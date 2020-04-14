@@ -7,11 +7,61 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 * ``minor`` increments add features but do not break API compatibility
 * ``micro`` increments represent bugfix releases or improvements in documentation
 
-0.6.1 - Bugfixes
-----------------
+0.7.0 - Current development
+---------------------------
+
+Behavior changed
+""""""""""""""""
+- `PR #508 <https://github.com/openforcefield/openforcefield/pull/508>`_:
+  In order to provide the same results for the same chemical species, regardless of input
+  conformation, fractional bond order calculation methods now default to ignore input conformers
+  and generate a new conformer of the molecule before running semiempirical calculations.
+  Users can override this behavior by specifying the keyword argument
+  ``use_conformers=molecule.conformers``
+- `PR #281 <https://github.com/openforcefield/openforcefield/pull/281>`_: Closes
+  `Issue #250 <https://github.com/openforcefield/openforcefield/issues/250>`_
+  by adding support for partial charge I/O in SDF. The partial charges are stored as a property in the
+  SDF molecule block under the tag ``<atom.dprop.PartialCharge>``.
+- `PR #281 <https://github.com/openforcefield/openforcefield/pull/281>`_: If an OFFMol's
+  ``partial_charges`` attribute is set to ``None`` (the default value), calling ``to_openeye`` will
+  now produce a OE molecule with partial charges set to ``nan``. This would previously produce an OE
+  molecule with partial charges of 0.0, which was a loss of information, since it wouldn't be clear
+  whether the original OFFMol's partial charges were REALLY all-zero as opposed to ``None``. OpenEye toolkit
+  wrapper methods such as ``from_smiles`` and ``from_file`` now produce OFFMols with
+  ``partial_charges = None`` when appropriate (previously these would produce OFFMols with
+  all-zero charges, for the same reasoning as above).
+- `PR #281 <https://github.com/openforcefield/openforcefield/pull/281>`_: ``Molecule.to_rdkit``
+  now sets partial charges on the RDAtom's ``PartialCharges`` property (this was previously set
+  on the ``partial_charges`` property). If the OFFMol's partial_charges attribute is None, this property
+  will not be defined on the RDAtoms.
+- `PR #281 <https://github.com/openforcefield/openforcefield/pull/281>`_:
+  Enforce the behavior during SDF I/O that a SDF may contain multiple MOLECULES, but that the OFF Toolkit
+  DOES NOT assume that it contains multiple CONFORMERS of the same molecule. This is an
+  important distinction, since otherwise there is ambiguity around whether properties of one
+  entry in a SDF are shared among several molecule blocks or not, or how to resolve conflicts if properties
+  are defined differently for several "conformers" of chemically-identical species (More info
+  `here <https://docs.eyesopen.com/toolkits/python/oechemtk/oemol.html#dude-where-s-my-sd-data>`_.
+  If the user requests the OFF
+  Toolkit to write a multi-conformer ``Molecule`` to SDF, only the first conformer will be written.
+  For more fine-grained control of writing properties, conformers, and partial charges, consider
+  using ``Molecule.to_rdkit`` or ``Molecule.to_openeye`` and using the functionality offered by
+  those packages.
+- `PR #281 <https://github.com/openforcefield/openforcefield/pull/281>`_: Due to different
+  constraints placed on the data types allowed by external toolkits, we make our best effort to
+  preserve ``offmol.properties`` when converting molecules to other packages, but users should be aware that
+  no guarantee of data integrity is made. The only data format for keys and values in the property dict that
+  we will try to support through a roundtrip to another toolkit's Molecule object is ``string``.
 
 API-breaking changes
 """"""""""""""""""""
+- `PR #558 <https://github.com/openforcefield/openforcefield/pull/558>`_: Removes
+  ``TopologyMolecule.topology_particle_start_index``, since the :py:class`Topology <openforcefield.topology.Topology>`
+  particle indexing system now orders :py:class`TopologyVirtualSites <openforcefield.topology.TopologyVirtualSite>`
+  after all atoms.
+  :py:meth`TopologyMolecule.topology_atom_start_index <openforcefield.topology.TopologyMolecule.topology_atom_start_index>`
+  and
+  :py:meth`TopologyMolecule.topology_virtual_site_start_index <openforcefield.topology.TopologyMolecule.topology_virtual_site_start_index>`
+  are still available to access the appropriate values in the respective topology indexing systems.
 - `PR #508 <https://github.com/openforcefield/openforcefield/pull/508>`_:
   ``OpenEyeToolkitWrapper.compute_wiberg_bond_orders`` is now
   :py:meth:`OpenEyeToolkitWrapper.assign_fractional_bond_orders <openforcefield.utils.toolkits.OpenEyeToolkitWrapper.assign_fractional_bond_orders>`.
@@ -57,10 +107,24 @@ New features
 - `PR #529 <https://github.com/openforcefield/openforcefield/pull/529>`_: Adds the ability to write out to XYZ files via
   :py:meth:`Molecule.to_file <openforcefield.topology.Molecule.to_file>` Both single frame and multiframe XYZ files are supported.
   Note reading from XYZ files will not be supported due to the lack of connectivity information.
+- `PR #535 <https://github.com/openforcefield/openforcefield/pull/535>`_: Extends the the API for the
+  :py:meth:`Molecule.to_smiles <openforcefield.topology.Molecule.to_smiles>` to allow for the creation of cmiles
+  identifiers through combinations of isomeric, explicit hydrogen and mapped smiles, the default settings will return
+  isomeric explicit hydrogen smiles as expected.
+        .. warning::
+           Atom maps can be supplied to the properties dictionary to modify which atoms have their map index included,
+           if no map is supplied all atoms will be mapped in the order they appear in the
+           :py:class:`Molecule <openforcefield.topology.Molecule>`.
+- `PR #563 <https://github.com/openforcefield/openforcefield/pull/563>`_:
+  Adds ``test_forcefields/ion_charges.offxml``, giving `LibraryCharges` for monatomic ions.
 
 
 Behavior changed
 """"""""""""""""
+- `PR #558 <https://github.com/openforcefield/openforcefield/pull/558>`_: The
+  :py:class`Topology <openforcefield.topology.Topology>`
+  particle indexing system now orders :py:class`TopologyVirtualSites <openforcefield.topology.TopologyVirtualSite>`
+  after all atoms.
 - `PR #469 <https://github.com/openforcefield/openforcefield/pull/469>`_:
   When running :py:meth:`Topology.to_openmm <openforcefield.topology.Topology.to_openmm>`, unique atom names
   are generated if the provided atom names are not unique (overriding any existing atom names). This
@@ -81,9 +145,18 @@ Behavior changed
   and generate a new conformer of the molecule before running semiempirical calculations.
   Users can override this behavior by specifying the keyword argument
   ``use_conformers=molecule.conformers``
+- `PR #544 <https://github.com/openforcefield/openforcefield/pull/544>`_: Raises 
+  ``NotImplementedError`` when calling 
+  :py:meth:`ParameterHandler.get_parameter   <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler.get_parameter>`, 
+  which is not yet implemented, but would previously silently return ``None``.
+- `PR #551 <https://github.com/openforcefield/openforcefield/pull/551>`_: Implemented the
+  :py:meth:`ParameterHandler.get_parameter   <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler.get_parameter>` function.
 
 Tests added
 """""""""""
+- `PR #558 <https://github.com/openforcefield/openforcefield/pull/558>`_: Adds tests ensuring
+  that the new Topology particle indexing system are properly implemented, and that TopologyVirtualSites
+  reference the correct TopologyAtoms.
 - `PR #469 <https://github.com/openforcefield/openforcefield/pull/469>`_: Added round-trip SMILES test
   to add coverage for :py:meth:`Molecule.from_smiles <openforcefield.topology.Molecule.from_smiles>`.
 - `PR #469 <https://github.com/openforcefield/openforcefield/pull/469>`_: Added tests for unique atom
@@ -127,9 +200,15 @@ Tests added
   :py:meth:`Molecule.from_inchi <openforcefield.topology.Molecule.from_inchi>`. Also added coverage for bad inputs and
   :py:meth:`Molecule.to_inchikey <openforcefield.topology.Molecule.to_inchikey>`.
 - `PR #529 <https://github.com/openforcefield/openforcefield/pull/529>`_: Added to XYZ file coverage tests.
+- `PR #563 <https://github.com/openforcefield/openforcefield/pull/563>`_: Added `LibraryCharges` parameterization test
+  for monatomic ions in ``test_forcefields/ion_charges.offxml``.
 
 Bugfixes
 """"""""
+- `PR #558 <https://github.com/openforcefield/openforcefield/pull/558>`_: Fixes a bug where
+  :py:meth:`TopologyVirtualSite.atoms <openforcefield.topology.TopologyVirtualSite.atoms>` would
+  not correctly apply ``TopologyMolecule`` atom ordering on top of the reference molecule ordering,
+  in cases where the same molecule appears multiple times, but in a different order, in the same Topology.
 - `Issue #460 <https://github.com/openforcefield/openforcefield/issues/460>`_: Creates unique atom
   names in :py:meth:`Topology.to_openmm <openforcefield.topology.Topology.to_openmm>` if the existing
   ones are not unique. The lack of unique atom names had been causing problems in workflows involving
@@ -165,7 +244,7 @@ Bugfixes
 Example added
 """""""""""""
 - `PR #472 <https://github.com/openforcefield/openforcefield/pull/472>`_: Adds an example notebook
-  `QCarchive_interface.ipynb <https://github.com/openforcefield/openforcefield/blob/master/examples/QCArchive_interface/QCarchive_interface.ipynb>`
+  `QCarchive_interface.ipynb <https://github.com/openforcefield/openforcefield/blob/master/examples/QCArchive_interface/QCarchive_interface.ipynb>`_
   which shows users how to instance the :py:class:`Molecule <openforcefield.topology.Molecule>` from
   a QCArchive entry level record and calculate the energy using RDKit through QCEngine.
 - `PR #533 <`https://github.com/openforcefield/openforcefield/pull/533>`_: Adds an example notebook which `conformer_energies.ipynb <https://github.com/openforcefield/openforcefield/blob/master/examples/conformer_energies/conformer_energies.ipynb>`

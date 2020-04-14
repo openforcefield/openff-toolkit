@@ -1826,14 +1826,25 @@ class FrozenMolecule(Serializable):
         # TODO the doc string did not match the previous function what matching should this method do?
         return Molecule.are_isomorphic(self, other, return_atom_map=False)[0]
 
-    def to_smiles(self, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+    def to_smiles(self, isomeric=True, explicit_hydrogens=True, mapped=False, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """
-        Return a canonical isomeric SMILES representation of the current molecule
+        Return a canonical isomeric SMILES representation of the current molecule.
+        A partially mapped smiles can also be generated for atoms of interest by supplying an `atom_map` to the
+        properties dictionary.
 
         .. note :: RDKit and OpenEye versions will not necessarily return the same representation.
 
         Parameters
         ----------
+        isomeric: bool optional, default= True
+            return an isomeric smiles
+        explicit_hydrogens: bool optional, default=True
+            return a smiles string containing all hydrogens explicitly
+        mapped: bool optional, default=False
+            return a explicit hydrogen mapped smiles, the atoms to be mapped can be controlled by supplying an
+            atom map into the properties dictionary. If no mapping is passed all atoms will be mapped in order, else
+            an atom map dictionary from the current atom index to the map id should be supplied with no duplicates.
+            The map ids (values) should start from 0 or 1.
         toolkit_registry : openforcefield.utils.toolkits.ToolkitRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES conversion
 
@@ -1868,14 +1879,14 @@ class FrozenMolecule(Serializable):
         # Get a string representation of the function containing the toolkit name so we can check
         # if a SMILES was already cached for this molecule. This will return, for example
         # "RDKitToolkitWrapper.to_smiles"
-        func_qualname = to_smiles_method.__qualname__
-
+        smiles_hash = to_smiles_method.__qualname__ + str(isomeric) + str(explicit_hydrogens) + str(mapped)
+        smiles_hash += str(self._properties.get('atom_map', None))
         # Check to see if a SMILES for this molecule was already cached using this method
-        if func_qualname in self._cached_smiles:
-            return self._cached_smiles[func_qualname]
+        if smiles_hash in self._cached_smiles:
+            return self._cached_smiles[smiles_hash]
         else:
-            smiles = to_smiles_method(self)
-            self._cached_smiles[func_qualname] = smiles
+            smiles = to_smiles_method(self, isomeric, explicit_hydrogens, mapped)
+            self._cached_smiles[smiles_hash] = smiles
             return smiles
 
     @staticmethod
@@ -2898,15 +2909,19 @@ class FrozenMolecule(Serializable):
 
         Parameters
         ----------
-        charges : a simtk.unit.Quantity - wrapped numpy array [1 x n_atoms]
-            The partial charges to assign to the molecule. Must be in units compatible with simtk.unit.elementary_charge
-        """
-        assert hasattr(charges, 'unit')
-        assert unit.elementary_charge.is_compatible(charges.unit)
-        assert charges.shape == (self.n_atoms, )
+        charges : None or a simtk.unit.Quantity - wrapped numpy array [1 x n_atoms]
+            The partial charges to assign to the molecule. If not None, must be in units compatible with simtk.unit.elementary_charge
 
-        charges_ec = charges.in_units_of(unit.elementary_charge)
-        self._partial_charges = charges_ec
+        """
+        if charges is None:
+            self._partial_charges = None
+        else:
+            assert hasattr(charges, 'unit')
+            assert unit.elementary_charge.is_compatible(charges.unit)
+            assert charges.shape == (self.n_atoms, )
+
+            charges_ec = charges.in_units_of(unit.elementary_charge)
+            self._partial_charges = charges_ec
 
     @property
     def n_particles(self):
@@ -3676,7 +3691,7 @@ class FrozenMolecule(Serializable):
     def to_qcschema(self, multiplicity=1, conformer=0):
         """
         Generate the qschema input format used to submit jobs to archive
-        or run qcengine calculations locally, the molecule is placed in canonical order first.
+        or run qcengine calculations locally,
         spec can be found here <https://molssi-qc-schema.readthedocs.io/en/latest/index.html>
 
         .. warning :: This API is experimental and subject to change.
@@ -3717,20 +3732,17 @@ class FrozenMolecule(Serializable):
             raise ImportError('Please install QCElemental via conda install -c conda-forge qcelemental '
                               'to validate the schema')
 
-        # get a canonical ordered version of the molecule
-        canonical_mol = self.canonical_order_atoms()
-
         # get/ check the geometry
         try:
-            geometry = canonical_mol.conformers[conformer].in_units_of(unit.bohr)
+            geometry = self.conformers[conformer].in_units_of(unit.bohr)
         except (IndexError, TypeError):
             raise InvalidConformerError('The molecule must have a conformation to produce a valid qcschema; '
                                         f'no conformer was found at index {conformer}.')
 
         # Gather the required qschema data
-        charge = sum([atom.formal_charge for atom in canonical_mol.atoms])
-        connectivity = [(bond.atom1_index, bond.atom2_index, bond.bond_order) for bond in canonical_mol.bonds]
-        symbols = [Element.getByAtomicNumber(atom.atomic_number).symbol for atom in canonical_mol.atoms]
+        charge = sum([atom.formal_charge for atom in self.atoms])
+        connectivity = [(bond.atom1_index, bond.atom2_index, bond.bond_order) for bond in self.bonds]
+        symbols = [Element.getByAtomicNumber(atom.atomic_number).symbol for atom in self.atoms]
 
         schema_dict = {'symbols': symbols, 'geometry': geometry, 'connectivity': connectivity,
                        'molecular_charge': charge, 'molecular_multiplicity': multiplicity}
@@ -3835,7 +3847,7 @@ class FrozenMolecule(Serializable):
         try:
             mapped_smiles = qca_record['attributes']['canonical_isomeric_explicit_hydrogen_mapped_smiles']
         except KeyError:
-            raise KeyError('The record must contain the hydrogen mapped smiles to be safley made from the archive.')
+            raise KeyError('The record must contain the hydrogen mapped smiles to be safely made from the archive.')
 
         # make a new molecule that has been reordered to match the cmiles mapping
         offmol = cls.from_mapped_smiles(mapped_smiles, toolkit_registry=toolkit_registry,
@@ -3912,9 +3924,6 @@ class FrozenMolecule(Serializable):
 
         Parameters
         ----------
-        hydrogens_last: bool, default True
-            If the canonical ordering should rank the hydrogens last.
-
         toolkit_registry : openforcefield.utils.toolkits.ToolkitRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
 
@@ -3998,10 +4007,11 @@ class FrozenMolecule(Serializable):
         new_molecule._bonds = sorted_bonds
 
         # remap the charges
-        new_charges = np.zeros(self.n_atoms)
-        for i in range(self.n_atoms):
-            new_charges[i] = self.partial_charges[new_to_cur[i]].value_in_unit(unit.elementary_charge)
-        new_molecule.partial_charges = new_charges * unit.elementary_charge
+        if self.partial_charges is not None:
+            new_charges = np.zeros(self.n_atoms)
+            for i in range(self.n_atoms):
+                new_charges[i] = self.partial_charges[new_to_cur[i]].value_in_unit(unit.elementary_charge)
+            new_molecule.partial_charges = new_charges * unit.elementary_charge
 
         # remap the conformers there can be more than one
         if self.conformers is not None:
