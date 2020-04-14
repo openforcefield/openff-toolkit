@@ -2909,15 +2909,19 @@ class FrozenMolecule(Serializable):
 
         Parameters
         ----------
-        charges : a simtk.unit.Quantity - wrapped numpy array [1 x n_atoms]
-            The partial charges to assign to the molecule. Must be in units compatible with simtk.unit.elementary_charge
-        """
-        assert hasattr(charges, 'unit')
-        assert unit.elementary_charge.is_compatible(charges.unit)
-        assert charges.shape == (self.n_atoms, )
+        charges : None or a simtk.unit.Quantity - wrapped numpy array [1 x n_atoms]
+            The partial charges to assign to the molecule. If not None, must be in units compatible with simtk.unit.elementary_charge
 
-        charges_ec = charges.in_units_of(unit.elementary_charge)
-        self._partial_charges = charges_ec
+        """
+        if charges is None:
+            self._partial_charges = None
+        else:
+            assert hasattr(charges, 'unit')
+            assert unit.elementary_charge.is_compatible(charges.unit)
+            assert charges.shape == (self.n_atoms, )
+
+            charges_ec = charges.in_units_of(unit.elementary_charge)
+            self._partial_charges = charges_ec
 
     @property
     def n_particles(self):
@@ -3580,6 +3584,111 @@ class FrozenMolecule(Serializable):
         else:
             toolkit.to_file_obj(self, file_path, file_format)
 
+    def enumerate_tautomers(self, max_states=20, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+        """
+        Enumerate the possible tautomers of the current molecule
+
+        Parameters
+        ----------
+        max_states: int optional, default=20
+            The maximum amount of molecules that should be returned
+
+        toolkit_registry: openforcefield.utils.toolkits.ToolkitRegistry or openforcefield.utils.toolkits.ToolkitWrapper,
+        optional, default=GLOBAL_TOOLKIT_REGISTRY
+            `ToolkitRegistry` or :class:`ToolkitWrapper` to use to enumerate the tautomers.
+
+        Returns
+        -------
+        molecules: List[openforcefield.topology.Molecule]
+            A list of openforcefield.topology.Molecule instances not including the input molecule.
+        """
+
+        if isinstance(toolkit_registry, ToolkitRegistry):
+            molecules = toolkit_registry.call('enumerate_tautomers',
+                                              molecule=self,
+                                              max_states=max_states)
+
+        elif isinstance(toolkit_registry, ToolkitWrapper):
+            molecules = toolkit_registry.enumerate_tautomers(self,
+                                                             max_states=max_states)
+
+        else:
+            raise ValueError(
+                "'toolkit_registry' must be either a ToolkitRegistry or a ToolkitWrapper"
+            )
+
+        return molecules
+
+    def enumerate_stereoisomers(self, undefined_only=False,
+                                max_isomers=20,
+                                rationalise=True,
+                                toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+        """
+        Enumerate the stereocenters and bonds of the current molecule.
+
+        Parameters
+        ----------
+        undefined_only: bool optional, default=False
+            If we should enumerate all stereocenters and bonds or only those with undefined stereochemistry
+
+        max_isomers: int optional, default=20
+            The maximum amount of molecules that should be returned
+
+        rationalise: bool optional, default=True
+            If we should try to build and rationalise the molecule to ensure it can exist
+
+        toolkit_registry: openforcefield.utils.toolkits.ToolkitRegistry or openforcefield.utils.toolkits.ToolkitWrapper,
+        optional, default=GLOBAL_TOOLKIT_REGISTRY
+            `ToolkitRegistry` or :class:`ToolkitWrapper` to use to enumerate the stereoisomers.
+
+        Returns
+        --------
+        molecules: List[openforcefield.topology.Molecule]
+            A list of openforcefield.topology.Molecule instances not including the input molecule.
+
+        """
+
+        if isinstance(toolkit_registry, ToolkitRegistry):
+            molecules = toolkit_registry.call('enumerate_stereoisomers',
+                                              molecule=self,
+                                              undefined_only=undefined_only,
+                                              max_isomers=max_isomers,
+                                              rationalise=rationalise)
+
+        elif isinstance(toolkit_registry, ToolkitWrapper):
+            molecules = toolkit_registry.enumerate_stereoisomers(self,
+                                                                 undefined_only=undefined_only,
+                                                                 max_isomers=max_isomers,
+                                                                 rationalise=rationalise)
+
+        else:
+            raise ValueError(
+                "'toolkit_registry' must be either a ToolkitRegistry or a ToolkitWrapper"
+            )
+
+        return molecules
+
+    @OpenEyeToolkitWrapper.requires_toolkit()
+    def enumerate_protomers(self, max_states=10):
+        """
+        Enumerate the formal charges of a molecule to generate different protomoers.
+
+        Parameters
+        ----------
+        max_states: int optional, default=10,
+            The maximum number of protomer states to be returned.
+
+        Returns
+        -------
+        molecules: List[openforcefield.topology.Molecule],
+            A list of the protomers of the input molecules not including the input.
+        """
+
+        toolkit = OpenEyeToolkitWrapper()
+        molecules = toolkit.enumerate_protomers(molecule=self, max_states=max_states)
+
+        return molecules
+
     @staticmethod
     @RDKitToolkitWrapper.requires_toolkit()
     def from_rdkit(rdmol, allow_undefined_stereo=False):
@@ -3843,7 +3952,7 @@ class FrozenMolecule(Serializable):
         try:
             mapped_smiles = qca_record['attributes']['canonical_isomeric_explicit_hydrogen_mapped_smiles']
         except KeyError:
-            raise KeyError('The record must contain the hydrogen mapped smiles to be safley made from the archive.')
+            raise KeyError('The record must contain the hydrogen mapped smiles to be safely made from the archive.')
 
         # make a new molecule that has been reordered to match the cmiles mapping
         offmol = cls.from_mapped_smiles(mapped_smiles, toolkit_registry=toolkit_registry,
@@ -3920,9 +4029,6 @@ class FrozenMolecule(Serializable):
 
         Parameters
         ----------
-        hydrogens_last: bool, default True
-            If the canonical ordering should rank the hydrogens last.
-
         toolkit_registry : openforcefield.utils.toolkits.ToolkitRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
 
@@ -4006,10 +4112,11 @@ class FrozenMolecule(Serializable):
         new_molecule._bonds = sorted_bonds
 
         # remap the charges
-        new_charges = np.zeros(self.n_atoms)
-        for i in range(self.n_atoms):
-            new_charges[i] = self.partial_charges[new_to_cur[i]].value_in_unit(unit.elementary_charge)
-        new_molecule.partial_charges = new_charges * unit.elementary_charge
+        if self.partial_charges is not None:
+            new_charges = np.zeros(self.n_atoms)
+            for i in range(self.n_atoms):
+                new_charges[i] = self.partial_charges[new_to_cur[i]].value_in_unit(unit.elementary_charge)
+            new_molecule.partial_charges = new_charges * unit.elementary_charge
 
         # remap the conformers there can be more than one
         if self.conformers is not None:
