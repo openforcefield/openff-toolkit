@@ -117,6 +117,13 @@ New features
            :py:class:`Molecule <openforcefield.topology.Molecule>`.
 - `PR #563 <https://github.com/openforcefield/openforcefield/pull/563>`_:
   Adds ``test_forcefields/ion_charges.offxml``, giving `LibraryCharges` for monatomic ions.
+- `PR #543 <https://github.com/openforcefield/openforcefield/pull/543>`_:
+  Adds 3 new methods to the :py:class:`Molecule <openforcefield.topology.Molecule>` which allow the enumeration of molecule
+  states these are :py:meth:`Molecule.enumerate_tautomers <openforcefield.topology.Molecule.enumerate_tautomers>`,
+  py:meth:`Molecule.enumerate_stereoisomers <openforcefield.topology.Molecule.enumerate_stereoisomers>`,
+  py:meth:`Molecule.enumerate_protomers <openforcefield.topology.Molecule.enumerate_protomers>`
+      .. warning::
+         Enumerate protomoers is currently only available through the OpenEye toolkit.
 
 
 Behavior changed
@@ -202,6 +209,9 @@ Tests added
 - `PR #529 <https://github.com/openforcefield/openforcefield/pull/529>`_: Added to XYZ file coverage tests.
 - `PR #563 <https://github.com/openforcefield/openforcefield/pull/563>`_: Added `LibraryCharges` parameterization test
   for monatomic ions in ``test_forcefields/ion_charges.offxml``.
+- `PR #543 <https://github.com/openforcefield/openforcefield/pull/543>`_: Added tests to assure that state enumeration can
+  correctly find molecules tautomers, stereoisomers and protomers when possible.
+
 
 Bugfixes
 """"""""

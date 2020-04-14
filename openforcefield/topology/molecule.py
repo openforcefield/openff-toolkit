@@ -3584,6 +3584,111 @@ class FrozenMolecule(Serializable):
         else:
             toolkit.to_file_obj(self, file_path, file_format)
 
+    def enumerate_tautomers(self, max_states=20, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+        """
+        Enumerate the possible tautomers of the current molecule
+
+        Parameters
+        ----------
+        max_states: int optional, default=20
+            The maximum amount of molecules that should be returned
+
+        toolkit_registry: openforcefield.utils.toolkits.ToolkitRegistry or openforcefield.utils.toolkits.ToolkitWrapper,
+        optional, default=GLOBAL_TOOLKIT_REGISTRY
+            `ToolkitRegistry` or :class:`ToolkitWrapper` to use to enumerate the tautomers.
+
+        Returns
+        -------
+        molecules: List[openforcefield.topology.Molecule]
+            A list of openforcefield.topology.Molecule instances not including the input molecule.
+        """
+
+        if isinstance(toolkit_registry, ToolkitRegistry):
+            molecules = toolkit_registry.call('enumerate_tautomers',
+                                              molecule=self,
+                                              max_states=max_states)
+
+        elif isinstance(toolkit_registry, ToolkitWrapper):
+            molecules = toolkit_registry.enumerate_tautomers(self,
+                                                             max_states=max_states)
+
+        else:
+            raise ValueError(
+                "'toolkit_registry' must be either a ToolkitRegistry or a ToolkitWrapper"
+            )
+
+        return molecules
+
+    def enumerate_stereoisomers(self, undefined_only=False,
+                                max_isomers=20,
+                                rationalise=True,
+                                toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+        """
+        Enumerate the stereocenters and bonds of the current molecule.
+
+        Parameters
+        ----------
+        undefined_only: bool optional, default=False
+            If we should enumerate all stereocenters and bonds or only those with undefined stereochemistry
+
+        max_isomers: int optional, default=20
+            The maximum amount of molecules that should be returned
+
+        rationalise: bool optional, default=True
+            If we should try to build and rationalise the molecule to ensure it can exist
+
+        toolkit_registry: openforcefield.utils.toolkits.ToolkitRegistry or openforcefield.utils.toolkits.ToolkitWrapper,
+        optional, default=GLOBAL_TOOLKIT_REGISTRY
+            `ToolkitRegistry` or :class:`ToolkitWrapper` to use to enumerate the stereoisomers.
+
+        Returns
+        --------
+        molecules: List[openforcefield.topology.Molecule]
+            A list of openforcefield.topology.Molecule instances not including the input molecule.
+
+        """
+
+        if isinstance(toolkit_registry, ToolkitRegistry):
+            molecules = toolkit_registry.call('enumerate_stereoisomers',
+                                              molecule=self,
+                                              undefined_only=undefined_only,
+                                              max_isomers=max_isomers,
+                                              rationalise=rationalise)
+
+        elif isinstance(toolkit_registry, ToolkitWrapper):
+            molecules = toolkit_registry.enumerate_stereoisomers(self,
+                                                                 undefined_only=undefined_only,
+                                                                 max_isomers=max_isomers,
+                                                                 rationalise=rationalise)
+
+        else:
+            raise ValueError(
+                "'toolkit_registry' must be either a ToolkitRegistry or a ToolkitWrapper"
+            )
+
+        return molecules
+
+    @OpenEyeToolkitWrapper.requires_toolkit()
+    def enumerate_protomers(self, max_states=10):
+        """
+        Enumerate the formal charges of a molecule to generate different protomoers.
+
+        Parameters
+        ----------
+        max_states: int optional, default=10,
+            The maximum number of protomer states to be returned.
+
+        Returns
+        -------
+        molecules: List[openforcefield.topology.Molecule],
+            A list of the protomers of the input molecules not including the input.
+        """
+
+        toolkit = OpenEyeToolkitWrapper()
+        molecules = toolkit.enumerate_protomers(molecule=self, max_states=max_states)
+
+        return molecules
+
     @staticmethod
     @RDKitToolkitWrapper.requires_toolkit()
     def from_rdkit(rdmol, allow_undefined_stereo=False):
