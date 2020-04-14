@@ -541,6 +541,8 @@ class TestOpenEyeToolkitWrapper:
         Test OpenEyeToolkitWrapper for writing a multiconformer molecule to SDF. The OFF toolkit should only
         save the first conformer.
         """
+        from io import StringIO
+
         toolkit_wrapper = OpenEyeToolkitWrapper()
         filename = get_data_file_path('molecules/ethanol.sdf')
         ethanol = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
@@ -548,8 +550,9 @@ class TestOpenEyeToolkitWrapper:
         ethanol.properties['test_prop'] = 'test_value'
         new_conf = ethanol.conformers[0] + (np.ones(ethanol.conformers[0].shape) * unit.angstrom)
         ethanol.add_conformer(new_conf)
-        ethanol.to_file('temp.sdf', 'sdf', toolkit_registry=toolkit_wrapper)
-        data = open('temp.sdf').read()
+        sio = StringIO()
+        ethanol.to_file(sio, 'sdf', toolkit_registry=toolkit_wrapper)
+        data = sio.getvalue()
         # In SD format, each molecule ends with "$$$$"
         assert data.count('$$$$') == 1
         # A basic SDF for ethanol would be 27 lines, though the properties add three more
@@ -1382,6 +1385,8 @@ class TestRDKitToolkitWrapper:
         Test RDKitToolkitWrapper for writing a multiconformer molecule to SDF. The OFF toolkit should only
         save the first conformer
         """
+        from io import StringIO
+
         toolkit_wrapper = RDKitToolkitWrapper()
         filename = get_data_file_path('molecules/ethanol.sdf')
         ethanol = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
@@ -1389,8 +1394,9 @@ class TestRDKitToolkitWrapper:
         ethanol.properties['test_prop'] = 'test_value'
         new_conf = ethanol.conformers[0] + (np.ones(ethanol.conformers[0].shape) * unit.angstrom)
         ethanol.add_conformer(new_conf)
-        ethanol.to_file('temp.sdf', 'sdf', toolkit_registry=toolkit_wrapper)
-        data = open('temp.sdf').read()
+        sio = StringIO()
+        ethanol.to_file(sio, 'sdf', toolkit_registry=toolkit_wrapper)
+        data = sio.getvalue()
         # In SD format, each molecule ends with "$$$$"
         assert data.count('$$$$') == 1
         # A basic SDF for ethanol would be 27 lines, though the properties add three more
@@ -1401,6 +1407,27 @@ class TestRDKitToolkitWrapper:
         assert str(ethanol.conformers[0][0][0].value_in_unit(unit.angstrom))[:5] in data
         # Ensure the SECOND conformer's first atom's X coordinate is NOT in the file
         assert str(ethanol.conformers[1][0][0].in_units_of(unit.angstrom))[:5] not in data
+
+    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
+    def test_write_milticonformer_pdb(self):
+        """
+        Make sure RDKit can write multi conformer PDB files.
+        """
+        from io import StringIO
+
+        toolkit = RDKitToolkitWrapper()
+        # load up a multiconformer pdb file and condense down the conformers
+        molecules = Molecule.from_file(get_data_file_path('molecules/butane_multi.sdf'), toolkit_registry=toolkit)
+        butane = molecules.pop(0)
+        for mol in molecules:
+            butane.add_conformer(mol.conformers[0])
+        assert butane.n_conformers == 7
+        sio = StringIO()
+        butane.to_file(sio, 'pdb', toolkit_registry=toolkit)
+        # we need to make sure each conformer is wrote to the file
+        pdb = sio.getvalue()
+        for i in range(1, 8):
+            assert f'MODEL        {i}' in pdb
 
     # Unskip this when we implement PDB-reading support for RDKitToolkitWrapper
     @pytest.mark.skip

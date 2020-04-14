@@ -2752,7 +2752,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                     x, y, z = conformer[atom_idx, :].value_in_unit(unit.angstrom)
                     rdmol_conformer.SetAtomPosition(atom_idx,
                                                     Geometry.Point3D(x, y, z))
-                rdmol.AddConformer(rdmol_conformer)
+                rdmol.AddConformer(rdmol_conformer, assignId=True)
 
         # Retain charges, if present
         if not (molecule._partial_charges is None):
