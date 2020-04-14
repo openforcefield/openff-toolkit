@@ -258,7 +258,7 @@ class TestMolecule:
 
     # TODO: Test getstate/setstate
 
-    # Test serialization {to_from}_{dict|yaml|toml|json|bson|messagepack|pickle}
+    # Test serialization {to|from}_{dict|yaml|toml|json|bson|messagepack|pickle}
     @pytest.mark.parametrize('molecule', mini_drug_bank())
     def test_dict_serialization(self, molecule):
         """Test seralization of a molecule object to dict."""
@@ -273,10 +273,10 @@ class TestMolecule:
         molecule_copy = Molecule.from_yaml(serialized)
         assert molecule == molecule_copy
 
-    def test_toml_serialization(self):
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_toml_serialization(self, molecule):
         """Test seralization of a molecule object to TOML."""
         # TODO: Test over mini_drug_bank when implemented
-        molecule = Molecule.from_smiles('CCO')
         with pytest.raises(NotImplementedError):
             molecule.to_toml()
 
@@ -287,10 +287,10 @@ class TestMolecule:
         molecule_copy = Molecule.from_bson(serialized)
         assert molecule == molecule_copy
 
-    def test_json_serialization(self):
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_json_serialization(self, molecule):
         """Test seralization of a molecule object to JSON."""
         # TODO: Test over mini_drug_bank when fully implemented
-        molecule = Molecule.from_smiles('CCO')
         with pytest.raises(TypeError):
             molecule.to_json()
 
