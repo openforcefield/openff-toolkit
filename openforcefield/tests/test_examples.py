@@ -129,8 +129,12 @@ def test_readme_links(readme_link):
     # client and the type of accepted documents so we add fake info
     # to avoid the response being an error.
     headers = {'User-Agent':'Mozilla/5.0',
-               'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',}
+               'Accept': 'application/xhtml+xml,text/html,application/xml;q=0.9,*/*;q=0.8',}
     request = Request(readme_link, headers=headers)
+
+    # Some DOI-based links are now behind DDoS protections, so skip them
+    if 'doi.org' in readme_link:
+        pytest.skip("DOI links are behind DDoS protection and do not resolve")
 
     # Try to connect 3 times, keeping track of exceptions so useful feedback can be provided.
     success = False

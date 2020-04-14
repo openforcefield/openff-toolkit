@@ -384,6 +384,54 @@ class TestParameterHandler:
         assert not(bh.attribute_is_cosmetic('pilot'))
 
 
+    def test_get_parameter(self):
+        """Test that ParameterHandler.get_parameter can lookup function
+        """
+        from simtk import unit
+        bh = BondHandler(skip_version_check=True, allow_cosmetic_attributes=True)
+
+        bh.add_parameter({'smirks': '[*:1]-[*:2]',
+                          'length': 1*unit.angstrom,
+                          'k': 10*unit.kilocalorie_per_mole/unit.angstrom**2,
+                          'id': 'b0'})
+        bh.parameters[0].add_cosmetic_attribute('foo', 'bar')
+
+        # Check base behavior
+        params = bh.get_parameter({'smirks': '[*:1]-[*:2]'})
+
+        assert params[0].length == unit.Quantity(1.0, unit.angstrom)
+        assert params[0].k == unit.Quantity(10.0, unit.kilocalorie_per_mole/unit.angstrom**2)
+
+        # Ensure a query with no matches returns an empty list
+        assert not bh.get_parameter({'smirks': 'xyz'})
+
+        # Ensure searching for a nonexistent attr does not raise an exception
+        assert not bh.get_parameter({'bAdAttR': '0'})
+
+        # Check for optional and cosmetic attrs
+        optional_params = bh.get_parameter({'id': 'b0'})
+        cosmetic_params = bh.get_parameter({'foo': 'bar'})
+
+        assert optional_params[0].id == 'b0'
+        assert cosmetic_params[0]._foo == 'bar'
+
+        # Ensure selection behaves a "OR" not "AND"
+        bh.add_parameter({'smirks': '[#1:1]-[#6:2]',
+                          'length': 1*unit.angstrom,
+                          'k': 10*unit.kilocalorie_per_mole/unit.angstrom**2,
+                          'id': 'b1'})
+
+        params = bh.get_parameter({'id': 'b0', 'smirks': '[#1:1]-[#6:2]'})
+
+        assert 'b0' in [param.id for param in params]
+        assert '[*:1]-[*:2]' in [param.smirks for param in params]
+
+        # Ensure selection does not return duplicates if multiple matches
+        params = bh.get_parameter({'id': 'b1', 'smirks': '[#1:1]-[#6:2]'})
+
+        assert len(params) == 1
+
+
 class TestParameterList:
     """Test capabilities of ParameterList for accessing and manipulating SMIRNOFF parameter definitions.
     """

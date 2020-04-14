@@ -1420,7 +1420,9 @@ class ParameterHandler(_ParameterAttributeHandler):
 
     def get_parameter(self, parameter_attrs):
         """
-        Return the parameters in this ParameterHandler that match the parameter_attrs argument
+        Return the parameters in this ParameterHandler that match the parameter_attrs argument.
+        When multiple attrs are passed, parameters that have any (not all) matching attributes
+        are returned.
 
         Parameters
         ----------
@@ -1429,11 +1431,43 @@ class ParameterHandler(_ParameterAttributeHandler):
 
         Returns
         -------
-        list of ParameterType objects
+        params : list of ParameterType objects
             A list of matching ParameterType objects
+
+        Examples
+        --------
+
+        Create a parameter handler and populate it with some data.
+
+        >>> from simtk import unit
+        >>> handler = BondHandler(skip_version_check=True)
+        >>> handler.add_parameter(
+        ...     {
+        ...         'smirks': '[*:1]-[*:2]',
+        ...         'length': 1*unit.angstrom,
+        ...         'k': 10*unit.kilocalorie_per_mole/unit.angstrom**2,
+        ...     }
+        ... )
+
+        Look up, from this handler, all parameters matching some SMIRKS pattern
+
+        >>> handler.get_parameter({'smirks': '[*:1]-[*:2]'})
+        [<BondType with smirks: [*:1]-[*:2]  length: 1 A  k: 10 kcal/(A**2 mol)  >]
+
         """
-        # TODO: This is a necessary API point for Lee-Ping's ForceBalance
-        pass
+        params = list()
+        for attr, value in parameter_attrs.items():
+            for param in self.parameters:
+                if param in params:
+                    continue
+                # TODO: Cleaner accessing of cosmetic attributes
+                # See issue #338
+                if param.attribute_is_cosmetic(attr):
+                    attr = '_' + attr
+                if hasattr(param, attr):
+                    if getattr(param, attr) == value:
+                        params.append(param)
+        return params
 
     class _Match:
         """Represents a ParameterType which has been matched to
@@ -2648,20 +2682,17 @@ class ElectrostaticsHandler(_NonbondedHandler):
             # instances of it in this topology.
             for topology_molecule in topology._reference_molecule_to_topology_molecules[ref_mol]:
 
-                top_mol_particle_start_index = topology_molecule.particle_start_topology_index
 
                 for topology_particle in topology_molecule.particles:
 
                     if type(topology_particle) is TopologyAtom:
                         ref_mol_particle_index = topology_particle.atom.molecule_particle_index
-                        top_mol_particle_index = topology_molecule._ref_to_top_index[ref_mol_particle_index]
                     elif type(topology_particle) is TopologyVirtualSite:
                         ref_mol_particle_index = topology_particle.virtual_site.molecule_particle_index
-                        top_mol_particle_index = ref_mol_particle_index
                     else:
                         raise ValueError(f'Particles of type {type(topology_particle)} are not supported')
 
-                    topology_particle_index = top_mol_particle_start_index + top_mol_particle_index
+                    topology_particle_index = topology_particle.topology_particle_index
 
                     particle_charge = temp_mol._partial_charges[ref_mol_particle_index]
 
@@ -2926,22 +2957,15 @@ class ToolkitAM1BCCHandler(_NonbondedHandler):
 
             # Assign charges to relevant atoms
             for topology_molecule in topology._reference_molecule_to_topology_molecules[ref_mol]:
-
-
-                top_mol_particle_start_index = topology_molecule.particle_start_topology_index
-
                 for topology_particle in topology_molecule.particles:
-
                     if type(topology_particle) is TopologyAtom:
                         ref_mol_particle_index = topology_particle.atom.molecule_particle_index
-                        top_mol_particle_index = topology_molecule._ref_to_top_index[ref_mol_particle_index]
                     elif type(topology_particle) is TopologyVirtualSite:
                         ref_mol_particle_index = topology_particle.virtual_site.molecule_particle_index
-                        top_mol_particle_index = ref_mol_particle_index
                     else:
                         raise ValueError(f'Particles of type {type(topology_particle)} are not supported')
 
-                    topology_particle_index = top_mol_particle_start_index + top_mol_particle_index
+                    topology_particle_index = topology_particle.topology_particle_index
 
                     particle_charge = temp_mol._partial_charges[ref_mol_particle_index]
 
