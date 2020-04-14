@@ -51,6 +51,11 @@ Behavior changed
   preserve ``offmol.properties`` when converting molecules to other packages, but users should be aware that
   no guarantee of data integrity is made. The only data format for keys and values in the property dict that
   we will try to support through a roundtrip to another toolkit's Molecule object is ``string``.
+- `PR #574 <https://github.com/openforcefield/openforcefield/pull/574>`_: Removed check that all
+  partial charges are zero after assignment by `quacpac` when AM1BCC used for charge assignment.
+  This check fails erroneously for cases in which the partial charge assignments are correctly all zero,
+  such as for ``N#N``. It is also an unnecessary check given that `quacpac` will reliably indicate when
+  it has failed to assign charges.
 
 API-breaking changes
 """"""""""""""""""""
