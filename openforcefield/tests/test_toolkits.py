@@ -539,7 +539,7 @@ class TestOpenEyeToolkitWrapper:
         """Test OpenEyeToolkitWrapper compute_partial_charges() on a molecule it cannot assign charges to"""
 
         toolkit_wrapper = OpenEyeToolkitWrapper()
-        smiles = '[Li]'
+        smiles = '[Li+1]'
         molecule = toolkit_wrapper.from_smiles(smiles)
         molecule.generate_conformers(toolkit_registry=toolkit_wrapper)
 
