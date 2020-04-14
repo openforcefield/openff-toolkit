@@ -210,7 +210,7 @@ Tests added
 - `PR #563 <https://github.com/openforcefield/openforcefield/pull/563>`_: Added `LibraryCharges` parameterization test
   for monatomic ions in ``test_forcefields/ion_charges.offxml``.
 - `PR #543 <https://github.com/openforcefield/openforcefield/pull/543>`_: Added tests to assure that state enumeration can
-  correctly find molecules tautomers, stereoisomers and protomers when possible. 
+  correctly find molecules tautomers, stereoisomers and protomers when possible.
 
 
 Bugfixes
