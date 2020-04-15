@@ -258,66 +258,67 @@ class TestMolecule:
 
     # TODO: Test getstate/setstate
 
-    # Test serialization {to|from}_{dict|yaml|toml|json|bson|messagepack|pickle}
+    # Test serialization {to|from}_{dict|yaml|toml|json|bson|xml|messagepack|pickle}
+
     @pytest.mark.parametrize('molecule', mini_drug_bank())
     def test_dict_serialization(self, molecule):
-        """Test seralization of a molecule object to dict."""
+        """Test serialization of a molecule object to and from dict."""
         serialized = molecule.to_dict()
         molecule_copy = Molecule.from_dict(serialized)
         assert molecule == molecule_copy
 
     @pytest.mark.parametrize('molecule', mini_drug_bank())
     def test_yaml_serialization(self, molecule):
-        """Test seralization of a molecule object to YAML."""
+        """Test serialization of a molecule object to and from YAML."""
         serialized = molecule.to_yaml()
         molecule_copy = Molecule.from_yaml(serialized)
         assert molecule == molecule_copy
 
     @pytest.mark.parametrize('molecule', mini_drug_bank())
     def test_toml_serialization(self, molecule):
-        """Test seralization of a molecule object to TOML."""
-        # TODO: Test over mini_drug_bank when implemented
+        """Test serialization of a molecule object to and from TOML."""
+        # TODO: Test round-trip when implemented
         with pytest.raises(NotImplementedError):
             molecule.to_toml()
 
     @pytest.mark.parametrize('molecule', mini_drug_bank())
     def test_bson_serialization(self, molecule):
-        """Test seralization of a molecule object to BSON."""
+        """Test serialization of a molecule object to and from BSON."""
         serialized = molecule.to_bson()
         molecule_copy = Molecule.from_bson(serialized)
         assert molecule == molecule_copy
 
     @pytest.mark.parametrize('molecule', mini_drug_bank())
     def test_json_serialization(self, molecule):
-        """Test seralization of a molecule object to JSON."""
-        # TODO: Test over mini_drug_bank when fully implemented
+        """Test serialization of a molecule object to and from JSON."""
+        # TODO: Test round-trip when to_json bug is fixed
         with pytest.raises(TypeError):
             molecule.to_json()
 
     @pytest.mark.parametrize('molecule', mini_drug_bank())
     def test_xml_serialization(self, molecule):
-        """Test seralization of a molecule object to XML."""
+        """Test serialization of a molecule object to and from XML."""
         # TODO: Test round-trip when from_xml is implemented
         serialized = molecule.to_xml()
         with pytest.raises(NotImplementedError):
             Molecule.from_xml(serialized)
 
     @pytest.mark.parametrize('molecule', mini_drug_bank())
-    def test_messagespack_serialization(self, molecule):
-        """Test seralization of a molecule object to messagepack."""
+    def test_messagepack_serialization(self, molecule):
+        """Test serialization of a molecule object to and from messagepack."""
         serialized = molecule.to_messagepack()
         molecule_copy = Molecule.from_messagepack(serialized)
         assert molecule == molecule_copy
 
     @pytest.mark.parametrize('molecule', mini_drug_bank())
     def test_pickle_serialization(self, molecule):
-        """Test pickling of a molecule object."""
+        """Test round-trip pickling of a molecule object."""
         serialized = pickle.dumps(molecule)
         molecule_copy = pickle.loads(serialized)
         assert molecule == molecule_copy
 
     def test_serialization_no_conformers(self):
-        """Test serialization when molecules have no conformers or partial charges."""
+        """Test round-trip serialization when molecules have no conformers or partial charges."""
         mol = Molecule.from_smiles('CCO')
 
         dict_copy = Molecule.from_dict(mol.to_dict())
