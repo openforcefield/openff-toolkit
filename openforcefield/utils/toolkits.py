@@ -644,6 +644,134 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         return mols
 
+    def enumerate_protomers(self, molecule, max_states=10):
+        """
+        Enumerate the formal charges of a molecule to generate different protomoers.
+
+        Parameters
+        ----------
+        molecule: openforcefield.topology.Molecule
+            The molecule whose state we should enumerate
+
+        max_states: int optional, default=10,
+            The maximum number of protomer states to be returned.
+
+        Returns
+        -------
+        molecules: List[openforcefield.topology.Molecule],
+            A list of the protomers of the input molecules not including the input.
+        """
+
+        from openeye import oequacpac
+        options = oequacpac.OEFormalChargeOptions()
+        # add one as the input is included
+        options.SetMaxCount(max_states + 1)
+
+        molecules = []
+
+        oemol = self.to_openeye(molecule=molecule)
+        for protomer in oequacpac.OEEnumerateFormalCharges(oemol, options):
+
+            mol = self.from_openeye(protomer, allow_undefined_stereo=True)
+
+            if mol != molecule:
+                molecules.append(mol)
+
+        return molecules
+
+    def enumerate_stereoisomers(self, molecule, undefined_only=False, max_isomers=20, rationalise=True):
+        """
+        Enumerate the stereocenters and bonds of the current molecule.
+
+        Parameters
+        ----------
+        molecule: openforcefield.topology.Molecule
+            The molecule whose state we should enumerate
+
+        undefined_only: bool optional, default=False
+            If we should enumerate all stereocenters and bonds or only those with undefined stereochemistry
+
+        max_isomers: int optional, default=20
+            The maximum amount of molecules that should be returned
+
+        rationalise: bool optional, default=True
+            If we should try to build and rationalise the molecule to ensure it can exist
+
+        Returns
+        --------
+        molecules: List[openforcefield.topology.Molecule]
+            A list of openforcefield.topology.Molecule instances
+
+        """
+        from openeye import oeomega, oechem
+        oemol = self.to_openeye(molecule=molecule)
+
+        # arguments for this function can be found here
+        # <https://docs.eyesopen.com/toolkits/python/omegatk/OEConfGenFunctions/OEFlipper.html?highlight=stereoisomers>
+
+        molecules = []
+        for isomer in oeomega.OEFlipper(oemol, 200, not undefined_only, True, False):
+
+            if rationalise:
+                # try and determine if the molecule is reasonable by generating a conformer with
+                # strict stereo, like embedding in rdkit
+                omega = oeomega.OEOmega()
+                omega.SetMaxConfs(1)
+                omega.SetCanonOrder(False)
+                # Don't generate random stereoisomer if not specified
+                omega.SetStrictStereo(True)
+                mol = oechem.OEMol(isomer)
+                status = omega(mol)
+                if status:
+                    isomol = self.from_openeye(mol)
+                    if isomol != molecule:
+                        molecules.append(isomol)
+
+            else:
+                isomol = self.from_openeye(isomer)
+                if isomol != molecule:
+                    molecules.append(isomol)
+
+        return molecules[:max_isomers]
+
+    def enumerate_tautomers(self, molecule, max_states=20):
+        """
+        Enumerate the possible tautomers of the current molecule
+
+        Parameters
+        ----------
+        molecule: openforcefield.topology.Molecule
+            The molecule whose state we should enumerate
+
+        max_states: int optional, default=20
+            The maximum amount of molecules that should be returned
+
+        Returns
+        -------
+        molecules: List[openforcefield.topology.Molecule]
+            A list of openforcefield.topology.Molecule instances excluding the input molecule.
+        """
+        from openeye import oequacpac
+        oemol = self.to_openeye(molecule=molecule)
+
+        tautomers = []
+
+        # set the options
+        tautomer_options = oequacpac.OETautomerOptions()
+        tautomer_options.SetApplyWarts(False)
+        tautomer_options.SetMaxTautomersGenerated(max_states + 1)
+        tautomer_options.SetSaveStereo(True)
+        # this aligns the outputs of rdkit and openeye for the example cases
+        tautomer_options.SetCarbonHybridization(False)
+
+        for tautomer in oequacpac.OEEnumerateTautomers(oemol, tautomer_options):
+            # remove the input tautomer from the output
+            taut = self.from_openeye(tautomer, allow_undefined_stereo=True)
+            if taut != molecule:
+                tautomers.append(self.from_openeye(tautomer, allow_undefined_stereo=True))
+
+        return tautomers
+
     @staticmethod
     def _check_mol2_gaff_atom_type(molecule, file_path=None):
         """Attempts to detect the presence of GAFF atom types in a molecule loaded from a mol2 file.
@@ -1618,7 +1746,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 quacpac_status = oequacpac.OEAssignCharges(oemol, oequacpac.OEAM1BCCCharges())
 
         if quacpac_status is False:
-            raise Exception('Unable to assign charges')
+            raise Exception('Unable to assign charges; OE error: "{}"'.format(errfs.str().decode("UTF-8")))
 
         # Extract and return charges
         ## TODO: Make sure atom mapping remains constant
@@ -1631,11 +1759,6 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             charge = charge * unit.elementary_charge
             charges[index] = charge
 
-        if ((charges / unit.elementary_charge) == 0.).all():
-            # TODO: These will be 0 if the charging failed. What behavior do we want in that case?
-            raise Exception(
-                "Partial charge calculation failed. Charges from compute_partial_charges() are all 0."
-            )
         return charges
 
     def assign_fractional_bond_orders(self, molecule, bond_order_model=None, use_conformers=None):
@@ -2136,6 +2259,93 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         # open a file object and pass to the object writer
         with open(file_path, 'w') as file_obj:
             self.to_file_obj(molecule=molecule, file_obj=file_obj, file_format=file_format)
+
+    def enumerate_stereoisomers(self, molecule, undefined_only=False, max_isomers=20, rationalise=True):
+        """
+        Enumerate the stereocenters and bonds of the current molecule.
+
+        Parameters
+        ----------
+        molecule: openforcefield.topology.Molecule
+            The molecule whose state we should enumerate
+
+        undefined_only: bool optional, default=False
+            If we should enumerate all stereocenters and bonds or only those with undefined stereochemistry
+
+        max_isomers: int optional, default=20
+            The maximum amount of molecules that should be returned
+
+        rationalise: bool optional, default=True
+            If we should try to build and rationalise the molecule to ensure it can exist
+
+        Returns
+        --------
+        molecules: List[openforcefield.topology.Molecule]
+            A list of openforcefield.topology.Molecule instances
+
+        """
+        from rdkit import Chem
+        from rdkit.Chem.EnumerateStereoisomers import EnumerateStereoisomers, StereoEnumerationOptions
+
+        # create the molecule
+        rdmol = self.to_rdkit(molecule=molecule)
+
+        # in case any bonds/centers are missing stereo chem flag it here
+        Chem.AssignStereochemistry(rdmol, force=True, flagPossibleStereoCenters=True)
+        Chem.FindPotentialStereoBonds(rdmol)
+
+        # set up the options
+        stereo_opts = StereoEnumerationOptions(tryEmbedding=rationalise, onlyUnassigned=undefined_only,
+                                               maxIsomers=max_isomers)
+
+        isomers = tuple(EnumerateStereoisomers(rdmol, options=stereo_opts))
+
+        molecules = []
+        for isomer in isomers:
+            # isomer has CIS/TRANS tags so convert back to E/Z
+            Chem.SetDoubleBondNeighborDirections(isomer)
+            Chem.AssignStereochemistry(isomer, force=True, cleanIt=True)
+            mol = self.from_rdkit(isomer)
+            if mol != molecule:
+                molecules.append(mol)
+
+        return molecules
+
+    def enumerate_tautomers(self, molecule, max_states=20):
+        """
+        Enumerate the possible tautomers of the current molecule.
+
+        Parameters
+        ----------
+        molecule: openforcefield.topology.Molecule
+            The molecule whose state we should enumerate
+
+        max_states: int optional, default=20
+            The maximum amount of molecules that should be returned
+
+        Returns
+        -------
+        molecules: List[openforcefield.topology.Molecule]
+            A list of openforcefield.topology.Molecule instances not including the input molecule.
+        """
+
+        from rdkit.Chem.MolStandardize import rdMolStandardize
+        from rdkit import Chem
+
+        enumerator = rdMolStandardize.TautomerEnumerator()
+        rdmol = Chem.RemoveHs(molecule.to_rdkit())
+
+        tautomers = enumerator.Enumerate(rdmol)
+
+        # make a list of openforcefield molecules excluding the input molecule
+        molecules = []
+        for taut in tautomers:
+            taut_hs = Chem.AddHs(taut)
+            mol = self.from_smiles(Chem.MolToSmiles(taut_hs), allow_undefined_stereo=True)
+            if mol != molecule:
+                molecules.append(mol)
+
+        return molecules[:max_states]
 
     def canonical_order_atoms(self, molecule):
         """
