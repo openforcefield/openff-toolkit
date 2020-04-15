@@ -295,6 +295,14 @@ class TestMolecule:
             molecule.to_json()
 
     @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_xml_serialization(self, molecule):
+        """Test seralization of a molecule object to XML."""
+        # TODO: Test round-trip when from_xml is implemented
+        serialized = molecule.to_xml()
+        with pytest.raises(NotImplementedError):
+            Molecule.from_xml(serialized)
+
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
     def test_messagespack_serialization(self, molecule):
         """Test seralization of a molecule object to messagepack."""
         serialized = molecule.to_messagepack()
@@ -324,6 +332,11 @@ class TestMolecule:
 
         json_copy = Molecule.from_json(mol.to_json())
         assert mol == json_copy
+
+        # TODO: round-trip when from_xml is implemented
+        mol_as_xml = mol.to_xml()
+        with pytest.raises(NotImplementedError):
+            Molecule.from_xml(mol_as_xml)
 
         messagepack_copy = Molecule.from_messagepack(mol.to_messagepack())
         assert mol == messagepack_copy
