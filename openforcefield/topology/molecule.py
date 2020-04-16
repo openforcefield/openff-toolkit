@@ -4699,7 +4699,7 @@ class Molecule(FrozenMolecule):
 
         return self._add_conformer(coordinates)
 
-    def visualize(self, backend='rdkit'):
+    def visualize(self, backend='rdkit', width=500, height=300):
         """
         Render a visualization of the molecule in Jupyter
         
@@ -4710,7 +4710,13 @@ class Molecule(FrozenMolecule):
             - rdkit
             - openeye
             - nglview (conformers needed)
-        
+        width : int, optional, default=500
+            Width of the generated representation (only applicable to
+            backend=openeye)
+        height : int, optional, default=500
+            Width of the generated representation (only applicable to
+            backend=openeye)
+
         Returns
         -------
         object
@@ -4748,7 +4754,6 @@ class Molecule(FrozenMolecule):
 
             oemol = self.to_openeye()
 
-            width, height = 500, 300
             opts = oedepict.OE2DMolDisplayOptions(width, height, oedepict.OEScale_AutoScale)
 
             oedepict.OEPrepareDepiction(oemol)
@@ -4761,20 +4766,22 @@ class Molecule(FrozenMolecule):
             raise ValueError('Could not find an appropriate backend')
 
     def _ipython_display_(self):
+        from IPython.display import display
         try:
-            self.visualize(backend='nglview')._ipython_display_()
+            return display(self.visualize(backend='nglview'))
         except (ImportError, ValueError):
             pass
 
         try:
-            self.visualize(backend='rdkit')._ipython_display_()
+            return display(self.visualize(backend='rdkit'))
         except ValueError:
             pass
 
         try:
-            self.visualize(backend='openeye')._ipython_display()
+            return display(self.visualize(backend='openeye'))
         except ValueError:
             pass
+
 
 try:
     from nglview import Trajectory as _NGLViewTrajectory
