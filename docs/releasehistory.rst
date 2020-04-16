@@ -55,12 +55,12 @@ Behavior changed
 API-breaking changes
 """"""""""""""""""""
 - `PR #558 <https://github.com/openforcefield/openforcefield/pull/558>`_: Removes
-  ``TopologyMolecule.topology_particle_start_index``, since the :py:class`Topology <openforcefield.topology.Topology>`
+  ``TopologyMolecule.topology_particle_start_index``, since the :py:class:`Topology <openforcefield.topology.Topology>`
   particle indexing system now orders :py:class`TopologyVirtualSites <openforcefield.topology.TopologyVirtualSite>`
   after all atoms.
-  :py:meth`TopologyMolecule.topology_atom_start_index <openforcefield.topology.TopologyMolecule.topology_atom_start_index>`
+  :py:meth:`TopologyMolecule.topology_atom_start_index <openforcefield.topology.TopologyMolecule.topology_atom_start_index>`
   and
-  :py:meth`TopologyMolecule.topology_virtual_site_start_index <openforcefield.topology.TopologyMolecule.topology_virtual_site_start_index>`
+  :py:meth:`TopologyMolecule.topology_virtual_site_start_index <openforcefield.topology.TopologyMolecule.topology_virtual_site_start_index>`
   are still available to access the appropriate values in the respective topology indexing systems.
 - `PR #508 <https://github.com/openforcefield/openforcefield/pull/508>`_:
   ``OpenEyeToolkitWrapper.compute_wiberg_bond_orders`` is now
@@ -211,6 +211,8 @@ Tests added
   for monatomic ions in ``test_forcefields/ion_charges.offxml``.
 - `PR #543 <https://github.com/openforcefield/openforcefield/pull/543>`_: Added tests to assure that state enumeration can
   correctly find molecules tautomers, stereoisomers and protomers when possible.
+- `PR #543 <https://github.com/openforcefield/openforcefield/pull/579>`_: Adds regression tests to ensure RDKit can be
+  be used to write multi-model PDB files.
 
 
 Bugfixes
@@ -248,8 +250,11 @@ Bugfixes
 - `Issue #474 <https://github.com/openforcefield/openforcefield/issues/474>`_: We can now  convert molecules to InChI and
    InChIKey and from InChI.
 - `Issue #523 <https://github.com/openforcefield/openforcefield/issues/523>`_: The
-   :py:meth: `Molecule.to_file <openforcefield.topology.Molecule.to_file>` can now correctly write to `MOL` files in
+   :py:meth:`Molecule.to_file <openforcefield.topology.Molecule.to_file>` can now correctly write to `MOL` files in
    line with the support file type list.
+- `Issue #568 <https://github.com/openforcefield/openforcefield/issues/568>`_: The
+  :py:meth:`Molecule.to_file <openforcefield.topology.Molecule.to_file>` can now correctly write multi-model PDB files
+  when using the RDKit backend toolkit.
 
 Example added
 """""""""""""
