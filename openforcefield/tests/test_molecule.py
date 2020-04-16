@@ -257,14 +257,94 @@ class TestMolecule:
     """Test Molecule class."""
 
     # TODO: Test getstate/setstate
-    # TODO: Test {to_from}_{dict|yaml|toml|json|bson|messagepack|pickle}
+
+    # Test serialization {to|from}_{dict|yaml|toml|json|bson|xml|messagepack|pickle}
+
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_dict_serialization(self, molecule):
+        """Test serialization of a molecule object to and from dict."""
+        serialized = molecule.to_dict()
+        molecule_copy = Molecule.from_dict(serialized)
+        assert molecule == molecule_copy
+
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_yaml_serialization(self, molecule):
+        """Test serialization of a molecule object to and from YAML."""
+        serialized = molecule.to_yaml()
+        molecule_copy = Molecule.from_yaml(serialized)
+        assert molecule == molecule_copy
+
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_toml_serialization(self, molecule):
+        """Test serialization of a molecule object to and from TOML."""
+        # TODO: Test round-trip when implemented
+        with pytest.raises(NotImplementedError):
+            molecule.to_toml()
+
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_bson_serialization(self, molecule):
+        """Test serialization of a molecule object to and from BSON."""
+        serialized = molecule.to_bson()
+        molecule_copy = Molecule.from_bson(serialized)
+        assert molecule == molecule_copy
+
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_json_serialization(self, molecule):
+        """Test serialization of a molecule object to and from JSON."""
+        # TODO: Test round-trip when to_json bug is fixed
+        with pytest.raises(TypeError):
+            molecule.to_json()
+
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_xml_serialization(self, molecule):
+        """Test serialization of a molecule object to and from XML."""
+        # TODO: Test round-trip when from_xml is implemented
+        serialized = molecule.to_xml()
+        with pytest.raises(NotImplementedError):
+            Molecule.from_xml(serialized)
+
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_messagepack_serialization(self, molecule):
+        """Test serialization of a molecule object to and from messagepack."""
+        serialized = molecule.to_messagepack()
+        molecule_copy = Molecule.from_messagepack(serialized)
+        assert molecule == molecule_copy
 
     @pytest.mark.parametrize('molecule', mini_drug_bank())
     def test_pickle_serialization(self, molecule):
-        """Test pickling of a molecule object."""
+        """Test round-trip pickling of a molecule object."""
         serialized = pickle.dumps(molecule)
         molecule_copy = pickle.loads(serialized)
         assert molecule == molecule_copy
+
+    def test_serialization_no_conformers(self):
+        """Test round-trip serialization when molecules have no conformers or partial charges."""
+        mol = Molecule.from_smiles('CCO')
+
+        dict_copy = Molecule.from_dict(mol.to_dict())
+        assert mol == dict_copy
+
+        # TODO: yaml_copy = Molecule.from_yaml(mol.to_yaml())
+        with pytest.raises(NotImplementedError):
+            mol.to_toml()
+
+        bson_copy = Molecule.from_bson(mol.to_bson())
+        assert mol == bson_copy
+
+        json_copy = Molecule.from_json(mol.to_json())
+        assert mol == json_copy
+
+        # TODO: round-trip when from_xml is implemented
+        mol_as_xml = mol.to_xml()
+        with pytest.raises(NotImplementedError):
+            Molecule.from_xml(mol_as_xml)
+
+        messagepack_copy = Molecule.from_messagepack(mol.to_messagepack())
+        assert mol == messagepack_copy
+
+        pickle_copy = pickle.loads(pickle.dumps(mol))
+        assert mol == pickle_copy
+
 
     # ----------------------------------------------------
     # Test Molecule constructors and conversion utilities.
