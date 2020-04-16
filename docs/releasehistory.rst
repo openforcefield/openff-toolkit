@@ -51,12 +51,17 @@ Behavior changed
   preserve ``offmol.properties`` when converting molecules to other packages, but users should be aware that
   no guarantee of data integrity is made. The only data format for keys and values in the property dict that
   we will try to support through a roundtrip to another toolkit's Molecule object is ``string``.
+- `PR #574 <https://github.com/openforcefield/openforcefield/pull/574>`_: Removed check that all
+  partial charges are zero after assignment by `quacpac` when AM1BCC used for charge assignment.
+  This check fails erroneously for cases in which the partial charge assignments are correctly all zero,
+  such as for ``N#N``. It is also an unnecessary check given that `quacpac` will reliably indicate when
+  it has failed to assign charges.
 
 API-breaking changes
 """"""""""""""""""""
 - `PR #558 <https://github.com/openforcefield/openforcefield/pull/558>`_: Removes
   ``TopologyMolecule.topology_particle_start_index``, since the :py:class:`Topology <openforcefield.topology.Topology>`
-  particle indexing system now orders :py:class`TopologyVirtualSites <openforcefield.topology.TopologyVirtualSite>`
+  particle indexing system now orders :py:class:`TopologyVirtualSites <openforcefield.topology.TopologyVirtualSite>`
   after all atoms.
   :py:meth:`TopologyMolecule.topology_atom_start_index <openforcefield.topology.TopologyMolecule.topology_atom_start_index>`
   and
@@ -124,6 +129,8 @@ New features
   py:meth:`Molecule.enumerate_protomers <openforcefield.topology.Molecule.enumerate_protomers>`
       .. warning::
          Enumerate protomoers is currently only available through the OpenEye toolkit.
+- `PR #573 <https://github.com/openforcefield/openforcefield/pull/573>`_:
+  Adds ``quacpac`` error output to ``quacpac`` failure in ``Molecule.compute_partial_charges_am1bcc``.
 
 
 Behavior changed
@@ -211,6 +218,8 @@ Tests added
   for monatomic ions in ``test_forcefields/ion_charges.offxml``.
 - `PR #543 <https://github.com/openforcefield/openforcefield/pull/543>`_: Added tests to assure that state enumeration can
   correctly find molecules tautomers, stereoisomers and protomers when possible.
+- `PR #573 <https://github.com/openforcefield/openforcefield/pull/573>`_: Added test for ``quacpac`` error output
+  for ``quacpac`` failure in ``Molecule.compute_partial_charges_am1bcc``.
 - `PR #543 <https://github.com/openforcefield/openforcefield/pull/579>`_: Adds regression tests to ensure RDKit can be
   be used to write multi-model PDB files.
 
