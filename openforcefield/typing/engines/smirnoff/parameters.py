@@ -52,6 +52,7 @@ from openforcefield.utils import attach_units,  \
     extract_serialized_units_from_dict, ToolkitUnavailableException, MessageException, \
     object_to_quantity
 from openforcefield.topology import ValenceDict, ImproperDict
+from openforcefield.topology.molecule import Molecule
 from openforcefield.typing.chemistry import ChemicalEnvironment
 from openforcefield.utils import IncompatibleUnitError
 from openforcefield.utils.collections import ValidatedList
@@ -1419,7 +1420,9 @@ class ParameterHandler(_ParameterAttributeHandler):
 
     def get_parameter(self, parameter_attrs):
         """
-        Return the parameters in this ParameterHandler that match the parameter_attrs argument
+        Return the parameters in this ParameterHandler that match the parameter_attrs argument.
+        When multiple attrs are passed, parameters that have any (not all) matching attributes
+        are returned.
 
         Parameters
         ----------
@@ -1428,11 +1431,43 @@ class ParameterHandler(_ParameterAttributeHandler):
 
         Returns
         -------
-        list of ParameterType objects
+        params : list of ParameterType objects
             A list of matching ParameterType objects
+
+        Examples
+        --------
+
+        Create a parameter handler and populate it with some data.
+
+        >>> from simtk import unit
+        >>> handler = BondHandler(skip_version_check=True)
+        >>> handler.add_parameter(
+        ...     {
+        ...         'smirks': '[*:1]-[*:2]',
+        ...         'length': 1*unit.angstrom,
+        ...         'k': 10*unit.kilocalorie_per_mole/unit.angstrom**2,
+        ...     }
+        ... )
+
+        Look up, from this handler, all parameters matching some SMIRKS pattern
+
+        >>> handler.get_parameter({'smirks': '[*:1]-[*:2]'})
+        [<BondType with smirks: [*:1]-[*:2]  length: 1 A  k: 10 kcal/(A**2 mol)  >]
+
         """
-        # TODO: This is a necessary API point for Lee-Ping's ForceBalance
-        pass
+        params = list()
+        for attr, value in parameter_attrs.items():
+            for param in self.parameters:
+                if param in params:
+                    continue
+                # TODO: Cleaner accessing of cosmetic attributes
+                # See issue #338
+                if param.attribute_is_cosmetic(attr):
+                    attr = '_' + attr
+                if hasattr(param, attr):
+                    if getattr(param, attr) == value:
+                        params.append(param)
+        return params
 
     class _Match:
         """Represents a ParameterType which has been matched to
@@ -2594,32 +2629,20 @@ class ElectrostaticsHandler(_NonbondedHandler):
             Whether a match was found. If True, the input molecule will have been modified in-place.
         """
 
-        from networkx.algorithms.isomorphism import GraphMatcher
         import simtk.unit
 
-        # Define the node/edge attributes that we will use to match the atoms/bonds during molecule comparison
-        node_match_func = lambda x, y: ((x['atomic_number'] == y['atomic_number']) and
-                                        (x['stereochemistry'] == y['stereochemistry']) and
-                                        (x['is_aromatic'] == y['is_aromatic'])
-                                        )
-        edge_match_func = lambda x, y: ((x['bond_order'] == y['bond_order']) and
-                                        (x['stereochemistry'] == y['stereochemistry']) and
-                                        (x['is_aromatic'] == y['is_aromatic'])
-                                        )
         # Check each charge_mol for whether it's isomorphic to the input molecule
         for charge_mol in charge_mols:
-            if molecule.is_isomorphic(charge_mol):
+            ismorphic, topology_atom_map = Molecule.are_isomorphic(molecule, charge_mol,
+                                                                   return_atom_map=True,
+                                                                   aromatic_matching=True,
+                                                                   formal_charge_matching=True,
+                                                                   bond_order_matching=True,
+                                                                   atom_stereochemistry_matching=True,
+                                                                   bond_stereochemistry_matching=True)
+            # if they are isomorphic then use the mapping
+            if ismorphic:
                 # Take the first valid atom indexing map
-                ref_mol_G = molecule.to_networkx()
-                charge_mol_G = charge_mol.to_networkx()
-                GM = GraphMatcher(
-                    charge_mol_G,
-                    ref_mol_G,
-                    node_match=node_match_func,
-                    edge_match=edge_match_func)
-                for mapping in GM.isomorphisms_iter():
-                    topology_atom_map = mapping
-                    break
                 # Set the partial charges
                 # Make a copy of the charge molecule's charges array (this way it's the right shape)
                 temp_mol_charges = copy.deepcopy(simtk.unit.Quantity(charge_mol.partial_charges))
@@ -2630,7 +2653,6 @@ class ElectrostaticsHandler(_NonbondedHandler):
 
         # If no match was found, return False
         return False
-
 
     def create_force(self, system, topology, **kwargs):
         from openforcefield.topology import FrozenMolecule, TopologyAtom, TopologyVirtualSite
@@ -2660,20 +2682,17 @@ class ElectrostaticsHandler(_NonbondedHandler):
             # instances of it in this topology.
             for topology_molecule in topology._reference_molecule_to_topology_molecules[ref_mol]:
 
-                top_mol_particle_start_index = topology_molecule.particle_start_topology_index
 
                 for topology_particle in topology_molecule.particles:
 
                     if type(topology_particle) is TopologyAtom:
                         ref_mol_particle_index = topology_particle.atom.molecule_particle_index
-                        top_mol_particle_index = topology_molecule._ref_to_top_index[ref_mol_particle_index]
                     elif type(topology_particle) is TopologyVirtualSite:
                         ref_mol_particle_index = topology_particle.virtual_site.molecule_particle_index
-                        top_mol_particle_index = ref_mol_particle_index
                     else:
                         raise ValueError(f'Particles of type {type(topology_particle)} are not supported')
 
-                    topology_particle_index = top_mol_particle_start_index + top_mol_particle_index
+                    topology_particle_index = topology_particle.topology_particle_index
 
                     particle_charge = temp_mol._partial_charges[ref_mol_particle_index]
 
@@ -2940,22 +2959,15 @@ class ToolkitAM1BCCHandler(_NonbondedHandler):
 
             # Assign charges to relevant atoms
             for topology_molecule in topology._reference_molecule_to_topology_molecules[ref_mol]:
-
-
-                top_mol_particle_start_index = topology_molecule.particle_start_topology_index
-
                 for topology_particle in topology_molecule.particles:
-
                     if type(topology_particle) is TopologyAtom:
                         ref_mol_particle_index = topology_particle.atom.molecule_particle_index
-                        top_mol_particle_index = topology_molecule._ref_to_top_index[ref_mol_particle_index]
                     elif type(topology_particle) is TopologyVirtualSite:
                         ref_mol_particle_index = topology_particle.virtual_site.molecule_particle_index
-                        top_mol_particle_index = ref_mol_particle_index
                     else:
                         raise ValueError(f'Particles of type {type(topology_particle)} are not supported')
 
-                    topology_particle_index = top_mol_particle_start_index + top_mol_particle_index
+                    topology_particle_index = topology_particle.topology_particle_index
 
                     particle_charge = temp_mol._partial_charges[ref_mol_particle_index]
 
@@ -3359,7 +3371,7 @@ class GBSAHandler(ParameterHandler):
         #for topology_particle in topology.topology_particles:
             #gbsa_force.addParticle([0.0, 1.0, 0.0])
 
-        params_to_add = [[] for particle in topology.topology_particles]
+        params_to_add = [[] for _ in topology.topology_particles]
         for atom_key, atom_match in atom_matches.items():
             atom_idx = atom_key[0]
             gbsatype = atom_match.parameter_type

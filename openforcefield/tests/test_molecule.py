@@ -31,11 +31,12 @@ import numpy as np
 import pytest
 from simtk import unit
 
-from openforcefield.topology.molecule import Molecule, Atom
+from openforcefield.topology.molecule import Molecule, Atom, InvalidConformerError
 from openforcefield.utils import get_data_file_path
 # TODO: Will the ToolkitWrapper allow us to pare that down?
 from openforcefield.utils.toolkits import OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper, ToolkitRegistry
-
+from openforcefield.tests.test_forcefield import create_ethanol, create_reversed_ethanol, create_acetaldehyde, \
+    create_benzene_no_aromatic, create_cyclohexane, create_cis_1_2_dichloroethene
 
 #=============================================================================================
 # TEST UTILITIES
@@ -58,7 +59,7 @@ def assert_molecule_is_equal(molecule1, molecule2, msg):
         Message to include if molecules fail to match.
 
     """
-    if not(molecule1.is_isomorphic(molecule2)):
+    if not(molecule1.is_isomorphic_with(molecule2)):
         raise AssertionError(msg)
 
 
@@ -192,6 +193,27 @@ def mini_drug_bank(xfail_mols=None, wip_mols=None):
 # used inside pytest.mark.parametrize (see issue #349 in pytest).
 mini_drug_bank.molecules = None
 
+# All the molecules that raise UndefinedStereochemistryError when read by OETK()
+openeye_drugbank_undefined_stereo_mols = {'DrugBank_1634', 'DrugBank_1700', 'DrugBank_1962',
+                                          'DrugBank_2519', 'DrugBank_2987', 'DrugBank_3502',
+                                          'DrugBank_3930', 'DrugBank_4161', 'DrugBank_4162',
+                                          'DrugBank_5043', 'DrugBank_5418', 'DrugBank_6531'}
+
+# All the molecules that raise UndefinedStereochemistryError when read by OETK().
+# Note that this list is different from that for OEMol,
+# since the toolkits have different definitions of "stereogenic"
+rdkit_drugbank_undefined_stereo_mols = {'DrugBank_1634', 'DrugBank_1962', 'DrugBank_2519',
+                                        'DrugBank_3930', 'DrugBank_5043', 'DrugBank_5418'}
+
+
+# Missing stereo in OE but not RDK:  'DrugBank_2987', 'DrugBank_3502', 'DrugBank_4161',
+# 'DrugBank_4162', 'DrugBank_6531', 'DrugBank_1700',
+drugbank_stereogenic_in_rdkit_but_not_openeye = {'DrugBank_5329'}
+
+# Some molecules are _valid_ in both OETK and RDKit, but will fail if you try
+# to convert from one to the other, since OE adds stereo that RDKit doesn't
+drugbank_stereogenic_in_oe_but_not_rdkit = {'DrugBank_1598', 'DrugBank_4346', 'DrugBank_1849',
+                                            'DrugBank_2141'}
 
 #=============================================================================================
 # TESTS
@@ -235,14 +257,94 @@ class TestMolecule:
     """Test Molecule class."""
 
     # TODO: Test getstate/setstate
-    # TODO: Test {to_from}_{dict|yaml|toml|json|bson|messagepack|pickle}
+
+    # Test serialization {to|from}_{dict|yaml|toml|json|bson|xml|messagepack|pickle}
+
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_dict_serialization(self, molecule):
+        """Test serialization of a molecule object to and from dict."""
+        serialized = molecule.to_dict()
+        molecule_copy = Molecule.from_dict(serialized)
+        assert molecule == molecule_copy
+
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_yaml_serialization(self, molecule):
+        """Test serialization of a molecule object to and from YAML."""
+        serialized = molecule.to_yaml()
+        molecule_copy = Molecule.from_yaml(serialized)
+        assert molecule == molecule_copy
+
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_toml_serialization(self, molecule):
+        """Test serialization of a molecule object to and from TOML."""
+        # TODO: Test round-trip when implemented
+        with pytest.raises(NotImplementedError):
+            molecule.to_toml()
+
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_bson_serialization(self, molecule):
+        """Test serialization of a molecule object to and from BSON."""
+        serialized = molecule.to_bson()
+        molecule_copy = Molecule.from_bson(serialized)
+        assert molecule == molecule_copy
+
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_json_serialization(self, molecule):
+        """Test serialization of a molecule object to and from JSON."""
+        # TODO: Test round-trip when to_json bug is fixed
+        with pytest.raises(TypeError):
+            molecule.to_json()
+
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_xml_serialization(self, molecule):
+        """Test serialization of a molecule object to and from XML."""
+        # TODO: Test round-trip when from_xml is implemented
+        serialized = molecule.to_xml()
+        with pytest.raises(NotImplementedError):
+            Molecule.from_xml(serialized)
+
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_messagepack_serialization(self, molecule):
+        """Test serialization of a molecule object to and from messagepack."""
+        serialized = molecule.to_messagepack()
+        molecule_copy = Molecule.from_messagepack(serialized)
+        assert molecule == molecule_copy
 
     @pytest.mark.parametrize('molecule', mini_drug_bank())
     def test_pickle_serialization(self, molecule):
-        """Test pickling of a molecule object."""
+        """Test round-trip pickling of a molecule object."""
         serialized = pickle.dumps(molecule)
         molecule_copy = pickle.loads(serialized)
         assert molecule == molecule_copy
+
+    def test_serialization_no_conformers(self):
+        """Test round-trip serialization when molecules have no conformers or partial charges."""
+        mol = Molecule.from_smiles('CCO')
+
+        dict_copy = Molecule.from_dict(mol.to_dict())
+        assert mol == dict_copy
+
+        # TODO: yaml_copy = Molecule.from_yaml(mol.to_yaml())
+        with pytest.raises(NotImplementedError):
+            mol.to_toml()
+
+        bson_copy = Molecule.from_bson(mol.to_bson())
+        assert mol == bson_copy
+
+        json_copy = Molecule.from_json(mol.to_json())
+        assert mol == json_copy
+
+        # TODO: round-trip when from_xml is implemented
+        mol_as_xml = mol.to_xml()
+        with pytest.raises(NotImplementedError):
+            Molecule.from_xml(mol_as_xml)
+
+        messagepack_copy = Molecule.from_messagepack(mol.to_messagepack())
+        assert mol == messagepack_copy
+
+        pickle_copy = pickle.loads(pickle.dumps(mol))
+        assert mol == pickle_copy
+
 
     # ----------------------------------------------------
     # Test Molecule constructors and conversion utilities.
@@ -259,6 +361,219 @@ class TestMolecule:
         """Test copy constructor."""
         molecule_copy = Molecule(molecule)
         assert molecule_copy == molecule
+
+    @pytest.mark.parametrize('toolkit', [OpenEyeToolkitWrapper, RDKitToolkitWrapper])
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_to_from_smiles(self, molecule, toolkit):
+        """Test round-trip creation from SMILES"""
+        if not toolkit.is_available():
+            pytest.skip('Required toolkit is unavailable')
+
+        if toolkit == RDKitToolkitWrapper:
+            # Skip the test if OpenEye assigns stereochemistry but RDKit doesn't (since then, the
+            # OFF molecule will be loaded, but fail to convert in to_rdkit)
+            if molecule.name in drugbank_stereogenic_in_oe_but_not_rdkit:
+                pytest.skip('Molecule is stereogenic in OpenEye (which loaded this dataset), but not RDKit, so it '
+                            'is impossible to make a valid RDMol in this test')
+            undefined_stereo_mols = rdkit_drugbank_undefined_stereo_mols
+        elif toolkit == OpenEyeToolkitWrapper:
+            undefined_stereo_mols = openeye_drugbank_undefined_stereo_mols
+
+        toolkit_wrapper = toolkit()
+
+        undefined_stereo = molecule.name in undefined_stereo_mols
+        # Since OpenEye did the original reading of MiniDrugBank, if OPENEYE doesn't
+        # think a feature is stereogenic, then "molecule" won't have stereochemistry defined
+        stereogenic_in_rdk_but_not_openeye = molecule.name in drugbank_stereogenic_in_rdkit_but_not_openeye
+
+        smiles1 = molecule.to_smiles(toolkit_registry=toolkit_wrapper)
+        if undefined_stereo or ((toolkit is RDKitToolkitWrapper) and stereogenic_in_rdk_but_not_openeye):
+            molecule2 = Molecule.from_smiles(smiles1,
+                                             allow_undefined_stereo=True,
+                                             toolkit_registry=toolkit_wrapper)
+        else:
+            molecule2 = Molecule.from_smiles(smiles1,
+                                             toolkit_registry=toolkit_wrapper)
+
+        smiles2 = molecule2.to_smiles(toolkit_registry=toolkit_wrapper)
+        assert (smiles1 == smiles2)
+
+    smiles_types = [{'isomeric': True, 'explicit_hydrogens': True, 'mapped': True, 'error': None},
+                    {'isomeric': False, 'explicit_hydrogens': True, 'mapped': True, 'error': None},
+                    {'isomeric': True, 'explicit_hydrogens': False, 'mapped': True, 'error': AssertionError},
+                    {'isomeric': True, 'explicit_hydrogens': True, 'mapped': False, 'error': None},
+                    {'isomeric': True, 'explicit_hydrogens': False, 'mapped': False, 'error': None},
+                    {'isomeric': False, 'explicit_hydrogens': True, 'mapped': False, 'error': None},
+                    {'isomeric': False, 'explicit_hydrogens': False, 'mapped': True, 'error': AssertionError},
+                    {'isomeric': False, 'explicit_hydrogens': False, 'mapped': False, 'error': None},
+                    ]
+
+    @pytest.mark.parametrize('toolkit_class', [OpenEyeToolkitWrapper, RDKitToolkitWrapper])
+    @pytest.mark.parametrize('data', smiles_types)
+    def test_smiles_types(self, data, toolkit_class):
+        """Test that the toolkit is passing the correct args to the toolkit backends across different combinations."""
+
+        if toolkit_class.is_available():
+            toolkit = toolkit_class()
+            mol = create_cis_1_2_dichloroethene()
+            isomeric, explicit_hs, mapped = data['isomeric'], data['explicit_hydrogens'], data['mapped']
+            if data['error'] is not None:
+                with pytest.raises(data['error']):
+                    mol.to_smiles(isomeric=isomeric, explicit_hydrogens=explicit_hs,
+                                  mapped=mapped, toolkit_registry=toolkit)
+
+            else:
+
+                # make the smiles then do some checks on it
+                output_smiles = mol.to_smiles(isomeric=isomeric,
+                                              explicit_hydrogens=explicit_hs,
+                                              mapped=mapped, toolkit_registry=toolkit)
+                if isomeric:
+                    assert '\\' in output_smiles
+                if explicit_hs:
+                    assert 'H' in output_smiles
+                if mapped:
+                    for i in range(1,7):
+                        assert f':{i}' in output_smiles
+                    # if the molecule is mapped make it using the mapping
+                    mol2 = Molecule.from_mapped_smiles(mapped_smiles=output_smiles,
+                                                       toolkit_registry=toolkit,
+                                                       allow_undefined_stereo=not isomeric)
+                else:
+                    # make a molecule from a standard smiles
+                    mol2 = Molecule.from_smiles(smiles=output_smiles,
+                                                allow_undefined_stereo=not isomeric,
+                                                toolkit_registry=toolkit)
+
+                isomorphic, atom_map = Molecule.are_isomorphic(mol, mol2, return_atom_map=True,
+                                                               aromatic_matching=True,
+                                                               formal_charge_matching=True,
+                                                               bond_order_matching=True,
+                                                               atom_stereochemistry_matching=isomeric,
+                                                               bond_stereochemistry_matching=isomeric)
+
+                assert isomorphic is True
+                if mapped:
+                    assert {0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5} == atom_map
+
+        else:
+            pytest.skip(f'The required toolkit ({toolkit_class.toolkit_name}) is not available.')
+
+    @pytest.mark.parametrize('toolkit_class', [OpenEyeToolkitWrapper, RDKitToolkitWrapper])
+    def test_smiles_cache(self, toolkit_class):
+        """Make sure that the smiles cache is being used correctly."""
+
+        if toolkit_class.is_available():
+            toolkit = toolkit_class()
+            # this uses no toolkit back end so no smiles should be saved
+            mol = create_ethanol()
+
+            # now lets populate the cache with a test result
+            # first we need to make the cache key for the default input
+            isomeric, explicit_hydrogens, mapped = True, True, False
+            cache_key = toolkit.to_smiles.__qualname__ + str(isomeric) + str(explicit_hydrogens) + str(mapped)
+            cache_key += str(mol._properties.get('atom_map', None))
+            mol._cached_smiles = {cache_key: None}
+            assert mol.to_smiles(isomeric=isomeric, toolkit_registry=toolkit,
+                                 explicit_hydrogens=explicit_hydrogens, mapped=mapped) is None
+
+            # now make sure the cache is not used if we change an input arg
+            assert mol.to_smiles(isomeric=True, explicit_hydrogens=True,
+                                 mapped=True, toolkit_registry=toolkit) is not None
+
+            # now make sure the cache was updated
+            assert mol._cached_smiles != {cache_key: None}
+            assert len(mol._cached_smiles) == 2
+
+        else:
+            pytest.skip(f'The required toolkit ({toolkit_class.toolkit_name}) is not available.')
+
+    mapped_types = [{'atom_map': None},
+                    {'atom_map': {0: 0}},
+                    {'atom_map': {0: 0, 1: 0, 2: 0, 3: 0}},
+                    {'atom_map': {0: 0, 1: 1, 2: 2, 3: 3}},
+                    {'atom_map': {0: 1, 1: 2, 2: 3, 3: 4}}]
+
+    @pytest.mark.parametrize('toolkit_class', [OpenEyeToolkitWrapper, RDKitToolkitWrapper])
+    @pytest.mark.parametrize('data', mapped_types)
+    def test_partial_mapped_smiles(self, toolkit_class, data):
+
+        if toolkit_class.is_available():
+            toolkit = toolkit_class()
+            mol = create_cis_1_2_dichloroethene()
+            mol._properties['atom_map'] = data['atom_map']
+
+            smiles = mol.to_smiles(isomeric=True, explicit_hydrogens=True,
+                                   mapped=True, toolkit_registry=toolkit)
+
+            # now we just need to check the smiles generated
+            if data['atom_map'] is None:
+                for i, atom in enumerate(mol.atoms, 1):
+                    assert f'[{atom.element.symbol}:{i}]' in smiles
+            else:
+                if 0 in data['atom_map'].values():
+                    increment = True
+                else:
+                    increment = False
+
+                for atom, index in data['atom_map'].items():
+                    assert f'[{mol.atoms[atom].element.symbol}:{index + 1 if increment else index}]'
+
+        else:
+            pytest.skip(f'The required toolkit ({toolkit_class.toolkit_name}) is not available.')
+
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_unique_atom_names(self, molecule):
+        """Test molecules have unique atom names"""
+        # The dataset we load in has atom names, so let's strip them first
+        # to ensure that we can fail the uniqueness check
+        for atom in molecule.atoms:
+            atom.name = ''
+        assert not(molecule.has_unique_atom_names)
+        # Then genreate unique atom names using the built in algorithm
+        molecule.generate_unique_atom_names()
+        # Check that the molecule has unique atom names
+        assert molecule.has_unique_atom_names
+        # Check molecule.has_unique_atom_names is working correctly
+        assert ((len(set([atom.name for atom in molecule.atoms])) == molecule.n_atoms) == molecule.has_unique_atom_names)
+        molecule.atoms[1].name = molecule.atoms[0].name # no longer unique
+        assert ((len(set([atom.name for atom in molecule.atoms])) == molecule.n_atoms) == molecule.has_unique_atom_names)
+
+    inchi_data = [{'molecule': create_ethanol(), 'standard_inchi': 'InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3',
+                   'fixed_hydrogen_inchi': 'InChI=1/C2H6O/c1-2-3/h3H,2H2,1H3'},
+                  {'molecule': create_reversed_ethanol(), 'standard_inchi': 'InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3',
+                   'fixed_hydrogen_inchi': 'InChI=1/C2H6O/c1-2-3/h3H,2H2,1H3'},
+                  {'molecule': create_acetaldehyde(), 'standard_inchi': 'InChI=1S/C2H4O/c1-2-3/h2H,1H3',
+                   'fixed_hydrogen_inchi': 'InChI=1/C2H4O/c1-2-3/h2H,1H3'},
+                  {'molecule': create_cyclohexane(), 'standard_inchi': 'InChI=1S/C6H12/c1-2-4-6-5-3-1/h1-6H2',
+                   'fixed_hydrogen_inchi': 'InChI=1/C6H12/c1-2-4-6-5-3-1/h1-6H2'}
+                  ]
+
+    @pytest.mark.parametrize('data', inchi_data)
+    def test_from_inchi(self, data):
+        """Test building a molecule from standard and non-standard InChI strings."""
+
+        toolkit = OpenEyeToolkitWrapper()
+        ref_mol = data['molecule']
+        # make a molecule from inchi
+        inchi_mol = Molecule.from_inchi(data['standard_inchi'], toolkit_registry=toolkit)
+        assert inchi_mol.to_inchi(toolkit_registry=toolkit) == data['standard_inchi']
+
+        def compare_mols(ref_mol, inchi_mol):
+            assert ref_mol.n_atoms == inchi_mol.n_atoms
+            assert ref_mol.n_bonds == inchi_mol.n_bonds
+            assert ref_mol.n_angles == inchi_mol.n_angles
+            assert ref_mol.n_propers == inchi_mol.n_propers
+            assert ref_mol.is_isomorphic_with(inchi_mol) is True
+
+        compare_mols(ref_mol, inchi_mol)
+
+        # now make the molecule from the non-standard inchi and compare
+        nonstandard_inchi_mol = Molecule.from_inchi(data['fixed_hydrogen_inchi'], toolkit_registry=toolkit)
+        assert nonstandard_inchi_mol.to_inchi(fixed_hydrogens=True, toolkit_registry=toolkit) == data[
+            'fixed_hydrogen_inchi']
+
+        compare_mols(ref_mol, nonstandard_inchi_mol)
 
     # TODO: Should there be an equivalent toolkit test and leave this as an integration test?
     @pytest.mark.slow
@@ -310,13 +625,7 @@ class TestMolecule:
         # import pickle
         from openforcefield.utils.toolkits import UndefinedStereochemistryError
 
-        # DrugBank test set known failures. Note that this list is different from that for OEMol,
-        # since the toolkits have different definitions of "stereogenic"
-        # Stereogenic in OE but not RDK:  'DrugBank_2987', 'DrugBank_3502', 'DrugBank_4161',
-        # 'DrugBank_4162', 'DrugBank_6531', 'DrugBank_1700',
-        undefined_stereo_mols = {'DrugBank_1634', 'DrugBank_1962', 'DrugBank_2519',
-                                 'DrugBank_3930', 'DrugBank_5043', 'DrugBank_5418'}
-        undefined_stereo = molecule.name in undefined_stereo_mols
+        undefined_stereo = molecule.name in rdkit_drugbank_undefined_stereo_mols
 
         toolkit_wrapper = RDKitToolkitWrapper()
 
@@ -327,7 +636,7 @@ class TestMolecule:
 
         # If this is a known failure, check that it raises UndefinedStereochemistryError
         # and proceed with the test ignoring it.
-        test_mol =  None
+        test_mol = None
         if undefined_stereo:
             with pytest.raises(UndefinedStereochemistryError):
                 Molecule(rdmol)
@@ -385,22 +694,24 @@ class TestMolecule:
         from openforcefield.utils.toolkits import UndefinedStereochemistryError
 
         # All the molecules that raise UndefinedStereochemistryError in Molecule.from_iupac()
-        undefined_stereo_mols = {'DrugBank_977', 'DrugBank_1634', 'DrugBank_1700', 'DrugBank_1962',
-                                 'DrugBank_2148', 'DrugBank_2178', 'DrugBank_2186', 'DrugBank_2208',
-                                 'DrugBank_2519', 'DrugBank_2538', 'DrugBank_2592', 'DrugBank_2651',
-                                 'DrugBank_2987', 'DrugBank_3332', 'DrugBank_3502', 'DrugBank_3622',
-                                 'DrugBank_3726', 'DrugBank_3844', 'DrugBank_3930', 'DrugBank_4161',
-                                 'DrugBank_4162', 'DrugBank_4778', 'DrugBank_4593', 'DrugBank_4959',
-                                 'DrugBank_5043', 'DrugBank_5076', 'DrugBank_5176', 'DrugBank_5418',
-                                 'DrugBank_5737', 'DrugBank_5902', 'DrugBank_6304', 'DrugBank_6305',
-                                 'DrugBank_6329', 'DrugBank_6355', 'DrugBank_6401', 'DrugBank_6509',
-                                 'DrugBank_6531', 'DrugBank_6647',
+        # (This is a larger list than the normal group of undefined stereo mols, probably has
+        # something to do with IUPAC information content)
+        iupac_problem_mols = {'DrugBank_977', 'DrugBank_1634', 'DrugBank_1700', 'DrugBank_1962',
+                              'DrugBank_2148', 'DrugBank_2178', 'DrugBank_2186', 'DrugBank_2208',
+                              'DrugBank_2519', 'DrugBank_2538', 'DrugBank_2592', 'DrugBank_2651',
+                              'DrugBank_2987', 'DrugBank_3332', 'DrugBank_3502', 'DrugBank_3622',
+                              'DrugBank_3726', 'DrugBank_3844', 'DrugBank_3930', 'DrugBank_4161',
+                              'DrugBank_4162', 'DrugBank_4778', 'DrugBank_4593', 'DrugBank_4959',
+                              'DrugBank_5043', 'DrugBank_5076', 'DrugBank_5176', 'DrugBank_5418',
+                              'DrugBank_5737', 'DrugBank_5902', 'DrugBank_6304', 'DrugBank_6305',
+                              'DrugBank_6329', 'DrugBank_6355', 'DrugBank_6401', 'DrugBank_6509',
+                              'DrugBank_6531', 'DrugBank_6647',
 
-                                 # These test cases are allowed to fail.
-                                 'DrugBank_390', 'DrugBank_810', 'DrugBank_4316', 'DrugBank_4346',
-                                 'DrugBank_7124'
-                                 }
-        undefined_stereo = molecule.name in undefined_stereo_mols
+                              # These test cases are allowed to fail.
+                              'DrugBank_390', 'DrugBank_810', 'DrugBank_4316', 'DrugBank_4346',
+                              'DrugBank_7124'
+                              }
+        undefined_stereo = molecule.name in iupac_problem_mols
 
         iupac = molecule.to_iupac()
 
@@ -409,7 +720,8 @@ class TestMolecule:
                 Molecule.from_iupac(iupac)
 
         molecule_copy = Molecule.from_iupac(iupac, allow_undefined_stereo=undefined_stereo)
-        assert molecule.is_isomorphic(molecule_copy, compare_atom_stereochemistry=not undefined_stereo)
+        assert molecule.is_isomorphic_with(molecule_copy,
+                                           atom_stereochemistry_matching=not undefined_stereo)
 
     @pytest.mark.parametrize('molecule', mini_drug_bank())
     def test_to_from_topology(self, molecule):
@@ -418,12 +730,99 @@ class TestMolecule:
         molecule_copy = Molecule.from_topology(topology)
         assert molecule == molecule_copy
 
+    def test_to_multiframe_xyz(self):
+        """Test writing out a molecule with multiple conformations to an xyz file"""
+
+        # load in an SDF of butane with multiple conformers in it
+        molecules = Molecule.from_file(get_data_file_path('molecules/butane_multi.sdf'), 'sdf')
+        # now we want to combine the conformers to one molecule
+        butane = molecules[0]
+        for mol in molecules[1:]:
+            butane.add_conformer(mol._conformers[0])
+
+        # make sure we have the 7 conformers
+        assert butane.n_conformers == 7
+        with NamedTemporaryFile(suffix='.xyz') as iofile:
+            # try and write out the xyz file
+            butane.to_file(iofile.name, 'xyz')
+
+            # now lets check whats in the file
+            with open(iofile.name) as xyz_data:
+                data = xyz_data.readlines()
+                # make sure we have the correct amount of lines writen
+                assert len(data) == 112
+                # make sure all headers and frame data was writen
+                assert data.count('14\n') == 7
+                for i in range(1, 8):
+                    assert f'C4H10 Frame {i}\n' in data
+
+                # now make sure the first line of the coordinates are correct in every frame
+                coords = ['C        1.8902000189    0.0425999984    0.2431000024\n',
+                          'C        1.8976000547   -0.0232999995    0.2845999897\n',
+                          'C       -1.8794000149   -0.1792999953   -0.2565000057\n',
+                          'C       -1.5205999613   -0.0164999999    0.2786999941\n',
+                          'C       -1.4889999628   -0.2619000077    0.4871000051\n',
+                          'C       -1.4940999746   -0.2249000072   -0.0957999974\n',
+                          'C       -1.8826999664   -0.0372000001    0.1937000006\n']
+                for coord in coords:
+                    assert coord in data
+
+    def test_to_single_xyz(self):
+        """Test writing to a single frame xyz file"""
+
+        # load a molecule with a single conformation
+        toluene = Molecule.from_file(get_data_file_path('molecules/toluene.sdf'), 'sdf')
+        # make sure it has one conformer
+        assert toluene.n_conformers == 1
+
+        with NamedTemporaryFile(suffix='.xyz') as iofile:
+            # try and write out the xyz file
+            toluene.to_file(iofile.name, 'xyz')
+
+            # now lets check the file contents
+            with open(iofile.name) as xyz_data:
+                data = xyz_data.readlines()
+                # make sure we have the correct amount of lines writen
+                assert len(data) == 17
+                # make sure all headers and frame data was writen
+                assert data.count('15\n') == 1
+                assert data.count('C7H8\n') == 1
+                # now check that we can find the first and last coords
+                coords = ['C        0.0000000000    0.0000000000    0.0000000000\n',
+                          'H       -0.0000000000    3.7604000568    0.0000000000\n']
+                for coord in coords:
+                    assert coord in data
+
+    def test_to_xyz_no_conformers(self):
+        """Test writing a molecule out when it has no conformers here all coords should be 0."""
+
+        # here we want to make a molecule with no coordinates
+        ethanol = create_ethanol()
+        assert ethanol.n_conformers == 0
+
+        with NamedTemporaryFile(suffix='.xyz') as iofile:
+            # try and write out the xyz file
+            ethanol.to_file(iofile.name, 'xyz')
+
+            # now lets check the file contents
+            with open(iofile.name) as xyz_data:
+                data = xyz_data.readlines()
+                # make sure we have the correct amount of lines writen
+                assert len(data) == 11
+                # make sure all headers and frame data was writen
+                assert data.count('9\n') == 1
+                assert data.count('C2H6O\n') == 1
+                # now check that all coords are 0
+                coords = ['0.0000000000', '0.0000000000', '0.0000000000']
+                for atom_coords in data[2:]:
+                    assert atom_coords.split()[1:] == coords
+
     # TODO: Should there be an equivalent toolkit test and leave this as an integration test?
     @pytest.mark.parametrize('molecule', mini_drug_bank())
     @pytest.mark.parametrize('format', [
         'mol2',
         'sdf',
-        pytest.param('pdb', marks=pytest.mark.wip(reason='Read from pdb has not bee implemented properly yet'))
+        pytest.param('pdb', marks=pytest.mark.wip(reason='Read from pdb has not been implemented properly yet'))
     ])
     def test_to_from_file(self, molecule, format):
         """Test that conversion/creation of a molecule to and from a file is consistent."""
@@ -463,12 +862,7 @@ class TestMolecule:
         # known_failures = {'ZINC05964684', 'ZINC05885163', 'ZINC05543156', 'ZINC17211981',
         #                   'ZINC17312986', 'ZINC06424847', 'ZINC04963126'}
 
-        # DrugBank test set known failures.
-        undefined_stereo_mols = {'DrugBank_1634', 'DrugBank_1700', 'DrugBank_1962',
-                                 'DrugBank_2519', 'DrugBank_2987', 'DrugBank_3502',
-                                 'DrugBank_3930', 'DrugBank_4161', 'DrugBank_4162',
-                                 'DrugBank_5043', 'DrugBank_5418', 'DrugBank_6531'}
-        undefined_stereo = molecule.name in undefined_stereo_mols
+        undefined_stereo = molecule.name in openeye_drugbank_undefined_stereo_mols
 
         toolkit_wrapper = OpenEyeToolkitWrapper()
 
@@ -479,7 +873,7 @@ class TestMolecule:
 
         # If this is a known failure, check that it raises UndefinedStereochemistryError
         # and proceed with the test ignoring it.
-        test_mol =  None
+        test_mol = None
         if undefined_stereo:
             with pytest.raises(UndefinedStereochemistryError):
                 Molecule(oemol)
@@ -528,6 +922,542 @@ class TestMolecule:
         molecule = Molecule()
         molecule.name = name
         assert molecule.name == name
+
+    def test_hill_formula(self):
+        """Test that making the hill formula is consistent between input methods and ordering"""
+        # make sure smiles match reference
+        molecule_smiles = create_ethanol()
+        assert molecule_smiles.hill_formula == 'C2H6O'
+        # make sure is not order dependent
+        molecule_smiles_reverse = create_reversed_ethanol()
+        assert molecule_smiles.hill_formula == molecule_smiles_reverse.hill_formula
+        # make sure single element names are put first
+        order_mol = Molecule.from_smiles('C(Br)CB')
+        assert order_mol.hill_formula == 'C2H6BBr'
+        # test molecule with no carbon
+        no_carb_mol = Molecule.from_smiles('OS(=O)(=O)O')
+        assert no_carb_mol.hill_formula == 'H2O4S'
+        # test no carbon and hydrogen
+        br_i = Molecule.from_smiles('BrI')
+        assert br_i.hill_formula == 'BrI'
+        # make sure files and smiles match
+        molecule_file = Molecule.from_file(get_data_file_path('molecules/ethanol.sdf'))
+        assert molecule_smiles.hill_formula == molecule_file.hill_formula
+        # make sure the topology molecule gives the same formula
+        from openforcefield.topology.topology import TopologyMolecule, Topology
+        topology = Topology.from_molecules(molecule_smiles)
+        topmol = TopologyMolecule(molecule_smiles, topology)
+        assert molecule_smiles.hill_formula == Molecule.to_hill_formula(topmol)
+        # make sure the networkx matches
+        assert molecule_smiles.hill_formula == Molecule.to_hill_formula(molecule_smiles.to_networkx())
+
+
+    def test_isomorphic_general(self):
+        """Test the matching using different input types"""
+        # check that hill formula fails are caught
+        ethanol = create_ethanol()
+        acetaldehyde = create_acetaldehyde()
+        assert ethanol.is_isomorphic_with(acetaldehyde) is False
+        assert acetaldehyde.is_isomorphic_with(ethanol) is False
+        # check that different orderings work with full matching
+        ethanol_reverse = create_reversed_ethanol()
+        assert ethanol.is_isomorphic_with(ethanol_reverse) is True
+        # check a reference mapping between ethanol and ethanol_reverse matches that calculated
+        ref_mapping = {0: 8, 1: 7, 2: 6, 3: 3, 4: 4, 5: 5, 6: 1, 7: 2, 8: 0}
+        assert Molecule.are_isomorphic(ethanol, ethanol_reverse, return_atom_map=True)[1] == ref_mapping
+        # check matching with nx.Graph atomic numbers and connectivity only
+        assert Molecule.are_isomorphic(ethanol, ethanol_reverse.to_networkx(), aromatic_matching=False,
+                                       formal_charge_matching=False, bond_order_matching=False,
+                                       atom_stereochemistry_matching=False,
+                                       bond_stereochemistry_matching=False)[0] is True
+        # check matching with nx.Graph with full matching
+        assert ethanol.is_isomorphic_with(ethanol_reverse.to_networkx()) is True
+        # check matching with a TopologyMolecule class
+        from openforcefield.topology.topology import TopologyMolecule, Topology
+        topology = Topology.from_molecules(ethanol)
+        topmol = TopologyMolecule(ethanol, topology)
+        assert Molecule.are_isomorphic(ethanol, topmol, aromatic_matching=False, formal_charge_matching=False,
+                                       bond_order_matching=False, atom_stereochemistry_matching=False,
+                                       bond_stereochemistry_matching=False)[0] is True
+        # test hill formula passes but isomorphic fails
+        mol1 = Molecule.from_smiles('Fc1ccc(F)cc1')
+        mol2 = Molecule.from_smiles('Fc1ccccc1F')
+        assert mol1.is_isomorphic_with(mol2) is False
+        assert mol2.is_isomorphic_with(mol1) is False
+
+    isomorphic_permutations = [{'aromatic_matching': True, 'formal_charge_matching': True, 'bond_order_matching': True,
+                                'atom_stereochemistry_matching': True, 'bond_stereochemistry_matching': True,
+                                'result': False},
+                               {'aromatic_matching': False, 'formal_charge_matching': True, 'bond_order_matching': True,
+                                'atom_stereochemistry_matching': True, 'bond_stereochemistry_matching': True,
+                                'result': False},
+                               {'aromatic_matching': True, 'formal_charge_matching': False, 'bond_order_matching': True,
+                                'atom_stereochemistry_matching': True, 'bond_stereochemistry_matching': True,
+                                'result': False},
+                               {'aromatic_matching': True, 'formal_charge_matching': True, 'bond_order_matching': False,
+                                'atom_stereochemistry_matching': True, 'bond_stereochemistry_matching': True,
+                                'result': False},
+                               {'aromatic_matching': True, 'formal_charge_matching': True, 'bond_order_matching': True,
+                                'atom_stereochemistry_matching': False, 'bond_stereochemistry_matching': True,
+                                'result': False},
+                               {'aromatic_matching': True, 'formal_charge_matching': True, 'bond_order_matching': True,
+                                'atom_stereochemistry_matching': True, 'bond_stereochemistry_matching': False,
+                                'result': False},
+                               {'aromatic_matching': False, 'formal_charge_matching': False, 'bond_order_matching': False,
+                                'atom_stereochemistry_matching': False, 'bond_stereochemistry_matching': False,
+                                'result': True},
+                               {'aromatic_matching': False, 'formal_charge_matching': True, 'bond_order_matching': False,
+                                'atom_stereochemistry_matching': True, 'bond_stereochemistry_matching': True,
+                                'result': True},
+                               {'aromatic_matching': False, 'formal_charge_matching': False, 'bond_order_matching': False,
+                                'atom_stereochemistry_matching': True, 'bond_stereochemistry_matching': True,
+                                'result': True},
+                               ]
+
+    @pytest.mark.parametrize('inputs', isomorphic_permutations)
+    def test_isomorphic_perumtations(self, inputs):
+        """Test all of the different combinations of matching levels between benzene with and without the aromatic bonds
+        defined"""
+        # get benzene with all aromatic atoms/bonds labeled
+        benzene = Molecule.from_smiles('c1ccccc1')
+        # get benzene with no aromatic labels
+        benzene_no_aromatic = create_benzene_no_aromatic()
+        # now test all of the variations
+        assert Molecule.are_isomorphic(benzene, benzene_no_aromatic, aromatic_matching=inputs['aromatic_matching'],
+                                       formal_charge_matching=inputs['formal_charge_matching'],
+                                       bond_order_matching=inputs['bond_order_matching'],
+                                       atom_stereochemistry_matching=inputs['atom_stereochemistry_matching'],
+                                       bond_stereochemistry_matching=inputs['bond_stereochemistry_matching'])[0] is inputs['result']
+
+    def test_remap(self):
+        """Test the remap function which should return a new molecule in the requested ordering"""
+        # the order here is CCO
+        ethanol = create_ethanol()
+        # get ethanol in reverse order OCC
+        ethanol_reverse = create_reversed_ethanol()
+        # get the mapping between the molecules
+        mapping = Molecule.are_isomorphic(ethanol, ethanol_reverse, True)[1]
+        ethanol.add_bond_charge_virtual_site([0, 1], 0.3 * unit.angstrom)
+        # make sure that molecules with virtual sites raises an error
+        with pytest.raises(NotImplementedError):
+            remapped = ethanol.remap(mapping, current_to_new=True)
+
+        # remake with no virtual site and remap to match the reversed ordering
+        ethanol = create_ethanol()
+
+        new_ethanol = ethanol.remap(mapping, current_to_new=True)
+
+        def assert_molecules_match_after_remap(mol1, mol2):
+            """Check all of the attributes in a molecule match after being remapped"""
+            for atoms in zip(mol1.atoms, mol2.atoms):
+                assert atoms[0].to_dict() == atoms[1].to_dict()
+            # bonds will not be in the same order in the molecule and the atom1 and atom2 indecies could be out of order
+            # make a dict to compare them both
+            remapped_bonds = dict(((bond.atom1_index, bond.atom2_index), bond) for bond in mol2.bonds)
+            for bond in mol1.bonds:
+                key = (bond.atom1_index, bond.atom2_index)
+                if key not in remapped_bonds:
+                    key = tuple(reversed(key))
+                assert key in remapped_bonds
+                # now compare each attribute of the bond except the atom indexes
+                bond_dict = bond.to_dict()
+                del bond_dict['atom1']
+                del bond_dict['atom2']
+                remapped_bond_dict = remapped_bonds[key].to_dict()
+                del remapped_bond_dict['atom1']
+                del remapped_bond_dict['atom2']
+            assert mol1.n_bonds == mol2.n_bonds
+            assert mol1.n_angles == mol2.n_angles
+            assert mol1.n_propers == mol2.n_propers
+            assert mol1.n_impropers == mol2.n_impropers
+            assert mol1.total_charge == mol2.total_charge
+            assert mol1.partial_charges.all() == mol2.partial_charges.all()
+
+        # check all of the properties match as well, torsions and impropers will be in a different order
+        # due to the bonds being out of order
+        assert_molecules_match_after_remap(new_ethanol, ethanol_reverse)
+
+        # test round trip (double remapping a molecule)
+        new_ethanol = ethanol.remap(mapping, current_to_new=True)
+        isomorphic, round_trip_mapping = Molecule.are_isomorphic(new_ethanol, ethanol, return_atom_map=True)
+        assert isomorphic is True
+        round_trip_ethanol = new_ethanol.remap(round_trip_mapping, current_to_new=True)
+        assert_molecules_match_after_remap(round_trip_ethanol, ethanol)
+
+    @requires_openeye
+    def test_canonical_ordering_openeye(self):
+        """Make sure molecules are returned in canonical ordering of openeye"""
+        from openforcefield.utils.toolkits import OpenEyeToolkitWrapper
+
+        openeye = OpenEyeToolkitWrapper()
+        # get ethanol in canonical order
+        ethanol = create_ethanol()
+        # get reversed non canonical ethanol
+        reversed_ethanol = create_reversed_ethanol()
+        # get the canonical ordering
+        canonical_ethanol = reversed_ethanol.canonical_order_atoms(openeye)
+        # make sure the mapping between the ethanol and the openeye ref canonical form is the same
+        assert (True, {0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 7: 7, 8: 8}) == Molecule.are_isomorphic(canonical_ethanol,
+                                                                                                         ethanol, True)
+
+    @requires_rdkit
+    def test_canonical_ordering_rdkit(self):
+        """Make sure molecules are returned in canonical ordering of the RDKit"""
+        from openforcefield.utils.toolkits import RDKitToolkitWrapper
+
+        rdkit = RDKitToolkitWrapper()
+        # get ethanol in canonical order
+        ethanol = create_ethanol()
+        # get reversed non canonical ethanol
+        reversed_ethanol = create_reversed_ethanol()
+        # get the canonical ordering
+        canonical_ethanol = reversed_ethanol.canonical_order_atoms(rdkit)
+        # make sure the mapping between the ethanol and the rdkit ref canonical form is the same
+        assert (True, {0: 2, 1: 0, 2: 1, 3: 8, 4: 3, 5: 4, 6: 5, 7: 6, 8: 7}) == Molecule.are_isomorphic(canonical_ethanol,
+                                                                                                         ethanol,
+                                                                                                         True)
+
+    def test_too_small_remap(self):
+        """Make sure remap fails if we do not supply enough indexes"""
+        ethanol = Molecule.from_file(get_data_file_path('molecules/ethanol.sdf'))
+        # catch mappings that are the wrong size
+        too_small_mapping = {0: 1}
+        with pytest.raises(ValueError):
+            new_ethanol = ethanol.remap(too_small_mapping, current_to_new=True)
+
+    def test_wrong_index_mapping(self):
+        """Make sure the remap fails when the indexing starts from the wrong value"""
+        ethanol = Molecule.from_file(get_data_file_path('molecules/ethanol.sdf'))
+        mapping = {0: 2, 1: 1, 2: 0, 3: 6, 4: 7, 5: 8, 6: 4, 7: 5, 8: 3}
+        wrong_index_mapping = dict((i + 10, new_id) for i, new_id in enumerate(mapping.values()))
+        with pytest.raises(IndexError):
+            new_ethanol = ethanol.remap(wrong_index_mapping, current_to_new=True)
+
+    tautomer_data = [{'molecule': 'Oc1c(cccc3)c3nc2ccncc12', 'tautomers': 2},
+                     {'molecule': 'CN=c1nc[nH]cc1', 'tautomers': 2},
+                     {'molecule': 'c1[nH]c2c(=O)[nH]c(nc2n1)N', 'tautomers': 14}]
+
+    @pytest.mark.parametrize('toolkit_class', [OpenEyeToolkitWrapper, RDKitToolkitWrapper])
+    @pytest.mark.parametrize('molecule_data', tautomer_data)
+    def test_enumerating_tautomers(self, molecule_data, toolkit_class):
+        """Test the ability of each toolkit to produce tautomers of an input molecule."""
+
+        if toolkit_class.is_available():
+            toolkit = toolkit_class()
+            mol = Molecule.from_smiles(molecule_data['molecule'], allow_undefined_stereo=True, toolkit_registry=toolkit)
+
+            tautomers = mol.enumerate_tautomers(toolkit_registry=toolkit)
+
+            assert len(tautomers) == molecule_data['tautomers']
+            assert mol not in tautomers
+            # check that the molecules are not isomorphic of the input
+            for taut in tautomers:
+                assert taut.n_conformers == 0
+                assert mol.is_isomorphic_with(taut) is False
+
+        else:
+            pytest.skip('Required toolkit is unavailable')
+
+    @pytest.mark.parametrize('toolkit_class', [OpenEyeToolkitWrapper, RDKitToolkitWrapper])
+    def test_enumerating_tautomers_options(self, toolkit_class):
+        """Test the enumeration options"""
+
+        if toolkit_class.is_available():
+            toolkit = toolkit_class()
+            # test the max molecules option
+            mol = Molecule.from_smiles('c1[nH]c2c(=O)[nH]c(nc2n1)N', toolkit_registry=toolkit, allow_undefined_stereo=True)
+
+            tauts_no = 5
+            tautomers = mol.enumerate_tautomers(max_states=tauts_no, toolkit_registry=toolkit)
+            assert len(tautomers) <= tauts_no
+            assert mol not in tautomers
+
+    @pytest.mark.parametrize('toolkit_class', [RDKitToolkitWrapper, OpenEyeToolkitWrapper])
+    def test_enumerating_no_tautomers(self, toolkit_class):
+        """Test that the toolkits return an empty list if there are no tautomers to enumerate."""
+
+        if toolkit_class.is_available():
+            toolkit = toolkit_class()
+            mol = Molecule.from_smiles('CC', toolkit_registry=toolkit)
+
+            tautomers = mol.enumerate_tautomers(toolkit_registry=toolkit)
+            assert tautomers == []
+
+        else:
+            pytest.skip('Required toolkit is unavailable')
+
+    @requires_openeye
+    def test_enumerating_no_protomers(self):
+        """Make sure no protomers are returned."""
+
+        mol = Molecule.from_smiles('CC')
+
+        assert mol.enumerate_protomers() == []
+
+    @requires_openeye
+    def test_enumerating_protomers(self):
+        """Test enumerating the formal charges."""
+
+        mol = Molecule.from_smiles('Oc2ccc(c1ccncc1)cc2')
+
+        # there should be three protomers for this molecule so restrict the output
+        protomers = mol.enumerate_protomers(max_states=2)
+
+        assert mol not in protomers
+        assert len(protomers) == 2
+
+        # now make sure we can generate them all
+        protomers = mol.enumerate_protomers(max_states=10)
+
+        assert mol not in protomers
+        assert len(protomers) == 3
+
+        # make sure each protomer is unique
+        unique_protomers = set(protomers)
+        assert len(protomers) == len(unique_protomers)
+
+    @pytest.mark.parametrize('toolkit_class', [OpenEyeToolkitWrapper, RDKitToolkitWrapper])
+    def test_enumerating_stereobonds(self, toolkit_class):
+        """Test the backend toolkits in enumerating the stereo bonds in a molecule."""
+
+        if toolkit_class.is_available():
+            toolkit = toolkit_class()
+            mol = Molecule.from_smiles('ClC=CCl', allow_undefined_stereo=True, toolkit_registry=toolkit)
+
+            # use the default options
+            isomers = mol.enumerate_stereoisomers()
+            assert len(isomers) == 2
+
+            assert mol not in isomers
+            # make sure the input molecule is only different by bond stereo
+            for ismol in isomers:
+                assert Molecule.are_isomorphic(mol, ismol, return_atom_map=False, bond_stereochemistry_matching=False)[0] is True
+                assert mol.is_isomorphic_with(ismol) is False
+
+            # make sure the isomers are different
+            assert isomers[0].is_isomorphic_with(isomers[1]) is False
+
+        else:
+            pytest.skip('Required toolkit is unavailable')
+
+    @pytest.mark.parametrize('toolkit_class', [OpenEyeToolkitWrapper, RDKitToolkitWrapper])
+    def test_enumerating_stereocenters(self, toolkit_class):
+        """Test the backend toolkits in enumerating the stereo centers in a molecule."""
+
+        if toolkit_class.is_available():
+            toolkit = toolkit_class()
+            mol = Molecule.from_smiles('NC(Cl)(F)O', toolkit_registry=toolkit, allow_undefined_stereo=True)
+
+            isomers = mol.enumerate_stereoisomers(toolkit_registry=toolkit)
+
+            assert len(isomers) == 2
+            # make sure the mol is not in the isomers and that they only differ by stereo chem
+            assert mol not in isomers
+            for ismol in isomers:
+                assert ismol.n_conformers != 0
+                assert Molecule.are_isomorphic(mol, ismol, return_atom_map=False, atom_stereochemistry_matching=False)[0] is True
+                assert mol.is_isomorphic_with(ismol) is False
+
+            # make sure the two isomers are different
+            assert isomers[0].is_isomorphic_with(isomers[1]) is False
+
+        else:
+            pytest.skip('Required toolkit is unavailable')
+
+    @pytest.mark.parametrize('toolkit_class', [OpenEyeToolkitWrapper, RDKitToolkitWrapper])
+    def test_enumerating_stereo_options(self, toolkit_class):
+        """Test the enumerating stereo chem options"""
+
+        if toolkit_class.is_available():
+            toolkit = toolkit_class()
+
+            # test undefined only
+            mol = Molecule.from_smiles('ClC=CCl', toolkit_registry=toolkit, allow_undefined_stereo=True)
+            isomers = mol.enumerate_stereoisomers(undefined_only=True, rationalise=False)
+
+            assert len(isomers) == 2
+            for isomer in isomers:
+                assert isomer.n_conformers == 0
+
+            mol = Molecule.from_smiles('Cl/C=C\Cl', toolkit_registry=toolkit, allow_undefined_stereo=True)
+            isomers = mol.enumerate_stereoisomers(undefined_only=True, rationalise=False)
+
+            assert isomers == []
+
+            mol = Molecule.from_smiles('Cl/C=C\Cl', toolkit_registry=toolkit, allow_undefined_stereo=True)
+            isomers = mol.enumerate_stereoisomers(undefined_only=False, rationalise=False)
+
+            assert len(isomers) == 1
+
+            # test max isomers
+            mol = Molecule.from_smiles('BrC=C[C@H]1OC(C2)(F)C2(Cl)C1', toolkit_registry=toolkit, allow_undefined_stereo=True)
+            isomers = mol.enumerate_stereoisomers(max_isomers=5, undefined_only=True, toolkit_registry=toolkit, rationalise=True)
+
+            assert len(isomers) <= 5
+            for isomer in isomers:
+                assert isomer.n_conformers == 1
+
+        else:
+            pytest.skip('Required toolkit is unavailable')
+
+    @requires_rdkit
+    def test_from_pdb_and_smiles(self):
+        """Test the ability to make a valid molecule using RDKit and SMILES together"""
+        # try and make a molecule from a pdb and smiles that don't match
+        with pytest.raises(InvalidConformerError):
+            mol = Molecule.from_pdb_and_smiles(get_data_file_path('molecules/toluene.pdb'), 'CC')
+
+        # make a molecule from the toluene pdb file and the correct smiles
+        mol = Molecule.from_pdb_and_smiles(get_data_file_path('molecules/toluene.pdb'), 'Cc1ccccc1')
+
+        # make toluene from the sdf file
+        mol_sdf = Molecule.from_file(get_data_file_path('molecules/toluene.sdf'))
+        # get the mapping between them and compare the properties
+        isomorphic, atom_map = Molecule.are_isomorphic(mol, mol_sdf, return_atom_map=True)
+        assert isomorphic is True
+        for pdb_atom, sdf_atom in atom_map.items():
+            assert mol.atoms[pdb_atom].to_dict() == mol_sdf.atoms[sdf_atom].to_dict()
+        # check bonds match, however there order might not
+        sdf_bonds = dict(((bond.atom1_index, bond.atom2_index), bond) for bond in mol_sdf.bonds)
+        for bond in mol.bonds:
+            key = (atom_map[bond.atom1_index], atom_map[bond.atom2_index])
+            if key not in sdf_bonds:
+                key = tuple(reversed(key))
+            assert key in sdf_bonds
+            # now compare the attributes
+            assert bond.is_aromatic == sdf_bonds[key].is_aromatic
+            assert bond.stereochemistry == sdf_bonds[key].stereochemistry
+
+    def test_to_qcschema(self):
+        """Test the ability to make and validate qcschema"""
+        # the molecule has no coordinates so this should fail
+        ethanol = Molecule.from_smiles('CCO')
+        with pytest.raises(InvalidConformerError):
+            qcschema = ethanol.to_qcschema()
+
+        # now remake the molecule from the sdf
+        ethanol = Molecule.from_file(get_data_file_path('molecules/ethanol.sdf'))
+        # make sure that requests to missing conformers are caught
+        with pytest.raises(InvalidConformerError):
+            qcschema = ethanol.to_qcschema(conformer=1)
+        # now make a valid qcschema and check its properties
+        qcschema = ethanol.to_qcschema()
+        # make sure the properties match
+        charge = 0
+        connectivity = [(0, 1, 1.0), (0, 4, 1.0), (0, 5, 1.0), (0, 6, 1.0), (1, 2, 1.0), (1, 7, 1.0), (1, 8, 1.0), (2, 3, 1.0)]
+        symbols = ['C', 'C', 'O', 'H', 'H', 'H', 'H', 'H', 'H']
+        assert charge == qcschema.molecular_charge
+        assert connectivity == qcschema.connectivity
+        assert symbols == qcschema.symbols.tolist()
+        assert qcschema.geometry.all() == ethanol.conformers[0].in_units_of(unit.bohr).all()
+
+    def test_from_qcschema_no_client(self):
+        """Test the ability to make molecules from QCArchive record instances and dicts"""
+
+        import json
+
+        # As the method can take a record instance or a dict with JSON encoding test both
+        # test incomplete dict
+        example_dict = {'name': 'CH4'}
+        with pytest.raises(KeyError):
+            mol = Molecule.from_qcschema(example_dict)
+
+        # test an object that is not a record
+        wrong_object = 'CH4'
+        with pytest.raises(AttributeError):
+            mol = Molecule.from_qcschema(wrong_object)
+
+        with open(get_data_file_path('molecules/qcportal_molecules.json')) as json_file:
+            # test loading the dict representation from a json file
+            json_mol = json.load(json_file)
+            mol = Molecule.from_qcschema(json_mol)
+            # now make a molecule from the canonical smiles and make sure they are isomorphic
+            can_mol = Molecule.from_smiles(json_mol['attributes']['canonical_isomeric_smiles'])
+            assert mol.is_isomorphic_with(can_mol) is True
+
+    client_examples = [{'dataset': 'TorsionDriveDataset', 'name': 'Fragment Stability Benchmark', 'index':
+                        'CC(=O)Nc1cc2c(cc1OC)nc[n:4][c:3]2[NH:2][c:1]3ccc(c(c3)Cl)F'},
+                       {'dataset': 'TorsionDriveDataset', 'name': 'OpenFF Fragmenter Phenyl Benchmark', 'index':
+                        'c1c[ch:1][c:2](cc1)[c:3](=[o:4])o'},
+                       {'dataset': 'TorsionDriveDataset', 'name': 'OpenFF Full TorsionDrive Benchmark 1', 'index':
+                        '0'},
+                       {'dataset': 'TorsionDriveDataset', 'name': 'OpenFF Group1 Torsions', 'index':
+                        'c1c[ch:1][c:2](cc1)[ch2:3][c:4]2ccccc2'},
+                       {'dataset': 'OptimizationDataset', 'name': 'Kinase Inhibitors: WBO Distributions', 'index':
+                        'cc1ccc(cc1nc2nccc(n2)c3cccnc3)nc(=o)c4ccc(cc4)cn5ccn(cc5)c-0'},
+                       {'dataset': 'OptimizationDataset', 'name': 'SMIRNOFF Coverage Set 1', 'index':
+                        'coc(o)oc-0'},
+                       {'dataset': 'GridOptimizationDataset', 'name': 'OpenFF Trivalent Nitrogen Set 1', 'index':
+                        'b1(c2c(ccs2)-c3ccsc3n1)c4c(c(c(c(c4f)f)f)f)f'},
+                       {'dataset': 'GridOptimizationDataset', 'name': 'OpenFF Trivalent Nitrogen Set 1', 'index':
+                       'C(#N)N'}
+                       ]
+
+    @pytest.mark.parametrize('input_data', client_examples)
+    def test_from_qcschema_with_client(self, input_data):
+        """For each of the examples try and make a offmol using the instance and dict and check they match"""
+
+        import qcportal as ptl
+        client = ptl.FractalClient()
+        ds = client.get_collection(input_data['dataset'], input_data['name'])
+        entry = ds.get_entry(input_data['index'])
+        # now make the molecule from the record instance with and without the geometry
+        mol_from_dict = Molecule.from_qcschema(entry.dict(encoding='json'))
+        # make the molecule again with the geometries attached
+        mol_from_instance = Molecule.from_qcschema(entry, client)
+        if hasattr(entry, 'initial_molecules'):
+            assert mol_from_instance.n_conformers == len(entry.initial_molecules)
+        else:
+            # opt records have one initial molecule
+            assert mol_from_instance.n_conformers == 1
+
+        # now make a molecule from the smiles and make sure they are isomorphic
+        mol_from_smiles = Molecule.from_smiles(entry.attributes['canonical_explicit_hydrogen_smiles'], True)
+
+        assert mol_from_dict.is_isomorphic_with(mol_from_smiles) is True
+
+    def test_qcschema_round_trip(self):
+        """Test making a molecule from qcschema then converting back"""
+
+        # get a molecule qcschema
+        import qcportal as ptl
+        client = ptl.FractalClient()
+        ds = client.get_collection('OptimizationDataset', 'SMIRNOFF Coverage Set 1')
+        # grab an entry from the optimization data set
+        entry = ds.get_entry('coc(o)oc-0')
+        # now make the molecule from the record instance with the geometry
+        mol = Molecule.from_qcschema(entry, client)
+        # now grab the initial molecule record
+        qca_mol = client.query_molecules(id=entry.initial_molecule)[0]
+        # mow make sure the majority of the qcschema attributes are the same
+        # note we can not compare the full dict due to qcelemental differences
+        qcschema = mol.to_qcschema()
+        assert qcschema.atom_labels.tolist() == qca_mol.atom_labels.tolist()
+        assert qcschema.symbols.tolist() == qca_mol.symbols.tolist()
+        # due to conversion useing different programs there is a slight difference here
+        assert qcschema.geometry.flatten().tolist() == pytest.approx(qca_mol.geometry.flatten().tolist(), rel=1.0e-5)
+        assert qcschema.connectivity == qca_mol.connectivity
+        assert qcschema.atomic_numbers.tolist() == qca_mol.atomic_numbers.tolist()
+        assert qcschema.fragment_charges == qca_mol.fragment_charges
+        assert qcschema.fragment_multiplicities == qca_mol.fragment_multiplicities
+        assert qcschema.fragments[0].tolist() == qca_mol.fragments[0].tolist()
+        assert qcschema.mass_numbers.tolist() == qca_mol.mass_numbers.tolist()
+        assert qcschema.name == qca_mol.name
+        assert qcschema.masses.all() == qca_mol.masses.all()
+        assert qcschema.molecular_charge == qca_mol.molecular_charge
+        assert qcschema.molecular_multiplicity == qca_mol.molecular_multiplicity
+        assert qcschema.real.all() == qca_mol.real.all()
+
+    def test_from_mapped_smiles(self):
+        """Test making the molecule from issue #412 using both toolkits to ensure the issue
+        is fixed."""
+
+        # there should be no undefined sterochmeistry error when making the molecule
+        mol = Molecule.from_mapped_smiles('[H:14][c:1]1[c:3]([c:7]([c:11]([c:8]([c:4]1[H:17])[H:21])[C:13]([H:24])([H:25])[c:12]2[c:9]([c:5]([c:2]([c:6]([c:10]2[H:23])[H:19])[H:15])[H:18])[H:22])[H:20])[H:16]')
+        assert mol.n_atoms == 25
+        # make sure the atom map is not exposed
+        with pytest.raises(KeyError):
+            mapping = mol._properties['atom_map']
 
     @pytest.mark.parametrize('molecule', mini_drug_bank())
     def test_n_particles(self, molecule):
@@ -730,9 +1660,9 @@ class TestMolecule:
         """
         Tests the unit type checking of the VirtualSite base class
         """
-        
+
         # TODO: Should these be using BondChargeVirtualSite, or should we just call the base class (which does the unit checks) directly?
-        
+
         # Prepare values for unit checks
         distance_unitless = 0.4
         sigma_unitless = 0.1
@@ -786,7 +1716,7 @@ class TestMolecule:
             molecule.add_bond_charge_virtual_site([atom1, atom2, atom3], distance, charge_increments=charge_increments)
 
         vsite3_index = molecule.add_bond_charge_virtual_site([atom1, atom2, atom3, atom4], distance, charge_increments=charge_increments)
-            
+
     @pytest.mark.parametrize('molecule', mini_drug_bank())
     def test_add_bond_charge_virtual_site(self, molecule):
         """Test the addition of a BondChargeVirtualSite to a molecule.
@@ -834,7 +1764,11 @@ class TestMolecule:
         molecule_dict = molecule.to_dict()
         molecule2 = Molecule.from_dict(molecule_dict)
 
-        assert hash(molecule) == hash(molecule2)
+        # test that the molecules are the same
+        assert molecule.is_isomorphic_with(molecule2)
+        # lets also make sure that the vsites were constructed correctly
+        for site1, site2 in zip(molecule.virtual_sites, molecule2.virtual_sites):
+            assert site1.to_dict() == site2.to_dict()
 
     # TODO: Make a test for to_dict and from_dict for VirtualSites (even though they're currently just unloaded using
     #      (for example) Molecule._add_bond_virtual_site functions
@@ -1054,14 +1988,22 @@ class TestMolecule:
         # Do not modify the original molecules.
         molecules = copy.deepcopy(mini_drug_bank())
 
-        toolkit_to_bondorder_method = {OpenEyeToolkitWrapper:['am1','pm3']}
-        for toolkit in list(toolkit_to_bondorder_method.keys()):
-            toolkit_registry = ToolkitRegistry(toolkit_precedence=[toolkit])
-            for charge_model in toolkit_to_bondorder_method[toolkit]:
+        toolkits_to_bondorder_method = {(OpenEyeToolkitWrapper,):['am1-wiberg','pm3-wiberg']}
+        # Don't test AmberTools here since it takes too long
+                                       #(AmberToolsToolkitWrapper, RDKitToolkitWrapper):['am1-wiberg']}
+        for toolkits in list(toolkits_to_bondorder_method.keys()):
+            toolkit_registry = ToolkitRegistry(toolkit_precedence=toolkits)
+            for bond_order_model in toolkits_to_bondorder_method[toolkits]:
                 for molecule in molecules[:5]: # Just test first five molecules for speed
-                    molecule.compute_wiberg_bond_orders(charge_model=charge_model, toolkit_registry=toolkit_registry)
+                    molecule.generate_conformers(toolkit_registry=toolkit_registry)
+                    molecule.assign_fractional_bond_orders(bond_order_model=bond_order_model,
+                                                           toolkit_registry=toolkit_registry,
+                                                           use_conformers=molecule.conformers)
                     fbo1 = [bond.fractional_bond_order for bond in molecule.bonds]
-                    # Call should be faster the second time due to caching
-                    molecule.compute_wiberg_bond_orders(charge_model=charge_model, toolkit_registry=toolkit_registry)
-                    fbo2 = [bond.fractional_bond_order for bond in molecule.bonds]
-                    assert fbo1 == fbo2
+                    # TODO: Now that the assign_fractional_bond_orders function takes more kwargs,
+                    #       how can we meaningfully cache its results?
+                    # # Call should be faster the second time due to caching
+                    # molecule.assign_fractional_bond_orders(bond_order_model=bond_order_model,
+                    #                                        toolkit_registry=toolkit_registry)
+                    # fbo2 = [bond.fractional_bond_order for bond in molecule.bonds]
+                    # np.testing.assert_allclose(fbo1, fbo2, atol=1.e-4)

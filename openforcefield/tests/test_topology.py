@@ -21,8 +21,8 @@ from simtk import unit
 from openforcefield.utils import (BASIC_CHEMINFORMATICS_TOOLKITS, RDKIT_AVAILABLE, OPENEYE_AVAILABLE,
                                   RDKitToolkitWrapper, OpenEyeToolkitWrapper)
 from openforcefield.tests.utils import get_data_file_path
-from openforcefield.tests.test_forcefield import create_cyclohexane, create_ethanol
-from openforcefield.topology import Topology, ValenceDict, ImproperDict, DuplicateUniqueMoleculeError
+from openforcefield.tests.test_forcefield import create_cyclohexane, create_ethanol, create_reversed_ethanol
+from openforcefield.topology import Topology, ValenceDict, DuplicateUniqueMoleculeError
 from openforcefield.topology import Molecule
 
 
@@ -191,25 +191,25 @@ class TestTopology(TestCase):
         assert topology.n_topology_bonds == 7
 
     def test_get_atom(self):
-            """Test Topology.atom function (atom lookup from index)"""
-            topology = Topology()
-            topology.add_molecule(self.ethane_from_smiles)
-            with self.assertRaises(Exception) as context:
-                topology_atom = topology.atom(-1)
+        """Test Topology.atom function (atom lookup from index)"""
+        topology = Topology()
+        topology.add_molecule(self.ethane_from_smiles)
+        with self.assertRaises(Exception) as context:
+            topology_atom = topology.atom(-1)
 
-            # Make sure we get 2 carbons and 8 hydrogens
-            n_carbons = 0
-            n_hydrogens = 0
-            for index in range(8):
-                if topology.atom(index).atomic_number == 6:
-                    n_carbons += 1
-                if topology.atom(index).atomic_number == 1:
-                    n_hydrogens += 1
-            assert n_carbons == 2
-            assert n_hydrogens == 6
+        # Make sure we get 2 carbons and 8 hydrogens
+        n_carbons = 0
+        n_hydrogens = 0
+        for index in range(8):
+            if topology.atom(index).atomic_number == 6:
+                n_carbons += 1
+            if topology.atom(index).atomic_number == 1:
+                n_hydrogens += 1
+        assert n_carbons == 2
+        assert n_hydrogens == 6
 
-            with self.assertRaises(Exception) as context:
-                topology_atom = topology.atom(8)
+        with self.assertRaises(Exception) as context:
+            topology_atom = topology.atom(8)
 
     def test_get_bond(self):
             """Test Topology.bond function (bond lookup from index)"""
@@ -281,12 +281,56 @@ class TestTopology(TestCase):
         # There are four virtual sites -- Two BondCharges with 2 atoms, and two MonovalentLonePairs with 3 atoms
         assert n_equal_atoms == 10
 
+    def test_topology_particles_virtualsites_indexed_last(self):
+        """
+        Test to ensure that virtualsites are strictly indexed after all atoms
+        in topology.particles
+        """
+        from openforcefield.topology import TopologyAtom, TopologyVirtualSite
+        topology = Topology()
+        topology.add_molecule(self.ethane_from_smiles_w_vsites)
+        topology.add_molecule(self.propane_from_smiles_w_vsites)
+
+        # Iterate through all TopologyParticles, ensuring that all atoms appear
+        # before all virtualsides
+        reading_atoms = True
+        for particle in topology.topology_particles:
+            if reading_atoms:
+                if isinstance(particle, TopologyAtom):
+                    pass
+                else:
+                    reading_atoms = False
+            elif not(reading_atoms):
+                assert isinstance(particle, TopologyVirtualSite)
+
+    def test_topology_virtualsites_atom_indexing(self):
+        """
+        Add multiple instances of the same molecule, but in a different
+        order, and ensure that virtualsite atoms are indexed correctly
+        """
+        topology = Topology()
+
+        topology.add_molecule(create_ethanol())
+        topology.add_molecule(create_ethanol())
+        topology.add_molecule(create_reversed_ethanol())
+
+        # Add a virtualsite to the reference ethanol
+        for ref_mol in topology.reference_molecules:
+            ref_mol._add_bond_charge_virtual_site([0, 1],
+                                                  0.5 * unit.angstrom,
+                                                  )
+
+        virtual_site_topology_atom_indices = [(0, 1), (9, 10), (26, 25)]
+        for top_vs, expected_indices in zip(topology.topology_virtual_sites, virtual_site_topology_atom_indices):
+            assert tuple([at.topology_particle_index for at in top_vs.atoms]) == expected_indices
+            assert top_vs.atom(0).topology_particle_index == expected_indices[0]
+            assert top_vs.atom(1).topology_particle_index == expected_indices[1]
+
     def test_is_bonded(self):
         """Test Topology.virtual_site function (get virtual site from index)
         """
         topology = Topology()
         topology.add_molecule(self.propane_from_smiles_w_vsites)
-        #raise Exception([str(topology.atom(i).atom) for i in range(6)])
         topology.assert_bonded(0, 1)
         topology.assert_bonded(1, 0)
         topology.assert_bonded(1, 2)
@@ -429,7 +473,7 @@ class TestTopology(TestCase):
 
         molecules = []
         molecules.append(Molecule.from_smiles('CCO'))
-        with pytest.raises(ValueError, match='No match found for molecule C1. This would be a '
+        with pytest.raises(ValueError, match='No match found for molecule C. This would be a '
                                              'very unusual molecule to try and parameterize, '
                                              'and it is likely that the data source it was '
                                              'read from does not contain connectivity '
@@ -493,8 +537,7 @@ class TestTopology(TestCase):
         """Check that a DuplicateUniqueMoleculeError is raised if we try to pass in two indistinguishably unique mols"""
         from simtk.openmm import app
         pdbfile = app.PDBFile(get_data_file_path('systems/packmol_boxes/cyclohexane_ethanol_0.4_0.6.pdb'))
-        #toolkit_wrapper = RDKitToolkitWrapper()
-        molecules = [ Molecule.from_file(get_data_file_path(name)) for name in ('molecules/ethanol.mol2',
+        molecules = [Molecule.from_file(get_data_file_path(name)) for name in ('molecules/ethanol.mol2',
                                                                                'molecules/ethanol_reordered.mol2',
                                                                                'molecules/cyclohexane.mol2')]
         with self.assertRaises(DuplicateUniqueMoleculeError) as context:
@@ -506,6 +549,92 @@ class TestTopology(TestCase):
         # From Jeff: The graph representation created from OMM molecules during the matching
         # process doesn't encode stereochemistry.
         raise NotImplementedError
+
+    def test_to_openmm_assign_unique_atom_names(self):
+        """
+        Ensure that OFF topologies with no pre-existing atom names have unique
+        atom names applied when being converted to openmm
+        """
+        # Create OpenFF topology with 1 ethanol and 2 benzenes.
+        ethanol = Molecule.from_smiles('CCO')
+        benzene = Molecule.from_smiles('c1ccccc1')
+        off_topology = Topology.from_molecules(molecules=[ethanol, benzene, benzene])
+        omm_topology = off_topology.to_openmm()
+        atom_names = set()
+        for atom in omm_topology.atoms():
+            atom_names.add(atom.name)
+        # There should be 6 unique Cs, 6 unique Hs, and 1 unique O, for a total of 13 unique atom names
+        assert len(atom_names) == 13
+
+    def test_to_openmm_assign_some_unique_atom_names(self):
+        """
+        Ensure that OFF topologies with some pre-existing atom names have unique
+        atom names applied to the other atoms when being converted to openmm
+        """
+        # Create OpenFF topology with 1 ethanol and 2 benzenes.
+        ethanol = Molecule.from_smiles('CCO')
+        for atom in ethanol.atoms:
+            atom.name = f'AT{atom.molecule_atom_index}'
+        benzene = Molecule.from_smiles('c1ccccc1')
+        off_topology = Topology.from_molecules(molecules=[ethanol, benzene, benzene])
+        omm_topology = off_topology.to_openmm()
+        atom_names = set()
+        for atom in omm_topology.atoms():
+            atom_names.add(atom.name)
+        # There should be 9 "ATOM#"-labeled atoms, 6 unique Cs, and 6 unique Hs,
+        # for a total of 21 unique atom names
+        assert len(atom_names) == 21
+
+    def test_to_openmm_assign_unique_atom_names_some_duplicates(self):
+        """
+        Ensure that OFF topologies where some molecules have invalid/duplicate
+        atom names have unique atom names applied while the other molecules are unaffected.
+        """
+        # Create OpenFF topology with 1 ethanol and 2 benzenes.
+        ethanol = Molecule.from_smiles('CCO')
+
+        # Assign duplicate atom names in ethanol (two AT0s)
+        ethanol_atom_names_with_duplicates = [f'AT{i}' for i in range(ethanol.n_atoms)]
+        ethanol_atom_names_with_duplicates[1] = 'AT0'
+        for atom, atom_name in zip(ethanol.atoms, ethanol_atom_names_with_duplicates):
+            atom.name = atom_name
+
+        # Assign unique atom names in benzene
+        benzene = Molecule.from_smiles('c1ccccc1')
+        benzene_atom_names = [f'AT{i}' for i in range(benzene.n_atoms)]
+        for atom, atom_name in zip(benzene.atoms, benzene_atom_names):
+            atom.name = atom_name
+
+        off_topology = Topology.from_molecules(molecules=[ethanol, benzene, benzene])
+        omm_topology = off_topology.to_openmm()
+        atom_names = set()
+        for atom in omm_topology.atoms():
+            atom_names.add(atom.name)
+
+        # There should be  12 "AT#"-labeled atoms (from benzene), 2 unique Cs,
+        # 1 unique O, and 6 unique Hs, for a total of 21 unique atom names
+        assert len(atom_names) == 21
+
+
+    def test_to_openmm_do_not_assign_unique_atom_names(self):
+        """
+        Test disabling unique atom name assignment in Topology.to_openmm
+        """
+        # Create OpenFF topology with 1 ethanol and 2 benzenes.
+        ethanol = Molecule.from_smiles('CCO')
+        for atom in ethanol.atoms:
+            atom.name = 'eth_test'
+        benzene = Molecule.from_smiles('c1ccccc1')
+        benzene.atoms[0].name = 'bzn_test'
+        off_topology = Topology.from_molecules(molecules=[ethanol, benzene, benzene])
+        omm_topology = off_topology.to_openmm(ensure_unique_atom_names=False)
+        atom_names = set()
+        for atom in omm_topology.atoms():
+            atom_names.add(atom.name)
+        # There should be 9 atom named "eth_test", 1 atom named "bzn_test",
+        # and 12 atoms named "", for a total of 3 unique atom names
+        assert len(atom_names) == 3
+
 
     @pytest.mark.skipif( not(OpenEyeToolkitWrapper.is_available()), reason='Test requires OE toolkit')
     def test_chemical_environments_matches_OE(self):
