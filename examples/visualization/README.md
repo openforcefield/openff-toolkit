@@ -12,3 +12,18 @@ There are two ways to invoke the visualization:
 - explicitly, by calling `Molecule.visualize()`
 
 This notebook demonstrates all the possible uses.
+
+**Note**: The content in this notebook demonstrates usage of `nglview` with `openforcefield`.
+This can be tricky to get working.
+Install with:
+
+    conda install -c conda-forge nglview
+    
+And configure for use with Jupyter with:
+
+    jupyter-nbextension enable nglview --py --sys-prefix
+    
+To use with Jupyterlab, configure with:
+
+    jupyter labextension install  nglview-js-widgets
+    jupyter-labextension install @jupyter-widgets/jupyterlab-manager
