@@ -1572,17 +1572,16 @@ class ParameterHandler(_ParameterAttributeHandler):
         """
         pass
 
-    def postprocess_system(self, system, topology, **kwargs):
+    def postprocess_system(self, topology, system, **kwargs):
         """Allow the force to perform a a final post-processing pass on the System following parameter assignment, if needed.
 
         Parameters
         ----------
-        system : simtk.openmm.System
-            The OpenMM System object to add the Force (or append new parameters) to.
         topology : openforcefield.topology.Topology
             The Topology for which parameters are to be assigned.
             Either a new Force will be created or parameters will be appended to an existing Force.
-
+        system : simtk.openmm.System
+            The OpenMM System object to add the Force (or append new parameters) to.
         """
         pass
 
