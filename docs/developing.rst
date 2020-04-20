@@ -207,6 +207,7 @@ Setting up a development environment
 
     $ # Create a conda environment with the Open Force Field toolkit and its dependencies
     $ conda create --name off-dev -c conda-forge -c omnia -c openeye openforcefield openeye-toolkits
+    $ conda activate openff-dev
     $ # Remove (only) the toolkit and replace it with a local install
     $ conda remove --force openforcefield
     $ git clone https://github.com/openforcefield/openforcefield
