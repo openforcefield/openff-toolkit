@@ -4745,25 +4745,29 @@ class Molecule(FrozenMolecule):
                     'Visualizing with NGLview requires that the molecule has '
                     'conformers.'
                 )
-        elif backend == 'rdkit' and RDKIT_AVAILABLE:
-            from rdkit.Chem.Draw import IPythonConsole
-            return self.to_rdkit()
-        elif backend == 'openeye' and OPENEYE_AVAILABLE:
-            from openeye import oedepict
-            from IPython.display import Image
+        if backend == 'rdkit':
+            if RDKIT_AVAILABLE:
+                from rdkit.Chem.Draw import IPythonConsole
+                return self.to_rdkit()
+            else:
+                backend = 'openeye'
+        if backend == 'openeye':
+            if OPENEYE_AVAILABLE:
+                from openeye import oedepict
+                from IPython.display import Image
 
-            oemol = self.to_openeye()
+                oemol = self.to_openeye()
 
-            opts = oedepict.OE2DMolDisplayOptions(width, height, oedepict.OEScale_AutoScale)
+                opts = oedepict.OE2DMolDisplayOptions(width, height, oedepict.OEScale_AutoScale)
 
-            oedepict.OEPrepareDepiction(oemol)
-            img = oedepict.OEImage(width, height)
-            display = oedepict.OE2DMolDisplay(oemol, opts)
-            oedepict.OERenderMolecule(img, display)
-            png = oedepict.OEWriteImageToString("png", img)
-            return Image(png)
-        else:
-            raise ValueError('Could not find an appropriate backend')
+                oedepict.OEPrepareDepiction(oemol)
+                img = oedepict.OEImage(width, height)
+                display = oedepict.OE2DMolDisplay(oemol, opts)
+                oedepict.OERenderMolecule(img, display)
+                png = oedepict.OEWriteImageToString("png", img)
+                return Image(png)
+
+        raise ValueError('Could not find an appropriate backend')
 
     def _ipython_display_(self):
         from IPython.display import display
