@@ -1518,7 +1518,8 @@ class ParameterHandler(_ParameterAttributeHandler):
 
     def _find_matches(self, entity, transformed_dict_cls=ValenceDict):
         """Implement find_matches() and allow using a difference valence dictionary.
-                Parameters
+
+        Parameters
         ----------
         entity : openforcefield.topology.Topology
             Topology to search.
@@ -2079,6 +2080,11 @@ class ProperTorsionHandler(ParameterHandler):
         k = IndexedParameterAttribute(unit=unit.kilocalorie_per_mole)
         idivf = IndexedParameterAttribute(default=None, converter=float)
 
+        # fractional bond order params
+        # `IndexedParameterAttribute` may not meet our needs for this one
+        # may have to expand its functionality or create a new class
+        k_bondorder = IndexedParameterAttribute(default=None, 
+
     _TAGNAME = 'ProperTorsions'  # SMIRNOFF tag name to process
     _INFOTYPE = ProperTorsionType  # info type to store
     _OPENMMTYPE = openmm.PeriodicTorsionForce  # OpenMM force class to create
@@ -2088,6 +2094,8 @@ class ProperTorsionHandler(ParameterHandler):
         converter=_allow_only(['k*(1+cos(periodicity*theta-phase))'])
     )
     default_idivf = ParameterAttribute(default='auto')
+    fractional_bondorder_method = ParameterAttribute(default='AM1-Wiberg')
+    fractional_bondorder_interpolation = ParameterAttribute(default='linear')
 
     def check_handler_compatibility(self,
                                     other_handler):
@@ -2105,7 +2113,9 @@ class ProperTorsionHandler(ParameterHandler):
         IncompatibleParameterError if handler_kwargs are incompatible with existing parameters.
         """
         float_attrs_to_compare = []
-        string_attrs_to_compare = ['potential']
+        string_attrs_to_compare = ['potential',
+                                   'fractional_bondorder_method',
+                                   'fractional_bondorder_interpolation']
 
         if self.default_idivf == 'auto':
             string_attrs_to_compare.append('default_idivf')
@@ -2119,30 +2129,46 @@ class ProperTorsionHandler(ParameterHandler):
         #force = super(ProperTorsionHandler, self).create_force(system, topology, **kwargs)
         existing = [system.getForce(i) for i in range(system.getNumForces())]
         existing = [f for f in existing if type(f) == self._OPENMMTYPE]
+
         if len(existing) == 0:
             force = self._OPENMMTYPE()
             system.addForce(force)
         else:
             force = existing[0]
+
+        # what condition do we want to use to trigger calculation of bond orders?
+        # could also do it later for each reference mol as needed,
+        # but that's an optimization
+        if <condition>:
+            for ref_mol in topology.reference_molecules:
+
+                # Make a temporary copy of ref_mol to assign bond orders
+                temp_mol = FrozenMolecule(ref_mol)
+
+                # how many conformers should we generate?
+                toolkit_registry = kwargs.get('toolkit_registry', GLOBAL_TOOLKIT_REGISTRY)
+                temp_mol.generate_conformers(n_conformers=10, toolkit_registry=toolkit_registry)
+                temp_mol.assign_fractional_bond_orders(toolkit_registry=toolkit_registry,
+                                                       use_conformers=temp_mol.conformers)
+
+                # need to attach bond orders to ref mol, yes?
+                # or do we really just need a way to extract bond orders
+                # on the basis of atom indexes?
+
         # Add all proper torsions to the system.
         torsion_matches = self.find_matches(topology)
 
         for (atom_indices, torsion_match) in torsion_matches.items():
             # Ensure atoms are actually bonded correct pattern in Topology
+            # Currently does nothing
             self._assert_correct_connectivity(torsion_match)
 
             torsion = torsion_match.parameter_type
-
-            for (periodicity, phase, k, idivf) in zip(torsion.periodicity,
-                                               torsion.phase, torsion.k, torsion.idivf):
-                if idivf == 'auto':
-                    # TODO: Implement correct "auto" behavior
-                    raise NotImplementedError("The OpenForceField toolkit hasn't implemented "
-                                              "support for the torsion `idivf` value of 'auto'")
-
-                force.addTorsion(atom_indices[0], atom_indices[1],
-                                 atom_indices[2], atom_indices[3], periodicity,
-                                 phase, k/idivf)
+            
+            if torsion.k_bondorder is not None:
+                self._assign_fractional_bond_orders(atom_indices, torsion, force)
+            else:
+                self._assign_torsion(atom_indices, torsion, force)
 
         logger.info('{} torsions added'.format(len(torsion_matches)))
 
@@ -2158,6 +2184,38 @@ class ProperTorsionHandler(ParameterHandler):
         self._check_all_valence_terms_assigned(assigned_terms=torsion_matches,
                                                valence_terms=list(topology.propers),
                                                exception_cls=UnassignedProperTorsionParameterException)
+
+    def _assign_torsion(self, atom_indices, torsion, force):
+        for (periodicity, phase, k, idivf) in zip(torsion.periodicity,
+                                           torsion.phase, torsion.k, torsion.idivf):
+            if idivf == 'auto':
+                # TODO: Implement correct "auto" behavior
+                raise NotImplementedError("The OpenForceField toolkit hasn't implemented "
+                                          "support for the torsion `idivf` value of 'auto'")
+        
+            force.addTorsion(atom_indices[0], atom_indices[1],
+                             atom_indices[2], atom_indices[3], periodicity,
+                             phase, k/idivf)
+
+
+    def _assign_fractional_bond_orders(self, atom_indices, torsion, force):
+        for (periodicity, phase, k_bondorder, idivf) in zip(torsoin.periodicity,
+                                                            torsion.phase,
+                                                            torsion.k_bondorder,
+                                                            torsion.idivf):
+            if idivf == 'auto':
+                # TODO: Implement correct "auto" behavior
+                raise NotImplementedError("The OpenForceField toolkit hasn't implemented "
+                                          "support for the torsion `idivf` value of 'auto'")
+
+
+            # this is where the logic should go for scaling k based on the bondorder of
+            # the central bond for atoms 2 and 3
+
+
+                
+
+
 
 
 # TODO: There's a lot of duplicated code in ProperTorsionHandler and ImproperTorsionHandler
