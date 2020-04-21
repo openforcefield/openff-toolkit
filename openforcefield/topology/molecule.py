@@ -39,6 +39,7 @@ from copy import deepcopy
 import operator
 from io import StringIO
 import uuid
+import warnings
 
 from simtk import unit
 from simtk.openmm.app import element, Element
@@ -4750,7 +4751,7 @@ class Molecule(FrozenMolecule):
                 from rdkit.Chem.Draw import IPythonConsole
                 return self.to_rdkit()
             else:
-                raise UserWarning(
+                warnings.warn(
                     'RDKit was requested as a visualizaiton backend but '
                     'it was not found to be installed. Falling back to '
                     'using OpenEye for visualization.'
