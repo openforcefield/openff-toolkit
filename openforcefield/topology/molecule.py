@@ -4750,6 +4750,11 @@ class Molecule(FrozenMolecule):
                 from rdkit.Chem.Draw import IPythonConsole
                 return self.to_rdkit()
             else:
+                raise UserWarning(
+                    'RDKit was requested as a visualizaiton backend but '
+                    'it was not found to be installed. Falling back to '
+                    'using OpenEye for visualization.'
+                )
                 backend = 'openeye'
         if backend == 'openeye':
             if OPENEYE_AVAILABLE:
