@@ -3081,7 +3081,16 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
         # in which chargeincrements match topology particles (ValenceDict reverses the order
         # of the matched particle indices to ensure the lowest index comes first)
 
-        return self._find_matches(entity, transformed_dict_cls=dict)
+        matches = self._find_matches(entity, transformed_dict_cls=dict)
+
+        # We need to do two things here:
+        # DEDUPLICATE based on shared chargeincrement particles, by:
+        #  Iterating through the list of matches in reverse (starting at bottom of OFFXML)
+        #  Each time a match is applied, take the sorted version of the tuple and add it to an "already_assigned_tuples" set
+        #  Each subsequent match, if the sorted version of its tuple is in "already_assigned_tuples", delete the match
+
+        return matches
+
 
 
 
@@ -3111,7 +3120,8 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
 
             # If the molecule wasn't assigned parameters from a manually-input charge_mol, calculate them here
             temp_mol.generate_conformers(n_conformers=self.number_of_conformers)
-            temp_mol.compute_partial_charges(partial_charge_method=self.partial_charge_method)
+            #temp_mol.compute_partial_charges(partial_charge_method=self.partial_charge_method)
+            temp_mol.assign_partial_charges(partial_charge_method=self.partial_charge_method)
 
             charges_to_assign = {}
 
