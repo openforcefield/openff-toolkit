@@ -4714,7 +4714,7 @@ class Molecule(FrozenMolecule):
         width : int, optional, default=500
             Width of the generated representation (only applicable to
             backend=openeye)
-        height : int, optional, default=500
+        height : int, optional, default=300
             Width of the generated representation (only applicable to
             backend=openeye)
 
@@ -4752,9 +4752,9 @@ class Molecule(FrozenMolecule):
                 return self.to_rdkit()
             else:
                 warnings.warn(
-                    'RDKit was requested as a visualizaiton backend but '
+                    'RDKit was requested as a visualization backend but '
                     'it was not found to be installed. Falling back to '
-                    'using OpenEye for visualization.'
+                    'trying to using OpenEye for visualization.'
                 )
                 backend = 'openeye'
         if backend == 'openeye':

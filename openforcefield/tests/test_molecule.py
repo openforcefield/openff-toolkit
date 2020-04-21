@@ -2017,7 +2017,7 @@ class TestMolecule:
 
         assert isinstance(mol.visualize(backend='rdkit'), rdkit.Chem.rdchem.Mol)
 
-    pytest.mark.skipif(RDKitToolkitWrapper.is_available())
+    @pytest.mark.skipif(RDKitToolkitWrapper.is_available())
     def test_visualize_fallback(self):
         """Test falling back from RDKit to OpenEye if RDKit is specified but not installed"""
         mol = Molecule().from_smiles('CCO')
