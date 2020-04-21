@@ -2513,7 +2513,6 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         molecule : openforcefield.topology.Molecule
             An openforcefield-style molecule.
         """
-        print("In RDKit toolkit", _cls)
         from rdkit import Chem
 
         rdmol = Chem.MolFromSmiles(smiles, sanitize=False)

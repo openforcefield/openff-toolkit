@@ -2054,14 +2054,12 @@ class FrozenMolecule(Serializable):
 
         """
         if isinstance(toolkit_registry, ToolkitRegistry):
-            print("Using registry with cls=", cls)
             molecule = toolkit_registry.call('from_smiles',
                                              smiles,
                                              hydrogens_are_explicit=hydrogens_are_explicit,
                                              allow_undefined_stereo=allow_undefined_stereo,
                                              _cls=cls)
         elif isinstance(toolkit_registry, ToolkitWrapper):
-            print("Using registry with cls=", cls)
             toolkit = toolkit_registry
             molecule = toolkit.from_smiles(smiles,
                                            hydrogens_are_explicit=hydrogens_are_explicit,
