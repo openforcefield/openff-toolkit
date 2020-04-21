@@ -1519,7 +1519,7 @@ class FrozenMolecule(Serializable):
             # Check through the toolkit registry to find a compatible wrapper for loading
             if not loaded:
                 try:
-                    result = toolkit_registry.call('from_object', other, allow_undefined_stereo=allow_undefined_stereo)
+                    result = toolkit_registry.call('from_object', other, allow_undefined_stereo=allow_undefined_stereo, _cls=self.__class__)
                 except NotImplementedError:
                     pass
                 else:
@@ -1529,11 +1529,11 @@ class FrozenMolecule(Serializable):
             # from a fileIO object)
             if (isinstance(other, str)
                     or hasattr(other, 'read')) and not (loaded):
-                mol = Molecule.from_file(
+                mol = self.from_file(
                     other,
                     file_format=file_format,
                     toolkit_registry=toolkit_registry,
-                    allow_undefined_stereo=allow_undefined_stereo
+                    allow_undefined_stereo=allow_undefined_stereo,
                 )  # returns a list only if multiple molecules are found
                 if type(mol) == list:
                     raise ValueError(
@@ -1889,8 +1889,8 @@ class FrozenMolecule(Serializable):
             self._cached_smiles[smiles_hash] = smiles
             return smiles
 
-    @staticmethod
-    def from_inchi(inchi, allow_undefined_stereo=False, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+    @classmethod
+    def from_inchi(cls, inchi, allow_undefined_stereo=False, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """
         Construct a Molecule from a InChI representation
 
@@ -1921,10 +1921,12 @@ class FrozenMolecule(Serializable):
         if isinstance(toolkit_registry, ToolkitRegistry):
             molecule = toolkit_registry.call('from_inchi',
                                              inchi,
+                                             _cls=cls,
                                              allow_undefined_stereo=allow_undefined_stereo)
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
             molecule = toolkit.from_inchi(inchi,
+                                          _cls=cls,
                                           allow_undefined_stereo=allow_undefined_stereo)
         else:
             raise Exception(
@@ -2019,8 +2021,9 @@ class FrozenMolecule(Serializable):
 
         return inchi_key
 
-    @staticmethod
-    def from_smiles(smiles,
+    @classmethod
+    def from_smiles(cls,
+                    smiles,
                     hydrogens_are_explicit=False,
                     toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
                     allow_undefined_stereo=False):
@@ -2051,16 +2054,19 @@ class FrozenMolecule(Serializable):
 
         """
         if isinstance(toolkit_registry, ToolkitRegistry):
+            print("Using registry with cls=", cls)
             molecule = toolkit_registry.call('from_smiles',
                                              smiles,
                                              hydrogens_are_explicit=hydrogens_are_explicit,
-                                             allow_undefined_stereo=allow_undefined_stereo)
+                                             allow_undefined_stereo=allow_undefined_stereo,
+                                             _cls=cls)
         elif isinstance(toolkit_registry, ToolkitWrapper):
+            print("Using registry with cls=", cls)
             toolkit = toolkit_registry
             molecule = toolkit.from_smiles(smiles,
                                            hydrogens_are_explicit=hydrogens_are_explicit,
-                                           allow_undefined_stereo=allow_undefined_stereo
-                                           )
+                                           allow_undefined_stereo=allow_undefined_stereo,
+                                           _cls=cls)
         else:
             raise Exception(
                 'Invalid toolkit_registry passed to from_smiles. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'
@@ -3288,8 +3294,8 @@ class FrozenMolecule(Serializable):
         from openeye import oeiupac
         return oeiupac.OECreateIUPACName(self.to_openeye())
 
-    @staticmethod
-    def from_topology(topology):
+    @classmethod
+    def from_topology(cls, topology):
         """Return a Molecule representation of an openforcefield Topology containing a single Molecule object.
 
         Parameters
@@ -3341,8 +3347,9 @@ class FrozenMolecule(Serializable):
         from openforcefield.topology import Topology
         return Topology.from_molecules(self)
 
-    @staticmethod
-    def from_file(file_path,
+    @classmethod
+    def from_file(cls,
+                  file_path,
                   file_format=None,
                   toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
                   allow_undefined_stereo=False):
@@ -3405,9 +3412,8 @@ class FrozenMolecule(Serializable):
                 if file_format in query_toolkit.toolkit_file_read_formats:
                     toolkit = query_toolkit
                     break
-                supported_read_formats[
-                    query_toolkit.
-                    toolkit_name] = query_toolkit.toolkit_file_read_formats
+                supported_read_formats[query_toolkit.toolkit_name] = \
+                    query_toolkit.toolkit_file_read_formats
             if toolkit is None:
                 msg = f"No toolkits in registry can read file {file_path} (format {file_format}). Supported " \
                       f"formats in the provided ToolkitRegistry are {supported_read_formats}. "
@@ -3447,13 +3453,15 @@ class FrozenMolecule(Serializable):
             mols = toolkit.from_file(
                 file_path,
                 file_format=file_format,
-                allow_undefined_stereo=allow_undefined_stereo)
+                allow_undefined_stereo=allow_undefined_stereo,
+                _cls=cls)
         elif hasattr(file_path, 'read'):
             file_obj = file_path
             mols = toolkit.from_file_obj(
                 file_obj,
                 file_format=file_format,
-                allow_undefined_stereo=allow_undefined_stereo)
+                allow_undefined_stereo=allow_undefined_stereo,
+                _cls=cls)
 
         if len(mols) == 0:
             raise Exception(
@@ -3689,9 +3697,9 @@ class FrozenMolecule(Serializable):
 
         return molecules
 
-    @staticmethod
+    @classmethod
     @RDKitToolkitWrapper.requires_toolkit()
-    def from_rdkit(rdmol, allow_undefined_stereo=False):
+    def from_rdkit(cls, rdmol, allow_undefined_stereo=False):
         """
         Create a Molecule from an RDKit molecule.
 
@@ -3722,7 +3730,7 @@ class FrozenMolecule(Serializable):
         """
         toolkit = RDKitToolkitWrapper()
         molecule = toolkit.from_rdkit(
-            rdmol, allow_undefined_stereo=allow_undefined_stereo)
+            rdmol, allow_undefined_stereo=allow_undefined_stereo, _cls=cls)
         return molecule
 
     @RDKitToolkitWrapper.requires_toolkit()
@@ -3756,9 +3764,9 @@ class FrozenMolecule(Serializable):
         toolkit = RDKitToolkitWrapper()
         return toolkit.to_rdkit(self, aromaticity_model=aromaticity_model)
 
-    @staticmethod
+    @classmethod
     @OpenEyeToolkitWrapper.requires_toolkit()
-    def from_openeye(oemol, allow_undefined_stereo=False):
+    def from_openeye(cls, oemol, allow_undefined_stereo=False):
         """
         Create a Molecule from an OpenEye molecule.
 
@@ -3790,7 +3798,7 @@ class FrozenMolecule(Serializable):
         """
         toolkit = OpenEyeToolkitWrapper()
         molecule = toolkit.from_openeye(
-            oemol, allow_undefined_stereo=allow_undefined_stereo)
+            oemol, allow_undefined_stereo=allow_undefined_stereo, _cls=cls)
         return molecule
 
     def to_qcschema(self, multiplicity=1, conformer=0):
@@ -4019,7 +4027,7 @@ class FrozenMolecule(Serializable):
         """
 
         toolkit = RDKitToolkitWrapper()
-        return toolkit.from_pdb_and_smiles(file_path, smiles, allow_undefined_stereo)
+        return toolkit.from_pdb_and_smiles(file_path, smiles, allow_undefined_stereo, _cls=cls)
 
     def canonical_order_atoms(self, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """
