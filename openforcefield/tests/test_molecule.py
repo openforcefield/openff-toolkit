@@ -2021,7 +2021,7 @@ class TestMolecule:
     def test_visualize_fallback(self):
         """Test falling back from RDKit to OpenEye if RDKit is specified but not installed"""
         mol = Molecule().from_smiles('CCO')
-        with pytest.raises(UserWarning):
+        with pytest.warns(UserWarning):
             mol.visualize(backend='rdkit')
 
     def test_visualize_nglview(self):
