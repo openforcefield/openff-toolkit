@@ -44,6 +44,7 @@ from enum import Enum
 import functools
 import inspect
 import logging
+import math
 import re
 
 from simtk import openmm, unit
@@ -2083,7 +2084,7 @@ class ProperTorsionHandler(ParameterHandler):
         # fractional bond order params
         # `IndexedParameterAttribute` may not meet our needs for this one
         # may have to expand its functionality or create a new class
-        k_bondorder = IndexedParameterAttribute(default=None, 
+        k_bondorder = IndexedParameterAttribute(default=None)
 
     _TAGNAME = 'ProperTorsions'  # SMIRNOFF tag name to process
     _INFOTYPE = ProperTorsionType  # info type to store
@@ -2136,26 +2137,6 @@ class ProperTorsionHandler(ParameterHandler):
         else:
             force = existing[0]
 
-        # what condition do we want to use to trigger calculation of bond orders?
-        # could also do it later for each reference mol as needed,
-        # but that's an optimization
-        if <condition>:
-            for ref_mol in topology.reference_molecules:
-
-                # Make a temporary copy of ref_mol to assign bond orders
-                temp_mol = FrozenMolecule(ref_mol)
-
-                # how many conformers should we generate?
-                toolkit_registry = kwargs.get('toolkit_registry', GLOBAL_TOOLKIT_REGISTRY)
-                temp_mol.generate_conformers(n_conformers=10, toolkit_registry=toolkit_registry)
-                temp_mol.assign_fractional_bond_orders(toolkit_registry=toolkit_registry,
-                                                       use_conformers=temp_mol.conformers)
-
-                # need to attach bond orders to ref mol
-
-                # or do we really just need a way to extract bond orders
-                # on the basis of atom indexes?
-
         # Add all proper torsions to the system.
         torsion_matches = self.find_matches(topology)
 
@@ -2165,9 +2146,9 @@ class ProperTorsionHandler(ParameterHandler):
             self._assert_correct_connectivity(torsion_match)
 
             if torsion_match.parameter_type.k_bondorder is not None:
-                self._assign_fractional_bond_orders(atom_indices, torsion_params, match, force)
+                self._assign_fractional_bond_orders(atom_indices, torsion_match, match, force)
             else:
-                self._assign_torsion(atom_indices, torsion_params, force)
+                self._assign_torsion(atom_indices, torsion_match, force)
 
         logger.info('{} torsions added'.format(len(torsion_matches)))
 
@@ -2214,6 +2195,10 @@ class ProperTorsionHandler(ParameterHandler):
                                                             torsion_params.k_bondorder,
                                                             torsion_params.idivf):
 
+            if len(k_bondorder) < 2:
+                raise ValueError("At least 2 bond order values required for `k_bondorder`; "
+                                 "got {}".format(len(k_bondorder)))
+
             if idivf == 'auto':
                 # TODO: Implement correct "auto" behavior
                 raise NotImplementedError("The OpenForceField toolkit hasn't implemented "
@@ -2240,22 +2225,70 @@ class ProperTorsionHandler(ParameterHandler):
             # the central bond for atoms 2 and 3
             if self.fractional_bondorder_interpolation == 'linear':
                 # we only interpolate on k
-                pass
-                #k = 
-
-
+                k = self._linear_interpolate_k(k_bondorder, central_bond.fractional_bond_order)
             else:
                 raise Exception(
                     "Fractional bondorder treatment {} is not implemented.".
                     format(self.fractional_bondorder_method))
-
                 
             force.addTorsion(atom_indices[0], atom_indices[1],
                              atom_indices[2], atom_indices[3], periodicity,
                              phase, k/idivf)
 
+    @staticmethod
+    def _linear_interpolate_k(k_bondorder, fractional_bond_order):
+        
+        # pre-empt case where no interpolation is necessary
+        if fractional_bond_order in k_bondorder:
+            return k_bondorder[fractional_bond_order]
 
+        # TODO: error out for nonsensical fractional bond orders
 
+        # find the nearest bond_order beneath our fractional value
+        try:
+            below = max(bo for bo in k_bondorder if bo < fractional_bond_order)
+        except ValueError:
+            below = None
+
+        # find the nearest bond_order above our fractional value
+        try:
+            above = min(bo for bo in k_bondorder if bo > fractional_bond_order)
+        except ValueError:
+            above = None
+
+        # handle case where we can clearly interpolate
+        if (above is not None) and (below is not None):
+            return (k_bondorder[below]
+                    + (k_bondorder[above] - k_bondorder[below])
+                    * ((fractional_bond_order - below)/(above - below)))
+
+        # error if we can't hope to interpolate at all
+        elif (above is None) and (below is None):
+            raise NotImplementedError(
+                    "Failed to find interpolation references for partial "
+                    "bond order '{}'".format(fractional_bond_order))
+
+        # extrapolate for fractional bond orders below our lowest defined bond order
+        elif below is None:
+            bond_orders = sorted(k_bondorder)
+            k = (k_bondorder[bond_orders[0]]
+                    - ((k_bondorder[bond_orders[1]] - k_bondorder[bond_orders[0]])
+                       /(bond_orders[1] - bond_orders[0]))
+                    * (bond_orders[0] - fractional_bond_order))
+            if k < 0:
+                raise ValueError(
+                        "Extrapolated k for fractional bond order "
+                        "'{}' below zero".format(fractional_bond_order))
+            return k
+
+        # extrapolate for fractional bond orders above our highest defined bond order
+        elif above is None:
+            bond_orders = sorted(k_bondorder)
+            k = (k_bondorder[bond_orders[-1]]
+                    + ((k_bondorder[bond_orders[-1]] - k_bondorder[bond_orders[-2]])
+                       /(bond_orders[-1] - bond_orders[-2]))
+                    * (fractional_bond_order - bond_order[-1]))
+            return k
 
 
 # TODO: There's a lot of duplicated code in ProperTorsionHandler and ImproperTorsionHandler
