@@ -1533,7 +1533,7 @@ class FrozenMolecule(Serializable):
                     other,
                     file_format=file_format,
                     toolkit_registry=toolkit_registry,
-                    allow_undefined_stereo=allow_undefined_stereo,
+                    allow_undefined_stereo=allow_undefined_stereo
                 )  # returns a list only if multiple molecules are found
                 if type(mol) == list:
                     raise ValueError(
@@ -3324,7 +3324,7 @@ class FrozenMolecule(Serializable):
         if topology.n_topology_molecules != 1:
             raise ValueError('Topology must contain exactly one molecule')
         molecule = [i for i in topology.reference_molecules][0]
-        return Molecule(molecule)
+        return cls(molecule)
 
     def to_topology(self):
         """
