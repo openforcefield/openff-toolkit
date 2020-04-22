@@ -2151,7 +2151,8 @@ class ProperTorsionHandler(ParameterHandler):
                 temp_mol.assign_fractional_bond_orders(toolkit_registry=toolkit_registry,
                                                        use_conformers=temp_mol.conformers)
 
-                # need to attach bond orders to ref mol, yes?
+                # need to attach bond orders to ref mol
+
                 # or do we really just need a way to extract bond orders
                 # on the basis of atom indexes?
 
@@ -2163,12 +2164,10 @@ class ProperTorsionHandler(ParameterHandler):
             # Currently does nothing
             self._assert_correct_connectivity(torsion_match)
 
-            torsion = torsion_match.parameter_type
-            
-            if torsion.k_bondorder is not None:
-                self._assign_fractional_bond_orders(atom_indices, torsion, force)
+            if torsion_match.parameter_type.k_bondorder is not None:
+                self._assign_fractional_bond_orders(atom_indices, torsion_params, match, force)
             else:
-                self._assign_torsion(atom_indices, torsion, force)
+                self._assign_torsion(atom_indices, torsion_params, force)
 
         logger.info('{} torsions added'.format(len(torsion_matches)))
 
@@ -2185,9 +2184,16 @@ class ProperTorsionHandler(ParameterHandler):
                                                valence_terms=list(topology.propers),
                                                exception_cls=UnassignedProperTorsionParameterException)
 
-    def _assign_torsion(self, atom_indices, torsion, force):
-        for (periodicity, phase, k, idivf) in zip(torsion.periodicity,
-                                           torsion.phase, torsion.k, torsion.idivf):
+    def _assign_torsion(self, atom_indices, torsion_match, force):
+
+        torsion_params = torsion_match.parameter_type
+
+        for (periodicity, phase, k, idivf) in zip(torsion_params.periodicity,
+                                                  torsion_params.phase,
+                                                  torsion_params.k,
+                                                  torsion_params.idivf):
+
+            
             if idivf == 'auto':
                 # TODO: Implement correct "auto" behavior
                 raise NotImplementedError("The OpenForceField toolkit hasn't implemented "
@@ -2198,22 +2204,56 @@ class ProperTorsionHandler(ParameterHandler):
                              phase, k/idivf)
 
 
-    def _assign_fractional_bond_orders(self, atom_indices, torsion, force):
-        for (periodicity, phase, k_bondorder, idivf) in zip(torsoin.periodicity,
-                                                            torsion.phase,
-                                                            torsion.k_bondorder,
-                                                            torsion.idivf):
+    def _assign_fractional_bond_orders(self, atom_indices, torsion_match, force):
+
+        torsion_params = torsion_match.parameter_type
+        match = torsion_match.environment_match
+            
+        for (periodicity, phase, k_bondorder, idivf) in zip(torsion_params.periodicity,
+                                                            torsion_params.phase,
+                                                            torsion_params.k_bondorder,
+                                                            torsion_params.idivf):
+
             if idivf == 'auto':
                 # TODO: Implement correct "auto" behavior
                 raise NotImplementedError("The OpenForceField toolkit hasn't implemented "
                                           "support for the torsion `idivf` value of 'auto'")
 
+            central_bond = match.reference_molecule.get_bond_between(
+                    atom_indices[1], atom_indices[2])
+
+            # if fractional bond order not calculated yet, we calculate it
+            # should only happen once per reference molecule for which we care
+            # about fractional bond interpolation
+            # and not at all for reference molecules we don't
+            if central_bond.fractional_bond_order is None:
+                    # how many conformers should we generate?
+                    toolkit_registry = kwargs.get('toolkit_registry', GLOBAL_TOOLKIT_REGISTRY)
+                    match.reference_molecule.generate_conformers(
+                            n_conformers=10,
+                            toolkit_registry=toolkit_registry)
+                    match.reference_molecule.assign_fractional_bond_orders(
+                            toolkit_registry=toolkit_registry,
+                            use_conformers=temp_mol.conformers)
 
             # this is where the logic should go for scaling k based on the bondorder of
             # the central bond for atoms 2 and 3
+            if self.fractional_bondorder_interpolation == 'linear':
+                # we only interpolate on k
+                pass
+                #k = 
 
+
+            else:
+                raise Exception(
+                    "Fractional bondorder treatment {} is not implemented.".
+                    format(self.fractional_bondorder_method))
 
                 
+            force.addTorsion(atom_indices[0], atom_indices[1],
+                             atom_indices[2], atom_indices[3], periodicity,
+                             phase, k/idivf)
+
 
 
 
