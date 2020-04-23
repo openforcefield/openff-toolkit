@@ -1,6 +1,15 @@
 <?xml version='1.0' encoding='ASCII'?>
 <SMIRFF version="0.1" aromaticity_model="OEAroModel_MDL">
   <!-- SMIRNOFF (SMIRKS Native Open Force Field) template file -->
+  <!-- Note that this file is not versioned, and is unsuitable for use in scholarly work. If you   -->
+  <!-- are looking for the Open Force Field Initiative's main line of force fields, download the   -->
+  <!-- `openforcefields` conda package, or see                                                     -->
+  <!-- https://github.com/openforcefield/openforcefields/                                          -->
+  <!-- To use the legacy smirnoff99Frosst line of force fields, which do NOT contain any effort at -->
+  <!-- improving accuracy over Parm@Frosst, download the `smirnoff99Frosst` conda package, or see  -->
+  <!-- https://github.com/openforcefield/smirnoff99Frosst/                                         -->
+  <!-- If you absolutely must refer to this file in scholarly work, indicate the file name and     --> 
+  <!-- Open Force Field Toolkit version that was used                                              -->
   <Date>Date: Feb. 14, 2019</Date>
   <Author>C. I. Bayly, OpenEye/UC Irvine; C. C. Bannan, UC Irvine; D. L. Mobley, UC Irvine</Author>
   <!-- This file is meant for processing via openforcefield.typing.engines.smirnoff -->
