@@ -2007,3 +2007,48 @@ class TestMolecule:
                     #                                        toolkit_registry=toolkit_registry)
                     # fbo2 = [bond.fractional_bond_order for bond in molecule.bonds]
                     # np.testing.assert_allclose(fbo1, fbo2, atol=1.e-4)
+
+    @requires_rdkit
+    def test_visualize_rdkit(self):
+        """Test that the visualize method returns an expected object when using RDKit to generate a 2-D representation"""
+        import rdkit
+
+        mol = Molecule().from_smiles('CCO')
+
+        assert isinstance(mol.visualize(backend='rdkit'), rdkit.Chem.rdchem.Mol)
+
+    @pytest.mark.skipif(RDKitToolkitWrapper.is_available(),
+        reason='Test requires that RDKit is NOT installed')
+    def test_visualize_fallback(self):
+        """Test falling back from RDKit to OpenEye if RDKit is specified but not installed"""
+        mol = Molecule().from_smiles('CCO')
+        with pytest.warns(UserWarning):
+            mol.visualize(backend='rdkit')
+
+    def test_visualize_nglview(self):
+        """Test that the visualize method returns an NGLview widget"""
+        try:
+            import nglview
+        except ModuleNotFoundError:
+            pass
+
+        # Start with a molecule without conformers
+        mol = Molecule().from_smiles('CCO')
+
+        with pytest.raises(ValueError):
+            mol.visualize(backend='nglview')
+
+        # Add conformers
+        mol.generate_conformers()
+
+        # Ensure an NGLView widget is returned
+        assert isinstance(mol.visualize(backend='nglview'), nglview.NGLWidget)
+
+    @requires_openeye
+    def test_visualize_openeye(self):
+        """Test that the visualize method returns an expected object when using OpenEye to generate a 2-D representation"""
+        import IPython
+
+        mol = Molecule().from_smiles('CCO')
+
+        assert isinstance(mol.visualize(backend='openeye'), IPython.core.display.Image)
