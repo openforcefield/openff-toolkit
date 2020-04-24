@@ -51,7 +51,7 @@ from simtk import openmm, unit
 from openforcefield.utils import attach_units,  \
     extract_serialized_units_from_dict, ToolkitUnavailableException, MessageException, \
     object_to_quantity
-from openforcefield.topology import ValenceDict, ImproperDict
+from openforcefield.topology import ValenceDict, ImproperDict, SortedDict
 from openforcefield.topology.molecule import Molecule
 from openforcefield.typing.chemistry import ChemicalEnvironment
 from openforcefield.utils import IncompatibleUnitError
@@ -3076,23 +3076,11 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
             ``matches[particle_indices]`` is the ``ParameterType`` object
             matching the tuple of particle indices in ``entity``.
         """
-        # It's necessary to overwrite the inherited behavior of this method to prevent it
-        # from using transformed_dict_class=ValenceDict, which could change the order
-        # in which chargeincrements match topology particles (ValenceDict reverses the order
-        # of the matched particle indices to ensure the lowest index comes first)
-
-        matches = self._find_matches(entity, transformed_dict_cls=dict)
-
-        # We need to do two things here:
-        # DEDUPLICATE based on shared chargeincrement particles, by:
-        #  Iterating through the list of matches in reverse (starting at bottom of OFFXML)
-        #  Each time a match is applied, take the sorted version of the tuple and add it to an "already_assigned_tuples" set
-        #  Each subsequent match, if the sorted version of its tuple is in "already_assigned_tuples", delete the match
-
+        # Using SortedDict here leads to the desired deduplication behavior, BUT it mangles the order
+        # of the atom indices in the keys. Thankfully, the Match objects that are values in `matches` contain
+        # `match.environment_match.topology_atom_indices`, which has the tuple in the correct order
+        matches = self._find_matches(entity, transformed_dict_cls=SortedDict)
         return matches
-
-
-
 
     def create_force(self, system, topology, **kwargs):
 
@@ -3143,13 +3131,21 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
                     #                     #                             particle_charge, sigma,
                     #                     #                             epsilon)
 
+            # Find SMARTS-based matches for charge increments
 
             charge_increment_matches = self.find_matches(topology)
 
-            for (atoms, charge_increment_match) in charge_increment_matches.items():
+            # We ignore the keys here, since they have been sorted in order to deduplicate matches and
+            # apply the SMIRNOFF parameter hierarchy. Since they are sorted, the position of the atom index
+            # in the key tuple DOES NOT correspond to the appropriate chargeincrementX value.
+            # Instead, the correct ordering of the match indices is found in
+            # charge_increment_match.environment_match.topology_atom_indices
+            for (_, charge_increment_match) in charge_increment_matches.items():
+
+                atom_indices = charge_increment_match.environment_match.topology_atom_indices
                 charge_increment = charge_increment_match.parameter_type
 
-                for top_particle_idx, charge_increment in zip(atoms, charge_increment.charge_increment):
+                for top_particle_idx, charge_increment in zip(atom_indices, charge_increment.charge_increment):
                     #print(top_particle_idx, charge_increment)
                     if top_particle_idx in charges_to_assign:
                         charges_to_assign[top_particle_idx] += charge_increment

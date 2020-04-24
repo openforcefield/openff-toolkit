@@ -109,6 +109,16 @@ class ValenceDict(_TransformedDict):
             key = tuple(reversed(key))
         return key
 
+class SortedDict(_TransformedDict):
+    """Enforce uniqueness in atom indices."""
+
+    def __keytransform__(self, key):
+        """Reverse tuple if first element is larger than last element."""
+        # Ensure key is a tuple.
+        key = tuple(sorted(key))
+        # Reverse the key if the first element is bigger than the last.
+        return key
+
 
 class ImproperDict(_TransformedDict):
     """Symmetrize improper torsions."""

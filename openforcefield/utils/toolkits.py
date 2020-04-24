@@ -4142,7 +4142,7 @@ class ToolkitRegistry:
         if toolkit_precedence is None:
             toolkit_precedence = [
                 OpenEyeToolkitWrapper, RDKitToolkitWrapper,
-                AmberToolsToolkitWrapper
+                AmberToolsToolkitWrapper, BuiltInToolkitWrapper
             ]
 
         if register_imported_toolkit_wrappers:
@@ -4327,6 +4327,8 @@ class ToolkitRegistry:
                     errors.append((toolkit, type_error))
                 except ValueError as value_error:
                     errors.append((toolkit, value_error))
+                except Exception as error:
+                    errors.append((toolkit, error))
 
         # No toolkit was found to provide the requested capability
         # TODO: Can we help developers by providing a check for typos in expected method names?
