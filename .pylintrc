@@ -18,7 +18,8 @@ persistent=no
 
 # List of plugins (as comma separated values of python modules names) to load,
 # usually to register additional checkers.
-load-plugins=pylint.extensions.docparams
+load-plugins=pylint.extensions.docparams,pylint.extensions.docstyle
+
 
 # Use multiple processes to speed up Pylint.
 jobs=2
@@ -225,8 +226,20 @@ enable=import-error,
        map-builtin-not-iterating,
        range-builtin-not-iterating,
        zip-builtin-not-iterating,
-       unused-variable
-
+       unused-variable,
+       bad-docstring-quotes,
+       differing-param-doc,
+       differing-type-doc,
+       multiple-constructor-doc,
+       missing-param-doc,
+       missing-type-doc,
+       missing-raises-doc,
+       missing-return-doc,
+       missing-return-type-doc,
+       missing-yield-doc,
+       missing-yield-type-doc,
+       redundant-returns-doc,
+       redundant-yields-doc
 
 # ...
 [REPORTS]
