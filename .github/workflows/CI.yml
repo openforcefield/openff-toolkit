@@ -207,7 +207,7 @@ jobs:
         run: |
           . devtools/gh-actions/initialize_conda.sh
           conda activate test
-          black --check -l 99 $PACKAGE/
+          black --check -l 99 $PACKAGE/ --exclude=$PACKAGE/_version.py
 
   docs:
     name: Test documentation
