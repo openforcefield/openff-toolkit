@@ -283,4 +283,4 @@ jobs:
           . devtools/gh-actions/initialize_conda.sh
           conda activate docs
           cd docs
-          make html
+          make html SPHINXOPTS="-W --keep-going -n"
