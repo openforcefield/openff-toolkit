@@ -261,6 +261,10 @@ jobs:
           python devtools/scripts/create_conda_env.py -n=docs -p=$PYVER docs/environment.yml
           conda activate docs
           conda install pytest
+          # JRG: We need to patch `m2r`, which is now incompatible with sphinx=3
+          conda remove --force m2r
+          pip install https://github.com/CrossNox/m2r/archive/ee7c81842e62034ffb55ae07798b0a2dc108ad29.zip
+          # end of m2r patch
           python -m pip install --no-deps .
 
       - name: Test Readme links

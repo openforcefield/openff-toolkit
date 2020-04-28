@@ -47,6 +47,8 @@ extensions = [
     'sphinx.ext.intersphinx',
     'nbsphinx',
     'm2r', # render markdown
+    # JRG: m2r is unmaintained and incompatible with sphinx 3.0!
+    # https://github.com/sphinx-doc/sphinx/issues/7420
     ]
 
 autosummary_generate = True
