@@ -217,10 +217,10 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      CI_OS: ${{ matrix.cfg.os }}
-      RDKIT: ${{ matrix.cfg.rdkit }}
-      OPENEYE: ${{ matrix.cfg.openeye }}
-      PYVER: ${{ matrix.python-version }}
+      CI_OS: ubuntu-latest
+      RDKIT: "true"
+      OPENEYE: "true"
+      PYVER: "3.7"
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
       PACKAGE: openforcefield
 
@@ -273,7 +273,7 @@ jobs:
             conda install openeye-toolkits
             python -c "from openeye import oechem; assert oechem.OEChemIsLicensed()"
           fi
-          python -m pip install black isort pylint flake8 flake8-docstrings
+          conda install black isort pylint flake8 flake8-docstrings
           python -m pip install --no-deps .
 
       - name: Run pylint
@@ -284,6 +284,7 @@ jobs:
           pylint $PACKAGE/
 
       - name: Run flake8
+        if: always()
         run: |
           . devtools/gh-actions/initialize_conda.sh
           conda activate lint
@@ -291,6 +292,7 @@ jobs:
 
       - name: Run isort
         shell: bash
+        if: always()
         run: |
           . devtools/gh-actions/initialize_conda.sh
           conda activate lint
