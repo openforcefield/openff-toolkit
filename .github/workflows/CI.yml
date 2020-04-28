@@ -195,7 +195,7 @@ jobs:
       - name: Run pylint
         shell: bash
         run: |
-          . devtools/github-actions/initialize_conda.sh
+          . devtools/gh-actions/initialize_conda.sh
           conda activate test
           pylint $PACKAGE/
 
@@ -203,7 +203,7 @@ jobs:
         shell: bash
         if: always()
         run: |
-          . devtools/github-actions/initialize_conda.sh
+          . devtools/gh-actions/initialize_conda.sh
           conda activate test
           black --check -l 99 $PACKAGE/
 
@@ -272,6 +272,7 @@ jobs:
 
       - name: Build docs
         shell: bash
+        if: always()
         run: |
           . devtools/gh-actions/initialize_conda.sh
           conda activate docs
