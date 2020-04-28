@@ -1280,7 +1280,7 @@ class ParameterHandler(_ParameterAttributeHandler):
     _MIN_SUPPORTED_SECTION_VERSION = 0.3
     _MAX_SUPPORTED_SECTION_VERSION = 0.3
 
-
+    
     version = ParameterAttribute()
 
     @version.converter
@@ -1492,7 +1492,7 @@ class ParameterHandler(_ParameterAttributeHandler):
         #  Should we reduce its scope and have a check here to make sure entity is a Topology?
         return self._find_matches(entity)
 
-    def _find_matches(self, entity, transformed_dict_cls=ValenceDict, variable_keylen=False, allow_multiple=False):
+    def _find_matches(self, entity, transformed_dict_cls=ValenceDict, variable_keylen=False, allow_multiple=False, select=None):
         """Implement find_matches() and allow using a difference valence dictionary.
                 Parameters
         ----------
@@ -1518,14 +1518,22 @@ class ParameterHandler(_ParameterAttributeHandler):
         # TODO: There are probably performance gains to be had here
         #       by performing this loop in reverse order, and breaking early once
         #       all environments have been matched.
+        if select is None:
+            select = self._parameters
+        elif not hasattr(select, "__iter__"):
+            select = [select]
+        if isinstance(self, VirtualSiteHandler):
+            breakpoint()
         for parameter_type in self._parameters:
+            if type(parameter_type) not in select:
+                continue
             matches_for_this_type = defaultdict(list)
 
             for environment_match in entity.chemical_environment_matches(parameter_type.smirks):
                 # Update the matches for this parameter type.
                 handler_match = self._Match(parameter_type, environment_match)
                 key = environment_match.topology_atom_indices
-
+                
                 if variable_keylen:
                     if len(key) < 4:
                         fn = ValenceDict.__keytransform__
@@ -1537,9 +1545,15 @@ class ParameterHandler(_ParameterAttributeHandler):
                 if environment_match.topology_atom_indices not in matches:
                     matches[key] = []
 
+            matches_for_this_type = dict(matches_for_this_type)
             # Update matches of all parameter types.
             if allow_multiple:
                 [ matches[k].extend(v) for k,v in matches_for_this_type.items()]
+                #for k,v in matches.items():
+                #    if np.all([hasattr(p._parameter_type, "name") for p in v]):
+                #        unique_names = set([p._parameter_type.name for p in v])
+                #        matches[k] = {name:list(filter(lambda p: name == p._parameter_type.name, v)) for name in unique_names }
+
             else:
                 matches.update(matches_for_this_type)
 
@@ -2911,7 +2925,6 @@ class VirtualSiteHandler(_NonbondedHandler):
     .. warning :: This API is experimental and subject to change.
     """
 
-
     #class VirtualSiteType(ParameterType):
     class VirtualSiteType(vdWHandler.vdWType):
         """A SMIRNOFF virtual site base type
@@ -2923,6 +2936,7 @@ class VirtualSiteHandler(_NonbondedHandler):
         # Needed here to read the generic VirtualSite xml elements
         # Will specialize after the type is parsed
         _ELEMENT_NAME = 'VirtualSite'
+        name            = ParameterAttribute(default="NamelessVS", converter=str)
         distance        = ParameterAttribute(unit=unit.angstrom)
         chargeincrement = IndexedParameterAttribute(unit=unit.elementary_charge)
         type            = ParameterAttribute()
@@ -2950,7 +2964,6 @@ class VirtualSiteHandler(_NonbondedHandler):
                 q       += self.chargeincrement[qi]
                 force.setParticleParameters(atom, q, s, e)
             return vsite_q
-
 
     class VirtualSiteBondChargeType(VirtualSiteType):
         """A SMIRNOFF virtual site bond charge type
@@ -3039,7 +3052,6 @@ class VirtualSiteHandler(_NonbondedHandler):
             }
             kwargs.update(base_args)
             return fn( *args, **kwargs)
-
 
     class VirtualSiteDivalentLonePairType(VirtualSiteLonePairType):
         """A SMIRNOFF divalent lone pair virtual site type
@@ -3174,7 +3186,37 @@ class VirtualSiteHandler(_NonbondedHandler):
             matching the n-tuple of atom indices in ``entity``.
 
         """
-        return self._find_matches(entity, transformed_dict_cls=dict, variable_keylen=False, allow_multiple=True)
+        vsite_kwargs = [
+            {
+                "select":                 __class__.VirtualSiteBondChargeType,
+                "transformed_dict_cls":  dict,  # do not deduplicate
+                "variable_keylen":       False,
+                "allow_multiple":        True
+            },
+            {
+                "select":                 __class__.VirtualSiteMonovalentLonePairType,
+                "transformed_dict_cls":  dict,  # do not deduplicate
+                "variable_keylen":       False,
+                "allow_multiple":        True
+            },
+            {
+                "select":                 __class__.VirtualSiteDivalentLonePairType,
+                "transformed_dict_cls":  ValenceDict,  # deduplicate
+                "variable_keylen":       False,
+                "allow_multiple":        False
+            },
+            {
+                "select":                 __class__.VirtualSiteTrivalentLonePairType,
+                "transformed_dict_cls":  ImproperDict,
+                "variable_keylen":       False,
+                "allow_multiple":        False
+            }
+        ]
+        matches = {}
+        for vsite_type in vsite_kwargs:
+            result = self._find_matches(entity, **vsite_type)
+            matches.update(result)
+        return matches
 
 
     def create_force(self, system, topology, **kwargs):
@@ -3209,7 +3251,8 @@ class VirtualSiteHandler(_NonbondedHandler):
                     sigma = ljtype.sigma
 
                 # create the vsite particle
-                vsite_idx = system.addParticle(0.0)
+                mass = 0.0
+                vsite_idx = system.addParticle(mass)
                 system.setVirtualSite(vsite_idx, vsite)
                 force.addParticle(vsite_q, sigma, ljtype.epsilon)
 
