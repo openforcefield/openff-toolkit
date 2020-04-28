@@ -125,7 +125,7 @@ jobs:
             PYTEST_ARGS+=" --ignore=examples/QCArchive_interface"
           fi
           pytest $PYTEST_ARGS examples/
-          pytest -v -k "not links" openforcefield/tests/tests_examples.py
+          pytest -v -k "not links" openforcefield/tests/test_examples.py
 
       - name: Codecov
         uses: codecov/codecov-action@v1
