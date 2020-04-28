@@ -108,7 +108,7 @@ jobs:
         run: |
           . devtools/gh-actions/initialize_conda.sh
           conda activate test
-          PYTEST_ARGS="-v -r --tb=short"
+          PYTEST_ARGS="-r fE --tb=short"
           # coverage options
           PYTEST_ARGS+=" --cov=$PACKAGE --cov-config=setup.cfg"
           # excludes
@@ -123,7 +123,7 @@ jobs:
         run: |
           . devtools/gh-actions/initialize_conda.sh
           conda activate test
-          PYTEST_ARGS="-v -r --tb=short"
+          PYTEST_ARGS="-r fE --tb=short"
           PYTEST_ARGS+=" --nbval-lax"
           PYTEST_ARGS+=" --ignore=examples/deprecated"
           if [[ "$RDKIT" == false && "$OPENEYE" == true ]]; then
@@ -279,7 +279,7 @@ jobs:
         run: |
           . devtools/gh-actions/initialize_conda.sh
           conda activate docs
-          PYTEST_ARGS="-v -r --tb=short"
+          PYTEST_ARGS="-r fE --tb=short"
           pytest $PYTEST_ARGS openforcefield/tests/test_links.py
 
       - name: Build docs
