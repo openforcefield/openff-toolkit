@@ -217,36 +217,89 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
+      CI_OS: ${{ matrix.cfg.os }}
+      RDKIT: ${{ matrix.cfg.rdkit }}
+      OPENEYE: ${{ matrix.cfg.openeye }}
+      PYVER: ${{ matrix.python-version }}
+      OE_LICENSE: ${{ github.workspace }}/oe_license.txt
       PACKAGE: openforcefield
 
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/setup-python@v1
-        with:
-          python-version: "3.7"
 
-      - name: Install linters
+      - name: Additional info about the build
         shell: bash
         run: |
+          uname -a
+          df -h
+          ulimit -a
+
+      - name: Fix conda permissions in MacOS
+        shell: bash
+        if: startsWith(matrix.cfg.os, 'macOS')
+        run: |
+          sudo chown -R $(id -u):$(id -g) ${CONDA}
+
+      - name: Configure conda
+        shell: bash
+        run: |
+          . devtools/gh-actions/initialize_conda.sh
+          conda activate
+          conda config --set always_yes yes
+          conda config --add channels omnia --add channels conda-forge --add channels openeye
+          conda install --quiet conda conda-build jinja2 anaconda-client
+          conda update --quiet --all
+          conda info --all
+          conda list
+
+      - name: Decrypt OpenEye license
+        shell: bash
+        env:
+          ENC_OE_LICENSE: ${{ secrets.OE_LICENSE__EXP_JUN2020 }}
+        run: |
+          echo "${ENC_OE_LICENSE}" > ${OE_LICENSE}
+
+      - name: Prepare lint environment
+        shell: bash
+        run: |
+          . devtools/gh-actions/initialize_conda.sh
+          conda activate
+          python devtools/scripts/create_conda_env.py -n=lint -p=$PYVER devtools/conda-envs/test_env.yaml
+          conda activate lint
+          if [[ "$RDKIT" == true ]]; then
+            conda install rdkit;
+          fi
+          if [[ "$OPENEYE" == true ]]; then
+            conda install openeye-toolkits
+            python -c "from openeye import oechem; assert oechem.OEChemIsLicensed()"
+          fi
           python -m pip install black isort pylint flake8 flake8-docstrings
           python -m pip install --no-deps .
 
       - name: Run pylint
         shell: bash
         run: |
+          . devtools/gh-actions/initialize_conda.sh
+          conda activate lint
           pylint $PACKAGE/
 
       - name: Run flake8
         run: |
+          . devtools/gh-actions/initialize_conda.sh
+          conda activate lint
           flake8 $PACKAGE/
 
       - name: Run isort
         shell: bash
         run: |
+          . devtools/gh-actions/initialize_conda.sh
+          conda activate lint
           isort --recursive --check-only $PACKAGE/
 
       - name: Run black check
         shell: bash
         if: always()
         run: |
+          . devtools/gh-actions/initialize_conda.sh
+          conda activate lint
           black --check $PACKAGE/ --exclude=$PACKAGE/_version.py
