@@ -268,7 +268,7 @@ jobs:
         run: |
           . devtools/gh-actions/initialize_conda.sh
           conda activate docs
-          pytest -v -k "links" openforcefield/tests/tests_examples.py
+          pytest -v -k "links" openforcefield/tests/test_examples.py
 
       - name: Build docs
         shell: bash
