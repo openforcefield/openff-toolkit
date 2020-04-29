@@ -1356,6 +1356,11 @@ class TestForceFieldChargeAssignment:
             charge, _, _ = nonbonded_force.getParticleParameters(idx)
             assert abs(charge - expected_charge) < 1.e-6 * unit.elementary_charge
 
+    def test_charge_increment_model_initialize_with_no_elements(self):
+        """Ensure that we can initialize a ForceField object from an OFFXML with a ChargeIncrementModel header, but no
+        ChargeIncrement elements"""
+        ff = ForceField(xml_charge_increment_model_formal_charges)
+
     def test_charge_increment_model_net_charge(self):
         """Test application of charge increments on a molecule with a net charge"""
         from simtk import unit
@@ -1502,13 +1507,6 @@ class TestForceFieldChargeAssignment:
             charge, _, _ = nonbonded_force.getParticleParameters(idx)
             assert abs(charge - expected_charge) < 1.e-6 * unit.elementary_charge
 
-
-    # test_charge_increment_wrong_number_of_increments
-    # test_charge_increment_initialize_empty_handler
-    # test_charge_increment_model_net_nonzero_increments
-    # test_charge_increment_model_graceful_failure
-
-
     @pytest.mark.parametrize("inputs", partial_charge_method_resolution_matrix)
     def test_partial_charge_resolution(self, inputs):
         """Check that the proper partial charge methods are available, and that unavailable partial charge methods
@@ -1523,7 +1521,7 @@ class TestForceFieldChargeAssignment:
         ethanol = create_ethanol()
         ethanol.generate_conformers()
         if expected_exception is None:
-            ethanol.compute_partial_charges(partial_charge_method=partial_charge_method,
+            ethanol.assign_partial_charges(partial_charge_method=partial_charge_method,
                                             toolkit_registry=toolkit_wrapper)
             abs_charge_sum = 0. * unit.elementary_charge
 
@@ -1534,7 +1532,7 @@ class TestForceFieldChargeAssignment:
 
         else:
             with pytest.raises(expected_exception, match=expected_exception_match) as excinfo:
-                ethanol.compute_partial_charges(partial_charge_method=partial_charge_method,
+                ethanol.assign_partial_charges(partial_charge_method=partial_charge_method,
                                                 toolkit_registry=toolkit_wrapper)
 
     def test_library_charge_hierarchy(self):

@@ -1015,6 +1015,33 @@ class TestLibraryChargeHandler:
         """Test creation of an empty LibraryChargeHandler"""
         handler = LibraryChargeHandler(skip_version_check=True)
 
+    def test_library_charge_type_wrong_num_charges(self):
+        """Ensure that an error is raised if a LibraryChargeType is initialized with a different number of
+        tagged atoms and charges"""
+        lc_type = LibraryChargeHandler.LibraryChargeType(smirks='[#6:1]-[#7:2]',
+                                                         charge1=0.1 * unit.elementary_charge,
+                                                         charge2=-0.1 * unit.elementary_charge)
+
+        lc_type = LibraryChargeHandler.LibraryChargeType(smirks='[#6:1]-[#7:2]-[#6]',
+                                                         charge1=0.1 * unit.elementary_charge,
+                                                         charge2=-0.1 * unit.elementary_charge)
+
+        with pytest.raises(SMIRNOFFSpecError, match="initialized with unequal number of tagged atoms and charges") as excinfo:
+            lc_type = LibraryChargeHandler.LibraryChargeType(smirks='[#6:1]-[#7:2]',
+                                                             charge1=0.05 * unit.elementary_charge,
+                                                             charge2=0.05 * unit.elementary_charge,
+                                                             charge3=-0.1 * unit.elementary_charge)
+
+        with pytest.raises(SMIRNOFFSpecError, match="initialized with unequal number of tagged atoms and charges") as excinfo:
+            lc_type = LibraryChargeHandler.LibraryChargeType(smirks='[#6:1]-[#7:2]-[#6]',
+                                                             charge1=0.05 * unit.elementary_charge,
+                                                             charge2=0.05 * unit.elementary_charge,
+                                                             charge3=-0.1 * unit.elementary_charge)
+
+        with pytest.raises(SMIRNOFFSpecError, match="initialized with unequal number of tagged atoms and charges") as excinfo:
+            lc_type = LibraryChargeHandler.LibraryChargeType(smirks='[#6:1]-[#7:2]-[#6]',
+                                                             charge1=0.05 * unit.elementary_charge)
+
 class TestChargeIncrementModelHandler:
     def test_create_charge_increment_model_handler(self):
         """Test creation of ChargeIncrementModelHandlers"""
@@ -1057,6 +1084,32 @@ class TestChargeIncrementModelHandler:
         with pytest.raises(IncompatibleParameterError) as excinfo:
             handler1.check_handler_compatibility(handler3)
 
+    def test_charge_increment_type_wrong_num_increments(self):
+        """Ensure that an error is raised if a ChargeIncrementType is initialized with a different number of
+        tagged atoms and chargeincrements"""
+        ci_type = ChargeIncrementModelHandler.ChargeIncrementType(smirks='[#6:1]-[#7:2]',
+                                                                  charge_increment1=0.1 * unit.elementary_charge,
+                                                                  charge_increment2=-0.1 * unit.elementary_charge)
+
+        ci_type = ChargeIncrementModelHandler.ChargeIncrementType(smirks='[#6:1]-[#7:2]-[#6]',
+                                                                  charge_increment1=0.1 * unit.elementary_charge,
+                                                                  charge_increment2=-0.1 * unit.elementary_charge)
+
+        with pytest.raises(SMIRNOFFSpecError, match="initialized with unequal number of tagged atoms and charge increments") as excinfo:
+            ci_type = ChargeIncrementModelHandler.ChargeIncrementType(smirks='[#6:1]-[#7:2]',
+                                                                      charge_increment1=0.05 * unit.elementary_charge,
+                                                                      charge_increment2=0.05 * unit.elementary_charge,
+                                                                      charge_increment3=-0.1 * unit.elementary_charge)
+
+        with pytest.raises(SMIRNOFFSpecError, match="initialized with unequal number of tagged atoms and charge increments") as excinfo:
+            ci_type = ChargeIncrementModelHandler.ChargeIncrementType(smirks='[#6:1]-[#7:2]-[#6]',
+                                                                      charge_increment1=0.05 * unit.elementary_charge,
+                                                                      charge_increment2=0.05 * unit.elementary_charge,
+                                                                      charge_increment3=-0.1 * unit.elementary_charge)
+
+        with pytest.raises(SMIRNOFFSpecError, match="initialized with unequal number of tagged atoms and charge increments") as excinfo:
+            ci_type = ChargeIncrementModelHandler.ChargeIncrementType(smirks='[#6:1]-[#7:2]-[#6]',
+                                                                      charge_increment1=0.05 * unit.elementary_charge)
 
 class TestGBSAHandler:
     def test_create_default_gbsahandler(self):

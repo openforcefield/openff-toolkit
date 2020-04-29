@@ -2822,6 +2822,14 @@ class LibraryChargeHandler(_NonbondedHandler):
         name = ParameterAttribute(default=None)
         charge = IndexedParameterAttribute(unit=unit.elementary_charge)
 
+        def __init__(self, **kwargs):
+            from openforcefield.typing.chemistry import ChemicalEnvironment
+            super().__init__(**kwargs)
+            chem_env = ChemicalEnvironment(self.smirks)
+            if len(self.charge) != len(chem_env.getIndexedAtoms()):
+                raise SMIRNOFFSpecError(f"LibraryCharge {self} was initialized with unequal number of "
+                                        f"tagged atoms and charges")
+
 
     _TAGNAME = 'LibraryCharges'  # SMIRNOFF tag name to process
     _INFOTYPE = LibraryChargeType  # info type to store
@@ -3032,6 +3040,14 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
 
         charge_increment = IndexedParameterAttribute(unit=unit.elementary_charge)
 
+        def __init__(self, **kwargs):
+            from openforcefield.typing.chemistry import ChemicalEnvironment
+            super().__init__(**kwargs)
+            chem_env = ChemicalEnvironment(self.smirks)
+            if len(self.charge_increment) != len(chem_env.getIndexedAtoms()):
+                raise SMIRNOFFSpecError(f"ChargeIncrement {self} was initialized with unequal number of "
+                                        f"tagged atoms and charge increments")
+
 
     _TAGNAME = 'ChargeIncrementModel'  # SMIRNOFF tag name to process
     _INFOTYPE = ChargeIncrementType  # info type to store
@@ -3195,9 +3211,6 @@ class GBSAHandler(ParameterHandler):
 
         radius = ParameterAttribute(unit=unit.angstrom)
         scale = ParameterAttribute(converter=float)
-
-        def __init__(self, **kwargs):
-            super().__init__(**kwargs)
 
     _TAGNAME = 'GBSA'
     _INFOTYPE = GBSAType
