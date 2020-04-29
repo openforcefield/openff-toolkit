@@ -24,6 +24,7 @@ __all__ = [
     'ParameterHandler',
     'ParameterAttribute',
     'IndexedParameterAttribute',
+    'IndexedMappedParameterAttribute',
     'ConstraintHandler',
     'BondHandler',
     'AngleHandler',
@@ -44,7 +45,6 @@ from enum import Enum
 import functools
 import inspect
 import logging
-import math
 import re
 
 from simtk import openmm, unit
@@ -393,7 +393,92 @@ class IndexedParameterAttribute(ParameterAttribute):
     [1.0, 1.0, 0.01, 4.0]
 
     """
+    # TODO index_mapping
+    def _convert_and_validate(self, instance, value):
+        """Overwrite ParameterAttribute._convert_and_validate to make the value a ValidatedList."""
+        # The default value is always allowed.
+        if self._is_valid_default(value):
+            return value
 
+        # We push the converters into a ValidatedList so that we can make
+        # sure that elements are validated correctly when they are modified
+        # after their initialization.
+        # ValidatedList expects converters that take the value as a single
+        # argument so we create a partial function with the instance assigned.
+        static_converter = functools.partial(self._call_converter, instance=instance)
+        value = ValidatedList(value, converter=[self._validate_units, static_converter])
+
+        return value
+
+
+class IndexedMappedParameterAttribute(ParameterAttribute):
+    """The attribute of a parameter with an unspecified number of terms, where
+    each term is a mapping.
+
+    Some parameters can be associated to multiple terms,
+    where those terms have multiple components.
+    For example, torsions with fractional bond orders have parameters such as
+    k1_bondorder1, k1_bondorder2, k2_bondorder1, k2_bondorder2, ..., and 
+    ``IndexedMappedParameterAttribute`` can be used to encapsulate the sequence of
+    terms as mappings (typically, `dict`s) of their components.
+
+    The only substantial difference with ``IndexedParameterAttribute`` is that
+    only sequences of mappings are supported as values and converters and units are
+    checked on each component of each element in the sequence.
+
+    Currently, the descriptor makes the sequence immutable. This is to
+    avoid that an element of the sequence could be set without being
+    properly validated. In the future, the data could be wrapped in a
+    safe list that would safely allow mutability.
+
+    Parameters
+    ----------
+    default : object, optional
+        When specified, the descriptor makes this attribute optional by
+        attaching a default value to it.
+    unit : simtk.unit.Quantity, optional
+        When specified, only sequences of mappings of quantities with
+        compatible units are allowed to be set.
+    converter : callable, optional
+        An optional function that can be used to validate and cast each
+        component of each element of the sequence before setting the attribute.
+
+    See Also
+    --------
+    IndexedParameterAttribute
+        A parameter attribute representing a sequence.
+
+    Examples
+    --------
+
+    Create an optional indexed attribute with unit of angstrom.
+
+    >>> from simtk import unit
+    >>> class MyParameter:
+    ...     length = IndexedMappedParameterAttribute(default=None, unit=unit.angstrom)
+    ...
+    >>> my_par = MyParameter()
+    >>> my_par.length is None
+    True
+
+    Strings are parsed into Quantity objects.
+
+    >>> my_par.length = [{1:'1 * angstrom'}, {1: 0.5 * unit.nanometer}]
+    >>> my_par.length[0]
+    Quantity(value=1, unit=angstrom)
+
+    Similarly, custom converters work as with ``ParameterAttribute``, but
+    they are used to validate each value in the sequence.
+
+    >>> class MyParameter:
+    ...     attr_indexed = IndexedMappedParameterAttribute(converter=float)
+    ...
+    >>> my_par = MyParameter()
+    >>> my_par.attr_indexed = [{1: 1}, {2: '1.0', 3: '1e-2'}, {4: 4.0}]
+    >>> my_par.attr_indexed
+    [{1: 1.0}, {2: 1.0, 3: 0.01}, {4: 4.0}]
+
+    """
     def _convert_and_validate(self, instance, value):
         """Overwrite ParameterAttribute._convert_and_validate to make the value a ValidatedList."""
         # The default value is always allowed.
@@ -669,6 +754,25 @@ class _ParameterAttributeHandler:
 
     def __getattr__(self, item):
         """Take care of mapping indexed attributes to their respective list elements."""
+
+        # Try matching the case where there are two indices
+        # this indicates a index_mapped parameter
+        attr_name, index, key = self._split_attribute_index_mapping(item)
+
+        # Check if this is an indexed_mapped attribute.
+        if ((key is not None) and
+            (index is not None) and
+            attr_name in self._get_indexed_mapped_parameter_attributes()):
+            indexed_mapped_attr_value = getattr(self, attr_name)
+            try:
+                return indexed_mapped_attr_value[index][key]
+            except (IndexError, KeyError) as err:
+                if not err.args: 
+                    err.args=('',)
+                err.args = err.args + (f"'{item}' is out of bound for indexed attribute '{attr_name}'",)
+                raise 
+
+        # Otherwise, try indexed attribute
         # Separate the indexed attribute name from the list index.
         attr_name, index = self._split_attribute_index(item)
 
@@ -693,6 +797,9 @@ class _ParameterAttributeHandler:
 
     def __setattr__(self, key, value):
         """Take care of mapping indexed attributes to their respective list elements."""
+
+        # TODO index_mapping
+
         # Separate the indexed attribute name from the list index.
         attr_name, index = self._split_attribute_index(key)
 
@@ -773,6 +880,7 @@ class _ParameterAttributeHandler:
         For example, the method takes 'k2' and returns the tuple ('k', 1).
         If attribute_name doesn't end with an integer, it returns (item, None).
         """
+
         # Match any number (\d+) at the end of the string ($).
         match = re.search(r'\d+$', item)
         if match is None:
@@ -782,6 +890,38 @@ class _ParameterAttributeHandler:
         attr_name = item[:-len(index)]
         index = int(match.group()) - 1
         return attr_name, index
+
+    @staticmethod
+    def _split_attribute_index_mapping(item):
+        """Split the attribute name from the final index.
+
+        For example, the method takes 'k2' and returns the tuple ('k', 1).
+        If attribute_name doesn't end with an integer, it returns (item, None).
+        """
+        # Match items of the form <item><index>_<mapping><key>
+        # where <index> and <key> always integers
+        match = re.search(r'\d+_[A-z]+\d+$', item)
+        if match is None:
+            return item, None
+
+        # Match any number (\d+) at the end of the string ($).
+        i_match = r'\d+$'
+
+        indexed, mapped = item.split('_')
+
+        # process indexed component
+        match_indexed = re.search(i_match, indexed)
+        index = match_indexed.group()  # This is a str.
+        attr_name = indexed[:-len(index)]
+        index = int(match.group()) - 1
+
+        # process mapped component
+        match_mapping = re.search(i_match, mapped)
+        key = match_mapping.group()  # This is a str.
+        attr_name = f"{attr_name}_{mapped[:-len(key)]}"
+        key = int(match.group()) # we don't subtract 1 here, because these are keys, not indices
+
+        return attr_name, index, key
 
     @classmethod
     def _get_parameter_attributes(cls, filter=None):
@@ -830,6 +970,11 @@ class _ParameterAttributeHandler:
                                            for name, descriptor in c.__dict__.items()
                                            if isinstance(descriptor, ParameterAttribute) and filter(descriptor))
         return parameter_attributes
+
+    @classmethod
+    def _get_indexed_mapped_parameter_attributes(cls):
+        """Shortcut to retrieve only IndexedMappedParameterAttributes."""
+        return cls._get_parameter_attributes(filter=lambda x: isinstance(x, IndexedMappedParameterAttribute))
 
     @classmethod
     def _get_indexed_parameter_attributes(cls):
@@ -2084,9 +2229,10 @@ class ProperTorsionHandler(ParameterHandler):
         # fractional bond order params
         # `IndexedParameterAttribute` may not meet our needs for this one
         # may have to expand its functionality or create a new class
-        k_bondorder = IndexedParameterAttribute(default=None)
+        k_bondorder = IndexedMappedParameterAttribute(default=None)
 
     _TAGNAME = 'ProperTorsions'  # SMIRNOFF tag name to process
+    _KWARGS = ['partial_bond_orders_from_molecules']
     _INFOTYPE = ProperTorsionType  # info type to store
     _OPENMMTYPE = openmm.PeriodicTorsionForce  # OpenMM force class to create
 
@@ -2126,6 +2272,38 @@ class ProperTorsionHandler(ParameterHandler):
         self._check_attributes_are_equal(other_handler, identical_attrs=string_attrs_to_compare,
                                          tolerance_attrs=float_attrs_to_compare)
 
+    def assign_partial_bond_orders_from_molecules(self, topology, pbo_mols):
+
+        # for each reference molecule in our topology, we'll walk through the provided partial bond order molecules
+        # if we find a match, we'll apply the partial bond orders and skip to the next molecule
+        for ref_mol in topology.reference_molecules:
+            for pbo_mol in pbo_mols:
+                # TODO: how stringent do we want matching to be in this case?
+                isomorphic, topology_atom_map = Molecule.are_isomorphic(ref_mol, pbo_mol,
+                                                                        return_atom_map=True,
+                                                                        aromatic_matching=True,
+                                                                        formal_charge_matching=True,
+                                                                        bond_order_matching=True,
+                                                                        atom_stereochemistry_matching=True,
+                                                                        bond_stereochemistry_matching=True)
+
+                # if matching, assign bond orders and skip to next molecule
+                # first match wins
+                if isomorphic:
+                    # walk through bonds on reference molecule
+                    for bond in ref_mol.bonds:
+                        # use atom mapping to translate to pbo_molecule bond
+                        pbo_bond = pbo_mol.get_bond_between(topology_atom_map[bond.atom1_index],
+                                                            topology_atom_map[bond.atom2_index])
+                        # extract fractional bond order
+                        # assign fractional bond order to reference molecule bond
+                        bond.fractional_bond_order = pbo_bond.fractional_bond_order
+
+                    break
+                # not necessary, but explicit
+                else:
+                    continue
+
     def create_force(self, system, topology, **kwargs):
         #force = super(ProperTorsionHandler, self).create_force(system, topology, **kwargs)
         existing = [system.getForce(i) for i in range(system.getNumForces())]
@@ -2137,7 +2315,14 @@ class ProperTorsionHandler(ParameterHandler):
         else:
             force = existing[0]
 
-        # Add all proper torsions to the system.
+        # first, check whether any of the reference molecules in the topology
+        # are in the partial_bond_orders_from_molecules list
+        if 'partial_bond_orders_from_molecules' in kwargs:
+            self.assign_partial_bond_orders_from_molecules(topology, kwargs['partial_bond_orders_from_molecules'])
+
+        # find all proper torsions for which we have parameters
+        # operates on reference molecules in topology
+        # but gives back matches for atoms for instance molecules
         torsion_matches = self.find_matches(topology)
 
         for (atom_indices, torsion_match) in torsion_matches.items():
@@ -2145,10 +2330,12 @@ class ProperTorsionHandler(ParameterHandler):
             # Currently does nothing
             self._assert_correct_connectivity(torsion_match)
 
-            if torsion_match.parameter_type.k_bondorder is not None:
-                self._assign_fractional_bond_orders(atom_indices, torsion_match, match, force)
-            else:
+            if torsion_match.parameter_type.k_bondorder is None:
+                # assign torsion with no interpolation
                 self._assign_torsion(atom_indices, torsion_match, force)
+            else:
+                # assign torsion with interpolation
+                self._assign_fractional_bond_orders(atom_indices, torsion_match, force, **kwargs)
 
         logger.info('{} torsions added'.format(len(torsion_matches)))
 
@@ -2173,7 +2360,6 @@ class ProperTorsionHandler(ParameterHandler):
                                                   torsion_params.phase,
                                                   torsion_params.k,
                                                   torsion_params.idivf):
-
             
             if idivf == 'auto':
                 # TODO: Implement correct "auto" behavior
@@ -2185,10 +2371,13 @@ class ProperTorsionHandler(ParameterHandler):
                              phase, k/idivf)
 
 
-    def _assign_fractional_bond_orders(self, atom_indices, torsion_match, force):
+    def _assign_fractional_bond_orders(self, atom_indices, torsion_match, force, **kwargs):
+        from openforcefield.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
 
         torsion_params = torsion_match.parameter_type
         match = torsion_match.environment_match
+
+        match
             
         for (periodicity, phase, k_bondorder, idivf) in zip(torsion_params.periodicity,
                                                             torsion_params.phase,
@@ -2204,8 +2393,9 @@ class ProperTorsionHandler(ParameterHandler):
                 raise NotImplementedError("The OpenForceField toolkit hasn't implemented "
                                           "support for the torsion `idivf` value of 'auto'")
 
+            # get central bond for reference molecule
             central_bond = match.reference_molecule.get_bond_between(
-                    atom_indices[1], atom_indices[2])
+                    match.reference_atom_indices[1], match.reference_atom_indices[2])
 
             # if fractional bond order not calculated yet, we calculate it
             # should only happen once per reference molecule for which we care
@@ -2214,15 +2404,18 @@ class ProperTorsionHandler(ParameterHandler):
             if central_bond.fractional_bond_order is None:
                     # how many conformers should we generate?
                     toolkit_registry = kwargs.get('toolkit_registry', GLOBAL_TOOLKIT_REGISTRY)
+
+                    # TODO: how many conformers do we need?
+                    # doesn't the conformer used heavily determine the fractional bond order
+                    # ultimately assigned to some bonds, or does it not matter for our toolkits?
                     match.reference_molecule.generate_conformers(
-                            n_conformers=10,
+                            n_conformers=1,
                             toolkit_registry=toolkit_registry)
                     match.reference_molecule.assign_fractional_bond_orders(
                             toolkit_registry=toolkit_registry,
-                            use_conformers=temp_mol.conformers)
+                            use_conformers=match.reference_molecule.conformers)
 
-            # this is where the logic should go for scaling k based on the bondorder of
-            # the central bond for atoms 2 and 3
+            # scale k based on the bondorder of the central bond
             if self.fractional_bondorder_interpolation == 'linear':
                 # we only interpolate on k
                 k = self._linear_interpolate_k(k_bondorder, central_bond.fractional_bond_order)
@@ -2231,6 +2424,7 @@ class ProperTorsionHandler(ParameterHandler):
                     "Fractional bondorder treatment {} is not implemented.".
                     format(self.fractional_bondorder_method))
                 
+            # add a torsion with given parameters for topology atoms
             force.addTorsion(atom_indices[0], atom_indices[1],
                              atom_indices[2], atom_indices[3], periodicity,
                              phase, k/idivf)
@@ -2287,7 +2481,7 @@ class ProperTorsionHandler(ParameterHandler):
             k = (k_bondorder[bond_orders[-1]]
                     + ((k_bondorder[bond_orders[-1]] - k_bondorder[bond_orders[-2]])
                        /(bond_orders[-1] - bond_orders[-2]))
-                    * (fractional_bond_order - bond_order[-1]))
+                    * (fractional_bond_order - bond_orders[-1]))
             return k
 
 

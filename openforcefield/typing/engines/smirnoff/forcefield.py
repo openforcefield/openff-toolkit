@@ -1093,6 +1093,9 @@ class ForceField:
         charge_from_molecules : List[openforcefield.molecule.Molecule], optional
             If specified, partial charges will be taken from the given molecules
             instead of being determined by the force field.
+        partial_bond_orders_from_molecules : List[openforcefield.molecule.Molecule], optional
+            If specified, partial bond orders will be taken from the given molecules
+            instead of being determined by the force field.
 
         Returns
         -------

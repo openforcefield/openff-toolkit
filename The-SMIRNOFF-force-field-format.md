@@ -485,14 +485,14 @@ This is similar to the functionality provided by fractional bond orders detailed
 For example, these parameters:
 ```XML
 <ProperTorsions version="0.3" potential="k*(1+cos(periodicity*theta-phase))" default_idivf="auto">
-    <Proper smirks="[*:1]:[#6X4]-[#6X4]:[*:4]" periodicity1="2" phase1="0.0 * degree" k1="1.40*kilocalories_per_mole" idivf1="1.0"/>
-    <Proper smirks="[*:1]:[#6X4]:[#6X4]:[*:4]" periodicity1="2" phase1="0.0 * degree" k1="1.90*kilocalories_per_mole" idivf1="1.0"/>
+    <Proper smirks="[*:1]:[#6X4]-[#6X4]:[*:4]" periodicity1="2" phase1="0.0 * degree" k1="1.00*kilocalories_per_mole" idivf1="1.0"/>
+    <Proper smirks="[*:1]:[#6X4]:[#6X4]:[*:4]" periodicity1="2" phase1="0.0 * degree" k1="1.40*kilocalories_per_mole" idivf1="1.0"/>
     ...
 ```
 can be replaced by a single parameter line by first invoking the `fractional_bondorder_method` attribute to specify a method for computing the fractional bond order and `fractional_bondorder_interpolation` for specifying the procedure for interpolating parameters between specified integral bond orders:
 ```XML
-<ProperTorsions version="0.3" potential="k*(1+cos(periodicity*theta-phase))" default_idivf="auto" fractional_bondorder_method="AMI-Wiberg" fractional_bondorder_interpolation="linear">
-    <Proper smirks="[*:1]:[#6X4]~[#6X4]:[*:4]" periodicity1="2" phase1="0.0 * degree" k1_bondorder1="1.40*kilocalories_per_mole" k1_bondorder2="1.90*kilocalories_per_mole" idivf1="1.0"/>
+<ProperTorsions version="0.3" potential="k*(1+cos(periodicity*theta-phase))" default_idivf="auto" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
+    <Proper smirks="[*:1]:[#6X4]~[#6X4]:[*:4]" periodicity1="2" phase1="0.0 * degree" k1_bondorder1="1.00*kilocalories_per_mole" k1_bondorder2="1.80*kilocalories_per_mole" idivf1="1.0"/>
     ...
 ```
 This allows specification of the barrier height for e.g. bond orders 1 and 2, and then interpolation between those based on the partial bond order.
@@ -501,9 +501,12 @@ This allows specification of the barrier height for e.g. bond orders 1 and 2, an
 
 |  ProperTorsions section tag version | Tag attributes and default values                                         | Required parameter attributes         | Optional parameter attributes |
 |-------------------------------------|---------------------------------------------------------------------------|---------------------------------------|-------------------------------|
-| 0.4                                 | `potential="k*(1+cos(periodicity*theta-phase))"`, `default_idivf="auto"`, | `smirks`, `k`, `phase`, `periodicity` | `idivf`, `id`, `parent_id`    |
-|                                     | `fractional_bondorder_method="AM1-Wiberg"`,                               |                                       |                               |
+| 0.3                                 | `potential="k*(1+cos(periodicity*theta-phase))"`, `default_idivf="auto"`, | `smirks`, `k`, `phase`, `periodicity` | `idivf`, `id`, `parent_id`    |
+|-------------------------------------|---------------------------------------------------------------------------|---------------------------------------|-------------------------------|
+| 0.4                                 | `potential="k*(1+cos(periodicity*theta-phase))"`, `default_idivf="auto"`, | `smirks`, `k_bondorder`,              | `idivf`, `id`, `parent_id`    |
+|                                     | `fractional_bondorder_method="AM1-Wiberg"`,                               | `phase`, `periodicity`                |                               |
 |                                     | `fractional_bondorder_interpolation="linear"`                             |                                       |                               |
+
 ### `<ImproperTorsions>`
 
 Improper torsions are specified via an `<ImproperTorsions>...</ImproperTorsions>` block, with individual `<Improper>` tags containing attributes that specify the same properties as `<ProperTorsions>`:
