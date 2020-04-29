@@ -238,6 +238,12 @@ xml_spec_docs_charge_increment_model_xml = '''
 </SMIRNOFF>
 '''
 
+xml_charge_increment_model_formal_charges = '''
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+  <ChargeIncrementModel version="0.3" number_of_conformers="1" partial_charge_method="formal_charge"/>
+</SMIRNOFF>
+'''
+
 #======================================================================
 # TEST UTILITY FUNCTIONS
 #======================================================================
@@ -1382,7 +1388,8 @@ class TestForceFieldChargeAssignment:
         ethanol = create_ethanol()
         top = ethanol.to_topology()
 
-        # Test a charge increment that matches all C-H bonds
+        # Test a charge increment that matches all C-H bonds at once
+        # (this should be applied once: C0-H3-H4-H5)
         test_charge_increment_model_ff = '''
         <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
           <Electrostatics version="0.3" method="PME" scale12="0.0" scale13="0.0" scale14="0.833333" cutoff="9.0 * angstrom"/>
@@ -1403,6 +1410,7 @@ class TestForceFieldChargeAssignment:
             assert abs(charge - expected_charge) < 1.e-6 * unit.elementary_charge
 
         # Test a charge increment that matches two C-H bonds at a time
+        # (this should be applied 3 times: C0-H3-H4, C0-H3-H5, C0-H4-H5)
         test_charge_increment_model_ff = '''
         <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
           <Electrostatics version="0.3" method="PME" scale12="0.0" scale13="0.0" scale14="0.833333" cutoff="9.0 * angstrom"/>
@@ -1424,6 +1432,7 @@ class TestForceFieldChargeAssignment:
 
 
         # Test a charge increment that matches ONE C-H bond at a time
+        # (this should be applied three times: C0-H3, C0-H4, C0-H5)
         test_charge_increment_model_ff = '''
         <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
           <Electrostatics version="0.3" method="PME" scale12="0.0" scale13="0.0" scale14="0.833333" cutoff="9.0 * angstrom"/>
@@ -1434,7 +1443,6 @@ class TestForceFieldChargeAssignment:
         file_path = get_data_file_path('test_forcefields/smirnoff99Frosst.offxml')
         ff = ForceField(file_path, test_charge_increment_model_ff)
         del ff._parameter_handlers['ToolkitAM1BCC']
-
 
         sys = ff.create_openmm_system(top)
         nonbonded_force = [force for force in sys.getForces() if isinstance(force, openmm.NonbondedForce)][0]
@@ -1469,11 +1477,35 @@ class TestForceFieldChargeAssignment:
             assert abs(charge - expected_charge) < 1.e-6 * unit.elementary_charge
 
 
+    def test_charge_increment_model_partially_overlapping_matches_both_apply(self):
+        """Ensure that DIFFERENT chargeincrements BOTH get applied if they match
+        a partially-overlapping set of atoms"""
+        from simtk import unit
+        test_charge_increment_model_ff = '''
+        <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+          <Electrostatics version="0.3" method="PME" scale12="0.0" scale13="0.0" scale14="0.833333" cutoff="9.0 * angstrom"/>
+          <ChargeIncrementModel version="0.3" number_of_conformers="1" partial_charge_method="formal_charge">
+            <ChargeIncrement smirks="[#6X4:1]([#1:2])([#1:3])([#1:4])" charge_increment1="0.3*elementary_charge" charge_increment2="-0.1*elementary_charge" charge_increment3="-0.1*elementary_charge" charge_increment4="-0.1*elementary_charge"/>
+            <ChargeIncrement smirks="[#6X4:1][#6X4:2][#8]" charge_increment1="0.05*elementary_charge" charge_increment2="-0.05*elementary_charge"/>
+          </ChargeIncrementModel>
+        </SMIRNOFF>'''
+        file_path = get_data_file_path('test_forcefields/smirnoff99Frosst.offxml')
+        ff = ForceField(file_path, test_charge_increment_model_ff)
+        del ff._parameter_handlers['ToolkitAM1BCC']
+
+        ethanol = create_ethanol()
+        top = ethanol.to_topology()
+        sys = ff.create_openmm_system(top)
+        nonbonded_force = [force for force in sys.getForces() if isinstance(force, openmm.NonbondedForce)][0]
+        expected_charges = [0.35, -0.05, 0, -0.1, -0.1, -0.1, 0., 0., 0.] * unit.elementary_charge
+        for idx, expected_charge in enumerate(expected_charges):
+            charge, _, _ = nonbonded_force.getParticleParameters(idx)
+            assert abs(charge - expected_charge) < 1.e-6 * unit.elementary_charge
 
 
     # test_charge_increment_wrong_number_of_increments
+    # test_charge_increment_initialize_empty_handler
     # test_charge_increment_model_net_nonzero_increments
-    # test_charge_increment_model_partially_overlapping_smarts_both_apply
     # test_charge_increment_model_graceful_failure
 
 
@@ -1611,13 +1643,23 @@ class TestForceFieldChargeAssignment:
 
         ff = ForceField('test_forcefields/smirnoff99Frosst.offxml',
                         xml_CH_zeroes_library_charges_xml,
-                        'test_forcefields/tip3p.offxml'
+                        'test_forcefields/tip3p.offxml',
+                        xml_charge_increment_model_formal_charges
                         )
+        # Cyclohexane will be assigned nonzero charges based on `charge_from_molecules` kwarg
         cyclohexane = Molecule.from_file(get_data_file_path(os.path.join('systems', 'monomers','cyclohexane.sdf')))
+        # Butanol will be assigned zero-valued charges based on `charge_from_molecules` kwarg
         butanol = Molecule.from_file(get_data_file_path(os.path.join('systems', 'monomers', 'butanol.sdf')))
+        # Propane will be assigned charges from AM1BCC
         propane = Molecule.from_file(get_data_file_path(os.path.join('systems', 'monomers', 'propane.sdf')))
+        # Water will be assigned TIP3P librarycharges
         water = Molecule.from_file(get_data_file_path(os.path.join('systems', 'monomers', 'water.sdf')))
+        # Ethanol should be caught by ToolkitAM1BCC
         ethanol = Molecule.from_file(get_data_file_path(os.path.join('systems', 'monomers', 'ethanol.sdf')))
+        # iodide should fail to be assigned charges by AM1-BCC, and instead be caught by ChargeIncrementHandler
+        # (and assigned formal charge by dummy charge method)
+        iodide = Molecule.from_smiles('[I-1]')
+
         # Assign dummy partial charges to cyclohexane, which we expect to find in the final system since it
         # is included in the charge_from_molecules kwarg to create_openmm_system
         cyclohexane.partial_charges = np.array([-0.2, -0.2, -0.2, -0.2, -0.2, -0.2,
@@ -1642,7 +1684,8 @@ class TestForceFieldChargeAssignment:
                      butanol,     # charge_from_molecules kwarg
                      propane,     # library charges
                      water,       # library charges
-                     ethanol]     # AM1-BCC
+                     ethanol,     # AM1-BCC
+                     iodide]      # charge increment model (formal charge)
         top = Topology.from_molecules(molecules)
         omm_system = ff.create_openmm_system(top, charge_from_molecules=[cyclohexane, butanol])
         existing = [f for f in omm_system.getForces() if type(f) == NonbondedForce]
@@ -1670,9 +1713,14 @@ class TestForceFieldChargeAssignment:
             assert q == expected_charge
 
         # Ensure the last molecule (ethanol) had _some_ nonzero charge assigned by an AM1BCC implementation
-        for particle_index in range(len(expected_charges), top.n_topology_atoms):
+        for particle_index in range(len(expected_charges), top.n_topology_atoms-1):
             q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
             assert q != 0 * unit.elementary_charge
+
+        # Ensure that iodine has a charge of -1, specified by charge increment model charge_method="formal charge"
+        q, sigma, epsilon = nonbondedForce.getParticleParameters(top.n_topology_atoms-1)
+        assert q == -1. * unit.elementary_charge
+
 
     def test_assign_charges_to_molecule_in_parts_using_multiple_library_charges(self):
         """Test assigning charges to parts of a molecule using two library charge lines. Note that these LibraryCharge
