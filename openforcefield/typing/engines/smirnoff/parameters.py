@@ -2934,7 +2934,7 @@ class ToolkitAM1BCCHandler(_NonbondedHandler):
         pass
 
     def create_force(self, system, topology, **kwargs):
-
+        import warnings
         from openforcefield.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
         from openforcefield.topology import FrozenMolecule, TopologyAtom, TopologyVirtualSite
 
@@ -2950,10 +2950,14 @@ class ToolkitAM1BCCHandler(_NonbondedHandler):
             # Make a temporary copy of ref_mol to assign charges
             temp_mol = FrozenMolecule(ref_mol)
 
-            # If the molecule wasn't already assigned charge values, calculate them here
-            toolkit_registry = kwargs.get('toolkit_registry', GLOBAL_TOOLKIT_REGISTRY)
-            temp_mol.generate_conformers(n_conformers=10, toolkit_registry=toolkit_registry)
-            temp_mol.compute_partial_charges_am1bcc(toolkit_registry=toolkit_registry)
+            try:
+                # If the molecule wasn't already assigned charge values, calculate them here
+                toolkit_registry = kwargs.get('toolkit_registry', GLOBAL_TOOLKIT_REGISTRY)
+                temp_mol.generate_conformers(n_conformers=10, toolkit_registry=toolkit_registry)
+                temp_mol.compute_partial_charges_am1bcc(toolkit_registry=toolkit_registry)
+            except Exception as e:
+                warnings.warn(str(e), Warning)
+                continue
 
             # Assign charges to relevant atoms
             for topology_molecule in topology._reference_molecule_to_topology_molecules[ref_mol]:
@@ -3031,7 +3035,7 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
 
     _TAGNAME = 'ChargeIncrementModel'  # SMIRNOFF tag name to process
     _INFOTYPE = ChargeIncrementType  # info type to store
-    _DEPENDENCIES = [vdWHandler, ElectrostaticsHandler, LibraryChargeHandler]
+    _DEPENDENCIES = [vdWHandler, ElectrostaticsHandler, LibraryChargeHandler, ToolkitAM1BCCHandler]
 
     number_of_conformers = ParameterAttribute(default=1, converter=int)
 
@@ -3083,8 +3087,7 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
         return matches
 
     def create_force(self, system, topology, **kwargs):
-
-
+        import warnings
         from openforcefield.topology import FrozenMolecule, TopologyAtom, TopologyVirtualSite
 
         existing = [system.getForce(i) for i in range(system.getNumForces())]
@@ -3106,10 +3109,13 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
             # Make a temporary copy of ref_mol to assign charges from charge_mol
             temp_mol = FrozenMolecule(ref_mol)
 
-            # If the molecule wasn't assigned parameters from a manually-input charge_mol, calculate them here
-            temp_mol.generate_conformers(n_conformers=self.number_of_conformers)
-            #temp_mol.compute_partial_charges(partial_charge_method=self.partial_charge_method)
-            temp_mol.assign_partial_charges(partial_charge_method=self.partial_charge_method)
+            try:
+                # If the molecule wasn't assigned parameters from a manually-input charge_mol, calculate them here
+                temp_mol.generate_conformers(n_conformers=self.number_of_conformers)
+                temp_mol.assign_partial_charges(partial_charge_method=self.partial_charge_method)
+            except Exception as e:
+                warnings.warn(str(e), Warning)
+                continue
 
             charges_to_assign = {}
 
