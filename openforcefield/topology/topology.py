@@ -100,7 +100,9 @@ class _TransformedDict(MutableMapping):
 class ValenceDict(_TransformedDict):
     """Enforce uniqueness in atom indices."""
 
-    def __keytransform__(self, key):
+    
+    @staticmethod
+    def key_transform(key):
         """Reverse tuple if first element is larger than last element."""
         # Ensure key is a tuple.
         key = tuple(key)
@@ -109,11 +111,31 @@ class ValenceDict(_TransformedDict):
             key = tuple(reversed(key))
         return key
 
+    @staticmethod
+    def index_of(key):
+        assert len(key) < 4
+        refkey = __class__.key_transform(key)
+        if len(key) == 2:
+            permutations = {
+                (refkey[0],refkey[1]): 0,
+                (refkey[1],refkey[0]): 1
+            }
+        else:
+            permutations = {
+                (refkey[0],refkey[1],refkey[2]): 0,
+                (refkey[2],refkey[1],refkey[0]): 1
+            }
+        return permutations[key]
+
+    def __keytransform__(self, key):
+        return __class__.key_transform(key)
+
 
 class ImproperDict(_TransformedDict):
     """Symmetrize improper torsions."""
 
-    def __keytransform__(self, key):
+    @staticmethod
+    def key_transform(key):
         """Reorder tuple in numerical order except for element[1] which is the central atom; it retains its position."""
         # Ensure key is a tuple
         key = tuple(key)
@@ -125,7 +147,23 @@ class ImproperDict(_TransformedDict):
         key = tuple(
             [connectedatoms[0], key[1], connectedatoms[1], connectedatoms[2]])
         return (key)
+    
+    @staticmethod
+    def index_of(key):
+        assert len(key) == 4
+        refkey = __class__.key_transform(key)
+        permutations = {
+            (refkey[0], refkey[1], refkey[2], refkey[3]): 0,
+            (refkey[0], refkey[1], refkey[3], refkey[2]): 1,
+            (refkey[2], refkey[1], refkey[0], refkey[3]): 2,
+            (refkey[2], refkey[1], refkey[3], refkey[0]): 3,
+            (refkey[3], refkey[1], refkey[0], refkey[2]): 4,
+            (refkey[3], refkey[1], refkey[2], refkey[0]): 5
+        }
+        return permutations[key]
 
+    def __keytransform__(self, key):
+        return __class__.key_transform(key)
 
 #=============================================================================================
 # TOPOLOGY OBJECTS
