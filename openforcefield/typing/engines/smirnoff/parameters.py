@@ -56,7 +56,7 @@ from openforcefield.topology import ValenceDict, ImproperDict
 from openforcefield.topology.molecule import Molecule
 from openforcefield.typing.chemistry import ChemicalEnvironment
 from openforcefield.utils import IncompatibleUnitError
-from openforcefield.utils.collections import ValidatedList
+from openforcefield.utils.collections import ValidatedList, ValidatedListMapping
 
 
 #=============================================================================================
@@ -393,7 +393,6 @@ class IndexedParameterAttribute(ParameterAttribute):
     [1.0, 1.0, 0.01, 4.0]
 
     """
-    # TODO index_mapping
     def _convert_and_validate(self, instance, value):
         """Overwrite ParameterAttribute._convert_and_validate to make the value a ValidatedList."""
         # The default value is always allowed.
@@ -479,19 +478,20 @@ class IndexedMappedParameterAttribute(ParameterAttribute):
     [{1: 1.0}, {2: 1.0, 3: 0.01}, {4: 4.0}]
 
     """
+    # TODO index_mapping
     def _convert_and_validate(self, instance, value):
         """Overwrite ParameterAttribute._convert_and_validate to make the value a ValidatedList."""
         # The default value is always allowed.
         if self._is_valid_default(value):
             return value
 
-        # We push the converters into a ValidatedList so that we can make
+        # We push the converters into a ValidatedListMapping so that we can make
         # sure that elements are validated correctly when they are modified
         # after their initialization.
-        # ValidatedList expects converters that take the value as a single
+        # ValidatedListMapping expects converters that take the value as a single
         # argument so we create a partial function with the instance assigned.
         static_converter = functools.partial(self._call_converter, instance=instance)
-        value = ValidatedList(value, converter=[self._validate_units, static_converter])
+        value = ValidatedListMapping(value, converter=[self._validate_units, static_converter])
 
         return value
 
@@ -798,8 +798,26 @@ class _ParameterAttributeHandler:
     def __setattr__(self, key, value):
         """Take care of mapping indexed attributes to their respective list elements."""
 
-        # TODO index_mapping
+        # Try matching the case where there are two indices
+        # this indicates a index_mapped parameter
+        attr_name, index, mapkey = self._split_attribute_index_mapping(key)
 
+        # Check if this is an index_mapped attribute. avoiding an infinite
+        # recursion by calling getattr() with non-existing keys.
+        if ((mapkey is not None) and
+            (index is not None) and
+            attr_name in self._get_indexed_mapped_parameter_attributes()):
+            indexed_mapped_attr_value = getattr(self, attr_name)
+            try:
+                indexed_attr_value[index][mapkey] = value
+                return
+            except (IndexError, KeyError) as err:
+                if not err.args: 
+                    err.args=('',)
+                err.args = err.args + (f"'{key}' is out of bound for indexed attribute '{attr_name}'",)
+                raise 
+            
+        # Otherwise, try indexed attribute
         # Separate the indexed attribute name from the list index.
         attr_name, index = self._split_attribute_index(key)
 
@@ -809,11 +827,12 @@ class _ParameterAttributeHandler:
             indexed_attr_value = getattr(self, attr_name)
             try:
                 indexed_attr_value[index] = value
+                return
             except IndexError:
                 raise IndexError(f"'{key}' is out of bound for indexed attribute '{attr_name}'")
-        else:
-            # Forward the request to the next class in the MRO.
-            super().__setattr__(key, value)
+            
+        # Forward the request to the next class in the MRO.
+        super().__setattr__(key, value)
 
     def add_cosmetic_attribute(self, attr_name, attr_value):
         """
@@ -2331,9 +2350,16 @@ class ProperTorsionHandler(ParameterHandler):
             self._assert_correct_connectivity(torsion_match)
 
             if torsion_match.parameter_type.k_bondorder is None:
+                # TODO: add a check here that we have same number of terms for 
+                # `kX_bondorder*`, `periodicityX`, `phaseX` has the same number of
+                # only count a given `kX_bondorder*` once
+
                 # assign torsion with no interpolation
                 self._assign_torsion(atom_indices, torsion_match, force)
             else:
+                # TODO: add a check here that we have same number of terms for 
+                # `kX`, `periodicityX`, `phaseX` has the same number of
+
                 # assign torsion with interpolation
                 self._assign_fractional_bond_orders(atom_indices, torsion_match, force, **kwargs)
 
