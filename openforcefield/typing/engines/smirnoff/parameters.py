@@ -1492,7 +1492,8 @@ class ParameterHandler(_ParameterAttributeHandler):
         #  Should we reduce its scope and have a check here to make sure entity is a Topology?
         return self._find_matches(entity)
 
-    def _find_matches(self, entity, transformed_dict_cls=ValenceDict, variable_keylen=False, allow_multiple=False, select=None):
+    def _find_matches(self, entity, transformed_dict_cls=ValenceDict, 
+            allow_multiple=False, variable_keylen=False):
         """Implement find_matches() and allow using a difference valence dictionary.
                 Parameters
         ----------
@@ -1518,15 +1519,7 @@ class ParameterHandler(_ParameterAttributeHandler):
         # TODO: There are probably performance gains to be had here
         #       by performing this loop in reverse order, and breaking early once
         #       all environments have been matched.
-        if select is None:
-            select = self._parameters
-        elif not hasattr(select, "__iter__"):
-            select = [select]
-        if isinstance(self, VirtualSiteHandler):
-            breakpoint()
         for parameter_type in self._parameters:
-            if type(parameter_type) not in select:
-                continue
             matches_for_this_type = defaultdict(list)
 
             for environment_match in entity.chemical_environment_matches(parameter_type.smirks):
@@ -1534,12 +1527,24 @@ class ParameterHandler(_ParameterAttributeHandler):
                 handler_match = self._Match(parameter_type, environment_match)
                 key = environment_match.topology_atom_indices
                 
-                if variable_keylen:
+
+                # only a match if index matches
+                # this should probably go into self._Match
+                if hasattr(handler_match._parameter_type, "index"):
+                    fn = ImproperDict.index_of
                     if len(key) < 4:
-                        fn = ValenceDict.__keytransform__
+                        fn = ValenceDict.index_of
+                    index_of_key = fn(key)
+                    if index_of_key != handler_match._parameter_type.index:
+                        continue
+                # this takes care of LibraryCharge, which can match
+                # tuples of variable length
+                elif variable_keylen:
+                    if len(key) < 4:
+                        fn = ValenceDict.key_transform
                     else:
-                        fn = ImproperDict.__keytransform__
-                    key = fn(None, key)
+                        fn = ImproperDict.key_transform
+                    key = fn(key)
 
                 matches_for_this_type[key] = [handler_match]
                 if environment_match.topology_atom_indices not in matches:
@@ -1548,12 +1553,27 @@ class ParameterHandler(_ParameterAttributeHandler):
             matches_for_this_type = dict(matches_for_this_type)
             # Update matches of all parameter types.
             if allow_multiple:
-                [ matches[k].extend(v) for k,v in matches_for_this_type.items()]
-                #for k,v in matches.items():
-                #    if np.all([hasattr(p._parameter_type, "name") for p in v]):
-                #        unique_names = set([p._parameter_type.name for p in v])
-                #        matches[k] = {name:list(filter(lambda p: name == p._parameter_type.name, v)) for name in unique_names }
+                for k,v in matches_for_this_type.items():
+                    marginal_matches = []
+                    for new_match in v:
+                        unique = True
+                        new_item = new_match._parameter_type
+                        for idx,existing_match in enumerate(matches[k]):
+                            existing_item = existing_match._parameter_type
+                            same_parameter = False
 
+                            same_type = type(existing_item) == type(new_item)
+                            if same_type:
+                                same_parameter = existing_item == new_item
+
+                            # same, so replace it to have a FIFO priority
+                            # and the last parameter matching wins
+                            if same_parameter:
+                                matches[k][idx] = new_match
+                                unique = False
+                        if unique:
+                            marginal_matches.append(new_match)
+                    [ matches[k].extend( marginal_matches) ]
             else:
                 matches.update(matches_for_this_type)
 
@@ -2940,6 +2960,7 @@ class VirtualSiteHandler(_NonbondedHandler):
         distance        = ParameterAttribute(unit=unit.angstrom)
         chargeincrement = IndexedParameterAttribute(unit=unit.elementary_charge)
         type            = ParameterAttribute()
+        index           = ParameterAttribute(default=0, converter=int)
 
         def add_virtual_site(self, fn, atoms, **kwargs):
 
@@ -2971,6 +2992,14 @@ class VirtualSiteHandler(_NonbondedHandler):
         .. warning :: This API is experimental and subject to change.
         """
         _ELEMENT_NAME = 'VirtualSiteBondChargeType'
+
+        def __eq__(self, obj):
+            if type(self) != type(obj):
+                return False
+            A = ["name","distance"]
+            A = ["name","index"]
+            are_equal = [getattr(self,a) == getattr(obj,a) for a in A]
+            return all(are_equal)
 
         def add_virtual_site(self, molecule, atoms):
             fn = molecule._add_bond_charge_virtual_site
@@ -3040,6 +3069,13 @@ class VirtualSiteHandler(_NonbondedHandler):
         outOfPlaneAngle = ParameterAttribute(unit=unit.degree)
         inPlaneAngle    = ParameterAttribute(unit=unit.degree)
 
+        def __eq__(self, obj):
+            if type(self) != type(obj):
+                return False
+            A = ["name","distance","outOfPlaneAngle","inPlaneAngle"]
+            A = ["name","index"]
+            are_equal = [getattr(self,a) == getattr(obj,a) for a in A]
+            return all(are_equal)
 
         def add_virtual_site(self, fn, atoms, **kwargs):
             args = [ atoms, self.distance, self.outOfPlaneAngle, self.inPlaneAngle ]
@@ -3186,36 +3222,39 @@ class VirtualSiteHandler(_NonbondedHandler):
             matching the n-tuple of atom indices in ``entity``.
 
         """
+        return self._find_matches(entity, transformed_dict_cls=dict,
+            allow_multiple=True)
+
         vsite_kwargs = [
             {
-                "select":                 __class__.VirtualSiteBondChargeType,
+                "select":           __class__.VirtualSiteBondChargeType,
                 "transformed_dict_cls":  dict,  # do not deduplicate
-                "variable_keylen":       False,
                 "allow_multiple":        True
             },
             {
-                "select":                 __class__.VirtualSiteMonovalentLonePairType,
+                "select":           __class__.VirtualSiteMonovalentLonePairType,
                 "transformed_dict_cls":  dict,  # do not deduplicate
-                "variable_keylen":       False,
                 "allow_multiple":        True
             },
             {
-                "select":                 __class__.VirtualSiteDivalentLonePairType,
-                "transformed_dict_cls":  ValenceDict,  # deduplicate
-                "variable_keylen":       False,
-                "allow_multiple":        False
+                "select":           __class__.VirtualSiteDivalentLonePairType,
+                "transformed_dict_cls":  dict,  # deduplicate
+                "allow_multiple":        True
             },
             {
-                "select":                 __class__.VirtualSiteTrivalentLonePairType,
-                "transformed_dict_cls":  ImproperDict,
-                "variable_keylen":       False,
-                "allow_multiple":        False
+                "select":           __class__.VirtualSiteTrivalentLonePairType,
+                "transformed_dict_cls":  dict,
+                "allow_multiple":        True
             }
         ]
         matches = {}
         for vsite_type in vsite_kwargs:
             result = self._find_matches(entity, **vsite_type)
-            matches.update(result)
+            for k,v in result.items():
+                if k not in matches:
+                    matches[k] = v
+                else:
+                    matches[k].extend(v)
         return matches
 
 
