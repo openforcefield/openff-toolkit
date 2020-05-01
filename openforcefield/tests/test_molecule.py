@@ -257,14 +257,94 @@ class TestMolecule:
     """Test Molecule class."""
 
     # TODO: Test getstate/setstate
-    # TODO: Test {to_from}_{dict|yaml|toml|json|bson|messagepack|pickle}
+
+    # Test serialization {to|from}_{dict|yaml|toml|json|bson|xml|messagepack|pickle}
+
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_dict_serialization(self, molecule):
+        """Test serialization of a molecule object to and from dict."""
+        serialized = molecule.to_dict()
+        molecule_copy = Molecule.from_dict(serialized)
+        assert molecule == molecule_copy
+
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_yaml_serialization(self, molecule):
+        """Test serialization of a molecule object to and from YAML."""
+        serialized = molecule.to_yaml()
+        molecule_copy = Molecule.from_yaml(serialized)
+        assert molecule == molecule_copy
+
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_toml_serialization(self, molecule):
+        """Test serialization of a molecule object to and from TOML."""
+        # TODO: Test round-trip when implemented
+        with pytest.raises(NotImplementedError):
+            molecule.to_toml()
+
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_bson_serialization(self, molecule):
+        """Test serialization of a molecule object to and from BSON."""
+        serialized = molecule.to_bson()
+        molecule_copy = Molecule.from_bson(serialized)
+        assert molecule == molecule_copy
+
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_json_serialization(self, molecule):
+        """Test serialization of a molecule object to and from JSON."""
+        # TODO: Test round-trip when to_json bug is fixed
+        with pytest.raises(TypeError):
+            molecule.to_json()
+
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_xml_serialization(self, molecule):
+        """Test serialization of a molecule object to and from XML."""
+        # TODO: Test round-trip when from_xml is implemented
+        serialized = molecule.to_xml()
+        with pytest.raises(NotImplementedError):
+            Molecule.from_xml(serialized)
+
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_messagepack_serialization(self, molecule):
+        """Test serialization of a molecule object to and from messagepack."""
+        serialized = molecule.to_messagepack()
+        molecule_copy = Molecule.from_messagepack(serialized)
+        assert molecule == molecule_copy
 
     @pytest.mark.parametrize('molecule', mini_drug_bank())
     def test_pickle_serialization(self, molecule):
-        """Test pickling of a molecule object."""
+        """Test round-trip pickling of a molecule object."""
         serialized = pickle.dumps(molecule)
         molecule_copy = pickle.loads(serialized)
         assert molecule == molecule_copy
+
+    def test_serialization_no_conformers(self):
+        """Test round-trip serialization when molecules have no conformers or partial charges."""
+        mol = Molecule.from_smiles('CCO')
+
+        dict_copy = Molecule.from_dict(mol.to_dict())
+        assert mol == dict_copy
+
+        # TODO: yaml_copy = Molecule.from_yaml(mol.to_yaml())
+        with pytest.raises(NotImplementedError):
+            mol.to_toml()
+
+        bson_copy = Molecule.from_bson(mol.to_bson())
+        assert mol == bson_copy
+
+        json_copy = Molecule.from_json(mol.to_json())
+        assert mol == json_copy
+
+        # TODO: round-trip when from_xml is implemented
+        mol_as_xml = mol.to_xml()
+        with pytest.raises(NotImplementedError):
+            Molecule.from_xml(mol_as_xml)
+
+        messagepack_copy = Molecule.from_messagepack(mol.to_messagepack())
+        assert mol == messagepack_copy
+
+        pickle_copy = pickle.loads(pickle.dumps(mol))
+        assert mol == pickle_copy
+
 
     # ----------------------------------------------------
     # Test Molecule constructors and conversion utilities.
@@ -1053,6 +1133,173 @@ class TestMolecule:
         with pytest.raises(IndexError):
             new_ethanol = ethanol.remap(wrong_index_mapping, current_to_new=True)
 
+    tautomer_data = [{'molecule': 'Oc1c(cccc3)c3nc2ccncc12', 'tautomers': 2},
+                     {'molecule': 'CN=c1nc[nH]cc1', 'tautomers': 2},
+                     {'molecule': 'c1[nH]c2c(=O)[nH]c(nc2n1)N', 'tautomers': 14}]
+
+    @pytest.mark.parametrize('toolkit_class', [OpenEyeToolkitWrapper, RDKitToolkitWrapper])
+    @pytest.mark.parametrize('molecule_data', tautomer_data)
+    def test_enumerating_tautomers(self, molecule_data, toolkit_class):
+        """Test the ability of each toolkit to produce tautomers of an input molecule."""
+
+        if toolkit_class.is_available():
+            toolkit = toolkit_class()
+            mol = Molecule.from_smiles(molecule_data['molecule'], allow_undefined_stereo=True, toolkit_registry=toolkit)
+
+            tautomers = mol.enumerate_tautomers(toolkit_registry=toolkit)
+
+            assert len(tautomers) == molecule_data['tautomers']
+            assert mol not in tautomers
+            # check that the molecules are not isomorphic of the input
+            for taut in tautomers:
+                assert taut.n_conformers == 0
+                assert mol.is_isomorphic_with(taut) is False
+
+        else:
+            pytest.skip('Required toolkit is unavailable')
+
+    @pytest.mark.parametrize('toolkit_class', [OpenEyeToolkitWrapper, RDKitToolkitWrapper])
+    def test_enumerating_tautomers_options(self, toolkit_class):
+        """Test the enumeration options"""
+
+        if toolkit_class.is_available():
+            toolkit = toolkit_class()
+            # test the max molecules option
+            mol = Molecule.from_smiles('c1[nH]c2c(=O)[nH]c(nc2n1)N', toolkit_registry=toolkit, allow_undefined_stereo=True)
+
+            tauts_no = 5
+            tautomers = mol.enumerate_tautomers(max_states=tauts_no, toolkit_registry=toolkit)
+            assert len(tautomers) <= tauts_no
+            assert mol not in tautomers
+
+    @pytest.mark.parametrize('toolkit_class', [RDKitToolkitWrapper, OpenEyeToolkitWrapper])
+    def test_enumerating_no_tautomers(self, toolkit_class):
+        """Test that the toolkits return an empty list if there are no tautomers to enumerate."""
+
+        if toolkit_class.is_available():
+            toolkit = toolkit_class()
+            mol = Molecule.from_smiles('CC', toolkit_registry=toolkit)
+
+            tautomers = mol.enumerate_tautomers(toolkit_registry=toolkit)
+            assert tautomers == []
+
+        else:
+            pytest.skip('Required toolkit is unavailable')
+
+    @requires_openeye
+    def test_enumerating_no_protomers(self):
+        """Make sure no protomers are returned."""
+
+        mol = Molecule.from_smiles('CC')
+
+        assert mol.enumerate_protomers() == []
+
+    @requires_openeye
+    def test_enumerating_protomers(self):
+        """Test enumerating the formal charges."""
+
+        mol = Molecule.from_smiles('Oc2ccc(c1ccncc1)cc2')
+
+        # there should be three protomers for this molecule so restrict the output
+        protomers = mol.enumerate_protomers(max_states=2)
+
+        assert mol not in protomers
+        assert len(protomers) == 2
+
+        # now make sure we can generate them all
+        protomers = mol.enumerate_protomers(max_states=10)
+
+        assert mol not in protomers
+        assert len(protomers) == 3
+
+        # make sure each protomer is unique
+        unique_protomers = set(protomers)
+        assert len(protomers) == len(unique_protomers)
+
+    @pytest.mark.parametrize('toolkit_class', [OpenEyeToolkitWrapper, RDKitToolkitWrapper])
+    def test_enumerating_stereobonds(self, toolkit_class):
+        """Test the backend toolkits in enumerating the stereo bonds in a molecule."""
+
+        if toolkit_class.is_available():
+            toolkit = toolkit_class()
+            mol = Molecule.from_smiles('ClC=CCl', allow_undefined_stereo=True, toolkit_registry=toolkit)
+
+            # use the default options
+            isomers = mol.enumerate_stereoisomers()
+            assert len(isomers) == 2
+
+            assert mol not in isomers
+            # make sure the input molecule is only different by bond stereo
+            for ismol in isomers:
+                assert Molecule.are_isomorphic(mol, ismol, return_atom_map=False, bond_stereochemistry_matching=False)[0] is True
+                assert mol.is_isomorphic_with(ismol) is False
+
+            # make sure the isomers are different
+            assert isomers[0].is_isomorphic_with(isomers[1]) is False
+
+        else:
+            pytest.skip('Required toolkit is unavailable')
+
+    @pytest.mark.parametrize('toolkit_class', [OpenEyeToolkitWrapper, RDKitToolkitWrapper])
+    def test_enumerating_stereocenters(self, toolkit_class):
+        """Test the backend toolkits in enumerating the stereo centers in a molecule."""
+
+        if toolkit_class.is_available():
+            toolkit = toolkit_class()
+            mol = Molecule.from_smiles('NC(Cl)(F)O', toolkit_registry=toolkit, allow_undefined_stereo=True)
+
+            isomers = mol.enumerate_stereoisomers(toolkit_registry=toolkit)
+
+            assert len(isomers) == 2
+            # make sure the mol is not in the isomers and that they only differ by stereo chem
+            assert mol not in isomers
+            for ismol in isomers:
+                assert ismol.n_conformers != 0
+                assert Molecule.are_isomorphic(mol, ismol, return_atom_map=False, atom_stereochemistry_matching=False)[0] is True
+                assert mol.is_isomorphic_with(ismol) is False
+
+            # make sure the two isomers are different
+            assert isomers[0].is_isomorphic_with(isomers[1]) is False
+
+        else:
+            pytest.skip('Required toolkit is unavailable')
+
+    @pytest.mark.parametrize('toolkit_class', [OpenEyeToolkitWrapper, RDKitToolkitWrapper])
+    def test_enumerating_stereo_options(self, toolkit_class):
+        """Test the enumerating stereo chem options"""
+
+        if toolkit_class.is_available():
+            toolkit = toolkit_class()
+
+            # test undefined only
+            mol = Molecule.from_smiles('ClC=CCl', toolkit_registry=toolkit, allow_undefined_stereo=True)
+            isomers = mol.enumerate_stereoisomers(undefined_only=True, rationalise=False)
+
+            assert len(isomers) == 2
+            for isomer in isomers:
+                assert isomer.n_conformers == 0
+
+            mol = Molecule.from_smiles('Cl/C=C\Cl', toolkit_registry=toolkit, allow_undefined_stereo=True)
+            isomers = mol.enumerate_stereoisomers(undefined_only=True, rationalise=False)
+
+            assert isomers == []
+
+            mol = Molecule.from_smiles('Cl/C=C\Cl', toolkit_registry=toolkit, allow_undefined_stereo=True)
+            isomers = mol.enumerate_stereoisomers(undefined_only=False, rationalise=False)
+
+            assert len(isomers) == 1
+
+            # test max isomers
+            mol = Molecule.from_smiles('BrC=C[C@H]1OC(C2)(F)C2(Cl)C1', toolkit_registry=toolkit, allow_undefined_stereo=True)
+            isomers = mol.enumerate_stereoisomers(max_isomers=5, undefined_only=True, toolkit_registry=toolkit, rationalise=True)
+
+            assert len(isomers) <= 5
+            for isomer in isomers:
+                assert isomer.n_conformers == 1
+
+        else:
+            pytest.skip('Required toolkit is unavailable')
+
     @requires_rdkit
     def test_from_pdb_and_smiles(self):
         """Test the ability to make a valid molecule using RDKit and SMILES together"""
@@ -1760,3 +2007,48 @@ class TestMolecule:
                     #                                        toolkit_registry=toolkit_registry)
                     # fbo2 = [bond.fractional_bond_order for bond in molecule.bonds]
                     # np.testing.assert_allclose(fbo1, fbo2, atol=1.e-4)
+
+    @requires_rdkit
+    def test_visualize_rdkit(self):
+        """Test that the visualize method returns an expected object when using RDKit to generate a 2-D representation"""
+        import rdkit
+
+        mol = Molecule().from_smiles('CCO')
+
+        assert isinstance(mol.visualize(backend='rdkit'), rdkit.Chem.rdchem.Mol)
+
+    @pytest.mark.skipif(RDKitToolkitWrapper.is_available(),
+        reason='Test requires that RDKit is NOT installed')
+    def test_visualize_fallback(self):
+        """Test falling back from RDKit to OpenEye if RDKit is specified but not installed"""
+        mol = Molecule().from_smiles('CCO')
+        with pytest.warns(UserWarning):
+            mol.visualize(backend='rdkit')
+
+    def test_visualize_nglview(self):
+        """Test that the visualize method returns an NGLview widget"""
+        try:
+            import nglview
+        except ModuleNotFoundError:
+            pass
+
+        # Start with a molecule without conformers
+        mol = Molecule().from_smiles('CCO')
+
+        with pytest.raises(ValueError):
+            mol.visualize(backend='nglview')
+
+        # Add conformers
+        mol.generate_conformers()
+
+        # Ensure an NGLView widget is returned
+        assert isinstance(mol.visualize(backend='nglview'), nglview.NGLWidget)
+
+    @requires_openeye
+    def test_visualize_openeye(self):
+        """Test that the visualize method returns an expected object when using OpenEye to generate a 2-D representation"""
+        import IPython
+
+        mol = Molecule().from_smiles('CCO')
+
+        assert isinstance(mol.visualize(backend='openeye'), IPython.core.display.Image)
