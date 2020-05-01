@@ -3713,7 +3713,8 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         partial_charge_method : str, optional, default=None
             The charge model to use. One of ['gasteiger', 'am1-mulliken']. If None, 'am1-mulliken' will be used.
         use_conformers : iterable of simtk.unit.Quantity-wrapped numpy arrays, each with shape (n_atoms, 3) and dimension of distance. Optional, default = None
-            Coordinates to use for partial charge calculation. If None, an appropriate number of conformers will be generated.
+            List of (n_atoms x 3) simtk.unit.Quantities to use for partial charge calculation.
+            If None, an appropriate number of conformers will be generated.
         strict_n_conformers : bool, default=False
             Whether to raise an exception if an invalid number of conformers is provided for the given charge method.
             If this is False and an invalid number of conformers is found, a warning will be raised.

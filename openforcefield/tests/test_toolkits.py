@@ -748,6 +748,28 @@ class TestOpenEyeToolkitWrapper:
         assert -1.e-5 < charge_sum.value_in_unit(unit.elementary_charge) < 1.e-5
 
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
+    @pytest.mark.parametrize("partial_charge_method", ['am1bcc', 'am1-mulliken'])
+    def test_assign_partial_charges_conformer_dependence(self, partial_charge_method):
+        """Test OpenEyeToolkitWrapper assign_partial_charges()'s use_conformers kwarg
+        to ensure charges are really conformer dependent"""
+        from openforcefield.tests.test_forcefield import create_ethanol
+        import copy
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=[OpenEyeToolkitWrapper])
+        molecule = create_ethanol()
+        molecule.generate_conformers(n_conformers=1)
+        molecule.assign_partial_charges(toolkit_registry=toolkit_registry,
+                                        partial_charge_method=partial_charge_method,
+                                        use_conformers=molecule.conformers)
+        pcs1 = copy.deepcopy(molecule.partial_charges)
+        molecule._conformers[0][0][0] += 0.5 * unit.angstrom
+        molecule._conformers[0][2][1] += 0.5 * unit.angstrom
+        molecule.assign_partial_charges(toolkit_registry=toolkit_registry,
+                                        partial_charge_method=partial_charge_method,
+                                        use_conformers=molecule.conformers)
+        for pc1, pc2 in zip(pcs1, molecule.partial_charges):
+            assert abs(pc1 - pc2) > 1.e-5 * unit.elementary_charge
+
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     @pytest.mark.parametrize("partial_charge_method", ['am1bcc', 'am1-mulliken', 'gasteiger'])
     def test_assign_partial_charges_net_charge(self, partial_charge_method):
         """
@@ -1726,6 +1748,29 @@ class TestAmberToolsToolkitWrapper:
         for pc in molecule.partial_charges:
             charge_sum += pc
         assert -1.e-5 < charge_sum.value_in_unit(unit.elementary_charge) < 1.e-5
+
+    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available() or not AmberToolsToolkitWrapper.is_available(),
+                        reason='RDKitToolkit and AmberToolsToolkit not available')
+    @pytest.mark.parametrize("partial_charge_method", ['am1bcc', 'am1-mulliken'])
+    def test_assign_partial_charges_conformer_dependence(self, partial_charge_method):
+        """Test AmberToolsToolkitWrapper assign_partial_charges()'s use_conformers kwarg
+        to ensure charges are really conformer dependent"""
+        from openforcefield.tests.test_forcefield import create_ethanol
+        import copy
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper])
+        molecule = create_ethanol()
+        molecule.generate_conformers(n_conformers=1)
+        molecule.assign_partial_charges(toolkit_registry=toolkit_registry,
+                                        partial_charge_method=partial_charge_method,
+                                        use_conformers=molecule.conformers)
+        pcs1 = copy.deepcopy(molecule.partial_charges)
+        molecule._conformers[0][0][0] += 0.5 * unit.angstrom
+        molecule._conformers[0][2][1] += 0.5 * unit.angstrom
+        molecule.assign_partial_charges(toolkit_registry=toolkit_registry,
+                                        partial_charge_method=partial_charge_method,
+                                        use_conformers=molecule.conformers)
+        for pc1, pc2 in zip(pcs1, molecule.partial_charges):
+            assert abs(pc1 - pc2) > 1.e-5 * unit.elementary_charge
 
     @pytest.mark.skipif(not RDKitToolkitWrapper.is_available() or not AmberToolsToolkitWrapper.is_available(),
                         reason='RDKitToolkit and AmberToolsToolkit not available')
