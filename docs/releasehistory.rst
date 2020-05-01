@@ -51,16 +51,21 @@ Behavior changed
   preserve ``offmol.properties`` when converting molecules to other packages, but users should be aware that
   no guarantee of data integrity is made. The only data format for keys and values in the property dict that
   we will try to support through a roundtrip to another toolkit's Molecule object is ``string``.
+- `PR #574 <https://github.com/openforcefield/openforcefield/pull/574>`_: Removed check that all
+  partial charges are zero after assignment by `quacpac` when AM1BCC used for charge assignment.
+  This check fails erroneously for cases in which the partial charge assignments are correctly all zero,
+  such as for ``N#N``. It is also an unnecessary check given that `quacpac` will reliably indicate when
+  it has failed to assign charges.
 
 API-breaking changes
 """"""""""""""""""""
 - `PR #558 <https://github.com/openforcefield/openforcefield/pull/558>`_: Removes
-  ``TopologyMolecule.topology_particle_start_index``, since the :py:class`Topology <openforcefield.topology.Topology>`
-  particle indexing system now orders :py:class`TopologyVirtualSites <openforcefield.topology.TopologyVirtualSite>`
+  ``TopologyMolecule.topology_particle_start_index``, since the :py:class:`Topology <openforcefield.topology.Topology>`
+  particle indexing system now orders :py:class:`TopologyVirtualSites <openforcefield.topology.TopologyVirtualSite>`
   after all atoms.
-  :py:meth`TopologyMolecule.topology_atom_start_index <openforcefield.topology.TopologyMolecule.topology_atom_start_index>`
+  :py:meth:`TopologyMolecule.topology_atom_start_index <openforcefield.topology.TopologyMolecule.topology_atom_start_index>`
   and
-  :py:meth`TopologyMolecule.topology_virtual_site_start_index <openforcefield.topology.TopologyMolecule.topology_virtual_site_start_index>`
+  :py:meth:`TopologyMolecule.topology_virtual_site_start_index <openforcefield.topology.TopologyMolecule.topology_virtual_site_start_index>`
   are still available to access the appropriate values in the respective topology indexing systems.
 - `PR #508 <https://github.com/openforcefield/openforcefield/pull/508>`_:
   ``OpenEyeToolkitWrapper.compute_wiberg_bond_orders`` is now
@@ -117,6 +122,16 @@ New features
            :py:class:`Molecule <openforcefield.topology.Molecule>`.
 - `PR #563 <https://github.com/openforcefield/openforcefield/pull/563>`_:
   Adds ``test_forcefields/ion_charges.offxml``, giving `LibraryCharges` for monatomic ions.
+- `PR #543 <https://github.com/openforcefield/openforcefield/pull/543>`_:
+  Adds 3 new methods to the :py:class:`Molecule <openforcefield.topology.Molecule>` which allow the enumeration of molecule
+  states these are :py:meth:`Molecule.enumerate_tautomers <openforcefield.topology.Molecule.enumerate_tautomers>`,
+  py:meth:`Molecule.enumerate_stereoisomers <openforcefield.topology.Molecule.enumerate_stereoisomers>`,
+  py:meth:`Molecule.enumerate_protomers <openforcefield.topology.Molecule.enumerate_protomers>`
+      .. warning::
+         Enumerate protomoers is currently only available through the OpenEye toolkit.
+- `PR #573 <https://github.com/openforcefield/openforcefield/pull/573>`_:
+  Adds ``quacpac`` error output to ``quacpac`` failure in ``Molecule.compute_partial_charges_am1bcc``.
+- `PR #560 <https://github.com/openforcefield/openforcefield/issues/560>`_: Added visualization method to the the Molecule class.
 
 
 Behavior changed
@@ -202,6 +217,13 @@ Tests added
 - `PR #529 <https://github.com/openforcefield/openforcefield/pull/529>`_: Added to XYZ file coverage tests.
 - `PR #563 <https://github.com/openforcefield/openforcefield/pull/563>`_: Added `LibraryCharges` parameterization test
   for monatomic ions in ``test_forcefields/ion_charges.offxml``.
+- `PR #543 <https://github.com/openforcefield/openforcefield/pull/543>`_: Added tests to assure that state enumeration can
+  correctly find molecules tautomers, stereoisomers and protomers when possible.
+- `PR #573 <https://github.com/openforcefield/openforcefield/pull/573>`_: Added test for ``quacpac`` error output
+  for ``quacpac`` failure in ``Molecule.compute_partial_charges_am1bcc``.
+- `PR #579 <https://github.com/openforcefield/openforcefield/pull/579>`_: Adds regression tests to ensure RDKit can be
+  be used to write multi-model PDB files.
+
 
 Bugfixes
 """"""""
@@ -238,8 +260,11 @@ Bugfixes
 - `Issue #474 <https://github.com/openforcefield/openforcefield/issues/474>`_: We can now  convert molecules to InChI and
    InChIKey and from InChI.
 - `Issue #523 <https://github.com/openforcefield/openforcefield/issues/523>`_: The
-   :py:meth: `Molecule.to_file <openforcefield.topology.Molecule.to_file>` can now correctly write to `MOL` files in
+   :py:meth:`Molecule.to_file <openforcefield.topology.Molecule.to_file>` can now correctly write to `MOL` files in
    line with the support file type list.
+- `Issue #568 <https://github.com/openforcefield/openforcefield/issues/568>`_: The
+  :py:meth:`Molecule.to_file <openforcefield.topology.Molecule.to_file>` can now correctly write multi-model PDB files
+  when using the RDKit backend toolkit.
 
 Example added
 """""""""""""
@@ -334,6 +359,7 @@ Tests added
 - `PR #430 <https://github.com/openforcefield/openforcefield/pull/430>`_: Added test for
   Wiberg Bond Order implemented in OpenEye Toolkits. Molecules taken from
   DOI:10.5281/zenodo.3405489 . Added by Sukanya Sasmal.
+- `PR #569 <https://github.com/openforcefield/openforcefield/pull/569>`_: Added round-trip tests for more serialization formats (dict, YAML, TOML, JSON, BSON, messagepack, pickle). Note that some are unsupported, but the tests raise the appropriate error.
 
 
 Bugfixes
