@@ -21,6 +21,7 @@ import textwrap
 import pytest
 
 from openforcefield.utils import temporary_directory
+from openforcefield.utils import RDKIT_AVAILABLE
 
 
 #======================================================================
@@ -71,15 +72,23 @@ def find_examples():
     }
     examples_dir_path = os.path.join(ROOT_DIR_PATH, 'examples')
 
+    requires_rdkit = {
+        os.path.join('conformer_energies', 'conformer_energies.py')
+    }
+
     example_file_paths = []
     for example_file_path in glob.glob(os.path.join(examples_dir_path, '*', '*.py')):
         example_file_path = os.path.relpath(example_file_path)
+        example_file_paths.append(example_file_path)
+        if not RDKIT_AVAILABLE:
+            for rdkit_example in requires_rdkit:
+                if rdkit_example in example_file_path:
+                    example_file_paths.remove(example_file_path)
         # Check if this is a slow test.
         for slow_example in slow_examples:
             if slow_example in example_file_path:
                 # This is a slow example.
                 example_file_path = pytest.param(example_file_path, marks=pytest.mark.slow)
-        example_file_paths.append(example_file_path)
     return example_file_paths
 
 
