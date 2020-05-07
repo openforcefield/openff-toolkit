@@ -106,6 +106,8 @@ jobs:
           PYTEST_ARGS+=" --ignore=docs --ignore=devtools"
           PYTEST_ARGS+=" --ignore=examples/check_dataset_parameter_coverage"
           PYTEST_ARGS+=" --ignore=examples/QCArchive_interface"
+        elif [[ "$RDKIT" == false ]]; then
+          PYTEST_ARGS+=" --ignore=examples/conformer_energies"
         fi
         pytest $PYTEST_ARGS
 
