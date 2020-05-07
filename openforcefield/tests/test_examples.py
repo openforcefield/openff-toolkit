@@ -20,9 +20,8 @@ import textwrap
 
 import pytest
 
-from openforcefield.utils import temporary_directory
-from openforcefield.utils import RDKIT_AVAILABLE
-
+from openforcefield.utils import (RDKIT_AVAILABLE, get_data_file_path,
+                                  temporary_directory)
 
 #======================================================================
 # TEST UTILITIES
@@ -34,6 +33,10 @@ ROOT_DIR_PATH = os.path.join(os.path.dirname(os.path.realpath(__file__)), '..', 
 def run_script_file(file_path):
     """Run through the shell a python script."""
     cmd = ['python', file_path]
+    if 'conformer_energies.py' in file_path:
+        cmd.append('--filename')
+        mol_file = get_data_file_path('molecules/ruxolitinib_conformers.sdf')
+        cmd.append(mol_file)
     try:
         subprocess.check_call(cmd)
     except subprocess.CalledProcessError:
