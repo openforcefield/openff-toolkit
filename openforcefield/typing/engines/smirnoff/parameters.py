@@ -56,7 +56,7 @@ from openforcefield.topology import ValenceDict, ImproperDict
 from openforcefield.topology.molecule import Molecule
 from openforcefield.typing.chemistry import ChemicalEnvironment
 from openforcefield.utils import IncompatibleUnitError
-from openforcefield.utils.collections import ValidatedList, ValidatedListMapping
+from openforcefield.utils.collections import ValidatedList, ValidatedDict
 
 
 #=============================================================================================
@@ -478,7 +478,6 @@ class IndexedMappedParameterAttribute(ParameterAttribute):
     [{1: 1.0}, {2: 1.0, 3: 0.01}, {4: 4.0}]
 
     """
-    # TODO index_mapping
     def _convert_and_validate(self, instance, value):
         """Overwrite ParameterAttribute._convert_and_validate to make the value a ValidatedList."""
         # The default value is always allowed.
@@ -491,7 +490,13 @@ class IndexedMappedParameterAttribute(ParameterAttribute):
         # ValidatedListMapping expects converters that take the value as a single
         # argument so we create a partial function with the instance assigned.
         static_converter = functools.partial(self._call_converter, instance=instance)
-        value = ValidatedListMapping(value, converter=[self._validate_units, static_converter])
+        index_converter = lambda x: ValidatedDict(x)
+
+        value = ValidatedList(
+                [ValidatedDict(element,
+                               converter=[self._validate_units, static_converter])
+                    for element in value], 
+                converter=index_converter)
 
         return value
 
@@ -921,7 +926,7 @@ class _ParameterAttributeHandler:
         # where <index> and <key> always integers
         match = re.search(r'\d+_[A-z]+\d+$', item)
         if match is None:
-            return item, None
+            return item, None, None
 
         # Match any number (\d+) at the end of the string ($).
         i_match = r'\d+$'

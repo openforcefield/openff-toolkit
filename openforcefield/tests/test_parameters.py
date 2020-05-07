@@ -988,6 +988,7 @@ class TestProperTorsionType:
                                                         k2=6 * unit.kilocalorie_per_mole,
                                                         )
 
+
 class TestProperTorsionHandler:
     def test_torsion_handler_charmm_potential(self):
         """
@@ -1010,10 +1011,12 @@ class TestProperTorsionHandler:
             ph1 = ImproperTorsionHandler(potential='charmm', skip_version_check=True)
         ph1 = ImproperTorsionHandler(potential='k*(1+cos(periodicity*theta-phase))', skip_version_check=True)
 
+
 class TestLibraryChargeHandler:
     def test_create_library_charge_handler(self):
         """Test creation of an empty LibraryChargeHandler"""
         handler = LibraryChargeHandler(skip_version_check=True)
+
 
 class TestGBSAHandler:
     def test_create_default_gbsahandler(self):
