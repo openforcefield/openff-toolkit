@@ -646,15 +646,88 @@ class _ParameterAttributeHandler:
         # Do not modify the original data.
         smirnoff_data = copy.deepcopy(kwargs)
 
+        smirnoff_data, indexed_mapped_attr_lengths = self._process_indexed_mapped_attributes(smirnoff_data)
+        smirnoff_data = self._process_indexed_attributes(smirnoff_data, indexed_mapped_attr_lengths)
+
+        # Check for missing required arguments.
+        given_attributes = set(smirnoff_data.keys())
+        required_attributes = set(self._get_required_parameter_attributes().keys())
+        missing_attributes = required_attributes.difference(given_attributes)
+        if len(missing_attributes) != 0:
+            msg = (f"{self.__class__} require the following missing parameters: {sorted(missing_attributes)}."
+                   f" Defined kwargs are {sorted(smirnoff_data.keys())}")
+            raise SMIRNOFFSpecError(msg)
+
+        # Finally, set attributes of this ParameterType and handle cosmetic attributes.
+        allowed_attributes = set(self._get_parameter_attributes().keys())
+        for key, val in smirnoff_data.items():
+            if key in allowed_attributes:
+                setattr(self, key, val)
+            # Handle all unknown kwargs as cosmetic so we can write them back out
+            elif allow_cosmetic_attributes:
+                self.add_cosmetic_attribute(key, val)
+            else:
+                msg = (f"Unexpected kwarg ({key}: {val})  passed to {self.__class__} constructor. "
+                        "If this is a desired cosmetic attribute, consider setting "
+                        "'allow_cosmetic_attributes=True'")
+                raise SMIRNOFFSpecError(msg)
+
+    def _process_indexed_mapped_attributes(self, smirnoff_data):
+        # TODO: construct data structure for holding indexed_mapped attrs, which
+        # will get fed into setattr
+        indexed_mapped_attr_lengths = {}
+        reindex = set()
+
+        kwargs = list(smirnoff_data.keys())
+        for kwarg in kwargs:
+            attr_name, index, key = self._split_attribute_index_mapping(kwarg)
+            
+            # Check if this is an indexed_mapped attribute.
+            if ((key is not None) and
+                (index is not None) and
+                attr_name in self._get_indexed_mapped_parameter_attributes()):
+                
+                # we start with a dict because have no guarantee of order
+                # in which we will see each kwarg
+                # we'll switch this to a list later
+                if attr_name not in smirnoff_data:
+                    smirnoff_data[attr_name] = dict()
+                    reindex.add(attr_name)
+
+                if index not in smirnoff_data[attr_name]:
+                    smirnoff_data[attr_name][index] = dict()
+
+                smirnoff_data[attr_name][index][key] = smirnoff_data[kwarg]
+
+                # remove the original key
+                del smirnoff_data[kwarg]
+
+        # turn all our top-level dicts into lists
+        for attr_name in reindex:
+            smirnoff_data[attr_name] = [smirnoff_data[attr_name][i]
+                    for i in sorted(smirnoff_data[attr_name].keys())]
+
+            indexed_mapped_attr_lengths[attr_name] = len(smirnoff_data[attr_name])
+
+        return smirnoff_data, indexed_mapped_attr_lengths
+
+    def _process_indexed_attributes(self, smirnoff_data, indexed_attr_lengths=None):
         # Check for indexed attributes and stack them into a list.
         # Keep track of how many indexed attribute we find to make sure they all have the same length.
-        indexed_attr_lengths = {}
+
+        # TODO: REFACTOR ME; try looping over contents of `smirnoff_data`, using 
+        # `split_attribute_index` to extract values
+
+        if indexed_attr_lengths is None:
+            indexed_attr_lengths = {}
+
         for attrib_basename in self._get_indexed_parameter_attributes().keys():
             index = 1
             while True:
                 attrib_w_index = '{}{}'.format(attrib_basename, index)
 
                 # Exit the while loop if the indexed attribute is not given.
+                # this is the stop condition
                 try:
                     attrib_w_index_value = smirnoff_data[attrib_w_index]
                 except KeyError:
@@ -689,28 +762,7 @@ class _ParameterAttributeHandler:
             raise TypeError('The following indexed attributes have '
                             f'different lengths: {indexed_attr_lengths}')
 
-        # Check for missing required arguments.
-        given_attributes = set(smirnoff_data.keys())
-        required_attributes = set(self._get_required_parameter_attributes().keys())
-        missing_attributes = required_attributes.difference(given_attributes)
-        if len(missing_attributes) != 0:
-            msg = (f"{self.__class__} require the following missing parameters: {sorted(missing_attributes)}."
-                   f" Defined kwargs are {sorted(smirnoff_data.keys())}")
-            raise SMIRNOFFSpecError(msg)
-
-        # Finally, set attributes of this ParameterType and handle cosmetic attributes.
-        allowed_attributes = set(self._get_parameter_attributes().keys())
-        for key, val in smirnoff_data.items():
-            if key in allowed_attributes:
-                setattr(self, key, val)
-            # Handle all unknown kwargs as cosmetic so we can write them back out
-            elif allow_cosmetic_attributes:
-                self.add_cosmetic_attribute(key, val)
-            else:
-                msg = (f"Unexpected kwarg ({key}: {val})  passed to {self.__class__} constructor. "
-                        "If this is a desired cosmetic attribute, consider setting "
-                        "'allow_cosmetic_attributes=True'")
-                raise SMIRNOFFSpecError(msg)
+        return smirnoff_data
 
     def to_dict(self, discard_cosmetic_attributes=False):
         """
@@ -738,13 +790,19 @@ class _ParameterAttributeHandler:
 
         # Start populating a dict of the attribs.
         indexed_attribs = set(self._get_indexed_parameter_attributes().keys())
+        indexed_mapped_attribs = set(self._get_indexed_mapped_parameter_attributes().keys())
         smirnoff_dict = OrderedDict()
 
         # If attribs_to_return is ordered here, that will effectively be an informal output ordering
         for attrib_name in attribs_to_return:
             attrib_value = getattr(self, attrib_name)
 
-            if attrib_name in indexed_attribs:
+            if attrib_name in indexed_mapped_attribs:
+                for idx, mapping in enumerate(attrib_value):
+                    for key, val in mapping.items():
+                        attrib_name_indexed, attrib_name_mapped = attrib_name.split('_')
+                        smirnoff_dict[f"{attrib_name_indexed}{str(idx+1)}_{attrib_name_mapped}{key}"] = val
+            elif attrib_name in indexed_attribs:
                 for idx, val in enumerate(attrib_value):
                     smirnoff_dict[attrib_name + str(idx+1)] = val
             else:
@@ -814,7 +872,7 @@ class _ParameterAttributeHandler:
             attr_name in self._get_indexed_mapped_parameter_attributes()):
             indexed_mapped_attr_value = getattr(self, attr_name)
             try:
-                indexed_attr_value[index][mapkey] = value
+                indexed_mapped_attr_value[index][mapkey] = value
                 return
             except (IndexError, KeyError) as err:
                 if not err.args: 
@@ -937,13 +995,13 @@ class _ParameterAttributeHandler:
         match_indexed = re.search(i_match, indexed)
         index = match_indexed.group()  # This is a str.
         attr_name = indexed[:-len(index)]
-        index = int(match.group()) - 1
+        index = int(index) - 1
 
         # process mapped component
         match_mapping = re.search(i_match, mapped)
         key = match_mapping.group()  # This is a str.
         attr_name = f"{attr_name}_{mapped[:-len(key)]}"
-        key = int(match.group()) # we don't subtract 1 here, because these are keys, not indices
+        key = int(key) # we don't subtract 1 here, because these are keys, not indices
 
         return attr_name, index, key
 
@@ -2247,13 +2305,12 @@ class ProperTorsionHandler(ParameterHandler):
 
         periodicity = IndexedParameterAttribute(converter=int)
         phase = IndexedParameterAttribute(unit=unit.degree)
-        k = IndexedParameterAttribute(unit=unit.kilocalorie_per_mole)
+        k = IndexedParameterAttribute(default=None, unit=unit.kilocalorie_per_mole)
         idivf = IndexedParameterAttribute(default=None, converter=float)
 
         # fractional bond order params
-        # `IndexedParameterAttribute` may not meet our needs for this one
-        # may have to expand its functionality or create a new class
-        k_bondorder = IndexedMappedParameterAttribute(default=None)
+        k_bondorder = IndexedMappedParameterAttribute(default=None,
+                                                      unit=unit.kilocalorie_per_mole)
 
     _TAGNAME = 'ProperTorsions'  # SMIRNOFF tag name to process
     _KWARGS = ['partial_bond_orders_from_molecules']

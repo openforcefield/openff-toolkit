@@ -988,6 +988,28 @@ class TestProperTorsionType:
                                                         k2=6 * unit.kilocalorie_per_mole,
                                                         )
 
+    def test_single_term_proper_torsion_bo(self):
+        """
+        Test creation and serialization of a single-term proper torsion with bond order interpolation.
+        """
+        from simtk import unit
+
+        p1 = ProperTorsionHandler.ProperTorsionType(smirks='[*:1]-[*:2]~[*:3]-[*:4]',
+                                                    phase1=30 * unit.degree,
+                                                    periodicity1=2,
+                                                    k1_bondorder1=1 * unit.kilocalorie_per_mole,
+                                                    k1_bondorder2=1.8 * unit.kilocalorie_per_mole,
+                                                    )
+        param_dict = p1.to_dict()
+        assert ('k1_bondorder1', 1 * unit.kilocalorie_per_mole) in param_dict.items()
+        assert ('k1_bondorder2', 1.8 * unit.kilocalorie_per_mole) in param_dict.items()
+        assert ('phase1', 30 * unit.degree) in param_dict.items()
+        assert ('periodicity1', 2) in param_dict.items()
+        assert 'idivf' not in param_dict
+        
+
+    def test_single_term_proper_torsion_wbo_w_idivf(self):
+        pass
 
 class TestProperTorsionHandler:
     def test_torsion_handler_charmm_potential(self):
