@@ -5,7 +5,7 @@ from rdkit.Chem import rdMolAlign
 import numpy as np
 from simtk import openmm, unit
 
-def main(filename):
+def compute_conformer_energies_from_file(filename):
     # Load in the molecule and its conformers.
     # Note that all conformers of the same molecule are loaded as separate Molecule objects
     # If using a OFF Toolkit version before 0.7.0, loading SDFs through RDKit and OpenEye may provide 
@@ -90,4 +90,4 @@ if __name__ == '__main__':
     parser.add_argument('-f', '--filename', help='Name of an input file containing conformers')
     args = parser.parse_args()
 
-    main(args.filename)
+    compute_conformer_energies_from_file(args.filename)
