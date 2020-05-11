@@ -1329,7 +1329,7 @@ class TestMolecule:
             assert bond.stereochemistry == sdf_bonds[key].stereochemistry
 
     def test_to_qcschema(self):
-        """Test the ability to make and validate qcschema"""
+        """Test the ability to make and validate qcschema with extras"""
         # the molecule has no coordinates so this should fail
         ethanol = Molecule.from_smiles('CCO')
         with pytest.raises(InvalidConformerError):
@@ -1341,7 +1341,7 @@ class TestMolecule:
         with pytest.raises(InvalidConformerError):
             qcschema = ethanol.to_qcschema(conformer=1)
         # now make a valid qcschema and check its properties
-        qcschema = ethanol.to_qcschema()
+        qcschema = ethanol.to_qcschema(extras={"test_tag": "test"})
         # make sure the properties match
         charge = 0
         connectivity = [(0, 1, 1.0), (0, 4, 1.0), (0, 5, 1.0), (0, 6, 1.0), (1, 2, 1.0), (1, 7, 1.0), (1, 8, 1.0), (2, 3, 1.0)]
@@ -1350,6 +1350,7 @@ class TestMolecule:
         assert connectivity == qcschema.connectivity
         assert symbols == qcschema.symbols.tolist()
         assert qcschema.geometry.all() == ethanol.conformers[0].in_units_of(unit.bohr).all()
+        assert qcschema.extras["test_tag"] == "test"
 
     def test_from_qcschema_no_client(self):
         """Test the ability to make molecules from QCArchive record instances and dicts"""
