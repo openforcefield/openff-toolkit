@@ -17,7 +17,7 @@ import os
 import re
 import subprocess
 import textwrap
-import  tempfile
+import tempfile
 
 import pytest
 
