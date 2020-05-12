@@ -6,6 +6,7 @@ channels:
 dependencies:
     # readthedocs dependencies
     - numpydoc
+    - sphinx ==2
     - nbsphinx
     - sphinx_bootstrap_theme
     - m2r >=0.2.1
