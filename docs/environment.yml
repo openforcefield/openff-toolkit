@@ -6,6 +6,8 @@ channels:
 dependencies:
     # readthedocs dependencies
     - numpydoc
+    # Sphinx pin is because of m2r compatibility
+    # https://github.com/openforcefield/openforcefield/pull/594
     - sphinx ==2
     - nbsphinx
     - sphinx_bootstrap_theme
