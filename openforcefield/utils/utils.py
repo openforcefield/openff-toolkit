@@ -31,7 +31,6 @@ __all__ = [
 # GLOBAL IMPORTS
 #=============================================================================================
 
-import contextlib
 import functools
 
 from simtk import unit
