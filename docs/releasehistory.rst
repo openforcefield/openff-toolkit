@@ -131,6 +131,7 @@ New features
          Enumerate protomoers is currently only available through the OpenEye toolkit.
 - `PR #573 <https://github.com/openforcefield/openforcefield/pull/573>`_:
   Adds ``quacpac`` error output to ``quacpac`` failure in ``Molecule.compute_partial_charges_am1bcc``.
+- `PR #560 <https://github.com/openforcefield/openforcefield/issues/560>`_: Added visualization method to the the Molecule class.
 
 
 Behavior changed
@@ -220,7 +221,7 @@ Tests added
   correctly find molecules tautomers, stereoisomers and protomers when possible.
 - `PR #573 <https://github.com/openforcefield/openforcefield/pull/573>`_: Added test for ``quacpac`` error output
   for ``quacpac`` failure in ``Molecule.compute_partial_charges_am1bcc``.
-- `PR #543 <https://github.com/openforcefield/openforcefield/pull/579>`_: Adds regression tests to ensure RDKit can be
+- `PR #579 <https://github.com/openforcefield/openforcefield/pull/579>`_: Adds regression tests to ensure RDKit can be
   be used to write multi-model PDB files.
 
 
@@ -265,12 +266,17 @@ Bugfixes
   :py:meth:`Molecule.to_file <openforcefield.topology.Molecule.to_file>` can now correctly write multi-model PDB files
   when using the RDKit backend toolkit.
 
-Example added
-"""""""""""""
+Examples added
+""""""""""""""
+- `PR #591 <https://github.com/openforcefield/openforcefield/pull/591>`_ and
+  `PR #533 <https://github.com/openforcefield/openforcefield/pull/533>`_: Adds an
+  `example notebook and utility to compute conformer energies <https://github.com/openforcefield/openforcefield/blob/master/examples/conformer_energies>`_.
+  This example is made to be reverse-compatible with the 0.6.0 OpenFF Toolkit release.
 - `PR #472 <https://github.com/openforcefield/openforcefield/pull/472>`_: Adds an example notebook
   `QCarchive_interface.ipynb <https://github.com/openforcefield/openforcefield/blob/master/examples/QCArchive_interface/QCarchive_interface.ipynb>`_
   which shows users how to instance the :py:class:`Molecule <openforcefield.topology.Molecule>` from
   a QCArchive entry level record and calculate the energy using RDKit through QCEngine.
+
 
 0.6.0 - Library Charges
 -----------------------
@@ -357,6 +363,7 @@ Tests added
 - `PR #430 <https://github.com/openforcefield/openforcefield/pull/430>`_: Added test for
   Wiberg Bond Order implemented in OpenEye Toolkits. Molecules taken from
   DOI:10.5281/zenodo.3405489 . Added by Sukanya Sasmal.
+- `PR #569 <https://github.com/openforcefield/openforcefield/pull/569>`_: Added round-trip tests for more serialization formats (dict, YAML, TOML, JSON, BSON, messagepack, pickle). Note that some are unsupported, but the tests raise the appropriate error.
 
 
 Bugfixes
