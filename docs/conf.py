@@ -32,7 +32,7 @@ import openforcefield
 #
 # Sphinx pin is because of m2r compatibility
 # https://github.com/openforcefield/openforcefield/pull/594
-needs_sphinx = '2'
+needs_sphinx = '2.4'
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
