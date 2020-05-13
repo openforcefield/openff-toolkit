@@ -1346,11 +1346,19 @@ class TestMolecule:
         charge = 0
         connectivity = [(0, 1, 1.0), (0, 4, 1.0), (0, 5, 1.0), (0, 6, 1.0), (1, 2, 1.0), (1, 7, 1.0), (1, 8, 1.0), (2, 3, 1.0)]
         symbols = ['C', 'C', 'O', 'H', 'H', 'H', 'H', 'H', 'H']
-        assert charge == qcschema.molecular_charge
-        assert connectivity == qcschema.connectivity
-        assert symbols == qcschema.symbols.tolist()
-        assert qcschema.geometry.all() == ethanol.conformers[0].in_units_of(unit.bohr).all()
+
+        def assert_check():
+            assert charge == qcschema.molecular_charge
+            assert connectivity == qcschema.connectivity
+            assert symbols == qcschema.symbols.tolist()
+            assert qcschema.geometry.all() == ethanol.conformers[0].in_units_of(unit.bohr).all()
+
+        assert_check()
         assert qcschema.extras["test_tag"] == "test"
+        # now run again when no extras
+        qcschema = ethanol.to_qcschema()
+        assert_check()
+        assert qcschema.extras is None
 
     def test_from_qcschema_no_client(self):
         """Test the ability to make molecules from QCArchive record instances and dicts"""

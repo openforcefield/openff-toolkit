@@ -93,6 +93,9 @@ New features
   and :py:meth:`Molecule.to_hill_formula <openforcefield.topology.Molecule.to_hill_formula>`
   and :py:meth:`Molecule.to_qcschema <openforcefield.topology.Molecule.to_qcschema>`
   and :py:meth:`Molecule.from_qcschema <openforcefield.topology.Molecule.from_qcschema>`
+      .. note::
+         The qcschema method accepts an extras dictionary which is passed into the validated qcelemental.models.Molecule
+         object.
   and :py:meth:`Molecule.from_mapped_smiles <openforcefield.topology.Molecule.from_mapped_smiles>`
   and :py:meth:`Molecule.from_pdb_and_smiles <openforcefield.topology.Molecule.from_pdb_and_smiles>`
   and :py:meth:`Molecule.canonical_order_atoms <openforcefield.topology.Molecule.canonical_order_atoms>`
