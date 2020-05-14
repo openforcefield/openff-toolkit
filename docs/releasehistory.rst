@@ -56,6 +56,7 @@ Behavior changed
   This check fails erroneously for cases in which the partial charge assignments are correctly all zero,
   such as for ``N#N``. It is also an unnecessary check given that `quacpac` will reliably indicate when
   it has failed to assign charges.
+  functions in Python's built-in standard library.
 
 API-breaking changes
 """"""""""""""""""""
@@ -93,6 +94,9 @@ New features
   and :py:meth:`Molecule.to_hill_formula <openforcefield.topology.Molecule.to_hill_formula>`
   and :py:meth:`Molecule.to_qcschema <openforcefield.topology.Molecule.to_qcschema>`
   and :py:meth:`Molecule.from_qcschema <openforcefield.topology.Molecule.from_qcschema>`
+      .. note::
+         The qcschema method accepts an extras dictionary which is passed into the validated qcelemental.models.Molecule
+         object.
   and :py:meth:`Molecule.from_mapped_smiles <openforcefield.topology.Molecule.from_mapped_smiles>`
   and :py:meth:`Molecule.from_pdb_and_smiles <openforcefield.topology.Molecule.from_pdb_and_smiles>`
   and :py:meth:`Molecule.canonical_order_atoms <openforcefield.topology.Molecule.canonical_order_atoms>`
@@ -266,13 +270,17 @@ Bugfixes
   :py:meth:`Molecule.to_file <openforcefield.topology.Molecule.to_file>` can now correctly write multi-model PDB files
   when using the RDKit backend toolkit.
 
-Example added
-"""""""""""""
+Examples added
+""""""""""""""
+- `PR #591 <https://github.com/openforcefield/openforcefield/pull/591>`_ and
+  `PR #533 <https://github.com/openforcefield/openforcefield/pull/533>`_: Adds an
+  `example notebook and utility to compute conformer energies <https://github.com/openforcefield/openforcefield/blob/master/examples/conformer_energies>`_.
+  This example is made to be reverse-compatible with the 0.6.0 OpenFF Toolkit release.
 - `PR #472 <https://github.com/openforcefield/openforcefield/pull/472>`_: Adds an example notebook
   `QCarchive_interface.ipynb <https://github.com/openforcefield/openforcefield/blob/master/examples/QCArchive_interface/QCarchive_interface.ipynb>`_
   which shows users how to instance the :py:class:`Molecule <openforcefield.topology.Molecule>` from
   a QCArchive entry level record and calculate the energy using RDKit through QCEngine.
-- `PR #533 <`https://github.com/openforcefield/openforcefield/pull/533>`_: Adds an example notebook which `conformer_energies.ipynb <https://github.com/openforcefield/openforcefield/blob/master/examples/conformer_energies/conformer_energies.ipynb>`
+
 
 0.6.0 - Library Charges
 -----------------------
