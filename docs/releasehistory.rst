@@ -56,6 +56,7 @@ Behavior changed
   This check fails erroneously for cases in which the partial charge assignments are correctly all zero,
   such as for ``N#N``. It is also an unnecessary check given that `quacpac` will reliably indicate when
   it has failed to assign charges.
+  functions in Python's built-in standard library.
 
 API-breaking changes
 """"""""""""""""""""

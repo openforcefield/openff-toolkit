@@ -17,11 +17,12 @@ import os
 import re
 import subprocess
 import textwrap
+import  tempfile
 
 import pytest
 
-from openforcefield.utils import (RDKIT_AVAILABLE, get_data_file_path,
-                                  temporary_directory)
+from openforcefield.utils import RDKIT_AVAILABLE, get_data_file_path
+
 
 #======================================================================
 # TEST UTILITIES
@@ -49,7 +50,7 @@ def run_script_str(script_str):
     With respect to eval, this has the advantage of catching all import errors.
 
     """
-    with temporary_directory() as tmp_dir:
+    with tempfile.TemporaryDirectory() as tmp_dir:
         temp_file_path = os.path.join(tmp_dir, 'temp.py')
         # Create temporary python script.
         with open(temp_file_path, 'w') as f:
