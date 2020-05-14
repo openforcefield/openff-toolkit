@@ -56,7 +56,9 @@ Behavior changed
   This check fails erroneously for cases in which the partial charge assignments are correctly all zero,
   such as for ``N#N``. It is also an unnecessary check given that `quacpac` will reliably indicate when
   it has failed to assign charges.
-  functions in Python's built-in standard library.
+- `PR #597 <https://github.com/openforcefield/openforcefield/pull/597>`_: Energy-minimized sample systems
+  with Parsley 1.1.0.
+
 
 API-breaking changes
 """"""""""""""""""""
@@ -76,6 +78,10 @@ API-breaking changes
 - `PR #508 <https://github.com/openforcefield/openforcefield/pull/508>`_:
   ``Molecule.compute_wiberg_bond_orders`` is now
   :py:meth:`Molecule.assign_fractional_bond_orders <openforcefield.topology.Molecule.assign_fractional_bond_orders>`.
+- `PR #595 <https://github.com/openforcefield/openforcefield/pull/595>`_: Removed functions
+  :py:meth:`temporary_directory <openforcefield.utils.utils.temporary_directory>` and
+  :py:meth:`temporary_cd <openforcefield.utils.utils.temporary_cd>` and replaced their behavoir with 
+  ``tempfile.TemporaryDirectory()``.
 
 
 New features
