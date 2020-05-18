@@ -1246,3 +1246,11 @@ class ForceField:
             msg += "Known parameter handler class tags are {}".format(self._parameter_handler_classes.keys())
             raise KeyError(msg)
         return ph_class
+
+    def __getitem__(self, val):
+        """Syntax sugar for lookikng up a ParameterHandler."""
+        if isinstance(val, str):
+            if val in self._parameter_handlers:
+                return self.get_parameter_handler(val)
+        elif isinstance(val, ParameterHandler):
+            raise NotImplementedError

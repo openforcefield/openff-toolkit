@@ -26,7 +26,7 @@ from tempfile import NamedTemporaryFile
 from openforcefield.utils.toolkits import OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper, ToolkitRegistry
 from openforcefield.utils import get_data_file_path
 from openforcefield.topology import Molecule, Topology
-from openforcefield.typing.engines.smirnoff import ForceField, IncompatibleParameterError, SMIRNOFFSpecError
+from openforcefield.typing.engines.smirnoff import ForceField, ParameterHandler, IncompatibleParameterError, SMIRNOFFSpecError
 from openforcefield.typing.engines.smirnoff import XMLParameterIOHandler
 
 
@@ -1096,8 +1096,36 @@ class TestForceField():
                 forcefield.get_parameter_handler('Electrostatics', {}).method = electrostatics_method
                 omm_system = forcefield.create_openmm_system(topology)
 
+    def test_parameter_handler_lookup(self):
+        """Ensure __getitem__ lookups work"""
+        forcefield = ForceField('test_forcefields/smirnoff99Frosst.offxml')
 
+        handlers_before = sorted(forcefield._parameter_handlers)
 
+        for val in handlers_before:
+            looked_up_handler = forcefield[val]
+            assert isinstance(looked_up_handler, ParameterHandler)
+
+        handlers_after = sorted(forcefield._parameter_handlers)
+
+        assert handlers_before == handlers_after
+
+    def test_unregistered_parameter_handler_lookup(self):
+        """Ensure __getitem__ lookups do not register new handlers"""
+        forcefield = ForceField('test_forcefields/smirnoff99Frosst.offxml')
+        unregistered_handler = 'LibraryCharges'
+
+        assert unregistered_handler not in forcefield._parameter_handlers
+        forcefield[unregistered_handler]
+        assert unregistered_handler not in forcefield._parameter_handlers
+
+    def test_lookup_parameter_handler_object(self):
+        """Ensure __getitem__ raises NotImplemented when passed a ParameterHandler object"""
+        forcefield = ForceField('test_forcefields/smirnoff99Frosst.offxml')
+        bonds = forcefield['Bonds']
+        with pytest.raises(NotImplementedError):
+            forcefield[bonds]
+        
 class TestForceFieldChargeAssignment:
 
     def generate_monatomic_ions():
