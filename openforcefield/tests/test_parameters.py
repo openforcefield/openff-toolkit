@@ -960,7 +960,7 @@ class TestProperTorsionType:
         """
         from simtk import unit
 
-        with pytest.raises(SMIRNOFFSpecError, match="Unexpected kwarg (phase3: 31 deg)*") as context:
+        with pytest.raises(SMIRNOFFSpecError, match="Unexpected kwarg \(phase3: 31 deg\)*.") as context:
             p1 = ProperTorsionHandler.ProperTorsionType(smirks='[*:1]-[*:2]-[*:3]-[*:4]',
                                                         phase1=30 * unit.degree,
                                                         periodicity1=2,
@@ -1006,10 +1006,112 @@ class TestProperTorsionType:
         assert ('phase1', 30 * unit.degree) in param_dict.items()
         assert ('periodicity1', 2) in param_dict.items()
         assert 'idivf' not in param_dict
-        
 
-    def test_single_term_proper_torsion_wbo_w_idivf(self):
-        pass
+        assert len(p1.k_bondorder) == 1
+        assert len(p1.k_bondorder[0]) == 2
+        assert {1, 2} == set(p1.k_bondorder[0].keys())
+
+    def test_single_term_proper_torsion_bo_w_idivf(self):
+        """
+        Test creation and serialization of a single-term proper torsion with bond order interpolation.
+
+        With `idivf1` specified.
+
+        """
+        from simtk import unit
+
+        p1 = ProperTorsionHandler.ProperTorsionType(smirks='[*:1]-[*:2]-[*:3]-[*:4]',
+                                                    phase1=30 * unit.degree,
+                                                    periodicity1=2,
+                                                    k1_bondorder1=1 * unit.kilocalorie_per_mole,
+                                                    k1_bondorder2=1.8 * unit.kilocalorie_per_mole,
+                                                    idivf1=4
+                                                    )
+
+        param_dict = p1.to_dict()
+        assert ('k1_bondorder1', 1 * unit.kilocalorie_per_mole) in param_dict.items()
+        assert ('k1_bondorder2', 1.8 * unit.kilocalorie_per_mole) in param_dict.items()
+        assert ('phase1', 30 * unit.degree) in param_dict.items()
+        assert ('periodicity1', 2) in param_dict.items()
+        assert ('idivf1', 4) in param_dict.items()
+
+    def test_multi_term_proper_torsion_bo(self):
+        """
+        Test creation and serialization of a multi-term proper torsion with bond order interpolation.
+        """
+        from simtk import unit
+
+        p1 = ProperTorsionHandler.ProperTorsionType(smirks='[*:1]-[*:2]-[*:3]-[*:4]',
+                                                    phase1=30 * unit.degree,
+                                                    periodicity1=2,
+                                                    k1_bondorder1=1 * unit.kilocalorie_per_mole,
+                                                    k1_bondorder2=1.8 * unit.kilocalorie_per_mole,
+                                                    phase2=31 * unit.degree,
+                                                    periodicity2=3,
+                                                    k2_bondorder1=1.2 * unit.kilocalorie_per_mole,
+                                                    k2_bondorder2=1.9 * unit.kilocalorie_per_mole,
+                                                    )
+        param_dict = p1.to_dict()
+        assert param_dict['k1_bondorder1'] == 1 * unit.kilocalorie_per_mole
+        assert param_dict['k1_bondorder2'] == 1.8 * unit.kilocalorie_per_mole
+        assert param_dict['phase1'] == 30 * unit.degree
+        assert param_dict['periodicity1'] == 2
+        assert param_dict['k2_bondorder1'] == 1.2 * unit.kilocalorie_per_mole
+        assert param_dict['k2_bondorder2'] == 1.9 * unit.kilocalorie_per_mole
+        assert param_dict['phase2'] == 31 * unit.degree
+        assert param_dict['periodicity2'] == 3
+
+    def test_multi_term_proper_torsion_bo_skip_index(self):
+        """
+        Test creation and serialization of a multi-term proper torsion where
+        the indices are not consecutive and a SMIRNOFFSpecError is raised
+        AND we are doing bond order interpolation
+        """
+        from simtk import unit
+
+        with pytest.raises(SMIRNOFFSpecError, match="Unexpected kwarg \(k3_bondorder1*.") as context:
+            p1 = ProperTorsionHandler.ProperTorsionType(smirks='[*:1]-[*:2]-[*:3]-[*:4]',
+                                                        phase1=30 * unit.degree,
+                                                        periodicity1=2,
+                                                        k1_bondorder1=1 * unit.kilocalorie_per_mole,
+                                                        k1_bondorder2=1.8 * unit.kilocalorie_per_mole,
+                                                        phase3=31 * unit.degree,
+                                                        periodicity3=3,
+                                                        k3_bondorder1=1.2 * unit.kilocalorie_per_mole,
+                                                        k3_bondorder2=1.9 * unit.kilocalorie_per_mole,
+                                                        )
+
+    def test_single_term_single_bo_exception(self):
+        """Test behavior where a single bond order term is specified for a single k"""
+        from simtk import unit
+
+        # TODO : currently raises no error, as checks are handled at parameterization
+        # is this a spec thing that we should be checking?
+        # if so, it will be painful to implement
+        p1 = ProperTorsionHandler.ProperTorsionType(smirks='[*:1]-[*:2]~[*:3]-[*:4]',
+                                                    phase1=30 * unit.degree,
+                                                    periodicity1=2,
+                                                    k1_bondorder1=1 * unit.kilocalorie_per_mole,
+                                                    )
+
+
+    def test_multi_term_single_bo_exception(self):
+        """Test behavior where a single bond order term is specified for each of multiple k"""
+        from simtk import unit
+
+        # TODO : currently raises no error, as checks are handled at parameterization
+        # is this a spec thing that we should be checking?
+        # if so, it will be painful to implement
+        p1 = ProperTorsionHandler.ProperTorsionType(smirks='[*:1]-[*:2]-[*:3]-[*:4]',
+                                                    phase1=30 * unit.degree,
+                                                    periodicity1=2,
+                                                    k1_bondorder1=1 * unit.kilocalorie_per_mole,
+                                                    phase2=31 * unit.degree,
+                                                    periodicity2=3,
+                                                    k2_bondorder1=1.2 * unit.kilocalorie_per_mole,
+                                                    )
+
+
 
 class TestProperTorsionHandler:
     def test_torsion_handler_charmm_potential(self):
@@ -1032,6 +1134,18 @@ class TestProperTorsionHandler:
         with pytest.raises(SMIRNOFFSpecError, match=err_msg):
             ph1 = ImproperTorsionHandler(potential='charmm', skip_version_check=True)
         ph1 = ImproperTorsionHandler(potential='k*(1+cos(periodicity*theta-phase))', skip_version_check=True)
+
+    def test_assign_partial_bond_orders_from_molecules(self):
+        pass
+
+    def test_create_force(self):
+        pass
+
+    def test_create_force_bo(self):
+        pass
+
+    def test_linear_interpolate_k(self):
+        pass
 
 
 class TestLibraryChargeHandler:

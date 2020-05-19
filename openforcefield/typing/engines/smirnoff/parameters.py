@@ -40,7 +40,7 @@ __all__ = [
 #=============================================================================================
 
 import copy
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 from enum import Enum
 import functools
 import inspect
@@ -677,6 +677,7 @@ class _ParameterAttributeHandler:
         # will get fed into setattr
         indexed_mapped_attr_lengths = {}
         reindex = set()
+        reverse = defaultdict(dict)
 
         kwargs = list(smirnoff_data.keys())
         for kwarg in kwargs:
@@ -698,15 +699,38 @@ class _ParameterAttributeHandler:
                     smirnoff_data[attr_name][index] = dict()
 
                 smirnoff_data[attr_name][index][key] = smirnoff_data[kwarg]
-
-                # remove the original key
                 del smirnoff_data[kwarg]
 
-        # turn all our top-level dicts into lists
-        for attr_name in reindex:
-            smirnoff_data[attr_name] = [smirnoff_data[attr_name][i]
-                    for i in sorted(smirnoff_data[attr_name].keys())]
+                # build reverse mapping; needed for contiguity check below
+                if index not in reverse[attr_name]:
+                    reverse[attr_name][index] = dict()
+                reverse[attr_name][index][key] = kwarg
 
+        # turn all our top-level dicts into lists
+        # catch cases where we skip an index,
+        # e.g. k1_bondorder*, k3_bondorder* defined, but not k2_bondorder*
+        for attr_name in reindex:
+            indexed_mapping = []
+            j = 0
+            for i in sorted(smirnoff_data[attr_name].keys()):
+                if int(i) == j:
+                    indexed_mapping.append(smirnoff_data[attr_name][i])
+                    j += 1
+                else:
+                    # any key will do; we are sensitive only to top-level index
+                    key = sorted(reverse[attr_name][i].keys())[0]
+                    kwarg = reverse[attr_name][i][key]
+                    val = smirnoff_data[attr_name][i][key]
+
+                    msg = (f"Unexpected kwarg ({kwarg}: {val})  passed to {self.__class__} constructor. "
+                            "If this is a desired cosmetic attribute, consider setting "
+                            "'allow_cosmetic_attributes=True'")
+                    raise SMIRNOFFSpecError(msg)
+
+            smirnoff_data[attr_name] = indexed_mapping
+
+            # keep track of lengths; used downstream for checking against other
+            # indexed attributes
             indexed_mapped_attr_lengths[attr_name] = len(smirnoff_data[attr_name])
 
         return smirnoff_data, indexed_mapped_attr_lengths
@@ -2413,14 +2437,15 @@ class ProperTorsionHandler(ParameterHandler):
 
             if torsion_match.parameter_type.k_bondorder is None:
                 # TODO: add a check here that we have same number of terms for 
-                # `kX_bondorder*`, `periodicityX`, `phaseX` has the same number of
+                # `kX_bondorder*`, `periodicityX`, `phaseX`
                 # only count a given `kX_bondorder*` once
 
                 # assign torsion with no interpolation
                 self._assign_torsion(atom_indices, torsion_match, force)
             else:
                 # TODO: add a check here that we have same number of terms for 
-                # `kX`, `periodicityX`, `phaseX` has the same number of
+                # `kX_bondorder*`, `periodicityX`, `phaseX`
+                # only count a given `kX_bondorder*` once
 
                 # assign torsion with interpolation
                 self._assign_fractional_bond_orders(atom_indices, torsion_match, force, **kwargs)
