@@ -26,6 +26,9 @@ import sphinx_bootstrap_theme
 
 import openforcefield
 
+from recommonmark.transform import AutoStructify
+from m2r import MdInclude
+
 # -- General configuration ------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
@@ -46,7 +49,7 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx.ext.intersphinx',
     'nbsphinx',
-    'm2r', # render markdown
+    'recommonmark', # render markdown
     ]
 
 autosummary_generate = True
@@ -285,3 +288,22 @@ texinfo_documents = [
      author, 'openforcefield', 'One line description of project.',
      'Miscellaneous'),
 ]
+
+# workaround for using m2r only for mdinclude and recommonmark for everything else
+# m2r unmaintained, but has features that aren't easy to replicate in recommonmark
+# https://github.com/readthedocs/recommonmark/issues/191#issuecomment-622369992
+# credit: @orsinium
+def setup(app):
+    config = {
+        'auto_toc_tree_section': 'Contents',
+        'enable_eval_rst': True,
+    }
+    app.add_config_value('recommonmark_config', config, True)
+    app.add_transform(AutoStructify)
+
+    # from m2r to make `mdinclude` work
+    app.add_config_value('no_underscore_emphasis', False, 'env')
+    app.add_config_value('m2r_parse_relative_links', False, 'env')
+    app.add_config_value('m2r_anonymous_references', False, 'env')
+    app.add_config_value('m2r_disable_inline_math', False, 'env')
+    app.add_directive('mdinclude', MdInclude)
