@@ -1248,9 +1248,12 @@ class ForceField:
         return ph_class
 
     def __getitem__(self, val):
-        """Syntax sugar for lookikng up a ParameterHandler."""
+        """
+        Syntax sugar for lookikng up a ParameterHandler. Note that only
+        string-based lookups are currently supported.
+        """
         if isinstance(val, str):
             if val in self._parameter_handlers:
                 return self.get_parameter_handler(val)
-        elif isinstance(val, ParameterHandler):
+        elif isinstance(val, ParameterHandler) or issubclass(val, ParameterHandler):
             raise NotImplementedError

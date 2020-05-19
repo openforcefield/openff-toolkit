@@ -1125,6 +1125,8 @@ class TestForceField():
         bonds = forcefield['Bonds']
         with pytest.raises(NotImplementedError):
             forcefield[bonds]
+        with pytest.raises(NotImplementedError):
+            forcefield[type(bonds)]
         
 class TestForceFieldChargeAssignment:
 
