@@ -10,6 +10,10 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 0.7.0 - Current development
 ---------------------------
 
+Dropping support for mutable chemical envs -- Use chemper instead
+Dropping support for chemical environment replacements kwarg
+Added ``get_tagged_smarts_connectivity``
+
 Behavior changed
 """"""""""""""""
 - `PR #508 <https://github.com/openforcefield/openforcefield/pull/508>`_:
