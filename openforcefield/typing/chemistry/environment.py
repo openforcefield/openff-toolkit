@@ -437,21 +437,39 @@ class ChemicalEnvironment:
 #                     '!-':1.5, '!:':1., '!=':1., '!#':1.}
 #             orderList = [orderDict[base] for (base, decor) in self.ORtypes]
 #             return min(orderList)
-#
-#     @staticmethod
-#     def validate(smirks, ensure_valence_type=None, toolkit='openeye'):
-#         """Validate the provided SMIRKS string is valid, and if requested, tags atoms appropriate to the specified valence type.
-#
-#         Parameters
-#         ----------
-#         smirks : str
-#             The SMIRKS expression to validate
-#         ensure_valence_type : str, optional, default=None
-#             If specified, ensure the tagged atoms are appropriate to the specified valence type
-#
-#         This method will raise a :class:`SMIRKSParsingError` if the provided SMIRKS string is not valid.
-#
-#         """
+    @classmethod
+    def validate_smirks(cls, smirks, validate_parsable=True, validate_valence_type=True, toolkit_registry=None):
+        """
+        Check the provided SMIRKS string is valid, and if requested, tags atoms appropriate to the
+        specified valence type.
+
+        Parameters
+        ----------
+        smirks : str
+            The SMIRKS expression to validate
+        validate_parsable: bool, optional, default=True
+            If specified, ensure the provided smirks is parsable
+        validate_valence_type : bool, optional, default=True
+            If specified, ensure the tagged atoms are appropriate to the specified valence type
+        toolkit_registry = string or ToolkitWrapper or ToolkitRegistry. Default = None
+            Either a ToolkitRegistry, ToolkitWrapper, or the strings 'openeye' or 'rdkit',
+            indicating the backend to use for validating the correct
+            connectivity of the SMIRKS during initialization. If None,
+            this function will use the GLOBAL_TOOLKIT_REGISTRY
+
+        Raises
+        ------
+        SMIRKSParsingError
+            if smirks was unparsable
+        SMIRKSMismatchError
+            if smirks did not have expected connectivity between tagged atoms
+            and validate_valence_type=True
+
+        """
+        cls(smirks,
+            validate_parsable=validate_parsable,
+            validate_valence_type=validate_valence_type,
+            toolkit_registry=toolkit_registry)
 #         chemenv = ChemicalEnvironment(smirks, toolkit=toolkit)
 #
 #         if ensure_valence_type:
@@ -463,7 +481,8 @@ class ChemicalEnvironment:
 
     _expected_type = None
 
-    def __init__(self, smirks = None, label = None, toolkit_registry=None):
+    def __init__(self, smirks=None, label=None, validate_parsable=True, validate_valence_type=True,
+                 toolkit_registry=None):
         """Initialize a chemical environment abstract base class.
 
         smirks = string, optional
@@ -472,11 +491,24 @@ class ChemicalEnvironment:
         label = anything, optional
             intended to be used to label this chemical environment
             could be a string, int, or float, or anything
+        validate_parsable: bool, optional, default=True
+            If specified, ensure the provided smirks is parsable
+        validate_valence_type : bool, optional, default=True
+            If specified, ensure the tagged atoms are appropriate to the specified valence type
         toolkit_registry = string or ToolkitWrapper or ToolkitRegistry. Default = None
             Either a ToolkitRegistry, ToolkitWrapper, or the strings 'openeye' or 'rdkit',
             indicating the backend to use for validating the correct
             connectivity of the SMIRKS during initialization. If None,
             this function will use the GLOBAL_TOOLKIT_REGISTRY
+
+        Raises
+        ------
+        SMIRKSParsingError
+            if smirks was unparsable
+        SMIRKSMismatchError
+            if smirks did not have expected connectivity between tagged atoms
+            and validate_valence_type=True
+
         """
         # Support string input for toolkit names for legacy reasons
         if toolkit_registry == 'openeye':
@@ -488,7 +520,8 @@ class ChemicalEnvironment:
 
         self.smirks = smirks
         self.label = label
-        self._validate_type(toolkit_registry=toolkit_registry)
+        if validate_parsable or validate_valence_type:
+            self.validate(validate_valence_type=validate_valence_type, toolkit_registry=toolkit_registry)
 
         ### Can't do this in the property, since it's toolkit-dependent, and we couldn't pass in a custom toolkit
     # @property
@@ -498,13 +531,29 @@ class ChemicalEnvironment:
     #     if not(self._validate_type()):
     #         raise SMIRKSMismatchError(f"{self.__class__} expected '{self._expected_type}' chemical environment, but "
     #     #                                   f"smirks was set to '{smirks}', which is type '{new_type}' ")
-    def _validate_type(self, toolkit_registry=None):
+    def validate(self, validate_valence_type=True, toolkit_registry=None):
         """
         Returns True if the underlying smirks is the correct valence type, False otherwise. If the expected type
         is None, this method always returns True.
+
+        validate_valence_type : bool, optional, default=True
+            If specified, ensure the tagged atoms are appropriate to the specified valence type
+        toolkit_registry = ToolkitWrapper or ToolkitRegistry. Default = None
+            Either a ToolkitRegistry or ToolkitWrapper,
+            indicating the backend to use for validating the correct
+            connectivity of the SMIRKS during initialization. If None,
+            this function will use the GLOBAL_TOOLKIT_REGISTRY
+
+        Raises
+        ------
+        SMIRKSParsingError
+            if smirks was unparsable
+        SMIRKSMismatchError
+            if smirks did not have expected connectivity between tagged atoms
+            and validate_valence_type=True
         """
         perceived_type = self.get_type(toolkit_registry=toolkit_registry)
-        if (perceived_type != self._expected_type) and not(self._expected_type is None):
+        if (perceived_type != self._expected_type) and validate_valence_type and not(self._expected_type is None):
             raise SMIRKSMismatchError(f"{self.__class__} expected '{self._expected_type}' chemical environment, but "
                                       f"smirks was set to '{self.smirks}', which is type '{perceived_type}'")
 
@@ -520,7 +569,6 @@ class ChemicalEnvironment:
         else:
             unique_tags, connectivity = toolkit_registry.call('get_tagged_smarts_connectivity', self.smirks)
 
-        print(unique_tags, connectivity)
         if unique_tags == (1,) and len(connectivity) == 0:
             return "Atom"
         if unique_tags == (1, 2) and (1, 2) in connectivity:

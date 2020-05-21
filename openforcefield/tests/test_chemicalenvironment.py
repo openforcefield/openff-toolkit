@@ -230,7 +230,7 @@ class TestChemicalEnvironments():#TestCase):
         """
         Check that an imparseable SMIRKS raises errors
         """
-        smirks = "[*;X:1]"
+        smirks = "[*;:1]"
         #msg = f"SMIRKS ({smirks}) should not be parseable, but an environment was successfully created"
         with pytest.raises(SMIRKSParsingError):
             env = ChemicalEnvironment(smirks, toolkit_registry=toolkit)

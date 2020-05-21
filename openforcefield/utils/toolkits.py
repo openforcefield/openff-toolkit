@@ -1855,8 +1855,12 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             lexically. So the return value for an improper torsion would be ((1, 2), (2, 3), (2, 4)).
         """
         from openeye import oechem
+        from openforcefield.typing.chemistry import SMIRKSParsingError
         qmol = oechem.OEQMol()
-        oechem.OEParseSmarts(qmol, smarts)
+        status = oechem.OEParseSmarts(qmol, smarts)
+        if status == False:
+            raise SMIRKSParsingError(f"OpenEye Toolkit was unable to parse SMIRKS {smarts}")
+
         unique_tags = set()
         connections = set()
         for at1 in qmol.GetAtoms():
@@ -3098,13 +3102,10 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         from openforcefield.typing.chemistry import SMIRKSParsingError
         ss = Chem.MolFromSmarts(smarts)
         # Still need to
-        # * Make OE and RDK detect when a SMIRKS is unparsable
-        #     * we might be able to hijack the OE error stream again to do this
         # * standardize on defining the argument as "smarts" or "smirks"
         # * finish docstring example in OETKW.get_tagged_smarts_connectivity and copy to RDKTKW
 
-        # This doens't work -- I need to find a different way to detect this failure
-        if ss.GetNumAtoms() == 0:
+        if ss is None:
             raise SMIRKSParsingError(f"RDKit was unable to parse SMIRKS {smarts}")
 
         unique_tags = set()
