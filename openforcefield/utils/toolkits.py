@@ -1838,8 +1838,6 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         Returns a tuple of tuples indicating connectivity between tagged atoms in a SMARTS string. Does not
         return bond order.
 
-        >>>
-
         Parameters
         ----------
         smarts : str
@@ -1847,12 +1845,17 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         Returns
         -------
-        unqiue_tags : tuple of int
-
+        unique_tags : tuple of int
+            A sorted tuple of all unique tagged atom map indices.
         tagged_atom_connectivity : tuple of tuples of int, shape n_tagged_bonds x 2
             A tuple of tuples, where each inner tuple is a pair of tagged atoms (tag_idx_1, tag_idx_2) which are
             bonded. The inner tuples are ordered smallest-to-largest, and the tuple of tuples is ordered
             lexically. So the return value for an improper torsion would be ((1, 2), (2, 3), (2, 4)).
+
+        Raises
+        ------
+        SMIRKSParsingError
+            If OpenEye toolkit was unable to parse the provided smirks/tagged smarts
         """
         from openeye import oechem
         from openforcefield.typing.chemistry import SMIRKSParsingError
@@ -3098,12 +3101,32 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         return inchi_key
 
     def get_tagged_smarts_connectivity(self, smarts):
+        """
+        Returns a tuple of tuples indicating connectivity between tagged atoms in a SMARTS string. Does not
+        return bond order.
+
+        Parameters
+        ----------
+        smarts : str
+            The tagged SMARTS to analyze
+
+        Returns
+        -------
+        unique_tags : tuple of int
+            A sorted tuple of all unique tagged atom map indices.
+        tagged_atom_connectivity : tuple of tuples of int, shape n_tagged_bonds x 2
+            A tuple of tuples, where each inner tuple is a pair of tagged atoms (tag_idx_1, tag_idx_2) which are
+            bonded. The inner tuples are ordered smallest-to-largest, and the tuple of tuples is ordered
+            lexically. So the return value for an improper torsion would be ((1, 2), (2, 3), (2, 4)).
+
+        Raises
+        ------
+        SMIRKSParsingError
+            If RDKit was unable to parse the provided smirks/tagged smarts
+        """
         from rdkit import Chem
         from openforcefield.typing.chemistry import SMIRKSParsingError
         ss = Chem.MolFromSmarts(smarts)
-        # Still need to
-        # * standardize on defining the argument as "smarts" or "smirks"
-        # * finish docstring example in OETKW.get_tagged_smarts_connectivity and copy to RDKTKW
 
         if ss is None:
             raise SMIRKSParsingError(f"RDKit was unable to parse SMIRKS {smarts}")
@@ -3114,7 +3137,6 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             if at1.GetAtomMapNum() == 0:
                 continue
             unique_tags.add(at1.GetAtomMapNum())
-            # print(dir(at1))
             for at2 in at1.GetNeighbors():
                 if at2.GetAtomMapNum() == 0:
                     continue
