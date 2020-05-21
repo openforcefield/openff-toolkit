@@ -15,6 +15,7 @@ Test classes and function in module openforcefield.typing.engines.smirnoff.param
 #======================================================================
 
 import pytest
+from numpy.testing import assert_almost_equal
 from simtk import unit
 
 from openforcefield.typing.engines.smirnoff import SMIRNOFFVersionError
@@ -1144,8 +1145,43 @@ class TestProperTorsionHandler:
     def test_create_force_bo(self):
         pass
 
-    def test_linear_interpolate_k(self):
-        pass
+    @pytest.mark.parametrize(
+            ('fractional_bond_order', 'k_interpolated'),
+            [(1.6, 1.48), (.7, .76), (2.3, 2.04)])
+    def test_linear_interpolate_k(self, fractional_bond_order, k_interpolated):
+        """Test that linear interpolation works as expected"""
+        from simtk import unit
+
+        k_bondorder = {1: 1 * unit.kilocalorie_per_mole,
+                       2: 1.8 * unit.kilocalorie_per_mole}
+
+        k = ProperTorsionHandler._linear_interpolate_k(k_bondorder, fractional_bond_order)
+        assert_almost_equal(k/k.unit, k_interpolated)
+
+    @pytest.mark.parametrize(
+            ('fractional_bond_order', 'k_interpolated'),
+            [(1.6, 1.48), (.7, .76), (2.3, 2.01), (3.1, 2.57)])
+    def test_linear_interpolate_k_3_terms(self, fractional_bond_order, k_interpolated):
+        """Test that linear interpolation works as expected for three terms"""
+        from simtk import unit
+
+        k_bondorder = {1: 1 * unit.kilocalorie_per_mole,
+                       2: 1.8 * unit.kilocalorie_per_mole,
+                       3: 2.5 * unit.kilocalorie_per_mole}
+
+        k = ProperTorsionHandler._linear_interpolate_k(k_bondorder, fractional_bond_order)
+        assert_almost_equal(k/k.unit, k_interpolated)
+
+    def test_linear_interpolate_k_below_zero(self):
+        """Test that linear interpolation throws error if resulting k less than 0"""
+        from simtk import unit
+
+        k_bondorder = {1: 1 * unit.kilocalorie_per_mole,
+                       2: 2.3 * unit.kilocalorie_per_mole}
+
+        fractional_bond_order = .2
+        with pytest.raises(ValueError):
+            k = ProperTorsionHandler._linear_interpolate_k(k_bondorder, fractional_bond_order)
 
 
 class TestLibraryChargeHandler:

@@ -2582,7 +2582,7 @@ class ProperTorsionHandler(ParameterHandler):
                     - ((k_bondorder[bond_orders[1]] - k_bondorder[bond_orders[0]])
                        /(bond_orders[1] - bond_orders[0]))
                     * (bond_orders[0] - fractional_bond_order))
-            if k < 0:
+            if k/k.unit < 0:
                 raise ValueError(
                         "Extrapolated k for fractional bond order "
                         "'{}' below zero".format(fractional_bond_order))
