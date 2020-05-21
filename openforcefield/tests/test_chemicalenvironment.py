@@ -3,12 +3,15 @@ import pytest
 from openforcefield.utils.toolkits import OPENEYE_AVAILABLE
 
 # TODO: Evaluate which tests in this file should be moved to test_toolkits
+toolkits = []
 if OPENEYE_AVAILABLE:
     from openforcefield.utils.toolkits import RDKitToolkitWrapper, OpenEyeToolkitWrapper
-    toolkits = ['rdkit', 'openeye', RDKitToolkitWrapper(), OpenEyeToolkitWrapper()]
+    toolkits.append('openeye')
+    toolkits.append(OpenEyeToolkitWrapper())
 else:
     from openforcefield.utils.toolkits import RDKitToolkitWrapper
-    toolkits = ['rdkit', RDKitToolkitWrapper]
+    toolkits.append('rdkit')
+    toolkits.append(RDKitToolkitWrapper())
 
 
 class TestChemicalEnvironments():
