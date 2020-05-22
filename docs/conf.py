@@ -21,13 +21,15 @@ import os
 import sys
 sys.path.insert(0, os.path.abspath('.'))
 
+import sphinx
+
 # bootstrap theme
 import sphinx_bootstrap_theme
 
 import openforcefield
 
-from recommonmark.transform import AutoStructify
-from m2r import MdInclude
+#from recommonmark.transform import AutoStructify
+#from m2r import MdInclude
 
 # -- General configuration ------------------------------------------------
 
@@ -49,7 +51,8 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx.ext.intersphinx',
     'nbsphinx',
-    'recommonmark', # render markdown
+    #'recommonmark', # render markdown
+    'm2r', # render markdown
     ]
 
 autosummary_generate = True
@@ -293,17 +296,37 @@ texinfo_documents = [
 # m2r unmaintained, but has features that aren't easy to replicate in recommonmark
 # https://github.com/readthedocs/recommonmark/issues/191#issuecomment-622369992
 # credit: @orsinium
-def setup(app):
-    config = {
-        'auto_toc_tree_section': 'Contents',
-        'enable_eval_rst': True,
-    }
-    app.add_config_value('recommonmark_config', config, True)
-    app.add_transform(AutoStructify)
+#def setup(app):
+#    config = {
+#        'auto_toc_tree_section': 'Contents',
+#        'enable_eval_rst': True,
+#    }
+#    app.add_config_value('recommonmark_config', config, True)
+#    app.add_transform(AutoStructify)
+#
+#    # from m2r to make `mdinclude` work
+#    app.add_config_value('no_underscore_emphasis', False, 'env')
+#    app.add_config_value('m2r_parse_relative_links', True, 'env')
+#    app.add_config_value('m2r_anonymous_references', False, 'env')
+#    app.add_config_value('m2r_disable_inline_math', False, 'env')
+#    app.add_directive('mdinclude', MdInclude)
 
-    # from m2r to make `mdinclude` work
-    app.add_config_value('no_underscore_emphasis', False, 'env')
-    app.add_config_value('m2r_parse_relative_links', True, 'env')
-    app.add_config_value('m2r_anonymous_references', False, 'env')
-    app.add_config_value('m2r_disable_inline_math', False, 'env')
-    app.add_directive('mdinclude', MdInclude)
+
+# workaround for m2r broken on sphinx >= 3.x
+def monkeypatch(cls):
+    """ decorator to monkey-patch methods """
+    def decorator(f):
+        method = f.__name__
+        old_method = getattr(cls, method)
+        setattr(cls, method, lambda self, *args, **kwargs: f(old_method, self, *args, **kwargs))
+    return decorator
+
+# workaround until https://github.com/miyakogi/m2r/pull/55 is merged
+@monkeypatch(sphinx.registry.SphinxComponentRegistry)
+def add_source_parser(_old_add_source_parser, self, *args, **kwargs):
+    # signature is (parser: Type[Parser], **kwargs), but m2r expects
+    # the removed (str, parser: Type[Parser], **kwargs).
+    if isinstance(args[0], str):
+        args = args[1:]
+    return _old_add_source_parser(self, *args, **kwargs)
+
