@@ -99,7 +99,6 @@ class ChemicalEnvironment:
         if validate_parsable or validate_valence_type:
             self.validate(validate_valence_type=validate_valence_type, toolkit_registry=toolkit_registry)
 
-
     def validate(self, validate_valence_type=True, toolkit_registry=None):
         """
         Returns True if the underlying smirks is the correct valence type, False otherwise. If the expected type
@@ -158,8 +157,6 @@ class ChemicalEnvironment:
             validate_parsable=validate_parsable,
             validate_valence_type=validate_valence_type,
             toolkit_registry=toolkit_registry)
-
-
 
     def get_type(self, toolkit_registry=None):
         """
@@ -221,20 +218,24 @@ class AtomChemicalEnvironment(ChemicalEnvironment):
     """
     _expected_type = 'Atom'
 
+
 class BondChemicalEnvironment(ChemicalEnvironment):
     """Chemical environment matching two labeled atoms (or a bond).
     """
     _expected_type = 'Bond'
+
 
 class AngleChemicalEnvironment(ChemicalEnvironment):
     """Chemical environment matching three marked atoms (angle).
     """
     _expected_type = 'Angle'
 
+
 class TorsionChemicalEnvironment(ChemicalEnvironment):
     """Chemical environment matching four marked atoms (torsion).
     """
     _expected_type = "ProperTorsion"
+
 
 class ImproperChemicalEnvironment(ChemicalEnvironment):
     """Chemical environment matching four marked atoms (improper).
