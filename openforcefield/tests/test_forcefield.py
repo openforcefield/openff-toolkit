@@ -1110,13 +1110,14 @@ class TestForceField():
 
         assert handlers_before == handlers_after
 
-    def test_unregistered_parameter_handler_lookup(self):
+    @pytest.mark.parametrize('unregistered_handler', ['LibraryCharges', 'foobar'])
+    def test_unregistered_parameter_handler_lookup(self, unregistered_handler):
         """Ensure __getitem__ lookups do not register new handlers"""
         forcefield = ForceField('test_forcefields/smirnoff99Frosst.offxml')
-        unregistered_handler = 'LibraryCharges'
 
         assert unregistered_handler not in forcefield._parameter_handlers
-        forcefield[unregistered_handler]
+        with pytest.raises(KeyError, match=unregistered_handler):
+            forcefield[unregistered_handler]
         assert unregistered_handler not in forcefield._parameter_handlers
 
     def test_lookup_parameter_handler_object(self):

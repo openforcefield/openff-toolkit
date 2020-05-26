@@ -1255,5 +1255,7 @@ class ForceField:
         if isinstance(val, str):
             if val in self._parameter_handlers:
                 return self.get_parameter_handler(val)
+            else:
+                raise KeyError(f"Parameter handler with name '{val}' not found.")
         elif isinstance(val, ParameterHandler) or issubclass(val, ParameterHandler):
             raise NotImplementedError
