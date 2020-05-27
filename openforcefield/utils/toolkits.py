@@ -3144,7 +3144,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                 connections.add(tuple(cxn_to_add))
         connections = tuple(sorted(list(connections)))
         unique_tags = tuple(sorted(list(unique_tags)))
-        return tuple(unique_tags), tuple(connections)
+        return unique_tags, connections
 
     @staticmethod
     def _find_smarts_matches(rdmol, smirks,
