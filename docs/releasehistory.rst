@@ -86,6 +86,8 @@ API-breaking changes
 
 New features
 """"""""""""
+- `PR #600 <https://github.com/openforcefield/openforcefield/pull/600>`_:
+  Adds :py:meth:`ForceField.__getitem__ <openforcefield.typing.engines.smirnoff.forcefield.ForceField.__getitem__>` to look up ``ParameterHandler`` objects based on their string names.
 - `PR #508 <https://github.com/openforcefield/openforcefield/pull/508>`_:
   Adds :py:meth:`AmberToolsToolkitWrapper.assign_fractional_bond_orders <openforcefield.utils.toolkits.AmberToolsToolkitWrapper.assign_wiberg_bond_orders>`.
 - `PR #469 <https://github.com/openforcefield/openforcefield/pull/469>`_:
