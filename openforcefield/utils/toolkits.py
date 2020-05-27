@@ -1598,7 +1598,6 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             molecule._add_conformer(conformer)
 
     def compute_partial_charges(self, molecule, quantum_chemical_method="AM1-BCC", partial_charge_method='None'):
-        #charge_model="am1bcc"):
         """
         Compute partial charges with OpenEye quacpac
 
@@ -1830,6 +1829,52 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             order = am1results.GetBondOrder(bond.GetBgnIdx(), bond.GetEndIdx())
             mol_bond = molecule._bonds[idx]
             mol_bond.fractional_bond_order = order
+
+    def get_tagged_smarts_connectivity(self, smarts):
+        """
+        Returns a tuple of tuples indicating connectivity between tagged atoms in a SMARTS string. Does not
+        return bond order.
+
+        Parameters
+        ----------
+        smarts : str
+            The tagged SMARTS to analyze
+
+        Returns
+        -------
+        unique_tags : tuple of int
+            A sorted tuple of all unique tagged atom map indices.
+        tagged_atom_connectivity : tuple of tuples of int, shape n_tagged_bonds x 2
+            A tuple of tuples, where each inner tuple is a pair of tagged atoms (tag_idx_1, tag_idx_2) which are
+            bonded. The inner tuples are ordered smallest-to-largest, and the tuple of tuples is ordered
+            lexically. So the return value for an improper torsion would be ((1, 2), (2, 3), (2, 4)).
+
+        Raises
+        ------
+        SMIRKSParsingError
+            If OpenEye toolkit was unable to parse the provided smirks/tagged smarts
+        """
+        from openeye import oechem
+        from openforcefield.typing.chemistry import SMIRKSParsingError
+        qmol = oechem.OEQMol()
+        status = oechem.OEParseSmarts(qmol, smarts)
+        if status == False:
+            raise SMIRKSParsingError(f"OpenEye Toolkit was unable to parse SMIRKS {smarts}")
+
+        unique_tags = set()
+        connections = set()
+        for at1 in qmol.GetAtoms():
+            if at1.GetMapIdx() == 0:
+                continue
+            unique_tags.add(at1.GetMapIdx())
+            for at2 in at1.GetAtoms():
+                if at2.GetMapIdx() == 0:
+                    continue
+                cxn_to_add = sorted([at1.GetMapIdx(), at2.GetMapIdx()])
+                connections.add(tuple(cxn_to_add))
+        connections = tuple(sorted(list(connections)))
+        unique_tags = tuple(sorted(list(unique_tags)))
+        return tuple(unique_tags), tuple(connections)
 
     @staticmethod
     def _find_smarts_matches(oemol, smarts, aromaticity_model=None):
@@ -3051,6 +3096,52 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         else:
             inchi_key = Chem.MolToInchiKey(rdmol)
         return inchi_key
+
+    def get_tagged_smarts_connectivity(self, smarts):
+        """
+        Returns a tuple of tuples indicating connectivity between tagged atoms in a SMARTS string. Does not
+        return bond order.
+
+        Parameters
+        ----------
+        smarts : str
+            The tagged SMARTS to analyze
+
+        Returns
+        -------
+        unique_tags : tuple of int
+            A sorted tuple of all unique tagged atom map indices.
+        tagged_atom_connectivity : tuple of tuples of int, shape n_tagged_bonds x 2
+            A tuple of tuples, where each inner tuple is a pair of tagged atoms (tag_idx_1, tag_idx_2) which are
+            bonded. The inner tuples are ordered smallest-to-largest, and the tuple of tuples is ordered
+            lexically. So the return value for an improper torsion would be ((1, 2), (2, 3), (2, 4)).
+
+        Raises
+        ------
+        SMIRKSParsingError
+            If RDKit was unable to parse the provided smirks/tagged smarts
+        """
+        from rdkit import Chem
+        from openforcefield.typing.chemistry import SMIRKSParsingError
+        ss = Chem.MolFromSmarts(smarts)
+
+        if ss is None:
+            raise SMIRKSParsingError(f"RDKit was unable to parse SMIRKS {smarts}")
+
+        unique_tags = set()
+        connections = set()
+        for at1 in ss.GetAtoms():
+            if at1.GetAtomMapNum() == 0:
+                continue
+            unique_tags.add(at1.GetAtomMapNum())
+            for at2 in at1.GetNeighbors():
+                if at2.GetAtomMapNum() == 0:
+                    continue
+                cxn_to_add = sorted([at1.GetAtomMapNum(), at2.GetAtomMapNum()])
+                connections.add(tuple(cxn_to_add))
+        connections = tuple(sorted(list(connections)))
+        unique_tags = tuple(sorted(list(unique_tags)))
+        return unique_tags, connections
 
     @staticmethod
     def _find_smarts_matches(rdmol, smirks,

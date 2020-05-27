@@ -62,6 +62,20 @@ Behavior changed
 
 API-breaking changes
 """"""""""""""""""""
+- `PR #601 <https://github.com/openforcefield/openforcefield/pull/601>`_: Removes
+  almost all of the previous
+  :py:class:`ChemicalEnvironment <openforcefield.typing.chemistry.ChemicalEnvironment>`
+  API, since this entire module was simply copied from
+  `Chemper <https://github.com/MobleyLab/chemper>`_ several years ago and has fallen behind on updates.
+  Currently only
+  :py:meth:`ChemicalEnvironment.get_type <openforcefield.typing.chemistry.ChemicalEnvironment.get_type>`,
+  :py:meth:`ChemicalEnvironment.validate <openforcefield.typing.chemistry.ChemicalEnvironment.validate>`,
+  and an equivalent classmethod
+  :py:meth:`ChemicalEnvironment.validate_smirks <openforcefield.typing.chemistry.ChemicalEnvironment.validate_smirks>`
+  remain. Also, please comment on
+  `this GitHub issue <https://github.com/MobleyLab/chemper/issues/90>`_ if you HAVE been using
+  the previous extra functionality in this module and would like us to prioritize creation of a Chemper
+  conda package.
 - `PR #558 <https://github.com/openforcefield/openforcefield/pull/558>`_: Removes
   ``TopologyMolecule.topology_particle_start_index``, since the :py:class:`Topology <openforcefield.topology.Topology>`
   particle indexing system now orders :py:class:`TopologyVirtualSites <openforcefield.topology.TopologyVirtualSite>`
@@ -83,9 +97,13 @@ API-breaking changes
   :py:meth:`temporary_cd <openforcefield.utils.utils.temporary_cd>` and replaced their behavoir with 
   ``tempfile.TemporaryDirectory()``.
 
-
 New features
 """"""""""""
+- `PR #601 <https://github.com/openforcefield/openforcefield/pull/601>`_: Adds
+  :py:meth:`RDKitToolkitWrapper.get_tagged_smarts_connectivity <openforcefield.utils.toolkits.RDKitToolkitWrapper.get_tagged_smarts_connectivity>`
+  and
+  :py:meth:`OpenEyeToolkitWrapper.get_tagged_smarts_connectivity <openforcefield.utils.toolkits.OpenEyeToolkitWrapper.get_tagged_smarts_connectivity>`,
+  which allow the use of either toolkit for smirks/tagged smarts validation.
 - `PR #600 <https://github.com/openforcefield/openforcefield/pull/600>`_:
   Adds :py:meth:`ForceField.__getitem__ <openforcefield.typing.engines.smirnoff.forcefield.ForceField.__getitem__>` to look up ``ParameterHandler`` objects based on their string names.
 - `PR #508 <https://github.com/openforcefield/openforcefield/pull/508>`_:
