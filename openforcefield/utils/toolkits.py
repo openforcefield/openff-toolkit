@@ -1600,7 +1600,6 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             molecule._add_conformer(conformer)
 
     def compute_partial_charges(self, molecule, quantum_chemical_method="AM1-BCC", partial_charge_method='None'):
-        #charge_model="am1bcc"):
         """
         Compute partial charges with OpenEye quacpac
 

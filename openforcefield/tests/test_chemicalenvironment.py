@@ -36,6 +36,7 @@ class TestChemicalEnvironments():
                               ["[#6&X4&H0:1](-[#1])-[#6&X4:2]-[#6&X4&H0:3](-[#1])-[#6&X4:4]", 'ProperTorsion',
                                TorsionChemicalEnvironment],
                               ["[#1:1]-[#6&X4:2](-[#8:3])-[#1:4]", 'ImproperTorsion', ImproperChemicalEnvironment],
+                              # Test that an improper smirks is also valid as a general ChemicalEnvironment
                               ["[#1:1]-[#6&X4:2](-[#8:3])-[*:4](-[#6&H1])-[#8:5]", None, ChemicalEnvironment],
                               ["[#6$(*~[#6]=[#8])$(*-,=[#7!-1,#8,#16,#7])]", None, ChemicalEnvironment],
                               ["CCC", None, ChemicalEnvironment],
