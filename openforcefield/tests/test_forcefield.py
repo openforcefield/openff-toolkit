@@ -1499,8 +1499,8 @@ class TestForceFieldConstraints:
         """Check that the bonds in the molecule is correctly constrained."""
         for constraint_idx in range(system.getNumConstraints()):
             atom1_idx, atom2_idx, distance = system.getConstraintParameters(constraint_idx)
-            atom_elements = {molecule.atoms[atom1_idx].element.symbol,
-                             molecule.atoms[atom2_idx].element.symbol}
+            atom_elements = {molecule.atoms[atom1_idx].symbol,
+                             molecule.atoms[atom2_idx].symbol}
             assert atom_elements == bond_elements
             assert np.isclose(distance/unit.angstrom, bond_length/unit.angstrom)
 
@@ -1779,7 +1779,7 @@ class TestForceFieldParameterAssignment:
 
         # Give each atom a unique name, otherwise OpenMM will complain
         for idx, atom in enumerate(molecule.atoms):
-            atom.name = f'{atom.element.symbol}{idx}'
+            atom.name = f'{atom.symbol}{idx}'
         positions = molecule.conformers[0]
 
         off_gbsas  = {'HCT': 'test_forcefields/GBSA_HCT-1.0.offxml',
@@ -1940,7 +1940,7 @@ class TestForceFieldParameterAssignment:
 
         # Give each atom a unique name, otherwise OpenMM will complain
         for idx, atom in enumerate(molecule.atoms):
-            atom.name = f'{atom.element.symbol}{idx}'
+            atom.name = f'{atom.symbol}{idx}'
 
         positions = np.concatenate((molecule.conformers[0], molecule.conformers[0] + (10 * unit.angstrom)))
         # Create OpenFF System with the current toolkit.

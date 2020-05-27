@@ -42,7 +42,8 @@ import uuid
 import warnings
 
 from simtk import unit
-from simtk.openmm.app import element, Element
+
+from qcelemental import periodictable as ptable
 
 import networkx as nx
 from networkx.algorithms.isomorphism import GraphMatcher
@@ -318,7 +319,7 @@ class Atom(Particle):
         The element name
 
         """
-        return element.Element.getByAtomicNumber(self._atomic_number)
+        return ptable.to_name(self._atomic_number)
 
     @property
     def atomic_number(self):
@@ -337,7 +338,7 @@ class Atom(Particle):
         TODO (from jeff): Are there atoms that have different chemical properties based on their isotopes?
 
         """
-        return self.element.mass
+        return ptable.to_mass(self._atomic_number)
 
     @property
     def name(self):
@@ -345,6 +346,13 @@ class Atom(Particle):
         The name of this atom, if any
         """
         return self._name
+
+    @property
+    def symbol(self):
+        """
+        The symbol representing the element of this atom, if any
+        """
+        return ptable.to_symbol(self._atomic_number)
 
     @name.setter
     def name(self, other):
@@ -1567,7 +1575,7 @@ class FrozenMolecule(Serializable):
         from collections import defaultdict
         element_counts = defaultdict(int)
         for atom in self.atoms:
-            symbol = atom.element.symbol
+            symbol = atom.symbol
             element_counts[symbol] += 1
             atom.name = symbol + str(element_counts[symbol])
 
@@ -3131,10 +3139,7 @@ class FrozenMolecule(Serializable):
         if isinstance(molecule, nx.Graph):
             atom_nums = list(dict(molecule.nodes(data='atomic_number', default=1)).values())
 
-        elif isinstance(molecule, TopologyMolecule):
-            atom_nums = [atom.atomic_number for atom in molecule.atoms]
-
-        elif isinstance(molecule, FrozenMolecule):
+        elif isinstance(molecule, (TopologyMolecule, FrozenMolecule)):
             atom_nums = [atom.atomic_number for atom in molecule.atoms]
 
         else:
@@ -3147,7 +3152,7 @@ class FrozenMolecule(Serializable):
         # https://en.wikipedia.org/wiki/Chemical_formula#Hill_system
 
         # create the counter dictionary using chemical symbols
-        atom_symbol_counts = Counter(Element.getByAtomicNumber(atom_num).symbol for atom_num in atom_nums)
+        atom_symbol_counts = Counter(ptable.to_symbol(atom_num) for atom_num in atom_nums)
 
         formula = []
         # Check for C and H first, to make a correct hill formula
@@ -3505,7 +3510,7 @@ class FrozenMolecule(Serializable):
             xyz_data.write(f'{self.n_atoms}\n'+title(end))
             for j, atom_coords in enumerate(geometry.in_units_of(unit.angstrom)):
                 x, y, z = atom_coords._value
-                xyz_data.write(f'{self.atoms[j].element.symbol}       {x: .10f}   {y: .10f}   {z: .10f}\n')
+                xyz_data.write(f'{self.atoms[j].symbol}       {x: .10f}   {y: .10f}   {z: .10f}\n')
 
             # now we up the frame count
             end = i + 1
@@ -3854,7 +3859,7 @@ class FrozenMolecule(Serializable):
         # Gather the required qschema data
         charge = sum([atom.formal_charge for atom in self.atoms])
         connectivity = [(bond.atom1_index, bond.atom2_index, bond.bond_order) for bond in self.bonds]
-        symbols = [Element.getByAtomicNumber(atom.atomic_number).symbol for atom in self.atoms]
+        symbols = [atom.symbol for atom in self.atoms]
 
         schema_dict = {'symbols': symbols, 'geometry': geometry, 'connectivity': connectivity,
                        'molecular_charge': charge, 'molecular_multiplicity': multiplicity, "extras": extras}

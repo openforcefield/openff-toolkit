@@ -2077,7 +2077,7 @@ class Topology(Serializable):
                     # Set atom name
                     oe_atom.SetName(openmm_at.name)
                     # Set Symbol
-                    oe_atom.SetType(openmm_at.element.symbol)
+                    oe_atom.SetType(openmm_at.symbol)
                     # Set Atom index
                     oe_res.SetSerialNumber(openmm_at.index + 1)
                     # Commit the changes

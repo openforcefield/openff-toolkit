@@ -30,6 +30,7 @@ from tempfile import NamedTemporaryFile
 import numpy as np
 import pytest
 from simtk import unit
+import qcelemental as qcel
 
 from openforcefield.topology.molecule import Molecule, Atom, InvalidConformerError
 from openforcefield.utils import get_data_file_path
@@ -219,6 +220,27 @@ drugbank_stereogenic_in_oe_but_not_rdkit = {'DrugBank_1598', 'DrugBank_4346', 'D
 # TESTS
 #=============================================================================================
 
+
+def known_openmm_elements():
+    """
+    Fixture containing elements known to both OpenMM's Element class and
+    QCElemental.
+    """
+    from simtk.openmm.app import element
+    elements = [getattr(element, name) for name in dir(element) if (type(getattr(element, name)) == element.Element)]
+
+    # The below runs into a problem with deuterium (fails name assertion)
+    elements.remove(element.deuterium)
+
+    # These elements have "old" names in OpenMM and "new" names in QCElemental
+    elements.remove(element.ununbium)
+    elements.remove(element.ununhexium)
+    elements.remove(element.ununpentium)
+    elements.remove(element.ununquadium)
+    elements.remove(element.ununtrium)
+
+    return elements
+
 class TestAtom:
     """Test Atom class."""
 
@@ -233,23 +255,22 @@ class TestAtom:
         atom2 = Atom(6, 0, False, stereochemistry='R', name='CT')
         assert atom1.stereochemistry != atom2.stereochemistry
 
-    def test_atom_properties(self):
+    @pytest.mark.parametrize('omm_element', known_openmm_elements())
+    def test_atom_properties(self, omm_element):
         """Test that atom properties are correctly populated and gettable"""
-        from simtk.openmm.app import element
         formal_charge = 0
         is_aromatic = False
-        # Attempt to create all elements supported by OpenMM
-        elements = [getattr(element, name) for name in dir(element) if (type(getattr(element, name)) == element.Element)]
-        # The above runs into a problem with deuterium (fails name assertion)
-        elements.remove(element.deuterium)
-        for this_element in elements:
-            atom = Atom(this_element.atomic_number, formal_charge, is_aromatic, name=this_element.name)
-            assert atom.atomic_number == this_element.atomic_number
-            assert atom.element == this_element
-            assert atom.mass == this_element.mass
-            assert atom.formal_charge == formal_charge
-            assert atom.is_aromatic == is_aromatic
-            assert atom.name == this_element.name
+
+        atom = Atom(omm_element.atomic_number, formal_charge, is_aromatic, name=omm_element.name)
+        assert atom.atomic_number == qcel.periodictable.to_atomic_number(omm_element.atomic_number)
+        assert atom.element == qcel.periodictable.to_name(omm_element.atomic_number)
+        # TODO: Add this test/behavior back. QCElemental has no "from_mass"
+        # behavior and when passed a number interprets it as the atomic number.
+        # See qcel.periodictable._resolve_atom_to_key
+        #assert atom.mass == qcel.periodictable.to_mass(omm_element.mass.value_in_unit(unit.dalton))
+        assert atom.formal_charge == formal_charge
+        assert atom.is_aromatic == is_aromatic
+        assert atom.name == qcel.periodictable.to_name(omm_element.atomic_number).lower()
 
 
 @requires_openeye
@@ -509,7 +530,7 @@ class TestMolecule:
             # now we just need to check the smiles generated
             if data['atom_map'] is None:
                 for i, atom in enumerate(mol.atoms, 1):
-                    assert f'[{atom.element.symbol}:{i}]' in smiles
+                    assert f'[{atom.symbol}:{i}]' in smiles
             else:
                 if 0 in data['atom_map'].values():
                     increment = True
@@ -517,7 +538,7 @@ class TestMolecule:
                     increment = False
 
                 for atom, index in data['atom_map'].items():
-                    assert f'[{mol.atoms[atom].element.symbol}:{index + 1 if increment else index}]'
+                    assert f'[{mol.atoms[atom].symbol}:{index + 1 if increment else index}]'
 
         else:
             pytest.skip(f'The required toolkit ({toolkit_class.toolkit_name}) is not available.')

@@ -1726,7 +1726,7 @@ class ParameterHandler(_ParameterAttributeHandler):
                 for atom_idx in unassigned_tuple:
                     topology_atom = topology.atom(atom_idx)
                     unassigned_topology_atoms.append(topology_atom)
-                    unassigned_str += f"({topology_atom.atom.name} {topology_atom.atom.element.symbol}), "
+                    unassigned_str += f"({topology_atom.atom.name} {topology_atom.atom.symbol}), "
                 unassigned_topology_atom_tuples.append(tuple(unassigned_topology_atoms))
             err_msg += ("{parameter_handler} was not able to find parameters for the following valence terms:\n"
                         "{unassigned_str}").format(parameter_handler=cls.__name__,
