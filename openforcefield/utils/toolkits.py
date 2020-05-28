@@ -3776,11 +3776,6 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         else:
             return True
 
-    def __init__(self):
-        # TODO: Find AMBERHOME or executable home, checking miniconda if needed
-        # Store an instance of an RDKitToolkitWrapper for file I/O
-        self._rdkit_toolkit_wrapper = RDKitToolkitWrapper()
-
     def assign_partial_charges(self,
                                molecule,
                                partial_charge_method=None,
@@ -4369,7 +4364,7 @@ class ToolkitRegistry:
         raise NotImplementedError(msg)
 
     # TODO: Can we instead register available methods directly with `ToolkitRegistry`, so we can just use `ToolkitRegistry.method()`?
-    def call(self, method_name, *args, **kwargs):
+    def call(self, method_name, *args, raise_first_error=True, **kwargs):
         """
         Execute the requested method by attempting to use all registered toolkits in order of precedence.
 
@@ -4381,10 +4376,21 @@ class ToolkitRegistry:
         ----------
         method_name : str
             The name of the method to execute
+        raise_first_error : bool, default=True
+            If True, raise an exception if the first ToolkitWrapper in the
+            ToolkitRegistry fails to perform the requested task. If False try ALL
+            ToolkitWrappers that can provide the requested method
+            and, if none of them return successfully, raise a single ValueError with
+            the collected errors from all ToolkitWrappers.
 
         Raises
         ------
         NotImplementedError if the requested method cannot be found among the registered toolkits
+
+        ValueError if raise_first_error=False and the task is failed
+
+        Other forms of exceptions are possible if raise_first_error=True.
+        These are defined by the ToolkitWrapper method being called.
 
         Examples
         --------
@@ -4403,16 +4409,16 @@ class ToolkitRegistry:
         for toolkit in self._toolkits:
             if hasattr(toolkit, method_name):
                 method = getattr(toolkit, method_name)
-                try:
-                    return method(*args, **kwargs)
-                except NotImplementedError as not_implemented_error:
-                    errors.append((toolkit, not_implemented_error))
-                except TypeError as type_error:
-                    errors.append((toolkit, type_error))
-                except ValueError as value_error:
-                    errors.append((toolkit, value_error))
-                except Exception as error:
-                    errors.append((toolkit, error))
+                if raise_first_error:
+                    try:
+                        return method(*args, **kwargs)
+                    except NotImplementedError as not_implemented_error:
+                        errors.append((toolkit, not_implemented_error))
+                else:
+                    try:
+                        return method(*args, **kwargs)
+                    except Exception as e:
+                        errors.append((toolkit, e))
 
         # No toolkit was found to provide the requested capability
         # TODO: Can we help developers by providing a check for typos in expected method names?
@@ -4422,7 +4428,7 @@ class ToolkitRegistry:
         msg += 'Available toolkits are: {}\n'.format(self.registered_toolkits)
         # Append information about toolkits that implemented the method, but could not handle the provided parameters
         for toolkit, error in errors:
-            msg += ' {} : {}\n'.format(toolkit, error)
+            msg += ' {} {} : {}\n'.format(toolkit, type(error),  error)
         # for toolkit, value_error in value_errors:
         #     msg += ' {} : {}\n'.format(toolkit, value_error)
         raise ValueError(msg)

@@ -731,7 +731,7 @@ class TestOpenEyeToolkitWrapper:
         # Test calling the ToolkitWrapper _indirectly_, though a ToolkitRegistry,
         # which should aggregate any exceptions and bundle all of the messages
         # in a failed task together in a single ValueError.
-        with pytest.raises(ValueError,
+        with pytest.raises(IncorrectNumConformersError,
                            match=f"has 2 conformers, but charge method 'am1bcc' "
                                  f"expects exactly 1."):
             molecule.compute_partial_charges_am1bcc(toolkit_registry=toolkit_registry,
@@ -813,7 +813,7 @@ class TestOpenEyeToolkitWrapper:
 
         # For now, ToolkitRegistries lose track of what exception type
         # was thrown inside them, so we just check for a ValueError here
-        with pytest.raises(ValueError, match="is not available from OpenEyeToolkitWrapper") as excinfo:
+        with pytest.raises(ChargeMethodUnavailableError, match="is not available from OpenEyeToolkitWrapper") as excinfo:
             molecule.assign_partial_charges(toolkit_registry=toolkit_registry,
                                             partial_charge_method="NotARealChargeMethod")
 
@@ -856,7 +856,7 @@ class TestOpenEyeToolkitWrapper:
         # Test calling the ToolkitWrapper _indirectly_, though a ToolkitRegistry,
         # which should aggregate any exceptions and bundle all of the messages
         # in a failed task together in a single ValueError.
-        with pytest.raises(ValueError,
+        with pytest.raises(IncorrectNumConformersError,
                            match=f"has 2 conformers, but charge method '{partial_charge_method}' "
                                  f"expects exactly {expected_n_confs}."):
             molecule.assign_partial_charges(toolkit_registry=toolkit_registry,
@@ -1795,7 +1795,7 @@ class TestAmberToolsToolkitWrapper:
         # Test calling the ToolkitWrapper _indirectly_, though a ToolkitRegistry,
         # which should aggregate any exceptions and bundle all of the messages
         # in a failed task together in a single ValueError.
-        with pytest.raises(ValueError,
+        with pytest.raises(IncorrectNumConformersError,
                            match=f"has 2 conformers, but charge method 'am1bcc' "
                                  f"expects exactly 1."):
             molecule.compute_partial_charges_am1bcc(toolkit_registry=toolkit_registry,
@@ -1881,7 +1881,7 @@ class TestAmberToolsToolkitWrapper:
 
         # For now, ToolkitRegistries lose track of what exception type
         # was thrown inside them, so we just check for a ValueError here
-        with pytest.raises(ValueError, match="is not available from AmberToolsToolkitWrapper") as excinfo:
+        with pytest.raises(ChargeMethodUnavailableError, match="is not available from AmberToolsToolkitWrapper") as excinfo:
             molecule.assign_partial_charges(toolkit_registry=toolkit_registry,
                                             partial_charge_method="NotARealChargeMethod")
 
@@ -1926,7 +1926,7 @@ class TestAmberToolsToolkitWrapper:
         # Test calling the ToolkitWrapper _indirectly_, though a ToolkitRegistry,
         # which should aggregate any exceptions and bundle all of the messages
         # in a failed task together in a single ValueError.
-        with pytest.raises(ValueError,
+        with pytest.raises(IncorrectNumConformersError,
                            match=f"has 2 conformers, but charge method '{partial_charge_method}' "
                                  f"expects exactly {expected_n_confs}."):
             molecule.assign_partial_charges(toolkit_registry=toolkit_registry,
@@ -2114,7 +2114,7 @@ class TestBuiltInToolkitWrapper:
 
         # For now, ToolkitRegistries lose track of what exception type
         # was thrown inside them, so we just check for a ValueError here
-        with pytest.raises(ValueError, match="is not supported by the Built-in toolkit") as excinfo:
+        with pytest.raises(ChargeMethodUnavailableError, match="is not supported by the Built-in toolkit") as excinfo:
             molecule.assign_partial_charges(toolkit_registry=toolkit_registry,
                                             partial_charge_method="NotARealChargeMethod")
 
@@ -2146,6 +2146,7 @@ class TestBuiltInToolkitWrapper:
                                         strict_n_conformers=True)
 
         # Test calling the ToolkitWrapper _indirectly_, though a ToolkitRegistry,
+        # using raise_first_error=False
         # which should aggregate any exceptions and bundle all of the messages
         # in a failed task together in a single ValueError.
         with pytest.raises(ValueError,
@@ -2229,6 +2230,38 @@ class TestToolkitRegistry:
         smiles = '[H]C([H])([H])C([H])([H])[H]'
         molecule = registry.call('from_smiles', smiles)
         #partial_charges = registry.call('compute_partial_charges', molecule)
+
+    def test_register_builtintoolkit(self):
+        """Test creation of toolkit registry with Built-in toolkit"""
+        # Test registration of RDKitToolkitWrapper
+        toolkit_precedence = [BuiltInToolkitWrapper]
+        registry = ToolkitRegistry(toolkit_precedence=toolkit_precedence,
+                                   register_imported_toolkit_wrappers=False)
+        #registry.register_toolkit(RDKitToolkitWrapper)
+        assert set([ type(c) for c in registry.registered_toolkits]) == set([BuiltInToolkitWrapper])
+
+        # Test ToolkitRegistry.resolve()
+        assert registry.resolve('assign_partial_charges') == registry.registered_toolkits[0].assign_partial_charges
+
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
+    def test_call_raise_first_error(self):
+        """Test to ensure proper behavior of raise_first_error kwarg to ToolkitRegistry.call"""
+        # Test registration of RDKitToolkitWrapper
+        toolkit_precedence = [BuiltInToolkitWrapper, OpenEyeToolkitWrapper]
+        registry = ToolkitRegistry(toolkit_precedence=toolkit_precedence,
+                                   register_imported_toolkit_wrappers=False)
+        mol = registry.call('from_smiles', 'C')
+        with pytest.raises(ChargeMethodUnavailableError, match='"notarealchargemethod"" is not supported by the Built-in toolkit.'):
+            registry.call('assign_partial_charges',
+                          molecule=mol,
+                          partial_charge_method="NotARealChargeMethod",
+                          raise_first_error=True)
+
+        with pytest.raises(ValueError, match="partial_charge_method \'notarealchargemethod\' is not available from OpenEyeToolkitWrapper"):
+            registry.call('assign_partial_charges',
+                          molecule=mol,
+                          partial_charge_method="NotARealChargeMethod",
+                          raise_first_error=False)
 
     @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
     def test_substructure_search_on_large_molecule(self):

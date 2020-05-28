@@ -2421,11 +2421,16 @@ class FrozenMolecule(Serializable):
 
         """
         if isinstance(toolkit_registry, ToolkitRegistry):
+            # We may need to try several toolkitwrappers to find one
+            # that supports the desired partial charge method, so we
+            # tell the ToolkitRegistry to continue trying ToolkitWrappers
+            # if one raises an error (raise_first_error=False)
             charges = toolkit_registry.call('assign_partial_charges',
                                             self,
                                             partial_charge_method=partial_charge_method,
                                             use_conformers=use_conformers,
-                                            strict_n_conformers=strict_n_conformers
+                                            strict_n_conformers=strict_n_conformers,
+                                            raise_first_error=False
                                             )
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
