@@ -37,6 +37,9 @@ import numpy as np
 from collections import OrderedDict, Counter
 from copy import deepcopy
 import operator
+from io import StringIO
+import uuid
+import warnings
 
 from simtk import unit
 from simtk.openmm.app import element, Element
@@ -3863,7 +3866,7 @@ class FrozenMolecule(Serializable):
             oemol, allow_undefined_stereo=allow_undefined_stereo)
         return molecule
 
-    def to_qcschema(self, multiplicity=1, conformer=0):
+    def to_qcschema(self, multiplicity=1, conformer=0, extras=None):
         """
         Generate the qschema input format used to submit jobs to archive
         or run qcengine calculations locally,
@@ -3878,6 +3881,10 @@ class FrozenMolecule(Serializable):
 
         conformer : int, default=0,
             The index of the conformer that should be used for qcschema
+
+        extras : dict, default=None
+            The extras dictionary that should be included into the qcelemental.models.Molecule. This can be used to
+            include extra information such as the smiles representation.
 
         Returns
         ---------
@@ -3920,7 +3927,7 @@ class FrozenMolecule(Serializable):
         symbols = [Element.getByAtomicNumber(atom.atomic_number).symbol for atom in self.atoms]
 
         schema_dict = {'symbols': symbols, 'geometry': geometry, 'connectivity': connectivity,
-                       'molecular_charge': charge, 'molecular_multiplicity': multiplicity}
+                       'molecular_charge': charge, 'molecular_multiplicity': multiplicity, "extras": extras}
 
         return qcel.models.Molecule.from_data(schema_dict, validate=True)
 
@@ -4736,7 +4743,7 @@ class Molecule(FrozenMolecule):
         index: int
             Index of the bond in this molecule
 
-"""
+        """
         bond_index = self._add_bond(
             atom1,
             atom2,
@@ -4766,6 +4773,137 @@ class Molecule(FrozenMolecule):
         #   is a conformation that does not change connectivity?
 
         return self._add_conformer(coordinates)
+
+    def visualize(self, backend='rdkit', width=500, height=300):
+        """
+        Render a visualization of the molecule in Jupyter
+        
+        Parameters
+        ----------
+        backend : str, optional, default='rdkit'
+            Which visualization engine to use. Choose from:
+            - rdkit
+            - openeye
+            - nglview (conformers needed)
+        width : int, optional, default=500
+            Width of the generated representation (only applicable to
+            backend=openeye)
+        height : int, optional, default=300
+            Width of the generated representation (only applicable to
+            backend=openeye)
+
+        Returns
+        -------
+        object
+            Depending on the backend chosen:
+            - rdkit, openeye -> IPython.display.Image
+            - nglview -> nglview.NGLWidget
+        """
+        from openforcefield.utils.toolkits import OPENEYE_AVAILABLE, RDKIT_AVAILABLE
+
+        backend = backend.lower()
+
+        if backend == 'nglview':
+            try:
+                import nglview as nv
+            except ImportError:
+                raise ValueError(
+                    'Attempted to visualize with NGLview but did not find it '
+                    'installed. Try conda install -c conda-forge nglview.'
+                )
+            if self.conformers:
+                trajectory_like = _OFFTrajectoryNGLView(self)
+                widget = nv.NGLWidget(trajectory_like)
+                return widget
+            else:
+                raise ValueError(
+                    'Visualizing with NGLview requires that the molecule has '
+                    'conformers.'
+                )
+        if backend == 'rdkit':
+            if RDKIT_AVAILABLE:
+                from rdkit.Chem.Draw import IPythonConsole
+                return self.to_rdkit()
+            else:
+                warnings.warn(
+                    'RDKit was requested as a visualization backend but '
+                    'it was not found to be installed. Falling back to '
+                    'trying to using OpenEye for visualization.'
+                )
+                backend = 'openeye'
+        if backend == 'openeye':
+            if OPENEYE_AVAILABLE:
+                from openeye import oedepict
+                from IPython.display import Image
+
+                oemol = self.to_openeye()
+
+                opts = oedepict.OE2DMolDisplayOptions(width, height, oedepict.OEScale_AutoScale)
+
+                oedepict.OEPrepareDepiction(oemol)
+                img = oedepict.OEImage(width, height)
+                display = oedepict.OE2DMolDisplay(oemol, opts)
+                oedepict.OERenderMolecule(img, display)
+                png = oedepict.OEWriteImageToString("png", img)
+                return Image(png)
+
+        raise ValueError('Could not find an appropriate backend')
+
+    def _ipython_display_(self):
+        from IPython.display import display
+        try:
+            return display(self.visualize(backend='nglview'))
+        except (ImportError, ValueError):
+            pass
+
+        try:
+            return display(self.visualize(backend='rdkit'))
+        except ValueError:
+            pass
+
+        try:
+            return display(self.visualize(backend='openeye'))
+        except ValueError:
+            pass
+
+
+try:
+    from nglview import Trajectory as _NGLViewTrajectory
+except ImportError:
+    _NGLViewTrajectory = object
+
+
+class _OFFTrajectoryNGLView(_NGLViewTrajectory):
+    """
+    Handling conformers of an OpenFF Molecule as frames in a trajectory. Only
+    to be used for NGLview visualization.
+
+    Parameters
+    ----------
+    molecule : openforcefield.topology.Molecule
+        The molecule (with conformers) to visualize
+    """
+    def __init__(self, molecule):
+        self.molecule = molecule
+        self.ext = "pdb"
+        self.params = {}
+        self.id = str(uuid.uuid4())
+
+    def get_coordinates(self, index):
+        return self.molecule.conformers[index] / unit.angstrom
+
+    @property
+    def n_frames(self):
+        return len(self.molecule.conformers)
+
+    def get_structure_string(self):
+        memfile = StringIO()
+        self.molecule.to_file(memfile, "pdb")
+        memfile.seek(0)
+        block = memfile.getvalue()
+        # FIXME: Prevent multi-model PDB export with a keyword in molecule.to_file()?
+        models = block.split('END\n', 1)
+        return models[0]
 
 
 class InvalidConformerError(Exception):

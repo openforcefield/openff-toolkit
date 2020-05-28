@@ -56,6 +56,7 @@ from functools import wraps
 import importlib
 import logging
 import subprocess
+import tempfile
 
 from simtk import unit
 import numpy as np
@@ -649,13 +650,10 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             The format for writing the molecule data
 
         """
-        from openforcefield.utils import temporary_directory, temporary_cd
-        # TODO: This is inefficiently implemented. Is there any way to attach a file-like object to an oemolstream?
-        with temporary_directory() as tmpdir:
-            with temporary_cd(tmpdir):
-                outfile = 'temp_molecule.' + file_format
-                self.to_file(molecule, outfile, file_format)
-                file_data = open(outfile).read()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            outfile = 'temp_molecule.' + file_format
+            self.to_file(molecule, outfile, file_format)
+            file_data = open(outfile).read()
         file_obj.write(file_data)
 
     def to_file(self, molecule, file_path, file_format):
@@ -1781,12 +1779,12 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         for conformer in molecule2._conformers:
             molecule._add_conformer(conformer)
 
-
     def assign_partial_charges(self,
                                molecule,
                                partial_charge_method=None,
                                use_conformers=False,
                                strict_n_conformers=False):
+
         """
         Compute partial charges with OpenEye quacpac, and assign
         the new values to the partial_charges attribute.
@@ -2049,6 +2047,52 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             order = am1results.GetBondOrder(bond.GetBgnIdx(), bond.GetEndIdx())
             mol_bond = molecule._bonds[idx]
             mol_bond.fractional_bond_order = order
+
+    def get_tagged_smarts_connectivity(self, smarts):
+        """
+        Returns a tuple of tuples indicating connectivity between tagged atoms in a SMARTS string. Does not
+        return bond order.
+
+        Parameters
+        ----------
+        smarts : str
+            The tagged SMARTS to analyze
+
+        Returns
+        -------
+        unique_tags : tuple of int
+            A sorted tuple of all unique tagged atom map indices.
+        tagged_atom_connectivity : tuple of tuples of int, shape n_tagged_bonds x 2
+            A tuple of tuples, where each inner tuple is a pair of tagged atoms (tag_idx_1, tag_idx_2) which are
+            bonded. The inner tuples are ordered smallest-to-largest, and the tuple of tuples is ordered
+            lexically. So the return value for an improper torsion would be ((1, 2), (2, 3), (2, 4)).
+
+        Raises
+        ------
+        SMIRKSParsingError
+            If OpenEye toolkit was unable to parse the provided smirks/tagged smarts
+        """
+        from openeye import oechem
+        from openforcefield.typing.chemistry import SMIRKSParsingError
+        qmol = oechem.OEQMol()
+        status = oechem.OEParseSmarts(qmol, smarts)
+        if status == False:
+            raise SMIRKSParsingError(f"OpenEye Toolkit was unable to parse SMIRKS {smarts}")
+
+        unique_tags = set()
+        connections = set()
+        for at1 in qmol.GetAtoms():
+            if at1.GetMapIdx() == 0:
+                continue
+            unique_tags.add(at1.GetMapIdx())
+            for at2 in at1.GetAtoms():
+                if at2.GetMapIdx() == 0:
+                    continue
+                cxn_to_add = sorted([at1.GetMapIdx(), at2.GetMapIdx()])
+                connections.add(tuple(cxn_to_add))
+        connections = tuple(sorted(list(connections)))
+        unique_tags = tuple(sorted(list(unique_tags)))
+        return tuple(unique_tags), tuple(connections)
 
     @staticmethod
     def _find_smarts_matches(oemol, smarts, aromaticity_model=None):
@@ -3184,7 +3228,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                     x, y, z = conformer[atom_idx, :].value_in_unit(unit.angstrom)
                     rdmol_conformer.SetAtomPosition(atom_idx,
                                                     Geometry.Point3D(x, y, z))
-                rdmol.AddConformer(rdmol_conformer)
+                rdmol.AddConformer(rdmol_conformer, assignId=True)
 
         # Retain charges, if present
         if not (molecule._partial_charges is None):
@@ -3275,6 +3319,52 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         else:
             inchi_key = Chem.MolToInchiKey(rdmol)
         return inchi_key
+
+    def get_tagged_smarts_connectivity(self, smarts):
+        """
+        Returns a tuple of tuples indicating connectivity between tagged atoms in a SMARTS string. Does not
+        return bond order.
+
+        Parameters
+        ----------
+        smarts : str
+            The tagged SMARTS to analyze
+
+        Returns
+        -------
+        unique_tags : tuple of int
+            A sorted tuple of all unique tagged atom map indices.
+        tagged_atom_connectivity : tuple of tuples of int, shape n_tagged_bonds x 2
+            A tuple of tuples, where each inner tuple is a pair of tagged atoms (tag_idx_1, tag_idx_2) which are
+            bonded. The inner tuples are ordered smallest-to-largest, and the tuple of tuples is ordered
+            lexically. So the return value for an improper torsion would be ((1, 2), (2, 3), (2, 4)).
+
+        Raises
+        ------
+        SMIRKSParsingError
+            If RDKit was unable to parse the provided smirks/tagged smarts
+        """
+        from rdkit import Chem
+        from openforcefield.typing.chemistry import SMIRKSParsingError
+        ss = Chem.MolFromSmarts(smarts)
+
+        if ss is None:
+            raise SMIRKSParsingError(f"RDKit was unable to parse SMIRKS {smarts}")
+
+        unique_tags = set()
+        connections = set()
+        for at1 in ss.GetAtoms():
+            if at1.GetAtomMapNum() == 0:
+                continue
+            unique_tags.add(at1.GetAtomMapNum())
+            for at2 in at1.GetNeighbors():
+                if at2.GetAtomMapNum() == 0:
+                    continue
+                cxn_to_add = sorted([at1.GetAtomMapNum(), at2.GetAtomMapNum()])
+                connections.add(tuple(cxn_to_add))
+        connections = tuple(sorted(list(connections)))
+        unique_tags = tuple(sorted(list(unique_tags)))
+        return unique_tags, connections
 
     @staticmethod
     def _find_smarts_matches(rdmol, smirks,
@@ -3721,7 +3811,7 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
 
         Raises
         ------
-        ChargeMethodUnavailableError if the requested charge method can not be handled by this toolkit
+
 
         ChargeCalculationError if the charge calculation is supported by this toolkit, but fails
     """
@@ -3791,48 +3881,43 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
             raise IOError("Antechamber not found, cannot run charge_mol()")
 
         # Compute charges
-        from openforcefield.utils import temporary_directory, temporary_cd
-        with temporary_directory() as tmpdir:
-            with temporary_cd(tmpdir):
-                net_charge = mol_copy.total_charge
-                # Write out molecule in SDF format
-                ## TODO: How should we handle multiple conformers?
-                self._rdkit_toolkit_wrapper.to_file(
-                    mol_copy, 'molecule.sdf', file_format='sdf')
-                #os.system('ls')
-                #os.system('cat molecule.sdf')
-                # Compute desired charges
-                # TODO: Add error handling if antechamber chokes
-                # TODO: Add something cleaner than os.system
-                short_charge_method = charge_method['antechamber_keyword']
-                subprocess.check_output([
-                    "antechamber", "-i", "molecule.sdf", "-fi", "sdf", "-o", "charged.mol2", "-fo",
-                    "mol2", "-pf", "yes", "-dr", "n", "-c", short_charge_method, "-nc", str(net_charge)]
-
-                )
-                #os.system('cat charged.mol2')
-
-                # Write out just charges
-                subprocess.check_output([
-                    "antechamber", "-dr", "n", "-i", "charged.mol2", "-fi", "mol2", "-o", "charges2.mol2", "-fo",
-                    "mol2", "-c", "wc",  "-cf", "charges.txt", "-pf", "yes"])
-                #os.system('cat charges.txt')
-                # Check to ensure charges were actually produced
-                if not os.path.exists('charges.txt'):
-                    # TODO: copy files into local directory to aid debugging?
-                    raise ChargeCalculationError(
-                        "Antechamber/sqm partial charge calculation failed on "
-                        "molecule {} (SMILES {})".format(
-                            molecule.name, molecule.to_smiles()))
-                # Read the charges
-                with open('charges.txt', 'r') as infile:
-                    contents = infile.read()
-                text_charges = contents.split()
-                charges = np.zeros([molecule.n_atoms], np.float64)
-                for index, token in enumerate(text_charges):
-                    charges[index] = float(token)
-                # TODO: Ensure that the atoms in charged.mol2 are in the same order as in molecule.sdf
-
+        with tempfile.TemporaryDirectory() as tmpdir:
+            net_charge = mol_copy.total_charge
+            # Write out molecule in SDF format
+            ## TODO: How should we handle multiple conformers?
+            self._rdkit_toolkit_wrapper.to_file(
+                mol_copy, 'molecule.sdf', file_format='sdf')
+            #os.system('ls')
+            #os.system('cat molecule.sdf')
+            # Compute desired charges
+            # TODO: Add error handling if antechamber chokes
+            # TODO: Add something cleaner than os.system
+            short_charge_method = charge_method['antechamber_keyword']
+            subprocess.check_output([
+                "antechamber", "-i", "molecule.sdf", "-fi", "sdf", "-o", "charged.mol2", "-fo",
+                "mol2", "-pf", "yes", "-dr", "n", "-c", short_charge_method, "-nc", str(net_charge)]
+             )
+            #os.system('cat charged.mol2')
+             # Write out just charges
+            subprocess.check_output([
+                "antechamber", "-dr", "n", "-i", "charged.mol2", "-fi", "mol2", "-o", "charges2.mol2", "-fo",
+                "mol2", "-c", "wc",  "-cf", "charges.txt", "-pf", "yes"])
+            #os.system('cat charges.txt')
+            # Check to ensure charges were actually produced
+            if not os.path.exists('charges.txt'):
+                # TODO: copy files into local directory to aid debugging?
+                raise ChargeCalculationError(
+                    "Antechamber/sqm partial charge calculation failed on "
+                    "molecule {} (SMILES {})".format(
+                        molecule.name, molecule.to_smiles()))
+            # Read the charges
+            with open('charges.txt', 'r') as infile:
+                contents = infile.read()
+            text_charges = contents.split()
+            charges = np.zeros([molecule.n_atoms], np.float64)
+            for index, token in enumerate(text_charges):
+                charges[index] = float(token)
+            # TODO: Ensure that the atoms in charged.mol2 are in the same order as in molecule.sdf
         charges = unit.Quantity(charges, unit.elementary_charge)
         molecule.partial_charges = charges
 
@@ -4037,28 +4122,26 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
                              f"Supported models are {supported_bond_order_models}")
         ac_charge_keyword = bond_order_model_to_antechamber_keyword[bond_order_model]
 
-        from openforcefield.utils import temporary_directory, temporary_cd
-        with temporary_directory() as tmpdir:
-            with temporary_cd(tmpdir):
-                net_charge = temp_mol.total_charge
-                # Write out molecule in SDF format
-                self._rdkit_toolkit_wrapper.to_file(
-                    temp_mol, 'molecule.sdf', file_format='sdf')
-                # Prepare sqm.in file as if we were going to run charge calc
-                # TODO: Add error handling if antechamber chokes
-                subprocess.check_output([
-                    "antechamber", "-i", "molecule.sdf", "-fi", "sdf", "-o",
-                    "sqm.in", "-fo", "sqmcrt", "-pf", "yes", "-c", ac_charge_keyword,
-                    "-nc", str(net_charge)
-                ])
-                # Modify sqm.in to request bond order calculation
-                self._modify_sqm_in_to_request_bond_orders("sqm.in")
-                # Run sqm to get bond orders
-                subprocess.check_output(["sqm", "-i", "sqm.in", "-o", "sqm.out", "-O"])
-                # Ensure that antechamber/sqm did not change the indexing by checking against
-                # an ordered list of element symbols for this molecule
-                expected_elements = [at.element.symbol for at in molecule.atoms]
-                bond_orders = self._get_fractional_bond_orders_from_sqm_out('sqm.out',
+        with tempfile.TemporaryDirectory() as tmpdir:
+            net_charge = temp_mol.total_charge
+            # Write out molecule in SDF format
+            self._rdkit_toolkit_wrapper.to_file(
+                temp_mol, 'molecule.sdf', file_format='sdf')
+            # Prepare sqm.in file as if we were going to run charge calc
+            # TODO: Add error handling if antechamber chokes
+            subprocess.check_output([
+                "antechamber", "-i", "molecule.sdf", "-fi", "sdf", "-o",
+                "sqm.in", "-fo", "sqmcrt", "-pf", "yes", "-c", ac_charge_keyword,
+                "-nc", str(net_charge)
+            ])
+            # Modify sqm.in to request bond order calculation
+            self._modify_sqm_in_to_request_bond_orders("sqm.in")
+            # Run sqm to get bond orders
+            subprocess.check_output(["sqm", "-i", "sqm.in", "-o", "sqm.out", "-O"])
+            # Ensure that antechamber/sqm did not change the indexing by checking against
+            # an ordered list of element symbols for this molecule
+            expected_elements = [at.element.symbol for at in molecule.atoms]
+            bond_orders = self._get_fractional_bond_orders_from_sqm_out('sqm.out',
                                                                             validate_elements=expected_elements)
 
         # Note that sqm calculate WBOs for ALL PAIRS of atoms, not just those that have

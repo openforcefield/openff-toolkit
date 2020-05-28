@@ -75,32 +75,6 @@ forcefield = ForceField('test_forcefields/Frosst_AlkEthOH_parmAtFrosst.offxml')
 ```
 Detailed examples of using SMIRNOFF with the toolkit can be found [in the documentation](https://open-forcefield-toolkit.readthedocs.io/en/latest/examples.html).
 
-## Chemical environments: Chemical environment perception and manipulation
-
-The `ChemicalEnvironments` class can be used to parse and manipulate [tagged SMARTS strings](http://www.daylight.com/dayhtml/doc/theory/theory.smarts.html) or single-fragment [SMIRKS strings](http://www.daylight.com/dayhtml/doc/theory/theory.smirks.html) representing chemical environments with tagged atoms.
-
-### Working with chemical environments
-
-```python
-from openforcefield.typing.chemistry import environment
-
-smirks = "[#6X3,#7:1]~;@[#8;r:2]~;@[#6X3,#7:3]"
-angle = environment.AngleChemicalEnvironment(smirks=smirks)
-print(angle.asSMIRKS())
-# "[#6X3,#7:1]~;@[#8;r:2]~;@[#6X3,#7:3]"
-
-# add a new atom
-atom3 = angle.selectAtom(3)
-alpha_ORtypes = [('#8', ['X2'])]
-alpha_bondANDtypes = ['!@']
-alpha = angle.addAtom(atom3, bondANDtypes = alpha_bondANDtypes, newORtypes = alpha_ORtypes)
-print(alpha.asSMIRKS()) # smirks for atom only
-# "[#8X2H1;R0]"
-print(angle.asSMIRKS())
-# "[#6X3,#7:1]~;@[#8;r:2]~;@[#6X3,#7:3]~;!@[#8X2]"
-```
-Daylight provides detailed specifications of the [SMILES](http://www.daylight.com/dayhtml_tutorials/languages/smiles/index.html), [SMARTS](http://www.daylight.com/dayhtml/doc/theory/theory.smarts.html), and [SMIRKS](http://www.daylight.com/dayhtml_tutorials/languages/smirks/index.html) languages.
-
 # Frequently asked questions (FAQ)
 
 See [`FAQ.md`](FAQ.md) for answers to a variety of common problems, such as:

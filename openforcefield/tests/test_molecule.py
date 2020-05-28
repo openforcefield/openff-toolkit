@@ -257,14 +257,94 @@ class TestMolecule:
     """Test Molecule class."""
 
     # TODO: Test getstate/setstate
-    # TODO: Test {to_from}_{dict|yaml|toml|json|bson|messagepack|pickle}
+
+    # Test serialization {to|from}_{dict|yaml|toml|json|bson|xml|messagepack|pickle}
+
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_dict_serialization(self, molecule):
+        """Test serialization of a molecule object to and from dict."""
+        serialized = molecule.to_dict()
+        molecule_copy = Molecule.from_dict(serialized)
+        assert molecule == molecule_copy
+
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_yaml_serialization(self, molecule):
+        """Test serialization of a molecule object to and from YAML."""
+        serialized = molecule.to_yaml()
+        molecule_copy = Molecule.from_yaml(serialized)
+        assert molecule == molecule_copy
+
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_toml_serialization(self, molecule):
+        """Test serialization of a molecule object to and from TOML."""
+        # TODO: Test round-trip when implemented
+        with pytest.raises(NotImplementedError):
+            molecule.to_toml()
+
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_bson_serialization(self, molecule):
+        """Test serialization of a molecule object to and from BSON."""
+        serialized = molecule.to_bson()
+        molecule_copy = Molecule.from_bson(serialized)
+        assert molecule == molecule_copy
+
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_json_serialization(self, molecule):
+        """Test serialization of a molecule object to and from JSON."""
+        # TODO: Test round-trip when to_json bug is fixed
+        with pytest.raises(TypeError):
+            molecule.to_json()
+
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_xml_serialization(self, molecule):
+        """Test serialization of a molecule object to and from XML."""
+        # TODO: Test round-trip when from_xml is implemented
+        serialized = molecule.to_xml()
+        with pytest.raises(NotImplementedError):
+            Molecule.from_xml(serialized)
+
+    @pytest.mark.parametrize('molecule', mini_drug_bank())
+    def test_messagepack_serialization(self, molecule):
+        """Test serialization of a molecule object to and from messagepack."""
+        serialized = molecule.to_messagepack()
+        molecule_copy = Molecule.from_messagepack(serialized)
+        assert molecule == molecule_copy
 
     @pytest.mark.parametrize('molecule', mini_drug_bank())
     def test_pickle_serialization(self, molecule):
-        """Test pickling of a molecule object."""
+        """Test round-trip pickling of a molecule object."""
         serialized = pickle.dumps(molecule)
         molecule_copy = pickle.loads(serialized)
         assert molecule == molecule_copy
+
+    def test_serialization_no_conformers(self):
+        """Test round-trip serialization when molecules have no conformers or partial charges."""
+        mol = Molecule.from_smiles('CCO')
+
+        dict_copy = Molecule.from_dict(mol.to_dict())
+        assert mol == dict_copy
+
+        # TODO: yaml_copy = Molecule.from_yaml(mol.to_yaml())
+        with pytest.raises(NotImplementedError):
+            mol.to_toml()
+
+        bson_copy = Molecule.from_bson(mol.to_bson())
+        assert mol == bson_copy
+
+        json_copy = Molecule.from_json(mol.to_json())
+        assert mol == json_copy
+
+        # TODO: round-trip when from_xml is implemented
+        mol_as_xml = mol.to_xml()
+        with pytest.raises(NotImplementedError):
+            Molecule.from_xml(mol_as_xml)
+
+        messagepack_copy = Molecule.from_messagepack(mol.to_messagepack())
+        assert mol == messagepack_copy
+
+        pickle_copy = pickle.loads(pickle.dumps(mol))
+        assert mol == pickle_copy
+
 
     # ----------------------------------------------------
     # Test Molecule constructors and conversion utilities.
@@ -1249,7 +1329,7 @@ class TestMolecule:
             assert bond.stereochemistry == sdf_bonds[key].stereochemistry
 
     def test_to_qcschema(self):
-        """Test the ability to make and validate qcschema"""
+        """Test the ability to make and validate qcschema with extras"""
         # the molecule has no coordinates so this should fail
         ethanol = Molecule.from_smiles('CCO')
         with pytest.raises(InvalidConformerError):
@@ -1261,15 +1341,24 @@ class TestMolecule:
         with pytest.raises(InvalidConformerError):
             qcschema = ethanol.to_qcschema(conformer=1)
         # now make a valid qcschema and check its properties
-        qcschema = ethanol.to_qcschema()
+        qcschema = ethanol.to_qcschema(extras={"test_tag": "test"})
         # make sure the properties match
         charge = 0
         connectivity = [(0, 1, 1.0), (0, 4, 1.0), (0, 5, 1.0), (0, 6, 1.0), (1, 2, 1.0), (1, 7, 1.0), (1, 8, 1.0), (2, 3, 1.0)]
         symbols = ['C', 'C', 'O', 'H', 'H', 'H', 'H', 'H', 'H']
-        assert charge == qcschema.molecular_charge
-        assert connectivity == qcschema.connectivity
-        assert symbols == qcschema.symbols.tolist()
-        assert qcschema.geometry.all() == ethanol.conformers[0].in_units_of(unit.bohr).all()
+
+        def assert_check():
+            assert charge == qcschema.molecular_charge
+            assert connectivity == qcschema.connectivity
+            assert symbols == qcschema.symbols.tolist()
+            assert qcschema.geometry.all() == ethanol.conformers[0].in_units_of(unit.bohr).all()
+
+        assert_check()
+        assert qcschema.extras["test_tag"] == "test"
+        # now run again when no extras
+        qcschema = ethanol.to_qcschema()
+        assert_check()
+        assert qcschema.extras is None
 
     def test_from_qcschema_no_client(self):
         """Test the ability to make molecules from QCArchive record instances and dicts"""
@@ -1929,3 +2018,48 @@ class TestMolecule:
                     #                                        toolkit_registry=toolkit_registry)
                     # fbo2 = [bond.fractional_bond_order for bond in molecule.bonds]
                     # np.testing.assert_allclose(fbo1, fbo2, atol=1.e-4)
+
+    @requires_rdkit
+    def test_visualize_rdkit(self):
+        """Test that the visualize method returns an expected object when using RDKit to generate a 2-D representation"""
+        import rdkit
+
+        mol = Molecule().from_smiles('CCO')
+
+        assert isinstance(mol.visualize(backend='rdkit'), rdkit.Chem.rdchem.Mol)
+
+    @pytest.mark.skipif(RDKitToolkitWrapper.is_available(),
+        reason='Test requires that RDKit is NOT installed')
+    def test_visualize_fallback(self):
+        """Test falling back from RDKit to OpenEye if RDKit is specified but not installed"""
+        mol = Molecule().from_smiles('CCO')
+        with pytest.warns(UserWarning):
+            mol.visualize(backend='rdkit')
+
+    def test_visualize_nglview(self):
+        """Test that the visualize method returns an NGLview widget"""
+        try:
+            import nglview
+        except ModuleNotFoundError:
+            pass
+
+        # Start with a molecule without conformers
+        mol = Molecule().from_smiles('CCO')
+
+        with pytest.raises(ValueError):
+            mol.visualize(backend='nglview')
+
+        # Add conformers
+        mol.generate_conformers()
+
+        # Ensure an NGLView widget is returned
+        assert isinstance(mol.visualize(backend='nglview'), nglview.NGLWidget)
+
+    @requires_openeye
+    def test_visualize_openeye(self):
+        """Test that the visualize method returns an expected object when using OpenEye to generate a 2-D representation"""
+        import IPython
+
+        mol = Molecule().from_smiles('CCO')
+
+        assert isinstance(mol.visualize(backend='openeye'), IPython.core.display.Image)

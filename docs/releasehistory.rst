@@ -56,6 +56,9 @@ Behavior changed
   This check fails erroneously for cases in which the partial charge assignments are correctly all zero,
   such as for ``N#N``. It is also an unnecessary check given that `quacpac` will reliably indicate when
   it has failed to assign charges.
+- `PR #597 <https://github.com/openforcefield/openforcefield/pull/597>`_: Energy-minimized sample systems
+  with Parsley 1.1.0.
+
 
 Behavior changed
 """"""""""""""""
@@ -71,13 +74,27 @@ More confs now used in compute_partial_charges_am1bcc -- True AM1BCC
 
 API-breaking changes
 """"""""""""""""""""
+- `PR #601 <https://github.com/openforcefield/openforcefield/pull/601>`_: Removes
+  almost all of the previous
+  :py:class:`ChemicalEnvironment <openforcefield.typing.chemistry.ChemicalEnvironment>`
+  API, since this entire module was simply copied from
+  `Chemper <https://github.com/MobleyLab/chemper>`_ several years ago and has fallen behind on updates.
+  Currently only
+  :py:meth:`ChemicalEnvironment.get_type <openforcefield.typing.chemistry.ChemicalEnvironment.get_type>`,
+  :py:meth:`ChemicalEnvironment.validate <openforcefield.typing.chemistry.ChemicalEnvironment.validate>`,
+  and an equivalent classmethod
+  :py:meth:`ChemicalEnvironment.validate_smirks <openforcefield.typing.chemistry.ChemicalEnvironment.validate_smirks>`
+  remain. Also, please comment on
+  `this GitHub issue <https://github.com/MobleyLab/chemper/issues/90>`_ if you HAVE been using
+  the previous extra functionality in this module and would like us to prioritize creation of a Chemper
+  conda package.
 - `PR #558 <https://github.com/openforcefield/openforcefield/pull/558>`_: Removes
-  ``TopologyMolecule.topology_particle_start_index``, since the :py:class`Topology <openforcefield.topology.Topology>`
-  particle indexing system now orders :py:class`TopologyVirtualSites <openforcefield.topology.TopologyVirtualSite>`
+  ``TopologyMolecule.topology_particle_start_index``, since the :py:class:`Topology <openforcefield.topology.Topology>`
+  particle indexing system now orders :py:class:`TopologyVirtualSites <openforcefield.topology.TopologyVirtualSite>`
   after all atoms.
-  :py:meth`TopologyMolecule.topology_atom_start_index <openforcefield.topology.TopologyMolecule.topology_atom_start_index>`
+  :py:meth:`TopologyMolecule.topology_atom_start_index <openforcefield.topology.TopologyMolecule.topology_atom_start_index>`
   and
-  :py:meth`TopologyMolecule.topology_virtual_site_start_index <openforcefield.topology.TopologyMolecule.topology_virtual_site_start_index>`
+  :py:meth:`TopologyMolecule.topology_virtual_site_start_index <openforcefield.topology.TopologyMolecule.topology_virtual_site_start_index>`
   are still available to access the appropriate values in the respective topology indexing systems.
 - `PR #508 <https://github.com/openforcefield/openforcefield/pull/508>`_:
   ``OpenEyeToolkitWrapper.compute_wiberg_bond_orders`` is now
@@ -87,10 +104,20 @@ API-breaking changes
 - `PR #508 <https://github.com/openforcefield/openforcefield/pull/508>`_:
   ``Molecule.compute_wiberg_bond_orders`` is now
   :py:meth:`Molecule.assign_fractional_bond_orders <openforcefield.topology.Molecule.assign_fractional_bond_orders>`.
-
+- `PR #595 <https://github.com/openforcefield/openforcefield/pull/595>`_: Removed functions
+  :py:meth:`temporary_directory <openforcefield.utils.utils.temporary_directory>` and
+  :py:meth:`temporary_cd <openforcefield.utils.utils.temporary_cd>` and replaced their behavoir with 
+  ``tempfile.TemporaryDirectory()``.
 
 New features
 """"""""""""
+- `PR #601 <https://github.com/openforcefield/openforcefield/pull/601>`_: Adds
+  :py:meth:`RDKitToolkitWrapper.get_tagged_smarts_connectivity <openforcefield.utils.toolkits.RDKitToolkitWrapper.get_tagged_smarts_connectivity>`
+  and
+  :py:meth:`OpenEyeToolkitWrapper.get_tagged_smarts_connectivity <openforcefield.utils.toolkits.OpenEyeToolkitWrapper.get_tagged_smarts_connectivity>`,
+  which allow the use of either toolkit for smirks/tagged smarts validation.
+- `PR #600 <https://github.com/openforcefield/openforcefield/pull/600>`_:
+  Adds :py:meth:`ForceField.__getitem__ <openforcefield.typing.engines.smirnoff.forcefield.ForceField.__getitem__>` to look up ``ParameterHandler`` objects based on their string names.
 - `PR #508 <https://github.com/openforcefield/openforcefield/pull/508>`_:
   Adds :py:meth:`AmberToolsToolkitWrapper.assign_fractional_bond_orders <openforcefield.utils.toolkits.AmberToolsToolkitWrapper.assign_wiberg_bond_orders>`.
 - `PR #469 <https://github.com/openforcefield/openforcefield/pull/469>`_:
@@ -105,6 +132,9 @@ New features
   and :py:meth:`Molecule.to_hill_formula <openforcefield.topology.Molecule.to_hill_formula>`
   and :py:meth:`Molecule.to_qcschema <openforcefield.topology.Molecule.to_qcschema>`
   and :py:meth:`Molecule.from_qcschema <openforcefield.topology.Molecule.from_qcschema>`
+      .. note::
+         The qcschema method accepts an extras dictionary which is passed into the validated qcelemental.models.Molecule
+         object.
   and :py:meth:`Molecule.from_mapped_smiles <openforcefield.topology.Molecule.from_mapped_smiles>`
   and :py:meth:`Molecule.from_pdb_and_smiles <openforcefield.topology.Molecule.from_pdb_and_smiles>`
   and :py:meth:`Molecule.canonical_order_atoms <openforcefield.topology.Molecule.canonical_order_atoms>`
@@ -143,6 +173,7 @@ New features
          Enumerate protomoers is currently only available through the OpenEye toolkit.
 - `PR #573 <https://github.com/openforcefield/openforcefield/pull/573>`_:
   Adds ``quacpac`` error output to ``quacpac`` failure in ``Molecule.compute_partial_charges_am1bcc``.
+- `PR #560 <https://github.com/openforcefield/openforcefield/issues/560>`_: Added visualization method to the the Molecule class.
 
 
 Behavior changed
@@ -232,6 +263,9 @@ Tests added
   correctly find molecules tautomers, stereoisomers and protomers when possible.
 - `PR #573 <https://github.com/openforcefield/openforcefield/pull/573>`_: Added test for ``quacpac`` error output
   for ``quacpac`` failure in ``Molecule.compute_partial_charges_am1bcc``.
+- `PR #579 <https://github.com/openforcefield/openforcefield/pull/579>`_: Adds regression tests to ensure RDKit can be
+  be used to write multi-model PDB files.
+
 
 Bugfixes
 """"""""
@@ -268,11 +302,18 @@ Bugfixes
 - `Issue #474 <https://github.com/openforcefield/openforcefield/issues/474>`_: We can now  convert molecules to InChI and
    InChIKey and from InChI.
 - `Issue #523 <https://github.com/openforcefield/openforcefield/issues/523>`_: The
-   :py:meth: `Molecule.to_file <openforcefield.topology.Molecule.to_file>` can now correctly write to `MOL` files in
+   :py:meth:`Molecule.to_file <openforcefield.topology.Molecule.to_file>` can now correctly write to `MOL` files in
    line with the support file type list.
+- `Issue #568 <https://github.com/openforcefield/openforcefield/issues/568>`_: The
+  :py:meth:`Molecule.to_file <openforcefield.topology.Molecule.to_file>` can now correctly write multi-model PDB files
+  when using the RDKit backend toolkit.
 
-Example added
-"""""""""""""
+Examples added
+""""""""""""""
+- `PR #591 <https://github.com/openforcefield/openforcefield/pull/591>`_ and
+  `PR #533 <https://github.com/openforcefield/openforcefield/pull/533>`_: Adds an
+  `example notebook and utility to compute conformer energies <https://github.com/openforcefield/openforcefield/blob/master/examples/conformer_energies>`_.
+  This example is made to be reverse-compatible with the 0.6.0 OpenFF Toolkit release.
 - `PR #472 <https://github.com/openforcefield/openforcefield/pull/472>`_: Adds an example notebook
   `QCarchive_interface.ipynb <https://github.com/openforcefield/openforcefield/blob/master/examples/QCArchive_interface/QCarchive_interface.ipynb>`_
   which shows users how to instance the :py:class:`Molecule <openforcefield.topology.Molecule>` from
@@ -427,6 +468,7 @@ Tests added
 - `PR #430 <https://github.com/openforcefield/openforcefield/pull/430>`_: Added test for
   Wiberg Bond Order implemented in OpenEye Toolkits. Molecules taken from
   DOI:10.5281/zenodo.3405489 . Added by Sukanya Sasmal.
+- `PR #569 <https://github.com/openforcefield/openforcefield/pull/569>`_: Added round-trip tests for more serialization formats (dict, YAML, TOML, JSON, BSON, messagepack, pickle). Note that some are unsupported, but the tests raise the appropriate error.
 
 
 Bugfixes
