@@ -50,7 +50,7 @@ from simtk import openmm, unit
 
 from openforcefield.utils import attach_units,  \
     extract_serialized_units_from_dict, ToolkitUnavailableException, MessageException, \
-    object_to_quantity
+    object_to_quantity, GLOBAL_TOOLKIT_REGISTRY
 from openforcefield.topology import ValenceDict, ImproperDict, SortedDict
 from openforcefield.topology.molecule import Molecule
 from openforcefield.typing.chemistry import ChemicalEnvironment
@@ -2813,8 +2813,8 @@ class LibraryChargeHandler(_NonbondedHandler):
         def __init__(self, **kwargs):
             from openforcefield.typing.chemistry import ChemicalEnvironment
             super().__init__(**kwargs)
-            chem_env = ChemicalEnvironment(self.smirks)
-            if len(self.charge) != len(chem_env.getIndexedAtoms()):
+            unique_tags, connectivity = GLOBAL_TOOLKIT_REGISTRY.call('get_tagged_smarts_connectivity', self.smirks)
+            if len(self.charge) != len(unique_tags):
                 raise SMIRNOFFSpecError(f"LibraryCharge {self} was initialized with unequal number of "
                                         f"tagged atoms and charges")
 
@@ -3031,8 +3031,8 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
         def __init__(self, **kwargs):
             from openforcefield.typing.chemistry import ChemicalEnvironment
             super().__init__(**kwargs)
-            chem_env = ChemicalEnvironment(self.smirks)
-            if len(self.charge_increment) != len(chem_env.getIndexedAtoms()):
+            unique_tags, connectivity = GLOBAL_TOOLKIT_REGISTRY.call('get_tagged_smarts_connectivity', self.smirks)
+            if len(self.charge_increment) != len(unique_tags):
                 raise SMIRNOFFSpecError(f"ChargeIncrement {self} was initialized with unequal number of "
                                         f"tagged atoms and charge increments")
 
