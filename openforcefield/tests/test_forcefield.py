@@ -28,7 +28,7 @@ from openforcefield.utils.toolkits import OpenEyeToolkitWrapper, RDKitToolkitWra
 from openforcefield.utils import get_data_file_path
 from openforcefield.topology import Molecule, Topology
 from openforcefield.typing.engines.smirnoff import ForceField, IncompatibleParameterError, SMIRNOFFSpecError, \
-    XMLParameterIOHandler
+    XMLParameterIOHandler, ParameterHandler
 
 
 #======================================================================

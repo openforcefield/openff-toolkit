@@ -157,8 +157,8 @@ class ToolkitWrapper:
     _is_available = None  # True if toolkit is available
     _toolkit_name = None  # Name of the toolkit
     _toolkit_installation_instructions = None  # Installation instructions for the toolkit
-    _toolkit_file_read_formats = None  # The file types that this toolkit can read
-    _toolkit_file_write_formats = None  # The file types that this toolkit can write
+    #_toolkit_file_read_formats = []  # The file types that this toolkit can read
+    #_toolkit_file_write_formats = []  # The file types that this toolkit can write
 
     #@staticmethod
     # TODO: Right now, to access the class definition, I have to make this a classmethod
@@ -355,10 +355,14 @@ class BuiltInToolkitWrapper(ToolkitWrapper):
     .. warning :: This API is experimental and subject to change.
     """
     _toolkit_name = 'Built-in Toolkit'
-    _toolkit_installation_instructions = 'This toolkit is installed with the Open Force Field Toolkit and does' \
+    _toolkit_installation_instructions = 'This toolkit is installed with the Open Force Field Toolkit and does ' \
                                          'not require additional dependencies.'
-    _toolkit_file_read_formats = []
-    _toolkit_file_write_formats = []
+
+    def __init__(self):
+        super().__init__()
+
+        self._toolkit_file_read_formats = []
+        self._toolkit_file_write_formats = []
 
 
     def assign_partial_charges(self,
