@@ -137,7 +137,12 @@ def test_component_combination():
     newsys = new_structure.createSystem(nonbondedMethod=openmm.app.NoCutoff, constraints=None, implicitSolvent=None)
 
     # Cross check energies
-    groups0, groups1, energy0, energy1 = compare_system_energies(pdbfile.topology, pdbfile.topology, system, newsys, pdbfile.positions, verbose = False)
+    groups0, groups1, energy0, energy1 = compare_system_energies(
+        system,
+        newsys,
+        pdbfile.positions,
+        box_vectors=system.getDefaultPeriodicBoxVectors(),
+    )
 
     # Also check that that the number of components is equal to the number I expect
     if not len(nums) == 2:
