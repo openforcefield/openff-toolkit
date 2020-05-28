@@ -233,6 +233,11 @@ class TestAtom:
         atom2 = Atom(6, 0, False, stereochemistry='R', name='CT')
         assert atom1.stereochemistry != atom2.stereochemistry
 
+        # Ensure that formal charge can also be set as a Quantity
+        atom1 = Atom(6, 1*unit.elementary_charge, False)
+        assert atom1.formal_charge == 1 * unit.elementary_charge
+
+
     def test_atom_properties(self):
         """Test that atom properties are correctly populated and gettable"""
         from simtk.openmm.app import element

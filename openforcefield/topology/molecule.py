@@ -177,7 +177,7 @@ class Atom(Particle):
         ----------
         atomic_number : int
             Atomic number of the atom
-        formal_charge : int
+        formal_charge : int or simtk.unit.Quantity with dimension "charge"
             Formal charge of the atom
         is_aromatic : bool
             If True, atom is aromatic; if False, not aromatic
@@ -248,7 +248,7 @@ class Atom(Particle):
         # TODO
         atom_dict = OrderedDict()
         atom_dict['atomic_number'] = self._atomic_number
-        atom_dict['formal_charge'] = self._formal_charge
+        atom_dict['formal_charge'] = self._formal_charge / unit.elementary_charge
         atom_dict['is_aromatic'] = self._is_aromatic
         atom_dict['stereochemistry'] = self._stereochemistry
         # TODO: Should we let atoms have names?
