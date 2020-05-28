@@ -3914,8 +3914,8 @@ class FrozenMolecule(Serializable):
             raise InvalidConformerError('The molecule must have a conformation to produce a valid qcschema; '
                                         f'no conformer was found at index {conformer}.')
 
-        # Gather the required qschema data
-        charge = sum([atom.formal_charge for atom in self.atoms])
+        # Gather the required qcschema data
+        charge = self.total_charge / unit.elementary_charge
         connectivity = [(bond.atom1_index, bond.atom2_index, bond.bond_order) for bond in self.bonds]
         symbols = [Element.getByAtomicNumber(atom.atomic_number).symbol for atom in self.atoms]
 
