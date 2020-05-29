@@ -10,8 +10,49 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 0.7.0 - Current development
 ---------------------------
 
+During implementation, the specification for ``ChargeIncrementModel`` changed substantially.
+While the draft spec proposed to define partial charge calculation schemes using the keywords
+``quantum_chemical_method="AM1"``, ``partial_charge_method="CM2"``, ``number_of_conformers="10"``, we
+recognized that these keywords would not not line up with graph-based partial charge methods or other
+methods on the roadmap. The fact that this tag would need to
+encapsulate a wide range of inputs would likely lead to several generations of spec changes, each one of which
+would inconvenience users. So, while the OpenFF Toolkit may eventually support a wide range set of keywords
+for this tag, there is currently too little known about the eventual scope of this section to develop a "future proof"
+specification for it right now.
+
+For this reason, the initial implementation of ``ChargeIncrementModel`` only defines attributes for ``version``,
+``partial_charge_method``, and ``number_of_conformers``. ``partial_charge_method`` can be any string, and it is
+up to the ``ToolkitWrapper``'s ``compute_partial_charges`` methods to understand what they mean. For
+geometry-independent ``partial_charge_method`` choices, ``number_of_conformers`` will be set to zero.
+
+SMIRKS-based parameter application for ``ChargeIncrement`` parameters is also slightly unusual.
+To give a concise example, if a molecule ``A-B(-C)-D`` were being parameterized, and the force field
+defines ``ChargeIncrement`` SMIRKS in the following order:
+
+1) ``[A:1]-[B:2]``
+2) ``[B:1]-[A:2]``
+3) ``[A:1]-[B:2]-[C:3]``
+4) ``[*:1]-[B:2](-[*:3])-[*:4]``
+5) ``[D:1]-[B:2](-[*:3])-[*:4]``
+
+what is the proper behavior? The initial implementation of ``ChargeIncrementModelHandler`` follows these rules:
+
+* an atom can be subject to many ``ChargeIncrement`` parameters, which combine additively.
+* a ``ChargeIncrement`` that matches a group of atoms is overwritten only if another ``ChargeIncrement``
+  matches the same group of atoms, regardless of order. This overriding follows the normal SMIRNOFF hierarchy.
+
+So, in the case above, the ChargeIncrement from parameters 1 and 4 would NOT be applied to the molecule,
+since another parameter matching the same group of atoms is specified further down in the parameter hierarchy
+(despite those subsequent matches being in a different order). Ultimately, the ChargeIncrement contributions
+from parameters 2, 3, and 5 would be summed and applied.
+
 Behavior changed
 """"""""""""""""
+- `PR #471 <https://github.com/openforcefield/openforcefield/pull/471>`_: Changes uses of
+  ``ValueError``, ``TypeError``, and ``NotImplementedError`` in
+  :py:meth:`AmberToolsToolkitWrapper.compute_partial_charges <openforcefield.utils.toolkits.AmberToolsToolkitWrapper.compute_partial_charges>`
+  and other
+  toolkit functions.
 - `PR #508 <https://github.com/openforcefield/openforcefield/pull/508>`_:
   In order to provide the same results for the same chemical species, regardless of input
   conformation, fractional bond order calculation methods now default to ignore input conformers
@@ -58,22 +99,49 @@ Behavior changed
   it has failed to assign charges.
 - `PR #597 <https://github.com/openforcefield/openforcefield/pull/597>`_: Energy-minimized sample systems
   with Parsley 1.1.0.
-
-
-Behavior changed
-""""""""""""""""
+- `PR #558 <https://github.com/openforcefield/openforcefield/pull/558>`_: The
+  :py:class`Topology <openforcefield.topology.Topology>`
+  particle indexing system now orders :py:class`TopologyVirtualSites <openforcefield.topology.TopologyVirtualSite>`
+  after all atoms.
+- `PR #469 <https://github.com/openforcefield/openforcefield/pull/469>`_:
+  When running :py:meth:`Topology.to_openmm <openforcefield.topology.Topology.to_openmm>`, unique atom names
+  are generated if the provided atom names are not unique (overriding any existing atom names). This
+  uniqueness extends only to atoms in the same molecule. To disable this behavior, set the kwarg
+  ``ensure_unique_atom_names=False``.
+- `PR #472 <https://github.com/openforcefield/openforcefield/pull/472>`_:
+  The :py:meth:`Molecule.__eq__ <openforcefield.topology.Molecule.__eq__>` now uses the new
+  :py:meth:`Molecule.are_isomorphic <openforcefield.topology.Molecule.are_isomorphic>` to perform the
+  similarity checking.
+- `PR #472 <https://github.com/openforcefield/openforcefield/pull/472>`_:
+  The :py:meth:`Topology.from_openmm <openforcefield.topology.Topology.from_openmm>` and
+  :py:meth:`Topology.add_molecule <openforcefield.topology.Topology.add_molecule>` now use the
+  :py:meth:`Molecule.are_isomorphic <openforcefield.topology.Molecule.are_isomorphic>` to match
+  molecules.
 - `PR #508 <https://github.com/openforcefield/openforcefield/pull/508>`_:
   In order to provide the same results for the same chemical species, regardless of input
   conformation, fractional bond order calculation methods now default to ignore input conformers
   and generate a new conformer of the molecule before running semiempirical calculations.
   Users can override this behavior by specifying the keyword argument
   ``use_conformers=molecule.conformers``
+- `PR #544 <https://github.com/openforcefield/openforcefield/pull/544>`_: Raises
+  ``NotImplementedError`` when calling
+  :py:meth:`ParameterHandler.get_parameter   <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler.get_parameter>`,
+  which is not yet implemented, but would previously silently return ``None``.
+- `PR #551 <https://github.com/openforcefield/openforcefield/pull/551>`_: Implemented the
+  :py:meth:`ParameterHandler.get_parameter   <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler.get_parameter>` function.
+
+
 compute_partial_charges_am1bcc no longer returns charges -- They're just attached to molecule
 More confs now used in compute_partial_charges_am1bcc -- True AM1BCC
 
 
 API-breaking changes
 """"""""""""""""""""
+- `PR #471 <https://github.com/openforcefield/openforcefield/pull/471>`_: Closes
+  `Issue #465 <https://github.com/openforcefield/openforcefield/issues/465>`_.
+  ``atom.formal_charge`` and ``molecule.total_charge`` now return ``simtk.unit.Quantity`` objects
+  instead of integers. To preserve backward compatibility, the setter for ``atom.formal_charge``
+  can accept either a ``simtk.unit.Quantity`` or an integer.
 - `PR #601 <https://github.com/openforcefield/openforcefield/pull/601>`_: Removes
   almost all of the previous
   :py:class:`ChemicalEnvironment <openforcefield.typing.chemistry.ChemicalEnvironment>`
@@ -111,6 +179,28 @@ API-breaking changes
 
 New features
 """"""""""""
+- `PR #471 <https://github.com/openforcefield/openforcefield/pull/471>`_: Closes
+  `Issue #208 <https://github.com/openforcefield/openforcefield/issues/208>`_
+  by implementing support for the
+  ``ChargeIncrementModel`` tag in the `SMIRNOFF specification <https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html#chargeincrementmodel-small-molecule-and-fragment-charges>`_.
+  In order to support broad experimentation
+- `PR #471 <https://github.com/openforcefield/openforcefield/pull/471>`_: Adds keyword
+  argument ``strict_n_conformers`` to ``Molecule.compute_partial_charges``,
+  ``OpenEyeToolkitWrapper.compute_partial_charges``, and
+  ``AmberToolsToolkitWrapper.compute_partial_charges``. ``strict_n_conformers`` is a
+  boolean argument indicating whether an ``IncorrectNumConformersError`` should be raised if an invalid number of
+  conformers is supplied during partial charge calculation. For example, if two conformers are
+  supplied, but ``partial_charge_method="AM1BCC"`` is also set, then there is no clear use for
+  the second conformer. The previous behavior in this case was to raise a warning, and to preserve that
+  behavior, ``strict_n_conformers`` defaults to a value of ``False``.
+- `PR #471 <https://github.com/openforcefield/openforcefield/pull/471>`_: Adds
+  keyword argument ``raise_first_error`` (default: ``True``) to
+  :py:meth:`ToolkitRegistry.call <openforcefield.utils.toolkits.ToolkitRegistry.call>.
+  If this is set to ``True``, the ToolkitRegistry will return an error
+  if the first ToolkitWrapper that can perform the requested method raises an error on the input.
+  If this is ``False``, the ToolkitRegistry will attempt to use every ToolkitWrapper that can
+  provide the requested method, returning the result if anyone of them succeeds, or raising a single
+  ``ValueError`` with a message listing the errors that were raised by each ToolkitWrapper.
 - `PR #601 <https://github.com/openforcefield/openforcefield/pull/601>`_: Adds
   :py:meth:`RDKitToolkitWrapper.get_tagged_smarts_connectivity <openforcefield.utils.toolkits.RDKitToolkitWrapper.get_tagged_smarts_connectivity>`
   and
@@ -170,44 +260,11 @@ New features
   py:meth:`Molecule.enumerate_stereoisomers <openforcefield.topology.Molecule.enumerate_stereoisomers>`,
   py:meth:`Molecule.enumerate_protomers <openforcefield.topology.Molecule.enumerate_protomers>`
       .. warning::
-         Enumerate protomoers is currently only available through the OpenEye toolkit.
+         Enumerate protomers is currently only available through the OpenEye toolkit.
 - `PR #573 <https://github.com/openforcefield/openforcefield/pull/573>`_:
   Adds ``quacpac`` error output to ``quacpac`` failure in ``Molecule.compute_partial_charges_am1bcc``.
 - `PR #560 <https://github.com/openforcefield/openforcefield/issues/560>`_: Added visualization method to the the Molecule class.
 
-
-Behavior changed
-""""""""""""""""
-- `PR #558 <https://github.com/openforcefield/openforcefield/pull/558>`_: The
-  :py:class`Topology <openforcefield.topology.Topology>`
-  particle indexing system now orders :py:class`TopologyVirtualSites <openforcefield.topology.TopologyVirtualSite>`
-  after all atoms.
-- `PR #469 <https://github.com/openforcefield/openforcefield/pull/469>`_:
-  When running :py:meth:`Topology.to_openmm <openforcefield.topology.Topology.to_openmm>`, unique atom names
-  are generated if the provided atom names are not unique (overriding any existing atom names). This
-  uniqueness extends only to atoms in the same molecule. To disable this behavior, set the kwarg
-  ``ensure_unique_atom_names=False``.
-- `PR #472 <https://github.com/openforcefield/openforcefield/pull/472>`_:
-  The :py:meth:`Molecule.__eq__ <openforcefield.topology.Molecule.__eq__>` now uses the new
-  :py:meth:`Molecule.are_isomorphic <openforcefield.topology.Molecule.are_isomorphic>` to perform the
-  similarity checking.
-- `PR #472 <https://github.com/openforcefield/openforcefield/pull/472>`_:
-  The :py:meth:`Topology.from_openmm <openforcefield.topology.Topology.from_openmm>` and
-  :py:meth:`Topology.add_molecule <openforcefield.topology.Topology.add_molecule>` now use the
-  :py:meth:`Molecule.are_isomorphic <openforcefield.topology.Molecule.are_isomorphic>` to match
-  molecules.
-- `PR #508 <https://github.com/openforcefield/openforcefield/pull/508>`_:
-  In order to provide the same results for the same chemical species, regardless of input
-  conformation, fractional bond order calculation methods now default to ignore input conformers
-  and generate a new conformer of the molecule before running semiempirical calculations.
-  Users can override this behavior by specifying the keyword argument
-  ``use_conformers=molecule.conformers``
-- `PR #544 <https://github.com/openforcefield/openforcefield/pull/544>`_: Raises 
-  ``NotImplementedError`` when calling 
-  :py:meth:`ParameterHandler.get_parameter   <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler.get_parameter>`, 
-  which is not yet implemented, but would previously silently return ``None``.
-- `PR #551 <https://github.com/openforcefield/openforcefield/pull/551>`_: Implemented the
-  :py:meth:`ParameterHandler.get_parameter   <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler.get_parameter>` function.
 
 Tests added
 """""""""""
@@ -308,6 +365,7 @@ Bugfixes
   :py:meth:`Molecule.to_file <openforcefield.topology.Molecule.to_file>` can now correctly write multi-model PDB files
   when using the RDKit backend toolkit.
 
+
 Examples added
 """"""""""""""
 - `PR #591 <https://github.com/openforcefield/openforcefield/pull/591>`_ and
@@ -319,68 +377,6 @@ Examples added
   which shows users how to instance the :py:class:`Molecule <openforcefield.topology.Molecule>` from
   a QCArchive entry level record and calculate the energy using RDKit through QCEngine.
 
-Current Development
--------------------
-
-During implementation, the proposed specification for ``ChargeIncrementModel`` changed substantially.
-While the draft spec proposed to define partial charge calculation schemes using the keywords
-``quantum_chemical_method="AM1"``, ``partial_charge_method="CM2"``, ``number_of_conformers="10"``, we
-recognized that these keywords would not not line up with graph-based partial charge methods or other
-methods on the roadmap. The fact that this tag would need to
-encapsulate a wide range of inputs would likely lead to several generations of spec changes, each one of which
-would inconvenience users. We ultimately realized that, while we may eventually support a concise set of keywords
-for this tag, there is currently too little known about the eventual scope of this section to develop a useful
-schema for it right now.
-
-For this reason, the initial implementation of ``ChargeIncrementModel`` only defines attributes for ``version``,
-``partial_charge_method``, and ``number_of_conformers``. ``partial_charge_method`` can be any string, and it is
-up to the ``ToolkitWrapper``'s ``compute_partial_charges`` methods to understand what they mean. For
-geometry-independent ``partial_charge_method`` choices, ``number_of_conformers`` wi2ll
-
-
-
-- `PR #471 <https://github.com/openforcefield/openforcefield/pull/471>`_: Closes
-  ><>< SOME ISSUE ><><
-  by implementing support for the
-  ```ChargeIncrementModel`` tag in the SMIRNOFF specification <https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html#chargeincrementmodel-small-molecule-and-fragment-charges>`_.
-  In order to support broad experimentation
-- `PR #471 <https://github.com/openforcefield/openforcefield/pull/471>`_: Adds keyword
-  argument ``strict_n_conformers`` to ``Molecule.compute_partial_charges``,
-  ``OpenEyeToolkitWrapper.compute_partial_charges``, and
-  ``AmberToolsToolkitWrapper.compute_partial_charges``. ``strict_n_conformers`` is a
-  boolean argument indicating whether an ``ValueError`` should be raised if an invalid number of
-  conformers is supplied during partial charge calculation. For example, if two conformers are
-  supplied, but ``partial_charge_method="AM1BCC"`` is also set, then there is no clear use for
-  the second conformer. The previous behavior in this case was to raise a warning, and to preserve that
-  behavior, ``strict_n_conformers`` defaults to a value of ``False``.
-
-- `PR #471 <https://github.com/openforcefield/openforcefield/pull/471>`_: Closes
-  `Issue #465 <https://github.com/openforcefield/openforcefield/issues/465>`_.
-  ``atom.formal_charge`` and ``molecule.total_charge`` now return ``simtk.unit.Quantity`` objects
-  instead of integers. To preserve backward compatibility, the setter for ``atom.formal_charge``
-  can accept either a ``simtk.unit.Quantity`` or an integer.
-- `PR #471 <https://github.com/openforcefield/openforcefield/pull/471>`_: Corrects uses of
-  ``ValueError``, ``TypeError``, and ``NotImplementedError`` in
-  :py:meth:`AmberToolsToolkitWrapper.compute_partial_charges <openforcefield.utils.toolkits.AmberToolsToolkitWrapper.compute_partial_charges>`
-  and other
-  toolkit functions. As more charging schemes (or other functions that could be performed
-  by different ToolkitWrappers) become supported, it is necessary to
-  distinguish between different types of failure. Roughly speaking, exceptions raised by
-  ToolkitWrappers now have the following meanings:
-    - ``TypeError``s indicate "The ToolkitWrapper can positively identify that it
-      shouldn't be able to handle this kind of input." For example,
-      ``RDKitToolkitWrapper.from_object`` will raise this if it is provided an OEMol as input.
-    - ``ValueError``s indicate "The ToolkitWrapper received an accepted TYPE of input, but it
-      couldn't handle it, and there is definitely something wrong with the input."
-      For example, ``RDKitToolkitWrapper.from_object`` will raise a ``ValueError`` if it is
-      given an ``rdkit.Chem.Mol`` that has no bonds as input.
-    - ``RuntimeError``s indicate "The ToolkitWrapper received an accepted TYPE of input, but it
-      couldn't handle it, however it's not clear that the input was wrong." For example,
-      ``AmberToolsToolkitWrapper.compute_partial_charges`` will raise ``XXError`` if it is
-      provided with the kwarg ``charge_model="am1bccelf10"``, which IS NOT a supported keyword for
-      ``AmberToolsToolkitWrapper.compute_partial_charges``, but IS supported by
-      ``OpenEyeToolkitWrapper.compute_partial_charges``. Other cases where this would be raised
-      include when a QM optimization is able to start, but fails to converge.
 
 
 0.6.0 - Library Charges
