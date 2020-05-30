@@ -228,8 +228,18 @@ xml_spec_docs_tip3p_library_charges_xml = '''
 xml_ff_torsion_bo = '''<?xml version='1.0' encoding='ASCII'?>
 <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
   <ProperTorsions version="0.3" potential="k*(1+cos(periodicity*theta-phase))">
-    <Proper smirks="[*:1]~[#6X3:2]~[#6X3:3]~[*:4]" id="tbo" periodicity1="2" phase1="0.0 * degree" k1_bondorder1="1.00*kilocalories_per_mole" k1_bondorder2="1.80*kilocalories_per_mole" idivf1="1.0"/>
-    <Proper smirks="[*:1]~[#6X4:2]~[#8X2:3]~[*:4]" id="tbo" periodicity1="2" phase1="0.0 * degree" k1_bondorder1="1.00*kilocalories_per_mole" k1_bondorder2="1.80*kilocalories_per_mole" idivf1="1.0"/>
+    <Proper smirks="[*:1]~[#6X3:2]~[#6X3:3]~[*:4]" id="tbo1" periodicity1="2" phase1="0.0 * degree" k1_bondorder1="1.00*kilocalories_per_mole" k1_bondorder2="1.80*kilocalories_per_mole" idivf1="1.0"/>
+    <Proper smirks="[*:1]~[#6X4:2]~[#8X2:3]~[*:4]" id="tbo2" periodicity1="2" phase1="0.0 * degree" k1_bondorder1="1.00*kilocalories_per_mole" k1_bondorder2="1.80*kilocalories_per_mole" idivf1="1.0"/>
+  </ProperTorsions>
+</SMIRNOFF>
+'''
+
+xml_ff_torsion_bo_standard_supersede = '''<?xml version='1.0' encoding='ASCII'?>
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+  <ProperTorsions version="0.3" potential="k*(1+cos(periodicity*theta-phase))">
+    <Proper smirks="[*:1]~[#6X3:2]~[#6X3:3]~[*:4]" id="tbo1" periodicity1="2" phase1="0.0 * degree" k1_bondorder1="1.00*kilocalories_per_mole" k1_bondorder2="1.80*kilocalories_per_mole" idivf1="1.0"/>
+    <Proper smirks="[*:1]~[#6X4:2]~[#8X2:3]~[*:4]" id="tbo2" periodicity1="2" phase1="0.0 * degree" k1_bondorder1="1.00*kilocalories_per_mole" k1_bondorder2="1.80*kilocalories_per_mole" idivf1="1.0"/>
+    <Proper smirks="[*:1]~[#6X4:2]-[#8X2:3]~[*:4]" id="t1" periodicity1="2" phase1="0.0 * degree" k1="1.20*kilocalories_per_mole" idivf1="1.0"/>
   </ProperTorsions>
 </SMIRNOFF>
 '''
@@ -2058,16 +2068,16 @@ class TestForceFieldParameterAssignment:
                         toolkit_registry=toolkit_registry,
                         allow_nonintegral_charges=False)
 
-
-
     @pytest.mark.parametrize(
             ('get_molecule', 'k_interpolated', 'central_atoms'),
             [(create_ethanol, 4.953856, (1, 2)), (create_reversed_ethanol, 4.953856, (7, 6))])
     def test_fractional_bondorder(self, get_molecule, k_interpolated, central_atoms):
+        """Test the fractional bond orders are used to interpolate k values as we expect"""
 
         mol = get_molecule()
 
-        forcefield = ForceField('test_forcefields/smirnoff99Frosst.offxml', xml_ff_torsion_bo)
+        forcefield = ForceField('test_forcefields/smirnoff99Frosst.offxml',
+                                xml_ff_torsion_bo)
         topology = Topology.from_molecules(mol)
 
         omm_system = forcefield.create_openmm_system(
@@ -2082,7 +2092,6 @@ class TestForceFieldParameterAssignment:
             params = off_torsion_force.getTorsionParameters(idx)
 
             atom2, atom3 = params[1], params[2]
-
             atom2_mol, atom3_mol = central_atoms
 
             if (((atom2 == atom2_mol) and (atom3 == atom3_mol)) or
@@ -2090,17 +2099,94 @@ class TestForceFieldParameterAssignment:
                 k = params[-1]
                 assert_almost_equal(k/k.unit, k_interpolated)
 
+    def test_fractional_bondorder_multiple_same_mol(self):
+        """Check that an error is thrown when essentially the same molecule is entered more than once
+        for partial_bond_orders_from_molecules"""
 
-    def test_create_force_fractional_bondorder(self):
-        pass
-        # Reading neutral molecule from file
-        #filename = get_data_file_path('molecules/CID20742535_neutral.sdf')
-        #molecule1 = Molecule.from_file(filename)
+        mol = create_ethanol()
+        mol2 = create_reversed_ethanol()
 
-        # Reading negative molecule from file
-        #filename = get_data_file_path('molecules/CID20742535_anion.sdf')
-        #molecule2 = Molecule.from_file(filename)
+        forcefield = ForceField('test_forcefields/smirnoff99Frosst.offxml',
+                                xml_ff_torsion_bo)
+        topology = Topology.from_molecules([mol, mol2])
 
+        with pytest.raises(ValueError):
+            omm_system = forcefield.create_openmm_system(
+                    topology,
+                    charge_from_molecules=[mol],
+                    partial_bond_orders_from_molecules=[mol, mol2])
+
+    @pytest.mark.parametrize(
+            ('get_molecule', 'central_atoms'),
+            [(create_ethanol, (1, 2)), (create_reversed_ethanol, (7, 6))])
+    def test_fractional_bondorder_superseded_by_standard_torsion(self, get_molecule, central_atoms):
+        """Test that matching rules are still respected with fractional bondorder parameters.
+
+        We check here that a standard torsion parameter can still get priority on a match
+        if it is further down the list.
+        """
+
+        mol = get_molecule()
+
+        forcefield = ForceField('test_forcefields/smirnoff99Frosst.offxml',
+                                xml_ff_torsion_bo_standard_supersede)
+        topology = Topology.from_molecules([mol])
+
+        omm_system = forcefield.create_openmm_system(
+                topology,
+                charge_from_molecules=[mol],
+                partial_bond_orders_from_molecules=[mol])
+
+        off_torsion_force = [force for force in omm_system.getForces() if
+                               isinstance(force, openmm.PeriodicTorsionForce)][0]
+
+        for idx in range(off_torsion_force.getNumTorsions()):
+            params = off_torsion_force.getTorsionParameters(idx)
+
+            atom2, atom3 = params[1], params[2]
+            atom2_mol, atom3_mol = central_atoms
+
+            if (((atom2 == atom2_mol) and (atom3 == atom3_mol)) or
+                    ((atom2 == atom3_mol) and (atom3 == atom2_mol))):
+                k = params[-1]
+                assert_almost_equal(k/k.unit, 5.0208)
+
+
+    @pytest.mark.parametrize(
+            ('get_molecule', 'k_interpolated', 'central_atoms'),
+            [(create_ethanol, 4.953856, (1, 2)), (create_reversed_ethanol, 4.953856, (7, 6))])
+    def test_fractional_bondorder_calculated(self, get_molecule, k_interpolated, central_atoms):
+        mol = get_molecule()
+
+        forcefield = ForceField('test_forcefields/smirnoff99Frosst.offxml',
+                                xml_ff_torsion_bo)
+        topology = Topology.from_molecules([mol])
+
+        omm_system = forcefield.create_openmm_system(
+                topology,
+                charge_from_molecules=[mol])
+
+        off_torsion_force = [force for force in omm_system.getForces() if
+                               isinstance(force, openmm.PeriodicTorsionForce)][0]
+
+        for idx in range(off_torsion_force.getNumTorsions()):
+            params = off_torsion_force.getTorsionParameters(idx)
+
+            atom2, atom3 = params[1], params[2]
+            atom2_mol, atom3_mol = central_atoms
+
+            if (((atom2 == atom2_mol) and (atom3 == atom3_mol)) or
+                    ((atom2 == atom3_mol) and (atom3 == atom2_mol))):
+                k = params[-1]
+
+                # check that we're at least between k1_bondorder1 and k1_bondorder2
+                # in kJ/mol
+                assert (k/k.unit > 4.184) and (k/k.unit < 7.5312)
+
+                # check that we *are not* matching the values we'd get if we
+                # had offered our molecules to `partial_bond_orders_from_molecules`
+                #with pytest.raises(AssertionError):
+                assert_almost_equal(k/k.unit, k_interpolated)
 
 
 class TestSmirnoffVersionConverter:

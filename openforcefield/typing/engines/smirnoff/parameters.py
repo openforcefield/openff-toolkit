@@ -2379,6 +2379,11 @@ class ProperTorsionHandler(ParameterHandler):
         self._check_attributes_are_equal(other_handler, identical_attrs=string_attrs_to_compare,
                                          tolerance_attrs=float_attrs_to_compare)
 
+    def check_partial_bond_orders_from_molecules_duplicates(self, pb_mols):
+        if len(set(map(Molecule.to_hill_formula, pb_mols))) < len(pb_mols):
+            raise ValueError("At least two user-provided fractional bond order "
+                             "molecules are isomorphic")
+
     def assign_partial_bond_orders_from_molecules(self, topology, pbo_mols):
 
         # for each reference molecule in our topology, we'll walk through the provided partial bond order molecules
@@ -2428,9 +2433,14 @@ class ProperTorsionHandler(ParameterHandler):
         else:
             force = existing[0]
 
-        # first, check whether any of the reference molecules in the topology
+
+        # check whether any of the reference molecules in the topology
         # are in the partial_bond_orders_from_molecules list
         if 'partial_bond_orders_from_molecules' in kwargs:
+            # check whether molecules in the partial_bond_orders_from_molecules
+            # list have any duplicates
+            self.check_partial_bond_orders_from_molecules_duplicates(kwargs['partial_bond_orders_from_molecules'])
+
             self.assign_partial_bond_orders_from_molecules(topology, kwargs['partial_bond_orders_from_molecules'])
 
         # find all proper torsions for which we have parameters
