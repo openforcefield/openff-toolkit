@@ -2160,20 +2160,22 @@ class BondHandler(ParameterHandler):
             # Compute equilibrium bond length and spring constant.
             bond = match.reference_molecule.get_bond_between(*match.reference_atom_indices)
 
-            if bond.fractional_bond_order is None:
-                [k, length] = [bond_params.k, bond_params.length]
-            else:
+            if hasattr(bond_params, 'k_bondorder1'):
+                raise NotImplementedError("Partial bondorder treatment is not implemented for bonds.")
+
                 # Interpolate using fractional bond orders
                 # TODO: Do we really want to allow per-bond specification of interpolation schemes?
-                order = bond.fractional_bond_order
-                if self.fractional_bondorder_interpolation == 'interpolate-linear':
-                    k = bond_params.k[0] + (bond_params.k[1] - bond_params.k[0]) * (order - 1.)
-                    length = bond_params.length[0] + (
-                        bond_params.length[1] - bond_params.length[0]) * (order - 1.)
-                else:
-                    raise Exception(
-                        "Partial bondorder treatment {} is not implemented.".
-                        format(self.fractional_bondorder_method))
+                #order = bond.fractional_bond_order
+                #if self.fractional_bondorder_interpolation == 'interpolate-linear':
+                #    k = bond_params.k[0] + (bond_params.k[1] - bond_params.k[0]) * (order - 1.)
+                #    length = bond_params.length[0] + (
+                #        bond_params.length[1] - bond_params.length[0]) * (order - 1.)
+                #else:
+                #    raise Exception(
+                #        "Partial bondorder treatment {} is not implemented.".
+                #        format(self.fractional_bondorder_method))
+            else:
+                [k, length] = [bond_params.k, bond_params.length]
 
             is_constrained = topology.is_constrained(*topology_atom_indices)
 
@@ -2383,7 +2385,8 @@ class ProperTorsionHandler(ParameterHandler):
         # if we find a match, we'll apply the partial bond orders and skip to the next molecule
         for ref_mol in topology.reference_molecules:
             for pbo_mol in pbo_mols:
-                # TODO: how stringent do we want matching to be in this case?
+                # we are as stringent as we are in the ElectrostaticsHandler
+                # TODO: figure out whether bond order matching is redundant with aromatic matching
                 isomorphic, topology_atom_map = Molecule.are_isomorphic(ref_mol, pbo_mol,
                                                                         return_atom_map=True,
                                                                         aromatic_matching=True,
@@ -2402,6 +2405,11 @@ class ProperTorsionHandler(ParameterHandler):
                                                             topology_atom_map[bond.atom2_index])
                         # extract fractional bond order
                         # assign fractional bond order to reference molecule bond
+                        if pbo_bond.fractional_bond_order is None:
+                            raise ValueError(f"Molecule '{ref_mol}' was requested to be parameterized "
+                                    f"with user-provided fractional bond orders from '{pbo_mol}', but not "
+                                    "all bonds were provided with `fractional_bond_order` specified")
+
                         bond.fractional_bond_order = pbo_bond.fractional_bond_order
 
                     break
@@ -2490,8 +2498,6 @@ class ProperTorsionHandler(ParameterHandler):
         torsion_params = torsion_match.parameter_type
         match = torsion_match.environment_match
 
-        match
-            
         for (periodicity, phase, k_bondorder, idivf) in zip(torsion_params.periodicity,
                                                             torsion_params.phase,
                                                             torsion_params.k_bondorder,

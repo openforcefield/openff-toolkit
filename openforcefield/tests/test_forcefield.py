@@ -19,6 +19,7 @@ import os
 
 from simtk import openmm, unit
 import numpy as np
+from numpy.testing import assert_almost_equal
 
 import pytest
 from tempfile import NamedTemporaryFile
@@ -223,6 +224,15 @@ xml_spec_docs_tip3p_library_charges_xml = '''
     </LibraryCharges>
 </SMIRNOFF>
 '''
+
+xml_ff_torsion_bo = '''<?xml version='1.0' encoding='ASCII'?>
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+  <ProperTorsions version="0.3" potential="k*(1+cos(periodicity*theta-phase))">
+    <Proper smirks="[*:1]~[#6X3:2]~[#6X3:3]~[*:4]" id="tbo" periodicity1="2" phase1="0.0 * degree" k1_bondorder1="1.00*kilocalories_per_mole" k1_bondorder2="1.80*kilocalories_per_mole" idivf1="1.0"/>
+    <Proper smirks="[*:1]~[#6X4:2]~[#8X2:3]~[*:4]" id="tbo" periodicity1="2" phase1="0.0 * degree" k1_bondorder1="1.00*kilocalories_per_mole" k1_bondorder2="1.80*kilocalories_per_mole" idivf1="1.0"/>
+  </ProperTorsions>
+</SMIRNOFF>
+'''
 #======================================================================
 # TEST UTILITY FUNCTIONS
 #======================================================================
@@ -279,16 +289,17 @@ def create_ethanol():
     ethanol.add_atom(1, 0, False)  # H6
     ethanol.add_atom(1, 0, False)  # H7
     ethanol.add_atom(1, 0, False)  # H8
-    ethanol.add_bond(0, 1, 1, False)  # C0 - C1
-    ethanol.add_bond(1, 2, 1, False)  # C1 - O2
-    ethanol.add_bond(0, 3, 1, False)  # C0 - H3
-    ethanol.add_bond(0, 4, 1, False)  # C0 - H4
-    ethanol.add_bond(0, 5, 1, False)  # C0 - H5
-    ethanol.add_bond(1, 6, 1, False)  # C1 - H6
-    ethanol.add_bond(1, 7, 1, False)  # C1 - H7
-    ethanol.add_bond(2, 8, 1, False)  # O2 - H8
+    ethanol.add_bond(0, 1, 1, False, fractional_bond_order=1.33)  # C0 - C1
+    ethanol.add_bond(1, 2, 1, False, fractional_bond_order=1.23)  # C1 - O2
+    ethanol.add_bond(0, 3, 1, False, fractional_bond_order=1)  # C0 - H3
+    ethanol.add_bond(0, 4, 1, False, fractional_bond_order=1)  # C0 - H4
+    ethanol.add_bond(0, 5, 1, False, fractional_bond_order=1)  # C0 - H5
+    ethanol.add_bond(1, 6, 1, False, fractional_bond_order=1)  # C1 - H6
+    ethanol.add_bond(1, 7, 1, False, fractional_bond_order=1)  # C1 - H7
+    ethanol.add_bond(2, 8, 1, False, fractional_bond_order=1)  # O2 - H8
     charges = unit.Quantity(np.array([-0.4, -0.3, -0.2, -0.1, 0.00001, 0.1, 0.2, 0.3, 0.4]), unit.elementary_charge)
     ethanol.partial_charges = charges
+
     return ethanol
 
 
@@ -309,14 +320,14 @@ def create_reversed_ethanol():
     ethanol.add_atom(8, 0, False)  # O6
     ethanol.add_atom(6, 0, False)  # C7
     ethanol.add_atom(6, 0, False)  # C8
-    ethanol.add_bond(8, 7, 1, False)  # C8 - C7
-    ethanol.add_bond(7, 6, 1, False)  # C7 - O6
-    ethanol.add_bond(8, 5, 1, False)  # C8 - H5
-    ethanol.add_bond(8, 4, 1, False)  # C8 - H4
-    ethanol.add_bond(8, 3, 1, False)  # C8 - H3
-    ethanol.add_bond(7, 2, 1, False)  # C7 - H2
-    ethanol.add_bond(7, 1, 1, False)  # C7 - H1
-    ethanol.add_bond(6, 0, 1, False)  # O6 - H0
+    ethanol.add_bond(8, 7, 1, False, fractional_bond_order=1.33)  # C8 - C7
+    ethanol.add_bond(7, 6, 1, False, fractional_bond_order=1.23)  # C7 - O6
+    ethanol.add_bond(8, 5, 1, False, fractional_bond_order=1)  # C8 - H5
+    ethanol.add_bond(8, 4, 1, False, fractional_bond_order=1)  # C8 - H4
+    ethanol.add_bond(8, 3, 1, False, fractional_bond_order=1)  # C8 - H3
+    ethanol.add_bond(7, 2, 1, False, fractional_bond_order=1)  # C7 - H2
+    ethanol.add_bond(7, 1, 1, False, fractional_bond_order=1)  # C7 - H1
+    ethanol.add_bond(6, 0, 1, False, fractional_bond_order=1)  # O6 - H0
     charges = unit.Quantity(np.array([0.4, 0.3, 0.2, 0.1, 0.00001, -0.1, -0.2, -0.3, -0.4]), unit.elementary_charge)
     ethanol.partial_charges = charges
     return ethanol
@@ -2047,6 +2058,51 @@ class TestForceFieldParameterAssignment:
                         toolkit_registry=toolkit_registry,
                         allow_nonintegral_charges=False)
 
+
+
+    @pytest.mark.parametrize(
+            ('get_molecule', 'k_interpolated', 'central_atoms'),
+            [(create_ethanol, 4.953856, (1, 2)), (create_reversed_ethanol, 4.953856, (7, 6))])
+    def test_fractional_bondorder(self, get_molecule, k_interpolated, central_atoms):
+
+        mol = get_molecule()
+
+        forcefield = ForceField('test_forcefields/smirnoff99Frosst.offxml', xml_ff_torsion_bo)
+        topology = Topology.from_molecules(mol)
+
+        omm_system = forcefield.create_openmm_system(
+                topology,
+                charge_from_molecules=[mol],
+                partial_bond_orders_from_molecules=[mol])
+
+        off_torsion_force = [force for force in omm_system.getForces() if
+                               isinstance(force, openmm.PeriodicTorsionForce)][0]
+
+        for idx in range(off_torsion_force.getNumTorsions()):
+            params = off_torsion_force.getTorsionParameters(idx)
+
+            atom2, atom3 = params[1], params[2]
+
+            atom2_mol, atom3_mol = central_atoms
+
+            if (((atom2 == atom2_mol) and (atom3 == atom3_mol)) or
+                    ((atom2 == atom3_mol) and (atom3 == atom2_mol))):
+                k = params[-1]
+                assert_almost_equal(k/k.unit, k_interpolated)
+
+
+    def test_create_force_fractional_bondorder(self):
+        pass
+        # Reading neutral molecule from file
+        #filename = get_data_file_path('molecules/CID20742535_neutral.sdf')
+        #molecule1 = Molecule.from_file(filename)
+
+        # Reading negative molecule from file
+        #filename = get_data_file_path('molecules/CID20742535_anion.sdf')
+        #molecule2 = Molecule.from_file(filename)
+
+
+
 class TestSmirnoffVersionConverter:
 
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(),
@@ -2134,12 +2190,11 @@ def test_create_system_molecules_parmatfrosst_gbsa(self):
     # TODO: Figure out if we just want to check that energy is finite (this is what the original test did,
     #       or compare numerically to a reference system.
 
+
 # TODO: test_get_new_parameterhandler
 # TODO: test_get_existing_parameterhandler
 # TODO: test_get_parameter
 # TODO: test_add_parameter
-# TODO: test_add_parameter_fractional_bondorder
-# TODO: test_create_force_fractional_bondorder
 # TODO: test_store_cosmetic_attribs
 # TODO: test_write_cosmetic_attribs
 # TODO: test_store_cosmetic_elements (eg. Author)
