@@ -25,7 +25,7 @@ For this reason, the initial implementation of ``ChargeIncrementModel`` only def
 up to the ``ToolkitWrapper``'s ``compute_partial_charges`` methods to understand what they mean. For
 geometry-independent ``partial_charge_method`` choices, ``number_of_conformers`` will be set to zero.
 
-SMIRKS-based parameter application for ``ChargeIncrement`` parameters is also slightly unusual.
+SMIRKS-based parameter application for ``ChargeIncrement`` parameters is different than other SMIRNOFF sections.
 To give a concise example, if a molecule ``A-B(-C)-D`` were being parameterized, and the force field
 defines ``ChargeIncrement`` SMIRKS in the following order:
 
@@ -46,13 +46,23 @@ since another parameter matching the same group of atoms is specified further do
 (despite those subsequent matches being in a different order). Ultimately, the ChargeIncrement contributions
 from parameters 2, 3, and 5 would be summed and applied.
 
+It's also important to identify a behavior that these rules were written to *avoid*: if not for the
+"regardless of order" clause in the second rule, parameters 4 and 5 could actually have been applied six and two times,
+respectively (due to symmetry in the SMIRKS and the use of wildcards). This situation could also arise as a result
+of molecular symmetry. For example, a methyl group could match the SMIRKS ``[C:1]([H:2])([H:3])([H:4])`` six ways
+(with different orderings of the three hydrogen atoms), but the user would almost certainly not intend for the charge
+increments to be applied six times. The "regardless of order" clause was added specifically to address this.
+
+In short, the first time a group of atoms becomes involved in a ``ChargeIncrement`` together, the System gains a new
+parameter "slot". Only another ``ChargeIncrement`` which applies to the exact same group of atoms (in any order) can
+take over the "slot", pushing the original ``ChargeIncrement`` out.
+
 Behavior changed
 """"""""""""""""
 - `PR #471 <https://github.com/openforcefield/openforcefield/pull/471>`_: Changes uses of
   ``ValueError``, ``TypeError``, and ``NotImplementedError`` in
   :py:meth:`AmberToolsToolkitWrapper.compute_partial_charges <openforcefield.utils.toolkits.AmberToolsToolkitWrapper.compute_partial_charges>`
-  and other
-  toolkit functions.
+  and other toolkit functions.
 - `PR #508 <https://github.com/openforcefield/openforcefield/pull/508>`_:
   In order to provide the same results for the same chemical species, regardless of input
   conformation, fractional bond order calculation methods now default to ignore input conformers
