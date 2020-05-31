@@ -1,4 +1,4 @@
-| **Status** | [![Travis build](https://img.shields.io/travis/openforcefield/openforcefield/master.svg?logo=linux&logoColor=white)](https://travis-ci.org/openforcefield/openforcefield) [![Codecov coverage](https://img.shields.io/codecov/c/github/openforcefield/openforcefield.svg?logo=Codecov&logoColor=white)](https://codecov.io/gh/openforcefield/openforcefield) [![LGTM analysis](https://img.shields.io/lgtm/grade/python/g/openforcefield/openforcefield.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/openforcefield/openforcefield/context:python) |
+| **Status** | [![GH Actions Status](https://github.com/openforcefield/openforcefield/workflows/CI/badge.svg)](https://github.com/openforcefield/openforcefield/actions?query=branch%3Amaster+workflow%3ACI)  [![Codecov coverage](https://img.shields.io/codecov/c/github/openforcefield/openforcefield.svg?logo=Codecov&logoColor=white)](https://codecov.io/gh/openforcefield/openforcefield) [![LGTM analysis](https://img.shields.io/lgtm/grade/python/g/openforcefield/openforcefield.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/openforcefield/openforcefield/context:python) |
 | :------ | :------- |
 | **Latest Release** | [![Last release tag](https://img.shields.io/github/release-pre/openforcefield/openforcefield.svg)](https://github.com/openforcefield/openforcefield/releases)  [![Commits since release](https://img.shields.io/github/commits-since/openforcefield/openforcefield/0.6.0.svg)](https://github.com/openforcefield/openforcefield/releases/tag/0.6.0)  [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.597754.svg)](https://doi.org/10.5281/zenodo.597754) |
 | **Communication** | [![docs latest](https://img.shields.io/badge/docs-latest-5077AB.svg?logo=read%20the%20docs)](https://open-forcefield-toolkit.readthedocs.io/en/latest/) [![dev chat on slack](https://img.shields.io/badge/dev_chat-on_slack-808493.svg?logo=slack)](https://join.slack.com/t/openforcefieldgroup/shared_invite/enQtNjA4MTMxMDg0MDAxLWY3Y2Q5NDY4MmU1OTIzMDhiYzFjOWFkZGFjN2Y4N2Q4OTRkOWNjODVhMDMxMzkwMDcxNDA5MjYyNjJjYjE2NTM) |
@@ -28,6 +28,15 @@ Detailed installation instructions can be found [here](https://open-forcefield-t
 ### Installing from source
 
 If you need to install via source, see the build and run package requirements listed in the [development conda recipe](https://github.com/openforcefield/openforcefield/blob/master/devtools/conda-recipe/meta.yaml).
+
+## Force Fields
+
+Two major force field development efforts have been undertaken by the Initiative, with results hosted in separate repositories.
+
+* The [Open Force Fields repository](https://github.com/openforcefield/openforcefields/), which features the [Parsley force field line](https://openforcefield.org/news/introducing-openforcefield-1.0/). This is the Open Force Field Initiative's first effort toward building a _new_ force field. The initial parameters are taken from smirnoff99Frosst, but software and data produced by the Initiative's efforts are being used to refit parameter values and add new SMIRKS-based parameters.
+* The [smirnoff99Frosst repository](https://github.com/openforcefield/smirnoff99Frosst/), which is descended from AMBER's parm99 forcefield as well as Merck-Frosst's parm@frosst. This line of force fields does not aim to alter parameter values, but is instead a test of accurately converting an atom type-based force field to the SMIRNOFF format.
+
+Force fields from both of these packages are available in their respective GitHub repositories and also as conda packages. Tables detailing the individual file names/versions within these force field lines are in the README of each repository. By default, installing the Open Force Field toolkit using `conda` or the single-file toolkit installers will also install these conda packages. A plugin architecture is provided for other force field developers to produce python/conda packages that can be imported by the Open Force Field Toolkit as well.
 
 # Toolkit features
 
@@ -65,32 +74,6 @@ openmm_system = forcefield.create_openmm_system(topology)
 forcefield = ForceField('test_forcefields/Frosst_AlkEthOH_parmAtFrosst.offxml')
 ```
 Detailed examples of using SMIRNOFF with the toolkit can be found [in the documentation](https://open-forcefield-toolkit.readthedocs.io/en/latest/examples.html).
-
-## Chemical environments: Chemical environment perception and manipulation
-
-The `ChemicalEnvironments` class can be used to parse and manipulate [tagged SMARTS strings](http://www.daylight.com/dayhtml/doc/theory/theory.smarts.html) or single-fragment [SMIRKS strings](http://www.daylight.com/dayhtml/doc/theory/theory.smirks.html) representing chemical environments with tagged atoms.
-
-### Working with chemical environments
-
-```python
-from openforcefield.typing.chemistry import environment
-
-smirks = "[#6X3,#7:1]~;@[#8;r:2]~;@[#6X3,#7:3]"
-angle = environment.AngleChemicalEnvironment(smirks=smirks)
-print(angle.asSMIRKS())
-# "[#6X3,#7:1]~;@[#8;r:2]~;@[#6X3,#7:3]"
-
-# add a new atom
-atom3 = angle.selectAtom(3)
-alpha_ORtypes = [('#8', ['X2'])]
-alpha_bondANDtypes = ['!@']
-alpha = angle.addAtom(atom3, bondANDtypes = alpha_bondANDtypes, newORtypes = alpha_ORtypes)
-print(alpha.asSMIRKS()) # smirks for atom only
-# "[#8X2H1;R0]"
-print(angle.asSMIRKS())
-# "[#6X3,#7:1]~;@[#8;r:2]~;@[#6X3,#7:3]~;!@[#8X2]"
-```
-Daylight provides detailed specifications of the [SMILES](http://www.daylight.com/dayhtml_tutorials/languages/smiles/index.html), [SMARTS](http://www.daylight.com/dayhtml/doc/theory/theory.smarts.html), and [SMIRKS](http://www.daylight.com/dayhtml_tutorials/languages/smirks/index.html) languages.
 
 # Frequently asked questions (FAQ)
 
