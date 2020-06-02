@@ -2292,7 +2292,8 @@ class FrozenMolecule(Serializable):
                             rms_cutoff=None,
                             clear_existing=True):
         """
-        Generate conformers for this molecule using an underlying toolkit
+        Generate conformers for this molecule using an underlying toolkit. If n_conformers is 0, no toolkit wrapper
+        will be called.
 
         Parameters
         ----------
@@ -2319,6 +2320,12 @@ class FrozenMolecule(Serializable):
             If an invalid object is passed as the toolkit_registry parameter
 
         """
+        # If no conformers are requested, do not call to a ToolkitWrapper at all
+        if n_conformers == 0:
+            if clear_existing:
+                self._conformers = None
+            return
+
         if isinstance(toolkit_registry, ToolkitRegistry):
             return toolkit_registry.call('generate_conformers',
                                          self,
