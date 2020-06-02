@@ -813,7 +813,7 @@ class TestOpenEyeToolkitWrapper:
 
         # For now, ToolkitRegistries lose track of what exception type
         # was thrown inside them, so we just check for a ValueError here
-        with pytest.raises(ChargeMethodUnavailableError, match="is not available from OpenEyeToolkitWrapper") as excinfo:
+        with pytest.raises(ValueError, match="is not available from OpenEyeToolkitWrapper") as excinfo:
             molecule.assign_partial_charges(toolkit_registry=toolkit_registry,
                                             partial_charge_method="NotARealChargeMethod")
 
@@ -856,7 +856,7 @@ class TestOpenEyeToolkitWrapper:
         # Test calling the ToolkitWrapper _indirectly_, though a ToolkitRegistry,
         # which should aggregate any exceptions and bundle all of the messages
         # in a failed task together in a single ValueError.
-        with pytest.raises(IncorrectNumConformersError,
+        with pytest.raises(ValueError,
                            match=f"has 2 conformers, but charge method '{partial_charge_method}' "
                                  f"expects exactly {expected_n_confs}."):
             molecule.assign_partial_charges(toolkit_registry=toolkit_registry,
