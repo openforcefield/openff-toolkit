@@ -1786,7 +1786,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
     def assign_partial_charges(self,
                                molecule,
                                partial_charge_method=None,
-                               use_conformers=False,
+                               use_conformers=None,
                                strict_n_conformers=False):
 
         """
@@ -3817,7 +3817,6 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
 
         import os
         import subprocess
-        from simtk import unit
         from openforcefield.topology import Molecule
 
         if partial_charge_method is None:

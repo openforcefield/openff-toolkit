@@ -2425,20 +2425,20 @@ class FrozenMolecule(Serializable):
             # that supports the desired partial charge method, so we
             # tell the ToolkitRegistry to continue trying ToolkitWrappers
             # if one raises an error (raise_first_error=False)
-            charges = toolkit_registry.call('assign_partial_charges',
-                                            self,
-                                            partial_charge_method=partial_charge_method,
-                                            use_conformers=use_conformers,
-                                            strict_n_conformers=strict_n_conformers,
-                                            raise_first_error=False
-                                            )
+            toolkit_registry.call('assign_partial_charges',
+                                  self,
+                                  partial_charge_method=partial_charge_method,
+                                  use_conformers=use_conformers,
+                                  strict_n_conformers=strict_n_conformers,
+                                  raise_first_error=False
+                                  )
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
-            charges = toolkit.assign_partial_charges(self,
-                                                     partial_charge_method=partial_charge_method,
-                                                     use_conformers=use_conformers,
-                                                     strict_n_conformers=strict_n_conformers
-                                                     )
+            toolkit.assign_partial_charges(self,
+                                           partial_charge_method=partial_charge_method,
+                                           use_conformers=use_conformers,
+                                           strict_n_conformers=strict_n_conformers
+                                           )
         else:
             raise InvalidToolkitError(
                 f'Invalid toolkit_registry passed to assign_partial_charges.'
