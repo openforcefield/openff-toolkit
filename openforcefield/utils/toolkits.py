@@ -4367,7 +4367,7 @@ class ToolkitRegistry:
         raise NotImplementedError(msg)
 
     # TODO: Can we instead register available methods directly with `ToolkitRegistry`, so we can just use `ToolkitRegistry.method()`?
-    def call(self, method_name, *args, raise_first_error=True, **kwargs):
+    def call(self, method_name, *args, raise_exception_types=None, **kwargs):
         """
         Execute the requested method by attempting to use all registered toolkits in order of precedence.
 
@@ -4379,7 +4379,7 @@ class ToolkitRegistry:
         ----------
         method_name : str
             The name of the method to execute
-        raise_first_error : bool, default=True
+        raise_exception_types : list of Exception subclasses, default=None
             If True, raise an exception if the first ToolkitWrapper in the
             ToolkitRegistry fails to perform the requested task. If False try ALL
             ToolkitWrappers that can provide the requested method
@@ -4407,21 +4407,33 @@ class ToolkitRegistry:
 
         """
         # TODO: catch ValueError and compile list of methods that exist but rejected the specific parameters because they did not implement the requested methods
+        #Change raise_first_error kwarg to raise_error_types list
+        #raise_first_error = True
+        if raise_exception_types is None:
+            raise_exception_types = [Exception]
 
         errors = list()
         for toolkit in self._toolkits:
             if hasattr(toolkit, method_name):
                 method = getattr(toolkit, method_name)
-                if raise_first_error:
-                    try:
-                        return method(*args, **kwargs)
-                    except NotImplementedError as not_implemented_error:
-                        errors.append((toolkit, not_implemented_error))
-                else:
-                    try:
-                        return method(*args, **kwargs)
-                    except Exception as e:
-                        errors.append((toolkit, e))
+                #if raise_first_error:
+                try:
+                    return method(*args, **kwargs)
+                except Exception as e:
+                    for exception_type in raise_exception_types:
+                        if isinstance(e, exception_type):
+                            raise e
+                    #if type(e) in raise_exception_types:
+                    #    raise e
+                    #else:
+                    errors.append((toolkit, e))
+                # except NotImplementedError as not_implemented_error:
+                #     errors.append((toolkit, not_implemented_error))
+                # else:
+                #     try:
+                #         return method(*args, **kwargs)
+                #     except Exception as e:
+                #         errors.append((toolkit, e))
 
         # No toolkit was found to provide the requested capability
         # TODO: Can we help developers by providing a check for typos in expected method names?

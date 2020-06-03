@@ -2253,13 +2253,13 @@ class TestToolkitRegistry:
             registry.call('assign_partial_charges',
                           molecule=mol,
                           partial_charge_method="NotARealChargeMethod",
-                          raise_first_error=True)
+                          raise_exception_types=[ChargeMethodUnavailableError])
 
         with pytest.raises(ValueError, match="partial_charge_method \'notarealchargemethod\' is not available from OpenEyeToolkitWrapper"):
             registry.call('assign_partial_charges',
                           molecule=mol,
                           partial_charge_method="NotARealChargeMethod",
-                          raise_first_error=False)
+                          raise_exception_types=[])
 
     @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
     def test_substructure_search_on_large_molecule(self):

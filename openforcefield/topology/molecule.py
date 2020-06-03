@@ -51,7 +51,7 @@ import openforcefield
 from openforcefield.utils import serialize_numpy, deserialize_numpy, quantity_to_string, \
     string_to_quantity, check_units_are_compatible
 from openforcefield.utils.toolkits import ToolkitRegistry, ToolkitWrapper, RDKitToolkitWrapper, OpenEyeToolkitWrapper,\
-    InvalidToolkitError, GLOBAL_TOOLKIT_REGISTRY
+    InvalidToolkitError, UndefinedStereochemistryError, GLOBAL_TOOLKIT_REGISTRY
 from openforcefield.utils.toolkits import DEFAULT_AROMATICITY_MODEL
 from openforcefield.utils.serialization import Serializable
 
@@ -1542,19 +1542,24 @@ class FrozenMolecule(Serializable):
             # Check through the toolkit registry to find a compatible wrapper for loading
             if not loaded:
                 try:
-                    result = toolkit_registry.call('from_object', other, allow_undefined_stereo=allow_undefined_stereo)
+                    result = toolkit_registry.call('from_object',
+                                                   other,
+                                                   allow_undefined_stereo=allow_undefined_stereo,
+                                                   #raise_first_error=False
+                                                   raise_exception_types=[UndefinedStereochemistryError])
                 # NotImplementedError should never be raised... Only from_file and from_file_obj are provided
                 # in the base class and require overwriting, so from_object should be excluded
                 # except NotImplementedError as e:
-                #     raise e
+                #    raise e
                 # A ValueError will be raised if "other" is of the correct type to be handled by this function,
                 # but there's something wrong with the information inside it.
                 except ValueError as e:
                     value_errors.append(e)
-                # A TypeError will be raised if simple type-checking shows that "other" is not of the correct type
-                # to be handled here
-                except TypeError:
-                    pass
+                # # A TypeError will be raised if simple type-checking shows that "other" is not of the correct type
+                # # to be handled here
+                # except TypeError:
+                #     pass
+                #except UndefinedStereochemistryError as e:
                 else:
                     self._copy_initializer(result)
                     loaded = True
@@ -2437,7 +2442,8 @@ class FrozenMolecule(Serializable):
                                   partial_charge_method=partial_charge_method,
                                   use_conformers=use_conformers,
                                   strict_n_conformers=strict_n_conformers,
-                                  raise_first_error=False
+                                  # raise_first_error=False
+                                  raise_exception_types=[]
                                   )
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
