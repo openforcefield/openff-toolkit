@@ -22,7 +22,8 @@ import pytest
 
 from openforcefield.utils.toolkits import (OpenEyeToolkitWrapper, RDKitToolkitWrapper,
                                            AmberToolsToolkitWrapper, ToolkitRegistry,
-                                           GAFFAtomTypeWarning, UndefinedStereochemistryError)
+                                           GAFFAtomTypeWarning, UndefinedStereochemistryError,
+                                           ToolkitUnavailableException, InvalidToolkitError)
 from openforcefield.utils import get_data_file_path
 from openforcefield.topology.molecule import Molecule
 from openforcefield.tests.test_forcefield import create_ethanol, create_cyclohexane, create_acetaldehyde, \
@@ -1768,6 +1769,19 @@ class TestAmberToolsToolkitWrapper:
 class TestToolkitRegistry:
     """Test the ToolkitRegistry"""
 
+    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
+    def test_add_bad_toolkit(self):
+        registry = ToolkitRegistry(toolkit_precedence=[RDKitToolkitWrapper])
+        with pytest.raises(InvalidToolkitError):
+            registry.add_toolkit('rdkit as a string')
+
+    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
+    @pytest.mark.skipif(OpenEyeToolkitWrapper.is_available(), reason='Skipping while OpenEye is available')
+    def test_register_unavailable_toolkit(self):
+        registry = ToolkitRegistry(toolkit_precedence=[RDKitToolkitWrapper])
+        with pytest.raises(ToolkitUnavailableException):
+            registry.register_toolkit(toolkit_wrapper=OpenEyeToolkitWrapper, exception_if_unavailable=True)
+
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_register_openeye(self):
         """Test creation of toolkit registry with OpenEye toolkit"""
@@ -1827,6 +1841,52 @@ class TestToolkitRegistry:
         smiles = '[H]C([H])([H])C([H])([H])[H]'
         molecule = registry.call('from_smiles', smiles)
         #partial_charges = registry.call('compute_partial_charges', molecule)
+
+    @pytest.mark.skipif(
+        not RDKitToolkitWrapper.is_available() or not AmberToolsToolkitWrapper.is_available(),
+        reason='RDKitToolkit and AmberToolsToolkit not available')
+    def test_deregister_toolkit(self):
+        """Test removing an instantiated toolkit from the registry"""
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper])
+
+        assert any([isinstance(tk, AmberToolsToolkitWrapper) for tk in toolkit_registry._toolkits])
+        assert any([isinstance(tk, RDKitToolkitWrapper) for tk in toolkit_registry._toolkits])
+
+        toolkit_registry.deregister_toolkit(toolkit_registry._toolkits[-1])
+        assert any([isinstance(tk, AmberToolsToolkitWrapper) for tk in toolkit_registry._toolkits])
+        assert not any([isinstance(tk, RDKitToolkitWrapper) for tk in toolkit_registry._toolkits])
+
+        toolkit_registry.deregister_toolkit(toolkit_registry._toolkits[-1])
+        assert not any([isinstance(tk, AmberToolsToolkitWrapper) for tk in toolkit_registry._toolkits])
+        assert not any([isinstance(tk, RDKitToolkitWrapper) for tk in toolkit_registry._toolkits])
+
+    @pytest.mark.skipif(
+        not RDKitToolkitWrapper.is_available() or not AmberToolsToolkitWrapper.is_available(),
+        reason='RDKitToolkit and AmberToolsToolkit not available')
+    def test_deregister_toolkit_by_class(self):
+        """Test removing a toolkit from the registry by matching class types"""
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper])
+
+        assert any([isinstance(tk, AmberToolsToolkitWrapper) for tk in toolkit_registry._toolkits])
+        assert any([isinstance(tk, RDKitToolkitWrapper) for tk in toolkit_registry._toolkits])
+
+        toolkit_registry.deregister_toolkit(RDKitToolkitWrapper)
+        assert any([isinstance(tk, AmberToolsToolkitWrapper) for tk in toolkit_registry._toolkits])
+        assert not any([isinstance(tk, RDKitToolkitWrapper) for tk in toolkit_registry._toolkits])
+
+        toolkit_registry.deregister_toolkit(AmberToolsToolkitWrapper)
+        assert not any([isinstance(tk, AmberToolsToolkitWrapper) for tk in toolkit_registry._toolkits])
+        assert not any([isinstance(tk, RDKitToolkitWrapper) for tk in toolkit_registry._toolkits])
+
+    @pytest.mark.skipif(
+        not RDKitToolkitWrapper.is_available() or not AmberToolsToolkitWrapper.is_available(),
+        reason='RDKitToolkit and AmberToolsToolkit not available')
+    def test_deregister_toolkit_bad_inputs(self):
+        """Test bad inputs to deregister_toolkit"""
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper])
+
+        with pytest.raises(InvalidToolkitError):
+            toolkit_registry.deregister_toolkit('rdkit as a string')
 
     @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
     def test_substructure_search_on_large_molecule(self):

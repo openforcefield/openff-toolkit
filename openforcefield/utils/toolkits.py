@@ -57,6 +57,7 @@ import importlib
 import logging
 import subprocess
 import tempfile
+import inspect
 
 from simtk import unit
 import numpy as np
@@ -4085,6 +4086,38 @@ class ToolkitRegistry:
         # Add toolkit to the registry.
         self._toolkits.append(toolkit_wrapper)
 
+    def deregister_toolkit(self, toolkit_wrapper):
+        """
+        De-register a toolkit.
+
+        .. warning :: This API is experimental and subject to change.
+
+        Parameters
+        ----------
+        toolkit_wrapper : instance or subclass of ToolkitWrapper
+            The toolkit wrapper to de-register, i.e. remove from registry.
+
+        """
+        # If passed in a un-instantiated wrapper, instantiate it
+        if inspect.isclass(toolkit_wrapper):
+            toolkit_wrapper = toolkit_wrapper()
+
+        if not isinstance(toolkit_wrapper, ToolkitWrapper):
+            raise InvalidToolkitError(f""
+                "Argument {toolkit_wrapper} must an ToolkitWrapper "
+                "or subclass of it. Found type {type(toolkit_wrapper)}."
+            )
+
+        toolkits_to_remove = []
+
+        for toolkit in self._toolkits:
+            if type(toolkit) == type(toolkit_wrapper):
+                toolkits_to_remove.append(toolkit)
+        # TODO: add else clause to warn user if toolkits_to_remove is empty?
+
+        for toolkit_to_remove in toolkits_to_remove:
+            self._toolkits.remove(toolkit_to_remove)
+
     def add_toolkit(self, toolkit_wrapper):
         """
         Append a ToolkitWrapper onto the list of toolkits in this ToolkitRegistry
@@ -4101,7 +4134,7 @@ class ToolkitRegistry:
             msg = "Something other than a ToolkitWrapper object was passed to ToolkitRegistry.add_toolkit()\n"
             msg += "Given object {} of type {}".format(toolkit_wrapper,
                                                        type(toolkit_wrapper))
-            raise Exception(msg)
+            raise InvalidToolkitError(msg)
         self._toolkits.append(toolkit_wrapper)
 
     # TODO: Can we automatically resolve calls to methods that are not explicitly defined using some Python magic?
