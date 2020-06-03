@@ -291,6 +291,37 @@ class TestParameterAttributeHandler:
 
 class TestParameterHandler:
 
+    from simtk import unit
+    length = 1*unit.angstrom
+    k = 10*unit.kilocalorie_per_mole/unit.angstrom**2
+
+    def test_add_parameter(self):
+        """Test the behavior of add_parameter"""
+        bh = BondHandler(skip_version_check=True)
+        param1 = {'smirks': '[*:1]-[*:2]', 'length': self.length, 'k': self.k}
+        param2 = {'smirks': '[*:1]=[*:2]', 'length': self.length, 'k': self.k}
+        param3 = {'smirks': '[*:1]#[*:2]', 'length': self.length, 'k': self.k}
+
+        bh.add_parameter(param1)
+        bh.add_parameter(param2)
+        bh.add_parameter(param3)
+
+        # TODO: Inspect and assert order
+
+        param_duplicate_smirks = {'smirks': '[*:1]=[*:2]', 'length': 2*self.length, 'k': self.k}
+
+        with pytest.raises(ValueError):
+            bh.add_parameter(param_duplicate_smirks)
+
+        param_to_add = {'smirks': '[#1:1]-[#6:2]', 'length': self.length, 'k': self.k}
+
+        with pytest.raises(ValueError):
+            bh.add_parameter(param_to_add, before='[*:1]-[*:2]', after='[*:1]#[*:2]')
+
+        bh.add_parameter(param_to_add, after='[*:1]=[*:2]')
+
+        # TODO: Inspect and assert order
+
     def test_different_units_to_dict(self):
         """Test ParameterHandler.to_dict() function when some parameters are in
         different units (proper behavior is to convert all quantities to the last-

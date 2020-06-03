@@ -1394,17 +1394,50 @@ class ParameterHandler(_ParameterAttributeHandler):
         pass
 
     # TODO: Can we ensure SMIRKS and other parameters remain valid after manipulation?
-    def add_parameter(self, parameter_kwargs):
+    def add_parameter(self, parameter_kwargs, after=None, before=None):
         """Add a parameter to the forcefield, ensuring all parameters are valid.
 
         Parameters
         ----------
         parameter_kwargs : dict
             The kwargs to pass to the ParameterHandler.INFOTYPE (a ParameterType) constructor
+        after : str, optional
+            The SMIRKS pattern of parameter directly before where the new parameter will be added
+        before : str, optional
+            The SMIRKS pattern of parameter directly after where the new parameter will be added
+
+        Note that when `before` and `after` are both specified, the new
+        parameter will be added immediately after the parameter matching the `before` pattern.
+
         """
+        # TODO: Take in ints for addition by index in parameter list
+        # TODO: Valiate that args are actually SMARTS?
+        for val in [before, after]:
+            if val and not isinstance(val, str):
+                raise TypeError
+
         # TODO: Do we need to check for incompatibility with existing parameters?
         new_parameter = self._INFOTYPE(**parameter_kwargs)
-        self._parameters.append(new_parameter)
+
+        if new_parameter.smirks in [p.smirks for p in self._parameters]:
+            raise ValueError(f'A parameter SMIRKS pattern {val} already exists.')
+
+        if before:
+            before_index = self._parameters.index(before)
+
+        if after:
+            after_index = self._parameters.index(after)
+
+        if before and after:
+            if after_index > before_index:
+                raise ValueError('before arg must be after after arg')
+
+        if after:
+            self._parameters.insert(after_index+1, new_parameter)
+        elif before:
+            self._parameters.insert(before_index, new_parameter)
+        else:
+            self._parameters.append(new_parameter)
 
     def get_parameter(self, parameter_attrs):
         """
