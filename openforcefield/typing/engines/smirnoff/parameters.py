@@ -2811,7 +2811,6 @@ class LibraryChargeHandler(_NonbondedHandler):
         charge = IndexedParameterAttribute(unit=unit.elementary_charge)
 
         def __init__(self, **kwargs):
-            from openforcefield.typing.chemistry import ChemicalEnvironment
             super().__init__(**kwargs)
             unique_tags, connectivity = GLOBAL_TOOLKIT_REGISTRY.call('get_tagged_smarts_connectivity', self.smirks)
             if len(self.charge) != len(unique_tags):
@@ -2946,14 +2945,14 @@ class ToolkitAM1BCCHandler(_NonbondedHandler):
             # Make a temporary copy of ref_mol to assign charges
             temp_mol = FrozenMolecule(ref_mol)
 
-            try:
-                # If the molecule wasn't already assigned charge values, calculate them here
-                toolkit_registry = kwargs.get('toolkit_registry', GLOBAL_TOOLKIT_REGISTRY)
-                temp_mol.generate_conformers(n_conformers=10, toolkit_registry=toolkit_registry)
-                temp_mol.compute_partial_charges_am1bcc(toolkit_registry=toolkit_registry)
-            except Exception as e:
-                warnings.warn(str(e), Warning)
-                continue
+            #try:
+            # If the molecule wasn't already assigned charge values, calculate them here
+            toolkit_registry = kwargs.get('toolkit_registry', GLOBAL_TOOLKIT_REGISTRY)
+            temp_mol.generate_conformers(n_conformers=10, toolkit_registry=toolkit_registry)
+            temp_mol.compute_partial_charges_am1bcc(toolkit_registry=toolkit_registry)
+            # except Exception as e:
+            #     warnings.warn(str(e), Warning)
+            #     continue
 
             # Assign charges to relevant atoms
             for topology_molecule in topology._reference_molecule_to_topology_molecules[ref_mol]:
