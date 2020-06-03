@@ -1554,7 +1554,7 @@ class TestForceFieldChargeAssignment:
         ethanol.generate_conformers()
         if expected_exception is None:
             ethanol.assign_partial_charges(partial_charge_method=partial_charge_method,
-                                            toolkit_registry=toolkit_wrapper)
+                                           toolkit_registry=toolkit_wrapper)
             abs_charge_sum = 0. * unit.elementary_charge
 
             # Ensure that nonzero charges were assigned
