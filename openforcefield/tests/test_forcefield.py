@@ -1543,9 +1543,10 @@ class TestForceFieldChargeAssignment:
         """Check that the proper partial charge methods are available, and that unavailable partial charge methods
         raise an exception.
         """
-        toolkit_wrapper = inputs['toolkit']()
-        if not(toolkit_wrapper.is_available()):
-            pytest.skip(f"{toolkit_wrapper} is not available.")
+        toolkit_wrapper_class = inputs['toolkit']
+        if not(toolkit_wrapper_class.is_available()):
+            pytest.skip(f"{toolkit_wrapper_class} is not available.")
+        toolkit_wrapper = toolkit_wrapper_class()
         partial_charge_method = inputs['partial_charge_method']
         expected_exception = inputs['exception']
         expected_exception_match = inputs['exception_match']

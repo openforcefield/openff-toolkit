@@ -1756,7 +1756,7 @@ class TestAmberToolsToolkitWrapper:
     @pytest.mark.skipif(not RDKitToolkitWrapper.is_available() or not AmberToolsToolkitWrapper.is_available(),
                         reason='RDKitToolkit and AmberToolsToolkit not available')
     def test_compute_partial_charges_am1bcc_net_charge(self):
-        """Test AmberToolsToolkitWrapper assign_partial_charges() on a molecule with a net +1 charge"""
+        """Test AmberToolsToolkitWrapper assign_partial_charges() on a molecule with a net -1 charge"""
         toolkit_registry = ToolkitRegistry(toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper])
         molecule = create_acetate()
         molecule.compute_partial_charges_am1bcc(toolkit_registry=toolkit_registry)

@@ -157,8 +157,6 @@ class ToolkitWrapper:
     _is_available = None  # True if toolkit is available
     _toolkit_name = None  # Name of the toolkit
     _toolkit_installation_instructions = None  # Installation instructions for the toolkit
-    #_toolkit_file_read_formats = []  # The file types that this toolkit can read
-    #_toolkit_file_write_formats = []  # The file types that this toolkit can write
 
     #@staticmethod
     # TODO: Right now, to access the class definition, I have to make this a classmethod
@@ -344,9 +342,6 @@ class ToolkitWrapper:
             warnings.warn(wrong_confs_msg, IncorrectNumConformersWarning)
 
 
-
-
-
 @inherit_docstrings
 class BuiltInToolkitWrapper(ToolkitWrapper):
     """
@@ -439,7 +434,6 @@ class BuiltInToolkitWrapper(ToolkitWrapper):
                 partial_charges[part_idx] = particle.formal_charge
 
         molecule.partial_charges = partial_charges
-
 
 
 @inherit_docstrings
@@ -548,14 +542,14 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         Raises
         ------
-        ValueError
+        NotImplementedError
             If the object could not be converted into a Molecule.
         """
         # TODO: Add tests for the from_object functions
         from openeye import oechem
         if isinstance(object, oechem.OEMolBase):
             return self.from_openeye(object, allow_undefined_stereo=allow_undefined_stereo)
-        raise TypeError('Cannot create Molecule from {} object'.format(type(object)))
+        raise NotImplementedError('Cannot create Molecule from {} object'.format(type(object)))
 
     def from_file(self,
                   file_path,
@@ -1819,7 +1813,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         ------
         ChargeMethodUnavailableError if the requested charge method can not be handled by this toolkit
 
-        ChargeCalculationError if the charge calculation is supported by this toolkit, but fails
+        ChargeCalculationError if the charge method is supported by this toolkit, but fails
         """
 
         from openeye import oequacpac, oechem
@@ -1870,7 +1864,6 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             )
 
         charge_method = SUPPORTED_CHARGE_METHODS[partial_charge_method]
-        # AVAILABLE_CHARGE_METHODS = ['am1-mulliken', 'gasteiger', 'mmff94', 'am1bcc', 'am1bccnosymspt', 'am1bccelf10']
 
         # Make a temporary copy of the molecule, since we'll be messing with its conformers
         mol_copy = Molecule(molecule)
@@ -1919,7 +1912,6 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             raise ChargeCalculationError(f'Unable to assign charges: {errfs.str().decode("UTF-8")}')
 
         # Extract and return charges
-        ## TODO: Behavior when given multiple conformations?
         ## TODO: Make sure atom mapping remains constant
 
         charges = unit.Quantity(
@@ -1946,12 +1938,6 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
 
         .. warning :: This API is experimental and subject to change.
-
-        .. todo ::
-
-           * Should the default be ELF?
-           * Can we expose more charge models?
-
 
         Parameters
         ----------
@@ -2284,7 +2270,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         if isinstance(object, Chem.rdchem.Mol):
             return self.from_rdkit(object,
                                    allow_undefined_stereo=allow_undefined_stereo)
-        raise TypeError('Cannot create Molecule from {} object'.format(type(object)))
+        raise NotImplementedError('Cannot create Molecule from {} object'.format(type(object)))
 
     def from_pdb_and_smiles(self, file_path, smiles, allow_undefined_stereo=False):
         """
@@ -3811,9 +3797,8 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         Raises
         ------
 
-
-        ChargeCalculationError if the charge calculation is supported by this toolkit, but fails
-    """
+        ChargeCalculationError if the charge method is supported by this toolkit, but fails
+        """
 
         import os
         import subprocess
@@ -3938,11 +3923,6 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
             Whether to raise an exception if an invalid number of conformers is provided.
             If this is False and an invalid number of conformers is found, a warning will be raised
             instead of an Exception.
-
-        Raises
-        ------
-        ValueError if the requested charge method could not be handled
-
         """
 
         import warnings
@@ -4380,11 +4360,11 @@ class ToolkitRegistry:
         method_name : str
             The name of the method to execute
         raise_exception_types : list of Exception subclasses, default=None
-            If True, raise an exception if the first ToolkitWrapper in the
-            ToolkitRegistry fails to perform the requested task. If False try ALL
-            ToolkitWrappers that can provide the requested method
-            and, if none of them return successfully, raise a single ValueError with
-            the collected errors from all ToolkitWrappers.
+            A list of exception-derived types to catch and raise immediately. If None, this will be set to [Exception],
+            which will raise an error immediately if the first ToolkitWrapper in the registry fails. To try each
+            ToolkitWrapper that provides a suitably-named method, set this to the empty list ([]). If all
+            ToolkitWrappers run without raising any exceptions in this list, a single ValueError will be raised
+            containing the each ToolkitWrapper that was tried and the exception it raised.
 
         Raises
         ------
@@ -4392,7 +4372,7 @@ class ToolkitRegistry:
 
         ValueError if raise_first_error=False and the task is failed
 
-        Other forms of exceptions are possible if raise_first_error=True.
+        Other forms of exceptions are possible if raise_exception_types is specified.
         These are defined by the ToolkitWrapper method being called.
 
         Examples
@@ -4406,9 +4386,6 @@ class ToolkitRegistry:
         >>> smiles = toolkit_registry.call('to_smiles', molecule)
 
         """
-        # TODO: catch ValueError and compile list of methods that exist but rejected the specific parameters because they did not implement the requested methods
-        #Change raise_first_error kwarg to raise_error_types list
-        #raise_first_error = True
         if raise_exception_types is None:
             raise_exception_types = [Exception]
 
@@ -4416,24 +4393,13 @@ class ToolkitRegistry:
         for toolkit in self._toolkits:
             if hasattr(toolkit, method_name):
                 method = getattr(toolkit, method_name)
-                #if raise_first_error:
                 try:
                     return method(*args, **kwargs)
                 except Exception as e:
                     for exception_type in raise_exception_types:
                         if isinstance(e, exception_type):
                             raise e
-                    #if type(e) in raise_exception_types:
-                    #    raise e
-                    #else:
                     errors.append((toolkit, e))
-                # except NotImplementedError as not_implemented_error:
-                #     errors.append((toolkit, not_implemented_error))
-                # else:
-                #     try:
-                #         return method(*args, **kwargs)
-                #     except Exception as e:
-                #         errors.append((toolkit, e))
 
         # No toolkit was found to provide the requested capability
         # TODO: Can we help developers by providing a check for typos in expected method names?
@@ -4444,8 +4410,6 @@ class ToolkitRegistry:
         # Append information about toolkits that implemented the method, but could not handle the provided parameters
         for toolkit, error in errors:
             msg += ' {} {} : {}\n'.format(toolkit, type(error),  error)
-        # for toolkit, value_error in value_errors:
-        #     msg += ' {} : {}\n'.format(toolkit, value_error)
         raise ValueError(msg)
 
 
