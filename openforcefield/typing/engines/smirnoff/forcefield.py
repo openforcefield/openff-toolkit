@@ -1096,6 +1096,9 @@ class ForceField:
         partial_bond_orders_from_molecules : List[openforcefield.molecule.Molecule], optional
             If specified, partial bond orders will be taken from the given molecules
             instead of being determined by the force field.
+        return_topology : bool
+            If ``True``, return tuple of ``(system, topology)``, where
+            ``topology`` is the processed topology. Default ``False``.
 
         Returns
         -------
@@ -1103,6 +1106,8 @@ class ForceField:
             The newly created OpenMM System corresponding to the specified ``topology``
 
         """
+        return_topology = kwargs.pop('return_topology', False)
+
         # Make a deep copy of the topology so we don't accidentally modify it
         topology = copy.deepcopy(topology)
 
@@ -1149,7 +1154,10 @@ class ForceField:
         for parameter_handler in parameter_handlers:
             parameter_handler.postprocess_system(system, topology, **kwargs)
 
-        return system
+        if return_topology:
+            return (system, topology)
+        else:
+            return system
 
     def create_parmed_structure(self,
                                 topology,

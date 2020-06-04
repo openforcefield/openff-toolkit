@@ -2162,12 +2162,19 @@ class TestForceFieldParameterAssignment:
                                 xml_ff_torsion_bo)
         topology = Topology.from_molecules([mol])
 
-        omm_system = forcefield.create_openmm_system(
+        omm_system, ret_top = forcefield.create_openmm_system(
                 topology,
-                charge_from_molecules=[mol])
+                charge_from_molecules=[mol],
+                return_topology=True)
 
         off_torsion_force = [force for force in omm_system.getForces() if
                                isinstance(force, openmm.PeriodicTorsionForce)][0]
+
+        ret_mol = list(ret_top.reference_molecules)[0]
+        bond = ret_mol.get_bond_between(*central_atoms)
+
+        # openeye toolkit appears to yield around .9945 for this bond
+        assert bond.fractional_bond_order > .99
 
         for idx in range(off_torsion_force.getNumTorsions()):
             params = off_torsion_force.getTorsionParameters(idx)
@@ -2179,9 +2186,16 @@ class TestForceFieldParameterAssignment:
                     ((atom2 == atom3_mol) and (atom3 == atom2_mol))):
                 k = params[-1]
 
+                # do a hand calculation as a sanity check
+                slope = (7.5312 - 4.184)/(1.8 - 1.0)
+                k_interpolated_ret = slope * (bond.fractional_bond_order - 1.0) + 4.184
+                assert_almost_equal(k_interpolated_ret, k/k.unit, 2)
+
+                ## this doesn't work out for openeye, since the calculated
+                ## fractional bond order is slightly less than 1 for this bond
                 # check that we're at least between k1_bondorder1 and k1_bondorder2
                 # in kJ/mol
-                assert (k/k.unit > 4.184) and (k/k.unit < 7.5312)
+                #assert (k/k.unit > 4.184) and (k/k.unit < 7.5312)
 
                 # check that we *are not* matching the values we'd get if we
                 # had offered our molecules to `partial_bond_orders_from_molecules`
