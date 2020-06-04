@@ -464,7 +464,7 @@ class IndexedMappedParameterAttribute(ParameterAttribute):
 
     >>> my_par.length = [{1:'1 * angstrom'}, {1: 0.5 * unit.nanometer}]
     >>> my_par.length[0]
-    Quantity(value=1, unit=angstrom)
+    {1: Quantity(value=1, unit=angstrom)}
 
     Similarly, custom converters work as with ``ParameterAttribute``, but
     they are used to validate each value in the sequence.

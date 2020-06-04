@@ -7,6 +7,7 @@ Custom collections classes.
 
 __all__ = [
     'ValidatedList',
+    'ValidatedDict',
 ]
 
 
@@ -177,7 +178,7 @@ class ValidatedDict(dict):
 
     Multiple converters that are run before the validators can be specified.
 
-    >>> vl = ValidatedList([{'c': -1, 'd': '2', 'e': 3.0], converter=[float, abs],
+    >>> vl = ValidatedList([{'c': -1, 'd': '2', 'e': 3.0}], converter=[float, abs],
     ...                    validator=is_positive_validator)
     >>> vl
     {'c': 1.0, 'd': 2.0, 'e': 3.0}

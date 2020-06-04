@@ -1096,6 +1096,8 @@ class ForceField:
         partial_bond_orders_from_molecules : List[openforcefield.molecule.Molecule], optional
             If specified, partial bond orders will be taken from the given molecules
             instead of being determined by the force field.
+            **All** bonds on each molecule given must have ``fractional_bond_order`` specified.
+            A `ValueError` will be raised if any bonds have ``fractional_bond_order=None``.
         return_topology : bool
             If ``True``, return tuple of ``(system, topology)``, where
             ``topology`` is the processed topology. Default ``False``.

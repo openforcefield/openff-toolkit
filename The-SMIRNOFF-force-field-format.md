@@ -495,7 +495,12 @@ can be replaced by a single parameter line by first invoking the `fractional_bon
     <Proper smirks="[*:1]:[#6X4:2]~[#6X4:3]:[*:4]" periodicity1="2" phase1="0.0 * degree" k1_bondorder1="1.00*kilocalories_per_mole" k1_bondorder2="1.80*kilocalories_per_mole" idivf1="1.0"/>
     ...
 ```
-This allows specification of the barrier height for e.g. bond orders 1 and 2, and then interpolation between those based on the partial bond order.
+This allows specification of the barrier height for e.g. bond orders 1 and 2, and then interpolation between those based on the partial/fractional bond order.
+Note that in actual usage partial/fractional bond order may never be exactly 1 or 2, or perhaps even near 2; these values only serve to define the slope of the line used for interpolation.
+In the example above, we replaced the two proper torsion terms (one single central bond (`-`) and one aromatic central bond (`:`)) with a single term giving the barrier heights for bond order 1 and 2.
+Bond order 1 and 2 can be thought of as corresponding to the single- and double-bonded case, respectively.
+
+Some key usage points:
 * `fractional_bondorder_method` defaults to `AM1-Wiberg`.
 * `fractional_bondorder_interpolation` defaults to `linear`, which is the only supported scheme for now.
 
