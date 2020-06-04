@@ -2840,7 +2840,7 @@ class LibraryChargeHandler(_NonbondedHandler):
         return self._find_matches(entity, transformed_dict_cls=dict)
 
     def create_force(self, system, topology, **kwargs):
-        from openforcefield.topology import FrozenMolecule, TopologyAtom, TopologyVirtualSite
+        from openforcefield.topology import FrozenMolecule
 
         force = super().create_force(system, topology, **kwargs)
 
@@ -2948,11 +2948,12 @@ class ToolkitAM1BCCHandler(_NonbondedHandler):
             #try:
             # If the molecule wasn't already assigned charge values, calculate them here
             toolkit_registry = kwargs.get('toolkit_registry', GLOBAL_TOOLKIT_REGISTRY)
-            temp_mol.generate_conformers(n_conformers=10, toolkit_registry=toolkit_registry)
-            temp_mol.compute_partial_charges_am1bcc(toolkit_registry=toolkit_registry)
-            # except Exception as e:
-            #     warnings.warn(str(e), Warning)
-            #     continue
+            try:
+                temp_mol.generate_conformers(n_conformers=10, toolkit_registry=toolkit_registry)
+                temp_mol.compute_partial_charges_am1bcc(toolkit_registry=toolkit_registry)
+            except Exception as e:
+                warnings.warn(str(e), Warning)
+                continue
 
             # Assign charges to relevant atoms
             for topology_molecule in topology._reference_molecule_to_topology_molecules[ref_mol]:
