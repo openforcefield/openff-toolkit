@@ -1098,6 +1098,8 @@ class ForceField:
             instead of being determined by the force field.
             **All** bonds on each molecule given must have ``fractional_bond_order`` specified.
             A `ValueError` will be raised if any bonds have ``fractional_bond_order=None``.
+            Molecules in the topology not represented in this list will have fractional
+            bond orders calculated using underlying toolkits as needed.
         return_topology : bool
             If ``True``, return tuple of ``(system, topology)``, where
             ``topology`` is the processed topology. Default ``False``.
