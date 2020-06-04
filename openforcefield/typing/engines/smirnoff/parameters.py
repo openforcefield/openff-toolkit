@@ -2433,7 +2433,6 @@ class ProperTorsionHandler(ParameterHandler):
         else:
             force = existing[0]
 
-
         # check whether any of the reference molecules in the topology
         # are in the partial_bond_orders_from_molecules list
         if 'partial_bond_orders_from_molecules' in kwargs:

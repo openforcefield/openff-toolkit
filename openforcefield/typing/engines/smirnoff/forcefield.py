@@ -1106,6 +1106,11 @@ class ForceField:
         # Make a deep copy of the topology so we don't accidentally modify it
         topology = copy.deepcopy(topology)
 
+        # set all fractional_bond_orders in topology to None
+        for ref_mol in topology.reference_molecules:
+            for bond in ref_mol.bonds:
+                bond.fractional_bond_order = None
+
         # Set the topology aromaticity model to that used by the current forcefield
         # TODO: See openforcefield issue #206 for proposed implementation of aromaticity
         #topology.set_aromaticity_model(self._aromaticity_model)

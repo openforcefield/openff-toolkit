@@ -2185,8 +2185,8 @@ class TestForceFieldParameterAssignment:
 
                 # check that we *are not* matching the values we'd get if we
                 # had offered our molecules to `partial_bond_orders_from_molecules`
-                #with pytest.raises(AssertionError):
-                assert_almost_equal(k/k.unit, k_interpolated)
+                with pytest.raises(AssertionError):
+                    assert_almost_equal(k/k.unit, k_interpolated)
 
 
 class TestSmirnoffVersionConverter:
