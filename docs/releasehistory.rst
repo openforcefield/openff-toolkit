@@ -162,6 +162,7 @@ New features
 - `PR #573 <https://github.com/openforcefield/openforcefield/pull/573>`_:
   Adds ``quacpac`` error output to ``quacpac`` failure in ``Molecule.compute_partial_charges_am1bcc``.
 - `PR #560 <https://github.com/openforcefield/openforcefield/issues/560>`_: Added visualization method to the the Molecule class.
+- `PR #582 <https://github.com/openforcefield/openforcefield/pull/582>`_: Added fractional bond order interpolation
 
 
 Behavior changed
@@ -234,7 +235,7 @@ Tests added
   :py:meth:`Molecule.chemical_environment_matches <openforcefield.topology.Molecule.chemical_environment_matches>`
   to check that the complete set of matches is returned.
 - `PR #509 <https://github.com/openforcefield/openforcefield/pull/509>`_: Added test for
-  :py:meth:`Forcefield.create_openmm_system <openforcefield.typing.engines.smirnoff.forcefield.create_openmm_system>`
+  :py:meth:`Forcefield.create_openmm_system <openforcefield.typing.engines.smirnoff.forcefield.ForceField.create_openmm_system>`
   to check that a protein system can be created.
 - `PR #506 <https://github.com/openforcefield/openforcefield/pull/506>`_: Added a test for the molecule
    identified in issue #513 as loosing aromaticity when converted to rdkit.
@@ -253,6 +254,8 @@ Tests added
   for ``quacpac`` failure in ``Molecule.compute_partial_charges_am1bcc``.
 - `PR #579 <https://github.com/openforcefield/openforcefield/pull/579>`_: Adds regression tests to ensure RDKit can be
   be used to write multi-model PDB files.
+- `PR #582 <https://github.com/openforcefield/openforcefield/pull/582>`_: Added fractional bond order interpolation tests,
+  tests for `ValidatedDict <openforcefield.utils.collections.ValidatedDict>`
 
 
 Bugfixes
