@@ -99,7 +99,8 @@ jobs:
       run: |
         . devtools/gh-actions/initialize_conda.sh
         conda activate test
-        PYTEST_ARGS="-v --ignore=utilities --ignore=examples/deprecated --nbval-lax --cov=openforcefield --cov-config=setup.cfg"
+        PYTEST_ARGS="-v --ignore=utilities --ignore=examples/deprecated --nbval-lax"
+        PYTEST_ARGS+=" --cov=openforcefield --cov-report=xml --cov-config=setup.cfg"
         if [[ "$RDKIT" == true && "$OPENEYE" == true ]]; then
           PYTEST_ARGS+=" --ignore=docs --ignore=devtools --doctest-modules"
         elif [[ "$OPENEYE" == true ]]; then
@@ -107,7 +108,13 @@ jobs:
           PYTEST_ARGS+=" --ignore=examples/check_dataset_parameter_coverage"
           PYTEST_ARGS+=" --ignore=examples/QCArchive_interface"
         fi
+        if [[ "$RDKIT" == false ]]; then
+          PYTEST_ARGS+=" --ignore=examples/conformer_energies"
+        fi
         pytest $PYTEST_ARGS
 
     - name: Codecov
       uses: codecov/codecov-action@v1
+      with:
+        file: ./coverage.xml
+        fail_ci_if_error: true

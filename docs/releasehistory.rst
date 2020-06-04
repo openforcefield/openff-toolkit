@@ -7,18 +7,82 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 * ``minor`` increments add features but do not break API compatibility
 * ``micro`` increments represent bugfix releases or improvements in documentation
 
-0.6.1 - Bugfixes
-----------------
+0.7.0 - Current development
+---------------------------
+
+Behavior changed
+""""""""""""""""
+- `PR #508 <https://github.com/openforcefield/openforcefield/pull/508>`_:
+  In order to provide the same results for the same chemical species, regardless of input
+  conformation, fractional bond order calculation methods now default to ignore input conformers
+  and generate a new conformer of the molecule before running semiempirical calculations.
+  Users can override this behavior by specifying the keyword argument
+  ``use_conformers=molecule.conformers``
+- `PR #281 <https://github.com/openforcefield/openforcefield/pull/281>`_: Closes
+  `Issue #250 <https://github.com/openforcefield/openforcefield/issues/250>`_
+  by adding support for partial charge I/O in SDF. The partial charges are stored as a property in the
+  SDF molecule block under the tag ``<atom.dprop.PartialCharge>``.
+- `PR #281 <https://github.com/openforcefield/openforcefield/pull/281>`_: If an OFFMol's
+  ``partial_charges`` attribute is set to ``None`` (the default value), calling ``to_openeye`` will
+  now produce a OE molecule with partial charges set to ``nan``. This would previously produce an OE
+  molecule with partial charges of 0.0, which was a loss of information, since it wouldn't be clear
+  whether the original OFFMol's partial charges were REALLY all-zero as opposed to ``None``. OpenEye toolkit
+  wrapper methods such as ``from_smiles`` and ``from_file`` now produce OFFMols with
+  ``partial_charges = None`` when appropriate (previously these would produce OFFMols with
+  all-zero charges, for the same reasoning as above).
+- `PR #281 <https://github.com/openforcefield/openforcefield/pull/281>`_: ``Molecule.to_rdkit``
+  now sets partial charges on the RDAtom's ``PartialCharges`` property (this was previously set
+  on the ``partial_charges`` property). If the OFFMol's partial_charges attribute is None, this property
+  will not be defined on the RDAtoms.
+- `PR #281 <https://github.com/openforcefield/openforcefield/pull/281>`_:
+  Enforce the behavior during SDF I/O that a SDF may contain multiple MOLECULES, but that the OFF Toolkit
+  DOES NOT assume that it contains multiple CONFORMERS of the same molecule. This is an
+  important distinction, since otherwise there is ambiguity around whether properties of one
+  entry in a SDF are shared among several molecule blocks or not, or how to resolve conflicts if properties
+  are defined differently for several "conformers" of chemically-identical species (More info
+  `here <https://docs.eyesopen.com/toolkits/python/oechemtk/oemol.html#dude-where-s-my-sd-data>`_.
+  If the user requests the OFF
+  Toolkit to write a multi-conformer ``Molecule`` to SDF, only the first conformer will be written.
+  For more fine-grained control of writing properties, conformers, and partial charges, consider
+  using ``Molecule.to_rdkit`` or ``Molecule.to_openeye`` and using the functionality offered by
+  those packages.
+- `PR #281 <https://github.com/openforcefield/openforcefield/pull/281>`_: Due to different
+  constraints placed on the data types allowed by external toolkits, we make our best effort to
+  preserve ``offmol.properties`` when converting molecules to other packages, but users should be aware that
+  no guarantee of data integrity is made. The only data format for keys and values in the property dict that
+  we will try to support through a roundtrip to another toolkit's Molecule object is ``string``.
+- `PR #574 <https://github.com/openforcefield/openforcefield/pull/574>`_: Removed check that all
+  partial charges are zero after assignment by `quacpac` when AM1BCC used for charge assignment.
+  This check fails erroneously for cases in which the partial charge assignments are correctly all zero,
+  such as for ``N#N``. It is also an unnecessary check given that `quacpac` will reliably indicate when
+  it has failed to assign charges.
+- `PR #597 <https://github.com/openforcefield/openforcefield/pull/597>`_: Energy-minimized sample systems
+  with Parsley 1.1.0.
+
 
 API-breaking changes
 """"""""""""""""""""
+- `PR #601 <https://github.com/openforcefield/openforcefield/pull/601>`_: Removes
+  almost all of the previous
+  :py:class:`ChemicalEnvironment <openforcefield.typing.chemistry.ChemicalEnvironment>`
+  API, since this entire module was simply copied from
+  `Chemper <https://github.com/MobleyLab/chemper>`_ several years ago and has fallen behind on updates.
+  Currently only
+  :py:meth:`ChemicalEnvironment.get_type <openforcefield.typing.chemistry.ChemicalEnvironment.get_type>`,
+  :py:meth:`ChemicalEnvironment.validate <openforcefield.typing.chemistry.ChemicalEnvironment.validate>`,
+  and an equivalent classmethod
+  :py:meth:`ChemicalEnvironment.validate_smirks <openforcefield.typing.chemistry.ChemicalEnvironment.validate_smirks>`
+  remain. Also, please comment on
+  `this GitHub issue <https://github.com/MobleyLab/chemper/issues/90>`_ if you HAVE been using
+  the previous extra functionality in this module and would like us to prioritize creation of a Chemper
+  conda package.
 - `PR #558 <https://github.com/openforcefield/openforcefield/pull/558>`_: Removes
-  ``TopologyMolecule.topology_particle_start_index``, since the :py:class`Topology <openforcefield.topology.Topology>`
-  particle indexing system now orders :py:class`TopologyVirtualSites <openforcefield.topology.TopologyVirtualSite>`
+  ``TopologyMolecule.topology_particle_start_index``, since the :py:class:`Topology <openforcefield.topology.Topology>`
+  particle indexing system now orders :py:class:`TopologyVirtualSites <openforcefield.topology.TopologyVirtualSite>`
   after all atoms.
-  :py:meth`TopologyMolecule.topology_atom_start_index <openforcefield.topology.TopologyMolecule.topology_atom_start_index>`
+  :py:meth:`TopologyMolecule.topology_atom_start_index <openforcefield.topology.TopologyMolecule.topology_atom_start_index>`
   and
-  :py:meth`TopologyMolecule.topology_virtual_site_start_index <openforcefield.topology.TopologyMolecule.topology_virtual_site_start_index>`
+  :py:meth:`TopologyMolecule.topology_virtual_site_start_index <openforcefield.topology.TopologyMolecule.topology_virtual_site_start_index>`
   are still available to access the appropriate values in the respective topology indexing systems.
 - `PR #508 <https://github.com/openforcefield/openforcefield/pull/508>`_:
   ``OpenEyeToolkitWrapper.compute_wiberg_bond_orders`` is now
@@ -28,10 +92,20 @@ API-breaking changes
 - `PR #508 <https://github.com/openforcefield/openforcefield/pull/508>`_:
   ``Molecule.compute_wiberg_bond_orders`` is now
   :py:meth:`Molecule.assign_fractional_bond_orders <openforcefield.topology.Molecule.assign_fractional_bond_orders>`.
-
+- `PR #595 <https://github.com/openforcefield/openforcefield/pull/595>`_: Removed functions
+  :py:meth:`temporary_directory <openforcefield.utils.utils.temporary_directory>` and
+  :py:meth:`temporary_cd <openforcefield.utils.utils.temporary_cd>` and replaced their behavoir with 
+  ``tempfile.TemporaryDirectory()``.
 
 New features
 """"""""""""
+- `PR #601 <https://github.com/openforcefield/openforcefield/pull/601>`_: Adds
+  :py:meth:`RDKitToolkitWrapper.get_tagged_smarts_connectivity <openforcefield.utils.toolkits.RDKitToolkitWrapper.get_tagged_smarts_connectivity>`
+  and
+  :py:meth:`OpenEyeToolkitWrapper.get_tagged_smarts_connectivity <openforcefield.utils.toolkits.OpenEyeToolkitWrapper.get_tagged_smarts_connectivity>`,
+  which allow the use of either toolkit for smirks/tagged smarts validation.
+- `PR #600 <https://github.com/openforcefield/openforcefield/pull/600>`_:
+  Adds :py:meth:`ForceField.__getitem__ <openforcefield.typing.engines.smirnoff.forcefield.ForceField.__getitem__>` to look up ``ParameterHandler`` objects based on their string names.
 - `PR #508 <https://github.com/openforcefield/openforcefield/pull/508>`_:
   Adds :py:meth:`AmberToolsToolkitWrapper.assign_fractional_bond_orders <openforcefield.utils.toolkits.AmberToolsToolkitWrapper.assign_wiberg_bond_orders>`.
 - `PR #469 <https://github.com/openforcefield/openforcefield/pull/469>`_:
@@ -46,6 +120,9 @@ New features
   and :py:meth:`Molecule.to_hill_formula <openforcefield.topology.Molecule.to_hill_formula>`
   and :py:meth:`Molecule.to_qcschema <openforcefield.topology.Molecule.to_qcschema>`
   and :py:meth:`Molecule.from_qcschema <openforcefield.topology.Molecule.from_qcschema>`
+      .. note::
+         The qcschema method accepts an extras dictionary which is passed into the validated qcelemental.models.Molecule
+         object.
   and :py:meth:`Molecule.from_mapped_smiles <openforcefield.topology.Molecule.from_mapped_smiles>`
   and :py:meth:`Molecule.from_pdb_and_smiles <openforcefield.topology.Molecule.from_pdb_and_smiles>`
   and :py:meth:`Molecule.canonical_order_atoms <openforcefield.topology.Molecule.canonical_order_atoms>`
@@ -75,6 +152,16 @@ New features
            :py:class:`Molecule <openforcefield.topology.Molecule>`.
 - `PR #563 <https://github.com/openforcefield/openforcefield/pull/563>`_:
   Adds ``test_forcefields/ion_charges.offxml``, giving `LibraryCharges` for monatomic ions.
+- `PR #543 <https://github.com/openforcefield/openforcefield/pull/543>`_:
+  Adds 3 new methods to the :py:class:`Molecule <openforcefield.topology.Molecule>` which allow the enumeration of molecule
+  states these are :py:meth:`Molecule.enumerate_tautomers <openforcefield.topology.Molecule.enumerate_tautomers>`,
+  py:meth:`Molecule.enumerate_stereoisomers <openforcefield.topology.Molecule.enumerate_stereoisomers>`,
+  py:meth:`Molecule.enumerate_protomers <openforcefield.topology.Molecule.enumerate_protomers>`
+      .. warning::
+         Enumerate protomoers is currently only available through the OpenEye toolkit.
+- `PR #573 <https://github.com/openforcefield/openforcefield/pull/573>`_:
+  Adds ``quacpac`` error output to ``quacpac`` failure in ``Molecule.compute_partial_charges_am1bcc``.
+- `PR #560 <https://github.com/openforcefield/openforcefield/issues/560>`_: Added visualization method to the the Molecule class.
 
 
 Behavior changed
@@ -160,6 +247,13 @@ Tests added
 - `PR #529 <https://github.com/openforcefield/openforcefield/pull/529>`_: Added to XYZ file coverage tests.
 - `PR #563 <https://github.com/openforcefield/openforcefield/pull/563>`_: Added `LibraryCharges` parameterization test
   for monatomic ions in ``test_forcefields/ion_charges.offxml``.
+- `PR #543 <https://github.com/openforcefield/openforcefield/pull/543>`_: Added tests to assure that state enumeration can
+  correctly find molecules tautomers, stereoisomers and protomers when possible.
+- `PR #573 <https://github.com/openforcefield/openforcefield/pull/573>`_: Added test for ``quacpac`` error output
+  for ``quacpac`` failure in ``Molecule.compute_partial_charges_am1bcc``.
+- `PR #579 <https://github.com/openforcefield/openforcefield/pull/579>`_: Adds regression tests to ensure RDKit can be
+  be used to write multi-model PDB files.
+
 
 Bugfixes
 """"""""
@@ -196,15 +290,23 @@ Bugfixes
 - `Issue #474 <https://github.com/openforcefield/openforcefield/issues/474>`_: We can now  convert molecules to InChI and
    InChIKey and from InChI.
 - `Issue #523 <https://github.com/openforcefield/openforcefield/issues/523>`_: The
-   :py:meth: `Molecule.to_file <openforcefield.topology.Molecule.to_file>` can now correctly write to `MOL` files in
+   :py:meth:`Molecule.to_file <openforcefield.topology.Molecule.to_file>` can now correctly write to `MOL` files in
    line with the support file type list.
+- `Issue #568 <https://github.com/openforcefield/openforcefield/issues/568>`_: The
+  :py:meth:`Molecule.to_file <openforcefield.topology.Molecule.to_file>` can now correctly write multi-model PDB files
+  when using the RDKit backend toolkit.
 
-Example added
-"""""""""""""
+Examples added
+""""""""""""""
+- `PR #591 <https://github.com/openforcefield/openforcefield/pull/591>`_ and
+  `PR #533 <https://github.com/openforcefield/openforcefield/pull/533>`_: Adds an
+  `example notebook and utility to compute conformer energies <https://github.com/openforcefield/openforcefield/blob/master/examples/conformer_energies>`_.
+  This example is made to be reverse-compatible with the 0.6.0 OpenFF Toolkit release.
 - `PR #472 <https://github.com/openforcefield/openforcefield/pull/472>`_: Adds an example notebook
-  `QCarchive_interface.ipynb <https://github.com/openforcefield/openforcefield/blob/master/examples/QCArchive_interface/QCarchive_interface.ipynb>`
+  `QCarchive_interface.ipynb <https://github.com/openforcefield/openforcefield/blob/master/examples/QCArchive_interface/QCarchive_interface.ipynb>`_
   which shows users how to instance the :py:class:`Molecule <openforcefield.topology.Molecule>` from
   a QCArchive entry level record and calculate the energy using RDKit through QCEngine.
+
 
 0.6.0 - Library Charges
 -----------------------
@@ -291,6 +393,7 @@ Tests added
 - `PR #430 <https://github.com/openforcefield/openforcefield/pull/430>`_: Added test for
   Wiberg Bond Order implemented in OpenEye Toolkits. Molecules taken from
   DOI:10.5281/zenodo.3405489 . Added by Sukanya Sasmal.
+- `PR #569 <https://github.com/openforcefield/openforcefield/pull/569>`_: Added round-trip tests for more serialization formats (dict, YAML, TOML, JSON, BSON, messagepack, pickle). Note that some are unsupported, but the tests raise the appropriate error.
 
 
 Bugfixes

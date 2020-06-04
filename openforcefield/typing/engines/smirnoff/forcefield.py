@@ -1264,3 +1264,16 @@ class ForceField:
             msg += "Known parameter handler class tags are {}".format(self._parameter_handler_classes.keys())
             raise KeyError(msg)
         return ph_class
+
+    def __getitem__(self, val):
+        """
+        Syntax sugar for lookikng up a ParameterHandler. Note that only
+        string-based lookups are currently supported.
+        """
+        if isinstance(val, str):
+            if val in self._parameter_handlers:
+                return self.get_parameter_handler(val)
+            else:
+                raise KeyError(f"Parameter handler with name '{val}' not found.")
+        elif isinstance(val, ParameterHandler) or issubclass(val, ParameterHandler):
+            raise NotImplementedError

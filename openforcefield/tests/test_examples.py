@@ -17,10 +17,11 @@ import os
 import re
 import subprocess
 import textwrap
+import  tempfile
 
 import pytest
 
-from openforcefield.utils import temporary_directory
+from openforcefield.utils import RDKIT_AVAILABLE, get_data_file_path
 
 
 #======================================================================
@@ -33,6 +34,10 @@ ROOT_DIR_PATH = os.path.join(os.path.dirname(os.path.realpath(__file__)), '..', 
 def run_script_file(file_path):
     """Run through the shell a python script."""
     cmd = ['python', file_path]
+    if 'conformer_energies.py' in file_path:
+        cmd.append('--filename')
+        mol_file = get_data_file_path('molecules/ruxolitinib_conformers.sdf')
+        cmd.append(mol_file)
     try:
         subprocess.check_call(cmd)
     except subprocess.CalledProcessError:
@@ -45,7 +50,7 @@ def run_script_str(script_str):
     With respect to eval, this has the advantage of catching all import errors.
 
     """
-    with temporary_directory() as tmp_dir:
+    with tempfile.TemporaryDirectory() as tmp_dir:
         temp_file_path = os.path.join(tmp_dir, 'temp.py')
         # Create temporary python script.
         with open(temp_file_path, 'w') as f:
@@ -71,15 +76,23 @@ def find_examples():
     }
     examples_dir_path = os.path.join(ROOT_DIR_PATH, 'examples')
 
+    requires_rdkit = {
+        os.path.join('conformer_energies', 'conformer_energies.py')
+    }
+
     example_file_paths = []
     for example_file_path in glob.glob(os.path.join(examples_dir_path, '*', '*.py')):
         example_file_path = os.path.relpath(example_file_path)
+        example_file_paths.append(example_file_path)
+        if not RDKIT_AVAILABLE:
+            for rdkit_example in requires_rdkit:
+                if rdkit_example in example_file_path:
+                    example_file_paths.remove(example_file_path)
         # Check if this is a slow test.
         for slow_example in slow_examples:
             if slow_example in example_file_path:
                 # This is a slow example.
                 example_file_path = pytest.param(example_file_path, marks=pytest.mark.slow)
-        example_file_paths.append(example_file_path)
     return example_file_paths
 
 
@@ -131,6 +144,10 @@ def test_readme_links(readme_link):
     headers = {'User-Agent':'Mozilla/5.0',
                'Accept': 'application/xhtml+xml,text/html,application/xml;q=0.9,*/*;q=0.8',}
     request = Request(readme_link, headers=headers)
+
+    # Some DOI-based links are now behind DDoS protections, so skip them
+    if 'doi.org' in readme_link:
+        pytest.skip("DOI links are behind DDoS protection and do not resolve")
 
     # Try to connect 3 times, keeping track of exceptions so useful feedback can be provided.
     success = False

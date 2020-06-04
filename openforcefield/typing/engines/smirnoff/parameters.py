@@ -1441,22 +1441,10 @@ class ParameterType(_ParameterAttributeHandler):
         # parameter type, raising an exception if it is invalid or doesn't
         # tag a valid set of atoms.
 
-        # TODO: Make better switch using toolkit registry after refactoring ChemicalEnvironment module.
-        from openforcefield.utils.toolkits import OPENEYE_AVAILABLE, RDKIT_AVAILABLE
-        toolkit = None
-        if OPENEYE_AVAILABLE:
-            toolkit = 'openeye'
-        elif RDKIT_AVAILABLE:
-            toolkit = 'rdkit'
-        if toolkit is None:
-            raise ToolkitUnavailableException(
-                "Validating SMIRKS required either the OpenEye Toolkit or the RDKit."
-                " Unable to find either.")
-
         # TODO: Add check to make sure we can't make tree non-hierarchical
         #       This would require parameter type knows which ParameterList it belongs to
-        ChemicalEnvironment.validate(
-            smirks, ensure_valence_type=self._VALENCE_TYPE, toolkit=toolkit)
+        ChemicalEnvironment.validate_smirks(
+            smirks, validate_valence_type=True)
         return smirks
 
     def __init__(self, smirks, allow_cosmetic_attributes=False, **kwargs):
