@@ -1951,10 +1951,11 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             If this is False and an invalid number of conformers is found, a warning will be raised
             instead of an Exception.
 
-
+        Returns
+        -------
+        charges : numpy.array of shape (natoms) of type float
+            The partial charges
         """
-        from openeye import oequacpac, oechem
-        import numpy as np
 
         import warnings
         warnings.warn("compute_partial_charges_am1bcc will be deprecated in an upcoming release. "
@@ -1965,6 +1966,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                                     partial_charge_method='am1bcc',
                                     use_conformers=use_conformers,
                                     strict_n_conformers=strict_n_conformers)
+        return molecule.partial_charges
 
     def assign_fractional_bond_orders(self, molecule, bond_order_model=None, use_conformers=None):
         """
@@ -3925,6 +3927,11 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
             Whether to raise an exception if an invalid number of conformers is provided.
             If this is False and an invalid number of conformers is found, a warning will be raised
             instead of an Exception.
+
+        Returns
+        -------
+        charges : numpy.array of shape (natoms) of type float
+            The partial charges
         """
 
         import warnings
@@ -3936,6 +3943,7 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
                                     partial_charge_method="AM1BCC",
                                     use_conformers=use_conformers,
                                     strict_n_conformers=strict_n_conformers)
+        return molecule.partial_charges
 
     def _modify_sqm_in_to_request_bond_orders(self, file_path):
         """
