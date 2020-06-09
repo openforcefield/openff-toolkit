@@ -10,20 +10,10 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 0.7.0 - Current development
 ---------------------------
 
-During implementation, the specification for ``ChargeIncrementModel`` changed substantially.
-While the draft spec proposed to define partial charge calculation schemes using the keywords
-``quantum_chemical_method="AM1"``, ``partial_charge_method="CM2"``, ``number_of_conformers="10"``, we
-recognized that these keywords would not apply or introduce ambiguity when used in combination with
-graph-based partial charge assignment or other charge methods on the roadmap. The fact that this tag would need to
-encapsulate a wide range of inputs would likely lead to several generations of spec changes, each one of which
-would inconvenience users. So, while the OpenFF Toolkit may eventually support a wide range set of keywords
-for this tag, there is currently too little known about the eventual scope of this section to develop a "future proof"
-specification for it right now.
-
-For this reason, the initial implementation of ``ChargeIncrementModel`` only defines attributes for ``version``,
+The initial implementation of the SMIRNOFF ``ChargeIncrementModel`` tag accepts keywords for ``version``,
 ``partial_charge_method``, and ``number_of_conformers``. ``partial_charge_method`` can be any string, and it is
 up to the ``ToolkitWrapper``'s ``compute_partial_charges`` methods to understand what they mean. For
-geometry-independent ``partial_charge_method`` choices, ``number_of_conformers`` will be set to zero.
+geometry-independent ``partial_charge_method`` choices, ``number_of_conformers`` should be set to zero.
 
 SMIRKS-based parameter application for ``ChargeIncrement`` parameters is different than other SMIRNOFF sections.
 The initial implementation of ``ChargeIncrementModelHandler`` follows these rules:
