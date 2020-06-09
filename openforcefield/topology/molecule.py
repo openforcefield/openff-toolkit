@@ -2407,7 +2407,7 @@ class FrozenMolecule(Serializable):
         --------
 
         >>> molecule = Molecule.from_smiles('CCCCCC')
-        >>> molecule.assign_partial_charges()
+        >>> molecule.assign_partial_charges('am1-mulliken')
 
         Raises
         ------
