@@ -300,7 +300,7 @@ class ToolkitWrapper:
 
         Raises
         ------
-        ValueError
+        IncorrectNumConformersError
             If the wrong number of conformers is attached to the input molecule, and strict_n_conformers is True.
         """
         import warnings
@@ -1959,11 +1959,10 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         import warnings
         warnings.warn("compute_partial_charges_am1bcc will be deprecated in an upcoming release. "
-                      "Use assign_partial_charges(partial_charge_method='am1bcc') instead.",
+                      "Use assign_partial_charges(partial_charge_method='am1bccelf10') instead.",
                       DeprecationWarning)
-
         self.assign_partial_charges(molecule,
-                                    partial_charge_method='am1bcc',
+                                    partial_charge_method='am1bccelf10',
                                     use_conformers=use_conformers,
                                     strict_n_conformers=strict_n_conformers)
         return molecule.partial_charges
@@ -2826,8 +2825,9 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         n_conformers : int, default=1
             Maximum number of conformers to generate.
         rms_cutoff : simtk.Quantity-wrapped float, in units of distance, optional, default=None
-            The minimum RMS value at which two conformers are considered redundant and one is deleted. Precise
-            implementation of this cutoff may be toolkit-dependent.
+            The minimum RMS value at which two conformers are considered redundant and one is deleted.
+            If None, the cutoff is set to 1 Angstrom
+
         clear_existing : bool, default=True
             Whether to overwrite existing conformers for the molecule.
 
@@ -3765,6 +3765,7 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         ANTECHAMBER_PATH = find_executable("antechamber")
         if ANTECHAMBER_PATH is None:
             return False
+        # AmberToolsToolkitWrapper needs RDKit to do basically anything, since its interface requires SDF I/O
         if not(RDKitToolkitWrapper.is_available()):
             return False
         return True
@@ -3875,7 +3876,7 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
                 self._rdkit_toolkit_wrapper.to_file(
                     mol_copy, 'molecule.sdf', file_format='sdf')
                 #os.system('ls')
-                os.system('cat molecule.sdf')
+                #os.system('cat molecule.sdf')
                 # Compute desired charges
                 # TODO: Add error handling if antechamber chokes
                 # TODO: Add something cleaner than os.system
@@ -3885,7 +3886,7 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
                     "mol2", "-pf", "yes", "-dr", "n", "-c", short_charge_method, "-nc", str(net_charge)]
                  )
                 #os.system('cat charged.mol2')
-                 # Write out just charges
+                # Write out just charges
                 subprocess.check_output([
                     "antechamber", "-dr", "n", "-i", "charged.mol2", "-fi", "mol2", "-o", "charges2.mol2", "-fo",
                     "mol2", "-c", "wc",  "-cf", "charges.txt", "-pf", "yes"])
@@ -4131,7 +4132,7 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
                 # an ordered list of element symbols for this molecule
                 expected_elements = [at.element.symbol for at in molecule.atoms]
                 bond_orders = self._get_fractional_bond_orders_from_sqm_out('sqm.out',
-                                                                                validate_elements=expected_elements)
+                                                                            validate_elements=expected_elements)
 
         # Note that sqm calculate WBOs for ALL PAIRS of atoms, not just those that have
         # bonds defined in the original molecule. So here we iterate over the bonds in
@@ -4381,7 +4382,8 @@ class ToolkitRegistry:
         ------
         NotImplementedError if the requested method cannot be found among the registered toolkits
 
-        ValueError if raise_first_error=False and the task is failed
+        ValueError if no exceptions in the raise_exception_types list were raised by ToolkitWrappers, and
+        all ToolkitWrappers in the ToolkitRegistry were tried.
 
         Other forms of exceptions are possible if raise_exception_types is specified.
         These are defined by the ToolkitWrapper method being called.

@@ -13,8 +13,8 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 During implementation, the specification for ``ChargeIncrementModel`` changed substantially.
 While the draft spec proposed to define partial charge calculation schemes using the keywords
 ``quantum_chemical_method="AM1"``, ``partial_charge_method="CM2"``, ``number_of_conformers="10"``, we
-recognized that these keywords would not not line up with graph-based partial charge methods or other
-methods on the roadmap. The fact that this tag would need to
+recognized that these keywords would not apply or introduce ambiguity when used in combination with
+graph-based partial charge assignment or other charge methods on the roadmap. The fact that this tag would need to
 encapsulate a wide range of inputs would likely lead to several generations of spec changes, each one of which
 would inconvenience users. So, while the OpenFF Toolkit may eventually support a wide range set of keywords
 for this tag, there is currently too little known about the eventual scope of this section to develop a "future proof"
@@ -26,8 +26,14 @@ up to the ``ToolkitWrapper``'s ``compute_partial_charges`` methods to understand
 geometry-independent ``partial_charge_method`` choices, ``number_of_conformers`` will be set to zero.
 
 SMIRKS-based parameter application for ``ChargeIncrement`` parameters is different than other SMIRNOFF sections.
-To give a concise example, if a molecule ``A-B(-C)-D`` were being parameterized, and the force field
-defines ``ChargeIncrement`` SMIRKS in the following order:
+The initial implementation of ``ChargeIncrementModelHandler`` follows these rules:
+
+* an atom can be subject to many ``ChargeIncrement`` parameters, which combine additively.
+* a ``ChargeIncrement`` that matches a set of atoms is overwritten only if another ``ChargeIncrement``
+  matches the same group of atoms, regardless of order. This overriding follows the normal SMIRNOFF hierarchy.
+
+To give a concise example, what if a molecule ``A-B(-C)-D`` were being parametrized, and the force field
+defined ``ChargeIncrement`` SMIRKS in the following order?
 
 1) ``[A:1]-[B:2]``
 2) ``[B:1]-[A:2]``
@@ -35,16 +41,11 @@ defines ``ChargeIncrement`` SMIRKS in the following order:
 4) ``[*:1]-[B:2](-[*:3])-[*:4]``
 5) ``[D:1]-[B:2](-[*:3])-[*:4]``
 
-what is the proper behavior? The initial implementation of ``ChargeIncrementModelHandler`` follows these rules:
+In the case above, the ChargeIncrement from parameters 1 and 4 would NOT be applied to the molecule,
+since another parameter matching the same set of atoms is specified further down in the parameter hierarchy
+(despite those subsequent matches being in a different order).
 
-* an atom can be subject to many ``ChargeIncrement`` parameters, which combine additively.
-* a ``ChargeIncrement`` that matches a group of atoms is overwritten only if another ``ChargeIncrement``
-  matches the same group of atoms, regardless of order. This overriding follows the normal SMIRNOFF hierarchy.
-
-So, in the case above, the ChargeIncrement from parameters 1 and 4 would NOT be applied to the molecule,
-since another parameter matching the same group of atoms is specified further down in the parameter hierarchy
-(despite those subsequent matches being in a different order). Ultimately, the ChargeIncrement contributions
-from parameters 2, 3, and 5 would be summed and applied.
+Ultimately, the ChargeIncrement contributions from parameters 2, 3, and 5 would be summed and applied.
 
 It's also important to identify a behavior that these rules were written to *avoid*: if not for the
 "regardless of order" clause in the second rule, parameters 4 and 5 could actually have been applied six and two times,
@@ -59,16 +60,13 @@ take over the "slot", pushing the original ``ChargeIncrement`` out.
 
 Behavior changed
 """"""""""""""""
-- `PR #471 <https://github.com/openforcefield/openforcefield/pull/471>`_: Changes uses of
-  ``ValueError``, ``TypeError``, and ``NotImplementedError`` in
-  :py:meth:`AmberToolsToolkitWrapper.compute_partial_charges <openforcefield.utils.toolkits.AmberToolsToolkitWrapper.compute_partial_charges>`
-  and other toolkit functions.
 - `PR #508 <https://github.com/openforcefield/openforcefield/pull/508>`_:
   In order to provide the same results for the same chemical species, regardless of input
-  conformation, fractional bond order calculation methods now default to ignore input conformers
-  and generate a new conformer of the molecule before running semiempirical calculations.
+  conformation, ``assign_partial_charges``, ``compute_partial_charges_am1bcc``, and
+  ``assign_fractional_bond_orders`` methods now default to ignore input conformers
+  and generate new conformer(s) of the molecule before running semiempirical calculations.
   Users can override this behavior by specifying the keyword argument
-  ``use_conformers=molecule.conformers``
+  ``use_conformers=molecule.conformers``.
 - `PR #281 <https://github.com/openforcefield/openforcefield/pull/281>`_: Closes
   `Issue #250 <https://github.com/openforcefield/openforcefield/issues/250>`_
   by adding support for partial charge I/O in SDF. The partial charges are stored as a property in the
@@ -127,23 +125,12 @@ Behavior changed
   :py:meth:`Topology.add_molecule <openforcefield.topology.Topology.add_molecule>` now use the
   :py:meth:`Molecule.are_isomorphic <openforcefield.topology.Molecule.are_isomorphic>` to match
   molecules.
-- `PR #508 <https://github.com/openforcefield/openforcefield/pull/508>`_:
-  In order to provide the same results for the same chemical species, regardless of input
-  conformation, fractional bond order calculation methods now default to ignore input conformers
-  and generate a new conformer of the molecule before running semiempirical calculations.
-  Users can override this behavior by specifying the keyword argument
-  ``use_conformers=molecule.conformers``
 - `PR #544 <https://github.com/openforcefield/openforcefield/pull/544>`_: Raises
   ``NotImplementedError`` when calling
   :py:meth:`ParameterHandler.get_parameter   <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler.get_parameter>`,
   which is not yet implemented, but would previously silently return ``None``.
 - `PR #551 <https://github.com/openforcefield/openforcefield/pull/551>`_: Implemented the
   :py:meth:`ParameterHandler.get_parameter   <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler.get_parameter>` function.
-
-
-compute_partial_charges_am1bcc no longer returns charges -- They're just attached to molecule
-More confs now used in compute_partial_charges_am1bcc -- True AM1BCC
-
 
 API-breaking changes
 """"""""""""""""""""
@@ -193,24 +180,24 @@ New features
   `Issue #208 <https://github.com/openforcefield/openforcefield/issues/208>`_
   by implementing support for the
   ``ChargeIncrementModel`` tag in the `SMIRNOFF specification <https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html#chargeincrementmodel-small-molecule-and-fragment-charges>`_.
-  In order to support broad experimentation
-- `PR #471 <https://github.com/openforcefield/openforcefield/pull/471>`_: Adds keyword
-  argument ``strict_n_conformers`` to ``Molecule.compute_partial_charges``,
+- `PR #471 <https://github.com/openforcefield/openforcefield/pull/471>`_: Implements
+  ``Molecule.compute_partial_charges``, which calls one of the newly-implemented
   ``OpenEyeToolkitWrapper.compute_partial_charges``, and
   ``AmberToolsToolkitWrapper.compute_partial_charges``. ``strict_n_conformers`` is a
-  boolean argument indicating whether an ``IncorrectNumConformersError`` should be raised if an invalid number of
-  conformers is supplied during partial charge calculation. For example, if two conformers are
+  optional boolean parameter indicating whether an ``IncorrectNumConformersError`` should be raised if an invalid
+  number of conformers is supplied during partial charge calculation. For example, if two conformers are
   supplied, but ``partial_charge_method="AM1BCC"`` is also set, then there is no clear use for
   the second conformer. The previous behavior in this case was to raise a warning, and to preserve that
   behavior, ``strict_n_conformers`` defaults to a value of ``False``.
 - `PR #471 <https://github.com/openforcefield/openforcefield/pull/471>`_: Adds
-  keyword argument ``raise_first_error`` (default: ``True``) to
+  keyword argument ``raise_exception_types`` (default: ``[Exception]``) to
   :py:meth:`ToolkitRegistry.call <openforcefield.utils.toolkits.ToolkitRegistry.call>.
-  If this is set to ``True``, the ToolkitRegistry will return an error
-  if the first ToolkitWrapper that can perform the requested method raises an error on the input.
-  If this is ``False``, the ToolkitRegistry will attempt to use every ToolkitWrapper that can
-  provide the requested method, returning the result if anyone of them succeeds, or raising a single
-  ``ValueError`` with a message listing the errors that were raised by each ToolkitWrapper.
+  The default value will provide the previous OpenFF Toolkit behavior, which is that the first ToolkitWrapper
+  that can provide the requested method is called, and it either returns on success or raises an exception. This new
+  keyword argument allows the ToolkitRegistry to *ignore* certain exceptions, but treat others as fatal.
+  If ``raise_exception_types = []``, the ToolkitRegistry will attempt to call each ToolkitWrapper that provides the
+  requested method and if none succeeds, a single ``ValueError`` will be raised, with text listing the
+  errors that were raised by each ToolkitWrapper.
 - `PR #601 <https://github.com/openforcefield/openforcefield/pull/601>`_: Adds
   :py:meth:`RDKitToolkitWrapper.get_tagged_smarts_connectivity <openforcefield.utils.toolkits.RDKitToolkitWrapper.get_tagged_smarts_connectivity>`
   and

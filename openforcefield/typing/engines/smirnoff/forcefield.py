@@ -887,6 +887,8 @@ class ForceField:
                 parameter_list_dict = section_dict.pop(parameter_list_tagname, {})
 
                 # If the parameter list isn't empty, it must be transferred into its own tag.
+                # This is necessary for deserializing SMIRNOFF force field sections which may or may
+                # not have any smirks-based elements (like an empty ChargeIncrementModel section)
                 if parameter_list_dict != {}:
                     parameter_list_dict = {parameter_list_tagname: parameter_list_dict}
 

@@ -177,7 +177,7 @@ class Atom(Particle):
         ----------
         atomic_number : int
             Atomic number of the atom
-        formal_charge : int or simtk.unit.Quantity with dimension "charge"
+        formal_charge : int or simtk.unit.Quantity-wrapped int with dimension "charge"
             Formal charge of the atom
         is_aromatic : bool
             If True, atom is aromatic; if False, not aromatic
@@ -199,7 +199,7 @@ class Atom(Particle):
 
         """
         self._atomic_number = atomic_number
-        # Use the setter here, since it will check the type of formal_charge
+        # Use the setter here, since it will handle either ints or Quantities
         self.formal_charge = formal_charge
         self._is_aromatic = is_aromatic
         self._stereochemistry = stereochemistry
@@ -276,7 +276,7 @@ class Atom(Particle):
     @formal_charge.setter
     def formal_charge(self, other):
         """
-        Set the atom's formal charge
+        Set the atom's formal charge. Accepts either ints or simtk.unit.Quantity-wrapped ints with units of charge.
         """
         if isinstance(other, int):
             self._formal_charge = other * unit.elementary_charge
@@ -1543,43 +1543,39 @@ class FrozenMolecule(Serializable):
             if not loaded:
                 try:
                     result = toolkit_registry.call('from_object',
-                                                   other,
-                                                   allow_undefined_stereo=allow_undefined_stereo,
-                                                   #raise_first_error=False
-                                                   raise_exception_types=[UndefinedStereochemistryError])
+                                                    other,
+                                                    allow_undefined_stereo=allow_undefined_stereo,
+                                                    raise_exception_types=[UndefinedStereochemistryError])
                 # NotImplementedError should never be raised... Only from_file and from_file_obj are provided
                 # in the base class and require overwriting, so from_object should be excluded
                 # except NotImplementedError as e:
                 #    raise e
-                # A ValueError will be raised if "other" is of the correct type to be handled by this function,
-                # but there's something wrong with the information inside it.
+                # The toolkit registry will aggregate all errors except UndefinedStereochemistryErrors into a single
+                # ValueError, which we should catch and return here.
                 except ValueError as e:
                     value_errors.append(e)
-                # # A TypeError will be raised if simple type-checking shows that "other" is not of the correct type
-                # # to be handled here
-                # except TypeError:
-                #     pass
-                #except UndefinedStereochemistryError as e:
                 else:
                     self._copy_initializer(result)
                     loaded = True
             # TODO: Make this compatible with file-like objects (I couldn't figure out how to make an oemolistream
             # from a fileIO object)
-            if (isinstance(other, str)
-                    or hasattr(other, 'read')) and not (loaded):
-                mol = Molecule.from_file(
-                    other,
-                    file_format=file_format,
-                    toolkit_registry=toolkit_registry,
-                    allow_undefined_stereo=allow_undefined_stereo
-                )  # returns a list only if multiple molecules are found
-                if type(mol) == list:
-                    raise ValueError(
-                        'Specified file or file-like object must contain exactly one molecule'
-                    )
-
-                self._copy_initializer(mol)
-                loaded = True
+            if (isinstance(other, str) or hasattr(other, 'read')) and not (loaded):
+                try:
+                    mol = Molecule.from_file(
+                        other,
+                        file_format=file_format,
+                        toolkit_registry=toolkit_registry,
+                        allow_undefined_stereo=allow_undefined_stereo
+                    )  # returns a list only if multiple molecules are found
+                    if type(mol) == list:
+                        raise ValueError(
+                            'Specified file or file-like object must contain exactly one molecule'
+                        )
+                except ValueError as e:
+                    value_errors.append(e)
+                else:
+                    self._copy_initializer(mol)
+                    loaded = True
 
             # If none of the above methods worked, raise a ValueError summarizing the
             # errors from the different loading attempts
@@ -2297,8 +2293,8 @@ class FrozenMolecule(Serializable):
                             rms_cutoff=None,
                             clear_existing=True):
         """
-        Generate conformers for this molecule using an underlying toolkit. If n_conformers is 0, no toolkit wrapper
-        will be called.
+        Generate conformers for this molecule using an underlying toolkit. If n_conformers=0, no toolkit wrapper
+        will be called. If n_conformers=0 and clear_existing=True, molecule.conformers will be set to None.
 
         Parameters
         ----------
@@ -2308,8 +2304,8 @@ class FrozenMolecule(Serializable):
             The maximum number of conformers to produce
         rms_cutoff : simtk.Quantity-wrapped float, in units of distance, optional, default=None
             The minimum RMS value at which two conformers are considered redundant and one is deleted. Precise
-            implementation of this cutoff may be toolkit-dependent. If None, the cutoff is set to 1 Angstrom
-
+            implementation of this cutoff may be toolkit-dependent. If None, the cutoff is set to be the default value
+            for each ToolkitWrapper (generally 1 Angstrom).
         clear_existing : bool, default=True
             Whether to overwrite existing conformers for the molecule
 
@@ -2362,8 +2358,8 @@ class FrozenMolecule(Serializable):
             Whether to raise an exception if an invalid number of conformers is provided for the given charge method.
             If this is False and an invalid number of conformers is found, a warning will be raised.
         use_conformers : iterable of simtk.unit.Quantity-wrapped numpy arrays, each with shape (n_atoms, 3) and dimension of distance. Optional, default=None
-            Coordinates to use for partial charge calculation. If None, an appropriate number of conformers will be generated.
-
+            Coordinates to use for partial charge calculation.
+            If None, an appropriate number of conformers for the given charge method will be generated.
         toolkit_registry : openforcefield.utils.toolkits.ToolkitRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for the calculation
 
@@ -2380,27 +2376,14 @@ class FrozenMolecule(Serializable):
             If an invalid object is passed as the toolkit_registry parameter
 
         """
-        if isinstance(toolkit_registry, ToolkitRegistry):
-            toolkit_registry.call(
-                'compute_partial_charges_am1bcc',
-                self,
-                use_conformers=use_conformers,
-                strict_n_conformers=strict_n_conformers
-            )
-        elif isinstance(toolkit_registry, ToolkitWrapper):
-            toolkit = toolkit_registry
-            toolkit.compute_partial_charges_am1bcc(self,
-                                                   use_conformers=use_conformers,
-                                                   strict_n_conformers=strict_n_conformers
-                                                   )
-        else:
-            raise InvalidToolkitError(
-                f'Invalid toolkit_registry passed to compute_partial_charges_am1bcc.'
-                f'Expected ToolkitRegistry or ToolkitWrapper. Got  {type(toolkit_registry)}')
+        self.assign_partial_charges(partial_charge_method='am1bcc',
+                                    use_conformers=use_conformers,
+                                    strict_n_conformers=strict_n_conformers,
+                                    toolkit_registry=toolkit_registry)
 
 
     def assign_partial_charges(self,
-                               partial_charge_method=None,
+                               partial_charge_method,
                                strict_n_conformers=False,
                                use_conformers=None,
                                toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
@@ -2410,7 +2393,7 @@ class FrozenMolecule(Serializable):
 
         Parameters
         ----------
-        partial_charge_method : string, default='AM1-Mulliken'
+        partial_charge_method : string
             The partial charge calculation method to use for partial charge calculation.
         strict_n_conformers : bool, default=False
             Whether to raise an exception if an invalid number of conformers is provided for the given charge method.
@@ -2436,13 +2419,12 @@ class FrozenMolecule(Serializable):
             # We may need to try several toolkitwrappers to find one
             # that supports the desired partial charge method, so we
             # tell the ToolkitRegistry to continue trying ToolkitWrappers
-            # if one raises an error (raise_first_error=False)
+            # if one raises an error (raise_exception_types=[])
             toolkit_registry.call('assign_partial_charges',
                                   self,
                                   partial_charge_method=partial_charge_method,
                                   use_conformers=use_conformers,
                                   strict_n_conformers=strict_n_conformers,
-                                  # raise_first_error=False
                                   raise_exception_types=[]
                                   )
         elif isinstance(toolkit_registry, ToolkitWrapper):

@@ -1062,7 +1062,7 @@ class TestChargeIncrementModelHandler:
         handler = ChargeIncrementModelHandler(skip_version_check=True, partial_charge_method=None)
 
     def test_charge_increment_model_handler_getters_setters(self):
-        """Test creation of ChargeIncrementModelHandlers"""
+        """Test ChargeIncrementModelHandler getters and setters"""
         handler = ChargeIncrementModelHandler(skip_version_check=True)
         assert handler.number_of_conformers == 1
         assert handler.partial_charge_method == 'AM1-Mulliken'
@@ -1072,7 +1072,6 @@ class TestChargeIncrementModelHandler:
         assert handler.number_of_conformers == 3
         with pytest.raises(ValueError) as excinfo:
             handler.number_of_conformers = "string that can't be cast to int"
-
 
     def test_charge_increment_model_handlers_are_compatible(self):
         """Test creation of ChargeIncrementModelHandlers"""

@@ -2477,7 +2477,7 @@ def test_charge_increment(self):
     """
     molecules_file_path = get_data_file_path('molecules/laromustine_tripos.mol2')
     molecule = openforcefield.topology.Molecule.from_file(molecules_file_path)
-    forcefield = ForceField(['test_forcefields/smirnoff99Frosst.offxml', 'charge_increment-test'])
+    forcefield = ForceField(['test_forcefields/smirnoff99Frosst.offxml', 'chargeincrement-test'])
     check_system_creation_from_molecule(forcefield, molecule)
     # TODO: We can't implement a test for chargeincrement yet because we
     #       haven't settled on a SMIRNOFF spec for chargeincrementmodel

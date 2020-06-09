@@ -2945,11 +2945,11 @@ class ToolkitAM1BCCHandler(_NonbondedHandler):
             # Make a temporary copy of ref_mol to assign charges
             temp_mol = FrozenMolecule(ref_mol)
 
-            #try:
             # If the molecule wasn't already assigned charge values, calculate them here
             toolkit_registry = kwargs.get('toolkit_registry', GLOBAL_TOOLKIT_REGISTRY)
             try:
-                temp_mol.generate_conformers(n_conformers=10, toolkit_registry=toolkit_registry)
+                # We don't need to generate conformers here, since that will be done by default in
+                # compute_partial_charges_am1bcc if the use_conformers kwarg isn't defined
                 temp_mol.compute_partial_charges_am1bcc(toolkit_registry=toolkit_registry)
             except Exception as e:
                 warnings.warn(str(e), Warning)
@@ -3123,7 +3123,7 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
 
             charges_to_assign = {}
 
-            # Assign charges to relevant atoms
+            # Assign initial, un-incremented charges to relevant atoms
             for topology_molecule in topology._reference_molecule_to_topology_molecules[ref_mol]:
                 for topology_particle in topology_molecule.particles:
                     topology_particle_index = topology_particle.topology_particle_index
@@ -3132,34 +3132,27 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
                     if type(topology_particle) is TopologyVirtualSite:
                         ref_mol_particle_index = topology_particle.virtual_site.molecule_particle_index
                     particle_charge = temp_mol._partial_charges[ref_mol_particle_index]
-
                     charges_to_assign[topology_particle_index] = particle_charge
-                    # # Retrieve nonbonded parameters for reference atom (charge not set yet)
-                    # _, sigma, epsilon = force.getParticleParameters(topology_particle_index)
-                    # # Set the nonbonded force with the partial charge
-                    # force.setParticleParameters(topology_particle_index,
-                    #                     #                             particle_charge, sigma,
-                    #                     #                             epsilon)
 
             # Find SMARTS-based matches for charge increments
-
             charge_increment_matches = self.find_matches(topology)
 
-            # We ignore the keys here, since they have been sorted in order to deduplicate matches and
-            # apply the SMIRNOFF parameter hierarchy. Since they are sorted, the position of the atom index
+            # We ignore the atom index order in the keys here, since they have been
+            # sorted in order to deduplicate matches and let us identify when one parameter overwrites another
+            # in the SMIRNOFF parameter hierarchy. Since they are sorted, the position of the atom index
             # in the key tuple DOES NOT correspond to the appropriate chargeincrementX value.
             # Instead, the correct ordering of the match indices is found in
             # charge_increment_match.environment_match.topology_atom_indices
             for (_, charge_increment_match) in charge_increment_matches.items():
-
+                # Adjust the values in the charges_to_assign dict by adding any
+                # charge increments onto the existing values
                 atom_indices = charge_increment_match.environment_match.topology_atom_indices
                 charge_increment = charge_increment_match.parameter_type
-
                 for top_particle_idx, charge_increment in zip(atom_indices, charge_increment.charge_increment):
-                    #print(top_particle_idx, charge_increment)
                     if top_particle_idx in charges_to_assign:
                         charges_to_assign[top_particle_idx] += charge_increment
-            #1/0
+
+            # Set the incremented charges on the System particles
             for topology_particle_index, charge_to_assign in charges_to_assign.items():
                 _, sigma, epsilon = force.getParticleParameters(topology_particle_index)
                 force.setParticleParameters(topology_particle_index,
@@ -3168,20 +3161,6 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
 
             # Finally, mark that charges were assigned for this reference molecule
             self.mark_charges_assigned(ref_mol, topology)
-
-
-
-
-    # # TODO: Move chargeModel and library residue charges to SMIRNOFF spec
-    # def postprocess_system(self, system, topology, **kwargs):
-    #
-    #     # Apply bond charge increments to all appropriate force groups
-    #     # QUESTION: Should we instead apply this to the Topology in a preprocessing step, prior to spreading out charge onto virtual sites?
-    #     for force in system.getForces():
-    #         if force.__class__.__name__ in [
-    #                 'NonbondedForce'
-    #         ]:  # TODO: We need to apply this to all Force types that involve charges, such as (Custom)GBSA forces and CustomNonbondedForce
-
 
 class GBSAHandler(ParameterHandler):
     """Handle SMIRNOFF ``<GBSA>`` tags
@@ -3203,6 +3182,8 @@ class GBSAHandler(ParameterHandler):
     _TAGNAME = 'GBSA'
     _INFOTYPE = GBSAType
     _OPENMMTYPE = openmm.GBSAOBCForce
+    # It's important that this runs AFTER partial charges are assigned to all particles, since this will need to
+    # collect and assign them to the GBSA particles
     _DEPENDENCIES = [vdWHandler, ElectrostaticsHandler,
                      ToolkitAM1BCCHandler, ChargeIncrementModelHandler, LibraryChargeHandler]
 
