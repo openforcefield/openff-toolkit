@@ -18,6 +18,7 @@ dependencies:
   - networkx
   - ambertools
   - packaging
+  - openmmforcefields
   - openmmtools
   - openforcefields
   - smirnoff99Frosst
