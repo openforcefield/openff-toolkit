@@ -44,6 +44,7 @@ from openforcefield.utils import all_subclasses, MessageException, \
     convert_0_1_smirnoff_to_0_2, convert_0_2_smirnoff_to_0_3
 from openforcefield.topology.molecule import DEFAULT_AROMATICITY_MODEL
 from openforcefield.typing.engines.smirnoff.parameters import ParameterHandler
+from openforcefield.typing.engines.smirnoff.plugins import load_handler_plugins
 from openforcefield.typing.engines.smirnoff.io import ParameterIOHandler
 
 
@@ -221,7 +222,8 @@ class ForceField:
                  parameter_handler_classes=None,
                  parameter_io_handler_classes=None,
                  disable_version_check=False,
-                 allow_cosmetic_attributes=False):
+                 allow_cosmetic_attributes=False,
+                 load_plugins=True):
         """Create a new :class:`ForceField` object from one or more SMIRNOFF parameter definition files.
 
         Parameters
@@ -245,6 +247,9 @@ class ForceField:
             This option is primarily intended for forcefield development.
         allow_cosmetic_attributes : bool, optional. Default = False
             Whether to retain non-spec kwargs from data sources.
+        load_plugins: bool, optional. Default = True
+            Whether to load ``ParameterHandler`` classes which have been registered
+            by installed plugins.
 
         Examples
         --------
@@ -276,11 +281,15 @@ class ForceField:
         # since both will try to register themselves for the same XML tag and an Exception will be raised.
         if parameter_handler_classes is None:
             parameter_handler_classes = all_subclasses(ParameterHandler)
+        if load_plugins:
+            parameter_handler_classes += load_handler_plugins()
+
         self._register_parameter_handler_classes(parameter_handler_classes)
 
         # Register all ParameterIOHandler objects that will process serialized parameter representations
         if parameter_io_handler_classes is None:
             parameter_io_handler_classes = all_subclasses(ParameterIOHandler)
+
         self._register_parameter_io_handler_classes(
             parameter_io_handler_classes)
 
