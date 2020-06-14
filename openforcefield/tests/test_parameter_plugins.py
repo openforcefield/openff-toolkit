@@ -56,16 +56,6 @@ def mock_entry_point_plugins():
     pkg_resources.working_set.by_key = previous_by_key
 
 
-def test_load_handler_plugins(mock_entry_point_plugins):
-    """Tests that parameter handlers can be registered as plugins.
-    """
-
-    registered_plugins = load_handler_plugins()
-
-    assert len(registered_plugins) == 1
-    assert registered_plugins[0].__name__ == "CustomHandler"
-
-
 def test_force_field_custom_handler(mock_entry_point_plugins):
     """Tests a force field can make use of a custom parameter handler registered
     through the entrypoint plugin system.
@@ -95,3 +85,13 @@ def test_force_field_custom_handler(mock_entry_point_plugins):
     parameter_handler = force_field.get_parameter_handler("CustomHandler")
     assert parameter_handler is not None
     assert parameter_handler.__class__.__name__ == "CustomHandler"
+
+
+def test_load_handler_plugins(mock_entry_point_plugins):
+    """Tests that parameter handlers can be registered as plugins.
+    """
+
+    registered_plugins = load_handler_plugins()
+
+    assert len(registered_plugins) == 1
+    assert registered_plugins[0].__name__ == "CustomHandler"
