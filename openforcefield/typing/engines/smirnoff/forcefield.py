@@ -282,7 +282,15 @@ class ForceField:
         if parameter_handler_classes is None:
             parameter_handler_classes = all_subclasses(ParameterHandler)
         if load_plugins:
-            parameter_handler_classes += load_handler_plugins()
+
+            registered_handlers = load_handler_plugins()
+
+            # Make sure the same handlers aren't added twice.
+            parameter_handler_classes += [
+                handler
+                for handler in registered_handlers
+                if handler not in parameter_handler_classes
+            ]
 
         self._register_parameter_handler_classes(parameter_handler_classes)
 
