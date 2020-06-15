@@ -14,6 +14,7 @@ dependencies:
   - nbval
   - codecov
   - coverage < 5.0
+  - py-cpuinfo = 5 # Needed until https://github.com/MolSSI/QCEngine/issues/252 is resolved+released
   - numpy
   - networkx
   - ambertools
