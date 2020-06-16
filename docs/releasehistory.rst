@@ -94,7 +94,7 @@ API-breaking changes
   :py:meth:`Molecule.assign_fractional_bond_orders <openforcefield.topology.Molecule.assign_fractional_bond_orders>`.
 - `PR #595 <https://github.com/openforcefield/openforcefield/pull/595>`_: Removed functions
   :py:meth:`temporary_directory <openforcefield.utils.utils.temporary_directory>` and
-  :py:meth:`temporary_cd <openforcefield.utils.utils.temporary_cd>` and replaced their behavoir with 
+  :py:meth:`temporary_cd <openforcefield.utils.utils.temporary_cd>` and replaced their behavoir with
   ``tempfile.TemporaryDirectory()``.
 
 New features
@@ -190,9 +190,9 @@ Behavior changed
   and generate a new conformer of the molecule before running semiempirical calculations.
   Users can override this behavior by specifying the keyword argument
   ``use_conformers=molecule.conformers``
-- `PR #544 <https://github.com/openforcefield/openforcefield/pull/544>`_: Raises 
-  ``NotImplementedError`` when calling 
-  :py:meth:`ParameterHandler.get_parameter   <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler.get_parameter>`, 
+- `PR #544 <https://github.com/openforcefield/openforcefield/pull/544>`_: Raises
+  ``NotImplementedError`` when calling
+  :py:meth:`ParameterHandler.get_parameter   <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler.get_parameter>`,
   which is not yet implemented, but would previously silently return ``None``.
 - `PR #551 <https://github.com/openforcefield/openforcefield/pull/551>`_: Implemented the
   :py:meth:`ParameterHandler.get_parameter   <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler.get_parameter>` function.
