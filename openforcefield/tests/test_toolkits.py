@@ -2229,11 +2229,11 @@ class TestToolkitRegistry:
 
     def test_register_builtintoolkit(self):
         """Test creation of toolkit registry with Built-in toolkit"""
-        # Test registration of RDKitToolkitWrapper
+        # Test registration of BuiltInToolkitWrapper
         toolkit_precedence = [BuiltInToolkitWrapper]
         registry = ToolkitRegistry(toolkit_precedence=toolkit_precedence,
                                    register_imported_toolkit_wrappers=False)
-        #registry.register_toolkit(RDKitToolkitWrapper)
+        #registry.register_toolkit(BuiltInToolkitWrapper)
         assert set([ type(c) for c in registry.registered_toolkits]) == set([BuiltInToolkitWrapper])
 
         # Test ToolkitRegistry.resolve()

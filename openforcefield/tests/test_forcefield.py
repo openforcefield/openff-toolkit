@@ -1737,7 +1737,7 @@ class TestForceFieldChargeAssignment:
                             # water (3 atoms) should have the following charges from tip3p.offxml
                             -0.834, 0.417, 0.417] * unit.elementary_charge
 
-        # Ensure that the first three molecules have exactly the charges we intended
+        # Ensure that the first four molecules have exactly the charges we intended
         for particle_index, expected_charge in enumerate(expected_charges):
             q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
             assert q == expected_charge

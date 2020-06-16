@@ -1110,6 +1110,7 @@ class TestChargeIncrementModelHandler:
             ci_type = ChargeIncrementModelHandler.ChargeIncrementType(smirks='[#6:1]-[#7:2]-[#6]',
                                                                       charge_increment1=0.05 * unit.elementary_charge)
 
+
 class TestGBSAHandler:
     def test_create_default_gbsahandler(self):
         """Test creation of an empty GBSAHandler, with all default attributes"""

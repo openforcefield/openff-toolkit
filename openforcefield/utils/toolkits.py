@@ -120,21 +120,26 @@ class GAFFAtomTypeWarning(RuntimeWarning):
     """A warning raised if a loaded mol2 file possibly uses GAFF atom types."""
     pass
 
+
 class ChargeMethodUnavailableError(MessageException):
     """A toolkit does not support the requested partial_charge_method combination"""
     pass
+
 
 class IncorrectNumConformersError(MessageException):
     """The requested partial_charge_method expects a different number of conformers than was provided"""
     pass
 
+
 class IncorrectNumConformersWarning(Warning):
     """The requested partial_charge_method expects a different number of conformers than was provided"""
     pass
 
+
 class ChargeCalculationError(MessageException):
     """An unhandled error occured in an external toolkit during charge calculation"""
     pass
+
 
 #=============================================================================================
 # TOOLKIT UTILITY DECORATORS
@@ -1782,7 +1787,6 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                                partial_charge_method=None,
                                use_conformers=None,
                                strict_n_conformers=False):
-
         """
         Compute partial charges with OpenEye quacpac, and assign
         the new values to the partial_charges attribute.
@@ -1797,7 +1801,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         Parameters
         ----------
-        molecule : Molecule
+        molecule : openforcefield.topology.Molecule
             Molecule for which partial charges are to be computed
         partial_charge_method : str, optional, default=None
             The charge model to use. One of ['amberff94', 'mmff', 'mmff94', `am1-mulliken`, 'am1bcc',
@@ -3787,7 +3791,7 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
 
         Parameters
         ----------
-        molecule : Molecule
+        molecule : openforcefield.topology.Molecule
             Molecule for which partial charges are to be computed
         partial_charge_method : str, optional, default=None
             The charge model to use. One of ['gasteiger', 'am1-mulliken']. If None, 'am1-mulliken' will be used.
@@ -3800,6 +3804,7 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
 
         Raises
         ------
+        ChargeMethodUnavailableError if the requested charge method can not be handled by this toolkit
 
         ChargeCalculationError if the charge method is supported by this toolkit, but fails
         """
@@ -3908,7 +3913,6 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
                 # TODO: Ensure that the atoms in charged.mol2 are in the same order as in molecule.sdf
         charges = unit.Quantity(charges, unit.elementary_charge)
         molecule.partial_charges = charges
-
 
     def compute_partial_charges_am1bcc(self, molecule, use_conformers=None, strict_n_conformers=False):
         """

@@ -3023,7 +3023,7 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
 
         .. warning :: This API is experimental and subject to change.
         """
-        _VALENCE_TYPE = None  # ChemicalEnvironment valence type expected for SMARTS
+        _VALENCE_TYPE = None  # This disables the connectivity check when parsing LibraryChargeType objects
         _ELEMENT_NAME = 'ChargeIncrement'
 
         charge_increment = IndexedParameterAttribute(unit=unit.elementary_charge)
@@ -3094,6 +3094,7 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
         import warnings
         from openforcefield.topology import FrozenMolecule, TopologyAtom, TopologyVirtualSite
 
+        # We only want one instance of this force type
         existing = [system.getForce(i) for i in range(system.getNumForces())]
         existing = [f for f in existing if type(f) == self._OPENMMTYPE]
         if len(existing) == 0:
@@ -3101,8 +3102,6 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
             system.addForce(force)
         else:
             force = existing[0]
-
-
 
         for ref_mol in topology.reference_molecules:
 
@@ -3161,6 +3160,7 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
 
             # Finally, mark that charges were assigned for this reference molecule
             self.mark_charges_assigned(ref_mol, topology)
+
 
 class GBSAHandler(ParameterHandler):
     """Handle SMIRNOFF ``<GBSA>`` tags
