@@ -476,9 +476,7 @@ U = \sum_{i=1}^N k_i * (1 + cos(periodicity_i * phi - phase_i))
 If the `potential` attribute is omitted, it defaults to `k*(1+cos(periodicity*theta-phase))`.
 
 
-#### Fractional torsion bond orders (EXPERIMENTAL)
-
-.. warning:: This functionality is not yet implemented and will appear in a future version of the toolkit.
+#### Fractional torsion bond orders
 
 Fractional torsion bond orders can be used to allow interpolation of torsion parameters.
 This is similar to the functionality provided by fractional bond orders detailed above.
@@ -486,19 +484,19 @@ For example, these parameters:
 ```XML
 <ProperTorsions version="0.3" potential="k*(1+cos(periodicity*theta-phase))" default_idivf="auto">
     <Proper smirks="[*:1]:[#6X4:2]-[#6X4:3]:[*:4]" periodicity1="2" phase1="0.0 * degree" k1="1.00*kilocalories_per_mole" idivf1="1.0"/>
-    <Proper smirks="[*:1]:[#6X4:2]:[#6X4:3]:[*:4]" periodicity1="2" phase1="0.0 * degree" k1="1.40*kilocalories_per_mole" idivf1="1.0"/>
+    <Proper smirks="[*:1]:[#6X4:2]=[#6X4:3]:[*:4]" periodicity1="2" phase1="0.0 * degree" k1="1.80*kilocalories_per_mole" idivf1="1.0"/>
     ...
 ```
-can be replaced by a single parameter line by first invoking the `fractional_bondorder_method` attribute to specify a method for computing the fractional bond order and `fractional_bondorder_interpolation` for specifying the procedure for interpolating parameters between specified integral bond orders:
+can be replaced by a single parameter line by first defining the `fractional_bondorder_method` header-level attribute to specify a method for computing the fractional bond order and `fractional_bondorder_interpolation` for specifying the procedure for interpolating parameters between specified integer bond orders:
 ```XML
 <ProperTorsions version="0.3" potential="k*(1+cos(periodicity*theta-phase))" default_idivf="auto" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
     <Proper smirks="[*:1]:[#6X4:2]~[#6X4:3]:[*:4]" periodicity1="2" phase1="0.0 * degree" k1_bondorder1="1.00*kilocalories_per_mole" k1_bondorder2="1.80*kilocalories_per_mole" idivf1="1.0"/>
     ...
 ```
-This allows specification of the barrier height for e.g. bond orders 1 and 2, and then interpolation between those based on the partial/fractional bond order.
+This allows specification of the barrier height for e.g. bond orders 1 and 2 (single and double bonds), and then interpolation between those based on the partial/fractional bond order.
 Note that in actual usage partial/fractional bond order may never be exactly 1 or 2, or perhaps even near 2; these values only serve to define the slope of the line used for interpolation.
-In the example above, we replaced the two proper torsion terms (one single central bond (`-`) and one aromatic central bond (`:`)) with a single term giving the barrier heights for bond order 1 and 2.
-Bond order 1 and 2 can be thought of as corresponding to the single- and double-bonded case, respectively.
+In the example above, we replaced the two proper torsion terms (one single central bond (`-`) and one double central bond (`=`)) with a single term giving the barrier heights for bond order 1 and 2.
+If there are cases where the fractional bond order is 1.5, this can correspond to e.g. an aromatic bond.
 
 Some key usage points:
 * `fractional_bondorder_method` defaults to `AM1-Wiberg`.
