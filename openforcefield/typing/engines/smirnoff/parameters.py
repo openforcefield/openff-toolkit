@@ -436,7 +436,7 @@ class IndexedMappedParameterAttribute(ParameterAttribute):
         When specified, the descriptor makes this attribute optional by
         attaching a default value to it.
     unit : simtk.unit.Quantity, optional
-        When specified, only sequences of mappings of quantities with
+        When specified, only sequences of mappings where values are quantities with
         compatible units are allowed to be set.
     converter : callable, optional
         An optional function that can be used to validate and cast each
@@ -2368,7 +2368,7 @@ class ProperTorsionHandler(ParameterHandler):
                                          tolerance_attrs=float_attrs_to_compare)
 
     def check_partial_bond_orders_from_molecules_duplicates(self, pb_mols):
-        if len(set(map(Molecule.to_hill_formula, pb_mols))) < len(pb_mols):
+        if len(set(map(Molecule.to_smiles, pb_mols))) < len(pb_mols):
             raise ValueError("At least two user-provided fractional bond order "
                              "molecules are isomorphic")
 
@@ -2518,15 +2518,7 @@ class ProperTorsionHandler(ParameterHandler):
             # about fractional bond interpolation
             # and not at all for reference molecules we don't
             if central_bond.fractional_bond_order is None:
-                    # how many conformers should we generate?
                     toolkit_registry = kwargs.get('toolkit_registry', GLOBAL_TOOLKIT_REGISTRY)
-
-                    # TODO: how many conformers do we need?
-                    # doesn't the conformer used heavily determine the fractional bond order
-                    # ultimately assigned to some bonds, or does it not matter for our toolkits?
-                    match.reference_molecule.generate_conformers(
-                            n_conformers=1,
-                            toolkit_registry=toolkit_registry)
                     match.reference_molecule.assign_fractional_bond_orders(
                             toolkit_registry=toolkit_registry,
                             use_conformers=match.reference_molecule.conformers)
@@ -2585,10 +2577,6 @@ class ProperTorsionHandler(ParameterHandler):
                     - ((k_bondorder[bond_orders[1]] - k_bondorder[bond_orders[0]])
                        /(bond_orders[1] - bond_orders[0]))
                     * (bond_orders[0] - fractional_bond_order))
-            if k/k.unit < 0:
-                raise ValueError(
-                        "Extrapolated k for fractional bond order "
-                        "'{}' below zero".format(fractional_bond_order))
             return k
 
         # extrapolate for fractional bond orders above our highest defined bond order
