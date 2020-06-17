@@ -476,9 +476,8 @@ U = \sum_{i=1}^N k_i * (1 + cos(periodicity_i * phi - phase_i))
 If the `potential` attribute is omitted, it defaults to `k*(1+cos(periodicity*theta-phase))`.
 
 
-#### Fractional torsion bond orders (EXPERIMENTAL)
+#### Fractional torsion bond orders
 
-.. warning:: This functionality is not yet implemented and will appear in a future version of the toolkit.
 
 Fractional torsion bond orders can be used to allow interpolation of torsion parameters.
 This is similar to the functionality provided by fractional bond orders detailed above.
@@ -489,7 +488,7 @@ For example, these parameters:
     <Proper smirks="[*:1]:[#6X4:2]:[#6X4:3]:[*:4]" periodicity1="2" phase1="0.0 * degree" k1="1.40*kilocalories_per_mole" idivf1="1.0"/>
     ...
 ```
-can be replaced by a single parameter line by first invoking the `fractional_bondorder_method` attribute to specify a method for computing the fractional bond order and `fractional_bondorder_interpolation` for specifying the procedure for interpolating parameters between specified integral bond orders:
+can be replaced by a single parameter line by first defining the `fractional_bondorder_method` header-level attribute to specify a method for computing the fractional bond order and `fractional_bondorder_interpolation` for specifying the procedure for interpolating parameters between specified integer bond orders:
 ```XML
 <ProperTorsions version="0.3" potential="k*(1+cos(periodicity*theta-phase))" default_idivf="auto" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
     <Proper smirks="[*:1]:[#6X4:2]~[#6X4:3]:[*:4]" periodicity1="2" phase1="0.0 * degree" k1_bondorder1="1.00*kilocalories_per_mole" k1_bondorder2="1.80*kilocalories_per_mole" idivf1="1.0"/>
@@ -508,7 +507,7 @@ Some key usage points:
 |-------------------------------------|---------------------------------------------------------------------------|---------------------------------------|-------------------------------|
 | 0.3                                 | `potential="k*(1+cos(periodicity*theta-phase))"`, `default_idivf="auto"`, | `smirks`, `k`, `phase`, `periodicity` | `idivf`, `id`, `parent_id`    |
 |-------------------------------------|---------------------------------------------------------------------------|---------------------------------------|-------------------------------|
-| 0.4                                 | `potential="k*(1+cos(periodicity*theta-phase))"`, `default_idivf="auto"`, | `smirks`, `k_bondorder`,              | `idivf`, `id`, `parent_id`    |
+| 0.4                                 | `potential="k*(1+cos(periodicity*theta-phase))"`, `default_idivf="auto"` | `smirks`, `k_bondorder`              | `idivf`, `id`, `parent_id`    |
 |                                     | `fractional_bondorder_method="AM1-Wiberg"`,                               | `phase`, `periodicity`                |                               |
 |                                     | `fractional_bondorder_interpolation="linear"`                             |                                       |                               |
 
