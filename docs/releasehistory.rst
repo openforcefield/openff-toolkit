@@ -161,7 +161,7 @@ API-breaking changes
   :py:meth:`Molecule.assign_fractional_bond_orders <openforcefield.topology.Molecule.assign_fractional_bond_orders>`.
 - `PR #595 <https://github.com/openforcefield/openforcefield/pull/595>`_: Removed functions
   :py:meth:`temporary_directory <openforcefield.utils.utils.temporary_directory>` and
-  :py:meth:`temporary_cd <openforcefield.utils.utils.temporary_cd>` and replaced their behavoir with 
+  :py:meth:`temporary_cd <openforcefield.utils.utils.temporary_cd>` and replaced their behavoir with
   ``tempfile.TemporaryDirectory()``.
 
 New features
@@ -252,6 +252,39 @@ New features
   Adds ``quacpac`` error output to ``quacpac`` failure in ``Molecule.compute_partial_charges_am1bcc``.
 - `PR #560 <https://github.com/openforcefield/openforcefield/issues/560>`_: Added visualization method to the the Molecule class.
 
+
+Behavior changed
+""""""""""""""""
+- `PR #558 <https://github.com/openforcefield/openforcefield/pull/558>`_: The
+  :py:class`Topology <openforcefield.topology.Topology>`
+  particle indexing system now orders :py:class`TopologyVirtualSites <openforcefield.topology.TopologyVirtualSite>`
+  after all atoms.
+- `PR #469 <https://github.com/openforcefield/openforcefield/pull/469>`_:
+  When running :py:meth:`Topology.to_openmm <openforcefield.topology.Topology.to_openmm>`, unique atom names
+  are generated if the provided atom names are not unique (overriding any existing atom names). This
+  uniqueness extends only to atoms in the same molecule. To disable this behavior, set the kwarg
+  ``ensure_unique_atom_names=False``.
+- `PR #472 <https://github.com/openforcefield/openforcefield/pull/472>`_:
+  The :py:meth:`Molecule.__eq__ <openforcefield.topology.Molecule.__eq__>` now uses the new
+  :py:meth:`Molecule.are_isomorphic <openforcefield.topology.Molecule.are_isomorphic>` to perform the
+  similarity checking.
+- `PR #472 <https://github.com/openforcefield/openforcefield/pull/472>`_:
+  The :py:meth:`Topology.from_openmm <openforcefield.topology.Topology.from_openmm>` and
+  :py:meth:`Topology.add_molecule <openforcefield.topology.Topology.add_molecule>` now use the
+  :py:meth:`Molecule.are_isomorphic <openforcefield.topology.Molecule.are_isomorphic>` to match
+  molecules.
+- `PR #508 <https://github.com/openforcefield/openforcefield/pull/508>`_:
+  In order to provide the same results for the same chemical species, regardless of input
+  conformation, fractional bond order calculation methods now default to ignore input conformers
+  and generate a new conformer of the molecule before running semiempirical calculations.
+  Users can override this behavior by specifying the keyword argument
+  ``use_conformers=molecule.conformers``
+- `PR #544 <https://github.com/openforcefield/openforcefield/pull/544>`_: Raises
+  ``NotImplementedError`` when calling
+  :py:meth:`ParameterHandler.get_parameter   <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler.get_parameter>`,
+  which is not yet implemented, but would previously silently return ``None``.
+- `PR #551 <https://github.com/openforcefield/openforcefield/pull/551>`_: Implemented the
+  :py:meth:`ParameterHandler.get_parameter   <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler.get_parameter>` function.
 
 Tests added
 """""""""""
