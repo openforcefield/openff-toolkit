@@ -2575,8 +2575,9 @@ class ProperTorsionHandler(ParameterHandler):
         # error if we can't hope to interpolate at all
         elif (above is None) and (below is None):
             raise NotImplementedError(
-                    "Failed to find interpolation references for partial "
-                    "bond order '{}'".format(fractional_bond_order))
+                    f"Failed to find interpolation references for "
+                    f"`fractional bond order` '{fractional_bond_order}', "
+                    f"with `k_bond_order` '{k_bondorder}'")
 
         # extrapolate for fractional bond orders below our lowest defined bond order
         elif below is None:

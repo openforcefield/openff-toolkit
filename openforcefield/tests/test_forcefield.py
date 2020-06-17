@@ -2182,11 +2182,18 @@ class TestForceFieldParameterAssignment:
                 k = params[-1]
                 assert_almost_equal(k/k.unit, 5.0208)
 
-
+    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='Test requires RDKit toolkit')
     @pytest.mark.parametrize(
             ('get_molecule', 'k_interpolated', 'central_atoms'),
             [(create_ethanol, 4.953856, (1, 2)), (create_reversed_ethanol, 4.953856, (7, 6))])
-    def test_fractional_bondorder_calculated(self, get_molecule, k_interpolated, central_atoms):
+    def test_fractional_bondorder_calculated_rdkit(self, get_molecule, k_interpolated, central_atoms):
+        """Test that torsion barrier heights interpolated from fractional bond
+        orders calculated with the Amber toolkit are assigned within our
+        expectations.
+
+        """
+
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=[RDKitToolkitWrapper, AmberToolsToolkitWrapper])
         mol = get_molecule()
 
         forcefield = ForceField('test_forcefields/smirnoff99Frosst.offxml',
@@ -2196,7 +2203,8 @@ class TestForceFieldParameterAssignment:
         omm_system, ret_top = forcefield.create_openmm_system(
                 topology,
                 charge_from_molecules=[mol],
-                return_topology=True)
+                return_topology=True,
+                toolkit_registry=toolkit_registry)
 
         off_torsion_force = [force for force in omm_system.getForces() if
                                isinstance(force, openmm.PeriodicTorsionForce)][0]
@@ -2204,8 +2212,9 @@ class TestForceFieldParameterAssignment:
         ret_mol = list(ret_top.reference_molecules)[0]
         bond = ret_mol.get_bond_between(*central_atoms)
 
-        # openeye toolkit appears to yield around .9945 for this bond
-        assert bond.fractional_bond_order > .99
+        # ambertools appears to yield around 1.0009 for this bond
+        assert abs(bond.fractional_bond_order - 1.) > 1.e-6
+        assert .95 < bond.fractional_bond_order < 1.05
 
         for idx in range(off_torsion_force.getNumTorsions()):
             params = off_torsion_force.getTorsionParameters(idx)
@@ -2222,11 +2231,59 @@ class TestForceFieldParameterAssignment:
                 k_interpolated_ret = slope * (bond.fractional_bond_order - 1.0) + 4.184
                 assert_almost_equal(k_interpolated_ret, k/k.unit, 2)
 
-                ## this doesn't work out for openeye, since the calculated
-                ## fractional bond order is slightly less than 1 for this bond
-                # check that we're at least between k1_bondorder1 and k1_bondorder2
-                # in kJ/mol
-                #assert (k/k.unit > 4.184) and (k/k.unit < 7.5312)
+                # check that we *are not* matching the values we'd get if we
+                # had offered our molecules to `partial_bond_orders_from_molecules`
+                with pytest.raises(AssertionError):
+                    assert_almost_equal(k/k.unit, k_interpolated)
+
+    @pytest.mark.skipif( not(OpenEyeToolkitWrapper.is_available()), reason='Test requires OE toolkit')
+    @pytest.mark.parametrize(
+            ('get_molecule', 'k_interpolated', 'central_atoms'),
+            [(create_ethanol, 4.953856, (1, 2)), (create_reversed_ethanol, 4.953856, (7, 6))])
+    def test_fractional_bondorder_calculated_openeye(self, get_molecule, k_interpolated, central_atoms):
+        """Test that torsion barrier heights interpolated from fractional bond
+        orders calculated with the OpenEye toolkit are assigned within our
+        expectations.
+
+        """
+
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=[OpenEyeToolkitWrapper])
+        mol = get_molecule()
+
+        forcefield = ForceField('test_forcefields/smirnoff99Frosst.offxml',
+                                xml_ff_torsion_bo)
+        topology = Topology.from_molecules([mol])
+
+        omm_system, ret_top = forcefield.create_openmm_system(
+                topology,
+                charge_from_molecules=[mol],
+                return_topology=True,
+                toolkit_registry=toolkit_registry)
+
+        off_torsion_force = [force for force in omm_system.getForces() if
+                               isinstance(force, openmm.PeriodicTorsionForce)][0]
+
+        ret_mol = list(ret_top.reference_molecules)[0]
+        bond = ret_mol.get_bond_between(*central_atoms)
+
+        # openeye toolkit appears to yield around .9945 for this bond
+        assert abs(bond.fractional_bond_order - 1.) > 1.e-6
+        assert .95 < bond.fractional_bond_order < 1.05
+
+        for idx in range(off_torsion_force.getNumTorsions()):
+            params = off_torsion_force.getTorsionParameters(idx)
+
+            atom2, atom3 = params[1], params[2]
+            atom2_mol, atom3_mol = central_atoms
+
+            if (((atom2 == atom2_mol) and (atom3 == atom3_mol)) or
+                    ((atom2 == atom3_mol) and (atom3 == atom2_mol))):
+                k = params[-1]
+
+                # do a hand calculation as a sanity check
+                slope = (7.5312 - 4.184)/(1.8 - 1.0)
+                k_interpolated_ret = slope * (bond.fractional_bond_order - 1.0) + 4.184
+                assert_almost_equal(k_interpolated_ret, k/k.unit, 2)
 
                 # check that we *are not* matching the values we'd get if we
                 # had offered our molecules to `partial_bond_orders_from_molecules`

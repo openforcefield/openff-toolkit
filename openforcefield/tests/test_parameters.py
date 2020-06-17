@@ -1086,9 +1086,8 @@ class TestProperTorsionType:
         """Test behavior where a single bond order term is specified for a single k"""
         from simtk import unit
 
-        # TODO : currently raises no error, as checks are handled at parameterization
-        # is this a spec thing that we should be checking?
-        # if so, it will be painful to implement
+        # raises no error, as checks are handled at parameterization
+        # we may add a `validate` method later that is called manually by user when they want it
         p1 = ProperTorsionHandler.ProperTorsionType(smirks='[*:1]-[*:2]~[*:3]-[*:4]',
                                                     phase1=30 * unit.degree,
                                                     periodicity1=2,
@@ -1136,15 +1135,6 @@ class TestProperTorsionHandler:
             ph1 = ImproperTorsionHandler(potential='charmm', skip_version_check=True)
         ph1 = ImproperTorsionHandler(potential='k*(1+cos(periodicity*theta-phase))', skip_version_check=True)
 
-    def test_assign_partial_bond_orders_from_molecules(self):
-        pass
-
-    def test_create_force(self):
-        pass
-
-    def test_create_force_bo(self):
-        pass
-
     @pytest.mark.parametrize(
             ('fractional_bond_order', 'k_interpolated'),
             [(1.6, 1.48), (.7, .76), (2.3, 2.04)])
@@ -1173,15 +1163,16 @@ class TestProperTorsionHandler:
         assert_almost_equal(k/k.unit, k_interpolated)
 
     def test_linear_interpolate_k_below_zero(self):
-        """Test that linear interpolation throws error if resulting k less than 0"""
+        """Test that linear interpolation does not error if resulting k less than 0"""
         from simtk import unit
 
         k_bondorder = {1: 1 * unit.kilocalorie_per_mole,
                        2: 2.3 * unit.kilocalorie_per_mole}
 
         fractional_bond_order = .2
-        with pytest.raises(ValueError):
-            k = ProperTorsionHandler._linear_interpolate_k(k_bondorder, fractional_bond_order)
+        k = ProperTorsionHandler._linear_interpolate_k(k_bondorder, fractional_bond_order)
+
+        assert k/k.unit < 0
 
 
 class TestLibraryChargeHandler:
