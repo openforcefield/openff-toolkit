@@ -239,7 +239,7 @@ xml_ff_torsion_bo_standard_supersede = '''<?xml version='1.0' encoding='ASCII'?>
   <ProperTorsions version="0.3" potential="k*(1+cos(periodicity*theta-phase))">
     <Proper smirks="[*:1]~[#6X3:2]~[#6X3:3]~[*:4]" id="tbo1" periodicity1="2" phase1="0.0 * degree" k1_bondorder1="1.00*kilocalories_per_mole" k1_bondorder2="1.80*kilocalories_per_mole" idivf1="1.0"/>
     <Proper smirks="[*:1]~[#6X4:2]~[#8X2:3]~[*:4]" id="tbo2" periodicity1="2" phase1="0.0 * degree" k1_bondorder1="1.00*kilocalories_per_mole" k1_bondorder2="1.80*kilocalories_per_mole" idivf1="1.0"/>
-    <Proper smirks="[*:1]~[#6X4:2]-[#8X2:3]~[*:4]" id="t1" periodicity1="2" phase1="0.0 * degree" k1="1.20*kilocalories_per_mole" idivf1="1.0"/>
+    <Proper smirks="[*:1]~[#6X4:2]-[#8X2:3]~[#1:4]" id="t1" periodicity1="2" phase1="0.0 * degree" k1="1.20*kilocalories_per_mole" idivf1="1.0"/>
   </ProperTorsions>
 </SMIRNOFF>
 '''

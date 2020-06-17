@@ -506,7 +506,7 @@ Some key usage points:
 |-------------------------------------|---------------------------------------------------------------------------|---------------------------------------|-------------------------------|
 | 0.3                                 | `potential="k*(1+cos(periodicity*theta-phase))"`, `default_idivf="auto"`, | `smirks`, `k`, `phase`, `periodicity` | `idivf`, `id`, `parent_id`    |
 |-------------------------------------|---------------------------------------------------------------------------|---------------------------------------|-------------------------------|
-| 0.4                                 | `potential="k*(1+cos(periodicity*theta-phase))"`, `default_idivf="auto"`, | `smirks`, `k_bondorder`,              | `idivf`, `id`, `parent_id`    |
+| 0.4                                 | `potential="k*(1+cos(periodicity*theta-phase))"`, `default_idivf="auto"` | `smirks`, `k_bondorder`              | `idivf`, `id`, `parent_id`    |
 |                                     | `fractional_bondorder_method="AM1-Wiberg"`,                               | `phase`, `periodicity`                |                               |
 |                                     | `fractional_bondorder_interpolation="linear"`                             |                                       |                               |
 
