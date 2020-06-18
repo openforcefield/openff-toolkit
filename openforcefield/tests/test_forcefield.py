@@ -23,12 +23,12 @@ import numpy as np
 import pytest
 from tempfile import NamedTemporaryFile
 
-from openforcefield.utils.toolkits import OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper, \
-    ToolkitRegistry, ChargeMethodUnavailableError
+from openforcefield.utils.toolkits import (OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper,
+    ToolkitRegistry, ChargeMethodUnavailableError)
 from openforcefield.utils import get_data_file_path
 from openforcefield.topology import Molecule, Topology
-from openforcefield.typing.engines.smirnoff import ForceField, IncompatibleParameterError, SMIRNOFFSpecError, \
-    XMLParameterIOHandler, ParameterHandler
+from openforcefield.typing.engines.smirnoff import (ForceField, IncompatibleParameterError, SMIRNOFFSpecError,
+    XMLParameterIOHandler, ParameterHandler)
 
 
 #======================================================================

@@ -1249,7 +1249,7 @@ class ForceField:
                 tagname)
             msg += "Known parameter handler class tags are {}".format(self._parameter_handler_classes.keys())
             raise KeyError(msg)
-        return ph_class
+        return ph_classte
 
     def __getitem__(self, val):
         """

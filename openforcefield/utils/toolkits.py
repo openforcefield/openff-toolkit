@@ -1896,6 +1896,9 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         oechem.OEThrow.SetOutputStream(errfs)
         oechem.OEThrow.Clear()
 
+        # The OpenFF toolkit has always supported a version of AM1BCC with no geometry optimization
+        # or symmetry correction. So we include this keyword to provide a special configuration of quacpac
+        # if requested.
         if partial_charge_method == "am1bccnosymspt":
             optimize = False
             symmetrize = False
@@ -1926,10 +1929,6 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             charge = charge * unit.elementary_charge
             charges[index] = charge
 
-        if ((charges / unit.elementary_charge) == 0.).all():
-            raise ChargeCalculationError(
-                "Partial charge calculation failed. Charges from assign_partial_charges() are all 0."
-            )
         molecule.partial_charges = charges
 
 
@@ -3794,7 +3793,7 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         molecule : openforcefield.topology.Molecule
             Molecule for which partial charges are to be computed
         partial_charge_method : str, optional, default=None
-            The charge model to use. One of ['gasteiger', 'am1-mulliken']. If None, 'am1-mulliken' will be used.
+            The charge model to use. One of ['gasteiger', 'am1bcc', 'am1-mulliken']. If None, 'am1-mulliken' will be used.
         use_conformers : iterable of simtk.unit.Quantity-wrapped numpy arrays, each with shape (n_atoms, 3) and dimension of distance. Optional, default = None
             List of (n_atoms x 3) simtk.unit.Quantities to use for partial charge calculation.
             If None, an appropriate number of conformers will be generated.
@@ -3880,8 +3879,6 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
                 ## TODO: How should we handle multiple conformers?
                 self._rdkit_toolkit_wrapper.to_file(
                     mol_copy, 'molecule.sdf', file_format='sdf')
-                #os.system('ls')
-                #os.system('cat molecule.sdf')
                 # Compute desired charges
                 # TODO: Add error handling if antechamber chokes
                 # TODO: Add something cleaner than os.system
@@ -3890,12 +3887,10 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
                     "antechamber", "-i", "molecule.sdf", "-fi", "sdf", "-o", "charged.mol2", "-fo",
                     "mol2", "-pf", "yes", "-dr", "n", "-c", short_charge_method, "-nc", str(net_charge)]
                  )
-                #os.system('cat charged.mol2')
                 # Write out just charges
                 subprocess.check_output([
                     "antechamber", "-dr", "n", "-i", "charged.mol2", "-fi", "mol2", "-o", "charges2.mol2", "-fo",
                     "mol2", "-c", "wc",  "-cf", "charges.txt", "-pf", "yes"])
-                #os.system('cat charges.txt')
                 # Check to ensure charges were actually produced
                 if not os.path.exists('charges.txt'):
                     # TODO: copy files into local directory to aid debugging?

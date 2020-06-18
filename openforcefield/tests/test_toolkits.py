@@ -749,7 +749,8 @@ class TestOpenEyeToolkitWrapper:
     @pytest.mark.parametrize("partial_charge_method", ['am1bcc', 'am1-mulliken'])
     def test_assign_partial_charges_conformer_dependence(self, partial_charge_method):
         """Test OpenEyeToolkitWrapper assign_partial_charges()'s use_conformers kwarg
-        to ensure charges are really conformer dependent"""
+        to ensure charges are really conformer dependent. Skip Gasteiger because it isn't
+        conformer dependent."""
         from openforcefield.tests.test_forcefield import create_ethanol
         import copy
         toolkit_registry = ToolkitRegistry(toolkit_precedence=[OpenEyeToolkitWrapper])
@@ -1829,7 +1830,8 @@ class TestAmberToolsToolkitWrapper:
     @pytest.mark.parametrize("partial_charge_method", ['am1bcc', 'am1-mulliken'])
     def test_assign_partial_charges_conformer_dependence(self, partial_charge_method):
         """Test AmberToolsToolkitWrapper assign_partial_charges()'s use_conformers kwarg
-        to ensure charges are really conformer dependent"""
+        to ensure charges are really conformer dependent. Skip Gasteiger because it isn't
+        conformer dependent."""
         from openforcefield.tests.test_forcefield import create_ethanol
         import copy
         toolkit_registry = ToolkitRegistry(toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper])

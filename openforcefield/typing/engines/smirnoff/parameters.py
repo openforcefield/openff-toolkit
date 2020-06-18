@@ -3029,7 +3029,6 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
         charge_increment = IndexedParameterAttribute(unit=unit.elementary_charge)
 
         def __init__(self, **kwargs):
-            from openforcefield.typing.chemistry import ChemicalEnvironment
             super().__init__(**kwargs)
             unique_tags, connectivity = GLOBAL_TOOLKIT_REGISTRY.call('get_tagged_smarts_connectivity', self.smirks)
             if len(self.charge_increment) != len(unique_tags):

@@ -1542,16 +1542,21 @@ class FrozenMolecule(Serializable):
             # Check through the toolkit registry to find a compatible wrapper for loading
             if not loaded:
                 try:
+                    # Each ToolkitWrapper may provide a from_object method, which turns some particular type(s)
+                    # of object into OFFMols. For example, RDKitToolkitWrapper's from_object method will
+                    # return an OFFMol if provided with an RDMol, or raise a ValueError if it is provided
+                    # an OEMol (or anything else). This makes the assumption that any non-ValueError errors raised
+                    # by the toolkit _really are_ bad and should be raised immediately, which may be a bad assumption.
                     result = toolkit_registry.call('from_object',
                                                     other,
                                                     allow_undefined_stereo=allow_undefined_stereo,
                                                     raise_exception_types=[UndefinedStereochemistryError])
                 # NotImplementedError should never be raised... Only from_file and from_file_obj are provided
-                # in the base class and require overwriting, so from_object should be excluded
+                # in the base ToolkitWrapper class and require overwriting, so from_object should be excluded
                 # except NotImplementedError as e:
                 #    raise e
                 # The toolkit registry will aggregate all errors except UndefinedStereochemistryErrors into a single
-                # ValueError, which we should catch and return here.
+                # ValueError, which we should catch and and store that here.
                 except ValueError as e:
                     value_errors.append(e)
                 else:
@@ -2401,7 +2406,7 @@ class FrozenMolecule(Serializable):
         use_conformers : iterable of simtk.unit.Quantity-wrapped numpy arrays, each with shape (n_atoms, 3) and dimension of distance. Optional, default=None
             Coordinates to use for partial charge calculation. If None, an appropriate number of conformers will be generated.
         toolkit_registry : openforcefield.utils.toolkits.ToolkitRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
-            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
+            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for the calculation.
 
         Examples
         --------
