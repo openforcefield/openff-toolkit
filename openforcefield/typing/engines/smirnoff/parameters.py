@@ -3111,10 +3111,12 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
             # Make a temporary copy of ref_mol to assign charges from charge_mol
             temp_mol = FrozenMolecule(ref_mol)
 
+            toolkit_registry = kwargs.get('toolkit_registry', GLOBAL_TOOLKIT_REGISTRY)
             try:
                 # If the molecule wasn't assigned parameters from a manually-input charge_mol, calculate them here
                 temp_mol.generate_conformers(n_conformers=self.number_of_conformers)
-                temp_mol.assign_partial_charges(partial_charge_method=self.partial_charge_method)
+                temp_mol.assign_partial_charges(partial_charge_method=self.partial_charge_method,
+                                                toolkit_registry=toolkit_registry)
             except Exception as e:
                 warnings.warn(str(e), Warning)
                 continue
