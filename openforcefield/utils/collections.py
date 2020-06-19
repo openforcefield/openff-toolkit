@@ -7,6 +7,7 @@ Custom collections classes.
 
 __all__ = [
     'ValidatedList',
+    'ValidatedDict',
 ]
 
 
@@ -128,7 +129,6 @@ class ValidatedList(list):
     def __reduce__(self):
         return (__class__, ( list( self),), self.__dict__)
 
-
     def _convert_and_validate(self, seq):
         """Run all converters and the validator on the given sequence."""
         # Run all element converters.
@@ -142,6 +142,109 @@ class ValidatedList(list):
                 for element in seq:
                     validator(element)
         return seq
+
+
+class ValidatedDict(dict):
+    """A dict that runs custom converter and validators when new
+    elements are added.
+
+    Multiple converters and validators can be assigned to the dict.
+    These are executed in the given order with converters run before
+    validators.
+
+    Validators must take the new element as the first argument and raise
+    an exception if validation fails.
+
+        validator(new_element) -> None
+
+    Converters must also take the new element as the first argument, but
+    they have to return the converted value.
+
+        converter(new_element) -> converted_value
+
+    Examples
+    --------
+    We can define validator and converter functions that are run on each
+    value of the dict.
+
+    >>> def is_positive_validator(value):
+    ...     if value <= 0:
+    ...         raise TypeError('value must be positive')
+    ...
+    >>> vl = ValidatedDict({'a': 1, 'b': -1}, validator=is_positive_validator)
+    Traceback (most recent call last):
+    ...
+    TypeError: value must be positive
+
+    Multiple converters that are run before the validators can be specified.
+
+    >>> vl = ValidatedDict({'c': -1, 'd': '2', 'e': 3.0}, converter=[float, abs],
+    ...                    validator=is_positive_validator)
+    >>> vl
+    {'c': 1.0, 'd': 2.0, 'e': 3.0}
+
+    """
+    def __init__(self, mapping, converter=None, validator=None):
+        """
+        Initialize the dict.
+
+        Parameters
+        ----------
+        mapping : Mapping
+            A mapping of elements, probably a dict.
+        converter : callable or List[callable]
+            Functions that will be used to convert each new element of
+            the dict.
+        validator : callable or List[callable]
+            Functions that will be used to convert each new element of
+            the dict.
+
+        """
+        # Make sure converter and validator are always iterables.
+        if not (converter is None or isinstance(converter, abc.Iterable)):
+            converter = [converter]
+        if not (validator is None or isinstance(validator, abc.Iterable)):
+            validator = [validator]
+        self._converters = converter
+        self._validators = validator
+
+        # Validate and convert the whole mapping
+        mapping = self._convert_and_validate(mapping)
+        super().__init__(mapping)
+
+    def update(self, other):
+       other = self._convert_and_validate(dict(other))
+       super().update(other)
+
+    def copy(self):
+        return self.__class__(self)
+
+    def __setitem__(self, key, value):
+        value = self._convert_and_validate({None: value})[None]
+        super().__setitem__(key, value)
+
+    # This is needed for pickling. See https://github.com/openforcefield/openforcefield/issues/411
+    # for more details.
+    # TODO: Is there a cleaner way (getstate/setstate perhaps?) to allow FFs to be
+    #       pickled?
+    def __reduce__(self):
+        return (__class__, ( dict( self),), self.__dict__)
+
+    def _convert_and_validate(self, mapping):
+        """Run all converters and the validator on the given mapping."""
+
+        # Run all element converters.
+        if self._converters is not None:
+            for converter in self._converters:
+                mapping = {key: converter(value)
+                        for key, value in mapping.items()}
+
+        # Run all element validators.
+        if self._validators is not None:
+            for validator in self._validators:
+                for value in mapping.values():
+                    validator(value)
+        return mapping
 
 
 if __name__ == '__main__':

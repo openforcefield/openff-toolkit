@@ -1093,6 +1093,16 @@ class ForceField:
         charge_from_molecules : List[openforcefield.molecule.Molecule], optional
             If specified, partial charges will be taken from the given molecules
             instead of being determined by the force field.
+        partial_bond_orders_from_molecules : List[openforcefield.molecule.Molecule], optional
+            If specified, partial bond orders will be taken from the given molecules
+            instead of being determined by the force field.
+            **All** bonds on each molecule given must have ``fractional_bond_order`` specified.
+            A `ValueError` will be raised if any bonds have ``fractional_bond_order=None``.
+            Molecules in the topology not represented in this list will have fractional
+            bond orders calculated using underlying toolkits as needed.
+        return_topology : bool
+            If ``True``, return tuple of ``(system, topology)``, where
+            ``topology`` is the processed topology. Default ``False``.
 
         Returns
         -------
@@ -1100,8 +1110,15 @@ class ForceField:
             The newly created OpenMM System corresponding to the specified ``topology``
 
         """
+        return_topology = kwargs.pop('return_topology', False)
+
         # Make a deep copy of the topology so we don't accidentally modify it
         topology = copy.deepcopy(topology)
+
+        # set all fractional_bond_orders in topology to None
+        for ref_mol in topology.reference_molecules:
+            for bond in ref_mol.bonds:
+                bond.fractional_bond_order = None
 
         # Set the topology aromaticity model to that used by the current forcefield
         # TODO: See openforcefield issue #206 for proposed implementation of aromaticity
@@ -1141,7 +1158,10 @@ class ForceField:
         for parameter_handler in parameter_handlers:
             parameter_handler.postprocess_system(system, topology, **kwargs)
 
-        return system
+        if return_topology:
+            return (system, topology)
+        else:
+            return system
 
     def create_parmed_structure(self,
                                 topology,
