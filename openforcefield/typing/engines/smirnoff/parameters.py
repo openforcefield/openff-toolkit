@@ -490,15 +490,18 @@ class IndexedMappedParameterAttribute(ParameterAttribute):
         # ValidatedListMapping expects converters that take the value as a single
         # argument so we create a partial function with the instance assigned.
         static_converter = functools.partial(self._call_converter, instance=instance)
-        index_converter = lambda x: ValidatedDict(x)
 
         value = ValidatedList(
                 [ValidatedDict(element,
                                converter=[self._validate_units, static_converter])
                     for element in value], 
-                converter=index_converter)
+                converter=self._index_converter)
 
         return value
+
+    @staticmethod
+    def _index_converter(x):
+        return ValidatedDict(x)
 
 
 class _ParameterAttributeHandler:

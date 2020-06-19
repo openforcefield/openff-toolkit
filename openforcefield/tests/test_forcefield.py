@@ -70,9 +70,10 @@ simple_xml_ff = str.encode('''<?xml version='1.0' encoding='ASCII'?>
     <Angle smirks="[*:1]~[#6X4:2]-[*:3]" angle="109.5 * degree" id="a1" k="100.0 * kilocalories_per_mole/radian**2"/>
     <Angle smirks="[#1:1]-[#6X4:2]-[#1:3]" angle="109.5 * degree" id="a2" k="70.0 * kilocalories_per_mole/radian**2"/>
   </Angles>
-  <ProperTorsions version="0.3" potential="k*(1+cos(periodicity*theta-phase))">
+  <ProperTorsions version="0.3" potential="k*(1+cos(periodicity*theta-phase))" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
     <Proper smirks="[*:1]-[#6X4:2]-[#6X4:3]-[*:4]" id="t1" idivf1="1" k1="0.156 * kilocalories_per_mole" periodicity1="3" phase1="0.0 * degree"/>
     <Proper smirks="[#6X4:1]-[#6X4:2]-[#6X4:3]-[#6X4:4]" id="t2" idivf1="1" k1="0.180 * kilocalories_per_mole" periodicity1="3" phase1="0.0 * degree" periodicity2="2" phase2="180.0 * degree" idivf2="1" k2="0.250 * kilocalories_per_mole" periodicity3="1" phase3="180.0 * degree" idivf3="1" k3="0.200 * kilocalories_per_mole"/>
+    <Proper smirks="[*:1]:[#6X4:2]~[#6X4:3]:[*:4]" periodicity1="2" phase1="0.0 * degree" k1_bondorder1="1.00*kilocalories_per_mole" k1_bondorder2="1.80*kilocalories_per_mole" idivf1="1.0"/>
   </ProperTorsions>
   <ImproperTorsions version="0.3" potential="k*(1+cos(periodicity*theta-phase))">
     <Improper smirks="[*:1]~[#6X3:2](~[*:3])~[*:4]" id="i1" k1="1.1 * kilocalories_per_mole" periodicity1="2" phase1="180. * degree"/>
@@ -137,9 +138,10 @@ xml_ff_w_cosmetic_elements = '''<?xml version='1.0' encoding='ASCII'?>
     <Angle smirks="[*:1]~[#6X4:2]-[*:3]" angle="109.5 * degree" id="a1" k="100.0 * kilocalories_per_mole/radian**2"/>
     <Angle smirks="[#1:1]-[#6X4:2]-[#1:3]" angle="109.5 * degree" id="a2" k="70.0 * kilocalories_per_mole/radian**2"/>
   </Angles>
-  <ProperTorsions version="0.3" potential="k*(1+cos(periodicity*theta-phase))">
+  <ProperTorsions version="0.3" potential="k*(1+cos(periodicity*theta-phase))" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
     <Proper smirks="[*:1]-[#6X4:2]-[#6X4:3]-[*:4]" id="t1" idivf1="1" k1="0.156 * kilocalories_per_mole" periodicity1="3" phase1="0.0 * degree"/>
     <Proper smirks="[#6X4:1]-[#6X4:2]-[#6X4:3]-[#6X4:4]" id="t2" idivf1="1" k1="0.180 * kilocalories_per_mole" periodicity1="3" phase1="0.0 * degree" periodicity2="2" phase2="180.0 * degree" idivf2="1" k2="0.250 * kilocalories_per_mole" periodicity3="1" phase3="180.0 * degree" idivf3="1" k3="0.200 * kilocalories_per_mole"/>
+    <Proper smirks="[*:1]:[#6X4:2]~[#6X4:3]:[*:4]" periodicity1="2" phase1="0.0 * degree" k1_bondorder1="1.00*kilocalories_per_mole" k1_bondorder2="1.80*kilocalories_per_mole" idivf1="1.0"/>
   </ProperTorsions>
   <ImproperTorsions version="0.3" potential="k*(1+cos(periodicity*theta-phase))">
     <Improper smirks="[*:1]~[#6X3:2](~[*:3])~[*:4]" id="i1" k1="1.1 * kilocalories_per_mole" periodicity1="2" phase1="180. * degree"/>
@@ -575,7 +577,7 @@ class TestForceField():
         forcefield = ForceField(simple_xml_ff)
         assert len(forcefield._parameter_handlers['Bonds']._parameters) == 2
         assert len(forcefield._parameter_handlers['Angles']._parameters) == 2
-        assert len(forcefield._parameter_handlers['ProperTorsions']._parameters) == 2
+        assert len(forcefield._parameter_handlers['ProperTorsions']._parameters) == 3
         assert len(forcefield._parameter_handlers['ImproperTorsions']._parameters) == 2
         assert len(forcefield._parameter_handlers['vdW']._parameters) == 2
 
