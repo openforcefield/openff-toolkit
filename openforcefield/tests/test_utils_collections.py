@@ -28,6 +28,7 @@ class TestValidatedMixin:
 
     def test_pickle(self):
         """Test pickle roundtripping"""
+        # TODO: implement this test
         pass
 
 
