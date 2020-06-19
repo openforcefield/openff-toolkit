@@ -4,4 +4,6 @@ These examples illustrate how to compute small molecule vacuum energies (for exa
 
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/openforcefield/openforcefield/master?filepath=examples%2Fconformer_energies%2Fconformer_energies.ipynb)
 
-[`conformer_energies.ipynb`](conformer_energies.ipynb) contains an example illustrating the computation of conformer energies using a SMIRNOFF force field
+* [`conformer_energies.ipynb`](conformer_energies.ipynb) contains an example illustrating the computation of conformer energies using a SMIRNOFF force field
+* [`conformer_energies.py`](conformer_energies.py) is a CLI utility for computing conformer energies using the "Parsley" (openff-1.1.0) SMIRNOFF force field.
+  It can be run on example data with `python conformer_energies.py -f ruxolitinib_conformers.sdf`

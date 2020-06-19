@@ -14,10 +14,12 @@ dependencies:
   - nbval
   - codecov
   - coverage < 5.0
+  - py-cpuinfo <= 5 # Needed until https://github.com/MolSSI/QCEngine/issues/252 is resolved+released
   - numpy
   - networkx
   - ambertools
   - packaging
+  - openmmforcefields >=0.7.2
   - openmmtools
   - openforcefields
   - smirnoff99Frosst
@@ -28,7 +30,7 @@ dependencies:
   - xmltodict
   - qcelemental
   - qcportal
-  - qcengine
+  - qcengine <= 0.14 # Remove this and py-cpuinfo pin above when there's a new release of QCEngine
 
     # Pip-only installs
   #- pip:

@@ -56,9 +56,26 @@ Behavior changed
   This check fails erroneously for cases in which the partial charge assignments are correctly all zero,
   such as for ``N#N``. It is also an unnecessary check given that `quacpac` will reliably indicate when
   it has failed to assign charges.
+- `PR #597 <https://github.com/openforcefield/openforcefield/pull/597>`_: Energy-minimized sample systems
+  with Parsley 1.1.0.
+
 
 API-breaking changes
 """"""""""""""""""""
+- `PR #601 <https://github.com/openforcefield/openforcefield/pull/601>`_: Removes
+  almost all of the previous
+  :py:class:`ChemicalEnvironment <openforcefield.typing.chemistry.ChemicalEnvironment>`
+  API, since this entire module was simply copied from
+  `Chemper <https://github.com/MobleyLab/chemper>`_ several years ago and has fallen behind on updates.
+  Currently only
+  :py:meth:`ChemicalEnvironment.get_type <openforcefield.typing.chemistry.ChemicalEnvironment.get_type>`,
+  :py:meth:`ChemicalEnvironment.validate <openforcefield.typing.chemistry.ChemicalEnvironment.validate>`,
+  and an equivalent classmethod
+  :py:meth:`ChemicalEnvironment.validate_smirks <openforcefield.typing.chemistry.ChemicalEnvironment.validate_smirks>`
+  remain. Also, please comment on
+  `this GitHub issue <https://github.com/MobleyLab/chemper/issues/90>`_ if you HAVE been using
+  the previous extra functionality in this module and would like us to prioritize creation of a Chemper
+  conda package.
 - `PR #558 <https://github.com/openforcefield/openforcefield/pull/558>`_: Removes
   ``TopologyMolecule.topology_particle_start_index``, since the :py:class:`Topology <openforcefield.topology.Topology>`
   particle indexing system now orders :py:class:`TopologyVirtualSites <openforcefield.topology.TopologyVirtualSite>`
@@ -75,10 +92,20 @@ API-breaking changes
 - `PR #508 <https://github.com/openforcefield/openforcefield/pull/508>`_:
   ``Molecule.compute_wiberg_bond_orders`` is now
   :py:meth:`Molecule.assign_fractional_bond_orders <openforcefield.topology.Molecule.assign_fractional_bond_orders>`.
-
+- `PR #595 <https://github.com/openforcefield/openforcefield/pull/595>`_: Removed functions
+  :py:meth:`temporary_directory <openforcefield.utils.utils.temporary_directory>` and
+  :py:meth:`temporary_cd <openforcefield.utils.utils.temporary_cd>` and replaced their behavoir with
+  ``tempfile.TemporaryDirectory()``.
 
 New features
 """"""""""""
+- `PR #601 <https://github.com/openforcefield/openforcefield/pull/601>`_: Adds
+  :py:meth:`RDKitToolkitWrapper.get_tagged_smarts_connectivity <openforcefield.utils.toolkits.RDKitToolkitWrapper.get_tagged_smarts_connectivity>`
+  and
+  :py:meth:`OpenEyeToolkitWrapper.get_tagged_smarts_connectivity <openforcefield.utils.toolkits.OpenEyeToolkitWrapper.get_tagged_smarts_connectivity>`,
+  which allow the use of either toolkit for smirks/tagged smarts validation.
+- `PR #600 <https://github.com/openforcefield/openforcefield/pull/600>`_:
+  Adds :py:meth:`ForceField.__getitem__ <openforcefield.typing.engines.smirnoff.forcefield.ForceField.__getitem__>` to look up ``ParameterHandler`` objects based on their string names.
 - `PR #508 <https://github.com/openforcefield/openforcefield/pull/508>`_:
   Adds :py:meth:`AmberToolsToolkitWrapper.assign_fractional_bond_orders <openforcefield.utils.toolkits.AmberToolsToolkitWrapper.assign_wiberg_bond_orders>`.
 - `PR #469 <https://github.com/openforcefield/openforcefield/pull/469>`_:
@@ -93,6 +120,9 @@ New features
   and :py:meth:`Molecule.to_hill_formula <openforcefield.topology.Molecule.to_hill_formula>`
   and :py:meth:`Molecule.to_qcschema <openforcefield.topology.Molecule.to_qcschema>`
   and :py:meth:`Molecule.from_qcschema <openforcefield.topology.Molecule.from_qcschema>`
+      .. note::
+         The qcschema method accepts an extras dictionary which is passed into the validated qcelemental.models.Molecule
+         object.
   and :py:meth:`Molecule.from_mapped_smiles <openforcefield.topology.Molecule.from_mapped_smiles>`
   and :py:meth:`Molecule.from_pdb_and_smiles <openforcefield.topology.Molecule.from_pdb_and_smiles>`
   and :py:meth:`Molecule.canonical_order_atoms <openforcefield.topology.Molecule.canonical_order_atoms>`
@@ -160,9 +190,9 @@ Behavior changed
   and generate a new conformer of the molecule before running semiempirical calculations.
   Users can override this behavior by specifying the keyword argument
   ``use_conformers=molecule.conformers``
-- `PR #544 <https://github.com/openforcefield/openforcefield/pull/544>`_: Raises 
-  ``NotImplementedError`` when calling 
-  :py:meth:`ParameterHandler.get_parameter   <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler.get_parameter>`, 
+- `PR #544 <https://github.com/openforcefield/openforcefield/pull/544>`_: Raises
+  ``NotImplementedError`` when calling
+  :py:meth:`ParameterHandler.get_parameter   <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler.get_parameter>`,
   which is not yet implemented, but would previously silently return ``None``.
 - `PR #551 <https://github.com/openforcefield/openforcefield/pull/551>`_: Implemented the
   :py:meth:`ParameterHandler.get_parameter   <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler.get_parameter>` function.
@@ -266,13 +296,17 @@ Bugfixes
   :py:meth:`Molecule.to_file <openforcefield.topology.Molecule.to_file>` can now correctly write multi-model PDB files
   when using the RDKit backend toolkit.
 
-Example added
-"""""""""""""
+Examples added
+""""""""""""""
+- `PR #591 <https://github.com/openforcefield/openforcefield/pull/591>`_ and
+  `PR #533 <https://github.com/openforcefield/openforcefield/pull/533>`_: Adds an
+  `example notebook and utility to compute conformer energies <https://github.com/openforcefield/openforcefield/blob/master/examples/conformer_energies>`_.
+  This example is made to be reverse-compatible with the 0.6.0 OpenFF Toolkit release.
 - `PR #472 <https://github.com/openforcefield/openforcefield/pull/472>`_: Adds an example notebook
   `QCarchive_interface.ipynb <https://github.com/openforcefield/openforcefield/blob/master/examples/QCArchive_interface/QCarchive_interface.ipynb>`_
   which shows users how to instance the :py:class:`Molecule <openforcefield.topology.Molecule>` from
   a QCArchive entry level record and calculate the energy using RDKit through QCEngine.
-- `PR #533 <`https://github.com/openforcefield/openforcefield/pull/533>`_: Adds an example notebook which `conformer_energies.ipynb <https://github.com/openforcefield/openforcefield/blob/master/examples/conformer_energies/conformer_energies.ipynb>`
+
 
 0.6.0 - Library Charges
 -----------------------

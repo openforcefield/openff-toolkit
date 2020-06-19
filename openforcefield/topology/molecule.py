@@ -3796,7 +3796,7 @@ class FrozenMolecule(Serializable):
             oemol, allow_undefined_stereo=allow_undefined_stereo)
         return molecule
 
-    def to_qcschema(self, multiplicity=1, conformer=0):
+    def to_qcschema(self, multiplicity=1, conformer=0, extras=None):
         """
         Generate the qschema input format used to submit jobs to archive
         or run qcengine calculations locally,
@@ -3811,6 +3811,10 @@ class FrozenMolecule(Serializable):
 
         conformer : int, default=0,
             The index of the conformer that should be used for qcschema
+
+        extras : dict, default=None
+            The extras dictionary that should be included into the qcelemental.models.Molecule. This can be used to
+            include extra information such as the smiles representation.
 
         Returns
         ---------
@@ -3853,7 +3857,7 @@ class FrozenMolecule(Serializable):
         symbols = [Element.getByAtomicNumber(atom.atomic_number).symbol for atom in self.atoms]
 
         schema_dict = {'symbols': symbols, 'geometry': geometry, 'connectivity': connectivity,
-                       'molecular_charge': charge, 'molecular_multiplicity': multiplicity}
+                       'molecular_charge': charge, 'molecular_multiplicity': multiplicity, "extras": extras}
 
         return qcel.models.Molecule.from_data(schema_dict, validate=True)
 
