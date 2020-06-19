@@ -247,7 +247,7 @@ class ForceField:
             This option is primarily intended for forcefield development.
         allow_cosmetic_attributes : bool, optional. Default = False
             Whether to retain non-spec kwargs from data sources.
-        load_plugins: bool, optional. Default = True
+        load_plugins: bool, optional. Default = False
             Whether to load ``ParameterHandler`` classes which have been registered
             by installed plugins.
 
