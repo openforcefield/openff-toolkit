@@ -3897,9 +3897,11 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         # Compute bond orders
         bond_order_model_to_antechamber_keyword = {'am1-wiberg': 'mul'}
         supported_bond_order_models = list(bond_order_model_to_antechamber_keyword.keys())
-        bond_order_model = bond_order_model.lower()
         if bond_order_model is None:
             bond_order_model = 'am1-wiberg'
+
+        bond_order_model = bond_order_model.lower()
+
         if bond_order_model not in supported_bond_order_models:
             raise ValueError(f"Bond order model '{bond_order_model}' is not supported by AmberToolsToolkitWrapper. "
                              f"Supported models are {supported_bond_order_models}")
