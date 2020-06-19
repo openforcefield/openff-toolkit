@@ -309,7 +309,7 @@ class ToolkitWrapper:
             If the wrong number of conformers is attached to the input molecule, and strict_n_conformers is True.
         """
         import warnings
-        n_confs = len(molecule.conformers)
+        n_confs = molecule.n_conformers
         wrong_confs_msg = f"Molecule '{molecule}' has {n_confs} conformers, " \
             f"but charge method '{partial_charge_method}' expects"
         exception_suffix = "You can disable this error by setting `strict_n_conformers=False' " \

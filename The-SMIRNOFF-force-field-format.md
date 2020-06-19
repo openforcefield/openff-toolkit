@@ -225,8 +225,6 @@ For example, to ensure water molecules are assigned partial charges for [TIP3P](
 
 ### `<ChargeIncrementModel>`: Small molecule and fragment charges
 
-.. warning:: This functionality is not yet implemented and will appear in a future version of the toolkit. This area of the SMIRNOFF spec is under further consideration. Please see `Issue 208 on the Open Force Field Toolkit issue tracker <https://github.com/openforcefield/openforcefield/issues/208>`_.
-
 In keeping with the AMBER force field philosophy, especially as implemented in small molecule force fields such as [GAFF](http://ambermd.org/antechamber/gaff.html), [GAFF2](https://mulan.swmed.edu/group/gaff.php), and [parm@Frosst](http://www.ccl.net/cca/data/parm_at_Frosst/), partial charges for small molecules are usually assigned using a quantum chemical method (usually a semiempirical method such as [AM1](https://en.wikipedia.org/wiki/Austin_Model_1)) and a [partial charge determination scheme](https://en.wikipedia.org/wiki/Partial_charge) (such as [CM2](http://doi.org/10.1021/jp972682r) or [RESP](http://doi.org/10.1021/ja00074a030)), then subsequently corrected via charge increment rules, as in the highly successful [AM1-BCC](https://dx.doi.org/10.1002/jcc.10128) approach.
 
 Here is an example:

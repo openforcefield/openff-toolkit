@@ -22,6 +22,7 @@ import pytest
 
 from openforcefield.utils.toolkits import (OpenEyeToolkitWrapper, RDKitToolkitWrapper,
                                            AmberToolsToolkitWrapper, BuiltInToolkitWrapper, ToolkitRegistry,
+                                           ToolkitWrapper,
                                            GAFFAtomTypeWarning, UndefinedStereochemistryError,
                                            ChargeMethodUnavailableError, IncorrectNumConformersError,
                                            IncorrectNumConformersWarning)
@@ -2166,8 +2167,93 @@ class TestBuiltInToolkitWrapper:
                                          use_conformers=molecule.conformers,
                                          strict_n_conformers=True)
 
+class TestToolkitWrapper:
+    """Test the ToolkitWrapper class"""
+    def test_check_n_conformers(self):
+        """Ensure that _check_n_conformers is working properly"""
+        tkw = ToolkitWrapper()
+        mol = create_ethanol()
+
+        ## Test molecule with no conformers
+        # Check with no min or max should pass
+        tkw._check_n_conformers(mol, 'nocharge')
+        # Check with min=1 should warn
+        with pytest.warns(IncorrectNumConformersWarning,
+                           match="has 0 conformers, but charge method 'nocharge' expects at least 1"):
+            tkw._check_n_conformers(mol, 'nocharge', min_confs=1)
+        # Check with min=1 and strict_n_conformers should raise an error
+        with pytest.raises(IncorrectNumConformersError,
+                           match="has 0 conformers, but charge method 'nocharge' expects at least 1"):
+            tkw._check_n_conformers(mol, 'nocharge', min_confs=1, strict_n_conformers=True)
+        # Check with min=1, max=1 and strict_n_conformers should raise an error
+        with pytest.raises(IncorrectNumConformersError,
+                           match="has 0 conformers, but charge method 'nocharge' expects exactly 1"):
+            tkw._check_n_conformers(mol, 'nocharge', min_confs=1, max_confs=1, strict_n_conformers=True)
+        # Check with min=1, max=2 and strict_n_conformers should raise an error
+        with pytest.raises(IncorrectNumConformersError,
+                           match="has 0 conformers, but charge method 'nocharge' expects between 1 and 2"):
+            tkw._check_n_conformers(mol, 'nocharge', min_confs=1, max_confs=2, strict_n_conformers=True)
+        # Check with max=1 should pass
+        tkw._check_n_conformers(mol, 'nocharge', max_confs=1, strict_n_conformers=True)
+
+        ## Test molecule with conformers
+        # Add some conformers
+        mol.generate_conformers(n_conformers=1)
+        for _ in range(9):
+            mol.add_conformer(mol.conformers[0])
+
+        # Check with no min or max should pass
+        tkw._check_n_conformers(mol, 'nocharge')
+
+        ## min_confs checks
+        # Check with min=1 should be fine
+        tkw._check_n_conformers(mol, 'nocharge', min_confs=1)
+        # Check with min=10 should be fine
+        tkw._check_n_conformers(mol, 'nocharge', min_confs=10)
+        # Check with min=11 should warn
+        with pytest.warns(IncorrectNumConformersWarning,
+                           match="has 10 conformers, but charge method 'nocharge' expects at least 11"):
+            tkw._check_n_conformers(mol, 'nocharge', min_confs=11)
+        # Check with min=11 and strict_n_conformers should raise an error
+        with pytest.raises(IncorrectNumConformersError,
+                           match="has 10 conformers, but charge method 'nocharge' expects at least 11"):
+            tkw._check_n_conformers(mol, 'nocharge', min_confs=11, strict_n_conformers=True)
+
+        ## max_confs checks
+        # Check with max=1 and strict_n_conformers should raise an error
+        with pytest.raises(IncorrectNumConformersError,
+                           match="has 10 conformers, but charge method 'nocharge' expects at most 1"):
+            tkw._check_n_conformers(mol, 'nocharge', max_confs=1, strict_n_conformers=True)
+        # Check with max=10 and strict_n_conformers should be OK
+        tkw._check_n_conformers(mol, 'nocharge', max_confs=10, strict_n_conformers=True)
+        # Check with max=11 and strict_n_conformers should be OK
+        tkw._check_n_conformers(mol, 'nocharge', max_confs=11, strict_n_conformers=True)
+
+        ## min_confs and max_confs checks
+        # Check with max=10 and min=10 and strict_n_conformers should be OK
+        tkw._check_n_conformers(mol, 'nocharge', min_confs=10, max_confs=10, strict_n_conformers=True)
+        # Check with max=10 and min=9 and strict_n_conformers should be OK
+        tkw._check_n_conformers(mol, 'nocharge', min_confs=9, max_confs=10, strict_n_conformers=True)
+        # Check with max=11 and min=10 and strict_n_conformers should be OK
+        tkw._check_n_conformers(mol, 'nocharge', min_confs=10, max_confs=11, strict_n_conformers=True)
+        # Check with max=11 and min=9 and strict_n_conformers should be OK
+        tkw._check_n_conformers(mol, 'nocharge', min_confs=9, max_confs=11, strict_n_conformers=True)
+        # Check with min=9 and max=9 and strict_n_conformers should raise an error
+        with pytest.raises(IncorrectNumConformersError,
+                           match="has 10 conformers, but charge method 'nocharge' expects exactly 9"):
+            tkw._check_n_conformers(mol, 'nocharge', min_confs=9, max_confs=9, strict_n_conformers=True)
+        # Check with min=1 and max=9 and strict_n_conformers should raise an error
+        with pytest.raises(IncorrectNumConformersError,
+                           match="has 10 conformers, but charge method 'nocharge' expects between 1 and 9"):
+            tkw._check_n_conformers(mol, 'nocharge', min_confs=1, max_confs=9, strict_n_conformers=True)
+        # Check with min=11 and max=12 and strict_n_conformers should raise an error
+        with pytest.raises(IncorrectNumConformersError,
+                           match="has 10 conformers, but charge method 'nocharge' expects between 11 and 12"):
+            tkw._check_n_conformers(mol, 'nocharge', min_confs=11, max_confs=12, strict_n_conformers=True)
+
+
 class TestToolkitRegistry:
-    """Test the ToolkitRegistry"""
+    """Test the ToolkitRegistry class"""
 
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_register_openeye(self):

@@ -240,7 +240,7 @@ xml_spec_docs_charge_increment_model_xml = '''
 
 xml_charge_increment_model_formal_charges = '''
 <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-  <ChargeIncrementModel version="0.3" number_of_conformers="1" partial_charge_method="formal_charge"/>
+  <ChargeIncrementModel version="0.3" number_of_conformers="0" partial_charge_method="formal_charge"/>
 </SMIRNOFF>
 '''
 
@@ -1520,7 +1520,7 @@ class TestForceFieldChargeAssignment:
         test_charge_increment_model_ff = '''
         <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
           <Electrostatics version="0.3" method="PME" scale12="0.0" scale13="0.0" scale14="0.833333" cutoff="9.0 * angstrom"/>
-          <ChargeIncrementModel version="0.3" number_of_conformers="1" partial_charge_method="formal_charge">
+          <ChargeIncrementModel version="0.3" number_of_conformers="0" partial_charge_method="formal_charge">
             <ChargeIncrement smirks="[#6X4:1]([#1:2])([#1:3])([#1:4])" charge_increment1="0.3*elementary_charge" charge_increment2="-0.1*elementary_charge" charge_increment3="-0.1*elementary_charge" charge_increment4="-0.1*elementary_charge"/>
             <ChargeIncrement smirks="[#6X4:1][#6X4:2][#8]" charge_increment1="0.05*elementary_charge" charge_increment2="-0.05*elementary_charge"/>
           </ChargeIncrementModel>
