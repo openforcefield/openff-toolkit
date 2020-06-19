@@ -223,7 +223,7 @@ class ForceField:
                  parameter_io_handler_classes=None,
                  disable_version_check=False,
                  allow_cosmetic_attributes=False,
-                 load_plugins=True):
+                 load_plugins=False):
         """Create a new :class:`ForceField` object from one or more SMIRNOFF parameter definition files.
 
         Parameters
