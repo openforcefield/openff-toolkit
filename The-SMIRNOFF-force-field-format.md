@@ -478,7 +478,7 @@ If the `potential` attribute is omitted, it defaults to `k*(1+cos(periodicity*th
 
 #### Fractional torsion bond orders
 
-Fractional torsion bond orders can be used to allow interpolation of torsion parameters.
+Fractional torsion bond orders can be used to allow interpolation and extrapolation of torsion parameters.
 This is similar to the functionality provided by fractional bond orders detailed above.
 For example, these parameters:
 ```XML
@@ -497,6 +497,13 @@ This allows specification of the barrier height for e.g. bond orders 1 and 2 (si
 Note that in actual usage partial/fractional bond order may never be exactly 1 or 2, or perhaps even near 2; these values only serve to define the slope of the line used for interpolation.
 In the example above, we replaced the two proper torsion terms (one single central bond (`-`) and one double central bond (`=`)) with a single term giving the barrier heights for bond order 1 and 2.
 If there are cases where the fractional bond order is 1.5, this can correspond to e.g. an aromatic bond.
+When barrier heights for more than two integer bond orders are specified, (say, 1, 2, and 3), the interpolation lines are drawn between successive points as a piecewiese linear function.
+
+Cases in which the fractional bond order for the central bond is outside of the bond orders specified (e.g. 1 and 2 above), the barrier height ``k#`` is *extrapolated* using the same slope of the line used for interpolation.
+This works even when barrier heights for more than two integer bond orders are specified (say, 1, 2, and 3), in which case the piecewise linear extrapolation beyond the bounds uses the slope of the line defined by the nearest two bond orders.
+In other words, a fractional bond order of 3.2 would yield an interpolated `k#` value determined by the interpolation line between ``k#_bondorder2`` and ``k#_bondorder3``.
+A fractional bond order of .9 would yield an interpolated `k#` value determined by the interpolation line between ``k#_bondorder1`` and ``k#_bondorder2``.
+
 
 Some key usage points:
 * `fractional_bondorder_method` defaults to `AM1-Wiberg`.
