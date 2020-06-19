@@ -63,6 +63,7 @@ Miscellaneous utility functions.
 
     inherit_docstrings
     all_subclasses
+    temporary_cd
     get_data_file_path
     convert_0_1_smirnoff_to_0_2
     convert_0_2_smirnoff_to_0_3

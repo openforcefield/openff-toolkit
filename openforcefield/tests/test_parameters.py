@@ -23,7 +23,7 @@ from openforcefield.typing.engines.smirnoff.parameters import (
     ParameterAttribute, IndexedParameterAttribute, ParameterList,
     ParameterType, BondHandler, ParameterHandler, ProperTorsionHandler,
     ImproperTorsionHandler, LibraryChargeHandler, GBSAHandler, SMIRNOFFSpecError,
-    _ParameterAttributeHandler
+    _ParameterAttributeHandler, ChargeIncrementModelHandler, IncompatibleParameterError
     )
 from openforcefield.utils import detach_units, IncompatibleUnitError
 from openforcefield.utils.collections import ValidatedList
@@ -1207,6 +1207,101 @@ class TestLibraryChargeHandler:
         """Test creation of an empty LibraryChargeHandler"""
         handler = LibraryChargeHandler(skip_version_check=True)
 
+    def test_library_charge_type_wrong_num_charges(self):
+        """Ensure that an error is raised if a LibraryChargeType is initialized with a different number of
+        tagged atoms and charges"""
+        lc_type = LibraryChargeHandler.LibraryChargeType(smirks='[#6:1]-[#7:2]',
+                                                         charge1=0.1 * unit.elementary_charge,
+                                                         charge2=-0.1 * unit.elementary_charge)
+
+        lc_type = LibraryChargeHandler.LibraryChargeType(smirks='[#6:1]-[#7:2]-[#6]',
+                                                         charge1=0.1 * unit.elementary_charge,
+                                                         charge2=-0.1 * unit.elementary_charge)
+
+        with pytest.raises(SMIRNOFFSpecError, match="initialized with unequal number of tagged atoms and charges") as excinfo:
+            lc_type = LibraryChargeHandler.LibraryChargeType(smirks='[#6:1]-[#7:2]',
+                                                             charge1=0.05 * unit.elementary_charge,
+                                                             charge2=0.05 * unit.elementary_charge,
+                                                             charge3=-0.1 * unit.elementary_charge)
+
+        with pytest.raises(SMIRNOFFSpecError, match="initialized with unequal number of tagged atoms and charges") as excinfo:
+            lc_type = LibraryChargeHandler.LibraryChargeType(smirks='[#6:1]-[#7:2]-[#6]',
+                                                             charge1=0.05 * unit.elementary_charge,
+                                                             charge2=0.05 * unit.elementary_charge,
+                                                             charge3=-0.1 * unit.elementary_charge)
+
+        with pytest.raises(SMIRNOFFSpecError, match="initialized with unequal number of tagged atoms and charges") as excinfo:
+            lc_type = LibraryChargeHandler.LibraryChargeType(smirks='[#6:1]-[#7:2]-[#6]',
+                                                             charge1=0.05 * unit.elementary_charge)
+
+class TestChargeIncrementModelHandler:
+    def test_create_charge_increment_model_handler(self):
+        """Test creation of ChargeIncrementModelHandlers"""
+        handler = ChargeIncrementModelHandler(skip_version_check=True)
+        assert handler.number_of_conformers == 1
+        assert handler.partial_charge_method == 'AM1-Mulliken'
+        handler = ChargeIncrementModelHandler(skip_version_check=True, number_of_conformers=10)
+        handler = ChargeIncrementModelHandler(skip_version_check=True, number_of_conformers=1)
+        handler = ChargeIncrementModelHandler(skip_version_check=True, number_of_conformers="10")
+        handler = ChargeIncrementModelHandler(skip_version_check=True, number_of_conformers=0)
+        handler = ChargeIncrementModelHandler(skip_version_check=True, number_of_conformers="0")
+        with pytest.raises(TypeError) as excinfo:
+            handler = ChargeIncrementModelHandler(skip_version_check=True, number_of_conformers=None)
+        with pytest.raises(SMIRNOFFSpecError) as excinfo:
+            handler = ChargeIncrementModelHandler(skip_version_check=True, n_conformers=[10])
+        handler = ChargeIncrementModelHandler(skip_version_check=True, partial_charge_method="AM1-Mulliken")
+        handler = ChargeIncrementModelHandler(skip_version_check=True, partial_charge_method="Gasteiger")
+        handler = ChargeIncrementModelHandler(skip_version_check=True, partial_charge_method=None)
+
+    def test_charge_increment_model_handler_getters_setters(self):
+        """Test ChargeIncrementModelHandler getters and setters"""
+        handler = ChargeIncrementModelHandler(skip_version_check=True)
+        assert handler.number_of_conformers == 1
+        assert handler.partial_charge_method == 'AM1-Mulliken'
+        handler.number_of_conformers = 2
+        assert handler.number_of_conformers == 2
+        handler.number_of_conformers = "3"
+        assert handler.number_of_conformers == 3
+        with pytest.raises(ValueError) as excinfo:
+            handler.number_of_conformers = "string that can't be cast to int"
+
+    def test_charge_increment_model_handlers_are_compatible(self):
+        """Test creation of ChargeIncrementModelHandlers"""
+        handler1 = ChargeIncrementModelHandler(skip_version_check=True)
+        handler2 = ChargeIncrementModelHandler(skip_version_check=True)
+        handler1.check_handler_compatibility(handler2)
+
+        handler3 = ChargeIncrementModelHandler(skip_version_check=True, number_of_conformers='9')
+        with pytest.raises(IncompatibleParameterError) as excinfo:
+            handler1.check_handler_compatibility(handler3)
+
+    def test_charge_increment_type_wrong_num_increments(self):
+        """Ensure that an error is raised if a ChargeIncrementType is initialized with a different number of
+        tagged atoms and chargeincrements"""
+        ci_type = ChargeIncrementModelHandler.ChargeIncrementType(smirks='[#6:1]-[#7:2]',
+                                                                  charge_increment1=0.1 * unit.elementary_charge,
+                                                                  charge_increment2=-0.1 * unit.elementary_charge)
+
+        ci_type = ChargeIncrementModelHandler.ChargeIncrementType(smirks='[#6:1]-[#7:2]-[#6]',
+                                                                  charge_increment1=0.1 * unit.elementary_charge,
+                                                                  charge_increment2=-0.1 * unit.elementary_charge)
+
+        with pytest.raises(SMIRNOFFSpecError, match="initialized with unequal number of tagged atoms and charge increments") as excinfo:
+            ci_type = ChargeIncrementModelHandler.ChargeIncrementType(smirks='[#6:1]-[#7:2]',
+                                                                      charge_increment1=0.05 * unit.elementary_charge,
+                                                                      charge_increment2=0.05 * unit.elementary_charge,
+                                                                      charge_increment3=-0.1 * unit.elementary_charge)
+
+        with pytest.raises(SMIRNOFFSpecError, match="initialized with unequal number of tagged atoms and charge increments") as excinfo:
+            ci_type = ChargeIncrementModelHandler.ChargeIncrementType(smirks='[#6:1]-[#7:2]-[#6]',
+                                                                      charge_increment1=0.05 * unit.elementary_charge,
+                                                                      charge_increment2=0.05 * unit.elementary_charge,
+                                                                      charge_increment3=-0.1 * unit.elementary_charge)
+
+        with pytest.raises(SMIRNOFFSpecError, match="initialized with unequal number of tagged atoms and charge increments") as excinfo:
+            ci_type = ChargeIncrementModelHandler.ChargeIncrementType(smirks='[#6:1]-[#7:2]-[#6]',
+                                                                      charge_increment1=0.05 * unit.elementary_charge)
+
 
 class TestGBSAHandler:
     def test_create_default_gbsahandler(self):
@@ -1263,7 +1358,6 @@ class TestGBSAHandler:
         """
         Test the check_handler_compatibility function of GBSAHandler
         """
-        from openforcefield.typing.engines.smirnoff import IncompatibleParameterError
         from simtk import unit
         gbsa_handler_1 = GBSAHandler(skip_version_check=True)
         gbsa_handler_2 = GBSAHandler(skip_version_check=True)

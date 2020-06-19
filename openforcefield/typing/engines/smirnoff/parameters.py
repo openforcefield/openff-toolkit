@@ -50,9 +50,9 @@ import re
 from simtk import openmm, unit
 
 from openforcefield.utils import attach_units,  \
-    extract_serialized_units_from_dict, ToolkitUnavailableException, MessageException, \
-    object_to_quantity
-from openforcefield.topology import ValenceDict, ImproperDict
+    extract_serialized_units_from_dict, MessageException, \
+    object_to_quantity, GLOBAL_TOOLKIT_REGISTRY
+from openforcefield.topology import ValenceDict, ImproperDict, SortedDict
 from openforcefield.topology.molecule import Molecule
 from openforcefield.typing.chemistry import ChemicalEnvironment
 from openforcefield.utils import IncompatibleUnitError
@@ -3229,7 +3229,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
             for top_particle in top_mol.particles:
                 q, _, _ = force.getParticleParameters(top_particle.topology_particle_index)
                 partial_charge_sum += q
-            if abs(float(formal_charge_sum) - (partial_charge_sum/unit.elementary_charge)) > 0.01:
+            if abs(formal_charge_sum - partial_charge_sum) > 0.01 * unit.elementary_charge:
                 msg = f"Partial charge sum ({partial_charge_sum}) " \
                       f"for molecule '{top_mol.reference_molecule.name}' (SMILES " \
                       f"{top_mol.reference_molecule.to_smiles()} does not equal formal charge sum " \
@@ -3255,6 +3255,13 @@ class LibraryChargeHandler(_NonbondedHandler):
         name = ParameterAttribute(default=None)
         charge = IndexedParameterAttribute(unit=unit.elementary_charge)
 
+        def __init__(self, **kwargs):
+            super().__init__(**kwargs)
+            unique_tags, connectivity = GLOBAL_TOOLKIT_REGISTRY.call('get_tagged_smarts_connectivity', self.smirks)
+            if len(self.charge) != len(unique_tags):
+                raise SMIRNOFFSpecError(f"LibraryCharge {self} was initialized with unequal number of "
+                                        f"tagged atoms and charges")
+
 
     _TAGNAME = 'LibraryCharges'  # SMIRNOFF tag name to process
     _INFOTYPE = LibraryChargeType  # info type to store
@@ -3275,12 +3282,10 @@ class LibraryChargeHandler(_NonbondedHandler):
             matching the tuple of particle indices in ``entity``.
         """
 
-        # TODO: Right now, this method is only ever called with an entity that is a Topoogy.
-        #  Should we reduce its scope and have a check here to make sure entity is a Topology?
         return self._find_matches(entity, transformed_dict_cls=dict)
 
     def create_force(self, system, topology, **kwargs):
-        from openforcefield.topology import FrozenMolecule, TopologyAtom, TopologyVirtualSite
+        from openforcefield.topology import FrozenMolecule
 
         force = super().create_force(system, topology, **kwargs)
 
@@ -3369,7 +3374,7 @@ class ToolkitAM1BCCHandler(_NonbondedHandler):
         pass
 
     def create_force(self, system, topology, **kwargs):
-
+        import warnings
         from openforcefield.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
         from openforcefield.topology import FrozenMolecule, TopologyAtom, TopologyVirtualSite
 
@@ -3387,8 +3392,13 @@ class ToolkitAM1BCCHandler(_NonbondedHandler):
 
             # If the molecule wasn't already assigned charge values, calculate them here
             toolkit_registry = kwargs.get('toolkit_registry', GLOBAL_TOOLKIT_REGISTRY)
-            temp_mol.generate_conformers(n_conformers=10, toolkit_registry=toolkit_registry)
-            temp_mol.compute_partial_charges_am1bcc(toolkit_registry=toolkit_registry)
+            try:
+                # We don't need to generate conformers here, since that will be done by default in
+                # compute_partial_charges_am1bcc if the use_conformers kwarg isn't defined
+                temp_mol.compute_partial_charges_am1bcc(toolkit_registry=toolkit_registry)
+            except Exception as e:
+                warnings.warn(str(e), Warning)
+                continue
 
             # Assign charges to relevant atoms
             for topology_molecule in topology._reference_molecule_to_topology_molecules[ref_mol]:
@@ -3458,29 +3468,28 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
 
         .. warning :: This API is experimental and subject to change.
         """
-        _VALENCE_TYPE = 'Bond'  # ChemicalEnvironment valence type expected for SMARTS
+        _VALENCE_TYPE = None  # This disables the connectivity check when parsing LibraryChargeType objects
         _ELEMENT_NAME = 'ChargeIncrement'
 
-        chargeincrement = IndexedParameterAttribute(unit=unit.elementary_charge)
+        charge_increment = IndexedParameterAttribute(unit=unit.elementary_charge)
+
+        def __init__(self, **kwargs):
+            super().__init__(**kwargs)
+            unique_tags, connectivity = GLOBAL_TOOLKIT_REGISTRY.call('get_tagged_smarts_connectivity', self.smirks)
+            if len(self.charge_increment) != len(unique_tags):
+                raise SMIRNOFFSpecError(f"ChargeIncrement {self} was initialized with unequal number of "
+                                        f"tagged atoms and charge increments")
 
 
     _TAGNAME = 'ChargeIncrementModel'  # SMIRNOFF tag name to process
     _INFOTYPE = ChargeIncrementType  # info type to store
-    # TODO: The structure of this is still undecided
+    _DEPENDENCIES = [vdWHandler, ElectrostaticsHandler, LibraryChargeHandler, ToolkitAM1BCCHandler]
 
-    number_of_conformers = ParameterAttribute(default=10, converter=int)
-    quantum_chemical_method = ParameterAttribute(
-        default='AM1',
-        converter=_allow_only(['AM1'])
-    )
+    number_of_conformers = ParameterAttribute(default=1, converter=int)
+
     partial_charge_method = ParameterAttribute(
-        default='CM2',
-        converter=_allow_only(['CM2'])
+        default='AM1-Mulliken', converter=str
     )
-
-    def __init__(self, **kwargs):
-        raise NotImplementedError("ChangeIncrementHandler is not yet implemented, pending finalization of the "
-                                  "SMIRNOFF spec")
 
     def check_handler_compatibility(self,
                                     other_handler,
@@ -3500,17 +3509,36 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
         """
 
         int_attrs_to_compare = ['number_of_conformers']
-        string_attrs_to_compare = ['quantum_chemical_method', 'partial_charge_method']
+        string_attrs_to_compare = ['partial_charge_method']
 
         self._check_attributes_are_equal(other_handler,
                                          identical_attrs=string_attrs_to_compare+int_attrs_to_compare)
 
+    def find_matches(self, entity):
+        """Find the elements of the topology/molecule matched by a parameter type.
+
+        Parameters
+        ----------
+        entity : openforcefield.topology.Topology
+            Topology to search.
+
+        Returns
+        ---------
+        matches : ValenceDict[Tuple[int], ParameterHandler._Match]
+            ``matches[particle_indices]`` is the ``ParameterType`` object
+            matching the tuple of particle indices in ``entity``.
+        """
+        # Using SortedDict here leads to the desired deduplication behavior, BUT it mangles the order
+        # of the atom indices in the keys. Thankfully, the Match objects that are values in `matches` contain
+        # `match.environment_match.topology_atom_indices`, which has the tuple in the correct order
+        matches = self._find_matches(entity, transformed_dict_cls=SortedDict)
+        return matches
 
     def create_force(self, system, topology, **kwargs):
-
-
+        import warnings
         from openforcefield.topology import FrozenMolecule, TopologyAtom, TopologyVirtualSite
 
+        # We only want one instance of this force type
         existing = [system.getForce(i) for i in range(system.getNumForces())]
         existing = [f for f in existing if type(f) == self._OPENMMTYPE]
         if len(existing) == 0:
@@ -3528,12 +3556,19 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
             # Make a temporary copy of ref_mol to assign charges from charge_mol
             temp_mol = FrozenMolecule(ref_mol)
 
-            # If the molecule wasn't assigned parameters from a manually-input charge_mol, calculate them here
-            temp_mol.generate_conformers(n_conformers=10)
-            temp_mol.compute_partial_charges(quantum_chemical_method=self._quantum_chemical_method,
-                                             partial_charge_method=self._partial_charge_method)
+            toolkit_registry = kwargs.get('toolkit_registry', GLOBAL_TOOLKIT_REGISTRY)
+            try:
+                # If the molecule wasn't assigned parameters from a manually-input charge_mol, calculate them here
+                temp_mol.generate_conformers(n_conformers=self.number_of_conformers)
+                temp_mol.assign_partial_charges(partial_charge_method=self.partial_charge_method,
+                                                toolkit_registry=toolkit_registry)
+            except Exception as e:
+                warnings.warn(str(e), Warning)
+                continue
 
-            # Assign charges to relevant atoms
+            charges_to_assign = {}
+
+            # Assign initial, un-incremented charges to relevant atoms
             for topology_molecule in topology._reference_molecule_to_topology_molecules[ref_mol]:
                 for topology_particle in topology_molecule.particles:
                     topology_particle_index = topology_particle.topology_particle_index
@@ -3542,50 +3577,35 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
                     if type(topology_particle) is TopologyVirtualSite:
                         ref_mol_particle_index = topology_particle.virtual_site.molecule_particle_index
                     particle_charge = temp_mol._partial_charges[ref_mol_particle_index]
+                    charges_to_assign[topology_particle_index] = particle_charge
 
-                    # Retrieve nonbonded parameters for reference atom (charge not set yet)
-                    _, sigma, epsilon = force.getParticleParameters(topology_particle_index)
-                    # Set the nonbonded force with the partial charge
-                    force.setParticleParameters(topology_particle_index,
-                                                particle_charge, sigma,
-                                                epsilon)
+            # Find SMARTS-based matches for charge increments
+            charge_increment_matches = self.find_matches(topology)
+
+            # We ignore the atom index order in the keys here, since they have been
+            # sorted in order to deduplicate matches and let us identify when one parameter overwrites another
+            # in the SMIRNOFF parameter hierarchy. Since they are sorted, the position of the atom index
+            # in the key tuple DOES NOT correspond to the appropriate chargeincrementX value.
+            # Instead, the correct ordering of the match indices is found in
+            # charge_increment_match.environment_match.topology_atom_indices
+            for (_, charge_increment_match) in charge_increment_matches.items():
+                # Adjust the values in the charges_to_assign dict by adding any
+                # charge increments onto the existing values
+                atom_indices = charge_increment_match.environment_match.topology_atom_indices
+                charge_increment = charge_increment_match.parameter_type
+                for top_particle_idx, charge_increment in zip(atom_indices, charge_increment.charge_increment):
+                    if top_particle_idx in charges_to_assign:
+                        charges_to_assign[top_particle_idx] += charge_increment
+
+            # Set the incremented charges on the System particles
+            for topology_particle_index, charge_to_assign in charges_to_assign.items():
+                _, sigma, epsilon = force.getParticleParameters(topology_particle_index)
+                force.setParticleParameters(topology_particle_index,
+                                            charge_to_assign, sigma,
+                                            epsilon)
 
             # Finally, mark that charges were assigned for this reference molecule
             self.mark_charges_assigned(ref_mol, topology)
-
-
-
-
-    # TODO: Move chargeModel and library residue charges to SMIRNOFF spec
-    def postprocess_system(self, system, topology, **kwargs):
-        bond_matches = self.find_matches(topology)
-
-        # Apply bond charge increments to all appropriate force groups
-        # QUESTION: Should we instead apply this to the Topology in a preprocessing step, prior to spreading out charge onto virtual sites?
-        for force in system.getForces():
-            if force.__class__.__name__ in [
-                    'NonbondedForce'
-            ]:  # TODO: We need to apply this to all Force types that involve charges, such as (Custom)GBSA forces and CustomNonbondedForce
-                for (atoms, bond_match) in bond_matches.items():
-                    bond = bond_match.parameter_type
-
-                    # Get corresponding particle indices in Topology
-                    particle_indices = tuple(
-                        [atom.particle_index for atom in atoms])
-                    # Retrieve parameters
-                    [charge0, sigma0, epsilon0] = force.getParticleParameters(
-                        particle_indices[0])
-                    [charge1, sigma1, epsilon1] = force.getParticleParameters(
-                        particle_indices[1])
-                    # Apply bond charge increment
-                    charge0 -= bond.increment
-                    charge1 += bond.increment
-                    # Update charges
-                    force.setParticleParameters(particle_indices[0], charge0,
-                                                sigma0, epsilon0)
-                    force.setParticleParameters(particle_indices[1], charge1,
-                                                sigma1, epsilon1)
-                    # TODO: Calculate exceptions
 
 
 class GBSAHandler(ParameterHandler):
@@ -3605,12 +3625,11 @@ class GBSAHandler(ParameterHandler):
         radius = ParameterAttribute(unit=unit.angstrom)
         scale = ParameterAttribute(converter=float)
 
-        def __init__(self, **kwargs):
-            super().__init__(**kwargs)
-
     _TAGNAME = 'GBSA'
     _INFOTYPE = GBSAType
     _OPENMMTYPE = openmm.GBSAOBCForce
+    # It's important that this runs AFTER partial charges are assigned to all particles, since this will need to
+    # collect and assign them to the GBSA particles
     _DEPENDENCIES = [vdWHandler, ElectrostaticsHandler,
                      ToolkitAM1BCCHandler, ChargeIncrementModelHandler, LibraryChargeHandler]
 
