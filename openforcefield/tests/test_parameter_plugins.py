@@ -1,5 +1,5 @@
 """
-Test classes and function in module openforcefield.typing.engines.smirnoff.parameters.plugins
+Test classes and function in module openforcefield.typing.engines.smirnoff.plugins
 """
 import pkg_resources
 import pytest
