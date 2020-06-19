@@ -76,7 +76,7 @@ jobs:
         conda update --quiet --all
         conda info --all
         conda list
-    - name: Decrypt OpenEye license
+    - name: Make oe_license.txt file from GH org secret "OE_LICENSE"
       shell: bash
       env:
         OE_LICENSE_TEXT: ${{ secrets.OE_LICENSE }}
