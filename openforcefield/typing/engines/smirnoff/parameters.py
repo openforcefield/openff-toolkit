@@ -1527,7 +1527,7 @@ class ParameterHandler(_ParameterAttributeHandler):
         return self._find_matches(entity)
 
     def _find_matches(self, entity, transformed_dict_cls=ValenceDict, 
-            allow_multiple=False, variable_keylen=False):
+            use_named_slots=False, variable_keylen=False):
         """Implement find_matches() and allow using a difference valence dictionary.
                 Parameters
         ----------
@@ -1554,9 +1554,16 @@ class ParameterHandler(_ParameterAttributeHandler):
         #       by performing this loop in reverse order, and breaking early once
         #       all environments have been matched.
         for parameter_type in self._parameters:
+            #if type(parameter_type) == VirtualSiteHandler.VirtualSiteMonovalentLonePairType:
+            #if type(parameter_type) == BondHandler:
+            #    breakpoint()
+            #    pass
             matches_for_this_type = defaultdict(list)
 
-            for environment_match in entity.chemical_environment_matches(parameter_type.smirks):
+            ce_matches = entity.chemical_environment_matches(parameter_type.smirks)
+            orders = [ m.topology_atom_indices for m in ce_matches ] 
+
+            for environment_match in ce_matches:
                 # Update the matches for this parameter type.
                 handler_match = self._Match(parameter_type, environment_match)
                 key = environment_match.topology_atom_indices
@@ -1565,12 +1572,24 @@ class ParameterHandler(_ParameterAttributeHandler):
                 # only a match if index matches
                 # this should probably go into self._Match
                 if hasattr(handler_match._parameter_type, "index"):
+                    handler_match._parameter_type.multiplicity=len(orders)
+                    if parameter_type.index >= len(orders):
+                        error_msg = (
+                            "For parameter of type\n{:s}\n" +
+                            "index {:d} exceeds length of possible orders " +
+                            "({:d}):\n{:s}").format( str(parameter_type), 
+                                parameter_type.index, len(orders), str(orders))
+                        raise IndexError(error_msg)
                     fn = ImproperDict.index_of
                     if len(key) < 4:
                         fn = ValenceDict.index_of
-                    index_of_key = fn(key)
-                    if index_of_key != handler_match._parameter_type.index:
-                        continue
+                    index_of_key = fn(key, possible=orders)
+                    #if index_of_key != handler_match._parameter_type.index:
+                    #    continue
+                    fn = ImproperDict.key_transform
+                    if len(key) < 4:
+                        fn = ValenceDict.key_transform
+                    key = fn(key)
                 # this takes care of LibraryCharge, which can match
                 # tuples of variable length
                 elif variable_keylen:
@@ -1580,19 +1599,27 @@ class ParameterHandler(_ParameterAttributeHandler):
                         fn = ImproperDict.key_transform
                     key = fn(key)
 
-                matches_for_this_type[key] = [handler_match]
-                if environment_match.topology_atom_indices not in matches:
-                    matches[key] = []
+                if hasattr(handler_match._parameter_type, "index"):
+                    if index_of_key == handler_match._parameter_type.index:
+                        matches_for_this_type[key].append(handler_match)
+                else:
+                    matches_for_this_type[key] = [handler_match]
+                new_key = environment_match.topology_atom_indices
+                #if matches.get(new_key) is None:
+                #    matches[key] = {}
 
             matches_for_this_type = dict(matches_for_this_type)
             # Update matches of all parameter types.
-            if allow_multiple:
+            if use_named_slots: # assumes virtualsites for now
+                for k in matches_for_this_type:
+                    if k not in matches:
+                        matches[k] = {}
                 for k,v in matches_for_this_type.items():
                     marginal_matches = []
                     for new_match in v:
                         unique = True
                         new_item = new_match._parameter_type
-                        for idx,existing_match in enumerate(matches[k]):
+                        for idx,(name,existing_match) in enumerate(matches[k].items()):
                             existing_item = existing_match._parameter_type
                             same_parameter = False
 
@@ -1603,11 +1630,11 @@ class ParameterHandler(_ParameterAttributeHandler):
                             # same, so replace it to have a FIFO priority
                             # and the last parameter matching wins
                             if same_parameter:
-                                matches[k][idx] = new_match
+                                matches[k][new_item.name] = new_match
                                 unique = False
                         if unique:
                             marginal_matches.append(new_match)
-                    [ matches[k].extend( marginal_matches) ]
+                    matches[k].update({p._parameter_type.name:p for p in marginal_matches})
             else:
                 matches.update(matches_for_this_type)
 
@@ -1615,6 +1642,11 @@ class ParameterHandler(_ParameterAttributeHandler):
                 parameter_type.smirks, len(matches_for_this_type)))
 
         logger.debug('{} matches identified'.format(len(matches)))
+
+        # 
+        if use_named_slots:
+            for k,v in matches.items():
+                matches[k] = list(v.values())
         return matches
 
     @staticmethod
@@ -1881,7 +1913,7 @@ class ConstraintHandler(ParameterHandler):
             # If a distance is specified (constraint.distance != True), add the constraint here.
             # Otherwise, the equilibrium bond length will be used to constrain the atoms in HarmonicBondHandler
             for constraint_match in constraint_matches:
-                constraint = constraint_match.parameter_type
+                constraint = constraint_match[0].parameter_type
 
                 if constraint.distance is None:
                     topology.add_constraint(*atoms, True)
@@ -1955,6 +1987,7 @@ class BondHandler(ParameterHandler):
 
         skipped_constrained_bonds = 0  # keep track of how many bonds were constrained (and hence skipped)
         for (topology_atom_indices, bond_match) in bond_matches.items():
+            bond_match = bond_match[0]
             # Get corresponding particle indices in Topology
             #particle_indices = tuple([ atom.particle_index for atom in atoms ])
 
@@ -2068,6 +2101,8 @@ class AngleHandler(ParameterHandler):
         angle_matches = self.find_matches(topology)
         skipped_constrained_angles = 0  # keep track of how many angles were constrained (and hence skipped)
         for (atoms, angle_match) in angle_matches.items():
+
+            angle_match = angle_match[0]
             # Ensure atoms are actually bonded correct pattern in Topology
             # for (i, j) in [(0, 1), (1, 2)]:
             #     topology.assert_bonded(atoms[i], atoms[j])
@@ -2193,6 +2228,7 @@ class ProperTorsionHandler(ParameterHandler):
         torsion_matches = self.find_matches(topology)
 
         for (atom_indices, torsion_match) in torsion_matches.items():
+            torsion_match = torsion_match[0]
             # Ensure atoms are actually bonded correct pattern in Topology
             self._assert_correct_connectivity(torsion_match)
 
@@ -2315,6 +2351,7 @@ class ImproperTorsionHandler(ParameterHandler):
         # Add all improper torsions to the system
         improper_matches = self.find_matches(topology)
         for (atom_indices, improper_match) in improper_matches.items():
+            improper_match = improper_match[0]
             # Ensure atoms are actually bonded correct pattern in Topology
             # For impropers, central atom is atom 1
             # for (i, j) in [(0, 1), (1, 2), (1, 3)]:
@@ -2908,7 +2945,7 @@ class LibraryChargeHandler(_NonbondedHandler):
 
         # TODO: Right now, this method is only ever called with an entity that is a Topoogy.
         #  Should we reduce its scope and have a check here to make sure entity is a Topology?
-        return self._find_matches(entity, transformed_dict_cls=dict, variable_keylen=True, allow_multiple=False)
+        return self._find_matches(entity, transformed_dict_cls=dict, variable_keylen=True, use_named_slots=False)
 
     def create_force(self, system, topology, **kwargs):
         from openforcefield.topology import FrozenMolecule, TopologyAtom, TopologyVirtualSite
@@ -2987,11 +3024,12 @@ class VirtualSiteHandler(_NonbondedHandler):
         # Needed here to read the generic VirtualSite xml elements
         # Will specialize after the type is parsed
         _ELEMENT_NAME = 'VirtualSite'
-        name            = ParameterAttribute(default="NamelessVS", converter=str)
+        name            = ParameterAttribute(default="VS", converter=str)
         distance        = ParameterAttribute(unit=unit.angstrom)
         chargeincrement = IndexedParameterAttribute(unit=unit.elementary_charge)
         type            = ParameterAttribute()
-        index           = ParameterAttribute(default=0, converter=int)
+        orientation     = ParameterAttribute(default=0, converter=int)
+        multiplicity    = ParameterAttribute(default=1, converter=int)
 
         def add_virtual_site(self, fn, atoms, **kwargs):
 
@@ -3028,7 +3066,7 @@ class VirtualSiteHandler(_NonbondedHandler):
             if type(self) != type(obj):
                 return False
             A = ["name","distance"]
-            A = ["name","index"]
+            A = ["name"]
             are_equal = [getattr(self,a) == getattr(obj,a) for a in A]
             return all(are_equal)
 
@@ -3104,7 +3142,7 @@ class VirtualSiteHandler(_NonbondedHandler):
             if type(self) != type(obj):
                 return False
             A = ["name","distance","outOfPlaneAngle","inPlaneAngle"]
-            A = ["name","index"]
+            A = ["name"]
             are_equal = [getattr(self,a) == getattr(obj,a) for a in A]
             return all(are_equal)
 
@@ -3160,16 +3198,16 @@ class VirtualSiteHandler(_NonbondedHandler):
         def get_openmm_virtual_site(self, atoms, mass=None):
             assert len(atoms) == 4
             originwt = np.zeros_like(atoms)
-            originwt[0] = 1.0 # 
+            originwt[1] = 1.0 # 
 
-            xdir = [-1.0, 1/3, 1/3, 1/3]
+            xdir = [1/3, -1.0, 1/3, 1/3]
 
             #ydir does not matter
-            ydir = [-1.0, 1.0, 0.0, 0.0]
+            ydir = [1.0, -1.0, 0.0, 0.0]
 
-            pos  = [0.0,
+            pos  = [-self.distance,
                     0.0,
-                    -self.distance] # pos of the vsite in local crds
+                    0.0] # pos of the vsite in local crds
             return openmm.LocalCoordinatesSite(atoms, originwt, xdir, ydir, pos)
 
     class VirtualSiteMonovalentLonePairType(VirtualSiteLonePairType):
@@ -3254,7 +3292,7 @@ class VirtualSiteHandler(_NonbondedHandler):
 
         """
         return self._find_matches(entity, transformed_dict_cls=dict,
-            allow_multiple=True)
+            use_named_slots=True)
 
         vsite_kwargs = [
             {
@@ -3278,15 +3316,12 @@ class VirtualSiteHandler(_NonbondedHandler):
                 "allow_multiple":        True
             }
         ]
-        matches = {}
+        matches = defaultdict(list)
         for vsite_type in vsite_kwargs:
             result = self._find_matches(entity, **vsite_type)
             for k,v in result.items():
-                if k not in matches:
-                    matches[k] = v
-                else:
-                    matches[k].extend(v)
-        return matches
+                matches[k].extend(v)
+        return dict(matches)
 
 
     def create_force(self, system, topology, **kwargs):
@@ -3299,20 +3334,27 @@ class VirtualSiteHandler(_NonbondedHandler):
         atom_matches = self.find_matches(topology)
 
         # Set the particle Lennard-Jones terms.
-        for atom_key, atom_match_lst in atom_matches.items():
+        applied = set()
+        for _, atom_match_lst in atom_matches.items():
+            #print("Atom key", atom_key)
             for atom_match in atom_match_lst:
+                print("    Atom match", atom_match)
 
                 atom_key = atom_match.environment_match.topology_atom_indices
                 # this is the new particle to add nonbonded terms to
                 mol = atom_match.environment_match.reference_molecule
 
-                atom_idx = atom_match.parameter_type.add_virtual_site( mol, atom_key)
+                ref_key = (topology.atom(i).atom.molecule_atom_index for i in atom_key)
+
+                #if ref_key not in applied:
+                    
+                atom_idx = atom_match.parameter_type.add_virtual_site( mol, ref_key)
                 vsite = atom_match.parameter_type.get_openmm_virtual_site( atom_key)
 
                 # apply the charge increment using the atom_key atoms, 
                 # and the vsite
                 # determine the vsite charge from the increment sum
-                vsite_q = atom_match.parameter_type.apply_chargeincrement( force, atom_key)
+                vsite_q = atom_match.parameter_type.apply_chargeincrement( force, ref_key)
 
                 ljtype = atom_match.parameter_type
                 if ljtype.sigma is None:
@@ -3418,7 +3460,7 @@ class ToolkitAM1BCCHandler(_NonbondedHandler):
             ]:  # TODO: We need to apply this to all Force types that involve charges, such as (Custom)GBSA forces and CustomNonbondedForce
                 for (atoms, bond_match) in bond_matches.items():
                     # Get corresponding particle indices in Topology
-                    bond = bond_match.parameter_type
+                    bond = bond_match[0].parameter_type
 
                     particle_indices = tuple(
                         [atom.particle_index for atom in atoms])
@@ -3558,7 +3600,7 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
                     'NonbondedForce'
             ]:  # TODO: We need to apply this to all Force types that involve charges, such as (Custom)GBSA forces and CustomNonbondedForce
                 for (atoms, bond_match) in bond_matches.items():
-                    bond = bond_match.parameter_type
+                    bond = bond_match[0].parameter_type
 
                     # Get corresponding particle indices in Topology
                     particle_indices = tuple(

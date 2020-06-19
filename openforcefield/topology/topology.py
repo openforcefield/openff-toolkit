@@ -112,7 +112,7 @@ class ValenceDict(_TransformedDict):
         return key
 
     @staticmethod
-    def index_of(key):
+    def index_of(key, possible=None):
         assert len(key) < 4
         refkey = __class__.key_transform(key)
         if len(key) == 2:
@@ -125,7 +125,15 @@ class ValenceDict(_TransformedDict):
                 (refkey[0],refkey[1],refkey[2]): 0,
                 (refkey[2],refkey[1],refkey[0]): 1
             }
-        return permutations[key]
+        if not possible is None:
+            i = 0
+            for k in permutations:
+                if all([x == y for x,y in zip(key,k)]):
+                    return i
+                if k in possible:
+                    i += 1
+        else:
+            return permutations[key]
 
     def __keytransform__(self, key):
         return __class__.key_transform(key)
@@ -149,18 +157,26 @@ class ImproperDict(_TransformedDict):
         return (key)
     
     @staticmethod
-    def index_of(key):
+    def index_of(key, possible=None):
         assert len(key) == 4
         refkey = __class__.key_transform(key)
-        permutations = {
+        permutations = OrderedDict({
             (refkey[0], refkey[1], refkey[2], refkey[3]): 0,
             (refkey[0], refkey[1], refkey[3], refkey[2]): 1,
             (refkey[2], refkey[1], refkey[0], refkey[3]): 2,
             (refkey[2], refkey[1], refkey[3], refkey[0]): 3,
             (refkey[3], refkey[1], refkey[0], refkey[2]): 4,
             (refkey[3], refkey[1], refkey[2], refkey[0]): 5
-        }
-        return permutations[key]
+        })
+        if not possible is None:
+            i = 0
+            for k in permutations:
+                if all([x == y for x,y in zip(key,k)]):
+                    return i
+                if k in possible:
+                    i += 1
+        else:
+            return permutations[key]
 
     def __keytransform__(self, key):
         return __class__.key_transform(key)
