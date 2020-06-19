@@ -472,10 +472,47 @@ U = \sum_{i=1}^N k_i * (1 + cos(periodicity_i * phi - phase_i))
 
 If the `potential` attribute is omitted, it defaults to `k*(1+cos(periodicity*theta-phase))`.
 
-|  ProperTorsions section tag version | Tag attributes and default values                                        | Required parameter attributes         | Optional parameter attributes |
-|-------------------------------------|--------------------------------------------------------------------------|---------------------------------------|-------------------------------|
-| 0.3                                 | `potential="k*(1+cos(periodicity*theta-phase))"`, `default_idivf="auto"` | `smirks`, `k`, `phase`, `periodicity` | `idivf`, `id`, `parent_id`    |
 
+#### Fractional torsion bond orders
+
+Fractional torsion bond orders can be used to allow interpolation and extrapolation of torsion parameters.
+This is similar to the functionality provided by fractional bond orders detailed above.
+For example, these parameters:
+```XML
+<ProperTorsions version="0.3" potential="k*(1+cos(periodicity*theta-phase))" default_idivf="auto">
+    <Proper smirks="[*:1]:[#6X4:2]-[#6X4:3]:[*:4]" periodicity1="2" phase1="0.0 * degree" k1="1.00*kilocalories_per_mole" idivf1="1.0"/>
+    <Proper smirks="[*:1]:[#6X4:2]=[#6X4:3]:[*:4]" periodicity1="2" phase1="0.0 * degree" k1="1.80*kilocalories_per_mole" idivf1="1.0"/>
+    ...
+```
+can be replaced by a single parameter line by first defining the `fractional_bondorder_method` header-level attribute to specify a method for computing the fractional bond order and `fractional_bondorder_interpolation` for specifying the procedure for interpolating parameters between specified integer bond orders:
+```XML
+<ProperTorsions version="0.3" potential="k*(1+cos(periodicity*theta-phase))" default_idivf="auto" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
+    <Proper smirks="[*:1]:[#6X4:2]~[#6X4:3]:[*:4]" periodicity1="2" phase1="0.0 * degree" k1_bondorder1="1.00*kilocalories_per_mole" k1_bondorder2="1.80*kilocalories_per_mole" idivf1="1.0"/>
+    ...
+```
+This allows specification of the barrier height for e.g. bond orders 1 and 2 (single and double bonds), and then interpolation between those based on the partial/fractional bond order.
+Note that in actual usage partial/fractional bond order may never be exactly 1 or 2, or perhaps even near 2; these values only serve to define the slope of the line used for interpolation.
+In the example above, we replaced the two proper torsion terms (one single central bond (`-`) and one double central bond (`=`)) with a single term giving the barrier heights for bond order 1 and 2.
+If there are cases where the fractional bond order is 1.5, this can correspond to e.g. an aromatic bond.
+When barrier heights for more than two integer bond orders are specified, (say, 1, 2, and 3), the interpolation lines are drawn between successive points as a piecewiese linear function.
+
+Cases in which the fractional bond order for the central bond is outside of the bond orders specified (e.g. 1 and 2 above), the barrier height ``k#`` is *extrapolated* using the same slope of the line used for interpolation.
+This works even when barrier heights for more than two integer bond orders are specified (say, 1, 2, and 3), in which case the piecewise linear extrapolation beyond the bounds uses the slope of the line defined by the nearest two bond orders.
+In other words, a fractional bond order of 3.2 would yield an interpolated `k#` value determined by the interpolation line between ``k#_bondorder2`` and ``k#_bondorder3``.
+A fractional bond order of .9 would yield an interpolated `k#` value determined by the interpolation line between ``k#_bondorder1`` and ``k#_bondorder2``.
+
+
+Some key usage points:
+* `fractional_bondorder_method` defaults to `AM1-Wiberg`.
+* `fractional_bondorder_interpolation` defaults to `linear`, which is the only supported scheme for now.
+
+|  ProperTorsions section tag version | Tag attributes and default values                                         | Required parameter attributes         | Optional parameter attributes |
+|-------------------------------------|---------------------------------------------------------------------------|---------------------------------------|-------------------------------|
+| 0.3                                 | `potential="k*(1+cos(periodicity*theta-phase))"`, `default_idivf="auto"`, | `smirks`, `k`, `phase`, `periodicity` | `idivf`, `id`, `parent_id`    |
+|-------------------------------------|---------------------------------------------------------------------------|---------------------------------------|-------------------------------|
+| 0.4                                 | `potential="k*(1+cos(periodicity*theta-phase))"`, `default_idivf="auto"`, | `smirks`, `k_bondorder`,              | `idivf`, `id`, `parent_id`    |
+|                                     | `fractional_bondorder_method="AM1-Wiberg"`,                               | `phase`, `periodicity`                |                               |
+|                                     | `fractional_bondorder_interpolation="linear"`                             |                                       |                               |
 
 ### `<ImproperTorsions>`
 
