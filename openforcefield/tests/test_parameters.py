@@ -1062,6 +1062,33 @@ class TestProperTorsionType:
         assert param_dict['phase2'] == 31 * unit.degree
         assert param_dict['periodicity2'] == 3
 
+
+    def test_multi_term_proper_torsion_bo_getters_setters(self):
+        """
+        Test getters and setters of a multi-term proper torsion with bond order interpolation.
+        """
+        from simtk import unit
+
+        p1 = ProperTorsionHandler.ProperTorsionType(smirks='[*:1]-[*:2]-[*:3]-[*:4]',
+                                                    phase1=30 * unit.degree,
+                                                    periodicity1=2,
+                                                    k1_bondorder1=1 * unit.kilocalorie_per_mole,
+                                                    k1_bondorder2=1.8 * unit.kilocalorie_per_mole,
+                                                    phase2=31 * unit.degree,
+                                                    periodicity2=3,
+                                                    k2_bondorder1=1.2 * unit.kilocalorie_per_mole,
+                                                    k2_bondorder2=1.9 * unit.kilocalorie_per_mole,
+                                                    )
+
+        assert p1.k1_bondorder1 == 1. * unit.kilocalorie_per_mole
+        p1.k1_bondorder1 = 2. * unit.kilocalorie_per_mole
+        assert p1.k1_bondorder1 == 2. * unit.kilocalorie_per_mole
+
+        assert p1.k2_bondorder2 == 1.9 * unit.kilocalorie_per_mole
+        p1.k2_bondorder2 = 2.9 * unit.kilocalorie_per_mole
+        assert p1.k2_bondorder2 == 2.9 * unit.kilocalorie_per_mole
+
+
     def test_multi_term_proper_torsion_bo_skip_index(self):
         """
         Test creation and serialization of a multi-term proper torsion where
