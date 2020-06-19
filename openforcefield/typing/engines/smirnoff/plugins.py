@@ -1,4 +1,4 @@
-"""This module defines functions for loading parameter handler and parser clases which
+"""This module defines functions for loading parameter handler and parser classes which
 have been registered through the `entrypoint plugin system <https://packaging.python.
 org/guides/creating-and-discovering-plugins/#using-package-metadata>`_.
 
