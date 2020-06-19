@@ -79,9 +79,9 @@ jobs:
     - name: Decrypt OpenEye license
       shell: bash
       env:
-        ENC_OE_LICENSE: ${{ secrets.OE_LICENSE__EXP_JUN2020 }}
+        OE_LICENSE_TEXT: ${{ secrets.OE_LICENSE }}
       run: |
-        echo "${ENC_OE_LICENSE}" > ${OE_LICENSE}
+        echo "${OE_LICENSE_TEXT}" > ${OE_LICENSE}
     - name: Prepare test environment
       shell: bash
       run: |
