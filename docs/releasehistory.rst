@@ -251,11 +251,11 @@ New features
 - `PR #573 <https://github.com/openforcefield/openforcefield/pull/573>`_:
   Adds ``quacpac`` error output to ``quacpac`` failure in ``Molecule.compute_partial_charges_am1bcc``.
 - `PR #560 <https://github.com/openforcefield/openforcefield/issues/560>`_: Added visualization method to the the Molecule class.
+- `PR #620 <https://github.com/openforcefield/openforcefield/pull/620>`_: Added the ability to register parameter handlers via entry point plugins. This functionality is accessible by initializing a ``ForceField`` with the ``load_plugins=True`` keyword argument. 
 - `PR #582 <https://github.com/openforcefield/openforcefield/pull/582>`_: Added fractional bond order interpolation
   Adds `return_topology` kwarg to
   :py:meth:`Forcefield.create_openmm_system <openforcefield.typing.engines.smirnoff.forcefield.ForceField.create_openmm_system>`,
   which returns the processed topology along with the system when ``True`` (default ``False``).
-
 
 Behavior changed
 """"""""""""""""
