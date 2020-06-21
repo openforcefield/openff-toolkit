@@ -7,8 +7,54 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 * ``minor`` increments add features but do not break API compatibility
 * ``micro`` increments represent bugfix releases or improvements in documentation
 
-0.7.0 - Current development
----------------------------
+0.7.0 - Charge Increment Model, Proper Torsion interpolation, and new Molecule methods
+--------------------------------------------------------------------------------------
+
+This is a relatively large release, motivated by the idea that changing existing functionality is bad
+so we shouldn't do it too often, but when we do change things we should do it all at once.
+
+Here's a brief rundown of what changed, migration tips, and what to search below to find more details:
+
+* To provide more consistent partial charges for a given molecule, existing conformers are now disregarded by default
+  by ``compute_partial_charges``. Instead, new conformers are generated for use in semiempirical calculations.
+  Search for `use_conformers` below.
+* Formal charges are now always returned as ``simtk.unit.Quantity`` objects, with units of elementary charge.
+  To convert them to integers, ``from simtk import unit`` and
+  ``atom.formal_charge.value_in_unit(unit.elementary_charge)`` or
+  ``mol.total_charge.value_in_unit(unit.elementary_charge)``.
+  Search ``atom.formal_charge`` below.
+* The OpenFF Toolkit now automatically reads and writes partial charges in SDF. Search for
+  ``atom.dprop.PartialCharges`` below.
+* The OpenFF Toolkit now has different behavior for handling multi-molecule and multi-conformer SDF files. Search
+  ``multi-conformer`` below.
+* The OpenFF Toolkit now distinguishes between partial charges that are all-zero and partial charges that are unknown.
+  Search ``partial_charges = None`` below.
+* ``Topology.to_openmm`` now assigns unique atoms names by default. Search ``ensure_unique_atom_names`` below.
+* Molecule equality checks are now done by graph comparison instead of SMILES comparison.
+  Search ``Molecule.are_isomorphic`` below.
+* The ``ChemicalEnvironment`` module was almost entirely removed, as it is an outdated duplicate of some Chemper
+  functionality. Search ``ChemicalEnvironment`` below.
+* ``TopologyMolecule.topology_particle_start_index`` has been removed from the ``TopologyMolecule`` API, since atoms
+  and virtualsites are no longer contiguous in the ``Topology`` particle indexing system. Search
+  ``topology_particle_start_index`` below.
+* ``compute_wiberg_bond_orders`` has been renamed to ``assign_fractional_bond_orders``.
+
+There are also a number of new features, such as:
+
+* Support for ``ChargeIncrementModel`` sections in force fields.
+* Support for ``ProperTorsion`` ``k`` interpolation in force fields using fractional bond orders.
+* Support for AM1-Mulliken, Gasteiger, and other charge methods using the new ``assign_partial_charges`` methods.
+* Support for AM1-Wiberg bond order calculation using either the OpenEye or RDKit/AmberTools backends.
+* Initial (limited) interoperability with QCArchive, via ``Molecule.to_qcschema`` and ``from_qcschema``.
+* A ``Molecule.visualize`` method.
+* Several additional ``Molecule`` methods, including state enumeration and mapped SMILES creation.
+
+**Major Feature: Support for the SMIRNOFF ChargeIncrementModel tag**
+
+`The ChargeIncrementModel tag in the SMIRNOFF specification <https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html#chargeincrementmodel-small-molecule-and-fragment-charges>`_.
+provides analagous functionality to AM1-BCC, except that instead of AM1-Mulliken charges, a number of different charge
+methods can be called, and instead of a fixed library of two-atom charge corrections, an arbitrary number of
+SMIRKS-based, N-atom charge corrections can be defined in the SMIRNOFF format.
 
 The initial implementation of the SMIRNOFF ``ChargeIncrementModel`` tag accepts keywords for ``version``,
 ``partial_charge_method``, and ``number_of_conformers``. ``partial_charge_method`` can be any string, and it is
@@ -48,6 +94,18 @@ In short, the first time a group of atoms becomes involved in a ``ChargeIncremen
 parameter "slot". Only another ``ChargeIncrement`` which applies to the exact same group of atoms (in any order) can
 take over the "slot", pushing the original ``ChargeIncrement`` out.
 
+**Major Feature: Support for ProperTorsion k value interpolation**
+
+Chaya Stern's work showed that we may be able to produce higher-quality proper torsion parameters by taking into
+account the "partial bond order" of the torsion's central bond. We now have the machinery to compute AM1-Wiberg
+partial bond orders for entire molecules using either ``OpenEyeToolkitWrapper``'s or ``AmberToolsToolkitWrapper``'s
+``assign_fractional_bond_orders`` methods. The thought is that, if some simple electron population analysis shows
+that a certain aromatic bond's order is 1.53, maybe rotations about that bond can be described well by interpolating
+53% of the way between the single and double bond k values.
+
+Full details of how to define a torsion-interpolating SMIRNOFF force fields are available in
+`the ProperTorsions section of the SMIRNOFF specification <https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html#fractional-torsion-bond-orders>`_.
+
 Behavior changed
 """"""""""""""""
 - `PR #508 <https://github.com/openforcefield/openforcefield/pull/508>`_:
@@ -79,7 +137,7 @@ Behavior changed
   important distinction, since otherwise there is ambiguity around whether properties of one
   entry in a SDF are shared among several molecule blocks or not, or how to resolve conflicts if properties
   are defined differently for several "conformers" of chemically-identical species (More info
-  `here <https://docs.eyesopen.com/toolkits/python/oechemtk/oemol.html#dude-where-s-my-sd-data>`_.
+  `here <https://docs.eyesopen.com/toolkits/python/oechemtk/oemol.html#dude-where-s-my-sd-data>`_).
   If the user requests the OFF
   Toolkit to write a multi-conformer ``Molecule`` to SDF, only the first conformer will be written.
   For more fine-grained control of writing properties, conformers, and partial charges, consider
@@ -115,12 +173,9 @@ Behavior changed
   :py:meth:`Topology.add_molecule <openforcefield.topology.Topology.add_molecule>` now use the
   :py:meth:`Molecule.are_isomorphic <openforcefield.topology.Molecule.are_isomorphic>` to match
   molecules.
-- `PR #544 <https://github.com/openforcefield/openforcefield/pull/544>`_: Raises
-  ``NotImplementedError`` when calling
-  :py:meth:`ParameterHandler.get_parameter   <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler.get_parameter>`,
-  which is not yet implemented, but would previously silently return ``None``.
 - `PR #551 <https://github.com/openforcefield/openforcefield/pull/551>`_: Implemented the
-  :py:meth:`ParameterHandler.get_parameter   <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler.get_parameter>` function.
+  :py:meth:`ParameterHandler.get_parameter <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler.get_parameter>`
+  function (would previously return ``None``).
 
 API-breaking changes
 """"""""""""""""""""
@@ -181,7 +236,7 @@ New features
   behavior, ``strict_n_conformers`` defaults to a value of ``False``.
 - `PR #471 <https://github.com/openforcefield/openforcefield/pull/471>`_: Adds
   keyword argument ``raise_exception_types`` (default: ``[Exception]``) to
-  :py:meth:`ToolkitRegistry.call <openforcefield.utils.toolkits.ToolkitRegistry.call>.
+  :py:meth:`ToolkitRegistry.call <openforcefield.utils.toolkits.ToolkitRegistry.call>`.
   The default value will provide the previous OpenFF Toolkit behavior, which is that the first ToolkitWrapper
   that can provide the requested method is called, and it either returns on success or raises an exception. This new
   keyword argument allows the ToolkitRegistry to *ignore* certain exceptions, but treat others as fatal.
@@ -194,30 +249,31 @@ New features
   :py:meth:`OpenEyeToolkitWrapper.get_tagged_smarts_connectivity <openforcefield.utils.toolkits.OpenEyeToolkitWrapper.get_tagged_smarts_connectivity>`,
   which allow the use of either toolkit for smirks/tagged smarts validation.
 - `PR #600 <https://github.com/openforcefield/openforcefield/pull/600>`_:
-  Adds :py:meth:`ForceField.__getitem__ <openforcefield.typing.engines.smirnoff.forcefield.ForceField.__getitem__>` to look up ``ParameterHandler`` objects based on their string names.
+  Adds :py:meth:`ForceField.__getitem__ <openforcefield.typing.engines.smirnoff.forcefield.ForceField.__getitem__>`
+  to look up ``ParameterHandler`` objects based on their string names.
 - `PR #508 <https://github.com/openforcefield/openforcefield/pull/508>`_:
   Adds :py:meth:`AmberToolsToolkitWrapper.assign_fractional_bond_orders <openforcefield.utils.toolkits.AmberToolsToolkitWrapper.assign_wiberg_bond_orders>`.
-- `PR #469 <https://github.com/openforcefield/openforcefield/pull/469>`_:
-  The :py:class:`Molecule <openforcefield.topology.Molecule>` adds
+- `PR #469 <https://github.com/openforcefield/openforcefield/pull/469>`_: The
+  :py:class:`Molecule <openforcefield.topology.Molecule>` class adds
   :py:meth:`Molecule.has_unique_atom_names <openforcefield.topology.Molecule.has_unique_atom_names>`
   and :py:meth:`Molecule.has_unique_atom_names <openforcefield.topology.Molecule.generate_unique_atom_names>`.
 - `PR #472 <https://github.com/openforcefield/openforcefield/pull/472>`_:
-  The :py:class:`Molecule <openforcefield.topology.Molecule>` adds
+  The :py:class:`Molecule <openforcefield.topology.Molecule>` class adds
   :py:meth:`Molecule.are_isomorphic <openforcefield.topology.Molecule.are_isomorphic>`
   and :py:meth:`Molecule.is_isomorphic_with <openforcefield.topology.Molecule.is_isomorphic_with>`
   and :py:meth:`Molecule.hill_formula <openforcefield.topology.Molecule.hill_formula>`
   and :py:meth:`Molecule.to_hill_formula <openforcefield.topology.Molecule.to_hill_formula>`
   and :py:meth:`Molecule.to_qcschema <openforcefield.topology.Molecule.to_qcschema>`
   and :py:meth:`Molecule.from_qcschema <openforcefield.topology.Molecule.from_qcschema>`
-      .. note::
-         The qcschema method accepts an extras dictionary which is passed into the validated qcelemental.models.Molecule
-         object.
   and :py:meth:`Molecule.from_mapped_smiles <openforcefield.topology.Molecule.from_mapped_smiles>`
   and :py:meth:`Molecule.from_pdb_and_smiles <openforcefield.topology.Molecule.from_pdb_and_smiles>`
   and :py:meth:`Molecule.canonical_order_atoms <openforcefield.topology.Molecule.canonical_order_atoms>`
   and :py:meth:`Molecule.remap <openforcefield.topology.Molecule.remap>`
+      .. note::
+         The to_qcschema method accepts an extras dictionary which is passed into the validated qcelemental.models.Molecule
+         object.
 - `PR #506 <https://github.com/openforcefield/openforcefield/pull/506>`_:
-   The :py:class:`Molecule <openforcefield.topology.Molecule>` adds
+  The :py:class:`Molecule <openforcefield.topology.Molecule>` class adds
   :py:meth:`Molecule.find_rotatable_bonds <openforcefield.topology.Molecule.find_rotatable_bonds>`
 - `PR #521 <https://github.com/openforcefield/openforcefield/pull/521>`_:
   Adds :py:meth:`Molecule.to_inchi <openforcefield.topology.Molecule.to_inchi>`
@@ -243,9 +299,9 @@ New features
   Adds ``test_forcefields/ion_charges.offxml``, giving `LibraryCharges` for monatomic ions.
 - `PR #543 <https://github.com/openforcefield/openforcefield/pull/543>`_:
   Adds 3 new methods to the :py:class:`Molecule <openforcefield.topology.Molecule>` which allow the enumeration of molecule
-  states these are :py:meth:`Molecule.enumerate_tautomers <openforcefield.topology.Molecule.enumerate_tautomers>`,
-  py:meth:`Molecule.enumerate_stereoisomers <openforcefield.topology.Molecule.enumerate_stereoisomers>`,
-  py:meth:`Molecule.enumerate_protomers <openforcefield.topology.Molecule.enumerate_protomers>`
+  states. These are :py:meth:`Molecule.enumerate_tautomers <openforcefield.topology.Molecule.enumerate_tautomers>`,
+  :py:meth:`Molecule.enumerate_stereoisomers <openforcefield.topology.Molecule.enumerate_stereoisomers>`,
+  :py:meth:`Molecule.enumerate_protomers <openforcefield.topology.Molecule.enumerate_protomers>`
       .. warning::
          Enumerate protomers is currently only available through the OpenEye toolkit.
 - `PR #573 <https://github.com/openforcefield/openforcefield/pull/573>`_:
@@ -256,39 +312,6 @@ New features
   Adds `return_topology` kwarg to
   :py:meth:`Forcefield.create_openmm_system <openforcefield.typing.engines.smirnoff.forcefield.ForceField.create_openmm_system>`,
   which returns the processed topology along with the system when ``True`` (default ``False``).
-
-Behavior changed
-""""""""""""""""
-- `PR #558 <https://github.com/openforcefield/openforcefield/pull/558>`_: The
-  :py:class`Topology <openforcefield.topology.Topology>`
-  particle indexing system now orders :py:class`TopologyVirtualSites <openforcefield.topology.TopologyVirtualSite>`
-  after all atoms.
-- `PR #469 <https://github.com/openforcefield/openforcefield/pull/469>`_:
-  When running :py:meth:`Topology.to_openmm <openforcefield.topology.Topology.to_openmm>`, unique atom names
-  are generated if the provided atom names are not unique (overriding any existing atom names). This
-  uniqueness extends only to atoms in the same molecule. To disable this behavior, set the kwarg
-  ``ensure_unique_atom_names=False``.
-- `PR #472 <https://github.com/openforcefield/openforcefield/pull/472>`_:
-  The :py:meth:`Molecule.__eq__ <openforcefield.topology.Molecule.__eq__>` now uses the new
-  :py:meth:`Molecule.are_isomorphic <openforcefield.topology.Molecule.are_isomorphic>` to perform the
-  similarity checking.
-- `PR #472 <https://github.com/openforcefield/openforcefield/pull/472>`_:
-  The :py:meth:`Topology.from_openmm <openforcefield.topology.Topology.from_openmm>` and
-  :py:meth:`Topology.add_molecule <openforcefield.topology.Topology.add_molecule>` now use the
-  :py:meth:`Molecule.are_isomorphic <openforcefield.topology.Molecule.are_isomorphic>` to match
-  molecules.
-- `PR #508 <https://github.com/openforcefield/openforcefield/pull/508>`_:
-  In order to provide the same results for the same chemical species, regardless of input
-  conformation, fractional bond order calculation methods now default to ignore input conformers
-  and generate a new conformer of the molecule before running semiempirical calculations.
-  Users can override this behavior by specifying the keyword argument
-  ``use_conformers=molecule.conformers``
-- `PR #544 <https://github.com/openforcefield/openforcefield/pull/544>`_: Raises
-  ``NotImplementedError`` when calling
-  :py:meth:`ParameterHandler.get_parameter   <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler.get_parameter>`,
-  which is not yet implemented, but would previously silently return ``None``.
-- `PR #551 <https://github.com/openforcefield/openforcefield/pull/551>`_: Implemented the
-  :py:meth:`ParameterHandler.get_parameter   <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler.get_parameter>` function.
 
 Tests added
 """""""""""
@@ -330,9 +353,9 @@ Tests added
   :py:meth:`Forcefield.create_openmm_system <openforcefield.typing.engines.smirnoff.forcefield.ForceField.create_openmm_system>`
   to check that a protein system can be created.
 - `PR #506 <https://github.com/openforcefield/openforcefield/pull/506>`_: Added a test for the molecule
-   identified in issue #513 as loosing aromaticity when converted to rdkit.
+  identified in issue #513 as losing aromaticity when converted to rdkit.
 - `PR #506 <https://github.com/openforcefield/openforcefield/pull/506>`_: Added a verity of toolkit dependent tests
-   for identifying rotatable bonds while ignoring the user requested types.
+  for identifying rotatable bonds while ignoring the user requested types.
 - `PR #521 <https://github.com/openforcefield/openforcefield/pull/521>`_: Added toolkit independent round-trip InChI
   tests which add coverage for :py:meth:`Molecule.to_inchi <openforcefield.topology.Molecule.to_inchi>` and
   :py:meth:`Molecule.from_inchi <openforcefield.topology.Molecule.from_inchi>`. Also added coverage for bad inputs and
@@ -376,17 +399,17 @@ Bugfixes
   We anticipate that this will reduce the number of times you need to
   type ``allow_undefined_stereo=True`` when processing molecules that do not actually contain stereochemistrty.
 - `Issue #513 <https://github.com/openforcefield/openforcefield/issues/513>`_: The
-   :py:meth:`Molecule.to_rdkit <openforcefield.topology.Molecule.to_rdkit>` now re-sets the aromaticity model
-   after sanitizing the molecule.
+  :py:meth:`Molecule.to_rdkit <openforcefield.topology.Molecule.to_rdkit>` now re-sets the aromaticity model
+  after sanitizing the molecule.
 - `Issue #500 <https://github.com/openforcefield/openforcefield/issues/500>`_: The
-   :py:meth:`Molecule.find_rotatable_bonds <openforcefield.topology.Molecule.find_rotatable_bonds>` has been added
-   which returns a list of rotatable :py:class:`Bond <openforcefield.topology.Bond>` instances for the molecule.
+  :py:meth:`Molecule.find_rotatable_bonds <openforcefield.topology.Molecule.find_rotatable_bonds>` has been added
+  which returns a list of rotatable :py:class:`Bond <openforcefield.topology.Bond>` instances for the molecule.
 - `Issue #491 <https://github.com/openforcefield/openforcefield/issues/491>`_: We can now parse large molecules without hitting a match limit cap.
 - `Issue #474 <https://github.com/openforcefield/openforcefield/issues/474>`_: We can now  convert molecules to InChI and
-   InChIKey and from InChI.
+  InChIKey and from InChI.
 - `Issue #523 <https://github.com/openforcefield/openforcefield/issues/523>`_: The
-   :py:meth:`Molecule.to_file <openforcefield.topology.Molecule.to_file>` can now correctly write to `MOL` files in
-   line with the support file type list.
+  :py:meth:`Molecule.to_file <openforcefield.topology.Molecule.to_file>` can now correctly write to `MOL` files in
+  line with the support file type list.
 - `Issue #568 <https://github.com/openforcefield/openforcefield/issues/568>`_: The
   :py:meth:`Molecule.to_file <openforcefield.topology.Molecule.to_file>` can now correctly write multi-model PDB files
   when using the RDKit backend toolkit.

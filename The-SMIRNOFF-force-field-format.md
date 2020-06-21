@@ -492,7 +492,7 @@ can be replaced by a single parameter line by first defining the `fractional_bon
 ```
 This allows specification of the barrier height for e.g. bond orders 1 and 2 (single and double bonds), and then interpolation between those based on the partial/fractional bond order.
 Note that in actual usage partial/fractional bond order may never be exactly 1 or 2, or perhaps even near 2; these values only serve to define the slope of the line used for interpolation.
-In the example above, we replaced the two proper torsion terms (one single central bond (`-`) and one double central bond (`=`)) with a single term giving the barrier heights for bond order 1 and 2.
+In the example above, we replaced the two proper torsion terms (one single central bond (`-`) and one double central bond (`=`) with a single term giving the barrier heights for bond order 1 and 2.
 If there are cases where the fractional bond order is 1.5, this can correspond to e.g. an aromatic bond.
 When barrier heights for more than two integer bond orders are specified, (say, 1, 2, and 3), the interpolation lines are drawn between successive points as a piecewiese linear function.
 
