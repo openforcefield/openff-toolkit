@@ -96,7 +96,8 @@ take over the "slot", pushing the original ``ChargeIncrement`` out.
 
 **Major Feature: Support for ProperTorsion k value interpolation**
 
-Chaya Stern's work showed that we may be able to produce higher-quality proper torsion parameters by taking into
+`Chaya Stern's work <https://chayast.github.io/fragmenter-manuscript/>`_
+showed that we may be able to produce higher-quality proper torsion parameters by taking into
 account the "partial bond order" of the torsion's central bond. We now have the machinery to compute AM1-Wiberg
 partial bond orders for entire molecules using the ``assign_fractional_bond_orders`` methods of either  ``OpenEyeToolkitWrapper`` or ``AmberToolsToolkitWrapper``. The thought is that, if some simple electron population analysis shows
 that a certain aromatic bond's order is 1.53, maybe rotations about that bond can be described well by interpolating
@@ -148,9 +149,9 @@ Behavior changed
   no guarantee of data integrity is made. The only data format for keys and values in the property dict that
   we will try to support through a roundtrip to another toolkit's Molecule object is ``string``.
 - `PR #574 <https://github.com/openforcefield/openforcefield/pull/574>`_: Removed check that all
-  partial charges are zero after assignment by `quacpac` when AM1BCC used for charge assignment.
+  partial charges are zero after assignment by ``quacpac`` when AM1BCC used for charge assignment.
   This check fails erroneously for cases in which the partial charge assignments are correctly all zero,
-  such as for ``N#N``. It is also an unnecessary check given that `quacpac` will reliably indicate when
+  such as for ``N#N``. It is also an unnecessary check given that ``quacpac`` will reliably indicate when
   it has failed to assign charges.
 - `PR #597 <https://github.com/openforcefield/openforcefield/pull/597>`_: Energy-minimized sample systems
   with Parsley 1.1.0.
@@ -215,7 +216,7 @@ API-breaking changes
   :py:meth:`Molecule.assign_fractional_bond_orders <openforcefield.topology.Molecule.assign_fractional_bond_orders>`.
 - `PR #595 <https://github.com/openforcefield/openforcefield/pull/595>`_: Removed functions
   :py:meth:`temporary_directory <openforcefield.utils.utils.temporary_directory>` and
-  :py:meth:`temporary_cd <openforcefield.utils.utils.temporary_cd>` and replaced their behavoir with
+  :py:meth:`temporary_cd <openforcefield.utils.utils.temporary_cd>` and replaced their behavior with
   ``tempfile.TemporaryDirectory()``.
 
 New features
@@ -297,7 +298,7 @@ New features
 - `PR #563 <https://github.com/openforcefield/openforcefield/pull/563>`_:
   Adds ``test_forcefields/ion_charges.offxml``, giving ``LibraryCharges`` for monatomic ions.
 - `PR #543 <https://github.com/openforcefield/openforcefield/pull/543>`_:
-  Adds 3 new methods to the :py:class:`Molecule <openforcefield.topology.Molecule>` which allow the enumeration of molecule
+  Adds 3 new methods to the :py:class:`Molecule <openforcefield.topology.Molecule>` class which allow the enumeration of molecule
   states. These are :py:meth:`Molecule.enumerate_tautomers <openforcefield.topology.Molecule.enumerate_tautomers>`,
   :py:meth:`Molecule.enumerate_stereoisomers <openforcefield.topology.Molecule.enumerate_stereoisomers>`,
   :py:meth:`Molecule.enumerate_protomers <openforcefield.topology.Molecule.enumerate_protomers>`
@@ -369,7 +370,7 @@ Tests added
 - `PR #579 <https://github.com/openforcefield/openforcefield/pull/579>`_: Adds regression tests to ensure RDKit can be
   be used to write multi-model PDB files.
 - `PR #582 <https://github.com/openforcefield/openforcefield/pull/582>`_: Added fractional bond order interpolation tests,
-  tests for `ValidatedDict <openforcefield.utils.collections.ValidatedDict>`
+  tests for :py:class:`ValidatedDict <openforcefield.utils.collections.ValidatedDict>`.
 
 
 Bugfixes
@@ -407,8 +408,8 @@ Bugfixes
 - `Issue #474 <https://github.com/openforcefield/openforcefield/issues/474>`_: We can now  convert molecules to InChI and
   InChIKey and from InChI.
 - `Issue #523 <https://github.com/openforcefield/openforcefield/issues/523>`_: The
-  :py:meth:`Molecule.to_file <openforcefield.topology.Molecule.to_file>` can now correctly write to `MOL` files in
-  line with the support file type list.
+  :py:meth:`Molecule.to_file <openforcefield.topology.Molecule.to_file>` method can now correctly write to ``MOL``
+  files, in line with the supported file type list.
 - `Issue #568 <https://github.com/openforcefield/openforcefield/issues/568>`_: The
   :py:meth:`Molecule.to_file <openforcefield.topology.Molecule.to_file>` can now correctly write multi-model PDB files
   when using the RDKit backend toolkit.
