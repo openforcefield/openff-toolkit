@@ -16,7 +16,7 @@ so we shouldn't do it too often, but when we do change things we should do it al
 Here's a brief rundown of what changed, migration tips, and what to search below to find more details:
 
 * To provide more consistent partial charges for a given molecule, existing conformers are now disregarded by default
-  by ``compute_partial_charges``. Instead, new conformers are generated for use in semiempirical calculations.
+  by ``Molecule.compute_partial_charges``. Instead, new conformers are generated for use in semiempirical calculations.
   Search for `use_conformers` below.
 * Formal charges are now always returned as ``simtk.unit.Quantity`` objects, with units of elementary charge.
   To convert them to integers, ``from simtk import unit`` and
