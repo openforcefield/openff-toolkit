@@ -295,7 +295,7 @@ New features
            if no map is supplied all atoms will be mapped in the order they appear in the
            :py:class:`Molecule <openforcefield.topology.Molecule>`.
 - `PR #563 <https://github.com/openforcefield/openforcefield/pull/563>`_:
-  Adds ``test_forcefields/ion_charges.offxml``, giving `LibraryCharges` for monatomic ions.
+  Adds ``test_forcefields/ion_charges.offxml``, giving ``LibraryCharges`` for monatomic ions.
 - `PR #543 <https://github.com/openforcefield/openforcefield/pull/543>`_:
   Adds 3 new methods to the :py:class:`Molecule <openforcefield.topology.Molecule>` which allow the enumeration of molecule
   states. These are :py:meth:`Molecule.enumerate_tautomers <openforcefield.topology.Molecule.enumerate_tautomers>`,
