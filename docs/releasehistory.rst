@@ -17,7 +17,7 @@ Here's a brief rundown of what changed, migration tips, and what to search below
 
 * To provide more consistent partial charges for a given molecule, existing conformers are now disregarded by default
   by ``Molecule.compute_partial_charges``. Instead, new conformers are generated for use in semiempirical calculations.
-  Search for `use_conformers` below.
+  Search for ``use_conformers`` below.
 * Formal charges are now always returned as ``simtk.unit.Quantity`` objects, with units of elementary charge.
   To convert them to integers, ``from simtk import unit`` and
   ``atom.formal_charge.value_in_unit(unit.elementary_charge)`` or
@@ -110,7 +110,9 @@ Behavior changed
 """"""""""""""""
 - `PR #508 <https://github.com/openforcefield/openforcefield/pull/508>`_:
   In order to provide the same results for the same chemical species, regardless of input
-  conformation, ``assign_partial_charges``, ``compute_partial_charges_am1bcc``, and
+  conformation,
+  :py:class:`Molecule <openforcefield.topology.Molecule>`
+  ``assign_partial_charges``, ``compute_partial_charges_am1bcc``, and
   ``assign_fractional_bond_orders`` methods now default to ignore input conformers
   and generate new conformer(s) of the molecule before running semiempirical calculations.
   Users can override this behavior by specifying the keyword argument
@@ -119,7 +121,8 @@ Behavior changed
   `Issue #250 <https://github.com/openforcefield/openforcefield/issues/250>`_
   by adding support for partial charge I/O in SDF. The partial charges are stored as a property in the
   SDF molecule block under the tag ``<atom.dprop.PartialCharge>``.
-- `PR #281 <https://github.com/openforcefield/openforcefield/pull/281>`_: If an OFFMol's
+- `PR #281 <https://github.com/openforcefield/openforcefield/pull/281>`_: If a
+  :py:class:`Molecule <openforcefield.topology.Molecule>`'s
   ``partial_charges`` attribute is set to ``None`` (the default value), calling ``to_openeye`` will
   now produce a OE molecule with partial charges set to ``nan``. This would previously produce an OE
   molecule with partial charges of 0.0, which was a loss of information, since it wouldn't be clear
@@ -127,25 +130,30 @@ Behavior changed
   wrapper methods such as ``from_smiles`` and ``from_file`` now produce OFFMols with
   ``partial_charges = None`` when appropriate (previously these would produce OFFMols with
   all-zero charges, for the same reasoning as above).
-- `PR #281 <https://github.com/openforcefield/openforcefield/pull/281>`_: ``Molecule.to_rdkit``
+- `PR #281 <https://github.com/openforcefield/openforcefield/pull/281>`_:
+  :py:class:`Molecule <openforcefield.topology.Molecule>`
+  ``to_rdkit``
   now sets partial charges on the RDAtom's ``PartialCharges`` property (this was previously set
-  on the ``partial_charges`` property). If the OFFMol's partial_charges attribute is None, this property
+  on the ``partial_charges`` property). If the
+  :py:class:`Molecule <openforcefield.topology.Molecule>`'s partial_charges attribute is None, this property
   will not be defined on the RDAtoms.
 - `PR #281 <https://github.com/openforcefield/openforcefield/pull/281>`_:
-  Enforce the behavior during SDF I/O that a SDF may contain multiple MOLECULES, but that the OFF Toolkit
-  DOES NOT assume that it contains multiple CONFORMERS of the same molecule. This is an
+  Enforce the behavior during SDF I/O that a SDF may contain multiple
+  `molecules`, but that the OFF Toolkit
+  does not assume that it contains multiple `conformers of the same molecule`. This is an
   important distinction, since otherwise there is ambiguity around whether properties of one
   entry in a SDF are shared among several molecule blocks or not, or how to resolve conflicts if properties
   are defined differently for several "conformers" of chemically-identical species (More info
   `here <https://docs.eyesopen.com/toolkits/python/oechemtk/oemol.html#dude-where-s-my-sd-data>`_).
-  If the user requests the OFF
-  Toolkit to write a multi-conformer ``Molecule`` to SDF, only the first conformer will be written.
+  If the user requests the OFF Toolkit to write a multi-conformer
+  :py:class:`Molecule <openforcefield.topology.Molecule>` to SDF, only the first conformer will be written.
   For more fine-grained control of writing properties, conformers, and partial charges, consider
   using ``Molecule.to_rdkit`` or ``Molecule.to_openeye`` and using the functionality offered by
   those packages.
 - `PR #281 <https://github.com/openforcefield/openforcefield/pull/281>`_: Due to different
   constraints placed on the data types allowed by external toolkits, we make our best effort to
-  preserve ``offmol.properties`` when converting molecules to other packages, but users should be aware that
+  preserve :py:class:`Molecule <openforcefield.topology.Molecule>`
+  ``properties`` when converting molecules to other packages, but users should be aware that
   no guarantee of data integrity is made. The only data format for keys and values in the property dict that
   we will try to support through a roundtrip to another toolkit's Molecule object is ``string``.
 - `PR #574 <https://github.com/openforcefield/openforcefield/pull/574>`_: Removed check that all
@@ -156,8 +164,8 @@ Behavior changed
 - `PR #597 <https://github.com/openforcefield/openforcefield/pull/597>`_: Energy-minimized sample systems
   with Parsley 1.1.0.
 - `PR #558 <https://github.com/openforcefield/openforcefield/pull/558>`_: The
-  :py:class`Topology <openforcefield.topology.Topology>`
-  particle indexing system now orders :py:class`TopologyVirtualSites <openforcefield.topology.TopologyVirtualSite>`
+  :py:class:`Topology <openforcefield.topology.Topology>`
+  particle indexing system now orders :py:class:`TopologyVirtualSites <openforcefield.topology.TopologyVirtualSite>`
   after all atoms.
 - `PR #469 <https://github.com/openforcefield/openforcefield/pull/469>`_:
   When running :py:meth:`Topology.to_openmm <openforcefield.topology.Topology.to_openmm>`, unique atom names
@@ -165,13 +173,13 @@ Behavior changed
   uniqueness extends only to atoms in the same molecule. To disable this behavior, set the kwarg
   ``ensure_unique_atom_names=False``.
 - `PR #472 <https://github.com/openforcefield/openforcefield/pull/472>`_:
-  The :py:meth:`Molecule.__eq__ <openforcefield.topology.Molecule.__eq__>` now uses the new
+  :py:meth:`Molecule.__eq__ <openforcefield.topology.Molecule.__eq__>` now uses the new
   :py:meth:`Molecule.are_isomorphic <openforcefield.topology.Molecule.are_isomorphic>` to perform the
   similarity checking.
 - `PR #472 <https://github.com/openforcefield/openforcefield/pull/472>`_:
   The :py:meth:`Topology.from_openmm <openforcefield.topology.Topology.from_openmm>` and
-  :py:meth:`Topology.add_molecule <openforcefield.topology.Topology.add_molecule>` now use the
-  :py:meth:`Molecule.are_isomorphic <openforcefield.topology.Molecule.are_isomorphic>` to match
+  :py:meth:`Topology.add_molecule <openforcefield.topology.Topology.add_molecule>` methods now use the
+  :py:meth:`Molecule.are_isomorphic <openforcefield.topology.Molecule.are_isomorphic>` method to match
   molecules.
 - `PR #551 <https://github.com/openforcefield/openforcefield/pull/551>`_: Implemented the
   :py:meth:`ParameterHandler.get_parameter <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler.get_parameter>`
@@ -215,8 +223,8 @@ API-breaking changes
   ``Molecule.compute_wiberg_bond_orders`` is now
   :py:meth:`Molecule.assign_fractional_bond_orders <openforcefield.topology.Molecule.assign_fractional_bond_orders>`.
 - `PR #595 <https://github.com/openforcefield/openforcefield/pull/595>`_: Removed functions
-  :py:meth:`temporary_directory <openforcefield.utils.utils.temporary_directory>` and
-  :py:meth:`temporary_cd <openforcefield.utils.utils.temporary_cd>` and replaced their behavior with
+  ``openforcefield.utils.utils.temporary_directory`` and
+  ``openforcefield.utils.utils.temporary_cd`` and replaced their behavior with
   ``tempfile.TemporaryDirectory()``.
 
 New features
