@@ -23,7 +23,7 @@ Here's a brief rundown of what changed, migration tips, and what to search below
   ``atom.formal_charge.value_in_unit(unit.elementary_charge)`` or
   ``mol.total_charge.value_in_unit(unit.elementary_charge)``.
   Search ``atom.formal_charge`` below.
-* The OpenFF Toolkit now automatically reads and writes partial charges in SDF. Search for
+* The OpenFF Toolkit now automatically reads and writes partial charges in SDF files. Search for
   ``atom.dprop.PartialCharges`` below.
 * The OpenFF Toolkit now has different behavior for handling multi-molecule and multi-conformer SDF files. Search
   ``multi-conformer`` below.
