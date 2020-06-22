@@ -257,7 +257,7 @@ New features
   :py:meth:`Molecule.has_unique_atom_names <openforcefield.topology.Molecule.has_unique_atom_names>`
   and :py:meth:`Molecule.has_unique_atom_names <openforcefield.topology.Molecule.generate_unique_atom_names>`.
 - `PR #472 <https://github.com/openforcefield/openforcefield/pull/472>`_:
-  The :py:class:`Molecule <openforcefield.topology.Molecule>` class adds
+  Adds to the :py:class:`Molecule <openforcefield.topology.Molecule>` class
   :py:meth:`Molecule.are_isomorphic <openforcefield.topology.Molecule.are_isomorphic>`
   and :py:meth:`Molecule.is_isomorphic_with <openforcefield.topology.Molecule.is_isomorphic_with>`
   and :py:meth:`Molecule.hill_formula <openforcefield.topology.Molecule.hill_formula>`
