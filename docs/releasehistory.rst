@@ -13,30 +13,30 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 This is a relatively large release, motivated by the idea that changing existing functionality is bad
 so we shouldn't do it too often, but when we do change things we should do it all at once.
 
-Here's a brief rundown of what changed, migration tips, and what to search below to find more details:
+Here's a brief rundown of what changed, migration tips, and how to find more details in the full release notes below:
 
 * To provide more consistent partial charges for a given molecule, existing conformers are now disregarded by default
-  by ``Molecule.compute_partial_charges``. Instead, new conformers are generated for use in semiempirical calculations.
-  Search for ``use_conformers`` below.
+  by ``Molecule.assign_partial_charges``. Instead, new conformers are generated for use in semiempirical calculations.
+  Search for ``use_conformers``.
 * Formal charges are now always returned as ``simtk.unit.Quantity`` objects, with units of elementary charge.
-  To convert them to integers, ``from simtk import unit`` and
+  To convert them to integers, use ``from simtk import unit`` and
   ``atom.formal_charge.value_in_unit(unit.elementary_charge)`` or
   ``mol.total_charge.value_in_unit(unit.elementary_charge)``.
-  Search ``atom.formal_charge`` below.
+  Search ``atom.formal_charge``.
 * The OpenFF Toolkit now automatically reads and writes partial charges in SDF files. Search for
-  ``atom.dprop.PartialCharges`` below.
+  ``atom.dprop.PartialCharges``.
 * The OpenFF Toolkit now has different behavior for handling multi-molecule and multi-conformer SDF files. Search
-  ``multi-conformer`` below.
+  ``multi-conformer``.
 * The OpenFF Toolkit now distinguishes between partial charges that are all-zero and partial charges that are unknown.
-  Search ``partial_charges = None`` below.
-* ``Topology.to_openmm`` now assigns unique atoms names by default. Search ``ensure_unique_atom_names`` below.
+  Search ``partial_charges = None``.
+* ``Topology.to_openmm`` now assigns unique atoms names by default. Search ``ensure_unique_atom_names``.
 * Molecule equality checks are now done by graph comparison instead of SMILES comparison.
-  Search ``Molecule.are_isomorphic`` below.
+  Search ``Molecule.are_isomorphic``.
 * The ``ChemicalEnvironment`` module was almost entirely removed, as it is an outdated duplicate of some Chemper
-  functionality. Search ``ChemicalEnvironment`` below.
+  functionality. Search ``ChemicalEnvironment``.
 * ``TopologyMolecule.topology_particle_start_index`` has been removed from the ``TopologyMolecule`` API, since atoms
   and virtualsites are no longer contiguous in the ``Topology`` particle indexing system. Search
-  ``topology_particle_start_index`` below.
+  ``topology_particle_start_index``.
 * ``compute_wiberg_bond_orders`` has been renamed to ``assign_fractional_bond_orders``.
 
 There are also a number of new features, such as:
@@ -44,14 +44,15 @@ There are also a number of new features, such as:
 * Support for ``ChargeIncrementModel`` sections in force fields.
 * Support for ``ProperTorsion`` ``k`` interpolation in force fields using fractional bond orders.
 * Support for AM1-Mulliken, Gasteiger, and other charge methods using the new ``assign_partial_charges`` methods.
-* Support for AM1-Wiberg bond order calculation using either the OpenEye or RDKit/AmberTools backends.
+* Support for AM1-Wiberg bond order calculation using either the OpenEye or RDKit/AmberTools backends and the
+  ``assign_fractional_bond_orders`` methods.
 * Initial (limited) interoperability with QCArchive, via ``Molecule.to_qcschema`` and ``from_qcschema``.
 * A ``Molecule.visualize`` method.
 * Several additional ``Molecule`` methods, including state enumeration and mapped SMILES creation.
 
 **Major Feature: Support for the SMIRNOFF ChargeIncrementModel tag**
 
-`The ChargeIncrementModel tag in the SMIRNOFF specification <https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html#chargeincrementmodel-small-molecule-and-fragment-charges>`_.
+`The ChargeIncrementModel tag in the SMIRNOFF specification <https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html#chargeincrementmodel-small-molecule-and-fragment-charges>`_
 provides analagous functionality to AM1-BCC, except that instead of AM1-Mulliken charges, a number of different charge
 methods can be called, and instead of a fixed library of two-atom charge corrections, an arbitrary number of
 SMIRKS-based, N-atom charge corrections can be defined in the SMIRNOFF format.
@@ -135,7 +136,7 @@ Behavior changed
   ``to_rdkit``
   now sets partial charges on the RDAtom's ``PartialCharges`` property (this was previously set
   on the ``partial_charges`` property). If the
-  :py:class:`Molecule <openforcefield.topology.Molecule>`'s partial_charges attribute is None, this property
+  :py:class:`Molecule <openforcefield.topology.Molecule>`'s partial_charges attribute is ``None``, this property
   will not be defined on the RDAtoms.
 - `PR #281 <https://github.com/openforcefield/openforcefield/pull/281>`_:
   Enforce the behavior during SDF I/O that a SDF may contain multiple
@@ -234,10 +235,10 @@ New features
   by implementing support for the
   ``ChargeIncrementModel`` tag in the `SMIRNOFF specification <https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html#chargeincrementmodel-small-molecule-and-fragment-charges>`_.
 - `PR #471 <https://github.com/openforcefield/openforcefield/pull/471>`_: Implements
-  ``Molecule.compute_partial_charges``, which calls one of the newly-implemented
-  ``OpenEyeToolkitWrapper.compute_partial_charges``, and
-  ``AmberToolsToolkitWrapper.compute_partial_charges``. ``strict_n_conformers`` is a
-  optional boolean parameter indicating whether an ``IncorrectNumConformersError`` should be raised if an invalid
+  ``Molecule.assign_partial_charges``, which calls one of the newly-implemented
+  ``OpenEyeToolkitWrapper.assign_partial_charges``, and
+  ``AmberToolsToolkitWrapper.assign_partial_charges``. ``strict_n_conformers`` is a
+  optional boolean keyword argument indicating whether an ``IncorrectNumConformersError`` should be raised if an invalid
   number of conformers is supplied during partial charge calculation. For example, if two conformers are
   supplied, but ``partial_charge_method="AM1BCC"`` is also set, then there is no clear use for
   the second conformer. The previous behavior in this case was to raise a warning, and to preserve that
