@@ -98,8 +98,7 @@ take over the "slot", pushing the original ``ChargeIncrement`` out.
 
 Chaya Stern's work showed that we may be able to produce higher-quality proper torsion parameters by taking into
 account the "partial bond order" of the torsion's central bond. We now have the machinery to compute AM1-Wiberg
-partial bond orders for entire molecules using either ``OpenEyeToolkitWrapper``'s or ``AmberToolsToolkitWrapper``'s
-``assign_fractional_bond_orders`` methods. The thought is that, if some simple electron population analysis shows
+partial bond orders for entire molecules using the ``assign_fractional_bond_orders`` methods of either  ``OpenEyeToolkitWrapper`` or ``AmberToolsToolkitWrapper``. The thought is that, if some simple electron population analysis shows
 that a certain aromatic bond's order is 1.53, maybe rotations about that bond can be described well by interpolating
 53% of the way between the single and double bond k values.
 
