@@ -904,11 +904,11 @@ class ForceField:
 
             # specialize VirtualSites for now to avoid possibly breaking anything
             all_params = defaultdict(list)
-            if parameter_name == "VirtualSites":
+            if parameter_name == "VirtualSites" and len(parameter_list_dict) > 0:
                 if not isinstance(parameter_list_dict, list):
                     parameter_list_dict = [ parameter_list_dict ]
                 for parameter in parameter_list_dict:
-                    assert ("type" in parameter), "VirtualSites must specify a type."
+                    assert ("type" in parameter), "VirtualSites must specify a type: {:s}".format(parameter.__repr__())
                     infotype = parameter["type"]
                     if type(ph_class._INFOTYPE) == type(property()):
                         ph_class._INFOTYPE.__set__(ph_class, infotype)

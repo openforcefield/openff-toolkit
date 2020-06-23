@@ -559,8 +559,7 @@ class TopologyVirtualSite(Serializable):
         """
         # This assumes that the particles in a topology are listed with all atoms from all TopologyMolecules
         # first, followed by all VirtualSites from all TopologyMolecules second
-        return self.topology.n_topology_atoms + self.topology_virtual_site_index
-
+        return self._topology_molecule.topology.n_topology_atoms + self.topology_virtual_site_index
         # return self._topology_molecule.particle_start_topology_index + self._virtual_site.molecule_particle_index
 
     @property

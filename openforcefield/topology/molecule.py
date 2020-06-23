@@ -589,12 +589,21 @@ class VirtualSite(Particle):
         self._molecule = atoms[0].molecule
 
         self._name = name
-
+        
         # Subclassing makes _type unnecessary
         #self._type = None
         # TODO: Validate site types against allowed values
 
         #self._weights = np.array(weights) # make a copy and convert to array internally
+
+    def __eq__(self, other):
+        if self.type != other.type:
+            return False
+        same_name = self.name == other.name
+        same_indices = self.atoms == other.atoms
+        same_vsite = same_name and same_indices
+        return same_vsite
+
 
     def to_dict(self):
         """Return a dict representation of the virtual site.
@@ -716,7 +725,6 @@ class VirtualSite(Particle):
         # TODO: Also include particle_index, which molecule this atom belongs to?
         return "<VirtualSite name={} type={} atoms={}>".format(
             self.name, self.type, self.atoms)
-
 
 class BondChargeVirtualSite(VirtualSite):
     """
@@ -2609,6 +2617,27 @@ class FrozenMolecule(Serializable):
         self._invalidate_cached_properties()
         return self._atoms.index(atom)
 
+
+    def _add_virtual_site(self, vsite, replace=False):
+        replaced=False
+        for i,existing_vsite in enumerate(self._virtual_sites):
+            same_vsite = existing_vsite == vsite
+            if same_vsite:
+                if replace:
+                    self._virtual_sites[i] = vsite
+                    replaced=True
+                    break
+                else:
+                    error_msg = ("Attempted to add the new virtual site:\n{}\n"+
+                        "to molecule: \n{}\nAnother vsite with the same type "+
+                        "already exists and replace=False. Existing vsite "+
+                        "is:\n{}\n").format(vsite, self, existing_vsite)
+                    raise Exception(error_msg)
+        if not replaced:
+            self._virtual_sites.append(vsite)
+        return self._virtual_sites.index(vsite)
+
+
     def _add_bond_charge_virtual_site(self, atoms, distance, **kwargs):
         """
         Create a bond charge-type virtual site, in which the location of the charge is specified by the position of two
@@ -2750,9 +2779,15 @@ class FrozenMolecule(Serializable):
                 'Invalid inputs to molecule._add_divalent_lone_pair_virtual_site. Expected ints or Atoms. '
                 'Received types {} '.format([type(i) for i in atoms]))
         # TODO: Check to make sure bond does not already exist
+        
+        replace = False 
+        if 'replace' in kwargs:
+            replace = kwargs['replace']
+            kwargs.pop('replace')
         vsite = DivalentLonePairVirtualSite(
             atom_list, distance, out_of_plane_angle, in_plane_angle, **kwargs)
-        self._virtual_sites.append(vsite)
+            
+        self._add_virtual_site(vsite, replace=replace)
         self._invalidate_cached_properties()
         return self._virtual_sites.index(vsite)
 

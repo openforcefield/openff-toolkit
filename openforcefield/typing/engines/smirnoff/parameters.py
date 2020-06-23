@@ -1515,9 +1515,9 @@ class ParameterHandler(_ParameterAttributeHandler):
         return self._find_matches(entity)
 
     def _find_matches(self, entity, transformed_dict_cls=ValenceDict, 
-            use_named_slots=False, variable_keylen=False):
+            use_named_slots=False, variable_keylen=False, expand_orientation=False):
         """Implement find_matches() and allow using a difference valence dictionary.
-                Parameters
+        Parameters
         ----------
         entity : openforcefield.topology.Topology
             Topology to search.
@@ -1557,16 +1557,18 @@ class ParameterHandler(_ParameterAttributeHandler):
                 key = environment_match.topology_atom_indices
                 
 
-                # only a match if index matches
+                # only a match if orientation matches
                 # this should probably go into self._Match
-                if hasattr(handler_match._parameter_type, "index"):
+                if hasattr(handler_match._parameter_type, "orientation"):
+                    orientation = handler_match._parameter_type.orientation
+                    orientation = list(map(int, orientation.split(",")))
                     handler_match._parameter_type.multiplicity=len(orders)
-                    if parameter_type.index >= len(orders):
+                    if len(orientation) > len(orders):
                         error_msg = (
-                            "For parameter of type\n{:s}\n" +
-                            "index {:d} exceeds length of possible orders " +
+                            "For parameter of type\n{:s}\norientations {} " +
+                            "exceeds length of possible orders " +
                             "({:d}):\n{:s}").format( str(parameter_type), 
-                                parameter_type.index, len(orders), str(orders))
+                                orientation, len(orders), str(orders))
                         raise IndexError(error_msg)
                     fn = ImproperDict.index_of
                     if len(key) < 4:
@@ -1577,7 +1579,9 @@ class ParameterHandler(_ParameterAttributeHandler):
                     fn = ImproperDict.key_transform
                     if len(key) < 4:
                         fn = ValenceDict.key_transform
-                    key = fn(key)
+                    if not expand_orientation:
+                        key = fn(key)
+
                 # this takes care of LibraryCharge, which can match
                 # tuples of variable length
                 elif variable_keylen:
@@ -1587,8 +1591,10 @@ class ParameterHandler(_ParameterAttributeHandler):
                         fn = ImproperDict.key_transform
                     key = fn(key)
 
-                if hasattr(handler_match._parameter_type, "index"):
-                    if index_of_key == handler_match._parameter_type.index:
+                if hasattr(handler_match._parameter_type, "orientation"):
+                    hit = sum([index_of_key == ornt for ornt in orientation])
+                    assert hit < 2, "VirtualSite orientation for {:s} indices invalid: Has duplicates".format(parameter_type.__repr__)
+                    if hit == 1:
                         matches_for_this_type[key].append(handler_match)
                 else:
                     matches_for_this_type[key] = [handler_match]
@@ -3016,18 +3022,35 @@ class VirtualSiteHandler(_NonbondedHandler):
         distance        = ParameterAttribute(unit=unit.angstrom)
         chargeincrement = IndexedParameterAttribute(unit=unit.elementary_charge)
         type            = ParameterAttribute()
-        orientation     = ParameterAttribute(default=0, converter=int)
+        orientation     = ParameterAttribute(default="0", converter=str)
         multiplicity    = ParameterAttribute(default=1, converter=int)
 
         def add_virtual_site(self, fn, atoms, **kwargs):
+            """
+
+            Parameters
+            ----------
+            fn : callable
+                The underlying OpenFF function that should be called to create
+                the virtual site in the toolkit. Currently, these are:
+                    * `Molecule._add_bond_charge_virtual_site`
+                    * `Molecule._add_monovalent_lone_pair_virtual_site`
+                    * `Molecule._add_divalent_lone_pair_virtual_site`
+                    * `Molecule._add_trivalent_lone_pair_virtual_site`
+
+            Returns
+            -------
+                The index of the created virtual site
+            """
 
             args = [ atoms, self.distance ]
             base_args = {
+                "name"              : self.name,
                 "charge_increments" : self.chargeincrement,
                 "weights"           : None,
                 "epsilon"           : self.epsilon,
                 "sigma"             : self.sigma,
-                "rmin_half"         : self.rmin_half
+                "rmin_half"         : self.rmin_half,
             }
             kwargs.update( base_args)
 
@@ -3037,7 +3060,7 @@ class VirtualSiteHandler(_NonbondedHandler):
             vsite_q = self.chargeincrement[0]
             vsite_q *= 0.0
             for qi,atom in enumerate(atom_key):
-                q, s, e = force.getParticleParameters( atom)
+                q, s, e = force.getParticleParameters(atom)
                 vsite_q -= self.chargeincrement[qi]
                 q       += self.chargeincrement[qi]
                 force.setParticleParameters(atom, q, s, e)
@@ -3053,15 +3076,14 @@ class VirtualSiteHandler(_NonbondedHandler):
         def __eq__(self, obj):
             if type(self) != type(obj):
                 return False
-            A = ["name","distance"]
             A = ["name"]
             are_equal = [getattr(self,a) == getattr(obj,a) for a in A]
             return all(are_equal)
 
-        def add_virtual_site(self, molecule, atoms):
+        def add_virtual_site(self, molecule, atoms, replace=False):
             fn = molecule._add_bond_charge_virtual_site
             kwargs = {}
-            off_idx = super().add_virtual_site(fn, atoms, **kwargs)
+            off_idx = super().add_virtual_site(fn, atoms, replace=replace)
             return off_idx
 
         def get_openmm_virtual_site(self, atoms, mass=None):
@@ -3096,7 +3118,7 @@ class VirtualSiteHandler(_NonbondedHandler):
         """
         _ELEMENT_NAME = 'VirtualSiteCentroidType'
 
-        def add_virtual_site(self, molecule, atoms):
+        def add_virtual_site(self, molecule, atoms, replace=False):
             # TODO: molecule does not have this vsite yet
             #fn = molecule._add_centroid_virtual_site
             #off_idx = super().add_virtual_site(fn, atoms, **kwargs)
@@ -3134,17 +3156,18 @@ class VirtualSiteHandler(_NonbondedHandler):
             are_equal = [getattr(self,a) == getattr(obj,a) for a in A]
             return all(are_equal)
 
-        def add_virtual_site(self, fn, atoms, **kwargs):
+        def add_virtual_site(self, fn, atoms, replace=False):
             args = [ atoms, self.distance, self.outOfPlaneAngle, self.inPlaneAngle ]
             base_args = {
+                "name"              : self.name,
                 "charge_increments" : self.chargeincrement,
                 "weights"           : None,
                 "epsilon"           : self.epsilon,
                 "sigma"             : self.sigma,
-                "rmin_half"         : self.rmin_half
+                "rmin_half"         : self.rmin_half,
+                "replace"           : replace
             }
-            kwargs.update(base_args)
-            return fn( *args, **kwargs)
+            return fn( *args, **base_args)
 
     class VirtualSiteDivalentLonePairType(VirtualSiteLonePairType):
         """A SMIRNOFF divalent lone pair virtual site type
@@ -3153,9 +3176,9 @@ class VirtualSiteHandler(_NonbondedHandler):
         """
 
         _ELEMENT_NAME = 'VirtualSiteDivalentType'
-        def add_virtual_site(self, molecule, atoms):
+        def add_virtual_site(self, molecule, atoms, replace=False):
             fn = molecule._add_divalent_lone_pair_virtual_site
-            return super().add_virtual_site(fn, atoms)
+            return super().add_virtual_site(fn, atoms, replace=replace)
 
         def get_openmm_virtual_site(self, atoms, mass=None):
             assert len(atoms) == 3
@@ -3179,9 +3202,9 @@ class VirtualSiteHandler(_NonbondedHandler):
         """
 
         _ELEMENT_NAME = 'VirtualSiteTrivalentType'
-        def add_virtual_site(self, molecule, atoms):
+        def add_virtual_site(self, molecule, atoms, replace=False):
             fn = molecule._add_trivalent_lone_pair_virtual_site
-            return super().add_virtual_site(fn, atoms)
+            return super().add_virtual_site(fn, atoms, replace=replace)
 
         def get_openmm_virtual_site(self, atoms, mass=None):
             assert len(atoms) == 4
@@ -3204,9 +3227,9 @@ class VirtualSiteHandler(_NonbondedHandler):
         .. warning :: This API is experimental and subject to change.
         """
         _ELEMENT_NAME = 'VirtualSiteMonovalentType'
-        def add_virtual_site(self, molecule, atoms):
+        def add_virtual_site(self, molecule, atoms, replace=False):
             fn = molecule._add_monovalent_lone_pair_virtual_site
-            return super().add_virtual_site(fn, atoms)
+            return super().add_virtual_site(fn, atoms, replace=replace)
 
         def get_openmm_virtual_site(self, atoms, mass=None):
             assert len(atoms) == 3
@@ -3264,7 +3287,7 @@ class VirtualSiteHandler(_NonbondedHandler):
         #self._check_attributes_are_equal(other_handler, identical_attrs=string_attrs_to_compare)
         #super().check_handler_compatibility(other_handler)
 
-    def find_matches(self, entity):
+    def find_matches(self, entity, expand_orientation=False):
         """Find the virtual sites in the topology/molecule matched by a parameter type.
 
         Parameters
@@ -3280,86 +3303,158 @@ class VirtualSiteHandler(_NonbondedHandler):
 
         """
         return self._find_matches(entity, transformed_dict_cls=dict,
-            use_named_slots=True)
+            use_named_slots=True, expand_orientation=expand_orientation)
 
-        vsite_kwargs = [
-            {
-                "select":           __class__.VirtualSiteBondChargeType,
-                "transformed_dict_cls":  dict,  # do not deduplicate
-                "allow_multiple":        True
-            },
-            {
-                "select":           __class__.VirtualSiteMonovalentLonePairType,
-                "transformed_dict_cls":  dict,  # do not deduplicate
-                "allow_multiple":        True
-            },
-            {
-                "select":           __class__.VirtualSiteDivalentLonePairType,
-                "transformed_dict_cls":  dict,  # deduplicate
-                "allow_multiple":        True
-            },
-            {
-                "select":           __class__.VirtualSiteTrivalentLonePairType,
-                "transformed_dict_cls":  dict,
-                "allow_multiple":        True
-            }
-        ]
-        matches = defaultdict(list)
-        for vsite_type in vsite_kwargs:
-            result = self._find_matches(entity, **vsite_type)
-            for k,v in result.items():
-                matches[k].extend(v)
-        return dict(matches)
+        # vsite_kwargs = [
+        #     {
+        #         "select":           __class__.VirtualSiteBondChargeType,
+        #         "transformed_dict_cls":  dict,  # do not deduplicate
+        #         "allow_multiple":        True
+        #     },
+        #     {
+        #         "select":           __class__.VirtualSiteMonovalentLonePairType,
+        #         "transformed_dict_cls":  dict,  # do not deduplicate
+        #         "allow_multiple":        True
+        #     },
+        #     {
+        #         "select":           __class__.VirtualSiteDivalentLonePairType,
+        #         "transformed_dict_cls":  dict,  # deduplicate
+        #         "allow_multiple":        True
+        #     },
+        #     {
+        #         "select":           __class__.VirtualSiteTrivalentLonePairType,
+        #         "transformed_dict_cls":  dict,
+        #         "allow_multiple":        True
+        #     }
+        # ]
+        # matches = defaultdict(list)
+        # for vsite_type in vsite_kwargs:
+        #     result = self._find_matches(entity, **vsite_type)
+        #     for k,v in result.items():
+        #         matches[k].extend(v)
+        # return dict(matches)
 
 
     def create_force(self, system, topology, **kwargs):
+
+        # Eventually support different exclusion policies
+        exclusion_policy="basic"
+
         force = super().create_force(system, topology, **kwargs)
 
+        atom_matches = self.find_matches(topology, expand_orientation=True)
 
-        # first we need to actually add the discovered virtualsites
-        # add them to the topology
-
-        atom_matches = self.find_matches(topology)
-
-        # Set the particle Lennard-Jones terms.
-        applied = set()
+        # Separate the logic of adding vsites in the oFF state and the OpenMM
+        # system. Operating on the topology is not ideal (a hack), so hopefully
+        # this loop, which adds the oFF vsites to the topology, will live 
+        # somewhere else
+        print("Creating OpenFF VSite representation...")        
         for _, atom_match_lst in atom_matches.items():
-            #print("Atom key", atom_key)
+            # print("Atom key", _, atom_match_lst)
             for atom_match in atom_match_lst:
-                print("    Atom match", atom_match)
+                # print("    Atom match", atom_match)
 
                 atom_key = atom_match.environment_match.topology_atom_indices
                 # this is the new particle to add nonbonded terms to
                 mol = atom_match.environment_match.reference_molecule
 
-                ref_key = (topology.atom(i).atom.molecule_atom_index for i in atom_key)
-
-                #if ref_key not in applied:
-                    
-                atom_idx = atom_match.parameter_type.add_virtual_site( mol, ref_key)
-                vsite = atom_match.parameter_type.get_openmm_virtual_site( atom_key)
-
-                # apply the charge increment using the atom_key atoms, 
-                # and the vsite
-                # determine the vsite charge from the increment sum
-                vsite_q = atom_match.parameter_type.apply_chargeincrement( force, ref_key)
-
-                ljtype = atom_match.parameter_type
-                if ljtype.sigma is None:
-                    sigma = 2. * ljtype.rmin_half / (2.**(1. / 6.))
-                else:
-                    sigma = ljtype.sigma
-
-                # create the vsite particle
-                mass = 0.0
-                vsite_idx = system.addParticle(mass)
-                system.setVirtualSite(vsite_idx, vsite)
-                force.addParticle(vsite_q, sigma, ljtype.epsilon)
+                ref_key = [topology.atom(i).atom.molecule_atom_index for i in atom_key]
+                atom_idx = atom_match.parameter_type.add_virtual_site(mol, ref_key, replace=True)
 
 
-        # Check that no atoms (n.b. not particles) are missing force parameters.
-        #self._check_all_valence_terms_assigned(assigned_terms=atom_matches,
-        #                                       valence_terms=list(topology.topology_atoms))
+        print("Creating OpenMM VSite particles...")        
+        for vsite in topology.topology_virtual_sites:
+
+            atom_key = [atom.topology_atom_index for atom in vsite.atoms]
+            omm_vsite = atom_match.parameter_type.get_openmm_virtual_site(atom_key)
+
+            ref_key = [topology.atom(i).atom.molecule_atom_index for i in atom_key]
+            vsite_q = atom_match.parameter_type.apply_chargeincrement( force, atom_key)
+
+            ljtype = vsite.virtual_site
+            if ljtype.sigma is None:
+                sigma = 2. * ljtype.rmin_half / (2.**(1. / 6.))
+            else:
+                sigma = ljtype.sigma
+
+            # create the vsite particle
+            mass = 0.0
+            vsite_idx = system.addParticle(mass)
+
+            # We are in trouble if the indices we are keeping do not match
+            # with the internal OpenMM representation
+            assert vsite_idx == vsite.topology_particle_index
+
+            system.setVirtualSite(vsite_idx, omm_vsite)
+            force.addParticle(vsite_q, sigma, ljtype.epsilon)
+
+
+        # Handle exclusions
+        print("Building VSite exclusions...")        
+        exclusions = set()
+
+        def orientations_of_same_virtual_site(vs_i, vs_j):
+            if vs_i.virtual_site.type != vs_j.virtual_site.type:
+                return False
+            if vs_i.virtual_site.name != vs_j.virtual_site.name:
+                return False
+            atoms_i = [atom.topology_particle_index for atom in vs_i.atoms]
+            atoms_j = [atom.topology_particle_index for atom in vs_j.atoms]
+            if sorted(atoms_i) == sorted(atoms_j):
+                return True
+            else:
+                return False
+
+        def virtual_site_shared_atoms(vs_i, vs_j):
+            atoms_i = [atom.topology_particle_index for atom in vs_i.atoms]
+            atoms_j = [atom.topology_particle_index for atom in vs_j.atoms]
+
+            shared = [i for i in atoms_i if i in atoms_j]
+            return shared
+
+        def excludePair(i, j, force, exclusions):
+            pair = tuple(sorted([i,j]))
+            if pair not in exclusions:
+                force.addException(i, j, 0.0, 0.0, 0.0, replace=True)
+                exclusions.add(pair)
+
+
+        for vsite in topology.topology_virtual_sites:
+            vsite_idx = vsite.topology_particle_index
+
+            if exclusion_policy != "none":
+
+                # this exclusion version just excludes vsites from atoms
+                # that is associated with, and other vsites which are 
+                # symmetric to it e.g. two lone pairs defined by a DivalentLonePair
+                # (a TIP5 water)
+                for atom in [atom.topology_particle_index for atom in vsite.atoms]:
+                    excludePair(vsite_idx,atom,force,exclusions)
+
+                for other_vsite in topology.topology_virtual_sites:
+                    vsite_j = other_vsite.topology_particle_index
+                    # assuming that the above generator is monotonic
+                    if vsite_j <= vsite_idx:
+                        continue
+
+                    if orientations_of_same_virtual_site(vsite, other_vsite):
+                        excludePair(vsite_idx,vsite_j,force,exclusions)
+
+                    # These options still need be laid out more carefully
+
+                    # this will be for a "complete" mode
+                    # combined_atoms = [atom.topology_particle_index for 
+                    #     atom in vsite.atoms]
+                    # combined_atoms.extend([atom.topology_particle_index for 
+                    #     atom in other_vsite.atoms])
+
+                    # This is the "full" option: if two vsites share an atom
+                    # completely exclude them from each other
+                    # for atom in virtual_site_shared_atoms(vsite, other_vsite):
+                    #     excludePair(vsite_idx, atom, exclusions)
+                    #     excludePair(vsite_idx, vsite_j, exclusions)
+                    #     excludePair(vsite_j, atom, exclusions)
+
 
 class ToolkitAM1BCCHandler(_NonbondedHandler):
     """Handle SMIRNOFF ``<ToolkitAM1BCC>`` tags
