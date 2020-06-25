@@ -12,6 +12,10 @@ def compute_conformer_energies_from_file(filename):
     # different behavior in some cases. So, here we force loading through RDKit to ensure the correct behavior
     rdktkw = RDKitToolkitWrapper()
     loaded_molecules = Molecule.from_file(filename, toolkit_registry=rdktkw)
+    # The logic below only works for lists of molecules, so if a
+    # single molecule was loaded, cast it to list
+    if type(loaded_molecules) is not list:
+        loaded_molecules = [loaded_molecules]
     # Collatate all conformers of the same molecule
     # NOTE: This isn't necessary if you have already loaded or created multi-conformer molecules;
     # it is just needed because our SDF reader does not automatically collapse conformers.
