@@ -1711,6 +1711,18 @@ class TestRDKitToolkitWrapper:
         for (offatom, rdatom) in zip(mol.atoms, rdmol.GetAtoms()):
             assert offatom.is_aromatic is rdatom.GetIsAromatic()
 
+    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
+    def test_substructure_search_on_large_molecule(self):
+        """Test RDKitToolkitWrapper substructure search when a large number hits are found"""
+
+        tk = RDKitToolkitWrapper()
+        smiles = "C"*3000
+        molecule = tk.from_smiles(smiles)
+        query = "[C:1]~[C:2]"
+        ret = molecule.chemical_environment_matches(query, toolkit_registry=tk)
+        assert len(ret) == 5998
+        assert len(ret[0]) == 2
+
 
         # TODO: Add test for higher bonds orders
         # TODO: Add test for aromaticity
@@ -2407,16 +2419,3 @@ class TestToolkitRegistry:
                           molecule=mol,
                           partial_charge_method="NotARealChargeMethod",
                           raise_exception_types=[])
-
-    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
-    def test_substructure_search_on_large_molecule(self):
-        """Test RDKitToolkitWrapper substructure search when a large number hits are found"""
-
-        tk = RDKitToolkitWrapper()
-        smiles = "C"*3000
-        molecule = tk.from_smiles(smiles)
-        query = "[C:1]~[C:2]"
-        ret = molecule.chemical_environment_matches(query, toolkit_registry=tk)
-        assert len(ret) == 5998
-        assert len(ret[0]) == 2
-
