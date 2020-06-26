@@ -9,6 +9,7 @@ __all__ = [
     'IncompatibleUnitError',
     'inherit_docstrings',
     'all_subclasses',
+    'temporary_cd',
     'get_data_file_path',
     'unit_to_string',
     'quantity_to_string',
@@ -35,6 +36,7 @@ import functools
 
 from simtk import unit
 import logging
+import contextlib
 
 
 #=============================================================================================
@@ -86,6 +88,26 @@ def all_subclasses(cls):
         g for s in cls.__subclasses__() for g in all_subclasses(s)
     ]
 
+@contextlib.contextmanager
+def temporary_cd(dir_path):
+    """Context to temporary change the working directory.
+    Parameters
+    ----------
+    dir_path : str
+        The directory path to enter within the context
+    Examples
+    --------
+    >>> dir_path = '/tmp'
+    >>> with temporary_cd(dir_path):
+    ...     pass  # do something in dir_path
+    """
+    import os
+    prev_dir = os.getcwd()
+    os.chdir(os.path.abspath(dir_path))
+    try:
+        yield
+    finally:
+        os.chdir(prev_dir)
 
 def get_data_file_path(relative_path):
     """Get the full path to one of the reference files in testsystems.
@@ -383,17 +405,25 @@ def check_units_are_compatible(object_name, object, unit_to_check, context=None)
     IncompatibleUnitError
     """
     from simtk import unit
+
+    # If context is not provided, explicitly make it a blank string
+    if context is None:
+        context = ''
+    # Otherwise add a space after the end of it to correct message printing
+    else:
+        context += ' '
+
     if isinstance(object, list):
         for sub_object in object:
             check_units_are_compatible(object_name, sub_object, unit_to_check, context=context)
     elif isinstance(object, unit.Quantity):
         if not object.unit.is_compatible(unit_to_check):
-            msg = f"{context} {object_name} with " \
-                  f"value {object}, is incompatible with expected unit {unit_to_check}"
+            msg = f"{context}{object_name} with " \
+                  f"value {object} is incompatible with expected unit {unit_to_check}"
             raise IncompatibleUnitError(msg)
     else:
-        msg = f"{context} {object_name} with " \
-              f"value {object}, is incompatible with expected unit {unit_to_check}"
+        msg = f"{context}{object_name} with " \
+              f"value {object} is incompatible with expected unit {unit_to_check}"
         raise IncompatibleUnitError(msg)
 
 

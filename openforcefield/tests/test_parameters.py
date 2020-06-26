@@ -15,6 +15,7 @@ Test classes and function in module openforcefield.typing.engines.smirnoff.param
 #======================================================================
 
 import pytest
+from numpy.testing import assert_almost_equal
 from simtk import unit
 
 from openforcefield.typing.engines.smirnoff import SMIRNOFFVersionError
@@ -22,7 +23,7 @@ from openforcefield.typing.engines.smirnoff.parameters import (
     ParameterAttribute, IndexedParameterAttribute, ParameterList,
     ParameterType, BondHandler, ParameterHandler, ProperTorsionHandler,
     ImproperTorsionHandler, LibraryChargeHandler, GBSAHandler, SMIRNOFFSpecError,
-    _ParameterAttributeHandler
+    _ParameterAttributeHandler, ChargeIncrementModelHandler, IncompatibleParameterError
     )
 from openforcefield.utils import detach_units, IncompatibleUnitError
 from openforcefield.utils.collections import ValidatedList
@@ -960,7 +961,7 @@ class TestProperTorsionType:
         """
         from simtk import unit
 
-        with pytest.raises(SMIRNOFFSpecError, match="Unexpected kwarg (phase3: 31 deg)*") as context:
+        with pytest.raises(SMIRNOFFSpecError, match="Unexpected kwarg \(phase3: 31 deg\)*.") as context:
             p1 = ProperTorsionHandler.ProperTorsionType(smirks='[*:1]-[*:2]-[*:3]-[*:4]',
                                                         phase1=30 * unit.degree,
                                                         periodicity1=2,
@@ -988,6 +989,157 @@ class TestProperTorsionType:
                                                         k2=6 * unit.kilocalorie_per_mole,
                                                         )
 
+    def test_single_term_proper_torsion_bo(self):
+        """
+        Test creation and serialization of a single-term proper torsion with bond order interpolation.
+        """
+        from simtk import unit
+
+        p1 = ProperTorsionHandler.ProperTorsionType(smirks='[*:1]-[*:2]~[*:3]-[*:4]',
+                                                    phase1=30 * unit.degree,
+                                                    periodicity1=2,
+                                                    k1_bondorder1=1 * unit.kilocalorie_per_mole,
+                                                    k1_bondorder2=1.8 * unit.kilocalorie_per_mole,
+                                                    )
+        param_dict = p1.to_dict()
+        assert ('k1_bondorder1', 1 * unit.kilocalorie_per_mole) in param_dict.items()
+        assert ('k1_bondorder2', 1.8 * unit.kilocalorie_per_mole) in param_dict.items()
+        assert ('phase1', 30 * unit.degree) in param_dict.items()
+        assert ('periodicity1', 2) in param_dict.items()
+        assert 'idivf' not in param_dict
+
+        assert len(p1.k_bondorder) == 1
+        assert len(p1.k_bondorder[0]) == 2
+        assert {1, 2} == set(p1.k_bondorder[0].keys())
+
+    def test_single_term_proper_torsion_bo_w_idivf(self):
+        """
+        Test creation and serialization of a single-term proper torsion with bond order interpolation.
+
+        With `idivf1` specified.
+
+        """
+        from simtk import unit
+
+        p1 = ProperTorsionHandler.ProperTorsionType(smirks='[*:1]-[*:2]-[*:3]-[*:4]',
+                                                    phase1=30 * unit.degree,
+                                                    periodicity1=2,
+                                                    k1_bondorder1=1 * unit.kilocalorie_per_mole,
+                                                    k1_bondorder2=1.8 * unit.kilocalorie_per_mole,
+                                                    idivf1=4
+                                                    )
+
+        param_dict = p1.to_dict()
+        assert ('k1_bondorder1', 1 * unit.kilocalorie_per_mole) in param_dict.items()
+        assert ('k1_bondorder2', 1.8 * unit.kilocalorie_per_mole) in param_dict.items()
+        assert ('phase1', 30 * unit.degree) in param_dict.items()
+        assert ('periodicity1', 2) in param_dict.items()
+        assert ('idivf1', 4) in param_dict.items()
+
+    def test_multi_term_proper_torsion_bo(self):
+        """
+        Test creation and serialization of a multi-term proper torsion with bond order interpolation.
+        """
+        from simtk import unit
+
+        p1 = ProperTorsionHandler.ProperTorsionType(smirks='[*:1]-[*:2]-[*:3]-[*:4]',
+                                                    phase1=30 * unit.degree,
+                                                    periodicity1=2,
+                                                    k1_bondorder1=1 * unit.kilocalorie_per_mole,
+                                                    k1_bondorder2=1.8 * unit.kilocalorie_per_mole,
+                                                    phase2=31 * unit.degree,
+                                                    periodicity2=3,
+                                                    k2_bondorder1=1.2 * unit.kilocalorie_per_mole,
+                                                    k2_bondorder2=1.9 * unit.kilocalorie_per_mole,
+                                                    )
+        param_dict = p1.to_dict()
+        assert param_dict['k1_bondorder1'] == 1 * unit.kilocalorie_per_mole
+        assert param_dict['k1_bondorder2'] == 1.8 * unit.kilocalorie_per_mole
+        assert param_dict['phase1'] == 30 * unit.degree
+        assert param_dict['periodicity1'] == 2
+        assert param_dict['k2_bondorder1'] == 1.2 * unit.kilocalorie_per_mole
+        assert param_dict['k2_bondorder2'] == 1.9 * unit.kilocalorie_per_mole
+        assert param_dict['phase2'] == 31 * unit.degree
+        assert param_dict['periodicity2'] == 3
+
+
+    def test_multi_term_proper_torsion_bo_getters_setters(self):
+        """
+        Test getters and setters of a multi-term proper torsion with bond order interpolation.
+        """
+        from simtk import unit
+
+        p1 = ProperTorsionHandler.ProperTorsionType(smirks='[*:1]-[*:2]-[*:3]-[*:4]',
+                                                    phase1=30 * unit.degree,
+                                                    periodicity1=2,
+                                                    k1_bondorder1=1 * unit.kilocalorie_per_mole,
+                                                    k1_bondorder2=1.8 * unit.kilocalorie_per_mole,
+                                                    phase2=31 * unit.degree,
+                                                    periodicity2=3,
+                                                    k2_bondorder1=1.2 * unit.kilocalorie_per_mole,
+                                                    k2_bondorder2=1.9 * unit.kilocalorie_per_mole,
+                                                    )
+
+        assert p1.k1_bondorder1 == 1. * unit.kilocalorie_per_mole
+        p1.k1_bondorder1 = 2. * unit.kilocalorie_per_mole
+        assert p1.k1_bondorder1 == 2. * unit.kilocalorie_per_mole
+
+        assert p1.k2_bondorder2 == 1.9 * unit.kilocalorie_per_mole
+        p1.k2_bondorder2 = 2.9 * unit.kilocalorie_per_mole
+        assert p1.k2_bondorder2 == 2.9 * unit.kilocalorie_per_mole
+
+
+    def test_multi_term_proper_torsion_bo_skip_index(self):
+        """
+        Test creation and serialization of a multi-term proper torsion where
+        the indices are not consecutive and a SMIRNOFFSpecError is raised
+        AND we are doing bond order interpolation
+        """
+        from simtk import unit
+
+        with pytest.raises(SMIRNOFFSpecError, match="Unexpected kwarg \(k3_bondorder1*.") as context:
+            p1 = ProperTorsionHandler.ProperTorsionType(smirks='[*:1]-[*:2]-[*:3]-[*:4]',
+                                                        phase1=30 * unit.degree,
+                                                        periodicity1=2,
+                                                        k1_bondorder1=1 * unit.kilocalorie_per_mole,
+                                                        k1_bondorder2=1.8 * unit.kilocalorie_per_mole,
+                                                        phase3=31 * unit.degree,
+                                                        periodicity3=3,
+                                                        k3_bondorder1=1.2 * unit.kilocalorie_per_mole,
+                                                        k3_bondorder2=1.9 * unit.kilocalorie_per_mole,
+                                                        )
+
+    def test_single_term_single_bo_exception(self):
+        """Test behavior where a single bond order term is specified for a single k"""
+        from simtk import unit
+
+        # raises no error, as checks are handled at parameterization
+        # we may add a `validate` method later that is called manually by user when they want it
+        p1 = ProperTorsionHandler.ProperTorsionType(smirks='[*:1]-[*:2]~[*:3]-[*:4]',
+                                                    phase1=30 * unit.degree,
+                                                    periodicity1=2,
+                                                    k1_bondorder1=1 * unit.kilocalorie_per_mole,
+                                                    )
+
+
+    def test_multi_term_single_bo_exception(self):
+        """Test behavior where a single bond order term is specified for each of multiple k"""
+        from simtk import unit
+
+        # TODO : currently raises no error, as checks are handled at parameterization
+        # is this a spec thing that we should be checking?
+        # if so, it will be painful to implement
+        p1 = ProperTorsionHandler.ProperTorsionType(smirks='[*:1]-[*:2]-[*:3]-[*:4]',
+                                                    phase1=30 * unit.degree,
+                                                    periodicity1=2,
+                                                    k1_bondorder1=1 * unit.kilocalorie_per_mole,
+                                                    phase2=31 * unit.degree,
+                                                    periodicity2=3,
+                                                    k2_bondorder1=1.2 * unit.kilocalorie_per_mole,
+                                                    )
+
+
+
 class TestProperTorsionHandler:
     def test_torsion_handler_charmm_potential(self):
         """
@@ -1010,10 +1162,146 @@ class TestProperTorsionHandler:
             ph1 = ImproperTorsionHandler(potential='charmm', skip_version_check=True)
         ph1 = ImproperTorsionHandler(potential='k*(1+cos(periodicity*theta-phase))', skip_version_check=True)
 
+    @pytest.mark.parametrize(
+            ('fractional_bond_order', 'k_interpolated'),
+            [(1.6, 1.48), (.7, .76), (2.3, 2.04)])
+    def test_linear_interpolate_k(self, fractional_bond_order, k_interpolated):
+        """Test that linear interpolation works as expected"""
+        from simtk import unit
+
+        k_bondorder = {1: 1 * unit.kilocalorie_per_mole,
+                       2: 1.8 * unit.kilocalorie_per_mole}
+
+        k = ProperTorsionHandler._linear_interpolate_k(k_bondorder, fractional_bond_order)
+        assert_almost_equal(k/k.unit, k_interpolated)
+
+    @pytest.mark.parametrize(
+            ('fractional_bond_order', 'k_interpolated'),
+            [(1.6, 1.48), (.7, .76), (2.3, 2.01), (3.1, 2.57)])
+    def test_linear_interpolate_k_3_terms(self, fractional_bond_order, k_interpolated):
+        """Test that linear interpolation works as expected for three terms"""
+        from simtk import unit
+
+        k_bondorder = {1: 1 * unit.kilocalorie_per_mole,
+                       2: 1.8 * unit.kilocalorie_per_mole,
+                       3: 2.5 * unit.kilocalorie_per_mole}
+
+        k = ProperTorsionHandler._linear_interpolate_k(k_bondorder, fractional_bond_order)
+        assert_almost_equal(k/k.unit, k_interpolated)
+
+    def test_linear_interpolate_k_below_zero(self):
+        """Test that linear interpolation does not error if resulting k less than 0"""
+        from simtk import unit
+
+        k_bondorder = {1: 1 * unit.kilocalorie_per_mole,
+                       2: 2.3 * unit.kilocalorie_per_mole}
+
+        fractional_bond_order = .2
+        k = ProperTorsionHandler._linear_interpolate_k(k_bondorder, fractional_bond_order)
+
+        assert k/k.unit < 0
+
+
 class TestLibraryChargeHandler:
     def test_create_library_charge_handler(self):
         """Test creation of an empty LibraryChargeHandler"""
         handler = LibraryChargeHandler(skip_version_check=True)
+
+    def test_library_charge_type_wrong_num_charges(self):
+        """Ensure that an error is raised if a LibraryChargeType is initialized with a different number of
+        tagged atoms and charges"""
+        lc_type = LibraryChargeHandler.LibraryChargeType(smirks='[#6:1]-[#7:2]',
+                                                         charge1=0.1 * unit.elementary_charge,
+                                                         charge2=-0.1 * unit.elementary_charge)
+
+        lc_type = LibraryChargeHandler.LibraryChargeType(smirks='[#6:1]-[#7:2]-[#6]',
+                                                         charge1=0.1 * unit.elementary_charge,
+                                                         charge2=-0.1 * unit.elementary_charge)
+
+        with pytest.raises(SMIRNOFFSpecError, match="initialized with unequal number of tagged atoms and charges") as excinfo:
+            lc_type = LibraryChargeHandler.LibraryChargeType(smirks='[#6:1]-[#7:2]',
+                                                             charge1=0.05 * unit.elementary_charge,
+                                                             charge2=0.05 * unit.elementary_charge,
+                                                             charge3=-0.1 * unit.elementary_charge)
+
+        with pytest.raises(SMIRNOFFSpecError, match="initialized with unequal number of tagged atoms and charges") as excinfo:
+            lc_type = LibraryChargeHandler.LibraryChargeType(smirks='[#6:1]-[#7:2]-[#6]',
+                                                             charge1=0.05 * unit.elementary_charge,
+                                                             charge2=0.05 * unit.elementary_charge,
+                                                             charge3=-0.1 * unit.elementary_charge)
+
+        with pytest.raises(SMIRNOFFSpecError, match="initialized with unequal number of tagged atoms and charges") as excinfo:
+            lc_type = LibraryChargeHandler.LibraryChargeType(smirks='[#6:1]-[#7:2]-[#6]',
+                                                             charge1=0.05 * unit.elementary_charge)
+
+class TestChargeIncrementModelHandler:
+    def test_create_charge_increment_model_handler(self):
+        """Test creation of ChargeIncrementModelHandlers"""
+        handler = ChargeIncrementModelHandler(skip_version_check=True)
+        assert handler.number_of_conformers == 1
+        assert handler.partial_charge_method == 'AM1-Mulliken'
+        handler = ChargeIncrementModelHandler(skip_version_check=True, number_of_conformers=10)
+        handler = ChargeIncrementModelHandler(skip_version_check=True, number_of_conformers=1)
+        handler = ChargeIncrementModelHandler(skip_version_check=True, number_of_conformers="10")
+        handler = ChargeIncrementModelHandler(skip_version_check=True, number_of_conformers=0)
+        handler = ChargeIncrementModelHandler(skip_version_check=True, number_of_conformers="0")
+        with pytest.raises(TypeError) as excinfo:
+            handler = ChargeIncrementModelHandler(skip_version_check=True, number_of_conformers=None)
+        with pytest.raises(SMIRNOFFSpecError) as excinfo:
+            handler = ChargeIncrementModelHandler(skip_version_check=True, n_conformers=[10])
+        handler = ChargeIncrementModelHandler(skip_version_check=True, partial_charge_method="AM1-Mulliken")
+        handler = ChargeIncrementModelHandler(skip_version_check=True, partial_charge_method="Gasteiger")
+        handler = ChargeIncrementModelHandler(skip_version_check=True, partial_charge_method=None)
+
+    def test_charge_increment_model_handler_getters_setters(self):
+        """Test ChargeIncrementModelHandler getters and setters"""
+        handler = ChargeIncrementModelHandler(skip_version_check=True)
+        assert handler.number_of_conformers == 1
+        assert handler.partial_charge_method == 'AM1-Mulliken'
+        handler.number_of_conformers = 2
+        assert handler.number_of_conformers == 2
+        handler.number_of_conformers = "3"
+        assert handler.number_of_conformers == 3
+        with pytest.raises(ValueError) as excinfo:
+            handler.number_of_conformers = "string that can't be cast to int"
+
+    def test_charge_increment_model_handlers_are_compatible(self):
+        """Test creation of ChargeIncrementModelHandlers"""
+        handler1 = ChargeIncrementModelHandler(skip_version_check=True)
+        handler2 = ChargeIncrementModelHandler(skip_version_check=True)
+        handler1.check_handler_compatibility(handler2)
+
+        handler3 = ChargeIncrementModelHandler(skip_version_check=True, number_of_conformers='9')
+        with pytest.raises(IncompatibleParameterError) as excinfo:
+            handler1.check_handler_compatibility(handler3)
+
+    def test_charge_increment_type_wrong_num_increments(self):
+        """Ensure that an error is raised if a ChargeIncrementType is initialized with a different number of
+        tagged atoms and chargeincrements"""
+        ci_type = ChargeIncrementModelHandler.ChargeIncrementType(smirks='[#6:1]-[#7:2]',
+                                                                  charge_increment1=0.1 * unit.elementary_charge,
+                                                                  charge_increment2=-0.1 * unit.elementary_charge)
+
+        ci_type = ChargeIncrementModelHandler.ChargeIncrementType(smirks='[#6:1]-[#7:2]-[#6]',
+                                                                  charge_increment1=0.1 * unit.elementary_charge,
+                                                                  charge_increment2=-0.1 * unit.elementary_charge)
+
+        with pytest.raises(SMIRNOFFSpecError, match="initialized with unequal number of tagged atoms and charge increments") as excinfo:
+            ci_type = ChargeIncrementModelHandler.ChargeIncrementType(smirks='[#6:1]-[#7:2]',
+                                                                      charge_increment1=0.05 * unit.elementary_charge,
+                                                                      charge_increment2=0.05 * unit.elementary_charge,
+                                                                      charge_increment3=-0.1 * unit.elementary_charge)
+
+        with pytest.raises(SMIRNOFFSpecError, match="initialized with unequal number of tagged atoms and charge increments") as excinfo:
+            ci_type = ChargeIncrementModelHandler.ChargeIncrementType(smirks='[#6:1]-[#7:2]-[#6]',
+                                                                      charge_increment1=0.05 * unit.elementary_charge,
+                                                                      charge_increment2=0.05 * unit.elementary_charge,
+                                                                      charge_increment3=-0.1 * unit.elementary_charge)
+
+        with pytest.raises(SMIRNOFFSpecError, match="initialized with unequal number of tagged atoms and charge increments") as excinfo:
+            ci_type = ChargeIncrementModelHandler.ChargeIncrementType(smirks='[#6:1]-[#7:2]-[#6]',
+                                                                      charge_increment1=0.05 * unit.elementary_charge)
+
 
 class TestGBSAHandler:
     def test_create_default_gbsahandler(self):
@@ -1070,7 +1358,6 @@ class TestGBSAHandler:
         """
         Test the check_handler_compatibility function of GBSAHandler
         """
-        from openforcefield.typing.engines.smirnoff import IncompatibleParameterError
         from simtk import unit
         gbsa_handler_1 = GBSAHandler(skip_version_check=True)
         gbsa_handler_2 = GBSAHandler(skip_version_check=True)
