@@ -2321,24 +2321,47 @@ class TestToolkitRegistry:
 
     @pytest.mark.skipif(
         not RDKitToolkitWrapper.is_available() or not AmberToolsToolkitWrapper.is_available(),
-        reason='RDKitToolkit and AmberToolsToolkit not available')
+        reason='RDKitToolkitWrapper or AmberToolsToolkit is not available'
+    )
     def test_register_ambertools(self):
-        """Test creation of toolkit registry with AmberToolsToolkitWrapper and RDKitToolkitWrapper
-        """
+        """Test creation of toolkit registry with AmberToolsToolkitWrapper"""
         # Test registration of AmberToolsToolkitWrapper
-        toolkit_precedence = [AmberToolsToolkitWrapper, RDKitToolkitWrapper]
+        toolkit_precedence = [AmberToolsToolkitWrapper]
         registry = ToolkitRegistry(toolkit_precedence=toolkit_precedence,
                                    register_imported_toolkit_wrappers=False)
-        #registry.register_toolkit(AmberToolsToolkitWrapper)
-        assert set([ type(c) for c in registry.registered_toolkits]) == set([AmberToolsToolkitWrapper,RDKitToolkitWrapper])
+
+        assert set([ type(c) for c in registry.registered_toolkits]) == {AmberToolsToolkitWrapper}
 
         # Test ToolkitRegistry.resolve()
         registry.resolve('assign_partial_charges')
         assert registry.resolve('assign_partial_charges') == registry.registered_toolkits[0].assign_partial_charges
 
         # Test ToolkitRegistry.call()
-        registry.register_toolkit(RDKitToolkitWrapper)
-        smiles = '[H]C([H])([H])C([H])([H])[H]'
+        molecule = RDKitToolkitWrapper().from_file(file_path=get_data_file_path('molecules/ethanol.sdf'), file_format='SDF')[0]
+        registry.call('assign_partial_charges', molecule)
+        charges_from_registry = molecule.partial_charges
+        AmberToolsToolkitWrapper().assign_partial_charges(molecule)
+        charges_from_toolkit = molecule.partial_charges
+
+        assert np.allclose(charges_from_registry, charges_from_toolkit)
+
+    @pytest.mark.skipif(not AmberToolsToolkitWrapper.is_available(),
+                        reason='AmberToolsToolkit not available')
+    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
+    def test_registr_rdkit_and_ambertools(self):
+        """Test creation of toolkit registry with RDKitToolkitWrapper and AmberToolsToolkitWrapper"""
+        toolkit_precedence = [RDKitToolkitWrapper, AmberToolsToolkitWrapper]
+        registry = ToolkitRegistry(toolkit_precedence=toolkit_precedence,
+                                   register_imported_toolkit_wrappers=False)
+
+        assert set([ type(c) for c in registry.registered_toolkits]) == {RDKitToolkitWrapper, AmberToolsToolkitWrapper}
+
+        # Test ToolkitRegistry.resolve()
+        assert registry.resolve('assign_partial_charges') == registry.registered_toolkits[1].assign_partial_charges
+        assert registry.resolve('from_smiles') == registry.register_toolkits[0].from_smiles
+
+        # Test ToolkitRegistry.call()
+        smiles = '[H][C]([H])([H])[C]([H])([H])[H]'
         molecule = registry.call('from_smiles', smiles)
         smiles2 = registry.call('to_smiles', molecule)
         assert smiles == smiles2
