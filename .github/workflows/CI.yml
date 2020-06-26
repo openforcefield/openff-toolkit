@@ -17,6 +17,7 @@ on:
 
 jobs:
   test:
+    if: (github.event_name == 'schedule' && github.repository == 'openforcefield/openforcefield') || (github.event_name != 'schedule')
     name: Test on ${{ matrix.cfg.os }}, Python ${{ matrix.python-version }}, RDKit=${{ matrix.cfg.rdkit }}, OpenEye=${{ matrix.cfg.openeye }}
     runs-on: ${{ matrix.cfg.os }}
     strategy:
@@ -75,12 +76,12 @@ jobs:
         conda update --quiet --all
         conda info --all
         conda list
-    - name: Decrypt OpenEye license
+    - name: Make oe_license.txt file from GH org secret "OE_LICENSE"
       shell: bash
       env:
-        ENC_OE_LICENSE: ${{ secrets.OE_LICENSE__EXP_JUN2020 }}
+        OE_LICENSE_TEXT: ${{ secrets.OE_LICENSE }}
       run: |
-        echo "${ENC_OE_LICENSE}" > ${OE_LICENSE}
+        echo "${OE_LICENSE_TEXT}" > ${OE_LICENSE}
     - name: Prepare test environment
       shell: bash
       run: |
@@ -99,7 +100,8 @@ jobs:
       run: |
         . devtools/gh-actions/initialize_conda.sh
         conda activate test
-        PYTEST_ARGS="-v --ignore=utilities --ignore=examples/deprecated --nbval-lax"
+        PYTEST_ARGS="-v --ignore=utilities --ignore=examples/deprecated"
+        PYTEST_ARGS+=" --ignore=openforcefield/tests/plugins.py --nbval-lax"
         PYTEST_ARGS+=" --cov=openforcefield --cov-report=xml --cov-config=setup.cfg"
         if [[ "$RDKIT" == true && "$OPENEYE" == true ]]; then
           PYTEST_ARGS+=" --ignore=docs --ignore=devtools --doctest-modules"

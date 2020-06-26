@@ -6,6 +6,6 @@ from openforcefield.topology.molecule import (
 
 from openforcefield.topology.topology import (
     DuplicateUniqueMoleculeError, NotBondedError,
-    ValenceDict, ImproperDict,
+    ValenceDict, ImproperDict, SortedDict,
     TopologyAtom, TopologyBond, TopologyVirtualSite, TopologyMolecule, Topology
 )

@@ -40,6 +40,14 @@ def test_subclasses():
     subclass_names = [ cls.__name__ for cls in utils.all_subclasses(Foo) ]
     assert set(subclass_names) == set(['FooSubclass1', 'FooSubclass2', 'FooSubSubclass'])
 
+def test_temporary_cd():
+    """Test temporary_cd() context manager"""
+    initial_dir = os.getcwd()
+    temporary_dir = '/'
+    from openforcefield.utils import temporary_cd
+    with temporary_cd(temporary_dir):
+        assert os.getcwd() == temporary_dir
+    assert os.getcwd() == initial_dir
 
 def test_get_data_file_path():
     """Test get_data_file_path()"""
