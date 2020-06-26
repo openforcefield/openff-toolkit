@@ -1649,48 +1649,64 @@ class ParameterHandler(_ParameterAttributeHandler):
         pass
 
     # TODO: Can we ensure SMIRKS and other parameters remain valid after manipulation?
-    def add_parameter(self, parameter_kwargs, after=None, before=None):
+    def add_parameter(self, parameter_kwargs=None, parameter=None, after=None, before=None):
         """Add a parameter to the forcefield, ensuring all parameters are valid.
 
         Parameters
         ----------
-        parameter_kwargs : dict
+        parameter_kwargs: dict, optional
             The kwargs to pass to the ParameterHandler.INFOTYPE (a ParameterType) constructor
-        after : str, optional
-            The SMIRKS pattern of parameter directly before where the new parameter will be added
+        parameter: ParameterType, optional
+            A ParameterType to add to the ParameterHandler
+        after : str or int, optional
+            if str, the SMIRKS pattern of the parameter directly before where the new parameter will be added
+            if int, the index directly before where in the ParameterList the new parameter will be added
         before : str, optional
-            The SMIRKS pattern of parameter directly after where the new parameter will be added
+            if str, the SMIRKS pattern of the parameter directly after where the new parameter will be added
+            if int, the index directly after where in the ParameterList the new parameter will be added
 
-        Note that when `before` and `after` are both specified, the new
-        parameter will be added immediately after the parameter matching the `before` pattern.
+        Note that one of (parameter_kwargs, parameter) must be specified
+        Note that when `before` and `after` are both None, the new parameter will be appended
+            to the END of the parameter list.
+        Note that when `before` and `after` are both specified, the new parameters
+            parameter will be added immediately after the parameter matching the `before` pattern or index.
 
         """
-        # TODO: Take in ints for addition by index in parameter list
-        # TODO: Valiate that args are actually SMARTS?
         for val in [before, after]:
-            if val and not isinstance(val, str):
+            if val and not isinstance(val, (str, int)):
                 raise TypeError
 
-        # TODO: Do we need to check for incompatibility with existing parameters?
-        new_parameter = self._INFOTYPE(**parameter_kwargs)
+        # If a dict was passed, construct it; if a ParameterType was passed, do nothing
+        if parameter_kwargs:
+            new_parameter = self._INFOTYPE(**parameter_kwargs)
+        elif parameter:
+            new_parameter = parameter
+        else:
+            raise ValueError('One of (parameter, parameter_kwargs) must be specified')
 
         if new_parameter.smirks in [p.smirks for p in self._parameters]:
             raise ValueError(f'A parameter SMIRKS pattern {val} already exists.')
 
-        if before:
-            before_index = self._parameters.index(before)
+        if before is not None:
+            if isinstance(before, str):
+                before_index = self._parameters.index(before)
+            elif isinstance(before, int):
+                before_index = before
 
-        if after:
-            after_index = self._parameters.index(after)
+        if after is not None:
+            if isinstance(after, str):
+                after_index = self._parameters.index(after)
+            elif isinstance(after, int):
+                after_index = after
 
-        if before and after:
-            if after_index > before_index:
+        if None not in (before, after):
+            if after_index < before_index:
                 raise ValueError('before arg must be after after arg')
 
-        if after:
-            self._parameters.insert(after_index+1, new_parameter)
-        elif before:
-            self._parameters.insert(before_index, new_parameter)
+        if after is not None:
+            self._parameters.insert(after_index, new_parameter)
+        elif before is not None:
+            self._parameters.insert(before_index+1, new_parameter)
         else:
             self._parameters.append(new_parameter)
 

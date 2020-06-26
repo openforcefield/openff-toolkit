@@ -299,29 +299,52 @@ class TestParameterHandler:
     def test_add_parameter(self):
         """Test the behavior of add_parameter"""
         bh = BondHandler(skip_version_check=True)
-        param1 = {'smirks': '[*:1]-[*:2]', 'length': self.length, 'k': self.k}
-        param2 = {'smirks': '[*:1]=[*:2]', 'length': self.length, 'k': self.k}
-        param3 = {'smirks': '[*:1]#[*:2]', 'length': self.length, 'k': self.k}
+        param1 = {'smirks': '[*:1]-[*:2]', 'length': self.length, 'k': self.k, 'id': 'b1'}
+        param2 = {'smirks': '[*:1]=[*:2]', 'length': self.length, 'k': self.k, 'id': 'b2'}
+        param3 = {'smirks': '[*:1]#[*:2]', 'length': self.length, 'k': self.k, 'id': 'b3'}
 
         bh.add_parameter(param1)
         bh.add_parameter(param2)
         bh.add_parameter(param3)
 
-        # TODO: Inspect and assert order
+        assert [param.id for param in bh._parameters] == ['b1', 'b2', 'b3']
 
-        param_duplicate_smirks = {'smirks': '[*:1]=[*:2]', 'length': 2*self.length, 'k': self.k}
+        param_duplicate_smirks = {'smirks': param2['smirks'], 'length': 2*self.length, 'k': 2*self.k}
 
         with pytest.raises(ValueError):
             bh.add_parameter(param_duplicate_smirks)
 
-        param_to_add = {'smirks': '[#1:1]-[#6:2]', 'length': self.length, 'k': self.k}
+        dict_to_add_by_smirks = {'smirks': '[#1:1]-[#6:2]', 'length': self.length, 'k': self.k, 'id': 'd1'}
+        dict_to_add_by_index = {'smirks': '[#1:1]-[#8:2]', 'length': self.length, 'k': self.k, 'id': 'd2'}
+
+        param_to_add_by_smirks = BondHandler.BondType(
+            **{'smirks': '[#6:1]-[#6:2]', 'length': self.length, 'k': self.k, 'id': 'p1'}
+        )
+        param_to_add_by_index = BondHandler.BondType(
+            **{'smirks': '[#6:1]=[#8:2]', 'length': self.length, 'k': self.k, 'id': 'p2'}
+        )
 
         with pytest.raises(ValueError):
-            bh.add_parameter(param_to_add, before='[*:1]-[*:2]', after='[*:1]#[*:2]')
+            bh.add_parameter(dict_to_add_by_smirks, before='[*:1]#[*:2]', after='[*:1]=[*:2]')
 
-        bh.add_parameter(param_to_add, after='[*:1]=[*:2]')
+        with pytest.raises(ValueError):
+            bh.add_parameter(dict_to_add_by_index, before=1, after=0)
 
-        # TODO: Inspect and assert order
+        bh.add_parameter(dict_to_add_by_smirks, before='[*:1]=[*:2]')
+
+        assert [param.id for param in bh._parameters] == ['b1', 'b2', 'd1', 'b3']
+
+        bh.add_parameter(dict_to_add_by_index, after=2)
+
+        assert [param.id for param in bh._parameters] == ['b1', 'b2', 'd2', 'd1', 'b3']
+
+        bh.add_parameter(parameter=param_to_add_by_smirks, before='[*:1]-[*:2]')
+
+        assert [param.id for param in bh._parameters] == ['b1', 'p1', 'b2', 'd2', 'd1', 'b3']
+
+        bh.add_parameter(parameter=param_to_add_by_index, after='[*:1]#[*:2]')
+
+        assert [param.id for param in bh._parameters] == ['b1', 'p1', 'b2', 'd2', 'd1', 'p2', 'b3']
 
     def test_different_units_to_dict(self):
         """Test ParameterHandler.to_dict() function when some parameters are in
