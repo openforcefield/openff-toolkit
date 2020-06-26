@@ -26,7 +26,7 @@ from openforcefield.utils.toolkits import (OpenEyeToolkitWrapper, RDKitToolkitWr
                                            GAFFAtomTypeWarning, UndefinedStereochemistryError,
                                            ChargeMethodUnavailableError, IncorrectNumConformersError,
                                            IncorrectNumConformersWarning, InvalidToolkitError,
-                                           ToolkitUnavailableException)
+                                           ToolkitUnavailableException, GLOBAL_TOOLKIT_REGISTRY)
 
 from openforcefield.utils import get_data_file_path
 from openforcefield.topology.molecule import Molecule
@@ -2415,6 +2415,24 @@ class TestToolkitRegistry:
         # Attempt to deregister a toolkit that is not registered
         with pytest.raises(ToolkitUnavailableException):
             toolkit_registry.deregister_toolkit(RDKitToolkitWrapper)
+
+    def deregister_from_global_registry(self):
+        # TODO: Update this, or move into a separate TestClass, pending GLOBAL_TOOLKIT_REGISTRY rewor
+        # See issue #493
+        # Whatever the first tookit it, de-register it and verify it's de-registered
+
+        # Keep a copy of the original registry since this is a "global" variable accessible to other modules
+        from copy import deepcopy
+        global_registry_copy = deepcopy(GLOBAL_TOOLKIT_REGISTRY)
+        first_toolkit = type(GLOBAL_TOOLKIT_REGISTRY.registered_toolkits[0])
+        num_toolkits = len(GLOBAL_TOOLKIT_REGISTRY.registered_toolkits)
+
+        GLOBAL_TOOLKIT_REGISTRY.deregister_toolkit(first_toolkit)
+
+        assert first_toolkit not in [type(tk) for tk in GLOBAL_TOOLKIT_REGISTRY.registered_toolkits]
+        assert len(GLOBAL_TOOLKIT_REGISTRY.registered_toolkits) == num_toolkits - 1
+
+        GLOBAL_TOOLKIT_REGISTRY = deepcopy(global_registry_copy)
 
     def test_register_builtintoolkit(self):
         """Test creation of toolkit registry with Built-in toolkit"""
