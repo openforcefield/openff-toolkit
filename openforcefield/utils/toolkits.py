@@ -4293,20 +4293,41 @@ class ToolkitRegistry:
 
         # Add toolkit to the registry.
         self._toolkits.append(toolkit_wrapper)
+        """
+        Append a ToolkitWrapper onto the list of toolkits in this ToolkitRegistry
+
+        .. warning :: This API is experimental and subject to change.
+
+        Parameters
+        ----------
+        toolkit_wrapper : openforcefield.utils.ToolkitWrapper
+            The ToolkitWrapper object to add to the list of registered toolkits
+
+        Raises
+        ------
+        InvalidToolkitError
+            If something other than a TooolkitWrapper object was passed.
+        """
 
     def deregister_toolkit(self, toolkit_wrapper):
         """
-        De-register a toolkit.
+        Remove a ToolkitWrapper from the list of toolkits in this ToolkitRegistry
 
         .. warning :: This API is experimental and subject to change.
 
         Parameters
         ----------
         toolkit_wrapper : instance or subclass of ToolkitWrapper
-            The toolkit wrapper to de-register, i.e. remove from registry.
+            The toolkit wrapper to remove from the registry
 
+        Raises
+        ------
+        InvalidToolkitError
+            If toolkit_wrapper is not a ToolkitWrapper or subclass
+        ToolkitUnavailableException
+            If toolkit_wrapper is not found in the registry
         """
-        # If passed in a un-instantiated wrapper, instantiate it
+        # If passed a class, instantiate it
         if inspect.isclass(toolkit_wrapper):
             toolkit_wrapper = toolkit_wrapper()
 
@@ -4337,6 +4358,10 @@ class ToolkitRegistry:
         toolkit_wrapper : openforcefield.utils.ToolkitWrapper
             The ToolkitWrapper object to add to the list of registered toolkits
 
+        Raises
+        ------
+        InvalidToolkitError
+            If toolkit_wrapper is not a ToolkitWrapper or subclass
         """
         if not isinstance(toolkit_wrapper, ToolkitWrapper):
             msg = "Something other than a ToolkitWrapper object was passed to ToolkitRegistry.add_toolkit()\n"

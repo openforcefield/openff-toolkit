@@ -2358,7 +2358,7 @@ class TestToolkitRegistry:
 
         # Test ToolkitRegistry.resolve()
         assert registry.resolve('assign_partial_charges') == registry.registered_toolkits[1].assign_partial_charges
-        assert registry.resolve('from_smiles') == registry.register_toolkits[0].from_smiles
+        assert registry.resolve('from_smiles') == registry.registered_toolkits[0].from_smiles
 
         # Test ToolkitRegistry.call()
         smiles = '[H][C]([H])([H])[C]([H])([H])[H]'
