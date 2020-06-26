@@ -21,11 +21,12 @@ from tempfile import NamedTemporaryFile
 import pytest
 
 from openforcefield.utils.toolkits import (OpenEyeToolkitWrapper, RDKitToolkitWrapper,
-                                           AmberToolsToolkitWrapper, BuiltInToolkitWrapper, ToolkitRegistry,
-                                           ToolkitWrapper,
+                                           AmberToolsToolkitWrapper, BuiltInToolkitWrapper,
+                                           ToolkitRegistry, ToolkitWrapper,
                                            GAFFAtomTypeWarning, UndefinedStereochemistryError,
                                            ChargeMethodUnavailableError, IncorrectNumConformersError,
-                                           IncorrectNumConformersWarning, InvalidToolkitError)
+                                           IncorrectNumConformersWarning, InvalidToolkitError,
+                                           ToolkitUnavailableException)
 
 from openforcefield.utils import get_data_file_path
 from openforcefield.topology.molecule import Molecule
@@ -2287,8 +2288,8 @@ class TestToolkitRegistry:
         # Test registration of OpenEyeToolkitWrapper
         toolkit_precedence = [OpenEyeToolkitWrapper]
         registry = ToolkitRegistry(toolkit_precedence=toolkit_precedence, register_imported_toolkit_wrappers=False)
-        #registry.register_toolkit(OpenEyeToolkitWrapper)
-        assert set([type(c) for c in registry.registered_toolkits]) == set([OpenEyeToolkitWrapper])
+
+        assert {type(c) for c in registry.registered_toolkits} == {OpenEyeToolkitWrapper}
 
         # Test ToolkitRegistry.resolve()
         assert registry.resolve('to_smiles') == registry.registered_toolkits[0].to_smiles
@@ -2306,8 +2307,8 @@ class TestToolkitRegistry:
         toolkit_precedence = [RDKitToolkitWrapper]
         registry = ToolkitRegistry(toolkit_precedence=toolkit_precedence,
                                    register_imported_toolkit_wrappers=False)
-        #registry.register_toolkit(RDKitToolkitWrapper)
-        assert set([ type(c) for c in registry.registered_toolkits]) == set([RDKitToolkitWrapper])
+
+        assert set([ type(c) for c in registry.registered_toolkits]) == {RDKitToolkitWrapper}
 
         # Test ToolkitRegistry.resolve()
         assert registry.resolve('to_smiles') == registry.registered_toolkits[0].to_smiles
@@ -2339,11 +2340,12 @@ class TestToolkitRegistry:
         registry.register_toolkit(RDKitToolkitWrapper)
         smiles = '[H]C([H])([H])C([H])([H])[H]'
         molecule = registry.call('from_smiles', smiles)
-        #partial_charges = registry.call('compute_partial_charges', molecule)
+        smiles2 = registry.call('to_smiles', molecule)
+        assert smiles == smiles2
 
     @pytest.mark.skipif(
         not RDKitToolkitWrapper.is_available() or not AmberToolsToolkitWrapper.is_available(),
-        reason='RDKitToolkit and AmberToolsToolkit not available')
+        reason='RDKitToolkit or AmberToolsToolkit is not available')
     def test_deregister_toolkit(self):
         """Test removing an instantiated toolkit from the registry"""
         toolkit_registry = ToolkitRegistry(toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper])
