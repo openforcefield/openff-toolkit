@@ -617,6 +617,12 @@ class TestForceField():
         assert len(forcefield._parameter_handlers['ImproperTorsions']._parameters) == 4
         assert len(forcefield._parameter_handlers['vdW']._parameters) == 35
 
+    def test_load_bad_string(self):
+        with pytest.raises(IOError) as exception_info:
+            ForceField('1234')
+        assert 'Source 1234 could not be read.' in str(exception_info.value)
+        assert 'syntax error' in str(exception_info.value)
+
     @pytest.mark.skip(reason='Needs to be updated for 0.2.0 syntax')
     def test_create_forcefield_from_file_list(self):
         # These offxml files are located in package data path, which is automatically installed and searched
