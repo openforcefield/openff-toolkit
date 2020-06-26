@@ -2407,10 +2407,14 @@ class TestToolkitRegistry:
         reason='RDKitToolkit and AmberToolsToolkit not available')
     def test_deregister_toolkit_bad_inputs(self):
         """Test bad inputs to deregister_toolkit"""
-        toolkit_registry = ToolkitRegistry(toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper])
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=[AmberToolsToolkitWrapper])
 
         with pytest.raises(InvalidToolkitError):
             toolkit_registry.deregister_toolkit('rdkit as a string')
+
+        # Attempt to deregister a toolkit that is not registered
+        with pytest.raises(ToolkitUnavailableException):
+            toolkit_registry.deregister_toolkit(RDKitToolkitWrapper)
 
     def test_register_builtintoolkit(self):
         """Test creation of toolkit registry with Built-in toolkit"""

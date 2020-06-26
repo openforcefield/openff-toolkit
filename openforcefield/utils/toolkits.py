@@ -4342,7 +4342,13 @@ class ToolkitRegistry:
         for toolkit in self._toolkits:
             if type(toolkit) == type(toolkit_wrapper):
                 toolkits_to_remove.append(toolkit)
-        # TODO: add else clause to warn user if toolkits_to_remove is empty?
+
+        if not toolkits_to_remove:
+            msg = (
+                f"Did not find {toolkit_wrapper} in registry. "
+                f"Currently registered toolkits are {self._toolkits}"
+            )
+            raise ToolkitUnavailableException(msg)
 
         for toolkit_to_remove in toolkits_to_remove:
             self._toolkits.remove(toolkit_to_remove)
