@@ -44,6 +44,7 @@ from openforcefield.utils import all_subclasses, MessageException, \
     convert_0_1_smirnoff_to_0_2, convert_0_2_smirnoff_to_0_3
 from openforcefield.topology.molecule import DEFAULT_AROMATICITY_MODEL
 from openforcefield.typing.engines.smirnoff.parameters import ParameterHandler
+from openforcefield.typing.engines.smirnoff.plugins import load_handler_plugins
 from openforcefield.typing.engines.smirnoff.io import ParameterIOHandler
 
 
@@ -221,7 +222,8 @@ class ForceField:
                  parameter_handler_classes=None,
                  parameter_io_handler_classes=None,
                  disable_version_check=False,
-                 allow_cosmetic_attributes=False):
+                 allow_cosmetic_attributes=False,
+                 load_plugins=False):
         """Create a new :class:`ForceField` object from one or more SMIRNOFF parameter definition files.
 
         Parameters
@@ -245,6 +247,9 @@ class ForceField:
             This option is primarily intended for forcefield development.
         allow_cosmetic_attributes : bool, optional. Default = False
             Whether to retain non-spec kwargs from data sources.
+        load_plugins: bool, optional. Default = False
+            Whether to load ``ParameterHandler`` classes which have been registered
+            by installed plugins.
 
         Examples
         --------
@@ -276,11 +281,23 @@ class ForceField:
         # since both will try to register themselves for the same XML tag and an Exception will be raised.
         if parameter_handler_classes is None:
             parameter_handler_classes = all_subclasses(ParameterHandler)
+        if load_plugins:
+
+            registered_handlers = load_handler_plugins()
+
+            # Make sure the same handlers aren't added twice.
+            parameter_handler_classes += [
+                handler
+                for handler in registered_handlers
+                if handler not in parameter_handler_classes
+            ]
+
         self._register_parameter_handler_classes(parameter_handler_classes)
 
         # Register all ParameterIOHandler objects that will process serialized parameter representations
         if parameter_io_handler_classes is None:
             parameter_io_handler_classes = all_subclasses(ParameterIOHandler)
+
         self._register_parameter_io_handler_classes(
             parameter_io_handler_classes)
 
@@ -924,6 +941,12 @@ class ForceField:
                 # Assumes that parameter_list_dict is always a list
                 all_params[parameter_list_tagname] = parameter_list_dict
 
+                # If the parameter list isn't empty, it must be transferred into its own tag.
+                # This is necessary for deserializing SMIRNOFF force field sections which may or may
+                # not have any smirks-based elements (like an empty ChargeIncrementModel section)
+                if parameter_list_dict != {}:
+                    parameter_list_dict = {parameter_list_tagname: parameter_list_dict}
+
             # Retrieve or create parameter handler, passing in section_dict to check for
             # compatibility if a handler for this parameter name already exists
             handler = self.get_parameter_handler(parameter_name,
@@ -1129,6 +1152,16 @@ class ForceField:
         charge_from_molecules : List[openforcefield.molecule.Molecule], optional
             If specified, partial charges will be taken from the given molecules
             instead of being determined by the force field.
+        partial_bond_orders_from_molecules : List[openforcefield.molecule.Molecule], optional
+            If specified, partial bond orders will be taken from the given molecules
+            instead of being determined by the force field.
+            **All** bonds on each molecule given must have ``fractional_bond_order`` specified.
+            A `ValueError` will be raised if any bonds have ``fractional_bond_order=None``.
+            Molecules in the topology not represented in this list will have fractional
+            bond orders calculated using underlying toolkits as needed.
+        return_topology : bool
+            If ``True``, return tuple of ``(system, topology)``, where
+            ``topology`` is the processed topology. Default ``False``.
 
         Returns
         -------
@@ -1136,8 +1169,15 @@ class ForceField:
             The newly created OpenMM System corresponding to the specified ``topology``
 
         """
+        return_topology = kwargs.pop('return_topology', False)
+
         # Make a deep copy of the topology so we don't accidentally modify it
         topology = copy.deepcopy(topology)
+
+        # set all fractional_bond_orders in topology to None
+        for ref_mol in topology.reference_molecules:
+            for bond in ref_mol.bonds:
+                bond.fractional_bond_order = None
 
         # Set the topology aromaticity model to that used by the current forcefield
         # TODO: See openforcefield issue #206 for proposed implementation of aromaticity
@@ -1177,7 +1217,10 @@ class ForceField:
         for parameter_handler in parameter_handlers:
             parameter_handler.postprocess_system(system, topology, **kwargs)
 
-        return system
+        if return_topology:
+            return (system, topology)
+        else:
+            return system
 
     def create_parmed_structure(self,
                                 topology,

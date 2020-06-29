@@ -100,7 +100,8 @@ jobs:
       run: |
         . devtools/gh-actions/initialize_conda.sh
         conda activate test
-        PYTEST_ARGS="-v --ignore=utilities --ignore=examples/deprecated --nbval-lax"
+        PYTEST_ARGS="-v --ignore=utilities --ignore=examples/deprecated"
+        PYTEST_ARGS+=" --ignore=openforcefield/tests/plugins.py --nbval-lax"
         PYTEST_ARGS+=" --cov=openforcefield --cov-report=xml --cov-config=setup.cfg"
         if [[ "$RDKIT" == true && "$OPENEYE" == true ]]; then
           PYTEST_ARGS+=" --ignore=docs --ignore=devtools --doctest-modules"

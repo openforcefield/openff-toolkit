@@ -49,12 +49,14 @@ import networkx as nx
 from networkx.algorithms.isomorphism import GraphMatcher
 
 import openforcefield
-from openforcefield.utils import serialize_numpy, deserialize_numpy, quantity_to_string, string_to_quantity
-from openforcefield.utils.toolkits import ToolkitRegistry, ToolkitWrapper, RDKitToolkitWrapper, OpenEyeToolkitWrapper, \
-    InvalidToolkitError, GLOBAL_TOOLKIT_REGISTRY
+from openforcefield.utils import serialize_numpy, deserialize_numpy, quantity_to_string, \
+    string_to_quantity, check_units_are_compatible
+from openforcefield.utils.toolkits import ToolkitRegistry, ToolkitWrapper, RDKitToolkitWrapper, OpenEyeToolkitWrapper,\
+    InvalidToolkitError, UndefinedStereochemistryError, GLOBAL_TOOLKIT_REGISTRY
 from openforcefield.utils.toolkits import DEFAULT_AROMATICITY_MODEL
 from openforcefield.utils.serialization import Serializable
 from openforcefield.topology.topology import ValenceDict, ImproperDict
+
 
 
 #=============================================================================================
@@ -177,7 +179,7 @@ class Atom(Particle):
         ----------
         atomic_number : int
             Atomic number of the atom
-        formal_charge : int
+        formal_charge : int or simtk.unit.Quantity-wrapped int with dimension "charge"
             Formal charge of the atom
         is_aromatic : bool
             If True, atom is aromatic; if False, not aromatic
@@ -199,7 +201,8 @@ class Atom(Particle):
 
         """
         self._atomic_number = atomic_number
-        self._formal_charge = formal_charge
+        # Use the setter here, since it will handle either ints or Quantities
+        self.formal_charge = formal_charge
         self._is_aromatic = is_aromatic
         self._stereochemistry = stereochemistry
         if name is None:
@@ -247,7 +250,7 @@ class Atom(Particle):
         # TODO
         atom_dict = OrderedDict()
         atom_dict['atomic_number'] = self._atomic_number
-        atom_dict['formal_charge'] = self._formal_charge
+        atom_dict['formal_charge'] = self._formal_charge / unit.elementary_charge
         atom_dict['is_aromatic'] = self._is_aromatic
         atom_dict['stereochemistry'] = self._stereochemistry
         # TODO: Should we let atoms have names?
@@ -271,6 +274,17 @@ class Atom(Particle):
         The atom's formal charge
         """
         return self._formal_charge
+
+    @formal_charge.setter
+    def formal_charge(self, other):
+        """
+        Set the atom's formal charge. Accepts either ints or simtk.unit.Quantity-wrapped ints with units of charge.
+        """
+        if isinstance(other, int):
+            self._formal_charge = other * unit.elementary_charge
+        else:
+            check_units_are_compatible("formal charge", other, unit.elementary_charge)
+            self._formal_charge = other
 
     @property
     def partial_charge(self):
@@ -1681,6 +1695,10 @@ class FrozenMolecule(Serializable):
             self._initialize()
         else:
             loaded = False
+            # Start a list of the ValueErrors the following logic encounters, so we can print it out
+            # if there turned out to be no way to load this input
+            value_errors = list()
+
             if isinstance(
                     other,
                     openforcefield.topology.FrozenMolecule) and not (loaded):
@@ -1694,36 +1712,60 @@ class FrozenMolecule(Serializable):
             if isinstance(other, OrderedDict) and not (loaded):
                 self.__setstate__(other)
                 loaded = True
+
+
             # Check through the toolkit registry to find a compatible wrapper for loading
             if not loaded:
                 try:
-                    result = toolkit_registry.call('from_object', other, allow_undefined_stereo=allow_undefined_stereo)
-                except NotImplementedError:
-                    pass
+                    # Each ToolkitWrapper may provide a from_object method, which turns some particular type(s)
+                    # of object into OFFMols. For example, RDKitToolkitWrapper's from_object method will
+                    # return an OFFMol if provided with an RDMol, or raise a ValueError if it is provided
+                    # an OEMol (or anything else). This makes the assumption that any non-ValueError errors raised
+                    # by the toolkit _really are_ bad and should be raised immediately, which may be a bad assumption.
+                    result = toolkit_registry.call('from_object',
+                                                    other,
+                                                    allow_undefined_stereo=allow_undefined_stereo,
+                                                    raise_exception_types=[UndefinedStereochemistryError])
+                # NotImplementedError should never be raised... Only from_file and from_file_obj are provided
+                # in the base ToolkitWrapper class and require overwriting, so from_object should be excluded
+                # except NotImplementedError as e:
+                #    raise e
+                # The toolkit registry will aggregate all errors except UndefinedStereochemistryErrors into a single
+                # ValueError, which we should catch and and store that here.
+                except ValueError as e:
+                    value_errors.append(e)
                 else:
                     self._copy_initializer(result)
                     loaded = True
             # TODO: Make this compatible with file-like objects (I couldn't figure out how to make an oemolistream
             # from a fileIO object)
-            if (isinstance(other, str)
-                    or hasattr(other, 'read')) and not (loaded):
-                mol = Molecule.from_file(
-                    other,
-                    file_format=file_format,
-                    toolkit_registry=toolkit_registry,
-                    allow_undefined_stereo=allow_undefined_stereo
-                )  # returns a list only if multiple molecules are found
-                if type(mol) == list:
-                    raise ValueError(
-                        'Specified file or file-like object must contain exactly one molecule'
-                    )
+            if (isinstance(other, str) or hasattr(other, 'read')) and not (loaded):
+                try:
+                    mol = Molecule.from_file(
+                        other,
+                        file_format=file_format,
+                        toolkit_registry=toolkit_registry,
+                        allow_undefined_stereo=allow_undefined_stereo
+                    )  # returns a list only if multiple molecules are found
+                    if type(mol) == list:
+                        raise ValueError(
+                            'Specified file or file-like object must contain exactly one molecule'
+                        )
+                except ValueError as e:
+                    value_errors.append(e)
+                else:
+                    self._copy_initializer(mol)
+                    loaded = True
 
-                self._copy_initializer(mol)
-                loaded = True
+            # If none of the above methods worked, raise a ValueError summarizing the
+            # errors from the different loading attempts
+
             if not (loaded):
                 msg = 'Cannot construct openforcefield.topology.Molecule from {}\n'.format(
                     other)
-                raise Exception(msg)
+                for value_error in value_errors:
+                    msg += str(value_error)
+                raise ValueError(msg)
 
     @property
     def has_unique_atom_names(self):
@@ -2428,9 +2470,11 @@ class FrozenMolecule(Serializable):
     def generate_conformers(self,
                             toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
                             n_conformers=10,
+                            rms_cutoff=None,
                             clear_existing=True):
         """
-        Generate conformers for this molecule using an underlying toolkit
+        Generate conformers for this molecule using an underlying toolkit. If n_conformers=0, no toolkit wrapper
+        will be called. If n_conformers=0 and clear_existing=True, molecule.conformers will be set to None.
 
         Parameters
         ----------
@@ -2438,6 +2482,10 @@ class FrozenMolecule(Serializable):
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
         n_conformers : int, default=1
             The maximum number of conformers to produce
+        rms_cutoff : simtk.Quantity-wrapped float, in units of distance, optional, default=None
+            The minimum RMS value at which two conformers are considered redundant and one is deleted. Precise
+            implementation of this cutoff may be toolkit-dependent. If None, the cutoff is set to be the default value
+            for each ToolkitWrapper (generally 1 Angstrom).
         clear_existing : bool, default=True
             Whether to overwrite existing conformers for the molecule
 
@@ -2453,23 +2501,45 @@ class FrozenMolecule(Serializable):
             If an invalid object is passed as the toolkit_registry parameter
 
         """
+        # If no conformers are requested, do not call to a ToolkitWrapper at all
+        if n_conformers == 0:
+            if clear_existing:
+                self._conformers = None
+            return
+
         if isinstance(toolkit_registry, ToolkitRegistry):
-            return toolkit_registry.call('generate_conformers', self, n_conformers=n_conformers,
+            return toolkit_registry.call('generate_conformers',
+                                         self,
+                                         n_conformers=n_conformers,
+                                         rms_cutoff=rms_cutoff,
                                          clear_existing=clear_existing)
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
-            return toolkit.generate_conformers(self, n_conformers=n_conformers, clear_existing=clear_existing)
+            return toolkit.generate_conformers(self,
+                                               n_conformers=n_conformers,
+                                               rms_cutoff = rms_cutoff,
+                                               clear_existing=clear_existing)
         else:
             raise InvalidToolkitError(
                 'Invalid toolkit_registry passed to generate_conformers. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'
                 .format(type(toolkit_registry)))
 
-    def compute_partial_charges_am1bcc(self, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+    def compute_partial_charges_am1bcc(self,
+                                       use_conformers=None,
+                                       strict_n_conformers=False,
+                                       toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """
         Calculate partial atomic charges for this molecule using AM1-BCC run by an underlying toolkit
+        and assign them to this molecule's partial_charges attribute.
 
         Parameters
         ----------
+        strict_n_conformers : bool, default=False
+            Whether to raise an exception if an invalid number of conformers is provided for the given charge method.
+            If this is False and an invalid number of conformers is found, a warning will be raised.
+        use_conformers : iterable of simtk.unit.Quantity-wrapped numpy arrays, each with shape (n_atoms, 3) and dimension of distance. Optional, default=None
+            Coordinates to use for partial charge calculation.
+            If None, an appropriate number of conformers for the given charge method will be generated.
         toolkit_registry : openforcefield.utils.toolkits.ToolkitRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for the calculation
 
@@ -2486,42 +2556,38 @@ class FrozenMolecule(Serializable):
             If an invalid object is passed as the toolkit_registry parameter
 
         """
-        if isinstance(toolkit_registry, ToolkitRegistry):
-            charges = toolkit_registry.call(
-                      'compute_partial_charges_am1bcc',
-                      self
-            )
-        elif isinstance(toolkit_registry, ToolkitWrapper):
-            toolkit = toolkit_registry
-            charges = toolkit.compute_partial_charges_am1bcc(self)
-        else:
-            raise InvalidToolkitError(
-                'Invalid toolkit_registry passed to compute_partial_charges_am1bcc. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'
-                .format(type(toolkit_registry)))
-        self.partial_charges = charges
+        self.assign_partial_charges(partial_charge_method='am1bcc',
+                                    use_conformers=use_conformers,
+                                    strict_n_conformers=strict_n_conformers,
+                                    toolkit_registry=toolkit_registry)
 
-    def compute_partial_charges(self,
-                                #quantum_chemical_method='AM1-BCC',
-                                #partial_charge_method='None',
-                                toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+
+    def assign_partial_charges(self,
+                               partial_charge_method,
+                               strict_n_conformers=False,
+                               use_conformers=None,
+                               toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """
-        **Warning! Not Implemented!**
-        Calculate partial atomic charges for this molecule using an underlying toolkit
+        Calculate partial atomic charges for this molecule using an underlying toolkit, and assign
+        the new values to the partial_charges attribute.
 
         Parameters
         ----------
-        quantum_chemical_method : string, default='AM1-BCC'
-            The quantum chemical method to use for partial charge calculation.
-        partial_charge_method : string, default='None'
+        partial_charge_method : string
             The partial charge calculation method to use for partial charge calculation.
+        strict_n_conformers : bool, default=False
+            Whether to raise an exception if an invalid number of conformers is provided for the given charge method.
+            If this is False and an invalid number of conformers is found, a warning will be raised.
+        use_conformers : iterable of simtk.unit.Quantity-wrapped numpy arrays, each with shape (n_atoms, 3) and dimension of distance. Optional, default=None
+            Coordinates to use for partial charge calculation. If None, an appropriate number of conformers will be generated.
         toolkit_registry : openforcefield.utils.toolkits.ToolkitRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
-            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
+            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for the calculation.
 
         Examples
         --------
 
         >>> molecule = Molecule.from_smiles('CCCCCC')
-        >>> molecule.generate_conformers()
+        >>> molecule.assign_partial_charges('am1-mulliken')
 
         Raises
         ------
@@ -2529,24 +2595,30 @@ class FrozenMolecule(Serializable):
             If an invalid object is passed as the toolkit_registry parameter
 
         """
-        raise NotImplementedError
-        # TODO: Implement this in a way that's compliant with SMIRNOFF's <ChargeIncrementModel> tag when the spec gets finalized
-        # if isinstance(toolkit_registry, ToolkitRegistry):
-        #     charges = toolkit_registry.call(
-        #               'compute_partial_charges_am1bcc',
-        #               self,
-        #     )
-        # elif isinstance(toolkit_registry, ToolkitWrapper):
-        #     toolkit = toolkit_registry
-        #     charges = toolkit.compute_partial_charges_am1bcc(
-        #         self,
-        #         #quantum_chemical_method=quantum_chemical_method,
-        #         #partial_charge_method=partial_charge_method
-        #     )
-        # else:
-        #     raise InvalidToolkitError(
-        #         'Invalid toolkit_registry passed to compute_partial_charges_am1bcc. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'
-        #         .format(type(toolkit_registry)))
+        if isinstance(toolkit_registry, ToolkitRegistry):
+            # We may need to try several toolkitwrappers to find one
+            # that supports the desired partial charge method, so we
+            # tell the ToolkitRegistry to continue trying ToolkitWrappers
+            # if one raises an error (raise_exception_types=[])
+            toolkit_registry.call('assign_partial_charges',
+                                  self,
+                                  partial_charge_method=partial_charge_method,
+                                  use_conformers=use_conformers,
+                                  strict_n_conformers=strict_n_conformers,
+                                  raise_exception_types=[]
+                                  )
+        elif isinstance(toolkit_registry, ToolkitWrapper):
+            toolkit = toolkit_registry
+            toolkit.assign_partial_charges(self,
+                                           partial_charge_method=partial_charge_method,
+                                           use_conformers=use_conformers,
+                                           strict_n_conformers=strict_n_conformers
+                                           )
+        else:
+            raise InvalidToolkitError(
+                f'Invalid toolkit_registry passed to assign_partial_charges.'
+                f'Expected ToolkitRegistry or ToolkitWrapper. Got  {type(toolkit_registry)}')
+
 
     def assign_fractional_bond_orders(self,
                                       bond_order_model=None,
@@ -3286,7 +3358,10 @@ class FrozenMolecule(Serializable):
         """
         Return the total charge on the molecule
         """
-        return sum([atom.formal_charge for atom in self.atoms])
+        charge_sum = 0. * unit.elementary_charge
+        for atom in self.atoms:
+            charge_sum += atom.formal_charge
+        return charge_sum
 
     @property
     def name(self):
@@ -4067,8 +4142,8 @@ class FrozenMolecule(Serializable):
             raise InvalidConformerError('The molecule must have a conformation to produce a valid qcschema; '
                                         f'no conformer was found at index {conformer}.')
 
-        # Gather the required qschema data
-        charge = sum([atom.formal_charge for atom in self.atoms])
+        # Gather the required qcschema data
+        charge = self.total_charge / unit.elementary_charge
         connectivity = [(bond.atom1_index, bond.atom2_index, bond.bond_order) for bond in self.bonds]
         symbols = [Element.getByAtomicNumber(atom.atomic_number).symbol for atom in self.atoms]
 

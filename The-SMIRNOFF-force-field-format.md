@@ -225,30 +225,27 @@ For example, to ensure water molecules are assigned partial charges for [TIP3P](
 
 ### `<ChargeIncrementModel>`: Small molecule and fragment charges
 
-.. warning:: This functionality is not yet implemented and will appear in a future version of the toolkit. This area of the SMIRNOFF spec is under further consideration. Please see `Issue 208 on the Open Force Field Toolkit issue tracker <https://github.com/openforcefield/openforcefield/issues/208>`_.
-
 In keeping with the AMBER force field philosophy, especially as implemented in small molecule force fields such as [GAFF](http://ambermd.org/antechamber/gaff.html), [GAFF2](https://mulan.swmed.edu/group/gaff.php), and [parm@Frosst](http://www.ccl.net/cca/data/parm_at_Frosst/), partial charges for small molecules are usually assigned using a quantum chemical method (usually a semiempirical method such as [AM1](https://en.wikipedia.org/wiki/Austin_Model_1)) and a [partial charge determination scheme](https://en.wikipedia.org/wiki/Partial_charge) (such as [CM2](http://doi.org/10.1021/jp972682r) or [RESP](http://doi.org/10.1021/ja00074a030)), then subsequently corrected via charge increment rules, as in the highly successful [AM1-BCC](https://dx.doi.org/10.1002/jcc.10128) approach.
 
 Here is an example:
 ```XML
-<ChargeIncrementModel version="0.3" number_of_conformers="10" quantum_chemical_method="AM1" partial_charge_method="CM2">
+<ChargeIncrementModel version="0.3" number_of_conformers="1" partial_charge_method="AM1-Mulliken">
   <!-- A fractional charge can be moved along a single bond -->
-  <ChargeIncrement smirks="[#6X4:1]-[#6X3a:2]" chargeincrement1="-0.0073*elementary_charge" chargeincrement2="+0.0073*elementary_charge"/>
-  <ChargeIncrement smirks="[#6X4:1]-[#6X3a:2]-[#7]" chargeincrement1="+0.0943*elementary_charge" chargeincrement2="-0.0943*elementary_charge"/>
-  <ChargeIncrement smirks="[#6X4:1]-[#8:2]" chargeincrement1="-0.0718*elementary_charge" chargeincrement2="+0.0718*elementary_charge"/>
-  <!--- Alternatively, factional charges can be redistributed among any number of bonded atoms -->
-  <ChargeIncrement smirks="[N:1](H:2)(H:3)" chargeincrement1="+0.02*elementary_charge" chargeincrement2="-0.01*elementary_charge" chargeincrement3="-0.01*elementary_charge"/>
+  <ChargeIncrement smirks="[#6X4:1]-[#6X3a:2]" charge_increment1="-0.0073*elementary_charge" charge_increment2="0.0073*elementary_charge"/>
+  <ChargeIncrement smirks="[#6X4:1]-[#6X3a:2]-[#7]" charge_increment1="0.0943*elementary_charge" charge_increment2="-0.0943*elementary_charge"/>
+  <ChargeIncrement smirks="[#6X4:1]-[#8:2]" charge_increment1="-0.0718*elementary_charge" charge_increment2="0.0718*elementary_charge"/>
+  <!--- Alternatively, fractional charges can be redistributed among any number of bonded atoms -->
+  <ChargeIncrement smirks="[N:1]([H:2])([H:3])" charge_increment1="0.02*elementary_charge" charge_increment2="-0.01*elementary_charge" charge_increment3="-0.01*elementary_charge"/>
 </ChargeIncrementModel>
 ```
 The sum of formal charges for the molecule or fragment will be used to determine the total charge the molecule or fragment will possess.
 
 `<ChargeIncrementModel>` provides several optional attributes to control its behavior:
-* The `number_of_conformers` attribute (default: `"10"`) is used to specify how many conformers will be generated for the molecule (or capped fragment) prior to charging.
-* The `quantum_chemical_method` attribute (default: `"AM1"`) is used to specify the quantum chemical method applied to the molecule or capped fragment.
-* The `partial_charge_method` attribute (default: `"CM2"`) is used to specify how uncorrected partial charges are to be generated from the quantum chemical wavefunction. Later additions will add restrained electrostatic potential fitting (RESP) capabilities.   
+* The `number_of_conformers` attribute (default: `"1"`) is used to specify how many conformers will be generated for the molecule (or capped fragment) prior to charging.
+* The `partial_charge_method` attribute (default: `"AM1-Mulliken"`) is used to specify how uncorrected partial charges are to be generated. Later additions will add restrained electrostatic potential fitting (RESP) capabilities.   
 
 The `<ChargeIncrement>` tags specify how the quantum chemical derived charges are to be corrected to produce the final charges.
-The `chargeincrement#` attributes specify how much the charge on the associated tagged atom index (replacing `#`) should be modified.
+The `charge_increment#` attributes specify how much the charge on the associated tagged atom index (replacing `#`) should be modified.
 The sum of charge increments should equal zero.
 
 Note that atoms for which library charges have already been applied are excluded from charging via `<ChargeIncrementModel>`.
@@ -475,10 +472,47 @@ U = \sum_{i=1}^N k_i * (1 + cos(periodicity_i * phi - phase_i))
 
 If the `potential` attribute is omitted, it defaults to `k*(1+cos(periodicity*theta-phase))`.
 
-|  ProperTorsions section tag version | Tag attributes and default values                                        | Required parameter attributes         | Optional parameter attributes |
-|-------------------------------------|--------------------------------------------------------------------------|---------------------------------------|-------------------------------|
-| 0.3                                 | `potential="k*(1+cos(periodicity*theta-phase))"`, `default_idivf="auto"` | `smirks`, `k`, `phase`, `periodicity` | `idivf`, `id`, `parent_id`    |
 
+#### Fractional torsion bond orders
+
+Fractional torsion bond orders can be used to allow interpolation and extrapolation of torsion parameters.
+This is similar to the functionality provided by fractional bond orders detailed above.
+For example, these parameters:
+```XML
+<ProperTorsions version="0.3" potential="k*(1+cos(periodicity*theta-phase))" default_idivf="auto">
+    <Proper smirks="[*:1]:[#6X4:2]-[#6X4:3]:[*:4]" periodicity1="2" phase1="0.0 * degree" k1="1.00*kilocalories_per_mole" idivf1="1.0"/>
+    <Proper smirks="[*:1]:[#6X4:2]=[#6X4:3]:[*:4]" periodicity1="2" phase1="0.0 * degree" k1="1.80*kilocalories_per_mole" idivf1="1.0"/>
+    ...
+```
+can be replaced by a single parameter line by first defining the `fractional_bondorder_method` header-level attribute to specify a method for computing the fractional bond order and `fractional_bondorder_interpolation` for specifying the procedure for interpolating parameters between specified integer bond orders:
+```XML
+<ProperTorsions version="0.3" potential="k*(1+cos(periodicity*theta-phase))" default_idivf="auto" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
+    <Proper smirks="[*:1]:[#6X4:2]~[#6X4:3]:[*:4]" periodicity1="2" phase1="0.0 * degree" k1_bondorder1="1.00*kilocalories_per_mole" k1_bondorder2="1.80*kilocalories_per_mole" idivf1="1.0"/>
+    ...
+```
+This allows specification of the barrier height for e.g. bond orders 1 and 2 (single and double bonds), and then interpolation between those based on the partial/fractional bond order.
+Note that in actual usage partial/fractional bond order may never be exactly 1 or 2, or perhaps even near 2; these values only serve to define the slope of the line used for interpolation.
+In the example above, we replaced the two proper torsion terms (one single central bond (`-`) and one double central bond (`=`) with a single term giving the barrier heights for bond order 1 and 2.
+If there are cases where the fractional bond order is 1.5, this can correspond to e.g. an aromatic bond.
+When barrier heights for more than two integer bond orders are specified, (say, 1, 2, and 3), the interpolation lines are drawn between successive points as a piecewiese linear function.
+
+Cases in which the fractional bond order for the central bond is outside of the bond orders specified (e.g. 1 and 2 above), the barrier height ``k#`` is *extrapolated* using the same slope of the line used for interpolation.
+This works even when barrier heights for more than two integer bond orders are specified (say, 1, 2, and 3), in which case the piecewise linear extrapolation beyond the bounds uses the slope of the line defined by the nearest two bond orders.
+In other words, a fractional bond order of 3.2 would yield an interpolated `k#` value determined by the interpolation line between ``k#_bondorder2`` and ``k#_bondorder3``.
+A fractional bond order of .9 would yield an interpolated `k#` value determined by the interpolation line between ``k#_bondorder1`` and ``k#_bondorder2``.
+
+
+Some key usage points:
+* `fractional_bondorder_method` defaults to `AM1-Wiberg`.
+* `fractional_bondorder_interpolation` defaults to `linear`, which is the only supported scheme for now.
+
+|  ProperTorsions section tag version | Tag attributes and default values                                         | Required parameter attributes         | Optional parameter attributes |
+|-------------------------------------|---------------------------------------------------------------------------|---------------------------------------|-------------------------------|
+| 0.3                                 | `potential="k*(1+cos(periodicity*theta-phase))"`, `default_idivf="auto"`, | `smirks`, `k`, `phase`, `periodicity` | `idivf`, `id`, `parent_id`    |
+|-------------------------------------|---------------------------------------------------------------------------|---------------------------------------|-------------------------------|
+| 0.4                                 | `potential="k*(1+cos(periodicity*theta-phase))"`, `default_idivf="auto"`, | `smirks`, `k_bondorder`,              | `idivf`, `id`, `parent_id`    |
+|                                     | `fractional_bondorder_method="AM1-Wiberg"`,                               | `phase`, `periodicity`                |                               |
+|                                     | `fractional_bondorder_interpolation="linear"`                             |                                       |                               |
 
 ### `<ImproperTorsions>`
 
@@ -617,7 +651,7 @@ We will support the following different types or geometries of off-center charge
 - `TrivalentLonePair`: This is suitable for planar or tetrahedral nitrogen lone pairs; a charge site `S` lies above  the central atom (e.g. nitrogen, blue) a distance `d` along the vector perpendicular to the plane of the three connected atoms (2,3,4). With positive values of `d` the site lies above the nitrogen and with negative values it lies below the nitrogen.
 ![Trivalent lone pair virtual site](figures/vsite_trivalent.jpg)
 
-Each virtual site receives charge which is transferred from the desired atoms specified in the SMIRKS pattern via a `chargeincrement#` parameter, e.g., if `chargeincrement1=+0.1*elementary_charge` then the virtual site will receive a charge of -0.1 and the atom labeled `1` will have its charge adjusted upwards by +0.1.
+Each virtual site receives charge which is transferred from the desired atoms specified in the SMIRKS pattern via a `charge_increment#` parameter, e.g., if `charge_increment1=+0.1*elementary_charge` then the virtual site will receive a charge of -0.1 and the atom labeled `1` will have its charge adjusted upwards by +0.1.
 N may index any indexed atom.
 Increments which are left unspecified default to zero.
 Additionally, each virtual site can bear Lennard-Jones parameters, specified by `sigma` and `epsilon` or `rmin_half` and `epsilon`.
@@ -628,23 +662,23 @@ In the SMIRNOFF format, these are encoded as:
 <VirtualSites version="0.3">
     <!-- sigma hole for halogens: "distance" denotes distance along the 2->1 bond vector, measured from atom 2 -->
     <!-- Specify that 0.2 charge from atom 1 and 0.1 charge units from atom 2 are to be moved to the virtual site, and a small Lennard-Jones site is to be added (sigma = 0.1*angstroms, epsilon=0.05*kcal/mol) -->
-    <VirtualSite type="BondCharge" smirks="[Cl:1]-[C:2]" distance="0.30*angstrom" chargeincrement1="+0.2*elementary_charge" chargeincrement2="+0.1*elementary_charge" sigma="0.1*angstrom" epsilon="0.05*kilocalories_per_mole" />
+    <VirtualSite type="BondCharge" smirks="[Cl:1]-[C:2]" distance="0.30*angstrom" charge_increment1="+0.2*elementary_charge" charge_increment2="+0.1*elementary_charge" sigma="0.1*angstrom" epsilon="0.05*kilocalories_per_mole" />
     <!-- Charge increments can extend out to as many atoms as are labeled, e.g. with a third atom: -->
-    <VirtualSite type="BondCharge" smirks="[Cl:1]-[C:2]~[*:3]" distance="0.30*angstrom" chargeincrement1="+0.1*elementary_charge" chargeincrement2="+0.1*elementary_charge" chargeincrement3="+0.05*elementary_charge" sigma="0.1*angstrom" epsilon="0.05*kilocalories_per_mole" />
+    <VirtualSite type="BondCharge" smirks="[Cl:1]-[C:2]~[*:3]" distance="0.30*angstrom" charge_increment1="+0.1*elementary_charge" charge_increment2="+0.1*elementary_charge" charge_increment3="+0.05*elementary_charge" sigma="0.1*angstrom" epsilon="0.05*kilocalories_per_mole" />
     <!-- monovalent lone pairs: carbonyl -->
     <!-- X denotes the charge site, and P denotes the projection of the charge site into the plane of 1 and 2. -->
     <!-- inPlaneAngle is angle point P makes with 1 and 2, i.e. P-1-2 -->
     <!-- outOfPlaneAngle is angle charge site (X) makes out of the plane of 2-1-3 (and P) measured from 1 -->
     <!-- Since unspecified here, sigma and epsilon for the virtual site default to zero -->
-    <VirtualSite type="MonovalentLonePair" smirks="[O:1]=[C:2]-[*:3]" distance="0.30*angstrom" outOfPlaneAngle="0*degree" inPlaneAngle="120*degree" chargeincrement1="+0.2*elementary_charge" />
+    <VirtualSite type="MonovalentLonePair" smirks="[O:1]=[C:2]-[*:3]" distance="0.30*angstrom" outOfPlaneAngle="0*degree" inPlaneAngle="120*degree" charge_increment1="+0.2*elementary_charge" />
     <!-- divalent lone pair: pyrimidine, TIP4P, TIP5P -->
     <!-- The atoms 2-1-3 define the X-Y plane, with Z perpendicular. If outOfPlaneAngle is 0, the charge site is a specified distance along the in-plane vector which bisects the angle left by taking 360 degrees minus angle(2,1,3). If outOfPlaneAngle is nonzero, the charge sites lie out of the plane by the specified angle (at the specified distance) and their in-plane projection lines along the angle's bisector. -->
-    <VirtualSite type="DivalentLonePair" smirks="[*:2]~[#7X2:1]~[*:3]" distance="0.30*angstrom" outOfPlaneAngle="0.0*degree" chargeincrement1="+0.1*elementary_charge" />
+    <VirtualSite type="DivalentLonePair" smirks="[*:2]~[#7X2:1]~[*:3]" distance="0.30*angstrom" outOfPlaneAngle="0.0*degree" charge_increment1="+0.1*elementary_charge" />
     <!-- trivalent nitrogen lone pair -->
     <!-- charge sites lie above and below the nitrogen at specified distances from the nitrogen, along the vector perpendicular to the plane of (2,3,4) that passes through the nitrogen. If the nitrogen is co-planar with the connected atom, charge sites are simply above and below the plane-->
     <!-- Positive and negative values refer to above or below the nitrogen as measured relative to the plane of (2,3,4), i.e. below the nitrogen means nearer the 2,3,4 plane unless they are co-planar -->
-    <VirtualSite type="TrivalentLonePair" smirks="[*:2]~[#7X3:1](~[*:4])~[*:3]" distance="0.30*angstrom" chargeincrement1="+0.1*elementary_charge"/>
-    <VirtualSite type="TrivalentLonePair" smirks="[*:2]~[#7X3:1](~[*:4])~[*:3]" distance="-0.30*angstrom" chargeincrement1="+0.1*elementary_charge"/>
+    <VirtualSite type="TrivalentLonePair" smirks="[*:2]~[#7X3:1](~[*:4])~[*:3]" distance="0.30*angstrom" charge_increment1="+0.1*elementary_charge"/>
+    <VirtualSite type="TrivalentLonePair" smirks="[*:2]~[#7X3:1](~[*:4])~[*:3]" distance="-0.30*angstrom" charge_increment1="+0.1*elementary_charge"/>
 </VirtualSites>
 ```
 
