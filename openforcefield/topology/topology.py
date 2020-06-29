@@ -451,6 +451,7 @@ class TopologyBond(Serializable):
         raise NotImplementedError()  # TODO
 
 
+
 #=============================================================================================
 # TopologyVirtualSite
 #=============================================================================================
@@ -546,9 +547,8 @@ class TopologyVirtualSite(Serializable):
             The index of this virtual site in its parent topology.
         """
         return self._topology_molecule.virtual_site_start_topology_index + self._virtual_site.molecule_virtual_site_index
-
     @property
-    def topology_particle_index(self):
+    def topology_particle_start_index(self):
         """
         Get the index of this particle in its parent Topology.
 
@@ -600,6 +600,39 @@ class TopologyVirtualSite(Serializable):
         raise NotImplementedError()  # TODO
 
 
+#=============================================================================================
+# TopologyVirtualParticle
+#=============================================================================================
+
+class TopologyVirtualParticle(TopologyVirtualSite):
+
+    def __init__(self, virtual_site, virtual_particle, topology_molecule):
+        self._virtual_site = virtual_site
+        self._virtual_particle = virtual_particle
+        self._topology_molecule = topology_molecule
+
+    @property
+    def topology_particle_index(self):
+        """
+        Get the index of this particle in its parent Topology.
+
+        Returns
+        -------
+        int
+            The index of this particle in its parent topology.
+        """
+        # This assumes that the particles in a topology are listed with all atoms from all TopologyMolecules
+        # first, followed by all VirtualSites from all TopologyMolecules second
+        orientation_key = self._virtual_particle.orientation
+        offset = 0
+        for i, ornt in enumerate(self._virtual_site.orientations):
+            if ornt == orientation_key == ornt:
+                offset = i
+                break
+
+        return offset + self.topology_particle_start_index
+        # return self._topology_molecule.particle_start_topology_index + self._virtual_site.molecule_particle_index
+
 # =============================================================================================
 # TopologyMolecule
 # =============================================================================================
@@ -643,6 +676,7 @@ class TopologyMolecule:
 
         # Initialize cached data
         self._atom_start_topology_index = None
+        self._particle_start_topology_index = None
         self._bond_start_topology_index = None
         self._virtual_site_start_topology_index = None
 
@@ -650,6 +684,7 @@ class TopologyMolecule:
     def _invalidate_cached_data(self):
         """Unset all cached data, in response to an appropriate change"""
         self._atom_start_topology_index = None
+        self._particle_start_topology_index = None
         self._bond_start_topology_index = None
         self._virtual_site_start_topology_index = None
 
@@ -737,6 +772,24 @@ class TopologyMolecule:
 
         # Return cached value
         return self._atom_start_topology_index
+
+    @property
+    def particle_start_topology_index(self):
+        """
+        Get the topology index of the first particle in this TopologyMolecule
+
+        """
+        # If cached value is not available, generate it.
+        if self._particle_start_topology_index is None:
+            particle_start_topology_index = 0
+            for topology_molecule in self._topology.topology_molecules:
+                if self == topology_molecule:
+                    self._particle_start_topology_index = particle_start_topology_index
+                    break
+                particle_start_topology_index += topology_molecule.n_particles
+
+        # Return cached value
+        return self._particle_start_topology_index
 
     def bond(self, index):
         """
@@ -826,7 +879,8 @@ class TopologyMolecule:
 
         # TODO: Add ordering scheme here
         for vsite in self.reference_molecule.virtual_sites:
-            yield TopologyVirtualSite(vsite, self)
+            for vp in vsite.particles:
+                yield TopologyVirtualParticle(vsite, vp, self)
 
     @property
     def n_particles(self):
@@ -1364,7 +1418,8 @@ class Topology(Serializable):
                 yield atom
         for topology_molecule in self._topology_molecules:
             for vs in topology_molecule.virtual_sites:
-                yield vs
+                for vp in vs.particles:
+                    yield vp
 
 
     @property
