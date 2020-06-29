@@ -52,7 +52,6 @@ from simtk import openmm, unit
 import numpy as np
 
 from openforcefield.utils import attach_units,  \
-
     extract_serialized_units_from_dict, MessageException, \
     object_to_quantity,  GLOBAL_TOOLKIT_REGISTRY
 from openforcefield.topology import Topology, ValenceDict, ImproperDict, SortedDict
@@ -4305,7 +4304,7 @@ class VirtualSiteHandler(_NonbondedHandler):
                 exclusions.add(pair)
 
         def dprint(*msg):
-            if True:
+            if False:
                 print(*msg)
 
         # Eventually support different exclusion policies:
