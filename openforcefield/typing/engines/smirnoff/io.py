@@ -204,7 +204,7 @@ class XMLParameterIOHandler(ParameterIOHandler):
             smirnoff_data = xmltodict.parse(data, attr_prefix='')
             return smirnoff_data
         except ExpatError as e:
-            raise ParseError(e)
+            raise ParseError(str(e))
 
     def to_file(self, file_path, smirnoff_data):
         """Write the current forcefield parameter set to a file.
