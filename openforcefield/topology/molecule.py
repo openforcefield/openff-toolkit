@@ -5042,7 +5042,7 @@ class Molecule(FrozenMolecule):
         epsilon=None,
         sigma=None,
         rmin_half=None,
-        name=""
+        name="",
         replace=False,
     ):
         """
