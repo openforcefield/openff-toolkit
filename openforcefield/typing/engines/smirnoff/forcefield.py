@@ -939,13 +939,13 @@ class ForceField:
 
                 # Must be wrapped into its own tag.
                 # Assumes that parameter_list_dict is always a list
-                all_params[parameter_list_tagname] = parameter_list_dict
 
                 # If the parameter list isn't empty, it must be transferred into its own tag.
                 # This is necessary for deserializing SMIRNOFF force field sections which may or may
                 # not have any smirks-based elements (like an empty ChargeIncrementModel section)
                 if parameter_list_dict != {}:
-                    parameter_list_dict = {parameter_list_tagname: parameter_list_dict}
+                    all_params[parameter_list_tagname] = parameter_list_dict
+                    # parameter_list_dict = {parameter_list_tagname: parameter_list_dict}
 
             # Retrieve or create parameter handler, passing in section_dict to check for
             # compatibility if a handler for this parameter name already exists

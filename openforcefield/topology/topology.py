@@ -573,6 +573,22 @@ class TopologyVirtualSite(Serializable):
         # return self._topology_molecule.particle_start_topology_index + self._virtual_site.molecule_particle_index
 
     @property
+    def particles(self):
+        """
+        Get an iterator to the reference particles that this TopologyVirtualSite
+        contains.
+
+        Returns
+        -------
+        iterator of TopologyVirtualParticles
+        """
+
+        for vptl in self.virtual_site.particles:
+            yield TopologyVirtualParticle(
+                self._virtual_site, vptl, self._topology_molecule
+            )
+
+    @property
     def molecule(self):
         """
         Get the reference Molecule that this TopologyVirtualSite belongs to.

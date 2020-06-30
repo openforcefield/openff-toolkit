@@ -2157,19 +2157,18 @@ class ConstraintHandler(ParameterHandler):
 
     def create_force(self, system, topology, **kwargs):
         constraint_matches = self.find_matches(topology)
-        for (atoms, constraint_matches) in constraint_matches.items():
+        for (atoms, constraint_match) in constraint_matches.items():
             # Update constrained atom pairs in topology
             #topology.add_constraint(*atoms, constraint.distance)
             # If a distance is specified (constraint.distance != True), add the constraint here.
             # Otherwise, the equilibrium bond length will be used to constrain the atoms in HarmonicBondHandler
-            for constraint_match in constraint_matches:
-                constraint = constraint_match.parameter_type
+            constraint = constraint_match.parameter_type
 
-                if constraint.distance is None:
-                    topology.add_constraint(*atoms, True)
-                else:
-                    system.addConstraint(*atoms, constraint.distance)
-                    topology.add_constraint(*atoms, constraint.distance)
+            if constraint.distance is None:
+                topology.add_constraint(*atoms, True)
+            else:
+                system.addConstraint(*atoms, constraint.distance)
+                topology.add_constraint(*atoms, constraint.distance)
 
 #=============================================================================================
 
@@ -3401,8 +3400,7 @@ class LibraryChargeHandler(_NonbondedHandler):
         atom_assignments = dict()
         # TODO: This assumes that later matches should always override earlier ones. This may require more
         #       thought, since matches can be partially overlapping
-        for topology_indices, library_charges in atom_matches.items():
-            for library_charge in library_charges:
+        for topology_indices, library_charge in atom_matches.items():
                 for charge_idx, top_idx in enumerate(topology_indices):
                     if top_idx in assignable_atoms:
                         logger.debug(f'Multiple library charge assignments found for atom {top_idx}')
