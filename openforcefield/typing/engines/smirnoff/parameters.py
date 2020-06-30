@@ -2237,7 +2237,6 @@ class BondHandler(ParameterHandler):
 
         skipped_constrained_bonds = 0  # keep track of how many bonds were constrained (and hence skipped)
         for (topology_atom_indices, bond_match) in bond_matches.items():
-            bond_match = bond_match
             # Get corresponding particle indices in Topology
             #particle_indices = tuple([ atom.particle_index for atom in atoms ])
 
@@ -2354,7 +2353,6 @@ class AngleHandler(ParameterHandler):
         skipped_constrained_angles = 0  # keep track of how many angles were constrained (and hence skipped)
         for (atoms, angle_match) in angle_matches.items():
 
-            angle_match = angle_match
             # Ensure atoms are actually bonded correct pattern in Topology
             # for (i, j) in [(0, 1), (1, 2)]:
             #     topology.assert_bonded(atoms[i], atoms[j])
@@ -2545,7 +2543,6 @@ class ProperTorsionHandler(ParameterHandler):
         torsion_matches = self.find_matches(topology)
 
         for (atom_indices, torsion_match) in torsion_matches.items():
-            torsion_match = torsion_match[0]
             # Ensure atoms are actually bonded correct pattern in Topology
             # Currently does nothing
             self._assert_correct_connectivity(torsion_match)
@@ -2790,7 +2787,6 @@ class ImproperTorsionHandler(ParameterHandler):
         # Add all improper torsions to the system
         improper_matches = self.find_matches(topology)
         for (atom_indices, improper_match) in improper_matches.items():
-            improper_match = improper_match[0]
             # Ensure atoms are actually bonded correct pattern in Topology
             # For impropers, central atom is atom 1
             # for (i, j) in [(0, 1), (1, 2), (1, 3)]:
@@ -3546,7 +3542,7 @@ class ToolkitAM1BCCHandler(_NonbondedHandler):
             ]:  # TODO: We need to apply this to all Force types that involve charges, such as (Custom)GBSA forces and CustomNonbondedForce
                 for (atoms, bond_match) in bond_matches.items():
                     # Get corresponding particle indices in Topology
-                    bond = bond_match[0].parameter_type
+                    bond = bond_match.parameter_type
 
                     particle_indices = tuple(
                         [atom.particle_index for atom in atoms])
