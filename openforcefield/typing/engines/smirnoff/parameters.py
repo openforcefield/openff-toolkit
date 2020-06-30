@@ -1770,7 +1770,7 @@ class ParameterHandler(_ParameterAttributeHandler):
         return self._find_matches(entity, expand_orientation=expand_orientation)
 
     def _find_matches(self, entity, transformed_dict_cls=ValenceDict, 
-            use_named_slots=False, variable_keylen=False, expand_orientation=False):
+            use_named_slots=False, expand_orientation=False):
         """Implement find_matches() and allow using a difference valence dictionary.
 
         Parameters
@@ -1835,15 +1835,6 @@ class ParameterHandler(_ParameterAttributeHandler):
                         fn = ValenceDict.key_transform
                     if not expand_orientation:
                         key = fn(key)
-
-                # this takes care of LibraryCharge, which can match
-                # tuples of variable length
-                elif variable_keylen:
-                    if len(key) < 4:
-                        fn = ValenceDict.key_transform
-                    else:
-                        fn = ImproperDict.key_transform
-                    key = fn(key)
 
                 if hasattr(handler_match._parameter_type, "orientation"):
                     hit = sum([index_of_key == ornt for ornt in orientation])
@@ -2052,10 +2043,10 @@ class ParameterHandler(_ParameterAttributeHandler):
             unassigned_topology_atom_tuples = []
 
             # Gain access to the relevant topology
-            if type(valence_terms) is TopologyAtom:
-                topology = valence_terms.topology_molecule.topology
-            else:
+            if type(valence_terms[0]) is TopologyAtom:
                 topology = valence_terms[0].topology_molecule.topology
+            else:
+                topology = valence_terms[0][0].topology_molecule.topology
             unassigned_str = ''
             for unassigned_tuple in unassigned_terms:
                 unassigned_str += '\n- Topology indices ' + str(unassigned_tuple)
@@ -3385,7 +3376,7 @@ class LibraryChargeHandler(_NonbondedHandler):
 
         # TODO: Right now, this method is only ever called with an entity that is a Topoogy.
         #  Should we reduce its scope and have a check here to make sure entity is a Topology?
-        return self._find_matches(entity, transformed_dict_cls=dict, variable_keylen=True, use_named_slots=False)
+        return self._find_matches(entity, transformed_dict_cls=dict, use_named_slots=False)
 
     def create_force(self, system, topology, **kwargs):
         from openforcefield.topology import FrozenMolecule
@@ -3401,11 +3392,11 @@ class LibraryChargeHandler(_NonbondedHandler):
         # TODO: This assumes that later matches should always override earlier ones. This may require more
         #       thought, since matches can be partially overlapping
         for topology_indices, library_charge in atom_matches.items():
-                for charge_idx, top_idx in enumerate(topology_indices):
-                    if top_idx in assignable_atoms:
-                        logger.debug(f'Multiple library charge assignments found for atom {top_idx}')
-                    assignable_atoms.add(top_idx)
-                    atom_assignments[top_idx] = library_charge.parameter_type.charge[charge_idx]
+            for charge_idx, top_idx in enumerate(topology_indices):
+                if top_idx in assignable_atoms:
+                    logger.debug(f'Multiple library charge assignments found for atom {top_idx}')
+                assignable_atoms.add(top_idx)
+                atom_assignments[top_idx] = library_charge.parameter_type.charge[charge_idx]
         # TODO: Should header include a residue separator delimiter? Maybe not, since it's not clear how having
         #       multiple LibraryChargeHandlers could return a single set of matches while respecting different
         #       separators.
@@ -4037,59 +4028,6 @@ class VirtualSiteHandler(_NonbondedHandler):
             off_idx = super().add_virtual_site(fn, atoms, replace=replace)
             return off_idx
 
-        def get_openmm_virtual_site(self, atoms, mass=None):
-            originwt = np.zeros_like(atoms)
-            originwt[0] = 1.0 # first atom is origin (where the hole should be)
-
-            xdir = np.full( len(atoms), 1.0/(originwt.shape[0]-1) ) # must == 1
-            xdir[0] = -1.0 # total sum == 0
-
-            # point towards COM (use mass weights instead of 1/N weights)
-            if mass:
-                mass = np.asarray(mass)
-                xdir[1:] = mass[1:] / mass[1:].sum()
-
-            # Seems ydir and zdir don't matter for BondCharge, since
-            # from openmm, zdir = cross(xdir, ydir) and then ydir set to 
-            # cross(zdir, xdir).
-            # We therefore allow ydir == zdir == 0, and just displace along xdir
-            ydir = np.array(xdir)
-
-            # since the origin is atom 1, and xdir is a unit vector pointing
-            # towards the center of the other atoms, we want the
-            # vsite to point away from the unit vector to achieve the desired
-            # distance
-            pos  = [-self.distance, 0.0, 0.0] # pos of the vsite in local crds
-            return openmm.LocalCoordinatesSite(atoms, originwt, xdir, ydir, pos)
-
-    class VirtualSiteCentroidType(VirtualSiteType):
-        """A SMIRNOFF virtual site centroid type
-
-        .. warning :: This API is experimental and subject to change.
-        """
-        _ELEMENT_NAME = 'VirtualSiteCentroidType'
-
-        def add_virtual_site(self, molecule, atoms, replace=False):
-            # TODO: molecule does not have this vsite yet
-            #fn = molecule._add_centroid_virtual_site
-            #off_idx = super().add_virtual_site(fn, atoms, **kwargs)
-            #return off_idx
-            return None
-
-        def get_openmm_virtual_site(self, atoms, mass=None):
-
-            originwt = None
-            if mass:
-                mass = np.asarray(mass)
-                originwt = mass / mass.sum()
-            else:
-                originwt = np.full( len(atoms), 1.0/len(atoms))
-
-            xdir = np.zeros_like(atoms)
-            ydir = np.zeros_like(atoms)
-            pos  = [0.0, 0.0, 0.0] # pos of the vsite in local crds
-            return openmm.LocalCoordinatesSite(atoms, originwt, xdir, ydir, pos)
-
     class VirtualSiteLonePairType(VirtualSiteType):
         """A SMIRNOFF virtual site requiring plane angles
 
@@ -4131,21 +4069,6 @@ class VirtualSiteHandler(_NonbondedHandler):
             fn = molecule._add_divalent_lone_pair_virtual_site
             return super().add_virtual_site(fn, atoms, replace=replace)
 
-        def get_openmm_virtual_site(self, atoms, mass=None):
-            assert len(atoms) == 3
-            originwt = np.zeros_like(atoms)
-            originwt[1] = 1.0 # 
-
-            xdir = [0.5, -1.0, 0.5]
-            ydir = [1.0, -1.0, 0.0]
-
-            theta = self.outOfPlaneAngle.value_in_unit(unit.radians)
-
-            pos = [-self.distance*np.cos( theta),
-                    0.0,
-                     self.distance*np.sin( theta)] # pos of the vsite in local crds
-            return openmm.LocalCoordinatesSite(atoms, originwt, xdir, ydir, pos)
-
     class VirtualSiteTrivalentLonePairType(VirtualSiteLonePairType):
         """A SMIRNOFF trivalent lone pair virtual site type
 
@@ -4157,21 +4080,6 @@ class VirtualSiteHandler(_NonbondedHandler):
             fn = molecule._add_trivalent_lone_pair_virtual_site
             return super().add_virtual_site(fn, atoms, replace=replace)
 
-        def get_openmm_virtual_site(self, atoms, mass=None):
-            assert len(atoms) == 4
-            originwt = np.zeros_like(atoms)
-            originwt[1] = 1.0 # 
-
-            xdir = [1/3, -1.0, 1/3, 1/3]
-
-            #ydir does not matter
-            ydir = [1.0, -1.0, 0.0, 0.0]
-
-            pos  = [-self.distance,
-                    0.0,
-                    0.0] # pos of the vsite in local crds
-            return openmm.LocalCoordinatesSite(atoms, originwt, xdir, ydir, pos)
-
     class VirtualSiteMonovalentLonePairType(VirtualSiteLonePairType):
         """A SMIRNOFF monovalent lone pair virtual site type
 
@@ -4182,24 +4090,41 @@ class VirtualSiteHandler(_NonbondedHandler):
             fn = molecule._add_monovalent_lone_pair_virtual_site
             return super().add_virtual_site(fn, atoms, replace=replace)
 
+    class VirtualSiteCentroidType(VirtualSiteType):
+        """A SMIRNOFF virtual site centroid type
+
+        .. warning :: This API is experimental and subject to change.
+        """
+        _ELEMENT_NAME = 'VirtualSiteCentroidType'
+
+        def add_virtual_site(self, molecule, atoms, replace=False):
+            # TODO: molecule does not have this vsite yet
+            #fn = molecule._add_centroid_virtual_site
+            #off_idx = super().add_virtual_site(fn, atoms, **kwargs)
+            #return off_idx
+            return None
+
         def get_openmm_virtual_site(self, atoms, mass=None):
-            assert len(atoms) == 3
-            originwt = np.zeros_like(atoms)
-            originwt[0] = 1.0 # 
 
-            xdir = [-1.0, 1.0, 0.0]
-            ydir = [-1.0, 0.0, 1.0]
+            originwt = None
+            if mass:
+                mass = np.asarray(mass)
+                originwt = mass / mass.sum()
+            else:
+                originwt = np.full( len(atoms), 1.0/len(atoms))
 
-            theta = self.inPlaneAngle.value_in_unit( unit.radians)
-            psi   = self.outOfPlaneAngle.value_in_unit( unit.radians)
-
-            pos  = [self.distance*np.cos( theta)*np.cos( psi),
-                    self.distance*np.sin( theta)*np.cos( psi),
-                    self.distance*np.sin( psi)] # pos of the vsite in local crds
+            xdir = np.zeros_like(atoms)
+            ydir = np.zeros_like(atoms)
+            pos  = [0.0, 0.0, 0.0] # pos of the vsite in local crds
             return openmm.LocalCoordinatesSite(atoms, originwt, xdir, ydir, pos)
+
         
-    _DEPENDENCIES = [ ElectrostaticsHandler, LibraryChargeHandler, ChargeIncrementModelHandler,
-        ToolkitAM1BCCHandler]
+    _DEPENDENCIES = [
+        ElectrostaticsHandler,
+        LibraryChargeHandler,
+        ChargeIncrementModelHandler,
+        ToolkitAM1BCCHandler
+    ]
     _TAGNAME = 'VirtualSites'  # SMIRNOFF tag name to process
     __INFOTYPE = VirtualSiteType  # class to hold force type info
     #_OPENMMTYPE = None
