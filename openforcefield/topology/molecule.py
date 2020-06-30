@@ -5042,7 +5042,8 @@ class Molecule(FrozenMolecule):
         epsilon=None,
         sigma=None,
         rmin_half=None,
-        name="",
+        name=""
+        replace=False,
     ):
         """
         Create a bond charge-type virtual site, in which the location of the charge is specified by the position of two atoms. This supports placement of a virtual site S along a vector between two specified atoms, e.g. to allow for a sigma hole for halogens or similar contexts. With positive values of the distance, the virtual site lies outside the first indexed atom.
@@ -5081,6 +5082,7 @@ class Molecule(FrozenMolecule):
             sigma=sigma,
             rmin_half=rmin_half,
             name=name,
+            replace=replace,
         )
         return vsite_index
 
