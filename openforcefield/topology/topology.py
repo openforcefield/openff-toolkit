@@ -105,8 +105,8 @@ class ValenceDict(_TransformedDict):
     def key_transform(key):
         """Reverse tuple if first element is larger than last element."""
         # Ensure key is a tuple.
-        assert len(key) == 1 or len(key) == 2 or len(key) == 3, "Valence keys must be 2 or 3 atoms"
         key = tuple(key)
+        assert len(key) > 0 and len(key) < 5, "Valence keys must be 2 or 3 atoms"
         # Reverse the key if the first element is bigger than the last.
         if key[0] > key[-1]:
             key = tuple(reversed(key))
@@ -118,17 +118,24 @@ class ValenceDict(_TransformedDict):
         assert len(key) < 4
         refkey = __class__.key_transform(key)
         if len(key) == 2:
-            permutations = {
+            permutations = OrderedDict({
                 (refkey[0],refkey[1]): 0,
                 (refkey[1],refkey[0]): 1
-            }
-        else:
-            permutations = {
+            })
+        elif len(key) == 3:
+            permutations = OrderedDict({
                 (refkey[0],refkey[1],refkey[2]): 0,
                 (refkey[2],refkey[1],refkey[0]): 1
-            }
+            })
+        else:
+            # For a proper, only forward/backward make sense
+            permutations = OrderedDict({
+                (refkey[0], refkey[1], refkey[2], refkey[3]): 0,
+                (refkey[3], refkey[1], refkey[2], refkey[0]): 1
+            })
         if not possible is None:
             i = 0
+            assert all([p in permutations for p in possible]), "Possible permuation is impossible!"
             for k in permutations:
                 if all([x == y for x,y in zip(key,k)]):
                     return i
@@ -181,6 +188,7 @@ class ImproperDict(_TransformedDict):
             (refkey[3], refkey[1], refkey[2], refkey[0]): 5
         })
         if not possible is None:
+            assert all([p in permutations for p in possible]), "Possible permuation is impossible!"
             i = 0
             for k in permutations:
                 if all([x == y for x,y in zip(key,k)]):

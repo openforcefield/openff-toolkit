@@ -1798,24 +1798,22 @@ class ParameterHandler(_ParameterAttributeHandler):
         #       by performing this loop in reverse order, and breaking early once
         #       all environments have been matched.
         for parameter_type in self._parameters:
-            # if type(parameter_type) == VirtualSiteHandler.VirtualSiteDivalentLonePairType:
-            #    breakpoint()
-            #if type(parameter_type) == BondHandler:
-            #    pass
+
             matches_for_this_type = defaultdict(list)
 
             ce_matches = entity.chemical_environment_matches(parameter_type.smirks)
-            orders = [ m.topology_atom_indices for m in ce_matches ] 
+            orders = [m.topology_atom_indices for m in ce_matches] 
 
             for environment_match in ce_matches:
                 # Update the matches for this parameter type.
                 handler_match = self._Match(parameter_type, environment_match)
                 key = environment_match.topology_atom_indices
                 
-
                 # only a match if orientation matches
-                # this should probably go into self._Match
-                if hasattr(handler_match._parameter_type, "orientation"):
+                if not hasattr(handler_match._parameter_type, "orientation"):
+                    # usual case (not virtual sites)
+                    matches_for_this_type[key] = handler_match
+                else:
                     orientation = handler_match._parameter_type.orientation
                     orientation = list(map(int, orientation.split(",")))
                     handler_match._parameter_type.multiplicity=len(orders)
@@ -1823,35 +1821,23 @@ class ParameterHandler(_ParameterAttributeHandler):
                         error_msg = (
                             "For parameter of type\n{:s}\norientations {} " +
                             "exceeds length of possible orders " +
-                            "({:d}):\n{:s}").format( str(parameter_type), 
+                            "({:d}):\n{:s}").format(str(parameter_type), 
                                 orientation, len(orders), str(orders))
                         raise IndexError(error_msg)
-                    fn = ImproperDict.index_of
-                    if len(key) < 4:
-                        fn = ValenceDict.index_of
-                    index_of_key = fn(key, possible=orders)
-                    fn = ImproperDict.key_transform
-                    if len(key) < 4:
-                        fn = ValenceDict.key_transform
-                    if not expand_orientation:
-                        key = fn(key)
+                    tdc = handler_match._parameter_type.transformed_dict_cls
 
-                if hasattr(handler_match._parameter_type, "orientation"):
+                    index_of_key = tdc.index_of(key, possible=orders)
+                    if not expand_orientation:
+                        key = tdc.key_transform(key)
+
                     hit = sum([index_of_key == ornt for ornt in orientation])
                     assert hit < 2, "VirtualSite orientation for {:s} indices invalid: Has duplicates".format(parameter_type.__repr__)
                     if hit == 1:
-                        # if expand_orientation:
-                        #     handler_match._parameter_type.orientation = str(index_of_key)
                         matches_for_this_type[key].append(handler_match)
-                else:
-                    matches_for_this_type[key] = handler_match
-                # new_key = environment_match.topology_atom_indices
-                #if matches.get(new_key) is None:
-                #    matches[key] = {}
 
             matches_for_this_type = dict(matches_for_this_type)
             # Update matches of all parameter types.
-            if use_named_slots: # assumes virtualsites for now
+            if use_named_slots:  # assumes virtualsites for now
                 for k in matches_for_this_type:
                     if k not in matches:
                         matches[k] = {}
@@ -3974,6 +3960,7 @@ class VirtualSiteHandler(_NonbondedHandler):
         type            = ParameterAttribute()
         orientation     = ParameterAttribute(default="0", converter=str)
         multiplicity    = ParameterAttribute(default=1, converter=int)
+        transformed_dict_cls = ValenceDict
 
         def add_virtual_site(self, fn, atoms, **kwargs):
             """
@@ -4076,6 +4063,8 @@ class VirtualSiteHandler(_NonbondedHandler):
         """
 
         _ELEMENT_NAME = 'VirtualSiteTrivalentType'
+        transformed_dict_cls = ImproperDict
+        
         def add_virtual_site(self, molecule, atoms, replace=False):
             fn = molecule._add_trivalent_lone_pair_virtual_site
             return super().add_virtual_site(fn, atoms, replace=replace)

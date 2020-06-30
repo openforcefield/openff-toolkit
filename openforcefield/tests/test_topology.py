@@ -22,7 +22,7 @@ from openforcefield.utils import (BASIC_CHEMINFORMATICS_TOOLKITS, RDKIT_AVAILABL
                                   RDKitToolkitWrapper, OpenEyeToolkitWrapper)
 from openforcefield.tests.utils import get_data_file_path
 from openforcefield.tests.test_forcefield import create_cyclohexane, create_ethanol, create_reversed_ethanol
-from openforcefield.topology import Topology, ValenceDict, DuplicateUniqueMoleculeError
+from openforcefield.topology import Topology, ValenceDict, ImproperDict, DuplicateUniqueMoleculeError
 from openforcefield.topology import Molecule
 
 
@@ -425,9 +425,12 @@ class TestTopology(TestCase):
         top_improper_atoms3 = [tuple(a._atom for a in atoms)
                             for atoms in topology_impropers[2*molecule1.n_impropers:]]
 
-        assert_tuple_of_atoms_equal(top_improper_atoms1, mol_improper_atoms1)
-        assert_tuple_of_atoms_equal(top_improper_atoms2, mol_improper_atoms1)
-        assert_tuple_of_atoms_equal(top_improper_atoms3, mol_improper_atoms2)
+        assert_tuple_of_atoms_equal(top_improper_atoms1, mol_improper_atoms1,
+                transformed_dict_cls=ImproperDict)
+        assert_tuple_of_atoms_equal(top_improper_atoms2, mol_improper_atoms1,
+                transformed_dict_cls=ImproperDict)
+        assert_tuple_of_atoms_equal(top_improper_atoms3, mol_improper_atoms2,
+                transformed_dict_cls=ImproperDict)
 
 
     # test_get_fractional_bond_order
