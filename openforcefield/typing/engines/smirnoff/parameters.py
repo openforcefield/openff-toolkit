@@ -1802,7 +1802,7 @@ class ParameterHandler(_ParameterAttributeHandler):
             matches_for_this_type = defaultdict(list)
 
             ce_matches = entity.chemical_environment_matches(parameter_type.smirks)
-            orders = [m.topology_atom_indices for m in ce_matches] 
+                
 
             for environment_match in ce_matches:
                 # Update the matches for this parameter type.
@@ -1814,6 +1814,12 @@ class ParameterHandler(_ParameterAttributeHandler):
                     # usual case (not virtual sites)
                     matches_for_this_type[key] = handler_match
                 else:
+
+                    # the possible orders of this match
+                    # must check that the tuple of atoms are the same
+                    # as they can be different in e.g. formaldehyde
+                    orders = [m.topology_atom_indices for m in ce_matches] 
+                    orders = [order for order in orders if sorted(key) == sorted(order)] 
                     orientation = handler_match._parameter_type.orientation
                     orientation = list(map(int, orientation.split(",")))
                     handler_match._parameter_type.multiplicity=len(orders)
@@ -3988,7 +3994,7 @@ class VirtualSiteHandler(_NonbondedHandler):
                 "epsilon"           : self.epsilon,
                 "sigma"             : self.sigma,
                 "rmin_half"         : self.rmin_half,
-                "orientations"      : self.orientations,
+                "orientations"      : self.orientation,
             }
             kwargs.update( base_args)
 
@@ -4252,9 +4258,10 @@ class VirtualSiteHandler(_NonbondedHandler):
                     found = False
                     for i, vsite_struct in enumerate(combined_orientations):
                         vs_j = vsite_struct[VSITETYPE]
+                        same_atoms = all([sorted(key) == sorted(k) for k in vsite_struct[KEYLIST]])
                         diff_keys = not key in vsite_struct[KEYLIST]
                         same_vsite = same_virtual_site_type(vs_i, vs_j)
-                        if diff_keys and same_vsite:
+                        if same_atoms and diff_keys and same_vsite:
                             combined_orientations[i][1].append(key)
                             found = True
                         if found:
