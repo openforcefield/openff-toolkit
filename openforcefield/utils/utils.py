@@ -146,6 +146,8 @@ def unit_to_string(input_unit):
         The serialized unit.
     """
 
+    if input_unit == unit.dimensionless:
+        return "dimensionless"
 
     # Decompose output_unit into a tuples of (base_dimension_unit, exponent)
     unit_string = None
