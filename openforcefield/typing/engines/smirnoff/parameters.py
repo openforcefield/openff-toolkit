@@ -1750,7 +1750,7 @@ class ParameterHandler(_ParameterAttributeHandler):
             self._parameter_type = parameter_type
             self._environment_match = environment_match
 
-    def find_matches(self, entity):
+    def find_matches(self, entity, expand_orientation=False):
         """Find the elements of the topology/molecule matched by a parameter type.
 
         Parameters
@@ -1767,7 +1767,7 @@ class ParameterHandler(_ParameterAttributeHandler):
 
         # TODO: Right now, this method is only ever called with an entity that is a Topology.
         #  Should we reduce its scope and have a check here to make sure entity is a Topology?
-        return self._find_matches(entity)
+        return self._find_matches(entity, expand_orientation=expand_orientation)
 
     def _find_matches(self, entity, transformed_dict_cls=ValenceDict, 
             use_named_slots=False, variable_keylen=False, expand_orientation=False):
@@ -1830,8 +1830,6 @@ class ParameterHandler(_ParameterAttributeHandler):
                     if len(key) < 4:
                         fn = ValenceDict.index_of
                     index_of_key = fn(key, possible=orders)
-                    #if index_of_key != handler_match._parameter_type.index:
-                    #    continue
                     fn = ImproperDict.key_transform
                     if len(key) < 4:
                         fn = ValenceDict.key_transform
@@ -1855,7 +1853,7 @@ class ParameterHandler(_ParameterAttributeHandler):
                         #     handler_match._parameter_type.orientation = str(index_of_key)
                         matches_for_this_type[key].append(handler_match)
                 else:
-                    matches_for_this_type[key] = [handler_match]
+                    matches_for_this_type[key] = handler_match
                 # new_key = environment_match.topology_atom_indices
                 #if matches.get(new_key) is None:
                 #    matches[key] = {}
@@ -2054,10 +2052,10 @@ class ParameterHandler(_ParameterAttributeHandler):
             unassigned_topology_atom_tuples = []
 
             # Gain access to the relevant topology
-            if type(valence_terms[0]) is TopologyAtom:
-                topology = valence_terms[0].topology_molecule.topology
+            if type(valence_terms) is TopologyAtom:
+                topology = valence_terms.topology_molecule.topology
             else:
-                topology = valence_terms[0][0].topology_molecule.topology
+                topology = valence_terms[0].topology_molecule.topology
             unassigned_str = ''
             for unassigned_tuple in unassigned_terms:
                 unassigned_str += '\n- Topology indices ' + str(unassigned_tuple)
@@ -2165,7 +2163,7 @@ class ConstraintHandler(ParameterHandler):
             # If a distance is specified (constraint.distance != True), add the constraint here.
             # Otherwise, the equilibrium bond length will be used to constrain the atoms in HarmonicBondHandler
             for constraint_match in constraint_matches:
-                constraint = constraint_match[0].parameter_type
+                constraint = constraint_match.parameter_type
 
                 if constraint.distance is None:
                     topology.add_constraint(*atoms, True)
@@ -2239,7 +2237,7 @@ class BondHandler(ParameterHandler):
 
         skipped_constrained_bonds = 0  # keep track of how many bonds were constrained (and hence skipped)
         for (topology_atom_indices, bond_match) in bond_matches.items():
-            bond_match = bond_match[0]
+            bond_match = bond_match
             # Get corresponding particle indices in Topology
             #particle_indices = tuple([ atom.particle_index for atom in atoms ])
 
@@ -2356,7 +2354,7 @@ class AngleHandler(ParameterHandler):
         skipped_constrained_angles = 0  # keep track of how many angles were constrained (and hence skipped)
         for (atoms, angle_match) in angle_matches.items():
 
-            angle_match = angle_match[0]
+            angle_match = angle_match
             # Ensure atoms are actually bonded correct pattern in Topology
             # for (i, j) in [(0, 1), (1, 2)]:
             #     topology.assert_bonded(atoms[i], atoms[j])
@@ -3027,16 +3025,15 @@ class vdWHandler(_NonbondedHandler):
 
 
         # Set the particle Lennard-Jones terms.
-        for atom_key, atom_match_lst in atom_matches.items():
-            for atom_match in atom_match_lst:
-                atom_idx = atom_key[0]
-                ljtype = atom_match.parameter_type
-                if ljtype.sigma is None:
-                    sigma = 2. * ljtype.rmin_half / (2.**(1. / 6.))
-                else:
-                    sigma = ljtype.sigma
-                force.setParticleParameters(atom_idx, 0.0, sigma,
-                                            ljtype.epsilon)
+        for atom_key, atom_match in atom_matches.items():
+            atom_idx = atom_key[0]
+            ljtype = atom_match.parameter_type
+            if ljtype.sigma is None:
+                sigma = 2. * ljtype.rmin_half / (2.**(1. / 6.))
+            else:
+                sigma = ljtype.sigma
+            force.setParticleParameters(atom_idx, 0.0, sigma,
+                                        ljtype.epsilon)
 
         # Check that no atoms (n.b. not particles) are missing force parameters.
         self._check_all_valence_terms_assigned(assigned_terms=atom_matches,
@@ -4380,8 +4377,8 @@ class VirtualSiteHandler(_NonbondedHandler):
                 for top_mol in ms:
                     dprint("top_mol:", top_mol)
                     vsite_exclusion_ids = []
-                    for orientation in vsite._orientations:
-
+                    for vp in vsite.particles:
+                        orientation = vp.orientation      
                         offset = top_mol.particle_start_topology_index
                         sort_key = [orientation.index(i) for i in ref_key]
                         atom_key = [ref_key[i] for i in sort_key]
