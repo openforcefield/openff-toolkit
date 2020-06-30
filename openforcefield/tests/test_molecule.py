@@ -1684,7 +1684,7 @@ class TestMolecule:
         sigma_unitless = 0.1
         rmin_half_unitless = 0.2
         epsilon_unitless = 0.3
-        charge_increments_unitless = [0.1, 0.2, 0.3, 0.4]
+        charge_increments_unitless = [0.1, 0.2]
         distance = distance_unitless * unit.angstrom
         sigma = sigma_unitless * unit.angstrom
         rmin_half = rmin_half_unitless * unit.angstrom
@@ -1732,7 +1732,7 @@ class TestMolecule:
 
         # We should have to give as many charge increments as atoms (len(charge_increments)) = 4
         with pytest.raises(Exception) as excinfo:
-            molecule.add_bond_charge_virtual_site(atoms, distance, charge_increments=charge_increments, replace=True)
+            molecule.add_bond_charge_virtual_site(atoms, distance, charge_increments=[0.0], replace=True)
 
         vsite3_index = molecule.add_bond_charge_virtual_site(atoms, distance, charge_increments=charge_increments, replace=True)
 
