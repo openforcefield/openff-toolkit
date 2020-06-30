@@ -105,6 +105,7 @@ class ValenceDict(_TransformedDict):
     def key_transform(key):
         """Reverse tuple if first element is larger than last element."""
         # Ensure key is a tuple.
+        assert len(key) == 2 or len(key) == 3, "Valence keys must be 2 or 3 atoms"
         key = tuple(key)
         # Reverse the key if the first element is bigger than the last.
         if key[0] > key[-1]:
@@ -157,6 +158,7 @@ class ImproperDict(_TransformedDict):
         """Reorder tuple in numerical order except for element[1] which is the central atom; it retains its position."""
         # Ensure key is a tuple
         key = tuple(key)
+        assert len(key) == 4, "Improper keys must be 4 atoms"
         # Retrieve connected atoms
         connectedatoms = [key[0], key[2], key[3]]
         # Sort connected atoms
