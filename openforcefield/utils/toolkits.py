@@ -2363,6 +2363,9 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         """
         from rdkit import Chem
+
+        file_format = file_format.upper()
+
         mols = list()
         if (file_format == 'MOL') or (file_format == 'SDF'):
             for rdmol in Chem.SupplierFromFilename(file_path, removeHs=False, sanitize=False, strictParsing=True):
