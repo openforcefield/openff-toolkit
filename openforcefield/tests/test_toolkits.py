@@ -87,12 +87,12 @@ rdkit_inchi_isomorphic_fails = ['DrugBank_178', 'DrugBank_246', 'DrugBank_5847',
 # TESTS
 #=============================================================================================
 
+@pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
 class TestOpenEyeToolkitWrapper:
     """Test the OpenEyeToolkitWrapper"""
 
     # TODO: Make separate smiles_add_H and smiles_explicit_H tests
 
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_smiles(self):
         """Test OpenEyeToolkitWrapper to_smiles() and from_smiles()"""
         toolkit_wrapper = OpenEyeToolkitWrapper()
@@ -107,7 +107,6 @@ class TestOpenEyeToolkitWrapper:
         smiles2 = molecule.to_smiles(toolkit_registry=toolkit_wrapper)
         assert smiles == smiles2
 
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_smiles_missing_stereochemistry(self):
         """Test OpenEyeToolkitWrapper to_smiles() and from_smiles()"""
         toolkit_wrapper = OpenEyeToolkitWrapper()
@@ -134,7 +133,6 @@ class TestOpenEyeToolkitWrapper:
     # TODO: test_smiles_round_trip
 
 
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_smiles_add_H(self):
         """Test OpenEyeToolkitWrapper for adding explicit hydrogens"""
         toolkit_wrapper = OpenEyeToolkitWrapper()
@@ -146,7 +144,6 @@ class TestOpenEyeToolkitWrapper:
         smiles2 = molecule.to_smiles(toolkit_registry=toolkit_wrapper)
         assert expected_output_smiles == smiles2
 
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_smiles_charged(self):
         """Test OpenEyeToolkitWrapper functions for reading/writing charged SMILES"""
         toolkit_wrapper = OpenEyeToolkitWrapper()
@@ -157,8 +154,6 @@ class TestOpenEyeToolkitWrapper:
         smiles2 = molecule.to_smiles(toolkit_registry=toolkit_wrapper)
         assert smiles == smiles2
 
-
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_to_from_openeye_core_props_filled(self):
         """Test OpenEyeToolkitWrapper to_openeye() and from_openeye()"""
         toolkit_wrapper = OpenEyeToolkitWrapper()
@@ -229,8 +224,6 @@ class TestOpenEyeToolkitWrapper:
             assert_almost_equal(pc1_ul, pc2_ul, decimal=6)
         assert molecule2.to_smiles(toolkit_registry=toolkit_wrapper) == expected_output_smiles
 
-
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_to_from_openeye_core_props_unset(self):
         """Test OpenEyeToolkitWrapper to_openeye() and from_openeye() when given empty core property fields"""
         toolkit_wrapper = OpenEyeToolkitWrapper()
@@ -275,7 +268,6 @@ class TestOpenEyeToolkitWrapper:
 
         assert molecule2.to_smiles(toolkit_registry=toolkit_wrapper) == expected_output_smiles
 
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_to_from_openeye_none_partial_charges(self):
         """Test to ensure that to_openeye and from_openeye correctly handle None partial charges"""
         import math
@@ -309,8 +301,6 @@ class TestOpenEyeToolkitWrapper:
         for oeatom in oemol2.GetAtoms():
             assert math.isnan(oeatom.GetPartialCharge())
 
-
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_from_openeye_implicit_hydrogen(self):
         """
         Test OpenEyeToolkitWrapper for loading a molecule with implicit
@@ -331,7 +321,6 @@ class TestOpenEyeToolkitWrapper:
         molecule_from_expl = Molecule.from_openeye(oemol_expl)
         assert molecule_from_expl.to_smiles() == molecule_from_impl.to_smiles()
 
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_openeye_from_smiles_hydrogens_are_explicit(self):
         """
         Test to ensure that OpenEyeToolkitWrapper.from_smiles has the proper behavior with
@@ -363,7 +352,6 @@ class TestOpenEyeToolkitWrapper:
                                       hydrogens_are_explicit=False)
         assert offmol.n_atoms == 4
 
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     @pytest.mark.parametrize('molecule', get_mini_drug_bank(OpenEyeToolkitWrapper))
     def test_to_inchi(self, molecule):
         """Test conversion to standard and non-standard InChI"""
@@ -372,7 +360,6 @@ class TestOpenEyeToolkitWrapper:
         inchi = molecule.to_inchi(toolkit_registry=toolkit)
         non_standard = molecule.to_inchi(True, toolkit_registry=toolkit)
 
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     @pytest.mark.parametrize('molecule', get_mini_drug_bank(OpenEyeToolkitWrapper))
     def test_to_inchikey(self, molecule):
         """Test the conversion to standard and non-standard InChIKey"""
@@ -381,7 +368,6 @@ class TestOpenEyeToolkitWrapper:
         inchikey = molecule.to_inchikey(toolkit_registry=toolkit)
         non_standard_key = molecule.to_inchikey(True, toolkit_registry=toolkit)
 
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_from_bad_inchi(self):
         """Test building a molecule from a bad InChI string"""
 
@@ -390,7 +376,6 @@ class TestOpenEyeToolkitWrapper:
         with pytest.raises(RuntimeError):
             mol = Molecule.from_inchi(inchi, toolkit_registry=toolkit)
 
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     @pytest.mark.parametrize('molecule', get_mini_drug_bank(OpenEyeToolkitWrapper))
     def test_non_standard_inchi_round_trip(self, molecule):
         """Test if a molecule can survive an InChi round trip test in some cases the standard InChI
@@ -419,7 +404,6 @@ class TestOpenEyeToolkitWrapper:
             else:
                 assert molecule.is_isomorphic_with(mol2, bond_order_matching=False)
 
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_get_sdf_coordinates(self):
         """Test OpenEyeToolkitWrapper for importing a single set of coordinates from a sdf file"""
 
@@ -429,7 +413,6 @@ class TestOpenEyeToolkitWrapper:
         assert len(molecule.conformers) == 1
         assert molecule.conformers[0].shape == (15,3)
 
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_load_multiconformer_sdf_as_separate_molecules(self):
         """
         Test OpenEyeToolkitWrapper for reading a "multiconformer" SDF, which the OFF
@@ -443,7 +426,6 @@ class TestOpenEyeToolkitWrapper:
         assert len(molecules[1].conformers) == 1
         assert molecules[0].conformers[0].shape == (5, 3)
 
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_load_multiconformer_sdf_as_separate_molecules_properties(self):
         """
         Test OpenEyeToolkitWrapper for reading a "multiconformer" SDF, which the OFF
@@ -467,7 +449,6 @@ class TestOpenEyeToolkitWrapper:
         np.testing.assert_allclose(molecules[1].partial_charges / unit.elementary_charge,
                                    [0.027170, 0.027170, 0.027170, 0.027170, -0.108680])
 
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_write_sdf_charges(self):
         """Test OpenEyeToolkitWrapper for writing partial charges to a sdf file"""
         from io import StringIO
@@ -496,7 +477,6 @@ class TestOpenEyeToolkitWrapper:
         assert_almost_equal(charges, [-0.4, -0.3, -0.2, -0.1, 0.00001, 0.1, 0.2, 0.3, 0.4])
 
 
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_write_sdf_no_charges(self):
         """Test OpenEyeToolkitWrapper for writing an SDF file without charges"""
         from io import StringIO
@@ -511,7 +491,6 @@ class TestOpenEyeToolkitWrapper:
         # out "n/a" (or another placeholder) in the partial charge block atoms without charges.
         assert '<atom.dprop.PartialCharge>' not in sdf_text
 
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_sdf_properties_roundtrip(self):
         """Test OpenEyeToolkitWrapper for performing a round trip of a molecule with defined partial charges
         and entries in the properties dict to and from a sdf file"""
@@ -536,9 +515,6 @@ class TestOpenEyeToolkitWrapper:
         assert ethanol2.partial_charges is None
         assert ethanol2.properties == {}
 
-
-
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_write_multiconformer_mol_as_sdf(self):
         """
         Test OpenEyeToolkitWrapper for writing a multiconformer molecule to SDF. The OFF toolkit should only
@@ -567,8 +543,6 @@ class TestOpenEyeToolkitWrapper:
         # Ensure the SECOND conformer's first atom's X coordinate is NOT in the file
         assert str(ethanol.conformers[1][0][0].in_units_of(unit.angstrom))[:5] not in data
 
-
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_get_mol2_coordinates(self):
         """Test OpenEyeToolkitWrapper for importing a single set of molecule coordinates"""
         toolkit_wrapper = OpenEyeToolkitWrapper()
@@ -595,7 +569,6 @@ class TestOpenEyeToolkitWrapper:
         assert molecule3.conformers[0].shape == (15, 3)
         assert_almost_equal(molecule3.conformers[0][5][1] / unit.angstrom, 22.98, decimal=2)
 
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_get_mol2_charges(self):
         """Test OpenEyeToolkitWrapper for importing a mol2 file specifying partial charges"""
         toolkit_wrapper = OpenEyeToolkitWrapper()
@@ -613,9 +586,6 @@ class TestOpenEyeToolkitWrapper:
             pc2_ul = pc2 / unit.elementary_charge
             assert_almost_equal(pc1_ul, pc2_ul, decimal=4)
 
-
-
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_mol2_charges_roundtrip(self):
         """Test OpenEyeToolkitWrapper for performing a round trip of a molecule with partial charge to and from
         a mol2 file"""
@@ -641,8 +611,6 @@ class TestOpenEyeToolkitWrapper:
         assert ethanol2.partial_charges is None
         assert ethanol2.properties == {}
 
-
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_get_mol2_gaff_atom_types(self):
         """Test that a warning is raised OpenEyeToolkitWrapper when it detects GAFF atom types in a mol2 file."""
         toolkit_wrapper = OpenEyeToolkitWrapper()
@@ -650,7 +618,6 @@ class TestOpenEyeToolkitWrapper:
         with pytest.warns(GAFFAtomTypeWarning, match='SYBYL'):
             Molecule.from_file(mol2_file_path, toolkit_registry=toolkit_wrapper)
 
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_generate_conformers(self):
         """Test OpenEyeToolkitWrapper generate_conformers()"""
         toolkit_wrapper = OpenEyeToolkitWrapper()
@@ -660,7 +627,6 @@ class TestOpenEyeToolkitWrapper:
         assert molecule.n_conformers != 0
         assert not(molecule.conformers[0] == (0.*unit.angstrom)).all()
 
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_generate_multiple_conformers(self):
         """Test OpenEyeToolkitWrapper generate_conformers() for generating multiple conformers"""
         toolkit_wrapper = OpenEyeToolkitWrapper()
@@ -686,7 +652,6 @@ class TestOpenEyeToolkitWrapper:
                                       toolkit_registry=toolkit_wrapper)
         assert molecule2.n_conformers == 10
 
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_compute_partial_charges_am1bcc(self):
         """Test OpenEyeToolkitWrapper compute_partial_charges_am1bcc()"""
         toolkit_registry = ToolkitRegistry(toolkit_precedence=[OpenEyeToolkitWrapper])
@@ -700,7 +665,6 @@ class TestOpenEyeToolkitWrapper:
         assert abs(charge_sum) < 0.005 * unit.elementary_charge
         assert abs_charge_sum > 0.25 * unit.elementary_charge
 
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_compute_partial_charges_am1bcc_net_charge(self):
         """Test OpenEyeToolkitWrapper assign_partial_charges() on a molecule with a net +1 charge"""
         toolkit_registry = ToolkitRegistry(toolkit_precedence=[OpenEyeToolkitWrapper])
@@ -711,7 +675,6 @@ class TestOpenEyeToolkitWrapper:
             charge_sum += pc
         assert -0.999 * unit.elementary_charge > charge_sum > -1.001 * unit.elementary_charge
 
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_compute_partial_charges_am1bcc_wrong_n_confs(self):
         """
         Test OpenEyeToolkitWrapper compute_partial_charges_am1bcc() when requesting to use an incorrect number of
@@ -729,10 +692,6 @@ class TestOpenEyeToolkitWrapper:
         # recommended number of confs will be generated
         molecule.compute_partial_charges_am1bcc(toolkit_registry=toolkit_registry,
                                                 strict_n_conformers=True)
-
-
-
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     @pytest.mark.parametrize("partial_charge_method", ['am1bcc', 'am1-mulliken', 'gasteiger'])
     def test_assign_partial_charges_neutral(self, partial_charge_method):
         """Test OpenEyeToolkitWrapper assign_partial_charges()"""
@@ -746,7 +705,6 @@ class TestOpenEyeToolkitWrapper:
             charge_sum += pc
         assert -1.e-5 < charge_sum.value_in_unit(unit.elementary_charge) < 1.e-5
 
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     @pytest.mark.parametrize("partial_charge_method", ['am1bcc', 'am1-mulliken'])
     def test_assign_partial_charges_conformer_dependence(self, partial_charge_method):
         """Test OpenEyeToolkitWrapper assign_partial_charges()'s use_conformers kwarg
@@ -770,7 +728,6 @@ class TestOpenEyeToolkitWrapper:
         for pc1, pc2 in zip(pcs1, molecule.partial_charges):
             assert abs(pc1 - pc2) > 1.e-5 * unit.elementary_charge
 
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     @pytest.mark.parametrize("partial_charge_method", ['am1bcc', 'am1-mulliken', 'gasteiger'])
     def test_assign_partial_charges_net_charge(self, partial_charge_method):
         """
@@ -786,7 +743,6 @@ class TestOpenEyeToolkitWrapper:
             charge_sum += pc
         assert -1.e-5 < charge_sum.value_in_unit(unit.elementary_charge) + 1. < 1.e-5
 
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_assign_partial_charges_bad_charge_method(self):
         """Test OpenEyeToolkitWrapper assign_partial_charges() for a nonexistent charge method"""
         from openforcefield.tests.test_forcefield import create_ethanol
@@ -805,7 +761,6 @@ class TestOpenEyeToolkitWrapper:
             OETKW.assign_partial_charges(molecule=molecule,
                                          partial_charge_method="NotARealChargeMethod")
 
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     @pytest.mark.parametrize("partial_charge_method,expected_n_confs", [('am1bcc', 1),
                                                                         ('am1-mulliken', 1),
                                                                         ('gasteiger', 0)])
@@ -857,7 +812,6 @@ class TestOpenEyeToolkitWrapper:
                                          use_conformers=molecule.conformers,
                                          strict_n_conformers=True)
 
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_compute_partial_charges_failure(self):
         """Test OpenEyeToolkitWrapper compute_partial_charges() on a molecule it cannot assign charges to"""
 
@@ -872,8 +826,6 @@ class TestOpenEyeToolkitWrapper:
             assert "Unable to assign charges" in str(excinfo)
             assert "OE Error: " in str(excinfo)
 
-
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_compute_partial_charges_trans_cooh_am1bcc(self):
         """Test OpenEyeToolkitWrapper for computing partial charges for problematic molecules, as exemplified by
         Issue 346 (https://github.com/openforcefield/openforcefield/issues/346)"""
@@ -883,8 +835,6 @@ class TestOpenEyeToolkitWrapper:
         lysine.generate_conformers(toolkit_registry=toolkit_wrapper)
         lysine.compute_partial_charges_am1bcc(toolkit_registry=toolkit_wrapper)
 
-
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_assign_fractional_bond_orders(self):
         """Test OpenEyeToolkitWrapper assign_fractional_bond_orders()"""
 
@@ -898,8 +848,6 @@ class TestOpenEyeToolkitWrapper:
             # TODO: Add test for equivalent Wiberg orders for equivalent bonds
 
 
-
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_assign_fractional_bond_orders_neutral_charge_mol(self):
         """Test OpenEyeToolkitWrapper assign_fractional_bond_orders() for neutral and charged molecule"""
 
@@ -961,7 +909,6 @@ class TestOpenEyeToolkitWrapper:
             # Wiberg bond order of C-O bond is higher in the anion
             assert (wbo_C_O_anion > wbo_C_O_neutral)
 
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_assign_fractional_bond_orders_charged(self):
         """Test OpenEyeToolkitWrapper assign_fractional_bond_orders() on a molecule with net charge +1"""
 
@@ -974,7 +921,6 @@ class TestOpenEyeToolkitWrapper:
                                                    bond_order_model=bond_order_model)
             # TODO: Add test for equivalent Wiberg orders for equivalent bonds
 
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_assign_fractional_bond_orders_invalid_method(self):
         """
         Test that OpenEyeToolkitWrapper assign_fractional_bond_orders() raises the
@@ -990,8 +936,6 @@ class TestOpenEyeToolkitWrapper:
             molecule.assign_fractional_bond_orders(toolkit_registry=toolkit_wrapper,
                                                     bond_order_model='not a real bond order model')
 
-
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_assign_fractional_bond_orders_double_bond(self):
         """Test OpenEyeToolkitWrapper assign_fractional_bond_orders() on a molecule with a double bond"""
 
@@ -1011,7 +955,6 @@ class TestOpenEyeToolkitWrapper:
                     double_bond_has_wbo_near_2 = True
         assert double_bond_has_wbo_near_2
 
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_substructure_search_on_large_molecule(self):
         """Test OpenEyeToolkitWrapper substructure search when a large number hits are found"""
 
@@ -1098,10 +1041,10 @@ class TestOpenEyeToolkitWrapper:
 
 
 
+@pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
 class TestRDKitToolkitWrapper:
     """Test the RDKitToolkitWrapper"""
     
-    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
     def test_smiles(self):
         """Test RDKitToolkitWrapper to_smiles() and from_smiles()"""
         toolkit_wrapper = RDKitToolkitWrapper()
@@ -1115,7 +1058,6 @@ class TestRDKitToolkitWrapper:
         #print(smiles, smiles2)
         assert smiles == smiles2
 
-    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
     @pytest.mark.parametrize("smiles,exception_regex", [
         (r"C\C(F)=C(/F)CC(C)(Cl)Br", "Undefined chiral centers"),
         (r"C\C(F)=C(/F)C[C@@](C)(Cl)Br", None),
@@ -1136,7 +1078,6 @@ class TestRDKitToolkitWrapper:
 
     # TODO: test_smiles_round_trip
 
-    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
     def test_smiles_add_H(self):
         """Test RDKitToolkitWrapper to_smiles() and from_smiles()"""
         toolkit_wrapper = RDKitToolkitWrapper()
@@ -1148,7 +1089,6 @@ class TestRDKitToolkitWrapper:
         smiles2 = molecule.to_smiles(toolkit_registry=toolkit_wrapper)
         assert smiles2 == expected_output_smiles
 
-    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_rdkit_from_smiles_hydrogens_are_explicit(self):
         """
         Test to ensure that RDKitToolkitWrapper.from_smiles has the proper behavior with
@@ -1180,7 +1120,6 @@ class TestRDKitToolkitWrapper:
                                       hydrogens_are_explicit=False)
         assert offmol.n_atoms == 4
 
-    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
     @pytest.mark.parametrize('molecule', get_mini_drug_bank(RDKitToolkitWrapper))
     def test_to_inchi(self, molecule):
         """Test conversion to standard and non-standard InChI"""
@@ -1189,7 +1128,6 @@ class TestRDKitToolkitWrapper:
         inchi = molecule.to_inchi(toolkit_registry=toolkit)
         non_standard = molecule.to_inchi(fixed_hydrogens=True,toolkit_registry=toolkit)
 
-    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
     @pytest.mark.parametrize('molecule', get_mini_drug_bank(RDKitToolkitWrapper))
     def test_to_inchikey(self, molecule):
         """Test the conversion to standard and non-standard InChIKey"""
@@ -1198,7 +1136,6 @@ class TestRDKitToolkitWrapper:
         inchikey = molecule.to_inchikey(toolkit_registry=toolkit)
         non_standard_key = molecule.to_inchikey(fixed_hydrogens=True, toolkit_registry=toolkit)
 
-    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
     def test_from_bad_inchi(self):
         """Test building a molecule from a bad InChI string"""
 
@@ -1217,7 +1154,6 @@ class TestRDKitToolkitWrapper:
                    'fixed_hydrogen_inchi': 'InChI=1/C6H12/c1-2-4-6-5-3-1/h1-6H2'}
                   ]
 
-    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
     @pytest.mark.parametrize('data', inchi_data)
     def test_from_inchi(self, data):
         """Test building a molecule from standard and non-standard InChI strings."""
@@ -1244,7 +1180,6 @@ class TestRDKitToolkitWrapper:
 
         compare_mols(ref_mol, nonstandard_inchi_mol)
 
-    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
     @pytest.mark.parametrize('molecule', get_mini_drug_bank(RDKitToolkitWrapper))
     def test_non_standard_inchi_round_trip(self, molecule):
         """Test if a molecule can survive an InChi round trip test in some cases the standard InChI
@@ -1274,7 +1209,6 @@ class TestRDKitToolkitWrapper:
             else:
                 assert molecule.is_isomorphic_with(mol2, bond_order_matching=False)
 
-    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
     def test_smiles_charged(self):
         """Test RDKitWrapper functions for reading/writing charged SMILES"""
         toolkit_wrapper = RDKitToolkitWrapper()
@@ -1285,7 +1219,6 @@ class TestRDKitToolkitWrapper:
         smiles2 = molecule.to_smiles(toolkit_registry=toolkit_wrapper)
         assert smiles == smiles2
 
-    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
     def test_to_from_rdkit_core_props_filled(self):
         """Test RDKitToolkitWrapper to_rdkit() and from_rdkit() when given populated core property fields"""
         toolkit_wrapper = RDKitToolkitWrapper()
@@ -1352,7 +1285,6 @@ class TestRDKitToolkitWrapper:
         assert molecule2.to_smiles(toolkit_registry=toolkit_wrapper) == expected_output_smiles
         # TODO: This should be its own test
 
-    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
     def test_to_from_rdkit_core_props_unset(self):
         """Test RDKitToolkitWrapper to_rdkit() and from_rdkit() when given empty core property fields"""
         toolkit_wrapper = RDKitToolkitWrapper()
@@ -1396,7 +1328,6 @@ class TestRDKitToolkitWrapper:
 
         assert molecule2.to_smiles(toolkit_registry=toolkit_wrapper) == expected_output_smiles
         
-    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
     def test_get_sdf_coordinates(self):
         """Test RDKitToolkitWrapper for importing a single set of coordinates from a sdf file"""
         toolkit_wrapper = RDKitToolkitWrapper()
@@ -1406,7 +1337,6 @@ class TestRDKitToolkitWrapper:
         assert molecule.conformers[0].shape == (15, 3)
         assert_almost_equal(molecule.conformers[0][5][1] / unit.angstrom, 2.0104, decimal=4)
 
-    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
     def test_read_sdf_charges(self):
         """Test RDKitToolkitWrapper for importing a charges from a sdf file"""
         toolkit_wrapper = RDKitToolkitWrapper()
@@ -1416,7 +1346,6 @@ class TestRDKitToolkitWrapper:
         assert molecule.partial_charges[0] == -0.4 * unit.elementary_charge
         assert molecule.partial_charges[-1] == 0.4 * unit.elementary_charge
 
-    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
     def test_write_sdf_charges(self):
         """Test RDKitToolkitWrapper for writing partial charges to a sdf file"""
         from io import StringIO
@@ -1446,7 +1375,6 @@ class TestRDKitToolkitWrapper:
         assert_almost_equal(charges, [-0.4, -0.3, -0.2, -0.1, 0.00001, 0.1, 0.2, 0.3, 0.4])
 
 
-    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
     def test_sdf_properties_roundtrip(self):
         """Test RDKitToolkitWrapper for performing a round trip of a molecule with defined partial charges
         and entries in the properties dict to and from a sdf file"""
@@ -1468,8 +1396,6 @@ class TestRDKitToolkitWrapper:
         assert ethanol2.partial_charges is None
         assert ethanol2.properties == {}
 
-
-    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
     def test_write_sdf_no_charges(self):
         """Test RDKitToolkitWrapper for writing an SDF file with no charges"""
         from io import StringIO
@@ -1484,8 +1410,6 @@ class TestRDKitToolkitWrapper:
         # out "n/a" (or another placeholder) in the partial charge block atoms without charges.
         assert '>  <atom.dprop.PartialCharge>' not in sdf_text
 
-
-    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
     def test_load_multiconformer_sdf_as_separate_molecules(self):
         """
         Test RDKitToolkitWrapper for reading a "multiconformer" SDF, which the OFF
@@ -1499,7 +1423,6 @@ class TestRDKitToolkitWrapper:
         assert len(molecules[1].conformers) == 1
         assert molecules[0].conformers[0].shape == (5, 3)
 
-    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
     def test_load_multiconformer_sdf_as_separate_molecules_properties(self):
         """
         Test RDKitToolkitWrapper for reading a "multiconformer" SDF, which the OFF
@@ -1522,7 +1445,6 @@ class TestRDKitToolkitWrapper:
         np.testing.assert_allclose(molecules[1].partial_charges / unit.elementary_charge,
                                    [0.027170, 0.027170, 0.027170, 0.027170, -0.108680])
 
-    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
     def test_write_multiconformer_mol_as_sdf(self):
         """
         Test RDKitToolkitWrapper for writing a multiconformer molecule to SDF. The OFF toolkit should only
@@ -1551,7 +1473,6 @@ class TestRDKitToolkitWrapper:
         # Ensure the SECOND conformer's first atom's X coordinate is NOT in the file
         assert str(ethanol.conformers[1][0][0].in_units_of(unit.angstrom))[:5] not in data
 
-    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
     def test_write_milticonformer_pdb(self):
         """
         Make sure RDKit can write multi conformer PDB files.
@@ -1574,7 +1495,6 @@ class TestRDKitToolkitWrapper:
 
     # Unskip this when we implement PDB-reading support for RDKitToolkitWrapper
     @pytest.mark.skip
-    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
     def test_get_pdb_coordinates(self):
         """Test RDKitToolkitWrapper for importing a single set of coordinates from a pdb file"""
         toolkit_wrapper = RDKitToolkitWrapper()
@@ -1585,7 +1505,6 @@ class TestRDKitToolkitWrapper:
 
     # Unskip this when we implement PDB-reading support for RDKitToolkitWrapper
     @pytest.mark.skip
-    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
     def test_load_aromatic_pdb(self):
         """Test OpenEyeToolkitWrapper for importing molecule conformers"""
         toolkit_wrapper = RDKitToolkitWrapper()
@@ -1594,7 +1513,6 @@ class TestRDKitToolkitWrapper:
         assert len(molecule.conformers) == 1
         assert molecule.conformers[0].shape == (15,3)
 
-    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
     def test_generate_conformers(self):
         """Test RDKitToolkitWrapper generate_conformers()"""
         toolkit_wrapper = RDKitToolkitWrapper()
@@ -1603,7 +1521,6 @@ class TestRDKitToolkitWrapper:
         molecule.generate_conformers()
         # TODO: Make this test more robust
 
-    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
     def test_generate_multiple_conformers(self):
         """Test RDKitToolkitWrapper generate_conformers() for generating multiple conformers"""
         toolkit_wrapper = RDKitToolkitWrapper()
@@ -1629,7 +1546,6 @@ class TestRDKitToolkitWrapper:
                                       toolkit_registry=toolkit_wrapper)
         assert molecule2.n_conformers == 10
 
-    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
     def test_find_rotatable_bonds(self):
         """Test finding rotatable bonds while ignoring some groups"""
 
@@ -1697,7 +1613,6 @@ class TestRDKitToolkitWrapper:
         bonds = toluene.find_rotatable_bonds(ignore_functional_groups=terminal_backwards)
         assert bonds == []
 
-    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
     def test_to_rdkit_losing_aromaticity_(self):
         # test the example given in issue #513
         # <https://github.com/openforcefield/openforcefield/issues/513>
@@ -1723,11 +1638,11 @@ class TestRDKitToolkitWrapper:
 
 
 
+@pytest.mark.skipif(not RDKitToolkitWrapper.is_available() or not AmberToolsToolkitWrapper.is_available(),
+                    reason='RDKitToolkit and AmberToolsToolkit not available')
 class TestAmberToolsToolkitWrapper:
     """Test the AmberToolsToolkitWrapper"""
 
-    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available() or not AmberToolsToolkitWrapper.is_available(),
-                    reason='RDKitToolkit and AmberToolsToolkit not available')
     def test_compute_partial_charges_am1bcc(self):
         """Test AmberToolsToolkitWrapper compute_partial_charges_am1bcc()"""
         toolkit_registry = ToolkitRegistry(toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper])
@@ -1741,8 +1656,6 @@ class TestAmberToolsToolkitWrapper:
         assert abs(charge_sum) < 0.001 * unit.elementary_charge
         assert abs_charge_sum > 0.25 * unit.elementary_charge
 
-    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available() or not AmberToolsToolkitWrapper.is_available(),
-                        reason='RDKitToolkit and AmberToolsToolkit not available')
     def test_compute_partial_charges_am1bcc_net_charge(self):
         """Test AmberToolsToolkitWrapper assign_partial_charges() on a molecule with a net -1 charge"""
         toolkit_registry = ToolkitRegistry(toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper])
@@ -1753,8 +1666,6 @@ class TestAmberToolsToolkitWrapper:
             charge_sum += pc
         assert -0.99 * unit.elementary_charge > charge_sum > -1.01 * unit.elementary_charge
 
-    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available() or not AmberToolsToolkitWrapper.is_available(),
-                        reason='RDKitToolkit and AmberToolsToolkit not available')
     def test_compute_partial_charges_am1bcc_wrong_n_confs(self):
         """
         Test AmberToolsToolkitWrapper compute_partial_charges_am1bcc() when requesting to use an incorrect number of
@@ -1810,9 +1721,6 @@ class TestAmberToolsToolkitWrapper:
                                                  use_conformers=molecule.conformers,
                                                  strict_n_conformers=True)
 
-
-    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available() or not AmberToolsToolkitWrapper.is_available(),
-                        reason='RDKitToolkit and AmberToolsToolkit not available')
     @pytest.mark.parametrize("partial_charge_method", ['am1bcc', 'am1-mulliken', 'gasteiger'])
     def test_assign_partial_charges_neutral(self, partial_charge_method):
         """Test AmberToolsToolkitWrapper assign_partial_charges()"""
@@ -1826,8 +1734,6 @@ class TestAmberToolsToolkitWrapper:
             charge_sum += pc
         assert -1.e-5 < charge_sum.value_in_unit(unit.elementary_charge) < 1.e-5
 
-    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available() or not AmberToolsToolkitWrapper.is_available(),
-                        reason='RDKitToolkit and AmberToolsToolkit not available')
     @pytest.mark.parametrize("partial_charge_method", ['am1bcc', 'am1-mulliken'])
     def test_assign_partial_charges_conformer_dependence(self, partial_charge_method):
         """Test AmberToolsToolkitWrapper assign_partial_charges()'s use_conformers kwarg
@@ -1851,8 +1757,6 @@ class TestAmberToolsToolkitWrapper:
         for pc1, pc2 in zip(pcs1, molecule.partial_charges):
             assert abs(pc1 - pc2) > 1.e-3 * unit.elementary_charge
 
-    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available() or not AmberToolsToolkitWrapper.is_available(),
-                        reason='RDKitToolkit and AmberToolsToolkit not available')
     @pytest.mark.parametrize("partial_charge_method", ['am1bcc', 'am1-mulliken', 'gasteiger'])
     def test_assign_partial_charges_net_charge(self, partial_charge_method):
         """
@@ -1868,9 +1772,6 @@ class TestAmberToolsToolkitWrapper:
             charge_sum += pc
         assert -1.01 < charge_sum.value_in_unit(unit.elementary_charge) < -0.99
 
-
-    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available() or not AmberToolsToolkitWrapper.is_available(),
-                        reason='RDKitToolkit and AmberToolsToolkit not available')
     def test_assign_partial_charges_bad_charge_method(self):
         """Test AmberToolsToolkitWrapper assign_partial_charges() for a nonexistent charge method"""
         from openforcefield.tests.test_forcefield import create_ethanol
@@ -1890,8 +1791,6 @@ class TestAmberToolsToolkitWrapper:
                                          partial_charge_method="NotARealChargeMethod")
 
 
-    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available() or not AmberToolsToolkitWrapper.is_available(),
-                        reason='RDKitToolkit and AmberToolsToolkit not available')
     @pytest.mark.parametrize("partial_charge_method,expected_n_confs", [('am1bcc', 1),
                                                                         ('am1-mulliken', 1),
                                                                         ('gasteiger', 0)])
@@ -1943,8 +1842,6 @@ class TestAmberToolsToolkitWrapper:
                                          use_conformers=molecule.conformers,
                                          strict_n_conformers=True)
 
-    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available() or not AmberToolsToolkitWrapper.is_available(),
-                        reason='RDKitToolkit and AmberToolsToolkit not available')
     def test_assign_fractional_bond_orders(self):
         """Test OpenEyeToolkitWrapper assign_fractional_bond_orders()"""
 
@@ -1955,8 +1852,6 @@ class TestAmberToolsToolkitWrapper:
             molecule.assign_fractional_bond_orders(toolkit_registry=toolkit_registry, bond_order_model=bond_order_model)
             # TODO: Add test for equivalent Wiberg orders for equivalent bonds
 
-    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available() or not AmberToolsToolkitWrapper.is_available(),
-                        reason='RDKitToolkit and AmberToolsToolkit not available')
     def test_assign_fractional_bond_orders_neutral_charge_mol(self):
         """Test OpenEyeToolkitWrapper assign_fractional_bond_orders() for neutral and charged molecule.
         Also tests using existing conformers"""
@@ -2020,8 +1915,6 @@ class TestAmberToolsToolkitWrapper:
             # Wiberg bond order of C-O bond is higher in the anion
             assert (wbo_C_O_anion > wbo_C_O_neutral)
 
-    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available() or not AmberToolsToolkitWrapper.is_available(),
-                        reason='RDKitToolkit and AmberToolsToolkit not available')
     def test_assign_fractional_bond_orders_charged(self):
         """Test OpenEyeToolkitWrapper assign_fractional_bond_orders() on a molecule with net charge +1"""
 
@@ -2033,8 +1926,6 @@ class TestAmberToolsToolkitWrapper:
                                                     bond_order_model=bond_order_model)
             # TODO: Add test for equivalent Wiberg orders for equivalent bonds
 
-    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available() or not AmberToolsToolkitWrapper.is_available(),
-                        reason='RDKitToolkit and AmberToolsToolkit not available')
     def test_assign_fractional_bond_orders_invalid_method(self):
         """
         Test that AmberToolsToolkitWrapper.assign_fractional_bond_orders() raises the
@@ -2051,8 +1942,6 @@ class TestAmberToolsToolkitWrapper:
             molecule.assign_fractional_bond_orders(toolkit_registry=AmberToolsToolkitWrapper(),
                                                    bond_order_model='not a real charge model')
 
-    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available() or not AmberToolsToolkitWrapper.is_available(),
-                        reason='RDKitToolkit and AmberToolsToolkit not available')
     def test_assign_fractional_bond_orders_double_bond(self):
         """Test OpenEyeToolkitWrapper assign_fractional_bond_orders() on a molecule with a double bond"""
 
