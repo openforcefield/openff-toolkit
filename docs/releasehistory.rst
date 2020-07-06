@@ -7,6 +7,15 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 * ``minor`` increments add features but do not break API compatibility
 * ``micro`` increments represent bugfix releases or improvements in documentation
 
+0.7.0 - Current development
+---------------------------
+
+New features
+""""""""""""
+- `PR #614 <https://github.com/openforcefield/openforcefield/pull/614>`_: Adds 
+  :py:meth:`ToolkitRegistry.deregister_toolkit <openforcefield.utils.toolkits.ToolkitRegistry.deregister_toolki>` 
+  to de-register registered toolkits, which can include toolkit wrappers loaded into `GLOBAL_TOOLKIT_REGISTRY` by default.
+
 0.7.0 - Charge Increment Model, Proper Torsion interpolation, and new Molecule methods
 --------------------------------------------------------------------------------------
 
