@@ -19,6 +19,9 @@ Bugfixes
 - `PR #631 <https://github.com/openforcefield/openforcefield/pull/631>`_: Fixes a bug in which calling
   :py:meth:`openforcefield.utils.utils.utils.unit_to_string <openforcefield.utils.utils.unit_to_string>` returned
   ``None`` when the unit is dimensionless. Now ``"dimensionless"`` is returned.
+- `PR #630 <https://github.com/openforcefield/openforcefield/pull/630>`_: Closes issue `Issue #629 
+  <https://github.com/openforcefield/openforcefield/issues/629>`_ in which the wrong exception is raised when
+  attempting to instantiate a ``ForceField`` from an unparsable string.
 
 New features
 """"""""""""
