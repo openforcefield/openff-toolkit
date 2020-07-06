@@ -1217,6 +1217,26 @@ class TestForceField():
                 forcefield.get_parameter_handler('Electrostatics', {}).method = electrostatics_method
                 omm_system = forcefield.create_openmm_system(topology)
 
+    def test_registered_parameter_handlers(self):
+        """Test registered_parameter_handlers property"""
+        forcefield = ForceField('test_forcefields/smirnoff99Frosst.offxml')
+        registered_handlers = forcefield.registered_parameter_handlers
+
+        expected_handlers = [
+            'Bonds',
+            'Angles',
+            'ProperTorsions',
+            'ImproperTorsions',
+            'vdW',
+            'Electrostatics',
+            'ToolkitAM1BCC',
+        ]
+
+        for expected_handler in expected_handlers:
+            assert expected_handler in registered_handlers
+
+        assert 'LibraryChrages' not in registered_handlers
+
     def test_parameter_handler_lookup(self):
         """Ensure __getitem__ lookups work"""
         forcefield = ForceField('test_forcefields/smirnoff99Frosst.offxml')
