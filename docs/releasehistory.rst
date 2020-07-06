@@ -7,6 +7,22 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 * ``minor`` increments add features but do not break API compatibility
 * ``micro`` increments represent bugfix releases or improvements in documentation
 
+0.7.1 - Current development
+---------------------------
+
+Bugfixes
+""""""""
+- `PR #634 <https://github.com/openforcefield/openforcefield/pull/634>`_: Fixes a bug in which calling 
+  :py:meth:`RDKitToolkitWrapper.from_file <openforcefield.utils.toolkits.RDKitToolkitWrapper.from_file>` directly
+  would not load files correctly if passed lowercase `file_format`. Note that this bug did not occur when calling
+  :`Molecule.from_file` <openforcefield.topology.molecule.Molecule.from_file>`.
+
+New features
+""""""""""""
+- `PR #632 <https://github.com/openforcefield/openforcefield/pull/632>`_: Adds
+  :py:meth:`ForceField.registered_parameter_handlers 
+  <openforcefield.typing.engines.smirnoff.forcefield.ForceField.registered_parameter_handlers>`
+
 0.7.0 - Charge Increment Model, Proper Torsion interpolation, and new Molecule methods
 --------------------------------------------------------------------------------------
 

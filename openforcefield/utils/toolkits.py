@@ -676,7 +676,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         from openeye import oechem
         oemol = self.to_openeye(molecule)
         ofs = oechem.oemolostream(file_path)
-        openeye_format = getattr(oechem, 'OEFormat_' + file_format)
+        openeye_format = getattr(oechem, 'OEFormat_' + file_format.upper())
         ofs.SetFormat(openeye_format)
 
         # OFFTK strictly treats SDF as a single-conformer format.
@@ -2363,6 +2363,9 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         """
         from rdkit import Chem
+
+        file_format = file_format.upper()
+
         mols = list()
         if (file_format == 'MOL') or (file_format == 'SDF'):
             for rdmol in Chem.SupplierFromFilename(file_path, removeHs=False, sanitize=False, strictParsing=True):
