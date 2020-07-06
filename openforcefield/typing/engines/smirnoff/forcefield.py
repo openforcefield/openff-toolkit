@@ -983,14 +983,14 @@ class ForceField:
                 smirnoff_data = parameter_io_handler.parse_file(source)
                 return smirnoff_data
             except ParseError as e:
-                exception_msg = str(e)
+                exception_msg = e.msg
             except (FileNotFoundError, OSError):
                 # If this is not a file path or a file handle, attempt parsing as a string.
                 try:
                     smirnoff_data = parameter_io_handler.parse_string(source)
                     return smirnoff_data
                 except ParseError as e:
-                    exception_msg = str(e)
+                    exception_msg = e.msg
 
         # If we haven't returned by now, the parsing was unsuccessful
         valid_formats = [
