@@ -556,6 +556,19 @@ class ForceField:
                     self._parameter_io_handlers[io_format]))
         self._parameter_io_handlers[io_format] = parameter_io_handler
 
+    @property
+    def registered_parameter_handlers(self):
+        """
+        Return the list of registered parameter handlers by name
+
+        .. warning :: This API is experimental and subject to change.
+
+        Returns
+        -------
+            registered_parameter_handlers: iterable of names of ParameterHandler objects in this ForceField
+
+        """
+        return [*self._parameter_handlers.keys()]
 
     # TODO: Do we want to make this optional?
 
