@@ -17,6 +17,12 @@ Bugfixes
   would not load files correctly if passed lowercase `file_format`. Note that this bug did not occur when calling
   :`Molecule.from_file` <openforcefield.topology.molecule.Molecule.from_file>`.
 
+New features
+""""""""""""
+- `PR #632 <https://github.com/openforcefield/openforcefield/pull/632>`_: Adds
+  :py:meth:`ForceField.registered_parameter_handlers 
+  <openforcefield.typing.engines.smirnoff.forcefield.ForceField.registered_parameter_handlers>`
+
 0.7.0 - Charge Increment Model, Proper Torsion interpolation, and new Molecule methods
 --------------------------------------------------------------------------------------
 
