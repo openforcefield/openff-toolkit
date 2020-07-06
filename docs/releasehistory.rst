@@ -16,6 +16,9 @@ Bugfixes
   :py:meth:`RDKitToolkitWrapper.from_file <openforcefield.utils.toolkits.RDKitToolkitWrapper.from_file>` directly
   would not load files correctly if passed lowercase `file_format`. Note that this bug did not occur when calling
   :`Molecule.from_file` <openforcefield.topology.molecule.Molecule.from_file>`.
+- `PR #631 <https://github.com/openforcefield/openforcefield/pull/631>`_: Fixes a bug in which calling
+  :py:meth:`openforcefield.utils.utils.utils.unit_to_string <openforcefield.utils.utils.unit_to_string>` returned
+  ``None`` when the unit is dimensionless. Now ``"dimensionless"`` is returned.
 
 New features
 """"""""""""
