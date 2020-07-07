@@ -470,6 +470,21 @@ class TestOpenEyeToolkitWrapper:
                                    [0.027170, 0.027170, 0.027170, 0.027170, -0.108680])
 
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
+    def test_file_extension_case(self):
+        """
+        Test round-trips of some file extensions when called directly from the toolkit wrappers,
+        including lower- and uppercase file extensions. Note that this test does not ensure
+        accuracy, it only tests that reading/writing without raising an exception.
+        """
+        mols_in = OpenEyeToolkitWrapper().from_file(file_path=get_data_file_path('molecules/ethanol.sdf'), file_format='sdf')
+
+        assert len(mols_in) > 0
+
+        mols_in = OpenEyeToolkitWrapper().from_file(file_path=get_data_file_path('molecules/ethanol.sdf'), file_format='SDF')
+
+        assert len(mols_in) > 0
+
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_write_sdf_charges(self):
         """Test OpenEyeToolkitWrapper for writing partial charges to a sdf file"""
         from io import StringIO
@@ -1397,7 +1412,22 @@ class TestRDKitToolkitWrapper:
         assert molecule2.partial_charges is None
 
         assert molecule2.to_smiles(toolkit_registry=toolkit_wrapper) == expected_output_smiles
-        
+
+    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
+    def test_file_extension_case(self):
+        """
+        Test round-trips of some file extensions when called directly from the toolkit wrappers,
+        including lower- and uppercase file extensions. Note that this test does not ensure
+        accuracy, it only tests that reading/writing without raising an exception.
+        """
+        mols_in = RDKitToolkitWrapper().from_file(file_path=get_data_file_path('molecules/ethanol.sdf'), file_format='sdf')
+
+        assert len(mols_in) > 0
+
+        mols_in = RDKitToolkitWrapper().from_file(file_path=get_data_file_path('molecules/ethanol.sdf'), file_format='SDF')
+
+        assert len(mols_in) > 0
+
     @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
     def test_get_sdf_coordinates(self):
         """Test RDKitToolkitWrapper for importing a single set of coordinates from a sdf file"""

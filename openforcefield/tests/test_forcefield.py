@@ -617,6 +617,12 @@ class TestForceField():
         assert len(forcefield._parameter_handlers['ImproperTorsions']._parameters) == 4
         assert len(forcefield._parameter_handlers['vdW']._parameters) == 35
 
+    def test_load_bad_string(self):
+        with pytest.raises(IOError) as exception_info:
+            ForceField('1234')
+        assert 'Source 1234 could not be read.' in str(exception_info.value)
+        assert 'syntax error' in str(exception_info.value)
+
     @pytest.mark.skip(reason='Needs to be updated for 0.2.0 syntax')
     def test_create_forcefield_from_file_list(self):
         # These offxml files are located in package data path, which is automatically installed and searched
@@ -1210,6 +1216,26 @@ class TestForceField():
                 forcefield.get_parameter_handler('vdW', {}).method = vdw_method
                 forcefield.get_parameter_handler('Electrostatics', {}).method = electrostatics_method
                 omm_system = forcefield.create_openmm_system(topology)
+
+    def test_registered_parameter_handlers(self):
+        """Test registered_parameter_handlers property"""
+        forcefield = ForceField('test_forcefields/smirnoff99Frosst.offxml')
+        registered_handlers = forcefield.registered_parameter_handlers
+
+        expected_handlers = [
+            'Bonds',
+            'Angles',
+            'ProperTorsions',
+            'ImproperTorsions',
+            'vdW',
+            'Electrostatics',
+            'ToolkitAM1BCC',
+        ]
+
+        for expected_handler in expected_handlers:
+            assert expected_handler in registered_handlers
+
+        assert 'LibraryChrages' not in registered_handlers
 
     def test_parameter_handler_lookup(self):
         """Ensure __getitem__ lookups work"""

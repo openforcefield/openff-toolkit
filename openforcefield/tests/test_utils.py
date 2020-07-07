@@ -71,3 +71,11 @@ def test_ast_eval(unit_string, expected_unit):
     ast_root_node = ast.parse(unit_string, mode='eval').body
     parsed_units = _ast_eval(ast_root_node)
     assert parsed_units == expected_unit
+
+def test_dimensionless_units():
+    assert utils.string_to_unit('dimensionless') == unit.dimensionless
+
+    unit_string = utils.unit_to_string(unit.dimensionless)
+    unit_value = utils.string_to_unit(unit_string)
+
+    assert unit_value == unit.dimensionless
