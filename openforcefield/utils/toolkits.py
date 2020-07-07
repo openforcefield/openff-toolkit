@@ -4335,10 +4335,11 @@ class ToolkitRegistry:
             toolkit_wrapper = toolkit_wrapper()
 
         if not isinstance(toolkit_wrapper, ToolkitWrapper):
-            raise InvalidToolkitError(f""
-                "Argument {toolkit_wrapper} must an ToolkitWrapper "
-                "or subclass of it. Found type {type(toolkit_wrapper)}."
+            msg = (
+                f"Argument {toolkit_wrapper} must an ToolkitWrapper "
+                f"or subclass of it. Found type {type(toolkit_wrapper)}."
             )
+            raise InvalidToolkitError(msg)
 
         toolkits_to_remove = []
 
