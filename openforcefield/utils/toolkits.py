@@ -4296,21 +4296,6 @@ class ToolkitRegistry:
 
         # Add toolkit to the registry.
         self._toolkits.append(toolkit_wrapper)
-        """
-        Append a ToolkitWrapper onto the list of toolkits in this ToolkitRegistry
-
-        .. warning :: This API is experimental and subject to change.
-
-        Parameters
-        ----------
-        toolkit_wrapper : openforcefield.utils.ToolkitWrapper
-            The ToolkitWrapper object to add to the list of registered toolkits
-
-        Raises
-        ------
-        InvalidToolkitError
-            If something other than a TooolkitWrapper object was passed.
-        """
 
     def deregister_toolkit(self, toolkit_wrapper):
         """
