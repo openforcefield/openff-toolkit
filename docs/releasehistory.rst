@@ -28,6 +28,9 @@ New features
 - `PR #632 <https://github.com/openforcefield/openforcefield/pull/632>`_: Adds
   :py:meth:`ForceField.registered_parameter_handlers 
   <openforcefield.typing.engines.smirnoff.forcefield.ForceField.registered_parameter_handlers>`
+- `PR #614 <https://github.com/openforcefield/openforcefield/pull/614>`_: Adds 
+  :py:meth:`ToolkitRegistry.deregister_toolkit <openforcefield.utils.toolkits.ToolkitRegistry.deregister_toolki>` 
+  to de-register registered toolkits, which can include toolkit wrappers loaded into `GLOBAL_TOOLKIT_REGISTRY` by default.
 
 0.7.0 - Charge Increment Model, Proper Torsion interpolation, and new Molecule methods
 --------------------------------------------------------------------------------------
