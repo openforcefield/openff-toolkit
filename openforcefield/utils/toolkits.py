@@ -57,6 +57,7 @@ import importlib
 import logging
 import subprocess
 import tempfile
+import inspect
 
 from simtk import unit
 import numpy as np
@@ -676,7 +677,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         from openeye import oechem
         oemol = self.to_openeye(molecule)
         ofs = oechem.oemolostream(file_path)
-        openeye_format = getattr(oechem, 'OEFormat_' + file_format)
+        openeye_format = getattr(oechem, 'OEFormat_' + file_format.upper())
         ofs.SetFormat(openeye_format)
 
         # OFFTK strictly treats SDF as a single-conformer format.
@@ -2363,6 +2364,9 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         """
         from rdkit import Chem
+
+        file_format = file_format.upper()
+
         mols = list()
         if (file_format == 'MOL') or (file_format == 'SDF'):
             for rdmol in Chem.SupplierFromFilename(file_path, removeHs=False, sanitize=False, strictParsing=True):
@@ -4292,6 +4296,51 @@ class ToolkitRegistry:
         # Add toolkit to the registry.
         self._toolkits.append(toolkit_wrapper)
 
+    def deregister_toolkit(self, toolkit_wrapper):
+        """
+        Remove a ToolkitWrapper from the list of toolkits in this ToolkitRegistry
+
+        .. warning :: This API is experimental and subject to change.
+
+        Parameters
+        ----------
+        toolkit_wrapper : instance or subclass of ToolkitWrapper
+            The toolkit wrapper to remove from the registry
+
+        Raises
+        ------
+        InvalidToolkitError
+            If toolkit_wrapper is not a ToolkitWrapper or subclass
+        ToolkitUnavailableException
+            If toolkit_wrapper is not found in the registry
+        """
+        # If passed a class, instantiate it
+        if inspect.isclass(toolkit_wrapper):
+            toolkit_wrapper = toolkit_wrapper()
+
+        if not isinstance(toolkit_wrapper, ToolkitWrapper):
+            msg = (
+                f"Argument {toolkit_wrapper} must an ToolkitWrapper "
+                f"or subclass of it. Found type {type(toolkit_wrapper)}."
+            )
+            raise InvalidToolkitError(msg)
+
+        toolkits_to_remove = []
+
+        for toolkit in self._toolkits:
+            if type(toolkit) == type(toolkit_wrapper):
+                toolkits_to_remove.append(toolkit)
+
+        if not toolkits_to_remove:
+            msg = (
+                f"Did not find {toolkit_wrapper} in registry. "
+                f"Currently registered toolkits are {self._toolkits}"
+            )
+            raise ToolkitUnavailableException(msg)
+
+        for toolkit_to_remove in toolkits_to_remove:
+            self._toolkits.remove(toolkit_to_remove)
+
     def add_toolkit(self, toolkit_wrapper):
         """
         Append a ToolkitWrapper onto the list of toolkits in this ToolkitRegistry
@@ -4303,12 +4352,16 @@ class ToolkitRegistry:
         toolkit_wrapper : openforcefield.utils.ToolkitWrapper
             The ToolkitWrapper object to add to the list of registered toolkits
 
+        Raises
+        ------
+        InvalidToolkitError
+            If toolkit_wrapper is not a ToolkitWrapper or subclass
         """
         if not isinstance(toolkit_wrapper, ToolkitWrapper):
             msg = "Something other than a ToolkitWrapper object was passed to ToolkitRegistry.add_toolkit()\n"
             msg += "Given object {} of type {}".format(toolkit_wrapper,
                                                        type(toolkit_wrapper))
-            raise Exception(msg)
+            raise InvalidToolkitError(msg)
         self._toolkits.append(toolkit_wrapper)
 
     # TODO: Can we automatically resolve calls to methods that are not explicitly defined using some Python magic?
