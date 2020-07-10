@@ -1683,21 +1683,23 @@ class ParameterHandler(_ParameterAttributeHandler):
 
         Given an existing parameter handler and a new parameter to add to it:
 
-        >>> bh.parameters
-        [<BondType with smirks: [*:1]-[*:2]  length: 1.5 A  k: 100 kcal/(A**2 mol)  id: b1  >,
-         <BondType with smirks: [*:1]=[*:2]  length: 1.5 A  k: 100 kcal/(A**2 mol)  id: b2  >,
-         <BondType with smirks: [*:1]#[*:2]  length: 1.5 A  k: 100 kcal/(A**2 mol)  id: b3  >]
+        >>> from simtk import unit
+        >>> bh = BondHandler(skip_version_check=True)
+        >>> length = 1.5 * unit.angstrom
+        >>> k = 100 * unit.kilocalorie_per_mole / unit.angstrom ** 2
+        >>> bh.add_parameter({'smirks': '[*:1]-[*:2]', 'length': length, 'k': k, 'id': 'b1'})
+        >>> bh.add_parameter({'smirks': '[*:1]=[*:2]', 'length': length, 'k': k, 'id': 'b2'})
+        >>> bh.add_parameter({'smirks': '[*:1]#[*:2]', 'length': length, 'k': k, 'id': 'b3'})
+        >>> [p.id for p in bh.parameters]
+        ['b1', 'b2', 'b3']
 
         >>> param = {'smirks': '[#1:1]-[#6:2]', 'length': length, 'k': k, 'id': 'b4'}
 
         Add a new parameter immediately after the parameter with the smirks '[*:1]=[*:2]'
 
         >>> bh.add_parameter(param, after='[*:1]=[*:2]')
-        >>> bh.parameters
-        [<BondType with smirks: [*:1]-[*:2]  length: 1.5 A  k: 100 kcal/(A**2 mol)  id: b1  >,
-         <BondType with smirks: [*:1]=[*:2]  length: 1.5 A  k: 100 kcal/(A**2 mol)  id: b2  >,
-         <BondType with smirks: [#1:1]-[#6:2]  length: 1.5 A  k: 100 kcal/(A**2 mol)  id: b4  >,
-         <BondType with smirks: [*:1]#[*:2]  length: 1.5 A  k: 100 kcal/(A**2 mol)  id: b3  >]
+        >>> [p.id for p in bh.parameters]
+        ['b1', 'b2', 'b4', 'b3']
         """
         for val in [before, after]:
             if val and not isinstance(val, (str, int)):
