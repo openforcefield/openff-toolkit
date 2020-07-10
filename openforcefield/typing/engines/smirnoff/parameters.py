@@ -1659,17 +1659,17 @@ class ParameterHandler(_ParameterAttributeHandler):
         parameter: ParameterType, optional
             A ParameterType to add to the ParameterHandler
         after : str or int, optional
-            if str, the SMIRKS pattern of the parameter directly before where the new parameter will be added
-            if int, the index directly before where in the ParameterList the new parameter will be added
+            The SMIRKS pattern (if str) or index (if int) of the parameter directly before where
+            the new parameter will be added
         before : str, optional
-            if str, the SMIRKS pattern of the parameter directly after where the new parameter will be added
-            if int, the index directly after where in the ParameterList the new parameter will be added
+            The SMIRKS pattern (if str) or index (if int) of the parameter directly after where
+            the new parameter will be added
 
         Note that one of (parameter_kwargs, parameter) must be specified
         Note that when `before` and `after` are both None, the new parameter will be appended
             to the END of the parameter list.
-        Note that when `before` and `after` are both specified, the new parameters
-            parameter will be added immediately after the parameter matching the `before` pattern or index.
+        Note that when `before` and `after` are both specified, the new parameter
+            will be added immediately after the parameter matching the `after` pattern or index.
 
         """
         for val in [before, after]:
@@ -1700,13 +1700,13 @@ class ParameterHandler(_ParameterAttributeHandler):
                 after_index = after
 
         if None not in (before, after):
-            if after_index < before_index:
-                raise ValueError('before arg must be after after arg')
+            if after_index > before_index:
+                raise ValueError('before arg must be before after arg')
 
         if after is not None:
-            self._parameters.insert(after_index, new_parameter)
+            self._parameters.insert(after_index+1, new_parameter)
         elif before is not None:
-            self._parameters.insert(before_index+1, new_parameter)
+            self._parameters.insert(before_index, new_parameter)
         else:
             self._parameters.append(new_parameter)
 
