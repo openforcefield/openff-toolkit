@@ -22,14 +22,13 @@ from openforcefield.typing.engines.smirnoff import ForceField
 from openforcefield.topology import Molecule, Topology
 from openforcefield import utils
 import openforcefield.utils.structure as structure
+from openforcefield.tests.utils import requires_openeye_mol2
 
 
 #=============================================================================================
 # TESTS
 #=============================================================================================
 
-requires_openeye_mol2 = pytest.mark.skipif(not utils.OpenEyeToolkitWrapper.is_available(),
-                                               reason='OpenEye is required to parse mol2 files')
 
 class TestUtilsStructure:
 

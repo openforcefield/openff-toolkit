@@ -37,15 +37,11 @@ from openforcefield.utils import get_data_file_path
 from openforcefield.utils.toolkits import OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper, ToolkitRegistry
 from openforcefield.tests.test_forcefield import create_ethanol, create_reversed_ethanol, create_acetaldehyde, \
     create_benzene_no_aromatic, create_cyclohexane, create_cis_1_2_dichloroethene
+from openforcefield.tests.utils import requires_rdkit, requires_openeye
 
 #=============================================================================================
 # TEST UTILITIES
 #=============================================================================================
-
-requires_openeye = pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(),
-                                      reason='Test requires OE toolkit')
-requires_rdkit = pytest.mark.skipif(not RDKitToolkitWrapper.is_available(),
-                                    reason='Test requires RDKit')
 
 
 def assert_molecule_is_equal(molecule1, molecule2, msg):
@@ -2033,8 +2029,7 @@ class TestMolecule:
 
         assert isinstance(mol.visualize(backend='rdkit'), rdkit.Chem.rdchem.Mol)
 
-    @pytest.mark.skipif(RDKitToolkitWrapper.is_available(),
-        reason='Test requires that RDKit is NOT installed')
+    @requires_rdkit
     def test_visualize_fallback(self):
         """Test falling back from RDKit to OpenEye if RDKit is specified but not installed"""
         mol = Molecule().from_smiles('CCO')

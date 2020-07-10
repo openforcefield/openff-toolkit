@@ -3809,7 +3809,6 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         """
 
         import os
-        import subprocess
         from openforcefield.topology import Molecule
 
         if partial_charge_method is None:

@@ -21,11 +21,27 @@ import os
 import pprint
 import textwrap
 
+import pytest
 import numpy as np
 from simtk import unit, openmm
 
 from openforcefield.utils import get_data_file_path
+from openforcefield.utils import (
+    OpenEyeToolkitWrapper,
+    RDKitToolkitWrapper,
+    AmberToolsToolkitWrapper,
+)
 
+
+requires_rdkit = pytest.mark.skipif(
+    not RDKitToolkitWrapper.is_available(), reason='Test requires RDKit',
+)
+requires_openeye = pytest.mark.skipif(
+    not OpenEyeToolkitWrapper.is_available(), reason='Test requires OE toolkit',
+)
+requires_openeye_mol2 = pytest.mark.skipif(
+    requires_openeye.args, reason = 'Test requires OE toolkit to read mol2 files'
+)
 
 #=============================================================================================
 # Shortcut functions to get file paths to test data.

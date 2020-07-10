@@ -30,6 +30,7 @@ from openforcefield.utils import get_data_file_path
 from openforcefield.topology.molecule import Molecule
 from openforcefield.tests.test_forcefield import create_ethanol, create_cyclohexane, create_acetaldehyde, \
     create_reversed_ethanol, create_acetate
+from openforcefield.tests.utils import requires_rdkit, requires_openeye
 
 #=============================================================================================
 # FIXTURES
@@ -87,7 +88,7 @@ rdkit_inchi_isomorphic_fails = ['DrugBank_178', 'DrugBank_246', 'DrugBank_5847',
 # TESTS
 #=============================================================================================
 
-@pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
+@requires_openeye
 class TestOpenEyeToolkitWrapper:
     """Test the OpenEyeToolkitWrapper"""
 
@@ -1041,7 +1042,7 @@ class TestOpenEyeToolkitWrapper:
 
 
 
-@pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
+@requires_rdkit
 class TestRDKitToolkitWrapper:
     """Test the RDKitToolkitWrapper"""
     
@@ -1638,8 +1639,7 @@ class TestRDKitToolkitWrapper:
 
 
 
-@pytest.mark.skipif(not RDKitToolkitWrapper.is_available() or not AmberToolsToolkitWrapper.is_available(),
-                    reason='RDKitToolkit and AmberToolsToolkit not available')
+@requires_rdkit
 class TestAmberToolsToolkitWrapper:
     """Test the AmberToolsToolkitWrapper"""
 
@@ -2144,7 +2144,7 @@ class TestToolkitWrapper:
 class TestToolkitRegistry:
     """Test the ToolkitRegistry class"""
 
-    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
+    @requires_openeye
     def test_register_openeye(self):
         """Test creation of toolkit registry with OpenEye toolkit"""
         # Test registration of OpenEyeToolkitWrapper
@@ -2162,7 +2162,7 @@ class TestToolkitRegistry:
         smiles2 = registry.call('to_smiles', molecule)
         assert smiles == smiles2
 
-    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
+    @requires_rdkit
     def test_register_rdkit(self):
         """Test creation of toolkit registry with RDKit toolkit"""
         # Test registration of RDKitToolkitWrapper
@@ -2181,9 +2181,7 @@ class TestToolkitRegistry:
         smiles2 = registry.call('to_smiles', molecule)
         assert smiles == smiles2
 
-    @pytest.mark.skipif(
-        not RDKitToolkitWrapper.is_available() or not AmberToolsToolkitWrapper.is_available(),
-        reason='RDKitToolkit and AmberToolsToolkit not available')
+    @requires_rdkit
     def test_register_ambertools(self):
         """Test creation of toolkit registry with AmberToolsToolkitWrapper and RDKitToolkitWrapper
         """
@@ -2216,7 +2214,6 @@ class TestToolkitRegistry:
         # Test ToolkitRegistry.resolve()
         assert registry.resolve('assign_partial_charges') == registry.registered_toolkits[0].assign_partial_charges
 
-    @pytest.mark.skipif(not AmberToolsToolkitWrapper.is_available(), reason='AmberTools Toolkit not available')
     def test_call_raise_first_error(self):
         """Test to ensure proper behavior of raise_first_error kwarg to ToolkitRegistry.call"""
         toolkit_precedence = [BuiltInToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper]
@@ -2237,7 +2234,7 @@ class TestToolkitRegistry:
                           partial_charge_method="NotARealChargeMethod",
                           raise_exception_types=[])
 
-    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
+    @requires_rdkit
     def test_substructure_search_on_large_molecule(self):
         """Test RDKitToolkitWrapper substructure search when a large number hits are found"""
 
