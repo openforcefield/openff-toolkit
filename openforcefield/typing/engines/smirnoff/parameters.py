@@ -108,9 +108,14 @@ class UnassignedMoleculeChargeException(Exception):
     """Exception raised when no charge method is able to assign charges to a molecule."""
     pass
 
+
 class NonintegralMoleculeChargeException(Exception):
     """Exception raised when the partial charges on a molecule do not sum up to its formal charge."""
     pass
+
+
+class DuplicateParameterError(MessageException):
+    """Exception raised when trying to add a ParameterType that already exists"""
 
 
 #======================================================================
@@ -1671,6 +1676,28 @@ class ParameterHandler(_ParameterAttributeHandler):
         Note that when `before` and `after` are both specified, the new parameter
             will be added immediately after the parameter matching the `after` pattern or index.
 
+        Examples
+        --------
+
+        Add a ParameterType to an existing ParameterList at a specified position.
+
+        Given an existing parameter handler and a new parameter to add to it:
+
+        >>> bh.parameters
+        [<BondType with smirks: [*:1]-[*:2]  length: 1.5 A  k: 100 kcal/(A**2 mol)  id: b1  >,
+         <BondType with smirks: [*:1]=[*:2]  length: 1.5 A  k: 100 kcal/(A**2 mol)  id: b2  >,
+         <BondType with smirks: [*:1]#[*:2]  length: 1.5 A  k: 100 kcal/(A**2 mol)  id: b3  >]
+
+        >>> param = {'smirks': '[#1:1]-[#6:2]', 'length': length, 'k': k, 'id': 'b4'}
+
+        Add a new parameter immediately after the parameter with the smirks '[*:1]=[*:2]'
+
+        >>> bh.add_parameter(param, after='[*:1]=[*:2]')
+        >>> bh.parameters
+        [<BondType with smirks: [*:1]-[*:2]  length: 1.5 A  k: 100 kcal/(A**2 mol)  id: b1  >,
+         <BondType with smirks: [*:1]=[*:2]  length: 1.5 A  k: 100 kcal/(A**2 mol)  id: b2  >,
+         <BondType with smirks: [#1:1]-[#6:2]  length: 1.5 A  k: 100 kcal/(A**2 mol)  id: b4  >,
+         <BondType with smirks: [*:1]#[*:2]  length: 1.5 A  k: 100 kcal/(A**2 mol)  id: b3  >]
         """
         for val in [before, after]:
             if val and not isinstance(val, (str, int)):
@@ -1685,7 +1712,8 @@ class ParameterHandler(_ParameterAttributeHandler):
             raise ValueError('One of (parameter, parameter_kwargs) must be specified')
 
         if new_parameter.smirks in [p.smirks for p in self._parameters]:
-            raise ValueError(f'A parameter SMIRKS pattern {val} already exists.')
+            msg = f'A parameter SMIRKS pattern {val} already exists.'
+            raise DuplicateParameterError(msg)
 
         if before is not None:
             if isinstance(before, str):

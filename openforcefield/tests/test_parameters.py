@@ -23,7 +23,8 @@ from openforcefield.typing.engines.smirnoff.parameters import (
     ParameterAttribute, IndexedParameterAttribute, ParameterList,
     ParameterType, BondHandler, ParameterHandler, ProperTorsionHandler,
     ImproperTorsionHandler, LibraryChargeHandler, GBSAHandler, SMIRNOFFSpecError,
-    _ParameterAttributeHandler, ChargeIncrementModelHandler, IncompatibleParameterError
+    _ParameterAttributeHandler, ChargeIncrementModelHandler, IncompatibleParameterError,
+    DuplicateParameterError,
     )
 from openforcefield.utils import detach_units, IncompatibleUnitError
 from openforcefield.utils.collections import ValidatedList
@@ -312,7 +313,7 @@ class TestParameterHandler:
         param_duplicate_smirks = {'smirks': param2['smirks'], 'length': 2*self.length, 'k': 2*self.k}
 
         # Ensure a duplicate parameter cannot be added
-        with pytest.raises(ValueError):
+        with pytest.raises(DuplicateParameterError):
             bh.add_parameter(param_duplicate_smirks)
 
         dict_to_add_by_smirks = {
@@ -333,8 +334,8 @@ class TestParameterHandler:
             'smirks': '[#1:1]-[#7:2]', 'length': self.length, 'k': self.k, 'id': 's0',
         }
 
-        # The parameter o f `before` should come after the parameter of `after`
-        # in the paramete}r list; i.e. in this list of ['-', '=', '#'], it is
+        # The `before` parameter should come after the `after` parameter
+        # in the parameter list; i.e. in this list of ['-', '=', '#'], it is
         # impossible to add a new parameter after '=' *and* before '-'
         with pytest.raises(ValueError):
             # Test invalid parameter order by SMIRKS
