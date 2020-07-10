@@ -556,6 +556,19 @@ class ForceField:
                     self._parameter_io_handlers[io_format]))
         self._parameter_io_handlers[io_format] = parameter_io_handler
 
+    @property
+    def registered_parameter_handlers(self):
+        """
+        Return the list of registered parameter handlers by name
+
+        .. warning :: This API is experimental and subject to change.
+
+        Returns
+        -------
+            registered_parameter_handlers: iterable of names of ParameterHandler objects in this ForceField
+
+        """
+        return [*self._parameter_handlers.keys()]
 
     # TODO: Do we want to make this optional?
 
@@ -970,14 +983,14 @@ class ForceField:
                 smirnoff_data = parameter_io_handler.parse_file(source)
                 return smirnoff_data
             except ParseError as e:
-                exception_msg = str(e)
+                exception_msg = e.msg
             except (FileNotFoundError, OSError):
                 # If this is not a file path or a file handle, attempt parsing as a string.
                 try:
                     smirnoff_data = parameter_io_handler.parse_string(source)
                     return smirnoff_data
                 except ParseError as e:
-                    exception_msg = str(e)
+                    exception_msg = e.msg
 
         # If we haven't returned by now, the parsing was unsuccessful
         valid_formats = [

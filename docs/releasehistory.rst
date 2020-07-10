@@ -7,6 +7,31 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 * ``minor`` increments add features but do not break API compatibility
 * ``micro`` increments represent bugfix releases or improvements in documentation
 
+0.7.1 - Current development
+---------------------------
+
+Bugfixes
+""""""""
+- `PR #634 <https://github.com/openforcefield/openforcefield/pull/634>`_: Fixes a bug in which calling 
+  :py:meth:`RDKitToolkitWrapper.from_file <openforcefield.utils.toolkits.RDKitToolkitWrapper.from_file>` directly
+  would not load files correctly if passed lowercase `file_format`. Note that this bug did not occur when calling
+  :`Molecule.from_file` <openforcefield.topology.molecule.Molecule.from_file>`.
+- `PR #631 <https://github.com/openforcefield/openforcefield/pull/631>`_: Fixes a bug in which calling
+  :py:meth:`openforcefield.utils.utils.utils.unit_to_string <openforcefield.utils.utils.unit_to_string>` returned
+  ``None`` when the unit is dimensionless. Now ``"dimensionless"`` is returned.
+- `PR #630 <https://github.com/openforcefield/openforcefield/pull/630>`_: Closes issue `Issue #629 
+  <https://github.com/openforcefield/openforcefield/issues/629>`_ in which the wrong exception is raised when
+  attempting to instantiate a ``ForceField`` from an unparsable string.
+
+New features
+""""""""""""
+- `PR #632 <https://github.com/openforcefield/openforcefield/pull/632>`_: Adds
+  :py:meth:`ForceField.registered_parameter_handlers 
+  <openforcefield.typing.engines.smirnoff.forcefield.ForceField.registered_parameter_handlers>`
+- `PR #614 <https://github.com/openforcefield/openforcefield/pull/614>`_: Adds 
+  :py:meth:`ToolkitRegistry.deregister_toolkit <openforcefield.utils.toolkits.ToolkitRegistry.deregister_toolki>` 
+  to de-register registered toolkits, which can include toolkit wrappers loaded into `GLOBAL_TOOLKIT_REGISTRY` by default.
+
 0.7.0 - Charge Increment Model, Proper Torsion interpolation, and new Molecule methods
 --------------------------------------------------------------------------------------
 
