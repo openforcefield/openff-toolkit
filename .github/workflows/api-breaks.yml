@@ -63,3 +63,4 @@ jobs:
       shell: bash -l {0}
       run: |
         frappuccino openforcefield.typing.engines.smirnoff openforcefield.topology openforcefield.utils --compare released.json 
+      continue-on-error: true
