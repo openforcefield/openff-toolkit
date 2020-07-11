@@ -1,7 +1,8 @@
-name: CI
+name: Check API
 
 on:
   push:
+  pull_request:
   schedule:
     - cron: "0 0 * * *"
 
