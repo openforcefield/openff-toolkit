@@ -17,6 +17,7 @@ Parameter assignment tools for the SMIRNOFF (SMIRKS Native Open Force Field) for
 """
 
 __all__ = [
+    'get_available_force_fields',
     'MAX_SUPPORTED_VERSION',
     'ParameterHandlerRegistrationError',
     'SMIRNOFFVersionError',
@@ -33,7 +34,7 @@ __all__ = [
 import copy
 import logging
 import os
-
+import pathlib
 from collections import OrderedDict
 
 
@@ -84,6 +85,38 @@ def _get_installed_offxml_dir_paths():
         for entry_point in iter_entry_points(group='openforcefield.smirnoff_forcefield_directory'):
             _installed_offxml_dir_paths.extend(entry_point.load()())
     return _installed_offxml_dir_paths
+
+
+def get_available_force_fields(full_paths=False):
+    """
+    Get the filenames of all available .offxml force field files.
+
+    Availability is determined by what is discovered through the
+   `openforcefield.smirnoff_forcefield_directory` entry point. If the
+   `openforcefields` package is installed, this should include several
+   .offxml files such as `openff-1.0.0.offxml`.
+
+    Parameters
+    ----------
+    full_paths : bool, default=False
+        If False, return the name of each available *.offxml file.
+        If True, return the full path to each available .offxml file.
+
+    Returns
+    -------
+    available_force_fields : List[str]
+        List of available force field files
+
+    """
+    installed_paths = _get_installed_offxml_dir_paths()
+    available_force_fields = []
+    for installed_path in installed_paths:
+        for globbed in pathlib.Path(installed_path).rglob('*.offxml'):
+            if full_paths:
+                available_force_fields.append(globbed.as_posix())
+            else:
+                available_force_fields.append(globbed.name)
+    return available_force_fields
 
 
 # TODO: Instead of having a global version number, alow each Force to have a separate version number
