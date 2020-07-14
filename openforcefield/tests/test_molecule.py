@@ -227,16 +227,21 @@ class TestAtom:
         # Create a non-aromatic carbon atom
         atom1 = Atom(6, 0, False)
         assert atom1.atomic_number == 6
-        assert atom1.formal_charge == 0
+        assert atom1.formal_charge == 0 * unit.elementary_charge
 
         # Create a chiral carbon atom
         atom2 = Atom(6, 0, False, stereochemistry='R', name='CT')
         assert atom1.stereochemistry != atom2.stereochemistry
 
+        # Ensure that formal charge can also be set as a Quantity
+        atom1 = Atom(6, 1*unit.elementary_charge, False)
+        assert atom1.formal_charge == 1 * unit.elementary_charge
+
+
     def test_atom_properties(self):
         """Test that atom properties are correctly populated and gettable"""
         from simtk.openmm.app import element
-        formal_charge = 0
+        formal_charge = 0 * unit.elementary_charge
         is_aromatic = False
         # Attempt to create all elements supported by OpenMM
         elements = [getattr(element, name) for name in dir(element) if (type(getattr(element, name)) == element.Element)]
@@ -1329,7 +1334,7 @@ class TestMolecule:
             assert bond.stereochemistry == sdf_bonds[key].stereochemistry
 
     def test_to_qcschema(self):
-        """Test the ability to make and validate qcschema"""
+        """Test the ability to make and validate qcschema with extras"""
         # the molecule has no coordinates so this should fail
         ethanol = Molecule.from_smiles('CCO')
         with pytest.raises(InvalidConformerError):
@@ -1341,15 +1346,24 @@ class TestMolecule:
         with pytest.raises(InvalidConformerError):
             qcschema = ethanol.to_qcschema(conformer=1)
         # now make a valid qcschema and check its properties
-        qcschema = ethanol.to_qcschema()
+        qcschema = ethanol.to_qcschema(extras={"test_tag": "test"})
         # make sure the properties match
         charge = 0
         connectivity = [(0, 1, 1.0), (0, 4, 1.0), (0, 5, 1.0), (0, 6, 1.0), (1, 2, 1.0), (1, 7, 1.0), (1, 8, 1.0), (2, 3, 1.0)]
         symbols = ['C', 'C', 'O', 'H', 'H', 'H', 'H', 'H', 'H']
-        assert charge == qcschema.molecular_charge
-        assert connectivity == qcschema.connectivity
-        assert symbols == qcschema.symbols.tolist()
-        assert qcschema.geometry.all() == ethanol.conformers[0].in_units_of(unit.bohr).all()
+
+        def assert_check():
+            assert charge == qcschema.molecular_charge
+            assert connectivity == qcschema.connectivity
+            assert symbols == qcschema.symbols.tolist()
+            assert qcschema.geometry.all() == ethanol.conformers[0].in_units_of(unit.bohr).all()
+
+        assert_check()
+        assert qcschema.extras["test_tag"] == "test"
+        # now run again when no extras
+        qcschema = ethanol.to_qcschema()
+        assert_check()
+        assert qcschema.extras is None
 
     def test_from_qcschema_no_client(self):
         """Test the ability to make molecules from QCArchive record instances and dicts"""
@@ -1538,8 +1552,10 @@ class TestMolecule:
     @pytest.mark.parametrize('molecule', mini_drug_bank())
     def test_total_charge(self, molecule):
         """Test total charge"""
-        total_charge = sum([atom.formal_charge for atom in molecule.atoms])
-        assert total_charge == molecule.total_charge
+        charge_sum = 0 * unit.elementary_charge
+        for atom in molecule.atoms:
+            charge_sum += atom.formal_charge
+        assert charge_sum == molecule.total_charge
 
     # ----------------------------------------------------
     # Test magic methods.
