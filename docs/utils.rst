@@ -67,20 +67,3 @@ Miscellaneous utility functions.
     get_data_file_path
     convert_0_1_smirnoff_to_0_2
     convert_0_2_smirnoff_to_0_3
-
-Structure tools
----------------
-
-Tools for manipulating molecules and structures
-
-.. warning ::
-
-   These methods are deprecated and will be removed and replaced with integrated API methods.
-   We recommend that no new code makes use of these functions.
-
-.. currentmodule:: openforcefield.utils.structure
-.. autosummary::
-    :nosignatures:
-    :toctree: api/generated/
-
-    get_molecule_parameterIDs
