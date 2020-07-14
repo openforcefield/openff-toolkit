@@ -100,10 +100,6 @@ jobs:
         run: |
           conda info
           conda list
-          if [[ "$OPENEYE" == true ]]; then
-            conda install openeye-toolkits
-            python -c "from openeye import oechem; assert oechem.OEChemIsLicensed()"
-          fi
 
       - name: Install package
         shell: bash -l {0}
