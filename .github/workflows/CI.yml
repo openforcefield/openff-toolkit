@@ -52,12 +52,13 @@ jobs:
       PYVER: ${{ matrix.python-version }}
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
       PACKAGE: openforcefield
+      PYTEST_ARGS: -r fE --tb=short
 
     steps:
       - uses: actions/checkout@v2
 
       - uses: goanpeca/setup-miniconda@v1
-        name: Additional info about the build
+        name: Install with both RDKit and OpenEye toolkits
         if: ${{ matrix.cfg.rdkit == 'TRUE' && matrix.cfg.openeye == 'TRUE' }}
         with:
           python-version: ${{ matrix.python-version }}
@@ -65,7 +66,7 @@ jobs:
           environment-file: devtools/conda-envs/test_env.yaml
           auto-activate-base: false
       - uses: goanpeca/setup-miniconda@v1
-        name: Additional info about the build
+        name: Install only RDKit
         if: ${{ matrix.cfg.rdkit == 'TRUE' && matrix.cfg.openeye == 'FALSE' }}
         with:
           python-version: ${{ matrix.python-version }}
@@ -73,7 +74,7 @@ jobs:
           environment-file: devtools/conda-envs/rdkit.yaml
           auto-activate-base: false
       - uses: goanpeca/setup-miniconda@v1
-        name: Additional info about the build
+        name: Install with OpenEye toolkits
         if: ${{ matrix.cfg.rdkit == 'FALSE' && matrix.cfg.openeye == 'TRUE' }}
         with:
           python-version: ${{ matrix.python-version }}
@@ -108,14 +109,12 @@ jobs:
       - name: Install package
         shell: bash -l {0}
         run: |
-          python -m pip isntall --no-deps -v .
+          python -m pip install --no-deps -v .
 
       - name: Run unit tests
         shell: bash -l {0}
         run: |
-          PYTEST_ARGS="-r fE --tb=short"
-          # coverage options
-          PYTEST_ARGS+=" --cov=$PACKAGE --cov-config=setup.cfg"
+          PYTEST_ARGS+= "--cov=$PACKAGE --cov-config=setup.cfg"
           # excludes
           PYTEST_ARGS+=" --ignore=openforcefield/tests/test_examples.py"
           if [[ "$RDKIT" == true && "$OPENEYE" == true ]]; then
@@ -126,7 +125,6 @@ jobs:
       - name: Run examples
         shell: bash -l {0}
         run: |
-          PYTEST_ARGS="-r fE --tb=short"
           PYTEST_ARGS+=" --nbval-lax"
           PYTEST_ARGS+=" --ignore=examples/deprecated"
           if [[ "$RDKIT" == false && "$OPENEYE" == true ]]; then
