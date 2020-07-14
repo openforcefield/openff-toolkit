@@ -1621,6 +1621,26 @@ class FrozenMolecule(Serializable):
         if not self.has_unique_atom_names:
             self.generate_unique_atom_names()
 
+    def strip_atom_stereochemistry(self, smarts, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+        """Delete stereochemistry information for certain atoms. This method can be used to "normalize"
+        molecules imported from different cheminformatics toolkits, which differ in which atom centers are
+        considered stereogenic.
+
+        Parameters
+        ----------
+        smarts: str or ChemicalEnvironment
+            Tagged SMARTS with a single atom with index 1. Any matches for this atom will have any assigned
+            stereocheistry information removed.
+        toolkit_registry : a :class:`ToolkitRegistry` or :class:`ToolkitWrapper` object, optional, default=GLOBAL_TOOLKIT_REGISTRY
+            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for I/O operations
+
+        """
+        matches = self.chemical_environment_matches(smarts)
+
+
+
+
+
     ####################################################################################################
     # Safe serialization
     ####################################################################################################
@@ -2120,7 +2140,8 @@ class FrozenMolecule(Serializable):
             formal_charge_matching=True,
             bond_order_matching=True,
             atom_stereochemistry_matching=True,
-            bond_stereochemistry_matching=True
+            bond_stereochemistry_matching=True,
+            ignore_atom_stereocenters=None
     ):
         """
         Determines whether the two molecules are isomorphic by comparing their graph representations and the chosen
@@ -2224,8 +2245,8 @@ class FrozenMolecule(Serializable):
             else:
                 raise NotImplementedError(f'The input type {type(data)} is not supported,'
                                           f'please supply an openforcefield.topology.molecule.Molecule,'
-                                          f'openforcefield.topology.topology.TopologyMolecule or networkx representaion '
-                                          f'of the molecule.')
+                                          f'openforcefield.topology.topology.TopologyMolecule or networkx '
+                                          f'representation of the molecule.')
 
         mol1_netx = to_networkx(mol1)
         mol2_netx = to_networkx(mol2)
