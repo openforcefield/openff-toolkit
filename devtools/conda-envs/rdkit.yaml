@@ -1,6 +1,5 @@
 name: test
 channels:
-  - openeye
   - conda-forge
   - omnia
 
@@ -18,8 +17,6 @@ dependencies:
   - numpy
   - networkx
   - ambertools
-  - rdkit
-  - openeye-toolkits=2019
   - packaging
   - openmmforcefields >=0.7.2
   - openmmtools
