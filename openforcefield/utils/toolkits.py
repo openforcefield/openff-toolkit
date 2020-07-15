@@ -2122,7 +2122,6 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         from openeye.oechem import OESubSearch
         # Make a copy of molecule so we don't influence original (probably safer than deepcopy per C Bayly)
         mol = oechem.OEMol(oemol)
-
         # Set up query
         qmol = oechem.OEQMol()
         if not oechem.OEParseSmarts(qmol, smarts):
@@ -2155,6 +2154,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         unique = False  # We require all matches, not just one of each kind
         substructure_search = OESubSearch(qmol)
         substructure_search.SetMaxMatches(0)
+        oechem.OEPrepareSearch(mol, substructure_search)
         matches = list()
         for match in substructure_search.Match(mol, unique):
             # Compile list of atom indices that match the pattern tags
