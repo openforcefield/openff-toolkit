@@ -1047,7 +1047,7 @@ class Topology(Serializable):
             Aromaticity model to use. One of: ['OEAroModel_MDL']
         """
 
-        if not aromaticity_model in ALLOWED_AROMATICITY_MODELS:
+        if aromaticity_model not in ALLOWED_AROMATICITY_MODELS:
             msg = "Aromaticity model must be one of {}; specified '{}'".format(
                 ALLOWED_AROMATICITY_MODELS, aromaticity_model
             )
@@ -1116,7 +1116,7 @@ class Topology(Serializable):
             Allowed values: ['AM1-BCC']
             * ``AM1-BCC``: Canonical AM1-BCC scheme
         """
-        if not charge_model in ALLOWED_CHARGE_MODELS:
+        if charge_model not in ALLOWED_CHARGE_MODELS:
             raise ValueError(
                 "Charge model must be one of {}; specified '{}'".format(
                     ALLOWED_CHARGE_MODELS, charge_model
@@ -1159,7 +1159,7 @@ class Topology(Serializable):
             Fractional bond order model to use. One of: ['Wiberg']
 
         """
-        if not fractional_bond_order_model in ALLOWED_FRACTIONAL_BOND_ORDER_MODELS:
+        if fractional_bond_order_model not in ALLOWED_FRACTIONAL_BOND_ORDER_MODELS:
             raise ValueError(
                 "Fractional bond order model must be one of {}; specified '{}'".format(
                     ALLOWED_FRACTIONAL_BOND_ORDER_MODELS, fractional_bond_order_model
@@ -1863,8 +1863,6 @@ class Topology(Serializable):
         topology : openforcefield.Topology
             An openforcefield Topology object
         """
-        import parmed
-
         # TODO: Implement functionality
         raise NotImplementedError
 
@@ -1880,8 +1878,6 @@ class Topology(Serializable):
         parmed_structure : parmed.Structure
             A ParmEd Structure objecft
         """
-        import parmed
-
         # TODO: Implement functionality
         raise NotImplementedError
 
@@ -2027,7 +2023,7 @@ class Topology(Serializable):
         # Creating bonds
         for oe_bond in mol.GetBonds():
             # Set the bond type
-            if oe_bond.GetType() is not "":
+            if oe_bond.GetType() != "":
                 if oe_bond.GetType() in [
                     "Single",
                     "Double",

@@ -56,8 +56,6 @@ def callback_method(func=None, events=()):
 class CallbackRegistrationError(TypeError):
     """Error raised when callback registration fails."""
 
-    pass
-
 
 class Callbackable:
     """A base class for registering and handling callbacks.

@@ -193,7 +193,7 @@ class Atom(Particle):
             name = ""
         self._name = name
         self._molecule = molecule
-        ## From Jeff: I'm going to assume that this is implicit in the parent Molecule's ordering of atoms
+        # From Jeff: I'm going to assume that this is implicit in the parent Molecule's ordering of atoms
         # self._molecule_atom_index = molecule_atom_index
         self._bonds = list()
         self._virtual_sites = list()
@@ -248,8 +248,8 @@ class Atom(Particle):
         """Create an Atom from a dict representation.
 
 """
-        ## TODO: classmethod or static method? Classmethod is needed for Bond, so it have
-        ## its _molecule set and then look up the Atom on each side of it by ID
+        # TODO: classmethod or static method? Classmethod is needed for Bond, so it have
+        # its _molecule set and then look up the Atom on each side of it by ID
         return cls.__init__(*atom_dict)
 
     @property
@@ -442,7 +442,7 @@ class Atom(Particle):
             raise ValueError("This Atom does not belong to a Molecule object")
         return self._molecule.particles.index(self)
 
-    # ## From Jeff: Not sure if we actually need this
+    # From Jeff: Not sure if we actually need this
     # @property
     # def topology_atom_index(self):
     #     """
@@ -535,7 +535,7 @@ class VirtualSite(Particle):
 
         # VdW parameters can either be epsilon+rmin_half or epsilon+sigma, but not both
         if not (epsilon is None):
-            if (rmin_half != None) and (sigma != None):
+            if (rmin_half is not None) and (sigma is not None):
                 raise Exception(
                     "VirtualSite constructor given epsilon (value : {}), rmin_half (value : {}), and sigma (value : {}). If epsilon is nonzero, it should receive either rmin_half OR sigma".format(
                         epsilon, rmin_half, sigma
@@ -552,7 +552,7 @@ class VirtualSite(Particle):
                 sigma = (2.0 * rmin_half) / (2.0 ** (1.0 / 6))
 
         elif epsilon is None:
-            if (rmin_half != None) or (sigma != None):
+            if (rmin_half is not None) or (sigma is not None):
                 raise Exception(
                     "VirtualSite constructor given rmin_half (value : {}) or sigma (value : {}), but not epsilon (value : {})".format(
                         rmin_half, sigma, epsilon
@@ -1617,10 +1617,6 @@ class FrozenMolecule(Serializable):
         if not self.has_unique_atom_names:
             self.generate_unique_atom_names()
 
-    ####################################################################################################
-    # Safe serialization
-    ####################################################################################################
-
     def to_dict(self):
         """
         Return a dictionary representation of the molecule.
@@ -1638,8 +1634,8 @@ class FrozenMolecule(Serializable):
         """
         molecule_dict = OrderedDict()
         molecule_dict["name"] = self._name
-        ## From Jeff: If we go the properties-as-dict route, then _properties should, at
-        ## the top level, be a dict. Should we go through recursively and ensure all values are dicts too?
+        # From Jeff: If we go the properties-as-dict route, then _properties should, at
+        # the top level, be a dict. Should we go through recursively and ensure all values are dicts too?
         molecule_dict["atoms"] = [atom.to_dict() for atom in self._atoms]
         molecule_dict["virtual_sites"] = [
             vsite.to_dict() for vsite in self._virtual_sites
@@ -3431,7 +3427,7 @@ class FrozenMolecule(Serializable):
         oeiupac.OEParseIUPACName(oemol, iupac_name)
         oechem.OETriposAtomNames(oemol)
         result = oechem.OEAddExplicitHydrogens(oemol)
-        if result == False:
+        if not result:
             raise Exception("Addition of explicit hydrogens failed in from_iupac")
         molecule = cls.from_openeye(oemol, **kwargs)
         return molecule
@@ -3593,12 +3589,12 @@ class FrozenMolecule(Serializable):
                 # to the error message that will hopefully reduce this confusion.
                 if file_format == "MOL2" and RDKitToolkitWrapper.is_available():
                     msg += (
-                        f"RDKit does not fully support input of molecules from mol2 format unless they "
-                        f"have Corina atom types, and this is not common in the simulation community. For this "
-                        f"reason, the Open Force Field Toolkit does not use "
-                        f"RDKit to read .mol2. Consider reading from SDF instead. If you would like to attempt "
-                        f"to use RDKit to read mol2 anyway, you can load the molecule of interest into an RDKit "
-                        f"molecule and use openforcefield.topology.Molecule.from_rdkit, but we do not recommend this."
+                        "RDKit does not fully support input of molecules from mol2 format unless they "
+                        "have Corina atom types, and this is not common in the simulation community. For this "
+                        "reason, the Open Force Field Toolkit does not use "
+                        "RDKit to read .mol2. Consider reading from SDF instead. If you would like to attempt "
+                        "to use RDKit to read mol2 anyway, you can load the molecule of interest into an RDKit "
+                        "molecule and use openforcefield.topology.Molecule.from_rdkit, but we do not recommend this."
                     )
                 elif file_format == "PDB" and RDKitToolkitWrapper.is_available():
                     msg += (
@@ -3676,12 +3672,12 @@ class FrozenMolecule(Serializable):
         if len(conformers) == 1:
             end = ""
             title = (
-                lambda frame: f'{self.name if self.name is not "" else self.hill_formula}{frame}\n'
+                lambda frame: f'{self.name if self.name != "" else self.hill_formula}{frame}\n'
             )
         else:
             end = 1
             title = (
-                lambda frame: f'{self.name if self.name is not "" else self.hill_formula} Frame {frame}\n'
+                lambda frame: f'{self.name if self.name != "" else self.hill_formula} Frame {frame}\n'
             )
 
         # check if we have a file path or an open file object
@@ -4977,7 +4973,7 @@ class Molecule(FrozenMolecule):
     def visualize(self, backend="rdkit", width=500, height=300):
         """
         Render a visualization of the molecule in Jupyter
-        
+
         Parameters
         ----------
         backend : str, optional, default='rdkit'
@@ -5022,7 +5018,7 @@ class Molecule(FrozenMolecule):
                 )
         if backend == "rdkit":
             if RDKIT_AVAILABLE:
-                from rdkit.Chem.Draw import IPythonConsole
+                from rdkit.Chem.Draw import IPythonConsole  # noqa: F401
 
                 return self.to_rdkit()
             else:

@@ -263,9 +263,6 @@ xml_ff_torsion_bo_standard_supersede = """<?xml version='1.0' encoding='ASCII'?>
   </ProperTorsions>
 </SMIRNOFF>
 """
-# ======================================================================
-# TEST UTILITY FUNCTIONS
-# ======================================================================
 
 
 def round_charge(xml):
@@ -655,11 +652,6 @@ partial_charge_method_resolution_matrix = [
         "exception_match": "",
     },
 ]
-
-
-# =============================================================================================
-# TESTS
-# =============================================================================================
 
 
 toolkit_registries = []
@@ -2435,11 +2427,6 @@ class TestForceFieldChargeAssignment:
             assert q != 0 * unit.elementary_charge
 
 
-# ======================================================================
-# TEST CONSTRAINTS
-# ======================================================================
-
-
 class TestForceFieldConstraints:
     """Tests that constraints are correctly applied and behave correctly."""
 
@@ -2469,11 +2456,6 @@ class TestForceFieldConstraints:
         self.check_molecule_constraints(
             ethane, system, bond_elements={"C", "H"}, bond_length=1.09 * unit.angstrom
         )
-
-
-# ======================================================================
-# TEST PARAMETER ASSIGNMENT
-# ======================================================================
 
 
 def generate_alkethoh_parameters_assignment_cases():

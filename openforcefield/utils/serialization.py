@@ -295,9 +295,9 @@ class Serializable(abc.ABC):
 
         yaml.SafeDumper.add_representer(
             OrderedDict,
-            lambda dumper, value: self._represent_odict(
+            lambda dumper, value: self._represent_odict(  # noqa: F821
                 dumper, u"tag:yaml.org,2002:map", value
-            ),
+            ),  # noqa: F821
         )
         d = yaml.safe_load(serialized)
         return cls.from_dict(d)

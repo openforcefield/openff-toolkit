@@ -699,7 +699,7 @@ class TestOpenEyeToolkitWrapper:
                 charge_line_found = True
 
         # Make sure that a charge line was ever found
-        assert charge_line_found == True
+        assert charge_line_found
 
         # Make sure that the charges found were correct
         assert_almost_equal(
@@ -2389,8 +2389,7 @@ class TestAmberToolsToolkitWrapper:
         # which should raise the first error encountered
         with pytest.raises(
             ValueError,
-            match=f"has 2 conformers, but charge method 'am1bcc' "
-            f"expects exactly 1.",
+            match="has 2 conformers, but charge method 'am1bcc' " "expects exactly 1.",
         ):
             molecule.compute_partial_charges_am1bcc(
                 toolkit_registry=toolkit_registry,
@@ -2404,8 +2403,7 @@ class TestAmberToolsToolkitWrapper:
         # in a failed task together in a single ValueError.
         with pytest.raises(
             ValueError,
-            match=f"has 2 conformers, but charge method 'am1bcc' "
-            f"expects exactly 1.",
+            match="has 2 conformers, but charge method 'am1bcc' " "expects exactly 1.",
         ):
             toolkit_registry.call(
                 "compute_partial_charges_am1bcc",
@@ -2419,8 +2417,7 @@ class TestAmberToolsToolkitWrapper:
         # confs, and specify strict_n_conformers, which should produce an IncorrectNumConformersError
         with pytest.raises(
             IncorrectNumConformersError,
-            match=f"has 2 conformers, but charge method 'am1bcc' "
-            f"expects exactly 1.",
+            match="has 2 conformers, but charge method 'am1bcc' " "expects exactly 1.",
         ):
             ATTKW = AmberToolsToolkitWrapper()
             ATTKW.compute_partial_charges_am1bcc(
@@ -2897,7 +2894,7 @@ class TestBuiltInToolkitWrapper:
         # was thrown inside them, so we just check for a ValueError here
         with pytest.raises(
             ValueError,
-            match=f"has 1 conformers, but charge method 'zeros' " f"expects exactly 0.",
+            match="has 1 conformers, but charge method 'zeros' expects exactly 0.",
         ):
             molecule.assign_partial_charges(
                 toolkit_registry=toolkit_registry,
@@ -2910,7 +2907,7 @@ class TestBuiltInToolkitWrapper:
         # confs, and specify strict_n_conformers, which should produce an IncorrectNumConformersError
         with pytest.raises(
             IncorrectNumConformersError,
-            match=f"has 1 conformers, but charge method 'zeros' " f"expects exactly 0.",
+            match="has 1 conformers, but charge method 'zeros' expects exactly 0.",
         ):
             BITKW = BuiltInToolkitWrapper()
             BITKW.assign_partial_charges(
@@ -2929,7 +2926,7 @@ class TestToolkitWrapper:
         tkw = ToolkitWrapper()
         mol = create_ethanol()
 
-        ## Test molecule with no conformers
+        # Test molecule with no conformers
         # Check with no min or max should pass
         tkw._check_n_conformers(mol, "nocharge")
         # Check with min=1 should warn
@@ -2965,7 +2962,7 @@ class TestToolkitWrapper:
         # Check with max=1 should pass
         tkw._check_n_conformers(mol, "nocharge", max_confs=1, strict_n_conformers=True)
 
-        ## Test molecule with conformers
+        # Test molecule with conformers
         # Add some conformers
         mol.generate_conformers(n_conformers=1)
         for _ in range(9):
@@ -2974,7 +2971,7 @@ class TestToolkitWrapper:
         # Check with no min or max should pass
         tkw._check_n_conformers(mol, "nocharge")
 
-        ## min_confs checks
+        # min_confs checks
         # Check with min=1 should be fine
         tkw._check_n_conformers(mol, "nocharge", min_confs=1)
         # Check with min=10 should be fine
@@ -2994,7 +2991,7 @@ class TestToolkitWrapper:
                 mol, "nocharge", min_confs=11, strict_n_conformers=True
             )
 
-        ## max_confs checks
+        # max_confs checks
         # Check with max=1 and strict_n_conformers should raise an error
         with pytest.raises(
             IncorrectNumConformersError,
@@ -3008,7 +3005,7 @@ class TestToolkitWrapper:
         # Check with max=11 and strict_n_conformers should be OK
         tkw._check_n_conformers(mol, "nocharge", max_confs=11, strict_n_conformers=True)
 
-        ## min_confs and max_confs checks
+        # min_confs and max_confs checks
         # Check with max=10 and min=10 and strict_n_conformers should be OK
         tkw._check_n_conformers(
             mol, "nocharge", min_confs=10, max_confs=10, strict_n_conformers=True

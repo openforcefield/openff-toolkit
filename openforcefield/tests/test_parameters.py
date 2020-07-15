@@ -29,10 +29,6 @@ from openforcefield.typing.engines.smirnoff.parameters import (
 from openforcefield.utils import IncompatibleUnitError, detach_units
 from openforcefield.utils.collections import ValidatedList
 
-# ======================================================================
-# Test ParameterAttribute descriptor
-# ======================================================================
-
 
 class TestParameterAttribute:
     """Test cases for the descriptor ParameterAttribute."""
@@ -331,11 +327,6 @@ class TestParameterAttributeHandler:
         my_parameter.assert_getattr()
         my_parameter.a1
         my_parameter.assert_getattr()
-
-
-# ======================================================================
-# Test ParameterHandler
-# ======================================================================
 
 
 class TestParameterHandler:

@@ -678,7 +678,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             The format for writing the molecule data
 
         """
-        with tempfile.TemporaryDirectory() as tmpdir:
+        with tempfile.TemporaryDirectory() as tmpdir:  # noqa: F841
             outfile = "temp_molecule." + file_format
             self.to_file(molecule, outfile, file_format)
             file_data = open(outfile).read()
@@ -1757,7 +1757,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         oechem.OESmilesToMol(oemol, smiles)
         if not (hydrogens_are_explicit):
             result = oechem.OEAddExplicitHydrogens(oemol)
-            if result == False:
+            if not result:
                 raise ValueError(
                     "Addition of explicit hydrogens failed in from_openeye"
                 )
@@ -2037,7 +2037,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             )
 
         # Extract and return charges
-        ## TODO: Make sure atom mapping remains constant
+        # TODO: Make sure atom mapping remains constant
 
         charges = unit.Quantity(
             np.zeros([oemol.NumAtoms()], np.float64), unit.elementary_charge
@@ -2202,7 +2202,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         qmol = oechem.OEQMol()
         status = oechem.OEParseSmarts(qmol, smarts)
-        if status == False:
+        if not status:
             raise SMIRKSParsingError(
                 f"OpenEye Toolkit was unable to parse SMIRKS {smarts}"
             )
@@ -2932,7 +2932,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         Chem.AssignStereochemistry(rdmol)
 
         # Throw an exception/warning if there is unspecified stereochemistry.
-        if allow_undefined_stereo == False:
+        if not allow_undefined_stereo:
             self._detect_undefined_stereo(
                 rdmol, err_msg_prefix="Unable to make OFFMol from SMILES: "
             )
@@ -3347,7 +3347,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             rdatom.SetIsAromatic(atom.is_aromatic)
             rdatom.SetProp("_Name", atom.name)
 
-            ## Stereo handling code moved to after bonds are added
+            # Stereo handling code moved to after bonds are added
             if atom.stereochemistry == "S":
                 rdatom.SetChiralTag(Chem.CHI_TETRAHEDRAL_CW)
             elif atom.stereochemistry == "R":
@@ -4138,7 +4138,7 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
             with temporary_cd(tmpdir):
                 net_charge = mol_copy.total_charge / unit.elementary_charge
                 # Write out molecule in SDF format
-                ## TODO: How should we handle multiple conformers?
+                # TODO: How should we handle multiple conformers?
                 self._rdkit_toolkit_wrapper.to_file(
                     mol_copy, "molecule.sdf", file_format="sdf"
                 )
@@ -4326,11 +4326,11 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         begin_sep = """ Bond Orders
  
   QMMM:    NUM1 ELEM1 NUM2 ELEM2      BOND_ORDER
-"""
+"""  # noqa
         end_sep = """
 
            --------- Calculation Completed ----------
-"""
+"""  # noqa
         # Extract the chunk of text between begin_sep and end_sep, and split it by newline
         fbo_lines = data.split(begin_sep)[1].split(end_sep)[0].split("\n")
 

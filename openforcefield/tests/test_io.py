@@ -19,14 +19,10 @@ class TestXMLParameterIOHandler:
         with pytest.raises(FileNotFoundError):
             io_handler.parse_file("nonexisting_file.xml")
 
-    #
-    # Tests for ForceField writing to XML files
-    #
-
     # TODO: Remove ForceField from this whole file. All tests should be for converting between hierarchical SMIRNOFF
     #       dicts and XML
     @pytest.mark.skip(reason="Needs to be updated for 1.0.0 syntax")
-    def test_save(self):
+    def test_save(self):  # flake8: noqa: F821
         """Test writing and reading of SMIRNOFF in XML format.
         """
         forcefield = ForceField(smirnoff99Frosst_offxml_filename)
@@ -41,8 +37,7 @@ class TestXMLParameterIOHandler:
                 "ForceField written to .offxml does not match original ForceField",
             )
 
-    @pytest.mark.skip(reason="Needs to be updated for 1.0.0 syntax")
-    def test_to_xml(self):
+    def test_to_xml(self):  # flake8: noqa: F821
         forcefield = ForceField(smirnoff99Frosst_offxml_filename)
         # Retrieve XML as a string
         xml = forcefield.to_xml()

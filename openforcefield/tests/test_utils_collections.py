@@ -32,53 +32,53 @@ class TestValidatedList(TestValidatedMixin):
         with pytest.raises(TypeError, match="value is not positive"):
             ValidatedList([1, -2], validator=is_positive)
 
-        l = ValidatedList([1, 2, 3], validator=is_positive)
+        validated_list = ValidatedList([1, 2, 3], validator=is_positive)
 
         # __setitem__()
         with pytest.raises(TypeError, match="value is not positive"):
-            l[2] = -1
+            validated_list[2] = -1
         with pytest.raises(TypeError, match="value is not positive"):
-            l[0:2] = [2, 3, -1]
+            validated_list[0:2] = [2, 3, -1]
 
         # append()
         with pytest.raises(TypeError, match="value is not positive"):
-            l.append(-4)
+            validated_list.append(-4)
 
         # extend() and __iadd__()
         with pytest.raises(TypeError, match="value is not positive"):
-            l.extend([6, -1])
+            validated_list.extend([6, -1])
         with pytest.raises(TypeError, match="value is not positive"):
-            l += [6, -1]
+            validated_list += [6, -1]
 
         # insert()
         with pytest.raises(TypeError, match="value is not positive"):
-            l.insert(1, -3)
+            validated_list.insert(1, -3)
 
     def test_converters(self):
         """Custom converters of ValidatedList are called correctly."""
         # All elements are converted on construction.
-        l = ValidatedList([1, 2.0, "3"], converter=int)
-        assert l == [1, 2, 3]
+        validated_list = ValidatedList([1, 2.0, "3"], converter=int)
+        assert validated_list == [1, 2, 3]
 
         # __setitem__()
-        l[2] = "4"
-        assert l[2] == 4
-        l[0:3] = ["2", "3", 4]
-        assert l == [2, 3, 4]
+        validated_list[2] = "4"
+        assert validated_list[2] == 4
+        validated_list[0:3] = ["2", "3", 4]
+        assert validated_list == [2, 3, 4]
 
         # append()
-        l.append("5")
-        assert l[3] == 5
+        validated_list.append("5")
+        assert validated_list[3] == 5
 
         # extend() and __iadd__()
-        l.extend([6, "7"])
-        assert l[5] == 7
-        l += ["8", 9]
-        assert l[6] == 8
+        validated_list.extend([6, "7"])
+        assert validated_list[5] == 7
+        validated_list += ["8", 9]
+        assert validated_list[6] == 8
 
         # insert()
-        l.insert(5, "10")
-        assert l[5] == 10
+        validated_list.insert(5, "10")
+        assert validated_list[5] == 10
 
     def test_validators_and_converters(self):
         """Custom converters of ValidatedList are called correctly."""
@@ -88,45 +88,45 @@ class TestValidatedList(TestValidatedMixin):
                 raise TypeError("value is not positive")
 
         # Validators are run after converters.
-        l = ValidatedList([1, 2, -3], converter=abs, validator=is_positive)
-        assert l == [1, 2, 3]
+        validated_list = ValidatedList([1, 2, -3], converter=abs, validator=is_positive)
+        assert validated_list == [1, 2, 3]
 
         # __setitem__
-        l[2] = -1
-        assert l[2] == 1
+        validated_list[2] = -1
+        assert validated_list[2] == 1
         with pytest.raises(TypeError, match="value is not positive"):
-            l[2] = 0
-        l[0:3] = [2, 3, -1]
-        assert l == [2, 3, 1]
+            validated_list[2] = 0
+        validated_list[0:3] = [2, 3, -1]
+        assert validated_list == [2, 3, 1]
         with pytest.raises(TypeError, match="value is not positive"):
-            l[0:3] = [2, 3, 0]
+            validated_list[0:3] = [2, 3, 0]
 
         # append()
-        l.append(-4)
-        assert l[-1] == 4
+        validated_list.append(-4)
+        assert validated_list[-1] == 4
         with pytest.raises(TypeError, match="value is not positive"):
-            l.append(0)
+            validated_list.append(0)
 
         # extend() and __iadd__()
-        l.extend([6, -1])
-        assert l[-2:] == [6, 1]
+        validated_list.extend([6, -1])
+        assert validated_list[-2:] == [6, 1]
         with pytest.raises(TypeError, match="value is not positive"):
-            l.extend([6, 0])
-        l += [6, -2]
-        assert l[-2:] == [6, 2]
+            validated_list.extend([6, 0])
+        validated_list += [6, -2]
+        assert validated_list[-2:] == [6, 2]
         with pytest.raises(TypeError, match="value is not positive"):
-            l += [6, 0]
+            validated_list += [6, 0]
 
         # insert()
-        l.insert(1, -3)
-        assert l[1] == 3
+        validated_list.insert(1, -3)
+        assert validated_list[1] == 3
         with pytest.raises(TypeError, match="value is not positive"):
-            l.insert(1, 0)
+            validated_list.insert(1, 0)
 
     def test_multiple_converters(self):
         """Multiple converters of ValidatedList are called in order."""
-        l = ValidatedList([1, 2, -3], converter=[abs, str])
-        assert l == ["1", "2", "3"]
+        validated_list = ValidatedList([1, 2, -3], converter=[abs, str])
+        assert validated_list == ["1", "2", "3"]
 
     def test_multiple_validators(self):
         """Multiple converters of ValidatedList are called in order."""
@@ -147,15 +147,15 @@ class TestValidatedList(TestValidatedMixin):
 
     def test_copy(self):
         """A copy of a ValidatedList returns another ValidatedList."""
-        l = ValidatedList([1, 2, 3])
-        assert isinstance(l.copy(), ValidatedList)
-        assert isinstance(copy.copy(l), ValidatedList)
-        assert isinstance(copy.deepcopy(l), ValidatedList)
+        validated_list = ValidatedList([1, 2, 3])
+        assert isinstance(validated_list.copy(), ValidatedList)
+        assert isinstance(copy.copy(validated_list), ValidatedList)
+        assert isinstance(copy.deepcopy(validated_list), ValidatedList)
 
     def test_slice(self):
         """A slice of a ValidatedList returns another ValidatedList."""
-        l = ValidatedList([1, 2, 3])
-        assert isinstance(l[:2], ValidatedList)
+        validated_list = ValidatedList([1, 2, 3])
+        assert isinstance(validated_list[:2], ValidatedList)
 
 
 class TestValidatedDict(TestValidatedMixin):

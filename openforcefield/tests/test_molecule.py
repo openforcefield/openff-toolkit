@@ -39,10 +39,6 @@ from openforcefield.utils.toolkits import (
     ToolkitRegistry,
 )
 
-# =============================================================================================
-# TEST UTILITIES
-# =============================================================================================
-
 requires_openeye = pytest.mark.skipif(
     not OpenEyeToolkitWrapper.is_available(), reason="Test requires OE toolkit"
 )
@@ -137,11 +133,6 @@ def is_three_memebered_ring_torsion(torsion):
 
     # This is a torsion including a three-membered ring.
     return True
-
-
-# =============================================================================================
-# FIXTURES
-# =============================================================================================
 
 
 def mini_drug_bank(xfail_mols=None, wip_mols=None):
@@ -248,10 +239,6 @@ drugbank_stereogenic_in_oe_but_not_rdkit = {
     "DrugBank_1849",
     "DrugBank_2141",
 }
-
-# =============================================================================================
-# TESTS
-# =============================================================================================
 
 
 class TestAtom:

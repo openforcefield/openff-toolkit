@@ -401,7 +401,7 @@ class IndexedMappedParameterAttribute(ParameterAttribute):
     Some parameters can be associated to multiple terms,
     where those terms have multiple components.
     For example, torsions with fractional bond orders have parameters such as
-    k1_bondorder1, k1_bondorder2, k2_bondorder1, k2_bondorder2, ..., and 
+    k1_bondorder1, k1_bondorder2, k2_bondorder1, k2_bondorder2, ..., and
     ``IndexedMappedParameterAttribute`` can be used to encapsulate the sequence of
     terms as mappings (typically, `dict`s) of their components.
 
@@ -1098,7 +1098,9 @@ class _ParameterAttributeHandler:
         """
         # If no filter is specified, get all the parameters.
         if filter is None:
-            filter = lambda x: True
+
+            def filter(x):
+                return True
 
         # Go through MRO and retrieve also parents descriptors. The function
         # inspect.getmembers() automatically resolves the MRO, but it also
@@ -4119,7 +4121,7 @@ class GBSAHandler(ParameterHandler):
             "OBC2": simtk.openmm.GBSAOBCForce,
             # It's tempting to do use the class below, but the customgbforce
             # version of OBC2 doesn't provide setSolventRadius()
-            #'OBC2': simtk.openmm.app.internal.customgbforces.GBSAOBC2Force,
+            # 'OBC2': simtk.openmm.app.internal.customgbforces.GBSAOBC2Force,
         }
         openmm_force_type = force_map[self.gb_model]
 
