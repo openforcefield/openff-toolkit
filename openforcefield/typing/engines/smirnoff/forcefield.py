@@ -25,7 +25,7 @@ import logging
 import os
 from collections import OrderedDict
 
-from simtk import openmm
+from simtk import openmm, unit  # noqa: F401
 
 from openforcefield.topology.molecule import DEFAULT_AROMATICITY_MODEL
 from openforcefield.typing.engines.smirnoff.io import ParameterIOHandler
