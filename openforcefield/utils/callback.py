@@ -1,28 +1,18 @@
-#!/usr/bin/env python
-
 """
 Utility classes and functions to create objects supporting callback registration.
 
 """
 
 __all__ = [
-    'callback_method',
-    'CallbackRegistrationError',
-    'Callbackable',
+    "callback_method",
+    "CallbackRegistrationError",
+    "Callbackable",
 ]
 
-
-# =====================================================================
-# GLOBAL IMPORTS
-# =====================================================================
 
 import functools
 import inspect
 
-
-# =====================================================================
-# CALLBACKABLE CLASSES
-# =====================================================================
 
 def callback_method(func=None, events=()):
     """Decorator used to mark a method as callbackable.
@@ -65,6 +55,7 @@ def callback_method(func=None, events=()):
 
 class CallbackRegistrationError(TypeError):
     """Error raised when callback registration fails."""
+
     pass
 
 
@@ -159,8 +150,10 @@ class Callbackable:
             try:
                 attr._callback_events
             except AttributeError:
-                raise CallbackRegistrationError(f'{self.__class__}.{event_name} is not '
-                                                f'tagged with the @callback_method decorator')
+                raise CallbackRegistrationError(
+                    f"{self.__class__}.{event_name} is not "
+                    f"tagged with the @callback_method decorator"
+                )
 
         # Update the instance callbacks dictionary.
         try:
@@ -181,8 +174,10 @@ class Callbackable:
                 return
 
         # The event wasn't found.
-        raise CallbackRegistrationError(f'No method of {self.__class__} is associated '
-                                        f'to the callback event "{event_name}".')
+        raise CallbackRegistrationError(
+            f"No method of {self.__class__} is associated "
+            f'to the callback event "{event_name}".'
+        )
 
     def _raise_callback_events(self, func_name, *args, **kwargs):
         events = getattr(self, func_name)._callback_events
@@ -193,6 +188,7 @@ class Callbackable:
                 callback(self, func_name, *args, **kwargs)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import doctest
+
     doctest.run_docstring_examples(Callbackable, globals())

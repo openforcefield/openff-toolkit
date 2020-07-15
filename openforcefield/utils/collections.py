@@ -1,26 +1,16 @@
-#!/usr/bin/env python
-
 """
 Custom collections classes.
 
 """
 
 __all__ = [
-    'ValidatedList',
-    'ValidatedDict',
+    "ValidatedList",
+    "ValidatedDict",
 ]
 
 
-# =====================================================================
-# GLOBAL IMPORTS
-# =====================================================================
-
 from collections import abc
 
-
-# =====================================================================
-# VALIDATED LIST
-# =====================================================================
 
 class ValidatedList(list):
     """A list that runs custom converter and validators when new elements are added.
@@ -127,7 +117,7 @@ class ValidatedList(list):
     # TODO: Is there a cleaner way (getstate/setstate perhaps?) to allow FFs to be
     #       pickled?
     def __reduce__(self):
-        return (__class__, ( list( self),), self.__dict__)
+        return (__class__, (list(self),), self.__dict__)
 
     def _convert_and_validate(self, seq):
         """Run all converters and the validator on the given sequence."""
@@ -184,6 +174,7 @@ class ValidatedDict(dict):
     {'c': 1.0, 'd': 2.0, 'e': 3.0}
 
     """
+
     def __init__(self, mapping, converter=None, validator=None):
         """
         Initialize the dict.
@@ -213,8 +204,8 @@ class ValidatedDict(dict):
         super().__init__(mapping)
 
     def update(self, other):
-       other = self._convert_and_validate(dict(other))
-       super().update(other)
+        other = self._convert_and_validate(dict(other))
+        super().update(other)
 
     def copy(self):
         return self.__class__(self)
@@ -228,7 +219,7 @@ class ValidatedDict(dict):
     # TODO: Is there a cleaner way (getstate/setstate perhaps?) to allow FFs to be
     #       pickled?
     def __reduce__(self):
-        return (__class__, ( dict( self),), self.__dict__)
+        return (__class__, (dict(self),), self.__dict__)
 
     def _convert_and_validate(self, mapping):
         """Run all converters and the validator on the given mapping."""
@@ -236,8 +227,7 @@ class ValidatedDict(dict):
         # Run all element converters.
         if self._converters is not None:
             for converter in self._converters:
-                mapping = {key: converter(value)
-                        for key, value in mapping.items()}
+                mapping = {key: converter(value) for key, value in mapping.items()}
 
         # Run all element validators.
         if self._validators is not None:
@@ -247,6 +237,7 @@ class ValidatedDict(dict):
         return mapping
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import doctest
+
     doctest.run_docstring_examples(ValidatedList, globals())

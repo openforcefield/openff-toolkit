@@ -1,32 +1,24 @@
-#!/usr/bin/env python
-
 """
 Utility subroutines for manipulating parmed Structure objects
 
 """
-#=============================================================================================
-# GLOBAL IMPORTS
-#=============================================================================================
 
 import os
 import time
-
-import numpy as np
-
-from simtk import openmm, unit
 import warnings
 
+import numpy as np
+from simtk import openmm, unit
 
-DEPRECATION_WARNING_TEXT = "Deprecation warning: Functionality in openforcefield.utils.structure was not updated " \
-                           "for the 0.2.0 Open Force Field Toolkit transition, and is no longer maintained. "\
-                           "This code is being considered for deprecation in the near future. Please leave " \
-                           "feedback on our GitHub issue #333 "\
-                           "if you would like us to maintain this functionality. "\
-                           "https://github.com/openforcefield/openforcefield/issues/333"
+DEPRECATION_WARNING_TEXT = (
+    "Deprecation warning: Functionality in openforcefield.utils.structure was not updated "
+    "for the 0.2.0 Open Force Field Toolkit transition, and is no longer maintained. "
+    "This code is being considered for deprecation in the near future. Please leave "
+    "feedback on our GitHub issue #333 "
+    "if you would like us to maintain this functionality. "
+    "https://github.com/openforcefield/openforcefield/issues/333"
+)
 
-#=============================================================================================
-# PARMED UTILITIES
-#=============================================================================================
 
 # TODO: Can we get rid of this, or convert it to use Molecule instead?
 def generateSMIRNOFFStructure(oemol):
@@ -51,25 +43,29 @@ def generateSMIRNOFFStructure(oemol):
 
     off_mol = Molecule.from_openeye(oemol)
     off_top = Topology.from_molecules([off_mol])
-    mol_ff = ForceField('test_forcefields/smirnoff99Frosst.offxml')
+    mol_ff = ForceField("test_forcefields/smirnoff99Frosst.offxml")
 
     # Create OpenMM System and Topology.
     omm_top = generateTopologyFromOEMol(oemol)
 
     # If it's a nonperiodic box, then we can't use default (PME) settings
     if omm_top.getPeriodicBoxVectors() is None:
-        mol_ff.get_parameter_handler("Electrostatics", {})._method = 'Coulomb'
+        mol_ff.get_parameter_handler("Electrostatics", {})._method = "Coulomb"
 
     system = mol_ff.create_openmm_system(off_top)
 
     # Convert to ParmEd structure.
     import parmed
+
     xyz = extractPositionsFromOEMol(oemol)
     molecule_structure = parmed.openmm.load_topology(omm_top, system, xyz=xyz)
 
     return molecule_structure
 
-def generateProteinStructure(proteinpdb, protein_forcefield='amber99sbildn.xml', solvent_forcefield='tip3p.xml'):
+
+def generateProteinStructure(
+    proteinpdb, protein_forcefield="amber99sbildn.xml", solvent_forcefield="tip3p.xml"
+):
     """
     Given an OpenMM PDBFile, create the OpenMM System of the protein using OpenMM's ForceField and then generate the parametrized ParmEd Structure of the protein.
 
@@ -91,14 +87,16 @@ def generateProteinStructure(proteinpdb, protein_forcefield='amber99sbildn.xml',
     warnings.warn(DEPRECATION_WARNING_TEXT, PendingDeprecationWarning)
 
     # Generate protein Structure object using OpenMM ForceField
-    from simtk.openmm import app
     import parmed
+    from simtk.openmm import app
+
     forcefield = openmm.app.ForceField(protein_forcefield, solvent_forcefield)
-    protein_system = forcefield.createSystem( proteinpdb.topology )
-    protein_structure = parmed.openmm.load_topology(proteinpdb.topology,
-                                                    protein_system,
-                                                    xyz=proteinpdb.positions)
+    protein_system = forcefield.createSystem(proteinpdb.topology)
+    protein_structure = parmed.openmm.load_topology(
+        proteinpdb.topology, protein_system, xyz=proteinpdb.positions
+    )
     return protein_structure
+
 
 def combinePositions(proteinPositions, molPositions):
     """
@@ -123,17 +121,17 @@ def combinePositions(proteinPositions, molPositions):
     positions_unit = unit.angstroms
     positions0_dimensionless = np.array(proteinPositions / positions_unit)
     positions1_dimensionless = np.array(molPositions / positions_unit)
-    coordinates = np.vstack(
-        (positions0_dimensionless, positions1_dimensionless))
+    coordinates = np.vstack((positions0_dimensionless, positions1_dimensionless))
     natoms = len(coordinates)
     positions = np.zeros([natoms, 3], np.float32)
     for index in range(natoms):
-            (x, y, z) = coordinates[index]
-            positions[index, 0] = x
-            positions[index, 1] = y
-            positions[index, 2] = z
+        (x, y, z) = coordinates[index]
+        positions[index, 0] = x
+        positions[index, 1] = y
+        positions[index, 2] = z
     positions = unit.Quantity(positions, positions_unit)
     return positions
+
 
 def mergeStructure(proteinStructure, molStructure):
     """
@@ -164,6 +162,7 @@ def mergeStructure(proteinStructure, molStructure):
     structure.box = proteinStructure.box
     return structure
 
+
 # TODO: Migrate into Molecule
 def generateTopologyFromOEMol(molecule):
     """
@@ -189,18 +188,21 @@ def generateTopologyFromOEMol(molecule):
 
     # Create a Topology object with one Chain and one Residue.
     from simtk.openmm.app import Topology
+
     topology = Topology()
     chain = topology.addChain()
     resname = mol.GetTitle()
     residue = topology.addResidue(resname, chain)
 
     # Make sure the atoms have names, otherwise bonds won't be created properly below
-    if any([atom.GetName() =='' for atom in mol.GetAtoms()]):
+    if any([atom.GetName() == "" for atom in mol.GetAtoms()]):
         oechem.OETriposAtomNames(mol)
     # Check names are unique; non-unique names will also cause a problem
-    atomnames = [ atom.GetName() for atom in mol.GetAtoms() ]
-    if any( atomnames.count(atom.GetName())>1 for atom in mol.GetAtoms()):
-        raise Exception("Error: Reference molecule must have unique atom names in order to create a Topology.")
+    atomnames = [atom.GetName() for atom in mol.GetAtoms()]
+    if any(atomnames.count(atom.GetName()) > 1 for atom in mol.GetAtoms()):
+        raise Exception(
+            "Error: Reference molecule must have unique atom names in order to create a Topology."
+        )
 
     # Create atoms in the residue.
     for atom in mol.GetAtoms():
@@ -209,12 +211,18 @@ def generateTopologyFromOEMol(molecule):
         topology.addAtom(name, element, residue)
 
     # Create bonds.
-    atoms = { atom.name : atom for atom in topology.atoms() }
+    atoms = {atom.name: atom for atom in topology.atoms()}
     for bond in mol.GetBonds():
         aromatic = None
-        if bond.IsAromatic(): aromatic = 'Aromatic'
+        if bond.IsAromatic():
+            aromatic = "Aromatic"
         # Add bond, preserving order assessed by OEChem
-        topology.addBond(atoms[bond.GetBgn().GetName()], atoms[bond.GetEnd().GetName()], type=aromatic, order=bond.GetOrder())
+        topology.addBond(
+            atoms[bond.GetBgn().GetName()],
+            atoms[bond.GetEnd().GetName()],
+            type=aromatic,
+            order=bond.GetOrder(),
+        )
 
     return topology
 
@@ -240,11 +248,12 @@ def normalize_molecules(molecules):
     # Build a conformation for all molecules with Omega.
     print("Building conformations for all molecules...")
     from openeye import oeomega
+
     omega = oeomega.OEOmega()
     omega.SetMaxConfs(1)
     omega.SetFromCT(True)
     for molecule in molecules:
-        #omega.SetFixMol(molecule)
+        # omega.SetFixMol(molecule)
         omega(molecule)
     end_time = time.time()
     elapsed_time = end_time - start_time
@@ -252,10 +261,12 @@ def normalize_molecules(molecules):
 
     # Regularize all molecules through writing as mol2.
     print("Regularizing all molecules...")
-    ligand_mol2_dirname  = os.path.dirname(mcmcDbName) + '/mol2'
-    if( not os.path.exists( ligand_mol2_dirname ) ):
+    ligand_mol2_dirname = os.path.dirname(mcmcDbName) + "/mol2"
+    if not os.path.exists(ligand_mol2_dirname):
         os.makedirs(ligand_mol2_dirname)
-    ligand_mol2_filename = ligand_mol2_dirname + '/temp' + os.path.basename(mcmcDbName) + '.mol2'
+    ligand_mol2_filename = (
+        ligand_mol2_dirname + "/temp" + os.path.basename(mcmcDbName) + ".mol2"
+    )
     start_time = time.time()
     omolstream = oechem.oemolostream(ligand_mol2_filename)
     for molecule in molecules:
@@ -276,7 +287,9 @@ def normalize_molecules(molecules):
             OEFormalPartialCharges(molecule)
         else:
             # Assign AM1-BCC charges for multiatom molecules.
-            OEAssignPartialCharges(molecule, OECharges_AM1BCC, False) # use explicit hydrogens
+            OEAssignPartialCharges(
+                molecule, OECharges_AM1BCC, False
+            )  # use explicit hydrogens
         # Check to make sure we ended up with partial charges.
         if OEHasPartialCharges(molecule) == False:
             print(f"No charges on molecule: '{molecule.GetTitle()}'")
@@ -291,6 +304,7 @@ def normalize_molecules(molecules):
     print(f"{len(molecules)} molecules remaining")
 
     return
+
 
 # TODO: Migrate into Molecule
 def read_molecules(file_path, verbose=True):
@@ -311,6 +325,7 @@ def read_molecules(file_path, verbose=True):
     warnings.warn(DEPRECATION_WARNING_TEXT, PendingDeprecationWarning)
 
     from openeye import oechem
+
     from openforcefield.utils import get_data_file_path
 
     if not os.path.exists(file_path):
@@ -319,30 +334,38 @@ def read_molecules(file_path, verbose=True):
             raise Exception(f"File '{file_path}' not found.")
         file_path = built_in
 
-    if verbose:print(f"Loading molecules from '{file_path}'...")
+    if verbose:
+        print(f"Loading molecules from '{file_path}'...")
     start_time = time.time()
     molecules = list()
     input_molstream = oechem.oemolistream(file_path)
 
-    flavor = oechem.OEIFlavor_Generic_Default | oechem.OEIFlavor_MOL2_Default | oechem.OEIFlavor_MOL2_Forcefield
+    flavor = (
+        oechem.OEIFlavor_Generic_Default
+        | oechem.OEIFlavor_MOL2_Default
+        | oechem.OEIFlavor_MOL2_Forcefield
+    )
     input_molstream.SetFlavor(oechem.OEFormat_MOL2, flavor)
 
     molecule = oechem.OECreateOEGraphMol()
     while oechem.OEReadMolecule(input_molstream, molecule):
         # If molecule has no title, try getting SD 'name' tag
-        if molecule.GetTitle() == '':
-            name = oechem.OEGetSDData(molecule, 'name').strip()
+        if molecule.GetTitle() == "":
+            name = oechem.OEGetSDData(molecule, "name").strip()
             molecule.SetTitle(name)
         # Append to list.
         molecule_copy = oechem.OEMol(molecule)
         molecules.append(molecule_copy)
     input_molstream.close()
-    if verbose: print(f"{len(molecules)} molecules read")
+    if verbose:
+        print(f"{len(molecules)} molecules read")
     end_time = time.time()
     elapsed_time = end_time - start_time
-    if verbose: print(f"{elapsed_time:.3f} s elapsed")
+    if verbose:
+        print(f"{elapsed_time:.3f} s elapsed")
 
     return molecules
+
 
 # TODO: Migrate into Molecule
 def setPositionsInOEMol(oemol, positions):
@@ -359,14 +382,18 @@ def setPositionsInOEMol(oemol, positions):
 
     from openeye import oechem
 
-    if oemol.NumAtoms() != len(positions): raise ValueError("Number of atoms in molecule does not match length of position array.")
-    pos_unitless = positions/unit.angstroms
+    if oemol.NumAtoms() != len(positions):
+        raise ValueError(
+            "Number of atoms in molecule does not match length of position array."
+        )
+    pos_unitless = positions / unit.angstroms
 
     coordlist = []
     for idx in range(len(pos_unitless)):
         for j in range(3):
             coordlist.append(pos_unitless[idx][j])
     oemol.SetCoords(oechem.OEFloatArray(coordlist))
+
 
 # TODO: Migrate into Molecule
 def extractPositionsFromOEMol(oemol):
@@ -385,11 +412,14 @@ def extractPositionsFromOEMol(oemol):
     """
     warnings.warn(DEPRECATION_WARNING_TEXT, PendingDeprecationWarning)
 
-    positions = unit.Quantity(np.zeros([oemol.NumAtoms(), 3], np.float32), unit.angstroms)
+    positions = unit.Quantity(
+        np.zeros([oemol.NumAtoms(), 3], np.float32), unit.angstroms
+    )
     coords = oemol.GetCoords()
     for index in range(oemol.NumAtoms()):
-        positions[index,:] = unit.Quantity(coords[index], unit.angstroms)
+        positions[index, :] = unit.Quantity(coords[index], unit.angstroms)
     return positions
+
 
 def read_typelist(file_path):
     """
@@ -429,7 +459,7 @@ def read_typelist(file_path):
 
     for line in lines:
         # Strip trailing comments
-        index = line.find('%')
+        index = line.find("%")
         if index != -1:
             line = line[0:index]
 
@@ -438,16 +468,19 @@ def read_typelist(file_path):
         # Process if we have enough tokens
         if len(tokens) >= 2:
             smarts = tokens[0]
-            typename = ' '.join(tokens[1:])
+            typename = " ".join(tokens[1:])
             if typename not in used_typenames:
-                typelist.append([smarts,typename])
+                typelist.append([smarts, typename])
                 used_typenames.append(typename)
             else:
-                raise Exception(f"Error in file '{file_path}' -- each entry must have a unique name.")
+                raise Exception(
+                    f"Error in file '{file_path}' -- each entry must have a unique name."
+                )
 
     ifs.close()
 
     return typelist
+
 
 # TODO: This only works with the OpenEye toolkit installed; replace with Molecule API
 def positions_from_oemol(mol):
@@ -467,25 +500,29 @@ def positions_from_oemol(mol):
     warnings.warn(DEPRECATION_WARNING_TEXT, PendingDeprecationWarning)
 
     from openeye import oechem, oeomega
+
     if mol.GetDimension() != 3:
         # Assign coordinates
         omega = oeomega.OEOmega()
         omega.SetMaxConfs(1)
         omega.SetIncludeInput(False)
         omega.SetCanonOrder(False)
-        omega.SetSampleHydrogens(True)  # Word to the wise: skipping this step can lead to significantly different charges!
+        omega.SetSampleHydrogens(
+            True
+        )  # Word to the wise: skipping this step can lead to significantly different charges!
         omega(mol)  # generate conformation
 
     coordinates = mol.GetCoords()
     natoms = len(coordinates)
-    positions = np.zeros([natoms,3], np.float32)
+    positions = np.zeros([natoms, 3], np.float32)
     for index in range(natoms):
-        (x,y,z) = coordinates[index]
-        positions[index,0] = x
-        positions[index,1] = y
-        positions[index,2] = z
+        (x, y, z) = coordinates[index]
+        positions[index, 0] = x
+        positions[index, 1] = y
+        positions[index, 2] = z
     positions = unit.Quantity(positions, unit.angstroms)
     return positions
+
 
 def check_energy_is_finite(system, positions):
     """
@@ -507,7 +544,8 @@ def check_energy_is_finite(system, positions):
     state = context.getState(getEnergy=True)
     energy = state.getPotentialEnergy() / unit.kilocalories_per_mole
     if np.isnan(energy):
-        raise Exception('Potential energy is NaN')
+        raise Exception("Potential energy is NaN")
+
 
 def get_energy(system, positions):
     """
@@ -532,11 +570,9 @@ def get_energy(system, positions):
     energy = state.getPotentialEnergy() / unit.kilocalories_per_mole
     return energy
 
-#=============================================================================
-# OPENMM MERGING AND EXPORTING UTILITY FUNCTIONS
-#=============================================================================
 
 # TODO: Reorganize this file, moving exporters to openforcefield.exporters
+
 
 def get_molecule_parameterIDs(molecules, forcefield):
     """Process a list of molecules with a specified SMIRNOFF ffxml file and determine which parameters are used by
@@ -566,16 +602,25 @@ def get_molecule_parameterIDs(molecules, forcefield):
     warnings.warn(DEPRECATION_WARNING_TEXT, PendingDeprecationWarning)
 
     from openforcefield.topology import Topology
+
     # Create storage
     parameters_by_molecule = dict()
     parameters_by_ID = dict()
 
     # Generate isomeric SMILES for each molecule, ensuring all molecules are unique
-    isosmiles = [ molecule.to_smiles() for molecule in molecules ]
+    isosmiles = [molecule.to_smiles() for molecule in molecules]
     already_seen = set()
-    duplicates = set(smiles for smiles in isosmiles if smiles in already_seen or already_seen.add(smiles))
+    duplicates = set(
+        smiles
+        for smiles in isosmiles
+        if smiles in already_seen or already_seen.add(smiles)
+    )
     if len(duplicates) > 0:
-        raise ValueError("Error: get_molecule_parameterIDs has been provided a list of oemols which contains some duplicates: {}".format(duplicates))
+        raise ValueError(
+            "Error: get_molecule_parameterIDs has been provided a list of oemols which contains some duplicates: {}".format(
+                duplicates
+            )
+        )
 
     # Assemble molecules into a Topology
     topology = Topology()
@@ -609,6 +654,7 @@ def get_molecule_parameterIDs(molecules, forcefield):
 
     return parameters_by_molecule, parameters_by_ID
 
+
 def getMolParamIDToAtomIndex(molecule, forcefield):
     """Take a Molecule and a SMIRNOFF forcefield object and return a dictionary, keyed by parameter ID, where each entry is a tuple of ( smirks, [[atom1, ... atomN], [atom1, ... atomN]) giving the SMIRKS corresponding to that parameter ID and a list of the atom groups in that molecule that parameter is applied to.
 
@@ -638,11 +684,22 @@ def getMolParamIDToAtomIndex(molecule, forcefield):
                 if not pid in param_usage:
                     param_usage[pid] = (smirks, [atom_indices])
                 else:
-                    param_usage[pid][1].append( atom_indices )
+                    param_usage[pid][1].append(atom_indices)
 
     return param_usage
 
-def merge_system(topology0, topology1, system0, system1, positions0, positions1, label0="AMBER system", label1="SMIRNOFF system", verbose=True):
+
+def merge_system(
+    topology0,
+    topology1,
+    system0,
+    system1,
+    positions0,
+    positions1,
+    label0="AMBER system",
+    label1="SMIRNOFF system",
+    verbose=True,
+):
     """Merge two given OpenMM systems. Returns the merged OpenMM System.
 
     Parameters
@@ -674,38 +731,44 @@ def merge_system(topology0, topology1, system0, system1, positions0, positions1,
     """
     warnings.warn(DEPRECATION_WARNING_TEXT, PendingDeprecationWarning)
 
-    #Load OpenMM Systems to ParmEd Structures
+    # Load OpenMM Systems to ParmEd Structures
     import parmed
-    structure0 = parmed.openmm.load_topology( topology0, system0 )
-    structure1 = parmed.openmm.load_topology( topology1, system1 )
 
-    #Merge parameterized Structure
+    structure0 = parmed.openmm.load_topology(topology0, system0)
+    structure1 = parmed.openmm.load_topology(topology1, system1)
+
+    # Merge parameterized Structure
     structure = structure0 + structure1
     topology = structure.topology
 
-    #Concatenate positions arrays
+    # Concatenate positions arrays
     positions_unit = unit.angstroms
-    positions0_dimensionless = np.array( positions0 / positions_unit )
-    positions1_dimensionless = np.array( positions1 / positions_unit )
+    positions0_dimensionless = np.array(positions0 / positions_unit)
+    positions1_dimensionless = np.array(positions1 / positions_unit)
 
-    coordinates = np.vstack((positions0_dimensionless,positions1_dimensionless))
+    coordinates = np.vstack((positions0_dimensionless, positions1_dimensionless))
     natoms = len(coordinates)
-    positions = np.zeros([natoms,3], np.float32)
+    positions = np.zeros([natoms, 3], np.float32)
     for index in range(natoms):
-        (x,y,z) = coordinates[index]
-        positions[index,0] = x
-        positions[index,1] = y
-        positions[index,2] = z
+        (x, y, z) = coordinates[index]
+        positions[index, 0] = x
+        positions[index, 1] = y
+        positions[index, 2] = z
     positions = unit.Quantity(positions, positions_unit)
 
-    #Generate merged OpenMM system
+    # Generate merged OpenMM system
     system = structure.createSystem()
 
     if verbose:
-        print("Generating ParmEd Structures...\n \t{}: {}\n \t{}: {}\n".format(label0, structure0, label1, structure1))
-        print("Merged ParmEd Structure: {}".format( structure ))
+        print(
+            "Generating ParmEd Structures...\n \t{}: {}\n \t{}: {}\n".format(
+                label0, structure0, label1, structure1
+            )
+        )
+        print("Merged ParmEd Structure: {}".format(structure))
 
     return topology, system, positions
+
 
 def save_system_to_amber(openmm_topology, system, positions, prmtop, inpcrd):
     """Save an OpenMM System, with provided topology and positions, to AMBER prmtop and coordinate files.
@@ -727,9 +790,13 @@ def save_system_to_amber(openmm_topology, system, positions, prmtop, inpcrd):
     warnings.warn(DEPRECATION_WARNING_TEXT, PendingDeprecationWarning)
 
     import parmed
-    structure = parmed.openmm.topsystem.load_topology(openmm_topology, system, positions)
-    structure.save(prmtop, overwrite = True, format="amber")
-    structure.save(inpcrd, format='rst7', overwrite = True)
+
+    structure = parmed.openmm.topsystem.load_topology(
+        openmm_topology, system, positions
+    )
+    structure.save(prmtop, overwrite=True, format="amber")
+    structure.save(inpcrd, format="rst7", overwrite=True)
+
 
 def save_system_to_gromacs(openmm_topology, system, positions, top, gro):
     """Save an OpenMM System, with provided topology and positions, to AMBER prmtop and coordinate files.
@@ -751,6 +818,9 @@ def save_system_to_gromacs(openmm_topology, system, positions, top, gro):
     warnings.warn(DEPRECATION_WARNING_TEXT, PendingDeprecationWarning)
 
     import parmed
-    structure = parmed.openmm.topsystem.load_topology(openmm_topology, system, positions )
-    structure.save(top, overwrite = True, format="gromacs")
-    structure.save(gro, overwrite = True, format="gro")
+
+    structure = parmed.openmm.topsystem.load_topology(
+        openmm_topology, system, positions
+    )
+    structure.save(top, overwrite=True, format="gromacs")
+    structure.save(gro, overwrite=True, format="gro")

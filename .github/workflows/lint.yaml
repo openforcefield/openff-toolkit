@@ -1,0 +1,39 @@
+name: lint
+
+on:
+  push:
+    paths:
+      - 'openforcefield/**.py'
+      - 'setup.cfg'
+
+jobs:
+
+  lint:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v1
+        with:
+          python-version: '3.7'
+      - name: Install the package
+        run: |
+          python setup.py develop --no-deps
+
+      - name: Install linters
+        run: |
+          pip install isort flake8 black
+
+      - name: Run isort
+        run: |
+          isort --recursive --check-only openff
+
+      - name: Run black
+        run: |
+          black openff --check
+
+      - name: Run flake8
+        run: |
+          flake8 openff

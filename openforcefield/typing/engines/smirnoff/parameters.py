@@ -1,8 +1,3 @@
-#!/usr/bin/env python
-
-#=============================================================================================
-# MODULE DOCSTRING
-#=============================================================================================
 """
 Parameter handlers for the SMIRNOFF force field engine
 
@@ -13,129 +8,105 @@ New pluggable handlers can be created by creating subclasses of :class:`Paramete
 """
 
 __all__ = [
-    'SMIRNOFFSpecError',
-    'IncompatibleParameterError',
-    'UnassignedValenceParameterException',
-    'UnassignedBondParameterException',
-    'UnassignedAngleParameterException',
-    'NonbondedMethod',
-    'ParameterList',
-    'ParameterType',
-    'ParameterHandler',
-    'ParameterAttribute',
-    'IndexedParameterAttribute',
-    'IndexedMappedParameterAttribute',
-    'ConstraintHandler',
-    'BondHandler',
-    'AngleHandler',
-    'ProperTorsionHandler',
-    'ImproperTorsionHandler',
-    'vdWHandler',
-    'GBSAHandler'
+    "SMIRNOFFSpecError",
+    "IncompatibleParameterError",
+    "UnassignedValenceParameterException",
+    "UnassignedBondParameterException",
+    "UnassignedAngleParameterException",
+    "NonbondedMethod",
+    "ParameterList",
+    "ParameterType",
+    "ParameterHandler",
+    "ParameterAttribute",
+    "IndexedParameterAttribute",
+    "IndexedMappedParameterAttribute",
+    "ConstraintHandler",
+    "BondHandler",
+    "AngleHandler",
+    "ProperTorsionHandler",
+    "ImproperTorsionHandler",
+    "vdWHandler",
+    "GBSAHandler",
 ]
 
 
-#=============================================================================================
-# GLOBAL IMPORTS
-#=============================================================================================
-
 import copy
-from collections import OrderedDict, defaultdict
-from enum import Enum
 import functools
 import inspect
 import logging
 import re
+from collections import OrderedDict, defaultdict
+from enum import Enum
 
 from simtk import openmm, unit
 
-from openforcefield.utils import attach_units,  \
-    extract_serialized_units_from_dict, MessageException, \
-    object_to_quantity, GLOBAL_TOOLKIT_REGISTRY
-from openforcefield.topology import ValenceDict, ImproperDict, SortedDict
+from openforcefield.topology import ImproperDict, SortedDict, ValenceDict
 from openforcefield.topology.molecule import Molecule
 from openforcefield.typing.chemistry import ChemicalEnvironment
-from openforcefield.utils import IncompatibleUnitError
-from openforcefield.utils.collections import ValidatedList, ValidatedDict
-
-
-#=============================================================================================
-# CONFIGURE LOGGER
-#=============================================================================================
+from openforcefield.utils import (
+    GLOBAL_TOOLKIT_REGISTRY,
+    IncompatibleUnitError,
+    MessageException,
+    attach_units,
+    extract_serialized_units_from_dict,
+    object_to_quantity,
+)
+from openforcefield.utils.collections import ValidatedDict, ValidatedList
 
 logger = logging.getLogger(__name__)
 
-
-#======================================================================
-# CUSTOM EXCEPTIONS
-#======================================================================
 
 class SMIRNOFFSpecError(MessageException):
     """
     Exception for when data is noncompliant with the SMIRNOFF data specification.
     """
-    pass
 
 
 class IncompatibleParameterError(MessageException):
     """
     Exception for when a set of parameters is scientifically/technically incompatible with another
     """
-    pass
 
 
 class UnassignedValenceParameterException(Exception):
     """Exception raised when there are valence terms for which a ParameterHandler can't find parameters."""
-    pass
 
 
 class UnassignedBondParameterException(UnassignedValenceParameterException):
     """Exception raised when there are bond terms for which a ParameterHandler can't find parameters."""
-    pass
 
 
 class UnassignedAngleParameterException(UnassignedValenceParameterException):
     """Exception raised when there are angle terms for which a ParameterHandler can't find parameters."""
-    pass
 
 
 class UnassignedProperTorsionParameterException(UnassignedValenceParameterException):
     """Exception raised when there are proper torsion terms for which a ParameterHandler can't find parameters."""
-    pass
 
 
 class UnassignedMoleculeChargeException(Exception):
     """Exception raised when no charge method is able to assign charges to a molecule."""
-    pass
 
 
 class NonintegralMoleculeChargeException(Exception):
     """Exception raised when the partial charges on a molecule do not sum up to its formal charge."""
-    pass
 
 
 class DuplicateParameterError(MessageException):
     """Exception raised when trying to add a ParameterType that already exists"""
 
 
-#======================================================================
-# ENUM TYPES
-#======================================================================
-
 class NonbondedMethod(Enum):
     """
     An enumeration of the nonbonded methods
     """
+
     NoCutoff = 0
     CutoffPeriodic = 1
     CutoffNonPeriodic = 2
     Ewald = 3
     PME = 4
 
-
-#======================================================================
-# PARAMETER ATTRIBUTES
-#======================================================================
 
 # TODO: Think about adding attrs to the dependencies and inherit from attr.ib
 class ParameterAttribute:
@@ -252,6 +223,7 @@ class ParameterAttribute:
 
     class UNDEFINED:
         """Custom type used by ``ParameterAttribute`` to differentiate between ``None`` and undeclared default."""
+
         pass
 
     def __init__(self, default=UNDEFINED, unit=None, converter=None):
@@ -260,7 +232,7 @@ class ParameterAttribute:
         self._converter = converter
 
     def __set_name__(self, owner, name):
-        self._name = '_' + name
+        self._name = "_" + name
 
     @property
     def name(self):
@@ -305,7 +277,9 @@ class ParameterAttribute:
 
     def _is_valid_default(self, value):
         """Return True if this is a defined default value."""
-        return self.default is not ParameterAttribute.UNDEFINED and value == self.default
+        return (
+            self.default is not ParameterAttribute.UNDEFINED and value == self.default
+        )
 
     def _validate_units(self, value):
         """Convert strings expressions to Quantity and validate the units if requested."""
@@ -316,10 +290,14 @@ class ParameterAttribute:
             # Check if units are compatible.
             try:
                 if not self._unit.is_compatible(value.unit):
-                    raise IncompatibleUnitError(f'{self.name}={value} should have units of {self._unit}')
+                    raise IncompatibleUnitError(
+                        f"{self.name}={value} should have units of {self._unit}"
+                    )
             except AttributeError:
                 # This is not a Quantity object.
-                raise IncompatibleUnitError(f'{self.name}={value} should have units of {self._unit}')
+                raise IncompatibleUnitError(
+                    f"{self.name}={value} should have units of {self._unit}"
+                )
         return value
 
     def _call_converter(self, value, instance):
@@ -398,6 +376,7 @@ class IndexedParameterAttribute(ParameterAttribute):
     [1.0, 1.0, 0.01, 4.0]
 
     """
+
     def _convert_and_validate(self, instance, value):
         """Overwrite ParameterAttribute._convert_and_validate to make the value a ValidatedList."""
         # The default value is always allowed.
@@ -483,6 +462,7 @@ class IndexedMappedParameterAttribute(ParameterAttribute):
     [{1: 1.0}, {2: 1.0, 3: 0.01}, {4: 4.0}]
 
     """
+
     def _convert_and_validate(self, instance, value):
         """Overwrite ParameterAttribute._convert_and_validate to make the value a ValidatedList."""
         # The default value is always allowed.
@@ -497,10 +477,14 @@ class IndexedMappedParameterAttribute(ParameterAttribute):
         static_converter = functools.partial(self._call_converter, instance=instance)
 
         value = ValidatedList(
-                [ValidatedDict(element,
-                               converter=[self._validate_units, static_converter])
-                    for element in value], 
-                converter=self._index_converter)
+            [
+                ValidatedDict(
+                    element, converter=[self._validate_units, static_converter]
+                )
+                for element in value
+            ],
+            converter=self._index_converter,
+        )
 
         return value
 
@@ -654,16 +638,23 @@ class _ParameterAttributeHandler:
         # Do not modify the original data.
         smirnoff_data = copy.deepcopy(kwargs)
 
-        smirnoff_data, indexed_mapped_attr_lengths = self._process_indexed_mapped_attributes(smirnoff_data)
-        smirnoff_data = self._process_indexed_attributes(smirnoff_data, indexed_mapped_attr_lengths)
+        (
+            smirnoff_data,
+            indexed_mapped_attr_lengths,
+        ) = self._process_indexed_mapped_attributes(smirnoff_data)
+        smirnoff_data = self._process_indexed_attributes(
+            smirnoff_data, indexed_mapped_attr_lengths
+        )
 
         # Check for missing required arguments.
         given_attributes = set(smirnoff_data.keys())
         required_attributes = set(self._get_required_parameter_attributes().keys())
         missing_attributes = required_attributes.difference(given_attributes)
         if len(missing_attributes) != 0:
-            msg = (f"{self.__class__} require the following missing parameters: {sorted(missing_attributes)}."
-                   f" Defined kwargs are {sorted(smirnoff_data.keys())}")
+            msg = (
+                f"{self.__class__} require the following missing parameters: {sorted(missing_attributes)}."
+                f" Defined kwargs are {sorted(smirnoff_data.keys())}"
+            )
             raise SMIRNOFFSpecError(msg)
 
         # Finally, set attributes of this ParameterType and handle cosmetic attributes.
@@ -675,9 +666,11 @@ class _ParameterAttributeHandler:
             elif allow_cosmetic_attributes:
                 self.add_cosmetic_attribute(key, val)
             else:
-                msg = (f"Unexpected kwarg ({key}: {val})  passed to {self.__class__} constructor. "
-                        "If this is a desired cosmetic attribute, consider setting "
-                        "'allow_cosmetic_attributes=True'")
+                msg = (
+                    f"Unexpected kwarg ({key}: {val})  passed to {self.__class__} constructor. "
+                    "If this is a desired cosmetic attribute, consider setting "
+                    "'allow_cosmetic_attributes=True'"
+                )
                 raise SMIRNOFFSpecError(msg)
 
     def _process_indexed_mapped_attributes(self, smirnoff_data):
@@ -690,12 +683,14 @@ class _ParameterAttributeHandler:
         kwargs = list(smirnoff_data.keys())
         for kwarg in kwargs:
             attr_name, index, key = self._split_attribute_index_mapping(kwarg)
-            
+
             # Check if this is an indexed_mapped attribute.
-            if ((key is not None) and
-                (index is not None) and
-                attr_name in self._get_indexed_mapped_parameter_attributes()):
-                
+            if (
+                (key is not None)
+                and (index is not None)
+                and attr_name in self._get_indexed_mapped_parameter_attributes()
+            ):
+
                 # we start with a dict because have no guarantee of order
                 # in which we will see each kwarg
                 # we'll switch this to a list later
@@ -730,9 +725,11 @@ class _ParameterAttributeHandler:
                     kwarg = reverse[attr_name][i][key]
                     val = smirnoff_data[attr_name][i][key]
 
-                    msg = (f"Unexpected kwarg ({kwarg}: {val})  passed to {self.__class__} constructor. "
-                            "If this is a desired cosmetic attribute, consider setting "
-                            "'allow_cosmetic_attributes=True'")
+                    msg = (
+                        f"Unexpected kwarg ({kwarg}: {val})  passed to {self.__class__} constructor. "
+                        "If this is a desired cosmetic attribute, consider setting "
+                        "'allow_cosmetic_attributes=True'"
+                    )
                     raise SMIRNOFFSpecError(msg)
 
             smirnoff_data[attr_name] = indexed_mapping
@@ -747,7 +744,7 @@ class _ParameterAttributeHandler:
         # Check for indexed attributes and stack them into a list.
         # Keep track of how many indexed attribute we find to make sure they all have the same length.
 
-        # TODO: REFACTOR ME; try looping over contents of `smirnoff_data`, using 
+        # TODO: REFACTOR ME; try looping over contents of `smirnoff_data`, using
         # `split_attribute_index` to extract values
 
         if indexed_attr_lengths is None:
@@ -756,7 +753,7 @@ class _ParameterAttributeHandler:
         for attrib_basename in self._get_indexed_parameter_attributes().keys():
             index = 1
             while True:
-                attrib_w_index = '{}{}'.format(attrib_basename, index)
+                attrib_w_index = "{}{}".format(attrib_basename, index)
 
                 # Exit the while loop if the indexed attribute is not given.
                 # this is the stop condition
@@ -769,8 +766,10 @@ class _ParameterAttributeHandler:
                 if index == 1:
                     # Check if this attribute has been specified with and without index.
                     if attrib_basename in smirnoff_data:
-                        err_msg = (f"The attribute '{attrib_basename}' has been specified "
-                                   f"with and without index: '{attrib_w_index}'")
+                        err_msg = (
+                            f"The attribute '{attrib_basename}' has been specified "
+                            f"with and without index: '{attrib_w_index}'"
+                        )
                         raise TypeError(err_msg)
 
                     # Otherwise create the list object.
@@ -786,13 +785,17 @@ class _ParameterAttributeHandler:
 
             # Update the lengths with this attribute (if it was found).
             if index > 1:
-                indexed_attr_lengths[attrib_basename] = len(smirnoff_data[attrib_basename])
+                indexed_attr_lengths[attrib_basename] = len(
+                    smirnoff_data[attrib_basename]
+                )
 
         # Raise an error if we there are different indexed
         # attributes with a different number of terms.
         if len(set(indexed_attr_lengths.values())) > 1:
-            raise TypeError('The following indexed attributes have '
-                            f'different lengths: {indexed_attr_lengths}')
+            raise TypeError(
+                "The following indexed attributes have "
+                f"different lengths: {indexed_attr_lengths}"
+            )
 
         return smirnoff_data
 
@@ -822,7 +825,9 @@ class _ParameterAttributeHandler:
 
         # Start populating a dict of the attribs.
         indexed_attribs = set(self._get_indexed_parameter_attributes().keys())
-        indexed_mapped_attribs = set(self._get_indexed_mapped_parameter_attributes().keys())
+        indexed_mapped_attribs = set(
+            self._get_indexed_mapped_parameter_attributes().keys()
+        )
         smirnoff_dict = OrderedDict()
 
         # If attribs_to_return is ordered here, that will effectively be an informal output ordering
@@ -832,18 +837,20 @@ class _ParameterAttributeHandler:
             if attrib_name in indexed_mapped_attribs:
                 for idx, mapping in enumerate(attrib_value):
                     for key, val in mapping.items():
-                        attrib_name_indexed, attrib_name_mapped = attrib_name.split('_')
-                        smirnoff_dict[f"{attrib_name_indexed}{str(idx+1)}_{attrib_name_mapped}{key}"] = val
+                        attrib_name_indexed, attrib_name_mapped = attrib_name.split("_")
+                        smirnoff_dict[
+                            f"{attrib_name_indexed}{str(idx+1)}_{attrib_name_mapped}{key}"
+                        ] = val
             elif attrib_name in indexed_attribs:
                 for idx, val in enumerate(attrib_value):
-                    smirnoff_dict[attrib_name + str(idx+1)] = val
+                    smirnoff_dict[attrib_name + str(idx + 1)] = val
             else:
                 smirnoff_dict[attrib_name] = attrib_value
 
         # Serialize cosmetic attributes.
-        if not(discard_cosmetic_attributes):
+        if not (discard_cosmetic_attributes):
             for cosmetic_attrib in self._cosmetic_attribs:
-                smirnoff_dict[cosmetic_attrib] = getattr(self, '_' + cosmetic_attrib)
+                smirnoff_dict[cosmetic_attrib] = getattr(self, "_" + cosmetic_attrib)
 
         return smirnoff_dict
 
@@ -855,29 +862,37 @@ class _ParameterAttributeHandler:
         attr_name, index, key = self._split_attribute_index_mapping(item)
 
         # Check if this is an indexed_mapped attribute.
-        if ((key is not None) and
-            (index is not None) and
-            attr_name in self._get_indexed_mapped_parameter_attributes()):
+        if (
+            (key is not None)
+            and (index is not None)
+            and attr_name in self._get_indexed_mapped_parameter_attributes()
+        ):
             indexed_mapped_attr_value = getattr(self, attr_name)
             try:
                 return indexed_mapped_attr_value[index][key]
             except (IndexError, KeyError) as err:
-                if not err.args: 
-                    err.args=('',)
-                err.args = err.args + (f"'{item}' is out of bound for indexed attribute '{attr_name}'",)
-                raise 
+                if not err.args:
+                    err.args = ("",)
+                err.args = err.args + (
+                    f"'{item}' is out of bound for indexed attribute '{attr_name}'",
+                )
+                raise
 
         # Otherwise, try indexed attribute
         # Separate the indexed attribute name from the list index.
         attr_name, index = self._split_attribute_index(item)
 
         # Check if this is an indexed attribute.
-        if (index is not None) and attr_name in self._get_indexed_parameter_attributes():
+        if (
+            index is not None
+        ) and attr_name in self._get_indexed_parameter_attributes():
             indexed_attr_value = getattr(self, attr_name)
             try:
                 return indexed_attr_value[index]
             except IndexError:
-                raise IndexError(f"'{item}' is out of bound for indexed attribute '{attr_name}'")
+                raise IndexError(
+                    f"'{item}' is out of bound for indexed attribute '{attr_name}'"
+                )
 
         # Otherwise, forward the search to the next class in the MRO.
         try:
@@ -885,8 +900,10 @@ class _ParameterAttributeHandler:
         except AttributeError as e:
             # If this fails because the next classes in the MRO do not
             # implement __getattr__(), then raise the standard Attribute error.
-            if '__getattr__' in str(e):
-                raise AttributeError(f"{self.__class__} object has no attribute '{item}'")
+            if "__getattr__" in str(e):
+                raise AttributeError(
+                    f"{self.__class__} object has no attribute '{item}'"
+                )
             # Otherwise, re-raise the error from the class in the MRO.
             raise
 
@@ -899,33 +916,41 @@ class _ParameterAttributeHandler:
 
         # Check if this is an index_mapped attribute. avoiding an infinite
         # recursion by calling getattr() with non-existing keys.
-        if ((mapkey is not None) and
-            (index is not None) and
-            attr_name in self._get_indexed_mapped_parameter_attributes()):
+        if (
+            (mapkey is not None)
+            and (index is not None)
+            and attr_name in self._get_indexed_mapped_parameter_attributes()
+        ):
             indexed_mapped_attr_value = getattr(self, attr_name)
             try:
                 indexed_mapped_attr_value[index][mapkey] = value
                 return
             except (IndexError, KeyError) as err:
-                if not err.args: 
-                    err.args=('',)
-                err.args = err.args + (f"'{key}' is out of bound for indexed attribute '{attr_name}'",)
-                raise 
-            
+                if not err.args:
+                    err.args = ("",)
+                err.args = err.args + (
+                    f"'{key}' is out of bound for indexed attribute '{attr_name}'",
+                )
+                raise
+
         # Otherwise, try indexed attribute
         # Separate the indexed attribute name from the list index.
         attr_name, index = self._split_attribute_index(key)
 
         # Check if this is an indexed attribute. avoiding an infinite
         # recursion by calling getattr() with non-existing keys.
-        if (index is not None) and (attr_name in self._get_indexed_parameter_attributes()):
+        if (index is not None) and (
+            attr_name in self._get_indexed_parameter_attributes()
+        ):
             indexed_attr_value = getattr(self, attr_name)
             try:
                 indexed_attr_value[index] = value
                 return
             except IndexError:
-                raise IndexError(f"'{key}' is out of bound for indexed attribute '{attr_name}'")
-            
+                raise IndexError(
+                    f"'{key}' is out of bound for indexed attribute '{attr_name}'"
+                )
+
         # Forward the request to the next class in the MRO.
         super().__setattr__(key, value)
 
@@ -948,7 +973,7 @@ class _ParameterAttributeHandler:
             The value of the attribute to define for this object.
 
         """
-        setattr(self, '_'+attr_name, attr_value)
+        setattr(self, "_" + attr_name, attr_value)
         self._cosmetic_attribs.append(attr_name)
 
     def delete_cosmetic_attribute(self, attr_name):
@@ -965,7 +990,7 @@ class _ParameterAttributeHandler:
         """
         # TODO: Can we handle this by overriding __delattr__ instead?
         #  Would we also need to override __del__ as well to cover both deletation methods?
-        delattr(self, '_'+attr_name)
+        delattr(self, "_" + attr_name)
         self._cosmetic_attribs.remove(attr_name)
 
     def attribute_is_cosmetic(self, attr_name):
@@ -996,12 +1021,12 @@ class _ParameterAttributeHandler:
         """
 
         # Match any number (\d+) at the end of the string ($).
-        match = re.search(r'\d+$', item)
+        match = re.search(r"\d+$", item)
         if match is None:
             return item, None
 
         index = match.group()  # This is a str.
-        attr_name = item[:-len(index)]
+        attr_name = item[: -len(index)]
         index = int(match.group()) - 1
         return attr_name, index
 
@@ -1014,26 +1039,26 @@ class _ParameterAttributeHandler:
         """
         # Match items of the form <item><index>_<mapping><key>
         # where <index> and <key> always integers
-        match = re.search(r'\d+_[A-z]+\d+$', item)
+        match = re.search(r"\d+_[A-z]+\d+$", item)
         if match is None:
             return item, None, None
 
         # Match any number (\d+) at the end of the string ($).
-        i_match = r'\d+$'
+        i_match = r"\d+$"
 
-        indexed, mapped = item.split('_')
+        indexed, mapped = item.split("_")
 
         # process indexed component
         match_indexed = re.search(i_match, indexed)
         index = match_indexed.group()  # This is a str.
-        attr_name = indexed[:-len(index)]
+        attr_name = indexed[: -len(index)]
         index = int(index) - 1
 
         # process mapped component
         match_mapping = re.search(i_match, mapped)
         key = match_mapping.group()  # This is a str.
         attr_name = f"{attr_name}_{mapped[:-len(key)]}"
-        key = int(key) # we don't subtract 1 here, because these are keys, not indices
+        key = int(key)  # we don't subtract 1 here, because these are keys, not indices
 
         return attr_name, index, key
 
@@ -1080,20 +1105,27 @@ class _ParameterAttributeHandler:
         # sorts the attribute alphabetically by name. Here we want the order
         # to be the same as the declaration order, which is guaranteed by PEP 520,
         # starting from the parent class.
-        parameter_attributes = OrderedDict((name, descriptor) for c in reversed(inspect.getmro(cls))
-                                           for name, descriptor in c.__dict__.items()
-                                           if isinstance(descriptor, ParameterAttribute) and filter(descriptor))
+        parameter_attributes = OrderedDict(
+            (name, descriptor)
+            for c in reversed(inspect.getmro(cls))
+            for name, descriptor in c.__dict__.items()
+            if isinstance(descriptor, ParameterAttribute) and filter(descriptor)
+        )
         return parameter_attributes
 
     @classmethod
     def _get_indexed_mapped_parameter_attributes(cls):
         """Shortcut to retrieve only IndexedMappedParameterAttributes."""
-        return cls._get_parameter_attributes(filter=lambda x: isinstance(x, IndexedMappedParameterAttribute))
+        return cls._get_parameter_attributes(
+            filter=lambda x: isinstance(x, IndexedMappedParameterAttribute)
+        )
 
     @classmethod
     def _get_indexed_parameter_attributes(cls):
         """Shortcut to retrieve only IndexedParameterAttributes."""
-        return cls._get_parameter_attributes(filter=lambda x: isinstance(x, IndexedParameterAttribute))
+        return cls._get_parameter_attributes(
+            filter=lambda x: isinstance(x, IndexedParameterAttribute)
+        )
 
     @classmethod
     def _get_required_parameter_attributes(cls):
@@ -1103,7 +1135,9 @@ class _ParameterAttributeHandler:
     @classmethod
     def _get_optional_parameter_attributes(cls):
         """Shortcut to retrieve only required ParameterAttributes."""
-        return cls._get_parameter_attributes(filter=lambda x: x.default is not x.UNDEFINED)
+        return cls._get_parameter_attributes(
+            filter=lambda x: x.default is not x.UNDEFINED
+        )
 
     def _get_defined_parameter_attributes(self):
         """Returns all the attributes except for the optional attributes that have None default value.
@@ -1114,15 +1148,16 @@ class _ParameterAttributeHandler:
         required = self._get_required_parameter_attributes()
         optional = self._get_optional_parameter_attributes()
         # Filter the optional parameters that are set to their default.
-        optional = OrderedDict((name, descriptor) for name, descriptor in optional.items()
-                               if not(descriptor.default is None and getattr(self, name) == descriptor.default))
+        optional = OrderedDict(
+            (name, descriptor)
+            for name, descriptor in optional.items()
+            if not (
+                descriptor.default is None and getattr(self, name) == descriptor.default
+            )
+        )
         required.update(optional)
         return required
 
-
-#======================================================================
-# PARAMETER TYPE/LIST
-#======================================================================
 
 # We can't actually make this derive from dict, because it's possible for the user to change SMIRKS
 # of parameters already in the list, which would cause the ParameterType object's SMIRKS and
@@ -1181,8 +1216,10 @@ class ParameterList(list):
 
         """
         if not isinstance(other, ParameterList):
-            msg = 'ParameterList.extend(other) expected instance of ParameterList, ' \
-                  'but received {} (type {}) instead'.format(other, type(other))
+            msg = (
+                "ParameterList.extend(other) expected instance of ParameterList, "
+                "but received {} (type {}) instead".format(other, type(other))
+            )
             raise TypeError(msg)
         # TODO: Check if other ParameterList contains the same ParameterTypes?
         super().extend(other)
@@ -1208,7 +1245,9 @@ class ParameterList(list):
             for parameter in self:
                 if parameter.smirks == item:
                     return self.index(parameter)
-            raise IndexError('SMIRKS {item} not found in ParameterList'.format(item=item))
+            raise IndexError(
+                "SMIRKS {item} not found in ParameterList".format(item=item)
+            )
 
     def insert(self, index, parameter):
         """
@@ -1257,15 +1296,13 @@ class ParameterList(list):
             index = self.index(item)
         return super().__getitem__(index)
 
-
     # TODO: Override __setitem__ and __del__ to ensure we can slice by SMIRKS as well
     # This is needed for pickling. See https://github.com/openforcefield/openforcefield/issues/411
     # for more details.
     # TODO: Is there a cleaner way (getstate/setstate perhaps?) to allow FFs to be
     #       pickled?
     def __reduce__(self):
-        return (__class__, ( list( self),), self.__dict__)
-
+        return (__class__, (list(self),), self.__dict__)
 
     def __contains__(self, item):
         """Check to see if either Parameter or SMIRKS is contained in parameter list.
@@ -1300,7 +1337,9 @@ class ParameterList(list):
         parameter_list = list()
 
         for parameter in self:
-            parameter_dict = parameter.to_dict(discard_cosmetic_attributes=discard_cosmetic_attributes)
+            parameter_dict = parameter.to_dict(
+                discard_cosmetic_attributes=discard_cosmetic_attributes
+            )
             parameter_list.append(parameter_dict)
 
         return parameter_list
@@ -1451,8 +1490,7 @@ class ParameterType(_ParameterAttributeHandler):
 
         # TODO: Add check to make sure we can't make tree non-hierarchical
         #       This would require parameter type knows which ParameterList it belongs to
-        ChemicalEnvironment.validate_smirks(
-            smirks, validate_valence_type=True)
+        ChemicalEnvironment.validate_smirks(smirks, validate_valence_type=True)
         return smirks
 
     def __init__(self, smirks, allow_cosmetic_attributes=False, **kwargs):
@@ -1470,32 +1508,19 @@ class ParameterType(_ParameterAttributeHandler):
 
         """
         # This is just to make smirks a required positional argument.
-        kwargs['smirks']  = smirks
+        kwargs["smirks"] = smirks
         super().__init__(allow_cosmetic_attributes=allow_cosmetic_attributes, **kwargs)
 
     def __repr__(self):
-        ret_str = '<{} with '.format(self.__class__.__name__)
+        ret_str = "<{} with ".format(self.__class__.__name__)
         for attr, val in self.to_dict().items():
-            ret_str += f'{attr}: {val}  '
-        ret_str += '>'
+            ret_str += f"{attr}: {val}  "
+        ret_str += ">"
         return ret_str
 
 
-#======================================================================
-# PARAMETER HANDLERS
-#
-# The following classes are Handlers that know how to create Force
-# subclasses and add them to a System that is being created. Each Handler
-# class must define three methods:
-# 1) a constructor which takes as input hierarchical dictionaries of data
-#    conformant to the SMIRNOFF spec;
-# 2) a create_force() method that constructs the Force object and adds it
-#    to the System; and
-# 3) a labelForce() method that provides access to which terms are applied
-#    to which atoms in specified mols.
-#======================================================================
-
 # TODO: Should we have a parameter handler registry?
+
 
 class ParameterHandler(_ParameterAttributeHandler):
     """Base class for parameter handlers.
@@ -1513,19 +1538,31 @@ class ParameterHandler(_ParameterAttributeHandler):
 
     .. warning :: This API is experimental and subject to change.
 
+    Each Handler class that subclasses this class must define three methods:
+    1. a constructor which takes as input hierarchical dictionaries of data
+        conformant to the SMIRNOFF spec;
+    2. a create_force() method that constructs the Force object and adds it
+        to the System; and
+    3. a labelForce() method that provides access to which terms are applied
+        to which atoms in specified mols.
     """
 
     _TAGNAME = None  # str of section type handled by this ParameterHandler (XML element name for SMIRNOFF XML representation)
     _INFOTYPE = None  # container class with type information that will be stored in self._parameters
     _OPENMMTYPE = None  # OpenMM Force class (or None if no equivalent)
-    _DEPENDENCIES = None  # list of ParameterHandler classes that must precede this, or None
+    _DEPENDENCIES = (
+        None  # list of ParameterHandler classes that must precede this, or None
+    )
 
-    _KWARGS = [] # Kwargs to catch when create_force is called
-    _SMIRNOFF_VERSION_INTRODUCED = 0.0  # the earliest version of SMIRNOFF spec that supports this ParameterHandler
-    _SMIRNOFF_VERSION_DEPRECATED = None  # if deprecated, the first SMIRNOFF version number it is no longer used
+    _KWARGS = []  # Kwargs to catch when create_force is called
+    _SMIRNOFF_VERSION_INTRODUCED = (
+        0.0  # the earliest version of SMIRNOFF spec that supports this ParameterHandler
+    )
+    _SMIRNOFF_VERSION_DEPRECATED = (
+        None  # if deprecated, the first SMIRNOFF version number it is no longer used
+    )
     _MIN_SUPPORTED_SECTION_VERSION = 0.3
     _MAX_SUPPORTED_SECTION_VERSION = 0.3
-
 
     version = ParameterAttribute()
 
@@ -1540,24 +1577,27 @@ class ParameterHandler(_ParameterAttributeHandler):
 
         """
         import packaging.version
+
         from openforcefield.typing.engines.smirnoff import SMIRNOFFVersionError
+
         # Use PEP-440 compliant version number comparison, if requested
         if (
-                packaging.version.parse(str(new_version)) >
-                packaging.version.parse(str(self._MAX_SUPPORTED_SECTION_VERSION))
-                ) or (
-                packaging.version.parse(str(new_version)) <
-                packaging.version.parse(str(self._MIN_SUPPORTED_SECTION_VERSION))
+            packaging.version.parse(str(new_version))
+            > packaging.version.parse(str(self._MAX_SUPPORTED_SECTION_VERSION))
+        ) or (
+            packaging.version.parse(str(new_version))
+            < packaging.version.parse(str(self._MIN_SUPPORTED_SECTION_VERSION))
         ):
             raise SMIRNOFFVersionError(
-                f'SMIRNOFF offxml file was written with version {new_version}, but this version '
-                f'of ForceField only supports version {self._MIN_SUPPORTED_SECTION_VERSION} '
-                f'to version {self._MAX_SUPPORTED_SECTION_VERSION}'
+                f"SMIRNOFF offxml file was written with version {new_version}, but this version "
+                f"of ForceField only supports version {self._MIN_SUPPORTED_SECTION_VERSION} "
+                f"to version {self._MAX_SUPPORTED_SECTION_VERSION}"
             )
         return new_version
 
-
-    def __init__(self, allow_cosmetic_attributes=False, skip_version_check=False, **kwargs):
+    def __init__(
+        self, allow_cosmetic_attributes=False, skip_version_check=False, **kwargs
+    ):
         """
         Initialize a ParameterHandler, optionally with a list of parameters and other kwargs.
 
@@ -1574,9 +1614,9 @@ class ParameterHandler(_ParameterAttributeHandler):
 
         """
         # Skip version check if requested.
-        if 'version' not in kwargs:
+        if "version" not in kwargs:
             if skip_version_check:
-                kwargs['version'] = self._MAX_SUPPORTED_SECTION_VERSION
+                kwargs["version"] = self._MAX_SUPPORTED_SECTION_VERSION
             else:
                 raise SMIRNOFFSpecError(
                     f"Missing version while trying to construct {self.__class__}. "
@@ -1602,7 +1642,9 @@ class ParameterHandler(_ParameterAttributeHandler):
             attribute of the parameter. If False, non-spec kwargs will raise an exception.
 
         """
-        unitless_kwargs, attached_units = extract_serialized_units_from_dict(section_dict)
+        unitless_kwargs, attached_units = extract_serialized_units_from_dict(
+            section_dict
+        )
         smirnoff_data = attach_units(unitless_kwargs, attached_units)
 
         element_name = None
@@ -1620,8 +1662,9 @@ class ParameterHandler(_ParameterAttributeHandler):
             # each parameter_dict, then use it to initialize a ParameterType
             for unitless_param_dict in val:
                 param_dict = attach_units(unitless_param_dict, attached_units)
-                new_parameter = self._INFOTYPE(**param_dict,
-                                               allow_cosmetic_attributes=allow_cosmetic_attributes)
+                new_parameter = self._INFOTYPE(
+                    **param_dict, allow_cosmetic_attributes=allow_cosmetic_attributes
+                )
                 self._parameters.append(new_parameter)
 
     @property
@@ -1654,7 +1697,9 @@ class ParameterHandler(_ParameterAttributeHandler):
         pass
 
     # TODO: Can we ensure SMIRKS and other parameters remain valid after manipulation?
-    def add_parameter(self, parameter_kwargs=None, parameter=None, after=None, before=None):
+    def add_parameter(
+        self, parameter_kwargs=None, parameter=None, after=None, before=None
+    ):
         """Add a parameter to the forcefield, ensuring all parameters are valid.
 
         Parameters
@@ -1711,10 +1756,10 @@ class ParameterHandler(_ParameterAttributeHandler):
         elif parameter:
             new_parameter = parameter
         else:
-            raise ValueError('One of (parameter, parameter_kwargs) must be specified')
+            raise ValueError("One of (parameter, parameter_kwargs) must be specified")
 
         if new_parameter.smirks in [p.smirks for p in self._parameters]:
-            msg = f'A parameter SMIRKS pattern {val} already exists.'
+            msg = f"A parameter SMIRKS pattern {val} already exists."
             raise DuplicateParameterError(msg)
 
         if before is not None:
@@ -1731,10 +1776,10 @@ class ParameterHandler(_ParameterAttributeHandler):
 
         if None not in (before, after):
             if after_index > before_index:
-                raise ValueError('before arg must be before after arg')
+                raise ValueError("before arg must be before after arg")
 
         if after is not None:
-            self._parameters.insert(after_index+1, new_parameter)
+            self._parameters.insert(after_index + 1, new_parameter)
         elif before is not None:
             self._parameters.insert(before_index, new_parameter)
         else:
@@ -1785,7 +1830,7 @@ class ParameterHandler(_ParameterAttributeHandler):
                 # TODO: Cleaner accessing of cosmetic attributes
                 # See issue #338
                 if param.attribute_is_cosmetic(attr):
-                    attr = '_' + attr
+                    attr = "_" + attr
                 if hasattr(param, attr):
                     if getattr(param, attr) == value:
                         params.append(param)
@@ -1857,7 +1902,7 @@ class ParameterHandler(_ParameterAttributeHandler):
             ``matches[particle_indices]`` is the ``ParameterType`` object
             matching the tuple of particle indices in ``entity``.
         """
-        logger.debug('Finding matches for {}'.format(self.__class__.__name__))
+        logger.debug("Finding matches for {}".format(self.__class__.__name__))
 
         matches = transformed_dict_cls()
 
@@ -1867,18 +1912,25 @@ class ParameterHandler(_ParameterAttributeHandler):
         for parameter_type in self._parameters:
             matches_for_this_type = {}
 
-            for environment_match in entity.chemical_environment_matches(parameter_type.smirks):
+            for environment_match in entity.chemical_environment_matches(
+                parameter_type.smirks
+            ):
                 # Update the matches for this parameter type.
                 handler_match = self._Match(parameter_type, environment_match)
-                matches_for_this_type[environment_match.topology_atom_indices] = handler_match
+                matches_for_this_type[
+                    environment_match.topology_atom_indices
+                ] = handler_match
 
             # Update matches of all parameter types.
             matches.update(matches_for_this_type)
 
-            logger.debug('{:64} : {:8} matches'.format(
-                parameter_type.smirks, len(matches_for_this_type)))
+            logger.debug(
+                "{:64} : {:8} matches".format(
+                    parameter_type.smirks, len(matches_for_this_type)
+                )
+            )
 
-        logger.debug('{} matches identified'.format(len(matches)))
+        logger.debug("{} matches identified".format(len(matches)))
         return matches
 
     @staticmethod
@@ -1943,7 +1995,6 @@ class ParameterHandler(_ParameterAttributeHandler):
         """
         pass
 
-
     def to_dict(self, discard_cosmetic_attributes=False):
         """
         Convert this ParameterHandler to an OrderedDict, compliant with the SMIRNOFF data spec.
@@ -1962,15 +2013,19 @@ class ParameterHandler(_ParameterAttributeHandler):
         smirnoff_data = OrderedDict()
 
         # Populate parameter list
-        parameter_list = self._parameters.to_list(discard_cosmetic_attributes=discard_cosmetic_attributes)
+        parameter_list = self._parameters.to_list(
+            discard_cosmetic_attributes=discard_cosmetic_attributes
+        )
 
         # NOTE: This assumes that a ParameterHandler will have just one homogenous ParameterList under it
         if self._INFOTYPE is not None:
-            #smirnoff_data[self._INFOTYPE._ELEMENT_NAME] = unitless_parameter_list
+            # smirnoff_data[self._INFOTYPE._ELEMENT_NAME] = unitless_parameter_list
             smirnoff_data[self._INFOTYPE._ELEMENT_NAME] = parameter_list
 
         # Collect parameter and cosmetic attributes.
-        header_attribute_dict = super().to_dict(discard_cosmetic_attributes=discard_cosmetic_attributes)
+        header_attribute_dict = super().to_dict(
+            discard_cosmetic_attributes=discard_cosmetic_attributes
+        )
         smirnoff_data.update(header_attribute_dict)
 
         return smirnoff_data
@@ -1980,8 +2035,12 @@ class ParameterHandler(_ParameterAttributeHandler):
     # -------------------------------
 
     @classmethod
-    def _check_all_valence_terms_assigned(cls, assigned_terms, valence_terms,
-                                          exception_cls=UnassignedValenceParameterException):
+    def _check_all_valence_terms_assigned(
+        cls,
+        assigned_terms,
+        valence_terms,
+        exception_cls=UnassignedValenceParameterException,
+    ):
         """Check that all valence terms have been assigned and print a user-friendly error message.
 
         Parameters
@@ -1996,6 +2055,7 @@ class ParameterHandler(_ParameterAttributeHandler):
 
         """
         from openforcefield.topology import TopologyAtom
+
         # Provided there are no duplicates in either list,
         # or something weird like a bond has been added to
         # a torsions list - this should work just fine I think.
@@ -2038,10 +2098,10 @@ class ParameterHandler(_ParameterAttributeHandler):
                 topology = valence_terms[0].topology_molecule.topology
             else:
                 topology = valence_terms[0][0].topology_molecule.topology
-            unassigned_str = ''
+            unassigned_str = ""
             for unassigned_tuple in unassigned_terms:
-                unassigned_str += '\n- Topology indices ' + str(unassigned_tuple)
-                unassigned_str += ': names and elements '
+                unassigned_str += "\n- Topology indices " + str(unassigned_tuple)
+                unassigned_str += ": names and elements "
 
                 unassigned_topology_atoms = []
 
@@ -2051,26 +2111,28 @@ class ParameterHandler(_ParameterAttributeHandler):
                     unassigned_topology_atoms.append(topology_atom)
                     unassigned_str += f"({topology_atom.atom.name} {topology_atom.atom.element.symbol}), "
                 unassigned_topology_atom_tuples.append(tuple(unassigned_topology_atoms))
-            err_msg += ("{parameter_handler} was not able to find parameters for the following valence terms:\n"
-                        "{unassigned_str}").format(parameter_handler=cls.__name__,
-                                                     unassigned_str=unassigned_str)
+            err_msg += (
+                "{parameter_handler} was not able to find parameters for the following valence terms:\n"
+                "{unassigned_str}"
+            ).format(parameter_handler=cls.__name__, unassigned_str=unassigned_str)
         if len(not_found_terms) > 0:
             if err_msg != "":
-                err_msg += '\n'
-            not_found_str = '\n- '.join([str(x) for x in not_found_terms])
-            err_msg += ("{parameter_handler} assigned terms that were not found in the topology:\n"
-                        "- {not_found_str}").format(parameter_handler=cls.__name__,
-                                                    not_found_str=not_found_str)
+                err_msg += "\n"
+            not_found_str = "\n- ".join([str(x) for x in not_found_terms])
+            err_msg += (
+                "{parameter_handler} assigned terms that were not found in the topology:\n"
+                "- {not_found_str}"
+            ).format(parameter_handler=cls.__name__, not_found_str=not_found_str)
         if err_msg != "":
-            err_msg += '\n'
+            err_msg += "\n"
             exception = exception_cls(err_msg)
             exception.unassigned_topology_atom_tuples = unassigned_topology_atom_tuples
             exception.handler_class = cls
             raise exception
 
-
-    def _check_attributes_are_equal(self, other, identical_attrs=(),
-                                    tolerance_attrs=(), tolerance=1e-6):
+    def _check_attributes_are_equal(
+        self, other, identical_attrs=(), tolerance_attrs=(), tolerance=1e-6
+    ):
         """Utility function to check that the given attributes of the two handlers are equal.
 
         Parameters
@@ -2082,6 +2144,7 @@ class ParameterHandler(_ParameterAttributeHandler):
         tolerance : float
             The absolute tolerance used to compare the parameters.
         """
+
         def get_unitless_values(attr):
             this_val = getattr(self, attr)
             other_val = getattr(other, attr)
@@ -2099,7 +2162,9 @@ class ParameterHandler(_ParameterAttributeHandler):
                 raise IncompatibleParameterError(
                     "{} values are not identical. "
                     "(handler value: {}, incompatible value: {}".format(
-                        attr, this_val, other_val))
+                        attr, this_val, other_val
+                    )
+                )
 
         for attr in tolerance_attrs:
             this_val, other_val = get_unitless_values(attr)
@@ -2107,10 +2172,9 @@ class ParameterHandler(_ParameterAttributeHandler):
                 raise IncompatibleParameterError(
                     "Difference between '{}' values is beyond allowed tolerance {}. "
                     "(handler value: {}, incompatible value: {}".format(
-                        attr, tolerance, this_val, other_val))
-
-
-#=============================================================================================
+                        attr, tolerance, this_val, other_val
+                    )
+                )
 
 
 class ConstraintHandler(ParameterHandler):
@@ -2127,13 +2191,13 @@ class ConstraintHandler(ParameterHandler):
 
         .. warning :: This API is experimental and subject to change.
         """
-        _VALENCE_TYPE = 'Bond'
-        _ELEMENT_NAME = 'Constraint'
+
+        _VALENCE_TYPE = "Bond"
+        _ELEMENT_NAME = "Constraint"
 
         distance = ParameterAttribute(default=None, unit=unit.angstrom)
 
-
-    _TAGNAME = 'Constraints'
+    _TAGNAME = "Constraints"
     _INFOTYPE = ConstraintType
     _OPENMMTYPE = None  # don't create a corresponding OpenMM Force class
 
@@ -2141,7 +2205,7 @@ class ConstraintHandler(ParameterHandler):
         constraint_matches = self.find_matches(topology)
         for (atoms, constraint_match) in constraint_matches.items():
             # Update constrained atom pairs in topology
-            #topology.add_constraint(*atoms, constraint.distance)
+            # topology.add_constraint(*atoms, constraint.distance)
             # If a distance is specified (constraint.distance != True), add the constraint here.
             # Otherwise, the equilibrium bond length will be used to constrain the atoms in HarmonicBondHandler
             constraint = constraint_match.parameter_type
@@ -2151,8 +2215,6 @@ class ConstraintHandler(ParameterHandler):
             else:
                 system.addConstraint(*atoms, constraint.distance)
                 topology.add_constraint(*atoms, constraint.distance)
-
-#=============================================================================================
 
 
 class BondHandler(ParameterHandler):
@@ -2166,25 +2228,25 @@ class BondHandler(ParameterHandler):
 
         .. warning :: This API is experimental and subject to change.
         """
+
         # ChemicalEnvironment valence type string expected by SMARTS string for this Handler
-        _VALENCE_TYPE = 'Bond'
-        _ELEMENT_NAME = 'Bond'
+        _VALENCE_TYPE = "Bond"
+        _ELEMENT_NAME = "Bond"
 
         # These attributes may be indexed (by integer bond order) if fractional bond orders are used.
         length = ParameterAttribute(unit=unit.angstrom)
-        k = ParameterAttribute(unit=unit.kilocalorie_per_mole / unit.angstrom**2)
+        k = ParameterAttribute(unit=unit.kilocalorie_per_mole / unit.angstrom ** 2)
 
-    _TAGNAME = 'Bonds'  # SMIRNOFF tag name to process
+    _TAGNAME = "Bonds"  # SMIRNOFF tag name to process
     _INFOTYPE = BondType  # class to hold force type info
     _OPENMMTYPE = openmm.HarmonicBondForce  # OpenMM force class to create
     _DEPENDENCIES = [ConstraintHandler]  # ConstraintHandler must be executed first
 
-    potential = ParameterAttribute(default='harmonic')
+    potential = ParameterAttribute(default="harmonic")
     fractional_bondorder_method = ParameterAttribute(default=None)
-    fractional_bondorder_interpolation = ParameterAttribute(default='linear')
+    fractional_bondorder_interpolation = ParameterAttribute(default="linear")
 
-    def check_handler_compatibility(self,
-                                    other_handler):
+    def check_handler_compatibility(self, other_handler):
         """
         Checks whether this ParameterHandler encodes compatible physics as another ParameterHandler. This is
         called if a second handler is attempted to be initialized for the same tag.
@@ -2198,13 +2260,19 @@ class BondHandler(ParameterHandler):
         ------
         IncompatibleParameterError if handler_kwargs are incompatible with existing parameters.
         """
-        string_attrs_to_compare = ['potential', 'fractional_bondorder_method', 'fractional_bondorder_interpolation']
-        self._check_attributes_are_equal(other_handler, identical_attrs=string_attrs_to_compare)
+        string_attrs_to_compare = [
+            "potential",
+            "fractional_bondorder_method",
+            "fractional_bondorder_interpolation",
+        ]
+        self._check_attributes_are_equal(
+            other_handler, identical_attrs=string_attrs_to_compare
+        )
 
     def create_force(self, system, topology, **kwargs):
         # Create or retrieve existing OpenMM Force object
         # TODO: The commented line below should replace the system.getForce search
-        #force = super(BondHandler, self).create_force(system, topology, **kwargs)
+        # force = super(BondHandler, self).create_force(system, topology, **kwargs)
         existing = [system.getForce(i) for i in range(system.getNumForces())]
         existing = [f for f in existing if type(f) == self._OPENMMTYPE]
         if len(existing) == 0:
@@ -2216,10 +2284,12 @@ class BondHandler(ParameterHandler):
         # Add all bonds to the system.
         bond_matches = self.find_matches(topology)
 
-        skipped_constrained_bonds = 0  # keep track of how many bonds were constrained (and hence skipped)
+        skipped_constrained_bonds = (
+            0  # keep track of how many bonds were constrained (and hence skipped)
+        )
         for (topology_atom_indices, bond_match) in bond_matches.items():
             # Get corresponding particle indices in Topology
-            #particle_indices = tuple([ atom.particle_index for atom in atoms ])
+            # particle_indices = tuple([ atom.particle_index for atom in atoms ])
 
             # Ensure atoms are actually bonded correct pattern in Topology
             self._assert_correct_connectivity(bond_match)
@@ -2228,19 +2298,23 @@ class BondHandler(ParameterHandler):
             match = bond_match.environment_match
 
             # Compute equilibrium bond length and spring constant.
-            bond = match.reference_molecule.get_bond_between(*match.reference_atom_indices)
+            bond = match.reference_molecule.get_bond_between(
+                *match.reference_atom_indices
+            )
 
-            if hasattr(bond_params, 'k_bondorder1'):
-                raise NotImplementedError("Partial bondorder treatment is not implemented for bonds.")
+            if hasattr(bond_params, "k_bondorder1"):
+                raise NotImplementedError(
+                    "Partial bondorder treatment is not implemented for bonds."
+                )
 
                 # Interpolate using fractional bond orders
                 # TODO: Do we really want to allow per-bond specification of interpolation schemes?
-                #order = bond.fractional_bond_order
-                #if self.fractional_bondorder_interpolation == 'interpolate-linear':
+                # order = bond.fractional_bond_order
+                # if self.fractional_bondorder_interpolation == 'interpolate-linear':
                 #    k = bond_params.k[0] + (bond_params.k[1] - bond_params.k[0]) * (order - 1.)
                 #    length = bond_params.length[0] + (
                 #        bond_params.length[1] - bond_params.length[0]) * (order - 1.)
-                #else:
+                # else:
                 #    raise Exception(
                 #        "Partial bondorder treatment {} is not implemented.".
                 #        format(self.fractional_bondorder_method))
@@ -2259,22 +2333,25 @@ class BondHandler(ParameterHandler):
                     topology.add_constraint(*topology_atom_indices, length)
                     # Add the constraint to the System.
                     system.addConstraint(*topology_atom_indices, length)
-                    #system.addConstraint(*particle_indices, length)
+                    # system.addConstraint(*particle_indices, length)
                 continue
 
             # Add harmonic bond to HarmonicBondForce
             force.addBond(*topology_atom_indices, length, k)
 
-        logger.info('{} bonds added ({} skipped due to constraints)'.format(
-            len(bond_matches) - skipped_constrained_bonds, skipped_constrained_bonds))
+        logger.info(
+            "{} bonds added ({} skipped due to constraints)".format(
+                len(bond_matches) - skipped_constrained_bonds, skipped_constrained_bonds
+            )
+        )
 
         # Check that no topological bonds are missing force parameters.
         valence_terms = [list(b.atoms) for b in topology.topology_bonds]
-        self._check_all_valence_terms_assigned(assigned_terms=bond_matches, valence_terms=valence_terms,
-                                               exception_cls=UnassignedBondParameterException)
-
-
-#=============================================================================================
+        self._check_all_valence_terms_assigned(
+            assigned_terms=bond_matches,
+            valence_terms=valence_terms,
+            exception_cls=UnassignedBondParameterException,
+        )
 
 
 class AngleHandler(ParameterHandler):
@@ -2288,21 +2365,21 @@ class AngleHandler(ParameterHandler):
 
         .. warning :: This API is experimental and subject to change.
         """
-        _VALENCE_TYPE = 'Angle'  # ChemicalEnvironment valence type string expected by SMARTS string for this Handler
-        _ELEMENT_NAME = 'Angle'
+
+        _VALENCE_TYPE = "Angle"  # ChemicalEnvironment valence type string expected by SMARTS string for this Handler
+        _ELEMENT_NAME = "Angle"
 
         angle = ParameterAttribute(unit=unit.degree)
-        k = ParameterAttribute(unit=unit.kilocalorie_per_mole / unit.degree**2)
+        k = ParameterAttribute(unit=unit.kilocalorie_per_mole / unit.degree ** 2)
 
-    _TAGNAME = 'Angles'  # SMIRNOFF tag name to process
+    _TAGNAME = "Angles"  # SMIRNOFF tag name to process
     _INFOTYPE = AngleType  # class to hold force type info
     _OPENMMTYPE = openmm.HarmonicAngleForce  # OpenMM force class to create
     _DEPENDENCIES = [ConstraintHandler]  # ConstraintHandler must be executed first
 
-    potential = ParameterAttribute(default='harmonic')
+    potential = ParameterAttribute(default="harmonic")
 
-    def check_handler_compatibility(self,
-                                    other_handler):
+    def check_handler_compatibility(self, other_handler):
         """
         Checks whether this ParameterHandler encodes compatible physics as another ParameterHandler. This is
         called if a second handler is attempted to be initialized for the same tag.
@@ -2316,11 +2393,13 @@ class AngleHandler(ParameterHandler):
         ------
         IncompatibleParameterError if handler_kwargs are incompatible with existing parameters.
         """
-        string_attrs_to_compare = ['potential']
-        self._check_attributes_are_equal(other_handler, identical_attrs=string_attrs_to_compare)
+        string_attrs_to_compare = ["potential"]
+        self._check_attributes_are_equal(
+            other_handler, identical_attrs=string_attrs_to_compare
+        )
 
     def create_force(self, system, topology, **kwargs):
-        #force = super(AngleHandler, self).create_force(system, topology, **kwargs)
+        # force = super(AngleHandler, self).create_force(system, topology, **kwargs)
         existing = [system.getForce(i) for i in range(system.getNumForces())]
         existing = [f for f in existing if type(f) == self._OPENMMTYPE]
         if len(existing) == 0:
@@ -2331,17 +2410,20 @@ class AngleHandler(ParameterHandler):
 
         # Add all angles to the system.
         angle_matches = self.find_matches(topology)
-        skipped_constrained_angles = 0  # keep track of how many angles were constrained (and hence skipped)
+        skipped_constrained_angles = (
+            0  # keep track of how many angles were constrained (and hence skipped)
+        )
         for (atoms, angle_match) in angle_matches.items():
             # Ensure atoms are actually bonded correct pattern in Topology
             # for (i, j) in [(0, 1), (1, 2)]:
             #     topology.assert_bonded(atoms[i], atoms[j])
             self._assert_correct_connectivity(angle_match)
 
-            if topology.is_constrained(
-                    atoms[0], atoms[1]) and topology.is_constrained(
-                        atoms[1], atoms[2]) and topology.is_constrained(
-                            atoms[0], atoms[2]):
+            if (
+                topology.is_constrained(atoms[0], atoms[1])
+                and topology.is_constrained(atoms[1], atoms[2])
+                and topology.is_constrained(atoms[0], atoms[2])
+            ):
                 # Angle is constrained; we don't need to add an angle term.
                 skipped_constrained_angles += 1
                 continue
@@ -2349,23 +2431,27 @@ class AngleHandler(ParameterHandler):
             angle = angle_match.parameter_type
             force.addAngle(*atoms, angle.angle, angle.k)
 
-        logger.info('{} angles added ({} skipped due to constraints)'.format(
-            len(angle_matches) - skipped_constrained_angles,
-            skipped_constrained_angles))
+        logger.info(
+            "{} angles added ({} skipped due to constraints)".format(
+                len(angle_matches) - skipped_constrained_angles,
+                skipped_constrained_angles,
+            )
+        )
 
         # Check that no topological angles are missing force parameters
-        self._check_all_valence_terms_assigned(assigned_terms=angle_matches,
-                                               valence_terms=list(topology.angles),
-                                               exception_cls=UnassignedAngleParameterException)
+        self._check_all_valence_terms_assigned(
+            assigned_terms=angle_matches,
+            valence_terms=list(topology.angles),
+            exception_cls=UnassignedAngleParameterException,
+        )
 
-
-#=============================================================================================
 
 # TODO: This is technically a validator, not a converter, but ParameterAttribute doesn't support them yet (it'll be easy if we switch to use the attrs library).
 def _allow_only(allowed_values):
     """A converter that checks the new value is only in a set.
     """
     allowed_values = frozenset(allowed_values)
+
     def _value_checker(instance, attr, new_value):
         # This statement means that, in the "SMIRNOFF Data Dict" format, the string "None"
         # and the Python None are the same thing
@@ -2375,11 +2461,14 @@ def _allow_only(allowed_values):
         # Ensure that the new value is in the list of allowed values
         if new_value not in allowed_values:
 
-            err_msg = (f'Attempted to set {instance.__class__.__name__}.{attr.name} '
-                       f'to {new_value}. Currently, only the following values '
-                       f'are supported: {sorted(allowed_values)}.')
+            err_msg = (
+                f"Attempted to set {instance.__class__.__name__}.{attr.name} "
+                f"to {new_value}. Currently, only the following values "
+                f"are supported: {sorted(allowed_values)}."
+            )
             raise SMIRNOFFSpecError(err_msg)
         return new_value
+
     return _value_checker
 
 
@@ -2396,8 +2485,8 @@ class ProperTorsionHandler(ParameterHandler):
         .. warning :: This API is experimental and subject to change.
         """
 
-        _VALENCE_TYPE = 'ProperTorsion'
-        _ELEMENT_NAME = 'Proper'
+        _VALENCE_TYPE = "ProperTorsion"
+        _ELEMENT_NAME = "Proper"
 
         periodicity = IndexedParameterAttribute(converter=int)
         phase = IndexedParameterAttribute(unit=unit.degree)
@@ -2405,24 +2494,24 @@ class ProperTorsionHandler(ParameterHandler):
         idivf = IndexedParameterAttribute(default=None, converter=float)
 
         # fractional bond order params
-        k_bondorder = IndexedMappedParameterAttribute(default=None,
-                                                      unit=unit.kilocalorie_per_mole)
+        k_bondorder = IndexedMappedParameterAttribute(
+            default=None, unit=unit.kilocalorie_per_mole
+        )
 
-    _TAGNAME = 'ProperTorsions'  # SMIRNOFF tag name to process
-    _KWARGS = ['partial_bond_orders_from_molecules']
+    _TAGNAME = "ProperTorsions"  # SMIRNOFF tag name to process
+    _KWARGS = ["partial_bond_orders_from_molecules"]
     _INFOTYPE = ProperTorsionType  # info type to store
     _OPENMMTYPE = openmm.PeriodicTorsionForce  # OpenMM force class to create
 
     potential = ParameterAttribute(
-        default='k*(1+cos(periodicity*theta-phase))',
-        converter=_allow_only(['k*(1+cos(periodicity*theta-phase))'])
+        default="k*(1+cos(periodicity*theta-phase))",
+        converter=_allow_only(["k*(1+cos(periodicity*theta-phase))"]),
     )
-    default_idivf = ParameterAttribute(default='auto')
-    fractional_bondorder_method = ParameterAttribute(default='AM1-Wiberg')
-    fractional_bondorder_interpolation = ParameterAttribute(default='linear')
+    default_idivf = ParameterAttribute(default="auto")
+    fractional_bondorder_method = ParameterAttribute(default="AM1-Wiberg")
+    fractional_bondorder_interpolation = ParameterAttribute(default="linear")
 
-    def check_handler_compatibility(self,
-                                    other_handler):
+    def check_handler_compatibility(self, other_handler):
         """
         Checks whether this ParameterHandler encodes compatible physics as another ParameterHandler. This is
         called if a second handler is attempted to be initialized for the same tag.
@@ -2437,22 +2526,29 @@ class ProperTorsionHandler(ParameterHandler):
         IncompatibleParameterError if handler_kwargs are incompatible with existing parameters.
         """
         float_attrs_to_compare = []
-        string_attrs_to_compare = ['potential',
-                                   'fractional_bondorder_method',
-                                   'fractional_bondorder_interpolation']
+        string_attrs_to_compare = [
+            "potential",
+            "fractional_bondorder_method",
+            "fractional_bondorder_interpolation",
+        ]
 
-        if self.default_idivf == 'auto':
-            string_attrs_to_compare.append('default_idivf')
+        if self.default_idivf == "auto":
+            string_attrs_to_compare.append("default_idivf")
         else:
-            float_attrs_to_compare.append('default_idivf')
+            float_attrs_to_compare.append("default_idivf")
 
-        self._check_attributes_are_equal(other_handler, identical_attrs=string_attrs_to_compare,
-                                         tolerance_attrs=float_attrs_to_compare)
+        self._check_attributes_are_equal(
+            other_handler,
+            identical_attrs=string_attrs_to_compare,
+            tolerance_attrs=float_attrs_to_compare,
+        )
 
     def check_partial_bond_orders_from_molecules_duplicates(self, pb_mols):
         if len(set(map(Molecule.to_smiles, pb_mols))) < len(pb_mols):
-            raise ValueError("At least two user-provided fractional bond order "
-                             "molecules are isomorphic")
+            raise ValueError(
+                "At least two user-provided fractional bond order "
+                "molecules are isomorphic"
+            )
 
     def assign_partial_bond_orders_from_molecules(self, topology, pbo_mols):
 
@@ -2462,13 +2558,16 @@ class ProperTorsionHandler(ParameterHandler):
             for pbo_mol in pbo_mols:
                 # we are as stringent as we are in the ElectrostaticsHandler
                 # TODO: figure out whether bond order matching is redundant with aromatic matching
-                isomorphic, topology_atom_map = Molecule.are_isomorphic(ref_mol, pbo_mol,
-                                                                        return_atom_map=True,
-                                                                        aromatic_matching=True,
-                                                                        formal_charge_matching=True,
-                                                                        bond_order_matching=True,
-                                                                        atom_stereochemistry_matching=True,
-                                                                        bond_stereochemistry_matching=True)
+                isomorphic, topology_atom_map = Molecule.are_isomorphic(
+                    ref_mol,
+                    pbo_mol,
+                    return_atom_map=True,
+                    aromatic_matching=True,
+                    formal_charge_matching=True,
+                    bond_order_matching=True,
+                    atom_stereochemistry_matching=True,
+                    bond_stereochemistry_matching=True,
+                )
 
                 # if matching, assign bond orders and skip to next molecule
                 # first match wins
@@ -2476,14 +2575,18 @@ class ProperTorsionHandler(ParameterHandler):
                     # walk through bonds on reference molecule
                     for bond in ref_mol.bonds:
                         # use atom mapping to translate to pbo_molecule bond
-                        pbo_bond = pbo_mol.get_bond_between(topology_atom_map[bond.atom1_index],
-                                                            topology_atom_map[bond.atom2_index])
+                        pbo_bond = pbo_mol.get_bond_between(
+                            topology_atom_map[bond.atom1_index],
+                            topology_atom_map[bond.atom2_index],
+                        )
                         # extract fractional bond order
                         # assign fractional bond order to reference molecule bond
                         if pbo_bond.fractional_bond_order is None:
-                            raise ValueError(f"Molecule '{ref_mol}' was requested to be parameterized "
-                                    f"with user-provided fractional bond orders from '{pbo_mol}', but not "
-                                    "all bonds were provided with `fractional_bond_order` specified")
+                            raise ValueError(
+                                f"Molecule '{ref_mol}' was requested to be parameterized "
+                                f"with user-provided fractional bond orders from '{pbo_mol}', but not "
+                                "all bonds were provided with `fractional_bond_order` specified"
+                            )
 
                         bond.fractional_bond_order = pbo_bond.fractional_bond_order
 
@@ -2493,7 +2596,7 @@ class ProperTorsionHandler(ParameterHandler):
                     continue
 
     def create_force(self, system, topology, **kwargs):
-        #force = super(ProperTorsionHandler, self).create_force(system, topology, **kwargs)
+        # force = super(ProperTorsionHandler, self).create_force(system, topology, **kwargs)
         existing = [system.getForce(i) for i in range(system.getNumForces())]
         existing = [f for f in existing if type(f) == self._OPENMMTYPE]
 
@@ -2505,12 +2608,16 @@ class ProperTorsionHandler(ParameterHandler):
 
         # check whether any of the reference molecules in the topology
         # are in the partial_bond_orders_from_molecules list
-        if 'partial_bond_orders_from_molecules' in kwargs:
+        if "partial_bond_orders_from_molecules" in kwargs:
             # check whether molecules in the partial_bond_orders_from_molecules
             # list have any duplicates
-            self.check_partial_bond_orders_from_molecules_duplicates(kwargs['partial_bond_orders_from_molecules'])
+            self.check_partial_bond_orders_from_molecules_duplicates(
+                kwargs["partial_bond_orders_from_molecules"]
+            )
 
-            self.assign_partial_bond_orders_from_molecules(topology, kwargs['partial_bond_orders_from_molecules'])
+            self.assign_partial_bond_orders_from_molecules(
+                topology, kwargs["partial_bond_orders_from_molecules"]
+            )
 
         # find all proper torsions for which we have parameters
         # operates on reference molecules in topology
@@ -2523,21 +2630,23 @@ class ProperTorsionHandler(ParameterHandler):
             self._assert_correct_connectivity(torsion_match)
 
             if torsion_match.parameter_type.k_bondorder is None:
-                # TODO: add a check here that we have same number of terms for 
+                # TODO: add a check here that we have same number of terms for
                 # `kX_bondorder*`, `periodicityX`, `phaseX`
                 # only count a given `kX_bondorder*` once
 
                 # assign torsion with no interpolation
                 self._assign_torsion(atom_indices, torsion_match, force)
             else:
-                # TODO: add a check here that we have same number of terms for 
+                # TODO: add a check here that we have same number of terms for
                 # `kX_bondorder*`, `periodicityX`, `phaseX`
                 # only count a given `kX_bondorder*` once
 
                 # assign torsion with interpolation
-                self._assign_fractional_bond_orders(atom_indices, torsion_match, force, **kwargs)
+                self._assign_fractional_bond_orders(
+                    atom_indices, torsion_match, force, **kwargs
+                )
 
-        logger.info('{} torsions added'.format(len(torsion_matches)))
+        logger.info("{} torsions added".format(len(torsion_matches)))
 
         # Check that no topological torsions are missing force parameters
 
@@ -2548,80 +2657,113 @@ class ProperTorsionHandler(ParameterHandler):
         # is focused on the single unique molecules, and then simply just cloned
         # onto the system. It seems like John's proposed System object would do
         # exactly this.
-        self._check_all_valence_terms_assigned(assigned_terms=torsion_matches,
-                                               valence_terms=list(topology.propers),
-                                               exception_cls=UnassignedProperTorsionParameterException)
+        self._check_all_valence_terms_assigned(
+            assigned_terms=torsion_matches,
+            valence_terms=list(topology.propers),
+            exception_cls=UnassignedProperTorsionParameterException,
+        )
 
     def _assign_torsion(self, atom_indices, torsion_match, force):
 
         torsion_params = torsion_match.parameter_type
 
-        for (periodicity, phase, k, idivf) in zip(torsion_params.periodicity,
-                                                  torsion_params.phase,
-                                                  torsion_params.k,
-                                                  torsion_params.idivf):
-            
-            if idivf == 'auto':
+        for (periodicity, phase, k, idivf) in zip(
+            torsion_params.periodicity,
+            torsion_params.phase,
+            torsion_params.k,
+            torsion_params.idivf,
+        ):
+
+            if idivf == "auto":
                 # TODO: Implement correct "auto" behavior
-                raise NotImplementedError("The OpenForceField toolkit hasn't implemented "
-                                          "support for the torsion `idivf` value of 'auto'")
-        
-            force.addTorsion(atom_indices[0], atom_indices[1],
-                             atom_indices[2], atom_indices[3], periodicity,
-                             phase, k/idivf)
+                raise NotImplementedError(
+                    "The OpenForceField toolkit hasn't implemented "
+                    "support for the torsion `idivf` value of 'auto'"
+                )
 
+            force.addTorsion(
+                atom_indices[0],
+                atom_indices[1],
+                atom_indices[2],
+                atom_indices[3],
+                periodicity,
+                phase,
+                k / idivf,
+            )
 
-    def _assign_fractional_bond_orders(self, atom_indices, torsion_match, force, **kwargs):
+    def _assign_fractional_bond_orders(
+        self, atom_indices, torsion_match, force, **kwargs
+    ):
         from openforcefield.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
 
         torsion_params = torsion_match.parameter_type
         match = torsion_match.environment_match
 
-        for (periodicity, phase, k_bondorder, idivf) in zip(torsion_params.periodicity,
-                                                            torsion_params.phase,
-                                                            torsion_params.k_bondorder,
-                                                            torsion_params.idivf):
+        for (periodicity, phase, k_bondorder, idivf) in zip(
+            torsion_params.periodicity,
+            torsion_params.phase,
+            torsion_params.k_bondorder,
+            torsion_params.idivf,
+        ):
 
             if len(k_bondorder) < 2:
-                raise ValueError("At least 2 bond order values required for `k_bondorder`; "
-                                 "got {}".format(len(k_bondorder)))
+                raise ValueError(
+                    "At least 2 bond order values required for `k_bondorder`; "
+                    "got {}".format(len(k_bondorder))
+                )
 
-            if idivf == 'auto':
+            if idivf == "auto":
                 # TODO: Implement correct "auto" behavior
-                raise NotImplementedError("The OpenForceField toolkit hasn't implemented "
-                                          "support for the torsion `idivf` value of 'auto'")
+                raise NotImplementedError(
+                    "The OpenForceField toolkit hasn't implemented "
+                    "support for the torsion `idivf` value of 'auto'"
+                )
 
             # get central bond for reference molecule
             central_bond = match.reference_molecule.get_bond_between(
-                    match.reference_atom_indices[1], match.reference_atom_indices[2])
+                match.reference_atom_indices[1], match.reference_atom_indices[2]
+            )
 
             # if fractional bond order not calculated yet, we calculate it
             # should only happen once per reference molecule for which we care
             # about fractional bond interpolation
             # and not at all for reference molecules we don't
             if central_bond.fractional_bond_order is None:
-                    toolkit_registry = kwargs.get('toolkit_registry', GLOBAL_TOOLKIT_REGISTRY)
-                    match.reference_molecule.assign_fractional_bond_orders(
-                            toolkit_registry=toolkit_registry,
-                            use_conformers=match.reference_molecule.conformers)
+                toolkit_registry = kwargs.get(
+                    "toolkit_registry", GLOBAL_TOOLKIT_REGISTRY
+                )
+                match.reference_molecule.assign_fractional_bond_orders(
+                    toolkit_registry=toolkit_registry,
+                    use_conformers=match.reference_molecule.conformers,
+                )
 
             # scale k based on the bondorder of the central bond
-            if self.fractional_bondorder_interpolation == 'linear':
+            if self.fractional_bondorder_interpolation == "linear":
                 # we only interpolate on k
-                k = self._linear_interpolate_k(k_bondorder, central_bond.fractional_bond_order)
+                k = self._linear_interpolate_k(
+                    k_bondorder, central_bond.fractional_bond_order
+                )
             else:
                 raise Exception(
-                    "Fractional bondorder treatment {} is not implemented.".
-                    format(self.fractional_bondorder_method))
-                
+                    "Fractional bondorder treatment {} is not implemented.".format(
+                        self.fractional_bondorder_method
+                    )
+                )
+
             # add a torsion with given parameters for topology atoms
-            force.addTorsion(atom_indices[0], atom_indices[1],
-                             atom_indices[2], atom_indices[3], periodicity,
-                             phase, k/idivf)
+            force.addTorsion(
+                atom_indices[0],
+                atom_indices[1],
+                atom_indices[2],
+                atom_indices[3],
+                periodicity,
+                phase,
+                k / idivf,
+            )
 
     @staticmethod
     def _linear_interpolate_k(k_bondorder, fractional_bond_order):
-        
+
         # pre-empt case where no interpolation is necessary
         if fractional_bond_order in k_bondorder:
             return k_bondorder[fractional_bond_order]
@@ -2642,33 +2784,34 @@ class ProperTorsionHandler(ParameterHandler):
 
         # handle case where we can clearly interpolate
         if (above is not None) and (below is not None):
-            return (k_bondorder[below]
-                    + (k_bondorder[above] - k_bondorder[below])
-                    * ((fractional_bond_order - below)/(above - below)))
+            return k_bondorder[below] + (k_bondorder[above] - k_bondorder[below]) * (
+                (fractional_bond_order - below) / (above - below)
+            )
 
         # error if we can't hope to interpolate at all
         elif (above is None) and (below is None):
             raise NotImplementedError(
-                    f"Failed to find interpolation references for "
-                    f"`fractional bond order` '{fractional_bond_order}', "
-                    f"with `k_bond_order` '{k_bondorder}'")
+                f"Failed to find interpolation references for "
+                f"`fractional bond order` '{fractional_bond_order}', "
+                f"with `k_bond_order` '{k_bondorder}'"
+            )
 
         # extrapolate for fractional bond orders below our lowest defined bond order
         elif below is None:
             bond_orders = sorted(k_bondorder)
-            k = (k_bondorder[bond_orders[0]]
-                    - ((k_bondorder[bond_orders[1]] - k_bondorder[bond_orders[0]])
-                       /(bond_orders[1] - bond_orders[0]))
-                    * (bond_orders[0] - fractional_bond_order))
+            k = k_bondorder[bond_orders[0]] - (
+                (k_bondorder[bond_orders[1]] - k_bondorder[bond_orders[0]])
+                / (bond_orders[1] - bond_orders[0])
+            ) * (bond_orders[0] - fractional_bond_order)
             return k
 
         # extrapolate for fractional bond orders above our highest defined bond order
         elif above is None:
             bond_orders = sorted(k_bondorder)
-            k = (k_bondorder[bond_orders[-1]]
-                    + ((k_bondorder[bond_orders[-1]] - k_bondorder[bond_orders[-2]])
-                       /(bond_orders[-1] - bond_orders[-2]))
-                    * (fractional_bond_order - bond_orders[-1]))
+            k = k_bondorder[bond_orders[-1]] + (
+                (k_bondorder[bond_orders[-1]] - k_bondorder[bond_orders[-2]])
+                / (bond_orders[-1] - bond_orders[-2])
+            ) * (fractional_bond_order - bond_orders[-1])
             return k
 
 
@@ -2684,27 +2827,26 @@ class ImproperTorsionHandler(ParameterHandler):
 
         .. warning :: This API is experimental and subject to change.
         """
-        _VALENCE_TYPE = 'ImproperTorsion'
-        _ELEMENT_NAME = 'Improper'
+
+        _VALENCE_TYPE = "ImproperTorsion"
+        _ELEMENT_NAME = "Improper"
 
         periodicity = IndexedParameterAttribute(converter=int)
         phase = IndexedParameterAttribute(unit=unit.degree)
         k = IndexedParameterAttribute(unit=unit.kilocalorie_per_mole)
         idivf = IndexedParameterAttribute(default=None, converter=float)
 
-
-    _TAGNAME = 'ImproperTorsions'  # SMIRNOFF tag name to process
+    _TAGNAME = "ImproperTorsions"  # SMIRNOFF tag name to process
     _INFOTYPE = ImproperTorsionType  # info type to store
     _OPENMMTYPE = openmm.PeriodicTorsionForce  # OpenMM force class to create
 
     potential = ParameterAttribute(
-        default='k*(1+cos(periodicity*theta-phase))',
-        converter=_allow_only(['k*(1+cos(periodicity*theta-phase))'])
+        default="k*(1+cos(periodicity*theta-phase))",
+        converter=_allow_only(["k*(1+cos(periodicity*theta-phase))"]),
     )
-    default_idivf = ParameterAttribute(default='auto')
+    default_idivf = ParameterAttribute(default="auto")
 
-    def check_handler_compatibility(self,
-                                    other_handler):
+    def check_handler_compatibility(self, other_handler):
         """
         Checks whether this ParameterHandler encodes compatible physics as another ParameterHandler. This is
         called if a second handler is attempted to be initialized for the same tag.
@@ -2719,15 +2861,18 @@ class ImproperTorsionHandler(ParameterHandler):
         IncompatibleParameterError if handler_kwargs are incompatible with existing parameters.
         """
         float_attrs_to_compare = []
-        string_attrs_to_compare = ['potential']
+        string_attrs_to_compare = ["potential"]
 
-        if self.default_idivf == 'auto':
-            string_attrs_to_compare.append('default_idivf')
+        if self.default_idivf == "auto":
+            string_attrs_to_compare.append("default_idivf")
         else:
-            float_attrs_to_compare.append('default_idivf')
+            float_attrs_to_compare.append("default_idivf")
 
-        self._check_attributes_are_equal(other_handler, identical_attrs=string_attrs_to_compare,
-                                         tolerance_attrs=float_attrs_to_compare)
+        self._check_attributes_are_equal(
+            other_handler,
+            identical_attrs=string_attrs_to_compare,
+            tolerance_attrs=float_attrs_to_compare,
+        )
 
     def find_matches(self, entity):
         """Find the improper torsions in the topology/molecule matched by a parameter type.
@@ -2747,12 +2892,10 @@ class ImproperTorsionHandler(ParameterHandler):
         return self._find_matches(entity, transformed_dict_cls=ImproperDict)
 
     def create_force(self, system, topology, **kwargs):
-        #force = super(ImproperTorsionHandler, self).create_force(system, topology, **kwargs)
-        #force = super().create_force(system, topology, **kwargs)
+        # force = super(ImproperTorsionHandler, self).create_force(system, topology, **kwargs)
+        # force = super().create_force(system, topology, **kwargs)
         existing = [system.getForce(i) for i in range(system.getNumForces())]
-        existing = [
-            f for f in existing if type(f) == openmm.PeriodicTorsionForce
-        ]
+        existing = [f for f in existing if type(f) == openmm.PeriodicTorsionForce]
         if len(existing) == 0:
             force = openmm.PeriodicTorsionForce()
             system.addForce(force)
@@ -2774,28 +2917,47 @@ class ImproperTorsionHandler(ParameterHandler):
             if improper.idivf is None:
                 improper.idivf = [3 for item in improper.k]
             # Impropers are applied in three paths around the trefoil having the same handedness
-            for (improper_periodicity, improper_phase, improper_k, improper_idivf) in zip(improper.periodicity,
-                                               improper.phase, improper.k, improper.idivf):
+            for (
+                improper_periodicity,
+                improper_phase,
+                improper_k,
+                improper_idivf,
+            ) in zip(improper.periodicity, improper.phase, improper.k, improper.idivf):
                 # TODO: Implement correct "auto" behavior
-                if improper_idivf == 'auto':
+                if improper_idivf == "auto":
                     improper_idivf = 3
-                    logger.warning("The OpenForceField toolkit hasn't implemented "
-                                   "support for the torsion `idivf` value of 'auto'."
-                                   "Currently assuming a value of '3' for impropers.")
+                    logger.warning(
+                        "The OpenForceField toolkit hasn't implemented "
+                        "support for the torsion `idivf` value of 'auto'."
+                        "Currently assuming a value of '3' for impropers."
+                    )
                 # Permute non-central atoms
                 others = [atom_indices[0], atom_indices[2], atom_indices[3]]
                 # ((0, 1, 2), (1, 2, 0), and (2, 0, 1)) are the three paths around the trefoil
-                for p in [(others[i], others[j], others[k]) for (i, j, k) in [(0, 1, 2), (1, 2, 0), (2, 0, 1)]]:
+                for p in [
+                    (others[i], others[j], others[k])
+                    for (i, j, k) in [(0, 1, 2), (1, 2, 0), (2, 0, 1)]
+                ]:
                     # The torsion force gets added three times, since the k is divided by three
-                    force.addTorsion(atom_indices[1], p[0], p[1], p[2],
-                                     improper_periodicity, improper_phase, improper_k/improper_idivf)
+                    force.addTorsion(
+                        atom_indices[1],
+                        p[0],
+                        p[1],
+                        p[2],
+                        improper_periodicity,
+                        improper_phase,
+                        improper_k / improper_idivf,
+                    )
         logger.info(
-            '{} impropers added, each applied in a six-fold trefoil'.format(
-                len(improper_matches)))
+            "{} impropers added, each applied in a six-fold trefoil".format(
+                len(improper_matches)
+            )
+        )
 
 
 class _NonbondedHandler(ParameterHandler):
     """Base class for ParameterHandlers that deal with OpenMM NonbondedForce objects."""
+
     _OPENMMTYPE = openmm.NonbondedForce
 
     def create_force(self, system, topology, **kwargs):
@@ -2804,7 +2966,9 @@ class _NonbondedHandler(ParameterHandler):
         # TODO: This should be an attribute of the _system_, not the _topology_. However, since we're still using
         #  OpenMM's System class, I am storing this data on the OFF Topology until we make an OFF System class.
         if not hasattr(topology, "_ref_mol_to_charge_method"):
-            topology._ref_mol_to_charge_method = {ref_mol: None for ref_mol in topology.reference_molecules}
+            topology._ref_mol_to_charge_method = {
+                ref_mol: None for ref_mol in topology.reference_molecules
+            }
 
         # Retrieve the system's OpenMM NonbondedForce
         existing = [system.getForce(i) for i in range(system.getNumForces())]
@@ -2865,22 +3029,22 @@ class vdWHandler(_NonbondedHandler):
     .. warning :: This API is experimental and subject to change.
     """
 
-
     class vdWType(ParameterType):
         """A SMIRNOFF vdWForce type.
 
         .. warning :: This API is experimental and subject to change.
         """
-        _VALENCE_TYPE = 'Atom'  # ChemicalEnvironment valence type expected for SMARTS
-        _ELEMENT_NAME = 'Atom'
+
+        _VALENCE_TYPE = "Atom"  # ChemicalEnvironment valence type expected for SMARTS
+        _ELEMENT_NAME = "Atom"
 
         epsilon = ParameterAttribute(unit=unit.kilocalorie_per_mole)
         sigma = ParameterAttribute(default=None, unit=unit.angstrom)
         rmin_half = ParameterAttribute(default=None, unit=unit.angstrom)
 
         def __init__(self, **kwargs):
-            sigma = kwargs.get('sigma', None)
-            rmin_half = kwargs.get('rmin_half', None)
+            sigma = kwargs.get("sigma", None)
+            rmin_half = kwargs.get("rmin_half", None)
             if (sigma is None) and (rmin_half is None):
                 raise SMIRNOFFSpecError("Either sigma or rmin_half must be specified.")
             if (sigma is not None) and (rmin_half is not None):
@@ -2890,19 +3054,17 @@ class vdWHandler(_NonbondedHandler):
 
             super().__init__(**kwargs)
 
-    _TAGNAME = 'vdW'  # SMIRNOFF tag name to process
+    _TAGNAME = "vdW"  # SMIRNOFF tag name to process
     _INFOTYPE = vdWType  # info type to store
     # _KWARGS = ['ewaldErrorTolerance',
     #            'useDispersionCorrection',
     #            'usePbc'] # Kwargs to catch when create_force is called
 
     potential = ParameterAttribute(
-        default='Lennard-Jones-12-6',
-        converter=_allow_only(['Lennard-Jones-12-6'])
+        default="Lennard-Jones-12-6", converter=_allow_only(["Lennard-Jones-12-6"])
     )
     combining_rules = ParameterAttribute(
-        default='Lorentz-Berthelot',
-        converter=_allow_only(['Lorentz-Berthelot'])
+        default="Lorentz-Berthelot", converter=_allow_only(["Lorentz-Berthelot"])
     )
 
     scale12 = ParameterAttribute(default=0.0, converter=float)
@@ -2913,37 +3075,41 @@ class vdWHandler(_NonbondedHandler):
     cutoff = ParameterAttribute(default=9.0 * unit.angstroms, unit=unit.angstrom)
     switch_width = ParameterAttribute(default=1.0 * unit.angstroms, unit=unit.angstrom)
     method = ParameterAttribute(
-        default='cutoff',
-        converter=_allow_only(['cutoff', 'PME'])
+        default="cutoff", converter=_allow_only(["cutoff", "PME"])
     )
 
     # TODO: Use _allow_only when ParameterAttribute will support multiple converters (it'll be easy when we switch to use the attrs library)
     @scale12.converter
     def scale12(self, attrs, new_scale12):
         if new_scale12 != 0.0:
-            raise SMIRNOFFSpecError("Current OFF toolkit is unable to handle scale12 values other than 0.0. "
-                                    "Specified 1-2 scaling was {}".format(self._scale12))
+            raise SMIRNOFFSpecError(
+                "Current OFF toolkit is unable to handle scale12 values other than 0.0. "
+                "Specified 1-2 scaling was {}".format(self._scale12)
+            )
         return new_scale12
 
     @scale13.converter
     def scale13(self, attrs, new_scale13):
         if new_scale13 != 0.0:
-            raise SMIRNOFFSpecError("Current OFF toolkit is unable to handle scale13 values other than 0.0. "
-                                    "Specified 1-3 scaling was {}".format(self._scale13))
+            raise SMIRNOFFSpecError(
+                "Current OFF toolkit is unable to handle scale13 values other than 0.0. "
+                "Specified 1-3 scaling was {}".format(self._scale13)
+            )
         return new_scale13
 
     @scale15.converter
     def scale15(self, attrs, new_scale15):
         if new_scale15 != 1.0:
-            raise SMIRNOFFSpecError("Current OFF toolkit is unable to handle scale15 values other than 1.0. "
-                                    "Specified 1-5 scaling was {}".format(self._scale15))
+            raise SMIRNOFFSpecError(
+                "Current OFF toolkit is unable to handle scale15 values other than 1.0. "
+                "Specified 1-5 scaling was {}".format(self._scale15)
+            )
         return new_scale15
 
     # Tolerance when comparing float attributes for handler compatibility.
     _SCALETOL = 1e-5
 
-    def check_handler_compatibility(self,
-                                    other_handler):
+    def check_handler_compatibility(self, other_handler):
         """
         Checks whether this ParameterHandler encodes compatible physics as another ParameterHandler. This is
         called if a second handler is attempted to be initialized for the same tag.
@@ -2957,34 +3123,37 @@ class vdWHandler(_NonbondedHandler):
         ------
         IncompatibleParameterError if handler_kwargs are incompatible with existing parameters.
         """
-        float_attrs_to_compare = ['scale12', 'scale13', 'scale14', 'scale15']
-        string_attrs_to_compare = ['potential', 'combining_rules', 'method']
-        unit_attrs_to_compare = ['cutoff']
+        float_attrs_to_compare = ["scale12", "scale13", "scale14", "scale15"]
+        string_attrs_to_compare = ["potential", "combining_rules", "method"]
+        unit_attrs_to_compare = ["cutoff"]
 
-        self._check_attributes_are_equal(other_handler, identical_attrs=string_attrs_to_compare,
-                                         tolerance_attrs=float_attrs_to_compare+unit_attrs_to_compare,
-                                         tolerance=self._SCALETOL)
+        self._check_attributes_are_equal(
+            other_handler,
+            identical_attrs=string_attrs_to_compare,
+            tolerance_attrs=float_attrs_to_compare + unit_attrs_to_compare,
+            tolerance=self._SCALETOL,
+        )
 
     def create_force(self, system, topology, **kwargs):
         force = super().create_force(system, topology, **kwargs)
 
         # If we're using PME, then the only possible openMM Nonbonded type is LJPME
-        if self._method == 'PME':
+        if self._method == "PME":
             # If we're given a nonperiodic box, we always set NoCutoff. Later we'll add support for CutoffNonPeriodic
-            if (topology.box_vectors is None):
+            if topology.box_vectors is None:
                 force.setNonbondedMethod(openmm.NonbondedForce.NoCutoff)
                 # if (topology.box_vectors is None):
                 #     raise SMIRNOFFSpecError("If vdW method is  PME, a periodic Topology "
                 #                             "must be provided")
             else:
                 force.setNonbondedMethod(openmm.NonbondedForce.LJPME)
-                force.setCutoffDistance(9. * unit.angstrom)
-                force.setEwaldErrorTolerance(1.e-4)
+                force.setCutoffDistance(9.0 * unit.angstrom)
+                force.setEwaldErrorTolerance(1.0e-4)
 
         # If method is cutoff, then we currently support openMM's PME for periodic system and NoCutoff for nonperiodic
-        elif self._method == 'cutoff':
+        elif self._method == "cutoff":
             # If we're given a nonperiodic box, we always set NoCutoff. Later we'll add support for CutoffNonPeriodic
-            if (topology.box_vectors is None):
+            if topology.box_vectors is None:
                 force.setNonbondedMethod(openmm.NonbondedForce.NoCutoff)
             else:
                 force.setNonbondedMethod(openmm.NonbondedForce.PME)
@@ -2994,21 +3163,20 @@ class vdWHandler(_NonbondedHandler):
         # Iterate over all defined Lennard-Jones types, allowing later matches to override earlier ones.
         atom_matches = self.find_matches(topology)
 
-
         # Set the particle Lennard-Jones terms.
         for atom_key, atom_match in atom_matches.items():
             atom_idx = atom_key[0]
             ljtype = atom_match.parameter_type
             if ljtype.sigma is None:
-                sigma = 2. * ljtype.rmin_half / (2.**(1. / 6.))
+                sigma = 2.0 * ljtype.rmin_half / (2.0 ** (1.0 / 6.0))
             else:
                 sigma = ljtype.sigma
-            force.setParticleParameters(atom_idx, 0.0, sigma,
-                                        ljtype.epsilon)
+            force.setParticleParameters(atom_idx, 0.0, sigma, ljtype.epsilon)
 
         # Check that no atoms (n.b. not particles) are missing force parameters.
-        self._check_all_valence_terms_assigned(assigned_terms=atom_matches,
-                                               valence_terms=list(topology.topology_atoms))
+        self._check_all_valence_terms_assigned(
+            assigned_terms=atom_matches, valence_terms=list(topology.topology_atoms)
+        )
 
     # TODO: Can we express separate constraints for postprocessing and normal processing?
     def postprocess_system(self, system, topology, **kwargs):
@@ -3023,8 +3191,12 @@ class vdWHandler(_NonbondedHandler):
 
             for topology_bond in topology_molecule.bonds:
 
-                top_index_1 = topology_molecule._ref_to_top_index[topology_bond.bond.atom1_index]
-                top_index_2 = topology_molecule._ref_to_top_index[topology_bond.bond.atom2_index]
+                top_index_1 = topology_molecule._ref_to_top_index[
+                    topology_bond.bond.atom1_index
+                ]
+                top_index_2 = topology_molecule._ref_to_top_index[
+                    topology_bond.bond.atom2_index
+                ]
 
                 top_index_1 += top_mol_particle_start_index
                 top_index_2 += top_mol_particle_start_index
@@ -3036,12 +3208,13 @@ class vdWHandler(_NonbondedHandler):
             # to prevent interference with other kinds of forces in the future?
             # TODO: Can we generalize this to allow for `CustomNonbondedForce` implementations too?
             if isinstance(force, openmm.NonbondedForce):
-                #nonbonded.createExceptionsFromBonds(bond_particle_indices, self.coulomb14scale, self.lj14scale)
+                # nonbonded.createExceptionsFromBonds(bond_particle_indices, self.coulomb14scale, self.lj14scale)
 
                 # TODO: Don't mess with electrostatic scaling here. Have a separate electrostatics handler.
-                force.createExceptionsFromBonds(bond_particle_indices, 0.83333,
-                                                self._scale14)
-                #force.createExceptionsFromBonds(bond_particle_indices, self.coulomb14scale, self._scale14)
+                force.createExceptionsFromBonds(
+                    bond_particle_indices, 0.83333, self._scale14
+                )
+                # force.createExceptionsFromBonds(bond_particle_indices, self.coulomb14scale, self._scale14)
 
 
 class ElectrostaticsHandler(_NonbondedHandler):
@@ -3049,10 +3222,10 @@ class ElectrostaticsHandler(_NonbondedHandler):
 
     .. warning :: This API is experimental and subject to change.
     """
-    _TAGNAME = 'Electrostatics'
-    _DEPENDENCIES = [vdWHandler]
-    _KWARGS = ['charge_from_molecules', 'allow_nonintegral_charges']
 
+    _TAGNAME = "Electrostatics"
+    _DEPENDENCIES = [vdWHandler]
+    _KWARGS = ["charge_from_molecules", "allow_nonintegral_charges"]
 
     scale12 = ParameterAttribute(default=0.0, converter=float)
     scale13 = ParameterAttribute(default=0.0, converter=float)
@@ -3061,30 +3234,35 @@ class ElectrostaticsHandler(_NonbondedHandler):
     cutoff = ParameterAttribute(default=9.0 * unit.angstrom, unit=unit.angstrom)
     switch_width = ParameterAttribute(default=0.0 * unit.angstrom, unit=unit.angstrom)
     method = ParameterAttribute(
-        default='PME',
-        converter=_allow_only(['Coulomb', 'PME'])
+        default="PME", converter=_allow_only(["Coulomb", "PME"])
     )
 
     # TODO: Use _allow_only when ParameterAttribute will support multiple converters (it'll be easy when we switch to use the attrs library)
     @scale12.converter
     def scale12(self, attrs, new_scale12):
         if new_scale12 != 0.0:
-            raise SMIRNOFFSpecError("Current OFF toolkit is unable to handle scale12 values other than 0.0. "
-                                    "Specified 1-2 scaling was {}".format(self._scale12))
+            raise SMIRNOFFSpecError(
+                "Current OFF toolkit is unable to handle scale12 values other than 0.0. "
+                "Specified 1-2 scaling was {}".format(self._scale12)
+            )
         return new_scale12
 
     @scale13.converter
     def scale13(self, attrs, new_scale13):
         if new_scale13 != 0.0:
-            raise SMIRNOFFSpecError("Current OFF toolkit is unable to handle scale13 values other than 0.0. "
-                                    "Specified 1-3 scaling was {}".format(self._scale13))
+            raise SMIRNOFFSpecError(
+                "Current OFF toolkit is unable to handle scale13 values other than 0.0. "
+                "Specified 1-3 scaling was {}".format(self._scale13)
+            )
         return new_scale13
 
     @scale15.converter
     def scale15(self, attrs, new_scale15):
         if new_scale15 != 1.0:
-            raise SMIRNOFFSpecError("Current OFF toolkit is unable to handle scale15 values other than 1.0. "
-                                    "Specified 1-5 scaling was {}".format(self._scale15))
+            raise SMIRNOFFSpecError(
+                "Current OFF toolkit is unable to handle scale15 values other than 1.0. "
+                "Specified 1-5 scaling was {}".format(self._scale15)
+            )
         return new_scale15
 
     @switch_width.converter
@@ -3099,8 +3277,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
     # Tolerance when comparing float attributes for handler compatibility.
     _SCALETOL = 1e-5
 
-    def check_handler_compatibility(self,
-                                    other_handler):
+    def check_handler_compatibility(self, other_handler):
         """
         Checks whether this ParameterHandler encodes compatible physics as another ParameterHandler. This is
         called if a second handler is attempted to be initialized for the same tag.
@@ -3114,14 +3291,16 @@ class ElectrostaticsHandler(_NonbondedHandler):
         ------
         IncompatibleParameterError if handler_kwargs are incompatible with existing parameters.
         """
-        float_attrs_to_compare = ['scale12', 'scale13', 'scale14', 'scale15']
-        string_attrs_to_compare = ['method']
-        unit_attrs_to_compare = ['cutoff', 'switch_width']
+        float_attrs_to_compare = ["scale12", "scale13", "scale14", "scale15"]
+        string_attrs_to_compare = ["method"]
+        unit_attrs_to_compare = ["cutoff", "switch_width"]
 
-        self._check_attributes_are_equal(other_handler, identical_attrs=string_attrs_to_compare,
-                                         tolerance_attrs=float_attrs_to_compare+unit_attrs_to_compare,
-                                         tolerance=self._SCALETOL)
-
+        self._check_attributes_are_equal(
+            other_handler,
+            identical_attrs=string_attrs_to_compare,
+            tolerance_attrs=float_attrs_to_compare + unit_attrs_to_compare,
+            tolerance=self._SCALETOL,
+        )
 
     def assign_charge_from_molecules(self, molecule, charge_mols):
         """
@@ -3145,19 +3324,24 @@ class ElectrostaticsHandler(_NonbondedHandler):
 
         # Check each charge_mol for whether it's isomorphic to the input molecule
         for charge_mol in charge_mols:
-            ismorphic, topology_atom_map = Molecule.are_isomorphic(molecule, charge_mol,
-                                                                   return_atom_map=True,
-                                                                   aromatic_matching=True,
-                                                                   formal_charge_matching=True,
-                                                                   bond_order_matching=True,
-                                                                   atom_stereochemistry_matching=True,
-                                                                   bond_stereochemistry_matching=True)
+            ismorphic, topology_atom_map = Molecule.are_isomorphic(
+                molecule,
+                charge_mol,
+                return_atom_map=True,
+                aromatic_matching=True,
+                formal_charge_matching=True,
+                bond_order_matching=True,
+                atom_stereochemistry_matching=True,
+                bond_stereochemistry_matching=True,
+            )
             # if they are isomorphic then use the mapping
             if ismorphic:
                 # Take the first valid atom indexing map
                 # Set the partial charges
                 # Make a copy of the charge molecule's charges array (this way it's the right shape)
-                temp_mol_charges = copy.deepcopy(simtk.unit.Quantity(charge_mol.partial_charges))
+                temp_mol_charges = copy.deepcopy(
+                    simtk.unit.Quantity(charge_mol.partial_charges)
+                )
                 for charge_idx, ref_idx in topology_atom_map.items():
                     temp_mol_charges[ref_idx] = charge_mol.partial_charges[charge_idx]
                 molecule.partial_charges = temp_mol_charges
@@ -3167,7 +3351,11 @@ class ElectrostaticsHandler(_NonbondedHandler):
         return False
 
     def create_force(self, system, topology, **kwargs):
-        from openforcefield.topology import FrozenMolecule, TopologyAtom, TopologyVirtualSite
+        from openforcefield.topology import (
+            FrozenMolecule,
+            TopologyAtom,
+            TopologyVirtualSite,
+        )
 
         force = super().create_force(system, topology, **kwargs)
 
@@ -3183,37 +3371,48 @@ class ElectrostaticsHandler(_NonbondedHandler):
 
             # First, check whether any of the reference molecules in the topology are in the charge_from_mol list
             charges_from_charge_mol = False
-            if 'charge_from_molecules' in kwargs:
-                charges_from_charge_mol = self.assign_charge_from_molecules(temp_mol, kwargs['charge_from_molecules'])
+            if "charge_from_molecules" in kwargs:
+                charges_from_charge_mol = self.assign_charge_from_molecules(
+                    temp_mol, kwargs["charge_from_molecules"]
+                )
 
             # If this reference molecule wasn't in the charge_from_molecules list, end this iteration
-            if not(charges_from_charge_mol):
+            if not (charges_from_charge_mol):
                 continue
 
             # Otherwise, the molecule is in the charge_from_molecules list, and we should assign charges to all
             # instances of it in this topology.
-            for topology_molecule in topology._reference_molecule_to_topology_molecules[ref_mol]:
-
+            for topology_molecule in topology._reference_molecule_to_topology_molecules[
+                ref_mol
+            ]:
 
                 for topology_particle in topology_molecule.particles:
 
                     if type(topology_particle) is TopologyAtom:
-                        ref_mol_particle_index = topology_particle.atom.molecule_particle_index
+                        ref_mol_particle_index = (
+                            topology_particle.atom.molecule_particle_index
+                        )
                     elif type(topology_particle) is TopologyVirtualSite:
-                        ref_mol_particle_index = topology_particle.virtual_site.molecule_particle_index
+                        ref_mol_particle_index = (
+                            topology_particle.virtual_site.molecule_particle_index
+                        )
                     else:
-                        raise ValueError(f'Particles of type {type(topology_particle)} are not supported')
+                        raise ValueError(
+                            f"Particles of type {type(topology_particle)} are not supported"
+                        )
 
                     topology_particle_index = topology_particle.topology_particle_index
 
                     particle_charge = temp_mol._partial_charges[ref_mol_particle_index]
 
                     # Retrieve nonbonded parameters for reference atom (charge not set yet)
-                    _, sigma, epsilon = force.getParticleParameters(topology_particle_index)
+                    _, sigma, epsilon = force.getParticleParameters(
+                        topology_particle_index
+                    )
                     # Set the nonbonded force with the partial charge
-                    force.setParticleParameters(topology_particle_index,
-                                                particle_charge, sigma,
-                                                epsilon)
+                    force.setParticleParameters(
+                        topology_particle_index, particle_charge, sigma, epsilon
+                    )
 
             # Finally, mark that charges were assigned for this reference molecule
             self.mark_charges_assigned(ref_mol, topology)
@@ -3224,13 +3423,17 @@ class ElectrostaticsHandler(_NonbondedHandler):
 
         # First, check whether the vdWHandler set the nonbonded method to LJPME, because that means
         # that electrostatics also has to be PME
-        if (current_nb_method == openmm.NonbondedForce.LJPME) and (self._method != 'PME'):
-            raise IncompatibleParameterError("In current Open Force Field toolkit implementation, if vdW "
-                                             "treatment is set to LJPME, electrostatics must also be PME "
-                                             "(electrostatics treatment currently set to {}".format(self._method))
+        if (current_nb_method == openmm.NonbondedForce.LJPME) and (
+            self._method != "PME"
+        ):
+            raise IncompatibleParameterError(
+                "In current Open Force Field toolkit implementation, if vdW "
+                "treatment is set to LJPME, electrostatics must also be PME "
+                "(electrostatics treatment currently set to {}".format(self._method)
+            )
 
         # Then, set nonbonded methods based on method keyword
-        if self._method == 'PME':
+        if self._method == "PME":
             # Check whether the topology is nonperiodic, in which case we always switch to NoCutoff
             # (vdWHandler will have already set this to NoCutoff)
             # TODO: This is an assumption right now, and a bad one. See issue #219
@@ -3245,41 +3448,48 @@ class ElectrostaticsHandler(_NonbondedHandler):
                     # There's no need to check for matching cutoff/tolerance here since both are hard-coded defaults
                 else:
                     force.setNonbondedMethod(openmm.NonbondedForce.PME)
-                    force.setCutoffDistance(9. * unit.angstrom)
-                    force.setEwaldErrorTolerance(1.e-4)
+                    force.setCutoffDistance(9.0 * unit.angstrom)
+                    force.setEwaldErrorTolerance(1.0e-4)
 
             settings_matched = True
 
         # If vdWHandler set the nonbonded method to NoCutoff, then we don't need to change anything
-        elif self._method == 'Coulomb':
+        elif self._method == "Coulomb":
             if topology.box_vectors is None:
                 # (vdWHandler will have already set this to NoCutoff)
                 assert current_nb_method == openmm.NonbondedForce.NoCutoff
                 settings_matched = True
             else:
-                raise IncompatibleParameterError("Electrostatics method set to Coulomb, and topology is periodic. "
-                                                 "In the future, this will lead to use of OpenMM's CutoffPeriodic "
-                                                 "Nonbonded force method, however this is not supported in the "
-                                                 "current Open Force Field toolkit.")
+                raise IncompatibleParameterError(
+                    "Electrostatics method set to Coulomb, and topology is periodic. "
+                    "In the future, this will lead to use of OpenMM's CutoffPeriodic "
+                    "Nonbonded force method, however this is not supported in the "
+                    "current Open Force Field toolkit."
+                )
 
         # If the vdWHandler set the nonbonded method to PME, then ensure that it has the same cutoff
-        elif self._method == 'reaction-field':
+        elif self._method == "reaction-field":
             if topology.box_vectors is None:
                 # (vdWHandler will have already set this to NoCutoff)
                 assert current_nb_method == openmm.NonbondedForce.NoCutoff
                 settings_matched = True
             else:
-                raise IncompatibleParameterError("Electrostatics method set to reaction-field. In the future, "
-                                                 "this will lead to use of OpenMM's CutoffPeriodic or CutoffNonPeriodic"
-                                                 " Nonbonded force method, however this is not supported in the "
-                                                 "current Open Force Field toolkit")
+                raise IncompatibleParameterError(
+                    "Electrostatics method set to reaction-field. In the future, "
+                    "this will lead to use of OpenMM's CutoffPeriodic or CutoffNonPeriodic"
+                    " Nonbonded force method, however this is not supported in the "
+                    "current Open Force Field toolkit"
+                )
 
         if not settings_matched:
-            raise IncompatibleParameterError("Unable to support provided vdW method, electrostatics "
-                                             "method ({}), and topology periodicity ({}) selections. Additional "
-                                             "options for nonbonded treatment may be added in future versions "
-                                             "of the Open Force Field toolkit.".format(self._method,
-                                                                                topology.box_vectors is not None))
+            raise IncompatibleParameterError(
+                "Unable to support provided vdW method, electrostatics "
+                "method ({}), and topology periodicity ({}) selections. Additional "
+                "options for nonbonded treatment may be added in future versions "
+                "of the Open Force Field toolkit.".format(
+                    self._method, topology.box_vectors is not None
+                )
+            )
 
     def postprocess_system(self, system, topology, **kwargs):
         force = super().create_force(system, topology, **kwargs)
@@ -3295,25 +3505,31 @@ class ElectrostaticsHandler(_NonbondedHandler):
                 msg += f"{ref_mol.to_smiles()}\n"
             raise UnassignedMoleculeChargeException(msg)
 
-
         # Unless check is disabled, ensure that the sum of partial charges on a molecule
         # add up to approximately its formal charge
-        allow_nonintegral_charges = kwargs.get('allow_nonintegral_charges', False)
+        allow_nonintegral_charges = kwargs.get("allow_nonintegral_charges", False)
         for top_mol in topology.topology_molecules:
             # Skip check if user manually disables it.
             if allow_nonintegral_charges:
                 continue
             formal_charge_sum = top_mol.reference_molecule.total_charge
-            partial_charge_sum = 0. * unit.elementary_charge
+            partial_charge_sum = 0.0 * unit.elementary_charge
             for top_particle in top_mol.particles:
-                q, _, _ = force.getParticleParameters(top_particle.topology_particle_index)
+                q, _, _ = force.getParticleParameters(
+                    top_particle.topology_particle_index
+                )
                 partial_charge_sum += q
-            if abs(formal_charge_sum - partial_charge_sum) > 0.01 * unit.elementary_charge:
-                msg = f"Partial charge sum ({partial_charge_sum}) " \
-                      f"for molecule '{top_mol.reference_molecule.name}' (SMILES " \
-                      f"{top_mol.reference_molecule.to_smiles()} does not equal formal charge sum " \
-                      f"({formal_charge_sum}). To override this error, provide the " \
-                      f"'allow_nonintegral_charges=True' keyword to ForceField.create_openmm_system"
+            if (
+                abs(formal_charge_sum - partial_charge_sum)
+                > 0.01 * unit.elementary_charge
+            ):
+                msg = (
+                    f"Partial charge sum ({partial_charge_sum}) "
+                    f"for molecule '{top_mol.reference_molecule.name}' (SMILES "
+                    f"{top_mol.reference_molecule.to_smiles()} does not equal formal charge sum "
+                    f"({formal_charge_sum}). To override this error, provide the "
+                    f"'allow_nonintegral_charges=True' keyword to ForceField.create_openmm_system"
+                )
                 raise NonintegralMoleculeChargeException(msg)
 
 
@@ -3328,21 +3544,25 @@ class LibraryChargeHandler(_NonbondedHandler):
 
         .. warning :: This API is experimental and subject to change.
         """
+
         _VALENCE_TYPE = None  # This disables the connectivity check when parsing LibraryChargeType objects
-        _ELEMENT_NAME = 'LibraryCharge'
+        _ELEMENT_NAME = "LibraryCharge"
 
         name = ParameterAttribute(default=None)
         charge = IndexedParameterAttribute(unit=unit.elementary_charge)
 
         def __init__(self, **kwargs):
             super().__init__(**kwargs)
-            unique_tags, connectivity = GLOBAL_TOOLKIT_REGISTRY.call('get_tagged_smarts_connectivity', self.smirks)
+            unique_tags, connectivity = GLOBAL_TOOLKIT_REGISTRY.call(
+                "get_tagged_smarts_connectivity", self.smirks
+            )
             if len(self.charge) != len(unique_tags):
-                raise SMIRNOFFSpecError(f"LibraryCharge {self} was initialized with unequal number of "
-                                        f"tagged atoms and charges")
+                raise SMIRNOFFSpecError(
+                    f"LibraryCharge {self} was initialized with unequal number of "
+                    f"tagged atoms and charges"
+                )
 
-
-    _TAGNAME = 'LibraryCharges'  # SMIRNOFF tag name to process
+    _TAGNAME = "LibraryCharges"  # SMIRNOFF tag name to process
     _INFOTYPE = LibraryChargeType  # info type to store
     _DEPENDENCIES = [vdWHandler, ElectrostaticsHandler]
 
@@ -3379,9 +3599,13 @@ class LibraryChargeHandler(_NonbondedHandler):
         for topology_indices, library_charge in atom_matches.items():
             for charge_idx, top_idx in enumerate(topology_indices):
                 if top_idx in assignable_atoms:
-                    logger.debug(f'Multiple library charge assignments found for atom {top_idx}')
+                    logger.debug(
+                        f"Multiple library charge assignments found for atom {top_idx}"
+                    )
                 assignable_atoms.add(top_idx)
-                atom_assignments[top_idx] = library_charge.parameter_type.charge[charge_idx]
+                atom_assignments[top_idx] = library_charge.parameter_type.charge[
+                    charge_idx
+                ]
         # TODO: Should header include a residue separator delimiter? Maybe not, since it's not clear how having
         #       multiple LibraryChargeHandlers could return a single set of matches while respecting different
         #       separators.
@@ -3402,8 +3626,13 @@ class LibraryChargeHandler(_NonbondedHandler):
 
             # Ensure all of the atoms in this mol are covered, otherwise skip it
             top_particle_idxs = [atom.topology_particle_index for atom in top_mol.atoms]
-            if len(set(top_particle_idxs).intersection(assignable_atoms)) != top_mol.n_atoms:
-                logger.debug('Entire molecule is not covered. Skipping library charge assignment.')
+            if (
+                len(set(top_particle_idxs).intersection(assignable_atoms))
+                != top_mol.n_atoms
+            ):
+                logger.debug(
+                    "Entire molecule is not covered. Skipping library charge assignment."
+                )
                 continue
 
             # If we pass both tests above, go ahead and assign charges
@@ -3411,10 +3640,9 @@ class LibraryChargeHandler(_NonbondedHandler):
             #       and assigning charges to all other instances of it in this topology
             for top_particle_idx in top_particle_idxs:
                 _, sigma, epsilon = force.getParticleParameters(top_particle_idx)
-                force.setParticleParameters(top_particle_idx,
-                                            atom_assignments[top_particle_idx],
-                                            sigma,
-                                            epsilon)
+                force.setParticleParameters(
+                    top_particle_idx, atom_assignments[top_particle_idx], sigma, epsilon
+                )
 
             ref_mols_assigned.add(temp_mol)
 
@@ -3423,20 +3651,19 @@ class LibraryChargeHandler(_NonbondedHandler):
             self.mark_charges_assigned(assigned_mol, topology)
 
 
-
 class ToolkitAM1BCCHandler(_NonbondedHandler):
     """Handle SMIRNOFF ``<ToolkitAM1BCC>`` tags
 
     .. warning :: This API is experimental and subject to change.
     """
 
-    _TAGNAME = 'ToolkitAM1BCC'  # SMIRNOFF tag name to process
+    _TAGNAME = "ToolkitAM1BCC"  # SMIRNOFF tag name to process
     _DEPENDENCIES = [vdWHandler, ElectrostaticsHandler, LibraryChargeHandler]
-    _KWARGS = ['toolkit_registry'] # Kwargs to catch when create_force is called
+    _KWARGS = ["toolkit_registry"]  # Kwargs to catch when create_force is called
 
-    def check_handler_compatibility(self,
-                                    other_handler,
-                                    assume_missing_is_default=True):
+    def check_handler_compatibility(
+        self, other_handler, assume_missing_is_default=True
+    ):
         """
         Checks whether this ParameterHandler encodes compatible physics as another ParameterHandler. This is
         called if a second handler is attempted to be initialized for the same tag.
@@ -3454,9 +3681,13 @@ class ToolkitAM1BCCHandler(_NonbondedHandler):
 
     def create_force(self, system, topology, **kwargs):
         import warnings
-        from openforcefield.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
-        from openforcefield.topology import FrozenMolecule, TopologyAtom, TopologyVirtualSite
 
+        from openforcefield.topology import (
+            FrozenMolecule,
+            TopologyAtom,
+            TopologyVirtualSite,
+        )
+        from openforcefield.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
 
         force = super().create_force(system, topology, **kwargs)
 
@@ -3470,38 +3701,49 @@ class ToolkitAM1BCCHandler(_NonbondedHandler):
             temp_mol = FrozenMolecule(ref_mol)
 
             # If the molecule wasn't already assigned charge values, calculate them here
-            toolkit_registry = kwargs.get('toolkit_registry', GLOBAL_TOOLKIT_REGISTRY)
+            toolkit_registry = kwargs.get("toolkit_registry", GLOBAL_TOOLKIT_REGISTRY)
             try:
                 # We don't need to generate conformers here, since that will be done by default in
                 # compute_partial_charges_am1bcc if the use_conformers kwarg isn't defined
-                temp_mol.compute_partial_charges_am1bcc(toolkit_registry=toolkit_registry)
+                temp_mol.compute_partial_charges_am1bcc(
+                    toolkit_registry=toolkit_registry
+                )
             except Exception as e:
                 warnings.warn(str(e), Warning)
                 continue
 
             # Assign charges to relevant atoms
-            for topology_molecule in topology._reference_molecule_to_topology_molecules[ref_mol]:
+            for topology_molecule in topology._reference_molecule_to_topology_molecules[
+                ref_mol
+            ]:
                 for topology_particle in topology_molecule.particles:
                     if type(topology_particle) is TopologyAtom:
-                        ref_mol_particle_index = topology_particle.atom.molecule_particle_index
+                        ref_mol_particle_index = (
+                            topology_particle.atom.molecule_particle_index
+                        )
                     elif type(topology_particle) is TopologyVirtualSite:
-                        ref_mol_particle_index = topology_particle.virtual_site.molecule_particle_index
+                        ref_mol_particle_index = (
+                            topology_particle.virtual_site.molecule_particle_index
+                        )
                     else:
-                        raise ValueError(f'Particles of type {type(topology_particle)} are not supported')
+                        raise ValueError(
+                            f"Particles of type {type(topology_particle)} are not supported"
+                        )
 
                     topology_particle_index = topology_particle.topology_particle_index
 
                     particle_charge = temp_mol._partial_charges[ref_mol_particle_index]
 
                     # Retrieve nonbonded parameters for reference atom (charge not set yet)
-                    _, sigma, epsilon = force.getParticleParameters(topology_particle_index)
+                    _, sigma, epsilon = force.getParticleParameters(
+                        topology_particle_index
+                    )
                     # Set the nonbonded force with the partial charge
-                    force.setParticleParameters(topology_particle_index,
-                                                particle_charge, sigma,
-                                                epsilon)
+                    force.setParticleParameters(
+                        topology_particle_index, particle_charge, sigma, epsilon
+                    )
             # Finally, mark that charges were assigned for this reference molecule
             self.mark_charges_assigned(ref_mol, topology)
-
 
     # TODO: Move chargeModel and library residue charges to SMIRNOFF spec
     def postprocess_system(self, system, topology, **kwargs):
@@ -3512,27 +3754,30 @@ class ToolkitAM1BCCHandler(_NonbondedHandler):
         # QUESTION: Should we instead apply this to the Topology in a preprocessing step, prior to spreading out charge onto virtual sites?
         for force in system.getForces():
             if force.__class__.__name__ in [
-                    'NonbondedForce'
+                "NonbondedForce"
             ]:  # TODO: We need to apply this to all Force types that involve charges, such as (Custom)GBSA forces and CustomNonbondedForce
                 for (atoms, bond_match) in bond_matches.items():
                     # Get corresponding particle indices in Topology
                     bond = bond_match.parameter_type
 
-                    particle_indices = tuple(
-                        [atom.particle_index for atom in atoms])
+                    particle_indices = tuple([atom.particle_index for atom in atoms])
                     # Retrieve parameters
                     [charge0, sigma0, epsilon0] = force.getParticleParameters(
-                        particle_indices[0])
+                        particle_indices[0]
+                    )
                     [charge1, sigma1, epsilon1] = force.getParticleParameters(
-                        particle_indices[1])
+                        particle_indices[1]
+                    )
                     # Apply bond charge increment
                     charge0 -= bond.increment
                     charge1 += bond.increment
                     # Update charges
-                    force.setParticleParameters(particle_indices[0], charge0,
-                                                sigma0, epsilon0)
-                    force.setParticleParameters(particle_indices[1], charge1,
-                                                sigma1, epsilon1)
+                    force.setParticleParameters(
+                        particle_indices[0], charge0, sigma0, epsilon0
+                    )
+                    force.setParticleParameters(
+                        particle_indices[1], charge1, sigma1, epsilon1
+                    )
                     # TODO: Calculate exceptions
 
 
@@ -3547,32 +3792,39 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
 
         .. warning :: This API is experimental and subject to change.
         """
+
         _VALENCE_TYPE = None  # This disables the connectivity check when parsing LibraryChargeType objects
-        _ELEMENT_NAME = 'ChargeIncrement'
+        _ELEMENT_NAME = "ChargeIncrement"
 
         charge_increment = IndexedParameterAttribute(unit=unit.elementary_charge)
 
         def __init__(self, **kwargs):
             super().__init__(**kwargs)
-            unique_tags, connectivity = GLOBAL_TOOLKIT_REGISTRY.call('get_tagged_smarts_connectivity', self.smirks)
+            unique_tags, connectivity = GLOBAL_TOOLKIT_REGISTRY.call(
+                "get_tagged_smarts_connectivity", self.smirks
+            )
             if len(self.charge_increment) != len(unique_tags):
-                raise SMIRNOFFSpecError(f"ChargeIncrement {self} was initialized with unequal number of "
-                                        f"tagged atoms and charge increments")
+                raise SMIRNOFFSpecError(
+                    f"ChargeIncrement {self} was initialized with unequal number of "
+                    f"tagged atoms and charge increments"
+                )
 
-
-    _TAGNAME = 'ChargeIncrementModel'  # SMIRNOFF tag name to process
+    _TAGNAME = "ChargeIncrementModel"  # SMIRNOFF tag name to process
     _INFOTYPE = ChargeIncrementType  # info type to store
-    _DEPENDENCIES = [vdWHandler, ElectrostaticsHandler, LibraryChargeHandler, ToolkitAM1BCCHandler]
+    _DEPENDENCIES = [
+        vdWHandler,
+        ElectrostaticsHandler,
+        LibraryChargeHandler,
+        ToolkitAM1BCCHandler,
+    ]
 
     number_of_conformers = ParameterAttribute(default=1, converter=int)
 
-    partial_charge_method = ParameterAttribute(
-        default='AM1-Mulliken', converter=str
-    )
+    partial_charge_method = ParameterAttribute(default="AM1-Mulliken", converter=str)
 
-    def check_handler_compatibility(self,
-                                    other_handler,
-                                    assume_missing_is_default=True):
+    def check_handler_compatibility(
+        self, other_handler, assume_missing_is_default=True
+    ):
         """
         Checks whether this ParameterHandler encodes compatible physics as another ParameterHandler. This is
         called if a second handler is attempted to be initialized for the same tag.
@@ -3587,11 +3839,13 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
         IncompatibleParameterError if handler_kwargs are incompatible with existing parameters.
         """
 
-        int_attrs_to_compare = ['number_of_conformers']
-        string_attrs_to_compare = ['partial_charge_method']
+        int_attrs_to_compare = ["number_of_conformers"]
+        string_attrs_to_compare = ["partial_charge_method"]
 
-        self._check_attributes_are_equal(other_handler,
-                                         identical_attrs=string_attrs_to_compare+int_attrs_to_compare)
+        self._check_attributes_are_equal(
+            other_handler,
+            identical_attrs=string_attrs_to_compare + int_attrs_to_compare,
+        )
 
     def find_matches(self, entity):
         """Find the elements of the topology/molecule matched by a parameter type.
@@ -3615,7 +3869,12 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
 
     def create_force(self, system, topology, **kwargs):
         import warnings
-        from openforcefield.topology import FrozenMolecule, TopologyAtom, TopologyVirtualSite
+
+        from openforcefield.topology import (
+            FrozenMolecule,
+            TopologyAtom,
+            TopologyVirtualSite,
+        )
 
         # We only want one instance of this force type
         existing = [system.getForce(i) for i in range(system.getNumForces())]
@@ -3635,12 +3894,14 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
             # Make a temporary copy of ref_mol to assign charges from charge_mol
             temp_mol = FrozenMolecule(ref_mol)
 
-            toolkit_registry = kwargs.get('toolkit_registry', GLOBAL_TOOLKIT_REGISTRY)
+            toolkit_registry = kwargs.get("toolkit_registry", GLOBAL_TOOLKIT_REGISTRY)
             try:
                 # If the molecule wasn't assigned parameters from a manually-input charge_mol, calculate them here
                 temp_mol.generate_conformers(n_conformers=self.number_of_conformers)
-                temp_mol.assign_partial_charges(partial_charge_method=self.partial_charge_method,
-                                                toolkit_registry=toolkit_registry)
+                temp_mol.assign_partial_charges(
+                    partial_charge_method=self.partial_charge_method,
+                    toolkit_registry=toolkit_registry,
+                )
             except Exception as e:
                 warnings.warn(str(e), Warning)
                 continue
@@ -3648,13 +3909,19 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
             charges_to_assign = {}
 
             # Assign initial, un-incremented charges to relevant atoms
-            for topology_molecule in topology._reference_molecule_to_topology_molecules[ref_mol]:
+            for topology_molecule in topology._reference_molecule_to_topology_molecules[
+                ref_mol
+            ]:
                 for topology_particle in topology_molecule.particles:
                     topology_particle_index = topology_particle.topology_particle_index
                     if type(topology_particle) is TopologyAtom:
-                        ref_mol_particle_index = topology_particle.atom.molecule_particle_index
+                        ref_mol_particle_index = (
+                            topology_particle.atom.molecule_particle_index
+                        )
                     if type(topology_particle) is TopologyVirtualSite:
-                        ref_mol_particle_index = topology_particle.virtual_site.molecule_particle_index
+                        ref_mol_particle_index = (
+                            topology_particle.virtual_site.molecule_particle_index
+                        )
                     particle_charge = temp_mol._partial_charges[ref_mol_particle_index]
                     charges_to_assign[topology_particle_index] = particle_charge
 
@@ -3670,18 +3937,22 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
             for (_, charge_increment_match) in charge_increment_matches.items():
                 # Adjust the values in the charges_to_assign dict by adding any
                 # charge increments onto the existing values
-                atom_indices = charge_increment_match.environment_match.topology_atom_indices
+                atom_indices = (
+                    charge_increment_match.environment_match.topology_atom_indices
+                )
                 charge_increment = charge_increment_match.parameter_type
-                for top_particle_idx, charge_increment in zip(atom_indices, charge_increment.charge_increment):
+                for top_particle_idx, charge_increment in zip(
+                    atom_indices, charge_increment.charge_increment
+                ):
                     if top_particle_idx in charges_to_assign:
                         charges_to_assign[top_particle_idx] += charge_increment
 
             # Set the incremented charges on the System particles
             for topology_particle_index, charge_to_assign in charges_to_assign.items():
                 _, sigma, epsilon = force.getParticleParameters(topology_particle_index)
-                force.setParticleParameters(topology_particle_index,
-                                            charge_to_assign, sigma,
-                                            epsilon)
+                force.setParticleParameters(
+                    topology_particle_index, charge_to_assign, sigma, epsilon
+                )
 
             # Finally, mark that charges were assigned for this reference molecule
             self.mark_charges_assigned(ref_mol, topology)
@@ -3698,32 +3969,37 @@ class GBSAHandler(ParameterHandler):
 
         .. warning :: This API is experimental and subject to change.
         """
-        _VALENCE_TYPE = 'Atom'
-        _ELEMENT_NAME = 'Atom'
+
+        _VALENCE_TYPE = "Atom"
+        _ELEMENT_NAME = "Atom"
 
         radius = ParameterAttribute(unit=unit.angstrom)
         scale = ParameterAttribute(converter=float)
 
-    _TAGNAME = 'GBSA'
+    _TAGNAME = "GBSA"
     _INFOTYPE = GBSAType
     _OPENMMTYPE = openmm.GBSAOBCForce
     # It's important that this runs AFTER partial charges are assigned to all particles, since this will need to
     # collect and assign them to the GBSA particles
-    _DEPENDENCIES = [vdWHandler, ElectrostaticsHandler,
-                     ToolkitAM1BCCHandler, ChargeIncrementModelHandler, LibraryChargeHandler]
+    _DEPENDENCIES = [
+        vdWHandler,
+        ElectrostaticsHandler,
+        ToolkitAM1BCCHandler,
+        ChargeIncrementModelHandler,
+        LibraryChargeHandler,
+    ]
 
     gb_model = ParameterAttribute(
-        default='OBC1',
-        converter=_allow_only(['HCT', 'OBC1', 'OBC2'])
+        default="OBC1", converter=_allow_only(["HCT", "OBC1", "OBC2"])
     )
     solvent_dielectric = ParameterAttribute(default=78.5, converter=float)
     solute_dielectric = ParameterAttribute(default=1, converter=float)
-    sa_model = ParameterAttribute(default='ACE', converter=_allow_only(['ACE', None])
+    sa_model = ParameterAttribute(default="ACE", converter=_allow_only(["ACE", None]))
+    surface_area_penalty = ParameterAttribute(
+        default=5.4 * unit.calorie / unit.mole / unit.angstrom ** 2,
+        unit=unit.calorie / unit.mole / unit.angstrom ** 2,
     )
-    surface_area_penalty = ParameterAttribute(default=5.4*unit.calorie / unit.mole / unit.angstrom**2,
-                                              unit=unit.calorie / unit.mole / unit.angstrom**2)
-    solvent_radius = ParameterAttribute(default=1.4*unit.angstrom, unit=unit.angstrom)
-
+    solvent_radius = ParameterAttribute(default=1.4 * unit.angstrom, unit=unit.angstrom)
 
     def _validate_parameters(self):
         """
@@ -3733,61 +4009,73 @@ class GBSAHandler(ParameterHandler):
         #   surface_area_energy is 5.4 cal/mol/A^2
         #   solvent_radius is 1.4 A
         # Justification at https://github.com/openforcefield/openforcefield/pull/363
-        if self.gb_model == 'HCT':
-            if ((self.surface_area_penalty != 5.4 * unit.calorie / unit.mole / unit.angstrom**2) and
-                (self.sa_model is not None)):
-                raise IncompatibleParameterError(f"The current implementation of HCT GBSA does not "
-                                                 f"support surface_area_penalty values other than 5.4 "
-                                                 f"cal/mol A^2 (data source specified value of "
-                                                 f"{self.surface_area_penalty})")
+        if self.gb_model == "HCT":
+            if (
+                self.surface_area_penalty
+                != 5.4 * unit.calorie / unit.mole / unit.angstrom ** 2
+            ) and (self.sa_model is not None):
+                raise IncompatibleParameterError(
+                    f"The current implementation of HCT GBSA does not "
+                    f"support surface_area_penalty values other than 5.4 "
+                    f"cal/mol A^2 (data source specified value of "
+                    f"{self.surface_area_penalty})"
+                )
 
-            if ((self.solvent_radius != 1.4 * unit.angstrom) and
-                (self.sa_model is not None)):
-                raise IncompatibleParameterError(f"The current implementation of HCT GBSA does not "
-                                                 f"support solvent_radius values other than 1.4 "
-                                                 f"A (data source specified value of "
-                                                 f"{self.solvent_radius})")
-
+            if (self.solvent_radius != 1.4 * unit.angstrom) and (
+                self.sa_model is not None
+            ):
+                raise IncompatibleParameterError(
+                    f"The current implementation of HCT GBSA does not "
+                    f"support solvent_radius values other than 1.4 "
+                    f"A (data source specified value of "
+                    f"{self.solvent_radius})"
+                )
 
         # If we're using OBC1 via GBSAOBC1Force(CustomAmberGBForceBase), then we need to ensure that:
         #   surface_area_energy is 5.4 cal/mol/A^2
         #   solvent_radius is 1.4 A
         # Justification at https://github.com/openforcefield/openforcefield/pull/363
-        if self.gb_model == 'OBC1':
-            if ((self.surface_area_penalty != 5.4 * unit.calorie / unit.mole / unit.angstrom**2) and
-                (self.sa_model is not None)):
-                raise IncompatibleParameterError(f"The current implementation of OBC1 GBSA does not "
-                                                 f"support surface_area_penalty values other than 5.4 "
-                                                 f"cal/mol A^2 (data source specified value of "
-                                                 f"{self.surface_area_penalty})")
+        if self.gb_model == "OBC1":
+            if (
+                self.surface_area_penalty
+                != 5.4 * unit.calorie / unit.mole / unit.angstrom ** 2
+            ) and (self.sa_model is not None):
+                raise IncompatibleParameterError(
+                    f"The current implementation of OBC1 GBSA does not "
+                    f"support surface_area_penalty values other than 5.4 "
+                    f"cal/mol A^2 (data source specified value of "
+                    f"{self.surface_area_penalty})"
+                )
 
-            if ((self.solvent_radius != 1.4 * unit.angstrom) and
-                (self.sa_model is not None)):
-                raise IncompatibleParameterError(f"The current implementation of OBC1 GBSA does not "
-                                                 f"support solvent_radius values other than 1.4 "
-                                                 f"A (data source specified value of "
-                                                 f"{self.solvent_radius})")
-
+            if (self.solvent_radius != 1.4 * unit.angstrom) and (
+                self.sa_model is not None
+            ):
+                raise IncompatibleParameterError(
+                    f"The current implementation of OBC1 GBSA does not "
+                    f"support solvent_radius values other than 1.4 "
+                    f"A (data source specified value of "
+                    f"{self.solvent_radius})"
+                )
 
         # If we're using OBC2 via GBSAOBCForce, then we need to ensure that
         #   solvent_radius is 1.4 A
         # Justification at https://github.com/openforcefield/openforcefield/pull/363
-        if self.gb_model == 'OBC2':
+        if self.gb_model == "OBC2":
 
-            if ((self.solvent_radius != 1.4 * unit.angstrom) and
-                (self.sa_model is not None)):
-                raise IncompatibleParameterError(f"The current implementation of OBC1 GBSA does not "
-                                                 f"support solvent_radius values other than 1.4 "
-                                                 f"A (data source specified value of "
-                                                 f"{self.solvent_radius})")
-
-
+            if (self.solvent_radius != 1.4 * unit.angstrom) and (
+                self.sa_model is not None
+            ):
+                raise IncompatibleParameterError(
+                    f"The current implementation of OBC1 GBSA does not "
+                    f"support solvent_radius values other than 1.4 "
+                    f"A (data source specified value of "
+                    f"{self.solvent_radius})"
+                )
 
     # Tolerance when comparing float attributes for handler compatibility.
     _SCALETOL = 1e-5
 
-    def check_handler_compatibility(self,
-                                    other_handler):
+    def check_handler_compatibility(self, other_handler):
         """
         Checks whether this ParameterHandler encodes compatible physics as another ParameterHandler. This is
         called if a second handler is attempted to be initialized for the same tag.
@@ -3801,15 +4089,16 @@ class GBSAHandler(ParameterHandler):
         ------
         IncompatibleParameterError if handler_kwargs are incompatible with existing parameters.
         """
-        float_attrs_to_compare = ['solvent_dielectric', 'solute_dielectric']
-        string_attrs_to_compare = ['gb_model', 'sa_model']
-        unit_attrs_to_compare = ['surface_area_penalty', 'solvent_radius']
+        float_attrs_to_compare = ["solvent_dielectric", "solute_dielectric"]
+        string_attrs_to_compare = ["gb_model", "sa_model"]
+        unit_attrs_to_compare = ["surface_area_penalty", "solvent_radius"]
 
-        self._check_attributes_are_equal(other_handler, identical_attrs=string_attrs_to_compare,
-                                         tolerance_attrs=float_attrs_to_compare+unit_attrs_to_compare,
-                                         tolerance=self._SCALETOL)
-
-
+        self._check_attributes_are_equal(
+            other_handler,
+            identical_attrs=string_attrs_to_compare,
+            tolerance_attrs=float_attrs_to_compare + unit_attrs_to_compare,
+            tolerance=self._SCALETOL,
+        )
 
     def create_force(self, system, topology, **kwargs):
         import simtk
@@ -3818,18 +4107,16 @@ class GBSAHandler(ParameterHandler):
 
         # Grab the existing nonbonded force (which will have particle charges)
         existing = [system.getForce(i) for i in range(system.getNumForces())]
-        existing = [
-            f for f in existing if type(f) == openmm.NonbondedForce
-        ]
+        existing = [f for f in existing if type(f) == openmm.NonbondedForce]
         assert len(existing) == 1
 
         nonbonded_force = existing[0]
 
         # No previous GBSAForce should exist, so we're safe just making one here.
         force_map = {
-            'HCT': simtk.openmm.app.internal.customgbforces.GBSAHCTForce,
-            'OBC1': simtk.openmm.app.internal.customgbforces.GBSAOBC1Force,
-            'OBC2': simtk.openmm.GBSAOBCForce,
+            "HCT": simtk.openmm.app.internal.customgbforces.GBSAHCTForce,
+            "OBC1": simtk.openmm.app.internal.customgbforces.GBSAOBC1Force,
+            "OBC2": simtk.openmm.GBSAOBCForce,
             # It's tempting to do use the class below, but the customgbforce
             # version of OBC2 doesn't provide setSolventRadius()
             #'OBC2': simtk.openmm.app.internal.customgbforces.GBSAOBC2Force,
@@ -3839,25 +4126,28 @@ class GBSAHandler(ParameterHandler):
         if nonbonded_force.getNonbondedMethod() == openmm.NonbondedForce.NoCutoff:
             amber_cutoff = None
         else:
-            amber_cutoff = nonbonded_force.getCutoffDistance().value_in_unit(unit.nanometer)
+            amber_cutoff = nonbonded_force.getCutoffDistance().value_in_unit(
+                unit.nanometer
+            )
 
-        if self.gb_model == 'OBC2':
+        if self.gb_model == "OBC2":
             gbsa_force = openmm_force_type()
 
         else:
             # We set these values in the constructor if we use the internal AMBER GBSA type wrapper
-            gbsa_force = openmm_force_type(solventDielectric=self.solvent_dielectric,
-                                           soluteDielectric=self.solute_dielectric,
-                                           SA=self.sa_model,
-                                           cutoff=amber_cutoff,
-                                           kappa=0,
-                                           )
+            gbsa_force = openmm_force_type(
+                solventDielectric=self.solvent_dielectric,
+                soluteDielectric=self.solute_dielectric,
+                SA=self.sa_model,
+                cutoff=amber_cutoff,
+                kappa=0,
+            )
             # WARNING: If using a CustomAmberGBForce, the functional form is affected by whether
             # the cutoff kwarg is None *during initialization*. So, if you initialize it with a
             # non-None value, and then try to change it to None, you're likely to get unphysical results.
 
         # Set the GBSAForce to have the same cutoff as NonbondedForce
-        #gbsa_force.setCutoffDistance(nonbonded_force.getCutoffDistance())
+        # gbsa_force.setCutoffDistance(nonbonded_force.getCutoffDistance())
         if amber_cutoff is not None:
             gbsa_force.setCutoffDistance(amber_cutoff)
 
@@ -3869,21 +4159,20 @@ class GBSAHandler(ParameterHandler):
             # http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.GBSAOBCForce.html
             # http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.CustomGBForce.html
 
-            #gbsa_force.setNonbondedMethod(simtk.openmm.NonbondedForce.CutoffPeriodic)
+            # gbsa_force.setNonbondedMethod(simtk.openmm.NonbondedForce.CutoffPeriodic)
             gbsa_force.setNonbondedMethod(simtk.openmm.CustomGBForce.CutoffPeriodic)
         else:
-            #gbsa_force.setNonbondedMethod(simtk.openmm.NonbondedForce.NoCutoff)
+            # gbsa_force.setNonbondedMethod(simtk.openmm.NonbondedForce.NoCutoff)
             gbsa_force.setNonbondedMethod(simtk.openmm.CustomGBForce.NoCutoff)
 
         # Add all GBSA terms to the system. Note that this will have been done above
-        if self.gb_model == 'OBC2':
+        if self.gb_model == "OBC2":
             gbsa_force.setSolventDielectric(self.solvent_dielectric)
             gbsa_force.setSoluteDielectric(self.solute_dielectric)
             if self.sa_model is None:
                 gbsa_force.setSurfaceAreaEnergy(0)
             else:
                 gbsa_force.setSurfaceAreaEnergy(self.surface_area_penalty)
-
 
         # Iterate over all defined GBSA types, allowing later matches to override earlier ones.
         atom_matches = self.find_matches(topology)
@@ -3899,8 +4188,8 @@ class GBSAHandler(ParameterHandler):
         # To keep it simple, we DO NOT pre-populate the particles in the GBSA force here.
         # We call addParticle further below instead.
         # These lines are commented out intentionally as an example of what NOT to do.
-        #for topology_particle in topology.topology_particles:
-            #gbsa_force.addParticle([0.0, 1.0, 0.0])
+        # for topology_particle in topology.topology_particles:
+        # gbsa_force.addParticle([0.0, 1.0, 0.0])
 
         params_to_add = [[] for _ in topology.topology_particles]
         for atom_key, atom_match in atom_matches.items():
@@ -3909,7 +4198,7 @@ class GBSAHandler(ParameterHandler):
             charge, _, _2 = nonbonded_force.getParticleParameters(atom_idx)
             params_to_add[atom_idx] = [charge, gbsatype.radius, gbsatype.scale]
 
-        if self.gb_model == 'OBC2':
+        if self.gb_model == "OBC2":
             for particle_param in params_to_add:
                 gbsa_force.addParticle(*particle_param)
         else:
@@ -3920,13 +4209,15 @@ class GBSAHandler(ParameterHandler):
             gbsa_force.finalize()
 
         # Check that no atoms (n.b. not particles) are missing force parameters.
-        self._check_all_valence_terms_assigned(assigned_terms=atom_matches,
-                                               valence_terms=list(topology.topology_atoms))
+        self._check_all_valence_terms_assigned(
+            assigned_terms=atom_matches, valence_terms=list(topology.topology_atoms)
+        )
 
         system.addForce(gbsa_force)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod()
     # doctest.run_docstring_examples(_ParameterAttributeHandler, globals())
