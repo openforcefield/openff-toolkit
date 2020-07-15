@@ -1,9 +1,3 @@
-#!/usr/bin/env python
-
-# =============================================================================================
-# MODULE DOCSTRING
-# =============================================================================================
-
 """
 Tests for molecular topology representations
 
@@ -18,9 +12,6 @@ TODO:
 
 """
 
-# =============================================================================================
-# GLOBAL IMPORTS
-# =============================================================================================
 
 import copy
 import os
@@ -41,8 +32,6 @@ from openforcefield.tests.test_forcefield import (
 )
 from openforcefield.topology.molecule import Atom, InvalidConformerError, Molecule
 from openforcefield.utils import get_data_file_path
-
-# TODO: Will the ToolkitWrapper allow us to pare that down?
 from openforcefield.utils.toolkits import (
     AmberToolsToolkitWrapper,
     OpenEyeToolkitWrapper,

@@ -1,16 +1,6 @@
-#!/usr/bin/env python
-
-# ======================================================================
-# MODULE DOCSTRING
-# ======================================================================
-
 """
 Test that the examples in the repo run without errors.
 """
-
-# ======================================================================
-# GLOBAL IMPORTS
-# ======================================================================
 
 import glob
 import os
@@ -22,10 +12,6 @@ import textwrap
 import pytest
 
 from openforcefield.utils import RDKIT_AVAILABLE, get_data_file_path
-
-# ======================================================================
-# TEST UTILITIES
-# ======================================================================
 
 ROOT_DIR_PATH = os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "..")
 
@@ -119,11 +105,6 @@ def find_readme_links():
     with open(readme_file_path, "r") as f:
         readme_content = f.read()
     return re.findall("http[s]?://(?:[0-9a-zA-Z]|[-/.%:_])+", readme_content)
-
-
-# ======================================================================
-# TESTS
-# ======================================================================
 
 
 @pytest.mark.parametrize("readme_example_str", find_readme_examples())

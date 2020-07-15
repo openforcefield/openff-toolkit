@@ -2295,12 +2295,12 @@ class BondHandler(ParameterHandler):
             self._assert_correct_connectivity(bond_match)
             # topology.assert_bonded(atoms[0], atoms[1])
             bond_params = bond_match.parameter_type
-            match = bond_match.environment_match
+            # match = bond_match.environment_match
 
             # Compute equilibrium bond length and spring constant.
-            bond = match.reference_molecule.get_bond_between(
-                *match.reference_atom_indices
-            )
+            # bond = match.reference_molecule.get_bond_between(
+            #     *match.reference_atom_indices
+            # )
 
             if hasattr(bond_params, "k_bondorder1"):
                 raise NotImplementedError(

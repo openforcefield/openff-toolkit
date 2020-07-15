@@ -1,18 +1,8 @@
-#!/usr/bin/env python
-
-# ======================================================================
-# MODULE DOCSTRING
-# ======================================================================
-
 """
 Test classes and function in module openforcefield.typing.engines.smirnoff.parameters.
 
 """
 
-
-# ======================================================================
-# GLOBAL IMPORTS
-# ======================================================================
 
 import pytest
 from numpy.testing import assert_almost_equal

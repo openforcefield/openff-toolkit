@@ -4,7 +4,6 @@ Utility subroutines
 """
 
 
-
 import contextlib
 import functools
 import logging

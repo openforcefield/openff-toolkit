@@ -619,7 +619,7 @@ class ForceField:
                     for atomset in assigned_terms
                 ]
             )
-        except TypeError as te:
+        except TypeError:
             topology_set = set([atom.index for atom in topological_terms])
             assigned_set = set([atomset[0] for atomset in assigned_terms])
 
@@ -631,7 +631,7 @@ class ForceField:
                     for atom_index in atomset:
                         atom = atoms[atom_index]
                         msg += f" {atom.residue.index:5} {atom.residue.name:3} {atom.name:3}"
-                except TypeError as te:
+                except TypeError:
                     atom = atoms[atomset]
                     msg += (
                         f" {atom.residue.index:5} {atom.residue.name:3} {atom.name:3}"
@@ -790,7 +790,7 @@ class ForceField:
         # Ensure that we are working with an iterable
         try:
             sources = iter(sources)
-        except TypeError as te:
+        except TypeError:
             # Make iterable object
             sources = [sources]
 

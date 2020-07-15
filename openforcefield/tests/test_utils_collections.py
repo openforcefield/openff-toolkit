@@ -1,27 +1,14 @@
-#!/usr/bin/env python
-
-# =====================================================================
-# MODULE DOCSTRING
-# =====================================================================
-
 """
 Tests for custom collections classes.
 
 """
 
-# =====================================================================
-# GLOBAL IMPORTS
-# =====================================================================
 
 import copy
 
 import pytest
 
 from openforcefield.utils.collections import ValidatedDict, ValidatedList
-
-# =====================================================================
-# Test Callbackable class
-# =====================================================================
 
 
 class TestValidatedMixin:

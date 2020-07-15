@@ -1,17 +1,8 @@
-#!/usr/bin/env python
-
-# =============================================================================================
-# MODULE DOCSTRING
-# =============================================================================================
-
 """
 Tests for utility methods that involve parmed Structure manipulation
 
 """
 
-# =============================================================================================
-# GLOBAL IMPORTS
-# =============================================================================================
 
 import os
 
@@ -22,10 +13,6 @@ import openforcefield.utils.structure as structure
 from openforcefield import utils
 from openforcefield.topology import Molecule, Topology
 from openforcefield.typing.engines.smirnoff import ForceField
-
-# =============================================================================================
-# TESTS
-# =============================================================================================
 
 requires_openeye_mol2 = pytest.mark.skipif(
     not utils.OpenEyeToolkitWrapper.is_available(),

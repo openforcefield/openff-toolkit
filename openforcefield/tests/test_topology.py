@@ -1,17 +1,7 @@
-#!/usr/bin/env python
-
-# =============================================================================================
-# MODULE DOCSTRING
-# =============================================================================================
-
 """
 Tests for Topology
 
 """
-
-# =============================================================================================
-# GLOBAL IMPORTS
-# =============================================================================================
 
 from unittest import TestCase
 
@@ -38,10 +28,6 @@ from openforcefield.utils import (
     OpenEyeToolkitWrapper,
     RDKitToolkitWrapper,
 )
-
-# =============================================================================================
-# UTILITY FUNCTIONS
-# =============================================================================================
 
 
 def assert_tuple_of_atoms_equal(
@@ -77,10 +63,6 @@ def assert_tuple_of_atoms_equal(
         atom_indices.append(valence_dict)
     assert set(atom_indices[0]) == set(atom_indices[1])
 
-
-# =============================================================================================
-# TESTS
-# =============================================================================================
 
 # IF we've done our jobs right, it shouldn't matter which toolkit the tests for Topology run using (both's behaviors
 # should be indistinguishable)

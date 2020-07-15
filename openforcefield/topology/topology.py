@@ -992,7 +992,7 @@ class Topology(Serializable):
         # Ensure that we are working with an iterable
         try:
             iter(molecules)
-        except TypeError as te:
+        except TypeError:
             # Make iterable object
             molecules = [molecules]
 

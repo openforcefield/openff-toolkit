@@ -57,12 +57,7 @@ from functools import wraps
 import numpy as np
 from simtk import unit
 
-from .utils import (
-    MessageException,
-    all_subclasses,
-    inherit_docstrings,
-    temporary_cd,
-)
+from .utils import MessageException, all_subclasses, inherit_docstrings, temporary_cd
 
 logger = logging.getLogger(__name__)
 

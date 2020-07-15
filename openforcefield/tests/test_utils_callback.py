@@ -1,17 +1,7 @@
-#!/usr/bin/env python
-
-# =====================================================================
-# MODULE DOCSTRING
-# =====================================================================
-
 """
 Tests for callback utility classes and functions.
 
 """
-
-# =====================================================================
-# GLOBAL IMPORTS
-# =====================================================================
 
 import pytest
 
@@ -20,10 +10,6 @@ from openforcefield.utils.callback import (
     CallbackRegistrationError,
     callback_method,
 )
-
-# =====================================================================
-# UTILITY CLASSES AND FUNCTIONS
-# =====================================================================
 
 
 class CallHistory:
@@ -63,11 +49,6 @@ class CallHistory:
 
 
 call_history = CallHistory()
-
-
-# =====================================================================
-# Test Callbackable class
-# =====================================================================
 
 
 class TestCallbackable:
