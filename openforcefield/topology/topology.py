@@ -861,9 +861,9 @@ class TopologyMolecule:
                     break
                 offset = sum([vsite.n_particles for vsite in topology_molecule.virtual_sites])
                 particle_start_topology_index += offset
-
+            self._virtual_particle_start_topology_index = particle_start_topology_index 
         # Return cached value
-        return self._virtualparticle_start_topology_index
+        return self._virtual_particle_start_topology_index
 
     def bond(self, index):
         """
@@ -954,8 +954,8 @@ class TopologyMolecule:
         # TODO: Add ordering scheme here
         for vsite in self.reference_molecule.virtual_sites:
             tvsite = TopologyVirtualSite(vsite, self)
-            for vp in vsite.particles:
-                yield TopologyVirtualParticle(tvsite, vp, self)
+            for vptl in vsite.particles:
+                yield TopologyVirtualParticle(tvsite, vptl, self)
 
     @property
     def n_particles(self):
@@ -966,7 +966,6 @@ class TopologyMolecule:
         int : The number of particles
         """
         return self._reference_molecule.n_particles
-
 
     def virtual_site(self, index):
         """
@@ -993,8 +992,8 @@ class TopologyMolecule:
         -------
         an iterator of openforcefield.topology.TopologyVirtualSite
         """
-        for vs in self._reference_molecule.virtual_sites:
-            yield TopologyVirtualSite(vs, self)
+        for vsite in self._reference_molecule.virtual_sites:
+            yield TopologyVirtualSite(vsite, self)
 
     @property
     def n_virtual_sites(self):
