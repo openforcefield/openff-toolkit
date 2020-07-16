@@ -504,6 +504,10 @@ class TopologyVirtualSite(Serializable):
         # TODO: Type checks
         self._virtual_site = virtual_site
         self._topology_molecule = topology_molecule
+        self._topology_virtual_particle_start_index = None
+
+    def invalidate_cached_data(self):
+        self._topology_virtual_particle_start_index = None
 
     def atom(self, index):
         """
@@ -567,10 +571,22 @@ class TopologyVirtualSite(Serializable):
             The index of this virtual site in its parent topology.
         """
         return self._topology_molecule.virtual_site_start_topology_index + self._virtual_site.molecule_virtual_site_index
+
     @property
-    def topology_particle_start_index(self):
+    def n_particles(self):
         """
-        Get the index of this particle in its parent Topology.
+        Get the number of particles represented by this VirtualSite
+
+        Returns
+        -------
+        int : The number of particles
+        """
+        return self._virtual_site.n_particles
+
+    @property
+    def topology_virtual_particle_start_index(self):
+        """
+        Get the index of the first virtual site particle in its parent Topology.
 
         Returns
         -------
@@ -579,6 +595,25 @@ class TopologyVirtualSite(Serializable):
         """
         # This assumes that the particles in a topology are listed with all atoms from all TopologyMolecules
         # first, followed by all VirtualSites from all TopologyMolecules second
+
+        # need to iterate through all previous 
+
+        # If the cached value is not available, generate it
+        if self._topology_virtual_particle_start_index is None:
+            virtual_particle_start_topology_index = self.topology_molecule.n_atoms
+            for topology_molecule in self._topology_molecule._topology.topology_molecules:
+                if self._topology_molecule == topology_molecule:
+                    for tvsite in topology_molecule.virtual_sites:
+                        if self == tvsite:
+                            break
+                        virtual_particle_start_topology_index += tvsite.n_particles
+                    break
+                else:
+                    virtual_particle_start_topology_index += topology_molecule.n_particles
+            self._topology_virtual_particle_start_index = virtual_particle_start_topology_index
+        # Return cached value
+        return self._topology_virtual_particle_start_index
+
         return self._topology_molecule.topology.n_topology_atoms + self.topology_virtual_site_index
         # return self._topology_molecule.particle_start_topology_index + self._virtual_site.molecule_particle_index
 
@@ -661,13 +696,13 @@ class TopologyVirtualParticle(TopologyVirtualSite):
         # first, followed by all VirtualSites from all TopologyMolecules second
         orientation_key = self._virtual_particle.orientation
         offset = 0
-        for i, ornt in enumerate(self._virtual_site.orientations):
-            if ornt == orientation_key == ornt:
+        # vsite is a topology vsite, which has a regular vsite
+        for i, ornt in enumerate(self._virtual_site._virtual_site.orientations):
+            if ornt == orientation_key:
                 offset = i
                 break
 
-        return offset + self.topology_particle_start_index
-        # return self._topology_molecule.particle_start_topology_index + self._virtual_site.molecule_particle_index
+        return offset + self._virtual_site.topology_virtual_particle_start_index
 
 # =============================================================================================
 # TopologyMolecule
@@ -715,7 +750,7 @@ class TopologyMolecule:
         self._particle_start_topology_index = None
         self._bond_start_topology_index = None
         self._virtual_site_start_topology_index = None
-
+        self._virtual_particle_start_topology_index = None
 
     def _invalidate_cached_data(self):
         """Unset all cached data, in response to an appropriate change"""
@@ -723,7 +758,9 @@ class TopologyMolecule:
         self._particle_start_topology_index = None
         self._bond_start_topology_index = None
         self._virtual_site_start_topology_index = None
-
+        self._virtual_particle_start_topology_index = None
+        for vsite in self.virtual_sites:
+            vsite.invalidate_cached_data()
 
     @property
     def topology(self):
@@ -810,22 +847,23 @@ class TopologyMolecule:
         return self._atom_start_topology_index
 
     @property
-    def particle_start_topology_index(self):
+    def virtual_particle_start_topology_index(self):
         """
-        Get the topology index of the first particle in this TopologyMolecule
+        Get the topology index of the first virtual particle in this TopologyMolecule
 
         """
         # If cached value is not available, generate it.
-        if self._particle_start_topology_index is None:
-            particle_start_topology_index = 0
+        if self._virtual_particle_start_topology_index is None:
+            virtual_particle_start_topology_index = self.topology.n_atoms
             for topology_molecule in self._topology.topology_molecules:
                 if self == topology_molecule:
                     self._particle_start_topology_index = particle_start_topology_index
                     break
-                particle_start_topology_index += topology_molecule.n_particles
+                offset = sum([vsite.n_particles for vsite in topology_molecule.virtual_sites])
+                particle_start_topology_index += offset
 
         # Return cached value
-        return self._particle_start_topology_index
+        return self._virtualparticle_start_topology_index
 
     def bond(self, index):
         """
@@ -915,8 +953,9 @@ class TopologyMolecule:
 
         # TODO: Add ordering scheme here
         for vsite in self.reference_molecule.virtual_sites:
+            tvsite = TopologyVirtualSite(vsite, self)
             for vp in vsite.particles:
-                yield TopologyVirtualParticle(vsite, vp, self)
+                yield TopologyVirtualParticle(tvsite, vp, self)
 
     @property
     def n_particles(self):

@@ -664,8 +664,7 @@ class VirtualSite(Particle):
                 ornt = [tuple(x) for x in orientations]
             self._orientations = ornt
             self._particles = {
-                order: VirtualParticle(self, order)
-                for order in ornt
+                order: VirtualParticle(self, order) for order in ornt
             }
 
         # exists likely only for debugging, can remove later once the api

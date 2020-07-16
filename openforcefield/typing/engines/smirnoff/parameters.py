@@ -4294,7 +4294,6 @@ class VirtualSiteHandler(_NonbondedHandler):
                     vsite_exclusion_ids = []
                     for vp in vsite.particles:
                         orientation = vp.orientation      
-                        offset = top_mol.particle_start_topology_index
                         sort_key = [orientation.index(i) for i in ref_key]
                         atom_key = [ref_key[i] for i in sort_key]
                         dprint("sort_key", sort_key)
@@ -4317,7 +4316,6 @@ class VirtualSiteHandler(_NonbondedHandler):
                         vsite_exclusion_ids.append(vsite_idx)
                         dprint(
                             "vsite id", vsite_idx,
-                            "offset_key", offset,
                             "orientation:", orientation,
                             "atom_key:", atom_key
                         )
@@ -4331,6 +4329,8 @@ class VirtualSiteHandler(_NonbondedHandler):
                         system.setVirtualSite(vsite_idx, omm_vsite)
                         force.addParticle(vsite_q, sigma, ljtype.epsilon)
 
+                        dprint(f"Added vsite particle with charge {vsite_q}")
+                        dprint(f"   chargeincrements:", vsite.charge_increments)
 
                         if exclusion_policy == 1:
                             keylen = len(atom_key)
