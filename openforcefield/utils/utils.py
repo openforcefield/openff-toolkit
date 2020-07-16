@@ -38,7 +38,6 @@ import functools
 from simtk import unit
 import logging
 import contextlib
-import warnings
 
 #=============================================================================================
 # CONFIGURE LOGGER
@@ -908,7 +907,6 @@ def get_molecule_parameterIDs(molecules, forcefield):
         in which that parameter occurs. No frequency information is stored.
 
     """
-    warnings.warn(DEPRECATION_WARNING_TEXT, PendingDeprecationWarning)
 
     from openforcefield.topology import Topology
     # Create storage
