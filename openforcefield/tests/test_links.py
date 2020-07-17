@@ -45,10 +45,10 @@ def test_readme_links(readme_link):
     if 'doi.org' in readme_link:
         pytest.skip("DOI links are behind DDoS protection and do not resolve")
 
-    # Try to connect 3 times, keeping track of exceptions so useful feedback can be provided.
+    # Try to connect 5 times, keeping track of exceptions so useful feedback can be provided.
     success = False
     exception = None
-    for retry in range(3):
+    for retry in range(5):
         try:
             urlopen(request)
             success = True

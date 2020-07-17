@@ -106,11 +106,19 @@ jobs:
         run: |
           python -m pip install --no-deps -v .
 
+      - name: Check links
+        shell: bash -l {0}
+        if: ${{ matrix.cfg.rdkit == 'true' && matrix.cfg.openeye == 'TRUE' }}
+        continue-on-error: true
+        run: |
+          pytest -r fE -tb=short openforcefield/tests/test_links.py
+
       - name: Run unit tests
         shell: bash -l {0}
         run: |
           PYTEST_ARGS=" -r fE --tb=short --cov=$PACKAGE --cov-config=setup.cfg"
           PYTEST_ARGS+=" --ignore=openforcefield/tests/test_examples.py"
+          PYTEST_ARGS+=" --ignore=openforcefield/tests/test_links.py"
           if [[ "$RDKIT" == true && "$OPENEYE" == true ]]; then
             PYTEST_ARGS+="--doctest-modules"
           fi
