@@ -1322,6 +1322,14 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         """
         from openeye import oechem
 
+        if hasattr(oechem, aromaticity_model):
+            oe_aro_model = getattr(oechem,
+                                   'OEAroModel_' + aromaticity_model)
+        else:
+            raise ValueError(
+                "Error: provided aromaticity model not recognized by oechem."
+            )
+
         oemol = oechem.OEMol()
         #if not(molecule.name is None):
         oemol.SetTitle(molecule.name)
@@ -1331,6 +1339,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         for atom in molecule.atoms:
             oeatom = oemol.NewAtom(atom.atomic_number)
             oeatom.SetFormalCharge(atom.formal_charge.value_in_unit(unit.elementary_charge)) # simtk.unit.Quantity(1, unit.elementary_charge)
+            # TODO: Do we want to provide _any_ pathway for Atom.is_aromatic to influence the OEMol?
             #oeatom.SetAromatic(atom.is_aromatic)
             oeatom.SetData('name', atom.name)
             oeatom.SetPartialCharge(float('nan'))
@@ -1347,13 +1356,14 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             oebond = oemol.NewBond(oemol_atoms[atom1_index],
                                    oemol_atoms[atom2_index])
             oebond.SetOrder(bond.bond_order)
+            # TODO: Do we want to provide _any_ pathway for Bond.is_aromatic to influence the OEMol?
             #oebond.SetAromatic(bond.is_aromatic)
             if not (bond.fractional_bond_order is None):
                 oebond.SetData('fractional_bond_order',
                                bond.fractional_bond_order)
             oemol_bonds.append(oebond)
 
-        oechem.OEAssignAromaticFlags(oemol, oechem.OEAroModel_MDL)
+        oechem.OEAssignAromaticFlags(oemol, oe_aro_model)
 
         # Set atom stereochemistry now that all connectivity is in place
         for atom, oeatom in zip(molecule.atoms, oemol_atoms):
