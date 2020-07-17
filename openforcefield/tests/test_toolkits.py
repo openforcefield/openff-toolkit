@@ -750,7 +750,7 @@ class TestOpenEyeToolkitWrapper:
 
 
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
-    @pytest.mark.parametrize("partial_charge_method", ['am1bcc', 'am1-mulliken', 'gasteiger'])
+    @pytest.mark.parametrize("partial_charge_method", ['am1bcc', 'am1elf10', 'am1-mulliken', 'gasteiger'])
     def test_assign_partial_charges_neutral(self, partial_charge_method):
         """Test OpenEyeToolkitWrapper assign_partial_charges()"""
         from openforcefield.tests.test_forcefield import create_ethanol
@@ -788,7 +788,7 @@ class TestOpenEyeToolkitWrapper:
             assert abs(pc1 - pc2) > 1.e-5 * unit.elementary_charge
 
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
-    @pytest.mark.parametrize("partial_charge_method", ['am1bcc', 'am1-mulliken', 'gasteiger'])
+    @pytest.mark.parametrize("partial_charge_method", ['am1bcc', 'am1elf10', 'am1-mulliken', 'gasteiger'])
     def test_assign_partial_charges_net_charge(self, partial_charge_method):
         """
         Test OpenEyeToolkitWrapper assign_partial_charges() on a molecule with net charge.
