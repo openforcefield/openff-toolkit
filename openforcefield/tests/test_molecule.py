@@ -708,9 +708,9 @@ class TestMolecule:
                               'DrugBank_3726', 'DrugBank_3844', 'DrugBank_3930', 'DrugBank_4161',
                               'DrugBank_4162', 'DrugBank_4778', 'DrugBank_4593', 'DrugBank_4959',
                               'DrugBank_5043', 'DrugBank_5076', 'DrugBank_5176', 'DrugBank_5418',
-                              'DrugBank_5737', 'DrugBank_5902', 'DrugBank_6304', 'DrugBank_6305',
-                              'DrugBank_6329', 'DrugBank_6355', 'DrugBank_6401', 'DrugBank_6509',
-                              'DrugBank_6531', 'DrugBank_6647',
+                              'DrugBank_5737', 'DrugBank_5902', 'DrugBank_6295', 'DrugBank_6304',
+                              'DrugBank_6305', 'DrugBank_6329', 'DrugBank_6355', 'DrugBank_6401',
+                              'DrugBank_6509', 'DrugBank_6531', 'DrugBank_6647',
 
                               # These test cases are allowed to fail.
                               'DrugBank_390', 'DrugBank_810', 'DrugBank_4316', 'DrugBank_4346',
