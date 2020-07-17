@@ -1048,6 +1048,24 @@ class TestMolecule:
         mol.strip_atom_stereochemistry(smarts='[N+0X3:1](-[*])(-[*])(-[*])')
         assert mol.atoms[3].stereochemistry is None
 
+    @pytest.mark.parametrize('mol_smiles',
+        [
+            ('C[N+](CC)(CC)CC'),
+            ('c1cnc[nH]1')
+        ])
+    def test_do_not_strip_atom_stereochemsitry(self, mol_smiles):
+        """
+        Test special cases in which we do not want nitrogen stereochemistry stripped:
+        NH in planar rings and tetra-coordinatined N+
+        """
+        mol = Molecule.from_smiles(mol_smiles)
+        mol_mod = copy.deepcopy(mol)
+        mol_mod.strip_atom_stereochemistry('[N+0X3:1](-[*])(-[*])(-[*])')
+
+        # Inspect each atom's stereochemistry instead of relying on __eq__
+        for before, after in zip(mol.atoms, mol_mod.atoms):
+            assert before.stereochemistry == after.stereochemistry
+
     def test_isomorphic_striped_stereochemistry(self):
         """Test that the equality operator disregards an edge case of nitrogen stereocenters"""
         mol1 = Molecule.from_smiles('CCC[N@](C)CC')
@@ -1061,6 +1079,18 @@ class TestMolecule:
         assert mol1 == mol2
         assert Molecule.from_smiles('CCC[N@](C)CC') == Molecule.from_smiles('CCC[N@@](C)CC')
 
+        mol1 = Molecule.from_smiles('CCC[N@](C)CC')
+        mol2 = Molecule.from_smiles('CCC[N@@](C)CC')
+
+        assert not Molecule.are_isomorphic(
+            mol1,
+            mol2,
+            strip_pyrimidal_n_atom_stereo=False,
+            atom_stereochemistry_matching=True,
+            bond_stereochemistry_matching=True,
+        )
+
+        'c1cnc[nH]1'
 
     def test_remap(self):
         """Test the remap function which should return a new molecule in the requested ordering"""
