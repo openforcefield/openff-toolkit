@@ -18,6 +18,7 @@ __all__ = [
     'UnassignedValenceParameterException',
     'UnassignedBondParameterException',
     'UnassignedAngleParameterException',
+    'DuplicateParameterError',
     'NonbondedMethod',
     'ParameterList',
     'ParameterType',

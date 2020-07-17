@@ -2114,7 +2114,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         return tuple(unique_tags), tuple(connections)
 
     @staticmethod
-    def _find_smarts_matches(oemol, smarts, aromaticity_model=None):
+    def _find_smarts_matches(oemol, smarts, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
         """Find all sets of atoms in the provided OpenEye molecule that match the provided SMARTS string.
 
         Parameters
@@ -2151,26 +2151,32 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         if not oechem.OEParseSmarts(qmol, smarts):
             raise ValueError(f"Error parsing SMARTS '{smarts}'")
 
-        # Determine aromaticity model
-        if aromaticity_model:
-            if type(aromaticity_model) == str:
-                # Check if the user has provided a manually-specified aromaticity_model
-                if hasattr(oechem, aromaticity_model):
-                    oearomodel = getattr(oechem,
-                                         'OEAroModel_' + aromaticity_model)
-                else:
-                    raise ValueError(
-                        "Error: provided aromaticity model not recognized by oechem."
-                    )
+        # Apply aromaticity model
+        if type(aromaticity_model) == str:
+            # Check if the user has provided a manually-specified aromaticity_model
+            if hasattr(oechem, aromaticity_model):
+                oearomodel = getattr(oechem,
+                                     aromaticity_model)
             else:
                 raise ValueError(
-                    "Error: provided aromaticity model must be a string.")
+                    "Error: provided aromaticity model not recognized by oechem."
+                )
+        else:
+            raise ValueError(
+                "Error: provided aromaticity model must be a string.")
 
-            # If aromaticity model was provided, prepare molecule
-            oechem.OEClearAromaticFlags(mol)
-            oechem.OEAssignAromaticFlags(mol, oearomodel)
-            # Avoid running OEPrepareSearch or we lose desired aromaticity, so instead:
-            oechem.OEAssignHybridization(mol)
+
+        # OEPrepareSearch will clobber our desired aromaticity model if we don't sync up mol and qmol ahead of time
+        # Prepare molecule
+        oechem.OEClearAromaticFlags(mol)
+        oechem.OEAssignAromaticFlags(mol, oearomodel)
+
+        # If aromaticity model was provided, prepare query molecule
+        oechem.OEClearAromaticFlags(qmol)
+        oechem.OEAssignAromaticFlags(qmol, oearomodel)
+
+        oechem.OEAssignHybridization(mol)
+        oechem.OEAssignHybridization(qmol)
 
         # Build list of matches
         # TODO: The MoleculeImage mapping should preserve ordering of template molecule for equivalent atoms
