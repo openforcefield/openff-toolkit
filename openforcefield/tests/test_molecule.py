@@ -1034,6 +1034,34 @@ class TestMolecule:
                                        atom_stereochemistry_matching=inputs['atom_stereochemistry_matching'],
                                        bond_stereochemistry_matching=inputs['bond_stereochemistry_matching'])[0] is inputs['result']
 
+    def test_strip_atom_stereochemistry(self):
+        """Test the basic behavior of strip_atom_stereochemistry"""
+        mol = Molecule.from_smiles('CCC[N@@](C)CC')
+
+        assert mol.atoms[3].stereochemistry == 'S'
+        mol.strip_atom_stereochemistry(smarts='[N+0X3:1](-[*])(-[*])(-[*])')
+        assert mol.atoms[3].stereochemistry is None
+
+        mol = Molecule.from_smiles('CCC[N@@](C)CC')
+
+        assert mol.atoms[3].stereochemistry == 'S'
+        mol.strip_atom_stereochemistry(smarts='[N+0X3:1](-[*])(-[*])(-[*])')
+        assert mol.atoms[3].stereochemistry is None
+
+    def test_isomorphic_striped_stereochemistry(self):
+        """Test that the equality operator disregards an edge case of nitrogen stereocenters"""
+        mol1 = Molecule.from_smiles('CCC[N@](C)CC')
+        mol2 = Molecule.from_smiles('CCC[N@@](C)CC')
+
+        # Ensure default value is respected and order does not matter
+        assert Molecule.are_isomorphic(mol1, mol2, strip_pyrimidal_n_atom_stereo=True)
+        assert Molecule.are_isomorphic(mol1, mol2)
+        assert Molecule.are_isomorphic(mol2, mol1)
+
+        assert mol1 == mol2
+        assert Molecule.from_smiles('CCC[N@](C)CC') == Molecule.from_smiles('CCC[N@@](C)CC')
+
+
     def test_remap(self):
         """Test the remap function which should return a new molecule in the requested ordering"""
         # the order here is CCO

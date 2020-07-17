@@ -49,7 +49,7 @@ from networkx.algorithms.isomorphism import GraphMatcher
 
 import openforcefield
 from openforcefield.utils import serialize_numpy, deserialize_numpy, quantity_to_string, \
-    string_to_quantity, check_units_are_compatible
+    string_to_quantity, check_units_are_compatible, MessageException
 from openforcefield.utils.toolkits import ToolkitRegistry, ToolkitWrapper, RDKitToolkitWrapper, OpenEyeToolkitWrapper,\
     InvalidToolkitError, UndefinedStereochemistryError, GLOBAL_TOOLKIT_REGISTRY
 from openforcefield.utils.toolkits import DEFAULT_AROMATICITY_MODEL
@@ -1635,10 +1635,16 @@ class FrozenMolecule(Serializable):
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for I/O operations
 
         """
-        matches = self.chemical_environment_matches(smarts)
 
+        matches = toolkit_registry.call('find_smarts_matches', self, smarts)
+        # matches = set(toolkit_registry.call('ToolkitRegistry.call('find_smarts_matches', ...)'.chemical_environment_matches(smarts))
 
+        for match in set(matches):
+            if len(match) > 1:
+                raise Exception
+            match = match[0]
 
+            self.atoms[match].stereochemistry = None
 
 
     ####################################################################################################
@@ -2141,7 +2147,7 @@ class FrozenMolecule(Serializable):
             bond_order_matching=True,
             atom_stereochemistry_matching=True,
             bond_stereochemistry_matching=True,
-            ignore_atom_stereocenters=None
+            strip_pyrimidal_n_atom_stereo=True,
     ):
         """
         Determines whether the two molecules are isomorphic by comparing their graph representations and the chosen
@@ -2233,11 +2239,18 @@ class FrozenMolecule(Serializable):
             """For the given data type, return the networkx graph"""
             from openforcefield.topology import TopologyMolecule
 
+            if strip_pyrimidal_n_atom_stereo:
+                SMARTS = '[N+0X3:1](-[*])(-[*])(-[*])'
+
             if isinstance(data, FrozenMolecule):
                 # Molecule class instance
+                if strip_pyrimidal_n_atom_stereo:
+                    data.strip_atom_stereochemistry(SMARTS)
                 return data.to_networkx()
             elif isinstance(data, TopologyMolecule):
                 # TopologyMolecule class instance
+                if strip_pyrimidal_n_atom_stereo:
+                    data.reference_molecule.strip_atom_stereochemistry(SMARTS)
                 return data.reference_molecule.to_networkx()
             elif isinstance(data, nx.Graph):
                 return data
@@ -2311,7 +2324,8 @@ class FrozenMolecule(Serializable):
                                        formal_charge_matching=kwargs.get('formal_charge_matching', True),
                                        bond_order_matching=kwargs.get('bond_order_matching', True),
                                        atom_stereochemistry_matching=kwargs.get('atom_stereochemistry_matching', True),
-                                       bond_stereochemistry_matching=kwargs.get('bond_stereochemistry_matching', True))[0]
+                                       bond_stereochemistry_matching=kwargs.get('bond_stereochemistry_matching', True),
+                                       strip_pyrimidal_n_atom_stereo=kwargs.get('strip_pyrimidal_n_atom_stereo', True))[0]
 
     def generate_conformers(self,
                             toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
@@ -4946,3 +4960,10 @@ class SmilesParsingError(Exception):
     This error is rasied when parsing a smiles string results in an error.
     """
     pass
+
+
+class PyramidalNitrogenStereochemistryError(MessageException):
+    """
+    This error is raised when stereochemistry of pyramidal nitrogens must be respected.
+    """
+    # TODO: Remove this if it cannot reliably be raised
