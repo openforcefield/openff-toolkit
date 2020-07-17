@@ -91,7 +91,7 @@ jobs:
         conda activate test
         if [[ "$RDKIT" == true ]]; then conda install rdkit; fi
         if [[ "$OPENEYE" == true ]]; then
-          conda install openeye-toolkits=2019
+          conda install openeye-toolkits
           python -c "from openeye import oechem; assert oechem.OEChemIsLicensed()"
         fi
         python -m pip install --no-deps .
