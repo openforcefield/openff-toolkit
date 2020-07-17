@@ -1088,9 +1088,7 @@ class TestMolecule:
             strip_pyrimidal_n_atom_stereo=False,
             atom_stereochemistry_matching=True,
             bond_stereochemistry_matching=True,
-        )
-
-        'c1cnc[nH]1'
+        )[0]
 
     def test_remap(self):
         """Test the remap function which should return a new molecule in the requested ordering"""
