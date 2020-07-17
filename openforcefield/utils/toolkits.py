@@ -1861,6 +1861,11 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                                                        'max_confs': 1,
                                                        'rec_confs': 1,
                                                        },
+                                    'am1elf10': {'oe_charge_method': oequacpac.OEELFCharges(oequacpac.OEAM1Charges(optimize=True, symmetrize=True), 10),
+                                                 'min_confs': 1,
+                                                 'max_confs': None,
+                                                 'rec_confs': 500,
+                                                },
                                     'am1bccelf10': {'oe_charge_method': oequacpac.OEAM1BCCELF10Charges,
                                                   'min_confs': 1,
                                                   'max_confs': None,
@@ -1916,16 +1921,24 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             symmetrize = False
             quacpac_status = oequacpac.OEAssignCharges(oemol, charge_method['oe_charge_method'](optimize, symmetrize))
         else:
-            quacpac_status = oequacpac.OEAssignCharges(oemol, charge_method['oe_charge_method']())
+            oe_charge_method = charge_method['oe_charge_method']
+
+            if callable(oe_charge_method):
+                oe_charge_method = oe_charge_method()
+
+            quacpac_status = oequacpac.OEAssignCharges(oemol, oe_charge_method)
 
         oechem.OEThrow.SetOutputStream(oechem.oeerr)  # restoring to original state
         # This logic handles errors encountered in #34, which can occur when using ELF10 conformer selection
         if not quacpac_status:
+
+            oe_charge_engine = oequacpac.OEAM1Charges if partial_charge_method == "am1elf10" else oequacpac.OEAM1BCCCharges
+
             if "SelectElfPop: issue with removing trans COOH conformers" in (errfs.str().decode("UTF-8")):
-                logger.warning("Warning: OEAM1BCCELF10 charge assignment failed due to a known bug (toolkit issue "
-                               "#346). Downgrading to OEAM1BCC charge assignment for this molecule. More information"
-                               "is available at https://github.com/openforcefield/openforcefield/issues/346")
-                quacpac_status = oequacpac.OEAssignCharges(oemol, oequacpac.OEAM1BCCCharges())
+                logger.warning(f"Warning: charge assignment involving ELF10 conformer selection failed due to a known bug (toolkit issue "
+                               f"#346). Downgrading to {oe_charge_engine.__name__} charge assignment for this molecule. More information"
+                               f"is available at https://github.com/openforcefield/openforcefield/issues/346")
+                quacpac_status = oequacpac.OEAssignCharges(oemol, oe_charge_engine())
 
         if quacpac_status is False:
             raise ChargeCalculationError(f'Unable to assign charges: {errfs.str().decode("UTF-8")}')
