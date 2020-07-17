@@ -31,6 +31,10 @@ New features
 - `PR #614 <https://github.com/openforcefield/openforcefield/pull/614>`_: Adds 
   :py:meth:`ToolkitRegistry.deregister_toolkit <openforcefield.utils.toolkits.ToolkitRegistry.deregister_toolki>` 
   to de-register registered toolkits, which can include toolkit wrappers loaded into `GLOBAL_TOOLKIT_REGISTRY` by default.
+- `PR #656 <https://github.com/openforcefield/openforcefield/pull/656>`_: Adds
+  a new allowed `am1elf10` option to the OpenEye implementation of
+  :py:meth:`assign_partial_charges <openforcefield.utils.toolkits.OpenEyeToolkitWrapper.assign_partial_charges>` which
+  calculates the average partial charges at the AM1 level of theory using conformers selected using the ELF10 method.
 
 0.7.0 - Charge Increment Model, Proper Torsion interpolation, and new Molecule methods
 --------------------------------------------------------------------------------------

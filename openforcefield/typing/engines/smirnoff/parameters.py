@@ -108,9 +108,14 @@ class UnassignedMoleculeChargeException(Exception):
     """Exception raised when no charge method is able to assign charges to a molecule."""
     pass
 
+
 class NonintegralMoleculeChargeException(Exception):
     """Exception raised when the partial charges on a molecule do not sum up to its formal charge."""
     pass
+
+
+class DuplicateParameterError(MessageException):
+    """Exception raised when trying to add a ParameterType that already exists"""
 
 
 #======================================================================
@@ -1649,17 +1654,91 @@ class ParameterHandler(_ParameterAttributeHandler):
         pass
 
     # TODO: Can we ensure SMIRKS and other parameters remain valid after manipulation?
-    def add_parameter(self, parameter_kwargs):
+    def add_parameter(self, parameter_kwargs=None, parameter=None, after=None, before=None):
         """Add a parameter to the forcefield, ensuring all parameters are valid.
 
         Parameters
         ----------
-        parameter_kwargs : dict
+        parameter_kwargs: dict, optional
             The kwargs to pass to the ParameterHandler.INFOTYPE (a ParameterType) constructor
+        parameter: ParameterType, optional
+            A ParameterType to add to the ParameterHandler
+        after : str or int, optional
+            The SMIRKS pattern (if str) or index (if int) of the parameter directly before where
+            the new parameter will be added
+        before : str, optional
+            The SMIRKS pattern (if str) or index (if int) of the parameter directly after where
+            the new parameter will be added
+
+        Note that one of (parameter_kwargs, parameter) must be specified
+        Note that when `before` and `after` are both None, the new parameter will be appended
+            to the END of the parameter list.
+        Note that when `before` and `after` are both specified, the new parameter
+            will be added immediately after the parameter matching the `after` pattern or index.
+
+        Examples
+        --------
+
+        Add a ParameterType to an existing ParameterList at a specified position.
+
+        Given an existing parameter handler and a new parameter to add to it:
+
+        >>> from simtk import unit
+        >>> bh = BondHandler(skip_version_check=True)
+        >>> length = 1.5 * unit.angstrom
+        >>> k = 100 * unit.kilocalorie_per_mole / unit.angstrom ** 2
+        >>> bh.add_parameter({'smirks': '[*:1]-[*:2]', 'length': length, 'k': k, 'id': 'b1'})
+        >>> bh.add_parameter({'smirks': '[*:1]=[*:2]', 'length': length, 'k': k, 'id': 'b2'})
+        >>> bh.add_parameter({'smirks': '[*:1]#[*:2]', 'length': length, 'k': k, 'id': 'b3'})
+        >>> [p.id for p in bh.parameters]
+        ['b1', 'b2', 'b3']
+
+        >>> param = {'smirks': '[#1:1]-[#6:2]', 'length': length, 'k': k, 'id': 'b4'}
+
+        Add a new parameter immediately after the parameter with the smirks '[*:1]=[*:2]'
+
+        >>> bh.add_parameter(param, after='[*:1]=[*:2]')
+        >>> [p.id for p in bh.parameters]
+        ['b1', 'b2', 'b4', 'b3']
         """
-        # TODO: Do we need to check for incompatibility with existing parameters?
-        new_parameter = self._INFOTYPE(**parameter_kwargs)
-        self._parameters.append(new_parameter)
+        for val in [before, after]:
+            if val and not isinstance(val, (str, int)):
+                raise TypeError
+
+        # If a dict was passed, construct it; if a ParameterType was passed, do nothing
+        if parameter_kwargs:
+            new_parameter = self._INFOTYPE(**parameter_kwargs)
+        elif parameter:
+            new_parameter = parameter
+        else:
+            raise ValueError('One of (parameter, parameter_kwargs) must be specified')
+
+        if new_parameter.smirks in [p.smirks for p in self._parameters]:
+            msg = f'A parameter SMIRKS pattern {val} already exists.'
+            raise DuplicateParameterError(msg)
+
+        if before is not None:
+            if isinstance(before, str):
+                before_index = self._parameters.index(before)
+            elif isinstance(before, int):
+                before_index = before
+
+        if after is not None:
+            if isinstance(after, str):
+                after_index = self._parameters.index(after)
+            elif isinstance(after, int):
+                after_index = after
+
+        if None not in (before, after):
+            if after_index > before_index:
+                raise ValueError('before arg must be before after arg')
+
+        if after is not None:
+            self._parameters.insert(after_index+1, new_parameter)
+        elif before is not None:
+            self._parameters.insert(before_index, new_parameter)
+        else:
+            self._parameters.append(new_parameter)
 
     def get_parameter(self, parameter_attrs):
         """
