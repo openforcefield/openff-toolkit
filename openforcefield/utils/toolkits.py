@@ -1323,8 +1323,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         from openeye import oechem
 
         if hasattr(oechem, aromaticity_model):
-            oe_aro_model = getattr(oechem,
-                                   'OEAroModel_' + aromaticity_model)
+            oe_aro_model = getattr(oechem, aromaticity_model)
         else:
             raise ValueError(
                 "Error: provided aromaticity model not recognized by oechem."
