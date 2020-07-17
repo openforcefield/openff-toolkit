@@ -599,19 +599,22 @@ class TopologyVirtualSite(Serializable):
         # need to iterate through all previous 
 
         # If the cached value is not available, generate it
+        # breakpoint()
         if self._topology_virtual_particle_start_index is None:
-            virtual_particle_start_topology_index = self.topology_molecule.n_atoms
+            virtual_particle_start_topology_index = self.topology_molecule.topology.n_topology_atoms
             for topology_molecule in self._topology_molecule._topology.topology_molecules:
+                for tvsite in topology_molecule.virtual_sites:
+                    if self == tvsite:
+                        break
+                    virtual_particle_start_topology_index += tvsite.n_particles
                 if self._topology_molecule == topology_molecule:
-                    for tvsite in topology_molecule.virtual_sites:
-                        if self == tvsite:
-                            break
-                        virtual_particle_start_topology_index += tvsite.n_particles
                     break
-                else:
-                    virtual_particle_start_topology_index += topology_molecule.n_particles
+                # else:
+                #     virtual_particle_start_topology_index += tvsite.n_particles
+                #     virtual_particle_start_topology_index += topology_molecule.n_particles
             self._topology_virtual_particle_start_index = virtual_particle_start_topology_index
         # Return cached value
+        # print(self._topology_virtual_particle_start_index)
         return self._topology_virtual_particle_start_index
 
         return self._topology_molecule.topology.n_topology_atoms + self.topology_virtual_site_index
