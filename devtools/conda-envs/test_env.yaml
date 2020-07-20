@@ -19,7 +19,7 @@ dependencies:
   - networkx
   - ambertools
   - rdkit
-  - openeye-toolkits=2019
+  - openeye-toolkits
   - packaging
   - openmmforcefields >=0.7.2
   - openmmtools

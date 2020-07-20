@@ -57,7 +57,7 @@ jobs:
       - uses: actions/checkout@v2
 
       - uses: goanpeca/setup-miniconda@v1
-        name: Install with both RDKit and OpenEye toolkits
+        name: Install both RDKit and OpenEye toolkits
         if: ${{ matrix.cfg.rdkit == 'TRUE' && matrix.cfg.openeye == 'TRUE' }}
         with:
           python-version: ${{ matrix.python-version }}
