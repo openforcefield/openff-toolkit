@@ -130,14 +130,11 @@ jobs:
           PYTEST_ARGS=" -r fE --tb=short --nbval-lax"
           PYTEST_ARGS+=" --ignore=utilities --ignore=examples/deprecated"
           PYTEST_ARGS+=" --ignore=openforcefield/tests/plugins.py --nbval-lax"
-          if [[ "$RDKIT" == true && "$OPENEYE" == true ]]; then
-            PYTEST_ARGS+=" --ignore=docs --ignore=devtools --doctest-modules"
-          fi
           if [[ "$OPENEYE" == true ]]; then
             PYTEST_ARGS+=" --ignore=examples/check_dataset_parameter_coverage"
             PYTEST_ARGS+=" --ignore=examples/QCArchive_interface"
           fi
-          pytest $PYTEST_ARGS examples/ openforcefield/tests/test_examples.py
+          pytest $PYTEST_ARGS openforcefield/tests/test_examples.py
 
       - name: Codecov
         uses: codecov/codecov-action@v1
