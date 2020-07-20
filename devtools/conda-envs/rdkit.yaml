@@ -17,6 +17,7 @@ dependencies:
   - numpy
   - networkx
   - ambertools
+  - rdkit
   - packaging
   - openmmforcefields >=0.7.2
   - openmmtools
