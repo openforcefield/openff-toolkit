@@ -29,7 +29,7 @@ from openforcefield.utils.toolkits import (OpenEyeToolkitWrapper, RDKitToolkitWr
 from openforcefield.utils import get_data_file_path
 from openforcefield.topology import Molecule, Topology
 from openforcefield.typing.engines.smirnoff import (ForceField, IncompatibleParameterError, SMIRNOFFSpecError,
-    XMLParameterIOHandler, ParameterHandler)
+    XMLParameterIOHandler, ParameterHandler, get_available_force_fields)
 
 
 #======================================================================
@@ -583,6 +583,29 @@ if RDKitToolkitWrapper.is_available() and AmberToolsToolkitWrapper.is_available(
 
 class TestForceField():
     """Test the ForceField class"""
+
+    def test_get_available_force_fields_loadable(self, full_path, force_field_file):
+        """Ensure get_available_force_fields returns some expected data"""
+        available_force_fields = get_available_force_fields(full_path=False)
+
+        # Incomplete list of some expected force fields
+        expected_force_fields = [
+            'smirnoff99Frosst-1.0.0.offxml',
+            'smirnoff99Frosst-1.1.0.offxml',
+            'openff-1.0.0.offxml',
+            'openff_unconstrainted-1.0.0.offxml',
+            'openff-1.1.0.offxml',
+            'openff-1.2.0.offxml',
+        ]
+
+        for ff in expected_force_fields:
+            assert ff in available_force_fields
+
+    @pytest.mark.parametrize('full_path', [(True, False)])
+    @pytest.mark.parametrize('force_field_file', [*get_available_force_fields()])
+    def test_get_available_force_fields_loadable(self, full_path, force_field_file):
+        """Ensure get_available_force_fields returns load-able files"""
+        ForceField(force_field_file)
 
     def test_create_forcefield_no_args(self):
         """Test empty constructor"""
