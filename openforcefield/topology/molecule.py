@@ -2193,6 +2193,8 @@ class FrozenMolecule(Serializable):
             [Dict[int,int]] ordered by mol1 indexing {mol1_index: mol2_index}
             If molecules are not isomorphic given input arguments, will return None instead of dict.
         """
+        mol1 = deepcopy(mol1)
+        mol2 = deepcopy(mol2)
 
         # Do a quick hill formula check first
         if Molecule.to_hill_formula(mol1) != Molecule.to_hill_formula(mol2):
