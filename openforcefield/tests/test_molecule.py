@@ -1038,15 +1038,17 @@ class TestMolecule:
         """Test the basic behavior of strip_atom_stereochemistry"""
         mol = Molecule.from_smiles('CCC[N@@](C)CC')
 
-        assert mol.atoms[3].stereochemistry == 'S'
+        nitrogen_idx = [atom.molecule_atom_index for atom in mol.atoms if atom.element.symbol == 'N'][0]
+
+        assert mol.atoms[nitrogen_idx].stereochemistry == 'S'
         mol.strip_atom_stereochemistry(smarts='[N+0X3:1](-[*])(-[*])(-[*])')
-        assert mol.atoms[3].stereochemistry is None
+        assert mol.atoms[nitrogen_idx].stereochemistry is None
 
         mol = Molecule.from_smiles('CCC[N@@](C)CC')
 
-        assert mol.atoms[3].stereochemistry == 'S'
+        assert mol.atoms[nitrogen_idx].stereochemistry == 'S'
         mol.strip_atom_stereochemistry(smarts='[N+0X3:1](-[*])(-[*])(-[*])')
-        assert mol.atoms[3].stereochemistry is None
+        assert mol.atoms[nitrogen_idx].stereochemistry is None
 
     @pytest.mark.parametrize('mol_smiles',
         [

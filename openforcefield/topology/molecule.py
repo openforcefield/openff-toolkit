@@ -49,7 +49,7 @@ from networkx.algorithms.isomorphism import GraphMatcher
 
 import openforcefield
 from openforcefield.utils import serialize_numpy, deserialize_numpy, quantity_to_string, \
-    string_to_quantity, check_units_are_compatible, MessageException
+    string_to_quantity, check_units_are_compatible
 from openforcefield.utils.toolkits import ToolkitRegistry, ToolkitWrapper, RDKitToolkitWrapper, OpenEyeToolkitWrapper,\
     InvalidToolkitError, UndefinedStereochemistryError, GLOBAL_TOOLKIT_REGISTRY
 from openforcefield.utils.toolkits import DEFAULT_AROMATICITY_MODEL
@@ -1622,9 +1622,9 @@ class FrozenMolecule(Serializable):
             self.generate_unique_atom_names()
 
     def strip_atom_stereochemistry(self, smarts, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
-        """Delete stereochemistry information for certain atoms. This method can be used to "normalize"
-        molecules imported from different cheminformatics toolkits, which differ in which atom centers are
-        considered stereogenic.
+        """Delete stereochemistry information for certain atoms, if it is present.
+        This method can be used to "normalize" molecules imported from different cheminformatics
+        toolkits, which differ in which atom centers are considered stereogenic.
 
         Parameters
         ----------
@@ -1635,16 +1635,13 @@ class FrozenMolecule(Serializable):
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for I/O operations
 
         """
-
-        matches = toolkit_registry.call('find_smarts_matches', self, smarts)
-        # matches = set(toolkit_registry.call('ToolkitRegistry.call('find_smarts_matches', ...)'.chemical_environment_matches(smarts))
+        from openforcefield.typing.chemistry.environment import AtomChemicalEnvironment
+        chem_env = AtomChemicalEnvironment(smarts)
+        matches = self.chemical_environment_matches(chem_env, toolkit_registry=toolkit_registry)
 
         for match in set(matches):
-            if len(match) > 1:
-                raise Exception
-            match = match[0]
-
-            self.atoms[match].stereochemistry = None
+            atom_idx = match[0]
+            self.atoms[atom_idx].stereochemistry = None
 
 
     ####################################################################################################
@@ -2193,8 +2190,6 @@ class FrozenMolecule(Serializable):
             [Dict[int,int]] ordered by mol1 indexing {mol1_index: mol2_index}
             If molecules are not isomorphic given input arguments, will return None instead of dict.
         """
-        mol1 = deepcopy(mol1)
-        mol2 = deepcopy(mol2)
 
         # Do a quick hill formula check first
         if Molecule.to_hill_formula(mol1) != Molecule.to_hill_formula(mol2):
@@ -2247,13 +2242,17 @@ class FrozenMolecule(Serializable):
             if isinstance(data, FrozenMolecule):
                 # Molecule class instance
                 if strip_pyrimidal_n_atom_stereo:
+                    # Make a copy of the molecule so we don't modify the original
+                    data = deepcopy(data)
                     data.strip_atom_stereochemistry(SMARTS)
                 return data.to_networkx()
             elif isinstance(data, TopologyMolecule):
                 # TopologyMolecule class instance
                 if strip_pyrimidal_n_atom_stereo:
-                    data.reference_molecule.strip_atom_stereochemistry(SMARTS)
-                return data.reference_molecule.to_networkx()
+                    # Make a copy of the molecule so we don't modify the original
+                    ref_mol = deepcopy(data.reference_molecule)
+                    ref_mol.strip_atom_stereochemistry(SMARTS)
+                return ref_mol.to_networkx()
             elif isinstance(data, nx.Graph):
                 return data
 
@@ -4962,10 +4961,3 @@ class SmilesParsingError(Exception):
     This error is rasied when parsing a smiles string results in an error.
     """
     pass
-
-
-class PyramidalNitrogenStereochemistryError(MessageException):
-    """
-    This error is raised when stereochemistry of pyramidal nitrogens must be respected.
-    """
-    # TODO: Remove this if it cannot reliably be raised

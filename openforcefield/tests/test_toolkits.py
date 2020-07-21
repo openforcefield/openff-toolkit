@@ -85,6 +85,7 @@ rdkit_inchi_stereochemistry_lost = ['DrugBank_5414', 'DrugBank_2955', 'DrugBank_
 rdkit_inchi_isomorphic_fails = ['DrugBank_178', 'DrugBank_246', 'DrugBank_5847', 'DrugBank_700', 'DrugBank_1564',
                                 'DrugBank_1700', 'DrugBank_4662', 'DrugBank_2052', 'DrugBank_2077', 'DrugBank_2082',
                                 'DrugBank_2210', 'DrugBank_2642']
+rdkit_inchi_roundtrip_mangled = ['DrugBank_2684']
 #=============================================================================================
 # TESTS
 #=============================================================================================
@@ -1282,6 +1283,13 @@ class TestRDKitToolkitWrapper:
         else:
             print(molecule.name)
             mol2 = molecule.from_inchi(inchi, toolkit_registry=toolkit)
+
+            # Some molecules are mangled by being round-tripped to/from InChI
+            if molecule.name in rdkit_inchi_roundtrip_mangled:
+                with pytest.raises(AssertionError):
+                    mol2.to_rdkit()
+                return
+
             # compare the full molecule excluding the properties dictionary
             # turn of the bond order matching as this could move in the aromatic rings
             if molecule.name in rdkit_inchi_isomorphic_fails:
