@@ -7,9 +7,15 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 * ``minor`` increments add features but do not break API compatibility
 * ``micro`` increments represent bugfix releases or improvements in documentation
 
-0.7.1 - Current development
----------------------------
+0.7.1 - OETK2020 Compatibility and Minor Update
+-----------------------------------------------
 
+This is the first of our minor releases on our new planned monthly release schedule.
+
+Detailed release notes are below, but the major new features of this release are updates for
+compatibility with the new 2020 OpenEye Toolkits release, the
+``get_available_force_fields`` function, and the disregarding of pyrimidal nitrogen stereochemistry
+in molecule isomorphism checks.
 
 Behavior changed
 """"""""""""""""
