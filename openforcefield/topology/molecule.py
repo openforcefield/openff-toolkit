@@ -3312,8 +3312,8 @@ class FrozenMolecule(Serializable):
         """
         # Resolve to SMIRKS if needed
         # TODO: Update this to use updated ChemicalEnvironment API
-        if hasattr(query, 'asSMIRKS'):
-            smirks = query.asSMIRKS()
+        if hasattr(query, 'smirks'):
+            smirks = query.smirks
         elif type(query) == str:
             smirks = query
         else:
