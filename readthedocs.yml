@@ -5,10 +5,6 @@ build:
 
 python:
   version: 3.6
-  # pip install m2r2
-  install:
-    extra_requirements:
-      - m2r2
   setup_py_install: true 
 
 # Build PDF in addition to default HTML and JSON
