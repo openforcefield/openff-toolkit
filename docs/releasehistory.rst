@@ -10,9 +10,27 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 0.7.1 - Current development
 ---------------------------
 
+
+Behavior changed
+""""""""""""""""
+- `PR #646 <https://github.com/openforcefield/openforcefield/pull/646>`_: Checking for molecule
+  equality (using thr ``==`` operator now disregards all pyrimidal nitrogen stereochemistry
+  by default. To re-enable, use
+  :py:meth:`Molecule.are_isomorphic <openforcefield.topology.Molecule.are_isomorphic>`
+  with the ``strip_pyrimidal_n_atom_stereo=False`` keyword argument.
+- `PR #646 <https://github.com/openforcefield/openforcefield/pull/646>`_: Adds
+  an optional ``toolkit_registry`` keyword argument to
+  :py:meth:`Molecule.are_isomorphic <openforcefield.topology.Molecule.are_isomorphic>`,
+  which identifies the toolkit that should be used to search for pyrimidal nitrogens.
+
+
 Bugfixes
 """"""""
-- `PR #634 <https://github.com/openforcefield/openforcefield/pull/634>`_: Fixes a bug in which calling 
+- `PR #646 <https://github.com/openforcefield/openforcefield/pull/646>`_: Fixes a bug where
+  :py:meth:`Molecule.chemical_environment_matches <openforcefield.topology.Molecule.chemical_environment_matches>`
+  was not able to accept a :py:class`ChemicalEnvironment <openforcefield.typing.chemistry.ChemicalEnvironment>` object
+  as a query.
+- `PR #634 <https://github.com/openforcefield/openforcefield/pull/634>`_: Fixes a bug in which calling
   :py:meth:`RDKitToolkitWrapper.from_file <openforcefield.utils.toolkits.RDKitToolkitWrapper.from_file>` directly
   would not load files correctly if passed lowercase `file_format`. Note that this bug did not occur when calling
   :`Molecule.from_file` <openforcefield.topology.molecule.Molecule.from_file>`.
@@ -26,8 +44,7 @@ Bugfixes
 New features
 """"""""""""
 - `PR #632 <https://github.com/openforcefield/openforcefield/pull/632>`_: Adds
-  :py:meth:`ForceField.registered_parameter_handlers 
-  <openforcefield.typing.engines.smirnoff.forcefield.ForceField.registered_parameter_handlers>`
+  :py:meth:`ForceField.registered_parameter_handlers <openforcefield.typing.engines.smirnoff.forcefield.ForceField.registered_parameter_handlers>`
 - `PR #614 <https://github.com/openforcefield/openforcefield/pull/614>`_: Adds 
   :py:meth:`ToolkitRegistry.deregister_toolkit <openforcefield.utils.toolkits.ToolkitRegistry.deregister_toolki>` 
   to de-register registered toolkits, which can include toolkit wrappers loaded into `GLOBAL_TOOLKIT_REGISTRY` by default.
@@ -38,6 +55,7 @@ New features
 - `PR #643 <https://github.com/openforcefield/openforcefield/pull/643>`_: Adds
   :py:func:`get_available_force_fields <openforcefield.typing.engines.smirnoff.forcefield.get_available_force_fields>`,
   which returns paths to the files of force fields available through entry point plugins.
+
 
 0.7.0 - Charge Increment Model, Proper Torsion interpolation, and new Molecule methods
 --------------------------------------------------------------------------------------
