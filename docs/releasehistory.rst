@@ -10,7 +10,7 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 0.7.1 - OETK2020 Compatibility and Minor Update
 -----------------------------------------------
 
-This is the first of our minor releases on our new planned monthly release schedule.
+This is the first of our patch releases on our new planned monthly release schedule.
 
 Detailed release notes are below, but the major new features of this release are updates for
 compatibility with the new 2020 OpenEye Toolkits release, the
