@@ -2145,6 +2145,7 @@ class FrozenMolecule(Serializable):
             atom_stereochemistry_matching=True,
             bond_stereochemistry_matching=True,
             strip_pyrimidal_n_atom_stereo=True,
+            toolkit_registry=GLOBAL_TOOLKIT_REGISTRY
     ):
         """
         Determines whether the two molecules are isomorphic by comparing their graph representations and the chosen
@@ -2181,6 +2182,15 @@ class FrozenMolecule(Serializable):
         bond_stereochemistry_matching : bool, default=True, optional
             If ``False``, bonds' stereochemistry is ignored for the
             purpose of determining equality.
+
+        strip_pyrimidal_n_atom_stereo: bool, default=True, optional
+            If ``True``, any stereochemistry defined around pyrimidal
+            nitrogen stereocenters will be disregarded in the isomorphism
+            check.
+
+        toolkit_registry : openforcefield.utils.toolkits.ToolkitRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
+            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for
+            removing stereochemistry from pyrimidal nitrogens.
 
         Returns
         -------
@@ -2244,14 +2254,14 @@ class FrozenMolecule(Serializable):
                 if strip_pyrimidal_n_atom_stereo:
                     # Make a copy of the molecule so we don't modify the original
                     data = deepcopy(data)
-                    data.strip_atom_stereochemistry(SMARTS)
+                    data.strip_atom_stereochemistry(SMARTS, toolkit_registry=toolkit_registry)
                 return data.to_networkx()
             elif isinstance(data, TopologyMolecule):
                 # TopologyMolecule class instance
                 if strip_pyrimidal_n_atom_stereo:
                     # Make a copy of the molecule so we don't modify the original
                     ref_mol = deepcopy(data.reference_molecule)
-                    ref_mol.strip_atom_stereochemistry(SMARTS)
+                    ref_mol.strip_atom_stereochemistry(SMARTS, toolkit_registry=toolkit_registry)
                 return ref_mol.to_networkx()
             elif isinstance(data, nx.Graph):
                 return data
@@ -2315,6 +2325,15 @@ class FrozenMolecule(Serializable):
             If ``False``, bonds' stereochemistry is ignored for the
             purpose of determining equality.
 
+        strip_pyrimidal_n_atom_stereo: bool, default=True, optional
+            If ``True``, any stereochemistry defined around pyrimidal
+            nitrogen stereocenters will be disregarded in the isomorphism
+            check.
+
+        toolkit_registry : openforcefield.utils.toolkits.ToolkitRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
+            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for
+            removing stereochemistry from pyrimidal nitrogens.
+
         Returns
         -------
         isomorphic : bool
@@ -2326,7 +2345,8 @@ class FrozenMolecule(Serializable):
                                        bond_order_matching=kwargs.get('bond_order_matching', True),
                                        atom_stereochemistry_matching=kwargs.get('atom_stereochemistry_matching', True),
                                        bond_stereochemistry_matching=kwargs.get('bond_stereochemistry_matching', True),
-                                       strip_pyrimidal_n_atom_stereo=kwargs.get('strip_pyrimidal_n_atom_stereo', True))[0]
+                                       strip_pyrimidal_n_atom_stereo=kwargs.get('strip_pyrimidal_n_atom_stereo', True),
+                                       toolkit_registry=kwargs.get('toolkit_registry', GLOBAL_TOOLKIT_REGISTRY))[0]
 
     def generate_conformers(self,
                             toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,

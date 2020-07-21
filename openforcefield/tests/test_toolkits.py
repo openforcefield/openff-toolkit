@@ -86,6 +86,7 @@ rdkit_inchi_isomorphic_fails = ['DrugBank_178', 'DrugBank_246', 'DrugBank_5847',
                                 'DrugBank_1700', 'DrugBank_4662', 'DrugBank_2052', 'DrugBank_2077', 'DrugBank_2082',
                                 'DrugBank_2210', 'DrugBank_2642']
 rdkit_inchi_roundtrip_mangled = ['DrugBank_2684']
+
 #=============================================================================================
 # TESTS
 #=============================================================================================
@@ -418,9 +419,9 @@ class TestOpenEyeToolkitWrapper:
                 # Some molecules graphs change during the round trip testing
                 # we test quite strict isomorphism here
                 with pytest.raises(AssertionError):
-                    assert molecule.is_isomorphic_with(mol2, bond_order_matching=False)
+                    assert molecule.is_isomorphic_with(mol2, bond_order_matching=False, toolkit_registry=toolkit)
             else:
-                assert molecule.is_isomorphic_with(mol2, bond_order_matching=False)
+                assert molecule.is_isomorphic_with(mol2, bond_order_matching=False, toolkit_registry=toolkit)
 
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_get_sdf_coordinates(self):
@@ -1296,9 +1297,9 @@ class TestRDKitToolkitWrapper:
                 # Some molecules graphs change during the round trip testing
                 # we test quite strict isomorphism here
                 with pytest.raises(AssertionError):
-                    assert molecule.is_isomorphic_with(mol2, bond_order_matching=False)
+                    assert molecule.is_isomorphic_with(mol2, bond_order_matching=False, toolkit_registry=toolkit)
             else:
-                assert molecule.is_isomorphic_with(mol2, bond_order_matching=False)
+                assert molecule.is_isomorphic_with(mol2, bond_order_matching=False, toolkit_registry=toolkit)
 
     @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
     def test_smiles_charged(self):
