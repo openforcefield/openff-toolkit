@@ -33,9 +33,9 @@ Behavior changed
 
 Bugfixes
 """"""""
-- `PR #647 <https://github.com/openforcefield/openforcefield/pull/646>`_: Updates
+- `PR #647 <https://github.com/openforcefield/openforcefield/pull/647>`_: Updates
   :py:class:`OpenEyeToolkitWrapper <openforcefield.utils.toolkits.OpenEyeToolkitWrapper>`
-  for 2020 OpenEye Toolkit API changes.
+  for 2020 OpenEye Toolkit behavior/API changes.
 - `PR #646 <https://github.com/openforcefield/openforcefield/pull/646>`_: Fixes a bug where
   :py:class:`Molecule.chemical_environment_matches <openforcefield.topology.Molecule>`
   was not able to accept a :py:class:`ChemicalEnvironment <openforcefield.typing.chemistry.ChemicalEnvironment>` object
