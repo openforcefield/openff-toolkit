@@ -135,7 +135,7 @@ class ValenceDict(_TransformedDict):
             })
         if not possible is None:
             i = 0
-            assert all([p in permutations for p in possible]), "Possible permuation is impossible!"
+            assert all([p in permutations for p in possible]), "Possible permutations "+str(possible)+" is impossible!"
             for k in permutations:
                 if all([x == y for x,y in zip(key,k)]):
                     return i
