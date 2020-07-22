@@ -1750,7 +1750,7 @@ class ParameterHandler(_ParameterAttributeHandler):
             self._parameter_type = parameter_type
             self._environment_match = environment_match
 
-    def find_matches(self, entity, expand_orientation=False):
+    def find_matches(self, entity, expand_permutations=False):
         """Find the elements of the topology/molecule matched by a parameter type.
 
         Parameters
@@ -1767,10 +1767,10 @@ class ParameterHandler(_ParameterAttributeHandler):
 
         # TODO: Right now, this method is only ever called with an entity that is a Topology.
         #  Should we reduce its scope and have a check here to make sure entity is a Topology?
-        return self._find_matches(entity, expand_orientation=expand_orientation)
+        return self._find_matches(entity, expand_permutations=expand_permutations)
 
     def _find_matches(self, entity, transformed_dict_cls=ValenceDict, 
-            use_named_slots=False, expand_orientation=False):
+            use_named_slots=False, expand_permutations=False):
         """Implement find_matches() and allow using a difference valence dictionary.
 
         Parameters
@@ -1810,7 +1810,7 @@ class ParameterHandler(_ParameterAttributeHandler):
                 key = environment_match.topology_atom_indices
                 
                 # only a match if orientation matches
-                if not hasattr(handler_match._parameter_type, "orientation"):
+                if not hasattr(handler_match._parameter_type, "match"):
                     # usual case (not virtual sites)
                     matches_for_this_type[key] = handler_match
                 else:
@@ -1819,9 +1819,23 @@ class ParameterHandler(_ParameterAttributeHandler):
                     # must check that the tuple of atoms are the same
                     # as they can be different in e.g. formaldehyde
                     orders = [m.topology_atom_indices for m in ce_matches] 
+                    orientation_flag = handler_match._parameter_type.match
+
+                    tdc = handler_match._parameter_type.transformed_dict_cls
+                    index_of_key = tdc.index_of(key, possible=orders)
+
+                    if orientation_flag == "once":
+                        orientation = [0]
+                    elif orientation_flag == "all_permutations":
+                        orientation = [tdc.index_of(k, possible=orders) for k in orders]
+                    else:
+                        raise Exception("VirtualSite match keyword not understood. Choose from 'once' or 'all_permutations'")
+
+
                     orders = [order for order in orders if sorted(key) == sorted(order)] 
-                    orientation = handler_match._parameter_type.orientation
-                    orientation = list(map(int, orientation.split(",")))
+
+
+                    # orientation = list(map(int, orientation.split(",")))
                     handler_match._parameter_type.multiplicity=len(orders)
                     if len(orientation) > len(orders):
                         error_msg = (
@@ -1830,10 +1844,8 @@ class ParameterHandler(_ParameterAttributeHandler):
                             "({:d}):\n{:s}").format(str(parameter_type), 
                                 orientation, len(orders), str(orders))
                         raise IndexError(error_msg)
-                    tdc = handler_match._parameter_type.transformed_dict_cls
 
-                    index_of_key = tdc.index_of(key, possible=orders)
-                    if not expand_orientation:
+                    if not expand_permutations:
                         key = tdc.key_transform(key)
 
                     hit = sum([index_of_key == ornt for ornt in orientation])
@@ -4159,7 +4171,7 @@ class VirtualSiteHandler(_NonbondedHandler):
         #self._check_attributes_are_equal(other_handler, identical_attrs=string_attrs_to_compare)
         #super().check_handler_compatibility(other_handler)
 
-    def find_matches(self, entity, expand_orientation=False):
+    def find_matches(self, entity, expand_permuations=False):
         """Find the virtual sites in the topology/molecule matched by a parameter type.
 
         Parameters
@@ -4175,7 +4187,7 @@ class VirtualSiteHandler(_NonbondedHandler):
 
         """
         return self._find_matches(entity, transformed_dict_cls=dict,
-            use_named_slots=True, expand_orientation=expand_orientation)
+            use_named_slots=True, expand_permutations=expand_permuations)
 
 
     def create_force(self, system, topology, **kwargs):
@@ -4249,7 +4261,7 @@ class VirtualSiteHandler(_NonbondedHandler):
         VSITETYPE=0
         for molecule in topology.reference_molecules:
             top_mol = Topology.from_molecules([molecule])
-            atom_matches = self.find_matches(top_mol, expand_orientation=True)
+            atom_matches = self.find_matches(top_mol, expand_permuations=True)
 
             combined_orientations = []
             for key, atom_match_lst in atom_matches.items():
