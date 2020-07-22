@@ -7,30 +7,67 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 * ``minor`` increments add features but do not break API compatibility
 * ``micro`` increments represent bugfix releases or improvements in documentation
 
-0.7.1 - Current development
----------------------------
+0.7.1 - OETK2020 Compatibility and Minor Update
+-----------------------------------------------
+
+This is the first of our patch releases on our new planned monthly release schedule.
+
+Detailed release notes are below, but the major new features of this release are updates for
+compatibility with the new 2020 OpenEye Toolkits release, the
+``get_available_force_fields`` function, and the disregarding of pyrimidal nitrogen stereochemistry
+in molecule isomorphism checks.
+
+Behavior changed
+""""""""""""""""
+- `PR #646 <https://github.com/openforcefield/openforcefield/pull/646>`_: Checking for
+  :py:class:`Molecule <openforcefield.topology.Molecule>`
+  equality using the ``==`` operator now disregards all pyrimidal nitrogen stereochemistry
+  by default. To re-enable, use
+  :py:class:`Molecule.{is|are}_isomorphic <openforcefield.topology.Molecule>`
+  with the ``strip_pyrimidal_n_atom_stereo=False`` keyword argument.
+- `PR #646 <https://github.com/openforcefield/openforcefield/pull/646>`_: Adds
+  an optional ``toolkit_registry`` keyword argument to
+  :py:class:`Molecule.are_isomorphic <openforcefield.topology.Molecule>`,
+  which identifies the toolkit that should be used to search for pyrimidal nitrogens.
+
 
 Bugfixes
 """"""""
-- `PR #634 <https://github.com/openforcefield/openforcefield/pull/634>`_: Fixes a bug in which calling 
-  :py:meth:`RDKitToolkitWrapper.from_file <openforcefield.utils.toolkits.RDKitToolkitWrapper.from_file>` directly
-  would not load files correctly if passed lowercase `file_format`. Note that this bug did not occur when calling
-  :`Molecule.from_file` <openforcefield.topology.molecule.Molecule.from_file>`.
+- `PR #647 <https://github.com/openforcefield/openforcefield/pull/647>`_: Updates
+  :py:class:`OpenEyeToolkitWrapper <openforcefield.utils.toolkits.OpenEyeToolkitWrapper>`
+  for 2020.0.4 OpenEye Toolkit behavior/API changes.
+- `PR #646 <https://github.com/openforcefield/openforcefield/pull/646>`_: Fixes a bug where
+  :py:class:`Molecule.chemical_environment_matches <openforcefield.topology.Molecule>`
+  was not able to accept a :py:class:`ChemicalEnvironment <openforcefield.typing.chemistry.ChemicalEnvironment>` object
+  as a query.
+- `PR #634 <https://github.com/openforcefield/openforcefield/pull/634>`_: Fixes a bug in which calling
+  :py:class:`RDKitToolkitWrapper.from_file <openforcefield.utils.toolkits.RDKitToolkitWrapper>` directly
+  would not load files correctly if passed lowercase ``file_format``. Note that this bug did not occur when calling
+  :py:class:`Molecule.from_file <openforcefield.topology.Molecule>`.
 - `PR #631 <https://github.com/openforcefield/openforcefield/pull/631>`_: Fixes a bug in which calling
-  :py:meth:`openforcefield.utils.utils.utils.unit_to_string <openforcefield.utils.utils.unit_to_string>` returned
+  :py:class:`unit_to_string <openforcefield.utils.utils.unit_to_string>` returned
   ``None`` when the unit is dimensionless. Now ``"dimensionless"`` is returned.
 - `PR #630 <https://github.com/openforcefield/openforcefield/pull/630>`_: Closes issue `Issue #629 
   <https://github.com/openforcefield/openforcefield/issues/629>`_ in which the wrong exception is raised when
-  attempting to instantiate a ``ForceField`` from an unparsable string.
+  attempting to instantiate a :py:class:`ForceField <openforcefield.typing.engines.smirnoff.forcefield.ForceField>`
+  from an unparsable string.
 
 New features
 """"""""""""
 - `PR #632 <https://github.com/openforcefield/openforcefield/pull/632>`_: Adds
-  :py:meth:`ForceField.registered_parameter_handlers 
-  <openforcefield.typing.engines.smirnoff.forcefield.ForceField.registered_parameter_handlers>`
+  :py:class:`ForceField.registered_parameter_handlers <openforcefield.typing.engines.smirnoff.forcefield.ForceField>`
 - `PR #614 <https://github.com/openforcefield/openforcefield/pull/614>`_: Adds 
-  :py:meth:`ToolkitRegistry.deregister_toolkit <openforcefield.utils.toolkits.ToolkitRegistry.deregister_toolki>` 
-  to de-register registered toolkits, which can include toolkit wrappers loaded into `GLOBAL_TOOLKIT_REGISTRY` by default.
+  :py:class:`ToolkitRegistry.deregister_toolkit <openforcefield.utils.toolkits.ToolkitRegistry>`
+  to de-register registered toolkits, which can include toolkit wrappers loaded into ``GLOBAL_TOOLKIT_REGISTRY``
+  by default.
+- `PR #656 <https://github.com/openforcefield/openforcefield/pull/656>`_: Adds
+  a new allowed ``am1elf10`` option to the OpenEye implementation of
+  :py:class:`assign_partial_charges <openforcefield.utils.toolkits.OpenEyeToolkitWrapper>` which
+  calculates the average partial charges at the AM1 level of theory using conformers selected using the ELF10 method.
+- `PR #643 <https://github.com/openforcefield/openforcefield/pull/643>`_: Adds
+  :py:class:`openforcefield.typing.engines.smirnoff.forcefield.get_available_force_fields <openforcefield.typing.engines.smirnoff.forcefield.get_available_force_fields>`,
+  which returns paths to the files of force fields available through entry point plugins.
+
 
 0.7.0 - Charge Increment Model, Proper Torsion interpolation, and new Molecule methods
 --------------------------------------------------------------------------------------
