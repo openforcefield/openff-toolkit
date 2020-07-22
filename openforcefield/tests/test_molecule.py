@@ -37,7 +37,7 @@ from openforcefield.utils import get_data_file_path
 from openforcefield.utils.toolkits import OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper, ToolkitRegistry
 from openforcefield.tests.test_forcefield import create_ethanol, create_reversed_ethanol, create_acetaldehyde, \
     create_benzene_no_aromatic, create_cyclohexane, create_cis_1_2_dichloroethene
-from openforcefield.tests.utils import requires_rdkit, requires_openeye
+from openforcefield.tests.utils import requires_rdkit, requires_openeye, has_pkg
 
 #=============================================================================================
 # TEST UTILITIES
@@ -1329,6 +1329,10 @@ class TestMolecule:
             assert bond.is_aromatic == sdf_bonds[key].is_aromatic
             assert bond.stereochemistry == sdf_bonds[key].stereochemistry
 
+    @pytest.mark.skipif(
+        not has_pkg('qcelemental'),
+        reason="Tests to/from QCShema require QCElemental, which was not found.",
+    )
     def test_to_qcschema(self):
         """Test the ability to make and validate qcschema with extras"""
         # the molecule has no coordinates so this should fail

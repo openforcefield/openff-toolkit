@@ -20,6 +20,7 @@ import itertools
 import os
 import pprint
 import textwrap
+import importlib
 
 import pytest
 import numpy as np
@@ -42,6 +43,36 @@ requires_openeye = pytest.mark.skipif(
 requires_openeye_mol2 = pytest.mark.skipif(
     requires_openeye.args, reason = 'Test requires OE toolkit to read mol2 files'
 )
+
+def has_pkg(pkg_name):
+    """
+    Helper function to generically check if a package is installed. Intended
+    to be used to check for optional dependencies.
+
+    Parameters
+    ----------
+    pkg_name : str
+        The name of the package to check of
+
+    Returns
+    -------
+    pkg_available : bool
+        Boolean indicator if the package is available or not
+
+    Examples
+    --------
+    >>> has_parmed = has_pkg('numpy')
+    >>> has_parmed
+    True
+    >>> has_foo = has_pkg('other_non_installed_pkg')
+    >>> has_foo
+    False
+    """
+    try:
+        module = importlib.import_module(pkg_name)
+    except ModuleNotFoundError:
+        return False
+    return True
 
 #=============================================================================================
 # Shortcut functions to get file paths to test data.
