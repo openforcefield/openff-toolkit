@@ -655,10 +655,11 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         """
         with tempfile.TemporaryDirectory() as tmpdir:
-            outfile = 'temp_molecule.' + file_format
-            self.to_file(molecule, outfile, file_format)
-            file_data = open(outfile).read()
-        file_obj.write(file_data)
+            with temporary_cd(tmpdir):
+                outfile = 'temp_molecule.' + file_format
+                self.to_file(molecule, outfile, file_format)
+                file_data = open(outfile).read()
+            file_obj.write(file_data)
 
     def to_file(self, molecule, file_path, file_format):
         """

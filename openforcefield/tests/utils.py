@@ -52,7 +52,7 @@ def has_pkg(pkg_name):
     Parameters
     ----------
     pkg_name : str
-        The name of the package to check of
+        The name of the package to check the availability of
 
     Returns
     -------
@@ -61,8 +61,8 @@ def has_pkg(pkg_name):
 
     Examples
     --------
-    >>> has_parmed = has_pkg('numpy')
-    >>> has_parmed
+    >>> has_numpy = has_pkg('numpy')
+    >>> has_numpy
     True
     >>> has_foo = has_pkg('other_non_installed_pkg')
     >>> has_foo
@@ -73,6 +73,28 @@ def has_pkg(pkg_name):
     except ModuleNotFoundError:
         return False
     return True
+
+
+def requires_pkg(pkg_name, reason=None):
+    """
+    Helper function to generate a skipif decorator for any package.
+
+    Parameters
+    ----------
+    pkg_name : str
+        The name of the package that is required for a test(s)
+    reason : str, optional
+        Explanation of why the skipped it to be tested
+
+    Returns
+    -------
+    requires_pkg : _pytest.mark.structures.MarkDecorator
+        A pytest decorator that will skip tests if the package is not available
+    """
+    if not reason:
+        reason = f"Package {pkg_name} is required, but was not found."
+    requires_pkg = pytest.mark.skipif(not has_pkg(pkg_name), reason=reason)
+    return requires_pkg
 
 #=============================================================================================
 # Shortcut functions to get file paths to test data.

@@ -37,12 +37,15 @@ from openforcefield.utils import get_data_file_path
 from openforcefield.utils.toolkits import OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper, ToolkitRegistry
 from openforcefield.tests.test_forcefield import create_ethanol, create_reversed_ethanol, create_acetaldehyde, \
     create_benzene_no_aromatic, create_cyclohexane, create_cis_1_2_dichloroethene
-from openforcefield.tests.utils import requires_rdkit, requires_openeye, has_pkg
+from openforcefield.tests.utils import requires_rdkit, requires_openeye, has_pkg, requires_pkg
 
 #=============================================================================================
 # TEST UTILITIES
 #=============================================================================================
 
+requires_qcelemental = requires_pkg(
+    'qcelemental', reason='Test involving QCSchema require QCElementa, which was not found.'
+)
 
 def assert_molecule_is_equal(molecule1, molecule2, msg):
     """Compare whether two Molecule objects are equal
@@ -1387,10 +1390,7 @@ class TestMolecule:
             assert bond.is_aromatic == sdf_bonds[key].is_aromatic
             assert bond.stereochemistry == sdf_bonds[key].stereochemistry
 
-    @pytest.mark.skipif(
-        not has_pkg('qcelemental'),
-        reason="Tests to/from QCShema require QCElemental, which was not found.",
-    )
+    @requires_qcelemental
     def test_to_qcschema(self):
         """Test the ability to make and validate qcschema with extras"""
         # the molecule has no coordinates so this should fail
@@ -1465,6 +1465,7 @@ class TestMolecule:
                        'C(#N)N'}
                        ]
 
+    @requires_qcelemental
     @pytest.mark.parametrize('input_data', client_examples)
     def test_from_qcschema_with_client(self, input_data):
         """For each of the examples try and make a offmol using the instance and dict and check they match"""
@@ -1488,6 +1489,7 @@ class TestMolecule:
 
         assert mol_from_dict.is_isomorphic_with(mol_from_smiles) is True
 
+    @requires_qcelemental
     def test_qcschema_round_trip(self):
         """Test making a molecule from qcschema then converting back"""
 
@@ -2091,7 +2093,10 @@ class TestMolecule:
 
         assert isinstance(mol.visualize(backend='rdkit'), rdkit.Chem.rdchem.Mol)
 
-    @requires_rdkit
+    @pytest.mark.skipif(
+        has_pkg('rdkit'),
+        reason='Test requires that RDKit is not installed',
+    )
     def test_visualize_fallback(self):
         """Test falling back from RDKit to OpenEye if RDKit is specified but not installed"""
         mol = Molecule().from_smiles('CCO')
