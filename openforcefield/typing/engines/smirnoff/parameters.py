@@ -1802,86 +1802,96 @@ class ParameterHandler(_ParameterAttributeHandler):
             matches_for_this_type = defaultdict(list)
 
             ce_matches = entity.chemical_environment_matches(parameter_type.smirks)
-                
 
-            for environment_match in ce_matches:
-                # Update the matches for this parameter type.
-                handler_match = self._Match(parameter_type, environment_match)
-                key = environment_match.topology_atom_indices
-                
-                # only a match if orientation matches
-                if not hasattr(handler_match._parameter_type, "match"):
-                    # usual case (not virtual sites)
-                    matches_for_this_type[key] = handler_match
-                else:
+            # Split the groups into unique sets i.e. 13,14 and 13,15
+            # Needed for vsites, where a vsite could match C-H with for a CH2 group
+            # Since these are distinct vsite definitions, we need to split them
+            # up into separate groups (match_groups)
+            match_groups_set = [m.topology_atom_indices for m in ce_matches]
+            match_groups = []
+            for key in set(match_groups_set):
+                distinct_atom_pairs = [x for x in ce_matches if sorted(x.topology_atom_indices) == sorted(key)]
+                match_groups.append(distinct_atom_pairs)
 
-                    # the possible orders of this match
-                    # must check that the tuple of atoms are the same
-                    # as they can be different in e.g. formaldehyde
-                    orders = [m.topology_atom_indices for m in ce_matches] 
-                    orientation_flag = handler_match._parameter_type.match
+            for ce_matches in match_groups:
+                for environment_match in ce_matches:
+                    # Update the matches for this parameter type.
+                    handler_match = self._Match(parameter_type, environment_match)
+                    key = environment_match.topology_atom_indices
 
-                    tdc = handler_match._parameter_type.transformed_dict_cls
-                    index_of_key = tdc.index_of(key, possible=orders)
-
-                    if orientation_flag == "once":
-                        orientation = [0]
-                    elif orientation_flag == "all_permutations":
-                        orientation = [tdc.index_of(k, possible=orders) for k in orders]
+                    # only a match if orientation matches
+                    if not hasattr(handler_match._parameter_type, "match"):
+                        # usual case (not virtual sites)
+                        matches_for_this_type[key] = handler_match
                     else:
-                        raise Exception("VirtualSite match keyword not understood. Choose from 'once' or 'all_permutations'")
+
+                        # breakpoint()
+                        # the possible orders of this match
+                        # must check that the tuple of atoms are the same
+                        # as they can be different in e.g. formaldehyde
+                        orders = [m.topology_atom_indices for m in ce_matches]
+                        orientation_flag = handler_match._parameter_type.match
+
+                        tdc = handler_match._parameter_type.transformed_dict_cls
+                        index_of_key = tdc.index_of(key, possible=orders)
+
+                        if orientation_flag == "once":
+                            orientation = [0]
+                        elif orientation_flag == "all_permutations":
+                            orientation = [tdc.index_of(k, possible=orders) for k in orders]
+                        else:
+                            raise Exception("VirtualSite match keyword not understood. Choose from 'once' or 'all_permutations'")
 
 
-                    orders = [order for order in orders if sorted(key) == sorted(order)] 
+                        orders = [order for order in orders if sorted(key) == sorted(order)]
 
 
-                    # orientation = list(map(int, orientation.split(",")))
-                    handler_match._parameter_type.multiplicity=len(orders)
-                    if len(orientation) > len(orders):
-                        error_msg = (
-                            "For parameter of type\n{:s}\norientations {} " +
-                            "exceeds length of possible orders " +
-                            "({:d}):\n{:s}").format(str(parameter_type), 
-                                orientation, len(orders), str(orders))
-                        raise IndexError(error_msg)
+                        # orientation = list(map(int, orientation.split(",")))
+                        handler_match._parameter_type.multiplicity=len(orders)
+                        if len(orientation) > len(orders):
+                            error_msg = (
+                                "For parameter of type\n{:s}\norientations {} " +
+                                "exceeds length of possible orders " +
+                                "({:d}):\n{:s}").format(str(parameter_type), 
+                                    orientation, len(orders), str(orders))
+                            raise IndexError(error_msg)
 
-                    if not expand_permutations:
-                        key = tdc.key_transform(key)
+                        if not expand_permutations:
+                            key = tdc.key_transform(key)
 
-                    hit = sum([index_of_key == ornt for ornt in orientation])
-                    assert hit < 2, "VirtualSite orientation for {:s} indices invalid: Has duplicates".format(parameter_type.__repr__)
-                    if hit == 1:
-                        matches_for_this_type[key].append(handler_match)
+                        hit = sum([index_of_key == ornt for ornt in orientation])
+                        assert hit < 2, "VirtualSite orientation for {:s} indices invalid: Has duplicates".format(parameter_type.__repr__)
+                        if hit == 1:
+                            matches_for_this_type[key].append(handler_match)
 
-            matches_for_this_type = dict(matches_for_this_type)
-            # Update matches of all parameter types.
-            if use_named_slots:  # assumes virtualsites for now
-                for k in matches_for_this_type:
-                    if k not in matches:
-                        matches[k] = {}
-                for k,v in matches_for_this_type.items():
-                    marginal_matches = []
-                    for new_match in v:
-                        unique = True
-                        new_item = new_match._parameter_type
-                        for idx,(name,existing_match) in enumerate(matches[k].items()):
-                            existing_item = existing_match._parameter_type
-                            same_parameter = False
+                # Update matches of all parameter types.
+                if use_named_slots:  # assumes virtualsites for now
+                    for k in matches_for_this_type:
+                        if k not in matches:
+                            matches[k] = {}
+                    for k,v in matches_for_this_type.items():
+                        marginal_matches = []
+                        for new_match in v:
+                            unique = True
+                            new_item = new_match._parameter_type
+                            for idx,(name,existing_match) in enumerate(matches[k].items()):
+                                existing_item = existing_match._parameter_type
+                                same_parameter = False
 
-                            same_type = type(existing_item) == type(new_item)
-                            if same_type:
-                                same_parameter = existing_item == new_item
+                                same_type = type(existing_item) == type(new_item)
+                                if same_type:
+                                    same_parameter = existing_item == new_item
 
-                            # same, so replace it to have a FIFO priority
-                            # and the last parameter matching wins
-                            if same_parameter:
-                                matches[k][new_item.name] = new_match
-                                unique = False
-                        if unique:
-                            marginal_matches.append(new_match)
-                    matches[k].update({p._parameter_type.name:p for p in marginal_matches})
-            else:
-                matches.update(matches_for_this_type)
+                                # same, so replace it to have a FIFO priority
+                                # and the last parameter matching wins
+                                if same_parameter:
+                                    matches[k][new_item.name] = new_match
+                                    unique = False
+                            if unique:
+                                marginal_matches.append(new_match)
+                        matches[k].update({p._parameter_type.name:p for p in marginal_matches})
+                else:
+                    matches.update(matches_for_this_type)
 
             logger.debug('{:64} : {:8} matches'.format(
                 parameter_type.smirks, len(matches_for_this_type)))
@@ -1889,6 +1899,8 @@ class ParameterHandler(_ParameterAttributeHandler):
         logger.debug('{} matches identified'.format(len(matches)))
 
         # 
+        # matches_for_this_type = dict(matches_for_this_type)
+
         if use_named_slots:
             for k,v in matches.items():
                 matches[k] = list(v.values())
@@ -3976,7 +3988,7 @@ class VirtualSiteHandler(_NonbondedHandler):
         distance        = ParameterAttribute(unit=unit.angstrom)
         chargeincrement = IndexedParameterAttribute(unit=unit.elementary_charge)
         type            = ParameterAttribute()
-        orientation     = ParameterAttribute(default="0", converter=str)
+        match           = ParameterAttribute(default="all-permutations", converter=str)
         multiplicity    = ParameterAttribute(default=1, converter=int)
         transformed_dict_cls = ValenceDict
 
@@ -3993,12 +4005,36 @@ class VirtualSiteHandler(_NonbondedHandler):
                     * `Molecule._add_divalent_lone_pair_virtual_site`
                     * `Molecule._add_trivalent_lone_pair_virtual_site`
 
+            atoms : List of atom indices
             Returns
             -------
                 The index of the created virtual site
             """
 
             args = [ atoms, self.distance ]
+
+
+            # This needs to be dealt with better
+            # Since we cannot save state with this object during find_matches,
+            # we have no idea here which permutations actually matched.
+            # Since we are past the point where we can examine chemical environment
+            # matches to determine the possible orientations, we must default
+            # and take the explicit interpretation: "all_permutations" will
+            # try to make a virtual particle for every permutation
+            # However, we will bail on cases we know to not work with the "current"
+            # spec.
+            if self.match == "once":
+                orientation=atoms
+            else:
+                if len(atoms) == 2:
+                    orientation=sorted(atoms)
+                elif len(atoms) == 3:
+                    orientation=[sorted(atoms), sorted(atoms)[::-1]] # This is believable
+                elif len(atoms) == 4: # assumes improper-like vsite
+                    Exception("No virtual site with 4 atoms and match=all_permutations is not supported.")
+                else:
+                    raise Exception("Virtual site with more than 4 atoms defined is not implemented.")
+
             base_args = {
                 "name"              : self.name,
                 "charge_increments" : self.chargeincrement,
@@ -4006,7 +4042,7 @@ class VirtualSiteHandler(_NonbondedHandler):
                 "epsilon"           : self.epsilon,
                 "sigma"             : self.sigma,
                 "rmin_half"         : self.rmin_half,
-                "orientations"      : self.orientation,
+                "orientations"      : orientation,
             }
             kwargs.update( base_args)
 

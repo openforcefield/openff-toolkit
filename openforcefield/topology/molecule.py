@@ -727,8 +727,8 @@ class VirtualSite(Particle):
         vsite_dict_units["charge_increments"] = string_to_quantity(
             vsite_dict["charge_increments"])
 
-        vsite_dict_units["orientation"] = self._orientation
-        vsite_dict_units["multiplicity"] = self._multiplicity
+        vsite_dict_units["orientation"] = cls._orientation
+        vsite_dict_units["multiplicity"] = cls._multiplicity
 
         return VirtualSite(**vsite_dict_units)
 
