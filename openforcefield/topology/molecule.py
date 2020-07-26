@@ -1853,6 +1853,29 @@ class FrozenMolecule(Serializable):
         if not self.has_unique_atom_names:
             self.generate_unique_atom_names()
 
+    def strip_atom_stereochemistry(self, smarts, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+        """Delete stereochemistry information for certain atoms, if it is present.
+        This method can be used to "normalize" molecules imported from different cheminformatics
+        toolkits, which differ in which atom centers are considered stereogenic.
+
+        Parameters
+        ----------
+        smarts: str or ChemicalEnvironment
+            Tagged SMARTS with a single atom with index 1. Any matches for this atom will have any assigned
+            stereocheistry information removed.
+        toolkit_registry : a :class:`ToolkitRegistry` or :class:`ToolkitWrapper` object, optional, default=GLOBAL_TOOLKIT_REGISTRY
+            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for I/O operations
+
+        """
+        from openforcefield.typing.chemistry.environment import AtomChemicalEnvironment
+        chem_env = AtomChemicalEnvironment(smarts)
+        matches = self.chemical_environment_matches(chem_env, toolkit_registry=toolkit_registry)
+
+        for match in set(matches):
+            atom_idx = match[0]
+            self.atoms[atom_idx].stereochemistry = None
+
+
     ####################################################################################################
     # Safe serialization
     ####################################################################################################
@@ -2365,14 +2388,15 @@ class FrozenMolecule(Serializable):
 
     @staticmethod
     def are_isomorphic(
-        mol1,
-        mol2,
-        return_atom_map=False,
-        aromatic_matching=True,
-        formal_charge_matching=True,
-        bond_order_matching=True,
-        atom_stereochemistry_matching=True,
-        bond_stereochemistry_matching=True,
+
+            mol1, mol2, return_atom_map=False,
+            aromatic_matching=True,
+            formal_charge_matching=True,
+            bond_order_matching=True,
+            atom_stereochemistry_matching=True,
+            bond_stereochemistry_matching=True,
+            strip_pyrimidal_n_atom_stereo=True,
+            toolkit_registry=GLOBAL_TOOLKIT_REGISTRY
     ):
         """
         Determines whether the two molecules are isomorphic by comparing their graph representations and the chosen
@@ -2409,6 +2433,15 @@ class FrozenMolecule(Serializable):
         bond_stereochemistry_matching : bool, default=True, optional
             If ``False``, bonds' stereochemistry is ignored for the
             purpose of determining equality.
+
+        strip_pyrimidal_n_atom_stereo: bool, default=True, optional
+            If ``True``, any stereochemistry defined around pyrimidal
+            nitrogen stereocenters will be disregarded in the isomorphism
+            check.
+
+        toolkit_registry : openforcefield.utils.toolkits.ToolkitRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
+            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for
+            removing stereochemistry from pyrimidal nitrogens.
 
         Returns
         -------
@@ -2469,21 +2502,32 @@ class FrozenMolecule(Serializable):
             """For the given data type, return the networkx graph"""
             from openforcefield.topology import TopologyMolecule
 
+            if strip_pyrimidal_n_atom_stereo:
+                SMARTS = '[N+0X3:1](-[*])(-[*])(-[*])'
+
             if isinstance(data, FrozenMolecule):
                 # Molecule class instance
+                if strip_pyrimidal_n_atom_stereo:
+                    # Make a copy of the molecule so we don't modify the original
+                    data = deepcopy(data)
+                    data.strip_atom_stereochemistry(SMARTS, toolkit_registry=toolkit_registry)
                 return data.to_networkx()
             elif isinstance(data, TopologyMolecule):
                 # TopologyMolecule class instance
-                return data.reference_molecule.to_networkx()
+                if strip_pyrimidal_n_atom_stereo:
+                    # Make a copy of the molecule so we don't modify the original
+                    ref_mol = deepcopy(data.reference_molecule)
+                    ref_mol.strip_atom_stereochemistry(SMARTS, toolkit_registry=toolkit_registry)
+                return ref_mol.to_networkx()
             elif isinstance(data, nx.Graph):
                 return data
 
             else:
-                raise NotImplementedError(
-                    f"The input type {type(data)} is not supported,"
-                    f"please supply an openforcefield.topology.molecule.Molecule,"
-                    f"openforcefield.topology.topology.TopologyMolecule or networkx representaion "
-                    f"of the molecule.")
+
+                raise NotImplementedError(f'The input type {type(data)} is not supported,'
+                                          f'please supply an openforcefield.topology.molecule.Molecule,'
+                                          f'openforcefield.topology.topology.TopologyMolecule or networkx '
+                                          f'representation of the molecule.')
 
         mol1_netx = to_networkx(mol1)
         mol2_netx = to_networkx(mol2)
@@ -2537,31 +2581,35 @@ class FrozenMolecule(Serializable):
             If ``False``, bonds' stereochemistry is ignored for the
             purpose of determining equality.
 
+        strip_pyrimidal_n_atom_stereo: bool, default=True, optional
+            If ``True``, any stereochemistry defined around pyrimidal
+            nitrogen stereocenters will be disregarded in the isomorphism
+            check.
+
+        toolkit_registry : openforcefield.utils.toolkits.ToolkitRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
+            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for
+            removing stereochemistry from pyrimidal nitrogens.
+
         Returns
         -------
         isomorphic : bool
         """
 
-        return Molecule.are_isomorphic(
-            self,
-            other,
-            return_atom_map=False,
-            aromatic_matching=kwargs.get("aromatic_matching", True),
-            formal_charge_matching=kwargs.get("formal_charge_matching", True),
-            bond_order_matching=kwargs.get("bond_order_matching", True),
-            atom_stereochemistry_matching=kwargs.get(
-                "atom_stereochemistry_matching", True),
-            bond_stereochemistry_matching=kwargs.get(
-                "bond_stereochemistry_matching", True),
-        )[0]
 
-    def generate_conformers(
-        self,
-        toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
-        n_conformers=10,
-        rms_cutoff=None,
-        clear_existing=True,
-    ):
+        return Molecule.are_isomorphic(self, other, return_atom_map=False,
+                                       aromatic_matching=kwargs.get('aromatic_matching', True),
+                                       formal_charge_matching=kwargs.get('formal_charge_matching', True),
+                                       bond_order_matching=kwargs.get('bond_order_matching', True),
+                                       atom_stereochemistry_matching=kwargs.get('atom_stereochemistry_matching', True),
+                                       bond_stereochemistry_matching=kwargs.get('bond_stereochemistry_matching', True),
+                                       strip_pyrimidal_n_atom_stereo=kwargs.get('strip_pyrimidal_n_atom_stereo', True),
+                                       toolkit_registry=kwargs.get('toolkit_registry', GLOBAL_TOOLKIT_REGISTRY))[0]
+
+    def generate_conformers(self,
+                            toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
+                            n_conformers=10,
+                            rms_cutoff=None,
+                            clear_existing=True):
         """
         Generate conformers for this molecule using an underlying toolkit. If n_conformers=0, no toolkit wrapper
         will be called. If n_conformers=0 and clear_existing=True, molecule.conformers will be set to None.
@@ -3656,8 +3704,9 @@ class FrozenMolecule(Serializable):
         """
         # Resolve to SMIRKS if needed
         # TODO: Update this to use updated ChemicalEnvironment API
-        if hasattr(query, "asSMIRKS"):
-            smirks = query.asSMIRKS()
+
+        if hasattr(query, 'smirks'):
+            smirks = query.smirks
         elif type(query) == str:
             smirks = query
         else:

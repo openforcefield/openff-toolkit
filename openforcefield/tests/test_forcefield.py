@@ -29,7 +29,7 @@ from openforcefield.utils.toolkits import (OpenEyeToolkitWrapper, RDKitToolkitWr
 from openforcefield.utils import get_data_file_path
 from openforcefield.topology import Molecule, Topology
 from openforcefield.typing.engines.smirnoff import (ForceField, IncompatibleParameterError, SMIRNOFFSpecError,
-    XMLParameterIOHandler, ParameterHandler)
+    XMLParameterIOHandler, ParameterHandler, get_available_force_fields)
 
 
 #======================================================================
@@ -584,6 +584,29 @@ if RDKitToolkitWrapper.is_available() and AmberToolsToolkitWrapper.is_available(
 class TestForceField():
     """Test the ForceField class"""
 
+    def test_get_available_force_fields_loadable(self, full_path, force_field_file):
+        """Ensure get_available_force_fields returns some expected data"""
+        available_force_fields = get_available_force_fields(full_path=False)
+
+        # Incomplete list of some expected force fields
+        expected_force_fields = [
+            'smirnoff99Frosst-1.0.0.offxml',
+            'smirnoff99Frosst-1.1.0.offxml',
+            'openff-1.0.0.offxml',
+            'openff_unconstrainted-1.0.0.offxml',
+            'openff-1.1.0.offxml',
+            'openff-1.2.0.offxml',
+        ]
+
+        for ff in expected_force_fields:
+            assert ff in available_force_fields
+
+    @pytest.mark.parametrize('full_path', [(True, False)])
+    @pytest.mark.parametrize('force_field_file', [*get_available_force_fields()])
+    def test_get_available_force_fields_loadable(self, full_path, force_field_file):
+        """Ensure get_available_force_fields returns load-able files"""
+        ForceField(force_field_file)
+
     def test_create_forcefield_no_args(self):
         """Test empty constructor"""
         forcefield = ForceField()
@@ -616,6 +639,12 @@ class TestForceField():
         assert len(forcefield._parameter_handlers['ProperTorsions']._parameters) == 158
         assert len(forcefield._parameter_handlers['ImproperTorsions']._parameters) == 4
         assert len(forcefield._parameter_handlers['vdW']._parameters) == 35
+
+    def test_load_bad_string(self):
+        with pytest.raises(IOError) as exception_info:
+            ForceField('1234')
+        assert 'Source 1234 could not be read.' in str(exception_info.value)
+        assert 'syntax error' in str(exception_info.value)
 
     @pytest.mark.skip(reason='Needs to be updated for 0.2.0 syntax')
     def test_create_forcefield_from_file_list(self):
@@ -1210,6 +1239,26 @@ class TestForceField():
                 forcefield.get_parameter_handler('vdW', {}).method = vdw_method
                 forcefield.get_parameter_handler('Electrostatics', {}).method = electrostatics_method
                 omm_system = forcefield.create_openmm_system(topology)
+
+    def test_registered_parameter_handlers(self):
+        """Test registered_parameter_handlers property"""
+        forcefield = ForceField('test_forcefields/smirnoff99Frosst.offxml')
+        registered_handlers = forcefield.registered_parameter_handlers
+
+        expected_handlers = [
+            'Bonds',
+            'Angles',
+            'ProperTorsions',
+            'ImproperTorsions',
+            'vdW',
+            'Electrostatics',
+            'ToolkitAM1BCC',
+        ]
+
+        for expected_handler in expected_handlers:
+            assert expected_handler in registered_handlers
+
+        assert 'LibraryChrages' not in registered_handlers
 
     def test_parameter_handler_lookup(self):
         """Ensure __getitem__ lookups work"""

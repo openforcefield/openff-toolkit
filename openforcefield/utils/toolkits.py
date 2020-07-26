@@ -57,6 +57,7 @@ import importlib
 import logging
 import subprocess
 import tempfile
+import inspect
 
 from simtk import unit
 import numpy as np
@@ -676,7 +677,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         from openeye import oechem
         oemol = self.to_openeye(molecule)
         ofs = oechem.oemolostream(file_path)
-        openeye_format = getattr(oechem, 'OEFormat_' + file_format)
+        openeye_format = getattr(oechem, 'OEFormat_' + file_format.upper())
         ofs.SetFormat(openeye_format)
 
         # OFFTK strictly treats SDF as a single-conformer format.
@@ -1321,6 +1322,13 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         """
         from openeye import oechem
 
+        if hasattr(oechem, aromaticity_model):
+            oe_aro_model = getattr(oechem, aromaticity_model)
+        else:
+            raise ValueError(
+                "Error: provided aromaticity model not recognized by oechem."
+            )
+
         oemol = oechem.OEMol()
         #if not(molecule.name is None):
         oemol.SetTitle(molecule.name)
@@ -1330,7 +1338,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         for atom in molecule.atoms:
             oeatom = oemol.NewAtom(atom.atomic_number)
             oeatom.SetFormalCharge(atom.formal_charge.value_in_unit(unit.elementary_charge)) # simtk.unit.Quantity(1, unit.elementary_charge)
-            oeatom.SetAromatic(atom.is_aromatic)
+            # TODO: Do we want to provide _any_ pathway for Atom.is_aromatic to influence the OEMol?
+            #oeatom.SetAromatic(atom.is_aromatic)
             oeatom.SetData('name', atom.name)
             oeatom.SetPartialCharge(float('nan'))
             oemol_atoms.append(oeatom)
@@ -1346,11 +1355,14 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             oebond = oemol.NewBond(oemol_atoms[atom1_index],
                                    oemol_atoms[atom2_index])
             oebond.SetOrder(bond.bond_order)
-            oebond.SetAromatic(bond.is_aromatic)
+            # TODO: Do we want to provide _any_ pathway for Bond.is_aromatic to influence the OEMol?
+            #oebond.SetAromatic(bond.is_aromatic)
             if not (bond.fractional_bond_order is None):
                 oebond.SetData('fractional_bond_order',
                                bond.fractional_bond_order)
             oemol_bonds.append(oebond)
+
+        oechem.OEAssignAromaticFlags(oemol, oe_aro_model)
 
         # Set atom stereochemistry now that all connectivity is in place
         for atom, oeatom in zip(molecule.atoms, oemol_atoms):
@@ -1849,6 +1861,11 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                                                        'max_confs': 1,
                                                        'rec_confs': 1,
                                                        },
+                                    'am1elf10': {'oe_charge_method': oequacpac.OEELFCharges(oequacpac.OEAM1Charges(optimize=True, symmetrize=True), 10),
+                                                 'min_confs': 1,
+                                                 'max_confs': None,
+                                                 'rec_confs': 500,
+                                                },
                                     'am1bccelf10': {'oe_charge_method': oequacpac.OEAM1BCCELF10Charges,
                                                   'min_confs': 1,
                                                   'max_confs': None,
@@ -1904,16 +1921,24 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             symmetrize = False
             quacpac_status = oequacpac.OEAssignCharges(oemol, charge_method['oe_charge_method'](optimize, symmetrize))
         else:
-            quacpac_status = oequacpac.OEAssignCharges(oemol, charge_method['oe_charge_method']())
+            oe_charge_method = charge_method['oe_charge_method']
+
+            if callable(oe_charge_method):
+                oe_charge_method = oe_charge_method()
+
+            quacpac_status = oequacpac.OEAssignCharges(oemol, oe_charge_method)
 
         oechem.OEThrow.SetOutputStream(oechem.oeerr)  # restoring to original state
         # This logic handles errors encountered in #34, which can occur when using ELF10 conformer selection
         if not quacpac_status:
+
+            oe_charge_engine = oequacpac.OEAM1Charges if partial_charge_method == "am1elf10" else oequacpac.OEAM1BCCCharges
+
             if "SelectElfPop: issue with removing trans COOH conformers" in (errfs.str().decode("UTF-8")):
-                logger.warning("Warning: OEAM1BCCELF10 charge assignment failed due to a known bug (toolkit issue "
-                               "#346). Downgrading to OEAM1BCC charge assignment for this molecule. More information"
-                               "is available at https://github.com/openforcefield/openforcefield/issues/346")
-                quacpac_status = oequacpac.OEAssignCharges(oemol, oequacpac.OEAM1BCCCharges())
+                logger.warning(f"Warning: charge assignment involving ELF10 conformer selection failed due to a known bug (toolkit issue "
+                               f"#346). Downgrading to {oe_charge_engine.__name__} charge assignment for this molecule. More information"
+                               f"is available at https://github.com/openforcefield/openforcefield/issues/346")
+                quacpac_status = oequacpac.OEAssignCharges(oemol, oe_charge_engine())
 
         if quacpac_status is False:
             raise ChargeCalculationError(f'Unable to assign charges: {errfs.str().decode("UTF-8")}')
@@ -2363,6 +2388,9 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         """
         from rdkit import Chem
+
+        file_format = file_format.upper()
+
         mols = list()
         if (file_format == 'MOL') or (file_format == 'SDF'):
             for rdmol in Chem.SupplierFromFilename(file_path, removeHs=False, sanitize=False, strictParsing=True):
@@ -4293,6 +4321,51 @@ class ToolkitRegistry:
         # Add toolkit to the registry.
         self._toolkits.append(toolkit_wrapper)
 
+    def deregister_toolkit(self, toolkit_wrapper):
+        """
+        Remove a ToolkitWrapper from the list of toolkits in this ToolkitRegistry
+
+        .. warning :: This API is experimental and subject to change.
+
+        Parameters
+        ----------
+        toolkit_wrapper : instance or subclass of ToolkitWrapper
+            The toolkit wrapper to remove from the registry
+
+        Raises
+        ------
+        InvalidToolkitError
+            If toolkit_wrapper is not a ToolkitWrapper or subclass
+        ToolkitUnavailableException
+            If toolkit_wrapper is not found in the registry
+        """
+        # If passed a class, instantiate it
+        if inspect.isclass(toolkit_wrapper):
+            toolkit_wrapper = toolkit_wrapper()
+
+        if not isinstance(toolkit_wrapper, ToolkitWrapper):
+            msg = (
+                f"Argument {toolkit_wrapper} must an ToolkitWrapper "
+                f"or subclass of it. Found type {type(toolkit_wrapper)}."
+            )
+            raise InvalidToolkitError(msg)
+
+        toolkits_to_remove = []
+
+        for toolkit in self._toolkits:
+            if type(toolkit) == type(toolkit_wrapper):
+                toolkits_to_remove.append(toolkit)
+
+        if not toolkits_to_remove:
+            msg = (
+                f"Did not find {toolkit_wrapper} in registry. "
+                f"Currently registered toolkits are {self._toolkits}"
+            )
+            raise ToolkitUnavailableException(msg)
+
+        for toolkit_to_remove in toolkits_to_remove:
+            self._toolkits.remove(toolkit_to_remove)
+
     def add_toolkit(self, toolkit_wrapper):
         """
         Append a ToolkitWrapper onto the list of toolkits in this ToolkitRegistry
@@ -4304,12 +4377,16 @@ class ToolkitRegistry:
         toolkit_wrapper : openforcefield.utils.ToolkitWrapper
             The ToolkitWrapper object to add to the list of registered toolkits
 
+        Raises
+        ------
+        InvalidToolkitError
+            If toolkit_wrapper is not a ToolkitWrapper or subclass
         """
         if not isinstance(toolkit_wrapper, ToolkitWrapper):
             msg = "Something other than a ToolkitWrapper object was passed to ToolkitRegistry.add_toolkit()\n"
             msg += "Given object {} of type {}".format(toolkit_wrapper,
                                                        type(toolkit_wrapper))
-            raise Exception(msg)
+            raise InvalidToolkitError(msg)
         self._toolkits.append(toolkit_wrapper)
 
     # TODO: Can we automatically resolve calls to methods that are not explicitly defined using some Python magic?

@@ -23,7 +23,8 @@ from openforcefield.typing.engines.smirnoff.parameters import (
     ParameterAttribute, IndexedParameterAttribute, ParameterList,
     ParameterType, BondHandler, ParameterHandler, ProperTorsionHandler,
     ImproperTorsionHandler, LibraryChargeHandler, GBSAHandler, SMIRNOFFSpecError,
-    _ParameterAttributeHandler, ChargeIncrementModelHandler, IncompatibleParameterError
+    _ParameterAttributeHandler, ChargeIncrementModelHandler, IncompatibleParameterError,
+    DuplicateParameterError,
     )
 from openforcefield.utils import detach_units, IncompatibleUnitError
 from openforcefield.utils.collections import ValidatedList
@@ -291,6 +292,83 @@ class TestParameterAttributeHandler:
 #======================================================================
 
 class TestParameterHandler:
+
+    from simtk import unit
+    length = 1*unit.angstrom
+    k = 10*unit.kilocalorie_per_mole/unit.angstrom**2
+
+    def test_add_parameter(self):
+        """Test the behavior of add_parameter"""
+        bh = BondHandler(skip_version_check=True)
+        param1 = {'smirks': '[*:1]-[*:2]', 'length': self.length, 'k': self.k, 'id': 'b1'}
+        param2 = {'smirks': '[*:1]=[*:2]', 'length': self.length, 'k': self.k, 'id': 'b2'}
+        param3 = {'smirks': '[*:1]#[*:2]', 'length': self.length, 'k': self.k, 'id': 'b3'}
+
+        bh.add_parameter(param1)
+        bh.add_parameter(param2)
+        bh.add_parameter(param3)
+
+        assert [p.id for p in bh._parameters] == ['b1', 'b2', 'b3']
+
+        param_duplicate_smirks = {'smirks': param2['smirks'], 'length': 2*self.length, 'k': 2*self.k}
+
+        # Ensure a duplicate parameter cannot be added
+        with pytest.raises(DuplicateParameterError):
+            bh.add_parameter(param_duplicate_smirks)
+
+        dict_to_add_by_smirks = {
+            'smirks': '[#1:1]-[#6:2]', 'length': self.length, 'k': self.k, 'id': 'd1',
+        }
+        dict_to_add_by_index = {
+            'smirks': '[#1:1]-[#8:2]', 'length': self.length, 'k': self.k, 'id': 'd2',
+        }
+
+        param_to_add_by_smirks = BondHandler.BondType(
+            **{'smirks': '[#6:1]-[#6:2]', 'length': self.length, 'k': self.k, 'id': 'p1'}
+        )
+        param_to_add_by_index = BondHandler.BondType(
+            **{'smirks': '[#6:1]=[#8:2]', 'length': self.length, 'k': self.k, 'id': 'p2'}
+        )
+
+        param_several_apart = {
+            'smirks': '[#1:1]-[#7:2]', 'length': self.length, 'k': self.k, 'id': 's0',
+        }
+
+        # The `before` parameter should come after the `after` parameter
+        # in the parameter list; i.e. in this list of ['-', '=', '#'], it is
+        # impossible to add a new parameter after '=' *and* before '-'
+        with pytest.raises(ValueError):
+            # Test invalid parameter order by SMIRKS
+            bh.add_parameter(dict_to_add_by_smirks, after='[*:1]=[*:2]', before='[*:1]-[*:2]')
+
+        with pytest.raises(ValueError):
+            # Test invalid parameter order by index
+            bh.add_parameter(dict_to_add_by_index, after=1, before=0)
+
+        # Add d1 before param b2
+        bh.add_parameter(dict_to_add_by_smirks, before='[*:1]=[*:2]')
+
+        assert [p.id for p in bh._parameters] == ['b1', 'd1', 'b2', 'b3']
+
+        # Add d2 after index 2 (which is also param b2)
+        bh.add_parameter(dict_to_add_by_index, after=2)
+
+        assert [p.id for p in bh._parameters] == ['b1', 'd1', 'b2', 'd2', 'b3']
+
+        # Add p1 before param b3
+        bh.add_parameter(parameter=param_to_add_by_smirks, before='[*:1]=[*:2]')
+
+        assert [p.id for p in bh._parameters] == ['b1', 'd1', 'p1', 'b2', 'd2', 'b3']
+
+        # Add p2 after index 2 (which is param p1)
+        bh.add_parameter(parameter=param_to_add_by_index, after=2)
+
+        assert [p.id for p in bh._parameters] == ['b1', 'd1', 'p1', 'p2', 'b2', 'd2', 'b3']
+
+        # Add s0 between params that are several positions apart
+        bh.add_parameter(param_several_apart, after=1, before=6)
+
+        assert [p.id for p in bh._parameters] == ['b1', 'd1', 's0', 'p1', 'p2', 'b2', 'd2', 'b3']
 
     def test_different_units_to_dict(self):
         """Test ParameterHandler.to_dict() function when some parameters are in

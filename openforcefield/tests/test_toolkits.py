@@ -21,11 +21,13 @@ from tempfile import NamedTemporaryFile
 import pytest
 
 from openforcefield.utils.toolkits import (OpenEyeToolkitWrapper, RDKitToolkitWrapper,
-                                           AmberToolsToolkitWrapper, BuiltInToolkitWrapper, ToolkitRegistry,
-                                           ToolkitWrapper,
+                                           AmberToolsToolkitWrapper, BuiltInToolkitWrapper,
+                                           ToolkitRegistry, ToolkitWrapper,
                                            GAFFAtomTypeWarning, UndefinedStereochemistryError,
                                            ChargeMethodUnavailableError, IncorrectNumConformersError,
-                                           IncorrectNumConformersWarning)
+                                           IncorrectNumConformersWarning, InvalidToolkitError,
+                                           ToolkitUnavailableException, GLOBAL_TOOLKIT_REGISTRY)
+
 from openforcefield.utils import get_data_file_path
 from openforcefield.topology.molecule import Molecule
 from openforcefield.tests.test_forcefield import create_ethanol, create_cyclohexane, create_acetaldehyde, \
@@ -83,6 +85,8 @@ rdkit_inchi_stereochemistry_lost = ['DrugBank_5414', 'DrugBank_2955', 'DrugBank_
 rdkit_inchi_isomorphic_fails = ['DrugBank_178', 'DrugBank_246', 'DrugBank_5847', 'DrugBank_700', 'DrugBank_1564',
                                 'DrugBank_1700', 'DrugBank_4662', 'DrugBank_2052', 'DrugBank_2077', 'DrugBank_2082',
                                 'DrugBank_2210', 'DrugBank_2642']
+rdkit_inchi_roundtrip_mangled = ['DrugBank_2684']
+
 #=============================================================================================
 # TESTS
 #=============================================================================================
@@ -415,9 +419,9 @@ class TestOpenEyeToolkitWrapper:
                 # Some molecules graphs change during the round trip testing
                 # we test quite strict isomorphism here
                 with pytest.raises(AssertionError):
-                    assert molecule.is_isomorphic_with(mol2, bond_order_matching=False)
+                    assert molecule.is_isomorphic_with(mol2, bond_order_matching=False, toolkit_registry=toolkit)
             else:
-                assert molecule.is_isomorphic_with(mol2, bond_order_matching=False)
+                assert molecule.is_isomorphic_with(mol2, bond_order_matching=False, toolkit_registry=toolkit)
 
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_get_sdf_coordinates(self):
@@ -466,6 +470,21 @@ class TestOpenEyeToolkitWrapper:
         assert molecules[1].properties['another_test_property_key'] == 'another_test_property_value'
         np.testing.assert_allclose(molecules[1].partial_charges / unit.elementary_charge,
                                    [0.027170, 0.027170, 0.027170, 0.027170, -0.108680])
+
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
+    def test_file_extension_case(self):
+        """
+        Test round-trips of some file extensions when called directly from the toolkit wrappers,
+        including lower- and uppercase file extensions. Note that this test does not ensure
+        accuracy, it only tests that reading/writing without raising an exception.
+        """
+        mols_in = OpenEyeToolkitWrapper().from_file(file_path=get_data_file_path('molecules/ethanol.sdf'), file_format='sdf')
+
+        assert len(mols_in) > 0
+
+        mols_in = OpenEyeToolkitWrapper().from_file(file_path=get_data_file_path('molecules/ethanol.sdf'), file_format='SDF')
+
+        assert len(mols_in) > 0
 
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_write_sdf_charges(self):
@@ -733,7 +752,7 @@ class TestOpenEyeToolkitWrapper:
 
 
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
-    @pytest.mark.parametrize("partial_charge_method", ['am1bcc', 'am1-mulliken', 'gasteiger'])
+    @pytest.mark.parametrize("partial_charge_method", ['am1bcc', 'am1elf10', 'am1-mulliken', 'gasteiger'])
     def test_assign_partial_charges_neutral(self, partial_charge_method):
         """Test OpenEyeToolkitWrapper assign_partial_charges()"""
         from openforcefield.tests.test_forcefield import create_ethanol
@@ -771,7 +790,7 @@ class TestOpenEyeToolkitWrapper:
             assert abs(pc1 - pc2) > 1.e-5 * unit.elementary_charge
 
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
-    @pytest.mark.parametrize("partial_charge_method", ['am1bcc', 'am1-mulliken', 'gasteiger'])
+    @pytest.mark.parametrize("partial_charge_method", ['am1bcc', 'am1elf10', 'am1-mulliken', 'gasteiger'])
     def test_assign_partial_charges_net_charge(self, partial_charge_method):
         """
         Test OpenEyeToolkitWrapper assign_partial_charges() on a molecule with net charge.
@@ -1011,6 +1030,7 @@ class TestOpenEyeToolkitWrapper:
                     double_bond_has_wbo_near_2 = True
         assert double_bond_has_wbo_near_2
 
+    @pytest.mark.slow
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_substructure_search_on_large_molecule(self):
         """Test OpenEyeToolkitWrapper substructure search when a large number hits are found"""
@@ -1264,15 +1284,22 @@ class TestRDKitToolkitWrapper:
         else:
             print(molecule.name)
             mol2 = molecule.from_inchi(inchi, toolkit_registry=toolkit)
+
+            # Some molecules are mangled by being round-tripped to/from InChI
+            if molecule.name in rdkit_inchi_roundtrip_mangled:
+                with pytest.raises(AssertionError):
+                    mol2.to_rdkit()
+                return
+
             # compare the full molecule excluding the properties dictionary
             # turn of the bond order matching as this could move in the aromatic rings
             if molecule.name in rdkit_inchi_isomorphic_fails:
                 # Some molecules graphs change during the round trip testing
                 # we test quite strict isomorphism here
                 with pytest.raises(AssertionError):
-                    assert molecule.is_isomorphic_with(mol2, bond_order_matching=False)
+                    assert molecule.is_isomorphic_with(mol2, bond_order_matching=False, toolkit_registry=toolkit)
             else:
-                assert molecule.is_isomorphic_with(mol2, bond_order_matching=False)
+                assert molecule.is_isomorphic_with(mol2, bond_order_matching=False, toolkit_registry=toolkit)
 
     @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
     def test_smiles_charged(self):
@@ -1395,7 +1422,22 @@ class TestRDKitToolkitWrapper:
         assert molecule2.partial_charges is None
 
         assert molecule2.to_smiles(toolkit_registry=toolkit_wrapper) == expected_output_smiles
-        
+
+    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
+    def test_file_extension_case(self):
+        """
+        Test round-trips of some file extensions when called directly from the toolkit wrappers,
+        including lower- and uppercase file extensions. Note that this test does not ensure
+        accuracy, it only tests that reading/writing without raising an exception.
+        """
+        mols_in = RDKitToolkitWrapper().from_file(file_path=get_data_file_path('molecules/ethanol.sdf'), file_format='sdf')
+
+        assert len(mols_in) > 0
+
+        mols_in = RDKitToolkitWrapper().from_file(file_path=get_data_file_path('molecules/ethanol.sdf'), file_format='SDF')
+
+        assert len(mols_in) > 0
+
     @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
     def test_get_sdf_coordinates(self):
         """Test RDKitToolkitWrapper for importing a single set of coordinates from a sdf file"""
@@ -1709,6 +1751,19 @@ class TestRDKitToolkitWrapper:
         # now make sure the aromaticity matches for each atom
         for (offatom, rdatom) in zip(mol.atoms, rdmol.GetAtoms()):
             assert offatom.is_aromatic is rdatom.GetIsAromatic()
+
+    @pytest.mark.slow
+    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
+    def test_substructure_search_on_large_molecule(self):
+        """Test RDKitToolkitWrapper substructure search when a large number hits are found"""
+
+        tk = RDKitToolkitWrapper()
+        smiles = "C"*3000
+        molecule = tk.from_smiles(smiles)
+        query = "[C:1]~[C:2]"
+        ret = molecule.chemical_environment_matches(query, toolkit_registry=tk)
+        assert len(ret) == 5998
+        assert len(ret[0]) == 2
 
 
         # TODO: Add test for higher bonds orders
@@ -2255,14 +2310,27 @@ class TestToolkitWrapper:
 class TestToolkitRegistry:
     """Test the ToolkitRegistry class"""
 
+    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
+    def test_add_bad_toolkit(self):
+        registry = ToolkitRegistry(toolkit_precedence=[RDKitToolkitWrapper])
+        with pytest.raises(InvalidToolkitError):
+            registry.add_toolkit('rdkit as a string')
+
+    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
+    @pytest.mark.skipif(OpenEyeToolkitWrapper.is_available(), reason='Skipping while OpenEye is available')
+    def test_register_unavailable_toolkit(self):
+        registry = ToolkitRegistry(toolkit_precedence=[RDKitToolkitWrapper])
+        with pytest.raises(ToolkitUnavailableException):
+            registry.register_toolkit(toolkit_wrapper=OpenEyeToolkitWrapper, exception_if_unavailable=True)
+
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_register_openeye(self):
         """Test creation of toolkit registry with OpenEye toolkit"""
         # Test registration of OpenEyeToolkitWrapper
         toolkit_precedence = [OpenEyeToolkitWrapper]
         registry = ToolkitRegistry(toolkit_precedence=toolkit_precedence, register_imported_toolkit_wrappers=False)
-        #registry.register_toolkit(OpenEyeToolkitWrapper)
-        assert set([type(c) for c in registry.registered_toolkits]) == set([OpenEyeToolkitWrapper])
+
+        assert set(type(c) for c in registry.registered_toolkits) == set([OpenEyeToolkitWrapper])
 
         # Test ToolkitRegistry.resolve()
         assert registry.resolve('to_smiles') == registry.registered_toolkits[0].to_smiles
@@ -2280,7 +2348,7 @@ class TestToolkitRegistry:
         toolkit_precedence = [RDKitToolkitWrapper]
         registry = ToolkitRegistry(toolkit_precedence=toolkit_precedence,
                                    register_imported_toolkit_wrappers=False)
-        #registry.register_toolkit(RDKitToolkitWrapper)
+
         assert set([ type(c) for c in registry.registered_toolkits]) == set([RDKitToolkitWrapper])
 
         # Test ToolkitRegistry.resolve()
@@ -2294,26 +2362,123 @@ class TestToolkitRegistry:
 
     @pytest.mark.skipif(
         not RDKitToolkitWrapper.is_available() or not AmberToolsToolkitWrapper.is_available(),
-        reason='RDKitToolkit and AmberToolsToolkit not available')
+        reason='RDKitToolkitWrapper or AmberToolsToolkit is not available'
+    )
     def test_register_ambertools(self):
-        """Test creation of toolkit registry with AmberToolsToolkitWrapper and RDKitToolkitWrapper
-        """
+        """Test creation of toolkit registry with AmberToolsToolkitWrapper"""
         # Test registration of AmberToolsToolkitWrapper
-        toolkit_precedence = [AmberToolsToolkitWrapper, RDKitToolkitWrapper]
+        toolkit_precedence = [AmberToolsToolkitWrapper]
         registry = ToolkitRegistry(toolkit_precedence=toolkit_precedence,
                                    register_imported_toolkit_wrappers=False)
-        #registry.register_toolkit(AmberToolsToolkitWrapper)
-        assert set([ type(c) for c in registry.registered_toolkits]) == set([AmberToolsToolkitWrapper,RDKitToolkitWrapper])
+
+        assert set([ type(c) for c in registry.registered_toolkits]) == set([AmberToolsToolkitWrapper])
 
         # Test ToolkitRegistry.resolve()
         registry.resolve('assign_partial_charges')
         assert registry.resolve('assign_partial_charges') == registry.registered_toolkits[0].assign_partial_charges
 
         # Test ToolkitRegistry.call()
-        registry.register_toolkit(RDKitToolkitWrapper)
-        smiles = '[H]C([H])([H])C([H])([H])[H]'
+        molecule = RDKitToolkitWrapper().from_file(file_path=get_data_file_path('molecules/ethanol.sdf'), file_format='SDF')[0]
+        registry.call('assign_partial_charges', molecule)
+        charges_from_registry = molecule.partial_charges
+        AmberToolsToolkitWrapper().assign_partial_charges(molecule)
+        charges_from_toolkit = molecule.partial_charges
+
+        assert np.allclose(charges_from_registry, charges_from_toolkit)
+
+    @pytest.mark.skipif(not AmberToolsToolkitWrapper.is_available(),
+                        reason='AmberToolsToolkit not available')
+    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
+    def test_register_rdkit_and_ambertools(self):
+        """Test creation of toolkit registry with RDKitToolkitWrapper and AmberToolsToolkitWrapper"""
+        toolkit_precedence = [RDKitToolkitWrapper, AmberToolsToolkitWrapper]
+        registry = ToolkitRegistry(toolkit_precedence=toolkit_precedence,
+                                   register_imported_toolkit_wrappers=False)
+
+        assert set([ type(c) for c in registry.registered_toolkits]) == set([RDKitToolkitWrapper, AmberToolsToolkitWrapper])
+
+        # Test ToolkitRegistry.resolve()
+        assert registry.resolve('assign_partial_charges') == registry.registered_toolkits[1].assign_partial_charges
+        assert registry.resolve('from_smiles') == registry.registered_toolkits[0].from_smiles
+
+        # Test ToolkitRegistry.call() for each toolkit
+        smiles = '[H][C]([H])([H])[C]([H])([H])[H]'
         molecule = registry.call('from_smiles', smiles)
-        #partial_charges = registry.call('compute_partial_charges', molecule)
+        smiles2 = registry.call('to_smiles', molecule)
+
+        # Round-tripping SMILES is not 100% reliable, so just ensure it returned something
+        assert isinstance(smiles2, str)
+
+        # This method is available in AmberToolsToolkitWrapper, but not RDKitToolkitWrapper
+        registry.call('assign_partial_charges', molecule)
+
+    @pytest.mark.skipif(
+        not RDKitToolkitWrapper.is_available() or not AmberToolsToolkitWrapper.is_available(),
+        reason='RDKitToolkit or AmberToolsToolkit is not available')
+    def test_deregister_toolkit(self):
+        """Test removing an instantiated toolkit from the registry"""
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper])
+
+        assert any([isinstance(tk, AmberToolsToolkitWrapper) for tk in toolkit_registry._toolkits])
+        assert any([isinstance(tk, RDKitToolkitWrapper) for tk in toolkit_registry._toolkits])
+
+        toolkit_registry.deregister_toolkit(toolkit_registry._toolkits[-1])
+        assert any([isinstance(tk, AmberToolsToolkitWrapper) for tk in toolkit_registry._toolkits])
+        assert not any([isinstance(tk, RDKitToolkitWrapper) for tk in toolkit_registry._toolkits])
+
+        toolkit_registry.deregister_toolkit(toolkit_registry._toolkits[-1])
+        assert not any([isinstance(tk, AmberToolsToolkitWrapper) for tk in toolkit_registry._toolkits])
+        assert not any([isinstance(tk, RDKitToolkitWrapper) for tk in toolkit_registry._toolkits])
+
+    @pytest.mark.skipif(
+        not RDKitToolkitWrapper.is_available() or not AmberToolsToolkitWrapper.is_available(),
+        reason='RDKitToolkit and AmberToolsToolkit not available')
+    def test_deregister_toolkit_by_class(self):
+        """Test removing a toolkit from the registry by matching class types"""
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper])
+
+        assert any([isinstance(tk, AmberToolsToolkitWrapper) for tk in toolkit_registry._toolkits])
+        assert any([isinstance(tk, RDKitToolkitWrapper) for tk in toolkit_registry._toolkits])
+
+        toolkit_registry.deregister_toolkit(RDKitToolkitWrapper)
+        assert any([isinstance(tk, AmberToolsToolkitWrapper) for tk in toolkit_registry._toolkits])
+        assert not any([isinstance(tk, RDKitToolkitWrapper) for tk in toolkit_registry._toolkits])
+
+        toolkit_registry.deregister_toolkit(AmberToolsToolkitWrapper)
+        assert not any([isinstance(tk, AmberToolsToolkitWrapper) for tk in toolkit_registry._toolkits])
+        assert not any([isinstance(tk, RDKitToolkitWrapper) for tk in toolkit_registry._toolkits])
+
+    @pytest.mark.skipif(
+        not RDKitToolkitWrapper.is_available() or not AmberToolsToolkitWrapper.is_available(),
+        reason='RDKitToolkit and AmberToolsToolkit not available')
+    def test_deregister_toolkit_bad_inputs(self):
+        """Test bad inputs to deregister_toolkit"""
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=[AmberToolsToolkitWrapper])
+
+        with pytest.raises(InvalidToolkitError):
+            toolkit_registry.deregister_toolkit('rdkit as a string')
+
+        # Attempt to deregister a toolkit that is not registered
+        with pytest.raises(ToolkitUnavailableException):
+            toolkit_registry.deregister_toolkit(RDKitToolkitWrapper)
+
+    def deregister_from_global_registry(self):
+        # TODO: Update this, or move into a separate TestClass, pending GLOBAL_TOOLKIT_REGISTRY rewor
+        # See issue #493
+        # Whatever the first tookit it, de-register it and verify it's de-registered
+
+        # Keep a copy of the original registry since this is a "global" variable accessible to other modules
+        from copy import deepcopy
+        global_registry_copy = deepcopy(GLOBAL_TOOLKIT_REGISTRY)
+        first_toolkit = type(GLOBAL_TOOLKIT_REGISTRY.registered_toolkits[0])
+        num_toolkits = len(GLOBAL_TOOLKIT_REGISTRY.registered_toolkits)
+
+        GLOBAL_TOOLKIT_REGISTRY.deregister_toolkit(first_toolkit)
+
+        assert first_toolkit not in [type(tk) for tk in GLOBAL_TOOLKIT_REGISTRY.registered_toolkits]
+        assert len(GLOBAL_TOOLKIT_REGISTRY.registered_toolkits) == num_toolkits - 1
+
+        GLOBAL_TOOLKIT_REGISTRY = deepcopy(global_registry_copy)
 
     def test_register_builtintoolkit(self):
         """Test creation of toolkit registry with Built-in toolkit"""
@@ -2347,16 +2512,3 @@ class TestToolkitRegistry:
                           molecule=mol,
                           partial_charge_method="NotARealChargeMethod",
                           raise_exception_types=[])
-
-    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
-    def test_substructure_search_on_large_molecule(self):
-        """Test RDKitToolkitWrapper substructure search when a large number hits are found"""
-
-        tk = RDKitToolkitWrapper()
-        smiles = "C"*3000
-        molecule = tk.from_smiles(smiles)
-        query = "[C:1]~[C:2]"
-        ret = molecule.chemical_environment_matches(query, toolkit_registry=tk)
-        assert len(ret) == 5998
-        assert len(ret[0]) == 2
-
