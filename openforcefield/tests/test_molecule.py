@@ -295,8 +295,11 @@ class TestMolecule:
 
     def test_json_serialization(self):
         """Test serialization of a molecule object to and from JSON."""
-        # TODO: Test round-trip, on mini_drug_bank, when to_json bug is fixed
+        # TODO: Test round-trip, on mini_drug_bank, when to_json bug is fixed, see #547
         mol = Molecule.from_smiles('CCO')
+        molecule_copy = Molecule.from_json(mol.to_json())
+        assert molecule_copy == mol
+        mol.generate_conformers(n_conformers=1)
         with pytest.raises(TypeError):
             mol.to_json()
 
