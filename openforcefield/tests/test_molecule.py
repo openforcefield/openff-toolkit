@@ -32,6 +32,7 @@ import pytest
 from simtk import unit
 
 from openforcefield.topology.molecule import Molecule, Atom, InvalidConformerError
+from openforcefield.topology import NotBondedError
 from openforcefield.utils import get_data_file_path
 # TODO: Will the ToolkitWrapper allow us to pare that down?
 from openforcefield.utils.toolkits import OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper, ToolkitRegistry
@@ -2083,6 +2084,21 @@ class TestMolecule:
                     #                                        toolkit_registry=toolkit_registry)
                     # fbo2 = [bond.fractional_bond_order for bond in molecule.bonds]
                     # np.testing.assert_allclose(fbo1, fbo2, atol=1.e-4)
+
+    def test_get_bond_between(self):
+        """Test Molecule.get_bond_between"""
+        mol = Molecule.from_smiles("C#C")
+
+        # Dynamically get atoms in case from_smiles produces different atom order
+        hydrogens = [a for a in mol.atoms if a.atomic_number == 1]
+        carbons = [a for a in mol.atoms if a.atomic_number == 6]
+
+        bond_from_atoms = mol.get_bond_between(carbons[0], carbons[1])
+        bond_from_idx = mol.get_bond_between(carbons[0].molecule_atom_index, carbons[1].molecule_atom_index)
+        assert bond_from_idx == bond_from_atoms
+
+        with pytest.raises(NotBondedError):
+            mol.get_bond_between(hydrogens[0], hydrogens[1])
 
     @requires_rdkit
     def test_visualize_rdkit(self):
