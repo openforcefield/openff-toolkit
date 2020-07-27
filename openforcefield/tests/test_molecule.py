@@ -2119,8 +2119,13 @@ class TestMolecule:
         with pytest.warns(UserWarning):
             mol.visualize(backend='rdkit')
 
+    @pytest.mark.skipif(
+        not has_pkg('nglview'),
+    )
     def test_visualize_nglview(self):
-        """Test that the visualize method returns an NGLview widget"""
+        """Test that the visualize method returns an NGLview widget. Note that
+        nglview is not explicitly a requirement in the test environment, but
+        is likely to get pulled in with other dependencies."""
         try:
             import nglview
         except ModuleNotFoundError:

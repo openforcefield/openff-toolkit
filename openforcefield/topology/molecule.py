@@ -1512,7 +1512,7 @@ class FrozenMolecule(Serializable):
             toolkit_registry = ToolkitRegistry(toolkit_precedence=[])
             toolkit_registry.add_toolkit(toolkit)
         else:
-            raise ValueError(
+            raise InvalidToolkitRegistryError(
                 "'toolkit_registry' must be either a ToolkitRegistry or a ToolkitWrapper"
             )
 
@@ -3349,7 +3349,7 @@ class FrozenMolecule(Serializable):
         elif isinstance(toolkit_registry, ToolkitWrapper):
             matches = toolkit_registry.find_smarts_matches(self, smirks)
         else:
-            raise ValueError(
+            raise InvalidToolkitRegistryError(
                 "'toolkit_registry' must be either a ToolkitRegistry or a ToolkitWrapper"
             )
 
@@ -3571,7 +3571,7 @@ class FrozenMolecule(Serializable):
                            "Molecule.from_pdb_and_smiles(file_path, smiles) constructor"
                 raise NotImplementedError(msg)
         else:
-            raise ValueError(
+            raise InvalidToolkitRegistryError(
                 "'toolkit_registry' must be either a ToolkitRegistry or a ToolkitWrapper"
             )
 
@@ -3684,7 +3684,7 @@ class FrozenMolecule(Serializable):
             toolkit_registry = ToolkitRegistry(toolkit_precedence=[])
             toolkit_registry.add_toolkit(toolkit)
         else:
-            raise ValueError(
+            raise InvalidToolkitRegistryError(
                 "'toolkit_registry' must be either a ToolkitRegistry or a ToolkitWrapper"
             )
 
@@ -3747,7 +3747,7 @@ class FrozenMolecule(Serializable):
                                                              max_states=max_states)
 
         else:
-            raise ValueError(
+            raise InvalidToolkitRegistryError(
                 "'toolkit_registry' must be either a ToolkitRegistry or a ToolkitWrapper"
             )
 
@@ -3796,7 +3796,7 @@ class FrozenMolecule(Serializable):
                                                                  rationalise=rationalise)
 
         else:
-            raise ValueError(
+            raise InvalidToolkitRegistryError(
                 "'toolkit_registry' must be either a ToolkitRegistry or a ToolkitWrapper"
             )
 
@@ -4424,7 +4424,7 @@ class FrozenMolecule(Serializable):
             atom_j = j
         else:
             raise TypeError(
-                "Invalid input passed to is_bonded(). Expected ints or Atoms, "
+                "Invalid input passed to get_bond_between(). Expected ints or Atoms, "
                 "got {} and {}".format(i, j))
 
         for bond in atom_i.bonds:

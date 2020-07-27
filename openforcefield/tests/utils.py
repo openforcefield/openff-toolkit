@@ -69,7 +69,7 @@ def has_pkg(pkg_name):
     False
     """
     try:
-        module = importlib.import_module(pkg_name)
+        importlib.import_module(pkg_name)
     except ModuleNotFoundError:
         return False
     return True
