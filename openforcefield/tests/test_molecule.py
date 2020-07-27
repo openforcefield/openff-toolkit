@@ -45,8 +45,10 @@ from openforcefield.tests.utils import requires_rdkit, requires_openeye, has_pkg
 #=============================================================================================
 
 requires_qcelemental = requires_pkg(
-    'qcelemental', reason='Test involving QCSchema require QCElementa, which was not found.'
+    'qcelemental', reason='Test involving QCSchema require QCElemental, which was not found.'
 )
+requires_nglview = requires_pkg('nglview')
+
 
 def assert_molecule_is_equal(molecule1, molecule2, msg):
     """Compare whether two Molecule objects are equal
@@ -2122,9 +2124,7 @@ class TestMolecule:
         with pytest.warns(UserWarning):
             mol.visualize(backend='rdkit')
 
-    @pytest.mark.skipif(
-        not has_pkg('nglview'),
-    )
+    @requires_nglview
     def test_visualize_nglview(self):
         """Test that the visualize method returns an NGLview widget. Note that
         nglview is not explicitly a requirement in the test environment, but

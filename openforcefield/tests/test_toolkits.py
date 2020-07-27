@@ -32,7 +32,7 @@ from openforcefield.utils import get_data_file_path
 from openforcefield.topology.molecule import Molecule
 from openforcefield.tests.test_forcefield import create_ethanol, create_cyclohexane, create_acetaldehyde, \
     create_reversed_ethanol, create_acetate
-from openforcefield.tests.utils import requires_rdkit, requires_openeye
+from openforcefield.tests.utils import requires_rdkit, requires_openeye, requires_ambertools
 
 #=============================================================================================
 # FIXTURES
@@ -1055,17 +1055,7 @@ class TestOpenEyeToolkitWrapper:
         bonds = toluene.find_rotatable_bonds(ignore_functional_groups=terminal_backwards)
         assert bonds == []
         
-    def test_substructure_search_on_large_molecule(self):
-        """Test RDKitToolkitWrapper substructure search when a large number hits are found"""
 
-        tk = RDKitToolkitWrapper()
-        smiles = "C"*3000
-        molecule = tk.from_smiles(smiles)
-        query = "[C:1]~[C:2]"
-        ret = molecule.chemical_environment_matches(query, toolkit_registry=tk)
-        assert len(ret) == 5998
-        assert len(ret[0]) == 2
-        
         # TODO: Check partial charge invariants (total charge, charge equivalence)
 
         # TODO: Add test for aromaticity
@@ -1702,7 +1692,7 @@ class TestRDKitToolkitWrapper:
 
 
 
-
+@requires_ambertools
 @requires_rdkit
 class TestAmberToolsToolkitWrapper:
     """Test the AmberToolsToolkitWrapper"""
@@ -2258,7 +2248,7 @@ class TestToolkitRegistry:
         smiles2 = registry.call('to_smiles', molecule)
         assert smiles == smiles2
 
-    @requires_rdkit
+    @requires_ambertools
     def test_register_ambertools(self):
         """Test creation of toolkit registry with AmberToolsToolkitWrapper"""
         # Test registration of AmberToolsToolkitWrapper
@@ -2281,7 +2271,7 @@ class TestToolkitRegistry:
 
         assert np.allclose(charges_from_registry, charges_from_toolkit)
 
-    @requires_openeye
+    @requires_ambertools
     def test_register_rdkit_and_ambertools(self):
         """Test creation of toolkit registry with RDKitToolkitWrapper and AmberToolsToolkitWrapper"""
         toolkit_precedence = [RDKitToolkitWrapper, AmberToolsToolkitWrapper]
@@ -2321,7 +2311,7 @@ class TestToolkitRegistry:
         assert not any([isinstance(tk, AmberToolsToolkitWrapper) for tk in toolkit_registry._toolkits])
         assert not any([isinstance(tk, RDKitToolkitWrapper) for tk in toolkit_registry._toolkits])
 
-    @requires_rdkit
+    @requires_ambertools
     def test_deregister_toolkit_by_class(self):
         """Test removing a toolkit from the registry by matching class types"""
         toolkit_registry = ToolkitRegistry(toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper])
@@ -2337,7 +2327,7 @@ class TestToolkitRegistry:
         assert not any([isinstance(tk, AmberToolsToolkitWrapper) for tk in toolkit_registry._toolkits])
         assert not any([isinstance(tk, RDKitToolkitWrapper) for tk in toolkit_registry._toolkits])
 
-    @requires_rdkit
+    @requires_ambertools
     def test_deregister_toolkit_bad_inputs(self):
         """Test bad inputs to deregister_toolkit"""
         toolkit_registry = ToolkitRegistry(toolkit_precedence=[AmberToolsToolkitWrapper])
@@ -2379,6 +2369,7 @@ class TestToolkitRegistry:
         # Test ToolkitRegistry.resolve()
         assert registry.resolve('assign_partial_charges') == registry.registered_toolkits[0].assign_partial_charges
 
+    @requires_ambertools
     def test_call_raise_first_error(self):
         """Test to ensure proper behavior of raise_first_error kwarg to ToolkitRegistry.call"""
         toolkit_precedence = [BuiltInToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper]
