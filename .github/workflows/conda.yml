@@ -55,7 +55,6 @@ jobs:
     - name: Configure conda
       shell: bash
       run: |
-        . devtools/gh-actions/initialize_conda.sh
         conda activate
         conda config --set always_yes yes
         conda update --quiet --all
@@ -64,7 +63,6 @@ jobs:
     - name: Follow installation instructions
       shell: bash
       run: |
-        . devtools/gh-actions/initialize_conda.sh
         conda activate
         conda config --add channels omnia --add channels conda-forge
         conda create -n openforcefield openforcefield python=${{ matrix.python-version }}
