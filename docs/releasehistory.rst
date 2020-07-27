@@ -7,6 +7,15 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 * ``minor`` increments add features but do not break API compatibility
 * ``micro`` increments represent bugfix releases or improvements in documentation
 
+0.8.0 - Current development
+---------------------------
+
+Behavior changed
+""""""""""""""""
+- `PR #648 <https://github.com/openforcefield/openforcefield/pull/648>`_: Removes the 
+  ``utils.structure`` module, which was deprecated in 0.2.0.
+
+
 0.7.1 - OETK2020 Compatibility and Minor Update
 -----------------------------------------------
 
