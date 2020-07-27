@@ -37,6 +37,9 @@ import numpy as np
 from collections import OrderedDict, Counter
 from copy import deepcopy
 import operator
+from io import StringIO
+import uuid
+import warnings
 
 from simtk import unit
 from simtk.openmm.app import element, Element
@@ -45,11 +48,13 @@ import networkx as nx
 from networkx.algorithms.isomorphism import GraphMatcher
 
 import openforcefield
-from openforcefield.utils import serialize_numpy, deserialize_numpy, quantity_to_string, string_to_quantity
-from openforcefield.utils.toolkits import ToolkitRegistry, ToolkitWrapper, RDKitToolkitWrapper, OpenEyeToolkitWrapper, \
-    InvalidToolkitError, GLOBAL_TOOLKIT_REGISTRY
+from openforcefield.utils import serialize_numpy, deserialize_numpy, quantity_to_string, \
+    string_to_quantity, check_units_are_compatible
+from openforcefield.utils.toolkits import ToolkitRegistry, ToolkitWrapper, RDKitToolkitWrapper, OpenEyeToolkitWrapper,\
+    InvalidToolkitError, UndefinedStereochemistryError, GLOBAL_TOOLKIT_REGISTRY
 from openforcefield.utils.toolkits import DEFAULT_AROMATICITY_MODEL
 from openforcefield.utils.serialization import Serializable
+
 
 
 #=============================================================================================
@@ -172,7 +177,7 @@ class Atom(Particle):
         ----------
         atomic_number : int
             Atomic number of the atom
-        formal_charge : int
+        formal_charge : int or simtk.unit.Quantity-wrapped int with dimension "charge"
             Formal charge of the atom
         is_aromatic : bool
             If True, atom is aromatic; if False, not aromatic
@@ -194,7 +199,8 @@ class Atom(Particle):
 
         """
         self._atomic_number = atomic_number
-        self._formal_charge = formal_charge
+        # Use the setter here, since it will handle either ints or Quantities
+        self.formal_charge = formal_charge
         self._is_aromatic = is_aromatic
         self._stereochemistry = stereochemistry
         if name is None:
@@ -242,7 +248,7 @@ class Atom(Particle):
         # TODO
         atom_dict = OrderedDict()
         atom_dict['atomic_number'] = self._atomic_number
-        atom_dict['formal_charge'] = self._formal_charge
+        atom_dict['formal_charge'] = self._formal_charge / unit.elementary_charge
         atom_dict['is_aromatic'] = self._is_aromatic
         atom_dict['stereochemistry'] = self._stereochemistry
         # TODO: Should we let atoms have names?
@@ -266,6 +272,17 @@ class Atom(Particle):
         The atom's formal charge
         """
         return self._formal_charge
+
+    @formal_charge.setter
+    def formal_charge(self, other):
+        """
+        Set the atom's formal charge. Accepts either ints or simtk.unit.Quantity-wrapped ints with units of charge.
+        """
+        if isinstance(other, int):
+            self._formal_charge = other * unit.elementary_charge
+        else:
+            check_units_are_compatible("formal charge", other, unit.elementary_charge)
+            self._formal_charge = other
 
     @property
     def partial_charge(self):
@@ -1503,6 +1520,10 @@ class FrozenMolecule(Serializable):
             self._initialize()
         else:
             loaded = False
+            # Start a list of the ValueErrors the following logic encounters, so we can print it out
+            # if there turned out to be no way to load this input
+            value_errors = list()
+
             if isinstance(
                     other,
                     openforcefield.topology.FrozenMolecule) and not (loaded):
@@ -1516,36 +1537,60 @@ class FrozenMolecule(Serializable):
             if isinstance(other, OrderedDict) and not (loaded):
                 self.__setstate__(other)
                 loaded = True
+
+
             # Check through the toolkit registry to find a compatible wrapper for loading
             if not loaded:
                 try:
-                    result = toolkit_registry.call('from_object', other, allow_undefined_stereo=allow_undefined_stereo)
-                except NotImplementedError:
-                    pass
+                    # Each ToolkitWrapper may provide a from_object method, which turns some particular type(s)
+                    # of object into OFFMols. For example, RDKitToolkitWrapper's from_object method will
+                    # return an OFFMol if provided with an RDMol, or raise a ValueError if it is provided
+                    # an OEMol (or anything else). This makes the assumption that any non-ValueError errors raised
+                    # by the toolkit _really are_ bad and should be raised immediately, which may be a bad assumption.
+                    result = toolkit_registry.call('from_object',
+                                                    other,
+                                                    allow_undefined_stereo=allow_undefined_stereo,
+                                                    raise_exception_types=[UndefinedStereochemistryError])
+                # NotImplementedError should never be raised... Only from_file and from_file_obj are provided
+                # in the base ToolkitWrapper class and require overwriting, so from_object should be excluded
+                # except NotImplementedError as e:
+                #    raise e
+                # The toolkit registry will aggregate all errors except UndefinedStereochemistryErrors into a single
+                # ValueError, which we should catch and and store that here.
+                except ValueError as e:
+                    value_errors.append(e)
                 else:
                     self._copy_initializer(result)
                     loaded = True
             # TODO: Make this compatible with file-like objects (I couldn't figure out how to make an oemolistream
             # from a fileIO object)
-            if (isinstance(other, str)
-                    or hasattr(other, 'read')) and not (loaded):
-                mol = Molecule.from_file(
-                    other,
-                    file_format=file_format,
-                    toolkit_registry=toolkit_registry,
-                    allow_undefined_stereo=allow_undefined_stereo
-                )  # returns a list only if multiple molecules are found
-                if type(mol) == list:
-                    raise ValueError(
-                        'Specified file or file-like object must contain exactly one molecule'
-                    )
+            if (isinstance(other, str) or hasattr(other, 'read')) and not (loaded):
+                try:
+                    mol = Molecule.from_file(
+                        other,
+                        file_format=file_format,
+                        toolkit_registry=toolkit_registry,
+                        allow_undefined_stereo=allow_undefined_stereo
+                    )  # returns a list only if multiple molecules are found
+                    if type(mol) == list:
+                        raise ValueError(
+                            'Specified file or file-like object must contain exactly one molecule'
+                        )
+                except ValueError as e:
+                    value_errors.append(e)
+                else:
+                    self._copy_initializer(mol)
+                    loaded = True
 
-                self._copy_initializer(mol)
-                loaded = True
+            # If none of the above methods worked, raise a ValueError summarizing the
+            # errors from the different loading attempts
+
             if not (loaded):
                 msg = 'Cannot construct openforcefield.topology.Molecule from {}\n'.format(
                     other)
-                raise Exception(msg)
+                for value_error in value_errors:
+                    msg += str(value_error)
+                raise ValueError(msg)
 
     @property
     def has_unique_atom_names(self):
@@ -1575,6 +1620,29 @@ class FrozenMolecule(Serializable):
         """
         if not self.has_unique_atom_names:
             self.generate_unique_atom_names()
+
+    def strip_atom_stereochemistry(self, smarts, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+        """Delete stereochemistry information for certain atoms, if it is present.
+        This method can be used to "normalize" molecules imported from different cheminformatics
+        toolkits, which differ in which atom centers are considered stereogenic.
+
+        Parameters
+        ----------
+        smarts: str or ChemicalEnvironment
+            Tagged SMARTS with a single atom with index 1. Any matches for this atom will have any assigned
+            stereocheistry information removed.
+        toolkit_registry : a :class:`ToolkitRegistry` or :class:`ToolkitWrapper` object, optional, default=GLOBAL_TOOLKIT_REGISTRY
+            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for I/O operations
+
+        """
+        from openforcefield.typing.chemistry.environment import AtomChemicalEnvironment
+        chem_env = AtomChemicalEnvironment(smarts)
+        matches = self.chemical_environment_matches(chem_env, toolkit_registry=toolkit_registry)
+
+        for match in set(matches):
+            atom_idx = match[0]
+            self.atoms[atom_idx].stereochemistry = None
+
 
     ####################################################################################################
     # Safe serialization
@@ -2075,7 +2143,9 @@ class FrozenMolecule(Serializable):
             formal_charge_matching=True,
             bond_order_matching=True,
             atom_stereochemistry_matching=True,
-            bond_stereochemistry_matching=True
+            bond_stereochemistry_matching=True,
+            strip_pyrimidal_n_atom_stereo=True,
+            toolkit_registry=GLOBAL_TOOLKIT_REGISTRY
     ):
         """
         Determines whether the two molecules are isomorphic by comparing their graph representations and the chosen
@@ -2112,6 +2182,15 @@ class FrozenMolecule(Serializable):
         bond_stereochemistry_matching : bool, default=True, optional
             If ``False``, bonds' stereochemistry is ignored for the
             purpose of determining equality.
+
+        strip_pyrimidal_n_atom_stereo: bool, default=True, optional
+            If ``True``, any stereochemistry defined around pyrimidal
+            nitrogen stereocenters will be disregarded in the isomorphism
+            check.
+
+        toolkit_registry : openforcefield.utils.toolkits.ToolkitRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
+            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for
+            removing stereochemistry from pyrimidal nitrogens.
 
         Returns
         -------
@@ -2167,20 +2246,31 @@ class FrozenMolecule(Serializable):
             """For the given data type, return the networkx graph"""
             from openforcefield.topology import TopologyMolecule
 
+            if strip_pyrimidal_n_atom_stereo:
+                SMARTS = '[N+0X3:1](-[*])(-[*])(-[*])'
+
             if isinstance(data, FrozenMolecule):
                 # Molecule class instance
+                if strip_pyrimidal_n_atom_stereo:
+                    # Make a copy of the molecule so we don't modify the original
+                    data = deepcopy(data)
+                    data.strip_atom_stereochemistry(SMARTS, toolkit_registry=toolkit_registry)
                 return data.to_networkx()
             elif isinstance(data, TopologyMolecule):
                 # TopologyMolecule class instance
-                return data.reference_molecule.to_networkx()
+                if strip_pyrimidal_n_atom_stereo:
+                    # Make a copy of the molecule so we don't modify the original
+                    ref_mol = deepcopy(data.reference_molecule)
+                    ref_mol.strip_atom_stereochemistry(SMARTS, toolkit_registry=toolkit_registry)
+                return ref_mol.to_networkx()
             elif isinstance(data, nx.Graph):
                 return data
 
             else:
                 raise NotImplementedError(f'The input type {type(data)} is not supported,'
                                           f'please supply an openforcefield.topology.molecule.Molecule,'
-                                          f'openforcefield.topology.topology.TopologyMolecule or networkx representaion '
-                                          f'of the molecule.')
+                                          f'openforcefield.topology.topology.TopologyMolecule or networkx '
+                                          f'representation of the molecule.')
 
         mol1_netx = to_networkx(mol1)
         mol2_netx = to_networkx(mol2)
@@ -2235,6 +2325,15 @@ class FrozenMolecule(Serializable):
             If ``False``, bonds' stereochemistry is ignored for the
             purpose of determining equality.
 
+        strip_pyrimidal_n_atom_stereo: bool, default=True, optional
+            If ``True``, any stereochemistry defined around pyrimidal
+            nitrogen stereocenters will be disregarded in the isomorphism
+            check.
+
+        toolkit_registry : openforcefield.utils.toolkits.ToolkitRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
+            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for
+            removing stereochemistry from pyrimidal nitrogens.
+
         Returns
         -------
         isomorphic : bool
@@ -2245,14 +2344,18 @@ class FrozenMolecule(Serializable):
                                        formal_charge_matching=kwargs.get('formal_charge_matching', True),
                                        bond_order_matching=kwargs.get('bond_order_matching', True),
                                        atom_stereochemistry_matching=kwargs.get('atom_stereochemistry_matching', True),
-                                       bond_stereochemistry_matching=kwargs.get('bond_stereochemistry_matching', True))[0]
+                                       bond_stereochemistry_matching=kwargs.get('bond_stereochemistry_matching', True),
+                                       strip_pyrimidal_n_atom_stereo=kwargs.get('strip_pyrimidal_n_atom_stereo', True),
+                                       toolkit_registry=kwargs.get('toolkit_registry', GLOBAL_TOOLKIT_REGISTRY))[0]
 
     def generate_conformers(self,
                             toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
                             n_conformers=10,
+                            rms_cutoff=None,
                             clear_existing=True):
         """
-        Generate conformers for this molecule using an underlying toolkit
+        Generate conformers for this molecule using an underlying toolkit. If n_conformers=0, no toolkit wrapper
+        will be called. If n_conformers=0 and clear_existing=True, molecule.conformers will be set to None.
 
         Parameters
         ----------
@@ -2260,6 +2363,10 @@ class FrozenMolecule(Serializable):
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
         n_conformers : int, default=1
             The maximum number of conformers to produce
+        rms_cutoff : simtk.Quantity-wrapped float, in units of distance, optional, default=None
+            The minimum RMS value at which two conformers are considered redundant and one is deleted. Precise
+            implementation of this cutoff may be toolkit-dependent. If None, the cutoff is set to be the default value
+            for each ToolkitWrapper (generally 1 Angstrom).
         clear_existing : bool, default=True
             Whether to overwrite existing conformers for the molecule
 
@@ -2275,23 +2382,45 @@ class FrozenMolecule(Serializable):
             If an invalid object is passed as the toolkit_registry parameter
 
         """
+        # If no conformers are requested, do not call to a ToolkitWrapper at all
+        if n_conformers == 0:
+            if clear_existing:
+                self._conformers = None
+            return
+
         if isinstance(toolkit_registry, ToolkitRegistry):
-            return toolkit_registry.call('generate_conformers', self, n_conformers=n_conformers,
+            return toolkit_registry.call('generate_conformers',
+                                         self,
+                                         n_conformers=n_conformers,
+                                         rms_cutoff=rms_cutoff,
                                          clear_existing=clear_existing)
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
-            return toolkit.generate_conformers(self, n_conformers=n_conformers, clear_existing=clear_existing)
+            return toolkit.generate_conformers(self,
+                                               n_conformers=n_conformers,
+                                               rms_cutoff = rms_cutoff,
+                                               clear_existing=clear_existing)
         else:
             raise InvalidToolkitError(
                 'Invalid toolkit_registry passed to generate_conformers. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'
                 .format(type(toolkit_registry)))
 
-    def compute_partial_charges_am1bcc(self, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+    def compute_partial_charges_am1bcc(self,
+                                       use_conformers=None,
+                                       strict_n_conformers=False,
+                                       toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """
         Calculate partial atomic charges for this molecule using AM1-BCC run by an underlying toolkit
+        and assign them to this molecule's partial_charges attribute.
 
         Parameters
         ----------
+        strict_n_conformers : bool, default=False
+            Whether to raise an exception if an invalid number of conformers is provided for the given charge method.
+            If this is False and an invalid number of conformers is found, a warning will be raised.
+        use_conformers : iterable of simtk.unit.Quantity-wrapped numpy arrays, each with shape (n_atoms, 3) and dimension of distance. Optional, default=None
+            Coordinates to use for partial charge calculation.
+            If None, an appropriate number of conformers for the given charge method will be generated.
         toolkit_registry : openforcefield.utils.toolkits.ToolkitRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for the calculation
 
@@ -2308,42 +2437,38 @@ class FrozenMolecule(Serializable):
             If an invalid object is passed as the toolkit_registry parameter
 
         """
-        if isinstance(toolkit_registry, ToolkitRegistry):
-            charges = toolkit_registry.call(
-                      'compute_partial_charges_am1bcc',
-                      self
-            )
-        elif isinstance(toolkit_registry, ToolkitWrapper):
-            toolkit = toolkit_registry
-            charges = toolkit.compute_partial_charges_am1bcc(self)
-        else:
-            raise InvalidToolkitError(
-                'Invalid toolkit_registry passed to compute_partial_charges_am1bcc. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'
-                .format(type(toolkit_registry)))
-        self.partial_charges = charges
+        self.assign_partial_charges(partial_charge_method='am1bcc',
+                                    use_conformers=use_conformers,
+                                    strict_n_conformers=strict_n_conformers,
+                                    toolkit_registry=toolkit_registry)
 
-    def compute_partial_charges(self,
-                                #quantum_chemical_method='AM1-BCC',
-                                #partial_charge_method='None',
-                                toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+
+    def assign_partial_charges(self,
+                               partial_charge_method,
+                               strict_n_conformers=False,
+                               use_conformers=None,
+                               toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """
-        **Warning! Not Implemented!**
-        Calculate partial atomic charges for this molecule using an underlying toolkit
+        Calculate partial atomic charges for this molecule using an underlying toolkit, and assign
+        the new values to the partial_charges attribute.
 
         Parameters
         ----------
-        quantum_chemical_method : string, default='AM1-BCC'
-            The quantum chemical method to use for partial charge calculation.
-        partial_charge_method : string, default='None'
+        partial_charge_method : string
             The partial charge calculation method to use for partial charge calculation.
+        strict_n_conformers : bool, default=False
+            Whether to raise an exception if an invalid number of conformers is provided for the given charge method.
+            If this is False and an invalid number of conformers is found, a warning will be raised.
+        use_conformers : iterable of simtk.unit.Quantity-wrapped numpy arrays, each with shape (n_atoms, 3) and dimension of distance. Optional, default=None
+            Coordinates to use for partial charge calculation. If None, an appropriate number of conformers will be generated.
         toolkit_registry : openforcefield.utils.toolkits.ToolkitRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=None
-            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
+            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for the calculation.
 
         Examples
         --------
 
         >>> molecule = Molecule.from_smiles('CCCCCC')
-        >>> molecule.generate_conformers()
+        >>> molecule.assign_partial_charges('am1-mulliken')
 
         Raises
         ------
@@ -2351,24 +2476,30 @@ class FrozenMolecule(Serializable):
             If an invalid object is passed as the toolkit_registry parameter
 
         """
-        raise NotImplementedError
-        # TODO: Implement this in a way that's compliant with SMIRNOFF's <ChargeIncrementModel> tag when the spec gets finalized
-        # if isinstance(toolkit_registry, ToolkitRegistry):
-        #     charges = toolkit_registry.call(
-        #               'compute_partial_charges_am1bcc',
-        #               self,
-        #     )
-        # elif isinstance(toolkit_registry, ToolkitWrapper):
-        #     toolkit = toolkit_registry
-        #     charges = toolkit.compute_partial_charges_am1bcc(
-        #         self,
-        #         #quantum_chemical_method=quantum_chemical_method,
-        #         #partial_charge_method=partial_charge_method
-        #     )
-        # else:
-        #     raise InvalidToolkitError(
-        #         'Invalid toolkit_registry passed to compute_partial_charges_am1bcc. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'
-        #         .format(type(toolkit_registry)))
+        if isinstance(toolkit_registry, ToolkitRegistry):
+            # We may need to try several toolkitwrappers to find one
+            # that supports the desired partial charge method, so we
+            # tell the ToolkitRegistry to continue trying ToolkitWrappers
+            # if one raises an error (raise_exception_types=[])
+            toolkit_registry.call('assign_partial_charges',
+                                  self,
+                                  partial_charge_method=partial_charge_method,
+                                  use_conformers=use_conformers,
+                                  strict_n_conformers=strict_n_conformers,
+                                  raise_exception_types=[]
+                                  )
+        elif isinstance(toolkit_registry, ToolkitWrapper):
+            toolkit = toolkit_registry
+            toolkit.assign_partial_charges(self,
+                                           partial_charge_method=partial_charge_method,
+                                           use_conformers=use_conformers,
+                                           strict_n_conformers=strict_n_conformers
+                                           )
+        else:
+            raise InvalidToolkitError(
+                f'Invalid toolkit_registry passed to assign_partial_charges.'
+                f'Expected ToolkitRegistry or ToolkitWrapper. Got  {type(toolkit_registry)}')
+
 
     def assign_fractional_bond_orders(self,
                                       bond_order_model=None,
@@ -3067,7 +3198,10 @@ class FrozenMolecule(Serializable):
         """
         Return the total charge on the molecule
         """
-        return sum([atom.formal_charge for atom in self.atoms])
+        charge_sum = 0. * unit.elementary_charge
+        for atom in self.atoms:
+            charge_sum += atom.formal_charge
+        return charge_sum
 
     @property
     def name(self):
@@ -3198,8 +3332,8 @@ class FrozenMolecule(Serializable):
         """
         # Resolve to SMIRKS if needed
         # TODO: Update this to use updated ChemicalEnvironment API
-        if hasattr(query, 'asSMIRKS'):
-            smirks = query.asSMIRKS()
+        if hasattr(query, 'smirks'):
+            smirks = query.smirks
         elif type(query) == str:
             smirks = query
         else:
@@ -3584,6 +3718,111 @@ class FrozenMolecule(Serializable):
         else:
             toolkit.to_file_obj(self, file_path, file_format)
 
+    def enumerate_tautomers(self, max_states=20, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+        """
+        Enumerate the possible tautomers of the current molecule
+
+        Parameters
+        ----------
+        max_states: int optional, default=20
+            The maximum amount of molecules that should be returned
+
+        toolkit_registry: openforcefield.utils.toolkits.ToolkitRegistry or openforcefield.utils.toolkits.ToolkitWrapper,
+        optional, default=GLOBAL_TOOLKIT_REGISTRY
+            `ToolkitRegistry` or :class:`ToolkitWrapper` to use to enumerate the tautomers.
+
+        Returns
+        -------
+        molecules: List[openforcefield.topology.Molecule]
+            A list of openforcefield.topology.Molecule instances not including the input molecule.
+        """
+
+        if isinstance(toolkit_registry, ToolkitRegistry):
+            molecules = toolkit_registry.call('enumerate_tautomers',
+                                              molecule=self,
+                                              max_states=max_states)
+
+        elif isinstance(toolkit_registry, ToolkitWrapper):
+            molecules = toolkit_registry.enumerate_tautomers(self,
+                                                             max_states=max_states)
+
+        else:
+            raise ValueError(
+                "'toolkit_registry' must be either a ToolkitRegistry or a ToolkitWrapper"
+            )
+
+        return molecules
+
+    def enumerate_stereoisomers(self, undefined_only=False,
+                                max_isomers=20,
+                                rationalise=True,
+                                toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+        """
+        Enumerate the stereocenters and bonds of the current molecule.
+
+        Parameters
+        ----------
+        undefined_only: bool optional, default=False
+            If we should enumerate all stereocenters and bonds or only those with undefined stereochemistry
+
+        max_isomers: int optional, default=20
+            The maximum amount of molecules that should be returned
+
+        rationalise: bool optional, default=True
+            If we should try to build and rationalise the molecule to ensure it can exist
+
+        toolkit_registry: openforcefield.utils.toolkits.ToolkitRegistry or openforcefield.utils.toolkits.ToolkitWrapper,
+        optional, default=GLOBAL_TOOLKIT_REGISTRY
+            `ToolkitRegistry` or :class:`ToolkitWrapper` to use to enumerate the stereoisomers.
+
+        Returns
+        --------
+        molecules: List[openforcefield.topology.Molecule]
+            A list of openforcefield.topology.Molecule instances not including the input molecule.
+
+        """
+
+        if isinstance(toolkit_registry, ToolkitRegistry):
+            molecules = toolkit_registry.call('enumerate_stereoisomers',
+                                              molecule=self,
+                                              undefined_only=undefined_only,
+                                              max_isomers=max_isomers,
+                                              rationalise=rationalise)
+
+        elif isinstance(toolkit_registry, ToolkitWrapper):
+            molecules = toolkit_registry.enumerate_stereoisomers(self,
+                                                                 undefined_only=undefined_only,
+                                                                 max_isomers=max_isomers,
+                                                                 rationalise=rationalise)
+
+        else:
+            raise ValueError(
+                "'toolkit_registry' must be either a ToolkitRegistry or a ToolkitWrapper"
+            )
+
+        return molecules
+
+    @OpenEyeToolkitWrapper.requires_toolkit()
+    def enumerate_protomers(self, max_states=10):
+        """
+        Enumerate the formal charges of a molecule to generate different protomoers.
+
+        Parameters
+        ----------
+        max_states: int optional, default=10,
+            The maximum number of protomer states to be returned.
+
+        Returns
+        -------
+        molecules: List[openforcefield.topology.Molecule],
+            A list of the protomers of the input molecules not including the input.
+        """
+
+        toolkit = OpenEyeToolkitWrapper()
+        molecules = toolkit.enumerate_protomers(molecule=self, max_states=max_states)
+
+        return molecules
+
     @staticmethod
     @RDKitToolkitWrapper.requires_toolkit()
     def from_rdkit(rdmol, allow_undefined_stereo=False):
@@ -3688,7 +3927,7 @@ class FrozenMolecule(Serializable):
             oemol, allow_undefined_stereo=allow_undefined_stereo)
         return molecule
 
-    def to_qcschema(self, multiplicity=1, conformer=0):
+    def to_qcschema(self, multiplicity=1, conformer=0, extras=None):
         """
         Generate the qschema input format used to submit jobs to archive
         or run qcengine calculations locally,
@@ -3703,6 +3942,10 @@ class FrozenMolecule(Serializable):
 
         conformer : int, default=0,
             The index of the conformer that should be used for qcschema
+
+        extras : dict, default=None
+            The extras dictionary that should be included into the qcelemental.models.Molecule. This can be used to
+            include extra information such as the smiles representation.
 
         Returns
         ---------
@@ -3739,13 +3982,13 @@ class FrozenMolecule(Serializable):
             raise InvalidConformerError('The molecule must have a conformation to produce a valid qcschema; '
                                         f'no conformer was found at index {conformer}.')
 
-        # Gather the required qschema data
-        charge = sum([atom.formal_charge for atom in self.atoms])
+        # Gather the required qcschema data
+        charge = self.total_charge / unit.elementary_charge
         connectivity = [(bond.atom1_index, bond.atom2_index, bond.bond_order) for bond in self.bonds]
         symbols = [Element.getByAtomicNumber(atom.atomic_number).symbol for atom in self.atoms]
 
         schema_dict = {'symbols': symbols, 'geometry': geometry, 'connectivity': connectivity,
-                       'molecular_charge': charge, 'molecular_multiplicity': multiplicity}
+                       'molecular_charge': charge, 'molecular_multiplicity': multiplicity, "extras": extras}
 
         return qcel.models.Molecule.from_data(schema_dict, validate=True)
 
@@ -4561,7 +4804,7 @@ class Molecule(FrozenMolecule):
         index: int
             Index of the bond in this molecule
 
-"""
+        """
         bond_index = self._add_bond(
             atom1,
             atom2,
@@ -4591,6 +4834,137 @@ class Molecule(FrozenMolecule):
         #   is a conformation that does not change connectivity?
 
         return self._add_conformer(coordinates)
+
+    def visualize(self, backend='rdkit', width=500, height=300):
+        """
+        Render a visualization of the molecule in Jupyter
+        
+        Parameters
+        ----------
+        backend : str, optional, default='rdkit'
+            Which visualization engine to use. Choose from:
+            - rdkit
+            - openeye
+            - nglview (conformers needed)
+        width : int, optional, default=500
+            Width of the generated representation (only applicable to
+            backend=openeye)
+        height : int, optional, default=300
+            Width of the generated representation (only applicable to
+            backend=openeye)
+
+        Returns
+        -------
+        object
+            Depending on the backend chosen:
+            - rdkit, openeye -> IPython.display.Image
+            - nglview -> nglview.NGLWidget
+        """
+        from openforcefield.utils.toolkits import OPENEYE_AVAILABLE, RDKIT_AVAILABLE
+
+        backend = backend.lower()
+
+        if backend == 'nglview':
+            try:
+                import nglview as nv
+            except ImportError:
+                raise ValueError(
+                    'Attempted to visualize with NGLview but did not find it '
+                    'installed. Try conda install -c conda-forge nglview.'
+                )
+            if self.conformers:
+                trajectory_like = _OFFTrajectoryNGLView(self)
+                widget = nv.NGLWidget(trajectory_like)
+                return widget
+            else:
+                raise ValueError(
+                    'Visualizing with NGLview requires that the molecule has '
+                    'conformers.'
+                )
+        if backend == 'rdkit':
+            if RDKIT_AVAILABLE:
+                from rdkit.Chem.Draw import IPythonConsole
+                return self.to_rdkit()
+            else:
+                warnings.warn(
+                    'RDKit was requested as a visualization backend but '
+                    'it was not found to be installed. Falling back to '
+                    'trying to using OpenEye for visualization.'
+                )
+                backend = 'openeye'
+        if backend == 'openeye':
+            if OPENEYE_AVAILABLE:
+                from openeye import oedepict
+                from IPython.display import Image
+
+                oemol = self.to_openeye()
+
+                opts = oedepict.OE2DMolDisplayOptions(width, height, oedepict.OEScale_AutoScale)
+
+                oedepict.OEPrepareDepiction(oemol)
+                img = oedepict.OEImage(width, height)
+                display = oedepict.OE2DMolDisplay(oemol, opts)
+                oedepict.OERenderMolecule(img, display)
+                png = oedepict.OEWriteImageToString("png", img)
+                return Image(png)
+
+        raise ValueError('Could not find an appropriate backend')
+
+    def _ipython_display_(self):
+        from IPython.display import display
+        try:
+            return display(self.visualize(backend='nglview'))
+        except (ImportError, ValueError):
+            pass
+
+        try:
+            return display(self.visualize(backend='rdkit'))
+        except ValueError:
+            pass
+
+        try:
+            return display(self.visualize(backend='openeye'))
+        except ValueError:
+            pass
+
+
+try:
+    from nglview import Trajectory as _NGLViewTrajectory
+except ImportError:
+    _NGLViewTrajectory = object
+
+
+class _OFFTrajectoryNGLView(_NGLViewTrajectory):
+    """
+    Handling conformers of an OpenFF Molecule as frames in a trajectory. Only
+    to be used for NGLview visualization.
+
+    Parameters
+    ----------
+    molecule : openforcefield.topology.Molecule
+        The molecule (with conformers) to visualize
+    """
+    def __init__(self, molecule):
+        self.molecule = molecule
+        self.ext = "pdb"
+        self.params = {}
+        self.id = str(uuid.uuid4())
+
+    def get_coordinates(self, index):
+        return self.molecule.conformers[index] / unit.angstrom
+
+    @property
+    def n_frames(self):
+        return len(self.molecule.conformers)
+
+    def get_structure_string(self):
+        memfile = StringIO()
+        self.molecule.to_file(memfile, "pdb")
+        memfile.seek(0)
+        block = memfile.getvalue()
+        # FIXME: Prevent multi-model PDB export with a keyword in molecule.to_file()?
+        models = block.split('END\n', 1)
+        return models[0]
 
 
 class InvalidConformerError(Exception):

@@ -10,7 +10,6 @@ __all__ = [
     'inherit_docstrings',
     'all_subclasses',
     'temporary_cd',
-    'temporary_directory',
     'get_data_file_path',
     'unit_to_string',
     'quantity_to_string',
@@ -26,19 +25,19 @@ __all__ = [
     'convert_all_quantities_to_string',
     'convert_all_strings_to_quantity',
     'convert_0_1_smirnoff_to_0_2',
-    'convert_0_2_smirnoff_to_0_3'
+    'convert_0_2_smirnoff_to_0_3',
+    'get_molecule_parameterIDs',
 ]
 
 #=============================================================================================
 # GLOBAL IMPORTS
 #=============================================================================================
 
-import contextlib
 import functools
 
 from simtk import unit
 import logging
-
+import contextlib
 
 #=============================================================================================
 # CONFIGURE LOGGER
@@ -89,22 +88,18 @@ def all_subclasses(cls):
         g for s in cls.__subclasses__() for g in all_subclasses(s)
     ]
 
-
 @contextlib.contextmanager
 def temporary_cd(dir_path):
     """Context to temporary change the working directory.
-
     Parameters
     ----------
     dir_path : str
         The directory path to enter within the context
-
     Examples
     --------
     >>> dir_path = '/tmp'
     >>> with temporary_cd(dir_path):
     ...     pass  # do something in dir_path
-
     """
     import os
     prev_dir = os.getcwd()
@@ -113,20 +108,6 @@ def temporary_cd(dir_path):
         yield
     finally:
         os.chdir(prev_dir)
-
-
-@contextlib.contextmanager
-def temporary_directory():
-    """Context for safe creation of temporary directories."""
-
-    import tempfile
-    tmp_dir = tempfile.mkdtemp()
-    try:
-        yield tmp_dir
-    finally:
-        import shutil
-        shutil.rmtree(tmp_dir)
-
 
 def get_data_file_path(relative_path):
     """Get the full path to one of the reference files in testsystems.
@@ -165,6 +146,8 @@ def unit_to_string(input_unit):
         The serialized unit.
     """
 
+    if input_unit == unit.dimensionless:
+        return "dimensionless"
 
     # Decompose output_unit into a tuples of (base_dimension_unit, exponent)
     unit_string = None
@@ -424,17 +407,25 @@ def check_units_are_compatible(object_name, object, unit_to_check, context=None)
     IncompatibleUnitError
     """
     from simtk import unit
+
+    # If context is not provided, explicitly make it a blank string
+    if context is None:
+        context = ''
+    # Otherwise add a space after the end of it to correct message printing
+    else:
+        context += ' '
+
     if isinstance(object, list):
         for sub_object in object:
             check_units_are_compatible(object_name, sub_object, unit_to_check, context=context)
     elif isinstance(object, unit.Quantity):
         if not object.unit.is_compatible(unit_to_check):
-            msg = f"{context} {object_name} with " \
-                  f"value {object}, is incompatible with expected unit {unit_to_check}"
+            msg = f"{context}{object_name} with " \
+                  f"value {object} is incompatible with expected unit {unit_to_check}"
             raise IncompatibleUnitError(msg)
     else:
-        msg = f"{context} {object_name} with " \
-              f"value {object}, is incompatible with expected unit {unit_to_check}"
+        msg = f"{context}{object_name} with " \
+              f"value {object} is incompatible with expected unit {unit_to_check}"
         raise IncompatibleUnitError(msg)
 
 
@@ -890,3 +881,74 @@ def recursive_attach_unit_strings(smirnoff_data, units_to_attach):
         pass
 
     return smirnoff_data
+
+def get_molecule_parameterIDs(molecules, forcefield):
+    """Process a list of molecules with a specified SMIRNOFF ffxml file and determine which parameters are used by
+    which molecules, returning collated results.
+
+    Parameters
+    ----------
+    molecules : list of openforcefield.topology.Molecule
+        List of molecules (with explicit hydrogens) to parse
+    forcefield : openforcefield.typing.engines.smirnoff.ForceField
+        The ForceField to apply
+
+    Returns
+    -------
+    parameters_by_molecule : dict
+        Parameter IDs used in each molecule, keyed by isomeric SMILES
+        generated from provided OEMols. Each entry in the dict is a list
+        which does not necessarily have unique entries; i.e. parameter IDs
+        which are used more than once will occur multiple times.
+
+    parameters_by_ID : dict
+        Molecules in which each parameter ID occur, keyed by parameter ID.
+        Each entry in the dict is a set of isomeric SMILES for molecules
+        in which that parameter occurs. No frequency information is stored.
+
+    """
+
+    from openforcefield.topology import Topology
+    # Create storage
+    parameters_by_molecule = dict()
+    parameters_by_ID = dict()
+
+    # Generate isomeric SMILES for each molecule, ensuring all molecules are unique
+    isosmiles = [ molecule.to_smiles() for molecule in molecules ]
+    already_seen = set()
+    duplicates = set(smiles for smiles in isosmiles if smiles in already_seen or already_seen.add(smiles))
+    if len(duplicates) > 0:
+        raise ValueError("Error: get_molecule_parameterIDs has been provided a list of oemols which contains some duplicates: {}".format(duplicates))
+
+    # Assemble molecules into a Topology
+    topology = Topology()
+    for molecule in molecules:
+        topology.add_molecule(molecule)
+
+    # Label molecules
+    labels = forcefield.label_molecules(topology)
+
+    # Organize labels into output dictionary by looping over all molecules/smiles
+    for idx in range(len(isosmiles)):
+        # Pull smiles, initialize storage
+        smi = isosmiles[idx]
+        parameters_by_molecule[smi] = []
+
+        # Organize data for this molecule
+        data = labels[idx]
+        for force_type in data.keys():
+            for atom_indices, parameter_type in data[force_type].items():
+
+                pid = parameter_type.id
+                # Store pid to molecule
+                parameters_by_molecule[smi].append(pid)
+
+                # Store which molecule this pid occurred in
+                if pid not in parameters_by_ID:
+                    parameters_by_ID[pid] = set()
+                    parameters_by_ID[pid].add(smi)
+                else:
+                    parameters_by_ID[pid].add(smi)
+
+    return parameters_by_molecule, parameters_by_ID
+

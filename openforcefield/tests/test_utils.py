@@ -49,27 +49,6 @@ def test_temporary_cd():
         assert os.getcwd() == temporary_dir
     assert os.getcwd() == initial_dir
 
-def test_temporary_directory():
-    """Test temporary_directory() context manager"""
-    from openforcefield.utils import temporary_directory
-    initial_dir = os.getcwd()
-    with temporary_directory() as tmp_dir:
-        # Make sure the temporary directory is not the current directory
-        assert tmp_dir != initial_dir
-
-        # Make sure the temporary directory is writeable
-        output_filename = os.path.join(tmp_dir, 'test.out')
-        outfile = open(output_filename,'w')
-        outfile.write('test')
-        outfile.close()
-
-        # Make sure the file we created exists
-        assert os.path.exists(output_filename)
-
-    # Make sure the directory has been cleaned up
-    assert not os.path.exists(tmp_dir), "Temporary directory was not automatically cleaned up."
-    assert not os.path.exists(output_filename), "Temporary directory was not automatically cleaned up."
-
 def test_get_data_file_path():
     """Test get_data_file_path()"""
     from openforcefield.utils import get_data_file_path
@@ -92,3 +71,11 @@ def test_ast_eval(unit_string, expected_unit):
     ast_root_node = ast.parse(unit_string, mode='eval').body
     parsed_units = _ast_eval(ast_root_node)
     assert parsed_units == expected_unit
+
+def test_dimensionless_units():
+    assert utils.string_to_unit('dimensionless') == unit.dimensionless
+
+    unit_string = utils.unit_to_string(unit.dimensionless)
+    unit_value = utils.string_to_unit(unit_string)
+
+    assert unit_value == unit.dimensionless

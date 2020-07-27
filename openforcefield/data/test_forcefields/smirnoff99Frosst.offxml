@@ -1,5 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+	<!-- Note that this file is not versioned, and is unsuitable for use in scholarly work. If you   -->
+        <!-- are looking for the Open Force Field Initiative's main line of force fields, download the   -->
+        <!-- `openforcefields` conda package, or see                                                     -->
+        <!-- https://github.com/openforcefield/openforcefields/                                          -->
+        <!-- To use the legacy smirnoff99Frosst line of force fields, which do NOT contain any effort at -->
+        <!-- improving accuracy over Parm@Frosst, download the `smirnoff99Frosst` conda package, or see  -->
+        <!-- https://github.com/openforcefield/smirnoff99Frosst/                                         -->
+        <!-- If you absolutely must refer to this file in scholarly work, indicate the file name and     --> 
+        <!-- Open Force Field Toolkit version that was used                                              -->
 	<Bonds version="0.3" potential="harmonic" fractional_bondorder_method="None" fractional_bondorder_interpolation="linear">
 		<Bond smirks="[#6X4:1]-[#6X4:2]" length="1.526 * angstrom" k="620.0 * angstrom**-2 * mole**-1 * kilocalorie" id="b1"></Bond>
 		<Bond smirks="[#6X4:1]-[#6X3:2]" length="1.51 * angstrom" k="634.0 * angstrom**-2 * mole**-1 * kilocalorie" id="b2"></Bond>

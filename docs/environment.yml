@@ -18,7 +18,7 @@ dependencies:
     - networkx
     - parmed
     - rdkit
-    - ambermini
+    - ambertools
     - packaging
     # Serialization: Should these be optional?
     - toml
