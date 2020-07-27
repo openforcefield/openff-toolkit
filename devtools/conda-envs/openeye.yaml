@@ -18,7 +18,6 @@ dependencies:
   - numpy
   - networkx
   - ambertools
-  - rdkit
   - openeye-toolkits
   - packaging
   - openmmforcefields >=0.7.2

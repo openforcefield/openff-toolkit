@@ -85,6 +85,8 @@ rdkit_inchi_stereochemistry_lost = ['DrugBank_5414', 'DrugBank_2955', 'DrugBank_
 rdkit_inchi_isomorphic_fails = ['DrugBank_178', 'DrugBank_246', 'DrugBank_5847', 'DrugBank_700', 'DrugBank_1564',
                                 'DrugBank_1700', 'DrugBank_4662', 'DrugBank_2052', 'DrugBank_2077', 'DrugBank_2082',
                                 'DrugBank_2210', 'DrugBank_2642']
+rdkit_inchi_roundtrip_mangled = ['DrugBank_2684']
+
 #=============================================================================================
 # TESTS
 #=============================================================================================
@@ -417,9 +419,9 @@ class TestOpenEyeToolkitWrapper:
                 # Some molecules graphs change during the round trip testing
                 # we test quite strict isomorphism here
                 with pytest.raises(AssertionError):
-                    assert molecule.is_isomorphic_with(mol2, bond_order_matching=False)
+                    assert molecule.is_isomorphic_with(mol2, bond_order_matching=False, toolkit_registry=toolkit)
             else:
-                assert molecule.is_isomorphic_with(mol2, bond_order_matching=False)
+                assert molecule.is_isomorphic_with(mol2, bond_order_matching=False, toolkit_registry=toolkit)
 
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
     def test_get_sdf_coordinates(self):
@@ -750,7 +752,7 @@ class TestOpenEyeToolkitWrapper:
 
 
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
-    @pytest.mark.parametrize("partial_charge_method", ['am1bcc', 'am1-mulliken', 'gasteiger'])
+    @pytest.mark.parametrize("partial_charge_method", ['am1bcc', 'am1elf10', 'am1-mulliken', 'gasteiger'])
     def test_assign_partial_charges_neutral(self, partial_charge_method):
         """Test OpenEyeToolkitWrapper assign_partial_charges()"""
         from openforcefield.tests.test_forcefield import create_ethanol
@@ -788,7 +790,7 @@ class TestOpenEyeToolkitWrapper:
             assert abs(pc1 - pc2) > 1.e-5 * unit.elementary_charge
 
     @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye Toolkit not available')
-    @pytest.mark.parametrize("partial_charge_method", ['am1bcc', 'am1-mulliken', 'gasteiger'])
+    @pytest.mark.parametrize("partial_charge_method", ['am1bcc', 'am1elf10', 'am1-mulliken', 'gasteiger'])
     def test_assign_partial_charges_net_charge(self, partial_charge_method):
         """
         Test OpenEyeToolkitWrapper assign_partial_charges() on a molecule with net charge.
@@ -1282,15 +1284,22 @@ class TestRDKitToolkitWrapper:
         else:
             print(molecule.name)
             mol2 = molecule.from_inchi(inchi, toolkit_registry=toolkit)
+
+            # Some molecules are mangled by being round-tripped to/from InChI
+            if molecule.name in rdkit_inchi_roundtrip_mangled:
+                with pytest.raises(AssertionError):
+                    mol2.to_rdkit()
+                return
+
             # compare the full molecule excluding the properties dictionary
             # turn of the bond order matching as this could move in the aromatic rings
             if molecule.name in rdkit_inchi_isomorphic_fails:
                 # Some molecules graphs change during the round trip testing
                 # we test quite strict isomorphism here
                 with pytest.raises(AssertionError):
-                    assert molecule.is_isomorphic_with(mol2, bond_order_matching=False)
+                    assert molecule.is_isomorphic_with(mol2, bond_order_matching=False, toolkit_registry=toolkit)
             else:
-                assert molecule.is_isomorphic_with(mol2, bond_order_matching=False)
+                assert molecule.is_isomorphic_with(mol2, bond_order_matching=False, toolkit_registry=toolkit)
 
     @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
     def test_smiles_charged(self):

@@ -51,72 +51,90 @@ jobs:
       OPENEYE: ${{ matrix.cfg.openeye }}
       PYVER: ${{ matrix.python-version }}
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
+      PACKAGE: openforcefield
 
     steps:
-    - uses: actions/checkout@v2
-    - name: Additional info about the build
-      shell: bash
-      run: |
-        uname -a
-        df -h
-        ulimit -a
-    - name: Fix conda permissions in MacOS
-      shell: bash
-      if: startsWith(matrix.cfg.os, 'macOS')
-      run: |
-        sudo chown -R $(id -u):$(id -g) ${CONDA}
-    - name: Configure conda
-      shell: bash
-      run: |
-        . devtools/gh-actions/initialize_conda.sh
-        conda activate
-        conda config --set always_yes yes
-        conda config --add channels omnia --add channels conda-forge --add channels openeye
-        conda install --quiet conda conda-build jinja2 anaconda-client
-        conda update --quiet --all
-        conda info --all
-        conda list
-    - name: Make oe_license.txt file from GH org secret "OE_LICENSE"
-      shell: bash
-      env:
-        OE_LICENSE_TEXT: ${{ secrets.OE_LICENSE }}
-      run: |
-        echo "${OE_LICENSE_TEXT}" > ${OE_LICENSE}
-    - name: Prepare test environment
-      shell: bash
-      run: |
-        . devtools/gh-actions/initialize_conda.sh
-        conda activate
-        python devtools/scripts/create_conda_env.py -n=test -p=$PYVER devtools/conda-envs/test_env.yaml
-        conda activate test
-        if [[ "$RDKIT" == true ]]; then conda install rdkit; fi
-        if [[ "$OPENEYE" == true ]]; then
-          conda install openeye-toolkits=2019
-          python -c "from openeye import oechem; assert oechem.OEChemIsLicensed()"
-        fi
-        python -m pip install --no-deps .
-    - name: Test the package
-      shell: bash
-      run: |
-        . devtools/gh-actions/initialize_conda.sh
-        conda activate test
-        PYTEST_ARGS="-v --ignore=utilities --ignore=examples/deprecated"
-        PYTEST_ARGS+=" --ignore=openforcefield/tests/plugins.py --nbval-lax"
-        PYTEST_ARGS+=" --cov=openforcefield --cov-report=xml --cov-config=setup.cfg"
-        if [[ "$RDKIT" == true && "$OPENEYE" == true ]]; then
-          PYTEST_ARGS+=" --ignore=docs --ignore=devtools --doctest-modules"
-        elif [[ "$OPENEYE" == true ]]; then
-          PYTEST_ARGS+=" --ignore=docs --ignore=devtools"
-          PYTEST_ARGS+=" --ignore=examples/check_dataset_parameter_coverage"
-          PYTEST_ARGS+=" --ignore=examples/QCArchive_interface"
-        fi
-        if [[ "$RDKIT" == false ]]; then
-          PYTEST_ARGS+=" --ignore=examples/conformer_energies"
-        fi
-        pytest $PYTEST_ARGS
+      - uses: actions/checkout@v2
 
-    - name: Codecov
-      uses: codecov/codecov-action@v1
-      with:
-        file: ./coverage.xml
-        fail_ci_if_error: true
+      - uses: goanpeca/setup-miniconda@v1
+        name: Install both RDKit and OpenEye toolkits
+        if: ${{ matrix.cfg.rdkit == 'TRUE' && matrix.cfg.openeye == 'TRUE' }}
+        with:
+          python-version: ${{ matrix.python-version }}
+          activate-environment: test
+          environment-file: devtools/conda-envs/test_env.yaml
+          auto-activate-base: false
+      - uses: goanpeca/setup-miniconda@v1
+        name: Install only RDKit
+        if: ${{ matrix.cfg.rdkit == 'TRUE' && matrix.cfg.openeye == 'FALSE' }}
+        with:
+          python-version: ${{ matrix.python-version }}
+          activate-environment: test
+          environment-file: devtools/conda-envs/rdkit.yaml
+          auto-activate-base: false
+      - uses: goanpeca/setup-miniconda@v1
+        name: Install with OpenEye toolkits
+        if: ${{ matrix.cfg.rdkit == 'FALSE' && matrix.cfg.openeye == 'TRUE' }}
+        with:
+          python-version: ${{ matrix.python-version }}
+          activate-environment: test
+          environment-file: devtools/conda-envs/openeye.yaml
+          auto-activate-base: false
+
+      - name: Additional info about the build
+        shell: bash -l {0}
+        run: |
+          uname -a
+          df -h
+          ulimit -a
+
+      - name: Decrypt OpenEye license
+        shell: bash -l {0}
+        env:
+          ENC_OE_LICENSE: ${{ secrets.OE_LICENSE__EXP_JUN2020 }}
+        run: |
+          echo "${ENC_OE_LICENSE}" > ${OE_LICENSE}
+
+      - name: Environment Information
+        shell: bash -l {0}
+        run: |
+          conda info
+          conda list
+
+      - name: Install package
+        shell: bash -l {0}
+        run: |
+          python -m pip install --no-deps -v .
+
+      - name: Check links
+        shell: bash -l {0}
+        if: ${{ matrix.cfg.rdkit == 'true' && matrix.cfg.openeye == 'TRUE' }}
+        continue-on-error: true
+        run: |
+          pytest -r fE -tb=short openforcefield/tests/test_links.py
+
+      - name: Run unit tests
+        shell: bash -l {0}
+        run: |
+          PYTEST_ARGS=" -r fE --tb=short --cov=$PACKAGE --cov-config=setup.cfg"
+          PYTEST_ARGS+=" --ignore=openforcefield/tests/test_examples.py"
+          PYTEST_ARGS+=" --ignore=openforcefield/tests/test_links.py"
+          if [[ "$RDKIT" == true && "$OPENEYE" == true ]]; then
+            PYTEST_ARGS+="--doctest-modules"
+          fi
+          pytest $PYTEST_ARGS $PACKAGE/
+
+      - name: Run examples
+        shell: bash -l {0}
+        run: |
+          PYTEST_ARGS=" -r fE --tb=short --nbval-lax"
+          PYTEST_ARGS+=" --ignore=utilities --ignore=examples/deprecated"
+          PYTEST_ARGS+=" --ignore=openforcefield/tests/plugins.py --nbval-lax"
+          if [[ "$OPENEYE" == true ]]; then
+            PYTEST_ARGS+=" --ignore=examples/check_dataset_parameter_coverage"
+            PYTEST_ARGS+=" --ignore=examples/QCArchive_interface"
+          fi
+          pytest $PYTEST_ARGS openforcefield/tests/test_examples.py
+
+      - name: Codecov
+        uses: codecov/codecov-action@v1

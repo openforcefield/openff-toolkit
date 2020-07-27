@@ -67,3 +67,4 @@ Miscellaneous utility functions.
     get_data_file_path
     convert_0_1_smirnoff_to_0_2
     convert_0_2_smirnoff_to_0_3
+    get_molecule_parameterIDs
