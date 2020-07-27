@@ -51,7 +51,7 @@ import openforcefield
 from openforcefield.utils import serialize_numpy, deserialize_numpy, quantity_to_string, \
     string_to_quantity, check_units_are_compatible
 from openforcefield.utils.toolkits import ToolkitRegistry, ToolkitWrapper, RDKitToolkitWrapper, OpenEyeToolkitWrapper,\
-    InvalidToolkitError, UndefinedStereochemistryError, GLOBAL_TOOLKIT_REGISTRY
+    InvalidToolkitRegistryError, UndefinedStereochemistryError, GLOBAL_TOOLKIT_REGISTRY
 from openforcefield.utils.toolkits import DEFAULT_AROMATICITY_MODEL
 from openforcefield.utils.serialization import Serializable
 
@@ -1940,7 +1940,7 @@ class FrozenMolecule(Serializable):
         elif isinstance(toolkit_registry, ToolkitWrapper):
             to_smiles_method = toolkit_registry.to_smiles
         else:
-            raise Exception(
+            raise InvalidToolkitRegistryError(
                 'Invalid toolkit_registry passed to to_smiles. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'
                 .format(type(toolkit_registry)))
 
@@ -1995,7 +1995,7 @@ class FrozenMolecule(Serializable):
             molecule = toolkit.from_inchi(inchi,
                                           allow_undefined_stereo=allow_undefined_stereo)
         else:
-            raise Exception(
+            raise InvalidToolkitRegistryError(
                 'Invalid toolkit_registry passed to from_inchi. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'
                 .format(type(toolkit_registry)))
 
@@ -2025,7 +2025,7 @@ class FrozenMolecule(Serializable):
 
         Raises
         -------
-        InvalidToolkitError
+        InvalidToolkitRegistryError
              If an invalid object is passed as the toolkit_registry parameter
         """
 
@@ -2038,7 +2038,7 @@ class FrozenMolecule(Serializable):
             inchi = toolkit.to_inchi(self,
                                      fixed_hydrogens=fixed_hydrogens)
         else:
-            raise InvalidToolkitError(
+            raise InvalidToolkitRegistryError(
                 'Invalid toolkit_registry passed to to_inchi. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'
                 .format(type(toolkit_registry)))
 
@@ -2068,7 +2068,7 @@ class FrozenMolecule(Serializable):
 
         Raises
         -------
-        InvalidToolkitError
+        InvalidToolkitRegistryError
              If an invalid object is passed as the toolkit_registry parameter
         """
 
@@ -2081,7 +2081,7 @@ class FrozenMolecule(Serializable):
             inchi_key = toolkit.to_inchikey(self,
                                             fixed_hydrogens=fixed_hydrogens)
         else:
-            raise InvalidToolkitError(
+            raise InvalidToolkitRegistryError(
                 'Invalid toolkit_registry passed to to_inchikey. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'
                 .format(type(toolkit_registry)))
 
@@ -2130,7 +2130,7 @@ class FrozenMolecule(Serializable):
                                            allow_undefined_stereo=allow_undefined_stereo
                                            )
         else:
-            raise Exception(
+            raise InvalidToolkitRegistryError(
                 'Invalid toolkit_registry passed to from_smiles. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'
                 .format(type(toolkit_registry)))
 
@@ -2378,7 +2378,7 @@ class FrozenMolecule(Serializable):
 
         Raises
         ------
-        InvalidToolkitError
+        InvalidToolkitRegistryError
             If an invalid object is passed as the toolkit_registry parameter
 
         """
@@ -2401,7 +2401,7 @@ class FrozenMolecule(Serializable):
                                                rms_cutoff = rms_cutoff,
                                                clear_existing=clear_existing)
         else:
-            raise InvalidToolkitError(
+            raise InvalidToolkitRegistryError(
                 'Invalid toolkit_registry passed to generate_conformers. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'
                 .format(type(toolkit_registry)))
 
@@ -2433,7 +2433,7 @@ class FrozenMolecule(Serializable):
 
         Raises
         ------
-        InvalidToolkitError
+        InvalidToolkitRegistryError
             If an invalid object is passed as the toolkit_registry parameter
 
         """
@@ -2472,7 +2472,7 @@ class FrozenMolecule(Serializable):
 
         Raises
         ------
-        InvalidToolkitError
+        InvalidToolkitRegistryError
             If an invalid object is passed as the toolkit_registry parameter
 
         """
@@ -2496,7 +2496,7 @@ class FrozenMolecule(Serializable):
                                            strict_n_conformers=strict_n_conformers
                                            )
         else:
-            raise InvalidToolkitError(
+            raise InvalidToolkitRegistryError(
                 f'Invalid toolkit_registry passed to assign_partial_charges.'
                 f'Expected ToolkitRegistry or ToolkitWrapper. Got  {type(toolkit_registry)}')
 
@@ -2529,7 +2529,7 @@ class FrozenMolecule(Serializable):
 
         Raises
         ------
-        InvalidToolkitError
+        InvalidToolkitRegistryError
             If an invalid object is passed as the toolkit_registry parameter
 
         """
@@ -2546,7 +2546,7 @@ class FrozenMolecule(Serializable):
                 bond_order_model=bond_order_model,
                 use_conformers=use_conformers)
         else:
-            raise Exception(
+            raise InvalidToolkitRegistryError(
                 f'Invalid toolkit_registry passed to assign_fractional_bond_orders. '
                 f'Expected ToolkitRegistry or ToolkitWrapper. Got {type(toolkit_registry)}.')
 
@@ -4183,7 +4183,7 @@ class FrozenMolecule(Serializable):
             toolkit = toolkit_registry
             return toolkit.canonical_order_atoms(self)
         else:
-            raise Exception(
+            raise InvalidToolkitRegistryError(
                 'Invalid toolkit_registry passed to from_smiles. Expected ToolkitRegistry or ToolkitWrapper. Got  {}'
                 .format(type(toolkit_registry)))
 

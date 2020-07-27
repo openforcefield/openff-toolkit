@@ -31,6 +31,7 @@ __all__ = [
     'MissingPackageError',
     'ToolkitUnavailableException',
     'InvalidToolkitError',
+    'InvalidToolkitRegistryError',
     'UndefinedStereochemistryError',
     'GAFFAtomTypeWarning',
     'ToolkitWrapper',
@@ -110,6 +111,10 @@ class ToolkitUnavailableException(MessageException):
 
 class InvalidToolkitError(MessageException):
     """A non-toolkit object was received when a toolkit object was expected"""
+
+
+class InvalidToolkitRegistryError(MessageException):
+        """An object other than a ToolkitRegistry or toolkit wrapper was received"""
 
 
 class UndefinedStereochemistryError(MessageException):
