@@ -279,12 +279,12 @@ class TestMolecule:
         molecule_copy = Molecule.from_yaml(serialized)
         assert molecule == molecule_copy
 
-    @pytest.mark.parametrize('molecule', mini_drug_bank())
-    def test_toml_serialization(self, molecule):
+    def test_toml_serialization(self):
         """Test serialization of a molecule object to and from TOML."""
-        # TODO: Test round-trip when implemented
+        # TODO: Test round-trip, on mini_drug_bank, when implemented
+        mol = Molecule.from_smiles('CCO')
         with pytest.raises(NotImplementedError):
-            molecule.to_toml()
+            mol.to_toml()
 
     @pytest.mark.parametrize('molecule', mini_drug_bank())
     def test_bson_serialization(self, molecule):
@@ -293,18 +293,18 @@ class TestMolecule:
         molecule_copy = Molecule.from_bson(serialized)
         assert molecule == molecule_copy
 
-    @pytest.mark.parametrize('molecule', mini_drug_bank())
-    def test_json_serialization(self, molecule):
+    def test_json_serialization(self):
         """Test serialization of a molecule object to and from JSON."""
-        # TODO: Test round-trip when to_json bug is fixed
+        # TODO: Test round-trip, on mini_drug_bank, when to_json bug is fixed
+        mol = Molecule.from_smiles('CCO')
         with pytest.raises(TypeError):
-            molecule.to_json()
+            mol.to_json()
 
-    @pytest.mark.parametrize('molecule', mini_drug_bank())
-    def test_xml_serialization(self, molecule):
+    def test_xml_serialization(self):
         """Test serialization of a molecule object to and from XML."""
-        # TODO: Test round-trip when from_xml is implemented
-        serialized = molecule.to_xml()
+        # TODO: Test round-trip, on mini_drug_bank, when from_xml is implemented
+        mol = Molecule.from_smiles('CCO')
+        serialized = mol.to_xml()
         with pytest.raises(NotImplementedError):
             Molecule.from_xml(serialized)
 
