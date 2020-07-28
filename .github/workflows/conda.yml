@@ -87,6 +87,8 @@ jobs:
       - name: Test the package
         shell: bash -l {0}
         run: |
+          # Checkout the state of the repo as of the last release
+          git checkout tags/`git ls-remote --tags https://github.com/openforcefield/openforcefield.git | tail -1 | cut -f2 | sed 's/refs\/tags\///'`
           PYTEST_ARGS="-v --ignore=utilities --ignore=examples/deprecated --nbval-lax"
           if [[ "$OPENEYE" == true ]]; then
             PYTEST_ARGS+=" --ignore=docs --ignore=devtools --doctest-modules"
