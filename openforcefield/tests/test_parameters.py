@@ -297,6 +297,17 @@ class TestParameterHandler:
     length = 1*unit.angstrom
     k = 10*unit.kilocalorie_per_mole/unit.angstrom**2
 
+    def test_tag_name(self):
+        """Test the tag_name getter, setter, and default behavior"""
+        ph = ParameterHandler(skip_version_check=True)
+        assert ph.tag_name is None
+
+        ph.tag_name = 'NovelTagName'
+        assert ph.tag_name == 'NovelTagName'
+
+        bh = BondHandler(skip_version_check=True)
+        assert bh.tag_name == 'Bonds'
+
     def test_add_parameter(self):
         """Test the behavior of add_parameter"""
         bh = BondHandler(skip_version_check=True)
