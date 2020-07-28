@@ -10,8 +10,7 @@ on:
 
 jobs:
   test:
-    if: (github.event_name == 'schedule' && github.repository == 'openforcefield/openforcefield') || (github.event_name != 'schedule')
-    name: Test on ${{ matrix.cfg.os }}, Python ${{ matrix.python-version }}, RDKit=${{ matrix.cfg.rdkit }}, OpenEye=${{ matrix.cfg.openeye }}
+    name: Test on ${{ matrix.cfg.os }}, Python ${{ matrix.python-version }}, OpenEye=${{ matrix.openeye }}
     runs-on: ${{ matrix.cfg.os }}
     strategy:
       fail-fast: false
@@ -48,7 +47,7 @@ jobs:
           auto-activate-base: false
       - uses: goanpeca/setup-miniconda@v1
         name: Install from conda with OpenEye
-        if: ${{ matrix.cfg.openeye == 'true' }}
+        if: ${{ matrix.openeye == 'true' }}
         with:
           python-version: ${{ matrix.python-version }}
           activate-environment: test
