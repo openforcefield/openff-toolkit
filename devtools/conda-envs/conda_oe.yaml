@@ -9,3 +9,4 @@ dependencies:
   - openforcefield
   - openeye-toolkits
   - pytest
+  - nbval

@@ -7,3 +7,4 @@ dependencies:
     # Base depends
   - openforcefield
   - pytest
+  - nbval
