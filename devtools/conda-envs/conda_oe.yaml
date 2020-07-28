@@ -1,0 +1,10 @@
+name: test
+channels:
+  - conda-forge
+  - omnia
+  - openeye
+
+dependencies:
+    # Base depends
+  - openforcefield
+  - openeye-toolkits

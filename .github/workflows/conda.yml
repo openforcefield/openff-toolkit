@@ -9,15 +9,13 @@ on:
     - cron: "0 0 * * *"
 
 jobs:
-  package:
-    name: Package installation tests
-    runs-on: ${{ matrix.os }}
+  test:
+    if: (github.event_name == 'schedule' && github.repository == 'openforcefield/openforcefield') || (github.event_name != 'schedule')
+    name: Test on ${{ matrix.cfg.os }}, Python ${{ matrix.python-version }}, RDKit=${{ matrix.cfg.rdkit }}, OpenEye=${{ matrix.cfg.openeye }}
+    runs-on: ${{ matrix.cfg.os }}
     strategy:
       fail-fast: false
       matrix:
-        os:
-          - ubuntu-latest
-          - macOS-latest
         python-version:
           - 3.6
           - 3.7
@@ -26,60 +24,67 @@ jobs:
         openeye:
           - true
           - false
+        cfg:
+          - os: ubuntu-latest
+          - os: macOS-latest
 
     env:
+      CI_OS: ${{ matrix.cfg.os }}
       OPENEYE: ${{ matrix.cfg.openeye }}
+      PYVER: ${{ matrix.python-version }}
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
+      PACKAGE: openforcefield
 
     steps:
-    - uses: actions/checkout@v2
-      with:
-        ref: master
-    - name: Decrypt OpenEye license
-      shell: bash
-      env:
-        ENC_OE_LICENSE: ${{ secrets.OE_LICENSE__EXP_JUN2020 }}
-      run: |
-        echo "${ENC_OE_LICENSE}" > ${OE_LICENSE}
-    - name: Additional info about the build
-      shell: bash
-      run: |
-        uname -a
-        df -h
-        ulimit -a
-    - name: Fix conda permissions in MacOS
-      shell: bash
-      if: startsWith(matrix.os, 'macOS')
-      run: |
-        sudo chown -R $(id -u):$(id -g) ${CONDA}
-    - name: Configure conda
-      shell: bash
-      run: |
-        . devtools/gh-actions/initialize_conda.sh
-        conda activate
-        conda config --set always_yes yes
-        conda update --quiet --all
-        conda info --all
-        conda list
-    - name: Follow installation instructions
-      shell: bash
-      run: |
-        . devtools/gh-actions/initialize_conda.sh
-        conda activate
-        conda config --add channels omnia --add channels conda-forge
-        conda create -n openforcefield openforcefield python=${{ matrix.python-version }}
-        conda activate openforcefield
-        if [[ "$OPENEYE" == true ]]; then
-          conda install openeye-toolkits
-          python -c "from openeye import oechem; assert oechem.OEChemIsLicensed()"
-        fi
-        conda list
-        # Make sure the currently installed version is the same as the newest git tag
-        python -c 'import openforcefield, sys; assert openforcefield.__version__ == sys.argv[1]' \
-        `git ls-remote --tags https://github.com/openforcefield/openforcefield.git | tail -1 | cut -f2 | sed 's/refs\/tags\///'`
-    - name: Test the package
-      shell: bash
-      run: |
+      - uses: actions/checkout@v2
+
+      - uses: goanpeca/setup-miniconda@v1
+        name: Vanilla install from conda
+        if: ${{ matrix.cfg.openeye == 'false' }}
+        with:
+          python-version: ${{ matrix.python-version }}
+          activate-environment: test
+          environment-file: devtools/conda-envs/conda.yaml
+          auto-activate-base: false
+      - uses: goanpeca/setup-miniconda@v1
+        name: Install from conda with OpenEye
+        if: ${{ matrix.cfg.openeye == 'true' }}
+        with:
+          python-version: ${{ matrix.python-version }}
+          activate-environment: test
+          environment-file: devtools/conda-envs/conda_oe.yaml
+          auto-activate-base: false
+
+
+      - name: Additional info about the build
+        shell: bash -l {0}
+        run: |
+          uname -a
+          df -h
+          ulimit -a
+
+      - name: Decrypt OpenEye license
+        shell: bash -l {0}
+        env:
+          ENC_OE_LICENSE: ${{ secrets.OE_LICENSE__EXP_JUN2020 }}
+        run: |
+          echo "${ENC_OE_LICENSE}" > ${OE_LICENSE}
+
+      - name: Environment Information
+        shell: bash -l {0}
+        run: |
+          conda info
+          conda list
+
+      - name: Check that correct OFFTK version was installed
+        shell: bash -l {0}
+        run: |
+          # Make sure the currently installed version is the same as the newest git tag
+          python -c 'import openforcefield, sys; assert openforcefield.__version__ == sys.argv[1]' \
+            `git ls-remote --tags https://github.com/openforcefield/openforcefield.git | tail -1 | cut -f2 | sed 's/refs\/tags\///'`
+      - name: Test the package
+        shell: bash
+        run: |
         PYTEST_ARGS="-v --ignore=utilities --ignore=examples/deprecated --nbval-lax"
         if [[ "$OPENEYE" == true ]]; then
           PYTEST_ARGS+=" --ignore=docs --ignore=devtools --doctest-modules"
