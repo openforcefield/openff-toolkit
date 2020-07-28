@@ -85,9 +85,9 @@ jobs:
       - name: Test the package
         shell: bash
         run: |
-        PYTEST_ARGS="-v --ignore=utilities --ignore=examples/deprecated --nbval-lax"
-        if [[ "$OPENEYE" == true ]]; then
-          PYTEST_ARGS+=" --ignore=docs --ignore=devtools --doctest-modules"
-        fi
-        pytest $PYTEST_ARGS
+          PYTEST_ARGS="-v --ignore=utilities --ignore=examples/deprecated --nbval-lax"
+          if [[ "$OPENEYE" == true ]]; then
+            PYTEST_ARGS+=" --ignore=docs --ignore=devtools --doctest-modules"
+          fi
+          pytest $PYTEST_ARGS
 
