@@ -6,3 +6,4 @@ channels:
 dependencies:
     # Base depends
   - openforcefield
+  - pytest
