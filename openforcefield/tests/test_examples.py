@@ -18,6 +18,7 @@ import re
 import subprocess
 import textwrap
 import tempfile
+import pathlib
 
 import pytest
 
@@ -29,7 +30,7 @@ from openforcefield.utils import RDKIT_AVAILABLE, get_data_file_path, \
 # TEST UTILITIES
 #======================================================================
 
-ROOT_DIR_PATH = os.path.join(os.path.dirname(os.path.realpath(__file__)), '..', '..')
+ROOT_DIR_PATH = pathlib.Path(__file__).joinpath('../../../').resolve()
 
 
 def run_script_file(file_path):
@@ -74,28 +75,19 @@ def find_examples():
     example_file_paths : List[str]
         List of python script to execute.
     """
-    slow_examples = {
-        os.path.join('SMIRNOFF_comparison', 'compare_set_energies.py')
-    }
-    examples_dir_path = os.path.join(ROOT_DIR_PATH, 'examples')
+    examples_dir_path = ROOT_DIR_PATH.joinpath('examples')
 
-    requires_rdkit = {
-        os.path.join('conformer_energies', 'conformer_energies.py')
+    # Examples that require RDKit
+    rdkit_examples = {
+        examples_dir_path.joinpath('conformer_energies/conformer_energies.py'),
     }
 
     example_file_paths = []
-    for example_file_path in glob.glob(os.path.join(examples_dir_path, '*', '*.py')):
-        example_file_path = os.path.abspath(example_file_path)
-        example_file_paths.append(example_file_path)
+    for example_file_path in examples_dir_path.glob('*/*.py'):
         if not RDKIT_AVAILABLE:
-            for rdkit_example in requires_rdkit:
-                if rdkit_example in example_file_path:
-                    example_file_paths.remove(example_file_path)
-        # Check if this is a slow test.
-        for slow_example in slow_examples:
-            if slow_example in example_file_path:
-                # This is a slow example.
-                example_file_path = pytest.param(example_file_path, marks=pytest.mark.slow)
+            if example_file_path in rdkit_examples:
+                continue
+        example_file_paths.append(example_file_path.as_posix())
     return example_file_paths
 
 
@@ -107,8 +99,8 @@ def find_readme_examples():
     readme_examples : List[str]
         The list of Python scripts included in the README.md files.
     """
-    readme_file_path = os.path.join(ROOT_DIR_PATH, 'README.md')
-    with open(readme_file_path, 'r') as f:
+    readme_path = ROOT_DIR_PATH.joinpath('README.md')
+    with open(readme_path, 'r') as f:
         readme_content = f.read()
     return re.findall('```python(.*?)```', readme_content, flags=re.DOTALL)
 
