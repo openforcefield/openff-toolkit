@@ -639,6 +639,7 @@ class TestForceField():
         assert len(forcefield._parameter_handlers['ProperTorsions']._parameters) == 158
         assert len(forcefield._parameter_handlers['ImproperTorsions']._parameters) == 4
         assert len(forcefield._parameter_handlers['vdW']._parameters) == 35
+        assert forcefield.aromaticity_model == 'OEAroModel_MDL'
 
     def test_load_bad_string(self):
         with pytest.raises(IOError) as exception_info:

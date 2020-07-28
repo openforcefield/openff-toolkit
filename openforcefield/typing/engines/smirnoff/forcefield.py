@@ -401,6 +401,9 @@ class ForceField:
         ------
         SMIRNOFFAromaticityError if an incompatible aromaticity model is passed in.
 
+        .. notes ::
+           * Currently, the only supported aromaticity model is 'OEAroModel_MDL'.
+
         """
         # Implement better logic here if we ever support another aromaticity model
         if aromaticity_model != 'OEAroModel_MDL':
@@ -408,6 +411,17 @@ class ForceField:
                                            "OEAroModel_MDL is supported.".format(aromaticity_model))
 
         self._aromaticity_model = aromaticity_model
+
+    @property
+    def aromaticity_model(self):
+        """Returns the aromaticity model for this ForceField object.
+
+        Returns
+        -------
+        aromaticity_model
+            The aromaticity model for this force field.
+        """
+        return self._aromaticity_model
 
     def _add_author(self, author):
         """
