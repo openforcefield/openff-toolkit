@@ -1691,9 +1691,7 @@ class TestRDKitToolkitWrapper:
         # TODO: Add write tests for all formats
 
 
-
 @requires_ambertools
-@requires_rdkit
 class TestAmberToolsToolkitWrapper:
     """Test the AmberToolsToolkitWrapper"""
 
@@ -2295,7 +2293,7 @@ class TestToolkitRegistry:
         # This method is available in AmberToolsToolkitWrapper, but not RDKitToolkitWrapper
         registry.call('assign_partial_charges', molecule)
 
-    @requires_rdkit
+    @requires_ambertools
     def test_deregister_toolkit(self):
         """Test removing an instantiated toolkit from the registry"""
         toolkit_registry = ToolkitRegistry(toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper])
