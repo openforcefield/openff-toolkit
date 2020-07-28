@@ -1642,18 +1642,6 @@ class ParameterHandler(_ParameterAttributeHandler):
         """
         return self._TAGNAME
 
-    @tag_name.setter
-    def tag_name(self, tag_name):
-        """
-        Set the name of this ParameterHandler object corresponding to a SMIRNOFF tag name.
-
-        Parameters
-        ----------
-        tag_name : str
-            The name to set this ParameterHandler tag name to
-        """
-        self._TAGNAME = tag_name
-
     # TODO: Do we need to return these, or can we handle this internally
     @property
     def known_kwargs(self):
