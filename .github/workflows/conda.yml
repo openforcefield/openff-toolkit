@@ -21,8 +21,8 @@ jobs:
           # Uncomment when ready ;)
           # - 3.8
         openeye:
-          - true
-          - false
+          - "true"
+          - "false"
         cfg:
           - os: ubuntu-latest
           - os: macOS-latest
@@ -39,7 +39,7 @@ jobs:
 
       - uses: goanpeca/setup-miniconda@v1
         name: Vanilla install from conda
-        if: ${{ matrix.cfg.openeye == 'false' }}
+        if: ${{ matrix.openeye == 'false' }}
         with:
           python-version: ${{ matrix.python-version }}
           activate-environment: test
@@ -79,7 +79,11 @@ jobs:
         shell: bash -l {0}
         run: |
           # Make sure the currently installed version is the same as the newest git tag
-          python -c 'import openforcefield, sys; assert openforcefield.__version__ == sys.argv[1]' \
+          echo "Latest tag:" `git ls-remote --tags https://github.com/openforcefield/openforcefield.git | tail -1 | cut -f2 | sed 's/refs\/tags\///'
+          python -c 'import openforcefield, sys;
+                     print('Installed OpenFF Version', openforcefield.__version__);
+                     assert openforcefield.__version__ == sys.argv[1]
+                     ' \
             `git ls-remote --tags https://github.com/openforcefield/openforcefield.git | tail -1 | cut -f2 | sed 's/refs\/tags\///'`
       - name: Test the package
         shell: bash
