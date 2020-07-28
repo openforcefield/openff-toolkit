@@ -85,7 +85,7 @@ jobs:
           python -c "import openforcefield, sys; print('Installed OpenFF Version', openforcefield.__version__);assert openforcefield.__version__ == sys.argv[1]" \
                        `git ls-remote --tags https://github.com/openforcefield/openforcefield.git | tail -1 | cut -f2 | sed 's/refs\/tags\/// ' `
       - name: Test the package
-        shell: bash
+        shell: bash -l {0}
         run: |
           PYTEST_ARGS="-v --ignore=utilities --ignore=examples/deprecated --nbval-lax"
           if [[ "$OPENEYE" == true ]]; then
