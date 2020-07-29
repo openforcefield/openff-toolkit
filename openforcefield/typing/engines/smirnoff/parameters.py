@@ -1630,7 +1630,7 @@ class ParameterHandler(_ParameterAttributeHandler):
         return self._parameters
 
     @property
-    def tag_name(self):
+    def TAGNAME(self):
         """
         The name of this ParameterHandler corresponding to the SMIRNOFF tag name
 
