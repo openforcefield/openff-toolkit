@@ -10,19 +10,10 @@ class TestCLIFunctions:
     @pytest.mark.parametrize('toolkit', ['rdkit', 'openeye'])
     def test_generate_conformers_function(self, toolkit):
         """
-        loading one molecule from a .sdf file WITH charges
-        (OE only) loading one molecule from a .mol2 file WITH charges
-        (OE only) loading one molecule from a .mol2 file WITHOUT charges (is this even possible)
-        loading a molecule with a defined name (from any format) and ensuring the output file has that prefix
-        loading a molecule with a defined name (from any format), and providing a -f option and ensuring the output file has the -f prefix
-        loading a molecule with a defined name (from any format) and ensuring the output file has that prefix
-        loading multiple molecules from a .sdf file
-        loading one molecule from SMILES in a .smi file
-        loading multiple molecules from SMILES in a .smi file
-        loading a molecule with ambiguous stereo from SMILES and enumerating stereoisomers
-        loading a molecule with defined stereo from SMILES and preserving that stereochemistry
-
         """
+        # TODO:
+        # Test CLI calls directly
+
         # loading one molecule from a .sdf file WITHOUT charges
         ethanol = get_data_file_path('molecules/ethanol.sdf')
         assert Molecule.from_file(ethanol).partial_charges is None
@@ -46,14 +37,20 @@ class TestCLIFunctions:
         # loading a molecule with a defined name (from any format), and providing a -f option and ensuring the output file has the -f prefix
         # loading a molecule with a defined name (from any format) and ensuring the output file has that prefix
         # loading multiple molecules from a .sdf file
+        butane_multi = get_data_file_path('molecules/butane_multi.sdf')
+        generate_conformers(molecule=butane_multi, forcefield='openff-1.0.0.offxml', toolkit=toolkit)
+
         # loading one molecule from SMILES in a .smi file
         ebastine = get_data_file_path('molecules/ebastine.smi')
         generate_conformers(molecule=ebastine, forcefield='openff-1.0.0.offxml', toolkit=toolkit)
 
-        # TODO:
         # loading multiple molecules from SMILES in a .smi file
         dyes = get_data_file_path('molecules/dyes.smi')
         generate_conformers(molecule=dyes, forcefield='openff-1.0.0.offxml', toolkit=toolkit)
 
         # loading a molecule with ambiguous stereo from SMILES and enumerating stereoisomers
+        # TODO: Should the CLI accept both paths and SMILES as strings, or only files?
+        mol = get_data_file_path('molecules/dichloroethene.smi')
+        generate_conformers(molecule=mol, forcefield='openff-1.0.0.offxml', toolkit=toolkit)
+
         # loading a molecule with defined stereo from SMILES and preserving that stereochemistry
