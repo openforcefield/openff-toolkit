@@ -506,10 +506,10 @@ Some key usage points:
 * `fractional_bondorder_method` defaults to `AM1-Wiberg`.
 * `fractional_bondorder_interpolation` defaults to `linear`, which is the only supported scheme for now.
 
-|  ProperTorsions section tag version | Tag attributes and default values                                                                                                                                   | Required parameter attributes                          | Optional parameter attributes  |
-|-------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------|--------------------------------|
-| 0.3                                 | `potential="k*(1+cos(periodicity*theta-phase))"`, `default_idivf="auto"`                                                                                            | `smirks`, `k`, `phase`, `periodicity`                  | `idivf`, `id`, `parent_id`     |
-| 0.4                                 | `potential="k*(1+cos(periodicity*theta-phase))"`, `default_idivf="auto"`, `fractional_bondorder_method="AM1-Wiberg"`, `fractional_bondorder_interpolation="linear"` | `smirks`, `k` or `k_bondorder`, `phase`, `periodicity` | `idivf`, `id`, `parent_id`     |
+|  ProperTorsions section tag version | Tag attributes and default values                                                                                                                                   | Required parameter attributes                            | Optional parameter attributes  |
+|-------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------|--------------------------------|
+| 0.3                                 | `potential="k*(1+cos(periodicity*theta-phase))"`, `default_idivf="auto"`                                                                                            | `smirks`, `k`, `phase`, `periodicity`                    | `idivf`, `id`, `parent_id`     |
+| 0.4                                 | `potential="k*(1+cos(periodicity*theta-phase))"`, `default_idivf="auto"`, `fractional_bondorder_method="AM1-Wiberg"`, `fractional_bondorder_interpolation="linear"` | `smirks`, (`k` OR `k_bondorder`), `phase`, `periodicity` | `idivf`, `id`, `parent_id`     |
 
 
 ### `<ImproperTorsions>`
