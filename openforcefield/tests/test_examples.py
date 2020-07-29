@@ -67,13 +67,13 @@ def run_script_str(script_str):
             raise Exception(f'The following script failed:\n{script_str}')
 
 
-def find_examples():
-    """Find all examples in the examples folder.
+def find_example_scripts():
+    """Find all Python scripts, excluding Jupyter notebooks, in the examples folder.
 
     Returns
     -------
     example_file_paths : List[str]
-        List of python script to execute.
+        List of full paths to python scripts to execute.
     """
     examples_dir_path = ROOT_DIR_PATH.joinpath('examples')
 
@@ -115,7 +115,7 @@ def test_readme_examples(readme_example_str):
     run_script_str(readme_example_str)
 
 
-@pytest.mark.parametrize('example_file_path', find_examples())
+@pytest.mark.parametrize('example_file_path', find_example_scripts())
 def test_examples(example_file_path):
     """Test that the example run without errors."""
     run_script_file(example_file_path)
