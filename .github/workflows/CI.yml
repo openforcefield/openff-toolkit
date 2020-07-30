@@ -139,7 +139,7 @@ jobs:
         run: |
           PYTEST_ARGS=" -r fE --tb=short --nbval-lax"
           PYTEST_ARGS+=" --ignore=examples/deprecated"
-          pytest $PYTESTARGS examples/
+          pytest $PYTEST_ARGS examples/
 
       - name: Codecov
         uses: codecov/codecov-action@v1
