@@ -36,6 +36,7 @@ def generate_conformers(
         print("catch speifics here")
         raise e
 
+    # TODO: Parse prefix of molecule file
     ambiguous_stereochemistry = False
     try:
         mols = toolkit_registry.call(
@@ -59,21 +60,25 @@ def generate_conformers(
     if type(mols) != list:
         mols = [mols]
 
+    # TODO: What happens if some molecules in a multi-molecule file have charges, others don't?
+    mols_with_charges = []
+    for mol in mols:
+        if mol.partial_charges is not None:
+            mols_with_charges.append(mol)
+
     mols = _collapse_conformers(mols)
 
+    mols_out = []
     for mol in mols:
-        toolkit_registry.call('generate_conformers', molecule=mol, n_conformers=5, rms_cutoff=None)
-        top = Topology.from_molecules(mol)
-        omm_sys, new_top = ff.create_openmm_system(top, return_topology=True)
-
-    for mol in mols:
-        simulation = _build_simulation(molecule=mol, forcefield=ff)
+        simulation, partial_charges = _build_simulation(molecule=mol, forcefield=ff, mols_with_charge=mols_with_charges)
 
         for conformer in mol.conformers:
             energy, positions = _get_minimized_data(conformer, simulation)
 
-            _save_minimized_conformer(mol, energy, positions, 'a.sdf')
+            mols_out.append(_reconstruct_mol_from_conformer(mol, energy, positions))
+            # _save_minimized_conformer(mol, energy, positions, 'a.sdf')
 
+    return mols_out
 
 def _collapse_conformers(molecules):
     """
@@ -106,11 +111,16 @@ def _collapse_conformers(molecules):
     return collapsed_molecules
 
 
-def _build_simulation(molecule, forcefield):
+def _build_simulation(molecule, forcefield, mols_with_charge):
     """Given a Molecule and ForceField, initialize a barebones OpenMM Simulation."""
     mol_copy = deepcopy(molecule)
     off_top = molecule.to_topology()
-    system = forcefield.create_openmm_system(off_top)
+    system, top_with_charges = forcefield.create_openmm_system(
+        off_top,
+        charge_from_molecules=mols_with_charge,
+        allow_nonintegral_charges=True,
+        return_topology=True
+    )
 
     # Use OpenMM to compute initial and minimized energy for all conformers
     integrator = openmm.VerletIntegrator(1 * unit.femtoseconds)
@@ -118,7 +128,11 @@ def _build_simulation(molecule, forcefield):
     omm_top = off_top.to_openmm()
     simulation = openmm.app.Simulation(omm_top, system, integrator, platform)
 
-    return simulation
+    # TODO: return_topology does not produce a top with charges, either make it do so
+    # or reconstruct partial charges from OpenMM system
+    partial_charges = [*top_with_charges.reference_molecules][0].partial_charges
+
+    return simulation, partial_charges
 
 
 def _get_minimized_data(conformer, simulation):
@@ -132,8 +146,7 @@ def _get_minimized_data(conformer, simulation):
 
     return min_energy, min_coords
 
-def _save_minimized_conformer(mol, energy, positions, filename):
-    """Save minimized structures to SDF files"""
+def _reconstruct_mol_from_conformer(mol, energy, positions):
     # TODO: Add SD data pairs in output SDF file for
     #   * absolute_energy in kcal/mol
     #   * conformer generation method and version (openeye version or rdkit version)
@@ -142,6 +155,10 @@ def _save_minimized_conformer(mol, energy, positions, filename):
     mol._conformers = None
     min_coords = np.array([[atom.x, atom.y, atom.z] for atom in positions]) * unit.nanometer
     mol.add_conformer(min_coords)
+    return mol
+
+def _save_minimized_conformer(mol, energy, positions, filename):
+    """Save minimized structures to SDF files"""
     # Add `energy` to mol
     mol.to_file(filename, file_format='sdf')
 
