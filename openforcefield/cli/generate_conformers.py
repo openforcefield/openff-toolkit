@@ -12,34 +12,35 @@ from simtk import openmm, unit
 
 
 def generate_conformers(
-    molecule, toolkit, forcefield, rms_cutoff=None, constrained=False,
+    molecule, toolkit, forcefield, rms_cutoff=None, constrained=False, prefix=None,
 ):
     if toolkit.lower() == "openeye":
         from openforcefield.utils.toolkits import OpenEyeToolkitWrapper
+        import openeye
 
         toolkit_registry = ToolkitRegistry(toolkit_precedence=[OpenEyeToolkitWrapper])
+        toolkit_version = 'openeye-toolkits version ' + openeye.__version__
+
     elif toolkit.lower() == "rdkit":
         from openforcefield.utils.toolkits import RDKitToolkitWrapper
+        import rdkit
 
         toolkit_registry = ToolkitRegistry(toolkit_precedence=[RDKitToolkitWrapper])
+        toolkit_version = 'rdkit version ' + rdkit.__version__
 
     ff_name = forcefield
     if constrained:
-        tmp = ff_name.split("-")
-        tmp[0] = "openff_unconstrained"
-        ff_name = "-".join(tmp)
+        split_name = ff_name.split("-")
+        split_name[0] = "openff_unconstrained"
+        ff_name = "-".join(split_name)
     if not ff_name.endswith(".offxml"):
         ff_name += ".offxml"
-    try:
-        ff = ForceField(ff_name)
-    except Exception as e:
-        print("catch specifics here")
-        raise e
+    ff = ForceField(ff_name)
 
-    # TODO: Parse prefix of molecule file
+    # TODO: This may not preserve order of loading molecules in
     ambiguous_stereochemistry = False
     try:
-        mols = toolkit_registry.call(
+        raw_mols = toolkit_registry.call(
             "from_file", molecule, file_format=molecule.split(".")[-1],
         )
     except UndefinedStereochemistryError:
@@ -49,13 +50,29 @@ def generate_conformers(
         )
         # TODO: This is a brute-force approach, it would be better to check stereo
         #  without needing to call enumerate_stereoisomers
-        mols = []
-        for mol in raw_mols:
-            stereoisomers = mol.enumerate_stereoisomers()
-            if stereoisomers:
-                [mols.append(val) for val in stereoisomers]
-            else:
-                mols.append(mol)
+
+    mols = []
+    for i, mol in enumerate(raw_mols):
+        if prefix is not None:
+            mol.name = prefix + str(i)
+        elif not mol.name:
+            mol.name = 'molecule' + str(i)
+        mols.append(mol)
+
+    if type(mols) != list:
+        mols = [mols]
+
+    # TODO: How to handle names of different stereoisomers? Just act like they're different conformers?
+#   mols_with_unpacked_stereoisomers = []
+#   for mol in mols_with_unpacked_stereoisomers:
+#       stereoisomers = mol.enumerate_stereoisomers()
+#       if stereoisomers:
+#           for i, iso in enumerate(stereoisomers):
+#               iso.name = mol.name + '_stereoisomer' + str(i)
+#               mols_with_unpacked_stereoisomers.append(iso)
+#       else:
+#           mols_with_unpacked_stereoisomers.append(mol)
+#   mols = mols_with_unpacked_stereoisomers
 
     # If no conformers were found (i.e. SMI files), generate some
     # TODO: How many should be generated?
@@ -63,9 +80,6 @@ def generate_conformers(
     for mol in mols:
         if not mol.conformers:
             mol.generate_conformers(toolkit_registry=toolkit_registry, n_conformers=1)
-
-    if type(mols) != list:
-        mols = [mols]
 
     # TODO: What happens if some molecules in a multi-molecule file have charges, others don't?
     mols_with_charges = []
@@ -80,13 +94,15 @@ def generate_conformers(
         simulation, partial_charges = _build_simulation(molecule=mol, forcefield=ff, mols_with_charge=mols_with_charges)
         mol._partial_charges = partial_charges
 
-        for conformer in mol.conformers:
+        for i, conformer in enumerate(mol.conformers):
             energy, positions = _get_minimized_data(conformer, simulation)
+            mol = _reconstruct_mol_from_conformer(mol, positions)
+            _add_metadata_to_mol(mol, energy, toolkit_version, ff_name)
+            mol.name += '_conf' + str(i)
+            mols_out.append(mol)
 
-            mols_out.append(_reconstruct_mol_from_conformer(mol, energy, positions))
-            # _save_minimized_conformer(mol, energy, positions, 'a.sdf')
+    return mols_out, toolkit_registry
 
-    return mols_out
 
 def _collapse_conformers(molecules):
     """
@@ -161,21 +177,30 @@ def _get_minimized_data(conformer, simulation):
 
     return min_energy, min_coords
 
-def _reconstruct_mol_from_conformer(mol, energy, positions):
-    # TODO: Add SD data pairs in output SDF file for
-    #   * absolute_energy in kcal/mol
-    #   * conformer generation method and version (openeye version or rdkit version)
-    #   * partial charges (so, use ForceField.to_openmm_system's return_topology kwarg, and attach the final coordinates to ret_topology._reference_molecules[0], then save that to file)
+
+def _reconstruct_mol_from_conformer(mol, positions):
     mol = deepcopy(mol)
     mol._conformers = None
     min_coords = np.array([[atom.x, atom.y, atom.z] for atom in positions]) * unit.nanometer
     mol.add_conformer(min_coords)
     return mol
 
-def _save_minimized_conformer(mol, energy, positions, filename):
-    """Save minimized structures to SDF files"""
-    # Add `energy` to mol
-    mol.to_file(filename, file_format='sdf')
+
+def _add_metadata_to_mol(mol, energy, toolkit_version, ff_name):
+    mol.properties['absolute energy (kcal/mol): '] = energy
+    mol.properties['conformer generation toolkit: '] = toolkit_version
+    mol.properties['minimized against: '] = ff_name
+
+
+def write_mols(mols, toolkit_registry):
+    """Save minimized structures, with data in SD tags, to files"""
+    for i, mol in enumerate(mols):
+        if mol.name:
+            filename = mol.name + '.sdf'
+        else:
+            mol.name = f'molecule{i}.sdf'
+        mol.to_file(file_path=filename, file_format='SDF', toolkit_registry=toolkit_registry)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -200,8 +225,28 @@ if __name__ == "__main__":
         default=0.25,
         help="The redundancy cutoff between pre-minimized conformers",
     )
-    args = parser.parse_args()  # ['-t', '-f', '-m'])
-
-    generate_conformers(
-        molecule=args.molecule, toolkit=args.toolkit, forcefield=args.forcefield
+    parser.add_argument(
+        "-p",
+        "--prefix",
+        type=str,
+        default="molecule",
+        help="The prefix for output molecules",
     )
+    parser.add_argument(
+        "--constrained",
+        type=bool,
+        default=False,
+        help="Whether or not to use a constrained version of the force field",
+    )
+    args = parser.parse_args()
+
+    mols, toolkit_registry = generate_conformers(
+        molecule=args.molecule,
+        toolkit=args.toolkit,
+        forcefield=args.forcefield,
+        rms_cutoff=args.rms_cutoff,
+        constrained=args.constrained,
+        prefix=args.prefix,
+    )
+
+    write_mols(mols, toolkit_registry=toolkit_registry)
