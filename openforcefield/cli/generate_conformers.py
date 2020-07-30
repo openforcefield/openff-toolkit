@@ -33,7 +33,7 @@ def generate_conformers(
     try:
         ff = ForceField(ff_name)
     except Exception as e:
-        print("catch speifics here")
+        print("catch specifics here")
         raise e
 
     # TODO: Parse prefix of molecule file
@@ -57,6 +57,13 @@ def generate_conformers(
             else:
                 mols.append(mol)
 
+    # If no conformers were found (i.e. SMI files), generate some
+    # TODO: How many should be generated?
+    # TODO: If 1 or a few conformers are found, should more be generated?
+    for mol in mols:
+        if not mol.conformers:
+            mol.generate_conformers(toolkit_registry=toolkit_registry, n_conformers=1)
+
     if type(mols) != list:
         mols = [mols]
 
@@ -71,6 +78,7 @@ def generate_conformers(
     mols_out = []
     for mol in mols:
         simulation, partial_charges = _build_simulation(molecule=mol, forcefield=ff, mols_with_charge=mols_with_charges)
+        mol._partial_charges = partial_charges
 
         for conformer in mol.conformers:
             energy, positions = _get_minimized_data(conformer, simulation)
@@ -130,7 +138,14 @@ def _build_simulation(molecule, forcefield, mols_with_charge):
 
     # TODO: return_topology does not produce a top with charges, either make it do so
     # or reconstruct partial charges from OpenMM system
-    partial_charges = [*top_with_charges.reference_molecules][0].partial_charges
+    # partial_charges = [*top_with_charges.reference_molecules][0].partial_charges
+    partial_charges = [system.getForces()[0].getParticleParameters(i)[0] for i in range(mol_copy.n_atoms)]
+    # Unwrap list of Quantity objects into a single Quantity that contains a list
+    # Surely there's a simpler way to to this?
+    partial_charges = unit.Quantity(
+        np.asarray([val.value_in_unit(unit.elementary_charge) for val in partial_charges]),
+        unit=unit.elementary_charge,
+    )
 
     return simulation, partial_charges
 

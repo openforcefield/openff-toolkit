@@ -7,7 +7,7 @@ from openforcefield.tests.utils import get_data_file_path
 
 
 @pytest.mark.parametrize('toolkit', ['rdkit', 'openeye'])
-class TestGeneratConformersCLI:
+class TestGenerateConformersCLI:
     # TODO: Test CLI calls directly
 
     def test_load_one_mol_sdf_without_charge(self, toolkit):
@@ -50,10 +50,9 @@ class TestGeneratConformersCLI:
         # loading a molecule with a defined name (from any format) and ensuring the output file has that prefix
         # loading multiple molecules from a .sdf file
 
-
+    def test_load_multi_mol_sdf(self, toolkit):
         butane_multi = get_data_file_path('molecules/butane_multi.sdf')
         generate_conformers(molecule=butane_multi, forcefield='openff-1.0.0.offxml', toolkit=toolkit)
-
 
     def test_load_one_mol_smi(self, toolkit):
         """Test loading one molecule from SMILES in a .smi file"""
@@ -77,7 +76,7 @@ class TestGeneratConformersCLI:
 
         assert len(mols_out) == 2
 
-    def test_preserve_stereo(self, toolkit):
+    def test_preserve_stereo_smi(self, toolkit):
         """Test loading a molecule with defined stereo from SMILES and preserving that stereochemistry"""
         mol = get_data_file_path('molecules/dichloroethene_stereo.smi')
         mols_out = generate_conformers(molecule=mol, forcefield='openff-1.0.0.offxml', toolkit=toolkit)
