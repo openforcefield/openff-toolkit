@@ -106,6 +106,22 @@ jobs:
         run: |
           python -m pip install --no-deps -v .
 
+      - name: Check installed toolkits
+        shell: bash -l {0}
+        run: |
+          if [[ "$OPENEYE" == true ]]; then
+            python -c "from openforcefield.utils.toolkits import OPENEYE_AVAILABLE; assert OPENEYE_AVAILABLE, 'OpenEye unavailable'"
+          fi
+          if [[ "$OPENEYE" == false ]]; then
+            python -c "from openforcefield.utils.toolkits import OPENEYE_AVAILABLE; assert not OPENEYE_AVAILABLE, 'OpenEye unexpectedly found'"
+          fi
+          if [[ "$RDKIT" == true ]]; then
+            python -c "from openforcefield.utils.toolkits import RDKIT_AVAILABLE; assert RDKIT_AVAILABLE, 'RDKit unavailable'"
+          fi
+          if [[ "$RDKIT" == false ]]; then
+            python -c "from openforcefield.utils.toolkits import RDKIT_AVAILABLE; assert not RDKIT_AVAILABLE, 'RDKit unexpectedly found'"
+          fi
+
       - name: Check links
         shell: bash -l {0}
         if: ${{ matrix.cfg.rdkit == 'true' && matrix.cfg.openeye == 'TRUE' }}
