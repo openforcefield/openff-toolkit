@@ -4,8 +4,11 @@ import numpy as np
 from openforcefield.topology import Molecule
 from openforcefield.cli.generate_conformers import generate_conformers
 from openforcefield.tests.utils import get_data_file_path
+from openforcefield.utils import RDKIT_AVAILABLE, OPENEYE_AVAILABLE
 
-
+# TODO: Update skipifs after #615
+@pytest.mark.skipif(not RDKIT_AVAILABLE, reason='requires rdkit')
+@pytest.mark.skipif(not OPENEYE_AVAILABLE, reason='requires openeye')
 @pytest.mark.parametrize('toolkit', ['rdkit', 'openeye'])
 class TestGenerateConformersCLI:
     # TODO: Test CLI calls directly
