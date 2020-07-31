@@ -2,7 +2,6 @@ import argparse
 from copy import deepcopy
 
 from openforcefield.typing.engines.smirnoff import ForceField
-from openforcefield.topology import Molecule, Topology
 from openforcefield.topology.molecule import UndefinedStereochemistryError
 from openforcefield.utils.toolkits import ToolkitRegistry
 
@@ -12,7 +11,7 @@ from simtk import openmm, unit
 
 
 def generate_conformers(
-    molecule, toolkit, forcefield, rms_cutoff=None, constrained=False, prefix=None,
+    molecule, toolkit, forcefield, rms_cutoff=None, constrained=False, prefix=None, return_registry=False,
 ):
     if toolkit.lower() == "openeye":
         from openforcefield.utils.toolkits import OpenEyeToolkitWrapper
@@ -48,8 +47,9 @@ def generate_conformers(
         raw_mols = toolkit_registry.call(
             "from_file", molecule, file_format=molecule.split(".")[-1], allow_undefined_stereo=True,
         )
-        # TODO: This is a brute-force approach, it would be better to check stereo
-        #  without needing to call enumerate_stereoisomers
+
+    if type(raw_mols) != list:
+        raw_mols = [raw_mols]
 
     mols = []
     for i, mol in enumerate(raw_mols):
@@ -59,26 +59,26 @@ def generate_conformers(
             mol.name = 'molecule' + str(i)
         mols.append(mol)
 
-    if type(mols) != list:
-        mols = [mols]
-
     # TODO: How to handle names of different stereoisomers? Just act like they're different conformers?
-#   mols_with_unpacked_stereoisomers = []
-#   for mol in mols_with_unpacked_stereoisomers:
-#       stereoisomers = mol.enumerate_stereoisomers()
-#       if stereoisomers:
-#           for i, iso in enumerate(stereoisomers):
-#               iso.name = mol.name + '_stereoisomer' + str(i)
-#               mols_with_unpacked_stereoisomers.append(iso)
-#       else:
-#           mols_with_unpacked_stereoisomers.append(mol)
-#   mols = mols_with_unpacked_stereoisomers
+    if ambiguous_stereochemistry:
+        mols_with_unpacked_stereoisomers = []
+        for mol in mols:
+            # TODO: This is a brute-force approach, it would be better to check stereo
+            #  without needing to call enumerate_stereoisomers
+            stereoisomers = mol.enumerate_stereoisomers()
+            if stereoisomers:
+                for i, iso in enumerate(stereoisomers):
+                    iso.name = mol.name + '_stereoisomer' + str(i)
+                    mols_with_unpacked_stereoisomers.append(iso)
+            else:
+                mols_with_unpacked_stereoisomers.append(mol)
+        mols = mols_with_unpacked_stereoisomers
 
     # If no conformers were found (i.e. SMI files), generate some
     # TODO: How many should be generated?
     # TODO: If 1 or a few conformers are found, should more be generated?
     for mol in mols:
-        if not mol.conformers:
+        if mol.conformers is None:
             mol.generate_conformers(toolkit_registry=toolkit_registry, n_conformers=1)
 
     # TODO: What happens if some molecules in a multi-molecule file have charges, others don't?
@@ -91,7 +91,9 @@ def generate_conformers(
 
     mols_out = []
     for mol in mols:
-        simulation, partial_charges = _build_simulation(molecule=mol, forcefield=ff, mols_with_charge=mols_with_charges)
+        simulation, partial_charges = _build_simulation(
+            molecule=mol, forcefield=ff, mols_with_charge=mols_with_charges
+        )
         mol._partial_charges = partial_charges
 
         for i, conformer in enumerate(mol.conformers):
@@ -101,7 +103,10 @@ def generate_conformers(
             mol.name += '_conf' + str(i)
             mols_out.append(mol)
 
-    return mols_out, toolkit_registry
+    if return_registry:
+        return mols_out, toolkit_registry
+    else:
+        return mols_out
 
 
 def _collapse_conformers(molecules):
@@ -247,6 +252,7 @@ if __name__ == "__main__":
         rms_cutoff=args.rms_cutoff,
         constrained=args.constrained,
         prefix=args.prefix,
+        return_registry=True,
     )
 
     write_mols(mols, toolkit_registry=toolkit_registry)

@@ -6,6 +6,7 @@ from openforcefield.cli.generate_conformers import generate_conformers
 from openforcefield.tests.utils import get_data_file_path
 from openforcefield.utils import RDKIT_AVAILABLE, OPENEYE_AVAILABLE
 
+
 # TODO: Update skipifs after #615
 @pytest.mark.skipif(not RDKIT_AVAILABLE, reason='requires rdkit')
 @pytest.mark.skipif(not OPENEYE_AVAILABLE, reason='requires openeye')
@@ -66,7 +67,7 @@ class TestGenerateConformersCLI:
 
     def test_load_multi_mol_smi(self, toolkit):
         """Test loading multiple molecules from SMILES in a .smi file"""
-        dyes = get_data_file_path('molecules/dyes.smi')
+        dyes = get_data_file_path('molecules/multi_mols.smi')
         mols_out = generate_conformers(molecule=dyes, forcefield='openff-1.0.0.offxml', toolkit=toolkit)
 
         assert len(mols_out) == 3
