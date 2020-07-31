@@ -113,12 +113,18 @@ jobs:
             python -c "from openforcefield.utils.toolkits import OPENEYE_AVAILABLE; assert OPENEYE_AVAILABLE, 'OpenEye unavailable'"
           fi
           if [[ "$OPENEYE" == false ]]; then
+            if [[ $(conda list | grep openeye-toolkits) ]]; then
+              conda remove --force openeye-toolkits --yes
+            fi
             python -c "from openforcefield.utils.toolkits import OPENEYE_AVAILABLE; assert not OPENEYE_AVAILABLE, 'OpenEye unexpectedly found'"
           fi
           if [[ "$RDKIT" == true ]]; then
             python -c "from openforcefield.utils.toolkits import RDKIT_AVAILABLE; assert RDKIT_AVAILABLE, 'RDKit unavailable'"
           fi
           if [[ "$RDKIT" == false ]]; then
+            if [[ $(conda list | grep rdkit) ]]; then
+              conda remove --force rdkit --yes
+            fi
             python -c "from openforcefield.utils.toolkits import RDKIT_AVAILABLE; assert not RDKIT_AVAILABLE, 'RDKit unexpectedly found'"
           fi
 
