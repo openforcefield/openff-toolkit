@@ -376,7 +376,8 @@ class BuiltInToolkitWrapper(ToolkitWrapper):
                                molecule,
                                partial_charge_method=None,
                                use_conformers=None,
-                               strict_n_conformers=False):
+                               strict_n_conformers=False,
+                               _cls=None):
         """
         Compute partial charges with the built-in toolkit using simple arithmetic operations, and assign
         the new values to the partial_charges attribute.
@@ -396,6 +397,8 @@ class BuiltInToolkitWrapper(ToolkitWrapper):
             Whether to raise an exception if an invalid number of conformers is provided for the given charge method.
             If this is False and an invalid number of conformers is found, a warning will be raised
             instead of an Exception.
+        _cls : class
+            Molecule constructor
 
         Raises
         ------
@@ -418,8 +421,12 @@ class BuiltInToolkitWrapper(ToolkitWrapper):
         if partial_charge_method is None:
             partial_charge_method = 'formal_charge'
 
+        if _cls is None:
+            from openforcefield.topology.molecule import Molecule
+            _cls = Molecule
+
         # Make a temporary copy of the molecule, since we'll be messing with its conformers
-        mol_copy = Molecule(molecule)
+        molecule = _cls()
 
         partial_charge_method = partial_charge_method.lower()
         if partial_charge_method not in PARTIAL_CHARGE_METHODS:
@@ -560,8 +567,16 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         """
         # TODO: Add tests for the from_object functions
         from openeye import oechem
-        if isinstance(object, oechem.OEMolBase):
-            return self.from_openeye(obj, allow_undefined_stereo=allow_undefined_stereo, _cls=_cls)
+
+        if _cls is None:
+            from openforcefield.topology.molecule import Molecule
+            _cls = Molecule
+
+        if isinstance(obj, oechem.OEMolBase):
+            try:
+                return self.from_openeye(oemol=obj, allow_undefined_stereo=allow_undefined_stereo, _cls=_cls)
+            except:
+                breakpoint()
         raise NotImplementedError('Cannot create Molecule from {} object'.format(type(obj)))
 
     def from_file(self,
@@ -1128,10 +1143,6 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         """
         from openeye import oechem
         import math
-        if _cls is None:
-            from openforcefield.topology.molecule import Molecule
-            _cls = Molecule
-
 
         # Add explicit hydrogens if they're implicit
         if oechem.OEHasImplicitHydrogens(oemol):
@@ -1195,6 +1206,10 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             else:
                 msg = 'Unable to make OFFMol from OEMol: ' + msg
                 raise UndefinedStereochemistryError(msg)
+
+        if _cls is None:
+            from openforcefield.topology.molecule import Molecule
+            _cls = Molecule
 
         molecule = _cls()
         molecule.name = oemol.GetTitle()
@@ -1822,7 +1837,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                                molecule,
                                partial_charge_method=None,
                                use_conformers=None,
-                               strict_n_conformers=False):
+                               strict_n_conformers=False,
+                               _cls=None):
         """
         Compute partial charges with OpenEye quacpac, and assign
         the new values to the partial_charges attribute.
@@ -1848,6 +1864,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         strict_n_conformers : bool, default=False
             Whether to raise an exception if an invalid number of conformers is provided for the given charge method.
             If this is False and an invalid number of conformers is found, a warning will be raised.
+        _cls : class
+            Molecule constructor
 
         Raises
         ------
@@ -1858,7 +1876,6 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         from openeye import oequacpac, oechem
         import numpy as np
-        from openforcefield.topology import Molecule
 
         SUPPORTED_CHARGE_METHODS = {'am1bcc': {'oe_charge_method': oequacpac.OEAM1BCCCharges,
                                                'min_confs': 1,
@@ -1910,8 +1927,12 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         charge_method = SUPPORTED_CHARGE_METHODS[partial_charge_method]
 
+        if _cls is None:
+            from openforcefield.topology.molecule import Molecule
+            _cls = Molecule
+
         # Make a temporary copy of the molecule, since we'll be messing with its conformers
-        mol_copy = Molecule(molecule)
+        mol_copy = _cls(molecule)
 
         if use_conformers is None:
             if charge_method['rec_confs'] == 0:
@@ -2019,7 +2040,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                                     strict_n_conformers=strict_n_conformers)
         return molecule.partial_charges
 
-    def assign_fractional_bond_orders(self, molecule, bond_order_model=None, use_conformers=None):
+    def assign_fractional_bond_orders(self, molecule, bond_order_model=None, use_conformers=None, _cls=None):
         """
         Update and store list of bond orders this molecule. Bond orders are stored on each
         bond, in the `bond.fractional_bond_order` attribute.
@@ -2035,12 +2056,19 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         use_conformers : iterable of simtk.unit.Quantity(np.array) with shape (n_atoms, 3) and dimension of distance, optional, default=None
             The conformers to use for fractional bond order calculation. If None, an appropriate number
             of conformers will be generated by an available ToolkitWrapper.
+        _cls : class
+            Molecule constructor
 
          """
         from openeye import oequacpac
-        from openforcefield.topology import Molecule
+
+        if _cls is None:
+            from openforcefield.topology.molecule import Molecule
+            _cls = Molecule
+
         # Make a copy since we'll be messing with this molecule's conformers
-        temp_mol = Molecule(molecule)
+        temp_mol = _cls(molecule)
+
         if use_conformers is None:
             temp_mol.generate_conformers(n_conformers=1)
         else:
@@ -2322,10 +2350,11 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         """
         # TODO: Add tests for the from_object functions
         from rdkit import Chem
+        if _cls is None:
+            from openforcefield.topology.molecule import Molecule
+            _cls = Molecule
         if isinstance(obj, Chem.rdchem.Mol):
-            return self.from_rdkit(obj,
-                                   _cls=_cls,
-                                   allow_undefined_stereo=allow_undefined_stereo)
+            return _cls.from_rdkit(obj, allow_undefined_stereo=allow_undefined_stereo)
         raise NotImplementedError('Cannot create Molecule from {} object'.format(type(obj)))
 
     def from_pdb_and_smiles(self, file_path, smiles, allow_undefined_stereo=False, _cls=None):
@@ -3855,7 +3884,8 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
                                molecule,
                                partial_charge_method=None,
                                use_conformers=None,
-                               strict_n_conformers=False):
+                               strict_n_conformers=False,
+                               _cls=None):
         """
         Compute partial charges with AmberTools using antechamber/sqm, and assign
         the new values to the partial_charges attribute.
@@ -3878,6 +3908,8 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         strict_n_conformers : bool, default=False
             Whether to raise an exception if an invalid number of conformers is provided for the given charge method.
             If this is False and an invalid number of conformers is found, a warning will be raised.
+        _cls : class
+            Molecule constructor
 
         Raises
         ------
@@ -3922,8 +3954,12 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
 
         charge_method = SUPPORTED_CHARGE_METHODS[partial_charge_method]
 
+        if _cls is None:
+            from openforcefield.topology.molecule import Molecule
+            _cls = Molecule
+
         # Make a temporary copy of the molecule, since we'll be messing with its conformers
-        mol_copy = Molecule(molecule)
+        mol_copy = _cls(molecule)
 
         if use_conformers is None:
             if charge_method['rec_confs'] == 0:
@@ -4130,7 +4166,7 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
             bond_orders[index_tuple] = bond_order
         return bond_orders
 
-    def assign_fractional_bond_orders(self, molecule, bond_order_model=None, use_conformers=None):
+    def assign_fractional_bond_orders(self, molecule, bond_order_model=None, use_conformers=None, _cls=None):
         """
         Update and store list of bond orders this molecule. Bond orders are stored on each
         bond, in the `bond.fractional_bond_order` attribute.
@@ -4146,6 +4182,8 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         use_conformers : iterable of simtk.unit.Quantity(np.array) with shape (n_atoms, 3) and dimension of distance, optional, default=None
             The conformers to use for fractional bond order calculation. If None, an appropriate number
             of conformers will be generated by an available ToolkitWrapper.
+        _cls : class
+            Molecule constructor
          """
         from openforcefield.topology import Molecule
         # Find the path to antechamber
@@ -4155,8 +4193,12 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
             raise (IOError("Antechamber not found, cannot run "
                            "AmberToolsToolkitWrapper.assign_fractional_bond_orders()"))
 
+        if _cls is None:
+            from openforcefield.topology.molecule import Molecule
+            _cls = Molecule
+
         # Make a copy since we'll be messing with this molecule's conformers
-        temp_mol = Molecule(molecule)
+        temp_mol = _cls(molecule)
 
         if use_conformers is None:
             temp_mol.generate_conformers(n_conformers=1)

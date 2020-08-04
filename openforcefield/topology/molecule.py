@@ -2447,7 +2447,6 @@ class FrozenMolecule(Serializable):
                                     strict_n_conformers=strict_n_conformers,
                                     toolkit_registry=toolkit_registry)
 
-
     def assign_partial_charges(self,
                                partial_charge_method,
                                strict_n_conformers=False,
@@ -2487,24 +2486,25 @@ class FrozenMolecule(Serializable):
             # tell the ToolkitRegistry to continue trying ToolkitWrappers
             # if one raises an error (raise_exception_types=[])
             toolkit_registry.call('assign_partial_charges',
-                                  self,
+                                  molecule=self,
                                   partial_charge_method=partial_charge_method,
                                   use_conformers=use_conformers,
                                   strict_n_conformers=strict_n_conformers,
-                                  raise_exception_types=[]
+                                  raise_exception_types=[],
+                                  _cls=cls,
                                   )
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
             toolkit.assign_partial_charges(self,
                                            partial_charge_method=partial_charge_method,
                                            use_conformers=use_conformers,
-                                           strict_n_conformers=strict_n_conformers
+                                           strict_n_conformers=strict_n_conformers,
+                                           _cls=cls,
                                            )
         else:
             raise InvalidToolkitError(
                 f'Invalid toolkit_registry passed to assign_partial_charges.'
                 f'Expected ToolkitRegistry or ToolkitWrapper. Got  {type(toolkit_registry)}')
-
 
     def assign_fractional_bond_orders(self,
                                       bond_order_model=None,
