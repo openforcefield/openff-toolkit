@@ -17,6 +17,7 @@ Parameter assignment tools for the SMIRNOFF (SMIRKS Native Open Force Field) for
 """
 
 __all__ = [
+    'get_available_force_fields',
     'MAX_SUPPORTED_VERSION',
     'ParameterHandlerRegistrationError',
     'SMIRNOFFVersionError',
@@ -33,7 +34,7 @@ __all__ = [
 import copy
 import logging
 import os
-
+import pathlib
 from collections import OrderedDict
 
 
@@ -44,6 +45,7 @@ from openforcefield.utils import all_subclasses, MessageException, \
     convert_0_1_smirnoff_to_0_2, convert_0_2_smirnoff_to_0_3
 from openforcefield.topology.molecule import DEFAULT_AROMATICITY_MODEL
 from openforcefield.typing.engines.smirnoff.parameters import ParameterHandler
+from openforcefield.typing.engines.smirnoff.plugins import load_handler_plugins
 from openforcefield.typing.engines.smirnoff.io import ParameterIOHandler
 
 
@@ -83,6 +85,38 @@ def _get_installed_offxml_dir_paths():
         for entry_point in iter_entry_points(group='openforcefield.smirnoff_forcefield_directory'):
             _installed_offxml_dir_paths.extend(entry_point.load()())
     return _installed_offxml_dir_paths
+
+
+def get_available_force_fields(full_paths=False):
+    """
+    Get the filenames of all available .offxml force field files.
+
+    Availability is determined by what is discovered through the
+   `openforcefield.smirnoff_forcefield_directory` entry point. If the
+   `openforcefields` package is installed, this should include several
+   .offxml files such as `openff-1.0.0.offxml`.
+
+    Parameters
+    ----------
+    full_paths : bool, default=False
+        If False, return the name of each available *.offxml file.
+        If True, return the full path to each available .offxml file.
+
+    Returns
+    -------
+    available_force_fields : List[str]
+        List of available force field files
+
+    """
+    installed_paths = _get_installed_offxml_dir_paths()
+    available_force_fields = []
+    for installed_path in installed_paths:
+        for globbed in pathlib.Path(installed_path).rglob('*.offxml'):
+            if full_paths:
+                available_force_fields.append(globbed.as_posix())
+            else:
+                available_force_fields.append(globbed.name)
+    return available_force_fields
 
 
 # TODO: Instead of having a global version number, alow each Force to have a separate version number
@@ -221,7 +255,8 @@ class ForceField:
                  parameter_handler_classes=None,
                  parameter_io_handler_classes=None,
                  disable_version_check=False,
-                 allow_cosmetic_attributes=False):
+                 allow_cosmetic_attributes=False,
+                 load_plugins=False):
         """Create a new :class:`ForceField` object from one or more SMIRNOFF parameter definition files.
 
         Parameters
@@ -245,6 +280,9 @@ class ForceField:
             This option is primarily intended for forcefield development.
         allow_cosmetic_attributes : bool, optional. Default = False
             Whether to retain non-spec kwargs from data sources.
+        load_plugins: bool, optional. Default = False
+            Whether to load ``ParameterHandler`` classes which have been registered
+            by installed plugins.
 
         Examples
         --------
@@ -276,11 +314,23 @@ class ForceField:
         # since both will try to register themselves for the same XML tag and an Exception will be raised.
         if parameter_handler_classes is None:
             parameter_handler_classes = all_subclasses(ParameterHandler)
+        if load_plugins:
+
+            registered_handlers = load_handler_plugins()
+
+            # Make sure the same handlers aren't added twice.
+            parameter_handler_classes += [
+                handler
+                for handler in registered_handlers
+                if handler not in parameter_handler_classes
+            ]
+
         self._register_parameter_handler_classes(parameter_handler_classes)
 
         # Register all ParameterIOHandler objects that will process serialized parameter representations
         if parameter_io_handler_classes is None:
             parameter_io_handler_classes = all_subclasses(ParameterIOHandler)
+
         self._register_parameter_io_handler_classes(
             parameter_io_handler_classes)
 
@@ -539,6 +589,19 @@ class ForceField:
                     self._parameter_io_handlers[io_format]))
         self._parameter_io_handlers[io_format] = parameter_io_handler
 
+    @property
+    def registered_parameter_handlers(self):
+        """
+        Return the list of registered parameter handlers by name
+
+        .. warning :: This API is experimental and subject to change.
+
+        Returns
+        -------
+            registered_parameter_handlers: iterable of names of ParameterHandler objects in this ForceField
+
+        """
+        return [*self._parameter_handlers.keys()]
 
     # TODO: Do we want to make this optional?
 
@@ -885,8 +948,12 @@ class ForceField:
                 parameter_list_dict = {}
             else:
                 parameter_list_dict = section_dict.pop(parameter_list_tagname, {})
-                # Must be wrapped into its own tag.
-                parameter_list_dict = {parameter_list_tagname: parameter_list_dict}
+
+                # If the parameter list isn't empty, it must be transferred into its own tag.
+                # This is necessary for deserializing SMIRNOFF force field sections which may or may
+                # not have any smirks-based elements (like an empty ChargeIncrementModel section)
+                if parameter_list_dict != {}:
+                    parameter_list_dict = {parameter_list_tagname: parameter_list_dict}
 
             # Retrieve or create parameter handler, passing in section_dict to check for
             # compatibility if a handler for this parameter name already exists
@@ -949,14 +1016,14 @@ class ForceField:
                 smirnoff_data = parameter_io_handler.parse_file(source)
                 return smirnoff_data
             except ParseError as e:
-                exception_msg = str(e)
+                exception_msg = e.msg
             except (FileNotFoundError, OSError):
                 # If this is not a file path or a file handle, attempt parsing as a string.
                 try:
                     smirnoff_data = parameter_io_handler.parse_string(source)
                     return smirnoff_data
                 except ParseError as e:
-                    exception_msg = str(e)
+                    exception_msg = e.msg
 
         # If we haven't returned by now, the parsing was unsuccessful
         valid_formats = [
@@ -1090,18 +1157,41 @@ class ForceField:
         ----------
         topology : openforcefield.topology.Topology
             The ``Topology`` corresponding to the system to be parameterized
-        charge_from_molecules : List[openforcefield.molecule.Molecule], optional
+        charge_from_molecules : List[openforcefield.molecule.Molecule], optional. default =[]
             If specified, partial charges will be taken from the given molecules
             instead of being determined by the force field.
+        partial_bond_orders_from_molecules : List[openforcefield.molecule.Molecule], optional. default=[]
+            If specified, partial bond orders will be taken from the given molecules
+            instead of being determined by the force field.
+            **All** bonds on each molecule given must have ``fractional_bond_order`` specified.
+            A `ValueError` will be raised if any bonds have ``fractional_bond_order=None``.
+            Molecules in the topology not represented in this list will have fractional
+            bond orders calculated using underlying toolkits as needed.
+        return_topology : bool, optional. default=False
+            If ``True``, return tuple of ``(system, topology)``, where
+            ``topology`` is the processed topology. Default ``False``. This topology will have the
+            final partial charges assigned on its reference_molecules attribute, as well as partial
+            bond orders (if they were calculated).
 
         Returns
         -------
         system : simtk.openmm.System
             The newly created OpenMM System corresponding to the specified ``topology``
+        topology : openforcefield.topology.Topology, optional.
+            If the `return_topology` keyword argument is used, this method will also return a Topology. This
+            can be used to inspect the partial charges and partial bond orders assigned to the molecules
+            during parameterization.
 
         """
+        return_topology = kwargs.pop('return_topology', False)
+
         # Make a deep copy of the topology so we don't accidentally modify it
         topology = copy.deepcopy(topology)
+
+        # set all fractional_bond_orders in topology to None
+        for ref_mol in topology.reference_molecules:
+            for bond in ref_mol.bonds:
+                bond.fractional_bond_order = None
 
         # Set the topology aromaticity model to that used by the current forcefield
         # TODO: See openforcefield issue #206 for proposed implementation of aromaticity
@@ -1141,7 +1231,10 @@ class ForceField:
         for parameter_handler in parameter_handlers:
             parameter_handler.postprocess_system(system, topology, **kwargs)
 
-        return system
+        if return_topology:
+            return (system, topology)
+        else:
+            return system
 
     def create_parmed_structure(self,
                                 topology,
@@ -1246,3 +1339,16 @@ class ForceField:
             msg += "Known parameter handler class tags are {}".format(self._parameter_handler_classes.keys())
             raise KeyError(msg)
         return ph_class
+
+    def __getitem__(self, val):
+        """
+        Syntax sugar for lookikng up a ParameterHandler. Note that only
+        string-based lookups are currently supported.
+        """
+        if isinstance(val, str):
+            if val in self._parameter_handlers:
+                return self.get_parameter_handler(val)
+            else:
+                raise KeyError(f"Parameter handler with name '{val}' not found.")
+        elif isinstance(val, ParameterHandler) or issubclass(val, ParameterHandler):
+            raise NotImplementedError

@@ -227,16 +227,21 @@ class TestAtom:
         # Create a non-aromatic carbon atom
         atom1 = Atom(6, 0, False)
         assert atom1.atomic_number == 6
-        assert atom1.formal_charge == 0
+        assert atom1.formal_charge == 0 * unit.elementary_charge
 
         # Create a chiral carbon atom
         atom2 = Atom(6, 0, False, stereochemistry='R', name='CT')
         assert atom1.stereochemistry != atom2.stereochemistry
 
+        # Ensure that formal charge can also be set as a Quantity
+        atom1 = Atom(6, 1*unit.elementary_charge, False)
+        assert atom1.formal_charge == 1 * unit.elementary_charge
+
+
     def test_atom_properties(self):
         """Test that atom properties are correctly populated and gettable"""
         from simtk.openmm.app import element
-        formal_charge = 0
+        formal_charge = 0 * unit.elementary_charge
         is_aromatic = False
         # Attempt to create all elements supported by OpenMM
         elements = [getattr(element, name) for name in dir(element) if (type(getattr(element, name)) == element.Element)]
@@ -703,9 +708,9 @@ class TestMolecule:
                               'DrugBank_3726', 'DrugBank_3844', 'DrugBank_3930', 'DrugBank_4161',
                               'DrugBank_4162', 'DrugBank_4778', 'DrugBank_4593', 'DrugBank_4959',
                               'DrugBank_5043', 'DrugBank_5076', 'DrugBank_5176', 'DrugBank_5418',
-                              'DrugBank_5737', 'DrugBank_5902', 'DrugBank_6304', 'DrugBank_6305',
-                              'DrugBank_6329', 'DrugBank_6355', 'DrugBank_6401', 'DrugBank_6509',
-                              'DrugBank_6531', 'DrugBank_6647',
+                              'DrugBank_5737', 'DrugBank_5902', 'DrugBank_6295', 'DrugBank_6304',
+                              'DrugBank_6305', 'DrugBank_6329', 'DrugBank_6355', 'DrugBank_6401',
+                              'DrugBank_6509', 'DrugBank_6531', 'DrugBank_6647',
 
                               # These test cases are allowed to fail.
                               'DrugBank_390', 'DrugBank_810', 'DrugBank_4316', 'DrugBank_4346',
@@ -1029,6 +1034,64 @@ class TestMolecule:
                                        atom_stereochemistry_matching=inputs['atom_stereochemistry_matching'],
                                        bond_stereochemistry_matching=inputs['bond_stereochemistry_matching'])[0] is inputs['result']
 
+    def test_strip_atom_stereochemistry(self):
+        """Test the basic behavior of strip_atom_stereochemistry"""
+        mol = Molecule.from_smiles('CCC[N@@](C)CC')
+
+        nitrogen_idx = [atom.molecule_atom_index for atom in mol.atoms if atom.element.symbol == 'N'][0]
+
+        assert mol.atoms[nitrogen_idx].stereochemistry == 'S'
+        mol.strip_atom_stereochemistry(smarts='[N+0X3:1](-[*])(-[*])(-[*])')
+        assert mol.atoms[nitrogen_idx].stereochemistry is None
+
+        mol = Molecule.from_smiles('CCC[N@@](C)CC')
+
+        assert mol.atoms[nitrogen_idx].stereochemistry == 'S'
+        mol.strip_atom_stereochemistry(smarts='[N+0X3:1](-[*])(-[*])(-[*])')
+        assert mol.atoms[nitrogen_idx].stereochemistry is None
+
+    @pytest.mark.parametrize('mol_smiles',
+        [
+            ('C[N+](CC)(CC)CC'),
+            ('c1cnc[nH]1')
+        ])
+    def test_do_not_strip_atom_stereochemsitry(self, mol_smiles):
+        """
+        Test special cases in which we do not want nitrogen stereochemistry stripped:
+        NH in planar rings and tetra-coordinatined N+
+        """
+        mol = Molecule.from_smiles(mol_smiles)
+        mol_mod = copy.deepcopy(mol)
+        mol_mod.strip_atom_stereochemistry('[N+0X3:1](-[*])(-[*])(-[*])')
+
+        # Inspect each atom's stereochemistry instead of relying on __eq__
+        for before, after in zip(mol.atoms, mol_mod.atoms):
+            assert before.stereochemistry == after.stereochemistry
+
+    def test_isomorphic_striped_stereochemistry(self):
+        """Test that the equality operator disregards an edge case of nitrogen stereocenters"""
+        mol1 = Molecule.from_smiles('CCC[N@](C)CC')
+        mol2 = Molecule.from_smiles('CCC[N@@](C)CC')
+
+        # Ensure default value is respected and order does not matter
+        assert Molecule.are_isomorphic(mol1, mol2, strip_pyrimidal_n_atom_stereo=True)
+        assert Molecule.are_isomorphic(mol1, mol2)
+        assert Molecule.are_isomorphic(mol2, mol1)
+
+        assert mol1 == mol2
+        assert Molecule.from_smiles('CCC[N@](C)CC') == Molecule.from_smiles('CCC[N@@](C)CC')
+
+        mol1 = Molecule.from_smiles('CCC[N@](C)CC')
+        mol2 = Molecule.from_smiles('CCC[N@@](C)CC')
+
+        assert not Molecule.are_isomorphic(
+            mol1,
+            mol2,
+            strip_pyrimidal_n_atom_stereo=False,
+            atom_stereochemistry_matching=True,
+            bond_stereochemistry_matching=True,
+        )[0]
+
     def test_remap(self):
         """Test the remap function which should return a new molecule in the requested ordering"""
         # the order here is CCO
@@ -1329,7 +1392,7 @@ class TestMolecule:
             assert bond.stereochemistry == sdf_bonds[key].stereochemistry
 
     def test_to_qcschema(self):
-        """Test the ability to make and validate qcschema"""
+        """Test the ability to make and validate qcschema with extras"""
         # the molecule has no coordinates so this should fail
         ethanol = Molecule.from_smiles('CCO')
         with pytest.raises(InvalidConformerError):
@@ -1341,15 +1404,24 @@ class TestMolecule:
         with pytest.raises(InvalidConformerError):
             qcschema = ethanol.to_qcschema(conformer=1)
         # now make a valid qcschema and check its properties
-        qcschema = ethanol.to_qcschema()
+        qcschema = ethanol.to_qcschema(extras={"test_tag": "test"})
         # make sure the properties match
         charge = 0
         connectivity = [(0, 1, 1.0), (0, 4, 1.0), (0, 5, 1.0), (0, 6, 1.0), (1, 2, 1.0), (1, 7, 1.0), (1, 8, 1.0), (2, 3, 1.0)]
         symbols = ['C', 'C', 'O', 'H', 'H', 'H', 'H', 'H', 'H']
-        assert charge == qcschema.molecular_charge
-        assert connectivity == qcschema.connectivity
-        assert symbols == qcschema.symbols.tolist()
-        assert qcschema.geometry.all() == ethanol.conformers[0].in_units_of(unit.bohr).all()
+
+        def assert_check():
+            assert charge == qcschema.molecular_charge
+            assert connectivity == qcschema.connectivity
+            assert symbols == qcschema.symbols.tolist()
+            assert qcschema.geometry.all() == ethanol.conformers[0].in_units_of(unit.bohr).all()
+
+        assert_check()
+        assert qcschema.extras["test_tag"] == "test"
+        # now run again when no extras
+        qcschema = ethanol.to_qcschema()
+        assert_check()
+        assert qcschema.extras is None
 
     def test_from_qcschema_no_client(self):
         """Test the ability to make molecules from QCArchive record instances and dicts"""
@@ -1538,8 +1610,10 @@ class TestMolecule:
     @pytest.mark.parametrize('molecule', mini_drug_bank())
     def test_total_charge(self, molecule):
         """Test total charge"""
-        total_charge = sum([atom.formal_charge for atom in molecule.atoms])
-        assert total_charge == molecule.total_charge
+        charge_sum = 0 * unit.elementary_charge
+        for atom in molecule.atoms:
+            charge_sum += atom.formal_charge
+        assert charge_sum == molecule.total_charge
 
     # ----------------------------------------------------
     # Test magic methods.
@@ -2007,3 +2081,48 @@ class TestMolecule:
                     #                                        toolkit_registry=toolkit_registry)
                     # fbo2 = [bond.fractional_bond_order for bond in molecule.bonds]
                     # np.testing.assert_allclose(fbo1, fbo2, atol=1.e-4)
+
+    @requires_rdkit
+    def test_visualize_rdkit(self):
+        """Test that the visualize method returns an expected object when using RDKit to generate a 2-D representation"""
+        import rdkit
+
+        mol = Molecule().from_smiles('CCO')
+
+        assert isinstance(mol.visualize(backend='rdkit'), rdkit.Chem.rdchem.Mol)
+
+    @pytest.mark.skipif(RDKitToolkitWrapper.is_available(),
+        reason='Test requires that RDKit is NOT installed')
+    def test_visualize_fallback(self):
+        """Test falling back from RDKit to OpenEye if RDKit is specified but not installed"""
+        mol = Molecule().from_smiles('CCO')
+        with pytest.warns(UserWarning):
+            mol.visualize(backend='rdkit')
+
+    def test_visualize_nglview(self):
+        """Test that the visualize method returns an NGLview widget"""
+        try:
+            import nglview
+        except ModuleNotFoundError:
+            pass
+
+        # Start with a molecule without conformers
+        mol = Molecule().from_smiles('CCO')
+
+        with pytest.raises(ValueError):
+            mol.visualize(backend='nglview')
+
+        # Add conformers
+        mol.generate_conformers()
+
+        # Ensure an NGLView widget is returned
+        assert isinstance(mol.visualize(backend='nglview'), nglview.NGLWidget)
+
+    @requires_openeye
+    def test_visualize_openeye(self):
+        """Test that the visualize method returns an expected object when using OpenEye to generate a 2-D representation"""
+        import IPython
+
+        mol = Molecule().from_smiles('CCO')
+
+        assert isinstance(mol.visualize(backend='openeye'), IPython.core.display.Image)
