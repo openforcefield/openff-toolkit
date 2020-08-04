@@ -35,14 +35,16 @@ jobs:
       PACKAGE: openforcefield
 
     steps:
-      - name: Define latest tag as an environment variable in the GH action (eg "tags/0.7.1")
-        shell: bash -l {0}
-        run: |
-          echo "::set-env name=latest_tag::"`git ls-remote --tags https://github.com/openforcefield/openforcefield.git | tail -1 | cut -f2  `
+      - name: Set env
+        run: echo ::set-env name=LATEST_TAG::$( git ls-remote --tags https://github.com/openforcefield/openforcefield.git | tail -1 | cut -f2  )
+      #- name: Define latest tag as an environment variable in the GH action (eg "tags/0.7.1")
+      #  shell: bash -l {0}
+      #  run: |
+      #    echo "::set-env name=latest_tag::"`git ls-remote --tags https://github.com/openforcefield/openforcefield.git | tail -1 | cut -f2  `
 
       - uses: actions/checkout@v2
         with:
-          ref: ${{ latest_tag }}
+          ref: ${{ LATEST_TAG }}
 
       - uses: goanpeca/setup-miniconda@v1
         name: Vanilla install from conda
