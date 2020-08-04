@@ -35,7 +35,13 @@ jobs:
       PACKAGE: openforcefield
 
     steps:
+      - name: Define latest tag as an environment variable in the GH action (eg "tags/0.7.1")
+        shell: bash -l {0}
+        run: |
+          echo "::set-env name=latest_tag::"`git ls-remote --tags https://github.com/openforcefield/openforcefield.git | tail -1 | cut -f2  `
+
       - uses: actions/checkout@v2
+        ref: ${{ latest_tag }}
 
       - uses: goanpeca/setup-miniconda@v1
         name: Vanilla install from conda
@@ -88,7 +94,7 @@ jobs:
         shell: bash -l {0}
         run: |
           # Checkout the state of the repo as of the last release
-          git pull https://github.com/openforcefield/openforcefield.git tags/`git ls-remote --tags https://github.com/openforcefield/openforcefield.git | tail -1 | cut -f2 | sed 's/refs\/tags\///'`
+          #git pull https://github.com/openforcefield/openforcefield.git tags/`git ls-remote --tags https://github.com/openforcefield/openforcefield.git | tail -1 | cut -f2 | sed 's/refs\/tags\///'`
           # git checkout tags/`git ls-remote --tags https://github.com/openforcefield/openforcefield.git | tail -1 | cut -f2 | sed 's/refs\/tags\///'`
           PYTEST_ARGS="-v --ignore=utilities --ignore=examples/deprecated --nbval-lax"
           if [[ "$OPENEYE" == true ]]; then
