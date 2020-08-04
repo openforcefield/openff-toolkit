@@ -1890,6 +1890,7 @@ class TestForceFieldChargeAssignment:
     def test_charges_on_ref_mols_when_using_return_topology(self, charge_method, additional_offxmls):
         """Ensure that charges are set on returned topology if the user specifies 'return_topology=True' in
         create_openmm_system"""
+        # TODO: Should this test also cover multiple unique molecules?
         from simtk.openmm import NonbondedForce
 
         mol = create_acetate()
