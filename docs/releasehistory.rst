@@ -12,9 +12,11 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 
 Behavior changed
 """"""""""""""""
-- `PR #648 <https://github.com/openforcefield/openforcefield/pull/648>`_: Removes the 
+- `PR #648 <https://github.com/openforcefield/openforcefield/pull/648>`_: Removes the
   ``utils.structure`` module, which was deprecated in 0.2.0.
-
+- `PR #670 <https://github.com/openforcefield/openforcefield/pull/670>`_: Makes the
+  :py:class:`Topology <openforcefield.topology.Topology>` returned by ``create_openmm_system``
+  contain the partial charges and partial bond orders (if any) assigned during parameterization.
 
 0.7.1 - OETK2020 Compatibility and Minor Update
 -----------------------------------------------
