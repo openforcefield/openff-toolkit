@@ -19,6 +19,15 @@ This adds the following command line options.
 
 import pytest
 
+def pytest_configure(config):
+    """
+    Initialization hook to register custom markers without a pytest.ini
+    More info: https://docs.pytest.org/en/latest/reference.html#initialization-hooks
+    """
+    config.addinivalue_line(
+        "markers", "slow: marks tests as slow (deselect with `-m 'not slow'`)"
+    )
+
 
 #=============================================================================================
 # UTILITY FUNCTIONS

@@ -17,6 +17,7 @@ Parameter assignment tools for the SMIRNOFF (SMIRKS Native Open Force Field) for
 """
 
 __all__ = [
+    'get_available_force_fields',
     'MAX_SUPPORTED_VERSION',
     'ParameterHandlerRegistrationError',
     'SMIRNOFFVersionError',
@@ -33,7 +34,7 @@ __all__ = [
 import copy
 import logging
 import os
-
+import pathlib
 from collections import OrderedDict
 
 
@@ -84,6 +85,38 @@ def _get_installed_offxml_dir_paths():
         for entry_point in iter_entry_points(group='openforcefield.smirnoff_forcefield_directory'):
             _installed_offxml_dir_paths.extend(entry_point.load()())
     return _installed_offxml_dir_paths
+
+
+def get_available_force_fields(full_paths=False):
+    """
+    Get the filenames of all available .offxml force field files.
+
+    Availability is determined by what is discovered through the
+   `openforcefield.smirnoff_forcefield_directory` entry point. If the
+   `openforcefields` package is installed, this should include several
+   .offxml files such as `openff-1.0.0.offxml`.
+
+    Parameters
+    ----------
+    full_paths : bool, default=False
+        If False, return the name of each available *.offxml file.
+        If True, return the full path to each available .offxml file.
+
+    Returns
+    -------
+    available_force_fields : List[str]
+        List of available force field files
+
+    """
+    installed_paths = _get_installed_offxml_dir_paths()
+    available_force_fields = []
+    for installed_path in installed_paths:
+        for globbed in pathlib.Path(installed_path).rglob('*.offxml'):
+            if full_paths:
+                available_force_fields.append(globbed.as_posix())
+            else:
+                available_force_fields.append(globbed.name)
+    return available_force_fields
 
 
 # TODO: Instead of having a global version number, alow each Force to have a separate version number
@@ -1124,24 +1157,30 @@ class ForceField:
         ----------
         topology : openforcefield.topology.Topology
             The ``Topology`` corresponding to the system to be parameterized
-        charge_from_molecules : List[openforcefield.molecule.Molecule], optional
+        charge_from_molecules : List[openforcefield.molecule.Molecule], optional. default =[]
             If specified, partial charges will be taken from the given molecules
             instead of being determined by the force field.
-        partial_bond_orders_from_molecules : List[openforcefield.molecule.Molecule], optional
+        partial_bond_orders_from_molecules : List[openforcefield.molecule.Molecule], optional. default=[]
             If specified, partial bond orders will be taken from the given molecules
             instead of being determined by the force field.
             **All** bonds on each molecule given must have ``fractional_bond_order`` specified.
             A `ValueError` will be raised if any bonds have ``fractional_bond_order=None``.
             Molecules in the topology not represented in this list will have fractional
             bond orders calculated using underlying toolkits as needed.
-        return_topology : bool
+        return_topology : bool, optional. default=False
             If ``True``, return tuple of ``(system, topology)``, where
-            ``topology`` is the processed topology. Default ``False``.
+            ``topology`` is the processed topology. Default ``False``. This topology will have the
+            final partial charges assigned on its reference_molecules attribute, as well as partial
+            bond orders (if they were calculated).
 
         Returns
         -------
         system : simtk.openmm.System
             The newly created OpenMM System corresponding to the specified ``topology``
+        topology : openforcefield.topology.Topology, optional.
+            If the `return_topology` keyword argument is used, this method will also return a Topology. This
+            can be used to inspect the partial charges and partial bond orders assigned to the molecules
+            during parameterization.
 
         """
         return_topology = kwargs.pop('return_topology', False)

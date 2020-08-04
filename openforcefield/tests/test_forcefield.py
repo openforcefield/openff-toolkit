@@ -29,7 +29,7 @@ from openforcefield.utils.toolkits import (OpenEyeToolkitWrapper, RDKitToolkitWr
 from openforcefield.utils import get_data_file_path
 from openforcefield.topology import Molecule, Topology
 from openforcefield.typing.engines.smirnoff import (ForceField, IncompatibleParameterError, SMIRNOFFSpecError,
-    XMLParameterIOHandler, ParameterHandler)
+    XMLParameterIOHandler, ParameterHandler, get_available_force_fields)
 
 
 #======================================================================
@@ -583,6 +583,29 @@ if RDKitToolkitWrapper.is_available() and AmberToolsToolkitWrapper.is_available(
 
 class TestForceField():
     """Test the ForceField class"""
+
+    def test_get_available_force_fields_loadable(self, full_path, force_field_file):
+        """Ensure get_available_force_fields returns some expected data"""
+        available_force_fields = get_available_force_fields(full_path=False)
+
+        # Incomplete list of some expected force fields
+        expected_force_fields = [
+            'smirnoff99Frosst-1.0.0.offxml',
+            'smirnoff99Frosst-1.1.0.offxml',
+            'openff-1.0.0.offxml',
+            'openff_unconstrainted-1.0.0.offxml',
+            'openff-1.1.0.offxml',
+            'openff-1.2.0.offxml',
+        ]
+
+        for ff in expected_force_fields:
+            assert ff in available_force_fields
+
+    @pytest.mark.parametrize('full_path', [(True, False)])
+    @pytest.mark.parametrize('force_field_file', [*get_available_force_fields()])
+    def test_get_available_force_fields_loadable(self, full_path, force_field_file):
+        """Ensure get_available_force_fields returns load-able files"""
+        ForceField(force_field_file)
 
     def test_create_forcefield_no_args(self):
         """Test empty constructor"""
@@ -1860,6 +1883,37 @@ class TestForceFieldChargeAssignment:
             q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
             assert q != 0 * unit.elementary_charge
 
+    @pytest.mark.parametrize('charge_method,additional_offxmls', [ ('ToolkitAM1BCC', []),
+                                                                   ('LibraryCharges', [xml_ethanol_library_charges_ff]),
+                                                                   ('ChargeIncrementHandler', [xml_charge_increment_model_formal_charges]),
+                                                                   ('charge_from_molecules', [])])
+    def test_charges_on_ref_mols_when_using_return_topology(self, charge_method, additional_offxmls):
+        """Ensure that charges are set on returned topology if the user specifies 'return_topology=True' in
+        create_openmm_system"""
+        # TODO: Should this test also cover multiple unique molecules?
+        from simtk.openmm import NonbondedForce
+
+        mol = create_acetate()
+        ff = ForceField('test_forcefields/smirnoff99Frosst.offxml', *additional_offxmls)
+        charge_mols = []
+        if charge_method == 'charge_from_molecules':
+            mol.partial_charges = np.array([-1.3, -0.2, -0.1, 0., 0.1, 0.2, 0.3]) * unit.elementary_charge
+            charge_mols = [mol]
+        omm_system, ret_top = ff.create_openmm_system(mol.to_topology(),
+                                                      charge_from_molecules=charge_mols,
+                                                      return_topology=True)
+        nonbondedForce = [f for f in omm_system.getForces() if type(f) == NonbondedForce][0]
+        ref_mol_from_ret_top = [i for i in ret_top.reference_molecules][0]
+
+        # Make sure the charges on the molecule are all nonzero, and that the molecule's
+        # partial_charges array matches the charges in the openmm system
+        all_charges_zero = True
+        for particle_index, ref_mol_charge in enumerate(ref_mol_from_ret_top.partial_charges):
+            q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
+            assert q == ref_mol_charge
+            if q != 0. * unit.elementary_charge:
+                all_charges_zero = False
+        assert not(all_charges_zero)
 
 
 
