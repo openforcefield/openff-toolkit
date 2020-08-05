@@ -1629,6 +1629,19 @@ class ParameterHandler(_ParameterAttributeHandler):
         """The ParameterList that holds this ParameterHandler's parameter objects"""
         return self._parameters
 
+    @property
+    def TAGNAME(self):
+        """
+        The name of this ParameterHandler corresponding to the SMIRNOFF tag name
+
+        Returns
+        -------
+        handler_name : str
+            The name of this parameter handler
+
+        """
+        return self._TAGNAME
+
     # TODO: Do we need to return these, or can we handle this internally
     @property
     def known_kwargs(self):
