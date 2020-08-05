@@ -3191,13 +3191,10 @@ class ElectrostaticsHandler(_NonbondedHandler):
             if self.check_charges_assigned(ref_mol, topology):
                 continue
 
-            # Make a temporary copy of ref_mol to assign charges from charge_mol
-            temp_mol = FrozenMolecule(ref_mol)
-
             # First, check whether any of the reference molecules in the topology are in the charge_from_mol list
             charges_from_charge_mol = False
             if 'charge_from_molecules' in kwargs:
-                charges_from_charge_mol = self.assign_charge_from_molecules(temp_mol, kwargs['charge_from_molecules'])
+                charges_from_charge_mol = self.assign_charge_from_molecules(ref_mol, kwargs['charge_from_molecules'])
 
             # If this reference molecule wasn't in the charge_from_molecules list, end this iteration
             if not(charges_from_charge_mol):
@@ -3219,7 +3216,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
 
                     topology_particle_index = topology_particle.topology_particle_index
 
-                    particle_charge = temp_mol._partial_charges[ref_mol_particle_index]
+                    particle_charge = ref_mol._partial_charges[ref_mol_particle_index]
 
                     # Retrieve nonbonded parameters for reference atom (charge not set yet)
                     _, sigma, epsilon = force.getParticleParameters(topology_particle_index)
@@ -3407,10 +3404,9 @@ class LibraryChargeHandler(_NonbondedHandler):
         for top_mol in topology.topology_molecules:
 
             # Make a temporary copy of ref_mol to assign charges from charge_mol
-            temp_mol = FrozenMolecule(top_mol.reference_molecule)
 
             # If charges were already assigned, skip this molecule
-            if self.check_charges_assigned(temp_mol, topology):
+            if self.check_charges_assigned(top_mol.reference_molecule, topology):
                 continue
 
             # Ensure all of the atoms in this mol are covered, otherwise skip it
@@ -3429,7 +3425,7 @@ class LibraryChargeHandler(_NonbondedHandler):
                                             sigma,
                                             epsilon)
 
-            ref_mols_assigned.add(temp_mol)
+            ref_mols_assigned.add(top_mol.reference_molecule)
 
         # Finally, mark that charges were assigned for this reference molecule
         for assigned_mol in ref_mols_assigned:
@@ -3479,15 +3475,12 @@ class ToolkitAM1BCCHandler(_NonbondedHandler):
             if self.check_charges_assigned(ref_mol, topology):
                 continue
 
-            # Make a temporary copy of ref_mol to assign charges
-            temp_mol = FrozenMolecule(ref_mol)
-
             # If the molecule wasn't already assigned charge values, calculate them here
             toolkit_registry = kwargs.get('toolkit_registry', GLOBAL_TOOLKIT_REGISTRY)
             try:
                 # We don't need to generate conformers here, since that will be done by default in
                 # compute_partial_charges_am1bcc if the use_conformers kwarg isn't defined
-                temp_mol.compute_partial_charges_am1bcc(toolkit_registry=toolkit_registry)
+                ref_mol.compute_partial_charges_am1bcc(toolkit_registry=toolkit_registry)
             except Exception as e:
                 warnings.warn(str(e), Warning)
                 continue
@@ -3504,7 +3497,7 @@ class ToolkitAM1BCCHandler(_NonbondedHandler):
 
                     topology_particle_index = topology_particle.topology_particle_index
 
-                    particle_charge = temp_mol._partial_charges[ref_mol_particle_index]
+                    particle_charge = ref_mol._partial_charges[ref_mol_particle_index]
 
                     # Retrieve nonbonded parameters for reference atom (charge not set yet)
                     _, sigma, epsilon = force.getParticleParameters(topology_particle_index)
@@ -3645,14 +3638,11 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
             if self.check_charges_assigned(ref_mol, topology):
                 continue
 
-            # Make a temporary copy of ref_mol to assign charges from charge_mol
-            temp_mol = FrozenMolecule(ref_mol)
-
             toolkit_registry = kwargs.get('toolkit_registry', GLOBAL_TOOLKIT_REGISTRY)
             try:
                 # If the molecule wasn't assigned parameters from a manually-input charge_mol, calculate them here
-                temp_mol.generate_conformers(n_conformers=self.number_of_conformers)
-                temp_mol.assign_partial_charges(partial_charge_method=self.partial_charge_method,
+                ref_mol.generate_conformers(n_conformers=self.number_of_conformers)
+                ref_mol.assign_partial_charges(partial_charge_method=self.partial_charge_method,
                                                 toolkit_registry=toolkit_registry)
             except Exception as e:
                 warnings.warn(str(e), Warning)
@@ -3668,7 +3658,7 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
                         ref_mol_particle_index = topology_particle.atom.molecule_particle_index
                     if type(topology_particle) is TopologyVirtualSite:
                         ref_mol_particle_index = topology_particle.virtual_site.molecule_particle_index
-                    particle_charge = temp_mol._partial_charges[ref_mol_particle_index]
+                    particle_charge = ref_mol._partial_charges[ref_mol_particle_index]
                     charges_to_assign[topology_particle_index] = particle_charge
 
             # Find SMARTS-based matches for charge increments
