@@ -2126,7 +2126,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             If there are N tagged atoms numbered 1..N, the resulting matches will be N-tuples of atoms that match the corresponding tagged atoms.
         aromaticity_model : str, optional, default=None
             OpenEye aromaticity model designation as a string, such as ``OEAroModel_MDL``.
-            If ``None``, molecule is processed exactly as provided; otherwise it is prepared with this aromaticity model prior to querying.
+            Molecule is prepared with this aromaticity model prior to querying.
 
         Returns
         -------
@@ -2217,13 +2217,13 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         smarts : str
             SMARTS string with optional SMIRKS-style atom tagging
         aromaticity_model : str, optional, default='OEAroModel_MDL'
-            Aromaticity model to use during matching
+            Molecule is prepared with this aromaticity model prior to querying.
 
         .. note :: Currently, the only supported ``aromaticity_model`` is ``OEAroModel_MDL``
 
         """
         oemol = self.to_openeye(molecule)
-        return self._find_smarts_matches(oemol, smarts)
+        return self._find_smarts_matches(oemol, smarts, aromaticity_model=aromaticity_model)
 
 
 class RDKitToolkitWrapper(ToolkitWrapper):
@@ -3409,7 +3409,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             If there are N tagged atoms numbered 1..N, the resulting matches will be N-tuples of atoms that match the corresponding tagged atoms.
         aromaticity_model : str, optional, default='OEAroModel_MDL'
             OpenEye aromaticity model designation as a string, such as ``OEAroModel_MDL``.
-            If ``None``, molecule is processed exactly as provided; otherwise it is prepared with this aromaticity model prior to querying.
+            Molecule is prepared with this aromaticity model prior to querying.
 
         Returns
         -------
@@ -3484,7 +3484,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         smarts : str
             SMARTS string with optional SMIRKS-style atom tagging
         aromaticity_model : str, optional, default='OEAroModel_MDL'
-            Aromaticity model to use during matching
+            Molecule is prepared with this aromaticity model prior to querying.
 
         .. note :: Currently, the only supported ``aromaticity_model`` is ``OEAroModel_MDL``
 
