@@ -2492,6 +2492,25 @@ class TestToolkitRegistry:
         # Test ToolkitRegistry.resolve()
         assert registry.resolve('assign_partial_charges') == registry.registered_toolkits[0].assign_partial_charges
 
+    @pytest.mark.skipif(not RDKitToolkitWrapper.is_available(), reason='RDKit Toolkit not available')
+    @pytest.mark.skipif(not OpenEyeToolkitWrapper.is_available(), reason='OpenEye is not available')
+    def test_toolkit_versions(self):
+        """Test behavior of ToolkitRegistry.registered_toolkit_versions"""
+        toolkit_precedence = [OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper, BuiltInToolkitWrapper]
+        all_toolkits = ToolkitRegistry(toolkit_precedence=toolkit_precedence)
+        versions = all_toolkits.registered_toolkit_versions
+
+        import openeye, rdkit
+        assert versions['OpenEye Toolkit'] == openeye.__version__
+        assert versions['The RDKit'] == rdkit.__version__
+        assert versions['AmberTools'].startswith('2')  # TODO: Safer way of checking AmberTools version
+        assert versions['Built-in Toolkit'] is None
+
+        toolkit_precedence = [RDKitToolkitWrapper, AmberToolsToolkitWrapper, BuiltInToolkitWrapper]
+        no_openeye = ToolkitRegistry(toolkit_precedence=toolkit_precedence)
+
+        assert 'OpenEye Toolkit' not in no_openeye.registered_toolkit_versions.keys()
+
     @pytest.mark.skipif(not AmberToolsToolkitWrapper.is_available(), reason='AmberTools Toolkit not available')
     def test_call_raise_first_error(self):
         """Test to ensure proper behavior of raise_first_error kwarg to ToolkitRegistry.call"""

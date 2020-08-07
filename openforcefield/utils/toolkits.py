@@ -37,6 +37,7 @@ __all__ = [
     'OpenEyeToolkitWrapper',
     'RDKitToolkitWrapper',
     'AmberToolsToolkitWrapper',
+    'BuiltInToolkitWrapper',
     'ToolkitRegistry',
     'GLOBAL_TOOLKIT_REGISTRY',
     'OPENEYE_AVAILABLE',
@@ -161,6 +162,7 @@ class ToolkitWrapper:
     .. warning :: This API is experimental and subject to change.
     """
     _is_available = None  # True if toolkit is available
+    _toolkit_version = None
     _toolkit_name = None  # Name of the toolkit
     _toolkit_installation_instructions = None  # Installation instructions for the toolkit
 
@@ -189,6 +191,9 @@ class ToolkitWrapper:
     def toolkit_name(self):
         """
         The name of the toolkit wrapped by this class.
+
+        .. warning :: This API is experimental and subject to change.
+
         """
         return self.__class__._toolkit_name
 
@@ -228,6 +233,16 @@ class ToolkitWrapper:
 
         """
         return NotImplementedError
+
+    @property
+    def toolkit_version(self):
+        """
+        Return the version of the wrapped toolkit
+
+        .. warning :: This API is experimental and subject to change.
+
+        """
+        return self._toolkit_version
 
     def from_file(self,
                   file_path,
@@ -471,6 +486,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         if not self.is_available():
             raise ToolkitUnavailableException(f'The required toolkit {self._toolkit_name} is not '
                                               f'available. {self._toolkit_installation_instructions}')
+        from openeye import __version__ as openeye_version
+        self._toolkit_version = openeye_version
 
     @staticmethod
     def is_available(
@@ -2240,6 +2257,9 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             raise ToolkitUnavailableException(f'The required toolkit {self._toolkit_name} is not '
                                               f'available. {self._toolkit_installation_instructions}')
         else:
+            from rdkit import __version__ as rdkit_version
+            self._toolkit_version = rdkit_version
+
             from rdkit import Chem
             # we have to make sure the toolkit can be loaded before formatting this dict
             # Note any new file write formats should be added here only
@@ -3776,6 +3796,11 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
             raise ToolkitUnavailableException(f'The required toolkit {self._toolkit_name} is not '
                                               f'available. {self._toolkit_installation_instructions}')
 
+        ANTECHAMBER_PATH = find_executable("antechamber")
+        out = subprocess.check_output(['antechamber', '-L'])
+        ambertools_version = out.decode("utf-8").split('\n')[1].split()[3].strip(':')
+        self._toolkit_version = ambertools_version
+
         # TODO: Find AMBERHOME or executable home, checking miniconda if needed
         # Store an instance of an RDKitToolkitWrapper for file I/O
         self._rdkit_toolkit_wrapper = RDKitToolkitWrapper()
@@ -4276,6 +4301,16 @@ class ToolkitRegistry:
         toolkits : iterable of toolkit objects
         """
         return list(self._toolkits)
+
+    @property
+    def registered_toolkit_versions(self):
+        """
+        Return a dict containing the version of each registered toolkit.
+
+        .. warning :: This API is experimental and subject to change.
+
+        """
+        return dict((tk.toolkit_name, tk.toolkit_version) for tk in self.registered_toolkits)
 
     def register_toolkit(self,
                          toolkit_wrapper,
