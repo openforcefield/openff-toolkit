@@ -12,6 +12,10 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 
 Behavior changed
 """"""""""""""""
+- `PR #649 <https://github.com/openforcefield/openforcefield/pull/648>`_: Makes SMARTS
+  searches stereochemistry-specific (if stereo is specified in the SMARTS) for both OpenEye
+  and RDKit backends. Also ensures that aromaticity is re-perceived according to the ForceField's specified
+  aromaticity model, which may overwrite user-specified aromaticity on the ``Molecule``.
 - `PR #648 <https://github.com/openforcefield/openforcefield/pull/648>`_: Removes the
   ``utils.structure`` module, which was deprecated in 0.2.0.
 - `PR #670 <https://github.com/openforcefield/openforcefield/pull/670>`_: Makes the
