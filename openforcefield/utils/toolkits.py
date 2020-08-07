@@ -3458,8 +3458,11 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         # choose the largest unsigned int without overflow
         # since the C++ signature is a uint
         max_matches = np.iinfo(np.uintc).max
-        for match in rdmol.GetSubstructMatches(qmol, uniquify=False,
-                maxMatches=max_matches):
+        for match in rdmol.GetSubstructMatches(qmol,
+                                               uniquify=False,
+                                               maxMatches=max_matches,
+                                               useChirality=True
+                                               ):
             mas = [match[x] for x in map_list]
             matches.append(tuple(mas))
 

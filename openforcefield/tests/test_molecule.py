@@ -1960,9 +1960,16 @@ class TestMolecule:
         assert len(matches[0]) == 3 # it should have three tagged atoms
         assert set(matches[0]) == set([atom_Cl, atom_C, atom_H])
         matches = molecule.chemical_environment_matches('[#6:1]~[*:2]', toolkit_registry=toolkit_wrapper)
-        assert len(matches) == 4 # there should be four matches
+        assert len(matches) == 4  # there should be four matches
+        for match in matches:
+            assert len(match) == 2  # each match should have two tagged atoms
+        # Test searching for stereo-specific SMARTS
+        matches = molecule.chemical_environment_matches('[#6@:1](-[F:2])(-[Cl])(-[Br])(-[H])', toolkit_registry=toolkit_wrapper)
+        assert len(matches) == 1 # there should be one match
         for match in matches:
             assert len(match) == 2 # each match should have two tagged atoms
+        matches = molecule.chemical_environment_matches('[#6@@:1](-[F:2])(-[Cl])(-[Br])(-[H])', toolkit_registry=toolkit_wrapper)
+        assert len(matches) == 0 # this is the wrong stereochemistry, so there shouldn't be any matches
 
     # TODO: Test forgive undef amide enol stereo
     # TODO: test forgive undef phospho linker stereo
@@ -2004,6 +2011,13 @@ class TestMolecule:
         assert len(matches) == 4 # there should be four matches
         for match in matches:
             assert len(match) == 2 # each match should have two tagged atoms
+        # Test searching for stereo-specific SMARTS
+        matches = molecule.chemical_environment_matches('[#6@:1](-[F:2])(-[Cl])(-[Br])(-[H])', toolkit_registry=toolkit_wrapper)
+        assert len(matches) == 1 # there should be one match
+        for match in matches:
+            assert len(match) == 2 # each match should have two tagged atoms
+        matches = molecule.chemical_environment_matches('[#6@@:1](-[F:2])(-[Cl])(-[Br])(-[H])', toolkit_registry=toolkit_wrapper)
+        assert len(matches) == 0 # this is the wrong stereochemistry, so there shouldn't be any matches
 
     @pytest.mark.slow
     def test_compute_partial_charges(self):
