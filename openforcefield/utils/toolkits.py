@@ -143,6 +143,10 @@ class ChargeCalculationError(MessageException):
     pass
 
 
+class AntechamberNotFoundError(MessageException):
+    """The antechamber executable was not found"""
+
+
 #=============================================================================================
 # TOOLKIT UTILITY DECORATORS
 #=============================================================================================
@@ -3796,7 +3800,6 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
             raise ToolkitUnavailableException(f'The required toolkit {self._toolkit_name} is not '
                                               f'available. {self._toolkit_installation_instructions}')
 
-        ANTECHAMBER_PATH = find_executable("antechamber")
         out = subprocess.check_output(['antechamber', '-L'])
         ambertools_version = out.decode("utf-8").split('\n')[1].split()[3].strip(':')
         self._toolkit_version = ambertools_version
@@ -3922,7 +3925,7 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         # TODO: How should we implement find_executable?
         ANTECHAMBER_PATH = find_executable("antechamber")
         if ANTECHAMBER_PATH is None:
-            raise IOError("Antechamber not found, cannot run charge_mol()")
+            raise AntechamberNotFoundError("Antechamber not found, cannot run charge_mol()")
 
         # Compute charges
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -4127,8 +4130,10 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         # TODO: How should we implement find_executable?
         ANTECHAMBER_PATH = find_executable("antechamber")
         if ANTECHAMBER_PATH is None:
-            raise (IOError("Antechamber not found, cannot run "
-                           "AmberToolsToolkitWrapper.assign_fractional_bond_orders()"))
+            raise AntechamberNotFoundError(
+                "Antechamber not found, cannot run "
+                "AmberToolsToolkitWrapper.assign_fractional_bond_orders()"
+            )
 
         # Make a copy since we'll be messing with this molecule's conformers
         temp_mol = Molecule(molecule)
