@@ -14,13 +14,21 @@ Behavior changed
 """"""""""""""""
 - `PR #649 <https://github.com/openforcefield/openforcefield/pull/648>`_: Makes SMARTS
   searches stereochemistry-specific (if stereo is specified in the SMARTS) for both OpenEye
-  and RDKit backends. Also ensures that aromaticity is re-perceived according to the ForceField's specified
+  and RDKit backends. Also ensures molecule
+  aromaticity is re-perceived according to the ForceField's specified
   aromaticity model, which may overwrite user-specified aromaticity on the ``Molecule``.
 - `PR #648 <https://github.com/openforcefield/openforcefield/pull/648>`_: Removes the
   ``utils.structure`` module, which was deprecated in 0.2.0.
 - `PR #670 <https://github.com/openforcefield/openforcefield/pull/670>`_: Makes the
   :py:class:`Topology <openforcefield.topology.Topology>` returned by ``create_openmm_system``
   contain the partial charges and partial bond orders (if any) assigned during parameterization.
+
+Bugfixes
+""""""""
+- `PR #649 <https://github.com/openforcefield/openforcefield/pull/648>`_: Prevents 2020 OE
+  toolkit from issuing a warning caused by doing stereo-specific smarts searches on certain
+  structures.
+
 
 0.7.1 - OETK2020 Compatibility and Minor Update
 -----------------------------------------------
