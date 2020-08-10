@@ -795,6 +795,22 @@ class ForceField:
 
         return io_handler
 
+    def delete_parameter_handler(self, handler):
+        """
+        Delete a parameter handler specified by tag name, class, or instance.
+
+        Parameters
+        ----------
+        handler: str, openforcefield.typing.engines.smirnoff.ParameterHandler-derived type or object
+            The handler to delete.
+        """
+        if isinstance(handler, ParameterHandler):
+            tagname = handler.TAGNAME
+        elif isinstance(handler, type):
+            tagname = handler._TAGNAME
+        else:
+            tagname = handler
+        del self._parameter_handlers[tagname]
 
     def parse_sources(self, sources, allow_cosmetic_attributes=True):
         """Parse a SMIRNOFF force field definition.
