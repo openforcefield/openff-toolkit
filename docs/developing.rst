@@ -268,18 +268,14 @@ The naming conventions of classes, functions, and variables follows `PEP8 <https
 
 We place a high priority on code cleanliness and readability, even if code could be written more compactly. For example, 15-character variable names are fine. Triply nested list comprehensions are not.
 
-The ``openforcefield`` toolkit uses automated code formatting tools ("linters") to maintain consistent style and remove the burden of adhering to these standards by hand. Currently, three are employed:
+The ``openforcefield`` toolkit is in the process of adopting code formatting tools ("linters") to maintain consistent style and remove the burden of adhering to these standards by hand. Currently, only one is employed:
 1. `Black <https://black.readthedocs.io/>`_, the uncompromising code formatter, automatically formats code with a consistent style.
-2. `isort <https://timothycrosley.github.io/isort/>`_ enforces a consistent ordering of imports.
-3. `Flake8 <https://flake8.pycqa.org/>`_ checks for other potential style issues. It does not automatically apply changes, it only reports issues it finds. It is highly configurable and we have some rules turned off; see the ``setup.cfg`` file for details.
 
-There is a step in CI that uses these tools to check for a consistent style. To ensure that changes follow these standards, you can install and run these tools locally:
+There is a step in CI that uses these tool(s) to check for a consistent style. To ensure that changes follow these standards, you can install and run these tool(s) locally:
 
 .. code-block:: bash
 
-    $ conda install black isort flake8 -c conda-forge
+    $ conda install black -c conda-forge
     $ black openforcefield
-    $ isort openforcefield
-    $ flake8 openforcefield
 
 Anything not covered above is up to personal preference.
