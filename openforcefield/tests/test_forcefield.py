@@ -639,6 +639,7 @@ class TestForceField():
         assert len(forcefield._parameter_handlers['ProperTorsions']._parameters) == 158
         assert len(forcefield._parameter_handlers['ImproperTorsions']._parameters) == 4
         assert len(forcefield._parameter_handlers['vdW']._parameters) == 35
+        assert forcefield.aromaticity_model == 'OEAroModel_MDL'
 
     def test_load_bad_string(self):
         with pytest.raises(IOError) as exception_info:
@@ -1883,6 +1884,37 @@ class TestForceFieldChargeAssignment:
             q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
             assert q != 0 * unit.elementary_charge
 
+    @pytest.mark.parametrize('charge_method,additional_offxmls', [ ('ToolkitAM1BCC', []),
+                                                                   ('LibraryCharges', [xml_ethanol_library_charges_ff]),
+                                                                   ('ChargeIncrementHandler', [xml_charge_increment_model_formal_charges]),
+                                                                   ('charge_from_molecules', [])])
+    def test_charges_on_ref_mols_when_using_return_topology(self, charge_method, additional_offxmls):
+        """Ensure that charges are set on returned topology if the user specifies 'return_topology=True' in
+        create_openmm_system"""
+        # TODO: Should this test also cover multiple unique molecules?
+        from simtk.openmm import NonbondedForce
+
+        mol = create_acetate()
+        ff = ForceField('test_forcefields/smirnoff99Frosst.offxml', *additional_offxmls)
+        charge_mols = []
+        if charge_method == 'charge_from_molecules':
+            mol.partial_charges = np.array([-1.3, -0.2, -0.1, 0., 0.1, 0.2, 0.3]) * unit.elementary_charge
+            charge_mols = [mol]
+        omm_system, ret_top = ff.create_openmm_system(mol.to_topology(),
+                                                      charge_from_molecules=charge_mols,
+                                                      return_topology=True)
+        nonbondedForce = [f for f in omm_system.getForces() if type(f) == NonbondedForce][0]
+        ref_mol_from_ret_top = [i for i in ret_top.reference_molecules][0]
+
+        # Make sure the charges on the molecule are all nonzero, and that the molecule's
+        # partial_charges array matches the charges in the openmm system
+        all_charges_zero = True
+        for particle_index, ref_mol_charge in enumerate(ref_mol_from_ret_top.partial_charges):
+            q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
+            assert q == ref_mol_charge
+            if q != 0. * unit.elementary_charge:
+                all_charges_zero = False
+        assert not(all_charges_zero)
 
 
 

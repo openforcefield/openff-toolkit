@@ -401,6 +401,9 @@ class ForceField:
         ------
         SMIRNOFFAromaticityError if an incompatible aromaticity model is passed in.
 
+        .. notes ::
+           * Currently, the only supported aromaticity model is 'OEAroModel_MDL'.
+
         """
         # Implement better logic here if we ever support another aromaticity model
         if aromaticity_model != 'OEAroModel_MDL':
@@ -408,6 +411,17 @@ class ForceField:
                                            "OEAroModel_MDL is supported.".format(aromaticity_model))
 
         self._aromaticity_model = aromaticity_model
+
+    @property
+    def aromaticity_model(self):
+        """Returns the aromaticity model for this ForceField object.
+
+        Returns
+        -------
+        aromaticity_model
+            The aromaticity model for this force field.
+        """
+        return self._aromaticity_model
 
     def _add_author(self, author):
         """
@@ -1157,24 +1171,30 @@ class ForceField:
         ----------
         topology : openforcefield.topology.Topology
             The ``Topology`` corresponding to the system to be parameterized
-        charge_from_molecules : List[openforcefield.molecule.Molecule], optional
+        charge_from_molecules : List[openforcefield.molecule.Molecule], optional. default =[]
             If specified, partial charges will be taken from the given molecules
             instead of being determined by the force field.
-        partial_bond_orders_from_molecules : List[openforcefield.molecule.Molecule], optional
+        partial_bond_orders_from_molecules : List[openforcefield.molecule.Molecule], optional. default=[]
             If specified, partial bond orders will be taken from the given molecules
             instead of being determined by the force field.
             **All** bonds on each molecule given must have ``fractional_bond_order`` specified.
             A `ValueError` will be raised if any bonds have ``fractional_bond_order=None``.
             Molecules in the topology not represented in this list will have fractional
             bond orders calculated using underlying toolkits as needed.
-        return_topology : bool
+        return_topology : bool, optional. default=False
             If ``True``, return tuple of ``(system, topology)``, where
-            ``topology`` is the processed topology. Default ``False``.
+            ``topology`` is the processed topology. Default ``False``. This topology will have the
+            final partial charges assigned on its reference_molecules attribute, as well as partial
+            bond orders (if they were calculated).
 
         Returns
         -------
         system : simtk.openmm.System
             The newly created OpenMM System corresponding to the specified ``topology``
+        topology : openforcefield.topology.Topology, optional.
+            If the `return_topology` keyword argument is used, this method will also return a Topology. This
+            can be used to inspect the partial charges and partial bond orders assigned to the molecules
+            during parameterization.
 
         """
         return_topology = kwargs.pop('return_topology', False)
