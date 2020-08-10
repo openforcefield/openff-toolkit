@@ -31,7 +31,8 @@ __all__ = [
     'ProperTorsionHandler',
     'ImproperTorsionHandler',
     'vdWHandler',
-    'GBSAHandler'
+    'GBSAHandler',
+    'ToolkitAM1BCCHandler'
 ]
 
 

@@ -29,7 +29,7 @@ from openforcefield.utils.toolkits import (OpenEyeToolkitWrapper, RDKitToolkitWr
 from openforcefield.utils import get_data_file_path
 from openforcefield.topology import Molecule, Topology
 from openforcefield.typing.engines.smirnoff import (ForceField, IncompatibleParameterError, SMIRNOFFSpecError,
-    XMLParameterIOHandler, ParameterHandler, get_available_force_fields)
+    XMLParameterIOHandler, ParameterHandler, get_available_force_fields, ToolkitAM1BCCHandler)
 
 
 #======================================================================
@@ -1293,7 +1293,30 @@ class TestForceField():
             forcefield[bonds]
         with pytest.raises(NotImplementedError):
             forcefield[type(bonds)]
-        
+
+    @pytest.mark.parametrize('to_delete', ['ToolkitAM1BCC',
+                                           ToolkitAM1BCCHandler,
+                                           ToolkitAM1BCCHandler(skip_version_check=True)])
+    def test_delete_parameter_handler(self, to_delete):
+        """Ensure that ForceField.delete_parameter_handler behaves correctly"""
+        ff = ForceField(simple_xml_ff)
+        # Make sure the handler is present in the test force field
+        handler_found = False
+        for handler in ff._parameter_handlers.values():
+            if isinstance(handler, ToolkitAM1BCCHandler):
+                handler_found = True
+        assert handler_found
+        ff.delete_parameter_handler(to_delete)
+        # Make sure the handler is absent after deletion
+        handler_found = False
+        for handler in ff._parameter_handlers.values():
+            if isinstance(handler, ToolkitAM1BCCHandler):
+                handler_found = True
+        assert not(handler_found)
+
+        with pytest.raises(KeyError) as excinfo:
+            ff.delete_parameter_handler(to_delete)
+
 class TestForceFieldChargeAssignment:
 
     def generate_monatomic_ions():
