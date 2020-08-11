@@ -806,7 +806,7 @@ class ForceField:
         """
         if isinstance(handler, ParameterHandler):
             tagname = handler.TAGNAME
-        elif isinstance(handler, type):
+        elif issubclass(handler, ParameterHandler):
             tagname = handler._TAGNAME
         else:
             tagname = handler
