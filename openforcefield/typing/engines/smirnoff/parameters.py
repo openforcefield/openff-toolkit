@@ -4052,6 +4052,7 @@ class VirtualSiteHandler(_NonbondedHandler):
             q       += chargeincrement[qi]
             force.setParticleParameters(atom, q, s, e)
         return vsite_q
+
     #class VirtualSiteType(ParameterType):
     class VirtualSiteType(vdWHandler.vdWType):
         """A SMIRNOFF virtual site base type
@@ -4060,7 +4061,7 @@ class VirtualSiteHandler(_NonbondedHandler):
         """
 
         _VALENCE_TYPE = None
-        # Needed here to read the generic VirtualSite xml elements
+        # Needed here to read the generic VirtualSite xml elements.
         # Will specialize after the type is parsed
         _ELEMENT_NAME = 'VirtualSite'
         name            = ParameterAttribute(default="VS", converter=str)
@@ -4102,6 +4103,7 @@ class VirtualSiteHandler(_NonbondedHandler):
             # try to make a virtual particle for every permutation
             # However, we will bail on cases we know to not work with the "current"
             # spec.
+
             if self.match == "once":
                 orientation=atoms
             else:
@@ -4112,7 +4114,7 @@ class VirtualSiteHandler(_NonbondedHandler):
                 elif len(atoms) == 4: # assumes improper-like vsite
                     Exception("No virtual site with 4 atoms and match=all_permutations is not supported.")
                 else:
-                    raise Exception("Virtual site with more than 4 atoms defined is not implemented.")
+                    raise NotImplementedError("Virtual site with more than 4 atoms defined is not implemented.")
 
             base_args = {
                 "name"              : self.name,
@@ -4123,10 +4125,9 @@ class VirtualSiteHandler(_NonbondedHandler):
                 "rmin_half"         : self.rmin_half,
                 "orientations"      : orientation,
             }
-            kwargs.update( base_args)
+            kwargs.update(base_args)
 
-            return fn( *args, **kwargs)
-
+            return fn(*args, **kwargs)
 
     class VirtualSiteBondChargeType(VirtualSiteType):
         """A SMIRNOFF virtual site bond charge type
@@ -4144,7 +4145,6 @@ class VirtualSiteHandler(_NonbondedHandler):
 
         def add_virtual_site(self, molecule, atoms, replace=False):
             fn = molecule._add_bond_charge_virtual_site
-            kwargs = {}
             off_idx = super().add_virtual_site(fn, atoms, replace=replace)
             return off_idx
 
@@ -4154,19 +4154,16 @@ class VirtualSiteHandler(_NonbondedHandler):
         .. warning :: This API is experimental and subject to change.
         """
         _ELEMENT_NAME = None
-        outOfPlaneAngle = ParameterAttribute(unit=unit.degree)
-        inPlaneAngle    = ParameterAttribute(unit=unit.degree)
 
         def __eq__(self, obj):
             if type(self) != type(obj):
                 return False
-            A = ["name","distance","outOfPlaneAngle","inPlaneAngle"]
             A = ["name"]
             are_equal = [getattr(self,a) == getattr(obj,a) for a in A]
             return all(are_equal)
 
-        def add_virtual_site(self, fn, atoms, replace=False):
-            args = [atoms, self.distance, self.outOfPlaneAngle, self.inPlaneAngle ]
+        def add_virtual_site(self, fn, atoms, args, replace=False):
+            args = [atoms, self.distance] + args
             base_args = {
                 "name"              : self.name,
                 "charge_increments" : self.chargeincrement,
@@ -4185,9 +4182,12 @@ class VirtualSiteHandler(_NonbondedHandler):
         """
 
         _ELEMENT_NAME = 'VirtualSiteDivalentType'
+        outOfPlaneAngle = ParameterAttribute(unit=unit.degree)
+
         def add_virtual_site(self, molecule, atoms, replace=False):
             fn = molecule._add_divalent_lone_pair_virtual_site
-            return super().add_virtual_site(fn, atoms, replace=replace)
+            args = [self.outOfPlaneAngle]
+            return super().add_virtual_site(fn, atoms, args, replace=replace)
 
     class VirtualSiteTrivalentLonePairType(VirtualSiteLonePairType):
         """A SMIRNOFF trivalent lone pair virtual site type
@@ -4200,7 +4200,8 @@ class VirtualSiteHandler(_NonbondedHandler):
         
         def add_virtual_site(self, molecule, atoms, replace=False):
             fn = molecule._add_trivalent_lone_pair_virtual_site
-            return super().add_virtual_site(fn, atoms, replace=replace)
+            args = []
+            return super().add_virtual_site(fn, atoms, args, replace=replace)
 
     class VirtualSiteMonovalentLonePairType(VirtualSiteLonePairType):
         """A SMIRNOFF monovalent lone pair virtual site type
@@ -4208,9 +4209,13 @@ class VirtualSiteHandler(_NonbondedHandler):
         .. warning :: This API is experimental and subject to change.
         """
         _ELEMENT_NAME = 'VirtualSiteMonovalentType'
+        outOfPlaneAngle = ParameterAttribute(unit=unit.degree)
+        inPlaneAngle    = ParameterAttribute(unit=unit.degree)
+
         def add_virtual_site(self, molecule, atoms, replace=False):
             fn = molecule._add_monovalent_lone_pair_virtual_site
-            return super().add_virtual_site(fn, atoms, replace=replace)
+            args = [self.outOfPlaneAngle, self.inPlaneAngle]
+            return super().add_virtual_site(fn, atoms, args, replace=replace)
 
     class VirtualSiteCentroidType(VirtualSiteType):
         """A SMIRNOFF virtual site centroid type
@@ -4286,7 +4291,7 @@ class VirtualSiteHandler(_NonbondedHandler):
         #self._check_attributes_are_equal(other_handler, identical_attrs=string_attrs_to_compare)
         #super().check_handler_compatibility(other_handler)
 
-    def find_matches(self, entity, expand_permuations=False):
+    def find_matches(self, entity, expand_permutations=False):
         """Find the virtual sites in the topology/molecule matched by a parameter type.
 
         Parameters
@@ -4302,48 +4307,54 @@ class VirtualSiteHandler(_NonbondedHandler):
 
         """
         return self._find_matches(entity, transformed_dict_cls=dict,
-            use_named_slots=True, expand_permutations=expand_permuations)
+            use_named_slots=True, expand_permutations=expand_permutations)
 
+
+    @classmethod
+    def orientations_of_same_virtual_site(vs_i, vs_j):
+        if vs_i.virtual_site.type != vs_j.virtual_site.type:
+            return False
+        if vs_i.virtual_site.name != vs_j.virtual_site.name:
+            return False
+        atoms_i = [atom.topology_particle_index for atom in vs_i.atoms]
+        atoms_j = [atom.topology_particle_index for atom in vs_j.atoms]
+        if sorted(atoms_i) == sorted(atoms_j):
+            return True
+        else:
+            return False
+
+    @classmethod
+    def _same_virtual_site_type(vs_i, vs_j):
+        if type(vs_i) != type(vs_j):
+            return False
+        if vs_i.name != vs_j.name:
+            return False
+        return True
+
+    @classmethod
+    def _virtual_site_shared_atoms(vs_i, vs_j):
+        atoms_i = [atom.topology_particle_index for atom in vs_i.atoms]
+        atoms_j = [atom.topology_particle_index for atom in vs_j.atoms]
+
+        shared = [i for i in atoms_i if i in atoms_j]
+        return shared
+
+    @classmethod
+    def _excludePair(i, j, force, exclusions):
+        pair = tuple(sorted([i,j]))
+        if pair not in exclusions:
+            force.addException(i, j, 0.0, 0.0, 0.0, replace=True)
+            exclusions.add(pair)
+
+    @classmethod
+    def _dprint(*msg):
+        if False:
+            print(*msg)
 
     def create_force(self, system, topology, **kwargs):
 
         from itertools import combinations
 
-        def orientations_of_same_virtual_site(vs_i, vs_j):
-            if vs_i.virtual_site.type != vs_j.virtual_site.type:
-                return False
-            if vs_i.virtual_site.name != vs_j.virtual_site.name:
-                return False
-            atoms_i = [atom.topology_particle_index for atom in vs_i.atoms]
-            atoms_j = [atom.topology_particle_index for atom in vs_j.atoms]
-            if sorted(atoms_i) == sorted(atoms_j):
-                return True
-            else:
-                return False
-
-        def same_virtual_site_type(vs_i, vs_j):
-            if type(vs_i) != type(vs_j):
-                return False
-            if vs_i.name != vs_j.name:
-                return False
-            return True
-
-        def virtual_site_shared_atoms(vs_i, vs_j):
-            atoms_i = [atom.topology_particle_index for atom in vs_i.atoms]
-            atoms_j = [atom.topology_particle_index for atom in vs_j.atoms]
-
-            shared = [i for i in atoms_i if i in atoms_j]
-            return shared
-
-        def excludePair(i, j, force, exclusions):
-            pair = tuple(sorted([i,j]))
-            if pair not in exclusions:
-                force.addException(i, j, 0.0, 0.0, 0.0, replace=True)
-                exclusions.add(pair)
-
-        def dprint(*msg):
-            if False:
-                print(*msg)
 
         # Eventually support different exclusion policies:
         # 0 none:    No exclusions are applied. This includes between virtual
@@ -4366,37 +4377,70 @@ class VirtualSiteHandler(_NonbondedHandler):
 
         force = super().create_force(system, topology, **kwargs)
 
-        dprint("Creating OpenFF VSite representation...")
+        self.dprint("Creating OpenFF VSite representation...")
 
         # Separate the logic of adding vsites in the oFF state and the OpenMM
         # system. Operating on the topology is not ideal (a hack), so hopefully
         # this loop, which adds the oFF vsites to the topology, will live 
         # somewhere else
-        KEYLIST=1
-        VSITETYPE=0
+
+        # These are the indices representing the tuples (VSITE_TYPE, KEY_LIST).
+        # Basically an ordered dictionary with ints as keys
+        VSITE_TYPE = 0
+        KEY_LIST = 1
+
         for molecule in topology.reference_molecules:
             top_mol = Topology.from_molecules([molecule])
-            atom_matches = self.find_matches(top_mol, expand_permuations=True)
+            atom_matches = self.find_matches(top_mol, expand_permutations=True)
 
+            # The ordered "dictionary" that holds the vsite -> key_list 
+            # relationship.
             combined_orientations = []
+
             for key, atom_match_lst in atom_matches.items():
                 for match in atom_match_lst:
+
+                    # for each match, loop through existing virtual sites found,
+                    # and determine if this match is a unique virtual site,
+                    # or a member of an existing virtual site (e.g. TIP5)
                     vs_i = match.parameter_type
                     found = False
+
                     for i, vsite_struct in enumerate(combined_orientations):
-                        vs_j = vsite_struct[VSITETYPE]
-                        same_atoms = all([sorted(key) == sorted(k) for k in vsite_struct[KEYLIST]])
-                        diff_keys = not key in vsite_struct[KEYLIST]
-                        same_vsite = same_virtual_site_type(vs_i, vs_j)
-                        if same_atoms and diff_keys and same_vsite:
-                            combined_orientations[i][1].append(key)
+
+                        vs_j = vsite_struct[VSITE_TYPE]
+
+                        # the logic to determine if the particles should be
+                        # combined into a single virtual site. If the atoms 
+                        # are the same, the vsite is the same, but the absolute
+                        # ordering of the match is different, then we say
+                        # this is part of the same virtual site.
+                        # Note that the expand_permutations=True above is what
+                        # returns the different orders for each match (normally,
+                        # this is not the case for e.g. bonds where 1-2 is the
+                        # same parameter as 2-1 and is return always as 1-2.
+                        same_atoms = all([sorted(key) == sorted(k)
+                            for k in vsite_struct[KEY_LIST]]
+                        )
+                        diff_keys = not key in vsite_struct[KEY_LIST]
+                        same_vsite = self.same_virtual_site_type(vs_i, vs_j)
+
+                        if same_atoms and same_vsite and diff_keys:
+                            combined_orientations[i][KEY_LIST].append(key)
                             found = True
+
+                        # skip out early since there is no reason to keep
+                        # searching since we will never add the same
+                        # particle twice
                         if found:
                             break
+
+                    # if the entire loop did not produce a hit, then this is
+                    # a brand new virtual site
                     if not found:
                         newsite = [None, None]
-                        newsite[VSITETYPE] = vs_i
-                        newsite[KEYLIST] = [key]
+                        newsite[VSITE_TYPE] = vs_i
+                        newsite[KEY_LIST] = [key]
                         combined_orientations.append(newsite)
 
             # Now handle the vsites for this molecule
@@ -4406,24 +4450,24 @@ class VirtualSiteHandler(_NonbondedHandler):
                 vsite.add_virtual_site(molecule, keys, replace=True)
 
         # The toolkit now has a representation of the vsites in the topology,
-        # and here we now create the OpenMM parameters/objects/exclusions
-        dprint("Creating OpenMM VSite particles...")        
+        # and here we create the OpenMM parameters/objects/exclusions
+        self.dprint("Creating OpenMM VSite particles...")        
         for ref_mol in topology.reference_molecules:
 
-            dprint("Ref mol:", ref_mol)
+            self.dprint("Ref mol:", ref_mol)
             for vsite in ref_mol.virtual_sites:
                 ref_key = [atom.molecule_atom_index for atom in vsite.atoms]
-                dprint("Vsite ref_key:", ref_key)
+                self.dprint("Vsite ref_key:", ref_key)
 
                 ms = topology._reference_molecule_to_topology_molecules[ref_mol]
                 for top_mol in ms:
-                    dprint("top_mol:", top_mol)
+                    self.dprint("top_mol:", top_mol)
                     vsite_exclusion_ids = []
                     for vp in vsite.particles:
                         orientation = vp.orientation      
                         sort_key = [orientation.index(i) for i in ref_key]
                         atom_key = [ref_key[i] for i in sort_key]
-                        dprint("sort_key", sort_key)
+                        self.dprint("sort_key", sort_key)
                         atom_key = [top_mol.atom_start_topology_index + i 
                                         for i in atom_key]
 
@@ -4441,7 +4485,7 @@ class VirtualSiteHandler(_NonbondedHandler):
                         mass = 0.0
                         vsite_idx = system.addParticle(mass)
                         vsite_exclusion_ids.append(vsite_idx)
-                        dprint(
+                        self.dprint(
                             "vsite id", vsite_idx,
                             "orientation:", orientation,
                             "atom_key:", atom_key
@@ -4456,8 +4500,8 @@ class VirtualSiteHandler(_NonbondedHandler):
                         system.setVirtualSite(vsite_idx, omm_vsite)
                         force.addParticle(vsite_q, sigma, ljtype.epsilon)
 
-                        dprint(f"Added vsite particle with charge {vsite_q}")
-                        dprint(f"   chargeincrements:", vsite.charge_increments)
+                        self.dprint(f"Added vsite particle with charge {vsite_q}")
+                        self.dprint(f"   chargeincrements:", vsite.charge_increments)
 
                         if exclusion_policy == 1:
                             keylen = len(atom_key)
@@ -4473,13 +4517,13 @@ class VirtualSiteHandler(_NonbondedHandler):
                         else:
                             # this is exclusion policy basic and higher
                             for i in atom_key:
-                                dprint("Excluding vsite", vsite_idx, "atom", i)
+                                self.dprint("Excluding vsite", vsite_idx, "atom", i)
                                 force.addException(i, vsite_idx,
                                     0.0, 0.0, 0.0, replace=True)
 
                     if exclusion_policy > 1:
-                        for i,j in combinations(vsite_exclusion_ids,2):
-                            dprint("Excluding vsite", i, "vsite", j)
+                        for i, j in combinations(vsite_exclusion_ids, 2):
+                            self.dprint("Excluding vsite", i, "vsite", j)
                             force.addException(i, j, 
                                 0.0, 0.0, 0.0, replace=True)
 
