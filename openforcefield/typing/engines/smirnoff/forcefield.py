@@ -806,6 +806,8 @@ class ForceField:
         """
         if isinstance(handler, ParameterHandler):
             tagname = handler.TAGNAME
+        elif isinstance(handler, str):  # Catch case of name (as str) before checking subclass
+            tagname = handler
         elif issubclass(handler, ParameterHandler):
             tagname = handler._TAGNAME
         else:
