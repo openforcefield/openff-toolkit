@@ -33,40 +33,38 @@ Molecular chemical entity representation and routines to interface with cheminfo
 # GLOBAL IMPORTS
 # =============================================================================================
 
-import numpy as np
-from collections import OrderedDict, Counter
-from copy import deepcopy
 import operator
-from io import StringIO
 import uuid
 import warnings
-
-from simtk import unit
-from simtk.openmm.app import element, Element
+from collections import Counter, OrderedDict
+from copy import deepcopy
+from io import StringIO
 
 import networkx as nx
+import numpy as np
 from networkx.algorithms.isomorphism import GraphMatcher
+from simtk import unit
+from simtk.openmm.app import Element, element
 
 import openforcefield
 from openforcefield.utils import (
-    serialize_numpy,
+    check_units_are_compatible,
     deserialize_numpy,
     quantity_to_string,
+    serialize_numpy,
     string_to_quantity,
-    check_units_are_compatible,
 )
+from openforcefield.utils.serialization import Serializable
 from openforcefield.utils.toolkits import (
+    DEFAULT_AROMATICITY_MODEL,
+    GLOBAL_TOOLKIT_REGISTRY,
+    InvalidToolkitError,
+    OpenEyeToolkitWrapper,
+    RDKitToolkitWrapper,
     ToolkitRegistry,
     ToolkitWrapper,
-    RDKitToolkitWrapper,
-    OpenEyeToolkitWrapper,
-    InvalidToolkitError,
     UndefinedStereochemistryError,
-    GLOBAL_TOOLKIT_REGISTRY,
 )
-from openforcefield.utils.toolkits import DEFAULT_AROMATICITY_MODEL
-from openforcefield.utils.serialization import Serializable
-
 
 # =============================================================================================
 # GLOBAL PARAMETERS
@@ -5144,8 +5142,8 @@ class Molecule(FrozenMolecule):
                 backend = "openeye"
         if backend == "openeye":
             if OPENEYE_AVAILABLE:
-                from openeye import oedepict
                 from IPython.display import Image
+                from openeye import oedepict
 
                 oemol = self.to_openeye()
 

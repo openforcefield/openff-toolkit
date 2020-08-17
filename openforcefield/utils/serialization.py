@@ -15,7 +15,6 @@ Serialization mix-in
 
 import abc
 
-
 # =============================================================================================
 # SERIALIZATION MIX-IN
 # =============================================================================================
@@ -268,8 +267,9 @@ class Serializable(abc.ABC):
             A YAML serialized representation of the object
 
         """
-        import yaml
         from collections import OrderedDict
+
+        import yaml
 
         yaml.SafeDumper.add_representer(
             OrderedDict,
@@ -298,8 +298,9 @@ class Serializable(abc.ABC):
             Instantiated object
 
         """
-        import yaml
         from collections import OrderedDict
+
+        import yaml
 
         yaml.SafeDumper.add_representer(
             OrderedDict,

@@ -20,25 +20,24 @@ from simtk import unit
 
 from openforcefield.typing.engines.smirnoff import SMIRNOFFVersionError
 from openforcefield.typing.engines.smirnoff.parameters import (
-    ParameterAttribute,
+    BondHandler,
+    ChargeIncrementModelHandler,
+    DuplicateParameterError,
+    GBSAHandler,
+    ImproperTorsionHandler,
+    IncompatibleParameterError,
     IndexedParameterAttribute,
+    LibraryChargeHandler,
+    ParameterAttribute,
+    ParameterHandler,
     ParameterList,
     ParameterType,
-    BondHandler,
-    ParameterHandler,
     ProperTorsionHandler,
-    ImproperTorsionHandler,
-    LibraryChargeHandler,
-    GBSAHandler,
     SMIRNOFFSpecError,
     _ParameterAttributeHandler,
-    ChargeIncrementModelHandler,
-    IncompatibleParameterError,
-    DuplicateParameterError,
 )
-from openforcefield.utils import detach_units, IncompatibleUnitError
+from openforcefield.utils import IncompatibleUnitError, detach_units
 from openforcefield.utils.collections import ValidatedList
-
 
 # ======================================================================
 # Test ParameterAttribute descriptor

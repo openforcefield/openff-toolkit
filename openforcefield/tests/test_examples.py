@@ -16,13 +16,12 @@ import glob
 import os
 import re
 import subprocess
-import textwrap
 import tempfile
+import textwrap
 
 import pytest
 
 from openforcefield.utils import RDKIT_AVAILABLE, get_data_file_path
-
 
 # ======================================================================
 # TEST UTILITIES
