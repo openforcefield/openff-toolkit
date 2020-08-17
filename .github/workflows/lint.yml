@@ -2,9 +2,6 @@ name: lint
 
 on:
   push:
-    paths:
-      - 'openforcefield/**.py'
-      - 'setup.cfg'
 
 jobs:
 
