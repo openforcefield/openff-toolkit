@@ -11,6 +11,7 @@ At least one supported cheminformatics toolkit must be installed to run these te
 Only the tests applicable to that toolkit will be run.
 
 TODO:
+- Will the ToolkitWrapper allow us to pare down importing each wrapper directly?
 - Add tests comparing RDKit and OpenEye aromaticity perception
 - Right now, the test database of TestMolecule is read from mol2, requiring the OE
   toolkit. Find a different test set that RDKit can read, or make a database of
@@ -34,7 +35,6 @@ from simtk import unit
 from openforcefield.topology.molecule import Molecule, Atom, InvalidConformerError
 from openforcefield.utils import get_data_file_path
 
-# TODO: Will the ToolkitWrapper allow us to pare that down?
 from openforcefield.utils.toolkits import (
     OpenEyeToolkitWrapper,
     RDKitToolkitWrapper,
