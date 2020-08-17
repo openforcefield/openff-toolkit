@@ -278,4 +278,4 @@ There is a step in CI that uses these tool(s) to check for a consistent style. T
     $ conda install black -c conda-forge
     $ black openforcefield
 
-Anything not covered above is up to personal preference.
+Anything not covered above is currently up to personal preference, but may change as new linters are added.
