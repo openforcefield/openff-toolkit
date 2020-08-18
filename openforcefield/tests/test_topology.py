@@ -15,25 +15,29 @@ Tests for Topology
 
 from unittest import TestCase
 
-import pytest
 import numpy as np
+import pytest
 from simtk import unit
-from openforcefield.utils import (
-    BASIC_CHEMINFORMATICS_TOOLKITS,
-    RDKIT_AVAILABLE,
-    OPENEYE_AVAILABLE,
-    RDKitToolkitWrapper,
-    OpenEyeToolkitWrapper,
-)
-from openforcefield.tests.utils import get_data_file_path
+
 from openforcefield.tests.test_forcefield import (
     create_cyclohexane,
     create_ethanol,
     create_reversed_ethanol,
 )
-from openforcefield.topology import Topology, ValenceDict, DuplicateUniqueMoleculeError
-from openforcefield.topology import Molecule
-
+from openforcefield.tests.utils import get_data_file_path
+from openforcefield.topology import (
+    DuplicateUniqueMoleculeError,
+    Molecule,
+    Topology,
+    ValenceDict,
+)
+from openforcefield.utils import (
+    BASIC_CHEMINFORMATICS_TOOLKITS,
+    OPENEYE_AVAILABLE,
+    RDKIT_AVAILABLE,
+    OpenEyeToolkitWrapper,
+    RDKitToolkitWrapper,
+)
 
 # =============================================================================================
 # UTILITY FUNCTIONS

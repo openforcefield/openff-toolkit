@@ -11,6 +11,7 @@ At least one supported cheminformatics toolkit must be installed to run these te
 Only the tests applicable to that toolkit will be run.
 
 TODO:
+- Will the ToolkitWrapper allow us to pare down importing each wrapper directly?
 - Add tests comparing RDKit and OpenEye aromaticity perception
 - Right now, the test database of TestMolecule is read from mol2, requiring the OE
   toolkit. Find a different test set that RDKit can read, or make a database of
@@ -31,23 +32,21 @@ import numpy as np
 import pytest
 from simtk import unit
 
-from openforcefield.topology.molecule import Molecule, Atom, InvalidConformerError
-from openforcefield.utils import get_data_file_path
-
-# TODO: Will the ToolkitWrapper allow us to pare that down?
-from openforcefield.utils.toolkits import (
-    OpenEyeToolkitWrapper,
-    RDKitToolkitWrapper,
-    AmberToolsToolkitWrapper,
-    ToolkitRegistry,
-)
 from openforcefield.tests.test_forcefield import (
-    create_ethanol,
-    create_reversed_ethanol,
     create_acetaldehyde,
     create_benzene_no_aromatic,
-    create_cyclohexane,
     create_cis_1_2_dichloroethene,
+    create_cyclohexane,
+    create_ethanol,
+    create_reversed_ethanol,
+)
+from openforcefield.topology.molecule import Atom, InvalidConformerError, Molecule
+from openforcefield.utils import get_data_file_path
+from openforcefield.utils.toolkits import (
+    AmberToolsToolkitWrapper,
+    OpenEyeToolkitWrapper,
+    RDKitToolkitWrapper,
+    ToolkitRegistry,
 )
 
 # =============================================================================================
@@ -1047,7 +1046,6 @@ class TestMolecule:
         from openforcefield.utils.toolkits import UndefinedStereochemistryError
 
         # TODO: Test all file capabilities; the current test is minimal
-
         # TODO: This is only for OE. Expand to both OE and RDKit toolkits.
         # Molecules that are known to raise UndefinedStereochemistryError.
         undefined_stereo_mols = {
@@ -1084,7 +1082,6 @@ class TestMolecule:
         # Known failures raise an UndefinedStereochemistryError, but
         # the round-trip SMILES representation with the OpenEyeToolkit
         # doesn't seem to be affected.
-
         # ZINC test set known failures.
         # known_failures = {'ZINC05964684', 'ZINC05885163', 'ZINC05543156', 'ZINC17211981',
         #                   'ZINC17312986', 'ZINC06424847', 'ZINC04963126'}
@@ -1176,7 +1173,7 @@ class TestMolecule:
         molecule_file = Molecule.from_file(get_data_file_path("molecules/ethanol.sdf"))
         assert molecule_smiles.hill_formula == molecule_file.hill_formula
         # make sure the topology molecule gives the same formula
-        from openforcefield.topology.topology import TopologyMolecule, Topology
+        from openforcefield.topology.topology import Topology, TopologyMolecule
 
         topology = Topology.from_molecules(molecule_smiles)
         topmol = TopologyMolecule(molecule_smiles, topology)
@@ -1218,7 +1215,7 @@ class TestMolecule:
         # check matching with nx.Graph with full matching
         assert ethanol.is_isomorphic_with(ethanol_reverse.to_networkx()) is True
         # check matching with a TopologyMolecule class
-        from openforcefield.topology.topology import TopologyMolecule, Topology
+        from openforcefield.topology.topology import Topology, TopologyMolecule
 
         topology = Topology.from_molecules(ethanol)
         topmol = TopologyMolecule(ethanol, topology)
@@ -2616,8 +2613,8 @@ class TestMolecule:
         """Test computation/retrieval of partial charges"""
         # TODO: Test only one molecule for speed?
         # TODO: Do we need to deepcopy each molecule, or is setUp called separately for each test method?
-        from simtk import unit
         import numpy as np
+        from simtk import unit
 
         # Do not modify original molecules.
         molecules = copy.deepcopy(mini_drug_bank())

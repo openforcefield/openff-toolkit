@@ -51,24 +51,23 @@ __all__ = [
 # =============================================================================================
 
 import copy
-from distutils.spawn import find_executable
-from functools import wraps
 import importlib
+import inspect
 import logging
 import subprocess
 import tempfile
-import inspect
+from distutils.spawn import find_executable
+from functools import wraps
 
-from simtk import unit
 import numpy as np
+from simtk import unit
 
 from openforcefield.utils import (
-    all_subclasses,
     MessageException,
+    all_subclasses,
     inherit_docstrings,
     temporary_cd,
 )
-
 
 # =============================================================================================
 # CONFIGURE LOGGER
@@ -977,7 +976,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             A list of openforcefield.topology.Molecule instances
 
         """
-        from openeye import oeomega, oechem
+        from openeye import oechem, oeomega
 
         oemol = self.to_openeye(molecule=molecule)
 
@@ -1207,9 +1206,11 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         >>> molecule = toolkit_wrapper.from_openeye(oemols[0])
 
         """
-        from openeye import oechem
-        from openforcefield.topology.molecule import Molecule
         import math
+
+        from openeye import oechem
+
+        from openforcefield.topology.molecule import Molecule
 
         # Add explicit hydrogens if they're implicit
         if oechem.OEHasImplicitHydrogens(oemol):
@@ -2041,8 +2042,9 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         ChargeCalculationError if the charge method is supported by this toolkit, but fails
         """
 
-        from openeye import oequacpac, oechem
         import numpy as np
+        from openeye import oechem, oequacpac
+
         from openforcefield.topology import Molecule
 
         SUPPORTED_CHARGE_METHODS = {
@@ -2258,6 +2260,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
          """
         from openeye import oequacpac
+
         from openforcefield.topology import Molecule
 
         # Make a copy since we'll be messing with this molecule's conformers
@@ -2338,6 +2341,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             If OpenEye toolkit was unable to parse the provided smirks/tagged smarts
         """
         from openeye import oechem
+
         from openforcefield.typing.chemistry import SMIRKSParsingError
 
         qmol = oechem.OEQMol()
@@ -2591,7 +2595,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         """
 
         from rdkit import Chem
-        from openforcefield.topology.molecule import Molecule, InvalidConformerError
+
+        from openforcefield.topology.molecule import InvalidConformerError, Molecule
 
         # Make the molecule from smiles
         offmol = self.from_smiles(smiles, allow_undefined_stereo=allow_undefined_stereo)
@@ -2894,8 +2899,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             A list of openforcefield.topology.Molecule instances not including the input molecule.
         """
 
-        from rdkit.Chem.MolStandardize import rdMolStandardize
         from rdkit import Chem
+        from rdkit.Chem.MolStandardize import rdMolStandardize
 
         enumerator = rdMolStandardize.TautomerEnumerator()
         rdmol = Chem.RemoveHs(molecule.to_rdkit())
@@ -3224,6 +3229,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         """
         from rdkit import Chem
+
         from openforcefield.topology.molecule import Molecule
 
         # Make a copy of the RDKit Mol as we'll need to change it (e.g. assign stereo).
@@ -3706,6 +3712,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             If RDKit was unable to parse the provided smirks/tagged smarts
         """
         from rdkit import Chem
+
         from openforcefield.typing.chemistry import SMIRKSParsingError
 
         ss = Chem.MolFromSmarts(smarts)
@@ -4201,6 +4208,7 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
 
         import os
         import subprocess
+
         from openforcefield.topology import Molecule
 
         if partial_charge_method is None:

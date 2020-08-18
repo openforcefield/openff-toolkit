@@ -18,8 +18,12 @@ jobs:
 
       - name: Install linters
         run: |
-          pip install black
+          pip install black isort
 
       - name: Run black
         run: |
           black --check openforcefield
+
+      - name: Run isort
+        run: |
+          isort --check openforcefield

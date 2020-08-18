@@ -22,23 +22,22 @@ Class definitions to represent a molecular system and its chemical components
 # =============================================================================================
 
 import itertools
-
-from collections.abc import MutableMapping
 from collections import OrderedDict
+from collections.abc import MutableMapping
 
 from simtk import unit
 from simtk.openmm import app
 
 from openforcefield.typing.chemistry import ChemicalEnvironment
-from openforcefield.utils.toolkits import (
-    DEFAULT_AROMATICITY_MODEL,
-    ALLOWED_AROMATICITY_MODELS,
-    ALLOWED_FRACTIONAL_BOND_ORDER_MODELS,
-    GLOBAL_TOOLKIT_REGISTRY,
-    ALLOWED_CHARGE_MODELS,
-)
-from openforcefield.utils.serialization import Serializable
 from openforcefield.utils import MessageException
+from openforcefield.utils.serialization import Serializable
+from openforcefield.utils.toolkits import (
+    ALLOWED_AROMATICITY_MODELS,
+    ALLOWED_CHARGE_MODELS,
+    ALLOWED_FRACTIONAL_BOND_ORDER_MODELS,
+    DEFAULT_AROMATICITY_MODEL,
+    GLOBAL_TOOLKIT_REGISTRY,
+)
 
 # =============================================================================================
 # Exceptions
@@ -1626,6 +1625,7 @@ class Topology(Serializable):
             An openforcefield Topology object
         """
         import networkx as nx
+
         from openforcefield.topology.molecule import Molecule
 
         # Check to see if the openMM system has defined bond orders, by looping over all Bonds in the Topology.
@@ -1763,8 +1763,9 @@ class Topology(Serializable):
             looks only at molecules, and does not guarantee uniqueness in
             the entire Topology.
         """
+        from simtk.openmm.app import Aromatic, Double, Single
         from simtk.openmm.app import Topology as OMMTopology
-        from simtk.openmm.app import Single, Double, Triple, Aromatic
+        from simtk.openmm.app import Triple
         from simtk.openmm.app.element import Element as OMMElement
 
         omm_topology = OMMTopology()
@@ -2393,7 +2394,7 @@ class Topology(Serializable):
         index : int
             The index of this molecule in the topology
         """
-        from openforcefield.topology.molecule import Molecule, FrozenMolecule
+        from openforcefield.topology.molecule import FrozenMolecule, Molecule
 
         if local_topology_to_reference_index is None:
             local_topology_to_reference_index = dict(

@@ -17,8 +17,7 @@ import copy
 
 import pytest
 
-from openforcefield.utils.collections import ValidatedList, ValidatedDict
-
+from openforcefield.utils.collections import ValidatedDict, ValidatedList
 
 # =====================================================================
 # Test Callbackable class
