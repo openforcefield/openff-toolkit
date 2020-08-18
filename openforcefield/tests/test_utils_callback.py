@@ -17,10 +17,9 @@ import pytest
 
 from openforcefield.utils.callback import (
     Callbackable,
-    callback_method,
     CallbackRegistrationError,
+    callback_method,
 )
-
 
 # =====================================================================
 # UTILITY CLASSES AND FUNCTIONS

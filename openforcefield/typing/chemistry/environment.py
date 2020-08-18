@@ -36,8 +36,8 @@ __all__ = [
 
 from openforcefield.utils.toolkits import (
     GLOBAL_TOOLKIT_REGISTRY,
-    ToolkitWrapper,
     MessageException,
+    ToolkitWrapper,
 )
 
 
