@@ -266,11 +266,16 @@ The naming conventions of classes, functions, and variables follows `PEP8 <https
 - Use ``file_path``, ``file_name``, and ``file_stem`` to indicate ``path/to/stem.extension``, ``stem.extension``, and ``stem`` respectively, consistently with the variables in the standard ``pathlib`` library.
 - Use ``n_x`` to abbreviate "number of X` (e.g. `n_atoms`, `n_molecules`).
 
-We place a high priority on code cleanliness and readability.
-So, 15-character variable names are fine.
-Triply nested list comprehensions are not.
+We place a high priority on code cleanliness and readability, even if code could be written more compactly. For example, 15-character variable names are fine. Triply nested list comprehensions are not.
 
+The ``openforcefield`` toolkit is in the process of adopting code formatting tools ("linters") to maintain consistent style and remove the burden of adhering to these standards by hand. Currently, only one is employed:
+1. `Black <https://black.readthedocs.io/>`_, the uncompromising code formatter, automatically formats code with a consistent style.
 
-Anything not covered above is up to personal preference.
-To remove the human friction from code formatting, we will likely adopt a standard formatter like `black <https://github.com/psf/black>`_ in the near future.
+There is a step in CI that uses these tool(s) to check for a consistent style. To ensure that changes follow these standards, you can install and run these tool(s) locally:
 
+.. code-block:: bash
+
+    $ conda install black -c conda-forge
+    $ black openforcefield
+
+Anything not covered above is currently up to personal preference, but may change as new linters are added.

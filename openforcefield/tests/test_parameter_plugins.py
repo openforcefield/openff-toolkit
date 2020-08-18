@@ -29,19 +29,18 @@ def mock_entry_point_plugins():
     # Create the fake entry point definitions. These include a parameter handler
     # which is supported, and an io parameter handler which should be skipped.
     handler_entry_point = pkg_resources.EntryPoint.parse(
-        "CustomHandler = openforcefield.tests.plugins:CustomHandler",
-        dist=distribution
+        "CustomHandler = openforcefield.tests.plugins:CustomHandler", dist=distribution
     )
     io_handler_entry_point = pkg_resources.EntryPoint.parse(
         "CustomIOHandler = openforcefield.tests.plugins:CustomIOHandler",
-        dist=distribution
+        dist=distribution,
     )
 
     # Add the mapping to the fake EntryPoint
     distribution._ep_map = {
         "openff.toolkit.plugins.handlers": {
             "CustomHandler": handler_entry_point,
-            "CustomIOHandler": io_handler_entry_point
+            "CustomIOHandler": io_handler_entry_point,
         }
     }
 
@@ -67,7 +66,7 @@ def test_force_field_custom_handler(mock_entry_point_plugins):
             "<?xml version='1.0' encoding='ASCII'?>",
             "<SMIRNOFF version='0.3' aromaticity_model='OEAroModel_MDL'>",
             "  <CustomHandler version='0.3'></CustomHandler>",
-            "</SMIRNOFF>"
+            "</SMIRNOFF>",
         ]
     )
 
@@ -76,7 +75,8 @@ def test_force_field_custom_handler(mock_entry_point_plugins):
         ForceField(force_field_contents)
 
     assert (
-        "Cannot find a registered parameter handler class for tag 'CustomHandler'" in error_info.value.args[0]
+        "Cannot find a registered parameter handler class for tag 'CustomHandler'"
+        in error_info.value.args[0]
     )
 
     # Otherwise the FF should be created as expected.
