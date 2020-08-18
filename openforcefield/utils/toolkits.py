@@ -155,6 +155,10 @@ class ChargeCalculationError(MessageException):
     pass
 
 
+class InvalidIUPACNameError(MessageException):
+    """Failed to parse IUPAC name"""
+
+
 # =============================================================================================
 # TOOLKIT UTILITY DECORATORS
 # =============================================================================================
@@ -1933,7 +1937,11 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         from openeye import oechem, oeiupac
 
         oemol = oechem.OEMol()
-        oeiupac.OEParseIUPACName(oemol, iupac_name)
+        parsing_result = oeiupac.OEParseIUPACName(oemol, iupac_name)
+        if not parsing_result:
+            raise InvalidIUPACNameError(
+                f"OpenEye failed to parse {iupac_name} as a IUPAC name"
+            )
         oechem.OETriposAtomNames(oemol)
         result = oechem.OEAddExplicitHydrogens(oemol)
         if not result:

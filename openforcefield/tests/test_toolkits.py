@@ -37,6 +37,7 @@ from openforcefield.utils.toolkits import (
     GAFFAtomTypeWarning,
     IncorrectNumConformersError,
     IncorrectNumConformersWarning,
+    InvalidIUPACNameError,
     InvalidToolkitError,
     OpenEyeToolkitWrapper,
     RDKitToolkitWrapper,
@@ -696,6 +697,9 @@ class TestOpenEyeToolkitWrapper:
                 "DrugBank_5415": 'raises warning "Failed to parse name:"',
                 "DrugBank_1661": "fails roundtrip test",
                 "DrugBank_6353": "fails roundtrip test",
+                "DrugBank_2799": "from_iupac fails to read what to_iupac returns",
+                "DrugBank_4865": "from_iupac fails to read what to_iupac returns",
+                "DrugBank_2465": "from_iupac fails to read what to_iupac returns",
             },
         ),
     )
@@ -716,6 +720,13 @@ class TestOpenEyeToolkitWrapper:
             assert molecule.is_isomorphic_with(
                 molecule_copy, atom_stereochemistry_matching=not undefined_stereo
             )
+
+    def test_from_iupac_failure(self):
+        """Test that invalid IUPAC names are handled properly"""
+        toolkit = OpenEyeToolkitWrapper()
+
+        with pytest.raises(InvalidIUPACNameError):
+            toolkit.from_iupac(".BETA.-PINENE")
 
     @pytest.mark.skipif(
         not OpenEyeToolkitWrapper.is_available(), reason="OpenEye Toolkit not available"
