@@ -24,15 +24,14 @@ from numpy.testing import assert_almost_equal
 from simtk import openmm, unit
 
 from openforcefield.topology import Molecule, Topology
-
 from openforcefield.typing.engines.smirnoff import (
     ForceField,
     IncompatibleParameterError,
     ParameterHandler,
     SMIRNOFFSpecError,
+    ToolkitAM1BCCHandler,
     XMLParameterIOHandler,
     get_available_force_fields,
-    ToolkitAM1BCCHandler,
 )
 from openforcefield.utils import get_data_file_path
 from openforcefield.utils.toolkits import (
