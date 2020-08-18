@@ -16,6 +16,9 @@ New features
   of :py:class:`ForceField <openforcefield.typing.engines.smirnoff.forcefield.ForceField>` and ``.TAGNAME``
   of :py:class:`ParameterHandler <openforcefield.typing.engines.smirnoff.Parameters.ParameterHandler>` as
   public attributes.
+- `PR #667 <https://github.com/openforcefield/openforcefield/pull/667>`_ and
+  `PR #681 <https://github.com/openforcefield/openforcefield/pull/681>`_ linted the codebase with
+  ``black`` and ``isort``, respectively.
 
 Behavior changed
 """"""""""""""""

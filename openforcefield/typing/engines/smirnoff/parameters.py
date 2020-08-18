@@ -41,28 +41,27 @@ __all__ = [
 # =============================================================================================
 
 import copy
-from collections import OrderedDict, defaultdict
-from enum import Enum
 import functools
 import inspect
 import logging
 import re
+from collections import OrderedDict, defaultdict
+from enum import Enum
 
 from simtk import openmm, unit
 
-from openforcefield.utils import (
-    attach_units,
-    extract_serialized_units_from_dict,
-    MessageException,
-    object_to_quantity,
-    GLOBAL_TOOLKIT_REGISTRY,
-)
-from openforcefield.topology import ValenceDict, ImproperDict, SortedDict
+from openforcefield.topology import ImproperDict, SortedDict, ValenceDict
 from openforcefield.topology.molecule import Molecule
 from openforcefield.typing.chemistry import ChemicalEnvironment
-from openforcefield.utils import IncompatibleUnitError
-from openforcefield.utils.collections import ValidatedList, ValidatedDict
-
+from openforcefield.utils import (
+    GLOBAL_TOOLKIT_REGISTRY,
+    IncompatibleUnitError,
+    MessageException,
+    attach_units,
+    extract_serialized_units_from_dict,
+    object_to_quantity,
+)
+from openforcefield.utils.collections import ValidatedDict, ValidatedList
 
 # =============================================================================================
 # CONFIGURE LOGGER
@@ -1633,6 +1632,7 @@ class ParameterHandler(_ParameterAttributeHandler):
 
         """
         import packaging.version
+
         from openforcefield.typing.engines.smirnoff import SMIRNOFFVersionError
 
         # Use PEP-440 compliant version number comparison, if requested
@@ -3756,12 +3756,13 @@ class ToolkitAM1BCCHandler(_NonbondedHandler):
 
     def create_force(self, system, topology, **kwargs):
         import warnings
-        from openforcefield.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
+
         from openforcefield.topology import (
             FrozenMolecule,
             TopologyAtom,
             TopologyVirtualSite,
         )
+        from openforcefield.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
 
         force = super().create_force(system, topology, **kwargs)
 
@@ -3940,6 +3941,7 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
 
     def create_force(self, system, topology, **kwargs):
         import warnings
+
         from openforcefield.topology import (
             FrozenMolecule,
             TopologyAtom,

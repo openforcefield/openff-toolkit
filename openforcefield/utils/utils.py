@@ -33,11 +33,11 @@ __all__ = [
 # GLOBAL IMPORTS
 # =============================================================================================
 
+import contextlib
 import functools
+import logging
 
 from simtk import unit
-import logging
-import contextlib
 
 # =============================================================================================
 # CONFIGURE LOGGER
@@ -129,8 +129,9 @@ def get_data_file_path(relative_path):
         Name of the file to load (with respect to the repex folder).
     """
 
-    from pkg_resources import resource_filename
     import os
+
+    from pkg_resources import resource_filename
 
     fn = resource_filename("openforcefield", os.path.join("data", relative_path))
 

@@ -18,7 +18,6 @@ import pytest
 
 from openforcefield.typing.engines.smirnoff.io import XMLParameterIOHandler
 
-
 # =============================================================================================
 # QUANTITY PARSING UTILITIES
 # =============================================================================================

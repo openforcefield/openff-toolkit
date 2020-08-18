@@ -16,34 +16,32 @@ Tests for forcefield class
 
 import copy
 import os
-
-from simtk import openmm, unit
-import numpy as np
-from numpy.testing import assert_almost_equal
-
-import pytest
 from tempfile import NamedTemporaryFile
 
-from openforcefield.utils.toolkits import (
-    OpenEyeToolkitWrapper,
-    RDKitToolkitWrapper,
-    AmberToolsToolkitWrapper,
-    ToolkitRegistry,
-    ChargeMethodUnavailableError,
-)
-from openforcefield.utils import get_data_file_path
+import numpy as np
+import pytest
+from numpy.testing import assert_almost_equal
+from simtk import openmm, unit
+
 from openforcefield.topology import Molecule, Topology
 
 from openforcefield.typing.engines.smirnoff import (
     ForceField,
     IncompatibleParameterError,
+    ParameterHandler,
     SMIRNOFFSpecError,
     XMLParameterIOHandler,
-    ParameterHandler,
     get_available_force_fields,
     ToolkitAM1BCCHandler,
 )
-
+from openforcefield.utils import get_data_file_path
+from openforcefield.utils.toolkits import (
+    AmberToolsToolkitWrapper,
+    ChargeMethodUnavailableError,
+    OpenEyeToolkitWrapper,
+    RDKitToolkitWrapper,
+    ToolkitRegistry,
+)
 
 # ======================================================================
 # GLOBAL CONSTANTS
@@ -1136,8 +1134,8 @@ class TestForceField:
     @pytest.fixture()
     def create_circular_handler_dependencies(self):
         from openforcefield.typing.engines.smirnoff.parameters import (
-            BondHandler,
             AngleHandler,
+            BondHandler,
             ConstraintHandler,
         )
 
@@ -1187,6 +1185,7 @@ class TestForceField:
 
     def test_parameterize_ethanol_missing_torsion(self):
         from simtk.openmm import app
+
         from openforcefield.typing.engines.smirnoff.parameters import (
             UnassignedProperTorsionParameterException,
         )
@@ -1298,8 +1297,7 @@ class TestForceField:
         The results of both should be identical.
         """
         toolkit_registry = ToolkitRegistry(toolkit_precedence=[OpenEyeToolkitWrapper])
-        from simtk.openmm import app
-        from simtk.openmm import XmlSerializer
+        from simtk.openmm import XmlSerializer, app
 
         forcefield = ForceField("test_forcefields/smirnoff99Frosst.offxml")
         pdbfile = app.PDBFile(get_data_file_path("systems/test_systems/1_ethanol.pdb"))
@@ -1335,8 +1333,7 @@ class TestForceField:
         The results of both should be identical.
         """
 
-        from simtk.openmm import app
-        from simtk.openmm import XmlSerializer
+        from simtk.openmm import XmlSerializer, app
 
         toolkit_registry = ToolkitRegistry(
             toolkit_precedence=[RDKitToolkitWrapper, AmberToolsToolkitWrapper]
@@ -1601,7 +1598,7 @@ class TestForceFieldChargeAssignment:
         # Create an ethanol molecule without using a toolkit
         molecules = [create_ethanol()]
 
-        from simtk.openmm import app, NonbondedForce
+        from simtk.openmm import NonbondedForce, app
 
         file_path = get_data_file_path("test_forcefields/smirnoff99Frosst.offxml")
         forcefield = ForceField(file_path)
@@ -1651,6 +1648,7 @@ class TestForceFieldChargeAssignment:
     def test_nonintegral_charge_exception(self, toolkit_registry, registry_description):
         """Test skipping charge generation and instead getting charges from the original Molecule"""
         from simtk.openmm import app
+
         from openforcefield.typing.engines.smirnoff.parameters import (
             NonintegralMoleculeChargeException,
         )
@@ -1694,7 +1692,7 @@ class TestForceFieldChargeAssignment:
         cyclohexane = create_cyclohexane()
         molecules = [ethanol, cyclohexane]
 
-        from simtk.openmm import app, NonbondedForce
+        from simtk.openmm import NonbondedForce, app
 
         file_path = get_data_file_path("test_forcefields/smirnoff99Frosst.offxml")
         forcefield = ForceField(file_path)
@@ -2470,6 +2468,7 @@ class TestForceFieldChargeAssignment:
     ):
         """Fail to assign charges to a molecule because not all atoms can be assigned"""
         from simtk.openmm import NonbondedForce
+
         from openforcefield.typing.engines.smirnoff.parameters import (
             UnassignedMoleculeChargeException,
         )
@@ -2716,8 +2715,8 @@ class TestForceFieldParameterAssignment:
 
         """
         from openforcefield.tests.utils import (
-            get_alkethoh_file_path,
             compare_amber_smirnoff,
+            get_alkethoh_file_path,
         )
 
         # Obtain the path to the input files.
@@ -2759,10 +2758,11 @@ class TestForceFieldParameterAssignment:
 
         """
         import parmed
+
         from openforcefield.tests.utils import (
-            get_alkethoh_file_path,
-            compare_system_parameters,
             compare_system_energies,
+            compare_system_parameters,
+            get_alkethoh_file_path,
         )
 
         # The AlkEthOH molecule ids to mix in the systems.
@@ -2844,8 +2844,8 @@ class TestForceFieldParameterAssignment:
 
         """
         from openforcefield.tests.utils import (
-            get_freesolv_file_path,
             compare_system_parameters,
+            get_freesolv_file_path,
         )
 
         mol2_file_path, xml_file_path = get_freesolv_file_path(
@@ -2904,15 +2904,16 @@ class TestForceFieldParameterAssignment:
         SMIRNOFF-based GBSA models match the equivalent OpenMM implementations.
         """
 
-        from openforcefield.tests.utils import (
-            get_freesolv_file_path,
-            compare_system_energies,
-            create_system_from_amber,
-            get_context_potential_energy,
-        )
         import parmed as pmd
         from simtk import openmm
         from simtk.openmm import Platform
+
+        from openforcefield.tests.utils import (
+            compare_system_energies,
+            create_system_from_amber,
+            get_context_potential_energy,
+            get_freesolv_file_path,
+        )
 
         mol2_file_path, _ = get_freesolv_file_path(freesolv_id, forcefield_version)
 
@@ -3103,15 +3104,16 @@ class TestForceFieldParameterAssignment:
     def test_molecule_energy_gb_no_sa(self, zero_charges, gbsa_model):
         """Test creating a GBSA system without a surface energy term, and validate its energy
         against the same system made using OpenMM's AMBER GBSA functionality"""
+        import numpy as np
+        import parmed as pmd
+        from simtk import openmm
+        from simtk.openmm import Platform
+
         from openforcefield.tests.utils import (
             compare_system_energies,
             create_system_from_amber,
             get_context_potential_energy,
         )
-        import parmed as pmd
-        from simtk import openmm
-        from simtk.openmm import Platform
-        import numpy as np
 
         # Load an arbitrary molecule from the freesolv set
         molecule = Molecule.from_file(
@@ -3573,8 +3575,8 @@ class TestSmirnoffVersionConverter:
         does the job.
         """
         from openforcefield.tests.utils import (
-            get_freesolv_file_path,
             compare_system_parameters,
+            get_freesolv_file_path,
         )
 
         mol2_file_path, xml_file_path = get_freesolv_file_path(

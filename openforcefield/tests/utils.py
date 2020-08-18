@@ -22,10 +22,9 @@ import pprint
 import textwrap
 
 import numpy as np
-from simtk import unit, openmm
+from simtk import openmm, unit
 
 from openforcefield.utils import get_data_file_path
-
 
 # =============================================================================================
 # Shortcut functions to get file paths to test data.
