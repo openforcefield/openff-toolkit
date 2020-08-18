@@ -837,7 +837,6 @@ class TestMolecule:
             molecule, test_mol, "Molecule.to_rdkit()/from_rdkit() round trip failed"
         )
 
-    # TODO: Should there be an equivalent toolkit test and leave this as an integration test?
     @requires_openeye
     @pytest.mark.parametrize(
         "molecule",

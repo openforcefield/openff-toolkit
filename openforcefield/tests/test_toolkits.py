@@ -52,7 +52,7 @@ from openforcefield.tests.test_forcefield import (
 # =============================================================================================
 
 
-def get_mini_drug_bank(toolkit_class):
+def get_mini_drug_bank(toolkit_class, xfail_mols=None):
     """Read the mini drug bank sdf file with the toolkit and return the molecules"""
 
     # This is a work around a weird error where even though the test is skipped due to a missing toolkit
@@ -67,6 +67,14 @@ def get_mini_drug_bank(toolkit_class):
         )
     else:
         molecules = []
+
+    if xfail_mols is None:
+        return molecules
+
+    for i, mol in enumerate(molecules):
+        if mol.name in xfail_mols:
+            marker = pytest.mark.xfail(reason=xfail_mols[mol.name])
+            molecules[i] = pytest.param(mol, marks=marker)
 
     return molecules
 
@@ -196,6 +204,58 @@ rdkit_inchi_isomorphic_fails = [
     "DrugBank_2642",
 ]
 rdkit_inchi_roundtrip_mangled = ["DrugBank_2684"]
+
+openeye_iupac_bad_stereo = [
+    "DrugBank_977",
+    "DrugBank_1634",
+    "DrugBank_1700",
+    "DrugBank_1962",
+    "DrugBank_2148",
+    "DrugBank_2178",
+    "DrugBank_2186",
+    "DrugBank_2208",
+    "DrugBank_2519",
+    "DrugBank_2538",
+    "DrugBank_2592",
+    "DrugBank_2651",
+    "DrugBank_2987",
+    "DrugBank_3332",
+    "DrugBank_3502",
+    "DrugBank_3622",
+    "DrugBank_3726",
+    "DrugBank_3844",
+    "DrugBank_3930",
+    "DrugBank_4161",
+    "DrugBank_4162",
+    "DrugBank_4778",
+    "DrugBank_4593",
+    "DrugBank_4959",
+    "DrugBank_5043",
+    "DrugBank_5076",
+    "DrugBank_5176",
+    "DrugBank_5418",
+    "DrugBank_5737",
+    "DrugBank_5902",
+    "DrugBank_6295",
+    "DrugBank_6304",
+    "DrugBank_6305",
+    "DrugBank_6329",
+    "DrugBank_6355",
+    "DrugBank_6401",
+    "DrugBank_6509",
+    "DrugBank_6531",
+    "DrugBank_6647",
+    "DrugBank_390",
+    "DrugBank_810",
+    "DrugBank_4316",
+    "DrugBank_4346",
+    "DrugBank_7124",
+    "DrugBank_2799",
+    "DrugBank_4662",
+    "DrugBank_4865",
+    "DrugBank_2465",
+]
+
 
 # =============================================================================================
 # TESTS
@@ -613,6 +673,50 @@ class TestOpenEyeToolkitWrapper:
                 assert molecule.is_isomorphic_with(
                     mol2, bond_order_matching=False, toolkit_registry=toolkit
                 )
+
+    @pytest.mark.skipif(
+        not OpenEyeToolkitWrapper.is_available(), reason="OpenEye Toolkit not available"
+    )
+    @pytest.mark.parametrize(
+        "molecule",
+        get_mini_drug_bank(
+            OpenEyeToolkitWrapper,
+            xfail_mols={
+                "DrugBank_2397": 'OpenEye cannot generate a correct IUPAC name and raises a "Warning: Incorrect name:" or simply return "BLAH".',
+                "DrugBank_2543": 'OpenEye cannot generate a correct IUPAC name and raises a "Warning: Incorrect name:" or simply return "BLAH".',
+                "DrugBank_2642": 'OpenEye cannot generate a correct IUPAC name and raises a "Warning: Incorrect name:" or simply return "BLAH".',
+                "DrugBank_1212": "the roundtrip generates molecules with very different IUPAC/SMILES!",
+                "DrugBank_2210": "the roundtrip generates molecules with very different IUPAC/SMILES!",
+                "DrugBank_4584": "the roundtrip generates molecules with very different IUPAC/SMILES!",
+                "DrugBank_390": 'raises warning "Unable to make OFFMol from OEMol: OEMol has unspecified stereochemistry."',
+                "DrugBank_810": 'raises warning "Unable to make OFFMol from OEMol: OEMol has unspecified stereochemistry."',
+                "DrugBank_4316": 'raises warning "Unable to make OFFMol from OEMol: OEMol has unspecified stereochemistry."',
+                "DrugBank_7124": 'raises warning "Unable to make OFFMol from OEMol: OEMol has unspecified stereochemistry."',
+                "DrugBank_3739": 'raises warning "Failed to parse name:"',
+                "DrugBank_4346": 'raises warning "Failed to parse name:"',
+                "DrugBank_5415": 'raises warning "Failed to parse name:"',
+                "DrugBank_1661": "fails roundtrip test",
+                "DrugBank_6353": "fails roundtrip test",
+            },
+        ),
+    )
+    def test_iupac_round_trip(self, molecule):
+        """Test round-trips with IUPAC names"""
+        undefined_stereo = molecule.name in openeye_iupac_bad_stereo
+
+        iupac = molecule.to_iupac()
+
+        if undefined_stereo:
+            with pytest.raises(UndefinedStereochemistryError):
+                Molecule.from_iupac(iupac)
+
+        molecule_copy = Molecule.from_iupac(
+            iupac, allow_undefined_stereo=undefined_stereo
+        )
+        if not undefined_stereo:
+            assert molecule.is_isomorphic_with(
+                molecule_copy, atom_stereochemistry_matching=not undefined_stereo
+            )
 
     @pytest.mark.skipif(
         not OpenEyeToolkitWrapper.is_available(), reason="OpenEye Toolkit not available"
