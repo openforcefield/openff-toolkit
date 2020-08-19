@@ -52,7 +52,7 @@ be useful for debugging and exploring subtley different behavior between toolkit
 For example, differences in ``to_smiles`` functionality between OpenEye toolkits and The RDKit can
 be explored by selecting which toolkit(s) are and are not registered.
 
-.. code-block::python
+.. code-block:: python
 
     from openforcefield.utils.toolkits import ToolkitRegistry, OpenEyeToolkitWrapper, RDKitToolkitWrapper
     toolkit_registry = ToolkitRegistry(toolkit_precedence=[OpenEyeToolkitWrapper, RDKitToolkitWrapper])
