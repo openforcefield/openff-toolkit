@@ -15,12 +15,11 @@ Tests for utility methods for serialization
 
 import pytest
 
+from openforcefield.utils.serialization import Serializable
 
 # =============================================================================================
 # TESTS
 # =============================================================================================
-
-from openforcefield.utils.serialization import Serializable
 
 
 class Thing(Serializable):
@@ -144,6 +143,7 @@ class TestUtilsSMIRNOFFSerialization(TestUtilsSerialization):
         cls.thing = Thing("blorb", [1, 2, 3])
         # Create an example object holding the SMIRNOFF xmltodict dictionary representation
         import xmltodict
+
         from openforcefield.utils import get_data_file_path
 
         filename = get_data_file_path("test_forcefields/smirnoff99Frosst.offxml")

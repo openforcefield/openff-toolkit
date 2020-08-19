@@ -13,38 +13,37 @@ Tests for cheminformatics toolkit wrappers
 # GLOBAL IMPORTS
 # =============================================================================================
 
-from simtk import unit
-import numpy as np
-from numpy.testing import assert_almost_equal
 from tempfile import NamedTemporaryFile
 
+import numpy as np
 import pytest
+from numpy.testing import assert_almost_equal
+from simtk import unit
 
+from openforcefield.tests.test_forcefield import (
+    create_acetaldehyde,
+    create_acetate,
+    create_cyclohexane,
+    create_ethanol,
+    create_reversed_ethanol,
+)
+from openforcefield.topology.molecule import Molecule
+from openforcefield.utils import get_data_file_path
 from openforcefield.utils.toolkits import (
-    OpenEyeToolkitWrapper,
-    RDKitToolkitWrapper,
+    GLOBAL_TOOLKIT_REGISTRY,
     AmberToolsToolkitWrapper,
     BuiltInToolkitWrapper,
-    ToolkitRegistry,
-    ToolkitWrapper,
-    GAFFAtomTypeWarning,
-    UndefinedStereochemistryError,
     ChargeMethodUnavailableError,
+    GAFFAtomTypeWarning,
     IncorrectNumConformersError,
     IncorrectNumConformersWarning,
     InvalidToolkitError,
+    OpenEyeToolkitWrapper,
+    RDKitToolkitWrapper,
+    ToolkitRegistry,
     ToolkitUnavailableException,
-    GLOBAL_TOOLKIT_REGISTRY,
-)
-
-from openforcefield.utils import get_data_file_path
-from openforcefield.topology.molecule import Molecule
-from openforcefield.tests.test_forcefield import (
-    create_ethanol,
-    create_cyclohexane,
-    create_acetaldehyde,
-    create_reversed_ethanol,
-    create_acetate,
+    ToolkitWrapper,
+    UndefinedStereochemistryError,
 )
 
 # =============================================================================================
@@ -1082,8 +1081,9 @@ class TestOpenEyeToolkitWrapper:
         """Test OpenEyeToolkitWrapper assign_partial_charges()'s use_conformers kwarg
         to ensure charges are really conformer dependent. Skip Gasteiger because it isn't
         conformer dependent."""
-        from openforcefield.tests.test_forcefield import create_ethanol
         import copy
+
+        from openforcefield.tests.test_forcefield import create_ethanol
 
         toolkit_registry = ToolkitRegistry(toolkit_precedence=[OpenEyeToolkitWrapper])
         molecule = create_ethanol()
@@ -2497,8 +2497,9 @@ class TestAmberToolsToolkitWrapper:
         """Test AmberToolsToolkitWrapper assign_partial_charges()'s use_conformers kwarg
         to ensure charges are really conformer dependent. Skip Gasteiger because it isn't
         conformer dependent."""
-        from openforcefield.tests.test_forcefield import create_ethanol
         import copy
+
+        from openforcefield.tests.test_forcefield import create_ethanol
 
         toolkit_registry = ToolkitRegistry(
             toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper]
