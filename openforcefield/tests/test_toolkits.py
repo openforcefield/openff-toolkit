@@ -3400,7 +3400,8 @@ class TestToolkitRegistry:
         all_toolkits = ToolkitRegistry(toolkit_precedence=toolkit_precedence)
         versions = all_toolkits.registered_toolkit_versions
 
-        import openeye, rdkit
+        import openeye
+        import rdkit
 
         assert versions["OpenEye Toolkit"] == openeye.__version__
         assert versions["The RDKit"] == rdkit.__version__
