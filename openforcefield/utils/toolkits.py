@@ -21,90 +21,96 @@ Currently supported toolkits:
 """
 
 __all__ = [
-    'DEFAULT_AROMATICITY_MODEL',
-    'ALLOWED_AROMATICITY_MODELS',
-    'DEFAULT_FRACTIONAL_BOND_ORDER_MODEL',
-    'ALLOWED_FRACTIONAL_BOND_ORDER_MODELS',
-    'DEFAULT_CHARGE_MODEL',
-    'ALLOWED_CHARGE_MODELS',
-    'LicenseError',
-    'MissingPackageError',
-    'ToolkitUnavailableException',
-    'InvalidToolkitError',
-    'UndefinedStereochemistryError',
-    'GAFFAtomTypeWarning',
-    'ToolkitWrapper',
-    'OpenEyeToolkitWrapper',
-    'RDKitToolkitWrapper',
-    'AmberToolsToolkitWrapper',
-    'BuiltInToolkitWrapper',
-    'ToolkitRegistry',
-    'GLOBAL_TOOLKIT_REGISTRY',
-    'OPENEYE_AVAILABLE',
-    'RDKIT_AVAILABLE',
-    'AMBERTOOLS_AVAILABLE',
-    'BASIC_CHEMINFORMATICS_TOOLKITS'
+    "DEFAULT_AROMATICITY_MODEL",
+    "ALLOWED_AROMATICITY_MODELS",
+    "DEFAULT_FRACTIONAL_BOND_ORDER_MODEL",
+    "ALLOWED_FRACTIONAL_BOND_ORDER_MODELS",
+    "DEFAULT_CHARGE_MODEL",
+    "ALLOWED_CHARGE_MODELS",
+    "LicenseError",
+    "MissingPackageError",
+    "ToolkitUnavailableException",
+    "InvalidToolkitError",
+    "UndefinedStereochemistryError",
+    "GAFFAtomTypeWarning",
+    "ToolkitWrapper",
+    "OpenEyeToolkitWrapper",
+    "RDKitToolkitWrapper",
+    "AmberToolsToolkitWrapper",
+    "ToolkitRegistry",
+    "GLOBAL_TOOLKIT_REGISTRY",
+    "OPENEYE_AVAILABLE",
+    "RDKIT_AVAILABLE",
+    "AMBERTOOLS_AVAILABLE",
+    "BASIC_CHEMINFORMATICS_TOOLKITS",
 ]
 
 
-#=============================================================================================
+# =============================================================================================
 # GLOBAL IMPORTS
-#=============================================================================================
+# =============================================================================================
 
 import copy
-from distutils.spawn import find_executable
-from functools import wraps
 import importlib
+import inspect
 import logging
 import subprocess
 import tempfile
-import inspect
+from distutils.spawn import find_executable
+from functools import wraps
 
-from simtk import unit
 import numpy as np
+from simtk import unit
 
-from openforcefield.utils import all_subclasses, MessageException, inherit_docstrings, temporary_cd
+from openforcefield.utils import (
+    MessageException,
+    all_subclasses,
+    inherit_docstrings,
+    temporary_cd,
+)
 
-
-#=============================================================================================
+# =============================================================================================
 # CONFIGURE LOGGER
-#=============================================================================================
+# =============================================================================================
 
 logger = logging.getLogger(__name__)
 
-#=============================================================================================
+# =============================================================================================
 # SUPPORTED MODELS
 #
 # TODO: We may no longer need these since we now require SMIRNOFF to specify these models explicitly.
-#=============================================================================================
+# =============================================================================================
 
-DEFAULT_AROMATICITY_MODEL = 'OEAroModel_MDL'  # TODO: Is there a more specific name and reference for the aromaticity model?
-ALLOWED_AROMATICITY_MODELS = ['OEAroModel_MDL']
+DEFAULT_AROMATICITY_MODEL = "OEAroModel_MDL"  # TODO: Is there a more specific name and reference for the aromaticity model?
+ALLOWED_AROMATICITY_MODELS = ["OEAroModel_MDL"]
 
-DEFAULT_FRACTIONAL_BOND_ORDER_MODEL = 'Wiberg'  # TODO: Is there a more specific name and reference for the fractional bond order models?
-ALLOWED_FRACTIONAL_BOND_ORDER_MODELS = ['Wiberg']
+DEFAULT_FRACTIONAL_BOND_ORDER_MODEL = "Wiberg"  # TODO: Is there a more specific name and reference for the fractional bond order models?
+ALLOWED_FRACTIONAL_BOND_ORDER_MODELS = ["Wiberg"]
 
-DEFAULT_CHARGE_MODEL = 'AM1-BCC'  # TODO: Should this be `AM1-BCC`, or should we encode BCCs explicitly via AM1-CM2 preprocessing?
-ALLOWED_CHARGE_MODELS = ['AM1-BCC'
-                         ]  # TODO: Which models do we want to support?
+DEFAULT_CHARGE_MODEL = "AM1-BCC"  # TODO: Should this be `AM1-BCC`, or should we encode BCCs explicitly via AM1-CM2 preprocessing?
+ALLOWED_CHARGE_MODELS = ["AM1-BCC"]  # TODO: Which models do we want to support?
 
 
-#=============================================================================================
+# =============================================================================================
 # Exceptions
-#=============================================================================================
+# =============================================================================================
+
 
 class LicenseError(Exception):
     """This function requires a license that cannot be found."""
+
     pass
 
 
 class MissingPackageError(MessageException):
     """This function requires a package that is not installed."""
+
     pass
 
 
 class ToolkitUnavailableException(MessageException):
     """The requested toolkit is unavailable."""
+
     # TODO: Allow toolkit to be specified and used in formatting/printing exception.
     pass
 
@@ -115,31 +121,37 @@ class InvalidToolkitError(MessageException):
 
 class UndefinedStereochemistryError(MessageException):
     """A molecule was attempted to be loaded with undefined stereochemistry"""
+
     pass
 
 
 class GAFFAtomTypeWarning(RuntimeWarning):
     """A warning raised if a loaded mol2 file possibly uses GAFF atom types."""
+
     pass
 
 
 class ChargeMethodUnavailableError(MessageException):
     """A toolkit does not support the requested partial_charge_method combination"""
+
     pass
 
 
 class IncorrectNumConformersError(MessageException):
     """The requested partial_charge_method expects a different number of conformers than was provided"""
+
     pass
 
 
 class IncorrectNumConformersWarning(Warning):
     """The requested partial_charge_method expects a different number of conformers than was provided"""
+
     pass
 
 
 class ChargeCalculationError(MessageException):
     """An unhandled error occured in an external toolkit during charge calculation"""
+
     pass
 
 
@@ -147,17 +159,18 @@ class AntechamberNotFoundError(MessageException):
     """The antechamber executable was not found"""
 
 
-#=============================================================================================
+# =============================================================================================
 # TOOLKIT UTILITY DECORATORS
-#=============================================================================================
+# =============================================================================================
 
-#=============================================================================================
+# =============================================================================================
 # UTILITY FUNCTIONS
-#=============================================================================================
+# =============================================================================================
 
-#=============================================================================================
+# =============================================================================================
 # CHEMINFORMATICS TOOLKIT WRAPPERS
-#=============================================================================================
+# =============================================================================================
+
 
 class ToolkitWrapper:
     """
@@ -165,23 +178,27 @@ class ToolkitWrapper:
 
     .. warning :: This API is experimental and subject to change.
     """
+
     _is_available = None  # True if toolkit is available
     _toolkit_version = None
     _toolkit_name = None  # Name of the toolkit
-    _toolkit_installation_instructions = None  # Installation instructions for the toolkit
+    _toolkit_installation_instructions = (
+        None  # Installation instructions for the toolkit
+    )
 
-    #@staticmethod
+    # @staticmethod
     # TODO: Right now, to access the class definition, I have to make this a classmethod
     # and thereby call it with () on the outermost decorator. Is this wasting time? Are we caching
     # the is_available results?
     @classmethod
-    def requires_toolkit(cls):  #remember cls is a ToolkitWrapper subclass here
+    def requires_toolkit(cls):  # remember cls is a ToolkitWrapper subclass here
         def decorator(func):
             @wraps(func)
             def wrapped_function(*args, **kwargs):
                 if not cls.is_available():
-                    msg = 'This function requires the {} toolkit'.format(
-                        cls._toolkit_name)
+                    msg = "This function requires the {} toolkit".format(
+                        cls._toolkit_name
+                    )
                     raise LicenseError(msg)
                 value = func(*args, **kwargs)
                 return value
@@ -191,7 +208,7 @@ class ToolkitWrapper:
         return decorator
 
     @property
-    #@classmethod
+    # @classmethod
     def toolkit_name(self):
         """
         The name of the toolkit wrapped by this class.
@@ -209,7 +226,7 @@ class ToolkitWrapper:
         """
         return cls._toolkit_installation_instructions
 
-    #@classmethod
+    # @classmethod
     @property
     def toolkit_file_read_formats(self):
         """
@@ -217,7 +234,7 @@ class ToolkitWrapper:
         """
         return self._toolkit_file_read_formats
 
-    #@classmethod
+    # @classmethod
     @property
     def toolkit_file_write_formats(self):
         """
@@ -248,10 +265,7 @@ class ToolkitWrapper:
         """
         return self._toolkit_version
 
-    def from_file(self,
-                  file_path,
-                  file_format,
-                  allow_undefined_stereo=False):
+    def from_file(self, file_path, file_format, allow_undefined_stereo=False):
         """
         Return an openforcefield.topology.Molecule from a file using this toolkit.
 
@@ -272,10 +286,7 @@ class ToolkitWrapper:
         """
         return NotImplementedError
 
-    def from_file_obj(self,
-                      file_obj,
-                      file_format,
-                      allow_undefined_stereo=False):
+    def from_file_obj(self, file_obj, file_format, allow_undefined_stereo=False):
         """
         Return an openforcefield.topology.Molecule from a file-like object (an object with a ".read()" method using this
          toolkit.
@@ -298,13 +309,14 @@ class ToolkitWrapper:
         """
         return NotImplementedError
 
-
-    def _check_n_conformers(self,
-                            molecule,
-                            partial_charge_method,
-                            min_confs=None,
-                            max_confs=None,
-                            strict_n_conformers=False):
+    def _check_n_conformers(
+        self,
+        molecule,
+        partial_charge_method,
+        min_confs=None,
+        max_confs=None,
+        strict_n_conformers=False,
+    ):
         """
         Private method for validating the number of conformers on a molecule prior to partial
         charge calculation
@@ -329,17 +341,22 @@ class ToolkitWrapper:
             If the wrong number of conformers is attached to the input molecule, and strict_n_conformers is True.
         """
         import warnings
+
         n_confs = molecule.n_conformers
-        wrong_confs_msg = f"Molecule '{molecule}' has {n_confs} conformers, " \
+        wrong_confs_msg = (
+            f"Molecule '{molecule}' has {n_confs} conformers, "
             f"but charge method '{partial_charge_method}' expects"
-        exception_suffix = "You can disable this error by setting `strict_n_conformers=False' " \
-                           "when calling 'molecule.assign_partial_charges'."
+        )
+        exception_suffix = (
+            "You can disable this error by setting `strict_n_conformers=False' "
+            "when calling 'molecule.assign_partial_charges'."
+        )
         # If there's no n_confs filter, then this molecule automatically passes
         if min_confs is None and max_confs is None:
             return
         # If there's constraints on both ends, check both limits
         elif min_confs is not None and max_confs is not None:
-            if not(min_confs <= n_confs <= max_confs):
+            if not (min_confs <= n_confs <= max_confs):
                 if min_confs == max_confs:
                     wrong_confs_msg += f" exactly {min_confs}."
                 else:
@@ -349,13 +366,13 @@ class ToolkitWrapper:
                 return
         # If there's only a max constraint, check that
         elif min_confs is not None and max_confs is None:
-            if not(min_confs <= n_confs):
+            if not (min_confs <= n_confs):
                 wrong_confs_msg += f" at least {min_confs}."
             else:
                 return
         # If there's only a maximum constraint, check that
         elif min_confs is None and max_confs is not None:
-            if not(n_confs <= max_confs):
+            if not (n_confs <= max_confs):
                 wrong_confs_msg += f" at most {max_confs}."
             else:
                 return
@@ -367,7 +384,9 @@ class ToolkitWrapper:
             warnings.warn(wrong_confs_msg, IncorrectNumConformersWarning)
 
     def __repr__(self):
-        return f"ToolkitWrapper around {self.toolkit_name} version {self.toolkit_version}"
+        return (
+            f"ToolkitWrapper around {self.toolkit_name} version {self.toolkit_version}"
+        )
 
 
 @inherit_docstrings
@@ -377,9 +396,12 @@ class BuiltInToolkitWrapper(ToolkitWrapper):
 
     .. warning :: This API is experimental and subject to change.
     """
-    _toolkit_name = 'Built-in Toolkit'
-    _toolkit_installation_instructions = 'This toolkit is installed with the Open Force Field Toolkit and does ' \
-                                         'not require additional dependencies.'
+
+    _toolkit_name = "Built-in Toolkit"
+    _toolkit_installation_instructions = (
+        "This toolkit is installed with the Open Force Field Toolkit and does "
+        "not require additional dependencies."
+    )
 
     def __init__(self):
         super().__init__()
@@ -387,12 +409,13 @@ class BuiltInToolkitWrapper(ToolkitWrapper):
         self._toolkit_file_read_formats = []
         self._toolkit_file_write_formats = []
 
-
-    def assign_partial_charges(self,
-                               molecule,
-                               partial_charge_method=None,
-                               use_conformers=None,
-                               strict_n_conformers=False):
+    def assign_partial_charges(
+        self,
+        molecule,
+        partial_charge_method=None,
+        use_conformers=None,
+        strict_n_conformers=False,
+    ):
         """
         Compute partial charges with the built-in toolkit using simple arithmetic operations, and assign
         the new values to the partial_charges attribute.
@@ -423,41 +446,50 @@ class BuiltInToolkitWrapper(ToolkitWrapper):
         ChargeCalculationError if the charge calculation is supported by this toolkit, but fails
         """
         from openforcefield.topology import Molecule
-        PARTIAL_CHARGE_METHODS = {'zeros':         {'rec_confs':0,
-                                                    'min_confs':0,
-                                                    'max_confs':0},
-                                  'formal_charge': {'rec_confs':0,
-                                                    'min_confs':0,
-                                                    'max_confs':0}
-                                  }
+
+        PARTIAL_CHARGE_METHODS = {
+            "zeros": {"rec_confs": 0, "min_confs": 0, "max_confs": 0},
+            "formal_charge": {"rec_confs": 0, "min_confs": 0, "max_confs": 0},
+        }
 
         if partial_charge_method is None:
-            partial_charge_method = 'formal_charge'
+            partial_charge_method = "formal_charge"
 
         # Make a temporary copy of the molecule, since we'll be messing with its conformers
         mol_copy = Molecule(molecule)
 
         partial_charge_method = partial_charge_method.lower()
         if partial_charge_method not in PARTIAL_CHARGE_METHODS:
-            raise ChargeMethodUnavailableError(f'Partial charge method "{partial_charge_method}"" is not supported by '
-                                               f'the Built-in toolkit. Available charge methods are '
-                                               f'{list(PARTIAL_CHARGE_METHODS.keys())}')
+            raise ChargeMethodUnavailableError(
+                f'Partial charge method "{partial_charge_method}"" is not supported by '
+                f"the Built-in toolkit. Available charge methods are "
+                f"{list(PARTIAL_CHARGE_METHODS.keys())}"
+            )
 
         if use_conformers is None:
             # Note that this refers back to the GLOBAL_TOOLKIT_REGISTRY by default, since
             # BuiltInToolkitWrapper can't generate conformers
-            mol_copy.generate_conformers(n_conformers=PARTIAL_CHARGE_METHODS[partial_charge_method]['rec_confs'])
+            mol_copy.generate_conformers(
+                n_conformers=PARTIAL_CHARGE_METHODS[partial_charge_method]["rec_confs"]
+            )
         else:
             mol_copy._conformers = None
             for conformer in use_conformers:
                 mol_copy.add_conformer(conformer)
-            self._check_n_conformers(mol_copy, partial_charge_method=partial_charge_method, min_confs=0,
-                                     max_confs=0,strict_n_conformers=strict_n_conformers)
+            self._check_n_conformers(
+                mol_copy,
+                partial_charge_method=partial_charge_method,
+                min_confs=0,
+                max_confs=0,
+                strict_n_conformers=strict_n_conformers,
+            )
 
-        partial_charges = unit.Quantity(np.zeros((molecule.n_particles)), unit.elementary_charge)
-        if partial_charge_method == 'zeroes':
+        partial_charges = unit.Quantity(
+            np.zeros((molecule.n_particles)), unit.elementary_charge
+        )
+        if partial_charge_method == "zeroes":
             pass
-        elif partial_charge_method == 'formal_charge':
+        elif partial_charge_method == "formal_charge":
             for part_idx, particle in enumerate(molecule.particles):
                 partial_charges[part_idx] = particle.formal_charge
 
@@ -471,34 +503,77 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
     .. warning :: This API is experimental and subject to change.
     """
-    _toolkit_name = 'OpenEye Toolkit'
-    _toolkit_installation_instructions = 'The OpenEye toolkit requires a (free for academics) license, and can be ' \
-                                         'found at: ' \
-                                         'https://docs.eyesopen.com/toolkits/python/quickstart-python/install.html'
+
+    _toolkit_name = "OpenEye Toolkit"
+    _toolkit_installation_instructions = (
+        "The OpenEye toolkit requires a (free for academics) license, and can be "
+        "found at: "
+        "https://docs.eyesopen.com/toolkits/python/quickstart-python/install.html"
+    )
 
     def __init__(self):
 
         self._toolkit_file_read_formats = [
-            'CAN', 'CDX', 'CSV', 'FASTA', 'INCHI', 'INCHIKEY', 'ISM', 'MDL', 'MF',
-            'MMOD', 'MOL2', 'MOL2H', 'MOPAC', 'OEB', 'PDB', 'RDF', 'SDF', 'SKC',
-            'SLN', 'SMI', 'USM', 'XYC'
+            "CAN",
+            "CDX",
+            "CSV",
+            "FASTA",
+            "INCHI",
+            "INCHIKEY",
+            "ISM",
+            "MDL",
+            "MF",
+            "MMOD",
+            "MOL2",
+            "MOL2H",
+            "MOPAC",
+            "OEB",
+            "PDB",
+            "RDF",
+            "SDF",
+            "SKC",
+            "SLN",
+            "SMI",
+            "USM",
+            "XYC",
         ]
         self._toolkit_file_write_formats = [
-            'CAN', 'CDX', 'CSV', 'FASTA', 'INCHI', 'INCHIKEY', 'ISM', 'MDL', 'MF',
-            'MMOD', 'MOL2', 'MOL2H', 'MOPAC', 'OEB', 'PDB', 'RDF', 'SDF', 'SKC',
-            'SLN', 'SMI', 'USM', 'XYC'
+            "CAN",
+            "CDX",
+            "CSV",
+            "FASTA",
+            "INCHI",
+            "INCHIKEY",
+            "ISM",
+            "MDL",
+            "MF",
+            "MMOD",
+            "MOL2",
+            "MOL2H",
+            "MOPAC",
+            "OEB",
+            "PDB",
+            "RDF",
+            "SDF",
+            "SKC",
+            "SLN",
+            "SMI",
+            "USM",
+            "XYC",
         ]
 
         # check if the toolkit can be loaded
         if not self.is_available():
-            raise ToolkitUnavailableException(f'The required toolkit {self._toolkit_name} is not '
-                                              f'available. {self._toolkit_installation_instructions}')
+            raise ToolkitUnavailableException(
+                f"The required toolkit {self._toolkit_name} is not "
+                f"available. {self._toolkit_installation_instructions}"
+            )
         from openeye import __version__ as openeye_version
+
         self._toolkit_version = openeye_version
 
     @staticmethod
-    def is_available(
-            oetools=('oechem', 'oequacpac', 'oeiupac', 'oeomega')):
+    def is_available(oetools=("oechem", "oequacpac", "oeiupac", "oeomega")):
         """
         Check if the given OpenEye toolkit components are available.
 
@@ -522,10 +597,10 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         """
         # Complete list of module -> license function to check.
         license_function_names = {
-            'oechem': 'OEChemIsLicensed',
-            'oequacpac': 'OEQuacPacIsLicensed',
-            'oeiupac': 'OEIUPACIsLicensed',
-            'oeomega': 'OEOmegaIsLicensed'
+            "oechem": "OEChemIsLicensed",
+            "oequacpac": "OEQuacPacIsLicensed",
+            "oeiupac": "OEIUPACIsLicensed",
+            "oeomega": "OEOmegaIsLicensed",
         }
         supported_tools = set(license_function_names.keys())
 
@@ -538,14 +613,17 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         # Check for unkown tools.
         unknown_tools = oetools.difference(supported_tools)
         if len(unknown_tools) > 0:
-            raise ValueError("Found unkown OpenEye tools: {}. Supported values are: {}".format(
-                sorted(unknown_tools), sorted(supported_tools)))
+            raise ValueError(
+                "Found unkown OpenEye tools: {}. Supported values are: {}".format(
+                    sorted(unknown_tools), sorted(supported_tools)
+                )
+            )
 
         # Check license of all tools.
         all_licensed = True
         for tool in oetools:
             try:
-                module = importlib.import_module('openeye.' + tool)
+                module = importlib.import_module("openeye." + tool)
             except (ImportError, ModuleNotFoundError):
                 return False
             else:
@@ -577,14 +655,16 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         """
         # TODO: Add tests for the from_object functions
         from openeye import oechem
-        if isinstance(object, oechem.OEMolBase):
-            return self.from_openeye(object, allow_undefined_stereo=allow_undefined_stereo)
-        raise NotImplementedError('Cannot create Molecule from {} object'.format(type(object)))
 
-    def from_file(self,
-                  file_path,
-                  file_format,
-                  allow_undefined_stereo=False):
+        if isinstance(object, oechem.OEMolBase):
+            return self.from_openeye(
+                object, allow_undefined_stereo=allow_undefined_stereo
+            )
+        raise NotImplementedError(
+            "Cannot create Molecule from {} object".format(type(object))
+        )
+
+    def from_file(self, file_path, file_format, allow_undefined_stereo=False):
         """
         Return an openforcefield.topology.Molecule from a file using this toolkit.
 
@@ -621,13 +701,13 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         """
         from openeye import oechem
-        ifs = oechem.oemolistream(file_path)
-        return self._read_oemolistream_molecules(ifs, allow_undefined_stereo, file_path=file_path)
 
-    def from_file_obj(self,
-                      file_obj,
-                      file_format,
-                      allow_undefined_stereo=False):
+        ifs = oechem.oemolistream(file_path)
+        return self._read_oemolistream_molecules(
+            ifs, allow_undefined_stereo, file_path=file_path
+        )
+
+    def from_file_obj(self, file_obj, file_format, allow_undefined_stereo=False):
         """
         Return an openforcefield.topology.Molecule from a file-like object (an object with a ".read()" method using
         this toolkit.
@@ -659,7 +739,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         # Configure input molecule stream.
         ifs = oechem.oemolistream()
         ifs.openstring(file_obj.read())
-        oeformat = getattr(oechem, 'OEFormat_' + file_format)
+        oeformat = getattr(oechem, "OEFormat_" + file_format)
         ifs.SetFormat(oeformat)
 
         return self._read_oemolistream_molecules(ifs, allow_undefined_stereo)
@@ -679,7 +759,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         """
         with tempfile.TemporaryDirectory() as tmpdir:
-            outfile = 'temp_molecule.' + file_format
+            outfile = "temp_molecule." + file_format
             self.to_file(molecule, outfile, file_format)
             file_data = open(outfile).read()
         file_obj.write(file_data)
@@ -699,9 +779,10 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         """
         from openeye import oechem
+
         oemol = self.to_openeye(molecule)
         ofs = oechem.oemolostream(file_path)
-        openeye_format = getattr(oechem, 'OEFormat_' + file_format.upper())
+        openeye_format = getattr(oechem, "OEFormat_" + file_format.upper())
         ofs.SetFormat(openeye_format)
 
         # OFFTK strictly treats SDF as a single-conformer format.
@@ -718,8 +799,10 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             oemol.NewConf(oecoords)
         # We're standardizing on putting partial charges into SDFs under the `atom.dprop.PartialCharge` property
         if (file_format.lower() == "sdf") and (molecule.partial_charges is not None):
-            partial_charges_list = [oeatom.GetPartialCharge() for oeatom in oemol.GetAtoms()]
-            partial_charges_str = ' '.join([f'{val:f}' for val in partial_charges_list])
+            partial_charges_list = [
+                oeatom.GetPartialCharge() for oeatom in oemol.GetAtoms()
+            ]
+            partial_charges_str = " ".join([f"{val:f}" for val in partial_charges_list])
             # TODO: "dprop" means "double precision" -- Is there any way to make Python more accurately
             #  describe/infer the proper data type?
             oechem.OESetSDData(oemol, "atom.dprop.PartialCharge", partial_charges_str)
@@ -751,6 +834,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             mol.partial_charges=None.
         """
         from openeye import oechem
+
         for dp in oechem.OEGetSDDataPairs(oemol):
             if dp.GetTag() == "atom.dprop.PartialCharge":
                 charges_str = oechem.OEGetSDData(oemol, "atom.dprop.PartialCharge")
@@ -763,7 +847,9 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         return False
 
     @classmethod
-    def _read_oemolistream_molecules(cls, oemolistream, allow_undefined_stereo, file_path=None):
+    def _read_oemolistream_molecules(
+        cls, oemolistream, allow_undefined_stereo, file_path=None
+    ):
         """
         Reads and return the Molecules in a OEMol input stream.
 
@@ -794,7 +880,9 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             oechem.OE3DToInternalStereo(oemol)
 
             # If this is either a multi-conformer or multi-molecule SD file, check to see if there are partial charges
-            if (oemolistream.GetFormat() == oechem.OEFormat_SDF) and hasattr(oemol, 'GetConfs'):
+            if (oemolistream.GetFormat() == oechem.OEFormat_SDF) and hasattr(
+                oemol, "GetConfs"
+            ):
                 # The openFF toolkit treats each conformer in a "multiconformer" SDF as
                 # a separate molecule.
                 # https://github.com/openforcefield/openforcefield/issues/202
@@ -813,21 +901,27 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                     # Then, we take any SD data pairs that were on the oemol, and copy them on to "this_conf_oemcmol".
                     # These SD pairs will be populated if we're dealing with a single-conformer SDF.
                     for dp in oechem.OEGetSDDataPairs(oemol):
-                        oechem.OESetSDData(this_conf_oemcmol, dp.GetTag(), dp.GetValue())
+                        oechem.OESetSDData(
+                            this_conf_oemcmol, dp.GetTag(), dp.GetValue()
+                        )
                     # On the other hand, these SD pairs will be populated if we're dealing with a MULTI-conformer SDF.
                     for dp in oechem.OEGetSDDataPairs(conf):
-                        oechem.OESetSDData(this_conf_oemcmol, dp.GetTag(), dp.GetValue())
+                        oechem.OESetSDData(
+                            this_conf_oemcmol, dp.GetTag(), dp.GetValue()
+                        )
                     # This function fishes out the special SD data tag we use for partial charge
                     # ("atom.dprop.PartialCharge"), and applies those as OETK-supported partial charges on the OEAtoms
-                    has_charges = cls._turn_oemolbase_sd_charges_into_partial_charges(this_conf_oemcmol)
+                    has_charges = cls._turn_oemolbase_sd_charges_into_partial_charges(
+                        this_conf_oemcmol
+                    )
 
                     # Finally, we feed the molecule into `from_openeye`, where it converted into an OFFMol
                     mol = cls.from_openeye(
-                        this_conf_oemcmol,
-                        allow_undefined_stereo=allow_undefined_stereo)
+                        this_conf_oemcmol, allow_undefined_stereo=allow_undefined_stereo
+                    )
 
                     # If the molecule didn't even have the `PartialCharges` tag, we set it from zeroes to None here.
-                    if not(has_charges):
+                    if not (has_charges):
                         mol.partial_charges = None
                     mols.append(mol)
 
@@ -836,8 +930,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 # stash partial charges into actual per-atom partial charges
                 cls._turn_oemolbase_sd_charges_into_partial_charges(oemol)
                 mol = cls.from_openeye(
-                    oemol,
-                    allow_undefined_stereo=allow_undefined_stereo)
+                    oemol, allow_undefined_stereo=allow_undefined_stereo
+                )
                 mols.append(mol)
 
             # Check if this is an AMBER-produced mol2 file, which we can not load because they use GAFF atom types.
@@ -865,6 +959,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         """
 
         from openeye import oequacpac
+
         options = oequacpac.OEFormalChargeOptions()
         # add one as the input is included
         options.SetMaxCount(max_states + 1)
@@ -881,7 +976,9 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         return molecules
 
-    def enumerate_stereoisomers(self, molecule, undefined_only=False, max_isomers=20, rationalise=True):
+    def enumerate_stereoisomers(
+        self, molecule, undefined_only=False, max_isomers=20, rationalise=True
+    ):
         """
         Enumerate the stereocenters and bonds of the current molecule.
 
@@ -905,7 +1002,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             A list of openforcefield.topology.Molecule instances
 
         """
-        from openeye import oeomega, oechem
+        from openeye import oechem, oeomega
+
         oemol = self.to_openeye(molecule=molecule)
 
         # arguments for this function can be found here
@@ -954,6 +1052,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             A list of openforcefield.topology.Molecule instances excluding the input molecule.
         """
         from openeye import oequacpac
+
         oemol = self.to_openeye(molecule=molecule)
 
         tautomers = []
@@ -970,7 +1069,9 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             # remove the input tautomer from the output
             taut = self.from_openeye(tautomer, allow_undefined_stereo=True)
             if taut != molecule:
-                tautomers.append(self.from_openeye(tautomer, allow_undefined_stereo=True))
+                tautomers.append(
+                    self.from_openeye(tautomer, allow_undefined_stereo=True)
+                )
 
         return tautomers
 
@@ -993,16 +1094,13 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         """
         # Handle default.
         if file_path is None:
-            file_path = ''
+            file_path = ""
         else:
             # Append a ':' character that will separate the file
             # path from the molecule string representation.
-            file_path = file_path + ':'
+            file_path = file_path + ":"
         # atomic_number: (GAFF_type, element_name)
-        warning_atomic_numbers = {
-            76: ('OS', 'Osmium'),
-            67: ('HO', 'Holmium')
-        }
+        warning_atomic_numbers = {76: ("OS", "Osmium"), 67: ("HO", "Holmium")}
 
         for atom in molecule.atoms:
             try:
@@ -1011,9 +1109,12 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 pass
             else:
                 import warnings
-                warn_msg = (f'OpenEye interpreted the type "{atom_type}" in {file_path}{molecule.name}'
-                            f' as {element_name}. Does your mol2 file uses Tripos SYBYL atom types?'
-                            ' Other atom types such as GAFF are not supported.')
+
+                warn_msg = (
+                    f'OpenEye interpreted the type "{atom_type}" in {file_path}{molecule.name}'
+                    f" as {element_name}. Does your mol2 file uses Tripos SYBYL atom types?"
+                    " Other atom types such as GAFF are not supported."
+                )
                 warnings.warn(warn_msg, GAFFAtomTypeWarning)
 
     @staticmethod
@@ -1043,9 +1144,9 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         cip = oechem.OEPerceiveCIPStereo(oemol, oeatom)
 
         if cip == oechem.OECIPAtomStereo_S:
-            return 'S'
+            return "S"
         elif cip == oechem.OECIPAtomStereo_R:
-            return 'R'
+            return "R"
         elif cip == oechem.OECIPAtomStereo_NotStereo:
             # Not a stereocenter
             # TODO: Should this be a different case from ``None``?
@@ -1079,9 +1180,9 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         cip = oechem.OEPerceiveCIPStereo(oemol, oebond)
 
         if cip == oechem.OECIPBondStereo_E:
-            return 'E'
+            return "E"
         elif cip == oechem.OECIPBondStereo_Z:
-            return 'Z'
+            return "Z"
         elif cip == oechem.OECIPBondStereo_NotStereo:
             return None
 
@@ -1131,10 +1232,11 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         >>> molecule = toolkit_wrapper.from_openeye(oemols[0])
 
         """
-        from openeye import oechem
-        from openforcefield.topology.molecule import Molecule
         import math
 
+        from openeye import oechem
+
+        from openforcefield.topology.molecule import Molecule
 
         # Add explicit hydrogens if they're implicit
         if oechem.OEHasImplicitHydrogens(oemol):
@@ -1164,39 +1266,45 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 if not (oebond.HasStereoSpecified()):
                     unspec_db = True
                     problematic_bonds.append(oebond)
-        if (unspec_chiral or unspec_db):
+        if unspec_chiral or unspec_db:
 
             def oeatom_to_str(oeatom):
-                return 'atomic num: {}, name: {}, idx: {}, aromatic: {}, chiral: {}'.format(
-                    oeatom.GetAtomicNum(), oeatom.GetName(), oeatom.GetIdx(),
-                    oeatom.IsAromatic(), oeatom.IsChiral())
+                return "atomic num: {}, name: {}, idx: {}, aromatic: {}, chiral: {}".format(
+                    oeatom.GetAtomicNum(),
+                    oeatom.GetName(),
+                    oeatom.GetIdx(),
+                    oeatom.IsAromatic(),
+                    oeatom.IsChiral(),
+                )
 
             def oebond_to_str(oebond):
-                return "order: {}, chiral: {}".format(oebond.GetOrder(),
-                                                      oebond.IsChiral())
+                return "order: {}, chiral: {}".format(
+                    oebond.GetOrder(), oebond.IsChiral()
+                )
 
             def describe_oeatom(oeatom):
-                description = "Atom {} with bonds:".format(
-                    oeatom_to_str(oeatom))
+                description = "Atom {} with bonds:".format(oeatom_to_str(oeatom))
                 for oebond in oeatom.GetBonds():
                     description += "\nbond {} to atom {}".format(
-                        oebond_to_str(oebond),
-                        oeatom_to_str(oebond.GetNbr(oeatom)))
+                        oebond_to_str(oebond), oeatom_to_str(oebond.GetNbr(oeatom))
+                    )
                 return description
 
-            msg = "OEMol has unspecified stereochemistry. " \
-                  "oemol.GetTitle(): {}\n".format(oemol.GetTitle())
+            msg = (
+                "OEMol has unspecified stereochemistry. "
+                "oemol.GetTitle(): {}\n".format(oemol.GetTitle())
+            )
             if len(problematic_atoms) != 0:
                 msg += "Problematic atoms are:\n"
                 for problematic_atom in problematic_atoms:
-                    msg += describe_oeatom(problematic_atom) + '\n'
+                    msg += describe_oeatom(problematic_atom) + "\n"
             if len(problematic_bonds) != 0:
                 msg += "Problematic bonds are: {}\n".format(problematic_bonds)
             if allow_undefined_stereo:
-                msg = 'Warning (not error because allow_undefined_stereo=True): ' + msg
+                msg = "Warning (not error because allow_undefined_stereo=True): " + msg
                 logger.warning(msg)
             else:
-                msg = 'Unable to make OFFMol from OEMol: ' + msg
+                msg = "Unable to make OFFMol from OEMol: " + msg
                 raise UndefinedStereochemistryError(msg)
 
         molecule = Molecule()
@@ -1215,24 +1323,27 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             formal_charge = oeatom.GetFormalCharge() * unit.elementary_charge
             is_aromatic = oeatom.IsAromatic()
             stereochemistry = OpenEyeToolkitWrapper._openeye_cip_atom_stereochemistry(
-                oemol, oeatom)
-            #stereochemistry = self._openeye_cip_atom_stereochemistry(oemol, oeatom)
-            name = ''
-            if oeatom.HasData('name'):
-                name = oeatom.GetData('name')
+                oemol, oeatom
+            )
+            # stereochemistry = self._openeye_cip_atom_stereochemistry(oemol, oeatom)
+            name = ""
+            if oeatom.HasData("name"):
+                name = oeatom.GetData("name")
             atom_index = molecule.add_atom(
                 atomic_number,
                 formal_charge,
                 is_aromatic,
                 stereochemistry=stereochemistry,
-                name=name)
+                name=name,
+            )
             map_atoms[
-                oe_idx] = atom_index  # store for mapping oeatom to molecule atom indices below
+                oe_idx
+            ] = atom_index  # store for mapping oeatom to molecule atom indices below
             atom_mapping[atom_index] = map_id
 
         # if we have a full atom map add it to the molecule, 0 indicates a missing mapping or no mapping
         if 0 not in atom_mapping.values():
-            molecule._properties['atom_map'] = atom_mapping
+            molecule._properties["atom_map"] = atom_mapping
 
         for oebond in oemol.GetBonds():
             atom1_index = map_atoms[oebond.GetBgnIdx()]
@@ -1240,9 +1351,10 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             bond_order = oebond.GetOrder()
             is_aromatic = oebond.IsAromatic()
             stereochemistry = OpenEyeToolkitWrapper._openeye_cip_bond_stereochemistry(
-                oemol, oebond)
-            if oebond.HasData('fractional_bond_order'):
-                fractional_bond_order = oebond.GetData('fractional_bond_order')
+                oemol, oebond
+            )
+            if oebond.HasData("fractional_bond_order"):
+                fractional_bond_order = oebond.GetData("fractional_bond_order")
             else:
                 fractional_bond_order = None
 
@@ -1252,21 +1364,24 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 bond_order,
                 is_aromatic=is_aromatic,
                 stereochemistry=stereochemistry,
-                fractional_bond_order=fractional_bond_order)
+                fractional_bond_order=fractional_bond_order,
+            )
 
         # TODO: Copy conformations, if present
         # TODO: Come up with some scheme to know when to import coordinates
         # From SMILES: no
         # From MOL2: maybe
         # From other: maybe
-        if hasattr(oemol, 'GetConfs'):
+        if hasattr(oemol, "GetConfs"):
             for conf in oemol.GetConfs():
                 n_atoms = molecule.n_atoms
                 positions = unit.Quantity(
-                    np.zeros([n_atoms, 3], np.float), unit.angstrom)
+                    np.zeros([n_atoms, 3], np.float), unit.angstrom
+                )
                 for oe_id in conf.GetCoords().keys():
-                    off_atom_coords = unit.Quantity(conf.GetCoords()[oe_id],
-                                                    unit.angstrom)
+                    off_atom_coords = unit.Quantity(
+                        conf.GetCoords()[oe_id], unit.angstrom
+                    )
                     off_atom_index = map_atoms[oe_id]
                     positions[off_atom_index, :] = off_atom_coords
                 if (positions == 0 * unit.angstrom).all() and n_atoms > 1:
@@ -1275,8 +1390,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         # Copy partial charges, if present
         partial_charges = unit.Quantity(
-            np.zeros(molecule.n_atoms, dtype=np.float),
-            unit=unit.elementary_charge)
+            np.zeros(molecule.n_atoms, dtype=np.float), unit=unit.elementary_charge
+        )
 
         # If all OEAtoms have a partial charge of NaN, then the OFFMol should
         # have its partial_charges attribute set to None
@@ -1287,7 +1402,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             unitless_charge = oe_atom.GetPartialCharge()
             if not math.isnan(unitless_charge):
                 any_partial_charge_is_not_nan = True
-                #break
+                # break
             charge = unitless_charge * unit.elementary_charge
             partial_charges[off_idx] = charge
 
@@ -1354,36 +1469,36 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             )
 
         oemol = oechem.OEMol()
-        #if not(molecule.name is None):
+        # if not(molecule.name is None):
         oemol.SetTitle(molecule.name)
         map_atoms = {}  # {off_idx : oe_idx}
         # Add atoms
         oemol_atoms = list()  # list of corresponding oemol atoms
         for atom in molecule.atoms:
             oeatom = oemol.NewAtom(atom.atomic_number)
-            oeatom.SetFormalCharge(atom.formal_charge.value_in_unit(unit.elementary_charge)) # simtk.unit.Quantity(1, unit.elementary_charge)
+            oeatom.SetFormalCharge(
+                atom.formal_charge.value_in_unit(unit.elementary_charge)
+            )  # simtk.unit.Quantity(1, unit.elementary_charge)
             # TODO: Do we want to provide _any_ pathway for Atom.is_aromatic to influence the OEMol?
-            #oeatom.SetAromatic(atom.is_aromatic)
-            oeatom.SetData('name', atom.name)
-            oeatom.SetPartialCharge(float('nan'))
+            # oeatom.SetAromatic(atom.is_aromatic)
+            oeatom.SetData("name", atom.name)
+            oeatom.SetPartialCharge(float("nan"))
             oemol_atoms.append(oeatom)
             map_atoms[atom.molecule_atom_index] = oeatom.GetIdx()
 
         # Add bonds
         oemol_bonds = list()  # list of corresponding oemol bonds
         for bond in molecule.bonds:
-            #atom1_index = molecule.atoms.index(bond.atom1)
-            #atom2_index = molecule.atoms.index(bond.atom2)
+            # atom1_index = molecule.atoms.index(bond.atom1)
+            # atom2_index = molecule.atoms.index(bond.atom2)
             atom1_index = bond.atom1_index
             atom2_index = bond.atom2_index
-            oebond = oemol.NewBond(oemol_atoms[atom1_index],
-                                   oemol_atoms[atom2_index])
+            oebond = oemol.NewBond(oemol_atoms[atom1_index], oemol_atoms[atom2_index])
             oebond.SetOrder(bond.bond_order)
             # TODO: Do we want to provide _any_ pathway for Bond.is_aromatic to influence the OEMol?
-            #oebond.SetAromatic(bond.is_aromatic)
+            # oebond.SetAromatic(bond.is_aromatic)
             if not (bond.fractional_bond_order is None):
-                oebond.SetData('fractional_bond_order',
-                               bond.fractional_bond_order)
+                oebond.SetData("fractional_bond_order", bond.fractional_bond_order)
             oemol_bonds.append(oebond)
 
         oechem.OEAssignAromaticFlags(oemol, oe_aro_model)
@@ -1395,22 +1510,26 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
             # Set arbitrary initial stereochemistry
             neighs = [n for n in oeatom.GetAtoms()]
-            oeatom.SetStereo(neighs, oechem.OEAtomStereo_Tetra,
-                             oechem.OEAtomStereo_Right)
+            oeatom.SetStereo(
+                neighs, oechem.OEAtomStereo_Tetra, oechem.OEAtomStereo_Right
+            )
 
             # Flip chirality if stereochemistry isincorrect
             oeatom_stereochemistry = OpenEyeToolkitWrapper._openeye_cip_atom_stereochemistry(
-                oemol, oeatom)
+                oemol, oeatom
+            )
             if oeatom_stereochemistry != atom.stereochemistry:
                 # Flip the stereochemistry
-                oeatom.SetStereo(neighs, oechem.OEAtomStereo_Tetra,
-                                 oechem.OEAtomStereo_Left)
+                oeatom.SetStereo(
+                    neighs, oechem.OEAtomStereo_Tetra, oechem.OEAtomStereo_Left
+                )
                 # Verify it matches now as a sanity check
                 oeatom_stereochemistry = OpenEyeToolkitWrapper._openeye_cip_atom_stereochemistry(
-                    oemol, oeatom)
+                    oemol, oeatom
+                )
                 if oeatom_stereochemistry != atom.stereochemistry:
                     raise Exception(
-                        'Programming error: OpenEye atom stereochemistry assumptions failed.'
+                        "Programming error: OpenEye atom stereochemistry assumptions failed."
                     )
 
         # Set bond stereochemistry
@@ -1421,33 +1540,34 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             atom1_index = bond.molecule.atoms.index(bond.atom1)
             atom2_index = bond.molecule.atoms.index(bond.atom2)
             # Set arbitrary initial stereochemistry
-            oeatom1, oeatom2 = oemol_atoms[atom1_index], oemol_atoms[
-                atom2_index]
-            oeatom1_neighbor = [
-                n for n in oeatom1.GetAtoms() if not n == oeatom2
-            ][0]
-            oeatom2_neighbor = [
-                n for n in oeatom2.GetAtoms() if not n == oeatom1
-            ][0]
-            #oebond.SetStereo([oeatom1, oeatom2], oechem.OEBondStereo_CisTrans, oechem.OEBondStereo_Cis)
-            oebond.SetStereo([oeatom1_neighbor, oeatom2_neighbor],
-                             oechem.OEBondStereo_CisTrans,
-                             oechem.OEBondStereo_Cis)
+            oeatom1, oeatom2 = oemol_atoms[atom1_index], oemol_atoms[atom2_index]
+            oeatom1_neighbor = [n for n in oeatom1.GetAtoms() if not n == oeatom2][0]
+            oeatom2_neighbor = [n for n in oeatom2.GetAtoms() if not n == oeatom1][0]
+            # oebond.SetStereo([oeatom1, oeatom2], oechem.OEBondStereo_CisTrans, oechem.OEBondStereo_Cis)
+            oebond.SetStereo(
+                [oeatom1_neighbor, oeatom2_neighbor],
+                oechem.OEBondStereo_CisTrans,
+                oechem.OEBondStereo_Cis,
+            )
 
             # Flip stereochemistry if incorrect
             oebond_stereochemistry = OpenEyeToolkitWrapper._openeye_cip_bond_stereochemistry(
-                oemol, oebond)
+                oemol, oebond
+            )
             if oebond_stereochemistry != bond.stereochemistry:
                 # Flip the stereochemistry
-                oebond.SetStereo([oeatom1_neighbor, oeatom2_neighbor],
-                                 oechem.OEBondStereo_CisTrans,
-                                 oechem.OEBondStereo_Trans)
+                oebond.SetStereo(
+                    [oeatom1_neighbor, oeatom2_neighbor],
+                    oechem.OEBondStereo_CisTrans,
+                    oechem.OEBondStereo_Trans,
+                )
                 # Verify it matches now as a sanity check
                 oebond_stereochemistry = OpenEyeToolkitWrapper._openeye_cip_bond_stereochemistry(
-                    oemol, oebond)
+                    oemol, oebond
+                )
                 if oebond_stereochemistry != bond.stereochemistry:
                     raise Exception(
-                        'Programming error: OpenEye bond stereochemistry assumptions failed.'
+                        "Programming error: OpenEye bond stereochemistry assumptions failed."
                     )
 
         # Retain conformations, if present
@@ -1455,8 +1575,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             oemol.DeleteConfs()
             for conf in molecule._conformers:
                 # OE needs a 1 x (3*n_Atoms) double array as input
-                flat_coords = np.zeros((oemol.NumAtoms() * 3),
-                                       dtype=np.float32)
+                flat_coords = np.zeros((oemol.NumAtoms() * 3), dtype=np.float32)
                 for index, oe_idx in map_atoms.items():
                     (x, y, z) = conf[index, :] / unit.angstrom
                     flat_coords[(3 * oe_idx)] = x
@@ -1477,7 +1596,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             #  It's worth investigating whether we make this assumption elsewhere in the codebase, since
             #  the OE docs may indicate that this sort of usage is a very bad thing to do.
             #  https://docs.eyesopen.com/toolkits/python/oechemtk/atombondindices.html#indices-for-molecule-lookup-considered-harmful
-            #for oe_idx, oe_atom in enumerate(oemol.GetAtoms()):
+            # for oe_idx, oe_atom in enumerate(oemol.GetAtoms()):
             for oe_atom in oemol.GetAtoms():
                 oe_idx = oe_atom.GetIdx()
                 oe_atom.SetPartialCharge(oe_indexed_charges[oe_idx])
@@ -1519,28 +1638,37 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             The SMILES of the input molecule.
         """
         from openeye import oechem
+
         oemol = self.to_openeye(molecule)
 
         # this sets up the default settings following the old DEFAULT flag
         # more information on flags can be found here
         # <https://docs.eyesopen.com/toolkits/python/oechemtk/OEChemConstants/OESMILESFlag.html#OEChem::OESMILESFlag>
-        smiles_options = oechem.OESMILESFlag_Canonical | oechem.OESMILESFlag_Isotopes | oechem.OESMILESFlag_RGroups
+        smiles_options = (
+            oechem.OESMILESFlag_Canonical
+            | oechem.OESMILESFlag_Isotopes
+            | oechem.OESMILESFlag_RGroups
+        )
 
         # check if we want an isomeric smiles
         if isomeric:
             # add the atom and bond stereo flags
-            smiles_options |= oechem.OESMILESFlag_AtomStereo | oechem.OESMILESFlag_BondStereo
+            smiles_options |= (
+                oechem.OESMILESFlag_AtomStereo | oechem.OESMILESFlag_BondStereo
+            )
 
         if explicit_hydrogens:
             # add the hydrogen flag
             smiles_options |= oechem.OESMILESFlag_Hydrogens
 
         if mapped:
-            assert explicit_hydrogens is True, "Mapped smiles require all hydrogens and " \
-                                                "stereochemsitry to be defined to retain order"
+            assert explicit_hydrogens is True, (
+                "Mapped smiles require all hydrogens and "
+                "stereochemsitry to be defined to retain order"
+            )
 
             # if we only want to map specific atoms check for an atom map
-            atom_map = molecule._properties.get('atom_map', None)
+            atom_map = molecule._properties.get("atom_map", None)
             if atom_map is not None:
                 # make sure there are no repeated indices
                 map_ids = set(atom_map.values())
@@ -1593,6 +1721,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         """
 
         from openeye import oechem
+
         oemol = self.to_openeye(molecule)
 
         if fixed_hydrogens:
@@ -1629,6 +1758,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         """
 
         from openeye import oechem
+
         oemol = self.to_openeye(molecule)
 
         if fixed_hydrogens:
@@ -1657,6 +1787,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         """
 
         from openeye import oechem
+
         oemol = self.to_openeye(molecule)
 
         oechem.OECanonicalOrderAtoms(oemol)
@@ -1671,7 +1802,10 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         vbnd = []
         for bond in oemol.GetBonds():
-            if bond.GetBgn().GetAtomicNum() != oechem.OEElemNo_H and bond.GetEnd().GetAtomicNum() != oechem.OEElemNo_H:
+            if (
+                bond.GetBgn().GetAtomicNum() != oechem.OEElemNo_H
+                and bond.GetEnd().GetAtomicNum() != oechem.OEElemNo_H
+            ):
                 vbnd.append(bond)
         oemol.OrderBonds(vbnd)
 
@@ -1683,7 +1817,9 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         return self.from_openeye(oemol, allow_undefined_stereo=True)
 
-    def from_smiles(self, smiles, hydrogens_are_explicit=False, allow_undefined_stereo=False):
+    def from_smiles(
+        self, smiles, hydrogens_are_explicit=False, allow_undefined_stereo=False
+    ):
         """
         Create a Molecule from a SMILES string using the OpenEye toolkit.
 
@@ -1707,27 +1843,31 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         """
 
         from openeye import oechem
+
         oemol = oechem.OEGraphMol()
         oechem.OESmilesToMol(oemol, smiles)
         if not (hydrogens_are_explicit):
             result = oechem.OEAddExplicitHydrogens(oemol)
             if result == False:
                 raise ValueError(
-                    "Addition of explicit hydrogens failed in from_openeye")
+                    "Addition of explicit hydrogens failed in from_openeye"
+                )
         elif hydrogens_are_explicit and oechem.OEHasImplicitHydrogens(oemol):
             raise ValueError(
                 f"'hydrogens_are_explicit' was specified as True, but OpenEye Toolkit interpreted "
                 f"SMILES '{smiles}' as having implicit hydrogen. If this SMILES is intended to "
                 f"express all explicit hydrogens in the molecule, then you should construct the "
                 f"desired molecule as an OEMol (where oechem.OEHasImplicitHydrogens(oemol) returns "
-                f"False), and then use Molecule.from_openeye() to create the desired OFFMol.")
+                f"False), and then use Molecule.from_openeye() to create the desired OFFMol."
+            )
 
         # Set partial charges to None, since they couldn't have been stored in a SMILES
         for atom in oemol.GetAtoms():
-            atom.SetPartialCharge(float('nan'))
+            atom.SetPartialCharge(float("nan"))
 
-        molecule = self.from_openeye(oemol,
-                                     allow_undefined_stereo=allow_undefined_stereo)
+        molecule = self.from_openeye(
+            oemol, allow_undefined_stereo=allow_undefined_stereo
+        )
         return molecule
 
     def from_inchi(self, inchi, allow_undefined_stereo=False):
@@ -1750,6 +1890,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         """
 
         from openeye import oechem
+
         # This calls the same functions as OESmilesToMol
         oemol = oechem.OEGraphMol()
         oechem.OEInChIToMol(oemol, inchi)
@@ -1757,13 +1898,19 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         # try and catch InChI parsing fails
         # if there are no atoms don't build the molecule
         if oemol.NumAtoms() == 0:
-            raise RuntimeError('There was an issue parsing the InChI string, please check and try again.')
+            raise RuntimeError(
+                "There was an issue parsing the InChI string, please check and try again."
+            )
 
-        molecule = self.from_openeye(oemol, allow_undefined_stereo=allow_undefined_stereo)
+        molecule = self.from_openeye(
+            oemol, allow_undefined_stereo=allow_undefined_stereo
+        )
 
         return molecule
 
-    def generate_conformers(self, molecule, n_conformers=1, rms_cutoff=None, clear_existing=True):
+    def generate_conformers(
+        self, molecule, n_conformers=1, rms_cutoff=None, clear_existing=True
+    ):
         """
         Generate molecule conformers using OpenEye Omega.
 
@@ -1789,12 +1936,13 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         """
         from openeye import oeomega
+
         oemol = self.to_openeye(molecule)
         omega = oeomega.OEOmega()
         omega.SetMaxConfs(n_conformers)
         omega.SetCanonOrder(False)
         omega.SetSampleHydrogens(True)
-        omega.SetEnergyWindow(15.0)  #unit?
+        omega.SetEnergyWindow(15.0)  # unit?
         if rms_cutoff is None:
             omega.SetRMSThreshold(1.0)
         else:
@@ -1809,7 +1957,6 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             if new_status is False:
                 raise Exception("OpenEye Omega conformer generation failed")
 
-
         molecule2 = self.from_openeye(oemol, allow_undefined_stereo=True)
 
         if clear_existing:
@@ -1818,11 +1965,13 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         for conformer in molecule2._conformers:
             molecule._add_conformer(conformer)
 
-    def assign_partial_charges(self,
-                               molecule,
-                               partial_charge_method=None,
-                               use_conformers=None,
-                               strict_n_conformers=False):
+    def assign_partial_charges(
+        self,
+        molecule,
+        partial_charge_method=None,
+        use_conformers=None,
+        strict_n_conformers=False,
+    ):
         """
         Compute partial charges with OpenEye quacpac, and assign
         the new values to the partial_charges attribute.
@@ -1856,46 +2005,57 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         ChargeCalculationError if the charge method is supported by this toolkit, but fails
         """
 
-        from openeye import oequacpac, oechem
         import numpy as np
+        from openeye import oechem, oequacpac
+
         from openforcefield.topology import Molecule
 
-        SUPPORTED_CHARGE_METHODS = {'am1bcc': {'oe_charge_method': oequacpac.OEAM1BCCCharges,
-                                               'min_confs': 1,
-                                               'max_confs': 1,
-                                               'rec_confs': 1,
-                                               },
-                                    'am1-mulliken': {'oe_charge_method': oequacpac.OEAM1Charges,
-                                                     'min_confs': 1,
-                                                     'max_confs': 1,
-                                                     'rec_confs': 1,
-                                                     },
-                                    'gasteiger': {'oe_charge_method': oequacpac.OEGasteigerCharges,
-                                                  'min_confs': 0,
-                                                  'max_confs': 0,
-                                                  'rec_confs': 0,
-                                                  },
-                                    'mmff94': {'oe_charge_method': oequacpac.OEMMFF94Charges,
-                                                  'min_confs': 0,
-                                                  'max_confs': 0,
-                                                  'rec_confs': 0,
-                                                  },
-                                    'am1bccnosymspt': {'oe_charge_method': oequacpac.OEAM1BCCCharges,
-                                                       'min_confs': 1,
-                                                       'max_confs': 1,
-                                                       'rec_confs': 1,
-                                                       },
-                                    'am1elf10': {'oe_charge_method': oequacpac.OEELFCharges(oequacpac.OEAM1Charges(optimize=True, symmetrize=True), 10),
-                                                 'min_confs': 1,
-                                                 'max_confs': None,
-                                                 'rec_confs': 500,
-                                                },
-                                    'am1bccelf10': {'oe_charge_method': oequacpac.OEAM1BCCELF10Charges,
-                                                  'min_confs': 1,
-                                                  'max_confs': None,
-                                                  'rec_confs': 500,
-                                                  },
-                                    }
+        SUPPORTED_CHARGE_METHODS = {
+            "am1bcc": {
+                "oe_charge_method": oequacpac.OEAM1BCCCharges,
+                "min_confs": 1,
+                "max_confs": 1,
+                "rec_confs": 1,
+            },
+            "am1-mulliken": {
+                "oe_charge_method": oequacpac.OEAM1Charges,
+                "min_confs": 1,
+                "max_confs": 1,
+                "rec_confs": 1,
+            },
+            "gasteiger": {
+                "oe_charge_method": oequacpac.OEGasteigerCharges,
+                "min_confs": 0,
+                "max_confs": 0,
+                "rec_confs": 0,
+            },
+            "mmff94": {
+                "oe_charge_method": oequacpac.OEMMFF94Charges,
+                "min_confs": 0,
+                "max_confs": 0,
+                "rec_confs": 0,
+            },
+            "am1bccnosymspt": {
+                "oe_charge_method": oequacpac.OEAM1BCCCharges,
+                "min_confs": 1,
+                "max_confs": 1,
+                "rec_confs": 1,
+            },
+            "am1elf10": {
+                "oe_charge_method": oequacpac.OEELFCharges(
+                    oequacpac.OEAM1Charges(optimize=True, symmetrize=True), 10
+                ),
+                "min_confs": 1,
+                "max_confs": None,
+                "rec_confs": 500,
+            },
+            "am1bccelf10": {
+                "oe_charge_method": oequacpac.OEAM1BCCELF10Charges,
+                "min_confs": 1,
+                "max_confs": None,
+                "rec_confs": 500,
+            },
+        }
 
         if partial_charge_method is None:
             partial_charge_method = "am1-mulliken"
@@ -1914,22 +2074,26 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         mol_copy = Molecule(molecule)
 
         if use_conformers is None:
-            if charge_method['rec_confs'] == 0:
+            if charge_method["rec_confs"] == 0:
                 mol_copy._conformers = None
             else:
-                self.generate_conformers(mol_copy,
-                                         n_conformers=charge_method['rec_confs'],
-                                         rms_cutoff=0.25*unit.angstrom)
+                self.generate_conformers(
+                    mol_copy,
+                    n_conformers=charge_method["rec_confs"],
+                    rms_cutoff=0.25 * unit.angstrom,
+                )
                 # TODO: What's a "best practice" RMS cutoff to use here?
         else:
             mol_copy._conformers = None
             for conformer in use_conformers:
                 mol_copy.add_conformer(conformer)
-            self._check_n_conformers(mol_copy,
-                                     partial_charge_method=partial_charge_method,
-                                     min_confs=charge_method['min_confs'],
-                                     max_confs=charge_method['max_confs'],
-                                     strict_n_conformers=strict_n_conformers)
+            self._check_n_conformers(
+                mol_copy,
+                partial_charge_method=partial_charge_method,
+                min_confs=charge_method["min_confs"],
+                max_confs=charge_method["max_confs"],
+                strict_n_conformers=strict_n_conformers,
+            )
 
         oemol = mol_copy.to_openeye()
 
@@ -1943,9 +2107,11 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         if partial_charge_method == "am1bccnosymspt":
             optimize = False
             symmetrize = False
-            quacpac_status = oequacpac.OEAssignCharges(oemol, charge_method['oe_charge_method'](optimize, symmetrize))
+            quacpac_status = oequacpac.OEAssignCharges(
+                oemol, charge_method["oe_charge_method"](optimize, symmetrize)
+            )
         else:
-            oe_charge_method = charge_method['oe_charge_method']
+            oe_charge_method = charge_method["oe_charge_method"]
 
             if callable(oe_charge_method):
                 oe_charge_method = oe_charge_method()
@@ -1956,22 +2122,33 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         # This logic handles errors encountered in #34, which can occur when using ELF10 conformer selection
         if not quacpac_status:
 
-            oe_charge_engine = oequacpac.OEAM1Charges if partial_charge_method == "am1elf10" else oequacpac.OEAM1BCCCharges
+            oe_charge_engine = (
+                oequacpac.OEAM1Charges
+                if partial_charge_method == "am1elf10"
+                else oequacpac.OEAM1BCCCharges
+            )
 
-            if "SelectElfPop: issue with removing trans COOH conformers" in (errfs.str().decode("UTF-8")):
-                logger.warning(f"Warning: charge assignment involving ELF10 conformer selection failed due to a known bug (toolkit issue "
-                               f"#346). Downgrading to {oe_charge_engine.__name__} charge assignment for this molecule. More information"
-                               f"is available at https://github.com/openforcefield/openforcefield/issues/346")
+            if "SelectElfPop: issue with removing trans COOH conformers" in (
+                errfs.str().decode("UTF-8")
+            ):
+                logger.warning(
+                    f"Warning: charge assignment involving ELF10 conformer selection failed due to a known bug (toolkit issue "
+                    f"#346). Downgrading to {oe_charge_engine.__name__} charge assignment for this molecule. More information"
+                    f"is available at https://github.com/openforcefield/openforcefield/issues/346"
+                )
                 quacpac_status = oequacpac.OEAssignCharges(oemol, oe_charge_engine())
 
         if quacpac_status is False:
-            raise ChargeCalculationError(f'Unable to assign charges: {errfs.str().decode("UTF-8")}')
+            raise ChargeCalculationError(
+                f'Unable to assign charges: {errfs.str().decode("UTF-8")}'
+            )
 
         # Extract and return charges
         ## TODO: Make sure atom mapping remains constant
 
         charges = unit.Quantity(
-            np.zeros([oemol.NumAtoms()], np.float64), unit.elementary_charge)
+            np.zeros([oemol.NumAtoms()], np.float64), unit.elementary_charge
+        )
         for oeatom in oemol.GetAtoms():
             index = oeatom.GetIdx()
             charge = oeatom.GetPartialCharge()
@@ -1980,8 +2157,9 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         molecule.partial_charges = charges
 
-
-    def compute_partial_charges_am1bcc(self, molecule, use_conformers=None, strict_n_conformers=False):
+    def compute_partial_charges_am1bcc(
+        self, molecule, use_conformers=None, strict_n_conformers=False
+    ):
         """
         Compute AM1BCC partial charges with OpenEye quacpac. This function will attempt to use
         the OEAM1BCCELF10 charge generation method, but may print a warning and fall back to
@@ -2010,16 +2188,23 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         """
 
         import warnings
-        warnings.warn("compute_partial_charges_am1bcc will be deprecated in an upcoming release. "
-                      "Use assign_partial_charges(partial_charge_method='am1bccelf10') instead.",
-                      DeprecationWarning)
-        self.assign_partial_charges(molecule,
-                                    partial_charge_method='am1bccelf10',
-                                    use_conformers=use_conformers,
-                                    strict_n_conformers=strict_n_conformers)
+
+        warnings.warn(
+            "compute_partial_charges_am1bcc will be deprecated in an upcoming release. "
+            "Use assign_partial_charges(partial_charge_method='am1bccelf10') instead.",
+            DeprecationWarning,
+        )
+        self.assign_partial_charges(
+            molecule,
+            partial_charge_method="am1bccelf10",
+            use_conformers=use_conformers,
+            strict_n_conformers=strict_n_conformers,
+        )
         return molecule.partial_charges
 
-    def assign_fractional_bond_orders(self, molecule, bond_order_model=None, use_conformers=None):
+    def assign_fractional_bond_orders(
+        self, molecule, bond_order_model=None, use_conformers=None
+    ):
         """
         Update and store list of bond orders this molecule. Bond orders are stored on each
         bond, in the `bond.fractional_bond_order` attribute.
@@ -2038,7 +2223,9 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
          """
         from openeye import oequacpac
+
         from openforcefield.topology import Molecule
+
         # Make a copy since we'll be messing with this molecule's conformers
         temp_mol = Molecule(molecule)
         if use_conformers is None:
@@ -2048,7 +2235,6 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             for conformer in use_conformers:
                 temp_mol.add_conformer(conformer)
 
-
         if temp_mol.n_conformers == 0:
             raise Exception(
                 "No conformers present in molecule submitted for fractional bond order calculation. Consider "
@@ -2057,7 +2243,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             )
 
         if bond_order_model is None:
-            bond_order_model = 'am1-wiberg'
+            bond_order_model = "am1-wiberg"
 
         # Based on example at https://docs.eyesopen.com/toolkits/python/quacpactk/examples_summary_wibergbondorders.html
         oemol = self.to_openeye(temp_mol)
@@ -2070,16 +2256,18 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             # TODO: Make sure that modifying am1options actually works
             am1options.SetSemiMethod(oequacpac.OEMethodType_PM3)
         else:
-            raise ValueError(f"Bond order model '{bond_order_model}' is not supported by OpenEyeToolkitWrapper. "
-                             f"Supported models are ['am1-wiberg', 'pm3-wiberg']")
+            raise ValueError(
+                f"Bond order model '{bond_order_model}' is not supported by OpenEyeToolkitWrapper. "
+                f"Supported models are ['am1-wiberg', 'pm3-wiberg']"
+            )
 
-        #for conf in oemol.GetConfs():
-        #TODO: How to handle multiple confs here?
+        # for conf in oemol.GetConfs():
+        # TODO: How to handle multiple confs here?
         status = am1.CalcAM1(am1results, oemol)
 
         if status is False:
             raise Exception(
-                'Unable to assign charges (in the process of calculating fractional bond orders)'
+                "Unable to assign charges (in the process of calculating fractional bond orders)"
             )
 
         # TODO: Will bonds always map back to the same index? Consider doing a topology mapping.
@@ -2116,11 +2304,15 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             If OpenEye toolkit was unable to parse the provided smirks/tagged smarts
         """
         from openeye import oechem
+
         from openforcefield.typing.chemistry import SMIRKSParsingError
+
         qmol = oechem.OEQMol()
         status = oechem.OEParseSmarts(qmol, smarts)
         if status == False:
-            raise SMIRKSParsingError(f"OpenEye Toolkit was unable to parse SMIRKS {smarts}")
+            raise SMIRKSParsingError(
+                f"OpenEye Toolkit was unable to parse SMIRKS {smarts}"
+            )
 
         unique_tags = set()
         connections = set()
@@ -2168,6 +2360,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         """
         from openeye import oechem
         from openeye.oechem import OESubSearch
+
         # Make a copy of molecule so we don't influence original (probably safer than deepcopy per C Bayly)
         mol = oechem.OEMol(oemol)
 
@@ -2181,15 +2374,13 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             if type(aromaticity_model) == str:
                 # Check if the user has provided a manually-specified aromaticity_model
                 if hasattr(oechem, aromaticity_model):
-                    oearomodel = getattr(oechem,
-                                         'OEAroModel_' + aromaticity_model)
+                    oearomodel = getattr(oechem, "OEAroModel_" + aromaticity_model)
                 else:
                     raise ValueError(
                         "Error: provided aromaticity model not recognized by oechem."
                     )
             else:
-                raise ValueError(
-                    "Error: provided aromaticity model must be a string.")
+                raise ValueError("Error: provided aromaticity model must be a string.")
 
             # If aromaticity model was provided, prepare molecule
             oechem.OEClearAromaticFlags(mol)
@@ -2209,20 +2400,16 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             atom_indices = dict()
             for matched_atom in match.GetAtoms():
                 if matched_atom.pattern.GetMapIdx() != 0:
-                    atom_indices[matched_atom.pattern.GetMapIdx() -
-                                 1] = matched_atom.target.GetIdx()
+                    atom_indices[
+                        matched_atom.pattern.GetMapIdx() - 1
+                    ] = matched_atom.target.GetIdx()
             # Compress into list
-            atom_indices = [
-                atom_indices[index] for index in range(len(atom_indices))
-            ]
+            atom_indices = [atom_indices[index] for index in range(len(atom_indices))]
             # Convert to tuple
             matches.append(tuple(atom_indices))
         return matches
 
-    def find_smarts_matches(self,
-                            molecule,
-                            smarts,
-                            aromaticity_model='OEAroModel_MDL'):
+    def find_smarts_matches(self, molecule, smarts, aromaticity_model="OEAroModel_MDL"):
         """
         Find all SMARTS matches for the specified molecule, using the specified aromaticity model.
 
@@ -2251,27 +2438,38 @@ class RDKitToolkitWrapper(ToolkitWrapper):
     .. warning :: This API is experimental and subject to change.
     """
 
-    _toolkit_name = 'The RDKit'
-    _toolkit_installation_instructions = 'A conda-installable version of the free and open source RDKit cheminformatics ' \
-                                         'toolkit can be found at: https://anaconda.org/rdkit/rdkit'
+    _toolkit_name = "The RDKit"
+    _toolkit_installation_instructions = (
+        "A conda-installable version of the free and open source RDKit cheminformatics "
+        "toolkit can be found at: https://anaconda.org/rdkit/rdkit"
+    )
 
     def __init__(self):
         super().__init__()
 
-        self._toolkit_file_read_formats = ['SDF', 'MOL', 'SMI']  # TODO: Add TDT support
+        self._toolkit_file_read_formats = ["SDF", "MOL", "SMI"]  # TODO: Add TDT support
 
         if not self.is_available():
-            raise ToolkitUnavailableException(f'The required toolkit {self._toolkit_name} is not '
-                                              f'available. {self._toolkit_installation_instructions}')
+            raise ToolkitUnavailableException(
+                f"The required toolkit {self._toolkit_name} is not "
+                f"available. {self._toolkit_installation_instructions}"
+            )
         else:
             from rdkit import __version__ as rdkit_version
+
             self._toolkit_version = rdkit_version
 
             from rdkit import Chem
+
             # we have to make sure the toolkit can be loaded before formatting this dict
             # Note any new file write formats should be added here only
-            self._toolkit_file_write_formats = {'SDF': Chem.SDWriter, 'MOL': Chem.SDWriter, 'SMI': Chem.SmilesWriter,
-                                                'PDB': Chem.PDBWriter, 'TDT': Chem.TDTWriter}
+            self._toolkit_file_write_formats = {
+                "SDF": Chem.SDWriter,
+                "MOL": Chem.SDWriter,
+                "SMI": Chem.SmilesWriter,
+                "PDB": Chem.PDBWriter,
+                "TDT": Chem.TDTWriter,
+            }
 
     @property
     def toolkit_file_write_formats(self):
@@ -2292,7 +2490,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         """
         try:
-            importlib.import_module('rdkit', 'Chem')
+            importlib.import_module("rdkit", "Chem")
             return True
         except ImportError:
             return False
@@ -2323,10 +2521,14 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         """
         # TODO: Add tests for the from_object functions
         from rdkit import Chem
+
         if isinstance(object, Chem.rdchem.Mol):
-            return self.from_rdkit(object,
-                                   allow_undefined_stereo=allow_undefined_stereo)
-        raise NotImplementedError('Cannot create Molecule from {} object'.format(type(object)))
+            return self.from_rdkit(
+                object, allow_undefined_stereo=allow_undefined_stereo
+            )
+        raise NotImplementedError(
+            "Cannot create Molecule from {} object".format(type(object))
+        )
 
     def from_pdb_and_smiles(self, file_path, smiles, allow_undefined_stereo=False):
         """
@@ -2360,23 +2562,29 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         """
 
         from rdkit import Chem
-        from openforcefield.topology.molecule import Molecule, InvalidConformerError
+
+        from openforcefield.topology.molecule import InvalidConformerError, Molecule
 
         # Make the molecule from smiles
-        offmol = self.from_smiles(smiles,
-                                  allow_undefined_stereo=allow_undefined_stereo)
+        offmol = self.from_smiles(smiles, allow_undefined_stereo=allow_undefined_stereo)
 
         # Make another molecule from the PDB, allow stero errors here they are expected
-        pdbmol = self.from_rdkit(Chem.MolFromPDBFile(file_path, removeHs=False), allow_undefined_stereo=True)
+        pdbmol = self.from_rdkit(
+            Chem.MolFromPDBFile(file_path, removeHs=False), allow_undefined_stereo=True
+        )
 
         # check isomorphic and get the mapping if true the mapping will be
         # Dict[pdb_index: offmol_index] sorted by pdb_index
-        isomorphic, mapping = Molecule.are_isomorphic(pdbmol, offmol, return_atom_map=True,
-                                                      aromatic_matching=False,
-                                                      formal_charge_matching=False,
-                                                      bond_order_matching=False,
-                                                      atom_stereochemistry_matching=False,
-                                                      bond_stereochemistry_matching=False)
+        isomorphic, mapping = Molecule.are_isomorphic(
+            pdbmol,
+            offmol,
+            return_atom_map=True,
+            aromatic_matching=False,
+            formal_charge_matching=False,
+            bond_order_matching=False,
+            atom_stereochemistry_matching=False,
+            bond_stereochemistry_matching=False,
+        )
 
         if mapping is not None:
             new_mol = offmol.remap(mapping)
@@ -2387,12 +2595,9 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             return new_mol
 
         else:
-            raise InvalidConformerError('The PDB and SMILES structures do not match.')
+            raise InvalidConformerError("The PDB and SMILES structures do not match.")
 
-    def from_file(self,
-                  file_path,
-                  file_format,
-                  allow_undefined_stereo=False):
+    def from_file(self, file_path, file_format, allow_undefined_stereo=False):
         """
         Create an openforcefield.topology.Molecule from a file using this toolkit.
 
@@ -2419,36 +2624,48 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         file_format = file_format.upper()
 
         mols = list()
-        if (file_format == 'MOL') or (file_format == 'SDF'):
-            for rdmol in Chem.SupplierFromFilename(file_path, removeHs=False, sanitize=False, strictParsing=True):
+        if (file_format == "MOL") or (file_format == "SDF"):
+            for rdmol in Chem.SupplierFromFilename(
+                file_path, removeHs=False, sanitize=False, strictParsing=True
+            ):
                 if rdmol is None:
                     continue
 
                 # Sanitize the molecules (fails on nitro groups)
                 try:
-                    Chem.SanitizeMol(rdmol, Chem.SANITIZE_ALL ^ Chem.SANITIZE_SETAROMATICITY ^ Chem.SANITIZE_ADJUSTHS)
+                    Chem.SanitizeMol(
+                        rdmol,
+                        Chem.SANITIZE_ALL
+                        ^ Chem.SANITIZE_SETAROMATICITY
+                        ^ Chem.SANITIZE_ADJUSTHS,
+                    )
                     Chem.AssignStereochemistryFrom3D(rdmol)
                 except ValueError as e:
-                    logger.warning(rdmol.GetProp('_Name') + ' ' + str(e))
+                    logger.warning(rdmol.GetProp("_Name") + " " + str(e))
                     continue
                 Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_MDL)
-                mol = self.from_rdkit(rdmol, allow_undefined_stereo=allow_undefined_stereo)
+                mol = self.from_rdkit(
+                    rdmol, allow_undefined_stereo=allow_undefined_stereo
+                )
                 mols.append(mol)
 
-        elif (file_format == 'SMI'):
+        elif file_format == "SMI":
             # TODO: We have to do some special stuff when we import SMILES (currently
             # just adding H's, but could get fancier in the future). It might be
             # worthwhile to parse the SMILES file ourselves and pass each SMILES
             # through the from_smiles function instead
             for rdmol in Chem.SmilesMolSupplier(file_path, titleLine=False):
                 rdmol = Chem.AddHs(rdmol)
-                mol = self.from_rdkit(rdmol, allow_undefined_stereo=allow_undefined_stereo)
+                mol = self.from_rdkit(
+                    rdmol, allow_undefined_stereo=allow_undefined_stereo
+                )
                 mols.append(mol)
 
-        elif (file_format == 'PDB'):
+        elif file_format == "PDB":
             raise Exception(
                 "RDKit can not safely read PDBs on their own. Information about bond order and aromaticity "
-                "is likely to be lost. To read a PDB using RDKit use Molecule.from_pdb_and_smiles()")
+                "is likely to be lost. To read a PDB using RDKit use Molecule.from_pdb_and_smiles()"
+            )
             # TODO: See if we can implement PDB+mol/smi combinations to get complete bond information.
             #  testing to see if we can make a molecule from smiles and then use the PDB conformer as the geometry
             #  and just reorder the molecule
@@ -2460,10 +2677,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         return mols
 
-    def from_file_obj(self,
-                      file_obj,
-                      file_format,
-                      allow_undefined_stereo=False):
+    def from_file_obj(self, file_obj, file_format, allow_undefined_stereo=False):
         """
         Return an openforcefield.topology.Molecule from a file-like object (an object with a ".read()" method using
         this toolkit.
@@ -2496,20 +2710,21 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                 mol = self.from_rdkit(rdmol)
                 mols.append(mol)
 
-        if (file_format == 'SMI'):
+        if file_format == "SMI":
             # TODO: Find a cleaner way to parse SMILES lines
             file_data = file_obj.read()
-            lines = [line.strip() for line in file_data.split('\n')]
+            lines = [line.strip() for line in file_data.split("\n")]
             # remove blank lines
-            lines.remove('')
+            lines.remove("")
             for line in lines:
                 mol = self.from_smiles(line)
                 mols.append(mol)
 
-        elif file_format == 'PDB':
+        elif file_format == "PDB":
             raise Exception(
                 "RDKit can not safely read PDBs on their own. Information about bond order and aromaticity "
-                "is likely to be lost. To read a PDB using RDKit use Molecule.from_pdb_and_smiles()")
+                "is likely to be lost. To read a PDB using RDKit use Molecule.from_pdb_and_smiles()"
+            )
             # TODO: See if we can implement PDB+mol/smi combinations to get complete bond information.
             # https://github.com/openforcefield/openforcefield/issues/121
             # file_data = file_obj.read()
@@ -2545,8 +2760,10 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             writer.close()
         # if we can not write to that file type catch the error here
         except KeyError:
-            raise ValueError(f'The requested file type ({file_format}) is not supported to be written using '
-                             f'RDKitToolkitWrapper.')
+            raise ValueError(
+                f"The requested file type ({file_format}) is not supported to be written using "
+                f"RDKitToolkitWrapper."
+            )
 
     def to_file(self, molecule, file_path, file_format):
         """
@@ -2567,10 +2784,14 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         """
 
         # open a file object and pass to the object writer
-        with open(file_path, 'w') as file_obj:
-            self.to_file_obj(molecule=molecule, file_obj=file_obj, file_format=file_format)
+        with open(file_path, "w") as file_obj:
+            self.to_file_obj(
+                molecule=molecule, file_obj=file_obj, file_format=file_format
+            )
 
-    def enumerate_stereoisomers(self, molecule, undefined_only=False, max_isomers=20, rationalise=True):
+    def enumerate_stereoisomers(
+        self, molecule, undefined_only=False, max_isomers=20, rationalise=True
+    ):
         """
         Enumerate the stereocenters and bonds of the current molecule.
 
@@ -2595,7 +2816,10 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         """
         from rdkit import Chem
-        from rdkit.Chem.EnumerateStereoisomers import EnumerateStereoisomers, StereoEnumerationOptions
+        from rdkit.Chem.EnumerateStereoisomers import (
+            EnumerateStereoisomers,
+            StereoEnumerationOptions,
+        )
 
         # create the molecule
         rdmol = self.to_rdkit(molecule=molecule)
@@ -2605,8 +2829,11 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         Chem.FindPotentialStereoBonds(rdmol)
 
         # set up the options
-        stereo_opts = StereoEnumerationOptions(tryEmbedding=rationalise, onlyUnassigned=undefined_only,
-                                               maxIsomers=max_isomers)
+        stereo_opts = StereoEnumerationOptions(
+            tryEmbedding=rationalise,
+            onlyUnassigned=undefined_only,
+            maxIsomers=max_isomers,
+        )
 
         isomers = tuple(EnumerateStereoisomers(rdmol, options=stereo_opts))
 
@@ -2639,8 +2866,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             A list of openforcefield.topology.Molecule instances not including the input molecule.
         """
 
-        from rdkit.Chem.MolStandardize import rdMolStandardize
         from rdkit import Chem
+        from rdkit.Chem.MolStandardize import rdMolStandardize
 
         enumerator = rdMolStandardize.TautomerEnumerator()
         rdmol = Chem.RemoveHs(molecule.to_rdkit())
@@ -2651,7 +2878,9 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         molecules = []
         for taut in tautomers:
             taut_hs = Chem.AddHs(taut)
-            mol = self.from_smiles(Chem.MolToSmiles(taut_hs), allow_undefined_stereo=True)
+            mol = self.from_smiles(
+                Chem.MolToSmiles(taut_hs), allow_undefined_stereo=True
+            )
             if mol != molecule:
                 molecules.append(mol)
 
@@ -2673,6 +2902,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         """
 
         from rdkit import Chem
+
         rdmol = self.to_rdkit(molecule)
 
         # get the canonical ordering with hydrogens first
@@ -2721,6 +2951,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             The SMILES of the input molecule.
         """
         from rdkit import Chem
+
         rdmol = self.to_rdkit(molecule)
 
         if not explicit_hydrogens:
@@ -2728,11 +2959,13 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             rdmol = Chem.RemoveHs(rdmol)
 
         if mapped:
-            assert explicit_hydrogens is True, "Mapped smiles require all hydrogens and " \
-                                               "stereochemistry to be defined to retain order"
+            assert explicit_hydrogens is True, (
+                "Mapped smiles require all hydrogens and "
+                "stereochemistry to be defined to retain order"
+            )
 
             # if we only want to map specific atoms check for an atom map
-            atom_map = molecule._properties.get('atom_map', None)
+            atom_map = molecule._properties.get("atom_map", None)
             if atom_map is not None:
                 # make sure there are no repeated indices
                 map_ids = set(atom_map.values())
@@ -2757,9 +2990,13 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                     except KeyError:
                         continue
 
-        return Chem.MolToSmiles(rdmol, isomericSmiles=isomeric, allHsExplicit=explicit_hydrogens)
+        return Chem.MolToSmiles(
+            rdmol, isomericSmiles=isomeric, allHsExplicit=explicit_hydrogens
+        )
 
-    def from_smiles(self, smiles, hydrogens_are_explicit=False, allow_undefined_stereo=False):
+    def from_smiles(
+        self, smiles, hydrogens_are_explicit=False, allow_undefined_stereo=False
+    ):
         """
         Create a Molecule from a SMILES string using the RDKit toolkit.
 
@@ -2789,13 +3026,16 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         for atom in rdmol.GetAtoms():
             if atom.GetAtomMapNum() != 0:
                 # set the map back to zero but hide the index in the atom prop data
-                atom.SetProp('_map_idx', str(atom.GetAtomMapNum()))
+                atom.SetProp("_map_idx", str(atom.GetAtomMapNum()))
                 # set it back to zero
                 atom.SetAtomMapNum(0)
 
         # TODO: I think UpdatePropertyCache(strict=True) is called anyway in Chem.SanitizeMol().
         rdmol.UpdatePropertyCache(strict=False)
-        Chem.SanitizeMol(rdmol, Chem.SANITIZE_ALL ^ Chem.SANITIZE_ADJUSTHS ^ Chem.SANITIZE_SETAROMATICITY)
+        Chem.SanitizeMol(
+            rdmol,
+            Chem.SANITIZE_ALL ^ Chem.SANITIZE_ADJUSTHS ^ Chem.SANITIZE_SETAROMATICITY,
+        )
         Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_MDL)
 
         # Chem.MolFromSmiles adds bond directions (i.e. ENDDOWNRIGHT/ENDUPRIGHT), but
@@ -2803,8 +3043,10 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         Chem.AssignStereochemistry(rdmol)
 
         # Throw an exception/warning if there is unspecified stereochemistry.
-        if allow_undefined_stereo==False:
-            self._detect_undefined_stereo(rdmol, err_msg_prefix='Unable to make OFFMol from SMILES: ')
+        if allow_undefined_stereo == False:
+            self._detect_undefined_stereo(
+                rdmol, err_msg_prefix="Unable to make OFFMol from SMILES: "
+            )
 
         # Add explicit hydrogens if they aren't there already
         if not hydrogens_are_explicit:
@@ -2818,10 +3060,10 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                         f"SMILES '{smiles}' as having implicit hydrogen. If this SMILES is intended to "
                         f"express all explicit hydrogens in the molecule, then you should construct the "
                         f"desired molecule as an RDMol with no implicit hydrogens, and then use "
-                        f"Molecule.from_rdkit() to create the desired OFFMol.")
+                        f"Molecule.from_rdkit() to create the desired OFFMol."
+                    )
 
-        molecule = self.from_rdkit(rdmol,
-                                   allow_undefined_stereo=allow_undefined_stereo)
+        molecule = self.from_rdkit(rdmol, allow_undefined_stereo=allow_undefined_stereo)
 
         return molecule
 
@@ -2845,17 +3087,23 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         """
 
         from rdkit import Chem
+
         # this seems to always remove the hydrogens
         rdmol = Chem.MolFromInchi(inchi, sanitize=False, removeHs=False)
 
         # try and catch an InChI parsing error
         if rdmol is None:
-            raise RuntimeError('There was an issue parsing the InChI string, please check and try again.')
+            raise RuntimeError(
+                "There was an issue parsing the InChI string, please check and try again."
+            )
 
         # process the molecule
         # TODO do we need this with inchi?
         rdmol.UpdatePropertyCache(strict=False)
-        Chem.SanitizeMol(rdmol, Chem.SANITIZE_ALL ^ Chem.SANITIZE_ADJUSTHS ^ Chem.SANITIZE_SETAROMATICITY)
+        Chem.SanitizeMol(
+            rdmol,
+            Chem.SANITIZE_ALL ^ Chem.SANITIZE_ADJUSTHS ^ Chem.SANITIZE_SETAROMATICITY,
+        )
         Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_MDL)
 
         # add hydrogens back here
@@ -2865,7 +3113,9 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         return molecule
 
-    def generate_conformers(self, molecule, n_conformers=1, rms_cutoff=None, clear_existing=True):
+    def generate_conformers(
+        self, molecule, n_conformers=1, rms_cutoff=None, clear_existing=True
+    ):
         """
         Generate molecule conformers using RDKit.
 
@@ -2892,8 +3142,9 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         """
         from rdkit.Chem import AllChem
+
         if rms_cutoff is None:
-            rms_cutoff = 1. * unit.angstrom
+            rms_cutoff = 1.0 * unit.angstrom
         rdmol = self.to_rdkit(molecule)
         # TODO: This generates way more conformations than omega, given the same nConfs and RMS threshold. Is there some way to set an energy cutoff as well?
         AllChem.EmbedMultipleConfs(
@@ -2901,7 +3152,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             numConfs=n_conformers,
             pruneRmsThresh=rms_cutoff / unit.angstrom,
             randomSeed=1,
-            #params=AllChem.ETKDG()
+            # params=AllChem.ETKDG()
         )
         molecule2 = self.from_rdkit(rdmol, allow_undefined_stereo=True)
 
@@ -2945,6 +3196,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         """
         from rdkit import Chem
+
         from openforcefield.topology.molecule import Molecule
 
         # Make a copy of the RDKit Mol as we'll need to change it (e.g. assign stereo).
@@ -2953,9 +3205,16 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         # Sanitizing the molecule. We handle aromaticity and chirality manually.
         # This SanitizeMol(...) calls cleanUp, updatePropertyCache, symmetrizeSSSR,
         # assignRadicals, setConjugation, and setHybridization.
-        Chem.SanitizeMol(rdmol, (Chem.SANITIZE_ALL ^ Chem.SANITIZE_SETAROMATICITY ^
-                                 Chem.SANITIZE_ADJUSTHS ^ Chem.SANITIZE_CLEANUPCHIRALITY ^
-                                 Chem.SANITIZE_KEKULIZE))
+        Chem.SanitizeMol(
+            rdmol,
+            (
+                Chem.SANITIZE_ALL
+                ^ Chem.SANITIZE_SETAROMATICITY
+                ^ Chem.SANITIZE_ADJUSTHS
+                ^ Chem.SANITIZE_CLEANUPCHIRALITY
+                ^ Chem.SANITIZE_KEKULIZE
+            ),
+        )
         Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_MDL)
         # SetAromaticity set aromatic bonds to 1.5, but Molecule.bond_order is an
         # integer (contrarily to fractional_bond_order) so we need the Kekule order.
@@ -2968,15 +3227,18 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         Chem.AssignStereochemistry(rdmol, cleanIt=False)
 
         # Check for undefined stereochemistry.
-        self._detect_undefined_stereo(rdmol, raise_warning=allow_undefined_stereo,
-                                      err_msg_prefix="Unable to make OFFMol from RDMol: ")
+        self._detect_undefined_stereo(
+            rdmol,
+            raise_warning=allow_undefined_stereo,
+            err_msg_prefix="Unable to make OFFMol from RDMol: ",
+        )
 
         # Create a new openforcefield Molecule
         offmol = Molecule()
 
         # If RDMol has a title save it
         if rdmol.HasProp("_Name"):
-            #raise Exception('{}'.format(rdmol.GetProp('name')))
+            # raise Exception('{}'.format(rdmol.GetProp('name')))
             offmol.name = rdmol.GetProp("_Name")
         else:
             offmol.name = ""
@@ -2997,51 +3259,54 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             # if the molecule was made from a mapped smiles this has been hidden
             # so that it does not affect the sterochemistry tags
             try:
-                map_id = int(rda.GetProp('_map_idx'))
+                map_id = int(rda.GetProp("_map_idx"))
             except KeyError:
                 map_id = rda.GetAtomMapNum()
 
             # create a new atom
-            #atomic_number = oemol.NewAtom(rda.GetAtomicNum())
+            # atomic_number = oemol.NewAtom(rda.GetAtomicNum())
             atomic_number = rda.GetAtomicNum()
             formal_charge = rda.GetFormalCharge() * unit.elementary_charge
             is_aromatic = rda.GetIsAromatic()
-            if rda.HasProp('_Name'):
-                name = rda.GetProp('_Name')
+            if rda.HasProp("_Name"):
+                name = rda.GetProp("_Name")
             else:
                 # check for PDB names
                 try:
                     name = rda.GetMonomerInfo().GetName().strip()
                 except AttributeError:
-                    name = ''
+                    name = ""
 
             # If chiral, store the chirality to be set later
             stereochemistry = None
-            #tag = rda.GetChiralTag()
-            if rda.HasProp('_CIPCode'):
-                stereo_code = rda.GetProp('_CIPCode')
-                #if tag == Chem.CHI_TETRAHEDRAL_CCW:
-                if stereo_code == 'R':
-                    stereochemistry = 'R'
-                #if tag == Chem.CHI_TETRAHEDRAL_CW:
-                elif stereo_code == 'S':
-                    stereochemistry = 'S'
+            # tag = rda.GetChiralTag()
+            if rda.HasProp("_CIPCode"):
+                stereo_code = rda.GetProp("_CIPCode")
+                # if tag == Chem.CHI_TETRAHEDRAL_CCW:
+                if stereo_code == "R":
+                    stereochemistry = "R"
+                # if tag == Chem.CHI_TETRAHEDRAL_CW:
+                elif stereo_code == "S":
+                    stereochemistry = "S"
                 else:
-                    raise UndefinedStereochemistryError("In from_rdkit: Expected atom stereochemistry of R or S. "
-                                                        "Got {} instead.".format(stereo_code))
+                    raise UndefinedStereochemistryError(
+                        "In from_rdkit: Expected atom stereochemistry of R or S. "
+                        "Got {} instead.".format(stereo_code)
+                    )
 
             atom_index = offmol.add_atom(
                 atomic_number,
                 formal_charge,
                 is_aromatic,
                 name=name,
-                stereochemistry=stereochemistry)
+                stereochemistry=stereochemistry,
+            )
             map_atoms[rd_idx] = atom_index
             atom_mapping[atom_index] = map_id
 
         # if we have a full atom map add it to the molecule, 0 indicates a missing mapping or no mapping
         if 0 not in atom_mapping.values():
-            offmol._properties['atom_map'] = atom_mapping
+            offmol._properties["atom_map"] = atom_mapping
 
         # Similar to chirality, stereochemistry of bonds in OE is set relative to their neighbors
         for rdb in rdmol.GetBonds():
@@ -3056,8 +3321,9 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             order = int(order)
 
             # create a new bond
-            bond_index = offmol.add_bond(map_atoms[a1], map_atoms[a2], order,
-                                         is_aromatic)
+            bond_index = offmol.add_bond(
+                map_atoms[a1], map_atoms[a2], order, is_aromatic
+            )
             map_bonds[rdb_idx] = bond_index
 
         # Now fill in the cached (structure-dependent) properties. We have to have the 2D structure of the molecule
@@ -3070,18 +3336,19 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             stereochemistry = None
             tag = rdb.GetStereo()
             if tag == Chem.BondStereo.STEREOZ:
-                stereochemistry = 'Z'
+                stereochemistry = "Z"
             elif tag == Chem.BondStereo.STEREOE:
-                stereochemistry = 'E'
+                stereochemistry = "E"
             elif tag == Chem.BondStereo.STEREOTRANS or tag == Chem.BondStereo.STEREOCIS:
                 raise ValueError(
-                    "Expected RDKit bond stereochemistry of E or Z, got {} instead"
-                    .format(tag))
+                    "Expected RDKit bond stereochemistry of E or Z, got {} instead".format(
+                        tag
+                    )
+                )
             offb._stereochemistry = stereochemistry
             fractional_bond_order = None
             if rdb.HasProp("fractional_bond_order"):
-                fractional_bond_order = rdb.GetDoubleProp(
-                    'fractional_bond_order')
+                fractional_bond_order = rdb.GetDoubleProp("fractional_bond_order")
             offb.fractional_bond_order = fractional_bond_order
 
         # TODO: Save conformer(s), if present
@@ -3090,22 +3357,21 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             for conf in rdmol.GetConformers():
                 n_atoms = offmol.n_atoms
                 # TODO: Will this always be angstrom when loading from RDKit?
-                positions = unit.Quantity(
-                    np.zeros((n_atoms, 3)), unit.angstrom)
+                positions = unit.Quantity(np.zeros((n_atoms, 3)), unit.angstrom)
                 for rd_idx, off_idx in map_atoms.items():
                     atom_coords = conf.GetPositions()[rd_idx, :] * unit.angstrom
                     positions[off_idx, :] = atom_coords
                 offmol.add_conformer(positions)
 
         partial_charges = unit.Quantity(
-            np.zeros(offmol.n_atoms, dtype=np.float), unit=unit.elementary_charge)
+            np.zeros(offmol.n_atoms, dtype=np.float), unit=unit.elementary_charge
+        )
 
         any_atom_has_partial_charge = False
         for rd_idx, rd_atom in enumerate(rdmol.GetAtoms()):
             off_idx = map_atoms[rd_idx]
             if rd_atom.HasProp("PartialCharge"):
-                charge = rd_atom.GetDoubleProp(
-                    "PartialCharge") * unit.elementary_charge
+                charge = rd_atom.GetDoubleProp("PartialCharge") * unit.elementary_charge
                 partial_charges[off_idx] = charge
                 any_atom_has_partial_charge = True
             else:
@@ -3157,7 +3423,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         # Set name
         # TODO: What is the best practice for how this should be named?
         if not (molecule.name is None):
-            rdmol.SetProp('_Name', molecule.name)
+            rdmol.SetProp("_Name", molecule.name)
 
         # TODO: Set other properties
         for name, value in molecule.properties.items():
@@ -3186,14 +3452,16 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         for index, atom in enumerate(molecule.atoms):
             rdatom = Chem.Atom(atom.atomic_number)
-            rdatom.SetFormalCharge(atom.formal_charge.value_in_unit(unit.elementary_charge))
+            rdatom.SetFormalCharge(
+                atom.formal_charge.value_in_unit(unit.elementary_charge)
+            )
             rdatom.SetIsAromatic(atom.is_aromatic)
-            rdatom.SetProp('_Name', atom.name)
+            rdatom.SetProp("_Name", atom.name)
 
             ## Stereo handling code moved to after bonds are added
-            if atom.stereochemistry == 'S':
+            if atom.stereochemistry == "S":
                 rdatom.SetChiralTag(Chem.CHI_TETRAHEDRAL_CW)
-            elif atom.stereochemistry == 'R':
+            elif atom.stereochemistry == "R":
                 rdatom.SetChiralTag(Chem.CHI_TETRAHEDRAL_CCW)
 
             rd_index = rdmol.AddAtom(rdatom)
@@ -3204,12 +3472,16 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             assert index == rd_index
 
         for bond in molecule.bonds:
-            atom_indices = (bond.atom1.molecule_atom_index, bond.atom2.molecule_atom_index)
+            atom_indices = (
+                bond.atom1.molecule_atom_index,
+                bond.atom2.molecule_atom_index,
+            )
             rdmol.AddBond(*atom_indices)
             rdbond = rdmol.GetBondBetweenAtoms(*atom_indices)
             if not (bond.fractional_bond_order is None):
-                rdbond.SetDoubleProp("fractional_bond_order",
-                                     bond.fractional_bond_order)
+                rdbond.SetDoubleProp(
+                    "fractional_bond_order", bond.fractional_bond_order
+                )
             # Assign bond type, which is based on order unless it is aromatic
             if bond.is_aromatic:
                 rdbond.SetBondType(_bondtypes[1.5])
@@ -3218,10 +3490,13 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                 rdbond.SetBondType(_bondtypes[bond.bond_order])
                 rdbond.SetIsAromatic(False)
 
-        Chem.SanitizeMol(rdmol, Chem.SANITIZE_ALL ^ Chem.SANITIZE_ADJUSTHS ^ Chem.SANITIZE_SETAROMATICITY)
+        Chem.SanitizeMol(
+            rdmol,
+            Chem.SANITIZE_ALL ^ Chem.SANITIZE_ADJUSTHS ^ Chem.SANITIZE_SETAROMATICITY,
+        )
 
         # Fix for aromaticity being lost
-        if aromaticity_model == 'OEAroModel_MDL':
+        if aromaticity_model == "OEAroModel_MDL":
             Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_MDL)
         else:
             raise ValueError(f"Aromaticity model {aromaticity_model} not recognized")
@@ -3244,7 +3519,10 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             # We need to do force and cleanIt to recalculate CIP stereo.
             Chem.AssignStereochemistry(rdmol, force=True, cleanIt=True)
             # If our random initial assignment worked, then we're set.
-            if rdatom.HasProp('_CIPCode') and rdatom.GetProp("_CIPCode") == atom.stereochemistry:
+            if (
+                rdatom.HasProp("_CIPCode")
+                and rdatom.GetProp("_CIPCode") == atom.stereochemistry
+            ):
                 continue
 
             # Otherwise, set it to CCW.
@@ -3252,19 +3530,25 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             # We need to do force and cleanIt to recalculate CIP stereo.
             Chem.AssignStereochemistry(rdmol, force=True, cleanIt=True)
             # Hopefully this worked, otherwise something's wrong
-            if rdatom.HasProp('_CIPCode') and rdatom.GetProp("_CIPCode") == atom.stereochemistry:
+            if (
+                rdatom.HasProp("_CIPCode")
+                and rdatom.GetProp("_CIPCode") == atom.stereochemistry
+            ):
                 continue
 
             # Keep track of undefined stereo atoms. We'll force stereochemistry
             # at the end to avoid the next AssignStereochemistry to overwrite.
-            if not rdatom.HasProp('_CIPCode'):
+            if not rdatom.HasProp("_CIPCode"):
                 undefined_stereo_atoms[rdatom] = atom.stereochemistry
                 continue
 
             # Something is wrong.
-            err_msg = ("Unknown atom stereochemistry encountered in to_rdkit. "
-                       "Desired stereochemistry: {}. Set stereochemistry {}".format(
-                atom.stereochemistry, rdatom.GetProp("_CIPCode")))
+            err_msg = (
+                "Unknown atom stereochemistry encountered in to_rdkit. "
+                "Desired stereochemistry: {}. Set stereochemistry {}".format(
+                    atom.stereochemistry, rdatom.GetProp("_CIPCode")
+                )
+            )
             raise RuntimeError(err_msg)
 
         # Copy bond stereo info from molecule to rdmol.
@@ -3276,8 +3560,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                 rdmol_conformer = Chem.Conformer()
                 for atom_idx in range(molecule.n_atoms):
                     x, y, z = conformer[atom_idx, :].value_in_unit(unit.angstrom)
-                    rdmol_conformer.SetAtomPosition(atom_idx,
-                                                    Geometry.Point3D(x, y, z))
+                    rdmol_conformer.SetAtomPosition(atom_idx, Geometry.Point3D(x, y, z))
                 rdmol.AddConformer(rdmol_conformer, assignId=True)
 
         # Retain charges, if present
@@ -3288,12 +3571,11 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                 charge_unitless = charge.value_in_unit(unit.elementary_charge)
                 rdk_indexed_charges[atom_idx] = charge_unitless
             for atom_idx, rdk_atom in enumerate(rdmol.GetAtoms()):
-                rdk_atom.SetDoubleProp('PartialCharge',
-                                       rdk_indexed_charges[atom_idx])
+                rdk_atom.SetDoubleProp("PartialCharge", rdk_indexed_charges[atom_idx])
 
             # Note: We could put this outside the "if" statement, which would result in all partial charges in the
             #       resulting file being set to "n/a" if they weren't set in the Open Force Field Molecule
-            Chem.CreateAtomDoublePropertyList(rdmol, 'PartialCharge')
+            Chem.CreateAtomDoublePropertyList(rdmol, "PartialCharge")
 
         # Cleanup the rdmol
         rdmol.UpdatePropertyCache(strict=False)
@@ -3303,7 +3585,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         # can't figure out. This must be done last as calling AssignStereochemistry
         # again will delete these properties (see #196).
         for rdatom, stereochemistry in undefined_stereo_atoms.items():
-            rdatom.SetProp('_CIPCode', stereochemistry)
+            rdatom.SetProp("_CIPCode", stereochemistry)
 
         # Return non-editable version
         return Chem.Mol(rdmol)
@@ -3332,9 +3614,10 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         """
 
         from rdkit import Chem
+
         rdmol = self.to_rdkit(molecule)
         if fixed_hydrogens:
-            inchi = Chem.MolToInchi(rdmol, options='-FixedH')
+            inchi = Chem.MolToInchi(rdmol, options="-FixedH")
         else:
             inchi = Chem.MolToInchi(rdmol)
         return inchi
@@ -3363,9 +3646,10 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         """
 
         from rdkit import Chem
+
         rdmol = self.to_rdkit(molecule)
         if fixed_hydrogens:
-            inchi_key = Chem.MolToInchiKey(rdmol, options='-FixedH')
+            inchi_key = Chem.MolToInchiKey(rdmol, options="-FixedH")
         else:
             inchi_key = Chem.MolToInchiKey(rdmol)
         return inchi_key
@@ -3395,7 +3679,9 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             If RDKit was unable to parse the provided smirks/tagged smarts
         """
         from rdkit import Chem
+
         from openforcefield.typing.chemistry import SMIRKSParsingError
+
         ss = Chem.MolFromSmarts(smarts)
 
         if ss is None:
@@ -3417,8 +3703,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         return unique_tags, connections
 
     @staticmethod
-    def _find_smarts_matches(rdmol, smirks,
-                             aromaticity_model='OEAroModel_MDL'):
+    def _find_smarts_matches(rdmol, smirks, aromaticity_model="OEAroModel_MDL"):
         """Find all sets of atoms in the provided RDKit molecule that match the provided SMARTS string.
 
         Parameters
@@ -3450,20 +3735,19 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         # Make a copy of the molecule
         rdmol = Chem.Mol(rdmol)
         # Use designated aromaticity model
-        if aromaticity_model == 'OEAroModel_MDL':
-            Chem.SanitizeMol(rdmol,
-                             Chem.SANITIZE_ALL ^ Chem.SANITIZE_SETAROMATICITY)
+        if aromaticity_model == "OEAroModel_MDL":
+            Chem.SanitizeMol(rdmol, Chem.SANITIZE_ALL ^ Chem.SANITIZE_SETAROMATICITY)
             Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_MDL)
         else:
             # Only the OEAroModel_MDL is supported for now
-            raise ValueError(
-                'Unknown aromaticity model: {}'.aromaticity_models)
+            raise ValueError("Unknown aromaticity model: {}".aromaticity_models)
 
         # Set up query.
-        qmol = Chem.MolFromSmarts(smirks)  #cannot catch the error
+        qmol = Chem.MolFromSmarts(smirks)  # cannot catch the error
         if qmol is None:
             raise ValueError(
-                'RDKit could not parse the SMIRKS string "{}"'.format(smirks))
+                'RDKit could not parse the SMIRKS string "{}"'.format(smirks)
+            )
 
         # Create atom mapping for query molecule
         idx_map = dict()
@@ -3479,17 +3763,15 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         # choose the largest unsigned int without overflow
         # since the C++ signature is a uint
         max_matches = np.iinfo(np.uintc).max
-        for match in rdmol.GetSubstructMatches(qmol, uniquify=False,
-                maxMatches=max_matches):
+        for match in rdmol.GetSubstructMatches(
+            qmol, uniquify=False, maxMatches=max_matches
+        ):
             mas = [match[x] for x in map_list]
             matches.append(tuple(mas))
 
         return matches
 
-    def find_smarts_matches(self,
-                            molecule,
-                            smarts,
-                            aromaticity_model='OEAroModel_MDL'):
+    def find_smarts_matches(self, molecule, smarts, aromaticity_model="OEAroModel_MDL"):
         """
         Find all SMARTS matches for the specified molecule, using the specified aromaticity model.
 
@@ -3509,7 +3791,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         """
         rdmol = self.to_rdkit(molecule, aromaticity_model=aromaticity_model)
         return self._find_smarts_matches(
-            rdmol, smarts, aromaticity_model='OEAroModel_MDL')
+            rdmol, smarts, aromaticity_model="OEAroModel_MDL"
+        )
 
     # --------------------------------
     # Stereochemistry RDKit utilities.
@@ -3551,8 +3834,9 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         # Find all atoms with undefined stereo.
         undefined_atom_indices = []
         for atom_idx, atom in enumerate(rdmol.GetAtoms()):
-            if (atom.GetChiralTag() == Chem.ChiralType.CHI_UNSPECIFIED and
-                    atom.HasProp('_ChiralityPossible')):
+            if atom.GetChiralTag() == Chem.ChiralType.CHI_UNSPECIFIED and atom.HasProp(
+                "_ChiralityPossible"
+            ):
                 undefined_atom_indices.append(atom_idx)
         return undefined_atom_indices
 
@@ -3603,7 +3887,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         return undefined_bond_indices
 
     @classmethod
-    def _detect_undefined_stereo(cls, rdmol, err_msg_prefix='', raise_warning=False):
+    def _detect_undefined_stereo(cls, rdmol, err_msg_prefix="", raise_warning=False):
         """Raise UndefinedStereochemistryError if the RDMol has undefined stereochemistry.
 
         Parameters
@@ -3638,9 +3922,10 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         if len(undefined_atom_indices) > 0:
             msg += "Undefined chiral centers are:\n"
             for undefined_atom_idx in undefined_atom_indices:
-                msg += ' - Atom {symbol} (index {index})\n'.format(
+                msg += " - Atom {symbol} (index {index})\n".format(
                     symbol=rdmol.GetAtomWithIdx(undefined_atom_idx).GetSymbol(),
-                    index=undefined_atom_idx)
+                    index=undefined_atom_idx,
+                )
 
         # Details about undefined bond.
         if len(undefined_bond_indices) > 0:
@@ -3648,17 +3933,20 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             for undefined_bond_idx in undefined_bond_indices:
                 bond = rdmol.GetBondWithIdx(undefined_bond_idx)
                 atom1, atom2 = bond.GetBeginAtom(), bond.GetEndAtom()
-                msg += ' - Bond {bindex} (atoms {aindex1}-{aindex2} of element ({symbol1}-{symbol2})\n'.format(
+                msg += " - Bond {bindex} (atoms {aindex1}-{aindex2} of element ({symbol1}-{symbol2})\n".format(
                     bindex=undefined_bond_idx,
-                    aindex1=atom1.GetIdx(), aindex2=atom2.GetIdx(),
-                    symbol1=atom1.GetSymbol(), symbol2=atom2.GetSymbol())
+                    aindex1=atom1.GetIdx(),
+                    aindex2=atom2.GetIdx(),
+                    symbol1=atom1.GetSymbol(),
+                    symbol2=atom2.GetSymbol(),
+                )
 
         if msg is not None:
             if raise_warning:
-                msg = 'Warning (not error because allow_undefined_stereo=True): '
+                msg = "Warning (not error because allow_undefined_stereo=True): "
                 logger.warning(msg)
             else:
-                msg = 'Unable to make OFFMol from RDMol: ' + msg
+                msg = "Unable to make OFFMol from RDMol: " + msg
                 raise UndefinedStereochemistryError(msg)
 
     @staticmethod
@@ -3686,7 +3974,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             # Check that we haven't flipped this bond already.
             if bond_atom_indices in flipped:
                 # This should never happen.
-                raise RuntimeError('Cannot flip the bond direction consistently.')
+                raise RuntimeError("Cannot flip the bond direction consistently.")
 
             # Flip the bond.
             if b.GetBondDir() == Chem.BondDir.ENDUPRIGHT:
@@ -3699,7 +3987,10 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             if bond_atom_indices in paired:
                 for paired_rdbond in paired[bond_atom_indices]:
                     # Don't flip the bond that was flipped in the upper-level recursion.
-                    if (paired_rdbond.GetBeginAtomIdx(), paired_rdbond.GetEndAtomIdx()) != ignored:
+                    if (
+                        paired_rdbond.GetBeginAtomIdx(),
+                        paired_rdbond.GetEndAtomIdx(),
+                    ) != ignored:
                         # Don't flip this bond in the next recursion.
                         _flip(paired_rdbond, paired, flipped, ignored=bond_atom_indices)
 
@@ -3721,17 +4012,27 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                 continue
 
             # Isolate stereo RDKit bond object.
-            rdbond_atom_indices = (bond.atom1.molecule_atom_index,
-                                   bond.atom2.molecule_atom_index)
+            rdbond_atom_indices = (
+                bond.atom1.molecule_atom_index,
+                bond.atom2.molecule_atom_index,
+            )
             stereo_rdbond = rdmol.GetBondBetweenAtoms(*rdbond_atom_indices)
 
             # Collect all neighboring rdbonds of atom1 and atom2.
-            neighbor_rdbonds1 = [rdmol.GetBondBetweenAtoms(n.molecule_atom_index,
-                                                           bond.atom1.molecule_atom_index)
-                                 for n in bond.atom1.bonded_atoms if n != bond.atom2]
-            neighbor_rdbonds2 = [rdmol.GetBondBetweenAtoms(bond.atom2.molecule_atom_index,
-                                                           n.molecule_atom_index)
-                                 for n in bond.atom2.bonded_atoms if n != bond.atom1]
+            neighbor_rdbonds1 = [
+                rdmol.GetBondBetweenAtoms(
+                    n.molecule_atom_index, bond.atom1.molecule_atom_index
+                )
+                for n in bond.atom1.bonded_atoms
+                if n != bond.atom2
+            ]
+            neighbor_rdbonds2 = [
+                rdmol.GetBondBetweenAtoms(
+                    bond.atom2.molecule_atom_index, n.molecule_atom_index
+                )
+                for n in bond.atom2.bonded_atoms
+                if n != bond.atom1
+            ]
 
             # Select only 1 neighbor bond per atom out of the two.
             neighbor_rdbonds = []
@@ -3759,8 +4060,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             Chem.AssignStereochemistry(rdmol, cleanIt=True, force=True)
 
             # Verify that the current directions give us the desired stereochemistries.
-            assert bond.stereochemistry in {'E', 'Z'}
-            if bond.stereochemistry == 'E':
+            assert bond.stereochemistry in {"E", "Z"}
+            if bond.stereochemistry == "E":
                 desired_rdk_stereo_code = Chem.rdchem.BondStereo.STEREOE
             else:
                 desired_rdk_stereo_code = Chem.rdchem.BondStereo.STEREOZ
@@ -3775,12 +4076,14 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                 assert stereo_rdbond.GetStereo() == desired_rdk_stereo_code
 
             # Update paired bonds map.
-            neighbor_bond_indices = [(rdb.GetBeginAtomIdx(), rdb.GetEndAtomIdx()) for rdb in neighbor_rdbonds]
+            neighbor_bond_indices = [
+                (rdb.GetBeginAtomIdx(), rdb.GetEndAtomIdx()) for rdb in neighbor_rdbonds
+            ]
             for i, bond_indices in enumerate(neighbor_bond_indices):
                 try:
-                    paired_bonds[bond_indices].append(neighbor_rdbonds[1-i])
+                    paired_bonds[bond_indices].append(neighbor_rdbonds[1 - i])
                 except KeyError:
-                    paired_bonds[bond_indices] = [neighbor_rdbonds[1-i]]
+                    paired_bonds[bond_indices] = [neighbor_rdbonds[1 - i]]
 
 
 class AmberToolsToolkitWrapper(ToolkitWrapper):
@@ -3789,9 +4092,12 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
 
     .. warning :: This API is experimental and subject to change.
     """
-    _toolkit_name = 'AmberTools'
-    _toolkit_installation_instructions = 'The AmberTools toolkit (free and open source) can be found at ' \
-                                         'https://anaconda.org/omnia/ambertools'
+
+    _toolkit_name = "AmberTools"
+    _toolkit_installation_instructions = (
+        "The AmberTools toolkit (free and open source) can be found at "
+        "https://anaconda.org/omnia/ambertools"
+    )
 
     def __init__(self):
         super().__init__()
@@ -3800,11 +4106,13 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         self._toolkit_file_write_formats = []
 
         if not self.is_available():
-            raise ToolkitUnavailableException(f'The required toolkit {self._toolkit_name} is not '
-                                              f'available. {self._toolkit_installation_instructions}')
+            raise ToolkitUnavailableException(
+                f"The required toolkit {self._toolkit_name} is not "
+                f"available. {self._toolkit_installation_instructions}"
+            )
 
-        out = subprocess.check_output(['antechamber', '-L'])
-        ambertools_version = out.decode("utf-8").split('\n')[1].split()[3].strip(':')
+        out = subprocess.check_output(["antechamber", "-L"])
+        ambertools_version = out.decode("utf-8").split("\n")[1].split()[3].strip(":")
         self._toolkit_version = ambertools_version
 
         # TODO: Find AMBERHOME or executable home, checking miniconda if needed
@@ -3828,15 +4136,17 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         if ANTECHAMBER_PATH is None:
             return False
         # AmberToolsToolkitWrapper needs RDKit to do basically anything, since its interface requires SDF I/O
-        if not(RDKitToolkitWrapper.is_available()):
+        if not (RDKitToolkitWrapper.is_available()):
             return False
         return True
 
-    def assign_partial_charges(self,
-                               molecule,
-                               partial_charge_method=None,
-                               use_conformers=None,
-                               strict_n_conformers=False):
+    def assign_partial_charges(
+        self,
+        molecule,
+        partial_charge_method=None,
+        use_conformers=None,
+        strict_n_conformers=False,
+    ):
         """
         Compute partial charges with AmberTools using antechamber/sqm, and assign
         the new values to the partial_charges attribute.
@@ -3869,31 +4179,35 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
 
         import os
         import subprocess
+
         from openforcefield.topology import Molecule
 
         if partial_charge_method is None:
-            partial_charge_method = 'am1-mulliken'
+            partial_charge_method = "am1-mulliken"
         else:
             # Standardize method name for string comparisons
             partial_charge_method = partial_charge_method.lower()
 
-        SUPPORTED_CHARGE_METHODS = {'am1bcc': {'antechamber_keyword':'bcc',
-                                               'min_confs': 1,
-                                               'max_confs': 1,
-                                               'rec_confs': 1,
-                                               },
-                                    'am1-mulliken': {'antechamber_keyword': 'mul',
-                                                     'min_confs': 1,
-                                                     'max_confs': 1,
-                                                     'rec_confs': 1,
-                                                     },
-                                    'gasteiger': {'antechamber_keyword': 'gas',
-                                                  'min_confs': 0,
-                                                  'max_confs': 0,
-                                                  'rec_confs': 0,
-                                                  }
-                                    }
-
+        SUPPORTED_CHARGE_METHODS = {
+            "am1bcc": {
+                "antechamber_keyword": "bcc",
+                "min_confs": 1,
+                "max_confs": 1,
+                "rec_confs": 1,
+            },
+            "am1-mulliken": {
+                "antechamber_keyword": "mul",
+                "min_confs": 1,
+                "max_confs": 1,
+                "rec_confs": 1,
+            },
+            "gasteiger": {
+                "antechamber_keyword": "gas",
+                "min_confs": 0,
+                "max_confs": 0,
+                "rec_confs": 0,
+            },
+        }
 
         if partial_charge_method not in SUPPORTED_CHARGE_METHODS:
             raise ChargeMethodUnavailableError(
@@ -3907,28 +4221,34 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         mol_copy = Molecule(molecule)
 
         if use_conformers is None:
-            if charge_method['rec_confs'] == 0:
+            if charge_method["rec_confs"] == 0:
                 mol_copy._conformers = None
             else:
-                mol_copy.generate_conformers(n_conformers=charge_method['rec_confs'],
-                                             rms_cutoff=0.25*unit.angstrom,
-                                             toolkit_registry=RDKitToolkitWrapper())
+                mol_copy.generate_conformers(
+                    n_conformers=charge_method["rec_confs"],
+                    rms_cutoff=0.25 * unit.angstrom,
+                    toolkit_registry=RDKitToolkitWrapper(),
+                )
             # TODO: What's a "best practice" RMS cutoff to use here?
         else:
             mol_copy._conformers = None
             for conformer in use_conformers:
                 mol_copy.add_conformer(conformer)
-            self._check_n_conformers(mol_copy,
-                                     partial_charge_method=partial_charge_method,
-                                     min_confs=charge_method['min_confs'],
-                                     max_confs=charge_method['max_confs'],
-                                     strict_n_conformers=strict_n_conformers)
+            self._check_n_conformers(
+                mol_copy,
+                partial_charge_method=partial_charge_method,
+                min_confs=charge_method["min_confs"],
+                max_confs=charge_method["max_confs"],
+                strict_n_conformers=strict_n_conformers,
+            )
 
         # Find the path to antechamber
         # TODO: How should we implement find_executable?
         ANTECHAMBER_PATH = find_executable("antechamber")
         if ANTECHAMBER_PATH is None:
-            raise AntechamberNotFoundError("Antechamber not found, cannot run charge_mol()")
+            raise AntechamberNotFoundError(
+                "Antechamber not found, cannot run charge_mol()"
+            )
 
         # Compute charges
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -3937,28 +4257,66 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
                 # Write out molecule in SDF format
                 ## TODO: How should we handle multiple conformers?
                 self._rdkit_toolkit_wrapper.to_file(
-                    mol_copy, 'molecule.sdf', file_format='sdf')
+                    mol_copy, "molecule.sdf", file_format="sdf"
+                )
                 # Compute desired charges
                 # TODO: Add error handling if antechamber chokes
                 # TODO: Add something cleaner than os.system
-                short_charge_method = charge_method['antechamber_keyword']
-                subprocess.check_output([
-                    "antechamber", "-i", "molecule.sdf", "-fi", "sdf", "-o", "charged.mol2", "-fo",
-                    "mol2", "-pf", "yes", "-dr", "n", "-c", short_charge_method, "-nc", str(net_charge)]
-                 )
+                short_charge_method = charge_method["antechamber_keyword"]
+                subprocess.check_output(
+                    [
+                        "antechamber",
+                        "-i",
+                        "molecule.sdf",
+                        "-fi",
+                        "sdf",
+                        "-o",
+                        "charged.mol2",
+                        "-fo",
+                        "mol2",
+                        "-pf",
+                        "yes",
+                        "-dr",
+                        "n",
+                        "-c",
+                        short_charge_method,
+                        "-nc",
+                        str(net_charge),
+                    ]
+                )
                 # Write out just charges
-                subprocess.check_output([
-                    "antechamber", "-dr", "n", "-i", "charged.mol2", "-fi", "mol2", "-o", "charges2.mol2", "-fo",
-                    "mol2", "-c", "wc",  "-cf", "charges.txt", "-pf", "yes"])
+                subprocess.check_output(
+                    [
+                        "antechamber",
+                        "-dr",
+                        "n",
+                        "-i",
+                        "charged.mol2",
+                        "-fi",
+                        "mol2",
+                        "-o",
+                        "charges2.mol2",
+                        "-fo",
+                        "mol2",
+                        "-c",
+                        "wc",
+                        "-cf",
+                        "charges.txt",
+                        "-pf",
+                        "yes",
+                    ]
+                )
                 # Check to ensure charges were actually produced
-                if not os.path.exists('charges.txt'):
+                if not os.path.exists("charges.txt"):
                     # TODO: copy files into local directory to aid debugging?
                     raise ChargeCalculationError(
                         "Antechamber/sqm partial charge calculation failed on "
                         "molecule {} (SMILES {})".format(
-                            molecule.name, molecule.to_smiles()))
+                            molecule.name, molecule.to_smiles()
+                        )
+                    )
                 # Read the charges
-                with open('charges.txt', 'r') as infile:
+                with open("charges.txt", "r") as infile:
                     contents = infile.read()
                 text_charges = contents.split()
                 charges = np.zeros([molecule.n_atoms], np.float64)
@@ -3968,7 +4326,9 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         charges = unit.Quantity(charges, unit.elementary_charge)
         molecule.partial_charges = charges
 
-    def compute_partial_charges_am1bcc(self, molecule, use_conformers=None, strict_n_conformers=False):
+    def compute_partial_charges_am1bcc(
+        self, molecule, use_conformers=None, strict_n_conformers=False
+    ):
         """
         Compute partial charges with AmberTools using antechamber/sqm. This will calculate AM1-BCC charges on the first
         conformer only.
@@ -3994,14 +4354,19 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         """
 
         import warnings
-        warnings.warn("compute_partial_charges_am1bcc will be deprecated in an upcoming release. "
-                      "Use assign_partial_charges(partial_charge_method='am1bcc') instead.",
-                      DeprecationWarning)
 
-        self.assign_partial_charges(molecule,
-                                    partial_charge_method="AM1BCC",
-                                    use_conformers=use_conformers,
-                                    strict_n_conformers=strict_n_conformers)
+        warnings.warn(
+            "compute_partial_charges_am1bcc will be deprecated in an upcoming release. "
+            "Use assign_partial_charges(partial_charge_method='am1bcc') instead.",
+            DeprecationWarning,
+        )
+
+        self.assign_partial_charges(
+            molecule,
+            partial_charge_method="AM1BCC",
+            use_conformers=use_conformers,
+            strict_n_conformers=strict_n_conformers,
+        )
         return molecule.partial_charges
 
     def _modify_sqm_in_to_request_bond_orders(self, file_path):
@@ -4031,14 +4396,16 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         # First, split the sqm.in text at the "/" mark at the end of the header
         datasp = data.split("/")
         # Insert the "printbondorders" directive in a new line and re-add the "/"
-        datasp.insert(1, 'printbondorders=1, \n /')
+        datasp.insert(1, "printbondorders=1, \n /")
         # Reassemble the file text
-        new_data = ''.join(datasp)
+        new_data = "".join(datasp)
         # Write the new file contents, overwriting the original file.
-        with open(file_path, 'w') as of:
+        with open(file_path, "w") as of:
             of.write(new_data)
 
-    def _get_fractional_bond_orders_from_sqm_out(self, file_path, validate_elements=None):
+    def _get_fractional_bond_orders_from_sqm_out(
+        self, file_path, validate_elements=None
+    ):
         """
         Process a SQM output file containing bond orders, and return a dict of the form
         dict[atom_1_index, atom_2_index] = fractional_bond_order
@@ -4073,16 +4440,16 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
 
         data = open(file_path).read()
 
-        begin_sep = ''' Bond Orders
+        begin_sep = """ Bond Orders
  
   QMMM:    NUM1 ELEM1 NUM2 ELEM2      BOND_ORDER
-'''
-        end_sep = '''
+"""
+        end_sep = """
 
            --------- Calculation Completed ----------
-'''
+"""
         # Extract the chunk of text between begin_sep and end_sep, and split it by newline
-        fbo_lines = data.split(begin_sep)[1].split(end_sep)[0].split('\n')
+        fbo_lines = data.split(begin_sep)[1].split(end_sep)[0].split("\n")
 
         # Iterate over the lines and populate the dict to return
         bond_orders = dict()
@@ -4096,14 +4463,16 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
 
             # If validate_elements was provided, ensure that the ordering of element symbols is what we expected
             if validate_elements is not None:
-                if ((atom_element_1 != validate_elements[atom_index_1-1]) or
-                    (atom_element_2 != validate_elements[atom_index_2-1])):
-                    #raise ValueError('\n'.join(fbo_lines))
-                    raise ValueError(f'Elements or indexing in sqm output differ from expectation. '
-                                     f'Expected {validate_elements[atom_index_1]} with index {atom_index_1} and '
-                                     f'{validate_elements[atom_index_2]} with index {atom_index_2}, '
-                                     f'but SQM output has {atom_element_1} and {atom_element_2} for the same atoms.')
-
+                if (atom_element_1 != validate_elements[atom_index_1 - 1]) or (
+                    atom_element_2 != validate_elements[atom_index_2 - 1]
+                ):
+                    # raise ValueError('\n'.join(fbo_lines))
+                    raise ValueError(
+                        f"Elements or indexing in sqm output differ from expectation. "
+                        f"Expected {validate_elements[atom_index_1]} with index {atom_index_1} and "
+                        f"{validate_elements[atom_index_2]} with index {atom_index_2}, "
+                        f"but SQM output has {atom_element_1} and {atom_element_2} for the same atoms."
+                    )
 
             # To make lookup easier, we identify bonds as integer tuples with the lowest atom index
             # first and the highest second.
@@ -4111,7 +4480,9 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
             bond_orders[index_tuple] = bond_order
         return bond_orders
 
-    def assign_fractional_bond_orders(self, molecule, bond_order_model=None, use_conformers=None):
+    def assign_fractional_bond_orders(
+        self, molecule, bond_order_model=None, use_conformers=None
+    ):
         """
         Update and store list of bond orders this molecule. Bond orders are stored on each
         bond, in the `bond.fractional_bond_order` attribute.
@@ -4129,6 +4500,7 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
             of conformers will be generated by an available ToolkitWrapper.
          """
         from openforcefield.topology import Molecule
+
         # Find the path to antechamber
         # TODO: How should we implement find_executable?
         ANTECHAMBER_PATH = find_executable("antechamber")
@@ -4155,22 +4527,27 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
                 "molecule.generate_conformers() before calling molecule.assign_fractional_bond_orders"
             )
         if len(temp_mol.conformers) > 1:
-            logger.warning(f"Warning: In AmberToolsToolkitWrapper.assign_fractional_bond_orders: "
-                           f"Molecule '{molecule.name}' has more than one conformer, but this function "
-                           f"will only generate fractional bond orders for the first one.")
-
+            logger.warning(
+                f"Warning: In AmberToolsToolkitWrapper.assign_fractional_bond_orders: "
+                f"Molecule '{molecule.name}' has more than one conformer, but this function "
+                f"will only generate fractional bond orders for the first one."
+            )
 
         # Compute bond orders
-        bond_order_model_to_antechamber_keyword = {'am1-wiberg': 'mul'}
-        supported_bond_order_models = list(bond_order_model_to_antechamber_keyword.keys())
+        bond_order_model_to_antechamber_keyword = {"am1-wiberg": "mul"}
+        supported_bond_order_models = list(
+            bond_order_model_to_antechamber_keyword.keys()
+        )
         if bond_order_model is None:
-            bond_order_model = 'am1-wiberg'
+            bond_order_model = "am1-wiberg"
 
         bond_order_model = bond_order_model.lower()
 
         if bond_order_model not in supported_bond_order_models:
-            raise ValueError(f"Bond order model '{bond_order_model}' is not supported by AmberToolsToolkitWrapper. "
-                             f"Supported models are {supported_bond_order_models}")
+            raise ValueError(
+                f"Bond order model '{bond_order_model}' is not supported by AmberToolsToolkitWrapper. "
+                f"Supported models are {supported_bond_order_models}"
+            )
         ac_charge_keyword = bond_order_model_to_antechamber_keyword[bond_order_model]
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -4178,14 +4555,29 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
                 net_charge = temp_mol.total_charge
                 # Write out molecule in SDF format
                 self._rdkit_toolkit_wrapper.to_file(
-                    temp_mol, 'molecule.sdf', file_format='sdf')
+                    temp_mol, "molecule.sdf", file_format="sdf"
+                )
                 # Prepare sqm.in file as if we were going to run charge calc
                 # TODO: Add error handling if antechamber chokes
-                subprocess.check_output([
-                    "antechamber", "-i", "molecule.sdf", "-fi", "sdf", "-o",
-                    "sqm.in", "-fo", "sqmcrt", "-pf", "yes", "-c", ac_charge_keyword,
-                    "-nc", str(net_charge)
-                ])
+                subprocess.check_output(
+                    [
+                        "antechamber",
+                        "-i",
+                        "molecule.sdf",
+                        "-fi",
+                        "sdf",
+                        "-o",
+                        "sqm.in",
+                        "-fo",
+                        "sqmcrt",
+                        "-pf",
+                        "yes",
+                        "-c",
+                        ac_charge_keyword,
+                        "-nc",
+                        str(net_charge),
+                    ]
+                )
                 # Modify sqm.in to request bond order calculation
                 self._modify_sqm_in_to_request_bond_orders("sqm.in")
                 # Run sqm to get bond orders
@@ -4193,8 +4585,9 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
                 # Ensure that antechamber/sqm did not change the indexing by checking against
                 # an ordered list of element symbols for this molecule
                 expected_elements = [at.element.symbol for at in molecule.atoms]
-                bond_orders = self._get_fractional_bond_orders_from_sqm_out('sqm.out',
-                                                                            validate_elements=expected_elements)
+                bond_orders = self._get_fractional_bond_orders_from_sqm_out(
+                    "sqm.out", validate_elements=expected_elements
+                )
 
         # Note that sqm calculate WBOs for ALL PAIRS of atoms, not just those that have
         # bonds defined in the original molecule. So here we iterate over the bonds in
@@ -4203,14 +4596,15 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
             # The atom index tuples that act as bond indices are ordered from lowest to highest by
             # _get_fractional_bond_orders_from_sqm_out, so here we make sure that we look them up in
             # sorted order as well
-            sorted_atom_indices = sorted(tuple([bond.atom1_index+1, bond.atom2_index+1]))
+            sorted_atom_indices = sorted(
+                tuple([bond.atom1_index + 1, bond.atom2_index + 1])
+            )
             bond.fractional_bond_order = bond_orders[tuple(sorted_atom_indices)]
 
 
-
-#=============================================================================================
+# =============================================================================================
 # Toolkit registry
-#=============================================================================================
+# =============================================================================================
 
 
 class ToolkitRegistry:
@@ -4253,10 +4647,12 @@ class ToolkitRegistry:
     .. warning :: This API is experimental and subject to change.
     """
 
-    def __init__(self,
-                 register_imported_toolkit_wrappers=False,
-                 toolkit_precedence=None,
-                 exception_if_unavailable=True):
+    def __init__(
+        self,
+        register_imported_toolkit_wrappers=False,
+        toolkit_precedence=None,
+        exception_if_unavailable=True,
+    ):
         """
         Create an empty toolkit registry.
 
@@ -4277,8 +4673,10 @@ class ToolkitRegistry:
 
         if toolkit_precedence is None:
             toolkit_precedence = [
-                OpenEyeToolkitWrapper, RDKitToolkitWrapper,
-                AmberToolsToolkitWrapper, BuiltInToolkitWrapper
+                OpenEyeToolkitWrapper,
+                RDKitToolkitWrapper,
+                AmberToolsToolkitWrapper,
+                BuiltInToolkitWrapper,
             ]
 
         if register_imported_toolkit_wrappers:
@@ -4293,7 +4691,9 @@ class ToolkitRegistry:
                 toolkit_precedence.append(toolkit)
 
         for toolkit in toolkit_precedence:
-            self.register_toolkit(toolkit, exception_if_unavailable=exception_if_unavailable)
+            self.register_toolkit(
+                toolkit, exception_if_unavailable=exception_if_unavailable
+            )
 
     @property
     def registered_toolkits(self):
@@ -4318,11 +4718,11 @@ class ToolkitRegistry:
         .. warning :: This API is experimental and subject to change.
 
         """
-        return dict((tk.toolkit_name, tk.toolkit_version) for tk in self.registered_toolkits)
+        return dict(
+            (tk.toolkit_name, tk.toolkit_version) for tk in self.registered_toolkits
+        )
 
-    def register_toolkit(self,
-                         toolkit_wrapper,
-                         exception_if_unavailable=True):
+    def register_toolkit(self, toolkit_wrapper, exception_if_unavailable=True):
         """
         Register the provided toolkit wrapper class, instantiating an object of it.
 
@@ -4346,18 +4746,22 @@ class ToolkitRegistry:
             try:
                 toolkit_wrapper = toolkit_wrapper()
             except ToolkitUnavailableException:
-                msg = "Unable to load toolkit '{}'. ".format(toolkit_wrapper._toolkit_name)
+                msg = "Unable to load toolkit '{}'. ".format(
+                    toolkit_wrapper._toolkit_name
+                )
                 if exception_if_unavailable:
                     raise ToolkitUnavailableException(msg)
                 else:
-                    if 'OpenEye' in msg:
-                        msg += "The Open Force Field Toolkit does not require the OpenEye Toolkits, and can " \
-                               "use RDKit/AmberTools instead. However, if you have a valid license for the " \
-                               "OpenEye Toolkits, consider installing them for faster performance and additional " \
-                               "file format support: " \
-                               "https://docs.eyesopen.com/toolkits/python/quickstart-python/linuxosx.html " \
-                               "OpenEye offers free Toolkit licenses for academics: " \
-                               "https://www.eyesopen.com/academic-licensing"
+                    if "OpenEye" in msg:
+                        msg += (
+                            "The Open Force Field Toolkit does not require the OpenEye Toolkits, and can "
+                            "use RDKit/AmberTools instead. However, if you have a valid license for the "
+                            "OpenEye Toolkits, consider installing them for faster performance and additional "
+                            "file format support: "
+                            "https://docs.eyesopen.com/toolkits/python/quickstart-python/linuxosx.html "
+                            "OpenEye offers free Toolkit licenses for academics: "
+                            "https://www.eyesopen.com/academic-licensing"
+                        )
                     logger.warning(f"Warning: {msg}")
                 return
 
@@ -4427,8 +4831,9 @@ class ToolkitRegistry:
         """
         if not isinstance(toolkit_wrapper, ToolkitWrapper):
             msg = "Something other than a ToolkitWrapper object was passed to ToolkitRegistry.add_toolkit()\n"
-            msg += "Given object {} of type {}".format(toolkit_wrapper,
-                                                       type(toolkit_wrapper))
+            msg += "Given object {} of type {}".format(
+                toolkit_wrapper, type(toolkit_wrapper)
+            )
             raise InvalidToolkitError(msg)
         self._toolkits.append(toolkit_wrapper)
 
@@ -4475,8 +4880,9 @@ class ToolkitRegistry:
         # No toolkit was found to provide the requested capability
         # TODO: Can we help developers by providing a check for typos in expected method names?
         msg = 'No registered toolkits can provide the capability "{}".\n'.format(
-            method_name)
-        msg += 'Available toolkits are: {}\n'.format(self.registered_toolkits)
+            method_name
+        )
+        msg += "Available toolkits are: {}\n".format(self.registered_toolkits)
         raise NotImplementedError(msg)
 
     # TODO: Can we instead register available methods directly with `ToolkitRegistry`, so we can just use `ToolkitRegistry.method()`?
@@ -4537,33 +4943,36 @@ class ToolkitRegistry:
 
         # No toolkit was found to provide the requested capability
         # TODO: Can we help developers by providing a check for typos in expected method names?
-        msg = f'No registered toolkits can provide the capability "{method_name}" ' \
-              f'for args "{args}" and kwargs "{kwargs}"\n'
+        msg = (
+            f'No registered toolkits can provide the capability "{method_name}" '
+            f'for args "{args}" and kwargs "{kwargs}"\n'
+        )
 
-        msg += 'Available toolkits are: {}\n'.format(self.registered_toolkits)
+        msg += "Available toolkits are: {}\n".format(self.registered_toolkits)
         # Append information about toolkits that implemented the method, but could not handle the provided parameters
         for toolkit, error in errors:
-            msg += ' {} {} : {}\n'.format(toolkit, type(error),  error)
+            msg += " {} {} : {}\n".format(toolkit, type(error), error)
         raise ValueError(msg)
 
     def __repr__(self):
-        return f"ToolkitRegistry containing " + \
-               ', '.join([tk.toolkit_name for tk in ToolkitRegistry()._toolkits])
+        return f"ToolkitRegistry containing " + ", ".join(
+            [tk.toolkit_name for tk in ToolkitRegistry()._toolkits]
+        )
 
 
-#=============================================================================================
+# =============================================================================================
 # GLOBAL TOOLKIT REGISTRY
-#=============================================================================================
+# =============================================================================================
 
 # Create global toolkit registry, where all available toolkits are registered
 # TODO: Should this be all lowercase since it's not a constant?
 GLOBAL_TOOLKIT_REGISTRY = ToolkitRegistry(
-    register_imported_toolkit_wrappers=True,
-    exception_if_unavailable=False)
+    register_imported_toolkit_wrappers=True, exception_if_unavailable=False
+)
 
-#=============================================================================================
+# =============================================================================================
 # SET GLOBAL TOOLKIT-AVAIABLE VARIABLES
-#=============================================================================================
+# =============================================================================================
 
 OPENEYE_AVAILABLE = False
 RDKIT_AVAILABLE = False
@@ -4578,26 +4987,31 @@ for toolkit in GLOBAL_TOOLKIT_REGISTRY.registered_toolkits:
     elif type(toolkit) is AmberToolsToolkitWrapper:
         AMBERTOOLS_AVAILABLE = True
 
-#=============================================================================================
+# =============================================================================================
 # WARN IF INSUFFICIENT TOOLKITS INSTALLED
-#=============================================================================================
+# =============================================================================================
 
 # Define basic toolkits that handle essential file I/O
 
 BASIC_CHEMINFORMATICS_TOOLKITS = [RDKitToolkitWrapper, OpenEyeToolkitWrapper]
 
 # Ensure we have at least one basic toolkit
-if sum([
-        tk.is_available()
-        for tk in GLOBAL_TOOLKIT_REGISTRY.registered_toolkits
-        if type(tk) in BASIC_CHEMINFORMATICS_TOOLKITS
-]) == 0:
-    msg = 'WARNING: No basic cheminformatics toolkits are available.\n'
-    msg += 'At least one basic toolkit is required to handle SMARTS matching and file I/O. \n'
-    msg += 'Please install at least one of the following basic toolkits:\n'
+if (
+    sum(
+        [
+            tk.is_available()
+            for tk in GLOBAL_TOOLKIT_REGISTRY.registered_toolkits
+            if type(tk) in BASIC_CHEMINFORMATICS_TOOLKITS
+        ]
+    )
+    == 0
+):
+    msg = "WARNING: No basic cheminformatics toolkits are available.\n"
+    msg += "At least one basic toolkit is required to handle SMARTS matching and file I/O. \n"
+    msg += "Please install at least one of the following basic toolkits:\n"
     for wrapper in all_subclasses(ToolkitWrapper):
         if wrapper.toolkit_name is not None:
-            msg += '{} : {}\n'.format(
-                wrapper._toolkit_name,
-                wrapper._toolkit_installation_instructions)
+            msg += "{} : {}\n".format(
+                wrapper._toolkit_name, wrapper._toolkit_installation_instructions
+            )
     print(msg)
