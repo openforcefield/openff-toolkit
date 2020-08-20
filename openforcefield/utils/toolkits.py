@@ -37,6 +37,7 @@ __all__ = [
     "OpenEyeToolkitWrapper",
     "RDKitToolkitWrapper",
     "AmberToolsToolkitWrapper",
+    "BuiltInToolkitWrapper",
     "ToolkitRegistry",
     "GLOBAL_TOOLKIT_REGISTRY",
     "OPENEYE_AVAILABLE",
@@ -4642,11 +4643,8 @@ class ToolkitRegistry:
 
         toolkits_to_register = list()
 
-        if toolkit_precedence:
-            toolkits_to_register = toolkit_precedence
-
         if register_imported_toolkit_wrappers:
-            if not toolkit_precedence:
+            if toolkit_precedence is None:
                 toolkit_precedence = [
                     OpenEyeToolkitWrapper,
                     RDKitToolkitWrapper,
@@ -4657,6 +4655,9 @@ class ToolkitRegistry:
             for toolkit in toolkit_precedence:
                 if toolkit in all_importable_toolkit_wrappers:
                     toolkits_to_register.append(toolkit)
+        else:
+            if toolkit_precedence:
+                toolkits_to_register = toolkit_precedence
 
         if toolkits_to_register:
             for toolkit in toolkits_to_register:

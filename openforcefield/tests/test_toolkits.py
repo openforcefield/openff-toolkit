@@ -3096,37 +3096,40 @@ class TestToolkitRegistry:
         not RDKitToolkitWrapper.is_available(), reason="RDKit Toolkit not available"
     )
     @pytest.mark.skipif(
-        OpenEyeToolkitWrapper.is_available(),
-        reason="Skipping while OpenEye is available",
+        not OpenEyeToolkitWrapper.is_available(),
+        reason="OpenEye Toolkit not available",
     )
     def test_register_imported_toolkit_wrappers(self):
         """Test that imported toolkits are registered, and in the expected order"""
         # Ensure the default order is respected
         default_registry = ToolkitRegistry(register_imported_toolkit_wrappers=True)
 
-        assert len(default_registry) == 4
-        assert isinstance(
-            default_registry.registered_toolkits[0], OpenEyeToolkitWrapper
-        )
-        assert isinstance(default_registry.registered_toolkits[0], RDKitToolkitWrapper)
-        assert isinstance(
-            default_registry.registered_toolkits[0], AmberToolsToolkitWrapper
-        )
-        assert isinstance(
-            default_registry.registered_toolkits[0], BuiltInToolkitWrapper
-        )
+        assert len(default_registry.registered_toolkits) == 4
+
+        expected_toolkits = [
+            OpenEyeToolkitWrapper,
+            RDKitToolkitWrapper,
+            AmberToolsToolkitWrapper,
+            BuiltInToolkitWrapper,
+        ]
+        for found, expected in zip(
+            default_registry.registered_toolkits, expected_toolkits
+        ):
+            assert isinstance(found, expected)
 
         # Test forcing a non-default order
         non_default_registry = ToolkitRegistry(
-            toolkit_precedence=[RDKitToolkitWrapper, AmberToolsToolkitWrapper],
+            toolkit_precedence=[BuiltInToolkitWrapper, RDKitToolkitWrapper],
             register_imported_toolkit_wrappers=True,
         )
 
-        assert len(default_registry) == 2
-        assert isinstance(non_default_registry.registered_toolkits[0], RDKitToolkitWrapper)
-        assert isinstance(
-            non_default_registry.registered_toolkits[1], AmberToolsToolkitWrapper
-        )
+        assert len(non_default_registry.registered_toolkits) == 2
+
+        expected_toolkits = [BuiltInToolkitWrapper, RDKitToolkitWrapper]
+        for found, expected in zip(
+            non_default_registry.registered_toolkits, expected_toolkits
+        ):
+            assert isinstance(found, expected)
 
     @pytest.mark.skipif(
         not RDKitToolkitWrapper.is_available(), reason="RDKit Toolkit not available"
