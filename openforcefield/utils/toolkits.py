@@ -366,6 +366,9 @@ class ToolkitWrapper:
         else:
             warnings.warn(wrong_confs_msg, IncorrectNumConformersWarning)
 
+    def __repr__(self):
+        return f"ToolkitWrapper around {self.toolkit_name} version {self.toolkit_version}"
+
 
 @inherit_docstrings
 class BuiltInToolkitWrapper(ToolkitWrapper):
@@ -4542,6 +4545,10 @@ class ToolkitRegistry:
         for toolkit, error in errors:
             msg += ' {} {} : {}\n'.format(toolkit, type(error),  error)
         raise ValueError(msg)
+
+    def __repr__(self):
+        return f"ToolkitRegistry containing " + \
+               ', '.join([tk.toolkit_name for tk in ToolkitRegistry()._toolkits])
 
 
 #=============================================================================================
