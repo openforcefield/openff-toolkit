@@ -4956,7 +4956,7 @@ class ToolkitRegistry:
 
     def __repr__(self):
         return f"ToolkitRegistry containing " + ", ".join(
-            [tk.toolkit_name for tk in ToolkitRegistry()._toolkits]
+            [tk.toolkit_name for tk in self._toolkits]
         )
 
 
