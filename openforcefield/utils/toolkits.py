@@ -4596,7 +4596,7 @@ class ToolkitRegistry:
     >>> for toolkit in toolkits:
     ...     toolkit_registry.register_toolkit(toolkit)
 
-    Register all available toolkits in arbitrary order
+    Register all available toolkits (in the order OpenEye, RDKit, AmberTools, built-in)
 
     >>> from openforcefield.utils import all_subclasses
     >>> toolkits = all_subclasses(ToolkitWrapper)
@@ -4625,41 +4625,44 @@ class ToolkitRegistry:
         Parameters
         ----------
         register_imported_toolkit_wrappers : bool, optional, default=False
-            If True, will attempt to register all imported ToolkitWrapper subclasses that can be found, in no particular
-             order.
+            If True, will attempt to register all imported ToolkitWrapper subclasses that can be
+            found in the order of toolkit_precedence, if specified. If toolkit_precedence is not
+            specified, the default order is [OpenEyeToolkitWrapper, RDKitToolkitWrapper,
+            AmberToolsToolkitWrapper, BuiltInToolkitWrapper].
+
         toolkit_precedence : list, optional, default=None
             List of toolkit wrapper classes, in order of desired precedence when performing molecule operations. If
-            None, defaults to [OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper].
+            None, no toolkits will be registered.
+
         exception_if_unavailable : bool, optional, default=True
             If True, an exception will be raised if the toolkit is unavailable
 
         """
-
         self._toolkits = list()
 
-        if toolkit_precedence is None:
-            toolkit_precedence = [
-                OpenEyeToolkitWrapper,
-                RDKitToolkitWrapper,
-                AmberToolsToolkitWrapper,
-                BuiltInToolkitWrapper,
-            ]
+        toolkits_to_register = list()
+
+        if toolkit_precedence:
+            toolkits_to_register = toolkit_precedence
 
         if register_imported_toolkit_wrappers:
-            # TODO: The precedence ordering of any non-specified remaining wrappers will be arbitrary.
-            # How do we fix this?
-            # Note: The precedence of non-specifid wrappers may be determined by the order in which
-            # they were defined
+            if not toolkit_precedence:
+                toolkit_precedence = [
+                    OpenEyeToolkitWrapper,
+                    RDKitToolkitWrapper,
+                    AmberToolsToolkitWrapper,
+                    BuiltInToolkitWrapper,
+                ]
             all_importable_toolkit_wrappers = all_subclasses(ToolkitWrapper)
-            for toolkit in all_importable_toolkit_wrappers:
-                if toolkit in toolkit_precedence:
-                    continue
-                toolkit_precedence.append(toolkit)
+            for toolkit in toolkit_precedence:
+                if toolkit in all_importable_toolkit_wrappers:
+                    toolkits_to_register.append(toolkit)
 
-        for toolkit in toolkit_precedence:
-            self.register_toolkit(
-                toolkit, exception_if_unavailable=exception_if_unavailable
-            )
+        if toolkits_to_register:
+            for toolkit in toolkits_to_register:
+                self.register_toolkit(
+                    toolkit, exception_if_unavailable=exception_if_unavailable
+                )
 
     @property
     def registered_toolkits(self):

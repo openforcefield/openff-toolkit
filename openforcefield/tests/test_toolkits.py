@@ -3087,6 +3087,47 @@ class TestToolkitWrapper:
 class TestToolkitRegistry:
     """Test the ToolkitRegistry class"""
 
+    def test_register_empty_toolkit(self):
+        """Ensure the default ToolkitRegistry init returns an empty registry"""
+        registry = ToolkitRegistry()
+        assert len(registry.registered_toolkits) == 0
+
+    @pytest.mark.skipif(
+        not RDKitToolkitWrapper.is_available(), reason="RDKit Toolkit not available"
+    )
+    @pytest.mark.skipif(
+        OpenEyeToolkitWrapper.is_available(),
+        reason="Skipping while OpenEye is available",
+    )
+    def test_register_imported_toolkit_wrappers(self):
+        """Test that imported toolkits are registered, and in the expected order"""
+        # Ensure the default order is respected
+        default_registry = ToolkitRegistry(register_imported_toolkit_wrappers=True)
+
+        assert len(default_registry) == 4
+        assert isinstance(
+            default_registry.registered_toolkits[0], OpenEyeToolkitWrapper
+        )
+        assert isinstance(default_registry.registered_toolkits[0], RDKitToolkitWrapper)
+        assert isinstance(
+            default_registry.registered_toolkits[0], AmberToolsToolkitWrapper
+        )
+        assert isinstance(
+            default_registry.registered_toolkits[0], BuiltInToolkitWrapper
+        )
+
+        # Test forcing a non-default order
+        non_default_registry = ToolkitRegistry(
+            toolkit_precedence=[RDKitToolkitWrapper, AmberToolsToolkitWrapper],
+            register_imported_toolkit_wrappers=True,
+        )
+
+        assert len(default_registry) == 2
+        assert isinstance(non_default_registry.registered_toolkits[0], RDKitToolkitWrapper)
+        assert isinstance(
+            non_default_registry.registered_toolkits[1], AmberToolsToolkitWrapper
+        )
+
     @pytest.mark.skipif(
         not RDKitToolkitWrapper.is_available(), reason="RDKit Toolkit not available"
     )
