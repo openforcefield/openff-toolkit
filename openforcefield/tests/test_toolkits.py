@@ -721,6 +721,9 @@ class TestOpenEyeToolkitWrapper:
                 molecule_copy, atom_stereochemistry_matching=not undefined_stereo
             )
 
+    @pytest.mark.skipif(
+        not OpenEyeToolkitWrapper.is_available(), reason="OpenEye Toolkit not available"
+    )
     def test_from_iupac_failure(self):
         """Test that invalid IUPAC names are handled properly"""
         toolkit = OpenEyeToolkitWrapper()
