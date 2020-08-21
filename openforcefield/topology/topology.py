@@ -692,7 +692,7 @@ class TopologyVirtualParticle(TopologyVirtualSite):
 
         Returns
         -------
-        int
+        idx : int
             The index of this particle in its parent topology.
         """
         # This assumes that the particles in a topology are listed with all atoms from all TopologyMolecules
