@@ -1620,8 +1620,7 @@ class ParameterHandler(_ParameterAttributeHandler):
                 # Perform some dynamic type checking if a type tag is specified
                 if "type" in unitless_param_dict:
                     self._INFOTYPE = unitless_param_dict["type"]
-                    element_name = self._INFOTYPE._ELEMENT_NAME
-                elif self._INFOTYPE is not None:
+                if self._INFOTYPE is not None:
                     element_name = self._INFOTYPE._ELEMENT_NAME
 
                 # Skip sections that aren't the parameter list
