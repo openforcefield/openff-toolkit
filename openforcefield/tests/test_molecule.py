@@ -1825,7 +1825,7 @@ class TestMolecule:
         assert vsite1 in atom2.virtual_sites
         assert vsite1.distance == distance
 
-        # Make an "everything bagel" virtual site
+        # Make a virtual site using all arguments
         vsite2_index = molecule.add_bond_charge_virtual_site([atom2, atom3],
                                                              distance,
                                                              sigma=0.1*unit.angstrom,
