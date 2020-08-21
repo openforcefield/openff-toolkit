@@ -973,7 +973,7 @@ class ForceField:
                 for parameter in parameter_list_dict:
                     assert ("type" in parameter), "VirtualSites must specify a type: {:s}".format(parameter.__repr__())
                     infotype = parameter["type"]
-                    if type(ph_class._INFOTYPE) == type(property()):
+                    if type(ph_class._INFOTYPE) == property:
                         ph_class._INFOTYPE.__set__(ph_class, infotype)
                         infotype = ph_class._INFOTYPE.__get__(ph_class, ph_class)
                     else:
