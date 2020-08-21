@@ -1545,6 +1545,50 @@ class TestForceField:
         with pytest.raises(NotImplementedError):
             forcefield[type(bonds)]
 
+    def test_hash_cosmetic(self):
+        """Test that adding a cosmetic attribute does not change the hash"""
+        forcefield = ForceField("test_forcefields/smirnoff99Frosst.offxml")
+
+        hash_without_cosmetic = hash(forcefield)
+
+        forcefield.get_parameter_handler("Bonds").add_cosmetic_attribute("foo", 4)
+        assert "foo" in forcefield["Bonds"]._cosmetic_attribs
+
+        hash_with_cosmetic = hash(forcefield)
+
+        assert hash_with_cosmetic == hash_without_cosmetic
+
+    length = 1 * unit.angstrom
+    k = 10 * unit.kilocalorie_per_mole / unit.angstrom ** 2
+
+    def test_hash_strip_ids(self):
+        """Test the behavior of strip_ids arg to __hash__()"""
+        from openforcefield.typing.engines.smirnoff import BondHandler
+
+        param_with_id = {
+            "smirks": "[*:1]-[*:2]",
+            "length": self.length,
+            "k": self.k,
+            "id": "b1",
+        }
+
+        param_without_id = {
+            "smirks": "[*:1]-[*:2]",
+            "length": self.length,
+            "k": self.k,
+        }
+
+        ff_with_id = ForceField()
+        ff_without_id = ForceField()
+
+        ff_with_id.register_parameter_handler(BondHandler(version=0.3))
+        ff_without_id.register_parameter_handler(BondHandler(version=0.3))
+
+        ff_with_id.get_parameter_handler("Bonds").add_parameter(param_with_id)
+        ff_without_id.get_parameter_handler("Bonds").add_parameter(param_without_id)
+
+        assert hash(ff_with_id) == hash(ff_without_id)
+
 
 class TestForceFieldChargeAssignment:
     def generate_monatomic_ions():

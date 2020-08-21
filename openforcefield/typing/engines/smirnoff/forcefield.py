@@ -1418,3 +1418,30 @@ class ForceField:
                 raise KeyError(f"Parameter handler with name '{val}' not found.")
         elif isinstance(val, ParameterHandler) or issubclass(val, ParameterHandler):
             raise NotImplementedError
+
+    def __hash__(self):
+        """Deterministically hash a ForceField object
+
+        Notable behavior: `id` and `parent_id` are stripped"""
+
+        # Completely re-constructing the force field may be overkill
+        # compared to deepcopying and modifying?
+        ff_copy = ForceField()
+        ff_copy.date = self.date
+        ff_copy.author = self.author
+
+        for handler_name in self.registered_parameter_handlers:
+            old_handler = self.get_parameter_handler(handler_name)
+            new_handler = (
+                old_handler  # old_handler.__class__(version=old_handler.version)
+            )
+
+            if True:  # strip_ids:
+                for param in new_handler._parameters:
+                    for attr in ["_id", "_parent_id"]:
+                        # param.__dict__.pop(attr, None) may be faster
+                        # https://stackoverflow.com/a/42303681/4248961
+                        if hasattr(param, attr):
+                            delattr(param, attr)
+
+        return hash(ff_copy.to_string(discard_cosmetic_attributes=True))
