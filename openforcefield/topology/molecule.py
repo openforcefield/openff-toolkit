@@ -58,7 +58,6 @@ from openforcefield.utils.serialization import Serializable
 from openforcefield.utils.toolkits import (
     DEFAULT_AROMATICITY_MODEL,
     GLOBAL_TOOLKIT_REGISTRY,
-    InvalidToolkitError,
     InvalidToolkitRegistryError,
     OpenEyeToolkitWrapper,
     RDKitToolkitWrapper,
