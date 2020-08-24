@@ -11,6 +11,7 @@ At least one supported cheminformatics toolkit must be installed to run these te
 Only the tests applicable to that toolkit will be run.
 
 TODO:
+- Will the ToolkitWrapper allow us to pare down importing each wrapper directly?
 - Add tests comparing RDKit and OpenEye aromaticity perception
 - Right now, the test database of TestMolecule is read from mol2, requiring the OE
   toolkit. Find a different test set that RDKit can read, or make a database of
@@ -48,8 +49,6 @@ from openforcefield.tests.utils import (
 from openforcefield.topology import NotBondedError
 from openforcefield.topology.molecule import Atom, InvalidConformerError, Molecule
 from openforcefield.utils import get_data_file_path
-
-# TODO: Will the ToolkitWrapper allow us to pare that down?
 from openforcefield.utils.toolkits import (
     AmberToolsToolkitWrapper,
     OpenEyeToolkitWrapper,
@@ -340,7 +339,8 @@ class TestMolecule:
         molecule_copy = Molecule.from_yaml(serialized)
         assert molecule == molecule_copy
 
-    def test_toml_serialization(self):
+    @pytest.mark.parametrize("molecule", mini_drug_bank())
+    def test_toml_serialization(self, molecule):
         """Test serialization of a molecule object to and from TOML."""
         # TODO: Test round-trip, on mini_drug_bank, when implemented
         mol = Molecule.from_smiles("CCO")
@@ -354,7 +354,8 @@ class TestMolecule:
         molecule_copy = Molecule.from_bson(serialized)
         assert molecule == molecule_copy
 
-    def test_json_serialization(self):
+    @pytest.mark.parametrize("molecule", mini_drug_bank())
+    def test_json_serialization(self, molecule):
         """Test serialization of a molecule object to and from JSON."""
         # TODO: Test round-trip, on mini_drug_bank, when to_json bug is fixed, see #547
         mol = Molecule.from_smiles("CCO")
@@ -364,7 +365,8 @@ class TestMolecule:
         with pytest.raises(TypeError):
             mol.to_json()
 
-    def test_xml_serialization(self):
+    @pytest.mark.parametrize("molecule", mini_drug_bank())
+    def test_xml_serialization(self, molecule):
         """Test serialization of a molecule object to and from XML."""
         # TODO: Test round-trip, on mini_drug_bank, when from_xml is implemented
         mol = Molecule.from_smiles("CCO")

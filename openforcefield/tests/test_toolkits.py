@@ -2134,6 +2134,7 @@ class TestRDKitToolkitWrapper:
 
 
 @requires_ambertools
+@requires_rdkit
 class TestAmberToolsToolkitWrapper:
     """Test the AmberToolsToolkitWrapper"""
 

@@ -4150,6 +4150,7 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         """
 
         import os
+        import subprocess
 
         from openforcefield.topology import Molecule
 
