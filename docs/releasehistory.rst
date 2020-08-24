@@ -10,6 +10,16 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 0.8.0 - Current development
 ---------------------------
 
+New features
+""""""""""""
+- `PR #662 <https://github.com/openforcefield/openforcefield/pull/662>`_: Adds ``.aromaticity_model``
+  of :py:class:`ForceField <openforcefield.typing.engines.smirnoff.forcefield.ForceField>` and ``.TAGNAME``
+  of :py:class:`ParameterHandler <openforcefield.typing.engines.smirnoff.Parameters.ParameterHandler>` as
+  public attributes.
+- `PR #667 <https://github.com/openforcefield/openforcefield/pull/667>`_ and
+  `PR #681 <https://github.com/openforcefield/openforcefield/pull/681>`_ linted the codebase with
+  ``black`` and ``isort``, respectively.
+
 Behavior changed
 """"""""""""""""
 - `PR #648 <https://github.com/openforcefield/openforcefield/pull/648>`_: Removes the
