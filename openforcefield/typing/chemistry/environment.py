@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
-#==============================================================================
+# ==============================================================================
 # MODULE DOCSTRING
-#==============================================================================
+# ==============================================================================
 
 """
 environment.py
@@ -19,22 +19,26 @@ and David Mobley, UC Irvine.
 """
 
 __all__ = [
-    'SMIRKSMismatchError',
-    'SMIRKSParsingError',
-    'ChemicalEnvironment',
-    'AtomChemicalEnvironment',
-    'BondChemicalEnvironment',
-    'AngleChemicalEnvironment',
-    'TorsionChemicalEnvironment',
-    'ImproperChemicalEnvironment'
+    "SMIRKSMismatchError",
+    "SMIRKSParsingError",
+    "ChemicalEnvironment",
+    "AtomChemicalEnvironment",
+    "BondChemicalEnvironment",
+    "AngleChemicalEnvironment",
+    "TorsionChemicalEnvironment",
+    "ImproperChemicalEnvironment",
 ]
 
 
-#==============================================================================
+# ==============================================================================
 # GLOBAL IMPORTS
-#==============================================================================
+# ==============================================================================
 
-from openforcefield.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY, ToolkitWrapper, MessageException
+from openforcefield.utils.toolkits import (
+    GLOBAL_TOOLKIT_REGISTRY,
+    MessageException,
+    ToolkitWrapper,
+)
 
 
 class SMIRKSMismatchError(MessageException):
@@ -42,6 +46,7 @@ class SMIRKSMismatchError(MessageException):
     Exception for cases where smirks are inappropriate
     for the environment type they are being parsed into
     """
+
     pass
 
 
@@ -49,6 +54,7 @@ class SMIRKSParsingError(MessageException):
     """
     Exception for when SMIRKS are not parseable for any environment
     """
+
     pass
 
 
@@ -58,8 +64,14 @@ class ChemicalEnvironment:
 
     _expected_type = None
 
-    def __init__(self, smirks=None, label=None, validate_parsable=True, validate_valence_type=True,
-                 toolkit_registry=None):
+    def __init__(
+        self,
+        smirks=None,
+        label=None,
+        validate_parsable=True,
+        validate_valence_type=True,
+        toolkit_registry=None,
+    ):
         """Initialize a chemical environment abstract base class.
 
         smirks = string, optional
@@ -87,17 +99,22 @@ class ChemicalEnvironment:
             and validate_valence_type=True
         """
         # Support string input for toolkit names for legacy reasons
-        if toolkit_registry == 'openeye':
+        if toolkit_registry == "openeye":
             from openforcefield.utils.toolkits import OpenEyeToolkitWrapper
+
             toolkit_registry = OpenEyeToolkitWrapper()
-        elif toolkit_registry == 'rdkit':
+        elif toolkit_registry == "rdkit":
             from openforcefield.utils.toolkits import RDKitToolkitWrapper
+
             toolkit_registry = RDKitToolkitWrapper()
 
         self.smirks = smirks
         self.label = label
         if validate_parsable or validate_valence_type:
-            self.validate(validate_valence_type=validate_valence_type, toolkit_registry=toolkit_registry)
+            self.validate(
+                validate_valence_type=validate_valence_type,
+                toolkit_registry=toolkit_registry,
+            )
 
     def validate(self, validate_valence_type=True, toolkit_registry=None):
         """
@@ -121,12 +138,24 @@ class ChemicalEnvironment:
             and validate_valence_type=True
         """
         perceived_type = self.get_type(toolkit_registry=toolkit_registry)
-        if (perceived_type != self._expected_type) and validate_valence_type and not(self._expected_type is None):
-            raise SMIRKSMismatchError(f"{self.__class__} expected '{self._expected_type}' chemical environment, but "
-                                      f"smirks was set to '{self.smirks}', which is type '{perceived_type}'")
+        if (
+            (perceived_type != self._expected_type)
+            and validate_valence_type
+            and not (self._expected_type is None)
+        ):
+            raise SMIRKSMismatchError(
+                f"{self.__class__} expected '{self._expected_type}' chemical environment, but "
+                f"smirks was set to '{self.smirks}', which is type '{perceived_type}'"
+            )
 
     @classmethod
-    def validate_smirks(cls, smirks, validate_parsable=True, validate_valence_type=True, toolkit_registry=None):
+    def validate_smirks(
+        cls,
+        smirks,
+        validate_parsable=True,
+        validate_valence_type=True,
+        toolkit_registry=None,
+    ):
         """
         Check the provided SMIRKS string is valid, and if requested, tags atoms appropriate to the
         specified valence type.
@@ -153,10 +182,12 @@ class ChemicalEnvironment:
             if smirks did not have expected connectivity between tagged atoms
             and validate_valence_type=True
         """
-        cls(smirks,
+        cls(
+            smirks,
             validate_parsable=validate_parsable,
             validate_valence_type=validate_valence_type,
-            toolkit_registry=toolkit_registry)
+            toolkit_registry=toolkit_registry,
+        )
 
     def get_type(self, toolkit_registry=None):
         """
@@ -184,30 +215,37 @@ class ChemicalEnvironment:
             toolkit_registry = GLOBAL_TOOLKIT_REGISTRY
 
         if isinstance(toolkit_registry, ToolkitWrapper):
-            unique_tags, connectivity = toolkit_registry.get_tagged_smarts_connectivity(self.smirks)
+            unique_tags, connectivity = toolkit_registry.get_tagged_smarts_connectivity(
+                self.smirks
+            )
         else:
-            unique_tags, connectivity = toolkit_registry.call('get_tagged_smarts_connectivity', self.smirks)
+            unique_tags, connectivity = toolkit_registry.call(
+                "get_tagged_smarts_connectivity", self.smirks
+            )
 
         if unique_tags == (1,) and len(connectivity) == 0:
             return "Atom"
         if unique_tags == (1, 2) and (1, 2) in connectivity:
             return "Bond"
-        elif (unique_tags == (1, 2, 3) and
-              (1, 2) in connectivity and
-              (2, 3) in connectivity
-              ):
+        elif (
+            unique_tags == (1, 2, 3)
+            and (1, 2) in connectivity
+            and (2, 3) in connectivity
+        ):
             return "Angle"
-        elif (unique_tags == (1, 2, 3, 4) and
-              (1, 2) in connectivity and
-              (2, 3) in connectivity and
-              (3, 4) in connectivity
-              ):
+        elif (
+            unique_tags == (1, 2, 3, 4)
+            and (1, 2) in connectivity
+            and (2, 3) in connectivity
+            and (3, 4) in connectivity
+        ):
             return "ProperTorsion"
-        elif (unique_tags == (1, 2, 3, 4) and
-              (1, 2) in connectivity and
-              (2, 3) in connectivity and
-              (2, 4) in connectivity
-              ):
+        elif (
+            unique_tags == (1, 2, 3, 4)
+            and (1, 2) in connectivity
+            and (2, 3) in connectivity
+            and (2, 4) in connectivity
+        ):
             return "ImproperTorsion"
         else:
             return None
@@ -216,28 +254,33 @@ class ChemicalEnvironment:
 class AtomChemicalEnvironment(ChemicalEnvironment):
     """Chemical environment matching one labeled atom.
     """
-    _expected_type = 'Atom'
+
+    _expected_type = "Atom"
 
 
 class BondChemicalEnvironment(ChemicalEnvironment):
     """Chemical environment matching two labeled atoms (or a bond).
     """
-    _expected_type = 'Bond'
+
+    _expected_type = "Bond"
 
 
 class AngleChemicalEnvironment(ChemicalEnvironment):
     """Chemical environment matching three marked atoms (angle).
     """
-    _expected_type = 'Angle'
+
+    _expected_type = "Angle"
 
 
 class TorsionChemicalEnvironment(ChemicalEnvironment):
     """Chemical environment matching four marked atoms (torsion).
     """
+
     _expected_type = "ProperTorsion"
 
 
 class ImproperChemicalEnvironment(ChemicalEnvironment):
     """Chemical environment matching four marked atoms (improper).
     """
+
     _expected_type = "ImproperTorsion"
