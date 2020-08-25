@@ -3,8 +3,8 @@ from openforcefield.typing.engines.smirnoff import ParameterHandler, ParameterIO
 
 
 class CustomHandler(ParameterHandler):
-    _TAGNAME = 'CustomHandler'
+    _TAGNAME = "CustomHandler"
 
 
 class CustomIOHandler(ParameterIOHandler):
-    _FORMAT = 'JSON'
+    _FORMAT = "JSON"

@@ -1,17 +1,17 @@
 #!/usr/bin/env python
 
-#=============================================================================================
+# =============================================================================================
 # MODULE DOCSTRING
-#=============================================================================================
+# =============================================================================================
 
 """
 Utilities for testing.
 
 """
 
-#=============================================================================================
+# =============================================================================================
 # GLOBAL IMPORTS
-#=============================================================================================
+# =============================================================================================
 
 import collections
 import copy
@@ -22,14 +22,14 @@ import pprint
 import textwrap
 
 import numpy as np
-from simtk import unit, openmm
+from simtk import openmm, unit
 
 from openforcefield.utils import get_data_file_path
 
-
-#=============================================================================================
+# =============================================================================================
 # Shortcut functions to get file paths to test data.
-#=============================================================================================
+# =============================================================================================
+
 
 def get_amber_file_path(prefix):
     """Get AMBER prmtop and inpcrd test data filepaths.
@@ -48,13 +48,13 @@ def get_amber_file_path(prefix):
         Absolute path to the AMBER inpcrd filepath in testdata/systems/amber
 
     """
-    prefix = os.path.join('systems', 'amber', prefix)
-    prmtop_filepath = get_data_file_path(prefix+'.prmtop')
-    inpcrd_filepath = get_data_file_path(prefix+'.inpcrd')
+    prefix = os.path.join("systems", "amber", prefix)
+    prmtop_filepath = get_data_file_path(prefix + ".prmtop")
+    inpcrd_filepath = get_data_file_path(prefix + ".inpcrd")
     return prmtop_filepath, inpcrd_filepath
 
 
-def get_packmol_pdb_file_path(prefix='cyclohexane_ethanol_0.4_0.6'):
+def get_packmol_pdb_file_path(prefix="cyclohexane_ethanol_0.4_0.6"):
     """Get PDB filename for a packmol-generated box
 
     Parameters
@@ -67,12 +67,12 @@ def get_packmol_pdb_file_path(prefix='cyclohexane_ethanol_0.4_0.6'):
     pdb_filename : str
         Absolute path to the PDB file
     """
-    prefix = os.path.join('systems', 'packmol_boxes', prefix)
-    pdb_filename = get_data_file_path(prefix+'.pdb')
+    prefix = os.path.join("systems", "packmol_boxes", prefix)
+    pdb_filename = get_data_file_path(prefix + ".pdb")
     return pdb_filename
 
 
-def get_monomer_mol2_file_path(prefix='ethanol'):
+def get_monomer_mol2_file_path(prefix="ethanol"):
     """Get absolute filepath for a mol2 file denoting a small molecule monomer in testdata
 
     Parameters
@@ -86,19 +86,21 @@ def get_monomer_mol2_file_path(prefix='ethanol'):
         Absolute path to the mol2 file
     """
     # TODO: The mol2 files in this folder are not tripos mol2 files. Delete or convert them.
-    prefix = os.path.join('systems', 'monomers', prefix)
-    mol2_filename = get_data_file_path(prefix + '.mol2')
+    prefix = os.path.join("systems", "monomers", prefix)
+    mol2_filename = get_data_file_path(prefix + ".mol2")
     return mol2_filename
 
 
 def extract_compressed_molecules(tar_file_name, file_subpaths=None, filter_func=None):
     if (file_subpaths is None) == (filter_func is None):
-        raise ValueError('Only one between file_subpaths and filter_func must be specified.')
+        raise ValueError(
+            "Only one between file_subpaths and filter_func must be specified."
+        )
 
     # Find the path of the tarfile with respect to the data/molecules/ folder.
-    molecules_dir_path = get_data_file_path('molecules')
+    molecules_dir_path = get_data_file_path("molecules")
     tar_file_path = os.path.join(molecules_dir_path, tar_file_name)
-    tar_root_dir_name = tar_file_name.split('.')[0]
+    tar_root_dir_name = tar_file_name.split(".")[0]
 
     # Return value: Paths to the extracted molecules.
     extracted_file_paths = None
@@ -107,14 +109,18 @@ def extract_compressed_molecules(tar_file_name, file_subpaths=None, filter_func=
     if file_subpaths is not None:
         # We can already check the paths of the extracted files
         # and skipping opening the tarball if not necessary.
-        extracted_file_paths = [os.path.join(molecules_dir_path, tar_root_dir_name, file_subpath)
-                                for file_subpath in file_subpaths]
+        extracted_file_paths = [
+            os.path.join(molecules_dir_path, tar_root_dir_name, file_subpath)
+            for file_subpath in file_subpaths
+        ]
 
         # Remove files that we have already extracted.
         # Also, we augument the subpath with its root directory.
-        file_subpaths_set = {os.path.join(tar_root_dir_name, subpath)
-                             for subpath, fullpath in zip(file_subpaths, extracted_file_paths)
-                             if not os.path.isfile(fullpath)}
+        file_subpaths_set = {
+            os.path.join(tar_root_dir_name, subpath)
+            for subpath, fullpath in zip(file_subpaths, extracted_file_paths)
+            if not os.path.isfile(fullpath)
+        }
 
         # If everything was already extracted, we don't need to open the tarball.
         if len(file_subpaths_set) == 0:
@@ -128,25 +134,30 @@ def extract_compressed_molecules(tar_file_name, file_subpaths=None, filter_func=
         filter_func = lambda x: True
 
     # Determine opening mode.
-    if '.gz' in tar_file_name:
-        mode = 'r:gz'
+    if ".gz" in tar_file_name:
+        mode = "r:gz"
     else:
-        mode = 'r'
+        mode = "r"
 
     # Extract required files.
     import tarfile
+
     with tarfile.open(tar_file_path, mode) as tar_file:
         # Gather the paths to extract. Remove the
         members = [m for m in tar_file.getmembers() if filter_func(m.name)]
 
         # Built the paths to the extracted molecules we didn't already.
         if extracted_file_paths is None:
-            extracted_file_paths = [os.path.join(molecules_dir_path, m.name)
-                                    for m in members]
+            extracted_file_paths = [
+                os.path.join(molecules_dir_path, m.name) for m in members
+            ]
 
         # Extract only the members that we haven't already extracted.
-        members = [member for member, fullpath in zip(members, extracted_file_paths)
-                   if not os.path.isfile(fullpath)]
+        members = [
+            member
+            for member, fullpath in zip(members, extracted_file_paths)
+            if not os.path.isfile(fullpath)
+        ]
         tar_file.extractall(path=molecules_dir_path, members=members)
 
     return extracted_file_paths
@@ -171,36 +182,39 @@ def get_alkethoh_file_path(alkethoh_name, get_amber=False):
 
     """
     # Determine if this is a ring or a chain molecule and the subfolder name.
-    is_ring = alkethoh_name[9] == 'r'
-    alkethoh_subdir_name = 'rings' if is_ring else 'chain'
-    alkethoh_subdir_name = 'AlkEthOH_' + alkethoh_subdir_name + '_filt1'
+    is_ring = alkethoh_name[9] == "r"
+    alkethoh_subdir_name = "rings" if is_ring else "chain"
+    alkethoh_subdir_name = "AlkEthOH_" + alkethoh_subdir_name + "_filt1"
 
     # Determine which paths have to be returned.
     file_base_subpath = os.path.join(alkethoh_subdir_name, alkethoh_name)
     # We always return the mol2 file.
-    file_subpaths = [file_base_subpath + '_tripos.mol2']
+    file_subpaths = [file_base_subpath + "_tripos.mol2"]
     # Check if we need to return also Amber files.
     if get_amber:
-        file_subpaths.append(file_base_subpath + '.top')
-        file_subpaths.append(file_base_subpath + '.crd')
+        file_subpaths.append(file_base_subpath + ".top")
+        file_subpaths.append(file_base_subpath + ".crd")
 
-    return extract_compressed_molecules('AlkEthOH_tripos.tar.gz', file_subpaths=file_subpaths)
+    return extract_compressed_molecules(
+        "AlkEthOH_tripos.tar.gz", file_subpaths=file_subpaths
+    )
 
 
 def get_freesolv_file_path(freesolv_id, ff_version):
-    file_base_name = 'mobley_' + freesolv_id
-    mol2_file_subpath = os.path.join('mol2files_sybyl', file_base_name + '.mol2')
-    xml_dir = 'xml_' + ff_version.replace('.', '_')
-    xml_file_subpath = os.path.join(xml_dir, file_base_name + '_vacuum.xml')
+    file_base_name = "mobley_" + freesolv_id
+    mol2_file_subpath = os.path.join("mol2files_sybyl", file_base_name + ".mol2")
+    xml_dir = "xml_" + ff_version.replace(".", "_")
+    xml_file_subpath = os.path.join(xml_dir, file_base_name + "_vacuum.xml")
 
     # Extract the files if needed.
     file_subpaths = [mol2_file_subpath, xml_file_subpath]
-    return extract_compressed_molecules('FreeSolv.tar.gz', file_subpaths=file_subpaths)
+    return extract_compressed_molecules("FreeSolv.tar.gz", file_subpaths=file_subpaths)
 
 
-#=============================================================================================
+# =============================================================================================
 # Shortcut functions to create System objects from system files.
-#=============================================================================================
+# =============================================================================================
+
 
 def create_system_from_amber(prmtop_file_path, inpcrd_file_path, *args, **kwargs):
     """Create an OpenMM System and Topology from the AMBER files.
@@ -237,9 +251,10 @@ def create_system_from_amber(prmtop_file_path, inpcrd_file_path, *args, **kwargs
     return system, prmtop_file.topology, positions
 
 
-#=============================================================================================
+# =============================================================================================
 # Utility functions for energy comparisons.
-#=============================================================================================
+# =============================================================================================
+
 
 def quantities_allclose(quantity1, quantity2, **kwargs):
     """Check if two Quantity objects are close.
@@ -265,16 +280,19 @@ def quantities_allclose(quantity1, quantity2, **kwargs):
     if isinstance(quantity1, unit.Quantity):
         # Check that the two Quantities have compatible units.
         if not quantity1.unit.is_compatible(quantity2.unit):
-            raise ValueError("The two quantities don't have compatible units: "
-                             "{} and {}".format(quantity1.unit, quantity2.unit))
+            raise ValueError(
+                "The two quantities don't have compatible units: "
+                "{} and {}".format(quantity1.unit, quantity2.unit)
+            )
         # Compare the values stripped of the units.
         quantity1 = quantity1.value_in_unit_system(unit.md_unit_system)
         quantity2 = quantity2.value_in_unit_system(unit.md_unit_system)
     return np.allclose(quantity1, quantity2, **kwargs)
 
 
-def get_context_potential_energy(context, positions, box_vectors=None,
-                                 by_force_group=True):
+def get_context_potential_energy(
+    context, positions, box_vectors=None, by_force_group=True
+):
     """Compute the potential energy of a System in a Context object.
 
     This is simply a shortcut that takes care of setting
@@ -331,13 +349,16 @@ class FailedEnergyComparisonError(AssertionError):
     potential_energy2
 
     """
+
     def __init__(self, err_msg, potential_energy1, potential_energy2):
         super().__init__(err_msg)
         self.potential_energy1 = potential_energy1
         self.potential_energy2 = potential_energy2
 
 
-def compare_context_energies(context1, context2, *args, rtol=1.e-5, atol=1.e-8, **kwargs):
+def compare_context_energies(
+    context1, context2, *args, rtol=1.0e-5, atol=1.0e-8, **kwargs
+):
     """Compare energies of two Contexts given the same positions.
 
     Parameters
@@ -394,17 +415,18 @@ def compare_context_energies(context1, context2, *args, rtol=1.e-5, atol=1.e-8, 
     # dictionary and we need to compare force group by force group.
     if isinstance(potential_energy1, unit.Quantity):
         raise_assert(
-            assertion=quantities_allclose(potential_energy1, potential_energy2,
-                                          rtol=rtol, atol=atol),
-            err_msg='potential energy 1 {}, potential energy 2: {}',
-            format_args=(potential_energy1, potential_energy2)
+            assertion=quantities_allclose(
+                potential_energy1, potential_energy2, rtol=rtol, atol=atol
+            ),
+            err_msg="potential energy 1 {}, potential energy 2: {}",
+            format_args=(potential_energy1, potential_energy2),
         )
     else:  # potential_energy1 is a dict.
         # If the two context expose different force groups raise an error.
         raise_assert(
             assertion=set(potential_energy1) == set(potential_energy2),
-            err_msg='The two contexts have different force groups: context1 {}, context2 {}',
-            format_args=(sorted(potential_energy1), sorted(potential_energy2))
+            err_msg="The two contexts have different force groups: context1 {}, context2 {}",
+            format_args=(sorted(potential_energy1), sorted(potential_energy2)),
         )
 
         # Check the potential energies of all force groups.
@@ -413,16 +435,24 @@ def compare_context_energies(context1, context2, *args, rtol=1.e-5, atol=1.e-8, 
             energy2 = potential_energy2[force_group]
             raise_assert(
                 assertion=quantities_allclose(energy1, energy2, rtol=rtol, atol=atol),
-                err_msg='Force group {} do not have the same energies: context1 {}, context2 {}',
-                format_args=(force_group, energy1, energy2)
+                err_msg="Force group {} do not have the same energies: context1 {}, context2 {}",
+                format_args=(force_group, energy1, energy2),
             )
 
     return potential_energy1, potential_energy2
 
 
-def compare_system_energies(system1, system2, positions, box_vectors=None,
-                            by_force_type=True, ignore_charges=False,
-                            modify_system=False, rtol=1.e-5, atol=1.e-8):
+def compare_system_energies(
+    system1,
+    system2,
+    positions,
+    box_vectors=None,
+    by_force_type=True,
+    ignore_charges=False,
+    modify_system=False,
+    rtol=1.0e-5,
+    atol=1.0e-8,
+):
     """Compare energies of two Systems given the same positions.
 
     Parameters
@@ -493,7 +523,7 @@ def compare_system_energies(system1, system2, positions, box_vectors=None,
         force_names1 = {f.__class__.__name__ for f in system1.getForces()}
         force_names2 = {f.__class__.__name__ for f in system2.getForces()}
         if set(force_names1) != set(force_names2):
-            err_msg = 'The two Systems have different forces to compare:\n - system1 {}\n - system2 {}'
+            err_msg = "The two Systems have different forces to compare:\n - system1 {}\n - system2 {}"
             raise ValueError(err_msg.format(sorted(force_names1), sorted(force_names2)))
 
         # Create a map from force group to force class and viceversa.
@@ -521,32 +551,49 @@ def compare_system_energies(system1, system2, positions, box_vectors=None,
 
             # Set particle charges to 0.0.
             for particle_idx in range(nonbonded_force.getNumParticles()):
-                charge, sigma, epsilon = nonbonded_force.getParticleParameters(particle_idx)
+                charge, sigma, epsilon = nonbonded_force.getParticleParameters(
+                    particle_idx
+                )
                 nonbonded_force.setParticleParameters(particle_idx, 0.0, sigma, epsilon)
 
             # Set particle exceptions charge products to 0.0.
             for exception_idx in range(nonbonded_force.getNumExceptions()):
-                atom1, atom2, chargeprod, sigma, epsilon = nonbonded_force.getExceptionParameters(exception_idx)
-                nonbonded_force.setExceptionParameters(exception_idx, atom1, atom2, 0.0, sigma, epsilon)
+                (
+                    atom1,
+                    atom2,
+                    chargeprod,
+                    sigma,
+                    epsilon,
+                ) = nonbonded_force.getExceptionParameters(exception_idx)
+                nonbonded_force.setExceptionParameters(
+                    exception_idx, atom1, atom2, 0.0, sigma, epsilon
+                )
 
     # Create Contexts and compare the energies.
-    integrator = openmm.VerletIntegrator(1.0*unit.femtoseconds)
+    integrator = openmm.VerletIntegrator(1.0 * unit.femtoseconds)
     context1 = openmm.Context(system1, integrator)
     context2 = openmm.Context(system2, copy.deepcopy(integrator))
 
     def map_energies_by_force_type(potential_energy1, potential_energy2):
         """Convert dictionary force_group -> energy to force_type -> energy."""
-        potential_energy1 = {group_to_force[group]: energy
-                             for group, energy in potential_energy1.items()}
-        potential_energy2 = {group_to_force[group]: energy
-                             for group, energy in potential_energy2.items()}
+        potential_energy1 = {
+            group_to_force[group]: energy for group, energy in potential_energy1.items()
+        }
+        potential_energy2 = {
+            group_to_force[group]: energy for group, energy in potential_energy2.items()
+        }
         return potential_energy1, potential_energy2
 
     # Catch the exception and log table force type -> energy.
     try:
         potential_energy1, potential_energy2 = compare_context_energies(
-            context1, context2, positions, box_vectors,
-            by_force_group=by_force_type, rtol=rtol, atol=atol
+            context1,
+            context2,
+            positions,
+            box_vectors,
+            by_force_group=by_force_type,
+            rtol=rtol,
+            atol=atol,
         )
     except FailedEnergyComparisonError as e:
         # We don't need to convert force groups into force types
@@ -557,8 +604,8 @@ def compare_system_energies(system1, system2, positions, box_vectors=None,
             e.potential_energy1, e.potential_energy2
         )
         # Pretty-print the dictionaries.
-        table = '\n\npotential energy system1:\n' + pprint.pformat(potential_energy1)
-        table += '\n\npotential energy system2:\n' + pprint.pformat(potential_energy2)
+        table = "\n\npotential energy system1:\n" + pprint.pformat(potential_energy1)
+        table += "\n\npotential energy system2:\n" + pprint.pformat(potential_energy2)
         raise type(e)(str(e) + table, e.potential_energy1, e.potential_energy2)
 
     if by_force_type:
@@ -566,9 +613,10 @@ def compare_system_energies(system1, system2, positions, box_vectors=None,
     return potential_energy1, potential_energy2
 
 
-#=============================================================================================
+# =============================================================================================
 # Utility functions for parameters comparisons.
-#=============================================================================================
+# =============================================================================================
+
 
 class _ParametersComparer:
     """This is just a convenience class to compare and print parameters.
@@ -631,12 +679,15 @@ class _ParametersComparer:
         diff_list = []
         for par_name in sorted(diff.keys()):
             par1, par2 = diff[par_name]
-            diff_list.append('{par_name}: {par1} != {par2}'.format(
-                par_name=par_name, par1=par1, par2=par2))
-        separator = '\n' if new_line else ''
+            diff_list.append(
+                "{par_name}: {par1} != {par2}".format(
+                    par_name=par_name, par1=par1, par2=par2
+                )
+            )
+        separator = "\n" if new_line else ""
         diff_str = separator.join(diff_list)
         if indent:
-            diff_str = textwrap.indent(diff_str, prefix='    ')
+            diff_str = textwrap.indent(diff_str, prefix="    ")
         return diff_str
 
     def _get_diff(self, other):
@@ -659,8 +710,10 @@ class _ParametersComparer:
         parameter_order = sorted(self.parameters)
         # Quantities in a dictionary are normally printed in the
         # format "Quantity(value, unit=unit)" so we make it prettier.
-        par_str = ', '.join('{}: {}'.format(p, self.parameters[p]) for p in parameter_order)
-        return '(' + par_str + ')'
+        par_str = ", ".join(
+            "{}: {}".format(p, self.parameters[p]) for p in parameter_order
+        )
+        return "(" + par_str + ")"
 
 
 class _TorsionParametersComparer:
@@ -709,27 +762,27 @@ class _TorsionParametersComparer:
         diff_str : str
 
         """
-        diff_str = 'Parameters in first system:\n'
+        diff_str = "Parameters in first system:\n"
         diff_str += self._pretty_format_parameters(self.parameters, new_line=new_line)
-        diff_str += '\nParameters in second system:\n'
+        diff_str += "\nParameters in second system:\n"
         diff_str += self._pretty_format_parameters(other.parameters, new_line=new_line)
         if indent:
-            diff_str = textwrap.indent(diff_str, '    ')
+            diff_str = textwrap.indent(diff_str, "    ")
         return diff_str
 
     def _pretty_format_parameters(self, parameters, new_line=True, indent=True):
         # Reorder the parameters by periodicity and then phase to print in deterministic order.
-        sort_key = lambda x: (x.parameters['periodicity'], x.parameters['phase'])
+        sort_key = lambda x: (x.parameters["periodicity"], x.parameters["phase"])
         parameters = sorted(parameters, key=sort_key)
         # Quantities in a dictionary are normally printed in the
         # format "Quantity(value, unit=unit)" so we make it prettier.
-        separator = '\n' if new_line else ', '
-        prefix = '['
+        separator = "\n" if new_line else ", "
+        prefix = "["
         if indent and new_line:
-            separator += '    '
+            separator += "    "
         elif indent:
-            prefix += '    '
-        return prefix + separator.join(str(pars) for pars in parameters) + ']'
+            prefix += "    "
+        return prefix + separator.join(str(pars) for pars in parameters) + "]"
 
     def __eq__(self, other):
         # Look for self.parameters that don't match any other.parameters.
@@ -746,7 +799,9 @@ class _TorsionParametersComparer:
         return True
 
     def __str__(self):
-        return self._pretty_format_parameters(self.parameters, new_line=False, indent=False)
+        return self._pretty_format_parameters(
+            self.parameters, new_line=False, indent=False
+        )
 
 
 class FailedParameterComparisonError(AssertionError):
@@ -760,13 +815,19 @@ class FailedParameterComparisonError(AssertionError):
         (parameter_force1, parameter_force2).
 
     """
+
     def __init__(self, err_msg, different_parameters):
         super().__init__(err_msg)
         self.different_parameters = different_parameters
 
 
-def _compare_parameters(parameters_force1, parameters_force2, interaction_type,
-                        force_name='', systems_labels=None):
+def _compare_parameters(
+    parameters_force1,
+    parameters_force2,
+    interaction_type,
+    force_name="",
+    systems_labels=None,
+):
     """Compare the parameters of 2 forces and raises an exception if they are different.
 
     Parameters
@@ -799,17 +860,17 @@ def _compare_parameters(parameters_force1, parameters_force2, interaction_type,
         with the different parameters.
 
     """
-    diff_msg = ''
+    diff_msg = ""
 
     # First check the parameters that are unique to only one of the forces.
     unique_keys1 = set(parameters_force1) - set(parameters_force2)
     unique_keys2 = set(parameters_force2) - set(parameters_force1)
-    err_msg = '\n\n{} force has the following unique ' + interaction_type + 's: {}\n'
+    err_msg = "\n\n{} force has the following unique " + interaction_type + "s: {}\n"
     if len(unique_keys1) != 0:
-        force_label = systems_labels[0] if systems_labels is not None else 'First'
+        force_label = systems_labels[0] if systems_labels is not None else "First"
         diff_msg += err_msg.format(force_label, sorted(unique_keys1))
     if len(unique_keys2) != 0:
-        force_label = systems_labels[1] if systems_labels is not None else 'Second'
+        force_label = systems_labels[1] if systems_labels is not None else "Second"
         diff_msg += err_msg.format(force_label, sorted(unique_keys2))
 
     # Create a diff for entries that have same keys but different parameters.
@@ -819,29 +880,35 @@ def _compare_parameters(parameters_force1, parameters_force2, interaction_type,
             different_parameters[key] = (parameters_force1[key], parameters_force2[key])
 
     # Handle force and systems labels default arguments.
-    if force_name != '':
-        force_name += ' '  # Add space after.
+    if force_name != "":
+        force_name += " "  # Add space after.
     if systems_labels is not None:
-        systems_labels = ' for the {} and {} systems respectively'.format(*systems_labels)
+        systems_labels = " for the {} and {} systems respectively".format(
+            *systems_labels
+        )
     else:
-        systems_labels = ''
+        systems_labels = ""
 
     # Print error.
     if len(different_parameters) > 0:
-        diff_msg += ('\n\nThe following {interaction}s have different parameters '
-                     'in the two {force_name}forces{systems_labels}:'.format(
-            interaction=interaction_type, force_name=force_name,
-            systems_labels=systems_labels)
+        diff_msg += (
+            "\n\nThe following {interaction}s have different parameters "
+            "in the two {force_name}forces{systems_labels}:".format(
+                interaction=interaction_type,
+                force_name=force_name,
+                systems_labels=systems_labels,
+            )
         )
         for key in sorted(different_parameters.keys()):
             param1, param2 = different_parameters[key]
             parameters_diff = param1.pretty_format_diff(param2)
-            diff_msg += '\n{} {}:\n{}'.format(interaction_type, key, parameters_diff)
+            diff_msg += "\n{} {}:\n{}".format(interaction_type, key, parameters_diff)
 
-    if diff_msg != '':
-        diff_msg = ('A difference between {} was detected. '
-                    'Details follow.').format(interaction_type) + diff_msg
-        raise FailedParameterComparisonError(diff_msg + '\n', different_parameters)
+    if diff_msg != "":
+        diff_msg = ("A difference between {} was detected. " "Details follow.").format(
+            interaction_type
+        ) + diff_msg
+        raise FailedParameterComparisonError(diff_msg + "\n", different_parameters)
 
 
 @functools.singledispatch
@@ -878,8 +945,10 @@ def _get_force_parameters(force, system, ignored_parameters):
         "proper torsion", "bond").
 
     """
-    raise NotImplementedError('Comparison between {}s is not currently '
-                              'supported.'.format(type(force)))
+    raise NotImplementedError(
+        "Comparison between {}s is not currently " "supported.".format(type(force))
+    )
+
 
 @_get_force_parameters.register(openmm.HarmonicBondForce)
 def _get_bond_force_parameters(force, _, ignored_parameters):
@@ -898,7 +967,7 @@ def _get_bond_force_parameters(force, _, ignored_parameters):
         force_parameters[bond_key] = _ParametersComparer(r0=r0, k=k)
         force_parameters[bond_key].remove_parameters(ignored_parameters)
 
-    return {'bond': force_parameters}
+    return {"bond": force_parameters}
 
 
 @_get_force_parameters.register(openmm.HarmonicAngleForce)
@@ -918,7 +987,7 @@ def _get_angle_force_parameters(force, _, ignored_parameters):
         force_parameters[angle_key] = _ParametersComparer(theta0=theta0, k=k)
         force_parameters[angle_key].remove_parameters(ignored_parameters)
 
-    return {'angle': force_parameters}
+    return {"angle": force_parameters}
 
 
 @_get_force_parameters.register(openmm.NonbondedForce)
@@ -931,26 +1000,30 @@ def _get_nonbonded_force_parameters(force, _, ignored_parameters):
 
         # Ignore sigma parameter if epsilon is 0.0.
         particle_parameters[particle_idx] = _ParametersComparer(
-            charge=charge, epsilon=epsilon)
+            charge=charge, epsilon=epsilon
+        )
         if (epsilon / epsilon.unit) != 0.0:
-            particle_parameters[particle_idx].parameters['sigma'] = sigma
+            particle_parameters[particle_idx].parameters["sigma"] = sigma
         particle_parameters[particle_idx].remove_parameters(ignored_parameters)
 
     # Build the dictionary representation of the particle exceptions.
     exception_parameters = {}
     for exception_idx in range(force.getNumExceptions()):
-        atom1, atom2, chargeprod, sigma, epsilon = force.getExceptionParameters(exception_idx)
+        atom1, atom2, chargeprod, sigma, epsilon = force.getExceptionParameters(
+            exception_idx
+        )
 
         # Reorder the atom indices to have a canonical key.
         exception_key = tuple(sorted([atom1, atom2]))
         # Ignore sigma parameter if epsilon is 0.0.
         exception_parameters[exception_key] = _ParametersComparer(
-            charge=chargeprod, epsilon=epsilon)
+            charge=chargeprod, epsilon=epsilon
+        )
         if (epsilon / epsilon.unit) != 0.0:
-            exception_parameters[exception_key].parameters['sigma'] = sigma
+            exception_parameters[exception_key].parameters["sigma"] = sigma
         exception_parameters[exception_key].remove_parameters(ignored_parameters)
 
-    return {'particle': particle_parameters, 'particle exception': exception_parameters}
+    return {"particle": particle_parameters, "particle exception": exception_parameters}
 
 
 def _merge_impropers_folds(improper_parameters):
@@ -971,10 +1044,12 @@ def _merge_impropers_folds(improper_parameters):
 
                 # If phase and periodicity match, sum the force constants
                 # and remove one _ParametersComparer object from the list.
-                if (parameters1['phase'] == parameters2['phase'] and
-                    parameters1['periodicity'] == parameters2['periodicity']):
+                if (
+                    parameters1["phase"] == parameters2["phase"]
+                    and parameters1["periodicity"] == parameters2["periodicity"]
+                ):
                     # Update the force constant of the first parameter.
-                    parameters1['k'] += parameters2['k']
+                    parameters1["k"] += parameters2["k"]
                     # Remove the second parameter from the list.
                     del improper_comparer.parameters[comparer2_idx]
                     break
@@ -992,14 +1067,14 @@ def _get_torsion_force_parameters(force, system, ignored_parameters):
     the current three-fold.
 
     """
-    if 'n_improper_folds' not in ignored_parameters:
+    if "n_improper_folds" not in ignored_parameters:
         ignore_n_folds = False
     else:
         ignore_n_folds = True
         # Create a copy of ignored_parameters without n_improper_folds
         # that must be removed later from the _ParametersComparer object.
         ignored_parameters = copy.deepcopy(ignored_parameters)
-        ignored_parameters.remove('n_improper_folds')
+        ignored_parameters.remove("n_improper_folds")
 
     # Find all bonds. We'll use this to distinguish
     # between proper and improper torsions.
@@ -1008,7 +1083,9 @@ def _get_torsion_force_parameters(force, system, ignored_parameters):
     proper_parameters = {}
     improper_parameters = {}
     for torsion_idx in range(force.getNumTorsions()):
-        atom1, atom2, atom3, atom4, periodicity, phase, k = force.getTorsionParameters(torsion_idx)
+        atom1, atom2, atom3, atom4, periodicity, phase, k = force.getTorsionParameters(
+            torsion_idx
+        )
 
         # Ignore torsions that don't contribute to the energy.
         if (k / k.unit) == 0.0:
@@ -1016,10 +1093,12 @@ def _get_torsion_force_parameters(force, system, ignored_parameters):
 
         torsion_key = [atom1, atom2, atom3, atom4]
         if len(set(torsion_key)) != 4:
-            raise ValueError('Torsion {} is defined on less than 4 atoms: {}'.format(torsion_key))
+            raise ValueError(
+                "Torsion {} is defined on less than 4 atoms: {}".format(torsion_key)
+            )
 
         # Check if this is proper or not.
-        torsion_bonds = [(torsion_key[i], torsion_key[i+1]) for i in range(3)]
+        torsion_bonds = [(torsion_key[i], torsion_key[i + 1]) for i in range(3)]
         is_proper = all(bond in bond_set for bond in torsion_bonds)
 
         # Determine the canonical order of the torsion key.
@@ -1046,7 +1125,10 @@ def _get_torsion_force_parameters(force, system, ignored_parameters):
     if ignore_n_folds:
         _merge_impropers_folds(improper_parameters)
 
-    return {'proper torsion': proper_parameters, 'improper torsion': improper_parameters}
+    return {
+        "proper torsion": proper_parameters,
+        "improper torsion": improper_parameters,
+    }
 
 
 def _find_all_bonds(system):
@@ -1067,7 +1149,9 @@ def _find_all_bonds(system):
 
     """
     # Find the force with information on the bonds.
-    bond_force = [f for f in system.getForces() if isinstance(f, openmm.HarmonicBondForce)]
+    bond_force = [
+        f for f in system.getForces() if isinstance(f, openmm.HarmonicBondForce)
+    ]
     assert len(bond_force) == 1
     bond_force = bond_force[0]
 
@@ -1139,8 +1223,8 @@ def _get_improper_torsion_canonical_order(bond_set, i0, i1, i2, i3):
     for (a, b) in itertools.combinations([i0, i1, i2, i3], 2):
         if (a, b) in bond_set:
             i, j = mapping[a], mapping[b]
-            connections[i, j] += 1.
-            connections[j, i] += 1.
+            connections[i, j] += 1.0
+            connections[j, i] += 1.0
 
     central_ind = connections.sum(0).argmax()
     central_ind = inv_mapping[central_ind]
@@ -1150,8 +1234,13 @@ def _get_improper_torsion_canonical_order(bond_set, i0, i1, i2, i3):
     return central_ind, other_ind[0], other_ind[1], other_ind[2]
 
 
-def compare_system_parameters(system1, system2, systems_labels=None,
-                              ignore_charges=False, ignore_improper_folds=False):
+def compare_system_parameters(
+    system1,
+    system2,
+    systems_labels=None,
+    ignore_charges=False,
+    ignore_improper_folds=False,
+):
     """Check that two OpenMM systems have the same parameters.
 
     Parameters
@@ -1183,25 +1272,29 @@ def compare_system_parameters(system1, system2, systems_labels=None,
     # Determine parameters to ignore.
     ignored_parameters_by_force = {}
     if ignore_charges:
-        ignored_parameters_by_force['NonbondedForce'] = ['charge', 'chargeprod']
+        ignored_parameters_by_force["NonbondedForce"] = ["charge", "chargeprod"]
     if ignore_improper_folds:
-        ignored_parameters_by_force['PeriodicTorsionForce'] = ['n_improper_folds']
+        ignored_parameters_by_force["PeriodicTorsionForce"] = ["n_improper_folds"]
 
     # We need to perform some checks on the type and number of forces in the Systems.
-    force_names1 = collections.Counter(f.__class__.__name__ for f in system1.getForces())
-    force_names2 = collections.Counter(f.__class__.__name__ for f in system2.getForces())
-    err_msg = 'Only systems having 1 force per type are supported.'
+    force_names1 = collections.Counter(
+        f.__class__.__name__ for f in system1.getForces()
+    )
+    force_names2 = collections.Counter(
+        f.__class__.__name__ for f in system2.getForces()
+    )
+    err_msg = "Only systems having 1 force per type are supported."
     assert set(force_names1.values()) == {1}, err_msg
     assert set(force_names2.values()) == {1}, err_msg
 
     # Remove the center-of-mass motion remover force from comparison.
     for force_names in [force_names1, force_names2]:
-        if 'CMMotionRemover' in force_names:
-            del force_names['CMMotionRemover']
+        if "CMMotionRemover" in force_names:
+            del force_names["CMMotionRemover"]
 
     # Check that the two systems have the same forces.
     if set(force_names1) != set(force_names2):
-        err_msg = 'The two Systems have different forces to compare:\n - system1 {}\n - system2 {}'
+        err_msg = "The two Systems have different forces to compare:\n - system1 {}\n - system2 {}"
         raise ValueError(err_msg.format(sorted(force_names1), sorted(force_names2)))
 
     # Find all the pair of forces to compare.
@@ -1209,7 +1302,7 @@ def compare_system_parameters(system1, system2, systems_labels=None,
     for system in [system1, system2]:
         for force in system.getForces():
             # Skip CMMotionRemover.
-            if force.__class__.__name__ == 'CMMotionRemover':
+            if force.__class__.__name__ == "CMMotionRemover":
                 continue
             force_pairs[force.__class__.__name__].append(force)
 
@@ -1228,18 +1321,29 @@ def compare_system_parameters(system1, system2, systems_labels=None,
         # Compare the forces and raise an error if a difference is detected.
         for parameter_type, parameters1 in parameters_force1.items():
             parameters2 = parameters_force2[parameter_type]
-            _compare_parameters(parameters1, parameters2,
-                                interaction_type=parameter_type,
-                                force_name=force_name,
-                                systems_labels=systems_labels)
+            _compare_parameters(
+                parameters1,
+                parameters2,
+                interaction_type=parameter_type,
+                force_name=force_name,
+                systems_labels=systems_labels,
+            )
 
 
-#=============================================================================================
+# =============================================================================================
 # Utility functions to compare SMIRNOFF and AMBER force fields.
-#=============================================================================================
+# =============================================================================================
 
-def compare_amber_smirnoff(prmtop_file_path, inpcrd_file_path, forcefield, molecule,
-                           check_parameters=True, check_energies=True, **kwargs):
+
+def compare_amber_smirnoff(
+    prmtop_file_path,
+    inpcrd_file_path,
+    forcefield,
+    molecule,
+    check_parameters=True,
+    check_energies=True,
+    **kwargs
+):
     """
     Compare energies and parameters for OpenMM Systems/topologies created
     from an AMBER prmtop and crd versus from a SMIRNOFF forcefield file which
@@ -1293,7 +1397,8 @@ def compare_amber_smirnoff(prmtop_file_path, inpcrd_file_path, forcefield, molec
     # Create System from AMBER files. By default, contrarily to ForceField,
     # systems from AMBER files are created with removeCMMotion=True
     amber_system, openmm_topology, positions = create_system_from_amber(
-        prmtop_file_path, inpcrd_file_path, removeCMMotion=False)
+        prmtop_file_path, inpcrd_file_path, removeCMMotion=False
+    )
     box_vectors = amber_system.getDefaultPeriodicBoxVectors()
 
     # Create System from forcefield.
@@ -1302,13 +1407,14 @@ def compare_amber_smirnoff(prmtop_file_path, inpcrd_file_path, forcefield, molec
 
     # Test energies and parameters.
     if check_parameters:
-        compare_system_parameters(amber_system, ff_system,
-                                  systems_labels=('AMBER', 'SMIRNOFF'),
-                                  **kwargs)
+        compare_system_parameters(
+            amber_system, ff_system, systems_labels=("AMBER", "SMIRNOFF"), **kwargs
+        )
 
     if check_energies:
         amber_energies, forcefield_energies = compare_system_energies(
-            amber_system, ff_system, positions, box_vectors, **kwargs)
+            amber_system, ff_system, positions, box_vectors, **kwargs
+        )
 
-        return {'AMBER': amber_energies, 'SMIRNOFF': forcefield_energies}
+        return {"AMBER": amber_energies, "SMIRNOFF": forcefield_energies}
     return None

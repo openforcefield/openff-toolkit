@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
-#=============================================================================================
+# =============================================================================================
 # MODULE DOCSTRING
-#=============================================================================================
+# =============================================================================================
 """
 Parameter assignment tools for the SMIRNOFF (SMIRKS Native Open Force Field) format.
 
@@ -17,19 +17,19 @@ Parameter assignment tools for the SMIRNOFF (SMIRKS Native Open Force Field) for
 """
 
 __all__ = [
-    'get_available_force_fields',
-    'MAX_SUPPORTED_VERSION',
-    'ParameterHandlerRegistrationError',
-    'SMIRNOFFVersionError',
-    'SMIRNOFFAromaticityError',
-    'ParseError',
-    'ForceField',
+    "get_available_force_fields",
+    "MAX_SUPPORTED_VERSION",
+    "ParameterHandlerRegistrationError",
+    "SMIRNOFFVersionError",
+    "SMIRNOFFAromaticityError",
+    "ParseError",
+    "ForceField",
 ]
 
 
-#=============================================================================================
+# =============================================================================================
 # GLOBAL IMPORTS
-#=============================================================================================
+# =============================================================================================
 
 import copy
 import logging
@@ -37,30 +37,34 @@ import os
 import pathlib
 from collections import OrderedDict
 
-
 from simtk import openmm, unit
 
-from openforcefield.utils import all_subclasses, MessageException, \
-    convert_all_quantities_to_string, convert_all_strings_to_quantity, \
-    convert_0_1_smirnoff_to_0_2, convert_0_2_smirnoff_to_0_3
 from openforcefield.topology.molecule import DEFAULT_AROMATICITY_MODEL
+from openforcefield.typing.engines.smirnoff.io import ParameterIOHandler
 from openforcefield.typing.engines.smirnoff.parameters import ParameterHandler
 from openforcefield.typing.engines.smirnoff.plugins import load_handler_plugins
-from openforcefield.typing.engines.smirnoff.io import ParameterIOHandler
+from openforcefield.utils import (
+    MessageException,
+    all_subclasses,
+    convert_0_1_smirnoff_to_0_2,
+    convert_0_2_smirnoff_to_0_3,
+    convert_all_quantities_to_string,
+    convert_all_strings_to_quantity,
+)
 
-
-#=============================================================================================
+# =============================================================================================
 # CONFIGURE LOGGER
-#=============================================================================================
+# =============================================================================================
 
 logger = logging.getLogger(__name__)
 
-#=============================================================================================
+# =============================================================================================
 # PRIVATE METHODS
-#=============================================================================================
+# =============================================================================================
 
 # Directory paths used by ForceField to discover offxml files.
 _installed_offxml_dir_paths = []
+
 
 def _get_installed_offxml_dir_paths():
     """Return the list of directory paths where to search for offxml files.
@@ -80,9 +84,12 @@ def _get_installed_offxml_dir_paths():
     global _installed_offxml_dir_paths
     if len(_installed_offxml_dir_paths) == 0:
         from pkg_resources import iter_entry_points
+
         # Find all registered entry points that should return a list of
         # paths to directories where to search for offxml files.
-        for entry_point in iter_entry_points(group='openforcefield.smirnoff_forcefield_directory'):
+        for entry_point in iter_entry_points(
+            group="openforcefield.smirnoff_forcefield_directory"
+        ):
             _installed_offxml_dir_paths.extend(entry_point.load()())
     return _installed_offxml_dir_paths
 
@@ -111,7 +118,7 @@ def get_available_force_fields(full_paths=False):
     installed_paths = _get_installed_offxml_dir_paths()
     available_force_fields = []
     for installed_path in installed_paths:
-        for globbed in pathlib.Path(installed_path).rglob('*.offxml'):
+        for globbed in pathlib.Path(installed_path).rglob("*.offxml"):
             if full_paths:
                 available_force_fields.append(globbed.as_posix())
             else:
@@ -120,39 +127,46 @@ def get_available_force_fields(full_paths=False):
 
 
 # TODO: Instead of having a global version number, alow each Force to have a separate version number
-MAX_SUPPORTED_VERSION = '1.0'  # maximum version of the SMIRNOFF spec supported by this SMIRNOFF forcefield
+MAX_SUPPORTED_VERSION = (
+    "1.0"  # maximum version of the SMIRNOFF spec supported by this SMIRNOFF forcefield
+)
 
 
 class ParameterHandlerRegistrationError(MessageException):
     """
     Exception for errors in ParameterHandler registration
     """
+
     pass
+
 
 class SMIRNOFFVersionError(MessageException):
     """
     Exception thrown when an incompatible SMIRNOFF version data structure in attempted to be read.
     """
+
     pass
+
 
 class SMIRNOFFAromaticityError(MessageException):
     """
     Exception thrown when an incompatible SMIRNOFF aromaticity model is checked for compatibility.
     """
+
     pass
+
 
 class ParseError(MessageException):
     """
     Error for when a SMIRNOFF data structure is not parseable by a ForceField
     """
+
     pass
 
 
-
-
-#=============================================================================================
+# =============================================================================================
 # FORCEFIELD
-#=============================================================================================
+# =============================================================================================
 
 # QUESTION: How should we document private object fields?
 
@@ -250,13 +264,15 @@ class ForceField:
 
     """
 
-    def __init__(self,
-                 *sources,
-                 parameter_handler_classes=None,
-                 parameter_io_handler_classes=None,
-                 disable_version_check=False,
-                 allow_cosmetic_attributes=False,
-                 load_plugins=False):
+    def __init__(
+        self,
+        *sources,
+        parameter_handler_classes=None,
+        parameter_io_handler_classes=None,
+        disable_version_check=False,
+        allow_cosmetic_attributes=False,
+        load_plugins=False,
+    ):
         """Create a new :class:`ForceField` object from one or more SMIRNOFF parameter definition files.
 
         Parameters
@@ -331,8 +347,7 @@ class ForceField:
         if parameter_io_handler_classes is None:
             parameter_io_handler_classes = all_subclasses(ParameterIOHandler)
 
-        self._register_parameter_io_handler_classes(
-            parameter_io_handler_classes)
+        self._register_parameter_io_handler_classes(parameter_io_handler_classes)
 
         # Parse all sources containing SMIRNOFF parameter definitions
         self.parse_sources(sources, allow_cosmetic_attributes=allow_cosmetic_attributes)
@@ -343,16 +358,25 @@ class ForceField:
         """
         self._MIN_SUPPORTED_SMIRNOFF_VERSION = 0.1
         self._MAX_SUPPORTED_SMIRNOFF_VERSION = 0.3
-        self._disable_version_check = False  # if True, will disable checking compatibility version
+        self._disable_version_check = (
+            False  # if True, will disable checking compatibility version
+        )
         self._aromaticity_model = DEFAULT_AROMATICITY_MODEL  # aromaticity model
-        self._parameter_handler_classes = OrderedDict()  # Parameter handler classes that _can_ be initialized if needed
-        self._parameter_handlers = OrderedDict()  # ParameterHandler classes to be instantiated for each parameter type
-        self._parameter_io_handler_classes = OrderedDict()  # ParameterIOHandler classes that _can_ be initialiazed if needed
-        self._parameter_io_handlers = OrderedDict()  # ParameterIO classes to be used for each file type
+        self._parameter_handler_classes = (
+            OrderedDict()
+        )  # Parameter handler classes that _can_ be initialized if needed
+        self._parameter_handlers = (
+            OrderedDict()
+        )  # ParameterHandler classes to be instantiated for each parameter type
+        self._parameter_io_handler_classes = (
+            OrderedDict()
+        )  # ParameterIOHandler classes that _can_ be initialiazed if needed
+        self._parameter_io_handlers = (
+            OrderedDict()
+        )  # ParameterIO classes to be used for each file type
         self._aromaticity_model = None
         self._author = None
         self._date = None
-
 
     def _check_smirnoff_version_compatibility(self, version):
         """
@@ -369,23 +393,26 @@ class ForceField:
 
         """
         import packaging.version
+
         # Use PEP-440 compliant version number comparison, if requested
         if (not self.disable_version_check) and (
-                (
-                        packaging.version.parse(str(version)) >
-                packaging.version.parse(str(self._MAX_SUPPORTED_SMIRNOFF_VERSION))
-
-                ) or (
-                packaging.version.parse(str(version)) <
-                packaging.version.parse(str(self._MIN_SUPPORTED_SMIRNOFF_VERSION))
-                )
-              ):
+            (
+                packaging.version.parse(str(version))
+                > packaging.version.parse(str(self._MAX_SUPPORTED_SMIRNOFF_VERSION))
+            )
+            or (
+                packaging.version.parse(str(version))
+                < packaging.version.parse(str(self._MIN_SUPPORTED_SMIRNOFF_VERSION))
+            )
+        ):
             raise SMIRNOFFVersionError(
-                'SMIRNOFF offxml file was written with version {}, but this version of ForceField only supports '
-                'version {} to version {}'.format(version,
-                                                  self._MIN_SUPPORTED_SMIRNOFF_VERSION,
-                                                  self._MAX_SUPPORTED_SMIRNOFF_VERSION))
-
+                "SMIRNOFF offxml file was written with version {}, but this version of ForceField only supports "
+                "version {} to version {}".format(
+                    version,
+                    self._MIN_SUPPORTED_SMIRNOFF_VERSION,
+                    self._MAX_SUPPORTED_SMIRNOFF_VERSION,
+                )
+            )
 
     def _set_aromaticity_model(self, aromaticity_model):
         """
@@ -401,13 +428,29 @@ class ForceField:
         ------
         SMIRNOFFAromaticityError if an incompatible aromaticity model is passed in.
 
+        .. notes ::
+           * Currently, the only supported aromaticity model is 'OEAroModel_MDL'.
+
         """
         # Implement better logic here if we ever support another aromaticity model
-        if aromaticity_model != 'OEAroModel_MDL':
-            raise SMIRNOFFAromaticityError("Read aromaticity model {}. Currently only "
-                                           "OEAroModel_MDL is supported.".format(aromaticity_model))
+        if aromaticity_model != "OEAroModel_MDL":
+            raise SMIRNOFFAromaticityError(
+                "Read aromaticity model {}. Currently only "
+                "OEAroModel_MDL is supported.".format(aromaticity_model)
+            )
 
         self._aromaticity_model = aromaticity_model
+
+    @property
+    def aromaticity_model(self):
+        """Returns the aromaticity model for this ForceField object.
+
+        Returns
+        -------
+        aromaticity_model
+            The aromaticity model for this force field.
+        """
+        return self._aromaticity_model
 
     def _add_author(self, author):
         """
@@ -422,8 +465,7 @@ class ForceField:
         if self._author is None:
             self._author = author
         else:
-            self._author += ' AND ' + author
-
+            self._author += " AND " + author
 
     def _add_date(self, date):
         """
@@ -438,7 +480,7 @@ class ForceField:
         if self._date is None:
             self._date = date
         else:
-            self._date += ' AND ' + date
+            self._date += " AND " + date
 
     @property
     def author(self):
@@ -451,7 +493,6 @@ class ForceField:
         """
         return self._author
 
-
     @author.setter
     def author(self, author):
         """Set the author data for this ForceField object. If not defined in any loaded files, this will be None.
@@ -463,7 +504,6 @@ class ForceField:
         """
         self._author = author
 
-
     @property
     def date(self):
         """Returns the date data for this ForceField object. If not defined in any loaded files, this will be None.
@@ -474,7 +514,6 @@ class ForceField:
             The date data for this forcefield.
         """
         return self._date
-
 
     @date.setter
     def date(self, date):
@@ -505,13 +544,14 @@ class ForceField:
                     raise Exception(
                         "Attempting to register ParameterHandler {}, which provides a parser for tag"
                         " '{}', but ParameterHandler {} has already been registered to handle that tag.".format(
-                        parameter_handler_class, tagname,
-                        self._parameter_handler_classes[tagname])
+                            parameter_handler_class,
+                            tagname,
+                            self._parameter_handler_classes[tagname],
+                        )
                     )
                 self._parameter_handler_classes[tagname] = parameter_handler_class
 
-    def _register_parameter_io_handler_classes(self,
-                                               parameter_io_handler_classes):
+    def _register_parameter_io_handler_classes(self, parameter_io_handler_classes):
         """
         Register multiple ParameterIOHandler classes, ensuring they specify unique suffixes
 
@@ -531,17 +571,18 @@ class ForceField:
         for parameter_io_handler_class in parameter_io_handler_classes:
             serialization_format = parameter_io_handler_class._FORMAT
             if serialization_format is not None:
-                if serialization_format in self._parameter_io_handler_classes.keys(
-                ):
+                if serialization_format in self._parameter_io_handler_classes.keys():
                     raise Exception(
                         "Attempting to register ParameterIOHandler {}, which provides a IO parser for format "
                         "'{}', but ParameterIOHandler {} has already been registered to handle that tag.".format(
-                        parameter_io_handler_class, serialization_format,
-                        self._parameter_io_handler_classes[
-                        serialization_format])
+                            parameter_io_handler_class,
+                            serialization_format,
+                            self._parameter_io_handler_classes[serialization_format],
+                        )
                     )
                 self._parameter_io_handler_classes[
-                    serialization_format] = parameter_io_handler_class
+                    serialization_format
+                ] = parameter_io_handler_class
 
     def register_parameter_handler(self, parameter_handler):
         """
@@ -562,8 +603,9 @@ class ForceField:
             raise ParameterHandlerRegistrationError(
                 "Tried to register parameter handler '{}' for tag '{}', but "
                 "tag is already registered to {}".format(
-                    parameter_handler, tagname,
-                    self._parameter_handlers[tagname]))
+                    parameter_handler, tagname, self._parameter_handlers[tagname]
+                )
+            )
 
         self._parameter_handlers[parameter_handler._TAGNAME] = parameter_handler
 
@@ -585,8 +627,11 @@ class ForceField:
             raise ParameterHandlerRegistrationError(
                 "Tried to register parameter IO handler '{}' for tag '{}', but "
                 "tag is already registered to {}".format(
-                    parameter_io_handler, io_format,
-                    self._parameter_io_handlers[io_format]))
+                    parameter_io_handler,
+                    io_format,
+                    self._parameter_io_handlers[io_format],
+                )
+            )
         self._parameter_io_handlers[io_format] = parameter_io_handler
 
     @property
@@ -606,8 +651,9 @@ class ForceField:
     # TODO: Do we want to make this optional?
 
     @staticmethod
-    def _check_for_missing_valence_terms(name, topology, assigned_terms,
-                                         topological_terms):
+    def _check_for_missing_valence_terms(
+        name, topology, assigned_terms, topological_terms
+    ):
         """
         Check to ensure there are no missing valence terms in the given topology, identifying potential gaps in
         parameter coverage.
@@ -638,14 +684,18 @@ class ForceField:
                 return tuple(reversed(atoms))
 
         try:
-            topology_set = set([
-                ordered_tuple(atom.index for atom in atomset)
-                for atomset in topological_terms
-            ])
-            assigned_set = set([
-                ordered_tuple(index for index in atomset)
-                for atomset in assigned_terms
-            ])
+            topology_set = set(
+                [
+                    ordered_tuple(atom.index for atom in atomset)
+                    for atomset in topological_terms
+                ]
+            )
+            assigned_set = set(
+                [
+                    ordered_tuple(index for index in atomset)
+                    for atomset in assigned_terms
+                ]
+            )
         except TypeError as te:
             topology_set = set([atom.index for atom in topological_terms])
             assigned_set = set([atomset[0] for atomset in assigned_terms])
@@ -653,36 +703,41 @@ class ForceField:
         def render_atoms(atomsets):
             msg = ""
             for atomset in atomsets:
-                msg += f'{atomset:30} :'
+                msg += f"{atomset:30} :"
                 try:
                     for atom_index in atomset:
                         atom = atoms[atom_index]
-                        msg += f' {atom.residue.index:5} {atom.residue.name:3} {atom.name:3}'
+                        msg += f" {atom.residue.index:5} {atom.residue.name:3} {atom.name:3}"
                 except TypeError as te:
                     atom = atoms[atomset]
-                    msg += f' {atom.residue.index:5} {atom.residue.name:3} {atom.name:3}'
+                    msg += (
+                        f" {atom.residue.index:5} {atom.residue.name:3} {atom.name:3}"
+                    )
 
-                msg += '\n'
+                msg += "\n"
             return msg
 
         if set(assigned_set) != set(topology_set):
             # Form informative error message
-            msg = f'{name}: Mismatch between valence terms added and topological terms expected.\n'
+            msg = f"{name}: Mismatch between valence terms added and topological terms expected.\n"
             atoms = [atom for atom in topology.topology_atoms]
             if len(assigned_set.difference(topology_set)) > 0:
-                msg += 'Valence terms created that are not present in Topology:\n'
+                msg += "Valence terms created that are not present in Topology:\n"
                 msg += render_atoms(assigned_set.difference(topology_set))
             if len(topology_set.difference(assigned_set)) > 0:
-                msg += 'Topological atom sets not assigned parameters:\n'
+                msg += "Topological atom sets not assigned parameters:\n"
                 msg += render_atoms(topology_set.difference(assigned_set))
-            msg += 'topology_set:\n'
-            msg += str(topology_set) + '\n'
-            msg += 'assigned_set:\n'
-            msg += str(assigned_set) + '\n'
+            msg += "topology_set:\n"
+            msg += str(topology_set) + "\n"
+            msg += "assigned_set:\n"
+            msg += str(assigned_set) + "\n"
             raise Exception(
-                msg)  # TODO: Should we raise a more specific exception here?
+                msg
+            )  # TODO: Should we raise a more specific exception here?
 
-    def get_parameter_handler(self, tagname, handler_kwargs=None, allow_cosmetic_attributes=False):
+    def get_parameter_handler(
+        self, tagname, handler_kwargs=None, allow_cosmetic_attributes=False
+    ):
         """Retrieve the parameter handlers associated with the provided tagname.
 
         If the parameter handler has not yet been instantiated, it will be created and returned.
@@ -725,17 +780,21 @@ class ForceField:
             # If no handler kwargs were provided, skip the compatibility check
             if handler_kwargs != {}:
                 # Initialize a new instance of this parameter handler class with the given kwargs
-                new_handler = ph_class(**handler_kwargs,
-                                       allow_cosmetic_attributes=allow_cosmetic_attributes,
-                                       skip_version_check=skip_version_check)
+                new_handler = ph_class(
+                    **handler_kwargs,
+                    allow_cosmetic_attributes=allow_cosmetic_attributes,
+                    skip_version_check=skip_version_check,
+                )
                 old_handler.check_handler_compatibility(new_handler)
             return_handler = old_handler
         elif tagname in self._parameter_handler_classes:
             # Otherwise, register this handler in the forcefield
             # Initialize a new instance of this parameter handler class with the given kwargs
-            new_handler = ph_class(**handler_kwargs,
-                                   allow_cosmetic_attributes=allow_cosmetic_attributes,
-                                   skip_version_check=skip_version_check)
+            new_handler = ph_class(
+                **handler_kwargs,
+                allow_cosmetic_attributes=allow_cosmetic_attributes,
+                skip_version_check=skip_version_check,
+            )
             self.register_parameter_handler(new_handler)
             return_handler = new_handler
 
@@ -762,7 +821,7 @@ class ForceField:
         io_format = io_format.upper()
 
         # Remove "." (ParameterIOHandler tags do not include it)
-        io_format = io_format.strip('.')
+        io_format = io_format.strip(".")
 
         # Find or initialize ParameterIOHandler for this format
         io_handler = None
@@ -774,13 +833,14 @@ class ForceField:
             self.register_parameter_io_handler(io_handler)
         if io_handler is None:
             msg = "Cannot find a registered parameter IO handler for format '{}'\n".format(
-                io_format)
+                io_format
+            )
             msg += "Registered parameter IO handlers: {}\n".format(
-                self._parameter_io_handlers.keys())
+                self._parameter_io_handlers.keys()
+            )
             raise KeyError(msg)
 
         return io_handler
-
 
     def parse_sources(self, sources, allow_cosmetic_attributes=True):
         """Parse a SMIRNOFF force field definition.
@@ -814,9 +874,9 @@ class ForceField:
         # TODO: If a non-first source fails here, the forcefield might be partially modified
         for source in sources:
             smirnoff_data = self.parse_smirnoff_from_source(source)
-            self._load_smirnoff_data(smirnoff_data,
-                                     allow_cosmetic_attributes=allow_cosmetic_attributes)
-
+            self._load_smirnoff_data(
+                smirnoff_data, allow_cosmetic_attributes=allow_cosmetic_attributes
+            )
 
     def _to_smirnoff_data(self, discard_cosmetic_attributes=False):
         """
@@ -834,25 +894,27 @@ class ForceField:
         l1_dict = OrderedDict()
 
         # Assume we will write out SMIRNOFF data in compliance with the max supported spec version
-        l1_dict['version'] = self._MAX_SUPPORTED_SMIRNOFF_VERSION
+        l1_dict["version"] = self._MAX_SUPPORTED_SMIRNOFF_VERSION
 
         # Write out the aromaticity model used
-        l1_dict['aromaticity_model'] = self._aromaticity_model
+        l1_dict["aromaticity_model"] = self._aromaticity_model
 
         # Write out author and date (if they have been set)
         if not (self._author is None):
-            l1_dict['Author'] = self._author
+            l1_dict["Author"] = self._author
 
         # Write out author and date (if they have been set)
         if not (self._date is None):
-            l1_dict['Date'] = self._date
+            l1_dict["Date"] = self._date
 
         for handler_format, parameter_handler in self._parameter_handlers.items():
             handler_tag = parameter_handler._TAGNAME
-            l1_dict[handler_tag] = parameter_handler.to_dict(discard_cosmetic_attributes=discard_cosmetic_attributes)
+            l1_dict[handler_tag] = parameter_handler.to_dict(
+                discard_cosmetic_attributes=discard_cosmetic_attributes
+            )
 
         smirnoff_dict = OrderedDict()
-        smirnoff_dict['SMIRNOFF'] = l1_dict
+        smirnoff_dict["SMIRNOFF"] = l1_dict
         smirnoff_dict = convert_all_quantities_to_string(smirnoff_dict)
         return smirnoff_dict
 
@@ -872,11 +934,10 @@ class ForceField:
 
         # Check that the SMIRNOFF version of this data structure is supported by this ForceField implementation
 
-
         if "SMIRNOFF" in smirnoff_data:
-            version = smirnoff_data['SMIRNOFF']['version']
+            version = smirnoff_data["SMIRNOFF"]["version"]
         elif "SMIRFF" in smirnoff_data:
-            version = smirnoff_data['SMIRFF']['version']
+            version = smirnoff_data["SMIRFF"]["version"]
         else:
             raise ParseError("'version' attribute must be specified in SMIRNOFF tag")
 
@@ -894,24 +955,28 @@ class ForceField:
             smirnoff_data = convert_0_2_smirnoff_to_0_3(smirnoff_data)
 
         # Ensure that SMIRNOFF is a top-level key of the dict
-        if not('SMIRNOFF' in smirnoff_data):
-            raise ParseError("'SMIRNOFF' must be a top-level key in the SMIRNOFF object model")
+        if not ("SMIRNOFF" in smirnoff_data):
+            raise ParseError(
+                "'SMIRNOFF' must be a top-level key in the SMIRNOFF object model"
+            )
 
         # Check that the aromaticity model required by this parameter set is compatible with
         # others loaded by this ForceField
-        if 'aromaticity_model' in smirnoff_data['SMIRNOFF']:
-            aromaticity_model = smirnoff_data['SMIRNOFF']['aromaticity_model']
+        if "aromaticity_model" in smirnoff_data["SMIRNOFF"]:
+            aromaticity_model = smirnoff_data["SMIRNOFF"]["aromaticity_model"]
             self._set_aromaticity_model(aromaticity_model)
 
         elif self._aromaticity_model is None:
-            raise ParseError("'aromaticity_model' attribute must be specified in SMIRNOFF "
-                             "tag, or contained in a previously-loaded SMIRNOFF data source")
+            raise ParseError(
+                "'aromaticity_model' attribute must be specified in SMIRNOFF "
+                "tag, or contained in a previously-loaded SMIRNOFF data source"
+            )
 
-        if 'Author' in smirnoff_data['SMIRNOFF']:
-            self._add_author(smirnoff_data['SMIRNOFF']['Author'])
+        if "Author" in smirnoff_data["SMIRNOFF"]:
+            self._add_author(smirnoff_data["SMIRNOFF"]["Author"])
 
-        if 'Date' in smirnoff_data['SMIRNOFF']:
-            self._add_date(smirnoff_data['SMIRNOFF']['Date'])
+        if "Date" in smirnoff_data["SMIRNOFF"]:
+            self._add_date(smirnoff_data["SMIRNOFF"]["Date"])
 
         # Go through the whole SMIRNOFF data structure, trying to convert all strings to Quantity
         smirnoff_data = convert_all_strings_to_quantity(smirnoff_data)
@@ -919,21 +984,21 @@ class ForceField:
         # Go through the subsections, delegating each to the proper ParameterHandler
 
         # Define keys which are expected from the spec, but are not parameter sections
-        l1_spec_keys = ['Author', 'Date', 'version', 'aromaticity_model']
+        l1_spec_keys = ["Author", "Date", "version", "aromaticity_model"]
         # TODO: Throw SMIRNOFFSpecError for unrecognized keywords
 
-        for parameter_name in smirnoff_data['SMIRNOFF']:
+        for parameter_name in smirnoff_data["SMIRNOFF"]:
             # Skip (for now) cosmetic l1 items. They're handled above
             if parameter_name in l1_spec_keys:
                 continue
             # Handle cases where a parameter name has no info (eg. ToolkitAM1BCC)
-            if smirnoff_data['SMIRNOFF'][parameter_name] is None:
+            if smirnoff_data["SMIRNOFF"][parameter_name] is None:
                 # "get"ting the parameter handler here will also initialize it.
                 _ = self.get_parameter_handler(parameter_name, {})
                 continue
 
             # Otherwise, we expect this l1_key to correspond to a ParameterHandler
-            section_dict = smirnoff_data['SMIRNOFF'][parameter_name]
+            section_dict = smirnoff_data["SMIRNOFF"][parameter_name]
 
             # TODO: Implement a ParameterHandler.from_dict() that knows how to deserialize itself for extensibility.
             #       We could let it load the ParameterTypes from the dict and append them to the existing handler
@@ -957,11 +1022,14 @@ class ForceField:
 
             # Retrieve or create parameter handler, passing in section_dict to check for
             # compatibility if a handler for this parameter name already exists
-            handler = self.get_parameter_handler(parameter_name,
-                                                 section_dict,
-                                                 allow_cosmetic_attributes=allow_cosmetic_attributes)
-            handler._add_parameters(parameter_list_dict,
-                                    allow_cosmetic_attributes=allow_cosmetic_attributes)
+            handler = self.get_parameter_handler(
+                parameter_name,
+                section_dict,
+                allow_cosmetic_attributes=allow_cosmetic_attributes,
+            )
+            handler._add_parameters(
+                parameter_list_dict, allow_cosmetic_attributes=allow_cosmetic_attributes
+            )
 
     def parse_smirnoff_from_source(self, source):
         """
@@ -988,12 +1056,12 @@ class ForceField:
         # file handler or a simple XML string.
         if isinstance(source, str):
             # Try first the simple path.
-            searched_dirs_paths = ['']
+            searched_dirs_paths = [""]
             # Then try a relative file path w.r.t. an installed directory.
-            searched_dirs_paths.extend( _get_installed_offxml_dir_paths())
+            searched_dirs_paths.extend(_get_installed_offxml_dir_paths())
             # Finally, search in openforcefield/data/.
             # TODO: Remove this when smirnoff99Frosst 1.0.9 will be released.
-            searched_dirs_paths.append(get_data_file_path(''))
+            searched_dirs_paths.append(get_data_file_path(""))
 
             # Determine the actual path of the file.
             # TODO: What is desired toolkit behavior if two files with the desired name are available?
@@ -1027,8 +1095,7 @@ class ForceField:
 
         # If we haven't returned by now, the parsing was unsuccessful
         valid_formats = [
-            input_format
-            for input_format in self._parameter_io_handlers.keys()
+            input_format for input_format in self._parameter_io_handlers.keys()
         ]
         msg = f"Source {source} could not be read. If this is a file, ensure that the path is correct.\n"
         msg += "If the file is present, ensure it is in a known SMIRNOFF encoding.\n"
@@ -1036,8 +1103,7 @@ class ForceField:
         msg += f"Parsing failed with the following error:\n{exception_msg}\n"
         raise IOError(msg)
 
-
-    def to_string(self, io_format='XML', discard_cosmetic_attributes=False):
+    def to_string(self, io_format="XML", discard_cosmetic_attributes=False):
         """
         Write this Forcefield and all its associated parameters to a string in a given format which
         complies with the SMIRNOFF spec.
@@ -1061,7 +1127,9 @@ class ForceField:
         else:
             io_handler = self.get_parameter_io_handler(io_format)
 
-        smirnoff_data = self._to_smirnoff_data(discard_cosmetic_attributes=discard_cosmetic_attributes)
+        smirnoff_data = self._to_smirnoff_data(
+            discard_cosmetic_attributes=discard_cosmetic_attributes
+        )
         string_data = io_handler.to_string(smirnoff_data)
         return string_data
 
@@ -1089,22 +1157,20 @@ class ForceField:
         if io_format is None:
             basename, io_format = os.path.splitext(filename)
 
-
-
         # Resolve which IO handler to use
         if isinstance(io_format, ParameterIOHandler):
             io_handler = io_format
         else:
             # Handle the fact that .offxml is the same as .xml
-            if io_format.lower() == 'offxml' or io_format.lower() == '.offxml':
-                io_format = 'xml'
+            if io_format.lower() == "offxml" or io_format.lower() == ".offxml":
+                io_format = "xml"
             io_handler = self.get_parameter_io_handler(io_format)
 
-
         # Write out the SMIRNOFF data to the IOHandler
-        smirnoff_data = self._to_smirnoff_data(discard_cosmetic_attributes=discard_cosmetic_attributes)
+        smirnoff_data = self._to_smirnoff_data(
+            discard_cosmetic_attributes=discard_cosmetic_attributes
+        )
         io_handler.to_file(filename, smirnoff_data)
-
 
     def _resolve_parameter_handler_order(self):
         """Resolve the order in which ParameterHandler objects should execute to satisfy constraints.
@@ -1117,6 +1183,7 @@ class ForceField:
 
         # Create a DAG expressing dependencies
         import networkx as nx
+
         G = nx.DiGraph()
         for tagname, parameter_handler in self._parameter_handlers.items():
             G.add_node(tagname)
@@ -1126,15 +1193,16 @@ class ForceField:
                     G.add_edge(dependency._TAGNAME, parameter_handler._TAGNAME)
 
         # Ensure there are no loops in handler order
-        if not(nx.is_directed_acyclic_graph(G)):
-            raise RuntimeError("Unable to resolve order in which to run ParameterHandlers. Dependencies do not form "
-                               "a directed acyclic graph.")
+        if not (nx.is_directed_acyclic_graph(G)):
+            raise RuntimeError(
+                "Unable to resolve order in which to run ParameterHandlers. Dependencies do not form "
+                "a directed acyclic graph."
+            )
         # Resolve order
         ordered_parameter_handlers = list()
         for tagname in nx.topological_sort(G):
             if tagname in self._parameter_handlers:
-                ordered_parameter_handlers.append(
-                    self._parameter_handlers[tagname])
+                ordered_parameter_handlers.append(self._parameter_handlers[tagname])
         return ordered_parameter_handlers
 
     # TODO: Should we add convenience methods to parameterize a Topology and export directly to AMBER, gromacs, CHARMM, etc.?
@@ -1146,38 +1214,40 @@ class ForceField:
     # TODO: How do we know if the system is periodic or not?
     # TODO: Should we also accept a Molecule as an alternative to a Topology?
 
-
-
-    def create_openmm_system(self,
-                             topology,
-                             **kwargs):
+    def create_openmm_system(self, topology, **kwargs):
         """Create an OpenMM System representing the interactions for the specified Topology with the current force field
 
         Parameters
         ----------
         topology : openforcefield.topology.Topology
             The ``Topology`` corresponding to the system to be parameterized
-        charge_from_molecules : List[openforcefield.molecule.Molecule], optional
+        charge_from_molecules : List[openforcefield.molecule.Molecule], optional. default =[]
             If specified, partial charges will be taken from the given molecules
             instead of being determined by the force field.
-        partial_bond_orders_from_molecules : List[openforcefield.molecule.Molecule], optional
+        partial_bond_orders_from_molecules : List[openforcefield.molecule.Molecule], optional. default=[]
             If specified, partial bond orders will be taken from the given molecules
             instead of being determined by the force field.
             **All** bonds on each molecule given must have ``fractional_bond_order`` specified.
             A `ValueError` will be raised if any bonds have ``fractional_bond_order=None``.
             Molecules in the topology not represented in this list will have fractional
             bond orders calculated using underlying toolkits as needed.
-        return_topology : bool
+        return_topology : bool, optional. default=False
             If ``True``, return tuple of ``(system, topology)``, where
-            ``topology`` is the processed topology. Default ``False``.
+            ``topology`` is the processed topology. Default ``False``. This topology will have the
+            final partial charges assigned on its reference_molecules attribute, as well as partial
+            bond orders (if they were calculated).
 
         Returns
         -------
         system : simtk.openmm.System
             The newly created OpenMM System corresponding to the specified ``topology``
+        topology : openforcefield.topology.Topology, optional.
+            If the `return_topology` keyword argument is used, this method will also return a Topology. This
+            can be used to inspect the partial charges and partial bond orders assigned to the molecules
+            during parameterization.
 
         """
-        return_topology = kwargs.pop('return_topology', False)
+        return_topology = kwargs.pop("return_topology", False)
 
         # Make a deep copy of the topology so we don't accidentally modify it
         topology = copy.deepcopy(topology)
@@ -1189,7 +1259,7 @@ class ForceField:
 
         # Set the topology aromaticity model to that used by the current forcefield
         # TODO: See openforcefield issue #206 for proposed implementation of aromaticity
-        #topology.set_aromaticity_model(self._aromaticity_model)
+        # topology.set_aromaticity_model(self._aromaticity_model)
 
         # Create an empty OpenMM System
         system = openmm.System()
@@ -1213,7 +1283,8 @@ class ForceField:
         unknown_kwargs = set(kwargs.keys()).difference(known_kwargs)
         if len(unknown_kwargs) > 0:
             msg = "The following keyword arguments to create_openmm_system() are not used by any registered force Handler: {}\n".format(
-                unknown_kwargs)
+                unknown_kwargs
+            )
             msg += "Known keyword arguments: {}".format(known_kwargs)
             raise ValueError(msg)
 
@@ -1230,10 +1301,7 @@ class ForceField:
         else:
             return system
 
-    def create_parmed_structure(self,
-                                topology,
-                                positions,
-                                **kwargs):
+    def create_parmed_structure(self, topology, positions, **kwargs):
         """Create a ParmEd Structure object representing the interactions for the specified Topology with the current force field
 
         This method creates a `ParmEd <http://github.com/parmed/parmed>`_ ``Structure`` object containing a topology, positions, and parameters.
@@ -1252,18 +1320,18 @@ class ForceField:
 
         """
         raise NotImplementedError
-        #import parmed
+        # import parmed
         # TODO: Automagically handle expansion of virtual sites? Or is Topology supposed to do that?
 
         # Create OpenMM System
-        #system = self.create_openmm_system(
+        # system = self.create_openmm_system(
         #    topology, **kwargs)
 
         # Create a ParmEd Structure object
-        #structure = parmed.openmm.topsystem.load_topology(
+        # structure = parmed.openmm.topsystem.load_topology(
         #    topology.to_openmm(), system, positions)
         #
-        #return structure
+        # return structure
 
     def label_molecules(self, topology):
         """Return labels for a list of molecules corresponding to parameters from this force field.
@@ -1293,6 +1361,7 @@ class ForceField:
 
         """
         from openforcefield.topology import Topology
+
         # Loop over molecules and label
         molecule_labels = list()
         for molecule_idx, molecule in enumerate(topology.reference_molecules):
@@ -1329,8 +1398,11 @@ class ForceField:
             ph_class = self._parameter_handler_classes[tagname]
         except KeyError:
             msg = "Cannot find a registered parameter handler class for tag '{}'\n".format(
-                tagname)
-            msg += "Known parameter handler class tags are {}".format(self._parameter_handler_classes.keys())
+                tagname
+            )
+            msg += "Known parameter handler class tags are {}".format(
+                self._parameter_handler_classes.keys()
+            )
             raise KeyError(msg)
         return ph_class
 
