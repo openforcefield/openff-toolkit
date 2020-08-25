@@ -842,14 +842,22 @@ class TestMolecule:
         Test basic behavior of the IUPAC conversion functions. More rigorous
         testing of the toolkity wrapper behavior is in test_toolkits.py
         """
-        from openforcefield.utils.toolkits import UndefinedStereochemistryError
+        from openforcefield.utils.toolkits import (
+            InvalidIUPACNameError,
+            UndefinedStereochemistryError,
+        )
 
         with pytest.raises(InvalidIUPACNameError):
             Molecule.from_iupac(".BETA.-PINENE")
 
-        mol_bad_stereo = Molecule.from_smiles("ClC=CCl")
+        # DrugBank_977, tagged as a problem molecule in earlier tests
+        bad_stereo_iupac = (
+            "(~{E},3~{R},5~{S})-7-[4-(4-fluorophenyl)-6-isopropyl-2-"
+            "[methyl(methylsulfonyl)amino]pyrimidin-5-yl]-3,5-"
+            "dihydroxy-hept-6-enoic acid"
+        )
         with pytest.raises(UndefinedStereochemistryError):
-            mol_bad_stereo.to_iupac()
+            Molecule.from_iupac(bad_stereo_iupac)
 
         cholesterol = Molecule.from_smiles(
             "C[C@H](CCCC(C)C)[C@H]1CC[C@@H]2[C@@]1(CC[C@H]3[C@H]2CC=C4[C@@]3(CC[C@@H](C4)O)C)C"
