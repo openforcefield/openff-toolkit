@@ -155,7 +155,7 @@ class ChargeCalculationError(MessageException):
     pass
 
 
-class InvalidIUPACNameError(MessageException):
+class InvalidIUPACNameError(MessageException):  # TODO: Should this live in molecule.py?
     """Failed to parse IUPAC name"""
 
 
