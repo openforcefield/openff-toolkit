@@ -211,9 +211,14 @@ class ToolkitWrapper:
     # @classmethod
     def toolkit_name(self):
         """
-        The name of the toolkit wrapped by this class.
+        Return the name of the toolkit wrapped by this class as a str
 
         .. warning :: This API is experimental and subject to change.
+
+        Returns
+        -------
+        toolkit_name : str
+            The name of the wrapped toolkit
 
         """
         return self.__class__._toolkit_name
@@ -258,9 +263,14 @@ class ToolkitWrapper:
     @property
     def toolkit_version(self):
         """
-        Return the version of the wrapped toolkit
+        Return the version of the wrapped toolkit as a str
 
         .. warning :: This API is experimental and subject to change.
+
+        Returns
+        -------
+        toolkit_version : str
+            The version of the wrapped toolkit
 
         """
         return self._toolkit_version
@@ -4111,6 +4121,7 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
                 f"available. {self._toolkit_installation_instructions}"
             )
 
+        # TODO: More reliable way to extract AmberTools version
         out = subprocess.check_output(["antechamber", "-L"])
         ambertools_version = out.decode("utf-8").split("\n")[1].split()[3].strip(":")
         self._toolkit_version = ambertools_version
@@ -4716,6 +4727,11 @@ class ToolkitRegistry:
         Return a dict containing the version of each registered toolkit.
 
         .. warning :: This API is experimental and subject to change.
+
+        Returns
+        -------
+        toolkit_versions : dict[str, str]
+            A dictionary mapping names and versions of wrapped toolkits
 
         """
         return dict(

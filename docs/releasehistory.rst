@@ -19,6 +19,11 @@ New features
 - `PR #667 <https://github.com/openforcefield/openforcefield/pull/667>`_ and
   `PR #681 <https://github.com/openforcefield/openforcefield/pull/681>`_ linted the codebase with
   ``black`` and ``isort``, respectively.
+- `PR #675 <https://github.com/openforcefield/openforcefield/pull/675>`_ adds
+  ``.toolkit_version`` to
+  :py:class:`ToolkitWrapper <openforcefield.utils.toolkits.ToolkitWrapper>` and
+  ``.registered_toolkit_versions`` to
+  :py:class:`ToolkitRegistry <openforcefield.utils.toolkits.ToolkitRegistry>`.
 
 Behavior changed
 """"""""""""""""
@@ -27,6 +32,9 @@ Behavior changed
 - `PR #670 <https://github.com/openforcefield/openforcefield/pull/670>`_: Makes the
   :py:class:`Topology <openforcefield.topology.Topology>` returned by ``create_openmm_system``
   contain the partial charges and partial bond orders (if any) assigned during parameterization.
+- `PR #675 <https://github.com/openforcefield/openforcefield/pull/675>`_ changes the
+  exception raised when no ``antechamber`` executable is found from ``IOError`` to
+  :py:class:`AntechamberNotFoundError <openforcefield.utils.toolkits.AntechamberNotFoundError>`
 
 0.7.1 - OETK2020 Compatibility and Minor Update
 -----------------------------------------------
