@@ -59,8 +59,7 @@ class SMIRKSParsingError(MessageException):
 
 
 class ChemicalEnvironment:
-    """Chemical environment abstract base class used for validating SMIRKS
-    """
+    """Chemical environment abstract base class used for validating SMIRKS"""
 
     _expected_type = None
 
@@ -252,35 +251,30 @@ class ChemicalEnvironment:
 
 
 class AtomChemicalEnvironment(ChemicalEnvironment):
-    """Chemical environment matching one labeled atom.
-    """
+    """Chemical environment matching one labeled atom."""
 
     _expected_type = "Atom"
 
 
 class BondChemicalEnvironment(ChemicalEnvironment):
-    """Chemical environment matching two labeled atoms (or a bond).
-    """
+    """Chemical environment matching two labeled atoms (or a bond)."""
 
     _expected_type = "Bond"
 
 
 class AngleChemicalEnvironment(ChemicalEnvironment):
-    """Chemical environment matching three marked atoms (angle).
-    """
+    """Chemical environment matching three marked atoms (angle)."""
 
     _expected_type = "Angle"
 
 
 class TorsionChemicalEnvironment(ChemicalEnvironment):
-    """Chemical environment matching four marked atoms (torsion).
-    """
+    """Chemical environment matching four marked atoms (torsion)."""
 
     _expected_type = "ProperTorsion"
 
 
 class ImproperChemicalEnvironment(ChemicalEnvironment):
-    """Chemical environment matching four marked atoms (improper).
-    """
+    """Chemical environment matching four marked atoms (improper)."""
 
     _expected_type = "ImproperTorsion"

@@ -279,8 +279,7 @@ class TestTopology(TestCase):
             topology_bond = topology.bond(12)
 
     def test_get_virtual_site(self):
-        """Test Topology.virtual_site function (get virtual site from index)
-        """
+        """Test Topology.virtual_site function (get virtual site from index)"""
         topology = Topology()
         topology.add_molecule(self.ethane_from_smiles_w_vsites)
         assert topology.n_topology_virtual_sites == 2
@@ -346,7 +345,8 @@ class TestTopology(TestCase):
         # Add a virtualsite to the reference ethanol
         for ref_mol in topology.reference_molecules:
             ref_mol._add_bond_charge_virtual_site(
-                [0, 1], 0.5 * unit.angstrom,
+                [0, 1],
+                0.5 * unit.angstrom,
             )
 
         virtual_site_topology_atom_indices = [(0, 1), (9, 10), (26, 25)]
@@ -361,8 +361,7 @@ class TestTopology(TestCase):
             assert top_vs.atom(1).topology_particle_index == expected_indices[1]
 
     def test_is_bonded(self):
-        """Test Topology.virtual_site function (get virtual site from index)
-        """
+        """Test Topology.virtual_site function (get virtual site from index)"""
         topology = Topology()
         topology.add_molecule(self.propane_from_smiles_w_vsites)
         topology.assert_bonded(0, 1)

@@ -233,8 +233,7 @@ class Atom(Particle):
         ----------
         bond: an openforcefield.topology.molecule.Bond
             A bond involving this atom
-
-"""
+        """
 
         self._bonds.append(bond)
         # self._stereochemistry = None
@@ -247,15 +246,12 @@ class Atom(Particle):
         ----------
         bond: an openforcefield.topology.molecule.Bond
             A bond involving this atom
-
-"""
+        """
 
         self._virtual_sites.append(vsite)
 
     def to_dict(self):
-        """Return a dict representation of the atom.
-
-"""
+        """Return a dict representation of the atom."""
         # TODO
         atom_dict = OrderedDict()
         atom_dict["atomic_number"] = self._atomic_number
@@ -270,9 +266,7 @@ class Atom(Particle):
 
     @classmethod
     def from_dict(cls, atom_dict):
-        """Create an Atom from a dict representation.
-
-"""
+        """Create an Atom from a dict representation."""
         ## TODO: classmethod or static method? Classmethod is needed for Bond, so it have
         ## its _molecule set and then look up the Atom on each side of it by ID
         return cls.__init__(*atom_dict)
@@ -551,8 +545,7 @@ class VirtualSite(Particle):
             Virtual site type.
         name : str or None, default=None
             The name of this virtual site. Default is None
-
-"""
+        """
 
         # Ensure we have as many charge_increments as we do atoms
         if not (charge_increments is None):
@@ -634,9 +627,7 @@ class VirtualSite(Particle):
         # self._weights = np.array(weights) # make a copy and convert to array internally
 
     def to_dict(self):
-        """Return a dict representation of the virtual site.
-
-"""
+        """Return a dict representation of the virtual site."""
         # Each subclass should have its own to_dict
         vsite_dict = OrderedDict()
         vsite_dict["name"] = self._name
@@ -651,9 +642,7 @@ class VirtualSite(Particle):
 
     @classmethod
     def from_dict(cls, vsite_dict):
-        """Create a virtual site from a dict representation.
-
-"""
+        """Create a virtual site from a dict representation."""
         # Each subclass needs to have its own from_dict
 
         # Make a copy of the vsite_dict, where we'll unit-wrap the appropriate values
@@ -861,7 +850,7 @@ class MonovalentLonePairVirtualSite(VirtualSite):
     A particle representing a "Monovalent Lone Pair"-type virtual site, in which the location of the charge is specified by the positions of three atoms. This is originally intended for situations like a carbonyl, and allows placement of a virtual site S at a specified distance d, in_plane_angle, and out_of_plane_angle relative to a central atom and two connected atoms.
 
     .. warning :: This API is experimental and subject to change.
-   """
+    """
 
     def __init__(
         self,
@@ -5085,7 +5074,7 @@ class Molecule(FrozenMolecule):
     def visualize(self, backend="rdkit", width=500, height=300):
         """
         Render a visualization of the molecule in Jupyter
-        
+
         Parameters
         ----------
         backend : str, optional, default='rdkit'
