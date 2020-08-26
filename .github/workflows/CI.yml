@@ -135,17 +135,6 @@ jobs:
         run: |
           pytest -r fE -tb=short openforcefield/tests/test_links.py
 
-      - name: Run unit tests
-        shell: bash -l {0}
-        run: |
-          PYTEST_ARGS=" -r fE --tb=short --cov=$PACKAGE --cov-config=setup.cfg"
-          PYTEST_ARGS+=" --ignore=openforcefield/tests/test_examples.py"
-          PYTEST_ARGS+=" --ignore=openforcefield/tests/test_links.py"
-          if [[ "$RDKIT" == true && "$OPENEYE" == true ]]; then
-            PYTEST_ARGS+="--doctest-modules"
-          fi
-          pytest $PYTEST_ARGS $PACKAGE/
-
       - name: Run examples
         shell: bash -l {0}
         run: |
