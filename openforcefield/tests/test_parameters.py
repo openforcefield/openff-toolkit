@@ -524,8 +524,7 @@ class TestParameterHandler:
         )
 
     def test_to_dict_maintain_units(self):
-        """Test ParameterHandler.to_dict() function when parameters were provided in different units
-        """
+        """Test ParameterHandler.to_dict() function when parameters were provided in different units"""
         from simtk import unit
 
         bh = BondHandler(skip_version_check=True)
@@ -623,8 +622,7 @@ class TestParameterHandler:
         assert not (bh.attribute_is_cosmetic("pilot"))
 
     def test_get_parameter(self):
-        """Test that ParameterHandler.get_parameter can lookup function
-        """
+        """Test that ParameterHandler.get_parameter can lookup function"""
         from simtk import unit
 
         bh = BondHandler(skip_version_check=True, allow_cosmetic_attributes=True)
@@ -682,12 +680,10 @@ class TestParameterHandler:
 
 
 class TestParameterList:
-    """Test capabilities of ParameterList for accessing and manipulating SMIRNOFF parameter definitions.
-    """
+    """Test capabilities of ParameterList for accessing and manipulating SMIRNOFF parameter definitions."""
 
     def test_create(self):
-        """Test creation of a parameter list.
-        """
+        """Test creation of a parameter list."""
         p1 = ParameterType(smirks="[*:1]")
         p2 = ParameterType(smirks="[#1:1]")
         parameters = ParameterList([p1, p2])
@@ -697,8 +693,7 @@ class TestParameterList:
         "API, the smirks assignment will fail with RDKit."
     )
     def test_getitem(self):
-        """Test ParameterList __getitem__ overloading.
-        """
+        """Test ParameterList __getitem__ overloading."""
         p1 = ParameterType(smirks="[*:1]")
         p2 = ParameterType(smirks="[#1:1]")
         parameters = ParameterList([p1, p2])
@@ -737,8 +732,7 @@ class TestParameterList:
             parameters.index(p4)
 
     def test_contains(self):
-        """Test ParameterList __contains__ overloading.
-        """
+        """Test ParameterList __contains__ overloading."""
         p1 = ParameterType(smirks="[*:1]")
         p2 = ParameterType(smirks="[#1:1]")
         p3 = ParameterType(smirks="[#7:1]")

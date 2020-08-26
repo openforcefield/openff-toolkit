@@ -1390,47 +1390,47 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
     @staticmethod
     def to_openeye(molecule, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
         """
-        Create an OpenEye molecule using the specified aromaticity model
+         Create an OpenEye molecule using the specified aromaticity model
 
-        ``OEAtom`` s have a different set of allowed value for partial charges than
-        ``openforcefield.topology.Molecule`` s. In the OpenEye toolkits, partial charges
-        are stored on individual ``OEAtom`` s, and their values are initialized to ``0.0``.
-        In the Open Force Field Toolkit, an ``openforcefield.topology.Molecule``'s
-        ``partial_charges`` attribute is initialized to ``None`` and can be set to a
-        ``simtk.unit.Quantity``-wrapped numpy array with units of
-        elementary charge. The Open Force
-        Field Toolkit considers an ``OEMol`` where every ``OEAtom`` has a partial
-        charge of ``float('nan')`` to be equivalent to an Open Force Field Molecule's
-        ``partial_charges = None``.
-        This assumption is made in both ``to_openeye`` and ``from_openeye``.
+         ``OEAtom`` s have a different set of allowed value for partial charges than
+         ``openforcefield.topology.Molecule`` s. In the OpenEye toolkits, partial charges
+         are stored on individual ``OEAtom`` s, and their values are initialized to ``0.0``.
+         In the Open Force Field Toolkit, an ``openforcefield.topology.Molecule``'s
+         ``partial_charges`` attribute is initialized to ``None`` and can be set to a
+         ``simtk.unit.Quantity``-wrapped numpy array with units of
+         elementary charge. The Open Force
+         Field Toolkit considers an ``OEMol`` where every ``OEAtom`` has a partial
+         charge of ``float('nan')`` to be equivalent to an Open Force Field Molecule's
+         ``partial_charges = None``.
+         This assumption is made in both ``to_openeye`` and ``from_openeye``.
 
-        .. todo ::
+         .. todo ::
 
-           * Should the aromaticity model be specified in some other way?
+            * Should the aromaticity model be specified in some other way?
 
-       .. warning :: This API is experimental and subject to change.
+        .. warning :: This API is experimental and subject to change.
 
-        Parameters
-        ----------
-        molecule : openforcefield.topology.molecule.Molecule object
-            The molecule to convert to an OEMol
-        aromaticity_model : str, optional, default=DEFAULT_AROMATICITY_MODEL
-            The aromaticity model to use
+         Parameters
+         ----------
+         molecule : openforcefield.topology.molecule.Molecule object
+             The molecule to convert to an OEMol
+         aromaticity_model : str, optional, default=DEFAULT_AROMATICITY_MODEL
+             The aromaticity model to use
 
-        Returns
-        -------
-        oemol : openeye.oechem.OEMol
-            An OpenEye molecule
+         Returns
+         -------
+         oemol : openeye.oechem.OEMol
+             An OpenEye molecule
 
-        Examples
-        --------
+         Examples
+         --------
 
-        Create an OpenEye molecule from a Molecule
+         Create an OpenEye molecule from a Molecule
 
-        >>> from openforcefield.topology import Molecule
-        >>> toolkit_wrapper = OpenEyeToolkitWrapper()
-        >>> molecule = Molecule.from_smiles('CC')
-        >>> oemol = toolkit_wrapper.to_openeye(molecule)
+         >>> from openforcefield.topology import Molecule
+         >>> toolkit_wrapper = OpenEyeToolkitWrapper()
+         >>> molecule = Molecule.from_smiles('CC')
+         >>> oemol = toolkit_wrapper.to_openeye(molecule)
 
         """
         from openeye import oechem
@@ -1489,8 +1489,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             )
 
             # Flip chirality if stereochemistry isincorrect
-            oeatom_stereochemistry = OpenEyeToolkitWrapper._openeye_cip_atom_stereochemistry(
-                oemol, oeatom
+            oeatom_stereochemistry = (
+                OpenEyeToolkitWrapper._openeye_cip_atom_stereochemistry(oemol, oeatom)
             )
             if oeatom_stereochemistry != atom.stereochemistry:
                 # Flip the stereochemistry
@@ -1498,8 +1498,10 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                     neighs, oechem.OEAtomStereo_Tetra, oechem.OEAtomStereo_Left
                 )
                 # Verify it matches now as a sanity check
-                oeatom_stereochemistry = OpenEyeToolkitWrapper._openeye_cip_atom_stereochemistry(
-                    oemol, oeatom
+                oeatom_stereochemistry = (
+                    OpenEyeToolkitWrapper._openeye_cip_atom_stereochemistry(
+                        oemol, oeatom
+                    )
                 )
                 if oeatom_stereochemistry != atom.stereochemistry:
                     raise Exception(
@@ -1525,8 +1527,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             )
 
             # Flip stereochemistry if incorrect
-            oebond_stereochemistry = OpenEyeToolkitWrapper._openeye_cip_bond_stereochemistry(
-                oemol, oebond
+            oebond_stereochemistry = (
+                OpenEyeToolkitWrapper._openeye_cip_bond_stereochemistry(oemol, oebond)
             )
             if oebond_stereochemistry != bond.stereochemistry:
                 # Flip the stereochemistry
@@ -1536,8 +1538,10 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                     oechem.OEBondStereo_Trans,
                 )
                 # Verify it matches now as a sanity check
-                oebond_stereochemistry = OpenEyeToolkitWrapper._openeye_cip_bond_stereochemistry(
-                    oemol, oebond
+                oebond_stereochemistry = (
+                    OpenEyeToolkitWrapper._openeye_cip_bond_stereochemistry(
+                        oemol, oebond
+                    )
                 )
                 if oebond_stereochemistry != bond.stereochemistry:
                     raise Exception(
@@ -2195,7 +2199,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             The conformers to use for fractional bond order calculation. If None, an appropriate number
             of conformers will be generated by an available ToolkitWrapper.
 
-         """
+        """
         from openeye import oequacpac
 
         from openforcefield.topology import Molecule
@@ -4462,7 +4466,7 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         use_conformers : iterable of simtk.unit.Quantity(np.array) with shape (n_atoms, 3) and dimension of distance, optional, default=None
             The conformers to use for fractional bond order calculation. If None, an appropriate number
             of conformers will be generated by an available ToolkitWrapper.
-         """
+        """
         from openforcefield.topology import Molecule
 
         # Find the path to antechamber
