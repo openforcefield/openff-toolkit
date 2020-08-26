@@ -29,7 +29,7 @@ The order of toolkits, as specified in ``toolkit_precedence`` above, determines 
 the called method is resolved, i.e. if the toolkit with highest precedence has a ``to_smiles``
 method, that is the toolkit that will be called. If the toolkit with highest precedence does not
 have such a method, it is attempted with other toolkits until one is found. By default, if a toolkit with an appropriately-named method raises an exception of any type, then iteration over the registered toolkits stops and that exception is raised. To continue iteration if specific exceptions are encountered, customize this behavior using the optional ``raise_exception_types`` keyword argument to ``ToolkitRegistry.call``. If no registered
-toolkits have the method, an informative error message is presented.
+toolkits have the method, a ValueError is raised, containing a message listing the registered toolkits and exceptions (if any) that were ignored. 
 
 Alternatively, the global toolkit registry (which will attempt to register any available toolkits) can be used:
 
