@@ -150,7 +150,7 @@ jobs:
         shell: bash -l {0}
         run: |
           PYTEST_ARGS=" -r fE --tb=short"
-          if [[ "$OPENEYE" == true ]]; then
+          if [[ "$OPENEYE" == false ]]; then
             PYTEST_ARGS+=" --ignore=examples/check_dataset_parameter_coverage"
             PYTEST_ARGS+=" --ignore=examples/QCArchive_interface"
           fi
@@ -161,6 +161,10 @@ jobs:
         run: |
           PYTEST_ARGS=" -r fE --tb=short --nbval-lax"
           PYTEST_ARGS+=" --ignore=examples/deprecated"
+          if [[ "$OPENEYE" == false ]]; then
+            PYTEST_ARGS+=" --ignore=examples/check_dataset_parameter_coverage"
+            PYTEST_ARGS+=" --ignore=examples/QCArchive_interface"
+          fi
           pytest $PYTEST_ARGS examples/
 
       - name: Codecov
