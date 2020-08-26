@@ -691,8 +691,7 @@ class _ParametersComparer:
         return diff_str
 
     def _get_diff(self, other):
-        """Build a 'diff' including only the parameters that are different.
-        """
+        """Build a 'diff' including only the parameters that are different."""
         assert set(self.parameters.keys()) == set(other.parameters.keys())
         diff = {}
         for par_name, par1_value in self.parameters.items():
