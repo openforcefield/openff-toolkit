@@ -38,7 +38,7 @@ Alternatively, the global toolkit registry (which will attempt to register any a
     from openforcefield.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY as toolkit_registry
     toolkit_registry.registered_toolkits
 
-Individual toolkits can be registered or deregistered to control which toolkits are called. This can
+Individual toolkits can be registered or deregistered to control the backend that ToolkitRegistry calls resolve to. This can
 be useful for debugging and exploring subtley different behavior between toolkit wrappers.
 
 .. code-block:: python
