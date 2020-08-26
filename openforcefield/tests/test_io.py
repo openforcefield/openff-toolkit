@@ -41,8 +41,7 @@ class TestXMLParameterIOHandler:
     #       dicts and XML
     @pytest.mark.skip(reason="Needs to be updated for 1.0.0 syntax")
     def test_save(self):
-        """Test writing and reading of SMIRNOFF in XML format.
-        """
+        """Test writing and reading of SMIRNOFF in XML format."""
         forcefield = ForceField(smirnoff99Frosst_offxml_filename)
         # Write XML to a file
         with TemporaryDirectory() as tmpdir:

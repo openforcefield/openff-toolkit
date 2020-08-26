@@ -88,8 +88,7 @@ def test_force_field_custom_handler(mock_entry_point_plugins):
 
 
 def test_load_handler_plugins(mock_entry_point_plugins):
-    """Tests that parameter handlers can be registered as plugins.
-    """
+    """Tests that parameter handlers can be registered as plugins."""
 
     registered_plugins = load_handler_plugins()
 

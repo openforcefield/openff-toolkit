@@ -785,8 +785,7 @@ class TestMolecule:
     @requires_rdkit
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_to_from_rdkit(self, molecule):
-        """Test that conversion/creation of a molecule to and from an RDKit rdmol is consistent.
-        """
+        """Test that conversion/creation of a molecule to and from an RDKit rdmol is consistent."""
         # import pickle
         from openforcefield.utils.toolkits import UndefinedStereochemistryError
 
@@ -2342,7 +2341,7 @@ class TestMolecule:
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_add_bond_charge_virtual_site(self, molecule):
         """Test the addition of a BondChargeVirtualSite to a molecule.
-           Also tests many of the inputs of the parent VirtualSite class
+        Also tests many of the inputs of the parent VirtualSite class
         """
         # Do not modify the original molecule.
         molecule = copy.deepcopy(molecule)
@@ -2674,8 +2673,7 @@ class TestMolecule:
 
     @requires_openeye
     def test_assign_fractional_bond_orders(self):
-        """Test assignment of fractional bond orders
-        """
+        """Test assignment of fractional bond orders"""
         # TODO: Test only one molecule for speed?
         # TODO: Do we need to deepcopy each molecule, or is setUp called separately for each test method?
 
