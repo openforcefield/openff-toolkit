@@ -16,15 +16,92 @@ Utilities for testing.
 import collections
 import copy
 import functools
+import importlib
 import itertools
 import os
 import pprint
 import textwrap
 
 import numpy as np
+import pytest
 from simtk import openmm, unit
 
-from openforcefield.utils import get_data_file_path
+from openforcefield.utils import (
+    AmberToolsToolkitWrapper,
+    OpenEyeToolkitWrapper,
+    RDKitToolkitWrapper,
+    get_data_file_path,
+)
+
+requires_ambertools = pytest.mark.skipif(
+    not AmberToolsToolkitWrapper.is_available(),
+    reason="Test requires AmberTools",
+)
+requires_rdkit = pytest.mark.skipif(
+    not RDKitToolkitWrapper.is_available(),
+    reason="Test requires RDKit",
+)
+requires_openeye = pytest.mark.skipif(
+    not OpenEyeToolkitWrapper.is_available(),
+    reason="Test requires OE toolkit",
+)
+requires_openeye_mol2 = pytest.mark.skipif(
+    requires_openeye.args, reason="Test requires OE toolkit to read mol2 files"
+)
+
+
+def has_pkg(pkg_name):
+    """
+    Helper function to generically check if a package is installed. Intended
+    to be used to check for optional dependencies.
+
+    Parameters
+    ----------
+    pkg_name : str
+        The name of the package to check the availability of
+
+    Returns
+    -------
+    pkg_available : bool
+        Boolean indicator if the package is available or not
+
+    Examples
+    --------
+    >>> has_numpy = has_pkg('numpy')
+    >>> has_numpy
+    True
+    >>> has_foo = has_pkg('other_non_installed_pkg')
+    >>> has_foo
+    False
+    """
+    try:
+        importlib.import_module(pkg_name)
+    except ModuleNotFoundError:
+        return False
+    return True
+
+
+def requires_pkg(pkg_name, reason=None):
+    """
+    Helper function to generate a skipif decorator for any package.
+
+    Parameters
+    ----------
+    pkg_name : str
+        The name of the package that is required for a test(s)
+    reason : str, optional
+        Explanation of why the skipped it to be tested
+
+    Returns
+    -------
+    requires_pkg : _pytest.mark.structures.MarkDecorator
+        A pytest decorator that will skip tests if the package is not available
+    """
+    if not reason:
+        reason = f"Package {pkg_name} is required, but was not found."
+    requires_pkg = pytest.mark.skipif(not has_pkg(pkg_name), reason=reason)
+    return requires_pkg
+
 
 # =============================================================================================
 # Shortcut functions to get file paths to test data.
@@ -1341,7 +1418,7 @@ def compare_amber_smirnoff(
     molecule,
     check_parameters=True,
     check_energies=True,
-    **kwargs
+    **kwargs,
 ):
     """
     Compare energies and parameters for OpenMM Systems/topologies created
