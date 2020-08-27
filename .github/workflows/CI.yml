@@ -168,7 +168,7 @@ jobs:
           fi
           pytest $PYTEST_ARGS examples/
 
-      - name; Run code snippets in docs
+      - name: Run code snippets in docs
         shell: bash -l {0}
         run: |
           pytest -v --doctest-glob="docs/*.rst" docs/
