@@ -34,13 +34,16 @@ from openforcefield.utils import (
 )
 
 requires_ambertools = pytest.mark.skipif(
-    not AmberToolsToolkitWrapper.is_available(), reason="Test requires AmberTools",
+    not AmberToolsToolkitWrapper.is_available(),
+    reason="Test requires AmberTools",
 )
 requires_rdkit = pytest.mark.skipif(
-    not RDKitToolkitWrapper.is_available(), reason="Test requires RDKit",
+    not RDKitToolkitWrapper.is_available(),
+    reason="Test requires RDKit",
 )
 requires_openeye = pytest.mark.skipif(
-    not OpenEyeToolkitWrapper.is_available(), reason="Test requires OE toolkit",
+    not OpenEyeToolkitWrapper.is_available(),
+    reason="Test requires OE toolkit",
 )
 requires_openeye_mol2 = pytest.mark.skipif(
     requires_openeye.args, reason="Test requires OE toolkit to read mol2 files"
