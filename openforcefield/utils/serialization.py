@@ -229,8 +229,7 @@ class Serializable(abc.ABC):
 
     @staticmethod
     def _represent_odict(dump, tag, mapping, flow_style=None):
-        """Like BaseRepresenter.represent_mapping, but does not issue the sort().
-        """
+        """Like BaseRepresenter.represent_mapping, but does not issue the sort()."""
         import yaml
 
         value = []

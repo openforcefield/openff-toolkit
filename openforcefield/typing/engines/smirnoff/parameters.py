@@ -444,7 +444,7 @@ class IndexedMappedParameterAttribute(ParameterAttribute):
     Some parameters can be associated to multiple terms,
     where those terms have multiple components.
     For example, torsions with fractional bond orders have parameters such as
-    k1_bondorder1, k1_bondorder2, k2_bondorder1, k2_bondorder2, ..., and 
+    k1_bondorder1, k1_bondorder2, k2_bondorder1, k2_bondorder2, ..., and
     ``IndexedMappedParameterAttribute`` can be used to encapsulate the sequence of
     terms as mappings (typically, `dict`s) of their components.
 
@@ -1742,8 +1742,7 @@ class ParameterHandler(_ParameterAttributeHandler):
     # TODO: Do we need to return these, or can we handle this internally
     @property
     def known_kwargs(self):
-        """List of kwargs that can be parsed by the function.
-        """
+        """List of kwargs that can be parsed by the function."""
         # TODO: Should we use introspection to inspect the function signature instead?
         return set(self._KWARGS)
 
@@ -2526,8 +2525,7 @@ class AngleHandler(ParameterHandler):
 
 # TODO: This is technically a validator, not a converter, but ParameterAttribute doesn't support them yet (it'll be easy if we switch to use the attrs library).
 def _allow_only(allowed_values):
-    """A converter that checks the new value is only in a set.
-    """
+    """A converter that checks the new value is only in a set."""
     allowed_values = frozenset(allowed_values)
 
     def _value_checker(instance, attr, new_value):
