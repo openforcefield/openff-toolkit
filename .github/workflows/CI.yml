@@ -52,6 +52,7 @@ jobs:
       PYVER: ${{ matrix.python-version }}
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
       PACKAGE: openforcefield
+      PYTEST_ARGS: -r fE --tb=short --cov=openforcefield --cov-config=setup.cfg --cov-append --cov-report=xml
 
     steps:
       - uses: actions/checkout@v2
@@ -138,7 +139,6 @@ jobs:
       - name: Run unit tests
         shell: bash -l {0}
         run: |
-          PYTEST_ARGS=" -r fE --tb=short --cov=$PACKAGE --cov-config=setup.cfg"
           PYTEST_ARGS+=" --ignore=openforcefield/tests/test_examples.py"
           PYTEST_ARGS+=" --ignore=openforcefield/tests/test_links.py"
           if [[ "$RDKIT" == true && "$OPENEYE" == true ]]; then
@@ -149,7 +149,6 @@ jobs:
       - name: Run example scripts
         shell: bash -l {0}
         run: |
-          PYTEST_ARGS=" -r fE --tb=short"
           if [[ "$RDKIT" == false ]]; then
             PYTEST_ARGS+=" --ignore=examples/check_dataset_parameter_coverage"
             PYTEST_ARGS+=" --ignore=examples/QCArchive_interface"
@@ -159,8 +158,7 @@ jobs:
       - name: Run example notebooks
         shell: bash -l {0}
         run: |
-          PYTEST_ARGS=" -r fE --tb=short --nbval-lax"
-          PYTEST_ARGS+=" --ignore=examples/deprecated"
+          PYTEST_ARGS+=" --nbval-lax --ignore=examples/deprecated"
           if [[ "$RDKIT" == false ]]; then
             PYTEST_ARGS+=" --ignore=examples/check_dataset_parameter_coverage"
             PYTEST_ARGS+=" --ignore=examples/conformer_energies"
