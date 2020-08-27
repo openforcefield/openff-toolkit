@@ -170,6 +170,7 @@ jobs:
 
       - name: Run code snippets in docs
         shell: bash -l {0}
+        if: ${{ matrix.cfg.rdkit == 'TRUE' && matrix.cfg.openeye == 'TRUE' }}
         run: |
           pytest -v --doctest-glob="docs/*.rst" docs/
 
