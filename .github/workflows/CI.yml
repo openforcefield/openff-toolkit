@@ -148,6 +148,7 @@ jobs:
 
       - name: Run example scripts
         shell: bash -l {0}
+        continue-on-error: true
         run: |
           if [[ "$RDKIT" == false ]]; then
             PYTEST_ARGS+=" --ignore=examples/check_dataset_parameter_coverage"
@@ -157,6 +158,7 @@ jobs:
 
       - name: Run example notebooks
         shell: bash -l {0}
+        continue-on-error: true
         run: |
           PYTEST_ARGS+=" --nbval-lax --ignore=examples/deprecated"
           if [[ "$RDKIT" == false ]]; then
