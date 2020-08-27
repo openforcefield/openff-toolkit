@@ -23,6 +23,11 @@ import pytest
 from numpy.testing import assert_almost_equal
 from simtk import openmm, unit
 
+from openforcefield.tests.utils import (
+    requires_openeye,
+    requires_openeye_mol2,
+    requires_rdkit,
+)
 from openforcefield.topology import Molecule, Topology
 from openforcefield.typing.engines.smirnoff import (
     ForceField,
@@ -1288,9 +1293,7 @@ class TestForceField:
         )
         # TODO: Add check to ensure system energy is finite
 
-    @pytest.mark.skipif(
-        not (OpenEyeToolkitWrapper.is_available()), reason="Test requires OE toolkit"
-    )
+    @requires_openeye
     def test_parameterize_ethanol_different_reference_ordering_openeye(self):
         """
         Test parameterizing the same PDB, using reference mol2s that have different atom orderings.
@@ -1330,9 +1333,7 @@ class TestForceField:
 
         assert serialized_1 == serialized_2
 
-    @pytest.mark.skipif(
-        not RDKitToolkitWrapper.is_available(), reason="Test requires RDKit toolkit"
-    )
+    @requires_rdkit
     def test_parameterize_ethanol_different_reference_ordering_rdkit(self):
         """
         Test parameterizing the same PDB, using reference mol2s that have different atom orderings.
@@ -1377,9 +1378,7 @@ class TestForceField:
 
         assert serialized_1 == serialized_2
 
-    @pytest.mark.skipif(
-        not RDKitToolkitWrapper.is_available(), reason="Test requires RDKit toolkit"
-    )
+    @requires_rdkit
     def test_parameterize_mol_missing_stereo_rdkit(self):
         """
         Test parameterizing a molecule with undefined stereochemsity using the RDKit/AmberTools backend.
@@ -1398,9 +1397,7 @@ class TestForceField:
         force_field = ForceField("test_forcefields/smirnoff99Frosst.offxml")
         force_field.create_openmm_system(topology, toolkit_registry=toolkit_registry)
 
-    @pytest.mark.skipif(
-        not OpenEyeToolkitWrapper.is_available(), reason="Test requires OpenEye toolkit"
-    )
+    @requires_openeye
     def test_parameterize_mol_missing_stereo_openeye(self):
         """
         Test parameterizing a molecule with undefined stereochemsity using the OpenEye backend.
@@ -2676,10 +2673,7 @@ def generate_freesolv_parameters_assignment_cases():
 class TestForceFieldParameterAssignment:
     """Regression tests checking that parameters are assigned correctly."""
 
-    @pytest.mark.skipif(
-        not OpenEyeToolkitWrapper.is_available(),
-        reason="Test requires OE toolkit to read mol2 files",
-    )
+    @requires_openeye_mol2
     @pytest.mark.parametrize(
         "alkethoh_id", generate_alkethoh_parameters_assignment_cases()
     )
@@ -2728,10 +2722,7 @@ class TestForceFieldParameterAssignment:
             ignore_charges=True,
         )
 
-    @pytest.mark.skipif(
-        not OpenEyeToolkitWrapper.is_available(),
-        reason="Test requires OE toolkit to read mol2 files",
-    )
+    @requires_openeye_mol2
     def test_multi_alkethoh_parameters_assignment(self):
         """Test that systems with multiple reference molecules are parametrized correctly.
 
@@ -2810,10 +2801,7 @@ class TestForceFieldParameterAssignment:
             amber_system, off_system, positions, ignore_charges=True
         )
 
-    @pytest.mark.skipif(
-        not OpenEyeToolkitWrapper.is_available(),
-        reason="Test requires OE toolkit to read mol2 files",
-    )
+    @requires_openeye_mol2
     @pytest.mark.parametrize(
         ("freesolv_id", "forcefield_version", "allow_undefined_stereo"),
         generate_freesolv_parameters_assignment_cases(),
@@ -2865,10 +2853,7 @@ class TestForceFieldParameterAssignment:
             ignore_improper_folds=True,
         )
 
-    @pytest.mark.skipif(
-        not OpenEyeToolkitWrapper.is_available(),
-        reason="Test requires OE toolkit to read mol2 files",
-    )
+    @requires_openeye_mol2
     @pytest.mark.parametrize(("is_periodic"), (False, True))
     @pytest.mark.parametrize(("gbsa_model"), ["HCT", "OBC1", "OBC2"])
     @pytest.mark.parametrize(
@@ -3085,10 +3070,7 @@ class TestForceFieldParameterAssignment:
             off_omm_system, amber_omm_system, positions, by_force_type=False
         )
 
-    @pytest.mark.skipif(
-        not OpenEyeToolkitWrapper.is_available(),
-        reason="Test requires OE toolkit to read mol2 files",
-    )
+    @requires_openeye_mol2
     @pytest.mark.parametrize("zero_charges", [True, False])
     @pytest.mark.parametrize(("gbsa_model"), ["HCT", "OBC1", "OBC2"])
     def test_molecule_energy_gb_no_sa(self, zero_charges, gbsa_model):
@@ -3270,10 +3252,7 @@ class TestForceFieldParameterAssignment:
         )
 
     @pytest.mark.slow
-    @pytest.mark.skipif(
-        not OpenEyeToolkitWrapper.is_available(),
-        reason="Test requires OE toolkit to read mol2 files",
-    )
+    @requires_openeye_mol2
     @pytest.mark.parametrize(
         "toolkit_registry,registry_description", toolkit_registries
     )
@@ -3404,9 +3383,7 @@ class TestForceFieldParameterAssignment:
                 k = params[-1]
                 assert_almost_equal(k / k.unit, 5.0208)
 
-    @pytest.mark.skipif(
-        not RDKitToolkitWrapper.is_available(), reason="Test requires RDKit toolkit"
-    )
+    @requires_rdkit
     @pytest.mark.parametrize(
         ("get_molecule", "k_interpolated", "central_atoms"),
         [
@@ -3474,9 +3451,7 @@ class TestForceFieldParameterAssignment:
                 with pytest.raises(AssertionError):
                     assert_almost_equal(k / k.unit, k_interpolated)
 
-    @pytest.mark.skipif(
-        not (OpenEyeToolkitWrapper.is_available()), reason="Test requires OE toolkit"
-    )
+    @requires_openeye
     @pytest.mark.parametrize(
         ("get_molecule", "k_interpolated", "central_atoms"),
         [
@@ -3544,10 +3519,7 @@ class TestForceFieldParameterAssignment:
 
 
 class TestSmirnoffVersionConverter:
-    @pytest.mark.skipif(
-        not OpenEyeToolkitWrapper.is_available(),
-        reason="Test requires OE toolkit to read mol2 files",
-    )
+    @requires_openeye_mol2
     @pytest.mark.parametrize(
         ("freesolv_id", "forcefield_version", "allow_undefined_stereo"),
         generate_freesolv_parameters_assignment_cases(),

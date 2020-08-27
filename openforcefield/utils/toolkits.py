@@ -31,6 +31,7 @@ __all__ = [
     "MissingPackageError",
     "ToolkitUnavailableException",
     "InvalidToolkitError",
+    "InvalidToolkitRegistryError",
     "UndefinedStereochemistryError",
     "GAFFAtomTypeWarning",
     "ToolkitWrapper",
@@ -117,6 +118,10 @@ class ToolkitUnavailableException(MessageException):
 
 class InvalidToolkitError(MessageException):
     """A non-toolkit object was received when a toolkit object was expected"""
+
+
+class InvalidToolkitRegistryError(MessageException):
+    """An object other than a ToolkitRegistry or toolkit wrapper was received"""
 
 
 class UndefinedStereochemistryError(MessageException):
@@ -733,10 +738,11 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         """
         with tempfile.TemporaryDirectory() as tmpdir:
-            outfile = "temp_molecule." + file_format
-            self.to_file(molecule, outfile, file_format)
-            file_data = open(outfile).read()
-        file_obj.write(file_data)
+            with temporary_cd(tmpdir):
+                outfile = "temp_molecule." + file_format
+                self.to_file(molecule, outfile, file_format)
+                file_data = open(outfile).read()
+            file_obj.write(file_data)
 
     def to_file(self, molecule, file_path, file_format):
         """
