@@ -374,7 +374,6 @@ class ForceField:
         self._parameter_io_handlers = (
             OrderedDict()
         )  # ParameterIO classes to be used for each file type
-        self._aromaticity_model = None
         self._author = None
         self._date = None
 
@@ -414,7 +413,19 @@ class ForceField:
                 )
             )
 
-    def _set_aromaticity_model(self, aromaticity_model):
+    @property
+    def aromaticity_model(self):
+        """Returns the aromaticity model for this ForceField object.
+
+        Returns
+        -------
+        aromaticity_model
+            The aromaticity model for this force field.
+        """
+        return self._aromaticity_model
+
+    @aromaticity_model.setter
+    def aromaticity_model(self, aromaticity_model):
         """
         Register that this forcefield is using an aromaticity model. Will check for
         compatibility with other aromaticity model(s) already in use.
@@ -440,17 +451,6 @@ class ForceField:
             )
 
         self._aromaticity_model = aromaticity_model
-
-    @property
-    def aromaticity_model(self):
-        """Returns the aromaticity model for this ForceField object.
-
-        Returns
-        -------
-        aromaticity_model
-            The aromaticity model for this force field.
-        """
-        return self._aromaticity_model
 
     def _add_author(self, author):
         """
@@ -964,7 +964,7 @@ class ForceField:
         # others loaded by this ForceField
         if "aromaticity_model" in smirnoff_data["SMIRNOFF"]:
             aromaticity_model = smirnoff_data["SMIRNOFF"]["aromaticity_model"]
-            self._set_aromaticity_model(aromaticity_model)
+            self.aromaticity_model = aromaticity_model
 
         elif self._aromaticity_model is None:
             raise ParseError(

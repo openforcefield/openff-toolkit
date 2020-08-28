@@ -736,6 +736,9 @@ class TestForceField:
         with pytest.raises(KeyError) as excinfo:
             forcefield.get_parameter_handler("InvalidKey")
 
+        # Verify the aromatocitiy model is not None
+        assert forcefield.aromaticity_model == "OEAroModel_MDL"
+
     def test_create_forcefield_custom_handler_classes(self):
         """Test constructor given specific classes to register"""
         from openforcefield.typing.engines.smirnoff import BondHandler
