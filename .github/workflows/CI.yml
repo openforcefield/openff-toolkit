@@ -146,17 +146,27 @@ jobs:
           fi
           pytest $PYTEST_ARGS $PACKAGE/
 
-      - name: Run examples
+      - name: Run example scripts
         shell: bash -l {0}
         run: |
-          PYTEST_ARGS=" -r fE --tb=short --nbval-lax"
-          PYTEST_ARGS+=" --ignore=utilities --ignore=examples/deprecated"
-          PYTEST_ARGS+=" --ignore=openforcefield/tests/plugins.py --nbval-lax"
-          if [[ "$OPENEYE" == true ]]; then
+          PYTEST_ARGS=" -r fE --tb=short"
+          if [[ "$RDKIT" == false ]]; then
             PYTEST_ARGS+=" --ignore=examples/check_dataset_parameter_coverage"
             PYTEST_ARGS+=" --ignore=examples/QCArchive_interface"
           fi
           pytest $PYTEST_ARGS openforcefield/tests/test_examples.py
+
+      - name: Run example notebooks
+        shell: bash -l {0}
+        run: |
+          PYTEST_ARGS=" -r fE --tb=short --nbval-lax"
+          PYTEST_ARGS+=" --ignore=examples/deprecated"
+          if [[ "$RDKIT" == false ]]; then
+            PYTEST_ARGS+=" --ignore=examples/check_dataset_parameter_coverage"
+            PYTEST_ARGS+=" --ignore=examples/conformer_energies"
+            PYTEST_ARGS+=" --ignore=examples/QCArchive_interface"
+          fi
+          pytest $PYTEST_ARGS examples/
 
       - name: Codecov
         uses: codecov/codecov-action@v1
