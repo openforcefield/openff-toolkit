@@ -20,11 +20,22 @@ from simtk import unit
 
 from openforcefield.typing.engines.smirnoff import SMIRNOFFVersionError
 from openforcefield.typing.engines.smirnoff.parameters import (
-    BondHandler, ChargeIncrementModelHandler, DuplicateParameterError,
-    GBSAHandler, ImproperTorsionHandler, IncompatibleParameterError,
-    IndexedParameterAttribute, LibraryChargeHandler, ParameterAttribute,
-    ParameterHandler, ParameterList, ParameterType, ProperTorsionHandler,
-    SMIRNOFFSpecError, _ParameterAttributeHandler)
+    BondHandler,
+    ChargeIncrementModelHandler,
+    DuplicateParameterError,
+    GBSAHandler,
+    ImproperTorsionHandler,
+    IncompatibleParameterError,
+    IndexedParameterAttribute,
+    LibraryChargeHandler,
+    ParameterAttribute,
+    ParameterHandler,
+    ParameterList,
+    ParameterType,
+    ProperTorsionHandler,
+    SMIRNOFFSpecError,
+    _ParameterAttributeHandler,
+)
 from openforcefield.utils import IncompatibleUnitError, detach_units
 from openforcefield.utils.collections import ValidatedList
 
@@ -343,6 +354,14 @@ class TestParameterHandler:
 
     length = 1 * unit.angstrom
     k = 10 * unit.kilocalorie_per_mole / unit.angstrom ** 2
+
+    def test_tagname(self):
+        """Test the TAGNAME getter and default behavior"""
+        ph = ParameterHandler(skip_version_check=True)
+        assert ph.TAGNAME is None
+
+        bh = BondHandler(skip_version_check=True)
+        assert bh.TAGNAME == "Bonds"
 
     def test_add_parameter(self):
         """Test the behavior of add_parameter"""

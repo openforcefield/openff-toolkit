@@ -31,9 +31,11 @@ __all__ = [
     "MissingPackageError",
     "ToolkitUnavailableException",
     "InvalidToolkitError",
+    "InvalidToolkitRegistryError",
     "UndefinedStereochemistryError",
     "GAFFAtomTypeWarning",
     "ToolkitWrapper",
+    "BuiltInToolkitWrapper",
     "OpenEyeToolkitWrapper",
     "RDKitToolkitWrapper",
     "AmberToolsToolkitWrapper",
@@ -62,8 +64,12 @@ from functools import wraps
 import numpy as np
 from simtk import unit
 
-from openforcefield.utils import (MessageException, all_subclasses,
-                                  inherit_docstrings, temporary_cd)
+from openforcefield.utils import (
+    MessageException,
+    all_subclasses,
+    inherit_docstrings,
+    temporary_cd,
+)
 
 # =============================================================================================
 # CONFIGURE LOGGER
@@ -115,6 +121,10 @@ class InvalidToolkitError(MessageException):
     """A non-toolkit object was received when a toolkit object was expected"""
 
 
+class InvalidToolkitRegistryError(MessageException):
+    """An object other than a ToolkitRegistry or toolkit wrapper was received"""
+
+
 class UndefinedStereochemistryError(MessageException):
     """A molecule was attempted to be loaded with undefined stereochemistry"""
 
@@ -151,6 +161,10 @@ class ChargeCalculationError(MessageException):
     pass
 
 
+class AntechamberNotFoundError(MessageException):
+    """The antechamber executable was not found"""
+
+
 # =============================================================================================
 # TOOLKIT UTILITY DECORATORS
 # =============================================================================================
@@ -172,6 +186,7 @@ class ToolkitWrapper:
     """
 
     _is_available = None  # True if toolkit is available
+    _toolkit_version = None
     _toolkit_name = None  # Name of the toolkit
     _toolkit_installation_instructions = (
         None  # Installation instructions for the toolkit
@@ -202,7 +217,15 @@ class ToolkitWrapper:
     # @classmethod
     def toolkit_name(self):
         """
-        The name of the toolkit wrapped by this class.
+        Return the name of the toolkit wrapped by this class as a str
+
+        .. warning :: This API is experimental and subject to change.
+
+        Returns
+        -------
+        toolkit_name : str
+            The name of the wrapped toolkit
+
         """
         return self.__class__._toolkit_name
 
@@ -242,6 +265,21 @@ class ToolkitWrapper:
 
         """
         return NotImplementedError
+
+    @property
+    def toolkit_version(self):
+        """
+        Return the version of the wrapped toolkit as a str
+
+        .. warning :: This API is experimental and subject to change.
+
+        Returns
+        -------
+        toolkit_version : str
+            The version of the wrapped toolkit
+
+        """
+        return self._toolkit_version
 
     def from_file(self, file_path, file_format, allow_undefined_stereo=False):
         """
@@ -360,6 +398,11 @@ class ToolkitWrapper:
             raise IncorrectNumConformersError(wrong_confs_msg)
         else:
             warnings.warn(wrong_confs_msg, IncorrectNumConformersWarning)
+
+    def __repr__(self):
+        return (
+            f"ToolkitWrapper around {self.toolkit_name} version {self.toolkit_version}"
+        )
 
 
 @inherit_docstrings
@@ -541,6 +584,9 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 f"The required toolkit {self._toolkit_name} is not "
                 f"available. {self._toolkit_installation_instructions}"
             )
+        from openeye import __version__ as openeye_version
+
+        self._toolkit_version = openeye_version
 
     @staticmethod
     def is_available(oetools=("oechem", "oequacpac", "oeiupac", "oeomega")):
@@ -729,10 +775,11 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         """
         with tempfile.TemporaryDirectory() as tmpdir:
-            outfile = "temp_molecule." + file_format
-            self.to_file(molecule, outfile, file_format)
-            file_data = open(outfile).read()
-        file_obj.write(file_data)
+            with temporary_cd(tmpdir):
+                outfile = "temp_molecule." + file_format
+                self.to_file(molecule, outfile, file_format)
+                file_data = open(outfile).read()
+            file_obj.write(file_data)
 
     def to_file(self, molecule, file_path, file_format):
         """
@@ -2429,6 +2476,10 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                 f"available. {self._toolkit_installation_instructions}"
             )
         else:
+            from rdkit import __version__ as rdkit_version
+
+            self._toolkit_version = rdkit_version
+
             from rdkit import Chem
 
             # we have to make sure the toolkit can be loaded before formatting this dict
@@ -2533,8 +2584,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         from rdkit import Chem
 
-        from openforcefield.topology.molecule import (InvalidConformerError,
-                                                      Molecule)
+        from openforcefield.topology.molecule import InvalidConformerError, Molecule
 
         # Make the molecule from smiles
         offmol = self.from_smiles(smiles, allow_undefined_stereo=allow_undefined_stereo)
@@ -2788,7 +2838,9 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         """
         from rdkit import Chem
         from rdkit.Chem.EnumerateStereoisomers import (
-            EnumerateStereoisomers, StereoEnumerationOptions)
+            EnumerateStereoisomers,
+            StereoEnumerationOptions,
+        )
 
         # create the molecule
         rdmol = self.to_rdkit(molecule=molecule)
@@ -4080,6 +4132,11 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
                 f"available. {self._toolkit_installation_instructions}"
             )
 
+        # TODO: More reliable way to extract AmberTools version
+        out = subprocess.check_output(["antechamber", "-L"])
+        ambertools_version = out.decode("utf-8").split("\n")[1].split()[3].strip(":")
+        self._toolkit_version = ambertools_version
+
         # TODO: Find AMBERHOME or executable home, checking miniconda if needed
         # Store an instance of an RDKitToolkitWrapper for file I/O
         self._rdkit_toolkit_wrapper = RDKitToolkitWrapper()
@@ -4211,7 +4268,9 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         # TODO: How should we implement find_executable?
         ANTECHAMBER_PATH = find_executable("antechamber")
         if ANTECHAMBER_PATH is None:
-            raise IOError("Antechamber not found, cannot run charge_mol()")
+            raise AntechamberNotFoundError(
+                "Antechamber not found, cannot run charge_mol()"
+            )
 
         # Compute charges
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -4468,11 +4527,9 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         # TODO: How should we implement find_executable?
         ANTECHAMBER_PATH = find_executable("antechamber")
         if ANTECHAMBER_PATH is None:
-            raise (
-                IOError(
-                    "Antechamber not found, cannot run "
-                    "AmberToolsToolkitWrapper.assign_fractional_bond_orders()"
-                )
+            raise AntechamberNotFoundError(
+                "Antechamber not found, cannot run "
+                "AmberToolsToolkitWrapper.assign_fractional_bond_orders()"
             )
 
         # Make a copy since we'll be messing with this molecule's conformers
@@ -4674,6 +4731,23 @@ class ToolkitRegistry:
         toolkits : iterable of toolkit objects
         """
         return list(self._toolkits)
+
+    @property
+    def registered_toolkit_versions(self):
+        """
+        Return a dict containing the version of each registered toolkit.
+
+        .. warning :: This API is experimental and subject to change.
+
+        Returns
+        -------
+        toolkit_versions : dict[str, str]
+            A dictionary mapping names and versions of wrapped toolkits
+
+        """
+        return dict(
+            (tk.toolkit_name, tk.toolkit_version) for tk in self.registered_toolkits
+        )
 
     def register_toolkit(self, toolkit_wrapper, exception_if_unavailable=True):
         """
@@ -4906,6 +4980,11 @@ class ToolkitRegistry:
         for toolkit, error in errors:
             msg += " {} {} : {}\n".format(toolkit, type(error), error)
         raise ValueError(msg)
+
+    def __repr__(self):
+        return f"ToolkitRegistry containing " + ", ".join(
+            [tk.toolkit_name for tk in self._toolkits]
+        )
 
 
 # =============================================================================================

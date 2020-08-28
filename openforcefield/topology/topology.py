@@ -32,9 +32,12 @@ from openforcefield.typing.chemistry import ChemicalEnvironment
 from openforcefield.utils import MessageException
 from openforcefield.utils.serialization import Serializable
 from openforcefield.utils.toolkits import (
-    ALLOWED_AROMATICITY_MODELS, ALLOWED_CHARGE_MODELS,
-    ALLOWED_FRACTIONAL_BOND_ORDER_MODELS, DEFAULT_AROMATICITY_MODEL,
-    GLOBAL_TOOLKIT_REGISTRY)
+    ALLOWED_AROMATICITY_MODELS,
+    ALLOWED_CHARGE_MODELS,
+    ALLOWED_FRACTIONAL_BOND_ORDER_MODELS,
+    DEFAULT_AROMATICITY_MODEL,
+    GLOBAL_TOOLKIT_REGISTRY,
+)
 
 # =============================================================================================
 # Exceptions

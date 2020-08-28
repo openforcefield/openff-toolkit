@@ -22,7 +22,6 @@ from openforcefield.utils.serialization import Serializable
 # =============================================================================================
 
 
-
 class Thing(Serializable):
     def __init__(self, description, mylist):
         self.description = description

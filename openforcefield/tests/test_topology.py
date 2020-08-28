@@ -22,7 +22,7 @@ from simtk import unit
 from openforcefield.tests.test_forcefield import (create_cyclohexane,
                                                   create_ethanol,
                                                   create_reversed_ethanol)
-from openforcefield.tests.utils import get_data_file_path
+from openforcefield.tests.utils import get_data_file_path, requires_rdkit, requires_openeye
 from openforcefield.topology import (DuplicateUniqueMoleculeError,
                                      ImproperDict, Molecule, Topology,
                                      ValenceDict)
@@ -601,9 +601,7 @@ class TestTopology(TestCase):
             assert bond.bond_order == bond_copy.bond_order
             assert bond.bond.is_aromatic == bond_copy.bond.is_aromatic
 
-    @pytest.mark.skipif(
-        not (OpenEyeToolkitWrapper.is_available()), reason="Test requires OE toolkit"
-    )
+    @requires_openeye
     def test_from_openmm_duplicate_unique_mol(self):
         """Check that a DuplicateUniqueMoleculeError is raised if we try to pass in two indistinguishably unique mols"""
         from simtk.openmm import app
@@ -715,9 +713,7 @@ class TestTopology(TestCase):
         # and 12 atoms named "", for a total of 3 unique atom names
         assert len(atom_names) == 3
 
-    @pytest.mark.skipif(
-        not (OpenEyeToolkitWrapper.is_available()), reason="Test requires OE toolkit"
-    )
+    @requires_openeye
     def test_chemical_environments_matches_OE(self):
         """Test Topology.chemical_environment_matches"""
         from simtk.openmm import app
@@ -753,9 +749,7 @@ class TestTopology(TestCase):
         )
         assert len(matches) == 0
 
-    @pytest.mark.skipif(
-        not (RDKitToolkitWrapper.is_available()), reason="Test requires RDKit"
-    )
+    @requires_rdkit
     def test_chemical_environments_matches_RDK(self):
         """Test Topology.chemical_environment_matches"""
         from simtk.openmm import app

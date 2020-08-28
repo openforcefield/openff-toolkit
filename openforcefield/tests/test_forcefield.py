@@ -30,6 +30,7 @@ from openforcefield.typing.engines.smirnoff import (ForceField,
                                                     SMIRNOFFSpecError,
                                                     XMLParameterIOHandler,
                                                     get_available_force_fields)
+from openforcefield.tests.utils import requires_openeye, requires_rdkit, requires_openeye_mol2
 from openforcefield.utils import get_data_file_path
 from openforcefield.utils.toolkits import (AmberToolsToolkitWrapper,
                                            ChargeMethodUnavailableError,
@@ -748,6 +749,7 @@ class TestForceField:
         assert len(forcefield._parameter_handlers["ProperTorsions"]._parameters) == 158
         assert len(forcefield._parameter_handlers["ImproperTorsions"]._parameters) == 4
         assert len(forcefield._parameter_handlers["vdW"]._parameters) == 35
+        assert forcefield.aromaticity_model == "OEAroModel_MDL"
 
     def test_load_bad_string(self):
         with pytest.raises(IOError) as exception_info:
@@ -1126,7 +1128,10 @@ class TestForceField:
     @pytest.fixture()
     def create_circular_handler_dependencies(self):
         from openforcefield.typing.engines.smirnoff.parameters import (
-            AngleHandler, BondHandler, ConstraintHandler)
+            AngleHandler,
+            BondHandler,
+            ConstraintHandler,
+        )
 
         # Modify the BondHandler and AngleHandler classes to depend on the other one running first during
         # system parameterization. Unfortunately, I can't figure out how to do this just to these _instances_
@@ -1175,8 +1180,9 @@ class TestForceField:
     def test_parameterize_ethanol_missing_torsion(self):
         from simtk.openmm import app
 
-        from openforcefield.typing.engines.smirnoff.parameters import \
-            UnassignedProperTorsionParameterException
+        from openforcefield.typing.engines.smirnoff.parameters import (
+            UnassignedProperTorsionParameterException,
+        )
 
         forcefield = ForceField(
             """
@@ -1279,9 +1285,7 @@ class TestForceField:
         )
         # TODO: Add check to ensure system energy is finite
 
-    @pytest.mark.skipif(
-        not (OpenEyeToolkitWrapper.is_available()), reason="Test requires OE toolkit"
-    )
+    @requires_openeye
     def test_parameterize_ethanol_different_reference_ordering_openeye(self):
         """
         Test parameterizing the same PDB, using reference mol2s that have different atom orderings.
@@ -1321,9 +1325,7 @@ class TestForceField:
 
         assert serialized_1 == serialized_2
 
-    @pytest.mark.skipif(
-        not RDKitToolkitWrapper.is_available(), reason="Test requires RDKit toolkit"
-    )
+    @requires_rdkit
     def test_parameterize_ethanol_different_reference_ordering_rdkit(self):
         """
         Test parameterizing the same PDB, using reference mol2s that have different atom orderings.
@@ -1368,9 +1370,7 @@ class TestForceField:
 
         assert serialized_1 == serialized_2
 
-    @pytest.mark.skipif(
-        not RDKitToolkitWrapper.is_available(), reason="Test requires RDKit toolkit"
-    )
+    @requires_rdkit
     def test_parameterize_mol_missing_stereo_rdkit(self):
         """
         Test parameterizing a molecule with undefined stereochemsity using the RDKit/AmberTools backend.
@@ -1389,9 +1389,7 @@ class TestForceField:
         force_field = ForceField("test_forcefields/smirnoff99Frosst.offxml")
         force_field.create_openmm_system(topology, toolkit_registry=toolkit_registry)
 
-    @pytest.mark.skipif(
-        not OpenEyeToolkitWrapper.is_available(), reason="Test requires OpenEye toolkit"
-    )
+    @requires_openeye
     def test_parameterize_mol_missing_stereo_openeye(self):
         """
         Test parameterizing a molecule with undefined stereochemsity using the OpenEye backend.
@@ -1624,8 +1622,9 @@ class TestForceFieldChargeAssignment:
         """Test skipping charge generation and instead getting charges from the original Molecule"""
         from simtk.openmm import app
 
-        from openforcefield.typing.engines.smirnoff.parameters import \
-            NonintegralMoleculeChargeException
+        from openforcefield.typing.engines.smirnoff.parameters import (
+            NonintegralMoleculeChargeException,
+        )
 
         # Create an ethanol molecule without using a toolkit
         ethanol = create_ethanol()
@@ -2443,8 +2442,9 @@ class TestForceFieldChargeAssignment:
         """Fail to assign charges to a molecule because not all atoms can be assigned"""
         from simtk.openmm import NonbondedForce
 
-        from openforcefield.typing.engines.smirnoff.parameters import \
-            UnassignedMoleculeChargeException
+        from openforcefield.typing.engines.smirnoff.parameters import (
+            UnassignedMoleculeChargeException,
+        )
 
         molecules = [Molecule.from_file(get_data_file_path("molecules/toluene.sdf"))]
         top = Topology.from_molecules(molecules)
@@ -2475,6 +2475,52 @@ class TestForceFieldChargeAssignment:
         for particle_index in range(top.n_topology_atoms):
             q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
             assert q != 0 * unit.elementary_charge
+
+    @pytest.mark.parametrize(
+        "charge_method,additional_offxmls",
+        [
+            ("ToolkitAM1BCC", []),
+            ("LibraryCharges", [xml_ethanol_library_charges_ff]),
+            ("ChargeIncrementHandler", [xml_charge_increment_model_formal_charges]),
+            ("charge_from_molecules", []),
+        ],
+    )
+    def test_charges_on_ref_mols_when_using_return_topology(
+        self, charge_method, additional_offxmls
+    ):
+        """Ensure that charges are set on returned topology if the user specifies 'return_topology=True' in
+        create_openmm_system"""
+        # TODO: Should this test also cover multiple unique molecules?
+        from simtk.openmm import NonbondedForce
+
+        mol = create_acetate()
+        ff = ForceField("test_forcefields/smirnoff99Frosst.offxml", *additional_offxmls)
+        charge_mols = []
+        if charge_method == "charge_from_molecules":
+            mol.partial_charges = (
+                np.array([-1.3, -0.2, -0.1, 0.0, 0.1, 0.2, 0.3])
+                * unit.elementary_charge
+            )
+            charge_mols = [mol]
+        omm_system, ret_top = ff.create_openmm_system(
+            mol.to_topology(), charge_from_molecules=charge_mols, return_topology=True
+        )
+        nonbondedForce = [
+            f for f in omm_system.getForces() if type(f) == NonbondedForce
+        ][0]
+        ref_mol_from_ret_top = [i for i in ret_top.reference_molecules][0]
+
+        # Make sure the charges on the molecule are all nonzero, and that the molecule's
+        # partial_charges array matches the charges in the openmm system
+        all_charges_zero = True
+        for particle_index, ref_mol_charge in enumerate(
+            ref_mol_from_ret_top.partial_charges
+        ):
+            q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
+            assert q == ref_mol_charge
+            if q != 0.0 * unit.elementary_charge:
+                all_charges_zero = False
+        assert not (all_charges_zero)
 
 
 # ======================================================================
@@ -2619,10 +2665,7 @@ def generate_freesolv_parameters_assignment_cases():
 class TestForceFieldParameterAssignment:
     """Regression tests checking that parameters are assigned correctly."""
 
-    @pytest.mark.skipif(
-        not OpenEyeToolkitWrapper.is_available(),
-        reason="Test requires OE toolkit to read mol2 files",
-    )
+    @requires_openeye_mol2
     @pytest.mark.parametrize(
         "alkethoh_id", generate_alkethoh_parameters_assignment_cases()
     )
@@ -2641,8 +2684,10 @@ class TestForceFieldParameterAssignment:
         does the job.
 
         """
-        from openforcefield.tests.utils import (compare_amber_smirnoff,
-                                                get_alkethoh_file_path)
+        from openforcefield.tests.utils import (
+            compare_amber_smirnoff,
+            get_alkethoh_file_path,
+        )
 
         # Obtain the path to the input files.
         alkethoh_name = "AlkEthOH_" + alkethoh_id
@@ -2669,10 +2714,7 @@ class TestForceFieldParameterAssignment:
             ignore_charges=True,
         )
 
-    @pytest.mark.skipif(
-        not OpenEyeToolkitWrapper.is_available(),
-        reason="Test requires OE toolkit to read mol2 files",
-    )
+    @requires_openeye_mol2
     def test_multi_alkethoh_parameters_assignment(self):
         """Test that systems with multiple reference molecules are parametrized correctly.
 
@@ -2684,9 +2726,11 @@ class TestForceFieldParameterAssignment:
         """
         import parmed
 
-        from openforcefield.tests.utils import (compare_system_energies,
-                                                compare_system_parameters,
-                                                get_alkethoh_file_path)
+        from openforcefield.tests.utils import (
+            compare_system_energies,
+            compare_system_parameters,
+            get_alkethoh_file_path,
+        )
 
         # The AlkEthOH molecule ids to mix in the systems.
         alketoh_ids = ["r0", "c38", "c1161"]
@@ -2749,10 +2793,7 @@ class TestForceFieldParameterAssignment:
             amber_system, off_system, positions, ignore_charges=True
         )
 
-    @pytest.mark.skipif(
-        not OpenEyeToolkitWrapper.is_available(),
-        reason="Test requires OE toolkit to read mol2 files",
-    )
+    @requires_openeye_mol2
     @pytest.mark.parametrize(
         ("freesolv_id", "forcefield_version", "allow_undefined_stereo"),
         generate_freesolv_parameters_assignment_cases(),
@@ -2766,8 +2807,10 @@ class TestForceFieldParameterAssignment:
         and improper torsions.
 
         """
-        from openforcefield.tests.utils import (compare_system_parameters,
-                                                get_freesolv_file_path)
+        from openforcefield.tests.utils import (
+            compare_system_parameters,
+            get_freesolv_file_path,
+        )
 
         mol2_file_path, xml_file_path = get_freesolv_file_path(
             freesolv_id, forcefield_version
@@ -2802,10 +2845,7 @@ class TestForceFieldParameterAssignment:
             ignore_improper_folds=True,
         )
 
-    @pytest.mark.skipif(
-        not OpenEyeToolkitWrapper.is_available(),
-        reason="Test requires OE toolkit to read mol2 files",
-    )
+    @requires_openeye_mol2
     @pytest.mark.parametrize(("is_periodic"), (False, True))
     @pytest.mark.parametrize(("gbsa_model"), ["HCT", "OBC1", "OBC2"])
     @pytest.mark.parametrize(
@@ -2829,10 +2869,12 @@ class TestForceFieldParameterAssignment:
         from simtk import openmm
         from simtk.openmm import Platform
 
-        from openforcefield.tests.utils import (compare_system_energies,
-                                                create_system_from_amber,
-                                                get_context_potential_energy,
-                                                get_freesolv_file_path)
+        from openforcefield.tests.utils import (
+            compare_system_energies,
+            create_system_from_amber,
+            get_context_potential_energy,
+            get_freesolv_file_path,
+        )
 
         mol2_file_path, _ = get_freesolv_file_path(freesolv_id, forcefield_version)
 
@@ -3020,10 +3062,7 @@ class TestForceFieldParameterAssignment:
             off_omm_system, amber_omm_system, positions, by_force_type=False
         )
 
-    @pytest.mark.skipif(
-        not OpenEyeToolkitWrapper.is_available(),
-        reason="Test requires OE toolkit to read mol2 files",
-    )
+    @requires_openeye_mol2
     @pytest.mark.parametrize("zero_charges", [True, False])
     @pytest.mark.parametrize(("gbsa_model"), ["HCT", "OBC1", "OBC2"])
     def test_molecule_energy_gb_no_sa(self, zero_charges, gbsa_model):
@@ -3034,9 +3073,11 @@ class TestForceFieldParameterAssignment:
         from simtk import openmm
         from simtk.openmm import Platform
 
-        from openforcefield.tests.utils import (compare_system_energies,
-                                                create_system_from_amber,
-                                                get_context_potential_energy)
+        from openforcefield.tests.utils import (
+            compare_system_energies,
+            create_system_from_amber,
+            get_context_potential_energy,
+        )
 
         # Load an arbitrary molecule from the freesolv set
         molecule = Molecule.from_file(
@@ -3203,10 +3244,7 @@ class TestForceFieldParameterAssignment:
         )
 
     @pytest.mark.slow
-    @pytest.mark.skipif(
-        not OpenEyeToolkitWrapper.is_available(),
-        reason="Test requires OE toolkit to read mol2 files",
-    )
+    @requires_openeye_mol2
     @pytest.mark.parametrize(
         "toolkit_registry,registry_description", toolkit_registries
     )
@@ -3337,9 +3375,7 @@ class TestForceFieldParameterAssignment:
                 k = params[-1]
                 assert_almost_equal(k / k.unit, 5.0208)
 
-    @pytest.mark.skipif(
-        not RDKitToolkitWrapper.is_available(), reason="Test requires RDKit toolkit"
-    )
+    @requires_rdkit
     @pytest.mark.parametrize(
         ("get_molecule", "k_interpolated", "central_atoms"),
         [
@@ -3407,9 +3443,7 @@ class TestForceFieldParameterAssignment:
                 with pytest.raises(AssertionError):
                     assert_almost_equal(k / k.unit, k_interpolated)
 
-    @pytest.mark.skipif(
-        not (OpenEyeToolkitWrapper.is_available()), reason="Test requires OE toolkit"
-    )
+    @requires_openeye
     @pytest.mark.parametrize(
         ("get_molecule", "k_interpolated", "central_atoms"),
         [
@@ -3477,10 +3511,7 @@ class TestForceFieldParameterAssignment:
 
 
 class TestSmirnoffVersionConverter:
-    @pytest.mark.skipif(
-        not OpenEyeToolkitWrapper.is_available(),
-        reason="Test requires OE toolkit to read mol2 files",
-    )
+    @requires_openeye_mol2
     @pytest.mark.parametrize(
         ("freesolv_id", "forcefield_version", "allow_undefined_stereo"),
         generate_freesolv_parameters_assignment_cases(),
@@ -3502,8 +3533,10 @@ class TestSmirnoffVersionConverter:
         tested separately. Currently, test_freesolv_parameters_assignment
         does the job.
         """
-        from openforcefield.tests.utils import (compare_system_parameters,
-                                                get_freesolv_file_path)
+        from openforcefield.tests.utils import (
+            compare_system_parameters,
+            get_freesolv_file_path,
+        )
 
         mol2_file_path, xml_file_path = get_freesolv_file_path(
             freesolv_id, forcefield_version

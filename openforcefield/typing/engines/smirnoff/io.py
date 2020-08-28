@@ -209,8 +209,7 @@ class XMLParameterIOHandler(ParameterIOHandler):
         """
         from pyexpat import ExpatError
 
-        from openforcefield.typing.engines.smirnoff.forcefield import \
-            ParseError
+        from openforcefield.typing.engines.smirnoff.forcefield import ParseError
 
         # Parse XML file
         try:

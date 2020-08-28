@@ -34,8 +34,11 @@ __all__ = [
 # GLOBAL IMPORTS
 # ==============================================================================
 
-from openforcefield.utils.toolkits import (GLOBAL_TOOLKIT_REGISTRY,
-                                           MessageException, ToolkitWrapper)
+from openforcefield.utils.toolkits import (
+    GLOBAL_TOOLKIT_REGISTRY,
+    MessageException,
+    ToolkitWrapper,
+)
 
 
 class SMIRKSMismatchError(MessageException):
