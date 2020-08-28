@@ -24,7 +24,11 @@ from openforcefield.tests.test_forcefield import (
     create_ethanol,
     create_reversed_ethanol,
 )
-from openforcefield.tests.utils import get_data_file_path
+from openforcefield.tests.utils import (
+    get_data_file_path,
+    requires_openeye,
+    requires_rdkit,
+)
 from openforcefield.topology import (
     DuplicateUniqueMoleculeError,
     Molecule,
@@ -275,8 +279,7 @@ class TestTopology(TestCase):
             topology_bond = topology.bond(12)
 
     def test_get_virtual_site(self):
-        """Test Topology.virtual_site function (get virtual site from index)
-        """
+        """Test Topology.virtual_site function (get virtual site from index)"""
         topology = Topology()
         topology.add_molecule(self.ethane_from_smiles_w_vsites)
         assert topology.n_topology_virtual_sites == 2
@@ -342,7 +345,8 @@ class TestTopology(TestCase):
         # Add a virtualsite to the reference ethanol
         for ref_mol in topology.reference_molecules:
             ref_mol._add_bond_charge_virtual_site(
-                [0, 1], 0.5 * unit.angstrom,
+                [0, 1],
+                0.5 * unit.angstrom,
             )
 
         virtual_site_topology_atom_indices = [(0, 1), (9, 10), (26, 25)]
@@ -357,8 +361,7 @@ class TestTopology(TestCase):
             assert top_vs.atom(1).topology_particle_index == expected_indices[1]
 
     def test_is_bonded(self):
-        """Test Topology.virtual_site function (get virtual site from index)
-        """
+        """Test Topology.virtual_site function (get virtual site from index)"""
         topology = Topology()
         topology.add_molecule(self.propane_from_smiles_w_vsites)
         topology.assert_bonded(0, 1)
@@ -605,9 +608,7 @@ class TestTopology(TestCase):
             assert bond.bond_order == bond_copy.bond_order
             assert bond.bond.is_aromatic == bond_copy.bond.is_aromatic
 
-    @pytest.mark.skipif(
-        not (OpenEyeToolkitWrapper.is_available()), reason="Test requires OE toolkit"
-    )
+    @requires_openeye
     def test_from_openmm_duplicate_unique_mol(self):
         """Check that a DuplicateUniqueMoleculeError is raised if we try to pass in two indistinguishably unique mols"""
         from simtk.openmm import app
@@ -719,9 +720,7 @@ class TestTopology(TestCase):
         # and 12 atoms named "", for a total of 3 unique atom names
         assert len(atom_names) == 3
 
-    @pytest.mark.skipif(
-        not (OpenEyeToolkitWrapper.is_available()), reason="Test requires OE toolkit"
-    )
+    @requires_openeye
     def test_chemical_environments_matches_OE(self):
         """Test Topology.chemical_environment_matches"""
         from simtk.openmm import app
@@ -757,9 +756,7 @@ class TestTopology(TestCase):
         )
         assert len(matches) == 0
 
-    @pytest.mark.skipif(
-        not (RDKitToolkitWrapper.is_available()), reason="Test requires RDKit"
-    )
+    @requires_rdkit
     def test_chemical_environments_matches_RDK(self):
         """Test Topology.chemical_environment_matches"""
         from simtk.openmm import app

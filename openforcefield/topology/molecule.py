@@ -58,7 +58,7 @@ from openforcefield.utils.serialization import Serializable
 from openforcefield.utils.toolkits import (
     DEFAULT_AROMATICITY_MODEL,
     GLOBAL_TOOLKIT_REGISTRY,
-    InvalidToolkitError,
+    InvalidToolkitRegistryError,
     OpenEyeToolkitWrapper,
     RDKitToolkitWrapper,
     ToolkitRegistry,
@@ -233,8 +233,7 @@ class Atom(Particle):
         ----------
         bond: an openforcefield.topology.molecule.Bond
             A bond involving this atom
-
-"""
+        """
 
         self._bonds.append(bond)
         # self._stereochemistry = None
@@ -247,15 +246,12 @@ class Atom(Particle):
         ----------
         bond: an openforcefield.topology.molecule.Bond
             A bond involving this atom
-
-"""
+        """
 
         self._virtual_sites.append(vsite)
 
     def to_dict(self):
-        """Return a dict representation of the atom.
-
-"""
+        """Return a dict representation of the atom."""
         # TODO
         atom_dict = OrderedDict()
         atom_dict["atomic_number"] = self._atomic_number
@@ -270,9 +266,7 @@ class Atom(Particle):
 
     @classmethod
     def from_dict(cls, atom_dict):
-        """Create an Atom from a dict representation.
-
-"""
+        """Create an Atom from a dict representation."""
         ## TODO: classmethod or static method? Classmethod is needed for Bond, so it have
         ## its _molecule set and then look up the Atom on each side of it by ID
         return cls.__init__(*atom_dict)
@@ -551,8 +545,7 @@ class VirtualSite(Particle):
             Virtual site type.
         name : str or None, default=None
             The name of this virtual site. Default is None
-
-"""
+        """
 
         # Ensure we have as many charge_increments as we do atoms
         if not (charge_increments is None):
@@ -634,9 +627,7 @@ class VirtualSite(Particle):
         # self._weights = np.array(weights) # make a copy and convert to array internally
 
     def to_dict(self):
-        """Return a dict representation of the virtual site.
-
-"""
+        """Return a dict representation of the virtual site."""
         # Each subclass should have its own to_dict
         vsite_dict = OrderedDict()
         vsite_dict["name"] = self._name
@@ -651,9 +642,7 @@ class VirtualSite(Particle):
 
     @classmethod
     def from_dict(cls, vsite_dict):
-        """Create a virtual site from a dict representation.
-
-"""
+        """Create a virtual site from a dict representation."""
         # Each subclass needs to have its own from_dict
 
         # Make a copy of the vsite_dict, where we'll unit-wrap the appropriate values
@@ -861,7 +850,7 @@ class MonovalentLonePairVirtualSite(VirtualSite):
     A particle representing a "Monovalent Lone Pair"-type virtual site, in which the location of the charge is specified by the positions of three atoms. This is originally intended for situations like a carbonyl, and allows placement of a virtual site S at a specified distance d, in_plane_angle, and out_of_plane_angle relative to a central atom and two connected atoms.
 
     .. warning :: This API is experimental and subject to change.
-   """
+    """
 
     def __init__(
         self,
@@ -1548,7 +1537,7 @@ class FrozenMolecule(Serializable):
             toolkit_registry = ToolkitRegistry(toolkit_precedence=[])
             toolkit_registry.add_toolkit(toolkit)
         else:
-            raise ValueError(
+            raise InvalidToolkitRegistryError(
                 "'toolkit_registry' must be either a ToolkitRegistry or a ToolkitWrapper"
             )
 
@@ -1996,7 +1985,7 @@ class FrozenMolecule(Serializable):
         elif isinstance(toolkit_registry, ToolkitWrapper):
             to_smiles_method = toolkit_registry.to_smiles
         else:
-            raise Exception(
+            raise InvalidToolkitRegistryError(
                 "Invalid toolkit_registry passed to to_smiles. Expected ToolkitRegistry or ToolkitWrapper. Got  {}".format(
                     type(toolkit_registry)
                 )
@@ -2061,7 +2050,7 @@ class FrozenMolecule(Serializable):
                 inchi, allow_undefined_stereo=allow_undefined_stereo
             )
         else:
-            raise Exception(
+            raise InvalidToolkitRegistryError(
                 "Invalid toolkit_registry passed to from_inchi. Expected ToolkitRegistry or ToolkitWrapper. Got  {}".format(
                     type(toolkit_registry)
                 )
@@ -2093,7 +2082,7 @@ class FrozenMolecule(Serializable):
 
         Raises
         -------
-        InvalidToolkitError
+        InvalidToolkitRegistryError
              If an invalid object is passed as the toolkit_registry parameter
         """
 
@@ -2105,7 +2094,7 @@ class FrozenMolecule(Serializable):
             toolkit = toolkit_registry
             inchi = toolkit.to_inchi(self, fixed_hydrogens=fixed_hydrogens)
         else:
-            raise InvalidToolkitError(
+            raise InvalidToolkitRegistryError(
                 "Invalid toolkit_registry passed to to_inchi. Expected ToolkitRegistry or ToolkitWrapper. Got  {}".format(
                     type(toolkit_registry)
                 )
@@ -2139,7 +2128,7 @@ class FrozenMolecule(Serializable):
 
         Raises
         -------
-        InvalidToolkitError
+        InvalidToolkitRegistryError
              If an invalid object is passed as the toolkit_registry parameter
         """
 
@@ -2151,7 +2140,7 @@ class FrozenMolecule(Serializable):
             toolkit = toolkit_registry
             inchi_key = toolkit.to_inchikey(self, fixed_hydrogens=fixed_hydrogens)
         else:
-            raise InvalidToolkitError(
+            raise InvalidToolkitRegistryError(
                 "Invalid toolkit_registry passed to to_inchikey. Expected ToolkitRegistry or ToolkitWrapper. Got  {}".format(
                     type(toolkit_registry)
                 )
@@ -2207,7 +2196,7 @@ class FrozenMolecule(Serializable):
                 allow_undefined_stereo=allow_undefined_stereo,
             )
         else:
-            raise Exception(
+            raise InvalidToolkitRegistryError(
                 "Invalid toolkit_registry passed to from_smiles. Expected ToolkitRegistry or ToolkitWrapper. Got  {}".format(
                     type(toolkit_registry)
                 )
@@ -2479,7 +2468,7 @@ class FrozenMolecule(Serializable):
 
         Raises
         ------
-        InvalidToolkitError
+        InvalidToolkitRegistryError
             If an invalid object is passed as the toolkit_registry parameter
 
         """
@@ -2506,7 +2495,7 @@ class FrozenMolecule(Serializable):
                 clear_existing=clear_existing,
             )
         else:
-            raise InvalidToolkitError(
+            raise InvalidToolkitRegistryError(
                 "Invalid toolkit_registry passed to generate_conformers. Expected ToolkitRegistry or ToolkitWrapper. Got  {}".format(
                     type(toolkit_registry)
                 )
@@ -2542,7 +2531,7 @@ class FrozenMolecule(Serializable):
 
         Raises
         ------
-        InvalidToolkitError
+        InvalidToolkitRegistryError
             If an invalid object is passed as the toolkit_registry parameter
 
         """
@@ -2584,7 +2573,7 @@ class FrozenMolecule(Serializable):
 
         Raises
         ------
-        InvalidToolkitError
+        InvalidToolkitRegistryError
             If an invalid object is passed as the toolkit_registry parameter
 
         """
@@ -2610,7 +2599,7 @@ class FrozenMolecule(Serializable):
                 strict_n_conformers=strict_n_conformers,
             )
         else:
-            raise InvalidToolkitError(
+            raise InvalidToolkitRegistryError(
                 f"Invalid toolkit_registry passed to assign_partial_charges."
                 f"Expected ToolkitRegistry or ToolkitWrapper. Got  {type(toolkit_registry)}"
             )
@@ -2645,7 +2634,7 @@ class FrozenMolecule(Serializable):
 
         Raises
         ------
-        InvalidToolkitError
+        InvalidToolkitRegistryError
             If an invalid object is passed as the toolkit_registry parameter
 
         """
@@ -2662,7 +2651,7 @@ class FrozenMolecule(Serializable):
                 self, bond_order_model=bond_order_model, use_conformers=use_conformers
             )
         else:
-            raise Exception(
+            raise InvalidToolkitRegistryError(
                 f"Invalid toolkit_registry passed to assign_fractional_bond_orders. "
                 f"Expected ToolkitRegistry or ToolkitWrapper. Got {type(toolkit_registry)}."
             )
@@ -3495,7 +3484,7 @@ class FrozenMolecule(Serializable):
         elif isinstance(toolkit_registry, ToolkitWrapper):
             matches = toolkit_registry.find_smarts_matches(self, smirks)
         else:
-            raise ValueError(
+            raise InvalidToolkitRegistryError(
                 "'toolkit_registry' must be either a ToolkitRegistry or a ToolkitWrapper"
             )
 
@@ -3550,7 +3539,9 @@ class FrozenMolecule(Serializable):
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
             molecule = toolkit.from_iupac(
-                iupac_name, allow_undefined_stereo=allow_undefined_stereo, **kwargs,
+                iupac_name,
+                allow_undefined_stereo=allow_undefined_stereo,
+                **kwargs,
             )
         else:
             raise Exception(
@@ -3758,7 +3749,7 @@ class FrozenMolecule(Serializable):
                     )
                 raise NotImplementedError(msg)
         else:
-            raise ValueError(
+            raise InvalidToolkitRegistryError(
                 "'toolkit_registry' must be either a ToolkitRegistry or a ToolkitWrapper"
             )
 
@@ -3877,7 +3868,7 @@ class FrozenMolecule(Serializable):
             toolkit_registry = ToolkitRegistry(toolkit_precedence=[])
             toolkit_registry.add_toolkit(toolkit)
         else:
-            raise ValueError(
+            raise InvalidToolkitRegistryError(
                 "'toolkit_registry' must be either a ToolkitRegistry or a ToolkitWrapper"
             )
 
@@ -3944,7 +3935,7 @@ class FrozenMolecule(Serializable):
             )
 
         else:
-            raise ValueError(
+            raise InvalidToolkitRegistryError(
                 "'toolkit_registry' must be either a ToolkitRegistry or a ToolkitWrapper"
             )
 
@@ -4000,7 +3991,7 @@ class FrozenMolecule(Serializable):
             )
 
         else:
-            raise ValueError(
+            raise InvalidToolkitRegistryError(
                 "'toolkit_registry' must be either a ToolkitRegistry or a ToolkitWrapper"
             )
 
@@ -4436,7 +4427,7 @@ class FrozenMolecule(Serializable):
             toolkit = toolkit_registry
             return toolkit.canonical_order_atoms(self)
         else:
-            raise Exception(
+            raise InvalidToolkitRegistryError(
                 "Invalid toolkit_registry passed to from_smiles. Expected ToolkitRegistry or ToolkitWrapper. Got  {}".format(
                     type(toolkit_registry)
                 )
@@ -4689,7 +4680,7 @@ class FrozenMolecule(Serializable):
             atom_j = j
         else:
             raise TypeError(
-                "Invalid input passed to is_bonded(). Expected ints or Atoms, "
+                "Invalid input passed to get_bond_between(). Expected ints or Atoms, "
                 "got {} and {}".format(i, j)
             )
 
@@ -5112,7 +5103,7 @@ class Molecule(FrozenMolecule):
     def visualize(self, backend="rdkit", width=500, height=300):
         """
         Render a visualization of the molecule in Jupyter
-        
+
         Parameters
         ----------
         backend : str, optional, default='rdkit'
