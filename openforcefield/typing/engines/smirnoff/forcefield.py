@@ -267,6 +267,7 @@ class ForceField:
     def __init__(
         self,
         *sources,
+        aromaticity_model=DEFAULT_AROMATICITY_MODEL,
         parameter_handler_classes=None,
         parameter_io_handler_classes=None,
         disable_version_check=False,
@@ -285,6 +286,8 @@ class ForceField:
             If multiple files are specified, any top-level tags that are repeated will be merged if they are compatible,
             with files appearing later in the sequence resulting in parameters that have higher precedence.
             Support for multiple files is primarily intended to allow solvent parameters to be specified by listing them last in the sequence.
+        aromaticity_model : string, default='OEAroModel_MDL'
+            The aromaticity model used by the force field. Currently, only 'OEAroModel_MDL' is supported
         parameter_handler_classes : iterable of ParameterHandler classes, optional, default=None
             If not None, the specified set of ParameterHandler classes will be instantiated to create the parameter object model.
             By default, all imported subclasses of ParameterHandler are automatically registered.
@@ -320,6 +323,7 @@ class ForceField:
         # Clear all object fields
         self._initialize()
 
+        self.aromaticity_model = aromaticity_model
         # Store initialization options
         self.disable_version_check = disable_version_check
         # if True, we won't check which SMIRNOFF version number we're parsing
@@ -361,7 +365,7 @@ class ForceField:
         self._disable_version_check = (
             False  # if True, will disable checking compatibility version
         )
-        self._aromaticity_model = DEFAULT_AROMATICITY_MODEL  # aromaticity model
+        self._aromaticity_model = None
         self._parameter_handler_classes = (
             OrderedDict()
         )  # Parameter handler classes that _can_ be initialized if needed
