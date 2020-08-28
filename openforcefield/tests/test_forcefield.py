@@ -23,20 +23,28 @@ import pytest
 from numpy.testing import assert_almost_equal
 from simtk import openmm, unit
 
+from openforcefield.tests.utils import (
+    requires_openeye,
+    requires_openeye_mol2,
+    requires_rdkit,
+)
 from openforcefield.topology import Molecule, Topology
-from openforcefield.typing.engines.smirnoff import (ForceField,
-                                                    IncompatibleParameterError,
-                                                    ParameterHandler,
-                                                    SMIRNOFFSpecError,
-                                                    XMLParameterIOHandler,
-                                                    get_available_force_fields)
-from openforcefield.tests.utils import requires_openeye, requires_rdkit, requires_openeye_mol2
+from openforcefield.typing.engines.smirnoff import (
+    ForceField,
+    IncompatibleParameterError,
+    ParameterHandler,
+    SMIRNOFFSpecError,
+    XMLParameterIOHandler,
+    get_available_force_fields,
+)
 from openforcefield.utils import get_data_file_path
-from openforcefield.utils.toolkits import (AmberToolsToolkitWrapper,
-                                           ChargeMethodUnavailableError,
-                                           OpenEyeToolkitWrapper,
-                                           RDKitToolkitWrapper,
-                                           ToolkitRegistry)
+from openforcefield.utils.toolkits import (
+    AmberToolsToolkitWrapper,
+    ChargeMethodUnavailableError,
+    OpenEyeToolkitWrapper,
+    RDKitToolkitWrapper,
+    ToolkitRegistry,
+)
 
 # ======================================================================
 # GLOBAL CONSTANTS

@@ -19,16 +19,30 @@ import numpy as np
 import pytest
 from simtk import unit
 
-from openforcefield.tests.test_forcefield import (create_cyclohexane,
-                                                  create_ethanol,
-                                                  create_reversed_ethanol)
-from openforcefield.tests.utils import get_data_file_path, requires_rdkit, requires_openeye
-from openforcefield.topology import (DuplicateUniqueMoleculeError,
-                                     ImproperDict, Molecule, Topology,
-                                     ValenceDict)
-from openforcefield.utils import (BASIC_CHEMINFORMATICS_TOOLKITS,
-                                  OPENEYE_AVAILABLE, RDKIT_AVAILABLE,
-                                  OpenEyeToolkitWrapper, RDKitToolkitWrapper)
+from openforcefield.tests.test_forcefield import (
+    create_cyclohexane,
+    create_ethanol,
+    create_reversed_ethanol,
+)
+from openforcefield.tests.utils import (
+    get_data_file_path,
+    requires_openeye,
+    requires_rdkit,
+)
+from openforcefield.topology import (
+    DuplicateUniqueMoleculeError,
+    ImproperDict,
+    Molecule,
+    Topology,
+    ValenceDict,
+)
+from openforcefield.utils import (
+    BASIC_CHEMINFORMATICS_TOOLKITS,
+    OPENEYE_AVAILABLE,
+    RDKIT_AVAILABLE,
+    OpenEyeToolkitWrapper,
+    RDKitToolkitWrapper,
+)
 
 # =============================================================================================
 # UTILITY FUNCTIONS

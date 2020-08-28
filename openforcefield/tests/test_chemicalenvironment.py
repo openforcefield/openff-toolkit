@@ -6,8 +6,7 @@ from openforcefield.utils.toolkits import OPENEYE_AVAILABLE
 # TODO: Evaluate which tests in this file should be moved to test_toolkits
 toolkits = []
 if OPENEYE_AVAILABLE:
-    from openforcefield.utils.toolkits import (OpenEyeToolkitWrapper,
-                                               RDKitToolkitWrapper)
+    from openforcefield.utils.toolkits import OpenEyeToolkitWrapper, RDKitToolkitWrapper
 
     toolkits.append("openeye")
     toolkits.append(OpenEyeToolkitWrapper())

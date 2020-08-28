@@ -68,8 +68,11 @@ class TestUtilsStructure:
 @requires_openeye_mol2
 def test_merge_system():
     """Test merging of a system created from AMBER and another created from SMIRNOFF."""
-    from .utils import (create_system_from_amber, get_alkethoh_file_path,
-                        get_amber_file_path)
+    from .utils import (
+        create_system_from_amber,
+        get_alkethoh_file_path,
+        get_amber_file_path,
+    )
 
     # Create System from AMBER
     prmtop_filename, inpcrd_filename = get_amber_file_path(

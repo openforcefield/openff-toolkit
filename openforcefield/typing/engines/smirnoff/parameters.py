@@ -51,7 +51,7 @@ from enum import Enum
 import numpy as np
 from simtk import openmm, unit
 
-from openforcefield.topology import ImproperDict, SortedDict, ValenceDict, Topology
+from openforcefield.topology import ImproperDict, SortedDict, Topology, ValenceDict
 from openforcefield.topology.molecule import Molecule
 from openforcefield.typing.chemistry import ChemicalEnvironment
 from openforcefield.utils import (
@@ -62,7 +62,6 @@ from openforcefield.utils import (
     extract_serialized_units_from_dict,
     object_to_quantity,
 )
-
 from openforcefield.utils.collections import ValidatedDict, ValidatedList
 
 # =============================================================================================
@@ -3558,8 +3557,11 @@ class ElectrostaticsHandler(_NonbondedHandler):
         return False
 
     def create_force(self, system, topology, **kwargs):
-        from openforcefield.topology import (FrozenMolecule, TopologyAtom,
-                                             TopologyVirtualSite)
+        from openforcefield.topology import (
+            FrozenMolecule,
+            TopologyAtom,
+            TopologyVirtualSite,
+        )
 
         force = super().create_force(system, topology, **kwargs)
 

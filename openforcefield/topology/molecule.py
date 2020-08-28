@@ -485,6 +485,7 @@ class Atom(Particle):
             self._name, self._atomic_number
         )
 
+
 # =============================================================================================
 # VirtualParticle
 # =============================================================================================
@@ -5372,8 +5373,7 @@ class Molecule(FrozenMolecule):
             - rdkit, openeye -> IPython.display.Image
             - nglview -> nglview.NGLWidget
         """
-        from openforcefield.utils.toolkits import (OPENEYE_AVAILABLE,
-                                                   RDKIT_AVAILABLE)
+        from openforcefield.utils.toolkits import OPENEYE_AVAILABLE, RDKIT_AVAILABLE
 
         backend = backend.lower()
 

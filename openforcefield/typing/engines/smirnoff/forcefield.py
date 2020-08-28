@@ -1404,8 +1404,7 @@ class ForceField:
 
         """
         from openforcefield.topology import Topology
-        from openforcefield.typing.engines.smirnoff.parameters import \
-            VirtualSiteHandler
+        from openforcefield.typing.engines.smirnoff.parameters import VirtualSiteHandler
 
         # Loop over molecules and label
         molecule_labels = list()
