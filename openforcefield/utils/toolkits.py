@@ -4639,66 +4639,61 @@ class ToolkitRegistry:
     Register toolkits in a specified order, skipping if unavailable
 
     >>> from openforcefield.utils.toolkits import ToolkitRegistry
-    >>> toolkit_registry = ToolkitRegistry()
     >>> toolkit_precedence = [OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper]
-    >>> for toolkit in toolkit_precedence:
-    ...     if toolkit.is_available():
-    ...         toolkit_registry.register_toolkit(toolkit)
-
-    Register specified toolkits, raising an exception if one is unavailable
-
-    >>> toolkit_registry = ToolkitRegistry()
-    >>> toolkits = [OpenEyeToolkitWrapper, AmberToolsToolkitWrapper]
-    >>> for toolkit in toolkits:
-    ...     toolkit_registry.register_toolkit(toolkit)
+    >>> toolkit_registry = ToolkitRegistry(toolkit_precedence)
+    >>> toolkit_registry
+    ToolkitRegistry containing OpenEye Toolkit, The RDKit, AmberTools
 
     Register all available toolkits (in the order OpenEye, RDKit, AmberTools, built-in)
 
-    >>> from openforcefield.utils import all_subclasses
-    >>> toolkits = all_subclasses(ToolkitWrapper)
-    >>> for toolkit in toolkit_precedence:
-    ...     if toolkit.is_available():
-    ...         toolkit_registry.register_toolkit(toolkit)
+    >>> toolkits = [OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper, BuiltInToolkitWrapper]
+    >>> toolkit_registry = ToolkitRegistry(toolkit_precedence=toolkits)
+    >>> toolkit_registry
+    ToolkitRegistry containing OpenEye Toolkit, The RDKit, AmberTools, Built-in Toolkit
 
     Retrieve the global singleton toolkit registry, which is created when this module is imported from all available
     toolkits:
 
     >>> from openforcefield.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY as toolkit_registry
-    >>> available_toolkits = toolkit_registry.registered_toolkits
+    >>> toolkit_registry
+    ToolkitRegistry containing OpenEye Toolkit, The RDKit, AmberTools, Built-in Toolkit
+
+    Note that this will contain different ToolkitWrapper objects based on what toolkits
+    are currently installed.
 
     .. warning :: This API is experimental and subject to change.
     """
 
     def __init__(
         self,
-        register_imported_toolkit_wrappers=False,
-        toolkit_precedence=None,
+        toolkit_precedence=[],
         exception_if_unavailable=True,
+        _register_imported_toolkit_wrappers=False,
     ):
         """
         Create an empty toolkit registry.
 
         Parameters
         ----------
-        register_imported_toolkit_wrappers : bool, optional, default=False
-            If True, will attempt to register all imported ToolkitWrapper subclasses that can be
-            found in the order of toolkit_precedence, if specified. If toolkit_precedence is not
-            specified, the default order is [OpenEyeToolkitWrapper, RDKitToolkitWrapper,
-            AmberToolsToolkitWrapper, BuiltInToolkitWrapper].
-
-        toolkit_precedence : list, optional, default=None
+        toolkit_precedence : list, default=[]
             List of toolkit wrapper classes, in order of desired precedence when performing molecule operations. If
             None, no toolkits will be registered.
 
         exception_if_unavailable : bool, optional, default=True
             If True, an exception will be raised if the toolkit is unavailable
 
+        _register_imported_toolkit_wrappers : bool, optional, default=False
+            If True, will attempt to register all imported ToolkitWrapper subclasses that can be
+            found in the order of toolkit_precedence, if specified. If toolkit_precedence is not
+            specified, the default order is [OpenEyeToolkitWrapper, RDKitToolkitWrapper,
+            AmberToolsToolkitWrapper, BuiltInToolkitWrapper].
+
         """
         self._toolkits = list()
 
         toolkits_to_register = list()
 
-        if register_imported_toolkit_wrappers:
+        if _register_imported_toolkit_wrappers:
             if toolkit_precedence is None:
                 toolkit_precedence = [
                     OpenEyeToolkitWrapper,
@@ -4895,7 +4890,7 @@ class ToolkitRegistry:
 
         >>> from openforcefield.topology import Molecule
         >>> molecule = Molecule.from_smiles('Cc1ccccc1')
-        >>> toolkit_registry = ToolkitRegistry(register_imported_toolkit_wrappers=True)
+        >>> toolkit_registry = ToolkitRegistry([OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper])
         >>> method = toolkit_registry.resolve('to_smiles')
         >>> smiles = method(molecule)
 
@@ -4952,7 +4947,7 @@ class ToolkitRegistry:
 
         >>> from openforcefield.topology import Molecule
         >>> molecule = Molecule.from_smiles('Cc1ccccc1')
-        >>> toolkit_registry = ToolkitRegistry(register_imported_toolkit_wrappers=True)
+        >>> toolkit_registry = ToolkitRegistry([OpenEyeToolkitWrapper, RDKitToolkitWrapper])
         >>> smiles = toolkit_registry.call('to_smiles', molecule)
 
         """
@@ -4997,7 +4992,13 @@ class ToolkitRegistry:
 # Create global toolkit registry, where all available toolkits are registered
 # TODO: Should this be all lowercase since it's not a constant?
 GLOBAL_TOOLKIT_REGISTRY = ToolkitRegistry(
-    register_imported_toolkit_wrappers=True, exception_if_unavailable=False
+    toolkit_precedence=[
+        OpenEyeToolkitWrapper,
+        RDKitToolkitWrapper,
+        AmberToolsToolkitWrapper,
+        BuiltInToolkitWrapper,
+    ],
+    exception_if_unavailable=False,
 )
 
 # =============================================================================================
