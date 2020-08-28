@@ -1,11 +1,14 @@
-from openforcefield.topology.molecule import (
-    Particle, Atom, Bond,
-    VirtualSite, BondChargeVirtualSite, MonovalentLonePairVirtualSite, DivalentLonePairVirtualSite, TrivalentLonePairVirtualSite,
-    FrozenMolecule, Molecule
-)
-
-from openforcefield.topology.topology import (
-    DuplicateUniqueMoleculeError, NotBondedError,
-    ValenceDict, ImproperDict, SortedDict,
-    TopologyAtom, TopologyBond, TopologyVirtualSite, TopologyMolecule, Topology
-)
+from openforcefield.topology.molecule import (Atom, Bond,
+                                              BondChargeVirtualSite,
+                                              DivalentLonePairVirtualSite,
+                                              FrozenMolecule, Molecule,
+                                              MonovalentLonePairVirtualSite,
+                                              Particle,
+                                              TrivalentLonePairVirtualSite,
+                                              VirtualSite)
+from openforcefield.topology.topology import (DuplicateUniqueMoleculeError,
+                                              ImproperDict, NotBondedError,
+                                              SortedDict, Topology,
+                                              TopologyAtom, TopologyBond,
+                                              TopologyMolecule,
+                                              TopologyVirtualSite, ValenceDict)
