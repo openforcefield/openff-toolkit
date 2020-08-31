@@ -27,8 +27,24 @@ jobs:
           environment-file: devtools/conda-envs/release-build.yaml
           auto-activate-base: false
 
-      - name: Environment Information
+      - name: Environment information
         shell: bash -l {0}
         run: |
           conda info
           conda list
+
+      - name: Build conda package
+        shell: bash -l {0}
+        env:
+          ANACONDA_TOKEN: ${{ secrets.ANACONDA_TOKEN }}
+        run: |
+          pushd devtools/conda-recipe/
+          conda build --token ${ANACONDA_TOKEN} --user omnia --label rc --python=3.6 -c conda-forge -c omnia .
+          popd
+
+          #- name: Upload package
+          #  shell: bash -l {0}
+          #  env:
+          #    ANACONDA_TOKEN: ${{ secrets.ANACONDA_TOKEN }}
+          #  run: |
+          #    anaconda -t ${ANACONDA_TOKEN} upload --user omnia -l rc

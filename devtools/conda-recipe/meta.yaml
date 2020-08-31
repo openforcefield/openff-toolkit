@@ -13,7 +13,7 @@ build:
   skip: True # [win or py27 or py35]
   noarch: python
   script: 
-    - ${PYTHON}  -m pip install .
+    - ${PYTHON} -m pip install .
 
 extra:
   #force_upload: True
@@ -22,32 +22,7 @@ extra:
 requirements:
   build:
     - python
-    - setuptools
-    # For building sphinx docs
-    - sphinx
-    - sphinx_bootstrap_theme
-    - numpydoc
-    - nbsphinx
-    - m2r >=0.2.1
-    - testpath ==0.3.1
-    # Run deps must be installed to build sphinx docs
-    - numpy
-    - smirnoff99frosst
-    - openforcefields
-    - openmm
-    - networkx
-    - rdkit
-    - ambertools
-    - packaging
-    - requests
-    - notebook
-    # Serialization: Should these be optional?
-    - toml
-    - bson
-    - msgpack-python
-    - xmltodict
-    - pyyaml
-    - cairo >=1.16
+    - pip
   run:
     - python
     - numpy
