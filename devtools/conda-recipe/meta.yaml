@@ -1,10 +1,10 @@
 package:
   name: openforcefield
-  version: 0.7.2-rc1
+  version: 0.7.2rc1
 
 source:
   git_url: https://github.com/openforcefield/openforcefield.git
-  git_tag: 0.7.2-rc1
+  git_tag: 0.7.2rc1
 
 build:
   preserve_egg_dir: True
