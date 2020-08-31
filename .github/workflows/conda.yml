@@ -97,7 +97,7 @@ jobs:
           git checkout tags/$LATEST_TAG
           git log -1 | cat
 
-          PYTEST_ARGS=" -r -fE --tb=short"
+          PYTEST_ARGS=" -r -fE --tb=short --ignore=openforcefield/tests/test_links.py"
           PYTEST_ARGS+="--ignore=utilities --ignore=examples/deprecated --nbval-lax"
           if [[ "$OPENEYE" == true ]]; then
             PYTEST_ARGS+=" --doctest-modules"
