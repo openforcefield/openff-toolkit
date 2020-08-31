@@ -883,6 +883,9 @@ class BondChargeVirtualSite(VirtualSite):
             Rmin_half term for VdW properties of virtual site. Default is None.
         name : string or None, default=None
             The name of this virtual site. Default is None.
+        orientations : list of tuples of 3 Atoms or ints
+            The permutations of the matched atoms that should be used to define
+            the orientation of each virtual site particle
         """
         assert hasattr(distance, "unit")
         assert unit.angstrom.is_compatible(distance.unit)
@@ -1012,8 +1015,9 @@ class MonovalentLonePairVirtualSite(VirtualSite):
             Rmin_half term for VdW properties of virtual site. Default is None.
         name : string or None, default=None
             The name of this virtual site. Default is None.
-
-
+        orientations : list of tuples of 3 Atoms or ints
+            The permutations of the matched atoms that should be used to define
+            the orientation of each virtual site particle
         """
         # assert isinstance(distance, unit.Quantity)
         # TODO: Check for proper number of atoms
@@ -1143,14 +1147,16 @@ class DivalentLonePairVirtualSite(VirtualSite):
             Rmin_half term for VdW properties of virtual site. Default is None.
         name : string or None, default=None
             The name of this virtual site. Default is None.
+        orientations : list of tuples of 3 Atoms or ints
+            The permutations of the matched atoms that should be used to define
+            the orientation of each virtual site particle
         """
-        # assert isinstance(distance, unit.Quantity)
         assert hasattr(distance, "unit")
         assert unit.angstrom.is_compatible(distance.unit)
-        # assert hasattr(in_plane_angle, "unit")
-        # assert unit.degree.is_compatible(in_plane_angle.unit)
+
         assert hasattr(out_of_plane_angle, "unit")
         assert unit.degree.is_compatible(out_of_plane_angle.unit)
+
         assert len(atoms) == 3
         super().__init__(
             atoms,
@@ -1258,9 +1264,12 @@ class TrivalentLonePairVirtualSite(VirtualSite):
             Rmin_half term for VdW properties of virtual site. Default is None.
         name : string or None, default=None
             The name of this virtual site. Default is None.
-
+        orientations : list of tuples of 3 Atoms or ints
+            The permutations of the matched atoms that should be used to define
+            the orientation of each virtual site particle
         """
         assert len(atoms) == 4
+
         assert hasattr(distance, "unit")
         assert unit.angstrom.is_compatible(distance.unit)
 
@@ -1319,17 +1328,6 @@ class TrivalentLonePairVirtualSite(VirtualSite):
         pos = [-self._distance, 0.0, 0.0]  # pos of the vsite in local crds
         return LocalCoordinatesSite(atoms, originwt, xdir, ydir, pos)
 
-
-# class VirtualParticle(Particle):
-#     """
-#     Represents a single particle in a VirtualSite
-#     """
-
-#     def __init__(self,
-#                  atoms,
-#         """
-#         """
-#         self.
 
 # =============================================================================================
 # Bond Stereochemistry
