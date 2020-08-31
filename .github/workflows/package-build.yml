@@ -42,10 +42,3 @@ jobs:
           pushd devtools/conda-recipe/
           conda build --token ${ANACONDA_TOKEN} --user omnia --label rc --python=3.6 -c conda-forge -c omnia .
           popd
-
-          #- name: Upload package
-          #  shell: bash -l {0}
-          #  env:
-          #    ANACONDA_TOKEN: ${{ secrets.ANACONDA_TOKEN }}
-          #  run: |
-          #    anaconda -t ${ANACONDA_TOKEN} upload --user omnia -l rc
