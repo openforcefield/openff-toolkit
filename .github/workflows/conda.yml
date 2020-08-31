@@ -71,7 +71,6 @@ jobs:
 
       - name: Check that correct OFFTK version was installed
         shell: bash -l {0}
-        continue-on-error: true
         run: |
           # Go up one directory to ensure that we don't just load the OFFTK from the checked-out repo
           cd ../
@@ -91,7 +90,6 @@ jobs:
 
       - name: Test the package
         shell: bash -l {0}
-        continue-on-error: true
         run: |
           export LATEST_TAG=$(git ls-remote --tags https://github.com/openforcefield/openforcefield.git | cut -f2 | grep -v "rc" | tail -1 | sed 's/refs\/tags\///')
           # Checkout the state of the repo as of the last release
