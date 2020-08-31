@@ -1,0 +1,8 @@
+name: release-build
+channels:
+  - conda-forge
+
+dependencies:
+  - python
+  - pip
+  - conda-build
