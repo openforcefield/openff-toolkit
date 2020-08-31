@@ -47,6 +47,7 @@ import logging
 import re
 from collections import OrderedDict, defaultdict
 from enum import Enum
+from itertools import combinations
 
 import numpy as np
 from simtk import openmm, unit
@@ -4455,12 +4456,22 @@ class VirtualSiteHandler(_NonbondedHandler):
         "parents": _ExclusionPolicy.PARENTS,
         "local": _ExclusionPolicy.LOCAL,
         "neighbors": _ExclusionPolicy.NEIGHBORS,
-        "connected": _ExclusionPolicy.CONNECTED
+        "connected": _ExclusionPolicy.CONNECTED,
     }
 
     exclusion_policy = ParameterAttribute(default="parents", converter=str)
 
     class VirtualSiteTypeSelector:
+        """A SMIRNOFF virtual site base selector
+
+        This is a placeholder class that will dynamically choose the correct
+        virtual site to create based on the type specified in attributes.
+        Normally, the OFFXML element explicity defines the type, but here it
+        depends on the type attribute as well, which needs the introspection
+        implemented here.
+
+        .. warning :: This API is experimental and subject to change.
+        """
 
         _VALENCE_TYPE = None
         # This is needed so VirtualSite elements are parsed correctly
@@ -4532,8 +4543,10 @@ class VirtualSiteHandler(_NonbondedHandler):
             # Since we are past the point where we can examine chemical environment
             # matches to determine the possible orientations, we must default
             # and take the explicit interpretation: "all_permutations" will
-            # try to make a virtual particle for every permutation
-            # However, we will bail on cases we know to not work with the "current"
+            # try to make a virtual particle for every permutation, and
+            # "once" is the canonical sorting of the atom indices.
+
+            # We will bail on cases we know to not work with the "current"
             # spec. This is currently the combination of trivalent and
             # "all_permutations", since it is a completely degenerate case
 
@@ -4722,7 +4735,6 @@ class VirtualSiteHandler(_NonbondedHandler):
         # system. Operating on the topology is not ideal (a hack), so hopefully
         # this loop, which adds the oFF vsites to the topology, will live
         # somewhere else
-        # Make it public since it seems like a useful thing to expose
 
         logger.debug("Creating OpenFF virtual site representations...")
         topology = self._create_openff_virtual_sites(topology)
@@ -4762,7 +4774,7 @@ class VirtualSiteHandler(_NonbondedHandler):
         for key, atom_match_lst in atom_matches.items():
             for match in atom_match_lst:
 
-                # for each match, loop through existing virtual sites found,
+                # For each match, loop through existing virtual sites found,
                 # and determine if this match is a unique virtual site,
                 # or a member of an existing virtual site (e.g. TIP5)
                 vs_i = match.parameter_type
@@ -4772,7 +4784,7 @@ class VirtualSiteHandler(_NonbondedHandler):
 
                     vs_j = vsite_struct[VSITE_TYPE]
 
-                    # the logic to determine if the particles should be
+                    # The logic to determine if the particles should be
                     # combined into a single virtual site. If the atoms
                     # are the same, the vsite is the same, but the absolute
                     # ordering of the match is different, then we say
@@ -4791,13 +4803,13 @@ class VirtualSiteHandler(_NonbondedHandler):
                         combined_orientations[i][KEY_LIST].append(key)
                         found = True
 
-                    # skip out early since there is no reason to keep
+                    # Skip out early since there is no reason to keep
                     # searching since we will never add the same
                     # particle twice
                     if found:
                         break
 
-                # if the entire loop did not produce a hit, then this is
+                # If the entire loop did not produce a hit, then this is
                 # a brand new virtual site
                 if not found:
                     newsite = [None, None]
@@ -4823,12 +4835,26 @@ class VirtualSiteHandler(_NonbondedHandler):
         return topology
 
     def _create_openmm_virtual_sites(self, system, force, topology, ref_mol):
-        from itertools import combinations
+
+
+        # Here we must assume that
+        #     1. All atoms in the topology are already present
+        #     2. The order we iterate these virtual sites is the order
+        #        they appear in the OpenMM system
+        # If 1 is not met, then 2 will fail; and it will be quite difficult
+        # to find the mapping since we currently do not keep track of any
+        # OpenMM state, and it is unlikely that we will ever do so.
+        # If 1 is met, then 2 should fall into place naturally.
+
+        # This means that we will not check that our index matches the OpenMM
+        # index, as there is no reason, from a purely technical standpoint, to
+        # require them to be.
 
         for vsite in ref_mol.virtual_sites:
             ref_key = [atom.molecule_atom_index for atom in vsite.atoms]
             logger.debug("VSite ref_key: {}".format(ref_key))
 
+            breakpoint()
             ms = topology._reference_molecule_to_topology_molecules[ref_mol]
             for top_mol in ms:
                 logger.debug("top_mol: {}".format(top_mol))
@@ -4837,13 +4863,17 @@ class VirtualSiteHandler(_NonbondedHandler):
                     system, force, top_mol, vsite, ref_key
                 )
 
-                # go and exclude each of the vsite particles; this makes
+                # Go and exclude each of the vsite particles; this makes
                 # sense because these particles cannot "feel" forces, only
                 # exert them
                 policy = self._parameter_to_policy[self.exclusion_policy]
                 if policy.value != self._ExclusionPolicy.NONE.value:
+                    # Default here is to always exclude vsites which are
+                    # of the same virtual site. Their positions are rigid,
+                    # and so any energy that would be added to the system
+                    # due to their pairwise interaction would not make sense.
                     for i, j in combinations(ids, 2):
-                        logger.debug("Excluding vsite {} vsite {}".format(i,j))
+                        logger.debug("Excluding vsite {} vsite {}".format(i, j))
                         force.addException(i, j, 0.0, 0.0, 0.0, replace=True)
 
     def _create_openmm_virtual_particle(self, system, force, top_mol, vsite, ref_key):
@@ -4875,22 +4905,11 @@ class VirtualSiteHandler(_NonbondedHandler):
             vsite_idx = system.addParticle(mass)
             ids.append(vsite_idx)
 
-            logger.debug( "vsite_id: {} orientation: {} atom_key: {}".format(vsite_idx, orientation, atom_key))
-
-            # It appears that we need a good way to map between
-            # OpenMM particle indices and our own indices.
-            # If we make the virtual sites in place (as we see the molecules,
-            # then our indices will not match if there is more than
-            # one molecule.
-
-            # n_particles = top_mol.topology.n_topology_particles
-            # if vsite_idx != n_particles:
-            #     raise IndexError(
-            #         f"""
-            #     The index of a newly created OpenMM particle {vsite_idx} does
-            #     not match the expected index of the OpenFF particle
-            #     {n_particles}."""
-            #     )
+            logger.debug(
+                "vsite_id: {} orientation: {} atom_key: {}".format(
+                    vsite_idx, orientation, atom_key
+                )
+            )
 
             system.setVirtualSite(vsite_idx, omm_vsite)
             force.addParticle(vsite_q, sigma, ljtype.epsilon)
@@ -4912,9 +4931,8 @@ class VirtualSiteHandler(_NonbondedHandler):
                 logger.debug(f"Excluding vsite {vsite_idx} atom {owning_atom}")
                 force.addException(owning_atom, vsite_idx, 0.0, 0.0, 0.0, replace=True)
 
-            # add exclusions to all atoms in the vsite definition
+            # add exclusions to all atoms in the vsite definition (the parents)
             if policy.value >= self._ExclusionPolicy.PARENTS.value:
-                # this is exclusion policy self
                 for i in atom_key:
                     if i == owning_atom:
                         continue

@@ -511,6 +511,13 @@ class VirtualParticle(Particle):
     def orientation(self):
         return self._orientation
 
+    @property
+    def virtual_site_particle_index(self):
+        """
+        The index of the particle relative to its owning virtual site. Normally
+        this should either be 1 or 2.
+        """
+
 
 # =============================================================================================
 # VirtualSite
