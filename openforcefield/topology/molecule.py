@@ -54,6 +54,7 @@ from openforcefield.utils import (
     serialize_numpy,
     string_to_quantity,
 )
+from openforcefield.topology.topology import ValenceDict, ImproperDict
 from openforcefield.utils.serialization import Serializable
 from openforcefield.utils.toolkits import (
     DEFAULT_AROMATICITY_MODEL,
@@ -546,7 +547,6 @@ class VirtualSite(Particle):
         rmin_half=None,
         name=None,
         orientations=None,
-        multiplicity=1,
     ):
         """
         Base class for VirtualSites
@@ -667,10 +667,6 @@ class VirtualSite(Particle):
             self._orientations = ornt
             self._particles = {order: VirtualParticle(self, order) for order in ornt}
 
-        # exists likely only for debugging, can remove later once the api
-        # works
-        self._multiplicity = multiplicity
-
         # Subclassing makes _type unnecessary
         # self._type = None
         # TODO: Validate site types against allowed values
@@ -702,7 +698,6 @@ class VirtualSite(Particle):
 
         vsite_dict["sigma"] = quantity_to_string(self._sigma)
         vsite_dict["orientations"] = self._orientations
-        vsite_dict["multiplicity"] = self._multiplicity
 
         # skip packing the particles; they are created dynamically
 
@@ -724,7 +719,6 @@ class VirtualSite(Particle):
         )
 
         vsite_dict_units["orientation"] = cls._orientation
-        vsite_dict_units["multiplicity"] = cls._multiplicity
 
         return VirtualSite(**vsite_dict_units)
 
@@ -865,7 +859,6 @@ class BondChargeVirtualSite(VirtualSite):
         rmin_half=None,
         name=None,
         orientations=None,
-        multiplicity=1,
     ):
         """
         Create a bond charge-type virtual site, in which the location of the charge is specified by the position of two atoms. This supports placement of a virtual site S along a vector between two specified atoms, e.g. to allow for a sigma hole for halogens or similar contexts. With positive values of the distance, the virtual site lies outside the first indexed atom.
@@ -902,7 +895,6 @@ class BondChargeVirtualSite(VirtualSite):
             rmin_half=rmin_half,
             name=name,
             orientations=orientations,
-            multiplicity=multiplicity,
         )
         self._distance = distance.in_units_of(unit.angstrom)
 
@@ -910,11 +902,9 @@ class BondChargeVirtualSite(VirtualSite):
         vsite_dict = super().to_dict()
         vsite_dict["distance"] = quantity_to_string(self._distance)
 
-        # type = self.type
         vsite_dict["vsite_type"] = self.type
         vsite_dict["orientations"] = self._orientations
-        vsite_dict["multiplicity"] = self._multiplicity
-        # vsite_dict['vsite_type'] = 'BondChargeVirtualSite'
+
         return vsite_dict
 
     @classmethod
@@ -934,6 +924,7 @@ class BondChargeVirtualSite(VirtualSite):
         return self._distance
 
     def get_openmm_virtual_site(self, atoms, mass=None):
+        from simtk.openmm import LocalCoordinatesSite
         originwt = np.zeros_like(atoms)
         originwt[0] = 1.0  # first atom is origin (where the hole should be)
 
@@ -968,14 +959,12 @@ class _LonePairVirtualSite(VirtualSite):
 
         # Make sure it's the right type of virtual site
         assert vsite_dict["vsite_type"] == cls.__name__
-        base_dict.pop("vsite_type")
-        base_dict.pop("distance")
-        base_dict.pop("out_of_plane_angle")
-        base_dict.pop("in_plane_angle")
+        base_dict.pop("vsite_type", None)
+        base_dict.pop("distance", None)
+        base_dict.pop("out_of_plane_angle", None)
+        base_dict.pop("in_plane_angle", None)
         vsite = super().from_dict(**base_dict)
         vsite._distance = string_to_quantity(vsite_dict["distance"])
-        vsite._in_plane_angle = string_to_quantity(vsite_dict["in_plane_angle"])
-        vsite._out_of_plane_angle = string_to_quantity(vsite_dict["out_of_plane_angle"])
         return vsite
 
 
@@ -999,7 +988,6 @@ class MonovalentLonePairVirtualSite(VirtualSite):
         rmin_half=None,
         name=None,
         orientations=None,
-        multiplicity=1,
     ):
         """
         Create a bond charge-type virtual site, in which the location of the charge is specified by the position of three atoms.
@@ -1045,7 +1033,6 @@ class MonovalentLonePairVirtualSite(VirtualSite):
             rmin_half=rmin_half,
             name=name,
             orientations=orientations,
-            multiplicity=multiplicity,
         )
         self._distance = distance.in_units_of(unit.angstrom)
         self._out_of_plane_angle = out_of_plane_angle.in_units_of(unit.degree)
@@ -1056,9 +1043,7 @@ class MonovalentLonePairVirtualSite(VirtualSite):
         vsite_dict["distance"] = quantity_to_string(self._distance)
         vsite_dict["out_of_plane_angle"] = quantity_to_string(self._out_of_plane_angle)
         vsite_dict["in_plane_angle"] = quantity_to_string(self._in_plane_angle)
-        # vsite_dict['vsite_type'] = self.type.fget()
         vsite_dict["vsite_type"] = self.type
-        # vsite_dict['vsite_type'] = 'MonovalentLonePairVirtualSite'
         return vsite_dict
 
     @classmethod
@@ -1077,7 +1062,10 @@ class MonovalentLonePairVirtualSite(VirtualSite):
 
         """
         # The function is overridden only to have a custom docstring.
-        return super().from_dict(vsite_dict)
+        vsite = super().from_dict(vsite_dict)
+        vsite._out_of_plane_angle = string_to_quantity(vsite_dict["out_of_plane_angle"])
+        vsite._in_plane_angle = string_to_quantity(vsite_dict["in_plane_angle"])
+        return vsite
 
     @property
     def distance(self):
@@ -1096,6 +1084,7 @@ class MonovalentLonePairVirtualSite(VirtualSite):
 
     def get_openmm_virtual_site(self, atoms, mass=None):
         assert len(atoms) == 3
+        from simtk.openmm import LocalCoordinatesSite
         originwt = np.zeros_like(atoms)
         originwt[0] = 1.0  #
 
@@ -1125,7 +1114,6 @@ class DivalentLonePairVirtualSite(VirtualSite):
         atoms,
         distance,
         out_of_plane_angle,
-        in_plane_angle,
         charge_increments=None,
         weights=None,
         epsilon=None,
@@ -1133,7 +1121,6 @@ class DivalentLonePairVirtualSite(VirtualSite):
         rmin_half=None,
         name=None,
         orientations=None,
-        multiplicity=1,
     ):
         """
         Create a divalent lone pair-type virtual site, in which the location of the charge is specified by the position of three atoms.
@@ -1148,8 +1135,6 @@ class DivalentLonePairVirtualSite(VirtualSite):
 
         out_of_plane_angle : float
 
-        in_plane_angle : float
-
         epsilon : float
             Epsilon term for VdW properties of virtual site. Default is None.
         sigma : float, default=None
@@ -1162,8 +1147,8 @@ class DivalentLonePairVirtualSite(VirtualSite):
         # assert isinstance(distance, unit.Quantity)
         assert hasattr(distance, "unit")
         assert unit.angstrom.is_compatible(distance.unit)
-        assert hasattr(in_plane_angle, "unit")
-        assert unit.degree.is_compatible(in_plane_angle.unit)
+        # assert hasattr(in_plane_angle, "unit")
+        # assert unit.degree.is_compatible(in_plane_angle.unit)
         assert hasattr(out_of_plane_angle, "unit")
         assert unit.degree.is_compatible(out_of_plane_angle.unit)
         assert len(atoms) == 3
@@ -1175,17 +1160,14 @@ class DivalentLonePairVirtualSite(VirtualSite):
             rmin_half=rmin_half,
             name=name,
             orientations=orientations,
-            multiplicity=multiplicity,
         )
         self._distance = distance.in_units_of(unit.angstrom)
         self._out_of_plane_angle = out_of_plane_angle.in_units_of(unit.degree)
-        self._in_plane_angle = in_plane_angle.in_units_of(unit.degree)
 
     def to_dict(self):
         vsite_dict = super().to_dict()
         vsite_dict["distance"] = quantity_to_string(self._distance)
         vsite_dict["out_of_plane_angle"] = quantity_to_string(self._out_of_plane_angle)
-        vsite_dict["in_plane_angle"] = quantity_to_string(self._in_plane_angle)
         vsite_dict["vsite_type"] = self.type
         return vsite_dict
 
@@ -1205,17 +1187,14 @@ class DivalentLonePairVirtualSite(VirtualSite):
 
         """
         # The function is overridden only to have a custom docstring.
-        return super().from_dict(vsite_dict)
+        vsite = super().from_dict(vsite_dict)
+        vsite._out_of_plane_angle = string_to_quantity(vsite_dict["out_of_plane_angle"])
+        return vsite
 
     @property
     def distance(self):
         """The distance parameter of the virtual site"""
         return self._distance
-
-    @property
-    def in_plane_angle(self):
-        """The in_plane_angle parameter of the virtual site"""
-        return self._in_plane_angle
 
     @property
     def out_of_plane_angle(self):
@@ -1224,6 +1203,7 @@ class DivalentLonePairVirtualSite(VirtualSite):
 
     def get_openmm_virtual_site(self, atoms, mass=None):
         assert len(atoms) == 3
+        from simtk.openmm import LocalCoordinatesSite
         originwt = np.zeros_like(atoms)
         originwt[1] = 1.0  #
 
@@ -1251,8 +1231,6 @@ class TrivalentLonePairVirtualSite(VirtualSite):
         self,
         atoms,
         distance,
-        out_of_plane_angle,
-        in_plane_angle,
         charge_increments=None,
         weights=None,
         epsilon=None,
@@ -1260,7 +1238,6 @@ class TrivalentLonePairVirtualSite(VirtualSite):
         rmin_half=None,
         name=None,
         orientations=None,
-        multiplicity=1,
     ):
         """
         Create a trivalent lone pair-type virtual site, in which the location of the charge is specified by the position of four atoms.
@@ -1272,10 +1249,6 @@ class TrivalentLonePairVirtualSite(VirtualSite):
         atoms : list of 4 openforcefield.topology.molecule.Atom objects
             The three atoms defining the virtual site's position
         distance : float
-
-        out_of_plane_angle : float
-
-        in_plane_angle : float
 
         epsilon : float
             Epsilon term for VdW properties of virtual site. Default is None.
@@ -1290,10 +1263,6 @@ class TrivalentLonePairVirtualSite(VirtualSite):
         assert len(atoms) == 4
         assert hasattr(distance, "unit")
         assert unit.angstrom.is_compatible(distance.unit)
-        assert hasattr(in_plane_angle, "unit")
-        assert unit.degree.is_compatible(in_plane_angle.unit)
-        assert hasattr(out_of_plane_angle, "unit")
-        assert unit.degree.is_compatible(out_of_plane_angle.unit)
 
         super().__init__(
             atoms,
@@ -1303,17 +1272,12 @@ class TrivalentLonePairVirtualSite(VirtualSite):
             rmin_half=rmin_half,
             name=name,
             orientations=orientations,
-            multiplicity=multiplicity,
         )
         self._distance = distance.in_units_of(unit.angstrom)
-        self._out_of_plane_angle = out_of_plane_angle.in_units_of(unit.degree)
-        self._in_plane_angle = in_plane_angle.in_units_of(unit.degree)
 
     def to_dict(self):
         vsite_dict = super().to_dict()
         vsite_dict["distance"] = quantity_to_string(self._distance)
-        vsite_dict["out_of_plane_angle"] = quantity_to_string(self._out_of_plane_angle)
-        vsite_dict["in_plane_angle"] = quantity_to_string(self._in_plane_angle)
         vsite_dict["vsite_type"] = self.type
         return vsite_dict
 
@@ -1341,18 +1305,9 @@ class TrivalentLonePairVirtualSite(VirtualSite):
         """The distance parameter of the virtual site"""
         return self._distance
 
-    @property
-    def in_plane_angle(self):
-        """The in_plane_angle parameter of the virtual site"""
-        return self._in_plane_angle
-
-    @property
-    def out_of_plane_angle(self):
-        """The out_of_plane_angle parameter of the virtual site"""
-        return self._out_of_plane_angle
-
     def get_openmm_virtual_site(self, atoms, mass=None):
         assert len(atoms) == 4
+        from simtk.openmm import LocalCoordinatesSite
         originwt = np.zeros_like(atoms)
         originwt[1] = 1.0  #
 
@@ -2027,9 +1982,9 @@ class FrozenMolecule(Serializable):
                 vsite_dict_units["distance"] = string_to_quantity(
                     vsite_dict["distance"]
                 )
-                vsite_dict_units["in_plane_angle"] = string_to_quantity(
-                    vsite_dict["in_plane_angle"]
-                )
+                # vsite_dict_units["in_plane_angle"] = string_to_quantity(
+                #     vsite_dict["in_plane_angle"]
+                # )
                 vsite_dict_units["out_of_plane_angle"] = string_to_quantity(
                     vsite_dict["out_of_plane_angle"]
                 )
@@ -2040,12 +1995,12 @@ class FrozenMolecule(Serializable):
                 vsite_dict_units["distance"] = string_to_quantity(
                     vsite_dict["distance"]
                 )
-                vsite_dict_units["in_plane_angle"] = string_to_quantity(
-                    vsite_dict["in_plane_angle"]
-                )
-                vsite_dict_units["out_of_plane_angle"] = string_to_quantity(
-                    vsite_dict["out_of_plane_angle"]
-                )
+                # vsite_dict_units["in_plane_angle"] = string_to_quantity(
+                #     vsite_dict["in_plane_angle"]
+                # )
+                # vsite_dict_units["out_of_plane_angle"] = string_to_quantity(
+                #     vsite_dict["out_of_plane_angle"]
+                # )
                 self._add_trivalent_lone_pair_virtual_site(**vsite_dict_units)
 
             else:
@@ -3062,7 +3017,7 @@ class FrozenMolecule(Serializable):
         """
         Generate a reference Atom set and the orientations from an input
         structure of the form
-        [(4,2,7),(7,2,4)] or [(Atom4,Atom2,Atom),(Atom7,Atom2,Atom4)]
+        [(4,2,7),(7,2,4)] or [(Atom4,Atom2,Atom7),(Atom7,Atom2,Atom4)]
 
         Parameters
         ----------
@@ -3070,10 +3025,11 @@ class FrozenMolecule(Serializable):
             A list of tuples of atom indices or Atoms
         key_transformer: callable
             The function that will order the given tuple to reference order
+
         Returns
         -------
         If, for example, the input is [(4,2,7),(7,2,4)] or its equivalent Atom
-        form, then
+        form, then (Tuple[List[Atom]], List[Tuple[int]]), e.g:
         ([Atom4,Atom2,Atom7],[(4,2,7),(7,2,4)])
         """
         # Need to generalize the above to an input of all Atoms
@@ -3225,7 +3181,7 @@ class FrozenMolecule(Serializable):
         return self._virtual_sites.index(vsite)
 
     def _add_divalent_lone_pair_virtual_site(
-        self, atoms, distance, out_of_plane_angle, in_plane_angle, **kwargs
+        self, atoms, distance, out_of_plane_angle, **kwargs
     ):
         """
         Create a divalent lone pair-type virtual site, in which the location of the charge is specified by the position
@@ -3270,7 +3226,7 @@ class FrozenMolecule(Serializable):
         kwargs["orientations"] = orientations
 
         vsite = DivalentLonePairVirtualSite(
-            ref_atoms, distance, out_of_plane_angle, in_plane_angle, **kwargs
+            ref_atoms, distance, out_of_plane_angle, **kwargs
         )
 
         self._add_virtual_site(vsite, replace=replace)
@@ -3317,7 +3273,7 @@ class FrozenMolecule(Serializable):
         kwargs["orientations"] = orientations
 
         vsite = TrivalentLonePairVirtualSite(
-            ref_atoms, distance, out_of_plane_angle, in_plane_angle, **kwargs
+            ref_atoms, distance, **kwargs
         )
 
         self._add_virtual_site(vsite, replace=replace)
@@ -5207,7 +5163,7 @@ class Molecule(FrozenMolecule):
 
     # def add_divalent_lone_pair_virtual_site(self, atoms, distance, out_of_plane_angle, in_plane_angle, charge_increments=None, weights=None, epsilon=None, sigma=None, rmin_half=None, name=None):
     def add_divalent_lone_pair_virtual_site(
-        self, atoms, distance, out_of_plane_angle, in_plane_angle, **kwargs
+        self, atoms, distance, out_of_plane_angle, **kwargs
     ):
         """
         Create a divalent lone pair-type virtual site, in which the location of the charge is specified by the position of three atoms.
@@ -5221,8 +5177,6 @@ class Molecule(FrozenMolecule):
         distance : float
 
         out_of_plane_angle : float
-
-        in_plane_angle : float
 
         epsilon : float
             Epsilon term for VdW properties of virtual site. Default is None.
@@ -5239,14 +5193,13 @@ class Molecule(FrozenMolecule):
             The index of the newly-added virtual site in the molecule
 
         """
-        # vsite_index = self._add_divalent_lone_pair_virtual_site(self, atoms, distance, out_of_plane_angle, in_plane_angle, charge_increments=charge_increments, weights=weights, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half, name=name)
         vsite_index = self._add_divalent_lone_pair_virtual_site(
-            atoms, distance, out_of_plane_angle, in_plane_angle, **kwargs
+            atoms, distance, out_of_plane_angle, **kwargs
         )
         return vsite_index
 
     def add_trivalent_lone_pair_virtual_site(
-        self, atoms, distance, out_of_plane_angle, in_plane_angle, **kwargs
+        self, atoms, distance, **kwargs
     ):
         """
         Create a trivalent lone pair-type virtual site, in which the location of the charge is specified by the position of four atoms.
@@ -5258,10 +5211,6 @@ class Molecule(FrozenMolecule):
         atoms : list of 4 openforcefield.topology.molecule.Atom objects or ints
             The three atoms defining the virtual site's position or their molecule atom indices
         distance : float
-
-        out_of_plane_angle : float
-
-        in_plane_angle : float
 
         epsilon : float
             Epsilon term for VdW properties of virtual site. Default is None.
@@ -5279,7 +5228,7 @@ class Molecule(FrozenMolecule):
 
         """
         vsite_index = self._add_trivalent_lone_pair_virtual_site(
-            atoms, distance, out_of_plane_angle, in_plane_angle, **kwargs
+            atoms, distance, **kwargs
         )
         return vsite_index
 

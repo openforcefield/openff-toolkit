@@ -1010,58 +1010,21 @@ class ForceField:
             ph_class = self._get_parameter_handler_class(parameter_name)
             try:
                 infotype = ph_class._INFOTYPE
-                # TG: The assignment above does not resolve to the underlying
-                # type if it is a class-level property, and for whatever reason
-                # the __get__ and __set__ methods are not automatically called.
-                # To overcome this, force __get__ and __set__ as needed.
-                # This allows a dynamic _INFOTYPE for e.g. VirtualSites
-                # where each elem has an additional type="" tag which introduces
-                # its own validation per type, which is all handled here and now.
-                # Would be nice to make the xml parser less of a struct
-                # and a little more reactive/flexible
-                if isinstance(infotype, property):
-                    # someone call 911 this is abuse
-                    infotype = infotype.__get__(ph_class)
-
                 parameter_list_tagname = infotype._ELEMENT_NAME
-
             except AttributeError:
                 # The ParameterHandler doesn't have ParameterTypes (e.g. ToolkitAM1BCCHandler).
                 parameter_list_dict = {}
             else:
                 parameter_list_dict = section_dict.pop(parameter_list_tagname, {})
 
-            # specialize VirtualSites for now to avoid possibly breaking anything
-            all_params = defaultdict(list)
-            if parameter_name == "VirtualSites" and len(parameter_list_dict) > 0:
-                if not isinstance(parameter_list_dict, list):
-                    parameter_list_dict = [parameter_list_dict]
-                for parameter in parameter_list_dict:
-                    assert (
-                        "type" in parameter
-                    ), "VirtualSites must specify a type: {:s}".format(
-                        parameter.__repr__()
-                    )
-                    infotype = parameter["type"]
-                    if type(ph_class._INFOTYPE) == property:
-                        ph_class._INFOTYPE.__set__(ph_class, infotype)
-                        infotype = ph_class._INFOTYPE.__get__(ph_class, ph_class)
-                    else:
-                        infotype = ph_class._INFOTYPE
-                    parameter_list_tagname = infotype._ELEMENT_NAME
+            # Must be wrapped into its own tag.
+            # Assumes that parameter_list_dict is always a list
 
-                    all_params[parameter_list_tagname].append(parameter)
-            else:
-
-                # Must be wrapped into its own tag.
-                # Assumes that parameter_list_dict is always a list
-
-                # If the parameter list isn't empty, it must be transferred into its own tag.
-                # This is necessary for deserializing SMIRNOFF force field sections which may or may
-                # not have any smirks-based elements (like an empty ChargeIncrementModel section)
-                if parameter_list_dict != {}:
-                    all_params[parameter_list_tagname] = parameter_list_dict
-                    # parameter_list_dict = {parameter_list_tagname: parameter_list_dict}
+            # If the parameter list isn't empty, it must be transferred into its own tag.
+            # This is necessary for deserializing SMIRNOFF force field sections which may or may
+            # not have any smirks-based elements (like an empty ChargeIncrementModel section)
+            if parameter_list_dict != {}:
+                parameter_list_dict = {parameter_list_tagname: parameter_list_dict}
 
             # Retrieve or create parameter handler, passing in section_dict to check for
             # compatibility if a handler for this parameter name already exists
@@ -1071,7 +1034,7 @@ class ForceField:
                 allow_cosmetic_attributes=allow_cosmetic_attributes,
             )
             handler._add_parameters(
-                all_params, allow_cosmetic_attributes=allow_cosmetic_attributes
+                parameter_list_dict, allow_cosmetic_attributes=allow_cosmetic_attributes
             )
 
     def parse_smirnoff_from_source(self, source):

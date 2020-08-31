@@ -112,7 +112,7 @@ class ValenceDict(_TransformedDict):
         """Reverse tuple if first element is larger than last element."""
         # Ensure key is a tuple.
         key = tuple(key)
-        assert len(key) > 0 and len(key) < 5, "Valence keys must be 2 or 3 atoms"
+        assert len(key) > 0 and len(key) < 5, "Valence keys must be at most 4 atoms"
         # Reverse the key if the first element is bigger than the last.
         if key[0] > key[-1]:
             key = tuple(reversed(key))
@@ -134,14 +134,14 @@ class ValenceDict(_TransformedDict):
                 }
             )
         else:
-            # For a proper, only forward/backward make sense
+            # For a proper, only forward/backward makes sense
             permutations = OrderedDict(
                 {
                     (refkey[0], refkey[1], refkey[2], refkey[3]): 0,
                     (refkey[3], refkey[1], refkey[2], refkey[0]): 1,
                 }
             )
-        if not possible is None:
+        if possible is not None:
             i = 0
             assert all([p in permutations for p in possible]), (
                 "Possible permutations " + str(possible) + " is impossible!"
@@ -200,7 +200,7 @@ class ImproperDict(_TransformedDict):
                 (refkey[3], refkey[1], refkey[2], refkey[0]): 5,
             }
         )
-        if not possible is None:
+        if possible is not None:
             assert all(
                 [p in permutations for p in possible]
             ), "Possible permuation is impossible!"
@@ -220,6 +220,17 @@ class ImproperDict(_TransformedDict):
 # =============================================================================================
 # TOPOLOGY OBJECTS
 # =============================================================================================
+
+
+# =============================================================================================
+# TopologyAtom
+# =============================================================================================
+
+
+class TopologyParticle(Serializable):
+    # TODO: Should this be added?
+    pass
+
 
 # =============================================================================================
 # TopologyAtom
@@ -895,7 +906,7 @@ class TopologyMolecule:
         """
         # If cached value is not available, generate it.
         if self._virtual_particle_start_topology_index is None:
-            virtual_particle_start_topology_index = self.topology.n_atoms
+            particle_start_topology_index = self.topology.n_atoms
             for topology_molecule in self._topology.topology_molecules:
                 if self == topology_molecule:
                     self._particle_start_topology_index = particle_start_topology_index

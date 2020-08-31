@@ -1703,9 +1703,14 @@ class ParameterHandler(_ParameterAttributeHandler):
         )
         smirnoff_data = attach_units(unitless_kwargs, attached_units)
 
-        element_name = None
         for key, val in smirnoff_data.items():
             # If there are multiple parameters, this will be a list. If there's just one, make it a list
+            if self._INFOTYPE is not None:
+                element_name = self._INFOTYPE._ELEMENT_NAME
+                # Skip sections that aren't the parameter list
+                if key != element_name:
+                    break
+
             if not (isinstance(val, list)):
                 val = [val]
 
@@ -1713,17 +1718,6 @@ class ParameterHandler(_ParameterAttributeHandler):
             # each parameter_dict, then use it to initialize a ParameterType
             for unitless_param_dict in val:
 
-                # Perform some dynamic type checking if a type tag is specified
-                if "type" in unitless_param_dict:
-                    self._INFOTYPE = unitless_param_dict["type"]
-                if self._INFOTYPE is not None:
-                    element_name = self._INFOTYPE._ELEMENT_NAME
-
-                # Skip sections that aren't the parameter list
-                # Delay check until now since we need to get the type per element
-                # since VirtualSite elements are variable
-                if key != element_name:
-                    break
                 param_dict = attach_units(unitless_param_dict, attached_units)
                 new_parameter = self._INFOTYPE(
                     **param_dict, allow_cosmetic_attributes=allow_cosmetic_attributes
@@ -2024,7 +2018,6 @@ class ParameterHandler(_ParameterAttributeHandler):
                         matches_for_this_type[key] = handler_match
                     else:
 
-                        # breakpoint()
                         # the possible orders of this match
                         # must check that the tuple of atoms are the same
                         # as they can be different in e.g. formaldehyde
@@ -4432,7 +4425,7 @@ class VirtualSiteHandler(_NonbondedHandler):
     # minimal: only add exclusions between vsite particles and their "single"
     # parent atom. This is the atom that the vsite's origin is defined as
 
-    # self: only add exclusions between vsite particles and all of the
+    # parents: only add exclusions between vsite particles and all of the
     # associated parent atoms
 
     # local: add exclusions between vsites that share exactly the same atoms.
@@ -4448,32 +4441,57 @@ class VirtualSiteHandler(_NonbondedHandler):
 
     # all: exclude all interactions, effectively turning vsites off.
 
-    exclusion_policy = ParameterAttribute(
-        default="self",
-        converter=_allow_only(
-            ["none", "minimal", "self", "local", "neighbors", "connected", "all"]
-        ),
-    )
-
     class _ExclusionPolicy(Enum):
         NONE = 1
         MINIMAL = 2
-        SELF = 3
+        PARENTS = 3
         LOCAL = 4
         NEIGHBORS = 5
         CONNECTED = 6
+
+    _parameter_to_policy = {
+        "none": _ExclusionPolicy.NONE,
+        "minimal": _ExclusionPolicy.MINIMAL,
+        "parents": _ExclusionPolicy.PARENTS,
+        "local": _ExclusionPolicy.LOCAL,
+        "neighbors": _ExclusionPolicy.NEIGHBORS,
+        "connected": _ExclusionPolicy.CONNECTED
+    }
+
+    exclusion_policy = ParameterAttribute(default="parents", converter=str)
+
+    class VirtualSiteTypeSelector:
+
+        _VALENCE_TYPE = None
+        # This is needed so VirtualSite elements are parsed correctly
+        # using this generic selector as a type
+        _ELEMENT_NAME = "VirtualSite"
+
+        def __new__(base, **attrs):
+
+            vsite_type = attrs["type"]
+
+            VSH = VirtualSiteHandler
+
+            if vsite_type == "BondCharge":
+                cls = VSH.VirtualSiteBondChargeType
+
+            elif vsite_type == "MonovalentLonePair":
+                cls = VSH.VirtualSiteMonovalentLonePairType
+
+            elif vsite_type == "DivalentLonePair":
+                cls = VSH.VirtualSiteDivalentLonePairType
+
+            elif vsite_type == "TrivalentLonePair":
+                cls = VSH.VirtualSiteTrivalentLonePairType
+
+            return cls(**attrs)
 
     class VirtualSiteType(vdWHandler.vdWType):
         """A SMIRNOFF virtual site base type
 
         .. warning :: This API is experimental and subject to change.
         """
-
-        _VALENCE_TYPE = None
-
-        # Needed here to read the generic VirtualSite xml elements.
-        # Will specialize after the type is parsed
-        _ELEMENT_NAME = "VirtualSite"
 
         # The attributes that we expect in the OFFXML
         name = ParameterAttribute(default="EP", converter=str)
@@ -4516,7 +4534,8 @@ class VirtualSiteHandler(_NonbondedHandler):
             # and take the explicit interpretation: "all_permutations" will
             # try to make a virtual particle for every permutation
             # However, we will bail on cases we know to not work with the "current"
-            # spec.
+            # spec. This is currently the combination of trivalent and
+            # "all_permutations", since it is a completely degenerate case
 
             if self.match == "once":
                 orientation = atoms
@@ -4530,17 +4549,11 @@ class VirtualSiteHandler(_NonbondedHandler):
                     ]  # This is believable
                 elif len(atoms) == 4:  # assumes improper-like vsite
                     Exception(
-                        """
-                    No virtual site with 4 atoms and match=all_permutations
-                    is not supported.
-                    """
+                        "Virtual site with 4 atoms and match=all_permutations is not supported."
                     )
                 else:
                     raise NotImplementedError(
-                        """
-                    Virtual site with more than 4 atoms defined is not 
-                    implemented.
-                    """
+                        "Virtual site with more than 4 atoms defined is not implemented."
                     )
 
             base_args = {
@@ -4562,8 +4575,6 @@ class VirtualSiteHandler(_NonbondedHandler):
         .. warning :: This API is experimental and subject to change.
         """
 
-        _ELEMENT_NAME = "VirtualSiteBondChargeType"
-
         def __eq__(self, obj):
             if type(self) != type(obj):
                 return False
@@ -4581,8 +4592,6 @@ class VirtualSiteHandler(_NonbondedHandler):
 
         .. warning :: This API is experimental and subject to change.
         """
-
-        _ELEMENT_NAME = None
 
         def __eq__(self, obj):
             if type(self) != type(obj):
@@ -4610,7 +4619,6 @@ class VirtualSiteHandler(_NonbondedHandler):
         .. warning :: This API is experimental and subject to change.
         """
 
-        _ELEMENT_NAME = "VirtualSiteMonovalentType"
         outOfPlaneAngle = ParameterAttribute(unit=unit.degree)
         inPlaneAngle = ParameterAttribute(unit=unit.degree)
 
@@ -4625,7 +4633,6 @@ class VirtualSiteHandler(_NonbondedHandler):
         .. warning :: This API is experimental and subject to change.
         """
 
-        _ELEMENT_NAME = "VirtualSiteDivalentType"
         outOfPlaneAngle = ParameterAttribute(unit=unit.degree)
 
         def add_virtual_site(self, molecule, atoms, replace=False):
@@ -4639,7 +4646,6 @@ class VirtualSiteHandler(_NonbondedHandler):
         .. warning :: This API is experimental and subject to change.
         """
 
-        _ELEMENT_NAME = "VirtualSiteTrivalentType"
         transformed_dict_cls = ImproperDict
 
         def add_virtual_site(self, molecule, atoms, replace=False):
@@ -4655,22 +4661,11 @@ class VirtualSiteHandler(_NonbondedHandler):
     ]
 
     _TAGNAME = "VirtualSites"  # SMIRNOFF tag name to process
-    __INFOTYPE = VirtualSiteType  # class to hold force type info
 
-    @property
-    def _INFOTYPE(self):
-        return self.__INFOTYPE
-
-    @_INFOTYPE.setter
-    def _INFOTYPE(self, type_str):
-        if type_str == "BondCharge":
-            self.__INFOTYPE = __class__.VirtualSiteBondChargeType
-        elif type_str == "MonovalentLonePair":
-            self.__INFOTYPE = __class__.VirtualSiteMonovalentLonePairType
-        elif type_str == "DivalentLonePair":
-            self.__INFOTYPE = __class__.VirtualSiteDivalentLonePairType
-        elif type_str == "TrivalentLonePair":
-            self.__INFOTYPE = __class__.VirtualSiteTrivalentLonePairType
+    # Trying to create an instance of this selector will cause
+    # some introspection to be done on the type attr passed in, and
+    # will dispatch the appropriate virtual site type.
+    _INFOTYPE = VirtualSiteTypeSelector  # class to hold force type info
 
     def check_handler_compatibility(self, other_handler):
         """
@@ -4729,14 +4724,14 @@ class VirtualSiteHandler(_NonbondedHandler):
         # somewhere else
         # Make it public since it seems like a useful thing to expose
 
-        logger.info("Creating OpenFF virtual site representations...")
+        logger.debug("Creating OpenFF virtual site representations...")
         topology = self._create_openff_virtual_sites(topology)
 
         # The toolkit now has a representation of the vsites in the topology,
         # and here we create the OpenMM parameters/objects/exclusions
-        logger.info("Creating OpenMM VSite particles...")
+        logger.debug("Creating OpenMM VSite particles...")
         for ref_mol in topology.reference_molecules:
-            logger.debug("Adding vsites for reference mol:", ref_mol)
+            logger.debug("Adding vsites for reference mol: {}".format(str(ref_mol)))
             self._create_openmm_virtual_sites(system, force, topology, ref_mol)
 
     def _apply_chargeincrement(self, force, atom_key, chargeincrement):
@@ -4809,12 +4804,13 @@ class VirtualSiteHandler(_NonbondedHandler):
                     newsite[VSITE_TYPE] = vs_i
                     newsite[KEY_LIST] = [key]
                     combined_orientations.append(newsite)
+
         return combined_orientations
 
     def _create_openff_virtual_sites(self, topology):
         for molecule in topology.reference_molecules:
-            # top_mol = Topology.from_molecules([molecule])
-            matches = self.find_matches(molecule, expand_permutations=True)
+            top_mol = Topology.from_molecules([molecule])
+            matches = self.find_matches(top_mol, expand_permutations=True)
 
             virtual_sites = self._reduce_virtual_particles_to_sites(matches)
 
@@ -4831,11 +4827,11 @@ class VirtualSiteHandler(_NonbondedHandler):
 
         for vsite in ref_mol.virtual_sites:
             ref_key = [atom.molecule_atom_index for atom in vsite.atoms]
-            logger.debug("Vsite ref_key:", ref_key)
+            logger.debug("VSite ref_key: {}".format(ref_key))
 
             ms = topology._reference_molecule_to_topology_molecules[ref_mol]
             for top_mol in ms:
-                logger.debug("top_mol:", top_mol)
+                logger.debug("top_mol: {}".format(top_mol))
 
                 ids = self._create_openmm_virtual_particle(
                     system, force, top_mol, vsite, ref_key
@@ -4844,12 +4840,15 @@ class VirtualSiteHandler(_NonbondedHandler):
                 # go and exclude each of the vsite particles; this makes
                 # sense because these particles cannot "feel" forces, only
                 # exert them
-                if self.exclusion_policy != self._ExclusionPolicy.NONE:
+                policy = self._parameter_to_policy[self.exclusion_policy]
+                if policy.value != self._ExclusionPolicy.NONE.value:
                     for i, j in combinations(ids, 2):
-                        logger.debug("Excluding vsite", i, "vsite", j)
+                        logger.debug("Excluding vsite {} vsite {}".format(i,j))
                         force.addException(i, j, 0.0, 0.0, 0.0, replace=True)
 
     def _create_openmm_virtual_particle(self, system, force, top_mol, vsite, ref_key):
+
+        policy = self._parameter_to_policy[self.exclusion_policy]
 
         ids = []
 
@@ -4857,7 +4856,7 @@ class VirtualSiteHandler(_NonbondedHandler):
             orientation = vp.orientation
             sort_key = [orientation.index(i) for i in ref_key]
             atom_key = [ref_key[i] for i in sort_key]
-            logger.debug("sort_key", sort_key)
+            logger.debug("sort_key: {}".format(sort_key))
             atom_key = [top_mol.atom_start_topology_index + i for i in atom_key]
 
             omm_vsite = vsite.get_openmm_virtual_site(atom_key)
@@ -4876,61 +4875,60 @@ class VirtualSiteHandler(_NonbondedHandler):
             vsite_idx = system.addParticle(mass)
             ids.append(vsite_idx)
 
-            logger.debug(
-                "vsite id",
-                vsite_idx,
-                "orientation:",
-                orientation,
-                "atom_key:",
-                atom_key,
-            )
+            logger.debug( "vsite_id: {} orientation: {} atom_key: {}".format(vsite_idx, orientation, atom_key))
 
-            # We are in trouble if the indices we are keeping do not
-            # match with the internal OpenMM representation.
-            # We must assume that all atoms are present prior to vsite creation,
-            # and since we order vsites last, we are essentially appending
-            # particles to the existing system.
-            n_particles = top_mol.topology.n_topology_particles
-            if vsite_idx != n_particles:
-                raise IndexError(
-                    f"""
-                The index of a newly created OpenMM particle {vsite_idx} does
-                not match the expected index of the OpenFF particle
-                {n_particles}."""
-                )
+            # It appears that we need a good way to map between
+            # OpenMM particle indices and our own indices.
+            # If we make the virtual sites in place (as we see the molecules,
+            # then our indices will not match if there is more than
+            # one molecule.
+
+            # n_particles = top_mol.topology.n_topology_particles
+            # if vsite_idx != n_particles:
+            #     raise IndexError(
+            #         f"""
+            #     The index of a newly created OpenMM particle {vsite_idx} does
+            #     not match the expected index of the OpenFF particle
+            #     {n_particles}."""
+            #     )
 
             system.setVirtualSite(vsite_idx, omm_vsite)
             force.addParticle(vsite_q, sigma, ljtype.epsilon)
 
             logger.debug(f"Added virtual site particle with charge {vsite_q}")
-            logger.debug(f"  chargeincrements:", vsite.charge_increments)
+            logger.debug(f"  chargeincrements: {vsite.charge_increments}")
 
             # add exclusion to the "parent" atom of the vsite
-            if self.exclusion_policy >= self._ExclusionPolicy.MINIMAL:
+            if policy.value >= self._ExclusionPolicy.MINIMAL.value:
                 keylen = len(atom_key)
                 if keylen == 2:
-                    atom_key = atom_key[0]
+                    owning_atom = atom_key[0]
                 elif keylen == 3:
-                    atom_key = atom_key[1]
+                    owning_atom = atom_key[1]
                 else:
                     # Need to be careful here; we say the center
                     # of a torsion/improper is the second atom!
-                    atom_key = atom_key[1]
-                atom_key = [atom_key]
+                    owning_atom = atom_key[1]
+                logger.debug(f"Excluding vsite {vsite_idx} atom {owning_atom}")
+                force.addException(owning_atom, vsite_idx, 0.0, 0.0, 0.0, replace=True)
 
             # add exclusions to all atoms in the vsite definition
-            if self.exclusion_policy >= self._ExclusionPolicy.SELF:
+            if policy.value >= self._ExclusionPolicy.PARENTS.value:
                 # this is exclusion policy self
                 for i in atom_key:
-                    self.debug("Excluding vsite", vsite_idx, "atom", i)
+                    if i == owning_atom:
+                        continue
+                    logger.debug(f"Excluding vsite {vsite_idx} atom {i}")
                     force.addException(i, vsite_idx, 0.0, 0.0, 0.0, replace=True)
 
-            if self.exclusion_policy > self._ExclusionPolicy.SELF:
+            if policy.value > self._ExclusionPolicy.PARENTS.value:
                 raise NotImplementedError(
                     """
-                Only the 'self' and 'none' exclusion_policy are 
+                Only the 'parents', 'minimal', and 'none' exclusion_policies are 
                 implemented"""
                 )
+
+        return ids
 
 
 if __name__ == "__main__":
