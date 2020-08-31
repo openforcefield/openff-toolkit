@@ -36,7 +36,7 @@ jobs:
       - name: Build conda package
         shell: bash -l {0}
         env:
-          ANACONDA_TOKEN: ${{ secrets.ANACONDA_TOKEN }}
+          ANACONDA_TOKEN: ${{ secrets.OMNIA_ANACONDA_TOKEN }}
         run: |
           pushd devtools/conda-recipe/
           conda build --token ${ANACONDA_TOKEN} --user omnia --label rc --python=3.6 -c conda-forge -c omnia .
