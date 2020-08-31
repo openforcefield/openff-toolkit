@@ -10,11 +10,31 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 0.8.0 - Current development
 ---------------------------
 
+New features
+""""""""""""
+- `PR #662 <https://github.com/openforcefield/openforcefield/pull/662>`_: Adds ``.aromaticity_model``
+  of :py:class:`ForceField <openforcefield.typing.engines.smirnoff.forcefield.ForceField>` and ``.TAGNAME``
+  of :py:class:`ParameterHandler <openforcefield.typing.engines.smirnoff.Parameters.ParameterHandler>` as
+  public attributes.
+- `PR #667 <https://github.com/openforcefield/openforcefield/pull/667>`_ and
+  `PR #681 <https://github.com/openforcefield/openforcefield/pull/681>`_ linted the codebase with
+  ``black`` and ``isort``, respectively.
+- `PR #675 <https://github.com/openforcefield/openforcefield/pull/675>`_ adds
+  ``.toolkit_version`` to
+  :py:class:`ToolkitWrapper <openforcefield.utils.toolkits.ToolkitWrapper>` and
+  ``.registered_toolkit_versions`` to
+  :py:class:`ToolkitRegistry <openforcefield.utils.toolkits.ToolkitRegistry>`.
+
 Behavior changed
 """"""""""""""""
-- `PR #648 <https://github.com/openforcefield/openforcefield/pull/648>`_: Removes the 
+- `PR #648 <https://github.com/openforcefield/openforcefield/pull/648>`_: Removes the
   ``utils.structure`` module, which was deprecated in 0.2.0.
-
+- `PR #670 <https://github.com/openforcefield/openforcefield/pull/670>`_: Makes the
+  :py:class:`Topology <openforcefield.topology.Topology>` returned by ``create_openmm_system``
+  contain the partial charges and partial bond orders (if any) assigned during parameterization.
+- `PR #675 <https://github.com/openforcefield/openforcefield/pull/675>`_ changes the
+  exception raised when no ``antechamber`` executable is found from ``IOError`` to
+  :py:class:`AntechamberNotFoundError <openforcefield.utils.toolkits.AntechamberNotFoundError>`
 
 0.7.1 - OETK2020 Compatibility and Minor Update
 -----------------------------------------------
