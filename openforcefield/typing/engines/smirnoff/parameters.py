@@ -4433,12 +4433,12 @@ class VirtualSiteHandler(_NonbondedHandler):
 
     # neighbors: add exclusions between vsites and atoms that share the same
     # "clique" of virtual sites. For example, if 1-2-3 and 3-4-5 each have a
-    # vsite, then the vsite on 1-2-3 will be excluded from 3-4-5 since they
-    # share atom 3.
+    # vsite, then the vsite on 1-2-3 will be excluded from atoms 4 and 5
+    # since they share atom 3.
 
     # connected: add exclusions between the vsite and all atoms connected to
     # the parents, e.g the entire molecule making it an interaction only
-    # between two fragments.
+    # between two nonbonded fragments.
 
     # all: exclude all interactions, effectively turning vsites off.
 
@@ -4545,6 +4545,10 @@ class VirtualSiteHandler(_NonbondedHandler):
             # and take the explicit interpretation: "all_permutations" will
             # try to make a virtual particle for every permutation, and
             # "once" is the canonical sorting of the atom indices.
+
+            # This means that, using the "match" option in the spec, it is not
+            # possible to choose specific permutations. For the current cases,
+            # this should be fine and works well.
 
             # We will bail on cases we know to not work with the "current"
             # spec. This is currently the combination of trivalent and
