@@ -5,4 +5,5 @@ cd src
 
 git clone https://github.com/openforcefield/openforcefield
 cd openforcefield
-python -m pip install --no-deps .
+pip install --no-deps -e .
+python -c "import openforcefield; print(openforcefield.__version__); print(openforcefield.__file__)"
