@@ -1,4 +1,4 @@
-name: Single-file installer
+name: constructor
 
 channels:
   - defaults

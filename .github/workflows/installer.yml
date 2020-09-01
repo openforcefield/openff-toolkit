@@ -63,9 +63,15 @@ jobs:
         # TODO: Make this a variable that can be passed through from trigger and/or allow RC
         export LATEST_TAG=$(git ls-remote --tags https://github.com/openforcefield/openforcefield.git | cut -f2 | grep -v "rc" | tail -1 | sed 's/refs\/tags\///')
 
+        echo $LATEST_TAG
+
         git clone https://github.com/mattwthompson/toolkit-installer-constructor
         cd toolkit-installer-constructor
 
         python ../openforcefield/devtools/scripts/build_cookiecutter_json.py $LATEST_TAG
         cp new_cookiecutter.json cookiecutter/cookiecutter.json
+
+        cat new_cookiecutter.json
+
         python run.py
+
