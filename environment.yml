@@ -5,5 +5,11 @@ channels:
   - omnia
   - defaults
 dependencies:
+  # Let conda pull in the toolkit and its deps
   - openforcefield
+
+  # Optional(-ish) dependencies used in example(s)
   - nglview
+  - qcportal
+  - qcengine
+  - openmmforcefields

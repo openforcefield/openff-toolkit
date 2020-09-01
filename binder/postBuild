@@ -1,0 +1,8 @@
+#!/bin/bash
+
+mkdir src
+cd src
+
+git clone https://github.com/openforcefield/openforcefield
+cd openforcefield
+python -m pip install --no-deps .
