@@ -75,6 +75,10 @@ jobs:
 
         python run.py
 
+        pwd
+        ls
+        ls build
+
     - name: Upload tarball as artifact
       uses: actions/upload-artifact@v2
       with:
@@ -83,6 +87,10 @@ jobs:
     - name: Install from installer
       shell: bash -l {0}
       run: |
+        pwd
+        ls
+        ls toolkit-installer-constructor
+
         mkdir ../scratch/
         cd ../scratch
         echo -ne "\n" | bash ../toolkit-installer-constructor/build/openforcefield-*.sh
