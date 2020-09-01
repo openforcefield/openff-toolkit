@@ -2,8 +2,11 @@ name: Conda
 
 on:
   pull_request:
+  release:
+  prerelease:
   schedule:
     - cron: "0 0 * * *"
+  workflow_dispatch:
 
 jobs:
   test:
@@ -31,6 +34,11 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
+
+      - name: Wait for 2 hours if triggered by a release
+        if: (github.event_name == 'release') || (github.event_name == 'prerelease')
+        run:
+            sleep 7200
 
       - uses: goanpeca/setup-miniconda@v1
         name: Vanilla install from conda
