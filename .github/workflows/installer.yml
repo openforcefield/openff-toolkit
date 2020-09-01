@@ -65,7 +65,7 @@ jobs:
 
         echo $LATEST_TAG
 
-        git clone https://github.com/mattwthompson/toolkit-installer-constructor
+        git clone https://github.com/openforcefield/toolkit-installer-constructor
         cd toolkit-installer-constructor
 
         python ../openforcefield/devtools/scripts/build_cookiecutter_json.py $LATEST_TAG
@@ -74,4 +74,38 @@ jobs:
         cat new_cookiecutter.json
 
         python run.py
+
+    - name: Upload tarball as artifact
+      uses: actions/upload-artifact@v2
+      with:
+        path: build/openforcefield-*.sh
+
+    - name: Install from installer
+      shell: bash -l {0}
+      run: |
+        mkdir ../scratch/
+        cd ../scratch
+        echo -ne "\n" | bash openforcefield-*.sh
+
+        conda info
+        conda list
+
+        export FOUND_VER=$(python -c "import openforcefield; print(openforcefield.__version__)")
+        export LATEST_TAG=$(git ls-remote --tags https://github.com/openforcefield/openforcefield.git | cut -f2 | grep -v "rc" | tail -1 | sed 's/refs\/tags\///')
+
+        echo $LATEST_TAG
+        echo $FOUND_VER
+
+        if [[ $LATEST_TAG != $FOUND_VER ]];
+          then echo "Version mismatch"
+          exit 1
+        fi
+
+        PYTEST_ARGS=" -r fE --tb=short"
+        PYTEST_ARGS+=" --ignore=openforcefield/tests/test_links.py"
+        # Can be dropped in the release after 0.7.1, in which readme links were tested in test_examples.py
+        PYTEST_ARGS+=" --ignore=openforcefield/tests/test_examples.py"
+        PYTEST_ARGS+=" --ignore=utilities --ignore=examples/deprecated --nbval-lax"
+
+        pytest $PYTEST_ARGS openforcefield
 
