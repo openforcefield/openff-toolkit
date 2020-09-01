@@ -85,7 +85,7 @@ jobs:
       run: |
         mkdir ../scratch/
         cd ../scratch
-        echo -ne "\n" | bash openforcefield-*.sh
+        echo -ne "\n" | bash ../toolkit-installer-constructor/build/openforcefield-*.sh
 
         conda info
         conda list
