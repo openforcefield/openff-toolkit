@@ -1,0 +1,71 @@
+name: Make single-file installers
+
+on:
+  release:
+    types: 
+      - released
+      - prereleased
+  workflow_dispatch:
+  pull_request:  # Remove this when merging this PR
+  schedule:
+    - cron: "0 0 * * 0"  # This cron job should maybe just live in openforcefield/status/?
+
+jobs:
+  test:
+    name: Building single file installer on ${{ matrix.cfg.os }}, Python ${{ matrix.python-version }}
+
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macOS-latest, ubuntu-latest]
+        python-version: [3.6, 3.7]
+
+    env:
+      CI_OS: ${{ matrix.os }}
+      PYVER: ${{ matrix.python-version }}
+
+    steps:
+    - uses: actions/checkout@v2
+      
+    - name: Wait for 2 hours if triggered by a release
+      if: (github.event_name == 'release') || (github.event_name == 'prerelease')
+      run:
+        sleep 7200
+
+    - uses: goanpeca/setup-miniconda@v1
+      with:
+        python-version: ${{ matrix.python-version }}
+        activate-environment: constructor
+        environment-file: devtools/conda-envs/installer.yaml
+        auto-activate-base: false
+
+    - name: Additional info about the build
+      shell: bash
+      run: |
+        uname -a
+        df -h
+        ulimit -a
+
+    - name: Environment Information
+      shell: bash -l {0}
+      run: |
+        conda info
+        conda list
+
+    - name: Prepare and run the constructor
+      shell: bash -l {0}
+      run: |
+        cd ..
+
+        # Find the tag of the last release (excluding RCs)
+        # TODO: Make this a variable that can be passed through from trigger and/or allow RC
+        export LATEST_TAG=$(git ls-remote --tags https://github.com/openforcefield/openforcefield.git | cut -f2 | grep -v "rc" | tail -1 | sed 's/refs\/tags\///')
+
+        git clone https://github.com/mattwthompson/toolkit-installer-constructor
+        cd toolkit-installer-constructor
+
+        python ../openforcefield/devtools/scripts/build_cookiecutter_json.py $LATEST_TAG
+        cp new_cookiecutter.json cookiecutter/cookiecutter.json
+        python run.py

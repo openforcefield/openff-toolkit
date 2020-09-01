@@ -1,0 +1,11 @@
+name: Single-file installer
+
+channels:
+  - defaults
+  - conda-forge
+
+dependencies:
+  - conda-build
+  - conda<4.7
+  - constructor
+  - cookiecutter
