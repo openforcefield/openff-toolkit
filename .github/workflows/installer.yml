@@ -87,12 +87,13 @@ jobs:
     - name: Install from installer
       shell: bash -l {0}
       run: |
+        cd ..
         pwd
         ls
         ls toolkit-installer-constructor
 
-        mkdir ../scratch/
-        cd ../scratch
+        mkdir scratch
+        cd scratch
         echo -ne "\n" | bash ../toolkit-installer-constructor/build/openforcefield-*.sh
 
         conda info
