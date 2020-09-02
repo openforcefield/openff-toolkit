@@ -47,6 +47,7 @@ from simtk import unit
 from simtk.openmm.app import Element, element
 
 import openforcefield
+from openforcefield.topology.topology import ImproperDict, ValenceDict
 from openforcefield.utils import (
     check_units_are_compatible,
     deserialize_numpy,
@@ -54,7 +55,6 @@ from openforcefield.utils import (
     serialize_numpy,
     string_to_quantity,
 )
-from openforcefield.topology.topology import ValenceDict, ImproperDict
 from openforcefield.utils.serialization import Serializable
 from openforcefield.utils.toolkits import (
     DEFAULT_AROMATICITY_MODEL,
@@ -672,7 +672,9 @@ class VirtualSite(Particle):
             else:
                 ornt = [tuple(x) for x in orientations]
             self._orientations = ornt
-            self._particles = {order: VirtualParticle(self, order) for order in ornt}
+            self._particles = dict(
+                {order: VirtualParticle(self, order) for order in ornt}
+            )
 
         # Subclassing makes _type unnecessary
         # self._type = None
@@ -935,6 +937,7 @@ class BondChargeVirtualSite(VirtualSite):
 
     def get_openmm_virtual_site(self, atoms, mass=None):
         from simtk.openmm import LocalCoordinatesSite
+
         originwt = np.zeros_like(atoms)
         originwt[0] = 1.0  # first atom is origin (where the hole should be)
 
@@ -1096,6 +1099,7 @@ class MonovalentLonePairVirtualSite(VirtualSite):
     def get_openmm_virtual_site(self, atoms, mass=None):
         assert len(atoms) == 3
         from simtk.openmm import LocalCoordinatesSite
+
         originwt = np.zeros_like(atoms)
         originwt[0] = 1.0  #
 
@@ -1217,6 +1221,7 @@ class DivalentLonePairVirtualSite(VirtualSite):
     def get_openmm_virtual_site(self, atoms, mass=None):
         assert len(atoms) == 3
         from simtk.openmm import LocalCoordinatesSite
+
         originwt = np.zeros_like(atoms)
         originwt[1] = 1.0  #
 
@@ -1324,6 +1329,7 @@ class TrivalentLonePairVirtualSite(VirtualSite):
     def get_openmm_virtual_site(self, atoms, mass=None):
         assert len(atoms) == 4
         from simtk.openmm import LocalCoordinatesSite
+
         originwt = np.zeros_like(atoms)
         originwt[1] = 1.0  #
 
@@ -1960,8 +1966,12 @@ class FrozenMolecule(Serializable):
             vsite_dict_units["charge_increments"] = string_to_quantity(
                 vsite_dict["charge_increments"]
             )
+            vsite_dict_units["orientations"] = vsite_dict["orientations"]
 
             # Call the correct molecule._add_X_virtual_site function, based on the stated type
+            # Also generate the Atom objects from the atom indices
+            atoms = [self._atoms[i] for i in vsite_dict_units["atoms"]]
+            vsite_dict_units["atoms"] = atoms
             if vsite_dict_units["vsite_type"] == "BondChargeVirtualSite":
                 del vsite_dict_units["vsite_type"]
                 vsite_dict_units["distance"] = string_to_quantity(
@@ -1987,9 +1997,6 @@ class FrozenMolecule(Serializable):
                 vsite_dict_units["distance"] = string_to_quantity(
                     vsite_dict["distance"]
                 )
-                # vsite_dict_units["in_plane_angle"] = string_to_quantity(
-                #     vsite_dict["in_plane_angle"]
-                # )
                 vsite_dict_units["out_of_plane_angle"] = string_to_quantity(
                     vsite_dict["out_of_plane_angle"]
                 )
@@ -2000,12 +2007,6 @@ class FrozenMolecule(Serializable):
                 vsite_dict_units["distance"] = string_to_quantity(
                     vsite_dict["distance"]
                 )
-                # vsite_dict_units["in_plane_angle"] = string_to_quantity(
-                #     vsite_dict["in_plane_angle"]
-                # )
-                # vsite_dict_units["out_of_plane_angle"] = string_to_quantity(
-                #     vsite_dict["out_of_plane_angle"]
-                # )
                 self._add_trivalent_lone_pair_virtual_site(**vsite_dict_units)
 
             else:
@@ -3018,50 +3019,6 @@ class FrozenMolecule(Serializable):
         self._invalidate_cached_properties()
         return self._atoms.index(atom)
 
-    def _parse_vsite_atoms(self, atoms, key_transformer):
-        """
-        Generate a reference Atom set and the orientations from an input
-        structure of the form
-        [(4,2,7),(7,2,4)] or [(Atom4,Atom2,Atom7),(Atom7,Atom2,Atom4)]
-
-        Parameters
-        ----------
-        atoms: List
-            A list of tuples of atom indices or Atoms
-        key_transformer: callable
-            The function that will order the given tuple to reference order
-
-        Returns
-        -------
-        If, for example, the input is [(4,2,7),(7,2,4)] or its equivalent Atom
-        form, then (Tuple[List[Atom]], List[Tuple[int]]), e.g:
-        ([Atom4,Atom2,Atom7],[(4,2,7),(7,2,4)])
-        """
-        # Need to generalize the above to an input of all Atoms
-
-        if isinstance(atoms[0], (int, Atom)):
-            atoms = [atoms]
-        if all([isinstance(atom, int) for atom_key in atoms for atom in atom_key]):
-            ref_atoms = [
-                self.atoms[atom_index] for atom_index in key_transformer(atoms[0])
-            ]
-            orientations = [x for x in atoms]
-        elif all([isinstance(atom, Atom) for atom_key in atoms for atom in atom_key]):
-            atom_key = [atom.molecule_atom_index for atom in atoms[0]]
-            ref_key = key_transformer(atom_key)
-            ref_atoms = [self.atoms[atom_index] for atom_index in ref_key]
-            orientations = [
-                atom.molecule_atom_index for atom_key in atoms for atom in atom_key
-            ]
-        else:
-            raise Exception(
-                "Invalid inputs to molecule._add_virtual_site. Expected list of tuples of ints/Atoms. "
-                "Received types {} ".format(
-                    [[type(i) for i in atom_list] for atom_list in atoms]
-                )
-            )
-        return ref_atoms, orientations
-
     def _add_virtual_site(self, vsite, replace=False):
         replaced = False
         for i, existing_vsite in enumerate(self._virtual_sites):
@@ -3096,9 +3053,6 @@ class FrozenMolecule(Serializable):
             The atoms defining the virtual site's position
         distance : float
 
-        weights : list of floats of shape [N] or None, optional, default=None
-            weights[index] is the weight of particles[index] contributing to the position of the virtual site. Default
-            is None
         charge_increments : list of floats of shape [N], optional, default=None
             The amount of charge to remove from the VirtualSite's atoms and put in the VirtualSite. Indexing in this
             list should match the ordering in the atoms list. Default is None.
@@ -3110,6 +3064,9 @@ class FrozenMolecule(Serializable):
             Rmin_half term for VdW properties of virtual site. Default is None.
         name : string or None, default=None
             The name of this virtual site. Default is None.
+        orientations : list of int 2-tuples
+            The orientations that should be used to create the virtual site.
+            Each orientation corresponds to an individual virtual particle.
 
         Returns
         -------
@@ -3117,17 +3074,9 @@ class FrozenMolecule(Serializable):
             The index of the newly-added virtual site in the molecule
         """
 
-        replace = False
-        if "replace" in kwargs:
-            replace = kwargs["replace"]
-            kwargs.pop("replace")
+        replace = kwargs.pop('replace', False)
 
-        ref_atoms, orientations = self._parse_vsite_atoms(
-            atoms, ValenceDict.key_transform
-        )
-        kwargs["orientations"] = orientations
-
-        vsite = BondChargeVirtualSite(ref_atoms, distance, **kwargs)
+        vsite = BondChargeVirtualSite(atoms, distance, **kwargs)
 
         self._add_virtual_site(vsite, replace=replace)
         self._invalidate_cached_properties()
@@ -3139,8 +3088,6 @@ class FrozenMolecule(Serializable):
         """
         Create a bond charge-type virtual site, in which the location of the charge is specified by the position of
         three atoms.
-
-        TODO : Do "weights" have any meaning here?
 
         Parameters
         ----------
@@ -3160,6 +3107,9 @@ class FrozenMolecule(Serializable):
             Rmin_half term for VdW properties of virtual site. Default is None.
         name : string or None, default=None
             The name of this virtual site. Default is None.
+        orientations : list of int 3-tuples
+            The orientations that should be used to create the virtual site.
+            Each orientation corresponds to an individual virtual particle.
 
         Returns
         -------
@@ -3167,18 +3117,10 @@ class FrozenMolecule(Serializable):
             The index of the newly-added virtual site in the molecule
         """
 
-        replace = False
-        if "replace" in kwargs:
-            replace = kwargs["replace"]
-            kwargs.pop("replace")
-
-        ref_atoms, orientations = self._parse_vsite_atoms(
-            atoms, ValenceDict.key_transform
-        )
-        kwargs["orientations"] = orientations
+        replace = kwargs.pop('replace', False)
 
         vsite = MonovalentLonePairVirtualSite(
-            ref_atoms, distance, out_of_plane_angle, in_plane_angle, **kwargs
+            atoms, distance, out_of_plane_angle, in_plane_angle, **kwargs
         )
 
         self._add_virtual_site(vsite, replace=replace)
@@ -3191,8 +3133,6 @@ class FrozenMolecule(Serializable):
         """
         Create a divalent lone pair-type virtual site, in which the location of the charge is specified by the position
         of three atoms.
-
-        TODO : Do "weights" have any meaning here?
 
         Parameters
         ----------
@@ -3212,26 +3152,20 @@ class FrozenMolecule(Serializable):
             Rmin_half term for VdW properties of virtual site. Default is None.
         name : string or None, default=None
             The name of this virtual site. Default is None.
+        orientations : list of int 3-tuples
+            The orientations that should be used to create the virtual site.
+            Each orientation corresponds to an individual virtual particle.
 
         Returns
         -------
         index : int
             The index of the newly-added virtual site in the molecule
         """
-        # Check if function was passed list of atoms or atom indices
 
-        replace = False
-        if "replace" in kwargs:
-            replace = kwargs["replace"]
-            kwargs.pop("replace")
-
-        ref_atoms, orientations = self._parse_vsite_atoms(
-            atoms, ValenceDict.key_transform
-        )
-        kwargs["orientations"] = orientations
+        replace = kwargs.pop('replace', False)
 
         vsite = DivalentLonePairVirtualSite(
-            ref_atoms, distance, out_of_plane_angle, **kwargs
+            atoms, distance, out_of_plane_angle, **kwargs
         )
 
         self._add_virtual_site(vsite, replace=replace)
@@ -3239,13 +3173,11 @@ class FrozenMolecule(Serializable):
         return self._virtual_sites.index(vsite)
 
     def _add_trivalent_lone_pair_virtual_site(
-        self, atoms, distance, out_of_plane_angle, in_plane_angle, **kwargs
+        self, atoms, distance, **kwargs
     ):
         """
         Create a trivalent lone pair-type virtual site, in which the location of the charge is specified by the position
          of four atoms.
-
-        TODO : Do "weights" have any meaning here?
 
         Parameters
         ----------
@@ -3267,19 +3199,9 @@ class FrozenMolecule(Serializable):
             The name of this virtual site. Default is None.
         """
 
-        replace = False
-        if "replace" in kwargs:
-            replace = kwargs["replace"]
-            kwargs.pop("replace")
+        replace = kwargs.pop('replace', False)
 
-        ref_atoms, orientations = self._parse_vsite_atoms(
-            atoms, ImproperDict.key_transform
-        )
-        kwargs["orientations"] = orientations
-
-        vsite = TrivalentLonePairVirtualSite(
-            ref_atoms, distance, **kwargs
-        )
+        vsite = TrivalentLonePairVirtualSite(atoms, distance, **kwargs)
 
         self._add_virtual_site(vsite, replace=replace)
         self._invalidate_cached_properties()
@@ -3438,6 +3360,13 @@ class FrozenMolecule(Serializable):
     def n_virtual_sites(self):
         """
         The number of VirtualSite objects.
+        """
+        return len(self._virtual_sites)
+
+    @property
+    def n_virtual_particles(self):
+        """
+        The number of VirtualParticle objects.
         """
         return sum(vsite.n_particles for vsite in self._virtual_sites)
 
@@ -5073,17 +5002,7 @@ class Molecule(FrozenMolecule):
         )
         return atom_index
 
-    def add_bond_charge_virtual_site(
-        self,
-        atoms,
-        distance,
-        charge_increments=None,
-        weights=None,
-        epsilon=None,
-        sigma=None,
-        rmin_half=None,
-        name="",
-    ):
+    def add_bond_charge_virtual_site(self, atoms, distance, **kwargs):
         """
         Create a bond charge-type virtual site, in which the location of the charge is specified by the position of two atoms. This supports placement of a virtual site S along a vector between two specified atoms, e.g. to allow for a sigma hole for halogens or similar contexts. With positive values of the distance, the virtual site lies outside the first indexed atom.
         Parameters
@@ -5104,6 +5023,10 @@ class Molecule(FrozenMolecule):
             Rmin_half term for VdW properties of virtual site. Default is None.
         name : string or None, default=''
             The name of this virtual site. Default is ''.
+        symmetric : bool, default=True
+            Whether to make virtual site symmetric by creating two particles
+            instead of just one. As an example, for N_2 this should be set to
+            True to model both lone pairs with the same parameters.
 
         Returns
         -------
@@ -5111,18 +5034,13 @@ class Molecule(FrozenMolecule):
             The index of the newly-added virtual site in the molecule
 
         """
+        if kwargs.get("symmetric", True) is True:
+            kwargs["orientations"] = [(0, 1), (1, 0)]
+        else:
+            kwargs["orientations"] = [(0, 1)]
+        kwargs.pop("symmetric", None)
 
-        vsite_index = self._add_bond_charge_virtual_site(
-            atoms,
-            distance,
-            weights=weights,
-            charge_increments=charge_increments,
-            epsilon=epsilon,
-            sigma=sigma,
-            rmin_half=rmin_half,
-            name=name,
-            replace=replace,
-        )
+        vsite_index = self._add_bond_charge_virtual_site(atoms, distance, **kwargs)
         return vsite_index
 
     def add_monovalent_lone_pair_virtual_site(
@@ -5151,6 +5069,11 @@ class Molecule(FrozenMolecule):
             Rmin_half term for VdW properties of virtual site. Default is None.
         name : string or None, default=''
             The name of this virtual site. Default is ''.
+        symmetric : bool, default=False
+            Whether to make virtual site symmetric by creating two particles
+            instead of just one. Note that because this site is defined is placed
+            on the noncentral atom, setting this to True will place one particle
+            on atom1, and the other on atom3.
 
         Returns
         -------
@@ -5160,7 +5083,12 @@ class Molecule(FrozenMolecule):
 
         """
 
-        # vsite_index = self._add_monovalent_lone_pair_virtual_site(self, atoms, distance, out_of_plane_angle, in_plane_angle, charge_increments=charge_increments, weights=weights, epsilon=epsilon, sigma=sigma, rmin_half=rmin_half, name=name)
+        if kwargs.get("symmetric", False) is True:
+            kwargs["orientations"] = [(0, 1, 2), (2, 1, 0)]
+        else:
+            kwargs["orientations"] = [(0, 1, 2)]
+        kwargs.pop("symmetric", None)
+
         vsite_index = self._add_monovalent_lone_pair_virtual_site(
             atoms, distance, out_of_plane_angle, in_plane_angle, **kwargs
         )
@@ -5191,6 +5119,11 @@ class Molecule(FrozenMolecule):
             Rmin_half term for VdW properties of virtual site. Default is None.
         name : string or None, default=''
             The name of this virtual site. Default is ''.
+        symmetric : bool, default=True
+            Whether to make virtual site symmetric by creating two particles
+            instead of just one. As an example, for TIP5 should be set to True
+            to model both lone pairs with the same parameters.
+
 
         Returns
         -------
@@ -5198,14 +5131,18 @@ class Molecule(FrozenMolecule):
             The index of the newly-added virtual site in the molecule
 
         """
+        if kwargs.get("symmetric", True) is True:
+            kwargs["orientations"] = [(0, 1, 2), (2, 1, 0)]
+        else:
+            kwargs["orientations"] = [(0, 1, 2)]
+        kwargs.pop("symmetric", None)
+
         vsite_index = self._add_divalent_lone_pair_virtual_site(
             atoms, distance, out_of_plane_angle, **kwargs
         )
         return vsite_index
 
-    def add_trivalent_lone_pair_virtual_site(
-        self, atoms, distance, **kwargs
-    ):
+    def add_trivalent_lone_pair_virtual_site(self, atoms, distance, **kwargs):
         """
         Create a trivalent lone pair-type virtual site, in which the location of the charge is specified by the position of four atoms.
 
@@ -5232,6 +5169,12 @@ class Molecule(FrozenMolecule):
             The index of the newly-added virtual site in the molecule
 
         """
+
+        # This virtual site only makes sense with a single orientation
+
+        kwargs["orientations"] = [(0, 1, 2, 3)]
+        kwargs.pop("symmetric", None)
+
         vsite_index = self._add_trivalent_lone_pair_virtual_site(
             atoms, distance, **kwargs
         )

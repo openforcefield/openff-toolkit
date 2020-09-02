@@ -631,13 +631,12 @@ class TopologyVirtualSite(Serializable):
         int
             The index of this particle in its parent topology.
         """
-        # This assumes that the particles in a topology are listed with all atoms from all TopologyMolecules
-        # first, followed by all VirtualSites from all TopologyMolecules second
-
-        # need to iterate through all previous
+        # This assumes that the particles in a topology are listed with all
+        # atoms from all TopologyMolecules first, followed by all VirtualSites
+        # from all TopologyMolecules second
 
         # If the cached value is not available, generate it
-        # breakpoint()
+
         if self._topology_virtual_particle_start_index is None:
             virtual_particle_start_topology_index = (
                 self.topology_molecule.topology.n_topology_atoms

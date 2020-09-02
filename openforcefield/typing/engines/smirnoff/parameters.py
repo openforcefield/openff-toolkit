@@ -1992,7 +1992,6 @@ class ParameterHandler(_ParameterAttributeHandler):
             matches_for_this_type = defaultdict(list)
 
             ce_matches = entity.chemical_environment_matches(parameter_type.smirks)
-
             # Split the groups into unique sets i.e. 13,14 and 13,15
             # Needed for vsites, where a vsite could match C-H with for a CH2 group
             # Since these are distinct vsite definitions, we need to split them
@@ -4416,6 +4415,8 @@ class GBSAHandler(ParameterHandler):
 class VirtualSiteHandler(_NonbondedHandler):
     """Handle SMIRNOFF ``<VirtualSites>`` tags
 
+    TODO: Add example usage/documentation
+
     .. warning :: This API is experimental and subject to change.
     """
 
@@ -4461,7 +4462,7 @@ class VirtualSiteHandler(_NonbondedHandler):
 
     exclusion_policy = ParameterAttribute(default="parents", converter=str)
 
-    class VirtualSiteTypeSelector:
+    class _VirtualSiteTypeSelector:
         """A SMIRNOFF virtual site base selector
 
         This is a placeholder class that will dynamically choose the correct
@@ -4516,7 +4517,15 @@ class VirtualSiteHandler(_NonbondedHandler):
         # atom key into a canonical ordering
         transformed_dict_cls = ValenceDict
 
-        def add_virtual_site(self, fn, atoms, **kwargs):
+        def __eq__(self, obj):
+            if type(self) != type(obj):
+                return False
+            A = ["name"]
+            are_equal = [getattr(self, a) == getattr(obj, a) for a in A]
+            return all(are_equal)
+
+
+        def _add_virtual_site(self, fn, atoms, orientations, *args, **kwargs):
             """
 
             Parameters
@@ -4529,22 +4538,25 @@ class VirtualSiteHandler(_NonbondedHandler):
                     * `Molecule._add_divalent_lone_pair_virtual_site`
                     * `Molecule._add_trivalent_lone_pair_virtual_site`
 
-            atoms : List of atom indices
+            orientations : list of int tuples
+                The permutations corresponding to each virtual particle in the
+                virtual site.
             Returns
             -------
                 The index of the created virtual site
             """
-
-            args = [atoms, self.distance]
+            
+            args = [atoms, self.distance] + list(args)
 
             # This needs to be dealt with better
             # Since we cannot save state with this object during find_matches,
             # we have no idea here which permutations actually matched.
-            # Since we are past the point where we can examine chemical environment
-            # matches to determine the possible orientations, we must default
-            # and take the explicit interpretation: "all_permutations" will
-            # try to make a virtual particle for every permutation, and
-            # "once" is the canonical sorting of the atom indices.
+            # Since we are past the point where we can examine chemical
+            # environment matches to determine the possible orientations, we
+            # must default and take the explicit interpretation:
+            # "all_permutations" will try to make a virtual particle for every
+            # permutation, and "once" is the canonical sorting of the atom
+            # indices.
 
             # This means that, using the "match" option in the spec, it is not
             # possible to choose specific permutations. For the current cases,
@@ -4552,26 +4564,30 @@ class VirtualSiteHandler(_NonbondedHandler):
 
             # We will bail on cases we know to not work with the "current"
             # spec. This is currently the combination of trivalent and
-            # "all_permutations", since it is a completely degenerate case
+            # "all_permutations", since it is a completely degenerate case.
 
+            # The API above takes all given orientations, but the OFFXML
+            # has the match setting, which ultimately decides which orientations
+            # to include.
             if self.match == "once":
-                orientation = atoms
-            else:
-                if len(atoms) == 2:
-                    orientation = sorted(atoms)
-                elif len(atoms) == 3:
-                    orientation = [
-                        sorted(atoms),
-                        sorted(atoms)[::-1],
-                    ]  # This is believable
-                elif len(atoms) == 4:  # assumes improper-like vsite
-                    Exception(
-                        "Virtual site with 4 atoms and match=all_permutations is not supported."
-                    )
-                else:
-                    raise NotImplementedError(
-                        "Virtual site with more than 4 atoms defined is not implemented."
-                    )
+                key = self.transformed_dict_cls.key_transform(orientations[0])
+                orientations = [key]
+            # else:
+            #     if len(atoms) == 2:
+            #         orientations = sorted(atoms)
+            #     elif len(atoms) == 3:
+            #         orientations = [
+            #             sorted(atoms),
+            #             sorted(atoms)[::-1],
+            #         ]  # This is believable
+            #     elif len(atoms) == 4:  # assumes improper-like vsite
+            #         Exception(
+            #             "Virtual site with 4 atoms and match=all_permutations is not supported."
+            #         )
+            #     else:
+            #         raise NotImplementedError(
+            #             "Virtual site with more than 4 atoms defined is not implemented."
+            #         )
 
             base_args = {
                 "name": self.name,
@@ -4580,7 +4596,8 @@ class VirtualSiteHandler(_NonbondedHandler):
                 "epsilon": self.epsilon,
                 "sigma": self.sigma,
                 "rmin_half": self.rmin_half,
-                "orientations": orientation,
+                "orientations": orientations,
+                "replace": kwargs.pop('replace', False)
             }
             kwargs.update(base_args)
 
@@ -4591,46 +4608,34 @@ class VirtualSiteHandler(_NonbondedHandler):
 
         .. warning :: This API is experimental and subject to change.
         """
-
-        def __eq__(self, obj):
-            if type(self) != type(obj):
-                return False
-            A = ["name"]
-            are_equal = [getattr(self, a) == getattr(obj, a) for a in A]
-            return all(are_equal)
-
-        def add_virtual_site(self, molecule, atoms, replace=False):
+        def add_virtual_site(self, molecule, orientations, replace=False):
             fn = molecule._add_bond_charge_virtual_site
-            off_idx = super().add_virtual_site(fn, atoms, replace=replace)
+            ref_key = self.transformed_dict_cls.key_transform(orientations[0])
+            atoms = list([molecule.atoms[i] for i in ref_key])
+            args = (atoms, orientations)
+            off_idx = super()._add_virtual_site(fn, *args, replace=replace)
             return off_idx
 
-    class VirtualSiteLonePairType(VirtualSiteType):
-        """A SMIRNOFF virtual site requiring plane angles
+    # class VirtualSiteLonePairType(VirtualSiteType):
+    #     """A SMIRNOFF virtual site requiring plane angles
 
-        .. warning :: This API is experimental and subject to change.
-        """
+    #     .. warning :: This API is experimental and subject to change.
+    #     """
 
-        def __eq__(self, obj):
-            if type(self) != type(obj):
-                return False
-            A = ["name"]
-            are_equal = [getattr(self, a) == getattr(obj, a) for a in A]
-            return all(are_equal)
+    #     def add_virtual_site(self, fn, atoms, args, replace=False):
+    #         args = [atoms, self.distance] + args
+    #         base_args = {
+    #             "name": self.name,
+    #             "charge_increments": self.chargeincrement,
+    #             "weights": None,
+    #             "epsilon": self.epsilon,
+    #             "sigma": self.sigma,
+    #             "rmin_half": self.rmin_half,
+    #             "replace": replace,
+    #         }
+    #         return fn(*args, **base_args)
 
-        def add_virtual_site(self, fn, atoms, args, replace=False):
-            args = [atoms, self.distance] + args
-            base_args = {
-                "name": self.name,
-                "charge_increments": self.chargeincrement,
-                "weights": None,
-                "epsilon": self.epsilon,
-                "sigma": self.sigma,
-                "rmin_half": self.rmin_half,
-                "replace": replace,
-            }
-            return fn(*args, **base_args)
-
-    class VirtualSiteMonovalentLonePairType(VirtualSiteLonePairType):
+    class VirtualSiteMonovalentLonePairType(VirtualSiteType):
         """A SMIRNOFF monovalent lone pair virtual site type
 
         .. warning :: This API is experimental and subject to change.
@@ -4639,12 +4644,18 @@ class VirtualSiteHandler(_NonbondedHandler):
         outOfPlaneAngle = ParameterAttribute(unit=unit.degree)
         inPlaneAngle = ParameterAttribute(unit=unit.degree)
 
-        def add_virtual_site(self, molecule, atoms, replace=False):
+        def add_virtual_site(self, molecule, orientations, replace=False):
+            """
+            Add this virtual site to the topology.
+            """
             fn = molecule._add_monovalent_lone_pair_virtual_site
-            args = [self.outOfPlaneAngle, self.inPlaneAngle]
-            return super().add_virtual_site(fn, atoms, args, replace=replace)
+            ref_key = self.transformed_dict_cls.key_transform(orientations[0])
+            atoms = list([molecule.atoms[i] for i in ref_key])
+            args = (atoms, orientations, self.outOfPlaneAngle, self.inPlaneAngle)
+            off_idx = super()._add_virtual_site(fn, *args, replace=replace)
+            return off_idx
 
-    class VirtualSiteDivalentLonePairType(VirtualSiteLonePairType):
+    class VirtualSiteDivalentLonePairType(VirtualSiteType):
         """A SMIRNOFF divalent lone pair virtual site type
 
         .. warning :: This API is experimental and subject to change.
@@ -4652,12 +4663,18 @@ class VirtualSiteHandler(_NonbondedHandler):
 
         outOfPlaneAngle = ParameterAttribute(unit=unit.degree)
 
-        def add_virtual_site(self, molecule, atoms, replace=False):
+        def add_virtual_site(self, molecule, orientations, replace=False):
+            """
+            Add this virtual site to the topology.
+            """
             fn = molecule._add_divalent_lone_pair_virtual_site
-            args = [self.outOfPlaneAngle]
-            return super().add_virtual_site(fn, atoms, args, replace=replace)
+            ref_key = self.transformed_dict_cls.key_transform(orientations[0])
+            atoms = list([molecule.atoms[i] for i in ref_key])
+            args = (atoms, orientations, self.outOfPlaneAngle)
+            off_idx = super()._add_virtual_site(fn, *args, replace=replace)
+            return off_idx
 
-    class VirtualSiteTrivalentLonePairType(VirtualSiteLonePairType):
+    class VirtualSiteTrivalentLonePairType(VirtualSiteType):
         """A SMIRNOFF trivalent lone pair virtual site type
 
         .. warning :: This API is experimental and subject to change.
@@ -4665,10 +4682,16 @@ class VirtualSiteHandler(_NonbondedHandler):
 
         transformed_dict_cls = ImproperDict
 
-        def add_virtual_site(self, molecule, atoms, replace=False):
+        def add_virtual_site(self, molecule, orientations, replace=False):
+            """
+            Add this virtual site to a topology.
+            """
             fn = molecule._add_trivalent_lone_pair_virtual_site
-            args = []
-            return super().add_virtual_site(fn, atoms, args, replace=replace)
+            ref_key = self.transformed_dict_cls.key_transform(orientations[0])
+            atoms = list([molecule.atoms[i] for i in ref_key])
+            args = (atoms, orientations)
+            off_idx = super()._add_virtual_site(fn, *args, replace=replace)
+            return off_idx
 
     _DEPENDENCIES = [
         ElectrostaticsHandler,
@@ -4682,7 +4705,7 @@ class VirtualSiteHandler(_NonbondedHandler):
     # Trying to create an instance of this selector will cause
     # some introspection to be done on the type attr passed in, and
     # will dispatch the appropriate virtual site type.
-    _INFOTYPE = VirtualSiteTypeSelector  # class to hold force type info
+    _INFOTYPE = _VirtualSiteTypeSelector  # class to hold force type info
 
     def check_handler_compatibility(self, other_handler):
         """
@@ -4824,7 +4847,24 @@ class VirtualSiteHandler(_NonbondedHandler):
         return combined_orientations
 
     def _create_openff_virtual_sites(self, topology):
+
         for molecule in topology.reference_molecules:
+
+            """ The following two lines below should be avoided but is left
+            until a better solution is found (see 699). The issue is that a
+            topology should not be required since `find_matches` works on
+            FrozenMolecules. However, the signature is different, as they return
+            different results.
+
+            Also, we are using a topology to retreive the indices for the
+            matches, but then using those indices as a direct `Atom` object
+            lookup in the molecule. This is unsafe because there is no reason to
+            believe that the indices should be consistent. However, there is
+            currently no `FrozenMolecule.atom(index)` functionality so using the
+            topology match indices is the only clear way forward.  See the
+            contents of `add_virtual_site` called below for the code that shows
+            this.  """
+
             top_mol = Topology.from_molecules([molecule])
             matches = self.find_matches(top_mol, expand_permutations=True)
 
@@ -4833,32 +4873,33 @@ class VirtualSiteHandler(_NonbondedHandler):
             # Now handle the vsites for this molecule
             # This call batches the key tuples into a single list, in order
             # for the virtual site to represent multiple particles
-            for vsite, keys in virtual_sites:
-                vsite.add_virtual_site(molecule, keys, replace=True)
+            for vsite_type, orientations in virtual_sites:
+                vsite_type.add_virtual_site(molecule, orientations, replace=True)
 
         return topology
 
     def _create_openmm_virtual_sites(self, system, force, topology, ref_mol):
 
 
-        # Here we must assume that
-        #     1. All atoms in the topology are already present
-        #     2. The order we iterate these virtual sites is the order
-        #        they appear in the OpenMM system
-        # If 1 is not met, then 2 will fail; and it will be quite difficult
-        # to find the mapping since we currently do not keep track of any
-        # OpenMM state, and it is unlikely that we will ever do so.
-        # If 1 is met, then 2 should fall into place naturally.
+        """
+        Here we must assume that 
+            1. All atoms in the topology are already present
+            2. The order we iterate these virtual sites is the order they
+                appear in the OpenMM system
+        If 1 is not met, then 2 will fail, and it will be quite difficult to
+        find the mapping since we currently do not keep track of any OpenMM
+        state, and it is unlikely that we will ever do so.  If 1 is met, then 2
+        should fall into place naturally.
 
-        # This means that we will not check that our index matches the OpenMM
-        # index, as there is no reason, from a purely technical standpoint, to
-        # require them to be.
+        This means that we will not check that our index matches the OpenMM
+        index, as there is no reason, from a purely technical and/or API
+        standpoint, to require them to be. 
+        """
 
         for vsite in ref_mol.virtual_sites:
             ref_key = [atom.molecule_atom_index for atom in vsite.atoms]
             logger.debug("VSite ref_key: {}".format(ref_key))
 
-            breakpoint()
             ms = topology._reference_molecule_to_topology_molecules[ref_mol]
             for top_mol in ms:
                 logger.debug("top_mol: {}".format(top_mol))
@@ -4929,8 +4970,8 @@ class VirtualSiteHandler(_NonbondedHandler):
                 elif keylen == 3:
                     owning_atom = atom_key[1]
                 else:
-                    # Need to be careful here; we say the center
-                    # of a torsion/improper is the second atom!
+                    # The second atom of an improper is considered the
+                    # "owning" atom
                     owning_atom = atom_key[1]
                 logger.debug(f"Excluding vsite {vsite_idx} atom {owning_atom}")
                 force.addException(owning_atom, vsite_idx, 0.0, 0.0, 0.0, replace=True)
