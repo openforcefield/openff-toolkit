@@ -146,29 +146,27 @@ class TestTopology(TestCase):
             20 * unit.degree,
             25 * unit.degree,
             charge_increments=[0.01, 0.02, 0.03] * unit.elementary_charge,
-            symmetric=True
+            symmetric=True,
         )
         # This will add *one* particle (symmetric=False), *one* virtual site
         molecule.add_bond_charge_virtual_site(
             (carbons[0], carbons[1]),
             0.1 * unit.angstrom,
             charge_increments=[0.1, 0.05] * unit.elementary_charge,
-            symmetric=False
+            symmetric=False,
         )
         self.propane_from_smiles_w_vsites = Molecule(molecule)
 
         # Make a TIP5 water, which uses orientations
         molecule = Molecule.from_smiles("[H][O][H]")
         O1 = [atom for atom in molecule.atoms if atom.atomic_number == 8][0]
-        H1, H2 = [
-            atom for atom in O1.bonded_atoms if atom.atomic_number == 1
-        ]
+        H1, H2 = [atom for atom in O1.bonded_atoms if atom.atomic_number == 1]
         molecule.add_divalent_lone_pair_virtual_site(
             (H1, O1, H2),
             0.7 * unit.angstrom,
             54.71384225 * unit.degree,
             charge_increments=[0.1205, 0.00, 0.1205] * unit.elementary_charge,
-            symmetric=True
+            symmetric=True,
         )
         self.tip5_water = Molecule(molecule)
 
