@@ -91,10 +91,12 @@ jobs:
         pwd
         ls
         ls toolkit-installer-constructor
+        ls toolkit-installer-constructor/build
+        ls toolkit-installer-constructor/build/openforcefield-*/
 
         mkdir scratch
         cd scratch
-        echo -ne "\n" | bash ../toolkit-installer-constructor/build/openforcefield-*.sh
+        echo -ne "\n" | bash ../toolkit-installer-constructor/build/openforcefield-*/openforcefield-*.sh
 
         conda info
         conda list
