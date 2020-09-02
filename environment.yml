@@ -1,5 +1,5 @@
 # Environment file for Jupyter notebook examples
-name: openforcefield
+name: binder-env
 channels:
   - conda-forge
   - omnia

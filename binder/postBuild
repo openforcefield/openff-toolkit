@@ -3,6 +3,9 @@
 mkdir src
 cd src
 
+conda activate binder-env
+conda list
+
 git clone https://github.com/openforcefield/openforcefield
 cd openforcefield
 pip install --no-deps -e .
