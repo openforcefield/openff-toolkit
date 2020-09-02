@@ -19,7 +19,7 @@ from openforcefield.topology.topology import (
     TopologyAtom,
     TopologyBond,
     TopologyMolecule,
-    TopologyVirtualSite,
     TopologyVirtualParticle,
+    TopologyVirtualSite,
     ValenceDict,
 )
