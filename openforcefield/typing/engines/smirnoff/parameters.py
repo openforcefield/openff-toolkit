@@ -1934,7 +1934,7 @@ class ParameterHandler(_ParameterAttributeHandler):
             self._parameter_type = parameter_type
             self._environment_match = environment_match
 
-    def find_matches(self, entity, expand_permutations=False):
+    def find_matches(self, entity):
         """Find the elements of the topology/molecule matched by a parameter type.
 
         Parameters
@@ -1951,17 +1951,10 @@ class ParameterHandler(_ParameterAttributeHandler):
 
         # TODO: Right now, this method is only ever called with an entity that is a Topology.
         #  Should we reduce its scope and have a check here to make sure entity is a Topology?
-        return self._find_matches(entity, expand_permutations=expand_permutations)
+        return self._find_matches(entity)
 
-    def _find_matches(
-        self,
-        entity,
-        transformed_dict_cls=ValenceDict,
-        use_named_slots=False,
-        expand_permutations=False,
-    ):
+    def _find_matches(self, entity, transformed_dict_cls=ValenceDict):
         """Implement find_matches() and allow using a difference valence dictionary.
-
         Parameters
         ----------
         entity : openforcefield.topology.Topology
@@ -1971,15 +1964,12 @@ class ParameterHandler(_ParameterAttributeHandler):
             will determine how groups of atom indices are stored
             and accessed (e.g for angles indices should be 0-1-2
             and not 2-1-0).
-
         Returns
         ---------
         matches : `transformed_dict_cls` of ParameterHandlerMatch
             ``matches[particle_indices]`` is the ``ParameterType`` object
             matching the tuple of particle indices in ``entity``.
         """
-        from collections import defaultdict
-
         logger.debug("Finding matches for {}".format(self.__class__.__name__))
 
         matches = transformed_dict_cls()
@@ -1988,119 +1978,19 @@ class ParameterHandler(_ParameterAttributeHandler):
         #       by performing this loop in reverse order, and breaking early once
         #       all environments have been matched.
         for parameter_type in self._parameters:
+            matches_for_this_type = {}
 
-            matches_for_this_type = defaultdict(list)
+            for environment_match in entity.chemical_environment_matches(
+                parameter_type.smirks
+            ):
+                # Update the matches for this parameter type.
+                handler_match = self._Match(parameter_type, environment_match)
+                matches_for_this_type[
+                    environment_match.topology_atom_indices
+                ] = handler_match
 
-            ce_matches = entity.chemical_environment_matches(parameter_type.smirks)
-            # Split the groups into unique sets i.e. 13,14 and 13,15
-            # Needed for vsites, where a vsite could match C-H with for a CH2 group
-            # Since these are distinct vsite definitions, we need to split them
-            # up into separate groups (match_groups)
-            match_groups_set = [m.topology_atom_indices for m in ce_matches]
-            match_groups = []
-            for key in set(match_groups_set):
-                distinct_atom_pairs = [
-                    x
-                    for x in ce_matches
-                    if sorted(x.topology_atom_indices) == sorted(key)
-                ]
-                match_groups.append(distinct_atom_pairs)
-
-            for ce_matches in match_groups:
-                for environment_match in ce_matches:
-                    # Update the matches for this parameter type.
-                    handler_match = self._Match(parameter_type, environment_match)
-                    key = environment_match.topology_atom_indices
-
-                    # only a match if orientation matches
-                    if not hasattr(handler_match._parameter_type, "match"):
-                        # usual case (not virtual sites)
-                        matches_for_this_type[key] = handler_match
-                    else:
-
-                        # the possible orders of this match
-                        # must check that the tuple of atoms are the same
-                        # as they can be different in e.g. formaldehyde
-                        orders = [m.topology_atom_indices for m in ce_matches]
-                        orientation_flag = handler_match._parameter_type.match
-
-                        tdc = handler_match._parameter_type.transformed_dict_cls
-                        index_of_key = tdc.index_of(key, possible=orders)
-
-                        if orientation_flag == "once":
-                            orientation = [0]
-                        elif orientation_flag == "all_permutations":
-                            orientation = [
-                                tdc.index_of(k, possible=orders) for k in orders
-                            ]
-                        else:
-                            raise Exception(
-                                "VirtualSite match keyword not understood. Choose from 'once' or 'all_permutations'"
-                            )
-
-                        orders = [
-                            order for order in orders if sorted(key) == sorted(order)
-                        ]
-
-                        # orientation = list(map(int, orientation.split(",")))
-                        handler_match._parameter_type.multiplicity = len(orders)
-                        if len(orientation) > len(orders):
-                            error_msg = (
-                                "For parameter of type\n{:s}\norientations {} "
-                                + "exceeds length of possible orders "
-                                + "({:d}):\n{:s}"
-                            ).format(
-                                str(parameter_type),
-                                orientation,
-                                len(orders),
-                                str(orders),
-                            )
-                            raise IndexError(error_msg)
-
-                        if not expand_permutations:
-                            key = tdc.key_transform(key)
-
-                        hit = sum([index_of_key == ornt for ornt in orientation])
-                        assert (
-                            hit < 2
-                        ), "VirtualSite orientation for {:s} indices invalid: Has duplicates".format(
-                            parameter_type.__repr__
-                        )
-                        if hit == 1:
-                            matches_for_this_type[key].append(handler_match)
-
-                # Update matches of all parameter types.
-                if use_named_slots:  # assumes virtualsites for now
-                    for k in matches_for_this_type:
-                        if k not in matches:
-                            matches[k] = {}
-                    for k, v in matches_for_this_type.items():
-                        marginal_matches = []
-                        for new_match in v:
-                            unique = True
-                            new_item = new_match._parameter_type
-                            for idx, (name, existing_match) in enumerate(
-                                matches[k].items()
-                            ):
-                                existing_item = existing_match._parameter_type
-                                same_parameter = False
-
-                                same_type = type(existing_item) == type(new_item)
-                                if same_type:
-                                    same_parameter = existing_item == new_item
-
-                                # same, so replace it to have a FIFO priority
-                                # and the last parameter matching wins
-                                if same_parameter:
-                                    matches[k][new_item.name] = new_match
-                                    unique = False
-                            if unique:
-                                marginal_matches.append(new_match)
-                        matches[k].update(
-                            {p._parameter_type.name: p for p in marginal_matches}
-                        )
-                else:
-                    matches.update(matches_for_this_type)
+            # Update matches of all parameter types.
+            matches.update(matches_for_this_type)
 
             logger.debug(
                 "{:64} : {:8} matches".format(
@@ -2109,13 +1999,6 @@ class ParameterHandler(_ParameterAttributeHandler):
             )
 
         logger.debug("{} matches identified".format(len(matches)))
-
-        #
-        # matches_for_this_type = dict(matches_for_this_type)
-
-        if use_named_slots:
-            for k, v in matches.items():
-                matches[k] = list(v.values())
         return matches
 
     @staticmethod
@@ -3779,9 +3662,7 @@ class LibraryChargeHandler(_NonbondedHandler):
 
         # TODO: Right now, this method is only ever called with an entity that is a Topoogy.
         #  Should we reduce its scope and have a check here to make sure entity is a Topology?
-        return self._find_matches(
-            entity, transformed_dict_cls=dict, use_named_slots=False
-        )
+        return self._find_matches(entity, transformed_dict_cls=dict)
 
     def create_force(self, system, topology, **kwargs):
         from openforcefield.topology import FrozenMolecule
@@ -4707,45 +4588,175 @@ class VirtualSiteHandler(_NonbondedHandler):
     # will dispatch the appropriate virtual site type.
     _INFOTYPE = _VirtualSiteTypeSelector  # class to hold force type info
 
-    def check_handler_compatibility(self, other_handler):
-        """
-        Checks whether this ParameterHandler encodes compatible physics as
-        another ParameterHandler. This is called if a second handler is
-        attempted to be initialized for the same tag.
-
-        Parameters
-        ----------
-        other_handler : a ParameterHandler object
-            The handler to compare to.
-
-        Raises
-        ------
-        IncompatibleParameterError if handler_kwargs are incompatible with
-        existing parameters.
-        """
-
-    def find_matches(self, entity, expand_permutations=False):
-        """Find the virtual sites in the topology/molecule matched by a
-        parameter type.
+    def _find_matches(
+        self,
+        entity,
+        transformed_dict_cls=ValenceDict,
+        use_named_slots=False,
+        expand_permutations=False,
+    ):
+        """Implement find_matches() and allow using a difference valence dictionary.
 
         Parameters
         ----------
         entity : openforcefield.topology.Topology
             Topology to search.
+        transformed_dict_cls: class
+            The type of dictionary to store the matches in. This
+            will determine how groups of atom indices are stored
+            and accessed (e.g for angles indices should be 0-1-2
+            and not 2-1-0).
 
         Returns
         ---------
-        matches : Dict[Tuple[int], ParameterHandler._Match]
-            ``matches[atom_indices]`` is the ``ParameterType`` object
-            matching the n-tuple of atom indices in ``entity``.
-
+        matches : `transformed_dict_cls` of ParameterHandlerMatch
+            ``matches[particle_indices]`` is the ``ParameterType`` object
+            matching the tuple of particle indices in ``entity``.
         """
-        return self._find_matches(
-            entity,
-            transformed_dict_cls=dict,
-            use_named_slots=True,
-            expand_permutations=expand_permutations,
-        )
+        from collections import defaultdict
+
+        logger.debug("Finding matches for {}".format(self.__class__.__name__))
+
+        matches = transformed_dict_cls()
+
+        # TODO: There are probably performance gains to be had here
+        #       by performing this loop in reverse order, and breaking early once
+        #       all environments have been matched.
+        for parameter_type in self._parameters:
+
+            matches_for_this_type = defaultdict(list)
+
+            ce_matches = entity.chemical_environment_matches(parameter_type.smirks)
+
+            # Split the groups into unique sets i.e. 13,14 and 13,15
+            # Needed for vsites, where a vsite could match C-H with for a CH2 group
+            # Since these are distinct vsite definitions, we need to split them
+            # up into separate groups (match_groups)
+            match_groups_set = [m.topology_atom_indices for m in ce_matches]
+            match_groups = []
+            for key in set(match_groups_set):
+                distinct_atom_pairs = [
+                    x
+                    for x in ce_matches
+                    if sorted(x.topology_atom_indices) == sorted(key)
+                ]
+                match_groups.append(distinct_atom_pairs)
+
+            for ce_matches in match_groups:
+                for environment_match in ce_matches:
+                    # Update the matches for this parameter type.
+                    handler_match = self._Match(parameter_type, environment_match)
+                    key = environment_match.topology_atom_indices
+
+                    # only a match if orientation matches
+                    if not hasattr(handler_match._parameter_type, "match"):
+                        # usual case (not virtual sites)
+                        matches_for_this_type[key] = handler_match
+                    else:
+
+                        # the possible orders of this match
+                        # must check that the tuple of atoms are the same
+                        # as they can be different in e.g. formaldehyde
+                        orders = [m.topology_atom_indices for m in ce_matches]
+                        orientation_flag = handler_match._parameter_type.match
+
+                        tdc = handler_match._parameter_type.transformed_dict_cls
+                        index_of_key = tdc.index_of(key, possible=orders)
+
+                        if orientation_flag == "once":
+                            orientation = [0]
+                        elif orientation_flag == "all_permutations":
+                            orientation = [
+                                tdc.index_of(k, possible=orders) for k in orders
+                            ]
+                        else:
+                            # Probably will never reach here since validation
+                            # happens elsewhere
+                            raise Exception(
+                                "VirtualSite match keyword not understood. Choose from 'once' or 'all_permutations'"
+                            )
+
+                        orders = [
+                            order for order in orders if sorted(key) == sorted(order)
+                        ]
+
+                        handler_match._parameter_type.multiplicity = len(orders)
+
+                        # This is from the older implementation that allows
+                        # specifying specific orientations. Leaving in for now..
+                        if len(orientation) > len(orders):
+                            error_msg = (
+                                "For parameter of type\n{:s}\norientations {} "
+                                + "exceeds length of possible orders "
+                                + "({:d}):\n{:s}"
+                            ).format(
+                                str(parameter_type),
+                                orientation,
+                                len(orders),
+                                str(orders),
+                            )
+                            raise IndexError(error_msg)
+
+                        if not expand_permutations:
+                            key = tdc.key_transform(key)
+
+                        hit = sum([index_of_key == ornt for ornt in orientation])
+                        assert (
+                            hit < 2
+                        ), "VirtualSite orientation for {:s} indices invalid: Has duplicates".format(
+                            parameter_type.__repr__
+                        )
+                        if hit == 1:
+                            matches_for_this_type[key].append(handler_match)
+
+                # Resolve match overriding by the use of the name attribute
+                # If two parameters match but have the same name, use most recent
+                # but if the names are different, keep and apply both parameters
+                if use_named_slots:
+                    for k in matches_for_this_type:
+                        if k not in matches:
+                            matches[k] = {}
+                    for k, v in matches_for_this_type.items():
+                        marginal_matches = []
+                        for new_match in v:
+                            unique = True
+                            new_item = new_match._parameter_type
+                            for idx, (name, existing_match) in enumerate(
+                                matches[k].items()
+                            ):
+                                existing_item = existing_match._parameter_type
+                                same_parameter = False
+
+                                same_type = type(existing_item) == type(new_item)
+                                if same_type:
+                                    same_parameter = existing_item == new_item
+
+                                # same, so replace it to have a FIFO priority
+                                # and the last parameter matching wins
+                                if same_parameter:
+                                    matches[k][new_item.name] = new_match
+                                    unique = False
+                            if unique:
+                                marginal_matches.append(new_match)
+                        matches[k].update(
+                            {p._parameter_type.name: p for p in marginal_matches}
+                        )
+                else:
+                    matches.update(matches_for_this_type)
+
+            logger.debug(
+                "{:64} : {:8} matches".format(
+                    parameter_type.smirks, len(matches_for_this_type)
+                )
+            )
+
+        logger.debug("{} matches identified".format(len(matches)))
+
+        if use_named_slots:
+            for k, v in matches.items():
+                matches[k] = list(v.values())
+
+        return matches
 
     def create_force(self, system, topology, **kwargs):
         """
@@ -4772,6 +4783,46 @@ class VirtualSiteHandler(_NonbondedHandler):
         for ref_mol in topology.reference_molecules:
             logger.debug("Adding vsites for reference mol: {}".format(str(ref_mol)))
             self._create_openmm_virtual_sites(system, force, topology, ref_mol)
+
+    def check_handler_compatibility(self, other_handler):
+        """
+        Checks whether this ParameterHandler encodes compatible physics as
+        another ParameterHandler. This is called if a second handler is
+        attempted to be initialized for the same tag.
+
+        Parameters
+        ----------
+        other_handler : a ParameterHandler object
+            The handler to compare to.
+
+        Raises
+        ------
+        IncompatibleParameterError if handler_kwargs are incompatible with
+        existing parameters.
+        """
+
+    def find_matches(self, entity, expand_permutations=True):
+        """Find the virtual sites in the topology/molecule matched by a
+        parameter type.
+
+        Parameters
+        ----------
+        entity : openforcefield.topology.Topology
+            Topology to search.
+
+        Returns
+        ---------
+        matches : Dict[Tuple[int], ParameterHandler._Match]
+            ``matches[atom_indices]`` is the ``ParameterType`` object
+            matching the n-tuple of atom indices in ``entity``.
+
+        """
+        return self._find_matches(
+            entity,
+            transformed_dict_cls=dict,
+            use_named_slots=True,
+            expand_permutations=expand_permutations,
+        )
 
     def _apply_chargeincrement(self, force, atom_key, chargeincrement):
         vsite_charge = chargeincrement[0]
@@ -4850,7 +4901,7 @@ class VirtualSiteHandler(_NonbondedHandler):
 
         for molecule in topology.reference_molecules:
 
-            """ The following two lines below should be avoided but is left
+            """The following two lines below should be avoided but is left
             until a better solution is found (see 699). The issue is that a
             topology should not be required since `find_matches` works on
             FrozenMolecules. However, the signature is different, as they return
@@ -4863,7 +4914,7 @@ class VirtualSiteHandler(_NonbondedHandler):
             currently no `FrozenMolecule.atom(index)` functionality so using the
             topology match indices is the only clear way forward.  See the
             contents of `add_virtual_site` called below for the code that shows
-            this.  """
+            this."""
 
             top_mol = Topology.from_molecules([molecule])
             matches = self.find_matches(top_mol, expand_permutations=True)
@@ -4881,7 +4932,7 @@ class VirtualSiteHandler(_NonbondedHandler):
     def _create_openmm_virtual_sites(self, system, force, topology, ref_mol):
 
         """
-        Here we must assume that 
+        Here we must assume that
             1. All atoms in the topology are already present
             2. The order we iterate these virtual sites is the order they
                 appear in the OpenMM system
@@ -4892,7 +4943,7 @@ class VirtualSiteHandler(_NonbondedHandler):
 
         This means that we will not check that our index matches the OpenMM
         index, as there is no reason, from a purely technical and/or API
-        standpoint, to require them to be. 
+        standpoint, to require them to be.
         """
 
         for vsite in ref_mol.virtual_sites:
