@@ -16,6 +16,7 @@ Tests for forcefield class
 
 import copy
 import os
+from collections import OrderedDict
 from tempfile import NamedTemporaryFile
 
 import numpy as np
@@ -283,6 +284,8 @@ xml_ff_torsion_bo_standard_supersede = """<?xml version='1.0' encoding='ASCII'?>
   </ProperTorsions>
 </SMIRNOFF>
 """
+
+
 # ======================================================================
 # TEST UTILITY FUNCTIONS
 # ======================================================================
@@ -441,10 +444,39 @@ def create_acetaldehyde():
     acetaldehyde.add_bond(0, 4, 1, False)  # C0 - H4
     acetaldehyde.add_bond(0, 5, 1, False)  # C0 - H5
     acetaldehyde.add_bond(1, 6, 1, False)  # C1 - H6
-    charges = unit.Quantity(np.array([0, 0, 0, 0, 0, 0, 0]), unit.elementary_charge)
+    charges = unit.Quantity(np.array([0., 0., 0., 0., 0., 0., 0.]), unit.elementary_charge)
     acetaldehyde.partial_charges = charges
     return acetaldehyde
 
+def create_water():
+    """
+    Creates an openforcefield.topology.Molecule representation of water through the API
+    """
+    mol = Molecule()
+    mol.add_atom(1, 0, False)  # H1
+    mol.add_atom(8, 0, False)  # O
+    mol.add_atom(1, 0, False)  # H2
+    mol.add_bond(0, 1, 1, False)  # H1 - O
+    mol.add_bond(1, 2, 1, False)  # O - H2
+    charges = unit.Quantity(np.array([0., 0., 0.]), unit.elementary_charge)
+    mol.partial_charges = charges
+    return mol
+
+def create_ammonia():
+    """
+    Creates an openforcefield.topology.Molecule representation of ammonia through the API
+    """
+    mol = Molecule()
+    mol.add_atom(1, 0, False)  # H1
+    mol.add_atom(7, 0, False)  # N
+    mol.add_atom(1, 0, False)  # H2
+    mol.add_atom(1, 0, False)  # H3
+    mol.add_bond(0, 1, 1, False)  # H1 - N
+    mol.add_bond(1, 2, 1, False)  # N - H2
+    mol.add_bond(1, 3, 1, False)  # N - H3
+    charges = unit.Quantity(np.array([0., 0., 0., 0.]), unit.elementary_charge)
+    mol.partial_charges = charges
+    return mol
 
 def create_acetate():
     """
@@ -1207,7 +1239,7 @@ class TestForceField:
         with pytest.raises(
             UnassignedProperTorsionParameterException,
             match="- Topology indices [(]5, 0, 1, 6[)]: "
-            "names and elements [(](H\d+)? H[)], [(](C\d+)? C[)], [(](C\d+)? C[)], [(](H\d+)? H[)],",
+            r"names and elements [(](H\d+)? H[)], [(](C\d+)? C[)], [(](C\d+)? C[)], [(](H\d+)? H[)],",
         ) as excinfo:
             omm_system = forcefield.create_openmm_system(topology)
 
@@ -1283,10 +1315,7 @@ class TestForceField:
             for name in mol_names
         ]
         molecules = [Molecule.from_file(sdf_file) for sdf_file in sdf_files]
-        topology = Topology.from_openmm(
-            pdbfile.topology,
-            unique_molecules=molecules,
-        )
+        topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules,)
 
         omm_system = forcefield.create_openmm_system(
             topology, toolkit_registry=toolkit_registry
@@ -1306,10 +1335,7 @@ class TestForceField:
         pdbfile = app.PDBFile(get_data_file_path("systems/test_systems/1_ethanol.pdb"))
         # Load the unique molecules with one atom ordering
         molecules1 = [Molecule.from_file(get_data_file_path("molecules/ethanol.sdf"))]
-        topology1 = Topology.from_openmm(
-            pdbfile.topology,
-            unique_molecules=molecules1,
-        )
+        topology1 = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules1,)
         omm_system1 = forcefield.create_openmm_system(
             topology1, toolkit_registry=toolkit_registry
         )
@@ -1317,10 +1343,7 @@ class TestForceField:
         molecules2 = [
             Molecule.from_file(get_data_file_path("molecules/ethanol_reordered.sdf"))
         ]
-        topology2 = Topology.from_openmm(
-            pdbfile.topology,
-            unique_molecules=molecules2,
-        )
+        topology2 = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules2,)
         omm_system2 = forcefield.create_openmm_system(
             topology2, toolkit_registry=toolkit_registry
         )
@@ -1350,10 +1373,7 @@ class TestForceField:
 
         # Load the unique molecules with one atom ordering
         molecules1 = [Molecule.from_file(get_data_file_path("molecules/ethanol.sdf"))]
-        topology1 = Topology.from_openmm(
-            pdbfile.topology,
-            unique_molecules=molecules1,
-        )
+        topology1 = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules1,)
         omm_system1 = forcefield.create_openmm_system(
             topology1, toolkit_registry=toolkit_registry
         )
@@ -1362,10 +1382,7 @@ class TestForceField:
         molecules2 = [
             Molecule.from_file(get_data_file_path("molecules/ethanol_reordered.sdf"))
         ]
-        topology2 = Topology.from_openmm(
-            pdbfile.topology,
-            unique_molecules=molecules2,
-        )
+        topology2 = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules2,)
         omm_system2 = forcefield.create_openmm_system(
             topology2, toolkit_registry=toolkit_registry
         )
@@ -1557,6 +1574,433 @@ class TestForceField:
             forcefield[type(bonds)]
 
 
+bond_charge_parameters_args = []
+monovalent_parameters_args = []
+divalent_parameters_args = []
+trivalent_parameters_args = []
+
+class TestForceFieldVirtualSites:
+
+    xml_ff_virtual_sites_bondcharge_match_once = """<?xml version="1.0" encoding="utf-8"?>
+    <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+        <VirtualSites version="0.3">
+            <VirtualSite
+                type="BondCharge"
+                name="EP"
+                smirks="[*:1]~[*:2]"
+                distance="0.1*angstrom"
+                chargeincrement1="0.1*elementary_charge"
+                chargeincrement2="0.1*elementary_charge"
+                sigma="0.1*angstrom"
+                epsilon="0.1*kilocalories_per_mole"
+                match="once" >
+            </VirtualSite>
+            <VirtualSite
+                type="BondCharge"
+                name="EP"
+                smirks="[#7:1]~[#7:2]"
+                distance="0.2*angstrom"
+                chargeincrement1="0.2*elementary_charge"
+                chargeincrement2="0.2*elementary_charge"
+                sigma="0.2*angstrom"
+                epsilon="0.2*kilocalories_per_mole"
+                match="all_permutations" >
+            </VirtualSite>
+            <VirtualSite
+                type="BondCharge"
+                name="EP"
+                smirks="[#7:1]~[#7:2]"
+                distance="0.2*nanometers"
+                chargeincrement1="0.2*elementary_charge"
+                chargeincrement2="0.2*elementary_charge"
+                sigma="0.2*angstrom"
+                epsilon="0.2*kilocalories_per_mole"
+                match="once" >
+            </VirtualSite>
+        </VirtualSites>
+    </SMIRNOFF>
+    """
+
+    xml_ff_virtual_sites_bondcharge_match_all = """<?xml version="1.0" encoding="utf-8"?>
+    <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+        <VirtualSites version="0.3">
+            <VirtualSite
+                type="BondCharge"
+                name="EP"
+                smirks="[*:1]~[*:2]"
+                distance="0.1*angstrom"
+                chargeincrement1="0.1*elementary_charge"
+                chargeincrement2="0.1*elementary_charge"
+                sigma="0.1*angstrom"
+                epsilon="0.1*kilocalories_per_mole"
+                match="once" >
+            </VirtualSite>
+            <VirtualSite
+                type="BondCharge"
+                name="EP"
+                smirks="[#7:1]~[#7:2]"
+                distance="0.2*angstrom"
+                chargeincrement1="0.2*elementary_charge"
+                chargeincrement2="0.2*elementary_charge"
+                sigma="0.2*angstrom"
+                epsilon="0.2*kilocalories_per_mole"
+                match="once" >
+            </VirtualSite>
+            <VirtualSite
+                type="BondCharge"
+                name="EP"
+                smirks="[#7:1]~[#7:2]"
+                distance="0.2*angstrom"
+                chargeincrement1="0.2*elementary_charge"
+                chargeincrement2="0.2*elementary_charge"
+                sigma="0.2*angstrom"
+                epsilon="0.2*kilocalories_per_mole"
+                match="all_permutations" >
+            </VirtualSite>
+        </VirtualSites>
+    </SMIRNOFF>
+    """
+
+    xml_ff_virtual_sites_bondcharge_match_once_two_names = """<?xml version="1.0" encoding="utf-8"?>
+    <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+        <VirtualSites version="0.3">
+            <VirtualSite
+                type="BondCharge"
+                name="EP1"
+                smirks="[*:1]~[*:2]"
+                distance="0.1*angstrom"
+                chargeincrement1="0.1*elementary_charge"
+                chargeincrement2="0.1*elementary_charge"
+                sigma="0.1*angstrom"
+                epsilon="0.1*kilocalories_per_mole"
+                match="once" >
+            </VirtualSite>
+            <VirtualSite
+                type="BondCharge"
+                name="EP2"
+                smirks="[*:1]~[*:2]"
+                distance="0.2*angstrom"
+                chargeincrement1="0.2*elementary_charge"
+                chargeincrement2="0.2*elementary_charge"
+                sigma="0.2*angstrom"
+                epsilon="0.2*kilocalories_per_mole"
+                match="once" >
+            </VirtualSite>
+        </VirtualSites>
+    </SMIRNOFF>
+    """
+
+    xml_ff_virtual_sites_monovalent_match_once = """<?xml version="1.0" encoding="utf-8"?>
+    <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+        <VirtualSites version="0.3">
+            <VirtualSite
+                type="MonovalentLonePair"
+                name="EP"
+                smirks="[#8:1]~[#6:2]~[#6:3]"
+                distance="0.1*angstrom"
+                chargeincrement1="0.1*elementary_charge"
+                chargeincrement2="0.1*elementary_charge"
+                chargeincrement3="0.1*elementary_charge"
+                sigma="0.1*angstrom"
+                epsilon="0.1*kilocalories_per_mole"
+                inPlaneAngle="110.*degree"
+                outOfPlaneAngle="41*degree"
+                match="once" >
+            </VirtualSite>
+            <VirtualSite
+                type="MonovalentLonePair"
+                name="EP"
+                smirks="[#8:1]=[#6:2]-[#6:3]"
+                distance="0.2*angstrom"
+                chargeincrement1="0.2*elementary_charge"
+                chargeincrement2="0.2*elementary_charge"
+                chargeincrement3="0.2*elementary_charge"
+                sigma="0.2*angstrom"
+                epsilon="0.2*kilocalories_per_mole"
+                inPlaneAngle="120.*degree"
+                outOfPlaneAngle="42*degree"
+                match="once" >
+            </VirtualSite>
+        </VirtualSites>
+    </SMIRNOFF>
+    """
+
+    xml_ff_virtual_sites_divalent_match_all = """<?xml version="1.0" encoding="ASCII"?>
+    <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+        <VirtualSites version="0.3">
+            <VirtualSite
+                type="DivalentLonePair"
+                name="EP"
+                smirks="[#1:1]-[#8X2H2+0:2]-[#1:3]"
+                distance="0.70 * angstrom"
+                chargeincrement1="0.241*elementary_charge"
+                chargeincrement2="0.0*elementary_charge"
+                chargeincrement3="0.241*elementary_charge"
+                sigma="3.12*angstrom"
+                epsilon="0.16*kilocalories_per_mole"
+                outOfPlaneAngle="54.71384225*degree"
+                match="all_permutations" >
+            </VirtualSite>
+        </VirtualSites>
+    </SMIRNOFF>
+    """
+
+    xml_ff_virtual_sites_trivalent_match_once = """<?xml version="1.0" encoding="ASCII"?>
+    <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+        <VirtualSites version="0.3">
+            <VirtualSite
+                type="TrivalentLonePair"
+                name="EP"
+                smirks="[*:1]-[#7X3:2](-[*:3])-[*:4]"
+                distance="0.50 * angstrom"
+                chargeincrement1="0.0*elementary_charge"
+                chargeincrement2="1.0*elementary_charge"
+                chargeincrement3="0.0*elementary_charge"
+                chargeincrement4="0.0*elementary_charge"
+                sigma="0.0*angstrom"
+                epsilon="0.0*kilocalories_per_mole"
+                match="once" >
+            </VirtualSite>
+        </VirtualSites>
+    </SMIRNOFF>
+    """
+
+    xml_ff_virtual_sites_trivalent_match_all = """
+    <?xml version="1.0" encoding="ASCII"?>
+    <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+            <VirtualSite
+                type="TrivalentLonePair"
+                name="EP"
+                smirks="[*:1]-[#7X3:2]-([*:3])-[*:4]"
+                distance="0.70 * angstrom"
+                chargeincrement1="0.1*elementary_charge"
+                chargeincrement2="0.1*elementary_charge"
+                chargeincrement3="0.1*elementary_charge"
+                chargeincrement4="0.1*elementary_charge"
+                sigma="0.1*angstrom"
+                epsilon="0.1*kilocalories_per_mole"
+                match="once" >
+            </VirtualSite>
+        </VirtualSites>
+    </SMIRNOFF>
+    """
+
+    def _test_physical_parameters(self, tkr, xml, smi, assert_physics, mol=None):
+
+        from simtk.openmm import NonbondedForce
+
+        forcefield = ForceField("openff-1.2.0.offxml", xml)
+        if mol is None:
+            mol = Molecule.from_smiles(smi)
+        topology = mol.to_topology()
+        kwargs = {}
+        if mol.partial_charges is not None:
+            kwargs['charge_from_molecules'] = [mol]
+        omm_system = forcefield.create_openmm_system(topology, toolkit_registry=tkr, **kwargs)
+        nonbondedForce = [
+            f for f in omm_system.getForces() if type(f) == NonbondedForce
+        ][0]
+
+        for particle_index, expected in enumerate(assert_physics):
+            parameters = nonbondedForce.getParticleParameters(particle_index)
+            assert all(
+                [
+                    (b is None or np.isclose(a / a.unit, b / a.unit))
+                    for a, b in zip(parameters, expected)
+                ]
+            )
+        return
+
+    q_unit = unit.elementary_charge
+    e_unit = unit.kilocalorie_per_mole
+    s_unit = unit.angstrom
+
+    ############################################################################
+    # Bond charge virtual site test data
+    ############################################################################
+
+    # First test that one vsite is added, and that the last parameter
+    # is chosen over the top-most wildcard match
+    opts = OrderedDict(
+        {
+            "xml": xml_ff_virtual_sites_bondcharge_match_once,
+            "smi": "[N]#[N]",
+            "assert_physics": (
+                # charge        sigma         epsilon
+                (+0.2 * q_unit, None, None),
+                (+0.2 * q_unit, None, None),
+                (-0.4 * q_unit, 0.2 * s_unit, 0.2 * e_unit),
+            ),
+        }
+    )
+    bond_charge_parameters_args.append(opts)
+
+    # Test the wildcard match
+    opts = OrderedDict(
+        {
+            "xml": xml_ff_virtual_sites_bondcharge_match_once,
+            "smi": "[C][C]",
+            "assert_physics": (
+                # charge        sigma         epsilon
+                (+0.1 * q_unit, None, None),
+                (+0.1 * q_unit, None, None),
+                (-0.2 * q_unit, 0.1 * s_unit, 0.1 * e_unit),
+            ),
+        }
+    )
+    bond_charge_parameters_args.append(opts)
+
+    # Test the wildcard match
+    opts = OrderedDict(
+        {
+            "xml": xml_ff_virtual_sites_bondcharge_match_all,
+            "smi": "[N]#[N]",
+            "assert_physics": (
+                # charge        sigma         epsilon
+                (+0.4 * q_unit, None, None),
+                (+0.4 * q_unit, None, None),
+                (-0.4 * q_unit, 0.2 * s_unit, 0.2 * e_unit),
+                (-0.4 * q_unit, 0.2 * s_unit, 0.2 * e_unit),
+            ),
+        }
+    )
+    bond_charge_parameters_args.append(opts)
+
+    ############################################################################
+    # Monovalent virtual site test data
+    ############################################################################
+
+    # Test that using different names allows for multiple virtual sites
+    opts = OrderedDict(
+        {
+            "xml": xml_ff_virtual_sites_bondcharge_match_once_two_names,
+            "smi": "[N]#[N]",
+            "assert_physics": (
+                # charge        sigma         epsilon
+                (+0.3 * q_unit, None, None),
+                (+0.3 * q_unit, None, None),
+                (-0.2 * q_unit, 0.1 * s_unit, 0.1 * e_unit),
+                (-0.4 * q_unit, 0.2 * s_unit, 0.2 * e_unit),
+            ),
+        }
+    )
+    bond_charge_parameters_args.append(opts)
+
+    opts = OrderedDict(
+        {
+            "xml": xml_ff_virtual_sites_monovalent_match_once,
+            "smi": None,
+            "assert_physics": (
+                # charge        sigma         epsilon
+                (+0.2 * q_unit, None, None),
+                (+0.2 * q_unit, None, None),
+                (+0.2 * q_unit, None, None),
+                (+0.0 * q_unit, None, None),
+                (+0.0 * q_unit, None, None),
+                (+0.0 * q_unit, None, None),
+                (+0.0 * q_unit, None, None),
+                (-0.6 * q_unit, 0.2 * s_unit, 0.2 * e_unit),
+            ),
+            "mol": create_acetaldehyde()
+        }
+    )
+    monovalent_parameters_args.append(opts)
+
+    ############################################################################
+    # Divalent virtual site test data
+    ############################################################################
+
+    # A TIP5 definition from OpenMM
+    opts = OrderedDict(
+        {
+            "xml": xml_ff_virtual_sites_divalent_match_all,
+            "smi": None,
+            "assert_physics": (
+                # charge           sigma         epsilon
+                (+0.4820 * q_unit, None, None),
+                (+0.0000 * q_unit, None, None),
+                (+0.4820 * q_unit, None, None),
+                (-0.4820 * q_unit, 3.12 * s_unit, 0.16 * e_unit),
+                (-0.4820 * q_unit, 3.12 * s_unit, 0.16 * e_unit),
+            ),
+            "mol": create_water()
+        }
+    )
+    divalent_parameters_args.append(opts)
+
+    ############################################################################
+    # Trivalent virtual site test data
+    ############################################################################
+
+    opts = OrderedDict(
+        {
+            "xml": xml_ff_virtual_sites_trivalent_match_once,
+            "smi": None,
+            "assert_physics": (
+                # charge           sigma         epsilon
+                (+0.0000 * q_unit, None, None),
+                (+1.0000 * q_unit, None, None),
+                (+0.0000 * q_unit, None, None),
+                (+0.0000 * q_unit, None, None),
+                (-1.0000 * q_unit, 0.00 * s_unit, 0.00 * e_unit),
+            ),
+            "mol": create_ammonia()
+        }
+    )
+    trivalent_parameters_args.append(opts)
+
+    @pytest.mark.parametrize(
+        "toolkit_registry,registry_description", toolkit_registries
+    )
+    @pytest.mark.parametrize("args", bond_charge_parameters_args)
+    def test_bond_charge_virtual_site_parameters(
+        self, toolkit_registry, registry_description, args
+    ):
+        """
+        Test force fields with bond charge lone pair virtual sites
+        """
+
+        self._test_physical_parameters(toolkit_registry, *args.values())
+
+    @pytest.mark.parametrize(
+        "toolkit_registry,registry_description", toolkit_registries
+    )
+    @pytest.mark.parametrize("args", monovalent_parameters_args)
+    def test_monovalent_virtual_site_parameters(
+        self, toolkit_registry, registry_description, args
+    ):
+        """
+        Test force fields with monovalent charge lone pair virtual sites
+        """
+
+        self._test_physical_parameters(toolkit_registry, *args.values())
+
+    @pytest.mark.parametrize(
+        "toolkit_registry,registry_description", toolkit_registries
+    )
+    @pytest.mark.parametrize("args", divalent_parameters_args)
+    def test_divalent_virtual_site_parameters(
+        self, toolkit_registry, registry_description, args
+    ):
+        """
+        Test force fields with divalent lone pair virtual sites
+        """
+
+        self._test_physical_parameters(toolkit_registry, *args.values())
+
+    @pytest.mark.parametrize(
+        "toolkit_registry,registry_description", toolkit_registries
+    )
+    @pytest.mark.parametrize("args", trivalent_parameters_args)
+    def test_trivalent_charge_virtual_site(
+        self, toolkit_registry, registry_description, args
+    ):
+        """
+        Test force fields with trivalent lone pair virtual sites
+        """
+
+        self._test_physical_parameters(toolkit_registry, *args.values())
+
 class TestForceFieldChargeAssignment:
     def generate_monatomic_ions():
         return (
@@ -1680,10 +2124,7 @@ class TestForceFieldChargeAssignment:
         pdbfile = app.PDBFile(
             get_data_file_path("systems/test_systems/1_cyclohexane_1_ethanol.pdb")
         )
-        topology = Topology.from_openmm(
-            pdbfile.topology,
-            unique_molecules=molecules,
-        )
+        topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules,)
 
         omm_system = forcefield.create_openmm_system(
             topology, charge_from_molecules=[ethanol], toolkit_registry=toolkit_registry
@@ -2289,58 +2730,61 @@ class TestForceFieldChargeAssignment:
         # Ensure that the handlers do not make multiple NonbondedForce objects
         assert len(existing) == 1
         nonbondedForce = existing[0]
-        expected_charges = [  # cyclohexane (18 atoms) should have the following values from charge_from_mols
-            -0.2,
-            -0.2,
-            -0.2,
-            -0.2,
-            -0.2,
-            -0.2,
-            0.1,
-            0.1,
-            0.1,
-            0.1,
-            0.1,
-            0.1,
-            0.1,
-            0.1,
-            0.1,
-            0.1,
-            0.1,
-            0.1,
-            # butanol (15 atoms) should have the following values from charge_from_mols
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            # propane (11 atoms) should have the following values from xml_CH_zeroes_library_charges_xml
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            # water (3 atoms) should have the following charges from tip3p.offxml
-            -0.834,
-            0.417,
-            0.417,
-        ] * unit.elementary_charge
+        expected_charges = (
+            [  # cyclohexane (18 atoms) should have the following values from charge_from_mols
+                -0.2,
+                -0.2,
+                -0.2,
+                -0.2,
+                -0.2,
+                -0.2,
+                0.1,
+                0.1,
+                0.1,
+                0.1,
+                0.1,
+                0.1,
+                0.1,
+                0.1,
+                0.1,
+                0.1,
+                0.1,
+                0.1,
+                # butanol (15 atoms) should have the following values from charge_from_mols
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                # propane (11 atoms) should have the following values from xml_CH_zeroes_library_charges_xml
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                # water (3 atoms) should have the following charges from tip3p.offxml
+                -0.834,
+                0.417,
+                0.417,
+            ]
+            * unit.elementary_charge
+        )
 
         # Ensure that the first four molecules have exactly the charges we intended
         for particle_index, expected_charge in enumerate(expected_charges):
@@ -2991,22 +3435,16 @@ class TestForceFieldParameterAssignment:
 
         # We get radius and screen values from each model's getStandardParameters method
         if gbsa_model == "HCT":
-            gb_params = (
-                openmm.app.internal.customgbforces.GBSAHCTForce.getStandardParameters(
-                    omm_top
-                )
+            gb_params = openmm.app.internal.customgbforces.GBSAHCTForce.getStandardParameters(
+                omm_top
             )
         elif gbsa_model == "OBC1":
-            gb_params = (
-                openmm.app.internal.customgbforces.GBSAOBC1Force.getStandardParameters(
-                    omm_top
-                )
+            gb_params = openmm.app.internal.customgbforces.GBSAOBC1Force.getStandardParameters(
+                omm_top
             )
         elif gbsa_model == "OBC2":
-            gb_params = (
-                openmm.app.internal.customgbforces.GBSAOBC2Force.getStandardParameters(
-                    omm_top
-                )
+            gb_params = openmm.app.internal.customgbforces.GBSAOBC2Force.getStandardParameters(
+                omm_top
             )
 
         # Use GB params from OpenMM GBSA classes to populate parameters
@@ -3175,22 +3613,16 @@ class TestForceFieldParameterAssignment:
 
         # We get radius and screen values from each model's getStandardParameters method
         if gbsa_model == "HCT":
-            gb_params = (
-                openmm.app.internal.customgbforces.GBSAHCTForce.getStandardParameters(
-                    omm_top
-                )
+            gb_params = openmm.app.internal.customgbforces.GBSAHCTForce.getStandardParameters(
+                omm_top
             )
         elif gbsa_model == "OBC1":
-            gb_params = (
-                openmm.app.internal.customgbforces.GBSAOBC1Force.getStandardParameters(
-                    omm_top
-                )
+            gb_params = openmm.app.internal.customgbforces.GBSAOBC1Force.getStandardParameters(
+                omm_top
             )
         elif gbsa_model == "OBC2":
-            gb_params = (
-                openmm.app.internal.customgbforces.GBSAOBC2Force.getStandardParameters(
-                    omm_top
-                )
+            gb_params = openmm.app.internal.customgbforces.GBSAOBC2Force.getStandardParameters(
+                omm_top
             )
             # This is only necessary until https://github.com/openmm/openmm/pull/2362 is bundled into a conda release
             amber_gbsa_force.setSurfaceAreaEnergy(0)
