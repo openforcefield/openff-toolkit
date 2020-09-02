@@ -3074,7 +3074,7 @@ class FrozenMolecule(Serializable):
             The index of the newly-added virtual site in the molecule
         """
 
-        replace = kwargs.pop('replace', False)
+        replace = kwargs.pop("replace", False)
 
         vsite = BondChargeVirtualSite(atoms, distance, **kwargs)
 
@@ -3117,7 +3117,7 @@ class FrozenMolecule(Serializable):
             The index of the newly-added virtual site in the molecule
         """
 
-        replace = kwargs.pop('replace', False)
+        replace = kwargs.pop("replace", False)
 
         vsite = MonovalentLonePairVirtualSite(
             atoms, distance, out_of_plane_angle, in_plane_angle, **kwargs
@@ -3162,7 +3162,7 @@ class FrozenMolecule(Serializable):
             The index of the newly-added virtual site in the molecule
         """
 
-        replace = kwargs.pop('replace', False)
+        replace = kwargs.pop("replace", False)
 
         vsite = DivalentLonePairVirtualSite(
             atoms, distance, out_of_plane_angle, **kwargs
@@ -3172,9 +3172,7 @@ class FrozenMolecule(Serializable):
         self._invalidate_cached_properties()
         return self._virtual_sites.index(vsite)
 
-    def _add_trivalent_lone_pair_virtual_site(
-        self, atoms, distance, **kwargs
-    ):
+    def _add_trivalent_lone_pair_virtual_site(self, atoms, distance, **kwargs):
         """
         Create a trivalent lone pair-type virtual site, in which the location of the charge is specified by the position
          of four atoms.
@@ -3199,7 +3197,7 @@ class FrozenMolecule(Serializable):
             The name of this virtual site. Default is None.
         """
 
-        replace = kwargs.pop('replace', False)
+        replace = kwargs.pop("replace", False)
 
         vsite = TrivalentLonePairVirtualSite(atoms, distance, **kwargs)
 

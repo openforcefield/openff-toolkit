@@ -444,9 +444,12 @@ def create_acetaldehyde():
     acetaldehyde.add_bond(0, 4, 1, False)  # C0 - H4
     acetaldehyde.add_bond(0, 5, 1, False)  # C0 - H5
     acetaldehyde.add_bond(1, 6, 1, False)  # C1 - H6
-    charges = unit.Quantity(np.array([0., 0., 0., 0., 0., 0., 0.]), unit.elementary_charge)
+    charges = unit.Quantity(
+        np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]), unit.elementary_charge
+    )
     acetaldehyde.partial_charges = charges
     return acetaldehyde
+
 
 def create_water():
     """
@@ -458,9 +461,10 @@ def create_water():
     mol.add_atom(1, 0, False)  # H2
     mol.add_bond(0, 1, 1, False)  # H1 - O
     mol.add_bond(1, 2, 1, False)  # O - H2
-    charges = unit.Quantity(np.array([0., 0., 0.]), unit.elementary_charge)
+    charges = unit.Quantity(np.array([0.0, 0.0, 0.0]), unit.elementary_charge)
     mol.partial_charges = charges
     return mol
+
 
 def create_ammonia():
     """
@@ -474,9 +478,10 @@ def create_ammonia():
     mol.add_bond(0, 1, 1, False)  # H1 - N
     mol.add_bond(1, 2, 1, False)  # N - H2
     mol.add_bond(1, 3, 1, False)  # N - H3
-    charges = unit.Quantity(np.array([0., 0., 0., 0.]), unit.elementary_charge)
+    charges = unit.Quantity(np.array([0.0, 0.0, 0.0, 0.0]), unit.elementary_charge)
     mol.partial_charges = charges
     return mol
+
 
 def create_acetate():
     """
@@ -1579,6 +1584,7 @@ monovalent_parameters_args = []
 divalent_parameters_args = []
 trivalent_parameters_args = []
 
+
 class TestForceFieldVirtualSites:
 
     xml_ff_virtual_sites_bondcharge_match_once = """<?xml version="1.0" encoding="utf-8"?>
@@ -1795,8 +1801,10 @@ class TestForceFieldVirtualSites:
         topology = mol.to_topology()
         kwargs = {}
         if mol.partial_charges is not None:
-            kwargs['charge_from_molecules'] = [mol]
-        omm_system = forcefield.create_openmm_system(topology, toolkit_registry=tkr, **kwargs)
+            kwargs["charge_from_molecules"] = [mol]
+        omm_system = forcefield.create_openmm_system(
+            topology, toolkit_registry=tkr, **kwargs
+        )
         nonbondedForce = [
             f for f in omm_system.getForces() if type(f) == NonbondedForce
         ][0]
@@ -1901,7 +1909,7 @@ class TestForceFieldVirtualSites:
                 (+0.0 * q_unit, None, None),
                 (-0.6 * q_unit, 0.2 * s_unit, 0.2 * e_unit),
             ),
-            "mol": create_acetaldehyde()
+            "mol": create_acetaldehyde(),
         }
     )
     monovalent_parameters_args.append(opts)
@@ -1923,7 +1931,7 @@ class TestForceFieldVirtualSites:
                 (-0.4820 * q_unit, 3.12 * s_unit, 0.16 * e_unit),
                 (-0.4820 * q_unit, 3.12 * s_unit, 0.16 * e_unit),
             ),
-            "mol": create_water()
+            "mol": create_water(),
         }
     )
     divalent_parameters_args.append(opts)
@@ -1944,7 +1952,7 @@ class TestForceFieldVirtualSites:
                 (+0.0000 * q_unit, None, None),
                 (-1.0000 * q_unit, 0.00 * s_unit, 0.00 * e_unit),
             ),
-            "mol": create_ammonia()
+            "mol": create_ammonia(),
         }
     )
     trivalent_parameters_args.append(opts)
@@ -2000,6 +2008,7 @@ class TestForceFieldVirtualSites:
         """
 
         self._test_physical_parameters(toolkit_registry, *args.values())
+
 
 class TestForceFieldChargeAssignment:
     def generate_monatomic_ions():

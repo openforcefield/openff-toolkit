@@ -4524,7 +4524,6 @@ class VirtualSiteHandler(_NonbondedHandler):
             are_equal = [getattr(self, a) == getattr(obj, a) for a in A]
             return all(are_equal)
 
-
         def _add_virtual_site(self, fn, atoms, orientations, *args, **kwargs):
             """
 
@@ -4545,7 +4544,7 @@ class VirtualSiteHandler(_NonbondedHandler):
             -------
                 The index of the created virtual site
             """
-            
+
             args = [atoms, self.distance] + list(args)
 
             # This needs to be dealt with better
@@ -4597,7 +4596,7 @@ class VirtualSiteHandler(_NonbondedHandler):
                 "sigma": self.sigma,
                 "rmin_half": self.rmin_half,
                 "orientations": orientations,
-                "replace": kwargs.pop('replace', False)
+                "replace": kwargs.pop("replace", False),
             }
             kwargs.update(base_args)
 
@@ -4608,6 +4607,7 @@ class VirtualSiteHandler(_NonbondedHandler):
 
         .. warning :: This API is experimental and subject to change.
         """
+
         def add_virtual_site(self, molecule, orientations, replace=False):
             fn = molecule._add_bond_charge_virtual_site
             ref_key = self.transformed_dict_cls.key_transform(orientations[0])
@@ -4879,7 +4879,6 @@ class VirtualSiteHandler(_NonbondedHandler):
         return topology
 
     def _create_openmm_virtual_sites(self, system, force, topology, ref_mol):
-
 
         """
         Here we must assume that 
