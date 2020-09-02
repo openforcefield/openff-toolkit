@@ -80,9 +80,10 @@ XML_FF_GENERICS = """<?xml version='1.0' encoding='ASCII'?>
 simple_xml_ff = str.encode(
     """<?xml version='1.0' encoding='ASCII'?>
 <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-  <Bonds version="0.3">
+  <Bonds version="0.3" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
     <Bond smirks="[#6X4:1]-[#6X4:2]" id="b1" k="620.0 * kilocalories_per_mole/angstrom**2" length="1.526 * angstrom"/>
     <Bond smirks="[#6X4:1]-[#6X3:2]" id="b2" k="634.0 * kilocalories_per_mole/angstrom**2" length="1.51 * angstrom"/>
+    <Bond smirks="[#6X3:1]-[#6X3:2]" id="b3" k_bondorder1="100.0*kilocalories_per_mole/angstrom**2" k_bondorder2="4000.0*kilocalories_per_mole/angstrom**2" length="1.5 * angstrom"/>
   </Bonds>
   <Angles version="0.3">
     <Angle smirks="[*:1]~[#6X4:2]-[*:3]" angle="109.5 * degree" id="a1" k="100.0 * kilocalories_per_mole/radian**2"/>
@@ -148,7 +149,7 @@ xml_ff_w_cosmetic_elements = """<?xml version='1.0' encoding='ASCII'?>
   <Author>Alice and Bob</Author>
   <!-- This file is meant for processing via openforcefield.typing.engines.smirnoff -->
   <!-- WARNING: AMBER functional forms drop the factor of 2 in the bond energy term, so cross-comparing this file with a corresponding .frcmod file, it will appear that the values here are twice as large as they should be. -->
-  <Bonds version="0.3">
+  <Bonds version="0.3" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
     <Bond smirks="[#6X4:1]-[#6X4:2]" id="b1" k="620.0 * kilocalories_per_mole/angstrom**2" length="1.526 * angstrom" parameters="k, length" parameterize_eval="blah=blah2"/>
     <Bond smirks="[#6X4:1]-[#6X3:2]" id="b2" k="634.0 * kilocalories_per_mole/angstrom**2" length="1.51 * angstrom"/>
   </Bonds>
@@ -813,7 +814,7 @@ class TestForceField:
 
     def test_create_forcefield_from_xml_string(self):
         forcefield = ForceField(simple_xml_ff)
-        assert len(forcefield._parameter_handlers["Bonds"]._parameters) == 2
+        assert len(forcefield._parameter_handlers["Bonds"]._parameters) == 3
         assert len(forcefield._parameter_handlers["Angles"]._parameters) == 2
         assert len(forcefield._parameter_handlers["ProperTorsions"]._parameters) == 3
         assert len(forcefield._parameter_handlers["ImproperTorsions"]._parameters) == 2
@@ -1056,7 +1057,7 @@ class TestForceField:
         ff = ForceField(
             simple_xml_ff, xml_ff_w_cosmetic_elements, allow_cosmetic_attributes=True
         )
-        assert len(ff.get_parameter_handler("Bonds").parameters) == 4
+        assert len(ff.get_parameter_handler("Bonds").parameters) == 5
 
     def test_load_two_sources_authors_dates(self):
         """Test that authors and dates are handled properly"""

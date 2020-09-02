@@ -2307,15 +2307,40 @@ class BondHandler(ParameterHandler):
 
         # These attributes may be indexed (by integer bond order) if fractional bond orders are used.
         length = ParameterAttribute(unit=unit.angstrom)
-        k = ParameterAttribute(unit=unit.kilocalorie_per_mole / unit.angstrom ** 2)
+        k = ParameterAttribute(
+            default=None, unit=unit.kilocalorie_per_mole / unit.angstrom ** 2
+        )
+
+        # fractional bond order params
+        k_bondorder = IndexedParameterAttribute(
+            default=None, unit=unit.kilocalorie_per_mole / unit.angstrom ** 2
+        )
+
+        def __init__(self, **kwargs):
+            found_k = "k" in kwargs.keys()
+            found_k_bondorder = any(["k_bondorder" in val for val in kwargs.keys()])
+            if found_k_bondorder:
+                if found_k:
+                    raise SMIRNOFFSpecError(
+                        "k and k_bondorder1/k_bondorder2/etc. cannot specified simultaneously."
+                    )
+            else:
+                if not found_k:
+                    # Is this error too general? What about a MissingParametersError
+                    raise SMIRNOFFSpecError(
+                        "Either k or k_bondorder1/k_bondorder2/etc. must be specified."
+                    )
+
+            super().__init__(**kwargs)
 
     _TAGNAME = "Bonds"  # SMIRNOFF tag name to process
+    _KWARGS = ["partial_bond_orders_from_molecules"]
     _INFOTYPE = BondType  # class to hold force type info
     _OPENMMTYPE = openmm.HarmonicBondForce  # OpenMM force class to create
     _DEPENDENCIES = [ConstraintHandler]  # ConstraintHandler must be executed first
 
     potential = ParameterAttribute(default="harmonic")
-    fractional_bondorder_method = ParameterAttribute(default=None)
+    fractional_bondorder_method = ParameterAttribute(default="AM1-Wiberg")
     fractional_bondorder_interpolation = ParameterAttribute(default="linear")
 
     def check_handler_compatibility(self, other_handler):

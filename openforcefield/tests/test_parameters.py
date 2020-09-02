@@ -1068,6 +1068,45 @@ class TestBondType:
             * (unit.kilocalorie ** 1),
         }
 
+    def test_bondtype_partial_bondorders(self):
+        """
+        Test the parsing of a BondType with k_bondorder1/2/3 definitions
+        """
+        from simtk import unit
+
+        length = 1.4 * unit.angstrom
+        k1 = 101 * unit.kilocalorie_per_mole / unit.angstrom ** 2
+        k2 = 202 * unit.kilocalorie_per_mole / unit.angstrom ** 2
+        k3 = 303 * unit.kilocalorie_per_mole / unit.angstrom ** 2
+
+        param = BondHandler.BondType(
+            smirks="[*:1]-[*:2]",
+            length=length,
+            k_bondorder1=k1,
+            k_bondorder2=k2,
+            k_bondorder3=k3,
+        )
+
+        assert param.k_bondorder1 == k1
+        assert param.k_bondorder2 == k2
+        assert param.k_bondorder3 == k3
+
+    def test_bondtype_missing_params(self):
+        """
+        Test the over/underspecification of k/k_bondorderN are caught
+        """
+        from simtk import unit
+
+        length = 1.4 * unit.angstrom
+        k1 = 101 * unit.kilocalorie_per_mole / unit.angstrom ** 2
+        k2 = 202 * unit.kilocalorie_per_mole / unit.angstrom ** 2
+
+        with pytest.raises(SMIRNOFFSpecError):
+            BondHandler.BondType(
+                smirks="[*:1]-[*:2]",
+                length=length,
+            )
+
     def test_bondtype_to_dict_custom_output_units(self):
         """
         Test BondType to_dict with custom output units.
