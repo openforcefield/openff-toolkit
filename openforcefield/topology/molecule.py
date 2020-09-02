@@ -3398,9 +3398,9 @@ class FrozenMolecule(Serializable):
         """
         Iterate over all Particle objects.
         """
-        # TODO: Re-implement this when we see how it interfaces with Topology
+
         return self._atoms + [
-            ptl for vsite in self._virtual_sites for ptl in [vsite] * vsite.n_particles
+            ptl for vsite in self._virtual_sites for ptl in vsite.particles
         ]
 
     @property
