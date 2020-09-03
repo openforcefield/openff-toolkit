@@ -1435,14 +1435,15 @@ class ForceField:
         param_attrs_to_strip = ["_id", "_parent_id"]
 
         for handler_name in self.registered_parameter_handlers:
-            old_handler = self.get_parameter_handler(handler_name)
-            new_handler = copy.deepcopy(old_handler)
+            handler = copy.deepcopy(self.get_parameter_handler(handler_name))
 
-            for param in new_handler._parameters:
+            for param in handler._parameters:
                 for attr in param_attrs_to_strip:
                     # param.__dict__.pop(attr, None) may be faster
                     # https://stackoverflow.com/a/42303681/4248961
                     if hasattr(param, attr):
                         delattr(param, attr)
+
+            ff_copy.register_parameter_handler(handler)
 
         return hash(ff_copy.to_string(discard_cosmetic_attributes=True))

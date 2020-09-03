@@ -15,6 +15,7 @@ Tests for forcefield class
 # =============================================================================================
 
 import copy
+import itertools
 import os
 from tempfile import NamedTemporaryFile
 
@@ -1555,6 +1556,13 @@ class TestForceField:
             forcefield[bonds]
         with pytest.raises(NotImplementedError):
             forcefield[type(bonds)]
+
+    def test_hash(self):
+        """Test hashes on all available force fields"""
+        ffs = get_available_force_fields()
+
+        for ff1, ff2 in itertools.combinations(ffs, 2):
+            assert hash(ff1) != hash(ff2)
 
     def test_hash_cosmetic(self):
         """Test that adding a cosmetic attribute does not change the hash"""
