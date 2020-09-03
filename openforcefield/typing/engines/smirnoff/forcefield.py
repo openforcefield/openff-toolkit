@@ -1422,26 +1422,30 @@ class ForceField:
     def __hash__(self):
         """Deterministically hash a ForceField object
 
-        Notable behavior: `id` and `parent_id` are stripped"""
+        Notable behavior:
+          * `author` and `date` are stripped from the ForceField
+          * `id` and `parent_id` are stripped from each ParameterType"""
+
 
         # Completely re-constructing the force field may be overkill
         # compared to deepcopying and modifying?
         ff_copy = ForceField()
-        ff_copy.date = self.date
-        ff_copy.author = self.author
+        ff_copy.date = None
+        ff_copy.author = None
+
+        param_attrs_to_strip = ["_id", "_parent_id"]
 
         for handler_name in self.registered_parameter_handlers:
             old_handler = self.get_parameter_handler(handler_name)
             new_handler = (
-                old_handler  # old_handler.__class__(version=old_handler.version)
+                old_handler
             )
 
-            if True:  # strip_ids:
-                for param in new_handler._parameters:
-                    for attr in ["_id", "_parent_id"]:
-                        # param.__dict__.pop(attr, None) may be faster
-                        # https://stackoverflow.com/a/42303681/4248961
-                        if hasattr(param, attr):
-                            delattr(param, attr)
+            for param in new_handler._parameters:
+                for attr in param_attrs_to_strip:
+                    # param.__dict__.pop(attr, None) may be faster
+                    # https://stackoverflow.com/a/42303681/4248961
+                    if hasattr(param, attr):
+                        delattr(param, attr)
 
         return hash(ff_copy.to_string(discard_cosmetic_attributes=True))

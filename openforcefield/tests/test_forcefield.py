@@ -1558,24 +1558,33 @@ class TestForceField:
 
         assert hash_with_cosmetic == hash_without_cosmetic
 
-    length = 1 * unit.angstrom
-    k = 10 * unit.kilocalorie_per_mole / unit.angstrom ** 2
+    def test_hash_strip_author_date(self):
+        """Ensure that author and date are ignored in hashing"""
+        ff_no_data = ForceField()
+        ff_with_author_date = ForceField()
+        ff_with_author_date.author = 'John Doe'
+        ff_with_author_date.date = '2020-01-01'
+
+        assert hash(ff_no_data) == hash(ff_with_author_date)
 
     def test_hash_strip_ids(self):
         """Test the behavior of strip_ids arg to __hash__()"""
         from openforcefield.typing.engines.smirnoff import BondHandler
 
+        length = 1 * unit.angstrom
+        k = 10 * unit.kilocalorie_per_mole / unit.angstrom ** 2
+
         param_with_id = {
             "smirks": "[*:1]-[*:2]",
-            "length": self.length,
-            "k": self.k,
+            "length": length,
+            "k": k,
             "id": "b1",
         }
 
         param_without_id = {
             "smirks": "[*:1]-[*:2]",
-            "length": self.length,
-            "k": self.k,
+            "length": length,
+            "k": k,
         }
 
         ff_with_id = ForceField()
