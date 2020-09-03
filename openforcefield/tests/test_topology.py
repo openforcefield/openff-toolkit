@@ -255,7 +255,6 @@ class TestTopology(TestCase):
 
     def test_n_topology_virtual_sites(self):
         """Test n_atoms function"""
-        breakpoint()
         topology = Topology()
         assert topology.n_topology_virtual_sites == 0
         topology.add_molecule(self.ethane_from_smiles_w_vsites)
@@ -381,7 +380,6 @@ class TestTopology(TestCase):
 
     def test_topology_virtual_site_particle_start_index(self):
 
-        breakpoint()
         topology = Topology()
         topology.add_molecule(self.propane_from_smiles_w_vsites)
         assert topology.virtual_site(0).topology_virtual_particle_start_index == 11
