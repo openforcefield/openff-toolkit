@@ -36,6 +36,11 @@ Behavior changed
   exception raised when no ``antechamber`` executable is found from ``IOError`` to
   :py:class:`AntechamberNotFoundError <openforcefield.utils.toolkits.AntechamberNotFoundError>`
 
+Tests added
+"""""""""""
+- `PR #694 <https://github.com/openforcefield/openforcefield/pull/694>`_: Adds automated testing
+  to code snippets in docs.
+
 0.7.1 - OETK2020 Compatibility and Minor Update
 -----------------------------------------------
 
