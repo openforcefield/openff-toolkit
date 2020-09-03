@@ -2399,7 +2399,7 @@ class BondHandler(ParameterHandler):
                 *match.reference_atom_indices
             )
 
-            if hasattr(bond_params, "k_bondorder1"):
+            if getattr(bond_params, 'k', None) is None and getattr(bond_params, "k_bondorder1", None) is not None:
                 raise NotImplementedError(
                     "Partial bondorder treatment is not implemented for bonds."
                 )
