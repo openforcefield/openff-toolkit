@@ -752,9 +752,7 @@ class TopologyMolecule:
 
     @property
     def bond_start_topology_index(self):
-        """Get the topology index of the first bond in this TopologyMolecule
-
-        """
+        """Get the topology index of the first bond in this TopologyMolecule"""
         # If cached value is not available, generate it.
         if self._bond_start_topology_index is None:
             bond_start_topology_index = 0
@@ -882,8 +880,7 @@ class TopologyMolecule:
 
     @property
     def virtual_site_start_topology_index(self):
-        """Get the topology index of the first virtual site in this TopologyMolecule
-        """
+        """Get the topology index of the first virtual site in this TopologyMolecule"""
         # If the cached value is not available, generate it
         if self._virtual_site_start_topology_index is None:
             virtual_site_start_topology_index = 0
@@ -1882,7 +1879,7 @@ class Topology(Serializable):
         ----------
         mdtraj_topology : mdtraj.Topology
             An MDTraj Topology object
-        # """
+        #"""
         import mdtraj as md
 
         return md.Topology.from_openmm(self.to_openmm())

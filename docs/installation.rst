@@ -15,7 +15,7 @@ If not, the quickest way to get started is to install the `miniconda <http://con
 
 On ``linux``, you can install the Python 3 version into ``$HOME/miniconda3`` with (on ``bash`` systems):
 
-.. code-block:: bash
+.. code-block:: shell
 
    $ wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
    $ bash ./Miniconda3-latest-Linux-x86_64.sh -b -p $HOME/miniconda3
@@ -25,7 +25,7 @@ On ``linux``, you can install the Python 3 version into ``$HOME/miniconda3`` wit
 
 On ``osx``, you want to use the ``osx`` binary
 
-.. code-block:: bash
+.. code-block:: shell
 
    $ curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -O
    $ bash ./Miniconda3-latest-MacOSX-x86_64.sh -b -p $HOME/miniconda3
@@ -48,7 +48,7 @@ Required dependencies
 
 The ``openforcefield`` toolkit makes use of the `Omnia <http://www.omnia.md>`_ and `Conda Forge <https://conda-forge.org/>`_ free and open source community package repositories:
 
-.. code-block:: bash
+.. code-block:: shell
 
    $ conda config --add channels omnia --add channels conda-forge
    $ conda update --all
@@ -67,7 +67,7 @@ Release build
 
 You can install the latest stable release build of ``openforcefield`` via the ``conda`` package with
 
-.. code-block:: none
+.. code-block:: shell
 
    $ conda config --add channels omnia --add channels conda-forge
    $ conda install openforcefield
@@ -83,7 +83,7 @@ Upgrading your installation
 
 To update an earlier ``conda`` installation of ``openforcefield`` to the latest release version, you can use ``conda update``:
 
-.. code-block:: bash
+.. code-block:: shell
 
    $ conda update openforcefield
 
@@ -97,7 +97,7 @@ Academic laboratories intending to release results into the public domain can `o
 
 To install the OpenEye toolkits (provided you have a valid license file):
 
-.. code-block:: none
+.. code-block:: shell
 
    $ conda install --yes -c openeye openeye-toolkits
 
@@ -128,7 +128,7 @@ Installation
 Download the appropriate installer (``openforcefield-<X.Y.Z>-py37-<your platform>-x86_64.sh``) from `the "Assets" section at the bottom of the desired release <https://github.com/openforcefield/openforcefield/releases/>`_.
 Then, install the toolkit with the following command:
 
-.. code-block:: bash
+.. code-block:: shell
 
    $ bash openforcefield-<X.Y.Z>-py37-<your platform>-x86_64.sh
 
@@ -148,7 +148,7 @@ Usage
 
 Any time you want to use this conda environment in a terminal, run
 
-.. code-block:: bash
+.. code-block:: shell
 
    $ source <install_directory>/etc/profile.d/conda.sh
    $ conda activate base
@@ -163,7 +163,7 @@ Installing optional OpenEye toolkits
 We're waiting on permission to redistribute the OpenEye toolkits inside the single-file installer, so for now the installers only ship with the open-source backend (RDKit+AmberTools).
 With this in mind, the conda environment created by the installer *contains the conda package manager itself*, which can be used to install the OpenEye toolkits if you have access to the Anaconda cloud.
 
-.. code-block:: bash
+.. code-block:: shell
 
    $ conda install -c openeye openeye-toolkits
 

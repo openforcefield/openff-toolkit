@@ -40,6 +40,13 @@ from openforcefield.tests.test_forcefield import (
     create_ethanol,
     create_reversed_ethanol,
 )
+from openforcefield.tests.utils import (
+    has_pkg,
+    requires_openeye,
+    requires_pkg,
+    requires_rdkit,
+)
+from openforcefield.topology import NotBondedError
 from openforcefield.topology.molecule import Atom, InvalidConformerError, Molecule
 from openforcefield.utils import get_data_file_path
 from openforcefield.utils.toolkits import (
@@ -53,12 +60,11 @@ from openforcefield.utils.toolkits import (
 # TEST UTILITIES
 # =============================================================================================
 
-requires_openeye = pytest.mark.skipif(
-    not OpenEyeToolkitWrapper.is_available(), reason="Test requires OE toolkit"
+requires_qcelemental = requires_pkg(
+    "qcelemental",
+    reason="Test involving QCSchema require QCElemental, which was not found.",
 )
-requires_rdkit = pytest.mark.skipif(
-    not RDKitToolkitWrapper.is_available(), reason="Test requires RDKit"
-)
+requires_nglview = requires_pkg("nglview")
 
 
 def assert_molecule_is_equal(molecule1, molecule2, msg):
@@ -336,9 +342,10 @@ class TestMolecule:
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_toml_serialization(self, molecule):
         """Test serialization of a molecule object to and from TOML."""
-        # TODO: Test round-trip when implemented
+        # TODO: Test round-trip, on mini_drug_bank, when implemented
+        mol = Molecule.from_smiles("CCO")
         with pytest.raises(NotImplementedError):
-            molecule.to_toml()
+            mol.to_toml()
 
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_bson_serialization(self, molecule):
@@ -350,15 +357,20 @@ class TestMolecule:
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_json_serialization(self, molecule):
         """Test serialization of a molecule object to and from JSON."""
-        # TODO: Test round-trip when to_json bug is fixed
+        # TODO: Test round-trip, on mini_drug_bank, when to_json bug is fixed, see #547
+        mol = Molecule.from_smiles("CCO")
+        molecule_copy = Molecule.from_json(mol.to_json())
+        assert molecule_copy == mol
+        mol.generate_conformers(n_conformers=1)
         with pytest.raises(TypeError):
-            molecule.to_json()
+            mol.to_json()
 
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_xml_serialization(self, molecule):
         """Test serialization of a molecule object to and from XML."""
-        # TODO: Test round-trip when from_xml is implemented
-        serialized = molecule.to_xml()
+        # TODO: Test round-trip, on mini_drug_bank, when from_xml is implemented
+        mol = Molecule.from_smiles("CCO")
+        serialized = mol.to_xml()
         with pytest.raises(NotImplementedError):
             Molecule.from_xml(serialized)
 
@@ -785,8 +797,7 @@ class TestMolecule:
     @requires_rdkit
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_to_from_rdkit(self, molecule):
-        """Test that conversion/creation of a molecule to and from an RDKit rdmol is consistent.
-        """
+        """Test that conversion/creation of a molecule to and from an RDKit rdmol is consistent."""
         # import pickle
         from openforcefield.utils.toolkits import UndefinedStereochemistryError
 
@@ -1774,6 +1785,7 @@ class TestMolecule:
             assert bond.is_aromatic == sdf_bonds[key].is_aromatic
             assert bond.stereochemistry == sdf_bonds[key].stereochemistry
 
+    @requires_qcelemental
     def test_to_qcschema(self):
         """Test the ability to make and validate qcschema with extras"""
         # the molecule has no coordinates so this should fail
@@ -1887,6 +1899,7 @@ class TestMolecule:
         },
     ]
 
+    @requires_qcelemental
     @pytest.mark.parametrize("input_data", client_examples)
     def test_from_qcschema_with_client(self, input_data):
         """For each of the examples try and make a offmol using the instance and dict and check they match"""
@@ -1913,6 +1926,7 @@ class TestMolecule:
 
         assert mol_from_dict.is_isomorphic_with(mol_from_smiles) is True
 
+    @requires_qcelemental
     def test_qcschema_round_trip(self):
         """Test making a molecule from qcschema then converting back"""
 
@@ -2342,7 +2356,7 @@ class TestMolecule:
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_add_bond_charge_virtual_site(self, molecule):
         """Test the addition of a BondChargeVirtualSite to a molecule.
-           Also tests many of the inputs of the parent VirtualSite class
+        Also tests many of the inputs of the parent VirtualSite class
         """
         # Do not modify the original molecule.
         molecule = copy.deepcopy(molecule)
@@ -2674,8 +2688,7 @@ class TestMolecule:
 
     @requires_openeye
     def test_assign_fractional_bond_orders(self):
-        """Test assignment of fractional bond orders
-        """
+        """Test assignment of fractional bond orders"""
         # TODO: Test only one molecule for speed?
         # TODO: Do we need to deepcopy each molecule, or is setUp called separately for each test method?
 
@@ -2708,6 +2721,23 @@ class TestMolecule:
                     # fbo2 = [bond.fractional_bond_order for bond in molecule.bonds]
                     # np.testing.assert_allclose(fbo1, fbo2, atol=1.e-4)
 
+    def test_get_bond_between(self):
+        """Test Molecule.get_bond_between"""
+        mol = Molecule.from_smiles("C#C")
+
+        # Dynamically get atoms in case from_smiles produces different atom order
+        hydrogens = [a for a in mol.atoms if a.atomic_number == 1]
+        carbons = [a for a in mol.atoms if a.atomic_number == 6]
+
+        bond_from_atoms = mol.get_bond_between(carbons[0], carbons[1])
+        bond_from_idx = mol.get_bond_between(
+            carbons[0].molecule_atom_index, carbons[1].molecule_atom_index
+        )
+        assert bond_from_idx == bond_from_atoms
+
+        with pytest.raises(NotBondedError):
+            mol.get_bond_between(hydrogens[0], hydrogens[1])
+
     @requires_rdkit
     def test_visualize_rdkit(self):
         """Test that the visualize method returns an expected object when using RDKit to generate a 2-D representation"""
@@ -2718,8 +2748,8 @@ class TestMolecule:
         assert isinstance(mol.visualize(backend="rdkit"), rdkit.Chem.rdchem.Mol)
 
     @pytest.mark.skipif(
-        RDKitToolkitWrapper.is_available(),
-        reason="Test requires that RDKit is NOT installed",
+        has_pkg("rdkit"),
+        reason="Test requires that RDKit is not installed",
     )
     def test_visualize_fallback(self):
         """Test falling back from RDKit to OpenEye if RDKit is specified but not installed"""
@@ -2727,8 +2757,11 @@ class TestMolecule:
         with pytest.warns(UserWarning):
             mol.visualize(backend="rdkit")
 
+    @requires_nglview
     def test_visualize_nglview(self):
-        """Test that the visualize method returns an NGLview widget"""
+        """Test that the visualize method returns an NGLview widget. Note that
+        nglview is not explicitly a requirement in the test environment, but
+        is likely to get pulled in with other dependencies."""
         try:
             import nglview
         except ModuleNotFoundError:

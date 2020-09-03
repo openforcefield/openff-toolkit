@@ -211,7 +211,7 @@ Setting up a development environment
 
 2. Set up conda environment
 
-.. code-block:: bash
+.. code-block:: shell
 
     $ # Create a conda environment with the Open Force Field toolkit and its dependencies
     $ conda create --name openff-dev -c conda-forge -c omnia -c openeye openforcefield openeye-toolkits
@@ -272,9 +272,9 @@ The ``openforcefield`` toolkit is in the process of adopting code formatting too
 1. `Black <https://black.readthedocs.io/>`_, the uncompromising code formatter, automatically formats code with a consistent style.
 1. `isort <https://timothycrosley.github.io/isort/>`_, sorts imports
 
-There is a step in CI that uses these tools to check for a consistent style. To ensure that changes follow these standards, you can install and run these tools locally:
+There is a step in CI that uses these tools to check for a consistent style. These checks will use the most recent versions of each linter. To ensure that changes follow these standards, you can install and run these tools locally:
 
-.. code-block:: bash
+.. code-block:: shell
 
     $ conda install black isort -c conda-forge
     $ black openforcefield

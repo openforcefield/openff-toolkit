@@ -23,6 +23,11 @@ import pytest
 from numpy.testing import assert_almost_equal
 from simtk import openmm, unit
 
+from openforcefield.tests.utils import (
+    requires_openeye,
+    requires_openeye_mol2,
+    requires_rdkit,
+)
 from openforcefield.topology import Molecule, Topology
 from openforcefield.typing.engines.smirnoff import (
     ForceField,
@@ -776,8 +781,7 @@ class TestForceField:
 
     @pytest.mark.skip(reason="Needs to be updated for 0.2.0 syntax")
     def test_create_gbsa():
-        """Test reading of ffxml files with GBSA support.
-        """
+        """Test reading of ffxml files with GBSA support."""
         forcefield = ForceField("test_forcefields/Frosst_AlkEthOH_GBSA.offxml")
 
     @pytest.mark.skip(reason="Needs to be updated for 0.2.0 syntax")
@@ -1162,7 +1166,7 @@ class TestForceField:
         registry_description,
     ):
         """Test parameterizing ethanol, but failing because custom handler classes can not resolve
-         which order to run in"""
+        which order to run in"""
         from simtk.openmm import app
 
         # from openforcefield.typing.engines.smirnoff.parameters import BondHandler, AngleHandler, ConstraintHandler
@@ -1279,16 +1283,17 @@ class TestForceField:
             for name in mol_names
         ]
         molecules = [Molecule.from_file(sdf_file) for sdf_file in sdf_files]
-        topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules,)
+        topology = Topology.from_openmm(
+            pdbfile.topology,
+            unique_molecules=molecules,
+        )
 
         omm_system = forcefield.create_openmm_system(
             topology, toolkit_registry=toolkit_registry
         )
         # TODO: Add check to ensure system energy is finite
 
-    @pytest.mark.skipif(
-        not (OpenEyeToolkitWrapper.is_available()), reason="Test requires OE toolkit"
-    )
+    @requires_openeye
     def test_parameterize_ethanol_different_reference_ordering_openeye(self):
         """
         Test parameterizing the same PDB, using reference mol2s that have different atom orderings.
@@ -1301,7 +1306,10 @@ class TestForceField:
         pdbfile = app.PDBFile(get_data_file_path("systems/test_systems/1_ethanol.pdb"))
         # Load the unique molecules with one atom ordering
         molecules1 = [Molecule.from_file(get_data_file_path("molecules/ethanol.sdf"))]
-        topology1 = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules1,)
+        topology1 = Topology.from_openmm(
+            pdbfile.topology,
+            unique_molecules=molecules1,
+        )
         omm_system1 = forcefield.create_openmm_system(
             topology1, toolkit_registry=toolkit_registry
         )
@@ -1309,7 +1317,10 @@ class TestForceField:
         molecules2 = [
             Molecule.from_file(get_data_file_path("molecules/ethanol_reordered.sdf"))
         ]
-        topology2 = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules2,)
+        topology2 = Topology.from_openmm(
+            pdbfile.topology,
+            unique_molecules=molecules2,
+        )
         omm_system2 = forcefield.create_openmm_system(
             topology2, toolkit_registry=toolkit_registry
         )
@@ -1322,9 +1333,7 @@ class TestForceField:
 
         assert serialized_1 == serialized_2
 
-    @pytest.mark.skipif(
-        not RDKitToolkitWrapper.is_available(), reason="Test requires RDKit toolkit"
-    )
+    @requires_rdkit
     def test_parameterize_ethanol_different_reference_ordering_rdkit(self):
         """
         Test parameterizing the same PDB, using reference mol2s that have different atom orderings.
@@ -1341,7 +1350,10 @@ class TestForceField:
 
         # Load the unique molecules with one atom ordering
         molecules1 = [Molecule.from_file(get_data_file_path("molecules/ethanol.sdf"))]
-        topology1 = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules1,)
+        topology1 = Topology.from_openmm(
+            pdbfile.topology,
+            unique_molecules=molecules1,
+        )
         omm_system1 = forcefield.create_openmm_system(
             topology1, toolkit_registry=toolkit_registry
         )
@@ -1350,7 +1362,10 @@ class TestForceField:
         molecules2 = [
             Molecule.from_file(get_data_file_path("molecules/ethanol_reordered.sdf"))
         ]
-        topology2 = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules2,)
+        topology2 = Topology.from_openmm(
+            pdbfile.topology,
+            unique_molecules=molecules2,
+        )
         omm_system2 = forcefield.create_openmm_system(
             topology2, toolkit_registry=toolkit_registry
         )
@@ -1363,9 +1378,7 @@ class TestForceField:
 
         assert serialized_1 == serialized_2
 
-    @pytest.mark.skipif(
-        not RDKitToolkitWrapper.is_available(), reason="Test requires RDKit toolkit"
-    )
+    @requires_rdkit
     def test_parameterize_mol_missing_stereo_rdkit(self):
         """
         Test parameterizing a molecule with undefined stereochemsity using the RDKit/AmberTools backend.
@@ -1384,9 +1397,7 @@ class TestForceField:
         force_field = ForceField("test_forcefields/smirnoff99Frosst.offxml")
         force_field.create_openmm_system(topology, toolkit_registry=toolkit_registry)
 
-    @pytest.mark.skipif(
-        not OpenEyeToolkitWrapper.is_available(), reason="Test requires OpenEye toolkit"
-    )
+    @requires_openeye
     def test_parameterize_mol_missing_stereo_openeye(self):
         """
         Test parameterizing a molecule with undefined stereochemsity using the OpenEye backend.
@@ -1722,7 +1733,10 @@ class TestForceFieldChargeAssignment:
         pdbfile = app.PDBFile(
             get_data_file_path("systems/test_systems/1_cyclohexane_1_ethanol.pdb")
         )
-        topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules,)
+        topology = Topology.from_openmm(
+            pdbfile.topology,
+            unique_molecules=molecules,
+        )
 
         omm_system = forcefield.create_openmm_system(
             topology, charge_from_molecules=[ethanol], toolkit_registry=toolkit_registry
@@ -2328,61 +2342,58 @@ class TestForceFieldChargeAssignment:
         # Ensure that the handlers do not make multiple NonbondedForce objects
         assert len(existing) == 1
         nonbondedForce = existing[0]
-        expected_charges = (
-            [  # cyclohexane (18 atoms) should have the following values from charge_from_mols
-                -0.2,
-                -0.2,
-                -0.2,
-                -0.2,
-                -0.2,
-                -0.2,
-                0.1,
-                0.1,
-                0.1,
-                0.1,
-                0.1,
-                0.1,
-                0.1,
-                0.1,
-                0.1,
-                0.1,
-                0.1,
-                0.1,
-                # butanol (15 atoms) should have the following values from charge_from_mols
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                # propane (11 atoms) should have the following values from xml_CH_zeroes_library_charges_xml
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                # water (3 atoms) should have the following charges from tip3p.offxml
-                -0.834,
-                0.417,
-                0.417,
-            ]
-            * unit.elementary_charge
-        )
+        expected_charges = [  # cyclohexane (18 atoms) should have the following values from charge_from_mols
+            -0.2,
+            -0.2,
+            -0.2,
+            -0.2,
+            -0.2,
+            -0.2,
+            0.1,
+            0.1,
+            0.1,
+            0.1,
+            0.1,
+            0.1,
+            0.1,
+            0.1,
+            0.1,
+            0.1,
+            0.1,
+            0.1,
+            # butanol (15 atoms) should have the following values from charge_from_mols
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            # propane (11 atoms) should have the following values from xml_CH_zeroes_library_charges_xml
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            # water (3 atoms) should have the following charges from tip3p.offxml
+            -0.834,
+            0.417,
+            0.417,
+        ] * unit.elementary_charge
 
         # Ensure that the first four molecules have exactly the charges we intended
         for particle_index, expected_charge in enumerate(expected_charges):
@@ -2715,10 +2726,7 @@ def generate_freesolv_parameters_assignment_cases():
 class TestForceFieldParameterAssignment:
     """Regression tests checking that parameters are assigned correctly."""
 
-    @pytest.mark.skipif(
-        not OpenEyeToolkitWrapper.is_available(),
-        reason="Test requires OE toolkit to read mol2 files",
-    )
+    @requires_openeye_mol2
     @pytest.mark.parametrize(
         "alkethoh_id", generate_alkethoh_parameters_assignment_cases()
     )
@@ -2767,10 +2775,7 @@ class TestForceFieldParameterAssignment:
             ignore_charges=True,
         )
 
-    @pytest.mark.skipif(
-        not OpenEyeToolkitWrapper.is_available(),
-        reason="Test requires OE toolkit to read mol2 files",
-    )
+    @requires_openeye_mol2
     def test_multi_alkethoh_parameters_assignment(self):
         """Test that systems with multiple reference molecules are parametrized correctly.
 
@@ -2849,10 +2854,7 @@ class TestForceFieldParameterAssignment:
             amber_system, off_system, positions, ignore_charges=True
         )
 
-    @pytest.mark.skipif(
-        not OpenEyeToolkitWrapper.is_available(),
-        reason="Test requires OE toolkit to read mol2 files",
-    )
+    @requires_openeye_mol2
     @pytest.mark.parametrize(
         ("freesolv_id", "forcefield_version", "allow_undefined_stereo"),
         generate_freesolv_parameters_assignment_cases(),
@@ -2904,10 +2906,7 @@ class TestForceFieldParameterAssignment:
             ignore_improper_folds=True,
         )
 
-    @pytest.mark.skipif(
-        not OpenEyeToolkitWrapper.is_available(),
-        reason="Test requires OE toolkit to read mol2 files",
-    )
+    @requires_openeye_mol2
     @pytest.mark.parametrize(("is_periodic"), (False, True))
     @pytest.mark.parametrize(("gbsa_model"), ["HCT", "OBC1", "OBC2"])
     @pytest.mark.parametrize(
@@ -3045,16 +3044,22 @@ class TestForceFieldParameterAssignment:
 
         # We get radius and screen values from each model's getStandardParameters method
         if gbsa_model == "HCT":
-            gb_params = openmm.app.internal.customgbforces.GBSAHCTForce.getStandardParameters(
-                omm_top
+            gb_params = (
+                openmm.app.internal.customgbforces.GBSAHCTForce.getStandardParameters(
+                    omm_top
+                )
             )
         elif gbsa_model == "OBC1":
-            gb_params = openmm.app.internal.customgbforces.GBSAOBC1Force.getStandardParameters(
-                omm_top
+            gb_params = (
+                openmm.app.internal.customgbforces.GBSAOBC1Force.getStandardParameters(
+                    omm_top
+                )
             )
         elif gbsa_model == "OBC2":
-            gb_params = openmm.app.internal.customgbforces.GBSAOBC2Force.getStandardParameters(
-                omm_top
+            gb_params = (
+                openmm.app.internal.customgbforces.GBSAOBC2Force.getStandardParameters(
+                    omm_top
+                )
             )
 
         # Use GB params from OpenMM GBSA classes to populate parameters
@@ -3118,10 +3123,7 @@ class TestForceFieldParameterAssignment:
             off_omm_system, amber_omm_system, positions, by_force_type=False
         )
 
-    @pytest.mark.skipif(
-        not OpenEyeToolkitWrapper.is_available(),
-        reason="Test requires OE toolkit to read mol2 files",
-    )
+    @requires_openeye_mol2
     @pytest.mark.parametrize("zero_charges", [True, False])
     @pytest.mark.parametrize(("gbsa_model"), ["HCT", "OBC1", "OBC2"])
     def test_molecule_energy_gb_no_sa(self, zero_charges, gbsa_model):
@@ -3226,16 +3228,22 @@ class TestForceFieldParameterAssignment:
 
         # We get radius and screen values from each model's getStandardParameters method
         if gbsa_model == "HCT":
-            gb_params = openmm.app.internal.customgbforces.GBSAHCTForce.getStandardParameters(
-                omm_top
+            gb_params = (
+                openmm.app.internal.customgbforces.GBSAHCTForce.getStandardParameters(
+                    omm_top
+                )
             )
         elif gbsa_model == "OBC1":
-            gb_params = openmm.app.internal.customgbforces.GBSAOBC1Force.getStandardParameters(
-                omm_top
+            gb_params = (
+                openmm.app.internal.customgbforces.GBSAOBC1Force.getStandardParameters(
+                    omm_top
+                )
             )
         elif gbsa_model == "OBC2":
-            gb_params = openmm.app.internal.customgbforces.GBSAOBC2Force.getStandardParameters(
-                omm_top
+            gb_params = (
+                openmm.app.internal.customgbforces.GBSAOBC2Force.getStandardParameters(
+                    omm_top
+                )
             )
             # This is only necessary until https://github.com/openmm/openmm/pull/2362 is bundled into a conda release
             amber_gbsa_force.setSurfaceAreaEnergy(0)
@@ -3297,16 +3305,12 @@ class TestForceFieldParameterAssignment:
         )
 
     @pytest.mark.slow
-    @pytest.mark.skipif(
-        not OpenEyeToolkitWrapper.is_available(),
-        reason="Test requires OE toolkit to read mol2 files",
-    )
+    @requires_openeye_mol2
     @pytest.mark.parametrize(
         "toolkit_registry,registry_description", toolkit_registries
     )
     def test_parameterize_protein(self, toolkit_registry, registry_description):
-        """Test that ForceField assigns parameters correctly for a protein
-        """
+        """Test that ForceField assigns parameters correctly for a protein"""
 
         mol_path = get_data_file_path("proteins/T4-protein.mol2")
         molecule = Molecule.from_file(mol_path, allow_undefined_stereo=False)
@@ -3432,9 +3436,7 @@ class TestForceFieldParameterAssignment:
                 k = params[-1]
                 assert_almost_equal(k / k.unit, 5.0208)
 
-    @pytest.mark.skipif(
-        not RDKitToolkitWrapper.is_available(), reason="Test requires RDKit toolkit"
-    )
+    @requires_rdkit
     @pytest.mark.parametrize(
         ("get_molecule", "k_interpolated", "central_atoms"),
         [
@@ -3502,9 +3504,7 @@ class TestForceFieldParameterAssignment:
                 with pytest.raises(AssertionError):
                     assert_almost_equal(k / k.unit, k_interpolated)
 
-    @pytest.mark.skipif(
-        not (OpenEyeToolkitWrapper.is_available()), reason="Test requires OE toolkit"
-    )
+    @requires_openeye
     @pytest.mark.parametrize(
         ("get_molecule", "k_interpolated", "central_atoms"),
         [
@@ -3572,10 +3572,7 @@ class TestForceFieldParameterAssignment:
 
 
 class TestSmirnoffVersionConverter:
-    @pytest.mark.skipif(
-        not OpenEyeToolkitWrapper.is_available(),
-        reason="Test requires OE toolkit to read mol2 files",
-    )
+    @requires_openeye_mol2
     @pytest.mark.parametrize(
         ("freesolv_id", "forcefield_version", "allow_undefined_stereo"),
         generate_freesolv_parameters_assignment_cases(),
@@ -3639,8 +3636,7 @@ class TestSmirnoffVersionConverter:
 
 @pytest.mark.skip(reason="Needs to be updated for 0.2.0 syntax")
 def test_electrostatics_options(self):
-    """Test parameter assignment using smirnoff99Frosst on laromustine with various long-range electrostatics options.
-    """
+    """Test parameter assignment using smirnoff99Frosst on laromustine with various long-range electrostatics options."""
     molecules_file_path = get_data_file_path("molecules/laromustine_tripos.mol2")
     molecule = openforcefield.topology.Molecule.from_file(molecules_file_path)
     forcefield = ForceField(
@@ -3660,8 +3656,7 @@ def test_electrostatics_options(self):
 
 @pytest.mark.skip(reason="Needs to be updated for 0.2.0 syntax")
 def test_charge_increment(self):
-    """Test parameter assignment using smirnoff99Frosst on laromustine with ChargeIncrementModel.
-    """
+    """Test parameter assignment using smirnoff99Frosst on laromustine with ChargeIncrementModel."""
     molecules_file_path = get_data_file_path("molecules/laromustine_tripos.mol2")
     molecule = openforcefield.topology.Molecule.from_file(molecules_file_path)
     forcefield = ForceField(
@@ -3674,8 +3669,7 @@ def test_charge_increment(self):
 
 @pytest.mark.skip(reason="Needs to be updated for 0.2.0 syntax")
 def test_create_system_molecules_parmatfrosst_gbsa(self):
-    """Test creation of a System object from small molecules to test parm@frosst forcefield with GBSA support.
-    """
+    """Test creation of a System object from small molecules to test parm@frosst forcefield with GBSA support."""
     molecules_file_path = get_data_file_path(
         "molecules/AlkEthOH_test_filt1_tripos.mol2"
     )
