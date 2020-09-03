@@ -1426,7 +1426,6 @@ class ForceField:
           * `author` and `date` are stripped from the ForceField
           * `id` and `parent_id` are stripped from each ParameterType"""
 
-
         # Completely re-constructing the force field may be overkill
         # compared to deepcopying and modifying?
         ff_copy = ForceField()
@@ -1437,9 +1436,7 @@ class ForceField:
 
         for handler_name in self.registered_parameter_handlers:
             old_handler = self.get_parameter_handler(handler_name)
-            new_handler = (
-                old_handler
-            )
+            new_handler = copy.deepcopy(old_handler)
 
             for param in new_handler._parameters:
                 for attr in param_attrs_to_strip:

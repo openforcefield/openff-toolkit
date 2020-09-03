@@ -1573,8 +1573,8 @@ class TestForceField:
         """Ensure that author and date are ignored in hashing"""
         ff_no_data = ForceField()
         ff_with_author_date = ForceField()
-        ff_with_author_date.author = 'John Doe'
-        ff_with_author_date.date = '2020-01-01'
+        ff_with_author_date.author = "John Doe"
+        ff_with_author_date.date = "2020-01-01"
 
         assert hash(ff_no_data) == hash(ff_with_author_date)
 
