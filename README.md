@@ -65,13 +65,11 @@ topology = Topology.from_molecules(molecule)
 
 # Load the smirnoff99Frosst SMIRNOFF force field definition
 from openforcefield.typing.engines.smirnoff import ForceField
-forcefield = ForceField('test_forcefields/smirnoff99Frosst.offxml')
+forcefield = ForceField('openff-1.2.0.offxml')
 
 # Create an OpenMM system representing the molecule with SMIRNOFF-applied parameters
 openmm_system = forcefield.create_openmm_system(topology)
 
-# Load a SMIRNOFF small molecule forcefield for alkanes, ethers, and alcohols
-forcefield = ForceField('test_forcefields/Frosst_AlkEthOH_parmAtFrosst.offxml')
 ```
 Detailed examples of using SMIRNOFF with the toolkit can be found [in the documentation](https://open-forcefield-toolkit.readthedocs.io/en/latest/examples.html).
 
