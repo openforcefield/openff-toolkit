@@ -842,14 +842,14 @@ class ForceField:
 
         return io_handler
 
-    def delete_parameter_handler(self, handler):
+    def deregister_parameter_handler(self, handler):
         """
-        Delete a parameter handler specified by tag name, class, or instance.
+        Deregister a parameter handler specified by tag name, class, or instance.
 
         Parameters
         ----------
         handler: str, openforcefield.typing.engines.smirnoff.ParameterHandler-derived type or object
-            The handler to delete.
+            The handler to deregister.
         """
         if isinstance(handler, ParameterHandler):
             tagname = handler.TAGNAME

@@ -1547,15 +1547,15 @@ class TestForceField:
             forcefield[type(bonds)]
 
     @pytest.mark.parametrize(
-        "to_delete",
+        "to_deregister",
         [
             "ToolkitAM1BCC",
             ToolkitAM1BCCHandler,
             ToolkitAM1BCCHandler(skip_version_check=True),
         ],
     )
-    def test_delete_parameter_handler(self, to_delete):
-        """Ensure that ForceField.delete_parameter_handler behaves correctly"""
+    def test_deregister_parameter_handler(self, to_deregister):
+        """Ensure that ForceField.deregister_parameter_handler behaves correctly"""
         ff = ForceField(simple_xml_ff)
         # Make sure the handler is present in the test force field
         handler_found = False
@@ -1563,7 +1563,7 @@ class TestForceField:
             if isinstance(handler, ToolkitAM1BCCHandler):
                 handler_found = True
         assert handler_found
-        ff.delete_parameter_handler(to_delete)
+        ff.deregister_parameter_handler(to_deregister)
         # Make sure the handler is absent after deletion
         handler_found = False
         for handler in ff._parameter_handlers.values():
@@ -1572,7 +1572,7 @@ class TestForceField:
         assert not (handler_found)
 
         with pytest.raises(KeyError) as excinfo:
-            ff.delete_parameter_handler(to_delete)
+            ff.deregister_parameter_handler(to_deregister)
 
 
 class TestForceFieldChargeAssignment:
