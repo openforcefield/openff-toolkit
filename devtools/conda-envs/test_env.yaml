@@ -10,7 +10,7 @@ dependencies:
   - pip
 
     # Testing
-  - pytest
+  - pytest < 6.0
   - pytest-cov
   - nbval
   - codecov

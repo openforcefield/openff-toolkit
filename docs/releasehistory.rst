@@ -19,6 +19,13 @@ New features
 - `PR #667 <https://github.com/openforcefield/openforcefield/pull/667>`_ and
   `PR #681 <https://github.com/openforcefield/openforcefield/pull/681>`_ linted the codebase with
   ``black`` and ``isort``, respectively.
+- `PR #675 <https://github.com/openforcefield/openforcefield/pull/675>`_ adds
+  ``.toolkit_version`` to
+  :py:class:`ToolkitWrapper <openforcefield.utils.toolkits.ToolkitWrapper>` and
+  ``.registered_toolkit_versions`` to
+  :py:class:`ToolkitRegistry <openforcefield.utils.toolkits.ToolkitRegistry>`.
+- `PR #696 <https://github.com/openforcefield/openforcefield/pull/696>`_ Exposes a setter for
+  :py:class:`ForceField.aromaticity_model <openforcefield.typing.engines.smirnoff.forcefield.ForceField>`
 
 Behavior changed
 """"""""""""""""
@@ -27,6 +34,18 @@ Behavior changed
 - `PR #670 <https://github.com/openforcefield/openforcefield/pull/670>`_: Makes the
   :py:class:`Topology <openforcefield.topology.Topology>` returned by ``create_openmm_system``
   contain the partial charges and partial bond orders (if any) assigned during parameterization.
+- `PR #675 <https://github.com/openforcefield/openforcefield/pull/675>`_ changes the
+  exception raised when no ``antechamber`` executable is found from ``IOError`` to
+  :py:class:`AntechamberNotFoundError <openforcefield.utils.toolkits.AntechamberNotFoundError>`
+- `PR #696 <https://github.com/openforcefield/openforcefield/pull/696>`_ Adds an
+  ``aromaticity_model`` keyword argument to the
+  :py:class:`ForceField <openforcefield.typing.engines.smirnoff.forcefield.ForceField>`
+  constructor, which defaults to ``DEFAULT_AROMATICITY_MODEL``.
+
+Tests added
+"""""""""""
+- `PR #694 <https://github.com/openforcefield/openforcefield/pull/694>`_: Adds automated testing
+  to code snippets in docs.
 
 0.7.1 - OETK2020 Compatibility and Minor Update
 -----------------------------------------------

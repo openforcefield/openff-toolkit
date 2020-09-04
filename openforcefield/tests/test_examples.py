@@ -14,6 +14,7 @@ Test that the examples in the repo run without errors.
 
 import glob
 import os
+import pathlib
 import re
 import subprocess
 import tempfile
@@ -21,26 +22,28 @@ import textwrap
 
 import pytest
 
-from openforcefield.utils import RDKIT_AVAILABLE, get_data_file_path
+from openforcefield.utils import RDKIT_AVAILABLE, get_data_file_path, temporary_cd
 
 # ======================================================================
 # TEST UTILITIES
 # ======================================================================
 
-ROOT_DIR_PATH = os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "..")
+ROOT_DIR_PATH = pathlib.Path(__file__).joinpath("../../../").resolve()
 
 
 def run_script_file(file_path):
     """Run through the shell a python script."""
-    cmd = ["python", file_path]
-    if "conformer_energies.py" in file_path:
-        cmd.append("--filename")
-        mol_file = get_data_file_path("molecules/ruxolitinib_conformers.sdf")
-        cmd.append(mol_file)
-    try:
-        subprocess.check_call(cmd)
-    except subprocess.CalledProcessError:
-        raise Exception("Example {file_path} failed".format(file_path=file_path))
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        with temporary_cd(tmp_dir):
+            cmd = ["python", file_path]
+            if "conformer_energies.py" in file_path:
+                cmd.append("--filename")
+                mol_file = get_data_file_path("molecules/ruxolitinib_conformers.sdf")
+                cmd.append(mol_file)
+            try:
+                subprocess.check_call(cmd)
+            except subprocess.CalledProcessError:
+                raise Exception(f"Example {file_path} failed")
 
 
 def run_script_str(script_str):
@@ -62,34 +65,27 @@ def run_script_str(script_str):
             raise Exception(f"The following script failed:\n{script_str}")
 
 
-def find_examples():
-    """Find all examples in the examples folder.
+def find_example_scripts():
+    """Find all Python scripts, excluding Jupyter notebooks, in the examples folder.
 
     Returns
     -------
     example_file_paths : List[str]
-        List of python script to execute.
+        List of full paths to python scripts to execute.
     """
-    slow_examples = {os.path.join("SMIRNOFF_comparison", "compare_set_energies.py")}
-    examples_dir_path = os.path.join(ROOT_DIR_PATH, "examples")
+    examples_dir_path = ROOT_DIR_PATH.joinpath("examples")
 
-    requires_rdkit = {os.path.join("conformer_energies", "conformer_energies.py")}
+    # Examples that require RDKit
+    rdkit_examples = {
+        examples_dir_path.joinpath("conformer_energies/conformer_energies.py"),
+    }
 
     example_file_paths = []
-    for example_file_path in glob.glob(os.path.join(examples_dir_path, "*", "*.py")):
-        example_file_path = os.path.relpath(example_file_path)
-        example_file_paths.append(example_file_path)
+    for example_file_path in examples_dir_path.glob("*/*.py"):
         if not RDKIT_AVAILABLE:
-            for rdkit_example in requires_rdkit:
-                if rdkit_example in example_file_path:
-                    example_file_paths.remove(example_file_path)
-        # Check if this is a slow test.
-        for slow_example in slow_examples:
-            if slow_example in example_file_path:
-                # This is a slow example.
-                example_file_path = pytest.param(
-                    example_file_path, marks=pytest.mark.slow
-                )
+            if example_file_path in rdkit_examples:
+                continue
+        example_file_paths.append(example_file_path.as_posix())
     return example_file_paths
 
 
@@ -101,8 +97,8 @@ def find_readme_examples():
     readme_examples : List[str]
         The list of Python scripts included in the README.md files.
     """
-    readme_file_path = os.path.join(ROOT_DIR_PATH, "README.md")
-    with open(readme_file_path, "r") as f:
+    readme_path = ROOT_DIR_PATH.joinpath("README.md")
+    with open(readme_path, "r") as f:
         readme_content = f.read()
     return re.findall("```python(.*?)```", readme_content, flags=re.DOTALL)
 
@@ -118,7 +114,7 @@ def test_readme_examples(readme_example_str):
     run_script_str(readme_example_str)
 
 
-@pytest.mark.parametrize("example_file_path", find_examples())
+@pytest.mark.parametrize("example_file_path", find_example_scripts())
 def test_examples(example_file_path):
     """Test that the example run without errors."""
     run_script_file(example_file_path)
