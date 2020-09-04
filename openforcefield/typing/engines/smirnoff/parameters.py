@@ -437,6 +437,14 @@ class IndexedParameterAttribute(ParameterAttribute):
         return value
 
 
+class MappedParameterAttribute(ParameterAttribute):
+    def _convert_and_validate(self, instance, value):
+        if self._is_valid_default(value):
+            return value
+        static_converter = functools.partial(self._call_converter, instance=instance)
+        value = ValidatedDict(value, converter=[self._validate_units, static_converter])
+        return value
+
 class IndexedMappedParameterAttribute(ParameterAttribute):
     """The attribute of a parameter with an unspecified number of terms, where
     each term is a mapping.
@@ -689,6 +697,8 @@ class _ParameterAttributeHandler:
             smirnoff_data, indexed_mapped_attr_lengths
         )
 
+        smirnoff_data = self._process_mapped_attributes(smirnoff_data)
+
         # Check for missing required arguments.
         given_attributes = set(smirnoff_data.keys())
         required_attributes = set(self._get_required_parameter_attributes().keys())
@@ -715,6 +725,22 @@ class _ParameterAttributeHandler:
                     "'allow_cosmetic_attributes=True'"
                 )
                 raise SMIRNOFFSpecError(msg)
+
+    def _process_mapped_attributes(self, smirnoff_data):
+        kwargs = list(smirnoff_data.keys())
+        for kwarg in kwargs:
+            attr_name, key = self._split_attribute_mapping(kwarg)
+
+            # Check if this is a mapped attribute
+            if key is not None and attr_name in self._get_mapped_parameter_attributes():
+                if attr_name not in smirnoff_data:
+                    smirnoff_data[attr_name] = dict()
+
+                smirnoff_data[attr_name][key] = smirnoff_data[kwarg]
+                del smirnoff_data[kwarg]
+
+        # TODO: Sort?
+        return smirnoff_data
 
     def _process_indexed_mapped_attributes(self, smirnoff_data):
         # TODO: construct data structure for holding indexed_mapped attrs, which
@@ -1105,6 +1131,28 @@ class _ParameterAttributeHandler:
 
         return attr_name, index, key
 
+    @staticmethod
+    def _split_attribute_mapping(item):
+        """Split the attribute name from the and its mapping.
+
+        For example, the method takes 'k_foo2' and returns the tuple ('k_foo', 2).
+        If attribute_name doesn't end with an integer, it returns (item, None).
+
+        """
+        # TODO: Can these three splitting functions be collapsed down into one?
+        # Match any number (\d+) at the end of the string ($).
+        map_match = r"\d+$"
+
+        match_mapping = re.search(map_match, item)
+        if match_mapping is None:
+            return item, None
+
+        key = match_mapping.group()
+        attr_name = item[: -len(key)]
+        key = int(key)
+
+        return attr_name, key
+
     @classmethod
     def _get_parameter_attributes(cls, filter=None):
         """Return all the attributes of the parameters.
@@ -1168,6 +1216,13 @@ class _ParameterAttributeHandler:
         """Shortcut to retrieve only IndexedParameterAttributes."""
         return cls._get_parameter_attributes(
             filter=lambda x: isinstance(x, IndexedParameterAttribute)
+        )
+
+    @classmethod
+    def _get_mapped_parameter_attributes(cls):
+        """Shortcut to retrieve only IndexedParameterAttributes."""
+        return cls._get_parameter_attributes(
+            filter=lambda x: isinstance(x, MappedParameterAttribute)
         )
 
     @classmethod
@@ -2311,7 +2366,7 @@ class BondHandler(ParameterHandler):
         )
 
         # fractional bond order params
-        k_bondorder = IndexedMappedParameterAttribute(
+        k_bondorder = MappedParameterAttribute(
             default=None, unit=unit.kilocalorie_per_mole / unit.angstrom ** 2
         )
 
@@ -2404,8 +2459,7 @@ class BondHandler(ParameterHandler):
                 # TODO: Do we really want to allow per-bond specification of interpolation schemes?
                 bond_order = bond.fractional_bond_order
                 if self.fractional_bondorder_interpolation == 'linear':
-                    import ipdb; ipdb.set_trace()
-                    k = ProperTorsionHandler._linear_interpolate_k(
+                    k = _linear_interpolate_k(
                         k_bondorder=bond_params.k_bondorder, fractional_bond_order=bond_order,
                     )
                 else:
@@ -2546,6 +2600,58 @@ class AngleHandler(ParameterHandler):
 
 
 # =============================================================================================
+
+def _linear_interpolate_k(k_bondorder, fractional_bond_order):
+
+    # pre-empt case where no interpolation is necessary
+    if fractional_bond_order in k_bondorder:
+        return k_bondorder[fractional_bond_order]
+
+    # TODO: error out for nonsensical fractional bond orders
+
+    # find the nearest bond_order beneath our fractional value
+    try:
+        below = max(bo for bo in k_bondorder if bo < fractional_bond_order)
+    except ValueError:
+        below = None
+    # find the nearest bond_order above our fractional value
+    try:
+        above = min(bo for bo in k_bondorder if bo > fractional_bond_order)
+    except ValueError:
+        above = None
+
+    # handle case where we can clearly interpolate
+    if (above is not None) and (below is not None):
+        return k_bondorder[below] + (k_bondorder[above] - k_bondorder[below]) * (
+                (fractional_bond_order - below) / (above - below)
+        )
+
+    # error if we can't hope to interpolate at all
+    elif (above is None) and (below is None):
+        raise NotImplementedError(
+            f"Failed to find interpolation references for "
+            f"`fractional bond order` '{fractional_bond_order}', "
+            f"with `k_bond_order` '{k_bondorder}'"
+        )
+
+    # extrapolate for fractional bond orders below our lowest defined bond order
+    elif below is None:
+        bond_orders = sorted(k_bondorder)
+        k = k_bondorder[bond_orders[0]] - (
+                (k_bondorder[bond_orders[1]] - k_bondorder[bond_orders[0]])
+                / (bond_orders[1] - bond_orders[0])
+        ) * (bond_orders[0] - fractional_bond_order)
+        return k
+
+    # extrapolate for fractional bond orders above our highest defined bond order
+    elif above is None:
+        bond_orders = sorted(k_bondorder)
+        k = k_bondorder[bond_orders[-1]] + (
+                (k_bondorder[bond_orders[-1]] - k_bondorder[bond_orders[-2]])
+                / (bond_orders[-1] - bond_orders[-2])
+        ) * (fractional_bond_order - bond_orders[-1])
+        return k
+
 
 # TODO: This is technically a validator, not a converter, but ParameterAttribute doesn't support them yet (it'll be easy if we switch to use the attrs library).
 def _allow_only(allowed_values):
@@ -2840,7 +2946,7 @@ class ProperTorsionHandler(ParameterHandler):
             # scale k based on the bondorder of the central bond
             if self.fractional_bondorder_interpolation == "linear":
                 # we only interpolate on k
-                k = self._linear_interpolate_k(
+                k = _linear_interpolate_k(
                     k_bondorder, central_bond.fractional_bond_order
                 )
             else:
@@ -2860,60 +2966,6 @@ class ProperTorsionHandler(ParameterHandler):
                 phase,
                 k / idivf,
             )
-
-    @staticmethod
-    def _linear_interpolate_k(k_bondorder, fractional_bond_order):
-
-        # pre-empt case where no interpolation is necessary
-        if fractional_bond_order in k_bondorder:
-            return k_bondorder[fractional_bond_order]
-
-        # TODO: error out for nonsensical fractional bond orders
-
-        # find the nearest bond_order beneath our fractional value
-        try:
-            below = max(bo for bo in k_bondorder if bo < fractional_bond_order)
-        except ValueError:
-            below = None
-
-        # find the nearest bond_order above our fractional value
-        try:
-            above = min(bo for bo in k_bondorder if bo > fractional_bond_order)
-        except ValueError:
-            above = None
-
-        # handle case where we can clearly interpolate
-        if (above is not None) and (below is not None):
-            return k_bondorder[below] + (k_bondorder[above] - k_bondorder[below]) * (
-                (fractional_bond_order - below) / (above - below)
-            )
-
-        # error if we can't hope to interpolate at all
-        elif (above is None) and (below is None):
-            raise NotImplementedError(
-                f"Failed to find interpolation references for "
-                f"`fractional bond order` '{fractional_bond_order}', "
-                f"with `k_bond_order` '{k_bondorder}'"
-            )
-
-        # extrapolate for fractional bond orders below our lowest defined bond order
-        elif below is None:
-            bond_orders = sorted(k_bondorder)
-            k = k_bondorder[bond_orders[0]] - (
-                (k_bondorder[bond_orders[1]] - k_bondorder[bond_orders[0]])
-                / (bond_orders[1] - bond_orders[0])
-            ) * (bond_orders[0] - fractional_bond_order)
-            return k
-
-        # extrapolate for fractional bond orders above our highest defined bond order
-        elif above is None:
-            bond_orders = sorted(k_bondorder)
-            k = k_bondorder[bond_orders[-1]] + (
-                (k_bondorder[bond_orders[-1]] - k_bondorder[bond_orders[-2]])
-                / (bond_orders[-1] - bond_orders[-2])
-            ) * (fractional_bond_order - bond_orders[-1])
-            return k
-
 
 # TODO: There's a lot of duplicated code in ProperTorsionHandler and ImproperTorsionHandler
 class ImproperTorsionHandler(ParameterHandler):

@@ -20,6 +20,7 @@ from simtk import unit
 
 from openforcefield.typing.engines.smirnoff import SMIRNOFFVersionError
 from openforcefield.typing.engines.smirnoff.parameters import (
+    _linear_interpolate_k,
     BondHandler,
     ChargeIncrementModelHandler,
     DuplicateParameterError,
@@ -1087,9 +1088,7 @@ class TestBondType:
             k_bondorder3=k3,
         )
 
-        assert param.k_bondorder1 == k1
-        assert param.k_bondorder2 == k2
-        assert param.k_bondorder3 == k3
+        assert param.k_bondorder == {1: k1, 2: k2, 3: k3}
 
     def test_bondtype_missing_params(self):
         """
@@ -1538,7 +1537,7 @@ class TestProperTorsionHandler:
             2: 1.8 * unit.kilocalorie_per_mole,
         }
 
-        k = ProperTorsionHandler._linear_interpolate_k(
+        k = _linear_interpolate_k(
             k_bondorder, fractional_bond_order
         )
         assert_almost_equal(k / k.unit, k_interpolated)
@@ -1557,7 +1556,7 @@ class TestProperTorsionHandler:
             3: 2.5 * unit.kilocalorie_per_mole,
         }
 
-        k = ProperTorsionHandler._linear_interpolate_k(
+        k = _linear_interpolate_k(
             k_bondorder, fractional_bond_order
         )
         assert_almost_equal(k / k.unit, k_interpolated)
@@ -1572,7 +1571,7 @@ class TestProperTorsionHandler:
         }
 
         fractional_bond_order = 0.2
-        k = ProperTorsionHandler._linear_interpolate_k(
+        k = _linear_interpolate_k(
             k_bondorder, fractional_bond_order
         )
 
