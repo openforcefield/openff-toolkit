@@ -29,7 +29,7 @@ jobs:
 
     env:
       CI_OS: ${{ matrix.cfg.os }}
-      OPENEYE: ${{ matrix.cfg.openeye }}
+      OPENEYE: ${{ matrix.openeye }}
       PYVER: ${{ matrix.python-version }}
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
       PACKAGE: openforcefield
