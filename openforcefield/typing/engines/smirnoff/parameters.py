@@ -445,6 +445,7 @@ class MappedParameterAttribute(ParameterAttribute):
         value = ValidatedDict(value, converter=[self._validate_units, static_converter])
         return value
 
+
 class IndexedMappedParameterAttribute(ParameterAttribute):
     """The attribute of a parameter with an unspecified number of terms, where
     each term is a mapping.
@@ -2467,15 +2468,16 @@ class BondHandler(ParameterHandler):
 
             length = bond_params.length
 
-            if getattr(bond_params, 'k', None) is not None:
+            if getattr(bond_params, "k", None) is not None:
                 k = bond_params.k
             else:
                 # Interpolate k using fractional bond orders
                 # TODO: Do we really want to allow per-bond specification of interpolation schemes?
                 bond_order = bond.fractional_bond_order
-                if self.fractional_bondorder_interpolation == 'linear':
+                if self.fractional_bondorder_interpolation == "linear":
                     k = _linear_interpolate_k(
-                        k_bondorder=bond_params.k_bondorder, fractional_bond_order=bond_order,
+                        k_bondorder=bond_params.k_bondorder,
+                        fractional_bond_order=bond_order,
                     )
                 else:
                     # TODO: Raise a more specific exception
@@ -2615,6 +2617,7 @@ class AngleHandler(ParameterHandler):
 
 # =============================================================================================
 
+
 def _check_partial_bond_orders_from_molecules_duplicates(pb_mols):
     if len(set(map(Molecule.to_smiles, pb_mols))) < len(pb_mols):
         raise ValueError(
@@ -2690,7 +2693,7 @@ def _linear_interpolate_k(k_bondorder, fractional_bond_order):
     # handle case where we can clearly interpolate
     if (above is not None) and (below is not None):
         return k_bondorder[below] + (k_bondorder[above] - k_bondorder[below]) * (
-                (fractional_bond_order - below) / (above - below)
+            (fractional_bond_order - below) / (above - below)
         )
 
     # error if we can't hope to interpolate at all
@@ -2705,8 +2708,8 @@ def _linear_interpolate_k(k_bondorder, fractional_bond_order):
     elif below is None:
         bond_orders = sorted(k_bondorder)
         k = k_bondorder[bond_orders[0]] - (
-                (k_bondorder[bond_orders[1]] - k_bondorder[bond_orders[0]])
-                / (bond_orders[1] - bond_orders[0])
+            (k_bondorder[bond_orders[1]] - k_bondorder[bond_orders[0]])
+            / (bond_orders[1] - bond_orders[0])
         ) * (bond_orders[0] - fractional_bond_order)
         return k
 
@@ -2714,8 +2717,8 @@ def _linear_interpolate_k(k_bondorder, fractional_bond_order):
     elif above is None:
         bond_orders = sorted(k_bondorder)
         k = k_bondorder[bond_orders[-1]] + (
-                (k_bondorder[bond_orders[-1]] - k_bondorder[bond_orders[-2]])
-                / (bond_orders[-1] - bond_orders[-2])
+            (k_bondorder[bond_orders[-1]] - k_bondorder[bond_orders[-2]])
+            / (bond_orders[-1] - bond_orders[-2])
         ) * (fractional_bond_order - bond_orders[-1])
         return k
 
@@ -2981,6 +2984,7 @@ class ProperTorsionHandler(ParameterHandler):
                 phase,
                 k / idivf,
             )
+
 
 # TODO: There's a lot of duplicated code in ProperTorsionHandler and ImproperTorsionHandler
 class ImproperTorsionHandler(ParameterHandler):

@@ -20,7 +20,6 @@ from simtk import unit
 
 from openforcefield.typing.engines.smirnoff import SMIRNOFFVersionError
 from openforcefield.typing.engines.smirnoff.parameters import (
-    _linear_interpolate_k,
     BondHandler,
     ChargeIncrementModelHandler,
     DuplicateParameterError,
@@ -35,6 +34,7 @@ from openforcefield.typing.engines.smirnoff.parameters import (
     ParameterType,
     ProperTorsionHandler,
     SMIRNOFFSpecError,
+    _linear_interpolate_k,
     _ParameterAttributeHandler,
 )
 from openforcefield.utils import IncompatibleUnitError, detach_units
@@ -1537,9 +1537,7 @@ class TestProperTorsionHandler:
             2: 1.8 * unit.kilocalorie_per_mole,
         }
 
-        k = _linear_interpolate_k(
-            k_bondorder, fractional_bond_order
-        )
+        k = _linear_interpolate_k(k_bondorder, fractional_bond_order)
         assert_almost_equal(k / k.unit, k_interpolated)
 
     @pytest.mark.parametrize(
@@ -1556,9 +1554,7 @@ class TestProperTorsionHandler:
             3: 2.5 * unit.kilocalorie_per_mole,
         }
 
-        k = _linear_interpolate_k(
-            k_bondorder, fractional_bond_order
-        )
+        k = _linear_interpolate_k(k_bondorder, fractional_bond_order)
         assert_almost_equal(k / k.unit, k_interpolated)
 
     def test_linear_interpolate_k_below_zero(self):
@@ -1571,9 +1567,7 @@ class TestProperTorsionHandler:
         }
 
         fractional_bond_order = 0.2
-        k = _linear_interpolate_k(
-            k_bondorder, fractional_bond_order
-        )
+        k = _linear_interpolate_k(k_bondorder, fractional_bond_order)
 
         assert k / k.unit < 0
 
