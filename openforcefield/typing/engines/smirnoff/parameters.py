@@ -2433,6 +2433,17 @@ class BondHandler(ParameterHandler):
         else:
             force = existing[0]
 
+        if "partial_bond_orders_from_molecules" in kwargs:
+            # check whether molecules in the partial_bond_orders_from_molecules
+            # list have any duplicates
+            _check_partial_bond_orders_from_molecules_duplicates(
+                kwargs["partial_bond_orders_from_molecules"]
+            )
+
+            _assign_partial_bond_orders_from_molecules(
+                topology, kwargs["partial_bond_orders_from_molecules"]
+            )
+
         # Add all bonds to the system.
         bond_matches = self.find_matches(topology)
 
@@ -2604,6 +2615,59 @@ class AngleHandler(ParameterHandler):
 
 # =============================================================================================
 
+def _check_partial_bond_orders_from_molecules_duplicates(pb_mols):
+    if len(set(map(Molecule.to_smiles, pb_mols))) < len(pb_mols):
+        raise ValueError(
+            "At least two user-provided fractional bond order "
+            "molecules are isomorphic"
+        )
+
+
+def _assign_partial_bond_orders_from_molecules(topology, pbo_mols):
+    # for each reference molecule in our topology, we'll walk through the provided partial bond order molecules
+    # if we find a match, we'll apply the partial bond orders and skip to the next molecule
+    for ref_mol in topology.reference_molecules:
+        for pbo_mol in pbo_mols:
+            # we are as stringent as we are in the ElectrostaticsHandler
+            # TODO: figure out whether bond order matching is redundant with aromatic matching
+            isomorphic, topology_atom_map = Molecule.are_isomorphic(
+                ref_mol,
+                pbo_mol,
+                return_atom_map=True,
+                aromatic_matching=True,
+                formal_charge_matching=True,
+                bond_order_matching=True,
+                atom_stereochemistry_matching=True,
+                bond_stereochemistry_matching=True,
+            )
+
+            # if matching, assign bond orders and skip to next molecule
+            # first match wins
+            if isomorphic:
+                # walk through bonds on reference molecule
+                for bond in ref_mol.bonds:
+                    # use atom mapping to translate to pbo_molecule bond
+                    pbo_bond = pbo_mol.get_bond_between(
+                        topology_atom_map[bond.atom1_index],
+                        topology_atom_map[bond.atom2_index],
+                    )
+                    # extract fractional bond order
+                    # assign fractional bond order to reference molecule bond
+                    if pbo_bond.fractional_bond_order is None:
+                        raise ValueError(
+                            f"Molecule '{ref_mol}' was requested to be parameterized "
+                            f"with user-provided fractional bond orders from '{pbo_mol}', but not "
+                            "all bonds were provided with `fractional_bond_order` specified"
+                        )
+
+                    bond.fractional_bond_order = pbo_bond.fractional_bond_order
+
+                break
+            # not necessary, but explicit
+            else:
+                continue
+
+
 def _linear_interpolate_k(k_bondorder, fractional_bond_order):
 
     # pre-empt case where no interpolation is necessary
@@ -2752,58 +2816,6 @@ class ProperTorsionHandler(ParameterHandler):
             tolerance_attrs=float_attrs_to_compare,
         )
 
-    def check_partial_bond_orders_from_molecules_duplicates(self, pb_mols):
-        if len(set(map(Molecule.to_smiles, pb_mols))) < len(pb_mols):
-            raise ValueError(
-                "At least two user-provided fractional bond order "
-                "molecules are isomorphic"
-            )
-
-    def assign_partial_bond_orders_from_molecules(self, topology, pbo_mols):
-
-        # for each reference molecule in our topology, we'll walk through the provided partial bond order molecules
-        # if we find a match, we'll apply the partial bond orders and skip to the next molecule
-        for ref_mol in topology.reference_molecules:
-            for pbo_mol in pbo_mols:
-                # we are as stringent as we are in the ElectrostaticsHandler
-                # TODO: figure out whether bond order matching is redundant with aromatic matching
-                isomorphic, topology_atom_map = Molecule.are_isomorphic(
-                    ref_mol,
-                    pbo_mol,
-                    return_atom_map=True,
-                    aromatic_matching=True,
-                    formal_charge_matching=True,
-                    bond_order_matching=True,
-                    atom_stereochemistry_matching=True,
-                    bond_stereochemistry_matching=True,
-                )
-
-                # if matching, assign bond orders and skip to next molecule
-                # first match wins
-                if isomorphic:
-                    # walk through bonds on reference molecule
-                    for bond in ref_mol.bonds:
-                        # use atom mapping to translate to pbo_molecule bond
-                        pbo_bond = pbo_mol.get_bond_between(
-                            topology_atom_map[bond.atom1_index],
-                            topology_atom_map[bond.atom2_index],
-                        )
-                        # extract fractional bond order
-                        # assign fractional bond order to reference molecule bond
-                        if pbo_bond.fractional_bond_order is None:
-                            raise ValueError(
-                                f"Molecule '{ref_mol}' was requested to be parameterized "
-                                f"with user-provided fractional bond orders from '{pbo_mol}', but not "
-                                "all bonds were provided with `fractional_bond_order` specified"
-                            )
-
-                        bond.fractional_bond_order = pbo_bond.fractional_bond_order
-
-                    break
-                # not necessary, but explicit
-                else:
-                    continue
-
     def create_force(self, system, topology, **kwargs):
         # force = super(ProperTorsionHandler, self).create_force(system, topology, **kwargs)
         existing = [system.getForce(i) for i in range(system.getNumForces())]
@@ -2820,11 +2832,11 @@ class ProperTorsionHandler(ParameterHandler):
         if "partial_bond_orders_from_molecules" in kwargs:
             # check whether molecules in the partial_bond_orders_from_molecules
             # list have any duplicates
-            self.check_partial_bond_orders_from_molecules_duplicates(
+            _check_partial_bond_orders_from_molecules_duplicates(
                 kwargs["partial_bond_orders_from_molecules"]
             )
 
-            self.assign_partial_bond_orders_from_molecules(
+            _assign_partial_bond_orders_from_molecules(
                 topology, kwargs["partial_bond_orders_from_molecules"]
             )
 
