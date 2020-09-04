@@ -2371,18 +2371,19 @@ class BondHandler(ParameterHandler):
         )
 
         def __init__(self, **kwargs):
-            found_k = "k" in kwargs.keys()
-            found_k_bondorder = any(["k_bondorder" in val for val in kwargs.keys()])
-            if found_k_bondorder:
-                if found_k:
+            has_k = "k" in kwargs.keys()
+            has_k_bondorder = any(["k_bondorder" in key for key in kwargs.keys()])
+
+            # Are these errors too general? What about ParametersMissingError/ParametersOverspecifiedError?
+            if has_k:
+                if has_k_bondorder:
                     raise SMIRNOFFSpecError(
-                        "k and k_bondorder1/k_bondorder2/etc. cannot specified simultaneously."
+                        "BOTH k and k_bondorder* cannot be specified simultaneously."
                     )
             else:
-                if not found_k:
-                    # Is this error too general? What about a MissingParametersError
+                if not has_k_bondorder:
                     raise SMIRNOFFSpecError(
-                        "Either k or k_bondorder1/k_bondorder2/etc. must be specified."
+                        "Either k or k_bondorder* must be specified"
                     )
 
             super().__init__(**kwargs)
@@ -2453,8 +2454,11 @@ class BondHandler(ParameterHandler):
                 *match.reference_atom_indices
             )
 
-            if getattr(bond_params, 'k', None) is None and getattr(bond_params, "k_bondorder1", None) is not None:
+            length = bond_params.length
 
+            if getattr(bond_params, 'k', None) is not None:
+                k = bond_params.k
+            else:
                 # Interpolate k using fractional bond orders
                 # TODO: Do we really want to allow per-bond specification of interpolation schemes?
                 bond_order = bond.fractional_bond_order
@@ -2463,13 +2467,12 @@ class BondHandler(ParameterHandler):
                         k_bondorder=bond_params.k_bondorder, fractional_bond_order=bond_order,
                     )
                 else:
+                    # TODO: Raise a more specific exception
                     raise Exception(
                         "Fractional bondorder treatment {} is not implemented.".format(
                             self.fractional_bondorder_method
                         )
                     )
-            else:
-                [k, length] = [bond_params.k, bond_params.length]
 
             is_constrained = topology.is_constrained(*topology_atom_indices)
 
