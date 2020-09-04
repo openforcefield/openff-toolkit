@@ -82,6 +82,14 @@ class SMIRNOFFSpecError(MessageException):
     pass
 
 
+class FractionalBondOrderMethodUnsupportedError(MessageException):
+    """
+    Exception for when a n unsupported fractional bond order assignment method is called.
+    """
+
+    # TODO: Could this just be SMIRNOFFSpecError? Or inherit from it
+
+
 class IncompatibleParameterError(MessageException):
     """
     Exception for when a set of parameters is scientifically/technically incompatible with another
@@ -2485,7 +2493,7 @@ class BondHandler(ParameterHandler):
                     )
                 else:
                     # TODO: Raise a more specific exception
-                    raise Exception(
+                    raise FractionalBondOrderMethodUnsupportedError(
                         "Fractional bondorder treatment {} is not implemented.".format(
                             self.fractional_bondorder_method
                         )
@@ -2972,7 +2980,7 @@ class ProperTorsionHandler(ParameterHandler):
                     k_bondorder, central_bond.fractional_bond_order
                 )
             else:
-                raise Exception(
+                raise FractionalBondOrderMethodUnsupportedError(
                     "Fractional bondorder treatment {} is not implemented.".format(
                         self.fractional_bondorder_method
                     )
