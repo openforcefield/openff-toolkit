@@ -895,6 +895,7 @@ class _ParameterAttributeHandler:
 
         # Start populating a dict of the attribs.
         indexed_attribs = set(self._get_indexed_parameter_attributes().keys())
+        mapped_attribs = set(self._get_mapped_parameter_attributes().keys())
         indexed_mapped_attribs = set(
             self._get_indexed_mapped_parameter_attributes().keys()
         )
@@ -914,6 +915,9 @@ class _ParameterAttributeHandler:
             elif attrib_name in indexed_attribs:
                 for idx, val in enumerate(attrib_value):
                     smirnoff_dict[attrib_name + str(idx + 1)] = val
+            elif attrib_name in mapped_attribs:
+                for key, val in attrib_value.items():
+                    smirnoff_dict[f"{attrib_name}{str(key)}"] = val
             else:
                 smirnoff_dict[attrib_name] = attrib_value
 
