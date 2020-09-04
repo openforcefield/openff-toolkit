@@ -107,6 +107,14 @@ jobs:
           git checkout tags/$LATEST_TAG
           git log -1 | cat
 
+          pwd
+          ls
+
+          if [[ "$OPENEYE" == true ]]; then
+            python -c "import openforcefield; print(openforcefield.__file__)"
+            python -c "import openeye; print(openeye.oechem.OEChemIsLicensed())"
+          fi
+
           PYTEST_ARGS=" -r fE --tb=short"
           PYTEST_ARGS+=" --ignore=openforcefield/tests/test_links.py"
           # Can be dropped in the release after 0.7.1, in which readme links were tested in test_examples.py
