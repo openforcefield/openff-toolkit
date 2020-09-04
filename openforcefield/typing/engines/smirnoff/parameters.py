@@ -2305,14 +2305,13 @@ class BondHandler(ParameterHandler):
         _VALENCE_TYPE = "Bond"
         _ELEMENT_NAME = "Bond"
 
-        # These attributes may be indexed (by integer bond order) if fractional bond orders are used.
         length = ParameterAttribute(unit=unit.angstrom)
         k = ParameterAttribute(
             default=None, unit=unit.kilocalorie_per_mole / unit.angstrom ** 2
         )
 
         # fractional bond order params
-        k_bondorder = IndexedParameterAttribute(
+        k_bondorder = IndexedMappedParameterAttribute(
             default=None, unit=unit.kilocalorie_per_mole / unit.angstrom ** 2
         )
 
@@ -2400,21 +2399,21 @@ class BondHandler(ParameterHandler):
             )
 
             if getattr(bond_params, 'k', None) is None and getattr(bond_params, "k_bondorder1", None) is not None:
-                raise NotImplementedError(
-                    "Partial bondorder treatment is not implemented for bonds."
-                )
 
-                # Interpolate using fractional bond orders
+                # Interpolate k using fractional bond orders
                 # TODO: Do we really want to allow per-bond specification of interpolation schemes?
-                # order = bond.fractional_bond_order
-                # if self.fractional_bondorder_interpolation == 'interpolate-linear':
-                #    k = bond_params.k[0] + (bond_params.k[1] - bond_params.k[0]) * (order - 1.)
-                #    length = bond_params.length[0] + (
-                #        bond_params.length[1] - bond_params.length[0]) * (order - 1.)
-                # else:
-                #    raise Exception(
-                #        "Partial bondorder treatment {} is not implemented.".
-                #        format(self.fractional_bondorder_method))
+                bond_order = bond.fractional_bond_order
+                if self.fractional_bondorder_interpolation == 'linear':
+                    import ipdb; ipdb.set_trace()
+                    k = ProperTorsionHandler._linear_interpolate_k(
+                        k_bondorder=bond_params.k_bondorder, fractional_bond_order=bond_order,
+                    )
+                else:
+                    raise Exception(
+                        "Fractional bondorder treatment {} is not implemented.".format(
+                            self.fractional_bondorder_method
+                        )
+                    )
             else:
                 [k, length] = [bond_params.k, bond_params.length]
 
