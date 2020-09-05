@@ -227,16 +227,6 @@ class ImproperDict(_TransformedDict):
 # =============================================================================================
 
 
-class TopologyParticle(Serializable):
-    # TODO: Should this be added?
-    pass
-
-
-# =============================================================================================
-# TopologyAtom
-# =============================================================================================
-
-
 class TopologyAtom(Serializable):
     """
     A TopologyAtom is a lightweight data structure that represents a single openforcefield.topology.molecule.Atom in
@@ -1002,7 +992,6 @@ class TopologyMolecule:
             ref_atom = self._reference_molecule.atoms[ref_mol_atom_index]
             yield TopologyAtom(ref_atom, self)
 
-        # TODO: Add ordering scheme here
         for vsite in self.reference_molecule.virtual_sites:
             tvsite = TopologyVirtualSite(vsite, self)
             for vptl in vsite.particles:
