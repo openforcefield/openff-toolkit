@@ -17,10 +17,12 @@ This adds the following command line options.
 # GLOBAL IMPORTS
 # =============================================================================================
 
-import pytest
 import logging
 
+import pytest
+
 logger = logging.getLogger(__name__)
+
 
 def pytest_configure(config):
     """
@@ -93,7 +95,9 @@ def pytest_addoption(parser):
             "--runslow", action="store_true", default=False, help="run slow tests"
         )
     except ValueError:
-        logger.warning("Option --runslow already added elsewhere (from a plugin possibly?). Skipping...")
+        logger.warning(
+            "Option --runslow already added elsewhere (from a plugin possibly?). Skipping..."
+        )
 
     try:
         parser.addoption(
@@ -103,7 +107,9 @@ def pytest_addoption(parser):
             help="fail work in progress tests",
         )
     except ValueError:
-        logger.warning("Option --failwip already added elsewhere (from a plugin possibly?). Skipping...")
+        logger.warning(
+            "Option --failwip already added elsewhere (from a plugin possibly?). Skipping..."
+        )
 
 
 def pytest_collection_modifyitems(config, items):
