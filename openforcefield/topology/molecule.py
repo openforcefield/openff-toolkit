@@ -689,7 +689,8 @@ class VirtualSite(Particle):
             return False
         same_name = self.name == other.name
         same_indices = self.atoms == other.atoms
-        same_vsite = same_name and same_indices
+        same_mol = self.molecule is other.molecule
+        same_vsite = same_name and same_indices and same_mol
         return same_vsite
 
     def to_dict(self):
