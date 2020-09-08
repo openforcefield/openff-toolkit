@@ -285,7 +285,7 @@ This decoupling of how parameters are assigned for each term provides a great de
 
 Below, we describe the specification for each force field term definition using the XML representation of a SMIRNOFF force field.
 
-As an example of a complete SMIRNOFF force field specification, see the prototype [SMIRNOFF99Frosst offxml](https://github.com/openforcefield/openforcefield/blob/master/openforcefield/data/test_forcefields/smirnoff99Frosst.offxml).
+As an example of a complete SMIRNOFF force field specification, see [a recent force field in the "Parsley" line (openff-1.2.0.offxml)](https://github.com/openforcefield/openforcefields/blob/1.2.0/openforcefields/offxml/openff-1.2.0.offxml).
 
 .. note :: Not all parameter sections *must* be specified in a SMIRNOFF force field. A wide variety of force field terms are provided in the specification, but a particular force field only needs to define a subset of those terms.
 
@@ -710,14 +710,14 @@ molecule = Molecule.from_file('imatinib.mol2')
 # Create a Topology specifying the system to be parameterized containing just the molecule
 topology = molecule.to_topology()
 
-# Load the smirnoff99Frosst forcefield
-from openforcefield.typing.engines import smirnoff
-forcefield = smirnoff.ForceField('test_forcefields/smirnoff99Frosst.offxml')
+# Load the first release of the "Parsley" forcefield
+from openforcefield.typing.engines.smirnoff import ForceField
+forcefield = ForceField('openff-1.0.0.offxml')
 
 # Create an OpenMM System from the topology
 system = forcefield.create_openmm_system(topology)
 ```
-See `examples/SMIRNOFF_simulation/` for an extension of this example illustrating to simulate this molecule in the gas phase.
+See `examples/SMIRNOFF_simulation/` for an extension of this example illustrating how to simulate this molecule in the gas phase.
 
 The `topology` object provided to `create_openmm_system()` can contain any number of molecules of different types, including biopolymers, ions, buffer molecules, or solvent molecules.
 The openforcefield toolkit provides a number of convenient methods for importing or constructing topologies given PDB files, Sybyl mol2 files, SDF files, SMILES strings, and IUPAC names; see the [toolkit documentation](https://open-forcefield-toolkit.readthedocs.io/) for more information.
@@ -726,7 +726,7 @@ Notably, this `topology` object differs from those found in [OpenMM](http://docs
 ### Using SMIRNOFF small molecule forcefields with traditional biopolymer force fields
 
 While SMIRNOFF format force fields can cover a wide range of biological systems, our initial focus is on gneral small molecule force fields, meaning that users may have considerable interest in combining SMIRNOFF small molecule parameters to systems in combination with traditional biopolymer parameters from conventional force fields, such as the AMBER family of protein/nucleic acid force fields.
-Thus, we provide an example of setting up a mixed protein-ligand system in [examples/mixedFF_structure](examples/mixedFF_structure), where an AMBER family force field is used for a protein and smirnoff99Frosst for a small molecule.
+Thus, we provide an example of setting up a mixed protein-ligand system in [examples/using_smirnoff_with_amber_protein_forcefield](examples/using_smirnoff_with_amber_protein_forcefield), where an AMBER family force field is used for a protein and the original "Parsley" force field (``openff-1.0.0``) for a small molecule.
 
 ### The optional `id` and `parent_id` attributes and other XML attributes
 
