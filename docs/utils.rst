@@ -12,18 +12,20 @@ These toolkit wrappers are generally used through a :class:`ToolkitRegistry`, wh
 
 .. code-block:: python
 
-    from openforcefield.utils.toolkits import ToolkitRegistry, OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper
-    toolkit_precedence = [OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper]
-    [toolkit.is_available() for toolkit in toolkit_precedence]
-    toolkit_registry = ToolkitRegistry(toolkit_precedence=toolkit_precedence)
-    toolkit_registry.registered_toolkits
+    >>> from openforcefield.utils.toolkits import ToolkitRegistry, OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper
+    >>> toolkit_registry = ToolkitRegistry()
+    >>> toolkit_precedence = [OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper]
+    >>> [ toolkit_registry.register_toolkit(toolkit) for toolkit in toolkit_precedence if toolkit.is_available() ]
+    [None, None, None]
 
 The toolkit wrappers can then be accessed through the registry:
 
 .. code-block:: python
 
-    molecule = Molecule.from_smiles('Cc1ccccc1')
-    smiles = toolkit_registry.call('to_smiles', molecule)
+    >>> from openforcefield.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY as toolkit_registry
+    >>> from openforcefield.topology.molecule import Molecule
+    >>> molecule = Molecule.from_smiles('Cc1ccccc1')
+    >>> smiles = toolkit_registry.call('to_smiles', molecule)
 
 The order of toolkits, as specified in ``toolkit_precedence`` above, determines the order in which
 the called method is resolved, i.e. if the toolkit with highest precedence has a ``to_smiles``
@@ -35,8 +37,9 @@ Alternatively, the global toolkit registry (which will attempt to register any a
 
 .. code-block:: python
 
-    from openforcefield.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY as toolkit_registry
-    toolkit_registry.registered_toolkits
+    >>> from openforcefield.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY as toolkit_registry
+    >>> len(toolkit_registry.registered_toolkits)
+    4
 
 Individual toolkits can be registered or deregistered to control the backend that ToolkitRegistry calls resolve to. This can
 be useful for debugging and exploring subtley different behavior between toolkit wrappers.
@@ -54,12 +57,17 @@ be explored by selecting which toolkit(s) are and are not registered.
 
 .. code-block:: python
 
-    from openforcefield.utils.toolkits import ToolkitRegistry, OpenEyeToolkitWrapper, RDKitToolkitWrapper
-    toolkit_registry = ToolkitRegistry(toolkit_precedence=[OpenEyeToolkitWrapper, RDKitToolkitWrapper])
-    smiles_via_openeye = toolkit_registry.call('to_smiles', molecule)
-    toolkit_registry.deregister_toolkit(OpenEyeToolkitWrapper)
-    smiles_via_rdkit = toolkit_registry.call('to_smiles', molecule)
+    >>> from openforcefield.utils.toolkits import OpenEyeToolkitWrapper, GLOBAL_TOOLKIT_REGISTRY as toolkit_registry
+    >>> from openforcefield.topology.molecule import Molecule
+    >>> molecule = Molecule.from_smiles('Cc1ccccc1')
+    >>> smiles_via_openeye = toolkit_registry.call('to_smiles', molecule)
+    >>> print(smiles_via_openeye)
+    [H]c1c(c(c(c(c1[H])[H])C([H])([H])[H])[H])[H]
 
+    >>> toolkit_registry.deregister_toolkit(OpenEyeToolkitWrapper)
+    >>> smiles_via_rdkit = toolkit_registry.call('to_smiles', molecule)
+    >>> print(smiles_via_rdkit)
+    [H][c]1[c]([H])[c]([H])[c]([C]([H])([H])[H])[c]([H])[c]1[H]
 
 .. currentmodule:: openforcefield.utils.toolkits
 .. autosummary::
