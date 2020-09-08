@@ -171,10 +171,16 @@ class TestTopology(TestCase):
         good_box_vectors = unit.Quantity(np.eye(3) * 20 * unit.angstrom)
         bad_shape_vectors = unit.Quantity(np.ones(2) * 20 * unit.angstrom)
         bad_dims_vectors = unit.Quantity(np.ones(3) * 20 * unit.nanometer)
+        bad_units_vectors = unit.Quantity(np.ones(3) * 20 * unit.year)
         unitless_vectors = np.array([10, 20, 30])
         assert topology.box_vectors is None
 
-        for bad_vectors in [bad_shape_vectors, bad_dims_vectors, unitless_vectors]:
+        for bad_vectors in [
+            bad_shape_vectors,
+            bad_dims_vectors,
+            bad_units_vectors,
+            unitless_vectors,
+        ]:
             with self.assertRaises(InvalidBoxVectorsError):
                 topology.box_vectors = bad_vectors
             assert topology.box_vectors is None
