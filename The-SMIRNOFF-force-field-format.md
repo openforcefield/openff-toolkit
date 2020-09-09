@@ -1,10 +1,10 @@
 # The SMIRks Native Open Force Field (SMIRNOFF) specification
 
-SMIRNOFF is a specification for encoding molecular mechanics force fields from the [Open Force Field Initiative](http://openforcefield.org) based on direct chemical perception using the broadly-supported [SMARTS](http://www.daylight.com/dayhtml/doc/theory/theory.smarts.html) language, utilizing atom tagging extensions from [SMIRKS](http://www.daylight.com/dayhtml/doc/theory/theory.smirks.html).
+SMIRNOFF is a specification for encoding molecular mechanics force fields from the [Open Force Field Initiative](https://openforcefield.org) based on direct chemical perception using the broadly-supported [SMARTS](https://www.daylight.com/dayhtml/doc/theory/theory.smarts.html) language, utilizing atom tagging extensions from [SMIRKS](https://www.daylight.com/dayhtml/doc/theory/theory.smirks.html).
 
 ## Authors and acknowledgments
 
-The SMIRNOFF specification was designed by the [Open Force Field Initiative](http://openforcefield.org).
+The SMIRNOFF specification was designed by the [Open Force Field Initiative](https://openforcefield.org).
 
 Primary contributors include:
 * Caitlin C. Bannan (University of California, Irvine) `<bannanc@uci.edu>`
@@ -12,12 +12,12 @@ Primary contributors include:
 * John D. Chodera  (Memorial Sloan Kettering Cancer Center) `<john.chodera@choderalab.org>`
 * David L. Mobley (University of California, Irvine) `<dmobley@uci.edu>`
 
-SMIRNOFF and its reference implementation in the `openforcefield` toolkit was heavily inspired by the [ForceField class](http://docs.openmm.org/latest/api-python/generated/simtk.openmm.app.forcefield.ForceField.html#simtk.openmm.app.forcefield.ForceField) from the [OpenMM](http://openmm.org) molecular simulation package, and its associated [XML format](http://docs.openmm.org/latest/userguide/application.html#writing-the-xml-file), developed by [Peter K. Eastman](https://en.wikipedia.org/wiki/Peter_Eastman) (Stanford University).
+SMIRNOFF and its reference implementation in the `openforcefield` toolkit was heavily inspired by the [ForceField class](https://docs.openmm.org/latest/api-python/generated/simtk.openmm.app.forcefield.ForceField.html#simtk.openmm.app.forcefield.ForceField) from the [OpenMM](https://openmm.org) molecular simulation package, and its associated [XML format](https://docs.openmm.org/latest/userguide/application.html#writing-the-xml-file), developed by [Peter K. Eastman](https://en.wikipedia.org/wiki/Peter_Eastman) (Stanford University).
 
 ## Representations and encodings
 
 A force field in the SMIRNOFF format can be encoded in multiple representations.
-Currently, only an [XML](https://en.wikipedia.org/wiki/XML) representation is supported by the reference implementation of the [openforcefield toolkit](http://github.com/openforcefield/openforcefield).
+Currently, only an [XML](https://en.wikipedia.org/wiki/XML) representation is supported by the reference implementation of the [openforcefield toolkit](https://github.com/openforcefield/openforcefield).
 
 ### XML representation
 
@@ -33,17 +33,17 @@ See [this list of XML and HTML character entity references](https://en.wikipedia
 
 ### Future representations: JSON, MessagePack, YAML, and TOML
 
-We are considering supporting [JSON](https://www.json.org/), [MessagePack](https://msgpack.org/index.html), [YAML](http://yaml.org/), and [TOML](https://github.com/toml-lang/toml) representations as well.
+We are considering supporting [JSON](https://www.json.org/), [MessagePack](https://msgpack.org/index.html), [YAML](https://yaml.org/), and [TOML](https://github.com/toml-lang/toml) representations as well.
 
 ## Reference implementation
 
-A reference implementation of the SMIRNOFF XML specification is provided in the [openforcefield toolkit](http://github.com/openforcefield/openforcefield).
+A reference implementation of the SMIRNOFF XML specification is provided in the [openforcefield toolkit](https://github.com/openforcefield/openforcefield).
 
 ## Support for molecular simulation packages
 
-The reference implementation currently generates parameterized molecular mechanics systems for the GPU-accelerated [OpenMM](http://openmm.org) molecular simulation toolkit.
-Parameterized systems can subsequently be converted for use in other popular molecular dynamics simulation packages (including [AMBER](http://ambermd.org/), [CHARMM](https://www.charmm.org), [NAMD](http://www.ks.uiuc.edu/Research/namd/), [Desmond](https://www.deshawresearch.com/resources_desmond.html), and [LAMMPS](http://lammps.sandia.gov/)) via [ParmEd](http://parmed.github.io/ParmEd) and [InterMol](https://github.com/shirtsgroup/InterMol).
-See [Converting SMIRNOFF parameterized systems to other simulation packages](https://open-forcefield-toolkit.readthedocs.io/en/latest/converting.html) for more details.
+The reference implementation currently generates parameterized molecular mechanics systems for the GPU-accelerated [OpenMM](https://openmm.org) molecular simulation toolkit.
+Parameterized systems can subsequently be converted for use in other popular molecular dynamics simulation packages (including [AMBER](https://ambermd.org/), [CHARMM](https://www.charmm.org), [NAMD](https://www.ks.uiuc.edu/Research/namd/), [Desmond](https://www.deshawresearch.com/resources_desmond.html), and [LAMMPS](https://lammps.sandia.gov/)) via [ParmEd](https://parmed.github.io/ParmEd) and [InterMol](https://github.com/shirtsgroup/InterMol).
+See [the example on using SMIRNOFF in AMBER or GROMACS](https://github.com/openforcefield/openforcefield/blob/master/examples/using_smirnoff_in_amber_or_gromacs/convert_to_amber_gromacs.ipynb) for more details.
 
 ## Basic structure
 
@@ -122,7 +122,7 @@ Under each of these force terms, there are tags for individual parameter lines s
 ```
 The first of these specifies the `smirks` attribute as `[a,A:1]-[#6X4:2]-[a,A:3]`, specifying a SMIRKS pattern that matches three connected atoms specifying an angle.
 This particular SMIRKS pattern matches a tetravalent carbon at the center with single bonds to two atoms of any type.
-This pattern is essentially a [SMARTS](http://www.daylight.com/dayhtml/doc/theory/theory.smarts.html) string with numerical atom tags commonly used in [SMIRKS](http://www.daylight.com/dayhtml/doc/theory/theory.smirks.html) to identify atoms in chemically unique environments---these can be thought of as tagged regular expressions for identifying chemical environments, and atoms within those environments.
+This pattern is essentially a [SMARTS](https://www.daylight.com/dayhtml/doc/theory/theory.smarts.html) string with numerical atom tags commonly used in [SMIRKS](https://www.daylight.com/dayhtml/doc/theory/theory.smirks.html) to identify atoms in chemically unique environments---these can be thought of as tagged regular expressions for identifying chemical environments, and atoms within those environments.
 Here, `[a,A]` denotes any atom---either aromatic (`a`) or aliphatic (`A`), while `[#6X4]` denotes a carbon by element number (`#6`) that with four substituents (`X4`).
 The symbol `-` joining these groups denotes a single bond.
 The strings `:1`, `:2`, and `:2` label these atoms as indices 1, 2, and 3, with 2 being the central atom.
@@ -151,12 +151,12 @@ This behavior is intended for limited use in appending very specific parameters,
 ## Units
 
 To minimize the potential for [unit conversion errors](https://en.wikipedia.org/wiki/Mars_Climate_Orbiter#Cause_of_failure), SMIRNOFF forcefields explicitly specify units in a form readable to both humans and computers for all unit-bearing quantities.
-Allowed values for units are given in [simtk.unit](https://github.com/pandegroup/openmm/blob/topology/wrappers/python/simtk/unit/unit_definitions.py) (though in the future this may change to the more widely-used Python [pint library](https://pint.readthedocs.io/en/latest/)).
+Allowed values for units are given in [simtk.unit](https://github.com/openmm/openmm/blob/master/wrappers/python/simtk/unit/unit_definitions.py) (though in the future this may change to the more widely-used Python [pint library](https://pint.readthedocs.io/en/latest/)).
 For example, for the `angle` (equilibrium angle) and `k` (force constant) parameters in the `<Angle>` example block above, both attributes are specified as a mathematical expression 
 ```XML
    <Angle smirks="[#1:1]-[#6X4:2]-[#1:3]" angle="109.50*degree" k="70.0*kilocalorie_per_mole/radian**2"/>
 ```
-For more information, see the [standard OpenMM unit system](http://docs.openmm.org/latest/userguide/theory.html#units).
+For more information, see the [standard OpenMM unit system](https://docs.openmm.org/latest/userguide/theory.html#units).
 
 ## SMIRNOFF independently applies parameters to each class of potential energy terms
 
@@ -180,7 +180,7 @@ Each top-level tag specifying a class of potential energy terms has an attribute
 Common defaults are defined, but the goal is to eventually allow these to be overridden by alternative choices or even algebraic expressions in the future, once more molecular simulation packages support general expressions.
 We distinguish between functional forms available in all common molecular simulation packages (specified by keywords) and support for general functional forms available in a few packages (especially OpenMM, which supports a flexible set of custom forces defined by algebraic expressions) with an **EXPERIMENTAL** label.
 
-Many of the specific forces are implemented as discussed in the [OpenMM Documentation](http://docs.openmm.org/latest/userguide/theory.html); see especially [Section 19 on Standard Forces](http://docs.openmm.org/latest/userguide/theory.html#standard-forces) for mathematical descriptions of these functional forms.
+Many of the specific forces are implemented as discussed in the [OpenMM Documentation](https://docs.openmm.org/latest/userguide/theory.html); see especially [Section 19 on Standard Forces](https://docs.openmm.org/latest/userguide/theory.html#standard-forces) for mathematical descriptions of these functional forms.
 Some top-level tags provide attributes that modify the functional form used to be consistent with packages such as AMBER or CHARMM.
 
 ## Partial charge and electrostatics models
@@ -193,7 +193,7 @@ Currently, only classical fixed point charge models are supported, but future ex
 A mechanism is provided for specifying library charges that can be applied to molecules or residues that match provided templates.
 Library charges are applied first, and atoms for which library charges are applied will be excluded from alternative charging schemes listed below.
 
-For example, to assign partial charges for a non-terminal ALA residue from the [AMBER ff14SB](http://doi.org/10.1021/acs.jctc.5b00255) parameter set:
+For example, to assign partial charges for a non-terminal ALA residue from the [AMBER ff14SB](https://doi.org/10.1021/acs.jctc.5b00255) parameter set:
 ```XML
 <LibraryCharges version="0.3">
    <!-- match a non-terminal alanine residue with AMBER ff14SB partial charges -->
@@ -208,7 +208,7 @@ If the template matches multiple non-overlapping sets of atoms, all such matches
 If multiple templates match the same set of atoms, the last template specified will be used.
 
 Solvent models or excipients can also have partial charges specified via the `<LibraryCharges>` tag.
-For example, to ensure water molecules are assigned partial charges for [TIP3P](http://www.sklogwiki.org/SklogWiki/index.php/TIP3P_model_of_water) water, we can specify a library charge entry:
+For example, to ensure water molecules are assigned partial charges for [TIP3P](https://www.sklogwiki.org/SklogWiki/index.php/TIP3P_model_of_water) water, we can specify a library charge entry:
 ```XML
 <LibraryCharges version="0.3">
    <!-- TIP3P water oxygen with charge override -->
@@ -225,7 +225,7 @@ For example, to ensure water molecules are assigned partial charges for [TIP3P](
 
 ### `<ChargeIncrementModel>`: Small molecule and fragment charges
 
-In keeping with the AMBER force field philosophy, especially as implemented in small molecule force fields such as [GAFF](http://ambermd.org/antechamber/gaff.html), [GAFF2](https://mulan.swmed.edu/group/gaff.php), and [parm@Frosst](http://www.ccl.net/cca/data/parm_at_Frosst/), partial charges for small molecules are usually assigned using a quantum chemical method (usually a semiempirical method such as [AM1](https://en.wikipedia.org/wiki/Austin_Model_1)) and a [partial charge determination scheme](https://en.wikipedia.org/wiki/Partial_charge) (such as [CM2](http://doi.org/10.1021/jp972682r) or [RESP](http://doi.org/10.1021/ja00074a030)), then subsequently corrected via charge increment rules, as in the highly successful [AM1-BCC](https://dx.doi.org/10.1002/jcc.10128) approach.
+In keeping with the AMBER force field philosophy, especially as implemented in small molecule force fields such as [GAFF](https://ambermd.org/antechamber/gaff.html), [GAFF2](https://mulan.pharmacy.pitt.edu/group/gaff.php), and [parm@Frosst](https://www.ccl.net/cca/data/parm_at_Frosst/), partial charges for small molecules are usually assigned using a quantum chemical method (usually a semiempirical method such as [AM1](https://en.wikipedia.org/wiki/Austin_Model_1)) and a [partial charge determination scheme](https://en.wikipedia.org/wiki/Partial_charge) (such as [CM2](https://doi.org/10.1021/jp972682r) or [RESP](https://doi.org/10.1021/ja00074a030)), then subsequently corrected via charge increment rules, as in the highly successful [AM1-BCC](https://dx.doi.org/10.1002/jcc.10128) approach.
 
 Here is an example:
 ```XML
@@ -258,7 +258,7 @@ Future additions will provide options for intelligently fragmenting large molecu
 
 This tag calculates partial charges using the default settings of the highest-priority cheminformatics toolkit that can perform [AM1-BCC charge assignment](https://docs.eyesopen.com/toolkits/python/quacpactk/molchargetheory.html#am1bcc-charges).
 Currently, if the OpenEye toolkit is licensed and available, this will use QuacPac configured to generate charges using [AM1-BCC ELF10](https://docs.eyesopen.com/toolkits/python/quacpactk/OEProtonClasses/OEAM1BCCELF10Charges.html) for each unique molecule in the topology.
-Otherwise [RDKit](http://rdkit.org/) will be used for initial conformer generation and the [AmberTools antechamber/sqm software](http://ambermd.org/AmberTools.php) will be used for charge calculation.
+Otherwise [RDKit](https://rdkit.org/) will be used for initial conformer generation and the [AmberTools antechamber/sqm software](https://ambermd.org/AmberTools.php) will be used for charge calculation.
 
 If this tag is specified for a force field, conformer generation will be performed regardless of whether conformations of the input molecule were provided.
 If RDKit/AmberTools are used as the toolkit backend for this calculation, only the first conformer is used for AM1-BCC calculation.
@@ -347,8 +347,8 @@ Electrostatic interactions are specified via the `<Electrostatics>` tag.
 <Electrostatics version="0.3" method="PME" scale12="0.0" scale13="0.0" scale14="0.833333" scale15="1.0"/>
 ```
 The `method` attribute specifies the manner in which electrostatic interactions are to be computed:
-* `PME` - [particle mesh Ewald](http://docs.openmm.org/latest/userguide/theory.html#coulomb-interaction-with-particle-mesh-ewald) should be used (DEFAULT); can only apply to periodic systems
-* `reaction-field` - [reaction-field electrostatics](http://docs.openmm.org/latest/userguide/theory.html#coulomb-interaction-with-cutoff) should be used; can only apply to periodic systems
+* `PME` - [particle mesh Ewald](https://docs.openmm.org/latest/userguide/theory.html#coulomb-interaction-with-particle-mesh-ewald) should be used (DEFAULT); can only apply to periodic systems
+* `reaction-field` - [reaction-field electrostatics](https://docs.openmm.org/latest/userguide/theory.html#coulomb-interaction-with-cutoff) should be used; can only apply to periodic systems
 * `Coulomb` - direct Coulomb interactions (with no reaction-field attenuation) should be used
 
 The interaction scaling parameters applied to atoms connected by a few bonds are
@@ -565,10 +565,10 @@ Generalized-Born surface area (GBSA) implicit solvent parameters are optionally 
 
 #### Supported Generalized Born (GB) models
 In the `<GBSA>` tag, `gb_model` selects which GB model is used.
-Currently, this can be selected from a subset of the GBSA models available in [OpenMM](http://docs.openmm.org/latest/userguide/application.html#amber-implicit-solvent):
-* `HCT` : [Hawkins-Cramer-Truhlar](http://docs.openmm.org/latest/userguide/zbibliography.html#hawkins1995) (corresponding to `igb=1` in AMBER): requires parameters `[radius, scale]`
-* `OBC1` : [Onufriev-Bashford-Case](http://docs.openmm.org/latest/userguide/zbibliography.html#onufriev2004) using the GB(OBC)I parameters (corresponding to `igb=2` in AMBER): requires parameters `[radius, scale]`
-* `OBC2` : [Onufriev-Bashford-Case](http://docs.openmm.org/latest/userguide/zbibliography.html#onufriev2004) using the GB(OBC)II parameters (corresponding to `igb=5` in AMBER): requires parameters `[radius, scale]`
+Currently, this can be selected from a subset of the GBSA models available in [OpenMM](https://docs.openmm.org/latest/userguide/application.html#amber-implicit-solvent):
+* `HCT` : [Hawkins-Cramer-Truhlar](https://docs.openmm.org/latest/userguide/zbibliography.html#hawkins1995) (corresponding to `igb=1` in AMBER): requires parameters `[radius, scale]`
+* `OBC1` : [Onufriev-Bashford-Case](https://docs.openmm.org/latest/userguide/zbibliography.html#onufriev2004) using the GB(OBC)I parameters (corresponding to `igb=2` in AMBER): requires parameters `[radius, scale]`
+* `OBC2` : [Onufriev-Bashford-Case](https://docs.openmm.org/latest/userguide/zbibliography.html#onufriev2004) using the GB(OBC)II parameters (corresponding to `igb=5` in AMBER): requires parameters `[radius, scale]`
 
 If the `gb_model` attribute is omitted, it defaults to `OBC1`.
 
@@ -579,7 +579,7 @@ In this example, `radius` and `scale` are per-particle parameters of the `OBC1` 
 
 The `sa_model` attribute specifies the solvent-accessible surface area model ("SA" part of GBSA) if one should be included; if omitted, no SA term is included.
 
-Currently, only the [analytical continuum electrostatics (ACE) model](http://docs.openmm.org/latest/userguide/theory.html#surface-area-term), designated `ACE`, can be specified, but there are plans to add more models in the future, such as the Gaussian solvation energy component of [EEF1](https://www.ncbi.nlm.nih.gov/pubmed/10223287).
+Currently, only the [analytical continuum electrostatics (ACE) model](https://docs.openmm.org/latest/userguide/theory.html#surface-area-term), designated `ACE`, can be specified, but there are plans to add more models in the future, such as the Gaussian solvation energy component of [EEF1](https://www.ncbi.nlm.nih.gov/pubmed/10223287).
 If `sa_model` is not specified, it defaults to `ACE`.
 
 The `ACE` model permits two additional parameters to be specified:
@@ -683,7 +683,7 @@ In the SMIRNOFF format, these are encoded as:
 ### Aromaticity models
 
 Before conducting SMIRKS substructure searches, molecules are prepared using one of the supported aromaticity models, which must be specified with the `aromaticity_model` attribute.
-The only aromaticity model currently widely supported (by both the [OpenEye toolkit](https://docs.eyesopen.com/toolkits/python/oechemtk/aromaticity.html) and [RDKit](http://www.rdkit.org/docs/RDKit_Book.html)) is the `OEAroModel_MDL` model.
+The only aromaticity model currently widely supported (by both the [OpenEye toolkit](https://docs.eyesopen.com/toolkits/python/oechemtk/aromaticity.html) and [RDKit](https://www.rdkit.org/docs/RDKit_Book.html)) is the `OEAroModel_MDL` model.
 
 ### Additional plans for future development
 
@@ -691,13 +691,13 @@ See the [openforcefield GitHub issue tracker](https://github.com/openforcefield/
 
 ## The `openforcefield` reference implementation
 
-A Python reference implementation of a parameterization engine implementing the SMIRNOFF force field specification can be found [online](http://github.com/openforcefield/openforcefield).
-This implementation can use either the free-for-academics (but commercially supported) [OpenEye toolkit](https://docs.eyesopen.com/toolkits/python/index.html) or the free and open source [RDKit cheminformatics toolkit](http://www.rdkit.org/).
+A Python reference implementation of a parameterization engine implementing the SMIRNOFF force field specification can be found [online](https://github.com/openforcefield/openforcefield).
+This implementation can use either the free-for-academics (but commercially supported) [OpenEye toolkit](https://docs.eyesopen.com/toolkits/python/index.html) or the free and open source [RDKit cheminformatics toolkit](https://www.rdkit.org/).
 See the [installation instructions](https://open-forcefield-toolkit.readthedocs.io/en/latest/installation.html) for information on how to install this implementation and its dependencies.
 
 ### Examples
 
-A relatively extensive set of examples is made available on the [reference implementation repository](http://github.com/openforcefield/openforcefield) under [examples/](https://github.com/openforcefield/openforcefield/tree/master/examples).
+A relatively extensive set of examples is made available on the [reference implementation repository](https://github.com/openforcefield/openforcefield) under [examples/](https://github.com/openforcefield/openforcefield/tree/master/examples).
 
 ### Parameterizing a system
 
@@ -721,12 +721,12 @@ See `examples/SMIRNOFF_simulation/` for an extension of this example illustratin
 
 The `topology` object provided to `create_openmm_system()` can contain any number of molecules of different types, including biopolymers, ions, buffer molecules, or solvent molecules.
 The openforcefield toolkit provides a number of convenient methods for importing or constructing topologies given PDB files, Sybyl mol2 files, SDF files, SMILES strings, and IUPAC names; see the [toolkit documentation](https://open-forcefield-toolkit.readthedocs.io/) for more information.
-Notably, this `topology` object differs from those found in [OpenMM](http://docs.openmm.org/latest/api-python/generated/simtk.openmm.app.topology.Topology.html#simtk.openmm.app.topology.Topology) or [MDTraj](http://mdtraj.org/1.9.0/api/generated/mdtraj.Topology.html#mdtraj.Topology) in that it contains information on the *chemical identity* of the molecules constituting the system, rather than this atomic elements and covalent connectivity; this additional chemical information is required for the [direct chemical perception](https://doi.org/10.1101/286542) features of SMIRNOFF typing.
+Notably, this `topology` object differs from those found in [OpenMM](https://docs.openmm.org/latest/api-python/generated/simtk.openmm.app.topology.Topology.html#simtk.openmm.app.topology.Topology) or [MDTraj](https://mdtraj.org/1.9.0/api/generated/mdtraj.Topology.html#mdtraj.Topology) in that it contains information on the *chemical identity* of the molecules constituting the system, rather than this atomic elements and covalent connectivity; this additional chemical information is required for the [direct chemical perception](https://doi.org/10.1101/286542) features of SMIRNOFF typing.
 
 ### Using SMIRNOFF small molecule forcefields with traditional biopolymer force fields
 
 While SMIRNOFF format force fields can cover a wide range of biological systems, our initial focus is on gneral small molecule force fields, meaning that users may have considerable interest in combining SMIRNOFF small molecule parameters to systems in combination with traditional biopolymer parameters from conventional force fields, such as the AMBER family of protein/nucleic acid force fields.
-Thus, we provide an example of setting up a mixed protein-ligand system in [examples/using_smirnoff_with_amber_protein_forcefield](examples/using_smirnoff_with_amber_protein_forcefield), where an AMBER family force field is used for a protein and the original "Parsley" force field (``openff-1.0.0``) for a small molecule.
+Thus, we provide an example of setting up a mixed protein-ligand system in [examples/using_smirnoff_with_amber_protein_forcefield](https://github.com/openforcefield/openforcefield/tree/master/examples/using_smirnoff_with_amber_protein_forcefield), where an AMBER family force field is used for a protein and the original "Parsley" force field (``openff-1.0.0``) for a small molecule.
 
 ### The optional `id` and `parent_id` attributes and other XML attributes
 
