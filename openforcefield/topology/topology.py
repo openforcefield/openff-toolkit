@@ -1140,7 +1140,7 @@ class Topology(Serializable):
         if hasattr(box_vectors, "shape"):
             if box_vectors.shape != (3, 3):
                 raise InvalidBoxVectorsError(
-                    "Box vectors must be shape (3, 3). Found shape {box_vectors.shape}"
+                    f"Box vectors must be shape (3, 3). Found shape {box_vectors.shape}"
                 )
         else:
             assert len(box_vectors) == 3
