@@ -1531,8 +1531,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             )
 
             # Flip chirality if stereochemistry isincorrect
-            oeatom_stereochemistry = (
-                OpenEyeToolkitWrapper._openeye_cip_atom_stereochemistry(oemol, oeatom)
+            oeatom_stereochemistry = OpenEyeToolkitWrapper._openeye_cip_atom_stereochemistry(
+                oemol, oeatom
             )
             if oeatom_stereochemistry != atom.stereochemistry:
                 # Flip the stereochemistry
@@ -1540,10 +1540,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                     neighs, oechem.OEAtomStereo_Tetra, oechem.OEAtomStereo_Left
                 )
                 # Verify it matches now as a sanity check
-                oeatom_stereochemistry = (
-                    OpenEyeToolkitWrapper._openeye_cip_atom_stereochemistry(
-                        oemol, oeatom
-                    )
+                oeatom_stereochemistry = OpenEyeToolkitWrapper._openeye_cip_atom_stereochemistry(
+                    oemol, oeatom
                 )
                 if oeatom_stereochemistry != atom.stereochemistry:
                     raise Exception(
@@ -1569,8 +1567,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             )
 
             # Flip stereochemistry if incorrect
-            oebond_stereochemistry = (
-                OpenEyeToolkitWrapper._openeye_cip_bond_stereochemistry(oemol, oebond)
+            oebond_stereochemistry = OpenEyeToolkitWrapper._openeye_cip_bond_stereochemistry(
+                oemol, oebond
             )
             if oebond_stereochemistry != bond.stereochemistry:
                 # Flip the stereochemistry
@@ -1580,10 +1578,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                     oechem.OEBondStereo_Trans,
                 )
                 # Verify it matches now as a sanity check
-                oebond_stereochemistry = (
-                    OpenEyeToolkitWrapper._openeye_cip_bond_stereochemistry(
-                        oemol, oebond
-                    )
+                oebond_stereochemistry = OpenEyeToolkitWrapper._openeye_cip_bond_stereochemistry(
+                    oemol, oebond
                 )
                 if oebond_stereochemistry != bond.stereochemistry:
                     raise Exception(
@@ -2350,7 +2346,9 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         return tuple(unique_tags), tuple(connections)
 
     @staticmethod
-    def _find_smarts_matches(oemol, smarts, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
+    def _find_smarts_matches(
+        oemol, smarts, aromaticity_model=DEFAULT_AROMATICITY_MODEL
+    ):
         """Find all sets of atoms in the provided OpenEye molecule that match the provided SMARTS string.
 
         Parameters
@@ -2392,16 +2390,13 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         if type(aromaticity_model) == str:
             # Check if the user has provided a manually-specified aromaticity_model
             if hasattr(oechem, aromaticity_model):
-                oearomodel = getattr(oechem,
-                                     aromaticity_model)
+                oearomodel = getattr(oechem, aromaticity_model)
             else:
                 raise ValueError(
                     "Error: provided aromaticity model not recognized by oechem."
                 )
         else:
-            raise ValueError(
-                "Error: provided aromaticity model must be a string.")
-
+            raise ValueError("Error: provided aromaticity model must be a string.")
 
         # OEPrepareSearch will clobber our desired aromaticity model if we don't sync up mol and qmol ahead of time
         # Prepare molecule
@@ -2455,7 +2450,9 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         """
         oemol = self.to_openeye(molecule)
-        return self._find_smarts_matches(oemol, smarts, aromaticity_model=aromaticity_model)
+        return self._find_smarts_matches(
+            oemol, smarts, aromaticity_model=aromaticity_model
+        )
 
 
 class RDKitToolkitWrapper(ToolkitWrapper):
@@ -3790,11 +3787,9 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         # choose the largest unsigned int without overflow
         # since the C++ signature is a uint
         max_matches = np.iinfo(np.uintc).max
-        for match in rdmol.GetSubstructMatches(qmol,
-                                               uniquify=False,
-                                               maxMatches=max_matches,
-                                               useChirality=True
-                                               ):
+        for match in rdmol.GetSubstructMatches(
+            qmol, uniquify=False, maxMatches=max_matches, useChirality=True
+        ):
             mas = [match[x] for x in map_list]
             matches.append(tuple(mas))
 
