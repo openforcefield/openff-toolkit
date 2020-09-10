@@ -33,7 +33,7 @@ If you need to install via source, see the build and run package requirements li
 
 Two major force field development efforts have been undertaken by the Initiative, with results hosted in separate repositories.
 
-* The [Open Force Fields repository](https://github.com/openforcefield/openforcefields/), which features the [Parsley force field line](https://openforcefield.org/news/introducing-openforcefield-1.0/). This is the Open Force Field Initiative's first effort toward building a _new_ force field. The initial parameters are taken from smirnoff99Frosst, but software and data produced by the Initiative's efforts are being used to refit parameter values and add new SMIRKS-based parameters.
+* The [Open Force Fields repository](https://github.com/openforcefield/openforcefields/), which features the [Parsley force field line](https://openforcefield.org/community/news/general/introducing-openforcefield-1.0/). This is the Open Force Field Initiative's first effort toward building a _new_ force field. The initial parameters are taken from smirnoff99Frosst, but software and data produced by the Initiative's efforts are being used to refit parameter values and add new SMIRKS-based parameters.
 * The [smirnoff99Frosst repository](https://github.com/openforcefield/smirnoff99Frosst/), which is descended from AMBER's parm99 forcefield as well as Merck-Frosst's parm@frosst. This line of force fields does not aim to alter parameter values, but is instead a test of accurately converting an atom type-based force field to the SMIRNOFF format.
 
 Force fields from both of these packages are available in their respective GitHub repositories and also as conda packages. Tables detailing the individual file names/versions within these force field lines are in the README of each repository. By default, installing the Open Force Field toolkit using `conda` or the single-file toolkit installers will also install these conda packages. A plugin architecture is provided for other force field developers to produce python/conda packages that can be imported by the Open Force Field Toolkit as well.
@@ -63,15 +63,13 @@ molecule = Molecule.from_file(sdf_file_path)
 from openforcefield.topology import Topology
 topology = Topology.from_molecules(molecule)
 
-# Load the smirnoff99Frosst SMIRNOFF force field definition
+# Load the latest OpenFF force field definition
 from openforcefield.typing.engines.smirnoff import ForceField
-forcefield = ForceField('test_forcefields/smirnoff99Frosst.offxml')
+forcefield = ForceField('openff-1.2.0.offxml')
 
 # Create an OpenMM system representing the molecule with SMIRNOFF-applied parameters
 openmm_system = forcefield.create_openmm_system(topology)
 
-# Load a SMIRNOFF small molecule forcefield for alkanes, ethers, and alcohols
-forcefield = ForceField('test_forcefields/Frosst_AlkEthOH_parmAtFrosst.offxml')
 ```
 Detailed examples of using SMIRNOFF with the toolkit can be found [in the documentation](https://open-forcefield-toolkit.readthedocs.io/en/latest/examples.html).
 
