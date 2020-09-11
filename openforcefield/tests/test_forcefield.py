@@ -3296,6 +3296,47 @@ class TestForceFieldParameterAssignment:
         )
 
     @requires_openeye
+    def test_overwrite_bond_orders(self):
+        """Test that previously-defined bond orders in the topology are overwritten"""
+        mol = create_ethanol()
+        mol.assign_fractional_bond_orders(bond_order_model="am1-wiberg")
+        top = Topology.from_molecules(mol)
+
+        mod_mol = create_ethanol()
+        mod_mol.assign_fractional_bond_orders(bond_order_model="am1-wiberg")
+        # populate the mol with garbage bond orders
+        for bond in mod_mol.bonds:
+            bond.fractional_bond_order = 3 - bond.fractional_bond_order
+        mod_top = Topology.from_molecules(mod_mol)
+
+        default_bo = [
+            b.fractional_bond_order for b in [*top.reference_molecules][0].bonds
+        ]
+        mod_bo = [
+            b.fractional_bond_order for b in [*mod_top.reference_molecules][0].bonds
+        ]
+        assert not default_bo == mod_bo
+
+        forcefield = ForceField("test_forcefields/smirnoff99Frosst.offxml", xml_ff_bo)
+
+        omm_system = forcefield.create_openmm_system(top)
+        mod_omm_system = forcefield.create_openmm_system(mod_top)
+
+        default_bond_force = [
+            f for f in omm_system.getForces() if isinstance(f, openmm.HarmonicBondForce)
+        ][0]
+        mod_bond_force = [
+            f
+            for f in mod_omm_system.getForces()
+            if isinstance(f, openmm.HarmonicBondForce)
+        ][0]
+
+        for idx in range(default_bond_force.getNumBonds()):
+            assert default_bond_force.getBondParameters(
+                idx
+            ) == mod_bond_force.getBondParameters(idx)
+
+    @requires_openeye
     @pytest.mark.parametrize(
         (
             "get_molecule",
