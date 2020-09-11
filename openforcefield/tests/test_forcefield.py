@@ -33,6 +33,7 @@ from openforcefield.typing.engines.smirnoff import (
     ForceField,
     IncompatibleParameterError,
     ParameterHandler,
+    SMIRNOFFAromaticityError,
     SMIRNOFFSpecError,
     XMLParameterIOHandler,
     get_available_force_fields,
@@ -736,6 +737,18 @@ class TestForceField:
         # Shouldn't find InvalidKey handler, since it doesn't exist
         with pytest.raises(KeyError) as excinfo:
             forcefield.get_parameter_handler("InvalidKey")
+
+        # Verify the aromatocitiy model is not None
+        assert forcefield.aromaticity_model == "OEAroModel_MDL"
+
+    def test_create_forcefield_aromaticity_model(self):
+        """Test the aromaticiy_model argument of the constructor"""
+        mdl = "OEAroModel_MDL"
+
+        assert ForceField(aromaticity_model=mdl).aromaticity_model == mdl
+
+        with pytest.raises(SMIRNOFFAromaticityError):
+            ForceField(aromaticity_model="foobar")
 
     def test_create_forcefield_custom_handler_classes(self):
         """Test constructor given specific classes to register"""
