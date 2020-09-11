@@ -25,6 +25,7 @@ import itertools
 from collections import OrderedDict
 from collections.abc import MutableMapping
 
+import numpy as np
 from simtk import unit
 from simtk.openmm import app
 
@@ -1138,6 +1139,8 @@ class Topology(Serializable):
             )
 
         if hasattr(box_vectors, "shape"):
+            if box_vectors.shape == (3,):
+                box_vectors *= np.eye(3)
             if box_vectors.shape != (3, 3):
                 raise InvalidBoxVectorsError(
                     f"Box vectors must be shape (3, 3). Found shape {box_vectors.shape}"
