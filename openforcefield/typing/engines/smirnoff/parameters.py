@@ -2402,7 +2402,6 @@ class BondHandler(ParameterHandler):
             super().__init__(**kwargs)
 
     _TAGNAME = "Bonds"  # SMIRNOFF tag name to process
-    _KWARGS = ["partial_bond_orders_from_molecules"]
     _INFOTYPE = BondType  # class to hold force type info
     _OPENMMTYPE = openmm.HarmonicBondForce  # OpenMM force class to create
     _DEPENDENCIES = [ConstraintHandler]  # ConstraintHandler must be executed first
@@ -2446,19 +2445,23 @@ class BondHandler(ParameterHandler):
         else:
             force = existing[0]
 
-        if "partial_bond_orders_from_molecules" in kwargs:
-            # check whether molecules in the partial_bond_orders_from_molecules
-            # list have any duplicates
-            _check_partial_bond_orders_from_molecules_duplicates(
-                kwargs["partial_bond_orders_from_molecules"]
-            )
-
-            _assign_partial_bond_orders_from_molecules(
-                topology, kwargs["partial_bond_orders_from_molecules"]
-            )
-
         # Add all bonds to the system.
         bond_matches = self.find_matches(topology)
+
+        # Determine if any parameters rely on bond order interpolation, but
+        # only if they were found as matches
+        uses_interpolation = False
+        for match in bond_matches.values():
+            if match.parameter_type.k_bondorder:
+                uses_interpolation = True
+                break
+
+        # Re-computing fractional bond orders is expensive and should be skipped if not necessary
+        if uses_interpolation:
+            for top_mol in topology.topology_molecules:
+                top_mol.reference_molecule.assign_fractional_bond_orders(
+                    bond_order_model=self.fractional_bondorder_method.lower()
+                )
 
         skipped_constrained_bonds = (
             0  # keep track of how many bonds were constrained (and hence skipped)
@@ -2485,6 +2488,7 @@ class BondHandler(ParameterHandler):
             else:
                 # Interpolate k using fractional bond orders
                 # TODO: Do we really want to allow per-bond specification of interpolation schemes?
+                # TODO: Deal with possibility that molecules use different fractional bond order methods
                 bond_order = bond.fractional_bond_order
                 if self.fractional_bondorder_interpolation == "linear":
                     k = _linear_interpolate_k(
