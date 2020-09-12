@@ -1531,8 +1531,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             )
 
             # Flip chirality if stereochemistry isincorrect
-            oeatom_stereochemistry = OpenEyeToolkitWrapper._openeye_cip_atom_stereochemistry(
-                oemol, oeatom
+            oeatom_stereochemistry = (
+                OpenEyeToolkitWrapper._openeye_cip_atom_stereochemistry(oemol, oeatom)
             )
             if oeatom_stereochemistry != atom.stereochemistry:
                 # Flip the stereochemistry
@@ -1540,8 +1540,10 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                     neighs, oechem.OEAtomStereo_Tetra, oechem.OEAtomStereo_Left
                 )
                 # Verify it matches now as a sanity check
-                oeatom_stereochemistry = OpenEyeToolkitWrapper._openeye_cip_atom_stereochemistry(
-                    oemol, oeatom
+                oeatom_stereochemistry = (
+                    OpenEyeToolkitWrapper._openeye_cip_atom_stereochemistry(
+                        oemol, oeatom
+                    )
                 )
                 if oeatom_stereochemistry != atom.stereochemistry:
                     raise Exception(
@@ -1567,8 +1569,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             )
 
             # Flip stereochemistry if incorrect
-            oebond_stereochemistry = OpenEyeToolkitWrapper._openeye_cip_bond_stereochemistry(
-                oemol, oebond
+            oebond_stereochemistry = (
+                OpenEyeToolkitWrapper._openeye_cip_bond_stereochemistry(oemol, oebond)
             )
             if oebond_stereochemistry != bond.stereochemistry:
                 # Flip the stereochemistry
@@ -1578,8 +1580,10 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                     oechem.OEBondStereo_Trans,
                 )
                 # Verify it matches now as a sanity check
-                oebond_stereochemistry = OpenEyeToolkitWrapper._openeye_cip_bond_stereochemistry(
-                    oemol, oebond
+                oebond_stereochemistry = (
+                    OpenEyeToolkitWrapper._openeye_cip_bond_stereochemistry(
+                        oemol, oebond
+                    )
                 )
                 if oebond_stereochemistry != bond.stereochemistry:
                     raise Exception(
