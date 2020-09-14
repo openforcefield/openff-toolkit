@@ -34,7 +34,7 @@ jobs:
       run:
         sleep 7200
 
-    - uses: goanpeca/setup-miniconda@v1
+    - uses: conda-incubator/setup-miniconda@v1
       with:
         python-version: ${{ matrix.python-version }}
         activate-environment: constructor
