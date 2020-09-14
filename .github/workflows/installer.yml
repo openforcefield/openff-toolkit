@@ -82,7 +82,7 @@ jobs:
     - name: Upload tarball as artifact
       uses: actions/upload-artifact@v2
       with:
-        path: build/openforcefield-*.sh
+        path: ../toolkit-installer-constructor/build/openforcefield-*.sh
 
     - name: Install from installer
       shell: bash -l {0}
@@ -101,7 +101,7 @@ jobs:
         conda info --envs
         conda init
 
-        source ~/.bashrc
+        bash
         conda info --envs
 
         conda activate openforcefield
