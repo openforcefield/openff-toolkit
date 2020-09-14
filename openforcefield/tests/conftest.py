@@ -17,7 +17,11 @@ This adds the following command line options.
 # GLOBAL IMPORTS
 # =============================================================================================
 
+import logging
+
 import pytest
+
+logger = logging.getLogger(__name__)
 
 
 def pytest_configure(config):
@@ -66,18 +70,46 @@ def pytest_addoption(parser):
     If --runslow is not given, tests marked with pytest.mark.slow are
     skipped.
 
-    If --failwip is not give, tests marked with pytest.mark.wip are
+    If --failwip is not given, tests marked with pytest.mark.wip are
     xfailed.
+
+    Parameters
+    ----------
+    parser : argparsing.parser
+        The parser used by pytest to process arguments
+
+    Returns
+    -------
+    None
+
     """
-    parser.addoption(
-        "--runslow", action="store_true", default=False, help="run slow tests"
-    )
-    parser.addoption(
-        "--failwip",
-        action="store_true",
-        default=False,
-        help="fail work in progress tests",
-    )
+
+    # Loaded pytest plugins define their own arguments, and in certain cases
+    # our options use the same name. Although this can define two different
+    # behaviors for the same argument, the two options below are fairly
+    # unambiguous in their interpretation, so we skip any errors and allow
+    # the testing to proceed
+
+    try:
+        parser.addoption(
+            "--runslow", action="store_true", default=False, help="run slow tests"
+        )
+    except ValueError:
+        logger.warning(
+            "Option --runslow already added elsewhere (from a plugin possibly?). Skipping..."
+        )
+
+    try:
+        parser.addoption(
+            "--failwip",
+            action="store_true",
+            default=False,
+            help="fail work in progress tests",
+        )
+    except ValueError:
+        logger.warning(
+            "Option --failwip already added elsewhere (from a plugin possibly?). Skipping..."
+        )
 
 
 def pytest_collection_modifyitems(config, items):
