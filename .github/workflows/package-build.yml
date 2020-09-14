@@ -21,7 +21,7 @@ jobs:
           ulimit -a
 
       - name: Configure conda
-        uses: goanpeca/setup-miniconda@v1
+        uses: conda-incubator/setup-miniconda@v1
         with:
           python-version: 3.6
           activate-environment: release-build
