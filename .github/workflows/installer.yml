@@ -99,6 +99,7 @@ jobs:
         echo -ne "\n" | bash ../toolkit-installer-constructor/build/openforcefield-*/openforcefield-*.sh
 
         conda info --envs
+        conda init
 
         conda activate openforcefield
         conda info
