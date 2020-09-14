@@ -97,9 +97,7 @@ jobs:
         mkdir scratch
         cd scratch
         echo -ne "\n" | bash ../toolkit-installer-constructor/build/openforcefield-*/openforcefield-*.sh
-
-        conda info
-        conda list
+        conda init
 
         conda activate openforcefield
         conda info
