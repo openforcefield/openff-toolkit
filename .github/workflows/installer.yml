@@ -94,9 +94,7 @@ jobs:
         ls toolkit-installer-constructor/build
         ls toolkit-installer-constructor/build/openforcefield-*/
 
-        mkdir scratch
-        cd scratch
-        echo -ne "\n" | bash ../toolkit-installer-constructor/build/openforcefield-*/openforcefield-*.sh
+        echo $HOME/constructor_install/ | bash ../toolkit-installer-constructor/build/openforcefield-*/openforcefield-*.sh
 
         conda info --envs
         conda init
