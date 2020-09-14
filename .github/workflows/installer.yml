@@ -101,6 +101,9 @@ jobs:
         conda info --envs
         conda init
 
+        source ~/.bashrc
+        conda info --envs
+
         conda activate openforcefield
         conda info
         conda list
