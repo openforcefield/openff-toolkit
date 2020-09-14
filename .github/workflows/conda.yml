@@ -1,6 +1,6 @@
 name: Conda
 
-on:
+on: 
   pull_request:
   release:
     types:
