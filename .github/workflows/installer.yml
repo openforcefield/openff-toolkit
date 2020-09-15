@@ -98,17 +98,7 @@ jobs:
         cd scratch
         echo $HOME/constructor_install/ | bash ../toolkit-installer-constructor/build/openforcefield-*/openforcefield-*.sh
 
-        conda info --envs
-        conda init
-
-        bash
-        conda info --envs
-
-        ls /Users/runner/
-        ls /Users/runner/constructor_install/
-        ls /Users/runner/constructor_install/envs
-
-        conda activate /Users/runner/constructor_install/miniconda/envs/openforcefield/
+        conda activate $HOME/constructor_install/
         conda info
         conda list
 
