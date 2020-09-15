@@ -79,6 +79,19 @@ jobs:
           conda info
           conda list
 
+      - name: Check installed toolkits
+        shell: bash -l {0}
+        run: |
+          if [[ "$OPENEYE" == true ]]; then
+            python -c "from openforcefield.utils.toolkits import OPENEYE_AVAILABLE; assert OPENEYE_AVAILABLE, 'OpenEye unavailable'"
+          fi
+          if [[ "$OPENEYE" == false ]]; then
+            if [[ $(conda list | grep openeye-toolkits) ]]; then
+              conda remove --force openeye-toolkits --yes
+            fi
+            python -c "from openforcefield.utils.toolkits import OPENEYE_AVAILABLE; assert not OPENEYE_AVAILABLE, 'OpenEye unexpectedly found'"
+          fi
+
       - name: Check that correct OFFTK version was installed
         shell: bash -l {0}
         run: |
