@@ -117,7 +117,7 @@ jobs:
         PYTEST_ARGS+=" --ignore=openforcefield/tests/test_links.py"
         # Can be dropped in the release after 0.7.1, in which readme links were tested in test_examples.py
         PYTEST_ARGS+=" --ignore=openforcefield/tests/test_examples.py"
-        PYTEST_ARGS+=" --ignore=utilities --ignore=examples/deprecated --nbval-lax"
+        PYTEST_ARGS+=" --ignore=utilities --ignore=examples/deprecated "
 
         pytest $PYTEST_ARGS openforcefield
 
