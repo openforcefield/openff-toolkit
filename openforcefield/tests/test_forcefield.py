@@ -15,6 +15,7 @@ Tests for forcefield class
 # =============================================================================================
 
 import copy
+import itertools
 import os
 from tempfile import NamedTemporaryFile
 
@@ -33,6 +34,7 @@ from openforcefield.typing.engines.smirnoff import (
     ForceField,
     IncompatibleParameterError,
     ParameterHandler,
+    SMIRNOFFAromaticityError,
     SMIRNOFFSpecError,
     XMLParameterIOHandler,
     get_available_force_fields,
@@ -735,6 +737,18 @@ class TestForceField:
         # Shouldn't find InvalidKey handler, since it doesn't exist
         with pytest.raises(KeyError) as excinfo:
             forcefield.get_parameter_handler("InvalidKey")
+
+        # Verify the aromatocitiy model is not None
+        assert forcefield.aromaticity_model == "OEAroModel_MDL"
+
+    def test_create_forcefield_aromaticity_model(self):
+        """Test the aromaticiy_model argument of the constructor"""
+        mdl = "OEAroModel_MDL"
+
+        assert ForceField(aromaticity_model=mdl).aromaticity_model == mdl
+
+        with pytest.raises(SMIRNOFFAromaticityError):
+            ForceField(aromaticity_model="foobar")
 
     def test_create_forcefield_custom_handler_classes(self):
         """Test constructor given specific classes to register"""
@@ -1555,6 +1569,66 @@ class TestForceField:
             forcefield[bonds]
         with pytest.raises(NotImplementedError):
             forcefield[type(bonds)]
+
+    def test_hash(self):
+        """Test hashes on all available force fields"""
+        ffs = get_available_force_fields()
+
+        for ff1, ff2 in itertools.combinations(ffs, 2):
+            assert hash(ff1) != hash(ff2)
+
+    def test_hash_cosmetic(self):
+        """Test that adding a cosmetic attribute does not change the hash"""
+        forcefield = ForceField("test_forcefields/smirnoff99Frosst.offxml")
+
+        hash_without_cosmetic = hash(forcefield)
+
+        forcefield.get_parameter_handler("Bonds").add_cosmetic_attribute("foo", 4)
+        assert "foo" in forcefield["Bonds"]._cosmetic_attribs
+
+        hash_with_cosmetic = hash(forcefield)
+
+        assert hash_with_cosmetic == hash_without_cosmetic
+
+    def test_hash_strip_author_date(self):
+        """Ensure that author and date are ignored in hashing"""
+        ff_no_data = ForceField()
+        ff_with_author_date = ForceField()
+        ff_with_author_date.author = "John Doe"
+        ff_with_author_date.date = "2020-01-01"
+
+        assert hash(ff_no_data) == hash(ff_with_author_date)
+
+    def test_hash_strip_ids(self):
+        """Test the behavior of strip_ids arg to __hash__()"""
+        from openforcefield.typing.engines.smirnoff import BondHandler
+
+        length = 1 * unit.angstrom
+        k = 10 * unit.kilocalorie_per_mole / unit.angstrom ** 2
+
+        param_with_id = {
+            "smirks": "[*:1]-[*:2]",
+            "length": length,
+            "k": k,
+            "id": "b1",
+        }
+
+        param_without_id = {
+            "smirks": "[*:1]-[*:2]",
+            "length": length,
+            "k": k,
+        }
+
+        ff_with_id = ForceField()
+        ff_without_id = ForceField()
+
+        ff_with_id.register_parameter_handler(BondHandler(version=0.3))
+        ff_without_id.register_parameter_handler(BondHandler(version=0.3))
+
+        ff_with_id.get_parameter_handler("Bonds").add_parameter(param_with_id)
+        ff_without_id.get_parameter_handler("Bonds").add_parameter(param_without_id)
+
+        assert hash(ff_with_id) == hash(ff_without_id)
 
 
 class TestForceFieldChargeAssignment:

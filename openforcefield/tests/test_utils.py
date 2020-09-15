@@ -97,3 +97,19 @@ def test_dimensionless_units():
     unit_value = utils.string_to_unit(unit_string)
 
     assert unit_value == unit.dimensionless
+
+
+def test_sort_smirnoff_dict():
+    from collections import OrderedDict
+
+    from openforcefield.typing.engines.smirnoff import ForceField
+    from openforcefield.utils.utils import sort_smirnoff_dict
+
+    forcefield = ForceField("test_forcefields/smirnoff99Frosst.offxml")
+    smirnoff_dict = forcefield._to_smirnoff_data()
+
+    # Ensure data is not created or destroyed
+    # dict.__eq__ does not check order
+    assert smirnoff_dict == OrderedDict(
+        sort_smirnoff_dict(forcefield._to_smirnoff_data())
+    )
