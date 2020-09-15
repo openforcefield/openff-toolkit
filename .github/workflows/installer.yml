@@ -104,11 +104,11 @@ jobs:
         bash
         conda info --envs
 
-        ls /home/runner/
-        ls /home/runner/constructor_install/
-        ls /home/runner/constructor_install/envs
+        ls /Users/runner/
+        ls /Users/runner/constructor_install/
+        ls /Users/runner/constructor_install/envs
 
-        conda activate /home/runner/constructor_install/miniconda/envs/openforcefield/
+        conda activate /Users/runner/constructor_install/miniconda/envs/openforcefield/
         conda info
         conda list
 
