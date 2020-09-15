@@ -82,7 +82,7 @@ jobs:
     - name: Upload tarball as artifact
       uses: actions/upload-artifact@v2
       with:
-        path: toolkit-installer-constructor/build/openforcefield-*.sh
+        path: toolkit-installer-constructor/build/openforcefield-*-64/openforcefield-*-64.sh
 
     - name: Install from installer
       shell: bash -l {0}
