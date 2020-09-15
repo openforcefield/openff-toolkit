@@ -113,11 +113,11 @@ jobs:
 
           cd openforcefield
 
-      - name: Install QCElemental  # This can be dropped after OFFTK 0.8.0, which adds @requires_qcelemental
+      - name: Install QCElemental and QCPortal # This can be dropped after OFFTK 0.8.0, which adds @requires_qcelemental
         shell: bash -l {0}
         run: |
           if [[ "$OPENEYE" == true ]]; then
-            conda install -yq qcelemental -c conda-forge
+            conda install -yq qcelemental qcportal -c conda-forge
           fi
 
       - name: Test the package
