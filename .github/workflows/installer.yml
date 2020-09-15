@@ -119,5 +119,7 @@ jobs:
         PYTEST_ARGS+=" --ignore=openforcefield/tests/test_examples.py"
         PYTEST_ARGS+=" --ignore=utilities --ignore=examples/deprecated "
 
-        pytest $PYTEST_ARGS openforcefield
+        # This should work if run directly at release time, but a safer approach would be
+        # to `git checkout` the corresponding tag of the release, see PR #577
+        pytest $PYTEST_ARGS $HOME/openforcefield
 
