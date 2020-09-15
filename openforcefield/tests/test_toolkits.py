@@ -580,6 +580,29 @@ class TestOpenEyeToolkitWrapper:
                     mol2, bond_order_matching=False, toolkit_registry=toolkit
                 )
 
+    def test_write_multiconformer_pdb(self):
+        """
+        Make sure OpenEye can write multi conformer PDB files.
+        """
+        from io import StringIO
+
+        toolkit = OpenEyeToolkitWrapper()
+        # load up a multiconformer pdb file and condense down the conformers
+        molecules = Molecule.from_file(
+            get_data_file_path("molecules/butane_multi.sdf"), toolkit_registry=toolkit
+        )
+        butane = molecules.pop(0)
+        for mol in molecules:
+            butane.add_conformer(mol.conformers[0])
+        assert butane.n_conformers == 7
+        sio = StringIO()
+        butane.to_file(sio, "pdb", toolkit_registry=toolkit)
+        # we need to make sure each conformer is wrote to the file
+        pdb = sio.getvalue()
+        assert(pdb.count("END") == 7)
+
+
+
     def test_get_sdf_coordinates(self):
         """Test OpenEyeToolkitWrapper for importing a single set of coordinates from a sdf file"""
 
@@ -1945,7 +1968,7 @@ class TestRDKitToolkitWrapper:
             str(ethanol.conformers[1][0][0].in_units_of(unit.angstrom))[:5] not in data
         )
 
-    def test_write_milticonformer_pdb(self):
+    def test_write_multiconformer_pdb(self):
         """
         Make sure RDKit can write multi conformer PDB files.
         """
