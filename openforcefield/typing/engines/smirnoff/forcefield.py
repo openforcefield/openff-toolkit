@@ -1431,7 +1431,7 @@ class ForceField:
           * `id` and `parent_id` are stripped from each ParameterType"""
 
         # Completely re-constructing the force field may be overkill
-        # compared to deepcopying and modifying?
+        # compared to deepcopying and modifying, but is not currently slow
         ff_copy = ForceField()
         ff_copy.date = None
         ff_copy.author = None
