@@ -26,9 +26,16 @@ New features
   :py:class:`ToolkitRegistry <openforcefield.utils.toolkits.ToolkitRegistry>`.
 - `PR #696 <https://github.com/openforcefield/openforcefield/pull/696>`_ Exposes a setter for
   :py:class:`ForceField.aromaticity_model <openforcefield.typing.engines.smirnoff.forcefield.ForceField>`
+- `PR #685 <https://github.com/openforcefield/openforcefield/pull/685>`_ Adds a custom ``__hash__``
+  function to
+  :py:class:`ForceField.aromaticity_model <openforcefield.typing.engines.smirnoff.forcefield.ForceField>`
 
 Behavior changed
 """"""""""""""""
+- `PR #684 <https://github.com/openforcefield/openforcefield/pull/684>`_: Changes
+  :py:class:`ToolkitRegistry <openforcefield.utils.toolkits.ToolkitRegistry>` to return an empty
+  registry when initialized with no arguments, i.e. ``ToolkitRegistry()`` and makes the
+  ``register_imported_toolkit_wrappers`` argument private.
 - `PR #648 <https://github.com/openforcefield/openforcefield/pull/648>`_: Removes the
   ``utils.structure`` module, which was deprecated in 0.2.0.
 - `PR #670 <https://github.com/openforcefield/openforcefield/pull/670>`_: Makes the
