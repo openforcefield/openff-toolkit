@@ -26,6 +26,9 @@ New features
   :py:class:`ToolkitRegistry <openforcefield.utils.toolkits.ToolkitRegistry>`.
 - `PR #696 <https://github.com/openforcefield/openforcefield/pull/696>`_ Exposes a setter for
   :py:class:`ForceField.aromaticity_model <openforcefield.typing.engines.smirnoff.forcefield.ForceField>`
+- `PR #685 <https://github.com/openforcefield/openforcefield/pull/685>`_ Adds a custom ``__hash__``
+  function to
+  :py:class:`ForceField.aromaticity_model <openforcefield.typing.engines.smirnoff.forcefield.ForceField>`
 
 Behavior changed
 """"""""""""""""
