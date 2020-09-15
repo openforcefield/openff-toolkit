@@ -32,6 +32,13 @@ New features
 
 Behavior changed
 """"""""""""""""
+- `PR #684 <https://github.com/openforcefield/openforcefield/pull/684>`_: Changes
+  :py:class:`ToolkitRegistry <openforcefield.utils.toolkits.ToolkitRegistry>` to return an empty
+  registry when initialized with no arguments, i.e. ``ToolkitRegistry()`` and makes the
+  ``register_imported_toolkit_wrappers`` argument private.
+- `PR #711 <https://github.com/openforcefield/openforcefield/pull/711>`_: The
+  setter for ``Topology.boxbox_vectors`` now infers box vectors (a 3x3 matrix) when box lengths
+  (a 3x1 array) are passed, assuming an orthogonal box.
 - `PR #648 <https://github.com/openforcefield/openforcefield/pull/648>`_: Removes the
   ``utils.structure`` module, which was deprecated in 0.2.0.
 - `PR #670 <https://github.com/openforcefield/openforcefield/pull/670>`_: Makes the
