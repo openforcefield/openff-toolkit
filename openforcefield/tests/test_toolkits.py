@@ -14,6 +14,7 @@ Tests for cheminformatics toolkit wrappers
 # =============================================================================================
 
 from tempfile import NamedTemporaryFile
+
 import numpy as np
 import pytest
 from numpy.testing import assert_almost_equal
@@ -606,6 +607,7 @@ class TestOpenEyeToolkitWrapper:
         (reference: https://github.com/openforcefield/openforcefield/issues/475).
         """
         from io import StringIO
+
         from openeye import oechem
 
         toolkit = OpenEyeToolkitWrapper()
