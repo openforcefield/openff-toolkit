@@ -826,7 +826,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         # If the file format is "pdb" using OEWriteMolecule() rearranges the atoms (hydrogens are pushed to the bottom)
         # Issue #475 (https://github.com/openforcefield/openforcefield/issues/475)
         # dfhahn's workaround: Using OEWritePDBFile does not alter the atom arrangement
-        if (file_format.lower() == "pdb"):
+        if file_format.lower() == "pdb":
             if oemol.NumConfs() > 1:
                 for conf in oemol.GetConfs():
                     oechem.OEWritePDBFile(ofs, conf, oechem.OEOFlavor_PDB_BONDS)
