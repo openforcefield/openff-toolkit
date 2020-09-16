@@ -26,14 +26,24 @@ New features
   :py:class:`ToolkitRegistry <openforcefield.utils.toolkits.ToolkitRegistry>`.
 - `PR #696 <https://github.com/openforcefield/openforcefield/pull/696>`_ Exposes a setter for
   :py:class:`ForceField.aromaticity_model <openforcefield.typing.engines.smirnoff.forcefield.ForceField>`
+- `PR #685 <https://github.com/openforcefield/openforcefield/pull/685>`_ Adds a custom ``__hash__``
+  function to
+  :py:class:`ForceField.aromaticity_model <openforcefield.typing.engines.smirnoff.forcefield.ForceField>`
 
 Behavior changed
 """"""""""""""""
-- `PR #649 <https://github.com/openforcefield/openforcefield/pull/648>`_: Makes SMARTS
+- `PR #684 <https://github.com/openforcefield/openforcefield/pull/684>`_: Changes
+  :py:class:`ToolkitRegistry <openforcefield.utils.toolkits.ToolkitRegistry>` to return an empty
+  registry when initialized with no arguments, i.e. ``ToolkitRegistry()`` and makes the
+  ``register_imported_toolkit_wrappers`` argument private.
+- `PR #711 <https://github.com/openforcefield/openforcefield/pull/711>`_: The
+  setter for ``Topology.boxbox_vectors`` now infers box vectors (a 3x3 matrix) when box lengths
+  (a 3x1 array) are passed, assuming an orthogonal box.
+  - `PR #649 <https://github.com/openforcefield/openforcefield/pull/648>`_: Makes SMARTS
   searches stereochemistry-specific (if stereo is specified in the SMARTS) for both OpenEye
   and RDKit backends. Also ensures molecule
   aromaticity is re-perceived according to the ForceField's specified
-  aromaticity model, which may overwrite user-specified aromaticity on the ``Molecule``.
+  aromaticity model, which may overwrite user-specified aromaticity on the ``Molecule``
 - `PR #648 <https://github.com/openforcefield/openforcefield/pull/648>`_: Removes the
   ``utils.structure`` module, which was deprecated in 0.2.0.
 - `PR #670 <https://github.com/openforcefield/openforcefield/pull/670>`_: Makes the
