@@ -14,7 +14,6 @@ Tests for cheminformatics toolkit wrappers
 # =============================================================================================
 
 from tempfile import NamedTemporaryFile
-
 import numpy as np
 import pytest
 from numpy.testing import assert_almost_equal
@@ -601,7 +600,31 @@ class TestOpenEyeToolkitWrapper:
         pdb = sio.getvalue()
         assert(pdb.count("END") == 7)
 
+    def test_write_pdb_preserving_atom_order(self):
+        """
+        Make sure OpenEye does not rearrange hydrogens when writing PDBs
+        (reference: https://github.com/openforcefield/openforcefield/issues/475).
+        """
+        from io import StringIO
+        from openeye import oechem
 
+        toolkit = OpenEyeToolkitWrapper()
+        water = Molecule()
+        water.add_atom(1, 0, False)
+        water.add_atom(8, 0, False)
+        water.add_atom(1, 0, False)
+        water.add_bond(0, 1, 1, False)
+        water.add_bond(1, 2, 1, False)
+        water.add_conformer(np.array([[1., 0., 0.],
+                                      [0., 1., 0.],
+                                      [0., 0., 1.]]) * unit.angstrom)
+        sio = StringIO()
+        water.to_file(sio, "pdb", toolkit_registry=toolkit)
+        water_from_pdb = sio.getvalue()
+        water_from_pdb_split = water_from_pdb.split("\n")
+        assert (water_from_pdb_split[0].split()[2].rstrip() == 'H')
+        assert (water_from_pdb_split[1].split()[2].rstrip() == 'O')
+        assert (water_from_pdb_split[2].split()[2].rstrip() == 'H')
 
     def test_get_sdf_coordinates(self):
         """Test OpenEyeToolkitWrapper for importing a single set of coordinates from a sdf file"""

@@ -822,7 +822,14 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             # TODO: "dprop" means "double precision" -- Is there any way to make Python more accurately
             #  describe/infer the proper data type?
             oechem.OESetSDData(oemol, "atom.dprop.PartialCharge", partial_charges_str)
-        oechem.OEWriteMolecule(ofs, oemol)
+
+        # If the file format is "pdb" using OEWriteMolecule() rearranges the atoms (hydrogens are pushed to the bottom)
+        # Issue #475 (https://github.com/openforcefield/openforcefield/issues/475)
+        # dfhahn's workaround: Using OEWritePDBFile does not alter the atom arrangement
+        if (file_format.lower() == "pdb"):
+            oechem.OEWritePDBFile(ofs, oemol, oechem.OEOFlavor_PDB_BONDS)
+        else:
+            oechem.OEWriteMolecule(ofs, oemol)
         ofs.close()
 
     @staticmethod
