@@ -57,10 +57,18 @@ Behavior changed
   :py:class:`ForceField <openforcefield.typing.engines.smirnoff.forcefield.ForceField>`
   constructor, which defaults to ``DEFAULT_AROMATICITY_MODEL``.
 
+Bug Fixes
+"""""""""
+- `PR #715 <https://github.com/openforcefield/openforcefield/pull/715>`_: Closes issue `Issue #475
+  <https://github.com/openforcefield/openforcefield/issues/475>`_ writing a "PDB" file using OE backend rearranges
+  the order of the atoms by pushing the hydrogens to the bottom.
+
 Tests added
 """""""""""
 - `PR #694 <https://github.com/openforcefield/openforcefield/pull/694>`_: Adds automated testing
   to code snippets in docs.
+- `PR #715 <https://github.com/openforcefield/openforcefield/pull/715>`_: Adds tests for pdb file writes using OE
+  backend.
 
 Bugfixes
 """"""""
