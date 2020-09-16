@@ -587,7 +587,7 @@ class TestOpenEyeToolkitWrapper:
         from io import StringIO
 
         toolkit = OpenEyeToolkitWrapper()
-        # load up a multiconformer pdb file and condense down the conformers
+        # load up a multiconformer sdf file and condense down the conformers
         molecules = Molecule.from_file(
             get_data_file_path("molecules/butane_multi.sdf"), toolkit_registry=toolkit
         )
