@@ -827,7 +827,11 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         # Issue #475 (https://github.com/openforcefield/openforcefield/issues/475)
         # dfhahn's workaround: Using OEWritePDBFile does not alter the atom arrangement
         if (file_format.lower() == "pdb"):
-            oechem.OEWritePDBFile(ofs, oemol, oechem.OEOFlavor_PDB_BONDS)
+            if oemol.NumConfs() > 1:
+                for conf in oemol.GetConfs():
+                    oechem.OEWritePDBFile(ofs, conf, oechem.OEOFlavor_PDB_BONDS)
+            else:
+                oechem.OEWritePDBFile(ofs, oemol, oechem.OEOFlavor_PDB_BONDS)
         else:
             oechem.OEWriteMolecule(ofs, oemol)
         ofs.close()
