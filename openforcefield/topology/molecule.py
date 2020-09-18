@@ -48,6 +48,7 @@ from simtk.openmm.app import Element, element
 
 import openforcefield
 from openforcefield.utils import (
+    MessageException,
     check_units_are_compatible,
     deserialize_numpy,
     quantity_to_string,
@@ -65,6 +66,11 @@ from openforcefield.utils.toolkits import (
     ToolkitWrapper,
     UndefinedStereochemistryError,
 )
+
+
+class NotAttachedToMoleculeError(MessageException):
+    """Exception for when a component does not belong to a Molecule object, but is queried """
+
 
 # =============================================================================================
 # GLOBAL PARAMETERS
@@ -428,6 +434,24 @@ class Atom(Particle):
                 if atom2 == bonded_atom:
                     return True
         return False
+
+    @property
+    def is_in_ring(self):
+        """
+        Return whether or not this atom is in a ring(s) (of any size)
+
+        """
+        if self._molecule is None:
+            raise NotAttachedToMoleculeError(
+                "This Atom does not belong to a Molecule object"
+            )
+
+        # This is really slow, since it queries the chemical environment on _each atom_
+        # Can we store Molecule._atoms_in_ring?
+        atoms_in_any_ring = [
+            val[0] for val in self._molecule.chemical_environment_matches("[*;R*:1]")
+        ]  # list of ints
+        return self.molecule_atom_index in atoms_in_any_ring
 
     @property
     def virtual_sites(self):
@@ -1380,6 +1404,23 @@ class Bond(Serializable):
         if self._molecule is None:
             raise ValueError("This Atom does not belong to a Molecule object")
         return self._molecule.bonds.index(self)
+
+    @property
+    def is_in_ring(self):
+        """
+        Return whether or not this atom is in a ring(s) (of any size)
+
+        """
+        if self._molecule is None:
+            raise NotAttachedToMoleculeError(
+                "This Bond does not belong to a Molecule object"
+            )
+
+        # Note that the definition here needs to be different than in Atom.is_in_ring,
+        # since a bond's two atoms may be in a ring, but _not the same_ ring;
+        # A MWE is biphenyl (see unit test)
+        # bonds_in_any_ring = [val[0] for val in self._molecule.chemical_environment_matches('[*;R*:1]~[*;R*:2]')]
+        return self.atom1.is_in_ring and self.atom2.is_in_ring
 
     def __repr__(self):
         return f"Bond(atom1 index={self.atom1_index}, atom2 index={self.atom2_index})"

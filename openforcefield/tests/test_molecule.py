@@ -2764,6 +2764,23 @@ class TestMolecule:
         with pytest.raises(NotBondedError):
             mol.get_bond_between(hydrogens[0], hydrogens[1])
 
+    def test_is_in_ring(self):
+        """Test Atom.is_in_ring and Bond.is_in_ring"""
+        naphthalene = Molecule.from_smiles("c1ccc2ccccc2c1")
+        biphenyl = Molecule.from_smiles("c1ccc(cc1)c2ccccc2")
+        imatinib = Molecule.from_smiles(
+            "Cc1ccc(cc1Nc2nccc(n2)c3cccnc3)NC(=O)c4ccc(cc4)CN5CCN(CC5)C"
+        )
+
+        assert len([atom for atom in naphthalene.atoms if atom.is_in_ring]) == 10
+        assert len([bond for bond in naphthalene.bonds if bond.is_in_ring]) == 11
+
+        assert len([atom for atom in biphenyl.atoms if atom.is_in_ring]) == 12
+        assert len([bond for bond in biphenyl.bonds if bond.is_in_ring]) == 12
+
+        assert len([atom for atom in imatinib.atoms if atom.is_in_ring]) == 30
+        assert len([bond for bond in imatinib.bonds if bond.is_in_ring]) == 30
+
     @requires_rdkit
     def test_visualize_rdkit(self):
         """Test that the visualize method returns an expected object when using RDKit to generate a 2-D representation"""
