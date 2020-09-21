@@ -1416,11 +1416,14 @@ class Bond(Serializable):
                 "This Bond does not belong to a Molecule object"
             )
 
-        # Note that the definition here needs to be different than in Atom.is_in_ring,
-        # since a bond's two atoms may be in a ring, but _not the same_ ring;
-        # A MWE is biphenyl (see unit test)
-        # bonds_in_any_ring = [val[0] for val in self._molecule.chemical_environment_matches('[*;R*:1]~[*;R*:2]')]
-        return self.atom1.is_in_ring and self.atom2.is_in_ring
+        rings = self._molecule._get_rings()
+        if rings is None:
+            return False
+        for ring in rings:
+            if self.atom1.molecule_atom_index in ring:
+                if self.atom2.molecule_atom_index in ring:
+                    return True
+        return False
 
     def __repr__(self):
         return f"Bond(atom1 index={self.atom1_index}, atom2 index={self.atom2_index})"
@@ -4709,6 +4712,26 @@ class FrozenMolecule(Serializable):
         from openforcefield.topology import NotBondedError
 
         raise NotBondedError("No bond between atom {} and {}".format(i, j))
+
+    def _get_rings(self):
+        """
+        Find the rings in this molecule
+
+        .. note ::
+
+            For systems containing many conjugated rings, this function is not
+            well-behaved and may report a smaller number of larger rings instead
+            of all rings of minimum size.
+
+        Returns
+        -------
+        rings : list of list of int
+            A nested list with one sublist per ring and each sublist containing
+            a list of the indices of atoms containing with it
+        """
+        graph = self.to_networkx()
+        rings = nx.cycle_basis(graph)
+        return rings
 
 
 class Molecule(FrozenMolecule):
