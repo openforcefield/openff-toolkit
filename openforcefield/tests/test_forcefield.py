@@ -562,6 +562,8 @@ def create_dioxygen():
     dioxygen.add_atom(8, 0, False)  # O0
     dioxygen.add_atom(8, 0, False)  # O1
     dioxygen.add_bond(0, 1, 2, False)  # O0 # O1
+    charges = unit.Quantity(np.array([0.0, 0.0]), unit.elementary_charge)
+    dioxygen.partial_charges = charges
 
     return dioxygen
 
@@ -575,6 +577,8 @@ def create_dinitrogen():
     dinitrogen.add_atom(7, 0, False)  # N0
     dinitrogen.add_atom(7, 0, False)  # N1
     dinitrogen.add_bond(0, 1, 3, False)  # N0 - N1
+    charges = unit.Quantity(np.array([0.0, 0.0]), unit.elementary_charge)
+    dinitrogen.partial_charges = charges
     return dinitrogen
 
 
@@ -1703,7 +1707,7 @@ class TestForceFieldVirtualSites:
 
     xml_ff_virtual_sites_bondcharge_match_once = """<?xml version="1.0" encoding="utf-8"?>
     <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-        <Bonds version="0.3">
+        <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="None" fractional_bondorder_interpolation="linear">
           <Bond smirks="[*:1]~[*:2]" id="b999" k="500.0 * kilocalories_per_mole/angstrom**2" length="1.1 * angstrom"/>
         </Bonds>
         <VirtualSites version="0.3">
@@ -1746,7 +1750,7 @@ class TestForceFieldVirtualSites:
 
     xml_ff_virtual_sites_bondcharge_match_all = """<?xml version="1.0" encoding="utf-8"?>
     <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-        <Bonds version="0.3">
+        <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="None" fractional_bondorder_interpolation="linear">
           <Bond smirks="[*:1]~[*:2]" id="b999" k="500.0 * kilocalories_per_mole/angstrom**2" length="1.1 * angstrom"/>
         </Bonds>
         <VirtualSites version="0.3">
@@ -1789,7 +1793,7 @@ class TestForceFieldVirtualSites:
 
     xml_ff_virtual_sites_bondcharge_match_once_two_names = """<?xml version="1.0" encoding="utf-8"?>
     <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-        <Bonds version="0.3">
+        <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="None" fractional_bondorder_interpolation="linear">
           <Bond smirks="[*:1]~[*:2]" id="b999" k="500.0 * kilocalories_per_mole/angstrom**2" length="1.1 * angstrom"/>
         </Bonds>
         <VirtualSites version="0.3">
@@ -1821,7 +1825,7 @@ class TestForceFieldVirtualSites:
 
     xml_ff_virtual_sites_monovalent_match_once = """<?xml version="1.0" encoding="utf-8"?>
     <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-        <Bonds version="0.3">
+        <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="None" fractional_bondorder_interpolation="linear">
           <Bond smirks="[*:1]~[*:2]" id="b999" k="500.0 * kilocalories_per_mole/angstrom**2" length="1.1 * angstrom"/>
         </Bonds>
         <VirtualSites version="0.3">
@@ -1859,7 +1863,7 @@ class TestForceFieldVirtualSites:
 
     xml_ff_virtual_sites_divalent_match_all = """<?xml version="1.0" encoding="ASCII"?>
     <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-        <Bonds version="0.3">
+        <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="None" fractional_bondorder_interpolation="linear">
           <Bond smirks="[*:1]~[*:2]" id="b999" k="500.0 * kilocalories_per_mole/angstrom**2" length="1.1 * angstrom"/>
         </Bonds>
         <VirtualSites version="0.3">
@@ -1882,7 +1886,7 @@ class TestForceFieldVirtualSites:
 
     xml_ff_virtual_sites_trivalent_match_once = """<?xml version="1.0" encoding="ASCII"?>
     <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-        <Bonds version="0.3">
+        <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="None" fractional_bondorder_interpolation="linear">
           <Bond smirks="[*:1]~[*:2]" id="b999" k="500.0 * kilocalories_per_mole/angstrom**2" length="1.1 * angstrom"/>
         </Bonds>
         <VirtualSites version="0.3">
@@ -1906,7 +1910,7 @@ class TestForceFieldVirtualSites:
     xml_ff_virtual_sites_trivalent_match_all = """
     <?xml version="1.0" encoding="ASCII"?>
     <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-        <Bonds version="0.3">
+        <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="None" fractional_bondorder_interpolation="linear">
           <Bond smirks="[*:1]~[*:2]" id="b999" k="500.0 * kilocalories_per_mole/angstrom**2" length="1.1 * angstrom"/>
         </Bonds>
         <VirtualSites version="0.3">
