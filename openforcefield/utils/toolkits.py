@@ -39,6 +39,7 @@ __all__ = [
     "OpenEyeToolkitWrapper",
     "RDKitToolkitWrapper",
     "AmberToolsToolkitWrapper",
+    "BuiltInToolkitWrapper",
     "ToolkitRegistry",
     "GLOBAL_TOOLKIT_REGISTRY",
     "OPENEYE_AVAILABLE",
@@ -823,7 +824,18 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             # TODO: "dprop" means "double precision" -- Is there any way to make Python more accurately
             #  describe/infer the proper data type?
             oechem.OESetSDData(oemol, "atom.dprop.PartialCharge", partial_charges_str)
-        oechem.OEWriteMolecule(ofs, oemol)
+
+        # If the file format is "pdb" using OEWriteMolecule() rearranges the atoms (hydrogens are pushed to the bottom)
+        # Issue #475 (https://github.com/openforcefield/openforcefield/issues/475)
+        # dfhahn's workaround: Using OEWritePDBFile does not alter the atom arrangement
+        if file_format.lower() == "pdb":
+            if oemol.NumConfs() > 1:
+                for conf in oemol.GetConfs():
+                    oechem.OEWritePDBFile(ofs, conf, oechem.OEOFlavor_PDB_BONDS)
+            else:
+                oechem.OEWritePDBFile(ofs, oemol, oechem.OEOFlavor_PDB_BONDS)
+        else:
+            oechem.OEWriteMolecule(ofs, oemol)
         ofs.close()
 
     @staticmethod
@@ -2351,7 +2363,9 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         return tuple(unique_tags), tuple(connections)
 
     @staticmethod
-    def _find_smarts_matches(oemol, smarts, aromaticity_model=None):
+    def _find_smarts_matches(
+        oemol, smarts, aromaticity_model=DEFAULT_AROMATICITY_MODEL
+    ):
         """Find all sets of atoms in the provided OpenEye molecule that match the provided SMARTS string.
 
         Parameters
@@ -2363,7 +2377,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             If there are N tagged atoms numbered 1..N, the resulting matches will be N-tuples of atoms that match the corresponding tagged atoms.
         aromaticity_model : str, optional, default=None
             OpenEye aromaticity model designation as a string, such as ``OEAroModel_MDL``.
-            If ``None``, molecule is processed exactly as provided; otherwise it is prepared with this aromaticity model prior to querying.
+            Molecule is prepared with this aromaticity model prior to querying.
 
         Returns
         -------
@@ -2384,30 +2398,33 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         # Make a copy of molecule so we don't influence original (probably safer than deepcopy per C Bayly)
         mol = oechem.OEMol(oemol)
-
         # Set up query
         qmol = oechem.OEQMol()
         if not oechem.OEParseSmarts(qmol, smarts):
             raise ValueError(f"Error parsing SMARTS '{smarts}'")
 
-        # Determine aromaticity model
-        if aromaticity_model:
-            if type(aromaticity_model) == str:
-                # Check if the user has provided a manually-specified aromaticity_model
-                if hasattr(oechem, aromaticity_model):
-                    oearomodel = getattr(oechem, "OEAroModel_" + aromaticity_model)
-                else:
-                    raise ValueError(
-                        "Error: provided aromaticity model not recognized by oechem."
-                    )
+        # Apply aromaticity model
+        if type(aromaticity_model) == str:
+            # Check if the user has provided a manually-specified aromaticity_model
+            if hasattr(oechem, aromaticity_model):
+                oearomodel = getattr(oechem, aromaticity_model)
             else:
-                raise ValueError("Error: provided aromaticity model must be a string.")
+                raise ValueError(
+                    "Error: provided aromaticity model not recognized by oechem."
+                )
+        else:
+            raise ValueError("Error: provided aromaticity model must be a string.")
 
-            # If aromaticity model was provided, prepare molecule
-            oechem.OEClearAromaticFlags(mol)
-            oechem.OEAssignAromaticFlags(mol, oearomodel)
-            # Avoid running OEPrepareSearch or we lose desired aromaticity, so instead:
-            oechem.OEAssignHybridization(mol)
+        # OEPrepareSearch will clobber our desired aromaticity model if we don't sync up mol and qmol ahead of time
+        # Prepare molecule
+        oechem.OEClearAromaticFlags(mol)
+        oechem.OEAssignAromaticFlags(mol, oearomodel)
+
+        # If aromaticity model was provided, prepare query molecule
+        oechem.OEClearAromaticFlags(qmol)
+        oechem.OEAssignAromaticFlags(qmol, oearomodel)
+        oechem.OEAssignHybridization(mol)
+        oechem.OEAssignHybridization(qmol)
 
         # Build list of matches
         # TODO: The MoleculeImage mapping should preserve ordering of template molecule for equivalent atoms
@@ -2415,6 +2432,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         unique = False  # We require all matches, not just one of each kind
         substructure_search = OESubSearch(qmol)
         substructure_search.SetMaxMatches(0)
+        oechem.OEPrepareSearch(mol, substructure_search)
         matches = list()
         for match in substructure_search.Match(mol, unique):
             # Compile list of atom indices that match the pattern tags
@@ -2443,13 +2461,15 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         smarts : str
             SMARTS string with optional SMIRKS-style atom tagging
         aromaticity_model : str, optional, default='OEAroModel_MDL'
-            Aromaticity model to use during matching
+            Molecule is prepared with this aromaticity model prior to querying.
 
         .. note :: Currently, the only supported ``aromaticity_model`` is ``OEAroModel_MDL``
 
         """
         oemol = self.to_openeye(molecule)
-        return self._find_smarts_matches(oemol, smarts)
+        return self._find_smarts_matches(
+            oemol, smarts, aromaticity_model=aromaticity_model
+        )
 
 
 class RDKitToolkitWrapper(ToolkitWrapper):
@@ -3736,7 +3756,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             If there are N tagged atoms numbered 1..N, the resulting matches will be N-tuples of atoms that match the corresponding tagged atoms.
         aromaticity_model : str, optional, default='OEAroModel_MDL'
             OpenEye aromaticity model designation as a string, such as ``OEAroModel_MDL``.
-            If ``None``, molecule is processed exactly as provided; otherwise it is prepared with this aromaticity model prior to querying.
+            Molecule is prepared with this aromaticity model prior to querying.
 
         Returns
         -------
@@ -3785,7 +3805,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         # since the C++ signature is a uint
         max_matches = np.iinfo(np.uintc).max
         for match in rdmol.GetSubstructMatches(
-            qmol, uniquify=False, maxMatches=max_matches
+            qmol, uniquify=False, maxMatches=max_matches, useChirality=True
         ):
             mas = [match[x] for x in map_list]
             matches.append(tuple(mas))
@@ -3805,7 +3825,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         smarts : str
             SMARTS string with optional SMIRKS-style atom tagging
         aromaticity_model : str, optional, default='OEAroModel_MDL'
-            Aromaticity model to use during matching
+            Molecule is prepared with this aromaticity model prior to querying.
 
         .. note :: Currently, the only supported ``aromaticity_model`` is ``OEAroModel_MDL``
 
@@ -4639,83 +4659,81 @@ class ToolkitRegistry:
     Register toolkits in a specified order, skipping if unavailable
 
     >>> from openforcefield.utils.toolkits import ToolkitRegistry
-    >>> toolkit_registry = ToolkitRegistry()
     >>> toolkit_precedence = [OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper]
-    >>> for toolkit in toolkit_precedence:
-    ...     if toolkit.is_available():
-    ...         toolkit_registry.register_toolkit(toolkit)
+    >>> toolkit_registry = ToolkitRegistry(toolkit_precedence)
+    >>> toolkit_registry
+    ToolkitRegistry containing OpenEye Toolkit, The RDKit, AmberTools
 
-    Register specified toolkits, raising an exception if one is unavailable
+    Register all available toolkits (in the order OpenEye, RDKit, AmberTools, built-in)
 
-    >>> toolkit_registry = ToolkitRegistry()
-    >>> toolkits = [OpenEyeToolkitWrapper, AmberToolsToolkitWrapper]
-    >>> for toolkit in toolkits:
-    ...     toolkit_registry.register_toolkit(toolkit)
-
-    Register all available toolkits in arbitrary order
-
-    >>> from openforcefield.utils import all_subclasses
-    >>> toolkits = all_subclasses(ToolkitWrapper)
-    >>> for toolkit in toolkit_precedence:
-    ...     if toolkit.is_available():
-    ...         toolkit_registry.register_toolkit(toolkit)
+    >>> toolkits = [OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper, BuiltInToolkitWrapper]
+    >>> toolkit_registry = ToolkitRegistry(toolkit_precedence=toolkits)
+    >>> toolkit_registry
+    ToolkitRegistry containing OpenEye Toolkit, The RDKit, AmberTools, Built-in Toolkit
 
     Retrieve the global singleton toolkit registry, which is created when this module is imported from all available
     toolkits:
 
     >>> from openforcefield.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY as toolkit_registry
-    >>> available_toolkits = toolkit_registry.registered_toolkits
+    >>> toolkit_registry
+    ToolkitRegistry containing OpenEye Toolkit, The RDKit, AmberTools, Built-in Toolkit
+
+    Note that this will contain different ToolkitWrapper objects based on what toolkits
+    are currently installed.
 
     .. warning :: This API is experimental and subject to change.
     """
 
     def __init__(
         self,
-        register_imported_toolkit_wrappers=False,
-        toolkit_precedence=None,
+        toolkit_precedence=[],
         exception_if_unavailable=True,
+        _register_imported_toolkit_wrappers=False,
     ):
         """
         Create an empty toolkit registry.
 
         Parameters
         ----------
-        register_imported_toolkit_wrappers : bool, optional, default=False
-            If True, will attempt to register all imported ToolkitWrapper subclasses that can be found, in no particular
-             order.
-        toolkit_precedence : list, optional, default=None
+        toolkit_precedence : list, default=[]
             List of toolkit wrapper classes, in order of desired precedence when performing molecule operations. If
-            None, defaults to [OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper].
+            None, no toolkits will be registered.
+
         exception_if_unavailable : bool, optional, default=True
             If True, an exception will be raised if the toolkit is unavailable
 
-        """
+        _register_imported_toolkit_wrappers : bool, optional, default=False
+            If True, will attempt to register all imported ToolkitWrapper subclasses that can be
+            found in the order of toolkit_precedence, if specified. If toolkit_precedence is not
+            specified, the default order is [OpenEyeToolkitWrapper, RDKitToolkitWrapper,
+            AmberToolsToolkitWrapper, BuiltInToolkitWrapper].
 
+        """
         self._toolkits = list()
 
-        if toolkit_precedence is None:
-            toolkit_precedence = [
-                OpenEyeToolkitWrapper,
-                RDKitToolkitWrapper,
-                AmberToolsToolkitWrapper,
-                BuiltInToolkitWrapper,
-            ]
+        toolkits_to_register = list()
 
-        if register_imported_toolkit_wrappers:
-            # TODO: The precedence ordering of any non-specified remaining wrappers will be arbitrary.
-            # How do we fix this?
-            # Note: The precedence of non-specifid wrappers may be determined by the order in which
-            # they were defined
+        if _register_imported_toolkit_wrappers:
+            if toolkit_precedence is None:
+                toolkit_precedence = [
+                    OpenEyeToolkitWrapper,
+                    RDKitToolkitWrapper,
+                    AmberToolsToolkitWrapper,
+                    BuiltInToolkitWrapper,
+                ]
             all_importable_toolkit_wrappers = all_subclasses(ToolkitWrapper)
-            for toolkit in all_importable_toolkit_wrappers:
-                if toolkit in toolkit_precedence:
-                    continue
-                toolkit_precedence.append(toolkit)
+            for toolkit in toolkit_precedence:
+                if toolkit in all_importable_toolkit_wrappers:
+                    toolkits_to_register.append(toolkit)
+        else:
+            if toolkit_precedence:
+                toolkits_to_register = toolkit_precedence
 
-        for toolkit in toolkit_precedence:
-            self.register_toolkit(
-                toolkit, exception_if_unavailable=exception_if_unavailable
-            )
+        if toolkits_to_register:
+            for toolkit in toolkits_to_register:
+                self.register_toolkit(
+                    toolkit, exception_if_unavailable=exception_if_unavailable
+                )
 
     @property
     def registered_toolkits(self):
@@ -4892,7 +4910,7 @@ class ToolkitRegistry:
 
         >>> from openforcefield.topology import Molecule
         >>> molecule = Molecule.from_smiles('Cc1ccccc1')
-        >>> toolkit_registry = ToolkitRegistry(register_imported_toolkit_wrappers=True)
+        >>> toolkit_registry = ToolkitRegistry([OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper])
         >>> method = toolkit_registry.resolve('to_smiles')
         >>> smiles = method(molecule)
 
@@ -4949,7 +4967,7 @@ class ToolkitRegistry:
 
         >>> from openforcefield.topology import Molecule
         >>> molecule = Molecule.from_smiles('Cc1ccccc1')
-        >>> toolkit_registry = ToolkitRegistry(register_imported_toolkit_wrappers=True)
+        >>> toolkit_registry = ToolkitRegistry([OpenEyeToolkitWrapper, RDKitToolkitWrapper])
         >>> smiles = toolkit_registry.call('to_smiles', molecule)
 
         """
@@ -4994,7 +5012,13 @@ class ToolkitRegistry:
 # Create global toolkit registry, where all available toolkits are registered
 # TODO: Should this be all lowercase since it's not a constant?
 GLOBAL_TOOLKIT_REGISTRY = ToolkitRegistry(
-    register_imported_toolkit_wrappers=True, exception_if_unavailable=False
+    toolkit_precedence=[
+        OpenEyeToolkitWrapper,
+        RDKitToolkitWrapper,
+        AmberToolsToolkitWrapper,
+        BuiltInToolkitWrapper,
+    ],
+    exception_if_unavailable=False,
 )
 
 # =============================================================================================

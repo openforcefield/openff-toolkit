@@ -13,6 +13,7 @@ from openforcefield.topology.molecule import (
 from openforcefield.topology.topology import (
     DuplicateUniqueMoleculeError,
     ImproperDict,
+    InvalidBoxVectorsError,
     NotBondedError,
     SortedDict,
     Topology,

@@ -32,6 +32,7 @@ from openforcefield.tests.utils import (
 from openforcefield.topology import (
     DuplicateUniqueMoleculeError,
     ImproperDict,
+    InvalidBoxVectorsError,
     Molecule,
     Topology,
     ValenceDict,
@@ -157,7 +158,7 @@ class TestTopology(TestCase):
         )
         self.propane_from_smiles_w_vsites = Molecule(molecule)
 
-        # Make a TIP5 water, which uses orientations
+        # Make a TIP5 water
         molecule = Molecule.from_smiles("[H][O][H]")
         O1 = [atom for atom in molecule.atoms if atom.atomic_number == 8][0]
         H1, H2 = [atom for atom in O1.bonded_atoms if atom.atomic_number == 1]
@@ -185,16 +186,25 @@ class TestTopology(TestCase):
     def test_box_vectors(self):
         """Test the getter and setter for box_vectors"""
         topology = Topology()
-        good_box_vectors = unit.Quantity(np.array([10, 20, 30]), unit.angstrom)
-        bad_box_vectors = np.array([10, 20, 30])  # They're bad because they're unitless
+        good_box_vectors = unit.Quantity(np.eye(3) * 20 * unit.angstrom)
+        one_dim_vectors = unit.Quantity(np.ones(3) * 20 * unit.angstrom)
+        bad_shape_vectors = unit.Quantity(np.ones(2) * 20 * unit.angstrom)
+        bad_units_vectors = unit.Quantity(np.ones(3) * 20 * unit.year)
+        unitless_vectors = np.array([10, 20, 30])
         assert topology.box_vectors is None
 
-        with self.assertRaises(ValueError) as context:
-            topology.box_vectors = bad_box_vectors
-        assert topology.box_vectors is None
+        for bad_vectors in [
+            bad_shape_vectors,
+            bad_units_vectors,
+            unitless_vectors,
+        ]:
+            with self.assertRaises(InvalidBoxVectorsError):
+                topology.box_vectors = bad_vectors
+            assert topology.box_vectors is None
 
-        topology.box_vectors = good_box_vectors
-        assert (topology.box_vectors == good_box_vectors).all()
+        for good_vectors in [good_box_vectors, one_dim_vectors]:
+            topology.box_vectors = good_vectors
+            assert (topology.box_vectors == good_vectors * np.eye(3)).all()
 
     def test_from_smiles(self):
         """Test creation of a openforcefield Topology object from a SMILES string"""

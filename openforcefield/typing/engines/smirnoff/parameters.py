@@ -1829,7 +1829,7 @@ class ParameterHandler(_ParameterAttributeHandler):
             raise ValueError("One of (parameter, parameter_kwargs) must be specified")
 
         if new_parameter.smirks in [p.smirks for p in self._parameters]:
-            msg = f"A parameter SMIRKS pattern {val} already exists."
+            msg = f"A parameter SMIRKS pattern {new_parameter.smirks} already exists."
             raise DuplicateParameterError(msg)
 
         if before is not None:

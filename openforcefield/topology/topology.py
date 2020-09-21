@@ -25,6 +25,7 @@ import itertools
 from collections import OrderedDict
 from collections.abc import MutableMapping
 
+import numpy as np
 from simtk import unit
 from simtk.openmm import app
 
@@ -58,6 +59,12 @@ class NotBondedError(MessageException):
     """
 
     pass
+
+
+class InvalidBoxVectorsError(MessageException):
+    """
+    Exception for setting invalid box vectors
+    """
 
 
 # =============================================================================================
@@ -1301,7 +1308,7 @@ class Topology(Serializable):
         """Return the box vectors of the topology, if specified
         Returns
         -------
-        box_vectors : simtk.unit.Quantity wrapped numpy array
+        box_vectors : simtk.unit.Quantity wrapped numpy array of shape (3, 3)
             The unit-wrapped box vectors of this topology
         """
         return self._box_vectors
@@ -1313,7 +1320,7 @@ class Topology(Serializable):
 
         Parameters
         ----------
-        box_vectors : simtk.unit.Quantity wrapped numpy array
+        box_vectors : simtk.unit.Quantity wrapped numpy array of shape (3, 3)
             The unit-wrapped box vectors
 
         """
@@ -1321,14 +1328,19 @@ class Topology(Serializable):
             self._box_vectors = None
             return
         if not hasattr(box_vectors, "unit"):
-            raise ValueError("Given unitless box vectors")
+            raise InvalidBoxVectorsError("Given unitless box vectors")
         if not (unit.angstrom.is_compatible(box_vectors.unit)):
-            raise ValueError(
+            raise InvalidBoxVectorsError(
                 "Attempting to set box vectors in units that are incompatible with simtk.unit.Angstrom"
             )
 
         if hasattr(box_vectors, "shape"):
-            assert box_vectors.shape == (3,)
+            if box_vectors.shape == (3,):
+                box_vectors *= np.eye(3)
+            if box_vectors.shape != (3, 3):
+                raise InvalidBoxVectorsError(
+                    f"Box vectors must be shape (3, 3). Found shape {box_vectors.shape}"
+                )
         else:
             assert len(box_vectors) == 3
         self._box_vectors = box_vectors
