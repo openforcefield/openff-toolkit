@@ -446,12 +446,7 @@ class Atom(Particle):
                 "This Atom does not belong to a Molecule object"
             )
 
-        # This is really slow, since it queries the chemical environment on _each atom_
-        # Can we store Molecule._atoms_in_ring?
-        atoms_in_any_ring = [
-            val[0] for val in self._molecule.chemical_environment_matches("[*;R*:1]")
-        ]  # list of ints
-        return self.molecule_atom_index in atoms_in_any_ring
+        return any([self.molecule_atom_index in ring for ring in self._molecule.rings])
 
     @property
     def virtual_sites(self):
@@ -1408,7 +1403,7 @@ class Bond(Serializable):
     @property
     def is_in_ring(self):
         """
-        Return whether or not this atom is in a ring(s) (of any size)
+        Return whether or not this bond is in a ring(s) (of any size)
 
         """
         if self._molecule is None:
@@ -1416,10 +1411,7 @@ class Bond(Serializable):
                 "This Bond does not belong to a Molecule object"
             )
 
-        rings = self._molecule._get_rings()
-        if rings is None:
-            return False
-        for ring in rings:
+        for ring in self._molecule.rings:
             if self.atom1.molecule_atom_index in ring:
                 if self.atom2.molecule_atom_index in ring:
                     return True
@@ -2713,6 +2705,7 @@ class FrozenMolecule(Serializable):
 
         self._cached_smiles = None
         # TODO: Clear fractional bond orders
+        self._rings = None
 
     def to_networkx(self):
         """Generate a NetworkX undirected graph from the Molecule.
@@ -4713,6 +4706,12 @@ class FrozenMolecule(Serializable):
 
         raise NotBondedError("No bond between atom {} and {}".format(i, j))
 
+    @property
+    def rings(self):
+        if self._rings is None:
+            self._rings = self._get_rings()
+        return self._rings
+
     def _get_rings(self):
         """
         Find the rings in this molecule
@@ -4727,10 +4726,13 @@ class FrozenMolecule(Serializable):
         -------
         rings : list of list of int
             A nested list with one sublist per ring and each sublist containing
-            a list of the indices of atoms containing with it
+            a list of the indices of atoms containing with it. If no rings are
+            found, a single empty list is returned.
         """
         graph = self.to_networkx()
         rings = nx.cycle_basis(graph)
+        if rings is None:
+            rings = []
         return rings
 
 
