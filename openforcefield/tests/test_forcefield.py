@@ -552,6 +552,7 @@ def create_cyclohexane():
     cyclohexane.add_bond(5, 17, 1, False)  # C5 - H17
     return cyclohexane
 
+
 def create_dioxygen():
     """
     Creates an openforcefield.topology.Molecule representation of
@@ -564,6 +565,7 @@ def create_dioxygen():
 
     return dioxygen
 
+
 def create_dinitrogen():
     """
     Creates an openforcefield.topology.Molecule representation of
@@ -574,6 +576,7 @@ def create_dinitrogen():
     dinitrogen.add_atom(7, 0, False)  # N1
     dinitrogen.add_bond(0, 1, 3, False)  # N0 - N1
     return dinitrogen
+
 
 nonbonded_resolution_matrix = [
     {
@@ -1972,7 +1975,7 @@ class TestForceFieldVirtualSites:
                 (+0.2 * q_unit, None, None),
                 (-0.4 * q_unit, 0.2 * s_unit, 0.2 * e_unit),
             ),
-            "mol": create_dinitrogen()
+            "mol": create_dinitrogen(),
         }
     )
     bond_charge_parameters_args.append(opts)
@@ -1988,7 +1991,7 @@ class TestForceFieldVirtualSites:
                 (+0.1 * q_unit, None, None),
                 (-0.2 * q_unit, 0.1 * s_unit, 0.1 * e_unit),
             ),
-            "mol": create_dioxygen()
+            "mol": create_dioxygen(),
         }
     )
     bond_charge_parameters_args.append(opts)
@@ -2005,7 +2008,7 @@ class TestForceFieldVirtualSites:
                 (-0.4 * q_unit, 0.2 * s_unit, 0.2 * e_unit),
                 (-0.4 * q_unit, 0.2 * s_unit, 0.2 * e_unit),
             ),
-            "mol": create_dinitrogen()
+            "mol": create_dinitrogen(),
         }
     )
     bond_charge_parameters_args.append(opts)
@@ -2026,7 +2029,7 @@ class TestForceFieldVirtualSites:
                 (-0.2 * q_unit, 0.1 * s_unit, 0.1 * e_unit),
                 (-0.4 * q_unit, 0.2 * s_unit, 0.2 * e_unit),
             ),
-            "mol": create_dinitrogen()
+            "mol": create_dinitrogen(),
         }
     )
     bond_charge_parameters_args.append(opts)

@@ -3980,7 +3980,6 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
                 warnings.warn(str(e), Warning)
                 continue
 
-
             charges_to_assign = {}
 
             # Assign initial, un-incremented charges to relevant atoms
