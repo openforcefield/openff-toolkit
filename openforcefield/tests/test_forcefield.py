@@ -552,6 +552,28 @@ def create_cyclohexane():
     cyclohexane.add_bond(5, 17, 1, False)  # C5 - H17
     return cyclohexane
 
+def create_dioxygen():
+    """
+    Creates an openforcefield.topology.Molecule representation of
+    dioxygen without the use of a cheminformatics toolkit
+    """
+    dioxygen = Molecule()
+    dioxygen.add_atom(8, 0, False)  # O0
+    dioxygen.add_atom(8, 0, False)  # O1
+    dioxygen.add_bond(0, 1, 2, False)  # O0 # O1
+
+    return dioxygen
+
+def create_dinitrogen():
+    """
+    Creates an openforcefield.topology.Molecule representation of
+    dinitrogen without the use of a cheminformatics toolkit
+    """
+    dinitrogen = Molecule()
+    dinitrogen.add_atom(7, 0, False)  # N0
+    dinitrogen.add_atom(7, 0, False)  # N1
+    dinitrogen.add_bond(0, 1, 3, False)  # N0 - N1
+    return dinitrogen
 
 nonbonded_resolution_matrix = [
     {
@@ -1678,6 +1700,9 @@ class TestForceFieldVirtualSites:
 
     xml_ff_virtual_sites_bondcharge_match_once = """<?xml version="1.0" encoding="utf-8"?>
     <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+        <Bonds version="0.3">
+          <Bond smirks="[*:1]~[*:2]" id="b999" k="500.0 * kilocalories_per_mole/angstrom**2" length="1.1 * angstrom"/>
+        </Bonds>
         <VirtualSites version="0.3">
             <VirtualSite
                 type="BondCharge"
@@ -1718,6 +1743,9 @@ class TestForceFieldVirtualSites:
 
     xml_ff_virtual_sites_bondcharge_match_all = """<?xml version="1.0" encoding="utf-8"?>
     <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+        <Bonds version="0.3">
+          <Bond smirks="[*:1]~[*:2]" id="b999" k="500.0 * kilocalories_per_mole/angstrom**2" length="1.1 * angstrom"/>
+        </Bonds>
         <VirtualSites version="0.3">
             <VirtualSite
                 type="BondCharge"
@@ -1758,6 +1786,9 @@ class TestForceFieldVirtualSites:
 
     xml_ff_virtual_sites_bondcharge_match_once_two_names = """<?xml version="1.0" encoding="utf-8"?>
     <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+        <Bonds version="0.3">
+          <Bond smirks="[*:1]~[*:2]" id="b999" k="500.0 * kilocalories_per_mole/angstrom**2" length="1.1 * angstrom"/>
+        </Bonds>
         <VirtualSites version="0.3">
             <VirtualSite
                 type="BondCharge"
@@ -1787,6 +1818,9 @@ class TestForceFieldVirtualSites:
 
     xml_ff_virtual_sites_monovalent_match_once = """<?xml version="1.0" encoding="utf-8"?>
     <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+        <Bonds version="0.3">
+          <Bond smirks="[*:1]~[*:2]" id="b999" k="500.0 * kilocalories_per_mole/angstrom**2" length="1.1 * angstrom"/>
+        </Bonds>
         <VirtualSites version="0.3">
             <VirtualSite
                 type="MonovalentLonePair"
@@ -1822,6 +1856,9 @@ class TestForceFieldVirtualSites:
 
     xml_ff_virtual_sites_divalent_match_all = """<?xml version="1.0" encoding="ASCII"?>
     <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+        <Bonds version="0.3">
+          <Bond smirks="[*:1]~[*:2]" id="b999" k="500.0 * kilocalories_per_mole/angstrom**2" length="1.1 * angstrom"/>
+        </Bonds>
         <VirtualSites version="0.3">
             <VirtualSite
                 type="DivalentLonePair"
@@ -1842,6 +1879,9 @@ class TestForceFieldVirtualSites:
 
     xml_ff_virtual_sites_trivalent_match_once = """<?xml version="1.0" encoding="ASCII"?>
     <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+        <Bonds version="0.3">
+          <Bond smirks="[*:1]~[*:2]" id="b999" k="500.0 * kilocalories_per_mole/angstrom**2" length="1.1 * angstrom"/>
+        </Bonds>
         <VirtualSites version="0.3">
             <VirtualSite
                 type="TrivalentLonePair"
@@ -1863,6 +1903,10 @@ class TestForceFieldVirtualSites:
     xml_ff_virtual_sites_trivalent_match_all = """
     <?xml version="1.0" encoding="ASCII"?>
     <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+        <Bonds version="0.3">
+          <Bond smirks="[*:1]~[*:2]" id="b999" k="500.0 * kilocalories_per_mole/angstrom**2" length="1.1 * angstrom"/>
+        </Bonds>
+        <VirtualSites version="0.3">
             <VirtualSite
                 type="TrivalentLonePair"
                 name="EP"
@@ -1921,37 +1965,39 @@ class TestForceFieldVirtualSites:
     opts = OrderedDict(
         {
             "xml": xml_ff_virtual_sites_bondcharge_match_once,
-            "smi": "[N]#[N]",
+            "smi": None,
             "assert_physics": (
                 # charge        sigma         epsilon
                 (+0.2 * q_unit, None, None),
                 (+0.2 * q_unit, None, None),
                 (-0.4 * q_unit, 0.2 * s_unit, 0.2 * e_unit),
             ),
+            "mol": create_dinitrogen()
         }
     )
     bond_charge_parameters_args.append(opts)
 
-    # Test the wildcard match
+    # Test the wildcard match where match
     opts = OrderedDict(
         {
             "xml": xml_ff_virtual_sites_bondcharge_match_once,
-            "smi": "[C][C]",
+            "smi": None,
             "assert_physics": (
                 # charge        sigma         epsilon
                 (+0.1 * q_unit, None, None),
                 (+0.1 * q_unit, None, None),
                 (-0.2 * q_unit, 0.1 * s_unit, 0.1 * e_unit),
             ),
+            "mol": create_dioxygen()
         }
     )
     bond_charge_parameters_args.append(opts)
 
-    # Test the wildcard match
+    # Test the wildcard match where match is 0-1 and 1-0
     opts = OrderedDict(
         {
             "xml": xml_ff_virtual_sites_bondcharge_match_all,
-            "smi": "[N]#[N]",
+            "smi": None,
             "assert_physics": (
                 # charge        sigma         epsilon
                 (+0.4 * q_unit, None, None),
@@ -1959,6 +2005,7 @@ class TestForceFieldVirtualSites:
                 (-0.4 * q_unit, 0.2 * s_unit, 0.2 * e_unit),
                 (-0.4 * q_unit, 0.2 * s_unit, 0.2 * e_unit),
             ),
+            "mol": create_dinitrogen()
         }
     )
     bond_charge_parameters_args.append(opts)
@@ -1971,7 +2018,7 @@ class TestForceFieldVirtualSites:
     opts = OrderedDict(
         {
             "xml": xml_ff_virtual_sites_bondcharge_match_once_two_names,
-            "smi": "[N]#[N]",
+            "smi": None,
             "assert_physics": (
                 # charge        sigma         epsilon
                 (+0.3 * q_unit, None, None),
@@ -1979,6 +2026,7 @@ class TestForceFieldVirtualSites:
                 (-0.2 * q_unit, 0.1 * s_unit, 0.1 * e_unit),
                 (-0.4 * q_unit, 0.2 * s_unit, 0.2 * e_unit),
             ),
+            "mol": create_dinitrogen()
         }
     )
     bond_charge_parameters_args.append(opts)
