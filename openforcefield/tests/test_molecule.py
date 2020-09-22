@@ -2776,12 +2776,14 @@ class TestMolecule:
             ("C1C2C(CCC1)CC5C3C2CCC7C3C4C(CCC6C4C5CCC6)CC7", 7),
         ],
     )
+    @requires_rdkit
     def test_molecule_rings(self, smiles, n_rings):
         """Test the Molecule.rings property"""
         assert (
             n_rings == Molecule.from_smiles(smiles, allow_undefined_stereo=True).n_rings
         )
 
+    @requires_rdkit
     def test_is_in_ring(self):
         """Test Atom.is_in_ring and Bond.is_in_ring"""
         naphthalene = Molecule.from_smiles("c1ccc2ccccc2c1")
