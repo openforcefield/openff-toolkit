@@ -1412,7 +1412,10 @@ class TestMolecule:
         ethanol_reverse = create_reversed_ethanol()
         # get the mapping between the molecules
         mapping = Molecule.are_isomorphic(ethanol, ethanol_reverse, True)[1]
-        ethanol.add_bond_charge_virtual_site([0, 1], 0.3 * unit.angstrom)
+
+        atom0, atom1 = list([atom for atom in ethanol.atoms])[:2]
+        ethanol.add_bond_charge_virtual_site([atom0, atom1], 0.3 * unit.angstrom)
+
         # make sure that molecules with virtual sites raises an error
         with pytest.raises(NotImplementedError):
             remapped = ethanol.remap(mapping, current_to_new=True)
@@ -2502,12 +2505,10 @@ class TestMolecule:
         atom4 = molecule.atoms[3]
         distance = 0.3 * unit.angstrom
         out_of_plane_angle = 30 * unit.degree
-        in_plane_angle = 0.2 * unit.radian
         vsite1_index = molecule.add_divalent_lone_pair_virtual_site(
             [atom1, atom2, atom3],
             distance,
             out_of_plane_angle,
-            in_plane_angle,
             replace=False,
         )
 
@@ -2517,7 +2518,6 @@ class TestMolecule:
                 [atom1, atom2],
                 distance,
                 out_of_plane_angle,
-                in_plane_angle,
                 replace=False,
             )
         molecule_dict = molecule.to_dict()
@@ -2535,13 +2535,10 @@ class TestMolecule:
         atom3 = molecule.atoms[2]
         atom4 = molecule.atoms[3]
         distance = 0.3 * unit.angstrom
-        out_of_plane_angle = 30 * unit.degree
-        in_plane_angle = 0.2 * unit.radian
+
         vsite1_index = molecule.add_trivalent_lone_pair_virtual_site(
             [atom1, atom2, atom3, atom4],
             distance,
-            out_of_plane_angle,
-            in_plane_angle,
             replace=False,
         )
         # Test for assertion when giving too few atoms
@@ -2549,8 +2546,6 @@ class TestMolecule:
             vsite1_index = molecule.add_trivalent_lone_pair_virtual_site(
                 [atom1, atom2, atom3],
                 distance,
-                out_of_plane_angle,
-                in_plane_angle,
                 replace=True,
             )
         molecule_dict = molecule.to_dict()
