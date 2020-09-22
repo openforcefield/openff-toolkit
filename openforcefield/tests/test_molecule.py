@@ -2769,6 +2769,7 @@ class TestMolecule:
         [
             ("CCO", 0),
             ("c1ccccc1", 1),
+            ("C1CC2CCC1C2", 2),  # This should probably be 3?
             ("c1ccc(cc1)c2ccccc2", 2),
             ("c1ccc2ccccc2c1", 2),
             ("c1ccc2cc3ccccc3cc2c1", 3),

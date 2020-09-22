@@ -4717,27 +4717,26 @@ class FrozenMolecule(Serializable):
             self._get_rings()
         return self._rings
 
-    def _get_rings(self):
+    def _get_rings(self, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """
-        Find the rings in this molecule
+        Call out to ToolkitWrapper methods to find the rings in this molecule.
 
         .. note ::
 
-            For systems containing many conjugated rings, this function is not
-            well-behaved and may report a smaller number of larger rings instead
-            of all rings of minimum size.
+            For systems containing some special cases of connected rings, this
+            function may not be well-behaved and may report a different number
+            rings than expected. Some problematic cases include networks of many
+            (5+) rings or bicyclic moieties (i.e. norbornane).
 
         Returns
         -------
-        rings : list of list of int
-            A nested list with one sublist per ring and each sublist containing
-            a list of the indices of atoms containing with it. If no rings are
-            found, a single empty list is returned.
+        rings : tuple of tuple of int
+            A nested tuple with one subtuple per ring and each subtuple containing
+            a tuple of the indices of atoms containing with it. If no rings are
+            found, a single empty tuple is returned.
+
         """
-        graph = self.to_networkx()
-        rings = nx.minimum_cycle_basis(graph)
-        if rings is None:
-            rings = []
+        rings = toolkit_registry.call("find_rings", self)
         self._rings = rings
 
 
