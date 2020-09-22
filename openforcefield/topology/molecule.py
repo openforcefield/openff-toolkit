@@ -3269,6 +3269,11 @@ class FrozenMolecule(Serializable):
         return len(self._impropers)
 
     @property
+    def n_rings(self):
+        """Return the number of rings found in the Molecule"""
+        return len(self.rings)
+
+    @property
     def particles(self):
         """
         Iterate over all Particle objects.
