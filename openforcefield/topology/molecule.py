@@ -4709,7 +4709,7 @@ class FrozenMolecule(Serializable):
     @property
     def rings(self):
         if self._rings is None:
-            self._rings = self._get_rings()
+            self._get_rings()
         return self._rings
 
     def _get_rings(self):
@@ -4730,10 +4730,10 @@ class FrozenMolecule(Serializable):
             found, a single empty list is returned.
         """
         graph = self.to_networkx()
-        rings = nx.cycle_basis(graph)
+        rings = nx.minimum_cycle_basis(graph)
         if rings is None:
             rings = []
-        return rings
+        self._rings = rings
 
 
 class Molecule(FrozenMolecule):
