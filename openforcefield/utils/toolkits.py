@@ -823,7 +823,18 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             # TODO: "dprop" means "double precision" -- Is there any way to make Python more accurately
             #  describe/infer the proper data type?
             oechem.OESetSDData(oemol, "atom.dprop.PartialCharge", partial_charges_str)
-        oechem.OEWriteMolecule(ofs, oemol)
+
+        # If the file format is "pdb" using OEWriteMolecule() rearranges the atoms (hydrogens are pushed to the bottom)
+        # Issue #475 (https://github.com/openforcefield/openforcefield/issues/475)
+        # dfhahn's workaround: Using OEWritePDBFile does not alter the atom arrangement
+        if file_format.lower() == "pdb":
+            if oemol.NumConfs() > 1:
+                for conf in oemol.GetConfs():
+                    oechem.OEWritePDBFile(ofs, conf, oechem.OEOFlavor_PDB_BONDS)
+            else:
+                oechem.OEWritePDBFile(ofs, oemol, oechem.OEOFlavor_PDB_BONDS)
+        else:
+            oechem.OEWriteMolecule(ofs, oemol)
         ofs.close()
 
     @staticmethod
@@ -2351,7 +2362,9 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         return tuple(unique_tags), tuple(connections)
 
     @staticmethod
-    def _find_smarts_matches(oemol, smarts, aromaticity_model=None):
+    def _find_smarts_matches(
+        oemol, smarts, aromaticity_model=DEFAULT_AROMATICITY_MODEL
+    ):
         """Find all sets of atoms in the provided OpenEye molecule that match the provided SMARTS string.
 
         Parameters
@@ -2363,7 +2376,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             If there are N tagged atoms numbered 1..N, the resulting matches will be N-tuples of atoms that match the corresponding tagged atoms.
         aromaticity_model : str, optional, default=None
             OpenEye aromaticity model designation as a string, such as ``OEAroModel_MDL``.
-            If ``None``, molecule is processed exactly as provided; otherwise it is prepared with this aromaticity model prior to querying.
+            Molecule is prepared with this aromaticity model prior to querying.
 
         Returns
         -------
@@ -2384,30 +2397,33 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         # Make a copy of molecule so we don't influence original (probably safer than deepcopy per C Bayly)
         mol = oechem.OEMol(oemol)
-
         # Set up query
         qmol = oechem.OEQMol()
         if not oechem.OEParseSmarts(qmol, smarts):
             raise ValueError(f"Error parsing SMARTS '{smarts}'")
 
-        # Determine aromaticity model
-        if aromaticity_model:
-            if type(aromaticity_model) == str:
-                # Check if the user has provided a manually-specified aromaticity_model
-                if hasattr(oechem, aromaticity_model):
-                    oearomodel = getattr(oechem, "OEAroModel_" + aromaticity_model)
-                else:
-                    raise ValueError(
-                        "Error: provided aromaticity model not recognized by oechem."
-                    )
+        # Apply aromaticity model
+        if type(aromaticity_model) == str:
+            # Check if the user has provided a manually-specified aromaticity_model
+            if hasattr(oechem, aromaticity_model):
+                oearomodel = getattr(oechem, aromaticity_model)
             else:
-                raise ValueError("Error: provided aromaticity model must be a string.")
+                raise ValueError(
+                    "Error: provided aromaticity model not recognized by oechem."
+                )
+        else:
+            raise ValueError("Error: provided aromaticity model must be a string.")
 
-            # If aromaticity model was provided, prepare molecule
-            oechem.OEClearAromaticFlags(mol)
-            oechem.OEAssignAromaticFlags(mol, oearomodel)
-            # Avoid running OEPrepareSearch or we lose desired aromaticity, so instead:
-            oechem.OEAssignHybridization(mol)
+        # OEPrepareSearch will clobber our desired aromaticity model if we don't sync up mol and qmol ahead of time
+        # Prepare molecule
+        oechem.OEClearAromaticFlags(mol)
+        oechem.OEAssignAromaticFlags(mol, oearomodel)
+
+        # If aromaticity model was provided, prepare query molecule
+        oechem.OEClearAromaticFlags(qmol)
+        oechem.OEAssignAromaticFlags(qmol, oearomodel)
+        oechem.OEAssignHybridization(mol)
+        oechem.OEAssignHybridization(qmol)
 
         # Build list of matches
         # TODO: The MoleculeImage mapping should preserve ordering of template molecule for equivalent atoms
@@ -2415,6 +2431,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         unique = False  # We require all matches, not just one of each kind
         substructure_search = OESubSearch(qmol)
         substructure_search.SetMaxMatches(0)
+        oechem.OEPrepareSearch(mol, substructure_search)
         matches = list()
         for match in substructure_search.Match(mol, unique):
             # Compile list of atom indices that match the pattern tags
@@ -2443,13 +2460,15 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         smarts : str
             SMARTS string with optional SMIRKS-style atom tagging
         aromaticity_model : str, optional, default='OEAroModel_MDL'
-            Aromaticity model to use during matching
+            Molecule is prepared with this aromaticity model prior to querying.
 
         .. note :: Currently, the only supported ``aromaticity_model`` is ``OEAroModel_MDL``
 
         """
         oemol = self.to_openeye(molecule)
-        return self._find_smarts_matches(oemol, smarts)
+        return self._find_smarts_matches(
+            oemol, smarts, aromaticity_model=aromaticity_model
+        )
 
 
 class RDKitToolkitWrapper(ToolkitWrapper):
@@ -3736,7 +3755,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             If there are N tagged atoms numbered 1..N, the resulting matches will be N-tuples of atoms that match the corresponding tagged atoms.
         aromaticity_model : str, optional, default='OEAroModel_MDL'
             OpenEye aromaticity model designation as a string, such as ``OEAroModel_MDL``.
-            If ``None``, molecule is processed exactly as provided; otherwise it is prepared with this aromaticity model prior to querying.
+            Molecule is prepared with this aromaticity model prior to querying.
 
         Returns
         -------
@@ -3785,7 +3804,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         # since the C++ signature is a uint
         max_matches = np.iinfo(np.uintc).max
         for match in rdmol.GetSubstructMatches(
-            qmol, uniquify=False, maxMatches=max_matches
+            qmol, uniquify=False, maxMatches=max_matches, useChirality=True
         ):
             mas = [match[x] for x in map_list]
             matches.append(tuple(mas))
@@ -3805,7 +3824,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         smarts : str
             SMARTS string with optional SMIRKS-style atom tagging
         aromaticity_model : str, optional, default='OEAroModel_MDL'
-            Aromaticity model to use during matching
+            Molecule is prepared with this aromaticity model prior to querying.
 
         .. note :: Currently, the only supported ``aromaticity_model`` is ``OEAroModel_MDL``
 

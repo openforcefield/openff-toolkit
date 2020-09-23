@@ -39,6 +39,11 @@ Behavior changed
 - `PR #711 <https://github.com/openforcefield/openforcefield/pull/711>`_: The
   setter for ``Topology.boxbox_vectors`` now infers box vectors (a 3x3 matrix) when box lengths
   (a 3x1 array) are passed, assuming an orthogonal box.
+  - `PR #649 <https://github.com/openforcefield/openforcefield/pull/648>`_: Makes SMARTS
+  searches stereochemistry-specific (if stereo is specified in the SMARTS) for both OpenEye
+  and RDKit backends. Also ensures molecule
+  aromaticity is re-perceived according to the ForceField's specified
+  aromaticity model, which may overwrite user-specified aromaticity on the ``Molecule``
 - `PR #648 <https://github.com/openforcefield/openforcefield/pull/648>`_: Removes the
   ``utils.structure`` module, which was deprecated in 0.2.0.
 - `PR #670 <https://github.com/openforcefield/openforcefield/pull/670>`_: Makes the
@@ -52,10 +57,25 @@ Behavior changed
   :py:class:`ForceField <openforcefield.typing.engines.smirnoff.forcefield.ForceField>`
   constructor, which defaults to ``DEFAULT_AROMATICITY_MODEL``.
 
+Bug Fixes
+"""""""""
+- `PR #715 <https://github.com/openforcefield/openforcefield/pull/715>`_: Closes issue `Issue #475
+  <https://github.com/openforcefield/openforcefield/issues/475>`_ writing a "PDB" file using OE backend rearranges
+  the order of the atoms by pushing the hydrogens to the bottom.
+
 Tests added
 """""""""""
 - `PR #694 <https://github.com/openforcefield/openforcefield/pull/694>`_: Adds automated testing
   to code snippets in docs.
+- `PR #715 <https://github.com/openforcefield/openforcefield/pull/715>`_: Adds tests for pdb file writes using OE
+  backend.
+
+Bugfixes
+""""""""
+- `PR #649 <https://github.com/openforcefield/openforcefield/pull/648>`_: Prevents 2020 OE
+  toolkit from issuing a warning caused by doing stereo-specific smarts searches on certain
+  structures.
+
 
 0.7.1 - OETK2020 Compatibility and Minor Update
 -----------------------------------------------
