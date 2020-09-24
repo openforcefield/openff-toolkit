@@ -1710,7 +1710,7 @@ class ParameterHandler(_ParameterAttributeHandler):
                 # Skip sections that aren't the parameter list
                 if key != element_name:
                     break
-
+            # If there are multiple parameters, this will be a list. If there's just one, make it a list
             if not (isinstance(val, list)):
                 val = [val]
 
