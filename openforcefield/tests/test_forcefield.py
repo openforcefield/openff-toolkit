@@ -3665,6 +3665,127 @@ class TestForceFieldParameterAssignment:
             off_omm_system, amber_omm_system, positions, by_force_type=False
         )
 
+    def test_tip5_dimer_energy(self):
+        """"""
+
+        tip5p_offxml = """<?xml version="1.0" encoding="utf-8"?>
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+    <LibraryCharges version="0.3">
+            <LibraryCharge name="tip5p" smirks="[#1:1]-[#8X2H2+0:2]-[#1:3]" charge1="0.*elementary_charge" charge2="0.*elementary_charge" charge3="0.*elementary_charge"/>
+    </LibraryCharges>
+    <vdW version="0.3" potential="Lennard-Jones-12-6" combining_rules="Lorentz-Berthelot" scale12="0.0" scale13="0.0" scale14="0.5" scale15="1.0" switch_width="1.0 * angstrom" cutoff="9.0 * angstrom" method="cutoff">
+            <Atom smirks="[#1:1]-[#8X2H2+0]-[#1]" epsilon="0. * mole**-1 * kilojoule" id="n35" sigma="1 * nanometer"/>
+            <Atom smirks="[#1]-[#8X2H2+0:1]-[#1]" epsilon="0.66944 * mole**-1 * kilojoule" id="n35" sigma="0.312 * nanometer"/>
+    </vdW>
+     <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="None" fractional_bondorder_interpolation="linear">
+        <Bond smirks="[#1:1]-[#8X2H2+0:2]-[#1]" length="0.9572 * angstrom" k="462750.4 * nanometer**-2 * mole**-1 * kilojoule" id="b1" />   
+    </Bonds>
+    <Angles version="0.3" potential="harmonic">
+        <Angle smirks="[#1:1]-[#8X2H2+0:2]-[#1:3]" angle="1.82421813418 * radian" k="836.8 * mole**-1 * radian**-2 * kilojoule" id="a1" />
+    </Angles>
+    <VirtualSites version="0.3" exclusion_policy="parents">
+        <VirtualSite
+            type="DivalentLonePair"
+            name="EP"
+            smirks="[#1:1]-[#8X2H2+0:2]-[#1:3]"
+            distance="0.70 * angstrom"
+            chargeincrement1="0.1205*elementary_charge"
+            chargeincrement2="0.0*elementary_charge"
+            chargeincrement3="0.1205*elementary_charge"
+            sigma="1.0*angstrom"
+            epsilon="0.0*kilocalories_per_mole"
+            outOfPlaneAngle="54.71384225*degree"
+            match="all_permutations" >
+        </VirtualSite>
+    </VirtualSites>
+    <Electrostatics version="0.3" method="PME" scale12="0.0" scale13="0.0" scale14="0.833333" scale15="1.0" switch_width="0.0 * angstrom" cutoff="9.0 * angstrom"/>
+  <Constraints version="0.3">
+    <Constraint smirks="[#1:1]-[#8X2H2+0:2]-[#1]" id="c1" distance="0.9572 * angstrom"/>
+    <Constraint smirks="[#1:1]-[#8X2H2+0]-[#1:2]" id="c2" distance="1.5139006545247014 * angstrom"/>
+  </Constraints>
+</SMIRNOFF>
+"""
+        from openforcefield.tests.utils import (
+            compare_system_energies,
+            get_context_potential_energy,
+            evaluate_water_off,
+        )
+        from simtk.openmm import app
+
+        off_ff = ForceField("test_forcefields/smirnoff99Frosst.offxml", tip5p_offxml)
+
+        molecule1 = create_water()
+        molecule1.atoms[0].name = "O"
+        molecule1.atoms[1].name = "H1"
+        molecule1.atoms[2].name = "H2"
+        molecule1.generate_conformers(n_conformers=1)
+
+        molecule1.conformers[0] = np.array([
+            [-0.78900161, -0.19816432, -0.0],
+            [-0.00612716, 0.39173634, -0.0],
+            [0.79512877, -0.19357202, 0.0],
+        ]) * unit.angstrom
+
+        molecule2 = create_water()
+        molecule2.atoms[0].name = "O"
+        molecule2.atoms[1].name = "H1"
+        molecule2.atoms[2].name = "H2"
+        molecule2.generate_conformers(n_conformers=1)
+
+        # This is mol1 + 10 angstrom
+        molecule2.conformers[0] = np.array([
+            [9.21099839, 9.80183568, 10.0],
+            [9.99387284, 10.39173634, 10.0],
+            [10.79512877, 9.80642798, 10.0],
+        ]) * unit.angstrom
+
+        off_crds, off_ene = evaluate_water_off(
+            [molecule1, molecule2], off_ff, minimize=False
+        )
+
+        ref_crds_with_vsite = np.array([
+            [-0.0789001605855, -0.0198164316973, -0.0],
+            [-0.0006127160367, 0.0391736336129, -0.0],
+            [0.0795128766222, -0.0193572019156, 0.0],
+            [0.9210998394144, 0.9801835683026, 1.0],
+            [0.9993872839632, 1.0391736336129, 1.0],
+            [1.0795128766222, 0.9806427980843, 1.0],
+            [-0.0012451030403, 0.0796049187395, -0.0571394020767],
+            [-0.0012451030403, 0.0796049187395, 0.0571394020767],
+            [0.9987548969596, 1.0796049187395, 0.9428605979232],
+            [0.9987548969596, 1.0796049187395, 1.0571394020767],
+        ]) * unit.nanometer
+
+        ref_ene = 0.0011797690240 * unit.kilojoule_per_mole
+
+        assert np.allclose(
+            off_crds / unit.angstrom, ref_crds_with_vsite / unit.angstrom
+        )
+        assert np.allclose(
+            off_ene / unit.kilocalorie_per_mole, ref_ene / unit.kilocalorie_per_mole
+        )
+
+        # skip direct comparison for now because of particle creation and atom
+        # ordering complications
+
+        # # Create the oMM paramterized system
+        # omm_ff = app.ForceField("tip5p.xml")
+
+        # omm_top = off_top.to_openmm()
+        # omm_modeller = app.Modeller(omm_top, positions)
+        # omm_modeller.addExtraParticles(omm_ff)
+        # omm_top = omm_modeller.getTopology()
+
+        # omm_omm_system = omm_ff.createSystem(omm_top, nonbondedMethod=app.NoCutoff)
+
+        # compare_system_energies(
+        #     off_omm_system,
+        #     omm_omm_system,
+        #     positions,
+        #     by_force_type=False,
+        #     modify_system=False,
+        # )
+
     @requires_openeye_mol2
     @pytest.mark.parametrize("zero_charges", [True, False])
     @pytest.mark.parametrize(("gbsa_model"), ["HCT", "OBC1", "OBC2"])
