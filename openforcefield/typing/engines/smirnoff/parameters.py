@@ -4321,6 +4321,8 @@ class VirtualSiteHandler(_NonbondedHandler):
 
     # all: exclude all interactions, effectively turning vsites off.
 
+    # Note: only up to local is implemented!
+
     class _ExclusionPolicy(Enum):
         NONE = 1
         MINIMAL = 2
@@ -4328,6 +4330,7 @@ class VirtualSiteHandler(_NonbondedHandler):
         LOCAL = 4
         NEIGHBORS = 5
         CONNECTED = 6
+        ALL = 7
 
     _parameter_to_policy = {
         "none": _ExclusionPolicy.NONE,
@@ -4336,6 +4339,7 @@ class VirtualSiteHandler(_NonbondedHandler):
         "local": _ExclusionPolicy.LOCAL,
         "neighbors": _ExclusionPolicy.NEIGHBORS,
         "connected": _ExclusionPolicy.CONNECTED,
+        "all": _ExclusionPolicy.ALL,
     }
 
     exclusion_policy = ParameterAttribute(default="parents", converter=str)
@@ -4439,32 +4443,13 @@ class VirtualSiteHandler(_NonbondedHandler):
             # possible to choose specific permutations. For the current cases,
             # this should be fine and works well.
 
-            # We will bail on cases we know to not work with the "current"
-            # spec. This is currently the combination of trivalent and
-            # "all_permutations", since it is a completely degenerate case.
-
             # The API above takes all given orientations, but the OFFXML
             # has the match setting, which ultimately decides which orientations
             # to include.
             if self.match == "once":
                 key = self.transformed_dict_cls.key_transform(orientations[0])
                 orientations = [key]
-            # else:
-            #     if len(atoms) == 2:
-            #         orientations = sorted(atoms)
-            #     elif len(atoms) == 3:
-            #         orientations = [
-            #             sorted(atoms),
-            #             sorted(atoms)[::-1],
-            #         ]  # This is believable
-            #     elif len(atoms) == 4:  # assumes improper-like vsite
-            #         Exception(
-            #             "Virtual site with 4 atoms and match=all_permutations is not supported."
-            #         )
-            #     else:
-            #         raise NotImplementedError(
-            #             "Virtual site with more than 4 atoms defined is not implemented."
-            #         )
+                # else all matches wanted, so keep whatever was matched.
 
             base_args = {
                 "name": self.name,
@@ -4493,25 +4478,6 @@ class VirtualSiteHandler(_NonbondedHandler):
             args = (atoms, orientations)
             off_idx = super()._add_virtual_site(fn, *args, replace=replace)
             return off_idx
-
-    # class VirtualSiteLonePairType(VirtualSiteType):
-    #     """A SMIRNOFF virtual site requiring plane angles
-
-    #     .. warning :: This API is experimental and subject to change.
-    #     """
-
-    #     def add_virtual_site(self, fn, atoms, args, replace=False):
-    #         args = [atoms, self.distance] + args
-    #         base_args = {
-    #             "name": self.name,
-    #             "charge_increments": self.chargeincrement,
-    #             "weights": None,
-    #             "epsilon": self.epsilon,
-    #             "sigma": self.sigma,
-    #             "rmin_half": self.rmin_half,
-    #             "replace": replace,
-    #         }
-    #         return fn(*args, **base_args)
 
     class VirtualSiteMonovalentLonePairType(VirtualSiteType):
         """A SMIRNOFF monovalent lone pair virtual site type
@@ -4867,7 +4833,7 @@ class VirtualSiteHandler(_NonbondedHandler):
                     # Note that the expand_permutations=True above is what
                     # returns the different orders for each match (normally,
                     # this is not the case for e.g. bonds where 1-2 is the
-                    # same parameter as 2-1 and is return always as 1-2.
+                    # same parameter as 2-1 and is always returned as 1-2.
                     same_atoms = all(
                         [sorted(key) == sorted(k) for k in vsite_struct[KEY_LIST]]
                     )
