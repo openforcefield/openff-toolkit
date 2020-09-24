@@ -1495,12 +1495,14 @@ def compare_amber_smirnoff(
         return {"AMBER": amber_energies, "SMIRNOFF": forcefield_energies}
     return None
 
+
 # =============================================================================================
 # Utility functions for handling molecules in OpenMM with virtual sites
 # =============================================================================================
 
 # Note that these assume that the system is homogenous, i.e. the system
 # is composed of one or more identical molecules
+
 
 def reorder_openff_to_openmm(xyz, n_atoms_per_mol, n_vptls_per_mol):
 
