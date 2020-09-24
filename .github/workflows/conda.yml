@@ -136,7 +136,7 @@ jobs:
             python -c "import openeye; print(openeye.oechem.OEChemIsLicensed())"
           fi
 
-          PYTEST_ARGS=" -r fE --tb=short"
+          PYTEST_ARGS=" -r fE --tb=short --runslow"
           PYTEST_ARGS+=" --ignore=openforcefield/tests/test_links.py"
           # Can be dropped in the release after 0.7.1, in which readme links were tested in test_examples.py
           PYTEST_ARGS+=" --ignore=openforcefield/tests/test_examples.py"

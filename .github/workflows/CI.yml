@@ -142,7 +142,10 @@ jobs:
           PYTEST_ARGS+=" --ignore=openforcefield/tests/test_examples.py"
           PYTEST_ARGS+=" --ignore=openforcefield/tests/test_links.py"
           if [[ "$RDKIT" == true && "$OPENEYE" == true ]]; then
-            PYTEST_ARGS+="--doctest-modules"
+            PYTEST_ARGS+=" --doctest-modules"
+          fi
+          if [[ "$GITHUB_EVENT_NAME" == "schedule" ]]; then
+            $PYTEST_ARGS+=" --runslow"
           fi
           pytest $PYTEST_ARGS $PACKAGE/
 
