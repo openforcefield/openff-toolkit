@@ -34,6 +34,7 @@ from openforcefield.typing.engines.smirnoff.parameters import (
     ParameterType,
     ProperTorsionHandler,
     SMIRNOFFSpecError,
+    VirtualSiteHandler,
     _ParameterAttributeHandler,
 )
 from openforcefield.utils import IncompatibleUnitError, detach_units
@@ -1538,6 +1539,183 @@ class TestProperTorsionHandler:
         )
 
         assert k / k.unit < 0
+
+
+class TestVirtualSiteHandler:
+    """
+    Test the creation of a VirtualSiteHandler and the implemented VirtualSiteTypes
+    """
+
+    def _test_variable_names(self, valid_kwargs, variable_names):
+
+        from openforcefield.typing.chemistry.environment import SMIRKSParsingError
+
+        for name_to_change in variable_names:
+            invalid_kwargs = valid_kwargs.copy()
+            invalid_kwargs[
+                name_to_change
+            ] = "bad_attribute_value_that_will_never_be_used"
+
+            # Should also be able to perform the lookup on the type attribute.
+            # Needed to test setting to the wrong type value
+            exception = SMIRNOFFSpecError
+
+            with pytest.raises(exception):
+                vs_type = VirtualSiteHandler._VirtualSiteTypeSelector(**invalid_kwargs)
+
+    def _test_complete_attributes(self, valid_kwargs, names, virtual_site_type):
+
+        vs_type = virtual_site_type(**valid_kwargs)
+
+        for name_to_remove in names:
+            invalid_kwargs = valid_kwargs.copy()
+            invalid_kwargs.pop(name_to_remove)
+
+            with pytest.raises(SMIRNOFFSpecError):
+                vs_type = virtual_site_type(**invalid_kwargs)
+
+        # Test adding bogus attr
+        with pytest.raises(SMIRNOFFSpecError):
+            invalid_kwargs = valid_kwargs.copy()
+            invalid_kwargs["bad_attribute_name_that_will_never_be_in_the_spec"] = True
+            vs_type = virtual_site_type(**invalid_kwargs)
+
+    def test_create_virtual_site_handler(self):
+        """Test creation of an empty VirtualSiteHandler"""
+        handler = VirtualSiteHandler(
+            skip_version_check=True, exclusion_policy="parents"
+        )
+
+        with pytest.raises(SMIRNOFFSpecError):
+            handler = VirtualSiteHandler(
+                skip_version_check=True,
+                exclusion_policy="bad_attribute_value_that_will_never_be_used",
+            )
+
+    def test_virtual_site_bond_charge_type(self):
+        """
+        Ensure that an error is raised if incorrect parameters are given to
+        a bond charge type
+        """
+
+        valid_kwargs = dict(
+            type="BondCharge",
+            smirks="[#6:1]-[#7:2]",
+            name="EP",
+            distance=1.0 * unit.angstrom,
+            chargeincrement=[1.0, 1.0] * unit.elementary_charge,
+            sigma=0.0 * unit.angstrom,
+            epsilon=1.0 * unit.kilocalorie_per_mole,
+            match="once",
+        )
+
+        names = ["type", "distance", "chargeincrement", "sigma", "epsilon"]
+
+        self._test_complete_attributes(
+            valid_kwargs, names, VirtualSiteHandler.VirtualSiteBondChargeType
+        )
+
+        variable_names = ["type", "match"]
+        self._test_variable_names(valid_kwargs, variable_names)
+
+    def test_virtual_site_monovalent_type(self):
+        """
+        Ensure that an error is raised if incorrect parameters are given to
+        a monovalent type
+        """
+
+        valid_kwargs = dict(
+            type="MonovalentLonePair",
+            smirks="[#6:1]-[#7:2]-[#8:3]",
+            name="EP",
+            distance=1.0 * unit.angstrom,
+            chargeincrement=[1.0, 1.0, 1.0] * unit.elementary_charge,
+            outOfPlaneAngle=30 * unit.degree,
+            inPlaneAngle=30 * unit.degree,
+            sigma=0.0 * unit.angstrom,
+            epsilon=1.0 * unit.kilocalorie_per_mole,
+            match="once",
+        )
+        names = [
+            "type",
+            "distance",
+            "chargeincrement",
+            "outOfPlaneAngle",
+            "inPlaneAngle",
+            "sigma",
+            "epsilon",
+        ]
+
+        self._test_complete_attributes(
+            valid_kwargs, names, VirtualSiteHandler.VirtualSiteMonovalentLonePairType
+        )
+
+        variable_names = ["type", "match"]
+        self._test_variable_names(valid_kwargs, variable_names)
+
+    def test_virtual_site_divalent_type(self):
+        """
+        Ensure that an error is raised if incorrect parameters are given to
+        a divalent type
+        """
+
+        valid_kwargs = dict(
+            type="DivalentLonePair",
+            smirks="[#6:1]-[#7:2]-[#8:3]",
+            name="EP",
+            distance=1.0 * unit.angstrom,
+            chargeincrement=[1.0, 1.0, 1.0] * unit.elementary_charge,
+            outOfPlaneAngle=30 * unit.degree,
+            sigma=0.0 * unit.angstrom,
+            epsilon=1.0 * unit.kilocalorie_per_mole,
+            match="once",
+        )
+        names = [
+            "type",
+            "distance",
+            "chargeincrement",
+            "outOfPlaneAngle",
+            "sigma",
+            "epsilon",
+        ]
+
+        self._test_complete_attributes(
+            valid_kwargs, names, VirtualSiteHandler.VirtualSiteDivalentLonePairType
+        )
+
+        variable_names = ["type", "match"]
+        self._test_variable_names(valid_kwargs, variable_names)
+
+    def test_virtual_site_trivalent_type(self):
+        """
+        Ensure that an error is raised if incorrect parameters are given to
+        a trivalent type
+        """
+
+        valid_kwargs = dict(
+            type="TrivalentLonePair",
+            smirks="[#6:1]-[#7:2](-[#8:3])-[#8:4]",
+            name="EP",
+            distance=1.0 * unit.angstrom,
+            chargeincrement=[1.0, 1.0, 1.0, 1.0] * unit.elementary_charge,
+            sigma=0.0 * unit.angstrom,
+            epsilon=1.0 * unit.kilocalorie_per_mole,
+            match="once",
+        )
+        names = [
+            "type",
+            "distance",
+            "sigma",
+            "epsilon",
+            "chargeincrement",
+        ]
+
+        self._test_complete_attributes(
+            valid_kwargs, names, VirtualSiteHandler.VirtualSiteTrivalentLonePairType
+        )
+
+        variable_names = ["type", "match"]
+        self._test_variable_names(valid_kwargs, variable_names)
 
 
 class TestLibraryChargeHandler:
