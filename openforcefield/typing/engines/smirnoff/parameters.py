@@ -4290,6 +4290,114 @@ class GBSAHandler(ParameterHandler):
         system.addForce(gbsa_force)
 
 
+def validate_virtual_site_type_option(vsite_type):
+    """
+    Convert and validate the virtual site type specified in the VirtualSite element
+
+    Parameters
+    ----------
+    vsite_type : Any
+        The virtual site type to validate
+
+    Returns
+    -------
+    policy : str
+        The virtual site type if it is valid
+
+    Raises
+    ------
+    SMIRNOFFSpecError
+    ValueError
+    """
+
+    try:
+        vsite_type = str(vsite_type)
+    except ValueError:
+        raise
+
+    if vsite_type in [
+        "BondCharge",
+        "MonovalentLonePair",
+        "DivalentLonePair",
+        "TrivalentLonePair",
+    ]:
+        return vsite_type
+    else:
+        raise SMIRNOFFSpecError(
+            'VirtualSite not given a type. Set type to one of "BondCharge", "MonovalentLonePair", "DivalentLonePair", "TrivalentLonePair"'
+        )
+
+
+def validate_virtual_site_type_match_option(match):
+    """
+    Convert and validate the virtual site type specified in the VirtualSite element
+
+    Parameters
+    ----------
+    policy : Any
+        The virtual site type to validate
+
+    Returns
+    -------
+    policy : str
+        The virtual site type if it is valid
+
+    Raises
+    ------
+    SMIRNOFFSpecError
+    ValueError
+    """
+
+    try:
+        match = str(match)
+    except ValueError:
+        raise
+
+    if match == "once" or match == "all_permutations":
+        return match
+    else:
+        raise SMIRNOFFSpecError(
+            'VirtualSite type must specify match as either "once" or "all_permutations"'
+        )
+
+
+def validate_virtual_site_exclusion_policy_option(policy):
+    """
+    Convert and validate the exclusion policy specified in the VirtualSiteHandler
+
+    Parameters
+    ----------
+    policy : Any
+        The policy name to validate
+
+    Returns
+    -------
+    policy : str
+        The policy name if it is valid
+
+    Raises
+    ------
+    SMIRNOFFSpecError
+    ValueError
+    """
+
+    try:
+        policy = str(policy)
+    except ValueError:
+        raise
+
+    _exclusion_policies_implemented = ["none", "minimal", "parents"]
+    if policy in _exclusion_policies_implemented:
+        return policy
+    else:
+
+        raise SMIRNOFFSpecError(
+            "VirtualSiteHander exclusion policy not understood. Set exclusion_policy to one of {}".format(
+                _exclusion_policies_implemented
+            )
+        )
+
+
 class VirtualSiteHandler(_NonbondedHandler):
     """Handle SMIRNOFF ``<VirtualSites>`` tags
 
@@ -4342,7 +4450,9 @@ class VirtualSiteHandler(_NonbondedHandler):
         "all": _ExclusionPolicy.ALL,
     }
 
-    exclusion_policy = ParameterAttribute(default="parents", converter=str)
+    exclusion_policy = ParameterAttribute(
+        default="parents", converter=validate_virtual_site_exclusion_policy_option
+    )
 
     class _VirtualSiteTypeSelector:
         """A SMIRNOFF virtual site base selector
@@ -4361,9 +4471,14 @@ class VirtualSiteHandler(_NonbondedHandler):
         # using this generic selector as a type
         _ELEMENT_NAME = "VirtualSite"
 
-        def __new__(base, **attrs):
+        def __new__(cls, **attrs):
 
-            vsite_type = attrs["type"]
+            try:
+                vsite_type = attrs["type"]
+            except KeyError:
+                raise SMIRNOFFSpecError(
+                    'VirtualSite not given a type. Set type to one of "BondCharge", "MonovalentLonePair", "DivalentLonePair", "TrivalentLonePair"'
+                )
 
             VSH = VirtualSiteHandler
 
@@ -4378,6 +4493,10 @@ class VirtualSiteHandler(_NonbondedHandler):
 
             elif vsite_type == "TrivalentLonePair":
                 cls = VSH.VirtualSiteTrivalentLonePairType
+            else:
+                raise SMIRNOFFSpecError(
+                    'VirtualSite type not understood. Choose one of "BondCharge", "MonovalentLonePair", "DivalentLonePair", "TrivalentLonePair"'
+                )
 
             return cls(**attrs)
 
@@ -4391,9 +4510,11 @@ class VirtualSiteHandler(_NonbondedHandler):
         name = ParameterAttribute(default="EP", converter=str)
         distance = ParameterAttribute(unit=unit.angstrom)
         chargeincrement = IndexedParameterAttribute(unit=unit.elementary_charge)
-        type = ParameterAttribute()
-        match = ParameterAttribute(default="all-permutations", converter=str)
-        multiplicity = ParameterAttribute(default=1, converter=int)
+        type = ParameterAttribute(converter=validate_virtual_site_type_option)
+        match = ParameterAttribute(
+            default="all_permuations",
+            converter=validate_virtual_site_type_match_option,
+        )
 
         # Here we define the default sorting behavior if we need to sort the
         # atom key into a canonical ordering
@@ -4642,8 +4763,6 @@ class VirtualSiteHandler(_NonbondedHandler):
                         orders = [
                             order for order in orders if sorted(key) == sorted(order)
                         ]
-
-                        handler_match._parameter_type.multiplicity = len(orders)
 
                         # This is from the older implementation that allows
                         # specifying specific orientations. Leaving in for now..
