@@ -1959,13 +1959,17 @@ class TestForceFieldVirtualSites:
             )
         return
 
-    q_unit = unit.elementary_charge
-    e_unit = unit.kilocalorie_per_mole
-    s_unit = unit.angstrom
+    charge_unit = unit.elementary_charge
+    epsilon_unit = unit.kilocalorie_per_mole
+    sigma_unit = unit.angstrom
 
     ############################################################################
     # Bond charge virtual site test data
     ############################################################################
+
+    # For the data structures below, a value of None means that the comparison
+    # should be skipped and is therefore not checked. The atom sigma and epsilon
+    # parameters are not touched by virtual sites, so we ignore them here.
 
     # First test that one vsite is added, and that the last parameter
     # is chosen over the top-most wildcard match
@@ -1974,43 +1978,41 @@ class TestForceFieldVirtualSites:
             "xml": xml_ff_virtual_sites_bondcharge_match_once,
             "smi": None,
             "assert_physics": (
-                # charge        sigma         epsilon
-                (+0.2 * q_unit, None, None),
-                (+0.2 * q_unit, None, None),
-                (-0.4 * q_unit, 0.2 * s_unit, 0.2 * e_unit),
+                (+0.2 * charge_unit, None, None),
+                (+0.2 * charge_unit, None, None),
+                (-0.4 * charge_unit, 0.2 * sigma_unit, 0.2 * epsilon_unit),
             ),
             "mol": create_dinitrogen(),
         }
     )
     bond_charge_parameters_args.append(opts)
 
-    # Test the wildcard match where match
+    # Test the wildcard match at the top, which means the other parameters
+    # should be skipped
     opts = OrderedDict(
         {
             "xml": xml_ff_virtual_sites_bondcharge_match_once,
             "smi": None,
             "assert_physics": (
-                # charge        sigma         epsilon
-                (+0.1 * q_unit, None, None),
-                (+0.1 * q_unit, None, None),
-                (-0.2 * q_unit, 0.1 * s_unit, 0.1 * e_unit),
+                (+0.1 * charge_unit, None, None),
+                (+0.1 * charge_unit, None, None),
+                (-0.2 * charge_unit, 0.1 * sigma_unit, 0.1 * epsilon_unit),
             ),
             "mol": create_dioxygen(),
         }
     )
     bond_charge_parameters_args.append(opts)
 
-    # Test the wildcard match where match is 0-1 and 1-0
+    # Test the wildcard match where match is 0-1 and 1-0, giving two particles
     opts = OrderedDict(
         {
             "xml": xml_ff_virtual_sites_bondcharge_match_all,
             "smi": None,
             "assert_physics": (
-                # charge        sigma         epsilon
-                (+0.4 * q_unit, None, None),
-                (+0.4 * q_unit, None, None),
-                (-0.4 * q_unit, 0.2 * s_unit, 0.2 * e_unit),
-                (-0.4 * q_unit, 0.2 * s_unit, 0.2 * e_unit),
+                (+0.4 * charge_unit, None, None),
+                (+0.4 * charge_unit, None, None),
+                (-0.4 * charge_unit, 0.2 * sigma_unit, 0.2 * epsilon_unit),
+                (-0.4 * charge_unit, 0.2 * sigma_unit, 0.2 * epsilon_unit),
             ),
             "mol": create_dinitrogen(),
         }
@@ -2027,11 +2029,10 @@ class TestForceFieldVirtualSites:
             "xml": xml_ff_virtual_sites_bondcharge_match_once_two_names,
             "smi": None,
             "assert_physics": (
-                # charge        sigma         epsilon
-                (+0.3 * q_unit, None, None),
-                (+0.3 * q_unit, None, None),
-                (-0.2 * q_unit, 0.1 * s_unit, 0.1 * e_unit),
-                (-0.4 * q_unit, 0.2 * s_unit, 0.2 * e_unit),
+                (+0.3 * charge_unit, None, None),
+                (+0.3 * charge_unit, None, None),
+                (-0.2 * charge_unit, 0.1 * sigma_unit, 0.1 * epsilon_unit),
+                (-0.4 * charge_unit, 0.2 * sigma_unit, 0.2 * epsilon_unit),
             ),
             "mol": create_dinitrogen(),
         }
@@ -2043,15 +2044,14 @@ class TestForceFieldVirtualSites:
             "xml": xml_ff_virtual_sites_monovalent_match_once,
             "smi": None,
             "assert_physics": (
-                # charge        sigma         epsilon
-                (+0.2 * q_unit, None, None),
-                (+0.2 * q_unit, None, None),
-                (+0.2 * q_unit, None, None),
-                (+0.0 * q_unit, None, None),
-                (+0.0 * q_unit, None, None),
-                (+0.0 * q_unit, None, None),
-                (+0.0 * q_unit, None, None),
-                (-0.6 * q_unit, 0.2 * s_unit, 0.2 * e_unit),
+                (+0.2 * charge_unit, None, None),
+                (+0.2 * charge_unit, None, None),
+                (+0.2 * charge_unit, None, None),
+                (+0.0 * charge_unit, None, None),
+                (+0.0 * charge_unit, None, None),
+                (+0.0 * charge_unit, None, None),
+                (+0.0 * charge_unit, None, None),
+                (-0.6 * charge_unit, 0.2 * sigma_unit, 0.2 * epsilon_unit),
             ),
             "mol": create_acetaldehyde(),
         }
@@ -2068,12 +2068,11 @@ class TestForceFieldVirtualSites:
             "xml": xml_ff_virtual_sites_divalent_match_all,
             "smi": None,
             "assert_physics": (
-                # charge           sigma         epsilon
-                (+0.4820 * q_unit, None, None),
-                (+0.0000 * q_unit, None, None),
-                (+0.4820 * q_unit, None, None),
-                (-0.4820 * q_unit, 3.12 * s_unit, 0.16 * e_unit),
-                (-0.4820 * q_unit, 3.12 * s_unit, 0.16 * e_unit),
+                (+0.4820 * charge_unit, None, None),
+                (+0.0000 * charge_unit, None, None),
+                (+0.4820 * charge_unit, None, None),
+                (-0.4820 * charge_unit, 3.12 * sigma_unit, 0.16 * epsilon_unit),
+                (-0.4820 * charge_unit, 3.12 * sigma_unit, 0.16 * epsilon_unit),
             ),
             "mol": create_water(),
         }
@@ -2089,12 +2088,11 @@ class TestForceFieldVirtualSites:
             "xml": xml_ff_virtual_sites_trivalent_match_once,
             "smi": None,
             "assert_physics": (
-                # charge           sigma         epsilon
-                (+0.0000 * q_unit, None, None),
-                (+1.0000 * q_unit, None, None),
-                (+0.0000 * q_unit, None, None),
-                (+0.0000 * q_unit, None, None),
-                (-1.0000 * q_unit, 0.00 * s_unit, 0.00 * e_unit),
+                (+0.0000 * charge_unit, None, None),
+                (+1.0000 * charge_unit, None, None),
+                (+0.0000 * charge_unit, None, None),
+                (+0.0000 * charge_unit, None, None),
+                (-1.0000 * charge_unit, 0.00 * sigma_unit, 0.00 * epsilon_unit),
             ),
             "mol": create_ammonia(),
         }
