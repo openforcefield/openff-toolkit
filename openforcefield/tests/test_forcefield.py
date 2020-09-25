@@ -3708,7 +3708,7 @@ class TestForceFieldParameterAssignment:
         from openforcefield.tests.utils import (
             compare_system_energies,
             get_context_potential_energy,
-            evaluate_water_off,
+            evaluate_molecules_off,
         )
         from simtk.openmm import app
 
@@ -3749,7 +3749,7 @@ class TestForceFieldParameterAssignment:
             * unit.angstrom
         )
 
-        off_crds, off_ene = evaluate_water_off(
+        off_crds, off_ene = evaluate_molecules_off(
             [molecule1, molecule2], off_ff, minimize=False
         )
 
