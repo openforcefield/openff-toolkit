@@ -1848,7 +1848,7 @@ class Topology(Serializable):
         extraParticleIdentifier=" ",
     ):
         """
-        Let's the openforcefield Topology to save a PDB file with coordinates as well as topology
+        To save a PDB file with coordinates as well as topology from openforcefield topology object
         Reference: https://github.com/openforcefield/openforcefield/issues/502
         :param filename: name of the topology file
         :param positions: Can be an openmm 'quantity' object which has atomic positions as a list of Vec3s
