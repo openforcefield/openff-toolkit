@@ -1496,15 +1496,36 @@ def compare_amber_smirnoff(
     return None
 
 
-# =============================================================================================
+# ==============================================================================
 # Utility functions for handling molecules in OpenMM with virtual sites
-# =============================================================================================
+# ==============================================================================
 
 # Note that these assume that the system is homogenous, i.e. the system
 # is composed of one or more identical molecules
 
 
 def reorder_openff_to_openmm(xyz, n_atoms_per_mol, n_vptls_per_mol):
+    """
+    Rearrange the coordinates of an OpenFF-created system to an order
+    that OpenMM uses/used.
+
+    This function is mainly used to compare with a system that was created with
+    OpenMM, where the ordering is AAABBAAABB and was created elsewhere. This will
+    reorder the OpenFF particles such that they match with this ordering.
+
+    xyz : List[List[float]]
+        The atom and virtual positions
+    n_atoms_per_mol : int
+        The number of atoms per molecule. All molecules are assumed to have the
+        same number of atoms.
+    n_vptls_per_mol : int
+        The number of virtual particles per molecule. All molecules are assumed
+        to have the same number of virtual particles
+
+    Returns:
+    xyz : List[List[float]]
+        The atom and virtual particle positions in OpenFF order
+    """
 
     n_particles_per_mol = n_atoms_per_mol + n_vptls_per_mol
     n_mols = xyz.shape[0] // n_particles_per_mol
@@ -1528,7 +1549,30 @@ def reorder_openff_to_openmm(xyz, n_atoms_per_mol, n_vptls_per_mol):
 
 
 def reorder_openmm_to_openff(xyz, n_atoms_per_mol, n_vptls_per_mol):
-    """"""
+    """
+    Rearrange the coordinates of an OpenMM-created system to an order
+    that OpenFF uses.
+
+    For example, since OpenMM creates virtual sites in-place, they are interleaved
+    with the atoms. This means that, if atoms are labeled as A and virtual sites
+    as B, then the ordering will be AAABBAAABB, and the index is 0 to 9.
+    This function will reorder the coordinates to be AAAAAABBBB, which is the order
+    OpenFF expects/uses.
+
+    xyz : List[List[float]]
+        The atom and virtual positions
+    n_atoms_per_mol : int
+        The number of atoms per molecule. All molecules are assumed to have the
+        same number of atoms.
+    n_vptls_per_mol : int
+        The number of virtual particles per molecule. All molecules are assumed
+        to have the same number of virtual particles
+
+    Returns:
+    xyz : List[List[float]]
+        The atom and virtual particle positions in OpenFF order
+    """
+
     # constants for simplicity
     n_particles_per_mol = n_atoms_per_mol + n_vptls_per_mol
     n_mols = xyz.shape[0] // n_particles_per_mol
@@ -1557,15 +1601,17 @@ def openmm_evaluate_vsites_and_energy(omm_top, omm_sys, atom_xyz_in_nm, minimize
     ----------
     omm_top: OpenMM Topology
     omm_sys: OpenMM System
-    atom_xyz_in_nm: N,3 list of floats interpreted as nanometers
-        The coordinates of the molecules
+    atom_xyz_in_nm: List[List[float]]
+        An N,3 array of floats interpreted as nanometers of the atom positions
     minimize: bool
         Perform a minimization before calculating energy
 
     Returns
     -------
-    pos: N,3 List of floats of the positions of all particles
-    ene: The potential energy of the particle positions
+    pos: List[List[float]]
+        The coordinates of all particles in the system (OpenMM ordering)
+    ene: float
+        The potential energy
     """
 
     integ = openmm.VerletIntegrator(1.0 * unit.femtoseconds)
@@ -1596,16 +1642,20 @@ def insert_vsite_padding(xyz, n_mol, n_vptl, order="OpenFF"):
     expected for either OpenFF or OpenMM. OpenFF places the dummy coordinates
     at the end, whereas OpenMM expects virtual sites to be next to their owning
     molecule.
+
     Parameters
     ----------
-        xyz: Nx3 List, of coordinates of atoms only
-        n_mol: int, The number of molecules
-        n_vptl: int, The number of virtual site particle dummy positions to insert
+    xyz: List[List[float]]
+        An Nx3 set of coordinates of atoms only
+    n_mol: int
+        The number of molecules
+    n_vptl: int
+        The number of virtual site particle dummy positions to insert
 
     Returns
     -------
-        xyz: (N+n_vsite,3) list, the coordinates of all particles in the
-        expected order
+    xyz : List[List[float]]
+        The coordinates of shape (N+n_vsite,3) with all particles in the expected order
     """
 
     # heuristic that vsites come at the end; applies to OpenFF
@@ -1625,28 +1675,40 @@ def coords_from_off_mols(mols, conformer_id=0, unit=unit.angstrom):
     """
     Small utility to extract the coordinates from the molecule conformers,
     with optional unit conversion
+
+    Parameters
+    ----------
+    mols : List[openforcefield.topology.molecule.Molecule]
+        The system/list of molecules
+    conformer_id : int, default=0
+        The conformer to use for retreiving the coordinates from each molcule
+    unit : simtk.unit, default=unit.angstrom
+        The units to convert the coordinates to
     """
     xyz = np.vstack([mol.conformers[conformer_id].value_in_unit(unit) for mol in mols])
     return xyz * unit
 
 
-def evaluate_water_omm(water, ff, minimize=False):
+def evaluate_molecules_omm(water, ff, minimize=False):
     """
     Given a list of molecules and a forcefield definition, calculate the
     positions and energy.
 
     Parameters
     ----------
-        molecules: List[openforcefield.topology.molecule.Molecule]
-            A list of water molecules with a 3D conformation
-        forcefield: openforcefield.typing.engines.smirnoff.forcefield.ForceField
-            The forcefield object to parameterize with
-        minimize: Boolean, whether the structure should be minimized
+    molecules: List[openforcefield.topology.molecule.Molecule]
+        A list of molecules with a 3D conformation
+    forcefield: openforcefield.typing.engines.smirnoff.forcefield.ForceField
+        The forcefield object to parameterize with
+    minimize: bool
+        Whether the structure should be minimized
 
     Returns
     -------
-        xyz: List The coordinates of all particles in the system (OpenMM ordering)
-        ene: float, The potential energy
+    xyz: List[List[float]]
+        The coordinates of all particles in the system (OpenMM ordering)
+    ene: float
+        The potential energy
     """
 
     from openforcefield.topology import Topology
@@ -1679,23 +1741,26 @@ def evaluate_water_omm(water, ff, minimize=False):
     return xyz, ene
 
 
-def evaluate_water_off(molecules, forcefield, minimize=False):
+def evaluate_molecules_off(molecules, forcefield, minimize=False):
     """
     Given a list of molecules and a forcefield definition, calculate the
     positions and energy.
 
     Parameters
     ----------
-        molecules: List[openforcefield.topology.molecule.Molecule]
-            A list of water molecules with a 3D conformation
-        forcefield: openforcefield.typing.engines.smirnoff.forcefield.ForceField
-            The forcefield object to parameterize with
-        minimize: boolean, whether the structure should be minimized
+    molecules: List[openforcefield.topology.molecule.Molecule]
+        A list of molecules with a 3D conformation
+    forcefield: openforcefield.typing.engines.smirnoff.forcefield.ForceField
+        The forcefield object to parameterize with
+    minimize: bool
+        Whether the structure should be minimized
 
     Returns
     -------
-        xyz: list The coordinates of all particles in the system (OpenMM ordering)
-        ene: float, The potential energy
+    xyz: List[List[float]]
+        The coordinates of all particles in the system (OpenMM ordering)
+    ene: float
+        The potential energy
     """
 
     from openforcefield.topology import Topology
