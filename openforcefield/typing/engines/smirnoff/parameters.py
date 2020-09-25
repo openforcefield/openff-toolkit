@@ -4898,7 +4898,7 @@ class VirtualSiteHandler(_NonbondedHandler):
                             ]
                         else:
                             # Probably will never reach here since validation
-                            # happens elsewhere 
+                            # happens elsewhere
                             raise Exception(
                                 "VirtualSite match keyword not understood. Choose from 'once' or 'all_permutations'. This error should be impossible to reach; please submit an issue at https://github.com/openforcefield/openforcefield"
                             )
