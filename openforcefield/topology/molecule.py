@@ -47,7 +47,6 @@ from simtk import unit
 from simtk.openmm.app import Element, element
 
 import openforcefield
-from openforcefield.topology.topology import ImproperDict, ValenceDict
 from openforcefield.utils import (
     check_units_are_compatible,
     deserialize_numpy,
@@ -911,6 +910,9 @@ class BondChargeVirtualSite(VirtualSite):
         )
         self._distance = distance.in_units_of(unit.angstrom)
 
+    def __eq__(self, other):
+        return super() == other
+
     def to_dict(self):
         vsite_dict = super().to_dict()
         vsite_dict["distance"] = quantity_to_string(self._distance)
@@ -1061,6 +1063,9 @@ class MonovalentLonePairVirtualSite(VirtualSite):
         vsite_dict["vsite_type"] = self.type
         return vsite_dict
 
+    def __eq__(self, other):
+        return super() == other
+
     @classmethod
     def from_dict(cls, vsite_dict):
         """
@@ -1182,6 +1187,9 @@ class DivalentLonePairVirtualSite(VirtualSite):
         self._distance = distance.in_units_of(unit.angstrom)
         self._out_of_plane_angle = out_of_plane_angle.in_units_of(unit.degree)
 
+    def __eq__(self, other):
+        return super() == other
+
     def to_dict(self):
         vsite_dict = super().to_dict()
         vsite_dict["distance"] = quantity_to_string(self._distance)
@@ -1296,6 +1304,9 @@ class TrivalentLonePairVirtualSite(VirtualSite):
             orientations=orientations,
         )
         self._distance = distance.in_units_of(unit.angstrom)
+
+    def __eq__(self, other):
+        return super() == other
 
     def to_dict(self):
         vsite_dict = super().to_dict()

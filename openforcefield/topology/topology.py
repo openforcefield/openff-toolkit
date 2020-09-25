@@ -657,12 +657,6 @@ class TopologyVirtualSite(Serializable):
         # print(self._topology_virtual_particle_start_index)
         return self._topology_virtual_particle_start_index
 
-        return (
-            self._topology_molecule.topology.n_topology_atoms
-            + self.topology_virtual_site_index
-        )
-        # return self._topology_molecule.particle_start_topology_index + self._virtual_site.molecule_particle_index
-
     @property
     def particles(self):
         """
@@ -728,6 +722,19 @@ class TopologyVirtualParticle(TopologyVirtualSite):
         self._virtual_site = virtual_site
         self._virtual_particle = virtual_particle
         self._topology_molecule = topology_molecule
+
+    def __eq__(self, other):
+
+        if type(other) != type(self):
+            return False
+
+        same_vsite = super() == super(TopologyVirtualSite, other)
+        if not same_vsite:
+            return False
+
+        same_ptl = self.topology_particle_index == other.topology_particle_index
+
+        return same_ptl
 
     @property
     def topology_particle_index(self):
