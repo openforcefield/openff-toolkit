@@ -49,7 +49,6 @@ from collections import OrderedDict, defaultdict
 from enum import Enum
 from itertools import combinations
 
-import numpy as np
 from simtk import openmm, unit
 
 from openforcefield.topology import ImproperDict, SortedDict, Topology, ValenceDict
@@ -59,6 +58,7 @@ from openforcefield.utils import (
     GLOBAL_TOOLKIT_REGISTRY,
     IncompatibleUnitError,
     MessageException,
+    all_subclasses,
     attach_units,
     extract_serialized_units_from_dict,
     object_to_quantity,
@@ -131,6 +131,12 @@ class NonintegralMoleculeChargeException(Exception):
 
 class DuplicateParameterError(MessageException):
     """Exception raised when trying to add a ParameterType that already exists"""
+
+
+class DuplicateVirtualSiteTypeException(Exception):
+    """Exception raised when trying to register two different virtual site classes with the same 'type'"""
+
+    pass
 
 
 # ======================================================================
@@ -4290,114 +4296,6 @@ class GBSAHandler(ParameterHandler):
         system.addForce(gbsa_force)
 
 
-def validate_virtual_site_type_option(vsite_type):
-    """
-    Convert and validate the virtual site type specified in the VirtualSite element
-
-    Parameters
-    ----------
-    vsite_type : Any
-        The virtual site type to validate
-
-    Returns
-    -------
-    policy : str
-        The virtual site type if it is valid
-
-    Raises
-    ------
-    SMIRNOFFSpecError
-    ValueError
-    """
-
-    try:
-        vsite_type = str(vsite_type)
-    except ValueError:
-        raise
-
-    if vsite_type in [
-        "BondCharge",
-        "MonovalentLonePair",
-        "DivalentLonePair",
-        "TrivalentLonePair",
-    ]:
-        return vsite_type
-    else:
-        raise SMIRNOFFSpecError(
-            'VirtualSite not given a type. Set type to one of "BondCharge", "MonovalentLonePair", "DivalentLonePair", "TrivalentLonePair"'
-        )
-
-
-def validate_virtual_site_type_match_option(match):
-    """
-    Convert and validate the virtual site type specified in the VirtualSite element
-
-    Parameters
-    ----------
-    policy : Any
-        The virtual site type to validate
-
-    Returns
-    -------
-    policy : str
-        The virtual site type if it is valid
-
-    Raises
-    ------
-    SMIRNOFFSpecError
-    ValueError
-    """
-
-    try:
-        match = str(match)
-    except ValueError:
-        raise
-
-    if match == "once" or match == "all_permutations":
-        return match
-    else:
-        raise SMIRNOFFSpecError(
-            'VirtualSite type must specify match as either "once" or "all_permutations"'
-        )
-
-
-def validate_virtual_site_exclusion_policy_option(policy):
-    """
-    Convert and validate the exclusion policy specified in the VirtualSiteHandler
-
-    Parameters
-    ----------
-    policy : Any
-        The policy name to validate
-
-    Returns
-    -------
-    policy : str
-        The policy name if it is valid
-
-    Raises
-    ------
-    SMIRNOFFSpecError
-    ValueError
-    """
-
-    try:
-        policy = str(policy)
-    except ValueError:
-        raise
-
-    _exclusion_policies_implemented = ["none", "minimal", "parents"]
-    if policy in _exclusion_policies_implemented:
-        return policy
-    else:
-
-        raise SMIRNOFFSpecError(
-            "VirtualSiteHander exclusion policy not understood. Set exclusion_policy to one of {}".format(
-                _exclusion_policies_implemented
-            )
-        )
-
-
 class VirtualSiteHandler(_NonbondedHandler):
     """Handle SMIRNOFF ``<VirtualSites>`` tags
 
@@ -4450,9 +4348,91 @@ class VirtualSiteHandler(_NonbondedHandler):
         "all": _ExclusionPolicy.ALL,
     }
 
-    exclusion_policy = ParameterAttribute(
-        default="parents", converter=validate_virtual_site_exclusion_policy_option
-    )
+    exclusion_policy = ParameterAttribute(default="parents")  # has custom converter
+    _virtual_site_types = set()
+
+    @classmethod
+    def register_virtual_site_type(self, vsite_name):
+        """
+        Register an implemented virtual site type. Doing this must be done to
+        pass the validation and option checking.
+
+        Parameters
+        ----------
+        vsite_name : str
+            The name of the type. This name must be what is found in the "type"
+            attribute in the OFFXML format
+
+        Returns
+        -------
+        None
+        """
+
+        if vsite_name in self._virtual_site_types:
+            raise DuplicateVirtualSiteTypeException(
+                "VirtualSite type {} already registered for handler {}".format(
+                    vsite_name, self.__name__
+                )
+            )
+        self._virtual_site_types.add(vsite_name)
+
+    @classmethod
+    def virtual_site_types(self):
+        """
+        Return the list of registered virtual site types
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        virtual_site_types : List[str]
+            A list of virtual site types already registered
+        """
+
+        return self._virtual_site_types
+
+    @exclusion_policy.converter
+    def exclusion_policy(self, attr, policy):
+        """
+        Convert and validate the exclusion policy specified in the VirtualSiteHandler
+
+        Parameters
+        ----------
+        attr : openforcefield.typing.engines.smirnoff.parameters.ParameterAttribute
+            The underlying ParameterAttribute
+        policy : Any
+            The policy name to validate
+
+        Returns
+        -------
+        policy : str
+            The policy name if it is valid
+
+        Raises
+        ------
+        SMIRNOFFSpecError if the value of policy did not match the SMIRNOFF Specification
+        ValueError if policy cannot be converted to a string
+
+        .. warning :: This API is experimental and subject to change.
+        """
+
+        try:
+            policy = str(policy)
+        except ValueError:
+            raise
+
+        _exclusion_policies_implemented = ["none", "minimal", "parents"]
+        if policy in _exclusion_policies_implemented:
+            return policy
+        else:
+
+            raise SMIRNOFFSpecError(
+                'VirtualSiteHander exclusion policy not understood. Set "exclusion_policy" to one of {}'.format(
+                    _exclusion_policies_implemented
+                )
+            )
 
     class _VirtualSiteTypeSelector:
         """A SMIRNOFF virtual site base selector
@@ -4463,7 +4443,6 @@ class VirtualSiteHandler(_NonbondedHandler):
         depends on the type attribute as well, which needs the introspection
         implemented here.
 
-        .. warning :: This API is experimental and subject to change.
         """
 
         _VALENCE_TYPE = None
@@ -4510,15 +4489,99 @@ class VirtualSiteHandler(_NonbondedHandler):
         name = ParameterAttribute(default="EP", converter=str)
         distance = ParameterAttribute(unit=unit.angstrom)
         chargeincrement = IndexedParameterAttribute(unit=unit.elementary_charge)
-        type = ParameterAttribute(converter=validate_virtual_site_type_option)
-        match = ParameterAttribute(
-            default="all_permuations",
-            converter=validate_virtual_site_type_match_option,
-        )
+        type = ParameterAttribute()  # has custom converter
+        match = ParameterAttribute(default="all_permutations")  # has custom converter
 
         # Here we define the default sorting behavior if we need to sort the
         # atom key into a canonical ordering
         transformed_dict_cls = ValenceDict
+
+        # Value of None indicates "not a valid type" or "not an actual implemented type".
+        # To enable/register a new virtual site type, make a subclass and set its
+        # _vsite_type to what would need to be provided in the OFFXML "type" attr,
+        # e.g. type="BondCharge" would mean _vsite_type="BondCharge"
+        _vsite_type = None
+
+        @classmethod
+        def vsite_type(cls):
+            """
+            The type of this virtual site as represented in the SMIRNOFF specification
+
+            .. warning :: This API is experimental and subject to change.
+            """
+            return cls._vsite_type
+
+        @type.converter
+        def type(self, attr, vsite_type):
+            """
+            Convert and validate the virtual site type specified in the VirtualSite element
+
+            Parameters
+            ----------
+            attr : openforcefield.typing.engines.smirnoff.parameters.ParameterAttribute
+                The underlying ParameterAttribute
+            vsite_type : Any
+                The virtual site type to validate
+
+            Returns
+            -------
+            vsite_type : str
+                The virtual site type if it is valid
+
+            Raises
+            ------
+            SMIRNOFFSpecError if the value of policy did not match the SMIRNOFF Specification
+            ValueError if policy cannot be converted to a string
+
+            .. warning :: This API is experimental and subject to change.
+            """
+
+            try:
+                vsite_type = str(vsite_type)
+            except ValueError:
+                raise
+
+            if vsite_type in VirtualSiteHandler.virtual_site_types():
+                return vsite_type
+            else:
+                raise SMIRNOFFSpecError(
+                    'VirtualSite not given a type. Set type to one of "BondCharge", "MonovalentLonePair", "DivalentLonePair", "TrivalentLonePair"'
+                )
+
+        @match.converter
+        def match(self, attr, match):
+            """
+            Convert and validate the virtual site type specified in the VirtualSite element
+
+            Parameters
+            ----------
+            match : Any
+                The virtual site type to validate
+
+            Returns
+            -------
+            match : str
+                The virtual site type if it is valid
+
+            Raises
+            ------
+            SMIRNOFFSpecError
+            ValueError
+
+            .. warning :: This API is experimental and subject to change.
+            """
+
+            try:
+                match = str(match)
+            except ValueError:
+                raise
+
+            if match == "once" or match == "all_permutations":
+                return match
+            else:
+                raise SMIRNOFFSpecError(
+                    'VirtualSite type must specify "match" as either "once" or "all_permutations"'
+                )
 
         def __eq__(self, obj):
             if type(self) != type(obj):
@@ -4592,7 +4655,30 @@ class VirtualSiteHandler(_NonbondedHandler):
         .. warning :: This API is experimental and subject to change.
         """
 
+        _vsite_type = "BondCharge"
+
         def add_virtual_site(self, molecule, orientations, replace=False):
+            """
+            Add a virtual site to the molecule
+
+            Parameters
+            ----------
+            molecule : openforcefield.topology.molecule.Molecule
+                The molecule to add the virtual site to
+            orientations : List[Tuple[int]]
+                A list of orientation tuples which define the permuations used
+                to contruct the geometry of the virtual site particles
+            replace : bool, default=False
+                Replace this virtual site if it already exists in the molecule
+
+            Returns
+            -------
+            off_idx : int
+                The index of the first particle added due to this virtual site
+
+            .. warning :: This API is experimental and subject to change.
+            """
+
             fn = molecule._add_bond_charge_virtual_site
             ref_key = self.transformed_dict_cls.key_transform(orientations[0])
             atoms = list([molecule.atoms[i] for i in ref_key])
@@ -4609,10 +4695,30 @@ class VirtualSiteHandler(_NonbondedHandler):
         outOfPlaneAngle = ParameterAttribute(unit=unit.degree)
         inPlaneAngle = ParameterAttribute(unit=unit.degree)
 
+        _vsite_type = "MonovalentLonePair"
+
         def add_virtual_site(self, molecule, orientations, replace=False):
             """
-            Add this virtual site to the topology.
+            Add a virtual site to the molecule
+
+            Parameters
+            ----------
+            molecule : openforcefield.topology.molecule.Molecule
+                The molecule to add the virtual site to
+            orientations : List[Tuple[int]]
+                A list of orientation tuples which define the permuations used
+                to contruct the geometry of the virtual site particles
+            replace : bool, default=False
+                Replace this virtual site if it already exists in the molecule
+
+            Returns
+            -------
+            off_idx : int
+                The index of the first particle added due to this virtual site
+
+            .. warning :: This API is experimental and subject to change.
             """
+
             fn = molecule._add_monovalent_lone_pair_virtual_site
             ref_key = self.transformed_dict_cls.key_transform(orientations[0])
             atoms = list([molecule.atoms[i] for i in ref_key])
@@ -4628,9 +4734,28 @@ class VirtualSiteHandler(_NonbondedHandler):
 
         outOfPlaneAngle = ParameterAttribute(unit=unit.degree)
 
+        _vsite_type = "DivalentLonePair"
+
         def add_virtual_site(self, molecule, orientations, replace=False):
             """
-            Add this virtual site to the topology.
+            Add a virtual site to the molecule
+
+            Parameters
+            ----------
+            molecule : openforcefield.topology.molecule.Molecule
+                The molecule to add the virtual site to
+            orientations : List[Tuple[int]]
+                A list of orientation tuples which define the permuations used
+                to contruct the geometry of the virtual site particles
+            replace : bool, default=False
+                Replace this virtual site if it already exists in the molecule
+
+            Returns
+            -------
+            off_idx : int
+                The index of the first particle added due to this virtual site
+
+            .. warning :: This API is experimental and subject to change.
             """
             fn = molecule._add_divalent_lone_pair_virtual_site
             ref_key = self.transformed_dict_cls.key_transform(orientations[0])
@@ -4647,9 +4772,28 @@ class VirtualSiteHandler(_NonbondedHandler):
 
         transformed_dict_cls = ImproperDict
 
+        _vsite_type = "TrivalentLonePair"
+
         def add_virtual_site(self, molecule, orientations, replace=False):
             """
-            Add this virtual site to a topology.
+            Add a virtual site to the molecule
+
+            Parameters
+            ----------
+            molecule : openforcefield.topology.molecule.Molecule
+                The molecule to add the virtual site to
+            orientations : List[Tuple[int]]
+                A list of orientation tuples which define the permuations used
+                to contruct the geometry of the virtual site particles
+            replace : bool, default=False
+                Replace this virtual site if it already exists in the molecule
+
+            Returns
+            -------
+            off_idx : int
+                The index of the first particle added due to this virtual site
+
+            .. warning :: This API is experimental and subject to change.
             """
             fn = molecule._add_trivalent_lone_pair_virtual_site
             ref_key = self.transformed_dict_cls.key_transform(orientations[0])
@@ -4685,14 +4829,14 @@ class VirtualSiteHandler(_NonbondedHandler):
         ----------
         entity : openforcefield.topology.Topology
             Topology to search.
-        transformed_dict_cls: class
+        transformed_dict_cls: Union[Dict, ValenceDict, ImproperDict]
             The type of dictionary to store the matches in. This
             will determine how groups of atom indices are stored
             and accessed (e.g for angles indices should be 0-1-2
             and not 2-1-0).
 
         Returns
-        ---------
+        -------
         matches : `transformed_dict_cls` of ParameterHandlerMatch
             ``matches[particle_indices]`` is the ``ParameterType`` object
             matching the tuple of particle indices in ``entity``.
@@ -4755,9 +4899,9 @@ class VirtualSiteHandler(_NonbondedHandler):
                             ]
                         else:
                             # Probably will never reach here since validation
-                            # happens elsewhere
+                            # happens elsewhere 
                             raise Exception(
-                                "VirtualSite match keyword not understood. Choose from 'once' or 'all_permutations'"
+                                "VirtualSite match keyword not understood. Choose from 'once' or 'all_permutations'. This error should be impossible to reach; please submit an issue at https://github.com/openforcefield/openforcefield"
                             )
 
                         orders = [
@@ -4847,7 +4991,7 @@ class VirtualSiteHandler(_NonbondedHandler):
         ----------
 
         Returns
-        ---------
+        -------
         """
         force = super().create_force(system, topology, **kwargs)
 
@@ -4956,7 +5100,7 @@ class VirtualSiteHandler(_NonbondedHandler):
                     same_atoms = all(
                         [sorted(key) == sorted(k) for k in vsite_struct[KEY_LIST]]
                     )
-                    diff_keys = not key in vsite_struct[KEY_LIST]
+                    diff_keys = key not in vsite_struct[KEY_LIST]
                     same_vsite = self._same_virtual_site_type(vs_i, vs_j)
 
                     if same_atoms and same_vsite and diff_keys:
@@ -4984,7 +5128,7 @@ class VirtualSiteHandler(_NonbondedHandler):
         for molecule in topology.reference_molecules:
 
             """The following two lines below should be avoided but is left
-            until a better solution is found (see 699). The issue is that a
+            until a better solution is found (see #699). The issue is that a
             topology should not be required since `find_matches` works on
             FrozenMolecules. However, the signature is different, as they return
             different results.
@@ -5119,12 +5263,25 @@ class VirtualSiteHandler(_NonbondedHandler):
             if policy.value > self._ExclusionPolicy.PARENTS.value:
                 raise NotImplementedError(
                     """
-                Only the 'parents', 'minimal', and 'none' exclusion_policies are 
+                Only the 'parents', 'minimal', and 'none' exclusion_policies are
                 implemented"""
                 )
 
         return ids
 
+
+################################################################################
+# Register the implemented virtual sites for the standard VirtualSiteHandler
+################################################################################
+def _register_virtual_site_types():
+    for vsite_type in all_subclasses(VirtualSiteHandler.VirtualSiteType):
+        # catch non-impl classes which must return None
+        vtype = vsite_type.vsite_type()
+        if vtype:
+            VirtualSiteHandler.register_virtual_site_type(vtype)
+
+
+_register_virtual_site_types()
 
 if __name__ == "__main__":
     import doctest
