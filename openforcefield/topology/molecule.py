@@ -911,7 +911,7 @@ class BondChargeVirtualSite(VirtualSite):
         self._distance = distance.in_units_of(unit.angstrom)
 
     def __eq__(self, other):
-        return super() == other
+        return super().__eq__(other)
 
     def to_dict(self):
         vsite_dict = super().to_dict()
@@ -1064,7 +1064,7 @@ class MonovalentLonePairVirtualSite(VirtualSite):
         return vsite_dict
 
     def __eq__(self, other):
-        return super() == other
+        return super().__eq__(other)
 
     @classmethod
     def from_dict(cls, vsite_dict):
@@ -1188,7 +1188,7 @@ class DivalentLonePairVirtualSite(VirtualSite):
         self._out_of_plane_angle = out_of_plane_angle.in_units_of(unit.degree)
 
     def __eq__(self, other):
-        return super() == other
+        return super().__eq__(other)
 
     def to_dict(self):
         vsite_dict = super().to_dict()
@@ -1306,7 +1306,7 @@ class TrivalentLonePairVirtualSite(VirtualSite):
         self._distance = distance.in_units_of(unit.angstrom)
 
     def __eq__(self, other):
-        return super() == other
+        return super().__eq__(other)
 
     def to_dict(self):
         vsite_dict = super().to_dict()
