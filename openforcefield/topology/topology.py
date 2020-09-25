@@ -1839,6 +1839,34 @@ class Topology(Serializable):
             omm_topology.setPeriodicBoxVectors(self.box_vectors)
         return omm_topology
 
+    def to_file(self, filename, positions, file_format="PDB", keepIds=False, extraParticleIdentifier=' '):
+        """
+        Let's the openforcefield Topology to save a PDB file with coordinates as well as topology
+        Reference: https://github.com/openforcefield/openforcefield/issues/502
+        :param filename: name of the topology file
+        :param positions: Can be an openmm 'quantity' object which has atomic positions as a list of Vec3s
+         along with associated units,
+         otherwise a 3D array of UNITLESS numbers are considered as "Angstroms" by default
+        :param file_format: write topology in pdb file format
+        :return:
+        """
+        from simtk.openmm.app import PDBFile
+        from simtk.unit import Quantity
+        from simtk.unit import angstroms
+
+        openmm_top = self.to_openmm()
+        if(file_format != "PDB"):
+            raise ValueError('Only PDB file format is allowed')
+
+        # if positions is not an openmm quantity it is converted to one
+        if not isinstance(positions, Quantity):
+            positions = Quantity(positions)
+            positions.unit = angstroms
+        
+        #writing to PDB file
+        with open(filename, 'w') as outfile:
+            PDBFile.writeFile(openmm_top, positions, outfile, keepIds, extraParticleIdentifier)
+
     @staticmethod
     def from_mdtraj(mdtraj_topology, unique_molecules=None):
         """
