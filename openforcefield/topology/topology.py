@@ -728,7 +728,7 @@ class TopologyVirtualParticle(TopologyVirtualSite):
         if type(other) != type(self):
             return False
 
-        same_vsite = super() == super(TopologyVirtualSite, other)
+        same_vsite = super() == super(TopologyVirtualParticle, other)
         if not same_vsite:
             return False
 
