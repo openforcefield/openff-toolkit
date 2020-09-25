@@ -3872,11 +3872,25 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
             unique_tags, connectivity = GLOBAL_TOOLKIT_REGISTRY.call(
                 "get_tagged_smarts_connectivity", self.smirks
             )
-            if len(self.charge_increment) != len(unique_tags):
+
+            n_tags = len(unique_tags)
+            n_increments = len(self.charge_increment)
+            diff = n_tags - n_increments
+
+            if diff < 0 or diff > 1:
+                # TODO: Consider dealing with diff > 2 by smearing charges across
+                # all un-specified increments
                 raise SMIRNOFFSpecError(
-                    f"ChargeIncrement {self} was initialized with unequal number of "
-                    f"tagged atoms and charge increments"
+                    f"ChargeIncrement {self} was initialized with an invalid combination "
+                    f"of tagged atoms and charge increments"
                 )
+            elif diff == 1:
+                # Print a warning/message to user?
+                # TODO: Explicitly track un-set charge increments; this approach
+                # assumes and necessitates that the missing value is the last value
+                import numpy as np
+
+                self.charge_increment.append(-1 * np.sum(self.charge_increment))
 
     _TAGNAME = "ChargeIncrementModel"  # SMIRNOFF tag name to process
     _INFOTYPE = ChargeIncrementType  # info type to store
