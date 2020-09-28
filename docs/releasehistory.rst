@@ -61,7 +61,7 @@ Behavior changed
 Bugfixes
 """""""""
 - `PR #649 <https://github.com/openforcefield/openforcefield/pull/648>`_: Prevents 2020 OpenEye
-  toolkit from issuing a warning caused by doing stereo-specific smarts searches on certain
+  toolkit from issuing a warning caused by doing stereo-specific SMARTS searches on certain
   structures.
 - `PR #715 <https://github.com/openforcefield/openforcefield/pull/715>`_: Closes `Issue #475
   <https://github.com/openforcefield/openforcefield/issues/475>`_, where writing a PDB file using OE backend
