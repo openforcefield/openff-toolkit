@@ -60,7 +60,7 @@ Behavior changed
 
 Bugfixes
 """""""""
-- `PR #649 <https://github.com/openforcefield/openforcefield/pull/648>`_: Prevents 2020 OE
+- `PR #649 <https://github.com/openforcefield/openforcefield/pull/648>`_: Prevents 2020 OpenEye
   toolkit from issuing a warning caused by doing stereo-specific smarts searches on certain
   structures.
 - `PR #715 <https://github.com/openforcefield/openforcefield/pull/715>`_: Closes `Issue #475
