@@ -82,6 +82,7 @@ jobs:
     - name: Upload installer as artifact
       uses: actions/upload-artifact@v2
       with:
+        name: ${{ matrix.os }}_py${{ matrix.python-version }}.sh  
         path: toolkit-installer-constructor/build/openforcefield*/openforcefield*.sh
 
     - name: Install from installer
