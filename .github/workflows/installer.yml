@@ -82,7 +82,7 @@ jobs:
     - name: Upload installer as artifact
       uses: actions/upload-artifact@v2
       with:
-        path: openforcefield/toolkit-installer-constructor/build/*/*_64.sh
+        path: /home/runner/work/openforcefield/openforcefield/toolkit-installer-constructor/build/openforcefield-0.7.2-py3.6-linux-64/openforcefield-0.7.2-py36-Linux-x86_64.sh
 
     - name: Install from installer
       shell: bash -l {0}
