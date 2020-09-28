@@ -57,7 +57,7 @@ jobs:
     - name: Prepare and run the constructor
       shell: bash -l {0}
       run: |
-        cd ..
+        #cd ..
 
         # Find the tag of the last release (excluding RCs)
         # TODO: Make this a variable that can be passed through from trigger and/or allow RC
@@ -68,7 +68,7 @@ jobs:
         git clone https://github.com/openforcefield/toolkit-installer-constructor
         cd toolkit-installer-constructor
 
-        python ../openforcefield/devtools/scripts/build_cookiecutter_json.py $LATEST_TAG $PYVER $CI_OS
+        python ../devtools/scripts/build_cookiecutter_json.py $LATEST_TAG $PYVER $CI_OS
         cp new_cookiecutter.json cookiecutter/cookiecutter.json
 
         cat new_cookiecutter.json
@@ -82,7 +82,7 @@ jobs:
     - name: Upload installer as artifact
       uses: actions/upload-artifact@v2
       with:
-        path: /*/runner/work/openforcefield/toolkit-installer-constructor/build/*/*_64.sh
+        path: openforcefield/toolkit-installer-constructor/build/*/*_64.sh
 
     - name: Install from installer
       shell: bash -l {0}
