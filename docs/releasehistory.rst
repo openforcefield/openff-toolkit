@@ -7,14 +7,14 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 * ``minor`` increments add features but do not break API compatibility
 * ``micro`` increments represent bugfix releases or improvements in documentation
 
-0.8.0 - Current development
----------------------------
+0.7.2 - Bugfix and minor feature release
+----------------------------------------
 
 New features
 """"""""""""
 - `PR #662 <https://github.com/openforcefield/openforcefield/pull/662>`_: Adds ``.aromaticity_model``
   of :py:class:`ForceField <openforcefield.typing.engines.smirnoff.forcefield.ForceField>` and ``.TAGNAME``
-  of :py:class:`ParameterHandler <openforcefield.typing.engines.smirnoff.Parameters.ParameterHandler>` as
+  of :py:class:`ParameterHandler <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler>` as
   public attributes.
 - `PR #667 <https://github.com/openforcefield/openforcefield/pull/667>`_ and
   `PR #681 <https://github.com/openforcefield/openforcefield/pull/681>`_ linted the codebase with
@@ -28,7 +28,7 @@ New features
   :py:class:`ForceField.aromaticity_model <openforcefield.typing.engines.smirnoff.forcefield.ForceField>`
 - `PR #685 <https://github.com/openforcefield/openforcefield/pull/685>`_ Adds a custom ``__hash__``
   function to
-  :py:class:`ForceField.aromaticity_model <openforcefield.typing.engines.smirnoff.forcefield.ForceField>`
+  :py:class:`ForceField <openforcefield.typing.engines.smirnoff.forcefield.ForceField>`
 
 Behavior changed
 """"""""""""""""
@@ -37,9 +37,10 @@ Behavior changed
   registry when initialized with no arguments, i.e. ``ToolkitRegistry()`` and makes the
   ``register_imported_toolkit_wrappers`` argument private.
 - `PR #711 <https://github.com/openforcefield/openforcefield/pull/711>`_: The
-  setter for ``Topology.boxbox_vectors`` now infers box vectors (a 3x3 matrix) when box lengths
+  setter for :py:class:`Topology.box_vectors <openforcefield.topology.Topology>`
+  now infers box vectors (a 3x3 matrix) when box lengths
   (a 3x1 array) are passed, assuming an orthogonal box.
-  - `PR #649 <https://github.com/openforcefield/openforcefield/pull/648>`_: Makes SMARTS
+- `PR #649 <https://github.com/openforcefield/openforcefield/pull/648>`_: Makes SMARTS
   searches stereochemistry-specific (if stereo is specified in the SMARTS) for both OpenEye
   and RDKit backends. Also ensures molecule
   aromaticity is re-perceived according to the ForceField's specified
@@ -57,11 +58,14 @@ Behavior changed
   :py:class:`ForceField <openforcefield.typing.engines.smirnoff.forcefield.ForceField>`
   constructor, which defaults to ``DEFAULT_AROMATICITY_MODEL``.
 
-Bug Fixes
+Bugfixes
 """""""""
-- `PR #715 <https://github.com/openforcefield/openforcefield/pull/715>`_: Closes issue `Issue #475
-  <https://github.com/openforcefield/openforcefield/issues/475>`_ writing a "PDB" file using OE backend rearranges
-  the order of the atoms by pushing the hydrogens to the bottom.
+- `PR #649 <https://github.com/openforcefield/openforcefield/pull/648>`_: Prevents 2020 OE
+  toolkit from issuing a warning caused by doing stereo-specific smarts searches on certain
+  structures.
+- `PR #715 <https://github.com/openforcefield/openforcefield/pull/715>`_: Closes `Issue #475
+  <https://github.com/openforcefield/openforcefield/issues/475>`_, where writing a PDB file using OE backend
+  sometimes rearranged the order of the atoms by pushing the hydrogens to the bottom.
 
 Tests added
 """""""""""
@@ -69,12 +73,6 @@ Tests added
   to code snippets in docs.
 - `PR #715 <https://github.com/openforcefield/openforcefield/pull/715>`_: Adds tests for pdb file writes using OE
   backend.
-
-Bugfixes
-""""""""
-- `PR #649 <https://github.com/openforcefield/openforcefield/pull/648>`_: Prevents 2020 OE
-  toolkit from issuing a warning caused by doing stereo-specific smarts searches on certain
-  structures.
 
 
 0.7.1 - OETK2020 Compatibility and Minor Update
