@@ -7,14 +7,14 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 * ``minor`` increments add features but do not break API compatibility
 * ``micro`` increments represent bugfix releases or improvements in documentation
 
-0.8.0 - Current development
----------------------------
+0.7.2 - Bugfix and minor feature release
+----------------------------------------
 
 New features
 """"""""""""
 - `PR #662 <https://github.com/openforcefield/openforcefield/pull/662>`_: Adds ``.aromaticity_model``
   of :py:class:`ForceField <openforcefield.typing.engines.smirnoff.forcefield.ForceField>` and ``.TAGNAME``
-  of :py:class:`ParameterHandler <openforcefield.typing.engines.smirnoff.Parameters.ParameterHandler>` as
+  of :py:class:`ParameterHandler <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler>` as
   public attributes.
 - `PR #667 <https://github.com/openforcefield/openforcefield/pull/667>`_ and
   `PR #681 <https://github.com/openforcefield/openforcefield/pull/681>`_ linted the codebase with
@@ -24,9 +24,27 @@ New features
   :py:class:`ToolkitWrapper <openforcefield.utils.toolkits.ToolkitWrapper>` and
   ``.registered_toolkit_versions`` to
   :py:class:`ToolkitRegistry <openforcefield.utils.toolkits.ToolkitRegistry>`.
+- `PR #696 <https://github.com/openforcefield/openforcefield/pull/696>`_ Exposes a setter for
+  :py:class:`ForceField.aromaticity_model <openforcefield.typing.engines.smirnoff.forcefield.ForceField>`
+- `PR #685 <https://github.com/openforcefield/openforcefield/pull/685>`_ Adds a custom ``__hash__``
+  function to
+  :py:class:`ForceField <openforcefield.typing.engines.smirnoff.forcefield.ForceField>`
 
 Behavior changed
 """"""""""""""""
+- `PR #684 <https://github.com/openforcefield/openforcefield/pull/684>`_: Changes
+  :py:class:`ToolkitRegistry <openforcefield.utils.toolkits.ToolkitRegistry>` to return an empty
+  registry when initialized with no arguments, i.e. ``ToolkitRegistry()`` and makes the
+  ``register_imported_toolkit_wrappers`` argument private.
+- `PR #711 <https://github.com/openforcefield/openforcefield/pull/711>`_: The
+  setter for :py:class:`Topology.box_vectors <openforcefield.topology.Topology>`
+  now infers box vectors (a 3x3 matrix) when box lengths
+  (a 3x1 array) are passed, assuming an orthogonal box.
+- `PR #649 <https://github.com/openforcefield/openforcefield/pull/648>`_: Makes SMARTS
+  searches stereochemistry-specific (if stereo is specified in the SMARTS) for both OpenEye
+  and RDKit backends. Also ensures molecule
+  aromaticity is re-perceived according to the ForceField's specified
+  aromaticity model, which may overwrite user-specified aromaticity on the ``Molecule``
 - `PR #648 <https://github.com/openforcefield/openforcefield/pull/648>`_: Removes the
   ``utils.structure`` module, which was deprecated in 0.2.0.
 - `PR #670 <https://github.com/openforcefield/openforcefield/pull/670>`_: Makes the
@@ -35,6 +53,27 @@ Behavior changed
 - `PR #675 <https://github.com/openforcefield/openforcefield/pull/675>`_ changes the
   exception raised when no ``antechamber`` executable is found from ``IOError`` to
   :py:class:`AntechamberNotFoundError <openforcefield.utils.toolkits.AntechamberNotFoundError>`
+- `PR #696 <https://github.com/openforcefield/openforcefield/pull/696>`_ Adds an
+  ``aromaticity_model`` keyword argument to the
+  :py:class:`ForceField <openforcefield.typing.engines.smirnoff.forcefield.ForceField>`
+  constructor, which defaults to ``DEFAULT_AROMATICITY_MODEL``.
+
+Bugfixes
+"""""""""
+- `PR #649 <https://github.com/openforcefield/openforcefield/pull/648>`_: Prevents 2020 OpenEye
+  toolkit from issuing a warning caused by doing stereo-specific SMARTS searches on certain
+  structures.
+- `PR #715 <https://github.com/openforcefield/openforcefield/pull/715>`_: Closes `Issue #475
+  <https://github.com/openforcefield/openforcefield/issues/475>`_, where writing a PDB file using OE backend
+  sometimes rearranged the order of the atoms by pushing the hydrogens to the bottom.
+
+Tests added
+"""""""""""
+- `PR #694 <https://github.com/openforcefield/openforcefield/pull/694>`_: Adds automated testing
+  to code snippets in docs.
+- `PR #715 <https://github.com/openforcefield/openforcefield/pull/715>`_: Adds tests for pdb file writes using OE
+  backend.
+
 
 0.7.1 - OETK2020 Compatibility and Minor Update
 -----------------------------------------------

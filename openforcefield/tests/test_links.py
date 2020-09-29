@@ -45,6 +45,8 @@ def test_readme_links(readme_link):
     # Some DOI-based links are now behind DDoS protections, so skip them
     if "doi.org" in readme_link:
         pytest.skip("DOI links are behind DDoS protection and do not resolve")
+    if "codecov.io" in readme_link:
+        pytest.skip("Codecov website DOI also may be behind DDoS protection")
 
     # Try to connect 5 times, keeping track of exceptions so useful feedback can be provided.
     success = False
