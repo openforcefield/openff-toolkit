@@ -1,0 +1,13 @@
+name: test
+channels:
+  - conda-forge
+  - omnia
+  - openeye
+
+dependencies:
+    # Base depends
+  - openforcefield
+  - openmmforcefields
+  - openeye-toolkits
+  - pytest
+  - nbval

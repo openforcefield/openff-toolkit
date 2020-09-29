@@ -1022,3 +1022,29 @@ def get_molecule_parameterIDs(molecules, forcefield):
                     parameters_by_ID[pid].add(smi)
 
     return parameters_by_molecule, parameters_by_ID
+
+
+def sort_smirnoff_dict(data):
+    """
+    Recursively sort the keys in a dict of SMIRNOFF data.
+
+    Adapted from https://stackoverflow.com/a/47882384/4248961
+
+    TODO: Should this live elsewhere?
+    """
+    sorted_dict = dict()
+    for key, val in sorted(data.items()):
+        if isinstance(val, dict):
+            # This should hit each ParameterHandler and dicts within them
+            sorted_dict[key] = sort_smirnoff_dict(val)
+        elif isinstance(val, list):
+            # Handle case of ParameterLists, which show up in
+            # the smirnoff dicts as lists of OrderedDicts
+            new_parameter_list = list()
+            for param in val:
+                new_parameter_list.append(sort_smirnoff_dict(param))
+            sorted_dict[key] = new_parameter_list
+        else:
+            # Handle metadata or the bottom of a recursive dict
+            sorted_dict[key] = val
+    return sorted_dict
