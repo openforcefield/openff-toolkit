@@ -7,5 +7,5 @@ channels:
 dependencies:
   - conda-build
   - conda
-  - constructor
+  - constructor=3.1
   - cookiecutter
