@@ -1,5 +1,7 @@
 # Built-in visualizations in `openforcefield`
 
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/openforcefield/openforcefield/d129d0c1f3399aa3e2611443210fce526bc62dd6)
+
 PR [#560](https://github.com/openforcefield/openforcefield/pull/560) introduced rich representation for the `openforcefield.topology.Molecule` objects. This means you can visualize them in your Jupyter Notebooks:
 
 We have implemented three backends:
