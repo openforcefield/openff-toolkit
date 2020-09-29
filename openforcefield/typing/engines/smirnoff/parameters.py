@@ -4326,7 +4326,7 @@ class VirtualSiteHandler(_NonbondedHandler):
 
     # all: exclude all interactions, effectively turning vsites off.
 
-    # Note: only up to local is implemented!
+    # Note: TODO: only up to parents is implemented!
 
     class _ExclusionPolicy(Enum):
         NONE = 1
@@ -4348,13 +4348,173 @@ class VirtualSiteHandler(_NonbondedHandler):
     }
 
     exclusion_policy = ParameterAttribute(default="parents")  # has custom converter
-    _virtual_site_types = set()
 
-    @classmethod
-    def register_virtual_site_type(self, vsite_name):
+    def __init__(self, **kwargs):
+
+        super().__init__(**kwargs)
+
+        self._virtual_site_types = dict()
+        for vsite_cls in all_subclasses(self.__class__.VirtualSiteType):
+            # catch classes which are not actual implementations, which should return None
+            vtype = vsite_cls.vsite_type()
+            if vtype:
+                self.register_virtual_site_type(vtype, vsite_cls)
+
+    def add_parameter(
+        self, parameter_kwargs=None, parameter=None, after=None, before=None
+    ):
+        """Add a parameter to the forcefield, ensuring all parameters are valid.
+        This method differs from other handlers in that it uses a plugin-style
+        enable/disable type system
+
+
+        Parameters
+        ----------
+        parameter_kwargs: dict, optional
+            The kwargs to pass to the ParameterHandler.INFOTYPE (a ParameterType) constructor
+        parameter: ParameterType, optional
+            A ParameterType to add to the ParameterHandler
+        after : str or int, optional
+            The SMIRKS pattern (if str) or index (if int) of the parameter directly before where
+            the new parameter will be added
+        before : str, optional
+            The SMIRKS pattern (if str) or index (if int) of the parameter directly after where
+            the new parameter will be added
+
+        Note that one of (parameter_kwargs, parameter) must be specified
+        Note that when `before` and `after` are both None, the new parameter will be appended
+            to the END of the parameter list.
+        Note that when `before` and `after` are both specified, the new parameter
+            will be added immediately after the parameter matching the `after` pattern or index.
+
+        """
+
+        # TODO: This function need unit tests
+
+        for val in [before, after]:
+            if val and not isinstance(val, (str, int)):
+                raise TypeError
+
+        # If a dict was passed, construct it; if a ParameterType was passed, do nothing
+        if parameter_kwargs:
+            vsite_type = parameter_kwargs["type"]
+            if (
+                vsite_type in self._virtual_site_types
+                and self._virtual_site_types[vsite_type] is not None
+            ):
+                new_parameter = self._virtual_site_types[vsite_type](**parameter_kwargs)
+            else:
+                raise ValueError(
+                    f"Virtual site type {vsite_type} not enabled or implemented in this handler {self.__class__}"
+                )
+        elif parameter:
+            new_parameter = parameter
+            # As a convenience, if parameter type not present, register it
+            if parameter.type not in self._virtual_site_types:
+                self.register_virtual_site_type(parameter.type, type(parameter))
+            # additionally, if the type was previously disabled (set to None),
+            # reenable it with this new type
+            elif self._virtual_site_types.get(parameter.type, None) is None:
+                self.register_virtual_site_type(
+                    parameter.type, type(parameter), replace=True
+                )
+
+        else:
+            raise ValueError("One of (parameter, parameter_kwargs) must be specified")
+
+        if (
+            (new_parameter.smirks in [p.smirks for p in self._parameters])
+            and (new_parameter.type in [p.type for p in self._parameters])
+            and (new_parameter.name in [p.name for p in self._parameters])
+        ):
+            msg = f"A parameter SMIRKS pattern {new_parameter.smirks} already exists for type {new_parameter.type} and name {new_parameter.name}."
+            raise DuplicateParameterError(msg)
+
+        if before is not None:
+            if isinstance(before, str):
+                before_index = self._parameters.index(before)
+            elif isinstance(before, int):
+                before_index = before
+
+        if after is not None:
+            if isinstance(after, str):
+                after_index = self._parameters.index(after)
+            elif isinstance(after, int):
+                after_index = after
+
+        if None not in (before, after):
+            if after_index > before_index:
+                raise ValueError("before arg must be before after arg")
+
+        if after is not None:
+            self._parameters.insert(after_index + 1, new_parameter)
+        elif before is not None:
+            self._parameters.insert(before_index, new_parameter)
+        else:
+            self._parameters.append(new_parameter)
+
+    def _add_parameters(self, section_dict, allow_cosmetic_attributes=False):
+        """
+        Extend the ParameterList in this VirtualSiteHandler using a SMIRNOFF data source.
+
+        Parameters
+        ----------
+        section_dict : dict
+            The dict representation of a SMIRNOFF data source containing parameters to att to this VirtualSiteHandler
+        allow_cosmetic_attributes : bool, optional. Default = False
+            Whether to allow non-spec fields in section_dict. If True, non-spec kwargs will be stored as an
+            attribute of the parameter. If False, non-spec kwargs will raise an exception.
+
+        """
+
+        # Most of this is exactly the same as the base _add_parameters. The only
+        # difference is how INFOTYPE is implemented, see the comment below
+
+        unitless_kwargs, attached_units = extract_serialized_units_from_dict(
+            section_dict
+        )
+        smirnoff_data = attach_units(unitless_kwargs, attached_units)
+
+        for key, val in smirnoff_data.items():
+            if self._INFOTYPE is not None:
+                element_name = self._INFOTYPE._ELEMENT_NAME
+                # Skip sections that aren't the parameter list
+                if key != element_name:
+                    break
+            # If there are multiple parameters, this will be a list. If there's just one, make it a list
+            if not (isinstance(val, list)):
+                val = [val]
+
+            # If we're reading the parameter list, iterate through and attach units to
+            # each parameter_dict, then use it to initialize a ParameterType
+            for unitless_param_dict in val:
+
+                param_dict = attach_units(unitless_param_dict, attached_units)
+
+                # This differs from other handlers in that we use both a
+                # dynamic version of INFOTYPE, and also allow a plugin-style
+                # system where we allow visibility of virtual site types to
+                # control which ones are allowed to be activated
+                vsite_type = param_dict["type"]
+                if (
+                    vsite_type in self._virtual_site_types
+                    and self._virtual_site_types[vsite_type] is not None
+                ):
+                    new_parameter = self._virtual_site_types[vsite_type](
+                        **param_dict,
+                        allow_cosmetic_attributes=allow_cosmetic_attributes,
+                    )
+                    self._parameters.append(new_parameter)
+                else:
+                    raise ValueError(
+                        f"Virtual site type {vsite_type} not enabled or implemented in this handler {self.__class__}"
+                    )
+
+    def register_virtual_site_type(self, vsite_name, vsite_cls, replace=False):
         """
         Register an implemented virtual site type. Doing this must be done to
-        pass the validation and option checking.
+        pass the validation and option checking. To disable a type, register the
+        name with None and replace=True
 
         Parameters
         ----------
@@ -4362,23 +4522,29 @@ class VirtualSiteHandler(_NonbondedHandler):
             The name of the type. This name must be what is found in the "type"
             attribute in the OFFXML format
 
+        vsite_cls : Any
+            The class to register the name with that implements the type.
+
         Returns
         -------
         None
         """
 
-        if vsite_name in self._virtual_site_types:
+        if vsite_name in self._virtual_site_types and replace == False:
             raise DuplicateVirtualSiteTypeException(
-                "VirtualSite type {} already registered for handler {}".format(
-                    vsite_name, self.__name__
+                "VirtualSite type {} already registered for handler {} and replace=False".format(
+                    vsite_name, self.__class__
                 )
             )
-        self._virtual_site_types.add(vsite_name)
+        self._virtual_site_types[vsite_name] = vsite_cls
+        self._parameters = [
+            param for param in self._parameters if param.type != vsite_name
+        ]
 
-    @classmethod
+    @property
     def virtual_site_types(self):
         """
-        Return the list of registered virtual site types
+        Return the dictionary of registered virtual site types
 
         Parameters
         ----------
@@ -4386,8 +4552,9 @@ class VirtualSiteHandler(_NonbondedHandler):
 
         Returns
         -------
-        virtual_site_types : List[str]
-            A list of virtual site types already registered
+        virtual_site_types : dict
+            A list of virtual site types already registered, paired with their
+            class that implements them
         """
 
         return self._virtual_site_types
@@ -4449,16 +4616,13 @@ class VirtualSiteHandler(_NonbondedHandler):
         # using this generic selector as a type
         _ELEMENT_NAME = "VirtualSite"
 
+        _enable_types = {}
+
         def __new__(cls, **attrs):
 
-            try:
-                vsite_type = attrs["type"]
-            except KeyError:
-                raise SMIRNOFFSpecError(
-                    'VirtualSite not given a type. Set type to one of "BondCharge", "MonovalentLonePair", "DivalentLonePair", "TrivalentLonePair"'
-                )
-
             VSH = VirtualSiteHandler
+
+            vsite_type = attrs["type"]
 
             if vsite_type == "BondCharge":
                 cls = VSH.VirtualSiteBondChargeType
@@ -4488,7 +4652,8 @@ class VirtualSiteHandler(_NonbondedHandler):
         name = ParameterAttribute(default="EP", converter=str)
         distance = ParameterAttribute(unit=unit.angstrom)
         chargeincrement = IndexedParameterAttribute(unit=unit.elementary_charge)
-        type = ParameterAttribute()  # has custom converter
+        # Type has a delayed converter/validator to support a plugin-style enable/disable system
+        type = ParameterAttribute(converter=str)
         match = ParameterAttribute(default="all_permutations")  # has custom converter
 
         # Here we define the default sorting behavior if we need to sort the
@@ -4510,42 +4675,45 @@ class VirtualSiteHandler(_NonbondedHandler):
             """
             return cls._vsite_type
 
-        @type.converter
-        def type(self, attr, vsite_type):
-            """
-            Convert and validate the virtual site type specified in the VirtualSite element
+        # @type.converter
+        # def type(self, attr, vsite_type):
+        #     """
+        #     Convert and validate the virtual site type specified in the VirtualSite element
 
-            Parameters
-            ----------
-            attr : openforcefield.typing.engines.smirnoff.parameters.ParameterAttribute
-                The underlying ParameterAttribute
-            vsite_type : Any
-                The virtual site type to validate
+        #     Parameters
+        #     ----------
+        #     attr : openforcefield.typing.engines.smirnoff.parameters.ParameterAttribute
+        #         The underlying ParameterAttribute
+        #     vsite_type : Any
+        #         The virtual site type to validate
 
-            Returns
-            -------
-            vsite_type : str
-                The virtual site type if it is valid
+        #     Returns
+        #     -------
+        #     vsite_type : str
+        #         The virtual site type if it is valid
 
-            Raises
-            ------
-            SMIRNOFFSpecError if the value of policy did not match the SMIRNOFF Specification
-            ValueError if policy cannot be converted to a string
+        #     Raises
+        #     ------
+        #     SMIRNOFFSpecError if the value of policy did not match the SMIRNOFF Specification
+        #     ValueError if policy cannot be converted to a string
 
-            .. warning :: This API is experimental and subject to change.
-            """
+        #     .. warning :: This API is experimental and subject to change.
+        #     """
 
-            try:
-                vsite_type = str(vsite_type)
-            except ValueError:
-                raise
+        #     try:
+        #         vsite_type = str(vsite_type)
+        #     except ValueError:
+        #         raise
 
-            if vsite_type in VirtualSiteHandler.virtual_site_types():
-                return vsite_type
-            else:
-                raise SMIRNOFFSpecError(
-                    'VirtualSite not given a type. Set type to one of "BondCharge", "MonovalentLonePair", "DivalentLonePair", "TrivalentLonePair"'
-                )
+        #     if vsite_type in VirtualSiteHandler.virtual_site_types():
+        #         return vsite_type
+        #     else:
+        #         valid_types = ", ".join(
+        #             [str('"' + vtype + '"') for vtype in self._virtual_site_types]
+        #         )
+        #         raise SMIRNOFFSpecError(
+        #             "VirtualSite not given a type. Set type to one of:\n" + valid_types
+        #         )
 
         @match.converter
         def match(self, attr, match):
@@ -4846,9 +5014,6 @@ class VirtualSiteHandler(_NonbondedHandler):
 
         matches = transformed_dict_cls()
 
-        # TODO: There are probably performance gains to be had here
-        #       by performing this loop in reverse order, and breaking early once
-        #       all environments have been matched.
         for parameter_type in self._parameters:
 
             matches_for_this_type = defaultdict(list)
@@ -4877,12 +5042,14 @@ class VirtualSiteHandler(_NonbondedHandler):
 
                     # only a match if orientation matches
                     if not hasattr(handler_match._parameter_type, "match"):
-                        # usual case (not virtual sites)
-                        matches_for_this_type[key] = handler_match
+                        # Probably should never get here
+                        raise SMIRNOFFSpecError(
+                            "The match keyword not found in this parameter?!"
+                        )
                     else:
 
-                        # the possible orders of this match
-                        # must check that the tuple of atoms are the same
+                        # The possible orders of this match
+                        # We must check that the tuple of atoms are the same
                         # as they can be different in e.g. formaldehyde
                         orders = [m.topology_atom_indices for m in ce_matches]
                         orientation_flag = handler_match._parameter_type.match
@@ -4907,7 +5074,7 @@ class VirtualSiteHandler(_NonbondedHandler):
                             order for order in orders if sorted(key) == sorted(order)
                         ]
 
-                        # This is from the older implementation that allows
+                        # Find these matches is from the older implementation that allows
                         # specifying specific orientations. Leaving in for now..
                         if len(orientation) > len(orders):
                             error_msg = (
@@ -4935,7 +5102,7 @@ class VirtualSiteHandler(_NonbondedHandler):
                             matches_for_this_type[key].append(handler_match)
 
                 # Resolve match overriding by the use of the name attribute
-                # If two parameters match but have the same name, use most recent
+                # If two parameters match but have the same name, use most recent,
                 # but if the names are different, keep and apply both parameters
                 if use_named_slots:
                     for k in matches_for_this_type:
@@ -5261,26 +5428,11 @@ class VirtualSiteHandler(_NonbondedHandler):
 
             if policy.value > self._ExclusionPolicy.PARENTS.value:
                 raise NotImplementedError(
-                    """
-                Only the 'parents', 'minimal', and 'none' exclusion_policies are
-                implemented"""
+                    "Only the 'parents', 'minimal', and 'none' exclusion_policies are implemented"
                 )
 
         return ids
 
-
-################################################################################
-# Register the implemented virtual sites for the standard VirtualSiteHandler
-################################################################################
-def _register_virtual_site_types():
-    for vsite_type in all_subclasses(VirtualSiteHandler.VirtualSiteType):
-        # catch non-impl classes which must return None
-        vtype = vsite_type.vsite_type()
-        if vtype:
-            VirtualSiteHandler.register_virtual_site_type(vtype)
-
-
-_register_virtual_site_types()
 
 if __name__ == "__main__":
     import doctest
