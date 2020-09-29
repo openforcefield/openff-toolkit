@@ -7,6 +7,17 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 * ``minor`` increments add features but do not break API compatibility
 * ``micro`` increments represent bugfix releases or improvements in documentation
 
+0.7.3 - Current development
+---------------------------
+
+New features
+""""""""""""
+- `PR #718 <https://github.com/openforcefield/openforcefield/pull/718>`_: Adds ``.rings`` and
+  ``.n_rings`` to :py:class:`Molecule <openforcefield.topology.Molecule>` and ``.is_in_ring``
+  to :py:class:`Atom <openforcefield.topology.molecule.Atom>` and
+  :py:class:`Bond <openforcefield.topology.molecule.Bond>`
+
+
 0.7.2 - Bugfix and minor feature release
 ----------------------------------------
 
