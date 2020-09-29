@@ -46,3 +46,13 @@ This means we recommend one of the following or equivalent:
 - IUPAC names for the components of your system
 
 Essentially, anything which provides the full identity of what you want to simulate (including stereochemistry) should work, though it may require more or less work to get it into an acceptable format.
+
+## My conda installation of the toolkit doesn't appear to work. What should I try next?
+
+We recommend that you install the toolkit in a fresh conda environment, explicitly passing the channels to be used, in-order:
+
+    conda install -n <my_new_env> -c conda-forge -c omnia openforcefield
+    conda activate <my_new_env>
+
+Installing into a new environment avoids forcing conda to satisfy the dependencies of both the toolkit and all existing packages in that environment.
+Taking the approach that conda environments are generally disposable, even ephemeral, minimizes the chances for hard-to-diagnose dependency issues.
