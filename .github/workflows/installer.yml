@@ -1,14 +1,7 @@
 name: Make single-file installers
 
 on:
-  release:
-    types: 
-      - released
-      - prereleased
   workflow_dispatch:
-  pull_request:  # Remove this when merging this PR
-  schedule:
-    - cron: "0 0 * * 0"  # This cron job should maybe just live in openforcefield/status/?
 
 jobs:
   test:
