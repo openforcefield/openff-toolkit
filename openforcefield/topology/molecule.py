@@ -3270,7 +3270,11 @@ class FrozenMolecule(Serializable):
 
     @property
     def n_rings(self):
-        """Return the number of rings found in the Molecule"""
+        """Return the number of rings found in the Molecule
+
+        Requires the RDKit to be installed.
+
+        """
         return len(self.rings)
 
     @property
@@ -4713,13 +4717,21 @@ class FrozenMolecule(Serializable):
 
     @property
     def rings(self):
+        """Return the number of rings in this molecule.
+
+        Requires the RDKit to be installed.
+
+        """
         if self._rings is None:
             self._get_rings()
         return self._rings
 
-    def _get_rings(self, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+    @RDKitToolkitWrapper.requires_toolkit()
+    def _get_rings(self):
         """
-        Call out to ToolkitWrapper methods to find the rings in this molecule.
+        Call out to RDKitToolkitWrapper methods to find the rings in this molecule.
+
+        Requires the RDKit to be installed.
 
         .. note ::
 
@@ -4727,6 +4739,9 @@ class FrozenMolecule(Serializable):
             function may not be well-behaved and may report a different number
             rings than expected. Some problematic cases include networks of many
             (5+) rings or bicyclic moieties (i.e. norbornane).
+
+        .. todo :: This could be refactored to use ToolkitWrapper.call() to flexibly
+            access other toolkits, if find_rings is implemented.
 
         Returns
         -------
@@ -4736,7 +4751,8 @@ class FrozenMolecule(Serializable):
             found, a single empty tuple is returned.
 
         """
-        rings = toolkit_registry.call("find_rings", self)
+        toolkit = RDKitToolkitWrapper()
+        rings = toolkit.find_rings(self)
         self._rings = rings
 
 

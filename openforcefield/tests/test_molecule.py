@@ -2783,23 +2783,21 @@ class TestMolecule:
             n_rings == Molecule.from_smiles(smiles, allow_undefined_stereo=True).n_rings
         )
 
+    @pytest.mark.parametrize(
+        ("smiles", "n_atom_rings", "n_bond_rings"),
+        [
+            ("c1ccc2ccccc2c1", 10, 11),
+            ("c1ccc(cc1)c2ccccc2", 12, 12),
+            ("Cc1ccc(cc1Nc2nccc(n2)c3cccnc3)NC(=O)c4ccc(cc4)CN5CCN(CC5)C", 30, 30),
+        ],
+    )
     @requires_rdkit
-    def test_is_in_ring(self):
+    def test_is_in_ring(self, smiles, n_atom_rings, n_bond_rings):
         """Test Atom.is_in_ring and Bond.is_in_ring"""
-        naphthalene = Molecule.from_smiles("c1ccc2ccccc2c1")
-        biphenyl = Molecule.from_smiles("c1ccc(cc1)c2ccccc2")
-        imatinib = Molecule.from_smiles(
-            "Cc1ccc(cc1Nc2nccc(n2)c3cccnc3)NC(=O)c4ccc(cc4)CN5CCN(CC5)C"
-        )
+        mol = Molecule.from_smiles(smiles)
 
-        assert len([atom for atom in naphthalene.atoms if atom.is_in_ring]) == 10
-        assert len([bond for bond in naphthalene.bonds if bond.is_in_ring]) == 11
-
-        assert len([atom for atom in biphenyl.atoms if atom.is_in_ring]) == 12
-        assert len([bond for bond in biphenyl.bonds if bond.is_in_ring]) == 12
-
-        assert len([atom for atom in imatinib.atoms if atom.is_in_ring]) == 30
-        assert len([bond for bond in imatinib.bonds if bond.is_in_ring]) == 30
+        assert len([atom for atom in mol.atoms if atom.is_in_ring]) == n_atom_rings
+        assert len([bond for bond in mol.bonds if bond.is_in_ring]) == n_bond_rings
 
     @requires_rdkit
     def test_visualize_rdkit(self):
