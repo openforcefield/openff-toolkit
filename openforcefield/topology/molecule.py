@@ -3274,6 +3274,13 @@ class FrozenMolecule(Serializable):
 
         Requires the RDKit to be installed.
 
+        .. note ::
+
+            For systems containing some special cases of connected rings, this
+            function may not be well-behaved and may report a different number
+            rings than expected. Some problematic cases include networks of many
+            (5+) rings or bicyclic moieties (i.e. norbornane).
+
         """
         return len(self.rings)
 
@@ -4720,6 +4727,13 @@ class FrozenMolecule(Serializable):
         """Return the number of rings in this molecule.
 
         Requires the RDKit to be installed.
+
+        .. note ::
+
+            For systems containing some special cases of connected rings, this
+            function may not be well-behaved and may report a different number
+            rings than expected. Some problematic cases include networks of many
+            (5+) rings or bicyclic moieties (i.e. norbornane).
 
         """
         if self._rings is None:
