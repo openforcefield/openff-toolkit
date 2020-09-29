@@ -1,6 +1,6 @@
 # Examples using SMIRNOFF with the toolkit
 
-The following examples are available in [the openforcefield toolkit repository](https://github.com/openforcefield/openforcefield/tree/master/examples):
+The following examples are available in [the openforcefield toolkit repository](https://github.com/openforcefield/openforcefield/tree/master/examples). Each can be run interactively in the browser with [binder](https://mybinder.org/v2/gh/openforcefield/openforcefield/master?filepath=%2Fexamples%2F), without installing anyting on your computer.
 
 ### Index of provided examples
 
