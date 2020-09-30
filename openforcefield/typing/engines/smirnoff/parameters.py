@@ -1116,8 +1116,8 @@ class _ParameterAttributeHandler:
     def _split_attribute_index_mapping(item):
         """Split the attribute name from the final index.
 
-        For example, the method takes 'k2' and returns the tuple ('k', 1).
-        If attribute_name doesn't end with an integer, it returns (item, None).
+        For example, the method takes 'k1_bondorder2' and returns the tuple ('k_bondorder', 0, 2).
+        If attribute_name doesn't end with an integer, it returns (item, None, None).
         """
         # Match items of the form <item><index>_<mapping><key>
         # where <index> and <key> always integers
@@ -2384,6 +2384,7 @@ class BondHandler(ParameterHandler):
         )
 
         def __init__(self, **kwargs):
+            # these checks enforce mutually-exclusive parameterattribute specifications
             has_k = "k" in kwargs.keys()
             has_k_bondorder = any(["k_bondorder" in key for key in kwargs.keys()])
 
