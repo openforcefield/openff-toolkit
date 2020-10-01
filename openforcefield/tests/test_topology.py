@@ -608,6 +608,165 @@ class TestTopology(TestCase):
             assert bond.bond_order == bond_copy.bond_order
             assert bond.bond.is_aromatic == bond_copy.bond.is_aromatic
 
+    def test_to_file_vsites(self):
+        """
+        Checks for the following:
+            1. doesn't write vsites
+        """
+        from openforcefield.tests.test_forcefield import create_ethanol
+        from openforcefield.topology import Molecule, Topology
+
+        # 1. test for virtual sites (shouldn't write for now)
+        topology = Topology()
+        topology.add_molecule(create_ethanol())
+        mol = Molecule.from_pdb_and_smiles(
+            get_data_file_path("systems/test_systems/1_ethanol.pdb"), "CCO"
+        )
+        carbons = [atom for atom in mol.atoms if atom.atomic_number == 6]
+        positions = mol.conformers[0]
+        mol.add_bond_charge_virtual_site(
+            (carbons[0], carbons[1]),
+            0.1 * unit.angstrom,
+            charge_increments=[0.1, 0.05] * unit.elementary_charge,
+        )
+        topology.to_file("ethanol.pdb", positions)
+        read_mol_from_pdb = Molecule.from_pdb_and_smiles("ethanol.pdb", "CCO")
+        assert read_mol_from_pdb.n_virtual_sites == 0
+
+    # def test_to_file_io_same_pdb(self):
+    #     """
+    #     Checks for the following:
+    #         2. read pdb and return same coords/file
+    #     """
+    #     from openforcefield.topology import Molecule, Topology
+    #     from simtk.openmm.app import PDBFile
+    #     import filecmp
+    #
+    #     # 2. Reading and writing returns same file
+    #     toluene_pdbfile = PDBFile(get_data_file_path("molecules/toluene.pdb"))
+    #     toluene = Molecule.from_smiles('Cc1ccccc1')
+    #     off_topology = Topology.from_openmm(openmm_topology=toluene_pdbfile.topology,
+    #                                         unique_molecules=[toluene])
+    #     off_topology.to_file("toluene_copy.pdb", toluene_pdbfile.positions)
+    #     assert(filecmp.cmp(get_data_file_path("molecules/toluene.pdb"), "toluene_copy.pdb", shallow=False))
+
+    def test_to_file_units_check(self):
+        """
+        Checks for the following:
+            3. read unitless positions, Angstrom positions, nanometer positions, all should output same pdb file
+        """
+        import filecmp
+
+        from simtk.unit import nanometer
+
+        from openforcefield.tests.test_forcefield import (
+            create_ethanol,
+            create_reversed_ethanol,
+        )
+        from openforcefield.topology import Molecule, Topology
+
+        topology = Topology()
+        topology.add_molecule(create_ethanol())
+        mol = Molecule.from_pdb_and_smiles(
+            get_data_file_path("systems/test_systems/1_ethanol.pdb"), "CCO"
+        )
+        positions_angstrom = mol.conformers[0]
+        topology.to_file("ethanol_ang.pdb", positions_angstrom)
+        positions_nanometer = positions_angstrom.value_in_unit(nanometer) * nanometer
+        topology.to_file("ethanol_nano.pdb", positions_nanometer)
+        positions_unitless = positions_angstrom._value
+        topology.to_file("ethanol_unitless.pdb", positions_unitless)
+        assert filecmp.cmp("ethanol_ang.pdb", "ethanol_nano.pdb", shallow=False)
+        assert filecmp.cmp("ethanol_ang.pdb", "ethanol_unitless.pdb", shallow=False)
+
+    def test_to_file_fileformat_lettercase(self):
+        """
+        Checks for the following:
+            4. for upper/lowercase fileformat specifier
+        """
+        import os
+
+        from openforcefield.tests.test_forcefield import (
+            create_ethanol,
+            create_reversed_ethanol,
+        )
+        from openforcefield.topology import Molecule, Topology
+
+        topology = Topology()
+        topology.add_molecule(create_ethanol())
+        mol = Molecule.from_pdb_and_smiles(
+            get_data_file_path("systems/test_systems/1_ethanol.pdb"), "CCO"
+        )
+        positions = mol.conformers[0]
+        fname = "ethanol_file.pdb"
+        topology.to_file(fname, positions, file_format="pDb")
+        assert os.path.isfile(fname)
+
+    def test_to_file_fileformat_invalid(self):
+        """
+        Checks for the following:
+            5. check error for invalid file format
+        """
+        from openforcefield.tests.test_forcefield import (
+            create_ethanol,
+            create_reversed_ethanol,
+        )
+        from openforcefield.topology import Molecule, Topology
+
+        topology = Topology()
+        topology.add_molecule(create_ethanol())
+        mol = Molecule.from_pdb_and_smiles(
+            get_data_file_path("systems/test_systems/1_ethanol.pdb"), "CCO"
+        )
+        positions = mol.conformers[0]
+        fname = "ethanol_file.pdb"
+        with pytest.raises(Exception):
+            topology.to_file(fname, positions, file_format="AbC")
+
+    def test_to_file_no_topology(self):
+        """
+        Checks for the following:
+            6. pdb write file fails because there is no topology
+        """
+        import os
+
+        from openforcefield.tests.test_forcefield import (
+            create_ethanol,
+            create_reversed_ethanol,
+        )
+        from openforcefield.topology import Molecule, Topology
+
+        topology = Topology()
+        mol = Molecule.from_pdb_and_smiles(
+            get_data_file_path("systems/test_systems/1_ethanol.pdb"), "CCO"
+        )
+        positions = mol.conformers[0]
+        fname = "ethanol_no_top.pdb"
+        with pytest.raises(Exception):
+            topology.to_file(fname, positions)
+
+    def test_to_file_multi_topology(self):
+        """
+        Checks for the following:
+            7. topology test for 2 molecules (Topology.addmolecule(create_ethanol()) and create_reversedethanol()
+                write fails with the pdb_write error 'The number of positions must match the number of atoms'
+        """
+        from openforcefield.tests.test_forcefield import (
+            create_ethanol,
+            create_reversed_ethanol,
+        )
+        from openforcefield.topology import Molecule, Topology
+
+        topology = Topology()
+        topology.add_molecule(create_ethanol())
+        topology.add_molecule(create_reversed_ethanol())
+        mol = Molecule.from_pdb_and_smiles(
+            get_data_file_path("systems/test_systems/1_ethanol.pdb"), "CCO"
+        )
+        positions = mol.conformers[0]
+        with pytest.raises(Exception):
+            topology.to_file("ethanol_multi_top.pdb", positions)
+
     @requires_openeye
     def test_from_openmm_duplicate_unique_mol(self):
         """Check that a DuplicateUniqueMoleculeError is raised if we try to pass in two indistinguishably unique mols"""

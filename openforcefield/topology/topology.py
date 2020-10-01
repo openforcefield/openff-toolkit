@@ -1839,41 +1839,38 @@ class Topology(Serializable):
             omm_topology.setPeriodicBoxVectors(self.box_vectors)
         return omm_topology
 
-    def to_file(
-        self,
-        filename,
-        positions,
-        file_format="PDB",
-        keepIds=False,
-        extraParticleIdentifier=" ",
-    ):
+    def to_file(self, filename, positions, file_format="PDB", keepIds=False):
         """
         To save a PDB file with coordinates as well as topology from openforcefield topology object
         Reference: https://github.com/openforcefield/openforcefield/issues/502
-        :param filename: name of the topology file
-        :param positions: Can be an openmm 'quantity' object which has atomic positions as a list of Vec3s
-         along with associated units,
-         otherwise a 3D array of UNITLESS numbers are considered as "Angstroms" by default
-        :param file_format: write topology in pdb file format
-        :return:
+        Note: 1. This doesn't handle virtual sites (they're ignored)
+              2. Atom numbering may not remain same, for example if the atoms in water are numbered as 1001, 1002, 1003,
+                 they would change to 1, 2, 3.
+                 This doesn't affect the topology or coordinates or atom-ordering in
+                 anyway, but may pose difficulty in provenance
+              3. Same issue with the amino acid names in the pdb file, they are not returned
+
+        Parameters
+        ----------
+        filename : name of the pdb file to write to
+        positions : Can be an openmm 'quantity' object which has atomic positions as a list of Vec3s along with associated units, otherwise a 3D array of UNITLESS numbers are considered as "Angstroms" by default
+        file_format : write topology in pdb file format
+
         """
         from simtk.openmm.app import PDBFile
         from simtk.unit import Quantity, angstroms
 
         openmm_top = self.to_openmm()
+        if not isinstance(positions, Quantity):
+            positions = positions * angstroms
+
+        file_format = file_format.upper()
         if file_format != "PDB":
             raise ValueError("Only PDB file format is allowed")
 
-        # if positions is not an openmm quantity it is converted to one
-        if not isinstance(positions, Quantity):
-            positions = Quantity(positions)
-            positions.unit = angstroms
-
         # writing to PDB file
         with open(filename, "w") as outfile:
-            PDBFile.writeFile(
-                openmm_top, positions, outfile, keepIds, extraParticleIdentifier
-            )
+            PDBFile.writeFile(openmm_top, positions, outfile, keepIds)
 
     @staticmethod
     def from_mdtraj(mdtraj_topology, unique_molecules=None):
