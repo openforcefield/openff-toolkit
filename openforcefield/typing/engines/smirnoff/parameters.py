@@ -2534,6 +2534,22 @@ class BondHandler(ParameterHandler):
 
             # Ensure atoms are actually bonded correct pattern in Topology
             self._assert_correct_connectivity(bond_match)
+
+            is_constrained = topology.is_constrained(*topology_atom_indices)
+
+            # Handle constraints.
+            if is_constrained:
+                # Atom pair is constrained; we don't need to add a bond term.
+                skipped_constrained_bonds += 1
+                # Check if we need to add the constraint here to the equilibrium bond length.
+                if is_constrained is True:
+                    # Mark that we have now assigned a specific constraint distance to this constraint.
+                    topology.add_constraint(*topology_atom_indices, length)
+                    # Add the constraint to the System.
+                    system.addConstraint(*topology_atom_indices, length)
+                    # system.addConstraint(*particle_indices, length)
+                continue
+
             # topology.assert_bonded(atoms[0], atoms[1])
             bond_params = bond_match.parameter_type
             match = bond_match.environment_match
@@ -2553,6 +2569,11 @@ class BondHandler(ParameterHandler):
                 # TODO: Deal with possibility that molecules use different fractional bond order methods
                 bond_order = bond.fractional_bond_order
                 if self.fractional_bondorder_interpolation == "linear":
+                    if len(bond_params.k_bondorder) < 2:
+                        raise SMIRNOFFSpecError(
+                            "In order to use bond order interpolation, 2 or more parameters "
+                            f"must be present. Found {len(bond_params.k_bondorder)} parameters."
+                        )
                     k = _linear_interpolate_k(
                         k_bondorder=bond_params.k_bondorder,
                         fractional_bond_order=bond_order,
@@ -2564,21 +2585,6 @@ class BondHandler(ParameterHandler):
                             self.fractional_bondorder_method
                         )
                     )
-
-            is_constrained = topology.is_constrained(*topology_atom_indices)
-
-            # Handle constraints.
-            if is_constrained:
-                # Atom pair is constrained; we don't need to add a bond term.
-                skipped_constrained_bonds += 1
-                # Check if we need to add the constraint here to the equilibrium bond length.
-                if is_constrained is True:
-                    # Mark that we have now assigned a specific constraint distance to this constraint.
-                    topology.add_constraint(*topology_atom_indices, length)
-                    # Add the constraint to the System.
-                    system.addConstraint(*topology_atom_indices, length)
-                    # system.addConstraint(*particle_indices, length)
-                continue
 
             # Add harmonic bond to HarmonicBondForce
             force.addBond(*topology_atom_indices, length, k)
