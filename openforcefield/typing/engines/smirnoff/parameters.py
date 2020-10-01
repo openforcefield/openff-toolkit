@@ -504,6 +504,7 @@ class MappedParameterAttribute(ParameterAttribute):
     Quantity(value=1.42, unit=angstrom)
 
     """
+
     def _convert_and_validate(self, instance, value):
         if self._is_valid_default(value):
             return value
@@ -2432,12 +2433,13 @@ class BondHandler(ParameterHandler):
         _VALENCE_TYPE = "Bond"
         _ELEMENT_NAME = "Bond"
 
-        length = ParameterAttribute(unit=unit.angstrom)
+        length = ParameterAttribute(default=None, unit=unit.angstrom)
         k = ParameterAttribute(
             default=None, unit=unit.kilocalorie_per_mole / unit.angstrom ** 2
         )
 
         # fractional bond order params
+        length_bondorder = MappedParameterAttribute(default=None, unit=unit.angstrom)
         k_bondorder = MappedParameterAttribute(
             default=None, unit=unit.kilocalorie_per_mole / unit.angstrom ** 2
         )
@@ -2446,6 +2448,10 @@ class BondHandler(ParameterHandler):
             # these checks enforce mutually-exclusive parameterattribute specifications
             has_k = "k" in kwargs.keys()
             has_k_bondorder = any(["k_bondorder" in key for key in kwargs.keys()])
+            has_length = "length" in kwargs.keys()
+            has_length_bondorder = any(
+                ["length_bondorder" in key for key in kwargs.keys()]
+            )
 
             # Are these errors too general? What about ParametersMissingError/ParametersOverspecifiedError?
             if has_k:
@@ -2456,7 +2462,17 @@ class BondHandler(ParameterHandler):
             else:
                 if not has_k_bondorder:
                     raise SMIRNOFFSpecError(
-                        "Either k or k_bondorder* must be specified"
+                        "Either k or k_bondorder* must be specified."
+                    )
+            if has_length:
+                if has_length_bondorder:
+                    raise SMIRNOFFSpecError(
+                        "BOTH length and length_bondorder* cannot be specified simultaneously."
+                    )
+            else:
+                if not has_length_bondorder:
+                    raise SMIRNOFFSpecError(
+                        "Either length or length_bondorder* must be specified."
                     )
 
             super().__init__(**kwargs)
@@ -2512,7 +2528,10 @@ class BondHandler(ParameterHandler):
         # only if they were found as matches
         uses_interpolation = False
         for match in bond_matches.values():
-            if match.parameter_type.k_bondorder:
+            if (
+                match.parameter_type.k_bondorder
+                or match.parameter_type.length_bondorder
+            ):
                 uses_interpolation = True
                 break
 
@@ -2559,8 +2578,28 @@ class BondHandler(ParameterHandler):
                 *match.reference_atom_indices
             )
 
-            length = bond_params.length
-
+            if getattr(bond_params, "length", None) is not None:
+                length = bond_params.length
+            else:
+                # Interpolate length using fractional bond orders
+                bond_order = bond.fractional_bond_order
+                if self.fractional_bondorder_interpolation == "linear":
+                    if len(bond_params.length_bondorder) < 2:
+                        raise SMIRNOFFSpecError(
+                            "In order to use bond order interpolation, 2 or more parameters "
+                            f"must be present. Found {len(bond_params.length_bondorder)} parameters."
+                        )
+                    length = _linear_interpolate_k(
+                        k_bondorder=bond_params.length_bondorder,
+                        fractional_bond_order=bond_order,
+                    )
+                else:
+                    # TODO: Raise a more specific exception
+                    raise FractionalBondOrderMethodUnsupportedError(
+                        "Fractional bondorder treatment {} is not implemented.".format(
+                            self.fractional_bondorder_method
+                        )
+                    )
             if getattr(bond_params, "k", None) is not None:
                 k = bond_params.k
             else:
