@@ -23,6 +23,7 @@ __all__ = [
     "ParameterType",
     "ParameterHandler",
     "ParameterAttribute",
+    "MappedParameterAttribute",
     "IndexedParameterAttribute",
     "IndexedMappedParameterAttribute",
     "ConstraintHandler",
@@ -395,6 +396,10 @@ class IndexedParameterAttribute(ParameterAttribute):
     --------
     ParameterAttribute
         A simple parameter attribute.
+    MappedParameterAttribute
+        A parameter attribute representing a mapping.
+    IndexedMappedParameterAttribute
+        A parameter attribute representing a sequence, each term of which is a mapping.
 
     Examples
     --------
@@ -446,6 +451,59 @@ class IndexedParameterAttribute(ParameterAttribute):
 
 
 class MappedParameterAttribute(ParameterAttribute):
+    """The attribute of a parameter in which each term is a mapping.
+
+    The substantial difference with ``IndexedParameterAttribute`` is that, unlike
+    indexing, the mapping can be based on artbitrary references, like indices but
+    can starting at non-zero values and include non-adjacent keys.
+
+    Parameters
+    ----------
+    default : object, optional
+        When specified, the descriptor makes this attribute optional by
+        attaching a default value to it.
+    unit : simtk.unit.Quantity, optional
+        When specified, only sequences of mappings where values are quantities with
+        compatible units are allowed to be set.
+    converter : callable, optional
+        An optional function that can be used to validate and cast each
+        component of each element of the sequence before setting the attribute.
+
+    See Also
+    --------
+    IndexedParameterAttribute
+        A parameter attribute representing a sequence.
+    IndexedMappedParameterAttribute
+        A parameter attribute representing a sequence, each term of which is a mapping.
+
+    Examples
+    --------
+
+    Create an optional indexed attribute with unit of angstrom.
+
+    >>> from simtk import unit
+    >>> class MyParameter:
+    ...     length = MappedParameterAttribute(default=None, unit=unit.angstrom)
+    ...
+    >>> my_par = MyParameter()
+    >>> my_par.length is None
+    True
+
+    Like other ParameterAttribute objects, strings are parsed into Quantity objects.
+
+    >>> my_par.length = {1:'1.5 * angstrom', 2: '1.4 * angstrom'}
+    >>> my_par.length[1]
+    Quantity(value=1.5, unit=angstrom)
+
+    Unlike other ParameterAttribute objects, the reference points can do not need ot be
+    zero-indexed, non-adjancent, such as interpolating defining a bond parameter for
+    interpolation by defining references values and bond orders 2 and 3:
+
+    >>> my_par.length = {2:'1.42 * angstrom', 3: '1.35 * angstrom'}
+    >>> my_par.length[2]
+    Quantity(value=1.42, unit=angstrom)
+
+    """
     def _convert_and_validate(self, instance, value):
         if self._is_valid_default(value):
             return value
@@ -490,6 +548,8 @@ class IndexedMappedParameterAttribute(ParameterAttribute):
     --------
     IndexedParameterAttribute
         A parameter attribute representing a sequence.
+    MappedParameterAttribute
+        A parameter attribute representing a mapping.
 
     Examples
     --------
@@ -748,7 +808,6 @@ class _ParameterAttributeHandler:
                 smirnoff_data[attr_name][key] = smirnoff_data[kwarg]
                 del smirnoff_data[kwarg]
 
-        # TODO: Sort?
         return smirnoff_data
 
     def _process_indexed_mapped_attributes(self, smirnoff_data):
@@ -2459,6 +2518,8 @@ class BondHandler(ParameterHandler):
 
         # Re-computing fractional bond orders is expensive and should be skipped if not necessary
         if uses_interpolation:
+            # TODO: When implementing `partial_bond_orders_from_molecules`, we'll want to be
+            #  picky and careful about which molecules get their bond orders computed
             for top_mol in topology.topology_molecules:
                 top_mol.reference_molecule.assign_fractional_bond_orders(
                     bond_order_model=self.fractional_bondorder_method.lower()
