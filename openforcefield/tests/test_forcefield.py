@@ -3342,22 +3342,46 @@ class TestForceFieldParameterAssignment:
             "get_molecule",
             "k_torsion_interpolated",
             "k_bond_interpolated",
+            "bond_length_interpolated",
             "central_atoms",
         ),
         [
-            (create_ethanol, 4.953856, 42208.5401, (1, 2)),
-            (create_reversed_ethanol, 4.953856, 42208.5401, (7, 6)),
+            (create_ethanol, 4.953856, 42208.5401, 1.40054, (1, 2)),
+            (create_reversed_ethanol, 4.953856, 42208.5401, 1.40054, (7, 6)),
         ],
     )
     def test_fractional_bondorder(
-        self, get_molecule, k_torsion_interpolated, k_bond_interpolated, central_atoms
+        self,
+        get_molecule,
+        k_torsion_interpolated,
+        k_bond_interpolated,
+        bond_length_interpolated,
+        central_atoms,
     ):
         """Test the fractional bond orders are used to interpolate k values as we expect
         Until toolkit-specific differences in fractional bond order generation (for harmonic bond forces) are handled,
-        this test is pinned to using OpenEye."""
+        this test is pinned to using OpenEye.
 
+        Values for torsion parameters are inferred from the bond order specified in the input molecule (1.23) but
+        values for bond parameters are currently interpolated from the bond orders that are always re-computed.
+        a bond order of 0.9945832744 via OpenEye. This test currently relies on partial_bond_orders_from_molecules,
+        and thereforce, the bond interpolation is skipped here. In a subsequent feature, these behaviors will be
+        unified, and, then, this test should be updated to reflect that.
+
+        Parameter   | SMIRNOFF unit | OpenMM unit   | param values at bond orders 1, 2  | used bond order   | value in OpenMM force
+        bond k      kcal/mol/A**2   kJ/mol/nm**2    101, 123                            SKIPPED             42208.540
+        bond length A               nm              1.4, 1.3                            SKIPPED             0.140054
+        torsion k   kcal            kj              1, 1.8                              1.23                4.953856
+
+        To obtain the bond order:
+        >>> mol = Molecule.from_smiles('CCO')
+        >>> mol.assign_fractional_bond_orders(toolkit_registry=ToolkitRegistry(OpenEyeToolkitWrapper))
+        >>> mol.get_bond_between(1, 2).fractional_bond_order
+        0.9945832743995565
+
+        TODO: Update this behavior when partial_bond_orders_from_molecules is added to bond interpolation
+        """
         mol = get_molecule()
-
         forcefield = ForceField("test_forcefields/smirnoff99Frosst.offxml", xml_ff_bo)
         topology = Topology.from_molecules(mol)
 
@@ -3373,12 +3397,6 @@ class TestForceFieldParameterAssignment:
             if isinstance(force, openmm.PeriodicTorsionForce)
         ][0]
 
-        off_bond_force = [
-            force
-            for force in omm_system.getForces()
-            if isinstance(force, openmm.HarmonicBondForce)
-        ][0]
-
         for idx in range(off_torsion_force.getNumTorsions()):
             params = off_torsion_force.getTorsionParameters(idx)
 
@@ -3390,18 +3408,6 @@ class TestForceFieldParameterAssignment:
             ):
                 k = params[-1]
                 assert_almost_equal(k / k.unit, k_torsion_interpolated)
-
-        for idx in range(off_bond_force.getNumBonds()):
-            params = off_bond_force.getBondParameters(idx)
-
-            atom1, atom2 = params[0], params[1]
-            atom1_mol, atom2_mol = central_atoms
-
-            if ((atom1 == atom1_mol) and (atom2 == atom2_mol)) or (
-                (atom1 == atom2_mol) and (atom2 == atom1_mol)
-            ):
-                k = params[-1]
-                assert_almost_equal(k / k.unit, k_bond_interpolated, 0)
 
     def test_fractional_bondorder_multiple_same_mol(self):
         """Check that an error is thrown when essentially the same molecule is entered more than once
@@ -3467,18 +3473,41 @@ class TestForceFieldParameterAssignment:
 
     @requires_rdkit
     @pytest.mark.parametrize(
-        ("get_molecule", "k_interpolated", "central_atoms"),
+        (
+            "get_molecule",
+            "k_torsion_interpolated",
+            "k_bond_interpolated",
+            "bond_length_interpolated",
+            "central_atoms",
+        ),
         [
-            (create_ethanol, 4.953856, (1, 2)),
-            (create_reversed_ethanol, 4.953856, (7, 6)),
+            (create_ethanol, 4.953856, 42266.68432, 1.39991, (1, 2)),
+            (create_reversed_ethanol, 4.953856, 42266.68432, 1.39991, (7, 6)),
         ],
     )
     def test_fractional_bondorder_calculated_rdkit(
-        self, get_molecule, k_interpolated, central_atoms
+        self,
+        get_molecule,
+        k_torsion_interpolated,
+        k_bond_interpolated,
+        bond_length_interpolated,
+        central_atoms,
     ):
         """Test that torsion barrier heights interpolated from fractional bond
         orders calculated with the Amber toolkit are assigned within our
         expectations.
+
+        This test mirrors test_fractional_bondorder but uses RDKit to re-compute the bond orders
+        on input molecules (and thereforce disregards the bond orders on them).
+
+        Note that RDKitToolkitWrapper does not provide a method for assigning fractional bond orders;
+        instead, AmberTools is used in the case that OpenEye is not installed.
+
+        To obtain the bond order:
+        >>> mol = Molecule.from_smiles('CCO')
+        >>> mol.assign_fractional_bond_orders(toolkit_registry=ToolkitRegistry(AmberToolsToolkitWrapper))
+        >>> mol.get_bond_between(1, 2).fractional_bond_order
+        1.0009
 
         """
 
@@ -3529,13 +3558,15 @@ class TestForceFieldParameterAssignment:
 
                 # do a hand calculation as a sanity check
                 slope = (7.5312 - 4.184) / (1.8 - 1.0)
-                k_interpolated_ret = slope * (bond.fractional_bond_order - 1.0) + 4.184
-                assert_almost_equal(k_interpolated_ret, k / k.unit, 2)
+                k_torsion_interpolated_ret = (
+                    slope * (bond.fractional_bond_order - 1.0) + 4.184
+                )
+                assert_almost_equal(k_torsion_interpolated_ret, k / k.unit, 2)
 
                 # check that we *are not* matching the values we'd get if we
                 # had offered our molecules to `partial_bond_orders_from_molecules`
                 with pytest.raises(AssertionError):
-                    assert_almost_equal(k / k.unit, k_interpolated)
+                    assert_almost_equal(k / k.unit, k_torsion_interpolated)
 
         for idx in range(off_bond_force.getNumBonds()):
             params = off_bond_force.getBondParameters(idx)
@@ -3546,29 +3577,44 @@ class TestForceFieldParameterAssignment:
             if atom1 == atom1_mol and atom2 == atom2_mol:
                 k = params[-1]
 
-                # do a hand calculation as a sanity check
-                # (k_bondorder2 - k_bondorder1) / ((difference in bond orders 2 and 1))
-                slope = (123 - 101) / (2 - 1)
-                k_interpolated = slope * (bond.fractional_bond_order - 1.0) + 101.0
-                k_interpolated *= 10 ** 2 * 4.184  # kcal/(mol*A**2) to kJ/(mol*nm**2)
-                assert_almost_equal(k_interpolated, k / k.unit, 2)
+                assert_almost_equal(k / k.unit, k_bond_interpolated, 0)
 
-                assert not assert_almost_equal(k_interpolated, k / k.unit)
+                length = params[-2]
+                assert_almost_equal(length / length.unit, bond_length_interpolated, 0)
 
     @requires_openeye
     @pytest.mark.parametrize(
-        ("get_molecule", "k_interpolated", "central_atoms"),
+        (
+            "get_molecule",
+            "k_torsion_interpolated",
+            "k_bond_interpolated",
+            "bond_length_interpolated",
+            "central_atoms",
+        ),
         [
-            (create_ethanol, 4.953856, (1, 2)),
-            (create_reversed_ethanol, 4.953856, (7, 6)),
+            (create_ethanol, 4.953856, 42208.540, 0.140054, (1, 2)),
+            (create_reversed_ethanol, 4.953856, 42208.540, 0.140054, (7, 6)),
         ],
     )
     def test_fractional_bondorder_calculated_openeye(
-        self, get_molecule, k_interpolated, central_atoms
+        self,
+        get_molecule,
+        k_torsion_interpolated,
+        k_bond_interpolated,
+        bond_length_interpolated,
+        central_atoms,
     ):
         """Test that torsion barrier heights interpolated from fractional bond
         orders calculated with the OpenEye toolkit are assigned within our
         expectations.
+
+        This test mirrors test_fractional_bondorder but uses OpenEye to re-compute the bond orders
+        on input molecules (and thereforce disregards the bond orders on them).
+
+        TODO: Update this when partial_bond_orders_from_molecules is added to bond interpolation,
+            and move the behavior currently in test_fractional_bondorder to here. Currently, that
+            test directly capture what this test intends to capture, since re-computing bond
+            orders is default behavior and that test pints to OpenEye.
 
         """
 
@@ -3617,13 +3663,15 @@ class TestForceFieldParameterAssignment:
 
                 # do a hand calculation as a sanity check
                 slope = (7.5312 - 4.184) / (1.8 - 1.0)
-                k_interpolated_ret = slope * (bond.fractional_bond_order - 1.0) + 4.184
-                assert_almost_equal(k_interpolated_ret, k / k.unit, 2)
+                k_torsion_interpolated_ret = (
+                    slope * (bond.fractional_bond_order - 1.0) + 4.184
+                )
+                assert_almost_equal(k_torsion_interpolated_ret, k / k.unit, 2)
 
                 # check that we *are not* matching the values we'd get if we
                 # had offered our molecules to `partial_bond_orders_from_molecules`
                 with pytest.raises(AssertionError):
-                    assert_almost_equal(k / k.unit, k_interpolated)
+                    assert_almost_equal(k / k.unit, k_torsion_interpolated)
 
         for idx in range(off_bond_force.getNumBonds()):
             params = off_bond_force.getBondParameters(idx)
@@ -3631,17 +3679,14 @@ class TestForceFieldParameterAssignment:
             atom1, atom2 = params[0], params[1]
             atom1_mol, atom2_mol = central_atoms
 
-            if atom1 == atom1_mol and atom2 == atom2_mol:
+            if ((atom1 == atom1_mol) and (atom2 == atom2_mol)) or (
+                (atom1 == atom2_mol) and (atom2 == atom1_mol)
+            ):
                 k = params[-1]
+                assert_almost_equal(k / k.unit, k_bond_interpolated, 0)
 
-                # do a hand calculation as a sanity check
-                # (k_bondorder2 - k_bondorder1) / ((difference in bond orders 2 and 1))
-                slope = (123 - 101) / (2 - 1)
-                k_interpolated = slope * (bond.fractional_bond_order - 1.0) + 101.0
-                k_interpolated *= 10 ** 2 * 4.184  # kcal/(mol*A**2) to kJ/(mol*nm**2)
-                assert_almost_equal(k_interpolated, k / k.unit, 2)
-
-                assert not assert_almost_equal(k_interpolated, k / k.unit)
+                length = params[-2]
+                assert_almost_equal(length / length.unit, bond_length_interpolated, 0)
 
 
 class TestSmirnoffVersionConverter:
