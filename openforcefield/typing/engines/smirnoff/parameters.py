@@ -2539,9 +2539,11 @@ class BondHandler(ParameterHandler):
         if uses_interpolation:
             # TODO: When implementing `partial_bond_orders_from_molecules`, we'll want to be
             #  picky and careful about which molecules get their bond orders computed
+            toolkit_registry = kwargs.get("toolkit_registry", GLOBAL_TOOLKIT_REGISTRY)
             for top_mol in topology.topology_molecules:
                 top_mol.reference_molecule.assign_fractional_bond_orders(
-                    bond_order_model=self.fractional_bondorder_method.lower()
+                    bond_order_model=self.fractional_bondorder_method.lower(),
+                    toolkit_registry=toolkit_registry,
                 )
 
         skipped_constrained_bonds = (

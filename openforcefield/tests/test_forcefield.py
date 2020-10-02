@@ -3539,8 +3539,8 @@ class TestForceFieldParameterAssignment:
             "central_atoms",
         ),
         [
-            (create_ethanol, 4.953856, 42266.68432, 1.39991, (1, 2)),
-            (create_reversed_ethanol, 4.953856, 42266.68432, 1.39991, (7, 6)),
+            (create_ethanol, 4.953856, 42215.07806904, 1.39991, (1, 2)),
+            (create_reversed_ethanol, 4.953856, 42215.07806904, 1.39991, (7, 6)),
         ],
     )
     def test_fractional_bondorder_calculated_rdkit(
