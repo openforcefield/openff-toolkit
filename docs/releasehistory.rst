@@ -47,6 +47,10 @@ Bug Fixes
 - `PR #715 <https://github.com/openforcefield/openforcefield/pull/715>`_: Closes issue `Issue #475
   <https://github.com/openforcefield/openforcefield/issues/475>`_ writing a "PDB" file using OE backend rearranges
   the order of the atoms by pushing the hydrogens to the bottom.
+- `PR #724 <https://github.com/openforcefield/openforcefield/pull/724>`_: Closes issue `Issue #502
+  <https://github.com/openforcefield/openforcefield/issues/502>`_ Adding a utility function Topology.to_file() to 
+  write topology and positions to a "PDB" file using openmm backend for pdb file write.
+
 
 Tests added
 """""""""""
@@ -54,6 +58,8 @@ Tests added
   to code snippets in docs.
 - `PR #715 <https://github.com/openforcefield/openforcefield/pull/715>`_: Adds tests for pdb file writes using OE
   backend.
+- `PR #724 <https://github.com/openforcefield/openforcefield/pull/724>`_: Adds tests for the utility function Topology.to_file().
+  
 
 0.7.1 - OETK2020 Compatibility and Minor Update
 -----------------------------------------------
