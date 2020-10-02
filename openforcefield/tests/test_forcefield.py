@@ -81,7 +81,7 @@ XML_FF_GENERICS = """<?xml version='1.0' encoding='ASCII'?>
 simple_xml_ff = str.encode(
     """<?xml version='1.0' encoding='ASCII'?>
 <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-  <Bonds version="0.3" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
+  <Bonds version="0.3">
     <Bond smirks="[#6X4:1]-[#6X4:2]" id="b1" k="620.0 * kilocalories_per_mole/angstrom**2" length="1.526 * angstrom"/>
     <Bond smirks="[#6X4:1]-[#6X3:2]" id="b2" k="634.0 * kilocalories_per_mole/angstrom**2" length="1.51 * angstrom"/>
     <Bond smirks="[#6X3:1]-[#6X3:2]" id="b3" k_bondorder1="100.0*kilocalories_per_mole/angstrom**2" k_bondorder2="4000.0*kilocalories_per_mole/angstrom**2" length="1.5 * angstrom"/>
@@ -150,7 +150,7 @@ xml_ff_w_cosmetic_elements = """<?xml version='1.0' encoding='ASCII'?>
   <Author>Alice and Bob</Author>
   <!-- This file is meant for processing via openforcefield.typing.engines.smirnoff -->
   <!-- WARNING: AMBER functional forms drop the factor of 2 in the bond energy term, so cross-comparing this file with a corresponding .frcmod file, it will appear that the values here are twice as large as they should be. -->
-  <Bonds version="0.3" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
+  <Bonds version="0.3">
     <Bond smirks="[#6X4:1]-[#6X4:2]" id="b1" k="620.0 * kilocalories_per_mole/angstrom**2" length="1.526 * angstrom" parameters="k, length" parameterize_eval="blah=blah2"/>
     <Bond smirks="[#6X4:1]-[#6X3:2]" id="b2" k="634.0 * kilocalories_per_mole/angstrom**2" length="1.51 * angstrom"/>
   </Bonds>
@@ -270,7 +270,7 @@ xml_charge_increment_model_formal_charges = """
 xml_ff_bo = """<?xml version='1.0' encoding='ASCII'?>
 <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
   <Bonds version="0.3" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
-    <Bond smirks="[#6X4:1]~[#8X2:2]" id="bbo1" k_bondorder1="101.0 * kilocalories_per_mole/angstrom**2" k_bondorder2="123.0 * kilocalories_per_mole/angstrom**2" length="1.4 * angstrom"/>
+    <Bond smirks="[#6X4:1]~[#8X2:2]" id="bbo1" k_bondorder1="101.0 * kilocalories_per_mole/angstrom**2" k_bondorder2="123.0 * kilocalories_per_mole/angstrom**2" length_bondorder1="1.4 * angstrom" length_bondorder2="1.3 * angstrom"/>
   </Bonds>
   <ProperTorsions version="0.3" potential="k*(1+cos(periodicity*theta-phase))">
     <Proper smirks="[*:1]~[#6X3:2]~[#6X3:3]~[*:4]" id="tbo1" periodicity1="2" phase1="0.0 * degree" k1_bondorder1="1.00*kilocalories_per_mole" k1_bondorder2="1.80*kilocalories_per_mole" idivf1="1.0"/>
