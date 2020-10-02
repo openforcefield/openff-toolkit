@@ -862,7 +862,6 @@ class BondChargeVirtualSite(VirtualSite):
         atoms,
         distance,
         charge_increments=None,
-        weights=None,
         epsilon=None,
         sigma=None,
         rmin_half=None,
@@ -998,7 +997,6 @@ class MonovalentLonePairVirtualSite(VirtualSite):
         out_of_plane_angle,
         in_plane_angle,
         charge_increments=None,
-        weights=None,
         epsilon=None,
         sigma=None,
         rmin_half=None,
@@ -1007,8 +1005,6 @@ class MonovalentLonePairVirtualSite(VirtualSite):
     ):
         """
         Create a bond charge-type virtual site, in which the location of the charge is specified by the position of three atoms.
-
-        TODO : Do "weights" have any meaning here?
 
         Parameters
         ----------
@@ -1136,7 +1132,6 @@ class DivalentLonePairVirtualSite(VirtualSite):
         distance,
         out_of_plane_angle,
         charge_increments=None,
-        weights=None,
         epsilon=None,
         sigma=None,
         rmin_half=None,
@@ -1145,8 +1140,6 @@ class DivalentLonePairVirtualSite(VirtualSite):
     ):
         """
         Create a divalent lone pair-type virtual site, in which the location of the charge is specified by the position of three atoms.
-
-        TODO : Do "weights" have any meaning here?
 
         Parameters
         ----------
@@ -1259,7 +1252,6 @@ class TrivalentLonePairVirtualSite(VirtualSite):
         atoms,
         distance,
         charge_increments=None,
-        weights=None,
         epsilon=None,
         sigma=None,
         rmin_half=None,
@@ -5059,8 +5051,6 @@ class Molecule(FrozenMolecule):
         """
         Create a bond charge-type virtual site, in which the location of the charge is specified by the position of three atoms.
 
-        TODO : Do "weights" have any meaning here?
-
         Parameters
         ----------
         atoms : list of three openforcefield.topology.molecule.Atom objects or ints
@@ -5110,8 +5100,6 @@ class Molecule(FrozenMolecule):
     ):
         """
         Create a divalent lone pair-type virtual site, in which the location of the charge is specified by the position of three atoms.
-
-        TODO : Do "weights" have any meaning here?
 
         Parameters
         ----------
