@@ -7,14 +7,25 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 * ``minor`` increments add features but do not break API compatibility
 * ``micro`` increments represent bugfix releases or improvements in documentation
 
-0.8.0 - Current development
+0.7.3 - Current development
 ---------------------------
+
+New features
+""""""""""""
+- `PR #718 <https://github.com/openforcefield/openforcefield/pull/718>`_: Adds ``.rings`` and
+  ``.n_rings`` to :py:class:`Molecule <openforcefield.topology.Molecule>` and ``.is_in_ring``
+  to :py:class:`Atom <openforcefield.topology.molecule.Atom>` and
+  :py:class:`Bond <openforcefield.topology.molecule.Bond>`
+
+
+0.7.2 - Bugfix and minor feature release
+----------------------------------------
 
 New features
 """"""""""""
 - `PR #662 <https://github.com/openforcefield/openforcefield/pull/662>`_: Adds ``.aromaticity_model``
   of :py:class:`ForceField <openforcefield.typing.engines.smirnoff.forcefield.ForceField>` and ``.TAGNAME``
-  of :py:class:`ParameterHandler <openforcefield.typing.engines.smirnoff.Parameters.ParameterHandler>` as
+  of :py:class:`ParameterHandler <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler>` as
   public attributes.
 - `PR #667 <https://github.com/openforcefield/openforcefield/pull/667>`_ and
   `PR #681 <https://github.com/openforcefield/openforcefield/pull/681>`_ linted the codebase with
@@ -26,9 +37,25 @@ New features
   :py:class:`ToolkitRegistry <openforcefield.utils.toolkits.ToolkitRegistry>`.
 - `PR #696 <https://github.com/openforcefield/openforcefield/pull/696>`_ Exposes a setter for
   :py:class:`ForceField.aromaticity_model <openforcefield.typing.engines.smirnoff.forcefield.ForceField>`
+- `PR #685 <https://github.com/openforcefield/openforcefield/pull/685>`_ Adds a custom ``__hash__``
+  function to
+  :py:class:`ForceField <openforcefield.typing.engines.smirnoff.forcefield.ForceField>`
 
 Behavior changed
 """"""""""""""""
+- `PR #684 <https://github.com/openforcefield/openforcefield/pull/684>`_: Changes
+  :py:class:`ToolkitRegistry <openforcefield.utils.toolkits.ToolkitRegistry>` to return an empty
+  registry when initialized with no arguments, i.e. ``ToolkitRegistry()`` and makes the
+  ``register_imported_toolkit_wrappers`` argument private.
+- `PR #711 <https://github.com/openforcefield/openforcefield/pull/711>`_: The
+  setter for :py:class:`Topology.box_vectors <openforcefield.topology.Topology>`
+  now infers box vectors (a 3x3 matrix) when box lengths
+  (a 3x1 array) are passed, assuming an orthogonal box.
+- `PR #649 <https://github.com/openforcefield/openforcefield/pull/648>`_: Makes SMARTS
+  searches stereochemistry-specific (if stereo is specified in the SMARTS) for both OpenEye
+  and RDKit backends. Also ensures molecule
+  aromaticity is re-perceived according to the ForceField's specified
+  aromaticity model, which may overwrite user-specified aromaticity on the ``Molecule``
 - `PR #648 <https://github.com/openforcefield/openforcefield/pull/648>`_: Removes the
   ``utils.structure`` module, which was deprecated in 0.2.0.
 - `PR #670 <https://github.com/openforcefield/openforcefield/pull/670>`_: Makes the
@@ -42,7 +69,7 @@ Behavior changed
   :py:class:`ForceField <openforcefield.typing.engines.smirnoff.forcefield.ForceField>`
   constructor, which defaults to ``DEFAULT_AROMATICITY_MODEL``.
 
-Bug Fixes
+Bugfixes
 """""""""
 - `PR #649 <https://github.com/openforcefield/openforcefield/pull/648>`_: Prevents 2020 OpenEye
   toolkit from issuing a warning caused by doing stereo-specific SMARTS searches on certain
@@ -54,7 +81,6 @@ Bug Fixes
   <https://github.com/openforcefield/openforcefield/issues/502>`_ Adding a utility function Topology.to_file() to 
   write topology and positions to a "PDB" file using openmm backend for pdb file write.
 
-
 Tests added
 """""""""""
 - `PR #694 <https://github.com/openforcefield/openforcefield/pull/694>`_: Adds automated testing
@@ -63,6 +89,7 @@ Tests added
   backend.
 - `PR #724 <https://github.com/openforcefield/openforcefield/pull/724>`_: Adds tests for the utility function Topology.to_file().
   
+
 
 0.7.1 - OETK2020 Compatibility and Minor Update
 -----------------------------------------------

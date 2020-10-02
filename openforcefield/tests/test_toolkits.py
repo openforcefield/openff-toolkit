@@ -2866,6 +2866,55 @@ class TestToolkitWrapper:
 class TestToolkitRegistry:
     """Test the ToolkitRegistry class"""
 
+    def test_register_empty_toolkit(self):
+        """Ensure the default ToolkitRegistry init returns an empty registry"""
+        empty_registry = ToolkitRegistry()
+
+        assert empty_registry.registered_toolkits == []
+        assert empty_registry.registered_toolkit_versions == {}
+
+    @requires_openeye
+    @requires_rdkit
+    def test_register_imported_toolkit_wrappers(self):
+        """Test that imported toolkits are registered, and in the expected order"""
+        # Ensure a specified order is respected
+        default_registry = ToolkitRegistry(
+            toolkit_precedence=[
+                OpenEyeToolkitWrapper,
+                RDKitToolkitWrapper,
+                AmberToolsToolkitWrapper,
+                BuiltInToolkitWrapper,
+            ],
+            _register_imported_toolkit_wrappers=True,
+        )
+
+        assert len(default_registry.registered_toolkits) == 4
+
+        expected_toolkits = [
+            OpenEyeToolkitWrapper,
+            RDKitToolkitWrapper,
+            AmberToolsToolkitWrapper,
+            BuiltInToolkitWrapper,
+        ]
+        for found, expected in zip(
+            default_registry.registered_toolkits, expected_toolkits
+        ):
+            assert isinstance(found, expected)
+
+        # Test forcing a non-default order
+        non_default_registry = ToolkitRegistry(
+            toolkit_precedence=[BuiltInToolkitWrapper, RDKitToolkitWrapper],
+            _register_imported_toolkit_wrappers=True,
+        )
+
+        assert len(non_default_registry.registered_toolkits) == 2
+
+        expected_toolkits = [BuiltInToolkitWrapper, RDKitToolkitWrapper]
+        for found, expected in zip(
+            non_default_registry.registered_toolkits, expected_toolkits
+        ):
+            assert isinstance(found, expected)
+
     @requires_rdkit
     def test_add_bad_toolkit(self):
         registry = ToolkitRegistry(toolkit_precedence=[RDKitToolkitWrapper])
@@ -2891,7 +2940,6 @@ class TestToolkitRegistry:
         toolkit_precedence = [OpenEyeToolkitWrapper]
         registry = ToolkitRegistry(
             toolkit_precedence=toolkit_precedence,
-            register_imported_toolkit_wrappers=False,
         )
 
         assert set(type(c) for c in registry.registered_toolkits) == set(
@@ -2916,7 +2964,6 @@ class TestToolkitRegistry:
         toolkit_precedence = [RDKitToolkitWrapper]
         registry = ToolkitRegistry(
             toolkit_precedence=toolkit_precedence,
-            register_imported_toolkit_wrappers=False,
         )
 
         assert set([type(c) for c in registry.registered_toolkits]) == set(
@@ -2941,7 +2988,6 @@ class TestToolkitRegistry:
         toolkit_precedence = [AmberToolsToolkitWrapper]
         registry = ToolkitRegistry(
             toolkit_precedence=toolkit_precedence,
-            register_imported_toolkit_wrappers=False,
         )
 
         assert set([type(c) for c in registry.registered_toolkits]) == set(
@@ -2972,7 +3018,6 @@ class TestToolkitRegistry:
         toolkit_precedence = [RDKitToolkitWrapper, AmberToolsToolkitWrapper]
         registry = ToolkitRegistry(
             toolkit_precedence=toolkit_precedence,
-            register_imported_toolkit_wrappers=False,
         )
 
         assert set([type(c) for c in registry.registered_toolkits]) == set(
@@ -3119,7 +3164,6 @@ class TestToolkitRegistry:
         toolkit_precedence = [BuiltInToolkitWrapper]
         registry = ToolkitRegistry(
             toolkit_precedence=toolkit_precedence,
-            register_imported_toolkit_wrappers=False,
         )
         # registry.register_toolkit(BuiltInToolkitWrapper)
         assert set([type(c) for c in registry.registered_toolkits]) == set(
@@ -3174,7 +3218,6 @@ class TestToolkitRegistry:
         ]
         registry = ToolkitRegistry(
             toolkit_precedence=toolkit_precedence,
-            register_imported_toolkit_wrappers=False,
         )
         mol = registry.call("from_smiles", "C")
         # Specify that the ToolkitRegistry should raise the first ChargeMethodUnavailableError it encounters
