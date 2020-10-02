@@ -3434,11 +3434,8 @@ class TestForceFieldParameterAssignment:
         bond length A               nm              1.4, 1.3                            SKIPPED             0.140054
         torsion k   kcal            kj              1, 1.8                              1.23                4.953856
 
-        To obtain the bond order:
-        >>> mol = Molecule.from_smiles('CCO')
-        >>> mol.assign_fractional_bond_orders(toolkit_registry=ToolkitRegistry(OpenEyeToolkitWrapper))
-        >>> mol.get_bond_between(1, 2).fractional_bond_order
-        0.9945832743995565
+        See test_fractional_bondorder_calculated_openeye test_fractional_bondorder_calculated_rdkit for
+        how the bond orders are obtained.
 
         TODO: Update this behavior when partial_bond_orders_from_molecules is added to bond interpolation
         """
@@ -3565,10 +3562,10 @@ class TestForceFieldParameterAssignment:
         instead, AmberTools is used in the case that OpenEye is not installed.
 
         To obtain the bond order:
-        >>> mol = Molecule.from_smiles('CCO')
-        >>> mol.assign_fractional_bond_orders(toolkit_registry=ToolkitRegistry(AmberToolsToolkitWrapper))
+        >>> mol = create_ethanol()
+        >>> AmberToolsToolkitWrapper().assign_fractional_bond_orders(mol)
         >>> mol.get_bond_between(1, 2).fractional_bond_order
-        1.0009
+        0.99529355
 
         """
 
@@ -3602,7 +3599,7 @@ class TestForceFieldParameterAssignment:
         ret_mol = list(ret_top.reference_molecules)[0]
         bond = ret_mol.get_bond_between(*central_atoms)
 
-        # ambertools appears to yield around 1.0009 for this bond
+        # ambertools appears to yield around 0.99529355 for this bond
         assert abs(bond.fractional_bond_order - 1.0) > 1.0e-6
         assert 0.95 < bond.fractional_bond_order < 1.05
 
@@ -3671,6 +3668,12 @@ class TestForceFieldParameterAssignment:
 
         This test mirrors test_fractional_bondorder but uses OpenEye to re-compute the bond orders
         on input molecules (and thereforce disregards the bond orders on them).
+
+        To obtain the bond order:
+        >>> mol = create_ethanol()
+        >>> OpenEyeToolkitWrapper().assign_fractional_bond_orders(mol)
+        >>> mol.get_bond_between(1, 2).fractional_bond_order
+        0.9945832743995565
 
         TODO: Update this when partial_bond_orders_from_molecules is added to bond interpolation,
             and move the behavior currently in test_fractional_bondorder to here. Currently, that
