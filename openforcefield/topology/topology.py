@@ -1846,8 +1846,7 @@ class Topology(Serializable):
         Note: 1. This doesn't handle virtual sites (they're ignored)
               2. Atom numbering may not remain same, for example if the atoms in water are numbered as 1001, 1002, 1003,
                  they would change to 1, 2, 3.
-                 This doesn't affect the topology or coordinates or atom-ordering in
-                 anyway, but may pose difficulty in provenance
+                 This doesn't affect the topology or coordinates or atom-ordering in anyway
               3. Same issue with the amino acid names in the pdb file, they are not returned
 
         Parameters
@@ -1866,7 +1865,7 @@ class Topology(Serializable):
 
         file_format = file_format.upper()
         if file_format != "PDB":
-            raise ValueError("Only PDB file format is allowed")
+            raise NotImplementedError("Topology.to_file supports only PDB format")
 
         # writing to PDB file
         with open(filename, "w") as outfile:
