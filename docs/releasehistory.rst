@@ -44,6 +44,9 @@ Behavior changed
 
 Bug Fixes
 """""""""
+- `PR #649 <https://github.com/openforcefield/openforcefield/pull/648>`_: Prevents 2020 OpenEye
+  toolkit from issuing a warning caused by doing stereo-specific SMARTS searches on certain
+  structures.
 - `PR #715 <https://github.com/openforcefield/openforcefield/pull/715>`_: Closes issue `Issue #475
   <https://github.com/openforcefield/openforcefield/issues/475>`_ writing a "PDB" file using OE backend rearranges
   the order of the atoms by pushing the hydrogens to the bottom.
