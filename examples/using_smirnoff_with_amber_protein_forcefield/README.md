@@ -1,5 +1,7 @@
 ## Combining a SMIRNOFF parameterized small molecule with an Amber parameterized protein using ParmEd
 
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/openforcefield/openforcefield/d129d0c1f3399aa3e2611443210fce526bc62dd6)
+
 These examples illustrate how the [ParmEd](http://parmed.github.io/ParmEd/html/index.html) utility can be used to merge a small molecule parameterized by SMIRNOFF with a traditionally parameterized protein (or other biopolymer) to create a fully parameterized protein-ligand system.
 
 ### BRD4:inhibitor complex
