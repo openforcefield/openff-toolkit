@@ -3539,8 +3539,8 @@ class TestForceFieldParameterAssignment:
             "central_atoms",
         ),
         [
-            (create_ethanol, 4.953856, 42215.07806904, 1.39991, (1, 2)),
-            (create_reversed_ethanol, 4.953856, 42215.07806904, 1.39991, (7, 6)),
+            (create_ethanol, 4.953856, 42266.9635, 1.39991, (1, 2)),
+            (create_reversed_ethanol, 4.953856, 42266.9635, 1.39991, (7, 6)),
         ],
     )
     def test_fractional_bondorder_calculated_rdkit(
@@ -3565,7 +3565,7 @@ class TestForceFieldParameterAssignment:
         >>> mol = create_ethanol()
         >>> AmberToolsToolkitWrapper().assign_fractional_bond_orders(mol)
         >>> mol.get_bond_between(1, 2).fractional_bond_order
-        0.99529355
+        1.00093033
 
         """
 
@@ -3599,7 +3599,7 @@ class TestForceFieldParameterAssignment:
         ret_mol = list(ret_top.reference_molecules)[0]
         bond = ret_mol.get_bond_between(*central_atoms)
 
-        # ambertools appears to yield around 0.99529355 for this bond
+        # ambertools appears to yield 1.00093033 for this bond
         assert abs(bond.fractional_bond_order - 1.0) > 1.0e-6
         assert 0.95 < bond.fractional_bond_order < 1.05
 
