@@ -10,58 +10,55 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 0.8.0 - Current development
 ---------------------------
 
-This release implements the SMIRNOFF virtual site specification. The implementation enables support for models using off-site charges, including 4- and 5-point water models, in addition to lone pair modeling on various functional groups. The primary focus was on the ability to parameterize a system using virtual sites, and generating an OpenMM system with all virtual sites present and ready for evaluation. Support for formats other than OpenMM has not be implemented in this release, but may come with the appearance of the OpenFF system object. In addition to implementing the specification, the toolkit topology and molecule objects now allow the creation and manipulation of virtual sites. 
+This release implements the SMIRNOFF virtual site specification. The implementation enables support for models using off-site charges, including 4- and 5-point water models, in addition to lone pair modeling on various functional groups. The primary focus was on the ability to parameterize a system using virtual sites, and generating an OpenMM system with all virtual sites present and ready for evaluation. Support for formats other than OpenMM has not be implemented in this release, but may come with the appearance of the OpenFF system object. In addition to implementing the specification, the toolkit :py:class:`Molecule <openforcefield.topology.Molecule>` objects now allow the creation and manipulation of virtual sites.
 
 **Major Feature: Support for the SMIRNOFF VirtualSite tag**
 
-`The VirtualSite tag in the SMIRNOFF specification <https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html#virtualsites-virtual-sites-for-off-atom-charges>`_
+Virtual sites can be added to a System in two ways:
+
+* `SMIRNOFF Force Fields can contain a VirtualSites tag <https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html#virtualsites-virtual-sites-for-off-atom-charges>`_ , specifying the addition of virtual sites according to SMARTS-based rules.
+* Virtual sites can be added to a :py:class:`Molecule <openforcefield.topology.Molecule>`, and these will appear in the final OpenMM system if a virtual site handler is present in the :py:class:`ForceField <openforcefield.typing.engines.smirnoff.forcefield.ForceField>`.
 
 Virtual sites are the first parameters which directly depend on 3D conformation, where the position of the virtual sites are based on vectors defined on the atoms that were matched during parameterization. Because of this, a virtual site matching the triplet of atoms 1-2-3 will define a point that is different from a triplet matching 3-2-1. This is similar to defining "right-handed" and "left-handed" coordinate systems. This subtlety interplays with two major concepts in force field development:
 
 1) we sometimes want to define a single virtual site describing two points with the same parameters (distance, angle, etc), such as 5-point water models
 2) we have a match that produces multiple orderings of the atoms (e.g. if wildcards are present in the SMARTS pattern), and we only want one to be applied.
 
-The latter case is the typical scenario for ammonia, where only one point needs to be specified. We offer a few interesting cases below. The former case is very useful for parameter optimization, where a single parameter can be used to optimize both points. Beyond these attributes, the virtual site specification allows a policy for specifying how to handle exclusions in the OpenMM force evaluator. The current default is to add pairwise energy exclusions in the OpenMM system between a virtual site and all atoms matched (i.e. the `"parents",` which the setting is named). Currently defined are `"none"`, `"minimal"`, and `"parents"`, where `"minimal"` specifies the single atom that the virtual site defines as the "origin". For water, for example, `"minimal"` would mean just the oxygen, where as "parents" would mean all three atoms. 
+Case 1) is very useful for parameter optimization, where a single SMARTS-based parameter can be used to optimize both points, such as the angle defining the virtual points for a 5-point water model. Case 2) is the typical scenario for the nitrogen lone pair in ammonia, where only one point needs to be specified. We discuss a few more illustrative examples below. Beyond these attributes, the virtual site specification allows a policy for specifying how to handle exclusions in the OpenMM force evaluator. The current default is to add pairwise energy exclusions in the OpenMM system between a virtual site and all tagged atoms matched in its SMARTS (``exclusion_policy="parents",`` ). Currently defined are ``"none"``, ``"minimal"``, and ``"parents"``, where ``"minimal"`` specifies the single atom that the virtual site defines as the "origin". For water, for example, ``"minimal"`` would mean just the oxygen, whereas ``"parents"`` would mean all three atoms.
 
-In order to give consistent and intended behavior, the specification was modified in following manner. The `"name"` and `"match"` attributes have been added to each virtual site parameter type. These changes allow for
+In order to give consistent and intended behavior, the specification was modified from its draft form in following manner: The ``"name"`` and ``"match"`` attributes have been added to each virtual site parameter type. These changes allow for
 
-1) specifying different virtual site types using the same atoms
-2) allowing two virtual sites with the same type and same atoms but different physical parameters to be added simultaneously
-3) allowing the ability to control whether the virtual site encodes one or multiple particles, based on the number of ways the matching atoms can be ordered.
+* specifying different virtual site types using the same atoms
+* allowing two virtual sites with the same type and same atoms but different physical parameters to be added simultaneously
+* allowing the ability to control whether the virtual site encodes one or multiple particles, based on the number of ways the matching atoms can be ordered.
 
-The `"name"` attribute encodes whether the virtual site to be added should override an existing virtual site of the same type (e.g. hierarchy preference), or if this virtual site should be added in addition to the other existing virtual sites on the given atoms. Next, the `"match"` attribute accepts either `"once"` or `"all_permutations"`, highlighting the fact that a SMIRKS pattern can possibly match multiple permutations, and we may need either just one or all of the new particles. The default value here is `"all_permutations",` but should be set to `"once"` for trivalent lone pair sites.
+The ``"name"`` attribute encodes whether the virtual site to be added should override an existing virtual site of the same type (e.g. hierarchy preference), or if this virtual site should be added in addition to the other existing virtual sites on the given atoms. Next, the ``"match"`` attribute accepts either ``"once"`` or ``"all_permutations"``, offering control for situations where a SMARTS pattern can possibly match the same group of atoms in different orders (either due to wildcards or local symmetry) and it is desired to either add just one or all of the possible virtual particles. The default value here is ``"all_permutations",`` but should be set to ``"once"`` for trivalent lone pair sites.
 
-The following cases are tricky enough to exemplify both our decisions in modifying the specification, and what issues may come up when designing virtual site parameters. Let us consider 4- and 5-, and 6-point water models: 
+The following cases exemplify our reasoning in implementing this behavior, and should draw caution to complex issues that may arise when designing virtual site parameters. Let us consider 4- and 5-, and 6-point water models:
 
-* A 4-point water model with a `DivalentLonePair`: This can be implemented by specifying `match="once"`, `outOfPlaneAngle="0*degree"`, and `distance=-.15*angstrom"`. Since the SMIRKS pattern `"[#1:1]-[#8X2:2]-[#2:3]"` would match water twice and would create two particles in the exact same position if `all_permutations` was specified, we specify `"once"` to have only one particle generated. Although having two particles in the same position should not affect the physics if the proper exclusion policy is applied, it would effectively make the 4-point model just as expensive as 5-point models.
+* A 4-point water model with a ``DivalentLonePair``: This can be implemented by specifying ``match="once"``, ``outOfPlaneAngle="0*degree"``, and ``distance=-.15*angstrom"``. Since the SMIRKS pattern ``"[#1:1]-[#8X2:2]-[#2:3]"`` would match water twice and would create two particles in the exact same position if ``all_permutations`` was specified, we specify ``"once"`` to have only one particle generated. Although having two particles in the same position should not affect the physics if the proper exclusion policy is applied, it would effectively make the 4-point model just as expensive as 5-point models.
 
-* A 5-point water model with a `DivalentLonePair`: This can be implemented by using `match="all_permutations"`, `outOfPlaneAngle="56.26*degree`, and `distance=0.7*angstrom`, for example. Here the permutations will cause particles to be placed at ±56.26 degrees, and changing any of the physical quantities will affect *both* particles. 
+* A 5-point water model with a ``DivalentLonePair``: This can be implemented by using ``match="all_permutations"`` (unlike the 4-point model), ``outOfPlaneAngle="56.26*degree``, and ``distance=0.7*angstrom``, for example. Here the permutations will cause particles to be placed at ±56.26 degrees, and changing any of the physical quantities will affect *both* particles.
 
-* A 6-point water model with both `DivalentLonePair` sites above. Since these two parameters look identical (we never compare the physical numbers to determine equality, as this can leading to instability during e.g. parameter fitting), it is unclear whether they should both be applied or if one should override the other. In this case, we specify `name="EP1"` to the first, and `name="EP2"` for the second. This instructs the parameter engine keep them separate, and both are applied. If both have the same name, then the typical SMIRNOFF ordering rules are used, and only the last matched parameter is applied.
+* A 6-point water model with both ``DivalentLonePair`` sites above. Since these two parameters look identical (we never compare the physical numbers to determine equality, as this can lead to instability during e.g. parameter fitting), it is unclear whether they should both be applied or if one should override the other. In this case, we specify ``name="EP1"`` to the first, and ``name="EP2"`` for the second. This instructs the parameter handler keep them separate, and both are applied. (If both had the _same_ name, then the typical SMIRNOFF hierarchy rules are used, and only the last matched parameter would be applied.)
 
-* Dinitrogen, `N#N` with a `BondCharge` virtual site. Since we want a `BondCharge` on both ends, we specify `match="all_permutations"`.
+* Dinitrogen, ``N#N`` with a ``BondCharge`` virtual site. Since we want a ``BondCharge`` on both ends, we specify ``match="all_permutations"``.
 
-* Formaldehyde, `H2C=O`, with `MonovalentLonePair` virtual site(s) on the oxygen, with the aim of modeling both lone pairs. This one is quite tricky, since `[#1:3]-[#6X3:2]=[:8X2:1]` only matches once, so `all_permutations` does not apply. However, this pattern does match twice, but with different atom groups, e.g. 1-3-4 and 2-3-4. There is no tooling to couple these, so two parameters must be given with nearly all parameters the same except `outOfPlaneAngle=-50*degree"` for one parameter, and `outOfPlaneAngle=50*degree` for the other, for example. This situation could also apply to generic carbonyl groups, such as protein backbone amides. A pattern more specific to formaldehyde would be using `smirks="[#1:3]-[#6X3:2](-[#1])=[#8]"`, using two parameters with two separate `name` attributes, and then specifying the different angles. As a special note: applying this to a completely symmetric molecule, e.g. water, `all_permutations` can come into play, but this will apply two particles *not* on the same hydrogen. 
+* **NEEDS RETHINKING, MAY BE MORE COMPLEX** Formaldehyde, ``H2C=O``, with ``MonovalentLonePair`` virtual site(s) on the oxygen, with the aim of modeling both lone pairs. This one is quite tricky, since ``[#1:3]-[#6X3:2]=[:8X2:1]`` matches two unique groups of atoms (``1-3-4`` and ``2-3-4``), so the ``match`` can not be used to deduplicate unwanted permutations. There is no tooling to couple these, so two SMARTS-based parameters must be provided with identical values except ``outOfPlaneAngle=-50*degree"`` for one parameter, and ``outOfPlaneAngle=50*degree`` for the other. This situation could also apply to generic carbonyl groups, such as protein backbone amides. A pattern more specific to formaldehyde would be using ``smirks="[#1:3]-[#6X3:2](-[#1])=[#8]"``, using two parameters with two separate ``name`` attributes, and then specifying the different angles. As a special note: applying this to a completely symmetric molecule, e.g. water, ``all_permutations`` can come into play, but this will apply two particles *not* on the same hydrogen.
 
-* Sulfur dioxide, `SO2`, with `BondCharge`, `MonovalentLonePair` and `DivalentLonePair` sites. The `MonovalentLonePair` and `DivalentLonePair` will match the same atoms, but are treated as separate types and will always be considered separately. This means the different types can use the same name without any effect (the default `name` is `EP` for all sites to give the expected behavior in the SMIRNOFF ordering system). All three virtual sites can all be handled by using situations described above. Two `MonovalentLonePair` sites are needed with two different names, and the `outOfPlaneAngle` set to the positive and negative values. The `DivalentLonePair` is similar to the 4-point water model case. The `BondCharge` can be specified once, since it will match both `S=O` bonds independently. Note, the default `exclusion_policy="parents"` attribute in the top-level `VirtualSite` tag will cause a nonzero interaction between the `BondCharge` site and the oxygen it did not pair with. This can be remedied in the future, when the `local` exclusion policy has been fully implemented and tested, which adds exclusions when at least one atom matches two different virtual sites.
+* **MAYBE DELETE, BUT MOVE THE NAMING BIT INTO A BODY PARAGRAPH** Sulfur dioxide, ``SO2``, with ``BondCharge``, ``MonovalentLonePair`` and ``DivalentLonePair`` sites. The ``MonovalentLonePair`` and ``DivalentLonePair`` will match the same atoms, but are treated as separate types and will never overwrite each other. This means the different virtual site types can share the same group of parent atoms and use the same name without overwriting each other (the default ``name`` is ``EP`` for all sites, which gives the expected hierarchical behavior used in other SMIRNOFF tags). All three virtual sites can all be handled by using situations described above. Two ``MonovalentLonePair`` sites are needed with two different names, and the ``outOfPlaneAngle`` set to the positive and negative values. The ``DivalentLonePair`` is similar to the 4-point water model case. The ``BondCharge`` can be specified once, since it will match both ``S=O`` bonds independently. Note, the default ``exclusion_policy="parents"`` attribute in the top-level ``VirtualSite`` tag will cause a nonzero interaction between the ``BondCharge`` site and the oxygen it did not pair with. This can be remedied in the future, when the ``local`` exclusion policy has been fully implemented and tested, which adds exclusions when at least one atom matches two different virtual sites.
 
-Finally, the toolkit handles the organization of atoms and virtual sites in a specific manner. Virtual sites are expected to be added *after all molecules in the topology are present*. This is because we *always* organize a topology by placing all atoms first, then all virtual sites last. This differs from the OpenMM Modeller, for example, which adds virtual sites per visited molecule, causing the order of atoms and virtual sites to be interleaved. In addition, due to the fact that a virtual site may contain multiple particles coupled to single parameters, the toolkit makes a distinction between a virtual *site*, and a virtual *particle*. A virtual site contains a list of virtual particles, so the total number of particles cannot be directly determined by simply summing the number of atoms and virtual sites in a molecule. This is taken into account, however, when working directly with particle iterators.
+Finally, the toolkit handles the organization of atoms and virtual sites in a specific manner. Virtual sites are expected to be added *after all molecules in the topology are present*. This is because the Open Force Field Toolkit organizes a topology by placing all atoms first, then all virtual sites last. This differs from the OpenMM Modeller object, for example, which interleaves the order of atoms and virtual sites in such a way that all particles of a molecule are contiguous. In addition, due to the fact that a virtual site may contain multiple particles coupled to single parameters, the toolkit makes a distinction between a virtual *site*, and a virtual *particle*. A virtual site may represent multiple virtual particles, so the total number of particles cannot be directly determined by simply summing the number of atoms and virtual sites in a molecule. This is taken into account, however, and the :py:class:`Molecule <openforcefield.topology.Molecule>` and :py:class:`Topology <openforcefield.topology.Topology>` classes now implement ``particle`` iterators.
 
-Virtual sites that were directly added to the topology are guaranteed to appear in the final OpenMM system if a virtual site handler is present.
 
 New features
 """"""""""""
 - `PR #548 <https://github.com/openforcefield/openforcefield/pull/548>`_: Adds support for the ``VirtualSites`` tag in the SMIRNOFF specification
-- `PR #548 <https://github.com/openforcefield/openforcefield/pull/548>`_: Adds ``replace`` kwarg
+- `PR #548 <https://github.com/openforcefield/openforcefield/pull/548>`_: Adds ``replace`` and ``all_permutations`` kwarg
   of :py:meth:`Molecule.add_bond_charge_virtual_site <openforcefield.topology.Molecule.add_bond_charge_virtual_site>`
   of :py:meth:`Molecule.add_monovalent_virtual_site <openforcefield.topology.Molecule.add_monovalent_virtual_site>`
   of :py:meth:`Molecule.add_divalent_virtual_site <openforcefield.topology.Molecule.add_divalent_virtual_site>`
   of :py:meth:`Molecule.add_trivalent_virtual_site <openforcefield.topology.Molecule.add_trivalent_virtual_site>`
-- `PR #548 <https://github.com/openforcefield/openforcefield/pull/548>`_: Adds ``symmetric`` kwarg
-  to :py:meth:`Molecule.add_bond_charge_virtual_site <openforcefield.topology.Molecule.add_bond_charge_virtual_site>`
-  to :py:meth:`Molecule.add_monovalent_virtual_site <openforcefield.topology.Molecule.add_monovalent_virtual_site>`
-  to :py:meth:`Molecule.add_divalent_virtual_site <openforcefield.topology.Molecule.add_divalent_virtual_site>`
-  to :py:meth:`Molecule.add_trivalent_virtual_site <openforcefield.topology.Molecule.add_trivalent_virtual_site>`
 - `PR #548 <https://github.com/openforcefield/openforcefield/pull/548>`_: Adds ``orientations``
   to :py:class:`BondChargeVirtualSite <openforcefield.topology.molecule.BondChargeVirtualSite>` 
   to :py:class:`MonovalentLonePairVirtualSite <openforcefield.topology.molecule.MonovalentLonePairVirtualSite>` 
@@ -72,11 +69,6 @@ New features
   :py:class:`TopologyVirtualParticle <openforcefield.topology.topology.TopologyVirtualParticle>`
   :py:class:`DuplicateVirtualSiteTypeException <openforcefield.typing.engines.smirnoff.parameters.DuplicateVirtualSiteTypeException>`
   :py:meth:`TopologyVirtualParticle.virtual_particle_start_topology_index <openforcefield.topology.molecule.TopologyVirtualParticle.virtual_particle_start_topology_index>`
-  :py:meth:`VirtualSite.__eq__ <openforcefield.topology.molecule.VirtualSite.__eq__>`
-  :py:meth:`BondChargeVirtualSite.__eq__ <openforcefield.topology.molecule.BondChargeVirtualSite.__eq__>` 
-  :py:meth:`MonovalentLonePairVirtualSite.__eq__ <openforcefield.topology.molecule.MonovalentLonePairVirtualSite.__eq__>` 
-  :py:meth:`DivalentLonePairVirtualSite.__eq__ <openforcefield.topology.molecule.DivalentLonePairVirtualSite.__eq__>` 
-  :py:meth:`TrivalentLonePairVirtualSite.__eq__ <openforcefield.topology.molecule.TrivalentLonePairVirtualSite.__eq__>` 
   :py:meth:`BondChargeVirtualSite.get_openmm_virtual_site <openforcefield.topology.BondChargeVirtualSite.get_openmm_virtual_site>`
   :py:meth:`MonovalentVirtualSite.get_openmm_virtual_site <openforcefield.topology.MonovalentLonePairVirtualSite.get_openmm_virtual_site>`
   :py:meth:`DivalentVirtualSite.get_openmm_virtual_site <openforcefield.topology.DivalentLonePairVirtualSite.get_openmm_virtual_site>`
@@ -103,8 +95,8 @@ New features
   function to
   :py:class:`ForceField.aromaticity_model <openforcefield.typing.engines.smirnoff.forcefield.ForceField>`
 
-Behavior changed
-""""""""""""""""
+API-breaking changes
+""""""""""""""""""""
 - `PR #548 <https://github.com/openforcefield/openforcefield/pull/548>`_: Methods
   to :py:meth:`Molecule.add_bond_charge_virtual_site <openforcefield.topology.Molecule.add_bond_charge_virtual_site>`
   to :py:meth:`Molecule.add_monovalent_virtual_site <openforcefield.topology.Molecule.add_monovalent_virtual_site>`
@@ -123,6 +115,9 @@ Behavior changed
   from :py:class:`MonovalentLonePairVirtualSite <openforcefield.topology.MonovalentLonePairVirtualSite>`
   from :py:class:`DivalentLonePairVirtualSite <openforcefield.topology.DivalentLonePairVirtualSite>`
   from :py:class:`TrivalentLonePairVirtualSite <openforcefield.topology.TrivalentLonePairVirtualSite>`
+
+Behavior changed
+""""""""""""""""
 - `PR #684 <https://github.com/openforcefield/openforcefield/pull/684>`_: Changes
   :py:class:`ToolkitRegistry <openforcefield.utils.toolkits.ToolkitRegistry>` to return an empty
   registry when initialized with no arguments, i.e. ``ToolkitRegistry()`` and makes the
@@ -160,14 +155,14 @@ Bug Fixes
 Tests added
 """""""""""
 - `PR #548 <https://github.com/openforcefield/openforcefield/pull/548>`_: Adds test for TIP5 water dimer energy and positions in
-  :py:meth: `test_forcefield.TestForceFieldParameterAssignment.test_tip5_dimer_energy`
+  ``test_forcefield.TestForceFieldParameterAssignment.test_tip5_dimer_energy``
 
 - `PR #548 <https://github.com/openforcefield/openforcefield/pull/548>`_: Adds tests to for virtual site/particle indexing/counting in
-  :py:meth: `test_topology.TestTopology.test_topology_virtual_site_particle_start_index`
-  :py:meth: `test_topology.TestTopology.test_n_topology_atoms_with_vsites`
+  ``test_topology.TestTopology.test_topology_virtual_site_particle_start_index``
+  ``test_topology.TestTopology.test_n_topology_atoms_with_vsites``
 
 - `PR #548 <https://github.com/openforcefield/openforcefield/pull/548>`_: Adds tests for virtual site parameter handler in
-  :py:class: `test_parameters.TestVirtualSiteHandler` 
+  ``test_parameters.TestVirtualSiteHandler``
 
 - `PR #694 <https://github.com/openforcefield/openforcefield/pull/694>`_: Adds automated testing
   to code snippets in docs.
@@ -176,7 +171,9 @@ Tests added
 
 Examples added
 """"""""""""""
-- `PR #548 <https://github.com/openforcefield/openforcefield/pull/548>`_: Adds a virtual site example notebook to run a OpenMM simulation with virtual sites, and compares positions and potential energy of TIP5 water between OpenFF and OpenMM forcefields.
+- `PR #548 <https://github.com/openforcefield/openforcefield/pull/548>`_: Adds a virtual site example notebook to run
+  an OpenMM simulation with virtual sites, and compares positions and potential energy of TIP5 water between OpenFF
+  and OpenMM forcefields.
 
 
 0.7.1 - OETK2020 Compatibility and Minor Update
