@@ -4581,7 +4581,10 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         temp_mol = Molecule(molecule)
 
         if use_conformers is None:
-            temp_mol.generate_conformers(n_conformers=1)
+            temp_mol.generate_conformers(
+                n_conformers=1,
+                toolkit_registry=self._rdkit_toolkit_wrapper,
+            )
         else:
             temp_mol._conformers = None
             for conformer in use_conformers:
