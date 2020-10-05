@@ -2599,7 +2599,7 @@ class BondHandler(ParameterHandler):
                     # TODO: Raise a more specific exception
                     raise FractionalBondOrderMethodUnsupportedError(
                         "Fractional bondorder treatment {} is not implemented.".format(
-                            self.fractional_bondorder_method
+                            self.fractional_bondorder_interpolation
                         )
                     )
             if getattr(bond_params, "k", None) is not None:
@@ -2623,7 +2623,7 @@ class BondHandler(ParameterHandler):
                     # TODO: Raise a more specific exception
                     raise FractionalBondOrderMethodUnsupportedError(
                         "Fractional bondorder treatment {} is not implemented.".format(
-                            self.fractional_bondorder_method
+                            self.fractional_bondorder_interpolation
                         )
                     )
 
@@ -3095,7 +3095,7 @@ class ProperTorsionHandler(ParameterHandler):
             else:
                 raise FractionalBondOrderMethodUnsupportedError(
                     "Fractional bondorder treatment {} is not implemented.".format(
-                        self.fractional_bondorder_method
+                        self.fractional_bondorder_interpolation
                     )
                 )
 

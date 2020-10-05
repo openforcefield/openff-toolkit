@@ -1090,20 +1090,49 @@ class TestBondType:
 
         assert param.k_bondorder == {1: k1, 2: k2, 3: k3}
 
-    def test_bondtype_missing_params(self):
+    def test_bondtype_bad_params(self):
         """
         Test the over/underspecification of k/k_bondorderN are caught
         """
         from simtk import unit
 
         length = 1.4 * unit.angstrom
+        length1 = 1.5 * unit.angstrom
+        length2 = 1.3 * unit.angstrom
+        k = 50 * unit.kilocalorie_per_mole / unit.angstrom ** 2
         k1 = 101 * unit.kilocalorie_per_mole / unit.angstrom ** 2
         k2 = 202 * unit.kilocalorie_per_mole / unit.angstrom ** 2
 
-        with pytest.raises(SMIRNOFFSpecError):
+        with pytest.raises(SMIRNOFFSpecError, match="Either k or k_bondorder"):
             BondHandler.BondType(
                 smirks="[*:1]-[*:2]",
                 length=length,
+            )
+
+        with pytest.raises(SMIRNOFFSpecError, match="BOTH k and k_bondorder"):
+            BondHandler.BondType(
+                smirks="[*:1]-[*:2]",
+                length=length,
+                k=k,
+                k_bondorder1=k1,
+                k_bondorder2=k2,
+            )
+
+        with pytest.raises(
+            SMIRNOFFSpecError, match="Either length or length_bondorder"
+        ):
+            BondHandler.BondType(
+                smirks="[*:1]-[*:2]",
+                k=k,
+            )
+
+        with pytest.raises(SMIRNOFFSpecError, match="BOTH length and length_bondorder"):
+            BondHandler.BondType(
+                smirks="[*:1]-[*:2]",
+                length=length,
+                k=k,
+                length_bondorder1=length1,
+                length_bondorder2=length2,
             )
 
     def test_bondtype_to_dict_custom_output_units(self):
@@ -1237,7 +1266,12 @@ class TestBondType:
 class TestBondHandler:
     @pytest.mark.parametrize(
         ("fractional_bond_order", "k_interpolated", "length_interpolated"),
-        [(1.5, 112.0, 1.35), (1.99, 122.78, 1.301), (2.1, 125.2, 1.29)],
+        [
+            (1.0, 101, 1.4),
+            (1.5, 112.0, 1.35),
+            (1.99, 122.78, 1.301),
+            (2.1, 125.2, 1.29),
+        ],
     )
     def test_linear_interpolate(
         self, fractional_bond_order, k_interpolated, length_interpolated
