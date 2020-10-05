@@ -1234,6 +1234,33 @@ class TestBondType:
         assert ("pilot", "alice") not in param_dict.items()
 
 
+class TestBondHandler:
+    @pytest.mark.parametrize(
+        ("fractional_bond_order", "k_interpolated", "length_interpolated"),
+        [(1.5, 112.0, 1.35), (1.99, 122.78, 1.301), (2.1, 125.2, 1.29)],
+    )
+    def test_linear_interpolate(
+        self, fractional_bond_order, k_interpolated, length_interpolated
+    ):
+        """Test that linear interpolation works as expected"""
+        from simtk import unit
+
+        k_bondorder = {
+            1: 101 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
+            2: 123 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
+        }
+
+        length_bondorder = {
+            1: 1.4 * unit.angstrom,
+            2: 1.3 * unit.angstrom,
+        }
+
+        k = _linear_interpolate_k(k_bondorder, fractional_bond_order)
+        length = _linear_interpolate_k(length_bondorder, fractional_bond_order)
+        assert_almost_equal(k / k.unit, k_interpolated, 1)
+        assert_almost_equal(length / length.unit, length_interpolated, 2)
+
+
 class TestProperTorsionType:
     """Tests for the ProperTorsionType class."""
 
