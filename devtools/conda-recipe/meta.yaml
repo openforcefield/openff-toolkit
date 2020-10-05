@@ -1,36 +1,52 @@
 package:
   name: openforcefield
-  version: 0.0.0
+  version: 0.7.2rc1
 
 source:
-  path: ../..
+  git_url: https://github.com/openforcefield/openforcefield.git
+  git_tag: 0.7.2rc1
 
 build:
   preserve_egg_dir: True
-  number: 0
+  number: 0 # Build number and string do not work together.
+  #string: py{{ py }}_a1 # Alpha version 1.
+  skip: True # [win or py27 or py35]
+  noarch: python
+  script: 
+    - ${PYTHON} -m pip install .
+
+extra:
+  #force_upload: True
+  upload: main # Upload to anaconda with the "main" label.
 
 requirements:
   build:
     - python
-    - setuptools
-
+    - pip
   run:
     - python
     - numpy
+    - smirnoff99frosst
+    - openforcefields
+    - openmm
     - networkx
-    - parmed
     - rdkit
-    - ambermini
+    - ambertools >=20
     - packaging
-    # Should we require this? It's useful for tests and examples, but not strictly required
-    - openmmtools
+    - pytest
+    - requests
+    - notebook
+    - nglview
     # Serialization: Should these be optional?
-    - pyyaml
     - toml
     - bson
     - msgpack-python
     - xmltodict
+    - pyyaml
+    - cairo >=1.16
 
 about:
   home: https://github.com/openforcefield/openforcefield
   license: MIT
+  license_file: LICENSE
+  description: The Open Forcefield Toolkit provides implementations of the SMIRNOFF format, parameterization engine, and other tools.

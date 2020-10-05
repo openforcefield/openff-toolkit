@@ -2506,6 +2506,19 @@ class TestMolecule:
         assert len(matches) == 4  # there should be four matches
         for match in matches:
             assert len(match) == 2  # each match should have two tagged atoms
+        # Test searching for stereo-specific SMARTS
+        matches = molecule.chemical_environment_matches(
+            "[#6@:1](-[F:2])(-[Cl])(-[Br])(-[H])", toolkit_registry=toolkit_wrapper
+        )
+        assert len(matches) == 1  # there should be one match
+        for match in matches:
+            assert len(match) == 2  # each match should have two tagged atoms
+        matches = molecule.chemical_environment_matches(
+            "[#6@@:1](-[F:2])(-[Cl])(-[Br])(-[H])", toolkit_registry=toolkit_wrapper
+        )
+        assert (
+            len(matches) == 0
+        )  # this is the wrong stereochemistry, so there shouldn't be any matches
 
     # TODO: Test forgive undef amide enol stereo
     # TODO: test forgive undef phospho linker stereo
@@ -2564,6 +2577,19 @@ class TestMolecule:
         assert len(matches) == 4  # there should be four matches
         for match in matches:
             assert len(match) == 2  # each match should have two tagged atoms
+        # Test searching for stereo-specific SMARTS
+        matches = molecule.chemical_environment_matches(
+            "[#6@:1](-[F:2])(-[Cl])(-[Br])(-[H])", toolkit_registry=toolkit_wrapper
+        )
+        assert len(matches) == 1  # there should be one match
+        for match in matches:
+            assert len(match) == 2  # each match should have two tagged atoms
+        matches = molecule.chemical_environment_matches(
+            "[#6@@:1](-[F:2])(-[Cl])(-[Br])(-[H])", toolkit_registry=toolkit_wrapper
+        )
+        assert (
+            len(matches) == 0
+        )  # this is the wrong stereochemistry, so there shouldn't be any matches
 
     @pytest.mark.slow
     def test_compute_partial_charges(self):
@@ -2679,6 +2705,41 @@ class TestMolecule:
 
         with pytest.raises(NotBondedError):
             mol.get_bond_between(hydrogens[0], hydrogens[1])
+
+    @pytest.mark.parametrize(
+        ("smiles", "n_rings"),
+        [
+            ("CCO", 0),
+            ("c1ccccc1", 1),
+            ("C1CC2CCC1C2", 2),  # This should probably be 3?
+            ("c1ccc(cc1)c2ccccc2", 2),
+            ("c1ccc2ccccc2c1", 2),
+            ("c1ccc2cc3ccccc3cc2c1", 3),
+            ("C1C2C(CCC1)CC5C3C2CCC7C3C4C(CCC6C4C5CCC6)CC7", 7),
+        ],
+    )
+    @requires_rdkit
+    def test_molecule_rings(self, smiles, n_rings):
+        """Test the Molecule.rings property"""
+        assert (
+            n_rings == Molecule.from_smiles(smiles, allow_undefined_stereo=True).n_rings
+        )
+
+    @pytest.mark.parametrize(
+        ("smiles", "n_atom_rings", "n_bond_rings"),
+        [
+            ("c1ccc2ccccc2c1", 10, 11),
+            ("c1ccc(cc1)c2ccccc2", 12, 12),
+            ("Cc1ccc(cc1Nc2nccc(n2)c3cccnc3)NC(=O)c4ccc(cc4)CN5CCN(CC5)C", 30, 30),
+        ],
+    )
+    @requires_rdkit
+    def test_is_in_ring(self, smiles, n_atom_rings, n_bond_rings):
+        """Test Atom.is_in_ring and Bond.is_in_ring"""
+        mol = Molecule.from_smiles(smiles)
+
+        assert len([atom for atom in mol.atoms if atom.is_in_ring]) == n_atom_rings
+        assert len([bond for bond in mol.bonds if bond.is_in_ring]) == n_bond_rings
 
     @requires_rdkit
     def test_visualize_rdkit(self):

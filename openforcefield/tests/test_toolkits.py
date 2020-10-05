@@ -692,6 +692,55 @@ class TestOpenEyeToolkitWrapper:
         with pytest.raises(InvalidIUPACNameError):
             toolkit.from_iupac(".BETA.-PINENE")
 
+    def test_write_multiconformer_pdb(self):
+        """
+        Make sure OpenEye can write multi conformer PDB files.
+        """
+        from io import StringIO
+
+        toolkit = OpenEyeToolkitWrapper()
+        # load up a multiconformer sdf file and condense down the conformers
+        molecules = Molecule.from_file(
+            get_data_file_path("molecules/butane_multi.sdf"), toolkit_registry=toolkit
+        )
+        butane = molecules.pop(0)
+        for mol in molecules:
+            butane.add_conformer(mol.conformers[0])
+        assert butane.n_conformers == 7
+        sio = StringIO()
+        butane.to_file(sio, "pdb", toolkit_registry=toolkit)
+        # we need to make sure each conformer is wrote to the file
+        pdb = sio.getvalue()
+        assert pdb.count("END") == 7
+
+    def test_write_pdb_preserving_atom_order(self):
+        """
+        Make sure OpenEye does not rearrange hydrogens when writing PDBs
+        (reference: https://github.com/openforcefield/openforcefield/issues/475).
+        """
+        from io import StringIO
+
+        from openeye import oechem
+
+        toolkit = OpenEyeToolkitWrapper()
+        water = Molecule()
+        water.add_atom(1, 0, False)
+        water.add_atom(8, 0, False)
+        water.add_atom(1, 0, False)
+        water.add_bond(0, 1, 1, False)
+        water.add_bond(1, 2, 1, False)
+        water.add_conformer(
+            np.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]])
+            * unit.angstrom
+        )
+        sio = StringIO()
+        water.to_file(sio, "pdb", toolkit_registry=toolkit)
+        water_from_pdb = sio.getvalue()
+        water_from_pdb_split = water_from_pdb.split("\n")
+        assert water_from_pdb_split[0].split()[2].rstrip() == "H"
+        assert water_from_pdb_split[1].split()[2].rstrip() == "O"
+        assert water_from_pdb_split[2].split()[2].rstrip() == "H"
+
     def test_get_sdf_coordinates(self):
         """Test OpenEyeToolkitWrapper for importing a single set of coordinates from a sdf file"""
 
@@ -2057,7 +2106,7 @@ class TestRDKitToolkitWrapper:
             str(ethanol.conformers[1][0][0].in_units_of(unit.angstrom))[:5] not in data
         )
 
-    def test_write_milticonformer_pdb(self):
+    def test_write_multiconformer_pdb(self):
         """
         Make sure RDKit can write multi conformer PDB files.
         """
@@ -2671,6 +2720,20 @@ class TestAmberToolsToolkitWrapper:
                     double_bond_has_wbo_near_2 = True
         assert double_bond_has_wbo_near_2
 
+    @requires_openeye
+    def test_assign_fractional_bond_orders_openeye_installed(self):
+        """Test that assign_fractional_bond_orders produces the same result
+        with and without OpenEye toolkits installed"""
+        mol = Molecule.from_smiles("CCO")
+        AmberToolsToolkitWrapper().assign_fractional_bond_orders(mol)
+        with_oe = [b.fractional_bond_order for b in mol.bonds]
+        GLOBAL_TOOLKIT_REGISTRY.deregister_toolkit(OpenEyeToolkitWrapper)
+        AmberToolsToolkitWrapper().assign_fractional_bond_orders(mol)
+        without_oe = [b.fractional_bond_order for b in mol.bonds]
+        GLOBAL_TOOLKIT_REGISTRY.register_toolkit(OpenEyeToolkitWrapper)
+
+        assert with_oe == without_oe
+
 
 class TestBuiltInToolkitWrapper:
     """Test the BuiltInToolkitWrapper"""
@@ -2929,6 +2992,55 @@ class TestToolkitWrapper:
 class TestToolkitRegistry:
     """Test the ToolkitRegistry class"""
 
+    def test_register_empty_toolkit(self):
+        """Ensure the default ToolkitRegistry init returns an empty registry"""
+        empty_registry = ToolkitRegistry()
+
+        assert empty_registry.registered_toolkits == []
+        assert empty_registry.registered_toolkit_versions == {}
+
+    @requires_openeye
+    @requires_rdkit
+    def test_register_imported_toolkit_wrappers(self):
+        """Test that imported toolkits are registered, and in the expected order"""
+        # Ensure a specified order is respected
+        default_registry = ToolkitRegistry(
+            toolkit_precedence=[
+                OpenEyeToolkitWrapper,
+                RDKitToolkitWrapper,
+                AmberToolsToolkitWrapper,
+                BuiltInToolkitWrapper,
+            ],
+            _register_imported_toolkit_wrappers=True,
+        )
+
+        assert len(default_registry.registered_toolkits) == 4
+
+        expected_toolkits = [
+            OpenEyeToolkitWrapper,
+            RDKitToolkitWrapper,
+            AmberToolsToolkitWrapper,
+            BuiltInToolkitWrapper,
+        ]
+        for found, expected in zip(
+            default_registry.registered_toolkits, expected_toolkits
+        ):
+            assert isinstance(found, expected)
+
+        # Test forcing a non-default order
+        non_default_registry = ToolkitRegistry(
+            toolkit_precedence=[BuiltInToolkitWrapper, RDKitToolkitWrapper],
+            _register_imported_toolkit_wrappers=True,
+        )
+
+        assert len(non_default_registry.registered_toolkits) == 2
+
+        expected_toolkits = [BuiltInToolkitWrapper, RDKitToolkitWrapper]
+        for found, expected in zip(
+            non_default_registry.registered_toolkits, expected_toolkits
+        ):
+            assert isinstance(found, expected)
+
     @requires_rdkit
     def test_add_bad_toolkit(self):
         registry = ToolkitRegistry(toolkit_precedence=[RDKitToolkitWrapper])
@@ -2954,7 +3066,6 @@ class TestToolkitRegistry:
         toolkit_precedence = [OpenEyeToolkitWrapper]
         registry = ToolkitRegistry(
             toolkit_precedence=toolkit_precedence,
-            register_imported_toolkit_wrappers=False,
         )
 
         assert set(type(c) for c in registry.registered_toolkits) == set(
@@ -2979,7 +3090,6 @@ class TestToolkitRegistry:
         toolkit_precedence = [RDKitToolkitWrapper]
         registry = ToolkitRegistry(
             toolkit_precedence=toolkit_precedence,
-            register_imported_toolkit_wrappers=False,
         )
 
         assert set([type(c) for c in registry.registered_toolkits]) == set(
@@ -3004,7 +3114,6 @@ class TestToolkitRegistry:
         toolkit_precedence = [AmberToolsToolkitWrapper]
         registry = ToolkitRegistry(
             toolkit_precedence=toolkit_precedence,
-            register_imported_toolkit_wrappers=False,
         )
 
         assert set([type(c) for c in registry.registered_toolkits]) == set(
@@ -3035,7 +3144,6 @@ class TestToolkitRegistry:
         toolkit_precedence = [RDKitToolkitWrapper, AmberToolsToolkitWrapper]
         registry = ToolkitRegistry(
             toolkit_precedence=toolkit_precedence,
-            register_imported_toolkit_wrappers=False,
         )
 
         assert set([type(c) for c in registry.registered_toolkits]) == set(
@@ -3182,7 +3290,6 @@ class TestToolkitRegistry:
         toolkit_precedence = [BuiltInToolkitWrapper]
         registry = ToolkitRegistry(
             toolkit_precedence=toolkit_precedence,
-            register_imported_toolkit_wrappers=False,
         )
         # registry.register_toolkit(BuiltInToolkitWrapper)
         assert set([type(c) for c in registry.registered_toolkits]) == set(
@@ -3237,7 +3344,6 @@ class TestToolkitRegistry:
         ]
         registry = ToolkitRegistry(
             toolkit_precedence=toolkit_precedence,
-            register_imported_toolkit_wrappers=False,
         )
         mol = registry.call("from_smiles", "C")
         # Specify that the ToolkitRegistry should raise the first ChargeMethodUnavailableError it encounters
