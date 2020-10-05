@@ -3544,7 +3544,6 @@ class FrozenMolecule(Serializable):
         return matches
 
     @classmethod
-    @OpenEyeToolkitWrapper.requires_toolkit()
     def from_iupac(
         cls,
         iupac_name,
@@ -3605,7 +3604,6 @@ class FrozenMolecule(Serializable):
 
         return molecule
 
-    @OpenEyeToolkitWrapper.requires_toolkit()
     def to_iupac(self, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """Generate IUPAC name from Molecule
 
