@@ -3838,6 +3838,32 @@ class RDKitToolkitWrapper(ToolkitWrapper):
     # Stereochemistry RDKit utilities.
     # --------------------------------
 
+    def find_rings(self, molecule):
+        """Find the rings in a given molecule.
+
+        .. note ::
+
+            For systems containing some special cases of connected rings, this
+            function may not be well-behaved and may report a different number
+            rings than expected. Some problematic cases include networks of many
+            (5+) rings or bicyclic moieties (i.e. norbornane).
+
+        Parameters
+        ----------
+        molecule : openforcefield.topology.Molecule
+            The molecule for which rings are to be found
+
+        Returns
+        -------
+        rings : tuple of tuples of atom indices
+            Nested tuples, each containing the indices of atoms in each ring
+
+        """
+        rdmol = molecule.to_rdkit()
+        ring_info = rdmol.GetRingInfo()
+        rings = ring_info.AtomRings()
+        return rings
+
     @staticmethod
     def _find_undefined_stereo_atoms(rdmol, assign_stereo=False):
         """Find the chiral atoms with undefined stereochemsitry in the RDMol.
