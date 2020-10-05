@@ -618,6 +618,7 @@ class TestTopology(TestCase):
             assert bond.bond_order == bond_copy.bond_order
             assert bond.bond.is_aromatic == bond_copy.bond.is_aromatic
 
+    @requires_rdkit
     def test_to_file_vsites(self):
         """
         Checks that Topology.to_file() doesn't write vsites
@@ -647,6 +648,7 @@ class TestTopology(TestCase):
                     count = count + 1
         assert count == 9
 
+    @requires_rdkit
     def test_to_file_units_check(self):
         """
         Checks whether writing pdb with unitless positions, Angstrom positions,
@@ -700,6 +702,7 @@ class TestTopology(TestCase):
                     coord = line.split()[-6]
         assert coord == "10.172"
 
+    @requires_rdkit
     def test_to_file_fileformat_lettercase(self):
         """
         Checks if fileformat specifier is indpendent of upper/lowercase
@@ -726,6 +729,7 @@ class TestTopology(TestCase):
                     coord = line.split()[-6]
         assert coord == "10.172"
 
+    @requires_rdkit
     def test_to_file_fileformat_invalid(self):
         """
         Checks for invalid file format
@@ -760,6 +764,7 @@ class TestTopology(TestCase):
                 lines.append(line.split())
         assert lines[1] == ["END"]
 
+    @requires_rdkit
     def test_to_file_multi_molecule_different_order(self):
         """
         Checks for the following if Topology.to_write maintains the order of atoms
