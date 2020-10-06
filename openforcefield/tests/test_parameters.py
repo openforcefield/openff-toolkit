@@ -581,6 +581,14 @@ class TestParameterHandler:
         ) as excinfo:
             ph = ParameterHandler(version="0.1")
 
+    def test_supported_version_range(self):
+        raise NotImplementedError()
+
+    def test_write_same_version_as_was_read(self):
+        raise NotImplementedError()
+
+
+
     def test_add_delete_cosmetic_attributes(self):
         """Test ParameterHandler.to_dict() function when some parameters are in
         different units (proper behavior is to convert all quantities to the last-
@@ -1294,6 +1302,12 @@ class TestBondHandler:
         assert_almost_equal(k / k.unit, k_interpolated, 1)
         assert_almost_equal(length / length.unit, length_interpolated, 2)
 
+    def test_different_defaults_03_04(self):
+        """Ensure that the 0.3 version's default fractional_bondorder_method is None and the 0.4's is AM1-Wiberg"""
+        bh = BondHandler(version=0.3)
+        assert bh.fractional_bondorder_method == 'none'
+        bh2 = BondHandler(version=0.4)
+        assert bh2.fractional_bondorder_method == 'AM1-Wiberg'
 
 class TestProperTorsionType:
     """Tests for the ProperTorsionType class."""

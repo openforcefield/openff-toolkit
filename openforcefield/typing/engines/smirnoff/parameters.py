@@ -2481,10 +2481,20 @@ class BondHandler(ParameterHandler):
     _INFOTYPE = BondType  # class to hold force type info
     _OPENMMTYPE = openmm.HarmonicBondForce  # OpenMM force class to create
     _DEPENDENCIES = [ConstraintHandler]  # ConstraintHandler must be executed first
+    _MAX_SUPPORTED_SECTION_VERSION = 0.4
 
     potential = ParameterAttribute(default="harmonic")
-    fractional_bondorder_method = ParameterAttribute(default="AM1-Wiberg")
+    # The default value for fractional_bondorder_method depends on the section version and is overwritten in __init__
+    fractional_bondorder_method = ParameterAttribute(default="overridden in init")
     fractional_bondorder_interpolation = ParameterAttribute(default="linear")
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        if self.version == 0.3 and 'fractional_bondorder_interpolation' not in kwargs:
+            self.fractional_bondorder_method = 'none'
+        elif self.version == 0.4 and 'fractional_bondorder_interpolation' not in kwargs:
+            self.fractional_bondorder_method = 'AM1-Wiberg'
+
 
     def check_handler_compatibility(self, other_handler):
         """
@@ -2903,6 +2913,7 @@ class ProperTorsionHandler(ParameterHandler):
     _KWARGS = ["partial_bond_orders_from_molecules"]
     _INFOTYPE = ProperTorsionType  # info type to store
     _OPENMMTYPE = openmm.PeriodicTorsionForce  # OpenMM force class to create
+    _MAX_SUPPORTED_SECTION_VERSION = 0.4
 
     potential = ParameterAttribute(
         default="k*(1+cos(periodicity*theta-phase))",

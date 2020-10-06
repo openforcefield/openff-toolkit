@@ -9,7 +9,7 @@
         <!-- https://github.com/openforcefield/smirnoff99Frosst/                                         -->
         <!-- If you absolutely must refer to this file in scholarly work, indicate the file name and     --> 
         <!-- Open Force Field Toolkit version that was used                                              -->
-       <Bonds version="0.3" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
+       <Bonds version="0.4" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
 		<Bond smirks="[#6X4:1]-[#6X4:2]" length="1.526 * angstrom" k="620.0 * angstrom**-2 * mole**-1 * kilocalorie" id="b1"></Bond>
 		<Bond smirks="[#6X4:1]-[#6X3:2]" length="1.51 * angstrom" k="634.0 * angstrom**-2 * mole**-1 * kilocalorie" id="b2"></Bond>
 		<Bond smirks="[#6X4:1]-[#6X3:2]=[#8X1+0]" length="1.522 * angstrom" k="634.0 * angstrom**-2 * mole**-1 * kilocalorie" id="b3"></Bond>
@@ -138,7 +138,7 @@
 		<Angle smirks="[#6X3:1]-[#16X2:2]-[#1:3]" angle="96.0 * degree" k="86.0 * mole**-1 * radian**-2 * kilocalorie" id="a37"></Angle>
 		<Angle smirks="[*:1]~[#15:2]~[*:3]" angle="109.5 * degree" k="140.0 * mole**-1 * radian**-2 * kilocalorie" id="a38"></Angle>
 	</Angles>
-	<ProperTorsions version="0.3" potential="k*(1+cos(periodicity*theta-phase))" default_idivf="auto">
+	<ProperTorsions version="0.4" potential="k*(1+cos(periodicity*theta-phase))" default_idivf="auto">
 		<Proper smirks="[*:1]-[#6X4:2]-[#6X4:3]-[*:4]" periodicity1="3" phase1="0.0 * degree" k1="0.156 * mole**-1 * kilocalorie" id="t1" idivf1="1.0"></Proper>
 		<Proper smirks="[#6X4:1]-[#6X4:2]-[#6X4:3]-[#6X4:4]" periodicity1="3" periodicity2="2" periodicity3="1" phase1="0.0 * degree" phase2="180.0 * degree" phase3="180.0 * degree" k1="0.18 * mole**-1 * kilocalorie" k2="0.25 * mole**-1 * kilocalorie" k3="0.2 * mole**-1 * kilocalorie" id="t2" idivf1="1.0" idivf2="1.0" idivf3="1.0"></Proper>
 		<Proper smirks="[#1:1]-[#6X4:2]-[#6X4:3]-[#1:4]" periodicity1="3" phase1="0.0 * degree" k1="0.15 * mole**-1 * kilocalorie" id="t3" idivf1="1.0"></Proper>

@@ -411,9 +411,10 @@ This allows specification of force constants and lengths for bond orders 1 and 2
 * `fractional_bondorder_method` defaults to `none`, but the `Wiberg` method is supported.
 * `fractional_bondorder_interpolation` defaults to `linear`, which is the only supported scheme for now.
 
-| Bonds section tag version | Tag attributes and default values                                                                           | Required parameter attributes                 | Optional parameter attributes |
-|---------------------------|-------------------------------------------------------------------------------------------------------------|-----------------------------------------------|-------------------------------|
-| 0.3                       | `potential="harmonic"`, `fractional_bondorder_method="none"`, `fractional_bondorder_interpolation="linear"` | `smirks`, `length`, `k`                       |  `id`, `parent_id`            |
+| Bonds section tag version | Tag attributes and default values                                                                                 | Required parameter attributes                 | Optional parameter attributes |
+|---------------------------|-------------------------------------------------------------------------------------------------------------------|-----------------------------------------------|-------------------------------|
+| 0.3                       | `potential="harmonic"`, `fractional_bondorder_method="none"`, `fractional_bondorder_interpolation="linear"`       | `smirks`, `length`, `k`                       |  `id`, `parent_id`            |
+| 0.4                       | `potential="harmonic"`, `fractional_bondorder_method="AM1-Wiberg"`, `fractional_bondorder_interpolation="linear"` | `smirks`, `length`, `k`                       |  `id`, `parent_id`            |
 
 
 ### `<Angles>`
