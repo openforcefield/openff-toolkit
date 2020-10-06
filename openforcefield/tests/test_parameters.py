@@ -1678,7 +1678,6 @@ class TestChargeIncrementModelHandler:
                 charge_increment1=0.05 * unit.elementary_charge,
                 charge_increment2=0.05 * unit.elementary_charge,
                 charge_increment3=-0.1 * unit.elementary_charge,
-                charge_increment4=-0.1 * unit.elementary_charge,
             )
 
         with pytest.raises(

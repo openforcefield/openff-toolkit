@@ -3884,13 +3884,13 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
                     f"ChargeIncrement {self} was initialized with an invalid combination "
                     f"of tagged atoms and charge increments"
                 )
-            elif diff == 1:
-                # Print a warning/message to user?
-                # TODO: Explicitly track un-set charge increments; this approach
-                # assumes and necessitates that the missing value is the last value
-                import numpy as np
-
-                self.charge_increment.append(-1 * np.sum(self.charge_increment))
+            #elif diff == 1:
+            #    # Print a warning/message to user?
+            #    # TODO: Explicitly track un-set charge increments; this approach
+            #    # assumes and necessitates that the missing value is the last value
+            #    import numpy as np
+            #
+            #    self.charge_increment.append(-1 * np.sum(self.charge_increment))
 
     _TAGNAME = "ChargeIncrementModel"  # SMIRNOFF tag name to process
     _INFOTYPE = ChargeIncrementType  # info type to store
@@ -4020,9 +4020,21 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
                 atom_indices = (
                     charge_increment_match.environment_match.topology_atom_indices
                 )
-                charge_increment = charge_increment_match.parameter_type
+                charge_increments = copy.deepcopy(charge_increment_match.parameter_type.charge_increment)
+
+                # If we've been provided with one less charge increment value than tagged atoms, assume the last
+                # tagged atom offsets the charge of the others to make the chargeincrement net-neutral
+                if len(charge_increments) - len(atom_indices) == -1:
+                    charge_increment_sum = 0. * unit.elementary_charge
+                    for ci in charge_increments:
+                        charge_increment_sum += ci
+                    charge_increments.append(-charge_increment_sum)
+                elif len(charge_increments) - len(atom_indices) == 0:
+                    pass
+                else:
+                    raise SMIRNOFFSpecError('Fill in this error message')
                 for top_particle_idx, charge_increment in zip(
-                    atom_indices, charge_increment.charge_increment
+                    atom_indices, charge_increments
                 ):
                     if top_particle_idx in charges_to_assign:
                         charges_to_assign[top_particle_idx] += charge_increment
