@@ -2650,7 +2650,9 @@ class BondHandler(ParameterHandler):
     # Do not use the allow_only filter here since ToolkitWrappers may be imported that support additional fractional
     # bondorder methods.
     fractional_bondorder_method = ParameterAttribute(default="overridden in init")
-    fractional_bondorder_interpolation = ParameterAttribute(default="linear")
+    # Use the _allow_only filter here because this class's implementation contains all the information about supported
+    # interpolation types.
+    fractional_bondorder_interpolation = ParameterAttribute(default="linear", converter=_allow_only(['linear']))
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -2975,7 +2977,7 @@ class ProperTorsionHandler(ParameterHandler):
     )
     default_idivf = ParameterAttribute(default="auto")
     fractional_bondorder_method = ParameterAttribute(default="AM1-Wiberg")
-    fractional_bondorder_interpolation = ParameterAttribute(default="linear")
+    fractional_bondorder_interpolation = ParameterAttribute(default="linear", converter=_allow_only(['linear']))
 
     def check_handler_compatibility(self, other_handler):
         """
