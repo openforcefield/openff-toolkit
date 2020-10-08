@@ -4032,7 +4032,10 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
                 elif len(charge_increments) - len(atom_indices) == 0:
                     pass
                 else:
-                    raise SMIRNOFFSpecError('Fill in this error message')
+                    raise SMIRNOFFSpecError(f"Trying to apply chargeincrements {charge_increment_match.parameter_type} "
+                                            f"to tagged atoms {atom_indices}, but the number of chargeincrements "
+                                            f"must be either the same as- or one less than the number of tagged atoms.")
+
                 for top_particle_idx, charge_increment in zip(
                     atom_indices, charge_increments
                 ):

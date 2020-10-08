@@ -1862,7 +1862,7 @@ class TestForceFieldChargeAssignment:
         <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
           <Electrostatics version="0.3" method="PME" scale12="0.0" scale13="0.0" scale14="0.833333" cutoff="9.0 * angstrom"/>
           <ChargeIncrementModel version="0.3" number_of_conformers="1" partial_charge_method="formal_charge">
-            <ChargeIncrement smirks="[#6X4:1]-[#8:2]" charge_increment1="-0.05*elementary_charge" charge_increment2="0.05*elementary_charge"/>
+            <ChargeIncrement smirks="[#6X4:1]-[#8:2]" charge_increment1="-0.06*elementary_charge" charge_increment2="0.06*elementary_charge"/>
             <ChargeIncrement smirks="[#6X4:1]-[#1:2]" charge_increment1="-0.01*elementary_charge"/>
             <ChargeIncrement smirks="[C:1][C:2][O:3]" charge_increment1="0.2*elementary_charge" charge_increment2="-0.1*elementary_charge"/>
           </ChargeIncrementModel>
@@ -1879,14 +1879,14 @@ class TestForceFieldChargeAssignment:
         ][0]
         expected_charges = [
             0.17,
-            -0.13,
-            -0.05,
+            -0.18,
+            -0.04,
             0.01,
             0.01,
             0.01,
             0.01,
             0.01,
-            0.01] * unit.elementary_charge
+            0.0] * unit.elementary_charge
         for idx, expected_charge in enumerate(expected_charges):
             charge, _, _ = nonbonded_force.getParticleParameters(idx)
             assert abs(charge - expected_charge) < 1.0e-6 * unit.elementary_charge
