@@ -168,6 +168,7 @@ class NonbondedMethod(Enum):
 # UTILITY FUNCTIONS
 # ======================================================================
 
+
 def _linear_inter_or_extrapolate(points_dict, x_query):
     """
     Linearly interpolate or extrapolate based on a piecewise linear function defined by a set of points.
@@ -191,8 +192,10 @@ def _linear_inter_or_extrapolate(points_dict, x_query):
         return points_dict[x_query]
 
     if len(points_dict) < 2:
-        raise NotEnoughPointsForInterpolationError(f"Unable to perform interpolation with less than two points. "
-                                                   f"points_dict: {points_dict}   x_query: {x_query}")
+        raise NotEnoughPointsForInterpolationError(
+            f"Unable to perform interpolation with less than two points. "
+            f"points_dict: {points_dict}   x_query: {x_query}"
+        )
     # TODO: error out for nonsensical fractional bond orders
 
     # find the nearest point beneath our queried x value
@@ -237,6 +240,7 @@ def _linear_inter_or_extrapolate(points_dict, x_query):
             / (bond_orders[-1] - bond_orders[-2])
         ) * (x_query - bond_orders[-1])
         return k
+
 
 # TODO: This is technically a validator, not a converter, but ParameterAttribute doesn't support them yet (it'll be easy if we switch to use the attrs library).
 def _allow_only(allowed_values):
@@ -2645,30 +2649,33 @@ class BondHandler(ParameterHandler):
 
     # Use the _allow_only filter here because this class's implementation contains all the information about supported
     # potentials for this handler.
-    potential = ParameterAttribute(default="overridden in init", converter=_allow_only(['harmonic', '(k/2)*(r-length)^2']))
+    potential = ParameterAttribute(
+        default="overridden in init",
+        converter=_allow_only(["harmonic", "(k/2)*(r-length)^2"]),
+    )
     # The default value for fractional_bondorder_method depends on the section version and is overwritten in __init__.
     # Do not use the allow_only filter here since ToolkitWrappers may be imported that support additional fractional
     # bondorder methods.
     fractional_bondorder_method = ParameterAttribute(default="overridden in init")
     # Use the _allow_only filter here because this class's implementation contains all the information about supported
     # interpolation types.
-    fractional_bondorder_interpolation = ParameterAttribute(default="linear", converter=_allow_only(['linear']))
+    fractional_bondorder_interpolation = ParameterAttribute(
+        default="linear", converter=_allow_only(["linear"])
+    )
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         # Default value for fractional_bondorder_interpolation depends on section version
-        if self.version == 0.3 and 'fractional_bondorder_interpolation' not in kwargs:
-            self.fractional_bondorder_method = 'none'
-        elif self.version == 0.4 and 'fractional_bondorder_interpolation' not in kwargs:
-            self.fractional_bondorder_method = 'AM1-Wiberg'
+        if self.version == 0.3 and "fractional_bondorder_interpolation" not in kwargs:
+            self.fractional_bondorder_method = "none"
+        elif self.version == 0.4 and "fractional_bondorder_interpolation" not in kwargs:
+            self.fractional_bondorder_method = "AM1-Wiberg"
 
         # Default value for potential depends on section version
-        if self.version == 0.3 and 'potential' not in kwargs:
-            self.potential = 'harmonic'
-        elif self.version == 0.4 and 'potential' not in kwargs:
-            self.potential = '(k/2)*(r-length)^2'
-
-
+        if self.version == 0.3 and "potential" not in kwargs:
+            self.potential = "harmonic"
+        elif self.version == 0.4 and "potential" not in kwargs:
+            self.potential = "(k/2)*(r-length)^2"
 
     def check_handler_compatibility(self, other_handler):
         """
@@ -2693,13 +2700,19 @@ class BondHandler(ParameterHandler):
         )
 
         # potential="harmonic" and potential="(k/2)*(r-length)^2" should be considered identical
-        self_has_harmonic_potential = self.potential == 'harmonic' or self.potential == "(k/2)*(r-length)^2"
-        other_has_harmonic_potential = other_handler.potential == 'harmonic' or other_handler.potential == "(k/2)*(r-length)^2"
-        if not(self_has_harmonic_potential and other_has_harmonic_potential):
+        self_has_harmonic_potential = (
+            self.potential == "harmonic" or self.potential == "(k/2)*(r-length)^2"
+        )
+        other_has_harmonic_potential = (
+            other_handler.potential == "harmonic"
+            or other_handler.potential == "(k/2)*(r-length)^2"
+        )
+        if not (self_has_harmonic_potential and other_has_harmonic_potential):
             if self.potential != other_handler.potential:
                 raise IncompatibleParameterError(
                     f"potential values are not identical. "
-                    f"(handler value: {self.potential}, incompatible value: {other_handler.potential}")
+                    f"(handler value: {self.potential}, incompatible value: {other_handler.potential}"
+                )
 
     def create_force(self, system, topology, **kwargs):
         # Create or retrieve existing OpenMM Force object
@@ -2761,21 +2774,27 @@ class BondHandler(ParameterHandler):
                 *match.reference_atom_indices
             )
 
-            length_requires_interpolation = getattr(bond_params, "length_bondorder", None) is not None
-            k_requires_interpolation = getattr(bond_params, "k_bondorder", None) is not None
+            length_requires_interpolation = (
+                getattr(bond_params, "length_bondorder", None) is not None
+            )
+            k_requires_interpolation = (
+                getattr(bond_params, "k_bondorder", None) is not None
+            )
 
             # Calculate fractional bond orders for this molecule only if needed.
-            if (length_requires_interpolation or k_requires_interpolation) and bond.fractional_bond_order is None:
+            if (
+                length_requires_interpolation or k_requires_interpolation
+            ) and bond.fractional_bond_order is None:
                 toolkit_registry = kwargs.get(
                     "toolkit_registry", GLOBAL_TOOLKIT_REGISTRY
                 )
                 match.reference_molecule.assign_fractional_bond_orders(
                     toolkit_registry=toolkit_registry,
                     use_conformers=match.reference_molecule.conformers,
-                    bond_order_model=self.fractional_bondorder_method.lower()
+                    bond_order_model=self.fractional_bondorder_method.lower(),
                 )
 
-            if not(length_requires_interpolation):
+            if not length_requires_interpolation:
                 length = bond_params.length
             else:
                 # Interpolate length using fractional bond orders
@@ -2798,7 +2817,7 @@ class BondHandler(ParameterHandler):
                             self.fractional_bondorder_interpolation
                         )
                     )
-            if not(k_requires_interpolation):
+            if not k_requires_interpolation:
                 k = bond_params.k
             else:
                 # Interpolate k using fractional bond orders
@@ -2824,7 +2843,7 @@ class BondHandler(ParameterHandler):
 
             # If this pair of atoms is subject to a constraint, only use the length
             is_constrained = topology.is_constrained(*topology_atom_indices)
-            if not(is_constrained):
+            if not is_constrained:
                 # Add harmonic bond to HarmonicBondForce
                 force.addBond(*topology_atom_indices, length, k)
             else:
@@ -2989,7 +3008,9 @@ class ProperTorsionHandler(ParameterHandler):
     )
     default_idivf = ParameterAttribute(default="auto")
     fractional_bondorder_method = ParameterAttribute(default="AM1-Wiberg")
-    fractional_bondorder_interpolation = ParameterAttribute(default="linear", converter=_allow_only(['linear']))
+    fractional_bondorder_interpolation = ParameterAttribute(
+        default="linear", converter=_allow_only(["linear"])
+    )
 
     def check_handler_compatibility(self, other_handler):
         """
@@ -3176,7 +3197,7 @@ class ProperTorsionHandler(ParameterHandler):
                 match.reference_molecule.assign_fractional_bond_orders(
                     toolkit_registry=toolkit_registry,
                     use_conformers=match.reference_molecule.conformers,
-                    bond_order_model=self.fractional_bondorder_method.lower()
+                    bond_order_model=self.fractional_bondorder_method.lower(),
                 )
 
             # scale k based on the bondorder of the central bond

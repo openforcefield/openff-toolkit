@@ -263,8 +263,10 @@ class TestIndexedParameterAttribute:
         my_par.attr_indexed.insert(5, "10")
         assert my_par.attr_indexed[5] == 10
 
+
 class TestInterpolation:
     """Test method(s) that are used for functionality like fractional bond order-dependent parameter interpolation"""
+
     @pytest.mark.parametrize(
         ("fractional_bond_order", "k_interpolated"),
         [(1.6, 1.48), (0.7, 0.76), (2.3, 2.04)],
@@ -295,7 +297,9 @@ class TestInterpolation:
         ("fractional_bond_order", "k_interpolated"),
         [(1.6, 1.48), (0.7, 0.76), (2.3, 2.01), (3.1, 2.57)],
     )
-    def test_linear_inter_or_extrapolate_3_terms(self, fractional_bond_order, k_interpolated):
+    def test_linear_inter_or_extrapolate_3_terms(
+        self, fractional_bond_order, k_interpolated
+    ):
         """Test that linear interpolation works as expected for three terms"""
         from simtk import unit
 
@@ -321,7 +325,6 @@ class TestInterpolation:
         k = _linear_inter_or_extrapolate(k_bondorder, fractional_bond_order)
 
         assert k / k.unit < 0
-
 
 
 class TestParameterAttributeHandler:
@@ -646,6 +649,7 @@ class TestParameterHandler:
         """
         Ensure that version values in various formats can be correctly parsed and validated
         """
+
         class MyPHSubclass(ParameterHandler):
             _MIN_SUPPORTED_SECTION_VERSION = 0.3
             _MAX_SUPPORTED_SECTION_VERSION = 2
@@ -659,16 +663,15 @@ class TestParameterHandler:
         with pytest.raises(SMIRNOFFVersionError) as excinfo:
             my_ph = MyPHSubclass(version=2.1)
 
-
     def test_write_same_version_as_was_set(self):
         """Ensure that a ParameterHandler remembers the version that was set when it was initialized. """
+
         class MyPHSubclass(ParameterHandler):
             _MIN_SUPPORTED_SECTION_VERSION = 0.3
             _MAX_SUPPORTED_SECTION_VERSION = 2
 
         my_ph = MyPHSubclass(version=1.234)
-        assert my_ph.to_dict()['version'] == 1.234
-
+        assert my_ph.to_dict()["version"] == 1.234
 
     def test_add_delete_cosmetic_attributes(self):
         """Test ParameterHandler.to_dict() function when some parameters are in
@@ -1386,11 +1389,11 @@ class TestBondHandler:
     def test_different_defaults_03_04(self):
         """Ensure that the 0.3 and 0.4 versions' defaults are correctly set"""
         bh = BondHandler(version=0.3)
-        assert bh.fractional_bondorder_method == 'none'
-        assert bh.potential == 'harmonic'
+        assert bh.fractional_bondorder_method == "none"
+        assert bh.potential == "harmonic"
         bh2 = BondHandler(version=0.4)
-        assert bh2.fractional_bondorder_method == 'AM1-Wiberg'
-        assert bh2.potential == '(k/2)*(r-length)^2'
+        assert bh2.fractional_bondorder_method == "AM1-Wiberg"
+        assert bh2.potential == "(k/2)*(r-length)^2"
 
     def test_harmonic_potentials_are_compatible(self):
         """

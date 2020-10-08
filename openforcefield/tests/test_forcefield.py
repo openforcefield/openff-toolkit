@@ -3381,8 +3381,12 @@ class TestForceFieldParameterAssignment:
 
         forcefield = ForceField("test_forcefields/smirnoff99Frosst.offxml", xml_ff_bo)
 
-        omm_system, omm_sys_top = forcefield.create_openmm_system(top, return_topology=True)
-        mod_omm_system, mod_omm_sys_top = forcefield.create_openmm_system(mod_top, return_topology=True)
+        omm_system, omm_sys_top = forcefield.create_openmm_system(
+            top, return_topology=True
+        )
+        mod_omm_system, mod_omm_sys_top = forcefield.create_openmm_system(
+            mod_top, return_topology=True
+        )
 
         default_bond_force = [
             f for f in omm_system.getForces() if isinstance(f, openmm.HarmonicBondForce)
@@ -3398,7 +3402,9 @@ class TestForceFieldParameterAssignment:
                 idx
             ) == mod_bond_force.getBondParameters(idx)
 
-        for bond1, bond2 in zip(omm_sys_top.topology_bonds, mod_omm_sys_top.topology_bonds):
+        for bond1, bond2 in zip(
+            omm_sys_top.topology_bonds, mod_omm_sys_top.topology_bonds
+        ):
             assert bond1.bond.fractional_bond_order == bond2.bond.fractional_bond_order
 
     @pytest.mark.parametrize(
@@ -3771,10 +3777,12 @@ class TestForceFieldParameterAssignment:
         mol = create_ethanol()
 
         forcefield = ForceField("test_forcefields/smirnoff99Frosst.offxml", xml_ff_bo)
-        forcefield.get_parameter_handler('ProperTorsions')._fractional_bondorder_interpolation = 'invalid method name'
+        forcefield.get_parameter_handler(
+            "ProperTorsions"
+        )._fractional_bondorder_interpolation = "invalid method name"
         topology = Topology.from_molecules([mol])
 
-        with pytest.raises(FractionalBondOrderInterpolationMethodUnsupportedError) as excinfo:
+        with pytest.raises(FractionalBondOrderInterpolationMethodUnsupportedError):
             omm_system, ret_top = forcefield.create_openmm_system(
                 topology,
                 charge_from_molecules=[mol],
