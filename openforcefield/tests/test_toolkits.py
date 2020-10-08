@@ -2606,6 +2606,20 @@ class TestAmberToolsToolkitWrapper:
                     double_bond_has_wbo_near_2 = True
         assert double_bond_has_wbo_near_2
 
+    @requires_openeye
+    def test_assign_fractional_bond_orders_openeye_installed(self):
+        """Test that assign_fractional_bond_orders produces the same result
+        with and without OpenEye toolkits installed"""
+        mol = Molecule.from_smiles("CCO")
+        AmberToolsToolkitWrapper().assign_fractional_bond_orders(mol)
+        with_oe = [b.fractional_bond_order for b in mol.bonds]
+        GLOBAL_TOOLKIT_REGISTRY.deregister_toolkit(OpenEyeToolkitWrapper)
+        AmberToolsToolkitWrapper().assign_fractional_bond_orders(mol)
+        without_oe = [b.fractional_bond_order for b in mol.bonds]
+        GLOBAL_TOOLKIT_REGISTRY.register_toolkit(OpenEyeToolkitWrapper)
+
+        assert with_oe == without_oe
+
 
 class TestBuiltInToolkitWrapper:
     """Test the BuiltInToolkitWrapper"""

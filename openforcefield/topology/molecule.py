@@ -48,6 +48,7 @@ from simtk.openmm.app import Element, element
 
 import openforcefield
 from openforcefield.utils import (
+    MessageException,
     check_units_are_compatible,
     deserialize_numpy,
     quantity_to_string,
@@ -65,6 +66,11 @@ from openforcefield.utils.toolkits import (
     ToolkitWrapper,
     UndefinedStereochemistryError,
 )
+
+
+class NotAttachedToMoleculeError(MessageException):
+    """Exception for when a component does not belong to a Molecule object, but is queried """
+
 
 # =============================================================================================
 # GLOBAL PARAMETERS
@@ -428,6 +434,19 @@ class Atom(Particle):
                 if atom2 == bonded_atom:
                     return True
         return False
+
+    @property
+    def is_in_ring(self):
+        """
+        Return whether or not this atom is in a ring(s) (of any size)
+
+        """
+        if self._molecule is None:
+            raise NotAttachedToMoleculeError(
+                "This Atom does not belong to a Molecule object"
+            )
+
+        return any([self.molecule_atom_index in ring for ring in self._molecule.rings])
 
     @property
     def virtual_sites(self):
@@ -1552,6 +1571,23 @@ class Bond(Serializable):
         if self._molecule is None:
             raise ValueError("This Atom does not belong to a Molecule object")
         return self._molecule.bonds.index(self)
+
+    @property
+    def is_in_ring(self):
+        """
+        Return whether or not this bond is in a ring(s) (of any size)
+
+        """
+        if self._molecule is None:
+            raise NotAttachedToMoleculeError(
+                "This Bond does not belong to a Molecule object"
+            )
+
+        for ring in self._molecule.rings:
+            if self.atom1.molecule_atom_index in ring:
+                if self.atom2.molecule_atom_index in ring:
+                    return True
+        return False
 
     def __repr__(self):
         return f"Bond(atom1 index={self.atom1_index}, atom2 index={self.atom2_index})"
@@ -2836,6 +2872,7 @@ class FrozenMolecule(Serializable):
 
         self._cached_smiles = None
         # TODO: Clear fractional bond orders
+        self._rings = None
 
     def to_networkx(self):
         """Generate a NetworkX undirected graph from the Molecule.
@@ -3393,6 +3430,22 @@ class FrozenMolecule(Serializable):
         """int: number of improper torsions in the Molecule."""
         self._construct_torsions()
         return len(self._impropers)
+
+    @property
+    def n_rings(self):
+        """Return the number of rings found in the Molecule
+
+        Requires the RDKit to be installed.
+
+        .. note ::
+
+            For systems containing some special cases of connected rings, this
+            function may not be well-behaved and may report a different number
+            rings than expected. Some problematic cases include networks of many
+            (5+) rings or bicyclic moieties (i.e. norbornane).
+
+        """
+        return len(self.rings)
 
     @property
     def particles(self):
@@ -4833,6 +4886,53 @@ class FrozenMolecule(Serializable):
         from openforcefield.topology import NotBondedError
 
         raise NotBondedError("No bond between atom {} and {}".format(i, j))
+
+    @property
+    def rings(self):
+        """Return the number of rings in this molecule.
+
+        Requires the RDKit to be installed.
+
+        .. note ::
+
+            For systems containing some special cases of connected rings, this
+            function may not be well-behaved and may report a different number
+            rings than expected. Some problematic cases include networks of many
+            (5+) rings or bicyclic moieties (i.e. norbornane).
+
+        """
+        if self._rings is None:
+            self._get_rings()
+        return self._rings
+
+    @RDKitToolkitWrapper.requires_toolkit()
+    def _get_rings(self):
+        """
+        Call out to RDKitToolkitWrapper methods to find the rings in this molecule.
+
+        Requires the RDKit to be installed.
+
+        .. note ::
+
+            For systems containing some special cases of connected rings, this
+            function may not be well-behaved and may report a different number
+            rings than expected. Some problematic cases include networks of many
+            (5+) rings or bicyclic moieties (i.e. norbornane).
+
+        .. todo :: This could be refactored to use ToolkitWrapper.call() to flexibly
+            access other toolkits, if find_rings is implemented.
+
+        Returns
+        -------
+        rings : tuple of tuple of int
+            A nested tuple with one subtuple per ring and each subtuple containing
+            a tuple of the indices of atoms containing with it. If no rings are
+            found, a single empty tuple is returned.
+
+        """
+        toolkit = RDKitToolkitWrapper()
+        rings = toolkit.find_rings(self)
+        self._rings = rings
 
 
 class Molecule(FrozenMolecule):
