@@ -1863,9 +1863,12 @@ class Topology(Serializable):
 
         Parameters
         ----------
-        filename : name of the pdb file to write to
-        positions : Can be an openmm 'quantity' object which has atomic positions as a list of Vec3s along with associated units, otherwise a 3D array of UNITLESS numbers are considered as "Angstroms" by default
-        file_format : write topology in pdb file format
+        filename : str
+            name of the pdb file to write to
+        positions : n_atoms x 3 numpy array or simtk.unit.Quantity-wrapped n_atoms x 3 iterable
+            Can be an openmm 'quantity' object which has atomic positions as a list of Vec3s along with associated units, otherwise a 3D array of UNITLESS numbers are considered as "Angstroms" by default
+        file_format : str
+            Output file format. Case insensitive. Currently only supported value is "pdb".
 
         """
         from simtk.openmm.app import PDBFile

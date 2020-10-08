@@ -640,6 +640,7 @@ class TestTopology(TestCase):
         topology = Topology()
         topology.add_molecule(mol)
         count = 0
+        # The file should be printed out with 9 atoms and 0 virtualsites, so we check to ensure that thtere are only 9 HETATM entries
         with NamedTemporaryFile(suffix=".pdb") as iofile:
             topology.to_file(iofile.name, positions)
             data = open(iofile.name).readlines()
@@ -663,12 +664,13 @@ class TestTopology(TestCase):
         from openforcefield.topology import Molecule, Topology
 
         topology = Topology()
-        topology.add_molecule(create_ethanol())
         mol = Molecule.from_pdb_and_smiles(
             get_data_file_path("systems/test_systems/1_ethanol.pdb"), "CCO"
         )
+        topology.add_molecule(mol)
         positions_angstrom = mol.conformers[0]
         count = 1
+        # Write the molecule to PDB and ensure that the X coordinate of the first atom is 10.172
         with NamedTemporaryFile(suffix=".pdb") as iofile:
             topology.to_file(iofile.name, positions_angstrom)
             data = open(iofile.name).readlines()
@@ -678,8 +680,9 @@ class TestTopology(TestCase):
                     coord = line.split()[-6]
         assert coord == "10.172"
 
+        # Do the same check, but feed in equivalent positions measured in nanometers and ensure the PDB is still the same
         count = 1
-        coord = "abc"
+        coord = None
         with NamedTemporaryFile(suffix=".pdb") as iofile:
             positions_nanometer = positions_angstrom.in_units_of(nanometer)
             topology.to_file(iofile.name, positions_nanometer)
@@ -714,10 +717,10 @@ class TestTopology(TestCase):
         from openforcefield.topology import Molecule, Topology
 
         topology = Topology()
-        topology.add_molecule(create_ethanol())
         mol = Molecule.from_pdb_and_smiles(
             get_data_file_path("systems/test_systems/1_ethanol.pdb"), "CCO"
         )
+        topology.add_molecule(mol)
         positions = mol.conformers[0]
         count = 1
         with NamedTemporaryFile(suffix=".pdb") as iofile:
@@ -738,10 +741,10 @@ class TestTopology(TestCase):
         from openforcefield.topology import Molecule, Topology
 
         topology = Topology()
-        topology.add_molecule(create_ethanol())
         mol = Molecule.from_pdb_and_smiles(
             get_data_file_path("systems/test_systems/1_ethanol.pdb"), "CCO"
         )
+        topology.add_molecule(mol)
         positions = mol.conformers[0]
         fname = "ethanol_file.pdb"
         with pytest.raises(NotImplementedError):
@@ -749,7 +752,7 @@ class TestTopology(TestCase):
 
     def test_to_file_no_molecules(self):
         """
-        Checks if Topology.to_write() writes a file with no topology and no coordinates
+        Checks if Topology.to_file() writes a file with no topology and no coordinates
         """
         from tempfile import NamedTemporaryFile
 
@@ -785,6 +788,8 @@ class TestTopology(TestCase):
             get_data_file_path("systems/test_systems/1_ethanol.pdb"), "CCO"
         )
         positions = mol.conformers[0]
+        # Make up coordinates for the second ethanol by translating the first by 10 angstroms 
+        # (note that this will still be a gibberish conformation, since the atom order in the second molecule is different)
         positions = np.concatenate([positions, positions + 10.0 * unit.angstrom])
         element_order = []
 
