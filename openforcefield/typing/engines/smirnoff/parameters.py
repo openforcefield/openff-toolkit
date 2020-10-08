@@ -15,6 +15,8 @@ New pluggable handlers can be created by creating subclasses of :class:`Paramete
 __all__ = [
     "SMIRNOFFSpecError",
     "IncompatibleParameterError",
+    "FractionalBondOrderInterpolationMethodUnsupportedError",
+    "NotEnoughPointsForInterpolationError",
     "UnassignedValenceParameterException",
     "UnassignedBondParameterException",
     "UnassignedAngleParameterException",
@@ -83,12 +85,18 @@ class SMIRNOFFSpecError(MessageException):
     pass
 
 
-class FractionalBondOrderMethodUnsupportedError(MessageException):
+class FractionalBondOrderInterpolationMethodUnsupportedError(MessageException):
     """
-    Exception for when a n unsupported fractional bond order assignment method is called.
+    Exception for when an unsupported fractional bond order interpolation assignment method is called.
     """
 
-    # TODO: Could this just be SMIRNOFFSpecError? Or inherit from it
+    pass
+
+
+class NotEnoughPointsForInterpolationError(MessageException):
+    """Exception for when less than two points are provided for interpolation"""
+
+    pass
 
 
 class IncompatibleParameterError(MessageException):
@@ -2635,17 +2643,29 @@ class BondHandler(ParameterHandler):
     _DEPENDENCIES = [ConstraintHandler]  # ConstraintHandler must be executed first
     _MAX_SUPPORTED_SECTION_VERSION = 0.4
 
-    potential = ParameterAttribute(default="harmonic")
-    # The default value for fractional_bondorder_method depends on the section version and is overwritten in __init__
+    # Use the _allow_only filter here because this class's implementation contains all the information about supported
+    # potentials for this handler.
+    potential = ParameterAttribute(default="overridden in init", converter=_allow_only(['harmonic', '(k/2)*(r-length)^2']))
+    # The default value for fractional_bondorder_method depends on the section version and is overwritten in __init__.
+    # Do not use the allow_only filter here since ToolkitWrappers may be imported that support additional fractional
+    # bondorder methods.
     fractional_bondorder_method = ParameterAttribute(default="overridden in init")
     fractional_bondorder_interpolation = ParameterAttribute(default="linear")
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        # Default value for fractional_bondorder_interpolation depends on section version
         if self.version == 0.3 and 'fractional_bondorder_interpolation' not in kwargs:
             self.fractional_bondorder_method = 'none'
         elif self.version == 0.4 and 'fractional_bondorder_interpolation' not in kwargs:
             self.fractional_bondorder_method = 'AM1-Wiberg'
+
+        # Default value for potential depends on section version
+        if self.version == 0.3 and 'potential' not in kwargs:
+            self.potential = 'harmonic'
+        elif self.version == 0.4 and 'potential' not in kwargs:
+            self.potential = '(k/2)*(r-length)^2'
+
 
 
     def check_handler_compatibility(self, other_handler):
@@ -2663,13 +2683,21 @@ class BondHandler(ParameterHandler):
         IncompatibleParameterError if handler_kwargs are incompatible with existing parameters.
         """
         string_attrs_to_compare = [
-            "potential",
             "fractional_bondorder_method",
             "fractional_bondorder_interpolation",
         ]
         self._check_attributes_are_equal(
             other_handler, identical_attrs=string_attrs_to_compare
         )
+
+        # potential="harmonic" and potential="(k/2)*(r-length)^2" should be considered identical
+        self_has_harmonic_potential = self.potential == 'harmonic' or self.potential == "(k/2)*(r-length)^2"
+        other_has_harmonic_potential = other_handler.potential == 'harmonic' or other_handler.potential == "(k/2)*(r-length)^2"
+        if not(self_has_harmonic_potential and other_has_harmonic_potential):
+            if self.potential != other_handler.potential:
+                raise IncompatibleParameterError(
+                    f"potential values are not identical. "
+                    f"(handler value: {self.potential}, incompatible value: {other_handler.potential}")
 
     def create_force(self, system, topology, **kwargs):
         # Create or retrieve existing OpenMM Force object
@@ -2733,7 +2761,21 @@ class BondHandler(ParameterHandler):
                 *match.reference_atom_indices
             )
 
-            if getattr(bond_params, "length", None) is not None:
+            length_requires_interpolation = getattr(bond_params, "length_bondorder", None) is not None
+            k_requires_interpolation = getattr(bond_params, "k_bondorder", None) is not None
+
+            # Calculate fractional bond orders for this molecule only if needed.
+            if (length_requires_interpolation or k_requires_interpolation) and bond.fractional_bond_order is None:
+                toolkit_registry = kwargs.get(
+                    "toolkit_registry", GLOBAL_TOOLKIT_REGISTRY
+                )
+                match.reference_molecule.assign_fractional_bond_orders(
+                    toolkit_registry=toolkit_registry,
+                    use_conformers=match.reference_molecule.conformers,
+                    bond_order_model=self.fractional_bondorder_method.lower()
+                )
+
+            if not(length_requires_interpolation):
                 length = bond_params.length
             else:
                 # Interpolate length using fractional bond orders
@@ -2749,18 +2791,17 @@ class BondHandler(ParameterHandler):
                         x_query=bond_order,
                     )
                 else:
-                    # TODO: Raise a more specific exception
-                    raise FractionalBondOrderMethodUnsupportedError(
-                        "Fractional bondorder treatment {} is not implemented.".format(
+                    # TODO: This code is effectively unreachable due to the the _allow_only converter used in this
+                    #       ParameterAttribute's definition, which only allows "linear". Remove?
+                    raise FractionalBondOrderInterpolationMethodUnsupportedError(
+                        "Fractional bondorder interpolation method {} is not implemented.".format(
                             self.fractional_bondorder_interpolation
                         )
                     )
-            if getattr(bond_params, "k", None) is not None:
+            if not(k_requires_interpolation):
                 k = bond_params.k
             else:
                 # Interpolate k using fractional bond orders
-                # TODO: Do we really want to allow per-bond specification of interpolation schemes?
-                # TODO: Deal with possibility that molecules use different fractional bond order methods
                 bond_order = bond.fractional_bond_order
                 if self.fractional_bondorder_interpolation == "linear":
                     if len(bond_params.k_bondorder) < 2:
@@ -2773,9 +2814,10 @@ class BondHandler(ParameterHandler):
                         x_query=bond_order,
                     )
                 else:
-                    # TODO: Raise a more specific exception
-                    raise FractionalBondOrderMethodUnsupportedError(
-                        "Fractional bondorder treatment {} is not implemented.".format(
+                    # TODO: This code is effectively unreachable due to the the _allow_only converter used in this
+                    #       ParameterAttribute's definition, which only allows "linear". Remove?
+                    raise FractionalBondOrderInterpolationMethodUnsupportedError(
+                        "Fractional bondorder interpolation method {} is not implemented.".format(
                             self.fractional_bondorder_interpolation
                         )
                     )
@@ -3107,6 +3149,7 @@ class ProperTorsionHandler(ParameterHandler):
                 match.reference_molecule.assign_fractional_bond_orders(
                     toolkit_registry=toolkit_registry,
                     use_conformers=match.reference_molecule.conformers,
+                    bond_order_model=self.fractional_bondorder_method.lower()
                 )
 
             # scale k based on the bondorder of the central bond
@@ -3116,8 +3159,10 @@ class ProperTorsionHandler(ParameterHandler):
                     k_bondorder, central_bond.fractional_bond_order
                 )
             else:
-                raise FractionalBondOrderMethodUnsupportedError(
-                    "Fractional bondorder treatment {} is not implemented.".format(
+                # TODO: This code is effectively unreachable due to the the _allow_only converter used in this
+                #       ParameterAttribute's definition, which only allows "linear". Remove?
+                raise FractionalBondOrderInterpolationMethodUnsupportedError(
+                    "Fractional bondorder interpolation method {} is not implemented.".format(
                         self.fractional_bondorder_interpolation
                     )
                 )
