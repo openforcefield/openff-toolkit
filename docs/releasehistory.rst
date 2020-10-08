@@ -17,6 +17,12 @@ New features
   to :py:class:`Atom <openforcefield.topology.molecule.Atom>` and
   :py:class:`Bond <openforcefield.topology.molecule.Bond>`
 
+Bugfixes
+"""""""""
+- `PR #737 <https://github.com/openforcefield/openforcefield/pull/737>`_: Prevents OpenEye from
+  incidentally being used in the conformer generation step of
+  :py:class:`AmberToolsToolkitWrapper.assign_fractional_bond_orders
+  <openforcefield.utils.toolkits.AmberToolsToolkitWrapper.assign_wiberg_bond_orders>`.
 
 0.7.2 - Bugfix and minor feature release
 ----------------------------------------
