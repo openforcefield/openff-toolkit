@@ -157,6 +157,105 @@ class NonbondedMethod(Enum):
 
 
 # ======================================================================
+# UTILITY FUNCTIONS
+# ======================================================================
+
+def _linear_inter_or_extrapolate(points_dict, x_query):
+    """
+    Linearly interpolate or extrapolate based on a piecewise linear function defined by a set of points.
+    This function is designed to work with key:value pairs where the value may be a simtk.unit.Quantity.
+
+    Parameters
+    ----------
+    points_dict : dict{float: float or float-valued simtk.unit.Quantity}
+        A dictionary with each item representing a point, where the key is the X value and the value is the Y value.
+    x_query : float
+        The X value of the point to interpolate or extrapolate.
+
+    Returns
+    -------
+    y_value : float or float-valued simtk.unit.Quantity
+        The result of interpolation/extrapolation.
+    """
+
+    # pre-empt case where no interpolation is necessary
+    if x_query in points_dict:
+        return points_dict[x_query]
+
+    if len(points_dict) < 2:
+        raise NotEnoughPointsForInterpolationError(f"Unable to perform interpolation with less than two points. "
+                                                   f"points_dict: {points_dict}   x_query: {x_query}")
+    # TODO: error out for nonsensical fractional bond orders
+
+    # find the nearest point beneath our queried x value
+    try:
+        below = max(bo for bo in points_dict if bo < x_query)
+    except ValueError:
+        below = None
+    # find the nearest point above our queried x value
+    try:
+        above = min(bo for bo in points_dict if bo > x_query)
+    except ValueError:
+        above = None
+
+    # handle case where we can clearly interpolate
+    if (above is not None) and (below is not None):
+        return points_dict[below] + (points_dict[above] - points_dict[below]) * (
+            (x_query - below) / (above - below)
+        )
+
+    # error if we can't hope to interpolate at all
+    elif (above is None) and (below is None):
+        raise NotImplementedError(
+            f"Failed to find interpolation references for "
+            f"`x_query` '{x_query}', "
+            f"with `points_dict` '{points_dict}'"
+        )
+
+    # extrapolate for fractional bond orders below our lowest defined bond order
+    elif below is None:
+        bond_orders = sorted(points_dict)
+        k = points_dict[bond_orders[0]] - (
+            (points_dict[bond_orders[1]] - points_dict[bond_orders[0]])
+            / (bond_orders[1] - bond_orders[0])
+        ) * (bond_orders[0] - x_query)
+        return k
+
+    # extrapolate for fractional bond orders above our highest defined bond order
+    elif above is None:
+        bond_orders = sorted(points_dict)
+        k = points_dict[bond_orders[-1]] + (
+            (points_dict[bond_orders[-1]] - points_dict[bond_orders[-2]])
+            / (bond_orders[-1] - bond_orders[-2])
+        ) * (x_query - bond_orders[-1])
+        return k
+
+# TODO: This is technically a validator, not a converter, but ParameterAttribute doesn't support them yet (it'll be easy if we switch to use the attrs library).
+def _allow_only(allowed_values):
+    """A converter that checks the new value is only in a set."""
+    allowed_values = frozenset(allowed_values)
+
+    def _value_checker(instance, attr, new_value):
+        # This statement means that, in the "SMIRNOFF Data Dict" format, the string "None"
+        # and the Python None are the same thing
+        if new_value == "None":
+            new_value = None
+
+        # Ensure that the new value is in the list of allowed values
+        if new_value not in allowed_values:
+
+            err_msg = (
+                f"Attempted to set {instance.__class__.__name__}.{attr.name} "
+                f"to {new_value}. Currently, only the following values "
+                f"are supported: {sorted(allowed_values)}."
+            )
+            raise SMIRNOFFSpecError(err_msg)
+        return new_value
+
+    return _value_checker
+
+
+# ======================================================================
 # PARAMETER ATTRIBUTES
 # ======================================================================
 
@@ -2370,6 +2469,59 @@ class ParameterHandler(_ParameterAttributeHandler):
                     )
                 )
 
+    @staticmethod
+    def _check_partial_bond_orders_from_molecules_duplicates(pb_mols):
+        if len(set(map(Molecule.to_smiles, pb_mols))) < len(pb_mols):
+            raise ValueError(
+                "At least two user-provided fractional bond order "
+                "molecules are isomorphic"
+            )
+
+    @staticmethod
+    def _assign_partial_bond_orders_from_molecules(topology, pbo_mols):
+        # for each reference molecule in our topology, we'll walk through the provided partial bond order molecules
+        # if we find a match, we'll apply the partial bond orders and skip to the next molecule
+        for ref_mol in topology.reference_molecules:
+            for pbo_mol in pbo_mols:
+                # we are as stringent as we are in the ElectrostaticsHandler
+                # TODO: figure out whether bond order matching is redundant with aromatic matching
+                isomorphic, topology_atom_map = Molecule.are_isomorphic(
+                    ref_mol,
+                    pbo_mol,
+                    return_atom_map=True,
+                    aromatic_matching=True,
+                    formal_charge_matching=True,
+                    bond_order_matching=True,
+                    atom_stereochemistry_matching=True,
+                    bond_stereochemistry_matching=True,
+                )
+
+                # if matching, assign bond orders and skip to next molecule
+                # first match wins
+                if isomorphic:
+                    # walk through bonds on reference molecule
+                    for bond in ref_mol.bonds:
+                        # use atom mapping to translate to pbo_molecule bond
+                        pbo_bond = pbo_mol.get_bond_between(
+                            topology_atom_map[bond.atom1_index],
+                            topology_atom_map[bond.atom2_index],
+                        )
+                        # extract fractional bond order
+                        # assign fractional bond order to reference molecule bond
+                        if pbo_bond.fractional_bond_order is None:
+                            raise ValueError(
+                                f"Molecule '{ref_mol}' was requested to be parameterized "
+                                f"with user-provided fractional bond orders from '{pbo_mol}', but not "
+                                "all bonds were provided with `fractional_bond_order` specified"
+                            )
+
+                        bond.fractional_bond_order = pbo_bond.fractional_bond_order
+
+                    break
+                # not necessary, but explicit
+                else:
+                    continue
+
 
 # =============================================================================================
 
@@ -2531,30 +2683,21 @@ class BondHandler(ParameterHandler):
         else:
             force = existing[0]
 
+        # check whether any of the reference molecules in the topology
+        # are in the partial_bond_orders_from_molecules list
+        if "partial_bond_orders_from_molecules" in kwargs:
+            # check whether molecules in the partial_bond_orders_from_molecules
+            # list have any duplicates
+            self._check_partial_bond_orders_from_molecules_duplicates(
+                kwargs["partial_bond_orders_from_molecules"]
+            )
+
+            self._assign_partial_bond_orders_from_molecules(
+                topology, kwargs["partial_bond_orders_from_molecules"]
+            )
+
         # Add all bonds to the system.
         bond_matches = self.find_matches(topology)
-
-        # Determine if any parameters rely on bond order interpolation, but
-        # only if they were found as matches
-        uses_interpolation = False
-        for match in bond_matches.values():
-            if (
-                match.parameter_type.k_bondorder
-                or match.parameter_type.length_bondorder
-            ):
-                uses_interpolation = True
-                break
-
-        # Re-computing fractional bond orders is expensive and should be skipped if not necessary
-        if uses_interpolation:
-            # TODO: When implementing `partial_bond_orders_from_molecules`, we'll want to be
-            #  picky and careful about which molecules get their bond orders computed
-            toolkit_registry = kwargs.get("toolkit_registry", GLOBAL_TOOLKIT_REGISTRY)
-            for top_mol in topology.topology_molecules:
-                top_mol.reference_molecule.assign_fractional_bond_orders(
-                    bond_order_model=self.fractional_bondorder_method.lower(),
-                    toolkit_registry=toolkit_registry,
-                )
 
         skipped_constrained_bonds = (
             0  # keep track of how many bonds were constrained (and hence skipped)
@@ -2601,9 +2744,9 @@ class BondHandler(ParameterHandler):
                             "In order to use bond order interpolation, 2 or more parameters "
                             f"must be present. Found {len(bond_params.length_bondorder)} parameters."
                         )
-                    length = _linear_interpolate_k(
-                        k_bondorder=bond_params.length_bondorder,
-                        fractional_bond_order=bond_order,
+                    length = _linear_inter_or_extrapolate(
+                        points_dict=bond_params.length_bondorder,
+                        x_query=bond_order,
                     )
                 else:
                     # TODO: Raise a more specific exception
@@ -2625,9 +2768,9 @@ class BondHandler(ParameterHandler):
                             "In order to use bond order interpolation, 2 or more parameters "
                             f"must be present. Found {len(bond_params.k_bondorder)} parameters."
                         )
-                    k = _linear_interpolate_k(
-                        k_bondorder=bond_params.k_bondorder,
-                        fractional_bond_order=bond_order,
+                    k = _linear_inter_or_extrapolate(
+                        points_dict=bond_params.k_bondorder,
+                        x_query=bond_order,
                     )
                 else:
                     # TODO: Raise a more specific exception
@@ -2752,137 +2895,6 @@ class AngleHandler(ParameterHandler):
 
 # =============================================================================================
 
-
-def _check_partial_bond_orders_from_molecules_duplicates(pb_mols):
-    if len(set(map(Molecule.to_smiles, pb_mols))) < len(pb_mols):
-        raise ValueError(
-            "At least two user-provided fractional bond order "
-            "molecules are isomorphic"
-        )
-
-
-def _assign_partial_bond_orders_from_molecules(topology, pbo_mols):
-    # for each reference molecule in our topology, we'll walk through the provided partial bond order molecules
-    # if we find a match, we'll apply the partial bond orders and skip to the next molecule
-    for ref_mol in topology.reference_molecules:
-        for pbo_mol in pbo_mols:
-            # we are as stringent as we are in the ElectrostaticsHandler
-            # TODO: figure out whether bond order matching is redundant with aromatic matching
-            isomorphic, topology_atom_map = Molecule.are_isomorphic(
-                ref_mol,
-                pbo_mol,
-                return_atom_map=True,
-                aromatic_matching=True,
-                formal_charge_matching=True,
-                bond_order_matching=True,
-                atom_stereochemistry_matching=True,
-                bond_stereochemistry_matching=True,
-            )
-
-            # if matching, assign bond orders and skip to next molecule
-            # first match wins
-            if isomorphic:
-                # walk through bonds on reference molecule
-                for bond in ref_mol.bonds:
-                    # use atom mapping to translate to pbo_molecule bond
-                    pbo_bond = pbo_mol.get_bond_between(
-                        topology_atom_map[bond.atom1_index],
-                        topology_atom_map[bond.atom2_index],
-                    )
-                    # extract fractional bond order
-                    # assign fractional bond order to reference molecule bond
-                    if pbo_bond.fractional_bond_order is None:
-                        raise ValueError(
-                            f"Molecule '{ref_mol}' was requested to be parameterized "
-                            f"with user-provided fractional bond orders from '{pbo_mol}', but not "
-                            "all bonds were provided with `fractional_bond_order` specified"
-                        )
-
-                    bond.fractional_bond_order = pbo_bond.fractional_bond_order
-
-                break
-            # not necessary, but explicit
-            else:
-                continue
-
-
-def _linear_interpolate_k(k_bondorder, fractional_bond_order):
-
-    # pre-empt case where no interpolation is necessary
-    if fractional_bond_order in k_bondorder:
-        return k_bondorder[fractional_bond_order]
-
-    # TODO: error out for nonsensical fractional bond orders
-
-    # find the nearest bond_order beneath our fractional value
-    try:
-        below = max(bo for bo in k_bondorder if bo < fractional_bond_order)
-    except ValueError:
-        below = None
-    # find the nearest bond_order above our fractional value
-    try:
-        above = min(bo for bo in k_bondorder if bo > fractional_bond_order)
-    except ValueError:
-        above = None
-
-    # handle case where we can clearly interpolate
-    if (above is not None) and (below is not None):
-        return k_bondorder[below] + (k_bondorder[above] - k_bondorder[below]) * (
-            (fractional_bond_order - below) / (above - below)
-        )
-
-    # error if we can't hope to interpolate at all
-    elif (above is None) and (below is None):
-        raise NotImplementedError(
-            f"Failed to find interpolation references for "
-            f"`fractional bond order` '{fractional_bond_order}', "
-            f"with `k_bond_order` '{k_bondorder}'"
-        )
-
-    # extrapolate for fractional bond orders below our lowest defined bond order
-    elif below is None:
-        bond_orders = sorted(k_bondorder)
-        k = k_bondorder[bond_orders[0]] - (
-            (k_bondorder[bond_orders[1]] - k_bondorder[bond_orders[0]])
-            / (bond_orders[1] - bond_orders[0])
-        ) * (bond_orders[0] - fractional_bond_order)
-        return k
-
-    # extrapolate for fractional bond orders above our highest defined bond order
-    elif above is None:
-        bond_orders = sorted(k_bondorder)
-        k = k_bondorder[bond_orders[-1]] + (
-            (k_bondorder[bond_orders[-1]] - k_bondorder[bond_orders[-2]])
-            / (bond_orders[-1] - bond_orders[-2])
-        ) * (fractional_bond_order - bond_orders[-1])
-        return k
-
-
-# TODO: This is technically a validator, not a converter, but ParameterAttribute doesn't support them yet (it'll be easy if we switch to use the attrs library).
-def _allow_only(allowed_values):
-    """A converter that checks the new value is only in a set."""
-    allowed_values = frozenset(allowed_values)
-
-    def _value_checker(instance, attr, new_value):
-        # This statement means that, in the "SMIRNOFF Data Dict" format, the string "None"
-        # and the Python None are the same thing
-        if new_value == "None":
-            new_value = None
-
-        # Ensure that the new value is in the list of allowed values
-        if new_value not in allowed_values:
-
-            err_msg = (
-                f"Attempted to set {instance.__class__.__name__}.{attr.name} "
-                f"to {new_value}. Currently, only the following values "
-                f"are supported: {sorted(allowed_values)}."
-            )
-            raise SMIRNOFFSpecError(err_msg)
-        return new_value
-
-    return _value_checker
-
-
 # TODO: There's a lot of duplicated code in ProperTorsionHandler and ImproperTorsionHandler
 class ProperTorsionHandler(ParameterHandler):
     """Handle SMIRNOFF ``<ProperTorsionForce>`` tags
@@ -2971,11 +2983,11 @@ class ProperTorsionHandler(ParameterHandler):
         if "partial_bond_orders_from_molecules" in kwargs:
             # check whether molecules in the partial_bond_orders_from_molecules
             # list have any duplicates
-            _check_partial_bond_orders_from_molecules_duplicates(
+            self._check_partial_bond_orders_from_molecules_duplicates(
                 kwargs["partial_bond_orders_from_molecules"]
             )
 
-            _assign_partial_bond_orders_from_molecules(
+            self._assign_partial_bond_orders_from_molecules(
                 topology, kwargs["partial_bond_orders_from_molecules"]
             )
 
@@ -3010,7 +3022,7 @@ class ProperTorsionHandler(ParameterHandler):
 
         # Check that no topological torsions are missing force parameters
 
-        # I can see the apeal of these kind of methods as an 'absolute' check
+        # I can see the appeal of these kind of methods as an 'absolute' check
         # that things have gone well, but I think just making sure that the
         # reference molecule has been fully parametrised should have the same
         # effect! It would be good to eventually refactor things so that everything
@@ -3100,7 +3112,7 @@ class ProperTorsionHandler(ParameterHandler):
             # scale k based on the bondorder of the central bond
             if self.fractional_bondorder_interpolation == "linear":
                 # we only interpolate on k
-                k = _linear_interpolate_k(
+                k = _linear_inter_or_extrapolate(
                     k_bondorder, central_bond.fractional_bond_order
                 )
             else:
