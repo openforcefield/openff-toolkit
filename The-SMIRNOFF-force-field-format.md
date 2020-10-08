@@ -636,8 +636,6 @@ Standard usage is expected to rely primarily on the features documented above an
 
 ### `<VirtualSites>`: Virtual sites for off-atom charges
 
-.. warning:: This functionality is not yet implemented and will appear in a future version of the toolkit
-
 We will implement experimental support for placement of off-atom (off-center) charges in a variety of contexts which may be chemically important in order to allow easy exploration of when these will be warranted.
 We will support the following different types or geometries of off-center charges (as diagrammed below):
 - `BondCharge`: This supports placement of a virtual site `S` along a vector between two specified atoms, e.g. to allow for a sigma hole for halogens or similar contexts. With positive values of the distance, the virtual site lies outside the first indexed atom (green in this image).
@@ -649,36 +647,44 @@ We will support the following different types or geometries of off-center charge
 - `TrivalentLonePair`: This is suitable for planar or tetrahedral nitrogen lone pairs; a charge site `S` lies above  the central atom (e.g. nitrogen, blue) a distance `d` along the vector perpendicular to the plane of the three connected atoms (2,3,4). With positive values of `d` the site lies above the nitrogen and with negative values it lies below the nitrogen.
 ![Trivalent lone pair virtual site](figures/vsite_trivalent.jpg)
 
-Each virtual site receives charge which is transferred from the desired atoms specified in the SMIRKS pattern via a `charge_increment#` parameter, e.g., if `charge_increment1=+0.1*elementary_charge` then the virtual site will receive a charge of -0.1 and the atom labeled `1` will have its charge adjusted upwards by +0.1.
+Each virtual site receives charge which is transferred from the desired atoms specified in the SMIRKS pattern via a `charge_increment#` parameter, e.g., if `charge_increment1=0.1*elementary_charge` then the virtual site will receive a charge of -0.1 and the atom labeled `1` will have its charge adjusted upwards by 0.1.
 N may index any indexed atom.
 Increments which are left unspecified default to zero.
 Additionally, each virtual site can bear Lennard-Jones parameters, specified by `sigma` and `epsilon` or `rmin_half` and `epsilon`.
 If unspecified these also default to zero.
 
 In the SMIRNOFF format, these are encoded as:
-```XML
-<VirtualSites version="0.3">
+```<?xml version="1.0" encoding='ASCII'?>
+<SMIRNOFF version="0.3">
+<VirtualSites version="0.3", exclusion_policy="none">
     <!-- sigma hole for halogens: "distance" denotes distance along the 2->1 bond vector, measured from atom 2 -->
     <!-- Specify that 0.2 charge from atom 1 and 0.1 charge units from atom 2 are to be moved to the virtual site, and a small Lennard-Jones site is to be added (sigma = 0.1*angstroms, epsilon=0.05*kcal/mol) -->
-    <VirtualSite type="BondCharge" smirks="[Cl:1]-[C:2]" distance="0.30*angstrom" charge_increment1="+0.2*elementary_charge" charge_increment2="+0.1*elementary_charge" sigma="0.1*angstrom" epsilon="0.05*kilocalories_per_mole" />
+    <VirtualSite type="BondCharge" smirks="[Cl:1]-[C:2]" distance="0.30*angstrom" charge_increment1="-0.2*elementary_charge" charge_increment2="-0.1*elementary_charge" sigma="0.1*angstrom" epsilon="0.05*kilocalories_per_mole" />
     <!-- Charge increments can extend out to as many atoms as are labeled, e.g. with a third atom: -->
-    <VirtualSite type="BondCharge" smirks="[Cl:1]-[C:2]~[*:3]" distance="0.30*angstrom" charge_increment1="+0.1*elementary_charge" charge_increment2="+0.1*elementary_charge" charge_increment3="+0.05*elementary_charge" sigma="0.1*angstrom" epsilon="0.05*kilocalories_per_mole" />
+    <VirtualSite type="BondCharge" smirks="[Cl:1]-[C:2]~[*:3]" distance="0.30*angstrom" charge_increment1="-0.1*elementary_charge" charge_increment2="-0.1*elementary_charge" charge_increment3="-0.05*elementary_charge" sigma="0.1*angstrom" epsilon="0.05*kilocalories_per_mole" />
     <!-- monovalent lone pairs: carbonyl -->
     <!-- X denotes the charge site, and P denotes the projection of the charge site into the plane of 1 and 2. -->
     <!-- inPlaneAngle is angle point P makes with 1 and 2, i.e. P-1-2 -->
     <!-- outOfPlaneAngle is angle charge site (X) makes out of the plane of 2-1-3 (and P) measured from 1 -->
     <!-- Since unspecified here, sigma and epsilon for the virtual site default to zero -->
-    <VirtualSite type="MonovalentLonePair" smirks="[O:1]=[C:2]-[*:3]" distance="0.30*angstrom" outOfPlaneAngle="0*degree" inPlaneAngle="120*degree" charge_increment1="+0.2*elementary_charge" />
+    <VirtualSite type="MonovalentLonePair" smirks="[O:1]=[C:2]-[*:3]" distance="0.30*angstrom" outOfPlaneAngle="0*degree" inPlaneAngle="120*degree" charge_increment1="0.2*elementary_charge" charge_increment2="0.2*elementary_charge" charge_increment3="0.2*elementary_charge"/>
     <!-- divalent lone pair: pyrimidine, TIP4P, TIP5P -->
     <!-- The atoms 2-1-3 define the X-Y plane, with Z perpendicular. If outOfPlaneAngle is 0, the charge site is a specified distance along the in-plane vector which bisects the angle left by taking 360 degrees minus angle(2,1,3). If outOfPlaneAngle is nonzero, the charge sites lie out of the plane by the specified angle (at the specified distance) and their in-plane projection lines along the angle's bisector. -->
-    <VirtualSite type="DivalentLonePair" smirks="[*:2]~[#7X2:1]~[*:3]" distance="0.30*angstrom" outOfPlaneAngle="0.0*degree" charge_increment1="+0.1*elementary_charge" />
+    <VirtualSite type="DivalentLonePair" smirks="[*:2]~[#7X2:1]~[*:3]" distance="0.30*angstrom" outOfPlaneAngle="0.0*degree" charge_increment1="0.1*elementary_charge" charge_increment2="0.2*elementary_charge" charge_increment3="0.2*elementary_charge" />
     <!-- trivalent nitrogen lone pair -->
     <!-- charge sites lie above and below the nitrogen at specified distances from the nitrogen, along the vector perpendicular to the plane of (2,3,4) that passes through the nitrogen. If the nitrogen is co-planar with the connected atom, charge sites are simply above and below the plane-->
     <!-- Positive and negative values refer to above or below the nitrogen as measured relative to the plane of (2,3,4), i.e. below the nitrogen means nearer the 2,3,4 plane unless they are co-planar -->
-    <VirtualSite type="TrivalentLonePair" smirks="[*:2]~[#7X3:1](~[*:4])~[*:3]" distance="0.30*angstrom" charge_increment1="+0.1*elementary_charge"/>
-    <VirtualSite type="TrivalentLonePair" smirks="[*:2]~[#7X3:1](~[*:4])~[*:3]" distance="-0.30*angstrom" charge_increment1="+0.1*elementary_charge"/>
+	<!-- To ensure that the second site does not overwrite the first, specify a unique name for each. -->
+    <VirtualSite type="TrivalentLonePair" smirks="[*:2]~[#7X3:1](~[*:4])~[*:3]" name="A" distance="0.30*angstrom" charge_increment1="0.1*elementary_charge" charge_increment2="0.2*elementary_charge" charge_increment3="0.2*elementary_charge" charge_increment4="0.2*elementary_charge" />
+    <VirtualSite type="TrivalentLonePair" smirks="[*:2]~[#7X3:1](~[*:4])~[*:3]" name="B" distance="-0.30*angstrom" charge_increment1="0.1*elementary_charge" charge_increment2="0.2*elementary_charge" charge_increment3="0.2*elementary_charge" charge_increment4="0.2*elementary_charge"/>
 </VirtualSites>
+</SMIRNOFF>
 ```
+
+| VirtualSites section tag version   | Tag attributes and default values    | Required parameter attributes   | Optional parameter attributes |
+|------------------------------------|--------------------------------------|---------------------------------|-------------------------------|
+| 0.3                                | `exclusion_policy="parents"`         | `smirks`, `type`, `distance`, `charge_increment` (indexed), `inPlaneAngle` (if `type="MonovalentLonePair"`), `outOfPlaneAngle` (if `type="MonovalentLonePair` or `type="DivalentLonePair"`)   | `sigma`, `epsilon`, `name` |
+
 
 ### Aromaticity models
 
