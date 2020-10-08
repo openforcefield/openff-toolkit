@@ -2478,7 +2478,7 @@ class ParameterHandler(_ParameterAttributeHandler):
                 )
 
     @staticmethod
-    def _check_partial_bond_orders_from_molecules_duplicates(pb_mols):
+    def check_partial_bond_orders_from_molecules_duplicates(pb_mols):
         if len(set(map(Molecule.to_smiles, pb_mols))) < len(pb_mols):
             raise ValueError(
                 "At least two user-provided fractional bond order "
@@ -2486,7 +2486,7 @@ class ParameterHandler(_ParameterAttributeHandler):
             )
 
     @staticmethod
-    def _assign_partial_bond_orders_from_molecules(topology, pbo_mols):
+    def assign_partial_bond_orders_from_molecules(topology, pbo_mols):
         # for each reference molecule in our topology, we'll walk through the provided partial bond order molecules
         # if we find a match, we'll apply the partial bond orders and skip to the next molecule
         for ref_mol in topology.reference_molecules:
@@ -2718,11 +2718,11 @@ class BondHandler(ParameterHandler):
         if "partial_bond_orders_from_molecules" in kwargs:
             # check whether molecules in the partial_bond_orders_from_molecules
             # list have any duplicates
-            self._check_partial_bond_orders_from_molecules_duplicates(
+            self.check_partial_bond_orders_from_molecules_duplicates(
                 kwargs["partial_bond_orders_from_molecules"]
             )
 
-            self._assign_partial_bond_orders_from_molecules(
+            self.assign_partial_bond_orders_from_molecules(
                 topology, kwargs["partial_bond_orders_from_molecules"]
             )
 
@@ -3027,11 +3027,11 @@ class ProperTorsionHandler(ParameterHandler):
         if "partial_bond_orders_from_molecules" in kwargs:
             # check whether molecules in the partial_bond_orders_from_molecules
             # list have any duplicates
-            self._check_partial_bond_orders_from_molecules_duplicates(
+            self.check_partial_bond_orders_from_molecules_duplicates(
                 kwargs["partial_bond_orders_from_molecules"]
             )
 
-            self._assign_partial_bond_orders_from_molecules(
+            self.assign_partial_bond_orders_from_molecules(
                 topology, kwargs["partial_bond_orders_from_molecules"]
             )
 
