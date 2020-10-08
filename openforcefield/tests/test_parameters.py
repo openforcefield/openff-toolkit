@@ -28,13 +28,14 @@ from openforcefield.typing.engines.smirnoff.parameters import (
     IncompatibleParameterError,
     IndexedParameterAttribute,
     LibraryChargeHandler,
+    NotEnoughPointsForInterpolationError,
     ParameterAttribute,
     ParameterHandler,
     ParameterList,
     ParameterType,
     ProperTorsionHandler,
     SMIRNOFFSpecError,
-    _linear_interpolate_k,
+    _linear_inter_or_extrapolate,
     _ParameterAttributeHandler,
 )
 from openforcefield.utils import IncompatibleUnitError, detach_units
@@ -261,6 +262,66 @@ class TestIndexedParameterAttribute:
         # And insert.
         my_par.attr_indexed.insert(5, "10")
         assert my_par.attr_indexed[5] == 10
+
+class TestInterpolation:
+    """Test method(s) that are used for functionality like fractional bond order-dependent parameter interpolation"""
+    @pytest.mark.parametrize(
+        ("fractional_bond_order", "k_interpolated"),
+        [(1.6, 1.48), (0.7, 0.76), (2.3, 2.04)],
+    )
+    def test_linear_inter_or_extrapolate(self, fractional_bond_order, k_interpolated):
+        """Test that linear interpolation works as expected"""
+        from simtk import unit
+
+        k_bondorder = {
+            1: 1 * unit.kilocalorie_per_mole,
+            2: 1.8 * unit.kilocalorie_per_mole,
+        }
+
+        k = _linear_inter_or_extrapolate(k_bondorder, fractional_bond_order)
+        assert_almost_equal(k / k.unit, k_interpolated)
+
+    def test_linear_inter_or_extrapolate_one_point(self):
+        """Test that linear interpolation raises an error if attempted with just one point"""
+        from simtk import unit
+
+        k_bondorder = {
+            2: 1.8 * unit.kilocalorie_per_mole,
+        }
+        with pytest.raises(NotEnoughPointsForInterpolationError) as excinfo:
+            k = _linear_inter_or_extrapolate(k_bondorder, 1)
+
+    @pytest.mark.parametrize(
+        ("fractional_bond_order", "k_interpolated"),
+        [(1.6, 1.48), (0.7, 0.76), (2.3, 2.01), (3.1, 2.57)],
+    )
+    def test_linear_inter_or_extrapolate_3_terms(self, fractional_bond_order, k_interpolated):
+        """Test that linear interpolation works as expected for three terms"""
+        from simtk import unit
+
+        k_bondorder = {
+            1: 1 * unit.kilocalorie_per_mole,
+            2: 1.8 * unit.kilocalorie_per_mole,
+            3: 2.5 * unit.kilocalorie_per_mole,
+        }
+
+        k = _linear_inter_or_extrapolate(k_bondorder, fractional_bond_order)
+        assert_almost_equal(k / k.unit, k_interpolated)
+
+    def test_linear_inter_or_extrapolate_below_zero(self):
+        """Test that linear interpolation does not error if resulting k less than 0"""
+        from simtk import unit
+
+        k_bondorder = {
+            1: 1 * unit.kilocalorie_per_mole,
+            2: 2.3 * unit.kilocalorie_per_mole,
+        }
+
+        fractional_bond_order = 0.2
+        k = _linear_inter_or_extrapolate(k_bondorder, fractional_bond_order)
+
+        assert k / k.unit < 0
+
 
 
 class TestParameterAttributeHandler:
@@ -582,11 +643,31 @@ class TestParameterHandler:
             ph = ParameterHandler(version="0.1")
 
     def test_supported_version_range(self):
-        raise NotImplementedError()
+        """
+        Ensure that version values in various formats can be correctly parsed and validated
+        """
+        class MyPHSubclass(ParameterHandler):
+            _MIN_SUPPORTED_SECTION_VERSION = 0.3
+            _MAX_SUPPORTED_SECTION_VERSION = 2
 
-    def test_write_same_version_as_was_read(self):
-        raise NotImplementedError()
+        with pytest.raises(SMIRNOFFVersionError) as excinfo:
+            my_ph = MyPHSubclass(version=0.1)
+        my_ph = MyPHSubclass(version=0.3)
+        my_ph = MyPHSubclass(version=1)
+        my_ph = MyPHSubclass(version="1.9")
+        my_ph = MyPHSubclass(version=2.0)
+        with pytest.raises(SMIRNOFFVersionError) as excinfo:
+            my_ph = MyPHSubclass(version=2.1)
 
+
+    def test_write_same_version_as_was_set(self):
+        """Ensure that a ParameterHandler remembers the version that was set when it was initialized. """
+        class MyPHSubclass(ParameterHandler):
+            _MIN_SUPPORTED_SECTION_VERSION = 0.3
+            _MAX_SUPPORTED_SECTION_VERSION = 2
+
+        my_ph = MyPHSubclass(version=1.234)
+        assert my_ph.to_dict()['version'] == 1.234
 
 
     def test_add_delete_cosmetic_attributes(self):
@@ -1297,17 +1378,31 @@ class TestBondHandler:
             2: 1.3 * unit.angstrom,
         }
 
-        k = _linear_interpolate_k(k_bondorder, fractional_bond_order)
-        length = _linear_interpolate_k(length_bondorder, fractional_bond_order)
+        k = _linear_inter_or_extrapolate(k_bondorder, fractional_bond_order)
+        length = _linear_inter_or_extrapolate(length_bondorder, fractional_bond_order)
         assert_almost_equal(k / k.unit, k_interpolated, 1)
         assert_almost_equal(length / length.unit, length_interpolated, 2)
 
     def test_different_defaults_03_04(self):
-        """Ensure that the 0.3 version's default fractional_bondorder_method is None and the 0.4's is AM1-Wiberg"""
+        """Ensure that the 0.3 and 0.4 versions' defaults are correctly set"""
         bh = BondHandler(version=0.3)
         assert bh.fractional_bondorder_method == 'none'
+        assert bh.potential == 'harmonic'
         bh2 = BondHandler(version=0.4)
         assert bh2.fractional_bondorder_method == 'AM1-Wiberg'
+        assert bh2.potential == '(k/2)*(r-length)^2'
+
+    def test_harmonic_potentials_are_compatible(self):
+        """
+        Ensure that handlers with potential ="harmonic" evaluate as compatible with handlers with potential="(k/2)*(r-length)^2"
+        """
+        bh1 = BondHandler(skip_version_check=True)
+        bh2 = BondHandler(skip_version_check=True)
+        bh1.potential = "harmonic"
+        bh2.potential = "(k/2)*(r-length)^2"
+        # This comparison should pass, since the potentials defined above are compatible
+        bh1.check_handler_compatibility(bh2)
+
 
 class TestProperTorsionType:
     """Tests for the ProperTorsionType class."""
@@ -1598,53 +1693,6 @@ class TestProperTorsionHandler:
         ph1 = ImproperTorsionHandler(
             potential="k*(1+cos(periodicity*theta-phase))", skip_version_check=True
         )
-
-    @pytest.mark.parametrize(
-        ("fractional_bond_order", "k_interpolated"),
-        [(1.6, 1.48), (0.7, 0.76), (2.3, 2.04)],
-    )
-    def test_linear_interpolate_k(self, fractional_bond_order, k_interpolated):
-        """Test that linear interpolation works as expected"""
-        from simtk import unit
-
-        k_bondorder = {
-            1: 1 * unit.kilocalorie_per_mole,
-            2: 1.8 * unit.kilocalorie_per_mole,
-        }
-
-        k = _linear_interpolate_k(k_bondorder, fractional_bond_order)
-        assert_almost_equal(k / k.unit, k_interpolated)
-
-    @pytest.mark.parametrize(
-        ("fractional_bond_order", "k_interpolated"),
-        [(1.6, 1.48), (0.7, 0.76), (2.3, 2.01), (3.1, 2.57)],
-    )
-    def test_linear_interpolate_k_3_terms(self, fractional_bond_order, k_interpolated):
-        """Test that linear interpolation works as expected for three terms"""
-        from simtk import unit
-
-        k_bondorder = {
-            1: 1 * unit.kilocalorie_per_mole,
-            2: 1.8 * unit.kilocalorie_per_mole,
-            3: 2.5 * unit.kilocalorie_per_mole,
-        }
-
-        k = _linear_interpolate_k(k_bondorder, fractional_bond_order)
-        assert_almost_equal(k / k.unit, k_interpolated)
-
-    def test_linear_interpolate_k_below_zero(self):
-        """Test that linear interpolation does not error if resulting k less than 0"""
-        from simtk import unit
-
-        k_bondorder = {
-            1: 1 * unit.kilocalorie_per_mole,
-            2: 2.3 * unit.kilocalorie_per_mole,
-        }
-
-        fractional_bond_order = 0.2
-        k = _linear_interpolate_k(k_bondorder, fractional_bond_order)
-
-        assert k / k.unit < 0
 
 
 class TestLibraryChargeHandler:

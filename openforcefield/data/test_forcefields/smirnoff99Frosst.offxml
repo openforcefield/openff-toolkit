@@ -9,7 +9,7 @@
         <!-- https://github.com/openforcefield/smirnoff99Frosst/                                         -->
         <!-- If you absolutely must refer to this file in scholarly work, indicate the file name and     --> 
         <!-- Open Force Field Toolkit version that was used                                              -->
-       <Bonds version="0.4" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
+    <Bonds version="0.4" potential="(k/2)*(r-length)^2">
 		<Bond smirks="[#6X4:1]-[#6X4:2]" length="1.526 * angstrom" k="620.0 * angstrom**-2 * mole**-1 * kilocalorie" id="b1"></Bond>
 		<Bond smirks="[#6X4:1]-[#6X3:2]" length="1.51 * angstrom" k="634.0 * angstrom**-2 * mole**-1 * kilocalorie" id="b2"></Bond>
 		<Bond smirks="[#6X4:1]-[#6X3:2]=[#8X1+0]" length="1.522 * angstrom" k="634.0 * angstrom**-2 * mole**-1 * kilocalorie" id="b3"></Bond>

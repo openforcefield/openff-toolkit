@@ -32,6 +32,7 @@ from openforcefield.tests.utils import (
 from openforcefield.topology import Molecule, Topology
 from openforcefield.typing.engines.smirnoff import (
     ForceField,
+    FractionalBondOrderInterpolationMethodUnsupportedError,
     IncompatibleParameterError,
     ParameterHandler,
     SMIRNOFFAromaticityError,
@@ -3380,8 +3381,8 @@ class TestForceFieldParameterAssignment:
 
         forcefield = ForceField("test_forcefields/smirnoff99Frosst.offxml", xml_ff_bo)
 
-        omm_system = forcefield.create_openmm_system(top)
-        mod_omm_system = forcefield.create_openmm_system(mod_top)
+        omm_system, omm_sys_top = forcefield.create_openmm_system(top, return_topology=True)
+        mod_omm_system, mod_omm_sys_top = forcefield.create_openmm_system(mod_top, return_topology=True)
 
         default_bond_force = [
             f for f in omm_system.getForces() if isinstance(f, openmm.HarmonicBondForce)
@@ -3397,47 +3398,41 @@ class TestForceFieldParameterAssignment:
                 idx
             ) == mod_bond_force.getBondParameters(idx)
 
-    @requires_openeye
+        for bond1, bond2 in zip(omm_sys_top.topology_bonds, mod_omm_sys_top.topology_bonds):
+            assert bond1.bond.fractional_bond_order == bond2.bond.fractional_bond_order
+
     @pytest.mark.parametrize(
         (
             "get_molecule",
             "k_torsion_interpolated",
             "k_bond_interpolated",
-            "bond_length_interpolated",
+            "length_bond_interpolated",
             "central_atoms",
         ),
         [
-            (create_ethanol, 4.953856, 42208.5401, 1.40054, (1, 2)),
-            (create_reversed_ethanol, 4.953856, 42208.5401, 1.40054, (7, 6)),
+            (create_ethanol, 4.953856, 44375.504, 0.13770, (1, 2)),
+            (create_reversed_ethanol, 4.953856, 44375.504, 0.13770, (7, 6)),
         ],
     )
-    def test_fractional_bondorder(
+    def test_fractional_bondorder_from_molecule(
         self,
         get_molecule,
         k_torsion_interpolated,
         k_bond_interpolated,
-        bond_length_interpolated,
+        length_bond_interpolated,
         central_atoms,
     ):
-        """Test the fractional bond orders are used to interpolate k values as we expect
-        Until toolkit-specific differences in fractional bond order generation (for harmonic bond forces) are handled,
-        this test is pinned to using OpenEye.
+        """Test the fractional bond orders are used to interpolate k and length values as we expect
 
-        Values for torsion parameters are inferred from the bond order specified in the input molecule (1.23) but
-        values for bond parameters are currently interpolated from the bond orders that are always re-computed.
-        a bond order of 0.9945832744 via OpenEye. This test currently relies on partial_bond_orders_from_molecules,
-        and thereforce, the bond interpolation is skipped here. In a subsequent feature, these behaviors will be
-        unified, and, then, this test should be updated to reflect that.
+        Values for bond and torsion parameters are inferred from the bond order specified in the input molecule (1.23)
 
         Parameter   | SMIRNOFF unit | OpenMM unit   | param values at bond orders 1, 2  | used bond order   | value in OpenMM force
-        bond k      kcal/mol/A**2   kJ/mol/nm**2    101, 123                            SKIPPED             42208.540
-        bond length A               nm              1.4, 1.3                            SKIPPED             0.140054
-        torsion k   kcal            kj              1, 1.8                              1.23                4.953856
+        bond k        kcal/mol/A**2   kJ/mol/nm**2    101, 123                            1.23                44375.504
+        bond length   A               nm              1.4, 1.3                            1.23                0.1377
+        torsion k     kcal            kj              1, 1.8                              1.23                4.953856
 
         See test_fractional_bondorder_calculated_openeye test_fractional_bondorder_calculated_rdkit for
         how the bond orders are obtained.
-
-        TODO: Update this behavior when partial_bond_orders_from_molecules is added to bond interpolation
         """
         mol = get_molecule()
         forcefield = ForceField("test_forcefields/smirnoff99Frosst.offxml", xml_ff_bo)
@@ -3449,6 +3444,28 @@ class TestForceFieldParameterAssignment:
             partial_bond_orders_from_molecules=[mol],
         )
 
+        # Verify that the assigned bond parameters were correctly interpolated
+        off_bond_force = [
+            force
+            for force in omm_system.getForces()
+            if isinstance(force, openmm.HarmonicBondForce)
+        ][0]
+
+        for idx in range(off_bond_force.getNumBonds()):
+            params = off_bond_force.getBondParameters(idx)
+
+            atom1, atom2 = params[0], params[1]
+            atom1_mol, atom2_mol = central_atoms
+
+            if ((atom1 == atom1_mol) and (atom2 == atom2_mol)) or (
+                (atom1 == atom2_mol) and (atom2 == atom1_mol)
+            ):
+                k = params[-1]
+                length = params[-2]
+                assert_almost_equal(k / k.unit, k_bond_interpolated)
+                assert_almost_equal(length / length.unit, length_bond_interpolated)
+
+        # Verify that the assigned torsion parameters were correctly interpolated
         off_torsion_force = [
             force
             for force in omm_system.getForces()
@@ -3556,7 +3573,7 @@ class TestForceFieldParameterAssignment:
         expectations.
 
         This test mirrors test_fractional_bondorder but uses RDKit to re-compute the bond orders
-        on input molecules (and thereforce disregards the bond orders on them).
+        on input molecules (and therefore disregards the bond orders on them).
 
         Note that RDKitToolkitWrapper does not provide a method for assigning fractional bond orders;
         instead, AmberTools is used in the case that OpenEye is not installed.
@@ -3667,19 +3684,13 @@ class TestForceFieldParameterAssignment:
         expectations.
 
         This test mirrors test_fractional_bondorder but uses OpenEye to re-compute the bond orders
-        on input molecules (and thereforce disregards the bond orders on them).
+        on input molecules (and therefore disregards the bond orders on them).
 
         To obtain the bond order:
         >>> mol = create_ethanol()
         >>> OpenEyeToolkitWrapper().assign_fractional_bond_orders(mol)
         >>> mol.get_bond_between(1, 2).fractional_bond_order
         0.9945832743995565
-
-        TODO: Update this when partial_bond_orders_from_molecules is added to bond interpolation,
-            and move the behavior currently in test_fractional_bondorder to here. Currently, that
-            test directly capture what this test intends to capture, since re-computing bond
-            orders is default behavior and that test pints to OpenEye.
-
         """
 
         toolkit_registry = ToolkitRegistry(toolkit_precedence=[OpenEyeToolkitWrapper])
@@ -3751,6 +3762,23 @@ class TestForceFieldParameterAssignment:
 
                 length = params[-2]
                 assert_almost_equal(length / length.unit, bond_length_interpolated, 0)
+
+    def test_fractional_bondorder_invalid_interpolation_method(self):
+        """
+        Ensure that requesting an invalid interpolation method leads to a
+        FractionalBondOrderInterpolationMethodUnsupportedError
+        """
+        mol = create_ethanol()
+
+        forcefield = ForceField("test_forcefields/smirnoff99Frosst.offxml", xml_ff_bo)
+        forcefield.get_parameter_handler('ProperTorsions')._fractional_bondorder_interpolation = 'invalid method name'
+        topology = Topology.from_molecules([mol])
+
+        with pytest.raises(FractionalBondOrderInterpolationMethodUnsupportedError) as excinfo:
+            omm_system, ret_top = forcefield.create_openmm_system(
+                topology,
+                charge_from_molecules=[mol],
+            )
 
 
 class TestSmirnoffVersionConverter:
