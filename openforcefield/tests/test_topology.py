@@ -788,7 +788,7 @@ class TestTopology(TestCase):
             get_data_file_path("systems/test_systems/1_ethanol.pdb"), "CCO"
         )
         positions = mol.conformers[0]
-        # Make up coordinates for the second ethanol by translating the first by 10 angstroms 
+        # Make up coordinates for the second ethanol by translating the first by 10 angstroms
         # (note that this will still be a gibberish conformation, since the atom order in the second molecule is different)
         positions = np.concatenate([positions, positions + 10.0 * unit.angstrom])
         element_order = []
