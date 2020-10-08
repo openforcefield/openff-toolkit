@@ -12,6 +12,10 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 
 New features
 """"""""""""
+- `PR #705 <https://github.com/openforcefield/openforcefield/pull/705>`_: Adds interpolation
+  based on fractional bond orders for harmonic bonds. This includes interpolation for both
+  the force constant ``k`` and/or equilibrium bond distance ``length``. This is accompanied by a
+  bump in the ``<Bonds>`` section of the SMIRNOFF spec (but not the entire spec).
 - `PR #718 <https://github.com/openforcefield/openforcefield/pull/718>`_: Adds ``.rings`` and
   ``.n_rings`` to :py:class:`Molecule <openforcefield.topology.Molecule>` and ``.is_in_ring``
   to :py:class:`Atom <openforcefield.topology.molecule.Atom>` and
@@ -23,6 +27,13 @@ Bugfixes
   incidentally being used in the conformer generation step of
   :py:class:`AmberToolsToolkitWrapper.assign_fractional_bond_orders
   <openforcefield.utils.toolkits.AmberToolsToolkitWrapper.assign_wiberg_bond_orders>`.
+
+Behavior changed
+""""""""""""""""
+- `PR #705 <https://github.com/openforcefield/openforcefield/pull/705>`_: Changes the default values
+  in the ``<Bonds>`` section of the SMIRNOFF spec to ``fractional_bondorder_method="AM1-Wiberg"``
+  and ``potential="(k/2)*(r-length)^2"``, which is backwards-compatible with and equivalent to
+  ``potential="harmonic"``.
 
 0.7.2 - Bugfix and minor feature release
 ----------------------------------------
