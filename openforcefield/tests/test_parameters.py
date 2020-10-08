@@ -1603,13 +1603,14 @@ class TestVirtualSiteHandler:
             smirks="[#6:1]-[#7:2]",
             name="EP",
             distance=1.0 * unit.angstrom,
-            chargeincrement=[1.0, 1.0] * unit.elementary_charge,
+            charge_increment=[1.0, 1.0] * unit.elementary_charge,
             sigma=0.0 * unit.angstrom,
             epsilon=1.0 * unit.kilocalorie_per_mole,
             match="once",
         )
 
-        names = ["type", "distance", "chargeincrement", "sigma", "epsilon"]
+        # sigma and epsilon are optional
+        names = ["type", "distance", "charge_increment"]
 
         self._test_complete_attributes(
             valid_kwargs, names, VirtualSiteHandler.VirtualSiteBondChargeType
@@ -1629,21 +1630,21 @@ class TestVirtualSiteHandler:
             smirks="[#6:1]-[#7:2]-[#8:3]",
             name="EP",
             distance=1.0 * unit.angstrom,
-            chargeincrement=[1.0, 1.0, 1.0] * unit.elementary_charge,
+            charge_increment=[1.0, 1.0, 1.0] * unit.elementary_charge,
             outOfPlaneAngle=30 * unit.degree,
             inPlaneAngle=30 * unit.degree,
             sigma=0.0 * unit.angstrom,
             epsilon=1.0 * unit.kilocalorie_per_mole,
             match="once",
         )
+
+        # sigma and epsilon are optional
         names = [
             "type",
             "distance",
-            "chargeincrement",
+            "charge_increment",
             "outOfPlaneAngle",
             "inPlaneAngle",
-            "sigma",
-            "epsilon",
         ]
 
         self._test_complete_attributes(
@@ -1664,19 +1665,19 @@ class TestVirtualSiteHandler:
             smirks="[#6:1]-[#7:2]-[#8:3]",
             name="EP",
             distance=1.0 * unit.angstrom,
-            chargeincrement=[1.0, 1.0, 1.0] * unit.elementary_charge,
+            charge_increment=[1.0, 1.0, 1.0] * unit.elementary_charge,
             outOfPlaneAngle=30 * unit.degree,
             sigma=0.0 * unit.angstrom,
             epsilon=1.0 * unit.kilocalorie_per_mole,
             match="once",
         )
+
+        # sigma and epsilon are optional
         names = [
             "type",
             "distance",
-            "chargeincrement",
+            "charge_increment",
             "outOfPlaneAngle",
-            "sigma",
-            "epsilon",
         ]
 
         self._test_complete_attributes(
@@ -1697,17 +1698,17 @@ class TestVirtualSiteHandler:
             smirks="[#6:1]-[#7:2](-[#8:3])-[#8:4]",
             name="EP",
             distance=1.0 * unit.angstrom,
-            chargeincrement=[1.0, 1.0, 1.0, 1.0] * unit.elementary_charge,
+            charge_increment=[1.0, 1.0, 1.0, 1.0] * unit.elementary_charge,
             sigma=0.0 * unit.angstrom,
             epsilon=1.0 * unit.kilocalorie_per_mole,
             match="once",
         )
+
+        # sigma and epsilon are optional
         names = [
             "type",
             "distance",
-            "sigma",
-            "epsilon",
-            "chargeincrement",
+            "charge_increment",
         ]
 
         self._test_complete_attributes(

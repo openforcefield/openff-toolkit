@@ -40,6 +40,7 @@ __all__ = [
 # GLOBAL IMPORTS
 # =============================================================================================
 
+import abc
 import copy
 import functools
 import inspect
@@ -4010,7 +4011,7 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
             # We ignore the atom index order in the keys here, since they have been
             # sorted in order to deduplicate matches and let us identify when one parameter overwrites another
             # in the SMIRNOFF parameter hierarchy. Since they are sorted, the position of the atom index
-            # in the key tuple DOES NOT correspond to the appropriate chargeincrementX value.
+            # in the key tuple DOES NOT correspond to the appropriate charge_incrementX value.
             # Instead, the correct ordering of the match indices is found in
             # charge_increment_match.environment_match.topology_atom_indices
             for (_, charge_increment_match) in charge_increment_matches.items():
@@ -4642,7 +4643,7 @@ class VirtualSiteHandler(_NonbondedHandler):
 
             return cls(**attrs)
 
-    class VirtualSiteType(vdWHandler.vdWType):
+    class VirtualSiteType(vdWHandler.vdWType, abc.ABC):
         """A SMIRNOFF virtual site base type
 
         .. warning :: This API is experimental and subject to change.
@@ -4651,10 +4652,15 @@ class VirtualSiteHandler(_NonbondedHandler):
         # The attributes that we expect in the OFFXML
         name = ParameterAttribute(default="EP", converter=str)
         distance = ParameterAttribute(unit=unit.angstrom)
-        chargeincrement = IndexedParameterAttribute(unit=unit.elementary_charge)
+        charge_increment = IndexedParameterAttribute(unit=unit.elementary_charge)
         # Type has a delayed converter/validator to support a plugin-style enable/disable system
         type = ParameterAttribute(converter=str)
         match = ParameterAttribute(default="all_permutations")  # has custom converter
+        epsilon = ParameterAttribute(
+            default=0.0 * unit.kilocalorie_per_mole, unit=unit.kilocalorie_per_mole
+        )
+        sigma = ParameterAttribute(default=0.0 * unit.angstrom, unit=unit.angstrom)
+        rmin_half = ParameterAttribute(default=None, unit=unit.angstrom)
 
         # Here we define the default sorting behavior if we need to sort the
         # atom key into a canonical ordering
@@ -4674,6 +4680,23 @@ class VirtualSiteHandler(_NonbondedHandler):
             .. warning :: This API is experimental and subject to change.
             """
             return cls._vsite_type
+
+        def __init__(self, **kwargs):
+            """
+            Create a virtual site parameter type
+            """
+
+            # Need to create default vdW parameters if not specified, since they are optional
+            sigma = kwargs.get("sigma", None)
+            rmin_half = kwargs.get("rmin_half", None)
+
+            if (sigma is None) and (rmin_half is None):
+                kwargs["sigma"] = 0.0 * unit.angstrom
+
+            if kwargs.get("epsilon", None) is None:
+                kwargs["epsilon"] = 0.0 * unit.kilocalorie_per_mole
+
+            super().__init__(**kwargs)
 
         # @type.converter
         # def type(self, attr, vsite_type):
@@ -4804,8 +4827,7 @@ class VirtualSiteHandler(_NonbondedHandler):
 
             base_args = {
                 "name": self.name,
-                "charge_increments": self.chargeincrement,
-                "weights": None,
+                "charge_increments": self.charge_increment,
                 "epsilon": self.epsilon,
                 "sigma": self.sigma,
                 "rmin_half": self.rmin_half,
@@ -5192,6 +5214,12 @@ class VirtualSiteHandler(_NonbondedHandler):
         IncompatibleParameterError if handler_kwargs are incompatible with
         existing parameters.
         """
+        string_attrs_to_compare = [
+            "exclusion_policy",
+        ]
+        self._check_attributes_are_equal(
+            other_handler, identical_attrs=string_attrs_to_compare
+        )
 
     def find_matches(self, entity, expand_permutations=True):
         """Find the virtual sites in the topology/molecule matched by a
@@ -5216,13 +5244,13 @@ class VirtualSiteHandler(_NonbondedHandler):
             expand_permutations=expand_permutations,
         )
 
-    def _apply_chargeincrement(self, force, atom_key, chargeincrement):
-        vsite_charge = chargeincrement[0]
+    def _apply_charge_increment(self, force, atom_key, charge_increment):
+        vsite_charge = charge_increment[0]
         vsite_charge *= 0.0
         for charge_i, atom in enumerate(atom_key):
             o_charge, o_sigma, o_epsilon = force.getParticleParameters(atom)
-            vsite_charge -= chargeincrement[charge_i]
-            o_charge += chargeincrement[charge_i]
+            vsite_charge -= charge_increment[charge_i]
+            o_charge += charge_increment[charge_i]
             force.setParticleParameters(atom, o_charge, o_sigma, o_epsilon)
         return vsite_charge
 
@@ -5377,7 +5405,7 @@ class VirtualSiteHandler(_NonbondedHandler):
             atom_key = [top_mol.atom_start_topology_index + i for i in atom_key]
 
             omm_vsite = vsite.get_openmm_virtual_site(atom_key)
-            vsite_q = self._apply_chargeincrement(
+            vsite_q = self._apply_charge_increment(
                 force, atom_key, vsite.charge_increments
             )
 
@@ -5402,7 +5430,7 @@ class VirtualSiteHandler(_NonbondedHandler):
             force.addParticle(vsite_q, sigma, ljtype.epsilon)
 
             logger.debug(f"Added virtual site particle with charge {vsite_q}")
-            logger.debug(f"  chargeincrements: {vsite.charge_increments}")
+            logger.debug(f"  charge_increments: {vsite.charge_increments}")
 
             # add exclusion to the "parent" atom of the vsite
             if policy.value >= self._ExclusionPolicy.MINIMAL.value:

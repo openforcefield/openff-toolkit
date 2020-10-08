@@ -937,19 +937,16 @@ class BondChargeVirtualSite(VirtualSite):
         """The distance parameter of the virtual site"""
         return self._distance
 
-    def get_openmm_virtual_site(self, atoms, mass=None):
+    def get_openmm_virtual_site(self, atoms):
         from simtk.openmm import LocalCoordinatesSite
 
         originwt = np.zeros_like(atoms)
-        originwt[0] = 1.0  # first atom is origin (where the hole should be)
+        originwt[0] = 1.0  # first atom is origin
 
-        xdir = np.full(len(atoms), 1.0 / (originwt.shape[0] - 1))  # must == 1
-        xdir[0] = -1.0  # total sum == 0
+        xdir = np.zeros_like(atoms)
 
-        # point towards COM (use mass weights instead of 1/N weights)
-        if mass:
-            mass = np.asarray(mass)
-            xdir[1:] = mass[1:] / mass[1:].sum()
+        xdir[0] = -1.0  # total sum == 0; x points from atom 1 to 2
+        xdir[1] = 1.0  #
 
         # Seems ydir and zdir don't matter for BondCharge, since
         # from openmm, zdir = cross(xdir, ydir) and then ydir set to
@@ -1099,7 +1096,7 @@ class MonovalentLonePairVirtualSite(VirtualSite):
         return self._out_of_plane_angle
 
     def get_openmm_virtual_site(self, atoms, mass=None):
-        assert len(atoms) == 3
+        assert len(atoms) >= 3
         from simtk.openmm import LocalCoordinatesSite
 
         originwt = np.zeros_like(atoms)
@@ -1221,7 +1218,7 @@ class DivalentLonePairVirtualSite(VirtualSite):
         return self._out_of_plane_angle
 
     def get_openmm_virtual_site(self, atoms, mass=None):
-        assert len(atoms) == 3
+        assert len(atoms) >= 3
         from simtk.openmm import LocalCoordinatesSite
 
         originwt = np.zeros_like(atoms)
@@ -1331,7 +1328,7 @@ class TrivalentLonePairVirtualSite(VirtualSite):
         return self._distance
 
     def get_openmm_virtual_site(self, atoms, mass=None):
-        assert len(atoms) == 4
+        assert len(atoms) >= 4
         from simtk.openmm import LocalCoordinatesSite
 
         originwt = np.zeros_like(atoms)
