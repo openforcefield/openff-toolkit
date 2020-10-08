@@ -618,6 +618,208 @@ class TestTopology(TestCase):
             assert bond.bond_order == bond_copy.bond_order
             assert bond.bond.is_aromatic == bond_copy.bond.is_aromatic
 
+    @requires_rdkit
+    def test_to_file_vsites(self):
+        """
+        Checks that Topology.to_file() doesn't write vsites
+        """
+        from tempfile import NamedTemporaryFile
+
+        from openforcefield.topology import Molecule, Topology
+
+        mol = Molecule.from_pdb_and_smiles(
+            get_data_file_path("systems/test_systems/1_ethanol.pdb"), "CCO"
+        )
+        carbons = [atom for atom in mol.atoms if atom.atomic_number == 6]
+        positions = mol.conformers[0]
+        mol.add_bond_charge_virtual_site(
+            (carbons[0], carbons[1]),
+            0.1 * unit.angstrom,
+            charge_increments=[0.1, 0.05] * unit.elementary_charge,
+        )
+        topology = Topology()
+        topology.add_molecule(mol)
+        count = 0
+        # The file should be printed out with 9 atoms and 0 virtualsites, so we check to ensure that thtere are only 9 HETATM entries
+        with NamedTemporaryFile(suffix=".pdb") as iofile:
+            topology.to_file(iofile.name, positions)
+            data = open(iofile.name).readlines()
+            for line in data:
+                if line.startswith("HETATM"):
+                    count = count + 1
+        assert count == 9
+
+    @requires_rdkit
+    def test_to_file_units_check(self):
+        """
+        Checks whether writing pdb with unitless positions, Angstrom positions,
+        nanometer positions, result in the same output
+        """
+        import filecmp
+        from tempfile import NamedTemporaryFile
+
+        from simtk.unit import nanometer
+
+        from openforcefield.tests.test_forcefield import create_ethanol
+        from openforcefield.topology import Molecule, Topology
+
+        topology = Topology()
+        mol = Molecule.from_pdb_and_smiles(
+            get_data_file_path("systems/test_systems/1_ethanol.pdb"), "CCO"
+        )
+        topology.add_molecule(mol)
+        positions_angstrom = mol.conformers[0]
+        count = 1
+        # Write the molecule to PDB and ensure that the X coordinate of the first atom is 10.172
+        with NamedTemporaryFile(suffix=".pdb") as iofile:
+            topology.to_file(iofile.name, positions_angstrom)
+            data = open(iofile.name).readlines()
+            for line in data:
+                if line.startswith("HETATM") and count == 1:
+                    count = count + 1
+                    coord = line.split()[-6]
+        assert coord == "10.172"
+
+        # Do the same check, but feed in equivalent positions measured in nanometers and ensure the PDB is still the same
+        count = 1
+        coord = None
+        with NamedTemporaryFile(suffix=".pdb") as iofile:
+            positions_nanometer = positions_angstrom.in_units_of(nanometer)
+            topology.to_file(iofile.name, positions_nanometer)
+            data = open(iofile.name).readlines()
+            for line in data:
+                if line.startswith("HETATM") and count == 1:
+                    count = count + 1
+                    coord = line.split()[-6]
+        assert coord == "10.172"
+
+        count = 1
+        coord = "abc"
+        with NamedTemporaryFile(suffix=".pdb") as iofile:
+            positions_unitless = positions_angstrom._value
+            topology.to_file(iofile.name, positions_unitless)
+            data = open(iofile.name).readlines()
+            for line in data:
+                if line.startswith("HETATM") and count == 1:
+                    count = count + 1
+                    coord = line.split()[-6]
+        assert coord == "10.172"
+
+    @requires_rdkit
+    def test_to_file_fileformat_lettercase(self):
+        """
+        Checks if fileformat specifier is indpendent of upper/lowercase
+        """
+        import os
+        from tempfile import NamedTemporaryFile
+
+        from openforcefield.tests.test_forcefield import create_ethanol
+        from openforcefield.topology import Molecule, Topology
+
+        topology = Topology()
+        mol = Molecule.from_pdb_and_smiles(
+            get_data_file_path("systems/test_systems/1_ethanol.pdb"), "CCO"
+        )
+        topology.add_molecule(mol)
+        positions = mol.conformers[0]
+        count = 1
+        with NamedTemporaryFile(suffix=".pdb") as iofile:
+            topology.to_file(iofile.name, positions, file_format="pDb")
+            data = open(iofile.name).readlines()
+            for line in data:
+                if line.startswith("HETATM") and count == 1:
+                    count = count + 1
+                    coord = line.split()[-6]
+        assert coord == "10.172"
+
+    @requires_rdkit
+    def test_to_file_fileformat_invalid(self):
+        """
+        Checks for invalid file format
+        """
+        from openforcefield.tests.test_forcefield import create_ethanol
+        from openforcefield.topology import Molecule, Topology
+
+        topology = Topology()
+        mol = Molecule.from_pdb_and_smiles(
+            get_data_file_path("systems/test_systems/1_ethanol.pdb"), "CCO"
+        )
+        topology.add_molecule(mol)
+        positions = mol.conformers[0]
+        fname = "ethanol_file.pdb"
+        with pytest.raises(NotImplementedError):
+            topology.to_file(fname, positions, file_format="AbC")
+
+    def test_to_file_no_molecules(self):
+        """
+        Checks if Topology.to_file() writes a file with no topology and no coordinates
+        """
+        from tempfile import NamedTemporaryFile
+
+        from openforcefield.topology import Topology
+
+        topology = Topology()
+        lines = []
+        with NamedTemporaryFile(suffix=".pdb") as iofile:
+            topology.to_file(iofile.name, [])
+            data = open(iofile.name).readlines()
+            for line in data:
+                lines.append(line.split())
+        assert lines[1] == ["END"]
+
+    @requires_rdkit
+    def test_to_file_multi_molecule_different_order(self):
+        """
+        Checks for the following if Topology.to_write maintains the order of atoms
+         for the same molecule with different indexing
+        """
+        from tempfile import NamedTemporaryFile
+
+        from openforcefield.tests.test_forcefield import (
+            create_ethanol,
+            create_reversed_ethanol,
+        )
+        from openforcefield.topology import Molecule, Topology
+
+        topology = Topology()
+        topology.add_molecule(create_ethanol())
+        topology.add_molecule(create_reversed_ethanol())
+        mol = Molecule.from_pdb_and_smiles(
+            get_data_file_path("systems/test_systems/1_ethanol.pdb"), "CCO"
+        )
+        positions = mol.conformers[0]
+        # Make up coordinates for the second ethanol by translating the first by 10 angstroms
+        # (note that this will still be a gibberish conformation, since the atom order in the second molecule is different)
+        positions = np.concatenate([positions, positions + 10.0 * unit.angstrom])
+        element_order = []
+
+        with NamedTemporaryFile(suffix=".pdb") as iofile:
+            topology.to_file(iofile.name, positions)
+            data = open(iofile.name).readlines()
+            for line in data:
+                if line.startswith("HETATM"):
+                    element_order.append(line.strip()[-1])
+        assert element_order == [
+            "C",
+            "C",
+            "O",
+            "H",
+            "H",
+            "H",
+            "H",
+            "H",
+            "H",
+            "H",
+            "H",
+            "H",
+            "H",
+            "H",
+            "H",
+            "O",
+            "C",
+            "C",
+        ]
+
     @requires_openeye
     def test_from_openmm_duplicate_unique_mol(self):
         """Check that a DuplicateUniqueMoleculeError is raised if we try to pass in two indistinguishably unique mols"""

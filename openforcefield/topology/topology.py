@@ -1851,6 +1851,41 @@ class Topology(Serializable):
             omm_topology.setPeriodicBoxVectors(self.box_vectors)
         return omm_topology
 
+    def to_file(self, filename, positions, file_format="PDB", keepIds=False):
+        """
+        To save a PDB file with coordinates as well as topology from openforcefield topology object
+        Reference: https://github.com/openforcefield/openforcefield/issues/502
+        Note: 1. This doesn't handle virtual sites (they're ignored)
+              2. Atom numbering may not remain same, for example if the atoms in water are numbered as 1001, 1002, 1003,
+                 they would change to 1, 2, 3.
+                 This doesn't affect the topology or coordinates or atom-ordering in anyway
+              3. Same issue with the amino acid names in the pdb file, they are not returned
+
+        Parameters
+        ----------
+        filename : str
+            name of the pdb file to write to
+        positions : n_atoms x 3 numpy array or simtk.unit.Quantity-wrapped n_atoms x 3 iterable
+            Can be an openmm 'quantity' object which has atomic positions as a list of Vec3s along with associated units, otherwise a 3D array of UNITLESS numbers are considered as "Angstroms" by default
+        file_format : str
+            Output file format. Case insensitive. Currently only supported value is "pdb".
+
+        """
+        from simtk.openmm.app import PDBFile
+        from simtk.unit import Quantity, angstroms
+
+        openmm_top = self.to_openmm()
+        if not isinstance(positions, Quantity):
+            positions = positions * angstroms
+
+        file_format = file_format.upper()
+        if file_format != "PDB":
+            raise NotImplementedError("Topology.to_file supports only PDB format")
+
+        # writing to PDB file
+        with open(filename, "w") as outfile:
+            PDBFile.writeFile(openmm_top, positions, outfile, keepIds)
+
     @staticmethod
     def from_mdtraj(mdtraj_topology, unique_molecules=None):
         """
