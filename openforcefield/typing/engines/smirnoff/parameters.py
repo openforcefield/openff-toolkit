@@ -2739,21 +2739,6 @@ class BondHandler(ParameterHandler):
             # Ensure atoms are actually bonded correct pattern in Topology
             self._assert_correct_connectivity(bond_match)
 
-            is_constrained = topology.is_constrained(*topology_atom_indices)
-
-            # Handle constraints.
-            if is_constrained:
-                # Atom pair is constrained; we don't need to add a bond term.
-                skipped_constrained_bonds += 1
-                # Check if we need to add the constraint here to the equilibrium bond length.
-                if is_constrained is True:
-                    # Mark that we have now assigned a specific constraint distance to this constraint.
-                    topology.add_constraint(*topology_atom_indices, length)
-                    # Add the constraint to the System.
-                    system.addConstraint(*topology_atom_indices, length)
-                    # system.addConstraint(*particle_indices, length)
-                continue
-
             # topology.assert_bonded(atoms[0], atoms[1])
             bond_params = bond_match.parameter_type
             match = bond_match.environment_match
@@ -2824,8 +2809,22 @@ class BondHandler(ParameterHandler):
                         )
                     )
 
-            # Add harmonic bond to HarmonicBondForce
-            force.addBond(*topology_atom_indices, length, k)
+            # If this pair of atoms is subject to a constraint, only use the length
+            is_constrained = topology.is_constrained(*topology_atom_indices)
+            if not(is_constrained):
+                # Add harmonic bond to HarmonicBondForce
+                force.addBond(*topology_atom_indices, length, k)
+            else:
+                # Handle constraints.
+                # Atom pair is constrained; we don't need to add a bond term.
+                skipped_constrained_bonds += 1
+                # Check if we need to add the constraint here to the equilibrium bond length.
+                if is_constrained is True:
+                    # Mark that we have now assigned a specific constraint distance to this constraint.
+                    topology.add_constraint(*topology_atom_indices, length)
+                    # Add the constraint to the System.
+                    system.addConstraint(*topology_atom_indices, length)
+                    # system.addConstraint(*particle_indices, length)
 
         logger.info(
             "{} bonds added ({} skipped due to constraints)".format(
