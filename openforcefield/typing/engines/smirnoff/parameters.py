@@ -2713,6 +2713,19 @@ class BondHandler(ParameterHandler):
         else:
             force = existing[0]
 
+        # Do not trust previously-calculated partial bond orders, since we don't know
+        # what method was used to assign them
+        # TODO: Jeff tried implementing a way to mark how bond orders were assigned on the
+        # topology, but realized that there's already a hierarchy of assignment
+        # methods. That is, if a molecule was assigned using PBOs_from_mols, then
+        # a different fractional bondorder method SHOULD NOT attempt
+        # recalculation, whereas if the previous method was simply DIFFERENT,
+        # then the old results should be erased/cached and overwritten with the
+        # new ones. It will be easier to handle this at the level of caching
+        # the results of molecule.assign_fractional_bond_orders
+        for top_bond in topology.topology_bonds:
+            top_bond.bond.fractional_bond_order = None
+
         # check whether any of the reference molecules in the topology
         # are in the partial_bond_orders_from_molecules list
         if "partial_bond_orders_from_molecules" in kwargs:
@@ -3020,6 +3033,19 @@ class ProperTorsionHandler(ParameterHandler):
             system.addForce(force)
         else:
             force = existing[0]
+
+        # Do not trust previously-calculated partial bond orders, since we don't know
+        # what method was used to assign them
+        # TODO: Jeff tried implementing a way to mark how bond orders were assigned on the
+        # topology, but realized that there's already a hierarchy of assignment
+        # methods. That is, if a molecule was assigned using PBOs_from_mols, then
+        # a different fractional bondorder method SHOULD NOT attempt
+        # recalculation, whereas if the previous method was simply DIFFERENT,
+        # then the old results should be erased/cached and overwritten with the
+        # new ones. It will be easier to handle this at the level of caching
+        # the results of molecule.assign_fractional_bond_orders
+        for top_bond in topology.topology_bonds:
+            top_bond.bond.fractional_bond_order = None
 
         # check whether any of the reference molecules in the topology
         # are in the partial_bond_orders_from_molecules list
@@ -3361,7 +3387,6 @@ class _NonbondedHandler(ParameterHandler):
             The molecule to mark as having charges assigned
         topology : openforcefield.topology.Topology
             The topology to record this information on.
-
         """
         # TODO: Change this to interface with system object instead of topology once we move away from OMM's System
         topology._ref_mol_to_charge_method[ref_mol] = self.__class__
