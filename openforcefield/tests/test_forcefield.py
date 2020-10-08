@@ -3779,7 +3779,9 @@ class TestForceFieldParameterAssignment:
         )
         # allow 1% error in energy difference (default is .001%)
         assert np.allclose(
-            off_ene / unit.kilocalorie_per_mole, ref_ene / unit.kilocalorie_per_mole, rtol=.05
+            off_ene / unit.kilocalorie_per_mole,
+            ref_ene / unit.kilocalorie_per_mole,
+            rtol=0.05,
         )
 
         # skip direct comparison for now because of particle creation and atom
