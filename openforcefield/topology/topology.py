@@ -1764,13 +1764,16 @@ class Topology(Serializable):
 
         Parameters
         ----------
-        openmm_topology : simtk.openmm.app.Topology
-            An OpenMM Topology object
         ensure_unique_atom_names : bool, optional. Default=True
             Whether to check that the molecules in each molecule have
             unique atom names, and regenerate them if not. Note that this
             looks only at molecules, and does not guarantee uniqueness in
             the entire Topology.
+
+        Returns
+        -------
+        openmm_topology : simtk.openmm.app.Topology
+            An OpenMM Topology object
         """
         from simtk.openmm.app import Aromatic, Double, Single
         from simtk.openmm.app import Topology as OMMTopology
