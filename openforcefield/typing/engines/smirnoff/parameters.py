@@ -3512,6 +3512,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
             # TODO: This is an assumption right now, and a bad one. See issue #219
             if topology.box_vectors is None:
                 assert current_nb_method == openmm.NonbondedForce.NoCutoff
+                force.setCutoffDistance(self.cutoff)
                 settings_matched = True
                 # raise IncompatibleParameterError("Electrostatics handler received PME method keyword, but a nonperiodic"
                 #                                  " topology. Use of PME electrostatics requires a periodic topology.")
