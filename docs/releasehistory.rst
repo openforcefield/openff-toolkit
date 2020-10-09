@@ -53,6 +53,7 @@ Finally, the toolkit handles the organization of atoms and virtual sites in a sp
 
 New features
 """"""""""""
+
 - `PR #548 <https://github.com/openforcefield/openforcefield/pull/548>`_: Adds support for the ``VirtualSites`` tag in the SMIRNOFF specification
 
 - `PR #548 <https://github.com/openforcefield/openforcefield/pull/548>`_: Adds ``replace`` and ``all_permutations`` kwarg to
@@ -84,6 +85,11 @@ New features
   - :py:meth:`ImproperDict.key_transform <openforcefield.topology.ImproperDict.key_transform>`
   - :py:meth:`ImproperDict.index_of <openforcefield.topology.ImproperDict.index_of>`
 
+- `PR #705 <https://github.com/openforcefield/openforcefield/pull/705>`_: Adds interpolation
+  based on fractional bond orders for harmonic bonds. This includes interpolation for both
+  the force constant ``k`` and/or equilibrium bond distance ``length``. This is accompanied by a
+  bump in the ``<Bonds>`` section of the SMIRNOFF spec (but not the entire spec).
+
 - `PR #718 <https://github.com/openforcefield/openforcefield/pull/718>`_: Adds ``.rings`` and
   ``.n_rings`` to :py:class:`Molecule <openforcefield.topology.Molecule>` and ``.is_in_ring``
   to :py:class:`Atom <openforcefield.topology.molecule.Atom>` and
@@ -95,6 +101,13 @@ Bugfixes
   incidentally being used in the conformer generation step of
   :py:class:`AmberToolsToolkitWrapper.assign_fractional_bond_orders
   <openforcefield.utils.toolkits.AmberToolsToolkitWrapper.assign_wiberg_bond_orders>`.
+
+Behavior changed
+""""""""""""""""
+- `PR #705 <https://github.com/openforcefield/openforcefield/pull/705>`_: Changes the default values
+  in the ``<Bonds>`` section of the SMIRNOFF spec to ``fractional_bondorder_method="AM1-Wiberg"``
+  and ``potential="(k/2)*(r-length)^2"``, which is backwards-compatible with and equivalent to
+  ``potential="harmonic"``.
 
 Examples added
 """"""""""""""
@@ -139,6 +152,7 @@ Tests added
   - TIP5P water dimer energy and positions
   - Adds tests to for virtual site/particle indexing/counting
 
+=======
 
 0.7.2 - Bugfix and minor feature release
 ----------------------------------------
@@ -200,6 +214,9 @@ Bugfixes
 - `PR #649 <https://github.com/openforcefield/openforcefield/pull/648>`_: Prevents 2020 OE
   toolkit from issuing a warning caused by doing stereo-specific smarts searches on certain
   structures.
+- `PR #724 <https://github.com/openforcefield/openforcefield/pull/724>`_: Closes issue `Issue #502
+  <https://github.com/openforcefield/openforcefield/issues/502>`_ Adding a utility function Topology.to_file() to 
+  write topology and positions to a "PDB" file using openmm backend for pdb file write.
 
 Tests added
 """""""""""
@@ -207,6 +224,8 @@ Tests added
   to code snippets in docs.
 - `PR #715 <https://github.com/openforcefield/openforcefield/pull/715>`_: Adds tests for pdb file writes using OE
   backend.
+- `PR #724 <https://github.com/openforcefield/openforcefield/pull/724>`_: Adds tests for the utility function Topology.to_file().
+  
 
 0.7.1 - OETK2020 Compatibility and Minor Update
 -----------------------------------------------

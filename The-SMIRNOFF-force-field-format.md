@@ -388,9 +388,7 @@ If the `potential` attribute is omitted, it defaults to `harmonic`.
 
 Constrained bonds are handled by a separate `<Constraints>` tag, which can either specify constraint distances or draw them from equilibrium distances specified in `<Bonds>`.
 
-#### Fractional bond orders (EXPERIMENTAL)
-
-.. warning:: This functionality is not yet implemented and will appear in a future version of the toolkit.
+#### Fractional bond orders
 
 Fractional bond orders can be used to allow interpolation of bond parameters.
 For example, these parameters:
@@ -403,17 +401,18 @@ For example, these parameters:
 ```
 can be replaced by a single parameter line by first invoking the `fractional_bondorder_method` attribute to specify a method for computing the fractional bond order and `fractional_bondorder_interpolation` for specifying the procedure for interpolating parameters between specified integral bond orders:
 ```XML
-<Bonds version="0.3" potential="harmonic" fractional_bondorder_method="Wiberg" fractional_bondorder_interpolation="linear">
+<Bonds version="0.3" potential="harmonic" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
     <Bond smirks="[#6X3:1]!#[#6X3:2]" k_bondorder1="820.0*kilocalories_per_mole/angstrom**2" k_bondorder2="1098*kilocalories_per_mole/angstrom**2" length_bondorder1="1.45*angstrom" length_bondorder2="1.35*angstrom"/>
     ...
 ```
 This allows specification of force constants and lengths for bond orders 1 and 2, and then interpolation between those based on the partial bond order.
-* `fractional_bondorder_method` defaults to `none`, but the `Wiberg` method is supported.
+* `fractional_bondorder_method` defaults to `AM1-Wiberg`.
 * `fractional_bondorder_interpolation` defaults to `linear`, which is the only supported scheme for now.
 
-| Bonds section tag version | Tag attributes and default values                                                                           | Required parameter attributes                 | Optional parameter attributes |
-|---------------------------|-------------------------------------------------------------------------------------------------------------|-----------------------------------------------|-------------------------------|
-| 0.3                       | `potential="harmonic"`, `fractional_bondorder_method="none"`, `fractional_bondorder_interpolation="linear"` | `smirks`, `length`, `k`                       |  `id`, `parent_id`            |
+| Bonds section tag version | Tag attributes and default values                                                                                           | Required parameter attributes                 | Optional parameter attributes |
+|---------------------------|-----------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------|-------------------------------|
+| 0.3                       | `potential="harmonic"`, `fractional_bondorder_method="none"`, `fractional_bondorder_interpolation="linear"`                 | `smirks`, `length`, `k`                       |  `id`, `parent_id`            |
+| 0.4                       | `potential="(k/2)*(r-length)^2"`, `fractional_bondorder_method="AM1-Wiberg"`, `fractional_bondorder_interpolation="linear"` | `smirks`, `length`, `k`                       |  `id`, `parent_id`            |
 
 
 ### `<Angles>`

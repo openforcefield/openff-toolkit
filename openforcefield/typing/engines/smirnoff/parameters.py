@@ -15,6 +15,8 @@ New pluggable handlers can be created by creating subclasses of :class:`Paramete
 __all__ = [
     "SMIRNOFFSpecError",
     "IncompatibleParameterError",
+    "FractionalBondOrderInterpolationMethodUnsupportedError",
+    "NotEnoughPointsForInterpolationError",
     "UnassignedValenceParameterException",
     "UnassignedBondParameterException",
     "UnassignedAngleParameterException",
@@ -23,6 +25,7 @@ __all__ = [
     "ParameterType",
     "ParameterHandler",
     "ParameterAttribute",
+    "MappedParameterAttribute",
     "IndexedParameterAttribute",
     "IndexedMappedParameterAttribute",
     "ConstraintHandler",
@@ -82,6 +85,20 @@ class SMIRNOFFSpecError(MessageException):
     """
     Exception for when data is noncompliant with the SMIRNOFF data specification.
     """
+
+    pass
+
+
+class FractionalBondOrderInterpolationMethodUnsupportedError(MessageException):
+    """
+    Exception for when an unsupported fractional bond order interpolation assignment method is called.
+    """
+
+    pass
+
+
+class NotEnoughPointsForInterpolationError(MessageException):
+    """Exception for when less than two points are provided for interpolation"""
 
     pass
 
@@ -155,6 +172,109 @@ class NonbondedMethod(Enum):
     CutoffNonPeriodic = 2
     Ewald = 3
     PME = 4
+
+
+# ======================================================================
+# UTILITY FUNCTIONS
+# ======================================================================
+
+
+def _linear_inter_or_extrapolate(points_dict, x_query):
+    """
+    Linearly interpolate or extrapolate based on a piecewise linear function defined by a set of points.
+    This function is designed to work with key:value pairs where the value may be a simtk.unit.Quantity.
+
+    Parameters
+    ----------
+    points_dict : dict{float: float or float-valued simtk.unit.Quantity}
+        A dictionary with each item representing a point, where the key is the X value and the value is the Y value.
+    x_query : float
+        The X value of the point to interpolate or extrapolate.
+
+    Returns
+    -------
+    y_value : float or float-valued simtk.unit.Quantity
+        The result of interpolation/extrapolation.
+    """
+
+    # pre-empt case where no interpolation is necessary
+    if x_query in points_dict:
+        return points_dict[x_query]
+
+    if len(points_dict) < 2:
+        raise NotEnoughPointsForInterpolationError(
+            f"Unable to perform interpolation with less than two points. "
+            f"points_dict: {points_dict}   x_query: {x_query}"
+        )
+    # TODO: error out for nonsensical fractional bond orders
+
+    # find the nearest point beneath our queried x value
+    try:
+        below = max(bo for bo in points_dict if bo < x_query)
+    except ValueError:
+        below = None
+    # find the nearest point above our queried x value
+    try:
+        above = min(bo for bo in points_dict if bo > x_query)
+    except ValueError:
+        above = None
+
+    # handle case where we can clearly interpolate
+    if (above is not None) and (below is not None):
+        return points_dict[below] + (points_dict[above] - points_dict[below]) * (
+            (x_query - below) / (above - below)
+        )
+
+    # error if we can't hope to interpolate at all
+    elif (above is None) and (below is None):
+        raise NotImplementedError(
+            f"Failed to find interpolation references for "
+            f"`x_query` '{x_query}', "
+            f"with `points_dict` '{points_dict}'"
+        )
+
+    # extrapolate for fractional bond orders below our lowest defined bond order
+    elif below is None:
+        bond_orders = sorted(points_dict)
+        k = points_dict[bond_orders[0]] - (
+            (points_dict[bond_orders[1]] - points_dict[bond_orders[0]])
+            / (bond_orders[1] - bond_orders[0])
+        ) * (bond_orders[0] - x_query)
+        return k
+
+    # extrapolate for fractional bond orders above our highest defined bond order
+    elif above is None:
+        bond_orders = sorted(points_dict)
+        k = points_dict[bond_orders[-1]] + (
+            (points_dict[bond_orders[-1]] - points_dict[bond_orders[-2]])
+            / (bond_orders[-1] - bond_orders[-2])
+        ) * (x_query - bond_orders[-1])
+        return k
+
+
+# TODO: This is technically a validator, not a converter, but ParameterAttribute doesn't support them yet (it'll be easy if we switch to use the attrs library).
+def _allow_only(allowed_values):
+    """A converter that checks the new value is only in a set."""
+    allowed_values = frozenset(allowed_values)
+
+    def _value_checker(instance, attr, new_value):
+        # This statement means that, in the "SMIRNOFF Data Dict" format, the string "None"
+        # and the Python None are the same thing
+        if new_value == "None":
+            new_value = None
+
+        # Ensure that the new value is in the list of allowed values
+        if new_value not in allowed_values:
+
+            err_msg = (
+                f"Attempted to set {instance.__class__.__name__}.{attr.name} "
+                f"to {new_value}. Currently, only the following values "
+                f"are supported: {sorted(allowed_values)}."
+            )
+            raise SMIRNOFFSpecError(err_msg)
+        return new_value
+
+    return _value_checker
 
 
 # ======================================================================
@@ -397,6 +517,10 @@ class IndexedParameterAttribute(ParameterAttribute):
     --------
     ParameterAttribute
         A simple parameter attribute.
+    MappedParameterAttribute
+        A parameter attribute representing a mapping.
+    IndexedMappedParameterAttribute
+        A parameter attribute representing a sequence, each term of which is a mapping.
 
     Examples
     --------
@@ -447,6 +571,69 @@ class IndexedParameterAttribute(ParameterAttribute):
         return value
 
 
+class MappedParameterAttribute(ParameterAttribute):
+    """The attribute of a parameter in which each term is a mapping.
+
+    The substantial difference with ``IndexedParameterAttribute`` is that, unlike
+    indexing, the mapping can be based on artbitrary references, like indices but
+    can starting at non-zero values and include non-adjacent keys.
+
+    Parameters
+    ----------
+    default : object, optional
+        When specified, the descriptor makes this attribute optional by
+        attaching a default value to it.
+    unit : simtk.unit.Quantity, optional
+        When specified, only sequences of mappings where values are quantities with
+        compatible units are allowed to be set.
+    converter : callable, optional
+        An optional function that can be used to validate and cast each
+        component of each element of the sequence before setting the attribute.
+
+    See Also
+    --------
+    IndexedParameterAttribute
+        A parameter attribute representing a sequence.
+    IndexedMappedParameterAttribute
+        A parameter attribute representing a sequence, each term of which is a mapping.
+
+    Examples
+    --------
+
+    Create an optional indexed attribute with unit of angstrom.
+
+    >>> from simtk import unit
+    >>> class MyParameter:
+    ...     length = MappedParameterAttribute(default=None, unit=unit.angstrom)
+    ...
+    >>> my_par = MyParameter()
+    >>> my_par.length is None
+    True
+
+    Like other ParameterAttribute objects, strings are parsed into Quantity objects.
+
+    >>> my_par.length = {1:'1.5 * angstrom', 2: '1.4 * angstrom'}
+    >>> my_par.length[1]
+    Quantity(value=1.5, unit=angstrom)
+
+    Unlike other ParameterAttribute objects, the reference points can do not need ot be
+    zero-indexed, non-adjancent, such as interpolating defining a bond parameter for
+    interpolation by defining references values and bond orders 2 and 3:
+
+    >>> my_par.length = {2:'1.42 * angstrom', 3: '1.35 * angstrom'}
+    >>> my_par.length[2]
+    Quantity(value=1.42, unit=angstrom)
+
+    """
+
+    def _convert_and_validate(self, instance, value):
+        if self._is_valid_default(value):
+            return value
+        static_converter = functools.partial(self._call_converter, instance=instance)
+        value = ValidatedDict(value, converter=[self._validate_units, static_converter])
+        return value
+
+
 class IndexedMappedParameterAttribute(ParameterAttribute):
     """The attribute of a parameter with an unspecified number of terms, where
     each term is a mapping.
@@ -483,6 +670,8 @@ class IndexedMappedParameterAttribute(ParameterAttribute):
     --------
     IndexedParameterAttribute
         A parameter attribute representing a sequence.
+    MappedParameterAttribute
+        A parameter attribute representing a mapping.
 
     Examples
     --------
@@ -699,6 +888,8 @@ class _ParameterAttributeHandler:
             smirnoff_data, indexed_mapped_attr_lengths
         )
 
+        smirnoff_data = self._process_mapped_attributes(smirnoff_data)
+
         # Check for missing required arguments.
         given_attributes = set(smirnoff_data.keys())
         required_attributes = set(self._get_required_parameter_attributes().keys())
@@ -725,6 +916,21 @@ class _ParameterAttributeHandler:
                     "'allow_cosmetic_attributes=True'"
                 )
                 raise SMIRNOFFSpecError(msg)
+
+    def _process_mapped_attributes(self, smirnoff_data):
+        kwargs = list(smirnoff_data.keys())
+        for kwarg in kwargs:
+            attr_name, key = self._split_attribute_mapping(kwarg)
+
+            # Check if this is a mapped attribute
+            if key is not None and attr_name in self._get_mapped_parameter_attributes():
+                if attr_name not in smirnoff_data:
+                    smirnoff_data[attr_name] = dict()
+
+                smirnoff_data[attr_name][key] = smirnoff_data[kwarg]
+                del smirnoff_data[kwarg]
+
+        return smirnoff_data
 
     def _process_indexed_mapped_attributes(self, smirnoff_data):
         # TODO: construct data structure for holding indexed_mapped attrs, which
@@ -878,6 +1084,7 @@ class _ParameterAttributeHandler:
 
         # Start populating a dict of the attribs.
         indexed_attribs = set(self._get_indexed_parameter_attributes().keys())
+        mapped_attribs = set(self._get_mapped_parameter_attributes().keys())
         indexed_mapped_attribs = set(
             self._get_indexed_mapped_parameter_attributes().keys()
         )
@@ -897,6 +1104,9 @@ class _ParameterAttributeHandler:
             elif attrib_name in indexed_attribs:
                 for idx, val in enumerate(attrib_value):
                     smirnoff_dict[attrib_name + str(idx + 1)] = val
+            elif attrib_name in mapped_attribs:
+                for key, val in attrib_value.items():
+                    smirnoff_dict[f"{attrib_name}{str(key)}"] = val
             else:
                 smirnoff_dict[attrib_name] = attrib_value
 
@@ -1087,8 +1297,8 @@ class _ParameterAttributeHandler:
     def _split_attribute_index_mapping(item):
         """Split the attribute name from the final index.
 
-        For example, the method takes 'k2' and returns the tuple ('k', 1).
-        If attribute_name doesn't end with an integer, it returns (item, None).
+        For example, the method takes 'k1_bondorder2' and returns the tuple ('k_bondorder', 0, 2).
+        If attribute_name doesn't end with an integer, it returns (item, None, None).
         """
         # Match items of the form <item><index>_<mapping><key>
         # where <index> and <key> always integers
@@ -1114,6 +1324,28 @@ class _ParameterAttributeHandler:
         key = int(key)  # we don't subtract 1 here, because these are keys, not indices
 
         return attr_name, index, key
+
+    @staticmethod
+    def _split_attribute_mapping(item):
+        """Split the attribute name from the and its mapping.
+
+        For example, the method takes 'k_foo2' and returns the tuple ('k_foo', 2).
+        If attribute_name doesn't end with an integer, it returns (item, None).
+
+        """
+        # TODO: Can these three splitting functions be collapsed down into one?
+        # Match any number (\d+) at the end of the string ($).
+        map_match = r"\d+$"
+
+        match_mapping = re.search(map_match, item)
+        if match_mapping is None:
+            return item, None
+
+        key = match_mapping.group()
+        attr_name = item[: -len(key)]
+        key = int(key)
+
+        return attr_name, key
 
     @classmethod
     def _get_parameter_attributes(cls, filter=None):
@@ -1178,6 +1410,13 @@ class _ParameterAttributeHandler:
         """Shortcut to retrieve only IndexedParameterAttributes."""
         return cls._get_parameter_attributes(
             filter=lambda x: isinstance(x, IndexedParameterAttribute)
+        )
+
+    @classmethod
+    def _get_mapped_parameter_attributes(cls):
+        """Shortcut to retrieve only IndexedParameterAttributes."""
+        return cls._get_parameter_attributes(
+            filter=lambda x: isinstance(x, MappedParameterAttribute)
         )
 
     @classmethod
@@ -2250,6 +2489,59 @@ class ParameterHandler(_ParameterAttributeHandler):
                     )
                 )
 
+    @staticmethod
+    def check_partial_bond_orders_from_molecules_duplicates(pb_mols):
+        if len(set(map(Molecule.to_smiles, pb_mols))) < len(pb_mols):
+            raise ValueError(
+                "At least two user-provided fractional bond order "
+                "molecules are isomorphic"
+            )
+
+    @staticmethod
+    def assign_partial_bond_orders_from_molecules(topology, pbo_mols):
+        # for each reference molecule in our topology, we'll walk through the provided partial bond order molecules
+        # if we find a match, we'll apply the partial bond orders and skip to the next molecule
+        for ref_mol in topology.reference_molecules:
+            for pbo_mol in pbo_mols:
+                # we are as stringent as we are in the ElectrostaticsHandler
+                # TODO: figure out whether bond order matching is redundant with aromatic matching
+                isomorphic, topology_atom_map = Molecule.are_isomorphic(
+                    ref_mol,
+                    pbo_mol,
+                    return_atom_map=True,
+                    aromatic_matching=True,
+                    formal_charge_matching=True,
+                    bond_order_matching=True,
+                    atom_stereochemistry_matching=True,
+                    bond_stereochemistry_matching=True,
+                )
+
+                # if matching, assign bond orders and skip to next molecule
+                # first match wins
+                if isomorphic:
+                    # walk through bonds on reference molecule
+                    for bond in ref_mol.bonds:
+                        # use atom mapping to translate to pbo_molecule bond
+                        pbo_bond = pbo_mol.get_bond_between(
+                            topology_atom_map[bond.atom1_index],
+                            topology_atom_map[bond.atom2_index],
+                        )
+                        # extract fractional bond order
+                        # assign fractional bond order to reference molecule bond
+                        if pbo_bond.fractional_bond_order is None:
+                            raise ValueError(
+                                f"Molecule '{ref_mol}' was requested to be parameterized "
+                                f"with user-provided fractional bond orders from '{pbo_mol}', but not "
+                                "all bonds were provided with `fractional_bond_order` specified"
+                            )
+
+                        bond.fractional_bond_order = pbo_bond.fractional_bond_order
+
+                    break
+                # not necessary, but explicit
+                else:
+                    continue
+
 
 # =============================================================================================
 
@@ -2313,18 +2605,85 @@ class BondHandler(ParameterHandler):
         _VALENCE_TYPE = "Bond"
         _ELEMENT_NAME = "Bond"
 
-        # These attributes may be indexed (by integer bond order) if fractional bond orders are used.
-        length = ParameterAttribute(unit=unit.angstrom)
-        k = ParameterAttribute(unit=unit.kilocalorie_per_mole / unit.angstrom ** 2)
+        length = ParameterAttribute(default=None, unit=unit.angstrom)
+        k = ParameterAttribute(
+            default=None, unit=unit.kilocalorie_per_mole / unit.angstrom ** 2
+        )
+
+        # fractional bond order params
+        length_bondorder = MappedParameterAttribute(default=None, unit=unit.angstrom)
+        k_bondorder = MappedParameterAttribute(
+            default=None, unit=unit.kilocalorie_per_mole / unit.angstrom ** 2
+        )
+
+        def __init__(self, **kwargs):
+            # these checks enforce mutually-exclusive parameterattribute specifications
+            has_k = "k" in kwargs.keys()
+            has_k_bondorder = any(["k_bondorder" in key for key in kwargs.keys()])
+            has_length = "length" in kwargs.keys()
+            has_length_bondorder = any(
+                ["length_bondorder" in key for key in kwargs.keys()]
+            )
+
+            # Are these errors too general? What about ParametersMissingError/ParametersOverspecifiedError?
+            if has_k:
+                if has_k_bondorder:
+                    raise SMIRNOFFSpecError(
+                        "BOTH k and k_bondorder* cannot be specified simultaneously."
+                    )
+            else:
+                if not has_k_bondorder:
+                    raise SMIRNOFFSpecError(
+                        "Either k or k_bondorder* must be specified."
+                    )
+            if has_length:
+                if has_length_bondorder:
+                    raise SMIRNOFFSpecError(
+                        "BOTH length and length_bondorder* cannot be specified simultaneously."
+                    )
+            else:
+                if not has_length_bondorder:
+                    raise SMIRNOFFSpecError(
+                        "Either length or length_bondorder* must be specified."
+                    )
+
+            super().__init__(**kwargs)
 
     _TAGNAME = "Bonds"  # SMIRNOFF tag name to process
     _INFOTYPE = BondType  # class to hold force type info
     _OPENMMTYPE = openmm.HarmonicBondForce  # OpenMM force class to create
     _DEPENDENCIES = [ConstraintHandler]  # ConstraintHandler must be executed first
+    _MAX_SUPPORTED_SECTION_VERSION = 0.4
 
-    potential = ParameterAttribute(default="harmonic")
-    fractional_bondorder_method = ParameterAttribute(default=None)
-    fractional_bondorder_interpolation = ParameterAttribute(default="linear")
+    # Use the _allow_only filter here because this class's implementation contains all the information about supported
+    # potentials for this handler.
+    potential = ParameterAttribute(
+        default="overridden in init",
+        converter=_allow_only(["harmonic", "(k/2)*(r-length)^2"]),
+    )
+    # The default value for fractional_bondorder_method depends on the section version and is overwritten in __init__.
+    # Do not use the allow_only filter here since ToolkitWrappers may be imported that support additional fractional
+    # bondorder methods.
+    fractional_bondorder_method = ParameterAttribute(default="overridden in init")
+    # Use the _allow_only filter here because this class's implementation contains all the information about supported
+    # interpolation types.
+    fractional_bondorder_interpolation = ParameterAttribute(
+        default="linear", converter=_allow_only(["linear"])
+    )
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        # Default value for fractional_bondorder_interpolation depends on section version
+        if self.version == 0.3 and "fractional_bondorder_interpolation" not in kwargs:
+            self.fractional_bondorder_method = "none"
+        elif self.version == 0.4 and "fractional_bondorder_interpolation" not in kwargs:
+            self.fractional_bondorder_method = "AM1-Wiberg"
+
+        # Default value for potential depends on section version
+        if self.version == 0.3 and "potential" not in kwargs:
+            self.potential = "harmonic"
+        elif self.version == 0.4 and "potential" not in kwargs:
+            self.potential = "(k/2)*(r-length)^2"
 
     def check_handler_compatibility(self, other_handler):
         """
@@ -2341,13 +2700,27 @@ class BondHandler(ParameterHandler):
         IncompatibleParameterError if handler_kwargs are incompatible with existing parameters.
         """
         string_attrs_to_compare = [
-            "potential",
             "fractional_bondorder_method",
             "fractional_bondorder_interpolation",
         ]
         self._check_attributes_are_equal(
             other_handler, identical_attrs=string_attrs_to_compare
         )
+
+        # potential="harmonic" and potential="(k/2)*(r-length)^2" should be considered identical
+        self_has_harmonic_potential = (
+            self.potential == "harmonic" or self.potential == "(k/2)*(r-length)^2"
+        )
+        other_has_harmonic_potential = (
+            other_handler.potential == "harmonic"
+            or other_handler.potential == "(k/2)*(r-length)^2"
+        )
+        if not (self_has_harmonic_potential and other_has_harmonic_potential):
+            if self.potential != other_handler.potential:
+                raise IncompatibleParameterError(
+                    f"potential values are not identical. "
+                    f"(handler value: {self.potential}, incompatible value: {other_handler.potential}"
+                )
 
     def create_force(self, system, topology, **kwargs):
         # Create or retrieve existing OpenMM Force object
@@ -2361,6 +2734,32 @@ class BondHandler(ParameterHandler):
         else:
             force = existing[0]
 
+        # Do not trust previously-calculated partial bond orders, since we don't know
+        # what method was used to assign them
+        # TODO: Jeff tried implementing a way to mark how bond orders were assigned on the
+        # topology, but realized that there's already a hierarchy of assignment
+        # methods. That is, if a molecule was assigned using PBOs_from_mols, then
+        # a different fractional bondorder method SHOULD NOT attempt
+        # recalculation, whereas if the previous method was simply DIFFERENT,
+        # then the old results should be erased/cached and overwritten with the
+        # new ones. It will be easier to handle this at the level of caching
+        # the results of molecule.assign_fractional_bond_orders
+        for top_bond in topology.topology_bonds:
+            top_bond.bond.fractional_bond_order = None
+
+        # check whether any of the reference molecules in the topology
+        # are in the partial_bond_orders_from_molecules list
+        if "partial_bond_orders_from_molecules" in kwargs:
+            # check whether molecules in the partial_bond_orders_from_molecules
+            # list have any duplicates
+            self.check_partial_bond_orders_from_molecules_duplicates(
+                kwargs["partial_bond_orders_from_molecules"]
+            )
+
+            self.assign_partial_bond_orders_from_molecules(
+                topology, kwargs["partial_bond_orders_from_molecules"]
+            )
+
         # Add all bonds to the system.
         bond_matches = self.find_matches(topology)
 
@@ -2373,6 +2772,7 @@ class BondHandler(ParameterHandler):
 
             # Ensure atoms are actually bonded correct pattern in Topology
             self._assert_correct_connectivity(bond_match)
+
             # topology.assert_bonded(atoms[0], atoms[1])
             bond_params = bond_match.parameter_type
             match = bond_match.environment_match
@@ -2382,29 +2782,80 @@ class BondHandler(ParameterHandler):
                 *match.reference_atom_indices
             )
 
-            if hasattr(bond_params, "k_bondorder1"):
-                raise NotImplementedError(
-                    "Partial bondorder treatment is not implemented for bonds."
+            length_requires_interpolation = (
+                getattr(bond_params, "length_bondorder", None) is not None
+            )
+            k_requires_interpolation = (
+                getattr(bond_params, "k_bondorder", None) is not None
+            )
+
+            # Calculate fractional bond orders for this molecule only if needed.
+            if (
+                length_requires_interpolation or k_requires_interpolation
+            ) and bond.fractional_bond_order is None:
+                toolkit_registry = kwargs.get(
+                    "toolkit_registry", GLOBAL_TOOLKIT_REGISTRY
+                )
+                match.reference_molecule.assign_fractional_bond_orders(
+                    toolkit_registry=toolkit_registry,
+                    use_conformers=match.reference_molecule.conformers,
+                    bond_order_model=self.fractional_bondorder_method.lower(),
                 )
 
-                # Interpolate using fractional bond orders
-                # TODO: Do we really want to allow per-bond specification of interpolation schemes?
-                # order = bond.fractional_bond_order
-                # if self.fractional_bondorder_interpolation == 'interpolate-linear':
-                #    k = bond_params.k[0] + (bond_params.k[1] - bond_params.k[0]) * (order - 1.)
-                #    length = bond_params.length[0] + (
-                #        bond_params.length[1] - bond_params.length[0]) * (order - 1.)
-                # else:
-                #    raise Exception(
-                #        "Partial bondorder treatment {} is not implemented.".
-                #        format(self.fractional_bondorder_method))
+            if not length_requires_interpolation:
+                length = bond_params.length
             else:
-                [k, length] = [bond_params.k, bond_params.length]
+                # Interpolate length using fractional bond orders
+                bond_order = bond.fractional_bond_order
+                if self.fractional_bondorder_interpolation == "linear":
+                    if len(bond_params.length_bondorder) < 2:
+                        raise SMIRNOFFSpecError(
+                            "In order to use bond order interpolation, 2 or more parameters "
+                            f"must be present. Found {len(bond_params.length_bondorder)} parameters."
+                        )
+                    length = _linear_inter_or_extrapolate(
+                        points_dict=bond_params.length_bondorder,
+                        x_query=bond_order,
+                    )
+                else:
+                    # TODO: This code is effectively unreachable due to the the _allow_only converter used in this
+                    #       ParameterAttribute's definition, which only allows "linear". Remove?
+                    raise FractionalBondOrderInterpolationMethodUnsupportedError(
+                        "Fractional bondorder interpolation method {} is not implemented.".format(
+                            self.fractional_bondorder_interpolation
+                        )
+                    )
+            if not k_requires_interpolation:
+                k = bond_params.k
+            else:
+                # Interpolate k using fractional bond orders
+                bond_order = bond.fractional_bond_order
+                if self.fractional_bondorder_interpolation == "linear":
+                    if len(bond_params.k_bondorder) < 2:
+                        raise SMIRNOFFSpecError(
+                            "In order to use bond order interpolation, 2 or more parameters "
+                            f"must be present. Found {len(bond_params.k_bondorder)} parameters."
+                        )
+                    k = _linear_inter_or_extrapolate(
+                        points_dict=bond_params.k_bondorder,
+                        x_query=bond_order,
+                    )
+                else:
+                    # TODO: This code is effectively unreachable due to the the _allow_only converter used in this
+                    #       ParameterAttribute's definition, which only allows "linear". Remove?
+                    raise FractionalBondOrderInterpolationMethodUnsupportedError(
+                        "Fractional bondorder interpolation method {} is not implemented.".format(
+                            self.fractional_bondorder_interpolation
+                        )
+                    )
 
+            # If this pair of atoms is subject to a constraint, only use the length
             is_constrained = topology.is_constrained(*topology_atom_indices)
-
-            # Handle constraints.
-            if is_constrained:
+            if not is_constrained:
+                # Add harmonic bond to HarmonicBondForce
+                force.addBond(*topology_atom_indices, length, k)
+            else:
+                # Handle constraints.
                 # Atom pair is constrained; we don't need to add a bond term.
                 skipped_constrained_bonds += 1
                 # Check if we need to add the constraint here to the equilibrium bond length.
@@ -2414,10 +2865,6 @@ class BondHandler(ParameterHandler):
                     # Add the constraint to the System.
                     system.addConstraint(*topology_atom_indices, length)
                     # system.addConstraint(*particle_indices, length)
-                continue
-
-            # Add harmonic bond to HarmonicBondForce
-            force.addBond(*topology_atom_indices, length, k)
 
         logger.info(
             "{} bonds added ({} skipped due to constraints)".format(
@@ -2532,6 +2979,7 @@ class AngleHandler(ParameterHandler):
 
 # =============================================================================================
 
+<<<<<<< HEAD
 
 # =============================================================================================
 
@@ -2560,6 +3008,8 @@ def _allow_only(allowed_values):
     return _value_checker
 
 
+=======
+>>>>>>> master
 # TODO: There's a lot of duplicated code in ProperTorsionHandler and ImproperTorsionHandler
 class ProperTorsionHandler(ParameterHandler):
     """Handle SMIRNOFF ``<ProperTorsionForce>`` tags
@@ -2590,6 +3040,7 @@ class ProperTorsionHandler(ParameterHandler):
     _KWARGS = ["partial_bond_orders_from_molecules"]
     _INFOTYPE = ProperTorsionType  # info type to store
     _OPENMMTYPE = openmm.PeriodicTorsionForce  # OpenMM force class to create
+    _MAX_SUPPORTED_SECTION_VERSION = 0.4
 
     potential = ParameterAttribute(
         default="k*(1+cos(periodicity*theta-phase))",
@@ -2597,7 +3048,9 @@ class ProperTorsionHandler(ParameterHandler):
     )
     default_idivf = ParameterAttribute(default="auto")
     fractional_bondorder_method = ParameterAttribute(default="AM1-Wiberg")
-    fractional_bondorder_interpolation = ParameterAttribute(default="linear")
+    fractional_bondorder_interpolation = ParameterAttribute(
+        default="linear", converter=_allow_only(["linear"])
+    )
 
     def check_handler_compatibility(self, other_handler):
         """
@@ -2631,58 +3084,6 @@ class ProperTorsionHandler(ParameterHandler):
             tolerance_attrs=float_attrs_to_compare,
         )
 
-    def check_partial_bond_orders_from_molecules_duplicates(self, pb_mols):
-        if len(set(map(Molecule.to_smiles, pb_mols))) < len(pb_mols):
-            raise ValueError(
-                "At least two user-provided fractional bond order "
-                "molecules are isomorphic"
-            )
-
-    def assign_partial_bond_orders_from_molecules(self, topology, pbo_mols):
-
-        # for each reference molecule in our topology, we'll walk through the provided partial bond order molecules
-        # if we find a match, we'll apply the partial bond orders and skip to the next molecule
-        for ref_mol in topology.reference_molecules:
-            for pbo_mol in pbo_mols:
-                # we are as stringent as we are in the ElectrostaticsHandler
-                # TODO: figure out whether bond order matching is redundant with aromatic matching
-                isomorphic, topology_atom_map = Molecule.are_isomorphic(
-                    ref_mol,
-                    pbo_mol,
-                    return_atom_map=True,
-                    aromatic_matching=True,
-                    formal_charge_matching=True,
-                    bond_order_matching=True,
-                    atom_stereochemistry_matching=True,
-                    bond_stereochemistry_matching=True,
-                )
-
-                # if matching, assign bond orders and skip to next molecule
-                # first match wins
-                if isomorphic:
-                    # walk through bonds on reference molecule
-                    for bond in ref_mol.bonds:
-                        # use atom mapping to translate to pbo_molecule bond
-                        pbo_bond = pbo_mol.get_bond_between(
-                            topology_atom_map[bond.atom1_index],
-                            topology_atom_map[bond.atom2_index],
-                        )
-                        # extract fractional bond order
-                        # assign fractional bond order to reference molecule bond
-                        if pbo_bond.fractional_bond_order is None:
-                            raise ValueError(
-                                f"Molecule '{ref_mol}' was requested to be parameterized "
-                                f"with user-provided fractional bond orders from '{pbo_mol}', but not "
-                                "all bonds were provided with `fractional_bond_order` specified"
-                            )
-
-                        bond.fractional_bond_order = pbo_bond.fractional_bond_order
-
-                    break
-                # not necessary, but explicit
-                else:
-                    continue
-
     def create_force(self, system, topology, **kwargs):
         # force = super(ProperTorsionHandler, self).create_force(system, topology, **kwargs)
         existing = [system.getForce(i) for i in range(system.getNumForces())]
@@ -2693,6 +3094,19 @@ class ProperTorsionHandler(ParameterHandler):
             system.addForce(force)
         else:
             force = existing[0]
+
+        # Do not trust previously-calculated partial bond orders, since we don't know
+        # what method was used to assign them
+        # TODO: Jeff tried implementing a way to mark how bond orders were assigned on the
+        # topology, but realized that there's already a hierarchy of assignment
+        # methods. That is, if a molecule was assigned using PBOs_from_mols, then
+        # a different fractional bondorder method SHOULD NOT attempt
+        # recalculation, whereas if the previous method was simply DIFFERENT,
+        # then the old results should be erased/cached and overwritten with the
+        # new ones. It will be easier to handle this at the level of caching
+        # the results of molecule.assign_fractional_bond_orders
+        for top_bond in topology.topology_bonds:
+            top_bond.bond.fractional_bond_order = None
 
         # check whether any of the reference molecules in the topology
         # are in the partial_bond_orders_from_molecules list
@@ -2738,7 +3152,7 @@ class ProperTorsionHandler(ParameterHandler):
 
         # Check that no topological torsions are missing force parameters
 
-        # I can see the apeal of these kind of methods as an 'absolute' check
+        # I can see the appeal of these kind of methods as an 'absolute' check
         # that things have gone well, but I think just making sure that the
         # reference molecule has been fully parametrised should have the same
         # effect! It would be good to eventually refactor things so that everything
@@ -2823,18 +3237,21 @@ class ProperTorsionHandler(ParameterHandler):
                 match.reference_molecule.assign_fractional_bond_orders(
                     toolkit_registry=toolkit_registry,
                     use_conformers=match.reference_molecule.conformers,
+                    bond_order_model=self.fractional_bondorder_method.lower(),
                 )
 
             # scale k based on the bondorder of the central bond
             if self.fractional_bondorder_interpolation == "linear":
                 # we only interpolate on k
-                k = self._linear_interpolate_k(
+                k = _linear_inter_or_extrapolate(
                     k_bondorder, central_bond.fractional_bond_order
                 )
             else:
-                raise Exception(
-                    "Fractional bondorder treatment {} is not implemented.".format(
-                        self.fractional_bondorder_method
+                # TODO: This code is effectively unreachable due to the the _allow_only converter used in this
+                #       ParameterAttribute's definition, which only allows "linear". Remove?
+                raise FractionalBondOrderInterpolationMethodUnsupportedError(
+                    "Fractional bondorder interpolation method {} is not implemented.".format(
+                        self.fractional_bondorder_interpolation
                     )
                 )
 
@@ -2848,59 +3265,6 @@ class ProperTorsionHandler(ParameterHandler):
                 phase,
                 k / idivf,
             )
-
-    @staticmethod
-    def _linear_interpolate_k(k_bondorder, fractional_bond_order):
-
-        # pre-empt case where no interpolation is necessary
-        if fractional_bond_order in k_bondorder:
-            return k_bondorder[fractional_bond_order]
-
-        # TODO: error out for nonsensical fractional bond orders
-
-        # find the nearest bond_order beneath our fractional value
-        try:
-            below = max(bo for bo in k_bondorder if bo < fractional_bond_order)
-        except ValueError:
-            below = None
-
-        # find the nearest bond_order above our fractional value
-        try:
-            above = min(bo for bo in k_bondorder if bo > fractional_bond_order)
-        except ValueError:
-            above = None
-
-        # handle case where we can clearly interpolate
-        if (above is not None) and (below is not None):
-            return k_bondorder[below] + (k_bondorder[above] - k_bondorder[below]) * (
-                (fractional_bond_order - below) / (above - below)
-            )
-
-        # error if we can't hope to interpolate at all
-        elif (above is None) and (below is None):
-            raise NotImplementedError(
-                f"Failed to find interpolation references for "
-                f"`fractional bond order` '{fractional_bond_order}', "
-                f"with `k_bond_order` '{k_bondorder}'"
-            )
-
-        # extrapolate for fractional bond orders below our lowest defined bond order
-        elif below is None:
-            bond_orders = sorted(k_bondorder)
-            k = k_bondorder[bond_orders[0]] - (
-                (k_bondorder[bond_orders[1]] - k_bondorder[bond_orders[0]])
-                / (bond_orders[1] - bond_orders[0])
-            ) * (bond_orders[0] - fractional_bond_order)
-            return k
-
-        # extrapolate for fractional bond orders above our highest defined bond order
-        elif above is None:
-            bond_orders = sorted(k_bondorder)
-            k = k_bondorder[bond_orders[-1]] + (
-                (k_bondorder[bond_orders[-1]] - k_bondorder[bond_orders[-2]])
-                / (bond_orders[-1] - bond_orders[-2])
-            ) * (fractional_bond_order - bond_orders[-1])
-            return k
 
 
 # TODO: There's a lot of duplicated code in ProperTorsionHandler and ImproperTorsionHandler
@@ -3084,7 +3448,6 @@ class _NonbondedHandler(ParameterHandler):
             The molecule to mark as having charges assigned
         topology : openforcefield.topology.Topology
             The topology to record this information on.
-
         """
         # TODO: Change this to interface with system object instead of topology once we move away from OMM's System
         topology._ref_mol_to_charge_method[ref_mol] = self.__class__
