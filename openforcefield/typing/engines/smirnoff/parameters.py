@@ -2979,37 +2979,6 @@ class AngleHandler(ParameterHandler):
 
 # =============================================================================================
 
-<<<<<<< HEAD
-
-# =============================================================================================
-
-# TODO: This is technically a validator, not a converter, but ParameterAttribute doesn't support them yet (it'll be easy if we switch to use the attrs library).
-def _allow_only(allowed_values):
-    """A converter that checks the new value is only in a set."""
-    allowed_values = frozenset(allowed_values)
-
-    def _value_checker(instance, attr, new_value):
-        # This statement means that, in the "SMIRNOFF Data Dict" format, the string "None"
-        # and the Python None are the same thing
-        if new_value == "None":
-            new_value = None
-
-        # Ensure that the new value is in the list of allowed values
-        if new_value not in allowed_values:
-
-            err_msg = (
-                f"Attempted to set {instance.__class__.__name__}.{attr.name} "
-                f"to {new_value}. Currently, only the following values "
-                f"are supported: {sorted(allowed_values)}."
-            )
-            raise SMIRNOFFSpecError(err_msg)
-        return new_value
-
-    return _value_checker
-
-
-=======
->>>>>>> master
 # TODO: There's a lot of duplicated code in ProperTorsionHandler and ImproperTorsionHandler
 class ProperTorsionHandler(ParameterHandler):
     """Handle SMIRNOFF ``<ProperTorsionForce>`` tags
