@@ -5295,6 +5295,16 @@ class VirtualSiteHandler(_NonbondedHandler):
 
         _vsite_type = "TrivalentLonePair"
 
+        def __init__(self, **kwargs):
+            """
+            Special init method for TrivalentLonePairSites that ensures that match="all_permutations"
+            """
+            super().__init__(**kwargs)
+            if self.match != "once":
+                raise SMIRNOFFSpecError(f"TrivalentLonePair virtual site defined with match attribute set to {self.match}. "
+                                        f"Only supported value is 'once'.")
+
+
         def add_virtual_site(self, molecule, orientations, replace=False):
             """
             Add a virtual site to the molecule
@@ -5322,7 +5332,7 @@ class VirtualSiteHandler(_NonbondedHandler):
 
             # Trivalents should never need multiple orientations as long
             # as there are no angle parameters
-            args = (atoms, orientations[:1])
+            args = (atoms, orientations)
             off_idx = super()._add_virtual_site(fn, *args, replace=replace)
             return off_idx
 

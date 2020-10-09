@@ -1876,6 +1876,26 @@ class TestVirtualSiteHandler:
         variable_names = ["type", "match"]
         self._test_variable_names(valid_kwargs, variable_names)
 
+    def test_virtual_site_trivalent_type_invalid_match(self):
+        """
+        Ensure that an error is raised if incorrect parameters are given to
+        a trivalent type
+        """
+
+        invalid_kwargs = dict(
+            type="TrivalentLonePair",
+            smirks="[#6:1]-[#7:2](-[#8:3])-[#8:4]",
+            name="EP",
+            distance=1.0 * unit.angstrom,
+            charge_increment=[1.0, 1.0, 1.0, 1.0] * unit.elementary_charge,
+            sigma=0.0 * unit.angstrom,
+            epsilon=1.0 * unit.kilocalorie_per_mole,
+            match="all_permutations",
+        )
+        with pytest.raises(SMIRNOFFSpecError, match="TrivalentLonePair virtual site defined with match attribute set to all_permutations. Only supported value is 'once'.") as excinfo:
+            vs = VirtualSiteHandler.VirtualSiteTrivalentLonePairType(**invalid_kwargs)
+
+
 
 class TestLibraryChargeHandler:
     def test_create_library_charge_handler(self):
