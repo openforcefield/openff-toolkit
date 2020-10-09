@@ -2814,7 +2814,8 @@ class BondHandler(ParameterHandler):
                             f"must be present. Found {len(bond_params.length_bondorder)} parameters."
                         )
                     length = _linear_inter_or_extrapolate(
-                        points_dict=bond_params.length_bondorder, x_query=bond_order,
+                        points_dict=bond_params.length_bondorder,
+                        x_query=bond_order,
                     )
                 else:
                     # TODO: This code is effectively unreachable due to the the _allow_only converter used in this
@@ -2836,7 +2837,8 @@ class BondHandler(ParameterHandler):
                             f"must be present. Found {len(bond_params.k_bondorder)} parameters."
                         )
                     k = _linear_inter_or_extrapolate(
-                        points_dict=bond_params.k_bondorder, x_query=bond_order,
+                        points_dict=bond_params.k_bondorder,
+                        x_query=bond_order,
                     )
                 else:
                     # TODO: This code is effectively unreachable due to the the _allow_only converter used in this

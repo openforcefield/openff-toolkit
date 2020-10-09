@@ -1198,7 +1198,8 @@ class TestBondType:
 
         with pytest.raises(SMIRNOFFSpecError, match="Either k or k_bondorder"):
             BondHandler.BondType(
-                smirks="[*:1]-[*:2]", length=length,
+                smirks="[*:1]-[*:2]",
+                length=length,
             )
 
         with pytest.raises(SMIRNOFFSpecError, match="BOTH k and k_bondorder"):
@@ -1214,7 +1215,8 @@ class TestBondType:
             SMIRNOFFSpecError, match="Either length or length_bondorder"
         ):
             BondHandler.BondType(
-                smirks="[*:1]-[*:2]", k=k,
+                smirks="[*:1]-[*:2]",
+                k=k,
             )
 
         with pytest.raises(SMIRNOFFSpecError, match="BOTH length and length_bondorder"):
