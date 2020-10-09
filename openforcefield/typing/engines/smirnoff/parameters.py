@@ -4987,7 +4987,10 @@ class VirtualSiteHandler(_NonbondedHandler):
             fn = molecule._add_trivalent_lone_pair_virtual_site
             ref_key = self.transformed_dict_cls.key_transform(orientations[0])
             atoms = list([molecule.atoms[i] for i in ref_key])
-            args = (atoms, orientations)
+
+            # Trivalents should never need multiple orientations as long
+            # as there are no angle parameters
+            args = (atoms, orientations[:1])
             off_idx = super()._add_virtual_site(fn, *args, replace=replace)
             return off_idx
 
