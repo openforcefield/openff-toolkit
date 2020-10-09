@@ -1940,7 +1940,8 @@ class TestForceFieldVirtualSites:
 
         from simtk.openmm import NonbondedForce
 
-        forcefield = ForceField("openff-1.2.0.offxml", xml)
+        file_path = get_data_file_path("test_forcefields/smirnoff99Frosst.offxml")
+        forcefield = ForceField(file_path)
         if mol is None:
             mol = Molecule.from_smiles(smi)
         topology = mol.to_topology()
