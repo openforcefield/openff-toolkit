@@ -35,6 +35,7 @@ __all__ = [
     "ImproperTorsionHandler",
     "vdWHandler",
     "GBSAHandler",
+    "VirtualSiteHandler",
 ]
 
 
@@ -42,6 +43,7 @@ __all__ = [
 # GLOBAL IMPORTS
 # =============================================================================================
 
+import abc
 import copy
 import functools
 import inspect
@@ -49,16 +51,18 @@ import logging
 import re
 from collections import OrderedDict, defaultdict
 from enum import Enum
+from itertools import combinations
 
 from simtk import openmm, unit
 
-from openforcefield.topology import ImproperDict, SortedDict, ValenceDict
+from openforcefield.topology import ImproperDict, SortedDict, Topology, ValenceDict
 from openforcefield.topology.molecule import Molecule
 from openforcefield.typing.chemistry import ChemicalEnvironment
 from openforcefield.utils import (
     GLOBAL_TOOLKIT_REGISTRY,
     IncompatibleUnitError,
     MessageException,
+    all_subclasses,
     attach_units,
     extract_serialized_units_from_dict,
     object_to_quantity,
@@ -145,6 +149,12 @@ class NonintegralMoleculeChargeException(Exception):
 
 class DuplicateParameterError(MessageException):
     """Exception raised when trying to add a ParameterType that already exists"""
+
+
+class DuplicateVirtualSiteTypeException(Exception):
+    """Exception raised when trying to register two different virtual site classes with the same 'type'"""
+
+    pass
 
 
 # ======================================================================
@@ -1940,20 +1950,20 @@ class ParameterHandler(_ParameterAttributeHandler):
         )
         smirnoff_data = attach_units(unitless_kwargs, attached_units)
 
-        element_name = None
-        if self._INFOTYPE is not None:
-            element_name = self._INFOTYPE._ELEMENT_NAME
-
         for key, val in smirnoff_data.items():
-            # Skip sections that aren't the parameter list
-            if key != element_name:
-                continue
+            if self._INFOTYPE is not None:
+                element_name = self._INFOTYPE._ELEMENT_NAME
+                # Skip sections that aren't the parameter list
+                if key != element_name:
+                    break
             # If there are multiple parameters, this will be a list. If there's just one, make it a list
             if not (isinstance(val, list)):
                 val = [val]
+
             # If we're reading the parameter list, iterate through and attach units to
             # each parameter_dict, then use it to initialize a ParameterType
             for unitless_param_dict in val:
+
                 param_dict = attach_units(unitless_param_dict, attached_units)
                 new_parameter = self._INFOTYPE(
                     **param_dict, allow_cosmetic_attributes=allow_cosmetic_attributes
@@ -2184,13 +2194,12 @@ class ParameterHandler(_ParameterAttributeHandler):
             matching the tuple of particle indices in ``entity``.
         """
 
-        # TODO: Right now, this method is only ever called with an entity that is a Topoogy.
+        # TODO: Right now, this method is only ever called with an entity that is a Topology.
         #  Should we reduce its scope and have a check here to make sure entity is a Topology?
         return self._find_matches(entity)
 
     def _find_matches(self, entity, transformed_dict_cls=ValenceDict):
         """Implement find_matches() and allow using a difference valence dictionary.
-
         Parameters
         ----------
         entity : openforcefield.topology.Topology
@@ -2200,7 +2209,6 @@ class ParameterHandler(_ParameterAttributeHandler):
             will determine how groups of atom indices are stored
             and accessed (e.g for angles indices should be 0-1-2
             and not 2-1-0).
-
         Returns
         ---------
         matches : `transformed_dict_cls` of ParameterHandlerMatch
@@ -2936,6 +2944,7 @@ class AngleHandler(ParameterHandler):
             0  # keep track of how many angles were constrained (and hence skipped)
         )
         for (atoms, angle_match) in angle_matches.items():
+
             # Ensure atoms are actually bonded correct pattern in Topology
             # for (i, j) in [(0, 1), (1, 2)]:
             #     topology.assert_bonded(atoms[i], atoms[j])
@@ -3989,6 +3998,8 @@ class LibraryChargeHandler(_NonbondedHandler):
             matching the tuple of particle indices in ``entity``.
         """
 
+        # TODO: Right now, this method is only ever called with an entity that is a Topology.
+        #  Should we reduce its scope and have a check here to make sure entity is a Topology?
         return self._find_matches(entity, transformed_dict_cls=dict)
 
     def create_force(self, system, topology, **kwargs):
@@ -4120,7 +4131,7 @@ class ToolkitAM1BCCHandler(_NonbondedHandler):
             for topology_molecule in topology._reference_molecule_to_topology_molecules[
                 ref_mol
             ]:
-                for topology_particle in topology_molecule.particles:
+                for topology_particle in topology_molecule.atoms:
                     if type(topology_particle) is TopologyAtom:
                         ref_mol_particle_index = (
                             topology_particle.atom.molecule_particle_index
@@ -4332,7 +4343,7 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
             # We ignore the atom index order in the keys here, since they have been
             # sorted in order to deduplicate matches and let us identify when one parameter overwrites another
             # in the SMIRNOFF parameter hierarchy. Since they are sorted, the position of the atom index
-            # in the key tuple DOES NOT correspond to the appropriate chargeincrementX value.
+            # in the key tuple DOES NOT correspond to the appropriate charge_incrementX value.
             # Instead, the correct ordering of the match indices is found in
             # charge_increment_match.environment_match.topology_atom_indices
             for (_, charge_increment_match) in charge_increment_matches.items():
@@ -4615,6 +4626,1186 @@ class GBSAHandler(ParameterHandler):
         )
 
         system.addForce(gbsa_force)
+
+
+class VirtualSiteHandler(_NonbondedHandler):
+    """Handle SMIRNOFF ``<VirtualSites>`` tags
+
+    TODO: Add example usage/documentation
+
+    .. warning :: This API is experimental and subject to change.
+    """
+
+    # Virtual Site exclusions policies
+    ############################################################################
+    # none: do not add any exclusions
+
+    # minimal: only add exclusions between vsite particles and their "single"
+    # parent atom. This is the atom that the vsite's origin is defined as
+
+    # parents: only add exclusions between vsite particles and all of the
+    # associated parent atoms
+
+    # local: add exclusions between vsites that share exactly the same atoms.
+
+    # neighbors: add exclusions between vsites and atoms that share the same
+    # "clique" of virtual sites. For example, if 1-2-3 and 3-4-5 each have a
+    # vsite, then the vsite on 1-2-3 will be excluded from atoms 4 and 5
+    # since they share atom 3.
+
+    # connected: add exclusions between the vsite and all atoms connected to
+    # the parents, e.g the entire molecule making it an interaction only
+    # between two nonbonded fragments.
+
+    # all: exclude all interactions, effectively turning vsites off.
+
+    # Note: TODO: only up to parents is implemented!
+
+    class _ExclusionPolicy(Enum):
+        NONE = 1
+        MINIMAL = 2
+        PARENTS = 3
+        LOCAL = 4
+        NEIGHBORS = 5
+        CONNECTED = 6
+        ALL = 7
+
+    _parameter_to_policy = {
+        "none": _ExclusionPolicy.NONE,
+        "minimal": _ExclusionPolicy.MINIMAL,
+        "parents": _ExclusionPolicy.PARENTS,
+        "local": _ExclusionPolicy.LOCAL,
+        "neighbors": _ExclusionPolicy.NEIGHBORS,
+        "connected": _ExclusionPolicy.CONNECTED,
+        "all": _ExclusionPolicy.ALL,
+    }
+
+    exclusion_policy = ParameterAttribute(default="parents")  # has custom converter
+
+    def __init__(self, **kwargs):
+
+        super().__init__(**kwargs)
+
+        self._virtual_site_types = dict()
+        for vsite_cls in all_subclasses(self.__class__.VirtualSiteType):
+            # catch classes which are not actual implementations, which should return None
+            vtype = vsite_cls.vsite_type()
+            if vtype:
+                self.register_virtual_site_type(vtype, vsite_cls)
+
+    def add_parameter(
+        self, parameter_kwargs=None, parameter=None, after=None, before=None
+    ):
+        """Add a parameter to the forcefield, ensuring all parameters are valid.
+        This method differs from other handlers in that it uses a plugin-style
+        enable/disable type system
+
+
+        Parameters
+        ----------
+        parameter_kwargs: dict, optional
+            The kwargs to pass to the ParameterHandler.INFOTYPE (a ParameterType) constructor
+        parameter: ParameterType, optional
+            A ParameterType to add to the ParameterHandler
+        after : str or int, optional
+            The SMIRKS pattern (if str) or index (if int) of the parameter directly before where
+            the new parameter will be added
+        before : str, optional
+            The SMIRKS pattern (if str) or index (if int) of the parameter directly after where
+            the new parameter will be added
+
+        Note that one of (parameter_kwargs, parameter) must be specified
+        Note that when `before` and `after` are both None, the new parameter will be appended
+            to the END of the parameter list.
+        Note that when `before` and `after` are both specified, the new parameter
+            will be added immediately after the parameter matching the `after` pattern or index.
+
+        """
+
+        # TODO: This function need unit tests
+
+        for val in [before, after]:
+            if val and not isinstance(val, (str, int)):
+                raise TypeError
+
+        # If a dict was passed, construct it; if a ParameterType was passed, do nothing
+        if parameter_kwargs:
+            vsite_type = parameter_kwargs["type"]
+            if (
+                vsite_type in self._virtual_site_types
+                and self._virtual_site_types[vsite_type] is not None
+            ):
+                new_parameter = self._virtual_site_types[vsite_type](**parameter_kwargs)
+            else:
+                raise ValueError(
+                    f"Virtual site type {vsite_type} not enabled or implemented in this handler {self.__class__}"
+                )
+        elif parameter:
+            new_parameter = parameter
+            # As a convenience, if parameter type not present, register it
+            if parameter.type not in self._virtual_site_types:
+                self.register_virtual_site_type(parameter.type, type(parameter))
+            # additionally, if the type was previously disabled (set to None),
+            # reenable it with this new type
+            elif self._virtual_site_types.get(parameter.type, None) is None:
+                self.register_virtual_site_type(
+                    parameter.type, type(parameter), replace=True
+                )
+
+        else:
+            raise ValueError("One of (parameter, parameter_kwargs) must be specified")
+
+        if (
+            (new_parameter.smirks in [p.smirks for p in self._parameters])
+            and (new_parameter.type in [p.type for p in self._parameters])
+            and (new_parameter.name in [p.name for p in self._parameters])
+        ):
+            msg = f"A parameter SMIRKS pattern {new_parameter.smirks} already exists for type {new_parameter.type} and name {new_parameter.name}."
+            raise DuplicateParameterError(msg)
+
+        if before is not None:
+            if isinstance(before, str):
+                before_index = self._parameters.index(before)
+            elif isinstance(before, int):
+                before_index = before
+
+        if after is not None:
+            if isinstance(after, str):
+                after_index = self._parameters.index(after)
+            elif isinstance(after, int):
+                after_index = after
+
+        if None not in (before, after):
+            if after_index > before_index:
+                raise ValueError("before arg must be before after arg")
+
+        if after is not None:
+            self._parameters.insert(after_index + 1, new_parameter)
+        elif before is not None:
+            self._parameters.insert(before_index, new_parameter)
+        else:
+            self._parameters.append(new_parameter)
+
+    def _add_parameters(self, section_dict, allow_cosmetic_attributes=False):
+        """
+        Extend the ParameterList in this VirtualSiteHandler using a SMIRNOFF data source.
+
+        Parameters
+        ----------
+        section_dict : dict
+            The dict representation of a SMIRNOFF data source containing parameters to att to this VirtualSiteHandler
+        allow_cosmetic_attributes : bool, optional. Default = False
+            Whether to allow non-spec fields in section_dict. If True, non-spec kwargs will be stored as an
+            attribute of the parameter. If False, non-spec kwargs will raise an exception.
+
+        """
+
+        # Most of this is exactly the same as the base _add_parameters. The only
+        # difference is how INFOTYPE is implemented, see the comment below
+
+        unitless_kwargs, attached_units = extract_serialized_units_from_dict(
+            section_dict
+        )
+        smirnoff_data = attach_units(unitless_kwargs, attached_units)
+
+        for key, val in smirnoff_data.items():
+            if self._INFOTYPE is not None:
+                element_name = self._INFOTYPE._ELEMENT_NAME
+                # Skip sections that aren't the parameter list
+                if key != element_name:
+                    break
+            # If there are multiple parameters, this will be a list. If there's just one, make it a list
+            if not (isinstance(val, list)):
+                val = [val]
+
+            # If we're reading the parameter list, iterate through and attach units to
+            # each parameter_dict, then use it to initialize a ParameterType
+            for unitless_param_dict in val:
+
+                param_dict = attach_units(unitless_param_dict, attached_units)
+
+                # This differs from other handlers in that we use both a
+                # dynamic version of INFOTYPE, and also allow a plugin-style
+                # system where we allow visibility of virtual site types to
+                # control which ones are allowed to be activated
+                vsite_type = param_dict["type"]
+                if (
+                    vsite_type in self._virtual_site_types
+                    and self._virtual_site_types[vsite_type] is not None
+                ):
+                    new_parameter = self._virtual_site_types[vsite_type](
+                        **param_dict,
+                        allow_cosmetic_attributes=allow_cosmetic_attributes,
+                    )
+                    self._parameters.append(new_parameter)
+                else:
+                    raise ValueError(
+                        f"Virtual site type {vsite_type} not enabled or implemented in this handler {self.__class__}"
+                    )
+
+    def register_virtual_site_type(self, vsite_name, vsite_cls, replace=False):
+        """
+        Register an implemented virtual site type. Doing this must be done to
+        pass the validation and option checking. To disable a type, register the
+        name with None and replace=True
+
+        Parameters
+        ----------
+        vsite_name : str
+            The name of the type. This name must be what is found in the "type"
+            attribute in the OFFXML format
+
+        vsite_cls : Any
+            The class to register the name with that implements the type.
+
+        Returns
+        -------
+        None
+        """
+
+        if vsite_name in self._virtual_site_types and replace == False:
+            raise DuplicateVirtualSiteTypeException(
+                "VirtualSite type {} already registered for handler {} and replace=False".format(
+                    vsite_name, self.__class__
+                )
+            )
+        self._virtual_site_types[vsite_name] = vsite_cls
+        self._parameters = [
+            param for param in self._parameters if param.type != vsite_name
+        ]
+
+    @property
+    def virtual_site_types(self):
+        """
+        Return the dictionary of registered virtual site types
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        virtual_site_types : dict
+            A list of virtual site types already registered, paired with their
+            class that implements them
+        """
+
+        return self._virtual_site_types
+
+    @exclusion_policy.converter
+    def exclusion_policy(self, attr, policy):
+        """
+        Convert and validate the exclusion policy specified in the VirtualSiteHandler
+
+        Parameters
+        ----------
+        attr : openforcefield.typing.engines.smirnoff.parameters.ParameterAttribute
+            The underlying ParameterAttribute
+        policy : Any
+            The policy name to validate
+
+        Returns
+        -------
+        policy : str
+            The policy name if it is valid
+
+        Raises
+        ------
+        SMIRNOFFSpecError if the value of policy did not match the SMIRNOFF Specification
+        ValueError if policy cannot be converted to a string
+
+        .. warning :: This API is experimental and subject to change.
+        """
+
+        try:
+            policy = str(policy)
+        except ValueError:
+            raise
+
+        _exclusion_policies_implemented = ["none", "minimal", "parents"]
+        if policy in _exclusion_policies_implemented:
+            return policy
+        else:
+
+            raise SMIRNOFFSpecError(
+                'VirtualSiteHander exclusion policy not understood. Set "exclusion_policy" to one of {}'.format(
+                    _exclusion_policies_implemented
+                )
+            )
+
+    class _VirtualSiteTypeSelector:
+        """A SMIRNOFF virtual site base selector
+
+        This is a placeholder class that will dynamically choose the correct
+        virtual site to create based on the type specified in attributes.
+        Normally, the OFFXML element explicity defines the type, but here it
+        depends on the type attribute as well, which needs the introspection
+        implemented here.
+
+        """
+
+        _VALENCE_TYPE = None
+        # This is needed so VirtualSite elements are parsed correctly
+        # using this generic selector as a type
+        _ELEMENT_NAME = "VirtualSite"
+
+        _enable_types = {}
+
+        def __new__(cls, **attrs):
+
+            VSH = VirtualSiteHandler
+
+            vsite_type = attrs["type"]
+
+            if vsite_type == "BondCharge":
+                cls = VSH.VirtualSiteBondChargeType
+
+            elif vsite_type == "MonovalentLonePair":
+                cls = VSH.VirtualSiteMonovalentLonePairType
+
+            elif vsite_type == "DivalentLonePair":
+                cls = VSH.VirtualSiteDivalentLonePairType
+
+            elif vsite_type == "TrivalentLonePair":
+                cls = VSH.VirtualSiteTrivalentLonePairType
+            else:
+                raise SMIRNOFFSpecError(
+                    'VirtualSite type not understood. Choose one of "BondCharge", "MonovalentLonePair", "DivalentLonePair", "TrivalentLonePair"'
+                )
+
+            return cls(**attrs)
+
+    class VirtualSiteType(vdWHandler.vdWType, abc.ABC):
+        """A SMIRNOFF virtual site base type
+
+        .. warning :: This API is experimental and subject to change.
+        """
+
+        # The attributes that we expect in the OFFXML
+        name = ParameterAttribute(default="EP", converter=str)
+        distance = ParameterAttribute(unit=unit.angstrom)
+        charge_increment = IndexedParameterAttribute(unit=unit.elementary_charge)
+        # Type has a delayed converter/validator to support a plugin-style enable/disable system
+        type = ParameterAttribute(converter=str)
+        match = ParameterAttribute(default="all_permutations")  # has custom converter
+        epsilon = ParameterAttribute(
+            default=0.0 * unit.kilocalorie_per_mole, unit=unit.kilocalorie_per_mole
+        )
+        sigma = ParameterAttribute(default=0.0 * unit.angstrom, unit=unit.angstrom)
+        rmin_half = ParameterAttribute(default=None, unit=unit.angstrom)
+
+        # Here we define the default sorting behavior if we need to sort the
+        # atom key into a canonical ordering
+        transformed_dict_cls = ValenceDict
+
+        # Value of None indicates "not a valid type" or "not an actual implemented type".
+        # To enable/register a new virtual site type, make a subclass and set its
+        # _vsite_type to what would need to be provided in the OFFXML "type" attr,
+        # e.g. type="BondCharge" would mean _vsite_type="BondCharge"
+        _vsite_type = None
+
+        @classmethod
+        def vsite_type(cls):
+            """
+            The type of this virtual site as represented in the SMIRNOFF specification
+
+            .. warning :: This API is experimental and subject to change.
+            """
+            return cls._vsite_type
+
+        def __init__(self, **kwargs):
+            """
+            Create a virtual site parameter type
+            """
+
+            # Need to create default vdW parameters if not specified, since they are optional
+            sigma = kwargs.get("sigma", None)
+            rmin_half = kwargs.get("rmin_half", None)
+
+            if (sigma is None) and (rmin_half is None):
+                kwargs["sigma"] = 0.0 * unit.angstrom
+
+            if kwargs.get("epsilon", None) is None:
+                kwargs["epsilon"] = 0.0 * unit.kilocalorie_per_mole
+
+            super().__init__(**kwargs)
+
+        # @type.converter
+        # def type(self, attr, vsite_type):
+        #     """
+        #     Convert and validate the virtual site type specified in the VirtualSite element
+
+        #     Parameters
+        #     ----------
+        #     attr : openforcefield.typing.engines.smirnoff.parameters.ParameterAttribute
+        #         The underlying ParameterAttribute
+        #     vsite_type : Any
+        #         The virtual site type to validate
+
+        #     Returns
+        #     -------
+        #     vsite_type : str
+        #         The virtual site type if it is valid
+
+        #     Raises
+        #     ------
+        #     SMIRNOFFSpecError if the value of policy did not match the SMIRNOFF Specification
+        #     ValueError if policy cannot be converted to a string
+
+        #     .. warning :: This API is experimental and subject to change.
+        #     """
+
+        #     try:
+        #         vsite_type = str(vsite_type)
+        #     except ValueError:
+        #         raise
+
+        #     if vsite_type in VirtualSiteHandler.virtual_site_types():
+        #         return vsite_type
+        #     else:
+        #         valid_types = ", ".join(
+        #             [str('"' + vtype + '"') for vtype in self._virtual_site_types]
+        #         )
+        #         raise SMIRNOFFSpecError(
+        #             "VirtualSite not given a type. Set type to one of:\n" + valid_types
+        #         )
+
+        @match.converter
+        def match(self, attr, match):
+            """
+            Convert and validate the virtual site type specified in the VirtualSite element
+
+            Parameters
+            ----------
+            match : Any
+                The virtual site type to validate
+
+            Returns
+            -------
+            match : str
+                The virtual site type if it is valid
+
+            Raises
+            ------
+            SMIRNOFFSpecError
+            ValueError
+
+            .. warning :: This API is experimental and subject to change.
+            """
+
+            try:
+                match = str(match)
+            except ValueError:
+                raise
+
+            if match == "once" or match == "all_permutations":
+                return match
+            else:
+                raise SMIRNOFFSpecError(
+                    'VirtualSite type must specify "match" as either "once" or "all_permutations"'
+                )
+
+        def __eq__(self, obj):
+            if type(self) != type(obj):
+                return False
+            A = ["name"]
+            are_equal = [getattr(self, a) == getattr(obj, a) for a in A]
+            return all(are_equal)
+
+        def _add_virtual_site(self, fn, atoms, orientations, *args, **kwargs):
+            """
+
+            Parameters
+            ----------
+            fn : callable
+                The underlying OpenFF function that should be called to create
+                the virtual site in the toolkit. Currently, these are:
+                    * `Molecule._add_bond_charge_virtual_site`
+                    * `Molecule._add_monovalent_lone_pair_virtual_site`
+                    * `Molecule._add_divalent_lone_pair_virtual_site`
+                    * `Molecule._add_trivalent_lone_pair_virtual_site`
+
+            orientations : list of int tuples
+                The permutations corresponding to each virtual particle in the
+                virtual site.
+            Returns
+            -------
+                The index of the created virtual site
+            """
+
+            args = [atoms, self.distance] + list(args)
+
+            # This needs to be dealt with better
+            # Since we cannot save state with this object during find_matches,
+            # we have no idea here which permutations actually matched.
+            # Since we are past the point where we can examine chemical
+            # environment matches to determine the possible orientations, we
+            # must default and take the explicit interpretation:
+            # "all_permutations" will try to make a virtual particle for every
+            # permutation, and "once" is the canonical sorting of the atom
+            # indices.
+
+            # This means that, using the "match" option in the spec, it is not
+            # possible to choose specific permutations. For the current cases,
+            # this should be fine and works well.
+
+            # The API above takes all given orientations, but the OFFXML
+            # has the match setting, which ultimately decides which orientations
+            # to include.
+            if self.match == "once":
+                key = self.transformed_dict_cls.key_transform(orientations[0])
+                orientations = [key]
+                # else all matches wanted, so keep whatever was matched.
+
+            base_args = {
+                "name": self.name,
+                "charge_increments": self.charge_increment,
+                "epsilon": self.epsilon,
+                "sigma": self.sigma,
+                "rmin_half": self.rmin_half,
+                "orientations": orientations,
+                "replace": kwargs.pop("replace", False),
+            }
+            kwargs.update(base_args)
+
+            return fn(*args, **kwargs)
+
+    class VirtualSiteBondChargeType(VirtualSiteType):
+        """A SMIRNOFF virtual site bond charge type
+
+        .. warning :: This API is experimental and subject to change.
+        """
+
+        _vsite_type = "BondCharge"
+
+        def add_virtual_site(self, molecule, orientations, replace=False):
+            """
+            Add a virtual site to the molecule
+
+            Parameters
+            ----------
+            molecule : openforcefield.topology.molecule.Molecule
+                The molecule to add the virtual site to
+            orientations : List[Tuple[int]]
+                A list of orientation tuples which define the permuations used
+                to contruct the geometry of the virtual site particles
+            replace : bool, default=False
+                Replace this virtual site if it already exists in the molecule
+
+            Returns
+            -------
+            off_idx : int
+                The index of the first particle added due to this virtual site
+
+            .. warning :: This API is experimental and subject to change.
+            """
+
+            fn = molecule._add_bond_charge_virtual_site
+            ref_key = self.transformed_dict_cls.key_transform(orientations[0])
+            atoms = list([molecule.atoms[i] for i in ref_key])
+            args = (atoms, orientations)
+            off_idx = super()._add_virtual_site(fn, *args, replace=replace)
+            return off_idx
+
+    class VirtualSiteMonovalentLonePairType(VirtualSiteType):
+        """A SMIRNOFF monovalent lone pair virtual site type
+
+        .. warning :: This API is experimental and subject to change.
+        """
+
+        outOfPlaneAngle = ParameterAttribute(unit=unit.degree)
+        inPlaneAngle = ParameterAttribute(unit=unit.degree)
+
+        _vsite_type = "MonovalentLonePair"
+
+        def add_virtual_site(self, molecule, orientations, replace=False):
+            """
+            Add a virtual site to the molecule
+
+            Parameters
+            ----------
+            molecule : openforcefield.topology.molecule.Molecule
+                The molecule to add the virtual site to
+            orientations : List[Tuple[int]]
+                A list of orientation tuples which define the permuations used
+                to contruct the geometry of the virtual site particles
+            replace : bool, default=False
+                Replace this virtual site if it already exists in the molecule
+
+            Returns
+            -------
+            off_idx : int
+                The index of the first particle added due to this virtual site
+
+            .. warning :: This API is experimental and subject to change.
+            """
+
+            fn = molecule._add_monovalent_lone_pair_virtual_site
+            ref_key = self.transformed_dict_cls.key_transform(orientations[0])
+            atoms = list([molecule.atoms[i] for i in ref_key])
+            args = (atoms, orientations, self.outOfPlaneAngle, self.inPlaneAngle)
+            off_idx = super()._add_virtual_site(fn, *args, replace=replace)
+            return off_idx
+
+    class VirtualSiteDivalentLonePairType(VirtualSiteType):
+        """A SMIRNOFF divalent lone pair virtual site type
+
+        .. warning :: This API is experimental and subject to change.
+        """
+
+        outOfPlaneAngle = ParameterAttribute(unit=unit.degree)
+
+        _vsite_type = "DivalentLonePair"
+
+        def add_virtual_site(self, molecule, orientations, replace=False):
+            """
+            Add a virtual site to the molecule
+
+            Parameters
+            ----------
+            molecule : openforcefield.topology.molecule.Molecule
+                The molecule to add the virtual site to
+            orientations : List[Tuple[int]]
+                A list of orientation tuples which define the permuations used
+                to contruct the geometry of the virtual site particles
+            replace : bool, default=False
+                Replace this virtual site if it already exists in the molecule
+
+            Returns
+            -------
+            off_idx : int
+                The index of the first particle added due to this virtual site
+
+            .. warning :: This API is experimental and subject to change.
+            """
+            fn = molecule._add_divalent_lone_pair_virtual_site
+            ref_key = self.transformed_dict_cls.key_transform(orientations[0])
+            atoms = list([molecule.atoms[i] for i in ref_key])
+            args = (atoms, orientations, self.outOfPlaneAngle)
+            off_idx = super()._add_virtual_site(fn, *args, replace=replace)
+            return off_idx
+
+    class VirtualSiteTrivalentLonePairType(VirtualSiteType):
+        """A SMIRNOFF trivalent lone pair virtual site type
+
+        .. warning :: This API is experimental and subject to change.
+        """
+
+        transformed_dict_cls = ImproperDict
+
+        _vsite_type = "TrivalentLonePair"
+
+        def __init__(self, **kwargs):
+            """
+            Special init method for TrivalentLonePairSites that ensures that match="all_permutations"
+            """
+            super().__init__(**kwargs)
+            if self.match != "once":
+                raise SMIRNOFFSpecError(
+                    f"TrivalentLonePair virtual site defined with match attribute set to {self.match}. "
+                    f"Only supported value is 'once'."
+                )
+
+        def add_virtual_site(self, molecule, orientations, replace=False):
+            """
+            Add a virtual site to the molecule
+
+            Parameters
+            ----------
+            molecule : openforcefield.topology.molecule.Molecule
+                The molecule to add the virtual site to
+            orientations : List[Tuple[int]]
+                A list of orientation tuples which define the permuations used
+                to contruct the geometry of the virtual site particles
+            replace : bool, default=False
+                Replace this virtual site if it already exists in the molecule
+
+            Returns
+            -------
+            off_idx : int
+                The index of the first particle added due to this virtual site
+
+            .. warning :: This API is experimental and subject to change.
+            """
+            fn = molecule._add_trivalent_lone_pair_virtual_site
+            ref_key = self.transformed_dict_cls.key_transform(orientations[0])
+            atoms = list([molecule.atoms[i] for i in ref_key])
+
+            # Trivalents should never need multiple orientations as long
+            # as there are no angle parameters
+            args = (atoms, orientations)
+            off_idx = super()._add_virtual_site(fn, *args, replace=replace)
+            return off_idx
+
+    _DEPENDENCIES = [
+        ElectrostaticsHandler,
+        LibraryChargeHandler,
+        ChargeIncrementModelHandler,
+        ToolkitAM1BCCHandler,
+    ]
+
+    _TAGNAME = "VirtualSites"  # SMIRNOFF tag name to process
+
+    # Trying to create an instance of this selector will cause
+    # some introspection to be done on the type attr passed in, and
+    # will dispatch the appropriate virtual site type.
+    _INFOTYPE = _VirtualSiteTypeSelector  # class to hold force type info
+
+    def _find_matches(
+        self,
+        entity,
+        transformed_dict_cls=ValenceDict,
+        use_named_slots=False,
+        expand_permutations=False,
+    ):
+        """Implement find_matches() and allow using a difference valence dictionary.
+
+        Parameters
+        ----------
+        entity : openforcefield.topology.Topology
+            Topology to search.
+        transformed_dict_cls: Union[Dict, ValenceDict, ImproperDict]
+            The type of dictionary to store the matches in. This
+            will determine how groups of atom indices are stored
+            and accessed (e.g for angles indices should be 0-1-2
+            and not 2-1-0).
+
+        Returns
+        -------
+        matches : `transformed_dict_cls` of ParameterHandlerMatch
+            ``matches[particle_indices]`` is the ``ParameterType`` object
+            matching the tuple of particle indices in ``entity``.
+        """
+        from collections import defaultdict
+
+        logger.debug("Finding matches for {}".format(self.__class__.__name__))
+
+        matches = transformed_dict_cls()
+
+        for parameter_type in self._parameters:
+
+            matches_for_this_type = defaultdict(list)
+
+            ce_matches = entity.chemical_environment_matches(parameter_type.smirks)
+
+            # Split the groups into unique sets i.e. 13,14 and 13,15
+            # Needed for vsites, where a vsite could match C-H with for a CH2 group
+            # Since these are distinct vsite definitions, we need to split them
+            # up into separate groups (match_groups)
+            match_groups_set = [m.topology_atom_indices for m in ce_matches]
+            match_groups = []
+            for key in set(match_groups_set):
+                distinct_atom_pairs = [
+                    x
+                    for x in ce_matches
+                    if sorted(x.topology_atom_indices) == sorted(key)
+                ]
+                match_groups.append(distinct_atom_pairs)
+
+            for ce_matches in match_groups:
+                for environment_match in ce_matches:
+                    # Update the matches for this parameter type.
+                    handler_match = self._Match(parameter_type, environment_match)
+                    key = environment_match.topology_atom_indices
+
+                    # only a match if orientation matches
+                    if not hasattr(handler_match._parameter_type, "match"):
+                        # Probably should never get here
+                        raise SMIRNOFFSpecError(
+                            "The match keyword not found in this parameter?!"
+                        )
+                    else:
+
+                        # The possible orders of this match
+                        # We must check that the tuple of atoms are the same
+                        # as they can be different in e.g. formaldehyde
+                        orders = [m.topology_atom_indices for m in ce_matches]
+                        orientation_flag = handler_match._parameter_type.match
+
+                        tdc = handler_match._parameter_type.transformed_dict_cls
+                        index_of_key = tdc.index_of(key, possible=orders)
+
+                        if orientation_flag == "once":
+                            orientation = [0]
+                        elif orientation_flag == "all_permutations":
+                            orientation = [
+                                tdc.index_of(k, possible=orders) for k in orders
+                            ]
+                        else:
+                            # Probably will never reach here since validation
+                            # happens elsewhere
+                            raise Exception(
+                                "VirtualSite match keyword not understood. Choose from 'once' or 'all_permutations'. This error should be impossible to reach; please submit an issue at https://github.com/openforcefield/openforcefield"
+                            )
+
+                        orders = [
+                            order for order in orders if sorted(key) == sorted(order)
+                        ]
+
+                        # Find these matches is from the older implementation that allows
+                        # specifying specific orientations. Leaving in for now..
+                        if len(orientation) > len(orders):
+                            error_msg = (
+                                "For parameter of type\n{:s}\norientations {} "
+                                + "exceeds length of possible orders "
+                                + "({:d}):\n{:s}"
+                            ).format(
+                                str(parameter_type),
+                                orientation,
+                                len(orders),
+                                str(orders),
+                            )
+                            raise IndexError(error_msg)
+
+                        if not expand_permutations:
+                            key = tdc.key_transform(key)
+
+                        hit = sum([index_of_key == ornt for ornt in orientation])
+                        assert (
+                            hit < 2
+                        ), "VirtualSite orientation for {:s} indices invalid: Has duplicates".format(
+                            parameter_type.__repr__
+                        )
+                        if hit == 1:
+                            matches_for_this_type[key].append(handler_match)
+
+                # Resolve match overriding by the use of the name attribute
+                # If two parameters match but have the same name, use most recent,
+                # but if the names are different, keep and apply both parameters
+                if use_named_slots:
+                    for k in matches_for_this_type:
+                        if k not in matches:
+                            matches[k] = {}
+                    for k, v in matches_for_this_type.items():
+                        marginal_matches = []
+                        for new_match in v:
+                            unique = True
+                            new_item = new_match._parameter_type
+                            for idx, (name, existing_match) in enumerate(
+                                matches[k].items()
+                            ):
+                                existing_item = existing_match._parameter_type
+                                same_parameter = False
+
+                                same_type = type(existing_item) == type(new_item)
+                                if same_type:
+                                    same_parameter = existing_item == new_item
+
+                                # same, so replace it to have a FIFO priority
+                                # and the last parameter matching wins
+                                if same_parameter:
+                                    matches[k][new_item.name] = new_match
+                                    unique = False
+                            if unique:
+                                marginal_matches.append(new_match)
+                        matches[k].update(
+                            {p._parameter_type.name: p for p in marginal_matches}
+                        )
+                else:
+                    matches.update(matches_for_this_type)
+
+            logger.debug(
+                "{:64} : {:8} matches".format(
+                    parameter_type.smirks, len(matches_for_this_type)
+                )
+            )
+
+        logger.debug("{} matches identified".format(len(matches)))
+
+        if use_named_slots:
+            for k, v in matches.items():
+                matches[k] = list(v.values())
+
+        return matches
+
+    def create_force(self, system, topology, **kwargs):
+        """
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+        """
+        force = super().create_force(system, topology, **kwargs)
+
+        # Separate the logic of adding vsites in the oFF state and the OpenMM
+        # system. Operating on the topology is not ideal (a hack), so hopefully
+        # this loop, which adds the oFF vsites to the topology, will live
+        # somewhere else
+
+        logger.debug("Creating OpenFF virtual site representations...")
+        topology = self._create_openff_virtual_sites(topology)
+
+        # The toolkit now has a representation of the vsites in the topology,
+        # and here we create the OpenMM parameters/objects/exclusions
+        logger.debug("Creating OpenMM VSite particles...")
+        for ref_mol in topology.reference_molecules:
+            logger.debug("Adding vsites for reference mol: {}".format(str(ref_mol)))
+            self._create_openmm_virtual_sites(system, force, topology, ref_mol)
+
+    def check_handler_compatibility(self, other_handler):
+        """
+        Checks whether this ParameterHandler encodes compatible physics as
+        another ParameterHandler. This is called if a second handler is
+        attempted to be initialized for the same tag.
+
+        Parameters
+        ----------
+        other_handler : a ParameterHandler object
+            The handler to compare to.
+
+        Raises
+        ------
+        IncompatibleParameterError if handler_kwargs are incompatible with
+        existing parameters.
+        """
+        string_attrs_to_compare = [
+            "exclusion_policy",
+        ]
+        self._check_attributes_are_equal(
+            other_handler, identical_attrs=string_attrs_to_compare
+        )
+
+    def find_matches(self, entity, expand_permutations=True):
+        """Find the virtual sites in the topology/molecule matched by a
+        parameter type.
+
+        Parameters
+        ----------
+        entity : openforcefield.topology.Topology
+            Topology to search.
+
+        Returns
+        ---------
+        matches : Dict[Tuple[int], ParameterHandler._Match]
+            ``matches[atom_indices]`` is the ``ParameterType`` object
+            matching the n-tuple of atom indices in ``entity``.
+
+        """
+        return self._find_matches(
+            entity,
+            transformed_dict_cls=dict,
+            use_named_slots=True,
+            expand_permutations=expand_permutations,
+        )
+
+    def _apply_charge_increment(self, force, atom_key, charge_increment):
+        vsite_charge = charge_increment[0]
+        vsite_charge *= 0.0
+        for charge_i, atom in enumerate(atom_key):
+            o_charge, o_sigma, o_epsilon = force.getParticleParameters(atom)
+            vsite_charge -= charge_increment[charge_i]
+            o_charge += charge_increment[charge_i]
+            force.setParticleParameters(atom, o_charge, o_sigma, o_epsilon)
+        return vsite_charge
+
+    def _same_virtual_site_type(self, vs_i, vs_j):
+        if type(vs_i) != type(vs_j):
+            return False
+        if vs_i.name != vs_j.name:
+            return False
+        return True
+
+    def _reduce_virtual_particles_to_sites(self, atom_matches):
+        combined_orientations = []
+
+        # These are the indices representing the tuples (VSITE_TYPE, KEY_LIST).
+        # Basically an ordered dictionary with ints as keys
+        VSITE_TYPE = 0
+        KEY_LIST = 1
+
+        for key, atom_match_lst in atom_matches.items():
+            for match in atom_match_lst:
+
+                # For each match, loop through existing virtual sites found,
+                # and determine if this match is a unique virtual site,
+                # or a member of an existing virtual site (e.g. TIP5)
+                vs_i = match.parameter_type
+                found = False
+
+                for i, vsite_struct in enumerate(combined_orientations):
+
+                    vs_j = vsite_struct[VSITE_TYPE]
+
+                    # The logic to determine if the particles should be
+                    # combined into a single virtual site. If the atoms
+                    # are the same, the vsite is the same, but the absolute
+                    # ordering of the match is different, then we say
+                    # this is part of the same virtual site.
+                    # Note that the expand_permutations=True above is what
+                    # returns the different orders for each match (normally,
+                    # this is not the case for e.g. bonds where 1-2 is the
+                    # same parameter as 2-1 and is always returned as 1-2.
+                    same_atoms = all(
+                        [sorted(key) == sorted(k) for k in vsite_struct[KEY_LIST]]
+                    )
+                    diff_keys = key not in vsite_struct[KEY_LIST]
+                    same_vsite = self._same_virtual_site_type(vs_i, vs_j)
+
+                    if same_atoms and same_vsite and diff_keys:
+                        combined_orientations[i][KEY_LIST].append(key)
+                        found = True
+
+                    # Skip out early since there is no reason to keep
+                    # searching since we will never add the same
+                    # particle twice
+                    if found:
+                        break
+
+                # If the entire loop did not produce a hit, then this is
+                # a brand new virtual site
+                if not found:
+                    newsite = [None, None]
+                    newsite[VSITE_TYPE] = vs_i
+                    newsite[KEY_LIST] = [key]
+                    combined_orientations.append(newsite)
+
+        return combined_orientations
+
+    def _create_openff_virtual_sites(self, topology):
+
+        for molecule in topology.reference_molecules:
+
+            """The following two lines below should be avoided but is left
+            until a better solution is found (see #699). The issue is that a
+            topology should not be required since `find_matches` works on
+            FrozenMolecules. However, the signature is different, as they return
+            different results.
+
+            Also, we are using a topology to retreive the indices for the
+            matches, but then using those indices as a direct `Atom` object
+            lookup in the molecule. This is unsafe because there is no reason to
+            believe that the indices should be consistent. However, there is
+            currently no `FrozenMolecule.atom(index)` functionality so using the
+            topology match indices is the only clear way forward.  See the
+            contents of `add_virtual_site` called below for the code that shows
+            this."""
+
+            top_mol = Topology.from_molecules([molecule])
+            matches = self.find_matches(top_mol, expand_permutations=True)
+
+            virtual_sites = self._reduce_virtual_particles_to_sites(matches)
+
+            # Now handle the vsites for this molecule
+            # This call batches the key tuples into a single list, in order
+            # for the virtual site to represent multiple particles
+            for vsite_type, orientations in virtual_sites:
+                vsite_type.add_virtual_site(molecule, orientations, replace=True)
+
+        return topology
+
+    def _create_openmm_virtual_sites(self, system, force, topology, ref_mol):
+
+        """
+        Here we must assume that
+            1. All atoms in the topology are already present
+            2. The order we iterate these virtual sites is the order they
+                appear in the OpenMM system
+        If 1 is not met, then 2 will fail, and it will be quite difficult to
+        find the mapping since we currently do not keep track of any OpenMM
+        state, and it is unlikely that we will ever do so.  If 1 is met, then 2
+        should fall into place naturally.
+
+        This means that we will not check that our index matches the OpenMM
+        index, as there is no reason, from a purely technical and/or API
+        standpoint, to require them to be.
+        """
+
+        for vsite in ref_mol.virtual_sites:
+            ref_key = [atom.molecule_atom_index for atom in vsite.atoms]
+            logger.debug("VSite ref_key: {}".format(ref_key))
+
+            ms = topology._reference_molecule_to_topology_molecules[ref_mol]
+            for top_mol in ms:
+                logger.debug("top_mol: {}".format(top_mol))
+
+                ids = self._create_openmm_virtual_particle(
+                    system, force, top_mol, vsite, ref_key
+                )
+
+                # Go and exclude each of the vsite particles; this makes
+                # sense because these particles cannot "feel" forces, only
+                # exert them
+                policy = self._parameter_to_policy[self.exclusion_policy]
+                if policy.value != self._ExclusionPolicy.NONE.value:
+                    # Default here is to always exclude vsites which are
+                    # of the same virtual site. Their positions are rigid,
+                    # and so any energy that would be added to the system
+                    # due to their pairwise interaction would not make sense.
+                    for i, j in combinations(ids, 2):
+                        logger.debug("Excluding vsite {} vsite {}".format(i, j))
+                        force.addException(i, j, 0.0, 0.0, 0.0, replace=True)
+
+    def _create_openmm_virtual_particle(self, system, force, top_mol, vsite, ref_key):
+
+        policy = self._parameter_to_policy[self.exclusion_policy]
+
+        ids = []
+
+        for vp in vsite.particles:
+            orientation = vp.orientation
+            sort_key = [orientation.index(i) for i in ref_key]
+            atom_key = [ref_key[i] for i in sort_key]
+            logger.debug("sort_key: {}".format(sort_key))
+            atom_key = [top_mol.atom_start_topology_index + i for i in atom_key]
+
+            omm_vsite = vsite.get_openmm_virtual_site(atom_key)
+            vsite_q = self._apply_charge_increment(
+                force, atom_key, vsite.charge_increments
+            )
+
+            ljtype = vsite
+            if ljtype.sigma is None:
+                sigma = 2.0 * ljtype.rmin_half / (2.0 ** (1.0 / 6.0))
+            else:
+                sigma = ljtype.sigma
+
+            # create the vsite particle
+            mass = 0.0
+            vsite_idx = system.addParticle(mass)
+            ids.append(vsite_idx)
+
+            logger.debug(
+                "vsite_id: {} orientation: {} atom_key: {}".format(
+                    vsite_idx, orientation, atom_key
+                )
+            )
+
+            system.setVirtualSite(vsite_idx, omm_vsite)
+            force.addParticle(vsite_q, sigma, ljtype.epsilon)
+
+            logger.debug(f"Added virtual site particle with charge {vsite_q}")
+            logger.debug(f"  charge_increments: {vsite.charge_increments}")
+
+            # add exclusion to the "parent" atom of the vsite
+            if policy.value >= self._ExclusionPolicy.MINIMAL.value:
+                keylen = len(atom_key)
+                if keylen == 2:
+                    owning_atom = atom_key[0]
+                elif keylen == 3:
+                    owning_atom = atom_key[1]
+                else:
+                    # The second atom of an improper is considered the
+                    # "owning" atom
+                    owning_atom = atom_key[1]
+                logger.debug(f"Excluding vsite {vsite_idx} atom {owning_atom}")
+                force.addException(owning_atom, vsite_idx, 0.0, 0.0, 0.0, replace=True)
+
+            # add exclusions to all atoms in the vsite definition (the parents)
+            if policy.value >= self._ExclusionPolicy.PARENTS.value:
+                for i in atom_key:
+                    if i == owning_atom:
+                        continue
+                    logger.debug(f"Excluding vsite {vsite_idx} atom {i}")
+                    force.addException(i, vsite_idx, 0.0, 0.0, 0.0, replace=True)
+
+            if policy.value > self._ExclusionPolicy.PARENTS.value:
+                raise NotImplementedError(
+                    "Only the 'parents', 'minimal', and 'none' exclusion_policies are implemented"
+                )
+
+        return ids
 
 
 if __name__ == "__main__":
