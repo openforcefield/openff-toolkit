@@ -1891,6 +1891,38 @@ class TestForceFieldChargeAssignment:
             charge, _, _ = nonbonded_force.getParticleParameters(idx)
             assert abs(charge - expected_charge) < 1.0e-6 * unit.elementary_charge
 
+    def test_charge_increment_model_invalid_number_of_cis(self):
+        """
+        Ensure that we support the behavior where a ChargeIncrement with an incorrect number of tagged atoms
+        and chargeincrementX values riases an error
+        """
+
+        file_path = get_data_file_path("test_forcefields/smirnoff99Frosst.offxml")
+        ff = ForceField(file_path)
+        del ff._parameter_handlers["ToolkitAM1BCC"]
+        cimh = ff.get_parameter_handler('ChargeIncrementModel',
+                                        handler_kwargs={'version':'0.3',
+                                                        'partial_charge_method': 'formal_charge'})
+        cimh.add_parameter({'smirks': '[C:1][C:2][O:3]',
+                           'charge_increment1': 0.3*unit.elementary_charge,
+                           'charge_increment2': -0.2*unit.elementary_charge,
+                           'charge_increment3': -0.1*unit.elementary_charge})
+
+        # Add ONE MORE chargeincrement parameter than there are tagged atoms and ensure an exception is raised
+        cimh.parameters[0].charge_increment.append(0.01*unit.elementary_charge)
+        top = Topology.from_molecules([create_ethanol()])
+        with pytest.raises(SMIRNOFFSpecError, match='number of chargeincrements must be either the same'):
+            sys = ff.create_openmm_system(top)
+
+        # Ensure that parameterization with the correct number of increments DOES NOT raise an exception
+        cimh.parameters[0].charge_increment = cimh.parameters[0].charge_increment[:2]
+        sys = ff.create_openmm_system(top)
+
+        # Add TWO LESS chargeincrement parameters than there are tagged atoms and ensure an exception is raised
+        cimh.parameters[0].charge_increment = cimh.parameters[0].charge_increment[:1]
+        with pytest.raises(SMIRNOFFSpecError, match='number of chargeincrements must be either the same'):
+            sys = ff.create_openmm_system(top)
+
 
     def test_charge_increment_model_initialize_with_no_elements(self):
         """Ensure that we can initialize a ForceField object from an OFFXML with a ChargeIncrementModel header, but no
