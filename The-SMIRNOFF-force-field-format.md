@@ -648,9 +648,8 @@ We will support the following different types or geometries of off-center charge
 
 Each virtual site receives charge which is transferred from the desired atoms specified in the SMIRKS pattern via a `charge_increment#` parameter, e.g., if `charge_increment1=0.1*elementary_charge` then the virtual site will receive a charge of -0.1 and the atom labeled `1` will have its charge adjusted upwards by 0.1.
 N may index any indexed atom.
-Increments which are left unspecified default to zero.
 Additionally, each virtual site can bear Lennard-Jones parameters, specified by `sigma` and `epsilon` or `rmin_half` and `epsilon`.
-If unspecified these also default to zero.
+If unspecified these default to zero.
 
 In the SMIRNOFF format, these are encoded as:
 ```XML
