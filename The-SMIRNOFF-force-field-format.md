@@ -677,9 +677,9 @@ In the SMIRNOFF format, these are encoded as:
 </VirtualSites>
 ```
 
-| VirtualSites section tag version   | Tag attributes and default values    | Required parameter attributes   | Optional parameter attributes |
-|------------------------------------|--------------------------------------|---------------------------------|-------------------------------|
-| 0.3                                | `exclusion_policy="parents"`         | `smirks`, `type`, `distance`, `charge_increment` (indexed), `inPlaneAngle` IF `type="MonovalentLonePair"`, `outOfPlaneAngle` IF `type="MonovalentLonePair` OR `type="DivalentLonePair"`   | `sigma`, `epsilon`, `name`, `match` |
+| VirtualSites section tag version   | Tag attributes and default values    | Required parameter attributes and default values   | Optional parameter attributes |
+|------------------------------------|--------------------------------------|----------------------------------------------------|-------------------------------|
+| 0.3                                | `exclusion_policy="parents"`         | `smirks`, `type`, `distance`, `charge_increment` (indexed), `inPlaneAngle` IF `type="MonovalentLonePair"`, `outOfPlaneAngle` IF `type="MonovalentLonePair` OR `type="DivalentLonePair"`,  `sigma=0.*angstrom`, `epsilon=0.*kilocalories_per_mole`, `name="EP"`, `match="all_permutations"` IF `type=BondCharge` OR `type="MonovalentLonePair` OR `type="DivalentLonePair"`, `match="once"` IF `type="TrivalentLonePair` | N/A |
 
 
 ### Aromaticity models
