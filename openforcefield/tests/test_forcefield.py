@@ -1712,7 +1712,7 @@ class TestForceFieldVirtualSites:
 
     xml_ff_virtual_sites_bondcharge_match_once = """<?xml version="1.0" encoding="utf-8"?>
     <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-        <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="None" fractional_bondorder_interpolation="linear">
+        <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
           <Bond smirks="[*:1]~[*:2]" id="b999" k="500.0 * kilocalories_per_mole/angstrom**2" length="1.1 * angstrom"/>
         </Bonds>
         <VirtualSites version="0.3">
@@ -1755,7 +1755,7 @@ class TestForceFieldVirtualSites:
 
     xml_ff_virtual_sites_bondcharge_match_all = """<?xml version="1.0" encoding="utf-8"?>
     <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-        <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="None" fractional_bondorder_interpolation="linear">
+        <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
           <Bond smirks="[*:1]~[*:2]" id="b999" k="500.0 * kilocalories_per_mole/angstrom**2" length="1.1 * angstrom"/>
         </Bonds>
         <VirtualSites version="0.3">
@@ -1798,7 +1798,7 @@ class TestForceFieldVirtualSites:
 
     xml_ff_virtual_sites_bondcharge_match_once_two_names = """<?xml version="1.0" encoding="utf-8"?>
     <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-        <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="None" fractional_bondorder_interpolation="linear">
+        <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
           <Bond smirks="[*:1]~[*:2]" id="b999" k="500.0 * kilocalories_per_mole/angstrom**2" length="1.1 * angstrom"/>
         </Bonds>
         <VirtualSites version="0.3">
@@ -1830,7 +1830,7 @@ class TestForceFieldVirtualSites:
 
     xml_ff_virtual_sites_monovalent_match_once = """<?xml version="1.0" encoding="utf-8"?>
     <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-        <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="None" fractional_bondorder_interpolation="linear">
+        <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
           <Bond smirks="[*:1]~[*:2]" id="b999" k="500.0 * kilocalories_per_mole/angstrom**2" length="1.1 * angstrom"/>
         </Bonds>
         <VirtualSites version="0.3">
@@ -1868,7 +1868,7 @@ class TestForceFieldVirtualSites:
 
     xml_ff_virtual_sites_divalent_match_all = """<?xml version="1.0" encoding="ASCII"?>
     <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-        <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="None" fractional_bondorder_interpolation="linear">
+        <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
           <Bond smirks="[*:1]~[*:2]" id="b999" k="500.0 * kilocalories_per_mole/angstrom**2" length="1.1 * angstrom"/>
         </Bonds>
         <VirtualSites version="0.3">
@@ -1891,7 +1891,7 @@ class TestForceFieldVirtualSites:
 
     xml_ff_virtual_sites_trivalent_match_once = """<?xml version="1.0" encoding="ASCII"?>
     <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-        <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="None" fractional_bondorder_interpolation="linear">
+        <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
           <Bond smirks="[*:1]~[*:2]" id="b999" k="500.0 * kilocalories_per_mole/angstrom**2" length="1.1 * angstrom"/>
         </Bonds>
         <VirtualSites version="0.3">
@@ -1915,7 +1915,7 @@ class TestForceFieldVirtualSites:
     xml_ff_virtual_sites_trivalent_match_all = """
     <?xml version="1.0" encoding="ASCII"?>
     <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-        <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="None" fractional_bondorder_interpolation="linear">
+        <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
           <Bond smirks="[*:1]~[*:2]" id="b999" k="500.0 * kilocalories_per_mole/angstrom**2" length="1.1 * angstrom"/>
         </Bonds>
         <VirtualSites version="0.3">
@@ -2067,7 +2067,7 @@ class TestForceFieldVirtualSites:
     # Divalent virtual site test data
     ############################################################################
 
-    # A TIP5 definition from OpenMM
+    # A TIP5P definition from OpenMM
     opts = OrderedDict(
         {
             "xml": xml_ff_virtual_sites_divalent_match_all,
@@ -3670,7 +3670,7 @@ class TestForceFieldParameterAssignment:
             off_omm_system, amber_omm_system, positions, by_force_type=False
         )
 
-    def test_tip5_dimer_energy(self):
+    def test_tip5p_dimer_energy(self):
         """"""
 
         tip5p_offxml = """<?xml version="1.0" encoding="utf-8"?>
@@ -3682,7 +3682,7 @@ class TestForceFieldParameterAssignment:
             <Atom smirks="[#1:1]-[#8X2H2+0]-[#1]" epsilon="0. * mole**-1 * kilojoule" id="n35" sigma="1 * nanometer"/>
             <Atom smirks="[#1]-[#8X2H2+0:1]-[#1]" epsilon="0.66944 * mole**-1 * kilojoule" id="n35" sigma="0.312 * nanometer"/>
     </vdW>
-     <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="None" fractional_bondorder_interpolation="linear">
+     <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
         <Bond smirks="[#1:1]-[#8X2H2+0:2]-[#1]" length="0.9572 * angstrom" k="462750.4 * nanometer**-2 * mole**-1 * kilojoule" id="b1" />   
     </Bonds>
     <Angles version="0.3" potential="harmonic">
