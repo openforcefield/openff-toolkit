@@ -680,7 +680,7 @@ In the SMIRNOFF format, these are encoded as:
 
 | VirtualSites section tag version   | Tag attributes and default values    | Required parameter attributes   | Optional parameter attributes |
 |------------------------------------|--------------------------------------|---------------------------------|-------------------------------|
-| 0.3                                | `exclusion_policy="parents"`         | `smirks`, `type`, `distance`, `charge_increment` (indexed), `inPlaneAngle` IF `type="MonovalentLonePair"`, `outOfPlaneAngle` IF `type="MonovalentLonePair` OR `type="DivalentLonePair"`   | `sigma`, `epsilon`, `name` |
+| 0.3                                | `exclusion_policy="parents"`         | `smirks`, `type`, `distance`, `charge_increment` (indexed), `inPlaneAngle` IF `type="MonovalentLonePair"`, `outOfPlaneAngle` IF `type="MonovalentLonePair` OR `type="DivalentLonePair"`   | `sigma`, `epsilon`, `name`, `match` |
 
 
 ### Aromaticity models
