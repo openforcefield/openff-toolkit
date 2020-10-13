@@ -97,6 +97,11 @@ New features
 
 Bugfixes
 """""""""
+- `PR #743 <https://github.com/openforcefield/openforcefield/pull/743>`_: Prevents the non-bonded
+  (vdW) cutoff from silently falling back to the OpenMM default of 1 nm in
+  :py:meth:`Forcefield.create_openmm_system
+  <openforcefield.typing.engines.smirnoff.forcefield.ForceField.create_openmm_system>` and instead
+  sets its to the value specified by the force field.
 - `PR #737 <https://github.com/openforcefield/openforcefield/pull/737>`_: Prevents OpenEye from
   incidentally being used in the conformer generation step of
   :py:class:`AmberToolsToolkitWrapper.assign_fractional_bond_orders
