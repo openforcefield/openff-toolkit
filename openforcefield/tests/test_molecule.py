@@ -847,95 +847,37 @@ class TestMolecule:
             molecule, test_mol, "Molecule.to_rdkit()/from_rdkit() round trip failed"
         )
 
-    # TODO: Should there be an equivalent toolkit test and leave this as an integration test?
     @requires_openeye
-    @pytest.mark.parametrize(
-        "molecule",
-        mini_drug_bank(
-            xfail_mols={
-                "DrugBank_2397": 'OpenEye cannot generate a correct IUPAC name and raises a "Warning: Incorrect name:" or simply return "BLAH".',
-                "DrugBank_2543": 'OpenEye cannot generate a correct IUPAC name and raises a "Warning: Incorrect name:" or simply return "BLAH".',
-                "DrugBank_2642": 'OpenEye cannot generate a correct IUPAC name and raises a "Warning: Incorrect name:" or simply return "BLAH".',
-            },
-            wip_mols={
-                "DrugBank_1212": "the roundtrip generates molecules with very different IUPAC/SMILES!",
-                "DrugBank_2210": "the roundtrip generates molecules with very different IUPAC/SMILES!",
-                "DrugBank_4584": "the roundtrip generates molecules with very different IUPAC/SMILES!",
-                "DrugBank_390": 'raises warning "Unable to make OFFMol from OEMol: OEMol has unspecified stereochemistry."',
-                "DrugBank_810": 'raises warning "Unable to make OFFMol from OEMol: OEMol has unspecified stereochemistry."',
-                "DrugBank_4316": 'raises warning "Unable to make OFFMol from OEMol: OEMol has unspecified stereochemistry."',
-                "DrugBank_7124": 'raises warning "Unable to make OFFMol from OEMol: OEMol has unspecified stereochemistry."',
-                "DrugBank_4346": 'raises warning "Failed to parse name:"',
-            },
-        ),
-    )
-    def test_to_from_iupac(self, molecule):
-        """Test that conversion/creation of a molecule to and from a IUPAC name is consistent."""
-        from openforcefield.utils.toolkits import UndefinedStereochemistryError
-
-        # All the molecules that raise UndefinedStereochemistryError in Molecule.from_iupac()
-        # (This is a larger list than the normal group of undefined stereo mols, probably has
-        # something to do with IUPAC information content)
-        iupac_problem_mols = {
-            "DrugBank_977",
-            "DrugBank_1634",
-            "DrugBank_1700",
-            "DrugBank_1962",
-            "DrugBank_2148",
-            "DrugBank_2178",
-            "DrugBank_2186",
-            "DrugBank_2208",
-            "DrugBank_2519",
-            "DrugBank_2538",
-            "DrugBank_2592",
-            "DrugBank_2651",
-            "DrugBank_2987",
-            "DrugBank_3332",
-            "DrugBank_3502",
-            "DrugBank_3622",
-            "DrugBank_3726",
-            "DrugBank_3844",
-            "DrugBank_3930",
-            "DrugBank_4161",
-            "DrugBank_4162",
-            "DrugBank_4778",
-            "DrugBank_4593",
-            "DrugBank_4959",
-            "DrugBank_5043",
-            "DrugBank_5076",
-            "DrugBank_5176",
-            "DrugBank_5418",
-            "DrugBank_5737",
-            "DrugBank_5902",
-            "DrugBank_6295",
-            "DrugBank_6304",
-            "DrugBank_6305",
-            "DrugBank_6329",
-            "DrugBank_6355",
-            "DrugBank_6401",
-            "DrugBank_6509",
-            "DrugBank_6531",
-            "DrugBank_6647",
-            # These test cases are allowed to fail.
-            "DrugBank_390",
-            "DrugBank_810",
-            "DrugBank_4316",
-            "DrugBank_4346",
-            "DrugBank_7124",
-        }
-        undefined_stereo = molecule.name in iupac_problem_mols
-
-        iupac = molecule.to_iupac()
-
-        if undefined_stereo:
-            with pytest.raises(UndefinedStereochemistryError):
-                Molecule.from_iupac(iupac)
-
-        molecule_copy = Molecule.from_iupac(
-            iupac, allow_undefined_stereo=undefined_stereo
+    def test_to_from_iupac(self):
+        """
+        Test basic behavior of the IUPAC conversion functions. More rigorous
+        testing of the toolkity wrapper behavior is in test_toolkits.py
+        """
+        from openforcefield.utils.toolkits import (
+            InvalidIUPACNameError,
+            UndefinedStereochemistryError,
         )
-        assert molecule.is_isomorphic_with(
-            molecule_copy, atom_stereochemistry_matching=not undefined_stereo
+
+        with pytest.raises(InvalidIUPACNameError):
+            Molecule.from_iupac(".BETA.-PINENE")
+
+        # DrugBank_977, tagged as a problem molecule in earlier tests
+        bad_stereo_iupac = (
+            "(~{E},3~{R},5~{S})-7-[4-(4-fluorophenyl)-6-isopropyl-2-"
+            "[methyl(methylsulfonyl)amino]pyrimidin-5-yl]-3,5-"
+            "dihydroxy-hept-6-enoic acid"
+        )
+        with pytest.raises(UndefinedStereochemistryError):
+            Molecule.from_iupac(bad_stereo_iupac)
+
+        cholesterol = Molecule.from_smiles(
+            "C[C@H](CCCC(C)C)[C@H]1CC[C@@H]2[C@@]1(CC[C@H]3[C@H]2CC=C4[C@@]3(CC[C@@H](C4)O)C)C"
+        )
+
+        cholesterol_iupac = cholesterol.to_iupac()
+
+        assert Molecule.are_isomorphic(
+            cholesterol, Molecule.from_iupac(cholesterol_iupac)
         )
 
     @pytest.mark.parametrize("molecule", mini_drug_bank())

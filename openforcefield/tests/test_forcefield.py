@@ -1544,6 +1544,30 @@ class TestForceField:
                 topology, invalid_kwarg="aaa", toolkit_registry=toolkit_registry
             )
 
+    @pytest.mark.parametrize("mod_cuoff", [True, False])
+    def test_nonbonded_cutoff_no_box_vectors(self, mod_cuoff):
+        """Ensure that the NonbondedForce objects use the cutoff specified in the
+        ParameterHandler, not the OpenMM defaults"""
+        top = Topology.from_molecules(create_ethanol())
+        assert top.box_vectors is None
+        forcefield = ForceField("test_forcefields/smirnoff99Frosst.offxml")
+
+        if mod_cuoff:
+            # Ensure a modified, non-default cutoff will be propogated through
+            forcefield["vdW"].cutoff = 0.777 * unit.angstrom
+            forcefield["Electrostatics"].cutoff = 0.777 * unit.angstrom
+
+        omm_sys = forcefield.create_openmm_system(top)
+
+        for f in omm_sys.getForces():
+            if isinstance(f, openmm.NonbondedForce):
+                nonbonded_force = f
+
+        found_cutoff = nonbonded_force.getCutoffDistance()
+        vdw_cutoff = forcefield["vdW"].cutoff
+        e_cutoff = forcefield["Electrostatics"].cutoff
+        assert found_cutoff == vdw_cutoff == e_cutoff
+
     @pytest.mark.parametrize("inputs", nonbonded_resolution_matrix)
     def test_nonbonded_method_resolution(self, inputs):
         """Test predefined permutations of input options to ensure nonbonded handling is correctly resolved"""

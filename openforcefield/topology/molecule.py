@@ -3709,16 +3709,22 @@ class FrozenMolecule(Serializable):
 
         return matches
 
-    # TODO: Move OE-dependent parts of this to toolkits.py
     @classmethod
-    @OpenEyeToolkitWrapper.requires_toolkit()
-    def from_iupac(cls, iupac_name, **kwargs):
+    def from_iupac(
+        cls,
+        iupac_name,
+        toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
+        allow_undefined_stereo=False,
+        **kwargs,
+    ):
         """Generate a molecule from IUPAC or common name
 
         Parameters
         ----------
         iupac_name : str
             IUPAC name of molecule to be generated
+        toolkit_registry : openforcefield.utils.toolkits.ToolkitRegistry or openforcefield.utils.toolkits.ToolkitWrapper, optional, default=GLOBAL_TOOLKIT_REGISTRY
+            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for chemical environment matches
         allow_undefined_stereo : bool, default=False
             If false, raises an exception if molecule contains undefined stereochemistry.
 
@@ -3732,7 +3738,7 @@ class FrozenMolecule(Serializable):
         Examples
         --------
 
-        Create a molecule from a common name
+        Create a molecule from an IUPAC name
 
         >>> molecule = Molecule.from_iupac('4-[(4-methylpiperazin-1-yl)methyl]-N-(4-methyl-3-{[4-(pyridin-3-yl)pyrimidin-2-yl]amino}phenyl)benzamide')
 
@@ -3741,20 +3747,30 @@ class FrozenMolecule(Serializable):
         >>> molecule = Molecule.from_iupac('imatinib')
 
         """
-        from openeye import oechem, oeiupac
+        if isinstance(toolkit_registry, ToolkitRegistry):
+            molecule = toolkit_registry.call(
+                "from_iupac",
+                iupac_name,
+                allow_undefined_stereo=allow_undefined_stereo,
+                **kwargs,
+            )
+        elif isinstance(toolkit_registry, ToolkitWrapper):
+            toolkit = toolkit_registry
+            molecule = toolkit.from_iupac(
+                iupac_name,
+                allow_undefined_stereo=allow_undefined_stereo,
+                **kwargs,
+            )
+        else:
+            raise Exception(
+                "Invalid toolkit_registry passed to from_iupac. Expected ToolkitRegistry or ToolkitWrapper. Got  {}".format(
+                    type(toolkit_registry)
+                )
+            )
 
-        oemol = oechem.OEMol()
-        oeiupac.OEParseIUPACName(oemol, iupac_name)
-        oechem.OETriposAtomNames(oemol)
-        result = oechem.OEAddExplicitHydrogens(oemol)
-        if result == False:
-            raise Exception("Addition of explicit hydrogens failed in from_iupac")
-        molecule = cls.from_openeye(oemol, **kwargs)
         return molecule
 
-    # TODO: Move OE-dependent parts of this to toolkits.py
-    @OpenEyeToolkitWrapper.requires_toolkit()
-    def to_iupac(self):
+    def to_iupac(self, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """Generate IUPAC name from Molecule
 
         Returns
@@ -3773,9 +3789,20 @@ class FrozenMolecule(Serializable):
         >>> iupac_name = molecule.to_iupac()
 
         """
-        from openeye import oeiupac
+        if isinstance(toolkit_registry, ToolkitRegistry):
+            to_iupac_method = toolkit_registry.resolve("to_iupac")
+        elif isinstance(toolkit_registry, ToolkitWrapper):
+            to_iupac_method = toolkit_registry.to_iupac
+        else:
+            raise Exception(
+                "Invalid toolkit_registry passed to to_iupac. Expected ToolkitRegistry or ToolkitWrapper. Got  {}".format(
+                    type(toolkit_registry)
+                )
+            )
 
-        return oeiupac.OECreateIUPACName(self.to_openeye())
+        # TODO: Can `to_iupac` fail if given a well-behaved OFFMol/OEMol?
+        result = to_iupac_method(self)
+        return result
 
     @staticmethod
     def from_topology(topology):
