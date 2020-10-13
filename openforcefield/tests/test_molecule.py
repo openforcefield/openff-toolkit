@@ -357,13 +357,14 @@ class TestMolecule:
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_json_serialization(self, molecule):
         """Test serialization of a molecule object to and from JSON."""
-        # TODO: Test round-trip, on mini_drug_bank, when to_json bug is fixed, see #547
         mol = Molecule.from_smiles("CCO")
         molecule_copy = Molecule.from_json(mol.to_json())
         assert molecule_copy == mol
+
         mol.generate_conformers(n_conformers=1)
-        with pytest.raises(TypeError):
-            mol.to_json()
+        copy_with_conformers = Molecule.from_json(mol.to_json())
+        assert copy_with_conformers == mol
+        assert np.allclose(copy_with_conformers.conformers, mol.conformers)
 
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_xml_serialization(self, molecule):
@@ -415,6 +416,18 @@ class TestMolecule:
 
         pickle_copy = pickle.loads(pickle.dumps(mol))
         assert mol == pickle_copy
+
+    def test_json_numpy_roundtrips(self):
+        """Ensure that array data survives several round-trips through JSON,
+        which depends on list serialization instead of bytes."""
+        mol = Molecule.from_smiles("CCO")
+        mol.generate_conformers(n_conformers=1)
+        initial_conformer = mol.conformers[0]
+
+        for _ in range(10):
+            mol = Molecule.from_json(mol.to_json())
+
+        assert np.allclose(initial_conformer, mol.conformers[0])
 
     # ----------------------------------------------------
     # Test Molecule constructors and conversion utilities.

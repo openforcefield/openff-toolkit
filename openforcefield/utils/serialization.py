@@ -120,6 +120,10 @@ class Serializable(abc.ABC):
         import json
 
         d = self.to_dict()
+        # TODO: More generally check for bytes in dict
+        if "conformers" in d.keys():
+            d = _prep_numpy_data_for_json(d)
+
         return json.dumps(d, indent=indent)
 
     @classmethod
@@ -452,3 +456,24 @@ class Serializable(abc.ABC):
 
         d = pickle.loads(serialized)
         return cls.from_dict(d)
+
+
+def _prep_numpy_data_for_json(data):
+    """Recursively search through a dict a dict and convert the bytes fields to lists"""
+    # TODO: Much of this logic can probably be trimmed down
+    import numpy as np
+
+    for key, val in data.items():
+        if isinstance(val, np.ndarray):
+            data[key] = val.tolist()
+        if isinstance(val, dict):
+            data[key] = _prep_numpy_data_for_json(val)
+        if isinstance(val, bytes):
+            data[key] = np.frombuffer(val).tolist()
+        if isinstance(val, list):
+            # Fairly hard-coded for case of Molecule.conformers being a List[np.array]
+            # A more general solution should safely recurse through lists like dicts
+            for i, element in enumerate(val):
+                if isinstance(element, bytes):
+                    data[key][i] = np.frombuffer(element).tolist()
+    return data
