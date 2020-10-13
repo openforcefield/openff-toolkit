@@ -35,6 +35,7 @@ __all__ = [
     "UndefinedStereochemistryError",
     "GAFFAtomTypeWarning",
     "ToolkitWrapper",
+    "BuiltInToolkitWrapper",
     "OpenEyeToolkitWrapper",
     "RDKitToolkitWrapper",
     "AmberToolsToolkitWrapper",

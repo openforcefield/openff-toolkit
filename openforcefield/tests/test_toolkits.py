@@ -793,7 +793,6 @@ class TestOpenEyeToolkitWrapper:
             [0.027170, 0.027170, 0.027170, 0.027170, -0.108680],
         )
 
-    @requires_openeye
     def test_file_extension_case(self):
         """
         Test round-trips of some file extensions when called directly from the toolkit wrappers,
@@ -1451,7 +1450,6 @@ class TestOpenEyeToolkitWrapper:
         assert double_bond_has_wbo_near_2
 
     @pytest.mark.slow
-    @requires_openeye
     def test_substructure_search_on_large_molecule(self):
         """Test OpenEyeToolkitWrapper substructure search when a large number hits are found"""
 
