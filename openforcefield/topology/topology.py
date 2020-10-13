@@ -114,14 +114,55 @@ class _TransformedDict(MutableMapping):
 class ValenceDict(_TransformedDict):
     """Enforce uniqueness in atom indices."""
 
-    def __keytransform__(self, key):
+    @staticmethod
+    def key_transform(key):
         """Reverse tuple if first element is larger than last element."""
         # Ensure key is a tuple.
         key = tuple(key)
+        assert len(key) > 0 and len(key) < 5, "Valence keys must be at most 4 atoms"
         # Reverse the key if the first element is bigger than the last.
         if key[0] > key[-1]:
             key = tuple(reversed(key))
         return key
+
+    @staticmethod
+    def index_of(key, possible=None):
+        assert len(key) < 4
+        refkey = __class__.key_transform(key)
+        if len(key) == 2:
+            permutations = OrderedDict(
+                {(refkey[0], refkey[1]): 0, (refkey[1], refkey[0]): 1}
+            )
+        elif len(key) == 3:
+            permutations = OrderedDict(
+                {
+                    (refkey[0], refkey[1], refkey[2]): 0,
+                    (refkey[2], refkey[1], refkey[0]): 1,
+                }
+            )
+        else:
+            # For a proper, only forward/backward makes sense
+            permutations = OrderedDict(
+                {
+                    (refkey[0], refkey[1], refkey[2], refkey[3]): 0,
+                    (refkey[3], refkey[1], refkey[2], refkey[0]): 1,
+                }
+            )
+        if possible is not None:
+            i = 0
+            assert all([p in permutations for p in possible]), (
+                "Possible permutations " + str(possible) + " is impossible!"
+            )
+            for k in permutations:
+                if all([x == y for x, y in zip(key, k)]):
+                    return i
+                if k in possible:
+                    i += 1
+        else:
+            return permutations[key]
+
+    def __keytransform__(self, key):
+        return __class__.key_transform(key)
 
 
 class SortedDict(_TransformedDict):
@@ -138,10 +179,12 @@ class SortedDict(_TransformedDict):
 class ImproperDict(_TransformedDict):
     """Symmetrize improper torsions."""
 
-    def __keytransform__(self, key):
+    @staticmethod
+    def key_transform(key):
         """Reorder tuple in numerical order except for element[1] which is the central atom; it retains its position."""
         # Ensure key is a tuple
         key = tuple(key)
+        assert len(key) == 4, "Improper keys must be 4 atoms"
         # Retrieve connected atoms
         connectedatoms = [key[0], key[2], key[3]]
         # Sort connected atoms
@@ -150,10 +193,41 @@ class ImproperDict(_TransformedDict):
         key = tuple([connectedatoms[0], key[1], connectedatoms[1], connectedatoms[2]])
         return key
 
+    @staticmethod
+    def index_of(key, possible=None):
+        assert len(key) == 4
+        refkey = __class__.key_transform(key)
+        permutations = OrderedDict(
+            {
+                (refkey[0], refkey[1], refkey[2], refkey[3]): 0,
+                (refkey[0], refkey[1], refkey[3], refkey[2]): 1,
+                (refkey[2], refkey[1], refkey[0], refkey[3]): 2,
+                (refkey[2], refkey[1], refkey[3], refkey[0]): 3,
+                (refkey[3], refkey[1], refkey[0], refkey[2]): 4,
+                (refkey[3], refkey[1], refkey[2], refkey[0]): 5,
+            }
+        )
+        if possible is not None:
+            assert all(
+                [p in permutations for p in possible]
+            ), "Possible permuation is impossible!"
+            i = 0
+            for k in permutations:
+                if all([x == y for x, y in zip(key, k)]):
+                    return i
+                if k in possible:
+                    i += 1
+        else:
+            return permutations[key]
+
+    def __keytransform__(self, key):
+        return __class__.key_transform(key)
+
 
 # =============================================================================================
 # TOPOLOGY OBJECTS
 # =============================================================================================
+
 
 # =============================================================================================
 # TopologyAtom
@@ -463,6 +537,10 @@ class TopologyVirtualSite(Serializable):
         # TODO: Type checks
         self._virtual_site = virtual_site
         self._topology_molecule = topology_molecule
+        self._topology_virtual_particle_start_index = None
+
+    def invalidate_cached_data(self):
+        self._topology_virtual_particle_start_index = None
 
     def atom(self, index):
         """
@@ -530,20 +608,70 @@ class TopologyVirtualSite(Serializable):
         )
 
     @property
-    def topology_particle_index(self):
+    def n_particles(self):
         """
-        Get the index of this particle in its parent Topology.
+        Get the number of particles represented by this VirtualSite
+
+        Returns
+        -------
+        int : The number of particles
+        """
+        return self._virtual_site.n_particles
+
+    @property
+    def topology_virtual_particle_start_index(self):
+        """
+        Get the index of the first virtual site particle in its parent Topology.
 
         Returns
         -------
         int
             The index of this particle in its parent topology.
         """
-        # This assumes that the particles in a topology are listed with all atoms from all TopologyMolecules
-        # first, followed by all VirtualSites from all TopologyMolecules second
-        return self.topology.n_topology_atoms + self.topology_virtual_site_index
+        # This assumes that the particles in a topology are listed with all
+        # atoms from all TopologyMolecules first, followed by all VirtualSites
+        # from all TopologyMolecules second
 
-        # return self._topology_molecule.particle_start_topology_index + self._virtual_site.molecule_particle_index
+        # If the cached value is not available, generate it
+
+        if self._topology_virtual_particle_start_index is None:
+            virtual_particle_start_topology_index = (
+                self.topology_molecule.topology.n_topology_atoms
+            )
+            for (
+                topology_molecule
+            ) in self._topology_molecule._topology.topology_molecules:
+                for tvsite in topology_molecule.virtual_sites:
+                    if self == tvsite:
+                        break
+                    virtual_particle_start_topology_index += tvsite.n_particles
+                if self._topology_molecule == topology_molecule:
+                    break
+                # else:
+                #     virtual_particle_start_topology_index += tvsite.n_particles
+                #     virtual_particle_start_topology_index += topology_molecule.n_particles
+            self._topology_virtual_particle_start_index = (
+                virtual_particle_start_topology_index
+            )
+        # Return cached value
+        # print(self._topology_virtual_particle_start_index)
+        return self._topology_virtual_particle_start_index
+
+    @property
+    def particles(self):
+        """
+        Get an iterator to the reference particles that this TopologyVirtualSite
+        contains.
+
+        Returns
+        -------
+        iterator of TopologyVirtualParticles
+        """
+
+        for vptl in self.virtual_site.particles:
+            yield TopologyVirtualParticle(
+                self._virtual_site, vptl, self._topology_molecule
+            )
 
     @property
     def molecule(self):
@@ -582,6 +710,53 @@ class TopologyVirtualSite(Serializable):
         """Static constructor from dictionary representation."""
         # Implement abstract method Serializable.to_dict()
         raise NotImplementedError()  # TODO
+
+
+# =============================================================================================
+# TopologyVirtualParticle
+# =============================================================================================
+
+
+class TopologyVirtualParticle(TopologyVirtualSite):
+    def __init__(self, virtual_site, virtual_particle, topology_molecule):
+        self._virtual_site = virtual_site
+        self._virtual_particle = virtual_particle
+        self._topology_molecule = topology_molecule
+
+    def __eq__(self, other):
+
+        if type(other) != type(self):
+            return False
+
+        same_vsite = super() == super(TopologyVirtualParticle, other)
+        if not same_vsite:
+            return False
+
+        same_ptl = self.topology_particle_index == other.topology_particle_index
+
+        return same_ptl
+
+    @property
+    def topology_particle_index(self):
+        """
+        Get the index of this particle in its parent Topology.
+
+        Returns
+        -------
+        idx : int
+            The index of this particle in its parent topology.
+        """
+        # This assumes that the particles in a topology are listed with all atoms from all TopologyMolecules
+        # first, followed by all VirtualSites from all TopologyMolecules second
+        orientation_key = self._virtual_particle.orientation
+        offset = 0
+        # vsite is a topology vsite, which has a regular vsite
+        for i, ornt in enumerate(self._virtual_site._virtual_site.orientations):
+            if ornt == orientation_key:
+                offset = i
+                break
+
+        return offset + self._virtual_site.topology_virtual_particle_start_index
 
 
 # =============================================================================================
@@ -628,14 +803,20 @@ class TopologyMolecule:
 
         # Initialize cached data
         self._atom_start_topology_index = None
+        self._particle_start_topology_index = None
         self._bond_start_topology_index = None
         self._virtual_site_start_topology_index = None
+        self._virtual_particle_start_topology_index = None
 
     def _invalidate_cached_data(self):
         """Unset all cached data, in response to an appropriate change"""
         self._atom_start_topology_index = None
+        self._particle_start_topology_index = None
         self._bond_start_topology_index = None
         self._virtual_site_start_topology_index = None
+        self._virtual_particle_start_topology_index = None
+        for vsite in self.virtual_sites:
+            vsite.invalidate_cached_data()
 
     @property
     def topology(self):
@@ -719,6 +900,27 @@ class TopologyMolecule:
 
         # Return cached value
         return self._atom_start_topology_index
+
+    @property
+    def virtual_particle_start_topology_index(self):
+        """
+        Get the topology index of the first virtual particle in this TopologyMolecule
+
+        """
+        # If cached value is not available, generate it.
+        if self._virtual_particle_start_topology_index is None:
+            particle_start_topology_index = self.topology.n_atoms
+            for topology_molecule in self._topology.topology_molecules:
+                if self == topology_molecule:
+                    self._particle_start_topology_index = particle_start_topology_index
+                    break
+                offset = sum(
+                    [vsite.n_particles for vsite in topology_molecule.virtual_sites]
+                )
+                particle_start_topology_index += offset
+            self._virtual_particle_start_topology_index = particle_start_topology_index
+        # Return cached value
+        return self._virtual_particle_start_topology_index
 
     def bond(self, index):
         """
@@ -804,9 +1006,10 @@ class TopologyMolecule:
             ref_atom = self._reference_molecule.atoms[ref_mol_atom_index]
             yield TopologyAtom(ref_atom, self)
 
-        # TODO: Add ordering scheme here
         for vsite in self.reference_molecule.virtual_sites:
-            yield TopologyVirtualSite(vsite, self)
+            tvsite = TopologyVirtualSite(vsite, self)
+            for vptl in vsite.particles:
+                yield TopologyVirtualParticle(tvsite, vptl, self)
 
     @property
     def n_particles(self):
@@ -842,8 +1045,8 @@ class TopologyMolecule:
         -------
         an iterator of openforcefield.topology.TopologyVirtualSite
         """
-        for vs in self._reference_molecule.virtual_sites:
-            yield TopologyVirtualSite(vs, self)
+        for vsite in self._reference_molecule.virtual_sites:
+            yield TopologyVirtualSite(vsite, self)
 
     @property
     def n_virtual_sites(self):
@@ -1356,7 +1559,8 @@ class Topology(Serializable):
                 yield atom
         for topology_molecule in self._topology_molecules:
             for vs in topology_molecule.virtual_sites:
-                yield vs
+                for vp in vs.particles:
+                    yield vp
 
     @property
     def n_topology_virtual_sites(self):
@@ -1764,13 +1968,16 @@ class Topology(Serializable):
 
         Parameters
         ----------
-        openmm_topology : simtk.openmm.app.Topology
-            An OpenMM Topology object
         ensure_unique_atom_names : bool, optional. Default=True
             Whether to check that the molecules in each molecule have
             unique atom names, and regenerate them if not. Note that this
             looks only at molecules, and does not guarantee uniqueness in
             the entire Topology.
+
+        Returns
+        -------
+        openmm_topology : simtk.openmm.app.Topology
+            An OpenMM Topology object
         """
         from simtk.openmm.app import Aromatic, Double, Single
         from simtk.openmm.app import Topology as OMMTopology

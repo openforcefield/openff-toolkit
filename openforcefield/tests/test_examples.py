@@ -86,6 +86,7 @@ def find_example_scripts():
             if example_file_path in rdkit_examples:
                 continue
         example_file_paths.append(example_file_path.as_posix())
+
     return example_file_paths
 
 
