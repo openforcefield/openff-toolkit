@@ -246,11 +246,21 @@ The sum of formal charges for the molecule or fragment will be used to determine
 
 The `<ChargeIncrement>` tags specify how the quantum chemical derived charges are to be corrected to produce the final charges.
 The `charge_increment#` attributes specify how much the charge on the associated tagged atom index (replacing `#`) should be modified.
-The sum of charge increments should equal zero.
+
+Starting in the 0.4 version of this handler, a `ChargeIncrement` may be specified with one less `charge_increment` value than it has tagged atoms.
+The final `charge_increment` will be calculated to offset the sum of the other `charge_increment`s in the same `ChargeIncrement` parameter to achieve a net value of 0.
+This allows `ChargeIncrement` to be defined similar to bond charge corrections. 
 
 Note that atoms for which library charges have already been applied are excluded from charging via `<ChargeIncrementModel>`.
 
 Future additions will provide options for intelligently fragmenting large molecules and biopolymers, as well as a `capping` attribute to specify how fragments with dangling bonds are to be capped to allow these groups to be charged.
+
+| ChargeIncrementModel section tag version | Tag attributes and default values                                  | Required parameter attributes          | Optional parameter attributes |
+|------------------------------------------|--------------------------------------------------------------------|----------------------------------------|-------------------------------|
+| 0.3                                      | `number_of_conformers="1"`, `partial_charge_method='AM1-Mulliken'` | `smirks`, `charge_increment` (indexed, one for each tagged atoms in `smirks`) | `name`, `id`, `parent_id`     |
+| 0.4                                      | `number_of_conformers="1"`, `partial_charge_method='AM1-Mulliken'` | `smirks`, `charge_increment` (indexed, either one for each tagged atom in `smirks` or one less) | `name`, `id`, `parent_id`     |
+
+
 
 ### `<ToolkitAM1BCC>`: Temporary support for toolkit-based AM1-BCC partial charges
 

@@ -1696,8 +1696,8 @@ class TestChargeIncrementModelHandler:
             charge_increment1=0.05 * unit.elementary_charge,
         )
 
-    def test_charge_increment_infer_one(self):
-        """Test the simplest case of automatically inferring a missing value"""
+    def test_charge_increment_one_ci_missing(self):
+        """Test creating a chargeincrement parameter with a missing value"""
         inferred = ChargeIncrementModelHandler.ChargeIncrementType(
             smirks="[*:1]-[*:2]",
             charge_increment=[0.1 * unit.elementary_charge],
@@ -1711,8 +1711,9 @@ class TestChargeIncrementModelHandler:
             ],
         )
 
-        assert inferred.to_dict() == explicit.to_dict()
-
+    def test_03_cimh_cant_handle_missing_ci(self):
+        # TODO: Implement a test that raises an error if an 0.3 chargeincrementhandler tries to load an 0.4-style chargeincrement?
+        raise NotImplementedError()
 
 class TestGBSAHandler:
     def test_create_default_gbsahandler(self):

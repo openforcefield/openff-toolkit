@@ -3900,6 +3900,7 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
         LibraryChargeHandler,
         ToolkitAM1BCCHandler,
     ]
+    _MAX_SUPPORTED_SECTION_VERSION = 0.4
 
     number_of_conformers = ParameterAttribute(default=1, converter=int)
 
