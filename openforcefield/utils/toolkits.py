@@ -35,6 +35,7 @@ __all__ = [
     "UndefinedStereochemistryError",
     "GAFFAtomTypeWarning",
     "ToolkitWrapper",
+    "BuiltInToolkitWrapper",
     "OpenEyeToolkitWrapper",
     "RDKitToolkitWrapper",
     "AmberToolsToolkitWrapper",
@@ -159,6 +160,10 @@ class ChargeCalculationError(MessageException):
     """An unhandled error occured in an external toolkit during charge calculation"""
 
     pass
+
+
+class InvalidIUPACNameError(MessageException):
+    """Failed to parse IUPAC name"""
 
 
 class AntechamberNotFoundError(MessageException):
@@ -1803,6 +1808,36 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         return inchi_key
 
+    def to_iupac(self, molecule):
+        """Generate IUPAC name from Molecule
+
+        Parameters
+        ----------
+        molecule : An openforcefield.topology.Molecule
+            The molecule to convert into a SMILES.
+
+        Returns
+        -------
+        iupac_name : str
+            IUPAC name of the molecule
+
+        Examples
+        --------
+
+        >>> from openforcefield.topology import Molecule
+        >>> from openforcefield.utils import get_data_file_path
+        >>> sdf_filepath = get_data_file_path('molecules/ethanol.sdf')
+        >>> molecule = Molecule(sdf_filepath)
+        >>> toolkit = OpenEyeToolkitWrapper()
+        >>> iupac_name = toolkit.to_iupac(molecule)
+
+        """
+        from openeye import oechem, oeiupac
+
+        oemol = self.to_openeye(molecule)
+
+        return oeiupac.OECreateIUPACName(oemol)
+
     def canonical_order_atoms(self, molecule):
         """
         Canonical order the atoms in the molecule using the OpenEye toolkit.
@@ -1936,6 +1971,43 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         molecule = self.from_openeye(
             oemol, allow_undefined_stereo=allow_undefined_stereo
+        )
+
+        return molecule
+
+    def from_iupac(self, iupac_name, allow_undefined_stereo=False, **kwargs):
+        """
+        Construct a Molecule from an IUPAC name
+
+        Parameters
+        ----------
+        iupac_name : str
+            The IUPAC or common name of the molecule.
+        allow_undefined_stereo : bool, default=False
+            Whether to accept a molecule name with undefined stereochemistry. If False,
+            an exception will be raised if a molecule name with undefined stereochemistry
+            is passed into this function.
+
+        Returns
+        -------
+        molecule : openforcefield.topology.Molecule
+
+        """
+        from openeye import oechem, oeiupac
+
+        oemol = oechem.OEMol()
+        parsing_result = oeiupac.OEParseIUPACName(oemol, iupac_name)
+        if not parsing_result:
+            raise InvalidIUPACNameError(
+                f"OpenEye failed to parse {iupac_name} as a IUPAC name"
+            )
+        oechem.OETriposAtomNames(oemol)
+        result = oechem.OEAddExplicitHydrogens(oemol)
+        if not result:
+            raise Exception("Addition of explicit hydrogens failed in from_iupac")
+
+        molecule = self.from_openeye(
+            oemol, allow_undefined_stereo=allow_undefined_stereo, **kwargs
         )
 
         return molecule
@@ -4581,7 +4653,10 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         temp_mol = Molecule(molecule)
 
         if use_conformers is None:
-            temp_mol.generate_conformers(n_conformers=1)
+            temp_mol.generate_conformers(
+                n_conformers=1,
+                toolkit_registry=self._rdkit_toolkit_wrapper,
+            )
         else:
             temp_mol._conformers = None
             for conformer in use_conformers:
