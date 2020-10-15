@@ -12,6 +12,9 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 
 New features
 """"""""""""
+- `PR #726 <https://github.com/openforcefield/openforcefield/pull/726>`_: Adds support for the 0.4
+  ChargeIncrementModel spec, allowing for the specification of one fewer ``charge_increment`` values
+  than there are tagged atoms, and assigning the final atom with an offsetting charge.
 - `PR #718 <https://github.com/openforcefield/openforcefield/pull/718>`_: Adds ``.rings`` and
   ``.n_rings`` to :py:class:`Molecule <openforcefield.topology.Molecule>` and ``.is_in_ring``
   to :py:class:`Atom <openforcefield.topology.molecule.Atom>` and

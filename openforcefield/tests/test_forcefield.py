@@ -250,13 +250,16 @@ xml_spec_docs_tip3p_library_charges_xml = """
 
 xml_spec_docs_charge_increment_model_xml = """
 <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-  <ChargeIncrementModel version="0.3" number_of_conformers="1" partial_charge_method="AM1-Mulliken">
+  <ChargeIncrementModel version="0.4" number_of_conformers="1" partial_charge_method="AM1-Mulliken">
     <!-- A fractional charge can be moved along a single bond -->
     <ChargeIncrement smirks="[#6X4:1]-[#6X3a:2]" charge_increment1="-0.0073*elementary_charge" charge_increment2="0.0073*elementary_charge"/>
     <ChargeIncrement smirks="[#6X4:1]-[#6X3a:2]-[#7]" charge_increment1="0.0943*elementary_charge" charge_increment2="-0.0943*elementary_charge"/>
-    <ChargeIncrement smirks="[#6X4:1]-[#8:2]" charge_increment1="-0.0718*elementary_charge" charge_increment2="0.0718*elementary_charge"/>
     <!--- Alternatively, fractional charges can be redistributed among any number of bonded atoms -->
     <ChargeIncrement smirks="[N:1]([H:2])([H:3])" charge_increment1="0.02*elementary_charge" charge_increment2="-0.01*elementary_charge" charge_increment3="-0.01*elementary_charge"/>
+    <!-- As of version 0.4 of the ChargeIncrementModel tag, it is possible to define one less charge_increment attribute than there are tagged atoms -->
+    <!-- The final, undefined charge_increment will be calculated as to make the sum of the charge_increments equal 0 -->
+    <ChargeIncrement smirks="[#6X4:1]-[#8:2]" charge_increment1="-0.0718*elementary_charge"/>
+    <ChargeIncrement smirks="[N]-[C:1]-[C:2]-[Cl:3]" charge_increment1="-0.123*elementary_charge" charge_increment2="0.456*elementary_charge" />
   </ChargeIncrementModel>
 </SMIRNOFF>
 """

@@ -1711,10 +1711,6 @@ class TestChargeIncrementModelHandler:
             ],
         )
 
-    def test_03_cimh_cant_handle_missing_ci(self):
-        # TODO: Implement a test that raises an error if an 0.3 chargeincrementhandler tries to load an 0.4-style chargeincrement?
-        raise NotImplementedError()
-
 class TestGBSAHandler:
     def test_create_default_gbsahandler(self):
         """Test creation of an empty GBSAHandler, with all default attributes"""
