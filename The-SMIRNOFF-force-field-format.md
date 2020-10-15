@@ -250,7 +250,7 @@ The sum of formal charges for the molecule or fragment will be used to determine
 The `<ChargeIncrement>` tags specify how the quantum chemical derived charges are to be corrected to produce the final charges.
 The `charge_increment#` attributes specify how much the charge on the associated tagged atom index (replacing `#`) should be modified.
 
-Starting in the 0.4 version of this handler, a `ChargeIncrement` may be specified with one less `charge_increment` value than it has tagged atoms.
+Starting in the 0.4 version of this section, a `ChargeIncrement` may be specified with one less `charge_increment` value than it has tagged atoms.
 The missing `charge_increment` value must be that of the highest tagged atom index. 
 This missing `charge_increment` will be calculated to offset the sum of the other `charge_increment`s in the same `ChargeIncrement` parameter to achieve a net value of 0.
 This allows `ChargeIncrement` parameters to be defined similar to bond charge corrections. 

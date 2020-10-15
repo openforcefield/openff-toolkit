@@ -51,11 +51,25 @@ The following cases exemplify our reasoning in implementing this behavior, and s
 Finally, the toolkit handles the organization of atoms and virtual sites in a specific manner. Virtual sites are expected to be added *after all molecules in the topology are present*. This is because the Open Force Field Toolkit organizes a topology by placing all atoms first, then all virtual sites last. This differs from the OpenMM Modeller object, for example, which interleaves the order of atoms and virtual sites in such a way that all particles of a molecule are contiguous. In addition, due to the fact that a virtual site may contain multiple particles coupled to single parameters, the toolkit makes a distinction between a virtual *site*, and a virtual *particle*. A virtual site may represent multiple virtual particles, so the total number of particles cannot be directly determined by simply summing the number of atoms and virtual sites in a molecule. This is taken into account, however, and the :py:class:`Molecule <openforcefield.topology.Molecule>` and :py:class:`Topology <openforcefield.topology.Topology>` classes now implement ``particle`` iterators.
 
 
+**Minor Feature: Support for the 0.4 ChargeIncrementModel tag**
+
+To allow for more convenient fitting of ``ChargeIncrement`` parameters, it is now possible to specify one less
+``charge_increment`` value than there are tagged atoms in a ``ChargeIncrement``'s ``smirks``. The missing
+``charge_increment`` value will be calculated at parameterization-time to make the sum of
+the charge contributions from a ``ChargeIncrement`` parameter equal to zero.
+Since this change allows for force fields that are incompatible with
+the previous specification, this new style of ``ChargeIncrement`` must specify a ``ChargeIncrementModel``
+section version of ``0.4``. All ``0.3``-compatible ``ChargeIncrement`` parameters are compatible with
+the ``0.4`` ``ChargeIncrementModel`` specification.
+
+More details and examples of this change are available in `The ChargeIncrementModel tag in the SMIRNOFF specification <https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html#chargeincrementmodel-small-molecule-and-fragment-charges>`_
+
+
 New features
 """"""""""""
 - `PR #726 <https://github.com/openforcefield/openforcefield/pull/726>`_: Adds support for the 0.4
   ChargeIncrementModel spec, allowing for the specification of one fewer ``charge_increment`` values
-  than there are tagged atoms, and assigning the final atom with an offsetting charge.
+  than there are tagged atoms in the ``smirks``, and automatically assigning the final atom an offsetting charge.
 - `PR #548 <https://github.com/openforcefield/openforcefield/pull/548>`_: Adds support for the ``VirtualSites`` tag in the SMIRNOFF specification
 
 - `PR #548 <https://github.com/openforcefield/openforcefield/pull/548>`_: Adds ``replace`` and ``all_permutations`` kwarg to
