@@ -4367,12 +4367,12 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
 
                 # If we've been provided with one less charge increment value than tagged atoms, assume the last
                 # tagged atom offsets the charge of the others to make the chargeincrement net-neutral
-                if len(charge_increments) - len(atom_indices) == -1:
+                if len(atom_indices) - len(charge_increments) == 1:
                     charge_increment_sum = 0.0 * unit.elementary_charge
                     for ci in charge_increments:
                         charge_increment_sum += ci
                     charge_increments.append(-charge_increment_sum)
-                elif len(charge_increments) - len(atom_indices) == 0:
+                elif len(atom_indices) - len(charge_increments) == 0:
                     pass
                 else:
                     raise SMIRNOFFSpecError(
