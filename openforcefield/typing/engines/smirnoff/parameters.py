@@ -4361,21 +4361,25 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
                 atom_indices = (
                     charge_increment_match.environment_match.topology_atom_indices
                 )
-                charge_increments = copy.deepcopy(charge_increment_match.parameter_type.charge_increment)
+                charge_increments = copy.deepcopy(
+                    charge_increment_match.parameter_type.charge_increment
+                )
 
                 # If we've been provided with one less charge increment value than tagged atoms, assume the last
                 # tagged atom offsets the charge of the others to make the chargeincrement net-neutral
                 if len(charge_increments) - len(atom_indices) == -1:
-                    charge_increment_sum = 0. * unit.elementary_charge
+                    charge_increment_sum = 0.0 * unit.elementary_charge
                     for ci in charge_increments:
                         charge_increment_sum += ci
                     charge_increments.append(-charge_increment_sum)
                 elif len(charge_increments) - len(atom_indices) == 0:
                     pass
                 else:
-                    raise SMIRNOFFSpecError(f"Trying to apply chargeincrements {charge_increment_match.parameter_type} "
-                                            f"to tagged atoms {atom_indices}, but the number of chargeincrements "
-                                            f"must be either the same as- or one less than the number of tagged atoms.")
+                    raise SMIRNOFFSpecError(
+                        f"Trying to apply chargeincrements {charge_increment_match.parameter_type} "
+                        f"to tagged atoms {atom_indices}, but the number of chargeincrements "
+                        f"must be either the same as- or one less than the number of tagged atoms."
+                    )
 
                 for top_particle_idx, charge_increment in zip(
                     atom_indices, charge_increments

@@ -2070,6 +2070,7 @@ class TestChargeIncrementModelHandler:
             ],
         )
 
+
 class TestGBSAHandler:
     def test_create_default_gbsahandler(self):
         """Test creation of an empty GBSAHandler, with all default attributes"""
