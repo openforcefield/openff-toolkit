@@ -2030,7 +2030,7 @@ class TestChargeIncrementModelHandler:
 
         with pytest.raises(
             SMIRNOFFSpecError,
-            match="initialized with unequal number of tagged atoms and charge increments",
+            match="an invalid combination of tagged atoms and charge increments",
         ) as excinfo:
             ci_type = ChargeIncrementModelHandler.ChargeIncrementType(
                 smirks="[#6:1]-[#7:2]",
@@ -2041,7 +2041,7 @@ class TestChargeIncrementModelHandler:
 
         with pytest.raises(
             SMIRNOFFSpecError,
-            match="initialized with unequal number of tagged atoms and charge increments",
+            match="an invalid combination of tagged atoms and charge increments",
         ) as excinfo:
             ci_type = ChargeIncrementModelHandler.ChargeIncrementType(
                 smirks="[#6:1]-[#7:2]-[#6]",
@@ -2050,14 +2050,25 @@ class TestChargeIncrementModelHandler:
                 charge_increment3=-0.1 * unit.elementary_charge,
             )
 
-        with pytest.raises(
-            SMIRNOFFSpecError,
-            match="initialized with unequal number of tagged atoms and charge increments",
-        ) as excinfo:
-            ci_type = ChargeIncrementModelHandler.ChargeIncrementType(
-                smirks="[#6:1]-[#7:2]-[#6]",
-                charge_increment1=0.05 * unit.elementary_charge,
-            )
+        ci_type = ChargeIncrementModelHandler.ChargeIncrementType(
+            smirks="[#6:1]-[#7:2]-[#6]",
+            charge_increment1=0.05 * unit.elementary_charge,
+        )
+
+    def test_charge_increment_one_ci_missing(self):
+        """Test creating a chargeincrement parameter with a missing value"""
+        inferred = ChargeIncrementModelHandler.ChargeIncrementType(
+            smirks="[*:1]-[*:2]",
+            charge_increment=[0.1 * unit.elementary_charge],
+        )
+
+        explicit = ChargeIncrementModelHandler.ChargeIncrementType(
+            smirks="[*:1]-[*:2]",
+            charge_increment=[
+                0.1 * unit.elementary_charge,
+                -0.1 * unit.elementary_charge,
+            ],
+        )
 
 
 class TestGBSAHandler:

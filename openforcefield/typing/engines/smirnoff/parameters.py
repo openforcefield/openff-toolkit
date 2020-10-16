@@ -4219,10 +4219,17 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
             unique_tags, connectivity = GLOBAL_TOOLKIT_REGISTRY.call(
                 "get_tagged_smarts_connectivity", self.smirks
             )
-            if len(self.charge_increment) != len(unique_tags):
+
+            n_tags = len(unique_tags)
+            n_increments = len(self.charge_increment)
+            diff = n_tags - n_increments
+
+            if diff < 0 or diff > 1:
+                # TODO: Consider dealing with diff > 2 by smearing charges across
+                # all un-specified increments
                 raise SMIRNOFFSpecError(
-                    f"ChargeIncrement {self} was initialized with unequal number of "
-                    f"tagged atoms and charge increments"
+                    f"ChargeIncrement {self} was initialized with an invalid combination "
+                    f"of tagged atoms and charge increments"
                 )
 
     _TAGNAME = "ChargeIncrementModel"  # SMIRNOFF tag name to process
@@ -4233,6 +4240,7 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
         LibraryChargeHandler,
         ToolkitAM1BCCHandler,
     ]
+    _MAX_SUPPORTED_SECTION_VERSION = 0.4
 
     number_of_conformers = ParameterAttribute(default=1, converter=int)
 
@@ -4353,9 +4361,28 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
                 atom_indices = (
                     charge_increment_match.environment_match.topology_atom_indices
                 )
-                charge_increment = charge_increment_match.parameter_type
+                charge_increments = copy.deepcopy(
+                    charge_increment_match.parameter_type.charge_increment
+                )
+
+                # If we've been provided with one less charge increment value than tagged atoms, assume the last
+                # tagged atom offsets the charge of the others to make the chargeincrement net-neutral
+                if len(atom_indices) - len(charge_increments) == 1:
+                    charge_increment_sum = 0.0 * unit.elementary_charge
+                    for ci in charge_increments:
+                        charge_increment_sum += ci
+                    charge_increments.append(-charge_increment_sum)
+                elif len(atom_indices) - len(charge_increments) == 0:
+                    pass
+                else:
+                    raise SMIRNOFFSpecError(
+                        f"Trying to apply chargeincrements {charge_increment_match.parameter_type} "
+                        f"to tagged atoms {atom_indices}, but the number of chargeincrements "
+                        f"must be either the same as- or one less than the number of tagged atoms."
+                    )
+
                 for top_particle_idx, charge_increment in zip(
-                    atom_indices, charge_increment.charge_increment
+                    atom_indices, charge_increments
                 ):
                     if top_particle_idx in charges_to_assign:
                         charges_to_assign[top_particle_idx] += charge_increment
