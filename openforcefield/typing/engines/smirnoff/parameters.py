@@ -4231,13 +4231,6 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
                     f"ChargeIncrement {self} was initialized with an invalid combination "
                     f"of tagged atoms and charge increments"
                 )
-            #elif diff == 1:
-            #    # Print a warning/message to user?
-            #    # TODO: Explicitly track un-set charge increments; this approach
-            #    # assumes and necessitates that the missing value is the last value
-            #    import numpy as np
-            #
-            #    self.charge_increment.append(-1 * np.sum(self.charge_increment))
 
     _TAGNAME = "ChargeIncrementModel"  # SMIRNOFF tag name to process
     _INFOTYPE = ChargeIncrementType  # info type to store
