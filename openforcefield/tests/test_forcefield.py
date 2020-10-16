@@ -2410,9 +2410,19 @@ class TestForceFieldChargeAssignment:
     def test_charge_increment_model_one_less_ci_than_tagged_atom(self):
         """
         Ensure that we support the behavior where a ChargeIncrement is initialized with one less chargeincrement value
-        than tagged atom.
+        than tagged atom. We test this by making two equivalent (one with fully explicit CIs, the other with some
+        implicit CIa) FFs and ensuring that both perform the same parameterization.
         """
-        test_charge_increment_model_ff = """
+        test_charge_increment_model_ff_no_missing_cis = """
+        <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+          <Electrostatics version="0.3" method="PME" scale12="0.0" scale13="0.0" scale14="0.833333" cutoff="9.0 * angstrom"/>
+          <ChargeIncrementModel version="0.3" number_of_conformers="1" partial_charge_method="formal_charge">
+            <ChargeIncrement smirks="[#6X4:1]-[#8:2]" charge_increment1="-0.06*elementary_charge" charge_increment2="0.06*elementary_charge"/>
+            <ChargeIncrement smirks="[#6X4:1]-[#1:2]" charge_increment1="-0.01*elementary_charge" charge_increment2="0.01*elementary_charge"/>
+            <ChargeIncrement smirks="[C:1][C:2][O:3]" charge_increment1="0.2*elementary_charge" charge_increment2="-0.1*elementary_charge" charge_increment3="-0.1*elementary_charge"/>
+          </ChargeIncrementModel>
+        </SMIRNOFF>"""
+        test_charge_increment_model_ff_one_less_ci = """
         <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
           <Electrostatics version="0.3" method="PME" scale12="0.0" scale13="0.0" scale14="0.833333" cutoff="9.0 * angstrom"/>
           <ChargeIncrementModel version="0.3" number_of_conformers="1" partial_charge_method="formal_charge">
@@ -2421,16 +2431,29 @@ class TestForceFieldChargeAssignment:
             <ChargeIncrement smirks="[C:1][C:2][O:3]" charge_increment1="0.2*elementary_charge" charge_increment2="-0.1*elementary_charge"/>
           </ChargeIncrementModel>
         </SMIRNOFF>"""
+        # Make a FF from each OFFXML string
         file_path = get_data_file_path("test_forcefields/smirnoff99Frosst.offxml")
-        ff = ForceField(file_path, test_charge_increment_model_ff)
-        del ff._parameter_handlers["ToolkitAM1BCC"]
+        ff1 = ForceField(file_path, test_charge_increment_model_ff_one_less_ci)
+        del ff1._parameter_handlers["ToolkitAM1BCC"]
+        ff2 = ForceField(file_path, test_charge_increment_model_ff_no_missing_cis)
+        del ff2._parameter_handlers["ToolkitAM1BCC"]
         top = Topology.from_molecules([create_ethanol()])
-        sys = ff.create_openmm_system(top)
-        nonbonded_force = [
+        # Make a system from each FF
+        sys1 = ff2.create_openmm_system(top)
+        sys2 = ff2.create_openmm_system(top)
+        # Extract the nonbonded force from each system
+        nonbonded_force1 = [
             force
-            for force in sys.getForces()
+            for force in sys1.getForces()
             if isinstance(force, openmm.NonbondedForce)
         ][0]
+        nonbonded_force2 = [
+            force
+            for force in sys2.getForces()
+            if isinstance(force, openmm.NonbondedForce)
+        ][0]
+
+        # Ensure that the systems both have the correct charges assigned
         expected_charges = [
             0.17,
             -0.18,
@@ -2442,8 +2465,10 @@ class TestForceFieldChargeAssignment:
             0.01,
             0.0] * unit.elementary_charge
         for idx, expected_charge in enumerate(expected_charges):
-            charge, _, _ = nonbonded_force.getParticleParameters(idx)
-            assert abs(charge - expected_charge) < 1.0e-6 * unit.elementary_charge
+            charge1, _, _ = nonbonded_force1.getParticleParameters(idx)
+            charge2, _, _ = nonbonded_force2.getParticleParameters(idx)
+            assert abs(charge1 - expected_charge) < 1.0e-6 * unit.elementary_charge
+            assert charge1 == charge2
 
     def test_charge_increment_model_invalid_number_of_cis(self):
         """
