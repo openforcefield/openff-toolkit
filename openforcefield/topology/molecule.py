@@ -1277,8 +1277,6 @@ class TrivalentLonePairVirtualSite(VirtualSite):
         """
         Create a trivalent lone pair-type virtual site, in which the location of the charge is specified by the position of four atoms.
 
-        TODO : Do "weights" have any meaning here?
-
         Parameters
         ----------
         atoms : list of 4 openforcefield.topology.molecule.Atom objects
@@ -5268,8 +5266,6 @@ class Molecule(FrozenMolecule):
     def add_trivalent_lone_pair_virtual_site(self, atoms, distance, **kwargs):
         """
         Create a trivalent lone pair-type virtual site, in which the location of the charge is specified by the position of four atoms.
-
-        TODO : Do "weights" have any meaning here?
 
         Parameters
         ----------

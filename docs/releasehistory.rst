@@ -7,8 +7,8 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 * ``minor`` increments add features but do not break API compatibility
 * ``micro`` increments represent bugfix releases or improvements in documentation
 
-Current development
--------------------
+0.8.0 - Virtual Sites
+---------------------
 
 This release implements the SMIRNOFF virtual site specification. The implementation enables support for models using off-site charges, including 4- and 5-point water models, in addition to lone pair modeling on various functional groups. The primary focus was on the ability to parameterize a system using virtual sites, and generating an OpenMM system with all virtual sites present and ready for evaluation. Support for formats other than OpenMM has not be implemented in this release, but may come with the appearance of the OpenFF system object. In addition to implementing the specification, the toolkit :py:class:`Molecule <openforcefield.topology.Molecule>` objects now allow the creation and manipulation of virtual sites.
 
@@ -75,23 +75,23 @@ New features
 - `PR #548 <https://github.com/openforcefield/openforcefield/pull/548>`_: Adds ``replace`` and ``all_permutations`` kwarg to
 
   - :py:meth:`Molecule.add_bond_charge_virtual_site <openforcefield.topology.Molecule.add_bond_charge_virtual_site>`
-  - :py:meth:`Molecule.add_monovalent_virtual_site <openforcefield.topology.Molecule.add_monovalent_virtual_site>`
-  - :py:meth:`Molecule.add_divalent_virtual_site <openforcefield.topology.Molecule.add_divalent_virtual_site>`
-  - :py:meth:`Molecule.add_trivalent_virtual_site <openforcefield.topology.Molecule.add_trivalent_virtual_site>`
+  - :py:meth:`Molecule.add_monovalent_lone_pair_virtual_site <openforcefield.topology.Molecule.add_monovalent_lone_pair_virtual_site>`
+  - :py:meth:`Molecule.add_divalent_lone_pair_virtual_site <openforcefield.topology.Molecule.add_divalent_lone_pair_virtual_site>`
+  - :py:meth:`Molecule.add_trivalent_lone_pair_virtual_site <openforcefield.topology.Molecule.add_trivalent_lone_pair_virtual_site>`
 
 - `PR #548 <https://github.com/openforcefield/openforcefield/pull/548>`_: Adds ``orientations`` to
 
-  - :py:class:`BondChargeVirtualSite <openforcefield.topology.molecule.BondChargeVirtualSite>` 
-  - :py:class:`MonovalentLonePairVirtualSite <openforcefield.topology.molecule.MonovalentLonePairVirtualSite>` 
-  - :py:class:`DivalentLonePairVirtualSite <openforcefield.topology.molecule.DivalentLonePairVirtualSite>` 
-  - :py:class:`TrivalentLonePairVirtualSite <openforcefield.topology.molecule.TrivalentLonePairVirtualSite>` 
+  - :py:class:`BondChargeVirtualSite <openforcefield.topology.BondChargeVirtualSite>`
+  - :py:class:`MonovalentLonePairVirtualSite <openforcefield.topology.MonovalentLonePairVirtualSite>`
+  - :py:class:`DivalentLonePairVirtualSite <openforcefield.topology.DivalentLonePairVirtualSite>`
+  - :py:class:`TrivalentLonePairVirtualSite <openforcefield.topology.TrivalentLonePairVirtualSite>`
 
 - `PR #548 <https://github.com/openforcefield/openforcefield/pull/548>`_: Adds
 
-  - :py:class:`VirtualParticle <openforcefield.topology.molecule.VirtualParticle>`
-  - :py:class:`TopologyVirtualParticle <openforcefield.topology.topology.TopologyVirtualParticle>`
-  - :py:class:`DuplicateVirtualSiteTypeException <openforcefield.typing.engines.smirnoff.parameters.DuplicateVirtualSiteTypeException>`
-  - :py:meth:`TopologyVirtualParticle.virtual_particle_start_topology_index <openforcefield.topology.molecule.TopologyVirtualParticle.virtual_particle_start_topology_index>`
+  - :py:class:`VirtualParticle <openforcefield.topology.VirtualParticle>`
+  - :py:class:`TopologyVirtualParticle <openforcefield.topology.TopologyVirtualParticle>`
+  - :py:class:`DuplicateVirtualSiteTypeException <openforcefield.typing.engines.smirnoff.DuplicateVirtualSiteTypeException>`
+  - :py:meth:`TopologyVirtualParticle.virtual_particle_start_topology_index <openforcefield.topology.TopologyVirtualParticle.virtual_particle_start_topology_index>`
   - :py:meth:`BondChargeVirtualSite.get_openmm_virtual_site <openforcefield.topology.BondChargeVirtualSite.get_openmm_virtual_site>`
   - :py:meth:`MonovalentVirtualSite.get_openmm_virtual_site <openforcefield.topology.MonovalentLonePairVirtualSite.get_openmm_virtual_site>`
   - :py:meth:`DivalentVirtualSite.get_openmm_virtual_site <openforcefield.topology.DivalentLonePairVirtualSite.get_openmm_virtual_site>`
@@ -175,7 +175,6 @@ Tests added
   - TIP5P water dimer energy and positions
   - Adds tests to for virtual site/particle indexing/counting
 
-=======
 
 0.7.2 - Bugfix and minor feature release
 ----------------------------------------
