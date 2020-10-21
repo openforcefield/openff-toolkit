@@ -2333,7 +2333,7 @@ class TestMolecule:
         assert len(vps1) == 1
         assert vps1[0].virtual_site_particle_index == 0
         orientations1 = [vp.orientation for vp in vps1]
-        assert len(set(orientations1) & {(0, 1)}) == 2
+        assert len(set(orientations1) & {(0, 1)}) == 1
 
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_add_bond_charge_virtual_site(self, molecule):
