@@ -517,13 +517,28 @@ class VirtualParticle(Particle):
     .. warning :: This API is experimental and subject to change.
     """
 
-    def __init__(self, vsite, orientation):
+    def __init__(self, vsite, orientation, name=None):
+        """
+        A single particle owned by a VirtualSite
+
+        Parameters
+        ----------
+        vsite : openforcefield.topology.VirtualSite
+            The parent VirtualSite of this VirtualParticle
+        orientation : tuple of int
+            Molecule atom indices of parent atoms
+        name : str, optional
+            The name of the particle
+
+        """
         self._virtual_site = vsite
+        self._molecule = vsite.molecule
         self._orientation = orientation
+        self._name = name
 
     @property
     def virtual_site(self):
-        return self._vsite
+        return self._virtual_site
 
     @property
     def orientation(self):
@@ -533,9 +548,9 @@ class VirtualParticle(Particle):
     def virtual_site_particle_index(self):
         """
         The index of the particle relative to its owning virtual site. Normally
-        this should either be 1 or 2.
+        this should either be 0 or 1.
         """
-
+        return self.virtual_site.orientations.index(self.orientation)
 
 # =============================================================================================
 # VirtualSite

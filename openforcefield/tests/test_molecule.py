@@ -2305,6 +2305,36 @@ class TestMolecule:
             atoms, distance, charge_increments=charge_increments, replace=True
         )
 
+    def test_virtual_particle(self):
+        """Test setter, getters, and methods of VirtualParticle"""
+        mol = create_ethanol()
+        # Add a SYMMETRIC (default) VirtualSite, which should have two particles
+        mol.add_bond_charge_virtual_site((mol.atoms[1], mol.atoms[2]),
+                                         0.5 * unit.angstrom,
+                                         charge_increments=[-0.1, 0.1] * unit.elementary_charge)
+        # Add a NON SYMMETRIC (specified in kwarg) VirtualSite, which should have one particle
+        mol.add_bond_charge_virtual_site((mol.atoms[0], mol.atoms[1]),
+                                         0.5 * unit.angstrom,
+                                         charge_increments=[-0.1, 0.1] * unit.elementary_charge,
+                                         symmetric=False)
+
+        assert len(mol.virtual_sites) == 2
+
+        # Ensure the first vsite has two particles
+        vps0 = [vp for vp in mol.virtual_sites[0].particles]
+        assert len(vps0) == 2
+        assert vps0[0].virtual_site_particle_index == 0
+        assert vps0[1].virtual_site_particle_index == 1
+        orientations0 = [vp.orientation for vp in vps0]
+        assert len(set(orientations0) & {(0, 1), (1, 0)}) == 2
+
+        # Ensure the second vsite has one particle
+        vps1 = [vp for vp in mol.virtual_sites[1].particles]
+        assert len(vps1) == 1
+        assert vps1[0].virtual_site_particle_index == 0
+        orientations1 = [vp.orientation for vp in vps1]
+        assert len(set(orientations1) & {(0, 1)}) == 2
+
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_add_bond_charge_virtual_site(self, molecule):
         """Test the addition of a BondChargeVirtualSite to a molecule.
