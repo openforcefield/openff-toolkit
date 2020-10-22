@@ -2309,14 +2309,18 @@ class TestMolecule:
         """Test setter, getters, and methods of VirtualParticle"""
         mol = create_ethanol()
         # Add a SYMMETRIC (default) VirtualSite, which should have two particles
-        mol.add_bond_charge_virtual_site((mol.atoms[1], mol.atoms[2]),
-                                         0.5 * unit.angstrom,
-                                         charge_increments=[-0.1, 0.1] * unit.elementary_charge)
+        mol.add_bond_charge_virtual_site(
+            (mol.atoms[1], mol.atoms[2]),
+            0.5 * unit.angstrom,
+            charge_increments=[-0.1, 0.1] * unit.elementary_charge,
+        )
         # Add a NON SYMMETRIC (specified in kwarg) VirtualSite, which should have one particle
-        mol.add_bond_charge_virtual_site((mol.atoms[0], mol.atoms[1]),
-                                         0.5 * unit.angstrom,
-                                         charge_increments=[-0.1, 0.1] * unit.elementary_charge,
-                                         symmetric=False)
+        mol.add_bond_charge_virtual_site(
+            (mol.atoms[0], mol.atoms[1]),
+            0.5 * unit.angstrom,
+            charge_increments=[-0.1, 0.1] * unit.elementary_charge,
+            symmetric=False,
+        )
 
         assert len(mol.virtual_sites) == 2
 

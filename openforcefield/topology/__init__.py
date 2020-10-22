@@ -8,9 +8,8 @@ from openforcefield.topology.molecule import (
     MonovalentLonePairVirtualSite,
     Particle,
     TrivalentLonePairVirtualSite,
+    VirtualParticle,
     VirtualSite,
-    VirtualParticle
-
 )
 from openforcefield.topology.topology import (
     DuplicateUniqueMoleculeError,
@@ -25,5 +24,4 @@ from openforcefield.topology.topology import (
     TopologyVirtualParticle,
     TopologyVirtualSite,
     ValenceDict,
-
 )
