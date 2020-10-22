@@ -127,6 +127,27 @@ class ValenceDict(_TransformedDict):
 
     @staticmethod
     def index_of(key, possible=None):
+        """
+        Generates a canonical ordering of the equivalent permutations of ``key`` (equivalent rearrangements of indices)
+        and identifies which of those possible orderings this particular ordering is. This method is useful when
+        multiple SMARTS patterns might match the same atoms, but local molecular symmetry or the use of
+        wildcards in the SMARTS could make the matches occur in arbitrary order.
+
+        This method can be restricted to a subset of the canonical orderings, by providing
+        the optional ``possible`` keyword argument. If provided, the index returned by this method will be
+        the index of the element in ``possible`` after undergoing the same canonical sorting as above.
+
+        Parameters
+        ----------
+        key : iterable of int
+            A valid key for ValenceDict
+        possible : iterable of iterable of int, optional. default=``None``
+            A subset of the possible orderings that this match might take.
+
+        Returns
+        -------
+        index : int
+        """
         assert len(key) < 4
         refkey = __class__.key_transform(key)
         if len(key) == 2:
@@ -150,15 +171,20 @@ class ValenceDict(_TransformedDict):
             )
         if possible is not None:
             i = 0
+            # If the possible permutations were provided, ensure that `possible` is a SUBSET of `permutations`
             assert all([p in permutations for p in possible]), (
                 "Possible permutations " + str(possible) + " is impossible!"
             )
+            # TODO: Double-check whether this will generalize. It seems like this would fail if ``key``
+            #       were in ``permutations``, but not ``possible``
+
             for k in permutations:
                 if all([x == y for x, y in zip(key, k)]):
                     return i
                 if k in possible:
                     i += 1
         else:
+            # If the possible permutations were NOT provided, then return the unique index of this permutation.
             return permutations[key]
 
     def __keytransform__(self, key):
@@ -195,6 +221,27 @@ class ImproperDict(_TransformedDict):
 
     @staticmethod
     def index_of(key, possible=None):
+        """
+        Generates a canonical ordering of the equivalent permutations of ``key`` (equivalent rearrangements of indices)
+        and identifies which of those possible orderings this particular ordering is. This method is useful when
+        multiple SMARTS patterns might match the same atoms, but local molecular symmetry or the use of
+        wildcards in the SMARTS could make the matches occur in arbitrary order.
+
+        This method can be restricted to a subset of the canonical orderings, by providing
+        the optional ``possible`` keyword argument. If provided, the index returned by this method will be
+        the index of the element in ``possible`` after undergoing the same canonical sorting as above.
+
+        Parameters
+        ----------
+        key : iterable of int
+            A valid key for ValenceDict
+        possible : iterable of iterable of int, optional. default=``None``
+            A subset of the possible orderings that this match might take.
+
+        Returns
+        -------
+        index : int
+        """
         assert len(key) == 4
         refkey = __class__.key_transform(key)
         permutations = OrderedDict(

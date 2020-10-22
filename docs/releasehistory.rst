@@ -90,12 +90,10 @@ New features
 
   - :py:class:`VirtualParticle <openforcefield.topology.VirtualParticle>`
   - :py:class:`TopologyVirtualParticle <openforcefield.topology.TopologyVirtualParticle>`
-  - :py:class:`DuplicateVirtualSiteTypeException <openforcefield.typing.engines.smirnoff.DuplicateVirtualSiteTypeException>`
-  - :py:meth:`TopologyVirtualParticle.virtual_particle_start_topology_index <openforcefield.topology.TopologyVirtualParticle.virtual_particle_start_topology_index>`
   - :py:meth:`BondChargeVirtualSite.get_openmm_virtual_site <openforcefield.topology.BondChargeVirtualSite.get_openmm_virtual_site>`
-  - :py:meth:`MonovalentVirtualSite.get_openmm_virtual_site <openforcefield.topology.MonovalentLonePairVirtualSite.get_openmm_virtual_site>`
-  - :py:meth:`DivalentVirtualSite.get_openmm_virtual_site <openforcefield.topology.DivalentLonePairVirtualSite.get_openmm_virtual_site>`
-  - :py:meth:`TrivalentVirtualSite.get_openmm_virtual_site <openforcefield.topology.TrivalentLonePairVirtualSite.get_openmm_virtual_site>`
+  - :py:meth:`MonovalentLonePairVirtualSite.get_openmm_virtual_site <openforcefield.topology.MonovalentLonePairVirtualSite.get_openmm_virtual_site>`
+  - :py:meth:`DivalentLonePairVirtualSite.get_openmm_virtual_site <openforcefield.topology.DivalentLonePairVirtualSite.get_openmm_virtual_site>`
+  - :py:meth:`TrivalentLonePairVirtualSite.get_openmm_virtual_site <openforcefield.topology.TrivalentLonePairVirtualSite.get_openmm_virtual_site>`
   - :py:meth:`ValenceDict.key_transform <openforcefield.topology.ValenceDict.key_transform>`
   - :py:meth:`ValenceDict.index_of <openforcefield.topology.ValenceDict.index_of>`
   - :py:meth:`ImproperDict.key_transform <openforcefield.topology.ImproperDict.key_transform>`

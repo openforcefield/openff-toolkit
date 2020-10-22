@@ -42,4 +42,6 @@ Secondary objects
     TopologyAtom
     TopologyBond
     TopologyVirtualSite
+    ValenceDict
+    ImproperDict
 

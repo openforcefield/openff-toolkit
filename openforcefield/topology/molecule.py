@@ -973,6 +973,20 @@ class BondChargeVirtualSite(VirtualSite):
         return self._distance
 
     def get_openmm_virtual_site(self, atoms):
+        """
+        Returns the OpenMMVirtualSite corresponding to this BondChargeVirtualSite.
+
+        Parameters
+        ----------
+        atoms : iterable of int
+            The indices of the atoms involved in this virtual site (not assumed to be
+            the same as the molecule indices as this method may be accessed with regard
+            to particles in a Topology).
+
+        Returns
+        -------
+        virtual_site : a simtk.openmm LocalCoordinatesSite
+        """
         from simtk.openmm import LocalCoordinatesSite
 
         originwt = np.zeros_like(atoms)
@@ -1130,7 +1144,22 @@ class MonovalentLonePairVirtualSite(VirtualSite):
         """The out_of_plane_angle parameter of the virtual site"""
         return self._out_of_plane_angle
 
-    def get_openmm_virtual_site(self, atoms, mass=None):
+    def get_openmm_virtual_site(self, atoms):
+        """
+        Returns the OpenMMVirtualSite corresponding to this MonovalentLonePairVirtualSite.
+
+        Parameters
+        ----------
+        atoms : iterable of int
+            The indices of the atoms involved in this virtual site (not assumed to be
+            the same as the molecule indices as this method may be accessed with regard
+            to particles in a Topology).
+
+        Returns
+        -------
+        virtual_site : a simtk.openmm LocalCoordinatesSite
+        """
+
         assert len(atoms) >= 3
         from simtk.openmm import LocalCoordinatesSite
 
@@ -1252,7 +1281,22 @@ class DivalentLonePairVirtualSite(VirtualSite):
         """The out_of_plane_angle parameter of the virtual site"""
         return self._out_of_plane_angle
 
-    def get_openmm_virtual_site(self, atoms, mass=None):
+    def get_openmm_virtual_site(self, atoms):
+        """
+        Returns the OpenMMVirtualSite corresponding to this DivalentLonePairVirtualSite.
+
+        Parameters
+        ----------
+        atoms : iterable of int
+            The indices of the atoms involved in this virtual site (not assumed to be
+            the same as the molecule indices as this method may be accessed with regard
+            to particles in a Topology).
+
+        Returns
+        -------
+        virtual_site : a simtk.openmm LocalCoordinatesSite
+        """
+
         assert len(atoms) >= 3
         from simtk.openmm import LocalCoordinatesSite
 
@@ -1360,7 +1404,22 @@ class TrivalentLonePairVirtualSite(VirtualSite):
         """The distance parameter of the virtual site"""
         return self._distance
 
-    def get_openmm_virtual_site(self, atoms, mass=None):
+    def get_openmm_virtual_site(self, atoms):
+        """
+        Returns the OpenMMVirtualSite corresponding to this TrivalentLonePairVirtualSite.
+
+        Parameters
+        ----------
+        atoms : iterable of int
+            The indices of the atoms involved in this virtual site (not assumed to be
+            the same as the molecule indices as this method amy be accessed with regard
+            to particles in a Topology).
+
+        Returns
+        -------
+        virtual_site : a simtk.openmm LocalCoordinatesSite
+        """
+
         assert len(atoms) >= 4
         from simtk.openmm import LocalCoordinatesSite
 
