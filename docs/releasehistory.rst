@@ -107,8 +107,8 @@ New features
   bump in the ``<Bonds>`` section of the SMIRNOFF spec (but not the entire spec).
 - `PR #718 <https://github.com/openforcefield/openforcefield/pull/718>`_: Adds ``.rings`` and
   ``.n_rings`` to :py:class:`Molecule <openforcefield.topology.Molecule>` and ``.is_in_ring``
-  to :py:class:`Atom <openforcefield.topology.molecule.Atom>` and
-  :py:class:`Bond <openforcefield.topology.molecule.Bond>`
+  to :py:class:`Atom <openforcefield.topology.Atom>` and
+  :py:class:`Bond <openforcefield.topology.Bond>`
 
 Bugfixes
 """""""""
@@ -123,7 +123,7 @@ Bugfixes
 - `PR #737 <https://github.com/openforcefield/openforcefield/pull/737>`_: Prevents OpenEye from
   incidentally being used in the conformer generation step of
   :py:class:`AmberToolsToolkitWrapper.assign_fractional_bond_orders
-  <openforcefield.utils.toolkits.AmberToolsToolkitWrapper.assign_wiberg_bond_orders>`.
+  <openforcefield.utils.toolkits.AmberToolsToolkitWrapper.assign_fractional_bond_orders>`.
 
 Behavior changed
 """"""""""""""""
@@ -143,13 +143,13 @@ API-breaking changes
 - `PR #548 <https://github.com/openforcefield/openforcefield/pull/548>`_: Methods
 
   - :py:meth:`Molecule.add_bond_charge_virtual_site <openforcefield.topology.Molecule.add_bond_charge_virtual_site>`
-  - :py:meth:`Molecule.add_monovalent_virtual_site <openforcefield.topology.Molecule.add_monovalent_virtual_site>`
-  - :py:meth:`Molecule.add_divalent_virtual_site <openforcefield.topology.Molecule.add_divalent_virtual_site>`
-  - :py:meth:`Molecule.add_trivalent_virtual_site <openforcefield.topology.Molecule.add_trivalent_virtual_site>`
+  - :py:meth:`Molecule.add_monovalent_lone_pair_virtual_site <openforcefield.topology.Molecule.add_monovalent_lone_pair_virtual_site>`
+  - :py:meth:`Molecule.add_divalent_lone_pair_virtual_site <openforcefield.topology.Molecule.add_divalent_lone_pair_virtual_site>`
+  - :py:meth:`Molecule.add_trivalent_lone_pair_virtual_site <openforcefield.topology.Molecule.add_trivalent_lone_pair_virtual_site>`
   now only accept a list of atoms, not a list of integers, to define to parent atoms
 
 - `PR #548 <https://github.com/openforcefield/openforcefield/pull/548>`_: Removes
-  :py:meth:`VirtualParticle.molecule_particle_index <openforcefield.topology.molecule.VirtualParticle.molecule_particle_index>`
+  :py:meth:`VirtualParticle.molecule_particle_index <openforcefield.topology.VirtualParticle.molecule_particle_index>`
 
 - `PR #548 <https://github.com/openforcefield/openforcefield/pull/548>`_: Removes ``outOfPlaneAngle`` from
 
@@ -161,7 +161,7 @@ API-breaking changes
 
 - `PR #548 <https://github.com/openforcefield/openforcefield/pull/548>`_: Removes ``weights`` from
 
-  - :py:class:`BondChargeVirtualSite <openforcefield.topology.BondChargeLonePairVirtualSite>`
+  - :py:class:`BondChargeVirtualSite <openforcefield.topology.BondChargeVirtualSite>`
   - :py:class:`MonovalentLonePairVirtualSite <openforcefield.topology.MonovalentLonePairVirtualSite>`
   - :py:class:`DivalentLonePairVirtualSite <openforcefield.topology.DivalentLonePairVirtualSite>`
   - :py:class:`TrivalentLonePairVirtualSite <openforcefield.topology.TrivalentLonePairVirtualSite>`

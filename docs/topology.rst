@@ -34,6 +34,7 @@ Secondary objects
     Bond
     VirtualSite
     VirtualParticle
+    TopologyVirtualParticle
     BondChargeVirtualSite
     MonovalentLonePairVirtualSite
     DivalentLonePairVirtualSite
