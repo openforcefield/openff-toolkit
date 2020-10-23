@@ -3474,6 +3474,17 @@ class vdWHandler(_NonbondedHandler):
 
             super().__init__(**kwargs)
 
+        def __setattr__(self, name, value):
+            if name == "rmin_half":
+                super().__setattr__(name, value)
+                super().__setattr__("sigma", value / 2 ** (1 / 6))
+
+            if name == "sigma":
+                super().__setattr__(name, value)
+                super().__setattr__("rmin_half", value * 2 ** (1 / 6))
+
+            super().__setattr__(key=name, value=value)
+
     _TAGNAME = "vdW"  # SMIRNOFF tag name to process
     _INFOTYPE = vdWType  # info type to store
     # _KWARGS = ['ewaldErrorTolerance',
