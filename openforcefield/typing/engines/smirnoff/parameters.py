@@ -1058,7 +1058,7 @@ class _ParameterAttributeHandler:
 
         return smirnoff_data
 
-    def to_dict(self, discard_cosmetic_attributes=False):
+    def to_dict(self, discard_cosmetic_attributes=False, duplicate_attributes=None):
         """
         Convert this object to dict format.
 
@@ -1070,6 +1070,9 @@ class _ParameterAttributeHandler:
         ----------
         discard_cosmetic_attributes : bool, optional. Default = False
             Whether to discard non-spec attributes of this object
+        duplicate_attributes : list of string, optional. Default = None
+            A list of names of attributes that redundantly decsribe
+            data and should be discarded during serializaiton
 
         Returns
         -------
@@ -1081,6 +1084,10 @@ class _ParameterAttributeHandler:
         # returned dict (call list() to make a copy). We discard
         # optional attributes that are set to None defaults.
         attribs_to_return = list(self._get_defined_parameter_attributes().keys())
+
+        if duplicate_attributes is not None:
+            for duplicate in duplicate_attributes:
+                attribs_to_return.pop(attribs_to_return.index(duplicate))
 
         # Start populating a dict of the attribs.
         indexed_attribs = set(self._get_indexed_parameter_attributes().keys())
@@ -3484,6 +3491,14 @@ class vdWHandler(_NonbondedHandler):
                 super().__setattr__("rmin_half", value * 2 ** (1 / 6))
 
             super().__setattr__(key=name, value=value)
+
+        def to_dict(
+            self, discard_cosmetic_attributes=False, duplicate_attributes=["sigma"]
+        ):
+            return super().to_dict(
+                discard_cosmetic_attributes=discard_cosmetic_attributes,
+                duplicate_attributes=duplicate_attributes,
+            )
 
     _TAGNAME = "vdW"  # SMIRNOFF tag name to process
     _INFOTYPE = vdWType  # info type to store
