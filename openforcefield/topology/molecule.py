@@ -517,13 +517,28 @@ class VirtualParticle(Particle):
     .. warning :: This API is experimental and subject to change.
     """
 
-    def __init__(self, vsite, orientation):
+    def __init__(self, vsite, orientation, name=None):
+        """
+        A single particle owned by a VirtualSite
+
+        Parameters
+        ----------
+        vsite : openforcefield.topology.VirtualSite
+            The parent VirtualSite of this VirtualParticle
+        orientation : tuple of int
+            Molecule atom indices of parent atoms
+        name : str, optional
+            The name of the particle
+
+        """
         self._virtual_site = vsite
+        self._molecule = vsite.molecule
         self._orientation = orientation
+        self._name = name
 
     @property
     def virtual_site(self):
-        return self._vsite
+        return self._virtual_site
 
     @property
     def orientation(self):
@@ -533,8 +548,9 @@ class VirtualParticle(Particle):
     def virtual_site_particle_index(self):
         """
         The index of the particle relative to its owning virtual site. Normally
-        this should either be 1 or 2.
+        this should either be 0 or 1.
         """
+        return self.virtual_site.orientations.index(self.orientation)
 
 
 # =============================================================================================
@@ -957,6 +973,20 @@ class BondChargeVirtualSite(VirtualSite):
         return self._distance
 
     def get_openmm_virtual_site(self, atoms):
+        """
+        Returns the OpenMMVirtualSite corresponding to this BondChargeVirtualSite.
+
+        Parameters
+        ----------
+        atoms : iterable of int
+            The indices of the atoms involved in this virtual site (not assumed to be
+            the same as the molecule indices as this method may be accessed with regard
+            to particles in a Topology).
+
+        Returns
+        -------
+        virtual_site : a simtk.openmm LocalCoordinatesSite
+        """
         from simtk.openmm import LocalCoordinatesSite
 
         originwt = np.zeros_like(atoms)
@@ -1114,7 +1144,22 @@ class MonovalentLonePairVirtualSite(VirtualSite):
         """The out_of_plane_angle parameter of the virtual site"""
         return self._out_of_plane_angle
 
-    def get_openmm_virtual_site(self, atoms, mass=None):
+    def get_openmm_virtual_site(self, atoms):
+        """
+        Returns the OpenMMVirtualSite corresponding to this MonovalentLonePairVirtualSite.
+
+        Parameters
+        ----------
+        atoms : iterable of int
+            The indices of the atoms involved in this virtual site (not assumed to be
+            the same as the molecule indices as this method may be accessed with regard
+            to particles in a Topology).
+
+        Returns
+        -------
+        virtual_site : a simtk.openmm LocalCoordinatesSite
+        """
+
         assert len(atoms) >= 3
         from simtk.openmm import LocalCoordinatesSite
 
@@ -1236,7 +1281,22 @@ class DivalentLonePairVirtualSite(VirtualSite):
         """The out_of_plane_angle parameter of the virtual site"""
         return self._out_of_plane_angle
 
-    def get_openmm_virtual_site(self, atoms, mass=None):
+    def get_openmm_virtual_site(self, atoms):
+        """
+        Returns the OpenMMVirtualSite corresponding to this DivalentLonePairVirtualSite.
+
+        Parameters
+        ----------
+        atoms : iterable of int
+            The indices of the atoms involved in this virtual site (not assumed to be
+            the same as the molecule indices as this method may be accessed with regard
+            to particles in a Topology).
+
+        Returns
+        -------
+        virtual_site : a simtk.openmm LocalCoordinatesSite
+        """
+
         assert len(atoms) >= 3
         from simtk.openmm import LocalCoordinatesSite
 
@@ -1276,8 +1336,6 @@ class TrivalentLonePairVirtualSite(VirtualSite):
     ):
         """
         Create a trivalent lone pair-type virtual site, in which the location of the charge is specified by the position of four atoms.
-
-        TODO : Do "weights" have any meaning here?
 
         Parameters
         ----------
@@ -1346,7 +1404,22 @@ class TrivalentLonePairVirtualSite(VirtualSite):
         """The distance parameter of the virtual site"""
         return self._distance
 
-    def get_openmm_virtual_site(self, atoms, mass=None):
+    def get_openmm_virtual_site(self, atoms):
+        """
+        Returns the OpenMMVirtualSite corresponding to this TrivalentLonePairVirtualSite.
+
+        Parameters
+        ----------
+        atoms : iterable of int
+            The indices of the atoms involved in this virtual site (not assumed to be
+            the same as the molecule indices as this method amy be accessed with regard
+            to particles in a Topology).
+
+        Returns
+        -------
+        virtual_site : a simtk.openmm LocalCoordinatesSite
+        """
+
         assert len(atoms) >= 4
         from simtk.openmm import LocalCoordinatesSite
 
@@ -5268,8 +5341,6 @@ class Molecule(FrozenMolecule):
     def add_trivalent_lone_pair_virtual_site(self, atoms, distance, **kwargs):
         """
         Create a trivalent lone pair-type virtual site, in which the location of the charge is specified by the position of four atoms.
-
-        TODO : Do "weights" have any meaning here?
 
         Parameters
         ----------
