@@ -3057,6 +3057,19 @@ class TestToolkitRegistry:
                 toolkit_wrapper=OpenEyeToolkitWrapper, exception_if_unavailable=True
             )
 
+    @pytest.mark.skipif(
+        RDKitToolkitWrapper.is_available(),
+        reason="Skipping while The RDKit is available",
+    )
+    def test_requires_toolkit_exception(self):
+        """Test that ToolkitUnavailableException, not LicenseError, is raised
+        when RDKitToolkitWrapper is unavailable"""
+        registry = ToolkitRegistry()
+        with pytest.raises(ToolkitUnavailableException):
+            registry.register_toolkit(
+                toolkit_wrapper=RDKitToolkitWrapper, exception_if_unavailable=True
+            )
+
     @requires_openeye
     def test_register_openeye(self):
         """Test creation of toolkit registry with OpenEye toolkit"""
