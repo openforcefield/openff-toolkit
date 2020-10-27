@@ -331,6 +331,8 @@ class TestMolecule:
         serialized = molecule.to_dict()
         molecule_copy = Molecule.from_dict(serialized)
         assert molecule == molecule_copy
+        assert molecule_copy.n_conformers == molecule.n_conformers
+        assert np.allclose(molecule_copy.conformers[0], molecule.conformers[0])
 
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_yaml_serialization(self, molecule):
@@ -338,6 +340,8 @@ class TestMolecule:
         serialized = molecule.to_yaml()
         molecule_copy = Molecule.from_yaml(serialized)
         assert molecule == molecule_copy
+        assert molecule_copy.n_conformers == molecule.n_conformers
+        assert np.allclose(molecule_copy.conformers[0], molecule.conformers[0])
 
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_toml_serialization(self, molecule):
@@ -353,18 +357,16 @@ class TestMolecule:
         serialized = molecule.to_bson()
         molecule_copy = Molecule.from_bson(serialized)
         assert molecule == molecule_copy
+        assert molecule_copy.n_conformers == molecule.n_conformers
+        assert np.allclose(molecule_copy.conformers[0], molecule.conformers[0])
 
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_json_serialization(self, molecule):
         """Test serialization of a molecule object to and from JSON."""
-        mol = Molecule.from_smiles("CCO")
-        molecule_copy = Molecule.from_json(mol.to_json())
-        assert molecule_copy == mol
-
-        mol.generate_conformers(n_conformers=1)
-        copy_with_conformers = Molecule.from_json(mol.to_json())
-        assert copy_with_conformers == mol
-        assert np.allclose(copy_with_conformers.conformers, mol.conformers)
+        molecule_copy = Molecule.from_json(molecule.to_json())
+        assert molecule_copy == molecule
+        assert molecule_copy.n_conformers == molecule.n_conformers
+        assert np.allclose(molecule_copy.conformers[0], molecule.conformers[0])
 
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_xml_serialization(self, molecule):
@@ -381,6 +383,8 @@ class TestMolecule:
         serialized = molecule.to_messagepack()
         molecule_copy = Molecule.from_messagepack(serialized)
         assert molecule == molecule_copy
+        assert molecule_copy.n_conformers == molecule.n_conformers
+        assert np.allclose(molecule_copy.conformers[0], molecule.conformers[0])
 
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_pickle_serialization(self, molecule):
@@ -388,6 +392,8 @@ class TestMolecule:
         serialized = pickle.dumps(molecule)
         molecule_copy = pickle.loads(serialized)
         assert molecule == molecule_copy
+        assert molecule_copy.n_conformers == molecule.n_conformers
+        assert np.allclose(molecule_copy.conformers[0], molecule.conformers[0])
 
     def test_serialization_no_conformers(self):
         """Test round-trip serialization when molecules have no conformers or partial charges."""
