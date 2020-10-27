@@ -2599,7 +2599,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                 importlib.import_module("rdkit", "Chem")
             except ImportError:
                 cls._is_available = False
-            cls._is_available = True
+            else:
+                cls._is_available = True
         return cls._is_available
 
     def from_object(self, object, allow_undefined_stereo=False):
