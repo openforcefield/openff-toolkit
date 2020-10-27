@@ -585,12 +585,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 f"available. {self._toolkit_installation_instructions}"
             )
             if self._is_installed is False:
-                print(self._is_installed)
-                print(self._is_licensed)
                 raise ToolkitUnavailableException(msg)
             if self._is_licensed is False:
-                print(self._is_installed)
-                print(self._is_licensed)
                 raise LicenseError(msg)
 
         from openeye import __version__ as openeye_version
