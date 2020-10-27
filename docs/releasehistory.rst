@@ -7,6 +7,17 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 * ``minor`` increments add features but do not break API compatibility
 * ``micro`` increments represent bugfix releases or improvements in documentation
 
+Current Development
+-------------------
+
+Bugfixes
+"""""""""
+- `PR #745 <https://github.com/openforcefield/openforcefield/pull/745>`_: Fixes bug when
+  serializing molecule with conformers to JSON.
+
+
+
+
 0.8.0 - Virtual Sites
 ---------------------
 
