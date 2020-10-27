@@ -21,6 +21,7 @@ __all__ = [
     "UnassignedBondParameterException",
     "UnassignedAngleParameterException",
     "DuplicateVirtualSiteTypeException",
+    "ParameterLookupError",
     "NonbondedMethod",
     "ParameterList",
     "ParameterType",
@@ -150,6 +151,11 @@ class NonintegralMoleculeChargeException(Exception):
 
 class DuplicateParameterError(MessageException):
     """Exception raised when trying to add a ParameterType that already exists"""
+
+
+class ParameterLookupError(MessageException):
+    """Exception raised when something goes wrong in a parameter lookup in
+    ParameterHandler.__getitem__"""
 
 
 class DuplicateVirtualSiteTypeException(Exception):
@@ -2542,6 +2548,26 @@ class ParameterHandler(_ParameterAttributeHandler):
                 # not necessary, but explicit
                 else:
                     continue
+
+    def __getitem__(self, val):
+        """
+        Syntax sugar for lookikng up a ParameterType in a ParameterHandler
+        based on its SMIRKS.
+        """
+        if isinstance(val, str):
+            params = self.get_parameter({"smirks": val})
+            if len(params) == 1:
+                return params[0]
+            elif len(params) > 1:  # Can this ever be hit?
+                raise ParameterLookupError(
+                    "Found multiple parameters with matching SMIRKS: " f"{params}"
+                )
+            else:
+                raise ParameterLookupError(
+                    f"Parameter handler with SMIRKS {val} not found."
+                )
+        elif isinstance(val, ParameterType) or issubclass(val, ParameterType):
+            raise ParameterLookupError("Lookup by instance is not supported")
 
 
 # =============================================================================================

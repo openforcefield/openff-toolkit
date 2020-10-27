@@ -36,6 +36,7 @@ from openforcefield.typing.engines.smirnoff import (
     FractionalBondOrderInterpolationMethodUnsupportedError,
     IncompatibleParameterError,
     ParameterHandler,
+    ParameterLookupError,
     SMIRNOFFAromaticityError,
     SMIRNOFFSpecError,
     XMLParameterIOHandler,
@@ -1636,7 +1637,7 @@ class TestForceField:
         assert "LibraryChrages" not in registered_handlers
 
     def test_parameter_handler_lookup(self):
-        """Ensure __getitem__ lookups work"""
+        """Ensure ForceField.__getitem__ lookups work"""
         forcefield = ForceField("test_forcefields/smirnoff99Frosst.offxml")
 
         handlers_before = sorted(forcefield._parameter_handlers)
@@ -1651,7 +1652,7 @@ class TestForceField:
 
     @pytest.mark.parametrize("unregistered_handler", ["LibraryCharges", "foobar"])
     def test_unregistered_parameter_handler_lookup(self, unregistered_handler):
-        """Ensure __getitem__ lookups do not register new handlers"""
+        """Ensure ForceField.__getitem__ lookups do not register new handlers"""
         forcefield = ForceField("test_forcefields/smirnoff99Frosst.offxml")
 
         assert unregistered_handler not in forcefield._parameter_handlers
@@ -1660,13 +1661,31 @@ class TestForceField:
         assert unregistered_handler not in forcefield._parameter_handlers
 
     def test_lookup_parameter_handler_object(self):
-        """Ensure __getitem__ raises NotImplemented when passed a ParameterHandler object"""
+        """Ensure ForceField.__getitem__ raises NotImplemented when passed a ParameterHandler object"""
         forcefield = ForceField("test_forcefields/smirnoff99Frosst.offxml")
         bonds = forcefield["Bonds"]
         with pytest.raises(NotImplementedError):
             forcefield[bonds]
         with pytest.raises(NotImplementedError):
             forcefield[type(bonds)]
+
+    def test_lookup_parameter_type(self):
+        """Test both ForceField and ParameterHandler __getitem__ methods"""
+        forcefield = ForceField("test_forcefields/smirnoff99Frosst.offxml")
+        smirks = "[#6X4:1]-[#6X3:2]=[#8X1+0]"
+        param = forcefield["Bonds"][smirks]
+        assert param.smirks == smirks
+
+        with pytest.raises(
+            ParameterLookupError,
+            match="Lookup by instance is not supported",
+        ):
+            forcefield["Bonds"][param]
+        with pytest.raises(
+            ParameterLookupError,
+            match=r"Parameter handler with SMIRKS ",
+        ):
+            forcefield["vdW"][smirks]
 
     def test_hash(self):
         """Test hashes on all available force fields"""
