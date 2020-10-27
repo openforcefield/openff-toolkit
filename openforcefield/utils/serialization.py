@@ -459,7 +459,7 @@ class Serializable(abc.ABC):
 
 
 def _prep_numpy_data_for_json(data):
-    """Recursively search through a dict a dict and convert the bytes fields to lists"""
+    """Recursively search through a dict and convert the bytes fields to lists"""
     # TODO: Much of this logic can probably be trimmed down
     import numpy as np
 
