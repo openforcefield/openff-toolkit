@@ -220,7 +220,9 @@ class TestTopology(TestCase):
         solvent_box.box_vectors = np.eye(3) * 4 * unit.nanometer
         assert solvent_box.is_periodic is True
 
-        solvent_box.is_periodic = False
+        with pytest.raises(InvalidPeriodicityError):
+            solvent_box.is_periodic = False
+        solvent_box.box_vectors = None
         assert solvent_box.is_periodic is False
 
     def test_from_smiles(self):

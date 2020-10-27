@@ -22,6 +22,7 @@ Class definitions to represent a molecular system and its chemical components
 # =============================================================================================
 
 import itertools
+import warnings
 from collections import OrderedDict
 from collections.abc import MutableMapping
 
@@ -1265,8 +1266,6 @@ class Topology(Serializable):
         self._aromaticity_model = DEFAULT_AROMATICITY_MODEL
         self._constrained_atom_pairs = dict()
         self._box_vectors = None
-        self._is_periodic = None
-        # self._is_periodic = False
         # self._reference_molecule_dicts = set()
         # TODO: Look into weakref and what it does. Having multiple topologies might cause a memory leak.
         self._reference_molecule_to_topology_molecules = OrderedDict()
@@ -1410,9 +1409,7 @@ class Topology(Serializable):
     def is_periodic(self):
         """Return whether or not this Topology is intended to be described with periodic
         boundary conditions."""
-        if self._is_periodic is None:
-            self._is_periodic = self.box_vectors is not None
-        return self._is_periodic
+        return self.box_vectors is not None
 
     @is_periodic.setter
     def is_periodic(self, is_periodic):
@@ -1425,12 +1422,20 @@ class Topology(Serializable):
             Whether or not this Topology is periodici
 
         """
-        if is_periodic and self.box_vectors is None:
-            raise InvalidPeriodicityError(
-                "Cannot set is_periodic to True without box vectors. Consider setting "
-                ".box_vectors first"
+        if is_periodic is self.is_periodic:
+            warnings.warn(
+                f".is_periodicic is already {is_periodic}. " "Setting has no effect."
             )
-        self._is_periodic = is_periodic
+        if is_periodic is True and self.box_vectors is None:
+            raise InvalidPeriodicityError(
+                "Cannot set is_periodic to True without box vectors. Set box "
+                "vectors directly instead."
+            )
+        if is_periodic is False and self.box_vectors is not None:
+            raise InvalidPeriodicityError(
+                "Cannot set is_periodic to False while box vectors are stored. "
+                "First set box_vectors to None."
+            )
 
     @property
     def charge_model(self):
