@@ -8,6 +8,7 @@ from openforcefield.topology.molecule import (
     MonovalentLonePairVirtualSite,
     Particle,
     TrivalentLonePairVirtualSite,
+    VirtualParticle,
     VirtualSite,
 )
 from openforcefield.topology.topology import (
@@ -21,6 +22,7 @@ from openforcefield.topology.topology import (
     TopologyAtom,
     TopologyBond,
     TopologyMolecule,
+    TopologyVirtualParticle,
     TopologyVirtualSite,
     ValenceDict,
 )
