@@ -1697,7 +1697,7 @@ class TestForceField:
         with pytest.raises(KeyError) as excinfo:
             ff.deregister_parameter_handler(to_deregister)
 
-def test_hash(self):
+    def test_hash(self):
         """Test hashes on all available force fields"""
         ffs = get_available_force_fields()
 
