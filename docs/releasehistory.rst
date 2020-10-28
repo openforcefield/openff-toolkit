@@ -10,8 +10,17 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 Current Development
 -------------------
 
+API-breaking changes
+""""""""""""""""""""
+- `PR #751 <https://github.com/openforcefield/openforcefield/pull/751>`_: Removes the
+  optional ``oetools=("oechem", "oequacpac", "oeiupac", "oeomega")`` keyword argument from
+  `OpenEyeToolkitWrapper.is_available <openforcefield.utils.toolkits.OpenEyeToolkitWrapper.is_available>`, as
+  there are no special behaviors that are accessed in the case of partially-licensed OpenEye backends. The
+  new behavior of this method is the same as if the default value above is always provided.
+
+
 New features
-------------
+""""""""""""
 - `PR #751 <https://github.com/openforcefield/openforcefield/pull/751>`_: Adds
   `LicenseError <openforcefield.utils.toolkits.LicenseError>`, a subclass of
   `ToolkitUnavailableException <openforcefield.utils.toolkits.ToolkitUnavailableException>`
@@ -21,10 +30,9 @@ New features
 
 
 Bugfixes
-"""""""""
+""""""""
 - `PR #745 <https://github.com/openforcefield/openforcefield/pull/745>`_: Fixes bug when
   serializing molecule with conformers to JSON.
-
 
 
 
