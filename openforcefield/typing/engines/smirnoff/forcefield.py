@@ -955,6 +955,8 @@ class ForceField:
         allow_cosmetic_attributes : bool, optional. Default = False
             Whether to permit non-spec kwargs in smirnoff_data.
         """
+        from collections import defaultdict
+
         import packaging.version
 
         # Check that the SMIRNOFF version of this data structure is supported by this ForceField implementation
@@ -1032,18 +1034,22 @@ class ForceField:
             # Get the parameter types serialization that is not passed to the ParameterHandler constructor.
             ph_class = self._get_parameter_handler_class(parameter_name)
             try:
-                parameter_list_tagname = ph_class._INFOTYPE._ELEMENT_NAME
+                infotype = ph_class._INFOTYPE
+                parameter_list_tagname = infotype._ELEMENT_NAME
             except AttributeError:
                 # The ParameterHandler doesn't have ParameterTypes (e.g. ToolkitAM1BCCHandler).
                 parameter_list_dict = {}
             else:
                 parameter_list_dict = section_dict.pop(parameter_list_tagname, {})
 
-                # If the parameter list isn't empty, it must be transferred into its own tag.
-                # This is necessary for deserializing SMIRNOFF force field sections which may or may
-                # not have any smirks-based elements (like an empty ChargeIncrementModel section)
-                if parameter_list_dict != {}:
-                    parameter_list_dict = {parameter_list_tagname: parameter_list_dict}
+            # Must be wrapped into its own tag.
+            # Assumes that parameter_list_dict is always a list
+
+            # If the parameter list isn't empty, it must be transferred into its own tag.
+            # This is necessary for deserializing SMIRNOFF force field sections which may or may
+            # not have any smirks-based elements (like an empty ChargeIncrementModel section)
+            if parameter_list_dict != {}:
+                parameter_list_dict = {parameter_list_tagname: parameter_list_dict}
 
             # Retrieve or create parameter handler, passing in section_dict to check for
             # compatibility if a handler for this parameter name already exists
@@ -1386,13 +1392,18 @@ class ForceField:
 
         """
         from openforcefield.topology import Topology
+        from openforcefield.typing.engines.smirnoff.parameters import VirtualSiteHandler
 
         # Loop over molecules and label
         molecule_labels = list()
         for molecule_idx, molecule in enumerate(topology.reference_molecules):
             top_mol = Topology.from_molecules([molecule])
             current_molecule_labels = dict()
+            param_is_list = False
             for tag, parameter_handler in self._parameter_handlers.items():
+
+                if type(parameter_handler) == VirtualSiteHandler:
+                    param_is_list = True
 
                 matches = parameter_handler.find_matches(top_mol)
 
@@ -1409,8 +1420,14 @@ class ForceField:
                 # Now make parameter_matches into a dict mapping
                 # match objects to ParameterTypes
 
-                for match in matches:
-                    parameter_matches[match] = matches[match].parameter_type
+                if param_is_list:
+                    for match in matches:
+                        parameter_matches[match] = [
+                            m.parameter_type for m in matches[match]
+                        ]
+                else:
+                    for match in matches:
+                        parameter_matches[match] = matches[match].parameter_type
 
                 current_molecule_labels[tag] = parameter_matches
 
@@ -1443,3 +1460,32 @@ class ForceField:
                 raise KeyError(f"Parameter handler with name '{val}' not found.")
         elif isinstance(val, ParameterHandler) or issubclass(val, ParameterHandler):
             raise NotImplementedError
+
+    def __hash__(self):
+        """Deterministically hash a ForceField object
+
+        Notable behavior:
+          * `author` and `date` are stripped from the ForceField
+          * `id` and `parent_id` are stripped from each ParameterType"""
+
+        # Completely re-constructing the force field may be overkill
+        # compared to deepcopying and modifying, but is not currently slow
+        ff_copy = ForceField()
+        ff_copy.date = None
+        ff_copy.author = None
+
+        param_attrs_to_strip = ["_id", "_parent_id"]
+
+        for handler_name in self.registered_parameter_handlers:
+            handler = copy.deepcopy(self.get_parameter_handler(handler_name))
+
+            for param in handler._parameters:
+                for attr in param_attrs_to_strip:
+                    # param.__dict__.pop(attr, None) may be faster
+                    # https://stackoverflow.com/a/42303681/4248961
+                    if hasattr(param, attr):
+                        delattr(param, attr)
+
+            ff_copy.register_parameter_handler(handler)
+
+        return hash(ff_copy.to_string(discard_cosmetic_attributes=True))

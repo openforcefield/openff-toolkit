@@ -331,6 +331,8 @@ class TestMolecule:
         serialized = molecule.to_dict()
         molecule_copy = Molecule.from_dict(serialized)
         assert molecule == molecule_copy
+        assert molecule_copy.n_conformers == molecule.n_conformers
+        assert np.allclose(molecule_copy.conformers[0], molecule.conformers[0])
 
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_yaml_serialization(self, molecule):
@@ -338,6 +340,8 @@ class TestMolecule:
         serialized = molecule.to_yaml()
         molecule_copy = Molecule.from_yaml(serialized)
         assert molecule == molecule_copy
+        assert molecule_copy.n_conformers == molecule.n_conformers
+        assert np.allclose(molecule_copy.conformers[0], molecule.conformers[0])
 
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_toml_serialization(self, molecule):
@@ -353,17 +357,16 @@ class TestMolecule:
         serialized = molecule.to_bson()
         molecule_copy = Molecule.from_bson(serialized)
         assert molecule == molecule_copy
+        assert molecule_copy.n_conformers == molecule.n_conformers
+        assert np.allclose(molecule_copy.conformers[0], molecule.conformers[0])
 
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_json_serialization(self, molecule):
         """Test serialization of a molecule object to and from JSON."""
-        # TODO: Test round-trip, on mini_drug_bank, when to_json bug is fixed, see #547
-        mol = Molecule.from_smiles("CCO")
-        molecule_copy = Molecule.from_json(mol.to_json())
-        assert molecule_copy == mol
-        mol.generate_conformers(n_conformers=1)
-        with pytest.raises(TypeError):
-            mol.to_json()
+        molecule_copy = Molecule.from_json(molecule.to_json())
+        assert molecule_copy == molecule
+        assert molecule_copy.n_conformers == molecule.n_conformers
+        assert np.allclose(molecule_copy.conformers[0], molecule.conformers[0])
 
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_xml_serialization(self, molecule):
@@ -380,6 +383,8 @@ class TestMolecule:
         serialized = molecule.to_messagepack()
         molecule_copy = Molecule.from_messagepack(serialized)
         assert molecule == molecule_copy
+        assert molecule_copy.n_conformers == molecule.n_conformers
+        assert np.allclose(molecule_copy.conformers[0], molecule.conformers[0])
 
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_pickle_serialization(self, molecule):
@@ -387,6 +392,8 @@ class TestMolecule:
         serialized = pickle.dumps(molecule)
         molecule_copy = pickle.loads(serialized)
         assert molecule == molecule_copy
+        assert molecule_copy.n_conformers == molecule.n_conformers
+        assert np.allclose(molecule_copy.conformers[0], molecule.conformers[0])
 
     def test_serialization_no_conformers(self):
         """Test round-trip serialization when molecules have no conformers or partial charges."""
@@ -415,6 +422,18 @@ class TestMolecule:
 
         pickle_copy = pickle.loads(pickle.dumps(mol))
         assert mol == pickle_copy
+
+    def test_json_numpy_roundtrips(self):
+        """Ensure that array data survives several round-trips through JSON,
+        which depends on list serialization instead of bytes."""
+        mol = Molecule.from_smiles("CCO")
+        mol.generate_conformers(n_conformers=1)
+        initial_conformer = mol.conformers[0]
+
+        for _ in range(10):
+            mol = Molecule.from_json(mol.to_json())
+
+        assert np.allclose(initial_conformer, mol.conformers[0])
 
     # ----------------------------------------------------
     # Test Molecule constructors and conversion utilities.
@@ -847,95 +866,37 @@ class TestMolecule:
             molecule, test_mol, "Molecule.to_rdkit()/from_rdkit() round trip failed"
         )
 
-    # TODO: Should there be an equivalent toolkit test and leave this as an integration test?
     @requires_openeye
-    @pytest.mark.parametrize(
-        "molecule",
-        mini_drug_bank(
-            xfail_mols={
-                "DrugBank_2397": 'OpenEye cannot generate a correct IUPAC name and raises a "Warning: Incorrect name:" or simply return "BLAH".',
-                "DrugBank_2543": 'OpenEye cannot generate a correct IUPAC name and raises a "Warning: Incorrect name:" or simply return "BLAH".',
-                "DrugBank_2642": 'OpenEye cannot generate a correct IUPAC name and raises a "Warning: Incorrect name:" or simply return "BLAH".',
-            },
-            wip_mols={
-                "DrugBank_1212": "the roundtrip generates molecules with very different IUPAC/SMILES!",
-                "DrugBank_2210": "the roundtrip generates molecules with very different IUPAC/SMILES!",
-                "DrugBank_4584": "the roundtrip generates molecules with very different IUPAC/SMILES!",
-                "DrugBank_390": 'raises warning "Unable to make OFFMol from OEMol: OEMol has unspecified stereochemistry."',
-                "DrugBank_810": 'raises warning "Unable to make OFFMol from OEMol: OEMol has unspecified stereochemistry."',
-                "DrugBank_4316": 'raises warning "Unable to make OFFMol from OEMol: OEMol has unspecified stereochemistry."',
-                "DrugBank_7124": 'raises warning "Unable to make OFFMol from OEMol: OEMol has unspecified stereochemistry."',
-                "DrugBank_4346": 'raises warning "Failed to parse name:"',
-            },
-        ),
-    )
-    def test_to_from_iupac(self, molecule):
-        """Test that conversion/creation of a molecule to and from a IUPAC name is consistent."""
-        from openforcefield.utils.toolkits import UndefinedStereochemistryError
-
-        # All the molecules that raise UndefinedStereochemistryError in Molecule.from_iupac()
-        # (This is a larger list than the normal group of undefined stereo mols, probably has
-        # something to do with IUPAC information content)
-        iupac_problem_mols = {
-            "DrugBank_977",
-            "DrugBank_1634",
-            "DrugBank_1700",
-            "DrugBank_1962",
-            "DrugBank_2148",
-            "DrugBank_2178",
-            "DrugBank_2186",
-            "DrugBank_2208",
-            "DrugBank_2519",
-            "DrugBank_2538",
-            "DrugBank_2592",
-            "DrugBank_2651",
-            "DrugBank_2987",
-            "DrugBank_3332",
-            "DrugBank_3502",
-            "DrugBank_3622",
-            "DrugBank_3726",
-            "DrugBank_3844",
-            "DrugBank_3930",
-            "DrugBank_4161",
-            "DrugBank_4162",
-            "DrugBank_4778",
-            "DrugBank_4593",
-            "DrugBank_4959",
-            "DrugBank_5043",
-            "DrugBank_5076",
-            "DrugBank_5176",
-            "DrugBank_5418",
-            "DrugBank_5737",
-            "DrugBank_5902",
-            "DrugBank_6295",
-            "DrugBank_6304",
-            "DrugBank_6305",
-            "DrugBank_6329",
-            "DrugBank_6355",
-            "DrugBank_6401",
-            "DrugBank_6509",
-            "DrugBank_6531",
-            "DrugBank_6647",
-            # These test cases are allowed to fail.
-            "DrugBank_390",
-            "DrugBank_810",
-            "DrugBank_4316",
-            "DrugBank_4346",
-            "DrugBank_7124",
-        }
-        undefined_stereo = molecule.name in iupac_problem_mols
-
-        iupac = molecule.to_iupac()
-
-        if undefined_stereo:
-            with pytest.raises(UndefinedStereochemistryError):
-                Molecule.from_iupac(iupac)
-
-        molecule_copy = Molecule.from_iupac(
-            iupac, allow_undefined_stereo=undefined_stereo
+    def test_to_from_iupac(self):
+        """
+        Test basic behavior of the IUPAC conversion functions. More rigorous
+        testing of the toolkity wrapper behavior is in test_toolkits.py
+        """
+        from openforcefield.utils.toolkits import (
+            InvalidIUPACNameError,
+            UndefinedStereochemistryError,
         )
-        assert molecule.is_isomorphic_with(
-            molecule_copy, atom_stereochemistry_matching=not undefined_stereo
+
+        with pytest.raises(InvalidIUPACNameError):
+            Molecule.from_iupac(".BETA.-PINENE")
+
+        # DrugBank_977, tagged as a problem molecule in earlier tests
+        bad_stereo_iupac = (
+            "(~{E},3~{R},5~{S})-7-[4-(4-fluorophenyl)-6-isopropyl-2-"
+            "[methyl(methylsulfonyl)amino]pyrimidin-5-yl]-3,5-"
+            "dihydroxy-hept-6-enoic acid"
+        )
+        with pytest.raises(UndefinedStereochemistryError):
+            Molecule.from_iupac(bad_stereo_iupac)
+
+        cholesterol = Molecule.from_smiles(
+            "C[C@H](CCCC(C)C)[C@H]1CC[C@@H]2[C@@]1(CC[C@H]3[C@H]2CC=C4[C@@]3(CC[C@@H](C4)O)C)C"
+        )
+
+        cholesterol_iupac = cholesterol.to_iupac()
+
+        assert Molecule.are_isomorphic(
+            cholesterol, Molecule.from_iupac(cholesterol_iupac)
         )
 
     @pytest.mark.parametrize("molecule", mini_drug_bank())
@@ -1412,7 +1373,10 @@ class TestMolecule:
         ethanol_reverse = create_reversed_ethanol()
         # get the mapping between the molecules
         mapping = Molecule.are_isomorphic(ethanol, ethanol_reverse, True)[1]
-        ethanol.add_bond_charge_virtual_site([0, 1], 0.3 * unit.angstrom)
+
+        atom0, atom1 = list([atom for atom in ethanol.atoms])[:2]
+        ethanol.add_bond_charge_virtual_site([atom0, atom1], 0.3 * unit.angstrom)
+
         # make sure that molecules with virtual sites raises an error
         with pytest.raises(NotImplementedError):
             remapped = ethanol.remap(mapping, current_to_new=True)
@@ -2274,7 +2238,7 @@ class TestMolecule:
         sigma_unitless = 0.1
         rmin_half_unitless = 0.2
         epsilon_unitless = 0.3
-        charge_increments_unitless = [0.1, 0.2, 0.3, 0.4]
+        charge_increments_unitless = [0.1, 0.2]
         distance = distance_unitless * unit.angstrom
         sigma = sigma_unitless * unit.angstrom
         rmin_half = rmin_half_unitless * unit.angstrom
@@ -2289,56 +2253,63 @@ class TestMolecule:
         atom3 = molecule.atoms[2]
         atom4 = molecule.atoms[3]
 
+        atoms = (atom1, atom2)
+
         # Try to feed in unitless sigma
         with pytest.raises(Exception) as excinfo:
             molecule.add_bond_charge_virtual_site(
-                [atom1, atom2, atom3], distance, epsilon=epsilon, sigma=sigma_unitless
+                atoms, distance, epsilon=epsilon, sigma=sigma_unitless, replace=True
             )
 
         # Try to feed in unitless rmin_half
         with pytest.raises(Exception) as excinfo:
             molecule.add_bond_charge_virtual_site(
-                [atom1, atom2, atom3],
+                atoms,
                 distance,
                 epsilon=epsilon,
                 rmin_half=rmin_half_unitless,
+                replace=True,
             )
 
         # Try to feed in unitless epsilon
         with pytest.raises(Exception) as excinfo:
             molecule.add_bond_charge_virtual_site(
-                [atom1, atom2, atom3],
+                atoms,
                 distance,
                 epsilon=epsilon_unitless,
                 sigma=sigma,
                 rmin_half=rmin_half,
+                replace=True,
             )
 
         # Try to feed in unitless charges
         with pytest.raises(Exception) as excinfo:
             molecule.add_bond_charge_virtual_site(
-                [atom1, atom2, atom3, atom4],
+                atoms,
                 distance,
                 charge_incrtements=charge_increments_unitless,
+                replace=True,
             )
 
         # We shouldn't be able to give both rmin_half and sigma VdW parameters.
         with pytest.raises(Exception) as excinfo:
             molecule.add_bond_charge_virtual_site(
-                [atom1, atom2, atom3],
+                [atom1, atom2],
                 distance,
                 epsilon=epsilon,
                 sigma=sigma,
                 rmin_half=rmin_half,
+                replace=True,
             )
 
-        # Try creating virtual site from sigma+epsilon
+        # Try creating virtual site from sigma+epsilon; replace=False since this
+        # should be the first vsite to succeed
         vsite1_index = molecule.add_bond_charge_virtual_site(
-            [atom1, atom2, atom3], distance, epsilon=epsilon, sigma=sigma
+            atoms, distance, epsilon=epsilon, sigma=sigma, replace=False
         )
         # Try creating virutal site from rmin_half+epsilon
         vsite2_index = molecule.add_bond_charge_virtual_site(
-            [atom1, atom2, atom3], distance, epsilon=epsilon, rmin_half=rmin_half
+            atoms, distance, epsilon=epsilon, rmin_half=rmin_half, replace=True
         )
 
         # TODO: Test the @property getters for sigma, epsilon, and rmin_half
@@ -2346,12 +2317,46 @@ class TestMolecule:
         # We should have to give as many charge increments as atoms (len(charge_increments)) = 4
         with pytest.raises(Exception) as excinfo:
             molecule.add_bond_charge_virtual_site(
-                [atom1, atom2, atom3], distance, charge_increments=charge_increments
+                atoms, distance, charge_increments=[0.0], replace=True
             )
 
         vsite3_index = molecule.add_bond_charge_virtual_site(
-            [atom1, atom2, atom3, atom4], distance, charge_increments=charge_increments
+            atoms, distance, charge_increments=charge_increments, replace=True
         )
+
+    def test_virtual_particle(self):
+        """Test setter, getters, and methods of VirtualParticle"""
+        mol = create_ethanol()
+        # Add a SYMMETRIC (default) VirtualSite, which should have two particles
+        mol.add_bond_charge_virtual_site(
+            (mol.atoms[1], mol.atoms[2]),
+            0.5 * unit.angstrom,
+            charge_increments=[-0.1, 0.1] * unit.elementary_charge,
+        )
+        # Add a NON SYMMETRIC (specified in kwarg) VirtualSite, which should have one particle
+        mol.add_bond_charge_virtual_site(
+            (mol.atoms[0], mol.atoms[1]),
+            0.5 * unit.angstrom,
+            charge_increments=[-0.1, 0.1] * unit.elementary_charge,
+            symmetric=False,
+        )
+
+        assert len(mol.virtual_sites) == 2
+
+        # Ensure the first vsite has two particles
+        vps0 = [vp for vp in mol.virtual_sites[0].particles]
+        assert len(vps0) == 2
+        assert vps0[0].virtual_site_particle_index == 0
+        assert vps0[1].virtual_site_particle_index == 1
+        orientations0 = [vp.orientation for vp in vps0]
+        assert len(set(orientations0) & {(0, 1), (1, 0)}) == 2
+
+        # Ensure the second vsite has one particle
+        vps1 = [vp for vp in mol.virtual_sites[1].particles]
+        assert len(vps1) == 1
+        assert vps1[0].virtual_site_particle_index == 0
+        orientations1 = [vp.orientation for vp in vps1]
+        assert len(set(orientations1) & {(0, 1)}) == 1
 
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_add_bond_charge_virtual_site(self, molecule):
@@ -2373,32 +2378,33 @@ class TestMolecule:
         # Try to feed in a unitless distance
         with pytest.raises(AssertionError) as excinfo:
             vsite1_index = molecule.add_bond_charge_virtual_site(
-                [atom1, atom2, atom3], distance_unitless
+                [atom1, atom2], distance_unitless
             )
 
-        vsite1_index = molecule.add_bond_charge_virtual_site(
-            [atom1, atom2, atom3], distance
-        )
+        vsite1_index = molecule.add_bond_charge_virtual_site([atom1, atom2], distance)
         vsite1 = molecule.virtual_sites[vsite1_index]
         assert atom1 in vsite1.atoms
         assert atom2 in vsite1.atoms
-        assert atom3 in vsite1.atoms
         assert vsite1 in atom1.virtual_sites
         assert vsite1 in atom2.virtual_sites
-        assert vsite1 in atom3.virtual_sites
         assert vsite1.distance == distance
 
-        # Make an "everything bagel" virtual site
+        # Make a virtual site using all arguments
         vsite2_index = molecule.add_bond_charge_virtual_site(
-            [atom1, atom2, atom3],
+            [atom2, atom3],
             distance,
             sigma=0.1 * unit.angstrom,
             epsilon=1.0 * unit.kilojoule_per_mole,
             charge_increments=unit.Quantity(
-                np.array([0.1, 0.2, 0.3]), unit.elementary_charge
+                np.array([0.1, 0.2]), unit.elementary_charge
             ),
         )
         vsite2 = molecule.virtual_sites[vsite2_index]
+        assert atom2 in vsite2.atoms
+        assert atom3 in vsite2.atoms
+        assert vsite2 in atom2.virtual_sites
+        assert vsite2 in atom3.virtual_sites
+        assert vsite2.distance == distance
 
         # test serialization
         molecule_dict = molecule.to_dict()
@@ -2431,33 +2437,51 @@ class TestMolecule:
         out_of_plane_angle = out_of_plane_angle_unitless * unit.degree
         in_plane_angle = in_plane_angle_unitless * unit.radian
 
+        atoms = (atom1, atom2, atom3)
+
         # Try passing in a unitless distance
         with pytest.raises(AssertionError) as excinfo:
             vsite1_index = molecule.add_monovalent_lone_pair_virtual_site(
-                [atom1, atom2], distance_unitless, out_of_plane_angle, in_plane_angle
+                atoms,
+                distance_unitless,
+                out_of_plane_angle,
+                in_plane_angle,
+                replace=True,
             )
 
         # Try passing in a unitless out_of_plane_angle
         with pytest.raises(AssertionError) as excinfo:
             vsite1_index = molecule.add_monovalent_lone_pair_virtual_site(
-                [atom1, atom2], distance, out_of_plane_angle_unitless, in_plane_angle
+                atoms,
+                distance,
+                out_of_plane_angle_unitless,
+                in_plane_angle,
+                replace=True,
             )
 
         # Try passing in a unitless in_plane_angle
         with pytest.raises(AssertionError) as excinfo:
             vsite1_index = molecule.add_monovalent_lone_pair_virtual_site(
-                [atom1, atom2], distance, out_of_plane_angle, in_plane_angle_unitless
+                atoms,
+                distance,
+                out_of_plane_angle,
+                in_plane_angle_unitless,
+                replace=True,
             )
 
         # Try giving two atoms
         with pytest.raises(AssertionError) as excinfo:
             vsite1_index = molecule.add_monovalent_lone_pair_virtual_site(
-                [atom1, atom2], distance, out_of_plane_angle, in_plane_angle
+                [atom1, atom2],
+                distance,
+                out_of_plane_angle,
+                in_plane_angle,
+                replace=True,
             )
 
-        # Successfully make a virtual site
+        # Successfully make a virtual site; throw exception is already present (replace=False)
         vsite1_index = molecule.add_monovalent_lone_pair_virtual_site(
-            [atom1, atom2, atom3], distance, out_of_plane_angle, in_plane_angle
+            atoms, distance, out_of_plane_angle, in_plane_angle, replace=False
         )
         # TODO: Check if we get the same values back out from the @properties
         molecule_dict = molecule.to_dict()
@@ -2476,13 +2500,20 @@ class TestMolecule:
         atom4 = molecule.atoms[3]
         distance = 0.3 * unit.angstrom
         out_of_plane_angle = 30 * unit.degree
-        in_plane_angle = 0.2 * unit.radian
         vsite1_index = molecule.add_divalent_lone_pair_virtual_site(
-            [atom1, atom2, atom3], distance, out_of_plane_angle, in_plane_angle
+            [atom1, atom2, atom3],
+            distance,
+            out_of_plane_angle,
+            replace=False,
         )
+
+        # test giving too few atoms
         with pytest.raises(AssertionError) as excinfo:
             vsite1_index = molecule.add_divalent_lone_pair_virtual_site(
-                [atom1, atom2], distance, out_of_plane_angle, in_plane_angle
+                [atom1, atom2],
+                distance,
+                out_of_plane_angle,
+                replace=False,
             )
         molecule_dict = molecule.to_dict()
         molecule2 = Molecule.from_dict(molecule_dict)
@@ -2499,15 +2530,18 @@ class TestMolecule:
         atom3 = molecule.atoms[2]
         atom4 = molecule.atoms[3]
         distance = 0.3 * unit.angstrom
-        out_of_plane_angle = 30 * unit.degree
-        in_plane_angle = 0.2 * unit.radian
+
         vsite1_index = molecule.add_trivalent_lone_pair_virtual_site(
-            [atom1, atom2, atom3, atom4], distance, out_of_plane_angle, in_plane_angle
+            [atom1, atom2, atom3, atom4],
+            distance,
+            replace=False,
         )
         # Test for assertion when giving too few atoms
         with pytest.raises(AssertionError) as excinfo:
             vsite1_index = molecule.add_trivalent_lone_pair_virtual_site(
-                [atom1, atom2, atom3], distance, out_of_plane_angle, in_plane_angle
+                [atom1, atom2, atom3],
+                distance,
+                replace=True,
             )
         molecule_dict = molecule.to_dict()
         molecule2 = Molecule.from_dict(molecule_dict)
@@ -2564,6 +2598,19 @@ class TestMolecule:
         assert len(matches) == 4  # there should be four matches
         for match in matches:
             assert len(match) == 2  # each match should have two tagged atoms
+        # Test searching for stereo-specific SMARTS
+        matches = molecule.chemical_environment_matches(
+            "[#6@:1](-[F:2])(-[Cl])(-[Br])(-[H])", toolkit_registry=toolkit_wrapper
+        )
+        assert len(matches) == 1  # there should be one match
+        for match in matches:
+            assert len(match) == 2  # each match should have two tagged atoms
+        matches = molecule.chemical_environment_matches(
+            "[#6@@:1](-[F:2])(-[Cl])(-[Br])(-[H])", toolkit_registry=toolkit_wrapper
+        )
+        assert (
+            len(matches) == 0
+        )  # this is the wrong stereochemistry, so there shouldn't be any matches
 
     # TODO: Test forgive undef amide enol stereo
     # TODO: test forgive undef phospho linker stereo
@@ -2622,6 +2669,19 @@ class TestMolecule:
         assert len(matches) == 4  # there should be four matches
         for match in matches:
             assert len(match) == 2  # each match should have two tagged atoms
+        # Test searching for stereo-specific SMARTS
+        matches = molecule.chemical_environment_matches(
+            "[#6@:1](-[F:2])(-[Cl])(-[Br])(-[H])", toolkit_registry=toolkit_wrapper
+        )
+        assert len(matches) == 1  # there should be one match
+        for match in matches:
+            assert len(match) == 2  # each match should have two tagged atoms
+        matches = molecule.chemical_environment_matches(
+            "[#6@@:1](-[F:2])(-[Cl])(-[Br])(-[H])", toolkit_registry=toolkit_wrapper
+        )
+        assert (
+            len(matches) == 0
+        )  # this is the wrong stereochemistry, so there shouldn't be any matches
 
     @pytest.mark.slow
     def test_compute_partial_charges(self):
@@ -2737,6 +2797,41 @@ class TestMolecule:
 
         with pytest.raises(NotBondedError):
             mol.get_bond_between(hydrogens[0], hydrogens[1])
+
+    @pytest.mark.parametrize(
+        ("smiles", "n_rings"),
+        [
+            ("CCO", 0),
+            ("c1ccccc1", 1),
+            ("C1CC2CCC1C2", 2),  # This should probably be 3?
+            ("c1ccc(cc1)c2ccccc2", 2),
+            ("c1ccc2ccccc2c1", 2),
+            ("c1ccc2cc3ccccc3cc2c1", 3),
+            ("C1C2C(CCC1)CC5C3C2CCC7C3C4C(CCC6C4C5CCC6)CC7", 7),
+        ],
+    )
+    @requires_rdkit
+    def test_molecule_rings(self, smiles, n_rings):
+        """Test the Molecule.rings property"""
+        assert (
+            n_rings == Molecule.from_smiles(smiles, allow_undefined_stereo=True).n_rings
+        )
+
+    @pytest.mark.parametrize(
+        ("smiles", "n_atom_rings", "n_bond_rings"),
+        [
+            ("c1ccc2ccccc2c1", 10, 11),
+            ("c1ccc(cc1)c2ccccc2", 12, 12),
+            ("Cc1ccc(cc1Nc2nccc(n2)c3cccnc3)NC(=O)c4ccc(cc4)CN5CCN(CC5)C", 30, 30),
+        ],
+    )
+    @requires_rdkit
+    def test_is_in_ring(self, smiles, n_atom_rings, n_bond_rings):
+        """Test Atom.is_in_ring and Bond.is_in_ring"""
+        mol = Molecule.from_smiles(smiles)
+
+        assert len([atom for atom in mol.atoms if atom.is_in_ring]) == n_atom_rings
+        assert len([bond for bond in mol.bonds if bond.is_in_ring]) == n_bond_rings
 
     @requires_rdkit
     def test_visualize_rdkit(self):

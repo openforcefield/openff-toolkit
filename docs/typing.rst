@@ -113,3 +113,5 @@ Parameter Attributes
 
     ParameterAttribute
     IndexedParameterAttribute
+    MappedParameterAttribute
+    IndexedMappedParameterAttribute

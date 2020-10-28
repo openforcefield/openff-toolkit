@@ -33,7 +33,15 @@ Secondary objects
     Atom
     Bond
     VirtualSite
+    VirtualParticle
+    TopologyVirtualParticle
+    BondChargeVirtualSite
+    MonovalentLonePairVirtualSite
+    DivalentLonePairVirtualSite
+    TrivalentLonePairVirtualSite
     TopologyAtom
     TopologyBond
     TopologyVirtualSite
+    ValenceDict
+    ImproperDict
 
