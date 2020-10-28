@@ -607,7 +607,6 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 all_licensed &= getattr(module, license_func)()
         return all_licensed
 
-    # TODO: Add back in oetools arg? It doesn't seem used
     @classmethod
     def is_available(cls):
         """
