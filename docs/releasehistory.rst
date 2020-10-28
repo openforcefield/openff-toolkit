@@ -27,6 +27,8 @@ New features
   which is raised when attempting to add a cheminformatics
   `ToolkitWrapper` <openforcefield.utils.toolkits.ToolkitWrapper>` for a toolkit that
   is installed but unlicensed.
+- `PR #678 <https://github.com/openforcefield/openforcefield/pull/678>`_: Adds
+  :py:class:`ForceField.delete_parameter_handler <openforcefield.typing.engines.forcefield.ForceField>`.
 
 
 Bugfixes
@@ -208,8 +210,6 @@ Tests added
 
 New features
 """"""""""""
-- `PR #678 <https://github.com/openforcefield/openforcefield/pull/678>`_: Adds
-  :py:class:`ForceField.delete_parameter_handler <openforcefield.typing.engines.forcefield.ForceField>`.
 - `PR #662 <https://github.com/openforcefield/openforcefield/pull/662>`_: Adds ``.aromaticity_model``
   of :py:class:`ForceField <openforcefield.typing.engines.smirnoff.forcefield.ForceField>` and ``.TAGNAME``
   of :py:class:`ParameterHandler <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler>` as
