@@ -14,7 +14,7 @@ API-breaking changes
 """"""""""""""""""""
 - `PR #751 <https://github.com/openforcefield/openforcefield/pull/751>`_: Removes the
   optional ``oetools=("oechem", "oequacpac", "oeiupac", "oeomega")`` keyword argument from
-  `OpenEyeToolkitWrapper.is_available <openforcefield.utils.toolkits.OpenEyeToolkitWrapper.is_available>`, as
+  :py:meth:`OpenEyeToolkitWrapper.is_available <openforcefield.utils.toolkits.OpenEyeToolkitWrapper.is_available>`, as
   there are no special behaviors that are accessed in the case of partially-licensed OpenEye backends. The
   new behavior of this method is the same as if the default value above is always provided.
 
@@ -22,13 +22,13 @@ API-breaking changes
 New features
 """"""""""""
 - `PR #751 <https://github.com/openforcefield/openforcefield/pull/751>`_: Adds
-  `LicenseError <openforcefield.utils.toolkits.LicenseError>`, a subclass of
-  `ToolkitUnavailableException <openforcefield.utils.toolkits.ToolkitUnavailableException>`
+  :py:class:`LicenseError <openforcefield.utils.toolkits.LicenseError>`, a subclass of
+  :py:class:`ToolkitUnavailableException <openforcefield.utils.toolkits.ToolkitUnavailableException>`
   which is raised when attempting to add a cheminformatics
-  `ToolkitWrapper` <openforcefield.utils.toolkits.ToolkitWrapper>` for a toolkit that
+  :py:class:`ToolkitWrapper <openforcefield.utils.toolkits.ToolkitWrapper>` for a toolkit that
   is installed but unlicensed.
 - `PR #678 <https://github.com/openforcefield/openforcefield/pull/678>`_: Adds
-  :py:class:`ForceField.delete_parameter_handler <openforcefield.typing.engines.forcefield.ForceField>`.
+  :py:meth:`ForceField.deregister_parameter_handler <openforcefield.typing.engines.smirnoff.forcefield.ForceField.deregister_parameter_handler>`.
 
 
 Bugfixes
