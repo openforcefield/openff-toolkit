@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
-#=============================================================================================
+# =============================================================================================
 # MODULE DOCSTRING
-#=============================================================================================
+# =============================================================================================
 """
 XML I/O parser for the SMIRNOFF (SMIRKS Native Open Force Field) format.
 
@@ -13,31 +13,31 @@ XML I/O parser for the SMIRNOFF (SMIRKS Native Open Force Field) format.
 """
 
 __all__ = [
-    'ParameterIOHandler',
-    'XMLParameterIOHandler',
+    "ParameterIOHandler",
+    "XMLParameterIOHandler",
 ]
 
 
-#=============================================================================================
+# =============================================================================================
 # GLOBAL IMPORTS
-#=============================================================================================
+# =============================================================================================
 
 import logging
 
 import xmltodict
 from simtk import unit
 
-
-#=============================================================================================
+# =============================================================================================
 # CONFIGURE LOGGER
-#=============================================================================================
+# =============================================================================================
 
 logger = logging.getLogger(__name__)
 
 
-#=============================================================================================
+# =============================================================================================
 # QUANTITY PARSING UTILITIES
-#=============================================================================================
+# =============================================================================================
+
 
 def _ast_unit_eval(node):
     """
@@ -49,35 +49,44 @@ def _ast_unit_eval(node):
     import ast
     import operator as op
 
-    operators = {ast.Add: op.add, ast.Sub: op.sub, ast.Mult: op.mul,
-        ast.Div: op.truediv, ast.Pow: op.pow, ast.BitXor: op.xor,
-        ast.USub: op.neg}
+    operators = {
+        ast.Add: op.add,
+        ast.Sub: op.sub,
+        ast.Mult: op.mul,
+        ast.Div: op.truediv,
+        ast.Pow: op.pow,
+        ast.BitXor: op.xor,
+        ast.USub: op.neg,
+    }
 
     if isinstance(node, ast.Num):  # <number>
         return node.n
     elif isinstance(node, ast.BinOp):  # <left> <operator> <right>
-        return operators[type(node.op)](_ast_unit_eval(node.left), _ast_unit_eval(node.right))
+        return operators[type(node.op)](
+            _ast_unit_eval(node.left), _ast_unit_eval(node.right)
+        )
     elif isinstance(node, ast.UnaryOp):  # <operator>( <operand> ) e.g., -1
         return operators[type(node.op)](_ast_unit_eval(node.operand))
     elif isinstance(node, ast.Name):
         # Check if this is a simtk unit.
         u = getattr(unit, node.id)
         if not isinstance(u, unit.Unit):
-            raise ValueError('No unit named {} found in simtk.unit.'.format(node.id))
+            raise ValueError("No unit named {} found in simtk.unit.".format(node.id))
         return u
     else:
         raise TypeError(node)
 
 
-#=============================================================================================
+# =============================================================================================
 # Base ParameterIOHandler
-#=============================================================================================
+# =============================================================================================
 
 
 class ParameterIOHandler:
     """
     Base class for handling serialization/deserialization of SMIRNOFF ForceField objects
     """
+
     _FORMAT = None
 
     def __init__(self):
@@ -147,16 +156,18 @@ class ParameterIOHandler:
         pass
 
 
-#=============================================================================================
+# =============================================================================================
 # XML I/O
-#=============================================================================================
+# =============================================================================================
+
 
 class XMLParameterIOHandler(ParameterIOHandler):
     """
     Handles serialization/deserialization of SMIRNOFF ForceField objects from OFFXML format.
     """
+
     # TODO: Come up with a better keyword for format
-    _FORMAT = 'XML'
+    _FORMAT = "XML"
 
     def parse_file(self, source):
         """Parse a SMIRNOFF force field definition in XML format, read from a file.
@@ -197,11 +208,12 @@ class XMLParameterIOHandler(ParameterIOHandler):
 
         """
         from pyexpat import ExpatError
+
         from openforcefield.typing.engines.smirnoff.forcefield import ParseError
 
         # Parse XML file
         try:
-            smirnoff_data = xmltodict.parse(data, attr_prefix='')
+            smirnoff_data = xmltodict.parse(data, attr_prefix="")
             return smirnoff_data
         except ExpatError as e:
             raise ParseError(str(e))
@@ -219,7 +231,7 @@ class XMLParameterIOHandler(ParameterIOHandler):
 
         """
         xml_string = self.to_string(smirnoff_data)
-        with open(file_path, 'w') as of:
+        with open(file_path, "w") as of:
             of.write(xml_string)
 
     def to_string(self, smirnoff_data):
@@ -237,7 +249,8 @@ class XMLParameterIOHandler(ParameterIOHandler):
             XML String representation of this forcefield.
 
         """
-        def prepend_all_keys(d, char='@', ignore_keys=frozenset()):
+
+        def prepend_all_keys(d, char="@", ignore_keys=frozenset()):
             """
             Modify a dictionary in-place, prepending a specified string to each key
             that doesn't refer to a value that is list or dict.
@@ -269,16 +282,14 @@ class XMLParameterIOHandler(ParameterIOHandler):
 
         # the "xmltodict" library defaults to print out all element attributes on separate lines
         # unless they're prepended by "@"
-        prepend_all_keys(smirnoff_data['SMIRNOFF'], ignore_keys=['Author', 'Date'])
+        prepend_all_keys(smirnoff_data["SMIRNOFF"], ignore_keys=["Author", "Date"])
 
         # Reorder parameter sections to put Author and Date at the top (this is the only
         # way to change the order of items in a dict, as far as I can tell)
-        for key, value in list(smirnoff_data['SMIRNOFF'].items()):
-            if key in ['Author', 'Date']:
+        for key, value in list(smirnoff_data["SMIRNOFF"].items()):
+            if key in ["Author", "Date"]:
                 continue
-            del smirnoff_data['SMIRNOFF'][key]
-            smirnoff_data['SMIRNOFF'][key] = value
+            del smirnoff_data["SMIRNOFF"][key]
+            smirnoff_data["SMIRNOFF"][key] = value
 
         return xmltodict.unparse(smirnoff_data, pretty=True)
-
-

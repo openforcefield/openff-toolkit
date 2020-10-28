@@ -211,7 +211,7 @@ Setting up a development environment
 
 2. Set up conda environment
 
-.. code-block:: bash
+.. code-block:: shell
 
     $ # Create a conda environment with the Open Force Field toolkit and its dependencies
     $ conda create --name openff-dev -c conda-forge -c omnia -c openeye openforcefield openeye-toolkits
@@ -266,11 +266,18 @@ The naming conventions of classes, functions, and variables follows `PEP8 <https
 - Use ``file_path``, ``file_name``, and ``file_stem`` to indicate ``path/to/stem.extension``, ``stem.extension``, and ``stem`` respectively, consistently with the variables in the standard ``pathlib`` library.
 - Use ``n_x`` to abbreviate "number of X` (e.g. `n_atoms`, `n_molecules`).
 
-We place a high priority on code cleanliness and readability.
-So, 15-character variable names are fine.
-Triply nested list comprehensions are not.
+We place a high priority on code cleanliness and readability, even if code could be written more compactly. For example, 15-character variable names are fine. Triply nested list comprehensions are not.
 
+The ``openforcefield`` toolkit is in the process of adopting code formatting tools ("linters") to maintain consistent style and remove the burden of adhering to these standards by hand. Currently, two are employed:
+1. `Black <https://black.readthedocs.io/>`_, the uncompromising code formatter, automatically formats code with a consistent style.
+1. `isort <https://timothycrosley.github.io/isort/>`_, sorts imports
 
-Anything not covered above is up to personal preference.
-To remove the human friction from code formatting, we will likely adopt a standard formatter like `black <https://github.com/psf/black>`_ in the near future.
+There is a step in CI that uses these tools to check for a consistent style. These checks will use the most recent versions of each linter. To ensure that changes follow these standards, you can install and run these tools locally:
 
+.. code-block:: shell
+
+    $ conda install black isort -c conda-forge
+    $ black openforcefield
+    $ isort openforcefield
+
+Anything not covered above is currently up to personal preference, but may change as new linters are added.

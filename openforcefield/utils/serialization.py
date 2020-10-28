@@ -9,16 +9,15 @@ Serialization mix-in
 
 """
 
-#=============================================================================================
+# =============================================================================================
 # GLOBAL IMPORTS
-#=============================================================================================
+# =============================================================================================
 
 import abc
 
-
-#=============================================================================================
+# =============================================================================================
 # SERIALIZATION MIX-IN
-#=============================================================================================
+# =============================================================================================
 
 
 class Serializable(abc.ABC):
@@ -119,6 +118,7 @@ class Serializable(abc.ABC):
 
         """
         import json
+
         d = self.to_dict()
         return json.dumps(d, indent=indent)
 
@@ -141,6 +141,7 @@ class Serializable(abc.ABC):
 
         """
         import json
+
         d = json.loads(serialized)
         return cls.from_dict(d)
 
@@ -157,6 +158,7 @@ class Serializable(abc.ABC):
 
         """
         import bson
+
         d = self.to_dict()
         return bson.dumps(d)
 
@@ -179,6 +181,7 @@ class Serializable(abc.ABC):
 
         """
         import bson
+
         d = bson.loads(serialized)
         return cls.from_dict(d)
 
@@ -220,29 +223,28 @@ class Serializable(abc.ABC):
 
         """
         import toml
+
         d = toml.loads(serialized)
         return cls.from_dict(d)
 
     @staticmethod
     def _represent_odict(dump, tag, mapping, flow_style=None):
-        """Like BaseRepresenter.represent_mapping, but does not issue the sort().
-        """
+        """Like BaseRepresenter.represent_mapping, but does not issue the sort()."""
         import yaml
+
         value = []
         node = yaml.MappingNode(tag, value, flow_style=flow_style)
         if dump.alias_key is not None:
             dump.represented_objects[dump.alias_key] = node
         best_style = True
-        if hasattr(mapping, 'items'):
+        if hasattr(mapping, "items"):
             mapping = mapping.items()
         for item_key, item_value in mapping:
             node_key = dump.represent_data(item_key)
             node_value = dump.represent_data(item_value)
-            if not (isinstance(node_key, yaml.ScalarNode)
-                    and not node_key.style):
+            if not (isinstance(node_key, yaml.ScalarNode) and not node_key.style):
                 best_style = False
-            if not (isinstance(node_value, yaml.ScalarNode)
-                    and not node_value.style):
+            if not (isinstance(node_value, yaml.ScalarNode) and not node_value.style):
                 best_style = False
             value.append((node_key, node_value))
         if flow_style is None:
@@ -264,10 +266,16 @@ class Serializable(abc.ABC):
             A YAML serialized representation of the object
 
         """
-        import yaml
         from collections import OrderedDict
-        yaml.SafeDumper.add_representer(OrderedDict,
-            lambda dumper, value: self._represent_odict(dumper, u'tag:yaml.org,2002:map', value))
+
+        import yaml
+
+        yaml.SafeDumper.add_representer(
+            OrderedDict,
+            lambda dumper, value: self._represent_odict(
+                dumper, u"tag:yaml.org,2002:map", value
+            ),
+        )
         d = self.to_dict()
         return yaml.safe_dump(d, width=180)
 
@@ -289,10 +297,16 @@ class Serializable(abc.ABC):
             Instantiated object
 
         """
-        import yaml
         from collections import OrderedDict
-        yaml.SafeDumper.add_representer(OrderedDict,
-            lambda dumper, value: self._represent_odict(dumper, u'tag:yaml.org,2002:map', value))
+
+        import yaml
+
+        yaml.SafeDumper.add_representer(
+            OrderedDict,
+            lambda dumper, value: self._represent_odict(
+                dumper, u"tag:yaml.org,2002:map", value
+            ),
+        )
         d = yaml.safe_load(serialized)
         return cls.from_dict(d)
 
@@ -309,6 +323,7 @@ class Serializable(abc.ABC):
 
         """
         import msgpack
+
         d = self.to_dict()
         return msgpack.dumps(d, use_bin_type=True)
 
@@ -331,6 +346,7 @@ class Serializable(abc.ABC):
 
         """
         import msgpack
+
         d = msgpack.loads(serialized, raw=False)
         return cls.from_dict(d)
 
@@ -352,13 +368,14 @@ class Serializable(abc.ABC):
 
         """
         import xmltodict
+
         # An XML document requires one and only one root node.
         root_name = self.__class__.__name__
         d = {root_name: self.to_dict()}
         # Configure indentation level.
         if indent is not None:
             pretty = True
-            indent = ' ' * indent
+            indent = " " * indent
         else:
             pretty = False
         # Convert data from dictionary to XML format.
@@ -406,6 +423,7 @@ class Serializable(abc.ABC):
 
         """
         import pickle
+
         d = self.to_dict()
         return pickle.dumps(d)
 
@@ -431,5 +449,6 @@ class Serializable(abc.ABC):
 
         """
         import pickle
+
         d = pickle.loads(serialized)
         return cls.from_dict(d)
