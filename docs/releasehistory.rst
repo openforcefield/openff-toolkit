@@ -10,6 +10,16 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 Current Development
 -------------------
 
+New features
+------------
+- `PR #751 <https://github.com/openforcefield/openforcefield/pull/751>`_: Adds
+  `LicenseError <openforcefield.utils.toolkits.LicenseError>`, a subclass of
+  `ToolkitUnavailableException <openforcefield.utils.toolkits.ToolkitUnavailableException>`
+  which is raised when attempting to add a cheminformatics
+  `ToolkitWrapper` <openforcefield.utils.toolkits.ToolkitWrapper>` for a toolkit that
+  is installed but unlicensed.
+
+
 Bugfixes
 """""""""
 - `PR #745 <https://github.com/openforcefield/openforcefield/pull/745>`_: Fixes bug when
