@@ -14,11 +14,12 @@ Test classes and function in module openforcefield.typing.engines.smirnoff.param
 # GLOBAL IMPORTS
 # ======================================================================
 
-import pytest
 import numpy
+import pytest
 from numpy.testing import assert_almost_equal
 from simtk import unit
 
+from openforcefield.topology import Molecule
 from openforcefield.typing.engines.smirnoff import SMIRNOFFVersionError
 from openforcefield.typing.engines.smirnoff.parameters import (
     BondHandler,
@@ -36,12 +37,11 @@ from openforcefield.typing.engines.smirnoff.parameters import (
     ParameterType,
     ProperTorsionHandler,
     SMIRNOFFSpecError,
-    vdWHandler,
     VirtualSiteHandler,
     _linear_inter_or_extrapolate,
     _ParameterAttributeHandler,
+    vdWHandler,
 )
-from openforcefield.topology import Molecule
 from openforcefield.utils import IncompatibleUnitError, detach_units
 from openforcefield.utils.collections import ValidatedList
 
