@@ -1701,14 +1701,16 @@ class TestProperTorsionHandler:
             potential="k*(1+cos(periodicity*theta-phase))", skip_version_check=True
         )
 
+
 class TestvdWHandler:
     def test_create_force_defaults(self):
         """Test that create_force works on a vdWHandler with all default values"""
         from simtk import openmm
+
         # Create a dummy topology containing only argon and give it a set of
         # box vectors.
         topology = Molecule.from_smiles("[Ar]").to_topology()
-        topology.box_vectors =  unit.Quantity(numpy.eye(3) * 20 * unit.angstrom)
+        topology.box_vectors = unit.Quantity(numpy.eye(3) * 20 * unit.angstrom)
 
         # create a VdW handler with only parameters for argon.
         vdw_handler = vdWHandler(version=0.3)
@@ -1716,12 +1718,13 @@ class TestvdWHandler:
             {
                 "smirks": "[#18:1]",
                 "epsilon": 1.0 * unit.kilojoules_per_mole,
-                "sigma": 1.0 * unit.angstrom
+                "sigma": 1.0 * unit.angstrom,
             }
         )
 
         omm_sys = openmm.System()
         vdw_handler.create_force(omm_sys, topology)
+
 
 class TestVirtualSiteHandler:
     """

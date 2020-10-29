@@ -35,6 +35,9 @@ Bugfixes
 """"""""
 - `PR #745 <https://github.com/openforcefield/openforcefield/pull/745>`_: Fixes bug when
   serializing molecule with conformers to JSON.
+- `PR #756 <https://github.com/openforcefield/openforcefield/pull/756>`_: Fixes bug when running
+  :py:meth:`vdWHandler.create_force <openforcefield.typing.engines.smirnoff.parameters.vdWHandler.create_force>`
+  using a ``vdWHandler`` that was initialized using the API.
 
 
 
