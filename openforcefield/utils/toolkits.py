@@ -613,20 +613,12 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         Check if the given OpenEye toolkit components are available.
 
         If the OpenEye toolkit is not installed or no license is found
-        for at least one the given toolkits , ``False`` is returned.
-
-        Parameters
-        ----------
-        oetools : str or iterable of strings, optional, default=('oechem', 'oequacpac', 'oeiupac', 'oeomega')
-            Set of tools to check by their Python module name. Defaults
-            to the complete set of tools supported by this function.
-            Also accepts a single tool to check as a string instead of
-            an iterable of length 1.
+        for at least one the required toolkits , ``False`` is returned.
 
         Returns
         -------
         all_installed : bool
-            ``True`` if all tools in ``oetools`` are installed and licensed,
+            ``True`` if all required OpenEye tools are installed and licensed,
             ``False`` otherwise
 
         """
