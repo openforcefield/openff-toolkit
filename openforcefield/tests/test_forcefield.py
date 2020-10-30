@@ -840,7 +840,7 @@ class TestForceField:
 
     def test_create_forcefield_from_file(self):
         """Test basic file loading in constructor"""
-        forcefield = ForceField("test_forcefields/smirnoff99Frosst.offxml")
+        forcefield = ForceField("test_forcefields/test_forcefield.offxml")
         assert len(forcefield._parameter_handlers["Bonds"]._parameters) == 87
         assert len(forcefield._parameter_handlers["Angles"]._parameters) == 38
         assert len(forcefield._parameter_handlers["ProperTorsions"]._parameters) == 158
@@ -876,7 +876,7 @@ class TestForceField:
     @pytest.mark.skip(reason="Needs to be updated for 0.2.0 syntax")
     def test_create_forcefield_from_url(self):
         urls = [
-            "https://raw.githubusercontent.com/openforcefield/openforcefield/master/openforcefield/data/test_forcefields/smirnoff99Frosst.offxml",
+            "https://raw.githubusercontent.com/openforcefield/openforcefield/master/openforcefield/data/test_forcefields/test_forcefield.offxml",
             "https://raw.githubusercontent.com/openforcefield/openforcefield/master/openforcefield/data/test_forcefields/tip3p.offxml",
         ]
         # Test creation with smirnoff99frosst URL
@@ -885,7 +885,7 @@ class TestForceField:
     @pytest.mark.skip(reason="Needs to be updated for 0.2.0 syntax")
     def test_create_forcefield_from_url_list(self):
         urls = [
-            "https://raw.githubusercontent.com/openforcefield/openforcefield/master/openforcefield/data/test_forcefields/smirnoff99Frosst.offxml",
+            "https://raw.githubusercontent.com/openforcefield/openforcefield/master/openforcefield/data/test_forcefields/test_forcefield.offxml",
             "https://raw.githubusercontent.com/openforcefield/openforcefield/master/openforcefield/data/test_forcefields/tip3p.offxml",
         ]
         # Test creation with multiple URLs
@@ -894,7 +894,7 @@ class TestForceField:
     @pytest.mark.skip(reason="Needs to be updated for 0.2.0 syntax")
     def test_create_forcefield_from_url_iterator(self):
         urls = [
-            "https://raw.githubusercontent.com/openforcefield/openforcefield/master/openforcefield/data/test_forcefields/smirnoff99Frosst.offxml",
+            "https://raw.githubusercontent.com/openforcefield/openforcefield/master/openforcefield/data/test_forcefields/test_forcefield.offxml",
             "https://raw.githubusercontent.com/openforcefield/openforcefield/master/openforcefield/data/test_forcefields/tip3p.offxml",
         ]
         # A generator should work as well
@@ -1213,7 +1213,7 @@ class TestForceField:
     def test_parameterize_ethanol(self, toolkit_registry, registry_description):
         from simtk.openmm import app
 
-        forcefield = ForceField("test_forcefields/smirnoff99Frosst.offxml")
+        forcefield = ForceField("test_forcefields/test_forcefield.offxml")
         pdbfile = app.PDBFile(get_data_file_path("systems/test_systems/1_ethanol.pdb"))
         molecules = [create_ethanol()]
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
@@ -1260,7 +1260,7 @@ class TestForceField:
 
         # from openforcefield.typing.engines.smirnoff.parameters import BondHandler, AngleHandler, ConstraintHandler
 
-        forcefield = ForceField("test_forcefields/smirnoff99Frosst.offxml")
+        forcefield = ForceField("test_forcefields/test_forcefield.offxml")
 
         pdbfile = app.PDBFile(get_data_file_path("systems/test_systems/1_ethanol.pdb"))
         molecules = [create_ethanol()]
@@ -1309,7 +1309,7 @@ class TestForceField:
         """Test parameterizing a periodic system of two distinct molecules"""
         from simtk.openmm import app
 
-        forcefield = ForceField("test_forcefields/smirnoff99Frosst.offxml")
+        forcefield = ForceField("test_forcefields/test_forcefield.offxml")
         pdbfile = app.PDBFile(
             get_data_file_path("systems/test_systems/1_cyclohexane_1_ethanol.pdb")
         )
@@ -1330,7 +1330,7 @@ class TestForceField:
         """Test parametrizing a nonperiodic system of two distinct molecules"""
         from simtk.openmm import app
 
-        forcefield = ForceField("test_forcefields/smirnoff99Frosst.offxml")
+        forcefield = ForceField("test_forcefields/test_forcefield.offxml")
         pdbfile = app.PDBFile(
             get_data_file_path("systems/test_systems/1_cyclohexane_1_ethanol.pdb")
         )
@@ -1361,7 +1361,7 @@ class TestForceField:
         """
         from simtk.openmm import app
 
-        forcefield = ForceField("test_forcefields/smirnoff99Frosst.offxml")
+        forcefield = ForceField("test_forcefields/test_forcefield.offxml")
         box_file_path = get_data_file_path(
             os.path.join("systems", "packmol_boxes", box)
         )
@@ -1391,7 +1391,7 @@ class TestForceField:
         toolkit_registry = ToolkitRegistry(toolkit_precedence=[OpenEyeToolkitWrapper])
         from simtk.openmm import XmlSerializer, app
 
-        forcefield = ForceField("test_forcefields/smirnoff99Frosst.offxml")
+        forcefield = ForceField("test_forcefields/test_forcefield.offxml")
         pdbfile = app.PDBFile(get_data_file_path("systems/test_systems/1_ethanol.pdb"))
         # Load the unique molecules with one atom ordering
         molecules1 = [Molecule.from_file(get_data_file_path("molecules/ethanol.sdf"))]
@@ -1434,7 +1434,7 @@ class TestForceField:
         toolkit_registry = ToolkitRegistry(
             toolkit_precedence=[RDKitToolkitWrapper, AmberToolsToolkitWrapper]
         )
-        forcefield = ForceField("test_forcefields/smirnoff99Frosst.offxml")
+        forcefield = ForceField("test_forcefields/test_forcefield.offxml")
         pdbfile = app.PDBFile(get_data_file_path("systems/test_systems/1_ethanol.pdb"))
 
         # Load the unique molecules with one atom ordering
@@ -1483,7 +1483,7 @@ class TestForceField:
         molecule = Molecule.from_smiles("CC1CCC(=O)O1", allow_undefined_stereo=True)
         topology = Topology.from_molecules([molecule])
 
-        force_field = ForceField("test_forcefields/smirnoff99Frosst.offxml")
+        force_field = ForceField("test_forcefields/test_forcefield.offxml")
         force_field.create_openmm_system(topology, toolkit_registry=toolkit_registry)
 
     @requires_openeye
@@ -1500,7 +1500,7 @@ class TestForceField:
         molecule = Molecule.from_smiles("CC1CCC(=O)O1", allow_undefined_stereo=True)
         topology = Topology.from_molecules([molecule])
 
-        force_field = ForceField("test_forcefields/smirnoff99Frosst.offxml")
+        force_field = ForceField("test_forcefields/test_forcefield.offxml")
         force_field.create_openmm_system(topology, toolkit_registry=toolkit_registry)
 
     @pytest.mark.skip(
@@ -1511,7 +1511,7 @@ class TestForceField:
     def test_parameterize_ethanol_to_parmed(self):
         from simtk.openmm import app
 
-        forcefield = ForceField("test_forcefields/smirnoff99Frosst.offxml")
+        forcefield = ForceField("test_forcefields/test_forcefield.offxml")
         pdbfile = app.PDBFile(get_data_file_path("systems/test_systems/1_ethanol.pdb"))
         # toolkit_wrapper = RDKitToolkitWrapper()
         molecules = [
@@ -1533,7 +1533,7 @@ class TestForceField:
         """Test to ensure an exception is raised when an unrecognized kwarg is passed """
         from simtk.openmm import app
 
-        file_path = get_data_file_path("test_forcefields/smirnoff99Frosst.offxml")
+        file_path = get_data_file_path("test_forcefields/test_forcefield.offxml")
         forcefield = ForceField(file_path)
         pdbfile = app.PDBFile(get_data_file_path("systems/test_systems/1_ethanol.pdb"))
         molecules = []
@@ -1554,7 +1554,7 @@ class TestForceField:
         ParameterHandler, not the OpenMM defaults"""
         top = Topology.from_molecules(create_ethanol())
         assert top.box_vectors is None
-        forcefield = ForceField("test_forcefields/smirnoff99Frosst.offxml")
+        forcefield = ForceField("test_forcefields/test_forcefield.offxml")
 
         if mod_cuoff:
             # Ensure a modified, non-default cutoff will be propogated through
@@ -1585,7 +1585,7 @@ class TestForceField:
         exception_match = inputs["exception_match"]
 
         molecules = [create_ethanol()]
-        forcefield = ForceField("test_forcefields/smirnoff99Frosst.offxml")
+        forcefield = ForceField("test_forcefields/test_forcefield.offxml")
 
         pdbfile = app.PDBFile(get_data_file_path("systems/test_systems/1_ethanol.pdb"))
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
@@ -1618,7 +1618,7 @@ class TestForceField:
 
     def test_registered_parameter_handlers(self):
         """Test registered_parameter_handlers property"""
-        forcefield = ForceField("test_forcefields/smirnoff99Frosst.offxml")
+        forcefield = ForceField("test_forcefields/test_forcefield.offxml")
         registered_handlers = forcefield.registered_parameter_handlers
 
         expected_handlers = [
@@ -1638,7 +1638,7 @@ class TestForceField:
 
     def test_parameter_handler_lookup(self):
         """Ensure __getitem__ lookups work"""
-        forcefield = ForceField("test_forcefields/smirnoff99Frosst.offxml")
+        forcefield = ForceField("test_forcefields/test_forcefield.offxml")
 
         handlers_before = sorted(forcefield._parameter_handlers)
 
@@ -1653,7 +1653,7 @@ class TestForceField:
     @pytest.mark.parametrize("unregistered_handler", ["LibraryCharges", "foobar"])
     def test_unregistered_parameter_handler_lookup(self, unregistered_handler):
         """Ensure __getitem__ lookups do not register new handlers"""
-        forcefield = ForceField("test_forcefields/smirnoff99Frosst.offxml")
+        forcefield = ForceField("test_forcefields/test_forcefield.offxml")
 
         assert unregistered_handler not in forcefield._parameter_handlers
         with pytest.raises(KeyError, match=unregistered_handler):
@@ -1662,7 +1662,7 @@ class TestForceField:
 
     def test_lookup_parameter_handler_object(self):
         """Ensure __getitem__ raises NotImplemented when passed a ParameterHandler object"""
-        forcefield = ForceField("test_forcefields/smirnoff99Frosst.offxml")
+        forcefield = ForceField("test_forcefields/test_forcefield.offxml")
         bonds = forcefield["Bonds"]
         with pytest.raises(NotImplementedError):
             forcefield[bonds]
@@ -1706,7 +1706,7 @@ class TestForceField:
 
     def test_hash_cosmetic(self):
         """Test that adding a cosmetic attribute does not change the hash"""
-        forcefield = ForceField("test_forcefields/smirnoff99Frosst.offxml")
+        forcefield = ForceField("test_forcefields/test_forcefield.offxml")
 
         hash_without_cosmetic = hash(forcefield)
 
@@ -1996,7 +1996,7 @@ class TestForceFieldVirtualSites:
 
         from simtk.openmm import NonbondedForce
 
-        file_path = get_data_file_path("test_forcefields/smirnoff99Frosst.offxml")
+        file_path = get_data_file_path("test_forcefields/test_forcefield.offxml")
         forcefield = ForceField(file_path, xml)
         if mol is None:
             mol = Molecule.from_smiles(smi)
@@ -2238,7 +2238,7 @@ class TestForceFieldChargeAssignment:
 
         from simtk.openmm import NonbondedForce, app
 
-        file_path = get_data_file_path("test_forcefields/smirnoff99Frosst.offxml")
+        file_path = get_data_file_path("test_forcefields/test_forcefield.offxml")
         forcefield = ForceField(file_path)
         pdbfile = app.PDBFile(get_data_file_path("systems/test_systems/1_ethanol.pdb"))
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
@@ -2295,7 +2295,7 @@ class TestForceFieldChargeAssignment:
         ethanol = create_ethanol()
         ethanol.partial_charges[0] = 1.0 * unit.elementary_charge
 
-        file_path = get_data_file_path("test_forcefields/smirnoff99Frosst.offxml")
+        file_path = get_data_file_path("test_forcefields/test_forcefield.offxml")
         forcefield = ForceField(file_path)
         pdbfile = app.PDBFile(get_data_file_path("systems/test_systems/1_ethanol.pdb"))
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=[ethanol])
@@ -2332,7 +2332,7 @@ class TestForceFieldChargeAssignment:
 
         from simtk.openmm import NonbondedForce, app
 
-        file_path = get_data_file_path("test_forcefields/smirnoff99Frosst.offxml")
+        file_path = get_data_file_path("test_forcefields/test_forcefield.offxml")
         forcefield = ForceField(file_path)
         pdbfile = app.PDBFile(
             get_data_file_path("systems/test_systems/1_cyclohexane_1_ethanol.pdb")
@@ -2365,7 +2365,7 @@ class TestForceFieldChargeAssignment:
         from simtk.openmm import NonbondedForce
 
         ff = ForceField(
-            "test_forcefields/smirnoff99Frosst.offxml", "test_forcefields/tip3p.offxml"
+            "test_forcefields/test_forcefield.offxml", "test_forcefields/tip3p.offxml"
         )
         mol = Molecule.from_file(
             get_data_file_path(os.path.join("systems", "monomers", "water.sdf"))
@@ -2402,7 +2402,7 @@ class TestForceFieldChargeAssignment:
             <ChargeIncrement smirks="[C:1][C:2][O:3]" charge_increment1="0.2*elementary_charge" charge_increment2="-0.1*elementary_charge" charge_increment3="-0.1*elementary_charge"/>
           </ChargeIncrementModel>
         </SMIRNOFF>"""
-        file_path = get_data_file_path("test_forcefields/smirnoff99Frosst.offxml")
+        file_path = get_data_file_path("test_forcefields/test_forcefield.offxml")
         ff = ForceField(file_path, test_charge_increment_model_ff)
         del ff._parameter_handlers["ToolkitAM1BCC"]
         top = Topology.from_molecules([create_ethanol(), create_reversed_ethanol()])
@@ -2461,7 +2461,7 @@ class TestForceFieldChargeAssignment:
           </ChargeIncrementModel>
         </SMIRNOFF>"""
         # Make a FF from each OFFXML string
-        file_path = get_data_file_path("test_forcefields/smirnoff99Frosst.offxml")
+        file_path = get_data_file_path("test_forcefields/test_forcefield.offxml")
         ff1 = ForceField(file_path, test_charge_increment_model_ff_one_less_ci)
         del ff1._parameter_handlers["ToolkitAM1BCC"]
         ff2 = ForceField(file_path, test_charge_increment_model_ff_no_missing_cis)
@@ -2506,7 +2506,7 @@ class TestForceFieldChargeAssignment:
         and chargeincrementX values riases an error
         """
 
-        file_path = get_data_file_path("test_forcefields/smirnoff99Frosst.offxml")
+        file_path = get_data_file_path("test_forcefields/test_forcefield.offxml")
         ff = ForceField(file_path)
         del ff._parameter_handlers["ToolkitAM1BCC"]
         cimh = ff.get_parameter_handler(
@@ -2560,7 +2560,7 @@ class TestForceFieldChargeAssignment:
             <ChargeIncrement smirks="[#6X3:1]=[#8X1:2]" charge_increment1="0.2*elementary_charge" charge_increment2="-0.2*elementary_charge"/>
           </ChargeIncrementModel>
         </SMIRNOFF>"""
-        file_path = get_data_file_path("test_forcefields/smirnoff99Frosst.offxml")
+        file_path = get_data_file_path("test_forcefields/test_forcefield.offxml")
         ff = ForceField(file_path, test_charge_increment_model_ff)
         del ff._parameter_handlers["ToolkitAM1BCC"]
 
@@ -2593,7 +2593,7 @@ class TestForceFieldChargeAssignment:
             <ChargeIncrement smirks="[#6X4:1]([#1:2])([#1:3])([#1:4])" charge_increment1="0.3*elementary_charge" charge_increment2="-0.1*elementary_charge" charge_increment3="-0.1*elementary_charge" charge_increment4="-0.1*elementary_charge"/>
           </ChargeIncrementModel>
         </SMIRNOFF>"""
-        file_path = get_data_file_path("test_forcefields/smirnoff99Frosst.offxml")
+        file_path = get_data_file_path("test_forcefields/test_forcefield.offxml")
         ff = ForceField(file_path, test_charge_increment_model_ff)
         del ff._parameter_handlers["ToolkitAM1BCC"]
 
@@ -2627,7 +2627,7 @@ class TestForceFieldChargeAssignment:
             <ChargeIncrement smirks="[#6X4:1]([#1:2])([#1:3])[#6][#8]" charge_increment1="0.1*elementary_charge" charge_increment2="-0.05*elementary_charge" charge_increment3="-0.05*elementary_charge"/>
           </ChargeIncrementModel>
         </SMIRNOFF>"""
-        file_path = get_data_file_path("test_forcefields/smirnoff99Frosst.offxml")
+        file_path = get_data_file_path("test_forcefields/test_forcefield.offxml")
         ff = ForceField(file_path, test_charge_increment_model_ff)
         del ff._parameter_handlers["ToolkitAM1BCC"]
 
@@ -2661,7 +2661,7 @@ class TestForceFieldChargeAssignment:
             <ChargeIncrement smirks="[#6X4:1]([#1:2])[#6][#8]" charge_increment1="0.1*elementary_charge" charge_increment2="-0.1*elementary_charge"/>
           </ChargeIncrementModel>
         </SMIRNOFF>"""
-        file_path = get_data_file_path("test_forcefields/smirnoff99Frosst.offxml")
+        file_path = get_data_file_path("test_forcefields/test_forcefield.offxml")
         ff = ForceField(file_path, test_charge_increment_model_ff)
         del ff._parameter_handlers["ToolkitAM1BCC"]
 
@@ -2699,7 +2699,7 @@ class TestForceFieldChargeAssignment:
             <ChargeIncrement smirks="[#6X4:1]([#1:2])([#1:3])([#1:4])" charge_increment1="0.3*elementary_charge" charge_increment2="-0.1*elementary_charge" charge_increment3="-0.1*elementary_charge" charge_increment4="-0.1*elementary_charge"/>
           </ChargeIncrementModel>
         </SMIRNOFF>"""
-        file_path = get_data_file_path("test_forcefields/smirnoff99Frosst.offxml")
+        file_path = get_data_file_path("test_forcefields/test_forcefield.offxml")
         ff = ForceField(file_path, test_charge_increment_model_ff)
         del ff._parameter_handlers["ToolkitAM1BCC"]
 
@@ -2739,7 +2739,7 @@ class TestForceFieldChargeAssignment:
             <ChargeIncrement smirks="[#6X4:1][#6X4:2][#8]" charge_increment1="0.05*elementary_charge" charge_increment2="-0.05*elementary_charge"/>
           </ChargeIncrementModel>
         </SMIRNOFF>"""
-        file_path = get_data_file_path("test_forcefields/smirnoff99Frosst.offxml")
+        file_path = get_data_file_path("test_forcefields/test_forcefield.offxml")
         ff = ForceField(file_path, test_charge_increment_model_ff)
         del ff._parameter_handlers["ToolkitAM1BCC"]
 
@@ -2808,7 +2808,7 @@ class TestForceFieldChargeAssignment:
 
         # Test with xml_OH_library_charges_xml loaded last, which should assign dummy partial charges
         ff = ForceField(
-            "test_forcefields/smirnoff99Frosst.offxml",
+            "test_forcefields/test_forcefield.offxml",
             "test_forcefields/tip3p.offxml",
             xml_OH_library_charges_xml,
         )
@@ -2826,7 +2826,7 @@ class TestForceFieldChargeAssignment:
 
         # Test again, but with tip3p.offxml loaded last (loading the correct partial charges)
         ff = ForceField(
-            "test_forcefields/smirnoff99Frosst.offxml",
+            "test_forcefields/test_forcefield.offxml",
             xml_OH_library_charges_xml,
             "test_forcefields/tip3p.offxml",
         )
@@ -2844,7 +2844,7 @@ class TestForceFieldChargeAssignment:
         from simtk.openmm import NonbondedForce
 
         ff = ForceField(
-            "test_forcefields/smirnoff99Frosst.offxml", "test_forcefields/tip3p.offxml"
+            "test_forcefields/test_forcefield.offxml", "test_forcefields/tip3p.offxml"
         )
         mol = Molecule.from_file(
             get_data_file_path(os.path.join("systems", "monomers", "water.sdf"))
@@ -2874,7 +2874,7 @@ class TestForceFieldChargeAssignment:
         # C2 has charge -0.1 and its Hs have -0.01, and O3 has charge 0.3, and its H has charge 0.08
 
         ff = ForceField(
-            "test_forcefields/smirnoff99Frosst.offxml", xml_ethanol_library_charges_ff
+            "test_forcefields/test_forcefield.offxml", xml_ethanol_library_charges_ff
         )
 
         # ethanol.sdf
@@ -2947,7 +2947,7 @@ class TestForceFieldChargeAssignment:
         from simtk.openmm import NonbondedForce
 
         ff = ForceField(
-            "test_forcefields/smirnoff99Frosst.offxml",
+            "test_forcefields/test_forcefield.offxml",
             "test_forcefields/ion_charges.offxml",
         )
         mol = Molecule.from_smiles("[{}]".format(monatomic_ion))
@@ -2965,7 +2965,7 @@ class TestForceFieldChargeAssignment:
         from simtk.openmm import NonbondedForce
 
         ff = ForceField(
-            "test_forcefields/smirnoff99Frosst.offxml",
+            "test_forcefields/test_forcefield.offxml",
             xml_CH_zeroes_library_charges_xml,
             "test_forcefields/tip3p.offxml",
             xml_charge_increment_model_formal_charges,
@@ -3128,7 +3128,7 @@ class TestForceFieldChargeAssignment:
         from simtk.openmm import NonbondedForce
 
         ff = ForceField(
-            "test_forcefields/smirnoff99Frosst.offxml",
+            "test_forcefields/test_forcefield.offxml",
             xml_ethanol_library_charges_in_parts_ff,
         )
 
@@ -3171,7 +3171,7 @@ class TestForceFieldChargeAssignment:
         from simtk.openmm import NonbondedForce
 
         ff = ForceField(
-            "test_forcefields/smirnoff99Frosst.offxml",
+            "test_forcefields/test_forcefield.offxml",
             xml_ethanol_library_charges_by_atom_ff,
         )
 
@@ -3223,7 +3223,7 @@ class TestForceFieldChargeAssignment:
 
         # The library charges in the FF should not be able to fully cover toluene
         ff = ForceField(
-            "test_forcefields/smirnoff99Frosst.offxml",
+            "test_forcefields/test_forcefield.offxml",
             xml_ethanol_library_charges_by_atom_ff,
         )
         # Delete the ToolkitAM1BCCHandler so the molecule won't get charges from anywhere
@@ -3237,7 +3237,7 @@ class TestForceFieldChargeAssignment:
         # If we do NOT delete the ToolkiAM1BCCHandler, then toluene should be assigned some nonzero partial charges.
         # The exact value will vary by toolkit, so we don't test that here.
         ff = ForceField(
-            "test_forcefields/smirnoff99Frosst.offxml",
+            "test_forcefields/test_forcefield.offxml",
             xml_ethanol_library_charges_by_atom_ff,
         )
         omm_system = ff.create_openmm_system(top)
@@ -3266,7 +3266,7 @@ class TestForceFieldChargeAssignment:
         from simtk.openmm import NonbondedForce
 
         mol = create_acetate()
-        ff = ForceField("test_forcefields/smirnoff99Frosst.offxml", *additional_offxmls)
+        ff = ForceField("test_forcefields/test_forcefield.offxml", *additional_offxmls)
         charge_mols = []
         if charge_method == "charge_from_molecules":
             mol.partial_charges = (
@@ -3667,7 +3667,7 @@ class TestForceFieldParameterAssignment:
         }
         # Create OpenFF System with the current toolkit.
         ff = ForceField(
-            "test_forcefields/smirnoff99Frosst.offxml", off_gbsas[gbsa_model]
+            "test_forcefields/test_forcefield.offxml", off_gbsas[gbsa_model]
         )
         off_top = molecule.to_topology()
         if is_periodic:
@@ -3882,7 +3882,7 @@ class TestForceFieldParameterAssignment:
             get_context_potential_energy,
         )
 
-        off_ff = ForceField("test_forcefields/smirnoff99Frosst.offxml", tip5p_offxml)
+        off_ff = ForceField("test_forcefields/test_forcefield.offxml", tip5p_offxml)
 
         molecule1 = create_water()
         molecule1.atoms[0].name = "O"
@@ -4020,7 +4020,7 @@ class TestForceFieldParameterAssignment:
         }
 
         ff = ForceField(
-            "test_forcefields/smirnoff99Frosst.offxml", off_gbsas[gbsa_model]
+            "test_forcefields/test_forcefield.offxml", off_gbsas[gbsa_model]
         )
         ff.get_parameter_handler("GBSA").sa_model = None
         off_top = Topology.from_molecules([molecule, molecule])
@@ -4165,7 +4165,7 @@ class TestForceFieldParameterAssignment:
 
         mol_path = get_data_file_path("proteins/T4-protein.mol2")
         molecule = Molecule.from_file(mol_path, allow_undefined_stereo=False)
-        forcefield = ForceField("test_forcefields/smirnoff99Frosst.offxml")
+        forcefield = ForceField("test_forcefields/test_forcefield.offxml")
         topology = Topology.from_molecules(molecule)
 
         labels = forcefield.label_molecules(topology)[0]
@@ -4204,7 +4204,7 @@ class TestForceFieldParameterAssignment:
         ]
         assert not default_bo == mod_bo
 
-        forcefield = ForceField("test_forcefields/smirnoff99Frosst.offxml", xml_ff_bo)
+        forcefield = ForceField("test_forcefields/test_forcefield.offxml", xml_ff_bo)
 
         omm_system, omm_sys_top = forcefield.create_openmm_system(
             top, return_topology=True
@@ -4266,7 +4266,7 @@ class TestForceFieldParameterAssignment:
         how the bond orders are obtained.
         """
         mol = get_molecule()
-        forcefield = ForceField("test_forcefields/smirnoff99Frosst.offxml", xml_ff_bo)
+        forcefield = ForceField("test_forcefields/test_forcefield.offxml", xml_ff_bo)
         topology = Topology.from_molecules(mol)
 
         omm_system = forcefield.create_openmm_system(
@@ -4322,7 +4322,7 @@ class TestForceFieldParameterAssignment:
         mol = create_ethanol()
         mol2 = create_reversed_ethanol()
 
-        forcefield = ForceField("test_forcefields/smirnoff99Frosst.offxml", xml_ff_bo)
+        forcefield = ForceField("test_forcefields/test_forcefield.offxml", xml_ff_bo)
         topology = Topology.from_molecules([mol, mol2])
 
         with pytest.raises(ValueError):
@@ -4348,7 +4348,7 @@ class TestForceFieldParameterAssignment:
         mol = get_molecule()
 
         forcefield = ForceField(
-            "test_forcefields/smirnoff99Frosst.offxml",
+            "test_forcefields/test_forcefield.offxml",
             xml_ff_torsion_bo_standard_supersede,
         )
         topology = Topology.from_molecules([mol])
@@ -4422,7 +4422,7 @@ class TestForceFieldParameterAssignment:
         )
         mol = get_molecule()
 
-        forcefield = ForceField("test_forcefields/smirnoff99Frosst.offxml", xml_ff_bo)
+        forcefield = ForceField("test_forcefields/test_forcefield.offxml", xml_ff_bo)
         topology = Topology.from_molecules([mol])
 
         omm_system, ret_top = forcefield.create_openmm_system(
@@ -4527,7 +4527,7 @@ class TestForceFieldParameterAssignment:
         toolkit_registry = ToolkitRegistry(toolkit_precedence=[OpenEyeToolkitWrapper])
         mol = get_molecule()
 
-        forcefield = ForceField("test_forcefields/smirnoff99Frosst.offxml", xml_ff_bo)
+        forcefield = ForceField("test_forcefields/test_forcefield.offxml", xml_ff_bo)
         topology = Topology.from_molecules([mol])
 
         omm_system, ret_top = forcefield.create_openmm_system(
@@ -4601,7 +4601,7 @@ class TestForceFieldParameterAssignment:
         """
         mol = create_ethanol()
 
-        forcefield = ForceField("test_forcefields/smirnoff99Frosst.offxml", xml_ff_bo)
+        forcefield = ForceField("test_forcefields/test_forcefield.offxml", xml_ff_bo)
         forcefield.get_parameter_handler(
             "ProperTorsions"
         )._fractional_bondorder_interpolation = "invalid method name"
@@ -4703,7 +4703,7 @@ def test_charge_increment(self):
     molecules_file_path = get_data_file_path("molecules/laromustine_tripos.mol2")
     molecule = openforcefield.topology.Molecule.from_file(molecules_file_path)
     forcefield = ForceField(
-        ["test_forcefields/smirnoff99Frosst.offxml", "chargeincrement-test"]
+        ["test_forcefields/test_forcefield.offxml", "chargeincrement-test"]
     )
     check_system_creation_from_molecule(forcefield, molecule)
     # TODO: We can't implement a test for chargeincrement yet because we

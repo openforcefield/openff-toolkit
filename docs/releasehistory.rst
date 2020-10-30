@@ -12,6 +12,10 @@ Current Development
 
 API-breaking changes
 """"""""""""""""""""
+- `PR #757 <https://github.com/openforcefield/openforcefield/pull/757>`_: Renames
+  ``test_forcefields/smirnoff99Frosst.offxml`` to ``test_forcefields/test_forcefield.offxml``
+  to avoid confusion with any of the ACTUAL released FFs in the
+  `smirnoff99Frosst line <https://github.com/openforcefield/smirnoff99Frosst/>`_
 - `PR #751 <https://github.com/openforcefield/openforcefield/pull/751>`_: Removes the
   optional ``oetools=("oechem", "oequacpac", "oeiupac", "oeomega")`` keyword argument from
   :py:meth:`OpenEyeToolkitWrapper.is_available <openforcefield.utils.toolkits.OpenEyeToolkitWrapper.is_available>`, as

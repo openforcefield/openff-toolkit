@@ -215,7 +215,7 @@ class ForceField:
     Create a new ForceField containing the smirnoff99Frosst parameter set:
 
     >>> from openforcefield.typing.engines.smirnoff import ForceField
-    >>> forcefield = ForceField('test_forcefields/smirnoff99Frosst.offxml')
+    >>> forcefield = ForceField('test_forcefields/test_forcefield.offxml')
 
     Create an OpenMM system from a :class:`openforcefield.topology.Topology` object:
 
@@ -308,11 +308,11 @@ class ForceField:
 
         Load one SMIRNOFF parameter set in XML format (searching the package data directory by default, which includes some standard parameter sets):
 
-        >>> forcefield = ForceField('test_forcefields/smirnoff99Frosst.offxml')
+        >>> forcefield = ForceField('test_forcefields/test_forcefield.offxml')
 
         Load multiple SMIRNOFF parameter sets:
 
-        forcefield = ForceField('test_forcefields/smirnoff99Frosst.offxml', 'test_forcefields/tip3p.offxml')
+        forcefield = ForceField('test_forcefields/test_forcefield.offxml', 'test_forcefields/tip3p.offxml')
 
         Load a parameter set from a string:
 
