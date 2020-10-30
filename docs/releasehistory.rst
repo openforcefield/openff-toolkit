@@ -29,6 +29,8 @@ New features
   is installed but unlicensed.
 - `PR #678 <https://github.com/openforcefield/openforcefield/pull/678>`_: Adds
   :py:meth:`ForceField.deregister_parameter_handler <openforcefield.typing.engines.smirnoff.forcefield.ForceField.deregister_parameter_handler>`.
+- `PR #730 <https://github.com/openforcefield/openforcefield/pull/730>`_: Adds
+  :py:class:`Topology.is_periodic <openforcefield.topology.Topology>`.
 
 
 Bugfixes
