@@ -1422,10 +1422,6 @@ class Topology(Serializable):
             Whether or not this Topology is periodici
 
         """
-        if is_periodic is self.is_periodic:
-            warnings.warn(
-                f".is_periodicic is already {is_periodic}. " "Setting has no effect."
-            )
         if is_periodic is True and self.box_vectors is None:
             raise InvalidPeriodicityError(
                 "Cannot set is_periodic to True without box vectors. Set box "
