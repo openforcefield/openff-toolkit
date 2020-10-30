@@ -11,7 +11,7 @@ molecule = Molecule.from_file(ligand_filename)
 
 # Load the smirnoff99Frosst force field
 from openforcefield.typing.engines import smirnoff
-forcefield = smirnoff.ForceField('test_forcefields/smirnoff99Frosst.offxml')
+forcefield = smirnoff.ForceField(test_forcefield.offxml)
 
 # Create a ParmEd structure for the molecule
 molecule_structure = forcefield.create_parmed_structure(topology=molecule.to_topology(), positions=molecule.positions)
