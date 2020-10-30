@@ -22,7 +22,6 @@ Class definitions to represent a molecular system and its chemical components
 # =============================================================================================
 
 import itertools
-import warnings
 from collections import OrderedDict
 from collections.abc import MutableMapping
 
