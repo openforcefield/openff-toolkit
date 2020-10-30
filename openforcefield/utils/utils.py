@@ -651,8 +651,8 @@ def deserialize_numpy(serialized_np, shape):
 
     Parameters
     ----------
-    serialized_np : str
-        A serialized numpy array
+    serialized_np : bytes or list
+        A byte or list serialized representation of a numpy array
     shape : tuple of ints
         The shape of the serialized array
     Returns
@@ -663,9 +663,12 @@ def deserialize_numpy(serialized_np, shape):
 
     import numpy as np
 
-    dt = np.dtype("float")
-    dt.newbyteorder(">")  # set to big-endian
-    np_array = np.frombuffer(serialized_np, dtype=dt)
+    if isinstance(serialized_np, list):
+        np_array = np.array(serialized_np)
+    if isinstance(serialized_np, bytes):
+        dt = np.dtype("float")
+        dt.newbyteorder(">")  # set to big-endian
+        np_array = np.frombuffer(serialized_np, dtype=dt)
     np_array = np_array.reshape(shape)
     return np_array
 

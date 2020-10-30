@@ -99,23 +99,18 @@ ALLOWED_CHARGE_MODELS = ["AM1-BCC"]  # TODO: Which models do we want to support?
 # =============================================================================================
 
 
-class LicenseError(Exception):
-    """This function requires a license that cannot be found."""
-
-    pass
-
-
 class MissingPackageError(MessageException):
     """This function requires a package that is not installed."""
-
-    pass
 
 
 class ToolkitUnavailableException(MessageException):
     """The requested toolkit is unavailable."""
 
     # TODO: Allow toolkit to be specified and used in formatting/printing exception.
-    pass
+
+
+class LicenseError(ToolkitUnavailableException):
+    """This function requires a license that cannot be found."""
 
 
 class InvalidToolkitError(MessageException):
@@ -129,37 +124,25 @@ class InvalidToolkitRegistryError(MessageException):
 class UndefinedStereochemistryError(MessageException):
     """A molecule was attempted to be loaded with undefined stereochemistry"""
 
-    pass
-
 
 class GAFFAtomTypeWarning(RuntimeWarning):
     """A warning raised if a loaded mol2 file possibly uses GAFF atom types."""
-
-    pass
 
 
 class ChargeMethodUnavailableError(MessageException):
     """A toolkit does not support the requested partial_charge_method combination"""
 
-    pass
-
 
 class IncorrectNumConformersError(MessageException):
     """The requested partial_charge_method expects a different number of conformers than was provided"""
-
-    pass
 
 
 class IncorrectNumConformersWarning(Warning):
     """The requested partial_charge_method expects a different number of conformers than was provided"""
 
-    pass
-
 
 class ChargeCalculationError(MessageException):
     """An unhandled error occured in an external toolkit during charge calculation"""
-
-    pass
 
 
 class InvalidIUPACNameError(MessageException):
@@ -210,7 +193,7 @@ class ToolkitWrapper:
                     msg = "This function requires the {} toolkit".format(
                         cls._toolkit_name
                     )
-                    raise LicenseError(msg)
+                    raise ToolkitUnavailableException(msg)
                 value = func(*args, **kwargs)
                 return value
 
@@ -258,8 +241,8 @@ class ToolkitWrapper:
         """
         return self._toolkit_file_write_formats
 
-    @staticmethod
-    def is_available():
+    @classmethod
+    def is_available(cls):
         """
         Check whether the corresponding toolkit can be imported
 
@@ -531,6 +514,18 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         "found at: "
         "https://docs.eyesopen.com/toolkits/python/quickstart-python/install.html"
     )
+    # This could belong to ToolkitWrapper, although it seems strange
+    # to carry that data for open-source toolkits
+    _is_licensed = None
+    # Only for OpenEye is there potentially a difference between
+    # being available and installed
+    _is_installed = None
+    _license_functions = {
+        "oechem": "OEChemIsLicensed",
+        "oequacpac": "OEQuacPacIsLicensed",
+        "oeiupac": "OEIUPACIsLicensed",
+        "oeomega": "OEOmegaIsLicensed",
+    }
 
     def __init__(self):
 
@@ -585,71 +580,60 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         # check if the toolkit can be loaded
         if not self.is_available():
-            raise ToolkitUnavailableException(
+            msg = (
                 f"The required toolkit {self._toolkit_name} is not "
                 f"available. {self._toolkit_installation_instructions}"
             )
+            if self._is_installed is False:
+                raise ToolkitUnavailableException(msg)
+            if self._is_licensed is False:
+                raise LicenseError(msg)
+
         from openeye import __version__ as openeye_version
 
         self._toolkit_version = openeye_version
 
-    @staticmethod
-    def is_available(oetools=("oechem", "oequacpac", "oeiupac", "oeomega")):
-        """
-        Check if the given OpenEye toolkit components are available.
-
-        If the OpenEye toolkit is not installed or no license is found
-        for at least one the given toolkits , ``False`` is returned.
-
-        Parameters
-        ----------
-        oetools : str or iterable of strings, optional, default=('oechem', 'oequacpac', 'oeiupac', 'oeomega')
-            Set of tools to check by their Python module name. Defaults
-            to the complete set of tools supported by this function.
-            Also accepts a single tool to check as a string instead of
-            an iterable of length 1.
-
-        Returns
-        -------
-        all_installed : bool
-            ``True`` if all tools in ``oetools`` are installed and licensed,
-            ``False`` otherwise
-
-        """
-        # Complete list of module -> license function to check.
-        license_function_names = {
-            "oechem": "OEChemIsLicensed",
-            "oequacpac": "OEQuacPacIsLicensed",
-            "oeiupac": "OEIUPACIsLicensed",
-            "oeomega": "OEOmegaIsLicensed",
-        }
-        supported_tools = set(license_function_names.keys())
-
-        # Make sure oetools is a set.
-        if isinstance(oetools, str):
-            oetools = {oetools}
-        else:
-            oetools = set(oetools)
-
-        # Check for unkown tools.
-        unknown_tools = oetools.difference(supported_tools)
-        if len(unknown_tools) > 0:
-            raise ValueError(
-                "Found unkown OpenEye tools: {}. Supported values are: {}".format(
-                    sorted(unknown_tools), sorted(supported_tools)
-                )
-            )
-
-        # Check license of all tools.
+    @classmethod
+    def _check_licenses(cls):
+        """Check license of all known OpenEye tools. Returns True if all are found
+        to be licensed, False if any are not."""
         all_licensed = True
-        for tool in oetools:
+        for (tool, license_func) in cls._license_functions.items():
             try:
                 module = importlib.import_module("openeye." + tool)
             except (ImportError, ModuleNotFoundError):
                 return False
             else:
-                all_licensed &= getattr(module, license_function_names[tool])()
+                all_licensed &= getattr(module, license_func)()
         return all_licensed
+
+    @classmethod
+    def is_available(cls):
+        """
+        Check if the given OpenEye toolkit components are available.
+
+        If the OpenEye toolkit is not installed or no license is found
+        for at least one the required toolkits , ``False`` is returned.
+
+        Returns
+        -------
+        all_installed : bool
+            ``True`` if all required OpenEye tools are installed and licensed,
+            ``False`` otherwise
+
+        """
+        if cls._is_available is None:
+            if cls._is_licensed is None:
+                cls._is_licensed = cls._check_licenses()
+            if cls._is_installed is None:
+                for tool in cls._license_functions.keys():
+                    cls._is_installed = True
+                    try:
+                        importlib.import_module("openeye." + tool)
+                    except (ImportError, ModuleNotFoundError):
+                        cls._is_installed = False
+            cls._is_available = cls._is_installed and cls._is_licensed
+        return cls._is_available
 
     def from_object(self, object, allow_undefined_stereo=False):
         """
@@ -2590,8 +2574,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         """
         return list(self._toolkit_file_write_formats.keys())
 
-    @staticmethod
-    def is_available():
+    @classmethod
+    def is_available(cls):
         """
         Check whether the RDKit toolkit can be imported
 
@@ -2601,11 +2585,14 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             True if RDKit is installed, False otherwise.
 
         """
-        try:
-            importlib.import_module("rdkit", "Chem")
-            return True
-        except ImportError:
-            return False
+        if cls._is_available is None:
+            try:
+                importlib.import_module("rdkit", "Chem")
+            except ImportError:
+                cls._is_available = False
+            else:
+                cls._is_available = True
+        return cls._is_available
 
     def from_object(self, object, allow_undefined_stereo=False):
         """

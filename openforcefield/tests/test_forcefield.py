@@ -38,6 +38,7 @@ from openforcefield.typing.engines.smirnoff import (
     ParameterHandler,
     SMIRNOFFAromaticityError,
     SMIRNOFFSpecError,
+    ToolkitAM1BCCHandler,
     XMLParameterIOHandler,
     get_available_force_fields,
 )
@@ -1667,6 +1668,34 @@ class TestForceField:
             forcefield[bonds]
         with pytest.raises(NotImplementedError):
             forcefield[type(bonds)]
+
+    @pytest.mark.parametrize(
+        "to_deregister",
+        [
+            "ToolkitAM1BCC",
+            ToolkitAM1BCCHandler,
+            ToolkitAM1BCCHandler(skip_version_check=True),
+        ],
+    )
+    def test_deregister_parameter_handler(self, to_deregister):
+        """Ensure that ForceField.deregister_parameter_handler behaves correctly"""
+        ff = ForceField(simple_xml_ff)
+        # Make sure the handler is present in the test force field
+        handler_found = False
+        for handler in ff._parameter_handlers.values():
+            if isinstance(handler, ToolkitAM1BCCHandler):
+                handler_found = True
+        assert handler_found
+        ff.deregister_parameter_handler(to_deregister)
+        # Make sure the handler is absent after deletion
+        handler_found = False
+        for handler in ff._parameter_handlers.values():
+            if isinstance(handler, ToolkitAM1BCCHandler):
+                handler_found = True
+        assert not (handler_found)
+
+        with pytest.raises(KeyError) as excinfo:
+            ff.deregister_parameter_handler(to_deregister)
 
     def test_hash(self):
         """Test hashes on all available force fields"""
