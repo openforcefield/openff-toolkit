@@ -3483,23 +3483,32 @@ class vdWHandler(_NonbondedHandler):
 
             super().__init__(**kwargs)
 
+            if sigma:
+                self._extra_nb_var = "rmin_half"
+            if rmin_half:
+                self._extra_nb_var = "sigma"
+
         def __setattr__(self, name, value):
             if name == "rmin_half":
                 super().__setattr__(name, value)
                 super().__setattr__("sigma", value / 2 ** (1 / 6))
+                self._extra_nb_var = "sigma"
 
             if name == "sigma":
                 super().__setattr__(name, value)
                 super().__setattr__("rmin_half", value * 2 ** (1 / 6))
+                self._extra_nb_var = "rmin_half"
 
             super().__setattr__(key=name, value=value)
 
         def to_dict(
-            self, discard_cosmetic_attributes=False, duplicate_attributes=["sigma"]
+            self,
+            discard_cosmetic_attributes=False,
+            duplicate_attributes=None,
         ):
             return super().to_dict(
                 discard_cosmetic_attributes=discard_cosmetic_attributes,
-                duplicate_attributes=duplicate_attributes,
+                duplicate_attributes=[self._extra_nb_var],
             )
 
     _TAGNAME = "vdW"  # SMIRNOFF tag name to process

@@ -1718,14 +1718,20 @@ class TestvdWType:
         assert param.sigma is not None
         assert param.rmin_half is not None
         assert param.sigma == param.rmin_half / 2 ** (1 / 6)
+        assert "sigma" in param.to_dict()
+        assert "rmin_half" not in param.to_dict()
 
         param.sigma = 0.8 * unit.angstrom
 
         assert param.sigma == param.rmin_half / 2 ** (1 / 6)
+        assert "sigma" in param.to_dict()
+        assert "rmin_half" not in param.to_dict()
 
         param.rmin_half = 0.8 * unit.angstrom
 
         assert param.sigma == param.rmin_half / 2 ** (1 / 6)
+        assert "sigma" not in param.to_dict()
+        assert "rmin_half" in param.to_dict()
 
 
 class TestVirtualSiteHandler:
