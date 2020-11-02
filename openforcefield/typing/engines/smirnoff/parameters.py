@@ -20,6 +20,7 @@ __all__ = [
     "UnassignedValenceParameterException",
     "UnassignedBondParameterException",
     "UnassignedAngleParameterException",
+    "DuplicateVirtualSiteTypeException",
     "NonbondedMethod",
     "ParameterList",
     "ParameterType",
@@ -35,6 +36,7 @@ __all__ = [
     "ImproperTorsionHandler",
     "vdWHandler",
     "GBSAHandler",
+    "ToolkitAM1BCCHandler",
     "VirtualSiteHandler",
 ]
 

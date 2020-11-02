@@ -7,8 +7,45 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 * ``minor`` increments add features but do not break API compatibility
 * ``micro`` increments represent bugfix releases or improvements in documentation
 
-Current development
+Current Development
 -------------------
+
+API-breaking changes
+""""""""""""""""""""
+- `PR #757 <https://github.com/openforcefield/openforcefield/pull/757>`_: Renames
+  ``test_forcefields/smirnoff99Frosst.offxml`` to ``test_forcefields/test_forcefield.offxml``
+  to avoid confusion with any of the ACTUAL released FFs in the
+  `smirnoff99Frosst line <https://github.com/openforcefield/smirnoff99Frosst/>`_
+- `PR #751 <https://github.com/openforcefield/openforcefield/pull/751>`_: Removes the
+  optional ``oetools=("oechem", "oequacpac", "oeiupac", "oeomega")`` keyword argument from
+  :py:meth:`OpenEyeToolkitWrapper.is_available <openforcefield.utils.toolkits.OpenEyeToolkitWrapper.is_available>`, as
+  there are no special behaviors that are accessed in the case of partially-licensed OpenEye backends. The
+  new behavior of this method is the same as if the default value above is always provided.
+
+
+New features
+""""""""""""
+- `PR #751 <https://github.com/openforcefield/openforcefield/pull/751>`_: Adds
+  :py:class:`LicenseError <openforcefield.utils.toolkits.LicenseError>`, a subclass of
+  :py:class:`ToolkitUnavailableException <openforcefield.utils.toolkits.ToolkitUnavailableException>`
+  which is raised when attempting to add a cheminformatics
+  :py:class:`ToolkitWrapper <openforcefield.utils.toolkits.ToolkitWrapper>` for a toolkit that
+  is installed but unlicensed.
+- `PR #678 <https://github.com/openforcefield/openforcefield/pull/678>`_: Adds
+  :py:meth:`ForceField.deregister_parameter_handler <openforcefield.typing.engines.smirnoff.forcefield.ForceField.deregister_parameter_handler>`.
+- `PR #730 <https://github.com/openforcefield/openforcefield/pull/730>`_: Adds
+  :py:class:`Topology.is_periodic <openforcefield.topology.Topology>`.
+
+
+Bugfixes
+""""""""
+- `PR #745 <https://github.com/openforcefield/openforcefield/pull/745>`_: Fixes bug when
+  serializing molecule with conformers to JSON.
+
+
+
+0.8.0 - Virtual Sites
+---------------------
 
 This release implements the SMIRNOFF virtual site specification. The implementation enables support for models using off-site charges, including 4- and 5-point water models, in addition to lone pair modeling on various functional groups. The primary focus was on the ability to parameterize a system using virtual sites, and generating an OpenMM system with all virtual sites present and ready for evaluation. Support for formats other than OpenMM has not be implemented in this release, but may come with the appearance of the OpenFF system object. In addition to implementing the specification, the toolkit :py:class:`Molecule <openforcefield.topology.Molecule>` objects now allow the creation and manipulation of virtual sites.
 
@@ -75,27 +112,25 @@ New features
 - `PR #548 <https://github.com/openforcefield/openforcefield/pull/548>`_: Adds ``replace`` and ``all_permutations`` kwarg to
 
   - :py:meth:`Molecule.add_bond_charge_virtual_site <openforcefield.topology.Molecule.add_bond_charge_virtual_site>`
-  - :py:meth:`Molecule.add_monovalent_virtual_site <openforcefield.topology.Molecule.add_monovalent_virtual_site>`
-  - :py:meth:`Molecule.add_divalent_virtual_site <openforcefield.topology.Molecule.add_divalent_virtual_site>`
-  - :py:meth:`Molecule.add_trivalent_virtual_site <openforcefield.topology.Molecule.add_trivalent_virtual_site>`
+  - :py:meth:`Molecule.add_monovalent_lone_pair_virtual_site <openforcefield.topology.Molecule.add_monovalent_lone_pair_virtual_site>`
+  - :py:meth:`Molecule.add_divalent_lone_pair_virtual_site <openforcefield.topology.Molecule.add_divalent_lone_pair_virtual_site>`
+  - :py:meth:`Molecule.add_trivalent_lone_pair_virtual_site <openforcefield.topology.Molecule.add_trivalent_lone_pair_virtual_site>`
 
 - `PR #548 <https://github.com/openforcefield/openforcefield/pull/548>`_: Adds ``orientations`` to
 
-  - :py:class:`BondChargeVirtualSite <openforcefield.topology.molecule.BondChargeVirtualSite>` 
-  - :py:class:`MonovalentLonePairVirtualSite <openforcefield.topology.molecule.MonovalentLonePairVirtualSite>` 
-  - :py:class:`DivalentLonePairVirtualSite <openforcefield.topology.molecule.DivalentLonePairVirtualSite>` 
-  - :py:class:`TrivalentLonePairVirtualSite <openforcefield.topology.molecule.TrivalentLonePairVirtualSite>` 
+  - :py:class:`BondChargeVirtualSite <openforcefield.topology.BondChargeVirtualSite>`
+  - :py:class:`MonovalentLonePairVirtualSite <openforcefield.topology.MonovalentLonePairVirtualSite>`
+  - :py:class:`DivalentLonePairVirtualSite <openforcefield.topology.DivalentLonePairVirtualSite>`
+  - :py:class:`TrivalentLonePairVirtualSite <openforcefield.topology.TrivalentLonePairVirtualSite>`
 
 - `PR #548 <https://github.com/openforcefield/openforcefield/pull/548>`_: Adds
 
-  - :py:class:`VirtualParticle <openforcefield.topology.molecule.VirtualParticle>`
-  - :py:class:`TopologyVirtualParticle <openforcefield.topology.topology.TopologyVirtualParticle>`
-  - :py:class:`DuplicateVirtualSiteTypeException <openforcefield.typing.engines.smirnoff.parameters.DuplicateVirtualSiteTypeException>`
-  - :py:meth:`TopologyVirtualParticle.virtual_particle_start_topology_index <openforcefield.topology.molecule.TopologyVirtualParticle.virtual_particle_start_topology_index>`
+  - :py:class:`VirtualParticle <openforcefield.topology.VirtualParticle>`
+  - :py:class:`TopologyVirtualParticle <openforcefield.topology.TopologyVirtualParticle>`
   - :py:meth:`BondChargeVirtualSite.get_openmm_virtual_site <openforcefield.topology.BondChargeVirtualSite.get_openmm_virtual_site>`
-  - :py:meth:`MonovalentVirtualSite.get_openmm_virtual_site <openforcefield.topology.MonovalentLonePairVirtualSite.get_openmm_virtual_site>`
-  - :py:meth:`DivalentVirtualSite.get_openmm_virtual_site <openforcefield.topology.DivalentLonePairVirtualSite.get_openmm_virtual_site>`
-  - :py:meth:`TrivalentVirtualSite.get_openmm_virtual_site <openforcefield.topology.TrivalentLonePairVirtualSite.get_openmm_virtual_site>`
+  - :py:meth:`MonovalentLonePairVirtualSite.get_openmm_virtual_site <openforcefield.topology.MonovalentLonePairVirtualSite.get_openmm_virtual_site>`
+  - :py:meth:`DivalentLonePairVirtualSite.get_openmm_virtual_site <openforcefield.topology.DivalentLonePairVirtualSite.get_openmm_virtual_site>`
+  - :py:meth:`TrivalentLonePairVirtualSite.get_openmm_virtual_site <openforcefield.topology.TrivalentLonePairVirtualSite.get_openmm_virtual_site>`
   - :py:meth:`ValenceDict.key_transform <openforcefield.topology.ValenceDict.key_transform>`
   - :py:meth:`ValenceDict.index_of <openforcefield.topology.ValenceDict.index_of>`
   - :py:meth:`ImproperDict.key_transform <openforcefield.topology.ImproperDict.key_transform>`
@@ -107,8 +142,8 @@ New features
   bump in the ``<Bonds>`` section of the SMIRNOFF spec (but not the entire spec).
 - `PR #718 <https://github.com/openforcefield/openforcefield/pull/718>`_: Adds ``.rings`` and
   ``.n_rings`` to :py:class:`Molecule <openforcefield.topology.Molecule>` and ``.is_in_ring``
-  to :py:class:`Atom <openforcefield.topology.molecule.Atom>` and
-  :py:class:`Bond <openforcefield.topology.molecule.Bond>`
+  to :py:class:`Atom <openforcefield.topology.Atom>` and
+  :py:class:`Bond <openforcefield.topology.Bond>`
 
 Bugfixes
 """""""""
@@ -123,7 +158,7 @@ Bugfixes
 - `PR #737 <https://github.com/openforcefield/openforcefield/pull/737>`_: Prevents OpenEye from
   incidentally being used in the conformer generation step of
   :py:class:`AmberToolsToolkitWrapper.assign_fractional_bond_orders
-  <openforcefield.utils.toolkits.AmberToolsToolkitWrapper.assign_wiberg_bond_orders>`.
+  <openforcefield.utils.toolkits.AmberToolsToolkitWrapper.assign_fractional_bond_orders>`.
 
 Behavior changed
 """"""""""""""""
@@ -143,13 +178,13 @@ API-breaking changes
 - `PR #548 <https://github.com/openforcefield/openforcefield/pull/548>`_: Methods
 
   - :py:meth:`Molecule.add_bond_charge_virtual_site <openforcefield.topology.Molecule.add_bond_charge_virtual_site>`
-  - :py:meth:`Molecule.add_monovalent_virtual_site <openforcefield.topology.Molecule.add_monovalent_virtual_site>`
-  - :py:meth:`Molecule.add_divalent_virtual_site <openforcefield.topology.Molecule.add_divalent_virtual_site>`
-  - :py:meth:`Molecule.add_trivalent_virtual_site <openforcefield.topology.Molecule.add_trivalent_virtual_site>`
+  - :py:meth:`Molecule.add_monovalent_lone_pair_virtual_site <openforcefield.topology.Molecule.add_monovalent_lone_pair_virtual_site>`
+  - :py:meth:`Molecule.add_divalent_lone_pair_virtual_site <openforcefield.topology.Molecule.add_divalent_lone_pair_virtual_site>`
+  - :py:meth:`Molecule.add_trivalent_lone_pair_virtual_site <openforcefield.topology.Molecule.add_trivalent_lone_pair_virtual_site>`
   now only accept a list of atoms, not a list of integers, to define to parent atoms
 
 - `PR #548 <https://github.com/openforcefield/openforcefield/pull/548>`_: Removes
-  :py:meth:`VirtualParticle.molecule_particle_index <openforcefield.topology.molecule.VirtualParticle.molecule_particle_index>`
+  :py:meth:`VirtualParticle.molecule_particle_index <openforcefield.topology.VirtualParticle.molecule_particle_index>`
 
 - `PR #548 <https://github.com/openforcefield/openforcefield/pull/548>`_: Removes ``outOfPlaneAngle`` from
 
@@ -161,7 +196,7 @@ API-breaking changes
 
 - `PR #548 <https://github.com/openforcefield/openforcefield/pull/548>`_: Removes ``weights`` from
 
-  - :py:class:`BondChargeVirtualSite <openforcefield.topology.BondChargeLonePairVirtualSite>`
+  - :py:class:`BondChargeVirtualSite <openforcefield.topology.BondChargeVirtualSite>`
   - :py:class:`MonovalentLonePairVirtualSite <openforcefield.topology.MonovalentLonePairVirtualSite>`
   - :py:class:`DivalentLonePairVirtualSite <openforcefield.topology.DivalentLonePairVirtualSite>`
   - :py:class:`TrivalentLonePairVirtualSite <openforcefield.topology.TrivalentLonePairVirtualSite>`
@@ -175,7 +210,6 @@ Tests added
   - TIP5P water dimer energy and positions
   - Adds tests to for virtual site/particle indexing/counting
 
-=======
 
 0.7.2 - Bugfix and minor feature release
 ----------------------------------------

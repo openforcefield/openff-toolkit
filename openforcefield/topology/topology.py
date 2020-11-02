@@ -67,6 +67,12 @@ class InvalidBoxVectorsError(MessageException):
     """
 
 
+class InvalidPeriodicityError(MessageException):
+    """
+    Exception for setting invalid periodicity
+    """
+
+
 # =============================================================================================
 # PRIVATE SUBROUTINES
 # =============================================================================================
@@ -127,6 +133,27 @@ class ValenceDict(_TransformedDict):
 
     @staticmethod
     def index_of(key, possible=None):
+        """
+        Generates a canonical ordering of the equivalent permutations of ``key`` (equivalent rearrangements of indices)
+        and identifies which of those possible orderings this particular ordering is. This method is useful when
+        multiple SMARTS patterns might match the same atoms, but local molecular symmetry or the use of
+        wildcards in the SMARTS could make the matches occur in arbitrary order.
+
+        This method can be restricted to a subset of the canonical orderings, by providing
+        the optional ``possible`` keyword argument. If provided, the index returned by this method will be
+        the index of the element in ``possible`` after undergoing the same canonical sorting as above.
+
+        Parameters
+        ----------
+        key : iterable of int
+            A valid key for ValenceDict
+        possible : iterable of iterable of int, optional. default=``None``
+            A subset of the possible orderings that this match might take.
+
+        Returns
+        -------
+        index : int
+        """
         assert len(key) < 4
         refkey = __class__.key_transform(key)
         if len(key) == 2:
@@ -150,15 +177,20 @@ class ValenceDict(_TransformedDict):
             )
         if possible is not None:
             i = 0
+            # If the possible permutations were provided, ensure that `possible` is a SUBSET of `permutations`
             assert all([p in permutations for p in possible]), (
                 "Possible permutations " + str(possible) + " is impossible!"
             )
+            # TODO: Double-check whether this will generalize. It seems like this would fail if ``key``
+            #       were in ``permutations``, but not ``possible``
+
             for k in permutations:
                 if all([x == y for x, y in zip(key, k)]):
                     return i
                 if k in possible:
                     i += 1
         else:
+            # If the possible permutations were NOT provided, then return the unique index of this permutation.
             return permutations[key]
 
     def __keytransform__(self, key):
@@ -195,6 +227,27 @@ class ImproperDict(_TransformedDict):
 
     @staticmethod
     def index_of(key, possible=None):
+        """
+        Generates a canonical ordering of the equivalent permutations of ``key`` (equivalent rearrangements of indices)
+        and identifies which of those possible orderings this particular ordering is. This method is useful when
+        multiple SMARTS patterns might match the same atoms, but local molecular symmetry or the use of
+        wildcards in the SMARTS could make the matches occur in arbitrary order.
+
+        This method can be restricted to a subset of the canonical orderings, by providing
+        the optional ``possible`` keyword argument. If provided, the index returned by this method will be
+        the index of the element in ``possible`` after undergoing the same canonical sorting as above.
+
+        Parameters
+        ----------
+        key : iterable of int
+            A valid key for ValenceDict
+        possible : iterable of iterable of int, optional. default=``None``
+            A subset of the possible orderings that this match might take.
+
+        Returns
+        -------
+        index : int
+        """
         assert len(key) == 4
         refkey = __class__.key_transform(key)
         permutations = OrderedDict(
@@ -1212,7 +1265,6 @@ class Topology(Serializable):
         self._aromaticity_model = DEFAULT_AROMATICITY_MODEL
         self._constrained_atom_pairs = dict()
         self._box_vectors = None
-        # self._is_periodic = False
         # self._reference_molecule_dicts = set()
         # TODO: Look into weakref and what it does. Having multiple topologies might cause a memory leak.
         self._reference_molecule_to_topology_molecules = OrderedDict()
@@ -1351,6 +1403,34 @@ class Topology(Serializable):
         else:
             assert len(box_vectors) == 3
         self._box_vectors = box_vectors
+
+    @property
+    def is_periodic(self):
+        """Return whether or not this Topology is intended to be described with periodic
+        boundary conditions."""
+        return self.box_vectors is not None
+
+    @is_periodic.setter
+    def is_periodic(self, is_periodic):
+        """
+        Set the partial charge model used for all molecules in the topology.
+
+        Parameters
+        ----------
+        is_periodic : bool
+            Whether or not this Topology is periodici
+
+        """
+        if is_periodic is True and self.box_vectors is None:
+            raise InvalidPeriodicityError(
+                "Cannot set is_periodic to True without box vectors. Set box "
+                "vectors directly instead."
+            )
+        if is_periodic is False and self.box_vectors is not None:
+            raise InvalidPeriodicityError(
+                "Cannot set is_periodic to False while box vectors are stored. "
+                "First set box_vectors to None."
+            )
 
     @property
     def charge_model(self):

@@ -331,6 +331,8 @@ class TestMolecule:
         serialized = molecule.to_dict()
         molecule_copy = Molecule.from_dict(serialized)
         assert molecule == molecule_copy
+        assert molecule_copy.n_conformers == molecule.n_conformers
+        assert np.allclose(molecule_copy.conformers[0], molecule.conformers[0])
 
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_yaml_serialization(self, molecule):
@@ -338,6 +340,8 @@ class TestMolecule:
         serialized = molecule.to_yaml()
         molecule_copy = Molecule.from_yaml(serialized)
         assert molecule == molecule_copy
+        assert molecule_copy.n_conformers == molecule.n_conformers
+        assert np.allclose(molecule_copy.conformers[0], molecule.conformers[0])
 
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_toml_serialization(self, molecule):
@@ -353,17 +357,16 @@ class TestMolecule:
         serialized = molecule.to_bson()
         molecule_copy = Molecule.from_bson(serialized)
         assert molecule == molecule_copy
+        assert molecule_copy.n_conformers == molecule.n_conformers
+        assert np.allclose(molecule_copy.conformers[0], molecule.conformers[0])
 
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_json_serialization(self, molecule):
         """Test serialization of a molecule object to and from JSON."""
-        # TODO: Test round-trip, on mini_drug_bank, when to_json bug is fixed, see #547
-        mol = Molecule.from_smiles("CCO")
-        molecule_copy = Molecule.from_json(mol.to_json())
-        assert molecule_copy == mol
-        mol.generate_conformers(n_conformers=1)
-        with pytest.raises(TypeError):
-            mol.to_json()
+        molecule_copy = Molecule.from_json(molecule.to_json())
+        assert molecule_copy == molecule
+        assert molecule_copy.n_conformers == molecule.n_conformers
+        assert np.allclose(molecule_copy.conformers[0], molecule.conformers[0])
 
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_xml_serialization(self, molecule):
@@ -380,6 +383,8 @@ class TestMolecule:
         serialized = molecule.to_messagepack()
         molecule_copy = Molecule.from_messagepack(serialized)
         assert molecule == molecule_copy
+        assert molecule_copy.n_conformers == molecule.n_conformers
+        assert np.allclose(molecule_copy.conformers[0], molecule.conformers[0])
 
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_pickle_serialization(self, molecule):
@@ -387,6 +392,8 @@ class TestMolecule:
         serialized = pickle.dumps(molecule)
         molecule_copy = pickle.loads(serialized)
         assert molecule == molecule_copy
+        assert molecule_copy.n_conformers == molecule.n_conformers
+        assert np.allclose(molecule_copy.conformers[0], molecule.conformers[0])
 
     def test_serialization_no_conformers(self):
         """Test round-trip serialization when molecules have no conformers or partial charges."""
@@ -415,6 +422,18 @@ class TestMolecule:
 
         pickle_copy = pickle.loads(pickle.dumps(mol))
         assert mol == pickle_copy
+
+    def test_json_numpy_roundtrips(self):
+        """Ensure that array data survives several round-trips through JSON,
+        which depends on list serialization instead of bytes."""
+        mol = Molecule.from_smiles("CCO")
+        mol.generate_conformers(n_conformers=1)
+        initial_conformer = mol.conformers[0]
+
+        for _ in range(10):
+            mol = Molecule.from_json(mol.to_json())
+
+        assert np.allclose(initial_conformer, mol.conformers[0])
 
     # ----------------------------------------------------
     # Test Molecule constructors and conversion utilities.
@@ -2304,6 +2323,40 @@ class TestMolecule:
         vsite3_index = molecule.add_bond_charge_virtual_site(
             atoms, distance, charge_increments=charge_increments, replace=True
         )
+
+    def test_virtual_particle(self):
+        """Test setter, getters, and methods of VirtualParticle"""
+        mol = create_ethanol()
+        # Add a SYMMETRIC (default) VirtualSite, which should have two particles
+        mol.add_bond_charge_virtual_site(
+            (mol.atoms[1], mol.atoms[2]),
+            0.5 * unit.angstrom,
+            charge_increments=[-0.1, 0.1] * unit.elementary_charge,
+        )
+        # Add a NON SYMMETRIC (specified in kwarg) VirtualSite, which should have one particle
+        mol.add_bond_charge_virtual_site(
+            (mol.atoms[0], mol.atoms[1]),
+            0.5 * unit.angstrom,
+            charge_increments=[-0.1, 0.1] * unit.elementary_charge,
+            symmetric=False,
+        )
+
+        assert len(mol.virtual_sites) == 2
+
+        # Ensure the first vsite has two particles
+        vps0 = [vp for vp in mol.virtual_sites[0].particles]
+        assert len(vps0) == 2
+        assert vps0[0].virtual_site_particle_index == 0
+        assert vps0[1].virtual_site_particle_index == 1
+        orientations0 = [vp.orientation for vp in vps0]
+        assert len(set(orientations0) & {(0, 1), (1, 0)}) == 2
+
+        # Ensure the second vsite has one particle
+        vps1 = [vp for vp in mol.virtual_sites[1].particles]
+        assert len(vps1) == 1
+        assert vps1[0].virtual_site_particle_index == 0
+        orientations1 = [vp.orientation for vp in vps1]
+        assert len(set(orientations1) & {(0, 1)}) == 1
 
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_add_bond_charge_virtual_site(self, molecule):

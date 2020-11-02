@@ -33,6 +33,7 @@ from openforcefield.topology import (
     DuplicateUniqueMoleculeError,
     ImproperDict,
     InvalidBoxVectorsError,
+    InvalidPeriodicityError,
     Molecule,
     Topology,
     ValenceDict,
@@ -181,6 +182,7 @@ class TestTopology(TestCase):
         assert topology.n_topology_particles == 0
         assert topology.n_topology_virtual_sites == 0
         assert topology.box_vectors is None
+        assert not topology.is_periodic
         assert len(topology.constrained_atom_pairs.items()) == 0
 
     def test_box_vectors(self):
@@ -205,6 +207,23 @@ class TestTopology(TestCase):
         for good_vectors in [good_box_vectors, one_dim_vectors]:
             topology.box_vectors = good_vectors
             assert (topology.box_vectors == good_vectors * np.eye(3)).all()
+
+    def test_is_periodic(self):
+        """Test the getter and setter for is_periodic"""
+        vacuum_top = Topology()
+        assert vacuum_top.is_periodic is False
+
+        with pytest.raises(InvalidPeriodicityError):
+            vacuum_top.is_periodic = True
+
+        solvent_box = Topology()
+        solvent_box.box_vectors = np.eye(3) * 4 * unit.nanometer
+        assert solvent_box.is_periodic is True
+
+        with pytest.raises(InvalidPeriodicityError):
+            solvent_box.is_periodic = False
+        solvent_box.box_vectors = None
+        assert solvent_box.is_periodic is False
 
     def test_from_smiles(self):
         """Test creation of a openforcefield Topology object from a SMILES string"""
