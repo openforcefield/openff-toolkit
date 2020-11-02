@@ -5086,6 +5086,11 @@ class VirtualSiteHandler(_NonbondedHandler):
 
             super().__init__(**kwargs)
 
+            if sigma:
+                self._extra_nb_var = "rmin_half"
+            if rmin_half:
+                self._extra_nb_var = "sigma"
+
         # @type.converter
         # def type(self, attr, vsite_type):
         #     """
@@ -5223,6 +5228,7 @@ class VirtualSiteHandler(_NonbondedHandler):
                 "replace": kwargs.pop("replace", False),
             }
             kwargs.update(base_args)
+            kwargs.pop(self._extra_nb_var)
 
             return fn(*args, **kwargs)
 
