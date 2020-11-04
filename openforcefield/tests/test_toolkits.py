@@ -1914,6 +1914,21 @@ class TestRDKitToolkitWrapper:
             == expected_output_smiles
         )
 
+    def test_from_rdkit_implicit_hydrogens(self):
+        """
+        Test that hydrogens are inferred from hydrogen-less RDKit molecules,
+        unless the option is turned off.
+        """
+        from rdkit import Chem
+
+        rdmol = Chem.MolFromSmiles("CC")
+        offmol = Molecule.from_rdkit(rdmol)
+
+        assert any([a.atomic_number == 1 for a in offmol.atoms])
+
+        offmol_no_h = Molecule.from_rdkit(rdmol, hydrogens_are_explicit=True)
+        assert not any([a.atomic_number == 1 for a in offmol_no_h.atoms])
+
     def test_file_extension_case(self):
         """
         Test round-trips of some file extensions when called directly from the toolkit wrappers,

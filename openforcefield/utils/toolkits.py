@@ -3261,7 +3261,12 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         for conformer in molecule2._conformers:
             molecule._add_conformer(conformer)
 
-    def from_rdkit(self, rdmol, allow_undefined_stereo=False):
+    def from_rdkit(
+        self,
+        rdmol,
+        allow_undefined_stereo=False,
+        hydrogens_are_explicit=False,
+    ):
         """
         Create a Molecule from an RDKit molecule.
 
@@ -3275,6 +3280,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             An RDKit molecule
         allow_undefined_stereo : bool, default=False
             If false, raises an exception if rdmol contains undefined stereochemistry.
+        hydrogens_are_explicit : bool, default=False
+            If False, RDKit will perform hydrogen addition using Chem.AddHs
 
         Returns
         -------
@@ -3300,6 +3307,9 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         # Make a copy of the RDKit Mol as we'll need to change it (e.g. assign stereo).
         rdmol = Chem.Mol(rdmol)
+
+        if not hydrogens_are_explicit:
+            rdmol = Chem.AddHs(rdmol)
 
         # Sanitizing the molecule. We handle aromaticity and chirality manually.
         # This SanitizeMol(...) calls cleanUp, updatePropertyCache, symmetrizeSSSR,

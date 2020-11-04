@@ -4310,7 +4310,7 @@ class FrozenMolecule(Serializable):
 
     @staticmethod
     @RDKitToolkitWrapper.requires_toolkit()
-    def from_rdkit(rdmol, allow_undefined_stereo=False):
+    def from_rdkit(rdmol, allow_undefined_stereo=False, hydrogens_are_explicit=False):
         """
         Create a Molecule from an RDKit molecule.
 
@@ -4322,6 +4322,8 @@ class FrozenMolecule(Serializable):
             An RDKit molecule
         allow_undefined_stereo : bool, default=False
             If false, raises an exception if oemol contains undefined stereochemistry.
+        hydrogens_are_explicit : bool, default=False
+            If False, RDKit will perform hydrogen addition using Chem.AddHs
 
         Returns
         -------
@@ -4341,7 +4343,9 @@ class FrozenMolecule(Serializable):
         """
         toolkit = RDKitToolkitWrapper()
         molecule = toolkit.from_rdkit(
-            rdmol, allow_undefined_stereo=allow_undefined_stereo
+            rdmol,
+            allow_undefined_stereo=allow_undefined_stereo,
+            hydrogens_are_explicit=hydrogens_are_explicit,
         )
         return molecule
 
