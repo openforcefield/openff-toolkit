@@ -10,11 +10,37 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 Current Development
 -------------------
 
+API-breaking changes
+""""""""""""""""""""
+- `PR #757 <https://github.com/openforcefield/openforcefield/pull/757>`_: Renames
+  ``test_forcefields/smirnoff99Frosst.offxml`` to ``test_forcefields/test_forcefield.offxml``
+  to avoid confusion with any of the ACTUAL released FFs in the
+  `smirnoff99Frosst line <https://github.com/openforcefield/smirnoff99Frosst/>`_
+- `PR #751 <https://github.com/openforcefield/openforcefield/pull/751>`_: Removes the
+  optional ``oetools=("oechem", "oequacpac", "oeiupac", "oeomega")`` keyword argument from
+  :py:meth:`OpenEyeToolkitWrapper.is_available <openforcefield.utils.toolkits.OpenEyeToolkitWrapper.is_available>`, as
+  there are no special behaviors that are accessed in the case of partially-licensed OpenEye backends. The
+  new behavior of this method is the same as if the default value above is always provided.
+
+
+New features
+""""""""""""
+- `PR #751 <https://github.com/openforcefield/openforcefield/pull/751>`_: Adds
+  :py:class:`LicenseError <openforcefield.utils.toolkits.LicenseError>`, a subclass of
+  :py:class:`ToolkitUnavailableException <openforcefield.utils.toolkits.ToolkitUnavailableException>`
+  which is raised when attempting to add a cheminformatics
+  :py:class:`ToolkitWrapper <openforcefield.utils.toolkits.ToolkitWrapper>` for a toolkit that
+  is installed but unlicensed.
+- `PR #678 <https://github.com/openforcefield/openforcefield/pull/678>`_: Adds
+  :py:meth:`ForceField.deregister_parameter_handler <openforcefield.typing.engines.smirnoff.forcefield.ForceField.deregister_parameter_handler>`.
+- `PR #730 <https://github.com/openforcefield/openforcefield/pull/730>`_: Adds
+  :py:class:`Topology.is_periodic <openforcefield.topology.Topology>`.
+
+
 Bugfixes
-"""""""""
+""""""""
 - `PR #745 <https://github.com/openforcefield/openforcefield/pull/745>`_: Fixes bug when
   serializing molecule with conformers to JSON.
-
 
 
 
