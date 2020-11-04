@@ -12,7 +12,6 @@ Test that the examples in the repo run without errors.
 # GLOBAL IMPORTS
 # ======================================================================
 
-import glob
 import os
 import pathlib
 import re

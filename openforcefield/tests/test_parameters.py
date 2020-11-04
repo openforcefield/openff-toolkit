@@ -1706,8 +1706,6 @@ class TestVirtualSiteHandler:
 
     def _test_variable_names(self, valid_kwargs, variable_names):
 
-        from openforcefield.typing.chemistry.environment import SMIRKSParsingError
-
         for name_to_change in variable_names:
             invalid_kwargs = valid_kwargs.copy()
             invalid_kwargs[

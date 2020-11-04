@@ -3874,13 +3874,7 @@ class TestForceFieldParameterAssignment:
   </Constraints>
 </SMIRNOFF>
 """
-        from simtk.openmm import app
-
-        from openforcefield.tests.utils import (
-            compare_system_energies,
-            evaluate_molecules_off,
-            get_context_potential_energy,
-        )
+        from openforcefield.tests.utils import evaluate_molecules_off
 
         off_ff = ForceField("test_forcefields/test_forcefield.offxml", tip5p_offxml)
 

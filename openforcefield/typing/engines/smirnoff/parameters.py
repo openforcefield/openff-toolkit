@@ -60,8 +60,9 @@ from simtk import openmm, unit
 from openforcefield.topology import ImproperDict, SortedDict, Topology, ValenceDict
 from openforcefield.topology.molecule import Molecule
 from openforcefield.typing.chemistry import ChemicalEnvironment
-from openforcefield.utils import (
-    GLOBAL_TOOLKIT_REGISTRY,
+from openforcefield.utils.collections import ValidatedDict, ValidatedList
+from openforcefield.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
+from openforcefield.utils.utils import (
     IncompatibleUnitError,
     MessageException,
     all_subclasses,
@@ -69,7 +70,6 @@ from openforcefield.utils import (
     extract_serialized_units_from_dict,
     object_to_quantity,
 )
-from openforcefield.utils.collections import ValidatedDict, ValidatedList
 
 # =============================================================================================
 # CONFIGURE LOGGER
@@ -3773,11 +3773,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
         return False
 
     def create_force(self, system, topology, **kwargs):
-        from openforcefield.topology import (
-            FrozenMolecule,
-            TopologyAtom,
-            TopologyVirtualSite,
-        )
+        from openforcefield.topology import TopologyAtom, TopologyVirtualSite
 
         force = super().create_force(system, topology, **kwargs)
 
@@ -4006,8 +4002,6 @@ class LibraryChargeHandler(_NonbondedHandler):
         return self._find_matches(entity, transformed_dict_cls=dict)
 
     def create_force(self, system, topology, **kwargs):
-        from openforcefield.topology import FrozenMolecule
-
         force = super().create_force(system, topology, **kwargs)
 
         # Iterate over all defined library charge parameters, allowing later matches to override earlier ones.
@@ -4103,11 +4097,7 @@ class ToolkitAM1BCCHandler(_NonbondedHandler):
     def create_force(self, system, topology, **kwargs):
         import warnings
 
-        from openforcefield.topology import (
-            FrozenMolecule,
-            TopologyAtom,
-            TopologyVirtualSite,
-        )
+        from openforcefield.topology import TopologyAtom, TopologyVirtualSite
         from openforcefield.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
 
         force = super().create_force(system, topology, **kwargs)
@@ -4296,11 +4286,7 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
     def create_force(self, system, topology, **kwargs):
         import warnings
 
-        from openforcefield.topology import (
-            FrozenMolecule,
-            TopologyAtom,
-            TopologyVirtualSite,
-        )
+        from openforcefield.topology import TopologyAtom, TopologyVirtualSite
 
         # We only want one instance of this force type
         existing = [system.getForce(i) for i in range(system.getNumForces())]

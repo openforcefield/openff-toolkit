@@ -34,25 +34,19 @@ Molecular chemical entity representation and routines to interface with cheminfo
 # =============================================================================================
 
 import operator
-import uuid
 import warnings
-from collections import Counter, OrderedDict
+from collections import OrderedDict
 from copy import deepcopy
-from io import StringIO
 
 import networkx as nx
 import numpy as np
-from networkx.algorithms.isomorphism import GraphMatcher
 from simtk import unit
 from simtk.openmm.app import Element, element
 
 import openforcefield
 from openforcefield.utils import (
     MessageException,
-    check_units_are_compatible,
-    deserialize_numpy,
     quantity_to_string,
-    serialize_numpy,
     string_to_quantity,
 )
 from openforcefield.utils.serialization import Serializable
@@ -286,6 +280,8 @@ class Atom(Particle):
 
     @formal_charge.setter
     def formal_charge(self, other):
+        from openforcefield.utils.utils import check_units_are_compatible
+
         """
         Set the atom's formal charge. Accepts either ints or simtk.unit.Quantity-wrapped ints with units of charge.
         """
@@ -1975,6 +1971,8 @@ class FrozenMolecule(Serializable):
             A dictionary representation of the molecule.
 
         """
+        from openforcefield.utils.utils import serialize_numpy
+
         molecule_dict = OrderedDict()
         molecule_dict["name"] = self._name
         ## From Jeff: If we go the properties-as-dict route, then _properties should, at
@@ -2060,6 +2058,7 @@ class FrozenMolecule(Serializable):
             A dictionary representation of the molecule.
         """
         # TODO: Provide useful exception messages if there are any failures
+        from openforcefield.utils.utils import deserialize_numpy
 
         self._initialize()
         self.name = molecule_dict["name"]
@@ -2630,6 +2629,8 @@ class FrozenMolecule(Serializable):
 
         mol1_netx = to_networkx(mol1)
         mol2_netx = to_networkx(mol2)
+        from networkx.algorithms.isomorphism import GraphMatcher
+
         GM = GraphMatcher(
             mol1_netx, mol2_netx, node_match=node_match_func, edge_match=edge_match_func
         )
@@ -3678,6 +3679,8 @@ class FrozenMolecule(Serializable):
         NotImplementedError : if the molecule is not of one of the specified types.
         """
 
+        import networkx as nx
+
         from openforcefield.topology import TopologyMolecule
 
         # check for networkx then assuming we have a Molecule or TopologyMolecule instance just try and
@@ -3705,6 +3708,8 @@ class FrozenMolecule(Serializable):
         # https://en.wikipedia.org/wiki/Chemical_formula#Hill_system
 
         # create the counter dictionary using chemical symbols
+        from collections import Counter
+
         atom_symbol_counts = Counter(
             Element.getByAtomicNumber(atom_num).symbol for atom_num in atom_nums
         )
