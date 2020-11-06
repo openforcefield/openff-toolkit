@@ -2567,6 +2567,8 @@ class ParameterHandler(_ParameterAttributeHandler):
                 raise ParameterLookupError(
                     f"Parameter handler with SMIRKS {val} not found."
                 )
+        elif isinstance(val, int):
+            return self.parameters[val]
         elif isinstance(val, ParameterType) or issubclass(val, ParameterType):
             raise ParameterLookupError("Lookup by instance is not supported")
 
