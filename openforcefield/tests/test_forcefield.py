@@ -1675,8 +1675,13 @@ class TestForceField:
         """Test both ForceField and ParameterHandler __getitem__ methods"""
         forcefield = ForceField("test_forcefields/test_forcefield.offxml")
         smirks = "[#6X4:1]-[#6X3:2]=[#8X1+0]"
+
         param = forcefield["Bonds"][smirks]
         assert param.smirks == smirks
+
+        # Look up the same param by its index in the ParameterList
+        param_idx = 2
+        assert param == forcefield["Bonds"][param_idx]
 
         with pytest.raises(
             ParameterLookupError,

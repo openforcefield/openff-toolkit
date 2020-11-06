@@ -2559,7 +2559,7 @@ class ParameterHandler(_ParameterAttributeHandler):
             params = self.get_parameter({"smirks": val})
             if len(params) == 1:
                 return params[0]
-            elif len(params) > 1:  # Can this ever be hit?
+            elif len(params) > 1:
                 raise ParameterLookupError(
                     "Found multiple parameters with matching SMIRKS: " f"{params}"
                 )
