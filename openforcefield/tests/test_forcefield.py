@@ -779,16 +779,16 @@ if RDKitToolkitWrapper.is_available() and AmberToolsToolkitWrapper.is_available(
 class TestForceField:
     """Test the ForceField class"""
 
-    def test_get_available_force_fields_loadable(self, full_path, force_field_file):
+    def test_get_available_force_fields(self):
         """Ensure get_available_force_fields returns some expected data"""
-        available_force_fields = get_available_force_fields(full_path=False)
+        available_force_fields = get_available_force_fields(full_paths=False)
 
         # Incomplete list of some expected force fields
         expected_force_fields = [
             "smirnoff99Frosst-1.0.0.offxml",
             "smirnoff99Frosst-1.1.0.offxml",
             "openff-1.0.0.offxml",
-            "openff_unconstrainted-1.0.0.offxml",
+            "openff_unconstrained-1.0.0.offxml",
             "openff-1.1.0.offxml",
             "openff-1.2.0.offxml",
         ]
@@ -3899,13 +3899,7 @@ class TestForceFieldParameterAssignment:
   </Constraints>
 </SMIRNOFF>
 """
-        from simtk.openmm import app
-
-        from openforcefield.tests.utils import (
-            compare_system_energies,
-            evaluate_molecules_off,
-            get_context_potential_energy,
-        )
+        from openforcefield.tests.utils import evaluate_molecules_off
 
         off_ff = ForceField("test_forcefields/test_forcefield.offxml", tip5p_offxml)
 

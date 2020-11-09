@@ -14,10 +14,12 @@ Test classes and function in module openforcefield.typing.engines.smirnoff.param
 # GLOBAL IMPORTS
 # ======================================================================
 
+import numpy
 import pytest
 from numpy.testing import assert_almost_equal
 from simtk import unit
 
+from openforcefield.topology import Molecule
 from openforcefield.typing.engines.smirnoff import SMIRNOFFVersionError
 from openforcefield.typing.engines.smirnoff.parameters import (
     BondHandler,
@@ -39,6 +41,7 @@ from openforcefield.typing.engines.smirnoff.parameters import (
     VirtualSiteHandler,
     _linear_inter_or_extrapolate,
     _ParameterAttributeHandler,
+    vdWHandler,
 )
 from openforcefield.utils import IncompatibleUnitError, detach_units
 from openforcefield.utils.collections import ValidatedList
@@ -1701,14 +1704,36 @@ class TestProperTorsionHandler:
         )
 
 
+class TestvdWHandler:
+    def test_create_force_defaults(self):
+        """Test that create_force works on a vdWHandler with all default values"""
+        from simtk import openmm
+
+        # Create a dummy topology containing only argon and give it a set of
+        # box vectors.
+        topology = Molecule.from_smiles("[Ar]").to_topology()
+        topology.box_vectors = unit.Quantity(numpy.eye(3) * 20 * unit.angstrom)
+
+        # create a VdW handler with only parameters for argon.
+        vdw_handler = vdWHandler(version=0.3)
+        vdw_handler.add_parameter(
+            {
+                "smirks": "[#18:1]",
+                "epsilon": 1.0 * unit.kilojoules_per_mole,
+                "sigma": 1.0 * unit.angstrom,
+            }
+        )
+
+        omm_sys = openmm.System()
+        vdw_handler.create_force(omm_sys, topology)
+
+
 class TestVirtualSiteHandler:
     """
     Test the creation of a VirtualSiteHandler and the implemented VirtualSiteTypes
     """
 
     def _test_variable_names(self, valid_kwargs, variable_names):
-
-        from openforcefield.typing.chemistry.environment import SMIRKSParsingError
 
         for name_to_change in variable_names:
             invalid_kwargs = valid_kwargs.copy()

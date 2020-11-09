@@ -61,8 +61,9 @@ from simtk import openmm, unit
 from openforcefield.topology import ImproperDict, SortedDict, Topology, ValenceDict
 from openforcefield.topology.molecule import Molecule
 from openforcefield.typing.chemistry import ChemicalEnvironment
-from openforcefield.utils import (
-    GLOBAL_TOOLKIT_REGISTRY,
+from openforcefield.utils.collections import ValidatedDict, ValidatedList
+from openforcefield.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
+from openforcefield.utils.utils import (
     IncompatibleUnitError,
     MessageException,
     all_subclasses,
@@ -70,7 +71,6 @@ from openforcefield.utils import (
     extract_serialized_units_from_dict,
     object_to_quantity,
 )
-from openforcefield.utils.collections import ValidatedDict, ValidatedList
 
 # =============================================================================================
 # CONFIGURE LOGGER
@@ -3521,7 +3521,7 @@ class vdWHandler(_NonbondedHandler):
         if new_scale12 != 0.0:
             raise SMIRNOFFSpecError(
                 "Current OFF toolkit is unable to handle scale12 values other than 0.0. "
-                "Specified 1-2 scaling was {}".format(self._scale12)
+                "Specified 1-2 scaling was {}".format(self.scale12)
             )
         return new_scale12
 
@@ -3530,7 +3530,7 @@ class vdWHandler(_NonbondedHandler):
         if new_scale13 != 0.0:
             raise SMIRNOFFSpecError(
                 "Current OFF toolkit is unable to handle scale13 values other than 0.0. "
-                "Specified 1-3 scaling was {}".format(self._scale13)
+                "Specified 1-3 scaling was {}".format(self.scale13)
             )
         return new_scale13
 
@@ -3539,7 +3539,7 @@ class vdWHandler(_NonbondedHandler):
         if new_scale15 != 1.0:
             raise SMIRNOFFSpecError(
                 "Current OFF toolkit is unable to handle scale15 values other than 1.0. "
-                "Specified 1-5 scaling was {}".format(self._scale15)
+                "Specified 1-5 scaling was {}".format(self.scale15)
             )
         return new_scale15
 
@@ -3575,7 +3575,7 @@ class vdWHandler(_NonbondedHandler):
         force = super().create_force(system, topology, **kwargs)
 
         # If we're using PME, then the only possible openMM Nonbonded type is LJPME
-        if self._method == "PME":
+        if self.method == "PME":
             # If we're given a nonperiodic box, we always set NoCutoff. Later we'll add support for CutoffNonPeriodic
             if topology.box_vectors is None:
                 force.setNonbondedMethod(openmm.NonbondedForce.NoCutoff)
@@ -3588,14 +3588,14 @@ class vdWHandler(_NonbondedHandler):
                 force.setEwaldErrorTolerance(1.0e-4)
 
         # If method is cutoff, then we currently support openMM's PME for periodic system and NoCutoff for nonperiodic
-        elif self._method == "cutoff":
+        elif self.method == "cutoff":
             # If we're given a nonperiodic box, we always set NoCutoff. Later we'll add support for CutoffNonPeriodic
             if topology.box_vectors is None:
                 force.setNonbondedMethod(openmm.NonbondedForce.NoCutoff)
             else:
                 force.setNonbondedMethod(openmm.NonbondedForce.PME)
                 force.setUseDispersionCorrection(True)
-                force.setCutoffDistance(self._cutoff)
+                force.setCutoffDistance(self.cutoff)
 
         # Iterate over all defined Lennard-Jones types, allowing later matches to override earlier ones.
         atom_matches = self.find_matches(topology)
@@ -3649,7 +3649,7 @@ class vdWHandler(_NonbondedHandler):
 
                 # TODO: Don't mess with electrostatic scaling here. Have a separate electrostatics handler.
                 force.createExceptionsFromBonds(
-                    bond_particle_indices, 0.83333, self._scale14
+                    bond_particle_indices, 0.83333, self.scale14
                 )
                 # force.createExceptionsFromBonds(bond_particle_indices, self.coulomb14scale, self._scale14)
 
@@ -3680,7 +3680,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
         if new_scale12 != 0.0:
             raise SMIRNOFFSpecError(
                 "Current OFF toolkit is unable to handle scale12 values other than 0.0. "
-                "Specified 1-2 scaling was {}".format(self._scale12)
+                "Specified 1-2 scaling was {}".format(self.scale12)
             )
         return new_scale12
 
@@ -3689,7 +3689,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
         if new_scale13 != 0.0:
             raise SMIRNOFFSpecError(
                 "Current OFF toolkit is unable to handle scale13 values other than 0.0. "
-                "Specified 1-3 scaling was {}".format(self._scale13)
+                "Specified 1-3 scaling was {}".format(self.scale13)
             )
         return new_scale13
 
@@ -3698,13 +3698,13 @@ class ElectrostaticsHandler(_NonbondedHandler):
         if new_scale15 != 1.0:
             raise SMIRNOFFSpecError(
                 "Current OFF toolkit is unable to handle scale15 values other than 1.0. "
-                "Specified 1-5 scaling was {}".format(self._scale15)
+                "Specified 1-5 scaling was {}".format(self.scale15)
             )
         return new_scale15
 
     @switch_width.converter
     def switch_width(self, attr, new_switch_width):
-        if self._switch_width != 0.0 * unit.angstrom:
+        if self.switch_width != 0.0 * unit.angstrom:
             raise IncompatibleParameterError(
                 "The current implementation of the Open Force Field toolkit can not "
                 "support an electrostatic switching width. Currently only `0.0 angstroms` "
@@ -3788,11 +3788,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
         return False
 
     def create_force(self, system, topology, **kwargs):
-        from openforcefield.topology import (
-            FrozenMolecule,
-            TopologyAtom,
-            TopologyVirtualSite,
-        )
+        from openforcefield.topology import TopologyAtom, TopologyVirtualSite
 
         force = super().create_force(system, topology, **kwargs)
 
@@ -3858,16 +3854,16 @@ class ElectrostaticsHandler(_NonbondedHandler):
         # First, check whether the vdWHandler set the nonbonded method to LJPME, because that means
         # that electrostatics also has to be PME
         if (current_nb_method == openmm.NonbondedForce.LJPME) and (
-            self._method != "PME"
+            self.method != "PME"
         ):
             raise IncompatibleParameterError(
                 "In current Open Force Field toolkit implementation, if vdW "
                 "treatment is set to LJPME, electrostatics must also be PME "
-                "(electrostatics treatment currently set to {}".format(self._method)
+                "(electrostatics treatment currently set to {}".format(self.method)
             )
 
         # Then, set nonbonded methods based on method keyword
-        if self._method == "PME":
+        if self.method == "PME":
             # Check whether the topology is nonperiodic, in which case we always switch to NoCutoff
             # (vdWHandler will have already set this to NoCutoff)
             # TODO: This is an assumption right now, and a bad one. See issue #219
@@ -3889,7 +3885,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
             settings_matched = True
 
         # If vdWHandler set the nonbonded method to NoCutoff, then we don't need to change anything
-        elif self._method == "Coulomb":
+        elif self.method == "Coulomb":
             if topology.box_vectors is None:
                 # (vdWHandler will have already set this to NoCutoff)
                 assert current_nb_method == openmm.NonbondedForce.NoCutoff
@@ -3903,7 +3899,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
                 )
 
         # If the vdWHandler set the nonbonded method to PME, then ensure that it has the same cutoff
-        elif self._method == "reaction-field":
+        elif self.method == "reaction-field":
             if topology.box_vectors is None:
                 # (vdWHandler will have already set this to NoCutoff)
                 assert current_nb_method == openmm.NonbondedForce.NoCutoff
@@ -3922,7 +3918,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
                 "method ({}), and topology periodicity ({}) selections. Additional "
                 "options for nonbonded treatment may be added in future versions "
                 "of the Open Force Field toolkit.".format(
-                    self._method, topology.box_vectors is not None
+                    self.method, topology.box_vectors is not None
                 )
             )
 
@@ -4021,8 +4017,6 @@ class LibraryChargeHandler(_NonbondedHandler):
         return self._find_matches(entity, transformed_dict_cls=dict)
 
     def create_force(self, system, topology, **kwargs):
-        from openforcefield.topology import FrozenMolecule
-
         force = super().create_force(system, topology, **kwargs)
 
         # Iterate over all defined library charge parameters, allowing later matches to override earlier ones.
@@ -4118,11 +4112,7 @@ class ToolkitAM1BCCHandler(_NonbondedHandler):
     def create_force(self, system, topology, **kwargs):
         import warnings
 
-        from openforcefield.topology import (
-            FrozenMolecule,
-            TopologyAtom,
-            TopologyVirtualSite,
-        )
+        from openforcefield.topology import TopologyAtom, TopologyVirtualSite
         from openforcefield.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
 
         force = super().create_force(system, topology, **kwargs)
@@ -4311,11 +4301,7 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
     def create_force(self, system, topology, **kwargs):
         import warnings
 
-        from openforcefield.topology import (
-            FrozenMolecule,
-            TopologyAtom,
-            TopologyVirtualSite,
-        )
+        from openforcefield.topology import TopologyAtom, TopologyVirtualSite
 
         # We only want one instance of this force type
         existing = [system.getForce(i) for i in range(system.getNumForces())]
