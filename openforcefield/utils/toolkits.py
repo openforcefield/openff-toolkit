@@ -65,7 +65,7 @@ from functools import wraps
 import numpy as np
 from simtk import unit
 
-from openforcefield.utils import (
+from openforcefield.utils.utils import (
     MessageException,
     all_subclasses,
     inherit_docstrings,
@@ -1816,7 +1816,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         >>> iupac_name = toolkit.to_iupac(molecule)
 
         """
-        from openeye import oechem, oeiupac
+        from openeye import oeiupac
 
         oemol = self.to_openeye(molecule)
 

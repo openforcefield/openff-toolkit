@@ -720,8 +720,6 @@ class TestOpenEyeToolkitWrapper:
         """
         from io import StringIO
 
-        from openeye import oechem
-
         toolkit = OpenEyeToolkitWrapper()
         water = Molecule()
         water.add_atom(1, 0, False)

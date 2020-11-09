@@ -748,12 +748,10 @@ class TestTopology(TestCase):
         Checks whether writing pdb with unitless positions, Angstrom positions,
         nanometer positions, result in the same output
         """
-        import filecmp
         from tempfile import NamedTemporaryFile
 
         from simtk.unit import nanometer
 
-        from openforcefield.tests.test_forcefield import create_ethanol
         from openforcefield.topology import Molecule, Topology
 
         topology = Topology()
@@ -803,10 +801,8 @@ class TestTopology(TestCase):
         """
         Checks if fileformat specifier is indpendent of upper/lowercase
         """
-        import os
         from tempfile import NamedTemporaryFile
 
-        from openforcefield.tests.test_forcefield import create_ethanol
         from openforcefield.topology import Molecule, Topology
 
         topology = Topology()
@@ -830,7 +826,6 @@ class TestTopology(TestCase):
         """
         Checks for invalid file format
         """
-        from openforcefield.tests.test_forcefield import create_ethanol
         from openforcefield.topology import Molecule, Topology
 
         topology = Topology()
