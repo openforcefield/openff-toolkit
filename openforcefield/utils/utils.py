@@ -434,7 +434,6 @@ def check_units_are_compatible(object_name, object, unit_to_check, context=None)
     ------
     IncompatibleUnitError
     """
-    from simtk import unit
 
     # If context is not provided, explicitly make it a blank string
     if context is None:
@@ -585,7 +584,6 @@ def detach_units(unit_bearing_dict, output_units=None):
         A dictionary in which keys are keys of simtk.unit.Quantity values in unit_bearing_dict,
         but suffixed with "_unit". Values are simtk.unit.Unit .
     """
-    from simtk import unit
 
     if output_units is None:
         output_units = {}
@@ -651,8 +649,8 @@ def deserialize_numpy(serialized_np, shape):
 
     Parameters
     ----------
-    serialized_np : str
-        A serialized numpy array
+    serialized_np : bytes or list
+        A byte or list serialized representation of a numpy array
     shape : tuple of ints
         The shape of the serialized array
     Returns
@@ -663,9 +661,12 @@ def deserialize_numpy(serialized_np, shape):
 
     import numpy as np
 
-    dt = np.dtype("float")
-    dt.newbyteorder(">")  # set to big-endian
-    np_array = np.frombuffer(serialized_np, dtype=dt)
+    if isinstance(serialized_np, list):
+        np_array = np.array(serialized_np)
+    if isinstance(serialized_np, bytes):
+        dt = np.dtype("float")
+        dt.newbyteorder(">")  # set to big-endian
+        np_array = np.frombuffer(serialized_np, dtype=dt)
     np_array = np_array.reshape(shape)
     return np_array
 
@@ -1022,3 +1023,29 @@ def get_molecule_parameterIDs(molecules, forcefield):
                     parameters_by_ID[pid].add(smi)
 
     return parameters_by_molecule, parameters_by_ID
+
+
+def sort_smirnoff_dict(data):
+    """
+    Recursively sort the keys in a dict of SMIRNOFF data.
+
+    Adapted from https://stackoverflow.com/a/47882384/4248961
+
+    TODO: Should this live elsewhere?
+    """
+    sorted_dict = dict()
+    for key, val in sorted(data.items()):
+        if isinstance(val, dict):
+            # This should hit each ParameterHandler and dicts within them
+            sorted_dict[key] = sort_smirnoff_dict(val)
+        elif isinstance(val, list):
+            # Handle case of ParameterLists, which show up in
+            # the smirnoff dicts as lists of OrderedDicts
+            new_parameter_list = list()
+            for param in val:
+                new_parameter_list.append(sort_smirnoff_dict(param))
+            sorted_dict[key] = new_parameter_list
+        else:
+            # Handle metadata or the bottom of a recursive dict
+            sorted_dict[key] = val
+    return sorted_dict
