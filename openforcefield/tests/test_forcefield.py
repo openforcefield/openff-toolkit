@@ -1690,7 +1690,7 @@ class TestForceField:
             forcefield["Bonds"][param]
         with pytest.raises(
             ParameterLookupError,
-            match=r"Parameter handler with SMIRKS ",
+            match=r" not found in ParameterList",
         ):
             forcefield["vdW"][smirks]
 

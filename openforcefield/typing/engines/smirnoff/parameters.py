@@ -1549,7 +1549,7 @@ class ParameterList(list):
             for parameter in self:
                 if parameter.smirks == item:
                     return self.index(parameter)
-            raise IndexError(
+            raise ParameterLookupError(
                 "SMIRKS {item} not found in ParameterList".format(item=item)
             )
 
@@ -1596,8 +1596,10 @@ class ParameterList(list):
             index = item
         elif type(item) is slice:
             index = item
-        else:
+        elif isinstance(item, str):
             index = self.index(item)
+        elif isinstance(item, ParameterType) or issubclass(item, ParameterType):
+            raise ParameterLookupError("Lookup by instance is not supported")
         return super().__getitem__(index)
 
     # TODO: Override __setitem__ and __del__ to ensure we can slice by SMIRKS as well
@@ -2555,22 +2557,7 @@ class ParameterHandler(_ParameterAttributeHandler):
         Syntax sugar for lookikng up a ParameterType in a ParameterHandler
         based on its SMIRKS.
         """
-        if isinstance(val, str):
-            params = self.get_parameter({"smirks": val})
-            if len(params) == 1:
-                return params[0]
-            elif len(params) > 1:
-                raise ParameterLookupError(
-                    "Found multiple parameters with matching SMIRKS: " f"{params}"
-                )
-            else:
-                raise ParameterLookupError(
-                    f"Parameter handler with SMIRKS {val} not found."
-                )
-        elif isinstance(val, int):
-            return self.parameters[val]
-        elif isinstance(val, ParameterType) or issubclass(val, ParameterType):
-            raise ParameterLookupError("Lookup by instance is not supported")
+        return self.parameters[val]
 
 
 # =============================================================================================
