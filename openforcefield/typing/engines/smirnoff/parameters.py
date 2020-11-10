@@ -1530,8 +1530,8 @@ class ParameterList(list):
 
     def index(self, item):
         """
-        Get the numerical index of a ParameterType object or SMIRKS in this ParameterList. Raises ValueError
-        if the item is not found.
+        Get the numerical index of a ParameterType object or SMIRKS in this ParameterList.
+        Raises ParameterLookupError if the item is not found.
 
         Parameters
         ----------
@@ -1542,6 +1542,11 @@ class ParameterList(list):
         -------
         index : int
             The index of the found item
+
+        Raises
+        ------
+        ParameterLookupError if SMIRKS pattern is passed in but not found
+
         """
         if isinstance(item, ParameterType):
             return super().index(item)

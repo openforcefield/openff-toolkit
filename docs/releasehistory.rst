@@ -35,7 +35,17 @@ New features
   :py:meth:`ForceField.deregister_parameter_handler <openforcefield.typing.engines.smirnoff.forcefield.ForceField.deregister_parameter_handler>`.
 - `PR #730 <https://github.com/openforcefield/openforcefield/pull/730>`_: Adds
   :py:class:`Topology.is_periodic <openforcefield.topology.Topology>`.
+- `PR #753 <https://github.com/openforcefield/openforcefield/pull/753>`_: Adds
+  :py:meth:`ParameterHandler.__getitem__ <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler.__getitem__>`
+  to look up individual :py:class:`ParameterType <openforcefield.typing.engines.smirnoff.parameters.ParameterType>`
+  objects.
 
+Behavior changed
+""""""""""""""""
+- `PR #753 <https://github.com/openforcefield/openforcefield/pull/753>`_: ``ParameterLookupError``
+  is now raised when passing to
+  :py:meth:`ParameterList.index <openforcefield.typing.engines.smirnoff.parameters.ParameterList>`
+  a SMIRKS pattern not found in the parameter list.
 
 Bugfixes
 """"""""
