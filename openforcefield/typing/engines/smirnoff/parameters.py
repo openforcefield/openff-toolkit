@@ -3498,7 +3498,6 @@ class vdWHandler(_NonbondedHandler):
                 super().__setattr__("rmin_half", value * 2 ** (1 / 6))
                 self._extra_nb_var = "rmin_half"
 
-
         def to_dict(
             self,
             discard_cosmetic_attributes=False,

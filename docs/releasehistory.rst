@@ -22,7 +22,6 @@ API-breaking changes
   there are no special behaviors that are accessed in the case of partially-licensed OpenEye backends. The
   new behavior of this method is the same as if the default value above is always provided.
 
-
 New features
 """"""""""""
 - `PR #751 <https://github.com/openforcefield/openforcefield/pull/751>`_: Adds
@@ -36,12 +35,14 @@ New features
 - `PR #730 <https://github.com/openforcefield/openforcefield/pull/730>`_: Adds
   :py:class:`Topology.is_periodic <openforcefield.topology.Topology>`.
 
-
 Bugfixes
 """"""""
 - `PR #745 <https://github.com/openforcefield/openforcefield/pull/745>`_: Fixes bug when
   serializing molecule with conformers to JSON.
-
+- `PR #750 <https://github.com/openforcefield/openforcefield/pull/750>`_: Fixes a bug causing either
+  ``sigma`` or ``rmin_half`` to sometimes be missing on
+  :py:class:`vdWHandler.vdWType <openforcefield.typing.engines.smirnoff.parameters.vdWHandler>`
+  objects.
 
 
 0.8.0 - Virtual Sites
