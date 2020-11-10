@@ -3489,17 +3489,15 @@ class vdWHandler(_NonbondedHandler):
                 self._extra_nb_var = "sigma"
 
         def __setattr__(self, name, value):
+            super().__setattr__(key=name, value=value)
             if name == "rmin_half":
-                super().__setattr__(name, value)
                 super().__setattr__("sigma", value / 2 ** (1 / 6))
                 self._extra_nb_var = "sigma"
 
             if name == "sigma":
-                super().__setattr__(name, value)
                 super().__setattr__("rmin_half", value * 2 ** (1 / 6))
                 self._extra_nb_var = "rmin_half"
 
-            super().__setattr__(key=name, value=value)
 
         def to_dict(
             self,
