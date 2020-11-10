@@ -37,13 +37,13 @@ import os
 import pathlib
 from collections import OrderedDict
 
-from simtk import openmm, unit
+from simtk import openmm
 
 from openforcefield.topology.molecule import DEFAULT_AROMATICITY_MODEL
 from openforcefield.typing.engines.smirnoff.io import ParameterIOHandler
 from openforcefield.typing.engines.smirnoff.parameters import ParameterHandler
 from openforcefield.typing.engines.smirnoff.plugins import load_handler_plugins
-from openforcefield.utils import (
+from openforcefield.utils.utils import (
     MessageException,
     all_subclasses,
     convert_0_1_smirnoff_to_0_2,
@@ -955,8 +955,6 @@ class ForceField:
         allow_cosmetic_attributes : bool, optional. Default = False
             Whether to permit non-spec kwargs in smirnoff_data.
         """
-        from collections import defaultdict
-
         import packaging.version
 
         # Check that the SMIRNOFF version of this data structure is supported by this ForceField implementation

@@ -34,6 +34,10 @@ New features
   :py:meth:`ForceField.deregister_parameter_handler <openforcefield.typing.engines.smirnoff.forcefield.ForceField.deregister_parameter_handler>`.
 - `PR #730 <https://github.com/openforcefield/openforcefield/pull/730>`_: Adds
   :py:class:`Topology.is_periodic <openforcefield.topology.Topology>`.
+- `PR #753 <https://github.com/openforcefield/openforcefield/pull/753>`_: Adds
+  :py:meth:`ParameterHandler.__getitem__ <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler.__getitem__>`
+  to look up individual :py:class:`ParameterType <openforcefield.typing.engines.smirnoff.parameters.ParameterType>`
+  objects.
 
 Bugfixes
 """"""""
@@ -43,6 +47,16 @@ Bugfixes
   ``sigma`` or ``rmin_half`` to sometimes be missing on
   :py:class:`vdWHandler.vdWType <openforcefield.typing.engines.smirnoff.parameters.vdWHandler>`
   objects.
+- `PR #756 <https://github.com/openforcefield/openforcefield/pull/756>`_: Fixes bug when running
+  :py:meth:`vdWHandler.create_force <openforcefield.typing.engines.smirnoff.parameters.vdWHandler.create_force>`
+  using a ``vdWHandler`` that was initialized using the API.
+
+Behavior changed
+""""""""""""""""
+- `PR #753 <https://github.com/openforcefield/openforcefield/pull/753>`_: ``ParameterLookupError``
+  is now raised when passing to
+  :py:meth:`ParameterList.index <openforcefield.typing.engines.smirnoff.parameters.ParameterList>`
+  a SMIRKS pattern not found in the parameter list.
 
 
 0.8.0 - Virtual Sites

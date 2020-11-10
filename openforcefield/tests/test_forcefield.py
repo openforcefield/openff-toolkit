@@ -36,6 +36,7 @@ from openforcefield.typing.engines.smirnoff import (
     FractionalBondOrderInterpolationMethodUnsupportedError,
     IncompatibleParameterError,
     ParameterHandler,
+    ParameterLookupError,
     SMIRNOFFAromaticityError,
     SMIRNOFFSpecError,
     ToolkitAM1BCCHandler,
@@ -778,16 +779,16 @@ if RDKitToolkitWrapper.is_available() and AmberToolsToolkitWrapper.is_available(
 class TestForceField:
     """Test the ForceField class"""
 
-    def test_get_available_force_fields_loadable(self, full_path, force_field_file):
+    def test_get_available_force_fields(self):
         """Ensure get_available_force_fields returns some expected data"""
-        available_force_fields = get_available_force_fields(full_path=False)
+        available_force_fields = get_available_force_fields(full_paths=False)
 
         # Incomplete list of some expected force fields
         expected_force_fields = [
             "smirnoff99Frosst-1.0.0.offxml",
             "smirnoff99Frosst-1.1.0.offxml",
             "openff-1.0.0.offxml",
-            "openff_unconstrainted-1.0.0.offxml",
+            "openff_unconstrained-1.0.0.offxml",
             "openff-1.1.0.offxml",
             "openff-1.2.0.offxml",
         ]
@@ -1652,7 +1653,7 @@ class TestForceField:
 
     @pytest.mark.parametrize("unregistered_handler", ["LibraryCharges", "foobar"])
     def test_unregistered_parameter_handler_lookup(self, unregistered_handler):
-        """Ensure __getitem__ lookups do not register new handlers"""
+        """Ensure ForceField.__getitem__ lookups do not register new handlers"""
         forcefield = ForceField("test_forcefields/test_forcefield.offxml")
 
         assert unregistered_handler not in forcefield._parameter_handlers
@@ -1661,13 +1662,37 @@ class TestForceField:
         assert unregistered_handler not in forcefield._parameter_handlers
 
     def test_lookup_parameter_handler_object(self):
-        """Ensure __getitem__ raises NotImplemented when passed a ParameterHandler object"""
+        """Ensure ForceField.__getitem__ raises NotImplemented when passed a ParameterHandler object"""
         forcefield = ForceField("test_forcefields/test_forcefield.offxml")
+
         bonds = forcefield["Bonds"]
         with pytest.raises(NotImplementedError):
             forcefield[bonds]
         with pytest.raises(NotImplementedError):
             forcefield[type(bonds)]
+
+    def test_lookup_parameter_type(self):
+        """Test both ForceField and ParameterHandler __getitem__ methods"""
+        forcefield = ForceField("test_forcefields/test_forcefield.offxml")
+        smirks = "[#6X4:1]-[#6X3:2]=[#8X1+0]"
+
+        param = forcefield["Bonds"][smirks]
+        assert param.smirks == smirks
+
+        # Look up the same param by its index in the ParameterList
+        param_idx = 2
+        assert param == forcefield["Bonds"][param_idx]
+
+        with pytest.raises(
+            ParameterLookupError,
+            match="Lookup by instance is not supported",
+        ):
+            forcefield["Bonds"][param]
+        with pytest.raises(
+            ParameterLookupError,
+            match=r" not found in ParameterList",
+        ):
+            forcefield["vdW"][smirks]
 
     @pytest.mark.parametrize(
         "to_deregister",
@@ -3874,13 +3899,7 @@ class TestForceFieldParameterAssignment:
   </Constraints>
 </SMIRNOFF>
 """
-        from simtk.openmm import app
-
-        from openforcefield.tests.utils import (
-            compare_system_energies,
-            evaluate_molecules_off,
-            get_context_potential_energy,
-        )
+        from openforcefield.tests.utils import evaluate_molecules_off
 
         off_ff = ForceField("test_forcefields/test_forcefield.offxml", tip5p_offxml)
 

@@ -2243,8 +2243,6 @@ class Topology(Serializable):
         topology : openforcefield.Topology
             An openforcefield Topology object
         """
-        import parmed
-
         # TODO: Implement functionality
         raise NotImplementedError
 
@@ -2260,8 +2258,6 @@ class Topology(Serializable):
         parmed_structure : parmed.Structure
             A ParmEd Structure objecft
         """
-        import parmed
-
         # TODO: Implement functionality
         raise NotImplementedError
 

@@ -434,7 +434,6 @@ def check_units_are_compatible(object_name, object, unit_to_check, context=None)
     ------
     IncompatibleUnitError
     """
-    from simtk import unit
 
     # If context is not provided, explicitly make it a blank string
     if context is None:
@@ -585,7 +584,6 @@ def detach_units(unit_bearing_dict, output_units=None):
         A dictionary in which keys are keys of simtk.unit.Quantity values in unit_bearing_dict,
         but suffixed with "_unit". Values are simtk.unit.Unit .
     """
-    from simtk import unit
 
     if output_units is None:
         output_units = {}
