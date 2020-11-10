@@ -1728,6 +1728,41 @@ class TestvdWHandler:
         vdw_handler.create_force(omm_sys, topology)
 
 
+class TestvdWType:
+    """
+    Test the behavior of vdWType
+    """
+
+    def test_sigma_rmin_half(self):
+        """Test the setter/getter behavior or sigma and rmin_half"""
+        from openforcefield.typing.engines.smirnoff.parameters import vdWHandler
+
+        data = {
+            "smirks": "[*:1]",
+            "sigma": 0.5 * unit.angstrom,
+            "epsilon": 0.5 * unit.kilocalorie_per_mole,
+        }
+        param = vdWHandler.vdWType(**data)
+
+        assert param.sigma is not None
+        assert param.rmin_half is not None
+        assert param.sigma == param.rmin_half / 2 ** (1 / 6)
+        assert "sigma" in param.to_dict()
+        assert "rmin_half" not in param.to_dict()
+
+        param.sigma = 0.8 * unit.angstrom
+
+        assert param.sigma == param.rmin_half / 2 ** (1 / 6)
+        assert "sigma" in param.to_dict()
+        assert "rmin_half" not in param.to_dict()
+
+        param.rmin_half = 0.8 * unit.angstrom
+
+        assert param.sigma == param.rmin_half / 2 ** (1 / 6)
+        assert "sigma" not in param.to_dict()
+        assert "rmin_half" in param.to_dict()
+
+
 class TestVirtualSiteHandler:
     """
     Test the creation of a VirtualSiteHandler and the implemented VirtualSiteTypes

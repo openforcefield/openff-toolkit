@@ -22,7 +22,6 @@ API-breaking changes
   there are no special behaviors that are accessed in the case of partially-licensed OpenEye backends. The
   new behavior of this method is the same as if the default value above is always provided.
 
-
 New features
 """"""""""""
 - `PR #751 <https://github.com/openforcefield/openforcefield/pull/751>`_: Adds
@@ -40,21 +39,24 @@ New features
   to look up individual :py:class:`ParameterType <openforcefield.typing.engines.smirnoff.parameters.ParameterType>`
   objects.
 
+Bugfixes
+""""""""
+- `PR #745 <https://github.com/openforcefield/openforcefield/pull/745>`_: Fixes bug when
+  serializing molecule with conformers to JSON.
+- `PR #750 <https://github.com/openforcefield/openforcefield/pull/750>`_: Fixes a bug causing either
+  ``sigma`` or ``rmin_half`` to sometimes be missing on
+  :py:class:`vdWHandler.vdWType <openforcefield.typing.engines.smirnoff.parameters.vdWHandler>`
+  objects.
+- `PR #756 <https://github.com/openforcefield/openforcefield/pull/756>`_: Fixes bug when running
+  :py:meth:`vdWHandler.create_force <openforcefield.typing.engines.smirnoff.parameters.vdWHandler.create_force>`
+  using a ``vdWHandler`` that was initialized using the API.
+
 Behavior changed
 """"""""""""""""
 - `PR #753 <https://github.com/openforcefield/openforcefield/pull/753>`_: ``ParameterLookupError``
   is now raised when passing to
   :py:meth:`ParameterList.index <openforcefield.typing.engines.smirnoff.parameters.ParameterList>`
   a SMIRKS pattern not found in the parameter list.
-
-Bugfixes
-""""""""
-- `PR #745 <https://github.com/openforcefield/openforcefield/pull/745>`_: Fixes bug when
-  serializing molecule with conformers to JSON.
-- `PR #756 <https://github.com/openforcefield/openforcefield/pull/756>`_: Fixes bug when running
-  :py:meth:`vdWHandler.create_force <openforcefield.typing.engines.smirnoff.parameters.vdWHandler.create_force>`
-  using a ``vdWHandler`` that was initialized using the API.
-
 
 
 0.8.0 - Virtual Sites
