@@ -36,6 +36,7 @@ from openforcefield.typing.engines.smirnoff import (
     FractionalBondOrderInterpolationMethodUnsupportedError,
     IncompatibleParameterError,
     ParameterHandler,
+    ParameterLookupError,
     SMIRNOFFAromaticityError,
     SMIRNOFFSpecError,
     ToolkitAM1BCCHandler,
@@ -1652,7 +1653,7 @@ class TestForceField:
 
     @pytest.mark.parametrize("unregistered_handler", ["LibraryCharges", "foobar"])
     def test_unregistered_parameter_handler_lookup(self, unregistered_handler):
-        """Ensure __getitem__ lookups do not register new handlers"""
+        """Ensure ForceField.__getitem__ lookups do not register new handlers"""
         forcefield = ForceField("test_forcefields/test_forcefield.offxml")
 
         assert unregistered_handler not in forcefield._parameter_handlers
@@ -1661,13 +1662,37 @@ class TestForceField:
         assert unregistered_handler not in forcefield._parameter_handlers
 
     def test_lookup_parameter_handler_object(self):
-        """Ensure __getitem__ raises NotImplemented when passed a ParameterHandler object"""
+        """Ensure ForceField.__getitem__ raises NotImplemented when passed a ParameterHandler object"""
         forcefield = ForceField("test_forcefields/test_forcefield.offxml")
+
         bonds = forcefield["Bonds"]
         with pytest.raises(NotImplementedError):
             forcefield[bonds]
         with pytest.raises(NotImplementedError):
             forcefield[type(bonds)]
+
+    def test_lookup_parameter_type(self):
+        """Test both ForceField and ParameterHandler __getitem__ methods"""
+        forcefield = ForceField("test_forcefields/test_forcefield.offxml")
+        smirks = "[#6X4:1]-[#6X3:2]=[#8X1+0]"
+
+        param = forcefield["Bonds"][smirks]
+        assert param.smirks == smirks
+
+        # Look up the same param by its index in the ParameterList
+        param_idx = 2
+        assert param == forcefield["Bonds"][param_idx]
+
+        with pytest.raises(
+            ParameterLookupError,
+            match="Lookup by instance is not supported",
+        ):
+            forcefield["Bonds"][param]
+        with pytest.raises(
+            ParameterLookupError,
+            match=r" not found in ParameterList",
+        ):
+            forcefield["vdW"][smirks]
 
     @pytest.mark.parametrize(
         "to_deregister",

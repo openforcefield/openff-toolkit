@@ -34,6 +34,7 @@ from openforcefield.typing.engines.smirnoff.parameters import (
     ParameterAttribute,
     ParameterHandler,
     ParameterList,
+    ParameterLookupError,
     ParameterType,
     ProperTorsionHandler,
     SMIRNOFFSpecError,
@@ -820,8 +821,8 @@ class TestParameterList:
         assert parameters.index("[#1:1]") == 1
         assert parameters.index("[#7:1]") == 2
         with pytest.raises(
-            IndexError, match=r"SMIRKS \[#2:1\] not found in ParameterList"
-        ) as excinfo:
+            ParameterLookupError, match=r"SMIRKS \[#2:1\] not found in ParameterList"
+        ):
             parameters.index("[#2:1]")
 
         p4 = ParameterType(smirks="[#2:1]")
@@ -853,7 +854,8 @@ class TestParameterList:
         with pytest.raises(IndexError, match="list assignment index out of range"):
             del parameters[4]
         with pytest.raises(
-            IndexError, match=r"SMIRKS \[#6:1\] not found in ParameterList"
+            ParameterLookupError,
+            match=r"SMIRKS \[#6:1\] not found in ParameterList",
         ):
             del parameters["[#6:1]"]
 

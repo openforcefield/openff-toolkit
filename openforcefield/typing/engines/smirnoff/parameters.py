@@ -21,6 +21,7 @@ __all__ = [
     "UnassignedBondParameterException",
     "UnassignedAngleParameterException",
     "DuplicateVirtualSiteTypeException",
+    "ParameterLookupError",
     "NonbondedMethod",
     "ParameterList",
     "ParameterType",
@@ -151,6 +152,11 @@ class NonintegralMoleculeChargeException(Exception):
 
 class DuplicateParameterError(MessageException):
     """Exception raised when trying to add a ParameterType that already exists"""
+
+
+class ParameterLookupError(MessageException):
+    """Exception raised when something goes wrong in a parameter lookup in
+    ParameterHandler.__getitem__"""
 
 
 class DuplicateVirtualSiteTypeException(Exception):
@@ -1524,8 +1530,8 @@ class ParameterList(list):
 
     def index(self, item):
         """
-        Get the numerical index of a ParameterType object or SMIRKS in this ParameterList. Raises ValueError
-        if the item is not found.
+        Get the numerical index of a ParameterType object or SMIRKS in this ParameterList.
+        Raises ParameterLookupError if the item is not found.
 
         Parameters
         ----------
@@ -1536,6 +1542,11 @@ class ParameterList(list):
         -------
         index : int
             The index of the found item
+
+        Raises
+        ------
+        ParameterLookupError if SMIRKS pattern is passed in but not found
+
         """
         if isinstance(item, ParameterType):
             return super().index(item)
@@ -1543,7 +1554,7 @@ class ParameterList(list):
             for parameter in self:
                 if parameter.smirks == item:
                     return self.index(parameter)
-            raise IndexError(
+            raise ParameterLookupError(
                 "SMIRKS {item} not found in ParameterList".format(item=item)
             )
 
@@ -1590,8 +1601,10 @@ class ParameterList(list):
             index = item
         elif type(item) is slice:
             index = item
-        else:
+        elif isinstance(item, str):
             index = self.index(item)
+        elif isinstance(item, ParameterType) or issubclass(item, ParameterType):
+            raise ParameterLookupError("Lookup by instance is not supported")
         return super().__getitem__(index)
 
     # TODO: Override __setitem__ and __del__ to ensure we can slice by SMIRKS as well
@@ -2543,6 +2556,13 @@ class ParameterHandler(_ParameterAttributeHandler):
                 # not necessary, but explicit
                 else:
                     continue
+
+    def __getitem__(self, val):
+        """
+        Syntax sugar for lookikng up a ParameterType in a ParameterHandler
+        based on its SMIRKS.
+        """
+        return self.parameters[val]
 
 
 # =============================================================================================
