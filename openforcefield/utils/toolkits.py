@@ -2669,7 +2669,9 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         # Make another molecule from the PDB, allow stero errors here they are expected
         pdbmol = self.from_rdkit(
-            Chem.MolFromPDBFile(file_path, removeHs=False), allow_undefined_stereo=True
+            Chem.MolFromPDBFile(file_path, removeHs=False),
+            allow_undefined_stereo=True,
+            hydrogens_are_explicit=True,
         )
 
         # check isomorphic and get the mapping if true the mapping will be
