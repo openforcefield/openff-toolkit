@@ -194,20 +194,6 @@ rdkit_inchi_stereochemistry_lost = [
     "DrugBank_2519",
 ]
 
-rdkit_inchi_isomorphic_fails = [
-    "DrugBank_178",
-    "DrugBank_246",
-    "DrugBank_5847",
-    "DrugBank_700",
-    "DrugBank_1564",
-    "DrugBank_1700",
-    "DrugBank_4662",
-    "DrugBank_2052",
-    "DrugBank_2077",
-    "DrugBank_2082",
-    "DrugBank_2210",
-    "DrugBank_2642",
-]
 rdkit_inchi_roundtrip_mangled = ["DrugBank_2684"]
 
 openeye_iupac_bad_stereo = [
@@ -1734,17 +1720,9 @@ class TestRDKitToolkitWrapper:
 
             # compare the full molecule excluding the properties dictionary
             # turn of the bond order matching as this could move in the aromatic rings
-            if molecule.name in rdkit_inchi_isomorphic_fails:
-                # Some molecules graphs change during the round trip testing
-                # we test quite strict isomorphism here
-                with pytest.raises(AssertionError):
-                    assert molecule.is_isomorphic_with(
-                        mol2, bond_order_matching=False, toolkit_registry=toolkit
-                    )
-            else:
-                assert molecule.is_isomorphic_with(
-                    mol2, bond_order_matching=False, toolkit_registry=toolkit
-                )
+            assert molecule.is_isomorphic_with(
+                mol2, bond_order_matching=False, toolkit_registry=toolkit
+            )
 
     def test_smiles_charged(self):
         """Test RDKitWrapper functions for reading/writing charged SMILES"""
