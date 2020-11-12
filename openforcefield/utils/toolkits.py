@@ -459,7 +459,6 @@ class BuiltInToolkitWrapper(ToolkitWrapper):
 
         ChargeCalculationError if the charge calculation is supported by this toolkit, but fails
         """
-        from openforcefield.topology import Molecule
 
         PARTIAL_CHARGE_METHODS = {
             "zeros": {"rec_confs": 0, "min_confs": 0, "max_confs": 0},
@@ -475,7 +474,7 @@ class BuiltInToolkitWrapper(ToolkitWrapper):
             _cls = Molecule
 
         # Make a temporary copy of the molecule, since we'll be messing with its conformers
-        molecule = _cls()
+        mol_copy = _cls(molecule)
 
         partial_charge_method = partial_charge_method.lower()
         if partial_charge_method not in PARTIAL_CHARGE_METHODS:
