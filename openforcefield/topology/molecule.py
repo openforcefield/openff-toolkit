@@ -4361,7 +4361,9 @@ class FrozenMolecule(Serializable):
         """
         toolkit = RDKitToolkitWrapper()
         molecule = toolkit.from_rdkit(
-            rdmol, allow_undefined_stereo=allow_undefined_stereo, _cls=cls,
+            rdmol,
+            allow_undefined_stereo=allow_undefined_stereo,
+            _cls=cls,
         )
         return molecule
 
