@@ -682,12 +682,9 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             _cls = Molecule
 
         if isinstance(obj, oechem.OEMolBase):
-            try:
-                return self.from_openeye(
-                    oemol=obj, allow_undefined_stereo=allow_undefined_stereo, _cls=_cls
-                )
-            except:
-                breakpoint()
+            return self.from_openeye(
+                oemol=obj, allow_undefined_stereo=allow_undefined_stereo, _cls=_cls
+            )
         raise NotImplementedError(
             "Cannot create Molecule from {} object".format(type(obj))
         )
