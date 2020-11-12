@@ -134,7 +134,7 @@ jobs:
         if: ${{ matrix.cfg.rdkit == 'true' && matrix.cfg.openeye == 'TRUE' }}
         continue-on-error: true
         run: |
-          pytest -r fE -tb=short openforcefield/tests/test_links.py
+          pytest -r fE --tb=short openforcefield/tests/test_links.py
 
       - name: Run unit tests
         shell: bash -l {0}
