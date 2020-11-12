@@ -494,7 +494,7 @@ class BuiltInToolkitWrapper(ToolkitWrapper):
         else:
             mol_copy._conformers = None
             for conformer in use_conformers:
-                mol_copy.add_conformer(conformer)
+                mol_copy._add_conformer(conformer)
             self._check_n_conformers(
                 mol_copy,
                 partial_charge_method=partial_charge_method,
@@ -1395,7 +1395,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             name = ""
             if oeatom.HasData("name"):
                 name = oeatom.GetData("name")
-            atom_index = molecule.add_atom(
+            atom_index = molecule._add_atom(
                 atomic_number,
                 formal_charge,
                 is_aromatic,
@@ -1424,7 +1424,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             else:
                 fractional_bond_order = None
 
-            molecule.add_bond(
+            molecule._add_bond(
                 atom1_index,
                 atom2_index,
                 bond_order,
@@ -1452,7 +1452,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                     positions[off_atom_index, :] = off_atom_coords
                 if (positions == 0 * unit.angstrom).all() and n_atoms > 1:
                     continue
-                molecule.add_conformer(positions)
+                molecule._add_conformer(positions)
 
         # Copy partial charges, if present
         partial_charges = unit.Quantity(
@@ -2241,7 +2241,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         else:
             mol_copy._conformers = None
             for conformer in use_conformers:
-                mol_copy.add_conformer(conformer)
+                mol_copy._add_conformer(conformer)
             self._check_n_conformers(
                 mol_copy,
                 partial_charge_method=partial_charge_method,
@@ -2394,7 +2394,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         else:
             temp_mol._conformers = None
             for conformer in use_conformers:
-                temp_mol.add_conformer(conformer)
+                temp_mol._add_conformer(conformer)
 
         if temp_mol.n_conformers == 0:
             raise Exception(
@@ -2774,7 +2774,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             new_mol = offmol.remap(mapping)
 
             # the pdb conformer is in the correct order so just attach it here
-            new_mol.add_conformer(pdbmol.conformers[0])
+            new_mol._add_conformer(pdbmol.conformers[0])
 
             return new_mol
 
@@ -3505,7 +3505,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                         "Got {} instead.".format(stereo_code)
                     )
 
-            atom_index = offmol.add_atom(
+            atom_index = offmol._add_atom(
                 atomic_number,
                 formal_charge,
                 is_aromatic,
@@ -3532,7 +3532,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             order = int(order)
 
             # create a new bond
-            bond_index = offmol.add_bond(
+            bond_index = offmol._add_bond(
                 map_atoms[a1], map_atoms[a2], order, is_aromatic
             )
             map_bonds[rdb_idx] = bond_index
@@ -3572,7 +3572,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                 for rd_idx, off_idx in map_atoms.items():
                     atom_coords = conf.GetPositions()[rd_idx, :] * unit.angstrom
                     positions[off_idx, :] = atom_coords
-                offmol.add_conformer(positions)
+                offmol._add_conformer(positions)
 
         partial_charges = unit.Quantity(
             np.zeros(offmol.n_atoms, dtype=np.float), unit=unit.elementary_charge
@@ -4479,7 +4479,7 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         else:
             mol_copy._conformers = None
             for conformer in use_conformers:
-                mol_copy.add_conformer(conformer)
+                mol_copy._add_conformer(conformer)
             self._check_n_conformers(
                 mol_copy,
                 partial_charge_method=partial_charge_method,
@@ -4774,7 +4774,7 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         else:
             temp_mol._conformers = None
             for conformer in use_conformers:
-                temp_mol.add_conformer(conformer)
+                temp_mol._add_conformer(conformer)
 
         if len(temp_mol.conformers) == 0:
             raise ValueError(
