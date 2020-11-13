@@ -27,7 +27,7 @@ jobs:
       run:
         sleep 7200
 
-    - uses: conda-incubator/setup-miniconda@v1
+    - uses: conda-incubator/setup-miniconda@v2
       with:
         python-version: ${{ matrix.python-version }}
         activate-environment: constructor
