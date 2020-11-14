@@ -49,7 +49,7 @@ jobs:
         if: ${{ matrix.cfg.rdkit == 'TRUE' && matrix.cfg.openeye == 'TRUE' }}
         with:
           python-version: ${{ matrix.python-version }}
-          activate-environment: test
+          activate-environment: openmm-test
           environment-file: devtools/conda-envs/openmm_test_env.yaml
           auto-activate-base: false
       - uses: conda-incubator/setup-miniconda@v2
