@@ -21,7 +21,6 @@ dependencies:
   - rdkit
   - openeye-toolkits
   - packaging
-  - openmm::conda-forge/label/test
   - openmmforcefields >=0.7.2
   - openmmtools
   - openforcefields
