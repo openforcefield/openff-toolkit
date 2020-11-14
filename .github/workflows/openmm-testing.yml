@@ -73,7 +73,7 @@ jobs:
         shell: bash -l {0}
         run: |
           conda install mamba -c conda-forge -yq
-          mamba install -c conda-forge/label/test -c conda-forge "openmm >= 7.5"
+          mamba install -c conda-forge/label/test -c conda-forge "openmm >= 7.5" -yq
 
       - name: Additional info about the build
         shell: bash -l {0}
