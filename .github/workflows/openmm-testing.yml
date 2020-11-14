@@ -71,7 +71,7 @@ jobs:
 
       - name: Install testing version of OpenMM
         shell: bash -l {0}
-        run |
+        run: |
           conda install mamba -c conda-forge -yq
           mamba install -c conda-forge/label/test -c conda-forge "openmm >= 7.5"
 
