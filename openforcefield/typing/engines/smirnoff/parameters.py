@@ -21,6 +21,7 @@ __all__ = [
     "UnassignedBondParameterException",
     "UnassignedAngleParameterException",
     "DuplicateVirtualSiteTypeException",
+    "ParameterLookupError",
     "NonbondedMethod",
     "ParameterList",
     "ParameterType",
@@ -151,6 +152,11 @@ class NonintegralMoleculeChargeException(Exception):
 
 class DuplicateParameterError(MessageException):
     """Exception raised when trying to add a ParameterType that already exists"""
+
+
+class ParameterLookupError(MessageException):
+    """Exception raised when something goes wrong in a parameter lookup in
+    ParameterHandler.__getitem__"""
 
 
 class DuplicateVirtualSiteTypeException(Exception):
@@ -1060,7 +1066,7 @@ class _ParameterAttributeHandler:
 
         return smirnoff_data
 
-    def to_dict(self, discard_cosmetic_attributes=False):
+    def to_dict(self, discard_cosmetic_attributes=False, duplicate_attributes=None):
         """
         Convert this object to dict format.
 
@@ -1072,6 +1078,9 @@ class _ParameterAttributeHandler:
         ----------
         discard_cosmetic_attributes : bool, optional. Default = False
             Whether to discard non-spec attributes of this object
+        duplicate_attributes : list of string, optional. Default = None
+            A list of names of attributes that redundantly decsribe
+            data and should be discarded during serializaiton
 
         Returns
         -------
@@ -1083,6 +1092,10 @@ class _ParameterAttributeHandler:
         # returned dict (call list() to make a copy). We discard
         # optional attributes that are set to None defaults.
         attribs_to_return = list(self._get_defined_parameter_attributes().keys())
+
+        if duplicate_attributes is not None:
+            for duplicate in duplicate_attributes:
+                attribs_to_return.pop(attribs_to_return.index(duplicate))
 
         # Start populating a dict of the attribs.
         indexed_attribs = set(self._get_indexed_parameter_attributes().keys())
@@ -1524,8 +1537,8 @@ class ParameterList(list):
 
     def index(self, item):
         """
-        Get the numerical index of a ParameterType object or SMIRKS in this ParameterList. Raises ValueError
-        if the item is not found.
+        Get the numerical index of a ParameterType object or SMIRKS in this ParameterList.
+        Raises ParameterLookupError if the item is not found.
 
         Parameters
         ----------
@@ -1536,6 +1549,11 @@ class ParameterList(list):
         -------
         index : int
             The index of the found item
+
+        Raises
+        ------
+        ParameterLookupError if SMIRKS pattern is passed in but not found
+
         """
         if isinstance(item, ParameterType):
             return super().index(item)
@@ -1543,7 +1561,7 @@ class ParameterList(list):
             for parameter in self:
                 if parameter.smirks == item:
                     return self.index(parameter)
-            raise IndexError(
+            raise ParameterLookupError(
                 "SMIRKS {item} not found in ParameterList".format(item=item)
             )
 
@@ -1590,8 +1608,10 @@ class ParameterList(list):
             index = item
         elif type(item) is slice:
             index = item
-        else:
+        elif isinstance(item, str):
             index = self.index(item)
+        elif isinstance(item, ParameterType) or issubclass(item, ParameterType):
+            raise ParameterLookupError("Lookup by instance is not supported")
         return super().__getitem__(index)
 
     # TODO: Override __setitem__ and __del__ to ensure we can slice by SMIRKS as well
@@ -2544,6 +2564,13 @@ class ParameterHandler(_ParameterAttributeHandler):
                 else:
                     continue
 
+    def __getitem__(self, val):
+        """
+        Syntax sugar for lookikng up a ParameterType in a ParameterHandler
+        based on its SMIRKS.
+        """
+        return self.parameters[val]
+
 
 # =============================================================================================
 
@@ -3475,6 +3502,31 @@ class vdWHandler(_NonbondedHandler):
                 )
 
             super().__init__(**kwargs)
+
+            if sigma:
+                self._extra_nb_var = "rmin_half"
+            if rmin_half:
+                self._extra_nb_var = "sigma"
+
+        def __setattr__(self, name, value):
+            super().__setattr__(key=name, value=value)
+            if name == "rmin_half":
+                super().__setattr__("sigma", value / 2 ** (1 / 6))
+                self._extra_nb_var = "sigma"
+
+            if name == "sigma":
+                super().__setattr__("rmin_half", value * 2 ** (1 / 6))
+                self._extra_nb_var = "rmin_half"
+
+        def to_dict(
+            self,
+            discard_cosmetic_attributes=False,
+            duplicate_attributes=None,
+        ):
+            return super().to_dict(
+                discard_cosmetic_attributes=discard_cosmetic_attributes,
+                duplicate_attributes=[self._extra_nb_var],
+            )
 
     _TAGNAME = "vdW"  # SMIRNOFF tag name to process
     _INFOTYPE = vdWType  # info type to store
@@ -5046,6 +5098,11 @@ class VirtualSiteHandler(_NonbondedHandler):
 
             super().__init__(**kwargs)
 
+            if sigma:
+                self._extra_nb_var = "rmin_half"
+            if rmin_half:
+                self._extra_nb_var = "sigma"
+
         # @type.converter
         # def type(self, attr, vsite_type):
         #     """
@@ -5183,6 +5240,7 @@ class VirtualSiteHandler(_NonbondedHandler):
                 "replace": kwargs.pop("replace", False),
             }
             kwargs.update(base_args)
+            kwargs.pop(self._extra_nb_var)
 
             return fn(*args, **kwargs)
 
