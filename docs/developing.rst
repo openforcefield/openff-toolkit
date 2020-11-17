@@ -153,9 +153,19 @@ ParameterHandler
 .. ParameterType
 
    ToolkitRegistry
-   
-   Molecule.to/from_object
-   
+
+       ``ToolkitRegistry.from_object``  / ``ToolkitRegistry.from_smiles`` / ``OpenEyeToolkitWrapper.from_openeye`` / ``RDKitToolkitWrapper.from_rdkit``
+        - These methods are a bit strange because they are effectively classmethods for ``FrozenMolecule`` and ``Molecule`` subclasses.
+          In `PR #583 <https://github.com/openforcefield/openforcefield/pull/583>`_, jaimergp raised a concern that effectively boils down to "if I subclass ``Molecule`` into a new class, ``MyMol``, then I expect ``MyMol.from_rdkit`` to return an instance of ``MyMol``, not ``Molecule``.
+          However, before this PR, methods like ``ToolkitRegistry.from_smiles`` didn't have any way to know what type of object they should return, and instead always returned ``Molecule`` objects.
+          So as of  `PR #583 <https://github.com/openforcefield/openforcefield/pull/583>`_, ToolkitRegistry methods that produce a Molecule must take a private parameter, ``_cls``, indicating the type of object to return.
+          This parameter should be of type ``type`` and should subclass ``FrozenMolecule``, or otherwise expose ``Molecule._add_atom``, ``._add_bond``, ``.add_conformer``, and ``.partial_charges``.
+
+
+   Molecule.to_X
+
+   Molecule.from_X
+
    Force field directories
 
 

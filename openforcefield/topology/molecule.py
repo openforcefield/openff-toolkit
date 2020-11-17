@@ -1852,6 +1852,7 @@ class FrozenMolecule(Serializable):
                         other,
                         allow_undefined_stereo=allow_undefined_stereo,
                         raise_exception_types=[UndefinedStereochemistryError],
+                        _cls=self.__class__,
                     )
                 # NotImplementedError should never be raised... Only from_file and from_file_obj are provided
                 # in the base ToolkitWrapper class and require overwriting, so from_object should be excluded
@@ -2284,9 +2285,12 @@ class FrozenMolecule(Serializable):
             self._cached_smiles[smiles_hash] = smiles
             return smiles
 
-    @staticmethod
+    @classmethod
     def from_inchi(
-        inchi, allow_undefined_stereo=False, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY
+        cls,
+        inchi,
+        allow_undefined_stereo=False,
+        toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
     ):
         """
         Construct a Molecule from a InChI representation
@@ -2317,12 +2321,15 @@ class FrozenMolecule(Serializable):
 
         if isinstance(toolkit_registry, ToolkitRegistry):
             molecule = toolkit_registry.call(
-                "from_inchi", inchi, allow_undefined_stereo=allow_undefined_stereo
+                "from_inchi",
+                inchi,
+                _cls=cls,
+                allow_undefined_stereo=allow_undefined_stereo,
             )
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
             molecule = toolkit.from_inchi(
-                inchi, allow_undefined_stereo=allow_undefined_stereo
+                inchi, _cls=cls, allow_undefined_stereo=allow_undefined_stereo
             )
         else:
             raise InvalidToolkitRegistryError(
@@ -2423,8 +2430,9 @@ class FrozenMolecule(Serializable):
 
         return inchi_key
 
-    @staticmethod
+    @classmethod
     def from_smiles(
+        cls,
         smiles,
         hydrogens_are_explicit=False,
         toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
@@ -2462,6 +2470,7 @@ class FrozenMolecule(Serializable):
                 smiles,
                 hydrogens_are_explicit=hydrogens_are_explicit,
                 allow_undefined_stereo=allow_undefined_stereo,
+                _cls=cls,
             )
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
@@ -2469,6 +2478,7 @@ class FrozenMolecule(Serializable):
                 smiles,
                 hydrogens_are_explicit=hydrogens_are_explicit,
                 allow_undefined_stereo=allow_undefined_stereo,
+                _cls=cls,
             )
         else:
             raise InvalidToolkitRegistryError(
@@ -2861,11 +2871,12 @@ class FrozenMolecule(Serializable):
             # if one raises an error (raise_exception_types=[])
             toolkit_registry.call(
                 "assign_partial_charges",
-                self,
+                molecule=self,
                 partial_charge_method=partial_charge_method,
                 use_conformers=use_conformers,
                 strict_n_conformers=strict_n_conformers,
                 raise_exception_types=[],
+                _cls=self.__class__,
             )
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
@@ -2874,6 +2885,7 @@ class FrozenMolecule(Serializable):
                 partial_charge_method=partial_charge_method,
                 use_conformers=use_conformers,
                 strict_n_conformers=strict_n_conformers,
+                _cls=self.__class__,
             )
         else:
             raise InvalidToolkitRegistryError(
@@ -3830,6 +3842,7 @@ class FrozenMolecule(Serializable):
                 "from_iupac",
                 iupac_name,
                 allow_undefined_stereo=allow_undefined_stereo,
+                _cls=cls,
                 **kwargs,
             )
         elif isinstance(toolkit_registry, ToolkitWrapper):
@@ -3837,7 +3850,7 @@ class FrozenMolecule(Serializable):
             molecule = toolkit.from_iupac(
                 iupac_name,
                 allow_undefined_stereo=allow_undefined_stereo,
-                **kwargs,
+                _cls=cls ** kwargs,
             )
         else:
             raise Exception(
@@ -3882,8 +3895,8 @@ class FrozenMolecule(Serializable):
         result = to_iupac_method(self)
         return result
 
-    @staticmethod
-    def from_topology(topology):
+    @classmethod
+    def from_topology(cls, topology):
         """Return a Molecule representation of an openforcefield Topology containing a single Molecule object.
 
         Parameters
@@ -3914,7 +3927,7 @@ class FrozenMolecule(Serializable):
         if topology.n_topology_molecules != 1:
             raise ValueError("Topology must contain exactly one molecule")
         molecule = [i for i in topology.reference_molecules][0]
-        return Molecule(molecule)
+        return cls(molecule)
 
     def to_topology(self):
         """
@@ -3936,8 +3949,9 @@ class FrozenMolecule(Serializable):
 
         return Topology.from_molecules(self)
 
-    @staticmethod
+    @classmethod
     def from_file(
+        cls,
         file_path,
         file_format=None,
         toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
@@ -4055,6 +4069,7 @@ class FrozenMolecule(Serializable):
                 file_path,
                 file_format=file_format,
                 allow_undefined_stereo=allow_undefined_stereo,
+                _cls=cls,
             )
         elif hasattr(file_path, "read"):
             file_obj = file_path
@@ -4062,6 +4077,7 @@ class FrozenMolecule(Serializable):
                 file_obj,
                 file_format=file_format,
                 allow_undefined_stereo=allow_undefined_stereo,
+                _cls=cls,
             )
 
         if len(mols) == 0:
@@ -4313,9 +4329,9 @@ class FrozenMolecule(Serializable):
 
         return molecules
 
-    @staticmethod
+    @classmethod
     @RDKitToolkitWrapper.requires_toolkit()
-    def from_rdkit(rdmol, allow_undefined_stereo=False):
+    def from_rdkit(cls, rdmol, allow_undefined_stereo=False):
         """
         Create a Molecule from an RDKit molecule.
 
@@ -4346,7 +4362,9 @@ class FrozenMolecule(Serializable):
         """
         toolkit = RDKitToolkitWrapper()
         molecule = toolkit.from_rdkit(
-            rdmol, allow_undefined_stereo=allow_undefined_stereo
+            rdmol,
+            allow_undefined_stereo=allow_undefined_stereo,
+            _cls=cls,
         )
         return molecule
 
@@ -4381,9 +4399,9 @@ class FrozenMolecule(Serializable):
         toolkit = RDKitToolkitWrapper()
         return toolkit.to_rdkit(self, aromaticity_model=aromaticity_model)
 
-    @staticmethod
+    @classmethod
     @OpenEyeToolkitWrapper.requires_toolkit()
-    def from_openeye(oemol, allow_undefined_stereo=False):
+    def from_openeye(cls, oemol, allow_undefined_stereo=False):
         """
         Create a Molecule from an OpenEye molecule.
 
@@ -4415,7 +4433,7 @@ class FrozenMolecule(Serializable):
         """
         toolkit = OpenEyeToolkitWrapper()
         molecule = toolkit.from_openeye(
-            oemol, allow_undefined_stereo=allow_undefined_stereo
+            oemol, allow_undefined_stereo=allow_undefined_stereo, _cls=cls
         )
         return molecule
 
@@ -4650,7 +4668,7 @@ class FrozenMolecule(Serializable):
                     np.array(molecule.geometry, np.float), unit.bohr
                 )
                 try:
-                    offmol.add_conformer(geometry.in_units_of(unit.angstrom))
+                    offmol._add_conformer(geometry.in_units_of(unit.angstrom))
                     initial_ids[molecule.id] = offmol.n_conformers - 1
                 except InvalidConformerError:
                     print(
@@ -4697,7 +4715,9 @@ class FrozenMolecule(Serializable):
         """
 
         toolkit = RDKitToolkitWrapper()
-        return toolkit.from_pdb_and_smiles(file_path, smiles, allow_undefined_stereo)
+        return toolkit.from_pdb_and_smiles(
+            file_path, smiles, allow_undefined_stereo, _cls=cls
+        )
 
     def canonical_order_atoms(self, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """
@@ -4766,7 +4786,7 @@ class FrozenMolecule(Serializable):
             new_to_cur = mapping_dict
             cur_to_new = dict(zip(mapping_dict.values(), mapping_dict.keys()))
 
-        new_molecule = Molecule()
+        new_molecule = self.__class__()
         new_molecule.name = self.name
 
         try:
@@ -4774,7 +4794,7 @@ class FrozenMolecule(Serializable):
             for i in range(self.n_atoms):
                 # get the old atom info
                 old_atom = self._atoms[new_to_cur[i]]
-                new_molecule.add_atom(**old_atom.to_dict())
+                new_molecule._add_atom(**old_atom.to_dict())
         # this is the first time we access the mapping; catch an index error here corresponding to mapping that starts
         # from 0 or higher
         except (KeyError, IndexError):
@@ -4788,7 +4808,7 @@ class FrozenMolecule(Serializable):
             bond_dict = bond.to_dict()
             bond_dict["atom1"] = atoms[0]
             bond_dict["atom2"] = atoms[1]
-            new_molecule.add_bond(**bond_dict)
+            new_molecule._add_bond(**bond_dict)
 
         # we can now resort the bonds
         sorted_bonds = sorted(
@@ -4813,7 +4833,7 @@ class FrozenMolecule(Serializable):
                     new_conformer[i] = conformer[new_to_cur[i]].value_in_unit(
                         unit.angstrom
                     )
-                new_molecule.add_conformer(new_conformer * unit.angstrom)
+                new_molecule._add_conformer(new_conformer * unit.angstrom)
 
         # move any properties across
         new_molecule._properties = self._properties

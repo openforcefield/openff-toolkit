@@ -1265,6 +1265,9 @@ class ForceField:
             ``topology`` is the processed topology. Default ``False``. This topology will have the
             final partial charges assigned on its reference_molecules attribute, as well as partial
             bond orders (if they were calculated).
+        toolkit_registry : openforcefield.utils.toolkits.ToolkitRegistry, optional. default=GLOBAL_TOOLKIT_REGISTRY
+            The toolkit registry to use for operations like conformer generation and
+            partial charge assignment.
 
         Returns
         -------
