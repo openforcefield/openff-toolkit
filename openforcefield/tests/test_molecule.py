@@ -2935,6 +2935,9 @@ class TestMoleculeSubclass:
         # now make the molecule from the record instance with and without the geometry
         mol = MyMol.from_qcschema(entry.dict(encoding="json"))
         assert isinstance(mol, MyMol)
+        # Make from object, which will include geometry
+        mol = MyMol.from_qcschema(entry, client)
+        assert isinstance(mol, MyMol)
 
     def test_molecule_subclass_from_topology(self):
         """Ensure that the right type of object is returned when running MyMol.from_topology"""
@@ -2953,4 +2956,10 @@ class TestMoleculeSubclass:
         """Ensure that the right type of object is returned when running the MyMol copy constructor"""
         normal_mol = MyMol.from_smiles("CCO")
         mol = MyMol(normal_mol)
+        assert isinstance(mol, MyMol)
+
+    def test_molecule_subclass_from_dict(self):
+        """Ensure that the right type of object is returned when running MyMol.from_dict"""
+        orig_mol = Molecule.from_smiles('CCO')
+        mol = MyMol.from_dict(orig_mol.to_dict())
         assert isinstance(mol, MyMol)

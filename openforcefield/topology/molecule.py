@@ -4667,7 +4667,7 @@ class FrozenMolecule(Serializable):
                     np.array(molecule.geometry, np.float), unit.bohr
                 )
                 try:
-                    offmol.add_conformer(geometry.in_units_of(unit.angstrom))
+                    offmol._add_conformer(geometry.in_units_of(unit.angstrom))
                     initial_ids[molecule.id] = offmol.n_conformers - 1
                 except InvalidConformerError:
                     print(
