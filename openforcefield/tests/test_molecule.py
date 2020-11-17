@@ -2945,6 +2945,7 @@ class TestMoleculeSubclass:
         mol = MyMol.from_topology(top)
         assert isinstance(mol, MyMol)
 
+    @requires_rdkit
     def test_molecule_subclass_from_pdb_and_smiles(self):
         """Ensure that the right type of object is returned when running MyMol.from_pdb_and_smiles"""
         mol = MyMol.from_pdb_and_smiles(
