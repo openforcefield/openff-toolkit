@@ -1763,6 +1763,7 @@ class FrozenMolecule(Serializable):
 
         Create an empty molecule:
 
+        >>> from openforcefield.topology.molecule import FrozenMolecule
         >>> empty_molecule = FrozenMolecule()
 
         Create a molecule from a file that can be used to construct a molecule,
@@ -5105,6 +5106,7 @@ class Molecule(FrozenMolecule):
 
         Create an empty molecule:
 
+        >>> from openforcefield.topology.molecule import Molecule
         >>> empty_molecule = Molecule()
 
         Create a molecule from a file that can be used to construct a molecule,

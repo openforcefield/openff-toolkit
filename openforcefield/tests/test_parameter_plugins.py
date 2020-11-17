@@ -55,7 +55,7 @@ def mock_entry_point_plugins():
     pkg_resources.working_set.by_key = previous_by_key
 
 
-def test_force_field_custom_handler(mock_entry_point_plugins):
+def test_force_field_custom_handler(mock_entry_point_plugins):  # doctest: +SKIP
     """Tests a force field can make use of a custom parameter handler registered
     through the entrypoint plugin system.
     """

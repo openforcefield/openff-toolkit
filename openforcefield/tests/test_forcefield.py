@@ -849,7 +849,7 @@ class TestForceField:
         assert len(forcefield._parameter_handlers["vdW"]._parameters) == 35
         assert forcefield.aromaticity_model == "OEAroModel_MDL"
 
-    def test_load_bad_string(self):
+    def test_load_bad_string(self):  # doctest: +SKIP
         with pytest.raises(IOError) as exception_info:
             ForceField("1234")
         assert "Source 1234 could not be read." in str(exception_info.value)
@@ -4432,7 +4432,7 @@ class TestForceFieldParameterAssignment:
         >>> mol = create_ethanol()
         >>> AmberToolsToolkitWrapper().assign_fractional_bond_orders(mol)
         >>> mol.get_bond_between(1, 2).fractional_bond_order
-        1.00093033
+        1.00093035
 
         """
 

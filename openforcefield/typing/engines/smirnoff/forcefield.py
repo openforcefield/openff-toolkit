@@ -234,6 +234,7 @@ class ForceField:
 
     Retrieve the vdW parameters by SMIRKS string and manipulate it:
 
+    >>> from simtk import unit
     >>> parameter = forcefield.get_parameter_handler('vdW').parameters['[#1:1]-[#7]']
     >>> parameter.rmin_half += 0.1 * unit.angstroms
     >>> parameter.epsilon *= 1.02
