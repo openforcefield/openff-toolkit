@@ -3850,8 +3850,7 @@ class FrozenMolecule(Serializable):
             molecule = toolkit.from_iupac(
                 iupac_name,
                 allow_undefined_stereo=allow_undefined_stereo,
-                _cls=cls
-                **kwargs,
+                _cls=cls ** kwargs,
             )
         else:
             raise Exception(
