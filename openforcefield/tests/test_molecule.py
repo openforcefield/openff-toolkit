@@ -2894,6 +2894,7 @@ class MyMol(FrozenMolecule):
     Lightweight FrozenMolecule subclass for molecule-subclass tests below
     """
 
+
 class TestMoleculeSubclass:
     """
     Test that the FrozenMolecule class is subclass-able, by ensuring that Molecule.from_X constructors
@@ -2908,6 +2909,12 @@ class TestMoleculeSubclass:
     def test_molecule_subclass_from_inchi(self):
         """Ensure that the right type of object is returned when running MyMol.from_inchi"""
         mol = MyMol.from_inchi("InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3")
+        assert isinstance(mol, MyMol)
+
+    @requires_openeye
+    def test_molecule_subclass_from_iupac(self):
+        """Ensure that the right type of object is returned when running MyMol.from_iupac"""
+        mol = MyMol.from_iupac("benzene")
         assert isinstance(mol, MyMol)
 
     def test_molecule_subclass_from_file(self):
@@ -2961,6 +2968,6 @@ class TestMoleculeSubclass:
 
     def test_molecule_subclass_from_dict(self):
         """Ensure that the right type of object is returned when running MyMol.from_dict"""
-        orig_mol = Molecule.from_smiles('CCO')
+        orig_mol = Molecule.from_smiles("CCO")
         mol = MyMol.from_dict(orig_mol.to_dict())
         assert isinstance(mol, MyMol)

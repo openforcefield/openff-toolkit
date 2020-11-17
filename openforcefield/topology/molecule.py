@@ -3842,6 +3842,7 @@ class FrozenMolecule(Serializable):
                 "from_iupac",
                 iupac_name,
                 allow_undefined_stereo=allow_undefined_stereo,
+                _cls=cls,
                 **kwargs,
             )
         elif isinstance(toolkit_registry, ToolkitWrapper):
@@ -3849,6 +3850,7 @@ class FrozenMolecule(Serializable):
             molecule = toolkit.from_iupac(
                 iupac_name,
                 allow_undefined_stereo=allow_undefined_stereo,
+                _cls=cls
                 **kwargs,
             )
         else:

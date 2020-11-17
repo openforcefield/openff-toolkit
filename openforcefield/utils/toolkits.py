@@ -2012,7 +2012,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         return molecule
 
-    def from_iupac(self, iupac_name, allow_undefined_stereo=False, **kwargs):
+    def from_iupac(self, iupac_name, allow_undefined_stereo=False, _cls=None, **kwargs):
         """
         Construct a Molecule from an IUPAC name
 
@@ -2024,6 +2024,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             Whether to accept a molecule name with undefined stereochemistry. If False,
             an exception will be raised if a molecule name with undefined stereochemistry
             is passed into this function.
+        _cls : class
+            Molecule constructor
 
         Returns
         -------
@@ -2044,7 +2046,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             raise Exception("Addition of explicit hydrogens failed in from_iupac")
 
         molecule = self.from_openeye(
-            oemol, allow_undefined_stereo=allow_undefined_stereo, **kwargs
+            oemol, allow_undefined_stereo=allow_undefined_stereo, _cls=_cls, **kwargs
         )
 
         return molecule
