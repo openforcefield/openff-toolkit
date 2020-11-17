@@ -28,7 +28,7 @@ Behavior Changed
   such as :py:meth:`Molecule.from_rdkit <openforcefield.topology.Molecule.from_rdkit>`
   and :py:meth:`Molecule.from_openeye <openforcefield.topology.Molecule.from_openeye>`,
   which delegate their internal logic to :py:class:`ToolkitRegistry <openforcefield.utils.ToolkitRegistry>`
-  functions, now guarantee that they will return an object of the correct type. Previously,
+  functions, now guarantee that they will return an object of the correct type when being called on ``Molecule``-derived classes. Previously,
   running these constructors using subclasses of :py:class:`FrozenMolecule <openforcefield.topology.Molecule>`
   would not return an instance of that subclass, but rather just an instance of a
   :py:class:`Molecule <openforcefield.topology.Molecule>`.
