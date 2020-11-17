@@ -4785,7 +4785,7 @@ class FrozenMolecule(Serializable):
             new_to_cur = mapping_dict
             cur_to_new = dict(zip(mapping_dict.values(), mapping_dict.keys()))
 
-        new_molecule = Molecule()
+        new_molecule = self.__class__()
         new_molecule.name = self.name
 
         try:
@@ -4793,7 +4793,7 @@ class FrozenMolecule(Serializable):
             for i in range(self.n_atoms):
                 # get the old atom info
                 old_atom = self._atoms[new_to_cur[i]]
-                new_molecule.add_atom(**old_atom.to_dict())
+                new_molecule._add_atom(**old_atom.to_dict())
         # this is the first time we access the mapping; catch an index error here corresponding to mapping that starts
         # from 0 or higher
         except (KeyError, IndexError):
@@ -4807,7 +4807,7 @@ class FrozenMolecule(Serializable):
             bond_dict = bond.to_dict()
             bond_dict["atom1"] = atoms[0]
             bond_dict["atom2"] = atoms[1]
-            new_molecule.add_bond(**bond_dict)
+            new_molecule._add_bond(**bond_dict)
 
         # we can now resort the bonds
         sorted_bonds = sorted(
@@ -4832,7 +4832,7 @@ class FrozenMolecule(Serializable):
                     new_conformer[i] = conformer[new_to_cur[i]].value_in_unit(
                         unit.angstrom
                     )
-                new_molecule.add_conformer(new_conformer * unit.angstrom)
+                new_molecule._add_conformer(new_conformer * unit.angstrom)
 
         # move any properties across
         new_molecule._properties = self._properties
