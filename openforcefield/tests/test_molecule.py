@@ -47,7 +47,12 @@ from openforcefield.tests.utils import (
     requires_rdkit,
 )
 from openforcefield.topology import NotBondedError
-from openforcefield.topology.molecule import Atom, InvalidConformerError, Molecule
+from openforcefield.topology.molecule import (
+    Atom,
+    FrozenMolecule,
+    InvalidConformerError,
+    Molecule,
+)
 from openforcefield.utils import get_data_file_path
 from openforcefield.utils.toolkits import (
     AmberToolsToolkitWrapper,
@@ -2882,3 +2887,70 @@ class TestMolecule:
         mol = Molecule().from_smiles("CCO")
 
         assert isinstance(mol.visualize(backend="openeye"), IPython.core.display.Image)
+
+
+class MyMol(FrozenMolecule):
+    """
+    Lightweight FrozenMolecule subclass for molecule-subclass tests below
+    """
+
+class TestMoleculeSubclass:
+    """
+    Test that the FrozenMolecule class is subclass-able, by ensuring that Molecule.from_X constructors
+    return objects of the correct types
+    """
+
+    def test_molecule_subclass_from_smiles(self):
+        """Ensure that the right type of object is returned when running MyMol.from_smiles"""
+        mol = MyMol.from_smiles("CCO")
+        assert isinstance(mol, MyMol)
+
+    def test_molecule_subclass_from_inchi(self):
+        """Ensure that the right type of object is returned when running MyMol.from_inchi"""
+        mol = MyMol.from_inchi("InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3")
+        assert isinstance(mol, MyMol)
+
+    def test_molecule_subclass_from_file(self):
+        """Ensure that the right type of object is returned when running MyMol.from_file"""
+        mol = MyMol.from_file(get_data_file_path("molecules/ethanol.sdf"))
+        assert isinstance(mol, MyMol)
+
+    def test_molecule_subclass_from_mapped_smiles(self):
+        """Ensure that the right type of object is returned when running MyMol.from_mapped_smiles"""
+        mol = MyMol.from_mapped_smiles("[H:1][C:2]([H:3])([H:4])([H:5])")
+        assert isinstance(mol, MyMol)
+
+    @requires_qcelemental
+    def test_molecule_subclass_from_qcschema(self):
+        """Ensure that the right type of object is returned when running MyMol.from_qcschema"""
+        import qcportal as ptl
+
+        client = ptl.FractalClient()
+        ds = client.get_collection(
+            "TorsionDriveDataset", "Fragment Stability Benchmark"
+        )
+        entry = ds.get_entry(
+            "CC(=O)Nc1cc2c(cc1OC)nc[n:4][c:3]2[NH:2][c:1]3ccc(c(c3)Cl)F"
+        )
+        # now make the molecule from the record instance with and without the geometry
+        mol = MyMol.from_qcschema(entry.dict(encoding="json"))
+        assert isinstance(mol, MyMol)
+
+    def test_molecule_subclass_from_topology(self):
+        """Ensure that the right type of object is returned when running MyMol.from_topology"""
+        top = Molecule.from_smiles("CCO").to_topology()
+        mol = MyMol.from_topology(top)
+        assert isinstance(mol, MyMol)
+
+    def test_molecule_subclass_from_pdb_and_smiles(self):
+        """Ensure that the right type of object is returned when running MyMol.from_pdb_and_smiles"""
+        mol = MyMol.from_pdb_and_smiles(
+            get_data_file_path("molecules/toluene.pdb"), "Cc1ccccc1"
+        )
+        assert isinstance(mol, MyMol)
+
+    def test_molecule_copy_constructor_from_other_subclass(self):
+        """Ensure that the right type of object is returned when running the MyMol copy constructor"""
+        normal_mol = MyMol.from_smiles("CCO")
+        mol = MyMol(normal_mol)
+        assert isinstance(mol, MyMol)
