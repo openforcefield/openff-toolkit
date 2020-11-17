@@ -142,7 +142,7 @@ jobs:
           PYTEST_ARGS+=" --ignore=openforcefield/tests/test_examples.py"
           PYTEST_ARGS+=" --ignore=openforcefield/tests/test_links.py"
           if [[ "$RDKIT" == true && "$OPENEYE" == true ]]; then
-            PYTEST_ARGS+="--doctest-modules"
+            PYTEST_ARGS+=" --doctest-modules"
           fi
           pytest $PYTEST_ARGS $PACKAGE/
 
