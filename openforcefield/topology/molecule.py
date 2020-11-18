@@ -3908,7 +3908,10 @@ class FrozenMolecule(Serializable):
 
         Create a molecule from a Topology object that contains exactly one molecule
 
-        >>> molecule = Molecule.from_topology(topology)  # doctest: +SKIP
+        >>> from openforcefield.topology import Topology, Molecule
+        >>> original_mol = Molecule.from_smiles("C")
+        >>> topology = Topology.from_molecules(original_mol)
+        >>> molecule = Molecule.from_topology(topology)
 
         """
         # TODO: Ensure we are dealing with an openforcefield Topology object
@@ -4151,9 +4154,9 @@ class FrozenMolecule(Serializable):
         --------
 
         >>> molecule = Molecule.from_iupac('imatinib')
-        >>> molecule.to_file('imatinib.mol2', file_format='mol2')  # doctest: +SKIP
-        >>> molecule.to_file('imatinib.sdf', file_format='sdf')  # doctest: +SKIP
-        >>> molecule.to_file('imatinib.pdb', file_format='pdb')  # doctest: +SKIP
+        >>> molecule.to_file('imatinib.mol2', file_format='mol2')
+        >>> molecule.to_file('imatinib.sdf', file_format='sdf')
+        >>> molecule.to_file('imatinib.pdb', file_format='pdb')
 
         """
 

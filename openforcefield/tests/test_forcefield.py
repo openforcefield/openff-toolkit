@@ -849,8 +849,8 @@ class TestForceField:
         assert len(forcefield._parameter_handlers["vdW"]._parameters) == 35
         assert forcefield.aromaticity_model == "OEAroModel_MDL"
 
-    def test_load_bad_string(self):  # doctest: +SKIP
-        with pytest.raises(IOError) as exception_info:
+    def test_load_bad_string(self):
+        with pytest.raises(OSError) as exception_info:
             ForceField("1234")
         assert "Source 1234 could not be read." in str(exception_info.value)
         assert "syntax error" in str(exception_info.value)
@@ -4417,7 +4417,7 @@ class TestForceFieldParameterAssignment:
         k_bond_interpolated,
         bond_length_interpolated,
         central_atoms,
-    ):
+    ):  # doctest: +SKIP
         """Test that torsion barrier heights interpolated from fractional bond
         orders calculated with the Amber toolkit are assigned within our
         expectations.
@@ -4528,7 +4528,7 @@ class TestForceFieldParameterAssignment:
         k_bond_interpolated,
         bond_length_interpolated,
         central_atoms,
-    ):
+    ):  # doctest: +SKIP
         """Test that torsion barrier heights interpolated from fractional bond
         orders calculated with the OpenEye toolkit are assigned within our
         expectations.
