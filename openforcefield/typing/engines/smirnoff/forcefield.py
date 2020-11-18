@@ -1131,7 +1131,7 @@ class ForceField:
         msg += "If the file is present, ensure it is in a known SMIRNOFF encoding.\n"
         msg += f"Valid formats are: {valid_formats}\n"
         msg += f"Parsing failed with the following error:\n{exception_msg}\n"
-        raise IOError(msg)
+        raise OSError(msg)
 
     def to_string(self, io_format="XML", discard_cosmetic_attributes=False):
         """
