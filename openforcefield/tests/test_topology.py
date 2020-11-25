@@ -34,6 +34,7 @@ from openforcefield.topology import (
     ImproperDict,
     InvalidBoxVectorsError,
     InvalidPeriodicityError,
+    MissingUniqueMoleculesError,
     Molecule,
     Topology,
     ValenceDict,
@@ -605,6 +606,11 @@ class TestTopology(TestCase):
             get_data_file_path("systems/packmol_boxes/cyclohexane_ethanol_0.4_0.6.pdb")
         )
 
+        with pytest.raises(
+            MissingUniqueMoleculesError, match="requires a list of Molecule objects"
+        ):
+            Topology.from_openmm(pdbfile.topology, unique_molecules=None)
+
         molecules = [create_ethanol(), create_cyclohexane()]
 
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
@@ -710,6 +716,28 @@ class TestTopology(TestCase):
             assert bond_atoms == bond_atoms_copy
             assert bond.bond_order == bond_copy.bond_order
             assert bond.bond.is_aromatic == bond_copy.bond.is_aromatic
+
+    def test_from_mdtraj(self):
+        """Test construction of an OpenFF Topology from an MDTraj Topology object"""
+        import mdtraj as md
+
+        pdb_path = get_data_file_path(
+            "systems/test_systems/1_cyclohexane_1_ethanol.pdb"
+        )
+        trj = md.load(pdb_path)
+
+        with pytest.raises(
+            MissingUniqueMoleculesError, match="requires a list of Molecule objects"
+        ):
+            Topology.from_mdtraj(trj.top, unique_molecules=None)
+
+        unique_molecules = [
+            Molecule.from_smiles(mol_name) for mol_name in ["C1CCCCC1", "CCO"]
+        ]
+        top = Topology.from_mdtraj(trj.top, unique_molecules=unique_molecules)
+
+        assert top.n_topology_molecules == 2
+        assert top.n_topology_bonds == 26
 
     @requires_rdkit
     def test_to_file_vsites(self):

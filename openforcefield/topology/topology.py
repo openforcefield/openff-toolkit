@@ -73,6 +73,12 @@ class InvalidPeriodicityError(MessageException):
     """
 
 
+class MissingUniqueMoleculesError(MessageException):
+    """
+    Exception for a when unique_molecules is required but not found
+    """
+
+
 # =============================================================================================
 # PRIVATE SUBROUTINES
 # =============================================================================================
@@ -1926,6 +1932,12 @@ class Topology(Serializable):
         for omm_bond in openmm_topology.bonds():
             if omm_bond.order is None:
                 omm_has_bond_orders = False
+
+        if unique_molecules is None:
+            raise MissingUniqueMoleculesError(
+                "Topology.from_openmm requires a list of Molecule objects "
+                "passed as unique_molecules, but None was passed."
+            )
 
         # Convert all unique mols to graphs
         topology = cls()
