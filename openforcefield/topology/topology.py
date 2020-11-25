@@ -1915,8 +1915,6 @@ class Topology(Serializable):
             The atomic elements and bond connectivity will be used to match the reference molecules
             to molecule graphs appearing in the OpenMM ``Topology``. If bond orders are present in the
             OpenMM ``Topology``, these will be used in matching as well.
-            If all bonds have bond orders assigned in ``mdtraj_topology``, these bond orders will be used to attempt to construct
-            the list of unique Molecules if the ``unique_molecules`` argument is omitted.
 
         Returns
         -------
@@ -2195,12 +2193,10 @@ class Topology(Serializable):
         mdtraj_topology : mdtraj.Topology
             An MDTraj Topology object
         unique_molecules : iterable of objects that can be used to construct unique Molecule objects
-            All unique molecules mult be provided, in any order, though multiple copies of each molecule are allowed.
+            All unique molecules must be provided, in any order, though multiple copies of each molecule are allowed.
             The atomic elements and bond connectivity will be used to match the reference molecules
             to molecule graphs appearing in the MDTraj ``Topology``. If bond orders are present in the
             MDTraj ``Topology``, these will be used in matching as well.
-            If all bonds have bond orders assigned in ``mdtraj_topology``, these bond orders will be used to attempt to construct
-            the list of unique Molecules if the ``unique_molecules`` argument is omitted.
 
         Returns
         -------
@@ -2242,13 +2238,10 @@ class Topology(Serializable):
         parmed_structure : parmed.Structure
             A ParmEd structure object
         unique_molecules : iterable of objects that can be used to construct unique Molecule objects
-            All unique molecules mult be provided, in any order, though multiple copies of each molecule are allowed.
+            All unique molecules must be provided, in any order, though multiple copies of each molecule are allowed.
             The atomic elements and bond connectivity will be used to match the reference molecules
             to molecule graphs appearing in the structure's ``topology`` object. If bond orders are present in the
             structure's ``topology`` object, these will be used in matching as well.
-            If all bonds have bond orders assigned in the structure's ``topology`` object,
-            these bond orders will be used to attempt to construct
-            the list of unique Molecules if the ``unique_molecules`` argument is omitted.
 
         Returns
         -------
