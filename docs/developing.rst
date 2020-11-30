@@ -150,7 +150,8 @@ ParameterHandler
           The default implementation of this method simply does nothing, and should suffice for most developers.
 
 .. TODO : fill in the modular components below
-.. ParameterType
+
+ParameterType
 
    ToolkitRegistry
 
