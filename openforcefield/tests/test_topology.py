@@ -609,7 +609,7 @@ class TestTopology(TestCase):
         with pytest.raises(
             MissingUniqueMoleculesError, match="requires a list of Molecule objects"
         ):
-            Topology.from_openmm(pdbfile.topology, unique_molecules=None)
+            Topology.from_openmm(pdbfile.topology)
 
         molecules = [create_ethanol(), create_cyclohexane()]
 
@@ -729,7 +729,7 @@ class TestTopology(TestCase):
         with pytest.raises(
             MissingUniqueMoleculesError, match="requires a list of Molecule objects"
         ):
-            Topology.from_mdtraj(trj.top, unique_molecules=None)
+            Topology.from_mdtraj(trj.top)
 
         unique_molecules = [
             Molecule.from_smiles(mol_name) for mol_name in ["C1CCCCC1", "CCO"]
