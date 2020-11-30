@@ -156,19 +156,6 @@ jobs:
           fi
           pytest $PYTEST_ARGS openforcefield/tests/test_examples.py
 
-      - name: Run example notebooks
-        shell: bash -l {0}
-        continue-on-error: true
-        run: |
-          PYTEST_ARGS+=" --nbval-lax --ignore=examples/deprecated"
-          if [[ "$RDKIT" == false ]]; then
-            PYTEST_ARGS+=" --ignore=examples/check_dataset_parameter_coverage"
-            PYTEST_ARGS+=" --ignore=examples/conformer_energies"
-            PYTEST_ARGS+=" --ignore=examples/QCArchive_interface"
-            PYTEST_ARGS+=" --ignore=examples/visualization"
-          fi
-          pytest $PYTEST_ARGS examples/
-
       - name: Run code snippets in docs
         shell: bash -l {0}
         if: ${{ matrix.cfg.rdkit == 'TRUE' && matrix.cfg.openeye == 'TRUE' }}

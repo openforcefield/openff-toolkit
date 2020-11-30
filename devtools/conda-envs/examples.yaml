@@ -1,0 +1,26 @@
+name: openff-examples
+channels:
+  - conda-forge
+  - omnia
+  - bioconda
+  - openeye
+
+dependencies:
+  - python
+  - pip
+
+  - nbval
+  - numpy
+  - networkx
+  - ambertools
+  - rdkit
+  - packaging
+  - openmmforcefields >=0.7.2
+  - openmmtools
+  - openforcefields
+  - qcelemental
+  - qcportal
+  - qcengine
+  - mdtraj
+  - gromacs
+  - openeye-toolkits
