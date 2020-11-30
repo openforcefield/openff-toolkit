@@ -67,7 +67,7 @@ Bugfixes
   using a ``vdWHandler`` that was initialized using the API.
 - `PR #776 <https://github.com/openforcefield/openforcefield/pull/776>`_: Fixes a bug in which
   the :py:meth:`Topology.from_openmm <openforcefield.topology.Topology.from_openmm>` and
-  :py:meth:`Topology.from_openmm <openforcefield.topology.Topology.from_openmm>` methods would
+  :py:meth:`Topology.from_mdtraj <openforcefield.topology.Topology.from_mdtraj>` methods would
   dangerously allow `unique_molecules=None`.
 
 
