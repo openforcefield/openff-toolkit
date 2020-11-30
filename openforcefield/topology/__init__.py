@@ -16,6 +16,7 @@ from openforcefield.topology.topology import (
     ImproperDict,
     InvalidBoxVectorsError,
     InvalidPeriodicityError,
+    MissingUniqueMoleculesError,
     NotBondedError,
     SortedDict,
     Topology,

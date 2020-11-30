@@ -32,7 +32,10 @@ Behavior Changed
   running these constructors using subclasses of :py:class:`FrozenMolecule <openforcefield.topology.Molecule>`
   would not return an instance of that subclass, but rather just an instance of a
   :py:class:`Molecule <openforcefield.topology.Molecule>`.
-
+- `PR #753 <https://github.com/openforcefield/openforcefield/pull/753>`_: ``ParameterLookupError``
+  is now raised when passing to
+  :py:meth:`ParameterList.index <openforcefield.typing.engines.smirnoff.parameters.ParameterList>`
+  a SMIRKS pattern not found in the parameter list.
 
 New features
 """"""""""""
@@ -62,13 +65,10 @@ Bugfixes
 - `PR #756 <https://github.com/openforcefield/openforcefield/pull/756>`_: Fixes bug when running
   :py:meth:`vdWHandler.create_force <openforcefield.typing.engines.smirnoff.parameters.vdWHandler.create_force>`
   using a ``vdWHandler`` that was initialized using the API.
-
-Behavior changed
-""""""""""""""""
-- `PR #753 <https://github.com/openforcefield/openforcefield/pull/753>`_: ``ParameterLookupError``
-  is now raised when passing to
-  :py:meth:`ParameterList.index <openforcefield.typing.engines.smirnoff.parameters.ParameterList>`
-  a SMIRKS pattern not found in the parameter list.
+- `PR #776 <https://github.com/openforcefield/openforcefield/pull/776>`_: Fixes a bug in which
+  the :py:meth:`Topology.from_openmm <openforcefield.topology.Topology.from_openmm>` and
+  :py:meth:`Topology.from_mdtraj <openforcefield.topology.Topology.from_mdtraj>` methods would
+  dangerously allow `unique_molecules=None`.
 
 
 0.8.0 - Virtual Sites
