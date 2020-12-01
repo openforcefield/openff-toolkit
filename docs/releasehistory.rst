@@ -7,14 +7,245 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 * ``minor`` increments add features but do not break API compatibility
 * ``micro`` increments represent bugfix releases or improvements in documentation
 
-0.8.0 - Current development
----------------------------
+Current Development
+-------------------
+
+API-breaking changes
+""""""""""""""""""""
+- `PR #757 <https://github.com/openforcefield/openforcefield/pull/757>`_: Renames
+  ``test_forcefields/smirnoff99Frosst.offxml`` to ``test_forcefields/test_forcefield.offxml``
+  to avoid confusion with any of the ACTUAL released FFs in the
+  `smirnoff99Frosst line <https://github.com/openforcefield/smirnoff99Frosst/>`_
+- `PR #751 <https://github.com/openforcefield/openforcefield/pull/751>`_: Removes the
+  optional ``oetools=("oechem", "oequacpac", "oeiupac", "oeomega")`` keyword argument from
+  :py:meth:`OpenEyeToolkitWrapper.is_available <openforcefield.utils.toolkits.OpenEyeToolkitWrapper.is_available>`, as
+  there are no special behaviors that are accessed in the case of partially-licensed OpenEye backends. The
+  new behavior of this method is the same as if the default value above is always provided.
+
+Behavior Changed
+""""""""""""""""
+- `PR #583 <https://github.com/openforcefield/openforcefield/pull/583>`_: Methods
+  such as :py:meth:`Molecule.from_rdkit <openforcefield.topology.Molecule.from_rdkit>`
+  and :py:meth:`Molecule.from_openeye <openforcefield.topology.Molecule.from_openeye>`,
+  which delegate their internal logic to :py:class:`ToolkitRegistry <openforcefield.utils.ToolkitRegistry>`
+  functions, now guarantee that they will return an object of the correct type when being called on ``Molecule``-derived classes. Previously,
+  running these constructors using subclasses of :py:class:`FrozenMolecule <openforcefield.topology.Molecule>`
+  would not return an instance of that subclass, but rather just an instance of a
+  :py:class:`Molecule <openforcefield.topology.Molecule>`.
+- `PR #753 <https://github.com/openforcefield/openforcefield/pull/753>`_: ``ParameterLookupError``
+  is now raised when passing to
+  :py:meth:`ParameterList.index <openforcefield.typing.engines.smirnoff.parameters.ParameterList>`
+  a SMIRKS pattern not found in the parameter list.
+
+New features
+""""""""""""
+- `PR #751 <https://github.com/openforcefield/openforcefield/pull/751>`_: Adds
+  :py:class:`LicenseError <openforcefield.utils.toolkits.LicenseError>`, a subclass of
+  :py:class:`ToolkitUnavailableException <openforcefield.utils.toolkits.ToolkitUnavailableException>`
+  which is raised when attempting to add a cheminformatics
+  :py:class:`ToolkitWrapper <openforcefield.utils.toolkits.ToolkitWrapper>` for a toolkit that
+  is installed but unlicensed.
+- `PR #678 <https://github.com/openforcefield/openforcefield/pull/678>`_: Adds
+  :py:meth:`ForceField.deregister_parameter_handler <openforcefield.typing.engines.smirnoff.forcefield.ForceField.deregister_parameter_handler>`.
+- `PR #730 <https://github.com/openforcefield/openforcefield/pull/730>`_: Adds
+  :py:class:`Topology.is_periodic <openforcefield.topology.Topology>`.
+- `PR #753 <https://github.com/openforcefield/openforcefield/pull/753>`_: Adds
+  :py:meth:`ParameterHandler.__getitem__ <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler.__getitem__>`
+  to look up individual :py:class:`ParameterType <openforcefield.typing.engines.smirnoff.parameters.ParameterType>`
+  objects.
+
+Bugfixes
+""""""""
+- `PR #745 <https://github.com/openforcefield/openforcefield/pull/745>`_: Fixes bug when
+  serializing molecule with conformers to JSON.
+- `PR #750 <https://github.com/openforcefield/openforcefield/pull/750>`_: Fixes a bug causing either
+  ``sigma`` or ``rmin_half`` to sometimes be missing on
+  :py:class:`vdWHandler.vdWType <openforcefield.typing.engines.smirnoff.parameters.vdWHandler>`
+  objects.
+- `PR #756 <https://github.com/openforcefield/openforcefield/pull/756>`_: Fixes bug when running
+  :py:meth:`vdWHandler.create_force <openforcefield.typing.engines.smirnoff.parameters.vdWHandler.create_force>`
+  using a ``vdWHandler`` that was initialized using the API.
+- `PR #776 <https://github.com/openforcefield/openforcefield/pull/776>`_: Fixes a bug in which
+  the :py:meth:`Topology.from_openmm <openforcefield.topology.Topology.from_openmm>` and
+  :py:meth:`Topology.from_mdtraj <openforcefield.topology.Topology.from_mdtraj>` methods would
+  dangerously allow `unique_molecules=None`.
+
+
+0.8.0 - Virtual Sites
+---------------------
+
+This release implements the SMIRNOFF virtual site specification. The implementation enables support for models using off-site charges, including 4- and 5-point water models, in addition to lone pair modeling on various functional groups. The primary focus was on the ability to parameterize a system using virtual sites, and generating an OpenMM system with all virtual sites present and ready for evaluation. Support for formats other than OpenMM has not be implemented in this release, but may come with the appearance of the OpenFF system object. In addition to implementing the specification, the toolkit :py:class:`Molecule <openforcefield.topology.Molecule>` objects now allow the creation and manipulation of virtual sites.
+
+**Major Feature: Support for the SMIRNOFF VirtualSite tag**
+
+Virtual sites can be added to a System in two ways:
+
+* `SMIRNOFF Force Fields can contain a VirtualSites tag <https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html#virtualsites-virtual-sites-for-off-atom-charges>`_ , specifying the addition of virtual sites according to SMARTS-based rules.
+* Virtual sites can be added to a :py:class:`Molecule <openforcefield.topology.Molecule>`, and these will appear in the final OpenMM system if a virtual site handler is present in the :py:class:`ForceField <openforcefield.typing.engines.smirnoff.forcefield.ForceField>`.
+
+Virtual sites are the first parameters which directly depend on 3D conformation, where the position of the virtual sites are based on vectors defined on the atoms that were matched during parameterization. Because of this, a virtual site matching the triplet of atoms 1-2-3 will define a point that is different from a triplet matching 3-2-1. This is similar to defining "right-handed" and "left-handed" coordinate systems. This subtlety interplays with two major concepts in force field development:
+
+1) we sometimes want to define a single virtual site describing two points with the same parameters (distance, angle, etc.), such as 5-point water models
+2) we have a match that produces multiple orderings of the atoms (e.g. if wildcards are present in the SMARTS pattern), and we only want one to be applied.
+
+Case 1) is very useful for parameter optimization, where a single SMARTS-based parameter can be used to optimize both points, such as the angle defining the virtual points for a 5-point water model. Case 2) is the typical scenario for the nitrogen lone pair in ammonia, where only one point needs to be specified. We discuss a few more illustrative examples below. Beyond these attributes, the virtual site specification allows a policy for specifying how to handle exclusions in the OpenMM force evaluator. The current default is to add pairwise energy exclusions in the OpenMM system between a virtual site and all tagged atoms matched in its SMARTS (``exclusion_policy="parents",`` ). Currently defined are ``"none"``, ``"minimal"``, and ``"parents"``, where ``"minimal"`` specifies the single atom that the virtual site defines as the "origin". For water, for example, ``"minimal"`` would mean just the oxygen, whereas ``"parents"`` would mean all three atoms.
+
+In order to give consistent and intended behavior, the specification was modified from its draft form in following manner: The ``"name"`` and ``"match"`` attributes have been added to each virtual site parameter type. These changes allow for
+
+* specifying different virtual site types using the same atoms
+* allowing two virtual sites with the same type and same atoms but different physical parameters to be added simultaneously
+* allowing the ability to control whether the virtual site encodes one or multiple particles, based on the number of ways the matching atoms can be ordered.
+
+The ``"name"`` attribute encodes whether the virtual site to be added should override an existing virtual site of the same type (e.g. hierarchy preference), or if this virtual site should be added in addition to the other existing virtual sites on the given atoms. This means that different virtual site types can share the same group of parent atoms and use the same name without overwriting each other (the default ``name`` is ``EP`` for all sites, which gives the expected hierarchical behavior used in other SMIRNOFF tags).
+
+The ``"match"`` attribute accepts either ``"once"`` or ``"all_permutations"``, offering control for situations where a SMARTS pattern can possibly match the same group of atoms in different orders (either due to wildcards or local symmetry) and it is desired to either add just one or all of the possible virtual particles. The default value is ``"all_permutations",`` but for TrivalentLonePair it is always set to ``"once"``, regardless of what the file contains, since all orderings always place the particle in the exact same position.
+
+The following cases exemplify our reasoning in implementing this behavior, and should draw caution to complex issues that may arise when designing virtual site parameters. Let us consider 4-, 5-, and 6-point water models:
+
+* A 4-point water model with a ``DivalentLonePair``: This can be implemented by specifying ``match="once"``, ``outOfPlaneAngle="0*degree"``, and ``distance=-.15*angstrom"``. Since the SMIRKS pattern ``"[#1:1]-[#8X2:2]-[#2:3]"`` would match water twice and would create two particles in the exact same position if ``all_permutations`` was specified, we specify ``"once"`` to have only one particle generated. Although having two particles in the same position should not affect the physics if the proper exclusion policy is applied, it would effectively make the 4-point model just as expensive as 5-point models.
+
+* A 5-point water model with a ``DivalentLonePair``: This can be implemented by using ``match="all_permutations"`` (unlike the 4-point model), ``outOfPlaneAngle="56.26*degree``, and ``distance=0.7*angstrom``, for example. Here the permutations will cause particles to be placed at ±56.26 degrees, and changing any of the physical quantities will affect *both* particles.
+
+* A 6-point water model with both ``DivalentLonePair`` sites above. Since these two parameters look identical, it is unclear whether they should both be applied or if one should override the other. The toolkit never compares the physical numbers to determine equality as this can lead to instability during e.g. parameter fitting. To get this to work, we specify ``name="EP1"`` for the first parameter, and ``name="EP2"`` for the second parameter. This instructs the parameter handler keep them separate, and therefore both are applied. (If both had the same name, then the typical SMIRNOFF hierarchy rules are used, and only the last matched parameter would be applied.)
+
+* Dinitrogen, ``N#N`` with a ``BondCharge`` virtual site. Since we want a ``BondCharge`` on both ends, we specify ``match="all_permutations"``.
+
+* Formaldehyde, ``H2C=O``, with ``MonovalentLonePair`` virtual site(s) on the oxygen, with the aim of modeling both lone pairs. This one is subtle, since ``[#1:3]-[#6X3:2]=[#8X1:1]`` matches two unique groups of atoms (``1-3-4`` and ``2-3-4``). It is important to note in this situation that ``match="all_permutations"`` behaves exactly the same as ``match="once"``. Due to the anchoring hydrogens (``1`` and ``2``) being symmetric but opposite about the bond between ``3`` and ``4``, a single parameter does correctly place both lone pairs. A standing issue here is that the default exclusion policy (``parents``) will allow these two virtual sites to interact since they have different indexed atoms (parents), causing the energy to be different than the non-virtual site parameterization. In the future, the ``exclusion_policy="local"`` will account for this, and make virtual sites that share at least one "parent" atom not interact with each other. As a special note: when applying a ``MonovalentLonePair`` to a completely symmetric molecule, e.g. water, ``all_permutations`` can come into play, but this will apply two particles (one for each hydrogen).
+
+Finally, the toolkit handles the organization of atoms and virtual sites in a specific manner. Virtual sites are expected to be added *after all molecules in the topology are present*. This is because the Open Force Field Toolkit organizes a topology by placing all atoms first, then all virtual sites last. This differs from the OpenMM Modeller object, for example, which interleaves the order of atoms and virtual sites in such a way that all particles of a molecule are contiguous. In addition, due to the fact that a virtual site may contain multiple particles coupled to single parameters, the toolkit makes a distinction between a virtual *site*, and a virtual *particle*. A virtual site may represent multiple virtual particles, so the total number of particles cannot be directly determined by simply summing the number of atoms and virtual sites in a molecule. This is taken into account, however, and the :py:class:`Molecule <openforcefield.topology.Molecule>` and :py:class:`Topology <openforcefield.topology.Topology>` classes now implement ``particle`` iterators.
+
+
+**Minor Feature: Support for the 0.4 ChargeIncrementModel tag**
+
+To allow for more convenient fitting of ``ChargeIncrement`` parameters, it is now possible to specify one less
+``charge_increment`` value than there are tagged atoms in a ``ChargeIncrement``'s ``smirks``. The missing
+``charge_increment`` value will be calculated at parameterization-time to make the sum of
+the charge contributions from a ``ChargeIncrement`` parameter equal to zero.
+Since this change allows for force fields that are incompatible with
+the previous specification, this new style of ``ChargeIncrement`` must specify a ``ChargeIncrementModel``
+section version of ``0.4``. All ``0.3``-compatible ``ChargeIncrement`` parameters are compatible with
+the ``0.4`` ``ChargeIncrementModel`` specification.
+
+More details and examples of this change are available in `The ChargeIncrementModel tag in the SMIRNOFF specification <https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html#chargeincrementmodel-small-molecule-and-fragment-charges>`_
+
+
+New features
+""""""""""""
+- `PR #726 <https://github.com/openforcefield/openforcefield/pull/726>`_: Adds support for the 0.4
+  ChargeIncrementModel spec, allowing for the specification of one fewer ``charge_increment`` values
+  than there are tagged atoms in the ``smirks``, and automatically assigning the final atom an offsetting charge.
+- `PR #548 <https://github.com/openforcefield/openforcefield/pull/548>`_: Adds support for the ``VirtualSites`` tag in the SMIRNOFF specification
+
+- `PR #548 <https://github.com/openforcefield/openforcefield/pull/548>`_: Adds ``replace`` and ``all_permutations`` kwarg to
+
+  - :py:meth:`Molecule.add_bond_charge_virtual_site <openforcefield.topology.Molecule.add_bond_charge_virtual_site>`
+  - :py:meth:`Molecule.add_monovalent_lone_pair_virtual_site <openforcefield.topology.Molecule.add_monovalent_lone_pair_virtual_site>`
+  - :py:meth:`Molecule.add_divalent_lone_pair_virtual_site <openforcefield.topology.Molecule.add_divalent_lone_pair_virtual_site>`
+  - :py:meth:`Molecule.add_trivalent_lone_pair_virtual_site <openforcefield.topology.Molecule.add_trivalent_lone_pair_virtual_site>`
+
+- `PR #548 <https://github.com/openforcefield/openforcefield/pull/548>`_: Adds ``orientations`` to
+
+  - :py:class:`BondChargeVirtualSite <openforcefield.topology.BondChargeVirtualSite>`
+  - :py:class:`MonovalentLonePairVirtualSite <openforcefield.topology.MonovalentLonePairVirtualSite>`
+  - :py:class:`DivalentLonePairVirtualSite <openforcefield.topology.DivalentLonePairVirtualSite>`
+  - :py:class:`TrivalentLonePairVirtualSite <openforcefield.topology.TrivalentLonePairVirtualSite>`
+
+- `PR #548 <https://github.com/openforcefield/openforcefield/pull/548>`_: Adds
+
+  - :py:class:`VirtualParticle <openforcefield.topology.VirtualParticle>`
+  - :py:class:`TopologyVirtualParticle <openforcefield.topology.TopologyVirtualParticle>`
+  - :py:meth:`BondChargeVirtualSite.get_openmm_virtual_site <openforcefield.topology.BondChargeVirtualSite.get_openmm_virtual_site>`
+  - :py:meth:`MonovalentLonePairVirtualSite.get_openmm_virtual_site <openforcefield.topology.MonovalentLonePairVirtualSite.get_openmm_virtual_site>`
+  - :py:meth:`DivalentLonePairVirtualSite.get_openmm_virtual_site <openforcefield.topology.DivalentLonePairVirtualSite.get_openmm_virtual_site>`
+  - :py:meth:`TrivalentLonePairVirtualSite.get_openmm_virtual_site <openforcefield.topology.TrivalentLonePairVirtualSite.get_openmm_virtual_site>`
+  - :py:meth:`ValenceDict.key_transform <openforcefield.topology.ValenceDict.key_transform>`
+  - :py:meth:`ValenceDict.index_of <openforcefield.topology.ValenceDict.index_of>`
+  - :py:meth:`ImproperDict.key_transform <openforcefield.topology.ImproperDict.key_transform>`
+  - :py:meth:`ImproperDict.index_of <openforcefield.topology.ImproperDict.index_of>`
+
+- `PR #705 <https://github.com/openforcefield/openforcefield/pull/705>`_: Adds interpolation
+  based on fractional bond orders for harmonic bonds. This includes interpolation for both
+  the force constant ``k`` and/or equilibrium bond distance ``length``. This is accompanied by a
+  bump in the ``<Bonds>`` section of the SMIRNOFF spec (but not the entire spec).
+- `PR #718 <https://github.com/openforcefield/openforcefield/pull/718>`_: Adds ``.rings`` and
+  ``.n_rings`` to :py:class:`Molecule <openforcefield.topology.Molecule>` and ``.is_in_ring``
+  to :py:class:`Atom <openforcefield.topology.Atom>` and
+  :py:class:`Bond <openforcefield.topology.Bond>`
+
+Bugfixes
+"""""""""
+- `PR #682 <https://github.com/openforcefield/openforcefield/pull/682>`_: Catches failures in
+  :py:meth:`Molecule.from_iupac <openforcefield.topology.Molecule.from_iupac>` instead of silently
+  failing.
+- `PR #743 <https://github.com/openforcefield/openforcefield/pull/743>`_: Prevents the non-bonded
+  (vdW) cutoff from silently falling back to the OpenMM default of 1 nm in
+  :py:meth:`Forcefield.create_openmm_system
+  <openforcefield.typing.engines.smirnoff.forcefield.ForceField.create_openmm_system>` and instead
+  sets its to the value specified by the force field.
+- `PR #737 <https://github.com/openforcefield/openforcefield/pull/737>`_: Prevents OpenEye from
+  incidentally being used in the conformer generation step of
+  :py:class:`AmberToolsToolkitWrapper.assign_fractional_bond_orders
+  <openforcefield.utils.toolkits.AmberToolsToolkitWrapper.assign_fractional_bond_orders>`.
+
+Behavior changed
+""""""""""""""""
+- `PR #705 <https://github.com/openforcefield/openforcefield/pull/705>`_: Changes the default values
+  in the ``<Bonds>`` section of the SMIRNOFF spec to ``fractional_bondorder_method="AM1-Wiberg"``
+  and ``potential="(k/2)*(r-length)^2"``, which is backwards-compatible with and equivalent to
+  ``potential="harmonic"``.
+
+Examples added
+""""""""""""""
+- `PR #548 <https://github.com/openforcefield/openforcefield/pull/548>`_: Adds a virtual site example notebook to run
+  an OpenMM simulation with virtual sites, and compares positions and potential energy of TIP5P water between OpenFF
+  and OpenMM forcefields.
+
+API-breaking changes
+""""""""""""""""""""
+- `PR #548 <https://github.com/openforcefield/openforcefield/pull/548>`_: Methods
+
+  - :py:meth:`Molecule.add_bond_charge_virtual_site <openforcefield.topology.Molecule.add_bond_charge_virtual_site>`
+  - :py:meth:`Molecule.add_monovalent_lone_pair_virtual_site <openforcefield.topology.Molecule.add_monovalent_lone_pair_virtual_site>`
+  - :py:meth:`Molecule.add_divalent_lone_pair_virtual_site <openforcefield.topology.Molecule.add_divalent_lone_pair_virtual_site>`
+  - :py:meth:`Molecule.add_trivalent_lone_pair_virtual_site <openforcefield.topology.Molecule.add_trivalent_lone_pair_virtual_site>`
+  now only accept a list of atoms, not a list of integers, to define to parent atoms
+
+- `PR #548 <https://github.com/openforcefield/openforcefield/pull/548>`_: Removes
+  :py:meth:`VirtualParticle.molecule_particle_index <openforcefield.topology.VirtualParticle.molecule_particle_index>`
+
+- `PR #548 <https://github.com/openforcefield/openforcefield/pull/548>`_: Removes ``outOfPlaneAngle`` from
+
+  - :py:class:`DivalentLonePairVirtualSite <openforcefield.topology.DivalentLonePairVirtualSite>`
+  - :py:class:`TrivalentLonePairVirtualSite <openforcefield.topology.TrivalentLonePairVirtualSite>`
+
+- `PR #548 <https://github.com/openforcefield/openforcefield/pull/548>`_: Removes ``inPlaneAngle`` from
+  :py:class:`TrivalentLonePairVirtualSite <openforcefield.topology.TrivalentLonePairVirtualSite>`
+
+- `PR #548 <https://github.com/openforcefield/openforcefield/pull/548>`_: Removes ``weights`` from
+
+  - :py:class:`BondChargeVirtualSite <openforcefield.topology.BondChargeVirtualSite>`
+  - :py:class:`MonovalentLonePairVirtualSite <openforcefield.topology.MonovalentLonePairVirtualSite>`
+  - :py:class:`DivalentLonePairVirtualSite <openforcefield.topology.DivalentLonePairVirtualSite>`
+  - :py:class:`TrivalentLonePairVirtualSite <openforcefield.topology.TrivalentLonePairVirtualSite>`
+
+Tests added
+"""""""""""
+
+- `PR #548 <https://github.com/openforcefield/openforcefield/pull/548>`_: Adds test for 
+
+  - The virtual site parameter handler
+  - TIP5P water dimer energy and positions
+  - Adds tests to for virtual site/particle indexing/counting
+
+
+0.7.2 - Bugfix and minor feature release
+----------------------------------------
 
 New features
 """"""""""""
 - `PR #662 <https://github.com/openforcefield/openforcefield/pull/662>`_: Adds ``.aromaticity_model``
   of :py:class:`ForceField <openforcefield.typing.engines.smirnoff.forcefield.ForceField>` and ``.TAGNAME``
-  of :py:class:`ParameterHandler <openforcefield.typing.engines.smirnoff.Parameters.ParameterHandler>` as
+  of :py:class:`ParameterHandler <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler>` as
   public attributes.
 - `PR #667 <https://github.com/openforcefield/openforcefield/pull/667>`_ and
   `PR #681 <https://github.com/openforcefield/openforcefield/pull/681>`_ linted the codebase with
@@ -28,7 +259,8 @@ New features
   :py:class:`ForceField.aromaticity_model <openforcefield.typing.engines.smirnoff.forcefield.ForceField>`
 - `PR #685 <https://github.com/openforcefield/openforcefield/pull/685>`_ Adds a custom ``__hash__``
   function to
-  :py:class:`ForceField.aromaticity_model <openforcefield.typing.engines.smirnoff.forcefield.ForceField>`
+  :py:class:`ForceField <openforcefield.typing.engines.smirnoff.forcefield.ForceField>`
+
 
 Behavior changed
 """"""""""""""""
@@ -37,9 +269,10 @@ Behavior changed
   registry when initialized with no arguments, i.e. ``ToolkitRegistry()`` and makes the
   ``register_imported_toolkit_wrappers`` argument private.
 - `PR #711 <https://github.com/openforcefield/openforcefield/pull/711>`_: The
-  setter for ``Topology.boxbox_vectors`` now infers box vectors (a 3x3 matrix) when box lengths
+  setter for :py:class:`Topology.box_vectors <openforcefield.topology.Topology>`
+  now infers box vectors (a 3x3 matrix) when box lengths
   (a 3x1 array) are passed, assuming an orthogonal box.
-  - `PR #649 <https://github.com/openforcefield/openforcefield/pull/648>`_: Makes SMARTS
+- `PR #649 <https://github.com/openforcefield/openforcefield/pull/648>`_: Makes SMARTS
   searches stereochemistry-specific (if stereo is specified in the SMARTS) for both OpenEye
   and RDKit backends. Also ensures molecule
   aromaticity is re-perceived according to the ForceField's specified
@@ -57,11 +290,17 @@ Behavior changed
   :py:class:`ForceField <openforcefield.typing.engines.smirnoff.forcefield.ForceField>`
   constructor, which defaults to ``DEFAULT_AROMATICITY_MODEL``.
 
-Bug Fixes
+Bugfixes
 """""""""
 - `PR #715 <https://github.com/openforcefield/openforcefield/pull/715>`_: Closes issue `Issue #475
   <https://github.com/openforcefield/openforcefield/issues/475>`_ writing a "PDB" file using OE backend rearranges
   the order of the atoms by pushing the hydrogens to the bottom.
+- `PR #649 <https://github.com/openforcefield/openforcefield/pull/648>`_: Prevents 2020 OE
+  toolkit from issuing a warning caused by doing stereo-specific smarts searches on certain
+  structures.
+- `PR #724 <https://github.com/openforcefield/openforcefield/pull/724>`_: Closes issue `Issue #502
+  <https://github.com/openforcefield/openforcefield/issues/502>`_ Adding a utility function Topology.to_file() to 
+  write topology and positions to a "PDB" file using openmm backend for pdb file write.
 
 Tests added
 """""""""""
@@ -69,13 +308,8 @@ Tests added
   to code snippets in docs.
 - `PR #715 <https://github.com/openforcefield/openforcefield/pull/715>`_: Adds tests for pdb file writes using OE
   backend.
-
-Bugfixes
-""""""""
-- `PR #649 <https://github.com/openforcefield/openforcefield/pull/648>`_: Prevents 2020 OE
-  toolkit from issuing a warning caused by doing stereo-specific smarts searches on certain
-  structures.
-
+- `PR #724 <https://github.com/openforcefield/openforcefield/pull/724>`_: Adds tests for the utility function Topology.to_file().
+  
 
 0.7.1 - OETK2020 Compatibility and Minor Update
 -----------------------------------------------

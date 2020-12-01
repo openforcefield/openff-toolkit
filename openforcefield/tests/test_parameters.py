@@ -14,10 +14,12 @@ Test classes and function in module openforcefield.typing.engines.smirnoff.param
 # GLOBAL IMPORTS
 # ======================================================================
 
+import numpy
 import pytest
 from numpy.testing import assert_almost_equal
 from simtk import unit
 
+from openforcefield.topology import Molecule
 from openforcefield.typing.engines.smirnoff import SMIRNOFFVersionError
 from openforcefield.typing.engines.smirnoff.parameters import (
     BondHandler,
@@ -28,13 +30,18 @@ from openforcefield.typing.engines.smirnoff.parameters import (
     IncompatibleParameterError,
     IndexedParameterAttribute,
     LibraryChargeHandler,
+    NotEnoughPointsForInterpolationError,
     ParameterAttribute,
     ParameterHandler,
     ParameterList,
+    ParameterLookupError,
     ParameterType,
     ProperTorsionHandler,
     SMIRNOFFSpecError,
+    VirtualSiteHandler,
+    _linear_inter_or_extrapolate,
     _ParameterAttributeHandler,
+    vdWHandler,
 )
 from openforcefield.utils import IncompatibleUnitError, detach_units
 from openforcefield.utils.collections import ValidatedList
@@ -260,6 +267,69 @@ class TestIndexedParameterAttribute:
         # And insert.
         my_par.attr_indexed.insert(5, "10")
         assert my_par.attr_indexed[5] == 10
+
+
+class TestInterpolation:
+    """Test method(s) that are used for functionality like fractional bond order-dependent parameter interpolation"""
+
+    @pytest.mark.parametrize(
+        ("fractional_bond_order", "k_interpolated"),
+        [(1.6, 1.48), (0.7, 0.76), (2.3, 2.04)],
+    )
+    def test_linear_inter_or_extrapolate(self, fractional_bond_order, k_interpolated):
+        """Test that linear interpolation works as expected"""
+        from simtk import unit
+
+        k_bondorder = {
+            1: 1 * unit.kilocalorie_per_mole,
+            2: 1.8 * unit.kilocalorie_per_mole,
+        }
+
+        k = _linear_inter_or_extrapolate(k_bondorder, fractional_bond_order)
+        assert_almost_equal(k / k.unit, k_interpolated)
+
+    def test_linear_inter_or_extrapolate_one_point(self):
+        """Test that linear interpolation raises an error if attempted with just one point"""
+        from simtk import unit
+
+        k_bondorder = {
+            2: 1.8 * unit.kilocalorie_per_mole,
+        }
+        with pytest.raises(NotEnoughPointsForInterpolationError) as excinfo:
+            k = _linear_inter_or_extrapolate(k_bondorder, 1)
+
+    @pytest.mark.parametrize(
+        ("fractional_bond_order", "k_interpolated"),
+        [(1.6, 1.48), (0.7, 0.76), (2.3, 2.01), (3.1, 2.57)],
+    )
+    def test_linear_inter_or_extrapolate_3_terms(
+        self, fractional_bond_order, k_interpolated
+    ):
+        """Test that linear interpolation works as expected for three terms"""
+        from simtk import unit
+
+        k_bondorder = {
+            1: 1 * unit.kilocalorie_per_mole,
+            2: 1.8 * unit.kilocalorie_per_mole,
+            3: 2.5 * unit.kilocalorie_per_mole,
+        }
+
+        k = _linear_inter_or_extrapolate(k_bondorder, fractional_bond_order)
+        assert_almost_equal(k / k.unit, k_interpolated)
+
+    def test_linear_inter_or_extrapolate_below_zero(self):
+        """Test that linear interpolation does not error if resulting k less than 0"""
+        from simtk import unit
+
+        k_bondorder = {
+            1: 1 * unit.kilocalorie_per_mole,
+            2: 2.3 * unit.kilocalorie_per_mole,
+        }
+
+        fractional_bond_order = 0.2
+        k = _linear_inter_or_extrapolate(k_bondorder, fractional_bond_order)
+
+        assert k / k.unit < 0
 
 
 class TestParameterAttributeHandler:
@@ -580,6 +650,34 @@ class TestParameterHandler:
         ) as excinfo:
             ph = ParameterHandler(version="0.1")
 
+    def test_supported_version_range(self):
+        """
+        Ensure that version values in various formats can be correctly parsed and validated
+        """
+
+        class MyPHSubclass(ParameterHandler):
+            _MIN_SUPPORTED_SECTION_VERSION = 0.3
+            _MAX_SUPPORTED_SECTION_VERSION = 2
+
+        with pytest.raises(SMIRNOFFVersionError) as excinfo:
+            my_ph = MyPHSubclass(version=0.1)
+        my_ph = MyPHSubclass(version=0.3)
+        my_ph = MyPHSubclass(version=1)
+        my_ph = MyPHSubclass(version="1.9")
+        my_ph = MyPHSubclass(version=2.0)
+        with pytest.raises(SMIRNOFFVersionError) as excinfo:
+            my_ph = MyPHSubclass(version=2.1)
+
+    def test_write_same_version_as_was_set(self):
+        """Ensure that a ParameterHandler remembers the version that was set when it was initialized. """
+
+        class MyPHSubclass(ParameterHandler):
+            _MIN_SUPPORTED_SECTION_VERSION = 0.3
+            _MAX_SUPPORTED_SECTION_VERSION = 2
+
+        my_ph = MyPHSubclass(version=1.234)
+        assert my_ph.to_dict()["version"] == 1.234
+
     def test_add_delete_cosmetic_attributes(self):
         """Test ParameterHandler.to_dict() function when some parameters are in
         different units (proper behavior is to convert all quantities to the last-
@@ -723,8 +821,8 @@ class TestParameterList:
         assert parameters.index("[#1:1]") == 1
         assert parameters.index("[#7:1]") == 2
         with pytest.raises(
-            IndexError, match=r"SMIRKS \[#2:1\] not found in ParameterList"
-        ) as excinfo:
+            ParameterLookupError, match=r"SMIRKS \[#2:1\] not found in ParameterList"
+        ):
             parameters.index("[#2:1]")
 
         p4 = ParameterType(smirks="[#2:1]")
@@ -756,7 +854,8 @@ class TestParameterList:
         with pytest.raises(IndexError, match="list assignment index out of range"):
             del parameters[4]
         with pytest.raises(
-            IndexError, match=r"SMIRKS \[#6:1\] not found in ParameterList"
+            ParameterLookupError,
+            match=r"SMIRKS \[#6:1\] not found in ParameterList",
         ):
             del parameters["[#6:1]"]
 
@@ -1068,6 +1167,72 @@ class TestBondType:
             * (unit.kilocalorie ** 1),
         }
 
+    def test_bondtype_partial_bondorders(self):
+        """
+        Test the parsing of a BondType with k_bondorder1/2/3 definitions
+        """
+        from simtk import unit
+
+        length = 1.4 * unit.angstrom
+        k1 = 101 * unit.kilocalorie_per_mole / unit.angstrom ** 2
+        k2 = 202 * unit.kilocalorie_per_mole / unit.angstrom ** 2
+        k3 = 303 * unit.kilocalorie_per_mole / unit.angstrom ** 2
+
+        param = BondHandler.BondType(
+            smirks="[*:1]-[*:2]",
+            length=length,
+            k_bondorder1=k1,
+            k_bondorder2=k2,
+            k_bondorder3=k3,
+        )
+
+        assert param.k_bondorder == {1: k1, 2: k2, 3: k3}
+
+    def test_bondtype_bad_params(self):
+        """
+        Test the over/underspecification of k/k_bondorderN are caught
+        """
+        from simtk import unit
+
+        length = 1.4 * unit.angstrom
+        length1 = 1.5 * unit.angstrom
+        length2 = 1.3 * unit.angstrom
+        k = 50 * unit.kilocalorie_per_mole / unit.angstrom ** 2
+        k1 = 101 * unit.kilocalorie_per_mole / unit.angstrom ** 2
+        k2 = 202 * unit.kilocalorie_per_mole / unit.angstrom ** 2
+
+        with pytest.raises(SMIRNOFFSpecError, match="Either k or k_bondorder"):
+            BondHandler.BondType(
+                smirks="[*:1]-[*:2]",
+                length=length,
+            )
+
+        with pytest.raises(SMIRNOFFSpecError, match="BOTH k and k_bondorder"):
+            BondHandler.BondType(
+                smirks="[*:1]-[*:2]",
+                length=length,
+                k=k,
+                k_bondorder1=k1,
+                k_bondorder2=k2,
+            )
+
+        with pytest.raises(
+            SMIRNOFFSpecError, match="Either length or length_bondorder"
+        ):
+            BondHandler.BondType(
+                smirks="[*:1]-[*:2]",
+                k=k,
+            )
+
+        with pytest.raises(SMIRNOFFSpecError, match="BOTH length and length_bondorder"):
+            BondHandler.BondType(
+                smirks="[*:1]-[*:2]",
+                length=length,
+                k=k,
+                length_bondorder1=length1,
+                length_bondorder2=length2,
+            )
+
     def test_bondtype_to_dict_custom_output_units(self):
         """
         Test BondType to_dict with custom output units.
@@ -1194,6 +1359,58 @@ class TestBondType:
         p1.delete_cosmetic_attribute("pilot")
         param_dict = p1.to_dict()
         assert ("pilot", "alice") not in param_dict.items()
+
+
+class TestBondHandler:
+    @pytest.mark.parametrize(
+        ("fractional_bond_order", "k_interpolated", "length_interpolated"),
+        [
+            (1.0, 101, 1.4),
+            (1.5, 112.0, 1.35),
+            (1.99, 122.78, 1.301),
+            (2.1, 125.2, 1.29),
+        ],
+    )
+    def test_linear_interpolate(
+        self, fractional_bond_order, k_interpolated, length_interpolated
+    ):
+        """Test that linear interpolation works as expected"""
+        from simtk import unit
+
+        k_bondorder = {
+            1: 101 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
+            2: 123 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
+        }
+
+        length_bondorder = {
+            1: 1.4 * unit.angstrom,
+            2: 1.3 * unit.angstrom,
+        }
+
+        k = _linear_inter_or_extrapolate(k_bondorder, fractional_bond_order)
+        length = _linear_inter_or_extrapolate(length_bondorder, fractional_bond_order)
+        assert_almost_equal(k / k.unit, k_interpolated, 1)
+        assert_almost_equal(length / length.unit, length_interpolated, 2)
+
+    def test_different_defaults_03_04(self):
+        """Ensure that the 0.3 and 0.4 versions' defaults are correctly set"""
+        bh = BondHandler(version=0.3)
+        assert bh.fractional_bondorder_method == "none"
+        assert bh.potential == "harmonic"
+        bh2 = BondHandler(version=0.4)
+        assert bh2.fractional_bondorder_method == "AM1-Wiberg"
+        assert bh2.potential == "(k/2)*(r-length)^2"
+
+    def test_harmonic_potentials_are_compatible(self):
+        """
+        Ensure that handlers with potential ="harmonic" evaluate as compatible with handlers with potential="(k/2)*(r-length)^2"
+        """
+        bh1 = BondHandler(skip_version_check=True)
+        bh2 = BondHandler(skip_version_check=True)
+        bh1.potential = "harmonic"
+        bh2.potential = "(k/2)*(r-length)^2"
+        # This comparison should pass, since the potentials defined above are compatible
+        bh1.check_handler_compatibility(bh2)
 
 
 class TestProperTorsionType:
@@ -1486,58 +1703,262 @@ class TestProperTorsionHandler:
             potential="k*(1+cos(periodicity*theta-phase))", skip_version_check=True
         )
 
-    @pytest.mark.parametrize(
-        ("fractional_bond_order", "k_interpolated"),
-        [(1.6, 1.48), (0.7, 0.76), (2.3, 2.04)],
-    )
-    def test_linear_interpolate_k(self, fractional_bond_order, k_interpolated):
-        """Test that linear interpolation works as expected"""
-        from simtk import unit
 
-        k_bondorder = {
-            1: 1 * unit.kilocalorie_per_mole,
-            2: 1.8 * unit.kilocalorie_per_mole,
-        }
+class TestvdWHandler:
+    def test_create_force_defaults(self):
+        """Test that create_force works on a vdWHandler with all default values"""
+        from simtk import openmm
 
-        k = ProperTorsionHandler._linear_interpolate_k(
-            k_bondorder, fractional_bond_order
-        )
-        assert_almost_equal(k / k.unit, k_interpolated)
+        # Create a dummy topology containing only argon and give it a set of
+        # box vectors.
+        topology = Molecule.from_smiles("[Ar]").to_topology()
+        topology.box_vectors = unit.Quantity(numpy.eye(3) * 20 * unit.angstrom)
 
-    @pytest.mark.parametrize(
-        ("fractional_bond_order", "k_interpolated"),
-        [(1.6, 1.48), (0.7, 0.76), (2.3, 2.01), (3.1, 2.57)],
-    )
-    def test_linear_interpolate_k_3_terms(self, fractional_bond_order, k_interpolated):
-        """Test that linear interpolation works as expected for three terms"""
-        from simtk import unit
-
-        k_bondorder = {
-            1: 1 * unit.kilocalorie_per_mole,
-            2: 1.8 * unit.kilocalorie_per_mole,
-            3: 2.5 * unit.kilocalorie_per_mole,
-        }
-
-        k = ProperTorsionHandler._linear_interpolate_k(
-            k_bondorder, fractional_bond_order
-        )
-        assert_almost_equal(k / k.unit, k_interpolated)
-
-    def test_linear_interpolate_k_below_zero(self):
-        """Test that linear interpolation does not error if resulting k less than 0"""
-        from simtk import unit
-
-        k_bondorder = {
-            1: 1 * unit.kilocalorie_per_mole,
-            2: 2.3 * unit.kilocalorie_per_mole,
-        }
-
-        fractional_bond_order = 0.2
-        k = ProperTorsionHandler._linear_interpolate_k(
-            k_bondorder, fractional_bond_order
+        # create a VdW handler with only parameters for argon.
+        vdw_handler = vdWHandler(version=0.3)
+        vdw_handler.add_parameter(
+            {
+                "smirks": "[#18:1]",
+                "epsilon": 1.0 * unit.kilojoules_per_mole,
+                "sigma": 1.0 * unit.angstrom,
+            }
         )
 
-        assert k / k.unit < 0
+        omm_sys = openmm.System()
+        vdw_handler.create_force(omm_sys, topology)
+
+
+class TestvdWType:
+    """
+    Test the behavior of vdWType
+    """
+
+    def test_sigma_rmin_half(self):
+        """Test the setter/getter behavior or sigma and rmin_half"""
+        from openforcefield.typing.engines.smirnoff.parameters import vdWHandler
+
+        data = {
+            "smirks": "[*:1]",
+            "sigma": 0.5 * unit.angstrom,
+            "epsilon": 0.5 * unit.kilocalorie_per_mole,
+        }
+        param = vdWHandler.vdWType(**data)
+
+        assert param.sigma is not None
+        assert param.rmin_half is not None
+        assert param.sigma == param.rmin_half / 2 ** (1 / 6)
+        assert "sigma" in param.to_dict()
+        assert "rmin_half" not in param.to_dict()
+
+        param.sigma = 0.8 * unit.angstrom
+
+        assert param.sigma == param.rmin_half / 2 ** (1 / 6)
+        assert "sigma" in param.to_dict()
+        assert "rmin_half" not in param.to_dict()
+
+        param.rmin_half = 0.8 * unit.angstrom
+
+        assert param.sigma == param.rmin_half / 2 ** (1 / 6)
+        assert "sigma" not in param.to_dict()
+        assert "rmin_half" in param.to_dict()
+
+
+class TestVirtualSiteHandler:
+    """
+    Test the creation of a VirtualSiteHandler and the implemented VirtualSiteTypes
+    """
+
+    def _test_variable_names(self, valid_kwargs, variable_names):
+
+        for name_to_change in variable_names:
+            invalid_kwargs = valid_kwargs.copy()
+            invalid_kwargs[
+                name_to_change
+            ] = "bad_attribute_value_that_will_never_be_used"
+
+            # Should also be able to perform the lookup on the type attribute.
+            # Needed to test setting to the wrong type value
+            exception = SMIRNOFFSpecError
+
+            with pytest.raises(exception):
+                vs_type = VirtualSiteHandler._VirtualSiteTypeSelector(**invalid_kwargs)
+
+    def _test_complete_attributes(self, valid_kwargs, names, virtual_site_type):
+
+        vs_type = virtual_site_type(**valid_kwargs)
+
+        for name_to_remove in names:
+            invalid_kwargs = valid_kwargs.copy()
+            invalid_kwargs.pop(name_to_remove)
+
+            with pytest.raises(SMIRNOFFSpecError):
+                vs_type = virtual_site_type(**invalid_kwargs)
+
+        # Test adding bogus attr
+        with pytest.raises(SMIRNOFFSpecError):
+            invalid_kwargs = valid_kwargs.copy()
+            invalid_kwargs["bad_attribute_name_that_will_never_be_in_the_spec"] = True
+            vs_type = virtual_site_type(**invalid_kwargs)
+
+    def test_create_virtual_site_handler(self):
+        """Test creation of an empty VirtualSiteHandler"""
+        handler = VirtualSiteHandler(
+            skip_version_check=True, exclusion_policy="parents"
+        )
+
+        with pytest.raises(SMIRNOFFSpecError):
+            handler = VirtualSiteHandler(
+                skip_version_check=True,
+                exclusion_policy="bad_attribute_value_that_will_never_be_used",
+            )
+
+    def test_virtual_site_bond_charge_type(self):
+        """
+        Ensure that an error is raised if incorrect parameters are given to
+        a bond charge type
+        """
+
+        valid_kwargs = dict(
+            type="BondCharge",
+            smirks="[#6:1]-[#7:2]",
+            name="EP",
+            distance=1.0 * unit.angstrom,
+            charge_increment=[1.0, 1.0] * unit.elementary_charge,
+            sigma=0.0 * unit.angstrom,
+            epsilon=1.0 * unit.kilocalorie_per_mole,
+            match="once",
+        )
+
+        # sigma and epsilon are optional
+        names = ["type", "distance", "charge_increment"]
+
+        self._test_complete_attributes(
+            valid_kwargs, names, VirtualSiteHandler.VirtualSiteBondChargeType
+        )
+
+        variable_names = ["type", "match"]
+        self._test_variable_names(valid_kwargs, variable_names)
+
+    def test_virtual_site_monovalent_type(self):
+        """
+        Ensure that an error is raised if incorrect parameters are given to
+        a monovalent type
+        """
+
+        valid_kwargs = dict(
+            type="MonovalentLonePair",
+            smirks="[#6:1]-[#7:2]-[#8:3]",
+            name="EP",
+            distance=1.0 * unit.angstrom,
+            charge_increment=[1.0, 1.0, 1.0] * unit.elementary_charge,
+            outOfPlaneAngle=30 * unit.degree,
+            inPlaneAngle=30 * unit.degree,
+            sigma=0.0 * unit.angstrom,
+            epsilon=1.0 * unit.kilocalorie_per_mole,
+            match="once",
+        )
+
+        # sigma and epsilon are optional
+        names = [
+            "type",
+            "distance",
+            "charge_increment",
+            "outOfPlaneAngle",
+            "inPlaneAngle",
+        ]
+
+        self._test_complete_attributes(
+            valid_kwargs, names, VirtualSiteHandler.VirtualSiteMonovalentLonePairType
+        )
+
+        variable_names = ["type", "match"]
+        self._test_variable_names(valid_kwargs, variable_names)
+
+    def test_virtual_site_divalent_type(self):
+        """
+        Ensure that an error is raised if incorrect parameters are given to
+        a divalent type
+        """
+
+        valid_kwargs = dict(
+            type="DivalentLonePair",
+            smirks="[#6:1]-[#7:2]-[#8:3]",
+            name="EP",
+            distance=1.0 * unit.angstrom,
+            charge_increment=[1.0, 1.0, 1.0] * unit.elementary_charge,
+            outOfPlaneAngle=30 * unit.degree,
+            sigma=0.0 * unit.angstrom,
+            epsilon=1.0 * unit.kilocalorie_per_mole,
+            match="once",
+        )
+
+        # sigma and epsilon are optional
+        names = [
+            "type",
+            "distance",
+            "charge_increment",
+            "outOfPlaneAngle",
+        ]
+
+        self._test_complete_attributes(
+            valid_kwargs, names, VirtualSiteHandler.VirtualSiteDivalentLonePairType
+        )
+
+        variable_names = ["type", "match"]
+        self._test_variable_names(valid_kwargs, variable_names)
+
+    def test_virtual_site_trivalent_type(self):
+        """
+        Ensure that an error is raised if incorrect parameters are given to
+        a trivalent type
+        """
+
+        valid_kwargs = dict(
+            type="TrivalentLonePair",
+            smirks="[#6:1]-[#7:2](-[#8:3])-[#8:4]",
+            name="EP",
+            distance=1.0 * unit.angstrom,
+            charge_increment=[1.0, 1.0, 1.0, 1.0] * unit.elementary_charge,
+            sigma=0.0 * unit.angstrom,
+            epsilon=1.0 * unit.kilocalorie_per_mole,
+            match="once",
+        )
+
+        # sigma and epsilon are optional
+        names = [
+            "type",
+            "distance",
+            "charge_increment",
+        ]
+
+        self._test_complete_attributes(
+            valid_kwargs, names, VirtualSiteHandler.VirtualSiteTrivalentLonePairType
+        )
+
+        variable_names = ["type", "match"]
+        self._test_variable_names(valid_kwargs, variable_names)
+
+    def test_virtual_site_trivalent_type_invalid_match(self):
+        """
+        Ensure that an error is raised if incorrect parameters are given to
+        a trivalent type
+        """
+
+        invalid_kwargs = dict(
+            type="TrivalentLonePair",
+            smirks="[#6:1]-[#7:2](-[#8:3])-[#8:4]",
+            name="EP",
+            distance=1.0 * unit.angstrom,
+            charge_increment=[1.0, 1.0, 1.0, 1.0] * unit.elementary_charge,
+            sigma=0.0 * unit.angstrom,
+            epsilon=1.0 * unit.kilocalorie_per_mole,
+            match="all_permutations",
+        )
+        with pytest.raises(
+            SMIRNOFFSpecError,
+            match="TrivalentLonePair virtual site defined with match attribute set to all_permutations. Only supported value is 'once'.",
+        ) as excinfo:
+            vs = VirtualSiteHandler.VirtualSiteTrivalentLonePairType(**invalid_kwargs)
 
 
 class TestLibraryChargeHandler:
@@ -1671,7 +2092,7 @@ class TestChargeIncrementModelHandler:
 
         with pytest.raises(
             SMIRNOFFSpecError,
-            match="initialized with unequal number of tagged atoms and charge increments",
+            match="an invalid combination of tagged atoms and charge increments",
         ) as excinfo:
             ci_type = ChargeIncrementModelHandler.ChargeIncrementType(
                 smirks="[#6:1]-[#7:2]",
@@ -1682,7 +2103,7 @@ class TestChargeIncrementModelHandler:
 
         with pytest.raises(
             SMIRNOFFSpecError,
-            match="initialized with unequal number of tagged atoms and charge increments",
+            match="an invalid combination of tagged atoms and charge increments",
         ) as excinfo:
             ci_type = ChargeIncrementModelHandler.ChargeIncrementType(
                 smirks="[#6:1]-[#7:2]-[#6]",
@@ -1691,14 +2112,25 @@ class TestChargeIncrementModelHandler:
                 charge_increment3=-0.1 * unit.elementary_charge,
             )
 
-        with pytest.raises(
-            SMIRNOFFSpecError,
-            match="initialized with unequal number of tagged atoms and charge increments",
-        ) as excinfo:
-            ci_type = ChargeIncrementModelHandler.ChargeIncrementType(
-                smirks="[#6:1]-[#7:2]-[#6]",
-                charge_increment1=0.05 * unit.elementary_charge,
-            )
+        ci_type = ChargeIncrementModelHandler.ChargeIncrementType(
+            smirks="[#6:1]-[#7:2]-[#6]",
+            charge_increment1=0.05 * unit.elementary_charge,
+        )
+
+    def test_charge_increment_one_ci_missing(self):
+        """Test creating a chargeincrement parameter with a missing value"""
+        inferred = ChargeIncrementModelHandler.ChargeIncrementType(
+            smirks="[*:1]-[*:2]",
+            charge_increment=[0.1 * unit.elementary_charge],
+        )
+
+        explicit = ChargeIncrementModelHandler.ChargeIncrementType(
+            smirks="[*:1]-[*:2]",
+            charge_increment=[
+                0.1 * unit.elementary_charge,
+                -0.1 * unit.elementary_charge,
+            ],
+        )
 
 
 class TestGBSAHandler:

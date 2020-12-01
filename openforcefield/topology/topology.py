@@ -67,6 +67,18 @@ class InvalidBoxVectorsError(MessageException):
     """
 
 
+class InvalidPeriodicityError(MessageException):
+    """
+    Exception for setting invalid periodicity
+    """
+
+
+class MissingUniqueMoleculesError(MessageException):
+    """
+    Exception for a when unique_molecules is required but not found
+    """
+
+
 # =============================================================================================
 # PRIVATE SUBROUTINES
 # =============================================================================================
@@ -114,14 +126,81 @@ class _TransformedDict(MutableMapping):
 class ValenceDict(_TransformedDict):
     """Enforce uniqueness in atom indices."""
 
-    def __keytransform__(self, key):
+    @staticmethod
+    def key_transform(key):
         """Reverse tuple if first element is larger than last element."""
         # Ensure key is a tuple.
         key = tuple(key)
+        assert len(key) > 0 and len(key) < 5, "Valence keys must be at most 4 atoms"
         # Reverse the key if the first element is bigger than the last.
         if key[0] > key[-1]:
             key = tuple(reversed(key))
         return key
+
+    @staticmethod
+    def index_of(key, possible=None):
+        """
+        Generates a canonical ordering of the equivalent permutations of ``key`` (equivalent rearrangements of indices)
+        and identifies which of those possible orderings this particular ordering is. This method is useful when
+        multiple SMARTS patterns might match the same atoms, but local molecular symmetry or the use of
+        wildcards in the SMARTS could make the matches occur in arbitrary order.
+
+        This method can be restricted to a subset of the canonical orderings, by providing
+        the optional ``possible`` keyword argument. If provided, the index returned by this method will be
+        the index of the element in ``possible`` after undergoing the same canonical sorting as above.
+
+        Parameters
+        ----------
+        key : iterable of int
+            A valid key for ValenceDict
+        possible : iterable of iterable of int, optional. default=``None``
+            A subset of the possible orderings that this match might take.
+
+        Returns
+        -------
+        index : int
+        """
+        assert len(key) < 4
+        refkey = __class__.key_transform(key)
+        if len(key) == 2:
+            permutations = OrderedDict(
+                {(refkey[0], refkey[1]): 0, (refkey[1], refkey[0]): 1}
+            )
+        elif len(key) == 3:
+            permutations = OrderedDict(
+                {
+                    (refkey[0], refkey[1], refkey[2]): 0,
+                    (refkey[2], refkey[1], refkey[0]): 1,
+                }
+            )
+        else:
+            # For a proper, only forward/backward makes sense
+            permutations = OrderedDict(
+                {
+                    (refkey[0], refkey[1], refkey[2], refkey[3]): 0,
+                    (refkey[3], refkey[1], refkey[2], refkey[0]): 1,
+                }
+            )
+        if possible is not None:
+            i = 0
+            # If the possible permutations were provided, ensure that `possible` is a SUBSET of `permutations`
+            assert all([p in permutations for p in possible]), (
+                "Possible permutations " + str(possible) + " is impossible!"
+            )
+            # TODO: Double-check whether this will generalize. It seems like this would fail if ``key``
+            #       were in ``permutations``, but not ``possible``
+
+            for k in permutations:
+                if all([x == y for x, y in zip(key, k)]):
+                    return i
+                if k in possible:
+                    i += 1
+        else:
+            # If the possible permutations were NOT provided, then return the unique index of this permutation.
+            return permutations[key]
+
+    def __keytransform__(self, key):
+        return __class__.key_transform(key)
 
 
 class SortedDict(_TransformedDict):
@@ -138,10 +217,12 @@ class SortedDict(_TransformedDict):
 class ImproperDict(_TransformedDict):
     """Symmetrize improper torsions."""
 
-    def __keytransform__(self, key):
+    @staticmethod
+    def key_transform(key):
         """Reorder tuple in numerical order except for element[1] which is the central atom; it retains its position."""
         # Ensure key is a tuple
         key = tuple(key)
+        assert len(key) == 4, "Improper keys must be 4 atoms"
         # Retrieve connected atoms
         connectedatoms = [key[0], key[2], key[3]]
         # Sort connected atoms
@@ -150,10 +231,62 @@ class ImproperDict(_TransformedDict):
         key = tuple([connectedatoms[0], key[1], connectedatoms[1], connectedatoms[2]])
         return key
 
+    @staticmethod
+    def index_of(key, possible=None):
+        """
+        Generates a canonical ordering of the equivalent permutations of ``key`` (equivalent rearrangements of indices)
+        and identifies which of those possible orderings this particular ordering is. This method is useful when
+        multiple SMARTS patterns might match the same atoms, but local molecular symmetry or the use of
+        wildcards in the SMARTS could make the matches occur in arbitrary order.
+
+        This method can be restricted to a subset of the canonical orderings, by providing
+        the optional ``possible`` keyword argument. If provided, the index returned by this method will be
+        the index of the element in ``possible`` after undergoing the same canonical sorting as above.
+
+        Parameters
+        ----------
+        key : iterable of int
+            A valid key for ValenceDict
+        possible : iterable of iterable of int, optional. default=``None``
+            A subset of the possible orderings that this match might take.
+
+        Returns
+        -------
+        index : int
+        """
+        assert len(key) == 4
+        refkey = __class__.key_transform(key)
+        permutations = OrderedDict(
+            {
+                (refkey[0], refkey[1], refkey[2], refkey[3]): 0,
+                (refkey[0], refkey[1], refkey[3], refkey[2]): 1,
+                (refkey[2], refkey[1], refkey[0], refkey[3]): 2,
+                (refkey[2], refkey[1], refkey[3], refkey[0]): 3,
+                (refkey[3], refkey[1], refkey[0], refkey[2]): 4,
+                (refkey[3], refkey[1], refkey[2], refkey[0]): 5,
+            }
+        )
+        if possible is not None:
+            assert all(
+                [p in permutations for p in possible]
+            ), "Possible permuation is impossible!"
+            i = 0
+            for k in permutations:
+                if all([x == y for x, y in zip(key, k)]):
+                    return i
+                if k in possible:
+                    i += 1
+        else:
+            return permutations[key]
+
+    def __keytransform__(self, key):
+        return __class__.key_transform(key)
+
 
 # =============================================================================================
 # TOPOLOGY OBJECTS
 # =============================================================================================
+
 
 # =============================================================================================
 # TopologyAtom
@@ -463,6 +596,10 @@ class TopologyVirtualSite(Serializable):
         # TODO: Type checks
         self._virtual_site = virtual_site
         self._topology_molecule = topology_molecule
+        self._topology_virtual_particle_start_index = None
+
+    def invalidate_cached_data(self):
+        self._topology_virtual_particle_start_index = None
 
     def atom(self, index):
         """
@@ -530,20 +667,70 @@ class TopologyVirtualSite(Serializable):
         )
 
     @property
-    def topology_particle_index(self):
+    def n_particles(self):
         """
-        Get the index of this particle in its parent Topology.
+        Get the number of particles represented by this VirtualSite
+
+        Returns
+        -------
+        int : The number of particles
+        """
+        return self._virtual_site.n_particles
+
+    @property
+    def topology_virtual_particle_start_index(self):
+        """
+        Get the index of the first virtual site particle in its parent Topology.
 
         Returns
         -------
         int
             The index of this particle in its parent topology.
         """
-        # This assumes that the particles in a topology are listed with all atoms from all TopologyMolecules
-        # first, followed by all VirtualSites from all TopologyMolecules second
-        return self.topology.n_topology_atoms + self.topology_virtual_site_index
+        # This assumes that the particles in a topology are listed with all
+        # atoms from all TopologyMolecules first, followed by all VirtualSites
+        # from all TopologyMolecules second
 
-        # return self._topology_molecule.particle_start_topology_index + self._virtual_site.molecule_particle_index
+        # If the cached value is not available, generate it
+
+        if self._topology_virtual_particle_start_index is None:
+            virtual_particle_start_topology_index = (
+                self.topology_molecule.topology.n_topology_atoms
+            )
+            for (
+                topology_molecule
+            ) in self._topology_molecule._topology.topology_molecules:
+                for tvsite in topology_molecule.virtual_sites:
+                    if self == tvsite:
+                        break
+                    virtual_particle_start_topology_index += tvsite.n_particles
+                if self._topology_molecule == topology_molecule:
+                    break
+                # else:
+                #     virtual_particle_start_topology_index += tvsite.n_particles
+                #     virtual_particle_start_topology_index += topology_molecule.n_particles
+            self._topology_virtual_particle_start_index = (
+                virtual_particle_start_topology_index
+            )
+        # Return cached value
+        # print(self._topology_virtual_particle_start_index)
+        return self._topology_virtual_particle_start_index
+
+    @property
+    def particles(self):
+        """
+        Get an iterator to the reference particles that this TopologyVirtualSite
+        contains.
+
+        Returns
+        -------
+        iterator of TopologyVirtualParticles
+        """
+
+        for vptl in self.virtual_site.particles:
+            yield TopologyVirtualParticle(
+                self._virtual_site, vptl, self._topology_molecule
+            )
 
     @property
     def molecule(self):
@@ -582,6 +769,53 @@ class TopologyVirtualSite(Serializable):
         """Static constructor from dictionary representation."""
         # Implement abstract method Serializable.to_dict()
         raise NotImplementedError()  # TODO
+
+
+# =============================================================================================
+# TopologyVirtualParticle
+# =============================================================================================
+
+
+class TopologyVirtualParticle(TopologyVirtualSite):
+    def __init__(self, virtual_site, virtual_particle, topology_molecule):
+        self._virtual_site = virtual_site
+        self._virtual_particle = virtual_particle
+        self._topology_molecule = topology_molecule
+
+    def __eq__(self, other):
+
+        if type(other) != type(self):
+            return False
+
+        same_vsite = super() == super(TopologyVirtualParticle, other)
+        if not same_vsite:
+            return False
+
+        same_ptl = self.topology_particle_index == other.topology_particle_index
+
+        return same_ptl
+
+    @property
+    def topology_particle_index(self):
+        """
+        Get the index of this particle in its parent Topology.
+
+        Returns
+        -------
+        idx : int
+            The index of this particle in its parent topology.
+        """
+        # This assumes that the particles in a topology are listed with all atoms from all TopologyMolecules
+        # first, followed by all VirtualSites from all TopologyMolecules second
+        orientation_key = self._virtual_particle.orientation
+        offset = 0
+        # vsite is a topology vsite, which has a regular vsite
+        for i, ornt in enumerate(self._virtual_site._virtual_site.orientations):
+            if ornt == orientation_key:
+                offset = i
+                break
+
+        return offset + self._virtual_site.topology_virtual_particle_start_index
 
 
 # =============================================================================================
@@ -628,14 +862,20 @@ class TopologyMolecule:
 
         # Initialize cached data
         self._atom_start_topology_index = None
+        self._particle_start_topology_index = None
         self._bond_start_topology_index = None
         self._virtual_site_start_topology_index = None
+        self._virtual_particle_start_topology_index = None
 
     def _invalidate_cached_data(self):
         """Unset all cached data, in response to an appropriate change"""
         self._atom_start_topology_index = None
+        self._particle_start_topology_index = None
         self._bond_start_topology_index = None
         self._virtual_site_start_topology_index = None
+        self._virtual_particle_start_topology_index = None
+        for vsite in self.virtual_sites:
+            vsite.invalidate_cached_data()
 
     @property
     def topology(self):
@@ -719,6 +959,27 @@ class TopologyMolecule:
 
         # Return cached value
         return self._atom_start_topology_index
+
+    @property
+    def virtual_particle_start_topology_index(self):
+        """
+        Get the topology index of the first virtual particle in this TopologyMolecule
+
+        """
+        # If cached value is not available, generate it.
+        if self._virtual_particle_start_topology_index is None:
+            particle_start_topology_index = self.topology.n_atoms
+            for topology_molecule in self._topology.topology_molecules:
+                if self == topology_molecule:
+                    self._particle_start_topology_index = particle_start_topology_index
+                    break
+                offset = sum(
+                    [vsite.n_particles for vsite in topology_molecule.virtual_sites]
+                )
+                particle_start_topology_index += offset
+            self._virtual_particle_start_topology_index = particle_start_topology_index
+        # Return cached value
+        return self._virtual_particle_start_topology_index
 
     def bond(self, index):
         """
@@ -804,9 +1065,10 @@ class TopologyMolecule:
             ref_atom = self._reference_molecule.atoms[ref_mol_atom_index]
             yield TopologyAtom(ref_atom, self)
 
-        # TODO: Add ordering scheme here
         for vsite in self.reference_molecule.virtual_sites:
-            yield TopologyVirtualSite(vsite, self)
+            tvsite = TopologyVirtualSite(vsite, self)
+            for vptl in vsite.particles:
+                yield TopologyVirtualParticle(tvsite, vptl, self)
 
     @property
     def n_particles(self):
@@ -842,8 +1104,8 @@ class TopologyMolecule:
         -------
         an iterator of openforcefield.topology.TopologyVirtualSite
         """
-        for vs in self._reference_molecule.virtual_sites:
-            yield TopologyVirtualSite(vs, self)
+        for vsite in self._reference_molecule.virtual_sites:
+            yield TopologyVirtualSite(vsite, self)
 
     @property
     def n_virtual_sites(self):
@@ -1009,7 +1271,6 @@ class Topology(Serializable):
         self._aromaticity_model = DEFAULT_AROMATICITY_MODEL
         self._constrained_atom_pairs = dict()
         self._box_vectors = None
-        # self._is_periodic = False
         # self._reference_molecule_dicts = set()
         # TODO: Look into weakref and what it does. Having multiple topologies might cause a memory leak.
         self._reference_molecule_to_topology_molecules = OrderedDict()
@@ -1148,6 +1409,34 @@ class Topology(Serializable):
         else:
             assert len(box_vectors) == 3
         self._box_vectors = box_vectors
+
+    @property
+    def is_periodic(self):
+        """Return whether or not this Topology is intended to be described with periodic
+        boundary conditions."""
+        return self.box_vectors is not None
+
+    @is_periodic.setter
+    def is_periodic(self, is_periodic):
+        """
+        Set the partial charge model used for all molecules in the topology.
+
+        Parameters
+        ----------
+        is_periodic : bool
+            Whether or not this Topology is periodici
+
+        """
+        if is_periodic is True and self.box_vectors is None:
+            raise InvalidPeriodicityError(
+                "Cannot set is_periodic to True without box vectors. Set box "
+                "vectors directly instead."
+            )
+        if is_periodic is False and self.box_vectors is not None:
+            raise InvalidPeriodicityError(
+                "Cannot set is_periodic to False while box vectors are stored. "
+                "First set box_vectors to None."
+            )
 
     @property
     def charge_model(self):
@@ -1356,7 +1645,8 @@ class Topology(Serializable):
                 yield atom
         for topology_molecule in self._topology_molecules:
             for vs in topology_molecule.virtual_sites:
-                yield vs
+                for vp in vs.particles:
+                    yield vp
 
     @property
     def n_topology_virtual_sites(self):
@@ -1625,8 +1915,6 @@ class Topology(Serializable):
             The atomic elements and bond connectivity will be used to match the reference molecules
             to molecule graphs appearing in the OpenMM ``Topology``. If bond orders are present in the
             OpenMM ``Topology``, these will be used in matching as well.
-            If all bonds have bond orders assigned in ``mdtraj_topology``, these bond orders will be used to attempt to construct
-            the list of unique Molecules if the ``unique_molecules`` argument is omitted.
 
         Returns
         -------
@@ -1642,6 +1930,12 @@ class Topology(Serializable):
         for omm_bond in openmm_topology.bonds():
             if omm_bond.order is None:
                 omm_has_bond_orders = False
+
+        if unique_molecules is None:
+            raise MissingUniqueMoleculesError(
+                "Topology.from_openmm requires a list of Molecule objects "
+                "passed as unique_molecules, but None was passed."
+            )
 
         # Convert all unique mols to graphs
         topology = cls()
@@ -1764,13 +2058,16 @@ class Topology(Serializable):
 
         Parameters
         ----------
-        openmm_topology : simtk.openmm.app.Topology
-            An OpenMM Topology object
         ensure_unique_atom_names : bool, optional. Default=True
             Whether to check that the molecules in each molecule have
             unique atom names, and regenerate them if not. Note that this
             looks only at molecules, and does not guarantee uniqueness in
             the entire Topology.
+
+        Returns
+        -------
+        openmm_topology : simtk.openmm.app.Topology
+            An OpenMM Topology object
         """
         from simtk.openmm.app import Aromatic, Double, Single
         from simtk.openmm.app import Topology as OMMTopology
@@ -1851,6 +2148,41 @@ class Topology(Serializable):
             omm_topology.setPeriodicBoxVectors(self.box_vectors)
         return omm_topology
 
+    def to_file(self, filename, positions, file_format="PDB", keepIds=False):
+        """
+        To save a PDB file with coordinates as well as topology from openforcefield topology object
+        Reference: https://github.com/openforcefield/openforcefield/issues/502
+        Note: 1. This doesn't handle virtual sites (they're ignored)
+              2. Atom numbering may not remain same, for example if the atoms in water are numbered as 1001, 1002, 1003,
+                 they would change to 1, 2, 3.
+                 This doesn't affect the topology or coordinates or atom-ordering in anyway
+              3. Same issue with the amino acid names in the pdb file, they are not returned
+
+        Parameters
+        ----------
+        filename : str
+            name of the pdb file to write to
+        positions : n_atoms x 3 numpy array or simtk.unit.Quantity-wrapped n_atoms x 3 iterable
+            Can be an openmm 'quantity' object which has atomic positions as a list of Vec3s along with associated units, otherwise a 3D array of UNITLESS numbers are considered as "Angstroms" by default
+        file_format : str
+            Output file format. Case insensitive. Currently only supported value is "pdb".
+
+        """
+        from simtk.openmm.app import PDBFile
+        from simtk.unit import Quantity, angstroms
+
+        openmm_top = self.to_openmm()
+        if not isinstance(positions, Quantity):
+            positions = positions * angstroms
+
+        file_format = file_format.upper()
+        if file_format != "PDB":
+            raise NotImplementedError("Topology.to_file supports only PDB format")
+
+        # writing to PDB file
+        with open(filename, "w") as outfile:
+            PDBFile.writeFile(openmm_top, positions, outfile, keepIds)
+
     @staticmethod
     def from_mdtraj(mdtraj_topology, unique_molecules=None):
         """
@@ -1861,12 +2193,10 @@ class Topology(Serializable):
         mdtraj_topology : mdtraj.Topology
             An MDTraj Topology object
         unique_molecules : iterable of objects that can be used to construct unique Molecule objects
-            All unique molecules mult be provided, in any order, though multiple copies of each molecule are allowed.
+            All unique molecules must be provided, in any order, though multiple copies of each molecule are allowed.
             The atomic elements and bond connectivity will be used to match the reference molecules
             to molecule graphs appearing in the MDTraj ``Topology``. If bond orders are present in the
             MDTraj ``Topology``, these will be used in matching as well.
-            If all bonds have bond orders assigned in ``mdtraj_topology``, these bond orders will be used to attempt to construct
-            the list of unique Molecules if the ``unique_molecules`` argument is omitted.
 
         Returns
         -------
@@ -1908,21 +2238,16 @@ class Topology(Serializable):
         parmed_structure : parmed.Structure
             A ParmEd structure object
         unique_molecules : iterable of objects that can be used to construct unique Molecule objects
-            All unique molecules mult be provided, in any order, though multiple copies of each molecule are allowed.
+            All unique molecules must be provided, in any order, though multiple copies of each molecule are allowed.
             The atomic elements and bond connectivity will be used to match the reference molecules
             to molecule graphs appearing in the structure's ``topology`` object. If bond orders are present in the
             structure's ``topology`` object, these will be used in matching as well.
-            If all bonds have bond orders assigned in the structure's ``topology`` object,
-            these bond orders will be used to attempt to construct
-            the list of unique Molecules if the ``unique_molecules`` argument is omitted.
 
         Returns
         -------
         topology : openforcefield.Topology
             An openforcefield Topology object
         """
-        import parmed
-
         # TODO: Implement functionality
         raise NotImplementedError
 
@@ -1938,8 +2263,6 @@ class Topology(Serializable):
         parmed_structure : parmed.Structure
             A ParmEd Structure objecft
         """
-        import parmed
-
         # TODO: Implement functionality
         raise NotImplementedError
 

@@ -229,13 +229,16 @@ In keeping with the AMBER force field philosophy, especially as implemented in s
 
 Here is an example:
 ```XML
-<ChargeIncrementModel version="0.3" number_of_conformers="1" partial_charge_method="AM1-Mulliken">
+<ChargeIncrementModel version="0.4" number_of_conformers="1" partial_charge_method="AM1-Mulliken">
   <!-- A fractional charge can be moved along a single bond -->
   <ChargeIncrement smirks="[#6X4:1]-[#6X3a:2]" charge_increment1="-0.0073*elementary_charge" charge_increment2="0.0073*elementary_charge"/>
   <ChargeIncrement smirks="[#6X4:1]-[#6X3a:2]-[#7]" charge_increment1="0.0943*elementary_charge" charge_increment2="-0.0943*elementary_charge"/>
-  <ChargeIncrement smirks="[#6X4:1]-[#8:2]" charge_increment1="-0.0718*elementary_charge" charge_increment2="0.0718*elementary_charge"/>
   <!--- Alternatively, fractional charges can be redistributed among any number of bonded atoms -->
   <ChargeIncrement smirks="[N:1]([H:2])([H:3])" charge_increment1="0.02*elementary_charge" charge_increment2="-0.01*elementary_charge" charge_increment3="-0.01*elementary_charge"/>
+  <!-- As of version 0.4 of the ChargeIncrementModel tag, it is possible to define one less charge_increment attribute than there are tagged atoms -->
+  <!-- The final, undefined charge_increment will be calculated as to make the sum of the charge_increments equal 0 -->
+  <ChargeIncrement smirks="[#6X4:1]-[#8:2]" charge_increment1="-0.0718*elementary_charge"/>
+  <ChargeIncrement smirks="[N]-[C:1]-[C:2]-[Cl:3]" charge_increment1="-0.123" charge_increment2="0.456" />
 </ChargeIncrementModel>
 ```
 The sum of formal charges for the molecule or fragment will be used to determine the total charge the molecule or fragment will possess.
@@ -246,15 +249,26 @@ The sum of formal charges for the molecule or fragment will be used to determine
 
 The `<ChargeIncrement>` tags specify how the quantum chemical derived charges are to be corrected to produce the final charges.
 The `charge_increment#` attributes specify how much the charge on the associated tagged atom index (replacing `#`) should be modified.
-The sum of charge increments should equal zero.
+
+Starting in the 0.4 version of this section, a `ChargeIncrement` may be specified with one less `charge_increment` value than it has tagged atoms.
+The missing `charge_increment` value must be that of the highest tagged atom index. 
+This missing `charge_increment` will be calculated to offset the sum of the other `charge_increment`s in the same `ChargeIncrement` parameter to achieve a net value of 0.
+This allows `ChargeIncrement` parameters to be defined similar to bond charge corrections. 
 
 Note that atoms for which library charges have already been applied are excluded from charging via `<ChargeIncrementModel>`.
 
 Future additions will provide options for intelligently fragmenting large molecules and biopolymers, as well as a `capping` attribute to specify how fragments with dangling bonds are to be capped to allow these groups to be charged.
 
+| ChargeIncrementModel section tag version | Tag attributes and default values                                  | Required parameter attributes                                                                   | Optional parameter attributes |
+|------------------------------------------|--------------------------------------------------------------------|-------------------------------------------------------------------------------------------------|-------------------------------|
+| 0.3                                      | `number_of_conformers="1"`, `partial_charge_method='AM1-Mulliken'` | `smirks`, `charge_increment` (indexed, must be equal to number of tagged atoms in `smirks`)                    | `name`, `id`, `parent_id`     |
+| 0.4                                      | `number_of_conformers="1"`, `partial_charge_method='AM1-Mulliken'` | `smirks`, `charge_increment` (indexed, must be equal to- or one less than- number of tagged atoms in `smirks`) | `name`, `id`, `parent_id`     |
+
+
+
 ### `<ToolkitAM1BCC>`: Temporary support for toolkit-based AM1-BCC partial charges
 
-.. warning:: Until `<ChargeIncrementModel>` is implemented, support for the `<ToolkitAM1BCC>` tag has been enabled in the toolkit. This tag is not permanent and may be phased out in future versions of the spec.
+.. warning:: This tag is not permanent and may be phased out in future versions of the spec.
 
 This tag calculates partial charges using the default settings of the highest-priority cheminformatics toolkit that can perform [AM1-BCC charge assignment](https://docs.eyesopen.com/toolkits/python/quacpactk/molchargetheory.html#am1bcc-charges).
 Currently, if the OpenEye toolkit is licensed and available, this will use QuacPac configured to generate charges using [AM1-BCC ELF10](https://docs.eyesopen.com/toolkits/python/quacpactk/OEProtonClasses/OEAM1BCCELF10Charges.html) for each unique molecule in the topology.
@@ -388,9 +402,7 @@ If the `potential` attribute is omitted, it defaults to `harmonic`.
 
 Constrained bonds are handled by a separate `<Constraints>` tag, which can either specify constraint distances or draw them from equilibrium distances specified in `<Bonds>`.
 
-#### Fractional bond orders (EXPERIMENTAL)
-
-.. warning:: This functionality is not yet implemented and will appear in a future version of the toolkit.
+#### Fractional bond orders
 
 Fractional bond orders can be used to allow interpolation of bond parameters.
 For example, these parameters:
@@ -403,17 +415,18 @@ For example, these parameters:
 ```
 can be replaced by a single parameter line by first invoking the `fractional_bondorder_method` attribute to specify a method for computing the fractional bond order and `fractional_bondorder_interpolation` for specifying the procedure for interpolating parameters between specified integral bond orders:
 ```XML
-<Bonds version="0.3" potential="harmonic" fractional_bondorder_method="Wiberg" fractional_bondorder_interpolation="linear">
+<Bonds version="0.3" potential="harmonic" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
     <Bond smirks="[#6X3:1]!#[#6X3:2]" k_bondorder1="820.0*kilocalories_per_mole/angstrom**2" k_bondorder2="1098*kilocalories_per_mole/angstrom**2" length_bondorder1="1.45*angstrom" length_bondorder2="1.35*angstrom"/>
     ...
 ```
 This allows specification of force constants and lengths for bond orders 1 and 2, and then interpolation between those based on the partial bond order.
-* `fractional_bondorder_method` defaults to `none`, but the `Wiberg` method is supported.
+* `fractional_bondorder_method` defaults to `AM1-Wiberg`.
 * `fractional_bondorder_interpolation` defaults to `linear`, which is the only supported scheme for now.
 
-| Bonds section tag version | Tag attributes and default values                                                                           | Required parameter attributes                 | Optional parameter attributes |
-|---------------------------|-------------------------------------------------------------------------------------------------------------|-----------------------------------------------|-------------------------------|
-| 0.3                       | `potential="harmonic"`, `fractional_bondorder_method="none"`, `fractional_bondorder_interpolation="linear"` | `smirks`, `length`, `k`                       |  `id`, `parent_id`            |
+| Bonds section tag version | Tag attributes and default values                                                                                           | Required parameter attributes                 | Optional parameter attributes |
+|---------------------------|-----------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------|-------------------------------|
+| 0.3                       | `potential="harmonic"`, `fractional_bondorder_method="none"`, `fractional_bondorder_interpolation="linear"`                 | `smirks`, `length`, `k`                       |  `id`, `parent_id`            |
+| 0.4                       | `potential="(k/2)*(r-length)^2"`, `fractional_bondorder_method="AM1-Wiberg"`, `fractional_bondorder_interpolation="linear"` | `smirks`, `length`, `k`                       |  `id`, `parent_id`            |
 
 
 ### `<Angles>`
@@ -636,8 +649,6 @@ Standard usage is expected to rely primarily on the features documented above an
 
 ### `<VirtualSites>`: Virtual sites for off-atom charges
 
-.. warning:: This functionality is not yet implemented and will appear in a future version of the toolkit
-
 We will implement experimental support for placement of off-atom (off-center) charges in a variety of contexts which may be chemically important in order to allow easy exploration of when these will be warranted.
 We will support the following different types or geometries of off-center charges (as diagrammed below):
 - `BondCharge`: This supports placement of a virtual site `S` along a vector between two specified atoms, e.g. to allow for a sigma hole for halogens or similar contexts. With positive values of the distance, the virtual site lies outside the first indexed atom (green in this image).
@@ -649,36 +660,41 @@ We will support the following different types or geometries of off-center charge
 - `TrivalentLonePair`: This is suitable for planar or tetrahedral nitrogen lone pairs; a charge site `S` lies above  the central atom (e.g. nitrogen, blue) a distance `d` along the vector perpendicular to the plane of the three connected atoms (2,3,4). With positive values of `d` the site lies above the nitrogen and with negative values it lies below the nitrogen.
 ![Trivalent lone pair virtual site](figures/vsite_trivalent.jpg)
 
-Each virtual site receives charge which is transferred from the desired atoms specified in the SMIRKS pattern via a `charge_increment#` parameter, e.g., if `charge_increment1=+0.1*elementary_charge` then the virtual site will receive a charge of -0.1 and the atom labeled `1` will have its charge adjusted upwards by +0.1.
+Each virtual site receives charge which is transferred from the desired atoms specified in the SMIRKS pattern via a `charge_increment#` parameter, e.g., if `charge_increment1=0.1*elementary_charge` then the virtual site will receive a charge of -0.1 and the atom labeled `1` will have its charge adjusted upwards by 0.1.
 N may index any indexed atom.
-Increments which are left unspecified default to zero.
 Additionally, each virtual site can bear Lennard-Jones parameters, specified by `sigma` and `epsilon` or `rmin_half` and `epsilon`.
-If unspecified these also default to zero.
+If unspecified these default to zero.
 
 In the SMIRNOFF format, these are encoded as:
 ```XML
-<VirtualSites version="0.3">
-    <!-- sigma hole for halogens: "distance" denotes distance along the 2->1 bond vector, measured from atom 2 -->
-    <!-- Specify that 0.2 charge from atom 1 and 0.1 charge units from atom 2 are to be moved to the virtual site, and a small Lennard-Jones site is to be added (sigma = 0.1*angstroms, epsilon=0.05*kcal/mol) -->
-    <VirtualSite type="BondCharge" smirks="[Cl:1]-[C:2]" distance="0.30*angstrom" charge_increment1="+0.2*elementary_charge" charge_increment2="+0.1*elementary_charge" sigma="0.1*angstrom" epsilon="0.05*kilocalories_per_mole" />
-    <!-- Charge increments can extend out to as many atoms as are labeled, e.g. with a third atom: -->
-    <VirtualSite type="BondCharge" smirks="[Cl:1]-[C:2]~[*:3]" distance="0.30*angstrom" charge_increment1="+0.1*elementary_charge" charge_increment2="+0.1*elementary_charge" charge_increment3="+0.05*elementary_charge" sigma="0.1*angstrom" epsilon="0.05*kilocalories_per_mole" />
-    <!-- monovalent lone pairs: carbonyl -->
-    <!-- X denotes the charge site, and P denotes the projection of the charge site into the plane of 1 and 2. -->
-    <!-- inPlaneAngle is angle point P makes with 1 and 2, i.e. P-1-2 -->
-    <!-- outOfPlaneAngle is angle charge site (X) makes out of the plane of 2-1-3 (and P) measured from 1 -->
-    <!-- Since unspecified here, sigma and epsilon for the virtual site default to zero -->
-    <VirtualSite type="MonovalentLonePair" smirks="[O:1]=[C:2]-[*:3]" distance="0.30*angstrom" outOfPlaneAngle="0*degree" inPlaneAngle="120*degree" charge_increment1="+0.2*elementary_charge" />
-    <!-- divalent lone pair: pyrimidine, TIP4P, TIP5P -->
-    <!-- The atoms 2-1-3 define the X-Y plane, with Z perpendicular. If outOfPlaneAngle is 0, the charge site is a specified distance along the in-plane vector which bisects the angle left by taking 360 degrees minus angle(2,1,3). If outOfPlaneAngle is nonzero, the charge sites lie out of the plane by the specified angle (at the specified distance) and their in-plane projection lines along the angle's bisector. -->
-    <VirtualSite type="DivalentLonePair" smirks="[*:2]~[#7X2:1]~[*:3]" distance="0.30*angstrom" outOfPlaneAngle="0.0*degree" charge_increment1="+0.1*elementary_charge" />
-    <!-- trivalent nitrogen lone pair -->
-    <!-- charge sites lie above and below the nitrogen at specified distances from the nitrogen, along the vector perpendicular to the plane of (2,3,4) that passes through the nitrogen. If the nitrogen is co-planar with the connected atom, charge sites are simply above and below the plane-->
-    <!-- Positive and negative values refer to above or below the nitrogen as measured relative to the plane of (2,3,4), i.e. below the nitrogen means nearer the 2,3,4 plane unless they are co-planar -->
-    <VirtualSite type="TrivalentLonePair" smirks="[*:2]~[#7X3:1](~[*:4])~[*:3]" distance="0.30*angstrom" charge_increment1="+0.1*elementary_charge"/>
-    <VirtualSite type="TrivalentLonePair" smirks="[*:2]~[#7X3:1](~[*:4])~[*:3]" distance="-0.30*angstrom" charge_increment1="+0.1*elementary_charge"/>
+<VirtualSites version="0.3" exclusion_policy="parents">
+  <!-- sigma hole for halogens: "distance" denotes distance along the 2->1 bond vector, measured from atom 2 -->
+  <!-- Specify that 0.2 charge from atom 1 and 0.1 charge units from atom 2 are to be moved to the virtual site, and a small Lennard-Jones site is to be added (sigma=0.1*angstroms, epsilon=0.05*kcal/mol) -->
+  <VirtualSite type="BondCharge" smirks="[Cl:1]-[C:2]" distance="0.30*angstrom" charge_increment1="-0.2*elementary_charge" charge_increment2="-0.1*elementary_charge" sigma="0.1*angstrom" epsilon="0.05*kilocalories_per_mole"/>
+  <!-- Charge increments can extend out to as many atoms as are labeled, e.g. with a third atom: -->
+  <VirtualSite type="BondCharge" smirks="[Cl:1]-[C:2]~[*:3]" distance="0.30*angstrom" charge_increment1="-0.1*elementary_charge" charge_increment2="-0.1*elementary_charge" charge_increment3="-0.05*elementary_charge" sigma="0.1*angstrom" epsilon="0.05*kilocalories_per_mole"/>
+  <!-- monovalent lone pairs: carbonyl -->
+  <!-- X denotes the charge site, and P denotes the projection of the charge site into the plane of 1 and 2. -->
+  <!-- inPlaneAngle is angle point P makes with 1 and 2, i.e. P-1-2 -->
+  <!-- outOfPlaneAngle is angle charge site (X) makes out of the plane of 2-1-3 (and P) measured from 1 -->
+  <!-- Since unspecified here, sigma and epsilon for the virtual site default to zero -->
+  <VirtualSite type="MonovalentLonePair" smirks="[O:1]=[C:2]-[*:3]" distance="0.30*angstrom" outOfPlaneAngle="0*degree" inPlaneAngle="120*degree" charge_increment1="0.2*elementary_charge" charge_increment2="0.2*elementary_charge" charge_increment3="0.2*elementary_charge"/>
+  <!-- divalent lone pair: pyrimidine, TIP4P, TIP5P -->
+  <!-- The atoms 2-1-3 define the X-Y plane, with Z perpendicular. If outOfPlaneAngle is 0, the charge site is a specified distance along the in-plane vector which bisects the angle left by taking 360 degrees minus angle(2,1,3). If outOfPlaneAngle is nonzero, the charge sites lie out of the plane by the specified angle (at the specified distance) and their in-plane projection lines along the angle's bisector. -->
+  <VirtualSite type="DivalentLonePair" smirks="[*:2]~[#7X2:1]~[*:3]" distance="0.30*angstrom" outOfPlaneAngle="0.0*degree" charge_increment1="0.1*elementary_charge" charge_increment2="0.2*elementary_charge" charge_increment3="0.2*elementary_charge"/>
+  <!-- trivalent nitrogen lone pair -->
+  <!-- charge sites lie above and below the nitrogen at specified distances from the nitrogen, along the vector perpendicular to the plane of (2,3,4) that passes through the nitrogen. If the nitrogen is co-planar with the connected atom, charge sites are simply above and below the plane -->
+  <!-- Positive and negative values refer to above or below the nitrogen as measured relative to the plane of (2,3,4), i.e. below the nitrogen means nearer the 2,3,4 plane unless they are co-planar -->
+  <!-- To ensure that the second site does not overwrite the first, specify a unique name for each. -->
+  <VirtualSite type="TrivalentLonePair" smirks="[*:2]~[#7X3:1](~[*:4])~[*:3]" name="A" distance="0.30*angstrom" charge_increment1="0.1*elementary_charge" charge_increment2="0.2*elementary_charge" charge_increment3="0.2*elementary_charge" charge_increment4="0.2*elementary_charge"/>
+  <VirtualSite type="TrivalentLonePair" smirks="[*:2]~[#7X3:1](~[*:4])~[*:3]" name="B" distance="-0.30*angstrom" charge_increment1="0.1*elementary_charge" charge_increment2="0.2*elementary_charge" charge_increment3="0.2*elementary_charge" charge_increment4="0.2*elementary_charge"/>
 </VirtualSites>
 ```
+
+| VirtualSites section tag version   | Tag attributes and default values    | Required parameter attributes and default values   | Optional parameter attributes |
+|------------------------------------|--------------------------------------|----------------------------------------------------|-------------------------------|
+| 0.3                                | `exclusion_policy="parents"`         | `smirks`, `type`, `distance`, `charge_increment` (indexed), `inPlaneAngle` IF `type="MonovalentLonePair"`, `outOfPlaneAngle` IF `type="MonovalentLonePair` OR `type="DivalentLonePair"`,  `sigma=0.*angstrom`, `epsilon=0.*kilocalories_per_mole`, `name="EP"`, `match="all_permutations"` IF `type=BondCharge` OR `type="MonovalentLonePair` OR `type="DivalentLonePair"`, `match="once"` IF `type="TrivalentLonePair` | N/A |
+
 
 ### Aromaticity models
 

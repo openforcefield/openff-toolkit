@@ -1,0 +1,11 @@
+name: constructor
+
+channels:
+  - defaults
+  - conda-forge
+
+dependencies:
+  - conda-build
+  - conda
+  - constructor=>3.1
+  - cookiecutter
