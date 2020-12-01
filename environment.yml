@@ -1,8 +1,15 @@
 # Environment file for Jupyter notebook examples
-name: openforcefield
+name: binder-env
 channels:
-    - conda-forge
-    - omnia
-    - defaults
+  - conda-forge
+  - omnia
+  - defaults
 dependencies:
-    - openforcefield
+  # Let conda pull in the toolkit and its deps
+  - openforcefield
+
+  # Optional(-ish) dependencies used in example(s)
+  - nglview
+  - qcportal
+  - qcengine
+  - openmmforcefields

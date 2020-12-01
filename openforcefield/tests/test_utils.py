@@ -105,7 +105,7 @@ def test_sort_smirnoff_dict():
     from openforcefield.typing.engines.smirnoff import ForceField
     from openforcefield.utils.utils import sort_smirnoff_dict
 
-    forcefield = ForceField("test_forcefields/smirnoff99Frosst.offxml")
+    forcefield = ForceField("test_forcefields/test_forcefield.offxml")
     smirnoff_dict = forcefield._to_smirnoff_data()
 
     # Ensure data is not created or destroyed

@@ -56,7 +56,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - uses: goanpeca/setup-miniconda@v1
+      - uses: conda-incubator/setup-miniconda@v2
         name: Install both RDKit and OpenEye toolkits
         if: ${{ matrix.cfg.rdkit == 'TRUE' && matrix.cfg.openeye == 'TRUE' }}
         with:
@@ -64,7 +64,7 @@ jobs:
           activate-environment: test
           environment-file: devtools/conda-envs/test_env.yaml
           auto-activate-base: false
-      - uses: goanpeca/setup-miniconda@v1
+      - uses: conda-incubator/setup-miniconda@v2
         name: Install only RDKit
         if: ${{ matrix.cfg.rdkit == 'TRUE' && matrix.cfg.openeye == 'FALSE' }}
         with:
@@ -72,7 +72,7 @@ jobs:
           activate-environment: test
           environment-file: devtools/conda-envs/rdkit.yaml
           auto-activate-base: false
-      - uses: goanpeca/setup-miniconda@v1
+      - uses: conda-incubator/setup-miniconda@v2
         name: Install with OpenEye toolkits
         if: ${{ matrix.cfg.rdkit == 'FALSE' && matrix.cfg.openeye == 'TRUE' }}
         with:
@@ -133,7 +133,7 @@ jobs:
         if: ${{ matrix.cfg.rdkit == 'true' && matrix.cfg.openeye == 'TRUE' }}
         continue-on-error: true
         run: |
-          pytest -r fE -tb=short openforcefield/tests/test_links.py
+          pytest -r fE --tb=short openforcefield/tests/test_links.py
 
       - name: Run unit tests
         shell: bash -l {0}
@@ -166,6 +166,7 @@ jobs:
             PYTEST_ARGS+=" --ignore=examples/check_dataset_parameter_coverage"
             PYTEST_ARGS+=" --ignore=examples/conformer_energies"
             PYTEST_ARGS+=" --ignore=examples/QCArchive_interface"
+            PYTEST_ARGS+=" --ignore=examples/visualization"
           fi
           pytest $PYTEST_ARGS examples/
 
