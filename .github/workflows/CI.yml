@@ -143,7 +143,7 @@ jobs:
           # if [[ "$GITHUB_EVENT_NAME" == "schedule" ]]; then
           if [[ "$RDKIT" == true && "$OPENEYE" == true ]]; then
             # Switch back to cron-only before merging
-            $PYTEST_ARGS+=" --runslow"
+            PYTEST_ARGS+=" --runslow"
           fi
           pytest $PYTEST_ARGS openforcefield/tests/
 
