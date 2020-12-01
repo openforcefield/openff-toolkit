@@ -9,12 +9,12 @@ dependencies:
   - python
   - pip
 
-  - nbval
   - numpy
   - networkx
   - ambertools
   - rdkit
   - packaging
+
   - openmmforcefields >=0.7.2
   - openmmtools
   - openforcefields
@@ -24,3 +24,6 @@ dependencies:
   - mdtraj
   - gromacs
   - openeye-toolkits
+
+  - pytest
+  - nbval
