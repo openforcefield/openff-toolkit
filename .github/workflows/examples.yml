@@ -38,7 +38,7 @@ jobs:
         name: Install toolkit and example dependencies
         with:
           python-version: ${{ matrix.python-version }}
-          activate-environment: test
+          activate-environment: openff-examples
           environment-file: devtools/conda-envs/examples.yaml
           auto-activate-base: false
 

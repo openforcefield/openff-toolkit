@@ -27,3 +27,6 @@ dependencies:
 
   - pytest
   - nbval
+
+  - pip:
+      - nb-black
