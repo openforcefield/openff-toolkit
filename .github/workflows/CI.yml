@@ -132,7 +132,6 @@ jobs:
       - name: Check links
         shell: bash -l {0}
         if: ${{ matrix.cfg.rdkit == 'true' && matrix.cfg.openeye == 'TRUE' }}
-        continue-on-error: true
         run: |
           pytest -r fE --tb=short openforcefield/tests/test_links.py
 
@@ -148,7 +147,6 @@ jobs:
 
       - name: Run example scripts
         shell: bash -l {0}
-        continue-on-error: true
         run: |
           if [[ "$RDKIT" == false ]]; then
             PYTEST_ARGS+=" --ignore=examples/check_dataset_parameter_coverage"
@@ -158,9 +156,9 @@ jobs:
 
       - name: Run example notebooks
         shell: bash -l {0}
-        continue-on-error: true
         run: |
           PYTEST_ARGS+=" --nbval-lax --ignore=examples/deprecated"
+          PYTEST_ARGS+=" --ignore=examples/using_smirnoff_in_amber_or_gromacs"
           if [[ "$RDKIT" == false ]]; then
             PYTEST_ARGS+=" --ignore=examples/check_dataset_parameter_coverage"
             PYTEST_ARGS+=" --ignore=examples/conformer_energies"
