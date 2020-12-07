@@ -158,6 +158,7 @@ jobs:
         shell: bash -l {0}
         run: |
           PYTEST_ARGS+=" --nbval-lax --ignore=examples/deprecated"
+          PYTEST_ARGS+=" --ignore=examples/using_smirnoff_in_amber_or_gromacs"
           if [[ "$RDKIT" == false ]]; then
             PYTEST_ARGS+=" --ignore=examples/check_dataset_parameter_coverage"
             PYTEST_ARGS+=" --ignore=examples/conformer_energies"
