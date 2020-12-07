@@ -4177,7 +4177,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         if msg is not None:
             if raise_warning:
-                msg = "Warning (not error because allow_undefined_stereo=True): "
+                msg = "Warning (not error because allow_undefined_stereo=True): " + msg
                 logger.warning(msg)
             else:
                 msg = "Unable to make OFFMol from RDMol: " + msg
