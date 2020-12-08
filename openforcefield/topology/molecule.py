@@ -1811,8 +1811,7 @@ class FrozenMolecule(Serializable):
             pass
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
-            toolkit_registry = ToolkitRegistry(toolkit_precedence=[])
-            toolkit_registry.add_toolkit(toolkit)
+            toolkit_registry = ToolkitRegistry(toolkit_precedence=[toolkit])
         else:
             raise InvalidToolkitRegistryError(
                 "'toolkit_registry' must be either a ToolkitRegistry or a ToolkitWrapper"
@@ -4176,8 +4175,7 @@ class FrozenMolecule(Serializable):
             pass
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
-            toolkit_registry = ToolkitRegistry(toolkit_precedence=[])
-            toolkit_registry.add_toolkit(toolkit)
+            toolkit_registry = ToolkitRegistry(toolkit_precedence=[toolkit])
         else:
             raise InvalidToolkitRegistryError(
                 "'toolkit_registry' must be either a ToolkitRegistry or a ToolkitWrapper"

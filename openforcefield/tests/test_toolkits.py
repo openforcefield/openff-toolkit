@@ -2995,6 +2995,8 @@ class TestToolkitRegistry:
         assert empty_registry.registered_toolkits == []
         assert empty_registry.registered_toolkit_versions == {}
 
+        assert "no registered toolkits" in empty_registry.__repr__()
+
     @requires_openeye
     @requires_rdkit
     def test_register_imported_toolkit_wrappers(self):

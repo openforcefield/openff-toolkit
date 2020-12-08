@@ -4897,7 +4897,7 @@ class ToolkitRegistry:
 
     def __init__(
         self,
-        toolkit_precedence=[],
+        toolkit_precedence=None,
         exception_if_unavailable=True,
         _register_imported_toolkit_wrappers=False,
     ):
@@ -4906,7 +4906,7 @@ class ToolkitRegistry:
 
         Parameters
         ----------
-        toolkit_precedence : list, default=[]
+        toolkit_precedence : list, optional, default=None
             List of toolkit wrapper classes, in order of desired precedence when performing molecule operations. If
             None, no toolkits will be registered.
 
@@ -5211,8 +5211,10 @@ class ToolkitRegistry:
         raise ValueError(msg)
 
     def __repr__(self):
-        return f"ToolkitRegistry containing " + ", ".join(
-            [tk.toolkit_name for tk in self._toolkits]
+        return "ToolkitRegistry containing " + (
+            ", ".join([tk.toolkit_name for tk in self._toolkits])
+            if len(self._toolkits) > 0
+            else "no registered toolkits"
         )
 
 
