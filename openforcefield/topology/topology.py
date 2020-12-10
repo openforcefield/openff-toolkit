@@ -777,6 +777,11 @@ class TopologyVirtualSite(Serializable):
 
 
 class TopologyVirtualParticle(TopologyVirtualSite):
+    """
+    A lightweight data structure that represents a single VirtualParticle in a Topology.
+
+    """
+
     def __init__(self, virtual_site, virtual_particle, topology_molecule):
         self._virtual_site = virtual_site
         self._virtual_particle = virtual_particle
