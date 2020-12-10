@@ -598,6 +598,43 @@ class TestTopology(TestCase):
     # test_is_bonded
     # TODO: Test serialization
 
+    def test_to_dict(self):
+        """Test the creation of a topology dict with Topology.to_dict()"""
+        ethanol = Molecule.from_smiles("CCO")
+        benzene = Molecule.from_smiles("c1ccccc1")
+        off_topology = Topology.from_molecules(molecules=[ethanol, benzene, benzene])
+
+        topology_dict = off_topology.to_dict()
+
+        assert topology_dict["box_vectors"] is None
+        assert ethanol.to_dict() in topology_dict["reference_molecules"]
+        assert benzene.to_dict() in topology_dict["reference_molecules"]
+
+    def test_to_from_dict_box_vectors(self):
+        """Test the round-tripping of box information in Topology.{to|from}_dict"""
+        top_none = Topology()
+        top_none_dict = top_none.to_dict()
+
+        assert "box_vectors_unit" not in top_none_dict
+        assert top_none.box_vectors == Topology.from_dict(top_none_dict).box_vectors
+
+        top = Topology()
+        top.box_vectors = np.array([4, 5, 6]) * unit.nanometer
+
+        assert (top.box_vectors == Topology.from_dict(top.to_dict()).box_vectors).all()
+
+        top_angstroms = Topology()
+
+        # Should box_vectors be allowed to have non-nm units?
+        top_angstroms.box_vectors = np.array([30, 30, 30]) * unit.angstrom
+        top_angstroms_dict = top_angstroms.to_dict()
+
+        assert top_angstroms_dict["box_vectors_unit"] == "angstrom"
+        assert (
+            top_angstroms.box_vectors
+            == Topology.from_dict(top_angstroms_dict).box_vectors
+        ).all()
+
     def test_from_openmm(self):
         """Test creation of an openforcefield Topology object from an OpenMM Topology and component molecules"""
         from simtk.openmm import app

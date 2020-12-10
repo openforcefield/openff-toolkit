@@ -1848,24 +1848,49 @@ class Topology(Serializable):
         """Convert to dictionary representation."""
         # Implement abstract method Serializable.to_dict()
         # TODO: serialize box vectors (?)
-        if self.n_topology_virtual_sites > 0 or self._box_vectors is not None:
+        if self.n_topology_virtual_sites > 0:
             raise NotImplementedError()
         topology_dict = OrderedDict()
         topology_dict["aromaticity_model"] = self._aromaticity_model
         # topology_dict["charge_model"] = self._charge_model
         # topology_dict["fractional_bond_order_model"] = self._fractional_bond_order_model
 
+        if self.box_vectors is None:
+            topology_dict["box_vectors"] = None
+        else:
+            box_vectors_unit = self.box_vectors.unit
+            unitless_box_vectors = self.box_vectors / box_vectors_unit
+            topology_dict["box_vectors"] = unitless_box_vectors
+            topology_dict["box_vectors_unit"] = box_vectors_unit.get_name()
         # TODO: Mapping between TopologyMolecules and their reference molecules
         # TODO: A better way of storing molecules that respects ordering?
-        topology_dict["molecules"] = [mol.to_dict() for mol in self.reference_molecules]
+        topology_dict["reference_molecules"] = [
+            mol.to_dict() for mol in self.reference_molecules
+        ]
 
         return topology_dict
 
     @classmethod
-    def from_dict(cls, d):
+    def from_dict(cls, topology_dict):
         """Static constructor from dictionary representation."""
-        # Implement abstract method Serializable.to_dict()
-        raise NotImplementedError()  # TODO
+        top = cls()
+
+        top.aromaticity_model = topology_dict["aromaticity_model"]
+
+        box_vectors = topology_dict["box_vectors"]
+        if box_vectors is None:
+            top.box_vectors = box_vectors
+        else:
+            box_vectors_unit = getattr(unit, topology_dict["box_vectors_unit"])
+            box_vectors = topology_dict["box_vectors"]
+            top.box_vectors = box_vectors * box_vectors_unit
+
+        # This approach will not work for anything but the simplest
+        # refmol_top:mapping
+        for ref_mol in topology_dict["reference_molecules"]:
+            top.add_molecule(ref_mol)
+
+        return top
 
     # TODO: Merge this into Molecule.from_networkx if/when we implement that.
     # TODO: can we now remove this as we have the ability to do this in the Molecule class?
