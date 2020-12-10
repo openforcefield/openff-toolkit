@@ -1847,7 +1847,19 @@ class Topology(Serializable):
     def to_dict(self):
         """Convert to dictionary representation."""
         # Implement abstract method Serializable.to_dict()
-        raise NotImplementedError()  # TODO
+        # TODO: serialize box vectors (?)
+        if self.n_topology_virtual_sites > 0 or self._box_vectors is not None:
+            raise NotImplementedError()
+        topology_dict = OrderedDict()
+        topology_dict["aromaticity_model"] = self._aromaticity_model
+        # topology_dict["charge_model"] = self._charge_model
+        # topology_dict["fractional_bond_order_model"] = self._fractional_bond_order_model
+
+        # TODO: Mapping between TopologyMolecules and their reference molecules
+        # TODO: A better way of storing molecules that respects ordering?
+        topology_dict["molecules"] = [mol.to_dict() for mol in self.reference_molecules]
+
+        return topology_dict
 
     @classmethod
     def from_dict(cls, d):
