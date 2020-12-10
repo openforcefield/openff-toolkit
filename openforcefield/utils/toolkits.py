@@ -4108,15 +4108,25 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         # assign Bond.STEREOANY to unspecific bond, which make subsequent calls
         # of Chem.AssignStereochemistry ignore the bond even if there are
         # ENDDOWNRIGHT/ENDUPRIGHT bond direction indications.
-        rdmol = copy.deepcopy(rdmol)
+        rdmol_copy = copy.deepcopy(rdmol)
+
+        # Clear any previous assignments on the bonds, since FindPotentialStereo may not overwrite it
+        for bond in rdmol_copy.GetBonds():
+            bond.SetStereo(Chem.BondStereo.STEREONONE)
 
         # This function assigns Bond.GetStereo() == Bond.STEREOANY to bonds with
-        # undefined stereochemistry.
-        Chem.FindPotentialStereoBonds(rdmol)
+        # possible stereochemistry.
+        Chem.FindPotentialStereoBonds(rdmol_copy, cleanIt=True)
 
+        # Any TRULY stereogenic bonds in the molecule are now marked as STEREOANY in rdmol_copy.
+        # Iterate through all the bonds, and for the ones where rdmol_copy is marked as STEREOANY,
+        # ensure that they are cis/trans/E/Z (tested here be ensuring that they're NOT either
+        # # of the other possible types (NONE or ANY))
         undefined_bond_indices = []
-        for bond_idx, bond in enumerate(rdmol.GetBonds()):
-            if bond.GetStereo() == Chem.BondStereo.STEREOANY:
+        for bond_idx, (orig_bond, repercieved_bond) in enumerate(zip(rdmol.GetBonds(), rdmol_copy.GetBonds())):
+            if (repercieved_bond.GetStereo() == Chem.BondStereo.STEREOANY) and \
+                    ((orig_bond.GetStereo() == Chem.BondStereo.STEREOANY) or
+                     (orig_bond.GetStereo() == Chem.BondStereo.STEREONONE)):
                 undefined_bond_indices.append(bond_idx)
         return undefined_bond_indices
 
