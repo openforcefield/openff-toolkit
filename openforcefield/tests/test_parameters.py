@@ -1737,7 +1737,7 @@ class TestvdWHandler:
         }
         vdw_handler.add_parameter(param)
 
-        assert vdw_handler.get_parameter({"smirks": "[*:1]"}).id == "n99"
+        assert vdw_handler.get_parameter({"smirks": "[*:1]"})[0].id == "n99"
 
 
 class TestvdWType:
