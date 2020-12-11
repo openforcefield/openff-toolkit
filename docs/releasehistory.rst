@@ -7,6 +7,17 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 * ``minor`` increments add features but do not break API compatibility
 * ``micro`` increments represent bugfix releases or improvements in documentation
 
+0.8.2 - Current development
+---------------------------
+
+Bugfixes
+""""""""
+- `PR #789 <https://github.com/openforcefield/openforcefield/pull/xyz>`_: Fixes bug
+  when creating
+  :py:class:`vdWHandler.vdWType <openforcefield.typing.engines.smirnoff.parameters.vdWHandler.vdWType>`
+  from scratch using dicts of strings.
+
+
 0.8.1 - Bugfix and minor feature release
 ----------------------------------------
 
