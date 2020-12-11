@@ -1727,6 +1727,18 @@ class TestvdWHandler:
         omm_sys = openmm.System()
         vdw_handler.create_force(omm_sys, topology)
 
+    def test_add_param_str(self):
+        vdw_handler = vdWHandler(version=0.3)
+        param = {
+            "epsilon": "0.5 * kilocalorie/mole",
+            "rmin_half": "1.2 * angstrom",
+            "smirks": "[*:1]",
+            "id": "n99",
+        }
+        vdw_handler.add_parameter(param)
+
+        assert vdw_handler.get_parameter({"smirks": "[*:1]"}).id == "n99"
+
 
 class TestvdWType:
     """
