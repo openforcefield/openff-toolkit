@@ -4124,6 +4124,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         # # of the other possible types (NONE or ANY))
         undefined_bond_indices = []
         for bond_idx, (orig_bond, repercieved_bond) in enumerate(zip(rdmol.GetBonds(), rdmol_copy.GetBonds())):
+            #print(repercieved_bond.GetStereo(), orig_bond.GetStereo())
             if (repercieved_bond.GetStereo() == Chem.BondStereo.STEREOANY) and \
                     ((orig_bond.GetStereo() == Chem.BondStereo.STEREOANY) or
                      (orig_bond.GetStereo() == Chem.BondStereo.STEREONONE)):
