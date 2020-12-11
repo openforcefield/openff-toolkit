@@ -1729,7 +1729,7 @@ class TestvdWHandler:
 
     def test_add_param_str(self):
         """
-        Ensure that string input is supported, given the added complication that the 
+        Ensure that string input is supported, given the added complication that the
         sigma/rmin_half setters silently set each other's value.
         See https://github.com/openforcefield/openforcefield/issues/788
         """
