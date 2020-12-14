@@ -2193,6 +2193,7 @@ class FrozenMolecule(Serializable):
 
         """
         import copy
+
         # assert isinstance(other, type(self)), "can only copy instances of {}".format(type(self))
 
         # Run a deepcopy here so that items that were _always_ dict (like other.properties) will

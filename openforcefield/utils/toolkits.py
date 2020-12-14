@@ -4123,11 +4123,14 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         # ensure that they are cis/trans/E/Z (tested here be ensuring that they're NOT either
         # # of the other possible types (NONE or ANY))
         undefined_bond_indices = []
-        for bond_idx, (orig_bond, repercieved_bond) in enumerate(zip(rdmol.GetBonds(), rdmol_copy.GetBonds())):
-            #print(repercieved_bond.GetStereo(), orig_bond.GetStereo())
-            if (repercieved_bond.GetStereo() == Chem.BondStereo.STEREOANY) and \
-                    ((orig_bond.GetStereo() == Chem.BondStereo.STEREOANY) or
-                     (orig_bond.GetStereo() == Chem.BondStereo.STEREONONE)):
+        for bond_idx, (orig_bond, repercieved_bond) in enumerate(
+            zip(rdmol.GetBonds(), rdmol_copy.GetBonds())
+        ):
+            # print(repercieved_bond.GetStereo(), orig_bond.GetStereo())
+            if (repercieved_bond.GetStereo() == Chem.BondStereo.STEREOANY) and (
+                (orig_bond.GetStereo() == Chem.BondStereo.STEREOANY)
+                or (orig_bond.GetStereo() == Chem.BondStereo.STEREONONE)
+            ):
                 undefined_bond_indices.append(bond_idx)
         return undefined_bond_indices
 
