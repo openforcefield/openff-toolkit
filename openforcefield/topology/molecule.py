@@ -2192,13 +2192,11 @@ class FrozenMolecule(Serializable):
             A deep copy is made.
 
         """
-        import copy
-
         # assert isinstance(other, type(self)), "can only copy instances of {}".format(type(self))
 
         # Run a deepcopy here so that items that were _always_ dict (like other.properties) will
         # not have any references to the old molecule
-        other_dict = copy.deepcopy(other.to_dict())
+        other_dict = deepcopy(other.to_dict())
         self._initialize_from_dict(other_dict)
 
     def __eq__(self, other):
