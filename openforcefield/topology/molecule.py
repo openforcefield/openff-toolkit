@@ -4506,6 +4506,7 @@ class FrozenMolecule(Serializable):
             Element.getByAtomicNumber(atom.atomic_number).symbol for atom in self.atoms
         ]
 
+        extras = {'canonical_isomeric_explicit_hydrogen_mapped_smiles': self.to_smiles(mapped=True)}
         schema_dict = {
             "symbols": symbols,
             "geometry": geometry,
@@ -4633,15 +4634,34 @@ class FrozenMolecule(Serializable):
                 raise AttributeError(
                     "The object passed could not be converted to a dict with json encoding"
                 )
+        mapped_smiles_from_extras = None
+        mapped_smiles = None
 
         try:
             mapped_smiles = qca_record["attributes"][
                 "canonical_isomeric_explicit_hydrogen_mapped_smiles"
             ]
         except KeyError:
-            raise KeyError(
-                "The record must contain the hydrogen mapped smiles to be safely made from the archive."
-            )
+            # Checking whether extras filed has the cmiles entry
+            mapped_smiles_from_extras = qca_record["extras"]["canonical_isomeric_explicit_hydrogen_mapped_smiles"]
+        except KeyError:
+                raise KeyError(
+                        "The record must contain the hydrogen mapped smiles to be safely made from the archive. "
+                        "It is not present in either attributes or extras"
+                                    )
+        try:
+           mapped_smiles_from_extras = qca_record["extras"]["canonical_isomeric_explicit_hydrogen_mapped_smiles"]
+        except KeyError:
+            pass
+
+        if (mapped_smiles and mapped_smiles_from_extras):
+            if mapped_smiles == mapped_smiles_from_extras:
+                pass
+            else:
+                raise KeyError("Mismatch in CMILES entries")
+
+        if (mapped_smiles_from_extras and not(mapped_smiles)):
+            mapped_smiles = mapped_smiles_from_extras
 
         # make a new molecule that has been reordered to match the cmiles mapping
         offmol = cls.from_mapped_smiles(
