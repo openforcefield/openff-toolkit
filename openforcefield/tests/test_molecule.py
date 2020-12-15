@@ -1962,6 +1962,43 @@ class TestMolecule:
         assert qcschema.molecular_multiplicity == qca_mol.molecular_multiplicity
         assert qcschema.real.all() == qca_mol.real.all()
 
+    @requires_qcelemental
+    def test_qcschema_round_trip_extras(self):
+        """Test making a molecule from qcschema then converting back"""
+
+        # get a molecule qcschema
+        import qcportal as ptl
+
+        client = ptl.FractalClient()
+        ds = client.get_collection("TorsionDriveDataset", "OpenFF-benchmark-ligand-fragments-v1.0")
+        # grab an entry from the torsiondrive data set
+        entry = ds.get_entry("[H]c1[c:1]([c:2](c(c(c1[H])N([H])C(=O)[H])[H])[C:3]2=C(C(=C([S:4]2)[H])OC([H])([H])[H])Br)[H]")
+        # now make the molecule from the record instance with the geometry
+        mol = Molecule.from_qcschema(entry, client)
+        # now grab the initial molecule record
+        qca_mol = client.query_molecules(id=entry.initial_molecules)[0]
+        # mow make sure the majority of the qcschema attributes are the same
+        # note we can not compare the full dict due to qcelemental differences
+        qcschema = mol.to_qcschema()
+        assert qcschema.atom_labels.tolist() == qca_mol.atom_labels.tolist()
+        assert qcschema.symbols.tolist() == qca_mol.symbols.tolist()
+        # due to conversion useing different programs there is a slight difference here
+        assert qcschema.geometry.flatten().tolist() == pytest.approx(
+            qca_mol.geometry.flatten().tolist(), rel=1.0e-5
+        )
+        assert qcschema.connectivity == qca_mol.connectivity
+        assert qcschema.atomic_numbers.tolist() == qca_mol.atomic_numbers.tolist()
+        assert qcschema.fragment_charges == qca_mol.fragment_charges
+        assert qcschema.fragment_multiplicities == qca_mol.fragment_multiplicities
+        assert qcschema.fragments[0].tolist() == qca_mol.fragments[0].tolist()
+        assert qcschema.mass_numbers.tolist() == qca_mol.mass_numbers.tolist()
+        assert qcschema.name == qca_mol.name
+        assert qcschema.masses.all() == qca_mol.masses.all()
+        assert qcschema.molecular_charge == qca_mol.molecular_charge
+        assert qcschema.molecular_multiplicity == qca_mol.molecular_multiplicity
+        assert qcschema.real.all() == qca_mol.real.all()
+        assert qcschema.extras['canonical_isomeric_explicit_hydrogen_mapped_smiles'] == qca_mol.extras['canonical_isomeric_explicit_hydrogen_mapped_smiles']
+
     def test_from_mapped_smiles(self):
         """Test making the molecule from issue #412 using both toolkits to ensure the issue
         is fixed."""
