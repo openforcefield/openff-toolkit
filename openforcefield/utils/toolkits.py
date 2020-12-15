@@ -3541,6 +3541,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             offb_idx = map_bonds[rdb_idx]
             offb = offmol.bonds[offb_idx]
             # determine if stereochemistry is needed
+            # Note that RDKit has 6 possible values of bond stereo: CIS, TRANS, E, Z, ANY, or NONE
+            # The logic below assumes that "ANY" and "NONE" mean the same thing.
             stereochemistry = None
             tag = rdb.GetStereo()
             if tag == Chem.BondStereo.STEREOZ:
