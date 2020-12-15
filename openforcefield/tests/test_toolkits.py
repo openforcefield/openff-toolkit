@@ -2025,6 +2025,15 @@ class TestRDKitToolkitWrapper:
         # out "n/a" (or another placeholder) in the partial charge block atoms without charges.
         assert ">  <atom.dprop.PartialCharge>" not in sdf_text
 
+    def test_read_ethene_sdf(self):
+        """
+        Test that RDKitToolkitWrapper can load an ethene molecule without complaining about bond stereo.
+        See https://github.com/openforcefield/openforcefield/issues/785
+        """
+        ethene_file_path = get_data_file_path("molecules/ethene_rdkit.sdf")
+        toolkit_wrapper = RDKitToolkitWrapper()
+        toolkit_wrapper.from_file(ethene_file_path, file_format="sdf")
+
     def test_load_multiconformer_sdf_as_separate_molecules(self):
         """
         Test RDKitToolkitWrapper for reading a "multiconformer" SDF, which the OFF

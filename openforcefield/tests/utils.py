@@ -1382,6 +1382,10 @@ def compare_system_parameters(
                 continue
             force_pairs[force.__class__.__name__].append(force)
 
+    # TODO: ParmEd-derived system representations separate out vdW from ES (putting ES in NonbondedForce
+    # and vdW in CustomNonbondedForce with precomputed mixing parameters). We'll need to update this to
+    # somehow account for the difference.
+
     # Compare all pairs of forces
     for force_name, (force1, force2) in force_pairs.items():
         # Select the parameters to ignore.
