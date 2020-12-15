@@ -1944,9 +1944,13 @@ class TestMolecule:
         import qcportal as ptl
 
         client = ptl.FractalClient()
-        ds = client.get_collection("TorsionDriveDataset", "OpenFF-benchmark-ligand-fragments-v1.0")
+        ds = client.get_collection(
+            "TorsionDriveDataset", "OpenFF-benchmark-ligand-fragments-v1.0"
+        )
         # grab an entry from the torsiondrive data set
-        entry = ds.get_entry("[H]c1[c:1]([c:2](c(c(c1[H])N([H])C(=O)[H])[H])[C:3]2=C(C(=C([S:4]2)[H])OC([H])([H])[H])Br)[H]")
+        entry = ds.get_entry(
+            "[H]c1[c:1]([c:2](c(c(c1[H])N([H])C(=O)[H])[H])[C:3]2=C(C(=C([S:4]2)[H])OC([H])([H])[H])Br)[H]"
+        )
         # now make the molecule from the record instance with the geometry
         mol = Molecule.from_qcschema(entry, client)
         # now grab the initial molecule record
@@ -1971,7 +1975,10 @@ class TestMolecule:
         assert qcschema.molecular_charge == qca_mol.molecular_charge
         assert qcschema.molecular_multiplicity == qca_mol.molecular_multiplicity
         assert qcschema.real.all() == qca_mol.real.all()
-        assert qcschema.extras['canonical_isomeric_explicit_hydrogen_mapped_smiles'] == qca_mol.extras['canonical_isomeric_explicit_hydrogen_mapped_smiles']
+        assert (
+            qcschema.extras["canonical_isomeric_explicit_hydrogen_mapped_smiles"]
+            == qca_mol.extras["canonical_isomeric_explicit_hydrogen_mapped_smiles"]
+        )
 
     def test_from_mapped_smiles(self):
         """Test making the molecule from issue #412 using both toolkits to ensure the issue

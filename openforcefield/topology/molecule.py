@@ -4506,7 +4506,11 @@ class FrozenMolecule(Serializable):
             Element.getByAtomicNumber(atom.atomic_number).symbol for atom in self.atoms
         ]
 
-        extras = {'canonical_isomeric_explicit_hydrogen_mapped_smiles': self.to_smiles(mapped=True)}
+        extras = {
+            "canonical_isomeric_explicit_hydrogen_mapped_smiles": self.to_smiles(
+                mapped=True
+            )
+        }
         schema_dict = {
             "symbols": symbols,
             "geometry": geometry,
@@ -4643,24 +4647,28 @@ class FrozenMolecule(Serializable):
             ]
         except KeyError:
             # Checking whether extras filed has the cmiles entry
-            mapped_smiles_from_extras = qca_record["extras"]["canonical_isomeric_explicit_hydrogen_mapped_smiles"]
+            mapped_smiles_from_extras = qca_record["extras"][
+                "canonical_isomeric_explicit_hydrogen_mapped_smiles"
+            ]
         except KeyError:
-                raise KeyError(
-                        "The record must contain the hydrogen mapped smiles to be safely made from the archive. "
-                        "It is not present in either attributes or extras"
-                                    )
+            raise KeyError(
+                "The record must contain the hydrogen mapped smiles to be safely made from the archive. "
+                "It is not present in either attributes or extras"
+            )
         try:
-           mapped_smiles_from_extras = qca_record["extras"]["canonical_isomeric_explicit_hydrogen_mapped_smiles"]
+            mapped_smiles_from_extras = qca_record["extras"][
+                "canonical_isomeric_explicit_hydrogen_mapped_smiles"
+            ]
         except KeyError:
             pass
 
-        if (mapped_smiles and mapped_smiles_from_extras):
+        if mapped_smiles and mapped_smiles_from_extras:
             if mapped_smiles == mapped_smiles_from_extras:
                 pass
             else:
                 raise KeyError("Mismatch in CMILES entries")
 
-        if (mapped_smiles_from_extras and not(mapped_smiles)):
+        if mapped_smiles_from_extras and not (mapped_smiles):
             mapped_smiles = mapped_smiles_from_extras
 
         # make a new molecule that has been reordered to match the cmiles mapping
