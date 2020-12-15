@@ -2027,7 +2027,7 @@ class TestRDKitToolkitWrapper:
 
     def test_read_ethene_sdf(self):
         """
-        Test that RDKitToolkitWRapper can load an ethene molecule without complaining about bond stereo
+        Test that RDKitToolkitWrapper can load an ethene molecule without complaining about bond stereo.
         See https://github.com/openforcefield/openforcefield/issues/785
         """
         ethene_file_path = get_data_file_path('molecules/ethene_rdkit.sdf')
