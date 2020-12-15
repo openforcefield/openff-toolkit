@@ -458,8 +458,8 @@ class TestMolecule:
 
         # Test that the "properties" dict of both molecules is unique
         # (see https://github.com/openforcefield/openforcefield/pull/786)
-        molecule_copy.properties['aaa'] = 'bbb'
-        assert 'aaa' not in molecule.properties
+        molecule_copy.properties["aaa"] = "bbb"
+        assert "aaa" not in molecule.properties
 
     @pytest.mark.parametrize("toolkit", [OpenEyeToolkitWrapper, RDKitToolkitWrapper])
     @pytest.mark.parametrize("molecule", mini_drug_bank())
