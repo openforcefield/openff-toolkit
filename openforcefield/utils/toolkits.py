@@ -3421,11 +3421,6 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                 f"Available charge methods are {list(SUPPORTED_CHARGE_METHODS)} "
             )
 
-        if _cls is None:
-            from openforcefield.topology.molecule import Molecule
-
-            _cls = Molecule
-
         rdkit_molecule = molecule.to_rdkit()
         charges = None
 
