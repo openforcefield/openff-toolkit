@@ -3221,7 +3221,8 @@ class TestToolkitRegistry:
 
     @requires_ambertools
     def test_register_rdkit_and_ambertools(self):
-        """Test creation of toolkit registry with RDKitToolkitWrapper and AmberToolsToolkitWrapper"""
+        """Test creation of toolkit registry with RDKitToolkitWrapper and
+        AmberToolsToolkitWrapper and test ToolkitRegistry.resolve()"""
         toolkit_precedence = [RDKitToolkitWrapper, AmberToolsToolkitWrapper]
         registry = ToolkitRegistry(
             toolkit_precedence=toolkit_precedence,
@@ -3231,11 +3232,14 @@ class TestToolkitRegistry:
             [RDKitToolkitWrapper, AmberToolsToolkitWrapper]
         )
 
-        # Test ToolkitRegistry.resolve()
+        # Resolve to a method that is supported by AmberToolsToolkitWrapper
+        # but _not_ RDKitToolkitWrapper. Note that this may change as more
+        # functionality is added to to toolkit wrappers
         assert (
-            registry.resolve("assign_partial_charges")
-            == registry.registered_toolkits[1].assign_partial_charges
+            registry.resolve("assign_fractional_bond_orders")
+            == registry.registered_toolkits[1].assign_fractional_bond_orders
         )
+        # Resolve a method supported by both to the highest-priority wrapper
         assert (
             registry.resolve("from_smiles")
             == registry.registered_toolkits[0].from_smiles
