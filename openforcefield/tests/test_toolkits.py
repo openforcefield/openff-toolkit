@@ -2192,6 +2192,69 @@ class TestRDKitToolkitWrapper:
         )
         assert molecule2.n_conformers == 10
 
+    @pytest.mark.parametrize("partial_charge_method", ["mmff94"])
+    def test_assign_partial_charges_neutral(self, partial_charge_method):
+        """Test RDKitToolkitWrapper assign_partial_charges()"""
+        from openforcefield.tests.test_forcefield import create_ethanol
+
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=[RDKitToolkitWrapper])
+        # TODO: create_ethanol should be replaced by a function scope fixture.
+        molecule = create_ethanol()
+        molecule.assign_partial_charges(
+            toolkit_registry=toolkit_registry,
+            partial_charge_method=partial_charge_method,
+        )
+        charge_sum = 0.0 * unit.elementary_charge
+        for pc in molecule.partial_charges:
+            charge_sum += pc
+        assert -1.0e-5 < charge_sum.value_in_unit(unit.elementary_charge) < 1.0e-5
+
+    @pytest.mark.parametrize("partial_charge_method", ["mmff94"])
+    def test_assign_partial_charges_net_charge(self, partial_charge_method):
+        """
+        Test RDKitToolkitWrapper assign_partial_charges() on a molecule with net charge.
+        """
+        from openforcefield.tests.test_forcefield import create_acetate
+
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=[RDKitToolkitWrapper])
+        # TODO: create_acetate should be replaced by a function scope fixture.
+        molecule = create_acetate()
+        molecule.assign_partial_charges(
+            toolkit_registry=toolkit_registry,
+            partial_charge_method=partial_charge_method,
+        )
+        charge_sum = 0.0 * unit.elementary_charge
+        for pc in molecule.partial_charges:
+            charge_sum += pc
+        assert -1.0e-5 < charge_sum.value_in_unit(unit.elementary_charge) + 1.0 < 1.0e-5
+
+    def test_assign_partial_charges_bad_charge_method(self):
+        """Test RDKitToolkitWrapper assign_partial_charges() for a nonexistent charge method"""
+        from openforcefield.tests.test_forcefield import create_ethanol
+
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=[RDKitToolkitWrapper])
+        molecule = create_ethanol()
+
+        # Molecule.assign_partial_charges calls the ToolkitRegistry with raise_exception_types = [],
+        # which means it will only ever return ValueError
+        with pytest.raises(
+            ValueError, match="is not available from RDKitToolkitWrapper"
+        ):
+            molecule.assign_partial_charges(
+                toolkit_registry=toolkit_registry,
+                partial_charge_method="NotARealChargeMethod",
+            )
+
+        # ToolkitWrappers raise a specific exception class, so we test that here
+        with pytest.raises(
+            ChargeMethodUnavailableError,
+            match="is not available from RDKitToolkitWrapper",
+        ):
+            RDTKW = RDKitToolkitWrapper()
+            RDTKW.assign_partial_charges(
+                molecule=molecule, partial_charge_method="NotARealChargeMethod"
+            )
+
     def test_find_rotatable_bonds(self):
         """Test finding rotatable bonds while ignoring some groups"""
 
@@ -3158,7 +3221,8 @@ class TestToolkitRegistry:
 
     @requires_ambertools
     def test_register_rdkit_and_ambertools(self):
-        """Test creation of toolkit registry with RDKitToolkitWrapper and AmberToolsToolkitWrapper"""
+        """Test creation of toolkit registry with RDKitToolkitWrapper and
+        AmberToolsToolkitWrapper and test ToolkitRegistry.resolve()"""
         toolkit_precedence = [RDKitToolkitWrapper, AmberToolsToolkitWrapper]
         registry = ToolkitRegistry(
             toolkit_precedence=toolkit_precedence,
@@ -3168,11 +3232,14 @@ class TestToolkitRegistry:
             [RDKitToolkitWrapper, AmberToolsToolkitWrapper]
         )
 
-        # Test ToolkitRegistry.resolve()
+        # Resolve to a method that is supported by AmberToolsToolkitWrapper
+        # but _not_ RDKitToolkitWrapper. Note that this may change as more
+        # functionality is added to to toolkit wrappers
         assert (
-            registry.resolve("assign_partial_charges")
-            == registry.registered_toolkits[1].assign_partial_charges
+            registry.resolve("assign_fractional_bond_orders")
+            == registry.registered_toolkits[1].assign_fractional_bond_orders
         )
+        # Resolve a method supported by both to the highest-priority wrapper
         assert (
             registry.resolve("from_smiles")
             == registry.registered_toolkits[0].from_smiles
