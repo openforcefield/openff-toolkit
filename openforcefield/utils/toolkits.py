@@ -3365,6 +3365,84 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         for conformer in molecule2._conformers:
             molecule._add_conformer(conformer)
 
+    def assign_partial_charges(
+        self,
+        molecule,
+        partial_charge_method=None,
+        use_conformers=None,
+        strict_n_conformers=False,
+        _cls=None,
+    ):
+        """
+        Compute partial charges with RDKit, and assign
+        the new values to the partial_charges attribute.
+
+        .. warning :: This API is experimental and subject to change.
+
+        Parameters
+        ----------
+        molecule : openforcefield.topology.Molecule
+            Molecule for which partial charges are to be computed
+        partial_charge_method : str, optional, default=None
+            The charge model to use. One of ['mmff94']. If None, 'mmff94' will be used.
+
+            * 'mmff94': Applies partial charges using the Merck Molecular Force Field
+                        (MMFF). This method does not make use of conformers, and hence
+                        ``use_conformers`` and ``strict_n_conformers`` will not impact
+                        the partial charges produced.
+        use_conformers : iterable of simtk.unit.Quantity-wrapped numpy arrays, each with shape (n_atoms, 3) and dimension of distance. Optional, default = None
+            Coordinates to use for partial charge calculation. If None, an appropriate number of conformers will be generated.
+        strict_n_conformers : bool, default=False
+            Whether to raise an exception if an invalid number of conformers is provided for the given charge method.
+            If this is False and an invalid number of conformers is found, a warning will be raised.
+        _cls : class
+            Molecule constructor
+
+        Raises
+        ------
+        ChargeMethodUnavailableError if the requested charge method can not be handled by this toolkit
+
+        ChargeCalculationError if the charge method is supported by this toolkit, but fails
+        """
+
+        import numpy as np
+        from rdkit.Chem import AllChem
+
+        SUPPORTED_CHARGE_METHODS = {"mmff94"}
+
+        if partial_charge_method is None:
+            partial_charge_method = "mmff94"
+
+        partial_charge_method = partial_charge_method.lower()
+
+        if partial_charge_method not in SUPPORTED_CHARGE_METHODS:
+            raise ChargeMethodUnavailableError(
+                f"partial_charge_method '{partial_charge_method}' is not available from RDKitToolkitWrapper. "
+                f"Available charge methods are {list(SUPPORTED_CHARGE_METHODS)} "
+            )
+
+        if _cls is None:
+            from openforcefield.topology.molecule import Molecule
+
+            _cls = Molecule
+
+        rdkit_molecule = molecule.to_rdkit()
+        charges = None
+
+        if partial_charge_method == "mmff94":
+
+            mmff_properties = AllChem.MMFFGetMoleculeProperties(
+                rdkit_molecule, "MMFF94"
+            )
+            charges = np.array(
+                [
+                    mmff_properties.GetMMFFPartialCharge(i)
+                    for i in range(molecule.n_atoms)
+                ]
+            )
+
+        molecule.partial_charges = charges * unit.elementary_charge
+
     def from_rdkit(self, rdmol, allow_undefined_stereo=False, _cls=None):
         """
         Create a Molecule from an RDKit molecule.
