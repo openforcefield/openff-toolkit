@@ -14,6 +14,7 @@ Tests for cheminformatics toolkit wrappers
 # =============================================================================================
 
 from tempfile import NamedTemporaryFile
+from typing import Dict
 
 import numpy as np
 import pytest
@@ -260,6 +261,23 @@ openeye_iupac_bad_stereo = [
     "DrugBank_4865",
     "DrugBank_2465",
 ]
+
+
+@pytest.fixture()
+def formic_acid_molecule() -> Molecule:
+
+    formic_acid = Molecule()
+    formic_acid.add_atom(8, 0, False)  # O1
+    formic_acid.add_atom(6, 0, False)  # C1
+    formic_acid.add_atom(8, 0, False)  # O2
+    formic_acid.add_atom(1, 0, False)  # H1
+    formic_acid.add_atom(1, 0, False)  # H2
+    formic_acid.add_bond(0, 1, 2, False)  # O1 - C1
+    formic_acid.add_bond(1, 2, 1, False)  # C1 - O2
+    formic_acid.add_bond(1, 3, 1, False)  # C1 - H1
+    formic_acid.add_bond(2, 4, 1, False)  # O2 - H2
+
+    return formic_acid
 
 
 # =============================================================================================
@@ -2254,6 +2272,128 @@ class TestRDKitToolkitWrapper:
             RDTKW.assign_partial_charges(
                 molecule=molecule, partial_charge_method="NotARealChargeMethod"
             )
+
+    def test_elf_compute_electrostatic_energy(self, formic_acid_molecule: Molecule):
+        """Test the computation of the ELF electrostatic energy function."""
+
+        # Set some partial charges and a dummy conformer with values which make
+        # computing the expected energy easier.
+        formic_acid_molecule.partial_charges = (
+            np.ones(formic_acid_molecule.n_atoms) * 1.0 * unit.elementary_charge
+        )
+
+        formic_acid_molecule.partial_charges[0] *= 2.0
+        formic_acid_molecule.partial_charges[4] *= 3.0
+
+        conformer = np.array(
+            [
+                [1.0, 0.0, 0.0],
+                [0.0, 0.0, 0.0],
+                [-1.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0],
+                [0.0, -1.0, 0.0],
+            ]
+        )
+
+        # Compute the conformers electrostatic energy.
+        computed_energy = RDKitToolkitWrapper._elf_compute_electrostatic_energy(
+            formic_acid_molecule, conformer * unit.angstrom
+        )
+        # q_O1 * q_H2 / d_O1,H2 + q_H1 * q_H2 / d_H1,H2
+        expected_energy = 2.0 * 3.0 / np.sqrt(2.0) + 1.0 * 3.0 / 2.0
+
+        assert np.isclose(computed_energy, expected_energy)
+
+    def test_elf_compute_rms_matrix(self, formic_acid_molecule: Molecule):
+        """Test the computation of the ELF conformer RMS matrix."""
+        formic_acid_molecule.add_conformer(np.random.random((5, 3)) * unit.angstrom)
+        formic_acid_molecule.add_conformer(np.random.random((5, 3)) * unit.angstrom)
+
+        rms_matrix = RDKitToolkitWrapper._elf_compute_rms_matrix(formic_acid_molecule)
+
+        assert rms_matrix.shape == (2, 2)
+
+        assert np.isclose(rms_matrix[0, 0], 0.0)
+        assert np.isclose(rms_matrix[1, 1], 0.0)
+
+        assert np.isclose(rms_matrix[0, 1], rms_matrix[1, 0])
+
+    @pytest.mark.parametrize(
+        "expected_conformer_map, rms_tolerance",
+        [({0: 0, 1: 2}, 0.001), ({0: 0}, 100.0)],
+    )
+    def test_elf_select_diverse_conformers(
+        self,
+        formic_acid_molecule: Molecule,
+        expected_conformer_map: Dict[int, int],
+        rms_tolerance: float,
+    ):
+        """Test the greedy selection of 'diverse' ELF conformers."""
+
+        formic_acid_molecule.add_conformer(np.random.random((5, 3)) * unit.angstrom)
+        formic_acid_molecule.add_conformer(formic_acid_molecule.conformers[0] * 1.1)
+        formic_acid_molecule.add_conformer(formic_acid_molecule.conformers[0] * 1.2)
+
+        conformers = RDKitToolkitWrapper._elf_select_diverse_conformers(
+            formic_acid_molecule, formic_acid_molecule.conformers, 2, rms_tolerance
+        )
+
+        assert len(conformers) == len(expected_conformer_map)
+
+        for elf_index, original_index in expected_conformer_map.items():
+            assert np.allclose(
+                conformers[elf_index].value_in_unit(unit.angstrom),
+                formic_acid_molecule.conformers[original_index].value_in_unit(
+                    unit.angstrom
+                ),
+            )
+
+    def test_apply_elf_conformer_selection(self, formic_acid_molecule: Molecule):
+        """Test the greedy selection of 'diverse' ELF conformers."""
+
+        toolkit = RDKitToolkitWrapper()
+
+        # Test that simple case of no conformers does not yield an exception.
+        toolkit.apply_elf_conformer_selection(formic_acid_molecule)
+
+        initial_conformers = [
+            # Add a cis conformer.
+            np.array(
+                [
+                    [-0.95927322, -0.91789997, 0.36333418],
+                    [-0.34727824, 0.12828046, 0.22784603],
+                    [0.82766682, 0.26871252, -0.42284882],
+                    [-0.67153811, 1.10376000, 0.61921501],
+                    [1.15035689, -0.58282924, -0.78766006],
+                ]
+            )
+            * unit.angstrom,
+            # Add a trans conformer.
+            np.array(
+                [
+                    [-0.95927322, -0.91789997, 0.36333418],
+                    [-0.34727824, 0.12828046, 0.22784603],
+                    [0.82766682, 0.26871252, -0.42284882],
+                    [-0.67153811, 1.10376000, 0.61921501],
+                    [1.14532626, 1.19679034, -0.41266876],
+                ]
+            )
+            * unit.angstrom,
+        ]
+
+        formic_acid_molecule.add_conformer(initial_conformers[0])
+        formic_acid_molecule.add_conformer(initial_conformers[1])
+
+        # Apply ELF10
+        toolkit.apply_elf_conformer_selection(formic_acid_molecule)
+        elf10_conformers = formic_acid_molecule.conformers
+
+        assert len(elf10_conformers) == 1
+
+        assert np.allclose(
+            elf10_conformers[0].value_in_unit(unit.angstrom),
+            initial_conformers[1].value_in_unit(unit.angstrom),
+        )
 
     def test_find_rotatable_bonds(self):
         """Test finding rotatable bonds while ignoring some groups"""
