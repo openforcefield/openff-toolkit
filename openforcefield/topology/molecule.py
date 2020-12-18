@@ -60,6 +60,7 @@ from openforcefield.utils.toolkits import (
     ToolkitWrapper,
     UndefinedStereochemistryError,
 )
+from openforcefield.utils.utils import MissingDependencyError, requires_package
 
 
 class NotAttachedToMoleculeError(MessageException):
@@ -4440,6 +4441,7 @@ class FrozenMolecule(Serializable):
         )
         return molecule
 
+    @requires_package("qcelemental")
     def to_qcschema(self, multiplicity=1, conformer=0, extras=None):
         """
         Generate the qschema input format used to submit jobs to archive
@@ -4477,18 +4479,10 @@ class FrozenMolecule(Serializable):
 
         Raises
         --------
-        ImportError : if qcelemental is not installed; the qcschema can not be validated.
+        MissingDependencyError : if qcelemental is not installed; the qcschema can not be validated.
 
         InvalidConformerError : if there is no conformer found at the given index.
         """
-
-        try:
-            import qcelemental as qcel
-        except ImportError:
-            raise ImportError(
-                "Please install QCElemental via conda install -c conda-forge qcelemental "
-                "to validate the schema"
-            )
 
         # get/ check the geometry
         try:
@@ -5500,10 +5494,7 @@ class Molecule(FrozenMolecule):
             try:
                 import nglview as nv
             except ImportError:
-                raise ValueError(
-                    "Attempted to visualize with NGLview but did not find it "
-                    "installed. Try conda install -c conda-forge nglview."
-                )
+                raise MissingDependencyError("nglview")
             if self.conformers:
                 from openforcefield.utils.viz import _OFFTrajectoryNGLView
 

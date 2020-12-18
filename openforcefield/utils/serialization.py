@@ -15,6 +15,8 @@ Serialization mix-in
 
 import abc
 
+from openforcefield.utils.utils import requires_package
+
 # =============================================================================================
 # SERIALIZATION MIX-IN
 # =============================================================================================
@@ -149,6 +151,7 @@ class Serializable(abc.ABC):
         d = json.loads(serialized)
         return cls.from_dict(d)
 
+    @requires_package("bson")
     def to_bson(self):
         """
         Return a BSON serialized representation.
@@ -167,6 +170,7 @@ class Serializable(abc.ABC):
         return bson.dumps(d)
 
     @classmethod
+    @requires_package("bson")
     def from_bson(cls, serialized):
         """
         Instantiate an object from a BSON serialized representation.
@@ -189,6 +193,7 @@ class Serializable(abc.ABC):
         d = bson.loads(serialized)
         return cls.from_dict(d)
 
+    @requires_package("toml")
     def to_toml(self):
         """
         Return a TOML serialized representation.
@@ -209,6 +214,7 @@ class Serializable(abc.ABC):
         # return toml.dumps(d)
 
     @classmethod
+    @requires_package("toml")
     def from_toml(cls, serialized):
         """
         Instantiate an object from a TOML serialized representation.
@@ -258,6 +264,7 @@ class Serializable(abc.ABC):
                 node.flow_style = best_style
         return node
 
+    @requires_package("yaml")
     def to_yaml(self):
         """
         Return a YAML serialized representation.
@@ -284,6 +291,7 @@ class Serializable(abc.ABC):
         return yaml.safe_dump(d, width=180)
 
     @classmethod
+    @requires_package("yaml")
     def from_yaml(cls, serialized):
         """
         Instantiate from a YAML serialized representation.
@@ -314,6 +322,7 @@ class Serializable(abc.ABC):
         d = yaml.safe_load(serialized)
         return cls.from_dict(d)
 
+    @requires_package("msgpack")
     def to_messagepack(self):
         """
         Return a MessagePack representation.
@@ -332,6 +341,7 @@ class Serializable(abc.ABC):
         return msgpack.dumps(d, use_bin_type=True)
 
     @classmethod
+    @requires_package("msgpack")
     def from_messagepack(cls, serialized):
         """
         Instantiate an object from a MessagePack serialized representation.
@@ -354,6 +364,7 @@ class Serializable(abc.ABC):
         d = msgpack.loads(serialized, raw=False)
         return cls.from_dict(d)
 
+    @requires_package("xmltodict")
     def to_xml(self, indent=2):
         """
         Return an XML representation.
@@ -386,6 +397,7 @@ class Serializable(abc.ABC):
         return xmltodict.unparse(d, pretty=pretty, indent=indent)
 
     @classmethod
+    @requires_package("xmltodict")
     def from_xml(cls, serialized):
         """
         Instantiate an object from an XML serialized representation.

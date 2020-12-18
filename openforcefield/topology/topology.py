@@ -39,6 +39,7 @@ from openforcefield.utils.toolkits import (
     DEFAULT_AROMATICITY_MODEL,
     GLOBAL_TOOLKIT_REGISTRY,
 )
+from openforcefield.utils.utils import requires_package
 
 # =============================================================================================
 # Exceptions
@@ -2184,6 +2185,7 @@ class Topology(Serializable):
             PDBFile.writeFile(openmm_top, positions, outfile, keepIds)
 
     @staticmethod
+    @requires_package("mdtraj")
     def from_mdtraj(mdtraj_topology, unique_molecules=None):
         """
         Construct an openforcefield Topology object from an MDTraj Topology object.
