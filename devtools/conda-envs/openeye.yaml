@@ -20,7 +20,7 @@ dependencies:
   - ambertools
   - openeye-toolkits
   - packaging
-  - openmmtools
+  - openmmforcefields
   - openforcefields
   - smirnoff99Frosst
   - pyyaml

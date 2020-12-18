@@ -108,12 +108,6 @@ jobs:
         run: |
           python -m pip install --no-deps -v .
 
-      - name: Install openmmforcefields
-        shell: bash -l {0}
-        if: ${{ matrix.python-version == 3.6 || matrix.python-version == 3.7 }}
-        run: |
-          conda install openmmforcefields -c conda-forge -c omnia
-
       - name: Check installed toolkits
         shell: bash -l {0}
         run: |
@@ -170,10 +164,6 @@ jobs:
             NB_ARGS+=" --ignore=examples/conformer_energies"
             NB_ARGS+=" --ignore=examples/QCArchive_interface"
             NB_ARGS+=" --ignore=examples/visualization"
-          fi
-          if [[ "$PYVER" == 3.8 || "$PYVER" == 3.9 ]]; then
-            # openmmforcefields not available on Python 3.8+
-            NB_ARGS+=" --ignore=examples/swap_amber_parameter"
           fi
           pytest $NB_ARGS examples/
 
