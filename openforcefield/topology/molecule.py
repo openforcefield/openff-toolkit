@@ -4484,6 +4484,8 @@ class FrozenMolecule(Serializable):
         InvalidConformerError : if there is no conformer found at the given index.
         """
 
+        import qcelemental as qcel
+
         # get/ check the geometry
         try:
             geometry = self.conformers[conformer].in_units_of(unit.bohr)
@@ -4578,6 +4580,7 @@ class FrozenMolecule(Serializable):
         return offmol.remap(adjusted_mapping, current_to_new=True)
 
     @classmethod
+    @requires_package("qcelemental")
     def from_qcschema(
         cls,
         qca_record,

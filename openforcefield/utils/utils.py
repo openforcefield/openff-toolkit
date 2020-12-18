@@ -7,6 +7,8 @@ Utility subroutines
 __all__ = [
     "MessageException",
     "IncompatibleUnitError",
+    "MissingDependencyError",
+    "requires_package",
     "inherit_docstrings",
     "all_subclasses",
     "temporary_cd",
