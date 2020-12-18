@@ -19,7 +19,7 @@ dependencies:
   - ambertools
   - rdkit
   - packaging
-  - openmmforcefields
+  - openmmforcefields >=0.7.2
   - openforcefields
   - smirnoff99Frosst
   - pyyaml
