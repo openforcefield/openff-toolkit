@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2.1.4
+        uses: actions/setup-python@v2.2.0
         with:
           python-version: 3.6
       - name: Python 3.6 timebomb
