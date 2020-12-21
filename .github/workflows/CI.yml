@@ -26,8 +26,8 @@ jobs:
         python-version:
           - 3.6
           - 3.7
-          # Uncomment when ready ;)
-          # - 3.8
+          - 3.8
+          - 3.9
         cfg:
           - os: ubuntu-latest
             rdkit: "true"
