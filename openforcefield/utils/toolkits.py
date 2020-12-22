@@ -3365,6 +3365,79 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         for conformer in molecule2._conformers:
             molecule._add_conformer(conformer)
 
+    def assign_partial_charges(
+        self,
+        molecule,
+        partial_charge_method=None,
+        use_conformers=None,
+        strict_n_conformers=False,
+        _cls=None,
+    ):
+        """
+        Compute partial charges with RDKit, and assign
+        the new values to the partial_charges attribute.
+
+        .. warning :: This API is experimental and subject to change.
+
+        Parameters
+        ----------
+        molecule : openforcefield.topology.Molecule
+            Molecule for which partial charges are to be computed
+        partial_charge_method : str, optional, default=None
+            The charge model to use. One of ['mmff94']. If None, 'mmff94' will be used.
+
+            * 'mmff94': Applies partial charges using the Merck Molecular Force Field
+                        (MMFF). This method does not make use of conformers, and hence
+                        ``use_conformers`` and ``strict_n_conformers`` will not impact
+                        the partial charges produced.
+        use_conformers : iterable of simtk.unit.Quantity-wrapped numpy arrays, each with shape (n_atoms, 3) and dimension of distance. Optional, default = None
+            Coordinates to use for partial charge calculation. If None, an appropriate number of conformers will be generated.
+        strict_n_conformers : bool, default=False
+            Whether to raise an exception if an invalid number of conformers is provided for the given charge method.
+            If this is False and an invalid number of conformers is found, a warning will be raised.
+        _cls : class
+            Molecule constructor
+
+        Raises
+        ------
+        ChargeMethodUnavailableError if the requested charge method can not be handled by this toolkit
+
+        ChargeCalculationError if the charge method is supported by this toolkit, but fails
+        """
+
+        import numpy as np
+        from rdkit.Chem import AllChem
+
+        SUPPORTED_CHARGE_METHODS = {"mmff94"}
+
+        if partial_charge_method is None:
+            partial_charge_method = "mmff94"
+
+        partial_charge_method = partial_charge_method.lower()
+
+        if partial_charge_method not in SUPPORTED_CHARGE_METHODS:
+            raise ChargeMethodUnavailableError(
+                f"partial_charge_method '{partial_charge_method}' is not available from RDKitToolkitWrapper. "
+                f"Available charge methods are {list(SUPPORTED_CHARGE_METHODS)} "
+            )
+
+        rdkit_molecule = molecule.to_rdkit()
+        charges = None
+
+        if partial_charge_method == "mmff94":
+
+            mmff_properties = AllChem.MMFFGetMoleculeProperties(
+                rdkit_molecule, "MMFF94"
+            )
+            charges = np.array(
+                [
+                    mmff_properties.GetMMFFPartialCharge(i)
+                    for i in range(molecule.n_atoms)
+                ]
+            )
+
+        molecule.partial_charges = charges * unit.elementary_charge
+
     def from_rdkit(self, rdmol, allow_undefined_stereo=False, _cls=None):
         """
         Create a Molecule from an RDKit molecule.
@@ -3541,6 +3614,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             offb_idx = map_bonds[rdb_idx]
             offb = offmol.bonds[offb_idx]
             # determine if stereochemistry is needed
+            # Note that RDKit has 6 possible values of bond stereo: CIS, TRANS, E, Z, ANY, or NONE
+            # The logic below assumes that "ANY" and "NONE" mean the same thing.
             stereochemistry = None
             tag = rdb.GetStereo()
             if tag == Chem.BondStereo.STEREOZ:
@@ -4108,15 +4183,29 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         # assign Bond.STEREOANY to unspecific bond, which make subsequent calls
         # of Chem.AssignStereochemistry ignore the bond even if there are
         # ENDDOWNRIGHT/ENDUPRIGHT bond direction indications.
-        rdmol = copy.deepcopy(rdmol)
+        rdmol_copy = copy.deepcopy(rdmol)
+
+        # Clear any previous assignments on the bonds, since FindPotentialStereo may not overwrite it
+        for bond in rdmol_copy.GetBonds():
+            bond.SetStereo(Chem.BondStereo.STEREONONE)
 
         # This function assigns Bond.GetStereo() == Bond.STEREOANY to bonds with
-        # undefined stereochemistry.
-        Chem.FindPotentialStereoBonds(rdmol)
+        # possible stereochemistry.
+        Chem.FindPotentialStereoBonds(rdmol_copy, cleanIt=True)
 
+        # Any TRULY stereogenic bonds in the molecule are now marked as STEREOANY in rdmol_copy.
+        # Iterate through all the bonds, and for the ones where rdmol_copy is marked as STEREOANY,
+        # ensure that they are cis/trans/E/Z (tested here be ensuring that they're NOT either
+        # # of the other possible types (NONE or ANY))
         undefined_bond_indices = []
-        for bond_idx, bond in enumerate(rdmol.GetBonds()):
-            if bond.GetStereo() == Chem.BondStereo.STEREOANY:
+        for bond_idx, (orig_bond, repercieved_bond) in enumerate(
+            zip(rdmol.GetBonds(), rdmol_copy.GetBonds())
+        ):
+            # print(repercieved_bond.GetStereo(), orig_bond.GetStereo())
+            if (repercieved_bond.GetStereo() == Chem.BondStereo.STEREOANY) and (
+                (orig_bond.GetStereo() == Chem.BondStereo.STEREOANY)
+                or (orig_bond.GetStereo() == Chem.BondStereo.STEREONONE)
+            ):
                 undefined_bond_indices.append(bond_idx)
         return undefined_bond_indices
 
@@ -4177,7 +4266,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         if msg is not None:
             if raise_warning:
-                msg = "Warning (not error because allow_undefined_stereo=True): "
+                msg = "Warning (not error because allow_undefined_stereo=True): " + msg
                 logger.warning(msg)
             else:
                 msg = "Unable to make OFFMol from RDMol: " + msg

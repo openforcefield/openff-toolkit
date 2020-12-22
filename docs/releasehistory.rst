@@ -7,8 +7,29 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 * ``minor`` increments add features but do not break API compatibility
 * ``micro`` increments represent bugfix releases or improvements in documentation
 
-Current Development
--------------------
+0.8.2 - Bugfix release
+----------------------
+
+Bugfixes
+""""""""
+- `PR #786 <https://github.com/openforcefield/openforcefield/pull/xyz>`_: Fixes `Issue #785
+  <https://github.com/openforcefield/openforcefield/issues/785>`_ where RDKitToolkitWrapper would
+  sometimes expect stereochemistry to be defined for non-stereogenic bonds when loading from
+  SDF.
+- `PR #786 <https://github.com/openforcefield/openforcefield/pull/786>`_: Fixes an issue where
+  using the :py:class:`Molecule <openforcefield.topology.Molecule>` copy constructor
+  (``newmol = Molecule(oldmol)``) would result
+  in the copy sharing the same ``.properties`` dict as the original (as in, changes to the
+  ``.properties`` dict of the copy would be reflected in the original).
+- `PR #789 <https://github.com/openforcefield/openforcefield/pull/789>`_: Fixes a regression noted in
+  `Issue #788 <https://github.com/openforcefield/openforcefield/issues/788>`_
+  where creating
+  :py:class:`vdWHandler.vdWType <openforcefield.typing.engines.smirnoff.parameters.vdWHandler.vdWType>`
+  or setting ``sigma`` or ``rmin_half`` using Quantities represented as strings resulted in an error.
+
+
+0.8.1 - Bugfix and minor feature release
+----------------------------------------
 
 API-breaking changes
 """"""""""""""""""""
@@ -27,7 +48,7 @@ Behavior Changed
 - `PR #583 <https://github.com/openforcefield/openforcefield/pull/583>`_: Methods
   such as :py:meth:`Molecule.from_rdkit <openforcefield.topology.Molecule.from_rdkit>`
   and :py:meth:`Molecule.from_openeye <openforcefield.topology.Molecule.from_openeye>`,
-  which delegate their internal logic to :py:class:`ToolkitRegistry <openforcefield.utils.ToolkitRegistry>`
+  which delegate their internal logic to :py:class:`ToolkitRegistry <openforcefield.utils.toolkits.ToolkitRegistry>`
   functions, now guarantee that they will return an object of the correct type when being called on ``Molecule``-derived classes. Previously,
   running these constructors using subclasses of :py:class:`FrozenMolecule <openforcefield.topology.Molecule>`
   would not return an instance of that subclass, but rather just an instance of a
@@ -60,7 +81,7 @@ Bugfixes
   serializing molecule with conformers to JSON.
 - `PR #750 <https://github.com/openforcefield/openforcefield/pull/750>`_: Fixes a bug causing either
   ``sigma`` or ``rmin_half`` to sometimes be missing on
-  :py:class:`vdWHandler.vdWType <openforcefield.typing.engines.smirnoff.parameters.vdWHandler>`
+  :py:class:`vdWHandler.vdWType <openforcefield.typing.engines.smirnoff.parameters.vdWHandler.vdWType>`
   objects.
 - `PR #756 <https://github.com/openforcefield/openforcefield/pull/756>`_: Fixes bug when running
   :py:meth:`vdWHandler.create_force <openforcefield.typing.engines.smirnoff.parameters.vdWHandler.create_force>`
@@ -68,7 +89,11 @@ Bugfixes
 - `PR #776 <https://github.com/openforcefield/openforcefield/pull/776>`_: Fixes a bug in which
   the :py:meth:`Topology.from_openmm <openforcefield.topology.Topology.from_openmm>` and
   :py:meth:`Topology.from_mdtraj <openforcefield.topology.Topology.from_mdtraj>` methods would
-  dangerously allow `unique_molecules=None`.
+  dangerously allow ``unique_molecules=None``.
+- `PR #777 <https://github.com/openforcefield/openforcefield/pull/777>`_:
+  :py:class:`RDKitToolkitWrapper <openforcefield.utils.toolkits.RDKitToolkitWrapper>`
+  now outputs the full warning message when ``allow_undefined_stereo=True`` (previously the
+  description of which stereo was undefined was squelched)
 
 
 0.8.0 - Virtual Sites
@@ -351,7 +376,7 @@ Bugfixes
 - `PR #631 <https://github.com/openforcefield/openforcefield/pull/631>`_: Fixes a bug in which calling
   :py:class:`unit_to_string <openforcefield.utils.utils.unit_to_string>` returned
   ``None`` when the unit is dimensionless. Now ``"dimensionless"`` is returned.
-- `PR #630 <https://github.com/openforcefield/openforcefield/pull/630>`_: Closes issue `Issue #629 
+- `PR #630 <https://github.com/openforcefield/openforcefield/pull/630>`_: Closes issue `Issue #629
   <https://github.com/openforcefield/openforcefield/issues/629>`_ in which the wrong exception is raised when
   attempting to instantiate a :py:class:`ForceField <openforcefield.typing.engines.smirnoff.forcefield.ForceField>`
   from an unparsable string.

@@ -1727,6 +1727,31 @@ class TestvdWHandler:
         omm_sys = openmm.System()
         vdw_handler.create_force(omm_sys, topology)
 
+    def test_add_param_str(self):
+        """
+        Ensure that string input is supported, given the added complication that the
+        sigma/rmin_half setters silently set each other's value.
+        See https://github.com/openforcefield/openforcefield/issues/788
+        """
+        vdw_handler = vdWHandler(version=0.3)
+        param1 = {
+            "epsilon": "0.5 * kilocalorie/mole",
+            "rmin_half": "1.2 * angstrom",
+            "smirks": "[*:1]",
+            "id": "n99",
+        }
+        param2 = {
+            "epsilon": "0.1 * kilocalorie/mole",
+            "sigma": "0.8 * angstrom",
+            "smirks": "[#1:1]",
+            "id": "n00",
+        }
+        vdw_handler.add_parameter(param1)
+        vdw_handler.add_parameter(param2)
+
+        assert vdw_handler.get_parameter({"smirks": "[*:1]"})[0].id == "n99"
+        assert vdw_handler.get_parameter({"smirks": "[#1:1]"})[0].id == "n00"
+
 
 class TestvdWType:
     """

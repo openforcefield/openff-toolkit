@@ -26,8 +26,8 @@ jobs:
         python-version:
           - 3.6
           - 3.7
-          # Uncomment when ready ;)
-          # - 3.8
+          - 3.8
+          - 3.9
         cfg:
           - os: ubuntu-latest
             rdkit: "true"
@@ -52,6 +52,7 @@ jobs:
       PYVER: ${{ matrix.python-version }}
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
       PYTEST_ARGS: -r fE --tb=short --cov=openforcefield --cov-config=setup.cfg --cov-append --cov-report=xml
+      NB_ARGS: -v --nbval-lax --ignore=examples/deprecated
 
     steps:
       - uses: actions/checkout@v2
@@ -131,7 +132,6 @@ jobs:
       - name: Check links
         shell: bash -l {0}
         if: ${{ matrix.cfg.rdkit == 'true' && matrix.cfg.openeye == 'TRUE' }}
-        continue-on-error: true
         run: |
           pytest -r fE --tb=short openforcefield/tests/test_links.py
 
@@ -149,7 +149,6 @@ jobs:
 
       - name: Run example scripts
         shell: bash -l {0}
-        continue-on-error: true
         run: |
           if [[ "$RDKIT" == false ]]; then
             PYTEST_ARGS+=" --ignore=examples/check_dataset_parameter_coverage"
@@ -159,16 +158,15 @@ jobs:
 
       - name: Run example notebooks
         shell: bash -l {0}
-        continue-on-error: true
         run: |
-          PYTEST_ARGS+=" --nbval-lax --ignore=examples/deprecated"
+          NB_ARGS+=" --ignore=examples/using_smirnoff_in_amber_or_gromacs"
           if [[ "$RDKIT" == false ]]; then
-            PYTEST_ARGS+=" --ignore=examples/check_dataset_parameter_coverage"
-            PYTEST_ARGS+=" --ignore=examples/conformer_energies"
-            PYTEST_ARGS+=" --ignore=examples/QCArchive_interface"
-            PYTEST_ARGS+=" --ignore=examples/visualization"
+            NB_ARGS+=" --ignore=examples/check_dataset_parameter_coverage"
+            NB_ARGS+=" --ignore=examples/conformer_energies"
+            NB_ARGS+=" --ignore=examples/QCArchive_interface"
+            NB_ARGS+=" --ignore=examples/visualization"
           fi
-          pytest $PYTEST_ARGS examples/
+          pytest $NB_ARGS examples/
 
       - name: Run code snippets in docs
         shell: bash -l {0}
