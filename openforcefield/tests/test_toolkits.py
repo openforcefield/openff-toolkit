@@ -1076,12 +1076,12 @@ class TestOpenEyeToolkitWrapper:
         )
         assert molecule2.n_conformers == 10
 
-    def test_compute_partial_charges_am1bcc(self):
-        """Test OpenEyeToolkitWrapper compute_partial_charges_am1bcc()"""
+    def test_assign_partial_charges_am1bcc(self):
+        """Test OpenEyeToolkitWrapper assign_partial_charges() with am1bcc"""
         toolkit_registry = ToolkitRegistry(toolkit_precedence=[OpenEyeToolkitWrapper])
         molecule = create_ethanol()
-        molecule.compute_partial_charges_am1bcc(
-            toolkit_registry=toolkit_registry
+        molecule.assign_partial_charges(
+            partial_charge_method="am1bcc", toolkit_registry=toolkit_registry
         )  # , charge_model=charge_model)
         charge_sum = 0 * unit.elementary_charge
         abs_charge_sum = 0 * unit.elementary_charge
@@ -1091,11 +1091,13 @@ class TestOpenEyeToolkitWrapper:
         assert abs(charge_sum) < 0.005 * unit.elementary_charge
         assert abs_charge_sum > 0.25 * unit.elementary_charge
 
-    def test_compute_partial_charges_am1bcc_net_charge(self):
+    def test_assign_partial_charges_am1bcc_net_charge(self):
         """Test OpenEyeToolkitWrapper assign_partial_charges() on a molecule with a net +1 charge"""
         toolkit_registry = ToolkitRegistry(toolkit_precedence=[OpenEyeToolkitWrapper])
         molecule = create_acetate()
-        molecule.compute_partial_charges_am1bcc(toolkit_registry=toolkit_registry)
+        molecule.assign_partial_charges(
+            partial_charge_method="am1bcc", toolkit_registry=toolkit_registry
+        )
         charge_sum = 0 * unit.elementary_charge
         for pc in molecule._partial_charges:
             charge_sum += pc
@@ -1105,9 +1107,9 @@ class TestOpenEyeToolkitWrapper:
             > -1.001 * unit.elementary_charge
         )
 
-    def test_compute_partial_charges_am1bcc_wrong_n_confs(self):
+    def test_assign_partial_charges_am1bcc_wrong_n_confs(self):
         """
-        Test OpenEyeToolkitWrapper compute_partial_charges_am1bcc() when requesting to use an incorrect number of
+        Test OpenEyeToolkitWrapper assign_partial_charges() with am1bcc when requesting to use an incorrect number of
         conformers. This test is a bit shorter than that for AmberToolsToolkitWrapper because OETK uses the
         ELF10 multiconformer method of AM1BCC, which doesn't have a maximum number of conformers.
         """
@@ -1123,8 +1125,10 @@ class TestOpenEyeToolkitWrapper:
 
         # Try again, with strict_n_confs as true, but not including use_confs, so the
         # recommended number of confs will be generated
-        molecule.compute_partial_charges_am1bcc(
-            toolkit_registry=toolkit_registry, strict_n_conformers=True
+        molecule.assign_partial_charges(
+            partial_charge_method="am1bcc",
+            toolkit_registry=toolkit_registry,
+            strict_n_conformers=True,
         )
 
     @pytest.mark.parametrize(
@@ -1290,8 +1294,8 @@ class TestOpenEyeToolkitWrapper:
                 strict_n_conformers=True,
             )
 
-    def test_compute_partial_charges_failure(self):
-        """Test OpenEyeToolkitWrapper compute_partial_charges() on a molecule it cannot assign charges to"""
+    def test_assign_partial_charges_failure(self):
+        """Test OpenEyeToolkitWrapper assign_partial_charges() on a molecule it cannot assign charges to"""
 
         toolkit_wrapper = OpenEyeToolkitWrapper()
         smiles = "[Li+1]"
@@ -1300,18 +1304,22 @@ class TestOpenEyeToolkitWrapper:
 
         # For now, I'm just testing AM1-BCC (will test more when the SMIRNOFF spec for other charges is finalized)
         with pytest.raises(Exception) as excinfo:
-            molecule.compute_partial_charges_am1bcc(toolkit_registry=toolkit_wrapper)
+            molecule.assign_partial_charges(
+                partial_charge_method="am1-bcc", toolkit_registry=toolkit_wrapper
+            )
             assert "Unable to assign charges" in str(excinfo)
             assert "OE Error: " in str(excinfo)
 
-    def test_compute_partial_charges_trans_cooh_am1bcc(self):
+    def test_assign_partial_charges_trans_cooh_am1bcc(self):
         """Test OpenEyeToolkitWrapper for computing partial charges for problematic molecules, as exemplified by
         Issue 346 (https://github.com/openforcefield/openforcefield/issues/346)"""
 
         lysine = Molecule.from_smiles("C(CC[NH3+])C[C@@H](C(=O)O)N")
         toolkit_wrapper = OpenEyeToolkitWrapper()
         lysine.generate_conformers(toolkit_registry=toolkit_wrapper)
-        lysine.compute_partial_charges_am1bcc(toolkit_registry=toolkit_wrapper)
+        lysine.assign_partial_charges(
+            partial_charge_method="am1bcc", toolkit_registry=toolkit_wrapper
+        )
 
     def test_assign_fractional_bond_orders(self):
         """Test OpenEyeToolkitWrapper assign_fractional_bond_orders()"""
@@ -2025,6 +2033,15 @@ class TestRDKitToolkitWrapper:
         # out "n/a" (or another placeholder) in the partial charge block atoms without charges.
         assert ">  <atom.dprop.PartialCharge>" not in sdf_text
 
+    def test_read_ethene_sdf(self):
+        """
+        Test that RDKitToolkitWrapper can load an ethene molecule without complaining about bond stereo.
+        See https://github.com/openforcefield/openforcefield/issues/785
+        """
+        ethene_file_path = get_data_file_path("molecules/ethene_rdkit.sdf")
+        toolkit_wrapper = RDKitToolkitWrapper()
+        toolkit_wrapper.from_file(ethene_file_path, file_format="sdf")
+
     def test_load_multiconformer_sdf_as_separate_molecules(self):
         """
         Test RDKitToolkitWrapper for reading a "multiconformer" SDF, which the OFF
@@ -2183,6 +2200,69 @@ class TestRDKitToolkitWrapper:
         )
         assert molecule2.n_conformers == 10
 
+    @pytest.mark.parametrize("partial_charge_method", ["mmff94"])
+    def test_assign_partial_charges_neutral(self, partial_charge_method):
+        """Test RDKitToolkitWrapper assign_partial_charges()"""
+        from openforcefield.tests.test_forcefield import create_ethanol
+
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=[RDKitToolkitWrapper])
+        # TODO: create_ethanol should be replaced by a function scope fixture.
+        molecule = create_ethanol()
+        molecule.assign_partial_charges(
+            toolkit_registry=toolkit_registry,
+            partial_charge_method=partial_charge_method,
+        )
+        charge_sum = 0.0 * unit.elementary_charge
+        for pc in molecule.partial_charges:
+            charge_sum += pc
+        assert -1.0e-5 < charge_sum.value_in_unit(unit.elementary_charge) < 1.0e-5
+
+    @pytest.mark.parametrize("partial_charge_method", ["mmff94"])
+    def test_assign_partial_charges_net_charge(self, partial_charge_method):
+        """
+        Test RDKitToolkitWrapper assign_partial_charges() on a molecule with net charge.
+        """
+        from openforcefield.tests.test_forcefield import create_acetate
+
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=[RDKitToolkitWrapper])
+        # TODO: create_acetate should be replaced by a function scope fixture.
+        molecule = create_acetate()
+        molecule.assign_partial_charges(
+            toolkit_registry=toolkit_registry,
+            partial_charge_method=partial_charge_method,
+        )
+        charge_sum = 0.0 * unit.elementary_charge
+        for pc in molecule.partial_charges:
+            charge_sum += pc
+        assert -1.0e-5 < charge_sum.value_in_unit(unit.elementary_charge) + 1.0 < 1.0e-5
+
+    def test_assign_partial_charges_bad_charge_method(self):
+        """Test RDKitToolkitWrapper assign_partial_charges() for a nonexistent charge method"""
+        from openforcefield.tests.test_forcefield import create_ethanol
+
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=[RDKitToolkitWrapper])
+        molecule = create_ethanol()
+
+        # Molecule.assign_partial_charges calls the ToolkitRegistry with raise_exception_types = [],
+        # which means it will only ever return ValueError
+        with pytest.raises(
+            ValueError, match="is not available from RDKitToolkitWrapper"
+        ):
+            molecule.assign_partial_charges(
+                toolkit_registry=toolkit_registry,
+                partial_charge_method="NotARealChargeMethod",
+            )
+
+        # ToolkitWrappers raise a specific exception class, so we test that here
+        with pytest.raises(
+            ChargeMethodUnavailableError,
+            match="is not available from RDKitToolkitWrapper",
+        ):
+            RDTKW = RDKitToolkitWrapper()
+            RDTKW.assign_partial_charges(
+                molecule=molecule, partial_charge_method="NotARealChargeMethod"
+            )
+
     def test_find_rotatable_bonds(self):
         """Test finding rotatable bonds while ignoring some groups"""
 
@@ -2295,13 +2375,15 @@ class TestRDKitToolkitWrapper:
 class TestAmberToolsToolkitWrapper:
     """Test the AmberToolsToolkitWrapper"""
 
-    def test_compute_partial_charges_am1bcc(self):
-        """Test AmberToolsToolkitWrapper compute_partial_charges_am1bcc()"""
+    def test_assign_partial_charges_am1bcc(self):
+        """Test AmberToolsToolkitWrapper assign_partial_charges() with am1bcc"""
         toolkit_registry = ToolkitRegistry(
             toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper]
         )
         molecule = create_ethanol()
-        molecule.compute_partial_charges_am1bcc(toolkit_registry=toolkit_registry)
+        molecule.assign_partial_charges(
+            partial_charge_method="am1bcc", toolkit_registry=toolkit_registry
+        )
         charge_sum = 0 * unit.elementary_charge
         abs_charge_sum = 0 * unit.elementary_charge
         for pc in molecule._partial_charges:
@@ -2310,13 +2392,15 @@ class TestAmberToolsToolkitWrapper:
         assert abs(charge_sum) < 0.001 * unit.elementary_charge
         assert abs_charge_sum > 0.25 * unit.elementary_charge
 
-    def test_compute_partial_charges_am1bcc_net_charge(self):
+    def test_assign_partial_charges_am1bcc_net_charge(self):
         """Test AmberToolsToolkitWrapper assign_partial_charges() on a molecule with a net -1 charge"""
         toolkit_registry = ToolkitRegistry(
             toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper]
         )
         molecule = create_acetate()
-        molecule.compute_partial_charges_am1bcc(toolkit_registry=toolkit_registry)
+        molecule.assign_partial_charges(
+            partial_charge_method="am1bcc", toolkit_registry=toolkit_registry
+        )
         charge_sum = 0 * unit.elementary_charge
         for pc in molecule._partial_charges:
             charge_sum += pc
@@ -2324,9 +2408,9 @@ class TestAmberToolsToolkitWrapper:
             -0.99 * unit.elementary_charge > charge_sum > -1.01 * unit.elementary_charge
         )
 
-    def test_compute_partial_charges_am1bcc_wrong_n_confs(self):
+    def test_assign_partial_charges_am1bcc_wrong_n_confs(self):
         """
-        Test AmberToolsToolkitWrapper compute_partial_charges_am1bcc() when requesting to use an incorrect number of
+        Test AmberToolsToolkitWrapper assign_partial_charges() with am1bcc when requesting to use an incorrect number of
         conformers
         """
         from openforcefield.tests.test_forcefield import create_ethanol
@@ -2343,7 +2427,8 @@ class TestAmberToolsToolkitWrapper:
             IncorrectNumConformersWarning,
             match="has 2 conformers, but charge method 'am1bcc' expects exactly 1.",
         ):
-            molecule.compute_partial_charges_am1bcc(
+            molecule.assign_partial_charges(
+                partial_charge_method="am1bcc",
                 toolkit_registry=toolkit_registry,
                 use_conformers=molecule.conformers,
                 strict_n_conformers=False,
@@ -2351,8 +2436,10 @@ class TestAmberToolsToolkitWrapper:
 
         # Try again, with strict_n_confs as true, but not including use_confs, so the
         # recommended number of confs will be generated
-        molecule.compute_partial_charges_am1bcc(
-            toolkit_registry=toolkit_registry, strict_n_conformers=True
+        molecule.assign_partial_charges(
+            partial_charge_method="am1bcc",
+            toolkit_registry=toolkit_registry,
+            strict_n_conformers=True,
         )
 
         # Test calling the ToolkitWrapper _indirectly_, though the Molecule API,
@@ -2362,7 +2449,8 @@ class TestAmberToolsToolkitWrapper:
             match=f"has 2 conformers, but charge method 'am1bcc' "
             f"expects exactly 1.",
         ):
-            molecule.compute_partial_charges_am1bcc(
+            molecule.assign_partial_charges(
+                partial_charge_method="am1bcc",
                 toolkit_registry=toolkit_registry,
                 use_conformers=molecule.conformers,
                 strict_n_conformers=True,
@@ -2378,7 +2466,8 @@ class TestAmberToolsToolkitWrapper:
             f"expects exactly 1.",
         ):
             toolkit_registry.call(
-                "compute_partial_charges_am1bcc",
+                "assign_partial_charges",
+                partial_charge_method="am1bcc",
                 molecule=molecule,
                 use_conformers=molecule.conformers,
                 strict_n_conformers=True,
@@ -2393,7 +2482,8 @@ class TestAmberToolsToolkitWrapper:
             f"expects exactly 1.",
         ):
             ATTKW = AmberToolsToolkitWrapper()
-            ATTKW.compute_partial_charges_am1bcc(
+            ATTKW.assign_partial_charges(
+                partial_charge_method="am1bcc",
                 molecule=molecule,
                 use_conformers=molecule.conformers,
                 strict_n_conformers=True,
@@ -3149,7 +3239,8 @@ class TestToolkitRegistry:
 
     @requires_ambertools
     def test_register_rdkit_and_ambertools(self):
-        """Test creation of toolkit registry with RDKitToolkitWrapper and AmberToolsToolkitWrapper"""
+        """Test creation of toolkit registry with RDKitToolkitWrapper and
+        AmberToolsToolkitWrapper and test ToolkitRegistry.resolve()"""
         toolkit_precedence = [RDKitToolkitWrapper, AmberToolsToolkitWrapper]
         registry = ToolkitRegistry(
             toolkit_precedence=toolkit_precedence,
@@ -3159,11 +3250,14 @@ class TestToolkitRegistry:
             [RDKitToolkitWrapper, AmberToolsToolkitWrapper]
         )
 
-        # Test ToolkitRegistry.resolve()
+        # Resolve to a method that is supported by AmberToolsToolkitWrapper
+        # but _not_ RDKitToolkitWrapper. Note that this may change as more
+        # functionality is added to to toolkit wrappers
         assert (
-            registry.resolve("assign_partial_charges")
-            == registry.registered_toolkits[1].assign_partial_charges
+            registry.resolve("assign_fractional_bond_orders")
+            == registry.registered_toolkits[1].assign_fractional_bond_orders
         )
+        # Resolve a method supported by both to the highest-priority wrapper
         assert (
             registry.resolve("from_smiles")
             == registry.registered_toolkits[0].from_smiles

@@ -10,18 +10,17 @@ dependencies:
   - pip
 
     # Testing
-  - pytest < 6.0
+  - pytest
   - pytest-cov
   - nbval
   - codecov
-  - coverage < 5.0
+  - coverage
   - numpy
   - networkx
   - ambertools
   - openeye-toolkits
   - packaging
   - openmmforcefields >=0.7.2
-  - openmmtools
   - openforcefields
   - smirnoff99Frosst
   - pyyaml

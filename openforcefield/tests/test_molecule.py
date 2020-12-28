@@ -47,7 +47,12 @@ from openforcefield.tests.utils import (
     requires_rdkit,
 )
 from openforcefield.topology import NotBondedError
-from openforcefield.topology.molecule import Atom, InvalidConformerError, Molecule
+from openforcefield.topology.molecule import (
+    Atom,
+    FrozenMolecule,
+    InvalidConformerError,
+    Molecule,
+)
 from openforcefield.utils import get_data_file_path
 from openforcefield.utils.toolkits import (
     AmberToolsToolkitWrapper,
@@ -450,6 +455,11 @@ class TestMolecule:
         """Test copy constructor."""
         molecule_copy = Molecule(molecule)
         assert molecule_copy == molecule
+
+        # Test that the "properties" dict of both molecules is unique
+        # (see https://github.com/openforcefield/openforcefield/pull/786)
+        molecule_copy.properties["aaa"] = "bbb"
+        assert "aaa" not in molecule.properties
 
     @pytest.mark.parametrize("toolkit", [OpenEyeToolkitWrapper, RDKitToolkitWrapper])
     @pytest.mark.parametrize("molecule", mini_drug_bank())
@@ -2684,7 +2694,22 @@ class TestMolecule:
         )  # this is the wrong stereochemistry, so there shouldn't be any matches
 
     @pytest.mark.slow
-    def test_compute_partial_charges(self):
+    @pytest.mark.parametrize(
+        ("toolkit", "method"),
+        [
+            ("openeye", "mmff94"),
+            ("openeye", "am1bcc"),
+            ("openeye", "am1-mulliken"),
+            ("openeye", "gasteiger"),
+            ("openeye", "am1bccnosymspt"),
+            ("openeye", "am1elf10"),
+            ("openeye", "am1bccelf10"),
+            ("ambertools", "am1bcc"),
+            ("ambertools", "gasteiger"),
+            ("ambertools", "am1-mulliken"),
+        ],
+    )
+    def test_assign_partial_charges(self, toolkit, method):
         """Test computation/retrieval of partial charges"""
         # TODO: Test only one molecule for speed?
         # TODO: Do we need to deepcopy each molecule, or is setUp called separately for each test method?
@@ -2692,59 +2717,47 @@ class TestMolecule:
         from simtk import unit
 
         # Do not modify original molecules.
-        molecules = copy.deepcopy(mini_drug_bank())
+        # molecules = copy.deepcopy(mini_drug_bank())
+        # In principle, testing for charge assignment over a wide set of molecules is important, but
+        # I think that's covered in test_toolkits.py. Here, we should only be concerned with testing the
+        # Molecule API, and therefore a single molecule should be sufficient
+        molecule = Molecule.from_smiles("CN1C=NC2=C1C(=O)N(C(=O)N2C)C")
 
-        # Test a single toolkit at a time
-        # Removed  ['amber', 'amberff94'] from OE list, as those won't find the residue types they're expecting
-        toolkit_to_charge_method = {
-            OpenEyeToolkitWrapper: [
-                "mmff",
-                "mmff94",
-                "am1bcc",
-                "am1bccnosymspt",
-                "am1bccelf10",
-            ],
-            AmberToolsToolkitWrapper: ["bcc", "gas", "mul"],
-        }
+        if toolkit == "openeye":
+            toolkit_registry = ToolkitRegistry(
+                toolkit_precedence=[OpenEyeToolkitWrapper]
+            )
+        elif toolkit == "ambertools":
+            toolkit_registry = ToolkitRegistry(
+                toolkit_precedence=[AmberToolsToolkitWrapper]
+            )
 
-        manual_skips = []
+        molecule.assign_partial_charges(
+            partial_charge_method=method,
+            toolkit_registry=toolkit_registry,
+        )
+        initial_charges = molecule._partial_charges
 
-        manual_skips.append(
-            "ZINC1564378"
-        )  # Warning: OEMMFF94Charges: assigning OEMMFFAtomTypes failed on mol .
-        manual_skips.append(
-            "ZINC00265517"
-        )  # Warning: OEMMFF94Charges: assigning OEMMFFAtomTypes failed on mol .
+        # Make sure everything isn't 0s
+        assert (abs(initial_charges / unit.elementary_charge) > 0.01).any()
+        # Check total charge
+        charges_sum_unitless = initial_charges.sum() / unit.elementary_charge
+        total_charge_unitless = molecule.total_charge / unit.elementary_charge
+        if abs(charges_sum_unitless - total_charge_unitless) > 0.0001:
+            print(
+                "molecule {}    charge_sum {}     molecule.total_charge {}".format(
+                    molecule.name, charges_sum_unitless, total_charge_unitless
+                )
+            )
+        np.allclose(charges_sum_unitless, total_charge_unitless, atol=0.002)
 
-        for toolkit in list(toolkit_to_charge_method.keys()):
-            toolkit_registry = ToolkitRegistry(toolkit_precedence=[toolkit])
-            for charge_model in toolkit_to_charge_method[toolkit]:
-                c = 0
-                for molecule in molecules[:1]:  # Just test first molecule to save time
-                    c += 1
-                    if molecule.name in manual_skips:  # Manual skips, hopefully rare
-                        continue
-                    molecule.compute_partial_charges(
-                        charge_model=charge_model, toolkit_registry=toolkit_registry
-                    )
-                    charges1 = molecule._partial_charges
-                    # Make sure everything isn't 0s
-                    assert (abs(charges1 / unit.elementary_charge) > 0.01).any()
-                    # Check total charge
-                    charges_sum_unitless = charges1.sum() / unit.elementary_charge
-                    # if abs(charges_sum_unitless - float(molecule.total_charge)) > 0.0001:
-                    #    print('c {}  molecule {}    charge_sum {}     molecule.total_charge {}'.format(c, molecule.name,
-                    #                                                                                   charges_sum_unitless,
-                    #                                                                                   molecule.total_charge))
-                    # assert_almost_equal(charges_sum_unitless, molecule.total_charge, decimal=4)
-
-                    # Call should be faster second time due to caching
-                    # TODO: Implement caching
-                    molecule.compute_partial_charges(
-                        charge_model=charge_model, toolkit_registry=toolkit_registry
-                    )
-                    charges2 = molecule._partial_charges
-                    assert np.allclose(charges1, charges2, atol=0.002)
+        # Call should be faster second time due to caching
+        # TODO: Implement caching
+        molecule.assign_partial_charges(
+            partial_charge_method=method, toolkit_registry=toolkit_registry
+        )
+        recomputed_charges = molecule._partial_charges
+        assert np.allclose(initial_charges, recomputed_charges, atol=0.002)
 
     @requires_openeye
     def test_assign_fractional_bond_orders(self):
@@ -2882,3 +2895,87 @@ class TestMolecule:
         mol = Molecule().from_smiles("CCO")
 
         assert isinstance(mol.visualize(backend="openeye"), IPython.core.display.Image)
+
+
+class MyMol(FrozenMolecule):
+    """
+    Lightweight FrozenMolecule subclass for molecule-subclass tests below
+    """
+
+
+class TestMoleculeSubclass:
+    """
+    Test that the FrozenMolecule class is subclass-able, by ensuring that Molecule.from_X constructors
+    return objects of the correct types
+    """
+
+    def test_molecule_subclass_from_smiles(self):
+        """Ensure that the right type of object is returned when running MyMol.from_smiles"""
+        mol = MyMol.from_smiles("CCO")
+        assert isinstance(mol, MyMol)
+
+    def test_molecule_subclass_from_inchi(self):
+        """Ensure that the right type of object is returned when running MyMol.from_inchi"""
+        mol = MyMol.from_inchi("InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3")
+        assert isinstance(mol, MyMol)
+
+    @requires_openeye
+    def test_molecule_subclass_from_iupac(self):
+        """Ensure that the right type of object is returned when running MyMol.from_iupac"""
+        mol = MyMol.from_iupac("benzene")
+        assert isinstance(mol, MyMol)
+
+    def test_molecule_subclass_from_file(self):
+        """Ensure that the right type of object is returned when running MyMol.from_file"""
+        mol = MyMol.from_file(get_data_file_path("molecules/ethanol.sdf"))
+        assert isinstance(mol, MyMol)
+
+    def test_molecule_subclass_from_mapped_smiles(self):
+        """Ensure that the right type of object is returned when running MyMol.from_mapped_smiles"""
+        mol = MyMol.from_mapped_smiles("[H:1][C:2]([H:3])([H:4])([H:5])")
+        assert isinstance(mol, MyMol)
+
+    @requires_qcelemental
+    def test_molecule_subclass_from_qcschema(self):
+        """Ensure that the right type of object is returned when running MyMol.from_qcschema"""
+        import qcportal as ptl
+
+        client = ptl.FractalClient()
+        ds = client.get_collection(
+            "TorsionDriveDataset", "Fragment Stability Benchmark"
+        )
+        entry = ds.get_entry(
+            "CC(=O)Nc1cc2c(cc1OC)nc[n:4][c:3]2[NH:2][c:1]3ccc(c(c3)Cl)F"
+        )
+        # now make the molecule from the record instance with and without the geometry
+        mol = MyMol.from_qcschema(entry.dict(encoding="json"))
+        assert isinstance(mol, MyMol)
+        # Make from object, which will include geometry
+        mol = MyMol.from_qcschema(entry, client)
+        assert isinstance(mol, MyMol)
+
+    def test_molecule_subclass_from_topology(self):
+        """Ensure that the right type of object is returned when running MyMol.from_topology"""
+        top = Molecule.from_smiles("CCO").to_topology()
+        mol = MyMol.from_topology(top)
+        assert isinstance(mol, MyMol)
+
+    @requires_rdkit
+    def test_molecule_subclass_from_pdb_and_smiles(self):
+        """Ensure that the right type of object is returned when running MyMol.from_pdb_and_smiles"""
+        mol = MyMol.from_pdb_and_smiles(
+            get_data_file_path("molecules/toluene.pdb"), "Cc1ccccc1"
+        )
+        assert isinstance(mol, MyMol)
+
+    def test_molecule_copy_constructor_from_other_subclass(self):
+        """Ensure that the right type of object is returned when running the MyMol copy constructor"""
+        normal_mol = MyMol.from_smiles("CCO")
+        mol = MyMol(normal_mol)
+        assert isinstance(mol, MyMol)
+
+    def test_molecule_subclass_from_dict(self):
+        """Ensure that the right type of object is returned when running MyMol.from_dict"""
+        orig_mol = Molecule.from_smiles("CCO")
+        mol = MyMol.from_dict(orig_mol.to_dict())
+        assert isinstance(mol, MyMol)

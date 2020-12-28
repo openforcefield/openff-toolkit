@@ -3511,10 +3511,14 @@ class vdWHandler(_NonbondedHandler):
         def __setattr__(self, name, value):
             super().__setattr__(key=name, value=value)
             if name == "rmin_half":
+                if type(value) == str:
+                    value = object_to_quantity(value)
                 super().__setattr__("sigma", value / 2 ** (1 / 6))
                 self._extra_nb_var = "sigma"
 
             if name == "sigma":
+                if type(value) == str:
+                    value = object_to_quantity(value)
                 super().__setattr__("rmin_half", value * 2 ** (1 / 6))
                 self._extra_nb_var = "rmin_half"
 
@@ -4164,9 +4168,9 @@ class ToolkitAM1BCCHandler(_NonbondedHandler):
             toolkit_registry = kwargs.get("toolkit_registry", GLOBAL_TOOLKIT_REGISTRY)
             try:
                 # We don't need to generate conformers here, since that will be done by default in
-                # compute_partial_charges_am1bcc if the use_conformers kwarg isn't defined
-                ref_mol.compute_partial_charges_am1bcc(
-                    toolkit_registry=toolkit_registry
+                # compute_partial_charges with am1bcc if the use_conformers kwarg isn't defined
+                ref_mol.assign_partial_charges(
+                    partial_charge_method="am1bcc", toolkit_registry=toolkit_registry
                 )
             except Exception as e:
                 warnings.warn(str(e), Warning)
