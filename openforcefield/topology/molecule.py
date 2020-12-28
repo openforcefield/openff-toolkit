@@ -3683,14 +3683,69 @@ class FrozenMolecule(Serializable):
     @property
     def impropers(self):
         """
-        Iterate over all proper torsions in the molecule
+        Iterate over all improper torsions in the molecule.
+
+        Returns
+        -------
+        impropers : set of tuple
+            An iterator of tuples, each containing the indices of atoms making
+            up a possible improper torsion.
+
+        See Also
+        --------
+        smirnoff_impropers, amber_impropers
 
         .. todo::
 
            * Do we need to return a ``Torsion`` object that collects information about fractional bond orders?
+
         """
         self._construct_torsions()
         return self._impropers
+
+    @property
+    def smirnoff_impropers(self):
+        """
+        Iterate over improper torsions in the molecule, but only those with
+        trivalent centers, reporting the central atom second in each improper.
+
+        Returns
+        -------
+        impropers : list of tuple
+            An iterator of tuples, each containing the indices of atoms making
+            up a possible improper torsion. The central atom is listed second
+            in each tuple.
+
+        See Also
+        --------
+        impropers, amber_impropers
+
+        """
+        smirnoff_improper_smarts = "[*:1]~[X3:2](~[*:3])~[*:4]"
+        improper_idxs = self.chemical_environment_matches(smirnoff_improper_smarts)
+        return improper_idxs
+
+    @property
+    def amber_impropers(self):
+        """
+        Iterate over improper torsions in the molecule, but only those with
+        trivalent centers, reporting the central atom first in each improper.
+
+        Returns
+        -------
+        impropers : list of tuple
+            An iterator of tuples, each containing the indices of atoms making
+            up a possible improper torsion. The central atom is listed first in
+            each tuple.
+
+        See Also
+        --------
+        impropers, smirnoff_impropers
+
+        """
+        amber_improper_smarts = "[X3:1](~[*:2])(~[*:3])~[*:4]"
+        improper_idxs = self.chemical_environment_matches(amber_improper_smarts)
+        return improper_idxs
 
     @property
     def total_charge(self):
@@ -5022,7 +5077,6 @@ class FrozenMolecule(Serializable):
         if not hasattr(self, "_torsions"):
             self._construct_bonded_atoms_list()
 
-            # self._torsions = set()
             self._propers = set()
             self._impropers = set()
             for atom1 in self._atoms:
@@ -5054,7 +5108,6 @@ class FrozenMolecule(Serializable):
                             self._impropers.add(improper)
 
             self._torsions = self._propers | self._impropers
-        # return iter(self._torsions)
 
     def _construct_bonded_atoms_list(self):
         """

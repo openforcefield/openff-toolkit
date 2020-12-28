@@ -2094,6 +2094,29 @@ class TestMolecule:
             )
             assert is_not_cyclic or is_three_memebered_ring_torsion(improper)
 
+    @pytest.mark.parametrize(
+        ("molecule", "n_impropers", "n_pruned"),
+        [
+            ("C", 24, 0),
+            ("CC", 48, 0),
+            ("N", 6, 6),
+        ],
+    )
+    def test_pruned_impropers(self, molecule, n_impropers, n_pruned):
+        """Test the amber_impropers and smirnoff_impropers properties"""
+        mol = Molecule.from_smiles(molecule)
+        assert mol.n_impropers == n_impropers
+        assert len(mol.smirnoff_impropers) == n_pruned
+        assert len(mol.amber_impropers) == n_pruned
+
+        for (smirnoff_imp, amber_imp) in zip(
+            mol.smirnoff_impropers, mol.amber_impropers
+        ):
+            assert smirnoff_imp[0] == amber_imp[1]
+            assert smirnoff_imp[1] == amber_imp[0]
+            assert smirnoff_imp[2] == amber_imp[2]
+            assert smirnoff_imp[3] == amber_imp[3]
+
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_torsions(self, molecule):
         """Test torsions property"""
