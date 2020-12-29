@@ -588,6 +588,23 @@ class TestTopology(TestCase):
             top_improper_atoms3, mol_improper_atoms2, transformed_dict_cls=ImproperDict
         )
 
+    def test_pruned_impropers(self):
+        """Test {smirnoff|amber}_impropers from the Topology API"""
+        top = Topology.from_molecules(
+            [Molecule.from_smiles(smi) for smi in ["N", "C=C"]]
+        )
+
+        assert len([*top.smirnoff_impropers]) == 18
+        assert len([*top.amber_impropers]) == 18
+
+        for (smirnoff_imp, amber_imp) in zip(
+            top.smirnoff_impropers, top.amber_impropers
+        ):
+            assert smirnoff_imp[0] == amber_imp[1]
+            assert smirnoff_imp[1] == amber_imp[0]
+            assert smirnoff_imp[2] == amber_imp[2]
+            assert smirnoff_imp[3] == amber_imp[3]
+
     # test_get_fractional_bond_order
     # test_two_of_same_molecule
     # test_two_different_molecules

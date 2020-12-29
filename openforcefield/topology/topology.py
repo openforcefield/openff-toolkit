@@ -1148,6 +1148,20 @@ class TopologyMolecule:
         return self._reference_molecule.n_impropers
 
     @property
+    def smirnoff_impropers(self):
+        """Iterable of Tuple[TopologyAtom]: iterator over the improper torsions in this Topology."""
+        return self._convert_to_topology_atom_tuples(
+            self._reference_molecule.smirnoff_impropers
+        )
+
+    @property
+    def amber_impropers(self):
+        """Iterable of Tuple[TopologyAtom]: iterator over the improper torsions in this Topology."""
+        return self._convert_to_topology_atom_tuples(
+            self._reference_molecule.amber_impropers
+        )
+
+    @property
     def virtual_site_start_topology_index(self):
         """Get the topology index of the first virtual site in this TopologyMolecule"""
         # If the cached value is not available, generate it
@@ -1717,6 +1731,20 @@ class Topology(Serializable):
         for topology_molecule in self._topology_molecules:
             for improper in topology_molecule.impropers:
                 yield improper
+
+    @property
+    def smirnoff_impropers(self):
+        """Iterable of Tuple[TopologyAtom]: iterator over the improper torsions in this Topology."""
+        for topology_molecule in self._topology_molecules:
+            for smirnoff_improper in topology_molecule.smirnoff_impropers:
+                yield smirnoff_improper
+
+    @property
+    def amber_impropers(self):
+        """Iterable of Tuple[TopologyAtom]: iterator over the improper torsions in this Topology."""
+        for topology_molecule in self._topology_molecules:
+            for amber_improper in topology_molecule.amber_impropers:
+                yield amber_improper
 
     class _ChemicalEnvironmentMatch:
         """Represents the match of a given chemical environment query, storing
