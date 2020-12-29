@@ -1119,44 +1119,44 @@ class TopologyMolecule:
 
     @property
     def angles(self):
-        """Iterable of Tuple[TopologyAtom]: iterator over the angles in this Topology."""
+        """Iterable of Tuple[TopologyAtom]: iterator over the angles in this TopologyMolecule."""
         return self._convert_to_topology_atom_tuples(self._reference_molecule.angles)
 
     @property
     def n_angles(self):
-        """int: number of angles in this Topology."""
+        """int: number of angles in this TopologyMolecule."""
         return self._reference_molecule.n_angles
 
     @property
     def propers(self):
-        """Iterable of Tuple[TopologyAtom]: iterator over the proper torsions in this Topology."""
+        """Iterable of Tuple[TopologyAtom]: iterator over the proper torsions in this TopologyMolecule."""
         return self._convert_to_topology_atom_tuples(self._reference_molecule.propers)
 
     @property
     def n_propers(self):
-        """int: number of proper torsions in this Topology."""
+        """int: number of proper torsions in this TopologyMolecule."""
         return self._reference_molecule.n_propers
 
     @property
     def impropers(self):
-        """Iterable of Tuple[TopologyAtom]: iterator over the improper torsions in this Topology."""
+        """Iterable of Tuple[TopologyAtom]: iterator over the improper torsions in this TopologyMolecule."""
         return self._convert_to_topology_atom_tuples(self._reference_molecule.impropers)
 
     @property
     def n_impropers(self):
-        """int: number of proper torsions in this Topology."""
+        """int: number of proper torsions in this TopologyMolecule."""
         return self._reference_molecule.n_impropers
 
     @property
     def smirnoff_impropers(self):
-        """Iterable of Tuple[TopologyAtom]: iterator over the improper torsions in this Topology."""
+        """Iterable of Tuple[TopologyAtom]: iterator over the improper torsions in this TopologyMolecule."""
         return self._convert_to_topology_atom_tuples(
             self._reference_molecule.smirnoff_impropers
         )
 
     @property
     def amber_impropers(self):
-        """Iterable of Tuple[TopologyAtom]: iterator over the improper torsions in this Topology."""
+        """Iterable of Tuple[TopologyAtom]: iterator over the improper torsions in this TopologyMolecule."""
         return self._convert_to_topology_atom_tuples(
             self._reference_molecule.amber_impropers
         )
