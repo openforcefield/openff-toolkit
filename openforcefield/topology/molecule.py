@@ -3663,7 +3663,10 @@ class FrozenMolecule(Serializable):
         """
         smirnoff_improper_smarts = "[*:1]~[X3:2](~[*:3])~[*:4]"
         improper_idxs = self.chemical_environment_matches(smirnoff_improper_smarts)
-        return improper_idxs
+        smirnoff_impropers = [
+            tuple(self.atoms[idx] for idx in imp) for imp in improper_idxs
+        ]
+        return smirnoff_impropers
 
     @property
     def amber_impropers(self):
@@ -3685,7 +3688,10 @@ class FrozenMolecule(Serializable):
         """
         amber_improper_smarts = "[X3:1](~[*:2])(~[*:3])~[*:4]"
         improper_idxs = self.chemical_environment_matches(amber_improper_smarts)
-        return improper_idxs
+        amber_impropers = [
+            tuple(self.atoms[idx] for idx in imp) for imp in improper_idxs
+        ]
+        return amber_impropers
 
     @property
     def total_charge(self):
