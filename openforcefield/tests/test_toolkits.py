@@ -584,6 +584,7 @@ class TestOpenEyeToolkitWrapper:
         )
         assert offmol.n_atoms == 4
 
+    @pytest.mark.roundrip
     @pytest.mark.parametrize("molecule", get_mini_drug_bank(OpenEyeToolkitWrapper))
     def test_to_inchi(self, molecule):
         """Test conversion to standard and non-standard InChI"""
@@ -592,6 +593,7 @@ class TestOpenEyeToolkitWrapper:
         inchi = molecule.to_inchi(toolkit_registry=toolkit)
         non_standard = molecule.to_inchi(True, toolkit_registry=toolkit)
 
+    @pytest.mark.roundrip
     @pytest.mark.parametrize("molecule", get_mini_drug_bank(OpenEyeToolkitWrapper))
     def test_to_inchikey(self, molecule):
         """Test the conversion to standard and non-standard InChIKey"""
@@ -608,6 +610,7 @@ class TestOpenEyeToolkitWrapper:
         with pytest.raises(RuntimeError):
             mol = Molecule.from_inchi(inchi, toolkit_registry=toolkit)
 
+    @pytest.mark.roundrip
     @pytest.mark.parametrize("molecule", get_mini_drug_bank(OpenEyeToolkitWrapper))
     def test_non_standard_inchi_round_trip(self, molecule):
         """Test if a molecule can survive an InChi round trip test in some cases the standard InChI
@@ -640,6 +643,7 @@ class TestOpenEyeToolkitWrapper:
                     mol2, bond_order_matching=False, toolkit_registry=toolkit
                 )
 
+    @pytest.mark.roundrip
     @pytest.mark.parametrize(
         "molecule",
         get_mini_drug_bank(
@@ -1609,6 +1613,7 @@ class TestRDKitToolkitWrapper:
         )
         assert offmol.n_atoms == 4
 
+    @pytest.mark.roundrip
     @pytest.mark.parametrize("molecule", get_mini_drug_bank(RDKitToolkitWrapper))
     def test_to_inchi(self, molecule):
         """Test conversion to standard and non-standard InChI"""
@@ -1617,6 +1622,7 @@ class TestRDKitToolkitWrapper:
         inchi = molecule.to_inchi(toolkit_registry=toolkit)
         non_standard = molecule.to_inchi(fixed_hydrogens=True, toolkit_registry=toolkit)
 
+    @pytest.mark.roundrip
     @pytest.mark.parametrize("molecule", get_mini_drug_bank(RDKitToolkitWrapper))
     def test_to_inchikey(self, molecule):
         """Test the conversion to standard and non-standard InChIKey"""
@@ -1691,6 +1697,7 @@ class TestRDKitToolkitWrapper:
 
         compare_mols(ref_mol, nonstandard_inchi_mol)
 
+    @pytest.mark.roundrip
     @pytest.mark.parametrize("molecule", get_mini_drug_bank(RDKitToolkitWrapper))
     def test_non_standard_inchi_round_trip(self, molecule):
         """Test if a molecule can survive an InChi round trip test in some cases the standard InChI

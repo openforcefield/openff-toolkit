@@ -323,6 +323,7 @@ class TestMolecule:
 
     # Test serialization {to|from}_{dict|yaml|toml|json|bson|xml|messagepack|pickle}
 
+    @pytest.mark.serialization
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_dict_serialization(self, molecule):
         """Test serialization of a molecule object to and from dict."""
@@ -332,6 +333,7 @@ class TestMolecule:
         assert molecule_copy.n_conformers == molecule.n_conformers
         assert np.allclose(molecule_copy.conformers[0], molecule.conformers[0])
 
+    @pytest.mark.serialization
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_yaml_serialization(self, molecule):
         """Test serialization of a molecule object to and from YAML."""
@@ -341,6 +343,7 @@ class TestMolecule:
         assert molecule_copy.n_conformers == molecule.n_conformers
         assert np.allclose(molecule_copy.conformers[0], molecule.conformers[0])
 
+    @pytest.mark.serialization
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_toml_serialization(self, molecule):
         """Test serialization of a molecule object to and from TOML."""
@@ -349,6 +352,7 @@ class TestMolecule:
         with pytest.raises(NotImplementedError):
             mol.to_toml()
 
+    @pytest.mark.serialization
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_bson_serialization(self, molecule):
         """Test serialization of a molecule object to and from BSON."""
@@ -358,6 +362,7 @@ class TestMolecule:
         assert molecule_copy.n_conformers == molecule.n_conformers
         assert np.allclose(molecule_copy.conformers[0], molecule.conformers[0])
 
+    @pytest.mark.serialization
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_json_serialization(self, molecule):
         """Test serialization of a molecule object to and from JSON."""
@@ -366,6 +371,7 @@ class TestMolecule:
         assert molecule_copy.n_conformers == molecule.n_conformers
         assert np.allclose(molecule_copy.conformers[0], molecule.conformers[0])
 
+    @pytest.mark.serialization
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_xml_serialization(self, molecule):
         """Test serialization of a molecule object to and from XML."""
@@ -375,6 +381,7 @@ class TestMolecule:
         with pytest.raises(NotImplementedError):
             Molecule.from_xml(serialized)
 
+    @pytest.mark.serialization
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_messagepack_serialization(self, molecule):
         """Test serialization of a molecule object to and from messagepack."""
@@ -384,6 +391,7 @@ class TestMolecule:
         assert molecule_copy.n_conformers == molecule.n_conformers
         assert np.allclose(molecule_copy.conformers[0], molecule.conformers[0])
 
+    @pytest.mark.serialization
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_pickle_serialization(self, molecule):
         """Test round-trip pickling of a molecule object."""
@@ -393,6 +401,7 @@ class TestMolecule:
         assert molecule_copy.n_conformers == molecule.n_conformers
         assert np.allclose(molecule_copy.conformers[0], molecule.conformers[0])
 
+    @pytest.mark.serialization
     def test_serialization_no_conformers(self):
         """Test round-trip serialization when molecules have no conformers or partial charges."""
         mol = Molecule.from_smiles("CCO")
@@ -443,6 +452,7 @@ class TestMolecule:
         assert len(molecule.atoms) == 0
         assert len(molecule.bonds) == 0
 
+    @pytest.mark.roundrip
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_create_copy(self, molecule):
         """Test copy constructor."""
@@ -454,6 +464,7 @@ class TestMolecule:
         molecule_copy.properties["aaa"] = "bbb"
         assert "aaa" not in molecule.properties
 
+    @pytest.mark.roundtrip
     @pytest.mark.parametrize("toolkit", [OpenEyeToolkitWrapper, RDKitToolkitWrapper])
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_to_from_smiles(self, molecule, toolkit):
@@ -797,6 +808,7 @@ class TestMolecule:
             filename = get_data_file_path("molecules/zinc-subset-tripos.mol2.gz")
             molecule = Molecule(filename, allow_undefined_stereo=True)
 
+    @pytest.mark.serialization
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_create_from_serialized(self, molecule):
         """Test standard constructor taking the output of __getstate__()."""
@@ -804,6 +816,7 @@ class TestMolecule:
         molecule_copy = Molecule(serialized_molecule)
         assert molecule == molecule_copy
 
+    @pytest.mark.roundtrip
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_to_from_dict(self, molecule):
         """Test that conversion/creation of a molecule to and from a dict is consistent."""
@@ -811,12 +824,14 @@ class TestMolecule:
         molecule_copy = Molecule.from_dict(serialized)
         assert molecule == molecule_copy
 
+    @pytest.mark.roundrip
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_to_networkx(self, molecule):
         """Test conversion to NetworkX graph."""
         graph = molecule.to_networkx()
 
     @requires_rdkit
+    @pytest.mark.roundrip
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_to_from_rdkit(self, molecule):
         """Test that conversion/creation of a molecule to and from an RDKit rdmol is consistent."""
@@ -902,6 +917,7 @@ class TestMolecule:
             cholesterol, Molecule.from_iupac(cholesterol_iupac)
         )
 
+    @pytest.mark.roundrip
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_to_from_topology(self, molecule):
         """Test that conversion/creation of a molecule to and from a Topology is consistent."""
@@ -1001,6 +1017,7 @@ class TestMolecule:
                 for atom_coords in data[2:]:
                     assert atom_coords.split()[1:] == coords
 
+    @pytest.mark.serialization
     # TODO: Should there be an equivalent toolkit test and leave this as an integration test?
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     @pytest.mark.parametrize(
@@ -1049,6 +1066,7 @@ class TestMolecule:
             # NOTE: We can't read pdb files and expect chemical information to be preserved
 
     @requires_openeye
+    @pytest.mark.roundrip
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_to_from_oemol(self, molecule):
         """Test that conversion/creation of a molecule to and from a OEMol is consistent."""
