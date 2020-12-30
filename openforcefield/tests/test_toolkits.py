@@ -12,7 +12,8 @@ Tests for cheminformatics toolkit wrappers
 # =============================================================================================
 # GLOBAL IMPORTS
 # =============================================================================================
-
+import logging
+import os
 from tempfile import NamedTemporaryFile
 from typing import Dict
 
@@ -278,6 +279,33 @@ def formic_acid_molecule() -> Molecule:
     formic_acid.add_bond(2, 4, 1, False)  # O2 - H2
 
     return formic_acid
+
+
+@pytest.fixture()
+def formic_acid_conformers() -> Dict[str, unit.Quantity]:
+
+    return {
+        "cis": np.array(
+            [
+                [-0.95927322, -0.91789997, 0.36333418],
+                [-0.34727824, 0.12828046, 0.22784603],
+                [0.82766682, 0.26871252, -0.42284882],
+                [-0.67153811, 1.10376000, 0.61921501],
+                [1.15035689, -0.58282924, -0.78766006],
+            ]
+        )
+        * unit.angstrom,
+        "trans": np.array(
+            [
+                [-0.95927322, -0.91789997, 0.36333418],
+                [-0.34727824, 0.12828046, 0.22784603],
+                [0.82766682, 0.26871252, -0.42284882],
+                [-0.67153811, 1.10376000, 0.61921501],
+                [1.14532626, 1.19679034, -0.41266876],
+            ]
+        )
+        * unit.angstrom,
+    }
 
 
 # =============================================================================================
@@ -2273,11 +2301,42 @@ class TestRDKitToolkitWrapper:
                 molecule=molecule, partial_charge_method="NotARealChargeMethod"
             )
 
+    def test_elf_is_problematic_conformer_acid(
+        self, formic_acid_molecule, formic_acid_conformers
+    ):
+        problematic, reason = RDKitToolkitWrapper._elf_is_problematic_conformer(
+            formic_acid_molecule, formic_acid_conformers["cis"]
+        )
+        assert not problematic
+        assert reason is None
+
+        problematic, reason = RDKitToolkitWrapper._elf_is_problematic_conformer(
+            formic_acid_molecule, formic_acid_conformers["trans"]
+        )
+        assert problematic
+        assert reason is not None
+
+    def test_elf_prune_problematic_conformers_acid(
+        self, formic_acid_molecule, formic_acid_conformers
+    ):
+
+        formic_acid_molecule._conformers = [*formic_acid_conformers.values()]
+
+        pruned_conformers = RDKitToolkitWrapper._elf_prune_problematic_conformers(
+            formic_acid_molecule
+        )
+
+        assert len(pruned_conformers) == 1
+        assert np.allclose(
+            formic_acid_conformers["cis"].value_in_unit(unit.angstrom),
+            pruned_conformers[0].value_in_unit(unit.angstrom),
+        )
+
     def test_elf_compute_electrostatic_energy(self, formic_acid_molecule: Molecule):
         """Test the computation of the ELF electrostatic energy function."""
 
         # Set some partial charges and a dummy conformer with values which make
-        # computing the expected energy easier.
+        # computing the expected energy by hand easier.
         formic_acid_molecule.partial_charges = (
             np.ones(formic_acid_molecule.n_atoms) * 1.0 * unit.elementary_charge
         )
@@ -2348,51 +2407,102 @@ class TestRDKitToolkitWrapper:
                 ),
             )
 
-    def test_apply_elf_conformer_selection(self, formic_acid_molecule: Molecule):
-        """Test the greedy selection of 'diverse' ELF conformers."""
+    def test_apply_elf_conformer_selection(self):
+        """Test applying the ELF10 method."""
 
         toolkit = RDKitToolkitWrapper()
 
-        # Test that simple case of no conformers does not yield an exception.
-        toolkit.apply_elf_conformer_selection(formic_acid_molecule)
+        molecule = Molecule.from_file(
+            get_data_file_path(os.path.join("molecules", "z_3_hydroxy_propenal.mol2")),
+            "MOL2",
+        )
+
+        # Test that the simple case of no conformers does not yield an exception.
+        toolkit.apply_elf_conformer_selection(molecule)
 
         initial_conformers = [
-            # Add a cis conformer.
+            # Add a conformer with an internal H-bond.
             np.array(
                 [
-                    [-0.95927322, -0.91789997, 0.36333418],
-                    [-0.34727824, 0.12828046, 0.22784603],
-                    [0.82766682, 0.26871252, -0.42284882],
-                    [-0.67153811, 1.10376000, 0.61921501],
-                    [1.15035689, -0.58282924, -0.78766006],
+                    [0.5477, 0.3297, -0.0621],
+                    [-0.1168, -0.7881, 0.2329],
+                    [-1.4803, -0.8771, 0.1667],
+                    [-0.2158, 1.5206, -0.4772],
+                    [-1.4382, 1.5111, -0.5580],
+                    [1.6274, 0.3962, -0.0089],
+                    [0.3388, -1.7170, 0.5467],
+                    [-1.8612, -0.0347, -0.1160],
+                    [0.3747, 2.4222, -0.7115],
                 ]
             )
             * unit.angstrom,
-            # Add a trans conformer.
+            # Add a conformer without an internal H-bond.
             np.array(
                 [
-                    [-0.95927322, -0.91789997, 0.36333418],
-                    [-0.34727824, 0.12828046, 0.22784603],
-                    [0.82766682, 0.26871252, -0.42284882],
-                    [-0.67153811, 1.10376000, 0.61921501],
-                    [1.14532626, 1.19679034, -0.41266876],
+                    [0.5477, 0.3297, -0.0621],
+                    [-0.1168, -0.7881, 0.2329],
+                    [-1.4803, -0.8771, 0.1667],
+                    [-0.2158, 1.5206, -0.4772],
+                    [0.3353, 2.5772, -0.7614],
+                    [1.6274, 0.3962, -0.0089],
+                    [0.3388, -1.7170, 0.5467],
+                    [-1.7743, -1.7634, 0.4166],
+                    [-1.3122, 1.4082, -0.5180],
                 ]
             )
             * unit.angstrom,
         ]
 
-        formic_acid_molecule.add_conformer(initial_conformers[0])
-        formic_acid_molecule.add_conformer(initial_conformers[1])
+        molecule._conformers = [*initial_conformers]
 
         # Apply ELF10
-        toolkit.apply_elf_conformer_selection(formic_acid_molecule)
-        elf10_conformers = formic_acid_molecule.conformers
+        toolkit.apply_elf_conformer_selection(molecule)
+        elf10_conformers = molecule.conformers
 
         assert len(elf10_conformers) == 1
 
         assert np.allclose(
             elf10_conformers[0].value_in_unit(unit.angstrom),
             initial_conformers[1].value_in_unit(unit.angstrom),
+        )
+
+    def test_apply_elf_conformer_selection_acid(
+        self, formic_acid_molecule, formic_acid_conformers, caplog
+    ):
+        """Test applying the ELF10 method."""
+
+        toolkit = RDKitToolkitWrapper()
+
+        # Add the conformers to the molecule and apply ELF.
+        formic_acid_molecule._conformers = [
+            formic_acid_conformers["trans"],
+            formic_acid_conformers["cis"],
+        ]
+
+        # Only the CIS conformer should remain after pruning and a warning raised to
+        # explain why the conformer was discarded.
+        with caplog.at_level(logging.WARNING):
+            toolkit.apply_elf_conformer_selection(formic_acid_molecule)
+
+        assert formic_acid_molecule.n_conformers == 1
+        assert "Discarding conformer 0" in caplog.text
+        assert "Molecules which contain COOH functional groups in a" in caplog.text
+
+        assert np.allclose(
+            formic_acid_molecule.conformers[0].value_in_unit(unit.angstrom),
+            formic_acid_conformers["cis"].value_in_unit(unit.angstrom),
+        )
+
+        # Check that an exception is raised if no conformers remain after removing the
+        # trans conformer.
+        formic_acid_molecule._conformers = [formic_acid_conformers["trans"]]
+
+        with pytest.raises(ValueError) as error_info:
+            toolkit.apply_elf_conformer_selection(formic_acid_molecule)
+
+        assert (
+            "There were no conformers to select from after discarding conformers"
+            in str(error_info.value)
         )
 
     def test_find_rotatable_bonds(self):

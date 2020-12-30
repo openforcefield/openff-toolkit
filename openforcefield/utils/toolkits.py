@@ -61,7 +61,7 @@ import subprocess
 import tempfile
 from distutils.spawn import find_executable
 from functools import wraps
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, List, Optional, Tuple
 
 import numpy as np
 from simtk import unit
@@ -3443,6 +3443,86 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         molecule.partial_charges = charges * unit.elementary_charge
 
     @classmethod
+    def _elf_is_problematic_conformer(
+        cls, molecule: "Molecule", conformer: unit.Quantity
+    ) -> Tuple[bool, Optional[str]]:
+        """A function which checks if a particular conformer is known to be problematic
+        when computing ELF partial charges.
+
+        Currently this includes conformers which:
+
+        * contain a trans-COOH configuration. These conformers ... TODO add reason.
+
+        Returns
+        -------
+            A tuple of a bool stating whether the conformer is problematic and, if it
+            is, a string message explaing why. If the conformer is not problematic, the
+            second return value will be none.
+        """
+        from rdkit.Chem.rdMolTransforms import GetDihedralRad
+
+        # Create a copy of the molecule which contains only this conformer.
+        molecule_copy = copy.deepcopy(molecule)
+        molecule_copy._conformers = [conformer]
+
+        rdkit_molecule = molecule_copy.to_rdkit()
+
+        # Check for trans-COOH configurations
+        carboxylic_acid_matches = cls._find_smarts_matches(
+            rdkit_molecule, "[#6X3:2](=[#8:1])(-[#8X2H1:3]-[#1:4])"
+        )
+
+        for match in carboxylic_acid_matches:
+
+            dihedral_angle = GetDihedralRad(rdkit_molecule.GetConformer(0), *match)
+
+            if dihedral_angle > np.pi / 2.0:
+                # Discard the 'trans' conformer.
+                return (
+                    True,
+                    "Molecules which contain COOH functional groups in a trans "
+                    "configuration are discarded by the ELF method.",
+                )
+
+        return False, None
+
+    @classmethod
+    def _elf_prune_problematic_conformers(
+        cls, molecule: "Molecule"
+    ) -> List[unit.Quantity]:
+        """A function which attempts to remove conformers which are known to be
+        problematic when computing ELF partial charges.
+
+        Currently this includes conformers which:
+
+        * contain a trans-COOH configuration. These conformers ... TODO add reason.
+
+        Notes
+        -----
+        * Problematic conformers are flagged by the
+          ``RDKitToolkitWrapper._elf_is_problematic_conformer`` function.
+
+        Returns
+        -------
+            The conformers to retain.
+        """
+
+        valid_conformers = []
+
+        for i, conformer in enumerate(molecule.conformers):
+
+            is_problematic, reason = cls._elf_is_problematic_conformer(
+                molecule, conformer
+            )
+
+            if is_problematic:
+                logger.warning(f"Discarding conformer {i}: {reason}")
+            else:
+                valid_conformers.append(conformer)
+
+        return valid_conformers
+
+    @classmethod
     def _elf_compute_electrostatic_energy(
         cls, molecule: "Molecule", conformer: unit.Quantity
     ) -> float:
@@ -3494,9 +3574,12 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             - 2 * coordinates.dot(coordinates.T)
             + np.sum(np.square(coordinates), axis=1)
         )
+        # Handle edge cases where the squared distance is slightly negative due to
+        # precision issues
+        np.fill_diagonal(distances, 0.0)
 
         inverse_distances = np.reciprocal(
-            distances, out=np.zeros_like(distances), where=distances != 0
+            distances, out=np.zeros_like(distances), where=~np.isclose(distances, 0.0)
         )
 
         # Multiply by the charge products.
@@ -3674,17 +3757,28 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         # Copy the input molecule so we can directly perturb it within the method.
         molecule_copy = copy.deepcopy(molecule)
 
+        # Prune any problematic conformers, such as trans-COOH configurations.
+        conformers = self._elf_prune_problematic_conformers(molecule_copy)
+
+        if len(conformers) == 0:
+
+            raise ValueError(
+                "There were no conformers to select from after discarding conformers "
+                "which are known to be problematic when computing ELF partial charges. "
+                "Make sure to generate a diverse array of conformers before calling the "
+                "`RDKitToolkitWrapper.apply_elf_conformer_selection` method."
+            )
+
         # Generate a set of absolute MMFF94 partial charges for the molecule and use
         # these to compute the electrostatic interaction energy of each conformer.
         self.assign_partial_charges(molecule_copy, "mmff94")
-        molecule_copy.assign_partial_charges("mmff94")
 
         conformer_energies = [
             (
                 self._elf_compute_electrostatic_energy(molecule_copy, conformer),
                 conformer,
             )
-            for conformer in molecule_copy.conformers
+            for conformer in conformers
         ]
 
         # Rank the conformer energies and retain `percentage`% with the lowest energies.
