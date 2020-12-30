@@ -32,14 +32,7 @@ import numpy as np
 import pytest
 from simtk import unit
 
-from openforcefield.tests.test_forcefield import (
-    create_acetaldehyde,
-    create_benzene_no_aromatic,
-    create_cis_1_2_dichloroethene,
-    create_cyclohexane,
-    create_ethanol,
-    create_reversed_ethanol,
-)
+from openforcefield.tests.conftest import *
 from openforcefield.tests.utils import (
     has_pkg,
     requires_openeye,
@@ -532,12 +525,12 @@ class TestMolecule:
         "toolkit_class", [OpenEyeToolkitWrapper, RDKitToolkitWrapper]
     )
     @pytest.mark.parametrize("data", smiles_types)
-    def test_smiles_types(self, data, toolkit_class):
+    def test_smiles_types(self, data, toolkit_class, cis_1_2_dichloroethene):
         """Test that the toolkit is passing the correct args to the toolkit backends across different combinations."""
 
         if toolkit_class.is_available():
             toolkit = toolkit_class()
-            mol = create_cis_1_2_dichloroethene()
+            mol = cis_1_2_dichloroethene
             isomeric, explicit_hs, mapped = (
                 data["isomeric"],
                 data["explicit_hydrogens"],
@@ -605,13 +598,13 @@ class TestMolecule:
     @pytest.mark.parametrize(
         "toolkit_class", [OpenEyeToolkitWrapper, RDKitToolkitWrapper]
     )
-    def test_smiles_cache(self, toolkit_class):
+    def test_smiles_cache(self, toolkit_class, ethanol):
         """Make sure that the smiles cache is being used correctly."""
 
         if toolkit_class.is_available():
             toolkit = toolkit_class()
             # this uses no toolkit back end so no smiles should be saved
-            mol = create_ethanol()
+            mol = ethanol
 
             # now lets populate the cache with a test result
             # first we need to make the cache key for the default input
@@ -666,11 +659,11 @@ class TestMolecule:
         "toolkit_class", [OpenEyeToolkitWrapper, RDKitToolkitWrapper]
     )
     @pytest.mark.parametrize("data", mapped_types)
-    def test_partial_mapped_smiles(self, toolkit_class, data):
+    def test_partial_mapped_smiles(self, toolkit_class, data, cis_1_2_dichloroethene):
 
         if toolkit_class.is_available():
             toolkit = toolkit_class()
-            mol = create_cis_1_2_dichloroethene()
+            mol = cis_1_2_dichloroethene
             mol._properties["atom_map"] = data["atom_map"]
 
             smiles = mol.to_smiles(
@@ -721,22 +714,22 @@ class TestMolecule:
 
     inchi_data = [
         {
-            "molecule": create_ethanol(),
+            "molecule": ethanol,
             "standard_inchi": "InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3",
             "fixed_hydrogen_inchi": "InChI=1/C2H6O/c1-2-3/h3H,2H2,1H3",
         },
         {
-            "molecule": create_reversed_ethanol(),
+            "molecule": reversed_ethanol,
             "standard_inchi": "InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3",
             "fixed_hydrogen_inchi": "InChI=1/C2H6O/c1-2-3/h3H,2H2,1H3",
         },
         {
-            "molecule": create_acetaldehyde(),
+            "molecule": acetaldehyde,
             "standard_inchi": "InChI=1S/C2H4O/c1-2-3/h2H,1H3",
             "fixed_hydrogen_inchi": "InChI=1/C2H4O/c1-2-3/h2H,1H3",
         },
         {
-            "molecule": create_cyclohexane(),
+            "molecule": cyclohexane,
             "standard_inchi": "InChI=1S/C6H12/c1-2-4-6-5-3-1/h1-6H2",
             "fixed_hydrogen_inchi": "InChI=1/C6H12/c1-2-4-6-5-3-1/h1-6H2",
         },
@@ -985,11 +978,10 @@ class TestMolecule:
                 for coord in coords:
                     assert coord in data
 
-    def test_to_xyz_no_conformers(self):
+    def test_to_xyz_no_conformers(self, ethanol):
         """Test writing a molecule out when it has no conformers here all coords should be 0."""
 
         # here we want to make a molecule with no coordinates
-        ethanol = create_ethanol()
         assert ethanol.n_conformers == 0
 
         with NamedTemporaryFile(suffix=".xyz") as iofile:
@@ -1135,14 +1127,12 @@ class TestMolecule:
         molecule.name = name
         assert molecule.name == name
 
-    def test_hill_formula(self):
+    def test_hill_formula(self, ethanol, reversed_ethanol):
         """Test that making the hill formula is consistent between input methods and ordering"""
         # make sure smiles match reference
-        molecule_smiles = create_ethanol()
-        assert molecule_smiles.hill_formula == "C2H6O"
+        assert ethanol.hill_formula == "C2H6O"
         # make sure is not order dependent
-        molecule_smiles_reverse = create_reversed_ethanol()
-        assert molecule_smiles.hill_formula == molecule_smiles_reverse.hill_formula
+        assert reversed_ethanol.hill_formula == ethanol.hill_formula
         # make sure single element names are put first
         order_mol = Molecule.from_smiles("C(Br)CB")
         assert order_mol.hill_formula == "C2H6BBr"
@@ -1153,29 +1143,26 @@ class TestMolecule:
         br_i = Molecule.from_smiles("BrI")
         assert br_i.hill_formula == "BrI"
         # make sure files and smiles match
-        molecule_file = Molecule.from_file(get_data_file_path("molecules/ethanol.sdf"))
-        assert molecule_smiles.hill_formula == molecule_file.hill_formula
+        ethanol_from_file = Molecule.from_file(
+            get_data_file_path("molecules/ethanol.sdf")
+        )
+        assert ethanol.hill_formula == ethanol_from_file.hill_formula
         # make sure the topology molecule gives the same formula
         from openforcefield.topology.topology import Topology, TopologyMolecule
 
-        topology = Topology.from_molecules(molecule_smiles)
-        topmol = TopologyMolecule(molecule_smiles, topology)
-        assert molecule_smiles.hill_formula == Molecule.to_hill_formula(topmol)
+        topology = Topology.from_molecules(ethanol)
+        topmol = TopologyMolecule(ethanol, topology)
+        assert ethanol.hill_formula == Molecule.to_hill_formula(topmol)
         # make sure the networkx matches
-        assert molecule_smiles.hill_formula == Molecule.to_hill_formula(
-            molecule_smiles.to_networkx()
-        )
+        assert ethanol.hill_formula == Molecule.to_hill_formula(ethanol.to_networkx())
 
-    def test_isomorphic_general(self):
+    def test_isomorphic_general(self, ethanol, reversed_ethanol, acetaldehyde):
         """Test the matching using different input types"""
         # check that hill formula fails are caught
-        ethanol = create_ethanol()
-        acetaldehyde = create_acetaldehyde()
         assert ethanol.is_isomorphic_with(acetaldehyde) is False
         assert acetaldehyde.is_isomorphic_with(ethanol) is False
         # check that different orderings work with full matching
-        ethanol_reverse = create_reversed_ethanol()
-        assert ethanol.is_isomorphic_with(ethanol_reverse) is True
+        assert ethanol.is_isomorphic_with(reversed_ethanol) is True
         # check a reference mapping between ethanol and ethanol_reverse matches that calculated
         ref_mapping = {0: 8, 1: 7, 2: 6, 3: 3, 4: 4, 5: 5, 6: 1, 7: 2, 8: 0}
         assert (
@@ -1296,13 +1283,12 @@ class TestMolecule:
     ]
 
     @pytest.mark.parametrize("inputs", isomorphic_permutations)
-    def test_isomorphic_perumtations(self, inputs):
+    def test_isomorphic_perumtations(self, inputs, benzene_no_aromatic):
         """Test all of the different combinations of matching levels between benzene with and without the aromatic bonds
         defined"""
         # get benzene with all aromatic atoms/bonds labeled
         benzene = Molecule.from_smiles("c1ccccc1")
-        # get benzene with no aromatic labels
-        benzene_no_aromatic = create_benzene_no_aromatic()
+        # benzene with no aromatic labels is from fixture
         # now test all of the variations
         assert (
             Molecule.are_isomorphic(
@@ -1375,24 +1361,22 @@ class TestMolecule:
             bond_stereochemistry_matching=True,
         )[0]
 
-    def test_remap(self):
+    def test_remap(self, ethanol, reversed_ethanol):
         """Test the remap function which should return a new molecule in the requested ordering"""
-        # the order here is CCO
-        ethanol = create_ethanol()
-        # get ethanol in reverse order OCC
-        ethanol_reverse = create_reversed_ethanol()
         # get the mapping between the molecules
-        mapping = Molecule.are_isomorphic(ethanol, ethanol_reverse, True)[1]
+        mapping, _ = Molecule.are_isomorphic(
+            ethanol, reversed_ethanol, return_atom_map=True
+        )
 
         atom0, atom1 = list([atom for atom in ethanol.atoms])[:2]
         ethanol.add_bond_charge_virtual_site([atom0, atom1], 0.3 * unit.angstrom)
 
         # make sure that molecules with virtual sites raises an error
         with pytest.raises(NotImplementedError):
-            remapped = ethanol.remap(mapping, current_to_new=True)
+            ethanol.remap(mapping, current_to_new=True)
 
         # remake with no virtual site and remap to match the reversed ordering
-        ethanol = create_ethanol()
+        ethanol = Molecule(ethanol)
 
         new_ethanol = ethanol.remap(mapping, current_to_new=True)
 
@@ -1438,33 +1422,25 @@ class TestMolecule:
         assert_molecules_match_after_remap(round_trip_ethanol, ethanol)
 
     @requires_openeye
-    def test_canonical_ordering_openeye(self):
+    def test_canonical_ordering_openeye(self, ethanol, reversed_ethanol):
         """Make sure molecules are returned in canonical ordering of openeye"""
         from openforcefield.utils.toolkits import OpenEyeToolkitWrapper
 
         openeye = OpenEyeToolkitWrapper()
-        # get ethanol in canonical order
-        ethanol = create_ethanol()
-        # get reversed non canonical ethanol
-        reversed_ethanol = create_reversed_ethanol()
         # get the canonical ordering
         canonical_ethanol = reversed_ethanol.canonical_order_atoms(openeye)
         # make sure the mapping between the ethanol and the openeye ref canonical form is the same
         assert (
             True,
             {0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 7: 7, 8: 8},
-        ) == Molecule.are_isomorphic(canonical_ethanol, ethanol, True)
+        ) == Molecule.are_isomorphic(canonical_ethanol, ethanol, return_atom_map=True)
 
     @requires_rdkit
-    def test_canonical_ordering_rdkit(self):
+    def test_canonical_ordering_rdkit(self, ethanol, reversed_ethanol):
         """Make sure molecules are returned in canonical ordering of the RDKit"""
         from openforcefield.utils.toolkits import RDKitToolkitWrapper
 
         rdkit = RDKitToolkitWrapper()
-        # get ethanol in canonical order
-        ethanol = create_ethanol()
-        # get reversed non canonical ethanol
-        reversed_ethanol = create_reversed_ethanol()
         # get the canonical ordering
         canonical_ethanol = reversed_ethanol.canonical_order_atoms(rdkit)
         # make sure the mapping between the ethanol and the rdkit ref canonical form is the same
@@ -2334,9 +2310,9 @@ class TestMolecule:
             atoms, distance, charge_increments=charge_increments, replace=True
         )
 
-    def test_virtual_particle(self):
+    def test_virtual_particle(self, ethanol):
         """Test setter, getters, and methods of VirtualParticle"""
-        mol = create_ethanol()
+        mol = ethanol
         # Add a SYMMETRIC (default) VirtualSite, which should have two particles
         mol.add_bond_charge_virtual_site(
             (mol.atoms[1], mol.atoms[2]),

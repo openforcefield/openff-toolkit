@@ -20,11 +20,10 @@ import os
 from collections import OrderedDict
 from tempfile import NamedTemporaryFile
 
-import numpy as np
-import pytest
 from numpy.testing import assert_almost_equal
-from simtk import openmm, unit
+from simtk import openmm
 
+from openforcefield.tests.conftest import *
 from openforcefield.tests.utils import (
     requires_openeye,
     requires_openeye_mol2,
@@ -316,280 +315,6 @@ def round_charge(xml):
         chunk = '" sig'.join(chunksp)
         xmlsp[index] = chunk
     return ' q="'.join(xmlsp)
-
-
-def create_cis_1_2_dichloroethene():
-    """
-    Creates an openforcefield.topology.Molecule representation of cis-1,2-dichloroethene
-    without the use of a cheminformatics toolkit.
-    """
-
-    cis_dichloroethene = Molecule()
-    cis_dichloroethene.add_atom(17, 0, False)
-    cis_dichloroethene.add_atom(6, 0, False)
-    cis_dichloroethene.add_atom(6, 0, False)
-    cis_dichloroethene.add_atom(17, 0, False)
-    cis_dichloroethene.add_atom(1, 0, False)
-    cis_dichloroethene.add_atom(1, 0, False)
-    cis_dichloroethene.add_bond(0, 1, 1, False)
-    cis_dichloroethene.add_bond(1, 2, 2, False, "Z")
-    cis_dichloroethene.add_bond(2, 3, 1, False)
-    cis_dichloroethene.add_bond(1, 4, 1, False)
-    cis_dichloroethene.add_bond(2, 5, 1, False)
-    return cis_dichloroethene
-
-
-def create_ethanol():
-    """
-    Creates an openforcefield.topology.Molecule representation of
-    ethanol without the use of a cheminformatics toolkit
-    """
-    # Create an ethanol molecule without using a toolkit
-    ethanol = Molecule()
-    ethanol.add_atom(6, 0, False)  # C0
-    ethanol.add_atom(6, 0, False)  # C1
-    ethanol.add_atom(8, 0, False)  # O2
-    ethanol.add_atom(1, 0, False)  # H3
-    ethanol.add_atom(1, 0, False)  # H4
-    ethanol.add_atom(1, 0, False)  # H5
-    ethanol.add_atom(1, 0, False)  # H6
-    ethanol.add_atom(1, 0, False)  # H7
-    ethanol.add_atom(1, 0, False)  # H8
-    ethanol.add_bond(0, 1, 1, False, fractional_bond_order=1.33)  # C0 - C1
-    ethanol.add_bond(1, 2, 1, False, fractional_bond_order=1.23)  # C1 - O2
-    ethanol.add_bond(0, 3, 1, False, fractional_bond_order=1)  # C0 - H3
-    ethanol.add_bond(0, 4, 1, False, fractional_bond_order=1)  # C0 - H4
-    ethanol.add_bond(0, 5, 1, False, fractional_bond_order=1)  # C0 - H5
-    ethanol.add_bond(1, 6, 1, False, fractional_bond_order=1)  # C1 - H6
-    ethanol.add_bond(1, 7, 1, False, fractional_bond_order=1)  # C1 - H7
-    ethanol.add_bond(2, 8, 1, False, fractional_bond_order=1)  # O2 - H8
-    charges = unit.Quantity(
-        np.array([-0.4, -0.3, -0.2, -0.1, 0.00001, 0.1, 0.2, 0.3, 0.4]),
-        unit.elementary_charge,
-    )
-    ethanol.partial_charges = charges
-
-    return ethanol
-
-
-def create_reversed_ethanol():
-    """
-    Creates an openforcefield.topology.Molecule representation of
-    ethanol without the use of a cheminformatics toolkit. This function
-    reverses the atom indexing of create_ethanol
-    """
-    # Create an ethanol molecule without using a toolkit
-    ethanol = Molecule()
-    ethanol.add_atom(1, 0, False)  # H0
-    ethanol.add_atom(1, 0, False)  # H1
-    ethanol.add_atom(1, 0, False)  # H2
-    ethanol.add_atom(1, 0, False)  # H3
-    ethanol.add_atom(1, 0, False)  # H4
-    ethanol.add_atom(1, 0, False)  # H5
-    ethanol.add_atom(8, 0, False)  # O6
-    ethanol.add_atom(6, 0, False)  # C7
-    ethanol.add_atom(6, 0, False)  # C8
-    ethanol.add_bond(8, 7, 1, False, fractional_bond_order=1.33)  # C8 - C7
-    ethanol.add_bond(7, 6, 1, False, fractional_bond_order=1.23)  # C7 - O6
-    ethanol.add_bond(8, 5, 1, False, fractional_bond_order=1)  # C8 - H5
-    ethanol.add_bond(8, 4, 1, False, fractional_bond_order=1)  # C8 - H4
-    ethanol.add_bond(8, 3, 1, False, fractional_bond_order=1)  # C8 - H3
-    ethanol.add_bond(7, 2, 1, False, fractional_bond_order=1)  # C7 - H2
-    ethanol.add_bond(7, 1, 1, False, fractional_bond_order=1)  # C7 - H1
-    ethanol.add_bond(6, 0, 1, False, fractional_bond_order=1)  # O6 - H0
-    charges = unit.Quantity(
-        np.array([0.4, 0.3, 0.2, 0.1, 0.00001, -0.1, -0.2, -0.3, -0.4]),
-        unit.elementary_charge,
-    )
-    ethanol.partial_charges = charges
-    return ethanol
-
-
-def create_benzene_no_aromatic():
-    """
-    Creates an openforcefield.topology.Molecule representation of benzene through the API with aromatic bonds
-    not defied, used to test the levels of isomorphic matching.
-    """
-    benzene = Molecule()
-    benzene.add_atom(6, 0, False)  # C0
-    benzene.add_atom(6, 0, False)  # C1
-    benzene.add_atom(6, 0, False)  # C2
-    benzene.add_atom(6, 0, False)  # C3
-    benzene.add_atom(6, 0, False)  # C4
-    benzene.add_atom(6, 0, False)  # C5
-    benzene.add_atom(1, 0, False)  # H6
-    benzene.add_atom(1, 0, False)  # H7
-    benzene.add_atom(1, 0, False)  # H8
-    benzene.add_atom(1, 0, False)  # H9
-    benzene.add_atom(1, 0, False)  # H10
-    benzene.add_atom(1, 0, False)  # H11
-    benzene.add_bond(0, 5, 1, False)  # C0 - C5
-    benzene.add_bond(0, 1, 1, False)  # C0 - C1
-    benzene.add_bond(1, 2, 1, False)  # C1 - C2
-    benzene.add_bond(2, 3, 1, False)  # C2 - C3
-    benzene.add_bond(3, 4, 1, False)  # C3 - C4
-    benzene.add_bond(4, 5, 1, False)  # C4 - C5
-    benzene.add_bond(0, 6, 1, False)  # C0 - H6
-    benzene.add_bond(1, 7, 1, False)  # C1 - C7
-    benzene.add_bond(2, 8, 1, False)  # C2 - C8
-    benzene.add_bond(3, 9, 1, False)  # C3 - C9
-    benzene.add_bond(4, 10, 1, False)  # C4 - C10
-    benzene.add_bond(5, 11, 1, False)  # C5 - C11
-    return benzene
-
-
-def create_acetaldehyde():
-    """
-    Creates an openforcefield.topology.Molecule representation of acetaldehyde through the API
-    """
-    acetaldehyde = Molecule()
-    acetaldehyde.add_atom(6, 0, False)  # C0
-    acetaldehyde.add_atom(6, 0, False)  # C1
-    acetaldehyde.add_atom(8, 0, False)  # O2
-    acetaldehyde.add_atom(1, 0, False)  # H3
-    acetaldehyde.add_atom(1, 0, False)  # H4
-    acetaldehyde.add_atom(1, 0, False)  # H5
-    acetaldehyde.add_atom(1, 0, False)  # H6
-    acetaldehyde.add_bond(0, 1, 1, False)  # C0 - C1
-    acetaldehyde.add_bond(1, 2, 2, False)  # C1 = O2
-    acetaldehyde.add_bond(0, 3, 1, False)  # C0 - H3
-    acetaldehyde.add_bond(0, 4, 1, False)  # C0 - H4
-    acetaldehyde.add_bond(0, 5, 1, False)  # C0 - H5
-    acetaldehyde.add_bond(1, 6, 1, False)  # C1 - H6
-    charges = unit.Quantity(
-        np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]), unit.elementary_charge
-    )
-    acetaldehyde.partial_charges = charges
-    return acetaldehyde
-
-
-def create_water():
-    """
-    Creates an openforcefield.topology.Molecule representation of water through the API
-    """
-    mol = Molecule()
-    mol.add_atom(1, 0, False)  # H1
-    mol.add_atom(8, 0, False)  # O
-    mol.add_atom(1, 0, False)  # H2
-    mol.add_bond(0, 1, 1, False)  # H1 - O
-    mol.add_bond(1, 2, 1, False)  # O - H2
-    charges = unit.Quantity(np.array([0.0, 0.0, 0.0]), unit.elementary_charge)
-    mol.partial_charges = charges
-    return mol
-
-
-def create_ammonia():
-    """
-    Creates an openforcefield.topology.Molecule representation of ammonia through the API
-    """
-    mol = Molecule()
-    mol.add_atom(1, 0, False)  # H1
-    mol.add_atom(7, 0, False)  # N
-    mol.add_atom(1, 0, False)  # H2
-    mol.add_atom(1, 0, False)  # H3
-    mol.add_bond(0, 1, 1, False)  # H1 - N
-    mol.add_bond(1, 2, 1, False)  # N - H2
-    mol.add_bond(1, 3, 1, False)  # N - H3
-    charges = unit.Quantity(np.array([0.0, 0.0, 0.0, 0.0]), unit.elementary_charge)
-    mol.partial_charges = charges
-    return mol
-
-
-def create_acetate():
-    """
-    Creates an openforcefield.topology.Molecule representation of
-    acetate without the use of a cheminformatics toolkit
-    """
-    # Create an acetate molecule without using a toolkit
-    acetate = Molecule()
-    acetate.add_atom(6, 0, False)  # C0
-    acetate.add_atom(6, 0, False)  # C1
-    acetate.add_atom(8, 0, False)  # O2
-    acetate.add_atom(8, -1, False)  # O3
-    acetate.add_atom(1, 0, False)  # H4
-    acetate.add_atom(1, 0, False)  # H5
-    acetate.add_atom(1, 0, False)  # H6
-    acetate.add_bond(0, 1, 1, False)  # C0 - C1
-    acetate.add_bond(1, 2, 2, False)  # C1 = O2
-    acetate.add_bond(1, 3, 1, False)  # C1 - O3[-1]
-    acetate.add_bond(0, 4, 1, False)  # C0 - H4
-    acetate.add_bond(0, 5, 1, False)  # C0 - H5
-    acetate.add_bond(0, 6, 1, False)  # C0 - H6
-    return acetate
-
-
-def create_cyclohexane():
-    """
-    Creates an openforcefield.topology.Molecule representation of
-    cyclohexane without the use of a cheminformatics toolkit
-    """
-    cyclohexane = Molecule()
-    cyclohexane.add_atom(6, 0, False)  # C0
-    cyclohexane.add_atom(6, 0, False)  # C1
-    cyclohexane.add_atom(6, 0, False)  # C2
-    cyclohexane.add_atom(6, 0, False)  # C3
-    cyclohexane.add_atom(6, 0, False)  # C4
-    cyclohexane.add_atom(6, 0, False)  # C5
-    cyclohexane.add_atom(1, 0, False)  # H6
-    cyclohexane.add_atom(1, 0, False)  # H7
-    cyclohexane.add_atom(1, 0, False)  # H8
-    cyclohexane.add_atom(1, 0, False)  # H9
-    cyclohexane.add_atom(1, 0, False)  # H10
-    cyclohexane.add_atom(1, 0, False)  # H11
-    cyclohexane.add_atom(1, 0, False)  # H12
-    cyclohexane.add_atom(1, 0, False)  # H13
-    cyclohexane.add_atom(1, 0, False)  # H14
-    cyclohexane.add_atom(1, 0, False)  # H15
-    cyclohexane.add_atom(1, 0, False)  # H16
-    cyclohexane.add_atom(1, 0, False)  # H17
-    cyclohexane.add_bond(0, 1, 1, False)  # C0 - C1
-    cyclohexane.add_bond(1, 2, 1, False)  # C1 - C2
-    cyclohexane.add_bond(2, 3, 1, False)  # C2 - C3
-    cyclohexane.add_bond(3, 4, 1, False)  # C3 - C4
-    cyclohexane.add_bond(4, 5, 1, False)  # C4 - C5
-    cyclohexane.add_bond(5, 0, 1, False)  # C5 - C0
-    cyclohexane.add_bond(0, 6, 1, False)  # C0 - H6
-    cyclohexane.add_bond(0, 7, 1, False)  # C0 - H7
-    cyclohexane.add_bond(1, 8, 1, False)  # C1 - H8
-    cyclohexane.add_bond(1, 9, 1, False)  # C1 - H9
-    cyclohexane.add_bond(2, 10, 1, False)  # C2 - H10
-    cyclohexane.add_bond(2, 11, 1, False)  # C2 - H11
-    cyclohexane.add_bond(3, 12, 1, False)  # C3 - H12
-    cyclohexane.add_bond(3, 13, 1, False)  # C3 - H13
-    cyclohexane.add_bond(4, 14, 1, False)  # C4 - H14
-    cyclohexane.add_bond(4, 15, 1, False)  # C4 - H15
-    cyclohexane.add_bond(5, 16, 1, False)  # C5 - H16
-    cyclohexane.add_bond(5, 17, 1, False)  # C5 - H17
-    return cyclohexane
-
-
-def create_dioxygen():
-    """
-    Creates an openforcefield.topology.Molecule representation of
-    dioxygen without the use of a cheminformatics toolkit
-    """
-    dioxygen = Molecule()
-    dioxygen.add_atom(8, 0, False)  # O0
-    dioxygen.add_atom(8, 0, False)  # O1
-    dioxygen.add_bond(0, 1, 2, False)  # O0 # O1
-    charges = unit.Quantity(np.array([0.0, 0.0]), unit.elementary_charge)
-    dioxygen.partial_charges = charges
-
-    return dioxygen
-
-
-def create_dinitrogen():
-    """
-    Creates an openforcefield.topology.Molecule representation of
-    dinitrogen without the use of a cheminformatics toolkit
-    """
-    dinitrogen = Molecule()
-    dinitrogen.add_atom(7, 0, False)  # N0
-    dinitrogen.add_atom(7, 0, False)  # N1
-    dinitrogen.add_bond(0, 1, 3, False)  # N0 - N1
-    charges = unit.Quantity(np.array([0.0, 0.0]), unit.elementary_charge)
-    dinitrogen.partial_charges = charges
-    return dinitrogen
 
 
 nonbonded_resolution_matrix = [
@@ -1216,7 +941,7 @@ class TestForceField:
 
         forcefield = ForceField("test_forcefields/test_forcefield.offxml")
         pdbfile = app.PDBFile(get_data_file_path("systems/test_systems/1_ethanol.pdb"))
-        molecules = [create_ethanol()]
+        molecules = [ethanol]
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
 
         omm_system = forcefield.create_openmm_system(
@@ -1253,7 +978,7 @@ class TestForceField:
         self,
         create_circular_handler_dependencies,
         toolkit_registry,
-        registry_description,
+        ethanol,
     ):
         """Test parameterizing ethanol, but failing because custom handler classes can not resolve
         which order to run in"""
@@ -1264,18 +989,18 @@ class TestForceField:
         forcefield = ForceField("test_forcefields/test_forcefield.offxml")
 
         pdbfile = app.PDBFile(get_data_file_path("systems/test_systems/1_ethanol.pdb"))
-        molecules = [create_ethanol()]
+        molecules = [ethanol]
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
         with pytest.raises(
             RuntimeError,
             match="Unable to resolve order in which to run ParameterHandlers. "
             "Dependencies do not form a directed acyclic graph",
-        ) as excinfo:
+        ):
             omm_system = forcefield.create_openmm_system(
                 topology, toolkit_registry=toolkit_registry
             )
 
-    def test_parameterize_ethanol_missing_torsion(self):
+    def test_parameterize_ethanol_missing_torsion(self, ethanol):
         from simtk.openmm import app
 
         from openforcefield.typing.engines.smirnoff.parameters import (
@@ -1292,7 +1017,7 @@ class TestForceField:
 """
         )
         pdbfile = app.PDBFile(get_data_file_path("systems/test_systems/1_ethanol.pdb"))
-        molecules = [create_ethanol()]
+        molecules = [ethanol]
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
         with pytest.raises(
             UnassignedProperTorsionParameterException,
@@ -1305,7 +1030,10 @@ class TestForceField:
         "toolkit_registry,registry_description", toolkit_registries
     )
     def test_parameterize_1_cyclohexane_1_ethanol(
-        self, toolkit_registry, registry_description
+        self,
+        toolkit_registry,
+        ethanol,
+        cyclohexane,
     ):
         """Test parameterizing a periodic system of two distinct molecules"""
         from simtk.openmm import app
@@ -1314,10 +1042,8 @@ class TestForceField:
         pdbfile = app.PDBFile(
             get_data_file_path("systems/test_systems/1_cyclohexane_1_ethanol.pdb")
         )
-        # toolkit_wrapper = RDKitToolkitWrapper()
-        molecules = [create_ethanol(), create_cyclohexane()]
-        # molecules = [Molecule.from_file(get_data_file_path(name)) for name in ('molecules/ethanol.mol2',
-        #                                                                      'molecules/cyclohexane.mol2')]
+
+        molecules = [ethanol, cyclohexane]
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
 
         omm_system = forcefield.create_openmm_system(topology)
@@ -1326,7 +1052,10 @@ class TestForceField:
         "toolkit_registry,registry_description", toolkit_registries
     )
     def test_parameterize_1_cyclohexane_1_ethanol_vacuum(
-        self, toolkit_registry, registry_description
+        self,
+        toolkit_registry,
+        ethanol,
+        cyclohexane,
     ):
         """Test parametrizing a nonperiodic system of two distinct molecules"""
         from simtk.openmm import app
@@ -1335,7 +1064,7 @@ class TestForceField:
         pdbfile = app.PDBFile(
             get_data_file_path("systems/test_systems/1_cyclohexane_1_ethanol.pdb")
         )
-        molecules = [create_ethanol(), create_cyclohexane()]
+        molecules = [ethanol, cyclohexane]
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
         topology.box_vectors = None
 
@@ -1550,10 +1279,10 @@ class TestForceField:
             )
 
     @pytest.mark.parametrize("mod_cuoff", [True, False])
-    def test_nonbonded_cutoff_no_box_vectors(self, mod_cuoff):
+    def test_nonbonded_cutoff_no_box_vectors(self, mod_cuoff, ethanol):
         """Ensure that the NonbondedForce objects use the cutoff specified in the
         ParameterHandler, not the OpenMM defaults"""
-        top = Topology.from_molecules(create_ethanol())
+        top = Topology.from_molecules(ethanol)
         assert top.box_vectors is None
         forcefield = ForceField("test_forcefields/test_forcefield.offxml")
 
@@ -1574,7 +1303,7 @@ class TestForceField:
         assert found_cutoff == vdw_cutoff == e_cutoff
 
     @pytest.mark.parametrize("inputs", nonbonded_resolution_matrix)
-    def test_nonbonded_method_resolution(self, inputs):
+    def test_nonbonded_method_resolution(self, inputs, ethanol):
         """Test predefined permutations of input options to ensure nonbonded handling is correctly resolved"""
         from simtk.openmm import app
 
@@ -1585,7 +1314,7 @@ class TestForceField:
         exception = inputs["exception"]
         exception_match = inputs["exception_match"]
 
-        molecules = [create_ethanol()]
+        molecules = [ethanol]
         forcefield = ForceField("test_forcefields/test_forcefield.offxml")
 
         pdbfile = app.PDBFile(get_data_file_path("systems/test_systems/1_ethanol.pdb"))
@@ -2069,7 +1798,7 @@ class TestForceFieldVirtualSites:
                 (+0.2 * charge_unit, None, None),
                 (-0.4 * charge_unit, 0.2 * sigma_unit, 0.2 * epsilon_unit),
             ),
-            "mol": create_dinitrogen(),
+            "mol": dinitrogen,
         }
     )
     bond_charge_parameters_args.append(opts)
@@ -2085,7 +1814,7 @@ class TestForceFieldVirtualSites:
                 (+0.1 * charge_unit, None, None),
                 (-0.2 * charge_unit, 0.1 * sigma_unit, 0.1 * epsilon_unit),
             ),
-            "mol": create_dioxygen(),
+            "mol": dioxygen,
         }
     )
     bond_charge_parameters_args.append(opts)
@@ -2101,7 +1830,7 @@ class TestForceFieldVirtualSites:
                 (-0.4 * charge_unit, 0.2 * sigma_unit, 0.2 * epsilon_unit),
                 (-0.4 * charge_unit, 0.2 * sigma_unit, 0.2 * epsilon_unit),
             ),
-            "mol": create_dinitrogen(),
+            "mol": dinitrogen,
         }
     )
     bond_charge_parameters_args.append(opts)
@@ -2121,7 +1850,7 @@ class TestForceFieldVirtualSites:
                 (-0.2 * charge_unit, 0.1 * sigma_unit, 0.1 * epsilon_unit),
                 (-0.4 * charge_unit, 0.2 * sigma_unit, 0.2 * epsilon_unit),
             ),
-            "mol": create_dinitrogen(),
+            "mol": dinitrogen,
         }
     )
     bond_charge_parameters_args.append(opts)
@@ -2140,7 +1869,7 @@ class TestForceFieldVirtualSites:
                 (+0.0 * charge_unit, None, None),
                 (-0.6 * charge_unit, 0.2 * sigma_unit, 0.2 * epsilon_unit),
             ),
-            "mol": create_acetaldehyde(),
+            "mol": acetaldehyde,
         }
     )
     monovalent_parameters_args.append(opts)
@@ -2161,7 +1890,7 @@ class TestForceFieldVirtualSites:
                 (-0.4820 * charge_unit, 3.12 * sigma_unit, 0.16 * epsilon_unit),
                 (-0.4820 * charge_unit, 3.12 * sigma_unit, 0.16 * epsilon_unit),
             ),
-            "mol": create_water(),
+            "mol": water,
         }
     )
     divalent_parameters_args.append(opts)
@@ -2181,7 +1910,7 @@ class TestForceFieldVirtualSites:
                 (+0.0000 * charge_unit, None, None),
                 (-1.0000 * charge_unit, 0.00 * sigma_unit, 0.00 * epsilon_unit),
             ),
-            "mol": create_ammonia(),
+            "mol": ammonia,
         }
     )
     trivalent_parameters_args.append(opts)
@@ -2259,7 +1988,7 @@ class TestForceFieldChargeAssignment:
     def test_charges_from_molecule(self, toolkit_registry, registry_description):
         """Test skipping charge generation and instead getting charges from the original Molecule"""
         # Create an ethanol molecule without using a toolkit
-        molecules = [create_ethanol()]
+        molecules = [ethanol]
 
         from simtk.openmm import NonbondedForce, app
 
@@ -2305,10 +2034,8 @@ class TestForceFieldChargeAssignment:
             q, sigma, epsilon = nonbondedForce2.getParticleParameters(particle_index)
             assert q == expected_charge
 
-    @pytest.mark.parametrize(
-        "toolkit_registry,registry_description", toolkit_registries
-    )
-    def test_nonintegral_charge_exception(self, toolkit_registry, registry_description):
+    @pytest.mark.parametrize("toolkit_registry", toolkit_registries)
+    def test_nonintegral_charge_exception(self, toolkit_registry, ethanol):
         """Test skipping charge generation and instead getting charges from the original Molecule"""
         from simtk.openmm import app
 
@@ -2316,8 +2043,6 @@ class TestForceFieldChargeAssignment:
             NonintegralMoleculeChargeException,
         )
 
-        # Create an ethanol molecule without using a toolkit
-        ethanol = create_ethanol()
         ethanol.partial_charges[0] = 1.0 * unit.elementary_charge
 
         file_path = get_data_file_path("test_forcefields/test_forcefield.offxml")
@@ -2343,16 +2068,12 @@ class TestForceFieldChargeAssignment:
             allow_nonintegral_charges=True,
         )
 
-    @pytest.mark.parametrize(
-        "toolkit_registry,registry_description", toolkit_registries
-    )
-    def test_some_charges_from_molecule(self, toolkit_registry, registry_description):
+    @pytest.mark.parametrize("toolkit_registry", toolkit_registries)
+    def test_some_charges_from_molecule(self, toolkit_registry, ethanol, cyclohexane):
         """
         Test creating an OpenMM system where some charges come from a Molecule, but others come from toolkit
         calculation
         """
-        ethanol = create_ethanol()
-        cyclohexane = create_cyclohexane()
         molecules = [ethanol, cyclohexane]
 
         from simtk.openmm import NonbondedForce, app
@@ -2417,7 +2138,9 @@ class TestForceFieldChargeAssignment:
         #       We should implement something like doctests for the XML snippets on the SMIRNOFF spec page.
         ff = ForceField(xml_spec_docs_charge_increment_model_xml)
 
-    def test_charge_increment_model_forward_and_reverse_ethanol(self):
+    def test_charge_increment_model_forward_and_reverse_ethanol(
+        self, ethanol, reversed_ethanol
+    ):
         """Test application of ChargeIncrements to the same molecule with different orderings in the topology"""
         test_charge_increment_model_ff = """
         <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
@@ -2430,7 +2153,7 @@ class TestForceFieldChargeAssignment:
         file_path = get_data_file_path("test_forcefields/test_forcefield.offxml")
         ff = ForceField(file_path, test_charge_increment_model_ff)
         del ff._parameter_handlers["ToolkitAM1BCC"]
-        top = Topology.from_molecules([create_ethanol(), create_reversed_ethanol()])
+        top = Topology.from_molecules([ethanol, reversed_ethanol])
         sys = ff.create_openmm_system(top)
         nonbonded_force = [
             force
@@ -2461,7 +2184,7 @@ class TestForceFieldChargeAssignment:
             charge, _, _ = nonbonded_force.getParticleParameters(idx)
             assert abs(charge - expected_charge) < 1.0e-6 * unit.elementary_charge
 
-    def test_charge_increment_model_one_less_ci_than_tagged_atom(self):
+    def test_charge_increment_model_one_less_ci_than_tagged_atom(self, ethanol):
         """
         Ensure that we support the behavior where a ChargeIncrement is initialized with one less chargeincrement value
         than tagged atom. We test this by making two equivalent (one with fully explicit CIs, the other with some
@@ -2491,7 +2214,7 @@ class TestForceFieldChargeAssignment:
         del ff1._parameter_handlers["ToolkitAM1BCC"]
         ff2 = ForceField(file_path, test_charge_increment_model_ff_no_missing_cis)
         del ff2._parameter_handlers["ToolkitAM1BCC"]
-        top = Topology.from_molecules([create_ethanol()])
+        top = Topology.from_molecules([ethanol])
         # Make a system from each FF
         sys1 = ff2.create_openmm_system(top)
         sys2 = ff2.create_openmm_system(top)
@@ -2525,7 +2248,7 @@ class TestForceFieldChargeAssignment:
             assert abs(charge1 - expected_charge) < 1.0e-6 * unit.elementary_charge
             assert charge1 == charge2
 
-    def test_charge_increment_model_invalid_number_of_cis(self):
+    def test_charge_increment_model_invalid_number_of_cis(self, ethanol):
         """
         Ensure that we support the behavior where a ChargeIncrement with an incorrect number of tagged atoms
         and chargeincrementX values riases an error
@@ -2549,7 +2272,7 @@ class TestForceFieldChargeAssignment:
 
         # Add ONE MORE chargeincrement parameter than there are tagged atoms and ensure an exception is raised
         cimh.parameters[0].charge_increment.append(0.01 * unit.elementary_charge)
-        top = Topology.from_molecules([create_ethanol()])
+        top = Topology.from_molecules([ethanol])
         with pytest.raises(
             SMIRNOFFSpecError,
             match="number of chargeincrements must be either the same",
@@ -2573,7 +2296,7 @@ class TestForceFieldChargeAssignment:
         ChargeIncrement elements"""
         ff = ForceField(xml_charge_increment_model_formal_charges)
 
-    def test_charge_increment_model_net_charge(self):
+    def test_charge_increment_model_net_charge(self, acetate):
         """Test application of charge increments on a molecule with a net charge"""
         from simtk import unit
 
@@ -2589,7 +2312,6 @@ class TestForceFieldChargeAssignment:
         ff = ForceField(file_path, test_charge_increment_model_ff)
         del ff._parameter_handlers["ToolkitAM1BCC"]
 
-        acetate = create_acetate()
         top = acetate.to_topology()
         sys = ff.create_openmm_system(top)
         nonbonded_force = [
@@ -2602,11 +2324,10 @@ class TestForceFieldChargeAssignment:
             charge, _, _ = nonbonded_force.getParticleParameters(idx)
             assert abs(charge - expected_charge) < 1.0e-6 * unit.elementary_charge
 
-    def test_charge_increment_model_deduplicate_symmetric_matches(self):
+    def test_charge_increment_model_deduplicate_symmetric_matches(self, ethanol):
         """Test that chargeincrementmodelhandler deduplicates symmetric matches"""
         from simtk import unit
 
-        ethanol = create_ethanol()
         top = ethanol.to_topology()
 
         # Test a charge increment that matches all C-H bonds at once
@@ -2711,7 +2432,9 @@ class TestForceFieldChargeAssignment:
             charge, _, _ = nonbonded_force.getParticleParameters(idx)
             assert abs(charge - expected_charge) < 1.0e-6 * unit.elementary_charge
 
-    def test_charge_increment_model_completely_overlapping_matches_override(self):
+    def test_charge_increment_model_completely_overlapping_matches_override(
+        self, ethanol
+    ):
         """Ensure that DIFFERENT chargeincrements override one another if they apply to the
         same atoms, regardless of order"""
         from simtk import unit
@@ -2728,7 +2451,6 @@ class TestForceFieldChargeAssignment:
         ff = ForceField(file_path, test_charge_increment_model_ff)
         del ff._parameter_handlers["ToolkitAM1BCC"]
 
-        ethanol = create_ethanol()
         top = ethanol.to_topology()
         sys = ff.create_openmm_system(top)
         nonbonded_force = [
@@ -2751,7 +2473,9 @@ class TestForceFieldChargeAssignment:
             charge, _, _ = nonbonded_force.getParticleParameters(idx)
             assert abs(charge - expected_charge) < 1.0e-6 * unit.elementary_charge
 
-    def test_charge_increment_model_partially_overlapping_matches_both_apply(self):
+    def test_charge_increment_model_partially_overlapping_matches_both_apply(
+        self, ethanol
+    ):
         """Ensure that DIFFERENT chargeincrements BOTH get applied if they match
         a partially-overlapping set of atoms"""
         from simtk import unit
@@ -2768,7 +2492,6 @@ class TestForceFieldChargeAssignment:
         ff = ForceField(file_path, test_charge_increment_model_ff)
         del ff._parameter_handlers["ToolkitAM1BCC"]
 
-        ethanol = create_ethanol()
         top = ethanol.to_topology()
         sys = ff.create_openmm_system(top)
         nonbonded_force = [
@@ -2792,7 +2515,7 @@ class TestForceFieldChargeAssignment:
             assert abs(charge - expected_charge) < 1.0e-6 * unit.elementary_charge
 
     @pytest.mark.parametrize("inputs", partial_charge_method_resolution_matrix)
-    def test_partial_charge_resolution(self, inputs):
+    def test_partial_charge_resolution(self, inputs, ethanol):
         """Check that the proper partial charge methods are available, and that unavailable partial charge methods
         raise an exception.
         """
@@ -2803,7 +2526,7 @@ class TestForceFieldChargeAssignment:
         partial_charge_method = inputs["partial_charge_method"]
         expected_exception = inputs["exception"]
         expected_exception_match = inputs["exception_match"]
-        ethanol = create_ethanol()
+
         ethanol.generate_conformers()
         if expected_exception is None:
             ethanol.assign_partial_charges(
@@ -2926,7 +2649,7 @@ class TestForceFieldChargeAssignment:
         molecules = [
             Molecule.from_file(get_data_file_path("molecules/ethanol.sdf")),
             Molecule.from_file(get_data_file_path("molecules/ethanol_reordered.sdf")),
-            create_reversed_ethanol(),
+            reversed_ethanol,
         ]
         top = Topology.from_molecules(molecules)
         omm_system = ff.create_openmm_system(top)
@@ -3256,7 +2979,7 @@ class TestForceFieldChargeAssignment:
         with pytest.raises(
             UnassignedMoleculeChargeException,
             match="did not have charges assigned by any ParameterHandler",
-        ) as excinfo:
+        ):
             omm_system = ff.create_openmm_system(top)
 
         # If we do NOT delete the ToolkiAM1BCCHandler, then toluene should be assigned some nonzero partial charges.
@@ -3283,14 +3006,16 @@ class TestForceFieldChargeAssignment:
         ],
     )
     def test_charges_on_ref_mols_when_using_return_topology(
-        self, charge_method, additional_offxmls
+        self,
+        charge_method,
+        additional_offxmls,
+        acetate,
     ):
         """Ensure that charges are set on returned topology if the user specifies 'return_topology=True' in
         create_openmm_system"""
         # TODO: Should this test also cover multiple unique molecules?
         from simtk.openmm import NonbondedForce
 
-        mol = create_acetate()
         ff = ForceField("test_forcefields/test_forcefield.offxml", *additional_offxmls)
         charge_mols = []
         if charge_method == "charge_from_molecules":
@@ -3859,7 +3584,7 @@ class TestForceFieldParameterAssignment:
             off_omm_system, amber_omm_system, positions, by_force_type=False
         )
 
-    def test_tip5p_dimer_energy(self):
+    def test_tip5p_dimer_energy(self, water):
         """"""
 
         tip5p_offxml = """<?xml version="1.0" encoding="utf-8"?>
@@ -3903,7 +3628,10 @@ class TestForceFieldParameterAssignment:
 
         off_ff = ForceField("test_forcefields/test_forcefield.offxml", tip5p_offxml)
 
-        molecule1 = create_water()
+        # Make new molecules from fixture to ensure objects differ
+        molecule1 = Molecule(water)
+        molecule2 = Molecule(water)
+
         molecule1.atoms[0].name = "O"
         molecule1.atoms[1].name = "H1"
         molecule1.atoms[2].name = "H2"
@@ -3920,7 +3648,6 @@ class TestForceFieldParameterAssignment:
             * unit.angstrom
         )
 
-        molecule2 = create_water()
         molecule2.atoms[0].name = "O"
         molecule2.atoms[1].name = "H1"
         molecule2.atoms[2].name = "H2"
@@ -4202,13 +3929,13 @@ class TestForceFieldParameterAssignment:
         )
 
     @requires_openeye
-    def test_overwrite_bond_orders(self):
+    def test_overwrite_bond_orders(self, ethanol):
         """Test that previously-defined bond orders in the topology are overwritten"""
-        mol = create_ethanol()
+        mol = Molecule(ethanol)
         mol.assign_fractional_bond_orders(bond_order_model="am1-wiberg")
         top = Topology.from_molecules(mol)
 
-        mod_mol = create_ethanol()
+        mod_mol = Molecule(ethanol)
         mod_mol.assign_fractional_bond_orders(bond_order_model="am1-wiberg")
         # populate the mol with garbage bond orders
         for bond in mod_mol.bonds:
@@ -4260,8 +3987,8 @@ class TestForceFieldParameterAssignment:
             "central_atoms",
         ),
         [
-            (create_ethanol, 4.953856, 44375.504, 0.13770, (1, 2)),
-            (create_reversed_ethanol, 4.953856, 44375.504, 0.13770, (7, 6)),
+            (ethanol, 4.953856, 44375.504, 0.13770, (1, 2)),
+            (reversed_ethanol, 4.953856, 44375.504, 0.13770, (7, 6)),
         ],
     )
     def test_fractional_bondorder_from_molecule(
@@ -4338,8 +4065,8 @@ class TestForceFieldParameterAssignment:
         """Check that an error is thrown when essentially the same molecule is entered more than once
         for partial_bond_orders_from_molecules"""
 
-        mol = create_ethanol()
-        mol2 = create_reversed_ethanol()
+        mol = ethanol
+        mol2 = reversed_ethanol
 
         forcefield = ForceField("test_forcefields/test_forcefield.offxml", xml_ff_bo)
         topology = Topology.from_molecules([mol, mol2])
@@ -4353,7 +4080,7 @@ class TestForceFieldParameterAssignment:
 
     @pytest.mark.parametrize(
         ("get_molecule", "central_atoms"),
-        [(create_ethanol, (1, 2)), (create_reversed_ethanol, (7, 6))],
+        [(ethanol, (1, 2)), (reversed_ethanol, (7, 6))],
     )
     def test_fractional_bondorder_superseded_by_standard_torsion(
         self, get_molecule, central_atoms
@@ -4406,8 +4133,8 @@ class TestForceFieldParameterAssignment:
             "central_atoms",
         ),
         [
-            (create_ethanol, 4.953856, 42266.9635, 1.39991, (1, 2)),
-            (create_reversed_ethanol, 4.953856, 42266.9635, 1.39991, (7, 6)),
+            (ethanol, 4.953856, 42266.9635, 1.39991, (1, 2)),
+            (reversed_ethanol, 4.953856, 42266.9635, 1.39991, (7, 6)),
         ],
     )
     def test_fractional_bondorder_calculated_rdkit(
@@ -4517,8 +4244,8 @@ class TestForceFieldParameterAssignment:
             "central_atoms",
         ),
         [
-            (create_ethanol, 4.953856, 42208.540, 0.140054, (1, 2)),
-            (create_reversed_ethanol, 4.953856, 42208.540, 0.140054, (7, 6)),
+            (ethanol, 4.953856, 42208.540, 0.140054, (1, 2)),
+            (reversed_ethanol, 4.953856, 42208.540, 0.140054, (7, 6)),
         ],
     )
     def test_fractional_bondorder_calculated_openeye(
@@ -4613,12 +4340,11 @@ class TestForceFieldParameterAssignment:
                 length = params[-2]
                 assert_almost_equal(length / length.unit, bond_length_interpolated, 0)
 
-    def test_fractional_bondorder_invalid_interpolation_method(self):
+    def test_fractional_bondorder_invalid_interpolation_method(self, ethanol):
         """
         Ensure that requesting an invalid interpolation method leads to a
         FractionalBondOrderInterpolationMethodUnsupportedError
         """
-        mol = create_ethanol()
 
         forcefield = ForceField("test_forcefields/test_forcefield.offxml", xml_ff_bo)
         forcefield.get_parameter_handler(
