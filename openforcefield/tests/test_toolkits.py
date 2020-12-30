@@ -2413,8 +2413,8 @@ class TestRDKitToolkitWrapper:
         toolkit = RDKitToolkitWrapper()
 
         molecule = Molecule.from_file(
-            get_data_file_path(os.path.join("molecules", "z_3_hydroxy_propenal.mol2")),
-            "MOL2",
+            get_data_file_path(os.path.join("molecules", "z_3_hydroxy_propenal.sdf")),
+            "SDF",
         )
 
         # Test that the simple case of no conformers does not yield an exception.
