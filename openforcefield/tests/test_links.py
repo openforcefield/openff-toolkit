@@ -58,5 +58,5 @@ def test_readme_links(readme_link):
             break
         except Exception as e:
             exception = e
-    if not (success):
+    if not success:
         raise exception

@@ -295,7 +295,7 @@ class TestInterpolation:
         k_bondorder = {
             2: 1.8 * unit.kilocalorie_per_mole,
         }
-        with pytest.raises(NotEnoughPointsForInterpolationError) as excinfo:
+        with pytest.raises(NotEnoughPointsForInterpolationError):
             k = _linear_inter_or_extrapolate(k_bondorder, 1)
 
     @pytest.mark.parametrize(
@@ -623,7 +623,7 @@ class TestParameterHandler:
         # Generate a SMIRNOFFSpecError by not providing a section version
         with pytest.raises(
             SMIRNOFFSpecError, match="Missing version while trying to construct"
-        ) as excinfo:
+        ):
             ph = ParameterHandler()
         # Successfully create ParameterHandler by skipping version check
         ph = ParameterHandler(skip_version_check=True)
@@ -639,7 +639,7 @@ class TestParameterHandler:
             SMIRNOFFVersionError,
             match="SMIRNOFF offxml file was written with version 1000.0, "
             "but this version of ForceField only supports version",
-        ) as excinfo:
+        ):
             ph = ParameterHandler(version="1000.0")
 
         # Generate a SMIRNOFFSpecError by providing a value lower than the min supported
@@ -647,7 +647,7 @@ class TestParameterHandler:
             SMIRNOFFVersionError,
             match="SMIRNOFF offxml file was written with version 0.1, "
             "but this version of ForceField only supports version",
-        ) as excinfo:
+        ):
             ph = ParameterHandler(version="0.1")
 
     def test_supported_version_range(self):
@@ -659,13 +659,13 @@ class TestParameterHandler:
             _MIN_SUPPORTED_SECTION_VERSION = 0.3
             _MAX_SUPPORTED_SECTION_VERSION = 2
 
-        with pytest.raises(SMIRNOFFVersionError) as excinfo:
+        with pytest.raises(SMIRNOFFVersionError):
             my_ph = MyPHSubclass(version=0.1)
         my_ph = MyPHSubclass(version=0.3)
         my_ph = MyPHSubclass(version=1)
         my_ph = MyPHSubclass(version="1.9")
         my_ph = MyPHSubclass(version=2.0)
-        with pytest.raises(SMIRNOFFVersionError) as excinfo:
+        with pytest.raises(SMIRNOFFVersionError):
             my_ph = MyPHSubclass(version=2.1)
 
     def test_write_same_version_as_was_set(self):
@@ -826,7 +826,7 @@ class TestParameterList:
             parameters.index("[#2:1]")
 
         p4 = ParameterType(smirks="[#2:1]")
-        with pytest.raises(ValueError, match="is not in list") as excinfo:
+        with pytest.raises(ValueError, match="is not in list"):
             parameters.index(p4)
 
     def test_contains(self):
@@ -1982,7 +1982,7 @@ class TestVirtualSiteHandler:
         with pytest.raises(
             SMIRNOFFSpecError,
             match="TrivalentLonePair virtual site defined with match attribute set to all_permutations. Only supported value is 'once'.",
-        ) as excinfo:
+        ):
             vs = VirtualSiteHandler.VirtualSiteTrivalentLonePairType(**invalid_kwargs)
 
 
@@ -2009,7 +2009,7 @@ class TestLibraryChargeHandler:
         with pytest.raises(
             SMIRNOFFSpecError,
             match="initialized with unequal number of tagged atoms and charges",
-        ) as excinfo:
+        ):
             lc_type = LibraryChargeHandler.LibraryChargeType(
                 smirks="[#6:1]-[#7:2]",
                 charge1=0.05 * unit.elementary_charge,
@@ -2020,7 +2020,7 @@ class TestLibraryChargeHandler:
         with pytest.raises(
             SMIRNOFFSpecError,
             match="initialized with unequal number of tagged atoms and charges",
-        ) as excinfo:
+        ):
             lc_type = LibraryChargeHandler.LibraryChargeType(
                 smirks="[#6:1]-[#7:2]-[#6]",
                 charge1=0.05 * unit.elementary_charge,
@@ -2031,7 +2031,7 @@ class TestLibraryChargeHandler:
         with pytest.raises(
             SMIRNOFFSpecError,
             match="initialized with unequal number of tagged atoms and charges",
-        ) as excinfo:
+        ):
             lc_type = LibraryChargeHandler.LibraryChargeType(
                 smirks="[#6:1]-[#7:2]-[#6]", charge1=0.05 * unit.elementary_charge
             )
@@ -2058,11 +2058,11 @@ class TestChargeIncrementModelHandler:
         handler = ChargeIncrementModelHandler(
             skip_version_check=True, number_of_conformers="0"
         )
-        with pytest.raises(TypeError) as excinfo:
+        with pytest.raises(TypeError):
             handler = ChargeIncrementModelHandler(
                 skip_version_check=True, number_of_conformers=None
             )
-        with pytest.raises(SMIRNOFFSpecError) as excinfo:
+        with pytest.raises(SMIRNOFFSpecError):
             handler = ChargeIncrementModelHandler(
                 skip_version_check=True, n_conformers=[10]
             )
@@ -2085,7 +2085,7 @@ class TestChargeIncrementModelHandler:
         assert handler.number_of_conformers == 2
         handler.number_of_conformers = "3"
         assert handler.number_of_conformers == 3
-        with pytest.raises(ValueError) as excinfo:
+        with pytest.raises(ValueError):
             handler.number_of_conformers = "string that can't be cast to int"
 
     def test_charge_increment_model_handlers_are_compatible(self):
@@ -2097,7 +2097,7 @@ class TestChargeIncrementModelHandler:
         handler3 = ChargeIncrementModelHandler(
             skip_version_check=True, number_of_conformers="9"
         )
-        with pytest.raises(IncompatibleParameterError) as excinfo:
+        with pytest.raises(IncompatibleParameterError):
             handler1.check_handler_compatibility(handler3)
 
     def test_charge_increment_type_wrong_num_increments(self):
@@ -2118,7 +2118,7 @@ class TestChargeIncrementModelHandler:
         with pytest.raises(
             SMIRNOFFSpecError,
             match="an invalid combination of tagged atoms and charge increments",
-        ) as excinfo:
+        ):
             ci_type = ChargeIncrementModelHandler.ChargeIncrementType(
                 smirks="[#6:1]-[#7:2]",
                 charge_increment1=0.05 * unit.elementary_charge,
@@ -2129,7 +2129,7 @@ class TestChargeIncrementModelHandler:
         with pytest.raises(
             SMIRNOFFSpecError,
             match="an invalid combination of tagged atoms and charge increments",
-        ) as excinfo:
+        ):
             ci_type = ChargeIncrementModelHandler.ChargeIncrementType(
                 smirks="[#6:1]-[#7:2]-[#6]",
                 charge_increment1=0.05 * unit.elementary_charge,
@@ -2183,17 +2183,17 @@ class TestGBSAHandler:
         gbsa_handler.gb_model = "OBC2"
         gbsa_handler.gb_model = "HCT"
         gbsa_handler.gb_model = "OBC1"
-        with pytest.raises(SMIRNOFFSpecError) as excinfo:
+        with pytest.raises(SMIRNOFFSpecError):
             gbsa_handler.gb_model = "Something invalid"
 
         gbsa_handler.solvent_dielectric = 50.0
         gbsa_handler.solvent_dielectric = "50.0"
-        with pytest.raises(ValueError) as excinfo:
+        with pytest.raises(ValueError):
             gbsa_handler.solvent_dielectric = "string that can not be cast to float"
 
         gbsa_handler.solute_dielectric = 2.5
         gbsa_handler.solute_dielectric = "3.5"
-        with pytest.raises(ValueError) as excinfo:
+        with pytest.raises(ValueError):
             gbsa_handler.solute_dielectric = "string that can not be cast to float"
 
         gbsa_handler.sa_model = "ACE"
@@ -2202,19 +2202,19 @@ class TestGBSAHandler:
         gbsa_handler.sa_model = None
         gbsa_handler.sa_model = "None"
 
-        with pytest.raises(TypeError) as excinfo:
+        with pytest.raises(TypeError):
             gbsa_handler.sa_model = "Invalid SA option"
 
         gbsa_handler.surface_area_penalty = (
             1.23 * unit.kilocalorie / unit.mole / unit.nanometer ** 2
         )
-        with pytest.raises(IncompatibleUnitError) as excinfo:
+        with pytest.raises(IncompatibleUnitError):
             gbsa_handler.surface_area_penalty = (
                 1.23 * unit.degree / unit.mole / unit.nanometer ** 2
             )
 
         gbsa_handler.solvent_radius = 300 * unit.femtometer
-        with pytest.raises(IncompatibleUnitError) as excinfo:
+        with pytest.raises(IncompatibleUnitError):
             gbsa_handler.solvent_radius = 3000 * unit.radian
 
     def test_gbsahandlers_are_compatible(self):
@@ -2235,7 +2235,7 @@ class TestGBSAHandler:
         )
         with pytest.raises(
             IncompatibleParameterError, match="Difference between 'solvent_radius' "
-        ) as excinfo:
+        ):
             gbsa_handler_1.check_handler_compatibility(gbsa_handler_3)
 
 

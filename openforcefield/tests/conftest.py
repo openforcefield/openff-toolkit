@@ -458,6 +458,7 @@ def dinitrogen():
     dinitrogen.partial_charges = charges
     return dinitrogen
 
+
 @pytest.fixture(scope="function")
 def cis_1_2_dichloroethene():
     """
@@ -479,5 +480,3 @@ def cis_1_2_dichloroethene():
     cis_dichloroethene.add_bond(1, 4, 1, False)
     cis_dichloroethene.add_bond(2, 5, 1, False)
     return cis_dichloroethene
-
-

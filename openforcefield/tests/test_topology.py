@@ -17,7 +17,6 @@ import numpy as np
 import pytest
 from simtk import unit
 
-from openforcefield.tests.conftest import *
 from openforcefield.tests.utils import (
     get_data_file_path,
     requires_openeye,
@@ -757,8 +756,6 @@ class TestTopology:
         """
         from tempfile import NamedTemporaryFile
 
-        from simtk.unit import nanometer
-
         from openforcefield.topology import Molecule, Topology
 
         topology = Topology()
@@ -782,7 +779,7 @@ class TestTopology:
         count = 1
         coord = None
         with NamedTemporaryFile(suffix=".pdb") as iofile:
-            positions_nanometer = positions_angstrom.in_units_of(nanometer)
+            positions_nanometer = positions_angstrom.in_units_of(unit.nanometer)
             topology.to_file(iofile.name, positions_nanometer)
             data = open(iofile.name).readlines()
             for line in data:

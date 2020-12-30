@@ -14,6 +14,8 @@ Tests for forcefield class
 # GLOBAL IMPORTS
 # =============================================================================================
 
+import numpy as np
+import pytest
 import copy
 import itertools
 import os
@@ -21,9 +23,8 @@ from collections import OrderedDict
 from tempfile import NamedTemporaryFile
 
 from numpy.testing import assert_almost_equal
-from simtk import openmm
+from simtk import openmm, unit
 
-from openforcefield.tests.conftest import *
 from openforcefield.tests.utils import (
     requires_openeye,
     requires_openeye_mol2,
@@ -533,7 +534,7 @@ class TestForceField:
         forcefield.get_parameter_handler("Angles")
 
         # Shouldn't find InvalidKey handler, since it doesn't exist
-        with pytest.raises(KeyError) as excinfo:
+        with pytest.raises(KeyError):
             forcefield.get_parameter_handler("InvalidKey")
 
         # Verify the aromatocitiy model is not None
@@ -558,7 +559,7 @@ class TestForceField:
         forcefield.get_parameter_handler("Bonds")
 
         # Shouldn't find AngleHandler, since we didn't allow that to be registered
-        with pytest.raises(KeyError) as excinfo:
+        with pytest.raises(KeyError):
             forcefield.get_parameter_handler("Angles")
 
     def test_create_forcefield_from_file(self):
@@ -592,7 +593,7 @@ class TestForceField:
         forcefield = ForceField(iter(file_paths))
 
     @pytest.mark.skip(reason="Needs to be updated for 0.2.0 syntax")
-    def test_create_gbsa():
+    def test_create_gbsa(self):
         """Test reading of ffxml files with GBSA support."""
         forcefield = ForceField("test_forcefields/Frosst_AlkEthOH_GBSA.offxml")
 
@@ -700,7 +701,7 @@ class TestForceField:
         with pytest.raises(
             SMIRNOFFSpecError,
             match="Unexpected kwarg [(]parameters: k, length[)]  passed",
-        ) as excinfo:
+        ):
             forcefield = ForceField(xml_ff_w_cosmetic_elements)
 
         # Create a forcefield from XML successfully, by explicitly permitting cosmetic attributes
@@ -717,7 +718,7 @@ class TestForceField:
         with pytest.raises(
             SMIRNOFFSpecError,
             match="Unexpected kwarg [(]parameters: k, length[)]  passed",
-        ) as excinfo:
+        ):
             forcefield = ForceField(string_1, allow_cosmetic_attributes=False)
 
         # Complete the forcefield_1 --> string --> forcefield_2 roundtrip
@@ -806,7 +807,7 @@ class TestForceField:
         with pytest.raises(
             SMIRNOFFSpecError,
             match="Unexpected kwarg [(]parameters: k, length[)]  passed",
-        ) as excinfo:
+        ):
             forcefield = ForceField(xml_ff_w_cosmetic_elements)
 
         # Create a forcefield from XML successfully
@@ -825,7 +826,7 @@ class TestForceField:
         with pytest.raises(
             SMIRNOFFSpecError,
             match="Unexpected kwarg [(]parameters: k, length[)]  passed",
-        ) as excinfo:
+        ):
             forcefield = ForceField(iofile1.name, allow_cosmetic_attributes=False)
 
         # Complete the forcefield_1 --> file --> forcefield_2 roundtrip
@@ -855,7 +856,7 @@ class TestForceField:
             match="Missing version while trying to construct "
             "<class 'openforcefield.typing.engines."
             "smirnoff.parameters.ToolkitAM1BCCHandler'>.",
-        ) as excinfo:
+        ):
             ff = ForceField(
                 '<?xml version="1.0" encoding="ASCII"?>'
                 '<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">'
@@ -912,7 +913,7 @@ class TestForceField:
         with pytest.raises(
             IncompatibleParameterError,
             match="handler value: 0.5, incompatible value: 1.0",
-        ) as excinfo:
+        ):
             ff = ForceField(simple_xml_ff, nonstandard_xml_ff)
 
     def test_gbsahandler_sa_model_none(self):
@@ -1252,8 +1253,8 @@ class TestForceField:
         with pytest.raises(
             ValueError,
             match=".* not used by any registered force Handler: {'invalid_kwarg'}.*",
-        ) as e:
-            omm_system = forcefield.create_openmm_system(
+        ):
+            forcefield.create_openmm_system(
                 topology, invalid_kwarg="aaa", toolkit_registry=toolkit_registry
             )
 
@@ -1317,7 +1318,7 @@ class TestForceField:
                         nonbond_method_matched = True
             assert nonbond_method_matched
         else:
-            with pytest.raises(exception, match=exception_match) as excinfo:
+            with pytest.raises(exception, match=exception_match):
                 # The method is validated and may raise an exception if it's not supported.
                 forcefield.get_parameter_handler("vdW", {}).method = vdw_method
                 forcefield.get_parameter_handler(
@@ -1427,7 +1428,7 @@ class TestForceField:
                 handler_found = True
         assert not (handler_found)
 
-        with pytest.raises(KeyError) as excinfo:
+        with pytest.raises(KeyError):
             ff.deregister_parameter_handler(to_deregister)
 
     def test_hash(self):
@@ -1932,6 +1933,7 @@ class TestForceFieldVirtualSites:
 
 
 class TestForceFieldChargeAssignment:
+    @pytest.fixture()
     def generate_monatomic_ions():
         return (
             ("Li+", +1 * unit.elementary_charge),
@@ -2502,9 +2504,7 @@ class TestForceFieldChargeAssignment:
             assert abs_charge_sum > 0.5 * unit.elementary_charge
 
         else:
-            with pytest.raises(
-                expected_exception, match=expected_exception_match
-            ) as excinfo:
+            with pytest.raises(expected_exception, match=expected_exception_match):
                 ethanol.assign_partial_charges(
                     partial_charge_method=partial_charge_method,
                     toolkit_registry=toolkit_wrapper,
@@ -2650,7 +2650,7 @@ class TestForceFieldChargeAssignment:
             q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
             assert q == expected_charge
 
-    @pytest.mark.parametrize("monatomic_ion,formal_charge", generate_monatomic_ions())
+    @pytest.mark.parametrize("monatomic_ion,formal_charge", generate_monatomic_ions)
     def test_library_charges_monatomic_ions(self, monatomic_ion, formal_charge):
         """Test assigning library charges to each of the monatomic ions in openff-1.1.0.xml"""
         from simtk.openmm import NonbondedForce

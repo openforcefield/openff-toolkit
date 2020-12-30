@@ -1,6 +1,15 @@
 import pytest
 
-from openforcefield.typing.chemistry import *
+from openforcefield.typing.chemistry import (
+    AngleChemicalEnvironment,
+    AtomChemicalEnvironment,
+    BondChemicalEnvironment,
+    ChemicalEnvironment,
+    ImproperChemicalEnvironment,
+    SMIRKSMismatchError,
+    SMIRKSParsingError,
+    TorsionChemicalEnvironment,
+)
 from openforcefield.utils.toolkits import OPENEYE_AVAILABLE
 
 # TODO: Evaluate which tests in this file should be moved to test_toolkits
@@ -178,7 +187,7 @@ class TestChemicalEnvironments:
         """
         for wrong_env in wrong_envs:
             with pytest.raises(SMIRKSMismatchError):
-                env = wrong_env(smirks)
+                wrong_env(smirks)
 
     @pytest.mark.parametrize("toolkit", toolkits)
     def test_wrong_smirks_error(self, toolkit):
@@ -187,11 +196,11 @@ class TestChemicalEnvironments:
         """
         smirks = "[*;:1]"
         with pytest.raises(SMIRKSParsingError):
-            env = ChemicalEnvironment(smirks, toolkit_registry=toolkit)
+            ChemicalEnvironment(smirks, toolkit_registry=toolkit)
 
     def test_embedded_atoms_smirks(self):
         """
         Check embedded atom parsing works
         """
         smirks = "[#1$(*-[#6](-[#7,#8,#9,#16,#17,#35])-[#7,#8,#9,#16,#17,#35]):1]~[$([#1]~[#6])]"
-        env = ChemicalEnvironment(smirks)
+        ChemicalEnvironment(smirks)

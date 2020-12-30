@@ -20,13 +20,6 @@ import pytest
 from numpy.testing import assert_almost_equal
 from simtk import unit
 
-from openforcefield.tests.test_forcefield import (
-    create_acetaldehyde,
-    create_acetate,
-    create_cyclohexane,
-    create_ethanol,
-    create_reversed_ethanol,
-)
 from openforcefield.tests.utils import (
     requires_ambertools,
     requires_openeye,
@@ -559,7 +552,7 @@ class TestOpenEyeToolkitWrapper:
         with pytest.raises(
             ValueError,
             match="but OpenEye Toolkit interpreted SMILES 'C#C' as having implicit hydrogen",
-        ) as excinfo:
+        ):
             offmol = Molecule.from_smiles(
                 smiles_impl,
                 toolkit_registry=toolkit_wrapper,
@@ -834,7 +827,7 @@ class TestOpenEyeToolkitWrapper:
                 charge_line_found = True
 
         # Make sure that a charge line was ever found
-        assert charge_line_found == True
+        assert charge_line_found
 
         # Make sure that the charges found were correct
         assert_almost_equal(
@@ -1196,7 +1189,7 @@ class TestOpenEyeToolkitWrapper:
         # which means it will only ever return ValueError
         with pytest.raises(
             ValueError, match="is not available from OpenEyeToolkitWrapper"
-        ) as excinfo:
+        ):
             molecule.assign_partial_charges(
                 toolkit_registry=toolkit_registry,
                 partial_charge_method="NotARealChargeMethod",
@@ -1206,7 +1199,7 @@ class TestOpenEyeToolkitWrapper:
         with pytest.raises(
             ChargeMethodUnavailableError,
             match="is not available from OpenEyeToolkitWrapper",
-        ) as excinfo:
+        ):
             OETKW = OpenEyeToolkitWrapper()
             OETKW.assign_partial_charges(
                 molecule=molecule, partial_charge_method="NotARealChargeMethod"
@@ -1291,7 +1284,7 @@ class TestOpenEyeToolkitWrapper:
         molecule.generate_conformers(toolkit_registry=toolkit_wrapper)
 
         # For now, I'm just testing AM1-BCC (will test more when the SMIRNOFF spec for other charges is finalized)
-        with pytest.raises(Exception) as excinfo:
+        with pytest.raises(Exception):
             molecule.compute_partial_charges_am1bcc(toolkit_registry=toolkit_wrapper)
             assert "Unable to assign charges" in str(excinfo)
             assert "OE Error: " in str(excinfo)
@@ -1413,7 +1406,7 @@ class TestOpenEyeToolkitWrapper:
             "Bond order model 'not a real bond order model' is not supported by "
             "OpenEyeToolkitWrapper. Supported models are ([[]'am1-wiberg', 'pm3-wiberg'[]])"
         )
-        with pytest.raises(ValueError, match=expected_error) as excinfo:
+        with pytest.raises(ValueError, match=expected_error):
             molecule.assign_fractional_bond_orders(
                 toolkit_registry=toolkit_wrapper,
                 bond_order_model="not a real bond order model",
@@ -1492,7 +1485,6 @@ class TestOpenEyeToolkitWrapper:
         assert bonds == []
 
         # test  molecules that should have no rotatable bonds
-        cyclohexane = cyclohexane
         bonds = cyclohexane.find_rotatable_bonds()
         assert bonds == []
 
@@ -1588,8 +1580,8 @@ class TestRDKitToolkitWrapper:
         with pytest.raises(
             ValueError,
             match="but RDKit toolkit interpreted SMILES 'C#C' as having implicit hydrogen",
-        ) as excinfo:
-            offmol = Molecule.from_smiles(
+        ):
+            Molecule.from_smiles(
                 smiles_impl,
                 toolkit_registry=toolkit_wrapper,
                 hydrogens_are_explicit=True,
@@ -2283,7 +2275,6 @@ class TestRDKitToolkitWrapper:
         assert bonds == []
 
         # test  molecules that should have no rotatable bonds
-        cyclohexane = cyclohexane
         bonds = cyclohexane.find_rotatable_bonds()
         assert bonds == []
 
@@ -2535,7 +2526,7 @@ class TestAmberToolsToolkitWrapper:
         # was thrown inside them, so we just check for a ValueError here
         with pytest.raises(
             ValueError, match="is not available from AmberToolsToolkitWrapper"
-        ) as excinfo:
+        ):
             molecule.assign_partial_charges(
                 toolkit_registry=toolkit_registry,
                 partial_charge_method="NotARealChargeMethod",
@@ -2545,7 +2536,7 @@ class TestAmberToolsToolkitWrapper:
         with pytest.raises(
             ChargeMethodUnavailableError,
             match="is not available from AmberToolsToolkitWrapper",
-        ) as excinfo:
+        ):
             ATTKW = AmberToolsToolkitWrapper()
             ATTKW.assign_partial_charges(
                 molecule=molecule, partial_charge_method="NotARealChargeMethod"
@@ -2740,7 +2731,7 @@ class TestAmberToolsToolkitWrapper:
             "Bond order model 'not a real charge model' is not supported by "
             "AmberToolsToolkitWrapper. Supported models are ([[]'am1-wiberg'[]])"
         )
-        with pytest.raises(ValueError, match=expected_error) as excinfo:
+        with pytest.raises(ValueError, match=expected_error):
             molecule.assign_fractional_bond_orders(
                 toolkit_registry=AmberToolsToolkitWrapper(),
                 bond_order_model="not a real charge model",
@@ -2826,7 +2817,7 @@ class TestBuiltInToolkitWrapper:
         # was thrown inside them, so we just check for a ValueError here
         with pytest.raises(
             ValueError, match="is not supported by the Built-in toolkit"
-        ) as excinfo:
+        ):
             molecule.assign_partial_charges(
                 toolkit_registry=toolkit_registry,
                 partial_charge_method="NotARealChargeMethod",
@@ -2836,7 +2827,7 @@ class TestBuiltInToolkitWrapper:
         with pytest.raises(
             ChargeMethodUnavailableError,
             match="is not supported by the Built-in toolkit",
-        ) as excinfo:
+        ):
             BITKW = BuiltInToolkitWrapper()
             BITKW.assign_partial_charges(
                 molecule=molecule, partial_charge_method="NotARealChargeMethod"
@@ -3320,7 +3311,7 @@ class TestToolkitRegistry:
             toolkit_registry.deregister_toolkit(RDKitToolkitWrapper)
 
     def deregister_from_global_registry(self):
-        # TODO: Update this, or move into a separate TestClass, pending GLOBAL_TOOLKIT_REGISTRY rewor
+        # TODO: Update this, or move into a separate TestClass, pending GLOBAL_TOOLKIT_REGISTRY rework
         # See issue #493
         # Whatever the first tookit it, de-register it and verify it's de-registered
 

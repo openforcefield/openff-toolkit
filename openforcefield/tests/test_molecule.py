@@ -32,7 +32,6 @@ import numpy as np
 import pytest
 from simtk import unit
 
-from openforcefield.tests.conftest import *
 from openforcefield.tests.utils import (
     has_pkg,
     requires_openeye,
@@ -320,8 +319,6 @@ class TestMolecule:
     """Test Molecule class."""
 
     # TODO: Test getstate/setstate
-
-    # Test serialization {to|from}_{dict|yaml|toml|json|bson|xml|messagepack|pickle}
 
     @pytest.mark.serialization
     @pytest.mark.parametrize("molecule", mini_drug_bank())
@@ -804,7 +801,7 @@ class TestMolecule:
 
         # Ensure that attempting to initialize a single Molecule from a file
         # containing multiple molecules raises a ValueError
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(ValueError):
             filename = get_data_file_path("molecules/zinc-subset-tripos.mol2.gz")
             molecule = Molecule(filename, allow_undefined_stereo=True)
 
@@ -1184,14 +1181,14 @@ class TestMolecule:
         # check a reference mapping between ethanol and ethanol_reverse matches that calculated
         ref_mapping = {0: 8, 1: 7, 2: 6, 3: 3, 4: 4, 5: 5, 6: 1, 7: 2, 8: 0}
         assert (
-            Molecule.are_isomorphic(ethanol, ethanol_reverse, return_atom_map=True)[1]
+            Molecule.are_isomorphic(ethanol, reversed_ethanol, return_atom_map=True)[1]
             == ref_mapping
         )
         # check matching with nx.Graph atomic numbers and connectivity only
         assert (
             Molecule.are_isomorphic(
                 ethanol,
-                ethanol_reverse.to_networkx(),
+                reversed_ethanol.to_networkx(),
                 aromatic_matching=False,
                 formal_charge_matching=False,
                 bond_order_matching=False,
@@ -1201,7 +1198,7 @@ class TestMolecule:
             is True
         )
         # check matching with nx.Graph with full matching
-        assert ethanol.is_isomorphic_with(ethanol_reverse.to_networkx()) is True
+        assert ethanol.is_isomorphic_with(reversed_ethanol.to_networkx()) is True
         # check matching with a TopologyMolecule class
         from openforcefield.topology.topology import Topology, TopologyMolecule
 
@@ -1428,7 +1425,7 @@ class TestMolecule:
 
         # check all of the properties match as well, torsions and impropers will be in a different order
         # due to the bonds being out of order
-        assert_molecules_match_after_remap(new_ethanol, ethanol_reverse)
+        assert_molecules_match_after_remap(new_ethanol, reversed_ethanol)
 
         # test round trip (double remapping a molecule)
         new_ethanol = ethanol.remap(mapping, current_to_new=True)
@@ -2111,7 +2108,7 @@ class TestMolecule:
             ),
             unit.angstrom,
         )
-        with pytest.raises(Exception) as excinfo:
+        with pytest.raises(Exception):
             molecule.add_conformer(conf_missing_z)
 
         conf_too_few_atoms = unit.Quantity(
@@ -2125,7 +2122,7 @@ class TestMolecule:
             ),
             unit.angstrom,
         )
-        with pytest.raises(Exception) as excinfo:
+        with pytest.raises(Exception):
             molecule.add_conformer(conf_too_few_atoms)
 
         # Add a conformer with too many coordinates
@@ -2142,12 +2139,12 @@ class TestMolecule:
             ),
             unit.angstrom,
         )
-        with pytest.raises(Exception) as excinfo:
+        with pytest.raises(Exception):
             molecule.add_conformer(conf_too_many_atoms)
 
         # Add a conformer with no coordinates
         conf_no_coordinates = unit.Quantity(np.array([]), unit.angstrom)
-        with pytest.raises(Exception) as excinfo:
+        with pytest.raises(Exception):
             molecule.add_conformer(conf_no_coordinates)
 
         # Add a conforer with units of nanometers
@@ -2180,7 +2177,7 @@ class TestMolecule:
             ),
             unit.joule,
         )
-        with pytest.raises(Exception) as excinfo:
+        with pytest.raises(Exception):
             molecule.add_conformer(conf_nonsense_units)
 
         # Add a conformer with no units
@@ -2193,7 +2190,7 @@ class TestMolecule:
                 [13.0, 14.0, 15],
             ]
         )
-        with pytest.raises(Exception) as excinfo:
+        with pytest.raises(Exception):
             molecule.add_conformer(conf_unitless)
 
     @pytest.mark.parametrize("molecule", mini_drug_bank())
@@ -2217,7 +2214,7 @@ class TestMolecule:
                 fractional_bond_order=bond.fractional_bond_order,
             )
         # Try to add the final bond twice, which should raise an Exception
-        with pytest.raises(Exception) as excinfo:
+        with pytest.raises(Exception):
             molecule_copy.add_bond(
                 bond.atom1_index,
                 bond.atom2_index,
@@ -2260,13 +2257,13 @@ class TestMolecule:
         atoms = (atom1, atom2)
 
         # Try to feed in unitless sigma
-        with pytest.raises(Exception) as excinfo:
+        with pytest.raises(Exception):
             molecule.add_bond_charge_virtual_site(
                 atoms, distance, epsilon=epsilon, sigma=sigma_unitless, replace=True
             )
 
         # Try to feed in unitless rmin_half
-        with pytest.raises(Exception) as excinfo:
+        with pytest.raises(Exception):
             molecule.add_bond_charge_virtual_site(
                 atoms,
                 distance,
@@ -2276,7 +2273,7 @@ class TestMolecule:
             )
 
         # Try to feed in unitless epsilon
-        with pytest.raises(Exception) as excinfo:
+        with pytest.raises(Exception):
             molecule.add_bond_charge_virtual_site(
                 atoms,
                 distance,
@@ -2287,7 +2284,7 @@ class TestMolecule:
             )
 
         # Try to feed in unitless charges
-        with pytest.raises(Exception) as excinfo:
+        with pytest.raises(Exception):
             molecule.add_bond_charge_virtual_site(
                 atoms,
                 distance,
@@ -2296,7 +2293,7 @@ class TestMolecule:
             )
 
         # We shouldn't be able to give both rmin_half and sigma VdW parameters.
-        with pytest.raises(Exception) as excinfo:
+        with pytest.raises(Exception):
             molecule.add_bond_charge_virtual_site(
                 [atom1, atom2],
                 distance,
@@ -2319,7 +2316,7 @@ class TestMolecule:
         # TODO: Test the @property getters for sigma, epsilon, and rmin_half
 
         # We should have to give as many charge increments as atoms (len(charge_increments)) = 4
-        with pytest.raises(Exception) as excinfo:
+        with pytest.raises(Exception):
             molecule.add_bond_charge_virtual_site(
                 atoms, distance, charge_increments=[0.0], replace=True
             )
@@ -2380,7 +2377,7 @@ class TestMolecule:
         distance = distance_unitless * unit.angstrom
 
         # Try to feed in a unitless distance
-        with pytest.raises(AssertionError) as excinfo:
+        with pytest.raises(AssertionError):
             vsite1_index = molecule.add_bond_charge_virtual_site(
                 [atom1, atom2], distance_unitless
             )
@@ -2444,7 +2441,7 @@ class TestMolecule:
         atoms = (atom1, atom2, atom3)
 
         # Try passing in a unitless distance
-        with pytest.raises(AssertionError) as excinfo:
+        with pytest.raises(AssertionError):
             vsite1_index = molecule.add_monovalent_lone_pair_virtual_site(
                 atoms,
                 distance_unitless,
@@ -2454,7 +2451,7 @@ class TestMolecule:
             )
 
         # Try passing in a unitless out_of_plane_angle
-        with pytest.raises(AssertionError) as excinfo:
+        with pytest.raises(AssertionError):
             vsite1_index = molecule.add_monovalent_lone_pair_virtual_site(
                 atoms,
                 distance,
@@ -2464,7 +2461,7 @@ class TestMolecule:
             )
 
         # Try passing in a unitless in_plane_angle
-        with pytest.raises(AssertionError) as excinfo:
+        with pytest.raises(AssertionError):
             vsite1_index = molecule.add_monovalent_lone_pair_virtual_site(
                 atoms,
                 distance,
@@ -2474,7 +2471,7 @@ class TestMolecule:
             )
 
         # Try giving two atoms
-        with pytest.raises(AssertionError) as excinfo:
+        with pytest.raises(AssertionError):
             vsite1_index = molecule.add_monovalent_lone_pair_virtual_site(
                 [atom1, atom2],
                 distance,
@@ -2512,7 +2509,7 @@ class TestMolecule:
         )
 
         # test giving too few atoms
-        with pytest.raises(AssertionError) as excinfo:
+        with pytest.raises(AssertionError):
             vsite1_index = molecule.add_divalent_lone_pair_virtual_site(
                 [atom1, atom2],
                 distance,
@@ -2541,7 +2538,7 @@ class TestMolecule:
             replace=False,
         )
         # Test for assertion when giving too few atoms
-        with pytest.raises(AssertionError) as excinfo:
+        with pytest.raises(AssertionError):
             vsite1_index = molecule.add_trivalent_lone_pair_virtual_site(
                 [atom1, atom2, atom3],
                 distance,
@@ -2753,9 +2750,6 @@ class TestMolecule:
     @requires_openeye
     def test_assign_fractional_bond_orders(self):
         """Test assignment of fractional bond orders"""
-        # TODO: Test only one molecule for speed?
-        # TODO: Do we need to deepcopy each molecule, or is setUp called separately for each test method?
-
         # Do not modify the original molecules.
         molecules = copy.deepcopy(mini_drug_bank())
 
