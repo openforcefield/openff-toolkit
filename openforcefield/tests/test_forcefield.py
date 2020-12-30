@@ -488,15 +488,12 @@ partial_charge_method_resolution_matrix = [
 toolkit_registries = []
 if OpenEyeToolkitWrapper.is_available():
     toolkit_registries.append(
-        (ToolkitRegistry(toolkit_precedence=[OpenEyeToolkitWrapper]), "OE")
+        ToolkitRegistry(toolkit_precedence=[OpenEyeToolkitWrapper])
     )
 if RDKitToolkitWrapper.is_available() and AmberToolsToolkitWrapper.is_available():
     toolkit_registries.append(
-        (
-            ToolkitRegistry(
-                toolkit_precedence=[RDKitToolkitWrapper, AmberToolsToolkitWrapper]
-            ),
-            "RDKit+AmberTools",
+        ToolkitRegistry(
+            toolkit_precedence=[RDKitToolkitWrapper, AmberToolsToolkitWrapper]
         )
     )
 
@@ -933,10 +930,8 @@ class TestForceField:
 
         ff = ForceField(gbsa_ff_xml)
 
-    @pytest.mark.parametrize(
-        "toolkit_registry,registry_description", toolkit_registries
-    )
-    def test_parameterize_ethanol(self, toolkit_registry, registry_description):
+    @pytest.mark.parametrize("toolkit_registry,", toolkit_registries)
+    def test_parameterize_ethanol(self, toolkit_registry, ethanol):
         from simtk.openmm import app
 
         forcefield = ForceField("test_forcefields/test_forcefield.offxml")
@@ -944,9 +939,7 @@ class TestForceField:
         molecules = [ethanol]
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
 
-        omm_system = forcefield.create_openmm_system(
-            topology, toolkit_registry=toolkit_registry
-        )
+        forcefield.create_openmm_system(topology, toolkit_registry=toolkit_registry)
 
     @pytest.fixture()
     def create_circular_handler_dependencies(self):
@@ -971,9 +964,7 @@ class TestForceField:
         BondHandler._DEPENDENCIES = orig_bh_depends
         AngleHandler._DEPENDENCIES = orig_ah_depends
 
-    @pytest.mark.parametrize(
-        "toolkit_registry,registry_description", toolkit_registries
-    )
+    @pytest.mark.parametrize("toolkit_registry", toolkit_registries)
     def test_parameterize_ethanol_handler_dependency_loop(
         self,
         create_circular_handler_dependencies,
@@ -1023,12 +1014,10 @@ class TestForceField:
             UnassignedProperTorsionParameterException,
             match="- Topology indices [(]5, 0, 1, 6[)]: "
             r"names and elements [(](H\d+)? H[)], [(](C\d+)? C[)], [(](C\d+)? C[)], [(](H\d+)? H[)],",
-        ) as excinfo:
-            omm_system = forcefield.create_openmm_system(topology)
+        ):
+            forcefield.create_openmm_system(topology)
 
-    @pytest.mark.parametrize(
-        "toolkit_registry,registry_description", toolkit_registries
-    )
+    @pytest.mark.parametrize("toolkit_registry", toolkit_registries)
     def test_parameterize_1_cyclohexane_1_ethanol(
         self,
         toolkit_registry,
@@ -1046,11 +1035,9 @@ class TestForceField:
         molecules = [ethanol, cyclohexane]
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
 
-        omm_system = forcefield.create_openmm_system(topology)
+        forcefield.create_openmm_system(topology)
 
-    @pytest.mark.parametrize(
-        "toolkit_registry,registry_description", toolkit_registries
-    )
+    @pytest.mark.parametrize("toolkit_registry", toolkit_registries)
     def test_parameterize_1_cyclohexane_1_ethanol_vacuum(
         self,
         toolkit_registry,
@@ -1068,12 +1055,10 @@ class TestForceField:
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
         topology.box_vectors = None
 
-        omm_system = forcefield.create_openmm_system(topology)
+        forcefield.create_openmm_system(topology)
 
     @pytest.mark.slow
-    @pytest.mark.parametrize(
-        "toolkit_registry,registry_description", toolkit_registries
-    )
+    @pytest.mark.parametrize("toolkit_registry", toolkit_registries)
     @pytest.mark.parametrize(
         "box",
         [
@@ -1083,9 +1068,7 @@ class TestForceField:
             "propane_methane_butanol_0.2_0.3_0.5.pdb",
         ],
     )
-    def test_parameterize_large_system(
-        self, toolkit_registry, registry_description, box
-    ):
+    def test_parameterize_large_system(self, toolkit_registry, box):
         """Test parameterizing a large system of several distinct molecules.
         This test is very slow, so it is only run if the --runslow option is provided to pytest.
         """
@@ -1254,12 +1237,8 @@ class TestForceField:
             topology, positions=pdbfile.getPositions()
         )
 
-    @pytest.mark.parametrize(
-        "toolkit_registry,registry_description", toolkit_registries
-    )
-    def test_pass_invalid_kwarg_to_create_openmm_system(
-        self, toolkit_registry, registry_description
-    ):
+    @pytest.mark.parametrize("toolkit_registry", toolkit_registries)
+    def test_pass_invalid_kwarg_to_create_openmm_system(self, toolkit_registry):
         """Test to ensure an exception is raised when an unrecognized kwarg is passed """
         from simtk.openmm import app
 
@@ -1915,52 +1894,36 @@ class TestForceFieldVirtualSites:
     )
     trivalent_parameters_args.append(opts)
 
-    @pytest.mark.parametrize(
-        "toolkit_registry,registry_description", toolkit_registries
-    )
+    @pytest.mark.parametrize("toolkit_registry", toolkit_registries)
     @pytest.mark.parametrize("args", bond_charge_parameters_args)
-    def test_bond_charge_virtual_site_parameters(
-        self, toolkit_registry, registry_description, args
-    ):
+    def test_bond_charge_virtual_site_parameters(self, toolkit_registry, args):
         """
         Test force fields with bond charge lone pair virtual sites
         """
 
         self._test_physical_parameters(toolkit_registry, *args.values())
 
-    @pytest.mark.parametrize(
-        "toolkit_registry,registry_description", toolkit_registries
-    )
+    @pytest.mark.parametrize("toolkit_registry", toolkit_registries)
     @pytest.mark.parametrize("args", monovalent_parameters_args)
-    def test_monovalent_virtual_site_parameters(
-        self, toolkit_registry, registry_description, args
-    ):
+    def test_monovalent_virtual_site_parameters(self, toolkit_registry, args):
         """
         Test force fields with monovalent charge lone pair virtual sites
         """
 
         self._test_physical_parameters(toolkit_registry, *args.values())
 
-    @pytest.mark.parametrize(
-        "toolkit_registry,registry_description", toolkit_registries
-    )
+    @pytest.mark.parametrize("toolkit_registry", toolkit_registries)
     @pytest.mark.parametrize("args", divalent_parameters_args)
-    def test_divalent_virtual_site_parameters(
-        self, toolkit_registry, registry_description, args
-    ):
+    def test_divalent_virtual_site_parameters(self, toolkit_registry, args):
         """
         Test force fields with divalent lone pair virtual sites
         """
 
         self._test_physical_parameters(toolkit_registry, *args.values())
 
-    @pytest.mark.parametrize(
-        "toolkit_registry,registry_description", toolkit_registries
-    )
+    @pytest.mark.parametrize("toolkit_registry", toolkit_registries)
     @pytest.mark.parametrize("args", trivalent_parameters_args)
-    def test_trivalent_charge_virtual_site(
-        self, toolkit_registry, registry_description, args
-    ):
+    def test_trivalent_charge_virtual_site(self, toolkit_registry, args):
         """
         Test force fields with trivalent lone pair virtual sites
         """
@@ -1982,10 +1945,8 @@ class TestForceFieldChargeAssignment:
             ("I-", -1 * unit.elementary_charge),
         )
 
-    @pytest.mark.parametrize(
-        "toolkit_registry,registry_description", toolkit_registries
-    )
-    def test_charges_from_molecule(self, toolkit_registry, registry_description):
+    @pytest.mark.parametrize("toolkit_registry", toolkit_registries)
+    def test_charges_from_molecule(self, toolkit_registry, ethanol):
         """Test skipping charge generation and instead getting charges from the original Molecule"""
         # Create an ethanol molecule without using a toolkit
         molecules = [ethanol]
@@ -3903,10 +3864,8 @@ class TestForceFieldParameterAssignment:
 
     @pytest.mark.slow
     @requires_openeye_mol2
-    @pytest.mark.parametrize(
-        "toolkit_registry,registry_description", toolkit_registries
-    )
-    def test_parameterize_protein(self, toolkit_registry, registry_description):
+    @pytest.mark.parametrize("toolkit_registry", toolkit_registries)
+    def test_parameterize_protein(self, toolkit_registry):
         """Test that ForceField assigns parameters correctly for a protein"""
 
         mol_path = get_data_file_path("proteins/T4-protein.mol2")
