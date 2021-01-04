@@ -595,13 +595,16 @@ class TestTopology(TestCase):
         assert len([*top.smirnoff_impropers]) == 18
         assert len([*top.amber_impropers]) == 18
 
-        for (smirnoff_imp, amber_imp) in zip(
-            top.smirnoff_impropers, top.amber_impropers
-        ):
-            assert smirnoff_imp[0] == amber_imp[1]
-            assert smirnoff_imp[1] == amber_imp[0]
-            assert smirnoff_imp[2] == amber_imp[2]
-            assert smirnoff_imp[3] == amber_imp[3]
+        # Order not guaranteed, so cannot zip and compare directly
+        for smirnoff_imp in top.smirnoff_impropers:
+            # Convert SMIRNOFF-style improper into AMBER-style
+            mod_imp = (
+                smirnoff_imp[1],
+                smirnoff_imp[0],
+                smirnoff_imp[2],
+                smirnoff_imp[3],
+            )
+            assert mod_imp in top.amber_impropers
 
     # test_get_fractional_bond_order
     # test_two_of_same_molecule
