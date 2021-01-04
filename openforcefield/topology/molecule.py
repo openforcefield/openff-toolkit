@@ -3711,7 +3711,7 @@ class FrozenMolecule(Serializable):
 
         Returns
         -------
-        impropers : list of tuple
+        impropers : set of tuple
             An iterator of tuples, each containing the indices of atoms making
             up a possible improper torsion. The central atom is listed second
             in each tuple.
@@ -3723,9 +3723,9 @@ class FrozenMolecule(Serializable):
         """
         smirnoff_improper_smarts = "[*:1]~[X3:2](~[*:3])~[*:4]"
         improper_idxs = self.chemical_environment_matches(smirnoff_improper_smarts)
-        smirnoff_impropers = [
+        smirnoff_impropers = {
             tuple(self.atoms[idx] for idx in imp) for imp in improper_idxs
-        ]
+        }
         return smirnoff_impropers
 
     @property
@@ -3736,7 +3736,7 @@ class FrozenMolecule(Serializable):
 
         Returns
         -------
-        impropers : list of tuple
+        impropers : set of tuple
             An iterator of tuples, each containing the indices of atoms making
             up a possible improper torsion. The central atom is listed first in
             each tuple.
@@ -3748,9 +3748,9 @@ class FrozenMolecule(Serializable):
         """
         amber_improper_smarts = "[X3:1](~[*:2])(~[*:3])~[*:4]"
         improper_idxs = self.chemical_environment_matches(amber_improper_smarts)
-        amber_impropers = [
+        amber_impropers = {
             tuple(self.atoms[idx] for idx in imp) for imp in improper_idxs
-        ]
+        }
         return amber_impropers
 
     @property
