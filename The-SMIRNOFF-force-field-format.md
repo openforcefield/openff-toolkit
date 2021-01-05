@@ -299,7 +299,7 @@ This decoupling of how parameters are assigned for each term provides a great de
 
 Below, we describe the specification for each force field term definition using the XML representation of a SMIRNOFF force field.
 
-As an example of a complete SMIRNOFF force field specification, see [a recent force field in the "Parsley" line (openff-1.2.0.offxml)](https://github.com/openforcefield/openforcefields/blob/1.2.0/openforcefields/offxml/openff-1.2.0.offxml).
+As an example of a complete SMIRNOFF force field specification, see [a recent force field in the "Parsley" line (openff-1.2.0.offxml)](https://github.com/openforcefield/openff-forcefields/blob/1.2.0/openforcefields/offxml/openff-1.2.0.offxml).
 
 .. note :: Not all parameter sections *must* be specified in a SMIRNOFF force field. A wide variety of force field terms are provided in the specification, but a particular force field only needs to define a subset of those terms.
 

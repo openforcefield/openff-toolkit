@@ -164,6 +164,8 @@ jobs:
             NB_ARGS+=" --ignore=examples/conformer_energies"
             NB_ARGS+=" --ignore=examples/QCArchive_interface"
             NB_ARGS+=" --ignore=examples/visualization"
+            # XFail until a new `openmmforcefields` build is made which depends on `openff-toolkit`.
+            NB_ARGS+=" --ignore=examples/swap_amber_parameters/swap_existing_ligand_parameters_with_openmmforcefields.ipynb"
           fi
           pytest $NB_ARGS examples/
 
