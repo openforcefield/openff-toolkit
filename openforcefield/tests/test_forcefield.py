@@ -4208,6 +4208,60 @@ class TestForceFieldParameterAssignment:
             allow_nonintegral_charges=False,
         )
 
+    def test_modified_14_factors(self):
+        """Test that the 1-4 scaling factors for electrostatics and vdW handlers matche,
+        to a tight precision, the values specified in the force field."""
+        top = Molecule.from_smiles("CCCC").to_topology()
+        default_14 = ForceField("test_forcefields/test_forcefield.offxml")
+        e_mod_14 = ForceField("test_forcefields/test_forcefield.offxml")
+        vdw_mod_14 = ForceField("test_forcefields/test_forcefield.offxml")
+
+        e_mod_14["Electrostatics"].scale14 = 0.66
+        assert e_mod_14["Electrostatics"].scale14 == 0.66
+
+        vdw_mod_14["vdW"].scale14 = 0.777
+        assert vdw_mod_14["vdW"].scale14 == 0.777
+
+        default_omm_sys = default_14.create_openmm_system(top)
+        e_mod_omm_sys = e_mod_14.create_openmm_system(top)
+        vdw_mod_omm_sys = vdw_mod_14.create_openmm_system(top)
+
+        for omm_sys, expected_vdw_14, expected_coul_14 in [
+            [default_omm_sys, 0.5, 0.833333],
+            [e_mod_omm_sys, 0.5, 0.66],
+            [vdw_mod_omm_sys, 0.777, 0.833333],
+        ]:
+            nonbond_force = [
+                f for f in omm_sys.getForces() if type(f) == openmm.NonbondedForce
+            ][0]
+            for exception_idx in range(nonbond_force.getNumExceptions()):
+                i, j, q, sig, eps = nonbond_force.getExceptionParameters(exception_idx)
+
+                # Trust that q == 0 covers the cases of 1-2, 1-3, and truly being 0
+                if q / unit.elementary_charge ** 2 != 0:
+                    q_i = nonbond_force.getParticleParameters(i)[0]
+                    q_j = nonbond_force.getParticleParameters(j)[0]
+                    coul_14 = q / (q_i * q_j)
+
+                    np.testing.assert_almost_equal(
+                        actual=coul_14,
+                        desired=expected_coul_14,
+                        decimal=10,
+                        err_msg="Electrostatics 1-4 scaling factors do not match",
+                    )
+
+                if eps / unit.kilojoule_per_mole != 0:
+                    eps_i = nonbond_force.getParticleParameters(i)[2]
+                    eps_j = nonbond_force.getParticleParameters(j)[2]
+                    vdw_14 = eps / (eps_i * eps_j) ** 0.5
+
+                    np.testing.assert_almost_equal(
+                        actual=vdw_14,
+                        desired=expected_vdw_14,
+                        decimal=10,
+                        err_msg="vdW 1-4 scaling factors do not match",
+                    )
+
     @requires_openeye
     def test_modified_14_factors(self):
         """Test that the 1-4 scaling factors for electrostatics and vdW handlers matche,
