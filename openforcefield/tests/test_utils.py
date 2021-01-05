@@ -19,15 +19,33 @@ import os
 import pytest
 from simtk import unit
 
-from openforcefield import utils
-
 # =============================================================================================
 # TESTS
 # =============================================================================================
 
 
+def test_requires_package():
+    """Test the @requires_package decorator"""
+    from openforcefield.utils.utils import MissingDependencyError, requires_package
+
+    @requires_package("numpy")
+    def fn_installed():
+        pass
+
+    fn_installed()
+
+    @requires_package("foobar")
+    def fn_missing():
+        pass
+
+    with pytest.raises(MissingDependencyError, match="foobar"):
+        fn_missing()
+
+
 def test_subclasses():
     """Test that all subclasses (and descendents) are correctly identified by all_subclasses()"""
+
+    from openforcefield.utils.utils import all_subclasses
 
     class Foo:
         pass
@@ -41,7 +59,7 @@ def test_subclasses():
     class FooSubSubclass(FooSubclass1):
         pass
 
-    subclass_names = [cls.__name__ for cls in utils.all_subclasses(Foo)]
+    subclass_names = [cls.__name__ for cls in all_subclasses(Foo)]
     assert set(subclass_names) == set(
         ["FooSubclass1", "FooSubclass2", "FooSubSubclass"]
     )
@@ -91,10 +109,12 @@ def test_ast_eval(unit_string, expected_unit):
 
 
 def test_dimensionless_units():
-    assert utils.string_to_unit("dimensionless") == unit.dimensionless
+    from openforcefield.utils.utils import string_to_unit, unit_to_string
 
-    unit_string = utils.unit_to_string(unit.dimensionless)
-    unit_value = utils.string_to_unit(unit_string)
+    assert string_to_unit("dimensionless") == unit.dimensionless
+
+    unit_string = unit_to_string(unit.dimensionless)
+    unit_value = string_to_unit(unit_string)
 
     assert unit_value == unit.dimensionless
 
