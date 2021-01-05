@@ -4505,12 +4505,17 @@ class FrozenMolecule(Serializable):
         symbols = [
             Element.getByAtomicNumber(atom.atomic_number).symbol for atom in self.atoms
         ]
+        if extras != None:
+            extras[
+                "canonical_isomeric_explicit_hydrogen_mapped_smiles"
+            ] = self.to_smiles(mapped=True)
+        else:
+            extras = {
+                "canonical_isomeric_explicit_hydrogen_mapped_smiles": self.to_smiles(
+                    mapped=True
+                )
+            }
 
-        extras = {
-            "canonical_isomeric_explicit_hydrogen_mapped_smiles": self.to_smiles(
-                mapped=True
-            )
-        }
         schema_dict = {
             "symbols": symbols,
             "geometry": geometry,
