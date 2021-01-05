@@ -39,7 +39,6 @@ from openforcefield.utils.toolkits import (
     DEFAULT_AROMATICITY_MODEL,
     GLOBAL_TOOLKIT_REGISTRY,
 )
-from openforcefield.utils.utils import requires_package
 
 # =============================================================================================
 # Exceptions
