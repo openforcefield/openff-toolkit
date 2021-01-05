@@ -22,7 +22,6 @@ dependencies:
   - openeye-toolkits
   - packaging
   - openmmforcefields >=0.7.2
-  - openmmtools
   - openforcefields
   - smirnoff99Frosst
   - pyyaml
