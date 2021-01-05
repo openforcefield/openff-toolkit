@@ -902,7 +902,7 @@ class BondChargeVirtualSite(VirtualSite):
         """
         Create a bond charge-type virtual site, in which the location of the charge is specified by the position of two atoms. This supports placement of a virtual site S along a vector between two specified atoms, e.g. to allow for a sigma hole for halogens or similar contexts. With positive values of the distance, the virtual site lies outside the first indexed atom.
 
-        TODO: One of the examples on https://openff-toolkit.readthedocs.io/en/topology/smirnoff.html#virtualsites-virtual-sites-for-off-atom-charges has a BondCharge defined with three atoms -- How does that work?
+        TODO: One of the examples on https://open-forcefield-toolkit.readthedocs.io/en/topology/smirnoff.html#virtualsites-virtual-sites-for-off-atom-charges has a BondCharge defined with three atoms -- How does that work?
 
         Parameters
         ----------

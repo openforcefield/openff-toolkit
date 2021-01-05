@@ -703,13 +703,13 @@ The only aromaticity model currently widely supported (by both the [OpenEye tool
 
 ### Additional plans for future development
 
-See the [OpenFF toolkit GitHub issue tracker](https://github.com/openforcefield/toolkit/issues) to propose changes to this specification, or read through proposed changes currently being discussed.
+See the [OpenFF toolkit GitHub issue tracker](https://github.com/openforcefield/openff-toolkit/issues) to propose changes to this specification, or read through proposed changes currently being discussed.
 
 ## The `openforcefield` reference implementation
 
 A Python reference implementation of a parameterization engine implementing the SMIRNOFF force field specification can be found [online](https://github.com/openforcefield/openforcefield).
 This implementation can use either the free-for-academics (but commercially supported) [OpenEye toolkit](https://docs.eyesopen.com/toolkits/python/index.html) or the free and open source [RDKit cheminformatics toolkit](https://www.rdkit.org/).
-See the [installation instructions](https://openff-toolkit.readthedocs.io/en/latest/installation.html) for information on how to install this implementation and its dependencies.
+See the [installation instructions](https://open-forcefield-toolkit.readthedocs.io/en/latest/installation.html) for information on how to install this implementation and its dependencies.
 
 ### Examples
 
@@ -736,7 +736,7 @@ system = forcefield.create_openmm_system(topology)
 See `examples/SMIRNOFF_simulation/` for an extension of this example illustrating how to simulate this molecule in the gas phase.
 
 The `topology` object provided to `create_openmm_system()` can contain any number of molecules of different types, including biopolymers, ions, buffer molecules, or solvent molecules.
-The OpenFF toolkit provides a number of convenient methods for importing or constructing topologies given PDB files, Sybyl mol2 files, SDF files, SMILES strings, and IUPAC names; see the [toolkit documentation](https://openff-toolkit.readthedocs.io/) for more information.
+The OpenFF toolkit provides a number of convenient methods for importing or constructing topologies given PDB files, Sybyl mol2 files, SDF files, SMILES strings, and IUPAC names; see the [toolkit documentation](https://open-forcefield-toolkit.readthedocs.io/) for more information.
 Notably, this `topology` object differs from those found in [OpenMM](https://docs.openmm.org/latest/api-python/generated/simtk.openmm.app.topology.Topology.html#simtk.openmm.app.topology.Topology) or [MDTraj](https://mdtraj.org/1.9.0/api/generated/mdtraj.Topology.html#mdtraj.Topology) in that it contains information on the *chemical identity* of the molecules constituting the system, rather than this atomic elements and covalent connectivity; this additional chemical information is required for the [direct chemical perception](https://doi.org/10.1101/286542) features of SMIRNOFF typing.
 
 ### Using SMIRNOFF small molecule forcefields with traditional biopolymer force fields
