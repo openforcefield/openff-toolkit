@@ -364,7 +364,6 @@ class Serializable(abc.ABC):
         d = msgpack.loads(serialized, raw=False)
         return cls.from_dict(d)
 
-    @requires_package("xmltodict")
     def to_xml(self, indent=2):
         """
         Return an XML representation.
@@ -397,7 +396,6 @@ class Serializable(abc.ABC):
         return xmltodict.unparse(d, pretty=pretty, indent=indent)
 
     @classmethod
-    @requires_package("xmltodict")
     def from_xml(cls, serialized):
         """
         Instantiate an object from an XML serialized representation.
