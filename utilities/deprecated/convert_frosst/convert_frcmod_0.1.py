@@ -1,8 +1,8 @@
 #!/bin/env python
 
 import numpy as np
-from openforcefield.typing.engines.smirnoff.forcefield import ForceField
-from openforcefield.typing.chemistry import environment
+from openff.toolkit.typing.engines.smirnoff.forcefield import ForceField
+from openff.toolkit.typing.chemistry import environment
 
 # Function definitions for parsing sections within parameter file
 def _parse_nonbon_line( line ):

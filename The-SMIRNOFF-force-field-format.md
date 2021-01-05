@@ -17,7 +17,7 @@ SMIRNOFF and its reference implementation in the `openforcefield` toolkit was he
 ## Representations and encodings
 
 A force field in the SMIRNOFF format can be encoded in multiple representations.
-Currently, only an [XML](https://en.wikipedia.org/wiki/XML) representation is supported by the reference implementation of the [openforcefield toolkit](https://github.com/openforcefield/openforcefield).
+Currently, only an [XML](https://en.wikipedia.org/wiki/XML) representation is supported by the reference implementation of the [OpenFF toolkit](https://github.com/openforcefield/openff-toolkit).
 
 ### XML representation
 
@@ -37,17 +37,17 @@ We are considering supporting [JSON](https://www.json.org/), [MessagePack](https
 
 ## Reference implementation
 
-A reference implementation of the SMIRNOFF XML specification is provided in the [openforcefield toolkit](https://github.com/openforcefield/openforcefield).
+A reference implementation of the SMIRNOFF XML specification is provided in the [OpenFF toolkit](https://github.com/openforcefield/openff-toolkit).
 
 ## Support for molecular simulation packages
 
 The reference implementation currently generates parameterized molecular mechanics systems for the GPU-accelerated [OpenMM](https://openmm.org) molecular simulation toolkit.
 Parameterized systems can subsequently be converted for use in other popular molecular dynamics simulation packages (including [AMBER](https://ambermd.org/), [CHARMM](https://www.charmm.org), [NAMD](https://www.ks.uiuc.edu/Research/namd/), [Desmond](https://www.deshawresearch.com/resources_desmond.html), and [LAMMPS](https://lammps.sandia.gov/)) via [ParmEd](https://parmed.github.io/ParmEd) and [InterMol](https://github.com/shirtsgroup/InterMol).
-See [the example on using SMIRNOFF in AMBER or GROMACS](https://github.com/openforcefield/openforcefield/blob/master/examples/using_smirnoff_in_amber_or_gromacs/convert_to_amber_gromacs.ipynb) for more details.
+See [the example on using SMIRNOFF in AMBER or GROMACS](https://github.com/openforcefield/openff-toolkit/blob/master/examples/using_smirnoff_in_amber_or_gromacs/convert_to_amber_gromacs.ipynb) for more details.
 
 ## Basic structure
 
-A reference implementation of a SMIRNOFF force field parser that can process XML representations (denoted by `.offxml` file extensions) can be found in the `ForceField` class of the `openforcefield.typing.engines.smirnoff` module.
+A reference implementation of a SMIRNOFF force field parser that can process XML representations (denoted by `.offxml` file extensions) can be found in the `ForceField` class of the `openff.toolkit.typing.engines.smirnoff` module.
 
 Below, we describe the main structure of such an XML representation.
 
@@ -141,7 +141,7 @@ This hierarchical structure means that a typical parameter file will tend to hav
 
 ### Multiple SMIRNOFF representations can be processed in sequence
 
-Multiple SMIRNOFF data sources (e.g. multiple OFFXML files) can be loaded by the openforcefield `ForceField` in sequence.
+Multiple SMIRNOFF data sources (e.g. multiple OFFXML files) can be loaded by the OpenFF `ForceField` in sequence.
 If these files each contain unique top-level tags (such as `<Bonds>`, `<Angles>`, etc.), the resulting forcefield will be independent of the order in which the files are loaded.
 If, however, the same tag occurs in multiple files, the contents of the tags are merged, with the tags read later taking precedence over the parameters read earlier, provided the top-level tags have compatible attributes.
 The resulting force field will therefore depend on the order in which parameters are read.
@@ -703,13 +703,13 @@ The only aromaticity model currently widely supported (by both the [OpenEye tool
 
 ### Additional plans for future development
 
-See the [openforcefield GitHub issue tracker](https://github.com/openforcefield/openforcefield/issues) to propose changes to this specification, or read through proposed changes currently being discussed.
+See the [OpenFF toolkit GitHub issue tracker](https://github.com/openforcefield/toolkit/issues) to propose changes to this specification, or read through proposed changes currently being discussed.
 
 ## The `openforcefield` reference implementation
 
 A Python reference implementation of a parameterization engine implementing the SMIRNOFF force field specification can be found [online](https://github.com/openforcefield/openforcefield).
 This implementation can use either the free-for-academics (but commercially supported) [OpenEye toolkit](https://docs.eyesopen.com/toolkits/python/index.html) or the free and open source [RDKit cheminformatics toolkit](https://www.rdkit.org/).
-See the [installation instructions](https://open-forcefield-toolkit.readthedocs.io/en/latest/installation.html) for information on how to install this implementation and its dependencies.
+See the [installation instructions](https://openff-toolkit.readthedocs.io/en/latest/installation.html) for information on how to install this implementation and its dependencies.
 
 ### Examples
 
@@ -720,14 +720,14 @@ A relatively extensive set of examples is made available on the [reference imple
 Consider parameterizing a simple system containing a the drug imatinib.
 ```python
 # Create a molecule from a mol2 file
-from openforcefield.topology import Molecule
+from openff.toolkit.topology import Molecule
 molecule = Molecule.from_file('imatinib.mol2')
 
 # Create a Topology specifying the system to be parameterized containing just the molecule
 topology = molecule.to_topology()
 
 # Load the first release of the "Parsley" forcefield
-from openforcefield.typing.engines.smirnoff import ForceField
+from openff.toolkit.typing.engines.smirnoff import ForceField
 forcefield = ForceField('openff-1.0.0.offxml')
 
 # Create an OpenMM System from the topology
@@ -736,7 +736,7 @@ system = forcefield.create_openmm_system(topology)
 See `examples/SMIRNOFF_simulation/` for an extension of this example illustrating how to simulate this molecule in the gas phase.
 
 The `topology` object provided to `create_openmm_system()` can contain any number of molecules of different types, including biopolymers, ions, buffer molecules, or solvent molecules.
-The openforcefield toolkit provides a number of convenient methods for importing or constructing topologies given PDB files, Sybyl mol2 files, SDF files, SMILES strings, and IUPAC names; see the [toolkit documentation](https://open-forcefield-toolkit.readthedocs.io/) for more information.
+The OpenFF toolkit provides a number of convenient methods for importing or constructing topologies given PDB files, Sybyl mol2 files, SDF files, SMILES strings, and IUPAC names; see the [toolkit documentation](https://openff-toolkit.readthedocs.io/) for more information.
 Notably, this `topology` object differs from those found in [OpenMM](https://docs.openmm.org/latest/api-python/generated/simtk.openmm.app.topology.Topology.html#simtk.openmm.app.topology.Topology) or [MDTraj](https://mdtraj.org/1.9.0/api/generated/mdtraj.Topology.html#mdtraj.Topology) in that it contains information on the *chemical identity* of the molecules constituting the system, rather than this atomic elements and covalent connectivity; this additional chemical information is required for the [direct chemical perception](https://doi.org/10.1101/286542) features of SMIRNOFF typing.
 
 ### Using SMIRNOFF small molecule forcefields with traditional biopolymer force fields
@@ -804,7 +804,7 @@ This is a backwards-incompatible overhaul of the SMIRNOFF 0.1 draft specificatio
     * The fractional bond order method is specified via the `fractional_bondorder_method` attribute
     * The fractional bond order interpolation scheme is specified via the `fractional_bondorder_interpolation`
 * Section heading names were cleaned up.
-* Example was updated to reflect use of the new `openforcefield.topology.Topology` class
+* Example was updated to reflect use of the new `openff.toolkit.topology.Topology` class
 * Eliminated "Requirements" section, since it specified requirements for the software, rather than described an aspect of the SMIRNOFF specification
 * Fractional bond orders are described in `<Bonds>`, since they currently only apply to this term.
 

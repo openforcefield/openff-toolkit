@@ -11,7 +11,7 @@ including offering serialization to a variety of standard formats (including `XM
 Primary objects
 ---------------
 
-.. currentmodule:: openforcefield.topology
+.. currentmodule:: openff.toolkit.topology
 .. autosummary::
     :nosignatures:
     :toctree: api/generated/
@@ -24,7 +24,7 @@ Primary objects
 Secondary objects
 -----------------
 
-.. currentmodule:: openforcefield.topology
+.. currentmodule:: openff.toolkit.topology
 .. autosummary::
     :nosignatures:
     :toctree: api/generated/

@@ -5,7 +5,7 @@ First, we will outline how they are structured with some example code snippets.
 
 ### Demo jupyter notebook
 
-The [using_environments.ipynb](https://github.com/openforcefield/openforcefield/blob/master/examples/chemicalEnvironments/using_environments.ipynb) jupyter notebook should be your first stop for interactively understanding and using `ChemicalEnvironment`.
+The [using_environments.ipynb](https://github.com/openforcefield/openff-toolkit/blob/master/examples/chemicalEnvironments/using_environments.ipynb) jupyter notebook should be your first stop for interactively understanding and using `ChemicalEnvironment`.
 It includes all of the examples shown above and more in a jupyter notebook so you can play with the different method options.
 
 ### Creating a `ChemicalEnvironment`
@@ -34,7 +34,7 @@ The five subtypes are listed below with their expected number of indexed atoms a
 
 Here is an example for initiating a chemical environment:
 ```python
-from openforcefield.typing.chemistry import environment as env
+from openff.toolkit.typing.chemistry import environment as env
 smirks = "[#6X3,#7;+0:1]~;@[#8;r:2]~;@[#6X3,#7;+0:3]"
 angle = env.AngleChemicalEnvironment(smirks = smirks)
 ```
