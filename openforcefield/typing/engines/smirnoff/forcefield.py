@@ -1328,7 +1328,17 @@ class ForceField:
 
         # Let force Handlers do postprocessing
         for parameter_handler in parameter_handlers:
+            if parameter_handler._TAGNAME == "vdW":
+                continue
             parameter_handler.postprocess_system(system, topology, **kwargs)
+
+        electrostatics_14 = self.get_parameter_handler(tagname="Electrostatics").scale14
+        # Absolute hack to get around the fact that the vdW handler needs to know the
+        # Electrostatics's 1-4 scaling factor; maybe this code should be copied directly
+        # here, instead of being in a postprocess_system?
+        self._parameter_handlers["vdW"].postprocess_system(
+            system, topology, electrostatics_14
+        )
 
         if return_topology:
             return (system, topology)

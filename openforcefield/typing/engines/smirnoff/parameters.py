@@ -3655,7 +3655,7 @@ class vdWHandler(_NonbondedHandler):
         )
 
     # TODO: Can we express separate constraints for postprocessing and normal processing?
-    def postprocess_system(self, system, topology, **kwargs):
+    def postprocess_system(self, system, topology, electrostatics_14):
         # Create exceptions based on bonds.
         # TODO: This postprocessing must occur after the ChargeIncrementModelHandler
         # QUESTION: Will we want to do this for *all* cases, or would we ever want flexibility here?
@@ -3688,7 +3688,7 @@ class vdWHandler(_NonbondedHandler):
 
                 # TODO: Don't mess with electrostatic scaling here. Have a separate electrostatics handler.
                 force.createExceptionsFromBonds(
-                    bond_particle_indices, 0.83333, self.scale14
+                    bond_particle_indices, electrostatics_14, self.scale14
                 )
                 # force.createExceptionsFromBonds(bond_particle_indices, self.coulomb14scale, self._scale14)
 
