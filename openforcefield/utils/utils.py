@@ -7,6 +7,8 @@ Utility subroutines
 __all__ = [
     "MessageException",
     "IncompatibleUnitError",
+    "MissingDependencyError",
+    "requires_package",
     "inherit_docstrings",
     "all_subclasses",
     "temporary_cd",
@@ -70,9 +72,45 @@ class IncompatibleUnitError(MessageException):
     pass
 
 
+class MissingDependencyError(MessageException):
+    """
+    Exception for when an optional dependency is needed but not installed
+
+    """
+
+    def __init__(self, package_name):
+        self.msg = (
+            f"Missing dependency {package_name}. Try installing it "
+            f"with\n\n$ conda install {package_name} -c conda-forge"
+        )
+        if package_name in ["openforcefields", "smirnoff99frosst"]:
+            self.msg += " -c omnia"
+        super().__init__(self.msg)
+
+
 # =============================================================================================
 # UTILITY SUBROUTINES
 # =============================================================================================
+
+
+def requires_package(package_name):
+    def inner_decorator(function):
+        @functools.wraps(function)
+        def wrapper(*args, **kwargs):
+            import importlib
+
+            try:
+                importlib.import_module(package_name)
+            except (ImportError, ModuleNotFoundError):
+                raise MissingDependencyError(package_name)
+            except Exception as e:
+                raise e
+
+            return function(*args, **kwargs)
+
+        return wrapper
+
+    return inner_decorator
 
 
 def inherit_docstrings(cls):

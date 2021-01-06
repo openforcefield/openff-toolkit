@@ -7,6 +7,15 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 * ``minor`` increments add features but do not break API compatibility
 * ``micro`` increments represent bugfix releases or improvements in documentation
 
+0.8.3 - Current development
+---------------------------
+
+New features
+""""""""""""
+- `PR #794 <https://github.com/openforcefield/openforcefield/pull/974>`_: Adds a decorator
+  ``@requires_package`` that denotes a function requires an optional dependency.
+
+
 0.8.2 - Bugfix release
 ----------------------
 
