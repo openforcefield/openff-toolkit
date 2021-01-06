@@ -14,7 +14,9 @@ New features
 """"""""""""
 - `PR #794 <https://github.com/openforcefield/openforcefield/pull/974>`_: Adds a decorator
   ``@requires_package`` that denotes a function requires an optional dependency.
-
+- `PR #790 <https://github.com/openforcefield/openforcefield/pull/790>`_: Fixes `Issue #720
+  <https://github.com/openforcefield/openforcefield/issues/720>`_ where qcschema roundtrip to/from results 
+  in an error due to missing cmiles entry in attributes.
 
 0.8.2 - Bugfix release
 ----------------------
