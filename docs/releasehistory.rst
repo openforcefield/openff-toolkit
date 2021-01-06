@@ -19,7 +19,7 @@ New features
 - `PR #831 <https://github.com/openforcefield/openff-toolkit/pull/831>`_: Expose ELF conformer selection through the
   OpenEye wrapper.
 - `PR #790 <https://github.com/openforcefield/openforcefield/pull/790>`_: Fixes `Issue #720
-  <https://github.com/openforcefield/openforcefield/issues/720>`_ where qcschema roundtrip to/from results 
+  <https://github.com/openforcefield/openforcefield/issues/720>`_ where qcschema roundtrip to/from results
   in an error due to missing cmiles entry in attributes.
 - `PR #793 <https://github.com/openforcefield/openff-toolkit/pull/793>`_: Add an initial ELF conformer selection
   implementation which uses RDKit.
@@ -109,6 +109,9 @@ New features
 """"""""""""
 - `PR #794 <https://github.com/openforcefield/openforcefield/pull/794>`_: Adds a decorator
   ``@requires_package`` that denotes a function requires an optional dependency.
+- `PR #790 <https://github.com/openforcefield/openforcefield/pull/790>`_: Fixes `Issue #720
+  <https://github.com/openforcefield/openforcefield/issues/720>`_ where qcschema roundtrip to/from results
+  in an error due to missing cmiles entry in attributes.
 - `PR #805 <https://github.com/openforcefield/openforcefield/pull/805>`_: Adds a deprecation warning for the up-coming
   release of the ``openff-toolkit`` package and its import breaking changes.
 
