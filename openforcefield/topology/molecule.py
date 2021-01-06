@@ -4652,15 +4652,18 @@ class FrozenMolecule(Serializable):
                 "canonical_isomeric_explicit_hydrogen_mapped_smiles"
             ]
         except KeyError:
-            # Checking whether extras filed has the cmiles entry
-            mapped_smiles_from_extras = qca_record["extras"][
-                "canonical_isomeric_explicit_hydrogen_mapped_smiles"
-            ]
-        except KeyError:
-            raise KeyError(
-                "The record must contain the hydrogen mapped smiles to be safely made from the archive. "
-                "It is not present in either attributes or extras"
-            )
+            try:
+                # Checking whether extras filed has the cmiles entry
+                mapped_smiles_from_extras = qca_record["extras"][
+                    "canonical_isomeric_explicit_hydrogen_mapped_smiles"
+                ]
+                pass
+            except KeyError:
+                raise KeyError(
+                    "The record must contain the hydrogen mapped smiles to be safely made from the archive. "
+                    "It is not present in either attributes or extras"
+                )
+
         try:
             mapped_smiles_from_extras = qca_record["extras"][
                 "canonical_isomeric_explicit_hydrogen_mapped_smiles"
