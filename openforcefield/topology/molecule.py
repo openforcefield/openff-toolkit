@@ -4657,7 +4657,6 @@ class FrozenMolecule(Serializable):
                 mapped_smiles_from_extras = qca_record["extras"][
                     "canonical_isomeric_explicit_hydrogen_mapped_smiles"
                 ]
-                pass
             except KeyError:
                 raise KeyError(
                     "The record must contain the hydrogen mapped smiles to be safely made from the archive. "
