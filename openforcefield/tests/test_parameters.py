@@ -1764,26 +1764,32 @@ class TestvdWType:
 
         data = {
             "smirks": "[*:1]",
-            "sigma": 0.5 * unit.angstrom,
+            "rmin_half": 0.5 * unit.angstrom,
             "epsilon": 0.5 * unit.kilocalorie_per_mole,
         }
         param = vdWHandler.vdWType(**data)
 
         assert param.sigma is not None
         assert param.rmin_half is not None
-        assert param.sigma == param.rmin_half / 2 ** (1 / 6)
+        assert numpy.isclose(
+            param.sigma.value_in_unit(unit.angstrom),
+            (2.0 * param.rmin_half / 2 ** (1 / 6)).value_in_unit(unit.angstrom),
+        )
+        assert "sigma" not in param.to_dict()
+        assert "rmin_half" in param.to_dict()
+
+        param.sigma = param.sigma
+
+        assert numpy.isclose(param.rmin_half.value_in_unit(unit.angstrom), 0.5)
         assert "sigma" in param.to_dict()
         assert "rmin_half" not in param.to_dict()
 
-        param.sigma = 0.8 * unit.angstrom
+        param.rmin_half = param.rmin_half
 
-        assert param.sigma == param.rmin_half / 2 ** (1 / 6)
-        assert "sigma" in param.to_dict()
-        assert "rmin_half" not in param.to_dict()
-
-        param.rmin_half = 0.8 * unit.angstrom
-
-        assert param.sigma == param.rmin_half / 2 ** (1 / 6)
+        assert numpy.isclose(
+            param.sigma.value_in_unit(unit.angstrom),
+            (2.0 * param.rmin_half / 2 ** (1 / 6)).value_in_unit(unit.angstrom),
+        )
         assert "sigma" not in param.to_dict()
         assert "rmin_half" in param.to_dict()
 

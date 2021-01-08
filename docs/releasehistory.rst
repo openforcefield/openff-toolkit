@@ -10,7 +10,9 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 0.8.3 - Current development
 ---------------------------
 
-This release is a final patch for the ``0.8.X`` series of releases of the toolkit, and also marks the last
+This release fixes a critical bug in van der Waals parameter assignment.
+
+This release is also a final patch for the ``0.8.X`` series of releases of the toolkit, and also marks the last
 version of the toolkit which will be imported as ``import openforcefield.XXX`` / ``from openforcefield import XXX``.
 From version ``0.9.0`` onwards the toolkit will be importable only as ``import openff.toolkit.XXX`` /
 ``from openff.toolkit import XXX``.
@@ -18,6 +20,14 @@ From version ``0.9.0`` onwards the toolkit will be importable only as ``import o
 **Note** This change will also be accompanied by a renaming of the package from ``openforcefield`` to ``openff-toolkit``,
 so users need not worry about accidentally pulling in a version with changed imports. Users will have to explicitly
 choose to install the ``openff-toolkit`` package once released which will contain the breaking import changes.
+
+Bugfixes
+""""""""
+- `PR #808 <https://github.com/openforcefield/openforcefield/pull/808>`_: Fixes
+  `Issue #807 <https://github.com/openforcefield/openforcefield/issues/807>`_,
+  which tracks a major bug in the interconversion between a vdW ``sigma``
+  and ``rmin_half`` parameter.
+
 
 New features
 """"""""""""
@@ -28,6 +38,10 @@ New features
 
 0.8.2 - Bugfix release
 ----------------------
+
+**WARNING: This release was later found to contain a major bug,**
+`Issue #807 <https://github.com/openforcefield/openforcefield/issues/807>`_,
+**and produces incorrect energies.**
 
 Bugfixes
 """"""""
@@ -49,6 +63,10 @@ Bugfixes
 
 0.8.1 - Bugfix and minor feature release
 ----------------------------------------
+
+**WARNING: This release was later found to contain a major bug,**
+`Issue #807 <https://github.com/openforcefield/openforcefield/issues/807>`_,
+**and produces incorrect energies.**
 
 API-breaking changes
 """"""""""""""""""""

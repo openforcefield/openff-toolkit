@@ -5,3 +5,4 @@
 - `molecules` - contains files for certain molecules used by openforcefield
 - `systems` - contains systems consisting of mixtures of molecules
 - `proteins` - contains pdb files for example proteins 
+- `reference_energies` - contains reference energies for regression tests
