@@ -4,11 +4,12 @@ import numpy as np
 import pytest
 from simtk import unit
 
-from openforcefield.tests.utils import get_data_file_path
+from openforcefield.tests.utils import get_data_file_path, requires_rdkit
 from openforcefield.topology import Molecule, Topology
 from openforcefield.typing.engines.smirnoff import ForceField
 
 
+@requires_rdkit
 @pytest.mark.parametrize("constrained", [True, False])
 @pytest.mark.parametrize(
     "mol",

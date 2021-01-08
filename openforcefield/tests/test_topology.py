@@ -27,6 +27,7 @@ from openforcefield.tests.test_forcefield import (
 from openforcefield.tests.utils import (
     get_data_file_path,
     requires_openeye,
+    requires_pkg,
     requires_rdkit,
 )
 from openforcefield.topology import (
@@ -717,6 +718,7 @@ class TestTopology(TestCase):
             assert bond.bond_order == bond_copy.bond_order
             assert bond.bond.is_aromatic == bond_copy.bond.is_aromatic
 
+    @requires_pkg("mdtraj")
     def test_from_mdtraj(self):
         """Test construction of an OpenFF Topology from an MDTraj Topology object"""
         import mdtraj as md
