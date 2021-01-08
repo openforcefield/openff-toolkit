@@ -7,6 +7,10 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 * ``minor`` increments add features but do not break API compatibility
 * ``micro`` increments represent bugfix releases or improvements in documentation
 
+0.9.0 - Current development
+---------------------------
+
+
 0.8.3 - Major bugfix release
 ----------------------------
 
