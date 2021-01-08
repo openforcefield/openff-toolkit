@@ -16,7 +16,7 @@ From version ``0.9.0`` onwards the toolkit will be importable only as ``import o
 ``from openff.toolkit import XXX``.
 
 **Note** This change will also be accompanied by a renaming of the package from ``openforcefield`` to ``openff-toolkit``,
-and so users need not worry about accidentally pulling in a version with changed imports. Users will have to explicitly
+so users need not worry about accidentally pulling in a version with changed imports. Users will have to explicitly
 choose to install the ``openff-toolkit`` package once released which will contain the breaking import changes.
 
 New features
