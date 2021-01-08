@@ -3513,13 +3513,13 @@ class vdWHandler(_NonbondedHandler):
             if name == "rmin_half":
                 if type(value) == str:
                     value = object_to_quantity(value)
-                super().__setattr__("sigma", value / 2 ** (1 / 6))
+                super().__setattr__("sigma", 2.0 * value / 2 ** (1 / 6))
                 self._extra_nb_var = "sigma"
 
             if name == "sigma":
                 if type(value) == str:
                     value = object_to_quantity(value)
-                super().__setattr__("rmin_half", value * 2 ** (1 / 6))
+                super().__setattr__("rmin_half", value * 2 ** (1 / 6) / 2.0)
                 self._extra_nb_var = "rmin_half"
 
         def to_dict(

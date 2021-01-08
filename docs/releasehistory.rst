@@ -15,6 +15,10 @@ New features
 - `PR #794 <https://github.com/openforcefield/openforcefield/pull/974>`_: Adds a decorator
   ``@requires_package`` that denotes a function requires an optional dependency.
 
+Bugfixes
+""""""""
+- `PR #808 <https://github.com/openforcefield/openforcefield/pull/808>`_: Fixes the interconversion
+  between a vdW ``sigma`` and ``rmin_half`` parameter.
 
 0.8.2 - Bugfix release
 ----------------------
