@@ -10,10 +10,21 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 0.8.3 - Current development
 ---------------------------
 
+This release is a final patch for the ``0.8.X`` series of releases of the toolkit, and also marks the last
+version of the toolkit which will be imported as ``import openforcefield.XXX`` / ``from openforcefield import XXX``.
+From version ``0.9.0`` onwards the toolkit will be importable only as ``import openff.toolkit.XXX`` /
+``from openff.toolkit import XXX``.
+
+**Note** This change will also be accompanied by a renaming of the package from ``openforcefield`` to ``openff-toolkit``,
+so users need not worry about accidentally pulling in a version with changed imports. Users will have to explicitly
+choose to install the ``openff-toolkit`` package once released which will contain the breaking import changes.
+
 New features
 """"""""""""
-- `PR #794 <https://github.com/openforcefield/openforcefield/pull/974>`_: Adds a decorator
+- `PR #794 <https://github.com/openforcefield/openforcefield/pull/794>`_: Adds a decorator
   ``@requires_package`` that denotes a function requires an optional dependency.
+- `PR #805 <https://github.com/openforcefield/openforcefield/pull/805>`_: Adds a deprecation warning for the up-coming
+  release of the ``openff-toolkit`` package and its import breaking changes.
 
 Bugfixes
 """"""""
