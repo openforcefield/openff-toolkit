@@ -24,7 +24,7 @@ New features
 - `PR #794 <https://github.com/openforcefield/openforcefield/pull/794>`_: Adds a decorator
   ``@requires_package`` that denotes a function requires an optional dependency.
 - `PR #805 <https://github.com/openforcefield/openforcefield/pull/805>`_: Adds a deprecation warning for the up-coming
-  release of the ``openff-toolkit`` package and it's import breaking changes.
+  release of the ``openff-toolkit`` package and its import breaking changes.
 
 0.8.2 - Bugfix release
 ----------------------
