@@ -6,6 +6,8 @@ channels:
 dependencies:
     # Base depends
   - openff-toolkit
-  - openmmforcefields
+
+    # Removed until a new release which targets openff-toolkit is made.
+#  - openmmforcefields
   - pytest
   - nbval

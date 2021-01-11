@@ -12,4 +12,5 @@ dependencies:
   - nglview
   - qcportal
   - qcengine
-  - openmmforcefields
+    # Removed until a new release which targets openff-toolkit is made.
+#  - openmmforcefields

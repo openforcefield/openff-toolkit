@@ -20,7 +20,8 @@ dependencies:
   - ambertools
   - openeye-toolkits
   - packaging
-  - openmmforcefields >=0.7.2
+    # Removed until a new release which targets openff-toolkit is made.
+#  - openmmforcefields
   - openforcefields
   - smirnoff99Frosst
   - pyyaml
