@@ -31,3 +31,4 @@ dependencies:
   - qcelemental
   - qcportal
   - qcengine
+  - mdtraj
