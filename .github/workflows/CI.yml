@@ -159,13 +159,13 @@ jobs:
         shell: bash -l {0}
         run: |
           NB_ARGS+=" --ignore=examples/using_smirnoff_in_amber_or_gromacs"
+          # XFail until a new `openmmforcefields` build is made which depends on `openff-toolkit`.
+          NB_ARGS+=" --ignore=examples/swap_amber_parameters"
           if [[ "$RDKIT" == false ]]; then
             NB_ARGS+=" --ignore=examples/check_dataset_parameter_coverage"
             NB_ARGS+=" --ignore=examples/conformer_energies"
             NB_ARGS+=" --ignore=examples/QCArchive_interface"
             NB_ARGS+=" --ignore=examples/visualization"
-            # XFail until a new `openmmforcefields` build is made which depends on `openff-toolkit`.
-            NB_ARGS+=" --ignore=examples/swap_amber_parameters"
           fi
           pytest $NB_ARGS examples/
 
