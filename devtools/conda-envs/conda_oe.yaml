@@ -9,6 +9,7 @@ dependencies:
   - openff-toolkit
     # Removed until a new release which targets openff-toolkit is made.
 #  - openmmforcefields
+  - openmm
   - openeye-toolkits
   - pytest
   - nbval
