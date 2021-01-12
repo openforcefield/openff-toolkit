@@ -2514,6 +2514,7 @@ class TestAmberToolsToolkitWrapper:
         # This test case needs a pretty extreme coordinate change since ambertools only
         # stores partial charges to 1e-3
         molecule._conformers[0][0][0] += 3.0 * unit.angstrom
+        molecule._conformers[0][1][1] += 3.0 * unit.angstrom
         molecule.assign_partial_charges(
             toolkit_registry=toolkit_registry,
             partial_charge_method=partial_charge_method,
