@@ -106,7 +106,7 @@ jobs:
       - name: Install package
         shell: bash -l {0}
         run: |
-          python -m pip install --no-deps -v .
+          python setup.py develop --no-deps
 
       - name: Check installed toolkits
         shell: bash -l {0}
