@@ -13,6 +13,8 @@ The toolkit currently covers two main areas we have committed to stably maintain
 * Tools for using the [SMIRKS Native Open Force Field (SMIRNOFF) specification](https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html)
 * Tools for [direct chemical environment perception](https://dx.doi.org/10.1021/acs.jctc.8b00640) and manipulation
 
+**Note**: Prior to version 0.9.0, this toolkit and its associated repository were named `openforcefield` and used different import paths. For details on this change and migration instructions, see the [release notes](https://open-forcefield-toolkit.readthedocs.io/en/latest/releasehistory.html) of version 0.9.0.
+
 ## Documentation
 
 [Documentation](https://open-forcefield-toolkit.readthedocs.io/en/latest/) for the `openforcefield` toolkit is hosted at [readthedocs](https://open-forcefield-toolkit.readthedocs.io/en/latest). Example notebooks are hosted on [binder](https://mybinder.org/v2/gh/openforcefield/openff-toolkit/master?filepath=%2Fexamples%2F)
