@@ -12,4 +12,4 @@ The `<Bonds>` section contains
    <Bond smirks="[#6X3:1]-[#1:2]" k="734.0" length="1.080"/> <!-- Christopher Bayly from parm99, Aug 2016 -->
 </Bonds>
 ```
-The jupyter notebook [test_partialbondorder.ipynb](https://github.com/openforcefield/openforcefield/blob/master/examples/partial_bondorder/test_partialbondorder.ipynb) illustrates the application of these parameters to benzene, and inspection of the resulting bonded parameters.
+The jupyter notebook [test_partialbondorder.ipynb](https://github.com/openforcefield/openff-toolkit/blob/master/examples/partial_bondorder/test_partialbondorder.ipynb) illustrates the application of these parameters to benzene, and inspection of the resulting bonded parameters.
