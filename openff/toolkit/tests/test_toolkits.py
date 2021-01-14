@@ -2491,6 +2491,7 @@ class TestAmberToolsToolkitWrapper:
             charge_sum += pc
         assert -1.0e-5 < charge_sum.value_in_unit(unit.elementary_charge) < 1.0e-5
 
+    @pytest.mark.xfail(strict=False)
     @pytest.mark.parametrize("partial_charge_method", ["am1bcc", "am1-mulliken"])
     def test_assign_partial_charges_conformer_dependence(self, partial_charge_method):
         """Test AmberToolsToolkitWrapper assign_partial_charges()'s use_conformers kwarg
