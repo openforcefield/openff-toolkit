@@ -10,6 +10,17 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 0.9.0 - Current development
 ---------------------------
 
+This release marks the transition from the old ``openforcefield`` branding over to its new
+identity as ``openff-toolkit``. This change has been made to better represent the role of the
+toolkit, and highlight it's place in the larger Open Force Field (OpenFF) ecosystem.
+
+From version ``0.9.0`` onwards the toolkit will need to be imported as ``import openff.toolkit.XXX`` and
+``from openff.toolkit import XXX``.
+
+API-breaking changes
+""""""""""""""""""""
+- `PR #803 <https://github.com/openforcefield/openforcefield/pull/803>`_: Migrates ``openforcefield``
+  imports to ``openff.toolkit``.
 
 0.8.3 - Major bugfix release
 ----------------------------
