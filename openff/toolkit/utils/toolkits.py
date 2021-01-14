@@ -4419,7 +4419,7 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
     _toolkit_name = "AmberTools"
     _toolkit_installation_instructions = (
         "The AmberTools toolkit (free and open source) can be found at "
-        "https://anaconda.org/omnia/ambertools"
+        "https://anaconda.org/conda-forge/ambertools"
     )
 
     def __init__(self):

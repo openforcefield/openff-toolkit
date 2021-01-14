@@ -1,7 +1,6 @@
 name: test
 channels:
   - conda-forge
-  - omnia
 
 dependencies:
     # Base depends
@@ -22,7 +21,7 @@ dependencies:
     # Removed until a new release which targets openff-toolkit is made.
 #  - openmmforcefields
   - openmm
-  - openforcefields
+  - openff-forcefields
   - smirnoff99Frosst
   - pyyaml
   - toml

@@ -2,11 +2,10 @@
 name: binder-env
 channels:
   - conda-forge
-  - omnia
   - defaults
 dependencies:
   # Let conda pull in the toolkit and its deps
-  - openforcefield
+  - openff-toolkit
 
   # Optional(-ish) dependencies used in example(s)
   - nglview
