@@ -12,7 +12,7 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 
 This release marks the transition from the old ``openforcefield`` branding over to its new
 identity as ``openff-toolkit``. This change has been made to better represent the role of the
-toolkit, and highlight it's place in the larger Open Force Field (OpenFF) ecosystem.
+toolkit, and highlight its place in the larger Open Force Field (OpenFF) ecosystem.
 
 From version ``0.9.0`` onwards the toolkit will need to be imported as ``import openff.toolkit.XXX`` and
 ``from openff.toolkit import XXX``.
