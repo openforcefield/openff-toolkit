@@ -10,12 +10,12 @@ Illustrate how to combine a SMIRNOFF parameterized small molecule with an AMBER 
 #
 
 # Load the small molecule
-from openforcefield.utils import get_data_file_path
+from openff.toolkit.utils import get_data_file_path
 ligand_filename = get_data_file_path('molecules/toluene.mol2')
 molecule = Molecule.from_file(ligand_filename)
 
 # Load the smirnoff99Frosst force field
-from openforcefield.typing.engines import smirnoff
+from openff.toolkit.typing.engines import smirnoff
 forcefield = smirnoff.ForceField('test_forcefields/test_forcefield.offxml')
 
 # Create a ParmEd structure for the molecule

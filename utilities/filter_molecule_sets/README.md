@@ -4,7 +4,7 @@ There are a number of molecule sets that have been used in the open-forcefield e
 In an effort to test the SMIRNOFFparm99Frosst it became increasingly evident that some of these molecules sets include molecules outside what we want to currently test our tools. 
 Molecule sets and relevant scripts are listed below. 
 For our purposes DrugBank refers to [DrugBank Release Version 5.0.1](http://www.drugbank.ca/releases/latest).
-The molecules in this set where then typed with parm@frosst atom types by Christopher I. Bayly and stored as `openforcefield/data/molecules/DrugBank_atyped.oeb`
+The molecules in this set where then typed with parm@frosst atom types by Christopher I. Bayly and stored as `openff/toolkit/data/molecules/DrugBank_atyped.oeb`
 
 **Molecule Sets**
 * `DrugBank_updated_tripos.mol2.gz` - created by calling 
@@ -24,7 +24,7 @@ python filter_molecule_sets.py --input DrugBank_atyped.oeb \
 
 **Python Scripts**
 * `filter_molecule_sets.py` - This script was developed to filter unwanted molecules out of a larger set and was created to be as general as possible. See details below. 
-* `coordinates_for_DrugBank.py` - This script specifically starts with `openforcefield/data/molecules/DrugBank_atyped.oeb` and generates 3D coordinates for as many molecules as possible. It generates `DrugBank_ff.mol2` and `DrugBank_tripos.mol2` that are available in the `data/molecules/` directory. Note that a time limit for conformer generation was created to prevent memory crashes on the UC Irvine cluster, 289 of 7133 initial molecules ran out of the designated time, oeomega failed to generate 3D coordinates for another 916 molecules.  
+* `coordinates_for_DrugBank.py` - This script specifically starts with `openff/toolkit/data/molecules/DrugBank_atyped.oeb` and generates 3D coordinates for as many molecules as possible. It generates `DrugBank_ff.mol2` and `DrugBank_tripos.mol2` that are available in the `data/molecules/` directory. Note that a time limit for conformer generation was created to prevent memory crashes on the UC Irvine cluster, 289 of 7133 initial molecules ran out of the designated time, oeomega failed to generate 3D coordinates for another 916 molecules.  
 * `oeb-to-FF-and-tripos-mol2.py` - utility to convert oeb file with parm@Frosst atomtypes to two `*.mol2` files with tripos and parm@frosst atomtypes
 
 **Input Files**

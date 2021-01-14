@@ -8,7 +8,7 @@ Chemical environments
 
 Tools for representing and operating on chemical environments
 
-.. currentmodule:: openforcefield.typing.chemistry
+.. currentmodule:: openff.toolkit.typing.chemistry
 .. autosummary::
     :nosignatures:
     :toctree: api/generated/
@@ -34,7 +34,7 @@ The ``ForceField`` class is a primary part of the top-level toolkit API.
 For a basic example of system creation using a ``ForceField``, see ``examples/SMIRNOFF_simulation``.
 
 
-.. currentmodule:: openforcefield.typing.engines.smirnoff.forcefield
+.. currentmodule:: openff.toolkit.typing.engines.smirnoff.forcefield
 .. autosummary::
     :nosignatures:
     :toctree: api/generated/
@@ -49,7 +49,7 @@ Parameter Type
 These are usually initialized during ``ForceField`` creation, and can be inspected and modified by users via the Python API.
 For more information, see ``examples/forcefield_modification``.
 
-.. currentmodule:: openforcefield.typing.engines.smirnoff.parameters
+.. currentmodule:: openff.toolkit.typing.engines.smirnoff.parameters
 .. autosummary::
     :nosignatures:
     :toctree: api/generated/
@@ -69,7 +69,7 @@ Parameter Handlers
 Each ``ForceField`` primarily consists of several ``ParameterHandler`` objects, which each contain the machinery to add one energy component to a system.
 During system creation, each ``ParameterHandler`` registered to a ``ForceField`` has its ``assign_parameters()`` function called..
 
-.. currentmodule:: openforcefield.typing.engines.smirnoff.parameters
+.. currentmodule:: openff.toolkit.typing.engines.smirnoff.parameters
 .. autosummary::
     :nosignatures:
     :toctree: api/generated/
@@ -91,7 +91,7 @@ Parameter I/O Handlers
 
 ``ParameterIOHandler`` objects handle reading and writing of serialzied SMIRNOFF data sources.
 
-.. currentmodule:: openforcefield.typing.engines.smirnoff.io
+.. currentmodule:: openff.toolkit.typing.engines.smirnoff.io
 .. autosummary::
     :nosignatures:
     :toctree: api/generated/
@@ -106,7 +106,7 @@ Parameter Attributes
 
 ``ParameterAttribute`` and ``IndexedParameterAttribute`` provide a standard backend for ParameterHandler and Parameter attributes, while also enforcing validation of types and units.
 
-.. currentmodule:: openforcefield.typing.engines.smirnoff.parameters
+.. currentmodule:: openff.toolkit.typing.engines.smirnoff.parameters
 .. autosummary::
     :nosignatures:
     :toctree: api/generated/
