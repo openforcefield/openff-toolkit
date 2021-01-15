@@ -1096,9 +1096,10 @@ class ForceField:
             # TODO: What is desired toolkit behavior if two files with the desired name are available?
             dir_paths = [pathlib.Path(path) for path in searched_dirs_paths]
             for dir_path in dir_paths:
-                for raw_file in dir_path.glob("*"):
-                    if raw_file.name.lower() == source.lower():
-                        source = str(raw_file.absolute())
+                for file_path in dir_path.glob("**/*.offxml"):
+                    # Cannot compare filenames alone, source can be test_forcefield/...
+                    if str(file_path).lower().endswith(source.lower()):
+                        source = str(file_path.absolute())
                         break
 
         # Process all SMIRNOFF definition files or objects
