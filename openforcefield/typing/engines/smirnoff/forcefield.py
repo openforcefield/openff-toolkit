@@ -32,7 +32,6 @@ __all__ = [
 # =============================================================================================
 
 import copy
-import glob
 import logging
 import os
 import pathlib
@@ -1095,10 +1094,11 @@ class ForceField:
 
             # Determine the actual path of the file.
             # TODO: What is desired toolkit behavior if two files with the desired name are available?
-            for dir_path in searched_dirs_paths:
-                for raw_file in glob.glob(os.path.join(dir_path, "*")):
-                    if os.path.split(raw_file)[1].lower() == source.lower():
-                        source = os.path.join(dir_path, source)
+            dir_paths = [pathlib.Path(path) for path in searched_dirs_paths]
+            for dir_path in dir_paths:
+                for raw_file in dir_path.glob("*"):
+                    if raw_file.name.lower() == source.lower():
+                        source = str(raw_file.absolute())
                         break
 
         # Process all SMIRNOFF definition files or objects
