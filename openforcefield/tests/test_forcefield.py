@@ -796,6 +796,13 @@ class TestForceField:
         for ff in expected_force_fields:
             assert ff in available_force_fields
 
+    def test_force_field_case(self):
+        """Ensure forcefield paths are loaded in a case-insensitive manner"""
+        default_case = ForceField('smirnoff99Frosst-1.1.0.offxml')
+        lower_case = ForceField('smirnoff99frosst-1.1.0.offxml')
+
+        assert hash(default_case) == hash(lower_case)
+
     @pytest.mark.parametrize("full_path", [(True, False)])
     @pytest.mark.parametrize("force_field_file", [*get_available_force_fields()])
     def test_get_available_force_fields_loadable(self, full_path, force_field_file):
