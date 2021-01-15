@@ -32,6 +32,7 @@ __all__ = [
 # =============================================================================================
 
 import copy
+import glob
 import logging
 import os
 import pathlib
@@ -1095,10 +1096,10 @@ class ForceField:
             # Determine the actual path of the file.
             # TODO: What is desired toolkit behavior if two files with the desired name are available?
             for dir_path in searched_dirs_paths:
-                file_path = os.path.join(dir_path, source)
-                if os.path.isfile(file_path):
-                    source = file_path
-                    break
+                for raw_file in glob.glob(os.path.join(dir_path, "*")):
+                    if os.path.split(raw_file)[1].lower() == source.lower():
+                        source = os.path.join(dir_path, source)
+                        break
 
         # Process all SMIRNOFF definition files or objects
         # QUESTION: Allow users to specify forcefield URLs so they can pull forcefield definitions from the web too?

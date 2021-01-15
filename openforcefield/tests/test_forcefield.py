@@ -798,8 +798,8 @@ class TestForceField:
 
     def test_force_field_case(self):
         """Ensure forcefield paths are loaded in a case-insensitive manner"""
-        default_case = ForceField('smirnoff99Frosst-1.1.0.offxml')
-        lower_case = ForceField('smirnoff99frosst-1.1.0.offxml')
+        default_case = ForceField("smirnoff99Frosst-1.1.0.offxml")
+        lower_case = ForceField("smirnoff99frosst-1.1.0.offxml")
 
         assert hash(default_case) == hash(lower_case)
 
