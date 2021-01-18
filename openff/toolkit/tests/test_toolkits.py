@@ -2379,13 +2379,13 @@ class TestRDKitToolkitWrapper:
 
     @pytest.mark.parametrize(
         "expected_conformer_map, rms_tolerance",
-        [({0: 0, 1: 2}, 0.001), ({0: 0}, 100.0)],
+        [({0: 0, 1: 2}, 0.001 * unit.angstrom), ({0: 0}, 100.0 * unit.angstrom)],
     )
     def test_elf_select_diverse_conformers(
         self,
         formic_acid_molecule: Molecule,
         expected_conformer_map: Dict[int, int],
-        rms_tolerance: float,
+        rms_tolerance: unit.Quantity,
     ):
         """Test the greedy selection of 'diverse' ELF conformers."""
 
