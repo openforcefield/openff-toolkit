@@ -3627,7 +3627,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         molecule: "Molecule",
         ranked_conformers: List[unit.Quantity],
         limit: int,
-        rms_tolerance: float,
+        rms_tolerance: unit.Quantity,
     ) -> List[unit.Quantity]:
         """Attempt to greedily select a specified number conformers which are maximally
         diverse.
@@ -3690,7 +3690,11 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             # Exclude already selected conformers or conformers which are too similar
             # to those already selected.
             closed_mask[
-                np.any(rms_matrix[closed_list[: i + 1], :] < rms_tolerance, axis=0)
+                np.any(
+                    rms_matrix[closed_list[: i + 1], :]
+                    < rms_tolerance.value_in_unit(unit.angstrom),
+                    axis=0,
+                )
             ] = True
 
             if np.all(closed_mask):
@@ -3709,7 +3713,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         molecule: "Molecule",
         percentage: float = 2.0,
         limit: int = 10,
-        rms_tolerance: float = 0.05,
+        rms_tolerance: unit.Quantity = 0.05 * unit.angstrom,
     ):
         """Applies the `ELF method<https://docs.eyesopen.com/toolkits/python/quacpactk/
         molchargetheory.html#elf-conformer-selection>`_ to select a set of diverse
@@ -3728,7 +3732,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         Notes
         -----
-        * The input molecule should already have a large set of conformers already
+        * The input molecule should have a large set of conformers already
           generated to select the ELF10 conformers from.
         * The selected conformers will be retained in the `molecule.conformers` list
           while unselected conformers will be discarded.
