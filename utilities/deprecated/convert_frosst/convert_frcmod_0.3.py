@@ -1,7 +1,7 @@
 #!/bin/env python
 
 import numpy as np
-from openforcefield.typing.engines.smirnoff.forcefield import ForceField
+from openff.toolkit.typing.engines.smirnoff.forcefield import ForceField
 
 # Function definitions for parsing sections within parameter file
 def _parse_nonbon_line( line ):
@@ -201,7 +201,7 @@ def convert_frcmod_to_ffxml( infile, inxml, outxml ):
     -------
     Input XML file will normally be the template of a SMIRNOFF XML file without any parameters present (but with requisite force types already specified).
     """
-    from openforcefield.typing.engines.smirnoff import XMLParameterIOHandler
+    from openff.toolkit.typing.engines.smirnoff import XMLParameterIOHandler
 
 
 

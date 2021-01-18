@@ -7,8 +7,56 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 * ``minor`` increments add features but do not break API compatibility
 * ``micro`` increments represent bugfix releases or improvements in documentation
 
+0.9.0 - Namespace Migration
+---------------------------
+
+This release marks the transition from the old ``openforcefield`` branding over to its new
+identity as ``openff-toolkit``. This change has been made to better represent the role of the
+toolkit, and highlight its place in the larger Open Force Field (OpenFF) ecosystem.
+
+From version ``0.9.0`` onwards the toolkit will need to be imported as ``import openff.toolkit.XXX`` and
+``from openff.toolkit import XXX``.
+
+API-breaking changes
+""""""""""""""""""""
+- `PR #803 <https://github.com/openforcefield/openforcefield/pull/803>`_: Migrates ``openforcefield``
+  imports to ``openff.toolkit``.
+
+0.8.3 - Major bugfix release
+----------------------------
+
+This release fixes a critical bug in van der Waals parameter assignment.
+
+This release is also a final patch for the ``0.8.X`` series of releases of the toolkit, and also marks the last
+version of the toolkit which will be imported as ``import openforcefield.XXX`` / ``from openforcefield import XXX``.
+From version ``0.9.0`` onwards the toolkit will be importable only as ``import openff.toolkit.XXX`` /
+``from openff.toolkit import XXX``.
+
+**Note** This change will also be accompanied by a renaming of the package from ``openforcefield`` to ``openff-toolkit``,
+so users need not worry about accidentally pulling in a version with changed imports. Users will have to explicitly
+choose to install the ``openff-toolkit`` package once released which will contain the breaking import changes.
+
+Bugfixes
+""""""""
+- `PR #808 <https://github.com/openforcefield/openforcefield/pull/808>`_: Fixes
+  `Issue #807 <https://github.com/openforcefield/openforcefield/issues/807>`_,
+  which tracks a major bug in the interconversion between a vdW ``sigma``
+  and ``rmin_half`` parameter.
+
+
+New features
+""""""""""""
+- `PR #794 <https://github.com/openforcefield/openforcefield/pull/794>`_: Adds a decorator
+  ``@requires_package`` that denotes a function requires an optional dependency.
+- `PR #805 <https://github.com/openforcefield/openforcefield/pull/805>`_: Adds a deprecation warning for the up-coming
+  release of the ``openff-toolkit`` package and its import breaking changes.
+
 0.8.2 - Bugfix release
 ----------------------
+
+**WARNING: This release was later found to contain a major bug,**
+`Issue #807 <https://github.com/openforcefield/openforcefield/issues/807>`_,
+**and produces incorrect energies.**
 
 Bugfixes
 """"""""
@@ -30,6 +78,10 @@ Bugfixes
 
 0.8.1 - Bugfix and minor feature release
 ----------------------------------------
+
+**WARNING: This release was later found to contain a major bug,**
+`Issue #807 <https://github.com/openforcefield/openforcefield/issues/807>`_,
+**and produces incorrect energies.**
 
 API-breaking changes
 """"""""""""""""""""

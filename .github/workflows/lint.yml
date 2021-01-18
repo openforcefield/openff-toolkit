@@ -12,7 +12,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - uses: actions/setup-python@v2.1.4
+      - uses: actions/setup-python@v2.2.1
         with:
           python-version: '3.7'
 
@@ -22,8 +22,8 @@ jobs:
 
       - name: Run black
         run: |
-          black --check openforcefield
+          black --check openff
 
       - name: Run isort
         run: |
-          isort --check openforcefield
+          isort --check openff

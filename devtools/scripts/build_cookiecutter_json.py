@@ -12,8 +12,8 @@ platform_mapping = {
 }
 
 data = {
-    "name": "openforcefield",
-    "channel": "omnia",
+    "name": "openff-toolkit",
+    "channel": "conda-forge",
     "python": [python_version],
     "platform": [platform_mapping[ci_os]],
     "release": release_tag,

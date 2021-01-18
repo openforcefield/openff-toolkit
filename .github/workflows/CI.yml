@@ -17,7 +17,7 @@ on:
 
 jobs:
   test:
-    if: (github.event_name == 'schedule' && github.repository == 'openforcefield/openforcefield') || (github.event_name != 'schedule')
+    if: (github.event_name == 'schedule' && github.repository == 'openforcefield/openff-toolkit') || (github.event_name != 'schedule')
     name: Test on ${{ matrix.cfg.os }}, Python ${{ matrix.python-version }}, RDKit=${{ matrix.cfg.rdkit }}, OpenEye=${{ matrix.cfg.openeye }}
     runs-on: ${{ matrix.cfg.os }}
     strategy:
@@ -26,8 +26,8 @@ jobs:
         python-version:
           - 3.6
           - 3.7
-          # Uncomment when ready ;)
-          # - 3.8
+          - 3.8
+          - 3.9
         cfg:
           - os: ubuntu-latest
             rdkit: "true"
@@ -51,8 +51,8 @@ jobs:
       OPENEYE: ${{ matrix.cfg.openeye }}
       PYVER: ${{ matrix.python-version }}
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
-      PACKAGE: openforcefield
-      PYTEST_ARGS: -r fE --tb=short --cov=openforcefield --cov-config=setup.cfg --cov-append --cov-report=xml
+      PACKAGE: openff
+      PYTEST_ARGS: -r fE --tb=short --cov=openff --cov-config=setup.cfg --cov-append --cov-report=xml
       NB_ARGS: -v --nbval-lax --ignore=examples/deprecated
 
     steps:
@@ -106,41 +106,41 @@ jobs:
       - name: Install package
         shell: bash -l {0}
         run: |
-          python -m pip install --no-deps -v .
+          python setup.py develop --no-deps
 
       - name: Check installed toolkits
         shell: bash -l {0}
         run: |
           if [[ "$OPENEYE" == true ]]; then
-            python -c "from openforcefield.utils.toolkits import OPENEYE_AVAILABLE; assert OPENEYE_AVAILABLE, 'OpenEye unavailable'"
+            python -c "from openff.toolkit.utils.toolkits import OPENEYE_AVAILABLE; assert OPENEYE_AVAILABLE, 'OpenEye unavailable'"
           fi
           if [[ "$OPENEYE" == false ]]; then
             if [[ $(conda list | grep openeye-toolkits) ]]; then
               conda remove --force openeye-toolkits --yes
             fi
-            python -c "from openforcefield.utils.toolkits import OPENEYE_AVAILABLE; assert not OPENEYE_AVAILABLE, 'OpenEye unexpectedly found'"
+            python -c "from openff.toolkit.utils.toolkits import OPENEYE_AVAILABLE; assert not OPENEYE_AVAILABLE, 'OpenEye unexpectedly found'"
           fi
           if [[ "$RDKIT" == true ]]; then
-            python -c "from openforcefield.utils.toolkits import RDKIT_AVAILABLE; assert RDKIT_AVAILABLE, 'RDKit unavailable'"
+            python -c "from openff.toolkit.utils.toolkits import RDKIT_AVAILABLE; assert RDKIT_AVAILABLE, 'RDKit unavailable'"
           fi
           if [[ "$RDKIT" == false ]]; then
             if [[ $(conda list | grep rdkit) ]]; then
               conda remove --force rdkit --yes
             fi
-            python -c "from openforcefield.utils.toolkits import RDKIT_AVAILABLE; assert not RDKIT_AVAILABLE, 'RDKit unexpectedly found'"
+            python -c "from openff.toolkit.utils.toolkits import RDKIT_AVAILABLE; assert not RDKIT_AVAILABLE, 'RDKit unexpectedly found'"
           fi
 
       - name: Check links
         shell: bash -l {0}
         if: ${{ matrix.cfg.rdkit == 'true' && matrix.cfg.openeye == 'TRUE' }}
         run: |
-          pytest -r fE --tb=short openforcefield/tests/test_links.py
+          pytest -r fE --tb=short openff/toolkit/tests/test_links.py
 
       - name: Run unit tests
         shell: bash -l {0}
         run: |
-          PYTEST_ARGS+=" --ignore=openforcefield/tests/test_examples.py"
-          PYTEST_ARGS+=" --ignore=openforcefield/tests/test_links.py"
+          PYTEST_ARGS+=" --ignore=openff/toolkit/tests/test_examples.py"
+          PYTEST_ARGS+=" --ignore=openff/toolkit/tests/test_links.py"
           if [[ "$RDKIT" == true && "$OPENEYE" == true ]]; then
             PYTEST_ARGS+="--doctest-modules"
           fi
@@ -153,12 +153,14 @@ jobs:
             PYTEST_ARGS+=" --ignore=examples/check_dataset_parameter_coverage"
             PYTEST_ARGS+=" --ignore=examples/QCArchive_interface"
           fi
-          pytest $PYTEST_ARGS openforcefield/tests/test_examples.py
+          pytest $PYTEST_ARGS openff/toolkit/tests/test_examples.py
 
       - name: Run example notebooks
         shell: bash -l {0}
         run: |
           NB_ARGS+=" --ignore=examples/using_smirnoff_in_amber_or_gromacs"
+          # XFail until a new `openmmforcefields` build is made which depends on `openff-toolkit`.
+          NB_ARGS+=" --ignore=examples/swap_amber_parameters"
           if [[ "$RDKIT" == false ]]; then
             NB_ARGS+=" --ignore=examples/check_dataset_parameter_coverage"
             NB_ARGS+=" --ignore=examples/conformer_energies"
