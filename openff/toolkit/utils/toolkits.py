@@ -3451,7 +3451,11 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         Currently this includes conformers which:
 
-        * contain a trans-COOH configuration. These conformers ... TODO add reason.
+        * contain a trans-COOH configuration. The trans conformer is discarded because
+          it leads to strong electrostatic interactions when assigning charges, and these
+          result in unreasonable charges. Downstream calculations have observed up to a
+          4 log unit error in water-octanol logP calculations when using charges assigned
+          from trans conformers.
 
         Returns
         -------
