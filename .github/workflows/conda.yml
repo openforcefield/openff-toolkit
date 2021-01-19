@@ -110,7 +110,7 @@ jobs:
             exit 1
           fi
 
-          cd openff/toolkit
+          cd openff-toolkit
 
       - name: Test the package
         shell: bash -l {0}
