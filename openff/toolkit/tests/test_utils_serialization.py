@@ -15,6 +15,7 @@ Tests for utility methods for serialization
 
 import pytest
 
+from openff.toolkit.tests.utils import requires_pkg
 from openff.toolkit.utils.serialization import Serializable
 
 # =============================================================================================
@@ -66,12 +67,14 @@ class TestUtilsSerialization:
         thing_from_json = self.thing.__class__.from_json(json_thing)
         assert self.thing == thing_from_json
 
+    @requires_pkg("yaml")
     def test_yaml(self):
         """Test YAML serialization"""
         yaml_thing = self.thing.to_yaml()
         thing_from_yaml = self.thing.__class__.from_yaml(yaml_thing)
         assert self.thing == thing_from_yaml
 
+    @requires_pkg("bson")
     def test_bson(self):
         """Test BSON serialization"""
         bson_thing = self.thing.to_bson()
@@ -85,12 +88,14 @@ class TestUtilsSerialization:
             "TestUtilsSMIRNOFFSerialization suite)."
         )
     )
+    @requires_pkg("toml")
     def test_toml(self):
         """Test TOML serialization"""
         toml_thing = self.thing.to_toml()
         thing_from_toml = self.thing.__class__.from_toml(toml_thing)
         assert self.thing == thing_from_toml
 
+    @requires_pkg("msgpack")
     def test_messagepack(self):
         """Test MessagePack serialization"""
         messagepack_thing = self.thing.to_messagepack()
