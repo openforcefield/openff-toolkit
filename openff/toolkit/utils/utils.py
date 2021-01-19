@@ -109,6 +109,7 @@ def requires_package(package_name):
     MissingDependencyError
 
     """
+
     def inner_decorator(function):
         @functools.wraps(function)
         def wrapper(*args, **kwargs):
