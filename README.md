@@ -17,11 +17,11 @@ The toolkit currently covers two main areas we have committed to stably maintain
 
 ## Documentation
 
-[Documentation](https://open-forcefield-toolkit.readthedocs.io/en/latest/) for the `openforcefield` toolkit is hosted at [readthedocs](https://open-forcefield-toolkit.readthedocs.io/en/latest). Example notebooks are hosted on [binder](https://mybinder.org/v2/gh/openforcefield/openff-toolkit/master?filepath=%2Fexamples%2F)
+[Documentation](https://open-forcefield-toolkit.readthedocs.io/en/latest/) for the Open Force Field Toolkit is hosted at [readthedocs](https://open-forcefield-toolkit.readthedocs.io/en/latest). Example notebooks are hosted on [binder](https://mybinder.org/v2/gh/openforcefield/openff-toolkit/master?filepath=%2Fexamples%2F)
 
 ## Installation
 
-`openforcefield` is a Python toolkit, and supports Python 3.6 and 3.7.
+The Open Force Field Toolkit (`openff-toolkit`) is a Python toolkit, and supports Python 3.6 and 3.7.
 
 ### Installing via conda
 
