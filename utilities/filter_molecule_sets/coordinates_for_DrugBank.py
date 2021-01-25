@@ -1,4 +1,4 @@
-from openforcefield.utils import utils
+from openff.toolkit.utils import utils
 from openeye import oechem
 from openeye import oeomega
 import multiprocessing

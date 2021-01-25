@@ -1,8 +1,8 @@
-# Built-in visualizations in `openforcefield`
+# Built-in visualizations in `openff-toolkit`
 
-[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/openforcefield/openforcefield/d129d0c1f3399aa3e2611443210fce526bc62dd6)
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/openforcefield/openff-toolkit/d129d0c1f3399aa3e2611443210fce526bc62dd6)
 
-PR [#560](https://github.com/openforcefield/openforcefield/pull/560) introduced rich representation for the `openforcefield.topology.Molecule` objects. This means you can visualize them in your Jupyter Notebooks:
+PR [#560](https://github.com/openforcefield/openff-toolkit/pull/560) introduced rich representation for the `openff.toolkit.topology.Molecule` objects. This means you can visualize them in your Jupyter Notebooks:
 
 We have implemented three backends:
 - `rdkit`
@@ -15,7 +15,7 @@ There are two ways to invoke the visualization:
 
 This notebook demonstrates all the possible uses.
 
-**Note**: The content in this notebook demonstrates usage of `nglview` with `openforcefield`.
+**Note**: The content in this notebook demonstrates usage of `nglview` with `openff-toolkit`.
 This can be tricky to get working.
 Install with:
 
