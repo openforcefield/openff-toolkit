@@ -2743,12 +2743,12 @@ class TestMolecule:
         # Check total charge
         charges_sum_unitless = initial_charges.sum() / unit.elementary_charge
         total_charge_unitless = molecule.total_charge / unit.elementary_charge
-        if abs(charges_sum_unitless - total_charge_unitless) > 0.0001:
-            print(
-                "molecule {}    charge_sum {}     molecule.total_charge {}".format(
-                    molecule.name, charges_sum_unitless, total_charge_unitless
-                )
-            )
+        # if abs(charges_sum_unitless - total_charge_unitless) > 0.0001:
+        # print(
+        #     "molecule {}    charge_sum {}     molecule.total_charge {}".format(
+        #         molecule.name, charges_sum_unitless, total_charge_unitless
+        #     )
+        # )
         np.allclose(charges_sum_unitless, total_charge_unitless, atol=0.002)
 
         # Call should be faster second time due to caching
