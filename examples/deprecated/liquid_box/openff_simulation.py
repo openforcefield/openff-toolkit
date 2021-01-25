@@ -10,10 +10,10 @@ from simtk.openmm.app import *
 from mdtraj.reporters import NetCDFReporter
 
 # Import the SMIRNOFF forcefield engine and some useful tools
-from openforcefield.typing.engines.smirnoff import ForceField
+from openff.toolkit.typing.engines.smirnoff import ForceField
 # LPW: openforcefield's PME is different from openmm's PME
-from openforcefield.typing.engines.smirnoff.forcefield import PME
-from openforcefield.utils import get_data_file_path
+from openff.toolkit.typing.engines.smirnoff.forcefield import PME
+from openff.toolkit.utils import get_data_file_path
 
 # Import the OpenEye toolkit
 from openeye import oechem

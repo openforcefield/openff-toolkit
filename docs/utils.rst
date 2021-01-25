@@ -12,7 +12,7 @@ These toolkit wrappers are generally used through a :class:`ToolkitRegistry`, wh
 
 .. code-block:: python
 
-    >>> from openforcefield.utils.toolkits import ToolkitRegistry, OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper
+    >>> from openff.toolkit.utils.toolkits import ToolkitRegistry, OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper
     >>> toolkit_registry = ToolkitRegistry()
     >>> toolkit_precedence = [OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper]
     >>> [ toolkit_registry.register_toolkit(toolkit) for toolkit in toolkit_precedence if toolkit.is_available() ]
@@ -22,8 +22,8 @@ The toolkit wrappers can then be accessed through the registry:
 
 .. code-block:: python
 
-    >>> from openforcefield.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY as toolkit_registry
-    >>> from openforcefield.topology.molecule import Molecule
+    >>> from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY as toolkit_registry
+    >>> from openff.toolkit.topology.molecule import Molecule
     >>> molecule = Molecule.from_smiles('Cc1ccccc1')
     >>> smiles = toolkit_registry.call('to_smiles', molecule)
 
@@ -37,7 +37,7 @@ Alternatively, the global toolkit registry (which will attempt to register any a
 
 .. code-block:: python
 
-    >>> from openforcefield.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY as toolkit_registry
+    >>> from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY as toolkit_registry
     >>> len(toolkit_registry.registered_toolkits)
     4
 
@@ -46,8 +46,8 @@ be useful for debugging and exploring subtley different behavior between toolkit
 
 .. code-block:: python
 
-    from openforcefield.utils.toolkits import OpenEyeToolkitWrapper, BuiltInToolkitWrapper
-    from openforcefield.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY as toolkit_registry
+    from openff.toolkit.utils.toolkits import OpenEyeToolkitWrapper, BuiltInToolkitWrapper
+    from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY as toolkit_registry
     toolkit_registry.deregister_toolkit(OpenEyeToolkitWrapper)
     toolkit_registry.register_toolkit(BuiltInToolkitWrapper)
     toolkit_registry.registered_toolkits
@@ -57,8 +57,8 @@ be explored by selecting which toolkit(s) are and are not registered.
 
 .. code-block:: python
 
-    >>> from openforcefield.utils.toolkits import OpenEyeToolkitWrapper, GLOBAL_TOOLKIT_REGISTRY as toolkit_registry
-    >>> from openforcefield.topology.molecule import Molecule
+    >>> from openff.toolkit.utils.toolkits import OpenEyeToolkitWrapper, GLOBAL_TOOLKIT_REGISTRY as toolkit_registry
+    >>> from openff.toolkit.topology.molecule import Molecule
     >>> molecule = Molecule.from_smiles('Cc1ccccc1')
     >>> smiles_via_openeye = toolkit_registry.call('to_smiles', molecule)
     >>> print(smiles_via_openeye)
@@ -69,7 +69,7 @@ be explored by selecting which toolkit(s) are and are not registered.
     >>> print(smiles_via_rdkit)
     [H][c]1[c]([H])[c]([H])[c]([C]([H])([H])[H])[c]([H])[c]1[H]
 
-.. currentmodule:: openforcefield.utils.toolkits
+.. currentmodule:: openff.toolkit.utils.toolkits
 .. autosummary::
     :nosignatures:
     :toctree: api/generated/
@@ -83,7 +83,7 @@ be explored by selecting which toolkit(s) are and are not registered.
 Serialization support
 ---------------------
 
-.. currentmodule:: openforcefield.utils.serialization
+.. currentmodule:: openff.toolkit.utils.serialization
 .. autosummary::
     :nosignatures:
     :toctree: api/generated/
@@ -95,7 +95,7 @@ Miscellaneous utilities
 
 Miscellaneous utility functions.
 
-.. currentmodule:: openforcefield.utils.utils
+.. currentmodule:: openff.toolkit.utils.utils
 .. autosummary::
     :nosignatures:
     :toctree: api/generated/

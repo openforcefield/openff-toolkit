@@ -7,8 +7,8 @@ Installing via `conda`
 ======================
 
 The simplest way to install the Open Forcefield Toolkit is via the `conda <http://www.continuum.io/blog/conda>`_  package manager.
-Packages are provided on the `omnia Anaconda Cloud channel <http://anaconda.org/omnia>`_ for Linux, OS X, and Win platforms.
-The `openforcefield Anaconda Cloud page <https://anaconda.org/omnia/openforcefield>`_ has useful instructions and `download statistics <https://anaconda.org/omnia/openforcefield/files>`_.
+Packages are provided on the `conda-forge Anaconda Cloud channel <https://anaconda.org/conda-forge>`_ for Linux, OS X, and Win platforms.
+The `openff-toolkit Anaconda Cloud page <https://anaconda.org/conda-forge/openff-toolkit>`_ has useful instructions and `download statistics <https://anaconda.org/conda-forge/openff-toolkit/files>`_.
 
 If you are using the `anaconda <https://www.continuum.io/downloads/>`_ scientific Python distribution, you already have the ``conda`` package manager installed.
 If not, the quickest way to get started is to install the `miniconda <http://conda.pydata.org/miniconda.html>`_ distribution, a lightweight minimal installation of Anaconda Python.
@@ -37,7 +37,7 @@ You may want to add the new ``source ~/miniconda3/etc/profile.d/conda.sh`` line 
 ``conda activate base`` will need to be run in each subsequent terminal session to return to the environment where the toolkit will be installed.
 
 
-Note that ``openforcefield`` will be installed into this local Python installation, so that you will not need to worry about disrupting existing Python installations.
+Note that ``openff-toolkit`` will be installed into this local Python installation, so that you will not need to worry about disrupting existing Python installations.
 
 .. note:: Installation via the conda package manager is the preferred method since all dependencies are automatically fetched and installed for you.
 
@@ -46,11 +46,11 @@ Note that ``openforcefield`` will be installed into this local Python installati
 Required dependencies
 =====================
 
-The ``openforcefield`` toolkit makes use of the `Omnia <http://www.omnia.md>`_ and `Conda Forge <https://conda-forge.org/>`_ free and open source community package repositories:
+The ``openff-toolkit`` makes use of the `Conda Forge <https://conda-forge.org/>`_ free and open source community package repository:
 
 .. code-block:: shell
 
-   $ conda config --add channels omnia --add channels conda-forge
+   $ conda config --add channels conda-forge
    $ conda update --all
 
 This only needs to be done once.
@@ -65,12 +65,12 @@ This only needs to be done once.
 Release build
 -------------
 
-You can install the latest stable release build of ``openforcefield`` via the ``conda`` package with
+You can install the latest stable release build of ``openff-toolkit`` via the ``conda`` package with
 
 .. code-block:: shell
 
-   $ conda config --add channels omnia --add channels conda-forge
-   $ conda install openforcefield
+   $ conda config --add channels conda-forge
+   $ conda install openff-toolkit
 
 This version is recommended for all users not actively developing new forcefield parameterization algorithms.
 
@@ -81,11 +81,11 @@ This version is recommended for all users not actively developing new forcefield
 Upgrading your installation
 ---------------------------
 
-To update an earlier ``conda`` installation of ``openforcefield`` to the latest release version, you can use ``conda update``:
+To update an earlier ``conda`` installation of ``openff-toolkit`` to the latest release version, you can use ``conda update``:
 
 .. code-block:: shell
 
-   $ conda update openforcefield
+   $ conda update openff-toolkit
 
 |
 
@@ -101,8 +101,8 @@ To install the OpenEye toolkits (provided you have a valid license file):
 
    $ conda install --yes -c openeye openeye-toolkits
 
-No essential ``openforcefield`` release capabilities *require* the OpenEye toolkit, but the Open Force Field developers make use of it in parameterizing new open source force fields.
-It is known that there are certain differences in toolkit behavior between RDKit and OpenEye when reading a small fraction of molecules, and we encourage you to report any unexpected behavior that may be caused by toolkit differences to our `issue tracker <https://github.com/openforcefield/openforcefield/issues>`_.
+No essential ``openff-toolkit`` release capabilities *require* the OpenEye toolkit, but the Open Force Field developers make use of it in parameterizing new open source force fields.
+It is known that there are certain differences in toolkit behavior between RDKit and OpenEye when reading a small fraction of molecules, and we encourage you to report any unexpected behavior that may be caused by toolkit differences to our `issue tracker <https://github.com/openforcefield/openff-toolkit/issues>`_.
 
 |
 
@@ -115,22 +115,22 @@ These installers have few requirements beyond a Linux or OSX operating system an
 The installers are very similar to the widely-used Miniconda ``*.sh`` files.
 Accordingly, installation using the "single-file installer" does not require root access.
 
-The installers are between 200 and 300 MB each, and can be downloaded from the "Assets" section of the Toolkit's `GitHub Releases page <https://github.com/openforcefield/openforcefield/releases/>`_.
+The installers are between 200 and 300 MB each, and can be downloaded from the "Assets" section of the Toolkit's `GitHub Releases page <https://github.com/openforcefield/openff-toolkit/releases/>`_.
 They are generated using a `workflow leveraging the "conda constructor" utility <https://github.com/openforcefield/toolkit-installer-constructor>`_.
 
-Please report any installer difficulties to the `OFF Toolkit Issue tracker <https://github.com/openforcefield/openforcefield/issues>`_, as we hope to make this a major distribution channel for the toolkit moving forward.
+Please report any installer difficulties to the `OFF Toolkit Issue tracker <https://github.com/openforcefield/openff-toolkit/issues>`_, as we hope to make this a major distribution channel for the toolkit moving forward.
 
 |
 
 Installation
 ------------
 
-Download the appropriate installer (``openforcefield-<X.Y.Z>-py37-<your platform>-x86_64.sh``) from `the "Assets" section at the bottom of the desired release <https://github.com/openforcefield/openforcefield/releases/>`_.
+Download the appropriate installer (``openff-toolkit-<X.Y.Z>-py37-<your platform>-x86_64.sh``) from `the "Assets" section at the bottom of the desired release <https://github.com/openforcefield/openff-toolkit/releases/>`_.
 Then, install the toolkit with the following command:
 
 .. code-block:: shell
 
-   $ bash openforcefield-<X.Y.Z>-py37-<your platform>-x86_64.sh
+   $ bash openff-toolkit-<X.Y.Z>-py37-<your platform>-x86_64.sh
 
 and follow the prompts.
 
