@@ -146,7 +146,7 @@ jobs:
             # Switch back to cron-only before merging
             PYTEST_ARGS+=" --runslow"
           fi
-          pytest $PYTEST_ARGS openforcefield/tests/
+          pytest $PYTEST_ARGS openff/tests/
 
       - name: Run example scripts
         shell: bash -l {0}
