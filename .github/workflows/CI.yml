@@ -141,9 +141,7 @@ jobs:
         run: |
           PYTEST_ARGS+=" --ignore=openff/toolkit/tests/test_examples.py"
           PYTEST_ARGS+=" --ignore=openff/toolkit/tests/test_links.py"
-          # if [[ "$GITHUB_EVENT_NAME" == "schedule" ]]; then
-          if [[ "$RDKIT" == true && "$OPENEYE" == true ]]; then
-            # Switch back to cron-only before merging
+          if [[ "$GITHUB_EVENT_NAME" == "schedule" ]]; then
             PYTEST_ARGS+=" --runslow"
           fi
           pytest $PYTEST_ARGS openff/toolkit/tests/
