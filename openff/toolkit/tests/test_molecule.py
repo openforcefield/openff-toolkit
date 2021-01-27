@@ -2861,6 +2861,7 @@ class TestMolecule:
         assert len([atom for atom in mol.atoms if atom.is_in_ring]) == n_atom_rings
         assert len([bond for bond in mol.bonds if bond.is_in_ring]) == n_bond_rings
 
+    @requires_pkg("ipython")
     @requires_rdkit
     def test_visualize_rdkit(self):
         """Test that the visualize method returns an expected object when using RDKit to generate a 2-D representation"""
