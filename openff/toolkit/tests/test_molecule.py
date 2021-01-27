@@ -2696,7 +2696,22 @@ class TestMolecule:
     @requires_rdkit
     @requires_openeye
     @pytest.mark.slow
-    def test_compute_partial_charges(self):
+    @pytest.mark.parametrize(
+        ("toolkit", "method"),
+        [
+            ("openeye", "mmff94"),
+            ("openeye", "am1bcc"),
+            ("openeye", "am1-mulliken"),
+            ("openeye", "gasteiger"),
+            ("openeye", "am1bccnosymspt"),
+            ("openeye", "am1elf10"),
+            ("openeye", "am1bccelf10"),
+            ("ambertools", "am1bcc"),
+            ("ambertools", "gasteiger"),
+            ("ambertools", "am1-mulliken"),
+        ],
+    )
+    def test_assign_partial_charges(self, toolkit, method):
         """Test computation/retrieval of partial charges"""
         # TODO: Test only one molecule for speed?
         # TODO: Do we need to deepcopy each molecule, or is setUp called separately for each test method?
@@ -2704,59 +2719,47 @@ class TestMolecule:
         from simtk import unit
 
         # Do not modify original molecules.
-        molecules = copy.deepcopy(mini_drug_bank())
+        # molecules = copy.deepcopy(mini_drug_bank())
+        # In principle, testing for charge assignment over a wide set of molecules is important, but
+        # I think that's covered in test_toolkits.py. Here, we should only be concerned with testing the
+        # Molecule API, and therefore a single molecule should be sufficient
+        molecule = Molecule.from_smiles("CN1C=NC2=C1C(=O)N(C(=O)N2C)C")
 
-        # Test a single toolkit at a time
-        # Removed  ['amber', 'amberff94'] from OE list, as those won't find the residue types they're expecting
-        toolkit_to_charge_method = {
-            OpenEyeToolkitWrapper: [
-                "mmff",
-                "mmff94",
-                "am1bcc",
-                "am1bccnosymspt",
-                "am1bccelf10",
-            ],
-            AmberToolsToolkitWrapper: ["bcc", "gas", "mul"],
-        }
+        if toolkit == "openeye":
+            toolkit_registry = ToolkitRegistry(
+                toolkit_precedence=[OpenEyeToolkitWrapper]
+            )
+        elif toolkit == "ambertools":
+            toolkit_registry = ToolkitRegistry(
+                toolkit_precedence=[AmberToolsToolkitWrapper]
+            )
 
-        manual_skips = []
+        molecule.assign_partial_charges(
+            partial_charge_method=method,
+            toolkit_registry=toolkit_registry,
+        )
+        initial_charges = molecule._partial_charges
 
-        manual_skips.append(
-            "ZINC1564378"
-        )  # Warning: OEMMFF94Charges: assigning OEMMFFAtomTypes failed on mol .
-        manual_skips.append(
-            "ZINC00265517"
-        )  # Warning: OEMMFF94Charges: assigning OEMMFFAtomTypes failed on mol .
+        # Make sure everything isn't 0s
+        assert (abs(initial_charges / unit.elementary_charge) > 0.01).any()
+        # Check total charge
+        charges_sum_unitless = initial_charges.sum() / unit.elementary_charge
+        total_charge_unitless = molecule.total_charge / unit.elementary_charge
+        # if abs(charges_sum_unitless - total_charge_unitless) > 0.0001:
+        # print(
+        #     "molecule {}    charge_sum {}     molecule.total_charge {}".format(
+        #         molecule.name, charges_sum_unitless, total_charge_unitless
+        #     )
+        # )
+        np.allclose(charges_sum_unitless, total_charge_unitless, atol=0.002)
 
-        for toolkit in list(toolkit_to_charge_method.keys()):
-            toolkit_registry = ToolkitRegistry(toolkit_precedence=[toolkit])
-            for charge_model in toolkit_to_charge_method[toolkit]:
-                c = 0
-                for molecule in molecules[:1]:  # Just test first molecule to save time
-                    c += 1
-                    if molecule.name in manual_skips:  # Manual skips, hopefully rare
-                        continue
-                    molecule.compute_partial_charges(
-                        charge_model=charge_model, toolkit_registry=toolkit_registry
-                    )
-                    charges1 = molecule._partial_charges
-                    # Make sure everything isn't 0s
-                    assert (abs(charges1 / unit.elementary_charge) > 0.01).any()
-                    # Check total charge
-                    charges_sum_unitless = charges1.sum() / unit.elementary_charge
-                    # if abs(charges_sum_unitless - float(molecule.total_charge)) > 0.0001:
-                    #    print('c {}  molecule {}    charge_sum {}     molecule.total_charge {}'.format(c, molecule.name,
-                    #                                                                                   charges_sum_unitless,
-                    #                                                                                   molecule.total_charge))
-                    # assert_almost_equal(charges_sum_unitless, molecule.total_charge, decimal=4)
-
-                    # Call should be faster second time due to caching
-                    # TODO: Implement caching
-                    molecule.compute_partial_charges(
-                        charge_model=charge_model, toolkit_registry=toolkit_registry
-                    )
-                    charges2 = molecule._partial_charges
-                    assert np.allclose(charges1, charges2, atol=0.002)
+        # Call should be faster second time due to caching
+        # TODO: Implement caching
+        molecule.assign_partial_charges(
+            partial_charge_method=method, toolkit_registry=toolkit_registry
+        )
+        recomputed_charges = molecule._partial_charges
+        assert np.allclose(initial_charges, recomputed_charges, atol=0.002)
 
     @requires_openeye
     def test_assign_fractional_bond_orders(self):
