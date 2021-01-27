@@ -65,11 +65,6 @@ from openff.toolkit.utils.toolkits import (
 # TEST UTILITIES
 # =============================================================================================
 
-requires_qcelemental = requires_pkg(
-    "qcelemental",
-    reason="Test involving QCSchema require QCElemental, which was not found.",
-)
-requires_nglview = requires_pkg("nglview")
 
 
 def assert_molecule_is_equal(molecule1, molecule2, msg):
@@ -322,7 +317,6 @@ class TestAtom:
             assert atom.name == this_element.name
 
 
-@requires_openeye
 class TestMolecule:
     """Test Molecule class."""
 
@@ -742,6 +736,7 @@ class TestMolecule:
         },
     ]
 
+    @requires_openeye
     @pytest.mark.parametrize("data", inchi_data)
     def test_from_inchi(self, data):
         """Test building a molecule from standard and non-standard InChI strings."""
@@ -916,8 +911,10 @@ class TestMolecule:
         molecule_copy = Molecule.from_topology(topology)
         assert molecule == molecule_copy
 
+    @requires_openeye
     def test_to_multiframe_xyz(self):
         """Test writing out a molecule with multiple conformations to an xyz file"""
+        # TODO: Resolve rounding errors when this test runs with and RDKit backend
 
         # load in an SDF of butane with multiple conformers in it
         molecules = Molecule.from_file(
@@ -1317,6 +1314,7 @@ class TestMolecule:
             is inputs["result"]
         )
 
+    @requires_openeye
     def test_strip_atom_stereochemistry(self):
         """Test the basic behavior of strip_atom_stereochemistry"""
         mol = Molecule.from_smiles("CCC[N@@](C)CC")
@@ -1325,6 +1323,8 @@ class TestMolecule:
             atom.molecule_atom_index for atom in mol.atoms if atom.element.symbol == "N"
         ][0]
 
+        # TODO: This fails with RDKitToolkitWrapper because it perceives
+        # the stereochemistry of this nitrogen as None
         assert mol.atoms[nitrogen_idx].stereochemistry == "S"
         mol.strip_atom_stereochemistry(smarts="[N+0X3:1](-[*])(-[*])(-[*])")
         assert mol.atoms[nitrogen_idx].stereochemistry is None
@@ -1759,7 +1759,7 @@ class TestMolecule:
             assert bond.is_aromatic == sdf_bonds[key].is_aromatic
             assert bond.stereochemistry == sdf_bonds[key].stereochemistry
 
-    @requires_qcelemental
+    @requires_pkg("qcportal")
     def test_to_qcschema(self):
         """Test the ability to make and validate qcschema with extras"""
         # the molecule has no coordinates so this should fail
@@ -1873,7 +1873,7 @@ class TestMolecule:
         },
     ]
 
-    @requires_qcelemental
+    @requires_pkg("qcportal")
     @pytest.mark.parametrize("input_data", client_examples)
     def test_from_qcschema_with_client(self, input_data):
         """For each of the examples try and make a offmol using the instance and dict and check they match"""
@@ -1900,7 +1900,7 @@ class TestMolecule:
 
         assert mol_from_dict.is_isomorphic_with(mol_from_smiles) is True
 
-    @requires_qcelemental
+    @requires_pkg("qcportal")
     def test_qcschema_round_trip(self):
         """Test making a molecule from qcschema then converting back"""
 
@@ -2693,6 +2693,8 @@ class TestMolecule:
             len(matches) == 0
         )  # this is the wrong stereochemistry, so there shouldn't be any matches
 
+    @requires_rdkit
+    @requires_openeye
     @pytest.mark.slow
     def test_compute_partial_charges(self):
         """Test computation/retrieval of partial charges"""
@@ -2862,7 +2864,7 @@ class TestMolecule:
         with pytest.warns(UserWarning):
             mol.visualize(backend="rdkit")
 
-    @requires_nglview
+    @requires_pkg("nglview")
     def test_visualize_nglview(self):
         """Test that the visualize method returns an NGLview widget. Note that
         nglview is not explicitly a requirement in the test environment, but
@@ -2932,7 +2934,8 @@ class TestMoleculeSubclass:
         mol = MyMol.from_mapped_smiles("[H:1][C:2]([H:3])([H:4])([H:5])")
         assert isinstance(mol, MyMol)
 
-    @requires_qcelemental
+    @requires_pkg("qcelemental")
+    @requires_pkg("qcportal")
     def test_molecule_subclass_from_qcschema(self):
         """Ensure that the right type of object is returned when running MyMol.from_qcschema"""
         import qcportal as ptl
