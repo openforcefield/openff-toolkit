@@ -66,7 +66,6 @@ from openff.toolkit.utils.toolkits import (
 # =============================================================================================
 
 
-
 def assert_molecule_is_equal(molecule1, molecule2, msg):
     """Compare whether two Molecule objects are equal
 
@@ -333,6 +332,7 @@ class TestMolecule:
         assert molecule_copy.n_conformers == molecule.n_conformers
         assert np.allclose(molecule_copy.conformers[0], molecule.conformers[0])
 
+    @requires_pkg("yaml")
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_yaml_serialization(self, molecule):
         """Test serialization of a molecule object to and from YAML."""
@@ -342,6 +342,7 @@ class TestMolecule:
         assert molecule_copy.n_conformers == molecule.n_conformers
         assert np.allclose(molecule_copy.conformers[0], molecule.conformers[0])
 
+    @requires_pkg("toml")
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_toml_serialization(self, molecule):
         """Test serialization of a molecule object to and from TOML."""
@@ -350,6 +351,7 @@ class TestMolecule:
         with pytest.raises(NotImplementedError):
             mol.to_toml()
 
+    @requires_pkg("bson")
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_bson_serialization(self, molecule):
         """Test serialization of a molecule object to and from BSON."""
@@ -376,6 +378,7 @@ class TestMolecule:
         with pytest.raises(NotImplementedError):
             Molecule.from_xml(serialized)
 
+    @requires_pkg("msgpack")
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_messagepack_serialization(self, molecule):
         """Test serialization of a molecule object to and from messagepack."""
@@ -394,6 +397,9 @@ class TestMolecule:
         assert molecule_copy.n_conformers == molecule.n_conformers
         assert np.allclose(molecule_copy.conformers[0], molecule.conformers[0])
 
+    @requires_pkg("yaml")
+    @requires_pkg("toml")
+    @requires_pkg("msgpack")
     def test_serialization_no_conformers(self):
         """Test round-trip serialization when molecules have no conformers or partial charges."""
         mol = Molecule.from_smiles("CCO")
@@ -954,8 +960,10 @@ class TestMolecule:
                 for coord in coords:
                     assert coord in data
 
+    @requires_openeye
     def test_to_single_xyz(self):
         """Test writing to a single frame xyz file"""
+        # TODO: Resolve rounding errors when this test runs with and RDKit backend
 
         # load a molecule with a single conformation
         toluene = Molecule.from_file(get_data_file_path("molecules/toluene.sdf"), "sdf")
@@ -1349,8 +1357,12 @@ class TestMolecule:
         for before, after in zip(mol.atoms, mol_mod.atoms):
             assert before.stereochemistry == after.stereochemistry
 
+    @requires_openeye
     def test_isomorphic_striped_stereochemistry(self):
         """Test that the equality operator disregards an edge case of nitrogen stereocenters"""
+        # TODO: This fails with RDKitToolkitWrapper because it perceives
+        # the stereochemistry of the central nitrogen as None
+
         mol1 = Molecule.from_smiles("CCC[N@](C)CC")
         mol2 = Molecule.from_smiles("CCC[N@@](C)CC")
 
@@ -1804,6 +1816,7 @@ class TestMolecule:
         assert_check()
         assert qcschema.extras is None
 
+    @requires_pkg("qcportal")
     def test_from_qcschema_no_client(self):
         """Test the ability to make molecules from QCArchive record instances and dicts"""
 
@@ -2889,6 +2902,7 @@ class TestMolecule:
         # Ensure an NGLView widget is returned
         assert isinstance(mol.visualize(backend="nglview"), nglview.NGLWidget)
 
+    @requires_pkg("ipython")
     @requires_openeye
     def test_visualize_openeye(self):
         """Test that the visualize method returns an expected object when using OpenEye to generate a 2-D representation"""
