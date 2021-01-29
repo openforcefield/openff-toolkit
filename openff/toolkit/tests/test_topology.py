@@ -192,6 +192,7 @@ class TestTopology(TestCase):
         topology = Topology()
         good_box_vectors = unit.Quantity(np.eye(3) * 20 * unit.angstrom)
         one_dim_vectors = unit.Quantity(np.ones(3) * 20 * unit.angstrom)
+        list_vectors = [20, 20, 20] * unit.angstrom
         bad_shape_vectors = unit.Quantity(np.ones(2) * 20 * unit.angstrom)
         bad_units_vectors = unit.Quantity(np.ones(3) * 20 * unit.year)
         unitless_vectors = np.array([10, 20, 30])
@@ -206,7 +207,7 @@ class TestTopology(TestCase):
                 topology.box_vectors = bad_vectors
             assert topology.box_vectors is None
 
-        for good_vectors in [good_box_vectors, one_dim_vectors]:
+        for good_vectors in [good_box_vectors, one_dim_vectors, list_vectors]:
             topology.box_vectors = good_vectors
             assert (topology.box_vectors == good_vectors * np.eye(3)).all()
 
