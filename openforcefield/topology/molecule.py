@@ -3412,7 +3412,9 @@ class FrozenMolecule(Serializable):
         index: int
             The index of this conformer
         """
-        new_conf = unit.Quantity(np.zeros((self.n_atoms, 3), np.float), unit.angstrom)
+        new_conf = unit.Quantity(
+            np.zeros(shape=(self.n_atoms, 3), dtype=float), unit.angstrom
+        )
         if not (new_conf.shape == coordinates.shape):
             raise Exception(
                 "molecule.add_conformer given input of the wrong shape: "
@@ -4108,7 +4110,7 @@ class FrozenMolecule(Serializable):
         # If we do not have a conformer make one with all zeros
         if self.n_conformers == 0:
             conformers = [
-                unit.Quantity(np.zeros((self.n_atoms, 3), np.float), unit.angstrom)
+                unit.Quantity(np.zeros((self.n_atoms, 3), dtype=float), unit.angstrom)
             ]
 
         else:
@@ -4665,7 +4667,7 @@ class FrozenMolecule(Serializable):
             # now for each molecule convert and attach the input geometry
             for molecule in input_mols:
                 geometry = unit.Quantity(
-                    np.array(molecule.geometry, np.float), unit.bohr
+                    np.array(molecule.geometry, dtype=float), unit.bohr
                 )
                 try:
                     offmol._add_conformer(geometry.in_units_of(unit.angstrom))

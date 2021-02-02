@@ -1437,7 +1437,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             for conf in oemol.GetConfs():
                 n_atoms = molecule.n_atoms
                 positions = unit.Quantity(
-                    np.zeros([n_atoms, 3], np.float), unit.angstrom
+                    np.zeros(shape=[n_atoms, 3], dtype=np.float64), unit.angstrom
                 )
                 for oe_id in conf.GetCoords().keys():
                     off_atom_coords = unit.Quantity(
@@ -1451,7 +1451,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         # Copy partial charges, if present
         partial_charges = unit.Quantity(
-            np.zeros(molecule.n_atoms, dtype=np.float), unit=unit.elementary_charge
+            np.zeros(shape=molecule.n_atoms, dtype=np.float64),
+            unit=unit.elementary_charge,
         )
 
         # If all OEAtoms have a partial charge of NaN, then the OFFMol should
@@ -1640,7 +1641,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             oemol.DeleteConfs()
             for conf in molecule._conformers:
                 # OE needs a 1 x (3*n_Atoms) double array as input
-                flat_coords = np.zeros((oemol.NumAtoms() * 3), dtype=np.float32)
+                flat_coords = np.zeros(shape=oemol.NumAtoms() * 3, dtype=np.float64)
                 for index, oe_idx in map_atoms.items():
                     (x, y, z) = conf[index, :] / unit.angstrom
                     flat_coords[(3 * oe_idx)] = x
@@ -1652,7 +1653,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         # Retain charges, if present. All atoms are initialized above with a partial charge of NaN.
         if molecule._partial_charges is not None:
-            oe_indexed_charges = np.zeros((molecule.n_atoms), dtype=np.float)
+            oe_indexed_charges = np.zeros(shape=molecule.n_atoms, dtype=np.float64)
             for off_idx, charge in enumerate(molecule._partial_charges):
                 oe_idx = map_atoms[off_idx]
                 charge_unitless = charge / unit.elementary_charge
@@ -2299,7 +2300,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         ## TODO: Make sure atom mapping remains constant
 
         charges = unit.Quantity(
-            np.zeros([oemol.NumAtoms()], np.float64), unit.elementary_charge
+            np.zeros(shape=oemol.NumAtoms(), dtype=np.float64), unit.elementary_charge
         )
         for oeatom in oemol.GetAtoms():
             index = oeatom.GetIdx()
@@ -3647,7 +3648,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                 offmol._add_conformer(positions)
 
         partial_charges = unit.Quantity(
-            np.zeros(offmol.n_atoms, dtype=np.float), unit=unit.elementary_charge
+            np.zeros(shape=offmol.n_atoms, dtype=np.float64),
+            unit=unit.elementary_charge,
         )
 
         any_atom_has_partial_charge = False
@@ -3849,7 +3851,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         # Retain charges, if present
         if not (molecule._partial_charges is None):
 
-            rdk_indexed_charges = np.zeros((molecule.n_atoms), dtype=np.float)
+            rdk_indexed_charges = np.zeros(shape=molecule.n_atoms, dtype=float)
             for atom_idx, charge in enumerate(molecule._partial_charges):
                 charge_unitless = charge.value_in_unit(unit.elementary_charge)
                 rdk_indexed_charges[atom_idx] = charge_unitless
