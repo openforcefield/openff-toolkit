@@ -54,7 +54,7 @@ jobs:
 
         # Find the tag of the last release (excluding RCs)
         # TODO: Make this a variable that can be passed through from trigger and/or allow RC
-        export LATEST_TAG=$(git ls-remote --tags https://github.com/openforcefield/openforcefield.git | cut -f2 | grep -v "rc" | tail -1 | sed 's/refs\/tags\///')
+        export LATEST_TAG=$(git ls-remote --tags https://github.com/openforcefield/openff-toolkit.git | cut -f2 | grep -v "rc" | tail -1 | sed 's/refs\/tags\///')
 
         echo $LATEST_TAG
 
@@ -76,7 +76,7 @@ jobs:
       uses: actions/upload-artifact@v2
       with:
         name: ${{ matrix.os }}_py${{ matrix.python-version }}.sh  
-        path: toolkit-installer-constructor/build/openforcefield*/openforcefield*.sh
+        path: toolkit-installer-constructor/build/openff-toolkit*/openff-toolkit*.sh
 
     - name: Install from installer
       shell: bash -l {0}
@@ -86,18 +86,18 @@ jobs:
         ls
         ls toolkit-installer-constructor
         ls toolkit-installer-constructor/build
-        ls toolkit-installer-constructor/build/openforcefield-*/
+        ls toolkit-installer-constructor/build/openff-toolkit-*/
 
         mkdir scratch
         cd scratch
-        echo $HOME/constructor_install/ | bash ../toolkit-installer-constructor/build/openforcefield-*/openforcefield-*.sh
+        echo $HOME/constructor_install/ | bash ../toolkit-installer-constructor/build/openff-toolkit-*/openff-toolkit-*.sh
 
         conda activate $HOME/constructor_install/
         conda info
         conda list
 
-        export FOUND_VER=$(python -c "import openforcefield; print(openforcefield.__version__)")
-        export LATEST_TAG=$(git ls-remote --tags https://github.com/openforcefield/openforcefield.git | cut -f2 | grep -v "rc" | tail -1 | sed 's/refs\/tags\///')
+        export FOUND_VER=$(python -c "import openff.toolkit; print(openff.toolkit.__version__)")
+        export LATEST_TAG=$(git ls-remote --tags https://github.com/openforcefield/openff-toolkit.git | cut -f2 | grep -v "rc" | tail -1 | sed 's/refs\/tags\///')
 
         echo $LATEST_TAG
         echo $FOUND_VER
@@ -108,9 +108,9 @@ jobs:
         fi
 
         PYTEST_ARGS=" -r fE --tb=short"
-        PYTEST_ARGS+=" --ignore=openforcefield/tests/test_links.py"
+        PYTEST_ARGS+=" --ignore=openff/toolkit/tests/test_links.py"
 
         # This should work if run directly at release time, but a safer approach would be
         # to `git checkout` the corresponding tag of the release, see PR #577
-        pytest $PYTEST_ARGS ../openforcefield/tests/
+        pytest $PYTEST_ARGS ../openff/toolkit/tests/
 
