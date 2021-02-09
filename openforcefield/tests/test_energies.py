@@ -23,7 +23,9 @@ def test_reference(constrained, mol):
     """Minimal regression test comparing molecule energies to energies computed
     by version 0.8.0 of the toolkit"""
     # TODO: Also test periodic vs. vacuum
-    with open(get_data_file_path("reference_energies/reference_0.8.0.json"), "r") as fi:
+    with open(
+        get_data_file_path("reference_energies/reference_after_802.json"), "r"
+    ) as fi:
         reference = json.loads(fi.read())
 
     name = mol + "_"
