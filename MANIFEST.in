@@ -1,2 +1,6 @@
+include LICENSE
+include MANIFEST.in
 include versioneer.py
-include openforcefield/_version.py
+
+graft openff
+global-exclude *.py[cod] __pycache__ *.so
