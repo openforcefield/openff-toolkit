@@ -4241,6 +4241,37 @@ class TestForceFieldParameterAssignment:
                 err_msg="Electrostatics 1-4 scaling factors do not match",
             )
 
+    def test_14_missing_nonbonded_handler(self):
+        """Test that something sane happens with 1-4 scaling factors if a
+        ForceField is missing a vdWHandler and/or ElectrostaticsHandler"""
+        top = Molecule.from_smiles("CCCC").to_topology()
+
+        ff_no_vdw = ForceField("test_forcefields/test_forcefield.offxml")
+        ff_no_electrostatics = ForceField("test_forcefields/test_forcefield.offxml")
+        ff_no_nonbonded = ForceField("test_forcefields/test_forcefield.offxml")
+
+        ff_no_vdw.deregister_parameter_handler("vdW")
+        ff_no_nonbonded.deregister_parameter_handler("vdW")
+
+        ff_no_electrostatics.deregister_parameter_handler("Electrostatics")
+        ff_no_nonbonded.deregister_parameter_handler("Electrostatics")
+
+        sys_no_vdw = ff_no_vdw.create_openmm_system(top)
+        sys_no_electrostatics = ff_no_electrostatics.create_openmm_system(top)
+        sys_no_nonbonded = ff_no_nonbonded.create_openmm_system(top)
+
+        np.testing.assert_almost_equal(
+            actual=get_14_scaling_factors(sys_no_vdw)[0],
+            desired=ff_no_vdw["Electrostatics"].scale14,
+            decimal=8,
+        )
+
+        np.testing.assert_almost_equal(
+            actual=get_14_scaling_factors(sys_no_electrostatics)[1],
+            desired=ff_no_electrostatics["vdW"].scale14,
+            decimal=8,
+        )
+
     @requires_openeye
     def test_overwrite_bond_orders(self):
         """Test that previously-defined bond orders in the topology are overwritten"""
