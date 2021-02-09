@@ -10,7 +10,7 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 0.9.1 - Current development
 ---------------------------
 
-Bugfixes
+Behavior changed
 """"""""
 - `PR #802 <https://github.com/openforcefield/openforcefield/pull/802>`_: Fixes
   `Issue #408 <https://github.com/openforcefield/openforcefield/issues/408>`_. The 1-4 scaling
