@@ -1326,16 +1326,42 @@ class ForceField:
 
         # Let force Handlers do postprocessing
         for parameter_handler in parameter_handlers:
-            if parameter_handler._TAGNAME == "vdW":
-                continue
             parameter_handler.postprocess_system(system, topology, **kwargs)
 
+        # Handle 1-4 scaling interactions here, instead of in handlers, since OpenMM
+        # does things slightly differently than other engines may
         electrostatics_14 = self.get_parameter_handler(tagname="Electrostatics").scale14
-        # Absolute hack to get around the fact that the vdW handler needs to know the
-        # Electrostatics's 1-4 scaling factor; maybe this code should be copied directly
-        # here, instead of being in a postprocess_system?
-        self._parameter_handlers["vdW"].postprocess_system(
-            system, topology, electrostatics_14
+        vdw_14 = self.get_parameter_handler(tagname="vdW").scale14
+
+        # Create exceptions based on bonds.
+        # QUESTION: Will we want to do this for *all* cases, or would we ever want flexibility here?
+        bond_particle_indices = []
+
+        for topology_molecule in topology.topology_molecules:
+
+            top_mol_particle_start_index = topology_molecule.atom_start_topology_index
+
+            for topology_bond in topology_molecule.bonds:
+                top_index_1 = topology_molecule._ref_to_top_index[
+                    topology_bond.bond.atom1_index
+                ]
+                top_index_2 = topology_molecule._ref_to_top_index[
+                    topology_bond.bond.atom2_index
+                ]
+
+                top_index_1 += top_mol_particle_start_index
+                top_index_2 += top_mol_particle_start_index
+
+                bond_particle_indices.append((top_index_1, top_index_2))
+
+        # TODO: Can we generalize this to allow for `CustomNonbondedForce` implementations too?
+        forces = [system.getForce(i) for i in range(system.getNumForces())]
+        nonbonded_force = [f for f in forces if type(f) == openmm.NonbondedForce][0]
+
+        nonbonded_force.createExceptionsFromBonds(
+            bond_particle_indices,
+            electrostatics_14,
+            vdw_14,
         )
 
         if return_topology:
