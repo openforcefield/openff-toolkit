@@ -10,6 +10,13 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 0.9.1 - Current development
 ---------------------------
 
+Bugfixes
+""""""""
+- `PR #802 <https://github.com/openforcefield/openforcefield/pull/802>`_: Fixes
+  `Issue #408 <https://github.com/openforcefield/openforcefield/issues/408>`_. The 1-4 scaling
+  factor for electrostatic interactions is now properly set by the value specified in the force
+  field. Previously it fell back to a default value of 0.83333. The toolkit may now produce
+  slightly different energies as a result of this change.
 
 0.9.0 - Namespace Migration
 ---------------------------
