@@ -2156,16 +2156,18 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         oe_molecule = molecule.to_openeye()
 
         # Select a subset of the OMEGA generated conformers using the ELF10 method.
-        charge_engine = oequacpac.OEELFCharges(
-            oequacpac.OEAM1Charges(), limit, percentage, True
-        )
+        oe_elf_options = oequacpac.OEELFOptions()
+        oe_elf_options.SetElfLimit(limit)
+        oe_elf_options.SetPercent(percentage)
+
+        oe_elf = oequacpac.OEELF(oe_elf_options)
 
         output_stream = oechem.oeosstream()
 
         oechem.OEThrow.SetOutputStream(output_stream)
         oechem.OEThrow.Clear()
 
-        status = oequacpac.OEAssignCharges(oe_molecule, charge_engine)
+        status = oe_elf.Select(oe_molecule)
 
         oechem.OEThrow.SetOutputStream(oechem.oeerr)
 
