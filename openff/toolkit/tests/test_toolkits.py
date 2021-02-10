@@ -2413,7 +2413,7 @@ class TestRDKitToolkitWrapper:
         rms_matrix = RDKitToolkitWrapper._elf_compute_rms_matrix(n_methyl_aniline)
 
         assert rms_matrix.shape == (2, 2)
-        assert np.allclose(rms_matrix, 0.0)
+        assert np.allclose(rms_matrix, 0.0, atol=1e-7)
 
     @pytest.mark.parametrize(
         "expected_conformer_map, rms_tolerance",
