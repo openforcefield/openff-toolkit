@@ -2376,6 +2376,36 @@ class TestRDKitToolkitWrapper:
         assert np.isclose(rms_matrix[1, 1], 0.0)
 
         assert np.isclose(rms_matrix[0, 1], rms_matrix[1, 0])
+        assert not np.isclose(rms_matrix[0, 1], 0.0)
+
+    def test_elf_compute_rms_matrix_symmetry(self):
+        """Test the computation of the ELF conformer RMS matrix for matrices which
+        contain symmetry."""
+
+        # Create a molecule which can have two different automorphs.
+        n_methyl_aniline: Molecule = Molecule.from_smiles("CNc1ccccc1")
+        n_methyl_aniline.generate_conformers(n_conformers=1)
+
+        # Add a second conformer with the benzene ring flipped 180
+        original_conformer = n_methyl_aniline.conformers[0].value_in_unit(unit.angstrom)
+
+        ring_atoms = RDKitToolkitWrapper().find_smarts_matches(
+            n_methyl_aniline,
+            "[#6]-[#7](-[#6]1:[#6:1](-[#1:2]):[#6:3](-[#1:4]):[#6]:[#6:6](-[#1:5]):[#6:8](-[#1:7])1)",
+        )[0]
+
+        flipped_conformer = np.copy(original_conformer)
+
+        for i in range(8):
+            flipped_conformer[ring_atoms[i], :] = original_conformer[ring_atoms[7 - i]]
+
+        n_methyl_aniline.add_conformer(flipped_conformer * unit.angstrom)
+
+        # Compute the RMS matrix.
+        rms_matrix = RDKitToolkitWrapper._elf_compute_rms_matrix(n_methyl_aniline)
+
+        assert rms_matrix.shape == (2, 2)
+        assert np.allclose(rms_matrix, 0.0)
 
     @pytest.mark.parametrize(
         "expected_conformer_map, rms_tolerance",

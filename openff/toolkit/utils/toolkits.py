@@ -56,6 +56,7 @@ __all__ = [
 import copy
 import importlib
 import inspect
+import itertools
 import logging
 import subprocess
 import tempfile
@@ -3599,7 +3600,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
     @classmethod
     def _elf_compute_rms_matrix(cls, molecule: "Molecule") -> np.ndarray:
-        """Computes the symmetric RMS matrix of all conformers in a molecule.
+        """Computes the symmetric RMS matrix of all conformers in a molecule taking
+        only heavy atoms into account.
 
         Parameters
         ----------
@@ -3614,15 +3616,26 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         from rdkit import Chem
         from rdkit.Chem import AllChem
 
-        rdkit_molecule: Chem.RWMol = molecule.to_rdkit()
+        rdkit_molecule: Chem.RWMol = Chem.RemoveHs(molecule.to_rdkit())
+
         n_conformers = len(molecule.conformers)
 
-        rms_index = np.tril_indices(n_conformers, k=-1, m=n_conformers)
+        conformer_ids = [conf.GetId() for conf in rdkit_molecule.GetConformers()]
+
+        # Compute the RMS matrix making sure to take into account any automorhism (e.g
+        # a phenyl or nitro substituent flipped 180 degrees.
         rms_matrix = np.zeros((n_conformers, n_conformers))
 
-        rms_matrix[rms_index] = np.array(AllChem.GetConformerRMSMatrix(rdkit_molecule))
-        rms_matrix += rms_matrix.T
+        for i, j in itertools.combinations(conformer_ids, 2):
 
+            rms_matrix[i, j] = AllChem.GetBestRMS(
+                rdkit_molecule,
+                rdkit_molecule,
+                conformer_ids[i],
+                conformer_ids[j],
+            )
+
+        rms_matrix += rms_matrix.T
         return rms_matrix
 
     @classmethod
@@ -3740,6 +3753,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
           generated to select the ELF10 conformers from.
         * The selected conformers will be retained in the `molecule.conformers` list
           while unselected conformers will be discarded.
+        * Only heavy atoms are included when using the RMS to select diverse conformers.
 
         See Also
         --------
