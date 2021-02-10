@@ -10,6 +10,13 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 0.9.1 - Current development
 ---------------------------
 
+New features
+""""""""""""
+- `PR #831 <https://github.com/openforcefield/openforcefield/pull/831>`_: Expose ELF conformer selection through the
+  OpenEye wrapper.
+- `PR #793 <https://github.com/openforcefield/openforcefield/pull/793>`_: Add an initial ELF conformer selection
+  implementation which uses RDKit.
+
 Behavior changed
 """"""""
 - `PR #802 <https://github.com/openforcefield/openforcefield/pull/802>`_: Fixes
