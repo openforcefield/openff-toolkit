@@ -141,10 +141,10 @@ jobs:
         run: |
           PYTEST_ARGS+=" --ignore=openff/toolkit/tests/test_examples.py"
           PYTEST_ARGS+=" --ignore=openff/toolkit/tests/test_links.py"
-          if [[ "$RDKIT" == true && "$OPENEYE" == true ]]; then
-            PYTEST_ARGS+="--doctest-modules"
+          if [[ "$GITHUB_EVENT_NAME" == "schedule" ]]; then
+            PYTEST_ARGS+=" --runslow"
           fi
-          pytest $PYTEST_ARGS $PACKAGE/
+          pytest $PYTEST_ARGS openff/toolkit/tests/
 
       - name: Run example scripts
         shell: bash -l {0}
