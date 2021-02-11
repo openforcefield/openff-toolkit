@@ -57,6 +57,7 @@ import copy
 import importlib
 import inspect
 import logging
+import re
 import subprocess
 import tempfile
 from collections import defaultdict
@@ -2110,6 +2111,88 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         for conformer in molecule2._conformers:
             molecule._add_conformer(conformer)
+
+    def apply_elf_conformer_selection(
+        self,
+        molecule: "Molecule",
+        percentage: float = 2.0,
+        limit: int = 10,
+    ):
+        """Applies the `ELF method<https://docs.eyesopen.com/toolkits/python/quacpactk/
+        molchargetheory.html#elf-conformer-selection>`_ to select a set of diverse
+        conformers which have minimal electrostatically strongly interacting functional
+        groups from a molecules conformers.
+
+        Notes
+        -----
+        * The input molecule should have a large set of conformers already
+          generated to select the ELF conformers from.
+        * The selected conformers will be retained in the `molecule.conformers` list
+          while unselected conformers will be discarded.
+
+        See Also
+        --------
+        ``RDKitToolkitWrapper.apply_elf_conformer_selection``
+
+        Parameters
+        ----------
+        molecule
+            The molecule which contains the set of conformers to select from.
+        percentage
+            The percentage of conformers with the lowest electrostatic interaction
+            energies to greedily select from.
+        limit
+            The maximum number of conformers to select.
+        """
+
+        from openeye import oechem, oequacpac
+
+        if molecule.n_conformers == 0:
+            return
+
+        oe_molecule = molecule.to_openeye()
+
+        # Select a subset of the OMEGA generated conformers using the ELF10 method.
+        oe_elf_options = oequacpac.OEELFOptions()
+        oe_elf_options.SetElfLimit(limit)
+        oe_elf_options.SetPercent(percentage)
+
+        oe_elf = oequacpac.OEELF(oe_elf_options)
+
+        output_stream = oechem.oeosstream()
+
+        oechem.OEThrow.SetOutputStream(output_stream)
+        oechem.OEThrow.Clear()
+
+        status = oe_elf.Select(oe_molecule)
+
+        oechem.OEThrow.SetOutputStream(oechem.oeerr)
+
+        output_string = output_stream.str().decode("UTF-8")
+        output_string = output_string.replace("Warning: ", "")
+        output_string = re.sub("^: +", "", output_string, flags=re.MULTILINE)
+        output_string = re.sub("\n$", "", output_string)
+
+        # Check to make sure the call to OE was succesful, and re-route any
+        # non-fatal warnings to the correct logger.
+        if not status:
+            raise RuntimeError("\n" + output_string)
+        elif len(output_string) > 0:
+            logger.warning(output_string)
+
+        # Extract and store the ELF conformers on the input molecule.
+        conformers = []
+
+        for oe_conformer in oe_molecule.GetConfs():
+
+            conformer = np.zeros((oe_molecule.NumAtoms(), 3))
+
+            for atom_index, coordinates in oe_conformer.GetCoords().items():
+                conformer[atom_index, :] = coordinates
+
+            conformers.append(conformer * unit.angstrom)
+
+        molecule._conformers = conformers
 
     def assign_partial_charges(
         self,

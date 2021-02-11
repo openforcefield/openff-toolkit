@@ -1076,6 +1076,65 @@ class TestOpenEyeToolkitWrapper:
         )
         assert molecule2.n_conformers == 10
 
+    def test_apply_elf_conformer_selection(self):
+        """Test applying the ELF10 method."""
+
+        toolkit = OpenEyeToolkitWrapper()
+
+        molecule = Molecule.from_file(
+            get_data_file_path(os.path.join("molecules", "z_3_hydroxy_propenal.sdf")),
+            "SDF",
+        )
+
+        # Test that the simple case of no conformers does not yield an exception.
+        toolkit.apply_elf_conformer_selection(molecule)
+
+        initial_conformers = [
+            # Add a conformer with an internal H-bond.
+            np.array(
+                [
+                    [0.5477, 0.3297, -0.0621],
+                    [-0.1168, -0.7881, 0.2329],
+                    [-1.4803, -0.8771, 0.1667],
+                    [-0.2158, 1.5206, -0.4772],
+                    [-1.4382, 1.5111, -0.5580],
+                    [1.6274, 0.3962, -0.0089],
+                    [0.3388, -1.7170, 0.5467],
+                    [-1.8612, -0.0347, -0.1160],
+                    [0.3747, 2.4222, -0.7115],
+                ]
+            )
+            * unit.angstrom,
+            # Add a conformer without an internal H-bond.
+            np.array(
+                [
+                    [0.5477, 0.3297, -0.0621],
+                    [-0.1168, -0.7881, 0.2329],
+                    [-1.4803, -0.8771, 0.1667],
+                    [-0.2158, 1.5206, -0.4772],
+                    [0.3353, 2.5772, -0.7614],
+                    [1.6274, 0.3962, -0.0089],
+                    [0.3388, -1.7170, 0.5467],
+                    [-1.7743, -1.7634, 0.4166],
+                    [-1.3122, 1.4082, -0.5180],
+                ]
+            )
+            * unit.angstrom,
+        ]
+
+        molecule._conformers = [*initial_conformers]
+
+        # Apply ELF10
+        toolkit.apply_elf_conformer_selection(molecule)
+        elf10_conformers = molecule.conformers
+
+        assert len(elf10_conformers) == 1
+
+        assert np.allclose(
+            elf10_conformers[0].value_in_unit(unit.angstrom),
+            initial_conformers[1].value_in_unit(unit.angstrom),
+        )
+
     def test_compute_partial_charges_am1bcc(self):
         """Test OpenEyeToolkitWrapper compute_partial_charges_am1bcc()"""
         toolkit_registry = ToolkitRegistry(toolkit_precedence=[OpenEyeToolkitWrapper])
