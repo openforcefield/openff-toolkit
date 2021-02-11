@@ -92,7 +92,7 @@ Development Infrastructure
 
     Services that run frequently while the code is undergoing changes, ensuring that the codebase still installs and has the intended behavior.
     Currently, we use a service called `Travis CI <https://travis-ci.org>`_ for this.
-    Every time we make commits to the ``master`` branch of the openforcefield Github repository, a set of virtual machines that mimic brand new Linux and Mac OSX computers are created, and follow build instructions specified in the repo's ``.travis.yml`` file to install the toolkit.
+    Every time we make commits to the ``master`` branch of the openff-toolkit Github repository, a set of virtual machines that mimic brand new Linux and Mac OSX computers are created, and follow build instructions specified in the repo's ``.travis.yml`` file to install the toolkit.
     After installing the OFF toolkit and its dependencies, these virtual machines run our test suite.
     If the tests all pass, the build "passes" (returns a green check mark on GitHub).
     If all the tests for a specific change to the ``master`` branch return green, then we know that the change has not broken the toolkit's existing functionality.
@@ -150,12 +150,23 @@ ParameterHandler
           The default implementation of this method simply does nothing, and should suffice for most developers.
 
 .. TODO : fill in the modular components below
-.. ParameterType
+
+ParameterType
 
    ToolkitRegistry
-   
-   Molecule.to/from_object
-   
+
+       ``ToolkitRegistry.from_object``  / ``ToolkitRegistry.from_smiles`` / ``OpenEyeToolkitWrapper.from_openeye`` / ``RDKitToolkitWrapper.from_rdkit``
+        - These methods are a bit strange because they are effectively classmethods for ``FrozenMolecule`` and ``Molecule`` subclasses.
+          In `PR #583 <https://github.com/openforcefield/openff-toolkit/pull/583>`_, jaimergp raised a concern that effectively boils down to "if I subclass ``Molecule`` into a new class, ``MyMol``, then I expect ``MyMol.from_rdkit`` to return an instance of ``MyMol``, not ``Molecule``.
+          However, before this PR, methods like ``ToolkitRegistry.from_smiles`` didn't have any way to know what type of object they should return, and instead always returned ``Molecule`` objects.
+          So as of  `PR #583 <https://github.com/openforcefield/openff-toolkit/pull/583>`_, ToolkitRegistry methods that produce a Molecule must take a private parameter, ``_cls``, indicating the type of object to return.
+          This parameter should be of type ``type`` and should subclass ``FrozenMolecule``, or otherwise expose ``Molecule._add_atom``, ``._add_bond``, ``.add_conformer``, and ``.partial_charges``.
+
+
+   Molecule.to_X
+
+   Molecule.from_X
+
    Force field directories
 
 
@@ -214,12 +225,12 @@ Setting up a development environment
 .. code-block:: shell
 
     $ # Create a conda environment with the Open Force Field toolkit and its dependencies
-    $ conda create --name openff-dev -c conda-forge -c omnia -c openeye openforcefield openeye-toolkits
+    $ conda create --name openff-dev -c conda-forge -c openeye openff-toolkit openeye-toolkits
     $ conda activate openff-dev
     $ # Remove (only) the toolkit and replace it with a local install
-    $ conda remove --force openforcefield
-    $ git clone https://github.com/openforcefield/openforcefield
-    $ cd openforcefield
+    $ conda remove --force openff-toolkit
+    $ git clone https://github.com/openforcefield/openff-toolkit
+    $ cd openff-toolkit
     $ pip install -e .
 
 3. Obtain and store Open Eye license somewhere like ``~/.oe_license.txt``.
@@ -232,11 +243,11 @@ Development Process
 
 Development of new toolkit features generally proceeds in the following stages:
 
-* Begin a discussion on the `GitHub issue tracker <http://github.com/openforcefield/openforcefield/issues>`_ to determine big-picture "what should this feature do?" and "does it fit in the scope of the OFF Toolkit?"
-    * `"... typically, for existing water models, we want to assign library charges" <https://github.com/openforcefield/openforcefield/issues/25>`_
+* Begin a discussion on the `GitHub issue tracker <http://github.com/openforcefield/openff-toolkit/issues>`_ to determine big-picture "what should this feature do?" and "does it fit in the scope of the OFF Toolkit?"
+    * `"... typically, for existing water models, we want to assign library charges" <https://github.com/openforcefield/openff-toolkit/issues/25>`_
 * Start identifying details of the implementation that will be clear from the outset
-    * `"Create a new "special section" in the SMIRNOFF format (kind of analogous to the BondChargeCorrections section) which allows SMIRKS patterns to specify use of library charges for specific groups <https://github.com/openforcefield/openforcefield/issues/25#issue-225173968>`_
-    * `"Following #86, here's how library charges might work: ..." <https://github.com/openforcefield/openforcefield/issues/25#issuecomment-354636391>`_
+    * `"Create a new "special section" in the SMIRNOFF format (kind of analogous to the BondChargeCorrections section) which allows SMIRKS patterns to specify use of library charges for specific groups <https://github.com/openforcefield/openff-toolkit/issues/25#issue-225173968>`_
+    * `"Following #86, here's how library charges might work: ..." <https://github.com/openforcefield/openff-toolkit/issues/25#issuecomment-354636391>`_
 * Create a branch or fork for development
     * The OFF Toolkit has one unusual aspect of its CI build process, which is that certain functionality requires the OpenEye toolkits, so the builds must contain a valid OpenEye license file.
       An encrypted OpenEye license is present in the OFF Toolkit GitHub repository, as ``oe_license.txt.enc``.
@@ -249,18 +260,18 @@ Development of new toolkit features generally proceeds in the following stages:
 Contributing
 """"""""""""
 
-We always welcome `GitHub pull requests <https://github.com/openforcefield/openforcefield/pulls>`_.
-For bug fixes, major feature additions, or refactoring, please raise an issue on the `GitHub issue tracker <http://github.com/openforcefield/openforcefield/issues>`_ first to ensure the design will be amenable to current developer plans.
+We always welcome `GitHub pull requests <https://github.com/openforcefield/openff-toolkit/pulls>`_.
+For bug fixes, major feature additions, or refactoring, please raise an issue on the `GitHub issue tracker <http://github.com/openforcefield/openff-toolkit/issues>`_ first to ensure the design will be amenable to current developer plans.
 
 How can I become a developer?
 """""""""""""""""""""""""""""
 
-If you would like to contribute, please post an issue on the `GitHub issue tracker <http://github.com/openforcefield/openforcefield/issues>`_ describing the contribution you would like to make to start a discussion.
+If you would like to contribute, please post an issue on the `GitHub issue tracker <http://github.com/openforcefield/openff-toolkit/issues>`_ describing the contribution you would like to make to start a discussion.
 
 Style guide
 """""""""""
 
-Development for the ``openforcefield`` toolkit conforms to the recommendations given by the `Software Development Best Practices for Computational Chemistry <https://github.com/choderalab/software-development>`_ guide.
+Development for the ``openff-toolkit`` conforms to the recommendations given by the `Software Development Best Practices for Computational Chemistry <https://github.com/choderalab/software-development>`_ guide.
 
 The naming conventions of classes, functions, and variables follows `PEP8 <https://www.python.org/dev/peps/pep-0008/>`_, consistently with the best practices guide. The naming conventions used in this library not covered by PEP8 are:
 - Use ``file_path``, ``file_name``, and ``file_stem`` to indicate ``path/to/stem.extension``, ``stem.extension``, and ``stem`` respectively, consistently with the variables in the standard ``pathlib`` library.
@@ -268,7 +279,7 @@ The naming conventions of classes, functions, and variables follows `PEP8 <https
 
 We place a high priority on code cleanliness and readability, even if code could be written more compactly. For example, 15-character variable names are fine. Triply nested list comprehensions are not.
 
-The ``openforcefield`` toolkit is in the process of adopting code formatting tools ("linters") to maintain consistent style and remove the burden of adhering to these standards by hand. Currently, two are employed:
+The ``openff-toolkit`` is in the process of adopting code formatting tools ("linters") to maintain consistent style and remove the burden of adhering to these standards by hand. Currently, two are employed:
 1. `Black <https://black.readthedocs.io/>`_, the uncompromising code formatter, automatically formats code with a consistent style.
 1. `isort <https://timothycrosley.github.io/isort/>`_, sorts imports
 
@@ -277,7 +288,7 @@ There is a step in CI that uses these tools to check for a consistent style. The
 .. code-block:: shell
 
     $ conda install black isort -c conda-forge
-    $ black openforcefield
-    $ isort openforcefield
+    $ black openff
+    $ isort openff
 
 Anything not covered above is currently up to personal preference, but may change as new linters are added.

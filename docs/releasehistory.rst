@@ -7,8 +7,99 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 * ``minor`` increments add features but do not break API compatibility
 * ``micro`` increments represent bugfix releases or improvements in documentation
 
-Current Development
--------------------
+0.9.1 - Current development
+---------------------------
+
+New features
+""""""""""""
+- `PR #831 <https://github.com/openforcefield/openforcefield/pull/831>`_: Expose ELF conformer selection through the
+  OpenEye wrapper.
+- `PR #793 <https://github.com/openforcefield/openforcefield/pull/793>`_: Add an initial ELF conformer selection
+  implementation which uses RDKit.
+
+Behavior changed
+""""""""
+- `PR #802 <https://github.com/openforcefield/openforcefield/pull/802>`_: Fixes
+  `Issue #408 <https://github.com/openforcefield/openforcefield/issues/408>`_. The 1-4 scaling
+  factor for electrostatic interactions is now properly set by the value specified in the force
+  field. Previously it fell back to a default value of 0.83333. The toolkit may now produce
+  slightly different energies as a result of this change.
+
+0.9.0 - Namespace Migration
+---------------------------
+
+This release marks the transition from the old ``openforcefield`` branding over to its new
+identity as ``openff-toolkit``. This change has been made to better represent the role of the
+toolkit, and highlight its place in the larger Open Force Field (OpenFF) ecosystem.
+
+From version ``0.9.0`` onwards the toolkit will need to be imported as ``import openff.toolkit.XXX`` and
+``from openff.toolkit import XXX``.
+
+API-breaking changes
+""""""""""""""""""""
+- `PR #803 <https://github.com/openforcefield/openforcefield/pull/803>`_: Migrates ``openforcefield``
+  imports to ``openff.toolkit``.
+
+0.8.3 - Major bugfix release
+----------------------------
+
+This release fixes a critical bug in van der Waals parameter assignment.
+
+This release is also a final patch for the ``0.8.X`` series of releases of the toolkit, and also marks the last
+version of the toolkit which will be imported as ``import openforcefield.XXX`` / ``from openforcefield import XXX``.
+From version ``0.9.0`` onwards the toolkit will be importable only as ``import openff.toolkit.XXX`` /
+``from openff.toolkit import XXX``.
+
+**Note** This change will also be accompanied by a renaming of the package from ``openforcefield`` to ``openff-toolkit``,
+so users need not worry about accidentally pulling in a version with changed imports. Users will have to explicitly
+choose to install the ``openff-toolkit`` package once released which will contain the breaking import changes.
+
+Bugfixes
+""""""""
+- `PR #808 <https://github.com/openforcefield/openforcefield/pull/808>`_: Fixes
+  `Issue #807 <https://github.com/openforcefield/openforcefield/issues/807>`_,
+  which tracks a major bug in the interconversion between a vdW ``sigma``
+  and ``rmin_half`` parameter.
+
+
+New features
+""""""""""""
+- `PR #794 <https://github.com/openforcefield/openforcefield/pull/794>`_: Adds a decorator
+  ``@requires_package`` that denotes a function requires an optional dependency.
+- `PR #805 <https://github.com/openforcefield/openforcefield/pull/805>`_: Adds a deprecation warning for the up-coming
+  release of the ``openff-toolkit`` package and its import breaking changes.
+
+0.8.2 - Bugfix release
+----------------------
+
+**WARNING: This release was later found to contain a major bug,**
+`Issue #807 <https://github.com/openforcefield/openforcefield/issues/807>`_,
+**and produces incorrect energies.**
+
+Bugfixes
+""""""""
+- `PR #786 <https://github.com/openforcefield/openforcefield/pull/xyz>`_: Fixes `Issue #785
+  <https://github.com/openforcefield/openforcefield/issues/785>`_ where RDKitToolkitWrapper would
+  sometimes expect stereochemistry to be defined for non-stereogenic bonds when loading from
+  SDF.
+- `PR #786 <https://github.com/openforcefield/openforcefield/pull/786>`_: Fixes an issue where
+  using the :py:class:`Molecule <openforcefield.topology.Molecule>` copy constructor
+  (``newmol = Molecule(oldmol)``) would result
+  in the copy sharing the same ``.properties`` dict as the original (as in, changes to the
+  ``.properties`` dict of the copy would be reflected in the original).
+- `PR #789 <https://github.com/openforcefield/openforcefield/pull/789>`_: Fixes a regression noted in
+  `Issue #788 <https://github.com/openforcefield/openforcefield/issues/788>`_
+  where creating
+  :py:class:`vdWHandler.vdWType <openforcefield.typing.engines.smirnoff.parameters.vdWHandler.vdWType>`
+  or setting ``sigma`` or ``rmin_half`` using Quantities represented as strings resulted in an error.
+
+
+0.8.1 - Bugfix and minor feature release
+----------------------------------------
+
+**WARNING: This release was later found to contain a major bug,**
+`Issue #807 <https://github.com/openforcefield/openforcefield/issues/807>`_,
+**and produces incorrect energies.**
 
 API-breaking changes
 """"""""""""""""""""
@@ -22,6 +113,20 @@ API-breaking changes
   there are no special behaviors that are accessed in the case of partially-licensed OpenEye backends. The
   new behavior of this method is the same as if the default value above is always provided.
 
+Behavior Changed
+""""""""""""""""
+- `PR #583 <https://github.com/openforcefield/openforcefield/pull/583>`_: Methods
+  such as :py:meth:`Molecule.from_rdkit <openforcefield.topology.Molecule.from_rdkit>`
+  and :py:meth:`Molecule.from_openeye <openforcefield.topology.Molecule.from_openeye>`,
+  which delegate their internal logic to :py:class:`ToolkitRegistry <openforcefield.utils.toolkits.ToolkitRegistry>`
+  functions, now guarantee that they will return an object of the correct type when being called on ``Molecule``-derived classes. Previously,
+  running these constructors using subclasses of :py:class:`FrozenMolecule <openforcefield.topology.Molecule>`
+  would not return an instance of that subclass, but rather just an instance of a
+  :py:class:`Molecule <openforcefield.topology.Molecule>`.
+- `PR #753 <https://github.com/openforcefield/openforcefield/pull/753>`_: ``ParameterLookupError``
+  is now raised when passing to
+  :py:meth:`ParameterList.index <openforcefield.typing.engines.smirnoff.parameters.ParameterList>`
+  a SMIRKS pattern not found in the parameter list.
 
 New features
 """"""""""""
@@ -35,13 +140,30 @@ New features
   :py:meth:`ForceField.deregister_parameter_handler <openforcefield.typing.engines.smirnoff.forcefield.ForceField.deregister_parameter_handler>`.
 - `PR #730 <https://github.com/openforcefield/openforcefield/pull/730>`_: Adds
   :py:class:`Topology.is_periodic <openforcefield.topology.Topology>`.
-
+- `PR #753 <https://github.com/openforcefield/openforcefield/pull/753>`_: Adds
+  :py:meth:`ParameterHandler.__getitem__ <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler.__getitem__>`
+  to look up individual :py:class:`ParameterType <openforcefield.typing.engines.smirnoff.parameters.ParameterType>`
+  objects.
 
 Bugfixes
 """"""""
 - `PR #745 <https://github.com/openforcefield/openforcefield/pull/745>`_: Fixes bug when
   serializing molecule with conformers to JSON.
-
+- `PR #750 <https://github.com/openforcefield/openforcefield/pull/750>`_: Fixes a bug causing either
+  ``sigma`` or ``rmin_half`` to sometimes be missing on
+  :py:class:`vdWHandler.vdWType <openforcefield.typing.engines.smirnoff.parameters.vdWHandler.vdWType>`
+  objects.
+- `PR #756 <https://github.com/openforcefield/openforcefield/pull/756>`_: Fixes bug when running
+  :py:meth:`vdWHandler.create_force <openforcefield.typing.engines.smirnoff.parameters.vdWHandler.create_force>`
+  using a ``vdWHandler`` that was initialized using the API.
+- `PR #776 <https://github.com/openforcefield/openforcefield/pull/776>`_: Fixes a bug in which
+  the :py:meth:`Topology.from_openmm <openforcefield.topology.Topology.from_openmm>` and
+  :py:meth:`Topology.from_mdtraj <openforcefield.topology.Topology.from_mdtraj>` methods would
+  dangerously allow ``unique_molecules=None``.
+- `PR #777 <https://github.com/openforcefield/openforcefield/pull/777>`_:
+  :py:class:`RDKitToolkitWrapper <openforcefield.utils.toolkits.RDKitToolkitWrapper>`
+  now outputs the full warning message when ``allow_undefined_stereo=True`` (previously the
+  description of which stereo was undefined was squelched)
 
 
 0.8.0 - Virtual Sites
@@ -324,7 +446,7 @@ Bugfixes
 - `PR #631 <https://github.com/openforcefield/openforcefield/pull/631>`_: Fixes a bug in which calling
   :py:class:`unit_to_string <openforcefield.utils.utils.unit_to_string>` returned
   ``None`` when the unit is dimensionless. Now ``"dimensionless"`` is returned.
-- `PR #630 <https://github.com/openforcefield/openforcefield/pull/630>`_: Closes issue `Issue #629 
+- `PR #630 <https://github.com/openforcefield/openforcefield/pull/630>`_: Closes issue `Issue #629
   <https://github.com/openforcefield/openforcefield/issues/629>`_ in which the wrong exception is raised when
   attempting to instantiate a :py:class:`ForceField <openforcefield.typing.engines.smirnoff.forcefield.ForceField>`
   from an unparsable string.
