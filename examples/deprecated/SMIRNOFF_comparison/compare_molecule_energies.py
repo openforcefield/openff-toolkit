@@ -21,22 +21,22 @@ inpcrd_filepath = os.path.join(datapath, molname + '.crd')
 if not os.path.isdir(datapath):
     print("Extracting archived molecule files.")
     # Extract the AlkEthOH dataset shipped with the toolkit in data/molecules/ in the working directory.
-    from openforcefield.tests.utils import get_data_file_path
+    from openff.toolkit.tests.utils import get_data_file_path
     tarfile_path = os.path.join(get_data_file_path('molecules'), 'AlkEthOH_tripos.tar.gz')
     import tarfile
     with tarfile.open(tarfile_path, 'r:gz') as tar:
         tar.extractall()
 
 # Load molecule
-from openforcefield.topology import Molecule
+from openff.toolkit.topology import Molecule
 molecule = Molecule.from_file(mol_filepath)
 
 # Load forcefield
-from openforcefield.typing.engines.smirnoff import ForceField
+from openff.toolkit.typing.engines.smirnoff import ForceField
 forcefield = ForceField('test_forcefields/Frosst_AlkEthOH_parmAtFrosst.offxml')
 
 # Compare energies
-from openforcefield.tests.utils import compare_amber_smirnoff
+from openff.toolkit.tests.utils import compare_amber_smirnoff
 # We ignore the charges as they are not included in the force field.
 # TODO: Reactivate this check when we'll be able to load charges from the file.
 energies = compare_amber_smirnoff(prmtop_filepath, inpcrd_filepath,

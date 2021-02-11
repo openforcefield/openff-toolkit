@@ -1,6 +1,6 @@
 import argparse
-from openforcefield.topology import Molecule, Topology
-from openforcefield.utils import RDKitToolkitWrapper
+from openff.toolkit.topology import Molecule, Topology
+from openff.toolkit.utils import RDKitToolkitWrapper
 from rdkit.Chem import rdMolAlign
 import numpy as np
 from simtk import openmm, unit
@@ -32,7 +32,7 @@ def compute_conformer_energies_from_file(filename):
     print(f'{n_molecules} unique molecule(s) loaded, with {n_conformers} total conformers')
 
     # Load the openff-1.1.0 force field appropriate for vacuum calculations (without constraints)
-    from openforcefield.typing.engines.smirnoff import ForceField
+    from openff.toolkit.typing.engines.smirnoff import ForceField
     forcefield = ForceField('openff_unconstrained-1.1.0.offxml')
     # Loop over molecules and minimize each conformer
     for molecule in molecules:
