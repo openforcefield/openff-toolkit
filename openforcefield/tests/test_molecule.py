@@ -2029,6 +2029,30 @@ class TestMolecule:
         with pytest.raises(KeyError):
             mol_qca_record = Molecule.from_qcschema(entry, client)
 
+    @requires_qcelemental
+    def test_qcschema_molecule_record_round_trip_from_to_from(self):
+        """Test making a molecule from qca record using from_qcschema,
+        then converting back to qcschema using to_qcschema,
+         and then reading that again using from_qcschema"""
+
+        # get a molecule qcschema
+        import qcportal as ptl
+
+        client = ptl.FractalClient()
+
+        record = client.query_molecules(molecular_formula="C16H20N3O5")[0]
+
+        # now make the molecule from the record instance with the geometry
+        mol_qca_record = Molecule.from_qcschema(record, client)
+        off_qcschema = mol_qca_record.to_qcschema()
+        mol_using_from_off_qcschema = Molecule.from_qcschema(off_qcschema)
+
+        assert_molecule_is_equal(
+            mol_qca_record,
+            mol_using_from_off_qcschema,
+            "Molecule roundtrip to/from_qcschema failed",
+        )
+
     def test_from_mapped_smiles(self):
         """Test making the molecule from issue #412 using both toolkits to ensure the issue
         is fixed."""
