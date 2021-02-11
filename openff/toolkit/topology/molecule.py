@@ -4670,7 +4670,7 @@ class FrozenMolecule(Serializable):
                 )
 
         # identify if this is a dataset entry
-        if 'attributes' in qca_record:
+        if "attributes" in qca_record:
             mapped_smiles = qca_record["attributes"][
                 "canonical_isomeric_explicit_hydrogen_mapped_smiles"
             ]
@@ -4678,10 +4678,14 @@ class FrozenMolecule(Serializable):
                 # try and find the initial molecule conformations and attach them
                 # collect the input molecules
                 try:
-                    input_mols = client.query_molecules(id=qca_record["initial_molecules"])
+                    input_mols = client.query_molecules(
+                        id=qca_record["initial_molecules"]
+                    )
                 except KeyError:
                     # this must be an optimisation record
-                    input_mols = client.query_molecules(id=qca_record["initial_molecule"])
+                    input_mols = client.query_molecules(
+                        id=qca_record["initial_molecule"]
+                    )
                 except AttributeError:
                     raise AttributeError(
                         "The provided client can not query molecules, make sure it is an instance of"
@@ -4691,16 +4695,16 @@ class FrozenMolecule(Serializable):
                 input_mols = []
 
         # identify if this is a molecule record
-        elif 'extras' in qca_record:
+        elif "extras" in qca_record:
             mapped_smiles = qca_record["extras"][
                 "canonical_isomeric_explicit_hydrogen_mapped_smiles"
             ]
             input_mols = [qca_record]
         else:
             raise KeyError(
-                    "The record must contain the hydrogen mapped smiles to be safely made from the archive. "
-                    "It is not present in either 'attributes' or 'extras' on the provided `qca_record`"
-                )
+                "The record must contain the hydrogen mapped smiles to be safely made from the archive. "
+                "It is not present in either 'attributes' or 'extras' on the provided `qca_record`"
+            )
 
         # make a new molecule that has been reordered to match the cmiles mapping
         offmol = cls.from_mapped_smiles(
@@ -4713,7 +4717,7 @@ class FrozenMolecule(Serializable):
         initial_ids = {}
         for molecule in input_mols:
             if not isinstance(molecule, dict):
-                mol = molecule.dict(encoding='json')
+                mol = molecule.dict(encoding="json")
             else:
                 mol = molecule
 
@@ -4723,8 +4727,8 @@ class FrozenMolecule(Serializable):
             try:
                 offmol._add_conformer(geometry.in_units_of(unit.angstrom))
                 # in case this molecule didn't come from a server at all
-                if 'id' in mol:
-                    initial_ids[mol['id']] = offmol.n_conformers - 1
+                if "id" in mol:
+                    initial_ids[mol["id"]] = offmol.n_conformers - 1
             except InvalidConformerError:
                 print(
                     "Invalid conformer for this molecule, the geometry could not be attached."
