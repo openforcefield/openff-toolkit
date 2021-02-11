@@ -2764,10 +2764,12 @@ class TestMolecule:
         """Test applying the ELF10 method."""
 
         if toolkit == "openeye":
+            pytest.importorskip("openeye")
             toolkit_registry = ToolkitRegistry(
                 toolkit_precedence=[OpenEyeToolkitWrapper]
             )
         elif toolkit == "rdkit":
+            pytest.importorskip("rdkit")
             toolkit_registry = ToolkitRegistry(toolkit_precedence=[RDKitToolkitWrapper])
 
         molecule = Molecule.from_file(
