@@ -1287,6 +1287,7 @@ class TestForceField:
         forcefield = ForceField(
             """
 <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+  <Electrostatics version="0.3" method="PME" scale12="0.0" scale13="0.0" scale14="0.833333" cutoff="9.0 * angstrom"/>
   <ProperTorsions version="0.3" potential="k*(1+cos(periodicity*theta-phase))">
     <Proper smirks="[#99:1]-[#99X4:2]-[#99:3]-[#99:4]" id="t1" idivf1="1" k1="0.156 * kilocalories_per_mole" periodicity1="3" phase1="0.0 * degree"/>
   </ProperTorsions>
@@ -4283,18 +4284,14 @@ class TestForceFieldParameterAssignment:
         ff_no_nonbonded.deregister_parameter_handler("Electrostatics")
 
         sys_no_vdw = ff_no_vdw.create_openmm_system(top)
-        sys_no_electrostatics = ff_no_electrostatics.create_openmm_system(top)
-        sys_no_nonbonded = ff_no_nonbonded.create_openmm_system(top)
+        with pytest.raises(MissingElectrostaticsError):
+            sys_no_electrostatics = ff_no_electrostatics.create_openmm_system(top)
+        with pytest.raises(MissingElectrostaticsError):
+            sys_no_nonbonded = ff_no_nonbonded.create_openmm_system(top)
 
         np.testing.assert_almost_equal(
             actual=get_14_scaling_factors(sys_no_vdw)[0],
             desired=ff_no_vdw["Electrostatics"].scale14,
-            decimal=8,
-        )
-
-        np.testing.assert_almost_equal(
-            actual=get_14_scaling_factors(sys_no_electrostatics)[1],
-            desired=ff_no_electrostatics["vdW"].scale14,
             decimal=8,
         )
 
