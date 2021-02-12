@@ -3676,6 +3676,9 @@ class FrozenMolecule(Serializable):
         impropers, amber_impropers
 
         """
+        # TODO: Replace with non-cheminformatics-toolkit method
+        #       (ie. just looping over all atoms and finding ones that have 3 bonds?)
+
         smirnoff_improper_smarts = "[*:1]~[X3:2](~[*:3])~[*:4]"
         improper_idxs = self.chemical_environment_matches(smirnoff_improper_smarts)
         smirnoff_impropers = {
@@ -3707,6 +3710,8 @@ class FrozenMolecule(Serializable):
         impropers, smirnoff_impropers
 
         """
+        # TODO: Replace with non-cheminformatics-toolkit method
+        #       (ie. just looping over all atoms and finding ones that have 3 bonds?)
         amber_improper_smarts = "[X3:1](~[*:2])(~[*:3])~[*:4]"
         improper_idxs = self.chemical_environment_matches(amber_improper_smarts)
         amber_impropers = {
