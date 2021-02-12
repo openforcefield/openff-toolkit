@@ -56,11 +56,14 @@ __all__ = [
 import copy
 import importlib
 import inspect
+import itertools
 import logging
+import re
 import subprocess
 import tempfile
 from distutils.spawn import find_executable
 from functools import wraps
+from typing import TYPE_CHECKING, List, Optional, Tuple
 
 import numpy as np
 from simtk import unit
@@ -71,6 +74,9 @@ from openff.toolkit.utils.utils import (
     inherit_docstrings,
     temporary_cd,
 )
+
+if TYPE_CHECKING:
+    from openforcefield.topology.molecule import Molecule
 
 # =============================================================================================
 # CONFIGURE LOGGER
@@ -2109,6 +2115,88 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         for conformer in molecule2._conformers:
             molecule._add_conformer(conformer)
 
+    def apply_elf_conformer_selection(
+        self,
+        molecule: "Molecule",
+        percentage: float = 2.0,
+        limit: int = 10,
+    ):
+        """Applies the `ELF method<https://docs.eyesopen.com/toolkits/python/quacpactk/
+        molchargetheory.html#elf-conformer-selection>`_ to select a set of diverse
+        conformers which have minimal electrostatically strongly interacting functional
+        groups from a molecules conformers.
+
+        Notes
+        -----
+        * The input molecule should have a large set of conformers already
+          generated to select the ELF conformers from.
+        * The selected conformers will be retained in the `molecule.conformers` list
+          while unselected conformers will be discarded.
+
+        See Also
+        --------
+        ``RDKitToolkitWrapper.apply_elf_conformer_selection``
+
+        Parameters
+        ----------
+        molecule
+            The molecule which contains the set of conformers to select from.
+        percentage
+            The percentage of conformers with the lowest electrostatic interaction
+            energies to greedily select from.
+        limit
+            The maximum number of conformers to select.
+        """
+
+        from openeye import oechem, oequacpac
+
+        if molecule.n_conformers == 0:
+            return
+
+        oe_molecule = molecule.to_openeye()
+
+        # Select a subset of the OMEGA generated conformers using the ELF10 method.
+        oe_elf_options = oequacpac.OEELFOptions()
+        oe_elf_options.SetElfLimit(limit)
+        oe_elf_options.SetPercent(percentage)
+
+        oe_elf = oequacpac.OEELF(oe_elf_options)
+
+        output_stream = oechem.oeosstream()
+
+        oechem.OEThrow.SetOutputStream(output_stream)
+        oechem.OEThrow.Clear()
+
+        status = oe_elf.Select(oe_molecule)
+
+        oechem.OEThrow.SetOutputStream(oechem.oeerr)
+
+        output_string = output_stream.str().decode("UTF-8")
+        output_string = output_string.replace("Warning: ", "")
+        output_string = re.sub("^: +", "", output_string, flags=re.MULTILINE)
+        output_string = re.sub("\n$", "", output_string)
+
+        # Check to make sure the call to OE was succesful, and re-route any
+        # non-fatal warnings to the correct logger.
+        if not status:
+            raise RuntimeError("\n" + output_string)
+        elif len(output_string) > 0:
+            logger.warning(output_string)
+
+        # Extract and store the ELF conformers on the input molecule.
+        conformers = []
+
+        for oe_conformer in oe_molecule.GetConfs():
+
+            conformer = np.zeros((oe_molecule.NumAtoms(), 3))
+
+            for atom_index, coordinates in oe_conformer.GetCoords().items():
+                conformer[atom_index, :] = coordinates
+
+            conformers.append(conformer * unit.angstrom)
+
+        molecule._conformers = conformers
+
     def assign_partial_charges(
         self,
         molecule,
@@ -3437,6 +3525,381 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             )
 
         molecule.partial_charges = charges * unit.elementary_charge
+
+    @classmethod
+    def _elf_is_problematic_conformer(
+        cls, molecule: "Molecule", conformer: unit.Quantity
+    ) -> Tuple[bool, Optional[str]]:
+        """A function which checks if a particular conformer is known to be problematic
+        when computing ELF partial charges.
+
+        Currently this includes conformers which:
+
+        * contain a trans-COOH configuration. The trans conformer is discarded because
+          it leads to strong electrostatic interactions when assigning charges, and these
+          result in unreasonable charges. Downstream calculations have observed up to a
+          4 log unit error in water-octanol logP calculations when using charges assigned
+          from trans conformers.
+
+        Returns
+        -------
+            A tuple of a bool stating whether the conformer is problematic and, if it
+            is, a string message explaing why. If the conformer is not problematic, the
+            second return value will be none.
+        """
+        from rdkit.Chem.rdMolTransforms import GetDihedralRad
+
+        # Create a copy of the molecule which contains only this conformer.
+        molecule_copy = copy.deepcopy(molecule)
+        molecule_copy._conformers = [conformer]
+
+        rdkit_molecule = molecule_copy.to_rdkit()
+
+        # Check for trans-COOH configurations
+        carboxylic_acid_matches = cls._find_smarts_matches(
+            rdkit_molecule, "[#6X3:2](=[#8:1])(-[#8X2H1:3]-[#1:4])"
+        )
+
+        for match in carboxylic_acid_matches:
+
+            dihedral_angle = GetDihedralRad(rdkit_molecule.GetConformer(0), *match)
+
+            if dihedral_angle > np.pi / 2.0:
+                # Discard the 'trans' conformer.
+                return (
+                    True,
+                    "Molecules which contain COOH functional groups in a trans "
+                    "configuration are discarded by the ELF method.",
+                )
+
+        return False, None
+
+    @classmethod
+    def _elf_prune_problematic_conformers(
+        cls, molecule: "Molecule"
+    ) -> List[unit.Quantity]:
+        """A function which attempts to remove conformers which are known to be
+        problematic when computing ELF partial charges.
+
+        Currently this includes conformers which:
+
+        * contain a trans-COOH configuration. These conformers ... TODO add reason.
+
+        Notes
+        -----
+        * Problematic conformers are flagged by the
+          ``RDKitToolkitWrapper._elf_is_problematic_conformer`` function.
+
+        Returns
+        -------
+            The conformers to retain.
+        """
+
+        valid_conformers = []
+
+        for i, conformer in enumerate(molecule.conformers):
+
+            is_problematic, reason = cls._elf_is_problematic_conformer(
+                molecule, conformer
+            )
+
+            if is_problematic:
+                logger.warning(f"Discarding conformer {i}: {reason}")
+            else:
+                valid_conformers.append(conformer)
+
+        return valid_conformers
+
+    @classmethod
+    def _elf_compute_electrostatic_energy(
+        cls, molecule: "Molecule", conformer: unit.Quantity
+    ) -> float:
+        """Computes the 'electrostatic interaction energy' of a particular conformer
+        of a molecule.
+
+        The energy is computed as the sum of ``|q_i * q_j| * r_ij^-1`` over all pairs
+        of atoms (i, j) excluding 1-2 and 1-3 terms, where q_i is the partial charge
+        of atom i and r_ij the Euclidean distance between atoms i and j.
+
+        Notes
+        -----
+        * The partial charges will be taken from the molecule directly.
+
+        Parameters
+        ----------
+        molecule
+            The molecule containing the partial charges.
+        conformer
+            The conformer to compute the energy of. This should be a unit wrapped
+            numpy array with shape=(n_atoms, 3) with units compatible with angstroms.
+
+        Returns
+        -------
+            The electrostatic interaction energy in units of [e^2 / Angstrom].
+        """
+
+        if molecule.partial_charges is None:
+            raise ValueError("The molecule has no partial charges assigned.")
+
+        partial_charges = np.abs(
+            molecule.partial_charges.value_in_unit(unit.elementary_charge)
+        ).reshape(-1, 1)
+
+        # Build an exclusion list for 1-2 and 1-3 interactions.
+        excluded_pairs = {
+            *[(bond.atom1_index, bond.atom2_index) for bond in molecule.bonds],
+            *[
+                (angle[0].molecule_atom_index, angle[-1].molecule_atom_index)
+                for angle in molecule.angles
+            ],
+        }
+
+        # Build the distance matrix between all pairs of atoms.
+        coordinates = conformer.value_in_unit(unit.angstrom)
+
+        distances = np.sqrt(
+            np.sum(np.square(coordinates)[:, np.newaxis, :], axis=2)
+            - 2 * coordinates.dot(coordinates.T)
+            + np.sum(np.square(coordinates), axis=1)
+        )
+        # Handle edge cases where the squared distance is slightly negative due to
+        # precision issues
+        np.fill_diagonal(distances, 0.0)
+
+        inverse_distances = np.reciprocal(
+            distances, out=np.zeros_like(distances), where=~np.isclose(distances, 0.0)
+        )
+
+        # Multiply by the charge products.
+        charge_products = partial_charges @ partial_charges.T
+
+        for x, y in excluded_pairs:
+            charge_products[x, y] = 0.0
+            charge_products[y, x] = 0.0
+
+        interaction_energies = inverse_distances * charge_products
+
+        return 0.5 * interaction_energies.sum()
+
+    @classmethod
+    def _elf_compute_rms_matrix(cls, molecule: "Molecule") -> np.ndarray:
+        """Computes the symmetric RMS matrix of all conformers in a molecule taking
+        only heavy atoms into account.
+
+        Parameters
+        ----------
+        molecule
+            The molecule containing the conformers.
+
+        Returns
+        -------
+            The RMS matrix with shape=(n_conformers, n_conformers).
+        """
+
+        from rdkit import Chem
+        from rdkit.Chem import AllChem
+
+        rdkit_molecule: Chem.RWMol = Chem.RemoveHs(molecule.to_rdkit())
+
+        n_conformers = len(molecule.conformers)
+
+        conformer_ids = [conf.GetId() for conf in rdkit_molecule.GetConformers()]
+
+        # Compute the RMS matrix making sure to take into account any automorhism (e.g
+        # a phenyl or nitro substituent flipped 180 degrees.
+        rms_matrix = np.zeros((n_conformers, n_conformers))
+
+        for i, j in itertools.combinations(conformer_ids, 2):
+
+            rms_matrix[i, j] = AllChem.GetBestRMS(
+                rdkit_molecule,
+                rdkit_molecule,
+                conformer_ids[i],
+                conformer_ids[j],
+            )
+
+        rms_matrix += rms_matrix.T
+        return rms_matrix
+
+    @classmethod
+    def _elf_select_diverse_conformers(
+        cls,
+        molecule: "Molecule",
+        ranked_conformers: List[unit.Quantity],
+        limit: int,
+        rms_tolerance: unit.Quantity,
+    ) -> List[unit.Quantity]:
+        """Attempt to greedily select a specified number conformers which are maximally
+        diverse.
+
+        The conformer with the lowest electrostatic energy (the first conformer in the
+        ``ranked_conformers`` list) is always chosen. After that selection proceeds by:
+
+        a) selecting an un-selected conformer which is the most different from those
+          already selected, and whose RMS compared to each selected conformer is
+          greater than ``rms_tolerance``. Here most different means the conformer
+          which has the largest sum of RMS with the selected conformers.
+
+        b) repeating a) until either ``limit`` number of conformers have been selected,
+           or there are no more distinct conformers to select from.
+
+        Notes
+        -----
+
+        * As the selection is greedy there is no guarantee that the selected conformers
+          will be the optimal distinct i.e. there may be other selections of conformers
+          which are more distinct.
+
+        Parameters
+        ----------
+        molecule
+            The molecule object which matches the conformers to select from.
+        ranked_conformers
+            A list of conformers to select from, ranked by their electrostatic
+            interaction energy (see ``_compute_electrostatic_energy``).
+        limit
+            The maximum number of conformers to select.
+        rms_tolerance
+            Conformers whose RMS is within this amount will be treated as identical and
+            the duplicate discarded.
+
+        Returns
+        -------
+            The select list of conformers.
+        """
+
+        # Compute the RMS between all pairs of conformers
+        molecule = copy.deepcopy(molecule)
+        molecule.conformers.clear()
+
+        for conformer in ranked_conformers:
+            molecule.add_conformer(conformer)
+
+        rms_matrix = cls._elf_compute_rms_matrix(molecule)
+
+        # Apply the greedy selection process.
+        closed_list = np.zeros(limit).astype(int)
+        closed_mask = np.zeros(rms_matrix.shape[0], dtype=bool)
+
+        n_selected = 1
+
+        for i in range(min(molecule.n_conformers, limit - 1)):
+
+            distances = rms_matrix[closed_list[: i + 1], :].sum(axis=0)
+
+            # Exclude already selected conformers or conformers which are too similar
+            # to those already selected.
+            closed_mask[
+                np.any(
+                    rms_matrix[closed_list[: i + 1], :]
+                    < rms_tolerance.value_in_unit(unit.angstrom),
+                    axis=0,
+                )
+            ] = True
+
+            if np.all(closed_mask):
+                # Stop of there are no more distinct conformers to select from.
+                break
+
+            distant_index = np.ma.array(distances, mask=closed_mask).argmax()
+            closed_list[i + 1] = distant_index
+
+            n_selected += 1
+
+        return [ranked_conformers[i.item()] for i in closed_list[:n_selected]]
+
+    def apply_elf_conformer_selection(
+        self,
+        molecule: "Molecule",
+        percentage: float = 2.0,
+        limit: int = 10,
+        rms_tolerance: unit.Quantity = 0.05 * unit.angstrom,
+    ):
+        """Applies the `ELF method<https://docs.eyesopen.com/toolkits/python/quacpactk/
+        molchargetheory.html#elf-conformer-selection>`_ to select a set of diverse
+        conformers which have minimal electrostatically strongly interacting functional
+        groups from a molecules conformers.
+
+        The diverse conformer selection is performed by the ``_elf_select_diverse_conformers``
+        function, which attempts to greedily select conformers which are most distinct
+        according to their RMS.
+
+        Warnings
+        --------
+        * Although this function is inspired by the OpenEye ELF10 method, this
+          implementation may yield slightly different conformers due to potential
+          differences in this and the OE closed source implementation.
+
+        Notes
+        -----
+        * The input molecule should have a large set of conformers already
+          generated to select the ELF10 conformers from.
+        * The selected conformers will be retained in the `molecule.conformers` list
+          while unselected conformers will be discarded.
+        * Only heavy atoms are included when using the RMS to select diverse conformers.
+
+        See Also
+        --------
+        ``RDKitToolkitWrapper._elf_select_diverse_conformers``
+
+        Parameters
+        ----------
+        molecule
+            The molecule which contains the set of conformers to select from.
+        percentage
+            The percentage of conformers with the lowest electrostatic interaction
+            energies to greedily select from.
+        limit
+            The maximum number of conformers to select.
+        rms_tolerance
+            Conformers whose RMS is within this amount will be treated as identical and
+            the duplicate discarded.
+        """
+
+        if molecule.n_conformers == 0:
+            return
+
+        # Copy the input molecule so we can directly perturb it within the method.
+        molecule_copy = copy.deepcopy(molecule)
+
+        # Prune any problematic conformers, such as trans-COOH configurations.
+        conformers = self._elf_prune_problematic_conformers(molecule_copy)
+
+        if len(conformers) == 0:
+
+            raise ValueError(
+                "There were no conformers to select from after discarding conformers "
+                "which are known to be problematic when computing ELF partial charges. "
+                "Make sure to generate a diverse array of conformers before calling the "
+                "`RDKitToolkitWrapper.apply_elf_conformer_selection` method."
+            )
+
+        # Generate a set of absolute MMFF94 partial charges for the molecule and use
+        # these to compute the electrostatic interaction energy of each conformer.
+        self.assign_partial_charges(molecule_copy, "mmff94")
+
+        conformer_energies = [
+            (
+                self._elf_compute_electrostatic_energy(molecule_copy, conformer),
+                conformer,
+            )
+            for conformer in conformers
+        ]
+
+        # Rank the conformer energies and retain `percentage`% with the lowest energies.
+        conformer_energies = sorted(conformer_energies, key=lambda x: x[0])
+        cutoff_index = max(1, int(len(conformer_energies) * percentage / 100.0))
+
+        low_energy_conformers = [
+            conformer for _, conformer in conformer_energies[:cutoff_index]
+        ]
+
+        # Attempt to greedily select `limit` conformers which are maximally diverse.
+        diverse_conformers = self._elf_select_diverse_conformers(
+            molecule_copy, low_energy_conformers, limit, rms_tolerance
+        )
+
+        molecule._conformers = diverse_conformers
 
     def from_rdkit(self, rdmol, allow_undefined_stereo=False, _cls=None):
         """
