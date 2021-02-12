@@ -36,6 +36,7 @@ from openff.toolkit.typing.engines.smirnoff import (
     ForceField,
     FractionalBondOrderInterpolationMethodUnsupportedError,
     IncompatibleParameterError,
+    MissingElectrostaticsError,
     ParameterHandler,
     ParameterLookupError,
     SMIRNOFFAromaticityError,
@@ -3233,6 +3234,31 @@ class TestForceFieldChargeAssignment:
         for particle_index, expected_charge in enumerate(expected_charges):
             q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
             assert q == expected_charge
+
+    def test_library_charges_missing_electrostatics(self):
+        """Test that a ForceField with no Electrostatics tag cannot be used to
+        create a system, even if some or all of the atoms have partial charges
+        assigned"""
+        from openff.toolkit.typing.engines.smirnoff.parameters import (
+            ElectrostaticsHandler,
+        )
+
+        top = Topology.from_molecules(Molecule.from_smiles("O"))
+        tip3p = ForceField("test_forcefields/tip3p.offxml")
+
+        with pytest.raises(MissingElectrostaticsError):
+            tip3p.create_openmm_system(top)
+
+        tip3p.register_parameter_handler(ElectrostaticsHandler(version=0.3))
+
+        out = tip3p.create_openmm_system(top)
+
+        for force in out.getForces():
+            if type(force) == openmm.NonbondedForce:
+                assert force.getCutoffDistance() == 9.0 * unit.angstrom
+                break
+        else:
+            raise Exception("Did not find a nonbonded force in this system")
 
     def test_library_charges_dont_parameterize_molecule_because_of_incomplete_coverage(
         self,

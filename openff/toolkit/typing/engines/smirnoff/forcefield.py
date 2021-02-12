@@ -22,6 +22,7 @@ __all__ = [
     "ParameterHandlerRegistrationError",
     "SMIRNOFFVersionError",
     "SMIRNOFFAromaticityError",
+    "MissingElectrostaticsError",
     "ParseError",
     "ForceField",
 ]
@@ -146,6 +147,13 @@ class SMIRNOFFVersionError(MessageException):
     """
 
     pass
+
+
+class MissingElectrostaticsError(MessageException):
+    """
+    Exception thrown when trying to create an OpenMM System with a force field
+    that does not have an Electrostatics tag.
+    """
 
 
 class SMIRNOFFAromaticityError(MessageException):
@@ -1280,6 +1288,10 @@ class ForceField:
 
         """
         return_topology = kwargs.pop("return_topology", False)
+
+        if "Electrostatics" not in self.registered_parameter_handlers:
+            # Could do this later, to not raise when systems don't have any charges?
+            raise MissingElectrostaticsError("No Electrostatics handler registered.")
 
         # Make a deep copy of the topology so we don't accidentally modify it
         topology = copy.deepcopy(topology)
