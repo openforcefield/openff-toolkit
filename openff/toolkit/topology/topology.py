@@ -1139,20 +1139,21 @@ class TopologyMolecule:
 
     @property
     def impropers(self):
-        """Iterable of Tuple[TopologyAtom]: iterator over the improper torsions in this TopologyMolecule."""
+        """Iterable of Tuple[TopologyAtom]: iterator over the possible improper torsions in this TopologyMolecule."""
         return self._convert_to_topology_atom_tuples(self._reference_molecule.impropers)
 
     @property
     def n_impropers(self):
-        """int: number of proper torsions in this TopologyMolecule."""
+        """int: number of possible improper torsions in this TopologyMolecule."""
         return self._reference_molecule.n_impropers
 
     @property
     def smirnoff_impropers(self):
         """
-        Iterable of Tuple[TopologyAtom]: iterator over the improper torsions in this TopologyMolecule.
+        Note that it's possible that a trivalent center will not have an improper assigned.
+        This will depend on the force field that is used.
 
-        Note that this will return 6 possible atom orderings around each improper
+        Also note that this will return 6 possible atom orderings around each improper
         center. In current SMIRNOFF parameterization, three of these six
         orderings will be used for the actual assignment of the improper term
         and measurement of the angles. These three orderings capture the three unique
@@ -1165,6 +1166,13 @@ class TopologyMolecule:
         ..todo : Offer a way to do the keytransform and get the final 3 orderings in this
                  method? How can we keep this logic synced up with the parameterization
                  machinery?
+
+        Returns
+        -------
+        impropers : set of tuple
+            An iterator of tuples, each containing the indices of atoms making
+            up a possible improper torsion. The central atom is listed second
+            in each tuple.
         """
         return self._convert_to_topology_atom_tuples(
             self._reference_molecule.smirnoff_impropers
@@ -1173,17 +1181,24 @@ class TopologyMolecule:
     @property
     def amber_impropers(self):
         """
-        Iterable of Tuple[TopologyAtom]: iterator over the improper torsions in this TopologyMolecule.
-
         Iterate over improper torsions in the molecule, but only those with
         trivalent centers, reporting the central atom first in each improper.
 
-        Note that this will return 6 possible atom orderings around each improper
+        Note that it's possible that a trivalent center will not have an improper assigned.
+        This will depend on the force field that is used.
+
+        Also note that this will return 6 possible atom orderings around each improper
         center. In current AMBER parameterization, one of these six
         orderings will be used for the actual assignment of the improper term
         and measurement of the angle. This method does not encode the logic to
         determine which of the six orderings AMBER would use.
 
+        Returns
+        -------
+        impropers : set of tuple
+            An iterator of tuples, each containing the indices of atoms making
+            up a possible improper torsion. The central atom is listed first in
+            each tuple.
         """
         return self._convert_to_topology_atom_tuples(
             self._reference_molecule.amber_impropers
@@ -1748,12 +1763,12 @@ class Topology(Serializable):
 
     @property
     def n_impropers(self):
-        """int: number of improper torsions in this Topology."""
+        """int: number of possible improper torsions in this Topology."""
         return sum(mol.n_impropers for mol in self._topology_molecules)
 
     @property
     def impropers(self):
-        """Iterable of Tuple[TopologyAtom]: iterator over the improper torsions in this Topology."""
+        """Iterable of Tuple[TopologyAtom]: iterator over the possible improper torsions in this Topology."""
         for topology_molecule in self._topology_molecules:
             for improper in topology_molecule.impropers:
                 yield improper
@@ -1764,7 +1779,10 @@ class Topology(Serializable):
         Iterate over improper torsions in the molecule, but only those with
         trivalent centers, reporting the central atom second in each improper.
 
-        Note that this will return 6 possible atom orderings around each improper
+        Note that it's possible that a trivalent center will not have an improper assigned.
+        This will depend on the force field that is used.
+
+        Also note that this will return 6 possible atom orderings around each improper
         center. In current SMIRNOFF parameterization, three of these six
         orderings will be used for the actual assignment of the improper term
         and measurement of the angles. These three orderings capture the three unique
@@ -1800,7 +1818,10 @@ class Topology(Serializable):
         Iterate over improper torsions in the molecule, but only those with
         trivalent centers, reporting the central atom first in each improper.
 
-        Note that this will return 6 possible atom orderings around each improper
+        Note that it's possible that a trivalent center will not have an improper assigned.
+        This will depend on the force field that is used.
+
+        Also note that this will return 6 possible atom orderings around each improper
         center. In current AMBER parameterization, one of these six
         orderings will be used for the actual assignment of the improper term
         and measurement of the angle. This method does not encode the logic to
