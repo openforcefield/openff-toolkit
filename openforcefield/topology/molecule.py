@@ -3709,6 +3709,20 @@ class FrozenMolecule(Serializable):
         Iterate over improper torsions in the molecule, but only those with
         trivalent centers, reporting the central atom second in each improper.
 
+        Note that this will return 6 possible atom orderings around each improper
+        center. In current SMIRNOFF parameterization, three of these six
+        orderings will be used for the actual assignment of the improper term
+        and measurement of the angles. These three orderings capture the three unique
+        angles that could be calculated around the improper center, therefore the sum
+        of these three terms will always return a consistent energy.
+
+        The exact three orderings that will be applied during parameterization can not be
+        determined in this method, since it requires sorting the particle indices, and
+        those indices may change when this molecule is added to a Topology.
+
+        For more details on the use of three-fold ('trefoil') impropers, see
+        https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html#impropertorsions
+
         Returns
         -------
         impropers : set of tuple
@@ -3733,6 +3747,12 @@ class FrozenMolecule(Serializable):
         """
         Iterate over improper torsions in the molecule, but only those with
         trivalent centers, reporting the central atom first in each improper.
+
+        Note that this will return 6 possible atom orderings around each improper
+        center. In current AMBER parameterization, one of these six
+        orderings will be used for the actual assignment of the improper term
+        and measurement of the angle. This method does not encode the logic to
+        determine which of the six orderings AMBER would use.
 
         Returns
         -------
