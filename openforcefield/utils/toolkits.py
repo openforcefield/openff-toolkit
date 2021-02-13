@@ -2137,7 +2137,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         See Also
         --------
-        ``RDKitToolkitWrapper.apply_elf_conformer_selection``
+        RDKitToolkitWrapper.apply_elf_conformer_selection
 
         Parameters
         ----------
@@ -3880,7 +3880,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         See Also
         --------
-        ``RDKitToolkitWrapper._elf_select_diverse_conformers``
+        RDKitToolkitWrapper._elf_select_diverse_conformers
 
         Parameters
         ----------
