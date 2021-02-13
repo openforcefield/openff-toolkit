@@ -3518,7 +3518,7 @@ class FrozenMolecule(Serializable):
 
     @property
     def n_impropers(self):
-        """int: number of improper torsions in the Molecule."""
+        """int: number of possible improper torsions in the Molecule."""
         self._construct_torsions()
         return len(self._impropers)
 
@@ -3624,14 +3624,104 @@ class FrozenMolecule(Serializable):
     @property
     def impropers(self):
         """
-        Iterate over all proper torsions in the molecule
+        Iterate over all improper torsions in the molecule.
 
-        .. todo::
-
+        .. todo ::
            * Do we need to return a ``Torsion`` object that collects information about fractional bond orders?
+
+        Returns
+        -------
+        impropers : set of tuple
+            An iterator of tuples, each containing the indices of atoms making
+            up a possible improper torsion.
+
+        See Also
+        --------
+        smirnoff_impropers, amber_impropers
         """
         self._construct_torsions()
         return self._impropers
+
+    @property
+    def smirnoff_impropers(self):
+        """
+        Iterate over improper torsions in the molecule, but only those with
+        trivalent centers, reporting the central atom second in each improper.
+
+        Note that it's possible that a trivalent center will not have an improper assigned.
+        This will depend on the force field that is used.
+
+        Also note that this will return 6 possible atom orderings around each improper
+        center. In current SMIRNOFF parameterization, three of these six
+        orderings will be used for the actual assignment of the improper term
+        and measurement of the angles. These three orderings capture the three unique
+        angles that could be calculated around the improper center, therefore the sum
+        of these three terms will always return a consistent energy.
+
+        The exact three orderings that will be applied during parameterization can not be
+        determined in this method, since it requires sorting the particle indices, and
+        those indices may change when this molecule is added to a Topology.
+
+        For more details on the use of three-fold ('trefoil') impropers, see
+        https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html#impropertorsions
+
+        Returns
+        -------
+        impropers : set of tuple
+            An iterator of tuples, each containing the indices of atoms making
+            up a possible improper torsion. The central atom is listed second
+            in each tuple.
+
+        See Also
+        --------
+        impropers, amber_impropers
+
+        """
+        # TODO: Replace with non-cheminformatics-toolkit method
+        #       (ie. just looping over all atoms and finding ones that have 3 bonds?)
+
+        smirnoff_improper_smarts = "[*:1]~[X3:2](~[*:3])~[*:4]"
+        improper_idxs = self.chemical_environment_matches(smirnoff_improper_smarts)
+        smirnoff_impropers = {
+            tuple(self.atoms[idx] for idx in imp) for imp in improper_idxs
+        }
+        return smirnoff_impropers
+
+    @property
+    def amber_impropers(self):
+        """
+        Iterate over improper torsions in the molecule, but only those with
+        trivalent centers, reporting the central atom first in each improper.
+
+        Note that it's possible that a trivalent center will not have an improper assigned.
+        This will depend on the force field that is used.
+
+        Also note that this will return 6 possible atom orderings around each improper
+        center. In current AMBER parameterization, one of these six
+        orderings will be used for the actual assignment of the improper term
+        and measurement of the angle. This method does not encode the logic to
+        determine which of the six orderings AMBER would use.
+
+        Returns
+        -------
+        impropers : set of tuple
+            An iterator of tuples, each containing the indices of atoms making
+            up a possible improper torsion. The central atom is listed first in
+            each tuple.
+
+        See Also
+        --------
+        impropers, smirnoff_impropers
+
+        """
+        # TODO: Replace with non-cheminformatics-toolkit method
+        #       (ie. just looping over all atoms and finding ones that have 3 bonds?)
+        amber_improper_smarts = "[X3:1](~[*:2])(~[*:3])~[*:4]"
+        improper_idxs = self.chemical_environment_matches(amber_improper_smarts)
+        amber_impropers = {
+            tuple(self.atoms[idx] for idx in imp) for imp in improper_idxs
+        }
+        return amber_impropers
 
     @property
     def total_charge(self):
@@ -4901,7 +4991,6 @@ class FrozenMolecule(Serializable):
         if not hasattr(self, "_torsions"):
             self._construct_bonded_atoms_list()
 
-            # self._torsions = set()
             self._propers = set()
             self._impropers = set()
             for atom1 in self._atoms:
@@ -4933,7 +5022,6 @@ class FrozenMolecule(Serializable):
                             self._impropers.add(improper)
 
             self._torsions = self._propers | self._impropers
-        # return iter(self._torsions)
 
     def _construct_bonded_atoms_list(self):
         """
