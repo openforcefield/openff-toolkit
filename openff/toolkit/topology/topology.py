@@ -1163,9 +1163,7 @@ class TopologyMolecule:
         For more details on the use of three-fold ('trefoil') impropers, see
         https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html#impropertorsions
 
-        ..todo : Offer a way to do the keytransform and get the final 3 orderings in this
-                 method? How can we keep this logic synced up with the parameterization
-                 machinery?
+
 
         Returns
         -------
@@ -1173,6 +1171,11 @@ class TopologyMolecule:
             An iterator of tuples, each containing the indices of atoms making
             up a possible improper torsion. The central atom is listed second
             in each tuple.
+
+        .. todo::
+           * Offer a way to do the keytransform and get the final 3 orderings in this
+             method? How can we keep this logic synced up with the parameterization
+             machinery?
         """
         return self._convert_to_topology_atom_tuples(
             self._reference_molecule.smirnoff_impropers
@@ -1792,9 +1795,9 @@ class Topology(Serializable):
         For more details on the use of three-fold ('trefoil') impropers, see
         https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html#impropertorsions
 
-        ..todo : Offer a way to do the keytransform and get the final 3 orderings in this
-                 method? How can we keep this logic synced up with the parameterization
-                 machinery?
+        .. todo:: Offer a way to do the keytransform and get the final 3 orderings in this
+                  method? How can we keep this logic synced up with the parameterization
+                  machinery?
 
         Returns
         -------

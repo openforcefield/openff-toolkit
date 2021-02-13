@@ -3626,6 +3626,9 @@ class FrozenMolecule(Serializable):
         """
         Iterate over all improper torsions in the molecule.
 
+        .. todo ::
+           * Do we need to return a ``Torsion`` object that collects information about fractional bond orders?
+
         Returns
         -------
         impropers : set of tuple
@@ -3635,11 +3638,6 @@ class FrozenMolecule(Serializable):
         See Also
         --------
         smirnoff_impropers, amber_impropers
-
-        .. todo::
-
-           * Do we need to return a ``Torsion`` object that collects information about fractional bond orders?
-
         """
         self._construct_torsions()
         return self._impropers
