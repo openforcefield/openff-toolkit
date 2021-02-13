@@ -19,6 +19,14 @@ New features
 - `PR #790 <https://github.com/openforcefield/openforcefield/pull/790>`_: Fixes `Issue #720
   <https://github.com/openforcefield/openforcefield/issues/720>`_ where qcschema roundtrip to/from results 
   in an error due to missing cmiles entry in attributes.
+- `PR #799 <https://github.com/openforcefield/openforcefield/pull/799>`_: Closes
+  `Issue #746 <https://github.com/openforcefield/openforcefield/issues/746>`_ by adding
+  :py:meth:`Molecule.smirnoff_impropers <openff.toolkit.topology.FrozenMolecule.smirnoff_impropers>`,
+  :py:meth:`Molecule.amber_impropers <openff.toolkit.topology.FrozenMolecule.amber_impropers>`,
+  :py:meth:`TopologyMolecule.smirnoff_impropers <openff.toolkit.topology.TopologyMolecule.smirnoff_impropers>`,
+  :py:meth:`TopologyMolecule.amber_impropers <openff.toolkit.topology.TopologyMolecule.amber_impropers>`,
+  :py:meth:`Topology.smirnoff_impropers <openff.toolkit.topology.Topology.smirnoff_impropers>`, and
+  :py:meth:`Topology.amber_impropers <openff.toolkit.topology.Topology.amber_impropers>`.
 
 Behavior changed
 """"""""
