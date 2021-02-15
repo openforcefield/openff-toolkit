@@ -12,7 +12,7 @@ The key idea here is to use the utility `compare_system_energies` to compare the
 from openmmtools.topology import Molecule
 molecule = Molecule.from_file(mol_filename)
 
-# Load forcefield
+# Load force field
 from openff.toolkit.typing.engines.smirnoff import ForceField
 forcefield = ForceField(offxml_filename)
 

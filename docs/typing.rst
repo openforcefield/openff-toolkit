@@ -1,6 +1,6 @@
 .. _typing ::
 
-Forcefield typing tools
+Force field typing tools
 =======================
 
 Chemical environments
@@ -16,7 +16,7 @@ Tools for representing and operating on chemical environments
     ChemicalEnvironment
 
 
-Forcefield typing engines
+Force field typing engines
 -------------------------
 
 Engines for applying parameters to chemical systems

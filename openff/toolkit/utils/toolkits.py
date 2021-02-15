@@ -1260,7 +1260,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         ``simtk.unit.Quantity``-wrapped numpy array with units of
         elementary charge. The Open Force
         Field Toolkit considers an ``OEMol`` where every ``OEAtom`` has a partial
-        charge of ``float('nan')`` to be equivalent to an Open Force Field Molecule's
+        charge of ``float('nan')`` to be equivalent to an Open Force Field Toolkit `Molecule`'s
         ``partial_charges = None``.
         This assumption is made in both ``to_openeye`` and ``from_openeye``.
 
@@ -1493,7 +1493,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
          ``simtk.unit.Quantity``-wrapped numpy array with units of
          elementary charge. The Open Force
          Field Toolkit considers an ``OEMol`` where every ``OEAtom`` has a partial
-         charge of ``float('nan')`` to be equivalent to an Open Force Field Molecule's
+         charge of ``float('nan')`` to be equivalent to an Open Force Field Toolkit `Molecule`'s
          ``partial_charges = None``.
          This assumption is made in both ``to_openeye`` and ``from_openeye``.
 
@@ -4320,7 +4320,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                 rdk_atom.SetDoubleProp("PartialCharge", rdk_indexed_charges[atom_idx])
 
             # Note: We could put this outside the "if" statement, which would result in all partial charges in the
-            #       resulting file being set to "n/a" if they weren't set in the Open Force Field Molecule
+            #       resulting file being set to "n/a" if they weren't set in the Open Force Field Toolkit `Molecule`
             Chem.CreateAtomDoublePropertyList(rdmol, "PartialCharge")
 
         # Cleanup the rdmol
