@@ -918,13 +918,18 @@ class TestMolecule:
         assert molecule == molecule_copy
 
     @requires_openeye
-    def test_to_multiframe_xyz(self):
-        """Test writing out a molecule with multiple conformations to an xyz file"""
-        # TODO: Resolve rounding errors when this test runs with and RDKit backend
+    def test_to_multiframe_xyz_openeye(self):
+        """
+        Test writing out a molecule with multiple conformations to an xyz file
 
+        This test is backend-specific because of precision/rounding differences between RDKit and OpenEye
+        """
+        from openff.toolkit.utils import OpenEyeToolkitWrapper
+        tkw = OpenEyeToolkitWrapper()
         # load in an SDF of butane with multiple conformers in it
         molecules = Molecule.from_file(
-            get_data_file_path("molecules/butane_multi.sdf"), "sdf"
+            get_data_file_path("molecules/butane_multi.sdf"), "sdf",
+            toolkit_registry=tkw
         )
         # now we want to combine the conformers to one molecule
         butane = molecules[0]
@@ -935,7 +940,8 @@ class TestMolecule:
         assert butane.n_conformers == 7
         with NamedTemporaryFile(suffix=".xyz") as iofile:
             # try and write out the xyz file
-            butane.to_file(iofile.name, "xyz")
+            butane.to_file(iofile.name, "xyz",
+                           toolkit_registry=tkw)
 
             # now lets check whats in the file
             with open(iofile.name) as xyz_data:
@@ -961,18 +967,25 @@ class TestMolecule:
                     assert coord in data
 
     @requires_openeye
-    def test_to_single_xyz(self):
-        """Test writing to a single frame xyz file"""
-        # TODO: Resolve rounding errors when this test runs with and RDKit backend
+    def test_to_single_xyz_openeye(self):
+        """
+        Test writing to a single frame xyz file
+
+        This test is backend-specific because of precision/rounding differences between RDKit and OpenEye
+        """
+        from openff.toolkit.utils import OpenEyeToolkitWrapper
+        tkw = OpenEyeToolkitWrapper()
 
         # load a molecule with a single conformation
-        toluene = Molecule.from_file(get_data_file_path("molecules/toluene.sdf"), "sdf")
+        toluene = Molecule.from_file(get_data_file_path("molecules/toluene.sdf"), "sdf",
+                                     toolkit_registry=tkw)
         # make sure it has one conformer
         assert toluene.n_conformers == 1
 
         with NamedTemporaryFile(suffix=".xyz") as iofile:
             # try and write out the xyz file
-            toluene.to_file(iofile.name, "xyz")
+            toluene.to_file(iofile.name, "xyz",
+                            toolkit_registry=tkw)
 
             # now lets check the file contents
             with open(iofile.name) as xyz_data:
@@ -986,6 +999,92 @@ class TestMolecule:
                 coords = [
                     "C        0.0000000000    0.0000000000    0.0000000000\n",
                     "H       -0.0000000000    3.7604000568    0.0000000000\n",
+                ]
+                for coord in coords:
+                    assert coord in data
+
+    @requires_rdkit
+    def test_to_multiframe_xyz_rdkit(self):
+        """
+        Test writing out a molecule with multiple conformations to an xyz file
+
+        This test is backend-specific because of precision/rounding differences between RDKit and OpenEye
+        """
+        from openff.toolkit.utils import RDKitToolkitWrapper
+        tkw = RDKitToolkitWrapper()
+        # load in an SDF of butane with multiple conformers in it
+        molecules = Molecule.from_file(
+            get_data_file_path("molecules/butane_multi.sdf"), "sdf",
+            toolkit_registry=tkw
+        )
+        # now we want to combine the conformers to one molecule
+        butane = molecules[0]
+        for mol in molecules[1:]:
+            butane.add_conformer(mol._conformers[0])
+
+        # make sure we have the 7 conformers
+        assert butane.n_conformers == 7
+        with NamedTemporaryFile(suffix=".xyz") as iofile:
+            # try and write out the xyz file
+            butane.to_file(iofile.name, "xyz",
+                           toolkit_registry=tkw)
+
+            # now lets check whats in the file
+            with open(iofile.name) as xyz_data:
+                data = xyz_data.readlines()
+                # make sure we have the correct amount of lines writen
+                assert len(data) == 112
+                # make sure all headers and frame data was writen
+                assert data.count("14\n") == 7
+                for i in range(1, 8):
+                    assert f"C4H10 Frame {i}\n" in data
+
+                # now make sure the first line of the coordinates are correct in every frame
+                coords = [
+                    "C        1.8902000000    0.0426000000    0.2431000000\n",
+                    "C        1.8976000000   -0.0233000000    0.2846000000\n",
+                    "C       -1.8794000000   -0.1793000000   -0.2565000000\n",
+                    "C       -1.5206000000   -0.0165000000    0.2787000000\n",
+                    "C       -1.4890000000   -0.2619000000    0.4871000000\n",
+                    "C       -1.4941000000   -0.2249000000   -0.0958000000\n",
+                    "C       -1.8827000000   -0.0372000000    0.1937000000\n",
+                ]
+                for coord in coords:
+                    assert coord in data
+
+    @requires_rdkit
+    def test_to_single_xyz_rdkit(self):
+        """
+        Test writing to a single frame xyz file
+
+        This test is backend-specific because of precision/rounding differences between RDKit and OpenEye
+        """
+        from openff.toolkit.utils import RDKitToolkitWrapper
+        tkw = RDKitToolkitWrapper()
+
+        # load a molecule with a single conformation
+        toluene = Molecule.from_file(get_data_file_path("molecules/toluene.sdf"), "sdf",
+                                     toolkit_registry=tkw)
+        # make sure it has one conformer
+        assert toluene.n_conformers == 1
+
+        with NamedTemporaryFile(suffix=".xyz") as iofile:
+            # try and write out the xyz file
+            toluene.to_file(iofile.name, "xyz",
+                            toolkit_registry=tkw)
+
+            # now lets check the file contents
+            with open(iofile.name) as xyz_data:
+                data = xyz_data.readlines()
+                # make sure we have the correct amount of lines writen
+                assert len(data) == 17
+                # make sure all headers and frame data was writen
+                assert data.count("15\n") == 1
+                assert data.count("C7H8\n") == 1
+                # now check that we can find the first and last coords
+                coords = [
+                    "C        0.0000000000    0.0000000000    0.0000000000\n",
+                    "H       -0.0000000000    3.7604000000    0.0000000000\n",
                 ]
                 for coord in coords:
                     assert coord in data
