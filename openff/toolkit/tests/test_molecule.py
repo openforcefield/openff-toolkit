@@ -2888,6 +2888,70 @@ class TestMolecule:
         recomputed_charges = molecule._partial_charges
         assert np.allclose(initial_charges, recomputed_charges, atol=0.002)
 
+    @pytest.mark.parametrize("toolkit", ["openeye", "rdkit"])
+    def test_apply_elf_conformer_selection(self, toolkit):
+        """Test applying the ELF10 method."""
+
+        if toolkit == "openeye":
+            pytest.importorskip("openeye")
+            toolkit_registry = ToolkitRegistry(
+                toolkit_precedence=[OpenEyeToolkitWrapper]
+            )
+        elif toolkit == "rdkit":
+            pytest.importorskip("rdkit")
+            toolkit_registry = ToolkitRegistry(toolkit_precedence=[RDKitToolkitWrapper])
+
+        molecule = Molecule.from_file(
+            get_data_file_path(os.path.join("molecules", "z_3_hydroxy_propenal.sdf")),
+            "SDF",
+        )
+
+        initial_conformers = [
+            # Add a conformer with an internal H-bond.
+            np.array(
+                [
+                    [0.5477, 0.3297, -0.0621],
+                    [-0.1168, -0.7881, 0.2329],
+                    [-1.4803, -0.8771, 0.1667],
+                    [-0.2158, 1.5206, -0.4772],
+                    [-1.4382, 1.5111, -0.5580],
+                    [1.6274, 0.3962, -0.0089],
+                    [0.3388, -1.7170, 0.5467],
+                    [-1.8612, -0.0347, -0.1160],
+                    [0.3747, 2.4222, -0.7115],
+                ]
+            )
+            * unit.angstrom,
+            # Add a conformer without an internal H-bond.
+            np.array(
+                [
+                    [0.5477, 0.3297, -0.0621],
+                    [-0.1168, -0.7881, 0.2329],
+                    [-1.4803, -0.8771, 0.1667],
+                    [-0.2158, 1.5206, -0.4772],
+                    [0.3353, 2.5772, -0.7614],
+                    [1.6274, 0.3962, -0.0089],
+                    [0.3388, -1.7170, 0.5467],
+                    [-1.7743, -1.7634, 0.4166],
+                    [-1.3122, 1.4082, -0.5180],
+                ]
+            )
+            * unit.angstrom,
+        ]
+
+        molecule._conformers = [*initial_conformers]
+
+        # Apply ELF10
+        molecule.apply_elf_conformer_selection(toolkit_registry=toolkit_registry)
+        elf10_conformers = molecule.conformers
+
+        assert len(elf10_conformers) == 1
+
+        assert np.allclose(
+            elf10_conformers[0].value_in_unit(unit.angstrom),
+            initial_conformers[1].value_in_unit(unit.angstrom),
+        )
+
     @requires_openeye
     def test_assign_fractional_bond_orders(self):
         """Test assignment of fractional bond orders"""
