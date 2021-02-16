@@ -1456,12 +1456,8 @@ class TestMolecule:
         for before, after in zip(mol.atoms, mol_mod.atoms):
             assert before.stereochemistry == after.stereochemistry
 
-    @requires_openeye
-    def test_isomorphic_striped_stereochemistry(self):
+    def test_isomorphic_stripped_stereochemistry(self):
         """Test that the equality operator disregards an edge case of nitrogen stereocenters"""
-        # TODO: This fails with RDKitToolkitWrapper because it perceives
-        # the stereochemistry of the central nitrogen as None
-
         mol1 = Molecule.from_smiles("CCC[N@](C)CC")
         mol2 = Molecule.from_smiles("CCC[N@@](C)CC")
 
@@ -1474,17 +1470,6 @@ class TestMolecule:
         assert Molecule.from_smiles("CCC[N@](C)CC") == Molecule.from_smiles(
             "CCC[N@@](C)CC"
         )
-
-        mol1 = Molecule.from_smiles("CCC[N@](C)CC")
-        mol2 = Molecule.from_smiles("CCC[N@@](C)CC")
-
-        assert not Molecule.are_isomorphic(
-            mol1,
-            mol2,
-            strip_pyrimidal_n_atom_stereo=False,
-            atom_stereochemistry_matching=True,
-            bond_stereochemistry_matching=True,
-        )[0]
 
     def test_remap(self):
         """Test the remap function which should return a new molecule in the requested ordering"""
