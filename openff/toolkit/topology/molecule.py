@@ -2816,8 +2816,8 @@ class FrozenMolecule(Serializable):
 
         See Also
         --------
-        ``OpenEyeToolkitWrapper.apply_elf_conformer_selection``
-        ``RDKitToolkitWrapper.apply_elf_conformer_selection``
+        OpenEyeToolkitWrapper.apply_elf_conformer_selection
+        RDKitToolkitWrapper.apply_elf_conformer_selection
 
         Parameters
         ----------
