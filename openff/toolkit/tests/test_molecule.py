@@ -925,11 +925,13 @@ class TestMolecule:
         This test is backend-specific because of precision/rounding differences between RDKit and OpenEye
         """
         from openff.toolkit.utils import OpenEyeToolkitWrapper
+
         tkw = OpenEyeToolkitWrapper()
         # load in an SDF of butane with multiple conformers in it
         molecules = Molecule.from_file(
-            get_data_file_path("molecules/butane_multi.sdf"), "sdf",
-            toolkit_registry=tkw
+            get_data_file_path("molecules/butane_multi.sdf"),
+            "sdf",
+            toolkit_registry=tkw,
         )
         # now we want to combine the conformers to one molecule
         butane = molecules[0]
@@ -940,8 +942,7 @@ class TestMolecule:
         assert butane.n_conformers == 7
         with NamedTemporaryFile(suffix=".xyz") as iofile:
             # try and write out the xyz file
-            butane.to_file(iofile.name, "xyz",
-                           toolkit_registry=tkw)
+            butane.to_file(iofile.name, "xyz", toolkit_registry=tkw)
 
             # now lets check whats in the file
             with open(iofile.name) as xyz_data:
@@ -974,18 +975,19 @@ class TestMolecule:
         This test is backend-specific because of precision/rounding differences between RDKit and OpenEye
         """
         from openff.toolkit.utils import OpenEyeToolkitWrapper
+
         tkw = OpenEyeToolkitWrapper()
 
         # load a molecule with a single conformation
-        toluene = Molecule.from_file(get_data_file_path("molecules/toluene.sdf"), "sdf",
-                                     toolkit_registry=tkw)
+        toluene = Molecule.from_file(
+            get_data_file_path("molecules/toluene.sdf"), "sdf", toolkit_registry=tkw
+        )
         # make sure it has one conformer
         assert toluene.n_conformers == 1
 
         with NamedTemporaryFile(suffix=".xyz") as iofile:
             # try and write out the xyz file
-            toluene.to_file(iofile.name, "xyz",
-                            toolkit_registry=tkw)
+            toluene.to_file(iofile.name, "xyz", toolkit_registry=tkw)
 
             # now lets check the file contents
             with open(iofile.name) as xyz_data:
@@ -1011,11 +1013,13 @@ class TestMolecule:
         This test is backend-specific because of precision/rounding differences between RDKit and OpenEye
         """
         from openff.toolkit.utils import RDKitToolkitWrapper
+
         tkw = RDKitToolkitWrapper()
         # load in an SDF of butane with multiple conformers in it
         molecules = Molecule.from_file(
-            get_data_file_path("molecules/butane_multi.sdf"), "sdf",
-            toolkit_registry=tkw
+            get_data_file_path("molecules/butane_multi.sdf"),
+            "sdf",
+            toolkit_registry=tkw,
         )
         # now we want to combine the conformers to one molecule
         butane = molecules[0]
@@ -1026,8 +1030,7 @@ class TestMolecule:
         assert butane.n_conformers == 7
         with NamedTemporaryFile(suffix=".xyz") as iofile:
             # try and write out the xyz file
-            butane.to_file(iofile.name, "xyz",
-                           toolkit_registry=tkw)
+            butane.to_file(iofile.name, "xyz", toolkit_registry=tkw)
 
             # now lets check whats in the file
             with open(iofile.name) as xyz_data:
@@ -1060,18 +1063,19 @@ class TestMolecule:
         This test is backend-specific because of precision/rounding differences between RDKit and OpenEye
         """
         from openff.toolkit.utils import RDKitToolkitWrapper
+
         tkw = RDKitToolkitWrapper()
 
         # load a molecule with a single conformation
-        toluene = Molecule.from_file(get_data_file_path("molecules/toluene.sdf"), "sdf",
-                                     toolkit_registry=tkw)
+        toluene = Molecule.from_file(
+            get_data_file_path("molecules/toluene.sdf"), "sdf", toolkit_registry=tkw
+        )
         # make sure it has one conformer
         assert toluene.n_conformers == 1
 
         with NamedTemporaryFile(suffix=".xyz") as iofile:
             # try and write out the xyz file
-            toluene.to_file(iofile.name, "xyz",
-                            toolkit_registry=tkw)
+            toluene.to_file(iofile.name, "xyz", toolkit_registry=tkw)
 
             # now lets check the file contents
             with open(iofile.name) as xyz_data:
