@@ -14,7 +14,6 @@ New features
 """"""""""""
 - `PR #839 <https://github.com/openforcefield/openforcefield/pull/839>`_: Add support for computing WBOs from multiple
   conformers (including ELF10 conformers) using the OpenEye toolkit wrapper.
-  ``Molecule`` API via a new ``apply_elf_conformer_selection`` function.
 - `PR #832 <https://github.com/openforcefield/openforcefield/pull/832>`_: Expose ELF conformer selection through the
   ``Molecule`` API via a new ``apply_elf_conformer_selection`` function.
 - `PR #831 <https://github.com/openforcefield/openforcefield/pull/831>`_: Expose ELF conformer selection through the
