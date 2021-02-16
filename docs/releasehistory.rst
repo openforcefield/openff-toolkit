@@ -33,6 +33,11 @@ Behavior changed
   field. Previously it fell back to a default value of 0.83333. The toolkit may now produce
   slightly different energies as a result of this change.
 
+Bugfixes
+""""""""
+- `PR #838 <https://github.com/openforcefield/openforcefield/pull/838>`_: Corrects spacing of "forcefield" to "force
+  field" throughout documentation. Fixes `Issue #112 <https://github.com/openforcefield/openforcefield/issues/112>`_.
+
 0.9.0 - Namespace Migration
 ---------------------------
 
