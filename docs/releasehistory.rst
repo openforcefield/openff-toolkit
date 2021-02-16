@@ -10,6 +10,28 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 0.9.1 - Current development
 ---------------------------
 
+New features
+""""""""""""
+- `PR #831 <https://github.com/openforcefield/openforcefield/pull/831>`_: Expose ELF conformer selection through the
+  OpenEye wrapper.
+- `PR #793 <https://github.com/openforcefield/openforcefield/pull/793>`_: Add an initial ELF conformer selection
+  implementation which uses RDKit.
+- `PR #799 <https://github.com/openforcefield/openforcefield/pull/799>`_: Closes
+  `Issue #746 <https://github.com/openforcefield/openforcefield/issues/746>`_ by adding
+  :py:meth:`Molecule.smirnoff_impropers <openff.toolkit.topology.FrozenMolecule.smirnoff_impropers>`,
+  :py:meth:`Molecule.amber_impropers <openff.toolkit.topology.FrozenMolecule.amber_impropers>`,
+  :py:meth:`TopologyMolecule.smirnoff_impropers <openff.toolkit.topology.TopologyMolecule.smirnoff_impropers>`,
+  :py:meth:`TopologyMolecule.amber_impropers <openff.toolkit.topology.TopologyMolecule.amber_impropers>`,
+  :py:meth:`Topology.smirnoff_impropers <openff.toolkit.topology.Topology.smirnoff_impropers>`, and
+  :py:meth:`Topology.amber_impropers <openff.toolkit.topology.Topology.amber_impropers>`.
+
+Behavior changed
+""""""""
+- `PR #802 <https://github.com/openforcefield/openforcefield/pull/802>`_: Fixes
+  `Issue #408 <https://github.com/openforcefield/openforcefield/issues/408>`_. The 1-4 scaling
+  factor for electrostatic interactions is now properly set by the value specified in the force
+  field. Previously it fell back to a default value of 0.83333. The toolkit may now produce
+  slightly different energies as a result of this change.
 
 0.9.0 - Namespace Migration
 ---------------------------
