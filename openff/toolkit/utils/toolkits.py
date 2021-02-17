@@ -5370,12 +5370,6 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
                 "loading the molecule from a file with geometry already present or running "
                 "molecule.generate_conformers() before calling molecule.assign_fractional_bond_orders"
             )
-        if len(temp_mol.conformers) > 1:
-            logger.warning(
-                f"Warning: In AmberToolsToolkitWrapper.assign_fractional_bond_orders: "
-                f"Molecule '{molecule.name}' has more than one conformer, but this function "
-                f"will only generate fractional bond orders for the first one."
-            )
 
         # Compute bond orders
         bond_order_model_to_antechamber_keyword = {"am1-wiberg": "mul"}
@@ -5394,44 +5388,57 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
             )
         ac_charge_keyword = bond_order_model_to_antechamber_keyword[bond_order_model]
 
-        with tempfile.TemporaryDirectory() as tmpdir:
-            with temporary_cd(tmpdir):
-                net_charge = temp_mol.total_charge
-                # Write out molecule in SDF format
-                self._rdkit_toolkit_wrapper.to_file(
-                    temp_mol, "molecule.sdf", file_format="sdf"
-                )
-                # Prepare sqm.in file as if we were going to run charge calc
-                # TODO: Add error handling if antechamber chokes
-                subprocess.check_output(
-                    [
-                        "antechamber",
-                        "-i",
-                        "molecule.sdf",
-                        "-fi",
-                        "sdf",
-                        "-o",
-                        "sqm.in",
-                        "-fo",
-                        "sqmcrt",
-                        "-pf",
-                        "yes",
-                        "-c",
-                        ac_charge_keyword,
-                        "-nc",
-                        str(net_charge),
-                    ]
-                )
-                # Modify sqm.in to request bond order calculation
-                self._modify_sqm_in_to_request_bond_orders("sqm.in")
-                # Run sqm to get bond orders
-                subprocess.check_output(["sqm", "-i", "sqm.in", "-o", "sqm.out", "-O"])
-                # Ensure that antechamber/sqm did not change the indexing by checking against
-                # an ordered list of element symbols for this molecule
-                expected_elements = [at.element.symbol for at in molecule.atoms]
-                bond_orders = self._get_fractional_bond_orders_from_sqm_out(
-                    "sqm.out", validate_elements=expected_elements
-                )
+        bond_orders = defaultdict(list)
+
+        for conformer in [*temp_mol.conformers]:
+
+            with tempfile.TemporaryDirectory() as tmpdir:
+
+                with temporary_cd(tmpdir):
+                    net_charge = temp_mol.total_charge
+                    # Write out molecule in SDF format
+                    temp_mol._conformers = [conformer]
+                    self._rdkit_toolkit_wrapper.to_file(
+                        temp_mol, "molecule.sdf", file_format="sdf"
+                    )
+                    # Prepare sqm.in file as if we were going to run charge calc
+                    # TODO: Add error handling if antechamber chokes
+                    subprocess.check_output(
+                        [
+                            "antechamber",
+                            "-i",
+                            "molecule.sdf",
+                            "-fi",
+                            "sdf",
+                            "-o",
+                            "sqm.in",
+                            "-fo",
+                            "sqmcrt",
+                            "-pf",
+                            "yes",
+                            "-c",
+                            ac_charge_keyword,
+                            "-nc",
+                            str(net_charge),
+                        ]
+                    )
+                    # Modify sqm.in to request bond order calculation
+                    self._modify_sqm_in_to_request_bond_orders("sqm.in")
+                    # Run sqm to get bond orders
+                    subprocess.check_output(
+                        ["sqm", "-i", "sqm.in", "-o", "sqm.out", "-O"]
+                    )
+                    # Ensure that antechamber/sqm did not change the indexing by checking against
+                    # an ordered list of element symbols for this molecule
+                    expected_elements = [at.element.symbol for at in molecule.atoms]
+                    conformer_bond_orders = (
+                        self._get_fractional_bond_orders_from_sqm_out(
+                            "sqm.out", validate_elements=expected_elements
+                        )
+                    )
+
+                    for bond_indices, value in conformer_bond_orders.items():
+                        bond_orders[bond_indices].append(value)
 
         # Note that sqm calculate WBOs for ALL PAIRS of atoms, not just those that have
         # bonds defined in the original molecule. So here we iterate over the bonds in
@@ -5443,7 +5450,9 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
             sorted_atom_indices = sorted(
                 tuple([bond.atom1_index + 1, bond.atom2_index + 1])
             )
-            bond.fractional_bond_order = bond_orders[tuple(sorted_atom_indices)]
+            bond.fractional_bond_order = np.mean(
+                bond_orders[tuple(sorted_atom_indices)]
+            )
 
 
 # =============================================================================================
