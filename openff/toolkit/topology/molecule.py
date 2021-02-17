@@ -37,6 +37,7 @@ import operator
 import warnings
 from collections import OrderedDict
 from copy import deepcopy
+from typing import Optional, Union
 
 import networkx as nx
 import numpy as np
@@ -2790,6 +2791,62 @@ class FrozenMolecule(Serializable):
                 "Invalid toolkit_registry passed to generate_conformers. Expected ToolkitRegistry or ToolkitWrapper. Got  {}".format(
                     type(toolkit_registry)
                 )
+            )
+
+    def apply_elf_conformer_selection(
+        self,
+        percentage: float = 2.0,
+        limit: int = 10,
+        toolkit_registry: Optional[
+            Union[ToolkitRegistry, ToolkitWrapper]
+        ] = GLOBAL_TOOLKIT_REGISTRY,
+        **kwargs,
+    ):
+        """Applies the `ELF method<https://docs.eyesopen.com/toolkits/python/quacpactk/
+        molchargetheory.html#elf-conformer-selection>`_ to select a set of diverse
+        conformers which have minimal electrostatically strongly interacting functional
+        groups from a molecules conformers.
+
+        Notes
+        -----
+        * The input molecule should have a large set of conformers already
+          generated to select the ELF conformers from.
+        * The selected conformers will be retained in the `conformers` list
+          while unselected conformers will be discarded.
+
+        See Also
+        --------
+        OpenEyeToolkitWrapper.apply_elf_conformer_selection
+        RDKitToolkitWrapper.apply_elf_conformer_selection
+
+        Parameters
+        ----------
+        toolkit_registry
+            The underlying toolkit to use to select the ELF conformers.
+        percentage
+            The percentage of conformers with the lowest electrostatic interaction
+            energies to greedily select from.
+        limit
+            The maximum number of conformers to select.
+        """
+        if isinstance(toolkit_registry, ToolkitRegistry):
+            toolkit_registry.call(
+                "apply_elf_conformer_selection",
+                molecule=self,
+                percentage=percentage,
+                limit=limit,
+                **kwargs,
+            )
+        elif isinstance(toolkit_registry, ToolkitWrapper):
+            toolkit = toolkit_registry
+            toolkit.apply_elf_conformer_selection(
+                self, molecule=self, percentage=percentage, limit=limit, **kwargs
+            )
+        else:
+            raise InvalidToolkitRegistryError(
+                f"Invalid toolkit_registry passed to apply_elf_conformer_selection."
+                f"Expected ToolkitRegistry or ToolkitWrapper. Got "
+                f"{type(toolkit_registry)}"
             )
 
     def compute_partial_charges_am1bcc(

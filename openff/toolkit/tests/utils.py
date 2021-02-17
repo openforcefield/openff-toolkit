@@ -84,7 +84,9 @@ def has_pkg(pkg_name):
 
 def requires_pkg(pkg_name, reason=None):
     """
-    Helper function to generate a skipif decorator for any package.
+    Helper function to generate a pytest.mark.skipif decorator
+    for any package. This allows tests to be skipped if some
+    optional dependency is not found.
 
     Parameters
     ----------

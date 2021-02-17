@@ -65,12 +65,6 @@ from openff.toolkit.utils.toolkits import (
 # TEST UTILITIES
 # =============================================================================================
 
-requires_qcelemental = requires_pkg(
-    "qcelemental",
-    reason="Test involving QCSchema require QCElemental, which was not found.",
-)
-requires_nglview = requires_pkg("nglview")
-
 
 def assert_molecule_is_equal(molecule1, molecule2, msg):
     """Compare whether two Molecule objects are equal
@@ -322,7 +316,6 @@ class TestAtom:
             assert atom.name == this_element.name
 
 
-@requires_openeye
 class TestMolecule:
     """Test Molecule class."""
 
@@ -339,6 +332,7 @@ class TestMolecule:
         assert molecule_copy.n_conformers == molecule.n_conformers
         assert np.allclose(molecule_copy.conformers[0], molecule.conformers[0])
 
+    @requires_pkg("yaml")
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_yaml_serialization(self, molecule):
         """Test serialization of a molecule object to and from YAML."""
@@ -348,6 +342,7 @@ class TestMolecule:
         assert molecule_copy.n_conformers == molecule.n_conformers
         assert np.allclose(molecule_copy.conformers[0], molecule.conformers[0])
 
+    @requires_pkg("toml")
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_toml_serialization(self, molecule):
         """Test serialization of a molecule object to and from TOML."""
@@ -356,6 +351,7 @@ class TestMolecule:
         with pytest.raises(NotImplementedError):
             mol.to_toml()
 
+    @requires_pkg("bson")
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_bson_serialization(self, molecule):
         """Test serialization of a molecule object to and from BSON."""
@@ -382,6 +378,7 @@ class TestMolecule:
         with pytest.raises(NotImplementedError):
             Molecule.from_xml(serialized)
 
+    @requires_pkg("msgpack")
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_messagepack_serialization(self, molecule):
         """Test serialization of a molecule object to and from messagepack."""
@@ -400,6 +397,9 @@ class TestMolecule:
         assert molecule_copy.n_conformers == molecule.n_conformers
         assert np.allclose(molecule_copy.conformers[0], molecule.conformers[0])
 
+    @requires_pkg("yaml")
+    @requires_pkg("toml")
+    @requires_pkg("msgpack")
     def test_serialization_no_conformers(self):
         """Test round-trip serialization when molecules have no conformers or partial charges."""
         mol = Molecule.from_smiles("CCO")
@@ -742,6 +742,7 @@ class TestMolecule:
         },
     ]
 
+    @requires_openeye
     @pytest.mark.parametrize("data", inchi_data)
     def test_from_inchi(self, data):
         """Test building a molecule from standard and non-standard InChI strings."""
@@ -777,6 +778,7 @@ class TestMolecule:
         compare_mols(ref_mol, nonstandard_inchi_mol)
 
     # TODO: Should there be an equivalent toolkit test and leave this as an integration test?
+    @requires_openeye
     @pytest.mark.slow
     def test_create_from_file(self):
         """Test standard constructor taking a filename or file-like object."""
@@ -916,12 +918,21 @@ class TestMolecule:
         molecule_copy = Molecule.from_topology(topology)
         assert molecule == molecule_copy
 
-    def test_to_multiframe_xyz(self):
-        """Test writing out a molecule with multiple conformations to an xyz file"""
+    @requires_openeye
+    def test_to_multiframe_xyz_openeye(self):
+        """
+        Test writing out a molecule with multiple conformations to an xyz file
 
+        This test is backend-specific because of precision/rounding differences between RDKit and OpenEye
+        """
+        from openff.toolkit.utils import OpenEyeToolkitWrapper
+
+        tkw = OpenEyeToolkitWrapper()
         # load in an SDF of butane with multiple conformers in it
         molecules = Molecule.from_file(
-            get_data_file_path("molecules/butane_multi.sdf"), "sdf"
+            get_data_file_path("molecules/butane_multi.sdf"),
+            "sdf",
+            toolkit_registry=tkw,
         )
         # now we want to combine the conformers to one molecule
         butane = molecules[0]
@@ -932,7 +943,7 @@ class TestMolecule:
         assert butane.n_conformers == 7
         with NamedTemporaryFile(suffix=".xyz") as iofile:
             # try and write out the xyz file
-            butane.to_file(iofile.name, "xyz")
+            butane.to_file(iofile.name, "xyz", toolkit_registry=tkw)
 
             # now lets check whats in the file
             with open(iofile.name) as xyz_data:
@@ -957,17 +968,27 @@ class TestMolecule:
                 for coord in coords:
                     assert coord in data
 
-    def test_to_single_xyz(self):
-        """Test writing to a single frame xyz file"""
+    @requires_openeye
+    def test_to_single_xyz_openeye(self):
+        """
+        Test writing to a single frame xyz file
+
+        This test is backend-specific because of precision/rounding differences between RDKit and OpenEye
+        """
+        from openff.toolkit.utils import OpenEyeToolkitWrapper
+
+        tkw = OpenEyeToolkitWrapper()
 
         # load a molecule with a single conformation
-        toluene = Molecule.from_file(get_data_file_path("molecules/toluene.sdf"), "sdf")
+        toluene = Molecule.from_file(
+            get_data_file_path("molecules/toluene.sdf"), "sdf", toolkit_registry=tkw
+        )
         # make sure it has one conformer
         assert toluene.n_conformers == 1
 
         with NamedTemporaryFile(suffix=".xyz") as iofile:
             # try and write out the xyz file
-            toluene.to_file(iofile.name, "xyz")
+            toluene.to_file(iofile.name, "xyz", toolkit_registry=tkw)
 
             # now lets check the file contents
             with open(iofile.name) as xyz_data:
@@ -981,6 +1002,94 @@ class TestMolecule:
                 coords = [
                     "C        0.0000000000    0.0000000000    0.0000000000\n",
                     "H       -0.0000000000    3.7604000568    0.0000000000\n",
+                ]
+                for coord in coords:
+                    assert coord in data
+
+    @requires_rdkit
+    def test_to_multiframe_xyz_rdkit(self):
+        """
+        Test writing out a molecule with multiple conformations to an xyz file
+
+        This test is backend-specific because of precision/rounding differences between RDKit and OpenEye
+        """
+        from openff.toolkit.utils import RDKitToolkitWrapper
+
+        tkw = RDKitToolkitWrapper()
+        # load in an SDF of butane with multiple conformers in it
+        molecules = Molecule.from_file(
+            get_data_file_path("molecules/butane_multi.sdf"),
+            "sdf",
+            toolkit_registry=tkw,
+        )
+        # now we want to combine the conformers to one molecule
+        butane = molecules[0]
+        for mol in molecules[1:]:
+            butane.add_conformer(mol._conformers[0])
+
+        # make sure we have the 7 conformers
+        assert butane.n_conformers == 7
+        with NamedTemporaryFile(suffix=".xyz") as iofile:
+            # try and write out the xyz file
+            butane.to_file(iofile.name, "xyz", toolkit_registry=tkw)
+
+            # now lets check whats in the file
+            with open(iofile.name) as xyz_data:
+                data = xyz_data.readlines()
+                # make sure we have the correct amount of lines writen
+                assert len(data) == 112
+                # make sure all headers and frame data was writen
+                assert data.count("14\n") == 7
+                for i in range(1, 8):
+                    assert f"C4H10 Frame {i}\n" in data
+
+                # now make sure the first line of the coordinates are correct in every frame
+                coords = [
+                    "C        1.8902000000    0.0426000000    0.2431000000\n",
+                    "C        1.8976000000   -0.0233000000    0.2846000000\n",
+                    "C       -1.8794000000   -0.1793000000   -0.2565000000\n",
+                    "C       -1.5206000000   -0.0165000000    0.2787000000\n",
+                    "C       -1.4890000000   -0.2619000000    0.4871000000\n",
+                    "C       -1.4941000000   -0.2249000000   -0.0958000000\n",
+                    "C       -1.8827000000   -0.0372000000    0.1937000000\n",
+                ]
+                for coord in coords:
+                    assert coord in data
+
+    @requires_rdkit
+    def test_to_single_xyz_rdkit(self):
+        """
+        Test writing to a single frame xyz file
+
+        This test is backend-specific because of precision/rounding differences between RDKit and OpenEye
+        """
+        from openff.toolkit.utils import RDKitToolkitWrapper
+
+        tkw = RDKitToolkitWrapper()
+
+        # load a molecule with a single conformation
+        toluene = Molecule.from_file(
+            get_data_file_path("molecules/toluene.sdf"), "sdf", toolkit_registry=tkw
+        )
+        # make sure it has one conformer
+        assert toluene.n_conformers == 1
+
+        with NamedTemporaryFile(suffix=".xyz") as iofile:
+            # try and write out the xyz file
+            toluene.to_file(iofile.name, "xyz", toolkit_registry=tkw)
+
+            # now lets check the file contents
+            with open(iofile.name) as xyz_data:
+                data = xyz_data.readlines()
+                # make sure we have the correct amount of lines writen
+                assert len(data) == 17
+                # make sure all headers and frame data was writen
+                assert data.count("15\n") == 1
+                assert data.count("C7H8\n") == 1
+                # now check that we can find the first and last coords
+                coords = [
+                    "C        0.0000000000    0.0000000000    0.0000000000\n",
+                    "H       -0.0000000000    3.7604000000    0.0000000000\n",
                 ]
                 for coord in coords:
                     assert coord in data
@@ -1317,6 +1426,7 @@ class TestMolecule:
             is inputs["result"]
         )
 
+    @requires_openeye
     def test_strip_atom_stereochemistry(self):
         """Test the basic behavior of strip_atom_stereochemistry"""
         mol = Molecule.from_smiles("CCC[N@@](C)CC")
@@ -1325,6 +1435,8 @@ class TestMolecule:
             atom.molecule_atom_index for atom in mol.atoms if atom.element.symbol == "N"
         ][0]
 
+        # TODO: This fails with RDKitToolkitWrapper because it perceives
+        # the stereochemistry of this nitrogen as None
         assert mol.atoms[nitrogen_idx].stereochemistry == "S"
         mol.strip_atom_stereochemistry(smarts="[N+0X3:1](-[*])(-[*])(-[*])")
         assert mol.atoms[nitrogen_idx].stereochemistry is None
@@ -1349,7 +1461,7 @@ class TestMolecule:
         for before, after in zip(mol.atoms, mol_mod.atoms):
             assert before.stereochemistry == after.stereochemistry
 
-    def test_isomorphic_striped_stereochemistry(self):
+    def test_isomorphic_stripped_stereochemistry(self):
         """Test that the equality operator disregards an edge case of nitrogen stereocenters"""
         mol1 = Molecule.from_smiles("CCC[N@](C)CC")
         mol2 = Molecule.from_smiles("CCC[N@@](C)CC")
@@ -1363,17 +1475,6 @@ class TestMolecule:
         assert Molecule.from_smiles("CCC[N@](C)CC") == Molecule.from_smiles(
             "CCC[N@@](C)CC"
         )
-
-        mol1 = Molecule.from_smiles("CCC[N@](C)CC")
-        mol2 = Molecule.from_smiles("CCC[N@@](C)CC")
-
-        assert not Molecule.are_isomorphic(
-            mol1,
-            mol2,
-            strip_pyrimidal_n_atom_stereo=False,
-            atom_stereochemistry_matching=True,
-            bond_stereochemistry_matching=True,
-        )[0]
 
     def test_remap(self):
         """Test the remap function which should return a new molecule in the requested ordering"""
@@ -1759,7 +1860,7 @@ class TestMolecule:
             assert bond.is_aromatic == sdf_bonds[key].is_aromatic
             assert bond.stereochemistry == sdf_bonds[key].stereochemistry
 
-    @requires_qcelemental
+    @requires_pkg("qcportal")
     def test_to_qcschema(self):
         """Test the ability to make and validate qcschema with extras"""
         # the molecule has no coordinates so this should fail
@@ -1804,6 +1905,7 @@ class TestMolecule:
         assert_check()
         assert qcschema.extras is None
 
+    @requires_pkg("qcportal")
     def test_from_qcschema_no_client(self):
         """Test the ability to make molecules from QCArchive record instances and dicts"""
 
@@ -1873,7 +1975,7 @@ class TestMolecule:
         },
     ]
 
-    @requires_qcelemental
+    @requires_pkg("qcportal")
     @pytest.mark.parametrize("input_data", client_examples)
     def test_from_qcschema_with_client(self, input_data):
         """For each of the examples try and make a offmol using the instance and dict and check they match"""
@@ -1900,7 +2002,7 @@ class TestMolecule:
 
         assert mol_from_dict.is_isomorphic_with(mol_from_smiles) is True
 
-    @requires_qcelemental
+    @requires_pkg("qcportal")
     def test_qcschema_round_trip(self):
         """Test making a molecule from qcschema then converting back"""
 
@@ -2719,6 +2821,8 @@ class TestMolecule:
             len(matches) == 0
         )  # this is the wrong stereochemistry, so there shouldn't be any matches
 
+    @requires_rdkit
+    @requires_openeye
     @pytest.mark.slow
     @pytest.mark.parametrize(
         ("toolkit", "method"),
@@ -2784,6 +2888,70 @@ class TestMolecule:
         )
         recomputed_charges = molecule._partial_charges
         assert np.allclose(initial_charges, recomputed_charges, atol=0.002)
+
+    @pytest.mark.parametrize("toolkit", ["openeye", "rdkit"])
+    def test_apply_elf_conformer_selection(self, toolkit):
+        """Test applying the ELF10 method."""
+
+        if toolkit == "openeye":
+            pytest.importorskip("openeye")
+            toolkit_registry = ToolkitRegistry(
+                toolkit_precedence=[OpenEyeToolkitWrapper]
+            )
+        elif toolkit == "rdkit":
+            pytest.importorskip("rdkit")
+            toolkit_registry = ToolkitRegistry(toolkit_precedence=[RDKitToolkitWrapper])
+
+        molecule = Molecule.from_file(
+            get_data_file_path(os.path.join("molecules", "z_3_hydroxy_propenal.sdf")),
+            "SDF",
+        )
+
+        initial_conformers = [
+            # Add a conformer with an internal H-bond.
+            np.array(
+                [
+                    [0.5477, 0.3297, -0.0621],
+                    [-0.1168, -0.7881, 0.2329],
+                    [-1.4803, -0.8771, 0.1667],
+                    [-0.2158, 1.5206, -0.4772],
+                    [-1.4382, 1.5111, -0.5580],
+                    [1.6274, 0.3962, -0.0089],
+                    [0.3388, -1.7170, 0.5467],
+                    [-1.8612, -0.0347, -0.1160],
+                    [0.3747, 2.4222, -0.7115],
+                ]
+            )
+            * unit.angstrom,
+            # Add a conformer without an internal H-bond.
+            np.array(
+                [
+                    [0.5477, 0.3297, -0.0621],
+                    [-0.1168, -0.7881, 0.2329],
+                    [-1.4803, -0.8771, 0.1667],
+                    [-0.2158, 1.5206, -0.4772],
+                    [0.3353, 2.5772, -0.7614],
+                    [1.6274, 0.3962, -0.0089],
+                    [0.3388, -1.7170, 0.5467],
+                    [-1.7743, -1.7634, 0.4166],
+                    [-1.3122, 1.4082, -0.5180],
+                ]
+            )
+            * unit.angstrom,
+        ]
+
+        molecule._conformers = [*initial_conformers]
+
+        # Apply ELF10
+        molecule.apply_elf_conformer_selection(toolkit_registry=toolkit_registry)
+        elf10_conformers = molecule.conformers
+
+        assert len(elf10_conformers) == 1
+
+        assert np.allclose(
+            elf10_conformers[0].value_in_unit(unit.angstrom),
+            initial_conformers[1].value_in_unit(unit.angstrom),
+        )
 
     @requires_openeye
     def test_assign_fractional_bond_orders(self):
@@ -2872,6 +3040,7 @@ class TestMolecule:
         assert len([atom for atom in mol.atoms if atom.is_in_ring]) == n_atom_rings
         assert len([bond for bond in mol.bonds if bond.is_in_ring]) == n_bond_rings
 
+    @requires_pkg("ipython")
     @requires_rdkit
     def test_visualize_rdkit(self):
         """Test that the visualize method returns an expected object when using RDKit to generate a 2-D representation"""
@@ -2891,7 +3060,7 @@ class TestMolecule:
         with pytest.warns(UserWarning):
             mol.visualize(backend="rdkit")
 
-    @requires_nglview
+    @requires_pkg("nglview")
     def test_visualize_nglview(self):
         """Test that the visualize method returns an NGLview widget. Note that
         nglview is not explicitly a requirement in the test environment, but
@@ -2913,6 +3082,7 @@ class TestMolecule:
         # Ensure an NGLView widget is returned
         assert isinstance(mol.visualize(backend="nglview"), nglview.NGLWidget)
 
+    @requires_pkg("ipython")
     @requires_openeye
     def test_visualize_openeye(self):
         """Test that the visualize method returns an expected object when using OpenEye to generate a 2-D representation"""
@@ -2961,7 +3131,8 @@ class TestMoleculeSubclass:
         mol = MyMol.from_mapped_smiles("[H:1][C:2]([H:3])([H:4])([H:5])")
         assert isinstance(mol, MyMol)
 
-    @requires_qcelemental
+    @requires_pkg("qcelemental")
+    @requires_pkg("qcportal")
     def test_molecule_subclass_from_qcschema(self):
         """Ensure that the right type of object is returned when running MyMol.from_qcschema"""
         import qcportal as ptl

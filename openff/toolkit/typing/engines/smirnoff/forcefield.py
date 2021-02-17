@@ -100,7 +100,7 @@ def get_available_force_fields(full_paths=False):
 
      Availability is determined by what is discovered through the
     `openforcefield.smirnoff_forcefield_directory` entry point. If the
-    `openforcefields` package is installed, this should include several
+    `openff-forcefields` package is installed, this should include several
     .offxml files such as `openff-1.0.0.offxml`.
 
      Parameters

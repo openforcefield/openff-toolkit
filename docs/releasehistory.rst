@@ -12,6 +12,8 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 
 New features
 """"""""""""
+- `PR #832 <https://github.com/openforcefield/openforcefield/pull/832>`_: Expose ELF conformer selection through the
+  ``Molecule`` API via a new ``apply_elf_conformer_selection`` function.
 - `PR #831 <https://github.com/openforcefield/openforcefield/pull/831>`_: Expose ELF conformer selection through the
   OpenEye wrapper.
 - `PR #793 <https://github.com/openforcefield/openforcefield/pull/793>`_: Add an initial ELF conformer selection

@@ -93,6 +93,23 @@ class MissingDependencyError(MessageException):
 
 
 def requires_package(package_name):
+    """
+    Helper function to denote that a funciton requires some optional
+    dependency. A function decorated with this decorator will raise
+    `MissingDependencyError` if the package is not found by
+    `importlib.import_module()`.
+
+    Parameters
+    ----------
+    package_name : str
+        The directory path to enter within the context
+
+    Raises
+    ------
+    MissingDependencyError
+
+    """
+
     def inner_decorator(function):
         @functools.wraps(function)
         def wrapper(*args, **kwargs):
