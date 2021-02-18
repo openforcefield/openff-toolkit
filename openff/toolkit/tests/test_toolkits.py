@@ -3084,7 +3084,7 @@ class TestAmberToolsToolkitWrapper:
 
     @pytest.mark.parametrize("bond_order_model", ["am1-wiberg"])
     def test_assign_fractional_bond_orders_neutral_charge_mol(self, bond_order_model):
-        """Test OpenEyeToolkitWrapper assign_fractional_bond_orders() for neutral and charged molecule.
+        """Test AmberToolsToolkitWrapper assign_fractional_bond_orders() for neutral and charged molecule.
         Also tests using existing conformers"""
 
         toolkit_registry = ToolkitRegistry(
