@@ -691,6 +691,8 @@ def serialize_numpy(np_array):
 
     bigendian_array = np_array.newbyteorder(">")
     serialized = bigendian_array.tobytes()
+    import base64
+    serialized = base64.b64encode(serialized).decode('ascii')
     shape = np_array.shape
     return serialized, shape
 
@@ -718,6 +720,12 @@ def deserialize_numpy(serialized_np, shape):
     if isinstance(serialized_np, list):
         np_array = np.array(serialized_np)
     if isinstance(serialized_np, bytes):
+        dt = np.dtype("float")
+        dt.newbyteorder(">")  # set to big-endian
+        np_array = np.frombuffer(serialized_np, dtype=dt)
+    if isinstance(serialized_np, str):
+        import base64
+        serialized_np = base64.b64decode(serialized_np)
         dt = np.dtype("float")
         dt.newbyteorder(">")  # set to big-endian
         np_array = np.frombuffer(serialized_np, dtype=dt)
