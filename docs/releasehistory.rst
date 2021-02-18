@@ -35,6 +35,11 @@ Behavior changed
   field. Previously it fell back to a default value of 0.83333. The toolkit may now produce
   slightly different energies as a result of this change.
 
+Bugfixes
+""""""""
+- `PR #838 <https://github.com/openforcefield/openforcefield/pull/838>`_: Corrects spacing of "forcefield" to "force
+  field" throughout documentation. Fixes `Issue #112 <https://github.com/openforcefield/openforcefield/issues/112>`_.
+
 0.9.0 - Namespace Migration
 ---------------------------
 
@@ -303,7 +308,7 @@ Examples added
 """"""""""""""
 - `PR #548 <https://github.com/openforcefield/openforcefield/pull/548>`_: Adds a virtual site example notebook to run
   an OpenMM simulation with virtual sites, and compares positions and potential energy of TIP5P water between OpenFF
-  and OpenMM forcefields.
+  and OpenMM force fields.
 
 API-breaking changes
 """"""""""""""""""""
@@ -1280,7 +1285,7 @@ Force fields added
 - `PR #368 <https://github.com/openforcefield/openforcefield/pull/368>`_: Temporarily adds
   ``test_forcefields/smirnoff99frosst_experimental.offxml`` to address hierarchy problems, redundancies, SMIRKS
   pattern typos etc., as documented in `issue #367 <https://github.com/openforcefield/openforcefield/issues/367>`_.
-  Will ultimately be propagated to an updated forcefield in the ``openforcefield/smirnoff99frosst`` repo.
+  Will ultimately be propagated to an updated force field in the ``openforcefield/smirnoff99frosst`` repo.
 - `PR #371 <https://github.com/openforcefield/openforcefield/pull/371>`_: Adds
   ``test_forcefields/smirff99Frosst_reference_0_1_spec.offxml``, a SMIRNOFF 0.1 spec file enclosed by the legacy
   ``SMIRFF`` tag. This file is used in backwards-compatibility testing.
@@ -1296,7 +1301,7 @@ This update also introduces the `SMIRNOFF 0.3 specification <https://open-forcef
 The spec update is the result of discussions about how to handle the evolution of data and parameter types as further functional forms are added to the SMIRNOFF spec.
 
 
-We provide methods to convert SMIRNOFF 0.1 and 0.2 forcefields written with the XML serialization (``.offxml``) to the SMIRNOFF 0.3 specification.
+We provide methods to convert SMIRNOFF 0.1 and 0.2 force fields written with the XML serialization (``.offxml``) to the SMIRNOFF 0.3 specification.
 These methods are called automatically when loading a serialized SMIRNOFF data representation written in the 0.1 or 0.2 specification.
 This functionality allows the toolkit to continue to read files containing SMIRNOFF 0.2 spec force fields, and also implements backwards-compatibility for SMIRNOFF 0.1 spec force fields.
 
@@ -1419,7 +1424,7 @@ New features
 * Major overhaul, resulting in the creation of the `SMIRNOFF 0.2 specification <https://open-forcefield-toolkit.readthedocs.io/en/master/smirnoff.html>`_ and its XML representation
 * Updated API and infrastructure for reference SMIRNOFF :class:`ForceField` implementation
 * Implementation of modular :class:`ParameterHandler` classes which process the topology to add all necessary forces to the system.
-* Implementation of modular :class:`ParameterIOHandler` classes for reading/writing different serialized SMIRNOFF forcefield representations
+* Implementation of modular :class:`ParameterIOHandler` classes for reading/writing different serialized SMIRNOFF force field representations
 * Introduction of :class:`Molecule` and :class:`Topology` classes for representing molecules and biomolecular systems
 * New :class:`ToolkitWrapper` interface to RDKit, OpenEye, and AmberTools toolkits, managed by :class:`ToolkitRegistry`
 * API improvements to more closely follow `PEP8 <https://www.python.org/dev/peps/pep-0008/>`_ guidelines

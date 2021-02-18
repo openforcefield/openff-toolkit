@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Convert oeb file of molecules into Forcefield atom typed and Tripos atom typed mol2 files.
+Convert oeb file of molecules into force field atom typed and Tripos atom typed mol2 files.
 
 Example:
 

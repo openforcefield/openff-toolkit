@@ -1237,7 +1237,7 @@ class _ParameterAttributeHandler:
         Add a cosmetic attribute to this object.
 
         This attribute will not have a functional effect on the object
-        in the Open Force Field toolkit, but can be written out during
+        in the Open Force Field Toolkit, but can be written out during
         output.
 
         .. warning :: The API for modifying cosmetic attributes is experimental
@@ -2037,7 +2037,7 @@ class ParameterHandler(_ParameterAttributeHandler):
     def add_parameter(
         self, parameter_kwargs=None, parameter=None, after=None, before=None
     ):
-        """Add a parameter to the forcefield, ensuring all parameters are valid.
+        """Add a parameter to the force field, ensuring all parameters are valid.
 
         Parameters
         ----------
@@ -3709,7 +3709,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
     def switch_width(self, attr, new_switch_width):
         if self.switch_width != 0.0 * unit.angstrom:
             raise IncompatibleParameterError(
-                "The current implementation of the Open Force Field toolkit can not "
+                "The current implementation of the Open Force Field Toolkit can not "
                 "support an electrostatic switching width. Currently only `0.0 angstroms` "
                 f"is supported (SMIRNOFF data specified {new_switch_width})"
             )
@@ -3860,7 +3860,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
             self.method != "PME"
         ):
             raise IncompatibleParameterError(
-                "In current Open Force Field toolkit implementation, if vdW "
+                "In current Open Force Field Toolkit implementation, if vdW "
                 "treatment is set to LJPME, electrostatics must also be PME "
                 "(electrostatics treatment currently set to {}".format(self.method)
             )
@@ -3898,7 +3898,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
                     "Electrostatics method set to Coulomb, and topology is periodic. "
                     "In the future, this will lead to use of OpenMM's CutoffPeriodic "
                     "Nonbonded force method, however this is not supported in the "
-                    "current Open Force Field toolkit."
+                    "current Open Force Field Toolkit."
                 )
 
         # If the vdWHandler set the nonbonded method to PME, then ensure that it has the same cutoff
@@ -3912,7 +3912,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
                     "Electrostatics method set to reaction-field. In the future, "
                     "this will lead to use of OpenMM's CutoffPeriodic or CutoffNonPeriodic"
                     " Nonbonded force method, however this is not supported in the "
-                    "current Open Force Field toolkit"
+                    "current Open Force Field Toolkit"
                 )
 
         if not settings_matched:
@@ -3920,7 +3920,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
                 "Unable to support provided vdW method, electrostatics "
                 "method ({}), and topology periodicity ({}) selections. Additional "
                 "options for nonbonded treatment may be added in future versions "
-                "of the Open Force Field toolkit.".format(
+                "of the Open Force Field Toolkit.".format(
                     self.method, topology.box_vectors is not None
                 )
             )
@@ -4730,7 +4730,7 @@ class VirtualSiteHandler(_NonbondedHandler):
     def add_parameter(
         self, parameter_kwargs=None, parameter=None, after=None, before=None
     ):
-        """Add a parameter to the forcefield, ensuring all parameters are valid.
+        """Add a parameter to the force field, ensuring all parameters are valid.
         This method differs from other handlers in that it uses a plugin-style
         enable/disable type system
 
