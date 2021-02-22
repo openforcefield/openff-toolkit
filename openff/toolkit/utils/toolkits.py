@@ -224,12 +224,12 @@ class ToolkitWrapper:
         return self.__class__._toolkit_name
 
     @property
-    @classmethod
-    def toolkit_installation_instructions(cls):
+    # @classmethod
+    def toolkit_installation_instructions(self):
         """
         Instructions on how to install the wrapped toolkit.
         """
-        return cls._toolkit_installation_instructions
+        return self._toolkit_installation_instructions
 
     # @classmethod
     @property
