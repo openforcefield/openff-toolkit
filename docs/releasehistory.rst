@@ -39,6 +39,8 @@ Bugfixes
 """"""""
 - `PR #838 <https://github.com/openforcefield/openff-toolkit/pull/838>`_: Corrects spacing of "forcefield" to "force
   field" throughout documentation. Fixes `Issue #112 <https://github.com/openforcefield/openff-toolkit/issues/112>`_.
+- `PR #846 <https://github.com/openforcefield/openff-toolkit/pull/846>`_: Corrects dead links throughout release history.
+  Fixes `Issue #112 <https://github.com/openforcefield/openff-toolkit/issues/835>`_.
 
 0.9.0 - Namespace Migration
 ---------------------------
