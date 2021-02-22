@@ -28,7 +28,7 @@ New features
   :py:meth:`Topology.amber_impropers <openff.toolkit.topology.Topology.amber_impropers>`.
 
 Behavior changed
-""""""""
+""""""""""""""""
 - `PR #802 <https://github.com/openforcefield/openforcefield/pull/802>`_: Fixes
   `Issue #408 <https://github.com/openforcefield/openforcefield/issues/408>`_. The 1-4 scaling
   factor for electrostatic interactions is now properly set by the value specified in the force
@@ -93,7 +93,7 @@ New features
 
 Bugfixes
 """"""""
-- `PR #786 <https://github.com/openforcefield/openforcefield/pull/xyz>`_: Fixes `Issue #785
+- `PR #786 <https://github.com/openforcefield/openforcefield/pull/786>`_: Fixes `Issue #785
   <https://github.com/openforcefield/openforcefield/issues/785>`_ where RDKitToolkitWrapper would
   sometimes expect stereochemistry to be defined for non-stereogenic bonds when loading from
   SDF.
@@ -318,7 +318,7 @@ API-breaking changes
   - :py:meth:`Molecule.add_monovalent_lone_pair_virtual_site <openforcefield.topology.Molecule.add_monovalent_lone_pair_virtual_site>`
   - :py:meth:`Molecule.add_divalent_lone_pair_virtual_site <openforcefield.topology.Molecule.add_divalent_lone_pair_virtual_site>`
   - :py:meth:`Molecule.add_trivalent_lone_pair_virtual_site <openforcefield.topology.Molecule.add_trivalent_lone_pair_virtual_site>`
-  now only accept a list of atoms, not a list of integers, to define to parent atoms
+    now only accept a list of atoms, not a list of integers, to define to parent atoms
 
 - `PR #548 <https://github.com/openforcefield/openforcefield/pull/548>`_: Removes
   :py:meth:`VirtualParticle.molecule_particle_index <openforcefield.topology.VirtualParticle.molecule_particle_index>`
@@ -754,9 +754,11 @@ New features
   and :py:meth:`Molecule.from_pdb_and_smiles <openforcefield.topology.Molecule.from_pdb_and_smiles>`
   and :py:meth:`Molecule.canonical_order_atoms <openforcefield.topology.Molecule.canonical_order_atoms>`
   and :py:meth:`Molecule.remap <openforcefield.topology.Molecule.remap>`
-      .. note::
-         The to_qcschema method accepts an extras dictionary which is passed into the validated qcelemental.models.Molecule
-         object.
+
+    .. note::
+       The to_qcschema method accepts an extras dictionary which is passed into the validated qcelemental.models.Molecule
+       object.
+
 - `PR #506 <https://github.com/openforcefield/openforcefield/pull/506>`_:
   The :py:class:`Molecule <openforcefield.topology.Molecule>` class adds
   :py:meth:`Molecule.find_rotatable_bonds <openforcefield.topology.Molecule.find_rotatable_bonds>`
@@ -764,11 +766,13 @@ New features
   Adds :py:meth:`Molecule.to_inchi <openforcefield.topology.Molecule.to_inchi>`
   and :py:meth:`Molecule.to_inchikey <openforcefield.topology.Molecule.to_inchikey>`
   and :py:meth:`Molecule.from_inchi <openforcefield.topology.Molecule.from_inchi>`
+
       .. warning::
          InChI was not designed as an molecule interchange format and using it as one is not recommended. Many round trip
          tests will fail when using this format due to a loss of information. We have also added support for fixed
          hydrogen layer nonstandard InChI which can help in the case of tautomers, but overall creating molecules from InChI should be
          avoided.
+
 - `PR #529 <https://github.com/openforcefield/openforcefield/pull/529>`_: Adds the ability to write out to XYZ files via
   :py:meth:`Molecule.to_file <openforcefield.topology.Molecule.to_file>` Both single frame and multiframe XYZ files are supported.
   Note reading from XYZ files will not be supported due to the lack of connectivity information.
@@ -776,10 +780,12 @@ New features
   :py:meth:`Molecule.to_smiles <openforcefield.topology.Molecule.to_smiles>` to allow for the creation of cmiles
   identifiers through combinations of isomeric, explicit hydrogen and mapped smiles, the default settings will return
   isomeric explicit hydrogen smiles as expected.
+
         .. warning::
            Atom maps can be supplied to the properties dictionary to modify which atoms have their map index included,
            if no map is supplied all atoms will be mapped in the order they appear in the
            :py:class:`Molecule <openforcefield.topology.Molecule>`.
+
 - `PR #563 <https://github.com/openforcefield/openforcefield/pull/563>`_:
   Adds ``test_forcefields/ion_charges.offxml``, giving ``LibraryCharges`` for monatomic ions.
 - `PR #543 <https://github.com/openforcefield/openforcefield/pull/543>`_:
@@ -787,8 +793,10 @@ New features
   states. These are :py:meth:`Molecule.enumerate_tautomers <openforcefield.topology.Molecule.enumerate_tautomers>`,
   :py:meth:`Molecule.enumerate_stereoisomers <openforcefield.topology.Molecule.enumerate_stereoisomers>`,
   :py:meth:`Molecule.enumerate_protomers <openforcefield.topology.Molecule.enumerate_protomers>`
+
       .. warning::
          Enumerate protomers is currently only available through the OpenEye toolkit.
+
 - `PR #573 <https://github.com/openforcefield/openforcefield/pull/573>`_:
   Adds ``quacpac`` error output to ``quacpac`` failure in ``Molecule.compute_partial_charges_am1bcc``.
 - `PR #560 <https://github.com/openforcefield/openforcefield/issues/560>`_: Added visualization method to the the Molecule class.
@@ -1083,8 +1091,8 @@ New features
   :py:class:`ForceFields <openforcefield.typing.engines.smirnoff.forcefield.ForceField>`
   and
   :py:class:`ParameterHandlers <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler>`.
-  Note that, while XML representations of ``ForceField``s are stable and conform to the SMIRNOFF
-  specification, the pickled ``ForceField``s that this functionality enables are not guaranteed
+  Note that, while XML representations of ``ForceField``\ s are stable and conform to the SMIRNOFF
+  specification, the pickled ``ForceField``\ s that this functionality enables are not guaranteed
   to be compatible with future toolkit versions.
 
 Improved documentation and warnings
