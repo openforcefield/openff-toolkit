@@ -1,4 +1,4 @@
-## Simulate a system parametrized with the Open Force Field toolkit
+## Simulate a system parametrized with the Open Force Field Toolkit
 
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/openforcefield/openff-toolkit/d129d0c1f3399aa3e2611443210fce526bc62dd6)
 

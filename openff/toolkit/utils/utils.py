@@ -93,6 +93,23 @@ class MissingDependencyError(MessageException):
 
 
 def requires_package(package_name):
+    """
+    Helper function to denote that a funciton requires some optional
+    dependency. A function decorated with this decorator will raise
+    `MissingDependencyError` if the package is not found by
+    `importlib.import_module()`.
+
+    Parameters
+    ----------
+    package_name : str
+        The directory path to enter within the context
+
+    Raises
+    ------
+    MissingDependencyError
+
+    """
+
     def inner_decorator(function):
         @functools.wraps(function)
         def wrapper(*args, **kwargs):
@@ -726,7 +743,7 @@ def convert_0_2_smirnoff_to_0_3(smirnoff_data_0_2):
     smirnoff_data_0_3
         Hierarchical dict representing a SMIRNOFF data structure according the the 0.3 spec
     """
-    # Legacy forcefields sometimes specify the NonbondedForce's sigma_unit value, but then provide
+    # Legacy force fields sometimes specify the NonbondedForce's sigma_unit value, but then provide
     # atom size as rmin_half. Here we correct for this behavior by explicitly defining both as
     # the same unit if either one is defined.
     if "vdW" in smirnoff_data_0_2["SMIRNOFF"].keys():

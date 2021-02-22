@@ -12,7 +12,7 @@ Primary contributors include:
 * John D. Chodera  (Memorial Sloan Kettering Cancer Center) `<john.chodera@choderalab.org>`
 * David L. Mobley (University of California, Irvine) `<dmobley@uci.edu>`
 
-SMIRNOFF and its reference implementation in the `openforcefield` toolkit was heavily inspired by the [ForceField class](https://docs.openmm.org/latest/api-python/generated/simtk.openmm.app.forcefield.ForceField.html#simtk.openmm.app.forcefield.ForceField) from the [OpenMM](https://openmm.org) molecular simulation package, and its associated [XML format](https://docs.openmm.org/latest/userguide/application.html#writing-the-xml-file), developed by [Peter K. Eastman](https://en.wikipedia.org/wiki/Peter_Eastman) (Stanford University).
+SMIRNOFF and its reference implementation in the Open Force Field Toolkit was heavily inspired by the [ForceField class](https://docs.openmm.org/latest/api-python/generated/simtk.openmm.app.forcefield.ForceField.html#simtk.openmm.app.forcefield.ForceField) from the [OpenMM](https://openmm.org) molecular simulation package, and its associated [XML format](https://docs.openmm.org/latest/userguide/application.html#writing-the-xml-file), developed by [Peter K. Eastman](https://en.wikipedia.org/wiki/Peter_Eastman) (Stanford University).
 
 ## Representations and encodings
 
@@ -53,7 +53,7 @@ Below, we describe the main structure of such an XML representation.
 
 ### The enclosing `<SMIRNOFF>` tag
 
-A SMIRNOFF forcefield XML specification always is enclosed in a `<SMIRNOFF>` tag, with certain required attributes provided. The required and permitted attributes defined in the ``<SMIRNOFF>`` are recorded in the version attribute, which describes the top-level attributes that are expected or permitted to be defined.
+A SMIRNOFF force field XML specification always is enclosed in a `<SMIRNOFF>` tag, with certain required attributes provided. The required and permitted attributes defined in the ``<SMIRNOFF>`` are recorded in the version attribute, which describes the top-level attributes that are expected or permitted to be defined.
 ```XML
 <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
 ...
@@ -130,7 +130,7 @@ Equilibrium angles are provided as the `angle` attribute, along with force const
 
 .. note ::
 
-   The reference implementation of the SMIRNOFF specification implemented in the Open Force Field toolkit will, by default, raise an exception if an unexpected attribute is encountered. The toolkit can be configured to accept non-spec keywords, but these are considered "cosmetic" and will not be evaluated. 
+   The reference implementation of the SMIRNOFF specification implemented in the Open Force Field Toolkit will, by default, raise an exception if an unexpected attribute is encountered. The toolkit can be configured to accept non-spec keywords, but these are considered "cosmetic" and will not be evaluated. 
    For example, providing an `<Angle>` tag that also specifies a second force constant `k2` will result in an exception, unless the user specifies that "cosmetic" attributes should be accepted by the parser.
 
 ### SMIRNOFF parameter specification is hierarchical
@@ -142,7 +142,7 @@ This hierarchical structure means that a typical parameter file will tend to hav
 ### Multiple SMIRNOFF representations can be processed in sequence
 
 Multiple SMIRNOFF data sources (e.g. multiple OFFXML files) can be loaded by the OpenFF `ForceField` in sequence.
-If these files each contain unique top-level tags (such as `<Bonds>`, `<Angles>`, etc.), the resulting forcefield will be independent of the order in which the files are loaded.
+If these files each contain unique top-level tags (such as `<Bonds>`, `<Angles>`, etc.), the resulting force field will be independent of the order in which the files are loaded.
 If, however, the same tag occurs in multiple files, the contents of the tags are merged, with the tags read later taking precedence over the parameters read earlier, provided the top-level tags have compatible attributes.
 The resulting force field will therefore depend on the order in which parameters are read.
 
@@ -150,7 +150,7 @@ This behavior is intended for limited use in appending very specific parameters,
 
 ## Units
 
-To minimize the potential for [unit conversion errors](https://en.wikipedia.org/wiki/Mars_Climate_Orbiter#Cause_of_failure), SMIRNOFF forcefields explicitly specify units in a form readable to both humans and computers for all unit-bearing quantities.
+To minimize the potential for [unit conversion errors](https://en.wikipedia.org/wiki/Mars_Climate_Orbiter#Cause_of_failure), SMIRNOFF force fields explicitly specify units in a form readable to both humans and computers for all unit-bearing quantities.
 Allowed values for units are given in [simtk.unit](https://github.com/openmm/openmm/blob/master/wrappers/python/simtk/unit/unit_definitions.py) (though in the future this may change to the more widely-used Python [pint library](https://pint.readthedocs.io/en/latest/)).
 For example, for the `angle` (equilibrium angle) and `k` (force constant) parameters in the `<Angle>` example block above, both attributes are specified as a mathematical expression 
 ```XML
@@ -285,7 +285,7 @@ Note that atoms for which prespecified or library charges have already been appl
 
 ### Prespecified charges (reference implementation only)
 
-In our reference implementation of SMIRNOFF in the `openforcefield` toolkit, we also provide a method for specifying user-defined partial charges during system creation.
+In our reference implementation of SMIRNOFF in the Open Force Field Toolkit, we also provide a method for specifying user-defined partial charges during system creation.
 This functionality is accessed by using the `charge_from_molecules` optional argument during system creation, such as in  `ForceField.create_openmm_system(topology, charge_from_molecules=molecule_list)`. 
 When this optional keyword is provided, all matching molecules will have their charges set by the entries in `molecule_list`.
 This method is provided solely for convenience in developing and exploring alternative charging schemes; actual force field releases for distribution will use one of the other mechanisms specified above.
@@ -726,7 +726,7 @@ molecule = Molecule.from_file('imatinib.mol2')
 # Create a Topology specifying the system to be parameterized containing just the molecule
 topology = molecule.to_topology()
 
-# Load the first release of the "Parsley" forcefield
+# Load the first release of the "Parsley" force field
 from openff.toolkit.typing.engines.smirnoff import ForceField
 forcefield = ForceField('openff-1.0.0.offxml')
 
@@ -739,7 +739,7 @@ The `topology` object provided to `create_openmm_system()` can contain any numbe
 The OpenFF toolkit provides a number of convenient methods for importing or constructing topologies given PDB files, Sybyl mol2 files, SDF files, SMILES strings, and IUPAC names; see the [toolkit documentation](https://open-forcefield-toolkit.readthedocs.io/) for more information.
 Notably, this `topology` object differs from those found in [OpenMM](https://docs.openmm.org/latest/api-python/generated/simtk.openmm.app.topology.Topology.html#simtk.openmm.app.topology.Topology) or [MDTraj](https://mdtraj.org/1.9.0/api/generated/mdtraj.Topology.html#mdtraj.Topology) in that it contains information on the *chemical identity* of the molecules constituting the system, rather than this atomic elements and covalent connectivity; this additional chemical information is required for the [direct chemical perception](https://doi.org/10.1101/286542) features of SMIRNOFF typing.
 
-### Using SMIRNOFF small molecule forcefields with traditional biopolymer force fields
+### Using SMIRNOFF small molecule force fields with traditional biopolymer force fields
 
 While SMIRNOFF format force fields can cover a wide range of biological systems, our initial focus is on gneral small molecule force fields, meaning that users may have considerable interest in combining SMIRNOFF small molecule parameters to systems in combination with traditional biopolymer parameters from conventional force fields, such as the AMBER family of protein/nucleic acid force fields.
 Thus, we provide an example of setting up a mixed protein-ligand system in [examples/using_smirnoff_with_amber_protein_forcefield](https://github.com/openforcefield/openforcefield/tree/master/examples/using_smirnoff_with_amber_protein_forcefield), where an AMBER family force field is used for a protein and the original "Parsley" force field (``openff-1.0.0``) for a small molecule.

@@ -6,7 +6,7 @@ Installation
 Installing via `conda`
 ======================
 
-The simplest way to install the Open Forcefield Toolkit is via the `conda <http://www.continuum.io/blog/conda>`_  package manager.
+The simplest way to install the Open Force Field Toolkit is via the `conda <http://www.continuum.io/blog/conda>`_  package manager.
 Packages are provided on the `conda-forge Anaconda Cloud channel <https://anaconda.org/conda-forge>`_ for Linux, OS X, and Win platforms.
 The `openff-toolkit Anaconda Cloud page <https://anaconda.org/conda-forge/openff-toolkit>`_ has useful instructions and `download statistics <https://anaconda.org/conda-forge/openff-toolkit/files>`_.
 
@@ -72,7 +72,7 @@ You can install the latest stable release build of ``openff-toolkit`` via the ``
    $ conda config --add channels conda-forge
    $ conda install openff-toolkit
 
-This version is recommended for all users not actively developing new forcefield parameterization algorithms.
+This version is recommended for all users not actively developing new force field parameterization algorithms.
 
 .. note:: The conda package manager will install dependencies from binary packages automatically, including difficult-to-install packages such as OpenMM, numpy, and scipy. This is really the easiest way to get started.
 

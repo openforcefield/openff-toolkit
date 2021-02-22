@@ -36,11 +36,6 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Wait for 2 hours if triggered by a release
-        if: (github.event_name == 'release') || (github.event_name == 'prerelease')
-        run:
-            sleep 7200
-
       - uses: conda-incubator/setup-miniconda@v2
         name: Vanilla install from conda
         if: ${{ matrix.openeye == 'false' }}
@@ -110,7 +105,7 @@ jobs:
             exit 1
           fi
 
-          cd openff/toolkit
+          cd openff-toolkit
 
       - name: Test the package
         shell: bash -l {0}

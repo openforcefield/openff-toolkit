@@ -125,7 +125,7 @@ class ParameterIOHandler:
 
     def to_file(self, file_path, smirnoff_data):
         """
-        Write the current forcefield parameter set to a file.
+        Write the current force field parameter set to a file.
 
         Parameters
         ----------
@@ -142,7 +142,7 @@ class ParameterIOHandler:
 
     def to_string(self, smirnoff_data):
         """
-        Render the forcefield parameter set to a string
+        Render the force field parameter set to a string
 
         Parameters
         ----------
@@ -219,7 +219,7 @@ class XMLParameterIOHandler(ParameterIOHandler):
             raise ParseError(str(e))
 
     def to_file(self, file_path, smirnoff_data):
-        """Write the current forcefield parameter set to a file.
+        """Write the current force field parameter set to a file.
 
         Parameters
         ----------
@@ -236,7 +236,7 @@ class XMLParameterIOHandler(ParameterIOHandler):
 
     def to_string(self, smirnoff_data):
         """
-        Write the current forcefield parameter set to an XML string.
+        Write the current force field parameter set to an XML string.
 
         Parameters
         ----------
@@ -246,7 +246,7 @@ class XMLParameterIOHandler(ParameterIOHandler):
         Returns
         -------
         serialized_forcefield : str
-            XML String representation of this forcefield.
+            XML String representation of this force field.
 
         """
 
