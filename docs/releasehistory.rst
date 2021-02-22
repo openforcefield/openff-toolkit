@@ -98,14 +98,14 @@ Bugfixes
   sometimes expect stereochemistry to be defined for non-stereogenic bonds when loading from
   SDF.
 - `PR #786 <https://github.com/openforcefield/openff-toolkit/pull/786>`_: Fixes an issue where
-  using the :py:class:`Molecule <openforcefield.topology.Molecule>` copy constructor
+  using the :py:class:`Molecule <openff.toolkit.topology.Molecule>` copy constructor
   (``newmol = Molecule(oldmol)``) would result
   in the copy sharing the same ``.properties`` dict as the original (as in, changes to the
   ``.properties`` dict of the copy would be reflected in the original).
 - `PR #789 <https://github.com/openforcefield/openff-toolkit/pull/789>`_: Fixes a regression noted in
   `Issue #788 <https://github.com/openforcefield/openff-toolkit/issues/788>`_
   where creating
-  :py:class:`vdWHandler.vdWType <openforcefield.typing.engines.smirnoff.parameters.vdWHandler.vdWType>`
+  :py:class:`vdWHandler.vdWType <openff.toolkit.typing.engines.smirnoff.parameters.vdWHandler.vdWType>`
   or setting ``sigma`` or ``rmin_half`` using Quantities represented as strings resulted in an error.
 
 
@@ -124,40 +124,38 @@ API-breaking changes
   `smirnoff99Frosst line <https://github.com/openforcefield/smirnoff99Frosst/>`_
 - `PR #751 <https://github.com/openforcefield/openff-toolkit/pull/751>`_: Removes the
   optional ``oetools=("oechem", "oequacpac", "oeiupac", "oeomega")`` keyword argument from
-  :py:meth:`OpenEyeToolkitWrapper.is_available <openforcefield.utils.toolkits.OpenEyeToolkitWrapper.is_available>`, as
+  :py:meth:`OpenEyeToolkitWrapper.is_available <openff.toolkit.utils.toolkits.OpenEyeToolkitWrapper.is_available>`, as
   there are no special behaviors that are accessed in the case of partially-licensed OpenEye backends. The
   new behavior of this method is the same as if the default value above is always provided.
 
 Behavior Changed
 """"""""""""""""
 - `PR #583 <https://github.com/openforcefield/openff-toolkit/pull/583>`_: Methods
-  such as :py:meth:`Molecule.from_rdkit <openforcefield.topology.Molecule.from_rdkit>`
-  and :py:meth:`Molecule.from_openeye <openforcefield.topology.Molecule.from_openeye>`,
-  which delegate their internal logic to :py:class:`ToolkitRegistry <openforcefield.utils.toolkits.ToolkitRegistry>`
+  such as :py:meth:`Molecule.from_rdkit <openff.toolkit.topology.Molecule.from_rdkit>`
+  and :py:meth:`Molecule.from_openeye <openff.toolkit.topology.Molecule.from_openeye>`,
+  which delegate their internal logic to :py:class:`ToolkitRegistry <openff.toolkit.utils.toolkits.ToolkitRegistry>`
   functions, now guarantee that they will return an object of the correct type when being called on ``Molecule``-derived classes. Previously,
-  running these constructors using subclasses of :py:class:`FrozenMolecule <openforcefield.topology.Molecule>`
+  running these constructors using subclasses of :py:class:`FrozenMolecule <openff.toolkit.topology.Molecule>`
   would not return an instance of that subclass, but rather just an instance of a
-  :py:class:`Molecule <openforcefield.topology.Molecule>`.
+  :py:class:`Molecule <openff.toolkit.topology.Molecule>`.
 - `PR #753 <https://github.com/openforcefield/openff-toolkit/pull/753>`_: ``ParameterLookupError``
   is now raised when passing to
-  :py:meth:`ParameterList.index <openforcefield.typing.engines.smirnoff.parameters.ParameterList>`
+  :py:meth:`ParameterList.index <openff.toolkit.typing.engines.smirnoff.parameters.ParameterList>`
   a SMIRKS pattern not found in the parameter list.
 
 New features
 """"""""""""
 - `PR #751 <https://github.com/openforcefield/openff-toolkit/pull/751>`_: Adds
-  :py:class:`LicenseError <openforcefield.utils.toolkits.LicenseError>`, a subclass of
-  :py:class:`ToolkitUnavailableException <openforcefield.utils.toolkits.ToolkitUnavailableException>`
-  which is raised when attempting to add a cheminformatics
-  :py:class:`ToolkitWrapper <openforcefield.utils.toolkits.ToolkitWrapper>` for a toolkit that
-  is installed but unlicensed.
+  ``LicenseError``, a subclass of ``ToolkitUnavailableException`` which is raised when attempting to 
+  add a cheminformatics :py:class:`ToolkitWrapper <openff.toolkit.utils.toolkits.ToolkitWrapper>` for 
+  a toolkit that is installed but unlicensed.
 - `PR #678 <https://github.com/openforcefield/openff-toolkit/pull/678>`_: Adds
-  :py:meth:`ForceField.deregister_parameter_handler <openforcefield.typing.engines.smirnoff.forcefield.ForceField.deregister_parameter_handler>`.
+  :py:meth:`ForceField.deregister_parameter_handler <openff.toolkit.typing.engines.smirnoff.forcefield.ForceField.deregister_parameter_handler>`.
 - `PR #730 <https://github.com/openforcefield/openff-toolkit/pull/730>`_: Adds
-  :py:class:`Topology.is_periodic <openforcefield.topology.Topology>`.
+  :py:class:`Topology.is_periodic <openff.toolkit.topology.Topology>`.
 - `PR #753 <https://github.com/openforcefield/openff-toolkit/pull/753>`_: Adds
-  :py:meth:`ParameterHandler.__getitem__ <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler.__getitem__>`
-  to look up individual :py:class:`ParameterType <openforcefield.typing.engines.smirnoff.parameters.ParameterType>`
+  :py:meth:`ParameterHandler.__getitem__ <openff.toolkit.typing.engines.smirnoff.parameters.ParameterHandler>`
+  to look up individual :py:class:`ParameterType <openff.toolkit.typing.engines.smirnoff.parameters.ParameterType>`
   objects.
 
 Bugfixes
@@ -166,17 +164,17 @@ Bugfixes
   serializing molecule with conformers to JSON.
 - `PR #750 <https://github.com/openforcefield/openff-toolkit/pull/750>`_: Fixes a bug causing either
   ``sigma`` or ``rmin_half`` to sometimes be missing on
-  :py:class:`vdWHandler.vdWType <openforcefield.typing.engines.smirnoff.parameters.vdWHandler.vdWType>`
+  :py:class:`vdWHandler.vdWType <openff.toolkit.typing.engines.smirnoff.parameters.vdWHandler.vdWType>`
   objects.
 - `PR #756 <https://github.com/openforcefield/openff-toolkit/pull/756>`_: Fixes bug when running
-  :py:meth:`vdWHandler.create_force <openforcefield.typing.engines.smirnoff.parameters.vdWHandler.create_force>`
+  :py:meth:`vdWHandler.create_force <openff.toolkit.typing.engines.smirnoff.parameters.vdWHandler>`
   using a ``vdWHandler`` that was initialized using the API.
 - `PR #776 <https://github.com/openforcefield/openff-toolkit/pull/776>`_: Fixes a bug in which
-  the :py:meth:`Topology.from_openmm <openforcefield.topology.Topology.from_openmm>` and
-  :py:meth:`Topology.from_mdtraj <openforcefield.topology.Topology.from_mdtraj>` methods would
+  the :py:meth:`Topology.from_openmm <openff.toolkit.topology.Topology.from_openmm>` and
+  :py:meth:`Topology.from_mdtraj <openff.toolkit.topology.Topology.from_mdtraj>` methods would
   dangerously allow ``unique_molecules=None``.
 - `PR #777 <https://github.com/openforcefield/openff-toolkit/pull/777>`_:
-  :py:class:`RDKitToolkitWrapper <openforcefield.utils.toolkits.RDKitToolkitWrapper>`
+  :py:class:`RDKitToolkitWrapper <openff.toolkit.utils.toolkits.RDKitToolkitWrapper>`
   now outputs the full warning message when ``allow_undefined_stereo=True`` (previously the
   description of which stereo was undefined was squelched)
 
@@ -184,14 +182,14 @@ Bugfixes
 0.8.0 - Virtual Sites
 ---------------------
 
-This release implements the SMIRNOFF virtual site specification. The implementation enables support for models using off-site charges, including 4- and 5-point water models, in addition to lone pair modeling on various functional groups. The primary focus was on the ability to parameterize a system using virtual sites, and generating an OpenMM system with all virtual sites present and ready for evaluation. Support for formats other than OpenMM has not be implemented in this release, but may come with the appearance of the OpenFF system object. In addition to implementing the specification, the toolkit :py:class:`Molecule <openforcefield.topology.Molecule>` objects now allow the creation and manipulation of virtual sites.
+This release implements the SMIRNOFF virtual site specification. The implementation enables support for models using off-site charges, including 4- and 5-point water models, in addition to lone pair modeling on various functional groups. The primary focus was on the ability to parameterize a system using virtual sites, and generating an OpenMM system with all virtual sites present and ready for evaluation. Support for formats other than OpenMM has not be implemented in this release, but may come with the appearance of the OpenFF system object. In addition to implementing the specification, the toolkit :py:class:`Molecule <openff.toolkit.topology.Molecule>` objects now allow the creation and manipulation of virtual sites.
 
 **Major Feature: Support for the SMIRNOFF VirtualSite tag**
 
 Virtual sites can be added to a System in two ways:
 
 * `SMIRNOFF Force Fields can contain a VirtualSites tag <https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html#virtualsites-virtual-sites-for-off-atom-charges>`_ , specifying the addition of virtual sites according to SMARTS-based rules.
-* Virtual sites can be added to a :py:class:`Molecule <openforcefield.topology.Molecule>`, and these will appear in the final OpenMM system if a virtual site handler is present in the :py:class:`ForceField <openforcefield.typing.engines.smirnoff.forcefield.ForceField>`.
+* Virtual sites can be added to a :py:class:`Molecule <openff.toolkit.topology.Molecule>`, and these will appear in the final OpenMM system if a virtual site handler is present in the :py:class:`ForceField <openff.toolkit.typing.engines.smirnoff.forcefield.ForceField>`.
 
 Virtual sites are the first parameters which directly depend on 3D conformation, where the position of the virtual sites are based on vectors defined on the atoms that were matched during parameterization. Because of this, a virtual site matching the triplet of atoms 1-2-3 will define a point that is different from a triplet matching 3-2-1. This is similar to defining "right-handed" and "left-handed" coordinate systems. This subtlety interplays with two major concepts in force field development:
 
@@ -222,7 +220,7 @@ The following cases exemplify our reasoning in implementing this behavior, and s
 
 * Formaldehyde, ``H2C=O``, with ``MonovalentLonePair`` virtual site(s) on the oxygen, with the aim of modeling both lone pairs. This one is subtle, since ``[#1:3]-[#6X3:2]=[#8X1:1]`` matches two unique groups of atoms (``1-3-4`` and ``2-3-4``). It is important to note in this situation that ``match="all_permutations"`` behaves exactly the same as ``match="once"``. Due to the anchoring hydrogens (``1`` and ``2``) being symmetric but opposite about the bond between ``3`` and ``4``, a single parameter does correctly place both lone pairs. A standing issue here is that the default exclusion policy (``parents``) will allow these two virtual sites to interact since they have different indexed atoms (parents), causing the energy to be different than the non-virtual site parameterization. In the future, the ``exclusion_policy="local"`` will account for this, and make virtual sites that share at least one "parent" atom not interact with each other. As a special note: when applying a ``MonovalentLonePair`` to a completely symmetric molecule, e.g. water, ``all_permutations`` can come into play, but this will apply two particles (one for each hydrogen).
 
-Finally, the toolkit handles the organization of atoms and virtual sites in a specific manner. Virtual sites are expected to be added *after all molecules in the topology are present*. This is because the Open Force Field Toolkit organizes a topology by placing all atoms first, then all virtual sites last. This differs from the OpenMM Modeller object, for example, which interleaves the order of atoms and virtual sites in such a way that all particles of a molecule are contiguous. In addition, due to the fact that a virtual site may contain multiple particles coupled to single parameters, the toolkit makes a distinction between a virtual *site*, and a virtual *particle*. A virtual site may represent multiple virtual particles, so the total number of particles cannot be directly determined by simply summing the number of atoms and virtual sites in a molecule. This is taken into account, however, and the :py:class:`Molecule <openforcefield.topology.Molecule>` and :py:class:`Topology <openforcefield.topology.Topology>` classes now implement ``particle`` iterators.
+Finally, the toolkit handles the organization of atoms and virtual sites in a specific manner. Virtual sites are expected to be added *after all molecules in the topology are present*. This is because the Open Force Field Toolkit organizes a topology by placing all atoms first, then all virtual sites last. This differs from the OpenMM Modeller object, for example, which interleaves the order of atoms and virtual sites in such a way that all particles of a molecule are contiguous. In addition, due to the fact that a virtual site may contain multiple particles coupled to single parameters, the toolkit makes a distinction between a virtual *site*, and a virtual *particle*. A virtual site may represent multiple virtual particles, so the total number of particles cannot be directly determined by simply summing the number of atoms and virtual sites in a molecule. This is taken into account, however, and the :py:class:`Molecule <openff.toolkit.topology.Molecule>` and :py:class:`Topology <openff.toolkit.topology.Topology>` classes now implement ``particle`` iterators.
 
 
 **Minor Feature: Support for the 0.4 ChargeIncrementModel tag**
@@ -248,54 +246,54 @@ New features
 
 - `PR #548 <https://github.com/openforcefield/openff-toolkit/pull/548>`_: Adds ``replace`` and ``all_permutations`` kwarg to
 
-  - :py:meth:`Molecule.add_bond_charge_virtual_site <openforcefield.topology.Molecule.add_bond_charge_virtual_site>`
-  - :py:meth:`Molecule.add_monovalent_lone_pair_virtual_site <openforcefield.topology.Molecule.add_monovalent_lone_pair_virtual_site>`
-  - :py:meth:`Molecule.add_divalent_lone_pair_virtual_site <openforcefield.topology.Molecule.add_divalent_lone_pair_virtual_site>`
-  - :py:meth:`Molecule.add_trivalent_lone_pair_virtual_site <openforcefield.topology.Molecule.add_trivalent_lone_pair_virtual_site>`
+  - :py:meth:`Molecule.add_bond_charge_virtual_site <openff.toolkit.topology.Molecule.add_bond_charge_virtual_site>`
+  - :py:meth:`Molecule.add_monovalent_lone_pair_virtual_site <openff.toolkit.topology.Molecule.add_monovalent_lone_pair_virtual_site>`
+  - :py:meth:`Molecule.add_divalent_lone_pair_virtual_site <openff.toolkit.topology.Molecule.add_divalent_lone_pair_virtual_site>`
+  - :py:meth:`Molecule.add_trivalent_lone_pair_virtual_site <openff.toolkit.topology.Molecule.add_trivalent_lone_pair_virtual_site>`
 
 - `PR #548 <https://github.com/openforcefield/openff-toolkit/pull/548>`_: Adds ``orientations`` to
 
-  - :py:class:`BondChargeVirtualSite <openforcefield.topology.BondChargeVirtualSite>`
-  - :py:class:`MonovalentLonePairVirtualSite <openforcefield.topology.MonovalentLonePairVirtualSite>`
-  - :py:class:`DivalentLonePairVirtualSite <openforcefield.topology.DivalentLonePairVirtualSite>`
-  - :py:class:`TrivalentLonePairVirtualSite <openforcefield.topology.TrivalentLonePairVirtualSite>`
+  - :py:class:`BondChargeVirtualSite <openff.toolkit.topology.BondChargeVirtualSite>`
+  - :py:class:`MonovalentLonePairVirtualSite <openff.toolkit.topology.MonovalentLonePairVirtualSite>`
+  - :py:class:`DivalentLonePairVirtualSite <openff.toolkit.topology.DivalentLonePairVirtualSite>`
+  - :py:class:`TrivalentLonePairVirtualSite <openff.toolkit.topology.TrivalentLonePairVirtualSite>`
 
 - `PR #548 <https://github.com/openforcefield/openff-toolkit/pull/548>`_: Adds
 
-  - :py:class:`VirtualParticle <openforcefield.topology.VirtualParticle>`
-  - :py:class:`TopologyVirtualParticle <openforcefield.topology.TopologyVirtualParticle>`
-  - :py:meth:`BondChargeVirtualSite.get_openmm_virtual_site <openforcefield.topology.BondChargeVirtualSite.get_openmm_virtual_site>`
-  - :py:meth:`MonovalentLonePairVirtualSite.get_openmm_virtual_site <openforcefield.topology.MonovalentLonePairVirtualSite.get_openmm_virtual_site>`
-  - :py:meth:`DivalentLonePairVirtualSite.get_openmm_virtual_site <openforcefield.topology.DivalentLonePairVirtualSite.get_openmm_virtual_site>`
-  - :py:meth:`TrivalentLonePairVirtualSite.get_openmm_virtual_site <openforcefield.topology.TrivalentLonePairVirtualSite.get_openmm_virtual_site>`
-  - :py:meth:`ValenceDict.key_transform <openforcefield.topology.ValenceDict.key_transform>`
-  - :py:meth:`ValenceDict.index_of <openforcefield.topology.ValenceDict.index_of>`
-  - :py:meth:`ImproperDict.key_transform <openforcefield.topology.ImproperDict.key_transform>`
-  - :py:meth:`ImproperDict.index_of <openforcefield.topology.ImproperDict.index_of>`
+  - :py:class:`VirtualParticle <openff.toolkit.topology.VirtualParticle>`
+  - :py:class:`TopologyVirtualParticle <openff.toolkit.topology.TopologyVirtualParticle>`
+  - :py:meth:`BondChargeVirtualSite.get_openmm_virtual_site <openff.toolkit.topology.BondChargeVirtualSite.get_openmm_virtual_site>`
+  - :py:meth:`MonovalentLonePairVirtualSite.get_openmm_virtual_site <openff.toolkit.topology.MonovalentLonePairVirtualSite.get_openmm_virtual_site>`
+  - :py:meth:`DivalentLonePairVirtualSite.get_openmm_virtual_site <openff.toolkit.topology.DivalentLonePairVirtualSite.get_openmm_virtual_site>`
+  - :py:meth:`TrivalentLonePairVirtualSite.get_openmm_virtual_site <openff.toolkit.topology.TrivalentLonePairVirtualSite.get_openmm_virtual_site>`
+  - :py:meth:`ValenceDict.key_transform <openff.toolkit.topology.ValenceDict.key_transform>`
+  - :py:meth:`ValenceDict.index_of <openff.toolkit.topology.ValenceDict.index_of>`
+  - :py:meth:`ImproperDict.key_transform <openff.toolkit.topology.ImproperDict.key_transform>`
+  - :py:meth:`ImproperDict.index_of <openff.toolkit.topology.ImproperDict.index_of>`
 
 - `PR #705 <https://github.com/openforcefield/openff-toolkit/pull/705>`_: Adds interpolation
   based on fractional bond orders for harmonic bonds. This includes interpolation for both
   the force constant ``k`` and/or equilibrium bond distance ``length``. This is accompanied by a
   bump in the ``<Bonds>`` section of the SMIRNOFF spec (but not the entire spec).
 - `PR #718 <https://github.com/openforcefield/openff-toolkit/pull/718>`_: Adds ``.rings`` and
-  ``.n_rings`` to :py:class:`Molecule <openforcefield.topology.Molecule>` and ``.is_in_ring``
-  to :py:class:`Atom <openforcefield.topology.Atom>` and
-  :py:class:`Bond <openforcefield.topology.Bond>`
+  ``.n_rings`` to :py:class:`Molecule <openff.toolkit.topology.Molecule>` and ``.is_in_ring``
+  to :py:class:`Atom <openff.toolkit.topology.Atom>` and
+  :py:class:`Bond <openff.toolkit.topology.Bond>`
 
 Bugfixes
 """""""""
 - `PR #682 <https://github.com/openforcefield/openff-toolkit/pull/682>`_: Catches failures in
-  :py:meth:`Molecule.from_iupac <openforcefield.topology.Molecule.from_iupac>` instead of silently
+  :py:meth:`Molecule.from_iupac <openff.toolkit.topology.Molecule.from_iupac>` instead of silently
   failing.
 - `PR #743 <https://github.com/openforcefield/openff-toolkit/pull/743>`_: Prevents the non-bonded
   (vdW) cutoff from silently falling back to the OpenMM default of 1 nm in
   :py:meth:`Forcefield.create_openmm_system
-  <openforcefield.typing.engines.smirnoff.forcefield.ForceField.create_openmm_system>` and instead
+  <openff.toolkit.typing.engines.smirnoff.forcefield.ForceField.create_openmm_system>` and instead
   sets its to the value specified by the force field.
 - `PR #737 <https://github.com/openforcefield/openff-toolkit/pull/737>`_: Prevents OpenEye from
   incidentally being used in the conformer generation step of
   :py:class:`AmberToolsToolkitWrapper.assign_fractional_bond_orders
-  <openforcefield.utils.toolkits.AmberToolsToolkitWrapper.assign_fractional_bond_orders>`.
+  <openff.toolkit.utils.toolkits.AmberToolsToolkitWrapper.assign_fractional_bond_orders>`.
 
 Behavior changed
 """"""""""""""""
@@ -314,29 +312,29 @@ API-breaking changes
 """"""""""""""""""""
 - `PR #548 <https://github.com/openforcefield/openff-toolkit/pull/548>`_: Methods
 
-  - :py:meth:`Molecule.add_bond_charge_virtual_site <openforcefield.topology.Molecule.add_bond_charge_virtual_site>`
-  - :py:meth:`Molecule.add_monovalent_lone_pair_virtual_site <openforcefield.topology.Molecule.add_monovalent_lone_pair_virtual_site>`
-  - :py:meth:`Molecule.add_divalent_lone_pair_virtual_site <openforcefield.topology.Molecule.add_divalent_lone_pair_virtual_site>`
-  - :py:meth:`Molecule.add_trivalent_lone_pair_virtual_site <openforcefield.topology.Molecule.add_trivalent_lone_pair_virtual_site>`
+  - :py:meth:`Molecule.add_bond_charge_virtual_site <openff.toolkit.topology.Molecule.add_bond_charge_virtual_site>`
+  - :py:meth:`Molecule.add_monovalent_lone_pair_virtual_site <openff.toolkit.topology.Molecule.add_monovalent_lone_pair_virtual_site>`
+  - :py:meth:`Molecule.add_divalent_lone_pair_virtual_site <openff.toolkit.topology.Molecule.add_divalent_lone_pair_virtual_site>`
+  - :py:meth:`Molecule.add_trivalent_lone_pair_virtual_site <openff.toolkit.topology.Molecule.add_trivalent_lone_pair_virtual_site>`
   now only accept a list of atoms, not a list of integers, to define to parent atoms
 
 - `PR #548 <https://github.com/openforcefield/openff-toolkit/pull/548>`_: Removes
-  :py:meth:`VirtualParticle.molecule_particle_index <openforcefield.topology.VirtualParticle.molecule_particle_index>`
+  :py:meth:`VirtualParticle.molecule_particle_index <openff.toolkit.topology.VirtualParticle.molecule_particle_index>`
 
 - `PR #548 <https://github.com/openforcefield/openff-toolkit/pull/548>`_: Removes ``outOfPlaneAngle`` from
 
-  - :py:class:`DivalentLonePairVirtualSite <openforcefield.topology.DivalentLonePairVirtualSite>`
-  - :py:class:`TrivalentLonePairVirtualSite <openforcefield.topology.TrivalentLonePairVirtualSite>`
+  - :py:class:`DivalentLonePairVirtualSite <openff.toolkit.topology.DivalentLonePairVirtualSite>`
+  - :py:class:`TrivalentLonePairVirtualSite <openff.toolkit.topology.TrivalentLonePairVirtualSite>`
 
 - `PR #548 <https://github.com/openforcefield/openff-toolkit/pull/548>`_: Removes ``inPlaneAngle`` from
-  :py:class:`TrivalentLonePairVirtualSite <openforcefield.topology.TrivalentLonePairVirtualSite>`
+  :py:class:`TrivalentLonePairVirtualSite <openff.toolkit.topology.TrivalentLonePairVirtualSite>`
 
 - `PR #548 <https://github.com/openforcefield/openff-toolkit/pull/548>`_: Removes ``weights`` from
 
-  - :py:class:`BondChargeVirtualSite <openforcefield.topology.BondChargeVirtualSite>`
-  - :py:class:`MonovalentLonePairVirtualSite <openforcefield.topology.MonovalentLonePairVirtualSite>`
-  - :py:class:`DivalentLonePairVirtualSite <openforcefield.topology.DivalentLonePairVirtualSite>`
-  - :py:class:`TrivalentLonePairVirtualSite <openforcefield.topology.TrivalentLonePairVirtualSite>`
+  - :py:class:`BondChargeVirtualSite <openff.toolkit.topology.BondChargeVirtualSite>`
+  - :py:class:`MonovalentLonePairVirtualSite <openff.toolkit.topology.MonovalentLonePairVirtualSite>`
+  - :py:class:`DivalentLonePairVirtualSite <openff.toolkit.topology.DivalentLonePairVirtualSite>`
+  - :py:class:`TrivalentLonePairVirtualSite <openff.toolkit.topology.TrivalentLonePairVirtualSite>`
 
 Tests added
 """""""""""
@@ -354,32 +352,32 @@ Tests added
 New features
 """"""""""""
 - `PR #662 <https://github.com/openforcefield/openff-toolkit/pull/662>`_: Adds ``.aromaticity_model``
-  of :py:class:`ForceField <openforcefield.typing.engines.smirnoff.forcefield.ForceField>` and ``.TAGNAME``
-  of :py:class:`ParameterHandler <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler>` as
+  of :py:class:`ForceField <openff.toolkit.typing.engines.smirnoff.forcefield.ForceField>` and ``.TAGNAME``
+  of :py:class:`ParameterHandler <openff.toolkit.typing.engines.smirnoff.parameters.ParameterHandler>` as
   public attributes.
 - `PR #667 <https://github.com/openforcefield/openff-toolkit/pull/667>`_ and
   `PR #681 <https://github.com/openforcefield/openff-toolkit/pull/681>`_ linted the codebase with
   ``black`` and ``isort``, respectively.
 - `PR #675 <https://github.com/openforcefield/openff-toolkit/pull/675>`_ adds
   ``.toolkit_version`` to
-  :py:class:`ToolkitWrapper <openforcefield.utils.toolkits.ToolkitWrapper>` and
+  :py:class:`ToolkitWrapper <openff.toolkit.utils.toolkits.ToolkitWrapper>` and
   ``.registered_toolkit_versions`` to
-  :py:class:`ToolkitRegistry <openforcefield.utils.toolkits.ToolkitRegistry>`.
+  :py:class:`ToolkitRegistry <openff.toolkit.utils.toolkits.ToolkitRegistry>`.
 - `PR #696 <https://github.com/openforcefield/openff-toolkit/pull/696>`_ Exposes a setter for
-  :py:class:`ForceField.aromaticity_model <openforcefield.typing.engines.smirnoff.forcefield.ForceField>`
+  :py:class:`ForceField.aromaticity_model <openff.toolkit.typing.engines.smirnoff.forcefield.ForceField>`
 - `PR #685 <https://github.com/openforcefield/openff-toolkit/pull/685>`_ Adds a custom ``__hash__``
   function to
-  :py:class:`ForceField <openforcefield.typing.engines.smirnoff.forcefield.ForceField>`
+  :py:class:`ForceField <openff.toolkit.typing.engines.smirnoff.forcefield.ForceField>`
 
 
 Behavior changed
 """"""""""""""""
 - `PR #684 <https://github.com/openforcefield/openff-toolkit/pull/684>`_: Changes
-  :py:class:`ToolkitRegistry <openforcefield.utils.toolkits.ToolkitRegistry>` to return an empty
+  :py:class:`ToolkitRegistry <openff.toolkit.utils.toolkits.ToolkitRegistry>` to return an empty
   registry when initialized with no arguments, i.e. ``ToolkitRegistry()`` and makes the
   ``register_imported_toolkit_wrappers`` argument private.
 - `PR #711 <https://github.com/openforcefield/openff-toolkit/pull/711>`_: The
-  setter for :py:class:`Topology.box_vectors <openforcefield.topology.Topology>`
+  setter for :py:class:`Topology.box_vectors <openff.toolkit.topology.Topology>`
   now infers box vectors (a 3x3 matrix) when box lengths
   (a 3x1 array) are passed, assuming an orthogonal box.
 - `PR #649 <https://github.com/openforcefield/openff-toolkit/pull/648>`_: Makes SMARTS
@@ -390,14 +388,14 @@ Behavior changed
 - `PR #648 <https://github.com/openforcefield/openff-toolkit/pull/648>`_: Removes the
   ``utils.structure`` module, which was deprecated in 0.2.0.
 - `PR #670 <https://github.com/openforcefield/openff-toolkit/pull/670>`_: Makes the
-  :py:class:`Topology <openforcefield.topology.Topology>` returned by ``create_openmm_system``
+  :py:class:`Topology <openff.toolkit.topology.Topology>` returned by ``create_openmm_system``
   contain the partial charges and partial bond orders (if any) assigned during parameterization.
 - `PR #675 <https://github.com/openforcefield/openff-toolkit/pull/675>`_ changes the
   exception raised when no ``antechamber`` executable is found from ``IOError`` to
-  :py:class:`AntechamberNotFoundError <openforcefield.utils.toolkits.AntechamberNotFoundError>`
+  ``AntechamberNotFoundError``
 - `PR #696 <https://github.com/openforcefield/openff-toolkit/pull/696>`_ Adds an
   ``aromaticity_model`` keyword argument to the
-  :py:class:`ForceField <openforcefield.typing.engines.smirnoff.forcefield.ForceField>`
+  :py:class:`ForceField <openff.toolkit.typing.engines.smirnoff.forcefield.ForceField>`
   constructor, which defaults to ``DEFAULT_AROMATICITY_MODEL``.
 
 Bugfixes
@@ -434,52 +432,52 @@ in molecule isomorphism checks.
 Behavior changed
 """"""""""""""""
 - `PR #646 <https://github.com/openforcefield/openff-toolkit/pull/646>`_: Checking for
-  :py:class:`Molecule <openforcefield.topology.Molecule>`
+  :py:class:`Molecule <openff.toolkit.topology.Molecule>`
   equality using the ``==`` operator now disregards all pyrimidal nitrogen stereochemistry
   by default. To re-enable, use
-  :py:class:`Molecule.{is|are}_isomorphic <openforcefield.topology.Molecule>`
+  :py:class:`Molecule.{is|are}_isomorphic <openff.toolkit.topology.Molecule>`
   with the ``strip_pyrimidal_n_atom_stereo=False`` keyword argument.
 - `PR #646 <https://github.com/openforcefield/openff-toolkit/pull/646>`_: Adds
   an optional ``toolkit_registry`` keyword argument to
-  :py:class:`Molecule.are_isomorphic <openforcefield.topology.Molecule>`,
+  :py:class:`Molecule.are_isomorphic <openff.toolkit.topology.Molecule>`,
   which identifies the toolkit that should be used to search for pyrimidal nitrogens.
 
 
 Bugfixes
 """"""""
 - `PR #647 <https://github.com/openforcefield/openff-toolkit/pull/647>`_: Updates
-  :py:class:`OpenEyeToolkitWrapper <openforcefield.utils.toolkits.OpenEyeToolkitWrapper>`
+  :py:class:`OpenEyeToolkitWrapper <openff.toolkit.utils.toolkits.OpenEyeToolkitWrapper>`
   for 2020.0.4 OpenEye Toolkit behavior/API changes.
 - `PR #646 <https://github.com/openforcefield/openff-toolkit/pull/646>`_: Fixes a bug where
-  :py:class:`Molecule.chemical_environment_matches <openforcefield.topology.Molecule>`
-  was not able to accept a :py:class:`ChemicalEnvironment <openforcefield.typing.chemistry.ChemicalEnvironment>` object
+  :py:class:`Molecule.chemical_environment_matches <openff.toolkit.topology.Molecule>`
+  was not able to accept a :py:class:`ChemicalEnvironment <openff.toolkit.typing.chemistry.ChemicalEnvironment>` object
   as a query.
 - `PR #634 <https://github.com/openforcefield/openff-toolkit/pull/634>`_: Fixes a bug in which calling
-  :py:class:`RDKitToolkitWrapper.from_file <openforcefield.utils.toolkits.RDKitToolkitWrapper>` directly
+  :py:class:`RDKitToolkitWrapper.from_file <openff.toolkit.utils.toolkits.RDKitToolkitWrapper>` directly
   would not load files correctly if passed lowercase ``file_format``. Note that this bug did not occur when calling
-  :py:class:`Molecule.from_file <openforcefield.topology.Molecule>`.
+  :py:class:`Molecule.from_file <openff.toolkit.topology.Molecule>`.
 - `PR #631 <https://github.com/openforcefield/openff-toolkit/pull/631>`_: Fixes a bug in which calling
-  :py:class:`unit_to_string <openforcefield.utils.utils.unit_to_string>` returned
+  :py:class:`unit_to_string <openff.toolkit.utils.utils.unit_to_string>` returned
   ``None`` when the unit is dimensionless. Now ``"dimensionless"`` is returned.
 - `PR #630 <https://github.com/openforcefield/openff-toolkit/pull/630>`_: Closes issue `Issue #629
   <https://github.com/openforcefield/openff-toolkit/issues/629>`_ in which the wrong exception is raised when
-  attempting to instantiate a :py:class:`ForceField <openforcefield.typing.engines.smirnoff.forcefield.ForceField>`
+  attempting to instantiate a :py:class:`ForceField <openff.toolkit.typing.engines.smirnoff.forcefield.ForceField>`
   from an unparsable string.
 
 New features
 """"""""""""
 - `PR #632 <https://github.com/openforcefield/openff-toolkit/pull/632>`_: Adds
-  :py:class:`ForceField.registered_parameter_handlers <openforcefield.typing.engines.smirnoff.forcefield.ForceField>`
+  :py:class:`ForceField.registered_parameter_handlers <openff.toolkit.typing.engines.smirnoff.forcefield.ForceField>`
 - `PR #614 <https://github.com/openforcefield/openff-toolkit/pull/614>`_: Adds 
-  :py:class:`ToolkitRegistry.deregister_toolkit <openforcefield.utils.toolkits.ToolkitRegistry>`
+  :py:class:`ToolkitRegistry.deregister_toolkit <openff.toolkit.utils.toolkits.ToolkitRegistry>`
   to de-register registered toolkits, which can include toolkit wrappers loaded into ``GLOBAL_TOOLKIT_REGISTRY``
   by default.
 - `PR #656 <https://github.com/openforcefield/openff-toolkit/pull/656>`_: Adds
   a new allowed ``am1elf10`` option to the OpenEye implementation of
-  :py:class:`assign_partial_charges <openforcefield.utils.toolkits.OpenEyeToolkitWrapper>` which
+  :py:class:`assign_partial_charges <openff.toolkit.utils.toolkits.OpenEyeToolkitWrapper>` which
   calculates the average partial charges at the AM1 level of theory using conformers selected using the ELF10 method.
 - `PR #643 <https://github.com/openforcefield/openff-toolkit/pull/643>`_: Adds
-  :py:class:`openforcefield.typing.engines.smirnoff.forcefield.get_available_force_fields <openforcefield.typing.engines.smirnoff.forcefield.get_available_force_fields>`,
+  :py:class:`openforcefield.typing.engines.smirnoff.forcefield.get_available_force_fields <openff.toolkit.typing.engines.smirnoff.forcefield.get_available_force_fields>`,
   which returns paths to the files of force fields available through entry point plugins.
 
 
@@ -588,7 +586,7 @@ Behavior changed
 - `PR #508 <https://github.com/openforcefield/openff-toolkit/pull/508>`_:
   In order to provide the same results for the same chemical species, regardless of input
   conformation,
-  :py:class:`Molecule <openforcefield.topology.Molecule>`
+  :py:class:`Molecule <openff.toolkit.topology.Molecule>`
   ``assign_partial_charges``, ``compute_partial_charges_am1bcc``, and
   ``assign_fractional_bond_orders`` methods now default to ignore input conformers
   and generate new conformer(s) of the molecule before running semiempirical calculations.
@@ -599,7 +597,7 @@ Behavior changed
   by adding support for partial charge I/O in SDF. The partial charges are stored as a property in the
   SDF molecule block under the tag ``<atom.dprop.PartialCharge>``.
 - `PR #281 <https://github.com/openforcefield/openff-toolkit/pull/281>`_: If a
-  :py:class:`Molecule <openforcefield.topology.Molecule>`'s
+  :py:class:`Molecule <openff.toolkit.topology.Molecule>`'s
   ``partial_charges`` attribute is set to ``None`` (the default value), calling ``to_openeye`` will
   now produce a OE molecule with partial charges set to ``nan``. This would previously produce an OE
   molecule with partial charges of 0.0, which was a loss of information, since it wouldn't be clear
@@ -608,11 +606,11 @@ Behavior changed
   ``partial_charges = None`` when appropriate (previously these would produce OFFMols with
   all-zero charges, for the same reasoning as above).
 - `PR #281 <https://github.com/openforcefield/openff-toolkit/pull/281>`_:
-  :py:class:`Molecule <openforcefield.topology.Molecule>`
+  :py:class:`Molecule <openff.toolkit.topology.Molecule>`
   ``to_rdkit``
   now sets partial charges on the RDAtom's ``PartialCharges`` property (this was previously set
   on the ``partial_charges`` property). If the
-  :py:class:`Molecule <openforcefield.topology.Molecule>`'s partial_charges attribute is ``None``, this property
+  :py:class:`Molecule <openff.toolkit.topology.Molecule>`'s partial_charges attribute is ``None``, this property
   will not be defined on the RDAtoms.
 - `PR #281 <https://github.com/openforcefield/openff-toolkit/pull/281>`_:
   Enforce the behavior during SDF I/O that a SDF may contain multiple
@@ -623,13 +621,13 @@ Behavior changed
   are defined differently for several "conformers" of chemically-identical species (More info
   `here <https://docs.eyesopen.com/toolkits/python/oechemtk/oemol.html#dude-where-s-my-sd-data>`_).
   If the user requests the OFF Toolkit to write a multi-conformer
-  :py:class:`Molecule <openforcefield.topology.Molecule>` to SDF, only the first conformer will be written.
+  :py:class:`Molecule <openff.toolkit.topology.Molecule>` to SDF, only the first conformer will be written.
   For more fine-grained control of writing properties, conformers, and partial charges, consider
   using ``Molecule.to_rdkit`` or ``Molecule.to_openeye`` and using the functionality offered by
   those packages.
 - `PR #281 <https://github.com/openforcefield/openff-toolkit/pull/281>`_: Due to different
   constraints placed on the data types allowed by external toolkits, we make our best effort to
-  preserve :py:class:`Molecule <openforcefield.topology.Molecule>`
+  preserve :py:class:`Molecule <openff.toolkit.topology.Molecule>`
   ``properties`` when converting molecules to other packages, but users should be aware that
   no guarantee of data integrity is made. The only data format for keys and values in the property dict that
   we will try to support through a roundtrip to another toolkit's Molecule object is ``string``.
@@ -641,25 +639,25 @@ Behavior changed
 - `PR #597 <https://github.com/openforcefield/openff-toolkit/pull/597>`_: Energy-minimized sample systems
   with Parsley 1.1.0.
 - `PR #558 <https://github.com/openforcefield/openff-toolkit/pull/558>`_: The
-  :py:class:`Topology <openforcefield.topology.Topology>`
-  particle indexing system now orders :py:class:`TopologyVirtualSites <openforcefield.topology.TopologyVirtualSite>`
+  :py:class:`Topology <openff.toolkit.topology.Topology>`
+  particle indexing system now orders :py:class:`TopologyVirtualSites <openff.toolkit.topology.TopologyVirtualSite>`
   after all atoms.
 - `PR #469 <https://github.com/openforcefield/openff-toolkit/pull/469>`_:
-  When running :py:meth:`Topology.to_openmm <openforcefield.topology.Topology.to_openmm>`, unique atom names
+  When running :py:meth:`Topology.to_openmm <openff.toolkit.topology.Topology.to_openmm>`, unique atom names
   are generated if the provided atom names are not unique (overriding any existing atom names). This
   uniqueness extends only to atoms in the same molecule. To disable this behavior, set the kwarg
   ``ensure_unique_atom_names=False``.
 - `PR #472 <https://github.com/openforcefield/openff-toolkit/pull/472>`_:
-  :py:meth:`Molecule.__eq__ <openforcefield.topology.Molecule.__eq__>` now uses the new
-  :py:meth:`Molecule.are_isomorphic <openforcefield.topology.Molecule.are_isomorphic>` to perform the
+  :py:meth:`Molecule.__eq__ <openff.toolkit.topology.Molecule>` now uses the new
+  :py:meth:`Molecule.are_isomorphic <openff.toolkit.topology.Molecule.are_isomorphic>` to perform the
   similarity checking.
 - `PR #472 <https://github.com/openforcefield/openff-toolkit/pull/472>`_:
-  The :py:meth:`Topology.from_openmm <openforcefield.topology.Topology.from_openmm>` and
-  :py:meth:`Topology.add_molecule <openforcefield.topology.Topology.add_molecule>` methods now use the
-  :py:meth:`Molecule.are_isomorphic <openforcefield.topology.Molecule.are_isomorphic>` method to match
+  The :py:meth:`Topology.from_openmm <openff.toolkit.topology.Topology.from_openmm>` and
+  :py:meth:`Topology.add_molecule <openff.toolkit.topology.Topology.add_molecule>` methods now use the
+  :py:meth:`Molecule.are_isomorphic <openff.toolkit.topology.Molecule.are_isomorphic>` method to match
   molecules.
 - `PR #551 <https://github.com/openforcefield/openff-toolkit/pull/551>`_: Implemented the
-  :py:meth:`ParameterHandler.get_parameter <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler.get_parameter>`
+  :py:meth:`ParameterHandler.get_parameter <openff.toolkit.typing.engines.smirnoff.parameters.ParameterHandler.get_parameter>`
   function (would previously return ``None``).
 
 API-breaking changes
@@ -671,34 +669,34 @@ API-breaking changes
   can accept either a ``simtk.unit.Quantity`` or an integer.
 - `PR #601 <https://github.com/openforcefield/openff-toolkit/pull/601>`_: Removes
   almost all of the previous
-  :py:class:`ChemicalEnvironment <openforcefield.typing.chemistry.ChemicalEnvironment>`
+  :py:class:`ChemicalEnvironment <openff.toolkit.typing.chemistry.ChemicalEnvironment>`
   API, since this entire module was simply copied from
   `Chemper <https://github.com/MobleyLab/chemper>`_ several years ago and has fallen behind on updates.
   Currently only
-  :py:meth:`ChemicalEnvironment.get_type <openforcefield.typing.chemistry.ChemicalEnvironment.get_type>`,
-  :py:meth:`ChemicalEnvironment.validate <openforcefield.typing.chemistry.ChemicalEnvironment.validate>`,
+  :py:meth:`ChemicalEnvironment.get_type <openff.toolkit.typing.chemistry.ChemicalEnvironment.get_type>`,
+  :py:meth:`ChemicalEnvironment.validate <openff.toolkit.typing.chemistry.ChemicalEnvironment.validate>`,
   and an equivalent classmethod
-  :py:meth:`ChemicalEnvironment.validate_smirks <openforcefield.typing.chemistry.ChemicalEnvironment.validate_smirks>`
+  :py:meth:`ChemicalEnvironment.validate_smirks <openff.toolkit.typing.chemistry.ChemicalEnvironment.validate_smirks>`
   remain. Also, please comment on
   `this GitHub issue <https://github.com/MobleyLab/chemper/issues/90>`_ if you HAVE been using
   the previous extra functionality in this module and would like us to prioritize creation of a Chemper
   conda package.
 - `PR #558 <https://github.com/openforcefield/openff-toolkit/pull/558>`_: Removes
-  ``TopologyMolecule.topology_particle_start_index``, since the :py:class:`Topology <openforcefield.topology.Topology>`
-  particle indexing system now orders :py:class:`TopologyVirtualSites <openforcefield.topology.TopologyVirtualSite>`
+  ``TopologyMolecule.topology_particle_start_index``, since the :py:class:`Topology <openff.toolkit.topology.Topology>`
+  particle indexing system now orders :py:class:`TopologyVirtualSites <openff.toolkit.topology.TopologyVirtualSite>`
   after all atoms.
-  :py:meth:`TopologyMolecule.topology_atom_start_index <openforcefield.topology.TopologyMolecule.topology_atom_start_index>`
+  :py:meth:`TopologyMolecule.atom_start_topology_index <openff.toolkit.topology.TopologyMolecule.atom_start_topology_index>`
   and
-  :py:meth:`TopologyMolecule.topology_virtual_site_start_index <openforcefield.topology.TopologyMolecule.topology_virtual_site_start_index>`
+  :py:meth:`TopologyMolecule.virtual_particle_start_topology_index <openff.toolkit.topology.TopologyMolecule.virtual_particle_start_topology_index>`
   are still available to access the appropriate values in the respective topology indexing systems.
 - `PR #508 <https://github.com/openforcefield/openff-toolkit/pull/508>`_:
   ``OpenEyeToolkitWrapper.compute_wiberg_bond_orders`` is now
-  :py:meth:`OpenEyeToolkitWrapper.assign_fractional_bond_orders <openforcefield.utils.toolkits.OpenEyeToolkitWrapper.assign_fractional_bond_orders>`.
+  :py:meth:`OpenEyeToolkitWrapper.assign_fractional_bond_orders <openff.toolkit.utils.toolkits.OpenEyeToolkitWrapper.assign_fractional_bond_orders>`.
   The ``charge_model`` keyword is now ``bond_order_model``. The allowed values of this keyword have
   changed from ``am1`` and ``pm3`` to ``am1-wiberg`` and ``pm3-wiberg``, respectively.
 - `PR #508 <https://github.com/openforcefield/openff-toolkit/pull/508>`_:
   ``Molecule.compute_wiberg_bond_orders`` is now
-  :py:meth:`Molecule.assign_fractional_bond_orders <openforcefield.topology.Molecule.assign_fractional_bond_orders>`.
+  :py:meth:`Molecule.assign_fractional_bond_orders <openff.toolkit.topology.Molecule.assign_fractional_bond_orders>`.
 - `PR #595 <https://github.com/openforcefield/openff-toolkit/pull/595>`_: Removed functions
   ``openforcefield.utils.utils.temporary_directory`` and
   ``openforcefield.utils.utils.temporary_cd`` and replaced their behavior with
@@ -721,7 +719,7 @@ New features
   behavior, ``strict_n_conformers`` defaults to a value of ``False``.
 - `PR #471 <https://github.com/openforcefield/openff-toolkit/pull/471>`_: Adds
   keyword argument ``raise_exception_types`` (default: ``[Exception]``) to
-  :py:meth:`ToolkitRegistry.call <openforcefield.utils.toolkits.ToolkitRegistry.call>`.
+  :py:meth:`ToolkitRegistry.call <openff.toolkit.utils.toolkits.ToolkitRegistry.call>`.
   The default value will provide the previous OpenFF Toolkit behavior, which is that the first ToolkitWrapper
   that can provide the requested method is called, and it either returns on success or raises an exception. This new
   keyword argument allows the ToolkitRegistry to *ignore* certain exceptions, but treat others as fatal.
@@ -729,64 +727,64 @@ New features
   requested method and if none succeeds, a single ``ValueError`` will be raised, with text listing the
   errors that were raised by each ToolkitWrapper.
 - `PR #601 <https://github.com/openforcefield/openff-toolkit/pull/601>`_: Adds
-  :py:meth:`RDKitToolkitWrapper.get_tagged_smarts_connectivity <openforcefield.utils.toolkits.RDKitToolkitWrapper.get_tagged_smarts_connectivity>`
+  :py:meth:`RDKitToolkitWrapper.get_tagged_smarts_connectivity <openff.toolkit.utils.toolkits.RDKitToolkitWrapper.get_tagged_smarts_connectivity>`
   and
-  :py:meth:`OpenEyeToolkitWrapper.get_tagged_smarts_connectivity <openforcefield.utils.toolkits.OpenEyeToolkitWrapper.get_tagged_smarts_connectivity>`,
+  :py:meth:`OpenEyeToolkitWrapper.get_tagged_smarts_connectivity <openff.toolkit.utils.toolkits.OpenEyeToolkitWrapper.get_tagged_smarts_connectivity>`,
   which allow the use of either toolkit for smirks/tagged smarts validation.
 - `PR #600 <https://github.com/openforcefield/openff-toolkit/pull/600>`_:
-  Adds :py:meth:`ForceField.__getitem__ <openforcefield.typing.engines.smirnoff.forcefield.ForceField.__getitem__>`
+  Adds :py:meth:`ForceField.__getitem__ <openff.toolkit.typing.engines.smirnoff.forcefield.ForceField>`
   to look up ``ParameterHandler`` objects based on their string names.
 - `PR #508 <https://github.com/openforcefield/openff-toolkit/pull/508>`_:
-  Adds :py:meth:`AmberToolsToolkitWrapper.assign_fractional_bond_orders <openforcefield.utils.toolkits.AmberToolsToolkitWrapper.assign_wiberg_bond_orders>`.
+  Adds :py:meth:`AmberToolsToolkitWrapper.assign_fractional_bond_orders <openff.toolkit.utils.toolkits.AmberToolsToolkitWrapper.assign_fractional_bond_orders>`.
 - `PR #469 <https://github.com/openforcefield/openff-toolkit/pull/469>`_: The
-  :py:class:`Molecule <openforcefield.topology.Molecule>` class adds
-  :py:meth:`Molecule.has_unique_atom_names <openforcefield.topology.Molecule.has_unique_atom_names>`
-  and :py:meth:`Molecule.has_unique_atom_names <openforcefield.topology.Molecule.generate_unique_atom_names>`.
+  :py:class:`Molecule <openff.toolkit.topology.Molecule>` class adds
+  :py:meth:`Molecule.has_unique_atom_names <openff.toolkit.topology.Molecule.has_unique_atom_names>`
+  and :py:meth:`Molecule.has_unique_atom_names <openff.toolkit.topology.Molecule.generate_unique_atom_names>`.
 - `PR #472 <https://github.com/openforcefield/openff-toolkit/pull/472>`_:
-  Adds to the :py:class:`Molecule <openforcefield.topology.Molecule>` class
-  :py:meth:`Molecule.are_isomorphic <openforcefield.topology.Molecule.are_isomorphic>`
-  and :py:meth:`Molecule.is_isomorphic_with <openforcefield.topology.Molecule.is_isomorphic_with>`
-  and :py:meth:`Molecule.hill_formula <openforcefield.topology.Molecule.hill_formula>`
-  and :py:meth:`Molecule.to_hill_formula <openforcefield.topology.Molecule.to_hill_formula>`
-  and :py:meth:`Molecule.to_qcschema <openforcefield.topology.Molecule.to_qcschema>`
-  and :py:meth:`Molecule.from_qcschema <openforcefield.topology.Molecule.from_qcschema>`
-  and :py:meth:`Molecule.from_mapped_smiles <openforcefield.topology.Molecule.from_mapped_smiles>`
-  and :py:meth:`Molecule.from_pdb_and_smiles <openforcefield.topology.Molecule.from_pdb_and_smiles>`
-  and :py:meth:`Molecule.canonical_order_atoms <openforcefield.topology.Molecule.canonical_order_atoms>`
-  and :py:meth:`Molecule.remap <openforcefield.topology.Molecule.remap>`
+  Adds to the :py:class:`Molecule <openff.toolkit.topology.Molecule>` class
+  :py:meth:`Molecule.are_isomorphic <openff.toolkit.topology.Molecule.are_isomorphic>`
+  and :py:meth:`Molecule.is_isomorphic_with <openff.toolkit.topology.Molecule.is_isomorphic_with>`
+  and :py:meth:`Molecule.hill_formula <openff.toolkit.topology.Molecule.hill_formula>`
+  and :py:meth:`Molecule.to_hill_formula <openff.toolkit.topology.Molecule.to_hill_formula>`
+  and :py:meth:`Molecule.to_qcschema <openff.toolkit.topology.Molecule.to_qcschema>`
+  and :py:meth:`Molecule.from_qcschema <openff.toolkit.topology.Molecule.from_qcschema>`
+  and :py:meth:`Molecule.from_mapped_smiles <openff.toolkit.topology.Molecule.from_mapped_smiles>`
+  and :py:meth:`Molecule.from_pdb_and_smiles <openff.toolkit.topology.Molecule.from_pdb_and_smiles>`
+  and :py:meth:`Molecule.canonical_order_atoms <openff.toolkit.topology.Molecule.canonical_order_atoms>`
+  and :py:meth:`Molecule.remap <openff.toolkit.topology.Molecule.remap>`
       .. note::
          The to_qcschema method accepts an extras dictionary which is passed into the validated qcelemental.models.Molecule
          object.
 - `PR #506 <https://github.com/openforcefield/openff-toolkit/pull/506>`_:
-  The :py:class:`Molecule <openforcefield.topology.Molecule>` class adds
-  :py:meth:`Molecule.find_rotatable_bonds <openforcefield.topology.Molecule.find_rotatable_bonds>`
+  The :py:class:`Molecule <openff.toolkit.topology.Molecule>` class adds
+  :py:meth:`Molecule.find_rotatable_bonds <openff.toolkit.topology.Molecule.find_rotatable_bonds>`
 - `PR #521 <https://github.com/openforcefield/openff-toolkit/pull/521>`_:
-  Adds :py:meth:`Molecule.to_inchi <openforcefield.topology.Molecule.to_inchi>`
-  and :py:meth:`Molecule.to_inchikey <openforcefield.topology.Molecule.to_inchikey>`
-  and :py:meth:`Molecule.from_inchi <openforcefield.topology.Molecule.from_inchi>`
+  Adds :py:meth:`Molecule.to_inchi <openff.toolkit.topology.Molecule.to_inchi>`
+  and :py:meth:`Molecule.to_inchikey <openff.toolkit.topology.Molecule.to_inchikey>`
+  and :py:meth:`Molecule.from_inchi <openff.toolkit.topology.Molecule.from_inchi>`
       .. warning::
          InChI was not designed as an molecule interchange format and using it as one is not recommended. Many round trip
          tests will fail when using this format due to a loss of information. We have also added support for fixed
          hydrogen layer nonstandard InChI which can help in the case of tautomers, but overall creating molecules from InChI should be
          avoided.
 - `PR #529 <https://github.com/openforcefield/openff-toolkit/pull/529>`_: Adds the ability to write out to XYZ files via
-  :py:meth:`Molecule.to_file <openforcefield.topology.Molecule.to_file>` Both single frame and multiframe XYZ files are supported.
+  :py:meth:`Molecule.to_file <openff.toolkit.topology.Molecule.to_file>` Both single frame and multiframe XYZ files are supported.
   Note reading from XYZ files will not be supported due to the lack of connectivity information.
 - `PR #535 <https://github.com/openforcefield/openff-toolkit/pull/535>`_: Extends the the API for the
-  :py:meth:`Molecule.to_smiles <openforcefield.topology.Molecule.to_smiles>` to allow for the creation of cmiles
+  :py:meth:`Molecule.to_smiles <openff.toolkit.topology.Molecule.to_smiles>` to allow for the creation of cmiles
   identifiers through combinations of isomeric, explicit hydrogen and mapped smiles, the default settings will return
   isomeric explicit hydrogen smiles as expected.
         .. warning::
            Atom maps can be supplied to the properties dictionary to modify which atoms have their map index included,
            if no map is supplied all atoms will be mapped in the order they appear in the
-           :py:class:`Molecule <openforcefield.topology.Molecule>`.
+           :py:class:`Molecule <openff.toolkit.topology.Molecule>`.
 - `PR #563 <https://github.com/openforcefield/openff-toolkit/pull/563>`_:
   Adds ``test_forcefields/ion_charges.offxml``, giving ``LibraryCharges`` for monatomic ions.
 - `PR #543 <https://github.com/openforcefield/openff-toolkit/pull/543>`_:
-  Adds 3 new methods to the :py:class:`Molecule <openforcefield.topology.Molecule>` class which allow the enumeration of molecule
-  states. These are :py:meth:`Molecule.enumerate_tautomers <openforcefield.topology.Molecule.enumerate_tautomers>`,
-  :py:meth:`Molecule.enumerate_stereoisomers <openforcefield.topology.Molecule.enumerate_stereoisomers>`,
-  :py:meth:`Molecule.enumerate_protomers <openforcefield.topology.Molecule.enumerate_protomers>`
+  Adds 3 new methods to the :py:class:`Molecule <openff.toolkit.topology.Molecule>` class which allow the enumeration of molecule
+  states. These are :py:meth:`Molecule.enumerate_tautomers <openff.toolkit.topology.Molecule.enumerate_tautomers>`,
+  :py:meth:`Molecule.enumerate_stereoisomers <openff.toolkit.topology.Molecule.enumerate_stereoisomers>`,
+  :py:meth:`Molecule.enumerate_protomers <openff.toolkit.topology.Molecule.enumerate_protomers>`
       .. warning::
          Enumerate protomers is currently only available through the OpenEye toolkit.
 - `PR #573 <https://github.com/openforcefield/openff-toolkit/pull/573>`_:
@@ -795,7 +793,7 @@ New features
 - `PR #620 <https://github.com/openforcefield/openff-toolkit/pull/620>`_: Added the ability to register parameter handlers via entry point plugins. This functionality is accessible by initializing a ``ForceField`` with the ``load_plugins=True`` keyword argument. 
 - `PR #582 <https://github.com/openforcefield/openff-toolkit/pull/582>`_: Added fractional bond order interpolation
   Adds `return_topology` kwarg to
-  :py:meth:`Forcefield.create_openmm_system <openforcefield.typing.engines.smirnoff.forcefield.ForceField.create_openmm_system>`,
+  :py:meth:`Forcefield.create_openmm_system <openff.toolkit.typing.engines.smirnoff.forcefield.ForceField.create_openmm_system>`,
   which returns the processed topology along with the system when ``True`` (default ``False``).
 
 Tests added
@@ -804,47 +802,47 @@ Tests added
   that the new Topology particle indexing system are properly implemented, and that TopologyVirtualSites
   reference the correct TopologyAtoms.
 - `PR #469 <https://github.com/openforcefield/openff-toolkit/pull/469>`_: Added round-trip SMILES test
-  to add coverage for :py:meth:`Molecule.from_smiles <openforcefield.topology.Molecule.from_smiles>`.
+  to add coverage for :py:meth:`Molecule.from_smiles <openff.toolkit.topology.Molecule.from_smiles>`.
 - `PR #469 <https://github.com/openforcefield/openff-toolkit/pull/469>`_: Added tests for unique atom
-  naming behavior in  :py:meth:`Topology.to_openmm <openforcefield.topology.Topology.to_openmm>`, as
+  naming behavior in  :py:meth:`Topology.to_openmm <openff.toolkit.topology.Topology.to_openmm>`, as
   well as tests of the ``ensure_unique_atom_names=False`` kwarg disabling this behavior.
 - `PR #472 <https://github.com/openforcefield/openff-toolkit/pull/472>`_: Added tests for
-  :py:meth:`Molecule.hill_formula <openforcefield.topology.Molecule.hill_formula>` and
-  :py:meth:`Molecule.to_hill_formula <openforcefield.topology.Molecule.to_hill_formula>` for the
+  :py:meth:`Molecule.hill_formula <openff.toolkit.topology.Molecule.hill_formula>` and
+  :py:meth:`Molecule.to_hill_formula <openff.toolkit.topology.Molecule.to_hill_formula>` for the
   various supported input types.
 - `PR #472 <https://github.com/openforcefield/openff-toolkit/pull/472>`_: Added round-trip test for
-  :py:meth:`Molecule.from_qcschema <openforcefield.topology.Molecule.from_qcschema>` and
-  :py:meth:`Molecule.to_qcschema <openforcefield.topology.Molecule.to_qcschema>`.
+  :py:meth:`Molecule.from_qcschema <openff.toolkit.topology.Molecule.from_qcschema>` and
+  :py:meth:`Molecule.to_qcschema <openff.toolkit.topology.Molecule.to_qcschema>`.
 - `PR #472 <https://github.com/openforcefield/openff-toolkit/pull/472>`_: Added tests for
-  :py:meth:`Molecule.is_isomorphic_with <openforcefield.topology.Molecule.is_isomorphic_with>` and
-  :py:meth:`Molecule.are_isomorphic <openforcefield.topology.Molecule.are_isomorphic>`
+  :py:meth:`Molecule.is_isomorphic_with <openff.toolkit.topology.Molecule.is_isomorphic_with>` and
+  :py:meth:`Molecule.are_isomorphic <openff.toolkit.topology.Molecule.are_isomorphic>`
   with various levels of isomorphic graph matching.
 - `PR #472 <https://github.com/openforcefield/openff-toolkit/pull/472>`_: Added toolkit dependent tests
-  for :py:meth:`Molecule.canonical_order_atoms <openforcefield.topology.Molecule.canonical_order_atoms>`
+  for :py:meth:`Molecule.canonical_order_atoms <openff.toolkit.topology.Molecule.canonical_order_atoms>`
   due to differences in the algorithms used.
 - `PR #472 <https://github.com/openforcefield/openff-toolkit/pull/472>`_: Added a test for
-  :py:meth:`Molecule.from_mapped_smiles <openforcefield.topology.Molecule.from_mapped_smiles>` using
+  :py:meth:`Molecule.from_mapped_smiles <openff.toolkit.topology.Molecule.from_mapped_smiles>` using
   the molecule from issue #412 to ensure it is now fixed.
 - `PR #472 <https://github.com/openforcefield/openff-toolkit/pull/472>`_: Added a test for
-  :py:meth:`Molecule.remap <openforcefield.topology.Molecule.remap>`, this also checks for expected
+  :py:meth:`Molecule.remap <openff.toolkit.topology.Molecule.remap>`, this also checks for expected
   error when the mapping is not complete.
 - `PR #472 <https://github.com/openforcefield/openff-toolkit/pull/472>`_: Added tests for
-  :py:meth:`Molecule.from_pdb_and_smiles <openforcefield.topology.Molecule.from_pdb_and_smiles>`
+  :py:meth:`Molecule.from_pdb_and_smiles <openff.toolkit.topology.Molecule.from_pdb_and_smiles>`
   to check for a correct combination of smiles and PDB and incorrect combinations.
 - `PR #509 <https://github.com/openforcefield/openff-toolkit/pull/509>`_: Added test for
-  :py:meth:`Molecule.chemical_environment_matches <openforcefield.topology.Molecule.chemical_environment_matches>`
+  :py:meth:`Molecule.chemical_environment_matches <openff.toolkit.topology.Molecule.chemical_environment_matches>`
   to check that the complete set of matches is returned.
 - `PR #509 <https://github.com/openforcefield/openff-toolkit/pull/509>`_: Added test for
-  :py:meth:`Forcefield.create_openmm_system <openforcefield.typing.engines.smirnoff.forcefield.ForceField.create_openmm_system>`
+  :py:meth:`Forcefield.create_openmm_system <openff.toolkit.typing.engines.smirnoff.forcefield.ForceField.create_openmm_system>`
   to check that a protein system can be created.
 - `PR #506 <https://github.com/openforcefield/openff-toolkit/pull/506>`_: Added a test for the molecule
   identified in issue #513 as losing aromaticity when converted to rdkit.
 - `PR #506 <https://github.com/openforcefield/openff-toolkit/pull/506>`_: Added a verity of toolkit dependent tests
   for identifying rotatable bonds while ignoring the user requested types.
 - `PR #521 <https://github.com/openforcefield/openff-toolkit/pull/521>`_: Added toolkit independent round-trip InChI
-  tests which add coverage for :py:meth:`Molecule.to_inchi <openforcefield.topology.Molecule.to_inchi>` and
-  :py:meth:`Molecule.from_inchi <openforcefield.topology.Molecule.from_inchi>`. Also added coverage for bad inputs and
-  :py:meth:`Molecule.to_inchikey <openforcefield.topology.Molecule.to_inchikey>`.
+  tests which add coverage for :py:meth:`Molecule.to_inchi <openff.toolkit.topology.Molecule.to_inchi>` and
+  :py:meth:`Molecule.from_inchi <openff.toolkit.topology.Molecule.from_inchi>`. Also added coverage for bad inputs and
+  :py:meth:`Molecule.to_inchikey <openff.toolkit.topology.Molecule.to_inchikey>`.
 - `PR #529 <https://github.com/openforcefield/openff-toolkit/pull/529>`_: Added to XYZ file coverage tests.
 - `PR #563 <https://github.com/openforcefield/openff-toolkit/pull/563>`_: Added `LibraryCharges` parameterization test
   for monatomic ions in ``test_forcefields/ion_charges.offxml``.
@@ -855,48 +853,48 @@ Tests added
 - `PR #579 <https://github.com/openforcefield/openff-toolkit/pull/579>`_: Adds regression tests to ensure RDKit can be
   be used to write multi-model PDB files.
 - `PR #582 <https://github.com/openforcefield/openff-toolkit/pull/582>`_: Added fractional bond order interpolation tests,
-  tests for :py:class:`ValidatedDict <openforcefield.utils.collections.ValidatedDict>`.
+  tests for :py:class:`ValidatedDict <openff.toolkit.utils.collections.ValidatedDict>`.
 
 
 Bugfixes
 """"""""
 - `PR #558 <https://github.com/openforcefield/openff-toolkit/pull/558>`_: Fixes a bug where
-  :py:meth:`TopologyVirtualSite.atoms <openforcefield.topology.TopologyVirtualSite.atoms>` would
+  :py:meth:`TopologyVirtualSite.atoms <openff.toolkit.topology.TopologyVirtualSite.atoms>` would
   not correctly apply ``TopologyMolecule`` atom ordering on top of the reference molecule ordering,
   in cases where the same molecule appears multiple times, but in a different order, in the same Topology.
 - `Issue #460 <https://github.com/openforcefield/openff-toolkit/issues/460>`_: Creates unique atom
-  names in :py:meth:`Topology.to_openmm <openforcefield.topology.Topology.to_openmm>` if the existing
+  names in :py:meth:`Topology.to_openmm <openff.toolkit.topology.Topology.to_openmm>` if the existing
   ones are not unique. The lack of unique atom names had been causing problems in workflows involving
   downstream tools that expect unique atom names.
 - `Issue #448 <https://github.com/openforcefield/openff-toolkit/issues/448>`_: We can now make molecules
-  from mapped smiles using :py:meth:`Molecule.from_mapped_smiles <openforcefield.topology.Molecule.from_mapped_smiles>`
+  from mapped smiles using :py:meth:`Molecule.from_mapped_smiles <openff.toolkit.topology.Molecule.from_mapped_smiles>`
   where the order will correspond to the indeing used in the smiles.
   Molecules can also be re-indexed at any time using the
-  :py:meth:`Molecule.remap <openforcefield.topology.Molecule.remap>`.
+  :py:meth:`Molecule.remap <openff.toolkit.topology.Molecule.remap>`.
 - `Issue #462 <https://github.com/openforcefield/openff-toolkit/issues/462>`_: We can now instance the
-  :py:class:`Molecule <openforcefield.topology.Molecule>` from a QCArchive entry record instance or dictionary
+  :py:class:`Molecule <openff.toolkit.topology.Molecule>` from a QCArchive entry record instance or dictionary
   representation.
 - `Issue #412 <https://github.com/openforcefield/openff-toolkit/issues/412>`_: We can now instance the
-  :py:class:`Molecule <openforcefield.topology.Molecule>` using
-  :py:meth:`Molecule.from_mapped_smiles <openforcefield.topology.Molecule.from_mapped_smiles>`. This resolves
+  :py:class:`Molecule <openff.toolkit.topology.Molecule>` using
+  :py:meth:`Molecule.from_mapped_smiles <openff.toolkit.topology.Molecule.from_mapped_smiles>`. This resolves
   an issue caused by RDKit considering atom map indices to be a distinguishing feature of an atom, which led
   to erroneous definition of chirality (as otherwise symmetric substituents would be seen as different).
   We anticipate that this will reduce the number of times you need to
   type ``allow_undefined_stereo=True`` when processing molecules that do not actually contain stereochemistrty.
 - `Issue #513 <https://github.com/openforcefield/openff-toolkit/issues/513>`_: The
-  :py:meth:`Molecule.to_rdkit <openforcefield.topology.Molecule.to_rdkit>` now re-sets the aromaticity model
+  :py:meth:`Molecule.to_rdkit <openff.toolkit.topology.Molecule.to_rdkit>` now re-sets the aromaticity model
   after sanitizing the molecule.
 - `Issue #500 <https://github.com/openforcefield/openff-toolkit/issues/500>`_: The
-  :py:meth:`Molecule.find_rotatable_bonds <openforcefield.topology.Molecule.find_rotatable_bonds>` has been added
-  which returns a list of rotatable :py:class:`Bond <openforcefield.topology.Bond>` instances for the molecule.
+  :py:meth:`Molecule.find_rotatable_bonds <openff.toolkit.topology.Molecule.find_rotatable_bonds>` has been added
+  which returns a list of rotatable :py:class:`Bond <openff.toolkit.topology.Bond>` instances for the molecule.
 - `Issue #491 <https://github.com/openforcefield/openff-toolkit/issues/491>`_: We can now parse large molecules without hitting a match limit cap.
 - `Issue #474 <https://github.com/openforcefield/openff-toolkit/issues/474>`_: We can now  convert molecules to InChI and
   InChIKey and from InChI.
 - `Issue #523 <https://github.com/openforcefield/openff-toolkit/issues/523>`_: The
-  :py:meth:`Molecule.to_file <openforcefield.topology.Molecule.to_file>` method can now correctly write to ``MOL``
+  :py:meth:`Molecule.to_file <openff.toolkit.topology.Molecule.to_file>` method can now correctly write to ``MOL``
   files, in line with the supported file type list.
 - `Issue #568 <https://github.com/openforcefield/openff-toolkit/issues/568>`_: The
-  :py:meth:`Molecule.to_file <openforcefield.topology.Molecule.to_file>` can now correctly write multi-model PDB files
+  :py:meth:`Molecule.to_file <openff.toolkit.topology.Molecule.to_file>` can now correctly write multi-model PDB files
   when using the RDKit backend toolkit.
 
 
@@ -908,7 +906,7 @@ Examples added
   This example is made to be reverse-compatible with the 0.6.0 OpenFF Toolkit release.
 - `PR #472 <https://github.com/openforcefield/openff-toolkit/pull/472>`_: Adds an example notebook
   `QCarchive_interface.ipynb <https://github.com/openforcefield/openff-toolkit/blob/master/examples/QCArchive_interface/QCarchive_interface.ipynb>`_
-  which shows users how to instance the :py:class:`Molecule <openforcefield.topology.Molecule>` from
+  which shows users how to instance the :py:class:`Molecule <openff.toolkit.topology.Molecule>` from
   a QCArchive entry level record and calculate the energy using RDKit through QCEngine.
 
 
@@ -941,7 +939,7 @@ New features
   initial support for the
   `LibraryCharges tag in the SMIRNOFF specification <https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html#librarycharges-library-charges-for-polymeric-residues-and-special-solvent-models>`_
   using
-  :py:class:`LibraryChargeHandler <openforcefield.typing.engines.smirnoff.parameters.LibraryChargeHandler>`.
+  :py:class:`LibraryChargeHandler <openff.toolkit.typing.engines.smirnoff.parameters.LibraryChargeHandler>`.
   For a molecule to have charges assigned using Library Charges, all of its atoms must be covered by
   at least one ``LibraryCharge``. If an atom is covered by multiple ``LibraryCharge`` s, then the last
   ``LibraryCharge`` matched will be applied (per the hierarchy rules in the SMIRNOFF format).
@@ -964,9 +962,9 @@ New features
 
 - `PR #455 <https://github.com/openforcefield/openff-toolkit/pull/455>`_: Addresses
   `Issue #393 <https://github.com/openforcefield/openff-toolkit/issues/393>`_ by adding
-  :py:meth:`ParameterHandler.attribute_is_cosmetic <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler.attribute_is_cosmetic>`
+  :py:meth:`ParameterHandler.attribute_is_cosmetic <openff.toolkit.typing.engines.smirnoff.parameters.ParameterHandler.attribute_is_cosmetic>`
   and
-  :py:meth:`ParameterType.attribute_is_cosmetic <openforcefield.typing.engines.smirnoff.parameters.ParameterType.attribute_is_cosmetic>`,
+  :py:meth:`ParameterType.attribute_is_cosmetic <openff.toolkit.typing.engines.smirnoff.parameters.ParameterType.attribute_is_cosmetic>`,
   which return True if the provided attribute name is defined for the queried object
   but does not correspond to an allowed value in the SMIRNOFF spec.
 
@@ -1071,18 +1069,18 @@ New features
 """"""""""""
 - `PR #419 <https://github.com/openforcefield/openff-toolkit/pull/419>`_: Unassigned
   valence parameter exceptions now include a list of tuples of
-  :py:class:`TopologyAtom <openforcefield.topology.TopologyAtom>`
+  :py:class:`TopologyAtom <openff.toolkit.topology.TopologyAtom>`
   which were unable to be parameterized (``exception.unassigned_topology_atom_tuples``)
   and the class of the
-  :py:class:`ParameterHandler <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler>`
+  :py:class:`ParameterHandler <openff.toolkit.typing.engines.smirnoff.parameters.ParameterHandler>`
   that raised the exception (``exception.handler_class``).
 - `PR #425 <https://github.com/openforcefield/openff-toolkit/pull/425>`_: Implements
   Trevor Gokey's suggestion from
   `Issue #411 <https://github.com/openforcefield/openff-toolkit/issues/411>`_, which
   enables pickling of
-  :py:class:`ForceFields <openforcefield.typing.engines.smirnoff.forcefield.ForceField>`
+  :py:class:`ForceFields <openff.toolkit.typing.engines.smirnoff.forcefield.ForceField>`
   and
-  :py:class:`ParameterHandlers <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler>`.
+  :py:class:`ParameterHandlers <openff.toolkit.typing.engines.smirnoff.parameters.ParameterHandler>`.
   Note that, while XML representations of ``ForceField``s are stable and conform to the SMIRNOFF
   specification, the pickled ``ForceField``s that this functionality enables are not guaranteed
   to be compatible with future toolkit versions.
@@ -1106,7 +1104,7 @@ Bugfixes
 - `PR #419 <https://github.com/openforcefield/openff-toolkit/pull/419>`_: Fixes
   `Issue #417 <https://github.com/openforcefield/openff-toolkit/issues/417>`_ and
   `Issue #418 <https://github.com/openforcefield/openff-toolkit/issues/418>`_, where
-  :py:meth:`RDKitToolkitWrapper.from_file <openforcefield.utils.toolkits.RDKitToolkitWrapper.from_file>`
+  :py:meth:`RDKitToolkitWrapper.from_file <openff.toolkit.utils.toolkits.RDKitToolkitWrapper.from_file>`
   would disregard the ``allow_undefined_stereo`` kwarg and skip the first molecule
   when reading a SMILES file.
 
@@ -1146,7 +1144,7 @@ which are now accessible as ``torsion.k1``, ``torsion.k2``, etc. (the previous a
 New features
 """"""""""""
 - `PR #363 <https://github.com/openforcefield/openff-toolkit/pull/363>`_: Implements
-  :py:class:`GBSAHandler <openforcefield.typing.engines.smirnoff.parameters.GBSAHandler>`,
+  :py:class:`GBSAHandler <openff.toolkit.typing.engines.smirnoff.parameters.GBSAHandler>`,
   which supports the
   `GBSA tag in the SMIRNOFF specification <https://open-forcefield-toolkit.readthedocs.io/en/0.5.0/smirnoff.html#gbsa>`_.
   Currently, only GBSAHandlers with ``gb_model="OBC2"`` support
@@ -1165,12 +1163,12 @@ New features
       These GBSA forces are currently only computable using OpenMM.
 
 - `PR #363 <https://github.com/openforcefield/openff-toolkit/pull/363>`_: When using
-  :py:meth:`Topology.to_openmm() <openforcefield.topology.Topology.to_openmm>`, periodic
+  :py:meth:`Topology.to_openmm() <openff.toolkit.topology.Topology.to_openmm>`, periodic
   box vectors are now transferred from the Open Force Field Toolkit Topology
   into the newly-created OpenMM Topology.
 - `PR #377 <https://github.com/openforcefield/openff-toolkit/pull/377>`_: Single indexed parameters in
-  :py:class:`ParameterHandler <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler>`
-  and :py:class:`ParameterType <openforcefield.typing.engines.smirnoff.parameters.ParameterType>`
+  :py:class:`ParameterHandler <openff.toolkit.typing.engines.smirnoff.parameters.ParameterHandler>`
+  and :py:class:`ParameterType <openff.toolkit.typing.engines.smirnoff.parameters.ParameterType>`
   can now be get/set through normal attribute syntax in addition to the list syntax.
 - `PR #394 <https://github.com/openforcefield/openff-toolkit/pull/394>`_: Include element and atom name
   in error output when there are missing valence parameters during molecule parameterization.
@@ -1179,12 +1177,12 @@ Bugfixes
 """"""""
 - `PR #385 <https://github.com/openforcefield/openff-toolkit/pull/385>`_: Fixes
   `Issue #346 <https://github.com/openforcefield/openff-toolkit/issues/346>`_ by
-  having :py:meth:`OpenEyeToolkitWrapper.compute_partial_charges_am1bcc <openforcefield.utils.toolkits.OpenEyeToolkitWrapper.compute_partial_charges_am1bcc>`
+  having :py:meth:`OpenEyeToolkitWrapper.compute_partial_charges_am1bcc <openff.toolkit.utils.toolkits.OpenEyeToolkitWrapper.compute_partial_charges_am1bcc>`
   fall back to using standard AM1-BCC if AM1-BCC ELF10 charge generation raises
   an error about "trans COOH conformers"
 - `PR #399 <https://github.com/openforcefield/openff-toolkit/pull/399>`_: Fixes
   issue where
-  :py:class:`ForceField <openforcefield.typing.engines.smirnoff.forcefield.ForceField>`
+  :py:class:`ForceField <openff.toolkit.typing.engines.smirnoff.forcefield.ForceField>`
   constructor would ignore ``parameter_handler_classes`` kwarg.
 - `PR #400 <https://github.com/openforcefield/openff-toolkit/pull/400>`_: Makes
   link-checking tests retry three times before failing.
@@ -1206,13 +1204,13 @@ This update fixes several toolkit bugs that have been reported by the community.
 Details of these bugfixes are provided below.
 
 It also refactors how
-:py:class:`ParameterType <openforcefield.typing.engines.smirnoff.parameters.ParameterType>`
+:py:class:`ParameterType <openff.toolkit.typing.engines.smirnoff.parameters.ParameterType>`
 and
-:py:class:`ParameterHandler <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler>`
+:py:class:`ParameterHandler <openff.toolkit.typing.engines.smirnoff.parameters.ParameterHandler>`
 store their attributes, by introducing
-:py:class:`ParameterAttribute <openforcefield.typing.engines.smirnoff.parameters.ParameterAttribute>`
+:py:class:`ParameterAttribute <openff.toolkit.typing.engines.smirnoff.parameters.ParameterAttribute>`
 and
-:py:class:`IndexedParameterAttribute <openforcefield.typing.engines.smirnoff.parameters.IndexedParameterAttribute>`.
+:py:class:`IndexedParameterAttribute <openff.toolkit.typing.engines.smirnoff.parameters.IndexedParameterAttribute>`.
 These new attribute-handling classes provide a consistent backend which should simplify manipulation of parameters
 and implementation of new handlers.
 
@@ -1220,7 +1218,7 @@ Bug fixes
 """""""""
 - `PR #329 <https://github.com/openforcefield/openff-toolkit/pull/329>`_: Fixed a
   bug where the two
-  :py:class:`BondType <openforcefield.typing.engines.smirnoff.parameters.BondHandler.BondType>`
+  :py:class:`BondType <openff.toolkit.typing.engines.smirnoff.parameters.BondHandler.BondType>`
   parameter attributes ``k`` and ``length`` were treated as indexed attributes. (``k`` and
   ``length`` values that correspond to specific bond orders will be indexed under
   ``k_bondorder1``, ``k_bondorder2``, etc when implemented in the future)
@@ -1228,14 +1226,14 @@ Bug fixes
   bug that allowed setting indexed attributes to single values instead of strictly lists.
 - `PR #370 <https://github.com/openforcefield/openff-toolkit/pull/370>`_: Fixed a
   bug in the API where
-  :py:class:`BondHandler <openforcefield.typing.engines.smirnoff.parameters.BondHandler>`,
-  :py:class:`ProperTorsionHandler <openforcefield.typing.engines.smirnoff.parameters.ProperTorsionHandler>`
+  :py:class:`BondHandler <openff.toolkit.typing.engines.smirnoff.parameters.BondHandler>`,
+  :py:class:`ProperTorsionHandler <openff.toolkit.typing.engines.smirnoff.parameters.ProperTorsionHandler>`
   , and
-  :py:class:`ImproperTorsionHandler <openforcefield.typing.engines.smirnoff.parameters.ImproperTorsionHandler>`
+  :py:class:`ImproperTorsionHandler <openff.toolkit.typing.engines.smirnoff.parameters.ImproperTorsionHandler>`
   exposed non-functional indexed parameters.
 - `PR #351 <https://github.com/openforcefield/openff-toolkit/pull/351>`_: Fixes
   `Issue #344 <https://github.com/openforcefield/openff-toolkit/issues/344>`_,
-  in which the main :py:class:`FrozenMolecule <openforcefield.topology.FrozenMolecule>`
+  in which the main :py:class:`FrozenMolecule <openff.toolkit.topology.FrozenMolecule>`
   constructor and several other Molecule-construction functions ignored or did not
   expose the ``allow_undefined_stereo`` keyword argument.
 - `PR #351 <https://github.com/openforcefield/openff-toolkit/pull/351>`_: Fixes
@@ -1244,14 +1242,14 @@ Bug fixes
   a different SMILES for the molecule) is explicitly called.
 - `PR #354 <https://github.com/openforcefield/openff-toolkit/pull/354>`_: Fixes
   the error message that is printed if an unexpected parameter attribute is found while loading
-  data into a :py:class:`ForceField <openforcefield.typing.engines.smirnoff.forcefield.ForceField>`
+  data into a :py:class:`ForceField <openff.toolkit.typing.engines.smirnoff.forcefield.ForceField>`
   (now instructs users to specify ``allow_cosmetic_attributes`` instead of ``permit_cosmetic_attributes``)
 - `PR #364 <https://github.com/openforcefield/openff-toolkit/pull/364>`_: Fixes
   `Issue #362 <https://github.com/openforcefield/openff-toolkit/issues/362>`_ by
   modifying
-  :py:meth:`OpenEyeToolkitWrapper.from_smiles <openforcefield.utils.toolkits.OpenEyeToolkitWrapper.from_smiles>`
+  :py:meth:`OpenEyeToolkitWrapper.from_smiles <openff.toolkit.utils.toolkits.OpenEyeToolkitWrapper.from_smiles>`
   and
-  :py:meth:`RDKitToolkitWrapper.from_smiles <openforcefield.utils.toolkits.RDKitToolkitWrapper.from_smiles>`
+  :py:meth:`RDKitToolkitWrapper.from_smiles <openff.toolkit.utils.toolkits.RDKitToolkitWrapper.from_smiles>`
   to make implicit hydrogens explicit before molecule creation. These functions also
   now raise an error if the optional keyword ``hydrogens_are_explicit=True`` but the
   SMILES are interpreted by the backend cheminformatic toolkit as having implicit
@@ -1267,12 +1265,12 @@ Bug fixes
 Code enhancements
 """""""""""""""""
 - `PR #329 <https://github.com/openforcefield/openff-toolkit/pull/329>`_:
-  :py:class:`ParameterType <openforcefield.typing.engines.smirnoff.parameters.ParameterType>`
+  :py:class:`ParameterType <openff.toolkit.typing.engines.smirnoff.parameters.ParameterType>`
   was refactored to improve its extensibility. It is now possible to create new parameter
   types by using the new descriptors
-  :py:class:`ParameterAttribute <openforcefield.typing.engines.smirnoff.parameters.ParameterAttribute>`
+  :py:class:`ParameterAttribute <openff.toolkit.typing.engines.smirnoff.parameters.ParameterAttribute>`
   and
-  :py:class:`IndexedParameterAttribute <openforcefield.typing.engines.smirnoff.parameters.IndexedParameterAttribute>`.
+  :py:class:`IndexedParameterAttribute <openff.toolkit.typing.engines.smirnoff.parameters.IndexedParameterAttribute>`.
 - `PR #357 <https://github.com/openforcefield/openff-toolkit/pull/357>`_: Addresses
   `Issue #356 <https://github.com/openforcefield/openff-toolkit/issues/356>`_ by raising
   an informative error message if a user attempts to load an OpenMM topology which
@@ -1295,7 +1293,7 @@ Force fields added
 0.4.0 - Performance optimizations and support for SMIRNOFF 0.3 specification
 ----------------------------------------------------------------------------
 
-This update contains performance enhancements that significantly reduce the time to create OpenMM systems for topologies containing many molecules via :py:meth:`ForceField.create_openmm_system <openforcefield.typing.engines.smirnoff.forcefield.ForceField.create_openmm_system>`.
+This update contains performance enhancements that significantly reduce the time to create OpenMM systems for topologies containing many molecules via :py:meth:`ForceField.create_openmm_system <openff.toolkit.typing.engines.smirnoff.forcefield.ForceField.create_openmm_system>`.
 
 This update also introduces the `SMIRNOFF 0.3 specification <https://open-forcefield-toolkit.readthedocs.io/en/0.4.0/smirnoff.html>`_.
 The spec update is the result of discussions about how to handle the evolution of data and parameter types as further functional forms are added to the SMIRNOFF spec.
@@ -1337,13 +1335,13 @@ New features
 
 * `PR #311 <https://github.com/openforcefield/openff-toolkit/pull/311>`_: Several new experimental functions.
 
-  * Adds :py:meth:`convert_0_2_smirnoff_to_0_3 <openforcefield.utils.utils.convert_0_2_smirnoff_to_0_3>`, which takes a SMIRNOFF 0.2-spec data dict, and updates it to 0.3.
+  * Adds :py:meth:`convert_0_2_smirnoff_to_0_3 <openff.toolkit.utils.utils.convert_0_2_smirnoff_to_0_3>`, which takes a SMIRNOFF 0.2-spec data dict, and updates it to 0.3.
     This function is called automatically when creating a ``ForceField`` from a SMIRNOFF 0.2 spec OFFXML file.
-  * Adds :py:meth:`convert_0_1_smirnoff_to_0_2 <openforcefield.utils.utils.convert_0_1_smirnoff_to_0_2>`, which takes a SMIRNOFF 0.1-spec data dict, and updates it to 0.2.
+  * Adds :py:meth:`convert_0_1_smirnoff_to_0_2 <openff.toolkit.utils.utils.convert_0_1_smirnoff_to_0_2>`, which takes a SMIRNOFF 0.1-spec data dict, and updates it to 0.2.
     This function is called automatically when creating a ``ForceField`` from a SMIRNOFF 0.1 spec OFFXML file.
   * NOTE: The format of the "SMIRNOFF data dict" above is likely to change significantly in the future.
-    Users that require a stable serialized ForceField object should use the output of :py:meth:`ForceField.to_string('XML') <openforcefield.typing.engines.smirnoff.forcefield.ForceField.to_string>` instead.
-  * Adds :py:class:`ParameterHandler <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler>` and :py:class:`ParameterType <openforcefield.typing.engines.smirnoff.parameters.ParameterType>` :py:meth:`add_cosmetic_attribute <openforcefield.typing.engines.smirnoff.parameters.ParameterType.add_cosmetic_attribute>` and :py:meth:`delete_cosmetic_attribute <openforcefield.typing.engines.smirnoff.parameters.ParameterType.delete_cosmetic_attribute>` functions.
+    Users that require a stable serialized ForceField object should use the output of :py:meth:`ForceField.to_string('XML') <openff.toolkit.typing.engines.smirnoff.forcefield.ForceField.to_string>` instead.
+  * Adds :py:class:`ParameterHandler <openff.toolkit.typing.engines.smirnoff.parameters.ParameterHandler>` and :py:class:`ParameterType <openff.toolkit.typing.engines.smirnoff.parameters.ParameterType>` :py:meth:`add_cosmetic_attribute <openff.toolkit.typing.engines.smirnoff.parameters.ParameterType.add_cosmetic_attribute>` and :py:meth:`delete_cosmetic_attribute <openff.toolkit.typing.engines.smirnoff.parameters.ParameterType.delete_cosmetic_attribute>` functions.
     Once created, cosmetic attributes can be accessed and modified as attributes of the underlying object (eg. ``ParameterType.my_cosmetic_attrib = 'blue'``)
     These functions are experimental, and we are interested in feedback on how cosmetic attribute handling could be improved. (`See Issue #338 <https://github.com/openforcefield/openff-toolkit/issues/338>`_)
     Note that if a new cosmetic attribute is added to an object without using these functions, it will not be recognized by the toolkit and will not be written out during serialization.
@@ -1353,15 +1351,15 @@ New features
 
 API-breaking changes
 """"""""""""""""""""
-* :py:meth:`ForceField.to_string <openforcefield.typing.engines.smirnoff.forcefield.ForceField.to_string>` and :py:meth:`ForceField.to_file <openforcefield.typing.engines.smirnoff.forcefield.ForceField.to_file>` have had the default value of their ``discard_cosmetic_attributes`` kwarg set to False.
-* :py:class:`ParameterHandler <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler>` and :py:class:`ParameterType <openforcefield.typing.engines.smirnoff.parameters.ParameterType>` constructors now expect the ``version`` kwarg (per the SMIRNOFF spec change above)
+* :py:meth:`ForceField.to_string <openff.toolkit.typing.engines.smirnoff.forcefield.ForceField.to_string>` and :py:meth:`ForceField.to_file <openff.toolkit.typing.engines.smirnoff.forcefield.ForceField.to_file>` have had the default value of their ``discard_cosmetic_attributes`` kwarg set to False.
+* :py:class:`ParameterHandler <openff.toolkit.typing.engines.smirnoff.parameters.ParameterHandler>` and :py:class:`ParameterType <openff.toolkit.typing.engines.smirnoff.parameters.ParameterType>` constructors now expect the ``version`` kwarg (per the SMIRNOFF spec change above)
   This requirement can be skipped by providing the kwarg ``skip_version_check=True``
-* :py:class:`ParameterHandler <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler>` and :py:class:`ParameterType <openforcefield.typing.engines.smirnoff.parameters.ParameterType>` functions no longer handle ``X_unit`` attributes in SMIRNOFF data (per the SMIRNOFF spec change above).
+* :py:class:`ParameterHandler <openff.toolkit.typing.engines.smirnoff.parameters.ParameterHandler>` and :py:class:`ParameterType <openff.toolkit.typing.engines.smirnoff.parameters.ParameterType>` functions no longer handle ``X_unit`` attributes in SMIRNOFF data (per the SMIRNOFF spec change above).
 * The scripts in ``utilities/convert_frosst`` are now deprecated.
   This functionality is important for provenance and will be migrated to the ``openforcefield/smirnoff99Frosst`` repository in the coming weeks.
-* :py:class:`ParameterType <openforcefield.typing.engines.smirnoff.parameters.ParameterType>` ``._SMIRNOFF_ATTRIBS`` is now :py:class:`ParameterType <openforcefield.typing.engines.smirnoff.parameters.ParameterType>` ``._REQUIRED_SPEC_ATTRIBS``, to better parallel the structure of the ``ParameterHandler`` class.
-* :py:class:`ParameterType <openforcefield.typing.engines.smirnoff.parameters.ParameterType>` ``._OPTIONAL_ATTRIBS`` is now :py:class:`ParameterType <openforcefield.typing.engines.smirnoff.parameters.ParameterType>` ``._OPTIONAL_SPEC_ATTRIBS``, to better parallel the structure of the ``ParameterHandler`` class.
-* Added class-level dictionaries :py:class:`ParameterHandler <openforcefield.typing.engines.smirnoff.parameters.ParameterHandler>` ``._DEFAULT_SPEC_ATTRIBS`` and :py:class:`ParameterType <openforcefield.typing.engines.smirnoff.parameters.ParameterType>` ``._DEFAULT_SPEC_ATTRIBS``.
+* :py:class:`ParameterType <openff.toolkit.typing.engines.smirnoff.parameters.ParameterType>` ``._SMIRNOFF_ATTRIBS`` is now :py:class:`ParameterType <openff.toolkit.typing.engines.smirnoff.parameters.ParameterType>` ``._REQUIRED_SPEC_ATTRIBS``, to better parallel the structure of the ``ParameterHandler`` class.
+* :py:class:`ParameterType <openff.toolkit.typing.engines.smirnoff.parameters.ParameterType>` ``._OPTIONAL_ATTRIBS`` is now :py:class:`ParameterType <openff.toolkit.typing.engines.smirnoff.parameters.ParameterType>` ``._OPTIONAL_SPEC_ATTRIBS``, to better parallel the structure of the ``ParameterHandler`` class.
+* Added class-level dictionaries :py:class:`ParameterHandler <openff.toolkit.typing.engines.smirnoff.parameters.ParameterHandler>` ``._DEFAULT_SPEC_ATTRIBS`` and :py:class:`ParameterType <openff.toolkit.typing.engines.smirnoff.parameters.ParameterType>` ``._DEFAULT_SPEC_ATTRIBS``.
 
 0.3.0 - API Improvements
 ------------------------
@@ -1423,10 +1421,10 @@ New features
 
 * Major overhaul, resulting in the creation of the `SMIRNOFF 0.2 specification <https://open-forcefield-toolkit.readthedocs.io/en/master/smirnoff.html>`_ and its XML representation
 * Updated API and infrastructure for reference SMIRNOFF :class:`ForceField` implementation
-* Implementation of modular :class:`ParameterHandler` classes which process the topology to add all necessary forces to the system.
-* Implementation of modular :class:`ParameterIOHandler` classes for reading/writing different serialized SMIRNOFF force field representations
-* Introduction of :class:`Molecule` and :class:`Topology` classes for representing molecules and biomolecular systems
-* New :class:`ToolkitWrapper` interface to RDKit, OpenEye, and AmberTools toolkits, managed by :class:`ToolkitRegistry`
+* Implementation of modular :class:`ParameterHandler <openff.toolkit.typing.engines.smirnoff.parameters.ParameterHandler>` classes which process the topology to add all necessary forces to the system.
+* Implementation of modular :class:`ParameterIOHandler <openff.toolkit.typing.engines.smirnoff.io.ParameterIOHandler>` classes for reading/writing different serialized SMIRNOFF force field representations
+* Introduction of :class:`Molecule <openff.toolkit.topology.Molecule>` and :class:`Topology <openff.toolkit.topology.Topology>` classes for representing molecules and biomolecular systems
+* New :class:`ToolkitWrapper <openff.toolkit.utils.toolkits.ToolkitWrapper>` interface to RDKit, OpenEye, and AmberTools toolkits, managed by :class:`ToolkitRegistry <openff.toolkit.utils.toolkits.ToolkitRegistry>`
 * API improvements to more closely follow `PEP8 <https://www.python.org/dev/peps/pep-0008/>`_ guidelines
 * Improved documentation and examples
 
