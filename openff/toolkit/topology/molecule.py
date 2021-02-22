@@ -4614,8 +4614,8 @@ class FrozenMolecule(Serializable):
         qcelemental.models.Molecule :
             A validated qcschema
 
-        Example
-        -------
+        Examples
+        --------
 
         Create and validate a qcelemental input
 
