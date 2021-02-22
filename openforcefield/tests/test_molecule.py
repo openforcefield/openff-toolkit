@@ -1944,7 +1944,7 @@ class TestMolecule:
         assert qcschema.molecular_multiplicity == qca_mol.molecular_multiplicity
         assert qcschema.real.all() == qca_mol.real.all()
 
-    @requires_qcelemental
+    @requires_pkg("qcportal")
     def test_qcschema_round_trip_extras(self):
         """Test making a molecule from qcschema then converting back"""
 
@@ -1988,7 +1988,7 @@ class TestMolecule:
             == qca_mol.extras["canonical_isomeric_explicit_hydrogen_mapped_smiles"]
         )
 
-    @requires_qcelemental
+    @requires_pkg("qcportal")
     def test_qcschema_round_trip_from_to_from(self):
         """Test making a molecule from qca record using from_qcschema,
         then converting back to qcschema using to_qcschema,
@@ -2015,7 +2015,7 @@ class TestMolecule:
             "Molecule roundtrip to/from_qcschema failed",
         )
 
-    @requires_qcelemental
+    @requires_pkg("qcportal")
     def test_qcschema_round_trip_raise_error(self):
         """Test making a molecule from qcschema,
         reaching inner except block where everything fails"""
@@ -2036,7 +2036,7 @@ class TestMolecule:
         with pytest.raises(KeyError):
             mol_qca_record = Molecule.from_qcschema(entry, client)
 
-    @requires_qcelemental
+    @requires_pkg("qcportal")
     def test_qcschema_molecule_record_round_trip_from_to_from(self):
         """Test making a molecule from qca record using from_qcschema,
         then converting back to qcschema using to_qcschema,
