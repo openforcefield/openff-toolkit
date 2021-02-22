@@ -104,8 +104,10 @@ class Particle(Serializable):
 
         .. todo::
 
-           * Should we have a single unique ``Molecule`` for each molecule type in the system,
-           or if we have multiple copies of the same molecule, should we have multiple ``Molecule``s?
+            * Should we have a single unique ``Molecule`` for each molecule 
+              type in the system, or if we have multiple copies of the same 
+              molecule, should we have multiple ``Molecule``\ s?
+
         """
         return self._molecule
 
@@ -357,6 +359,7 @@ class Atom(Particle):
         The standard atomic weight (abundance-weighted isotopic mass) of the atomic site.
 
         .. todo :: Should we discriminate between standard atomic weight and most abundant isotopic mass?
+
         TODO (from jeff): Are there atoms that have different chemical properties based on their isotopes?
 
         """
