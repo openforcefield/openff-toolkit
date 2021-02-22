@@ -1900,17 +1900,15 @@ class TestMolecule:
 
         assert_check()
         assert qcschema.extras["test_tag"] == "test"
-        assert (
-            qcschema.extras["canonical_isomeric_explicit_hydrogen_mapped_smiles"]
-            == ethanol.to_smiles(mapped=True)
-        )
+        assert qcschema.extras[
+            "canonical_isomeric_explicit_hydrogen_mapped_smiles"
+        ] == ethanol.to_smiles(mapped=True)
         # # now run again with no extras passed, only cmiles entry will be present with fix-720
         qcschema = ethanol.to_qcschema()
         assert_check()
-        assert (
-            qcschema.extras["canonical_isomeric_explicit_hydrogen_mapped_smiles"]
-            == ethanol.to_smiles(mapped=True)
-        )
+        assert qcschema.extras[
+            "canonical_isomeric_explicit_hydrogen_mapped_smiles"
+        ] == ethanol.to_smiles(mapped=True)
 
     @requires_pkg("qcportal")
     def test_from_qcschema_no_client(self):
