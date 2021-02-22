@@ -1801,14 +1801,14 @@ class TestMolecule:
         assert qcschema.extras["test_tag"] == "test"
         assert (
             qcschema.extras["canonical_isomeric_explicit_hydrogen_mapped_smiles"]
-            == "[H:5][C:1]([H:6])([H:7])[C:2]([H:8])([H:9])[O:3][H:4]"
+            == ethanol.to_smiles(mapped=True)
         )
         # # now run again with no extras passed, only cmiles entry will be present with fix-720
         qcschema = ethanol.to_qcschema()
         assert_check()
         assert (
             qcschema.extras["canonical_isomeric_explicit_hydrogen_mapped_smiles"]
-            == "[H:5][C:1]([H:6])([H:7])[C:2]([H:8])([H:9])[O:3][H:4]"
+            == ethanol.to_smiles(mapped=True)
         )
 
     def test_from_qcschema_no_client(self):
