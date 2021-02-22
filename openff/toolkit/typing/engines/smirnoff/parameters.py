@@ -651,7 +651,7 @@ class IndexedMappedParameterAttribute(ParameterAttribute):
     For example, torsions with fractional bond orders have parameters such as
     k1_bondorder1, k1_bondorder2, k2_bondorder1, k2_bondorder2, ..., and
     ``IndexedMappedParameterAttribute`` can be used to encapsulate the sequence of
-    terms as mappings (typically, `dict`s) of their components.
+    terms as mappings (typically, ``dict``\ s) of their components.
 
     The only substantial difference with ``IndexedParameterAttribute`` is that
     only sequences of mappings are supported as values and converters and units are
@@ -1761,7 +1761,7 @@ class ParameterType(_ParameterAttributeHandler):
 
     Parameter attributes that can be indexed can be handled with the
     ``IndexedParameterAttribute``. These support unit validation and
-    converters exactly as ``ParameterAttribute``s, but the validation/conversion
+    converters exactly as ``ParameterAttribute``\ s, but the validation/conversion
     is performed for each indexed attribute.
 
     >>> class MyTorsionType(ParameterType):
