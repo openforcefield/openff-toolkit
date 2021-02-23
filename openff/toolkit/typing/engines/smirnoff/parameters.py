@@ -300,10 +300,10 @@ class ParameterAttribute:
     attributes have the ``default`` set to the special type ``UNDEFINED``.
 
     Converters can be both static or instance functions/methods with
-    respective signatures
+    respective signatures::
 
-    converter(value): -> converted_value
-    converter(instance, parameter_attribute, value): -> converted_value
+        converter(value): -> converted_value
+        converter(instance, parameter_attribute, value): -> converted_value
 
     A decorator syntax is available (see example below).
 
@@ -392,6 +392,7 @@ class ParameterAttribute:
     2.0
 
     The custom converter associated to attr_int_to_float converts only integers instead.
+
     >>> my_par.attr_int_to_float = 3
     >>> my_par.attr_int_to_float
     3.0
@@ -407,10 +408,11 @@ class ParameterAttribute:
 
         pass
 
-    def __init__(self, default=UNDEFINED, unit=None, converter=None):
+    def __init__(self, default=UNDEFINED, unit=None, converter=None, docstring=""):
         self.default = default
         self._unit = unit
         self._converter = converter
+        self.__doc__ = docstring
 
     def __set_name__(self, owner, name):
         self._name = "_" + name
