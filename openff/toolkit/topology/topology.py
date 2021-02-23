@@ -2288,11 +2288,11 @@ class Topology(Serializable):
         Notes:
 
         1. This doesn't handle virtual sites (they're ignored)
-        2. Atom numbering may not remain same, for example if the atoms 
-           in water are numbered as 1001, 1002, 1003, they would change 
-           to 1, 2, 3. This doesn't affect the topology or coordinates or 
+        2. Atom numbering may not remain same, for example if the atoms
+           in water are numbered as 1001, 1002, 1003, they would change
+           to 1, 2, 3. This doesn't affect the topology or coordinates or
            atom-ordering in any way.
-        3. Same issue with the amino acid names in the pdb file, they are 
+        3. Same issue with the amino acid names in the pdb file, they are
            not returned.
 
         Parameters

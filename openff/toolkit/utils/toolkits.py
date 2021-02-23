@@ -3818,8 +3818,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         rms_tolerance: unit.Quantity = 0.05 * unit.angstrom,
     ):
         """Applies the `ELF method
-        <https://docs.eyesopen.com/toolkits/python/quacpactk/molchargetheory.html#elf-conformer-selection>`_ 
-        to select a set of diverse conformers which have minimal electrostatically 
+        <https://docs.eyesopen.com/toolkits/python/quacpactk/molchargetheory.html#elf-conformer-selection>`_
+        to select a set of diverse conformers which have minimal electrostatically
         strongly interacting functional groups from a molecules conformers.
 
         The diverse conformer selection is performed by the ``_elf_select_diverse_conformers``
