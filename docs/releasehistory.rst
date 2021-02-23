@@ -26,6 +26,10 @@ New features
   :py:meth:`TopologyMolecule.amber_impropers <openff.toolkit.topology.TopologyMolecule.amber_impropers>`,
   :py:meth:`Topology.smirnoff_impropers <openff.toolkit.topology.Topology.smirnoff_impropers>`, and
   :py:meth:`Topology.amber_impropers <openff.toolkit.topology.Topology.amber_impropers>`.
+- `PR #847 <https://github.com/openforcefield/openforcefield/pull/847>`_: Instances of
+  :py:class:`ParameterAttribute <openff.toolkit.typing.engines.smirnoff.parameters.ParameterAttribute>`
+  documentation can now specify their docstrings with the optional ``docstring`` argument to the
+  ``__init__()`` method.
 
 Behavior changed
 """"""""""""""""
@@ -35,10 +39,16 @@ Behavior changed
   field. Previously it fell back to a default value of 0.83333. The toolkit may now produce
   slightly different energies as a result of this change.
 
-Bugfixes
-""""""""
+Improved documentation and warnings
+"""""""""""""""""""""""""""""""""""
 - `PR #838 <https://github.com/openforcefield/openforcefield/pull/838>`_: Corrects spacing of "forcefield" to "force
   field" throughout documentation. Fixes `Issue #112 <https://github.com/openforcefield/openforcefield/issues/112>`_.
+- `PR #847 <https://github.com/openforcefield/openforcefield/pull/847>`_: Documentation now compiles
+  with far fewer warnings, and in many cases more correctly. Additionally, :py:class:`ParameterAttribute
+  <openff.toolkit.typing.engines.smirnoff.parameters.ParameterAttribute>` documentation no longer
+  appears incorrectly in classes where it is used. Fixes `Issue #112
+  <https://github.com/openforcefield/openforcefield/issues/397>`_.
+
 
 0.9.0 - Namespace Migration
 ---------------------------
