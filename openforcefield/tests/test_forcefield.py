@@ -4209,6 +4209,76 @@ class TestForceFieldParameterAssignment:
         )
 
     @requires_openeye
+    def test_modified_14_factors(self):
+        """Test that the 1-4 scaling factors for electrostatics and vdW handlers matche,
+        to a tight precision, the values specified in the force field."""
+        top = Molecule.from_smiles("CCCC").to_topology()
+        default_14 = ForceField("test_forcefields/test_forcefield.offxml")
+        e_mod_14 = ForceField("test_forcefields/test_forcefield.offxml")
+        vdw_mod_14 = ForceField("test_forcefields/test_forcefield.offxml")
+
+        e_mod_14["Electrostatics"].scale14 = 0.66
+        assert e_mod_14["Electrostatics"].scale14 == 0.66
+
+        vdw_mod_14["vdW"].scale14 = 0.777
+        assert vdw_mod_14["vdW"].scale14 == 0.777
+
+        default_omm_sys = default_14.create_openmm_system(top)
+        e_mod_omm_sys = e_mod_14.create_openmm_system(top)
+        vdw_mod_omm_sys = vdw_mod_14.create_openmm_system(top)
+
+        for omm_sys, expected_vdw_14, expected_coul_14 in [
+            [default_omm_sys, 0.5, 0.833333],
+            [e_mod_omm_sys, 0.5, 0.66],
+            [vdw_mod_omm_sys, 0.777, 0.833333],
+        ]:
+            found_coul_14, found_vdw_14 = get_14_scaling_factors(omm_sys)
+
+            np.testing.assert_almost_equal(
+                actual=found_vdw_14,
+                desired=expected_vdw_14,
+                decimal=10,
+                err_msg="vdW 1-4 scaling factors do not match",
+            )
+
+            np.testing.assert_almost_equal(
+                actual=found_coul_14,
+                desired=expected_coul_14,
+                decimal=10,
+                err_msg="Electrostatics 1-4 scaling factors do not match",
+            )
+
+    def test_14_missing_nonbonded_handler(self):
+        """Test that something sane happens with 1-4 scaling factors if a
+        ForceField is missing a vdWHandler and/or ElectrostaticsHandler"""
+        top = Molecule.from_smiles("CCCC").to_topology()
+
+        ff_no_vdw = ForceField("test_forcefields/test_forcefield.offxml")
+        ff_no_electrostatics = ForceField("test_forcefields/test_forcefield.offxml")
+        ff_no_nonbonded = ForceField("test_forcefields/test_forcefield.offxml")
+
+        ff_no_vdw.deregister_parameter_handler("vdW")
+        ff_no_nonbonded.deregister_parameter_handler("vdW")
+
+        ff_no_electrostatics.deregister_parameter_handler("Electrostatics")
+        ff_no_nonbonded.deregister_parameter_handler("Electrostatics")
+
+        sys_no_vdw = ff_no_vdw.create_openmm_system(top)
+        sys_no_electrostatics = ff_no_electrostatics.create_openmm_system(top)
+        sys_no_nonbonded = ff_no_nonbonded.create_openmm_system(top)
+
+        np.testing.assert_almost_equal(
+            actual=get_14_scaling_factors(sys_no_vdw)[0],
+            desired=ff_no_vdw["Electrostatics"].scale14,
+            decimal=8,
+        )
+
+        np.testing.assert_almost_equal(
+            actual=get_14_scaling_factors(sys_no_electrostatics)[1],
+            desired=ff_no_electrostatics["vdW"].scale14,
+            decimal=8,
+        )
+
     def test_overwrite_bond_orders(self):
         """Test that previously-defined bond orders in the topology are overwritten"""
         mol = create_ethanol()
@@ -4257,6 +4327,71 @@ class TestForceFieldParameterAssignment:
             omm_sys_top.topology_bonds, mod_omm_sys_top.topology_bonds
         ):
             assert bond1.bond.fractional_bond_order == bond2.bond.fractional_bond_order
+
+    def test_fractional_bond_order_ignore_existing_confs(self):
+        """Test that previously-defined bond orders in the topology are overwritten"""
+        mol = create_ethanol()
+        top = Topology.from_molecules(mol)
+
+        mod_mol = create_ethanol()
+        mod_mol.generate_conformers()
+        mod_mol._conformers[0][0][0] = mod_mol._conformers[0][0][0] + 1. * unit.angstrom
+        mod_mol._conformers[0][1][0] = mod_mol._conformers[0][1][0] - 1. * unit.angstrom
+        mod_mol._conformers[0][2][0] = mod_mol._conformers[0][2][0] + 1. * unit.angstrom
+
+        mod_top = Topology.from_molecules(mod_mol)
+
+        forcefield = ForceField("test_forcefields/test_forcefield.offxml", xml_ff_bo)
+
+        omm_system, omm_sys_top = forcefield.create_openmm_system(
+            top, return_topology=True
+        )
+        mod_omm_system, mod_omm_sys_top = forcefield.create_openmm_system(
+            mod_top, return_topology=True
+        )
+
+        # Check that the assigned bond parameters are identical for both systems
+        default_bond_force = [
+            f for f in omm_system.getForces() if isinstance(f, openmm.HarmonicBondForce)
+        ][0]
+        mod_bond_force = [
+            f
+            for f in mod_omm_system.getForces()
+            if isinstance(f, openmm.HarmonicBondForce)
+        ][0]
+
+        for idx in range(default_bond_force.getNumBonds()):
+            assert default_bond_force.getBondParameters(
+                idx
+            ) == mod_bond_force.getBondParameters(idx)
+
+        # Check that the assigned torsion parameters are identical for both systems
+        default_torsion_force = [
+            force
+            for force in omm_system.getForces()
+            if isinstance(force, openmm.PeriodicTorsionForce)
+        ][0]
+        mod_torsion_force = [
+            force
+            for force in mod_omm_system.getForces()
+            if isinstance(force, openmm.PeriodicTorsionForce)
+        ][0]
+
+        for idx in range(default_torsion_force.getNumTorsions()):
+            default_k = default_torsion_force.getTorsionParameters(idx)[-1]
+            mod_k = mod_torsion_force.getTorsionParameters(idx)[-1]
+            assert default_k == mod_k
+
+        # Check that the returned topology has the correct bond order
+        for bond1, bond2 in zip(
+            omm_sys_top.topology_bonds, mod_omm_sys_top.topology_bonds
+        ):
+            assert bond1.bond.fractional_bond_order == bond2.bond.fractional_bond_order
+
+
+
+
+
 
     @pytest.mark.parametrize(
         (
