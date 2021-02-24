@@ -614,17 +614,17 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
     @classmethod
     def _check_licenses(cls):
-        """Check license of all known OpenEye tools. Returns True if all are found
+        """Check license of all known OpenEye tools. Returns True if any are found
         to be licensed, False if any are not."""
-        all_licensed = True
         for (tool, license_func) in cls._license_functions.items():
             try:
                 module = importlib.import_module("openeye." + tool)
             except (ImportError, ModuleNotFoundError):
-                return False
+                continue
             else:
-                all_licensed &= getattr(module, license_func)()
-        return all_licensed
+                if getattr(module, license_func)():
+                    return True
+        return False
 
     @classmethod
     def is_available(cls):

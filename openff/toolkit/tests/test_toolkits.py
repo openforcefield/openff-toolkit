@@ -3813,3 +3813,27 @@ class TestToolkitRegistry:
                 partial_charge_method="NotARealChargeMethod",
                 raise_exception_types=[],
             )
+
+
+@requires_openeye
+def test_license_check(monkeypatch):
+    def MockIsLicensed():
+        return False
+
+    from openeye import oeiupac
+
+    assert oeiupac.OEIUPACIsLicensed()
+
+    from openff.toolkit.utils.toolkits import OpenEyeToolkitWrapper
+
+    assert OpenEyeToolkitWrapper.is_available()
+
+    # Mock OEIUPACIsLicensed to return False ...
+    monkeypatch.setattr(oeiupac, "OEIUPACIsLicensed", MockIsLicensed)
+
+    # ... ensure that the oeiupac module reflects this
+    assert not oeiupac.OEIUPACIsLicensed()
+
+    # ... and ensure that the toolkit wrapper is **still** available
+    assert OpenEyeToolkitWrapper()._check_licenses()
+    assert OpenEyeToolkitWrapper().is_available()
