@@ -37,6 +37,10 @@ Behavior changed
 
 Bugfixes
 """"""""
+- `PR #849 <https://github.com/openforcefield/openforcefield/pull/849>`_: Changes
+  :py:meth:`create_openmm_system <openff.toolkit.typing.engines.smirnoff.ForceField.create_openmm_system>` so
+  that it no longer uses the conformers on existing reference molecules (if present) to calculate Wiberg
+  bond orders. Instead, new conformers are always generated during parameterization.
 - `PR #838 <https://github.com/openforcefield/openforcefield/pull/838>`_: Corrects spacing of "forcefield" to "force
   field" throughout documentation. Fixes `Issue #112 <https://github.com/openforcefield/openforcefield/issues/112>`_.
 
