@@ -4335,9 +4335,15 @@ class TestForceFieldParameterAssignment:
 
         mod_mol = create_ethanol()
         mod_mol.generate_conformers()
-        mod_mol._conformers[0][0][0] = mod_mol._conformers[0][0][0] + 1. * unit.angstrom
-        mod_mol._conformers[0][1][0] = mod_mol._conformers[0][1][0] - 1. * unit.angstrom
-        mod_mol._conformers[0][2][0] = mod_mol._conformers[0][2][0] + 1. * unit.angstrom
+        mod_mol._conformers[0][0][0] = (
+            mod_mol._conformers[0][0][0] + 1.0 * unit.angstrom
+        )
+        mod_mol._conformers[0][1][0] = (
+            mod_mol._conformers[0][1][0] - 1.0 * unit.angstrom
+        )
+        mod_mol._conformers[0][2][0] = (
+            mod_mol._conformers[0][2][0] + 1.0 * unit.angstrom
+        )
 
         mod_top = Topology.from_molecules(mod_mol)
 
@@ -4387,11 +4393,6 @@ class TestForceFieldParameterAssignment:
             omm_sys_top.topology_bonds, mod_omm_sys_top.topology_bonds
         ):
             assert bond1.bond.fractional_bond_order == bond2.bond.fractional_bond_order
-
-
-
-
-
 
     @pytest.mark.parametrize(
         (

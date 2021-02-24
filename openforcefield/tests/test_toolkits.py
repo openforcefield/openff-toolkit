@@ -1326,7 +1326,6 @@ class TestOpenEyeToolkitWrapper:
             )
             # TODO: Add test for equivalent Wiberg orders for equivalent bonds
 
-
     def test_assign_fractional_bond_orders_conformer_dependence(self):
         """
         Test that OpenEyeToolkitWrapper assign_fractional_bond_orders() provides different results when using
@@ -1340,18 +1339,26 @@ class TestOpenEyeToolkitWrapper:
         molecule.assign_fractional_bond_orders(
             toolkit_registry=toolkit_wrapper,
             use_conformers=molecule.conformers,
-            bond_order_model='am1-wiberg')
+            bond_order_model="am1-wiberg",
+        )
 
         # Do the same again, but change the conformer to yield a different result
         molecule_diff_coords = create_ethanol()
         molecule_diff_coords.generate_conformers(toolkit_registry=toolkit_wrapper)
-        molecule_diff_coords._conformers[0][0][0] = molecule_diff_coords._conformers[0][0][0] + 1. * unit.angstrom
-        molecule_diff_coords._conformers[0][1][0] = molecule_diff_coords._conformers[0][1][0] - 1. * unit.angstrom
-        molecule_diff_coords._conformers[0][2][0] = molecule_diff_coords._conformers[0][2][0] + 1. * unit.angstrom
+        molecule_diff_coords._conformers[0][0][0] = (
+            molecule_diff_coords._conformers[0][0][0] + 1.0 * unit.angstrom
+        )
+        molecule_diff_coords._conformers[0][1][0] = (
+            molecule_diff_coords._conformers[0][1][0] - 1.0 * unit.angstrom
+        )
+        molecule_diff_coords._conformers[0][2][0] = (
+            molecule_diff_coords._conformers[0][2][0] + 1.0 * unit.angstrom
+        )
         molecule_diff_coords.assign_fractional_bond_orders(
             toolkit_registry=toolkit_wrapper,
             use_conformers=molecule_diff_coords.conformers,
-            bond_order_model='am1-wiberg')
+            bond_order_model="am1-wiberg",
+        )
 
         for bond1, bond2 in zip(molecule.bonds, molecule_diff_coords.bonds):
             assert abs(bond1.fractional_bond_order - bond2.fractional_bond_order) > 1e-3
@@ -2688,32 +2695,41 @@ class TestAmberToolsToolkitWrapper:
             )
             # TODO: Add test for equivalent Wiberg orders for equivalent bonds
 
-
     def test_assign_fractional_bond_orders_conformer_dependence(self):
         """
         Test that RDKitToolkitWrapper assign_fractional_bond_orders() provides different results when using
         different conformers
         """
 
-        toolkit_wrapper = ToolkitRegistry([RDKitToolkitWrapper, AmberToolsToolkitWrapper])
+        toolkit_wrapper = ToolkitRegistry(
+            [RDKitToolkitWrapper, AmberToolsToolkitWrapper]
+        )
         # Get the WBOs using one conformer
         molecule = create_ethanol()
         molecule.generate_conformers(toolkit_registry=toolkit_wrapper)
         molecule.assign_fractional_bond_orders(
             toolkit_registry=toolkit_wrapper,
             use_conformers=molecule.conformers,
-            bond_order_model='am1-wiberg')
+            bond_order_model="am1-wiberg",
+        )
 
         # Do the same again, but change the conformer to yield a different result
         molecule_diff_coords = create_ethanol()
         molecule_diff_coords.generate_conformers(toolkit_registry=toolkit_wrapper)
-        molecule_diff_coords._conformers[0][0][0] = molecule_diff_coords._conformers[0][0][0] + 1. * unit.angstrom
-        molecule_diff_coords._conformers[0][1][0] = molecule_diff_coords._conformers[0][1][0] - 1. * unit.angstrom
-        molecule_diff_coords._conformers[0][2][0] = molecule_diff_coords._conformers[0][2][0] + 1. * unit.angstrom
+        molecule_diff_coords._conformers[0][0][0] = (
+            molecule_diff_coords._conformers[0][0][0] + 1.0 * unit.angstrom
+        )
+        molecule_diff_coords._conformers[0][1][0] = (
+            molecule_diff_coords._conformers[0][1][0] - 1.0 * unit.angstrom
+        )
+        molecule_diff_coords._conformers[0][2][0] = (
+            molecule_diff_coords._conformers[0][2][0] + 1.0 * unit.angstrom
+        )
         molecule_diff_coords.assign_fractional_bond_orders(
             toolkit_registry=toolkit_wrapper,
             use_conformers=molecule_diff_coords.conformers,
-            bond_order_model='am1-wiberg')
+            bond_order_model="am1-wiberg",
+        )
 
         for bond1, bond2 in zip(molecule.bonds, molecule_diff_coords.bonds):
             assert abs(bond1.fractional_bond_order - bond2.fractional_bond_order) > 1e-3
