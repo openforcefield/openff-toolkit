@@ -2827,7 +2827,6 @@ class BondHandler(ParameterHandler):
                 )
                 match.reference_molecule.assign_fractional_bond_orders(
                     toolkit_registry=toolkit_registry,
-                    use_conformers=match.reference_molecule.conformers,
                     bond_order_model=self.fractional_bondorder_method.lower(),
                 )
 
@@ -3234,7 +3233,6 @@ class ProperTorsionHandler(ParameterHandler):
                 )
                 match.reference_molecule.assign_fractional_bond_orders(
                     toolkit_registry=toolkit_registry,
-                    use_conformers=match.reference_molecule.conformers,
                     bond_order_model=self.fractional_bondorder_method.lower(),
                 )
 
