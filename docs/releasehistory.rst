@@ -37,9 +37,7 @@ Behavior changed
   field. Previously it fell back to a default value of 0.83333. The toolkit may now produce
   slightly different energies as a result of this change.
 - `PR #839 <https://github.com/openforcefield/openforcefield/pull/839>`_: The average WBO will now be returned when
-  multiple conformers are provided to ``assign_fractional_bond_orders`` using ``use_conformers`` and an OpenEye
-  toolkit wrapper is used. The behaviour when computing WBOs using the AmberTools toolkit wrapper is currently
-  unchanged.
+  multiple conformers are provided to ``assign_fractional_bond_orders`` using ``use_conformers``.
 
 0.9.0 - Namespace Migration
 ---------------------------
