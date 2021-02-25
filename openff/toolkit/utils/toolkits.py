@@ -2685,6 +2685,32 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         )
 
 
+def requires_openeye_module(module_name):
+    def inner_decorator(function):
+        @wraps(function)
+        def wrapper(*args, **kwargs):
+            import importlib
+
+            try:
+                module = importlib.import_module("openeye." + module_name)
+            except (ImportError, ModuleNotFoundError):
+                # TODO: Custom exception
+                raise Exception("openeye." + module_name)
+            try:
+                license_func = OpenEyeToolkitWrapper._license_functions[module_name]
+            except KeyError:
+                # TODO: Custom exception
+                raise Exception(f"we do not currently use {module_name}")
+
+            assert getattr(module, license_func)()
+
+            return function(*args, **kwargs)
+
+        return wrapper
+
+    return inner_decorator
+
+
 class RDKitToolkitWrapper(ToolkitWrapper):
     """
     RDKit toolkit wrapper

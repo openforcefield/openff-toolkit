@@ -3837,3 +3837,19 @@ def test_license_check(monkeypatch):
     # ... and ensure that the toolkit wrapper is **still** available
     assert OpenEyeToolkitWrapper()._check_licenses()
     assert OpenEyeToolkitWrapper().is_available()
+
+    from openff.toolkit.utils.toolkits import requires_openeye_module
+
+    @requires_openeye_module("oeszybki")
+    def func_using_extraneous_openeye_module():
+        pass
+
+    with pytest.raises(Exception, match="currently use oeszybki"):
+        func_using_extraneous_openeye_module()
+
+    @requires_openeye_module("oeiupac")
+    def func_using_unlicsensed_openeye_module():
+        pass
+
+    with pytest.raises(Exception, match="currently use oeszybki"):
+        func_using_extraneous_openeye_module()
