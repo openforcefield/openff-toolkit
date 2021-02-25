@@ -1313,18 +1313,88 @@ class TestOpenEyeToolkitWrapper:
         lysine.generate_conformers(toolkit_registry=toolkit_wrapper)
         lysine.compute_partial_charges_am1bcc(toolkit_registry=toolkit_wrapper)
 
-    def test_assign_fractional_bond_orders(self):
+    @pytest.mark.parametrize(
+        "bond_order_model",
+        ["am1-wiberg", "am1-wiberg-elf10", "pm3-wiberg", "pm3-wiberg-elf10"],
+    )
+    @pytest.mark.parametrize(
+        "smiles",
+        [
+            "[H]C([H])([H])C([H])([H])[H]",
+            "[H]C([H])([H])[N+]([H])([H])[H]",
+            r"C\C(F)=C(/F)C[C@@](C)(Cl)Br",
+        ],
+    )
+    def test_assign_fractional_bond_orders(self, bond_order_model, smiles):
         """Test OpenEyeToolkitWrapper assign_fractional_bond_orders()"""
 
         toolkit_wrapper = OpenEyeToolkitWrapper()
-        smiles = "[H]C([H])([H])C([H])([H])[H]"
         molecule = toolkit_wrapper.from_smiles(smiles)
-        molecule.generate_conformers(toolkit_registry=toolkit_wrapper)
-        for bond_order_model in ["am1-wiberg", "pm3-wiberg"]:
-            molecule.assign_fractional_bond_orders(
-                toolkit_registry=toolkit_wrapper, bond_order_model=bond_order_model
-            )
-            # TODO: Add test for equivalent Wiberg orders for equivalent bonds
+
+        molecule.assign_fractional_bond_orders(
+            toolkit_registry=toolkit_wrapper, bond_order_model=bond_order_model
+        )
+        # TODO: Add test for equivalent Wiberg orders for equivalent bonds
+
+        # Sanity check single bonds.
+        assert all(
+            0.75 < bond.fractional_bond_order < 1.25
+            for bond in molecule.bonds
+            if bond.bond_order == 1
+        )
+        # Sanity check double bonds.
+        assert all(
+            1.75 < bond.fractional_bond_order < 2.25
+            for bond in molecule.bonds
+            if bond.bond_order == 2
+        )
+
+    def test_assign_fractional_bond_orders_multi_conf(
+        self, formic_acid_molecule, formic_acid_conformers
+    ):
+        """Test that the OpenEyeToolkitWrapper assign_fractional_bond_orders()
+        function correctly averages over all conformers."""
+
+        toolkit_wrapper = OpenEyeToolkitWrapper()
+
+        # Compute the WBO from a single conformer.
+        formic_acid_molecule.assign_fractional_bond_orders(
+            toolkit_registry=toolkit_wrapper,
+            bond_order_model="am1-wiberg",
+            use_conformers=[formic_acid_conformers["cis"]],
+        )
+        cis_bond_orders = [
+            bond.fractional_bond_order for bond in formic_acid_molecule.bonds
+        ]
+        formic_acid_molecule.assign_fractional_bond_orders(
+            toolkit_registry=toolkit_wrapper,
+            bond_order_model="am1-wiberg",
+            use_conformers=[formic_acid_conformers["trans"]],
+        )
+        trans_bond_orders = [
+            bond.fractional_bond_order for bond in formic_acid_molecule.bonds
+        ]
+
+        # Use the method to average the conformers.
+        formic_acid_molecule.assign_fractional_bond_orders(
+            toolkit_registry=toolkit_wrapper,
+            bond_order_model="am1-wiberg",
+            use_conformers=[
+                formic_acid_conformers["cis"],
+                formic_acid_conformers["trans"],
+            ],
+        )
+        avg_bond_orders = [
+            bond.fractional_bond_order for bond in formic_acid_molecule.bonds
+        ]
+
+        # The average should be distinct from the WBO from either conformer.
+        assert not np.allclose(cis_bond_orders, avg_bond_orders)
+        assert not np.allclose(trans_bond_orders, avg_bond_orders)
+
+        assert np.allclose(
+            np.mean([trans_bond_orders, cis_bond_orders], axis=0), avg_bond_orders
+        )
 
     def test_assign_fractional_bond_orders_conformer_dependence(self):
         """
@@ -1383,73 +1453,60 @@ class TestOpenEyeToolkitWrapper:
         # Checking that only one additional bond is present in the neutral molecule
         assert len(molecule1.bonds) == len(molecule2.bonds) + 1
 
-        for bond_order_model in ["am1-wiberg"]:
-            molecule1.assign_fractional_bond_orders(
-                toolkit_registry=toolkit_wrapper,
-                bond_order_model=bond_order_model,
-                use_conformers=molecule1.conformers,
-            )
+        molecule1.assign_fractional_bond_orders(
+            toolkit_registry=toolkit_wrapper,
+            bond_order_model=bond_order_model,
+            use_conformers=molecule1.conformers,
+        )
 
-            for i in molecule1.bonds:
-                if i.is_aromatic:
-                    # Checking aromatic bonds
-                    assert 1.05 < i.fractional_bond_order < 1.65
-                elif i.atom1.atomic_number == 1 or i.atom2.atomic_number == 1:
-                    # Checking bond order of C-H or O-H bonds are around 1
-                    assert 0.85 < i.fractional_bond_order < 1.05
-                elif i.atom1.atomic_number == 8 or i.atom2.atomic_number == 8:
-                    # Checking C-O single bond
-                    wbo_C_O_neutral = i.fractional_bond_order
-                    assert 1.0 < wbo_C_O_neutral < 1.5
-                else:
-                    # Should be C-C single bond
-                    assert (i.atom1_index == 4 and i.atom2_index == 6) or (
-                        i.atom1_index == 6 and i.atom2_index == 4
-                    )
-                    wbo_C_C_neutral = i.fractional_bond_order
-                    assert 1.0 < wbo_C_C_neutral < 1.3
+        for i in molecule1.bonds:
+            if i.is_aromatic:
+                # Checking aromatic bonds
+                assert 1.05 < i.fractional_bond_order < 1.65
+            elif i.atom1.atomic_number == 1 or i.atom2.atomic_number == 1:
+                # Checking bond order of C-H or O-H bonds are around 1
+                assert 0.85 < i.fractional_bond_order < 1.05
+            elif i.atom1.atomic_number == 8 or i.atom2.atomic_number == 8:
+                # Checking C-O single bond
+                wbo_C_O_neutral = i.fractional_bond_order
+                assert 1.0 < wbo_C_O_neutral < 1.5
+            else:
+                # Should be C-C single bond
+                assert (i.atom1_index == 4 and i.atom2_index == 6) or (
+                    i.atom1_index == 6 and i.atom2_index == 4
+                )
+                wbo_C_C_neutral = i.fractional_bond_order
+                assert 1.0 < wbo_C_C_neutral < 1.3
 
-            molecule2.assign_fractional_bond_orders(
-                toolkit_registry=toolkit_wrapper,
-                bond_order_model=bond_order_model,
-                use_conformers=molecule2.conformers,
-            )
-            for i in molecule2.bonds:
-                if i.is_aromatic:
-                    # Checking aromatic bonds
-                    assert 1.05 < i.fractional_bond_order < 1.65
-                elif i.atom1.atomic_number == 1 or i.atom2.atomic_number == 1:
-                    # Checking bond order of C-H or O-H bonds are around 1
-                    assert 0.85 < i.fractional_bond_order < 1.05
-                elif i.atom1.atomic_number == 8 or i.atom2.atomic_number == 8:
-                    # Checking C-O single bond
-                    wbo_C_O_anion = i.fractional_bond_order
-                    assert 1.3 < wbo_C_O_anion < 1.8
-                else:
-                    # Should be C-C single bond
-                    assert (i.atom1_index == 4 and i.atom2_index == 6) or (
-                        i.atom1_index == 6 and i.atom2_index == 4
-                    )
-                    wbo_C_C_anion = i.fractional_bond_order
-                    assert 1.0 < wbo_C_C_anion < 1.3
+        molecule2.assign_fractional_bond_orders(
+            toolkit_registry=toolkit_wrapper,
+            bond_order_model=bond_order_model,
+            use_conformers=molecule2.conformers,
+        )
+        for i in molecule2.bonds:
 
-            # Wiberg bond order of C-C single bond is higher in the anion
-            assert wbo_C_C_anion > wbo_C_C_neutral
-            # Wiberg bond order of C-O bond is higher in the anion
-            assert wbo_C_O_anion > wbo_C_O_neutral
+            if i.is_aromatic:
+                # Checking aromatic bonds
+                assert 1.05 < i.fractional_bond_order < 1.65
+            elif i.atom1.atomic_number == 1 or i.atom2.atomic_number == 1:
+                # Checking bond order of C-H or O-H bonds are around 1
+                assert 0.85 < i.fractional_bond_order < 1.05
+            elif i.atom1.atomic_number == 8 or i.atom2.atomic_number == 8:
+                # Checking C-O single bond
+                wbo_C_O_anion = i.fractional_bond_order
+                assert 1.3 < wbo_C_O_anion < 1.8
+            else:
+                # Should be C-C single bond
+                assert (i.atom1_index == 4 and i.atom2_index == 6) or (
+                    i.atom1_index == 6 and i.atom2_index == 4
+                )
+                wbo_C_C_anion = i.fractional_bond_order
+                assert 1.0 < wbo_C_C_anion < 1.3
 
-    def test_assign_fractional_bond_orders_charged(self):
-        """Test OpenEyeToolkitWrapper assign_fractional_bond_orders() on a molecule with net charge +1"""
-
-        toolkit_wrapper = OpenEyeToolkitWrapper()
-        smiles = "[H]C([H])([H])[N+]([H])([H])[H]"
-        molecule = toolkit_wrapper.from_smiles(smiles)
-        molecule.generate_conformers(toolkit_registry=toolkit_wrapper)
-        for bond_order_model in ["am1-wiberg", "pm3-wiberg"]:
-            molecule.assign_fractional_bond_orders(
-                toolkit_registry=toolkit_wrapper, bond_order_model=bond_order_model
-            )
-            # TODO: Add test for equivalent Wiberg orders for equivalent bonds
+        # Wiberg bond order of C-C single bond is higher in the anion
+        assert wbo_C_C_anion > wbo_C_C_neutral
+        # Wiberg bond order of C-O bond is higher in the anion
+        assert wbo_C_O_anion > wbo_C_O_neutral
 
     def test_assign_fractional_bond_orders_invalid_method(self):
         """
@@ -1457,38 +1514,20 @@ class TestOpenEyeToolkitWrapper:
         correct error if an invalid charge model is provided
         """
         toolkit_wrapper = OpenEyeToolkitWrapper()
-        smiles = "[H]C([H])([H])[N+]([H])([H])[H]"
-        molecule = toolkit_wrapper.from_smiles(smiles)
-        molecule.generate_conformers(toolkit_registry=toolkit_wrapper)
+
+        molecule = toolkit_wrapper.from_smiles("C")
+
         expected_error = (
             "Bond order model 'not a real bond order model' is not supported by "
-            "OpenEyeToolkitWrapper. Supported models are ([[]'am1-wiberg', 'pm3-wiberg'[]])"
+            "OpenEyeToolkitWrapper. Supported models are "
+            "\['am1-wiberg', 'am1-wiberg-elf10', 'pm3-wiberg', 'pm3-wiberg-elf10'\]"
         )
-        with pytest.raises(ValueError, match=expected_error) as excinfo:
+
+        with pytest.raises(ValueError, match=expected_error):
             molecule.assign_fractional_bond_orders(
                 toolkit_registry=toolkit_wrapper,
                 bond_order_model="not a real bond order model",
             )
-
-    def test_assign_fractional_bond_orders_double_bond(self):
-        """Test OpenEyeToolkitWrapper assign_fractional_bond_orders() on a molecule with a double bond"""
-
-        toolkit_wrapper = OpenEyeToolkitWrapper()
-        smiles = r"C\C(F)=C(/F)C[C@@](C)(Cl)Br"
-        molecule = toolkit_wrapper.from_smiles(smiles)
-        molecule.generate_conformers(toolkit_registry=toolkit_wrapper)
-        for bond_order_model in ["am1-wiberg", "pm3-wiberg"]:
-            molecule.assign_fractional_bond_orders(
-                toolkit_registry=toolkit_wrapper, bond_order_model=bond_order_model
-            )
-            # TODO: Add test for equivalent Wiberg orders for equivalent bonds
-
-        double_bond_has_wbo_near_2 = False
-        for bond in molecule.bonds:
-            if bond.bond_order == 2:
-                if 1.75 < bond.fractional_bond_order < 2.25:
-                    double_bond_has_wbo_near_2 = True
-        assert double_bond_has_wbo_near_2
 
     @pytest.mark.slow
     def test_substructure_search_on_large_molecule(self):
@@ -2687,25 +2726,47 @@ class TestAmberToolsToolkitWrapper:
                 strict_n_conformers=True,
             )
 
-    def test_assign_fractional_bond_orders(self):
-        """Test OpenEyeToolkitWrapper assign_fractional_bond_orders()"""
+    @pytest.mark.parametrize("bond_order_model", ["am1-wiberg"])
+    @pytest.mark.parametrize(
+        "smiles",
+        [
+            "[H]C([H])([H])C([H])([H])[H]",
+            "[H]C([H])([H])[N+]([H])([H])[H]",
+            r"C\C(F)=C(/F)C[C@@](C)(Cl)Br",
+        ],
+    )
+    def test_assign_fractional_bond_orders(self, bond_order_model, smiles):
+        """Test AmbetToolsToolkitWrapper assign_fractional_bond_orders()"""
 
         toolkit_registry = ToolkitRegistry(
             toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper]
         )
-        smiles = "[H]C([H])([H])C([H])([H])[H]"
-        molecule = toolkit_registry.call("from_smiles", smiles)
-        for bond_order_model in ["am1-wiberg"]:
-            molecule.assign_fractional_bond_orders(
-                toolkit_registry=toolkit_registry, bond_order_model=bond_order_model
-            )
-            # TODO: Add test for equivalent Wiberg orders for equivalent bonds
 
+        molecule = toolkit_registry.call("from_smiles", smiles)
+        molecule.assign_fractional_bond_orders(
+            toolkit_registry=toolkit_registry, bond_order_model=bond_order_model
+        )
+        # TODO: Add test for equivalent Wiberg orders for equivalent bonds
+
+        # Sanity check single bonds.
+        assert all(
+            0.75 < bond.fractional_bond_order < 1.25
+            for bond in molecule.bonds
+            if bond.bond_order == 1
+        )
+        # Sanity check double bonds.
+        assert all(
+            1.75 < bond.fractional_bond_order < 2.25
+            for bond in molecule.bonds
+            if bond.bond_order == 2
+        )
+
+    @pytest.mark.parametrize("bond_order_model", ["am1-wiberg"])
+    def test_assign_fractional_bond_orders_neutral_charge_mol(self, bond_order_model):
+        """Test AmberToolsToolkitWrapper assign_fractional_bond_orders() for neutral and charged molecule.
     def test_assign_fractional_bond_orders_conformer_dependence(self):
         """
-        Test that RDKitToolkitWrapper assign_fractional_bond_orders() provides different results when using
-        different conformers
-        """
+
 
         toolkit_wrapper = ToolkitRegistry(
             [RDKitToolkitWrapper, AmberToolsToolkitWrapper]
@@ -2740,14 +2801,9 @@ class TestAmberToolsToolkitWrapper:
         for bond1, bond2 in zip(molecule.bonds, molecule_diff_coords.bonds):
             assert abs(bond1.fractional_bond_order - bond2.fractional_bond_order) > 1e-3
 
-<<<<<<< HEAD:openforcefield/tests/test_toolkits.py
-    def test_assign_fractional_bond_orders_neutral_charge_mol(self):
-        """Test OpenEyeToolkitWrapper assign_fractional_bond_orders() for neutral and charged molecule.
-=======
     @pytest.mark.parametrize("bond_order_model", ["am1-wiberg"])
     def test_assign_fractional_bond_orders_neutral_charge_mol(self, bond_order_model):
         """Test AmberToolsToolkitWrapper assign_fractional_bond_orders() for neutral and charged molecule.
->>>>>>> 35b1d182 (black):openff/toolkit/tests/test_toolkits.py
         Also tests using existing conformers"""
 
         toolkit_registry = ToolkitRegistry(
@@ -2763,75 +2819,60 @@ class TestAmberToolsToolkitWrapper:
         # Checking that only one additional bond is present in the neutral molecule
         assert len(molecule1.bonds) == len(molecule2.bonds) + 1
 
-        for bond_order_model in ["am1-wiberg"]:
-            molecule1.assign_fractional_bond_orders(
-                toolkit_registry=toolkit_registry,
-                bond_order_model=bond_order_model,
-                use_conformers=molecule1.conformers,
-            )
-
-            for i in molecule1.bonds:
-                if i.is_aromatic:
-                    # Checking aromatic bonds
-                    assert 1.05 < i.fractional_bond_order < 1.65
-                elif i.atom1.atomic_number == 1 or i.atom2.atomic_number == 1:
-                    # Checking bond order of C-H or O-H bonds are around 1
-                    assert 0.85 < i.fractional_bond_order < 1.05
-                elif i.atom1.atomic_number == 8 or i.atom2.atomic_number == 8:
-                    # Checking C-O single bond
-                    wbo_C_O_neutral = i.fractional_bond_order
-                    assert 1.0 < wbo_C_O_neutral < 1.5
-                else:
-                    # Should be C-C single bond
-                    assert (i.atom1_index == 4 and i.atom2_index == 6) or (
-                        i.atom1_index == 6 and i.atom2_index == 4
-                    )
-                    wbo_C_C_neutral = i.fractional_bond_order
-                    assert 1.0 < wbo_C_C_neutral < 1.3
-
-            molecule2.assign_fractional_bond_orders(
-                toolkit_registry=toolkit_registry,
-                bond_order_model=bond_order_model,
-                use_conformers=molecule2.conformers,
-            )
-            for i in molecule2.bonds:
-                if i.is_aromatic:
-                    # Checking aromatic bonds
-                    assert 1.05 < i.fractional_bond_order < 1.65
-
-                elif i.atom1.atomic_number == 1 or i.atom2.atomic_number == 1:
-                    # Checking bond order of C-H or O-H bonds are around 1
-                    assert 0.85 < i.fractional_bond_order < 1.05
-                elif i.atom1.atomic_number == 8 or i.atom2.atomic_number == 8:
-                    # Checking C-O single bond
-                    wbo_C_O_anion = i.fractional_bond_order
-                    assert 1.3 < wbo_C_O_anion < 1.8
-                else:
-                    # Should be C-C single bond
-                    assert (i.atom1_index == 4 and i.atom2_index == 6) or (
-                        i.atom1_index == 6 and i.atom2_index == 4
-                    )
-                    wbo_C_C_anion = i.fractional_bond_order
-                    assert 1.0 < wbo_C_C_anion < 1.3
-
-            # Wiberg bond order of C-C single bond is higher in the anion
-            assert wbo_C_C_anion > wbo_C_C_neutral
-            # Wiberg bond order of C-O bond is higher in the anion
-            assert wbo_C_O_anion > wbo_C_O_neutral
-
-    def test_assign_fractional_bond_orders_charged(self):
-        """Test OpenEyeToolkitWrapper assign_fractional_bond_orders() on a molecule with net charge +1"""
-
-        toolkit_registry = ToolkitRegistry(
-            toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper]
+        molecule1.assign_fractional_bond_orders(
+            toolkit_registry=toolkit_registry,
+            bond_order_model=bond_order_model,
+            use_conformers=molecule1.conformers,
         )
-        smiles = "[H]C([H])([H])[N+]([H])([H])[H]"
-        molecule = toolkit_registry.call("from_smiles", smiles)
-        for bond_order_model in ["am1-wiberg"]:
-            molecule.assign_fractional_bond_orders(
-                toolkit_registry=toolkit_registry, bond_order_model=bond_order_model
-            )
-            # TODO: Add test for equivalent Wiberg orders for equivalent bonds
+
+        for i in molecule1.bonds:
+            if i.is_aromatic:
+                # Checking aromatic bonds
+                assert 1.05 < i.fractional_bond_order < 1.65
+            elif i.atom1.atomic_number == 1 or i.atom2.atomic_number == 1:
+                # Checking bond order of C-H or O-H bonds are around 1
+                assert 0.85 < i.fractional_bond_order < 1.05
+            elif i.atom1.atomic_number == 8 or i.atom2.atomic_number == 8:
+                # Checking C-O single bond
+                wbo_C_O_neutral = i.fractional_bond_order
+                assert 1.0 < wbo_C_O_neutral < 1.5
+            else:
+                # Should be C-C single bond
+                assert (i.atom1_index == 4 and i.atom2_index == 6) or (
+                    i.atom1_index == 6 and i.atom2_index == 4
+                )
+                wbo_C_C_neutral = i.fractional_bond_order
+                assert 1.0 < wbo_C_C_neutral < 1.3
+
+        molecule2.assign_fractional_bond_orders(
+            toolkit_registry=toolkit_registry,
+            bond_order_model=bond_order_model,
+            use_conformers=molecule2.conformers,
+        )
+        for i in molecule2.bonds:
+            if i.is_aromatic:
+                # Checking aromatic bonds
+                assert 1.05 < i.fractional_bond_order < 1.65
+
+            elif i.atom1.atomic_number == 1 or i.atom2.atomic_number == 1:
+                # Checking bond order of C-H or O-H bonds are around 1
+                assert 0.85 < i.fractional_bond_order < 1.05
+            elif i.atom1.atomic_number == 8 or i.atom2.atomic_number == 8:
+                # Checking C-O single bond
+                wbo_C_O_anion = i.fractional_bond_order
+                assert 1.3 < wbo_C_O_anion < 1.8
+            else:
+                # Should be C-C single bond
+                assert (i.atom1_index == 4 and i.atom2_index == 6) or (
+                    i.atom1_index == 6 and i.atom2_index == 4
+                )
+                wbo_C_C_anion = i.fractional_bond_order
+                assert 1.0 < wbo_C_C_anion < 1.3
+
+        # Wiberg bond order of C-C single bond is higher in the anion
+        assert wbo_C_C_anion > wbo_C_C_neutral
+        # Wiberg bond order of C-O bond is higher in the anion
+        assert wbo_C_O_anion > wbo_C_O_neutral
 
     def test_assign_fractional_bond_orders_invalid_method(self):
         """
@@ -2842,39 +2883,17 @@ class TestAmberToolsToolkitWrapper:
         toolkit_registry = ToolkitRegistry(
             toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper]
         )
-        smiles = "[H]C([H])([H])[N+]([H])([H])[H]"
-        molecule = toolkit_registry.call("from_smiles", smiles)
+        molecule = toolkit_registry.call("from_smiles", "C")
 
         expected_error = (
             "Bond order model 'not a real charge model' is not supported by "
             "AmberToolsToolkitWrapper. Supported models are ([[]'am1-wiberg'[]])"
         )
-        with pytest.raises(ValueError, match=expected_error) as excinfo:
+        with pytest.raises(ValueError, match=expected_error):
             molecule.assign_fractional_bond_orders(
                 toolkit_registry=AmberToolsToolkitWrapper(),
                 bond_order_model="not a real charge model",
             )
-
-    def test_assign_fractional_bond_orders_double_bond(self):
-        """Test OpenEyeToolkitWrapper assign_fractional_bond_orders() on a molecule with a double bond"""
-
-        toolkit_registry = ToolkitRegistry(
-            toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper]
-        )
-        smiles = r"C\C(F)=C(/F)C[C@@](C)(Cl)Br"
-        molecule = toolkit_registry.call("from_smiles", smiles)
-        for bond_order_model in ["am1-wiberg"]:
-            molecule.assign_fractional_bond_orders(
-                toolkit_registry=toolkit_registry, bond_order_model=bond_order_model
-            )
-            # TODO: Add test for equivalent Wiberg orders for equivalent bonds
-
-        double_bond_has_wbo_near_2 = False
-        for bond in molecule.bonds:
-            if bond.bond_order == 2:
-                if 1.75 < bond.fractional_bond_order < 2.25:
-                    double_bond_has_wbo_near_2 = True
-        assert double_bond_has_wbo_near_2
 
     @requires_openeye
     def test_assign_fractional_bond_orders_openeye_installed(self):

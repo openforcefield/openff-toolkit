@@ -377,7 +377,7 @@ API-breaking changes
 Tests added
 """""""""""
 
-- `PR #548 <https://github.com/openforcefield/openforcefield/pull/548>`_: Adds test for 
+- `PR #548 <https://github.com/openforcefield/openforcefield/pull/548>`_: Adds test for
 
   - The virtual site parameter handler
   - TIP5P water dimer energy and positions
@@ -445,7 +445,7 @@ Bugfixes
   toolkit from issuing a warning caused by doing stereo-specific smarts searches on certain
   structures.
 - `PR #724 <https://github.com/openforcefield/openforcefield/pull/724>`_: Closes issue `Issue #502
-  <https://github.com/openforcefield/openforcefield/issues/502>`_ Adding a utility function Topology.to_file() to 
+  <https://github.com/openforcefield/openforcefield/issues/502>`_ Adding a utility function Topology.to_file() to
   write topology and positions to a "PDB" file using openmm backend for pdb file write.
 
 Tests added
@@ -506,7 +506,7 @@ New features
 """"""""""""
 - `PR #632 <https://github.com/openforcefield/openforcefield/pull/632>`_: Adds
   :py:class:`ForceField.registered_parameter_handlers <openforcefield.typing.engines.smirnoff.forcefield.ForceField>`
-- `PR #614 <https://github.com/openforcefield/openforcefield/pull/614>`_: Adds 
+- `PR #614 <https://github.com/openforcefield/openforcefield/pull/614>`_: Adds
   :py:class:`ToolkitRegistry.deregister_toolkit <openforcefield.utils.toolkits.ToolkitRegistry>`
   to de-register registered toolkits, which can include toolkit wrappers loaded into ``GLOBAL_TOOLKIT_REGISTRY``
   by default.
@@ -828,7 +828,7 @@ New features
 - `PR #573 <https://github.com/openforcefield/openforcefield/pull/573>`_:
   Adds ``quacpac`` error output to ``quacpac`` failure in ``Molecule.compute_partial_charges_am1bcc``.
 - `PR #560 <https://github.com/openforcefield/openforcefield/issues/560>`_: Added visualization method to the the Molecule class.
-- `PR #620 <https://github.com/openforcefield/openforcefield/pull/620>`_: Added the ability to register parameter handlers via entry point plugins. This functionality is accessible by initializing a ``ForceField`` with the ``load_plugins=True`` keyword argument. 
+- `PR #620 <https://github.com/openforcefield/openforcefield/pull/620>`_: Added the ability to register parameter handlers via entry point plugins. This functionality is accessible by initializing a ``ForceField`` with the ``load_plugins=True`` keyword argument.
 - `PR #582 <https://github.com/openforcefield/openforcefield/pull/582>`_: Added fractional bond order interpolation
   Adds `return_topology` kwarg to
   :py:meth:`Forcefield.create_openmm_system <openforcefield.typing.engines.smirnoff.forcefield.ForceField.create_openmm_system>`,
