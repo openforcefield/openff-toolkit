@@ -62,6 +62,7 @@ For more information, see ``examples/forcefield_modification``.
     vdWHandler.vdWType
     LibraryChargeHandler.LibraryChargeType
     GBSAHandler.GBSAType
+    ChargeIncrementModelHandler.ChargeIncrementType
 
 Parameter Handlers
 ~~~~~~~~~~~~~~~~~~
@@ -85,6 +86,7 @@ During system creation, each ``ParameterHandler`` registered to a ``ForceField``
     LibraryChargeHandler
     ToolkitAM1BCCHandler
     GBSAHandler
+    ChargeIncrementModelHandler
 
 Parameter I/O Handlers
 ~~~~~~~~~~~~~~~~~~~~~~
