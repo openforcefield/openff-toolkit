@@ -2702,6 +2702,7 @@ def requires_openeye_module(module_name):
                 # TODO: Custom exception
                 raise Exception(f"we do not currently use {module_name}")
 
+            # TODO: Custom exception
             assert getattr(module, license_func)()
 
             return function(*args, **kwargs)

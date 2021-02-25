@@ -3851,5 +3851,5 @@ def test_license_check(monkeypatch):
     def func_using_unlicsensed_openeye_module():
         pass
 
-    with pytest.raises(Exception, match="currently use oeszybki"):
-        func_using_extraneous_openeye_module()
+    with pytest.raises(AssertionError):
+        func_using_unlicsensed_openeye_module()
