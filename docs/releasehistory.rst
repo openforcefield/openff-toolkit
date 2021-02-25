@@ -12,7 +12,9 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 
 New features
 """"""""""""
-- `PR #832 <https://github.com/openforcefield/openff-toolkit/pull/832>`_: Expose ELF conformer selection through the
+- `PR #839 <https://github.com/openforcefield/openforcefield/pull/839>`_: Add support for computing WBOs from multiple
+  conformers using the AmberTools and OpenEye toolkits, and from ELF10 conformers using the OpenEye toolkit wrapper.
+- `PR #832 <https://github.com/openforcefield/openforcefield/pull/832>`_: Expose ELF conformer selection through the
   ``Molecule`` API via a new ``apply_elf_conformer_selection`` function.
 - `PR #831 <https://github.com/openforcefield/openff-toolkit/pull/831>`_: Expose ELF conformer selection through the
   OpenEye wrapper.
@@ -38,6 +40,8 @@ Behavior changed
   factor for electrostatic interactions is now properly set by the value specified in the force
   field. Previously it fell back to a default value of 0.83333. The toolkit may now produce
   slightly different energies as a result of this change.
+- `PR #839 <https://github.com/openforcefield/openforcefield/pull/839>`_: The average WBO will now be returned when
+  multiple conformers are provided to ``assign_fractional_bond_orders`` using ``use_conformers``.
 
 Improved documentation and warnings
 """""""""""""""""""""""""""""""""""
