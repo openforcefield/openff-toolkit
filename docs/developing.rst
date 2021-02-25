@@ -55,7 +55,7 @@ Open Force Field Toolkit Concepts
 
 ``OFF Topology``
   An object that efficiently holds many OFF ``Molecule`` objects.
-  The atom indexing in a ``Topology`` may differ from those of the underlying ``Molecule``s
+  The atom indexing in a ``Topology`` may differ from those of the underlying ``Molecule``\ s
 
 ``OFF TopologyMolecule``
   The efficient data structures that make up an OFF Topology.
@@ -137,7 +137,7 @@ ParameterHandler
           ParameterHandler versions allow us to evolve ParameterHandler behavior in a controlled, recorded way.
           Force field development is experimental by nature, and it is unlikely that the initial choice of header attributes is suitable for all use cases.
           Recording the "versions" of a SMIRNOFF spec tag allows us to encode the default behavior and API of a specific generation of ParameterHandlers, while allowing the safe addition of new attributes and behaviors.
-    - Each ParameterHandler-derived class MAY implement:
+    Each ParameterHandler-derived class MAY implement:
         - ``known_kwargs``: Keyword arguments passed to ``ForceField.create_openmm_system`` are validated against the ``known_kwargs`` lists of each ParameterHandler that the ForceField owns.
           If present, these kwargs and their values will be passed on to the ParameterHandler.
         - ``to_dict``: converts the ParameterHandler to a hierarchical dict compliant with the SMIRNOFF specification.

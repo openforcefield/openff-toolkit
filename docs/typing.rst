@@ -1,4 +1,4 @@
-.. _typing ::
+.. _typing :
 
 Force field typing tools
 ========================
