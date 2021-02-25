@@ -778,6 +778,7 @@ class TestMolecule:
         compare_mols(ref_mol, nonstandard_inchi_mol)
 
     # TODO: Should there be an equivalent toolkit test and leave this as an integration test?
+    @requires_openeye
     @pytest.mark.slow
     def test_create_from_file(self):
         """Test standard constructor taking a filename or file-like object."""

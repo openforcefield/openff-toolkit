@@ -9,9 +9,9 @@ from simtk.openmm.app import *
 # Use MDTraj to write simulation trajectories
 from mdtraj.reporters import NetCDFReporter
 
-# Import the SMIRNOFF forcefield engine and some useful tools
+# Import the SMIRNOFF force field engine and some useful tools
 from openff.toolkit.typing.engines.smirnoff import ForceField
-# LPW: openforcefield's PME is different from openmm's PME
+# LPW: Open Force Field's PME is different from openmm's PME
 from openff.toolkit.typing.engines.smirnoff.forcefield import PME
 from openff.toolkit.utils import get_data_file_path
 
@@ -32,7 +32,7 @@ data_freq = 1000 # number of steps per written simulation statistics
 # Load molecule and create pdb object
 pdb = PDBFile(pdb_filename)
 
-# Load a SMIRNOFF forcefield
+# Load a SMIRNOFF force field
 forcefield = ForceField(get_data_file_path('test_forcefields/Frosst_AlkEthOH_parmAtFrosst.offxml'))
 
 # Load molecule using OpenEye tools

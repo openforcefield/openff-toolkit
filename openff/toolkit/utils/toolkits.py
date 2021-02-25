@@ -225,12 +225,12 @@ class ToolkitWrapper:
         return self.__class__._toolkit_name
 
     @property
-    @classmethod
-    def toolkit_installation_instructions(cls):
+    # @classmethod
+    def toolkit_installation_instructions(self):
         """
         Instructions on how to install the wrapped toolkit.
         """
-        return cls._toolkit_installation_instructions
+        return self._toolkit_installation_instructions
 
     # @classmethod
     @property
@@ -1261,7 +1261,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         ``simtk.unit.Quantity``-wrapped numpy array with units of
         elementary charge. The Open Force
         Field Toolkit considers an ``OEMol`` where every ``OEAtom`` has a partial
-        charge of ``float('nan')`` to be equivalent to an Open Force Field Molecule's
+        charge of ``float('nan')`` to be equivalent to an Open Force Field Toolkit `Molecule`'s
         ``partial_charges = None``.
         This assumption is made in both ``to_openeye`` and ``from_openeye``.
 
@@ -1484,47 +1484,48 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
     @staticmethod
     def to_openeye(molecule, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
         """
-         Create an OpenEye molecule using the specified aromaticity model
+        Create an OpenEye molecule using the specified aromaticity model
 
-         ``OEAtom`` s have a different set of allowed value for partial charges than
-         ``openff.toolkit.topology.Molecule`` s. In the OpenEye toolkits, partial charges
-         are stored on individual ``OEAtom`` s, and their values are initialized to ``0.0``.
-         In the Open Force Field Toolkit, an ``openff.toolkit.topology.Molecule``'s
-         ``partial_charges`` attribute is initialized to ``None`` and can be set to a
-         ``simtk.unit.Quantity``-wrapped numpy array with units of
-         elementary charge. The Open Force
-         Field Toolkit considers an ``OEMol`` where every ``OEAtom`` has a partial
-         charge of ``float('nan')`` to be equivalent to an Open Force Field Molecule's
-         ``partial_charges = None``.
-         This assumption is made in both ``to_openeye`` and ``from_openeye``.
+        ``OEAtom`` s have a different set of allowed value for partial
+        charges than ``openff.toolkit.topology.Molecule``\ s. In the
+        OpenEye toolkits, partial charges are stored on individual
+        ``OEAtom``\ s, and their values are initialized to ``0.0``. In
+        the Open Force Field Toolkit, an``openff.toolkit.topology.Molecule``'s
+        ``partial_charges`` attribute is initialized to ``None`` and can
+        be set to a ``simtk.unit.Quantity``-wrapped numpy array with
+        units of elementary charge. The Open Force Field Toolkit
+        considers an ``OEMol`` where every ``OEAtom`` has a partial
+        charge of ``float('nan')`` to be equivalent to an Open Force
+        Field Toolkit ``Molecule``'s ``partial_charges = None``. This
+        assumption is made in both ``to_openeye`` and ``from_openeye``.
 
-         .. todo ::
+        .. todo ::
 
-            * Should the aromaticity model be specified in some other way?
+           * Should the aromaticity model be specified in some other way?
 
         .. warning :: This API is experimental and subject to change.
 
-         Parameters
-         ----------
-         molecule : openff.toolkit.topology.molecule.Molecule object
-             The molecule to convert to an OEMol
-         aromaticity_model : str, optional, default=DEFAULT_AROMATICITY_MODEL
-             The aromaticity model to use
+        Parameters
+        ----------
+        molecule : openff.toolkit.topology.molecule.Molecule object
+            The molecule to convert to an OEMol
+        aromaticity_model : str, optional, default=DEFAULT_AROMATICITY_MODEL
+            The aromaticity model to use
 
-         Returns
-         -------
-         oemol : openeye.oechem.OEMol
-             An OpenEye molecule
+        Returns
+        -------
+        oemol : openeye.oechem.OEMol
+            An OpenEye molecule
 
-         Examples
-         --------
+        Examples
+        --------
 
-         Create an OpenEye molecule from a Molecule
+        Create an OpenEye molecule from a Molecule
 
-         >>> from openff.toolkit.topology import Molecule
-         >>> toolkit_wrapper = OpenEyeToolkitWrapper()
-         >>> molecule = Molecule.from_smiles('CC')
-         >>> oemol = toolkit_wrapper.to_openeye(molecule)
+        >>> from openff.toolkit.topology import Molecule
+        >>> toolkit_wrapper = OpenEyeToolkitWrapper()
+        >>> molecule = Molecule.from_smiles('CC')
+        >>> oemol = toolkit_wrapper.to_openeye(molecule)
 
         """
         from openeye import oechem
@@ -2068,12 +2069,12 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         .. todo ::
 
-           * which parameters should we expose? (or can we implement a general system with **kwargs?)
-           * will the coordinates be returned in the OpenFF Molecule's own indexing system? Or is there a chance that
-           they'll get reindexed when we convert the input into an OEmol?
+            * which parameters should we expose? (or can we implement a general system with \*\*kwargs?)
+            * will the coordinates be returned in the OpenFF Molecule's own indexing system? Or is there a chance that
+              they'll get reindexed when we convert the input into an OEmol?
 
         Parameters
-        ---------
+        ----------
         molecule : a :class:`Molecule`
             The molecule to generate conformers for.
         n_conformers : int, default=1
@@ -2122,8 +2123,9 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         percentage: float = 2.0,
         limit: int = 10,
     ):
-        """Applies the `ELF method<https://docs.eyesopen.com/toolkits/python/quacpactk/
-        molchargetheory.html#elf-conformer-selection>`_ to select a set of diverse
+        """Applies the `ELF method
+        <https://docs.eyesopen.com/toolkits/python/quacpactk/molchargetheory.html#elf-conformer-selection>`_
+        to select a set of diverse
         conformers which have minimal electrostatically strongly interacting functional
         groups from a molecules conformers.
 
@@ -3450,11 +3452,11 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         .. todo ::
 
-           * which parameters should we expose? (or can we implement a general system with **kwargs?)
+           * which parameters should we expose? (or can we implement a general system with \*\*kwargs?)
            * will the coordinates be returned in the OpenFF Molecule's own indexing system? Or is there a chance that they'll get reindexed when we convert the input into an RDMol?
 
         Parameters
-        ---------
+        ----------
         molecule : a :class:`Molecule`
             The molecule to generate conformers for.
         n_conformers : int, default=1
@@ -3854,10 +3856,10 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         limit: int = 10,
         rms_tolerance: unit.Quantity = 0.05 * unit.angstrom,
     ):
-        """Applies the `ELF method<https://docs.eyesopen.com/toolkits/python/quacpactk/
-        molchargetheory.html#elf-conformer-selection>`_ to select a set of diverse
-        conformers which have minimal electrostatically strongly interacting functional
-        groups from a molecules conformers.
+        """Applies the `ELF method
+        <https://docs.eyesopen.com/toolkits/python/quacpactk/molchargetheory.html#elf-conformer-selection>`_
+        to select a set of diverse conformers which have minimal electrostatically
+        strongly interacting functional groups from a molecules conformers.
 
         The diverse conformer selection is performed by the ``_elf_select_diverse_conformers``
         function, which attempts to greedily select conformers which are most distinct
@@ -4359,7 +4361,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                 rdk_atom.SetDoubleProp("PartialCharge", rdk_indexed_charges[atom_idx])
 
             # Note: We could put this outside the "if" statement, which would result in all partial charges in the
-            #       resulting file being set to "n/a" if they weren't set in the Open Force Field Molecule
+            #       resulting file being set to "n/a" if they weren't set in the Open Force Field Toolkit ``Molecule``
             Chem.CreateAtomDoublePropertyList(rdmol, "PartialCharge")
 
         # Cleanup the rdmol

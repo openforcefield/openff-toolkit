@@ -152,15 +152,20 @@ def all_subclasses(cls):
 @contextlib.contextmanager
 def temporary_cd(dir_path):
     """Context to temporary change the working directory.
+
     Parameters
     ----------
+
     dir_path : str
         The directory path to enter within the context
+
     Examples
     --------
+
     >>> dir_path = '/tmp'
     >>> with temporary_cd(dir_path):
     ...     pass  # do something in dir_path
+
     """
     import os
 
@@ -177,10 +182,13 @@ def get_data_file_path(relative_path):
     In the source distribution, these files are in ``openff/toolkit/data/``,
     but on installation, they're moved to somewhere in the user's python
     site-packages directory.
+
     Parameters
     ----------
+
     name : str
         Name of the file to load (with respect to the repex folder).
+
     """
 
     import os
@@ -743,7 +751,7 @@ def convert_0_2_smirnoff_to_0_3(smirnoff_data_0_2):
     smirnoff_data_0_3
         Hierarchical dict representing a SMIRNOFF data structure according the the 0.3 spec
     """
-    # Legacy forcefields sometimes specify the NonbondedForce's sigma_unit value, but then provide
+    # Legacy force fields sometimes specify the NonbondedForce's sigma_unit value, but then provide
     # atom size as rmin_half. Here we correct for this behavior by explicitly defining both as
     # the same unit if either one is defined.
     if "vdW" in smirnoff_data_0_2["SMIRNOFF"].keys():

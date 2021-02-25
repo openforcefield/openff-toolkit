@@ -1429,7 +1429,7 @@ def compare_amber_smirnoff(
 ):
     """
     Compare energies and parameters for OpenMM Systems/topologies created
-    from an AMBER prmtop and crd versus from a SMIRNOFF forcefield file which
+    from an AMBER prmtop and crd versus from a SMIRNOFF force field file which
     should parameterize the same system with same parameters.
 
     Parameters
@@ -1484,7 +1484,7 @@ def compare_amber_smirnoff(
     )
     box_vectors = amber_system.getDefaultPeriodicBoxVectors()
 
-    # Create System from forcefield.
+    # Create System from force field.
     openff_topology = Topology.from_openmm(openmm_topology, unique_molecules=[molecule])
     ff_system = forcefield.create_openmm_system(openff_topology)
 
@@ -1698,7 +1698,7 @@ def coords_from_off_mols(mols, conformer_id=0, unit=unit.angstrom):
 
 def evaluate_molecules_omm(water, ff, minimize=False):
     """
-    Given a list of molecules and a forcefield definition, calculate the
+    Given a list of molecules and a force field definition, calculate the
     positions and energy.
 
     Parameters
@@ -1706,7 +1706,7 @@ def evaluate_molecules_omm(water, ff, minimize=False):
     molecules: List[openff.toolkit.topology.molecule.Molecule]
         A list of molecules with a 3D conformation
     forcefield: openff.toolkit.typing.engines.smirnoff.forcefield.ForceField
-        The forcefield object to parameterize with
+        The force field object to parameterize with
     minimize: bool
         Whether the structure should be minimized
 
@@ -1750,7 +1750,7 @@ def evaluate_molecules_omm(water, ff, minimize=False):
 
 def evaluate_molecules_off(molecules, forcefield, minimize=False):
     """
-    Given a list of molecules and a forcefield definition, calculate the
+    Given a list of molecules and a force field definition, calculate the
     positions and energy.
 
     Parameters
@@ -1758,7 +1758,7 @@ def evaluate_molecules_off(molecules, forcefield, minimize=False):
     molecules: List[openff.toolkit.topology.molecule.Molecule]
         A list of molecules with a 3D conformation
     forcefield: openff.toolkit.typing.engines.smirnoff.forcefield.ForceField
-        The forcefield object to parameterize with
+        The force field object to parameterize with
     minimize: bool
         Whether the structure should be minimized
 

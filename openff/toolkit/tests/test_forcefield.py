@@ -937,7 +937,7 @@ class TestForceField:
 
     def test_pickle(self):
         """
-        Test pickling and unpickling a forcefield
+        Test pickling and unpickling a force field
         """
         import pickle
 
@@ -948,7 +948,7 @@ class TestForceField:
 
     def test_pickle_with_cosmetic_attributes(self):
         """
-        Test pickling and unpickling a forcefield with cosmetic attributes
+        Test pickling and unpickling a force field with cosmetic attributes
         """
         import pickle
 
@@ -973,7 +973,7 @@ class TestForceField:
 
     def test_xml_string_roundtrip_keep_cosmetic(self):
         """
-        Test roundtripping a forcefield to an XML string with and without retaining cosmetic elements
+        Test roundtripping a force field to an XML string with and without retaining cosmetic elements
         """
         # Ensure an exception is raised if we try to read the XML string with cosmetic attributes
         with pytest.raises(
@@ -982,12 +982,12 @@ class TestForceField:
         ) as excinfo:
             forcefield = ForceField(xml_ff_w_cosmetic_elements)
 
-        # Create a forcefield from XML successfully, by explicitly permitting cosmetic attributes
+        # Create a force field from XML successfully, by explicitly permitting cosmetic attributes
         forcefield_1 = ForceField(
             xml_ff_w_cosmetic_elements, allow_cosmetic_attributes=True
         )
 
-        # Convert the forcefield back to XML
+        # Convert the force field back to XML
         string_1 = forcefield_1.to_string("XML", discard_cosmetic_attributes=False)
 
         # Ensure that the new XML string has cosmetic attributes in it
@@ -1002,7 +1002,7 @@ class TestForceField:
         # Complete the forcefield_1 --> string --> forcefield_2 roundtrip
         forcefield_2 = ForceField(string_1, allow_cosmetic_attributes=True)
 
-        # Ensure that the forcefield remains the same after the roundtrip
+        # Ensure that the force field remains the same after the roundtrip
         string_2 = forcefield_2.to_string("XML", discard_cosmetic_attributes=False)
         assert string_1 == string_2
 
@@ -1074,7 +1074,7 @@ class TestForceField:
         self, file_path_extension, specified_format
     ):
         """
-        Test roundtripping a forcefield to an XML file with and without retaining cosmetic elements
+        Test roundtripping a force field to an XML file with and without retaining cosmetic elements
         """
         # These files will be deleted once garbage collection runs (end of this function)
         iofile1 = NamedTemporaryFile(suffix="." + file_path_extension)
@@ -1088,12 +1088,12 @@ class TestForceField:
         ) as excinfo:
             forcefield = ForceField(xml_ff_w_cosmetic_elements)
 
-        # Create a forcefield from XML successfully
+        # Create a force field from XML successfully
         forcefield_1 = ForceField(
             xml_ff_w_cosmetic_elements, allow_cosmetic_attributes=True
         )
 
-        # Convert the forcefield back to XML, keeping cosmetic attributes
+        # Convert the force field back to XML, keeping cosmetic attributes
         forcefield_1.to_file(
             iofile1.name, discard_cosmetic_attributes=False, io_format=specified_format
         )
@@ -1110,7 +1110,7 @@ class TestForceField:
         # Complete the forcefield_1 --> file --> forcefield_2 roundtrip
         forcefield_2 = ForceField(iofile1.name, allow_cosmetic_attributes=True)
 
-        # Ensure that the forcefield remains the same after the roundtrip
+        # Ensure that the force field remains the same after the roundtrip
         forcefield_2.to_file(
             iofile2.name, discard_cosmetic_attributes=False, io_format=specified_format
         )
@@ -1186,7 +1186,7 @@ class TestForceField:
 
     def test_load_two_sources_incompatible_tags(self):
         """Test loading data from two SMIRNOFF data sources which have incompatible physics"""
-        # Make an XML forcefield with a modifiedvdW 1-4 scaling factor
+        # Make an XML force field with a modifiedvdW 1-4 scaling factor
         nonstandard_xml_ff = xml_ff_w_comments.replace('scale14="0.5"', 'scale14="1.0"')
         with pytest.raises(
             IncompatibleParameterError,
@@ -3496,7 +3496,7 @@ class TestForceFieldParameterAssignment:
         # Load molecule.
         molecule = Molecule.from_file(mol2_filepath)
 
-        # Load forcefield
+        # Load force field
         forcefield = ForceField("test_forcefields/Frosst_AlkEthOH_parmAtFrosst.offxml")
 
         # Compare parameters. Skip the energy checks as the parameter check should be
@@ -4802,7 +4802,7 @@ def test_charge_increment(self):
 
 @pytest.mark.skip(reason="Needs to be updated for 0.2.0 syntax")
 def test_create_system_molecules_parmatfrosst_gbsa(self):
-    """Test creation of a System object from small molecules to test parm@frosst forcefield with GBSA support."""
+    """Test creation of a System object from small molecules to test parm@frosst force field with GBSA support."""
     molecules_file_path = get_data_file_path(
         "molecules/AlkEthOH_test_filt1_tripos.mol2"
     )
