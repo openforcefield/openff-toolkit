@@ -45,6 +45,8 @@ Behavior changed
   slightly different energies as a result of this change.
 - `PR #839 <https://github.com/openforcefield/openforcefield/pull/839>`_: The average WBO will now be returned when
   multiple conformers are provided to ``assign_fractional_bond_orders`` using ``use_conformers``.
+- `PR #816 <https://github.com/openforcefield/openforcefield/pull/816>`_: Force field file paths
+  are now loaded in a case-insensitive manner.
 
 Improved documentation and warnings
 """""""""""""""""""""""""""""""""""
