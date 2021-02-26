@@ -4611,6 +4611,27 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         rings = ring_info.AtomRings()
         return rings
 
+    def atom_is_in_ring(self, molecule, atom_index: int) -> bool:
+        """Return whether or not an atom is in a ring.
+
+        Parameters
+        ----------
+        molecule : openff.toolkit.topology.Molecule
+            The molecule containing the atom of interest
+        atom_index : int
+            The index of the atom of interest
+
+        Returns
+        -------
+        is_in_ring : bool
+            Whether or not the atom of index `atom_index` is in a ring
+
+        """
+        rdmol = molecule.to_rdkit()
+        is_in_ring = rdmol.GetAtomWithIdx(atom_index).IsInRing()
+
+        return is_in_ring
+
     @staticmethod
     def _find_undefined_stereo_atoms(rdmol, assign_stereo=False):
         """Find the chiral atoms with undefined stereochemsitry in the RDMol.

@@ -3098,9 +3098,8 @@ class TestMolecule:
     @requires_rdkit
     def test_molecule_rings(self, smiles, n_rings):
         """Test the Molecule.rings property"""
-        assert (
-            n_rings == Molecule.from_smiles(smiles, allow_undefined_stereo=True).n_rings
-        )
+        mol = Molecule.from_smiles(smiles, allow_undefined_stereo=True)
+        assert n_rings == mol.get_n_rings()
 
     @pytest.mark.parametrize(
         ("smiles", "n_atom_rings", "n_bond_rings"),
@@ -3115,8 +3114,8 @@ class TestMolecule:
         """Test Atom.is_in_ring and Bond.is_in_ring"""
         mol = Molecule.from_smiles(smiles)
 
-        assert len([atom for atom in mol.atoms if atom.is_in_ring]) == n_atom_rings
-        assert len([bond for bond in mol.bonds if bond.is_in_ring]) == n_bond_rings
+        assert len([atom for atom in mol.atoms if atom.is_in_ring()]) == n_atom_rings
+        assert len([bond for bond in mol.bonds if bond.is_in_ring()]) == n_bond_rings
 
     @requires_pkg("ipython")
     @requires_rdkit
