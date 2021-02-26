@@ -5249,12 +5249,11 @@ class FrozenMolecule(Serializable):
             self._get_rings()
         return self._rings
 
-    @RDKitToolkitWrapper.requires_toolkit()
-    def _get_rings(self):
+    def _get_rings(self, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """
-        Call out to RDKitToolkitWrapper methods to find the rings in this molecule.
+        Call out to ToolkitWrapper methods to find the rings in this molecule.
 
-        Requires the RDKit to be installed.
+        Currently only implemented vai The RDKit, which must be installed.
 
         .. note ::
 
@@ -5262,9 +5261,6 @@ class FrozenMolecule(Serializable):
             function may not be well-behaved and may report a different number
             rings than expected. Some problematic cases include networks of many
             (5+) rings or bicyclic moieties (i.e. norbornane).
-
-        .. todo :: This could be refactored to use ToolkitWrapper.call() to flexibly
-            access other toolkits, if find_rings is implemented.
 
         Returns
         -------
@@ -5274,8 +5270,22 @@ class FrozenMolecule(Serializable):
             found, a single empty tuple is returned.
 
         """
-        toolkit = RDKitToolkitWrapper()
-        rings = toolkit.find_rings(self)
+        if isinstance(toolkit_registry, ToolkitRegistry):
+            rings = toolkit_registry.call(
+                "find_rings",
+                molecule=self,
+            )
+        elif isinstance(toolkit_registry, ToolkitWrapper):
+            toolkit = toolkit_registry
+            rings = toolkit.find_rings(
+                molecule=self,
+            )
+        else:
+            raise InvalidToolkitRegistryError(
+                "Invalid toolkit_registry passed to from_smiles. Expected ToolkitRegistry or ToolkitWrapper. "
+                f"Got  {type(toolkit_registry)}"
+            )
+
         self._rings = rings
 
 
