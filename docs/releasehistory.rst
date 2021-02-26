@@ -18,6 +18,9 @@ New features
   ``Molecule`` API via a new ``apply_elf_conformer_selection`` function.
 - `PR #831 <https://github.com/openforcefield/openff-toolkit/pull/831>`_: Expose ELF conformer selection through the
   OpenEye wrapper.
+- `PR #790 <https://github.com/openforcefield/openforcefield/pull/790>`_: Fixes `Issue #720
+  <https://github.com/openforcefield/openforcefield/issues/720>`_ where qcschema roundtrip to/from results 
+  in an error due to missing cmiles entry in attributes.
 - `PR #793 <https://github.com/openforcefield/openff-toolkit/pull/793>`_: Add an initial ELF conformer selection
   implementation which uses RDKit.
 - `PR #799 <https://github.com/openforcefield/openff-toolkit/pull/799>`_: Closes
