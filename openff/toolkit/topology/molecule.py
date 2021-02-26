@@ -37,6 +37,7 @@ import operator
 import warnings
 from collections import OrderedDict
 from copy import deepcopy
+from typing import Optional, Union
 
 import networkx as nx
 import numpy as np
@@ -103,8 +104,10 @@ class Particle(Serializable):
 
         .. todo::
 
-           * Should we have a single unique ``Molecule`` for each molecule type in the system,
-           or if we have multiple copies of the same molecule, should we have multiple ``Molecule``s?
+            * Should we have a single unique ``Molecule`` for each molecule
+              type in the system, or if we have multiple copies of the same
+              molecule, should we have multiple ``Molecule``\ s?
+
         """
         return self._molecule
 
@@ -356,6 +359,7 @@ class Atom(Particle):
         The standard atomic weight (abundance-weighted isotopic mass) of the atomic site.
 
         .. todo :: Should we discriminate between standard atomic weight and most abundant isotopic mass?
+
         TODO (from jeff): Are there atoms that have different chemical properties based on their isotopes?
 
         """
@@ -1680,7 +1684,8 @@ class FrozenMolecule(Serializable):
     """
     Immutable chemical representation of a molecule, such as a small molecule or biopolymer.
 
-    .. todo :: What other API calls would be useful for supporting biopolymers as small molecules? Perhaps iterating over chains and residues?
+    .. todo :: What other API calls would be useful for supporting biopolymers
+               as small molecules? Perhaps iterating over chains and residues?
 
     Examples
     --------
@@ -1732,28 +1737,34 @@ class FrozenMolecule(Serializable):
 
         .. todo ::
 
-           * If a filename or file-like object is specified but the file contains more than one molecule, what is the proper behavior?
-           Read just the first molecule, or raise an exception if more than one molecule is found?
+           * If a filename or file-like object is specified but the file
+             contains more than one molecule, what is the proper behavior?
+             Read just the first molecule, or raise an exception if more
+             than one molecule is found?
 
-           * Should we also support SMILES strings or IUPAC names for ``other``?
+           * Should we also support SMILES strings or IUPAC names for
+             ``other``\ ?
 
         Parameters
         ----------
         other : optional, default=None
-            If specified, attempt to construct a copy of the Molecule from the specified object.
-            This can be any one of the following:
+            If specified, attempt to construct a copy of the Molecule from
+            the specified object. This can be any one of the following:
 
             * a :class:`Molecule` object
             * a file that can be used to construct a :class:`Molecule` object
             * an ``openeye.oechem.OEMol``
             * an ``rdkit.Chem.rdchem.Mol``
             * a serialized :class:`Molecule` object
+
         file_format : str, optional, default=None
             If providing a file-like object, you must specify the format
             of the data. If providing a file, the file format will attempt
             to be guessed from the suffix.
-        toolkit_registry : a :class:`ToolkitRegistry` or :class:`ToolkitWrapper` object, optional, default=GLOBAL_TOOLKIT_REGISTRY
-            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for I/O operations
+        toolkit_registry : a :class:`ToolkitRegistry` or
+            :class:`ToolkitWrapper` object, optional,
+            default=GLOBAL_TOOLKIT_REGISTRY :class:`ToolkitRegistry`
+            or :class:`ToolkitWrapper` to use for I/O operations
         allow_undefined_stereo : bool, default=False
             If loaded from a file and ``False``, raises an exception if
             undefined stereochemistry is detected during the molecule's
@@ -2792,6 +2803,63 @@ class FrozenMolecule(Serializable):
                 )
             )
 
+    def apply_elf_conformer_selection(
+        self,
+        percentage: float = 2.0,
+        limit: int = 10,
+        toolkit_registry: Optional[
+            Union[ToolkitRegistry, ToolkitWrapper]
+        ] = GLOBAL_TOOLKIT_REGISTRY,
+        **kwargs,
+    ):
+        """Applies the `ELF method
+        <https://docs.eyesopen.com/toolkits/python/quacpactk/molchargetheory.html#elf-conformer-selection>`_
+        to select a set of diverse conformers which have minimal
+        electrostatically strongly interacting functional groups from a
+        molecules conformers.
+
+        Notes
+        -----
+        * The input molecule should have a large set of conformers already
+          generated to select the ELF conformers from.
+        * The selected conformers will be retained in the `conformers` list
+          while unselected conformers will be discarded.
+
+        See Also
+        --------
+        OpenEyeToolkitWrapper.apply_elf_conformer_selection
+        RDKitToolkitWrapper.apply_elf_conformer_selection
+
+        Parameters
+        ----------
+        toolkit_registry
+            The underlying toolkit to use to select the ELF conformers.
+        percentage
+            The percentage of conformers with the lowest electrostatic
+            interaction energies to greedily select from.
+        limit
+            The maximum number of conformers to select.
+        """
+        if isinstance(toolkit_registry, ToolkitRegistry):
+            toolkit_registry.call(
+                "apply_elf_conformer_selection",
+                molecule=self,
+                percentage=percentage,
+                limit=limit,
+                **kwargs,
+            )
+        elif isinstance(toolkit_registry, ToolkitWrapper):
+            toolkit = toolkit_registry
+            toolkit.apply_elf_conformer_selection(
+                self, molecule=self, percentage=percentage, limit=limit, **kwargs
+            )
+        else:
+            raise InvalidToolkitRegistryError(
+                f"Invalid toolkit_registry passed to apply_elf_conformer_selection."
+                f"Expected ToolkitRegistry or ToolkitWrapper. Got "
+                f"{type(toolkit_registry)}"
+            )
+
     def compute_partial_charges_am1bcc(
         self,
         use_conformers=None,
@@ -3520,7 +3588,7 @@ class FrozenMolecule(Serializable):
 
     @property
     def n_impropers(self):
-        """int: number of improper torsions in the Molecule."""
+        """int: number of possible improper torsions in the Molecule."""
         self._construct_torsions()
         return len(self._impropers)
 
@@ -3626,14 +3694,104 @@ class FrozenMolecule(Serializable):
     @property
     def impropers(self):
         """
-        Iterate over all proper torsions in the molecule
+        Iterate over all improper torsions in the molecule.
 
-        .. todo::
-
+        .. todo ::
            * Do we need to return a ``Torsion`` object that collects information about fractional bond orders?
+
+        Returns
+        -------
+        impropers : set of tuple
+            An iterator of tuples, each containing the indices of atoms making
+            up a possible improper torsion.
+
+        See Also
+        --------
+        smirnoff_impropers, amber_impropers
         """
         self._construct_torsions()
         return self._impropers
+
+    @property
+    def smirnoff_impropers(self):
+        """
+        Iterate over improper torsions in the molecule, but only those with
+        trivalent centers, reporting the central atom second in each improper.
+
+        Note that it's possible that a trivalent center will not have an improper assigned.
+        This will depend on the force field that is used.
+
+        Also note that this will return 6 possible atom orderings around each improper
+        center. In current SMIRNOFF parameterization, three of these six
+        orderings will be used for the actual assignment of the improper term
+        and measurement of the angles. These three orderings capture the three unique
+        angles that could be calculated around the improper center, therefore the sum
+        of these three terms will always return a consistent energy.
+
+        The exact three orderings that will be applied during parameterization can not be
+        determined in this method, since it requires sorting the particle indices, and
+        those indices may change when this molecule is added to a Topology.
+
+        For more details on the use of three-fold ('trefoil') impropers, see
+        https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html#impropertorsions
+
+        Returns
+        -------
+        impropers : set of tuple
+            An iterator of tuples, each containing the indices of atoms making
+            up a possible improper torsion. The central atom is listed second
+            in each tuple.
+
+        See Also
+        --------
+        impropers, amber_impropers
+
+        """
+        # TODO: Replace with non-cheminformatics-toolkit method
+        #       (ie. just looping over all atoms and finding ones that have 3 bonds?)
+
+        smirnoff_improper_smarts = "[*:1]~[X3:2](~[*:3])~[*:4]"
+        improper_idxs = self.chemical_environment_matches(smirnoff_improper_smarts)
+        smirnoff_impropers = {
+            tuple(self.atoms[idx] for idx in imp) for imp in improper_idxs
+        }
+        return smirnoff_impropers
+
+    @property
+    def amber_impropers(self):
+        """
+        Iterate over improper torsions in the molecule, but only those with
+        trivalent centers, reporting the central atom first in each improper.
+
+        Note that it's possible that a trivalent center will not have an improper assigned.
+        This will depend on the force field that is used.
+
+        Also note that this will return 6 possible atom orderings around each improper
+        center. In current AMBER parameterization, one of these six
+        orderings will be used for the actual assignment of the improper term
+        and measurement of the angle. This method does not encode the logic to
+        determine which of the six orderings AMBER would use.
+
+        Returns
+        -------
+        impropers : set of tuple
+            An iterator of tuples, each containing the indices of atoms making
+            up a possible improper torsion. The central atom is listed first in
+            each tuple.
+
+        See Also
+        --------
+        impropers, smirnoff_impropers
+
+        """
+        # TODO: Replace with non-cheminformatics-toolkit method
+        #       (ie. just looping over all atoms and finding ones that have 3 bonds?)
+        amber_improper_smarts = "[X3:1](~[*:2])(~[*:3])~[*:4]"
+        improper_idxs = self.chemical_environment_matches(amber_improper_smarts)
+        amber_impropers = {
+            tuple(self.atoms[idx] for idx in imp) for imp in improper_idxs
+        }
+        return amber_impropers
 
     @property
     def total_charge(self):
@@ -4446,44 +4604,43 @@ class FrozenMolecule(Serializable):
     @requires_package("qcelemental")
     def to_qcschema(self, multiplicity=1, conformer=0, extras=None):
         """
-        Generate the qschema input format used to submit jobs to archive
-        or run qcengine calculations locally,
-        spec can be found here <https://molssi-qc-schema.readthedocs.io/en/latest/index.html>
+        Create a QCElemental Molecule.
 
         .. warning :: This API is experimental and subject to change.
 
         Parameters
         ----------
         multiplicity : int, default=1,
-            The multiplicity of the molecule required for qcschema
+            The multiplicity of the molecule;
+            sets `molecular_multiplicity` field for QCElemental Molecule.
 
         conformer : int, default=0,
-            The index of the conformer that should be used for qcschema
+            The index of the conformer to use for the QCElemental Molecule geometry.
 
         extras : dict, default=None
-            The extras dictionary that should be included into the qcelemental.models.Molecule. This can be used to
-            include extra information such as the smiles representation.
+            A dictionary that should be included in the `extras` field on the QCElemental Molecule.
+            This can be used to include extra information, such as a smiles representation.
 
         Returns
         ---------
-        qcelemental.models.Molecule :
-            A validated qcschema
+        qcelemental.models.Molecule
+            A validated QCElemental Molecule.
 
-        Example
-        -------
+        Examples
+        --------
 
-        Create and validate a qcelemental input
+        Create a QCElemental Molecule:
 
         >>> import qcelemental as qcel
         >>> mol = Molecule.from_smiles('CC')
         >>> mol.generate_conformers(n_conformers=1)
-        >>> qcschema = mol.to_qcschema()
+        >>> qcemol = mol.to_qcschema()
 
         Raises
         --------
-        MissingDependencyError : if qcelemental is not installed; the qcschema can not be validated.
+        MissingDependencyError : qcelemental is not installed, the qcschema can not be validated.
+        InvalidConformerError : no conformer found at the given index.
 
-        InvalidConformerError : if there is no conformer found at the given index.
         """
 
         import qcelemental as qcel
@@ -4505,6 +4662,16 @@ class FrozenMolecule(Serializable):
         symbols = [
             Element.getByAtomicNumber(atom.atomic_number).symbol for atom in self.atoms
         ]
+        if extras != None:
+            extras[
+                "canonical_isomeric_explicit_hydrogen_mapped_smiles"
+            ] = self.to_smiles(mapped=True)
+        else:
+            extras = {
+                "canonical_isomeric_explicit_hydrogen_mapped_smiles": self.to_smiles(
+                    mapped=True
+                )
+            }
 
         schema_dict = {
             "symbols": symbols,
@@ -4591,17 +4758,25 @@ class FrozenMolecule(Serializable):
         allow_undefined_stereo=False,
     ):
         """
-        Create a Molecule from  a QCArchive entry based on the cmiles information.
+        Create a Molecule from a QCArchive molecule record or dataset entry
+        based on attached cmiles information.
 
-        If we also have a client instance/address we can go and attach the starting geometry.
+        For a molecule record, a conformer will be set from its geometry.
+
+        For a dataset entry, if a corresponding client instance is provided,
+        the starting geometry for that entry will be used as a conformer.
+
+        A QCElemental Molecule produced from `Molecule.to_qcschema` can be round-tripped
+        through this method to produce a new, valid Molecule.
 
         Parameters
         ----------
-        qca_record : dict,
-            A QCArchive dict with json encoding or record instance
+        qca_record : dict
+            A QCArchive molecule record or dataset entry.
 
         client : optional, default=None,
-            A qcportal.FractalClient instance so we can pull the initial molecule geometry.
+            A qcportal.FractalClient instance to use for fetching an initial geometry.
+            Only used if `qca_record` is a dataset entry.
 
         toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
@@ -4613,6 +4788,26 @@ class FrozenMolecule(Serializable):
         -------
         molecule : openff.toolkit.topology.Molecule
             An OpenFF molecule instance.
+
+        Example
+        -------
+        Get Molecule from a QCArchive molecule record:
+
+        >>> from qcportal import FractalClient
+        >>> client = FractalClient()
+        >>> offmol = Molecule.from_qcschema(client.query_molecules(molecular_formula="C16H20N3O5")[0])
+
+        Get Molecule from a QCArchive optimization entry:
+
+        >>> from qcportal import FractalClient
+        >>> client = FractalClient()
+        >>> optds = client.get_collection("OptimizationDataset",
+                                          "SMIRNOFF Coverage Set 1")
+        >>> offmol = Molecule.from_qcschema(optds.get_entry('coc(o)oc-0'))
+
+        Same as above, but with conformer(s) from initial molecule(s) by providing client to database:
+
+        >>> offmol = Molecule.from_qcschema(optds.get_entry('coc(o)oc-0'), client=client)
 
         Raises
         -------
@@ -4634,13 +4829,41 @@ class FrozenMolecule(Serializable):
                     "The object passed could not be converted to a dict with json encoding"
                 )
 
-        try:
+        # identify if this is a dataset entry
+        if "attributes" in qca_record:
             mapped_smiles = qca_record["attributes"][
                 "canonical_isomeric_explicit_hydrogen_mapped_smiles"
             ]
-        except KeyError:
+            if client is not None:
+                # try and find the initial molecule conformations and attach them
+                # collect the input molecules
+                try:
+                    input_mols = client.query_molecules(
+                        id=qca_record["initial_molecules"]
+                    )
+                except KeyError:
+                    # this must be an optimisation record
+                    input_mols = client.query_molecules(
+                        id=qca_record["initial_molecule"]
+                    )
+                except AttributeError:
+                    raise AttributeError(
+                        "The provided client can not query molecules, make sure it is an instance of"
+                        "qcportal.client.FractalClient() with the correct address."
+                    )
+            else:
+                input_mols = []
+
+        # identify if this is a molecule record
+        elif "extras" in qca_record:
+            mapped_smiles = qca_record["extras"][
+                "canonical_isomeric_explicit_hydrogen_mapped_smiles"
+            ]
+            input_mols = [qca_record]
+        else:
             raise KeyError(
-                "The record must contain the hydrogen mapped smiles to be safely made from the archive."
+                "The record must contain the hydrogen mapped smiles to be safely made from the archive. "
+                "It is not present in either 'attributes' or 'extras' on the provided `qca_record`"
             )
 
         # make a new molecule that has been reordered to match the cmiles mapping
@@ -4650,33 +4873,30 @@ class FrozenMolecule(Serializable):
             allow_undefined_stereo=allow_undefined_stereo,
         )
 
-        if client is not None:
-            # try and find the initial molecule conformations and attach them
-            # collect the input molecules
+        # now for each molecule convert and attach the input geometry
+        initial_ids = {}
+        for molecule in input_mols:
+            if not isinstance(molecule, dict):
+                mol = molecule.dict(encoding="json")
+            else:
+                mol = molecule
+
+            geometry = unit.Quantity(
+                np.array(mol["geometry"], float).reshape(-1, 3), unit.bohr
+            )
             try:
-                input_mols = client.query_molecules(id=qca_record["initial_molecules"])
-            except KeyError:
-                # this must be an optimisation record
-                input_mols = client.query_molecules(id=qca_record["initial_molecule"])
-            except AttributeError:
-                raise AttributeError(
-                    "The provided client can not query molecules, make sure it is an instance of"
-                    "qcportal.client.FractalClient() with the correct address."
+                offmol._add_conformer(geometry.in_units_of(unit.angstrom))
+                # in case this molecule didn't come from a server at all
+                if "id" in mol:
+                    initial_ids[mol["id"]] = offmol.n_conformers - 1
+            except InvalidConformerError:
+                print(
+                    "Invalid conformer for this molecule, the geometry could not be attached."
                 )
-            initial_ids = {}
-            # now for each molecule convert and attach the input geometry
-            for molecule in input_mols:
-                geometry = unit.Quantity(
-                    np.array(molecule.geometry, dtype=float), unit.bohr
-                )
-                try:
-                    offmol._add_conformer(geometry.in_units_of(unit.angstrom))
-                    initial_ids[molecule.id] = offmol.n_conformers - 1
-                except InvalidConformerError:
-                    print(
-                        "Invalid conformer for this molecule, the geometry could not be attached."
-                    )
-            # attach a dict that has the initial molecule ids and the number of the conformer it is stored in
+
+        # attach a dict that has the initial molecule ids and the number of the conformer it is stored in
+        # if it's empty, don't bother
+        if initial_ids:
             offmol._properties["initial_molecules"] = initial_ids
 
         return offmol
@@ -4903,7 +5123,6 @@ class FrozenMolecule(Serializable):
         if not hasattr(self, "_torsions"):
             self._construct_bonded_atoms_list()
 
-            # self._torsions = set()
             self._propers = set()
             self._impropers = set()
             for atom1 in self._atoms:
@@ -4935,7 +5154,6 @@ class FrozenMolecule(Serializable):
                             self._impropers.add(improper)
 
             self._torsions = self._propers | self._impropers
-        # return iter(self._torsions)
 
     def _construct_bonded_atoms_list(self):
         """
@@ -5113,8 +5331,8 @@ class Molecule(FrozenMolecule):
         Parameters
         ----------
         other : optional, default=None
-            If specified, attempt to construct a copy of the Molecule from the specified object.
-            This can be any one of the following:
+            If specified, attempt to construct a copy of the Molecule from the
+            specified object. This can be any one of the following:
 
             * a :class:`Molecule` object
             * a file that can be used to construct a :class:`Molecule` object
@@ -5168,10 +5386,13 @@ class Molecule(FrozenMolecule):
 
         .. todo ::
 
-           * If a filename or file-like object is specified but the file contains more than one molecule, what is the
-           proper behavior? Read just the first molecule, or raise an exception if more than one molecule is found?
+           * If a filename or file-like object is specified but the file
+             contains more than one molecule, what is the proper behavior?
+             Read just the first molecule, or raise an exception if more
+             than one molecule is found?
 
-           * Should we also support SMILES strings or IUPAC names for ``other``?
+           * Should we also support SMILES strings or IUPAC names for
+             ``other``?
 
         """
         # super(self, Molecule).__init__(*args, **kwargs)
@@ -5231,17 +5452,28 @@ class Molecule(FrozenMolecule):
 
     def add_bond_charge_virtual_site(self, atoms, distance, **kwargs):
         """
-        Create a bond charge-type virtual site, in which the location of the charge is specified by the position of two atoms. This supports placement of a virtual site S along a vector between two specified atoms, e.g. to allow for a sigma hole for halogens or similar contexts. With positive values of the distance, the virtual site lies outside the first indexed atom.
+        Add a virtual site representing the charge on a bond.
+
+        Create a bond charge-type virtual site, in which the location of the
+        charge is specified by the position of two atoms. This supports
+        placement of a virtual site S along a vector between two specified
+        atoms, e.g. to allow for a sigma hole for halogens or similar contexts.
+        With positive values of the distance, the virtual site lies outside the
+        first indexed atom.
+
         Parameters
         ----------
-        atoms : list of openff.toolkit.topology.molecule.Atom objects or ints of shape [N
+        atoms : list of openff.toolkit.topology.molecule.Atom objects or ints of shape [N]
             The atoms defining the virtual site's position or their indices
         distance : float
 
         weights : list of floats of shape [N] or None, optional, default=None
-            weights[index] is the weight of particles[index] contributing to the position of the virtual site. Default is None
+            weights[index] is the weight of particles[index] contributing to
+            the position of the virtual site. Default is None
         charge_increments : list of floats of shape [N], optional, default=None
-            The amount of charge to remove from the VirtualSite's atoms and put in the VirtualSite. Indexing in this list should match the ordering in the atoms list. Default is None.
+            The amount of charge to remove from the VirtualSite's atoms and put
+            in the VirtualSite. Indexing in this list should match the ordering
+            in the atoms list. Default is None.
         epsilon : float
             Epsilon term for VdW properties of virtual site. Default is None.
         sigma : float, default=None

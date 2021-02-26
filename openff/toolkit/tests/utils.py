@@ -21,6 +21,7 @@ import itertools
 import os
 import pprint
 import textwrap
+from typing import List, Tuple
 
 import numpy as np
 import pytest
@@ -83,7 +84,9 @@ def has_pkg(pkg_name):
 
 def requires_pkg(pkg_name, reason=None):
     """
-    Helper function to generate a skipif decorator for any package.
+    Helper function to generate a pytest.mark.skipif decorator
+    for any package. This allows tests to be skipped if some
+    optional dependency is not found.
 
     Parameters
     ----------
@@ -1426,7 +1429,7 @@ def compare_amber_smirnoff(
 ):
     """
     Compare energies and parameters for OpenMM Systems/topologies created
-    from an AMBER prmtop and crd versus from a SMIRNOFF forcefield file which
+    from an AMBER prmtop and crd versus from a SMIRNOFF force field file which
     should parameterize the same system with same parameters.
 
     Parameters
@@ -1481,7 +1484,7 @@ def compare_amber_smirnoff(
     )
     box_vectors = amber_system.getDefaultPeriodicBoxVectors()
 
-    # Create System from forcefield.
+    # Create System from force field.
     openff_topology = Topology.from_openmm(openmm_topology, unique_molecules=[molecule])
     ff_system = forcefield.create_openmm_system(openff_topology)
 
@@ -1695,7 +1698,7 @@ def coords_from_off_mols(mols, conformer_id=0, unit=unit.angstrom):
 
 def evaluate_molecules_omm(water, ff, minimize=False):
     """
-    Given a list of molecules and a forcefield definition, calculate the
+    Given a list of molecules and a force field definition, calculate the
     positions and energy.
 
     Parameters
@@ -1703,7 +1706,7 @@ def evaluate_molecules_omm(water, ff, minimize=False):
     molecules: List[openff.toolkit.topology.molecule.Molecule]
         A list of molecules with a 3D conformation
     forcefield: openff.toolkit.typing.engines.smirnoff.forcefield.ForceField
-        The forcefield object to parameterize with
+        The force field object to parameterize with
     minimize: bool
         Whether the structure should be minimized
 
@@ -1747,7 +1750,7 @@ def evaluate_molecules_omm(water, ff, minimize=False):
 
 def evaluate_molecules_off(molecules, forcefield, minimize=False):
     """
-    Given a list of molecules and a forcefield definition, calculate the
+    Given a list of molecules and a force field definition, calculate the
     positions and energy.
 
     Parameters
@@ -1755,7 +1758,7 @@ def evaluate_molecules_off(molecules, forcefield, minimize=False):
     molecules: List[openff.toolkit.topology.molecule.Molecule]
         A list of molecules with a 3D conformation
     forcefield: openff.toolkit.typing.engines.smirnoff.forcefield.ForceField
-        The forcefield object to parameterize with
+        The force field object to parameterize with
     minimize: bool
         Whether the structure should be minimized
 
@@ -1788,3 +1791,29 @@ def evaluate_molecules_off(molecules, forcefield, minimize=False):
     )
 
     return xyz, ene
+
+
+def get_14_scaling_factors(omm_sys: openmm.System) -> Tuple[List, List]:
+    """Find the 1-4 scaling factors as they are applied to an OpenMM System"""
+    nonbond_force = [
+        f for f in omm_sys.getForces() if type(f) == openmm.NonbondedForce
+    ][0]
+
+    vdw_14 = list()
+    coul_14 = list()
+
+    for exception_idx in range(nonbond_force.getNumExceptions()):
+        i, j, q, sig, eps = nonbond_force.getExceptionParameters(exception_idx)
+
+        # Trust that q == 0 covers the cases of 1-2, 1-3, and truly being 0
+        if q / unit.elementary_charge ** 2 != 0:
+            q_i = nonbond_force.getParticleParameters(i)[0]
+            q_j = nonbond_force.getParticleParameters(j)[0]
+            coul_14.append(q / (q_i * q_j))
+
+        if eps / unit.kilojoule_per_mole != 0:
+            eps_i = nonbond_force.getParticleParameters(i)[2]
+            eps_j = nonbond_force.getParticleParameters(j)[2]
+            vdw_14.append(eps / (eps_i * eps_j) ** 0.5)
+
+    return coul_14, vdw_14

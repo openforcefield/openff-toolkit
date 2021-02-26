@@ -17,14 +17,14 @@ except IOError:
 setup(
     name="openff-toolkit",
 
-    author="Open Forcefield Consortium",
+    author="Open Force Field Consortium",
     author_email="info@openforcefield.org",
 
     description=short_description[0],
     long_description=long_description,
     long_description_content_type="text/markdown",
 
-    keywords="molecular mechanics, forcefield, parameterization",
+    keywords="molecular mechanics, force field, parameterization",
     url="http://github.com/openforcefield/openff-toolkit",
 
     version=versioneer.get_version(),

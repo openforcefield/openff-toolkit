@@ -21,7 +21,7 @@ def genConfs(c_mol, ofsff, ofsTri, index):
     if status:
         # change title
         mol.SetTitle(f'DrugBank_{index}')
-        # save forcefield type
+        # save force field type
         mol1 = oechem.OEMol(mol)
         oechem.OETriposAtomNames(mol1)
         oechem.OEWriteConstMolecule(ofsff, mol1)

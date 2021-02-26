@@ -12,8 +12,10 @@ Tests for cheminformatics toolkit wrappers
 # =============================================================================================
 # GLOBAL IMPORTS
 # =============================================================================================
-
+import logging
+import os
 from tempfile import NamedTemporaryFile
+from typing import Dict
 
 import numpy as np
 import pytest
@@ -260,6 +262,50 @@ openeye_iupac_bad_stereo = [
     "DrugBank_4865",
     "DrugBank_2465",
 ]
+
+
+@pytest.fixture()
+def formic_acid_molecule() -> Molecule:
+
+    formic_acid = Molecule()
+    formic_acid.add_atom(8, 0, False)  # O1
+    formic_acid.add_atom(6, 0, False)  # C1
+    formic_acid.add_atom(8, 0, False)  # O2
+    formic_acid.add_atom(1, 0, False)  # H1
+    formic_acid.add_atom(1, 0, False)  # H2
+    formic_acid.add_bond(0, 1, 2, False)  # O1 - C1
+    formic_acid.add_bond(1, 2, 1, False)  # C1 - O2
+    formic_acid.add_bond(1, 3, 1, False)  # C1 - H1
+    formic_acid.add_bond(2, 4, 1, False)  # O2 - H2
+
+    return formic_acid
+
+
+@pytest.fixture()
+def formic_acid_conformers() -> Dict[str, unit.Quantity]:
+
+    return {
+        "cis": np.array(
+            [
+                [-0.95927322, -0.91789997, 0.36333418],
+                [-0.34727824, 0.12828046, 0.22784603],
+                [0.82766682, 0.26871252, -0.42284882],
+                [-0.67153811, 1.10376000, 0.61921501],
+                [1.15035689, -0.58282924, -0.78766006],
+            ]
+        )
+        * unit.angstrom,
+        "trans": np.array(
+            [
+                [-0.95927322, -0.91789997, 0.36333418],
+                [-0.34727824, 0.12828046, 0.22784603],
+                [0.82766682, 0.26871252, -0.42284882],
+                [-0.67153811, 1.10376000, 0.61921501],
+                [1.14532626, 1.19679034, -0.41266876],
+            ]
+        )
+        * unit.angstrom,
+    }
 
 
 # =============================================================================================
@@ -1076,6 +1122,65 @@ class TestOpenEyeToolkitWrapper:
         )
         assert molecule2.n_conformers == 10
 
+    def test_apply_elf_conformer_selection(self):
+        """Test applying the ELF10 method."""
+
+        toolkit = OpenEyeToolkitWrapper()
+
+        molecule = Molecule.from_file(
+            get_data_file_path(os.path.join("molecules", "z_3_hydroxy_propenal.sdf")),
+            "SDF",
+        )
+
+        # Test that the simple case of no conformers does not yield an exception.
+        toolkit.apply_elf_conformer_selection(molecule)
+
+        initial_conformers = [
+            # Add a conformer with an internal H-bond.
+            np.array(
+                [
+                    [0.5477, 0.3297, -0.0621],
+                    [-0.1168, -0.7881, 0.2329],
+                    [-1.4803, -0.8771, 0.1667],
+                    [-0.2158, 1.5206, -0.4772],
+                    [-1.4382, 1.5111, -0.5580],
+                    [1.6274, 0.3962, -0.0089],
+                    [0.3388, -1.7170, 0.5467],
+                    [-1.8612, -0.0347, -0.1160],
+                    [0.3747, 2.4222, -0.7115],
+                ]
+            )
+            * unit.angstrom,
+            # Add a conformer without an internal H-bond.
+            np.array(
+                [
+                    [0.5477, 0.3297, -0.0621],
+                    [-0.1168, -0.7881, 0.2329],
+                    [-1.4803, -0.8771, 0.1667],
+                    [-0.2158, 1.5206, -0.4772],
+                    [0.3353, 2.5772, -0.7614],
+                    [1.6274, 0.3962, -0.0089],
+                    [0.3388, -1.7170, 0.5467],
+                    [-1.7743, -1.7634, 0.4166],
+                    [-1.3122, 1.4082, -0.5180],
+                ]
+            )
+            * unit.angstrom,
+        ]
+
+        molecule._conformers = [*initial_conformers]
+
+        # Apply ELF10
+        toolkit.apply_elf_conformer_selection(molecule)
+        elf10_conformers = molecule.conformers
+
+        assert len(elf10_conformers) == 1
+
+        assert np.allclose(
+            elf10_conformers[0].value_in_unit(unit.angstrom),
+            initial_conformers[1].value_in_unit(unit.angstrom),
+        )
+
     def test_assign_partial_charges_am1bcc(self):
         """Test OpenEyeToolkitWrapper assign_partial_charges() with am1bcc"""
         toolkit_registry = ToolkitRegistry(toolkit_precedence=[OpenEyeToolkitWrapper])
@@ -1321,21 +1426,96 @@ class TestOpenEyeToolkitWrapper:
             partial_charge_method="am1bcc", toolkit_registry=toolkit_wrapper
         )
 
-    def test_assign_fractional_bond_orders(self):
+    @pytest.mark.parametrize(
+        "bond_order_model",
+        ["am1-wiberg", "am1-wiberg-elf10", "pm3-wiberg", "pm3-wiberg-elf10"],
+    )
+    @pytest.mark.parametrize(
+        "smiles",
+        [
+            "[H]C([H])([H])C([H])([H])[H]",
+            "[H]C([H])([H])[N+]([H])([H])[H]",
+            r"C\C(F)=C(/F)C[C@@](C)(Cl)Br",
+        ],
+    )
+    def test_assign_fractional_bond_orders(self, bond_order_model, smiles):
         """Test OpenEyeToolkitWrapper assign_fractional_bond_orders()"""
 
         toolkit_wrapper = OpenEyeToolkitWrapper()
-        smiles = "[H]C([H])([H])C([H])([H])[H]"
         molecule = toolkit_wrapper.from_smiles(smiles)
-        molecule.generate_conformers(toolkit_registry=toolkit_wrapper)
-        for bond_order_model in ["am1-wiberg", "pm3-wiberg"]:
-            molecule.assign_fractional_bond_orders(
-                toolkit_registry=toolkit_wrapper, bond_order_model=bond_order_model
-            )
-            # TODO: Add test for equivalent Wiberg orders for equivalent bonds
 
-    def test_assign_fractional_bond_orders_neutral_charge_mol(self):
-        """Test OpenEyeToolkitWrapper assign_fractional_bond_orders() for neutral and charged molecule"""
+        molecule.assign_fractional_bond_orders(
+            toolkit_registry=toolkit_wrapper, bond_order_model=bond_order_model
+        )
+        # TODO: Add test for equivalent Wiberg orders for equivalent bonds
+
+        # Sanity check single bonds.
+        assert all(
+            0.75 < bond.fractional_bond_order < 1.25
+            for bond in molecule.bonds
+            if bond.bond_order == 1
+        )
+        # Sanity check double bonds.
+        assert all(
+            1.75 < bond.fractional_bond_order < 2.25
+            for bond in molecule.bonds
+            if bond.bond_order == 2
+        )
+
+    def test_assign_fractional_bond_orders_multi_conf(
+        self, formic_acid_molecule, formic_acid_conformers
+    ):
+        """Test that the OpenEyeToolkitWrapper assign_fractional_bond_orders()
+        function correctly averages over all conformers."""
+
+        toolkit_wrapper = OpenEyeToolkitWrapper()
+
+        # Compute the WBO from a single conformer.
+        formic_acid_molecule.assign_fractional_bond_orders(
+            toolkit_registry=toolkit_wrapper,
+            bond_order_model="am1-wiberg",
+            use_conformers=[formic_acid_conformers["cis"]],
+        )
+        cis_bond_orders = [
+            bond.fractional_bond_order for bond in formic_acid_molecule.bonds
+        ]
+        formic_acid_molecule.assign_fractional_bond_orders(
+            toolkit_registry=toolkit_wrapper,
+            bond_order_model="am1-wiberg",
+            use_conformers=[formic_acid_conformers["trans"]],
+        )
+        trans_bond_orders = [
+            bond.fractional_bond_order for bond in formic_acid_molecule.bonds
+        ]
+
+        # Use the method to average the conformers.
+        formic_acid_molecule.assign_fractional_bond_orders(
+            toolkit_registry=toolkit_wrapper,
+            bond_order_model="am1-wiberg",
+            use_conformers=[
+                formic_acid_conformers["cis"],
+                formic_acid_conformers["trans"],
+            ],
+        )
+        avg_bond_orders = [
+            bond.fractional_bond_order for bond in formic_acid_molecule.bonds
+        ]
+
+        # The average should be distinct from the WBO from either conformer.
+        assert not np.allclose(cis_bond_orders, avg_bond_orders)
+        assert not np.allclose(trans_bond_orders, avg_bond_orders)
+
+        assert np.allclose(
+            np.mean([trans_bond_orders, cis_bond_orders], axis=0), avg_bond_orders
+        )
+
+    @pytest.mark.parametrize(
+        "bond_order_model",
+        ["am1-wiberg", "am1-wiberg-elf10", "pm3-wiberg", "pm3-wiberg-elf10"],
+    )
+    def test_assign_fractional_bond_orders_neutral_charge_mol(self, bond_order_model):
+        """Test OpenEyeToolkitWrapper assign_fractional_bond_orders() for neutral and
+        charged molecule"""
 
         toolkit_wrapper = OpenEyeToolkitWrapper()
         # Reading neutral molecule from file
@@ -1348,73 +1528,60 @@ class TestOpenEyeToolkitWrapper:
         # Checking that only one additional bond is present in the neutral molecule
         assert len(molecule1.bonds) == len(molecule2.bonds) + 1
 
-        for bond_order_model in ["am1-wiberg"]:
-            molecule1.assign_fractional_bond_orders(
-                toolkit_registry=toolkit_wrapper,
-                bond_order_model=bond_order_model,
-                use_conformers=molecule1.conformers,
-            )
+        molecule1.assign_fractional_bond_orders(
+            toolkit_registry=toolkit_wrapper,
+            bond_order_model=bond_order_model,
+            use_conformers=molecule1.conformers,
+        )
 
-            for i in molecule1.bonds:
-                if i.is_aromatic:
-                    # Checking aromatic bonds
-                    assert 1.05 < i.fractional_bond_order < 1.65
-                elif i.atom1.atomic_number == 1 or i.atom2.atomic_number == 1:
-                    # Checking bond order of C-H or O-H bonds are around 1
-                    assert 0.85 < i.fractional_bond_order < 1.05
-                elif i.atom1.atomic_number == 8 or i.atom2.atomic_number == 8:
-                    # Checking C-O single bond
-                    wbo_C_O_neutral = i.fractional_bond_order
-                    assert 1.0 < wbo_C_O_neutral < 1.5
-                else:
-                    # Should be C-C single bond
-                    assert (i.atom1_index == 4 and i.atom2_index == 6) or (
-                        i.atom1_index == 6 and i.atom2_index == 4
-                    )
-                    wbo_C_C_neutral = i.fractional_bond_order
-                    assert 1.0 < wbo_C_C_neutral < 1.3
+        for i in molecule1.bonds:
+            if i.is_aromatic:
+                # Checking aromatic bonds
+                assert 1.05 < i.fractional_bond_order < 1.65
+            elif i.atom1.atomic_number == 1 or i.atom2.atomic_number == 1:
+                # Checking bond order of C-H or O-H bonds are around 1
+                assert 0.85 < i.fractional_bond_order < 1.05
+            elif i.atom1.atomic_number == 8 or i.atom2.atomic_number == 8:
+                # Checking C-O single bond
+                wbo_C_O_neutral = i.fractional_bond_order
+                assert 1.0 < wbo_C_O_neutral < 1.5
+            else:
+                # Should be C-C single bond
+                assert (i.atom1_index == 4 and i.atom2_index == 6) or (
+                    i.atom1_index == 6 and i.atom2_index == 4
+                )
+                wbo_C_C_neutral = i.fractional_bond_order
+                assert 1.0 < wbo_C_C_neutral < 1.3
 
-            molecule2.assign_fractional_bond_orders(
-                toolkit_registry=toolkit_wrapper,
-                bond_order_model=bond_order_model,
-                use_conformers=molecule2.conformers,
-            )
-            for i in molecule2.bonds:
-                if i.is_aromatic:
-                    # Checking aromatic bonds
-                    assert 1.05 < i.fractional_bond_order < 1.65
-                elif i.atom1.atomic_number == 1 or i.atom2.atomic_number == 1:
-                    # Checking bond order of C-H or O-H bonds are around 1
-                    assert 0.85 < i.fractional_bond_order < 1.05
-                elif i.atom1.atomic_number == 8 or i.atom2.atomic_number == 8:
-                    # Checking C-O single bond
-                    wbo_C_O_anion = i.fractional_bond_order
-                    assert 1.3 < wbo_C_O_anion < 1.8
-                else:
-                    # Should be C-C single bond
-                    assert (i.atom1_index == 4 and i.atom2_index == 6) or (
-                        i.atom1_index == 6 and i.atom2_index == 4
-                    )
-                    wbo_C_C_anion = i.fractional_bond_order
-                    assert 1.0 < wbo_C_C_anion < 1.3
+        molecule2.assign_fractional_bond_orders(
+            toolkit_registry=toolkit_wrapper,
+            bond_order_model=bond_order_model,
+            use_conformers=molecule2.conformers,
+        )
+        for i in molecule2.bonds:
 
-            # Wiberg bond order of C-C single bond is higher in the anion
-            assert wbo_C_C_anion > wbo_C_C_neutral
-            # Wiberg bond order of C-O bond is higher in the anion
-            assert wbo_C_O_anion > wbo_C_O_neutral
+            if i.is_aromatic:
+                # Checking aromatic bonds
+                assert 1.05 < i.fractional_bond_order < 1.65
+            elif i.atom1.atomic_number == 1 or i.atom2.atomic_number == 1:
+                # Checking bond order of C-H or O-H bonds are around 1
+                assert 0.85 < i.fractional_bond_order < 1.05
+            elif i.atom1.atomic_number == 8 or i.atom2.atomic_number == 8:
+                # Checking C-O single bond
+                wbo_C_O_anion = i.fractional_bond_order
+                assert 1.3 < wbo_C_O_anion < 1.8
+            else:
+                # Should be C-C single bond
+                assert (i.atom1_index == 4 and i.atom2_index == 6) or (
+                    i.atom1_index == 6 and i.atom2_index == 4
+                )
+                wbo_C_C_anion = i.fractional_bond_order
+                assert 1.0 < wbo_C_C_anion < 1.3
 
-    def test_assign_fractional_bond_orders_charged(self):
-        """Test OpenEyeToolkitWrapper assign_fractional_bond_orders() on a molecule with net charge +1"""
-
-        toolkit_wrapper = OpenEyeToolkitWrapper()
-        smiles = "[H]C([H])([H])[N+]([H])([H])[H]"
-        molecule = toolkit_wrapper.from_smiles(smiles)
-        molecule.generate_conformers(toolkit_registry=toolkit_wrapper)
-        for bond_order_model in ["am1-wiberg", "pm3-wiberg"]:
-            molecule.assign_fractional_bond_orders(
-                toolkit_registry=toolkit_wrapper, bond_order_model=bond_order_model
-            )
-            # TODO: Add test for equivalent Wiberg orders for equivalent bonds
+        # Wiberg bond order of C-C single bond is higher in the anion
+        assert wbo_C_C_anion > wbo_C_C_neutral
+        # Wiberg bond order of C-O bond is higher in the anion
+        assert wbo_C_O_anion > wbo_C_O_neutral
 
     def test_assign_fractional_bond_orders_invalid_method(self):
         """
@@ -1422,38 +1589,20 @@ class TestOpenEyeToolkitWrapper:
         correct error if an invalid charge model is provided
         """
         toolkit_wrapper = OpenEyeToolkitWrapper()
-        smiles = "[H]C([H])([H])[N+]([H])([H])[H]"
-        molecule = toolkit_wrapper.from_smiles(smiles)
-        molecule.generate_conformers(toolkit_registry=toolkit_wrapper)
+
+        molecule = toolkit_wrapper.from_smiles("C")
+
         expected_error = (
             "Bond order model 'not a real bond order model' is not supported by "
-            "OpenEyeToolkitWrapper. Supported models are ([[]'am1-wiberg', 'pm3-wiberg'[]])"
+            "OpenEyeToolkitWrapper. Supported models are "
+            "\['am1-wiberg', 'am1-wiberg-elf10', 'pm3-wiberg', 'pm3-wiberg-elf10'\]"
         )
-        with pytest.raises(ValueError, match=expected_error) as excinfo:
+
+        with pytest.raises(ValueError, match=expected_error):
             molecule.assign_fractional_bond_orders(
                 toolkit_registry=toolkit_wrapper,
                 bond_order_model="not a real bond order model",
             )
-
-    def test_assign_fractional_bond_orders_double_bond(self):
-        """Test OpenEyeToolkitWrapper assign_fractional_bond_orders() on a molecule with a double bond"""
-
-        toolkit_wrapper = OpenEyeToolkitWrapper()
-        smiles = r"C\C(F)=C(/F)C[C@@](C)(Cl)Br"
-        molecule = toolkit_wrapper.from_smiles(smiles)
-        molecule.generate_conformers(toolkit_registry=toolkit_wrapper)
-        for bond_order_model in ["am1-wiberg", "pm3-wiberg"]:
-            molecule.assign_fractional_bond_orders(
-                toolkit_registry=toolkit_wrapper, bond_order_model=bond_order_model
-            )
-            # TODO: Add test for equivalent Wiberg orders for equivalent bonds
-
-        double_bond_has_wbo_near_2 = False
-        for bond in molecule.bonds:
-            if bond.bond_order == 2:
-                if 1.75 < bond.fractional_bond_order < 2.25:
-                    double_bond_has_wbo_near_2 = True
-        assert double_bond_has_wbo_near_2
 
     @pytest.mark.slow
     def test_substructure_search_on_large_molecule(self):
@@ -2263,6 +2412,240 @@ class TestRDKitToolkitWrapper:
                 molecule=molecule, partial_charge_method="NotARealChargeMethod"
             )
 
+    def test_elf_is_problematic_conformer_acid(
+        self, formic_acid_molecule, formic_acid_conformers
+    ):
+        problematic, reason = RDKitToolkitWrapper._elf_is_problematic_conformer(
+            formic_acid_molecule, formic_acid_conformers["cis"]
+        )
+        assert not problematic
+        assert reason is None
+
+        problematic, reason = RDKitToolkitWrapper._elf_is_problematic_conformer(
+            formic_acid_molecule, formic_acid_conformers["trans"]
+        )
+        assert problematic
+        assert reason is not None
+
+    def test_elf_prune_problematic_conformers_acid(
+        self, formic_acid_molecule, formic_acid_conformers
+    ):
+
+        formic_acid_molecule._conformers = [*formic_acid_conformers.values()]
+
+        pruned_conformers = RDKitToolkitWrapper._elf_prune_problematic_conformers(
+            formic_acid_molecule
+        )
+
+        assert len(pruned_conformers) == 1
+        assert np.allclose(
+            formic_acid_conformers["cis"].value_in_unit(unit.angstrom),
+            pruned_conformers[0].value_in_unit(unit.angstrom),
+        )
+
+    def test_elf_compute_electrostatic_energy(self, formic_acid_molecule: Molecule):
+        """Test the computation of the ELF electrostatic energy function."""
+
+        # Set some partial charges and a dummy conformer with values which make
+        # computing the expected energy by hand easier.
+        formic_acid_molecule.partial_charges = (
+            np.ones(formic_acid_molecule.n_atoms) * 1.0 * unit.elementary_charge
+        )
+
+        formic_acid_molecule.partial_charges[0] *= 2.0
+        formic_acid_molecule.partial_charges[4] *= 3.0
+
+        conformer = np.array(
+            [
+                [1.0, 0.0, 0.0],
+                [0.0, 0.0, 0.0],
+                [-1.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0],
+                [0.0, -1.0, 0.0],
+            ]
+        )
+
+        # Compute the conformers electrostatic energy.
+        computed_energy = RDKitToolkitWrapper._elf_compute_electrostatic_energy(
+            formic_acid_molecule, conformer * unit.angstrom
+        )
+        # q_O1 * q_H2 / d_O1,H2 + q_H1 * q_H2 / d_H1,H2
+        expected_energy = 2.0 * 3.0 / np.sqrt(2.0) + 1.0 * 3.0 / 2.0
+
+        assert np.isclose(computed_energy, expected_energy)
+
+    def test_elf_compute_rms_matrix(self, formic_acid_molecule: Molecule):
+        """Test the computation of the ELF conformer RMS matrix."""
+        formic_acid_molecule.add_conformer(np.random.random((5, 3)) * unit.angstrom)
+        formic_acid_molecule.add_conformer(np.random.random((5, 3)) * unit.angstrom)
+
+        rms_matrix = RDKitToolkitWrapper._elf_compute_rms_matrix(formic_acid_molecule)
+
+        assert rms_matrix.shape == (2, 2)
+
+        assert np.isclose(rms_matrix[0, 0], 0.0)
+        assert np.isclose(rms_matrix[1, 1], 0.0)
+
+        assert np.isclose(rms_matrix[0, 1], rms_matrix[1, 0])
+        assert not np.isclose(rms_matrix[0, 1], 0.0)
+
+    def test_elf_compute_rms_matrix_symmetry(self):
+        """Test the computation of the ELF conformer RMS matrix for matrices which
+        contain symmetry."""
+
+        # Create a molecule which can have two different automorphs.
+        n_methyl_aniline: Molecule = Molecule.from_smiles("CNc1ccccc1")
+        n_methyl_aniline.generate_conformers(n_conformers=1)
+
+        # Add a second conformer with the benzene ring flipped 180
+        original_conformer = n_methyl_aniline.conformers[0].value_in_unit(unit.angstrom)
+
+        ring_atoms = RDKitToolkitWrapper().find_smarts_matches(
+            n_methyl_aniline,
+            "[#6]-[#7](-[#6]1:[#6:1](-[#1:2]):[#6:3](-[#1:4]):[#6]:[#6:6](-[#1:5]):[#6:8](-[#1:7])1)",
+        )[0]
+
+        flipped_conformer = np.copy(original_conformer)
+
+        for i in range(8):
+            flipped_conformer[ring_atoms[i], :] = original_conformer[ring_atoms[7 - i]]
+
+        n_methyl_aniline.add_conformer(flipped_conformer * unit.angstrom)
+
+        # Compute the RMS matrix.
+        rms_matrix = RDKitToolkitWrapper._elf_compute_rms_matrix(n_methyl_aniline)
+
+        assert rms_matrix.shape == (2, 2)
+        assert np.allclose(rms_matrix, 0.0, atol=1e-7)
+
+    @pytest.mark.parametrize(
+        "expected_conformer_map, rms_tolerance",
+        [({0: 0, 1: 2}, 0.001 * unit.angstrom), ({0: 0}, 100.0 * unit.angstrom)],
+    )
+    def test_elf_select_diverse_conformers(
+        self,
+        formic_acid_molecule: Molecule,
+        expected_conformer_map: Dict[int, int],
+        rms_tolerance: unit.Quantity,
+    ):
+        """Test the greedy selection of 'diverse' ELF conformers."""
+
+        formic_acid_molecule.add_conformer(np.random.random((5, 3)) * unit.angstrom)
+        formic_acid_molecule.add_conformer(formic_acid_molecule.conformers[0] * 1.1)
+        formic_acid_molecule.add_conformer(formic_acid_molecule.conformers[0] * 1.2)
+
+        conformers = RDKitToolkitWrapper._elf_select_diverse_conformers(
+            formic_acid_molecule, formic_acid_molecule.conformers, 2, rms_tolerance
+        )
+
+        assert len(conformers) == len(expected_conformer_map)
+
+        for elf_index, original_index in expected_conformer_map.items():
+            assert np.allclose(
+                conformers[elf_index].value_in_unit(unit.angstrom),
+                formic_acid_molecule.conformers[original_index].value_in_unit(
+                    unit.angstrom
+                ),
+            )
+
+    def test_apply_elf_conformer_selection(self):
+        """Test applying the ELF10 method."""
+
+        toolkit = RDKitToolkitWrapper()
+
+        molecule = Molecule.from_file(
+            get_data_file_path(os.path.join("molecules", "z_3_hydroxy_propenal.sdf")),
+            "SDF",
+        )
+
+        # Test that the simple case of no conformers does not yield an exception.
+        toolkit.apply_elf_conformer_selection(molecule)
+
+        initial_conformers = [
+            # Add a conformer with an internal H-bond.
+            np.array(
+                [
+                    [0.5477, 0.3297, -0.0621],
+                    [-0.1168, -0.7881, 0.2329],
+                    [-1.4803, -0.8771, 0.1667],
+                    [-0.2158, 1.5206, -0.4772],
+                    [-1.4382, 1.5111, -0.5580],
+                    [1.6274, 0.3962, -0.0089],
+                    [0.3388, -1.7170, 0.5467],
+                    [-1.8612, -0.0347, -0.1160],
+                    [0.3747, 2.4222, -0.7115],
+                ]
+            )
+            * unit.angstrom,
+            # Add a conformer without an internal H-bond.
+            np.array(
+                [
+                    [0.5477, 0.3297, -0.0621],
+                    [-0.1168, -0.7881, 0.2329],
+                    [-1.4803, -0.8771, 0.1667],
+                    [-0.2158, 1.5206, -0.4772],
+                    [0.3353, 2.5772, -0.7614],
+                    [1.6274, 0.3962, -0.0089],
+                    [0.3388, -1.7170, 0.5467],
+                    [-1.7743, -1.7634, 0.4166],
+                    [-1.3122, 1.4082, -0.5180],
+                ]
+            )
+            * unit.angstrom,
+        ]
+
+        molecule._conformers = [*initial_conformers]
+
+        # Apply ELF10
+        toolkit.apply_elf_conformer_selection(molecule)
+        elf10_conformers = molecule.conformers
+
+        assert len(elf10_conformers) == 1
+
+        assert np.allclose(
+            elf10_conformers[0].value_in_unit(unit.angstrom),
+            initial_conformers[1].value_in_unit(unit.angstrom),
+        )
+
+    def test_apply_elf_conformer_selection_acid(
+        self, formic_acid_molecule, formic_acid_conformers, caplog
+    ):
+        """Test applying the ELF10 method."""
+
+        toolkit = RDKitToolkitWrapper()
+
+        # Add the conformers to the molecule and apply ELF.
+        formic_acid_molecule._conformers = [
+            formic_acid_conformers["trans"],
+            formic_acid_conformers["cis"],
+        ]
+
+        # Only the CIS conformer should remain after pruning and a warning raised to
+        # explain why the conformer was discarded.
+        with caplog.at_level(logging.WARNING):
+            toolkit.apply_elf_conformer_selection(formic_acid_molecule)
+
+        assert formic_acid_molecule.n_conformers == 1
+        assert "Discarding conformer 0" in caplog.text
+        assert "Molecules which contain COOH functional groups in a" in caplog.text
+
+        assert np.allclose(
+            formic_acid_molecule.conformers[0].value_in_unit(unit.angstrom),
+            formic_acid_conformers["cis"].value_in_unit(unit.angstrom),
+        )
+
+        # Check that an exception is raised if no conformers remain after removing the
+        # trans conformer.
+        formic_acid_molecule._conformers = [formic_acid_conformers["trans"]]
+
+        with pytest.raises(ValueError) as error_info:
+            toolkit.apply_elf_conformer_selection(formic_acid_molecule)
+
+        assert (
+            "There were no conformers to select from after discarding conformers"
+            in str(error_info.value)
+        )
+
     def test_find_rotatable_bonds(self):
         """Test finding rotatable bonds while ignoring some groups"""
 
@@ -2664,22 +3047,44 @@ class TestAmberToolsToolkitWrapper:
                 strict_n_conformers=True,
             )
 
-    def test_assign_fractional_bond_orders(self):
-        """Test OpenEyeToolkitWrapper assign_fractional_bond_orders()"""
+    @pytest.mark.parametrize("bond_order_model", ["am1-wiberg"])
+    @pytest.mark.parametrize(
+        "smiles",
+        [
+            "[H]C([H])([H])C([H])([H])[H]",
+            "[H]C([H])([H])[N+]([H])([H])[H]",
+            r"C\C(F)=C(/F)C[C@@](C)(Cl)Br",
+        ],
+    )
+    def test_assign_fractional_bond_orders(self, bond_order_model, smiles):
+        """Test AmbetToolsToolkitWrapper assign_fractional_bond_orders()"""
 
         toolkit_registry = ToolkitRegistry(
             toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper]
         )
-        smiles = "[H]C([H])([H])C([H])([H])[H]"
-        molecule = toolkit_registry.call("from_smiles", smiles)
-        for bond_order_model in ["am1-wiberg"]:
-            molecule.assign_fractional_bond_orders(
-                toolkit_registry=toolkit_registry, bond_order_model=bond_order_model
-            )
-            # TODO: Add test for equivalent Wiberg orders for equivalent bonds
 
-    def test_assign_fractional_bond_orders_neutral_charge_mol(self):
-        """Test OpenEyeToolkitWrapper assign_fractional_bond_orders() for neutral and charged molecule.
+        molecule = toolkit_registry.call("from_smiles", smiles)
+        molecule.assign_fractional_bond_orders(
+            toolkit_registry=toolkit_registry, bond_order_model=bond_order_model
+        )
+        # TODO: Add test for equivalent Wiberg orders for equivalent bonds
+
+        # Sanity check single bonds.
+        assert all(
+            0.75 < bond.fractional_bond_order < 1.25
+            for bond in molecule.bonds
+            if bond.bond_order == 1
+        )
+        # Sanity check double bonds.
+        assert all(
+            1.75 < bond.fractional_bond_order < 2.25
+            for bond in molecule.bonds
+            if bond.bond_order == 2
+        )
+
+    @pytest.mark.parametrize("bond_order_model", ["am1-wiberg"])
+    def test_assign_fractional_bond_orders_neutral_charge_mol(self, bond_order_model):
+        """Test AmberToolsToolkitWrapper assign_fractional_bond_orders() for neutral and charged molecule.
         Also tests using existing conformers"""
 
         toolkit_registry = ToolkitRegistry(
@@ -2695,75 +3100,60 @@ class TestAmberToolsToolkitWrapper:
         # Checking that only one additional bond is present in the neutral molecule
         assert len(molecule1.bonds) == len(molecule2.bonds) + 1
 
-        for bond_order_model in ["am1-wiberg"]:
-            molecule1.assign_fractional_bond_orders(
-                toolkit_registry=toolkit_registry,
-                bond_order_model=bond_order_model,
-                use_conformers=molecule1.conformers,
-            )
-
-            for i in molecule1.bonds:
-                if i.is_aromatic:
-                    # Checking aromatic bonds
-                    assert 1.05 < i.fractional_bond_order < 1.65
-                elif i.atom1.atomic_number == 1 or i.atom2.atomic_number == 1:
-                    # Checking bond order of C-H or O-H bonds are around 1
-                    assert 0.85 < i.fractional_bond_order < 1.05
-                elif i.atom1.atomic_number == 8 or i.atom2.atomic_number == 8:
-                    # Checking C-O single bond
-                    wbo_C_O_neutral = i.fractional_bond_order
-                    assert 1.0 < wbo_C_O_neutral < 1.5
-                else:
-                    # Should be C-C single bond
-                    assert (i.atom1_index == 4 and i.atom2_index == 6) or (
-                        i.atom1_index == 6 and i.atom2_index == 4
-                    )
-                    wbo_C_C_neutral = i.fractional_bond_order
-                    assert 1.0 < wbo_C_C_neutral < 1.3
-
-            molecule2.assign_fractional_bond_orders(
-                toolkit_registry=toolkit_registry,
-                bond_order_model=bond_order_model,
-                use_conformers=molecule2.conformers,
-            )
-            for i in molecule2.bonds:
-                if i.is_aromatic:
-                    # Checking aromatic bonds
-                    assert 1.05 < i.fractional_bond_order < 1.65
-
-                elif i.atom1.atomic_number == 1 or i.atom2.atomic_number == 1:
-                    # Checking bond order of C-H or O-H bonds are around 1
-                    assert 0.85 < i.fractional_bond_order < 1.05
-                elif i.atom1.atomic_number == 8 or i.atom2.atomic_number == 8:
-                    # Checking C-O single bond
-                    wbo_C_O_anion = i.fractional_bond_order
-                    assert 1.3 < wbo_C_O_anion < 1.8
-                else:
-                    # Should be C-C single bond
-                    assert (i.atom1_index == 4 and i.atom2_index == 6) or (
-                        i.atom1_index == 6 and i.atom2_index == 4
-                    )
-                    wbo_C_C_anion = i.fractional_bond_order
-                    assert 1.0 < wbo_C_C_anion < 1.3
-
-            # Wiberg bond order of C-C single bond is higher in the anion
-            assert wbo_C_C_anion > wbo_C_C_neutral
-            # Wiberg bond order of C-O bond is higher in the anion
-            assert wbo_C_O_anion > wbo_C_O_neutral
-
-    def test_assign_fractional_bond_orders_charged(self):
-        """Test OpenEyeToolkitWrapper assign_fractional_bond_orders() on a molecule with net charge +1"""
-
-        toolkit_registry = ToolkitRegistry(
-            toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper]
+        molecule1.assign_fractional_bond_orders(
+            toolkit_registry=toolkit_registry,
+            bond_order_model=bond_order_model,
+            use_conformers=molecule1.conformers,
         )
-        smiles = "[H]C([H])([H])[N+]([H])([H])[H]"
-        molecule = toolkit_registry.call("from_smiles", smiles)
-        for bond_order_model in ["am1-wiberg"]:
-            molecule.assign_fractional_bond_orders(
-                toolkit_registry=toolkit_registry, bond_order_model=bond_order_model
-            )
-            # TODO: Add test for equivalent Wiberg orders for equivalent bonds
+
+        for i in molecule1.bonds:
+            if i.is_aromatic:
+                # Checking aromatic bonds
+                assert 1.05 < i.fractional_bond_order < 1.65
+            elif i.atom1.atomic_number == 1 or i.atom2.atomic_number == 1:
+                # Checking bond order of C-H or O-H bonds are around 1
+                assert 0.85 < i.fractional_bond_order < 1.05
+            elif i.atom1.atomic_number == 8 or i.atom2.atomic_number == 8:
+                # Checking C-O single bond
+                wbo_C_O_neutral = i.fractional_bond_order
+                assert 1.0 < wbo_C_O_neutral < 1.5
+            else:
+                # Should be C-C single bond
+                assert (i.atom1_index == 4 and i.atom2_index == 6) or (
+                    i.atom1_index == 6 and i.atom2_index == 4
+                )
+                wbo_C_C_neutral = i.fractional_bond_order
+                assert 1.0 < wbo_C_C_neutral < 1.3
+
+        molecule2.assign_fractional_bond_orders(
+            toolkit_registry=toolkit_registry,
+            bond_order_model=bond_order_model,
+            use_conformers=molecule2.conformers,
+        )
+        for i in molecule2.bonds:
+            if i.is_aromatic:
+                # Checking aromatic bonds
+                assert 1.05 < i.fractional_bond_order < 1.65
+
+            elif i.atom1.atomic_number == 1 or i.atom2.atomic_number == 1:
+                # Checking bond order of C-H or O-H bonds are around 1
+                assert 0.85 < i.fractional_bond_order < 1.05
+            elif i.atom1.atomic_number == 8 or i.atom2.atomic_number == 8:
+                # Checking C-O single bond
+                wbo_C_O_anion = i.fractional_bond_order
+                assert 1.3 < wbo_C_O_anion < 1.8
+            else:
+                # Should be C-C single bond
+                assert (i.atom1_index == 4 and i.atom2_index == 6) or (
+                    i.atom1_index == 6 and i.atom2_index == 4
+                )
+                wbo_C_C_anion = i.fractional_bond_order
+                assert 1.0 < wbo_C_C_anion < 1.3
+
+        # Wiberg bond order of C-C single bond is higher in the anion
+        assert wbo_C_C_anion > wbo_C_C_neutral
+        # Wiberg bond order of C-O bond is higher in the anion
+        assert wbo_C_O_anion > wbo_C_O_neutral
 
     def test_assign_fractional_bond_orders_invalid_method(self):
         """
@@ -2774,39 +3164,17 @@ class TestAmberToolsToolkitWrapper:
         toolkit_registry = ToolkitRegistry(
             toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper]
         )
-        smiles = "[H]C([H])([H])[N+]([H])([H])[H]"
-        molecule = toolkit_registry.call("from_smiles", smiles)
+        molecule = toolkit_registry.call("from_smiles", "C")
 
         expected_error = (
             "Bond order model 'not a real charge model' is not supported by "
             "AmberToolsToolkitWrapper. Supported models are ([[]'am1-wiberg'[]])"
         )
-        with pytest.raises(ValueError, match=expected_error) as excinfo:
+        with pytest.raises(ValueError, match=expected_error):
             molecule.assign_fractional_bond_orders(
                 toolkit_registry=AmberToolsToolkitWrapper(),
                 bond_order_model="not a real charge model",
             )
-
-    def test_assign_fractional_bond_orders_double_bond(self):
-        """Test OpenEyeToolkitWrapper assign_fractional_bond_orders() on a molecule with a double bond"""
-
-        toolkit_registry = ToolkitRegistry(
-            toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper]
-        )
-        smiles = r"C\C(F)=C(/F)C[C@@](C)(Cl)Br"
-        molecule = toolkit_registry.call("from_smiles", smiles)
-        for bond_order_model in ["am1-wiberg"]:
-            molecule.assign_fractional_bond_orders(
-                toolkit_registry=toolkit_registry, bond_order_model=bond_order_model
-            )
-            # TODO: Add test for equivalent Wiberg orders for equivalent bonds
-
-        double_bond_has_wbo_near_2 = False
-        for bond in molecule.bonds:
-            if bond.bond_order == 2:
-                if 1.75 < bond.fractional_bond_order < 2.25:
-                    double_bond_has_wbo_near_2 = True
-        assert double_bond_has_wbo_near_2
 
     @requires_openeye
     def test_assign_fractional_bond_orders_openeye_installed(self):
