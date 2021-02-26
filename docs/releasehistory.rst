@@ -10,6 +10,10 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 0.9.1 - Current development
 ---------------------------
 
+Behavior Changed
+""""""""""""""""
+- `PR #816 <https://github.com/openforcefield/openforcefield/pull/816>`_: Force field file paths 
+  are now loaded in a case-insensitive manner.
 
 0.9.0 - Namespace Migration
 ---------------------------
