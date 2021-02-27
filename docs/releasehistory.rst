@@ -12,10 +12,15 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 
 New features
 """"""""""""
-- `PR #832 <https://github.com/openforcefield/openff-toolkit/pull/832>`_: Expose ELF conformer selection through the
+- `PR #839 <https://github.com/openforcefield/openforcefield/pull/839>`_: Add support for computing WBOs from multiple
+  conformers using the AmberTools and OpenEye toolkits, and from ELF10 conformers using the OpenEye toolkit wrapper.
+- `PR #832 <https://github.com/openforcefield/openforcefield/pull/832>`_: Expose ELF conformer selection through the
   ``Molecule`` API via a new ``apply_elf_conformer_selection`` function.
 - `PR #831 <https://github.com/openforcefield/openff-toolkit/pull/831>`_: Expose ELF conformer selection through the
   OpenEye wrapper.
+- `PR #790 <https://github.com/openforcefield/openforcefield/pull/790>`_: Fixes `Issue #720
+  <https://github.com/openforcefield/openforcefield/issues/720>`_ where qcschema roundtrip to/from results 
+  in an error due to missing cmiles entry in attributes.
 - `PR #793 <https://github.com/openforcefield/openff-toolkit/pull/793>`_: Add an initial ELF conformer selection
   implementation which uses RDKit.
 - `PR #799 <https://github.com/openforcefield/openff-toolkit/pull/799>`_: Closes
@@ -38,6 +43,17 @@ Behavior changed
   factor for electrostatic interactions is now properly set by the value specified in the force
   field. Previously it fell back to a default value of 0.83333. The toolkit may now produce
   slightly different energies as a result of this change.
+- `PR #839 <https://github.com/openforcefield/openforcefield/pull/839>`_: The average WBO will now be returned when
+  multiple conformers are provided to ``assign_fractional_bond_orders`` using ``use_conformers``.
+- `PR #816 <https://github.com/openforcefield/openforcefield/pull/816>`_: Force field file paths
+  are now loaded in a case-insensitive manner.
+
+Bugfixes
+""""""""
+- `PR #849 <https://github.com/openforcefield/openforcefield/pull/849>`_: Changes
+  :py:meth:`create_openmm_system <openff.toolkit.typing.engines.smirnoff.ForceField.create_openmm_system>` so
+  that it no longer uses the conformers on existing reference molecules (if present) to calculate Wiberg
+  bond orders. Instead, new conformers are always generated during parameterization.
 
 Improved documentation and warnings
 """""""""""""""""""""""""""""""""""

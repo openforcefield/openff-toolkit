@@ -1094,11 +1094,13 @@ class ForceField:
 
             # Determine the actual path of the file.
             # TODO: What is desired toolkit behavior if two files with the desired name are available?
-            for dir_path in searched_dirs_paths:
-                file_path = os.path.join(dir_path, source)
-                if os.path.isfile(file_path):
-                    source = file_path
-                    break
+            dir_paths = [pathlib.Path(path) for path in searched_dirs_paths]
+            for dir_path in dir_paths:
+                for file_path in dir_path.glob("**/*.offxml"):
+                    # Cannot compare filenames alone, source can be test_forcefield/...
+                    if str(file_path).lower().endswith(source.lower()):
+                        source = str(file_path.absolute())
+                        break
 
         # Process all SMIRNOFF definition files or objects
         # QUESTION: Allow users to specify force field URLs so they can pull force field definitions from the web too?

@@ -797,6 +797,13 @@ class TestForceField:
         for ff in expected_force_fields:
             assert ff in available_force_fields
 
+    def test_force_field_case(self):
+        """Ensure forcefield paths are loaded in a case-insensitive manner"""
+        default_case = ForceField("smirnoff99Frosst-1.1.0.offxml")
+        lower_case = ForceField("smirnoff99frosst-1.1.0.offxml")
+
+        assert hash(default_case) == hash(lower_case)
+
     @pytest.mark.parametrize("full_path", [(True, False)])
     @pytest.mark.parametrize("force_field_file", [*get_available_force_fields()])
     def test_get_available_force_fields_loadable(self, full_path, force_field_file):
@@ -4272,7 +4279,6 @@ class TestForceFieldParameterAssignment:
             decimal=8,
         )
 
-    @requires_openeye
     def test_overwrite_bond_orders(self):
         """Test that previously-defined bond orders in the topology are overwritten"""
         mol = create_ethanol()
@@ -4321,6 +4327,84 @@ class TestForceFieldParameterAssignment:
             omm_sys_top.topology_bonds, mod_omm_sys_top.topology_bonds
         ):
             assert bond1.bond.fractional_bond_order == bond2.bond.fractional_bond_order
+
+    def test_fractional_bond_order_ignore_existing_confs(self):
+        """Test that previously-defined bond orders in the topology are overwritten"""
+        mol = create_ethanol()
+        top = Topology.from_molecules(mol)
+
+        mod_mol = create_ethanol()
+        mod_mol.generate_conformers()
+        mod_mol._conformers[0][0][0] = (
+            mod_mol._conformers[0][0][0] + 1.0 * unit.angstrom
+        )
+        mod_mol._conformers[0][1][0] = (
+            mod_mol._conformers[0][1][0] - 1.0 * unit.angstrom
+        )
+        mod_mol._conformers[0][2][0] = (
+            mod_mol._conformers[0][2][0] + 1.0 * unit.angstrom
+        )
+
+        mod_top = Topology.from_molecules(mod_mol)
+
+        forcefield = ForceField("test_forcefields/test_forcefield.offxml", xml_ff_bo)
+
+        omm_system, omm_sys_top = forcefield.create_openmm_system(
+            top, return_topology=True
+        )
+        mod_omm_system, mod_omm_sys_top = forcefield.create_openmm_system(
+            mod_top, return_topology=True
+        )
+
+        # Check that the assigned bond parameters are identical for both systems
+        default_bond_force = [
+            f for f in omm_system.getForces() if isinstance(f, openmm.HarmonicBondForce)
+        ][0]
+        mod_bond_force = [
+            f
+            for f in mod_omm_system.getForces()
+            if isinstance(f, openmm.HarmonicBondForce)
+        ][0]
+
+        for idx in range(default_bond_force.getNumBonds()):
+            assert all(
+                np.isclose(
+                    default_value.value_in_unit(default_value.unit),
+                    mod_value.value_in_unit(default_value.unit),
+                )
+                for default_value, mod_value in zip(
+                    default_bond_force.getBondParameters(idx)[2:],
+                    mod_bond_force.getBondParameters(idx)[2:],
+                )
+            )
+
+        # Check that the assigned torsion parameters are identical for both systems
+        default_torsion_force = [
+            force
+            for force in omm_system.getForces()
+            if isinstance(force, openmm.PeriodicTorsionForce)
+        ][0]
+        mod_torsion_force = [
+            force
+            for force in mod_omm_system.getForces()
+            if isinstance(force, openmm.PeriodicTorsionForce)
+        ][0]
+
+        for idx in range(default_torsion_force.getNumTorsions()):
+            default_k = default_torsion_force.getTorsionParameters(idx)[-1]
+            mod_k = mod_torsion_force.getTorsionParameters(idx)[-1]
+            assert np.isclose(
+                default_k.value_in_unit(default_k.unit),
+                mod_k.value_in_unit(default_k.unit),
+            )
+
+        # Check that the returned topology has the correct bond order
+        for bond1, bond2 in zip(
+            omm_sys_top.topology_bonds, mod_omm_sys_top.topology_bonds
+        ):
+            assert np.isclose(
+                bond1.bond.fractional_bond_order, bond2.bond.fractional_bond_order
+            )
 
     @pytest.mark.parametrize(
         (
