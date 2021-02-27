@@ -1443,7 +1443,6 @@ class TestOpenEyeToolkitWrapper:
 
         toolkit_wrapper = OpenEyeToolkitWrapper()
         molecule = toolkit_wrapper.from_smiles(smiles)
-
         molecule.assign_fractional_bond_orders(
             toolkit_registry=toolkit_wrapper, bond_order_model=bond_order_model
         )
@@ -1508,6 +1507,42 @@ class TestOpenEyeToolkitWrapper:
         assert np.allclose(
             np.mean([trans_bond_orders, cis_bond_orders], axis=0), avg_bond_orders
         )
+
+    def test_assign_fractional_bond_orders_conformer_dependence(self):
+        """
+        Test that OpenEyeToolkitWrapper assign_fractional_bond_orders() provides different results when using
+        different conformers
+        """
+        toolkit_wrapper = OpenEyeToolkitWrapper()
+        # Get the WBOs using one conformer
+        molecule = create_ethanol()
+        molecule.generate_conformers(toolkit_registry=toolkit_wrapper)
+        molecule.assign_fractional_bond_orders(
+            toolkit_registry=toolkit_wrapper,
+            use_conformers=molecule.conformers,
+            bond_order_model="am1-wiberg",
+        )
+
+        # Do the same again, but change the conformer to yield a different result
+        molecule_diff_coords = create_ethanol()
+        molecule_diff_coords.generate_conformers(toolkit_registry=toolkit_wrapper)
+        molecule_diff_coords._conformers[0][0][0] = (
+            molecule_diff_coords._conformers[0][0][0] + 1.0 * unit.angstrom
+        )
+        molecule_diff_coords._conformers[0][1][0] = (
+            molecule_diff_coords._conformers[0][1][0] - 1.0 * unit.angstrom
+        )
+        molecule_diff_coords._conformers[0][2][0] = (
+            molecule_diff_coords._conformers[0][2][0] + 1.0 * unit.angstrom
+        )
+        molecule_diff_coords.assign_fractional_bond_orders(
+            toolkit_registry=toolkit_wrapper,
+            use_conformers=molecule_diff_coords.conformers,
+            bond_order_model="am1-wiberg",
+        )
+
+        for bond1, bond2 in zip(molecule.bonds, molecule_diff_coords.bonds):
+            assert abs(bond1.fractional_bond_order - bond2.fractional_bond_order) > 1e-3
 
     @pytest.mark.parametrize(
         "bond_order_model",
@@ -3081,6 +3116,45 @@ class TestAmberToolsToolkitWrapper:
             for bond in molecule.bonds
             if bond.bond_order == 2
         )
+
+    def test_assign_fractional_bond_orders_conformer_dependence(self):
+        """
+        Test that RDKitToolkitWrapper assign_fractional_bond_orders() provides different results when using
+        different conformers
+        """
+
+        toolkit_wrapper = ToolkitRegistry(
+            [RDKitToolkitWrapper, AmberToolsToolkitWrapper]
+        )
+        # Get the WBOs using one conformer
+        molecule = create_ethanol()
+        molecule.generate_conformers(toolkit_registry=toolkit_wrapper)
+        molecule.assign_fractional_bond_orders(
+            toolkit_registry=toolkit_wrapper,
+            use_conformers=molecule.conformers,
+            bond_order_model="am1-wiberg",
+        )
+
+        # Do the same again, but change the conformer to yield a different result
+        molecule_diff_coords = create_ethanol()
+        molecule_diff_coords.generate_conformers(toolkit_registry=toolkit_wrapper)
+        molecule_diff_coords._conformers[0][0][0] = (
+            molecule_diff_coords._conformers[0][0][0] + 1.0 * unit.angstrom
+        )
+        molecule_diff_coords._conformers[0][1][0] = (
+            molecule_diff_coords._conformers[0][1][0] - 1.0 * unit.angstrom
+        )
+        molecule_diff_coords._conformers[0][2][0] = (
+            molecule_diff_coords._conformers[0][2][0] + 1.0 * unit.angstrom
+        )
+        molecule_diff_coords.assign_fractional_bond_orders(
+            toolkit_registry=toolkit_wrapper,
+            use_conformers=molecule_diff_coords.conformers,
+            bond_order_model="am1-wiberg",
+        )
+
+        for bond1, bond2 in zip(molecule.bonds, molecule_diff_coords.bonds):
+            assert abs(bond1.fractional_bond_order - bond2.fractional_bond_order) > 1e-3
 
     @pytest.mark.parametrize("bond_order_model", ["am1-wiberg"])
     def test_assign_fractional_bond_orders_neutral_charge_mol(self, bond_order_model):
