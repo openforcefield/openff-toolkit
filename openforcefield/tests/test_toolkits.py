@@ -1363,8 +1363,14 @@ class TestOpenEyeToolkitWrapper:
         for bond1, bond2 in zip(molecule.bonds, molecule_diff_coords.bonds):
             assert abs(bond1.fractional_bond_order - bond2.fractional_bond_order) > 1e-3
 
-    def test_assign_fractional_bond_orders_neutral_charge_mol(self):
-        """Test OpenEyeToolkitWrapper assign_fractional_bond_orders() for neutral and charged molecule"""
+
+    @pytest.mark.parametrize(
+        "bond_order_model",
+        ["am1-wiberg", "am1-wiberg-elf10", "pm3-wiberg", "pm3-wiberg-elf10"],
+    )
+    def test_assign_fractional_bond_orders_neutral_charge_mol(self, bond_order_model):
+        """Test OpenEyeToolkitWrapper assign_fractional_bond_orders() for neutral and
+        charged molecule"""
 
         toolkit_wrapper = OpenEyeToolkitWrapper()
         # Reading neutral molecule from file
@@ -2734,8 +2740,14 @@ class TestAmberToolsToolkitWrapper:
         for bond1, bond2 in zip(molecule.bonds, molecule_diff_coords.bonds):
             assert abs(bond1.fractional_bond_order - bond2.fractional_bond_order) > 1e-3
 
+<<<<<<< HEAD:openforcefield/tests/test_toolkits.py
     def test_assign_fractional_bond_orders_neutral_charge_mol(self):
         """Test OpenEyeToolkitWrapper assign_fractional_bond_orders() for neutral and charged molecule.
+=======
+    @pytest.mark.parametrize("bond_order_model", ["am1-wiberg"])
+    def test_assign_fractional_bond_orders_neutral_charge_mol(self, bond_order_model):
+        """Test AmberToolsToolkitWrapper assign_fractional_bond_orders() for neutral and charged molecule.
+>>>>>>> 35b1d182 (black):openff/toolkit/tests/test_toolkits.py
         Also tests using existing conformers"""
 
         toolkit_registry = ToolkitRegistry(
