@@ -4367,9 +4367,16 @@ class TestForceFieldParameterAssignment:
         ][0]
 
         for idx in range(default_bond_force.getNumBonds()):
-            assert default_bond_force.getBondParameters(
-                idx
-            ) == mod_bond_force.getBondParameters(idx)
+            assert all(
+                np.isclose(
+                    default_value.value_in_unit(default_value.unit),
+                    mod_value.value_in_unit(default_value.unit),
+                )
+                for default_value, mod_value in zip(
+                    default_bond_force.getBondParameters(idx)[2:],
+                    mod_bond_force.getBondParameters(idx)[2:],
+                )
+            )
 
         # Check that the assigned torsion parameters are identical for both systems
         default_torsion_force = [
