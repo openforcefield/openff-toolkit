@@ -4379,7 +4379,10 @@ class TestForceFieldParameterAssignment:
         for idx in range(default_torsion_force.getNumTorsions()):
             default_k = default_torsion_force.getTorsionParameters(idx)[-1]
             mod_k = mod_torsion_force.getTorsionParameters(idx)[-1]
-            assert default_k == mod_k
+            assert np.isclose(
+                default_k.value_in_unit(default_k.unit),
+                mod_k.value_in_unit(default_k.unit),
+            )
 
         # Check that the returned topology has the correct bond order
         for bond1, bond2 in zip(
