@@ -1,6 +1,6 @@
 # Filtering Molecule Sets
 
-There are a number of molecule sets that have been used in the open-forcefield effort. 
+There are a number of molecule sets that have been used in the open force field effort. 
 In an effort to test the SMIRNOFFparm99Frosst it became increasingly evident that some of these molecules sets include molecules outside what we want to currently test our tools. 
 Molecule sets and relevant scripts are listed below. 
 For our purposes DrugBank refers to [DrugBank Release Version 5.0.1](http://www.drugbank.ca/releases/latest).

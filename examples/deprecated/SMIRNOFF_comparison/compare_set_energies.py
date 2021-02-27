@@ -28,7 +28,7 @@ mol_filepaths = [fnm for fnm in mol_filepaths if not 'c1302' in fnm]  # Skip wat
 
 print('Found {} files to test'.format(len(mol_filepaths)))
 
-# Load forcefield
+# Load force field
 from openff.toolkit.typing.engines.smirnoff import ForceField
 forcefield = ForceField('test_forcefields/Frosst_AlkEthOH_parmAtFrosst.offxml')
 
