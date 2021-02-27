@@ -1900,10 +1900,15 @@ class TestMolecule:
 
         assert_check()
         assert qcschema.extras["test_tag"] == "test"
-        # now run again when no extras
+        assert qcschema.extras[
+            "canonical_isomeric_explicit_hydrogen_mapped_smiles"
+        ] == ethanol.to_smiles(mapped=True)
+        # # now run again with no extras passed, only cmiles entry will be present with fix-720
         qcschema = ethanol.to_qcschema()
         assert_check()
-        assert qcschema.extras is None
+        assert qcschema.extras[
+            "canonical_isomeric_explicit_hydrogen_mapped_smiles"
+        ] == ethanol.to_smiles(mapped=True)
 
     @requires_pkg("qcportal")
     def test_from_qcschema_no_client(self):
@@ -2004,7 +2009,8 @@ class TestMolecule:
 
     @requires_pkg("qcportal")
     def test_qcschema_round_trip(self):
-        """Test making a molecule from qcschema then converting back"""
+        """Test making a molecule from qcschema then converting back
+        Checking whether qca_mol and mol created from/to qcschema are the same or not"""
 
         # get a molecule qcschema
         import qcportal as ptl
@@ -2022,7 +2028,7 @@ class TestMolecule:
         qcschema = mol.to_qcschema()
         assert qcschema.atom_labels.tolist() == qca_mol.atom_labels.tolist()
         assert qcschema.symbols.tolist() == qca_mol.symbols.tolist()
-        # due to conversion useing different programs there is a slight difference here
+        # due to conversion using different programs there is a slight difference here
         assert qcschema.geometry.flatten().tolist() == pytest.approx(
             qca_mol.geometry.flatten().tolist(), rel=1.0e-5
         )
@@ -2037,6 +2043,78 @@ class TestMolecule:
         assert qcschema.molecular_charge == qca_mol.molecular_charge
         assert qcschema.molecular_multiplicity == qca_mol.molecular_multiplicity
         assert qcschema.real.all() == qca_mol.real.all()
+
+    @requires_pkg("qcportal")
+    def test_qcschema_round_trip_from_to_from(self):
+        """Test making a molecule from qca record using from_qcschema,
+        then converting back to qcschema using to_qcschema,
+         and then reading that again using from_qcschema"""
+
+        # get a molecule qcschema
+        import qcportal as ptl
+
+        client = ptl.FractalClient()
+        ds = client.get_collection(
+            "TorsionDriveDataset", "OpenFF-benchmark-ligand-fragments-v1.0"
+        )
+        # grab an entry from the torsiondrive data set
+        entry = ds.get_entry(
+            "[H]c1[c:1]([c:2](c(c(c1[H])N([H])C(=O)[H])[H])[C:3]2=C(C(=C([S:4]2)[H])OC([H])([H])[H])Br)[H]"
+        )
+        # now make the molecule from the record instance with the geometry
+        mol_qca_record = Molecule.from_qcschema(entry, client)
+        off_qcschema = mol_qca_record.to_qcschema()
+        mol_using_from_off_qcschema = Molecule.from_qcschema(off_qcschema)
+        assert_molecule_is_equal(
+            mol_qca_record,
+            mol_using_from_off_qcschema,
+            "Molecule roundtrip to/from_qcschema failed",
+        )
+
+    @requires_pkg("qcportal")
+    def test_qcschema_round_trip_raise_error(self):
+        """Test making a molecule from qcschema,
+        reaching inner except block where everything fails"""
+
+        # get a molecule qcschema
+        import qcportal as ptl
+
+        client = ptl.FractalClient()
+        ds = client.get_collection(
+            "TorsionDriveDataset", "OpenFF-benchmark-ligand-fragments-v1.0"
+        )
+        # grab an entry from the torsiondrive data set
+        entry = ds.get_entry(
+            "[H]c1[c:1]([c:2](c(c(c1[H])N([H])C(=O)[H])[H])[C:3]2=C(C(=C([S:4]2)[H])OC([H])([H])[H])Br)[H]"
+        )
+        del entry.attributes["canonical_isomeric_explicit_hydrogen_mapped_smiles"]
+        # now make the molecule from the record instance with the geometry
+        with pytest.raises(KeyError):
+            mol_qca_record = Molecule.from_qcschema(entry, client)
+
+    @requires_pkg("qcportal")
+    def test_qcschema_molecule_record_round_trip_from_to_from(self):
+        """Test making a molecule from qca record using from_qcschema,
+        then converting back to qcschema using to_qcschema,
+         and then reading that again using from_qcschema"""
+
+        # get a molecule qcschema
+        import qcportal as ptl
+
+        client = ptl.FractalClient()
+
+        record = client.query_molecules(molecular_formula="C16H20N3O5")[0]
+
+        # now make the molecule from the record instance with the geometry
+        mol_qca_record = Molecule.from_qcschema(record, client)
+        off_qcschema = mol_qca_record.to_qcschema()
+        mol_using_from_off_qcschema = Molecule.from_qcschema(off_qcschema)
+
+        assert_molecule_is_equal(
+            mol_qca_record,
+            mol_using_from_off_qcschema,
+            "Molecule roundtrip to/from_qcschema failed",
+        )
 
     def test_from_mapped_smiles(self):
         """Test making the molecule from issue #412 using both toolkits to ensure the issue

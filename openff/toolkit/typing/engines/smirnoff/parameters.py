@@ -300,10 +300,10 @@ class ParameterAttribute:
     attributes have the ``default`` set to the special type ``UNDEFINED``.
 
     Converters can be both static or instance functions/methods with
-    respective signatures
+    respective signatures::
 
-    converter(value): -> converted_value
-    converter(instance, parameter_attribute, value): -> converted_value
+        converter(value): -> converted_value
+        converter(instance, parameter_attribute, value): -> converted_value
 
     A decorator syntax is available (see example below).
 
@@ -392,6 +392,7 @@ class ParameterAttribute:
     2.0
 
     The custom converter associated to attr_int_to_float converts only integers instead.
+
     >>> my_par.attr_int_to_float = 3
     >>> my_par.attr_int_to_float
     3.0
@@ -407,10 +408,11 @@ class ParameterAttribute:
 
         pass
 
-    def __init__(self, default=UNDEFINED, unit=None, converter=None):
+    def __init__(self, default=UNDEFINED, unit=None, converter=None, docstring=""):
         self.default = default
         self._unit = unit
         self._converter = converter
+        self.__doc__ = docstring
 
     def __set_name__(self, owner, name):
         self._name = "_" + name
@@ -651,7 +653,7 @@ class IndexedMappedParameterAttribute(ParameterAttribute):
     For example, torsions with fractional bond orders have parameters such as
     k1_bondorder1, k1_bondorder2, k2_bondorder1, k2_bondorder2, ..., and
     ``IndexedMappedParameterAttribute`` can be used to encapsulate the sequence of
-    terms as mappings (typically, `dict`s) of their components.
+    terms as mappings (typically, ``dict``\ s) of their components.
 
     The only substantial difference with ``IndexedParameterAttribute`` is that
     only sequences of mappings are supported as values and converters and units are
@@ -1761,7 +1763,7 @@ class ParameterType(_ParameterAttributeHandler):
 
     Parameter attributes that can be indexed can be handled with the
     ``IndexedParameterAttribute``. These support unit validation and
-    converters exactly as ``ParameterAttribute``s, but the validation/conversion
+    converters exactly as ``ParameterAttribute``\ s, but the validation/conversion
     is performed for each indexed attribute.
 
     >>> class MyTorsionType(ParameterType):
