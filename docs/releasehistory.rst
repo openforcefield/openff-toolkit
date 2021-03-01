@@ -35,6 +35,9 @@ New features
   :py:class:`ParameterAttribute <openff.toolkit.typing.engines.smirnoff.parameters.ParameterAttribute>`
   documentation can now specify their docstrings with the optional ``docstring`` argument to the
   ``__init__()`` method.
+- `PR #827 <https://github.com/openforcefield/openff-toolkit/pull/827>`_: The
+  setter for :py:class:`Topology.box_vectors <openff.toolkit.topology.Topology>` now infers box vectors
+  when box lengths are pass as a list of length 3.
 
 Behavior changed
 """"""""""""""""
