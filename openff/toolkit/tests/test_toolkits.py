@@ -878,7 +878,7 @@ class TestOpenEyeToolkitWrapper:
                 charge_line_found = True
 
         # Make sure that a charge line was ever found
-        assert charge_line_found == True
+        assert charge_line_found
 
         # Make sure that the charges found were correct
         assert_almost_equal(
