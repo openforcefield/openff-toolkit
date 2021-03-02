@@ -52,7 +52,6 @@ Behavior changed
   are now loaded in a case-insensitive manner.
 
 
-=======
 Bugfixes
 """"""""
 - `PR #849 <https://github.com/openforcefield/openforcefield/pull/849>`_: Changes
