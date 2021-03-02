@@ -1433,7 +1433,6 @@ class TestOpenEyeToolkitWrapper:
         for bond1, bond2 in zip(molecule.bonds, molecule_diff_coords.bonds):
             assert abs(bond1.fractional_bond_order - bond2.fractional_bond_order) > 1e-3
 
-
     @pytest.mark.parametrize(
         "bond_order_model",
         ["am1-wiberg", "am1-wiberg-elf10", "pm3-wiberg", "pm3-wiberg-elf10"],
@@ -2763,10 +2762,7 @@ class TestAmberToolsToolkitWrapper:
 
     @pytest.mark.parametrize("bond_order_model", ["am1-wiberg"])
     def test_assign_fractional_bond_orders_neutral_charge_mol(self, bond_order_model):
-        """Test AmberToolsToolkitWrapper assign_fractional_bond_orders() for neutral and charged molecule.
-    def test_assign_fractional_bond_orders_conformer_dependence(self):
-        """
-
+        """Test AmberToolsToolkitWrapper assign_fractional_bond_orders() for neutral and charged molecule."""
 
         toolkit_wrapper = ToolkitRegistry(
             [RDKitToolkitWrapper, AmberToolsToolkitWrapper]
