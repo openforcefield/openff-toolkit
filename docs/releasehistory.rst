@@ -69,6 +69,8 @@ Improved documentation and warnings
   <openff.toolkit.typing.engines.smirnoff.parameters.ParameterAttribute>` documentation no longer
   appears incorrectly in classes where it is used. Fixes `Issue #397
   <https://github.com/openforcefield/openforcefield/issues/397>`_.
+- `PR #863 <https://github.com/openforcefield/openff-toolkit/pull/863>`_: Documented how to build
+  the docs in the developers guide.
 
 0.9.0 - Namespace Migration
 ---------------------------
