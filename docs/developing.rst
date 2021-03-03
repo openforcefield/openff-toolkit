@@ -224,18 +224,44 @@ Setting up a development environment
 
 .. code-block:: shell
 
-    $ # Create a conda environment with the Open Force Field toolkit and its dependencies
-    $ conda create --name openff-dev -c conda-forge -c openeye openff-toolkit openeye-toolkits
-    $ conda activate openff-dev
-    $ # Remove (only) the toolkit and replace it with a local install
-    $ conda remove --force openff-toolkit
-    $ git clone https://github.com/openforcefield/openff-toolkit
-    $ cd openff-toolkit
-    $ pip install -e .
+    # Create a conda environment with the Open Force Field toolkit and its dependencies
+    conda create --name openff-dev -c conda-forge -c openeye openff-toolkit openeye-toolkits
+    conda activate openff-dev
+    # Remove (only) the toolkit and replace it with a local install
+    conda remove --force openff-toolkit
+    git clone https://github.com/openforcefield/openff-toolkit
+    cd openff-toolkit
+    pip install -e .
 
 3. Obtain and store Open Eye license somewhere like ``~/.oe_license.txt``.
    Optionally store the path in environmental variable ``OE_LICENSE``, i.e. using a command like ``echo
    "export OE_LICENSE=/Users/yournamehere/.oe_license.txt" >> ~/.bashrc``
+
+Building the Docs
+'''''''''''''''''
+
+The documentation is composed of two parts, a hand-written user guide and an auto-generated API
+documentation.
+Both are compiled by Sphinx, and can be automatically served and regenerated on changes with sphinx-autobuild.
+Documentation for released versions is available at `ReadTheDocs <https://open-forcefield-toolkit.readthedocs.io/en/0.9.0/>`_.
+ReadTheDocs also builds the documentation for each Pull Request opened on GitHub and keeps the output for 90 days.
+
+.. code-block:: shell
+
+    # Add the documentation requirements to your Conda environment
+    conda env update --name openff-dev --file docs/environment.yml
+
+    # Build the documentation
+    conda activate openff-dev
+    make html
+
+    # Host the docs on a local HTTP server and rebuild when a source file is changed
+    # Works best when the docs have already been built
+    conda activate openff-dev
+    sphinx-autobuild docs docs/_build/html --watch openff
+    # Then navigate your web browser to http://localhost:8000
+
+
 
 
 Development Process
