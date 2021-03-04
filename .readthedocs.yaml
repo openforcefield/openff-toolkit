@@ -16,6 +16,7 @@ python:
   version: 3.6
   install:
     - method: setuptools
+      path: .
 
 # Build PDF in addition to default HTML and JSON
 formats:
