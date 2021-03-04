@@ -243,7 +243,7 @@ Building the Docs
 The documentation is composed of two parts, a hand-written user guide and an auto-generated API
 documentation.
 Both are compiled by Sphinx, and can be automatically served and regenerated on changes with sphinx-autobuild.
-Documentation for released versions is available at `ReadTheDocs <https://open-forcefield-toolkit.readthedocs.io/en/0.9.0/>`_.
+Documentation for released versions is available at `ReadTheDocs <https://open-forcefield-toolkit.readthedocs.io/en/latest/>`_.
 ReadTheDocs also builds the documentation for each Pull Request opened on GitHub and keeps the output for 90 days.
 
 .. code-block:: shell
