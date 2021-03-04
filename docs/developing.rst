@@ -246,17 +246,32 @@ Both are compiled by Sphinx, and can be automatically served and regenerated on 
 Documentation for released versions is available at `ReadTheDocs <https://open-forcefield-toolkit.readthedocs.io/en/latest/>`_.
 ReadTheDocs also builds the documentation for each Pull Request opened on GitHub and keeps the output for 90 days.
 
+To add the documentation dependencies to your existing ``openff-dev`` Conda environment:
+
 .. code-block:: shell
 
     # Add the documentation requirements to your Conda environment
     conda env update --name openff-dev --file docs/environment.yml
+    conda install --name openff-dev -c conda-forge sphinx-autobuild
+
+To build the documentation from scratch:
+
+.. code-block:: shell
 
     # Build the documentation
+    # From the openff-toolkit root directory
     conda activate openff-dev
+    cd docs
     make html
+    # Documentation can be found in docs/_build/html/index.html
+
+To watch the source directory for changes and automatically rebuild the documentation and refresh your browser:
+
+.. code-block:: shell
 
     # Host the docs on a local HTTP server and rebuild when a source file is changed
     # Works best when the docs have already been built
+    # From the openff-toolkit root directory
     conda activate openff-dev
     sphinx-autobuild docs docs/_build/html --watch openff
     # Then navigate your web browser to http://localhost:8000
