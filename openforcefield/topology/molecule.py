@@ -104,8 +104,10 @@ class Particle(Serializable):
 
         .. todo::
 
-           * Should we have a single unique ``Molecule`` for each molecule type in the system,
-           or if we have multiple copies of the same molecule, should we have multiple ``Molecule``s?
+            * Should we have a single unique ``Molecule`` for each molecule
+              type in the system, or if we have multiple copies of the same
+              molecule, should we have multiple ``Molecule``\ s?
+
         """
         return self._molecule
 
@@ -357,6 +359,7 @@ class Atom(Particle):
         The standard atomic weight (abundance-weighted isotopic mass) of the atomic site.
 
         .. todo :: Should we discriminate between standard atomic weight and most abundant isotopic mass?
+
         TODO (from jeff): Are there atoms that have different chemical properties based on their isotopes?
 
         """
@@ -1681,7 +1684,8 @@ class FrozenMolecule(Serializable):
     """
     Immutable chemical representation of a molecule, such as a small molecule or biopolymer.
 
-    .. todo :: What other API calls would be useful for supporting biopolymers as small molecules? Perhaps iterating over chains and residues?
+    .. todo :: What other API calls would be useful for supporting biopolymers
+               as small molecules? Perhaps iterating over chains and residues?
 
     Examples
     --------
@@ -1733,28 +1737,34 @@ class FrozenMolecule(Serializable):
 
         .. todo ::
 
-           * If a filename or file-like object is specified but the file contains more than one molecule, what is the proper behavior?
-           Read just the first molecule, or raise an exception if more than one molecule is found?
+           * If a filename or file-like object is specified but the file
+             contains more than one molecule, what is the proper behavior?
+             Read just the first molecule, or raise an exception if more
+             than one molecule is found?
 
-           * Should we also support SMILES strings or IUPAC names for ``other``?
+           * Should we also support SMILES strings or IUPAC names for
+             ``other``\ ?
 
         Parameters
         ----------
         other : optional, default=None
-            If specified, attempt to construct a copy of the Molecule from the specified object.
-            This can be any one of the following:
+            If specified, attempt to construct a copy of the Molecule from
+            the specified object. This can be any one of the following:
 
             * a :class:`Molecule` object
             * a file that can be used to construct a :class:`Molecule` object
             * an ``openeye.oechem.OEMol``
             * an ``rdkit.Chem.rdchem.Mol``
             * a serialized :class:`Molecule` object
+
         file_format : str, optional, default=None
             If providing a file-like object, you must specify the format
             of the data. If providing a file, the file format will attempt
             to be guessed from the suffix.
-        toolkit_registry : a :class:`ToolkitRegistry` or :class:`ToolkitWrapper` object, optional, default=GLOBAL_TOOLKIT_REGISTRY
-            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for I/O operations
+        toolkit_registry : a :class:`ToolkitRegistry` or
+            :class:`ToolkitWrapper` object, optional,
+            default=GLOBAL_TOOLKIT_REGISTRY :class:`ToolkitRegistry`
+            or :class:`ToolkitWrapper` to use for I/O operations
         allow_undefined_stereo : bool, default=False
             If loaded from a file and ``False``, raises an exception if
             undefined stereochemistry is detected during the molecule's
@@ -2802,10 +2812,11 @@ class FrozenMolecule(Serializable):
         ] = GLOBAL_TOOLKIT_REGISTRY,
         **kwargs,
     ):
-        """Applies the `ELF method<https://docs.eyesopen.com/toolkits/python/quacpactk/
-        molchargetheory.html#elf-conformer-selection>`_ to select a set of diverse
-        conformers which have minimal electrostatically strongly interacting functional
-        groups from a molecules conformers.
+        """Applies the `ELF method
+        <https://docs.eyesopen.com/toolkits/python/quacpactk/molchargetheory.html#elf-conformer-selection>`_
+        to select a set of diverse conformers which have minimal
+        electrostatically strongly interacting functional groups from a
+        molecules conformers.
 
         Notes
         -----
@@ -2824,8 +2835,8 @@ class FrozenMolecule(Serializable):
         toolkit_registry
             The underlying toolkit to use to select the ELF conformers.
         percentage
-            The percentage of conformers with the lowest electrostatic interaction
-            energies to greedily select from.
+            The percentage of conformers with the lowest electrostatic
+            interaction energies to greedily select from.
         limit
             The maximum number of conformers to select.
         """
@@ -4050,7 +4061,7 @@ class FrozenMolecule(Serializable):
 
     @classmethod
     def from_topology(cls, topology):
-        """Return a Molecule representation of an openforcefield Topology containing a single Molecule object.
+        """Return a Molecule representation of an OpenFF Topology containing a single Molecule object.
 
         Parameters
         ----------
@@ -4076,7 +4087,7 @@ class FrozenMolecule(Serializable):
         >>> molecule = Molecule.from_topology(topology)  # doctest: +SKIP
 
         """
-        # TODO: Ensure we are dealing with an openforcefield Topology object
+        # TODO: Ensure we are dealing with an OpenFF Topology object
         if topology.n_topology_molecules != 1:
             raise ValueError("Topology must contain exactly one molecule")
         molecule = [i for i in topology.reference_molecules][0]
@@ -4084,7 +4095,7 @@ class FrozenMolecule(Serializable):
 
     def to_topology(self):
         """
-        Return an openforcefield Topology representation containing one copy of this molecule
+        Return an OpenFF Topology representation containing one copy of this molecule
 
         Returns
         -------
@@ -4499,8 +4510,8 @@ class FrozenMolecule(Serializable):
 
         Returns
         -------
-        molecule : openforcefield.Molecule
-            An openforcefield molecule
+        molecule : openforcefield.topology.Molecule
+            An OpenFF molecule
 
         Examples
         --------
@@ -4570,7 +4581,7 @@ class FrozenMolecule(Serializable):
         Returns
         -------
         molecule : openforcefield.topology.Molecule
-            An openforcefield molecule
+            An OpenFF molecule
 
         Examples
         --------
@@ -4615,8 +4626,8 @@ class FrozenMolecule(Serializable):
         qcelemental.models.Molecule
             A validated QCElemental Molecule.
 
-        Example
-        -------
+        Examples
+        --------
 
         Create a QCElemental Molecule:
 
@@ -4700,7 +4711,7 @@ class FrozenMolecule(Serializable):
         Returns
         ----------
         offmol : openforcefield.topology.molecule.Molecule
-            An openforcefiled molecule instance.
+            An OpenFF molecule instance.
 
         Raises
         --------
@@ -4776,7 +4787,7 @@ class FrozenMolecule(Serializable):
         Returns
         -------
         molecule : openforcefield.topology.Molecule
-            An openforcefield molecule instance.
+            An OpenFF molecule instance.
 
         Example
         -------
@@ -4871,7 +4882,7 @@ class FrozenMolecule(Serializable):
                 mol = molecule
 
             geometry = unit.Quantity(
-                np.array(mol["geometry"], dtype=float).reshape(-1, 3), unit.bohr
+                np.array(mol["geometry"], float).reshape(-1, 3), unit.bohr
             )
             try:
                 offmol._add_conformer(geometry.in_units_of(unit.angstrom))
@@ -4944,7 +4955,7 @@ class FrozenMolecule(Serializable):
          Returns
         -------
         molecule : openforcefield.topology.Molecule
-            An new openforcefield-style molecule with atoms in the canonical order.
+            An new OpenFF style molecule with atoms in the canonical order.
         """
 
         if isinstance(toolkit_registry, ToolkitRegistry):
@@ -5320,8 +5331,8 @@ class Molecule(FrozenMolecule):
         Parameters
         ----------
         other : optional, default=None
-            If specified, attempt to construct a copy of the Molecule from the specified object.
-            This can be any one of the following:
+            If specified, attempt to construct a copy of the Molecule from the
+            specified object. This can be any one of the following:
 
             * a :class:`Molecule` object
             * a file that can be used to construct a :class:`Molecule` object
@@ -5375,10 +5386,13 @@ class Molecule(FrozenMolecule):
 
         .. todo ::
 
-           * If a filename or file-like object is specified but the file contains more than one molecule, what is the
-           proper behavior? Read just the first molecule, or raise an exception if more than one molecule is found?
+           * If a filename or file-like object is specified but the file
+             contains more than one molecule, what is the proper behavior?
+             Read just the first molecule, or raise an exception if more
+             than one molecule is found?
 
-           * Should we also support SMILES strings or IUPAC names for ``other``?
+           * Should we also support SMILES strings or IUPAC names for
+             ``other``?
 
         """
         # super(self, Molecule).__init__(*args, **kwargs)
@@ -5438,17 +5452,28 @@ class Molecule(FrozenMolecule):
 
     def add_bond_charge_virtual_site(self, atoms, distance, **kwargs):
         """
-        Create a bond charge-type virtual site, in which the location of the charge is specified by the position of two atoms. This supports placement of a virtual site S along a vector between two specified atoms, e.g. to allow for a sigma hole for halogens or similar contexts. With positive values of the distance, the virtual site lies outside the first indexed atom.
+        Add a virtual site representing the charge on a bond.
+
+        Create a bond charge-type virtual site, in which the location of the
+        charge is specified by the position of two atoms. This supports
+        placement of a virtual site S along a vector between two specified
+        atoms, e.g. to allow for a sigma hole for halogens or similar contexts.
+        With positive values of the distance, the virtual site lies outside the
+        first indexed atom.
+
         Parameters
         ----------
-        atoms : list of openforcefield.topology.molecule.Atom objects or ints of shape [N
+        atoms : list of openforcefield.topology.molecule.Atom objects or ints of shape [N]
             The atoms defining the virtual site's position or their indices
         distance : float
 
         weights : list of floats of shape [N] or None, optional, default=None
-            weights[index] is the weight of particles[index] contributing to the position of the virtual site. Default is None
+            weights[index] is the weight of particles[index] contributing to
+            the position of the virtual site. Default is None
         charge_increments : list of floats of shape [N], optional, default=None
-            The amount of charge to remove from the VirtualSite's atoms and put in the VirtualSite. Indexing in this list should match the ordering in the atoms list. Default is None.
+            The amount of charge to remove from the VirtualSite's atoms and put
+            in the VirtualSite. Indexing in this list should match the ordering
+            in the atoms list. Default is None.
         epsilon : float
             Epsilon term for VdW properties of virtual site. Default is None.
         sigma : float, default=None

@@ -885,8 +885,8 @@ class TestForceField:
     @pytest.mark.skip(reason="Needs to be updated for 0.2.0 syntax")
     def test_create_forcefield_from_url(self):
         urls = [
-            "https://raw.githubusercontent.com/openforcefield/openforcefield/master/openforcefield/data/test_forcefields/test_forcefield.offxml",
-            "https://raw.githubusercontent.com/openforcefield/openforcefield/master/openforcefield/data/test_forcefields/tip3p.offxml",
+            "https://raw.githubusercontent.com/openforcefield/openff-toolkit/master/openff/toolkit/data/test_forcefields/test_forcefield.offxml",
+            "https://raw.githubusercontent.com/openforcefield/openff-toolkit/master/openff/toolkit/data/test_forcefields/tip3p.offxml",
         ]
         # Test creation with smirnoff99frosst URL
         forcefield = ForceField(urls[0])
@@ -894,8 +894,8 @@ class TestForceField:
     @pytest.mark.skip(reason="Needs to be updated for 0.2.0 syntax")
     def test_create_forcefield_from_url_list(self):
         urls = [
-            "https://raw.githubusercontent.com/openforcefield/openforcefield/master/openforcefield/data/test_forcefields/test_forcefield.offxml",
-            "https://raw.githubusercontent.com/openforcefield/openforcefield/master/openforcefield/data/test_forcefields/tip3p.offxml",
+            "https://raw.githubusercontent.com/openforcefield/openff-toolkit/master/openff/toolkit/data/test_forcefields/test_forcefield.offxml",
+            "https://raw.githubusercontent.com/openforcefield/openff-toolkit/master/openff/toolkit/data/test_forcefields/tip3p.offxml",
         ]
         # Test creation with multiple URLs
         forcefield = ForceField(urls)
@@ -903,8 +903,8 @@ class TestForceField:
     @pytest.mark.skip(reason="Needs to be updated for 0.2.0 syntax")
     def test_create_forcefield_from_url_iterator(self):
         urls = [
-            "https://raw.githubusercontent.com/openforcefield/openforcefield/master/openforcefield/data/test_forcefields/test_forcefield.offxml",
-            "https://raw.githubusercontent.com/openforcefield/openforcefield/master/openforcefield/data/test_forcefields/tip3p.offxml",
+            "https://raw.githubusercontent.com/openforcefield/openff-toolkit/master/openff/toolkit/data/test_forcefields/test_forcefield.offxml",
+            "https://raw.githubusercontent.com/openforcefield/openff-toolkit/master/openff/toolkit/data/test_forcefields/tip3p.offxml",
         ]
         # A generator should work as well
         forcefield = ForceField(iter(urls))
@@ -944,7 +944,7 @@ class TestForceField:
 
     def test_pickle(self):
         """
-        Test pickling and unpickling a forcefield
+        Test pickling and unpickling a force field
         """
         import pickle
 
@@ -955,7 +955,7 @@ class TestForceField:
 
     def test_pickle_with_cosmetic_attributes(self):
         """
-        Test pickling and unpickling a forcefield with cosmetic attributes
+        Test pickling and unpickling a force field with cosmetic attributes
         """
         import pickle
 
@@ -980,7 +980,7 @@ class TestForceField:
 
     def test_xml_string_roundtrip_keep_cosmetic(self):
         """
-        Test roundtripping a forcefield to an XML string with and without retaining cosmetic elements
+        Test roundtripping a force field to an XML string with and without retaining cosmetic elements
         """
         # Ensure an exception is raised if we try to read the XML string with cosmetic attributes
         with pytest.raises(
@@ -989,12 +989,12 @@ class TestForceField:
         ) as excinfo:
             forcefield = ForceField(xml_ff_w_cosmetic_elements)
 
-        # Create a forcefield from XML successfully, by explicitly permitting cosmetic attributes
+        # Create a force field from XML successfully, by explicitly permitting cosmetic attributes
         forcefield_1 = ForceField(
             xml_ff_w_cosmetic_elements, allow_cosmetic_attributes=True
         )
 
-        # Convert the forcefield back to XML
+        # Convert the force field back to XML
         string_1 = forcefield_1.to_string("XML", discard_cosmetic_attributes=False)
 
         # Ensure that the new XML string has cosmetic attributes in it
@@ -1009,7 +1009,7 @@ class TestForceField:
         # Complete the forcefield_1 --> string --> forcefield_2 roundtrip
         forcefield_2 = ForceField(string_1, allow_cosmetic_attributes=True)
 
-        # Ensure that the forcefield remains the same after the roundtrip
+        # Ensure that the force field remains the same after the roundtrip
         string_2 = forcefield_2.to_string("XML", discard_cosmetic_attributes=False)
         assert string_1 == string_2
 
@@ -1081,7 +1081,7 @@ class TestForceField:
         self, file_path_extension, specified_format
     ):
         """
-        Test roundtripping a forcefield to an XML file with and without retaining cosmetic elements
+        Test roundtripping a force field to an XML file with and without retaining cosmetic elements
         """
         # These files will be deleted once garbage collection runs (end of this function)
         iofile1 = NamedTemporaryFile(suffix="." + file_path_extension)
@@ -1095,12 +1095,12 @@ class TestForceField:
         ) as excinfo:
             forcefield = ForceField(xml_ff_w_cosmetic_elements)
 
-        # Create a forcefield from XML successfully
+        # Create a force field from XML successfully
         forcefield_1 = ForceField(
             xml_ff_w_cosmetic_elements, allow_cosmetic_attributes=True
         )
 
-        # Convert the forcefield back to XML, keeping cosmetic attributes
+        # Convert the force field back to XML, keeping cosmetic attributes
         forcefield_1.to_file(
             iofile1.name, discard_cosmetic_attributes=False, io_format=specified_format
         )
@@ -1117,7 +1117,7 @@ class TestForceField:
         # Complete the forcefield_1 --> file --> forcefield_2 roundtrip
         forcefield_2 = ForceField(iofile1.name, allow_cosmetic_attributes=True)
 
-        # Ensure that the forcefield remains the same after the roundtrip
+        # Ensure that the force field remains the same after the roundtrip
         forcefield_2.to_file(
             iofile2.name, discard_cosmetic_attributes=False, io_format=specified_format
         )
@@ -1193,7 +1193,7 @@ class TestForceField:
 
     def test_load_two_sources_incompatible_tags(self):
         """Test loading data from two SMIRNOFF data sources which have incompatible physics"""
-        # Make an XML forcefield with a modifiedvdW 1-4 scaling factor
+        # Make an XML force field with a modifiedvdW 1-4 scaling factor
         nonstandard_xml_ff = xml_ff_w_comments.replace('scale14="0.5"', 'scale14="1.0"')
         with pytest.raises(
             IncompatibleParameterError,
@@ -3503,7 +3503,7 @@ class TestForceFieldParameterAssignment:
         # Load molecule.
         molecule = Molecule.from_file(mol2_filepath)
 
-        # Load forcefield
+        # Load force field
         forcefield = ForceField("test_forcefields/Frosst_AlkEthOH_parmAtFrosst.offxml")
 
         # Compare parameters. Skip the energy checks as the parameter check should be
@@ -4279,77 +4279,6 @@ class TestForceFieldParameterAssignment:
             decimal=8,
         )
 
-    @requires_openeye
-    def test_modified_14_factors(self):
-        """Test that the 1-4 scaling factors for electrostatics and vdW handlers matche,
-        to a tight precision, the values specified in the force field."""
-        top = Molecule.from_smiles("CCCC").to_topology()
-        default_14 = ForceField("test_forcefields/test_forcefield.offxml")
-        e_mod_14 = ForceField("test_forcefields/test_forcefield.offxml")
-        vdw_mod_14 = ForceField("test_forcefields/test_forcefield.offxml")
-
-        e_mod_14["Electrostatics"].scale14 = 0.66
-        assert e_mod_14["Electrostatics"].scale14 == 0.66
-
-        vdw_mod_14["vdW"].scale14 = 0.777
-        assert vdw_mod_14["vdW"].scale14 == 0.777
-
-        default_omm_sys = default_14.create_openmm_system(top)
-        e_mod_omm_sys = e_mod_14.create_openmm_system(top)
-        vdw_mod_omm_sys = vdw_mod_14.create_openmm_system(top)
-
-        for omm_sys, expected_vdw_14, expected_coul_14 in [
-            [default_omm_sys, 0.5, 0.833333],
-            [e_mod_omm_sys, 0.5, 0.66],
-            [vdw_mod_omm_sys, 0.777, 0.833333],
-        ]:
-            found_coul_14, found_vdw_14 = get_14_scaling_factors(omm_sys)
-
-            np.testing.assert_almost_equal(
-                actual=found_vdw_14,
-                desired=expected_vdw_14,
-                decimal=10,
-                err_msg="vdW 1-4 scaling factors do not match",
-            )
-
-            np.testing.assert_almost_equal(
-                actual=found_coul_14,
-                desired=expected_coul_14,
-                decimal=10,
-                err_msg="Electrostatics 1-4 scaling factors do not match",
-            )
-
-    def test_14_missing_nonbonded_handler(self):
-        """Test that something sane happens with 1-4 scaling factors if a
-        ForceField is missing a vdWHandler and/or ElectrostaticsHandler"""
-        top = Molecule.from_smiles("CCCC").to_topology()
-
-        ff_no_vdw = ForceField("test_forcefields/test_forcefield.offxml")
-        ff_no_electrostatics = ForceField("test_forcefields/test_forcefield.offxml")
-        ff_no_nonbonded = ForceField("test_forcefields/test_forcefield.offxml")
-
-        ff_no_vdw.deregister_parameter_handler("vdW")
-        ff_no_nonbonded.deregister_parameter_handler("vdW")
-
-        ff_no_electrostatics.deregister_parameter_handler("Electrostatics")
-        ff_no_nonbonded.deregister_parameter_handler("Electrostatics")
-
-        sys_no_vdw = ff_no_vdw.create_openmm_system(top)
-        sys_no_electrostatics = ff_no_electrostatics.create_openmm_system(top)
-        sys_no_nonbonded = ff_no_nonbonded.create_openmm_system(top)
-
-        np.testing.assert_almost_equal(
-            actual=get_14_scaling_factors(sys_no_vdw)[0],
-            desired=ff_no_vdw["Electrostatics"].scale14,
-            decimal=8,
-        )
-
-        np.testing.assert_almost_equal(
-            actual=get_14_scaling_factors(sys_no_electrostatics)[1],
-            desired=ff_no_electrostatics["vdW"].scale14,
-            decimal=8,
-        )
-
     def test_overwrite_bond_orders(self):
         """Test that previously-defined bond orders in the topology are overwritten"""
         mol = create_ethanol()
@@ -4957,7 +4886,7 @@ def test_charge_increment(self):
 
 @pytest.mark.skip(reason="Needs to be updated for 0.2.0 syntax")
 def test_create_system_molecules_parmatfrosst_gbsa(self):
-    """Test creation of a System object from small molecules to test parm@frosst forcefield with GBSA support."""
+    """Test creation of a System object from small molecules to test parm@frosst force field with GBSA support."""
     molecules_file_path = get_data_file_path(
         "molecules/AlkEthOH_test_filt1_tripos.mol2"
     )
