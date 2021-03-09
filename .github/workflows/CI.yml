@@ -5,10 +5,12 @@ on:
     branches:
       - "master"
       - "maintenance/.+"
+      - "084-rc"
   pull_request:
     branches:
       - "master"
       - "maintenance/.+"
+      - "084-rc"
   schedule:
     # Nightly tests run on master by default:
     #   Scheduled workflows run on the latest commit on the default or base branch.

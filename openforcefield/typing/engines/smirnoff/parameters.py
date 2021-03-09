@@ -2827,7 +2827,6 @@ class BondHandler(ParameterHandler):
                 )
                 match.reference_molecule.assign_fractional_bond_orders(
                     toolkit_registry=toolkit_registry,
-                    use_conformers=match.reference_molecule.conformers,
                     bond_order_model=self.fractional_bondorder_method.lower(),
                 )
 
@@ -3234,7 +3233,6 @@ class ProperTorsionHandler(ParameterHandler):
                 )
                 match.reference_molecule.assign_fractional_bond_orders(
                     toolkit_registry=toolkit_registry,
-                    use_conformers=match.reference_molecule.conformers,
                     bond_order_model=self.fractional_bondorder_method.lower(),
                 )
 
@@ -3655,44 +3653,6 @@ class vdWHandler(_NonbondedHandler):
         self._check_all_valence_terms_assigned(
             assigned_terms=atom_matches, valence_terms=list(topology.topology_atoms)
         )
-
-    # TODO: Can we express separate constraints for postprocessing and normal processing?
-    def postprocess_system(self, system, topology, **kwargs):
-        # Create exceptions based on bonds.
-        # TODO: This postprocessing must occur after the ChargeIncrementModelHandler
-        # QUESTION: Will we want to do this for *all* cases, or would we ever want flexibility here?
-        bond_particle_indices = []
-
-        for topology_molecule in topology.topology_molecules:
-
-            top_mol_particle_start_index = topology_molecule.atom_start_topology_index
-
-            for topology_bond in topology_molecule.bonds:
-
-                top_index_1 = topology_molecule._ref_to_top_index[
-                    topology_bond.bond.atom1_index
-                ]
-                top_index_2 = topology_molecule._ref_to_top_index[
-                    topology_bond.bond.atom2_index
-                ]
-
-                top_index_1 += top_mol_particle_start_index
-                top_index_2 += top_mol_particle_start_index
-
-                bond_particle_indices.append((top_index_1, top_index_2))
-
-        for force in system.getForces():
-            # TODO: Should we just store which `Force` object we are adding to and use that instead,
-            # to prevent interference with other kinds of forces in the future?
-            # TODO: Can we generalize this to allow for `CustomNonbondedForce` implementations too?
-            if isinstance(force, openmm.NonbondedForce):
-                # nonbonded.createExceptionsFromBonds(bond_particle_indices, self.coulomb14scale, self.lj14scale)
-
-                # TODO: Don't mess with electrostatic scaling here. Have a separate electrostatics handler.
-                force.createExceptionsFromBonds(
-                    bond_particle_indices, 0.83333, self.scale14
-                )
-                # force.createExceptionsFromBonds(bond_particle_indices, self.coulomb14scale, self._scale14)
 
 
 class ElectrostaticsHandler(_NonbondedHandler):

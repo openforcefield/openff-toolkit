@@ -7,6 +7,87 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 * ``minor`` increments add features but do not break API compatibility
 * ``micro`` increments represent bugfix releases or improvements in documentation
 
+0.8.4 - Current development
+---------------------------
+
+New features
+""""""""""""
+- `PR #839 <https://github.com/openforcefield/openforcefield/pull/839>`_: Add support for computing WBOs from multiple
+  conformers using the AmberTools and OpenEye toolkits, and from ELF10 conformers using the OpenEye toolkit wrapper.
+- `PR #832 <https://github.com/openforcefield/openforcefield/pull/832>`_: Expose ELF conformer selection through the
+  ``Molecule`` API via a new ``apply_elf_conformer_selection`` function.
+- `PR #831 <https://github.com/openforcefield/openff-toolkit/pull/831>`_: Expose ELF conformer selection through the
+  OpenEye wrapper.
+- `PR #790 <https://github.com/openforcefield/openforcefield/pull/790>`_: Fixes `Issue #720
+  <https://github.com/openforcefield/openforcefield/issues/720>`_ where qcschema roundtrip to/from results
+  in an error due to missing cmiles entry in attributes.
+- `PR #793 <https://github.com/openforcefield/openff-toolkit/pull/793>`_: Add an initial ELF conformer selection
+  implementation which uses RDKit.
+- `PR #799 <https://github.com/openforcefield/openff-toolkit/pull/799>`_: Closes
+  `Issue #746 <https://github.com/openforcefield/openff-toolkit/issues/746>`_ by adding
+  :py:meth:`Molecule.smirnoff_impropers <openff.toolkit.topology.FrozenMolecule.smirnoff_impropers>`,
+  :py:meth:`Molecule.amber_impropers <openff.toolkit.topology.FrozenMolecule.amber_impropers>`,
+  :py:meth:`TopologyMolecule.smirnoff_impropers <openff.toolkit.topology.TopologyMolecule.smirnoff_impropers>`,
+  :py:meth:`TopologyMolecule.amber_impropers <openff.toolkit.topology.TopologyMolecule.amber_impropers>`,
+  :py:meth:`Topology.smirnoff_impropers <openff.toolkit.topology.Topology.smirnoff_impropers>`, and
+  :py:meth:`Topology.amber_impropers <openff.toolkit.topology.Topology.amber_impropers>`.
+- `PR #847 <https://github.com/openforcefield/openforcefield/pull/847>`_: Instances of
+  :py:class:`ParameterAttribute <openff.toolkit.typing.engines.smirnoff.parameters.ParameterAttribute>`
+  documentation can now specify their docstrings with the optional ``docstring`` argument to the
+  ``__init__()`` method.
+- `PR #827 <https://github.com/openforcefield/openff-toolkit/pull/827>`_: The
+  setter for :py:class:`Topology.box_vectors <openff.toolkit.topology.Topology>` now infers box vectors
+  when box lengths are pass as a list of length 3.
+
+Behavior changed
+""""""""""""""""
+- `PR #802 <https://github.com/openforcefield/openforcefield/pull/802>`_: Fixes
+  `Issue #408 <https://github.com/openforcefield/openforcefield/issues/408>`_. The 1-4 scaling
+  factor for electrostatic interactions is now properly set by the value specified in the force
+  field. Previously it fell back to a default value of 0.83333. The toolkit may now produce
+  slightly different energies as a result of this change.
+- `PR #839 <https://github.com/openforcefield/openforcefield/pull/839>`_: The average WBO will now be returned when
+  multiple conformers are provided to ``assign_fractional_bond_orders`` using ``use_conformers``.
+- `PR #816 <https://github.com/openforcefield/openforcefield/pull/816>`_: Force field file paths
+  are now loaded in a case-insensitive manner.
+
+
+Bugfixes
+""""""""
+- `PR #849 <https://github.com/openforcefield/openforcefield/pull/849>`_: Changes
+  :py:meth:`create_openmm_system <openff.toolkit.typing.engines.smirnoff.ForceField.create_openmm_system>` so
+  that it no longer uses the conformers on existing reference molecules (if present) to calculate Wiberg
+  bond orders. Instead, new conformers are always generated during parameterization.
+- `PR #838 <https://github.com/openforcefield/openforcefield/pull/838>`_: Corrects spacing of "forcefield" to "force
+  field" throughout documentation. Fixes `Issue #112 <https://github.com/openforcefield/openforcefield/issues/112>`_.
+- `PR #846 <https://github.com/openforcefield/openff-toolkit/pull/846>`_: Corrects dead links throughout release history.
+  Fixes `Issue #835 <https://github.com/openforcefield/openff-toolkit/issues/835>`_.
+- `PR #847 <https://github.com/openforcefield/openforcefield/pull/847>`_: Documentation now compiles
+  with far fewer warnings, and in many cases more correctly. Additionally, :py:class:`ParameterAttribute
+  <openff.toolkit.typing.engines.smirnoff.parameters.ParameterAttribute>` documentation no longer
+  appears incorrectly in classes where it is used. Fixes `Issue #397
+  <https://github.com/openforcefield/openforcefield/issues/397>`_.
+- `PR #802 <https://github.com/openforcefield/openforcefield/pull/802>`_: Fixes
+  `Issue #408 <https://github.com/openforcefield/openforcefield/issues/408>`_. The 1-4 scaling
+  factor for electrostatic interactions is now properly set by the value specified in the force
+  field. Previously it fell back to a default value of 0.83333. The toolkit may now produce
+  slightly different energies as a result of this change.
+
+0.9.0 - Namespace Migration
+---------------------------
+
+This release marks the transition from the old ``openforcefield`` branding over to its new
+identity as ``openff-toolkit``. This change has been made to better represent the role of the
+toolkit, and highlight its place in the larger Open Force Field (OpenFF) ecosystem.
+
+From version ``0.9.0`` onwards the toolkit will need to be imported as ``import openff.toolkit.XXX`` and
+``from openff.toolkit import XXX``.
+
+API-breaking changes
+""""""""""""""""""""
+- `PR #803 <https://github.com/openforcefield/openff-toolkit/pull/803>`_: Migrates ``openforcefield``
+  imports to ``openff.toolkit``.
+
 0.8.3 - Major bugfix release
 ----------------------------
 
@@ -33,6 +114,9 @@ New features
 """"""""""""
 - `PR #794 <https://github.com/openforcefield/openforcefield/pull/794>`_: Adds a decorator
   ``@requires_package`` that denotes a function requires an optional dependency.
+- `PR #790 <https://github.com/openforcefield/openforcefield/pull/790>`_: Fixes `Issue #720
+  <https://github.com/openforcefield/openforcefield/issues/720>`_ where qcschema roundtrip to/from results
+  in an error due to missing cmiles entry in attributes.
 - `PR #805 <https://github.com/openforcefield/openforcefield/pull/805>`_: Adds a deprecation warning for the up-coming
   release of the ``openff-toolkit`` package and its import breaking changes.
 
@@ -293,7 +377,7 @@ API-breaking changes
 Tests added
 """""""""""
 
-- `PR #548 <https://github.com/openforcefield/openforcefield/pull/548>`_: Adds test for 
+- `PR #548 <https://github.com/openforcefield/openforcefield/pull/548>`_: Adds test for
 
   - The virtual site parameter handler
   - TIP5P water dimer energy and positions
@@ -361,7 +445,7 @@ Bugfixes
   toolkit from issuing a warning caused by doing stereo-specific smarts searches on certain
   structures.
 - `PR #724 <https://github.com/openforcefield/openforcefield/pull/724>`_: Closes issue `Issue #502
-  <https://github.com/openforcefield/openforcefield/issues/502>`_ Adding a utility function Topology.to_file() to 
+  <https://github.com/openforcefield/openforcefield/issues/502>`_ Adding a utility function Topology.to_file() to
   write topology and positions to a "PDB" file using openmm backend for pdb file write.
 
 Tests added
@@ -422,7 +506,7 @@ New features
 """"""""""""
 - `PR #632 <https://github.com/openforcefield/openforcefield/pull/632>`_: Adds
   :py:class:`ForceField.registered_parameter_handlers <openforcefield.typing.engines.smirnoff.forcefield.ForceField>`
-- `PR #614 <https://github.com/openforcefield/openforcefield/pull/614>`_: Adds 
+- `PR #614 <https://github.com/openforcefield/openforcefield/pull/614>`_: Adds
   :py:class:`ToolkitRegistry.deregister_toolkit <openforcefield.utils.toolkits.ToolkitRegistry>`
   to de-register registered toolkits, which can include toolkit wrappers loaded into ``GLOBAL_TOOLKIT_REGISTRY``
   by default.
@@ -744,7 +828,7 @@ New features
 - `PR #573 <https://github.com/openforcefield/openforcefield/pull/573>`_:
   Adds ``quacpac`` error output to ``quacpac`` failure in ``Molecule.compute_partial_charges_am1bcc``.
 - `PR #560 <https://github.com/openforcefield/openforcefield/issues/560>`_: Added visualization method to the the Molecule class.
-- `PR #620 <https://github.com/openforcefield/openforcefield/pull/620>`_: Added the ability to register parameter handlers via entry point plugins. This functionality is accessible by initializing a ``ForceField`` with the ``load_plugins=True`` keyword argument. 
+- `PR #620 <https://github.com/openforcefield/openforcefield/pull/620>`_: Added the ability to register parameter handlers via entry point plugins. This functionality is accessible by initializing a ``ForceField`` with the ``load_plugins=True`` keyword argument.
 - `PR #582 <https://github.com/openforcefield/openforcefield/pull/582>`_: Added fractional bond order interpolation
   Adds `return_topology` kwarg to
   :py:meth:`Forcefield.create_openmm_system <openforcefield.typing.engines.smirnoff.forcefield.ForceField.create_openmm_system>`,
