@@ -20,7 +20,7 @@ Getting started
    faq
 
 Using the toolkit
-----------
+-----------------
 
 .. toctree::
    :maxdepth: 1
