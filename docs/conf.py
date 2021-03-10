@@ -78,7 +78,9 @@ templates_path = ['_templates']
 # Extensions for the myst parser
 myst_enable_extensions = [
     "dollarmath",
-    "colon_fence"
+    "colon_fence",
+    "smartquotes",
+    "replacements"
 ]
 
 # Source parsers
