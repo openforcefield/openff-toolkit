@@ -87,7 +87,10 @@ The `aromaticity_model` specifies the aromaticity model used for chemical percep
 
 Currently, the only supported model is `OEAroModel_MDL`, which is implemented in both the RDKit and the OpenEye Toolkit.
 
-.. note :: Add link to complete open specification of `OEAroModel_MDL` aromaticity model.
+:::{note}
+Add link to complete open specification of `OEAroModel_MDL` aromaticity model.
+:::
+
 
 ### Metadata
 
@@ -98,7 +101,9 @@ Typically, date and author information is included:
 ```
 The `<Date>` tag should conform to [ISO 8601 date formatting guidelines](https://en.wikipedia.org/wiki/ISO_8601), such as `2018-07-14` or `2018-07-14T08:50:48+00:00` (UTC time).
 
-.. todo :: Should we have a separate `<Metadata>` or `<Provenance>` section that users can add whatever they want to? This would minimize the potential for accidentally colliding with other tags we add in the future.
+:::{todo}
+Should we have a separate `<Metadata>` or `<Provenance>` section that users can add whatever they want to? This would minimize the potential for accidentally colliding with other tags we add in the future.
+:::
 
 ### Parameter generators
 
@@ -128,10 +133,10 @@ The symbol `-` joining these groups denotes a single bond.
 The strings `:1`, `:2`, and `:2` label these atoms as indices 1, 2, and 3, with 2 being the central atom.
 Equilibrium angles are provided as the `angle` attribute, along with force constants as the `k` attribute (with corresponding units included in the expression).
 
-.. note ::
-
-   The reference implementation of the SMIRNOFF specification implemented in the Open Force Field Toolkit will, by default, raise an exception if an unexpected attribute is encountered. The toolkit can be configured to accept non-spec keywords, but these are considered "cosmetic" and will not be evaluated. 
-   For example, providing an `<Angle>` tag that also specifies a second force constant `k2` will result in an exception, unless the user specifies that "cosmetic" attributes should be accepted by the parser.
+:::{note}
+The reference implementation of the SMIRNOFF specification implemented in the Open Force Field Toolkit will, by default, raise an exception if an unexpected attribute is encountered. The toolkit can be configured to accept non-spec keywords, but these are considered "cosmetic" and will not be evaluated. 
+For example, providing an `<Angle>` tag that also specifies a second force constant `k2` will result in an exception, unless the user specifies that "cosmetic" attributes should be accepted by the parser.
+:::
 
 ### SMIRNOFF parameter specification is hierarchical
 
@@ -268,7 +273,9 @@ Future additions will provide options for intelligently fragmenting large molecu
 
 ### `<ToolkitAM1BCC>`: Temporary support for toolkit-based AM1-BCC partial charges
 
-.. warning:: This tag is not permanent and may be phased out in future versions of the spec.
+:::{warning}
+This tag is not permanent and may be phased out in future versions of the spec.
+:::
 
 This tag calculates partial charges using the default settings of the highest-priority cheminformatics toolkit that can perform [AM1-BCC charge assignment](https://docs.eyesopen.com/toolkits/python/quacpactk/molchargetheory.html#am1bcc-charges).
 Currently, if the OpenEye toolkit is licensed and available, this will use QuacPac configured to generate charges using [AM1-BCC ELF10](https://docs.eyesopen.com/toolkits/python/quacpactk/OEProtonClasses/OEAM1BCCELF10Charges.html) for each unique molecule in the topology.
@@ -301,7 +308,9 @@ Below, we describe the specification for each force field term definition using 
 
 As an example of a complete SMIRNOFF force field specification, see [a recent force field in the "Parsley" line (openff-1.2.0.offxml)](https://github.com/openforcefield/openff-forcefields/blob/1.2.0/openforcefields/offxml/openff-1.2.0.offxml).
 
-.. note :: Not all parameter sections *must* be specified in a SMIRNOFF force field. A wide variety of force field terms are provided in the specification, but a particular force field only needs to define a subset of those terms.
+:::{Note}
+Not all parameter sections *must* be specified in a SMIRNOFF force field. A wide variety of force field terms are provided in the specification, but a particular force field only needs to define a subset of those terms.
+:::
 
 ### `<vdW>`
 
@@ -481,7 +490,9 @@ Currently, only `potential="k*(1+cos(periodicity*theta-phase))"` is supported, w
 U = \sum_{i=1}^N k_i * (1 + cos(periodicity_i * phi - phase_i))
 ```
 
-.. note:: **AMBER defines a modified functional form**, such that `U = \sum_{i=1}^N (k_i/2) * (1 + cos(periodicity_i * phi - phase_i))`, so that barrier heights would need to be divided by two in order to be used in the SMIRNOFF format.
+:::{note}
+**AMBER defines a modified functional form**, such that `U = \sum_{i=1}^N (k_i/2) * (1 + cos(periodicity_i * phi - phase_i))`, so that barrier heights would need to be divided by two in order to be used in the SMIRNOFF format.
+:::
 
 If the `potential` attribute is omitted, it defaults to `k*(1+cos(periodicity*theta-phase))`.
 
@@ -539,7 +550,10 @@ Currently, only `potential="charmm"` is supported, where we utilize the function
 U = \sum_{i=1}^N k_i * (1 + cos(periodicity_i * phi - phase_i))
 ```
 
-.. note:: **AMBER defines a modified functional form**, such that `U = \sum_{i=1}^N (k_i/2) * (1 + cos(periodicity_i * phi - phase_i))`, so that barrier heights would need to be divided by two in order to be used in the SMIRNOFF format.
+:::{note}
+**AMBER defines a modified functional form**, such that `U = \sum_{i=1}^N (k_i/2) * (1 + cos(periodicity_i * phi - phase_i))`, so that barrier heights would need to be divided by two in order to be used in the SMIRNOFF format.
+:::
+
 If the `potential` attribute is omitted, it defaults to `charmm`.
 
 The improper torsion energy is computed as the average over all three impropers (all with the same handedness) in a [trefoil](https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Trefoil_knot_left.svg/2000px-Trefoil_knot_left.svg.png).
@@ -553,11 +567,9 @@ The *second* atom in an improper (in the example above, the trivalent carbon) is
 
 ### `<GBSA>`
 
-  .. warning :: The current release of ParmEd
-    `can not transfer GBSA models produced by the Open Force Field Toolkit
-    to other simulation packages
-    <https://github.com/ParmEd/ParmEd/blob/3.2.0/parmed/openmm/topsystem.py#L148-L150>`_.
-    These GBSA forces are currently only computable using OpenMM.
+:::{warning}
+The current release of ParmEd [can not transfer GBSA models produced by the Open Force Field Toolkit to other simulation packages](https://github.com/ParmEd/ParmEd/blob/3.2.0/parmed/openmm/topsystem.py#L148-L150). These GBSA forces are currently only computable using OpenMM.
+:::
 
 Generalized-Born surface area (GBSA) implicit solvent parameters are optionally specified via a `<GBSA>...</GBSA>` using `<Atom>` tags with GBSA model specific attributes:
 ```XML
