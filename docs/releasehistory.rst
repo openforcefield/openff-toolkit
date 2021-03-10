@@ -7,8 +7,8 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 * ``minor`` increments add features but do not break API compatibility
 * ``micro`` increments represent bugfix releases or improvements in documentation
 
-0.9.1 - Current development
----------------------------
+0.9.1 - Minor feature and bugfix release
+----------------------------------------
 
 New features
 """"""""""""
@@ -54,7 +54,7 @@ Behavior changed
 Bugfixes
 """"""""
 - `PR #849 <https://github.com/openforcefield/openforcefield/pull/849>`_: Changes
-  :py:meth:`create_openmm_system <openff.toolkit.typing.engines.smirnoff.ForceField.create_openmm_system>` so
+  :py:meth:`create_openmm_system <openff.toolkit.typing.engines.smirnoff.forcefield.ForceField.create_openmm_system>` so
   that it no longer uses the conformers on existing reference molecules (if present) to calculate Wiberg
   bond orders. Instead, new conformers are always generated during parameterization.
 
@@ -87,6 +87,23 @@ API-breaking changes
 """"""""""""""""""""
 - `PR #803 <https://github.com/openforcefield/openff-toolkit/pull/803>`_: Migrates ``openforcefield``
   imports to ``openff.toolkit``.
+
+
+0.8.4 - Minor feature and bugfix release
+----------------------------------------
+
+**This release is intended to be functionally identical to 0.9.1.
+The only difference is that it uses the "openforcefield" namespace.**
+
+This release is a final patch for the ``0.8.X`` series of releases of the toolkit, and also marks the last
+version of the toolkit which will be imported as ``import openforcefield.XXX`` / ``from openforcefield import XXX``.
+From version ``0.9.0`` onwards the toolkit will be importable only as ``import openff.toolkit.XXX`` /
+``from openff.toolkit import XXX``.
+
+**Note** This change will also be accompanied by a renaming of the package from ``openforcefield`` to ``openff-toolkit``,
+so users need not worry about accidentally pulling in a version with changed imports. Users will have to explicitly
+choose to install the ``openff-toolkit`` package once released which will contain the breaking import changes.
+
 
 0.8.3 - Major bugfix release
 ----------------------------
