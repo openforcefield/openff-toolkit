@@ -69,6 +69,9 @@ Improved documentation and warnings
   <openff.toolkit.typing.engines.smirnoff.parameters.ParameterAttribute>` documentation no longer
   appears incorrectly in classes where it is used. Fixes `Issue #397
   <https://github.com/openforcefield/openforcefield/issues/397>`_.
+- `PR #862 <https://github.com/openforcefield/openforcefield/pull/862>`_: Clarify that ``System`` objects
+  produced by the toolkit are OpenMM ``System``\ s in anticipation of forthcoming OpenFF ``System``\ s.
+  Fixes `Issue #618 <https://github.com/openforcefield/openforcefield/issues/618>`_.
 
 0.9.0 - Namespace Migration
 ---------------------------
@@ -585,7 +588,7 @@ of molecular symmetry. For example, a methyl group could match the SMIRKS ``[C:1
 (with different orderings of the three hydrogen atoms), but the user would almost certainly not intend for the charge
 increments to be applied six times. The "regardless of order" clause was added specifically to address this.
 
-In short, the first time a group of atoms becomes involved in a ``ChargeIncrement`` together, the System gains a new
+In short, the first time a group of atoms becomes involved in a ``ChargeIncrement`` together, the OpenMM ``System`` gains a new
 parameter "slot". Only another ``ChargeIncrement`` which applies to the exact same group of atoms (in any order) can
 take over the "slot", pushing the original ``ChargeIncrement`` out.
 
@@ -822,7 +825,7 @@ New features
 - `PR #582 <https://github.com/openforcefield/openff-toolkit/pull/582>`_: Added fractional bond order interpolation
   Adds `return_topology` kwarg to
   :py:meth:`Forcefield.create_openmm_system <openff.toolkit.typing.engines.smirnoff.forcefield.ForceField.create_openmm_system>`,
-  which returns the processed topology along with the system when ``True`` (default ``False``).
+  which returns the processed topology along with the OpenMM ``System`` when ``True`` (default ``False``).
 
 Tests added
 """""""""""
@@ -1003,7 +1006,7 @@ Behavior changed
   ``openforcefield.typing.engines.smirnoff.parameters.UnassignedMoleculeChargeException``
   will be raised. Previously, creating a system without either ``ToolkitAM1BCCHandler`` or
   the ``charge_from_molecules`` keyword argument to ``ForceField.create_openmm_system`` would
-  produce a system where the molecule has zero charge on all atoms. However, given that we
+  produce an OpenMM ``System`` where the molecule has zero charge on all atoms. However, given that we
   will soon be adding more options for charge assignment, it is important that
   failures not be silent. Molecules with zero charge can still be produced by setting the
   ``Molecule.partial_charges`` array to be all zeroes, and including the molecule in the
