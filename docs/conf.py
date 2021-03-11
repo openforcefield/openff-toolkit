@@ -82,6 +82,8 @@ myst_enable_extensions = [
     "smartquotes",
     "replacements"
 ]
+# Stop myst from disabling MathJax's $...$ and $$...$$ environments
+myst_update_mathjax = False
 
 # Source parsers
 #source_parsers = {
