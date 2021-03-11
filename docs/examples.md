@@ -1,4 +1,4 @@
 (examples)=
 
-```{include} ../examples/README.md
-```
+:::{include} ../examples/README.md
+:::
