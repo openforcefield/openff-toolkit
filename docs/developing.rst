@@ -211,7 +211,7 @@ But when we do need to make tradeoffs, "assume the user is an expert" is our gui
 
 At the same time, we aim for "automagic" behavior whenever a decision will clearly go one way over another.
 System parametrization is an inherently complex topic, and the OFF toolkit would be nearly unusable if we required the user to explicitly approve every aspect of the process.
-For example, if a ``Topology`` has its ``box_vectors`` attribute defined, we assume that the resulting ``System`` should be periodic.
+For example, if a ``Topology`` has its ``box_vectors`` attribute defined, we assume that the resulting OpenMM ``System`` should be periodic.
 
 
 
