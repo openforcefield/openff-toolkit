@@ -7,6 +7,14 @@ Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https:/
 * ``minor`` increments add features but do not break API compatibility
 * ``micro`` increments represent bugfix releases or improvements in documentation
 
+Changes since last release
+--------------------------
+
+Improved documentation and warnings
+"""""""""""""""""""""""""""""""""""
+- `PR #870 <https://github.com/openforcefield/openff-toolkit/pull/870>`_: Reorganised documentation
+  to improve discoverability and allow future additions.
+
 0.9.1 - Minor feature and bugfix release
 ----------------------------------------
 
