@@ -1379,7 +1379,7 @@ class ForceField:
         Parameters
         ----------
         topology : openff.toolkit.topology.Topology
-            The ``Topology`` corresponding to the ``System`` object to be created.
+            The ``Topology`` corresponding to the OpenMM ``System`` object to be created.
         positions : simtk.unit.Quantity of dimension (natoms,3) with units compatible with angstroms
             The positions corresponding to the ``System`` object to be created
 
