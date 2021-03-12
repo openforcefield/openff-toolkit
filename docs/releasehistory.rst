@@ -17,6 +17,8 @@ Improved documentation and warnings
   Fixes `Issue #618 <https://github.com/openforcefield/openforcefield/issues/618>`_.
 - `PR #870 <https://github.com/openforcefield/openff-toolkit/pull/870>`_: Reorganised documentation
   to improve discoverability and allow future additions.
+- `PR #863 <https://github.com/openforcefield/openff-toolkit/pull/863>`_: Documented how to build
+  the docs in the developers guide.
 
 0.9.1 - Minor feature and bugfix release
 ----------------------------------------
