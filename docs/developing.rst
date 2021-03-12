@@ -292,3 +292,28 @@ There is a step in CI that uses these tools to check for a consistent style. The
     $ isort openff
 
 Anything not covered above is currently up to personal preference, but may change as new linters are added.
+
+Supported Python versions
+"""""""""""""""""""""""""
+
+The OpenFF Toolkit roughly follows `NEP 29 <https://numpy.org/neps/nep-0029-deprecation_policy.html>`_. As of version 0.9.1 (March 2021) this means Python 3.7-3.9 is officially supported. We develop, test, and distribute on macOS and Linux-based operating systems. We do not currently support Windows. Some CI builds run using only The RDKit as a backend, some run using only OpenEye Toolkits, and some run using both installed at once.
+
+The CI matrix is currently as follows:
+
++-----------------------+------------+-----------+-------------+------------+-----------+-------------+
+| Operating system      | Linux                                | macOS                                |
++-----------------------+------------+-----------+-------------+------------+-----------+-------------+
+| Wrapped toolkit(s)    | RDKit      | OpenEye   | RDKit + OE  | RDKit      | OpenEye   | RDKit + OE  |
++-----------------------+------------+-----------+-------------+------------+-----------+-------------+
+| Python version        |            |           |             |            |           |             |
++=======================+========================+=============+========================+=============+
+| Python 3.6 and older  | No support after 0.9.1 (March 20201)                                        |
++-----------------------+------------+-----------+-------------+------------+-----------+-------------+
+| Python 3.7            | Test       | Test      | Test        | Test       | Test      | Test        |
++-----------------------+------------+-----------+-------------+------------+-----------+-------------+
+| Python 3.8            | Test       | Skip      |        Skip | Test       | Skip      | Skip        |
++-----------------------+------------+-----------+-------------+------------+-----------+-------------+
+| Python 3.9            | Test       | Skip      |        Skip | Test       | Skip      | Skip        |
++-----------------------+------------+-----------+-------------+------------+-----------+-------------+
+| Python 3.10 and newer |   Waiting on official releases and upstream support                         |
++-----------------------+------------+-----------+-------------+------------+-----------+-------------+
