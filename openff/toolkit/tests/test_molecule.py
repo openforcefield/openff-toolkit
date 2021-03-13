@@ -81,7 +81,7 @@ def assert_molecule_is_equal(molecule1, molecule2, msg):
         raise AssertionError(msg)
 
 
-def is_four_memebered_ring_torsion(torsion):
+def is_four_membered_ring_torsion(torsion):
     """Check that three atoms in the given torsion form a four-membered ring."""
     # Push a copy of the first and second atom in the end to make the code simpler.
     torsion = list(torsion) + [torsion[0], torsion[1]]
@@ -96,7 +96,7 @@ def is_four_memebered_ring_torsion(torsion):
     return is_four_membered_ring
 
 
-def is_three_memebered_ring_torsion(torsion):
+def is_three_membered_ring_torsion(torsion):
     """Check that three atoms in the given torsion form a three-membered ring.
 
     In order to be 4 atoms with a three-membered ring, there must be
@@ -2190,8 +2190,8 @@ class TestMolecule:
 
             assert (
                 is_chain
-                or is_three_memebered_ring_torsion(proper)
-                or is_four_memebered_ring_torsion(proper)
+                or is_three_membered_ring_torsion(proper)
+                or is_four_membered_ring_torsion(proper)
             )
 
     @pytest.mark.parametrize("molecule", mini_drug_bank())
@@ -2209,7 +2209,7 @@ class TestMolecule:
                 or (improper[0].is_bonded_to(improper[3]))
                 or (improper[2].is_bonded_to(improper[3]))
             )
-            assert is_not_cyclic or is_three_memebered_ring_torsion(improper)
+            assert is_not_cyclic or is_three_membered_ring_torsion(improper)
 
     @pytest.mark.parametrize(
         ("molecule", "n_impropers", "n_pruned"),
@@ -2248,7 +2248,7 @@ class TestMolecule:
         common_torsions = molecule.propers & molecule.impropers
         if len(common_torsions) > 0:
             for torsion in common_torsions:
-                assert is_three_memebered_ring_torsion(torsion)
+                assert is_three_membered_ring_torsion(torsion)
 
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_total_charge(self, molecule):
