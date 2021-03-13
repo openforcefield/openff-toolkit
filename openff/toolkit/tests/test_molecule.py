@@ -268,7 +268,6 @@ drugbank_stereogenic_in_oe_but_not_rdkit = {
 # TESTS
 # =============================================================================================
 
-
 class TestAtom:
     """Test Atom class."""
 
@@ -314,6 +313,22 @@ class TestAtom:
             assert atom.formal_charge == formal_charge
             assert atom.is_aromatic == is_aromatic
             assert atom.name == this_element.name
+    
+    def test_set_molecule(self):
+        """Test appropriately setting a molecule with no errors"""
+        mol = Molecule.from_smiles("CCO")
+        atom = Atom(6, 0, False)
+        atom.molecule = mol
+    
+    def test_set_molecule_error(self):
+        """Test setting molecule for atom with molecule raises error"""
+        mol = Molecule.from_smiles("CCO")
+        atom = Atom(6, 0, False)
+        atom.molecule = mol
+        with pytest.raises(AssertionError,
+                           match="already has an associated molecule"):
+            atom.molecule = mol
+
 
 
 class TestMolecule:
