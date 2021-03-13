@@ -5099,7 +5099,6 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
                 )
                 # Compute desired charges
                 # TODO: Add error handling if antechamber chokes
-                # TODO: Add something cleaner than os.system
                 short_charge_method = charge_method["antechamber_keyword"]
                 subprocess.check_output(
                     [
