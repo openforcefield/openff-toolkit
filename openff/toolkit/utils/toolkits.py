@@ -5824,7 +5824,6 @@ class ToolkitRegistry:
 # =============================================================================================
 
 # Create global toolkit registry, where all available toolkits are registered
-# TODO: Should this be all lowercase since it's not a constant?
 GLOBAL_TOOLKIT_REGISTRY = ToolkitRegistry(
     toolkit_precedence=[
         OpenEyeToolkitWrapper,
