@@ -3353,8 +3353,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                 # set it back to zero
                 atom.SetAtomMapNum(0)
 
-        # TODO: I think UpdatePropertyCache(strict=True) is called anyway in Chem.SanitizeMol().
-        rdmol.UpdatePropertyCache(strict=False)
+        # Chem.SanitizeMol calls updatePropertyCache so we don't need to call it ourselves
+        # https://www.rdkit.org/docs/cppapi/namespaceRDKit_1_1MolOps.html#a8d831787aaf2d65d9920c37b25b476f5
         Chem.SanitizeMol(
             rdmol,
             Chem.SANITIZE_ALL ^ Chem.SANITIZE_ADJUSTHS ^ Chem.SANITIZE_SETAROMATICITY,
