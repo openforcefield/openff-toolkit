@@ -92,7 +92,9 @@ Development Infrastructure
 
     Services that run frequently while the code is undergoing changes, ensuring that the codebase still installs and has the intended behavior.
     Currently, we use a service called `GitHub Actions <https://github.com/features/actions>`_ for this.
-    Every time we make commits to the ``master`` branch of the ``openff-toolkit`` Github repository, a set of virtual machines that mimic brand new Linux and Mac OSX computers are created. These follow build instructions (``.github/workflows/CI.yml``) file to install the toolkit.
+    CI jobs run every time a commit is made to the ``master`` branch of the ``openff-toolkit`` Github repository or in a PR opened against it.
+    These runs start by booting virtual machines that mimic brand new Linux and macOS computers.
+    They then follow build instructions (see the ``.github/workflows/CI.yml`` file) to install the toolkit.
     After installing the OpenFF Toolkit and its dependencies, these virtual machines run our test suite.
     If the tests all pass, the build "passes" (returns a green check mark on GitHub).
     If all the tests for a specific change to the ``master`` branch return green, then we know that the change has not broken the toolkit's existing functionality.
