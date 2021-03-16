@@ -1,24 +1,24 @@
-Release History
-===============
+# Release History
 
-Releases follow the ``major.minor.micro`` scheme recommended by `PEP440 <https://www.python.org/dev/peps/pep-0440/#final-releases>`_, where
+Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://www.python.org/dev/peps/pep-0440/#final-releases), where
 
-* ``major`` increments denote a change that may break API compatibility with previous ``major`` releases
-* ``minor`` increments add features but do not break API compatibility
-* ``micro`` increments represent bugfix releases or improvements in documentation
+* `major` increments denote a change that may break API compatibility with previous `major` releases
+* `minor` increments add features but do not break API compatibility
+* `micro` increments represent bugfix releases or improvements in documentation
 
-Changes since last release
---------------------------
+## Changes since last release
 
-Improved documentation and warnings
-"""""""""""""""""""""""""""""""""""
-- `PR #862 <https://github.com/openforcefield/openforcefield/pull/862>`_: Clarify that ``System`` objects
-  produced by the toolkit are OpenMM ``System``\ s in anticipation of forthcoming OpenFF ``System``\ s.
-  Fixes `Issue #618 <https://github.com/openforcefield/openforcefield/issues/618>`_.
-- `PR #870 <https://github.com/openforcefield/openff-toolkit/pull/870>`_: Reorganised documentation
-  to improve discoverability and allow future additions.
-- `PR #863 <https://github.com/openforcefield/openff-toolkit/pull/863>`_: Documented how to build
-  the docs in the developers guide.
+### Improved documentation and warnings
+- [PR #862](https://github.com/openforcefield/openforcefield/pull/862): Clarify that `System` objects produced by the toolkit are OpenMM `System`s in anticipation of forthcoming OpenFF `System`s. Fixes [Issue #618](https://github.com/openforcefield/openforcefield/issues/618).
+- [PR #863](https://github.com/openforcefield/openff-toolkit/pull/863): Documented how to build the docs in the developers guide.
+- [PR #870](https://github.com/openforcefield/openff-toolkit/pull/870): Reorganised documentation to improve discoverability and allow future additions.
+- [PR #871](https://github.com/openforcefield/openff-toolkit/pull/871): Changed Markdown parser from m2r2 to MyST for improved documentation rendering.
+
+:::{TODO}
+Translate previous release history to MyST markdown
+:::
+
+:::{eval-rst}
 
 0.9.1 - Minor feature and bugfix release
 ----------------------------------------
@@ -1489,3 +1489,5 @@ A significant (though currently unused) problem in handling of improper torsions
 Previously, non-planar impropers did not behave correctly, as six-fold impropers have two potential chiralities.
 To remedy this, SMIRNOFF impropers are now implemented as three-fold impropers with consistent chirality.
 However, current force fields in the SMIRNOFF format had no non-planar impropers, so this change is mainly aimed at future work.
+
+:::
