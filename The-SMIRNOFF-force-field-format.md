@@ -47,7 +47,7 @@ See [the example on using SMIRNOFF in AMBER or GROMACS](https://github.com/openf
 
 ## Basic structure
 
-A reference implementation of a SMIRNOFF force field parser that can process XML representations (denoted by `.offxml` file extensions) can be found in the `ForceField` class of the `openff.toolkit.typing.engines.smirnoff` module.
+A reference implementation of a SMIRNOFF force field parser that can process XML representations (denoted by `.offxml` file extensions) can be found in the [`ForceField`](openff.toolkit.typing.engines.smirnoff.forcefield.ForceField) class of the `openff.toolkit.typing.engines.smirnoff` module.
 
 Below, we describe the main structure of such an XML representation.
 
@@ -146,7 +146,7 @@ This hierarchical structure means that a typical parameter file will tend to hav
 
 ### Multiple SMIRNOFF representations can be processed in sequence
 
-Multiple SMIRNOFF data sources (e.g. multiple OFFXML files) can be loaded by the OpenFF `ForceField` in sequence.
+Multiple SMIRNOFF data sources (e.g. multiple OFFXML files) can be loaded by the OpenFF [`ForceField`](openff.toolkit.typing.engines.smirnoff.forcefield.ForceField) in sequence.
 If these files each contain unique top-level tags (such as `<Bonds>`, `<Angles>`, etc.), the resulting force field will be independent of the order in which the files are loaded.
 If, however, the same tag occurs in multiple files, the contents of the tags are merged, with the tags read later taking precedence over the parameters read earlier, provided the top-level tags have compatible attributes.
 The resulting force field will therefore depend on the order in which parameters are read.
@@ -323,7 +323,7 @@ van der Waals force parameters, which include repulsive forces arising from Paul
 </vdW>
 ```
 For standard Lennard-Jones 12-6 potentials (specified via `potential="Lennard-Jones-12-6"`), the `epsilon` parameter denotes the well depth, while the size property can be specified either via providing the `sigma` attribute, such as `sigma="1.3*angstrom"`, or via the `r_0/2` (`rmin/2`) values used in AMBER force fields (here denoted `rmin_half` as in the example above).
-The two are related by `r0 = 2^(1/6)*sigma` and conversion is done internally in `ForceField` into the `sigma` values used in OpenMM.
+The two are related by `r0 = 2^(1/6)*sigma` and conversion is done internally in [`ForceField`](openff.toolkit.typing.engines.smirnoff.forcefield.ForceField) into the `sigma` values used in OpenMM.
 
 Attributes in the `<vdW>` tag specify the scaling terms applied to the energies of 1-2 (`scale12`, default: 0), 1-3 (`scale13`, default: 0), 1-4 (`scale14`, default: 0.5), and 1-5 (`scale15`, default: 1.0) interactions,
 as well as the distance at which a switching function is applied (`switch_width`, default: `"1.0*angstrom"`), the cutoff (`cutoff`, default: `"9.0*angstroms"`), and long-range dispersion treatment scheme (`long_range_dispersion`, default: `"isotropic"`).
@@ -758,20 +758,20 @@ Thus, we provide an example of setting up a mixed protein-ligand system in [exam
 
 ### The optional `id` and `parent_id` attributes and other XML attributes
 
-In general, additional optional XML attributes can be specified and will be ignored by `ForceField` unless they are specifically handled by the parser (and specified in this document).
+In general, additional optional XML attributes can be specified and will be ignored by [`ForceField`](openff.toolkit.typing.engines.smirnoff.forcefield.ForceField) unless they are specifically handled by the parser (and specified in this document).
 
 One attribute we have found helpful in parameter file development is the `id` attribute for a specific parameter line, and we *recommend* that SMIRNOFF force fields utilize this as effectively a parameter serial number, such as in:
 ```XML
  <Bond smirks="[#6X3:1]-[#6X3:2]" id="b5" k="820.0*kilocalorie_per_mole/angstrom**2" length="1.45*angstrom"/>
 ```
-Some functionality in `ForceField`, such as `ForceField.label_molecules`, looks for the `id` attribute.
+Some functionality in [`ForceField`](openff.toolkit.typing.engines.smirnoff.forcefield.ForceField), such as `ForceField.label_molecules`, looks for the `id` attribute.
 Without this attribute, there is no way to uniquely identify a specific parameter line in the XML file without referring to it by its smirks string, and since some smirks strings can become long and relatively unwieldy (especially for torsions) this provides a more human- and search-friendly way of referring to specific sets of parameters.
 
 The `parent_id` attribute is also frequently used to denote parameters from which the current parameter is derived in some manner.
 
 ### A remark about parameter availability
 
-`ForceField` will currently raise an exception if any parameters are missing where expected for your system---i.e. if a bond is assigned no parameters, an exception will be raised.
+[`ForceField`](openff.toolkit.typing.engines.smirnoff.forcefield.ForceField) will currently raise an exception if any parameters are missing where expected for your system---i.e. if a bond is assigned no parameters, an exception will be raised.
 However, use of generic parameters (i.e. `[*:1]~[*:2]` for a bond) in your `.offxml` will result in parameters being assigned everywhere, bypassing this exception.
 We recommend generics be used sparingly unless it is your intention to provide true universal generic parameters.
 
@@ -795,7 +795,7 @@ Key changes in this version of the spec are:
 
 ### 0.2
 
-This is a backwards-incompatible overhaul of the SMIRNOFF 0.1 draft specification along with `ForceField` implementation refactor:
+This is a backwards-incompatible overhaul of the SMIRNOFF 0.1 draft specification along with [`ForceField`](openff.toolkit.typing.engines.smirnoff.forcefield.ForceField) implementation refactor:
 * Aromaticity model now defaults to `OEAroModel_MDL`, and aromaticity model names drop OpenEye-specific prefixes
 * Top-level tags are now required to specify units for any unit-bearing quantities to avoid the potential for mistakes from implied units.
 * Potential energy component definitions were renamed to be more general:
