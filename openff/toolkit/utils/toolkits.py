@@ -3353,8 +3353,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                 # set it back to zero
                 atom.SetAtomMapNum(0)
 
-        # TODO: I think UpdatePropertyCache(strict=True) is called anyway in Chem.SanitizeMol().
-        rdmol.UpdatePropertyCache(strict=False)
+        # Chem.SanitizeMol calls updatePropertyCache so we don't need to call it ourselves
+        # https://www.rdkit.org/docs/cppapi/namespaceRDKit_1_1MolOps.html#a8d831787aaf2d65d9920c37b25b476f5
         Chem.SanitizeMol(
             rdmol,
             Chem.SANITIZE_ALL ^ Chem.SANITIZE_ADJUSTHS ^ Chem.SANITIZE_SETAROMATICITY,
@@ -5099,7 +5099,6 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
                 )
                 # Compute desired charges
                 # TODO: Add error handling if antechamber chokes
-                # TODO: Add something cleaner than os.system
                 short_charge_method = charge_method["antechamber_keyword"]
                 subprocess.check_output(
                     [
@@ -5825,7 +5824,6 @@ class ToolkitRegistry:
 # =============================================================================================
 
 # Create global toolkit registry, where all available toolkits are registered
-# TODO: Should this be all lowercase since it's not a constant?
 GLOBAL_TOOLKIT_REGISTRY = ToolkitRegistry(
     toolkit_precedence=[
         OpenEyeToolkitWrapper,
