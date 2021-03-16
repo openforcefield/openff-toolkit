@@ -149,25 +149,25 @@ ParameterHandler
         - ``postprocess_system``: operates identically to ``create_force``, but is run after each ParameterHandlers' ``create_force`` has already been called.
           The default implementation of this method simply does nothing, and should suffice for most developers.
 
-.. TODO : fill in the modular components below
-
-ParameterType
-
-   ToolkitRegistry
-
-       ``ToolkitRegistry.from_object``  / ``ToolkitRegistry.from_smiles`` / ``OpenEyeToolkitWrapper.from_openeye`` / ``RDKitToolkitWrapper.from_rdkit``
-        - These methods are a bit strange because they are effectively classmethods for ``FrozenMolecule`` and ``Molecule`` subclasses.
+ToolkitRegistry
+    ``ToolkitRegistry.from_object``  / ``ToolkitRegistry.from_smiles`` / ``OpenEyeToolkitWrapper.from_openeye`` / ``RDKitToolkitWrapper.from_rdkit``
+          These methods are a bit strange because they are effectively classmethods for ``FrozenMolecule`` and ``Molecule`` subclasses.
           In `PR #583 <https://github.com/openforcefield/openff-toolkit/pull/583>`_, jaimergp raised a concern that effectively boils down to "if I subclass ``Molecule`` into a new class, ``MyMol``, then I expect ``MyMol.from_rdkit`` to return an instance of ``MyMol``, not ``Molecule``.
           However, before this PR, methods like ``ToolkitRegistry.from_smiles`` didn't have any way to know what type of object they should return, and instead always returned ``Molecule`` objects.
           So as of  `PR #583 <https://github.com/openforcefield/openff-toolkit/pull/583>`_, ToolkitRegistry methods that produce a Molecule must take a private parameter, ``_cls``, indicating the type of object to return.
           This parameter should be of type ``type`` and should subclass ``FrozenMolecule``, or otherwise expose ``Molecule._add_atom``, ``._add_bond``, ``.add_conformer``, and ``.partial_charges``.
 
 
-   Molecule.to_X
 
-   Molecule.from_X
+.. TODO : fill in the modular components below, and clarify ToolkitRegistry above
 
-   Force field directories
+    ParameterType
+
+    Molecule.to_X
+
+    Molecule.from_X
+
+    Force field directories
 
 
 .. TODO : fill in the sections below
@@ -224,18 +224,59 @@ Setting up a development environment
 
 .. code-block:: shell
 
-    $ # Create a conda environment with the Open Force Field toolkit and its dependencies
-    $ conda create --name openff-dev -c conda-forge -c openeye openff-toolkit openeye-toolkits
-    $ conda activate openff-dev
-    $ # Remove (only) the toolkit and replace it with a local install
-    $ conda remove --force openff-toolkit
-    $ git clone https://github.com/openforcefield/openff-toolkit
-    $ cd openff-toolkit
-    $ pip install -e .
+    # Create a conda environment with the Open Force Field toolkit and its dependencies
+    conda create --name openff-dev -c conda-forge -c openeye openff-toolkit openeye-toolkits
+    conda activate openff-dev
+    # Remove (only) the toolkit and replace it with a local install
+    conda remove --force openff-toolkit
+    git clone https://github.com/openforcefield/openff-toolkit
+    cd openff-toolkit
+    pip install -e .
 
 3. Obtain and store Open Eye license somewhere like ``~/.oe_license.txt``.
    Optionally store the path in environmental variable ``OE_LICENSE``, i.e. using a command like ``echo
    "export OE_LICENSE=/Users/yournamehere/.oe_license.txt" >> ~/.bashrc``
+
+Building the Docs
+'''''''''''''''''
+
+The documentation is composed of two parts, a hand-written user guide and an auto-generated API
+documentation.
+Both are compiled by Sphinx, and can be automatically served and regenerated on changes with sphinx-autobuild.
+Documentation for released versions is available at `ReadTheDocs <https://open-forcefield-toolkit.readthedocs.io/en/latest/>`_.
+ReadTheDocs also builds the documentation for each Pull Request opened on GitHub and keeps the output for 90 days.
+
+To add the documentation dependencies to your existing ``openff-dev`` Conda environment:
+
+.. code-block:: shell
+
+    # Add the documentation requirements to your Conda environment
+    conda env update --name openff-dev --file docs/environment.yml
+    conda install --name openff-dev -c conda-forge sphinx-autobuild
+
+To build the documentation from scratch:
+
+.. code-block:: shell
+
+    # Build the documentation
+    # From the openff-toolkit root directory
+    conda activate openff-dev
+    cd docs
+    make html
+    # Documentation can be found in docs/_build/html/index.html
+
+To watch the source directory for changes and automatically rebuild the documentation and refresh your browser:
+
+.. code-block:: shell
+
+    # Host the docs on a local HTTP server and rebuild when a source file is changed
+    # Works best when the docs have already been built
+    # From the openff-toolkit root directory
+    conda activate openff-dev
+    sphinx-autobuild docs docs/_build/html --watch openff
+    # Then navigate your web browser to http://localhost:8000
+
+
 
 
 Development Process
@@ -292,3 +333,28 @@ There is a step in CI that uses these tools to check for a consistent style. The
     $ isort openff
 
 Anything not covered above is currently up to personal preference, but may change as new linters are added.
+
+Supported Python versions
+"""""""""""""""""""""""""
+
+The OpenFF Toolkit roughly follows `NEP 29 <https://numpy.org/neps/nep-0029-deprecation_policy.html>`_. As of version 0.9.1 (March 2021) this means Python 3.7-3.9 is officially supported. We develop, test, and distribute on macOS and Linux-based operating systems. We do not currently support Windows. Some CI builds run using only The RDKit as a backend, some run using only OpenEye Toolkits, and some run using both installed at once.
+
+The CI matrix is currently as follows:
+
++-----------------------+------------+-----------+-------------+------------+-----------+-------------+
+| Operating system      | Linux                                | macOS                                |
++-----------------------+------------+-----------+-------------+------------+-----------+-------------+
+| Wrapped toolkit(s)    | RDKit      | OpenEye   | RDKit + OE  | RDKit      | OpenEye   | RDKit + OE  |
++-----------------------+------------+-----------+-------------+------------+-----------+-------------+
+| Python version        |            |           |             |            |           |             |
++=======================+========================+=============+========================+=============+
+| Python 3.6 and older  | No support after 0.9.1 (March 20201)                                        |
++-----------------------+------------+-----------+-------------+------------+-----------+-------------+
+| Python 3.7            | Test       | Test      | Test        | Test       | Test      | Test        |
++-----------------------+------------+-----------+-------------+------------+-----------+-------------+
+| Python 3.8            | Test       | Skip      |        Skip | Test       | Skip      | Skip        |
++-----------------------+------------+-----------+-------------+------------+-----------+-------------+
+| Python 3.9            | Test       | Skip      |        Skip | Test       | Skip      | Skip        |
++-----------------------+------------+-----------+-------------+------------+-----------+-------------+
+| Python 3.10 and newer |   Waiting on official releases and upstream support                         |
++-----------------------+------------+-----------+-------------+------------+-----------+-------------+
