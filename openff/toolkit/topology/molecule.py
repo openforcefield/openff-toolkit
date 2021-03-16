@@ -4789,8 +4789,8 @@ class FrozenMolecule(Serializable):
         molecule : openff.toolkit.topology.Molecule
             An OpenFF molecule instance.
 
-        Example
-        -------
+        Examples
+        --------
         Get Molecule from a QCArchive molecule record:
 
         >>> from qcportal import FractalClient
