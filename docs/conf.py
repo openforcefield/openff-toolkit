@@ -80,7 +80,8 @@ myst_enable_extensions = [
     "dollarmath",
     "colon_fence",
     "smartquotes",
-    "replacements"
+    "replacements",
+    "deflist"
 ]
 # Stop myst from disabling MathJax's $...$ and $$...$$ environments
 myst_update_mathjax = False
