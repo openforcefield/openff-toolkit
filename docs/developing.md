@@ -84,6 +84,7 @@ Adding functionality at these interfaces should be considerably easier than in o
 
 [`ParameterHandler`](openff.toolkit.typing.engines.smirnoff.parameters.ParameterHandler)
 : A generic base class for objects that perform parameterization for one section in a SMIRNOFF data source.
+  Extend this class to add a support for a new force to the toolkit.
 
   Each `ParameterHandler`-derived class MUST implement:
     - `create_force(self, system, topology, **kwargs)`: takes an OpenMM `System` and a OpenFF `Topology` as input, as well as optional keyword arguments, and modifies the `System` to contain the appropriate parameters.
@@ -108,8 +109,22 @@ Adding functionality at these interfaces should be considerably easier than in o
     - `postprocess_system`: operates identically to `create_force`, but is run after each ParameterHandlers' `create_force` has already been called.
       The default implementation of this method simply does nothing, and should suffice for most developers.
 
+[`ParameterAttribute`](openff.toolkit.typing.engines.smirnoff.parameters.ParameterAttribute)
+: A single parameter value with units and runtime validation.
+
+[`IndexedParameterAttribute`](openff.toolkit.typing.engines.smirnoff.parameters.IndexedParameterAttribute)
+: A variable number of parameter values with units and runtime validation.
+For example, dihedral torsions are often parameterized as the sum of several sine wave terms.
+Each of the parameters of the sine wave `k`, `periodicity`, and `phase` are implemented as `IndexedParameterAttribute`s.
+
+[`ParameterType`](openff.toolkit.typing.engines.smirnoff.parameters.ParameterType)
+: A base class for the parameters of a `ParameterHandler`.
+  Extend this alongside `ParameterHandler` to define and validate the parameters of a new force.
+  For example, the Lennard-Jones potential can be parameterized through either the length `ParameterAttribute` `sigma` or `r_min`, alongside the energy `ParameterAttribute` `epsilon`. Both options are handled through the [`vdWType`](openff.toolkit.typing.engines.smirnoff.parameters.vdWHandler.vdWType) class, a subclass of `ParameterType`.
+  This is distinct from the [`vdWHandler`](openff.toolkit.typing.engines.smirnoff.parameters.vdWHandler) class, which includes other `ParameterAttribute`s that apply to all atoms in the system.
+
+
 % TODO : fill in the modular components below
-%    ParameterType
 %    Molecule.to_X
 %    Molecule.from_X
 %    Force field directories
@@ -263,7 +278,7 @@ black openff
 isort openff
 ```
 
-Anything not covered above is currently up to personal preference, but may change as new linters are added.
+Anything not covered above is currently up to personal preference, but this may change as new linters are added.
 
 ## Supported Python versions
 
