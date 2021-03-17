@@ -217,10 +217,10 @@ sphinx-autobuild docs docs/_build/html --watch openff
 ```
 
 
+## Contributing
 
-
-## Development Process
-
+We always welcome [GitHub pull requests](https://github.com/openforcefield/openff-toolkit/pulls).
+For bug fixes, major feature additions, or refactoring, please raise an issue on the [GitHub issue tracker](http://github.com/openforcefield/openff-toolkit/issues) first to ensure the design will be amenable to current developer plans.
 Development of new toolkit features generally proceeds in the following stages:
 
 * Begin a discussion on the [GitHub issue tracker](http://github.com/openforcefield/openff-toolkit/issues) to determine big-picture "what should this feature do?" and "does it fit in the scope of the OpenFF Toolkit?"
