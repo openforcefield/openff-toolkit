@@ -2,9 +2,9 @@
 
 # Developing for the toolkit
 
-## Overview
-
-### Introduction
+:::{contents}
+  :local:
+:::
 
 This guide is written with the understanding that our contributors are NOT professional software developers, but are instead computational chemistry trainees and professionals.
 With this in mind, we aim to use a minimum of bleeding-edge technology and alphabet soup, and we will define any potentially unfamiliar processes or technologies the first time they are mentioned.
@@ -17,6 +17,7 @@ This Issue discussion will help us decide with you where in the codebase it shou
 Please note that the OpenFF Toolkit is intended to be used primarily as one piece of larger workflows, and that simplicity and reliability are two of our primary goals.
 Often, the cost/benefit of new features must be discussed, as a complex codebase is harder to maintain.
 When new functionality is added to the OpenFF Toolkit, it becomes our responsibility to maintain it, so it's important that we understand contributed code and are in a position to keep it up to date.
+## Overview
 
 ### Philosophy
 
@@ -29,7 +30,7 @@ When new functionality is added to the OpenFF Toolkit, it becomes our responsibi
 
 For high-level toolkit concepts and terminology, see [Core concepts](concepts).
 
-#### SMIRNOFF and the OpenFF Forcefield
+#### SMIRNOFF and the OpenFF Toolkit
 
 SMIRNOFF data
 : A hierarchical data structure that complies with the [SMIRNOFF specification](smirnoff).
@@ -157,8 +158,27 @@ System parameterization is an inherently complex topic, and the OFF toolkit woul
 For example, if a `Topology` has its `box_vectors` attribute defined, we assume that the resulting OpenMM `System` should be periodic.
 
 
+## Contributing
 
-## Setting up a development environment
+We always welcome [GitHub pull requests](https://github.com/openforcefield/openff-toolkit/pulls).
+For bug fixes, major feature additions, or refactoring, please raise an issue on the [GitHub issue tracker](http://github.com/openforcefield/openff-toolkit/issues) first to ensure the design will be amenable to current developer plans.
+Development of new toolkit features generally proceeds in the following stages:
+
+* Begin a discussion on the [GitHub issue tracker](http://github.com/openforcefield/openff-toolkit/issues) to determine big-picture "what should this feature do?" and "does it fit in the scope of the OpenFF Toolkit?"
+    * ["... typically, for existing water models, we want to assign library charges"](https://github.com/openforcefield/openff-toolkit/issues/25)
+* Start identifying details of the implementation that will be clear from the outset
+    * ["Create a new "special section" in the SMIRNOFF format (kind of analogous to the BondChargeCorrections section) which allows SMIRKS patterns to specify use of library charges for specific groups](https://github.com/openforcefield/openff-toolkit/issues/25#issue-225173968)
+    * ["Following #86, here's how library charges might work: ..."](https://github.com/openforcefield/openff-toolkit/issues/25#issuecomment-354636391)
+* Create a branch or fork for development
+    * The OpenFF Toolkit has one unusual aspect of its CI build process, which is that certain functionality requires the OpenEye toolkits, so the builds must contain a valid OpenEye license file.
+    An OpenEye license is stored as an encrypted token within the `openforcefield` organization on GitHub.
+    For security reasons, builds run from forks cannot access this key.
+    Therefore, tests that depend on the OpenEye Toolkits will be skipped on forks.
+    Contributions run on forks are still welcome, especially as features that do not interact directly with the OpenEye Toolktis are not likely affected by this limitation.
+
+
+
+### Setting up a development environment
 
 1. Install the `conda` package manager as part of the Anaconda Distribution from [here](https://www.anaconda.com/distribution/)
 
@@ -179,7 +199,7 @@ For example, if a `Topology` has its `box_vectors` attribute defined, we assume 
    Optionally store the path in environmental variable `OE_LICENSE`, i.e. using a command like `echo
    "export OE_LICENSE=/Users/yournamehere/.oe_license.txt" >> ~/.bashrc`
 
-### Building the Docs
+#### Building the Docs
 
 The documentation is composed of two parts, a hand-written user guide and an auto-generated API reference.
 Both are compiled by Sphinx, and can be automatically served and regenerated on changes with `sphinx-autobuild`.
@@ -216,43 +236,14 @@ sphinx-autobuild docs docs/_build/html --watch openff
 # Then navigate your web browser to http://localhost:8000
 ```
 
-
-## Contributing
-
-We always welcome [GitHub pull requests](https://github.com/openforcefield/openff-toolkit/pulls).
-For bug fixes, major feature additions, or refactoring, please raise an issue on the [GitHub issue tracker](http://github.com/openforcefield/openff-toolkit/issues) first to ensure the design will be amenable to current developer plans.
-Development of new toolkit features generally proceeds in the following stages:
-
-* Begin a discussion on the [GitHub issue tracker](http://github.com/openforcefield/openff-toolkit/issues) to determine big-picture "what should this feature do?" and "does it fit in the scope of the OpenFF Toolkit?"
-    * ["... typically, for existing water models, we want to assign library charges"](https://github.com/openforcefield/openff-toolkit/issues/25)
-* Start identifying details of the implementation that will be clear from the outset
-    * ["Create a new "special section" in the SMIRNOFF format (kind of analogous to the BondChargeCorrections section) which allows SMIRKS patterns to specify use of library charges for specific groups](https://github.com/openforcefield/openff-toolkit/issues/25#issue-225173968)
-    * ["Following #86, here's how library charges might work: ..."](https://github.com/openforcefield/openff-toolkit/issues/25#issuecomment-354636391)
-* Create a branch or fork for development
-    * The OpenFF Toolkit has one unusual aspect of its CI build process, which is that certain functionality requires the OpenEye toolkits, so the builds must contain a valid OpenEye license file.
-    An OpenEye license is stored as an encrypted token within the `openforcefield` organization on GitHub.
-    For security reasons, builds run from forks cannot access this key.
-    Therefore, tests that depend on the OpenEye Toolkits will be skipped on forks.
-    Contributions run on forks are still welcome, especially as features that do not interact directly with the OpenEye Toolktis are not likely affected by this limitation.
-
-
-## Contributing
-
-We always welcome [GitHub pull requests](https://github.com/openforcefield/openff-toolkit/pulls).
-For bug fixes, major feature additions, or refactoring, please raise an issue on the [GitHub issue tracker](http://github.com/openforcefield/openff-toolkit/issues) first to ensure the design will be amenable to current developer plans.
-
-## How can I become a developer?
-
-If you would like to contribute, please post an issue on the [GitHub issue tracker](http://github.com/openforcefield/openff-toolkit/issues) describing the contribution you would like to make to start a discussion.
-
-## Style guide
+### Style guide
 
 Development for the `openff-toolkit` conforms to the recommendations given by the [Software Development Best Practices for Computational Chemistry](https://github.com/choderalab/software-development) guide.
 
 The naming conventions of classes, functions, and variables follows [PEP8](https://www.python.org/dev/peps/pep-0008/), consistently with the best practices guide. 
 The naming conventions used in this library not covered by PEP8 are:
-- Use `file_path`, `file_name`, and `file_stem` to indicate `path/to/stem.extension`, `stem.extension`, and `stem` respectively, consistently with the variables in the standard `pathlib` library.
-- Use `n_x` to abbreviate "number of $X$" (e.g. `n_atoms`, `n_molecules`).
+- Use `file_path`, `file_name`, and `file_stem` to indicate `path/to/stem.extension`, `stem.extension`, and `stem` respectively, consistent with the variables in the [`pathlib` module](https://docs.python.org/3/library/pathlib.html) of the standard library.
+- Use `n_x` to abbreviate "number of $x$" (e.g. `n_atoms`, `n_molecules`).
 
 We place a high priority on code cleanliness and readability, even if code could be written more compactly. 
 For example, 15-character variable names are fine. Triply nested list comprehensions are not.
