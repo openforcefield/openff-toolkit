@@ -1,0 +1,10 @@
+@media only screen and (min-width: 600px) {
+    div#contents {
+        max-width: 300px;
+        float: left;
+        padding: 12px;
+
+        margin-right: 1rem;
+        margin-top: 5px;
+    }
+}
