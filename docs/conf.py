@@ -48,7 +48,8 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx.ext.intersphinx',
     'nbsphinx',
-    'm2r2', # render markdown
+    # 'm2r2', # render markdown
+    'myst_parser'
     ]
 
 # Autodoc settings
@@ -73,6 +74,16 @@ intersphinx_mapping = {
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
+
+# Extensions for the myst parser
+myst_enable_extensions = [
+    "dollarmath",
+    "colon_fence",
+    "smartquotes",
+    "replacements"
+]
+# Stop myst from disabling MathJax's $...$ and $$...$$ environments
+myst_update_mathjax = False
 
 # Source parsers
 #source_parsers = {

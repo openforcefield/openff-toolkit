@@ -21,7 +21,7 @@ The toolkit currently covers two main areas we have committed to stably maintain
 
 ## Installation
 
-The Open Force Field Toolkit (`openff-toolkit`) is a Python toolkit, and supports Python 3.6 and 3.7.
+The Open Force Field Toolkit (`openff-toolkit`) is a Python toolkit, and supports Python 3.7, 3.8 and 3.9.
 
 ### Installing via conda
 
