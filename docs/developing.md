@@ -92,14 +92,21 @@ Adding functionality at these interfaces should be considerably easier than in o
     For example,, the `Bonds` tag in the SMIRNOFF spec has an optional `fractional_bondorder_method` field, which corresponds to the line  `fractional_bondorder_method = ParameterAttribute(default=None)` in the `BondHandler` class definition.
     The `ParameterAttribute` and `IndexedParameterAttribute` classes offer considerable flexibility for validating inputs.
     Defining these attributes at the class level implements the corresponding behavior in the default `__init__` function.
-    - Class-level definitions `_MAX_SUPPORTED_SECTION_VERSION` and `_MAX_SUPPORTED_SECTION_VERSION`.
+    - Class-level definitions `_MIN_SUPPORTED_SECTION_VERSION` and `_MAX_SUPPORTED_SECTION_VERSION`.
     ParameterHandler versions allow us to evolve ParameterHandler behavior in a controlled, recorded way.
     Force field development is experimental by nature, and it is unlikely that the initial choice of header attributes is suitable for all use cases.
     Recording the "versions" of a SMIRNOFF spec tag allows us to encode the default behavior and API of a specific generation of ParameterHandlers, while allowing the safe addition of new attributes and behaviors.
+    If these attributes are not defined, defaults in the base class will apply and updates introducing new versions may break the existing code.
 
   Each ParameterHandler-derived class MAY implement:
-    - `known_kwargs`: Keyword arguments passed to `ForceField.create_openmm_system` are validated against the `known_kwargs` lists of each ParameterHandler that the ForceField owns.
-      If present, these kwargs and their values will be passed on to the ParameterHandler.
+    - `_KWARGS`: Keyword arguments passed to `ForceField.create_openmm_system` are validated against the `_KWARGS` lists of each ParameterHandler that the ForceField owns.
+      If present, these keyword arguments and their values will be passed on to the `ParameterHandler`.
+    - `_TAGNAME`: The name of the SMIRNOFF OFFXML tag used to parameterize the class.
+      This tag should appear in the top level within the [`<SMIRNOFF>`](smirnoff.html#the-enclosing-smirnoff-tag) tag; see the [Parameter generators](smirnoff.html#parameter-generators) section of the SMIRNOFF specification.
+    - `_INFOTYPE`: The `ParameterType` subclass used to parse the elements in the `ParameterHandler`'s parameter list.
+    - `_DEPENDENCIES`: A list of `ParameterHandler` subclasses that, when present, must run before this one.
+      Note that this is *not* a list of `ParameterHandler`s that are required by this one.
+      Ideally, `ParameterHandler`s are entirely independent and energy components of a force field form distinct terms; when this is impossible, `_DEPENDENCIES` may be used to guarantee execution order.
     - `to_dict`: converts the ParameterHandler to a hierarchical dict compliant with the SMIRNOFF specification.
       The default implementation of this function should suffice for most developers.
     - `check_handler_compatibility`: Checks whether this ParameterHandler is "compatible" with another.
