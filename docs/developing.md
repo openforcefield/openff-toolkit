@@ -172,8 +172,8 @@ Each ParameterHandler-derived class MAY implement:
 
 ### [`ParameterType`](openff.toolkit.typing.engines.smirnoff.parameters.ParameterType)
 A base class for the SMIRKS-based parameters of a `ParameterHandler`.
-Extend this alongside `ParameterHandler` to define and validate the SMIRKS-based (/ForceField) parameters of a new force.
-This is analagous to ParmEd's XType classes, like [BondType](https://parmed.github.io/ParmEd/html/api/parmed/parmed.html?highlight=bondtype#parmed.BondType). A `ParameterType` should correspond to a single SMARTS-based parameter.
+Extend this alongside `ParameterHandler` to define and validate the force field parameters of a new force.
+This is analogous to ParmEd's XType classes, like [BondType](https://parmed.github.io/ParmEd/html/api/parmed/parmed.html?highlight=bondtype#parmed.BondType). A `ParameterType` should correspond to a single SMARTS-based parameter.
 
 For example, the Lennard-Jones potential can be parameterized through either the size `ParameterAttribute` `sigma` or `r_min`, alongside the energy `ParameterAttribute` `epsilon`. Both options are handled through the [`vdWType`](openff.toolkit.typing.engines.smirnoff.parameters.vdWHandler.vdWType) class, a subclass of `ParameterType`.
 
