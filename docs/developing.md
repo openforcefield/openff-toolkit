@@ -17,6 +17,7 @@ This Issue discussion will help us decide with you where in the codebase it shou
 Please note that the OpenFF Toolkit is intended to be used primarily as one piece of larger workflows, and that simplicity and reliability are two of our primary goals.
 Often, the cost/benefit of new features must be discussed, as a complex codebase is harder to maintain.
 When new functionality is added to the OpenFF Toolkit, it becomes our responsibility to maintain it, so it's important that we understand contributed code and are in a position to keep it up to date.
+
 ## Overview
 
 ### Philosophy
