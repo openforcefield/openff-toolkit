@@ -1843,8 +1843,8 @@ class ParameterType(_ParameterAttributeHandler):
 # PARAMETER HANDLERS
 #
 # The following classes are Handlers that know how to create Force
-# subclasses and add them to a System that is being created. Each Handler
-# class must define three methods:
+# subclasses and add them to an OpenMM System that is being created. Each
+# Handler class must define three methods:
 # 1) a constructor which takes as input hierarchical dictionaries of data
 #    conformant to the SMIRNOFF spec;
 # 2) a create_force() method that constructs the Force object and adds it
@@ -2307,7 +2307,7 @@ class ParameterHandler(_ParameterAttributeHandler):
             reference_molecule.get_bond_between(atom_i, atom_j)
 
     def assign_parameters(self, topology, system):
-        """Assign parameters for the given Topology to the specified System object.
+        """Assign parameters for the given Topology to the specified OpenMM ``System`` object.
 
         Parameters
         ----------
@@ -2320,7 +2320,7 @@ class ParameterHandler(_ParameterAttributeHandler):
         pass
 
     def postprocess_system(self, topology, system, **kwargs):
-        """Allow the force to perform a a final post-processing pass on the System following parameter assignment, if needed.
+        """Allow the force to perform a a final post-processing pass on the OpenMM ``System`` following parameter assignment, if needed.
 
         Parameters
         ----------

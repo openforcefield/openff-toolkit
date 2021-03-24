@@ -117,8 +117,8 @@ class Particle(Serializable):
         Set the particle's molecule pointer. Note that this will only work if the particle currently
         doesn't have a molecule
         """
-        # TODO: Add informative exception here
-        assert self._molecule is None
+        err = f"{type(self).__name__} already has an associated molecule"
+        assert self._molecule is None, err
         self._molecule = molecule
 
     @property
@@ -4789,8 +4789,8 @@ class FrozenMolecule(Serializable):
         molecule : openff.toolkit.topology.Molecule
             An OpenFF molecule instance.
 
-        Example
-        -------
+        Examples
+        --------
         Get Molecule from a QCArchive molecule record:
 
         >>> from qcportal import FractalClient
