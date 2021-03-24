@@ -13,6 +13,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 - [PR #863](https://github.com/openforcefield/openff-toolkit/pull/863): Documented how to build the docs in the developers guide.
 - [PR #870](https://github.com/openforcefield/openff-toolkit/pull/870): Reorganised documentation to improve discoverability and allow future additions.
 - [PR #871](https://github.com/openforcefield/openff-toolkit/pull/871): Changed Markdown parser from m2r2 to MyST for improved documentation rendering.
+- [PR #880](https://github.com/openforcefield/openff-toolkit/pull/880): Cleanup and partial rewrite of the developer's guide.
 
 :::{TODO}
 Translate previous release history to MyST markdown
