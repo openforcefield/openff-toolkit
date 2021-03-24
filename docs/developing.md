@@ -28,7 +28,7 @@ When new functionality is added to the OpenFF Toolkit, it becomes our responsibi
 
 ### Terminology
 
-For high-level toolkit concepts and terminology, see [Core concepts](concepts).
+For high-level toolkit concepts and terminology important for both development and use of the Toolkit, see the [core concepts page](concepts).
 
 #### SMIRNOFF and the OpenFF Toolkit
 
@@ -37,14 +37,7 @@ SMIRNOFF data
   This can be serialized in many formats, including XML (OFFXML).
   The subsections in a SMIRNOFF data source generally correspond to one energy term in the functional form of a force field.
 
-`ParameterHandler`
-: An object that has the ability to produce one component of an OpenMM `System`, corresponding to one subsection in a SMIRNOFF data source.
-  Most `ParameterHandler` objects contain a list of `ParameterType` objects.
-
-`ParameterType`
-: An object corresponding to a single SMARTS-based parameter.
-
-`Cosmetic attribute`
+Cosmetic attribute
 : Data in a SMIRNOFF data source that does not correspond to a known attribute.
   These have no functional effect, but several programs use the extensibility of the OFFXML format to define additional attributes for their own use, and their workflows require the OFF toolkit to process the files while retaining these keywords.
 
@@ -77,91 +70,6 @@ ReadTheDocs (RTD)
   The documentation itself can be accessed from the ReadTheDocs badge in the README.
   It is compiled by RTD alongside the other CI checks, and the compiled documentation for a pull request can be viewed by clicking the "details" link after the status.
 
-### Modular design features
-
-There are a few areas where we've designed the toolkit with extensibility in mind.
-Adding functionality at these interfaces should be considerably easier than in other parts of the toolkit, and we encourage experimentation and contribution on these fronts.
-
-[`ParameterHandler`](openff.toolkit.typing.engines.smirnoff.parameters.ParameterHandler)
-: A generic base class for objects that perform parameterization for one section in a SMIRNOFF data source.
-  Extend this class to add a support for a new force to the toolkit.
-
-  Each `ParameterHandler`-derived class MUST implement:
-    - `create_force(self, system, topology, **kwargs)`: takes an OpenMM `System` and a OpenFF `Topology` as input, as well as optional keyword arguments, and modifies the `System` to contain the appropriate parameters.
-    - Class-level `ParameterAttributes` and `IndexedParameterAttributes`: These correspond to the header-level attributes in a SMIRNOFF data source.
-    For example,, the `Bonds` tag in the SMIRNOFF spec has an optional `fractional_bondorder_method` field, which corresponds to the line  `fractional_bondorder_method = ParameterAttribute(default=None)` in the `BondHandler` class definition.
-    The `ParameterAttribute` and `IndexedParameterAttribute` classes offer considerable flexibility for validating inputs.
-    Defining these attributes at the class level implements the corresponding behavior in the default `__init__` function.
-    - Class-level definitions `_MIN_SUPPORTED_SECTION_VERSION` and `_MAX_SUPPORTED_SECTION_VERSION`.
-    ParameterHandler versions allow us to evolve ParameterHandler behavior in a controlled, recorded way.
-    Force field development is experimental by nature, and it is unlikely that the initial choice of header attributes is suitable for all use cases.
-    Recording the "versions" of a SMIRNOFF spec tag allows us to encode the default behavior and API of a specific generation of ParameterHandlers, while allowing the safe addition of new attributes and behaviors.
-    If these attributes are not defined, defaults in the base class will apply and updates introducing new versions may break the existing code.
-
-  Each ParameterHandler-derived class MAY implement:
-    - `_KWARGS`: Keyword arguments passed to `ForceField.create_openmm_system` are validated against the `_KWARGS` lists of each ParameterHandler that the ForceField owns.
-      If present, these keyword arguments and their values will be passed on to the `ParameterHandler`.
-    - `_TAGNAME`: The name of the SMIRNOFF OFFXML tag used to parameterize the class.
-      This tag should appear in the top level within the [`<SMIRNOFF>`](smirnoff.html#the-enclosing-smirnoff-tag) tag; see the [Parameter generators](smirnoff.html#parameter-generators) section of the SMIRNOFF specification.
-    - `_INFOTYPE`: The `ParameterType` subclass used to parse the elements in the `ParameterHandler`'s parameter list.
-    - `_DEPENDENCIES`: A list of `ParameterHandler` subclasses that, when present, must run before this one.
-      Note that this is *not* a list of `ParameterHandler`s that are required by this one.
-      Ideally, `ParameterHandler`s are entirely independent and energy components of a force field form distinct terms; when this is impossible, `_DEPENDENCIES` may be used to guarantee execution order.
-    - `to_dict`: converts the ParameterHandler to a hierarchical dict compliant with the SMIRNOFF specification.
-      The default implementation of this function should suffice for most developers.
-    - `check_handler_compatibility`: Checks whether this ParameterHandler is "compatible" with another.
-      This function is used when a ForceField is attempted to be constructed from *multiple* SMIRNOFF data sources, and it is necessary to check that two sections with the same tagname can be combined in a sane way.
-      For example, if the user instructed two `vdW` sections to be read, but the sections defined different vdW potentials, then this function should raise an Exception indicating that there is no safe way to combine the parameters.
-      The default implementation of this function should suffice for most developers.
-    - `postprocess_system`: operates identically to `create_force`, but is run after each ParameterHandlers' `create_force` has already been called.
-      The default implementation of this method simply does nothing, and should suffice for most developers.
-
-[`ParameterAttribute`](openff.toolkit.typing.engines.smirnoff.parameters.ParameterAttribute)
-: A single parameter value with units and runtime validation.
-
-[`IndexedParameterAttribute`](openff.toolkit.typing.engines.smirnoff.parameters.IndexedParameterAttribute)
-: A variable number of parameter values with units and runtime validation.
-For example, dihedral torsions are often parameterized as the sum of several sine wave terms.
-Each of the parameters of the sine wave `k`, `periodicity`, and `phase` are implemented as `IndexedParameterAttribute`s.
-
-[`ParameterType`](openff.toolkit.typing.engines.smirnoff.parameters.ParameterType)
-: A base class for the parameters of a `ParameterHandler`.
-  Extend this alongside `ParameterHandler` to define and validate the parameters of a new force.
-  For example, the Lennard-Jones potential can be parameterized through either the length `ParameterAttribute` `sigma` or `r_min`, alongside the energy `ParameterAttribute` `epsilon`. Both options are handled through the [`vdWType`](openff.toolkit.typing.engines.smirnoff.parameters.vdWHandler.vdWType) class, a subclass of `ParameterType`.
-  This is distinct from the [`vdWHandler`](openff.toolkit.typing.engines.smirnoff.parameters.vdWHandler) class, which includes other `ParameterAttribute`s that apply to all atoms in the system.
-
-
-% TODO : fill in the modular components below
-%    Molecule.to_X
-%    Molecule.from_X
-%    Force field directories
-
-
-%  TODO : fill in the sections below
-%  Molecule definition
-%  '''''''''''''''''''
-%  
-%  Required stereochemistry
-%  ''''''''''''''''''''''''
-%  
-%  Conformation dependence
-%  '''''''''''''''''''''''
-%  
-%  
-%  
-%  Reliance on external dependencies
-%  '''''''''''''''''''''''''''''''''
-%  
-%  
-%  
-%  ForceField file paths
-%  '''''''''''''''''''''
-
-%  TODO : expand this section
-%  Documentation
-%  '''''''''''''
-%  If you define a new class, add new files to autodoc
-
 ### User Experience
 
 One important aspect of how we make design decisions is by asking "who do we envision using this software, and what would they want it to do here?".
@@ -178,6 +86,128 @@ Often, the same design decision is the best for all types of users, but when we 
 At the same time, we aim for "automagic" behavior whenever a decision will clearly go one way over another.
 System parameterization is an inherently complex topic, and the OFF toolkit would be nearly unusable if we required the user to explicitly approve every aspect of the process.
 For example, if a `Topology` has its `box_vectors` attribute defined, we assume that the resulting OpenMM `System` should be periodic.
+
+
+
+## Modular design features
+
+There are a few areas where we've designed the toolkit with extensibility in mind.
+Adding functionality at these interfaces should be considerably easier than in other parts of the toolkit, and we encourage experimentation and contribution on these fronts.
+
+These features have occasionally confusing names.
+"Parameter" here refers to a single value in a force field, as it is generally used in biophysics; it does not refer to an argument to a function.
+"Attribute" is used to refer to an XML attribute, which allows data to be defined for a particular tag; it does not refer to a member of a Python class or object.
+For example, in the following XML excerpt the `<SMIRNOFF>` tag has the attributes `version` and `aromaticity_model`:
+
+```xml
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+  ...
+</SMIRNOFF>
+```
+
+"Member" is used here to describe Python attributes.
+This terminology is borrowed for the sake of clarity in this section from languages like C++ and Java.
+
+
+### [`ParameterAttribute`](openff.toolkit.typing.engines.smirnoff.parameters.ParameterAttribute)
+A single value that can be validated at runtime.
+
+`ParameterAttribute`s can be instantiated as Python class or instance members to define the kinds of value that a particular parameter can take.
+They are used in both `ParameterHandler`s and `ParameterType`s.
+The sorts of values a ParameterAttribute can take on are restricted by runtime validation.
+This validation is highly customizable, and may do things like allowing only certain values for a string or enforcing the correct units or array dimensions on the value; in fact, the validation can be defined using arbitrary code.
+The name of a ParameterAttribute should correspond exactly to the corresponding attribute in an OFFXML file.
+
+#### [`IndexedParameterAttribute`](openff.toolkit.typing.engines.smirnoff.parameters.IndexedParameterAttribute)
+A ParameterAttribute with a sequence of values, rather than just one. Each value in the sequence is indexed by an integer.
+
+The exact name of an IndexedParameterAttribute is NOT expected to appear verbatim in a OFFXML file, but instead should appear with a numerical integer suffix.
+For example the IndexedParameterAttribute `k` should only appear as `k1`, `k2`, `k3`, and so on in an OFFXML.
+The current implementation requires this indexing to start at 1 and subsequent values be contiguous (no skipping numbers), but does not enforce an upper limit on the integer.
+
+For example, dihedral torsions are often parameterized as the sum of several sine wave terms.
+Each of the parameters of the sine wave `k`, `periodicity`, and `phase` are implemented as `IndexedParameterAttribute`s.
+
+#### [`MappedParameterAttribute`](openff.toolkit.typing.engines.smirnoff.parameters.MappedParameterAttribute)
+A ParameterAttribute with several values, with some arbitrary mapping to access values.
+
+#### [`IndexedMappedParameterAttribute`](openff.toolkit.typing.engines.smirnoff.parameters.IndexedMappedParameterAttribute)
+A ParameterAttribute with a sequence of maps of values.
+
+### [`ParameterHandler`](openff.toolkit.typing.engines.smirnoff.parameters.ParameterHandler)
+A generic base class for objects that perform parameterization for one section in a SMIRNOFF data source.
+A `ParameterHandler` has the ability to produce one component of an OpenMM `System`.
+Extend this class to add a support for a new force or energy term to the toolkit.
+
+Each `ParameterHandler`-derived class MUST implement the following methods and define the following attributes:
+
+- `create_force(self, system, topology, **kwargs)`: takes an OpenMM `System` and a OpenFF `Topology` as input, as well as optional keyword arguments, and modifies the `System` to contain the appropriate parameters.
+- Class members `ParameterAttributes`: These correspond to the header-level attributes in a SMIRNOFF data source.
+For example, the `Bonds` tag in the SMIRNOFF spec has an optional `fractional_bondorder_method` field, which corresponds to the line  `fractional_bondorder_method = ParameterAttribute(default=None)` in the `BondHandler` class definition.
+The `ParameterAttribute` and `IndexedParameterAttribute` classes offer considerable flexibility for validating inputs.
+Defining these attributes at the class level implements the corresponding behavior in the default `__init__` function.
+- Class members `_MIN_SUPPORTED_SECTION_VERSION` and `_MAX_SUPPORTED_SECTION_VERSION`.
+ParameterHandler versions allow us to evolve ParameterHandler behavior in a controlled, recorded way.
+Force field development is experimental by nature, and it is unlikely that the initial choice of header attributes is suitable for all use cases.
+Recording the "versions" of a SMIRNOFF spec tag allows us to encode the default behavior and API of a specific generation of ParameterHandlers, while allowing the safe addition of new attributes and behaviors.
+If these attributes are not defined, defaults in the base class will apply and updates introducing new versions may break the existing code.
+
+Each ParameterHandler-derived class MAY implement:
+  - `_KWARGS`: Keyword arguments passed to `ForceField.create_openmm_system` are validated against the `_KWARGS` lists of each ParameterHandler that the ForceField owns.
+    If present, these keyword arguments and their values will be passed on to the `ParameterHandler`.
+  - `_TAGNAME`: The name of the SMIRNOFF OFFXML tag used to parameterize the class.
+    This tag should appear in the top level within the [`<SMIRNOFF>`](smirnoff.html#the-enclosing-smirnoff-tag) tag; see the [Parameter generators](smirnoff.html#parameter-generators) section of the SMIRNOFF specification.
+  - `_INFOTYPE`: The `ParameterType` subclass used to parse the elements in the `ParameterHandler`'s parameter list.
+  - `_DEPENDENCIES`: A list of `ParameterHandler` subclasses that, when present, must run before this one.
+    Note that this is *not* a list of `ParameterHandler`s that are required by this one.
+    Ideally, `ParameterHandler`s are entirely independent and energy components of a force field form distinct terms; when this is impossible, `_DEPENDENCIES` may be used to guarantee execution order.
+  - `to_dict`: converts the ParameterHandler to a hierarchical dict compliant with the SMIRNOFF specification.
+    The default implementation of this function should suffice for most developers.
+  - `check_handler_compatibility`: Checks whether this ParameterHandler is "compatible" with another.
+    This function is used when a ForceField is attempted to be constructed from *multiple* SMIRNOFF data sources, and it is necessary to check that two sections with the same tag name can be combined in a sane way.
+    For example, if the user instructed two `vdW` sections to be read, but the sections defined different vdW potentials, then this function should raise an Exception indicating that there is no safe way to combine the parameters.
+    The default implementation of this function should suffice for most developers.
+  - `postprocess_system`: operates identically to `create_force`, but is run after each ParameterHandlers' `create_force` has already been called.
+    The default implementation of this method simply does nothing, and should suffice for most developers.
+
+### [`ParameterType`](openff.toolkit.typing.engines.smirnoff.parameters.ParameterType)
+A base class for the SMIRKS-based parameters of a `ParameterHandler`.
+Extend this alongside `ParameterHandler` to define and validate the SMIRKS-based (/ForceField) parameters of a new force.
+This is analagous to ParmEd's XType classes, like [BondType](https://parmed.github.io/ParmEd/html/api/parmed/parmed.html?highlight=bondtype#parmed.BondType). A `ParameterType` should correspond to a single SMARTS-based parameter.
+
+For example, the Lennard-Jones potential can be parameterized through either the size `ParameterAttribute` `sigma` or `r_min`, alongside the energy `ParameterAttribute` `epsilon`. Both options are handled through the [`vdWType`](openff.toolkit.typing.engines.smirnoff.parameters.vdWHandler.vdWType) class, a subclass of `ParameterType`.
+
+
+% TODO : fill in the modular components below
+%    Molecule.to_X
+%    Molecule.from_X
+%    Force field directories
+
+
+%  TODO : fill in the sections below
+%  Molecule definition
+%  '''''''''''''''''''
+%
+%  Required stereochemistry
+%  ''''''''''''''''''''''''
+%
+%  Conformation dependence
+%  '''''''''''''''''''''''
+%
+%
+%
+%  Reliance on external dependencies
+%  '''''''''''''''''''''''''''''''''
+%
+%
+%
+%  ForceField file paths
+%  '''''''''''''''''''''
+
+%  TODO : expand this section
+%  Documentation
+%  '''''''''''''
+%  If you define a new class, add new files to autodoc
 
 
 ## Contributing
