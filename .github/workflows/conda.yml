@@ -1,15 +1,6 @@
 name: Conda
 
 on: 
-  # Removing these triggers before merging
-  push:
-    branches:
-      - "master"
-      - "maintenance/.+"
-  pull_request:
-    branches:
-      - "master"
-      - "maintenance/.+"
   release:
     types:
       - released
