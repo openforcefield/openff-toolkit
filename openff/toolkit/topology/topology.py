@@ -2547,7 +2547,7 @@ class Topology(Serializable):
         # Creating bonds
         for oe_bond in mol.GetBonds():
             # Set the bond type
-            if oe_bond.GetType() is not "":
+            if oe_bond.GetType() != "":
                 if oe_bond.GetType() in [
                     "Single",
                     "Double",
