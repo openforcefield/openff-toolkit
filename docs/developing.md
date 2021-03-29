@@ -113,27 +113,27 @@ This terminology is borrowed for the sake of clarity in this section from langua
 ### [`ParameterAttribute`](openff.toolkit.typing.engines.smirnoff.parameters.ParameterAttribute)
 A single value that can be validated at runtime.
 
-`ParameterAttribute`s can be instantiated as Python class or instance members to define the kinds of value that a particular parameter can take.
-They are used in both `ParameterHandler`s and `ParameterType`s.
-The sorts of values a ParameterAttribute can take on are restricted by runtime validation.
+A `ParameterAttribute` can be instantiated as Python class or instance members to define the kinds of value that a particular parameter can take.
+They are used in the definitions of both `ParameterHandler` and `ParameterType`.
+The sorts of values a `ParameterAttribute` can take on are restricted by runtime validation.
 This validation is highly customizable, and may do things like allowing only certain values for a string or enforcing the correct units or array dimensions on the value; in fact, the validation can be defined using arbitrary code.
-The name of a ParameterAttribute should correspond exactly to the corresponding attribute in an OFFXML file.
+The name of a `ParameterAttribute` should correspond exactly to the corresponding attribute in an OFFXML file.
 
 #### [`IndexedParameterAttribute`](openff.toolkit.typing.engines.smirnoff.parameters.IndexedParameterAttribute)
-A ParameterAttribute with a sequence of values, rather than just one. Each value in the sequence is indexed by an integer.
+A `ParameterAttribute` with a sequence of values, rather than just one. Each value in the sequence is indexed by an integer.
 
-The exact name of an IndexedParameterAttribute is NOT expected to appear verbatim in a OFFXML file, but instead should appear with a numerical integer suffix.
-For example the IndexedParameterAttribute `k` should only appear as `k1`, `k2`, `k3`, and so on in an OFFXML.
+The exact name of an `IndexedParameterAttribute` is NOT expected to appear verbatim in a OFFXML file, but instead should appear with a numerical integer suffix.
+For example the `IndexedParameterAttribute` `k` should only appear as `k1`, `k2`, `k3`, and so on in an OFFXML.
 The current implementation requires this indexing to start at 1 and subsequent values be contiguous (no skipping numbers), but does not enforce an upper limit on the integer.
 
 For example, dihedral torsions are often parameterized as the sum of several sine wave terms.
-Each of the parameters of the sine wave `k`, `periodicity`, and `phase` are implemented as `IndexedParameterAttribute`s.
+Each of the parameters of the sine wave `k`, `periodicity`, and `phase` is implemented as an `IndexedParameterAttribute`.
 
 #### [`MappedParameterAttribute`](openff.toolkit.typing.engines.smirnoff.parameters.MappedParameterAttribute)
-A ParameterAttribute with several values, with some arbitrary mapping to access values.
+A `ParameterAttribute` with several values, with some arbitrary mapping to access values.
 
 #### [`IndexedMappedParameterAttribute`](openff.toolkit.typing.engines.smirnoff.parameters.IndexedMappedParameterAttribute)
-A ParameterAttribute with a sequence of maps of values.
+A `ParameterAttribute` with a sequence of maps of values.
 
 ### [`ParameterHandler`](openff.toolkit.typing.engines.smirnoff.parameters.ParameterHandler)
 A generic base class for objects that perform parameterization for one section in a SMIRNOFF data source.
@@ -148,24 +148,24 @@ For example, the `Bonds` tag in the SMIRNOFF spec has an optional `fractional_bo
 The `ParameterAttribute` and `IndexedParameterAttribute` classes offer considerable flexibility for validating inputs.
 Defining these attributes at the class level implements the corresponding behavior in the default `__init__` function.
 - Class members `_MIN_SUPPORTED_SECTION_VERSION` and `_MAX_SUPPORTED_SECTION_VERSION`.
-ParameterHandler versions allow us to evolve ParameterHandler behavior in a controlled, recorded way.
+`ParameterHandler` versions allow us to evolve `ParameterHandler` behavior in a controlled, recorded way.
 Force field development is experimental by nature, and it is unlikely that the initial choice of header attributes is suitable for all use cases.
-Recording the "versions" of a SMIRNOFF spec tag allows us to encode the default behavior and API of a specific generation of ParameterHandlers, while allowing the safe addition of new attributes and behaviors.
+Recording the "versions" of a SMIRNOFF spec tag allows us to encode the default behavior and API of a specific generation of a `ParameterHandler`, while allowing the safe addition of new attributes and behaviors.
 If these attributes are not defined, defaults in the base class will apply and updates introducing new versions may break the existing code.
 
-Each ParameterHandler-derived class MAY implement:
+Each `ParameterHandler`-derived class MAY implement:
   - `_KWARGS`: Keyword arguments passed to `ForceField.create_openmm_system` are validated against the `_KWARGS` lists of each ParameterHandler that the ForceField owns.
     If present, these keyword arguments and their values will be passed on to the `ParameterHandler`.
   - `_TAGNAME`: The name of the SMIRNOFF OFFXML tag used to parameterize the class.
     This tag should appear in the top level within the [`<SMIRNOFF>`](smirnoff.html#the-enclosing-smirnoff-tag) tag; see the [Parameter generators](smirnoff.html#parameter-generators) section of the SMIRNOFF specification.
   - `_INFOTYPE`: The `ParameterType` subclass used to parse the elements in the `ParameterHandler`'s parameter list.
   - `_DEPENDENCIES`: A list of `ParameterHandler` subclasses that, when present, must run before this one.
-    Note that this is *not* a list of `ParameterHandler`s that are required by this one.
-    Ideally, `ParameterHandler`s are entirely independent and energy components of a force field form distinct terms; when this is impossible, `_DEPENDENCIES` may be used to guarantee execution order.
-  - `to_dict`: converts the ParameterHandler to a hierarchical dict compliant with the SMIRNOFF specification.
+    Note that this is *not* a list of `ParameterHandler` subclasses that are required by this one.
+    Ideally, child classes of `ParameterHandler` are entirely independent, and energy components of a force field form distinct terms; when this is impossible, `_DEPENDENCIES` may be used to guarantee execution order.
+  - `to_dict`: converts the `ParameterHandler` to a hierarchical dict compliant with the SMIRNOFF specification.
     The default implementation of this function should suffice for most developers.
-  - `check_handler_compatibility`: Checks whether this ParameterHandler is "compatible" with another.
-    This function is used when a ForceField is attempted to be constructed from *multiple* SMIRNOFF data sources, and it is necessary to check that two sections with the same tag name can be combined in a sane way.
+  - `check_handler_compatibility`: Checks whether this `ParameterHandler` is "compatible" with another.
+    This function is used when a `ForceField` is attempted to be constructed from *multiple* SMIRNOFF data sources, and it is necessary to check that two sections with the same tag name can be combined in a sane way.
     For example, if the user instructed two `vdW` sections to be read, but the sections defined different vdW potentials, then this function should raise an Exception indicating that there is no safe way to combine the parameters.
     The default implementation of this function should suffice for most developers.
   - `postprocess_system`: operates identically to `create_force`, but is run after each ParameterHandlers' `create_force` has already been called.
