@@ -4904,9 +4904,9 @@ class VirtualSiteHandler(_NonbondedHandler):
                 )
             )
         self._virtual_site_types[vsite_name] = vsite_cls
-        self._parameters = ParameterList([
-            param for param in self._parameters if param.type != vsite_name
-        ])
+        self._parameters = ParameterList(
+            [param for param in self._parameters if param.type != vsite_name]
+        )
 
     @property
     def virtual_site_types(self):
