@@ -110,8 +110,8 @@ For example, in the following XML excerpt the `<SMIRNOFF>` tag has the attribute
 This terminology is borrowed for the sake of clarity in this section from languages like C++ and Java.
 
 
-### [`ParameterAttribute`](openff.toolkit.typing.engines.smirnoff.parameters.ParameterAttribute)
-A single value that can be validated at runtime.
+### `ParameterAttribute`
+A [`ParameterAttribute`](openff.toolkit.typing.engines.smirnoff.parameters.ParameterAttribute) is a single value that can be validated at runtime.
 
 A `ParameterAttribute` can be instantiated as Python class or instance members to define the kinds of value that a particular parameter can take.
 They are used in the definitions of both `ParameterHandler` and `ParameterType`.
@@ -119,8 +119,8 @@ The sorts of values a `ParameterAttribute` can take on are restricted by runtime
 This validation is highly customizable, and may do things like allowing only certain values for a string or enforcing the correct units or array dimensions on the value; in fact, the validation can be defined using arbitrary code.
 The name of a `ParameterAttribute` should correspond exactly to the corresponding attribute in an OFFXML file.
 
-#### [`IndexedParameterAttribute`](openff.toolkit.typing.engines.smirnoff.parameters.IndexedParameterAttribute)
-A `ParameterAttribute` with a sequence of values, rather than just one. Each value in the sequence is indexed by an integer.
+#### `IndexedParameterAttribute`
+An [`IndexedParameterAttribute`](openff.toolkit.typing.engines.smirnoff.parameters.IndexedParameterAttribute) is a  `ParameterAttribute` with a sequence of values, rather than just one. Each value in the sequence is indexed by an integer.
 
 The exact name of an `IndexedParameterAttribute` is NOT expected to appear verbatim in a OFFXML file, but instead should appear with a numerical integer suffix.
 For example the `IndexedParameterAttribute` `k` should only appear as `k1`, `k2`, `k3`, and so on in an OFFXML.
@@ -129,14 +129,14 @@ The current implementation requires this indexing to start at 1 and subsequent v
 For example, dihedral torsions are often parameterized as the sum of several sine wave terms.
 Each of the parameters of the sine wave `k`, `periodicity`, and `phase` is implemented as an `IndexedParameterAttribute`.
 
-#### [`MappedParameterAttribute`](openff.toolkit.typing.engines.smirnoff.parameters.MappedParameterAttribute)
-A `ParameterAttribute` with several values, with some arbitrary mapping to access values.
+#### `MappedParameterAttribute`
+A [`MappedParameterAttribute`](openff.toolkit.typing.engines.smirnoff.parameters.MappedParameterAttribute) is a  `ParameterAttribute` with several values, with some arbitrary mapping to access values.
 
-#### [`IndexedMappedParameterAttribute`](openff.toolkit.typing.engines.smirnoff.parameters.IndexedMappedParameterAttribute)
-A `ParameterAttribute` with a sequence of maps of values.
+#### `IndexedMappedParameterAttribute`
+An [`IndexedMappedParameterAttribute`](openff.toolkit.typing.engines.smirnoff.parameters.IndexedMappedParameterAttribute) is a `ParameterAttribute` with a sequence of maps of values.
 
-### [`ParameterHandler`](openff.toolkit.typing.engines.smirnoff.parameters.ParameterHandler)
-A generic base class for objects that perform parameterization for one section in a SMIRNOFF data source.
+### `ParameterHandler`
+[`ParameterHandler`](openff.toolkit.typing.engines.smirnoff.parameters.ParameterHandler) is a generic base class for objects that perform parameterization for one section in a SMIRNOFF data source.
 A `ParameterHandler` has the ability to produce one component of an OpenMM `System`.
 Extend this class to add a support for a new force or energy term to the toolkit.
 
@@ -171,8 +171,8 @@ Each `ParameterHandler`-derived class MAY implement:
   - `postprocess_system`: operates identically to `create_force`, but is run after each ParameterHandlers' `create_force` has already been called.
     The default implementation of this method simply does nothing, and should suffice for most developers.
 
-### [`ParameterType`](openff.toolkit.typing.engines.smirnoff.parameters.ParameterType)
-A base class for the SMIRKS-based parameters of a `ParameterHandler`.
+### `ParameterType`
+[`ParameterType`](openff.toolkit.typing.engines.smirnoff.parameters.ParameterType) is a base class for the SMIRKS-based parameters of a `ParameterHandler`.
 Extend this alongside `ParameterHandler` to define and validate the force field parameters of a new force.
 This is analogous to ParmEd's XType classes, like [BondType](https://parmed.github.io/ParmEd/html/api/parmed/parmed.html?highlight=bondtype#parmed.BondType). A `ParameterType` should correspond to a single SMARTS-based parameter.
 
