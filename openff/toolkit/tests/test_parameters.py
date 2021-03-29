@@ -1843,6 +1843,27 @@ class TestVirtualSiteHandler:
                 exclusion_policy="bad_attribute_value_that_will_never_be_used",
             )
 
+    def test_serialize_virtual_site_handler(self):
+        """Test creation of an empty VirtualSiteHandler"""
+        handler = VirtualSiteHandler(
+            skip_version_check=True, exclusion_policy="parents"
+        )
+
+        handler.add_parameter(
+            {
+                "smirks": "[#1:1]-[#8X2H2+0:2]-[#1:3]",
+                "type": "DivalentLonePair",
+                "distance": -0.0106 * unit.nanometers,
+                "outOfPlaneAngle": 0.0 * unit.degrees,
+                "match": "once",
+                "charge_increment1": 0.5 * unit.elementary_charge,
+                "charge_increment2": -1.0 * unit.elementary_charge,
+                "charge_increment3": 0.5 * unit.elementary_charge,
+            }
+        )
+
+        handler.to_dict()
+
     def test_virtual_site_bond_charge_type(self):
         """
         Ensure that an error is raised if incorrect parameters are given to
