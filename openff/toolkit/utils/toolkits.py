@@ -1958,7 +1958,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         oechem.OESmilesToMol(oemol, smiles)
         if not (hydrogens_are_explicit):
             result = oechem.OEAddExplicitHydrogens(oemol)
-            if result == False:
+            if not result:
                 raise ValueError(
                     "Addition of explicit hydrogens failed in from_openeye"
                 )
@@ -2597,7 +2597,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         qmol = oechem.OEQMol()
         status = oechem.OEParseSmarts(qmol, smarts)
-        if status == False:
+        if not status:
             raise SMIRKSParsingError(
                 f"OpenEye Toolkit was unable to parse SMIRKS {smarts}"
             )
@@ -3366,7 +3366,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         Chem.AssignStereochemistry(rdmol)
 
         # Throw an exception/warning if there is unspecified stereochemistry.
-        if allow_undefined_stereo == False:
+        if not allow_undefined_stereo:
             self._detect_undefined_stereo(
                 rdmol, err_msg_prefix="Unable to make OFFMol from SMILES: "
             )

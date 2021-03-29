@@ -47,7 +47,8 @@ requires_openeye = pytest.mark.skipif(
     reason="Test requires OE toolkit",
 )
 requires_openeye_mol2 = pytest.mark.skipif(
-    requires_openeye.args, reason="Test requires OE toolkit to read mol2 files"
+    not OpenEyeToolkitWrapper.is_available(),
+    reason="Test requires OE toolkit to read mol2 files",
 )
 
 

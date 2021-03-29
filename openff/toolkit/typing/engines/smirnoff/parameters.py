@@ -4897,7 +4897,7 @@ class VirtualSiteHandler(_NonbondedHandler):
         None
         """
 
-        if vsite_name in self._virtual_site_types and replace == False:
+        if vsite_name in self._virtual_site_types and not replace:
             raise DuplicateVirtualSiteTypeException(
                 "VirtualSite type {} already registered for handler {} and replace=False".format(
                     vsite_name, self.__class__
