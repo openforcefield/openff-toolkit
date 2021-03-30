@@ -1409,9 +1409,13 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             ] = atom_index  # store for mapping oeatom to molecule atom indices below
             atom_mapping[atom_index] = map_id
 
-        # if we have a full atom map add it to the molecule, 0 indicates a missing mapping or no mapping
-        if 0 not in atom_mapping.values():
-            molecule._properties["atom_map"] = atom_mapping
+        # If we have a full / partial atom map add it to the molecule. Zeroes 0
+        # indicates no mapping
+        if {*atom_mapping.values()} != {0}:
+
+            molecule._properties["atom_map"] = {
+                idx: map_idx for idx, map_idx in atom_mapping.items() if map_idx != 0
+            }
 
         for oebond in oemol.GetBonds():
             atom1_index = map_atoms[oebond.GetBgnIdx()]
@@ -4090,9 +4094,13 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             map_atoms[rd_idx] = atom_index
             atom_mapping[atom_index] = map_id
 
-        # if we have a full atom map add it to the molecule, 0 indicates a missing mapping or no mapping
-        if 0 not in atom_mapping.values():
-            offmol._properties["atom_map"] = atom_mapping
+        # If we have a full / partial atom map add it to the molecule. Zeroes 0
+        # indicates no mapping
+        if {*atom_mapping.values()} != {0}:
+
+            offmol._properties["atom_map"] = {
+                idx: map_idx for idx, map_idx in atom_mapping.items() if map_idx != 0
+            }
 
         # Similar to chirality, stereochemistry of bonds in OE is set relative to their neighbors
         for rdb in rdmol.GetBonds():
