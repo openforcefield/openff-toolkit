@@ -8,6 +8,10 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ## Changes since last release
 
+### Bugfixes
+
+- [PR #891](https://github.com/openforcefield/openforcefield/pull/891): Calls to `Molecule.from_openeye` no longer mutates the input OE molecule.
+
 ### Improved documentation and warnings
 - [PR #862](https://github.com/openforcefield/openforcefield/pull/862): Clarify that `System` objects produced by the toolkit are OpenMM `System`s in anticipation of forthcoming OpenFF `System`s. Fixes [Issue #618](https://github.com/openforcefield/openforcefield/issues/618).
 - [PR #863](https://github.com/openforcefield/openff-toolkit/pull/863): Documented how to build the docs in the developers guide.
