@@ -1094,7 +1094,7 @@ class TestOpenEyeToolkitWrapper:
     def test_generate_multiple_conformers(self):
         """Test OpenEyeToolkitWrapper generate_conformers() for generating multiple conformers"""
         toolkit_wrapper = OpenEyeToolkitWrapper()
-        smiles = "CCCCCCC"
+        smiles = "CCCCCCCCCN"
         molecule = toolkit_wrapper.from_smiles(smiles)
         molecule.generate_conformers(
             rms_cutoff=1 * unit.angstrom,
@@ -2356,7 +2356,7 @@ class TestRDKitToolkitWrapper:
     def test_generate_multiple_conformers(self):
         """Test RDKitToolkitWrapper generate_conformers() for generating multiple conformers"""
         toolkit_wrapper = RDKitToolkitWrapper()
-        smiles = "CCCCCCC"
+        smiles = "CCCCCCCCCN"
         molecule = toolkit_wrapper.from_smiles(smiles)
         molecule.generate_conformers(
             rms_cutoff=1 * unit.angstrom,
