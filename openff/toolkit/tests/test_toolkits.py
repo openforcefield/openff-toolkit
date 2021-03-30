@@ -2839,7 +2839,7 @@ class TestAmberToolsToolkitWrapper:
             toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper]
         )
         molecule = create_ethanol()
-        molecule.generate_conformers(n_conformers=2, rms_cutoff=0.1 * unit.angstrom)
+        molecule.generate_conformers(n_conformers=2, rms_cutoff=0.01 * unit.angstrom)
 
         # Try passing in the incorrect number of confs, but without specifying strict_n_conformers,
         # which should produce a warning
