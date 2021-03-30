@@ -1,0 +1,15 @@
+name: offtk-examples
+channels:
+  - conda-forge
+
+dependencies:
+  - python
+  - openff-toolkit
+  - nglview
+  - notebook
+  # Below are dependencies of the above; they are
+  # listed explicitly as a reference.
+  - mdtraj
+  - numpy
+  - openmm
+  - rdkit
