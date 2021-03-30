@@ -1844,7 +1844,7 @@ class TestVirtualSiteHandler:
             )
 
     def test_serialize_virtual_site_handler(self):
-        """Test creation of an empty VirtualSiteHandler"""
+        """Test serializing a populated VirtualSiteHandler"""
         handler = VirtualSiteHandler(
             skip_version_check=True, exclusion_policy="parents"
         )
