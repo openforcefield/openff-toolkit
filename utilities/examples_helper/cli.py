@@ -1,6 +1,7 @@
 import click
 
-import conda.cli.python_api as conda
+import conda.cli.python_api
+import conda.exceptions
 
 
 from pathlib import Path
@@ -61,9 +62,15 @@ def conda_cmd(cmd, *args, **kwargs):
     """Wrapper around both run_command() and conda_env()"""
     args = [str(arg) for arg in args]
     if cmd == "env":
+        if "--dry-run" in args:
+            return (None, None, 0)
         return conda_env(*args, **kwargs)
     else:
-        return conda.run_command(cmd, *args, **kwargs)
+        try:
+            return conda.cli.python_api.run_command(cmd, *args, **kwargs)
+        except conda.exceptions.DryRunExit:
+            return (None, None, 0)
+
 
 
 def get_current_conda_prefix():
@@ -93,11 +100,12 @@ class Example:
 
         `path` should be the path to a readable directory including
         exactly one Jupyter notebook (*.ipynb). The path to this
-        notebook is available as `Example.notebook`. A human and
-        machine readable name of the `Example` is taken from the
-        directory's path and is available as `Example.name`. If a file
-        named environment.yml or environment.yaml exists in the
-        directory, it is available as `Example.environment`
+        notebook, relative to the example directory, is available as
+        `Example.notebook`. A human and machine readable name of the
+        `Example` is taken from the directory's path and is available
+        as `Example.name`. If a file named environment.yml or
+        environment.yaml exists in the directory, it is available as
+        `Example.environment`
         """
         self.path = Path(path).resolve()
 
@@ -110,7 +118,7 @@ class Example:
         notebooks = [p for p in self.path.glob("*.ipynb")]
 
         if len(notebooks) == 1:
-            self.notebook = notebooks[0]
+            self.notebook = notebooks[0].relative_to(self.path)
         else:
             raise ValueError(
                 "path should be a folder with exactly one notebook"
@@ -218,12 +226,17 @@ def install(example, target, dry_run, quiet, update_current):
     target = (target / example.name)
 
     if dry_run:
-        echo("Dry run; taking no file system actions")
+        echo(style("Dry run; taking no file system actions.", fg="red"))
 
     if not quiet:
         echo(f"Taking example {style_path(example.name)} from {style_path(example.path)}")
         echo(f"Installing to {style_path(target)}")
 
+    if target.exists():
+        raise click.BadParameter(
+            f"Directory {style_path(target)} already exists",
+            param_hint="--target"
+        )
     if not dry_run:
         shutil.copytree(example.path, target)
 
@@ -267,17 +280,24 @@ def install(example, target, dry_run, quiet, update_current):
             stdout=None, stderr=None
         )
 
-        echo(
-            style('Installation complete.', fg='green'),
-            f"From the new {style_path(target)} directory, activate the "
-            f"example prefix with",
-            style_cmd(f"conda activate {prefix.resolve()}"),
-            f"and run the example with",
-            style_cmd(
-                f"jupyter notebook {example.notebook.relative_to(example.path)}"
-            ),
-            sep="\n"
-        )
+        if dry_run:
+            echo(style('Dry run complete.', fg='red'))
+        else:
+            echo(
+                style('Installation complete.', fg='green'),
+                f"Activate the example Conda environment with",
+                style_cmd(f"conda activate {prefix.resolve()}"),
+                f"With the environment active and working from the new "
+                f"{style_path(target)} directory, run the example with",
+                style_cmd(
+                    f"jupyter notebook {example.notebook}"
+                ),
+                f"To get started right now:",
+                style_cmd(
+                    f"conda run -p {prefix} --cwd {target} jupyter notebook {example.notebook}"
+                ),
+                sep="\n"
+            )
     except Exception as e:
         if not dry_run:
             echo(
