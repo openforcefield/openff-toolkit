@@ -2,7 +2,6 @@ name: test
 channels:
   - openeye
   - conda-forge
-  - omnia
 
 dependencies:
     # Base depends
@@ -10,20 +9,21 @@ dependencies:
   - pip
 
     # Testing
-  - pytest < 6.0
+  - pytest
   - pytest-cov
   - nbval
   - codecov
-  - coverage < 5.0
+  - coverage
   - numpy
   - networkx
   - ambertools
   - rdkit
   - openeye-toolkits
   - packaging
-  - openmmforcefields >=0.7.2
-  - openmmtools
-  - openforcefields
+    # Removed until a new release which targets openff-toolkit is made.
+#  - openmmforcefields
+  - openmm
+  - openff-forcefields
   - smirnoff99Frosst
   - pyyaml
   - toml
@@ -33,3 +33,4 @@ dependencies:
   - qcelemental
   - qcportal
   - qcengine
+  - mdtraj

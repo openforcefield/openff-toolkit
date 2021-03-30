@@ -1,12 +1,12 @@
 name: test
 channels:
   - conda-forge
-  - omnia
   - openeye
 
 dependencies:
     # Base depends
-  - openforcefield
+  - openff-toolkit
+
   - openmmforcefields
   - openeye-toolkits
   - pytest

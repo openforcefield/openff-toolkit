@@ -1,4 +1,4 @@
-from openforcefield.utils import utils
+from openff.toolkit.utils import utils
 from openeye import oechem
 from openeye import oeomega
 import multiprocessing
@@ -21,7 +21,7 @@ def genConfs(c_mol, ofsff, ofsTri, index):
     if status:
         # change title
         mol.SetTitle(f'DrugBank_{index}')
-        # save forcefield type
+        # save force field type
         mol1 = oechem.OEMol(mol)
         oechem.OETriposAtomNames(mol1)
         oechem.OEWriteConstMolecule(ofsff, mol1)

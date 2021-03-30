@@ -17,67 +17,72 @@ on:
 
 jobs:
   test:
-    if: (github.event_name == 'schedule' && github.repository == 'openforcefield/openforcefield') || (github.event_name != 'schedule')
-    name: Test on ${{ matrix.cfg.os }}, Python ${{ matrix.python-version }}, RDKit=${{ matrix.cfg.rdkit }}, OpenEye=${{ matrix.cfg.openeye }}
-    runs-on: ${{ matrix.cfg.os }}
+    if: (github.event_name == 'schedule' && github.repository == 'openforcefield/openff-toolkit') || (github.event_name != 'schedule')
+    name: Test on ${{ matrix.os }}, Python ${{ matrix.cfg.python-version }}, RDKit=${{ matrix.cfg.rdkit }}, OpenEye=${{ matrix.cfg.openeye }}
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        python-version:
-          - 3.6
-          - 3.7
-          # Uncomment when ready ;)
-          # - 3.8
+        os:
+          - ubuntu-latest
+          - macos-latest
         cfg:
-          - os: ubuntu-latest
+          - python-version: 3.7
             rdkit: "true"
             openeye: "false"
 
-          - os: ubuntu-latest
+          - python-version: 3.7
             rdkit: "false"
             openeye: "true"
 
-          - os: ubuntu-latest
+          - python-version: 3.7
             rdkit: "true"
             openeye: "true"
 
-          - os: macOS-latest
+          - python-version: 3.8
+            rdkit: "true"
+            openeye: "false"
+
+          - python-version: 3.9
             rdkit: "true"
             openeye: "false"
 
     env:
-      CI_OS: ${{ matrix.cfg.os }}
+      CI_OS: ${{ matrix.os }}
       RDKIT: ${{ matrix.cfg.rdkit }}
       OPENEYE: ${{ matrix.cfg.openeye }}
-      PYVER: ${{ matrix.python-version }}
+      PYVER: ${{ matrix.cfg.python-version }}
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
-      PACKAGE: openforcefield
-      PYTEST_ARGS: -r fE --tb=short --cov=openforcefield --cov-config=setup.cfg --cov-append --cov-report=xml
+      PACKAGE: openff
+      PYTEST_ARGS: -r fE --tb=short --cov=openff --cov-config=setup.cfg --cov-append --cov-report=xml
+      NB_ARGS: -v --nbval-lax --ignore=examples/deprecated
 
     steps:
       - uses: actions/checkout@v2
+        with:
+          fetch-depth: 2
 
-      - uses: conda-incubator/setup-miniconda@v1
+      - uses: conda-incubator/setup-miniconda@v2
         name: Install both RDKit and OpenEye toolkits
         if: ${{ matrix.cfg.rdkit == 'TRUE' && matrix.cfg.openeye == 'TRUE' }}
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: ${{ matrix.cfg.python-version }}
           activate-environment: test
           environment-file: devtools/conda-envs/test_env.yaml
           auto-activate-base: false
-      - uses: conda-incubator/setup-miniconda@v1
+      - uses: conda-incubator/setup-miniconda@v2
         name: Install only RDKit
         if: ${{ matrix.cfg.rdkit == 'TRUE' && matrix.cfg.openeye == 'FALSE' }}
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: ${{ matrix.cfg.python-version }}
           activate-environment: test
           environment-file: devtools/conda-envs/rdkit.yaml
           auto-activate-base: false
-      - uses: conda-incubator/setup-miniconda@v1
+      - uses: conda-incubator/setup-miniconda@v2
         name: Install with OpenEye toolkits
         if: ${{ matrix.cfg.rdkit == 'FALSE' && matrix.cfg.openeye == 'TRUE' }}
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: ${{ matrix.cfg.python-version }}
           activate-environment: test
           environment-file: devtools/conda-envs/openeye.yaml
           auto-activate-base: false
@@ -105,69 +110,68 @@ jobs:
       - name: Install package
         shell: bash -l {0}
         run: |
-          python -m pip install --no-deps -v .
+          python setup.py develop --no-deps
 
       - name: Check installed toolkits
         shell: bash -l {0}
         run: |
           if [[ "$OPENEYE" == true ]]; then
-            python -c "from openforcefield.utils.toolkits import OPENEYE_AVAILABLE; assert OPENEYE_AVAILABLE, 'OpenEye unavailable'"
+            python -c "from openff.toolkit.utils.toolkits import OPENEYE_AVAILABLE; assert OPENEYE_AVAILABLE, 'OpenEye unavailable'"
           fi
           if [[ "$OPENEYE" == false ]]; then
             if [[ $(conda list | grep openeye-toolkits) ]]; then
               conda remove --force openeye-toolkits --yes
             fi
-            python -c "from openforcefield.utils.toolkits import OPENEYE_AVAILABLE; assert not OPENEYE_AVAILABLE, 'OpenEye unexpectedly found'"
+            python -c "from openff.toolkit.utils.toolkits import OPENEYE_AVAILABLE; assert not OPENEYE_AVAILABLE, 'OpenEye unexpectedly found'"
           fi
           if [[ "$RDKIT" == true ]]; then
-            python -c "from openforcefield.utils.toolkits import RDKIT_AVAILABLE; assert RDKIT_AVAILABLE, 'RDKit unavailable'"
+            python -c "from openff.toolkit.utils.toolkits import RDKIT_AVAILABLE; assert RDKIT_AVAILABLE, 'RDKit unavailable'"
           fi
           if [[ "$RDKIT" == false ]]; then
             if [[ $(conda list | grep rdkit) ]]; then
               conda remove --force rdkit --yes
             fi
-            python -c "from openforcefield.utils.toolkits import RDKIT_AVAILABLE; assert not RDKIT_AVAILABLE, 'RDKit unexpectedly found'"
+            python -c "from openff.toolkit.utils.toolkits import RDKIT_AVAILABLE; assert not RDKIT_AVAILABLE, 'RDKit unexpectedly found'"
           fi
 
       - name: Check links
         shell: bash -l {0}
         if: ${{ matrix.cfg.rdkit == 'true' && matrix.cfg.openeye == 'TRUE' }}
-        continue-on-error: true
         run: |
-          pytest -r fE -tb=short openforcefield/tests/test_links.py
+          pytest -r fE --tb=short openff/toolkit/tests/test_links.py
 
       - name: Run unit tests
         shell: bash -l {0}
         run: |
-          PYTEST_ARGS+=" --ignore=openforcefield/tests/test_examples.py"
-          PYTEST_ARGS+=" --ignore=openforcefield/tests/test_links.py"
-          if [[ "$RDKIT" == true && "$OPENEYE" == true ]]; then
-            PYTEST_ARGS+="--doctest-modules"
+          PYTEST_ARGS+=" --ignore=openff/toolkit/tests/test_examples.py"
+          PYTEST_ARGS+=" --ignore=openff/toolkit/tests/test_links.py"
+          if [[ "$GITHUB_EVENT_NAME" == "schedule" ]]; then
+            PYTEST_ARGS+=" --runslow"
           fi
-          pytest $PYTEST_ARGS $PACKAGE/
+          pytest $PYTEST_ARGS openff/toolkit/tests/
 
       - name: Run example scripts
         shell: bash -l {0}
-        continue-on-error: true
         run: |
           if [[ "$RDKIT" == false ]]; then
             PYTEST_ARGS+=" --ignore=examples/check_dataset_parameter_coverage"
             PYTEST_ARGS+=" --ignore=examples/QCArchive_interface"
           fi
-          pytest $PYTEST_ARGS openforcefield/tests/test_examples.py
+          pytest $PYTEST_ARGS openff/toolkit/tests/test_examples.py
 
       - name: Run example notebooks
         shell: bash -l {0}
-        continue-on-error: true
         run: |
-          PYTEST_ARGS+=" --nbval-lax --ignore=examples/deprecated"
+          NB_ARGS+=" --ignore=examples/using_smirnoff_in_amber_or_gromacs"
+          # XFail until a new `openmmforcefields` build is made which depends on `openff-toolkit`.
+          NB_ARGS+=" --ignore=examples/swap_amber_parameters"
           if [[ "$RDKIT" == false ]]; then
-            PYTEST_ARGS+=" --ignore=examples/check_dataset_parameter_coverage"
-            PYTEST_ARGS+=" --ignore=examples/conformer_energies"
-            PYTEST_ARGS+=" --ignore=examples/QCArchive_interface"
-            PYTEST_ARGS+=" --ignore=examples/visualization"
+            NB_ARGS+=" --ignore=examples/check_dataset_parameter_coverage"
+            NB_ARGS+=" --ignore=examples/conformer_energies"
+            NB_ARGS+=" --ignore=examples/QCArchive_interface"
+            NB_ARGS+=" --ignore=examples/visualization"
           fi
-          pytest $PYTEST_ARGS examples/
+          pytest $NB_ARGS examples/
 
       - name: Run code snippets in docs
         shell: bash -l {0}

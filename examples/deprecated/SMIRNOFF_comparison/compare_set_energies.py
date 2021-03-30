@@ -16,7 +16,7 @@ datapath = './AlkEthOH_tripos/AlkEthOH_test_filt1'
 if not os.path.isdir(datapath):
     print("Extracting archived molecule files.")
     # Extract the AlkEthOH dataset shipped with the toolkit in data/molecules/ in the working directory.
-    from openforcefield.tests.utils import get_data_file_path
+    from openff.toolkit.tests.utils import get_data_file_path
     tarfile_path = os.path.join(get_data_file_path('molecules'), 'AlkEthOH_tripos.tar.gz')
     import tarfile
     with tarfile.open(tarfile_path, 'r:gz') as tar:
@@ -28,11 +28,11 @@ mol_filepaths = [fnm for fnm in mol_filepaths if not 'c1302' in fnm]  # Skip wat
 
 print('Found {} files to test'.format(len(mol_filepaths)))
 
-# Load forcefield
-from openforcefield.typing.engines.smirnoff import ForceField
+# Load force field
+from openff.toolkit.typing.engines.smirnoff import ForceField
 forcefield = ForceField('test_forcefields/Frosst_AlkEthOH_parmAtFrosst.offxml')
 
-from openforcefield.topology import Molecule
+from openff.toolkit.topology import Molecule
 for mol_idx, mol_filepath in enumerate(mol_filepaths):
     # Load molecule.
     molecule = Molecule.from_file(mol_filepath)
@@ -44,8 +44,8 @@ for mol_idx, mol_filepath in enumerate(mol_filepaths):
     inpcrd_filepath = os.path.join(datapath, molname+'.crd')
 
     # Compare energies
-    from openforcefield.tests.utils import compare_amber_smirnoff
-    from openforcefield.tests.utils import FailedParameterComparisonError, FailedEnergyComparisonError
+    from openff.toolkit.tests.utils import compare_amber_smirnoff
+    from openff.toolkit.tests.utils import FailedParameterComparisonError, FailedEnergyComparisonError
     try:
         # We ignore the charges as they are not included in the force field.
         # TODO: Reactivate this check when we'll be able to load charges from the file.
