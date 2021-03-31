@@ -249,12 +249,18 @@ rdkit_drugbank_undefined_stereo_mols = {
     "DrugBank_3930",
     "DrugBank_5043",
     "DrugBank_5418",
+    "DrugBank_7124",
+    "DrugBank_6865",
 }
 
 
 # Missing stereo in OE but not RDK:  'DrugBank_2987', 'DrugBank_3502', 'DrugBank_4161',
 # 'DrugBank_4162', 'DrugBank_6531', 'DrugBank_1700',
-drugbank_stereogenic_in_rdkit_but_not_openeye = {"DrugBank_5329"}
+drugbank_stereogenic_in_rdkit_but_not_openeye = {
+    "DrugBank_5329",
+    "DrugBank_7124",
+    "DrugBank_6865",
+}
 
 # Some molecules are _valid_ in both OETK and RDKit, but will fail if you try
 # to convert from one to the other, since OE adds stereo that RDKit doesn't
