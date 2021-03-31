@@ -52,6 +52,7 @@ from openff.toolkit.topology.molecule import (
     FrozenMolecule,
     InvalidConformerError,
     Molecule,
+    SmilesParsingError,
 )
 from openff.toolkit.utils import get_data_file_path
 from openff.toolkit.utils.toolkits import (
@@ -515,6 +516,16 @@ class TestMolecule:
 
         smiles2 = molecule2.to_smiles(toolkit_registry=toolkit_wrapper)
         assert smiles1 == smiles2
+
+    @pytest.mark.parametrize(
+        "smiles, expected", [("[Cl:1]Cl", {0: 1}), ("[Cl:1][Cl:2]", {0: 1, 1: 2})]
+    )
+    @pytest.mark.parametrize(
+        "toolkit", [OpenEyeToolkitWrapper(), RDKitToolkitWrapper()]
+    )
+    def test_from_smiles_with_map(self, smiles, expected, toolkit):
+        molecule = Molecule.from_smiles(smiles, toolkit_registry=toolkit)
+        assert molecule.properties["atom_map"] == expected
 
     smiles_types = [
         {"isomeric": True, "explicit_hydrogens": True, "mapped": True, "error": None},
@@ -2142,6 +2153,19 @@ class TestMolecule:
         # make sure the atom map is not exposed
         with pytest.raises(KeyError):
             mapping = mol._properties["atom_map"]
+
+    @pytest.mark.parametrize(
+        "toolkit_class", [OpenEyeToolkitWrapper, RDKitToolkitWrapper]
+    )
+    def test_from_mapped_smiles_partial(self, toolkit_class):
+        """Test that creating a molecule from a partially mapped SMILES raises an
+        exception."""
+
+        with pytest.raises(
+            SmilesParsingError,
+            match="The mapped smiles does not contain enough indexes",
+        ):
+            Molecule.from_mapped_smiles("[Cl:1][Cl]", toolkit_registry=toolkit_class)
 
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_n_particles(self, molecule):
