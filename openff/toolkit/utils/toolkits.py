@@ -1299,7 +1299,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         from openeye import oechem
 
-        from openff.toolkit.topology.molecule import Molecule
+        oemol = oechem.OEMol(oemol)
 
         # Add explicit hydrogens if they're implicit
         if oechem.OEHasImplicitHydrogens(oemol):

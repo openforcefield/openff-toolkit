@@ -194,6 +194,8 @@ rdkit_inchi_stereochemistry_lost = [
     "DrugBank_1962",
     "DrugBank_5043",
     "DrugBank_2519",
+    "DrugBank_7124",
+    "DrugBank_6865",
 ]
 
 rdkit_inchi_roundtrip_mangled = ["DrugBank_2684"]
@@ -561,6 +563,19 @@ class TestOpenEyeToolkitWrapper:
         oemol2 = eth_from_oe.to_openeye()
         for oeatom in oemol2.GetAtoms():
             assert math.isnan(oeatom.GetPartialCharge())
+
+    def test_from_openeye_mutable_input(self):
+        """
+        Test ``OpenEyeToolkitWrapper.from_openeye`` does not mutate the input molecule.
+        """
+        from openeye import oechem
+
+        oe_molecule = oechem.OEMol()
+        oechem.OESmilesToMol(oe_molecule, "C")
+
+        assert oechem.OEHasImplicitHydrogens(oe_molecule)
+        Molecule.from_openeye(oe_molecule)
+        assert oechem.OEHasImplicitHydrogens(oe_molecule)
 
     def test_from_openeye_implicit_hydrogen(self):
         """
@@ -1080,7 +1095,7 @@ class TestOpenEyeToolkitWrapper:
     def test_generate_multiple_conformers(self):
         """Test OpenEyeToolkitWrapper generate_conformers() for generating multiple conformers"""
         toolkit_wrapper = OpenEyeToolkitWrapper()
-        smiles = "CCCCCCC"
+        smiles = "CCCCCCCCCN"
         molecule = toolkit_wrapper.from_smiles(smiles)
         molecule.generate_conformers(
             rms_cutoff=1 * unit.angstrom,
@@ -2349,7 +2364,7 @@ class TestRDKitToolkitWrapper:
     def test_generate_multiple_conformers(self):
         """Test RDKitToolkitWrapper generate_conformers() for generating multiple conformers"""
         toolkit_wrapper = RDKitToolkitWrapper()
-        smiles = "CCCCCCC"
+        smiles = "CCCCCCCCCN"
         molecule = toolkit_wrapper.from_smiles(smiles)
         molecule.generate_conformers(
             rms_cutoff=1 * unit.angstrom,
@@ -2830,7 +2845,7 @@ class TestAmberToolsToolkitWrapper:
             toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper]
         )
         molecule = create_ethanol()
-        molecule.generate_conformers(n_conformers=2, rms_cutoff=0.1 * unit.angstrom)
+        molecule.generate_conformers(n_conformers=2, rms_cutoff=0.01 * unit.angstrom)
 
         # Try passing in the incorrect number of confs, but without specifying strict_n_conformers,
         # which should produce a warning
