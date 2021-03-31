@@ -1752,6 +1752,61 @@ class TestvdWHandler:
         assert vdw_handler.get_parameter({"smirks": "[*:1]"})[0].id == "n99"
         assert vdw_handler.get_parameter({"smirks": "[#1:1]"})[0].id == "n00"
 
+    @pytest.mark.parametrize(
+        "switch_width, expected",
+        [
+            (10.0 * unit.angstrom, False),
+            (9.0 * unit.angstrom, False),
+            (8.0 * unit.angstrom, True),
+        ],
+    )
+    @pytest.mark.parametrize(
+        "method",
+        ["PME", "cutoff"],
+    )
+    def test_switch_width(self, switch_width, expected, method):
+        """Test that create_force works on a vdWHandler which has a switch width
+        specified.
+        """
+
+        from simtk import openmm
+
+        # Create a dummy topology containing only argon and give it a set of
+        # box vectors.
+        topology = Molecule.from_smiles("[Ar]").to_topology()
+        topology.box_vectors = unit.Quantity(numpy.eye(3) * 20 * unit.angstrom)
+
+        # create a VdW handler with only parameters for argon.
+        vdw_handler = vdWHandler(
+            version=0.3,
+            cutoff=9.0 * unit.angstrom,
+            switch_width=switch_width,
+            method=method,
+        )
+        vdw_handler.add_parameter(
+            {
+                "smirks": "[#18:1]",
+                "epsilon": 1.0 * unit.kilojoules_per_mole,
+                "sigma": 1.0 * unit.angstrom,
+            }
+        )
+
+        omm_sys = openmm.System()
+        vdw_handler.create_force(omm_sys, topology)
+
+        nonbonded_force = [
+            force
+            for force in omm_sys.getForces()
+            if isinstance(force, openmm.NonbondedForce)
+        ][0]
+
+        assert numpy.isclose(
+            nonbonded_force.getSwitchingDistance().value_in_unit(unit.angstrom),
+            switch_width.value_in_unit(unit.angstrom),
+        )
+
+        assert nonbonded_force.getUseSwitchingFunction() == expected
+
 
 class TestvdWType:
     """

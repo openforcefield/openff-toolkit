@@ -3603,7 +3603,7 @@ class vdWHandler(_NonbondedHandler):
         """
         float_attrs_to_compare = ["scale12", "scale13", "scale14", "scale15"]
         string_attrs_to_compare = ["potential", "combining_rules", "method"]
-        unit_attrs_to_compare = ["cutoff"]
+        unit_attrs_to_compare = ["cutoff", "switch_width"]
 
         self._check_attributes_are_equal(
             other_handler,
@@ -3625,8 +3625,11 @@ class vdWHandler(_NonbondedHandler):
                 #                             "must be provided")
             else:
                 force.setNonbondedMethod(openmm.NonbondedForce.LJPME)
-                force.setCutoffDistance(9.0 * unit.angstrom)
+                force.setCutoffDistance(self.cutoff)
                 force.setEwaldErrorTolerance(1.0e-4)
+
+                force.setSwitchingDistance(self.switch_width)
+                force.setUseSwitchingFunction(self.switch_width < self.cutoff)
 
         # If method is cutoff, then we currently support openMM's PME for periodic system and NoCutoff for nonperiodic
         elif self.method == "cutoff":
@@ -3637,6 +3640,9 @@ class vdWHandler(_NonbondedHandler):
                 force.setNonbondedMethod(openmm.NonbondedForce.PME)
                 force.setUseDispersionCorrection(True)
                 force.setCutoffDistance(self.cutoff)
+
+                force.setSwitchingDistance(self.switch_width)
+                force.setUseSwitchingFunction(self.switch_width < self.cutoff)
 
         # Iterate over all defined Lennard-Jones types, allowing later matches to override earlier ones.
         atom_matches = self.find_matches(topology)
