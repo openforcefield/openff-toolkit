@@ -11,6 +11,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ### Bugfixes
 
 - [PR #891](https://github.com/openforcefield/openforcefield/pull/891): Calls to `Molecule.from_openeye` no longer mutate the input OE molecule.
+- [PR #897](https://github.com/openforcefield/openforcefield/pull/897): Fixes enumeration of stereoisomers for molecules with already defined stereochemistry using RDKit.
 
 ### Improved documentation and warnings
 - [PR #862](https://github.com/openforcefield/openforcefield/pull/862): Clarify that `System` objects produced by the toolkit are OpenMM `System`s in anticipation of forthcoming OpenFF `System`s. Fixes [Issue #618](https://github.com/openforcefield/openforcefield/issues/618).
