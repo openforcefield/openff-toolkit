@@ -25,6 +25,7 @@ Using the toolkit
 .. toctree::
    :maxdepth: 1
 
+   concepts
    smirnoff
    virtualsites
    developing
