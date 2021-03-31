@@ -578,6 +578,19 @@ class TestOpenEyeToolkitWrapper:
         for oeatom in oemol2.GetAtoms():
             assert math.isnan(oeatom.GetPartialCharge())
 
+    def test_from_openeye_mutable_input(self):
+        """
+        Test ``OpenEyeToolkitWrapper.from_openeye`` does not mutate the input molecule.
+        """
+        from openeye import oechem
+
+        oe_molecule = oechem.OEMol()
+        oechem.OESmilesToMol(oe_molecule, "C")
+
+        assert oechem.OEHasImplicitHydrogens(oe_molecule)
+        Molecule.from_openeye(oe_molecule)
+        assert oechem.OEHasImplicitHydrogens(oe_molecule)
+
     def test_from_openeye_implicit_hydrogen(self):
         """
         Test OpenEyeToolkitWrapper for loading a molecule with implicit

@@ -10,6 +10,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Bugfixes
 
+- [PR #891](https://github.com/openforcefield/openforcefield/pull/891): Calls to `Molecule.from_openeye` no longer mutate the input OE molecule.
 - [PR #894](https://github.com/openforcefield/openforcefield/pull/894): Store partial atom maps from OE / RDKit molecules.
 
 ### Improved documentation and warnings
