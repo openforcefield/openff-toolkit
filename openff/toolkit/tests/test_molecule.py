@@ -530,7 +530,7 @@ class TestMolecule:
         "toolkit_class", [OpenEyeToolkitWrapper, RDKitToolkitWrapper]
     )
     def test_from_smiles_with_map(self, smiles, expected, toolkit_class):
-        if not(toolkit_class.is_available()):
+        if not (toolkit_class.is_available()):
             pytest.skip(f"Required toolkit {toolkit_class} is unavailable")
         molecule = Molecule.from_smiles(smiles, toolkit_registry=toolkit_class())
         assert molecule.properties["atom_map"] == expected
@@ -2168,7 +2168,7 @@ class TestMolecule:
     def test_from_mapped_smiles_partial(self, toolkit_class):
         """Test that creating a molecule from a partially mapped SMILES raises an
         exception."""
-        if not(toolkit_class.is_available()):
+        if not (toolkit_class.is_available()):
             pytest.skip(f"Required toolkit {toolkit_class} is unavailable")
         with pytest.raises(
             SmilesParsingError,
