@@ -527,12 +527,12 @@ class TestMolecule:
         "smiles, expected", [("[Cl:1]Cl", {0: 1}), ("[Cl:1][Cl:2]", {0: 1, 1: 2})]
     )
     @pytest.mark.parametrize(
-        "toolkit", [OpenEyeToolkitWrapper(), RDKitToolkitWrapper()]
+        "toolkit_class", [OpenEyeToolkitWrapper, RDKitToolkitWrapper]
     )
-    def test_from_smiles_with_map(self, smiles, expected, toolkit):
-        if not(toolkit.is_available()):
+    def test_from_smiles_with_map(self, smiles, expected, toolkit_class):
+        if not(toolkit_class.is_available()):
             pytest.skip(f"Required toolkit {toolkit} is unavailable")
-        molecule = Molecule.from_smiles(smiles, toolkit_registry=toolkit)
+        molecule = Molecule.from_smiles(smiles, toolkit_registry=toolkit_class())
         assert molecule.properties["atom_map"] == expected
 
     smiles_types = [
