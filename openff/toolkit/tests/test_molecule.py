@@ -530,6 +530,8 @@ class TestMolecule:
         "toolkit", [OpenEyeToolkitWrapper(), RDKitToolkitWrapper()]
     )
     def test_from_smiles_with_map(self, smiles, expected, toolkit):
+        if not(toolkit.is_available()):
+            pytest.skip(f"Required toolkit {toolkit} is unavailable")
         molecule = Molecule.from_smiles(smiles, toolkit_registry=toolkit)
         assert molecule.properties["atom_map"] == expected
 
@@ -2166,12 +2168,13 @@ class TestMolecule:
     def test_from_mapped_smiles_partial(self, toolkit_class):
         """Test that creating a molecule from a partially mapped SMILES raises an
         exception."""
-
+        if not(toolkit_class.is_available()):
+            pytest.skip(f"Required toolkit {toolkit} is unavailable")
         with pytest.raises(
             SmilesParsingError,
             match="The mapped smiles does not contain enough indexes",
         ):
-            Molecule.from_mapped_smiles("[Cl:1][Cl]", toolkit_registry=toolkit_class)
+            Molecule.from_mapped_smiles("[Cl:1][Cl]", toolkit_registry=toolkit_class())
 
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_n_particles(self, molecule):
