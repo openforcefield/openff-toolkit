@@ -646,6 +646,22 @@ class TestOpenEyeToolkitWrapper:
         )
         assert offmol.n_atoms == 4
 
+    @pytest.mark.parametrize(
+        "smiles, expected_map", [("[Cl:1][H]", {0: 1}), ("[Cl:1][H:2]", {0: 1, 1: 2})]
+    )
+    def test_from_openeye_atom_map(self, smiles, expected_map):
+        """
+        Test OpenEyeToolkitWrapper for loading a molecule with implicit
+        hydrogens (correct behavior is to add them explicitly)
+        """
+        from openeye import oechem
+
+        oemol = oechem.OEMol()
+        oechem.OESmilesToMol(oemol, smiles)
+
+        off_molecule = Molecule.from_openeye(oemol)
+        assert off_molecule.properties["atom_map"] == expected_map
+
     @pytest.mark.parametrize("molecule", get_mini_drug_bank(OpenEyeToolkitWrapper))
     def test_to_inchi(self, molecule):
         """Test conversion to standard and non-standard InChI"""
@@ -2118,6 +2134,19 @@ class TestRDKitToolkitWrapper:
             molecule2.to_smiles(toolkit_registry=toolkit_wrapper)
             == expected_output_smiles
         )
+
+    @pytest.mark.parametrize(
+        "smiles, expected_map", [("[Cl:1][Cl]", {0: 1}), ("[Cl:1][Cl:2]", {0: 1, 1: 2})]
+    )
+    def test_from_rdkit_atom_map(self, smiles, expected_map):
+        """
+        Test OpenEyeToolkitWrapper for loading a molecule with implicit
+        hydrogens (correct behavior is to add them explicitly)
+        """
+        from rdkit import Chem
+
+        off_molecule = Molecule.from_rdkit(Chem.MolFromSmiles(smiles))
+        assert off_molecule.properties["atom_map"] == expected_map
 
     def test_file_extension_case(self):
         """

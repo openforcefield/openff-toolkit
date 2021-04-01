@@ -8,6 +8,13 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ## Changes since last release
 
+### Behaviors changed
+
+- [PR #894](https://github.com/openforcefield/openforcefield/pull/894): Calls to `Molecule.from_openeye`, 
+  `Molecule.from_rdkit`, `Molecule.from_smiles`, `OpenEyeToolkitWrapper.from_smiles`, and 
+  `RDKitToolkitWrapper.from_smiles` will now load atom maps into the the resulting 
+  `Molecule's` `offmol.properties['atom_map']` field, even if not all atoms have map indices assigned.
+
 ### Bugfixes
 
 - [PR #891](https://github.com/openforcefield/openforcefield/pull/891): Calls to `Molecule.from_openeye` no longer mutate the input OE molecule.
