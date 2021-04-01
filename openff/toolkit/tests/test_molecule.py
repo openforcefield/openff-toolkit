@@ -531,7 +531,7 @@ class TestMolecule:
     )
     def test_from_smiles_with_map(self, smiles, expected, toolkit_class):
         if not(toolkit_class.is_available()):
-            pytest.skip(f"Required toolkit {toolkit} is unavailable")
+            pytest.skip(f"Required toolkit {toolkit_class} is unavailable")
         molecule = Molecule.from_smiles(smiles, toolkit_registry=toolkit_class())
         assert molecule.properties["atom_map"] == expected
 
@@ -2169,7 +2169,7 @@ class TestMolecule:
         """Test that creating a molecule from a partially mapped SMILES raises an
         exception."""
         if not(toolkit_class.is_available()):
-            pytest.skip(f"Required toolkit {toolkit} is unavailable")
+            pytest.skip(f"Required toolkit {toolkit_class} is unavailable")
         with pytest.raises(
             SmilesParsingError,
             match="The mapped smiles does not contain enough indexes",
