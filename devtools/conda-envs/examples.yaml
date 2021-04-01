@@ -3,13 +3,17 @@ channels:
   - conda-forge
 
 dependencies:
+    # Base depends
   - python
-  - openff-toolkit
-  - nglview
-  - notebook
-  # Below are dependencies of the above; they are
-  # listed explicitly as a reference.
-  - mdtraj
+  - pip
+  - packaging
   - numpy
+  - smirnoff99frosst
+  - openff-forcefields
   - openmm
+  - networkx
+  - mdtraj
+  - xmltodict
   - rdkit
+  - ambertools >=20
+
