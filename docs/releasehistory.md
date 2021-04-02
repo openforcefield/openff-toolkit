@@ -8,15 +8,24 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ## Changes since last release
 
+### Behaviors changed
+
+- [PR #894](https://github.com/openforcefield/openforcefield/pull/894): Calls to `Molecule.from_openeye`, 
+  `Molecule.from_rdkit`, `Molecule.from_smiles`, `OpenEyeToolkitWrapper.from_smiles`, and 
+  `RDKitToolkitWrapper.from_smiles` will now load atom maps into the the resulting 
+  `Molecule's` `offmol.properties['atom_map']` field, even if not all atoms have map indices assigned.
+
 ### Bugfixes
 
 - [PR #891](https://github.com/openforcefield/openforcefield/pull/891): Calls to `Molecule.from_openeye` no longer mutate the input OE molecule.
+- [PR #897](https://github.com/openforcefield/openforcefield/pull/897): Fixes enumeration of stereoisomers for molecules with already defined stereochemistry using RDKit.
 
 ### Improved documentation and warnings
 - [PR #862](https://github.com/openforcefield/openforcefield/pull/862): Clarify that `System` objects produced by the toolkit are OpenMM `System`s in anticipation of forthcoming OpenFF `System`s. Fixes [Issue #618](https://github.com/openforcefield/openforcefield/issues/618).
 - [PR #863](https://github.com/openforcefield/openff-toolkit/pull/863): Documented how to build the docs in the developers guide.
 - [PR #870](https://github.com/openforcefield/openff-toolkit/pull/870): Reorganised documentation to improve discoverability and allow future additions.
 - [PR #871](https://github.com/openforcefield/openff-toolkit/pull/871): Changed Markdown parser from m2r2 to MyST for improved documentation rendering.
+- [PR #880](https://github.com/openforcefield/openff-toolkit/pull/880): Cleanup and partial rewrite of the developer's guide.
 
 :::{TODO}
 Translate previous release history to MyST markdown

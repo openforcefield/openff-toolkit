@@ -52,6 +52,7 @@ from openff.toolkit.topology.molecule import (
     FrozenMolecule,
     InvalidConformerError,
     Molecule,
+    SmilesParsingError,
 )
 from openff.toolkit.utils import get_data_file_path
 from openff.toolkit.utils.toolkits import (
@@ -521,6 +522,18 @@ class TestMolecule:
 
         smiles2 = molecule2.to_smiles(toolkit_registry=toolkit_wrapper)
         assert smiles1 == smiles2
+
+    @pytest.mark.parametrize(
+        "smiles, expected", [("[Cl:1]Cl", {0: 1}), ("[Cl:1][Cl:2]", {0: 1, 1: 2})]
+    )
+    @pytest.mark.parametrize(
+        "toolkit_class", [OpenEyeToolkitWrapper, RDKitToolkitWrapper]
+    )
+    def test_from_smiles_with_map(self, smiles, expected, toolkit_class):
+        if not (toolkit_class.is_available()):
+            pytest.skip(f"Required toolkit {toolkit_class} is unavailable")
+        molecule = Molecule.from_smiles(smiles, toolkit_registry=toolkit_class())
+        assert molecule.properties["atom_map"] == expected
 
     smiles_types = [
         {"isomeric": True, "explicit_hydrogens": True, "mapped": True, "error": None},
@@ -1844,6 +1857,66 @@ class TestMolecule:
         else:
             pytest.skip("Required toolkit is unavailable")
 
+    @pytest.mark.parametrize(
+        "toolkit_class", [OpenEyeToolkitWrapper, RDKitToolkitWrapper]
+    )
+    @pytest.mark.parametrize(
+        "smiles, undefined_only, expected",
+        [
+            (
+                "FC(Br)(Cl)[C@@H](Br)(Cl)",
+                False,
+                [
+                    "F[C@](Br)(Cl)[C@@H](Br)(Cl)",
+                    "F[C@](Br)(Cl)[C@H](Br)(Cl)",
+                    "F[C@@](Br)(Cl)[C@@H](Br)(Cl)",
+                    "F[C@@](Br)(Cl)[C@H](Br)(Cl)",
+                ],
+            ),
+            (
+                "FC(Br)(Cl)[C@@H](Br)(Cl)",
+                True,
+                ["F[C@](Br)(Cl)[C@@H](Br)(Cl)", "F[C@@](Br)(Cl)[C@@H](Br)(Cl)"],
+            ),
+            ("F[C@H](Cl)Br", False, ["F[C@@H](Cl)Br"]),
+            ("F[C@H](Cl)Br", True, []),
+        ],
+    )
+    def test_enumerating_stereo_partially_defined(
+        self, toolkit_class, smiles, undefined_only, expected
+    ):
+        """Test the enumerating stereo of molecules with partially defined chirality"""
+
+        if not toolkit_class.is_available():
+            pytest.skip("Required toolkit is unavailable")
+
+        toolkit = toolkit_class()
+
+        # test undefined only
+        mol = Molecule.from_smiles(
+            smiles, toolkit_registry=toolkit, allow_undefined_stereo=True
+        )
+        stereoisomers = mol.enumerate_stereoisomers(
+            undefined_only=undefined_only, rationalise=False
+        )
+
+        # Ensure that the results of the enumeration are what the test expects.
+        # This roundtrips the expected output from SMILES --> OFFMol --> SMILES,
+        # since the SMILES for stereoisomers generated in this test may change depending
+        # on which cheminformatics toolkit is used.
+        expected = {
+            Molecule.from_smiles(stereoisomer, allow_undefined_stereo=True).to_smiles(
+                explicit_hydrogens=True, isomeric=True, mapped=False
+            )
+            for stereoisomer in expected
+        }
+        actual = {
+            stereoisomer.to_smiles(explicit_hydrogens=True, isomeric=True, mapped=False)
+            for stereoisomer in stereoisomers
+        }
+
+        assert expected == actual
+
     @requires_rdkit
     def test_from_pdb_and_smiles(self):
         """Test the ability to make a valid molecule using RDKit and SMILES together"""
@@ -2148,6 +2221,20 @@ class TestMolecule:
         # make sure the atom map is not exposed
         with pytest.raises(KeyError):
             mapping = mol._properties["atom_map"]
+
+    @pytest.mark.parametrize(
+        "toolkit_class", [OpenEyeToolkitWrapper, RDKitToolkitWrapper]
+    )
+    def test_from_mapped_smiles_partial(self, toolkit_class):
+        """Test that creating a molecule from a partially mapped SMILES raises an
+        exception."""
+        if not (toolkit_class.is_available()):
+            pytest.skip(f"Required toolkit {toolkit_class} is unavailable")
+        with pytest.raises(
+            SmilesParsingError,
+            match="The mapped smiles does not contain enough indexes",
+        ):
+            Molecule.from_mapped_smiles("[Cl:1][Cl]", toolkit_registry=toolkit_class())
 
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_n_particles(self, molecule):
