@@ -1857,6 +1857,66 @@ class TestMolecule:
         else:
             pytest.skip("Required toolkit is unavailable")
 
+    @pytest.mark.parametrize(
+        "toolkit_class", [OpenEyeToolkitWrapper, RDKitToolkitWrapper]
+    )
+    @pytest.mark.parametrize(
+        "smiles, undefined_only, expected",
+        [
+            (
+                "FC(Br)(Cl)[C@@H](Br)(Cl)",
+                False,
+                [
+                    "F[C@](Br)(Cl)[C@@H](Br)(Cl)",
+                    "F[C@](Br)(Cl)[C@H](Br)(Cl)",
+                    "F[C@@](Br)(Cl)[C@@H](Br)(Cl)",
+                    "F[C@@](Br)(Cl)[C@H](Br)(Cl)",
+                ],
+            ),
+            (
+                "FC(Br)(Cl)[C@@H](Br)(Cl)",
+                True,
+                ["F[C@](Br)(Cl)[C@@H](Br)(Cl)", "F[C@@](Br)(Cl)[C@@H](Br)(Cl)"],
+            ),
+            ("F[C@H](Cl)Br", False, ["F[C@@H](Cl)Br"]),
+            ("F[C@H](Cl)Br", True, []),
+        ],
+    )
+    def test_enumerating_stereo_partially_defined(
+        self, toolkit_class, smiles, undefined_only, expected
+    ):
+        """Test the enumerating stereo of molecules with partially defined chirality"""
+
+        if not toolkit_class.is_available():
+            pytest.skip("Required toolkit is unavailable")
+
+        toolkit = toolkit_class()
+
+        # test undefined only
+        mol = Molecule.from_smiles(
+            smiles, toolkit_registry=toolkit, allow_undefined_stereo=True
+        )
+        stereoisomers = mol.enumerate_stereoisomers(
+            undefined_only=undefined_only, rationalise=False
+        )
+
+        # Ensure that the results of the enumeration are what the test expects.
+        # This roundtrips the expected output from SMILES --> OFFMol --> SMILES,
+        # since the SMILES for stereoisomers generated in this test may change depending
+        # on which cheminformatics toolkit is used.
+        expected = {
+            Molecule.from_smiles(stereoisomer, allow_undefined_stereo=True).to_smiles(
+                explicit_hydrogens=True, isomeric=True, mapped=False
+            )
+            for stereoisomer in expected
+        }
+        actual = {
+            stereoisomer.to_smiles(explicit_hydrogens=True, isomeric=True, mapped=False)
+            for stereoisomer in stereoisomers
+        }
+
+        assert expected == actual
+
     @requires_rdkit
     def test_from_pdb_and_smiles(self):
         """Test the ability to make a valid molecule using RDKit and SMILES together"""

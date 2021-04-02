@@ -3146,7 +3146,9 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         rdmol = self.to_rdkit(molecule=molecule)
 
         # in case any bonds/centers are missing stereo chem flag it here
-        Chem.AssignStereochemistry(rdmol, force=True, flagPossibleStereoCenters=True)
+        Chem.AssignStereochemistry(
+            rdmol, cleanIt=True, force=True, flagPossibleStereoCenters=True
+        )
         Chem.FindPotentialStereoBonds(rdmol)
 
         # set up the options
