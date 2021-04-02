@@ -1887,6 +1887,10 @@ class TestMolecule:
             undefined_only=undefined_only, rationalise=False
         )
 
+        # Ensure that the results of the enumeration are what the test expects.
+        # This roundtrips the expected output from SMILES --> OFFMol --> SMILES,
+        # since the SMILES for stereoisomers generated in this test may change depending
+        # on which cheminformatics toolkit is used.
         expected = {
             Molecule.from_smiles(stereoisomer, allow_undefined_stereo=True).to_smiles(
                 explicit_hydrogens=True, isomeric=True, mapped=False
