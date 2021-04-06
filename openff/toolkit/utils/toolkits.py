@@ -3394,8 +3394,10 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                     )
 
         molecule = self.from_rdkit(
-            rdmol, _cls=_cls, allow_undefined_stereo=allow_undefined_stereo,
-            hydrogens_are_explicit=hydrogens_are_explicit
+            rdmol,
+            _cls=_cls,
+            allow_undefined_stereo=allow_undefined_stereo,
+            hydrogens_are_explicit=hydrogens_are_explicit,
         )
 
         return molecule
