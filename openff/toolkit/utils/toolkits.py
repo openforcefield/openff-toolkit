@@ -3194,6 +3194,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         from rdkit.Chem.MolStandardize import rdMolStandardize
 
         enumerator = rdMolStandardize.TautomerEnumerator()
+        enumerator.SetMaxTautomers(max_states)
         rdmol = Chem.RemoveHs(molecule.to_rdkit())
 
         tautomers = enumerator.Enumerate(rdmol)
