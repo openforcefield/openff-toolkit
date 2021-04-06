@@ -3394,7 +3394,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                     )
 
         molecule = self.from_rdkit(
-            rdmol, _cls=_cls, allow_undefined_stereo=allow_undefined_stereo
+            rdmol, _cls=_cls, allow_undefined_stereo=allow_undefined_stereo,
+            hydrogens_are_explicit=hydrogens_are_explicit
         )
 
         return molecule
@@ -4004,7 +4005,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         rdmol = Chem.Mol(rdmol)
 
         if not hydrogens_are_explicit:
-            rdmol = Chem.AddHs(rdmol)
+            rdmol = Chem.AddHs(rdmol, addCoords=True)
 
         # Sanitizing the molecule. We handle aromaticity and chirality manually.
         # This SanitizeMol(...) calls cleanUp, updatePropertyCache, symmetrizeSSSR,
