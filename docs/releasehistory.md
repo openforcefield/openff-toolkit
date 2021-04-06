@@ -8,8 +8,16 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ## Changes since last release
 
-### Behaviors changed
+### New features and behaviors changed
 
+- [PR #762](https://github.com/openforcefield/openforcefield/pull/762): `Molecule.from_rdkit` now converts
+  implicit hydrogens into explicit hydrogens by default. This change may affect 
+  `RDKitToolkitWrapper/Molecule.from_smiles`, 
+  `from_mapped_smiles`, `from_file`, `from_file_obj`, `from_inchi`, and `from_qcschema`. 
+  This new behavior can be disabled using the
+  `hydrogens_are_explicit=True` keyword argument to `from_smiles`, or loading the molecule into
+  the desired protonation state in RDKit, and calling `from_rdkit` on the RDKit molecule with 
+  `hydrogens_are_explicit=True`.
 - [PR #894](https://github.com/openforcefield/openforcefield/pull/894): Calls to `Molecule.from_openeye`, 
   `Molecule.from_rdkit`, `Molecule.from_smiles`, `OpenEyeToolkitWrapper.from_smiles`, and 
   `RDKitToolkitWrapper.from_smiles` will now load atom maps into the the resulting 
