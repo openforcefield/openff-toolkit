@@ -2,7 +2,7 @@
 
 The following examples are available in [the OpenFF toolkit repository](https://github.com/openforcefield/openff-toolkit/tree/master/examples). Each can be run interactively in the browser with [binder](https://mybinder.org/v2/gh/openforcefield/openforcefield/master?filepath=%2Fexamples%2F), without installing anything on your computer.
 
-### Index of provided examples
+## Index of provided examples
 
 * [conformer_energies](https://github.com/openforcefield/openff-toolkit/tree/master/examples/conformer_energies) - compute conformer energies of one or more small molecules using a SMIRNOFF force field
 * [SMIRNOFF_simulation](https://github.com/openforcefield/openff-toolkit/tree/master/examples/SMIRNOFF_simulation) - simulation of a molecule in the gas phase with the SMIRNOFF force field format

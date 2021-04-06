@@ -117,8 +117,8 @@ class Particle(Serializable):
         Set the particle's molecule pointer. Note that this will only work if the particle currently
         doesn't have a molecule
         """
-        # TODO: Add informative exception here
-        assert self._molecule is None
+        err = f"{type(self).__name__} already has an associated molecule"
+        assert self._molecule is None, err
         self._molecule = molecule
 
     @property
@@ -632,7 +632,7 @@ class VirtualSite(Particle):
 
         # VdW parameters can either be epsilon+rmin_half or epsilon+sigma, but not both
         if not (epsilon is None):
-            if (rmin_half != None) and (sigma != None):
+            if (rmin_half is not None) and (sigma is not None):
                 raise Exception(
                     "VirtualSite constructor given epsilon (value : {}), rmin_half (value : {}), and sigma (value : {}). If epsilon is nonzero, it should receive either rmin_half OR sigma".format(
                         epsilon, rmin_half, sigma
@@ -649,7 +649,7 @@ class VirtualSite(Particle):
                 sigma = (2.0 * rmin_half) / (2.0 ** (1.0 / 6))
 
         elif epsilon is None:
-            if (rmin_half != None) or (sigma != None):
+            if (rmin_half is not None) or (sigma is not None):
                 raise Exception(
                     "VirtualSite constructor given rmin_half (value : {}) or sigma (value : {}), but not epsilon (value : {})".format(
                         rmin_half, sigma, epsilon
@@ -4277,12 +4277,12 @@ class FrozenMolecule(Serializable):
         if len(conformers) == 1:
             end = ""
             title = (
-                lambda frame: f'{self.name if self.name is not "" else self.hill_formula}{frame}\n'
+                lambda frame: f'{self.name if self.name != "" else self.hill_formula}{frame}\n'
             )
         else:
             end = 1
             title = (
-                lambda frame: f'{self.name if self.name is not "" else self.hill_formula} Frame {frame}\n'
+                lambda frame: f'{self.name if self.name != "" else self.hill_formula} Frame {frame}\n'
             )
 
         # check if we have a file path or an open file object
@@ -4495,7 +4495,9 @@ class FrozenMolecule(Serializable):
 
     @classmethod
     @RDKitToolkitWrapper.requires_toolkit()
-    def from_rdkit(cls, rdmol, allow_undefined_stereo=False):
+    def from_rdkit(
+        cls, rdmol, allow_undefined_stereo=False, hydrogens_are_explicit=False
+    ):
         """
         Create a Molecule from an RDKit molecule.
 
@@ -4507,6 +4509,8 @@ class FrozenMolecule(Serializable):
             An RDKit molecule
         allow_undefined_stereo : bool, default=False
             If false, raises an exception if oemol contains undefined stereochemistry.
+        hydrogens_are_explicit : bool, default=False
+            If False, RDKit will perform hydrogen addition using Chem.AddHs
 
         Returns
         -------
@@ -4528,6 +4532,7 @@ class FrozenMolecule(Serializable):
         molecule = toolkit.from_rdkit(
             rdmol,
             allow_undefined_stereo=allow_undefined_stereo,
+            hydrogens_are_explicit=hydrogens_are_explicit,
             _cls=cls,
         )
         return molecule
@@ -4662,7 +4667,7 @@ class FrozenMolecule(Serializable):
         symbols = [
             Element.getByAtomicNumber(atom.atomic_number).symbol for atom in self.atoms
         ]
-        if extras != None:
+        if extras is not None:
             extras[
                 "canonical_isomeric_explicit_hydrogen_mapped_smiles"
             ] = self.to_smiles(mapped=True)
@@ -4789,8 +4794,8 @@ class FrozenMolecule(Serializable):
         molecule : openff.toolkit.topology.Molecule
             An OpenFF molecule instance.
 
-        Example
-        -------
+        Examples
+        --------
         Get Molecule from a QCArchive molecule record:
 
         >>> from qcportal import FractalClient

@@ -1299,7 +1299,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         from openeye import oechem
 
-        from openff.toolkit.topology.molecule import Molecule
+        oemol = oechem.OEMol(oemol)
 
         # Add explicit hydrogens if they're implicit
         if oechem.OEHasImplicitHydrogens(oemol):
@@ -1409,9 +1409,13 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             ] = atom_index  # store for mapping oeatom to molecule atom indices below
             atom_mapping[atom_index] = map_id
 
-        # if we have a full atom map add it to the molecule, 0 indicates a missing mapping or no mapping
-        if 0 not in atom_mapping.values():
-            molecule._properties["atom_map"] = atom_mapping
+        # If we have a full / partial atom map add it to the molecule. Zeroes 0
+        # indicates no mapping
+        if {*atom_mapping.values()} != {0}:
+
+            molecule._properties["atom_map"] = {
+                idx: map_idx for idx, map_idx in atom_mapping.items() if map_idx != 0
+            }
 
         for oebond in oemol.GetBonds():
             atom1_index = map_atoms[oebond.GetBgnIdx()]
@@ -1958,7 +1962,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         oechem.OESmilesToMol(oemol, smiles)
         if not (hydrogens_are_explicit):
             result = oechem.OEAddExplicitHydrogens(oemol)
-            if result == False:
+            if not result:
                 raise ValueError(
                     "Addition of explicit hydrogens failed in from_openeye"
                 )
@@ -2597,7 +2601,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         qmol = oechem.OEQMol()
         status = oechem.OEParseSmarts(qmol, smarts)
-        if status == False:
+        if not status:
             raise SMIRKSParsingError(
                 f"OpenEye Toolkit was unable to parse SMIRKS {smarts}"
             )
@@ -2881,6 +2885,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         pdbmol = self.from_rdkit(
             Chem.MolFromPDBFile(file_path, removeHs=False),
             allow_undefined_stereo=True,
+            hydrogens_are_explicit=True,
             _cls=_cls,
         )
 
@@ -3142,7 +3147,9 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         rdmol = self.to_rdkit(molecule=molecule)
 
         # in case any bonds/centers are missing stereo chem flag it here
-        Chem.AssignStereochemistry(rdmol, force=True, flagPossibleStereoCenters=True)
+        Chem.AssignStereochemistry(
+            rdmol, cleanIt=True, force=True, flagPossibleStereoCenters=True
+        )
         Chem.FindPotentialStereoBonds(rdmol)
 
         # set up the options
@@ -3354,8 +3361,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                 # set it back to zero
                 atom.SetAtomMapNum(0)
 
-        # TODO: I think UpdatePropertyCache(strict=True) is called anyway in Chem.SanitizeMol().
-        rdmol.UpdatePropertyCache(strict=False)
+        # Chem.SanitizeMol calls updatePropertyCache so we don't need to call it ourselves
+        # https://www.rdkit.org/docs/cppapi/namespaceRDKit_1_1MolOps.html#a8d831787aaf2d65d9920c37b25b476f5
         Chem.SanitizeMol(
             rdmol,
             Chem.SANITIZE_ALL ^ Chem.SANITIZE_ADJUSTHS ^ Chem.SANITIZE_SETAROMATICITY,
@@ -3367,7 +3374,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         Chem.AssignStereochemistry(rdmol)
 
         # Throw an exception/warning if there is unspecified stereochemistry.
-        if allow_undefined_stereo == False:
+        if not allow_undefined_stereo:
             self._detect_undefined_stereo(
                 rdmol, err_msg_prefix="Unable to make OFFMol from SMILES: "
             )
@@ -3388,7 +3395,10 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                     )
 
         molecule = self.from_rdkit(
-            rdmol, _cls=_cls, allow_undefined_stereo=allow_undefined_stereo
+            rdmol,
+            _cls=_cls,
+            allow_undefined_stereo=allow_undefined_stereo,
+            hydrogens_are_explicit=hydrogens_are_explicit,
         )
 
         return molecule
@@ -3944,7 +3954,13 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         molecule._conformers = diverse_conformers
 
-    def from_rdkit(self, rdmol, allow_undefined_stereo=False, _cls=None):
+    def from_rdkit(
+        self,
+        rdmol,
+        allow_undefined_stereo=False,
+        hydrogens_are_explicit=False,
+        _cls=None,
+    ):
         """
         Create a Molecule from an RDKit molecule.
 
@@ -3958,6 +3974,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             An RDKit molecule
         allow_undefined_stereo : bool, default=False
             If false, raises an exception if rdmol contains undefined stereochemistry.
+        hydrogens_are_explicit : bool, default=False
+            If False, RDKit will perform hydrogen addition using Chem.AddHs
         _cls : class
             Molecule constructor
 
@@ -3988,6 +4006,9 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         # Make a copy of the RDKit Mol as we'll need to change it (e.g. assign stereo).
         rdmol = Chem.Mol(rdmol)
+
+        if not hydrogens_are_explicit:
+            rdmol = Chem.AddHs(rdmol, addCoords=True)
 
         # Sanitizing the molecule. We handle aromaticity and chirality manually.
         # This SanitizeMol(...) calls cleanUp, updatePropertyCache, symmetrizeSSSR,
@@ -4091,9 +4112,13 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             map_atoms[rd_idx] = atom_index
             atom_mapping[atom_index] = map_id
 
-        # if we have a full atom map add it to the molecule, 0 indicates a missing mapping or no mapping
-        if 0 not in atom_mapping.values():
-            offmol._properties["atom_map"] = atom_mapping
+        # If we have a full / partial atom map add it to the molecule. Zeroes 0
+        # indicates no mapping
+        if {*atom_mapping.values()} != {0}:
+
+            offmol._properties["atom_map"] = {
+                idx: map_idx for idx, map_idx in atom_mapping.items() if map_idx != 0
+            }
 
         # Similar to chirality, stereochemistry of bonds in OE is set relative to their neighbors
         for rdb in rdmol.GetBonds():
@@ -5100,7 +5125,6 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
                 )
                 # Compute desired charges
                 # TODO: Add error handling if antechamber chokes
-                # TODO: Add something cleaner than os.system
                 short_charge_method = charge_method["antechamber_keyword"]
                 subprocess.check_output(
                     [
@@ -5826,7 +5850,6 @@ class ToolkitRegistry:
 # =============================================================================================
 
 # Create global toolkit registry, where all available toolkits are registered
-# TODO: Should this be all lowercase since it's not a constant?
 GLOBAL_TOOLKIT_REGISTRY = ToolkitRegistry(
     toolkit_precedence=[
         OpenEyeToolkitWrapper,
