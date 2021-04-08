@@ -328,7 +328,7 @@ class TestTopology(TestCase):
         first_element = topology.atom(0).element
         eighth_element = topology.atom(7).element
 
-        # Check if instances are correct
+        # Check if types/instances are correct
         assert isinstance(first_element, element.Element)
         assert isinstance(eighth_element, element.Element)
 
