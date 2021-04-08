@@ -22,6 +22,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
   `Molecule.from_rdkit`, `Molecule.from_smiles`, `OpenEyeToolkitWrapper.from_smiles`, and 
   `RDKitToolkitWrapper.from_smiles` will now load atom maps into the the resulting 
   `Molecule's` `offmol.properties['atom_map']` field, even if not all atoms have map indices assigned.
+- [PR #904](https://github.com/openforcefield/openforcefield/pull/904): `TopologyAtom` objects now have 
+  an element getter `TopologyAtom.element`.
 
 ### Bugfixes
 
