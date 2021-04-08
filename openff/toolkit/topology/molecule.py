@@ -340,8 +340,11 @@ class Atom(Particle):
     @property
     def element(self):
         """
-        The element name
+        The element of this atom.
 
+        Returns
+        -------
+        simtk.openmm.app.element.Element
         """
         return element.Element.getByAtomicNumber(self._atomic_number)
 
