@@ -1,7 +1,6 @@
 import subprocess as sp
-import click
 
-if sp.run(["mamba", "--version"]).returncode == 0:
+if sp.run(["mamba", "--version"], capture_output=True).returncode == 0:
     CMD = "mamba"
 else:
     CMD = "conda"
@@ -35,7 +34,7 @@ def create_environment(prefix=None, name=None, dry_run=False, quiet=False):
         conda_args.append("--name")
         conda_args.append(str(name))
 
-    proc = cmd("create", *conda_args)
+    cmd("create", *conda_args)
 
 
 def update_envs(environments, prefix=None, name=None):
@@ -49,7 +48,7 @@ def update_envs(environments, prefix=None, name=None):
         conda_args.append("--name")
         conda_args.append(str(name))
 
-    proc = cmd(
+    cmd(
         "env",
         "update",
         *conda_args,

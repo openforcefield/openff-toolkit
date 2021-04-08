@@ -42,6 +42,6 @@ setup(
         'Programming Language :: Python :: 3',
     ],
     entry_points={'console_scripts': [
-        'openff-examples=utilities.examples_helper.cli:main'
+        'openff-examples=openff.toolkit.examples_helper.cli:main'
     ]},
 )

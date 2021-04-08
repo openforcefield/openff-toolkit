@@ -4,14 +4,9 @@ from pathlib import Path
 
 import click
 
-# Make sure the examples_helper dir is in PYTHONPATH, even if run through setup.py
-sys.path.insert(0, str((Path(__file__) / "..").resolve()))
-
-from example import Example, ExampleArg, OFFTK_ROOT, EXAMPLES_DIR, EXAMPLES_ENV
-from utils import *
-from pathlib import Path
-import conda
-
+from openff.toolkit.examples_helper.example import *
+from openff.toolkit.examples_helper.utils import *
+import openff.toolkit.examples_helper.conda as conda
 
 
 @click.group()
@@ -127,6 +122,7 @@ def install(example, target, dry_run, quiet, update_environment, create_environm
             echo(
                 f"From the new {style_path(target)} directory, run the example:",
                 style_cmd(f"jupyter notebook {example.notebook}"),
+                sep="\n"
             )
             if (update_environment or create_environment) and (prefix or name):
                 echo("To get started right now:")
