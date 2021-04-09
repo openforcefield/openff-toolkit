@@ -37,6 +37,7 @@ from openff.toolkit.typing.engines.smirnoff import (
     FractionalBondOrderInterpolationMethodUnsupportedError,
     IncompatibleParameterError,
     MissingElectrostaticsError,
+    MissingvdWError,
     ParameterHandler,
     ParameterLookupError,
     SMIRNOFFAromaticityError,
@@ -1786,6 +1787,71 @@ class TestForceField:
         assert hash(ff_with_id) == hash(ff_without_id)
 
 
+class TestForceFieldMissingNonbondedHandlers:
+    """Test creation, and associated error handling, of create_openmm_system from force fields
+    that lack (partially or completely) nonbonded handlers"""
+
+    def test_missing_electrostatics(self):
+        """Test that a ForceField with no Electrostatics tag cannot be used to
+        create a system"""
+        top = create_ethanol().to_topology()
+        forcefield = ForceField("test_forcefields/test_forcefield.offxml")
+
+        forcefield.deregister_parameter_handler(forcefield["Electrostatics"])
+
+        with pytest.raises(MissingElectrostaticsError):
+            forcefield.create_openmm_system(top)
+
+    def test_missing_vdw(self):
+        """Test that a ForceField with no vdW tag cannot be used to
+        create a system"""
+        top = create_ethanol().to_topology()
+        forcefield = ForceField("test_forcefields/test_forcefield.offxml")
+
+        forcefield.deregister_parameter_handler(forcefield["vdW"])
+
+        with pytest.raises(MissingvdWError):
+            forcefield.create_openmm_system(top)
+
+    def test_missing_nonbonded(self):
+        """Test that a ForceField with no vdW tag AND no Electrostatics
+        cannot be used to create a system"""
+        top = create_ethanol().to_topology()
+        forcefield = ForceField("test_forcefields/test_forcefield.offxml")
+
+        forcefield.deregister_parameter_handler(forcefield["vdW"])
+        forcefield.deregister_parameter_handler(forcefield["Electrostatics"])
+
+        # TODO: The logic here errors out simply because Electrostatics is checked first
+        with pytest.raises(MissingElectrostaticsError):
+            forcefield.create_openmm_system(top)
+
+    def test_library_charges_missing_electrostatics(self):
+        """Test that a ForceField with no Electrostatics tag cannot be used to
+        create a system, even if some or all of the atoms have partial charges
+        assigned"""
+        from openff.toolkit.typing.engines.smirnoff.parameters import (
+            ElectrostaticsHandler,
+        )
+
+        top = Topology.from_molecules(Molecule.from_smiles("O"))
+        tip3p = ForceField("test_forcefields/tip3p.offxml")
+        tip3p.deregister_parameter_handler(tip3p["Electrostatics"])
+
+        with pytest.raises(MissingElectrostaticsError):
+            tip3p.create_openmm_system(top)
+
+        tip3p.register_parameter_handler(ElectrostaticsHandler(version=0.3))
+
+        out = tip3p.create_openmm_system(top)
+
+        nonbonded_force = [
+            force for force in out.getForces() if type(force) == openmm.NonbondedForce
+        ][0]
+
+        assert nonbonded_force.getCutoffDistance() == 9.0 * unit.angstrom
+
+
 bond_charge_parameters_args = []
 monovalent_parameters_args = []
 divalent_parameters_args = []
@@ -3236,31 +3302,6 @@ class TestForceFieldChargeAssignment:
             q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
             assert q == expected_charge
 
-    def test_library_charges_missing_electrostatics(self):
-        """Test that a ForceField with no Electrostatics tag cannot be used to
-        create a system, even if some or all of the atoms have partial charges
-        assigned"""
-        from openff.toolkit.typing.engines.smirnoff.parameters import (
-            ElectrostaticsHandler,
-        )
-
-        top = Topology.from_molecules(Molecule.from_smiles("O"))
-        tip3p = ForceField("test_forcefields/tip3p.offxml")
-
-        with pytest.raises(MissingElectrostaticsError):
-            tip3p.create_openmm_system(top)
-
-        tip3p.register_parameter_handler(ElectrostaticsHandler(version=0.3))
-
-        out = tip3p.create_openmm_system(top)
-
-        for force in out.getForces():
-            if type(force) == openmm.NonbondedForce:
-                assert force.getCutoffDistance() == 9.0 * unit.angstrom
-                break
-        else:
-            raise Exception("Did not find a nonbonded force in this system")
-
     def test_library_charges_dont_parameterize_molecule_because_of_incomplete_coverage(
         self,
     ):
@@ -4285,9 +4326,9 @@ class TestForceFieldParameterAssignment:
 
         sys_no_vdw = ff_no_vdw.create_openmm_system(top)
         with pytest.raises(MissingElectrostaticsError):
-            sys_no_electrostatics = ff_no_electrostatics.create_openmm_system(top)
+            ff_no_electrostatics.create_openmm_system(top)
         with pytest.raises(MissingElectrostaticsError):
-            sys_no_nonbonded = ff_no_nonbonded.create_openmm_system(top)
+            ff_no_nonbonded.create_openmm_system(top)
 
         np.testing.assert_almost_equal(
             actual=get_14_scaling_factors(sys_no_vdw)[0],

@@ -23,6 +23,7 @@ __all__ = [
     "SMIRNOFFVersionError",
     "SMIRNOFFAromaticityError",
     "MissingElectrostaticsError",
+    "MissingvdWError",
     "ParseError",
     "ForceField",
 ]
@@ -153,6 +154,13 @@ class MissingElectrostaticsError(MessageException):
     """
     Exception thrown when trying to create an OpenMM System with a force field
     that does not have an Electrostatics tag.
+    """
+
+
+class MissingvdWError(MessageException):
+    """
+    Exception thrown when trying to create an OpenMM System with a force field
+    that does not have a vdW tag.
     """
 
 
@@ -1289,9 +1297,22 @@ class ForceField:
         """
         return_topology = kwargs.pop("return_topology", False)
 
+        # TODO: Implement behaviors specified in table in
+        # https://github.com/openforcefield/openff-toolkit/pull/833#issuecomment-816336358
         if "Electrostatics" not in self.registered_parameter_handlers:
             # Could do this later, to not raise when systems don't have any charges?
-            raise MissingElectrostaticsError("No Electrostatics handler registered.")
+            raise MissingElectrostaticsError(
+                "No Electrostatics handler registered. Future releases of the OpenFF Toolkit will "
+                "allow for the creation of OpenMM System objects from force fields that lack "
+                "eletrostatics handlers."
+            )
+
+        if "vdW" not in self.registered_parameter_handlers:
+            raise MissingvdWError(
+                "No vdW handler registered. Future releases of the OpenFF Toolkit will "
+                "allow for the creation of OpenMM System objects from force fields that lack "
+                "nonbonded parameter handlers."
+            )
 
         # Make a deep copy of the topology so we don't accidentally modify it
         topology = copy.deepcopy(topology)
