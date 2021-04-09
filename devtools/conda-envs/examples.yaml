@@ -6,6 +6,7 @@ dependencies:
     # Base depends
   - python
   - pip
+  - pytest
   - packaging
   - numpy
   - smirnoff99frosst
