@@ -80,7 +80,7 @@ class ExampleArg(click.ParamType):
         except ValueError:
             pass
 
-        self.fail(
+        return self.fail(
             f"Could not find example {value}. It should be a folder "
             f"containing exactly one Jupyter notebook.",
             param,
