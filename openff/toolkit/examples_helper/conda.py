@@ -14,10 +14,7 @@ except FileNotFoundError:
 
 def cmd(*args, **kwargs):
     """Run conda or mamba with the given commands and arguments"""
-    run_kwargs = dict(
-        text=True,
-        check=True
-    )
+    run_kwargs = dict(text=True, check=True)
     run_kwargs.update(kwargs)
 
     return sp.run([CMD, *args], **run_kwargs)  # pylint: disable=subprocess-run-check

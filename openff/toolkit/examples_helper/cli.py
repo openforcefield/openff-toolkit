@@ -9,8 +9,19 @@ from pathlib import Path
 
 import click
 
-from openff.toolkit.examples_helper.example import EXAMPLES_DIR, EXAMPLES_ENV, Example, ExampleArg
-from openff.toolkit.examples_helper.utils import flatten, echo, style, style_path, style_cmd
+from openff.toolkit.examples_helper.example import (
+    EXAMPLES_DIR,
+    EXAMPLES_ENV,
+    Example,
+    ExampleArg,
+)
+from openff.toolkit.examples_helper.utils import (
+    flatten,
+    echo,
+    style,
+    style_path,
+    style_cmd,
+)
 import openff.toolkit.examples_helper.conda as conda
 
 
@@ -76,7 +87,16 @@ def list_command():
     "--name",
     help="Name of the Conda environment to update.",
 )
-def install(example, target, dry_run, quiet, update_environment, create_environment, prefix, name):
+def install(
+    example,
+    target,
+    dry_run,
+    quiet,
+    update_environment,
+    create_environment,
+    prefix,
+    name,
+):
     """Copy EXAMPLE to a convenient location."""
     target = target / example.name
 
@@ -115,31 +135,33 @@ def install(example, target, dry_run, quiet, update_environment, create_environm
                     "Activate the example Conda environment:",
                 )
                 if prefix:
-                    echo(
-                        style_cmd(f"conda activate {prefix.resolve()}")
-                    )
+                    echo(style_cmd(f"conda activate {prefix.resolve()}"))
                 else:
-                    echo(
-                        style_cmd(f"conda activate {name}")
-                    )
+                    echo(style_cmd(f"conda activate {name}"))
 
             echo(
                 f"From the new {style_path(target)} directory, run the example:",
                 style_cmd(f"jupyter notebook {example.notebook}"),
-                sep="\n"
+                sep="\n",
             )
             if (update_environment or create_environment) and (prefix or name):
                 echo("To get started right now:")
                 if prefix:
-                    echo(style_cmd(
-                        f"conda run -p {prefix} --cwd {target} jupyter notebook {example.notebook}"
-                    ))
+                    echo(
+                        style_cmd(
+                            f"conda run -p {prefix} --cwd {target} jupyter notebook {example.notebook}"
+                        )
+                    )
                 else:
-                    echo(style_cmd(
-                        f"conda run -n {name} --cwd {target} jupyter notebook {example.notebook}"
-                    ))
+                    echo(
+                        style_cmd(
+                            f"conda run -n {name} --cwd {target} jupyter notebook {example.notebook}"
+                        )
+                    )
             else:
-                echo("If you need to install dependencies, try the --update-environment or --create-environment switches to this script")
+                echo(
+                    "If you need to install dependencies, try the --update-environment or --create-environment switches to this script"
+                )
     except Exception as e:
         if not dry_run:
             echo(
