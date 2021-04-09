@@ -799,6 +799,13 @@ class TestForceField:
         for ff in expected_force_fields:
             assert ff in available_force_fields
 
+    def test_force_field_case(self):
+        """Ensure forcefield paths are loaded in a case-insensitive manner"""
+        default_case = ForceField("smirnoff99Frosst-1.1.0.offxml")
+        lower_case = ForceField("smirnoff99frosst-1.1.0.offxml")
+
+        assert hash(default_case) == hash(lower_case)
+
     @pytest.mark.parametrize("full_path", [(True, False)])
     @pytest.mark.parametrize("force_field_file", [*get_available_force_fields()])
     def test_get_available_force_fields_loadable(self, full_path, force_field_file):
@@ -939,7 +946,7 @@ class TestForceField:
 
     def test_pickle(self):
         """
-        Test pickling and unpickling a forcefield
+        Test pickling and unpickling a force field
         """
         import pickle
 
@@ -950,7 +957,7 @@ class TestForceField:
 
     def test_pickle_with_cosmetic_attributes(self):
         """
-        Test pickling and unpickling a forcefield with cosmetic attributes
+        Test pickling and unpickling a force field with cosmetic attributes
         """
         import pickle
 
@@ -975,7 +982,7 @@ class TestForceField:
 
     def test_xml_string_roundtrip_keep_cosmetic(self):
         """
-        Test roundtripping a forcefield to an XML string with and without retaining cosmetic elements
+        Test roundtripping a force field to an XML string with and without retaining cosmetic elements
         """
         # Ensure an exception is raised if we try to read the XML string with cosmetic attributes
         with pytest.raises(
@@ -984,12 +991,12 @@ class TestForceField:
         ) as excinfo:
             forcefield = ForceField(xml_ff_w_cosmetic_elements)
 
-        # Create a forcefield from XML successfully, by explicitly permitting cosmetic attributes
+        # Create a force field from XML successfully, by explicitly permitting cosmetic attributes
         forcefield_1 = ForceField(
             xml_ff_w_cosmetic_elements, allow_cosmetic_attributes=True
         )
 
-        # Convert the forcefield back to XML
+        # Convert the force field back to XML
         string_1 = forcefield_1.to_string("XML", discard_cosmetic_attributes=False)
 
         # Ensure that the new XML string has cosmetic attributes in it
@@ -1004,7 +1011,7 @@ class TestForceField:
         # Complete the forcefield_1 --> string --> forcefield_2 roundtrip
         forcefield_2 = ForceField(string_1, allow_cosmetic_attributes=True)
 
-        # Ensure that the forcefield remains the same after the roundtrip
+        # Ensure that the force field remains the same after the roundtrip
         string_2 = forcefield_2.to_string("XML", discard_cosmetic_attributes=False)
         assert string_1 == string_2
 
@@ -1076,7 +1083,7 @@ class TestForceField:
         self, file_path_extension, specified_format
     ):
         """
-        Test roundtripping a forcefield to an XML file with and without retaining cosmetic elements
+        Test roundtripping a force field to an XML file with and without retaining cosmetic elements
         """
         # These files will be deleted once garbage collection runs (end of this function)
         iofile1 = NamedTemporaryFile(suffix="." + file_path_extension)
@@ -1090,12 +1097,12 @@ class TestForceField:
         ) as excinfo:
             forcefield = ForceField(xml_ff_w_cosmetic_elements)
 
-        # Create a forcefield from XML successfully
+        # Create a force field from XML successfully
         forcefield_1 = ForceField(
             xml_ff_w_cosmetic_elements, allow_cosmetic_attributes=True
         )
 
-        # Convert the forcefield back to XML, keeping cosmetic attributes
+        # Convert the force field back to XML, keeping cosmetic attributes
         forcefield_1.to_file(
             iofile1.name, discard_cosmetic_attributes=False, io_format=specified_format
         )
@@ -1112,7 +1119,7 @@ class TestForceField:
         # Complete the forcefield_1 --> file --> forcefield_2 roundtrip
         forcefield_2 = ForceField(iofile1.name, allow_cosmetic_attributes=True)
 
-        # Ensure that the forcefield remains the same after the roundtrip
+        # Ensure that the force field remains the same after the roundtrip
         forcefield_2.to_file(
             iofile2.name, discard_cosmetic_attributes=False, io_format=specified_format
         )
@@ -1188,7 +1195,7 @@ class TestForceField:
 
     def test_load_two_sources_incompatible_tags(self):
         """Test loading data from two SMIRNOFF data sources which have incompatible physics"""
-        # Make an XML forcefield with a modifiedvdW 1-4 scaling factor
+        # Make an XML force field with a modifiedvdW 1-4 scaling factor
         nonstandard_xml_ff = xml_ff_w_comments.replace('scale14="0.5"', 'scale14="1.0"')
         with pytest.raises(
             IncompatibleParameterError,
@@ -3564,7 +3571,7 @@ class TestForceFieldParameterAssignment:
         # Load molecule.
         molecule = Molecule.from_file(mol2_filepath)
 
-        # Load forcefield
+        # Load force field
         forcefield = ForceField("test_forcefields/Frosst_AlkEthOH_parmAtFrosst.offxml")
 
         # Compare parameters. Skip the energy checks as the parameter check should be
@@ -4336,6 +4343,12 @@ class TestForceFieldParameterAssignment:
             decimal=8,
         )
 
+        np.testing.assert_almost_equal(
+            actual=get_14_scaling_factors(sys_no_electrostatics)[1],
+            desired=ff_no_electrostatics["vdW"].scale14,
+            decimal=8,
+        )
+
     @requires_openeye
     def test_overwrite_bond_orders(self):
         """Test that previously-defined bond orders in the topology are overwritten"""
@@ -4385,6 +4398,84 @@ class TestForceFieldParameterAssignment:
             omm_sys_top.topology_bonds, mod_omm_sys_top.topology_bonds
         ):
             assert bond1.bond.fractional_bond_order == bond2.bond.fractional_bond_order
+
+    def test_fractional_bond_order_ignore_existing_confs(self):
+        """Test that previously-defined bond orders in the topology are overwritten"""
+        mol = create_ethanol()
+        top = Topology.from_molecules(mol)
+
+        mod_mol = create_ethanol()
+        mod_mol.generate_conformers()
+        mod_mol._conformers[0][0][0] = (
+            mod_mol._conformers[0][0][0] + 1.0 * unit.angstrom
+        )
+        mod_mol._conformers[0][1][0] = (
+            mod_mol._conformers[0][1][0] - 1.0 * unit.angstrom
+        )
+        mod_mol._conformers[0][2][0] = (
+            mod_mol._conformers[0][2][0] + 1.0 * unit.angstrom
+        )
+
+        mod_top = Topology.from_molecules(mod_mol)
+
+        forcefield = ForceField("test_forcefields/test_forcefield.offxml", xml_ff_bo)
+
+        omm_system, omm_sys_top = forcefield.create_openmm_system(
+            top, return_topology=True
+        )
+        mod_omm_system, mod_omm_sys_top = forcefield.create_openmm_system(
+            mod_top, return_topology=True
+        )
+
+        # Check that the assigned bond parameters are identical for both systems
+        default_bond_force = [
+            f for f in omm_system.getForces() if isinstance(f, openmm.HarmonicBondForce)
+        ][0]
+        mod_bond_force = [
+            f
+            for f in mod_omm_system.getForces()
+            if isinstance(f, openmm.HarmonicBondForce)
+        ][0]
+
+        for idx in range(default_bond_force.getNumBonds()):
+            assert all(
+                np.isclose(
+                    default_value.value_in_unit(default_value.unit),
+                    mod_value.value_in_unit(default_value.unit),
+                )
+                for default_value, mod_value in zip(
+                    default_bond_force.getBondParameters(idx)[2:],
+                    mod_bond_force.getBondParameters(idx)[2:],
+                )
+            )
+
+        # Check that the assigned torsion parameters are identical for both systems
+        default_torsion_force = [
+            force
+            for force in omm_system.getForces()
+            if isinstance(force, openmm.PeriodicTorsionForce)
+        ][0]
+        mod_torsion_force = [
+            force
+            for force in mod_omm_system.getForces()
+            if isinstance(force, openmm.PeriodicTorsionForce)
+        ][0]
+
+        for idx in range(default_torsion_force.getNumTorsions()):
+            default_k = default_torsion_force.getTorsionParameters(idx)[-1]
+            mod_k = mod_torsion_force.getTorsionParameters(idx)[-1]
+            assert np.isclose(
+                default_k.value_in_unit(default_k.unit),
+                mod_k.value_in_unit(default_k.unit),
+            )
+
+        # Check that the returned topology has the correct bond order
+        for bond1, bond2 in zip(
+            omm_sys_top.topology_bonds, mod_omm_sys_top.topology_bonds
+        ):
+            assert np.isclose(
+                bond1.bond.fractional_bond_order, bond2.bond.fractional_bond_order
+            )
 
     @pytest.mark.parametrize(
         (
@@ -4866,7 +4957,7 @@ def test_charge_increment(self):
 
 @pytest.mark.skip(reason="Needs to be updated for 0.2.0 syntax")
 def test_create_system_molecules_parmatfrosst_gbsa(self):
-    """Test creation of a System object from small molecules to test parm@frosst forcefield with GBSA support."""
+    """Test creation of a System object from small molecules to test parm@frosst force field with GBSA support."""
     molecules_file_path = get_data_file_path(
         "molecules/AlkEthOH_test_filt1_tripos.mol2"
     )
