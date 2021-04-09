@@ -9,6 +9,7 @@ from pathlib import Path
 
 import click
 
+import openff.toolkit.examples_helper.conda as conda
 from openff.toolkit.examples_helper.example import (
     EXAMPLES_DIR,
     EXAMPLES_ENV,
@@ -16,13 +17,12 @@ from openff.toolkit.examples_helper.example import (
     ExampleArg,
 )
 from openff.toolkit.examples_helper.utils import (
-    flatten,
     echo,
+    flatten,
     style,
-    style_path,
     style_cmd,
+    style_path,
 )
-import openff.toolkit.examples_helper.conda as conda
 
 
 @click.group()

@@ -1,6 +1,7 @@
 """Types and constants related to Examples themselves"""
 
 from pathlib import Path
+
 import click
 
 OFFTK_ROOT = (Path(__file__) / "../../../../").resolve()
