@@ -1,3 +1,5 @@
+"""Types and constants related to Examples themselves"""
+
 from pathlib import Path
 import click
 
@@ -22,13 +24,13 @@ class Example:
         `Example` is taken from the directory's path and is available
         as `Example.name`. If a file named envircmd, *args, **kwargs):
         """
-        self.path = Path(path).resolve()
+        path = Path(path)
+        self.path = path.resolve()
 
         if not self.path.is_dir():
             raise ValueError("path should be a directory")
 
-        # `list(path.glob("*.ipynb"))` doesn't work here
-        notebooks = [p for p in self.path.glob("*.ipynb")]
+        notebooks = list(path.glob("*.ipynb"))
 
         if len(notebooks) == 1:
             self.notebook = notebooks[0].relative_to(self.path)
@@ -47,11 +49,12 @@ class Example:
 
     @property
     def name(self):
+        """The name of the example"""
         return self.path.name
 
 
 class ExampleArg(click.ParamType):
-    """Construct an `Example` from a click argument"""
+    """Construct an `Example` from a cli, and echo what we're doingck argument"""
 
     def convert(self, value, param, ctx):
         """

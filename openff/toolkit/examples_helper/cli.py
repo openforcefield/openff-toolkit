@@ -1,22 +1,26 @@
+"""
+CLI tool to copy examples to a user-writeable directory and install
+their dependencies.
+"""
+
 import shutil
 import sys
 from pathlib import Path
 
 import click
 
-from openff.toolkit.examples_helper.example import *
-from openff.toolkit.examples_helper.utils import *
+from openff.toolkit.examples_helper.example import EXAMPLES_DIR, EXAMPLES_ENV, Example, ExampleArg
+from openff.toolkit.examples_helper.utils import flatten, echo, style, style_path, style_cmd
 import openff.toolkit.examples_helper.conda as conda
 
 
 @click.group()
 def main():
     """Easily run examples with the Open Force Field Toolkit."""
-    pass
 
 
-@main.command()
-def list():
+@main.command(name="list")
+def list_command():
     """List the available examples."""
     for example in EXAMPLES_DIR.iterdir():
         try:
@@ -108,7 +112,7 @@ def install(example, target, dry_run, quiet, update_environment, create_environm
             echo(style("Installation complete.", fg="green"))
             if (update_environment or create_environment) and (prefix or name):
                 echo(
-                    f"Activate the example Conda environment:",
+                    "Activate the example Conda environment:",
                 )
                 if prefix:
                     echo(
@@ -135,7 +139,7 @@ def install(example, target, dry_run, quiet, update_environment, create_environm
                         f"conda run -n {name} --cwd {target} jupyter notebook {example.notebook}"
                     ))
             else:
-                echo(f"If you need to install dependencies, try the --update-environment or --create-environment switches to this script")
+                echo("If you need to install dependencies, try the --update-environment or --create-environment switches to this script")
     except Exception as e:
         if not dry_run:
             echo(
@@ -149,6 +153,7 @@ def install(example, target, dry_run, quiet, update_environment, create_environm
 
 
 def copy_example(example, target, dry_run=False, quiet=False):
+    """Copy an example folder to the target directory, and echo what we're doing"""
     if not quiet:
         echo(
             f"Taking example {style_path(example.name)} from {style_path(example.path)}"
@@ -164,6 +169,7 @@ def copy_example(example, target, dry_run=False, quiet=False):
 
 
 def create_env(prefix=None, name=None, dry_run=False, quiet=False):
+    """Create a conda environment, and echo what we're doing"""
     if prefix and name:
         raise ValueError("prefix and name are mutually exclusive")
     if not quiet:
@@ -176,6 +182,7 @@ def create_env(prefix=None, name=None, dry_run=False, quiet=False):
 
 
 def update_env(example, prefix=None, name=None, dry_run=False, quiet=False):
+    """Install the example dependencies in the specified conda environment"""
     if prefix and name:
         raise ValueError("prefix and name are mutually exclusive")
 
