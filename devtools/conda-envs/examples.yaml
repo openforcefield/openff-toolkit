@@ -8,6 +8,7 @@ dependencies:
   - mamba
   - pytest
   - pytest-cov
+  - click
   - nbval
   - codecov
   - coverage
