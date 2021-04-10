@@ -88,15 +88,16 @@ jobs:
       - name: Run example notebooks
         shell: bash -l {0}
         run: |
-          NB_ARGS+=" --ignore=examples/using_smirnoff_in_amber_or_gromacs"
-          NB_ARGS+=" --ignore=examples/swap_amber_parameters"
-          if [[ "$RDKIT" == false ]]; then
-            NB_ARGS+=" --ignore=examples/check_dataset_parameter_coverage"
-            NB_ARGS+=" --ignore=examples/conformer_energies"
-            NB_ARGS+=" --ignore=examples/QCArchive_interface"
-            NB_ARGS+=" --ignore=examples/visualization"
-          fi
-          pytest $NB_ARGS examples/
+          echo "PYTEST_ARGS = $PYTEST_ARGS"
+          NOTEBOOKS=( $(openff-examples list) )
+
+          openff-examples install --update-environment ${NOTEBOOKS[0]}
+          pytest $PYTEST_ARGS ${NOTEBOOKS[0]}/
+
+          for notebook in ${NOTEBOOKS[@]:1} do
+            openff-examples install $notebook
+            pytest $PYTEST_ARGS $notebook/
+          done
 
       - name: Codecov
         uses: codecov/codecov-action@v1
