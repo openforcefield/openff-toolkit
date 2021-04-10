@@ -7,6 +7,10 @@ dependencies:
   - python
   - pip
   - pytest
+  - pytest-cov
+  - nbval
+  - codecov
+  - coverage
   - packaging
   - numpy
   - smirnoff99frosst
