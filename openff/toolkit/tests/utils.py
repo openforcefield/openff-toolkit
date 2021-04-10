@@ -1487,7 +1487,7 @@ def compare_amber_smirnoff(
 
     # Create System from force field.
     openff_topology = Topology.from_openmm(openmm_topology, unique_molecules=[molecule])
-    ff_system = forcefield.create_openmm_system(openff_topology)
+    ff_system = forcefield.create_openmm_system(openff_topology, charge_from_molecules=[molecule])
 
     # Test energies and parameters.
     if check_parameters:

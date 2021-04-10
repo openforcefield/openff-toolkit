@@ -3564,6 +3564,7 @@ class TestForceFieldParameterAssignment:
             compare_amber_smirnoff,
             get_alkethoh_file_path,
         )
+        from openff.toolkit.typing.engines.smirnoff.parameters import ElectrostaticsHandler
 
         # Obtain the path to the input files.
         alkethoh_name = "AlkEthOH_" + alkethoh_id
@@ -3576,18 +3577,18 @@ class TestForceFieldParameterAssignment:
 
         # Load force field
         forcefield = ForceField("test_forcefields/Frosst_AlkEthOH_parmAtFrosst.offxml")
+        forcefield.register_parameter_handler(ElectrostaticsHandler(version=0.3))
 
         # Compare parameters. Skip the energy checks as the parameter check should be
         # sufficient. We test both energies and parameters in the slow test.
         # We ignore the charges for now as they are not included in the force field.
-        # TODO: Reactivate the charge check when we'll be able to load charges from files.
         compare_amber_smirnoff(
             top_filepath,
             crd_filepath,
             forcefield,
             molecule,
             check_energies=False,
-            ignore_charges=True,
+            ignore_charges=False,
         )
 
     @requires_openeye_mol2
@@ -3607,6 +3608,7 @@ class TestForceFieldParameterAssignment:
             compare_system_parameters,
             get_alkethoh_file_path,
         )
+        from openff.toolkit.typing.engines.smirnoff.parameters import ElectrostaticsHandler
 
         # The AlkEthOH molecule ids to mix in the systems.
         alketoh_ids = ["r0", "c38", "c1161"]
@@ -3637,7 +3639,9 @@ class TestForceFieldParameterAssignment:
         )
         topology.box_vectors = None
         ff = ForceField("test_forcefields/Frosst_AlkEthOH_parmAtFrosst.offxml")
-        off_system = ff.create_openmm_system(topology)
+        ff.register_parameter_handler(ElectrostaticsHandler(version=0.3))
+
+        off_system = ff.create_openmm_system(topology, charge_from_molecules=molecules)
 
         # Translate the molecules a little to avoid overlapping atoms.
         positions = copy.deepcopy(structure_mixture.positions)
@@ -3666,7 +3670,7 @@ class TestForceFieldParameterAssignment:
             ignore_charges=True,
         )
         compare_system_energies(
-            amber_system, off_system, positions, ignore_charges=True
+            amber_system, off_system, positions
         )
 
     @requires_openeye_mol2
@@ -3687,6 +3691,7 @@ class TestForceFieldParameterAssignment:
             compare_system_parameters,
             get_freesolv_file_path,
         )
+        from openff.toolkit.typing.engines.smirnoff.parameters import ElectrostaticsHandler
 
         mol2_file_path, xml_file_path = get_freesolv_file_path(
             freesolv_id, forcefield_version
@@ -3702,7 +3707,9 @@ class TestForceFieldParameterAssignment:
             "test_forcefields/old/test_ff_" + forcefield_version + "_spec_0_2.offxml"
         )
         ff = ForceField(forcefield_file_path, "test_forcefields/old/hbonds.offxml")
-        ff_system = ff.create_openmm_system(molecule.to_topology())
+        ff.register_parameter_handler(ElectrostaticsHandler(version=0.3))
+
+        ff_system = ff.create_openmm_system(molecule.to_topology(), charge_from_molecules=[molecule])
 
         # Load OpenMM System created with the 0.1 version of the toolkit.
         from simtk import openmm
@@ -3717,7 +3724,6 @@ class TestForceFieldParameterAssignment:
             ff_system,
             xml_system,
             systems_labels=("current OpenFF", "SMIRNOFF 0.0.4"),
-            ignore_charges=True,
             ignore_improper_folds=True,
         )
 
@@ -4891,6 +4897,7 @@ class TestSmirnoffVersionConverter:
             compare_system_parameters,
             get_freesolv_file_path,
         )
+        from openff.toolkit.typing.engines.smirnoff.parameters import ElectrostaticsHandler
 
         mol2_file_path, xml_file_path = get_freesolv_file_path(
             freesolv_id, forcefield_version
@@ -4907,7 +4914,8 @@ class TestSmirnoffVersionConverter:
             f"test_forcefields/old/test_ff_{forcefield_version}_spec_{spec}.offxml"
         )
         ff = ForceField(forcefield_file_path, "test_forcefields/old/hbonds.offxml")
-        ff_system = ff.create_openmm_system(molecule.to_topology())
+
+        ff_system = ff.create_openmm_system(molecule.to_topology(), charge_from_molecules=[molecule])
 
         # Load OpenMM System created with the 0.1 version of the toolkit.
         from simtk import openmm
@@ -4922,7 +4930,6 @@ class TestSmirnoffVersionConverter:
             ff_system,
             xml_system,
             systems_labels=("current OpenFF", "SMIRNOFF 0.0.4"),
-            ignore_charges=True,
             ignore_improper_folds=True,
         )
 

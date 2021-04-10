@@ -1306,7 +1306,7 @@ class ForceField:
             raise MissingElectrostaticsError(
                 "No Electrostatics handler registered. Future releases of the OpenFF Toolkit will "
                 "allow for the creation of OpenMM System objects from force fields that lack "
-                "eletrostatics handlers."
+                "Electrostatics handlers."
             )
 
         if "vdW" not in self.registered_parameter_handlers:
