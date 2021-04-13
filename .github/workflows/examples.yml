@@ -87,7 +87,7 @@ jobs:
 
       - name: Print openff-examples script for debugging
         shell: bash -l {0}
-          run: cat /usr/share/miniconda/envs/test/bin/python
+        run: cat /usr/share/miniconda/envs/test/bin/python
 
       - name: Run example notebooks
         shell: bash -l {0}
