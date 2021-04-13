@@ -1299,7 +1299,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         from openeye import oechem
 
-        from openff.toolkit.topology.molecule import Molecule
+        oemol = oechem.OEMol(oemol)
 
         # Add explicit hydrogens if they're implicit
         if oechem.OEHasImplicitHydrogens(oemol):
@@ -1409,9 +1409,13 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             ] = atom_index  # store for mapping oeatom to molecule atom indices below
             atom_mapping[atom_index] = map_id
 
-        # if we have a full atom map add it to the molecule, 0 indicates a missing mapping or no mapping
-        if 0 not in atom_mapping.values():
-            molecule._properties["atom_map"] = atom_mapping
+        # If we have a full / partial atom map add it to the molecule. Zeroes 0
+        # indicates no mapping
+        if {*atom_mapping.values()} != {0}:
+
+            molecule._properties["atom_map"] = {
+                idx: map_idx for idx, map_idx in atom_mapping.items() if map_idx != 0
+            }
 
         for oebond in oemol.GetBonds():
             atom1_index = map_atoms[oebond.GetBgnIdx()]
@@ -2881,6 +2885,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         pdbmol = self.from_rdkit(
             Chem.MolFromPDBFile(file_path, removeHs=False),
             allow_undefined_stereo=True,
+            hydrogens_are_explicit=True,
             _cls=_cls,
         )
 
@@ -3142,7 +3147,9 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         rdmol = self.to_rdkit(molecule=molecule)
 
         # in case any bonds/centers are missing stereo chem flag it here
-        Chem.AssignStereochemistry(rdmol, force=True, flagPossibleStereoCenters=True)
+        Chem.AssignStereochemistry(
+            rdmol, cleanIt=True, force=True, flagPossibleStereoCenters=True
+        )
         Chem.FindPotentialStereoBonds(rdmol)
 
         # set up the options
@@ -3187,6 +3194,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         from rdkit.Chem.MolStandardize import rdMolStandardize
 
         enumerator = rdMolStandardize.TautomerEnumerator()
+        enumerator.SetMaxTautomers(max_states)
         rdmol = Chem.RemoveHs(molecule.to_rdkit())
 
         tautomers = enumerator.Enumerate(rdmol)
@@ -3387,7 +3395,10 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                     )
 
         molecule = self.from_rdkit(
-            rdmol, _cls=_cls, allow_undefined_stereo=allow_undefined_stereo
+            rdmol,
+            _cls=_cls,
+            allow_undefined_stereo=allow_undefined_stereo,
+            hydrogens_are_explicit=hydrogens_are_explicit,
         )
 
         return molecule
@@ -3943,7 +3954,13 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         molecule._conformers = diverse_conformers
 
-    def from_rdkit(self, rdmol, allow_undefined_stereo=False, _cls=None):
+    def from_rdkit(
+        self,
+        rdmol,
+        allow_undefined_stereo=False,
+        hydrogens_are_explicit=False,
+        _cls=None,
+    ):
         """
         Create a Molecule from an RDKit molecule.
 
@@ -3957,6 +3974,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             An RDKit molecule
         allow_undefined_stereo : bool, default=False
             If false, raises an exception if rdmol contains undefined stereochemistry.
+        hydrogens_are_explicit : bool, default=False
+            If False, RDKit will perform hydrogen addition using Chem.AddHs
         _cls : class
             Molecule constructor
 
@@ -3987,6 +4006,9 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         # Make a copy of the RDKit Mol as we'll need to change it (e.g. assign stereo).
         rdmol = Chem.Mol(rdmol)
+
+        if not hydrogens_are_explicit:
+            rdmol = Chem.AddHs(rdmol, addCoords=True)
 
         # Sanitizing the molecule. We handle aromaticity and chirality manually.
         # This SanitizeMol(...) calls cleanUp, updatePropertyCache, symmetrizeSSSR,
@@ -4090,9 +4112,13 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             map_atoms[rd_idx] = atom_index
             atom_mapping[atom_index] = map_id
 
-        # if we have a full atom map add it to the molecule, 0 indicates a missing mapping or no mapping
-        if 0 not in atom_mapping.values():
-            offmol._properties["atom_map"] = atom_mapping
+        # If we have a full / partial atom map add it to the molecule. Zeroes 0
+        # indicates no mapping
+        if {*atom_mapping.values()} != {0}:
+
+            offmol._properties["atom_map"] = {
+                idx: map_idx for idx, map_idx in atom_mapping.items() if map_idx != 0
+            }
 
         # Similar to chirality, stereochemistry of bonds in OE is set relative to their neighbors
         for rdb in rdmol.GetBonds():

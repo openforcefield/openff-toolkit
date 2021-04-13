@@ -194,22 +194,10 @@ rdkit_inchi_stereochemistry_lost = [
     "DrugBank_1962",
     "DrugBank_5043",
     "DrugBank_2519",
+    "DrugBank_7124",
+    "DrugBank_6865",
 ]
 
-rdkit_inchi_isomorphic_fails = [
-    "DrugBank_178",
-    "DrugBank_246",
-    "DrugBank_5847",
-    "DrugBank_700",
-    "DrugBank_1564",
-    "DrugBank_1700",
-    "DrugBank_4662",
-    "DrugBank_2052",
-    "DrugBank_2077",
-    "DrugBank_2082",
-    "DrugBank_2210",
-    "DrugBank_2642",
-]
 rdkit_inchi_roundtrip_mangled = ["DrugBank_2684"]
 
 openeye_iupac_bad_stereo = [
@@ -576,6 +564,19 @@ class TestOpenEyeToolkitWrapper:
         for oeatom in oemol2.GetAtoms():
             assert math.isnan(oeatom.GetPartialCharge())
 
+    def test_from_openeye_mutable_input(self):
+        """
+        Test ``OpenEyeToolkitWrapper.from_openeye`` does not mutate the input molecule.
+        """
+        from openeye import oechem
+
+        oe_molecule = oechem.OEMol()
+        oechem.OESmilesToMol(oe_molecule, "C")
+
+        assert oechem.OEHasImplicitHydrogens(oe_molecule)
+        Molecule.from_openeye(oe_molecule)
+        assert oechem.OEHasImplicitHydrogens(oe_molecule)
+
     def test_from_openeye_implicit_hydrogen(self):
         """
         Test OpenEyeToolkitWrapper for loading a molecule with implicit
@@ -630,6 +631,22 @@ class TestOpenEyeToolkitWrapper:
             smiles_expl, toolkit_registry=toolkit_wrapper, hydrogens_are_explicit=False
         )
         assert offmol.n_atoms == 4
+
+    @pytest.mark.parametrize(
+        "smiles, expected_map", [("[Cl:1][H]", {0: 1}), ("[Cl:1][H:2]", {0: 1, 1: 2})]
+    )
+    def test_from_openeye_atom_map(self, smiles, expected_map):
+        """
+        Test OpenEyeToolkitWrapper for loading a molecule with implicit
+        hydrogens (correct behavior is to add them explicitly)
+        """
+        from openeye import oechem
+
+        oemol = oechem.OEMol()
+        oechem.OESmilesToMol(oemol, smiles)
+
+        off_molecule = Molecule.from_openeye(oemol)
+        assert off_molecule.properties["atom_map"] == expected_map
 
     @pytest.mark.parametrize("molecule", get_mini_drug_bank(OpenEyeToolkitWrapper))
     def test_to_inchi(self, molecule):
@@ -1094,7 +1111,7 @@ class TestOpenEyeToolkitWrapper:
     def test_generate_multiple_conformers(self):
         """Test OpenEyeToolkitWrapper generate_conformers() for generating multiple conformers"""
         toolkit_wrapper = OpenEyeToolkitWrapper()
-        smiles = "CCCCCCC"
+        smiles = "CCCCCCCCCN"
         molecule = toolkit_wrapper.from_smiles(smiles)
         molecule.generate_conformers(
             rms_cutoff=1 * unit.angstrom,
@@ -1924,17 +1941,9 @@ class TestRDKitToolkitWrapper:
 
             # compare the full molecule excluding the properties dictionary
             # turn of the bond order matching as this could move in the aromatic rings
-            if molecule.name in rdkit_inchi_isomorphic_fails:
-                # Some molecules graphs change during the round trip testing
-                # we test quite strict isomorphism here
-                with pytest.raises(AssertionError):
-                    assert molecule.is_isomorphic_with(
-                        mol2, bond_order_matching=False, toolkit_registry=toolkit
-                    )
-            else:
-                assert molecule.is_isomorphic_with(
-                    mol2, bond_order_matching=False, toolkit_registry=toolkit
-                )
+            assert molecule.is_isomorphic_with(
+                mol2, bond_order_matching=False, toolkit_registry=toolkit
+            )
 
     def test_smiles_charged(self):
         """Test RDKitWrapper functions for reading/writing charged SMILES"""
@@ -2103,6 +2112,34 @@ class TestRDKitToolkitWrapper:
             molecule2.to_smiles(toolkit_registry=toolkit_wrapper)
             == expected_output_smiles
         )
+
+    def test_from_rdkit_implicit_hydrogens(self):
+        """
+        Test that hydrogens are inferred from hydrogen-less RDKit molecules,
+        unless the option is turned off.
+        """
+        from rdkit import Chem
+
+        rdmol = Chem.MolFromSmiles("CC")
+        offmol = Molecule.from_rdkit(rdmol)
+
+        assert any([a.atomic_number == 1 for a in offmol.atoms])
+
+        offmol_no_h = Molecule.from_rdkit(rdmol, hydrogens_are_explicit=True)
+        assert not any([a.atomic_number == 1 for a in offmol_no_h.atoms])
+
+    @pytest.mark.parametrize(
+        "smiles, expected_map", [("[Cl:1][Cl]", {0: 1}), ("[Cl:1][Cl:2]", {0: 1, 1: 2})]
+    )
+    def test_from_rdkit_atom_map(self, smiles, expected_map):
+        """
+        Test OpenEyeToolkitWrapper for loading a molecule with implicit
+        hydrogens (correct behavior is to add them explicitly)
+        """
+        from rdkit import Chem
+
+        off_molecule = Molecule.from_rdkit(Chem.MolFromSmiles(smiles))
+        assert off_molecule.properties["atom_map"] == expected_map
 
     def test_file_extension_case(self):
         """
@@ -2356,7 +2393,7 @@ class TestRDKitToolkitWrapper:
     def test_generate_multiple_conformers(self):
         """Test RDKitToolkitWrapper generate_conformers() for generating multiple conformers"""
         toolkit_wrapper = RDKitToolkitWrapper()
-        smiles = "CCCCCCC"
+        smiles = "CCCCCCCCCN"
         molecule = toolkit_wrapper.from_smiles(smiles)
         molecule.generate_conformers(
             rms_cutoff=1 * unit.angstrom,
@@ -2837,7 +2874,7 @@ class TestAmberToolsToolkitWrapper:
             toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper]
         )
         molecule = create_ethanol()
-        molecule.generate_conformers(n_conformers=2, rms_cutoff=0.1 * unit.angstrom)
+        molecule.generate_conformers(n_conformers=2, rms_cutoff=0.01 * unit.angstrom)
 
         # Try passing in the incorrect number of confs, but without specifying strict_n_conformers,
         # which should produce a warning

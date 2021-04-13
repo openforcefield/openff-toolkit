@@ -8,11 +8,35 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ## Changes since last release
 
+### New features and behaviors changed
+
+- [PR #762](https://github.com/openforcefield/openforcefield/pull/762): `Molecule.from_rdkit` now converts
+  implicit hydrogens into explicit hydrogens by default. This change may affect 
+  `RDKitToolkitWrapper/Molecule.from_smiles`, 
+  `from_mapped_smiles`, `from_file`, `from_file_obj`, `from_inchi`, and `from_qcschema`. 
+  This new behavior can be disabled using the
+  `hydrogens_are_explicit=True` keyword argument to `from_smiles`, or loading the molecule into
+  the desired protonation state in RDKit, and calling `from_rdkit` on the RDKit molecule with 
+  `hydrogens_are_explicit=True`.
+- [PR #894](https://github.com/openforcefield/openforcefield/pull/894): Calls to `Molecule.from_openeye`, 
+  `Molecule.from_rdkit`, `Molecule.from_smiles`, `OpenEyeToolkitWrapper.from_smiles`, and 
+  `RDKitToolkitWrapper.from_smiles` will now load atom maps into the the resulting 
+  `Molecule's` `offmol.properties['atom_map']` field, even if not all atoms have map indices assigned.
+- [PR #904](https://github.com/openforcefield/openforcefield/pull/904): `TopologyAtom` objects now have 
+  an element getter `TopologyAtom.element`.
+
+### Bugfixes
+
+- [PR #891](https://github.com/openforcefield/openforcefield/pull/891): Calls to `Molecule.from_openeye` no longer mutate the input OE molecule.
+- [PR #897](https://github.com/openforcefield/openforcefield/pull/897): Fixes enumeration of stereoisomers for molecules with already defined stereochemistry using RDKit.
+- [PR #859](https://github.com/openforcefield/openforcefield/pull/859): Makes `RDKitToolkitWrapper.enumerate_tautomers` actually use the `max_states` keyword argument during tautomer generation, which will reduce resource use in some cases. 
+
 ### Improved documentation and warnings
 - [PR #862](https://github.com/openforcefield/openforcefield/pull/862): Clarify that `System` objects produced by the toolkit are OpenMM `System`s in anticipation of forthcoming OpenFF `System`s. Fixes [Issue #618](https://github.com/openforcefield/openforcefield/issues/618).
 - [PR #863](https://github.com/openforcefield/openff-toolkit/pull/863): Documented how to build the docs in the developers guide.
 - [PR #870](https://github.com/openforcefield/openff-toolkit/pull/870): Reorganised documentation to improve discoverability and allow future additions.
 - [PR #871](https://github.com/openforcefield/openff-toolkit/pull/871): Changed Markdown parser from m2r2 to MyST for improved documentation rendering.
+- [PR #880](https://github.com/openforcefield/openff-toolkit/pull/880): Cleanup and partial rewrite of the developer's guide.
 - [PR #888](https://github.com/openforcefield/openff-toolkit/pull/888): Add a simple tool for installing and running [examples](examples) and their dependencies.
 
 :::{TODO}

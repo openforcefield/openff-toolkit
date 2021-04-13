@@ -345,6 +345,17 @@ class TopologyAtom(Serializable):
         return self._atom.atomic_number
 
     @property
+    def element(self):
+        """
+        Get the element name of this atom.
+
+        Returns
+        -------
+        simtk.openmm.app.element.Element
+        """
+        return self._atom.element
+
+    @property
     def topology_molecule(self):
         """
         Get the TopologyMolecule that this TopologyAtom belongs to.
