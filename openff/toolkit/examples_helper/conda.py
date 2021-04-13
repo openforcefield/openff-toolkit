@@ -92,13 +92,4 @@ def overwrite_local_module(module_name, local_module, name=None, prefix=None):
         conda_args.append(str(name))
 
     cmd("uninstall", *conda_args, "--force", module_name)
-    cmd(
-        "run",
-        *conda_args,
-        "--cwd",
-        local_module,
-        "python",
-        "setup.py",
-        "develop",
-        "--no-deps",
-    )
+    cmd("run", *conda_args, "--cwd", local_module, "pip", "install", "-e", ".")
