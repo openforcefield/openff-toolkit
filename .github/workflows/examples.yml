@@ -88,7 +88,9 @@ jobs:
       - name: Run example notebooks
         shell: bash -l {0}
         run: |
+          PYTEST_ARGS+=" --nbval"
           echo "PYTEST_ARGS = $PYTEST_ARGS"
+          
           NOTEBOOKS=( $(openff-examples list) )
 
           openff-examples install --update-environment ${NOTEBOOKS[0]}
