@@ -5,6 +5,7 @@ channels:
 dependencies:
     # Base depends
   - python
+  - pip
   - mamba
   - pytest
   - pytest-cov

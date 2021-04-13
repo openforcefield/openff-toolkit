@@ -76,3 +76,20 @@ def get_current_prefix():
         if prefix:
             return Path(prefix.strip())
     raise ValueError("Could not determine prefix")
+
+
+def overwrite_local_module(module_name, local_module, name=None, prefix=None):
+    """Overwrite a module installed from Conda with a local module"""
+
+    conda_args = []
+    if prefix and name:
+        raise ValueError("prefix and name are mutually exclusive")
+    if prefix:
+        conda_args.append("--prefix")
+        conda_args.append(str(prefix))
+    elif name:
+        conda_args.append("--name")
+        conda_args.append(str(name))
+
+    cmd("uninstall", *conda_args, "--force", module_name)
+    cmd("run", *conda_args, "--cwd", local_module, "pip", "install", "-e", ".")

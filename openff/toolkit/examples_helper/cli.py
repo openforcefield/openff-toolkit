@@ -8,11 +8,11 @@ import sys
 from pathlib import Path
 
 import click
-
 import openff.toolkit.examples_helper.conda as conda
 from openff.toolkit.examples_helper.example import (
     EXAMPLES_DIR,
     EXAMPLES_ENV,
+    OFFTK_ROOT,
     Example,
     ExampleArg,
 )
@@ -220,6 +220,9 @@ def update_env(example, prefix=None, name=None, dry_run=False, quiet=False):
 
     if not dry_run:
         conda.update_envs(environments, prefix=prefix, name=name)
+        conda.overwrite_local_module(
+            "openff-toolkit", OFFTK_ROOT, prefix=prefix, name=name
+        )
 
 
 if __name__ == "__main__":
