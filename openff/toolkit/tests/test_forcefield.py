@@ -1627,7 +1627,7 @@ class TestForceField:
                 # The method is validated and may raise an exception if it's not supported.
                 forcefield.get_parameter_handler("vdW", {}).method = vdw_method
                 forcefield.get_parameter_handler(
-                    "Electrostatics", {}
+                    "Electrostatics", {'version':0.3}
                 ).method = electrostatics_method
                 omm_system = forcefield.create_openmm_system(topology)
 
@@ -4914,7 +4914,9 @@ class TestSmirnoffVersionConverter:
             f"test_forcefields/old/test_ff_{forcefield_version}_spec_{spec}.offxml"
         )
         ff = ForceField(forcefield_file_path, "test_forcefields/old/hbonds.offxml")
-
+        ff.get_parameter_handler(
+            "Electrostatics", {'version':0.3}
+        )
         ff_system = ff.create_openmm_system(molecule.to_topology(), charge_from_molecules=[molecule])
 
         # Load OpenMM System created with the 0.1 version of the toolkit.
