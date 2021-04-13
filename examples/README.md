@@ -2,6 +2,30 @@
 
 The following examples are available in [the OpenFF toolkit repository](https://github.com/openforcefield/openff-toolkit/tree/master/examples). Each can be run interactively in the browser with [binder](https://mybinder.org/v2/gh/openforcefield/openforcefield/master?filepath=%2Fexamples%2F), without installing anything on your computer.
 
+## Running the examples
+
+We provide a tool named `openff-examples` to install the examples and their dependencies for you. This can be used to copy the examples to a local, user-writable directory, and manage their dependencies.
+
+List available examples:
+
+```
+openff-examples list
+```
+
+Copy the `visualization` example to a subfolder of the working directory:
+
+```
+openff-examples install visualization
+```
+
+Copy the `visualization` example to a subfolder of the working directory and install its dependencies in a new virtual environment:
+
+```
+openff-examples install --create-environment visualization
+```
+
+Other options, including specifying the target directory, installing dependencies to an existing environment, or specifying the name or location of the new environment, are available with the `--help` switch. When finished, the tool will provide commands to run the examples. `openff-examples` will not be able to install dependencies if it unless `conda` or `mamba` is installed and available in your system `$PATH`.
+
 ## Index of provided examples
 
 * [conformer_energies](https://github.com/openforcefield/openff-toolkit/tree/master/examples/conformer_energies) - compute conformer energies of one or more small molecules using a SMIRNOFF force field
