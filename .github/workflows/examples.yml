@@ -85,11 +85,15 @@ jobs:
           fi
           pytest $PYTEST_ARGS openff/toolkit/tests/test_examples.py
 
+      - name: Print openff-examples script for debugging
+        shell: bash -l {0}
+          run: cat /usr/share/miniconda/envs/test/bin/python
+
       - name: Run example notebooks
         shell: bash -l {0}
         run: |
           NOTEBOOKS=( $(openff-examples list) )
-          echo "NOTEBOOKS = $NOTEBOOKS"
+          echo "NOTEBOOKS = $NOTEBOOKS[@]"
 
           openff-examples install --update-environment ${NOTEBOOKS[0]}
           pytest $NB_ARGS ${NOTEBOOKS[0]}/
