@@ -9,6 +9,9 @@ dependencies:
   - nglview
   - notebook
   - gromacs
+  - qcelemental
+  - qcportal
+  - qcengine
   # Below are dependencies of the above; they are
   # listed explicitly as a reference.
   - mdtraj
