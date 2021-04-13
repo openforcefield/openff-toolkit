@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 
 import click
+
 import openff.toolkit.examples_helper.conda as conda
 from openff.toolkit.examples_helper.example import (
     EXAMPLES_DIR,
