@@ -238,13 +238,12 @@ Development of new toolkit features generally proceeds in the following stages:
 2. Set up conda environment:
 
     ```shell
-    # Create a conda environment with the Open Force Field toolkit and its dependencies
-    conda create --name openff-dev -c conda-forge -c openeye openff-toolkit openeye-toolkits
-    conda activate openff-dev
-    # Remove (only) the toolkit and replace it with a local install
-    conda remove --force openff-toolkit
     git clone https://github.com/openforcefield/openff-toolkit
-    cd openff-toolkit
+    cd openff-toolkit/
+    # Create a conda environment with dependencies from env/YAML file
+    conda env create -n openff-dev -f devtools/conda-envs/test_env.yaml
+    conda activate openff-dev
+    # Perform editable/dirty dev install
     pip install -e .
     ```
 
