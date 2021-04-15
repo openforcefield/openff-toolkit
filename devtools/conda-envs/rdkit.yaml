@@ -13,6 +13,7 @@ dependencies:
   - nbval
   - codecov
   - coverage
+  - click
   - numpy
   - networkx
   - ambertools
