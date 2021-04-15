@@ -219,8 +219,10 @@ def update_env(example, prefix=None, name=None, dry_run=False, quiet=False):
             echo(f"    {style_path(path)}")
     environments = flatten(environments)
 
+    conda.update_envs(
+        environments, prefix=prefix, name=name, dry_run=dry_run, quiet=quiet
+    )
     if not dry_run:
-        conda.update_envs(environments, prefix=prefix, name=name)
         conda.overwrite_local_module(
             "openff-toolkit", OFFTK_ROOT, prefix=prefix, name=name
         )

@@ -3,6 +3,8 @@
 import subprocess as sp
 from pathlib import Path
 
+from openff.toolkit.examples_helper.utils import echo
+
 
 def cmd(*args, text=True, check=True, **kwargs):
     """Run conda or mamba with the given commands and arguments"""
@@ -31,7 +33,7 @@ def create_environment(prefix=None, name=None, dry_run=False, quiet=False):
     cmd("create", *conda_args)
 
 
-def update_envs(environments, prefix=None, name=None):
+def update_envs(environments, prefix=None, name=None, dry_run=False, quiet=False):
     """Update the conda environment given by prefix or name with the provided environment.yml files"""
     conda_args = []
     if prefix and name:
@@ -42,13 +44,18 @@ def update_envs(environments, prefix=None, name=None):
     elif name:
         conda_args.append("--name")
         conda_args.append(str(name))
+    if quiet:
+        conda_args.append("--quiet")
 
-    cmd(
-        "env",
-        "update",
-        *conda_args,
-        *environments,
-    )
+    if dry_run:
+        echo("conda env update", *conda_args, *environments)
+    else:
+        cmd(
+            "env",
+            "update",
+            *conda_args,
+            *environments,
+        )
 
 
 def get_current_prefix():
