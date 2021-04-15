@@ -38,6 +38,8 @@ jobs:
 
     env:
       CI_OS: ${{ matrix.os }}
+      RDKIT: ${{ matrix.cfg.rdkit }}
+      OPENEYE: ${{ matrix.cfg.openeye }}
       PYVER: ${{ matrix.cfg.python-version }}
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
       PACKAGE: openff
