@@ -8,7 +8,6 @@ import sys
 from pathlib import Path
 
 import click
-
 import openff.toolkit.examples_helper.conda as conda
 from openff.toolkit.examples_helper.example import (
     EXAMPLES_DIR,
@@ -140,25 +139,25 @@ def install(
                 else:
                     echo(style_cmd(f"conda activate {name}"))
 
-            echo(
-                f"From the new {style_path(target)} directory, run the example:",
-                style_cmd(f"jupyter notebook {example.notebook}"),
-                sep="\n",
-            )
+            echo(f"From the new {style_path(target)} directory, run the example:")
+            for notebook in example.notebooks:
+                echo(style_cmd(f"jupyter notebook {notebook}"))
+
             if (update_environment or create_environment) and (prefix or name):
                 echo("To get started right now:")
-                if prefix:
-                    echo(
-                        style_cmd(
-                            f"conda run -p {prefix} --cwd {target} jupyter notebook {example.notebook}"
+                for notebook in example.notebooks:
+                    if prefix:
+                        echo(
+                            style_cmd(
+                                f"conda run -p {prefix} --cwd {target} jupyter notebook {notebook}"
+                            )
                         )
-                    )
-                else:
-                    echo(
-                        style_cmd(
-                            f"conda run -n {name} --cwd {target} jupyter notebook {example.notebook}"
+                    else:
+                        echo(
+                            style_cmd(
+                                f"conda run -n {name} --cwd {target} jupyter notebook {notebook}"
+                            )
                         )
-                    )
             else:
                 echo(
                     "If you need to install dependencies, try the --update-environment or --create-environment switches to this script"

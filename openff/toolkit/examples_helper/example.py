@@ -19,9 +19,9 @@ class Example:
         Initialize an `Example` from a `path`
 
         `path` should be the path to a readable directory including
-        exactly one Jupyter notebook (*.ipynb). The path to this
-        notebook, relative to the example directory, is available as
-        `Example.notebook`. A human and machine readable name of the
+        one or more Jupyter notebook (*.ipynb). The path to these
+        notebooks, relative to the example directory, are available as
+        `Example.notebooks`. A human and machine readable name of the
         `Example` is taken from the directory's path and is available
         as `Example.name`. If a file named envircmd, *args, **kwargs):
         """
@@ -31,12 +31,10 @@ class Example:
         if not self.path.is_dir():
             raise ValueError("path should be a directory")
 
-        notebooks = list(path.glob("*.ipynb"))
+        self.notebooks = list(path.glob("*.ipynb"))
 
-        if len(notebooks) == 1:
-            self.notebook = notebooks[0].relative_to(self.path)
-        else:
-            raise ValueError("path should be a folder with exactly one notebook")
+        if not self.notebooks:
+            raise ValueError("path should be a directory with at least one .ipynb file")
 
         if (self.path / "environment.yaml").is_file():
             self.environment = self.path / "environment.yaml"
