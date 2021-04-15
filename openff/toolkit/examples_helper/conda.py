@@ -1,5 +1,6 @@
 """Python wrapper around the mamba and conda cli tools"""
 
+import json
 import subprocess as sp
 from pathlib import Path
 
@@ -74,8 +75,8 @@ def get_current_prefix():
     raise ValueError("Could not determine prefix")
 
 
-def overwrite_local_module(module_name, local_module, name=None, prefix=None):
-    """Overwrite a module installed from Conda with a local module"""
+def install_local_module(local_module, name=None, prefix=None):
+    """Install a local module in dev mode"""
 
     conda_args = []
     if prefix and name:
@@ -87,5 +88,20 @@ def overwrite_local_module(module_name, local_module, name=None, prefix=None):
         conda_args.append("--name")
         conda_args.append(str(name))
 
-    cmd("uninstall", *conda_args, "--force", module_name)
     cmd("run", *conda_args, "--cwd", local_module, "pip", "install", "-e", ".")
+
+
+def openff_toolkit_is_installed(name=None, prefix=None):
+    """Return True if openff-toolkit is installed in the environment, otherwise False"""
+    conda_args = []
+    if prefix and name:
+        raise ValueError("prefix and name are mutually exclusive")
+    if prefix:
+        conda_args.append("--prefix")
+        conda_args.append(str(prefix))
+    elif name:
+        conda_args.append("--name")
+        conda_args.append(str(name))
+
+    data = cmd("list", "openff-toolkit", "--json", *conda_args).stdout
+    return bool(json.loads(data))

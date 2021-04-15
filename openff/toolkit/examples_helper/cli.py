@@ -13,6 +13,7 @@ import openff.toolkit.examples_helper.conda as conda
 from openff.toolkit.examples_helper.example import (
     EXAMPLES_DIR,
     EXAMPLES_ENV,
+    OFFTK_ENV,
     OFFTK_ROOT,
     Example,
     ExampleArg,
@@ -121,6 +122,14 @@ def install(
     if create_environment and prefix is None and name is None:
         prefix = target / ".env"
 
+    if update_environment and not conda.openff_toolkit_is_installed(
+        prefix=prefix, name=name
+    ):
+        raise click.BadParameter(
+            "openff-toolkit must be installed in the environment to be updated",
+            param_hint="--update-environment",
+        )
+
     try:
         if create_environment:
             create_env(prefix=prefix, name=name, dry_run=dry_run, quiet=quiet)
@@ -202,6 +211,9 @@ def create_env(prefix=None, name=None, dry_run=False, quiet=False):
             echo(f"Creating new conda environment with name {style_path(name)}")
 
     conda.create_environment(prefix=prefix, name=name, dry_run=dry_run, quiet=quiet)
+    conda.update_envs(OFFTK_ENV, prefix=prefix, name=name, dry_run=dry_run, quiet=quiet)
+    if not dry_run:
+        conda.install_local_module(OFFTK_ROOT, prefix=prefix, name=name)
 
 
 def update_env(example, prefix=None, name=None, dry_run=False, quiet=False):
@@ -222,10 +234,6 @@ def update_env(example, prefix=None, name=None, dry_run=False, quiet=False):
     conda.update_envs(
         environments, prefix=prefix, name=name, dry_run=dry_run, quiet=quiet
     )
-    if not dry_run:
-        conda.overwrite_local_module(
-            "openff-toolkit", OFFTK_ROOT, prefix=prefix, name=name
-        )
 
 
 if __name__ == "__main__":
