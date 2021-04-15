@@ -12,12 +12,9 @@ except FileNotFoundError:
     CMD = "conda"
 
 
-def cmd(*args, **kwargs):
+def cmd(*args, text=True, check=True, **kwargs):
     """Run conda or mamba with the given commands and arguments"""
-    run_kwargs = dict(text=True, check=True)
-    run_kwargs.update(kwargs)
-
-    return sp.run([CMD, *args], **run_kwargs)  # pylint: disable=subprocess-run-check
+    return sp.run([CMD, *args], text=text, check=check, **kwargs)
 
 
 def create_environment(prefix=None, name=None, dry_run=False, quiet=False):
