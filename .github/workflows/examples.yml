@@ -18,7 +18,7 @@ on:
 jobs:
   test:
     if: (github.event_name == 'schedule' && github.repository == 'openforcefield/openff-toolkit') || (github.event_name != 'schedule')
-    name: Test on ${{ matrix.os }}, Python ${{ matrix.cfg.python-version }}
+    name: ${{ matrix.os }}, Python ${{ matrix.cfg.python-version }}, RDKit=${{ matrix.cfg.rdkit }}, OpenEye=${{ matrix.cfg.openeye }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
