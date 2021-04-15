@@ -128,6 +128,8 @@ jobs:
           openff-examples install --update-environment ${NOTEBOOKS[0]}
           pytest $NB_ARGS ${NOTEBOOKS[0]}/
 
+          conda list
+
           for notebook in ${NOTEBOOKS[@]:1}; do
             openff-examples install $notebook
             pytest $NB_ARGS $notebook/
