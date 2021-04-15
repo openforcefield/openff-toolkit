@@ -48,7 +48,7 @@ jobs:
         with:
           python-version: ${{ matrix.cfg.python-version }}
           activate-environment: test
-          environment-file: devtools/conda-envs/examples.yaml
+          environment-file: devtools/conda-envs/rdkit.yaml
           auto-activate-base: false
 
       - name: Additional info about the build
