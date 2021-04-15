@@ -103,5 +103,7 @@ def openff_toolkit_is_installed(name=None, prefix=None):
         conda_args.append("--name")
         conda_args.append(str(name))
 
-    data = cmd("list", "openff-toolkit", "--json", *conda_args).stdout
+    data = cmd(
+        "list", "openff-toolkit", "--json", *conda_args, capture_output=True
+    ).stdout
     return bool(json.loads(data))
