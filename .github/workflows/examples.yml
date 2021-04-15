@@ -28,6 +28,12 @@ jobs:
           - macos-latest
         cfg:
           - python-version: 3.7
+            rdkit: "true"
+            openeye: "false"
+
+          - python-version: 3.7
+            rdkit: "false"
+            openeye: "true"
 
 
     env:
@@ -44,11 +50,20 @@ jobs:
           fetch-depth: 2
 
       - uses: conda-incubator/setup-miniconda@v2
-        name: Install both RDKit and OpenEye toolkits
+        name: Install only RDKit
+        if: ${{ matrix.cfg.rdkit == 'TRUE' && matrix.cfg.openeye == 'FALSE' }}
         with:
           python-version: ${{ matrix.cfg.python-version }}
           activate-environment: test
           environment-file: devtools/conda-envs/rdkit.yaml
+          auto-activate-base: false
+      - uses: conda-incubator/setup-miniconda@v2
+        name: Install with OpenEye toolkits
+        if: ${{ matrix.cfg.rdkit == 'FALSE' && matrix.cfg.openeye == 'TRUE' }}
+        with:
+          python-version: ${{ matrix.cfg.python-version }}
+          activate-environment: test
+          environment-file: devtools/conda-envs/openeye.yaml
           auto-activate-base: false
 
       - name: Additional info about the build
