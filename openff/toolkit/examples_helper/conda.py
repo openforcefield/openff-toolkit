@@ -3,18 +3,10 @@
 import subprocess as sp
 from pathlib import Path
 
-try:
-    if sp.run("mamba", check=True, capture_output=True).returncode == 0:
-        CMD = "mamba"
-    else:
-        CMD = "conda"
-except FileNotFoundError:
-    CMD = "conda"
-
 
 def cmd(*args, text=True, check=True, **kwargs):
     """Run conda or mamba with the given commands and arguments"""
-    return sp.run([CMD, *args], text=text, check=check, **kwargs)
+    return sp.run(["conda", *args], text=text, check=check, **kwargs)
 
 
 def create_environment(prefix=None, name=None, dry_run=False, quiet=False):
