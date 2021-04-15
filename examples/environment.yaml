@@ -3,9 +3,8 @@ channels:
   - conda-forge
   - bioconda
 
+# These dependencies are in addition to the toolkit itself
 dependencies:
-  - python
-  - openff-toolkit
   - nglview
   - notebook
   - gromacs
@@ -13,8 +12,7 @@ dependencies:
   - qcportal
   - qcengine
   - openmmforcefields
-  # Below are dependencies of the above; they are
-  # listed explicitly as a reference.
+  # Below are dependencies of the toolkit; they are listed here as a reference
   - mdtraj
   - numpy
   - openmm
