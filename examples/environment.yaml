@@ -12,6 +12,7 @@ dependencies:
   - qcelemental
   - qcportal
   - qcengine
+  - openmmforcefields
   # Below are dependencies of the above; they are
   # listed explicitly as a reference.
   - mdtraj
