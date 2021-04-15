@@ -89,7 +89,8 @@ jobs:
       - name: Install package
         shell: bash -l {0}
         run: |
-          python setup.py develop --no-deps
+          # python setup.py develop --no-deps
+          pip install -e .
 
       - name: Run example scripts without OE
         shell: bash -l {0}
