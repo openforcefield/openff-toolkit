@@ -35,6 +35,7 @@ Molecular chemical entity representation and routines to interface with cheminfo
 
 import operator
 import warnings
+from abc import abstractmethod
 from collections import OrderedDict
 from copy import deepcopy
 from typing import Optional, Union
@@ -556,6 +557,65 @@ class VirtualParticle(Particle):
         """
         return self.virtual_site.orientations.index(self.orientation)
 
+    def _position(self, atom_positions):
+
+        originwt, xdir, ydir = self.virtual_site.compute_local_frame_weights()
+        disp = self.virtual_site.compute_local_position()
+        u = disp.unit
+        x, y, z = disp / u
+
+        pos = []
+        for atom in self._orientation:
+            pos.append(atom_positions[atom])
+
+        atom_positions = pos
+
+        originwt = np.atleast_2d(originwt)
+        atom_positions = np.atleast_2d(atom_positions)
+
+        origin = np.dot(originwt, atom_positions).sum(axis=0)
+
+        xaxis, yaxis = np.dot(np.vstack((xdir, ydir)), atom_positions)
+        zaxis = np.cross(xaxis, yaxis)
+
+        def normalize(axis):
+            L = np.linalg.norm(axis)
+            if L > 0.0:
+                axis /= L
+            return axis
+        xaxis, yaxis, zaxis = map(normalize, (xaxis, yaxis, zaxis))
+
+        return u * list(origin + x * xaxis + y * yaxis + z * zaxis)
+
+    def _extract_position_from_conformer(self, conformation):
+
+        indices = [atom.molecule_atom_index for atom in self.virtual_site.atoms]
+
+        atom_positions = [conformation[i] for i in indices]
+
+        return atom_positions
+
+    def _get_conformer(self, conformer_idx):
+
+        assert self.molecule
+        assert len(self.molecule.conformers) > 0
+
+        conformer = self.molecule.conformers[conformer_idx]
+
+        return conformer
+
+    def compute_position_from_conformer(self, conformer_idx):
+
+        atom_positions = self._get_conformer(conformer_idx)
+
+        # atom_positions = self._extract_position_from_conformer(conformer)
+
+        return self.compute_position_from_atom_positions(atom_positions)
+
+    def compute_position_from_atom_positions(self, atom_positions):
+
+        return self._position(atom_positions)
+
 
 # =============================================================================================
 # VirtualSite
@@ -888,6 +948,32 @@ class VirtualSite(Particle):
             self.name, self.type, self.atoms, self.n_particles
         )
 
+    @abstractmethod
+    def compute_local_frame_weights(self):
+        pass
+
+    @abstractmethod
+    def compute_local_position(self):
+        pass
+
+    def compute_positions_from_conformer(self, conformer_idx):
+
+        positions = []
+        for vp in self.particles:
+            vp_pos = vp.compute_position_from_conformer(conformer_idx)
+            positions.append(vp_pos.value_in_unit(unit.angstrom))
+        
+        return unit.angstrom * positions
+
+    def compute_positions_from_atom_positions(self, atom_positions):
+
+        positions = []
+        for vp in self.particles:
+            vp_pos = vp.compute_position_from_atom_positions(atom_positions)
+            positions.append(vp_pos.value_in_unit(unit.angstrom))
+        
+        return unit.angstrom * positions
+
 
 class BondChargeVirtualSite(VirtualSite):
     """
@@ -976,6 +1062,33 @@ class BondChargeVirtualSite(VirtualSite):
         """The distance parameter of the virtual site"""
         return self._distance
 
+    def compute_local_frame_weights(self):
+
+        originwt = np.zeros((2,))
+        originwt[0] = 1.0  # first atom is origin
+
+        xdir = np.zeros((2,))
+
+        xdir[0] = -1.0  # total sum == 0; x points from atom 1 to 2
+        xdir[1] = 1.0  #
+
+        # Seems ydir and zdir don't matter for BondCharge, since
+        # from openmm, zdir = cross(xdir, ydir) and then ydir set to
+        # cross(zdir, xdir).
+        # We therefore allow ydir == zdir == 0, and just displace along xdir
+        ydir = np.array(xdir)
+
+        return originwt, xdir, ydir
+
+    def compute_local_position(self):
+        # since the origin is atom 1, and xdir is a unit vector pointing
+        # towards the center of the other atoms, we want the
+        # vsite to point away from the unit vector to achieve the desired
+        # distance
+        u = self._distance.unit
+        pos = u * [-self._distance / u, 0.0, 0.0]  # pos of the vsite in local crds
+        return pos
+
     def get_openmm_virtual_site(self, atoms):
         """
         Returns the OpenMMVirtualSite corresponding to this BondChargeVirtualSite.
@@ -991,27 +1104,12 @@ class BondChargeVirtualSite(VirtualSite):
         -------
         virtual_site : a simtk.openmm LocalCoordinatesSite
         """
+        assert len(atoms) >= 2
         from simtk.openmm import LocalCoordinatesSite
 
-        originwt = np.zeros_like(atoms)
-        originwt[0] = 1.0  # first atom is origin
+        originwt, xdir, ydir = self.compute_local_frame_weights()
+        pos = self.compute_local_position()
 
-        xdir = np.zeros_like(atoms)
-
-        xdir[0] = -1.0  # total sum == 0; x points from atom 1 to 2
-        xdir[1] = 1.0  #
-
-        # Seems ydir and zdir don't matter for BondCharge, since
-        # from openmm, zdir = cross(xdir, ydir) and then ydir set to
-        # cross(zdir, xdir).
-        # We therefore allow ydir == zdir == 0, and just displace along xdir
-        ydir = np.array(xdir)
-
-        # since the origin is atom 1, and xdir is a unit vector pointing
-        # towards the center of the other atoms, we want the
-        # vsite to point away from the unit vector to achieve the desired
-        # distance
-        pos = [-self._distance, 0.0, 0.0]  # pos of the vsite in local crds
         return LocalCoordinatesSite(atoms, originwt, xdir, ydir, pos)
 
 
@@ -1148,6 +1246,44 @@ class MonovalentLonePairVirtualSite(VirtualSite):
         """The out_of_plane_angle parameter of the virtual site"""
         return self._out_of_plane_angle
 
+    def compute_local_frame_weights(self):
+        """
+        Returns the local frame used to calculate the particle positions.
+
+        Parameters
+        ----------
+        atoms: iterable of int
+            The indices of the atoms used to build to indices
+
+        Returns
+        -------
+            The relative indices of the origin, x-axis, y-axis, and z-axis
+        """
+
+        originwt = np.zeros((3,))
+        originwt[0] = 1.0  #
+
+        xdir = [-1.0, 1.0, 0.0]
+        ydir = [-1.0, 0.0, 1.0]
+
+        return originwt, xdir, ydir
+
+    def compute_local_position(self):
+        """
+        Returns the displacements in the local frame
+
+        """
+        theta = self._in_plane_angle.value_in_unit(unit.radians)
+        psi = self._out_of_plane_angle.value_in_unit(unit.radians)
+
+        u = self._distance.unit
+        pos = u * [
+            self._distance / u * np.cos(theta) * np.cos(psi),
+            self._distance / u * np.sin(theta) * np.cos(psi),
+            self._distance / u * np.sin(psi),
+        ]
+        return pos
+
     def get_openmm_virtual_site(self, atoms):
         """
         Returns the OpenMMVirtualSite corresponding to this MonovalentLonePairVirtualSite.
@@ -1167,20 +1303,9 @@ class MonovalentLonePairVirtualSite(VirtualSite):
         assert len(atoms) >= 3
         from simtk.openmm import LocalCoordinatesSite
 
-        originwt = np.zeros_like(atoms)
-        originwt[0] = 1.0  #
+        originwt, xdir, ydir = self.compute_local_frame_weights()
+        pos = self.compute_local_position()
 
-        xdir = [-1.0, 1.0, 0.0]
-        ydir = [-1.0, 0.0, 1.0]
-
-        theta = self._in_plane_angle.value_in_unit(unit.radians)
-        psi = self._out_of_plane_angle.value_in_unit(unit.radians)
-
-        pos = [
-            self._distance * np.cos(theta) * np.cos(psi),
-            self._distance * np.sin(theta) * np.cos(psi),
-            self._distance * np.sin(psi),
-        ]  # pos of the vsite in local crds
         return LocalCoordinatesSite(atoms, originwt, xdir, ydir, pos)
 
 
@@ -1285,6 +1410,28 @@ class DivalentLonePairVirtualSite(VirtualSite):
         """The out_of_plane_angle parameter of the virtual site"""
         return self._out_of_plane_angle
 
+    def compute_local_frame_weights(self):
+
+        originwt = np.zeros((3,))
+        originwt[1] = 1.0
+
+        xdir = [0.5, -1.0, 0.5]
+        ydir = [1.0, -1.0, 0.0]
+
+        return originwt, xdir, ydir
+
+    def compute_local_position(self):
+
+        theta = self._out_of_plane_angle.value_in_unit(unit.radians)
+
+        u = self._distance.unit
+        pos = u * [
+            -self._distance / u * np.cos(theta),
+            0.0,
+            self._distance / u * np.sin(theta),
+        ]  # pos of the vsite in local crds
+        return pos
+
     def get_openmm_virtual_site(self, atoms):
         """
         Returns the OpenMMVirtualSite corresponding to this DivalentLonePairVirtualSite.
@@ -1304,19 +1451,9 @@ class DivalentLonePairVirtualSite(VirtualSite):
         assert len(atoms) >= 3
         from simtk.openmm import LocalCoordinatesSite
 
-        originwt = np.zeros_like(atoms)
-        originwt[1] = 1.0  #
+        originwt, xdir, ydir, zdir = self.compute_local_frame_weights()
+        pos = self.compute_local_position()
 
-        xdir = [0.5, -1.0, 0.5]
-        ydir = [1.0, -1.0, 0.0]
-
-        theta = self._out_of_plane_angle.value_in_unit(unit.radians)
-
-        pos = [
-            -self._distance * np.cos(theta),
-            0.0,
-            self._distance * np.sin(theta),
-        ]  # pos of the vsite in local crds
         return LocalCoordinatesSite(atoms, originwt, xdir, ydir, pos)
 
 
@@ -1408,6 +1545,33 @@ class TrivalentLonePairVirtualSite(VirtualSite):
         """The distance parameter of the virtual site"""
         return self._distance
 
+    def compute_local_frame_weights(self):
+        """
+        Returns the local frame used to calculate the particle positions.
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+            The relative indices of the origin, x-axis, y-axis, z-axis
+        """
+
+        originwt = np.zeros((4,))
+        originwt[1] = 1.0  #
+
+        xdir = [1 / 3, -1.0, 1 / 3, 1 / 3]
+
+        # ydir does not matter
+        ydir = [1.0, -1.0, 0.0, 0.0]
+
+        return originwt, xdir, ydir
+
+    def compute_local_position(self):
+        u = self._distance.unit
+        pos = u * [-self._distance / u, 0.0, 0.0]  # pos of the vsite in local crds
+        return pos
+
     def get_openmm_virtual_site(self, atoms):
         """
         Returns the OpenMMVirtualSite corresponding to this TrivalentLonePairVirtualSite.
@@ -1427,15 +1591,9 @@ class TrivalentLonePairVirtualSite(VirtualSite):
         assert len(atoms) >= 4
         from simtk.openmm import LocalCoordinatesSite
 
-        originwt = np.zeros_like(atoms)
-        originwt[1] = 1.0  #
+        originwt, xdir, ydir, zdir = self.compute_local_frame_weights()
+        pos = self.compute_local_position()
 
-        xdir = [1 / 3, -1.0, 1 / 3, 1 / 3]
-
-        # ydir does not matter
-        ydir = [1.0, -1.0, 0.0, 0.0]
-
-        pos = [-self._distance, 0.0, 0.0]  # pos of the vsite in local crds
         return LocalCoordinatesSite(atoms, originwt, xdir, ydir, pos)
 
 
@@ -2805,6 +2963,30 @@ class FrozenMolecule(Serializable):
                     type(toolkit_registry)
                 )
             )
+
+    def compute_virtual_site_positions_from_conformer(self, conformer_idx):
+
+        positions = []
+
+        for vsite in self.virtual_sites:
+            vsite_pos = vsite.compute_positions_from_conformer(conformer_idx)
+            positions.extend(
+                vsite_pos.value_in_unit(unit.angstrom)
+            )
+
+        return unit.angstrom * positions
+
+    def compute_virtual_site_positions_from_atom_positions(self, atom_positions):
+
+        positions = []
+
+        for vsite in self.virtual_sites:
+            vsite_pos = vsite.compute_positions_from_atom_positions(atom_positions)
+            positions.extend(
+                vsite_pos.value_in_unit(unit.angstrom)
+            )
+
+        return unit.angstrom * positions
 
     def apply_elf_conformer_selection(
         self,
