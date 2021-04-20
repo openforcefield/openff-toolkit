@@ -4,14 +4,17 @@ import time
 
 # Use MDTraj to write simulation trajectories
 from mdtraj.reporters import NetCDFReporter
+
 # Import the OpenEye toolkit
 from openeye import oechem
+
 # Import OpenMM tools
 from simtk import openmm, unit
 from simtk.openmm.app import *
 
 # Import the SMIRNOFF force field engine and some useful tools
 from openff.toolkit.typing.engines.smirnoff import ForceField
+
 # LPW: Open Force Field's PME is different from openmm's PME
 from openff.toolkit.typing.engines.smirnoff.forcefield import PME
 from openff.toolkit.utils import get_data_file_path
