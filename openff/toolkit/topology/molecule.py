@@ -559,10 +559,10 @@ class VirtualParticle(Particle):
 
     def _position(self, atom_positions):
 
-        originwt, xdir, ydir = self.virtual_site.compute_local_frame_weights()
-        disp = self.virtual_site.compute_local_position()
-        u = disp.unit
-        x, y, z = disp / u
+        originwt, xdir, ydir = self.virtual_site.local_frame_weights
+        disp = self.virtual_site.local_frame_position
+        unit = disp.unit
+        x, y, z = disp / unit
 
         pos = []
         for atom in self._orientation:
@@ -576,16 +576,19 @@ class VirtualParticle(Particle):
         origin = np.dot(originwt, atom_positions).sum(axis=0)
 
         xaxis, yaxis = np.dot(np.vstack((xdir, ydir)), atom_positions)
-        zaxis = np.cross(xaxis, yaxis)
 
-        def normalize(axis):
+        zaxis = np.cross(xaxis, yaxis)
+        yaxis = np.cross(zaxis, xaxis)
+
+        def _normalize(axis):
             L = np.linalg.norm(axis)
             if L > 0.0:
                 axis /= L
             return axis
-        xaxis, yaxis, zaxis = map(normalize, (xaxis, yaxis, zaxis))
 
-        return u * list(origin + x * xaxis + y * yaxis + z * zaxis)
+        xaxis, yaxis, zaxis = map(_normalize, (xaxis, yaxis, zaxis))
+
+        return unit * list(origin + x * xaxis + y * yaxis + z * zaxis)
 
     def _extract_position_from_conformer(self, conformation):
 
@@ -607,8 +610,6 @@ class VirtualParticle(Particle):
     def compute_position_from_conformer(self, conformer_idx):
 
         atom_positions = self._get_conformer(conformer_idx)
-
-        # atom_positions = self._extract_position_from_conformer(conformer)
 
         return self.compute_position_from_atom_positions(atom_positions)
 
@@ -936,6 +937,37 @@ class VirtualSite(Particle):
         """The type of this VirtualSite (returns the class name as string)"""
         return self.__class__.__name__
 
+    @property
+    @abstractmethod
+    def local_frame_weights(self):
+        """
+        Returns the local frame weights used to calculate the particle positions.
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+            The list of relative indices of the origin, x-axis, y-axis, and z-axis
+        """
+        pass
+
+    @property
+    @abstractmethod
+    def local_frame_position(self):
+        """
+        The displacements of the virtual site relative to the local frame
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+            A simtk.unit.Quantity of unit [Length] wrapping a list of displacements in
+            the local frame.
+        """
+        pass
+
     def __repr__(self):
         # TODO: Also include particle_index, which molecule this atom belongs to?
         return "VirtualSite(name={}, type={}, atoms={})".format(
@@ -948,13 +980,14 @@ class VirtualSite(Particle):
             self.name, self.type, self.atoms, self.n_particles
         )
 
-    @abstractmethod
-    def compute_local_frame_weights(self):
-        pass
+    def _openmm_virtual_site(self, atoms):
 
-    @abstractmethod
-    def compute_local_position(self):
-        pass
+        from simtk.openmm import LocalCoordinatesSite
+
+        originwt, xdir, ydir = self.local_frame_weights
+        pos = self.local_frame_position
+
+        return LocalCoordinatesSite(atoms, originwt, xdir, ydir, pos)
 
     def compute_positions_from_conformer(self, conformer_idx):
 
@@ -1062,25 +1095,47 @@ class BondChargeVirtualSite(VirtualSite):
         """The distance parameter of the virtual site"""
         return self._distance
 
-    def compute_local_frame_weights(self):
+    @property
+    def local_frame_weights(self):
+        """
+        Returns the local frame weights used to calculate the particle positions.
 
-        originwt = np.zeros((2,))
-        originwt[0] = 1.0  # first atom is origin
+        Parameters
+        ----------
 
-        xdir = np.zeros((2,))
+        Returns
+        -------
+            The list of relative indices of the origin, x-axis, y-axis, and z-axis
+        """
 
-        xdir[0] = -1.0  # total sum == 0; x points from atom 1 to 2
-        xdir[1] = 1.0  #
+        originwt = [1.0, 0.0] # first atom is origin
+
+        xdir = [-1.0, 1.0]
 
         # Seems ydir and zdir don't matter for BondCharge, since
         # from openmm, zdir = cross(xdir, ydir) and then ydir set to
         # cross(zdir, xdir).
         # We therefore allow ydir == zdir == 0, and just displace along xdir
-        ydir = np.array(xdir)
+        ydir = [-1.0, 1.0]
 
         return originwt, xdir, ydir
 
-    def compute_local_position(self):
+    @property
+    def local_frame_position(self):
+        """
+        The displacements of the virtual site relative to the local frame
+
+        [TODO:description]
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+            A simtk.unit.Quantity of unit [Length] wrapping a list of displacements in
+            the local frame.
+        """
+
         # since the origin is atom 1, and xdir is a unit vector pointing
         # towards the center of the other atoms, we want the
         # vsite to point away from the unit vector to achieve the desired
@@ -1105,12 +1160,7 @@ class BondChargeVirtualSite(VirtualSite):
         virtual_site : a simtk.openmm LocalCoordinatesSite
         """
         assert len(atoms) >= 2
-        from simtk.openmm import LocalCoordinatesSite
-
-        originwt, xdir, ydir = self.compute_local_frame_weights()
-        pos = self.compute_local_position()
-
-        return LocalCoordinatesSite(atoms, originwt, xdir, ydir, pos)
+        return self._openmm_virtual_site(atoms)
 
 
 class _LonePairVirtualSite(VirtualSite):
@@ -1246,33 +1296,40 @@ class MonovalentLonePairVirtualSite(VirtualSite):
         """The out_of_plane_angle parameter of the virtual site"""
         return self._out_of_plane_angle
 
-    def compute_local_frame_weights(self):
+    @property
+    def local_frame_weights(self):
         """
-        Returns the local frame used to calculate the particle positions.
+        Returns the local frame weights used to calculate the particle positions.
 
         Parameters
         ----------
-        atoms: iterable of int
-            The indices of the atoms used to build to indices
 
         Returns
         -------
-            The relative indices of the origin, x-axis, y-axis, and z-axis
+            The list of relative indices of the origin, x-axis, y-axis, and z-axis
         """
 
-        originwt = np.zeros((3,))
-        originwt[0] = 1.0  #
+        originwt = [1.0, 0.0, 0.0]
 
         xdir = [-1.0, 1.0, 0.0]
         ydir = [-1.0, 0.0, 1.0]
 
         return originwt, xdir, ydir
 
-    def compute_local_position(self):
+    @property
+    def local_frame_position(self):
         """
-        Returns the displacements in the local frame
+        The displacements of the virtual site relative to the local frame
 
+        Parameters
+        ----------
+
+        Returns
+        -------
+            A simtk.unit.Quantity of unit [Length] wrapping a list of displacements in
+            the local frame.
         """
+
         theta = self._in_plane_angle.value_in_unit(unit.radians)
         psi = self._out_of_plane_angle.value_in_unit(unit.radians)
 
@@ -1301,12 +1358,7 @@ class MonovalentLonePairVirtualSite(VirtualSite):
         """
 
         assert len(atoms) >= 3
-        from simtk.openmm import LocalCoordinatesSite
-
-        originwt, xdir, ydir = self.compute_local_frame_weights()
-        pos = self.compute_local_position()
-
-        return LocalCoordinatesSite(atoms, originwt, xdir, ydir, pos)
+        return self._openmm_virtual_site(atoms)
 
 
 class DivalentLonePairVirtualSite(VirtualSite):
@@ -1410,17 +1462,39 @@ class DivalentLonePairVirtualSite(VirtualSite):
         """The out_of_plane_angle parameter of the virtual site"""
         return self._out_of_plane_angle
 
-    def compute_local_frame_weights(self):
+    @property
+    def local_frame_weights(self):
+        """
+        Returns the local frame weights used to calculate the particle positions.
 
-        originwt = np.zeros((3,))
-        originwt[1] = 1.0
+        Parameters
+        ----------
+
+        Returns
+        -------
+            The list of relative indices of the origin, x-axis, y-axis, and z-axis
+        """
+
+        originwt = [0.0, 1.0, 0.0]
 
         xdir = [0.5, -1.0, 0.5]
         ydir = [1.0, -1.0, 0.0]
 
         return originwt, xdir, ydir
 
-    def compute_local_position(self):
+    @property
+    def local_frame_position(self):
+        """
+        The displacements of the virtual site relative to the local frame
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+            A simtk.unit.Quantity of unit [Length] wrapping a list of displacements in
+            the local frame.
+        """
 
         theta = self._out_of_plane_angle.value_in_unit(unit.radians)
 
@@ -1449,13 +1523,7 @@ class DivalentLonePairVirtualSite(VirtualSite):
         """
 
         assert len(atoms) >= 3
-        from simtk.openmm import LocalCoordinatesSite
-
-        originwt, xdir, ydir, zdir = self.compute_local_frame_weights()
-        pos = self.compute_local_position()
-
-        return LocalCoordinatesSite(atoms, originwt, xdir, ydir, pos)
-
+        return self._openmm_virtual_site(atoms)
 
 class TrivalentLonePairVirtualSite(VirtualSite):
     """
@@ -1545,20 +1613,20 @@ class TrivalentLonePairVirtualSite(VirtualSite):
         """The distance parameter of the virtual site"""
         return self._distance
 
-    def compute_local_frame_weights(self):
+    @property
+    def local_frame_weights(self):
         """
-        Returns the local frame used to calculate the particle positions.
+        Returns the local frame weights used to calculate the particle positions.
 
         Parameters
         ----------
 
         Returns
         -------
-            The relative indices of the origin, x-axis, y-axis, z-axis
+            The list of relative indices of the origin, x-axis, y-axis, and z-axis
         """
 
-        originwt = np.zeros((4,))
-        originwt[1] = 1.0  #
+        originwt = [0.0, 1.0, 0.0, 0.0]
 
         xdir = [1 / 3, -1.0, 1 / 3, 1 / 3]
 
@@ -1567,7 +1635,19 @@ class TrivalentLonePairVirtualSite(VirtualSite):
 
         return originwt, xdir, ydir
 
-    def compute_local_position(self):
+    @property
+    def local_frame_position(self):
+        """
+        The displacements of the virtual site relative to the local frame
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+            A simtk.unit.Quantity of unit [Length] wrapping a list of displacements in
+            the local frame.
+        """
         u = self._distance.unit
         pos = u * [-self._distance / u, 0.0, 0.0]  # pos of the vsite in local crds
         return pos
@@ -1589,12 +1669,7 @@ class TrivalentLonePairVirtualSite(VirtualSite):
         """
 
         assert len(atoms) >= 4
-        from simtk.openmm import LocalCoordinatesSite
-
-        originwt, xdir, ydir, zdir = self.compute_local_frame_weights()
-        pos = self.compute_local_position()
-
-        return LocalCoordinatesSite(atoms, originwt, xdir, ydir, pos)
+        return self._openmm_virtual_site(atoms)
 
 
 # =============================================================================================
@@ -2965,6 +3040,16 @@ class FrozenMolecule(Serializable):
             )
 
     def compute_virtual_site_positions_from_conformer(self, conformer_idx):
+        """
+        [TODO:summary]
+
+        [TODO:description]
+
+        Parameters
+        ----------
+        conformer_idx : [TODO:type]
+            [TODO:description]
+        """
 
         positions = []
 
@@ -2977,6 +3062,16 @@ class FrozenMolecule(Serializable):
         return unit.angstrom * positions
 
     def compute_virtual_site_positions_from_atom_positions(self, atom_positions):
+        """
+        [TODO:summary]
+
+        [TODO:description]
+
+        Parameters
+        ----------
+        atom_positions : [TODO:type]
+            [TODO:description]
+        """
 
         positions = []
 
@@ -4041,7 +4136,6 @@ class FrozenMolecule(Serializable):
         """
 
         import networkx as nx
-
         from openff.toolkit.topology import TopologyMolecule
 
         # check for networkx then assuming we have a Molecule or TopologyMolecule instance just try and
