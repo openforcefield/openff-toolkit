@@ -5,8 +5,8 @@ Cross-check energies of molecules from AlkEthOH set using SMIRNOFF xml file
 versus energies from AMBER .prmtop and .crd files (parm@frosst params).
 """
 
-import os
 import glob
+import os
 
 # datapath = './AlkEthOH_tripos/AlkEthOH_chain_filt1'
 # datapath = './AlkEthOH_tripos/AlkEthOH_rings_filt1'
@@ -50,10 +50,10 @@ for mol_idx, mol_filepath in enumerate(mol_filepaths):
     inpcrd_filepath = os.path.join(datapath, molname + ".crd")
 
     # Compare energies
-    from openff.toolkit.tests.utils import compare_amber_smirnoff
     from openff.toolkit.tests.utils import (
-        FailedParameterComparisonError,
         FailedEnergyComparisonError,
+        FailedParameterComparisonError,
+        compare_amber_smirnoff,
     )
 
     try:

@@ -1,10 +1,15 @@
 #!/usr/bin/env python
 
+import argparse
+import os
+import subprocess
+import sys
+import time
+
+import openmoltools
 from forcebalance.molecule import Molecule
 from forcebalance.nifty import which
 from openeye import oechem
-import openmoltools
-import os, sys, time, argparse, subprocess
 
 
 def CalculateMolecularWeight(mol):

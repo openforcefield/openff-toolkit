@@ -1,9 +1,11 @@
 import argparse
+
+import numpy as np
+from rdkit.Chem import rdMolAlign
+from simtk import openmm, unit
+
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.utils import RDKitToolkitWrapper
-from rdkit.Chem import rdMolAlign
-import numpy as np
-from simtk import openmm, unit
 
 
 def compute_conformer_energies_from_file(filename):

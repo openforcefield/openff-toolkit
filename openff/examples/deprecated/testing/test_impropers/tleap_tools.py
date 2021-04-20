@@ -1,7 +1,8 @@
-import mdtraj.utils
+import logging
 import os
 import shutil
-import logging
+
+import mdtraj.utils
 
 logger = logging.getLogger(__name__)
 from openmoltools.utils import getoutput
