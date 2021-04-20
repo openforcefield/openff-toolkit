@@ -6,6 +6,7 @@ from openeye import oechem
 import openmoltools
 import os, sys, time, argparse, subprocess
 
+
 def CalculateMolecularWeight(mol):
     """
     Calculate the molecular weight for an OpenEye molecule.
@@ -23,11 +24,12 @@ def CalculateMolecularWeight(mol):
     for atom in mol.GetAtoms():
         elem = atom.GetAtomicNum()
         mass = atom.GetIsotope()
-        if (elem != 0 and mass != 0):
-            result += oechem.OEGetIsotopicWeight(elem,mass)
+        if elem != 0 and mass != 0:
+            result += oechem.OEGetIsotopicWeight(elem, mass)
         else:
             result += oechem.OEGetAverageWeight(elem)
     return result
+
 
 def CalculateBoxSize(nmol, molwt, density):
     """
@@ -50,8 +52,9 @@ def CalculateBoxSize(nmol, molwt, density):
     # Calculate total mass of the box in kg
     mass = nmol * molwt / 1000 / 6.022e23
     volume = mass / density
-    length = volume**(1./3)/1e-9
+    length = volume ** (1.0 / 3) / 1e-9
     return length
+
 
 def GenerateBox(pdbin, pdbout, box, nmol, tries):
     """
@@ -76,55 +79,66 @@ def GenerateBox(pdbin, pdbout, box, nmol, tries):
     None
         If successful, produces "pdbout" containing solvent box.
     """
-    if which('gmx'):
-        gmxcmd='gmx insert-molecules'
-    elif which('genbox'):
-        gmxcmd='genbox'
+    if which("gmx"):
+        gmxcmd = "gmx insert-molecules"
+    elif which("genbox"):
+        gmxcmd = "genbox"
     else:
-        raise RuntimeError('gmx and/or genbox not in PATH. Please source Gromacs environment variables.')
+        raise RuntimeError(
+            "gmx and/or genbox not in PATH. Please source Gromacs environment variables."
+        )
 
-    fout=open('genbox.out', 'w')
-    ferr=open('genbox.err', 'w')
-    subprocess.Popen(f'{gmxcmd} -ci {pdbin} -o genbox.pdb -box {box:.3f} {box:.3f} {box:.3f} -nmol {nmol} -try {tries}',
-                     shell=True, stdout=fout, stderr=ferr)
+    fout = open("genbox.out", "w")
+    ferr = open("genbox.err", "w")
+    subprocess.Popen(
+        f"{gmxcmd} -ci {pdbin} -o genbox.pdb -box {box:.3f} {box:.3f} {box:.3f} -nmol {nmol} -try {tries}",
+        shell=True,
+        stdout=fout,
+        stderr=ferr,
+    )
     fout.close()
     ferr.close()
     t0 = time.time()
     print(f"Running {gmxcmd} to create a solvent box...")
     print(f"Time elapsed: {(time.time() - t0): .3f} seconds")
     nmol_out = 0
-    for line in open('genbox.err').readlines():
-        if 'Output configuration contains' in line:
+    for line in open("genbox.err").readlines():
+        if "Output configuration contains" in line:
             nmol_out = int(line.split()[-2])
     if nmol_out == 0:
-        raise RuntimeError('genbox failed to produce an output configuration')
+        raise RuntimeError("genbox failed to produce an output configuration")
     elif nmol_out != nmol:
-        raise RuntimeError(f'genbox failed to create a box with {nmol} molecules (actual {nmol_out}); '
-                           'please retry with increased box size or number of tries')
+        raise RuntimeError(
+            f"genbox failed to create a box with {nmol} molecules (actual {nmol_out}); "
+            "please retry with increased box size or number of tries"
+        )
     else:
         # genbox throws away the CONECT records in the PDB, this operation adds them back.
         M1 = Molecule(pdbin, build_topology=False)
-        M = Molecule('genbox.pdb', build_topology=False)
+        M = Molecule("genbox.pdb", build_topology=False)
         solventbox_bonds = []
         # Loop over the number of molecules in the solvent box
         for i in range(nmol):
             for j in M1.bonds:
                 # Add the bonds for molecule number "i" in the solvent box
-                solventbox_bonds.append((j[0]+i*M1.na, j[1]+i*M1.na))
+                solventbox_bonds.append((j[0] + i * M1.na, j[1] + i * M1.na))
         M.bonds = solventbox_bonds
         M.write(pdbout)
-        print(f"-=# Output #=- Created {pdbout} containing solvent box with {nmol} molecules and length {box:.3f}")
+        print(
+            f"-=# Output #=- Created {pdbout} containing solvent box with {nmol} molecules and length {box:.3f}"
+        )
+
 
 def run_create_mol2_pdb(**kwargs):
 
-    nmol = kwargs['nmol']
-    input_txt = kwargs['input']
-    resname = kwargs['resname']
-    density = kwargs['density']
-    tries = kwargs['tries']
+    nmol = kwargs["nmol"]
+    input_txt = kwargs["input"]
+    resname = kwargs["resname"]
+    density = kwargs["density"]
+    tries = kwargs["tries"]
 
     # Disable Gromacs backup file creation
-    os.environ['GMX_MAXBACKUP']="-1"
+    os.environ["GMX_MAXBACKUP"] = "-1"
 
     smiles_string = open(input_txt).readlines()[0].strip()
     print(f"The following SMILES string will be converted: {smiles_string}")
@@ -152,7 +166,7 @@ def run_create_mol2_pdb(**kwargs):
 
     # Write output files
     ofs = oechem.oemolostream()
-    output_fnms = [f"{resname}.mol2", f'{resname}.pdb']
+    output_fnms = [f"{resname}.mol2", f"{resname}.pdb"]
     for output_fnm in output_fnms:
         if not ofs.open(output_fnm):
             oechem.OEThrow.Fatal(f"Unable to create {output_fnm}")
@@ -162,7 +176,8 @@ def run_create_mol2_pdb(**kwargs):
     grams_per_mole = CalculateMolecularWeight(oemol)
 
     boxlen = CalculateBoxSize(nmol, grams_per_mole, density)
-    GenerateBox(f"{resname}.pdb", f'{resname}-box.pdb', boxlen, nmol, tries)
+    GenerateBox(f"{resname}.pdb", f"{resname}-box.pdb", boxlen, nmol, tries)
+
 
 def main():
     """
@@ -177,17 +192,36 @@ def main():
     ForceBalance 1.5.x (for putting information back that was thrown away by genbox)
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument('--density', type=int, default=600, help='Specify target density of the solvent box; should be somewhat smaller than true liquid density due to imperfect packing.')
-    parser.add_argument('--nmol', type=int, default=256, help='Specify desired number of molecules in the solvent box.')
-    parser.add_argument('--tries', type=int, default=10, help='Pass number of tries per molecule to be passed to genbox. Higher = longer runtime but may achieve higher density.')
-    parser.add_argument('input', type=str, help='Input file containing a single SMILES string')
-    parser.add_argument('resname', type=str, help='Specify a custom residue name for the molecule.')
+    parser.add_argument(
+        "--density",
+        type=int,
+        default=600,
+        help="Specify target density of the solvent box; should be somewhat smaller than true liquid density due to imperfect packing.",
+    )
+    parser.add_argument(
+        "--nmol",
+        type=int,
+        default=256,
+        help="Specify desired number of molecules in the solvent box.",
+    )
+    parser.add_argument(
+        "--tries",
+        type=int,
+        default=10,
+        help="Pass number of tries per molecule to be passed to genbox. Higher = longer runtime but may achieve higher density.",
+    )
+    parser.add_argument(
+        "input", type=str, help="Input file containing a single SMILES string"
+    )
+    parser.add_argument(
+        "resname", type=str, help="Specify a custom residue name for the molecule."
+    )
     print(f"{__file__} called with the following command line:")
-    print(' '.join(sys.argv))
+    print(" ".join(sys.argv))
     args = parser.parse_args(sys.argv[1:])
     # Create the desired files (.mol2 file containing a single conformation and .pdb file containing solvent box).
     run_create_mol2_pdb(**vars(args))
 
+
 if __name__ == "__main__":
     main()
-

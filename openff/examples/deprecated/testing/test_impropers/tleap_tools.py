@@ -2,12 +2,22 @@ import mdtraj.utils
 import os
 import shutil
 import logging
+
 logger = logging.getLogger(__name__)
 from openmoltools.utils import getoutput
 
 # Functionality below adapted from openmoltools.amber.run_tleap
 
-def run_tleap(molecule_name, mol2_filename, frcmod_filename, prmtop_filename=None, inpcrd_filename=None, log_debug_output=False, verbose = True):
+
+def run_tleap(
+    molecule_name,
+    mol2_filename,
+    frcmod_filename,
+    prmtop_filename=None,
+    inpcrd_filename=None,
+    log_debug_output=False,
+    verbose=True,
+):
     """Run AmberTools tleap to create simulation files for AMBER
     Parameters
     ----------
@@ -37,16 +47,16 @@ def run_tleap(molecule_name, mol2_filename, frcmod_filename, prmtop_filename=Non
     if inpcrd_filename is None:
         inpcrd_filename = f"{molecule_name}.inpcrd"
 
-    #Get absolute paths for input/output
-    mol2_filename = os.path.abspath( mol2_filename )
-    frcmod_filename = os.path.abspath( frcmod_filename )
-    prmtop_filename = os.path.abspath( prmtop_filename )
-    inpcrd_filename = os.path.abspath( inpcrd_filename )
+    # Get absolute paths for input/output
+    mol2_filename = os.path.abspath(mol2_filename)
+    frcmod_filename = os.path.abspath(frcmod_filename)
+    prmtop_filename = os.path.abspath(prmtop_filename)
+    inpcrd_filename = os.path.abspath(inpcrd_filename)
 
-    #Work in a temporary directory, on hard coded filenames, to avoid any issues AMBER may have with spaces and other special characters in filenames
+    # Work in a temporary directory, on hard coded filenames, to avoid any issues AMBER may have with spaces and other special characters in filenames
     with mdtraj.utils.enter_temp_directory():
-        shutil.copy( mol2_filename, 'file.mol2' )
-        shutil.copy( frcmod_filename, 'file.frcmod' )
+        shutil.copy(mol2_filename, "file.mol2")
+        shutil.copy(frcmod_filename, "file.frcmod")
 
         tleap_input = """
     source oldff/leaprc.ff99
@@ -57,28 +67,36 @@ def run_tleap(molecule_name, mol2_filename, frcmod_filename, prmtop_filename=Non
     quit
 """
 
-        file_handle = open('tleap_commands', 'w')
+        file_handle = open("tleap_commands", "w")
         file_handle.writelines(tleap_input)
         file_handle.close()
 
         cmd = f"tleap -f {file_handle.name} "
-        if log_debug_output: logger.debug(cmd)
-        if verbose: print(cmd)
+        if log_debug_output:
+            logger.debug(cmd)
+        if verbose:
+            print(cmd)
 
         output = getoutput(cmd)
-        if log_debug_output: logger.debug(output)
-        if verbose: print(output)
+        if log_debug_output:
+            logger.debug(output)
+        if verbose:
+            print(output)
 
-        check_for_errors( output, other_errors = ['Improper number of arguments'], ignore_errors=['Perhaps a format error'])
+        check_for_errors(
+            output,
+            other_errors=["Improper number of arguments"],
+            ignore_errors=["Perhaps a format error"],
+        )
 
-        #Copy back target files
-        shutil.copy( 'out.prmtop', prmtop_filename )
-        shutil.copy( 'out.inpcrd', inpcrd_filename )
+        # Copy back target files
+        shutil.copy("out.prmtop", prmtop_filename)
+        shutil.copy("out.inpcrd", inpcrd_filename)
 
     return prmtop_filename, inpcrd_filename
 
 
-def check_for_errors( outputtext, other_errors = None, ignore_errors = None ):
+def check_for_errors(outputtext, other_errors=None, ignore_errors=None):
     """Check AMBER package output for the string 'ERROR' (upper or lowercase) and (optionally) specified other strings and raise an exception if it is found (to avoid silent failures which might be noted to log but otherwise ignored).
     Parameters
     ----------
@@ -91,17 +109,17 @@ def check_for_errors( outputtext, other_errors = None, ignore_errors = None ):
     Notes
     -----
     If error(s) are found, raise a RuntimeError and attept to print the appropriate errors from the processed text."""
-    lines = outputtext.split('\n')
+    lines = outputtext.split("\n")
     error_lines = []
     for line in lines:
-        if 'ERROR' in line.upper():
-            error_lines.append( line )
+        if "ERROR" in line.upper():
+            error_lines.append(line)
         if not other_errors == None:
             for err in other_errors:
                 if err.upper() in line.upper():
-                    error_lines.append( line )
+                    error_lines.append(line)
 
-    if not ignore_errors == None and len(error_lines)>0:
+    if not ignore_errors == None and len(error_lines) > 0:
         new_error_lines = []
         for ign in ignore_errors:
             ignore = False
@@ -109,12 +127,13 @@ def check_for_errors( outputtext, other_errors = None, ignore_errors = None ):
                 if ign in err:
                     ignore = True
             if not ignore:
-                new_error_lines.append( err )
+                new_error_lines.append(err)
         error_lines = new_error_lines
 
     if len(error_lines) > 0:
         print("Unexpected errors encountered running AMBER tool. Offending output:")
-        for line in error_lines: print(line)
-        raise(RuntimeError("Error encountered running AMBER tool. Exiting."))
+        for line in error_lines:
+            print(line)
+        raise (RuntimeError("Error encountered running AMBER tool. Exiting."))
 
     return
