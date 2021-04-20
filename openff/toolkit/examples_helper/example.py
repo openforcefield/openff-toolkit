@@ -5,7 +5,6 @@ from pathlib import Path
 import click
 
 OFFTK_ROOT = (Path(__file__) / "../../../").resolve()
-OFFTK_ENV = OFFTK_ROOT / "devtools/conda-envs/rdkit.yaml"
 EXAMPLES_DIR = OFFTK_ROOT / "examples"
 EXAMPLES_ENV = EXAMPLES_DIR / "environment.yaml"
 OFFTK_ENV = EXAMPLES_DIR / "rdkit.yaml"
