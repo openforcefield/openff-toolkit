@@ -150,29 +150,6 @@ jobs:
           fi
           pytest $PYTEST_ARGS openff/toolkit/tests/
 
-      - name: Run example scripts
-        shell: bash -l {0}
-        run: |
-          if [[ "$RDKIT" == false ]]; then
-            PYTEST_ARGS+=" --ignore=examples/check_dataset_parameter_coverage"
-            PYTEST_ARGS+=" --ignore=examples/QCArchive_interface"
-          fi
-          pytest $PYTEST_ARGS openff/toolkit/tests/test_examples.py
-
-      - name: Run example notebooks
-        shell: bash -l {0}
-        run: |
-          NB_ARGS+=" --ignore=examples/using_smirnoff_in_amber_or_gromacs"
-          # XFail until a new `openmmforcefields` build is made which depends on `openff-toolkit`.
-          NB_ARGS+=" --ignore=examples/swap_amber_parameters"
-          if [[ "$RDKIT" == false ]]; then
-            NB_ARGS+=" --ignore=examples/check_dataset_parameter_coverage"
-            NB_ARGS+=" --ignore=examples/conformer_energies"
-            NB_ARGS+=" --ignore=examples/QCArchive_interface"
-            NB_ARGS+=" --ignore=examples/visualization"
-          fi
-          pytest $NB_ARGS examples/
-
       - name: Run code snippets in docs
         shell: bash -l {0}
         if: ${{ matrix.cfg.rdkit == 'TRUE' && matrix.cfg.openeye == 'TRUE' }}
