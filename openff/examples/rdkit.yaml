@@ -1,0 +1,35 @@
+name: test
+channels:
+  - conda-forge
+
+dependencies:
+    # Base depends
+  - python
+  - pip
+
+    # Testing
+  - pytest
+  - pytest-cov
+  - nbval
+  - codecov
+  - coverage
+  - click
+  - numpy
+  - networkx
+  - ambertools
+  - rdkit
+  - packaging
+    # Removed until a new release which targets openff-toolkit is made.
+#  - openmmforcefields
+  - openmm
+  - openff-forcefields
+  - smirnoff99Frosst
+  - pyyaml
+  - toml
+  - bson
+  - msgpack-python
+  - xmltodict
+  - qcelemental
+  - qcportal
+  - qcengine
+  - mdtraj

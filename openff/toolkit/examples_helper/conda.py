@@ -9,7 +9,9 @@ from openff.toolkit.examples_helper.utils import echo
 
 def cmd(*args, text=True, check=True, **kwargs):
     """Run conda or mamba with the given commands and arguments"""
-    return sp.run(["conda", *args], text=text, check=check, **kwargs)
+    args = ["conda", *map(str, args)]
+    print(" ".join(args))
+    return sp.run(args, text=text, check=check, **kwargs)
 
 
 def create_environment(prefix=None, name=None, dry_run=False, quiet=False):
