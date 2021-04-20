@@ -106,7 +106,7 @@ jobs:
         shell: bash -l {0}
         run: |
           # LS="$(/bin/ls examples --ignore='deprecated' --ignore='*.*' -1 | sort)"
-          FIND="$(find openff/examples -mindepth 1 -maxdepth 1 -type d ! -name deprecated -printf '%f\n' | sort)"
+          FIND="$(find openff/examples -mindepth 1 -maxdepth 1 -type d ! -name deprecated | sed -e 's/^openff\/examples\///' | sort)"
           EXAMPLES="$(openff-examples list | sort)"
 
           if [ "$FIND" == "$EXAMPLES" ]; then
