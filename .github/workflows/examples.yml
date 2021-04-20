@@ -105,7 +105,7 @@ jobs:
       - name: Check openff-examples list is complete and correct
         shell: bash -l {0}
         run: |
-          LS="$(/bin/ls openff/examples --ignore='deprecated' --ignore='*.*' -1 | sort)"
+          FIND="$(find openff/examples -mindepth 1 -maxdepth 1 -type d ! -name deprecated -printf '%f\n' | sort)"
           EXAMPLES="$(openff-examples list | sort)"
 
           if [ "$LS" == "$EXAMPLES" ]; then
