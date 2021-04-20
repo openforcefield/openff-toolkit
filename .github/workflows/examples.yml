@@ -105,17 +105,18 @@ jobs:
       - name: Check openff-examples list is complete and correct
         shell: bash -l {0}
         run: |
+          # LS="$(/bin/ls examples --ignore='deprecated' --ignore='*.*' -1 | sort)"
           FIND="$(find openff/examples -mindepth 1 -maxdepth 1 -type d ! -name deprecated -printf '%f\n' | sort)"
           EXAMPLES="$(openff-examples list | sort)"
 
-          if [ "$LS" == "$EXAMPLES" ]; then
+          if [ "$FIND" == "$EXAMPLES" ]; then
             echo 'openff-examples list works!'
           else
             echo 'openff-examples list does not match ls examples.'
             echo 'Output of `openff-examples list | sort`:'
             echo "$EXAMPLES"
-            echo 'Output of `/bin/ls examples --ignore='deprecated' --ignore='*.*' -1 | sort`:'
-            echo "$LS"
+            echo 'Output of `find openff/examples -mindepth 1 -maxdepth 1 -type d ! -name deprecated -printf '%f\n' | sort`:'
+            echo "$FIND"
             false
           fi
 
