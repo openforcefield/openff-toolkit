@@ -112,7 +112,7 @@ jobs:
         run: |
           EXAMPLES="$(find examples -mindepth 1 -maxdepth 1 -type d ! -name deprecated)"
           for example in $EXAMPLES; do
-            pytest $NB_ARGS $examples
+            pytest $NB_ARGS $example
           done
 
 
