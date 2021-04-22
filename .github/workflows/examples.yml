@@ -110,7 +110,10 @@ jobs:
       - name: Run example notebooks
         shell: bash -l {0}
         run: |
-          pytest $NB_ARGS examples/
+          EXAMPLES="$(find examples -mindepth 1 -maxdepth 1 -type d ! -name deprecated)"
+          for example in $EXAMPLES; do
+            pytest $NB_ARGS $examples
+          done
 
 
       # - name: Check openff-examples list is complete and correct
