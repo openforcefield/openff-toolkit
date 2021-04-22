@@ -87,16 +87,16 @@ jobs:
         run: |
           echo "${OE_LICENSE_TEXT}" > ${OE_LICENSE}
 
+      - name: Install package
+        shell: bash -l {0}
+        run: |
+          python setup.py develop --no-deps
+
       - name: Environment Information
         shell: bash -l {0}
         run: |
           conda info
           conda list
-
-      - name: Install package
-        shell: bash -l {0}
-        run: |
-          python setup.py develop --no-deps
 
       - name: Run example scripts without OE
         shell: bash -l {0}
@@ -111,6 +111,14 @@ jobs:
         shell: bash -l {0}
         run: |
           pytest $NB_ARGS examples
+
+      - name: Conda tree information
+        shell: bash -l {0}
+        run: |
+          conda install -c conda-forge conda-tree
+          conda tree deptree
+          conda tree leaves
+          conda tree whoneeds rdkit
 
       - name: Codecov
         uses: codecov/codecov-action@v1
