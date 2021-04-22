@@ -16,4 +16,3 @@ dependencies:
   - mdtraj
   - numpy
   - openmm
-  - rdkit

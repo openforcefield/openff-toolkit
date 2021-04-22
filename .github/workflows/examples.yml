@@ -71,7 +71,7 @@ jobs:
       - name: Install additional example dependencies
         shell: bash -l {0}
         run: |
-          conda env update --file examples/environment.yaml
+          conda env update --file examples/environment.yaml --name test
 
       - name: Additional info about the build
         shell: bash -l {0}
@@ -110,44 +110,7 @@ jobs:
       - name: Run example notebooks
         shell: bash -l {0}
         run: |
-          EXAMPLES="$(find examples -mindepth 1 -maxdepth 1 -type d ! -name deprecated)"
-          for example in $EXAMPLES; do
-            pytest $NB_ARGS $example
-          done
-
-
-      # - name: Check openff-examples list is complete and correct
-      #   shell: bash -l {0}
-      #   run: |
-      #     # LS="$(/bin/ls examples --ignore='deprecated' --ignore='*.*' -1 | sort)"
-      #     FIND="$(find openff/examples -mindepth 1 -maxdepth 1 -type d ! -name deprecated | sed -e 's/^openff\/examples\///' | sort)"
-      #     EXAMPLES="$(openff-examples list | sort)"
-
-      #     if [ "$FIND" == "$EXAMPLES" ]; then
-      #       echo 'openff-examples list works!'
-      #     else
-      #       echo 'openff-examples list does not match ls examples.'
-      #       echo 'Output of `openff-examples list | sort`:'
-      #       echo "$EXAMPLES"
-      #       echo 'Output of `find openff/examples -mindepth 1 -maxdepth 1 -type d ! -name deprecated -printf '%f\n' | sort`:'
-      #       echo "$FIND"
-      #       false
-      #     fi
-
-      # - name: Run example notebooks
-      #   shell: bash -l {0}
-      #   run: |
-      #     NOTEBOOKS=( $(openff-examples list) )
-
-      #     openff-examples install --update-environment ${NOTEBOOKS[0]}
-      #     pytest $NB_ARGS ${NOTEBOOKS[0]}/
-
-      #     conda list
-
-      #     for notebook in ${NOTEBOOKS[@]:1}; do
-      #       openff-examples install $notebook
-      #       pytest $NB_ARGS $notebook/
-      #     done
+          pytest $NB_ARGS examples
 
       - name: Codecov
         uses: codecov/codecov-action@v1
