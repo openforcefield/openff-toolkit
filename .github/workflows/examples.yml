@@ -117,6 +117,11 @@ jobs:
       - name: Run example notebooks
         shell: bash -l {0}
         run: |
+          if [[ "$RDKIT" == false ]]; then
+            NB_ARGS+=" --ignore=examples/QCArchive_interface"
+            NB_ARGS+=" --ignore=examples/check_dataset_parameter_coverage"
+            NB_ARGS+=" --ignore=examples/conformer_energies"
+          fi
           pytest $NB_ARGS examples
 
       - name: Codecov
