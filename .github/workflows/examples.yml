@@ -52,7 +52,7 @@ jobs:
           fetch-depth: 2
 
       - uses: conda-incubator/setup-miniconda@v2
-        name: Install only RDKit
+        name: Install with only RDKit
         if: ${{ matrix.cfg.rdkit == 'TRUE' && matrix.cfg.openeye == 'FALSE' }}
         with:
           python-version: ${{ matrix.cfg.python-version }}
@@ -98,7 +98,7 @@ jobs:
           conda info
           conda list
 
-      - name: Run example scripts without OE
+      - name: Run example scripts
         shell: bash -l {0}
         run: |
           if [[ "$RDKIT" == false ]]; then
@@ -125,4 +125,3 @@ jobs:
         with:
           file: ./coverage.xml
           fail_ci_if_error: true
-
