@@ -73,6 +73,11 @@ jobs:
         run: |
           conda env update --file examples/environment.yaml --name test
 
+          # Remove rdkit if it is not being tested, as it is a dependency of openmmforcefields
+          if [[ "$RDKIT" == false ]]; then
+            conda remove --force rdkit
+          fi
+
       - name: Additional info about the build
         shell: bash -l {0}
         run: |
@@ -90,6 +95,8 @@ jobs:
       - name: Install package
         shell: bash -l {0}
         run: |
+          # Remove the packaged openff-toolkit, installed as a dependency of openmmforcefields
+          conda remove --force openff-toolkit
           python setup.py develop --no-deps
 
       - name: Environment Information
@@ -111,14 +118,6 @@ jobs:
         shell: bash -l {0}
         run: |
           pytest $NB_ARGS examples
-
-      - name: Conda tree information
-        shell: bash -l {0}
-        run: |
-          conda install -c conda-forge conda-tree
-          conda tree deptree
-          conda tree leaves
-          conda tree whoneeds rdkit
 
       - name: Codecov
         uses: codecov/codecov-action@v1
