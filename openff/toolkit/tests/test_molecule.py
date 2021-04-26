@@ -2873,15 +2873,23 @@ class TestMolecule:
     def test_bond_charge_virtual_site_position(self):
         # from openff.toolkit.tests.test_forcefields import create_water
         import openff.toolkit.tests.test_forcefield
+
         molecule = openff.toolkit.tests.test_forcefield.create_water()
         # molecule = create_water()
 
         # a 90 degree water molecule on the xy plane
-        molecule.add_conformer(unit.Quantity(np.array([
-            [ 1.0, 0.0, 0.0 ],
-            [ 0.0, 0.0, 0.0 ],
-            [ 0.0, 1.0, 0.0 ],
-            ]), unit.angstrom))
+        molecule.add_conformer(
+            unit.Quantity(
+                np.array(
+                    [
+                        [1.0, 0.0, 0.0],
+                        [0.0, 0.0, 0.0],
+                        [0.0, 1.0, 0.0],
+                    ]
+                ),
+                unit.angstrom,
+            )
+        )
 
         atom1 = molecule.atoms[0]
         atom2 = molecule.atoms[1]
@@ -2897,28 +2905,37 @@ class TestMolecule:
         vsite_pos = molecule.compute_virtual_site_positions_from_conformer(0)
         vsite_pos = vsite_pos / vsite_pos.unit
 
-        assert vsite_pos.shape == (1,3)
+        assert vsite_pos.shape == (1, 3)
         assert np.allclose(vsite_pos, expected)
 
         conformer = molecule.conformers[0]
-        vsite_pos = molecule.compute_virtual_site_positions_from_atom_positions(conformer)
+        vsite_pos = molecule.compute_virtual_site_positions_from_atom_positions(
+            conformer
+        )
         vsite_pos = vsite_pos / vsite_pos.unit
 
-        assert vsite_pos.shape == (1,3)
+        assert vsite_pos.shape == (1, 3)
         assert np.allclose(vsite_pos, expected)
-
 
     def test_monovalent_lone_pair_virtual_site_position(self):
 
         import openff.toolkit.tests.test_forcefield
+
         molecule = openff.toolkit.tests.test_forcefield.create_water()
 
         # a 90 degree water molecule on the xy plane
-        molecule.add_conformer(unit.Quantity(np.array([
-            [ 1.0, 0.0, 0.0 ],
-            [ 0.0, 0.0, 0.0 ],
-            [ 0.0, 1.0, 0.0 ],
-            ]), unit.angstrom))
+        molecule.add_conformer(
+            unit.Quantity(
+                np.array(
+                    [
+                        [1.0, 0.0, 0.0],
+                        [0.0, 0.0, 0.0],
+                        [0.0, 1.0, 0.0],
+                    ]
+                ),
+                unit.angstrom,
+            )
+        )
 
         atom1 = molecule.atoms[0]
         atom2 = molecule.atoms[1]
@@ -2937,27 +2954,36 @@ class TestMolecule:
 
         vsite_pos = molecule.compute_virtual_site_positions_from_conformer(0)
         vsite_pos = vsite_pos / vsite_pos.unit
-        assert vsite_pos.shape == (1,3)
+        assert vsite_pos.shape == (1, 3)
         assert np.allclose(vsite_pos, expected)
 
-
         conformer = molecule.conformers[0]
-        vsite_pos = molecule.compute_virtual_site_positions_from_atom_positions(conformer)
+        vsite_pos = molecule.compute_virtual_site_positions_from_atom_positions(
+            conformer
+        )
         vsite_pos = vsite_pos / vsite_pos.unit
-        assert vsite_pos.shape == (1,3)
+        assert vsite_pos.shape == (1, 3)
         assert np.allclose(vsite_pos, expected)
 
     def test_divalent_lone_pair_virtual_site_position(self):
 
         import openff.toolkit.tests.test_forcefield
+
         molecule = openff.toolkit.tests.test_forcefield.create_water()
 
         # a 90 degree water molecule on the xy plane
-        molecule.add_conformer(unit.Quantity(np.array([
-            [ 1.0, 0.0, 0.0 ],
-            [ 0.0, 0.0, 0.0 ],
-            [ 0.0, 1.0, 0.0 ],
-            ]), unit.angstrom))
+        molecule.add_conformer(
+            unit.Quantity(
+                np.array(
+                    [
+                        [1.0, 0.0, 0.0],
+                        [0.0, 0.0, 0.0],
+                        [0.0, 1.0, 0.0],
+                    ]
+                ),
+                unit.angstrom,
+            )
+        )
 
         atom1 = molecule.atoms[0]
         atom2 = molecule.atoms[1]
@@ -2968,35 +2994,44 @@ class TestMolecule:
             [atom1, atom2, atom3],
             distance,
             out_of_plane_angle=out_of_plane_angle,
-            symmetric=False
+            symmetric=False,
         )
         expected = np.array([[0.0, 0.0, -0.2]])
 
         vsite_pos = molecule.compute_virtual_site_positions_from_conformer(0)
         vsite_pos = vsite_pos / vsite_pos.unit
-        assert vsite_pos.shape == (1,3)
+        assert vsite_pos.shape == (1, 3)
         assert np.allclose(vsite_pos, expected)
 
-
         conformer = molecule.conformers[0]
-        vsite_pos = molecule.compute_virtual_site_positions_from_atom_positions(conformer)
+        vsite_pos = molecule.compute_virtual_site_positions_from_atom_positions(
+            conformer
+        )
         vsite_pos = vsite_pos / vsite_pos.unit
-        assert vsite_pos.shape == (1,3)
+        assert vsite_pos.shape == (1, 3)
         assert np.allclose(vsite_pos, expected)
 
     def test_trivalent_lone_pair_virtual_site_position(self):
 
         import openff.toolkit.tests.test_forcefield
+
         molecule = openff.toolkit.tests.test_forcefield.create_ammonia()
 
         # an ammonia; the central nitrogen .5 above the hydrogen, which all lie one
         # an xy plane
-        molecule.add_conformer(unit.Quantity(np.array([
-            [ 1.0, 0.0, 0.0 ],
-            [ 0.0, 0.0, 0.5 ],
-            [ -0.5, 0.5, 0.0 ],
-            [ -0.5, -0.5, 0.0 ],
-            ]), unit.angstrom))
+        molecule.add_conformer(
+            unit.Quantity(
+                np.array(
+                    [
+                        [1.0, 0.0, 0.0],
+                        [0.0, 0.0, 0.5],
+                        [-0.5, 0.5, 0.0],
+                        [-0.5, -0.5, 0.0],
+                    ]
+                ),
+                unit.angstrom,
+            )
+        )
 
         atom1 = molecule.atoms[0]
         atom2 = molecule.atoms[1]
@@ -3004,22 +3039,21 @@ class TestMolecule:
         atom4 = molecule.atoms[3]
         distance = 1.0 * unit.angstrom
         vsite1_index = molecule.add_trivalent_lone_pair_virtual_site(
-            [atom1, atom2, atom3, atom4],
-            distance,
-            symmetric=False
+            [atom1, atom2, atom3, atom4], distance, symmetric=False
         )
         expected = np.array([[0.0, 0.0, 1.5]])
 
         vsite_pos = molecule.compute_virtual_site_positions_from_conformer(0)
         vsite_pos = vsite_pos / vsite_pos.unit
-        assert vsite_pos.shape == (1,3)
+        assert vsite_pos.shape == (1, 3)
         assert np.allclose(vsite_pos, expected)
 
-
         conformer = molecule.conformers[0]
-        vsite_pos = molecule.compute_virtual_site_positions_from_atom_positions(conformer)
+        vsite_pos = molecule.compute_virtual_site_positions_from_atom_positions(
+            conformer
+        )
         vsite_pos = vsite_pos / vsite_pos.unit
-        assert vsite_pos.shape == (1,3)
+        assert vsite_pos.shape == (1, 3)
         assert np.allclose(vsite_pos, expected)
 
     @requires_openeye
