@@ -1083,7 +1083,7 @@ class VirtualSite(Particle):
           atom 2. The calculation is 0.5 * atom1.xyz + 0.5 * atom2.xyz
         - X-Axis: [-1, 1] The x-axis points from atom 1 to atom 2. Positive
           displacements of this axis are closer to atom 2.
-        - Y-Axis: [0, 0] This axes must be defined, so here we set it to the null
+        - Y-Axis: [0, 0] This axis must be defined, so here we set it to the null
           space. Any displacements along y are sent to 0. Because of this, the z-axis
           will also be 0.
 
@@ -1170,7 +1170,7 @@ class VirtualSite(Particle):
             vp_pos = vp.compute_position_from_conformer(conformer_idx)
             positions.append(vp_pos.value_in_unit(unit.angstrom))
 
-        return unit.Quantity(np.array(positions), unit=unit.angstrom)
+        return unit.Quantity(np.array(positions).reshape(-1, 3), unit=unit.angstrom)
 
     def compute_positions_from_atom_positions(self, atom_positions):
         """
@@ -1197,7 +1197,7 @@ class VirtualSite(Particle):
             vp_pos = vp.compute_position_from_atom_positions(atom_positions)
             positions.extend(vp_pos.value_in_unit(unit.angstrom))
 
-        return unit.Quantity(np.array(positions), unit=unit.angstrom)
+        return unit.Quantity(np.array(positions).reshape(-1, 3), unit=unit.angstrom)
 
 
 class BondChargeVirtualSite(VirtualSite):
@@ -3304,7 +3304,7 @@ class FrozenMolecule(Serializable):
             vsite_pos = vsite.compute_positions_from_atom_positions(atom_positions)
             positions.append(vsite_pos.value_in_unit(unit.angstrom))
 
-        return unit.Quantity(np.array(positions), unit=unit.angstrom)
+        return unit.Quantity(np.array(positions).reshape(-1,3), unit=unit.angstrom)
 
     def apply_elf_conformer_selection(
         self,
