@@ -3304,7 +3304,7 @@ class FrozenMolecule(Serializable):
             vsite_pos = vsite.compute_positions_from_atom_positions(atom_positions)
             positions.append(vsite_pos.value_in_unit(unit.angstrom))
 
-        return unit.Quantity(np.array(positions).reshape(-1,3), unit=unit.angstrom)
+        return unit.Quantity(np.array(positions).reshape(-1, 3), unit=unit.angstrom)
 
     def apply_elf_conformer_selection(
         self,
