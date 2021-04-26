@@ -18,6 +18,7 @@ from unittest import TestCase
 import numpy as np
 import pytest
 from simtk import unit
+from simtk.openmm.app import element
 
 from openff.toolkit.tests.test_forcefield import (
     create_cyclohexane,
@@ -192,6 +193,7 @@ class TestTopology(TestCase):
         topology = Topology()
         good_box_vectors = unit.Quantity(np.eye(3) * 20 * unit.angstrom)
         one_dim_vectors = unit.Quantity(np.ones(3) * 20 * unit.angstrom)
+        list_vectors = [20, 20, 20] * unit.angstrom
         bad_shape_vectors = unit.Quantity(np.ones(2) * 20 * unit.angstrom)
         bad_units_vectors = unit.Quantity(np.ones(3) * 20 * unit.year)
         unitless_vectors = np.array([10, 20, 30])
@@ -206,7 +208,7 @@ class TestTopology(TestCase):
                 topology.box_vectors = bad_vectors
             assert topology.box_vectors is None
 
-        for good_vectors in [good_box_vectors, one_dim_vectors]:
+        for good_vectors in [good_box_vectors, one_dim_vectors, list_vectors]:
             topology.box_vectors = good_vectors
             assert (topology.box_vectors == good_vectors * np.eye(3)).all()
 
@@ -317,6 +319,22 @@ class TestTopology(TestCase):
 
         with self.assertRaises(Exception) as context:
             topology_atom = topology.atom(8)
+
+    def test_topology_atom_element(self):
+        """Test getters of TopologyAtom element and atomic number"""
+        topology = Topology()
+        topology.add_molecule(self.toluene_from_sdf)
+
+        first_element = topology.atom(0).element
+        eighth_element = topology.atom(7).element
+
+        # Check if types/instances are correct
+        assert isinstance(first_element, element.Element)
+        assert isinstance(eighth_element, element.Element)
+
+        # Make sure first is a carbon element and eighth is a hydrogen element
+        assert first_element == element.carbon
+        assert eighth_element == element.hydrogen
 
     def test_get_bond(self):
         """Test Topology.bond function (bond lookup from index)"""
@@ -586,6 +604,26 @@ class TestTopology(TestCase):
         assert_tuple_of_atoms_equal(
             top_improper_atoms3, mol_improper_atoms2, transformed_dict_cls=ImproperDict
         )
+
+    def test_pruned_impropers(self):
+        """Test {smirnoff|amber}_impropers from the Topology API"""
+        top = Topology.from_molecules(
+            [Molecule.from_smiles(smi) for smi in ["N", "C=C"]]
+        )
+
+        assert len([*top.smirnoff_impropers]) == 18
+        assert len([*top.amber_impropers]) == 18
+
+        # Order not guaranteed, so cannot zip and compare directly
+        for smirnoff_imp in top.smirnoff_impropers:
+            # Convert SMIRNOFF-style improper into AMBER-style
+            mod_imp = (
+                smirnoff_imp[1],
+                smirnoff_imp[0],
+                smirnoff_imp[2],
+                smirnoff_imp[3],
+            )
+            assert mod_imp in top.amber_impropers
 
     # test_get_fractional_bond_order
     # test_two_of_same_molecule

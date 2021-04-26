@@ -1,1 +1,1 @@
-# Typing tools for forcefields
+# Typing tools for force fields

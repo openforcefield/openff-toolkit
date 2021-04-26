@@ -31,7 +31,7 @@ if not os.path.isdir(datapath):
 from openff.toolkit.topology import Molecule
 molecule = Molecule.from_file(mol_filepath)
 
-# Load forcefield
+# Load force field
 from openff.toolkit.typing.engines.smirnoff import ForceField
 forcefield = ForceField('test_forcefields/Frosst_AlkEthOH_parmAtFrosst.offxml')
 

@@ -1,47 +1,84 @@
-name: Run example notebooks
+
+name: Examples
 
 on:
   push:
     branches:
       - "master"
+      - "maintenance/.+"
   pull_request:
     branches:
       - "master"
+      - "maintenance/.+"
   schedule:
+    # Nightly tests run on master by default:
+    #   Scheduled workflows run on the latest commit on the default or base branch.
+    #   (from https://help.github.com/en/actions/reference/events-that-trigger-workflows#scheduled-events-schedule)
     - cron: "0 0 * * *"
 
 jobs:
   test:
-    # TODO: Find a way to run on all PRs before merge, but not blindly on all commits 
-    name: Run example notebooks on Test on ${{ matrix.cfg.os }}, Python ${{ matrix.python-version }}
-    runs-on: ${{ matrix.cfg.os }}
+    if: (github.event_name == 'schedule' && github.repository == 'openforcefield/openff-toolkit') || (github.event_name != 'schedule')
+    name: ${{ matrix.os }}, Python ${{ matrix.cfg.python-version }}, RDKit=${{ matrix.cfg.rdkit }}, OpenEye=${{ matrix.cfg.openeye }}
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        python-version:
-          - 3.6
-          - 3.7
+        os:
+          - ubuntu-latest
+          - macos-latest
         cfg:
-          - os: ubuntu-latest
-          - os: macOS-latest
+          - python-version: 3.7
+            rdkit: "true"
+            openeye: "false"
+
+          - python-version: 3.7
+            rdkit: "false"
+            openeye: "true"
+
 
     env:
-      CI_OS: ${{ matrix.cfg.os }}
-      PYVER: ${{ matrix.python-version }}
+      CI_OS: ${{ matrix.os }}
+      RDKIT: ${{ matrix.cfg.rdkit }}
+      OPENEYE: ${{ matrix.cfg.openeye }}
+      PYVER: ${{ matrix.cfg.python-version }}
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
-      PACKAGE: openforcefield
+      PACKAGE: openff
+      PYTEST_ARGS: -r fE --tb=short --cov=openff --cov-config=setup.cfg --cov-append --cov-report=xml
+      NB_ARGS: -v --nbval-lax --ignore=examples/deprecated
 
     steps:
       - uses: actions/checkout@v2
+        with:
+          fetch-depth: 2
 
       - uses: conda-incubator/setup-miniconda@v2
-        name: Install toolkit and example dependencies
+        name: Install with only RDKit
+        if: ${{ matrix.cfg.rdkit == 'TRUE' && matrix.cfg.openeye == 'FALSE' }}
         with:
-          python-version: ${{ matrix.python-version }}
-          activate-environment: openff-examples
-          environment-file: devtools/conda-envs/examples.yaml
+          python-version: ${{ matrix.cfg.python-version }}
+          activate-environment: test
+          environment-file: devtools/conda-envs/rdkit.yaml
+          auto-activate-base: false
+      - uses: conda-incubator/setup-miniconda@v2
+        name: Install with OpenEye toolkits
+        if: ${{ matrix.cfg.rdkit == 'FALSE' && matrix.cfg.openeye == 'TRUE' }}
+        with:
+          python-version: ${{ matrix.cfg.python-version }}
+          activate-environment: test
+          environment-file: devtools/conda-envs/openeye.yaml
           auto-activate-base: false
 
+      - name: Install additional example dependencies
+        shell: bash -l {0}
+        run: |
+          conda env update --file examples/environment.yaml --name test
+
+          # Remove rdkit if it is not being tested, as it is a dependency of openmmforcefields
+          if [[ "$RDKIT" == false ]]; then
+            conda remove --force rdkit
+          fi
+          
       - name: Additional info about the build
         shell: bash -l {0}
         run: |
@@ -56,20 +93,40 @@ jobs:
         run: |
           echo "${OE_LICENSE_TEXT}" > ${OE_LICENSE}
 
+      - name: Install package
+        shell: bash -l {0}
+        run: |
+          # Remove the packaged openff-toolkit, installed as a dependency of openmmforcefields
+          conda remove --force openff-toolkit
+          python setup.py develop --no-deps
+
       - name: Environment Information
         shell: bash -l {0}
         run: |
           conda info
           conda list
 
-      - name: Install package
+      - name: Run example scripts
         shell: bash -l {0}
         run: |
-          python -m pip install --no-deps -v .
+          if [[ "$RDKIT" == false ]]; then
+            PYTEST_ARGS+=" --ignore=examples/check_dataset_parameter_coverage"
+            PYTEST_ARGS+=" --ignore=examples/QCArchive_interface"
+          fi
+          pytest $PYTEST_ARGS openff/toolkit/tests/test_examples.py
 
       - name: Run example notebooks
         shell: bash -l {0}
-        continue-on-error: true
         run: |
-          PYTEST_ARGS="pytest -v --nbval-lax --ignore=examples/deprecated"
-          pytest $PYTEST_ARGS examples/
+          if [[ "$RDKIT" == false ]]; then
+            NB_ARGS+=" --ignore=examples/QCArchive_interface"
+            NB_ARGS+=" --ignore=examples/check_dataset_parameter_coverage"
+            NB_ARGS+=" --ignore=examples/conformer_energies"
+          fi
+          pytest $NB_ARGS examples
+
+      - name: Codecov
+        uses: codecov/codecov-action@v1
+        with:
+          file: ./coverage.xml
+          fail_ci_if_error: true

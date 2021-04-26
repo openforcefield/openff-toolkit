@@ -96,18 +96,18 @@ def _get_installed_offxml_dir_paths():
 
 def get_available_force_fields(full_paths=False):
     """
-     Get the filenames of all available .offxml force field files.
+    Get the filenames of all available .offxml force field files.
 
-     Availability is determined by what is discovered through the
-    `openforcefield.smirnoff_forcefield_directory` entry point. If the
-    `openforcefields` package is installed, this should include several
-    .offxml files such as `openff-1.0.0.offxml`.
+    Availability is determined by what is discovered through the
+    ``openforcefield.smirnoff_forcefield_directory`` entry point. If the
+    ``openff-forcefields`` package is installed, this should include several
+    .offxml files such as ``openff-1.0.0.offxml``\ .
 
      Parameters
      ----------
      full_paths : bool, default=False
-         If False, return the name of each available *.offxml file.
-         If True, return the full path to each available .offxml file.
+         If False, return the name of each available \*.offxml file.
+         If True, return the full path to each available \*.offxml file.
 
      Returns
      -------
@@ -128,7 +128,7 @@ def get_available_force_fields(full_paths=False):
 
 # TODO: Instead of having a global version number, alow each Force to have a separate version number
 MAX_SUPPORTED_VERSION = (
-    "1.0"  # maximum version of the SMIRNOFF spec supported by this SMIRNOFF forcefield
+    "1.0"  # maximum version of the SMIRNOFF spec supported by this SMIRNOFF force field
 )
 
 
@@ -201,7 +201,7 @@ class ForceField:
         This is the primary means of retrieving and modifying parameters, such as
         ``parameters['vdW'][0].sigma *= 1.1``
     parameter_object_handlers : dict of str : ParameterHandler class
-        Registered list of :class:`ParameterHandler` classes that will handle different forcefield tags to create the parameter object model.
+        Registered list of :class:`ParameterHandler` classes that will handle different force field tags to create the parameter object model.
         ``parameter_object_handlers[tagname]`` is the :class:`ParameterHandler` that will be instantiated to process the force field definition section ``tagname``.
         :class:`ParameterHandler` classes are registered when the ForceField object is created, but can be manipulated afterwards.
     parameter_io_handlers : dict of str : ParameterIOHandler class
@@ -282,7 +282,7 @@ class ForceField:
             A list of files defining the SMIRNOFF force field to be loaded.
             Currently, only `the SMIRNOFF XML format <https://github.com/openforcefield/openff-toolkit/blob/master/The-SMIRNOFF-force-field-format.md>`_ is supported.
             Each entry may be an absolute file path, a path relative to the current working directory, a path relative to this module's data subdirectory
-            (for built in force fields), or an open file-like object with a ``read()`` method from which the forcefield XML data can be loaded.
+            (for built in force fields), or an open file-like object with a ``read()`` method from which the force field XML data can be loaded.
             If multiple files are specified, any top-level tags that are repeated will be merged if they are compatible,
             with files appearing later in the sequence resulting in parameters that have higher precedence.
             Support for multiple files is primarily intended to allow solvent parameters to be specified by listing them last in the sequence.
@@ -295,8 +295,8 @@ class ForceField:
             If not None, the specified set of ParameterIOHandler classes will be used to parse/generate serialized parameter sets.
             By default, all imported subclasses of ParameterIOHandler are automatically registered.
         disable_version_check : bool, optional, default=False
-            If True, will disable checks against the current highest supported forcefield version.
-            This option is primarily intended for forcefield development.
+            If True, will disable checks against the current highest supported force field version.
+            This option is primarily intended for force field development.
         allow_cosmetic_attributes : bool, optional. Default = False
             Whether to retain non-spec kwargs from data sources.
         load_plugins: bool, optional. Default = False
@@ -431,7 +431,7 @@ class ForceField:
     @aromaticity_model.setter
     def aromaticity_model(self, aromaticity_model):
         """
-        Register that this forcefield is using an aromaticity model. Will check for
+        Register that this force field is using an aromaticity model. Will check for
         compatibility with other aromaticity model(s) already in use.
 
         Parameters
@@ -458,7 +458,7 @@ class ForceField:
 
     def _add_author(self, author):
         """
-        Add an author to this forcefield. If this functional is called multiple times, all provided authors
+        Add an author to this force field. If this functional is called multiple times, all provided authors
         will be concatenated with the string " AND ". No redundancy checking is performed by this function.
 
         Parameters
@@ -473,7 +473,7 @@ class ForceField:
 
     def _add_date(self, date):
         """
-        Add an date to this forcefield. If this functional is called multiple times, all provided dates
+        Add an date to this force field. If this functional is called multiple times, all provided dates
         will be concatenated with the string " AND ". No redundancy checking is performed by this function.
 
         Parameters
@@ -493,7 +493,7 @@ class ForceField:
         Returns
         -------
         author : str
-            The author data for this forcefield.
+            The author data for this force field.
         """
         return self._author
 
@@ -504,7 +504,7 @@ class ForceField:
         Parameters
         ----------
         author : str
-            The author data to set for this forcefield.
+            The author data to set for this force field.
         """
         self._author = author
 
@@ -515,7 +515,7 @@ class ForceField:
         Returns
         -------
         date : str
-            The date data for this forcefield.
+            The date data for this force field.
         """
         return self._date
 
@@ -526,7 +526,7 @@ class ForceField:
         Parameters
         ----------
         date : str
-            The date data to set for this forcefield.
+            The date data to set for this force field.
         """
         self._date = date
 
@@ -792,7 +792,7 @@ class ForceField:
                 old_handler.check_handler_compatibility(new_handler)
             return_handler = old_handler
         elif tagname in self._parameter_handler_classes:
-            # Otherwise, register this handler in the forcefield
+            # Otherwise, register this handler in the force field
             # Initialize a new instance of this parameter handler class with the given kwargs
             new_handler = ph_class(
                 **handler_kwargs,
@@ -876,7 +876,7 @@ class ForceField:
             A list of files defining the SMIRNOFF force field to be loaded.
             Currently, only `the SMIRNOFF XML format <https://github.com/openforcefield/openff-toolkit/blob/master/The-SMIRNOFF-force-field-format.md>`_ is supported.
             Each entry may be an absolute file path, a path relative to the current working directory, a path relative to this module's data subdirectory
-            (for built in force fields), or an open file-like object with a ``read()`` method from which the forcefield XML data can be loaded.
+            (for built in force fields), or an open file-like object with a ``read()`` method from which the force field XML data can be loaded.
             If multiple files are specified, any top-level tags that are repeated will be merged if they are compatible,
             with files appearing later in the sequence resulting in parameters that have higher precedence.
             Support for multiple files is primarily intended to allow solvent parameters to be specified by listing them last in the sequence.
@@ -896,7 +896,7 @@ class ForceField:
             # Make iterable object
             sources = [sources]
 
-        # TODO: If a non-first source fails here, the forcefield might be partially modified
+        # TODO: If a non-first source fails here, the force field might be partially modified
         for source in sources:
             smirnoff_data = self.parse_smirnoff_from_source(source)
             self._load_smirnoff_data(
@@ -1071,7 +1071,7 @@ class ForceField:
             A list of files defining the SMIRNOFF force field to be loaded
             Currently, only `the SMIRNOFF XML format <https://github.com/openforcefield/openff-toolkit/blob/master/The-SMIRNOFF-force-field-format.md>`_ is supported.
             Each entry may be an absolute file path, a path relative to the current working directory, a path relative to this module's data subdirectory
-            (for built in force fields), or an open file-like object with a ``read()`` method from which the forcefield XML data can be loaded.
+            (for built in force fields), or an open file-like object with a ``read()`` method from which the force field XML data can be loaded.
 
         Returns
         -------
@@ -1094,21 +1094,23 @@ class ForceField:
 
             # Determine the actual path of the file.
             # TODO: What is desired toolkit behavior if two files with the desired name are available?
-            for dir_path in searched_dirs_paths:
-                file_path = os.path.join(dir_path, source)
-                if os.path.isfile(file_path):
-                    source = file_path
-                    break
+            dir_paths = [pathlib.Path(path) for path in searched_dirs_paths]
+            for dir_path in dir_paths:
+                for file_path in dir_path.glob("**/*.offxml"):
+                    # Cannot compare filenames alone, source can be test_forcefield/...
+                    if str(file_path).lower().endswith(source.lower()):
+                        source = str(file_path.absolute())
+                        break
 
         # Process all SMIRNOFF definition files or objects
-        # QUESTION: Allow users to specify forcefield URLs so they can pull forcefield definitions from the web too?
+        # QUESTION: Allow users to specify force field URLs so they can pull force field definitions from the web too?
         io_formats_to_try = self._parameter_io_handler_classes.keys()
 
         # Parse content depending on type
         for parameter_io_format in io_formats_to_try:
             parameter_io_handler = self.get_parameter_io_handler(parameter_io_format)
 
-            # Try parsing as a forcefield file or file-like object
+            # Try parsing as a force field file or file-like object
             try:
                 smirnoff_data = parameter_io_handler.parse_file(source)
                 return smirnoff_data
@@ -1148,7 +1150,7 @@ class ForceField:
         Returns
         -------
         forcefield_string : str
-            The string representation of the serialized forcefield
+            The string representation of the serialized force field
         """
         # Resolve which IO handler to use
         if isinstance(io_format, ParameterIOHandler):
@@ -1180,7 +1182,7 @@ class ForceField:
         Returns
         -------
         forcefield_string : str
-            The string representation of the serialized forcefield
+            The string representation of the serialized force field
         """
 
         if io_format is None:
@@ -1289,7 +1291,7 @@ class ForceField:
             for bond in ref_mol.bonds:
                 bond.fractional_bond_order = None
 
-        # Set the topology aromaticity model to that used by the current forcefield
+        # Set the topology aromaticity model to that used by the current force field
         # TODO: See openff-toolkit issue #206 for proposed implementation of aromaticity
         # topology.set_aromaticity_model(self._aromaticity_model)
 
@@ -1377,7 +1379,7 @@ class ForceField:
         Parameters
         ----------
         topology : openff.toolkit.topology.Topology
-            The ``Topology`` corresponding to the ``System`` object to be created.
+            The ``Topology`` corresponding to the OpenMM ``System`` object to be created.
         positions : simtk.unit.Quantity of dimension (natoms,3) with units compatible with angstroms
             The positions corresponding to the ``System`` object to be created
 

@@ -151,7 +151,7 @@ def convert_frcmod_to_ffxml( infile, inxml, outxml ):
 
     # fix date and author in inxml file:
     add_date_and_author(inxml, date, author)
-    # Read template forcefield file
+    # Read template force field file
     ff = ForceField(inxml)
     # Use functions to parse sections from target file and add parameters to force field
     param_id_by_section={}
@@ -188,7 +188,7 @@ def convert_frcmod_to_ffxml( infile, inxml, outxml ):
             if not (name=='IMPR' or name=='DIHE'):
                 # Check for duplicates first
                 if ff.getParameter( smirks, force_type = force_section[idx] ):
-                    raise ValueError(f"Error: parameter for {smirks} is already present in forcefield.")
+                    raise ValueError(f"Error: parameter for {smirks} is already present in force field.")
                 else:
                     ff.addParameter( params, smirks, force_section[idx], tag[idx] )
 
