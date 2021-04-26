@@ -921,7 +921,6 @@ class VirtualSite(Particle):
         A tuple of atom indices
         """
 
-
         for i, vp in enumerate(self.particles):
             if vp.orientation == virtual_particle.orientation:
                 return i
@@ -1166,7 +1165,7 @@ class VirtualSite(Particle):
         for vp in self.particles:
             vp_pos = vp.compute_position_from_conformer(conformer_idx)
             positions.append(vp_pos.value_in_unit(unit.angstrom))
-        
+
         return unit.Quantity(positions, unit=unit.anstrom)
 
     def compute_positions_from_atom_positions(self, atom_positions):
@@ -1191,7 +1190,7 @@ class VirtualSite(Particle):
         for vp in self.particles:
             vp_pos = vp.compute_position_from_atom_positions(atom_positions)
             positions.append(vp_pos.value_in_unit(unit.angstrom))
-        
+
         return unit.Quantity(positions, unit=unit.angstrom)
 
 
@@ -1300,7 +1299,7 @@ class BondChargeVirtualSite(VirtualSite):
         Tuple of list of weights used to define the origin, x-axis, and y-axis
         """
 
-        originwt = [1.0, 0.0] # first atom is origin
+        originwt = [1.0, 0.0]  # first atom is origin
 
         xdir = [-1.0, 1.0]
 
@@ -1522,11 +1521,14 @@ class MonovalentLonePairVirtualSite(VirtualSite):
         psi = self._out_of_plane_angle.value_in_unit(unit.radians)
 
         unit = self._distance.unit
-        pos = unit.Quantity([
-            self._distance / unit * np.cos(theta) * np.cos(psi),
-            self._distance / unit * np.sin(theta) * np.cos(psi),
-            self._distance / unit * np.sin(psi),
-        ], unit=unit)
+        pos = unit.Quantity(
+            [
+                self._distance / unit * np.cos(theta) * np.cos(psi),
+                self._distance / unit * np.sin(theta) * np.cos(psi),
+                self._distance / unit * np.sin(psi),
+            ],
+            unit=unit,
+        )
 
         return pos
 
@@ -1711,6 +1713,7 @@ class DivalentLonePairVirtualSite(VirtualSite):
 
         assert len(atoms) >= 3
         return self._openmm_virtual_site(atoms)
+
 
 class TrivalentLonePairVirtualSite(VirtualSite):
     """
@@ -3246,9 +3249,7 @@ class FrozenMolecule(Serializable):
 
         for vsite in self.virtual_sites:
             vsite_pos = vsite.compute_positions_from_conformer(conformer_idx)
-            positions.extend(
-                vsite_pos.value_in_unit(unit.angstrom)
-            )
+            positions.extend(vsite_pos.value_in_unit(unit.angstrom))
 
         return unit.angstrom * positions
 
@@ -3268,9 +3269,7 @@ class FrozenMolecule(Serializable):
 
         for vsite in self.virtual_sites:
             vsite_pos = vsite.compute_positions_from_atom_positions(atom_positions)
-            positions.extend(
-                vsite_pos.value_in_unit(unit.angstrom)
-            )
+            positions.extend(vsite_pos.value_in_unit(unit.angstrom))
 
         return unit.angstrom * positions
 
