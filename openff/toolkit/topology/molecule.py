@@ -559,30 +559,30 @@ class VirtualParticle(Particle):
 
     def _position(self, atom_positions):
         """
-        Calculations the position of a virtual particle, as defined by the
-        OpenMM :class:`simtk.openmm.openmm.LocalCoordinatesSite` definition.
+        Calculations the position of a virtual particle, as defined by the OpenMM
+        :class:`simtk.openmm.openmm.LocalCoordinatesSite` definition.
 
-        The frame is first constructed using the input atoms, where
-        the weights defined by each virtual site are used. The virtual
-        particle positions are then determined by setting the displacements,
-        also determined uniquely by each virtual site definition.
+        The frame is first constructed using the input atoms, where the weights defined
+        by each virtual site are used. The virtual particle positions are then
+        determined by setting the displacements, also determined uniquely by each
+        virtual site definition.
 
-        Note that, following the definition of the OpenMM LocalCoordinatesSite,
-        the frame is forced to be orthogonal. This is first enforced by only
-        allowing the x and y axes to be defined, since z must be normal to this
-        plane. Then, y is then reset to be normal to the zx plane. This should
-        ensure that the frame is orthonormal (after normalization).
+        Note that, following the definition of the OpenMM LocalCoordinatesSite, the
+        frame is forced to be orthogonal. This is first enforced by only allowing the
+        x- and y-axis to be defined, since the z-axis must be normal to this plane.
+        Then, y is then reset to be normal to the zx plane. This should ensure that the
+        frame is orthonormal (after normalization).
 
-        Note that this returns a 1D flat list as it is meant to be appended
-        into a (M, 3) array via the public interface.
+        Note that this returns a 1D flat list as it is meant to be appended into a
+        (M, 3) array via the public interface.
 
         Parameters
         ----------
         atom_positions: iterable of int
-            The indices of the atoms, relative to the indices defined by the
-            owning molecule. This is necessary since this particle has a certain
-            orientation, so the input atoms must be in the original input ordering
-            which was used to define the orientation.
+            The indices of the atoms, relative to the indices defined by the owning
+            molecule. This is necessary since this particle has a certain orientation,
+            so the input atoms must be in the original input ordering which was used to
+            define the orientation.
 
         Returns
         -------
@@ -660,7 +660,7 @@ class VirtualParticle(Particle):
 
         Returns
         -------
-        :class:`simtk.unit.Quantity` of unit [Length] in unit Angstroms wrapping a
+        :class:`simtk.unit.Quantity` of dimension [Length] in unit Angstroms wrapping a
         numpy.ndarray
             The positions of the virtual particles belonging to this virtual site.
             The array is the size (M, 3) where M is the number of virtual particles
@@ -940,18 +940,18 @@ class VirtualSite(Particle):
         This is similar to improper torsion angles: the angle you find depends on the
         atom ordering used in the calculation.
 
-        As a further implementation detail, before the positions are constructed,
-        the parent atoms are reordered according to the particle's orientation. Each
-        virtual particle has exactly one orientation. Since the frame of the virtual
-        site is defined by a static list of weights and masks, we are able to influence
-        how the local frame is constructed by crafting specific ordering the parent
-        atoms.
+        Before the positions are constructed, the parent atoms are reordered according
+        to the particle's orientation. Each virtual particle has exactly one
+        orientation. Since the frame of the virtual site is defined by a static list of
+        weights and masks, we are able to influence how the local frame is constructed
+        by crafting specific ordering the parent atoms.
 
         As a concrete example, we could define a TIP5 water by using one virtual site,
         and the particles have orientations (0, 1, 2) and (2, 1, 0). This means that,
-        given that we are using a right-handed coordinate system, the z direction will
-        point in opposite directions for each particle. Using the same outOfPlaneAngle
-        and distance will therefore result in two unique particle positions.
+        given that we are using a right-handed coordinate system, the z-axis will
+        point in opposite directions for each particle. Using the same
+        ``out_of_plane_angle`` and ``distance`` will therefore result in two unique
+        particle positions.
 
         Using the toolkit API allows arbitrary selection of orientations. The SMIRNOFF
         specification, via the offxml file format, the orientations are controlled
@@ -959,12 +959,19 @@ class VirtualSite(Particle):
         "all_permuations" are allowed, meaning only the first orientation or all
         possible orientations are generated.
 
+        The virtual site adders via :class:`Molecule` simplify this by optionally using
+        a ``symmetric`` kwarg, which is the equivalent to the XML ``match`` keyword
+        described above. However, the symmetric kwarg is not available for sites
+        which symmetry is not possible, e.g. :class:`TrivalentLonePairVirtualSite`,
+        provided a layer of sanity checking.  For the TIP5 example above, setting
+        ``symmetric=True`` (the default) should automatically produce both particles.
+
         Parameters
         ----------
 
         Returns
         -------
-        List of tuples of atom indices
+        List of tuples of ints specifying the ordering of the parent atoms.
         """
         return self._orientations
 
@@ -1148,8 +1155,8 @@ class VirtualSite(Particle):
 
     def compute_positions_from_conformer(self, conformer_idx):
         """
-        Compute the position of the virtual site particles given an existing
-        conformer owned by the parent molecule.
+        Compute the position of the virtual site particles given an existing conformer
+        owned by the parent molecule.
 
         Parameters
         ----------
@@ -1292,7 +1299,7 @@ class BondChargeVirtualSite(VirtualSite):
     def local_frame_weights(self):
         """
         Returns the local frame weights used to calculate the particle positions.
-        See ``VirtualSite.local_frame_weights`` for a general description.
+        See :attr:`VirtualSite.local_frame_weights` for a general description.
 
         Bond charge virtual sites are defined by the axis defined by the two
         atoms that define the bond. Since the virtual site position is defined
@@ -1673,7 +1680,7 @@ class DivalentLonePairVirtualSite(VirtualSite):
     def local_frame_weights(self):
         """
         Returns the local frame weights used to calculate the particle positions.
-        See VirtualSite.local_frame_weights for a general description.
+        See :attr:`VirtualSite.local_frame_weights` for a general description.
 
         Parameters
         ----------
@@ -1828,7 +1835,7 @@ class TrivalentLonePairVirtualSite(VirtualSite):
     def local_frame_weights(self):
         """
         Returns the local frame weights used to calculate the particle positions.
-        See VirtualSite.local_frame_weights for a general description.
+        See :attr:`VirtualSite.local_frame_weights` for a general description.
 
         Parameters
         ----------
@@ -1851,7 +1858,7 @@ class TrivalentLonePairVirtualSite(VirtualSite):
     def local_frame_position(self):
         """
         The displacements of the virtual site relative to the local frame.
-        See VirtualSite.local_frame_position for a general description.
+        See :attr:`VirtualSite.local_frame_position` for a general description.
 
         Parameters
         ----------
