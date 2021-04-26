@@ -1,5 +1,7 @@
 from tempfile import NamedTemporaryFile
+from simtk import openmm, unit
 from simtk.openmm import app
+import nglview
 import mdtraj as mdt
 
 
@@ -41,3 +43,40 @@ def find_clashing_water(pmd_struct, lig_resname, distance=0.15):
     # 1-indexed, therefore we add 1 before returning
     clash_res_idx = [i[1] + 1 for i in contacts[1][(contacts[0] < distance)[0, :]]]
     return clash_res_idx
+
+
+def minimize_and_visualize(molecule, forcefield):
+    """
+    Minimize the molecule with the force field and then visualize it with nglview
+
+    Parameters
+    ----------
+    molecule : openff.toolkit.topology.molecule.Molecule
+        The molecule to minimize
+    forcefield : openff.toolkit.typing.engines.smirnoff.forcefield.ForceField
+        The force field to minimize against
+
+    Returns
+    -------
+    view : nglview.widget.NGLWidget
+        A view of the molecule
+    """
+    mol_topology = molecule.to_topology()
+    mol_system = forcefield.create_openmm_system(
+        mol_topology, charge_from_molecules=[molecule]
+    )
+
+    integrator = openmm.LangevinIntegrator(
+        300 * unit.kelvin, 1 / unit.picosecond, 0.002 * unit.picoseconds
+    )
+    simulation = openmm.app.Simulation(mol_topology.to_openmm(), mol_system, integrator)
+    simulation.context.setPositions(molecule.conformers[0])
+    simulation.minimizeEnergy()
+    with NamedTemporaryFile(suffix=".pdb") as tf:
+        openmm.app.PDBFile.writeModel(
+            simulation.topology,
+            simulation.context.getState(getPositions=True).getPositions(),
+            open(tf.name, "w"),
+        )
+        view = nglview.show_file(tf.name)
+    return view
