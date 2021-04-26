@@ -560,7 +560,7 @@ class VirtualParticle(Particle):
     def _position(self, atom_positions):
         """
         Calculations the position of a virtual particle, as defined by the
-        OpenMM "LocalCoordiatesSite" definition.
+        OpenMM :class:`simtk.openmm.openmm.LocalCoordinatesSite` definition.
 
         The frame is first constructed using the input atoms, where
         the weights defined by each virtual site are used. The virtual
@@ -586,7 +586,8 @@ class VirtualParticle(Particle):
 
         Returns
         -------
-        simtk.unit.Quantity of unit [Length] in Angstrom wrapping a list
+        :class:`simtk.unit.Quantity` of dimension [Length] in unit Angstrom wrapping an
+        numpy.ndarray
         """
 
         # Although the above docstring claims that we fully implement
@@ -598,8 +599,8 @@ class VirtualParticle(Particle):
 
         originwt, xdir, ydir = self.virtual_site.local_frame_weights
         disp = self.virtual_site.local_frame_position
-        unit = disp.unit
-        x, y, z = disp / unit
+        _unit = disp.unit
+        x, y, z = disp / _unit
 
         # this pulls the correct ordering of the atoms
         pos = []
@@ -626,9 +627,9 @@ class VirtualParticle(Particle):
 
         xaxis, yaxis, zaxis = map(_normalize, (xaxis, yaxis, zaxis))
 
-        position = [origin + x * xaxis + y * yaxis + z * zaxis]
+        position = origin + x * xaxis + y * yaxis + z * zaxis
 
-        return unit.Quantity(position, unit=unit)
+        return unit.Quantity(position, unit=_unit)
 
     def _extract_position_from_conformer(self, conformation):
 
@@ -659,12 +660,12 @@ class VirtualParticle(Particle):
 
         Returns
         -------
-        simtk.unit.Quantity of unit [Length] in Angstroms wrapping a numpy.ndarray
+        :class:`simtk.unit.Quantity` of unit [Length] in unit Angstroms wrapping a
+        numpy.ndarray
             The positions of the virtual particles belonging to this virtual site.
             The array is the size (M, 3) where M is the number of virtual particles
-            belonging to this virtual site
+            belonging to this virtual site.
 
-        .. warning :: This API is experimental and subject to change.
         """
 
         atom_positions = self._get_conformer(conformer_idx)
@@ -677,18 +678,19 @@ class VirtualParticle(Particle):
 
         Parameters
         ----------
-        atom_positions : simtk.unit.Quantity of unit [Length] wrapping a numpy.ndarray
+        atom_positions : :class:`simtk.unit.Quantity` of unit [Length] wrapping a
+        numpy.ndarray
             The positions of all atoms in the molecule. The array is the size (N, 3)
-            where N is the number of atoms in the molecule
+            where N is the number of atoms in the molecule.
 
         Returns
         -------
-        simtk.unit.Quantity of unit [Length] in Angstroms wrapping a numpy.ndarray
+        :class:`simtk.unit.Quantity` of unit [Length] in unit Angstroms wrapping a
+        numpy.ndarray
             The positions of the virtual particles belonging to this virtual site.
             The array is the size (M, 3) where M is the number of virtual particles
-            belonging to this virtual site
+            belonging to this virtual site.
 
-        .. warning :: This API is experimental and subject to change.
         """
 
         return self._position(atom_positions)
@@ -735,14 +737,12 @@ class VirtualSite(Particle):
 
         .. todo ::
 
-           * This will need to be generalized for virtual sites to allow out-of-plane sites, which are not simply a linear combination of atomic positions
-           * Add checking for allowed virtual site types
-           * How do we want users to specify virtual site types?
+           * change sigma/epsilon/rmin_half to have units
 
         Parameters
         ----------
         atoms : list of Atom of shape [N]
-            atoms[index] is the corresponding Atom for weights[index]
+            atoms[index] is the corresponding Atom
         charge_increments : list of floats of shape [N], optional, default=None
             The amount of charge to remove from the VirtualSite's atoms and put in the VirtualSite. Indexing in this list should match the ordering in the atoms list. Default is None.
         sigma : float, default=None
@@ -754,11 +754,12 @@ class VirtualSite(Particle):
         name : string or None, default=None
             The name of this virtual site. Default is None.
 
-
         virtual_site_type : str
             Virtual site type.
         name : str or None, default=None
             The name of this virtual site. Default is None
+        orientation : list of int tuples or None, default=None
+            The ordering of the atoms used to define the frame of the virtual site.
         """
 
         # Ensure we have as many charge_increments as we do atoms
@@ -1067,11 +1068,12 @@ class VirtualSite(Particle):
         """
         The per-atom weights used to define the virtual site frame.
 
-        The SMIRNOFF virtual sites use the definition of "LocalCoordinatesSite" as
-        implemented by OpenMM. As such, the weights are used to determine the origin
-        and the x and y axes of the local frame. Since the frame is an orthogonal
-        bases, the z axis is not specified as it is assumed to be the cross of the
-        x and y axes (using a right-handed coordinates).
+        The SMIRNOFF virtual sites use the definition of
+        :class:`simtk.openmm.openmm.LocalCoordinatesSite` implemented by OpenMM.
+        As such, the weights are used to determine the origin and the x and y axes of
+        the local frame. Since the frame is an orthogonal bases, the z axis is not
+        specified as it is assumed to be the cross of the x and y axes (using a
+        right-handed coordinates).
 
         The weights defined refer to the weights of each atom's positions. For the
         origin, the weights must sum to 1. For the x and y axes, the weights much each
@@ -1086,10 +1088,10 @@ class VirtualSite(Particle):
           will also be 0.
 
         The displacements along the axes defined here are defined/returned by
-        VirtualSite.local_frame_position.
+        :attr:`VirtualSite.local_frame_position`.
 
-        To implement a new virtual site type (using a LocalCoordinatesSite definition),
-        overload this function.
+        To implement a new virtual site type (using a LocalCoordinatesSite
+        definition), override this function.
 
         Parameters
         ----------
@@ -1105,21 +1107,22 @@ class VirtualSite(Particle):
         """
         The displacements of the virtual site relative to the local frame.
 
-        The SMIRNOFF virtual sites use the definition of "LocalCoordinatesSite" as
-        implemented by OpenMM. As such, the frame positions refer to positions as
-        defined by the frame, or the local axes defined by the owning atoms (see
-        VirtualSite.local_frame_weights).
+        The SMIRNOFF virtual sites use the definition of
+        :class:`simtk.openmm.openmm.LocalCoordinatesSite` as implemented by OpenMM.
+        As such, the frame positions refer to positions as defined by the frame, or the
+        local axes defined by the owning atoms (see
+        :attr:`VirtualSite.local_frame_weights`).
 
-        To implement a new virtual site type (using a LocalCoordinatesSite definition),
-        overload this function.
+        To implement a new virtual site type (using a LocalCoordinatesSite
+        definition), override this function.
 
         Parameters
         ----------
 
         Returns
         -------
-        simtk.unit.Quantity of unit [Length] wrapping a list of displacements in
-        the local frame for the x, y, and z directions.
+        :class:`simtk.unit.Quantity` of dimension [Length] wrapping a list of
+        displacements in the local frame for the x, y, and z directions.
         """
 
     def __repr__(self):
@@ -1155,10 +1158,11 @@ class VirtualSite(Particle):
 
         Returns
         -------
-        simtk.unit.Quantity of unit [Length] in Angstroms wrapping a numpy.ndarray
+        :class:`simtk.unit.Quantity` of dimension [Length] in unit Angstroms wrapping a
+        numpy.ndarray
             The positions of the virtual particles belonging to this virtual site.
             The array is the size (M, 3) where M is the number of virtual particles
-            belonging to this virtual site
+            belonging to this virtual site.
         """
 
         positions = []
@@ -1166,7 +1170,7 @@ class VirtualSite(Particle):
             vp_pos = vp.compute_position_from_conformer(conformer_idx)
             positions.append(vp_pos.value_in_unit(unit.angstrom))
 
-        return unit.Quantity(positions, unit=unit.anstrom)
+        return unit.Quantity(np.array(positions), unit=unit.angstrom)
 
     def compute_positions_from_atom_positions(self, atom_positions):
         """
@@ -1174,24 +1178,26 @@ class VirtualSite(Particle):
 
         Parameters
         ----------
-        atom_positions : simtk.unit.Quantity of unit [Length] wrapping a numpy.ndarray
+        atom_positions : :class:`simtk.unit.Quantity` of dimension [Length] wrapping a
+        numpy.ndarray
             The positions of all atoms in the molecule. The array is the size (N, 3)
-            where N is the number of atoms in the molecule
+            where N is the number of atoms in the molecule.
 
         Returns
         -------
-        simtk.unit.Quantity of unit [Length] in Angstroms wrapping a numpy.ndarray
+        :class:`simtk.unit.Quantity` of dimension [Length] in unit Angstroms wrapping a
+        numpy.ndarray
             The positions of the virtual particles belonging to this virtual site.
             The array is the size (M, 3) where M is the number of virtual particles
-            belonging to this virtual site
+            belonging to this virtual site.
         """
 
         positions = []
         for vp in self.particles:
             vp_pos = vp.compute_position_from_atom_positions(atom_positions)
-            positions.append(vp_pos.value_in_unit(unit.angstrom))
+            positions.extend(vp_pos.value_in_unit(unit.angstrom))
 
-        return unit.Quantity(positions, unit=unit.angstrom)
+        return unit.Quantity(np.array(positions), unit=unit.angstrom)
 
 
 class BondChargeVirtualSite(VirtualSite):
@@ -1221,7 +1227,8 @@ class BondChargeVirtualSite(VirtualSite):
         ----------
         atoms : list of openff.toolkit.topology.molecule.Atom objects of shape [N]
             The atoms defining the virtual site's position
-        distance : float
+
+        distance : :class:`simtk.unit.Quantity` of dimension [Length] wrapping a scalar
 
         weights : list of floats of shape [N] or None, optional, default=None
             weights[index] is the weight of particles[index] contributing to the position of the virtual site. Default is None
@@ -1285,7 +1292,7 @@ class BondChargeVirtualSite(VirtualSite):
     def local_frame_weights(self):
         """
         Returns the local frame weights used to calculate the particle positions.
-        See VirtualSite.local_frame_weights for a general description.
+        See ``VirtualSite.local_frame_weights`` for a general description.
 
         Bond charge virtual sites are defined by the axis defined by the two
         atoms that define the bond. Since the virtual site position is defined
@@ -1296,7 +1303,7 @@ class BondChargeVirtualSite(VirtualSite):
 
         Returns
         -------
-        Tuple of list of weights used to define the origin, x-axis, and y-axis
+        Tuple of list of weights used to define the origin, x-axis, and y-axis.
         """
 
         originwt = [1.0, 0.0]  # first atom is origin
@@ -1311,29 +1318,29 @@ class BondChargeVirtualSite(VirtualSite):
     def local_frame_position(self):
         """
         The displacements of the virtual site relative to the local frame.
-        See VirtualSite.local_frame_position for a general description.
+        See :attr:`VirtualSite.local_frame_position` for a general description.
 
         Parameters
         ----------
 
         Returns
         -------
-        simtk.unit.Quantity of unit [Length] wrapping a list of displacements in
-        the local frame for the x, y, and z directions.
+        :class:`simtk.unit.Quantity` of dimension [Length] wrapping a list of
+        displacements in the local frame for the x, y, and z directions.
         """
 
         # since the origin is atom 1, and xdir is a unit vector pointing
         # towards the center of the other atoms, we want the
         # vsite to point away from the unit vector to achieve the desired
         # distance
-        unit = self._distance.unit
-        pos = unit * [-self._distance / unit, 0.0, 0.0]
+        _unit = self._distance.unit
+        pos = _unit * [-self._distance / _unit, 0.0, 0.0]
 
         return pos
 
     def get_openmm_virtual_site(self, atoms):
         """
-        Returns the OpenMMVirtualSite corresponding to this BondChargeVirtualSite.
+        Returns the OpenMM virtual site corresponding to this BondChargeVirtualSite.
 
         Parameters
         ----------
@@ -1342,7 +1349,7 @@ class BondChargeVirtualSite(VirtualSite):
 
         Returns
         -------
-        simtk.openmm.LocalCoordinatesSite
+        :class:`simtk.openmm.openmm.LocalCoordinatesSite`
         """
         assert len(atoms) >= 2
         return self._openmm_virtual_site(atoms)
@@ -1350,6 +1357,13 @@ class BondChargeVirtualSite(VirtualSite):
 
 class _LonePairVirtualSite(VirtualSite):
     """Private base class for mono/di/trivalent lone pair virtual sites."""
+
+    # This is unused and can be deleted? Originally this was for the n-valent
+    # lone pair sites, but since they all used a different number of parameters
+    # (mono has two angles, di has one, tri has none), the validation machinery
+    # really made this convenience class not useful since extra terms
+    # are not accepted during XML parsing, and/or you need to specify values for
+    # every defined term
 
     @classmethod
     def from_dict(cls, vsite_dict):
@@ -1393,11 +1407,14 @@ class MonovalentLonePairVirtualSite(VirtualSite):
         ----------
         atoms : list of three openff.toolkit.topology.molecule.Atom objects
             The three atoms defining the virtual site's position
-        distance : float
 
-        out_of_plane_angle : float
+        distance : :class:`simtk.unit.Quantity` of dimension [Length] wrapping a scalar
 
-        in_plane_angle : float
+        out_of_plane_angle : :class:`simtk.unit.Quantity` of dimension [Angle] wrapping
+        a scalar
+
+        in_plane_angle : :class:`simtk.unit.Quantity` of dimension [Angle] wrapping a
+        scalar
 
         epsilon : float
             Epsilon term for VdW properties of virtual site. Default is None.
@@ -1485,14 +1502,14 @@ class MonovalentLonePairVirtualSite(VirtualSite):
     def local_frame_weights(self):
         """
         Returns the local frame weights used to calculate the particle positions.
-        See VirtualSite.local_frame_weights for a general description.
+        See :attr:`VirtualSite.local_frame_weights` for a general description.
 
         Parameters
         ----------
 
         Returns
         -------
-        Tuple of list of weights used to define the origin, x-axis, and y-axis
+        Tuple of list of weights used to define the origin, x-axis, and y-axis.
         """
 
         originwt = [1.0, 0.0, 0.0]
@@ -1506,35 +1523,36 @@ class MonovalentLonePairVirtualSite(VirtualSite):
     def local_frame_position(self):
         """
         The displacements of the virtual site relative to the local frame.
-        See VirtualSite.local_frame_position for a general description.
+        See :attr:`VirtualSite.local_frame_position` for a general description.
 
         Parameters
         ----------
 
         Returns
         -------
-        simtk.unit.Quantity of unit [Length] wrapping a list of displacements in
-        the local frame for the x, y, and z directions.
+        :class:`simtk.unit.Quantity` of unit [Length] wrapping a list of displacements
+        in the local frame for the x, y, and z directions.
         """
 
         theta = self._in_plane_angle.value_in_unit(unit.radians)
         psi = self._out_of_plane_angle.value_in_unit(unit.radians)
 
-        unit = self._distance.unit
+        _unit = self._distance.unit
         pos = unit.Quantity(
             [
-                self._distance / unit * np.cos(theta) * np.cos(psi),
-                self._distance / unit * np.sin(theta) * np.cos(psi),
-                self._distance / unit * np.sin(psi),
+                self._distance / _unit * np.cos(theta) * np.cos(psi),
+                self._distance / _unit * np.sin(theta) * np.cos(psi),
+                self._distance / _unit * np.sin(psi),
             ],
-            unit=unit,
+            unit=_unit,
         )
 
         return pos
 
     def get_openmm_virtual_site(self, atoms):
         """
-        Returns the OpenMMVirtualSite corresponding to this MonovalentLonePairVirtualSite.
+        Returns the OpenMM virtual site corresponding to this
+        MonovalentLonePairVirtualSite.
 
         Parameters
         ----------
@@ -1543,7 +1561,7 @@ class MonovalentLonePairVirtualSite(VirtualSite):
 
         Returns
         -------
-        simtk.openmm.LocalCoordinatesSite
+        :class:`simtk.openmm.openmm.LocalCoordinatesSite`
         """
 
         assert len(atoms) >= 3
@@ -1574,9 +1592,11 @@ class DivalentLonePairVirtualSite(VirtualSite):
         ----------
         atoms : list of 3 openff.toolkit.topology.molecule.Atom objects
             The three atoms defining the virtual site's position
-        distance : float
 
-        out_of_plane_angle : float
+        distance : :class:`simtk.unit.Quantity` of dimension [Length] wrapping a scalar
+
+        out_of_plane_angle : :class:`simtk.unit.Quantity` of dimension [Angle] wrapping
+        a scalar
 
         epsilon : float
             Epsilon term for VdW properties of virtual site. Default is None.
@@ -1660,7 +1680,7 @@ class DivalentLonePairVirtualSite(VirtualSite):
 
         Returns
         -------
-        Tuple of list of weights used to define the origin, x-axis, and y-axis
+        Tuple of list of weights used to define the origin, x-axis, and y-axis.
         """
 
         originwt = [0.0, 1.0, 0.0]
@@ -1674,41 +1694,41 @@ class DivalentLonePairVirtualSite(VirtualSite):
     def local_frame_position(self):
         """
         The displacements of the virtual site relative to the local frame.
-        See VirtualSite.local_frame_position for a general description.
+        See :attr:`VirtualSite.local_frame_position` for a general description.
 
         Parameters
         ----------
 
         Returns
         -------
-        simtk.unit.Quantity of unit [Length] wrapping a list of displacements in
-        the local frame for the x, y, and z directions.
+        :class:`simtk.unit.Quantity` of dimension [Length] wrapping a list of
+        displacements in the local frame for the x, y, and z directions.
         """
 
         theta = self._out_of_plane_angle.value_in_unit(unit.radians)
 
-        u = self._distance.unit
-        pos = u * [
-            -self._distance / u * np.cos(theta),
+        _unit = self._distance.unit
+
+        pos = _unit * [
+            -self._distance / _unit * np.cos(theta),
             0.0,
-            self._distance / u * np.sin(theta),
+            self._distance / _unit * np.sin(theta),
         ]  # pos of the vsite in local crds
         return pos
 
     def get_openmm_virtual_site(self, atoms):
         """
-        Returns the OpenMMVirtualSite corresponding to this DivalentLonePairVirtualSite.
+        Returns the OpenMM virtual site corresponding to this
+        DivalentLonePairVirtualSite.
 
         Parameters
         ----------
         atoms : iterable of int
-            The indices of the atoms involved in this virtual site (not assumed to be
-            the same as the molecule indices as this method may be accessed with regard
-            to particles in a Topology).
+            The indices of the atoms involved in this virtual site.
 
         Returns
         -------
-        simtk.openmm.LocalCoordinatesSite
+        :class:`simtk.openmm.openmm.LocalCoordinatesSite`
         """
 
         assert len(atoms) >= 3
@@ -1740,7 +1760,8 @@ class TrivalentLonePairVirtualSite(VirtualSite):
         ----------
         atoms : list of 4 openff.toolkit.topology.molecule.Atom objects
             The three atoms defining the virtual site's position
-        distance : float
+
+        distance : :class:`simtk.unit.Quantity` of dimension [Length] wrapping a scalar
 
         epsilon : float
             Epsilon term for VdW properties of virtual site. Default is None.
@@ -1814,7 +1835,7 @@ class TrivalentLonePairVirtualSite(VirtualSite):
 
         Returns
         -------
-        Tuple of list of weights used to define the origin, x-axis, and y-axis
+        Tuple of list of weights used to define the origin, x-axis, and y-axis.
         """
 
         originwt = [0.0, 1.0, 0.0, 0.0]
@@ -1837,29 +1858,28 @@ class TrivalentLonePairVirtualSite(VirtualSite):
 
         Returns
         -------
-        simtk.unit.Quantity of unit [Length] wrapping a list of displacements in
-        the local frame for the x, y, and z directions.
+        :class:`simtk.unit.Quantity` of dimension [Length] wrapping a list of
+        displacements in the local frame for the x, y, and z directions.
         """
 
-        unit = self._distance.unit
-        pos = unit.Quantity([-self._distance / unit, 0.0, 0.0], unit=unit)
+        _unit = self._distance.unit
+        pos = unit.Quantity([-self._distance / _unit, 0.0, 0.0], unit=_unit)
 
         return pos
 
     def get_openmm_virtual_site(self, atoms):
         """
-        Returns the OpenMMVirtualSite corresponding to this TrivalentLonePairVirtualSite.
+        Returns the OpenMM virtual site corresponding to this
+        TrivalentLonePairVirtualSite.
 
         Parameters
         ----------
         atoms : iterable of int
-            The indices of the atoms involved in this virtual site (not assumed to be
-            the same as the molecule indices as this method amy be accessed with regard
-            to particles in a Topology).
+            The indices of the atoms involved in this virtual site.
 
         Returns
         -------
-        simtk.openmm.LocalCoordinatesSite
+        :class:`simtk.openmm.openmm.LocalCoordinatesSite`
         """
 
         assert len(atoms) >= 4
@@ -3235,43 +3255,56 @@ class FrozenMolecule(Serializable):
 
     def compute_virtual_site_positions_from_conformer(self, conformer_idx):
         """
-        [TODO:summary]
-
-        [TODO:description]
+        Compute the position of all virtual sites given an existing
+        conformer specified by its index.
 
         Parameters
         ----------
-        conformer_idx : [TODO:type]
-            [TODO:description]
+        conformer_idx : int
+            The index of the conformer.
+
+        Returns
+        -------
+        :class:`simtk.unit.Quantity` of dimension [Length] in unit Angstroms wrapping a
+        numpy.ndarray
+            The positions of the virtual particles belonging to this virtual site.
+            The array is the size (M, 3) where M is the number of virtual particles
+            belonging to this virtual site.
         """
 
-        positions = []
-
-        for vsite in self.virtual_sites:
-            vsite_pos = vsite.compute_positions_from_conformer(conformer_idx)
-            positions.extend(vsite_pos.value_in_unit(unit.angstrom))
-
-        return unit.angstrom * positions
+        atom_positions = self._conformers[conformer_idx]
+        return self.compute_virtual_site_positions_from_atom_positions(atom_positions)
 
     def compute_virtual_site_positions_from_atom_positions(self, atom_positions):
         """
-        [TODO:summary]
-
-        [TODO:description]
+        Compute the positions of the virtual sites in this molecule given a set of
+        external coordinates. The coordinates do not need come from an internal
+        conformer, but are assumed to have the same shape and be in the same order.
 
         Parameters
         ----------
-        atom_positions : [TODO:type]
-            [TODO:description]
+        atom_positions : :class:`simtk.unit.Quantity` of dimension [Length] wrapping a
+        numpy.ndarray
+            The positions of all atoms in the molecule. The array is the size (N, 3)
+            where N is the number of atoms in the molecule.
+
+        Returns
+        -------
+        :class:`simtk.unit.Quantity` of dimension [Length] in unit Angstroms wrapping a
+        numpy.ndarray
+            The positions of the virtual particles belonging to this virtual site.
+            The array is the size (M, 3) where M is the number of virtual particles
+            belonging to this virtual site.
+
         """
 
         positions = []
 
         for vsite in self.virtual_sites:
             vsite_pos = vsite.compute_positions_from_atom_positions(atom_positions)
-            positions.extend(vsite_pos.value_in_unit(unit.angstrom))
+            positions.append(vsite_pos.value_in_unit(unit.angstrom))
 
-        return unit.angstrom * positions
+        return unit.Quantity(np.array(positions), unit=unit.angstrom)
 
     def apply_elf_conformer_selection(
         self,
@@ -3718,7 +3751,8 @@ class FrozenMolecule(Serializable):
         ----------
         atoms : list of openff.toolkit.topology.molecule.Atom objects of shape [N]
             The atoms defining the virtual site's position
-        distance : float
+
+        distance : :class:`simtk.unit.Quantity` of dimension [Length] wrapping a scalar
 
         charge_increments : list of floats of shape [N], optional, default=None
             The amount of charge to remove from the VirtualSite's atoms and put in the VirtualSite. Indexing in this
@@ -3746,7 +3780,12 @@ class FrozenMolecule(Serializable):
         vsite = BondChargeVirtualSite(atoms, distance, **kwargs)
 
         self._add_virtual_site(vsite, replace=replace)
-        self._invalidate_cached_properties()
+
+        # If we invalidate, we can never generate virtual sites after
+        # conformers are generated. This seems off. Since virtual sites
+        # do not seem to affect anything cached, we keep it.
+        # self._invalidate_cached_properties()
+
         return self._virtual_sites.index(vsite)
 
     def _add_monovalent_lone_pair_virtual_site(
@@ -3758,13 +3797,16 @@ class FrozenMolecule(Serializable):
 
         Parameters
         ----------
-        atoms : list of three openff.toolkit.topology.molecule.Atom objects
+        atoms : list of three :class:`openff.toolkit.topology.molecule.Atom` objects
             The three atoms defining the virtual site's position
-        distance : float
 
-        out_of_plane_angle : float
+        distance : :class:`simtk.unit.Quantity` of dimension [Length] wrapping a scalar
 
-        in_plane_angle : float
+        out_of_plane_angle : :class:`simtk.unit.Quantity` of dimension [Angle] wrapping
+        a scalar
+
+        in_plane_angle : :class:`simtk.unit.Quantity` of dimension [Angle] wrapping a
+        scalar
 
         epsilon : float
             Epsilon term for VdW properties of virtual site. Default is None.
@@ -3791,7 +3833,12 @@ class FrozenMolecule(Serializable):
         )
 
         self._add_virtual_site(vsite, replace=replace)
-        self._invalidate_cached_properties()
+
+        # If we invalidate, we can never generate virtual sites after
+        # conformers are generated. This seems off. Since virtual sites
+        # do not seem to affect anything cached, we keep it.
+        # self._invalidate_cached_properties()
+
         return self._virtual_sites.index(vsite)
 
     def _add_divalent_lone_pair_virtual_site(
@@ -3803,13 +3850,13 @@ class FrozenMolecule(Serializable):
 
         Parameters
         ----------
-        atoms : list of 3 openff.toolkit.topology.molecule.Atom objects
+        atoms : list of three :class:`openff.toolkit.topology.molecule.Atom` objects
             The three atoms defining the virtual site's position
-        distance : float
 
-        out_of_plane_angle : float
+        distance : :class:`simtk.unit.Quantity` of dimension [Length] wrapping a scalar
 
-        in_plane_angle : float
+        out_of_plane_angle : :class:`simtk.unit.Quantity` of dimension [Angle] wrapping
+        a scalar
 
         epsilon : float
             Epsilon term for VdW properties of virtual site. Default is None.
@@ -3836,7 +3883,12 @@ class FrozenMolecule(Serializable):
         )
 
         self._add_virtual_site(vsite, replace=replace)
-        self._invalidate_cached_properties()
+
+        # If we invalidate, we can never generate virtual sites after
+        # conformers are generated. This seems off. Since virtual sites
+        # do not seem to affect anything cached, we keep it.
+        # self._invalidate_cached_properties()
+
         return self._virtual_sites.index(vsite)
 
     def _add_trivalent_lone_pair_virtual_site(self, atoms, distance, **kwargs):
@@ -3846,13 +3898,10 @@ class FrozenMolecule(Serializable):
 
         Parameters
         ----------
-        atoms : list of 4 openff.toolkit.topology.molecule.Atom objects or atom indices
-            The three atoms defining the virtual site's position
-        distance : float
+        atoms : list of 4 :class:`openff.toolkit.topology.molecule.Atom` objects
+            The four atoms defining the virtual site's position
 
-        out_of_plane_angle : float
-
-        in_plane_angle : float
+        distance : :class:`simtk.unit.Quantity` of dimension [Length] wrapping a scalar
 
         epsilon : float
             Epsilon term for VdW properties of virtual site. Default is None.
@@ -3869,7 +3918,12 @@ class FrozenMolecule(Serializable):
         vsite = TrivalentLonePairVirtualSite(atoms, distance, **kwargs)
 
         self._add_virtual_site(vsite, replace=replace)
-        self._invalidate_cached_properties()
+
+        # If we invalidate, we can never generate virtual sites after
+        # conformers are generated. This seems off. Since virtual sites
+        # do not seem to affect anything cached, we keep it.
+        # self._invalidate_cached_properties()
+
         return self._virtual_sites.index(vsite)
 
     def _add_bond(
@@ -5870,7 +5924,8 @@ class Molecule(FrozenMolecule):
 
         """
         # super(self, Molecule).__init__(*args, **kwargs)
-        super(Molecule, self).__init__(*args, **kwargs)
+        # super(Molecule, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     # TODO: Change this to add_atom(Atom) to improve encapsulation and extensibility?
     def add_atom(
@@ -5937,13 +5992,11 @@ class Molecule(FrozenMolecule):
 
         Parameters
         ----------
-        atoms : list of openff.toolkit.topology.molecule.Atom objects or ints of shape [N]
-            The atoms defining the virtual site's position or their indices
-        distance : float
+        atoms : list of :class:`openff.toolkit.topology.molecule.Atom` objects
+            The atoms defining the virtual site's position
 
-        weights : list of floats of shape [N] or None, optional, default=None
-            weights[index] is the weight of particles[index] contributing to
-            the position of the virtual site. Default is None
+        distance : :class:`simtk.unit.Quantity` of dimension [Length] wrapping a scalar
+
         charge_increments : list of floats of shape [N], optional, default=None
             The amount of charge to remove from the VirtualSite's atoms and put
             in the VirtualSite. Indexing in this list should match the ordering
@@ -5984,13 +6037,16 @@ class Molecule(FrozenMolecule):
 
         Parameters
         ----------
-        atoms : list of three openff.toolkit.topology.molecule.Atom objects or ints
-            The three atoms defining the virtual site's position or their molecule atom indices
-        distance : float
+        atoms : list of three :class:`openff.toolkit.topology.molecule.Atom` objects
+            The three atoms defining the virtual site's position
 
-        out_of_plane_angle : float
+        distance : :class:`simtk.unit.Quantity` of dimension [Length] wrapping a scalar
 
-        in_plane_angle : float
+        out_of_plane_angle : :class:`simtk.unit.Quantity` of dimension [Angle] wrapping
+        a scalar
+
+        in_plane_angle : :class:`simtk.unit.Quantity` of dimension [Angle] wrapping a
+        scalar
 
         epsilon : float
             Epsilon term for VdW properties of virtual site. Default is None.
@@ -6034,11 +6090,13 @@ class Molecule(FrozenMolecule):
 
         Parameters
         ----------
-        atoms : list of 3 openff.toolkit.topology.molecule.Atom objects or ints
-            The three atoms defining the virtual site's position or their molecule atom indices
-        distance : float
+        atoms : list of three :class:`openff.toolkit.topology.molecule.Atom` objects
+            The three atoms defining the virtual site's position
 
-        out_of_plane_angle : float
+        distance : :class:`simtk.unit.Quantity` of dimension [Length] wrapping a scalar
+
+        out_of_plane_angle : :class:`simtk.unit.Quantity` of dimension [Angle] wrapping
+        a scalar
 
         epsilon : float
             Epsilon term for VdW properties of virtual site. Default is None.
@@ -6077,9 +6135,10 @@ class Molecule(FrozenMolecule):
 
         Parameters
         ----------
-        atoms : list of 4 openff.toolkit.topology.molecule.Atom objects or ints
-            The three atoms defining the virtual site's position or their molecule atom indices
-        distance : float
+        atoms : list of four :class:`openff.toolkit.topology.molecule.Atom` objects
+            The four atoms defining the virtual site's position
+
+        distance : simtk.unit.Quantity of unit [Length] wrapping a scalar
 
         epsilon : float
             Epsilon term for VdW properties of virtual site. Default is None.
