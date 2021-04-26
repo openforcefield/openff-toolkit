@@ -5924,8 +5924,7 @@ class Molecule(FrozenMolecule):
 
         """
         # super(self, Molecule).__init__(*args, **kwargs)
-        # super(Molecule, self).__init__(*args, **kwargs)
-        super().__init__(*args, **kwargs)
+        super(Molecule, self).__init__(*args, **kwargs)
 
     # TODO: Change this to add_atom(Atom) to improve encapsulation and extensibility?
     def add_atom(
