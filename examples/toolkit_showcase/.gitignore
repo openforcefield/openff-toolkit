@@ -1,0 +1,13 @@
+fep-benchmark/
+*.nc
+*.top
+*.gro
+*.pdb
+*.tpr
+*.trr
+*.log
+*.edr
+*.cpt
+*.xtc
+mdout.mdp
+\#*\#
