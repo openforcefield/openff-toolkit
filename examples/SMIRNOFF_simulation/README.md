@@ -1,5 +1,5 @@
 ## Simulate a system parametrized with the Open Force Field Toolkit
 
-[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/openforcefield/openff-toolkit/d129d0c1f3399aa3e2611443210fce526bc62dd6)
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/openforcefield/openff-toolkit/latest?filepath=examples%2FSMIRNOFF_simulation%2Frun_simulation.ipynb)
 
 The notebook `run_simulation.ipynb` shows how to use the Open Force Field Toolkit to create a parametrized `System` object that can be used to run a molecular dynamic simulation with OpenMM.

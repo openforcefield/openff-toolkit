@@ -1,5 +1,5 @@
 ## Inspecting which SMIRNOFF parameters are assigned to specific molecules
 
-[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/openforcefield/openff-toolkit/d129d0c1f3399aa3e2611443210fce526bc62dd6)
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/openforcefield/openff-toolkit/latest?filepath=examples%2Finspect_assigned_parameters%2Finspect_assigned_parameters.ipynb)
 
 These examples illustrate how to inspect which SMIRNOFF parameters are assigned to specific atoms for a test molecule, and to sets of molecules.

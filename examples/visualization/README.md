@@ -1,6 +1,6 @@
 # Built-in visualizations in `openff-toolkit`
 
-[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/openforcefield/openff-toolkit/d129d0c1f3399aa3e2611443210fce526bc62dd6)
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/openforcefield/openff-toolkit/latest?filepath=examples%2Fvisualization%2Fvisualization.ipynb)
 
 PR [#560](https://github.com/openforcefield/openff-toolkit/pull/560) introduced rich representation for the `openff.toolkit.topology.Molecule` objects. This means you can visualize them in your Jupyter Notebooks:
 
