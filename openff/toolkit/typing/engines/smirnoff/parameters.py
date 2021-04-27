@@ -3858,7 +3858,6 @@ class ElectrostaticsHandler(_NonbondedHandler):
             self.mark_charges_assigned(ref_mol, topology)
 
         # Set the nonbonded method
-        settings_matched = False
         current_nb_method = force.getNonbondedMethod()
 
         # First, check whether the vdWHandler set the nonbonded method to LJPME, because that means
@@ -3880,7 +3879,6 @@ class ElectrostaticsHandler(_NonbondedHandler):
             if topology.box_vectors is None:
                 assert current_nb_method == openmm.NonbondedForce.NoCutoff
                 force.setCutoffDistance(self.cutoff)
-                settings_matched = True
                 # raise IncompatibleParameterError("Electrostatics handler received PME method keyword, but a nonperiodic"
                 #                                  " topology. Use of PME electrostatics requires a periodic topology.")
             else:
@@ -3892,14 +3890,11 @@ class ElectrostaticsHandler(_NonbondedHandler):
                     force.setCutoffDistance(9.0 * unit.angstrom)
                     force.setEwaldErrorTolerance(1.0e-4)
 
-            settings_matched = True
-
         # If vdWHandler set the nonbonded method to NoCutoff, then we don't need to change anything
         elif self.method == "Coulomb":
             if topology.box_vectors is None:
                 # (vdWHandler will have already set this to NoCutoff)
                 assert current_nb_method == openmm.NonbondedForce.NoCutoff
-                settings_matched = True
             else:
                 raise IncompatibleParameterError(
                     "Electrostatics method set to Coulomb, and topology is periodic. "
