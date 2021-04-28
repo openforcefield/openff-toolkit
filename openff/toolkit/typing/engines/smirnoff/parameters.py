@@ -36,6 +36,8 @@ __all__ = [
     "AngleHandler",
     "ProperTorsionHandler",
     "ImproperTorsionHandler",
+    "ElectrostaticsHandler",
+    "LibraryChargeHandler",
     "vdWHandler",
     "GBSAHandler",
     "ToolkitAM1BCCHandler",

@@ -41,7 +41,10 @@ from simtk import openmm
 
 from openff.toolkit.topology.molecule import DEFAULT_AROMATICITY_MODEL
 from openff.toolkit.typing.engines.smirnoff.io import ParameterIOHandler
-from openff.toolkit.typing.engines.smirnoff.parameters import ParameterHandler
+from openff.toolkit.typing.engines.smirnoff.parameters import (
+    IncompatibleParameterError,
+    ParameterHandler,
+)
 from openff.toolkit.typing.engines.smirnoff.plugins import load_handler_plugins
 from openff.toolkit.utils.utils import (
     MessageException,
@@ -1365,6 +1368,21 @@ class ForceField:
             electrostatics_14,
             vdw_14,
         )
+
+        if hasattr(self.get_parameter_handler("Electrostatics"), "cutoff"):
+            vdw_cutoff = self.get_parameter_handler("vdW").cutoff
+            coul_cutoff = self.get_parameter_handler("Electrostatics").cutoff
+            coul_method = self.get_parameter_handler("Electrostatics").method
+            if vdw_cutoff != coul_cutoff:
+                if coul_method == "PME":
+                    nonbonded_force.setCutoffDistance(vdw_cutoff)
+                else:
+                    raise IncompatibleParameterError(
+                        "In its current implementation of the OpenFF Toolkit, with "
+                        f"With electrostatics method {coul_method}, the electrostatics "
+                        f"cutoff must equal the vdW cutoff. Found vdw cutoff {vdw_cutoff} "
+                        f"and {coul_cutoff}."
+                    )
 
         if return_topology:
             return (system, topology)
