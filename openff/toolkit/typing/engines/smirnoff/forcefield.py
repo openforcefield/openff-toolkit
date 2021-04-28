@@ -1283,6 +1283,8 @@ class ForceField:
         """
         return_topology = kwargs.pop("return_topology", False)
 
+        combine_nonbonded_forces = kwargs.pop("combine_nonbonded_forces", True)
+
         # Make a deep copy of the topology so we don't accidentally modify it
         topology = copy.deepcopy(topology)
 

@@ -3541,6 +3541,7 @@ class vdWHandler(_NonbondedHandler):
 
     _TAGNAME = "vdW"  # SMIRNOFF tag name to process
     _INFOTYPE = vdWType  # info type to store
+    _KWARGS = ["combine_nonbonded_forces"]
     # _KWARGS = ['ewaldErrorTolerance',
     #            'useDispersionCorrection',
     #            'usePbc'] # Kwargs to catch when create_force is called
@@ -3620,28 +3621,53 @@ class vdWHandler(_NonbondedHandler):
         )
 
     def create_force(self, system, topology, **kwargs):
-        force = super().create_force(system, topology, **kwargs)
+        combine_forces = True  # kwargs.get("combine_nonbonded_forces")
+
+        if combine_forces:
+            force = super().create_force(system, topology, **kwargs)
+        else:
+            expression = (
+                "4epsilon((sigma/r)^12-(sigma/r)^6); "
+                "sigma=(sigma1+sigma2)/2; "
+                "epsilon=sqrt(epsilon1epsilon2)"
+            )
+            force = openmm.CustomNonbondedForce(expression)
+            force.addPerParticleParameter("sigma")
+            force.addPerParticleParameter("epsilon")
+            for _ in topology.topology_particles:
+                force.addParticle([1.0, 0.0])
 
         # If we're using PME, then the only possible openMM Nonbonded type is LJPME
         if self.method == "PME":
             # If we're given a nonperiodic box, we always set NoCutoff. Later we'll add support for CutoffNonPeriodic
             if topology.box_vectors is None:
-                force.setNonbondedMethod(openmm.NonbondedForce.NoCutoff)
-                # if (topology.box_vectors is None):
-                #     raise SMIRNOFFSpecError("If vdW method is  PME, a periodic Topology "
-                #                             "must be provided")
+                if combine_forces:
+                    force.setNonbondedMethod(openmm.NonbondedForce.NoCutoff)
+                    # if (topology.box_vectors is None):
+                    #     raise SMIRNOFFSpecError("If vdW method is  PME, a periodic Topology "
+                    #                             "must be provided")
+                else:
+                    raise Exception("LJPME is only valid for a periodic topology")
             else:
                 force.setNonbondedMethod(openmm.NonbondedForce.LJPME)
-                force.setCutoffDistance(9.0 * unit.angstrom)
+                force.setCutoffDistance(self.cutoff)
                 force.setEwaldErrorTolerance(1.0e-4)
 
         # If method is cutoff, then we currently support openMM's PME for periodic system and NoCutoff for nonperiodic
         elif self.method == "cutoff":
             # If we're given a nonperiodic box, we always set NoCutoff. Later we'll add support for CutoffNonPeriodic
             if topology.box_vectors is None:
-                force.setNonbondedMethod(openmm.NonbondedForce.NoCutoff)
+                if combine_forces:
+                    force.setNonbondedMethod(openmm.NonbondedForce.NoCutoff)
+                else:
+                    force.setNonbondedMethod(openmm.NonbondedForce.CutoffNonPeriodic)
+                    force.setUseDispersionCorrection(True)
+                    force.setCutoffDistance(self.cutoff)
             else:
-                force.setNonbondedMethod(openmm.NonbondedForce.PME)
+                if combine_forces:
+                    force.setNonbondedMethod(openmm.NonbondedForce.PME)
+                else:
+                    force.setNonbondedMethod(openmm.NonbondedForce.CutoffPeriodic)
                 force.setUseDispersionCorrection(True)
                 force.setCutoffDistance(self.cutoff)
 
@@ -3656,7 +3682,10 @@ class vdWHandler(_NonbondedHandler):
                 sigma = 2.0 * ljtype.rmin_half / (2.0 ** (1.0 / 6.0))
             else:
                 sigma = ljtype.sigma
-            force.setParticleParameters(atom_idx, 0.0, sigma, ljtype.epsilon)
+            if combine_forces:
+                force.setParticleParameters(atom_idx, 0.0, sigma, ljtype.epsilon)
+            else:
+                force.setParticleParameters(atom_idx, sigma, ljtype.epsilon)
 
         # Check that no atoms (n.b. not particles) are missing force parameters.
         self._check_all_valence_terms_assigned(
@@ -3672,7 +3701,11 @@ class ElectrostaticsHandler(_NonbondedHandler):
 
     _TAGNAME = "Electrostatics"
     _DEPENDENCIES = [vdWHandler]
-    _KWARGS = ["charge_from_molecules", "allow_nonintegral_charges"]
+    _KWARGS = [
+        "charge_from_molecules",
+        "allow_nonintegral_charges",
+        "combine_nonbonded_forces",
+    ]
 
     scale12 = ParameterAttribute(default=0.0, converter=float)
     scale13 = ParameterAttribute(default=0.0, converter=float)
@@ -3800,6 +3833,8 @@ class ElectrostaticsHandler(_NonbondedHandler):
     def create_force(self, system, topology, **kwargs):
         from openff.toolkit.topology import TopologyAtom, TopologyVirtualSite
 
+        combine_forces = True  # kwargs.get("combine_nonbonded_forces")
+
         force = super().create_force(system, topology, **kwargs)
 
         # See if each molecule should have charges assigned by the charge_from_molecules kwarg
@@ -3857,64 +3892,95 @@ class ElectrostaticsHandler(_NonbondedHandler):
             # Finally, mark that charges were assigned for this reference molecule
             self.mark_charges_assigned(ref_mol, topology)
 
-        # Set the nonbonded method
-        current_nb_method = force.getNonbondedMethod()
+        if combine_forces:
+            # Set the nonbonded method
+            current_nb_method = force.getNonbondedMethod()
 
-        # First, check whether the vdWHandler set the nonbonded method to LJPME, because that means
-        # that electrostatics also has to be PME
-        if (current_nb_method == openmm.NonbondedForce.LJPME) and (
-            self.method != "PME"
-        ):
-            raise IncompatibleParameterError(
-                "In current Open Force Field Toolkit implementation, if vdW "
-                "treatment is set to LJPME, electrostatics must also be PME "
-                "(electrostatics treatment currently set to {}".format(self.method)
-            )
+            # First, check whether the vdWHandler set the nonbonded method to LJPME, because that means
+            # that electrostatics also has to be PME
+            if (
+                current_nb_method == openmm.NonbondedForce.LJPME
+                and self.method != "PME"
+            ):
+                raise IncompatibleParameterError(
+                    "In current Open Force Field Toolkit implementation, if vdW "
+                    "treatment is set to LJPME, electrostatics must also be PME "
+                    "(electrostatics treatment currently set to {}".format(self.method)
+                )
 
-        # Then, set nonbonded methods based on method keyword
-        if self.method == "PME":
-            # Check whether the topology is nonperiodic, in which case we always switch to NoCutoff
-            # (vdWHandler will have already set this to NoCutoff)
-            # TODO: This is an assumption right now, and a bad one. See issue #219
-            if topology.box_vectors is None:
-                assert current_nb_method == openmm.NonbondedForce.NoCutoff
-                force.setCutoffDistance(self.cutoff)
-                # raise IncompatibleParameterError("Electrostatics handler received PME method keyword, but a nonperiodic"
-                #                                  " topology. Use of PME electrostatics requires a periodic topology.")
-            else:
-                if current_nb_method == openmm.NonbondedForce.LJPME:
-                    pass
-                    # There's no need to check for matching cutoff/tolerance here since both are hard-coded defaults
+            # Then, set nonbonded methods based on method keyword
+            if self.method == "PME":
+                # Check whether the topology is nonperiodic, in which case we always switch to NoCutoff
+                # (vdWHandler will have already set this to NoCutoff)
+                # TODO: This is an assumption right now, and a bad one. See issue #219
+                if topology.box_vectors is None:
+                    assert current_nb_method == openmm.NonbondedForce.NoCutoff
+                    force.setCutoffDistance(self.cutoff)
+                    # raise IncompatibleParameterError("Electrostatics handler received PME method keyword, but a nonperiodic"
+                    #                                  " topology. Use of PME electrostatics requires a periodic topology.")
+                else:
+                    if current_nb_method == openmm.NonbondedForce.LJPME:
+                        pass
+                        # There's no need to check for matching cutoff/tolerance here since both are hard-coded defaults
+                    else:
+                        force.setNonbondedMethod(openmm.NonbondedForce.PME)
+                        force.setCutoffDistance(self.cutoff)
+                        force.setEwaldErrorTolerance(1.0e-4)
+
+            # If vdWHandler set the nonbonded method to NoCutoff, then we don't need to change anything
+            elif self.method == "Coulomb":
+                if topology.box_vectors is None:
+                    # (vdWHandler will have already set this to NoCutoff)
+                    assert current_nb_method == openmm.NonbondedForce.NoCutoff
+                else:
+                    raise IncompatibleParameterError(
+                        "Electrostatics method set to Coulomb, and topology is periodic. "
+                        "In the future, this will lead to use of OpenMM's CutoffPeriodic "
+                        "Nonbonded force method, however this is not supported in the "
+                        "current Open Force Field Toolkit."
+                    )
+
+            # If the vdWHandler set the nonbonded method to PME, then ensure that it has the same cutoff
+            elif self.method == "reaction-field":
+                if topology.box_vectors is None:
+                    raise SMIRNOFFSpecError(
+                        "Electrostatics method reaction-field can only be applied to a periodic system."
+                    )
+
+                else:
+                    raise SMIRNOFFSpecUnimplementedError(
+                        "Electrostatics method reaction-field is supported in the SMIRNOFF specification "
+                        "but not yet implemented in the OpenFF Toolkit."
+                    )
+        else:
+            if self.method == "PME":
+                if topology.box_vectors is None:
+                    raise IncompatibleParameterError(
+                        "Electrostatics handler received PME method keyword, but a nonperiodic "
+                        "topology. Use of PME electrostatics requires a periodic topology."
+                    )
                 else:
                     force.setNonbondedMethod(openmm.NonbondedForce.PME)
-                    force.setCutoffDistance(9.0 * unit.angstrom)
+                    force.setCutoffDistance(self.cutoff)
                     force.setEwaldErrorTolerance(1.0e-4)
 
-        # If vdWHandler set the nonbonded method to NoCutoff, then we don't need to change anything
-        elif self.method == "Coulomb":
-            if topology.box_vectors is None:
-                # (vdWHandler will have already set this to NoCutoff)
-                assert current_nb_method == openmm.NonbondedForce.NoCutoff
-            else:
-                raise IncompatibleParameterError(
-                    "Electrostatics method set to Coulomb, and topology is periodic. "
-                    "In the future, this will lead to use of OpenMM's CutoffPeriodic "
-                    "Nonbonded force method, however this is not supported in the "
-                    "current Open Force Field Toolkit."
-                )
-
-        # If the vdWHandler set the nonbonded method to PME, then ensure that it has the same cutoff
-        elif self.method == "reaction-field":
-            if topology.box_vectors is None:
-                raise SMIRNOFFSpecError(
-                    "Electrostatics method reaction-field can only be applied to a periodic system."
-                )
-
-            else:
-                raise SMIRNOFFSpecUnimplementedError(
-                    "Electrostatics method reaction-field is supported in the SMIRNOFF specification "
-                    "but not yet implemented in the OpenFF Toolkit."
-                )
+            elif self.method == "Coulomb":
+                if topology.box_vectors is None:
+                    raise IncompatibleParameterError(
+                        "Electrostatics method set to Coulomb, and topology is non-periodic. "
+                        "In the future, this will lead to use of OpenMM's CutoffNonPeriodic "
+                        "Nonbonded force method, however this is not supported in the "
+                        "current Open Force Field Toolkit."
+                    )
+                    # force.setNonbondedMethod(openmm.NonbondedForce.CutoffNonPeriodic)
+                else:
+                    raise IncompatibleParameterError(
+                        "Electrostatics method set to Coulomb, and topology is periodic. "
+                        "In the future, this will lead to use of OpenMM's CutoffPeriodic "
+                        "Nonbonded force method, however this is not supported in the "
+                        "current Open Force Field Toolkit."
+                    )
+                    # force.setNonbondedMethod(openmm.NonbondedForce.CutoffPeriodic)
 
     def postprocess_system(self, system, topology, **kwargs):
         force = super().create_force(system, topology, **kwargs)
