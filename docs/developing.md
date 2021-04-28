@@ -213,21 +213,22 @@ For example, the Lennard-Jones potential can be parameterized through either the
 ### Non-bonded methods as implemented in OpenMM
 
 The SMIRNOFF specification describes the contents of a force field, which can be implemented in a number of different ways in different molecular simulation engines.
-The OpenMM implementation provided by the OpenFF Toolkit produces either an `openmm.System` object containing a `openmm.NonbondedForce` object or raises an exception if there is any incompatibility or unimplemented behavior.
-The below table describes these exceptions or which [`NonbondedMethod`](http://docs.openmm.org/latest/userguide/application.html?highlight=ljpme#nonbonded-interactions) is set on the resulting `NonbondedForce`.
+The OpenMM implementation provided by the OpenFF Toolkit either produces an `openmm.System` containing a `openmm.NonbondedForce` object or raises an exception depending on how the non-bonded parameters are specified.
+Exceptions are raised when parameters are incompatible with OpenMM (`IncompatibleParameterError`) or otherwise against spec (`SMIRNOFFSpecError`), and also when they are appropriate for the spec but not yet implemented in the toolkit (`SMIRNOFFSpecUnimplementedError`).
+This table describes which [`NonbondedMethod`](http://docs.openmm.org/latest/userguide/application.html?highlight=ljpme#nonbonded-interactions) is used in the produced `NonbondedForce`, or else which exception is raised.
 
 | vdw_method | electrostatics_method | periodic | OpenMM Nonbonded method or exception |
 |------------|-----------------------|----------|--------------------------------------|
-| cutoff     | Coulomb               | True     | `IncompatibleParameterError`
+| cutoff     | Coulomb               | True     | raises `IncompatibleParameterError`
 | cutoff     | Coulomb               | False    | `openmm.NonbondedForce.NoCutoff`
-| cutoff     | reaction-field        | True     | `SMIRNOFFSpecError`
-| cutoff     | reaction-field        | False    | `SMIRNOFFSpecUnimplementedError`
+| cutoff     | reaction-field        | True     | raises `SMIRNOFFSpecError`
+| cutoff     | reaction-field        | False    | raises `SMIRNOFFSpecUnimplementedError`
 | cutoff     | PME                   | True     | `openmm.NonbondedForce.PME`
 | cutoff     | PME                   | False    | `openmm.NonbondedForce.NoCutoff`
-| LJPME      | Coulomb               | True     | `IncompatibleParameterError`
+| LJPME      | Coulomb               | True     | raises `IncompatibleParameterError`
 | LJPME      | Coulomb               | False    | `openmm.NonbondedForce.NoCutoff`
-| LJPME      | reaction-field        | True     | `IncompatibleParameterError`
-| LJPME      | reaction-field        | False    | `SMIRNOFFSpecError`
+| LJPME      | reaction-field        | True     | raises `IncompatibleParameterError`
+| LJPME      | reaction-field        | False    | raises `SMIRNOFFSpecError`
 | LJPME      | PME                   | True     | `openmm.NonbondedForce.LJPME`
 | LJPME      | PME                   | False    | `openmm.NonbondedForce.NoCutoff`
 
