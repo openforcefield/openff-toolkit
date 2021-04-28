@@ -235,7 +235,7 @@ Notes:
 * The most commonly-used case (including the Parsley line) is row is the sixth row (cutoff vdW, PME electrostatics, periodic topology)
 * For all cases included a non-periodic topology, `openmm.NonbondedForce.NoCutoff` is currently used.
 * Electrostatics method `reaction-field` can only apply to periodic systems, however it is not currently implemented.
-* LJPME (particle mesh ewald for LJ/vdW itneractions) is not yet fully described in the SMIRNOFF specification.
+* LJPME (particle mesh ewald for LJ/vdW interactions) is not yet fully described in the SMIRNOFF specification.
 * In the future, the OpenFF Toolkit may create multiple `CustomNonbondedForce` objects in order to better de-couple vdW and electrostatic interactions.
 
 ## Contributing
