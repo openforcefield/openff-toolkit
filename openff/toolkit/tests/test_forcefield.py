@@ -40,6 +40,7 @@ from openff.toolkit.typing.engines.smirnoff import (
     ParameterLookupError,
     SMIRNOFFAromaticityError,
     SMIRNOFFSpecError,
+    SMIRNOFFSpecUnimplementedError,
     ToolkitAM1BCCHandler,
     XMLParameterIOHandler,
     get_available_force_fields,
@@ -615,7 +616,7 @@ nonbonded_resolution_matrix = [
         "electrostatics_method": "reaction-field",
         "has_periodic_box": True,
         "omm_force": None,
-        "exception": SMIRNOFFSpecError,
+        "exception": SMIRNOFFSpecUnimplementedError,
         "exception_match": "reaction-field",
     },
     {
@@ -663,7 +664,7 @@ nonbonded_resolution_matrix = [
         "electrostatics_method": "reaction-field",
         "has_periodic_box": True,
         "omm_force": None,
-        "exception": SMIRNOFFSpecError,
+        "exception": IncompatibleParameterError,
         "exception_match": "reaction-field",
     },
     {
