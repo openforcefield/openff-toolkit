@@ -1285,6 +1285,37 @@ class ForceField:
 
         combine_nonbonded_forces = kwargs.get("combine_nonbonded_forces", True)
 
+        electrostatics_method = self.get_parameter_handler(
+            tagname="Electrostatics"
+        ).method
+        vdw_method = self.get_parameter_handler(tagname="vdW").method
+
+        if combine_nonbonded_forces:
+            if electrostatics_method in ["PME", "reaction-field"]:
+                if vdw_method in ["PME", "cutoff"]:
+                    can_be_combined = True
+                else:
+                    can_be_combined = False
+            elif electrostatics_method == "Coulomb":
+                if vdw_method == "cutoff":
+                    can_be_combined = True
+                if vdw_method == "PME":
+                    can_be_combined = False
+
+            if not can_be_combined:
+                from openff.toolkit.typing.engines.smirnoff.parameters import (
+                    IncompatibleParameterError,
+                )
+
+                raise IncompatibleParameterError(
+                    "`combine_nonbonded_forces=True` was passed to `.create_openmm_system()`, "
+                    "but un-combinable vdW and Electrostatics methods were found in "
+                    f"the force field. Found vdW method {vdw_method} and electrostatics method "
+                    f"{electrostatics_method}."
+                )
+
+        # What are the other problematic cases
+
         # Make a deep copy of the topology so we don't accidentally modify it
         topology = copy.deepcopy(topology)
 
