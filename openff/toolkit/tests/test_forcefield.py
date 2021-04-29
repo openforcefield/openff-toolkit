@@ -656,8 +656,8 @@ nonbonded_resolution_matrix = [
         "electrostatics_method": "Coulomb",
         "has_periodic_box": False,
         "omm_force": None,
-        "exception": SMIRNOFFSpecError,
-        "exception_match": "vdW method PME requires a p",
+        "exception": IncompatibleParameterError,
+        "exception_match": "but un-combinable",
     },
     {
         "vdw_method": "PME",
@@ -1606,6 +1606,16 @@ class TestForceField:
             by_force_type=False,
         )
 
+    def test_cannot_combine_nonbonded_forces(self):
+        top = Molecule.from_smiles("[#18]").to_topology()
+        forcefield = ForceField("test_forcefields/test_forcefield.offxml")
+
+        forcefield["vdW"].method = "PME"
+        forcefield["Electrostatics"].method = "Coulomb"
+
+        with pytest.raises(IncompatibleParameterError, match="un-comb"):
+            forcefield.create_openmm_system(top)
+
     @pytest.mark.parametrize("inputs", nonbonded_resolution_matrix)
     def test_nonbonded_method_resolution(self, inputs):
         """Test predefined permutations of input options to ensure nonbonded handling is correctly resolved"""
@@ -1642,13 +1652,13 @@ class TestForceField:
                         nonbond_method_matched = True
             assert nonbond_method_matched
         else:
-            with pytest.raises(exception, match=exception_match) as excinfo:
-                # The method is validated and may raise an exception if it's not supported.
-                forcefield.get_parameter_handler("vdW", {}).method = vdw_method
-                forcefield.get_parameter_handler(
-                    "Electrostatics", {}
-                ).method = electrostatics_method
-                omm_system = forcefield.create_openmm_system(topology)
+            # The method is validated and may raise an exception if it's not supported.
+            forcefield.get_parameter_handler("vdW").method = vdw_method
+            forcefield.get_parameter_handler(
+                "Electrostatics"
+            ).method = electrostatics_method
+            with pytest.raises(exception, match=exception_match):
+                forcefield.create_openmm_system(topology)
 
     def test_registered_parameter_handlers(self):
         """Test registered_parameter_handlers property"""
