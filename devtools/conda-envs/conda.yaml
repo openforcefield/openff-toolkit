@@ -3,9 +3,4 @@ channels:
   - conda-forge
 
 dependencies:
-    # Base depends
   - openff-toolkit
-
-  - openmmforcefields
-  - pytest
-  - nbval

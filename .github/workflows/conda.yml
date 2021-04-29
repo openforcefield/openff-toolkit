@@ -1,6 +1,16 @@
 name: Conda
 
 on: 
+  # Remove ...
+  push:
+    branches:
+      - "master"
+      - "maintenance/.+"
+  pull_request:
+    branches:
+      - "master"
+      - "maintenance/.+"
+  # ... until here before merging
   release:
     types:
       - released
@@ -48,20 +58,44 @@ jobs:
 
       - uses: conda-incubator/setup-miniconda@v2
         name: Vanilla install from conda
-        if: ${{ matrix.cfg.openeye == 'false' }}
         with:
           python-version: ${{ matrix.cfg.python-version }}
           activate-environment: test
           environment-file: devtools/conda-envs/conda.yaml
           auto-activate-base: false
-      - uses: conda-incubator/setup-miniconda@v2
-        name: Install from conda with OpenEye
+
+      - name: Environment with vanilla install
+        shell: bash -l {0}
+        run: |
+          conda info
+          conda list
+
+      - name: Import core classes
+        shell: bash -l {0}
+        run: |
+          which python
+          python -c "from openff.toolkit.topology import Molecule, Topology"
+          python -c "from openff.toolkit.typing.engines.smirnoff import ForceField"
+          python -c "from openff.toolkit.utils import *"
+
+      - name: Install test dependencies
+        shell: bash -l {0}
+        run: |
+          conda install openmmforcefields pytest nbval -c conda-forge
+
+      - name: Install OpenEye Toolkits
         if: ${{ matrix.cfg.openeye == 'true' }}
-        with:
-          python-version: ${{ matrix.cfg.python-version }}
-          activate-environment: test
-          environment-file: devtools/conda-envs/conda_oe.yaml
-          auto-activate-base: false
+        shell: bash -l {0}
+        run: |
+          conda install openeye-toolkits -c openeye
+
+      - name: Make oe_license.txt file from GH org secret "OE_LICENSE"
+        if: ${{ matrix.cfg.openeye == 'true' }}
+        shell: bash
+        env:
+          OE_LICENSE_TEXT: ${{ secrets.OE_LICENSE }}
+        run: |
+          echo "${OE_LICENSE_TEXT}" > ${OE_LICENSE}
 
       - name: Additional info about the build
         shell: bash -l {0}
@@ -70,14 +104,7 @@ jobs:
           df -h
           ulimit -a
 
-      - name: Make oe_license.txt file from GH org secret "OE_LICENSE"
-        shell: bash
-        env:
-          OE_LICENSE_TEXT: ${{ secrets.OE_LICENSE }}
-        run: |
-          echo "${OE_LICENSE_TEXT}" > ${OE_LICENSE}
-
-      - name: Environment Information
+      - name: Environment with test deps
         shell: bash -l {0}
         run: |
           conda info
