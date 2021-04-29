@@ -1582,6 +1582,30 @@ class TestForceField:
         e_cutoff = forcefield["Electrostatics"].cutoff
         assert found_cutoff == vdw_cutoff == e_cutoff
 
+    def test_split_nonbonded_forces(self):
+        mol = create_ethanol()
+        mol.generate_conformers(n_conformers=1)
+        top = Topology.from_molecules([mol])
+        top.box_vectors = [4, 4, 4] * unit.nanometer
+        forcefield = ForceField("test_forcefields/test_forcefield.offxml")
+
+        combined_force = forcefield.create_openmm_system(top)
+        split_force = forcefield.create_openmm_system(
+            top, combine_nonbonded_forces=False
+        )
+
+        assert combined_force.getNumForces() < split_force.getNumForces()
+
+        from openff.toolkit.tests.utils import compare_system_energies
+
+        compare_system_energies(
+            system1=combined_force,
+            system2=split_force,
+            positions=mol.conformers[0],
+            box_vectors=top.box_vectors,
+            by_force_type=False,
+        )
+
     @pytest.mark.parametrize("inputs", nonbonded_resolution_matrix)
     def test_nonbonded_method_resolution(self, inputs):
         """Test predefined permutations of input options to ensure nonbonded handling is correctly resolved"""

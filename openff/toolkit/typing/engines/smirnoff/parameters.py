@@ -3621,17 +3621,18 @@ class vdWHandler(_NonbondedHandler):
         )
 
     def create_force(self, system, topology, **kwargs):
-        combine_forces = True  # kwargs.get("combine_nonbonded_forces")
+        combine_forces = kwargs.get("combine_nonbonded_forces", True)
 
         if combine_forces:
             force = super().create_force(system, topology, **kwargs)
         else:
             expression = (
-                "4epsilon((sigma/r)^12-(sigma/r)^6); "
+                "4*epsilon*((sigma/r)^12-(sigma/r)^6); "
                 "sigma=(sigma1+sigma2)/2; "
-                "epsilon=sqrt(epsilon1epsilon2)"
+                "epsilon=sqrt(epsilon1*epsilon2); "
             )
             force = openmm.CustomNonbondedForce(expression)
+            system.addForce(force)
             force.addPerParticleParameter("sigma")
             force.addPerParticleParameter("epsilon")
             for _ in topology.topology_particles:
@@ -3655,9 +3656,10 @@ class vdWHandler(_NonbondedHandler):
             else:
                 if combine_forces:
                     force.setNonbondedMethod(openmm.NonbondedForce.PME)
+                    force.setUseDispersionCorrection(True)
                 else:
                     force.setNonbondedMethod(openmm.NonbondedForce.CutoffPeriodic)
-            force.setUseDispersionCorrection(True)
+                    force.setUseLongRangeCorrection(True)
             force.setCutoffDistance(self.cutoff)
 
         # Iterate over all defined Lennard-Jones types, allowing later matches to override earlier ones.
@@ -3674,7 +3676,7 @@ class vdWHandler(_NonbondedHandler):
             if combine_forces:
                 force.setParticleParameters(atom_idx, 0.0, sigma, ljtype.epsilon)
             else:
-                force.setParticleParameters(atom_idx, sigma, ljtype.epsilon)
+                force.setParticleParameters(atom_idx, [sigma, ljtype.epsilon])
 
         # Check that no atoms (n.b. not particles) are missing force parameters.
         self._check_all_valence_terms_assigned(
@@ -3822,7 +3824,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
     def create_force(self, system, topology, **kwargs):
         from openff.toolkit.topology import TopologyAtom, TopologyVirtualSite
 
-        combine_forces = True  # kwargs.get("combine_nonbonded_forces")
+        combine_forces = kwargs.get("combine_nonbonded_forces", True)
 
         force = super().create_force(system, topology, **kwargs)
 

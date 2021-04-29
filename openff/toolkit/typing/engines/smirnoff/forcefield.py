@@ -1283,7 +1283,7 @@ class ForceField:
         """
         return_topology = kwargs.pop("return_topology", False)
 
-        combine_nonbonded_forces = kwargs.pop("combine_nonbonded_forces", True)
+        combine_nonbonded_forces = kwargs.get("combine_nonbonded_forces", True)
 
         # Make a deep copy of the topology so we don't accidentally modify it
         topology = copy.deepcopy(topology)
@@ -1358,15 +1358,32 @@ class ForceField:
 
                 bond_particle_indices.append((top_index_1, top_index_2))
 
-        # TODO: Can we generalize this to allow for `CustomNonbondedForce` implementations too?
-        forces = [system.getForce(i) for i in range(system.getNumForces())]
-        nonbonded_force = [f for f in forces if type(f) == openmm.NonbondedForce][0]
-
-        nonbonded_force.createExceptionsFromBonds(
-            bond_particle_indices,
-            electrostatics_14,
-            vdw_14,
-        )
+        for force in system.getForces():
+            if type(force) == openmm.NonbondedForce:
+                force.createExceptionsFromBonds(
+                    bond_particle_indices,
+                    electrostatics_14,
+                    vdw_14,
+                )
+        if not combine_nonbonded_forces:
+            for force in system.getForces():
+                if type(force) == openmm.CustomNonbondedForce:
+                    vdw_force = force
+                elif type(force) == openmm.NonbondedForce:
+                    coul_force = force
+            vdw_force.createExclusionsFromBonds(
+                bonds=bond_particle_indices,
+                bondCutoff=3,
+            )
+            for i in range(coul_force.getNumExceptions()):
+                (p1, p2, q, sig, eps) = coul_force.getExceptionParameters(i)
+                if q._value == 0.0:
+                    continue
+                sig1, eps1 = vdw_force.getParticleParameters(p1)
+                sig2, eps2 = vdw_force.getParticleParameters(p1)
+                sig_14 = (sig1 + sig2) * 0.5
+                eps_14 = (eps1 * eps2) ** 0.5
+                coul_force.setExceptionParameters(i, p1, p2, q, sig_14, eps_14)
 
         if return_topology:
             return (system, topology)
