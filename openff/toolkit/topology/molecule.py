@@ -771,7 +771,7 @@ class VirtualSite(Particle):
                     )
                 )
         else:
-            charge_increments = ([0.0]*len(atoms)) * unit.elementary_charge
+            charge_increments = ([0.0] * len(atoms)) * unit.elementary_charge
 
         # set sane defaults for OpenMM
         if epsilon is None and rmin_half is None:
