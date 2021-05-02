@@ -10,6 +10,24 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### New features and behaviors changed
 
+- [PR #909](https://github.com/openforcefield/openforcefield/pull/909): Virtual site positions can now
+  be computed directly in the toolkit. This functionality is accessed through
+  - :py:meth:`FrozenMolecule.compute_virtual_site_positions_from_conformer`
+  - :py:meth:`VirtualSite.compute_virtual_site_positions_from_conformer`
+  - :py:meth:`VirtualParticle.compute_position_from_conformer`
+  - :py:meth:`FrozenMolecule.compute_virtual_site_positions_from_atom_positions`
+  - :py:meth:`VirtualSite.compute_virtual_site_positions_from_atom_positions`
+  - :py:meth:`VirtualParticle.compute_position_from_atom_positions`
+    where the positions can be computed from a stored conformer, or an input vector of atom positions.
+  - Tests have been added (`TestMolecule.test_*_virtual_site_position`) to check for sane behavior. The tests do
+    not directly compare OpenMM position equivalence, but offline tests show that they are equivalent.
+  - The helper method :py:meth:`VirtualSiteHandler._create_openff_virtual_sites` is now public,
+    which returns a modified topology with virtual sites added.
+  - Virtual sites now expose the parameters used to create its local frame via the read-only properties
+    - :py:meth:`VirtualSite.local_frame_weights`
+    - :py:meth:`VirtualSite.local_frame_positions`
+  - Adding virtual sites via the `Molecule` API now have defaults for `sigma`, `epsilon`, and `charge_increment`
+    set to 0 with appropriate units, rather than `None`
 - [PR #762](https://github.com/openforcefield/openforcefield/pull/762): `Molecule.from_rdkit` now converts
   implicit hydrogens into explicit hydrogens by default. This change may affect 
   `RDKitToolkitWrapper/Molecule.from_smiles`, 
@@ -27,6 +45,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Bugfixes
 
+- [PR #909](https://github.com/openforcefield/openforcefield/pull/909): It is now possible to create an OpenMM system with virtual sites created via the `Molecule` virtual site API
 - [PR #891](https://github.com/openforcefield/openforcefield/pull/891): Calls to `Molecule.from_openeye` no longer mutate the input OE molecule.
 - [PR #897](https://github.com/openforcefield/openforcefield/pull/897): Fixes enumeration of stereoisomers for molecules with already defined stereochemistry using RDKit.
 - [PR #859](https://github.com/openforcefield/openforcefield/pull/859): Makes `RDKitToolkitWrapper.enumerate_tautomers` actually use the `max_states` keyword argument during tautomer generation, which will reduce resource use in some cases. 
@@ -40,7 +59,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 - [PR #906](https://github.com/openforcefield/openff-toolkit/pull/906): Cleaner instructions on how to setup development environment. 
 
 :::{TODO}
-Translate previous release history to MyST markdown
+- Translate previous release history to MyST markdown
+- Enable `Topology.to_openmm` export of virtual site particles
 :::
 
 :::{eval-rst}
