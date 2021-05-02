@@ -770,6 +770,14 @@ class VirtualSite(Particle):
                         len(charge_increments), len(atoms)
                     )
                 )
+        else:
+            charge_increments = ([0.0]*len(atoms)) * unit.elementary_charge
+
+        # set sane defaults for OpenMM
+        if epsilon is None and rmin_half is None:
+            epsilon = 0.0 * unit.kilocalorie_per_mole
+        if sigma is None and rmin_half is None:
+            sigma = 0.0 * unit.angstrom
 
         # VdW parameters can either be epsilon+rmin_half or epsilon+sigma, but not both
         if not (epsilon is None):

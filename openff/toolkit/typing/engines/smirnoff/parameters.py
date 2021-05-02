@@ -3428,8 +3428,9 @@ class _NonbondedHandler(ParameterHandler):
         if len(existing) == 0:
             force = self._OPENMMTYPE()
             system.addForce(force)
-            # Create all particles.
-            for _ in topology.topology_particles:
+            # Create all atom particles. Virtual site particles are handled in
+            # in its own handler
+            for _ in topology.topology_atoms:
                 force.addParticle(0.0, 1.0, 0.0)
         else:
             force = existing[0]
