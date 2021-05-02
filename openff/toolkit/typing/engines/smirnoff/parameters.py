@@ -4954,7 +4954,7 @@ class VirtualSiteHandler(_NonbondedHandler):
         else:
 
             raise SMIRNOFFSpecError(
-                'VirtualSiteHander exclusion policy not understood. Set "exclusion_policy" to one of {}'.format(
+                'VirtualSiteHandler exclusion policy not understood. Set "exclusion_policy" to one of {}'.format(
                     _exclusion_policies_implemented
                 )
             )
@@ -5567,7 +5567,7 @@ class VirtualSiteHandler(_NonbondedHandler):
         # somewhere else
 
         logger.debug("Creating OpenFF virtual site representations...")
-        topology = self._create_openff_virtual_sites(topology)
+        topology = self.create_openff_virtual_sites(topology)
 
         # The toolkit now has a representation of the vsites in the topology,
         # and here we create the OpenMM parameters/objects/exclusions
@@ -5695,7 +5695,7 @@ class VirtualSiteHandler(_NonbondedHandler):
 
         return combined_orientations
 
-    def _create_openff_virtual_sites(self, topology):
+    def create_openff_virtual_sites(self, topology):
 
         for molecule in topology.reference_molecules:
 
