@@ -6,7 +6,9 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 * `minor` increments add features but do not break API compatibility
 * `micro` increments represent bugfix releases or improvements in documentation
 
-## Changes since last release
+## Current Development
+
+## 0.9.2 Minor feature and bugfix release
 
 ### New features and behaviors changed
 
@@ -28,35 +30,62 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
     - :py:meth:`VirtualSite.local_frame_positions`
   - Adding virtual sites via the `Molecule` API now have defaults for `sigma`, `epsilon`, and `charge_increment`
     set to 0 with appropriate units, rather than `None`
-- [PR #762](https://github.com/openforcefield/openforcefield/pull/762): `Molecule.from_rdkit` now converts
+- [PR #762](https://github.com/openforcefield/openforcefield/pull/762): 
+  [`Molecule.from_rdkit`](openff.toolkit.topology.Molecule.from_rdkit) now converts
   implicit hydrogens into explicit hydrogens by default. This change may affect 
-  `RDKitToolkitWrapper/Molecule.from_smiles`, 
-  `from_mapped_smiles`, `from_file`, `from_file_obj`, `from_inchi`, and `from_qcschema`. 
+  [`RDKitToolkitWrapper/Molecule.from_smiles`](openff.toolkit.utils.toolkits.RDKitToolkitWrapper.from_smiles), 
+  [`from_mapped_smiles`](openff.toolkit.topology.Molecule.from_mapped_smiles), 
+  [`from_file`](openff.toolkit.utils.toolkits.RDKitToolkitWrapper.from_file), 
+  [`from_file_obj`](openff.toolkit.utils.toolkits.RDKitToolkitWrapper.from_file_obj), 
+  [`from_inchi`](openff.toolkit.utils.toolkits.RDKitToolkitWrapper.from_inchi), and 
+  [`from_qcschema`](openff.toolkit.topology.Molecule.from_qcschema). 
   This new behavior can be disabled using the
-  `hydrogens_are_explicit=True` keyword argument to `from_smiles`, or loading the molecule into
-  the desired protonation state in RDKit, and calling `from_rdkit` on the RDKit molecule with 
+  `hydrogens_are_explicit=True` keyword argument to 
+  [`from_smiles`](openff.toolkit.utils.toolkits.RDKitToolkitWrapper.from_smiles), 
+  or loading the molecule into the desired explicit protonation state in RDKit, then calling 
+  [`from_rdkit`](openff.toolkit.utils.toolkits.RDKitToolkitWrapper.from_rdkit) on the RDKit molecule with 
   `hydrogens_are_explicit=True`.
-- [PR #894](https://github.com/openforcefield/openforcefield/pull/894): Calls to `Molecule.from_openeye`, 
-  `Molecule.from_rdkit`, `Molecule.from_smiles`, `OpenEyeToolkitWrapper.from_smiles`, and 
-  `RDKitToolkitWrapper.from_smiles` will now load atom maps into the the resulting 
+- [PR #894](https://github.com/openforcefield/openforcefield/pull/894): Calls to 
+  [`Molecule.from_openeye`](openff.toolkit.topology.Molecule.from_openeye), 
+  [`Molecule.from_rdkit`](openff.toolkit.topology.Molecule.from_rdkit), 
+  [`Molecule.from_smiles`](openff.toolkit.topology.Molecule.from_smiles), 
+  [`OpenEyeToolkitWrapper.from_smiles`](openff.toolkit.utils.toolkits.OpenEyeToolkitWrapper.from_smiles), and 
+  [`RDKitToolkitWrapper.from_smiles`](openff.toolkit.utils.toolkits.RDKitToolkitWrapper.from_smiles) 
+  will now load atom maps into the the resulting 
   `Molecule's` `offmol.properties['atom_map']` field, even if not all atoms have map indices assigned.
-- [PR #904](https://github.com/openforcefield/openforcefield/pull/904): `TopologyAtom` objects now have 
-  an element getter `TopologyAtom.element`.
+- [PR #904](https://github.com/openforcefield/openforcefield/pull/904): 
+  [`TopologyAtom`](openff.toolkit.topology.TopologyAtom.element) objects now have 
+  an element getter [`TopologyAtom.element`](openff.toolkit.topology.TopologyAtom.element).
 
 ### Bugfixes
 
-- [PR #909](https://github.com/openforcefield/openforcefield/pull/909): It is now possible to create an OpenMM system with virtual sites created via the `Molecule` virtual site API
-- [PR #891](https://github.com/openforcefield/openforcefield/pull/891): Calls to `Molecule.from_openeye` no longer mutate the input OE molecule.
-- [PR #897](https://github.com/openforcefield/openforcefield/pull/897): Fixes enumeration of stereoisomers for molecules with already defined stereochemistry using RDKit.
-- [PR #859](https://github.com/openforcefield/openforcefield/pull/859): Makes `RDKitToolkitWrapper.enumerate_tautomers` actually use the `max_states` keyword argument during tautomer generation, which will reduce resource use in some cases. 
+- [PR #909](https://github.com/openforcefield/openforcefield/pull/909): It is now possible to create an
+  OpenMM system with virtual sites created via the `Molecule` virtual site API
+- [PR #891](https://github.com/openforcefield/openforcefield/pull/891): Calls to 
+  [`Molecule/OpenEyeToolkitWrapper.from_openeye`](openff.toolkit.utils.toolkits.OpenEyeToolkitWrapper.from_openeye) 
+  no longer mutate the input OE molecule.
+- [PR #897](https://github.com/openforcefield/openforcefield/pull/897): Fixes enumeration of stereoisomers for 
+  molecules with already defined stereochemistry using 
+  [`RDKitToolkitWrapper.enumerate_stereoisomers`](openff.toolkit.utils.toolkits.RDKitToolkitWrapper.enumerate_stereoisomers).
+- [PR #859](https://github.com/openforcefield/openforcefield/pull/859): Makes 
+  [`RDKitToolkitWrapper.enumerate_tautomers`](openff.toolkit.utils.toolkits.RDKitToolkitWrapper.enumerate_tautomers) 
+  actually use the `max_states` keyword argument during tautomer generation, which will reduce resource use in some 
+  cases. 
 
 ### Improved documentation and warnings
-- [PR #862](https://github.com/openforcefield/openforcefield/pull/862): Clarify that `System` objects produced by the toolkit are OpenMM `System`s in anticipation of forthcoming OpenFF `System`s. Fixes [Issue #618](https://github.com/openforcefield/openforcefield/issues/618).
-- [PR #863](https://github.com/openforcefield/openff-toolkit/pull/863): Documented how to build the docs in the developers guide.
-- [PR #870](https://github.com/openforcefield/openff-toolkit/pull/870): Reorganised documentation to improve discoverability and allow future additions.
-- [PR #871](https://github.com/openforcefield/openff-toolkit/pull/871): Changed Markdown parser from m2r2 to MyST for improved documentation rendering.
-- [PR #880](https://github.com/openforcefield/openff-toolkit/pull/880): Cleanup and partial rewrite of the developer's guide.
-- [PR #906](https://github.com/openforcefield/openff-toolkit/pull/906): Cleaner instructions on how to setup development environment. 
+- [PR #862](https://github.com/openforcefield/openforcefield/pull/862): Clarify that `System` objects produced by the 
+  toolkit are OpenMM `System`s in anticipation of forthcoming OpenFF `System`s. Fixes 
+  [Issue #618](https://github.com/openforcefield/openforcefield/issues/618).
+- [PR #863](https://github.com/openforcefield/openff-toolkit/pull/863): Documented how to build the docs in the 
+  developers guide.
+- [PR #870](https://github.com/openforcefield/openff-toolkit/pull/870): Reorganised documentation to improve 
+  discoverability and allow future additions.
+- [PR #871](https://github.com/openforcefield/openff-toolkit/pull/871): Changed Markdown parser from m2r2 to MyST for 
+  improved documentation rendering.
+- [PR #880](https://github.com/openforcefield/openff-toolkit/pull/880): Cleanup and partial rewrite of the developer's 
+  guide.
+- [PR #906](https://github.com/openforcefield/openff-toolkit/pull/906): Cleaner instructions on how to setup 
+  development environment. 
 
 :::{TODO}
 - Translate previous release history to MyST markdown
