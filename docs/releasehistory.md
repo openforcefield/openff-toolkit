@@ -8,8 +8,6 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ## Current Development
 
-## 0.9.2 Minor feature and bugfix release
-
 ### New features and behaviors changed
 
 - [PR #909](https://github.com/openforcefield/openforcefield/pull/909): Virtual site positions can now
@@ -30,6 +28,16 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
     - :py:meth:`VirtualSite.local_frame_positions`
   - Adding virtual sites via the `Molecule` API now have defaults for `sigma`, `epsilon`, and `charge_increment`
     set to 0 with appropriate units, rather than `None`
+
+### Bugfixes
+
+- [PR #909](https://github.com/openforcefield/openforcefield/pull/909): It is now possible to create an
+  OpenMM system with virtual sites created via the `Molecule` virtual site API
+
+## 0.9.2 Minor feature and bugfix release
+
+### New features and behaviors changed
+
 - [PR #762](https://github.com/openforcefield/openforcefield/pull/762): 
   [`Molecule.from_rdkit`](openff.toolkit.topology.Molecule.from_rdkit) now converts
   implicit hydrogens into explicit hydrogens by default. This change may affect 
@@ -59,8 +67,6 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Bugfixes
 
-- [PR #909](https://github.com/openforcefield/openforcefield/pull/909): It is now possible to create an
-  OpenMM system with virtual sites created via the `Molecule` virtual site API
 - [PR #891](https://github.com/openforcefield/openforcefield/pull/891): Calls to 
   [`Molecule/OpenEyeToolkitWrapper.from_openeye`](openff.toolkit.utils.toolkits.OpenEyeToolkitWrapper.from_openeye) 
   no longer mutate the input OE molecule.
@@ -89,7 +95,6 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 :::{TODO}
 - Translate previous release history to MyST markdown
-- Enable `Topology.to_openmm` export of virtual site particles
 :::
 
 :::{eval-rst}
