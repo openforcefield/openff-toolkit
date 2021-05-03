@@ -1389,32 +1389,44 @@ class ForceField:
 
                 bond_particle_indices.append((top_index_1, top_index_2))
 
-        for force in system.getForces():
-            if type(force) == openmm.NonbondedForce:
-                force.createExceptionsFromBonds(
-                    bond_particle_indices,
-                    electrostatics_14,
-                    vdw_14,
-                )
-        if not combine_nonbonded_forces:
+        if combine_nonbonded_forces:
+            for force in system.getForces():
+                if type(force) == openmm.NonbondedForce:
+                    force.createExceptionsFromBonds(
+                        bond_particle_indices,
+                        electrostatics_14,
+                        vdw_14,
+                    )
+        else:
             for force in system.getForces():
                 if type(force) == openmm.CustomNonbondedForce:
                     vdw_force = force
                 elif type(force) == openmm.NonbondedForce:
                     coul_force = force
-            vdw_force.createExclusionsFromBonds(
-                bonds=bond_particle_indices,
-                bondCutoff=3,
+            # Keep coul 1-4 in the NonbondedForce, but zero out the vdW 1-4
+            coul_force.createExceptionsFromBonds(
+                bond_particle_indices,
+                electrostatics_14,
+                0.0,
             )
+
+            # Make a new CustomBondForce for the vdW 1-4
+            vdw_14_force = openmm.CustomBondForce(
+                "4*epsilon*((sigma/r)^12-(sigma/r)^6)"
+            )
+            vdw_14_force.addPerBondParameter("sigma")
+            vdw_14_force.addPerBondParameter("epsilon")
+
             for i in range(coul_force.getNumExceptions()):
                 (p1, p2, q, sig, eps) = coul_force.getExceptionParameters(i)
-                if q._value == 0.0:
-                    continue
+
+                # Look up the vdW parameters for each particle
                 sig1, eps1 = vdw_force.getParticleParameters(p1)
                 sig2, eps2 = vdw_force.getParticleParameters(p1)
+                # manually compute and set the 1-4 interactions
                 sig_14 = (sig1 + sig2) * 0.5
-                eps_14 = (eps1 * eps2) ** 0.5
-                coul_force.setExceptionParameters(i, p1, p2, q, sig_14, eps_14)
+                eps_14 = (eps1 * eps2) ** 0.5 * vdw_14
+                vdw_14_force.addBond(p1, p2, [sig_14, eps_14])
 
         if return_topology:
             return (system, topology)
