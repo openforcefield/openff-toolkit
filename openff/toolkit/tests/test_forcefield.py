@@ -1291,24 +1291,28 @@ class TestForceField:
             UnassignedProperTorsionParameterException,
         )
 
+        test_forcefield = ForceField("test_forcefields/test_forcefield.offxml")
         forcefield = ForceField(
             """
 <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+  <Electrostatics version="0.3" scale12="0.0" scale13="0.0" scale14="0.8333333333" scale15="1.0" cutoff="9.0 * angstrom" switch_width="0.0 * angstrom" method="PME"></Electrostatics>
   <ProperTorsions version="0.3" potential="k*(1+cos(periodicity*theta-phase))">
     <Proper smirks="[#99:1]-[#99X4:2]-[#99:3]-[#99:4]" id="t1" idivf1="1" k1="0.156 * kilocalories_per_mole" periodicity1="3" phase1="0.0 * degree"/>
   </ProperTorsions>
 </SMIRNOFF>
 """
         )
+        forcefield.register_parameter_handler(test_forcefield["vdW"])
         pdbfile = app.PDBFile(get_data_file_path("systems/test_systems/1_ethanol.pdb"))
         molecules = [create_ethanol()]
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
+        topology.box = [4, 4, 4] * unit.nanometer
         with pytest.raises(
             UnassignedProperTorsionParameterException,
             match="- Topology indices [(]5, 0, 1, 6[)]: "
             r"names and elements [(](H\d+)? H[)], [(](C\d+)? C[)], [(](C\d+)? C[)], [(](H\d+)? H[)],",
-        ) as excinfo:
-            omm_system = forcefield.create_openmm_system(topology)
+        ):
+            forcefield.create_openmm_system(topology)
 
     @pytest.mark.parametrize(
         "toolkit_registry,registry_description", toolkit_registries
@@ -1341,6 +1345,8 @@ class TestForceField:
         from simtk.openmm import app
 
         forcefield = ForceField("test_forcefields/test_forcefield.offxml")
+        forcefield["Electrostatics"].method = "Coulomb"
+
         pdbfile = app.PDBFile(
             get_data_file_path("systems/test_systems/1_cyclohexane_1_ethanol.pdb")
         )
@@ -1348,7 +1354,7 @@ class TestForceField:
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
         topology.box_vectors = None
 
-        omm_system = forcefield.create_openmm_system(topology)
+        forcefield.create_openmm_system(topology)
 
     @pytest.mark.slow
     @pytest.mark.parametrize(
@@ -1492,6 +1498,7 @@ class TestForceField:
 
         molecule = Molecule.from_smiles("CC1CCC(=O)O1", allow_undefined_stereo=True)
         topology = Topology.from_molecules([molecule])
+        topology.box_vectors = [4, 4, 4] * unit.nanometer
 
         force_field = ForceField("test_forcefields/test_forcefield.offxml")
         force_field.create_openmm_system(topology, toolkit_registry=toolkit_registry)
@@ -1509,6 +1516,7 @@ class TestForceField:
 
         molecule = Molecule.from_smiles("CC1CCC(=O)O1", allow_undefined_stereo=True)
         topology = Topology.from_molecules([molecule])
+        topology.box_vectors = [4, 4, 4] * unit.nanometer
 
         force_field = ForceField("test_forcefields/test_forcefield.offxml")
         force_field.create_openmm_system(topology, toolkit_registry=toolkit_registry)
@@ -1571,6 +1579,13 @@ class TestForceField:
             forcefield["vdW"].cutoff = 0.777 * unit.angstrom
             forcefield["Electrostatics"].cutoff = 0.777 * unit.angstrom
 
+        with pytest.raises(
+            IncompatibleParameterError,
+            match="Electrostatics method PME requires a periodic topology",
+        ):
+            forcefield.create_openmm_system(top)
+
+        top.box_vectors = [4, 4, 4] * unit.nanometer
         omm_sys = forcefield.create_openmm_system(top)
 
         for f in omm_sys.getForces():
