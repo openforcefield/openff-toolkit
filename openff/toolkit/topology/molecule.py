@@ -4395,6 +4395,7 @@ class FrozenMolecule(Serializable):
         """
 
         import networkx as nx
+
         from openff.toolkit.topology import TopologyMolecule
 
         # check for networkx then assuming we have a Molecule or TopologyMolecule instance just try and
