@@ -1406,27 +1406,47 @@ class ForceField:
             # Keep coul 1-4 in the NonbondedForce, but zero out the vdW 1-4
             coul_force.createExceptionsFromBonds(
                 bond_particle_indices,
-                electrostatics_14,
-                0.0,
+                1.0,
+                1.0,
             )
 
-            # Make a new CustomBondForce for the vdW 1-4
-            vdw_14_force = openmm.CustomBondForce(
-                "4*epsilon*((sigma/r)^12-(sigma/r)^6)"
+            # Make a new CustomBondForce for the 1-4 exceptions
+            # This includes BOTH vdW and Electrostatics
+            coul_const = 138.935456
+
+            force_14 = openmm.CustomBondForce(
+                f"4*epsilon*((sigma/r)^12-(sigma/r)^6) - {coul_const}*qq/r"
             )
-            vdw_14_force.addPerBondParameter("sigma")
-            vdw_14_force.addPerBondParameter("epsilon")
+            force_14.addPerBondParameter("sigma")
+            force_14.addPerBondParameter("epsilon")
+            force_14.addPerBondParameter("qq")
 
             for i in range(coul_force.getNumExceptions()):
                 (p1, p2, q, sig, eps) = coul_force.getExceptionParameters(i)
 
-                # Look up the vdW parameters for each particle
-                sig1, eps1 = vdw_force.getParticleParameters(p1)
-                sig2, eps2 = vdw_force.getParticleParameters(p1)
-                # manually compute and set the 1-4 interactions
-                sig_14 = (sig1 + sig2) * 0.5
-                eps_14 = (eps1 * eps2) ** 0.5 * vdw_14
-                vdw_14_force.addBond(p1, p2, [sig_14, eps_14])
+                # If the interactions are both zero, assume this is a 1-2 or 1-3 interaction
+                if q._value == 0 and eps._value == 0:
+                    pass
+                else:
+                    # Assume this is a 1-4 interaction
+                    # Look up the vdW parameters for each particle
+                    sig1, eps1 = vdw_force.getParticleParameters(p1)
+                    sig2, eps2 = vdw_force.getParticleParameters(p1)
+                    q1, _, _ = coul_force.getParticleParameters(p1)
+                    q2, _, _ = coul_force.getParticleParameters(p2)
+
+                    # manually compute and set the 1-4 interactions
+                    sig_14 = (sig1 + sig2) * 0.5
+                    eps_14 = (eps1 * eps2) ** 0.5 * vdw_14
+                    qq = q1 * q2 * electrostatics_14
+                    force_14.addBond(p1, p2, [sig_14, eps_14, qq])
+
+                # No matter if it's 1-4 or not, exclude it from the CustomNonBondedForce
+                # and zero out the interactions in the NonbondedForce
+                vdw_force.addExclusion(p1, p2)
+                coul_force.setExceptionParameters(i, p1, p2, 0.0, 0.0, 0.0)
+
+            system.addForce(force_14)
 
         if return_topology:
             return (system, topology)

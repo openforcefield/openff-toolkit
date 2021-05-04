@@ -1611,14 +1611,23 @@ class TestForceField:
 
         assert combined_force.getNumForces() < split_force.getNumForces()
 
-        from openff.toolkit.tests.utils import compare_system_energies
+        from openff.toolkit.tests.utils import compare_context_energies
 
-        compare_system_energies(
-            system1=combined_force,
-            system2=split_force,
+        integrator = openmm.VerletIntegrator(1.0 * unit.femtoseconds)
+        context1 = openmm.Context(combined_force, integrator)
+        try:
+            context2 = openmm.Context(split_force, copy.deepcopy(integrator))
+        except openmm.OpenMMException:
+            import ipdb
+
+            ipdb.set_trace()
+
+        compare_context_energies(
+            context1=context1,
+            context2=context2,
             positions=mol.conformers[0],
             box_vectors=top.box_vectors,
-            by_force_type=False,
+            by_force_group=False,
         )
 
     def test_cannot_combine_nonbonded_forces(self):
