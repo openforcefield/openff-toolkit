@@ -1246,7 +1246,7 @@ class _ParameterAttributeHandler:
         Add a cosmetic attribute to this object.
 
         This attribute will not have a functional effect on the object
-        in the Open Force Field Toolkit, but can be written out during
+        in the OpenFF Toolkit, but can be written out during
         output.
 
         .. warning :: The API for modifying cosmetic attributes is experimental
@@ -3624,26 +3624,23 @@ class vdWHandler(_NonbondedHandler):
 
         # If we're using PME, then the only possible openMM Nonbonded type is LJPME
         if self.method == "PME":
-            # If we're given a nonperiodic box, we always set NoCutoff. Later we'll add support for CutoffNonPeriodic
             if topology.box_vectors is None:
-                force.setNonbondedMethod(openmm.NonbondedForce.NoCutoff)
-                # if (topology.box_vectors is None):
-                #     raise SMIRNOFFSpecError("If vdW method is  PME, a periodic Topology "
-                #                             "must be provided")
+                raise SMIRNOFFSpecError(
+                    "vdW method PME requires a periodic topology, but a non-periodic topology "
+                    "was provided."
+                )
             else:
                 force.setNonbondedMethod(openmm.NonbondedForce.LJPME)
                 force.setCutoffDistance(9.0 * unit.angstrom)
                 force.setEwaldErrorTolerance(1.0e-4)
 
-        # If method is cutoff, then we currently support openMM's PME for periodic system and NoCutoff for nonperiodic
         elif self.method == "cutoff":
-            # If we're given a nonperiodic box, we always set NoCutoff. Later we'll add support for CutoffNonPeriodic
             if topology.box_vectors is None:
-                force.setNonbondedMethod(openmm.NonbondedForce.NoCutoff)
+                force.setNonbondedMethod(openmm.NonbondedForce.CutoffNonPeriodic)
             else:
-                force.setNonbondedMethod(openmm.NonbondedForce.PME)
-                force.setUseDispersionCorrection(True)
-                force.setCutoffDistance(self.cutoff)
+                force.setNonbondedMethod(openmm.NonbondedForce.CutoffPeriodic)
+            force.setUseDispersionCorrection(True)
+            force.setCutoffDistance(self.cutoff)
 
         # Iterate over all defined Lennard-Jones types, allowing later matches to override earlier ones.
         atom_matches = self.find_matches(topology)
@@ -3716,8 +3713,8 @@ class ElectrostaticsHandler(_NonbondedHandler):
     def switch_width(self, attr, new_switch_width):
         if self.switch_width != 0.0 * unit.angstrom:
             raise IncompatibleParameterError(
-                "The current implementation of the Open Force Field Toolkit can not "
-                "support an electrostatic switching width. Currently only `0.0 angstroms` "
+                "The current implementation of the OpenFF Toolkit can not support"
+                "an electrostatic switching width. Currently only `0.0 angstroms` "
                 f"is supported (SMIRNOFF data specified {new_switch_width})"
             )
 
@@ -3860,61 +3857,61 @@ class ElectrostaticsHandler(_NonbondedHandler):
         # Set the nonbonded method
         current_nb_method = force.getNonbondedMethod()
 
-        # First, check whether the vdWHandler set the nonbonded method to LJPME, because that means
-        # that electrostatics also has to be PME
-        if (current_nb_method == openmm.NonbondedForce.LJPME) and (
-            self.method != "PME"
-        ):
-            raise IncompatibleParameterError(
-                "In current Open Force Field Toolkit implementation, if vdW "
-                "treatment is set to LJPME, electrostatics must also be PME "
-                "(electrostatics treatment currently set to {}".format(self.method)
-            )
-
         # Then, set nonbonded methods based on method keyword
         if self.method == "PME":
-            # Check whether the topology is nonperiodic, in which case we always switch to NoCutoff
-            # (vdWHandler will have already set this to NoCutoff)
-            # TODO: This is an assumption right now, and a bad one. See issue #219
+            # First, check whether the vdWHandler set the nonbonded method to LJPME, because that means
+            # that electrostatics also has to be PME
             if topology.box_vectors is None:
-                assert current_nb_method == openmm.NonbondedForce.NoCutoff
-                force.setCutoffDistance(self.cutoff)
-                # raise IncompatibleParameterError("Electrostatics handler received PME method keyword, but a nonperiodic"
-                #                                  " topology. Use of PME electrostatics requires a periodic topology.")
+                raise IncompatibleParameterError(
+                    "Electrostatics method PME requires a periodic topology, but a "
+                    "non-periodic topology was provided. Consider setting the electrostatics "
+                    'method to "Coulomb" to directly compute electrostatics in a '
+                    "non-periodic system."
+                )
             else:
                 if current_nb_method == openmm.NonbondedForce.LJPME:
+                    # There's no need to check for matching cutoffs/tolerance here since both
+                    # user-specified PME "cutoffs" don't make much sense and OpenMM mostly handles it
                     pass
-                    # There's no need to check for matching cutoff/tolerance here since both are hard-coded defaults
-                else:
+                elif current_nb_method == openmm.NonbondedForce.CutoffPeriodic:
                     force.setNonbondedMethod(openmm.NonbondedForce.PME)
-                    force.setCutoffDistance(9.0 * unit.angstrom)
+                    force.setCutoffDistance(self.cutoff)
                     force.setEwaldErrorTolerance(1.0e-4)
-
-        # If vdWHandler set the nonbonded method to NoCutoff, then we don't need to change anything
-        elif self.method == "Coulomb":
-            if topology.box_vectors is None:
-                # (vdWHandler will have already set this to NoCutoff)
-                assert current_nb_method == openmm.NonbondedForce.NoCutoff
-            else:
-                raise IncompatibleParameterError(
-                    "Electrostatics method set to Coulomb, and topology is periodic. "
-                    "In the future, this will lead to use of OpenMM's CutoffPeriodic "
-                    "Nonbonded force method, however this is not supported in the "
-                    "current Open Force Field Toolkit."
-                )
+                else:
+                    # CutoffNonPeriodic nor NoCutoff should not creep in here
+                    raise IncompatibleParameterError(
+                        f"Found unexpected OpenMM non-bonded method {current_nb_method} which cannot "
+                        "be guaranteed to be compatible with NonbondedForce.PME"
+                    )
 
         # If the vdWHandler set the nonbonded method to PME, then ensure that it has the same cutoff
         elif self.method == "reaction-field":
-            if topology.box_vectors is None:
-                raise SMIRNOFFSpecError(
-                    "Electrostatics method reaction-field can only be applied to a periodic system."
+            if current_nb_method == openmm.NonbondedForce.LJPME:
+                raise SMIRNOFFSpecUnimplementedError(
+                    "In current OpenFF Toolkit implementation, if vdW "
+                    "treatment is set to PME/LJPME, electrostatics must also be PME. "
+                    "Found electrostatics method {}".format(self.method)
                 )
 
+            if topology.box_vectors is None:
+                force.setNonbondedMethod(openmm.NonbondedForce.CutoffNonPeriodic)
             else:
+                force.setNonbondedMethod(openmm.NonbondedForce.CutoffPeriodic)
+            found_cutoff = force.getCutoffDistance()
+            if found_cutoff != self.cutoff:
                 raise SMIRNOFFSpecUnimplementedError(
-                    "Electrostatics method reaction-field is supported in the SMIRNOFF specification "
-                    "but not yet implemented in the OpenFF Toolkit."
+                    "In the current OpenFF Toolkit implementation, if both vdW and electrostatics "
+                    "treatments meaningfully depend on cutoffs, those cutoffs must be equal. "
+                    f"Found vdW cutoff {found_cutoff} and electrostatics cutoff {self.cutoff}."
                 )
+            # TODO: This value should really be in the SMIRNOFF spec
+            force.setReactionFieldDielectric(78.3)
+
+        elif self.method == "Coulomb":
+            raise SMIRNOFFSpecUnimplementedError(
+                "In the current OpenFF Toolkit implementation, no vdW methods are compatible "
+                "with electrostatics method Coulomb."
+            )
 
     def postprocess_system(self, system, topology, **kwargs):
         force = super().create_force(system, topology, **kwargs)

@@ -219,10 +219,10 @@ This table describes which [`NonbondedMethod`](http://docs.openmm.org/latest/use
 
 | vdw_method | electrostatics_method | periodic | OpenMM Nonbonded method or exception | Common case |
 |------------|-----------------------|----------|--------------------------------------|---|
-| cutoff     | Coulomb               | True     | raises `IncompatibleParameterError`
-| cutoff     | Coulomb               | False    | `openmm.NonbondedForce.NoCutoff`
-| cutoff     | reaction-field        | True     | raises `SMIRNOFFSpecUnimplementedError`
-| cutoff     | reaction-field        | False    | raises `SMIRNOFFSpecError`
+| cutoff     | Coulomb               | True     | raises `.SMIRNOFFSpecUnimplementedError`
+| cutoff     | Coulomb               | False    | raises `.SMIRNOFFSpecUnimplementedError`
+| cutoff     | reaction-field        | True     | `openmm.NonbondedForce.CutoffPeriodic`
+| cutoff     | reaction-field        | False    | `openmm.NonbondedForce.CutoffNonPeriodic`
 | cutoff     | PME                   | True     | `openmm.NonbondedForce.PME` | * |
 | cutoff     | PME                   | False    | `openmm.NonbondedForce.NoCutoff`
 | LJPME      | Coulomb               | True     | raises `IncompatibleParameterError`
