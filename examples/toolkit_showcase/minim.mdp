@@ -1,15 +1,35 @@
-; minim.mdp - used as input into grompp to generate em.tpr
-; Parameters describing what to do, when to stop and what to save
-integrator  = steep         ; Algorithm (steep = steepest descent minimization)
-emtol       = 1000.0        ; Stop minimization when the maximum force < 1000.0 kJ/mol/nm
-emstep      = 0.01          ; Minimization step size
-nsteps      = 50000         ; Maximum number of (minimization) steps to perform
+; MDP file for energy minimising with the Parsley 1.3.0 force field
 
-; Parameters describing how to find the neighbors of each atom and how to calculate the interactions
-nstlist         = 1         ; Frequency to update the neighbor list and long range forces
-cutoff-scheme   = Verlet    ; Buffered neighbor searching
-ns_type         = grid      ; Method to determine neighbor list (simple, grid)
-coulombtype     = PME       ; Treatment of long range electrostatic interactions
-rcoulomb        = 1.0       ; Short-range electrostatic cut-off
-rvdw            = 1.0       ; Short-range Van der Waals cut-off
-pbc             = xyz       ; Periodic Boundary Conditions in all 3 dimensions
+;    INTEGRATION - EM
+integrator             = steep ; Steepest descent energy minimisation
+nsteps                 = 10000 ; Maximum of 10000 steps
+emtol                  = 1000 ; Stop minimising when greatest force is smaller than 1000 kJ/mol/nm
+emstep                 = 0.01 ; Initial step size (nm); default 0.01
+
+;    OUTPUT CONTROL
+; Strangely, this is where GROMACS sets all its output control
+; mdrun switches don't change anything
+nstxout                = 0 ; only last ; Steps between writing coords to uncompressed output trajectory
+nstvout                = 0 ; only last ; Steps between writing velocities to uncompressed output trajectory
+nstfout                = 0 ; never ; Steps between writing forces to uncompressed output trajectory
+nstlog                 = 0 ; only last ; Steps between writing energies to log file
+nstenergy              = 0 ; only last ; Steps between writing energies to energy file
+
+;    CUTOFF SCHEME - verlet
+; Verlet is faster, more parallelisable, more accurate, supports GPUs
+; Only use group for the legacy interactions it supports
+cutoff-scheme          = Verlet ; Neighbor searching with a Verlet buffer
+
+;    COULOMB INTERACTIONS
+coulombtype            = PME ; Use Particle Mesh Ewald to compute long-range electrostatic interactions
+rcoulomb               = 0.9 ; Cutoff for short-range electrostatics; tuned for performance at runtime by GROMACS
+
+;    LJ INTERACTIONS
+vdwtype                = Cut-off ; Use a cut-off for vdW interactions
+vdw-modifier           = force-switch ; Smoothly switch off the LJ interactions
+rvdw                   = 0.9 ; Distance cutoff for the vdW interactions
+rvdw-switch            = 0.8 ; where to start switching off the LJ force
+DispCorr               = EnerPres ; Correct the energy and pressure for long range dispersion errors
+
+;    CONSTRAINTS - EM
+constraints            = None ; Energy minimise without constraints for stability
