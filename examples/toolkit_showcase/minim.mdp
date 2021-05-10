@@ -32,4 +32,4 @@ rvdw-switch            = 0.8 ; where to start switching off the LJ force
 DispCorr               = EnerPres ; Correct the energy and pressure for long range dispersion errors
 
 ;    CONSTRAINTS - EM
-constraints            = None ; Energy minimise without constraints for stability
+constraints            = None ; Energy minimise without constraints to avoid LINCS warnings
