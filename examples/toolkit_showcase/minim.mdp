@@ -4,7 +4,7 @@
 integrator             = steep ; Steepest descent energy minimisation
 nsteps                 = 10000 ; Maximum of 10000 steps
 emtol                  = 1000 ; Stop minimising when greatest force is smaller than 1000 kJ/mol/nm
-emstep                 = 0.01 ; Initial step size (nm); default 0.01
+emstep                 = 0.001 ; Initial step size (nm); default 0.01
 
 ;    OUTPUT CONTROL
 ; Strangely, this is where GROMACS sets all its output control

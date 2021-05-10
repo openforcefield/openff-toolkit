@@ -2,7 +2,7 @@
 
 ;    INTEGRATION - MD
 integrator             = md ; leapfrog integrator
-dt                     = 0.001 ; 1 fs time step for unconstrained Parsley force field
+dt                     = 0.002 ; 2 fs time step
 nsteps                 = 5000 ; 10 ps
 nstcomm                = 1000 ; remove COM motion every 2 ps
 
@@ -55,8 +55,7 @@ gen-seed               = -1 ; -1 uses a random seed
 ; Constraints on bonds with Hydrogen permits 2 fs time step
 ; LINCS is faster and more stable
 ; Use SHAKE if you need angle constraints
-; constraints            = h-bonds ; Use constraints rather than harmonics for bonds involving Hydrogen
-constraints            = none ; No constraints for the unconstrained Parsley force field
+constraints            = h-bonds ; Use constraints rather than harmonics for bonds involving Hydrogen
 constraint-algorithm   = LINCS ; Use fast and stable LINCS constraint algorithm
 continuation           = no ; Apply constraints to the initial configuration (important since energy minimisation was unconstrained)
 lincs-order            = 4 ; Increase if you get LINCS errors
