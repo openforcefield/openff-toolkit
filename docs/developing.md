@@ -210,6 +210,34 @@ For example, the Lennard-Jones potential can be parameterized through either the
 %  '''''''''''''
 %  If you define a new class, add new files to autodoc
 
+### Non-bonded methods as implemented in OpenMM
+
+The SMIRNOFF specification describes the contents of a force field, which can be implemented in a number of different ways in different molecular simulation engines.
+The OpenMM implementation provided by the OpenFF Toolkit either produces an `openmm.System` containing a `openmm.NonbondedForce` object or raises an exception depending on how the non-bonded parameters are specified.
+Exceptions are raised when parameters are incompatible with OpenMM (`IncompatibleParameterError`) or otherwise against spec (`SMIRNOFFSpecError`), and also when they are appropriate for the spec but not yet implemented in the toolkit (`SMIRNOFFSpecUnimplementedError`).
+This table describes which [`NonbondedMethod`](http://docs.openmm.org/latest/userguide/application.html?highlight=ljpme#nonbonded-interactions) is used in the produced `NonbondedForce`, or else which exception is raised.
+
+| vdw_method | electrostatics_method | periodic | OpenMM Nonbonded method or exception | Common case |
+|------------|-----------------------|----------|--------------------------------------|---|
+| cutoff     | Coulomb               | True     | raises `IncompatibleParameterError`
+| cutoff     | Coulomb               | False    | `openmm.NonbondedForce.NoCutoff`
+| cutoff     | reaction-field        | True     | raises `SMIRNOFFSpecUnimplementedError`
+| cutoff     | reaction-field        | False    | raises `SMIRNOFFSpecError`
+| cutoff     | PME                   | True     | `openmm.NonbondedForce.PME` | * |
+| cutoff     | PME                   | False    | `openmm.NonbondedForce.NoCutoff`
+| LJPME      | Coulomb               | True     | raises `IncompatibleParameterError`
+| LJPME      | Coulomb               | False    | `openmm.NonbondedForce.NoCutoff`
+| LJPME      | reaction-field        | True     | raises `IncompatibleParameterError`
+| LJPME      | reaction-field        | False    | raises `SMIRNOFFSpecError`
+| LJPME      | PME                   | True     | `openmm.NonbondedForce.LJPME`
+| LJPME      | PME                   | False    | `openmm.NonbondedForce.NoCutoff`
+
+Notes:
+* The most commonly-used case (including the Parsley line) is in the fifth row (cutoff vdW, PME electrostatics, periodic topology) and marked with an asterisk.
+* For all cases included a non-periodic topology, `openmm.NonbondedForce.NoCutoff` is currently used.
+* Electrostatics method `reaction-field` can only apply to periodic systems, however it is not currently implemented.
+* LJPME (particle mesh ewald for LJ/vdW interactions) is not yet fully described in the SMIRNOFF specification.
+* In the future, the OpenFF Toolkit may create multiple `CustomNonbondedForce` objects in order to better de-couple vdW and electrostatic interactions.
 
 ## Contributing
 
