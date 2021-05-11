@@ -8,6 +8,10 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ## Current Development
 
+- [PR #917](https://github.com/openforcefield/openforcefield/pull/917):
+  [`ForceField.create_openff_system`] Ensures that the cutoff of the `NonbondedForce` is set to 
+  the cutoff of the `vdWHandler` when it and a `Electrostatics` handler are present in the force field.
+
 ## 0.9.2 Minor feature and bugfix release
 
 ### New features and behaviors changed
