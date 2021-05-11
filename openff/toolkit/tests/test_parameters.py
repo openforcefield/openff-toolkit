@@ -669,7 +669,7 @@ class TestParameterHandler:
             my_ph = MyPHSubclass(version=2.1)
 
     def test_write_same_version_as_was_set(self):
-        """Ensure that a ParameterHandler remembers the version that was set when it was initialized. """
+        """Ensure that a ParameterHandler remembers the version that was set when it was initialized."""
 
         class MyPHSubclass(ParameterHandler):
             _MIN_SUPPORTED_SECTION_VERSION = 0.3

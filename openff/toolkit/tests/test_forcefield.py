@@ -40,6 +40,7 @@ from openff.toolkit.typing.engines.smirnoff import (
     ParameterLookupError,
     SMIRNOFFAromaticityError,
     SMIRNOFFSpecError,
+    SMIRNOFFSpecUnimplementedError,
     ToolkitAM1BCCHandler,
     XMLParameterIOHandler,
     get_available_force_fields,
@@ -615,7 +616,7 @@ nonbonded_resolution_matrix = [
         "electrostatics_method": "reaction-field",
         "has_periodic_box": True,
         "omm_force": None,
-        "exception": SMIRNOFFSpecError,
+        "exception": SMIRNOFFSpecUnimplementedError,
         "exception_match": "reaction-field",
     },
     {
@@ -663,7 +664,7 @@ nonbonded_resolution_matrix = [
         "electrostatics_method": "reaction-field",
         "has_periodic_box": True,
         "omm_force": None,
-        "exception": SMIRNOFFSpecError,
+        "exception": IncompatibleParameterError,
         "exception_match": "reaction-field",
     },
     {
@@ -1539,7 +1540,7 @@ class TestForceField:
     def test_pass_invalid_kwarg_to_create_openmm_system(
         self, toolkit_registry, registry_description
     ):
-        """Test to ensure an exception is raised when an unrecognized kwarg is passed """
+        """Test to ensure an exception is raised when an unrecognized kwarg is passed"""
         from simtk.openmm import app
 
         file_path = get_data_file_path("test_forcefields/test_forcefield.offxml")
@@ -3868,7 +3869,7 @@ class TestForceFieldParameterAssignment:
         )
 
     def test_tip5p_dimer_energy(self):
-        """"""
+        """ """
 
         tip5p_offxml = """<?xml version="1.0" encoding="utf-8"?>
 <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">

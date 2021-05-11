@@ -65,7 +65,7 @@ from openff.toolkit.utils.utils import MissingDependencyError, requires_package
 
 
 class NotAttachedToMoleculeError(MessageException):
-    """Exception for when a component does not belong to a Molecule object, but is queried """
+    """Exception for when a component does not belong to a Molecule object, but is queried"""
 
 
 # =============================================================================================
