@@ -8,6 +8,10 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ## Current Development
 
+### Examples added
+
+- [PR #763](https://github.com/openforcefield/openff-toolkit/pull/763): Adds an introductory example showcasing the toolkit parameterizing a protein-ligand simulation.
+
 ## 0.9.2 Minor feature and bugfix release
 
 ### New features and behaviors changed
