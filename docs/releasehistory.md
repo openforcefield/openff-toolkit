@@ -8,6 +8,10 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ## Current Development
 
+### Examples added
+
+- [PR #934](https://github.com/openforcefield/openff-toolkit/pull/934) and [conda-forge/openff-toolkit-feedstock#9](https://github.com/conda-forge/openff-toolkit-feedstock/pull/9): Added `openff-toolkit-examples` Conda package for easy installation of examples and their dependencies. Simply `conda install -c conda-forge openff-toolkit-examples` and then run the `openff-toolkit-examples` script to copy the examples suite to a convenient place to run them!
+
 ## 0.9.2 Minor feature and bugfix release
 
 ### New features and behaviors changed
