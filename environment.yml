@@ -9,7 +9,7 @@ dependencies:
 
   # Optional(-ish) dependencies used in example(s)
   - nglview
+  - qcelemental
   - qcportal
   - qcengine
-    # Removed until a new release which targets openff-toolkit is made.
-#  - openmmforcefields
+  - openmmforcefields
