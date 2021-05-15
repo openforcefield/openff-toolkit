@@ -7,9 +7,9 @@ dependencies:
     - numpydoc
     - nbsphinx
     - sphinx_bootstrap_theme
-    - myst-parser
-    - testpath ==0.3.1
-    - docutils ==0.16 # Temporary https://github.com/executablebooks/MyST-Parser/issues/343
+    - myst-parser>=0.14
+    - testpath==0.3.1
+    - docutils
     # conda build dependencies
     - python
     - setuptools
