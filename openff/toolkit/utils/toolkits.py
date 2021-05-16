@@ -2095,7 +2095,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         oemol = self.to_openeye(molecule)
         omega = oeomega.OEOmega()
         omega.SetMaxConfs(n_conformers)
-        omega.SetCanonOrder(False)
+        omega.SetCanonOrder(True)
         omega.SetSampleHydrogens(True)
         omega.SetEnergyWindow(15.0)  # unit?
         if rms_cutoff is None:
@@ -3487,17 +3487,28 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         if rms_cutoff is None:
             rms_cutoff = 1.0 * unit.angstrom
-        rdmol = self.to_rdkit(molecule)
+        rdmol_orig = self.to_rdkit(molecule)
+        # Increase reproducibility by canonically ordering
+        # Making it a dictionary to be used with off molecule remap
+        canonical_order = dict(enumerate(AllChem.CanonicalRankAtoms(rdmol_orig)))
+        rdmol_ordered = molecule.remap(canonical_order).to_rdkit()
+        #rdmol_ordered = molecule.to_rdkit()
         # TODO: This generates way more conformations than omega, given the same nConfs and RMS threshold. Is there some way to set an energy cutoff as well?
         AllChem.EmbedMultipleConfs(
-            rdmol,
+            rdmol_ordered,
             numConfs=n_conformers,
             pruneRmsThresh=rms_cutoff / unit.angstrom,
             randomSeed=1,
             # params=AllChem.ETKDG()
         )
+
         molecule2 = self.from_rdkit(
-            rdmol, allow_undefined_stereo=True, _cls=molecule.__class__
+            rdmol_ordered, allow_undefined_stereo=True, _cls=molecule.__class__
+        )
+        # Getting back original order using OFF remap capabilities
+        molecule2 = molecule2.remap(
+           canonical_order,
+           current_to_new=False
         )
 
         if clear_existing:

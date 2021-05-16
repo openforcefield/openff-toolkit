@@ -1111,7 +1111,7 @@ class TestOpenEyeToolkitWrapper:
     def test_generate_multiple_conformers(self):
         """Test OpenEyeToolkitWrapper generate_conformers() for generating multiple conformers"""
         toolkit_wrapper = OpenEyeToolkitWrapper()
-        smiles = "CCCCCCCCCN"
+        smiles = "COCNCOCCCCCN"
         molecule = toolkit_wrapper.from_smiles(smiles)
         molecule.generate_conformers(
             rms_cutoff=1 * unit.angstrom,
@@ -2393,7 +2393,7 @@ class TestRDKitToolkitWrapper:
     def test_generate_multiple_conformers(self):
         """Test RDKitToolkitWrapper generate_conformers() for generating multiple conformers"""
         toolkit_wrapper = RDKitToolkitWrapper()
-        smiles = "CCCCCCCCCN"
+        smiles = "COCNCOCCCCCN"
         molecule = toolkit_wrapper.from_smiles(smiles)
         molecule.generate_conformers(
             rms_cutoff=1 * unit.angstrom,
@@ -2420,6 +2420,22 @@ class TestRDKitToolkitWrapper:
             toolkit_registry=toolkit_wrapper,
         )
         assert molecule2.n_conformers == 10
+
+    def test_generate_conformers_order_independent(self):
+        """Test same conformers are generated independently of the atom order."""
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=[RDKitToolkitWrapper])
+        #openff_mol_1 = Molecule.from_smiles('CC(C)(C)c1sc(c2ccnc(N)n2)c(n1)c3cccc(N[S](=O)(=O)c4c(F)cccc4F)c3F')
+        openff_mol_1 = Molecule.from_smiles('c1c(F)cc(Cl)cc1')
+        new_order = dict([(i, openff_mol_1.n_atoms-i-1) for i in range(openff_mol_1.n_atoms)])
+        openff_mol_2 = openff_mol_1.remap(new_order)
+        openff_mol_1.generate_conformers(toolkit_registry=toolkit_registry)
+        openff_mol_2.generate_conformers(toolkit_registry=toolkit_registry)
+        for conf1, conf2 in zip(openff_mol_1.conformers, openff_mol_2.conformers):
+            print(conf1, conf2)
+            for atom_1_index in range(openff_mol_1.n_atoms):
+                np.testing.assert_almost_equal(conf1[atom_1_index] / unit.angstroms,
+                                               conf2[new_order[atom_1_index]] / unit.angstroms
+                                               )
 
     @pytest.mark.parametrize("partial_charge_method", ["mmff94"])
     def test_assign_partial_charges_neutral(self, partial_charge_method):
