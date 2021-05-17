@@ -2735,8 +2735,6 @@ def requires_openeye_module(module_name):
     def inner_decorator(function):
         @wraps(function)
         def wrapper(*args, **kwargs):
-            import importlib
-
             try:
                 module = importlib.import_module("openeye." + module_name)
             except (ImportError, ModuleNotFoundError):
