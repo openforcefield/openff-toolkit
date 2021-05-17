@@ -152,15 +152,20 @@ def all_subclasses(cls):
 @contextlib.contextmanager
 def temporary_cd(dir_path):
     """Context to temporary change the working directory.
+
     Parameters
     ----------
+
     dir_path : str
         The directory path to enter within the context
+
     Examples
     --------
+
     >>> dir_path = '/tmp'
     >>> with temporary_cd(dir_path):
     ...     pass  # do something in dir_path
+
     """
     import os
 
@@ -177,10 +182,13 @@ def get_data_file_path(relative_path):
     In the source distribution, these files are in ``openff/toolkit/data/``,
     but on installation, they're moved to somewhere in the user's python
     site-packages directory.
+
     Parameters
     ----------
+
     name : str
         Name of the file to load (with respect to the repex folder).
+
     """
 
     import os

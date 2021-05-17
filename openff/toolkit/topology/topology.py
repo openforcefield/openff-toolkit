@@ -345,6 +345,17 @@ class TopologyAtom(Serializable):
         return self._atom.atomic_number
 
     @property
+    def element(self):
+        """
+        Get the element name of this atom.
+
+        Returns
+        -------
+        simtk.openmm.app.element.Element
+        """
+        return self._atom.element
+
+    @property
     def topology_molecule(self):
         """
         Get the TopologyMolecule that this TopologyAtom belongs to.
@@ -1431,6 +1442,7 @@ class Topology(Serializable):
     @property
     def box_vectors(self):
         """Return the box vectors of the topology, if specified
+
         Returns
         -------
         box_vectors : simtk.unit.Quantity wrapped numpy array of shape (3, 3)
@@ -1466,8 +1478,10 @@ class Topology(Serializable):
                 raise InvalidBoxVectorsError(
                     f"Box vectors must be shape (3, 3). Found shape {box_vectors.shape}"
                 )
-        else:
-            assert len(box_vectors) == 3
+        elif isinstance(box_vectors._value, list):
+            if len(box_vectors) == 3:
+                box_vectors._value *= np.eye(3)
+
         self._box_vectors = box_vectors
 
     @property
@@ -1895,6 +1909,7 @@ class Topology(Serializable):
         Retrieve all matches for a given chemical environment query.
 
         TODO:
+
         * Do we want to generalize this to other kinds of queries too, like mdtraj DSL, pymol selections, atom index slices, etc?
           We could just call it topology.matches(query)
 
@@ -2279,13 +2294,19 @@ class Topology(Serializable):
 
     def to_file(self, filename, positions, file_format="PDB", keepIds=False):
         """
-        To save a PDB file with coordinates as well as topology from OpenFF topology object
+        Save coordinates and topology to a PDB file.
+
         Reference: https://github.com/openforcefield/openff-toolkit/issues/502
-        Note: 1. This doesn't handle virtual sites (they're ignored)
-              2. Atom numbering may not remain same, for example if the atoms in water are numbered as 1001, 1002, 1003,
-                 they would change to 1, 2, 3.
-                 This doesn't affect the topology or coordinates or atom-ordering in anyway
-              3. Same issue with the amino acid names in the pdb file, they are not returned
+
+        Notes:
+
+        1. This doesn't handle virtual sites (they're ignored)
+        2. Atom numbering may not remain same, for example if the atoms
+           in water are numbered as 1001, 1002, 1003, they would change
+           to 1, 2, 3. This doesn't affect the topology or coordinates or
+           atom-ordering in any way.
+        3. Same issue with the amino acid names in the pdb file, they are
+           not returned.
 
         Parameters
         ----------
@@ -2537,7 +2558,7 @@ class Topology(Serializable):
         # Creating bonds
         for oe_bond in mol.GetBonds():
             # Set the bond type
-            if oe_bond.GetType() is not "":
+            if oe_bond.GetType() != "":
                 if oe_bond.GetType() in [
                     "Single",
                     "Double",

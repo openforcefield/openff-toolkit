@@ -3,13 +3,13 @@ channels:
     - conda-forge
     - defaults
 dependencies:
-    - pip
     # readthedocs dependencies
     - numpydoc
     - nbsphinx
     - sphinx_bootstrap_theme
-    #- m2r >=0.2.1
-    - testpath ==0.3.1
+    - myst-parser>=0.14
+    - testpath==0.3.1
+    - docutils
     # conda build dependencies
     - python
     - setuptools
@@ -27,5 +27,3 @@ dependencies:
     - xmltodict
     - pyyaml
     - cairo >=1.16
-    - pip:
-        - m2r2

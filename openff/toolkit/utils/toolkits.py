@@ -61,6 +61,7 @@ import logging
 import re
 import subprocess
 import tempfile
+from collections import defaultdict
 from distutils.spawn import find_executable
 from functools import wraps
 from typing import TYPE_CHECKING, List, Optional, Tuple
@@ -224,12 +225,12 @@ class ToolkitWrapper:
         return self.__class__._toolkit_name
 
     @property
-    @classmethod
-    def toolkit_installation_instructions(cls):
+    # @classmethod
+    def toolkit_installation_instructions(self):
         """
         Instructions on how to install the wrapped toolkit.
         """
-        return cls._toolkit_installation_instructions
+        return self._toolkit_installation_instructions
 
     # @classmethod
     @property
@@ -1298,7 +1299,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         from openeye import oechem
 
-        from openff.toolkit.topology.molecule import Molecule
+        oemol = oechem.OEMol(oemol)
 
         # Add explicit hydrogens if they're implicit
         if oechem.OEHasImplicitHydrogens(oemol):
@@ -1408,9 +1409,13 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             ] = atom_index  # store for mapping oeatom to molecule atom indices below
             atom_mapping[atom_index] = map_id
 
-        # if we have a full atom map add it to the molecule, 0 indicates a missing mapping or no mapping
-        if 0 not in atom_mapping.values():
-            molecule._properties["atom_map"] = atom_mapping
+        # If we have a full / partial atom map add it to the molecule. Zeroes 0
+        # indicates no mapping
+        if {*atom_mapping.values()} != {0}:
+
+            molecule._properties["atom_map"] = {
+                idx: map_idx for idx, map_idx in atom_mapping.items() if map_idx != 0
+            }
 
         for oebond in oemol.GetBonds():
             atom1_index = map_atoms[oebond.GetBgnIdx()]
@@ -1443,7 +1448,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             for conf in oemol.GetConfs():
                 n_atoms = molecule.n_atoms
                 positions = unit.Quantity(
-                    np.zeros([n_atoms, 3], np.float), unit.angstrom
+                    np.zeros(shape=[n_atoms, 3], dtype=np.float64), unit.angstrom
                 )
                 for oe_id in conf.GetCoords().keys():
                     off_atom_coords = unit.Quantity(
@@ -1457,7 +1462,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         # Copy partial charges, if present
         partial_charges = unit.Quantity(
-            np.zeros(molecule.n_atoms, dtype=np.float), unit=unit.elementary_charge
+            np.zeros(shape=molecule.n_atoms, dtype=np.float64),
+            unit=unit.elementary_charge,
         )
 
         # If all OEAtoms have a partial charge of NaN, then the OFFMol should
@@ -1483,47 +1489,48 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
     @staticmethod
     def to_openeye(molecule, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
         """
-         Create an OpenEye molecule using the specified aromaticity model
+        Create an OpenEye molecule using the specified aromaticity model
 
-         ``OEAtom`` s have a different set of allowed value for partial charges than
-         ``openff.toolkit.topology.Molecule`` s. In the OpenEye toolkits, partial charges
-         are stored on individual ``OEAtom`` s, and their values are initialized to ``0.0``.
-         In the Open Force Field Toolkit, an ``openff.toolkit.topology.Molecule``'s
-         ``partial_charges`` attribute is initialized to ``None`` and can be set to a
-         ``simtk.unit.Quantity``-wrapped numpy array with units of
-         elementary charge. The Open Force
-         Field Toolkit considers an ``OEMol`` where every ``OEAtom`` has a partial
-         charge of ``float('nan')`` to be equivalent to an Open Force Field Toolkit ``Molecule``'s
-         ``partial_charges = None``.
-         This assumption is made in both ``to_openeye`` and ``from_openeye``.
+        ``OEAtom`` s have a different set of allowed value for partial
+        charges than ``openff.toolkit.topology.Molecule``\ s. In the
+        OpenEye toolkits, partial charges are stored on individual
+        ``OEAtom``\ s, and their values are initialized to ``0.0``. In
+        the Open Force Field Toolkit, an``openff.toolkit.topology.Molecule``'s
+        ``partial_charges`` attribute is initialized to ``None`` and can
+        be set to a ``simtk.unit.Quantity``-wrapped numpy array with
+        units of elementary charge. The Open Force Field Toolkit
+        considers an ``OEMol`` where every ``OEAtom`` has a partial
+        charge of ``float('nan')`` to be equivalent to an Open Force
+        Field Toolkit ``Molecule``'s ``partial_charges = None``. This
+        assumption is made in both ``to_openeye`` and ``from_openeye``.
 
-         .. todo ::
+        .. todo ::
 
-            * Should the aromaticity model be specified in some other way?
+           * Should the aromaticity model be specified in some other way?
 
         .. warning :: This API is experimental and subject to change.
 
-         Parameters
-         ----------
-         molecule : openff.toolkit.topology.molecule.Molecule object
-             The molecule to convert to an OEMol
-         aromaticity_model : str, optional, default=DEFAULT_AROMATICITY_MODEL
-             The aromaticity model to use
+        Parameters
+        ----------
+        molecule : openff.toolkit.topology.molecule.Molecule object
+            The molecule to convert to an OEMol
+        aromaticity_model : str, optional, default=DEFAULT_AROMATICITY_MODEL
+            The aromaticity model to use
 
-         Returns
-         -------
-         oemol : openeye.oechem.OEMol
-             An OpenEye molecule
+        Returns
+        -------
+        oemol : openeye.oechem.OEMol
+            An OpenEye molecule
 
-         Examples
-         --------
+        Examples
+        --------
 
-         Create an OpenEye molecule from a Molecule
+        Create an OpenEye molecule from a Molecule
 
-         >>> from openff.toolkit.topology import Molecule
-         >>> toolkit_wrapper = OpenEyeToolkitWrapper()
-         >>> molecule = Molecule.from_smiles('CC')
-         >>> oemol = toolkit_wrapper.to_openeye(molecule)
+        >>> from openff.toolkit.topology import Molecule
+        >>> toolkit_wrapper = OpenEyeToolkitWrapper()
+        >>> molecule = Molecule.from_smiles('CC')
+        >>> oemol = toolkit_wrapper.to_openeye(molecule)
 
         """
         from openeye import oechem
@@ -1646,7 +1653,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             oemol.DeleteConfs()
             for conf in molecule._conformers:
                 # OE needs a 1 x (3*n_Atoms) double array as input
-                flat_coords = np.zeros((oemol.NumAtoms() * 3), dtype=np.float32)
+                flat_coords = np.zeros(shape=oemol.NumAtoms() * 3, dtype=np.float64)
                 for index, oe_idx in map_atoms.items():
                     (x, y, z) = conf[index, :] / unit.angstrom
                     flat_coords[(3 * oe_idx)] = x
@@ -1658,7 +1665,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         # Retain charges, if present. All atoms are initialized above with a partial charge of NaN.
         if molecule._partial_charges is not None:
-            oe_indexed_charges = np.zeros((molecule.n_atoms), dtype=np.float)
+            oe_indexed_charges = np.zeros(shape=molecule.n_atoms, dtype=np.float64)
             for off_idx, charge in enumerate(molecule._partial_charges):
                 oe_idx = map_atoms[off_idx]
                 charge_unitless = charge / unit.elementary_charge
@@ -1955,7 +1962,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         oechem.OESmilesToMol(oemol, smiles)
         if not (hydrogens_are_explicit):
             result = oechem.OEAddExplicitHydrogens(oemol)
-            if result == False:
+            if not result:
                 raise ValueError(
                     "Addition of explicit hydrogens failed in from_openeye"
                 )
@@ -2067,12 +2074,12 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         .. todo ::
 
-           * which parameters should we expose? (or can we implement a general system with **kwargs?)
-           * will the coordinates be returned in the OpenFF Molecule's own indexing system? Or is there a chance that
-           they'll get reindexed when we convert the input into an OEmol?
+            * which parameters should we expose? (or can we implement a general system with \*\*kwargs?)
+            * will the coordinates be returned in the OpenFF Molecule's own indexing system? Or is there a chance that
+              they'll get reindexed when we convert the input into an OEmol?
 
         Parameters
-        ---------
+        ----------
         molecule : a :class:`Molecule`
             The molecule to generate conformers for.
         n_conformers : int, default=1
@@ -2121,8 +2128,9 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         percentage: float = 2.0,
         limit: int = 10,
     ):
-        """Applies the `ELF method<https://docs.eyesopen.com/toolkits/python/quacpactk/
-        molchargetheory.html#elf-conformer-selection>`_ to select a set of diverse
+        """Applies the `ELF method
+        <https://docs.eyesopen.com/toolkits/python/quacpactk/molchargetheory.html#elf-conformer-selection>`_
+        to select a set of diverse
         conformers which have minimal electrostatically strongly interacting functional
         groups from a molecules conformers.
 
@@ -2387,7 +2395,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         ## TODO: Make sure atom mapping remains constant
 
         charges = unit.Quantity(
-            np.zeros([oemol.NumAtoms()], np.float64), unit.elementary_charge
+            np.zeros(shape=oemol.NumAtoms(), dtype=np.float64), unit.elementary_charge
         )
         for oeatom in oemol.GetAtoms():
             index = oeatom.GetIdx()
@@ -2456,15 +2464,17 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         molecule : openff.toolkit.topology.molecule Molecule
             The molecule to assign wiberg bond orders to
         bond_order_model : str, optional, default=None
-            The charge model to use. One of ['am1-wiberg', 'pm3-wiberg']. If None, 'am1-wiberg' will be used.
+            The charge model to use. One of ['am1-wiberg', 'am1-wiberg-elf10',
+            'pm3-wiberg', 'pm3-wiberg-elf10']. If None, 'am1-wiberg' will be used.
         use_conformers : iterable of simtk.unit.Quantity(np.array) with shape (n_atoms, 3) and dimension of distance, optional, default=None
-            The conformers to use for fractional bond order calculation. If None, an appropriate number
-            of conformers will be generated by an available ToolkitWrapper.
+            The conformers to use for fractional bond order calculation. If None, an
+            appropriate number of conformers will be generated by an available
+            ToolkitWrapper. If the chosen ``bond_order_model`` is an ELF variant, the ELF
+            conformer selection method will be applied to the provided conformers.
         _cls : class
             Molecule constructor
-
         """
-        from openeye import oequacpac
+        from openeye import oechem, oequacpac
 
         if _cls is None:
             from openff.toolkit.topology.molecule import Molecule
@@ -2474,13 +2484,23 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         # Make a copy since we'll be messing with this molecule's conformers
         temp_mol = _cls(molecule)
 
+        if bond_order_model is None:
+            bond_order_model = "am1-wiberg"
+
+        is_elf_method = bond_order_model in ["am1-wiberg-elf10", "pm3-wiberg-elf10"]
+
         if use_conformers is None:
-            temp_mol.generate_conformers(n_conformers=1)
+            temp_mol.generate_conformers(
+                n_conformers=1 if not is_elf_method else 500,
+                # 0.05 is the recommended RMS when generating a 'Dense' amount of
+                # conformers using Omega: https://docs.eyesopen.com/toolkits/python/
+                # omegatk/OEConfGenConstants/OEFragBuilderMode.html.
+                rms_cutoff=None if not is_elf_method else 0.05 * unit.angstrom,
+            )
         else:
             temp_mol._conformers = None
             for conformer in use_conformers:
                 temp_mol._add_conformer(conformer)
-
         if temp_mol.n_conformers == 0:
             raise Exception(
                 "No conformers present in molecule submitted for fractional bond order calculation. Consider "
@@ -2488,41 +2508,67 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 "molecule.generate_conformers() before calling molecule.compute_wiberg_bond_orders()"
             )
 
-        if bond_order_model is None:
-            bond_order_model = "am1-wiberg"
+        if is_elf_method:
+            # Apply the ELF10 conformer selection method.
+            temp_mol.apply_elf_conformer_selection()
 
-        # Based on example at https://docs.eyesopen.com/toolkits/python/quacpactk/examples_summary_wibergbondorders.html
-        oemol = self.to_openeye(temp_mol)
+        # Set the options to use when computing the WBOs. This is based on example at
+        # https://docs.eyesopen.com/toolkits/python/quacpactk/examples_summary_wibergbondorders.html
         am1 = oequacpac.OEAM1()
+
         am1results = oequacpac.OEAM1Results()
         am1options = am1.GetOptions()
-        if bond_order_model == "am1-wiberg":
+
+        if bond_order_model.startswith("am1-wiberg"):
             am1options.SetSemiMethod(oequacpac.OEMethodType_AM1)
-        elif bond_order_model == "pm3-wiberg":
+        elif bond_order_model.startswith("pm3-wiberg"):
             # TODO: Make sure that modifying am1options actually works
             am1options.SetSemiMethod(oequacpac.OEMethodType_PM3)
         else:
             raise ValueError(
-                f"Bond order model '{bond_order_model}' is not supported by OpenEyeToolkitWrapper. "
-                f"Supported models are ['am1-wiberg', 'pm3-wiberg']"
+                f"Bond order model '{bond_order_model}' is not supported by "
+                f"OpenEyeToolkitWrapper. Supported models are ['am1-wiberg', "
+                f"'am1-wiberg-elf10', 'pm3-wiberg', 'pm3-wiberg-elf10']."
             )
 
-        # for conf in oemol.GetConfs():
-        # TODO: How to handle multiple confs here?
-        status = am1.CalcAM1(am1results, oemol)
+        # Convert the conformers into OE friendly objects to make setting them one
+        # at a time easier.
+        oe_conformers = [
+            oechem.OEFloatArray(conformer.value_in_unit(unit.angstrom).flatten())
+            for conformer in temp_mol.conformers
+        ]
 
-        if status is False:
-            raise Exception(
-                "Unable to assign charges (in the process of calculating fractional bond orders)"
-            )
+        oemol = self.to_openeye(temp_mol)
+        bond_orders = defaultdict(list)
 
-        # TODO: Will bonds always map back to the same index? Consider doing a topology mapping.
-        # Loop over bonds
-        for bond in oemol.GetBonds():
-            idx = bond.GetIdx()
+        for oe_conformer in oe_conformers:
+
+            oemol.DeleteConfs()
+            oemol.NewConf(oe_conformer)
+
+            status = am1.CalcAM1(am1results, oemol)
+
+            if status is False:
+
+                raise Exception(
+                    "Unable to assign charges (in the process of calculating "
+                    "fractional bond orders)"
+                )
+
+            for bond in oemol.GetBonds():
+
+                bond_orders[bond.GetIdx()].append(
+                    am1results.GetBondOrder(bond.GetBgnIdx(), bond.GetEndIdx())
+                )
+
+        # TODO: Will bonds always map back to the same index? Consider doing a
+        #       topology mapping.
+        for bond_idx, conformer_bond_orders in bond_orders.items():
+
             # Get bond order
-            order = am1results.GetBondOrder(bond.GetBgnIdx(), bond.GetEndIdx())
-            mol_bond = molecule._bonds[idx]
+            order = np.mean(conformer_bond_orders)
+
+            mol_bond = molecule._bonds[bond_idx]
             mol_bond.fractional_bond_order = order
 
     def get_tagged_smarts_connectivity(self, smarts):
@@ -2555,7 +2601,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         qmol = oechem.OEQMol()
         status = oechem.OEParseSmarts(qmol, smarts)
-        if status == False:
+        if not status:
             raise SMIRKSParsingError(
                 f"OpenEye Toolkit was unable to parse SMIRKS {smarts}"
             )
@@ -2866,6 +2912,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         pdbmol = self.from_rdkit(
             Chem.MolFromPDBFile(file_path, removeHs=False),
             allow_undefined_stereo=True,
+            hydrogens_are_explicit=True,
             _cls=_cls,
         )
 
@@ -3127,7 +3174,9 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         rdmol = self.to_rdkit(molecule=molecule)
 
         # in case any bonds/centers are missing stereo chem flag it here
-        Chem.AssignStereochemistry(rdmol, force=True, flagPossibleStereoCenters=True)
+        Chem.AssignStereochemistry(
+            rdmol, cleanIt=True, force=True, flagPossibleStereoCenters=True
+        )
         Chem.FindPotentialStereoBonds(rdmol)
 
         # set up the options
@@ -3172,6 +3221,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         from rdkit.Chem.MolStandardize import rdMolStandardize
 
         enumerator = rdMolStandardize.TautomerEnumerator()
+        enumerator.SetMaxTautomers(max_states)
         rdmol = Chem.RemoveHs(molecule.to_rdkit())
 
         tautomers = enumerator.Enumerate(rdmol)
@@ -3338,8 +3388,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                 # set it back to zero
                 atom.SetAtomMapNum(0)
 
-        # TODO: I think UpdatePropertyCache(strict=True) is called anyway in Chem.SanitizeMol().
-        rdmol.UpdatePropertyCache(strict=False)
+        # Chem.SanitizeMol calls updatePropertyCache so we don't need to call it ourselves
+        # https://www.rdkit.org/docs/cppapi/namespaceRDKit_1_1MolOps.html#a8d831787aaf2d65d9920c37b25b476f5
         Chem.SanitizeMol(
             rdmol,
             Chem.SANITIZE_ALL ^ Chem.SANITIZE_ADJUSTHS ^ Chem.SANITIZE_SETAROMATICITY,
@@ -3351,7 +3401,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         Chem.AssignStereochemistry(rdmol)
 
         # Throw an exception/warning if there is unspecified stereochemistry.
-        if allow_undefined_stereo == False:
+        if not allow_undefined_stereo:
             self._detect_undefined_stereo(
                 rdmol, err_msg_prefix="Unable to make OFFMol from SMILES: "
             )
@@ -3372,7 +3422,10 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                     )
 
         molecule = self.from_rdkit(
-            rdmol, _cls=_cls, allow_undefined_stereo=allow_undefined_stereo
+            rdmol,
+            _cls=_cls,
+            allow_undefined_stereo=allow_undefined_stereo,
+            hydrogens_are_explicit=hydrogens_are_explicit,
         )
 
         return molecule
@@ -3438,11 +3491,11 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         .. todo ::
 
-           * which parameters should we expose? (or can we implement a general system with **kwargs?)
+           * which parameters should we expose? (or can we implement a general system with \*\*kwargs?)
            * will the coordinates be returned in the OpenFF Molecule's own indexing system? Or is there a chance that they'll get reindexed when we convert the input into an RDMol?
 
         Parameters
-        ---------
+        ----------
         molecule : a :class:`Molecule`
             The molecule to generate conformers for.
         n_conformers : int, default=1
@@ -3842,10 +3895,10 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         limit: int = 10,
         rms_tolerance: unit.Quantity = 0.05 * unit.angstrom,
     ):
-        """Applies the `ELF method<https://docs.eyesopen.com/toolkits/python/quacpactk/
-        molchargetheory.html#elf-conformer-selection>`_ to select a set of diverse
-        conformers which have minimal electrostatically strongly interacting functional
-        groups from a molecules conformers.
+        """Applies the `ELF method
+        <https://docs.eyesopen.com/toolkits/python/quacpactk/molchargetheory.html#elf-conformer-selection>`_
+        to select a set of diverse conformers which have minimal electrostatically
+        strongly interacting functional groups from a molecules conformers.
 
         The diverse conformer selection is performed by the ``_elf_select_diverse_conformers``
         function, which attempts to greedily select conformers which are most distinct
@@ -3928,7 +3981,13 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         molecule._conformers = diverse_conformers
 
-    def from_rdkit(self, rdmol, allow_undefined_stereo=False, _cls=None):
+    def from_rdkit(
+        self,
+        rdmol,
+        allow_undefined_stereo=False,
+        hydrogens_are_explicit=False,
+        _cls=None,
+    ):
         """
         Create a Molecule from an RDKit molecule.
 
@@ -3942,6 +4001,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             An RDKit molecule
         allow_undefined_stereo : bool, default=False
             If false, raises an exception if rdmol contains undefined stereochemistry.
+        hydrogens_are_explicit : bool, default=False
+            If False, RDKit will perform hydrogen addition using Chem.AddHs
         _cls : class
             Molecule constructor
 
@@ -3972,6 +4033,9 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         # Make a copy of the RDKit Mol as we'll need to change it (e.g. assign stereo).
         rdmol = Chem.Mol(rdmol)
+
+        if not hydrogens_are_explicit:
+            rdmol = Chem.AddHs(rdmol, addCoords=True)
 
         # Sanitizing the molecule. We handle aromaticity and chirality manually.
         # This SanitizeMol(...) calls cleanUp, updatePropertyCache, symmetrizeSSSR,
@@ -4075,9 +4139,13 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             map_atoms[rd_idx] = atom_index
             atom_mapping[atom_index] = map_id
 
-        # if we have a full atom map add it to the molecule, 0 indicates a missing mapping or no mapping
-        if 0 not in atom_mapping.values():
-            offmol._properties["atom_map"] = atom_mapping
+        # If we have a full / partial atom map add it to the molecule. Zeroes 0
+        # indicates no mapping
+        if {*atom_mapping.values()} != {0}:
+
+            offmol._properties["atom_map"] = {
+                idx: map_idx for idx, map_idx in atom_mapping.items() if map_idx != 0
+            }
 
         # Similar to chirality, stereochemistry of bonds in OE is set relative to their neighbors
         for rdb in rdmol.GetBonds():
@@ -4137,7 +4205,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                 offmol._add_conformer(positions)
 
         partial_charges = unit.Quantity(
-            np.zeros(offmol.n_atoms, dtype=np.float), unit=unit.elementary_charge
+            np.zeros(shape=offmol.n_atoms, dtype=np.float64),
+            unit=unit.elementary_charge,
         )
 
         any_atom_has_partial_charge = False
@@ -4339,7 +4408,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         # Retain charges, if present
         if not (molecule._partial_charges is None):
 
-            rdk_indexed_charges = np.zeros((molecule.n_atoms), dtype=np.float)
+            rdk_indexed_charges = np.zeros(shape=molecule.n_atoms, dtype=float)
             for atom_idx, charge in enumerate(molecule._partial_charges):
                 charge_unitless = charge.value_in_unit(unit.elementary_charge)
                 rdk_indexed_charges[atom_idx] = charge_unitless
@@ -5083,7 +5152,6 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
                 )
                 # Compute desired charges
                 # TODO: Add error handling if antechamber chokes
-                # TODO: Add something cleaner than os.system
                 short_charge_method = charge_method["antechamber_keyword"]
                 subprocess.check_output(
                     [
@@ -5358,12 +5426,6 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
                 "loading the molecule from a file with geometry already present or running "
                 "molecule.generate_conformers() before calling molecule.assign_fractional_bond_orders"
             )
-        if len(temp_mol.conformers) > 1:
-            logger.warning(
-                f"Warning: In AmberToolsToolkitWrapper.assign_fractional_bond_orders: "
-                f"Molecule '{molecule.name}' has more than one conformer, but this function "
-                f"will only generate fractional bond orders for the first one."
-            )
 
         # Compute bond orders
         bond_order_model_to_antechamber_keyword = {"am1-wiberg": "mul"}
@@ -5382,44 +5444,57 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
             )
         ac_charge_keyword = bond_order_model_to_antechamber_keyword[bond_order_model]
 
-        with tempfile.TemporaryDirectory() as tmpdir:
-            with temporary_cd(tmpdir):
-                net_charge = temp_mol.total_charge
-                # Write out molecule in SDF format
-                self._rdkit_toolkit_wrapper.to_file(
-                    temp_mol, "molecule.sdf", file_format="sdf"
-                )
-                # Prepare sqm.in file as if we were going to run charge calc
-                # TODO: Add error handling if antechamber chokes
-                subprocess.check_output(
-                    [
-                        "antechamber",
-                        "-i",
-                        "molecule.sdf",
-                        "-fi",
-                        "sdf",
-                        "-o",
-                        "sqm.in",
-                        "-fo",
-                        "sqmcrt",
-                        "-pf",
-                        "yes",
-                        "-c",
-                        ac_charge_keyword,
-                        "-nc",
-                        str(net_charge),
-                    ]
-                )
-                # Modify sqm.in to request bond order calculation
-                self._modify_sqm_in_to_request_bond_orders("sqm.in")
-                # Run sqm to get bond orders
-                subprocess.check_output(["sqm", "-i", "sqm.in", "-o", "sqm.out", "-O"])
-                # Ensure that antechamber/sqm did not change the indexing by checking against
-                # an ordered list of element symbols for this molecule
-                expected_elements = [at.element.symbol for at in molecule.atoms]
-                bond_orders = self._get_fractional_bond_orders_from_sqm_out(
-                    "sqm.out", validate_elements=expected_elements
-                )
+        bond_orders = defaultdict(list)
+
+        for conformer in [*temp_mol.conformers]:
+
+            with tempfile.TemporaryDirectory() as tmpdir:
+
+                with temporary_cd(tmpdir):
+                    net_charge = temp_mol.total_charge
+                    # Write out molecule in SDF format
+                    temp_mol._conformers = [conformer]
+                    self._rdkit_toolkit_wrapper.to_file(
+                        temp_mol, "molecule.sdf", file_format="sdf"
+                    )
+                    # Prepare sqm.in file as if we were going to run charge calc
+                    # TODO: Add error handling if antechamber chokes
+                    subprocess.check_output(
+                        [
+                            "antechamber",
+                            "-i",
+                            "molecule.sdf",
+                            "-fi",
+                            "sdf",
+                            "-o",
+                            "sqm.in",
+                            "-fo",
+                            "sqmcrt",
+                            "-pf",
+                            "yes",
+                            "-c",
+                            ac_charge_keyword,
+                            "-nc",
+                            str(net_charge),
+                        ]
+                    )
+                    # Modify sqm.in to request bond order calculation
+                    self._modify_sqm_in_to_request_bond_orders("sqm.in")
+                    # Run sqm to get bond orders
+                    subprocess.check_output(
+                        ["sqm", "-i", "sqm.in", "-o", "sqm.out", "-O"]
+                    )
+                    # Ensure that antechamber/sqm did not change the indexing by checking against
+                    # an ordered list of element symbols for this molecule
+                    expected_elements = [at.element.symbol for at in molecule.atoms]
+                    conformer_bond_orders = (
+                        self._get_fractional_bond_orders_from_sqm_out(
+                            "sqm.out", validate_elements=expected_elements
+                        )
+                    )
+
+                    for bond_indices, value in conformer_bond_orders.items():
+                        bond_orders[bond_indices].append(value)
 
         # Note that sqm calculate WBOs for ALL PAIRS of atoms, not just those that have
         # bonds defined in the original molecule. So here we iterate over the bonds in
@@ -5431,7 +5506,9 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
             sorted_atom_indices = sorted(
                 tuple([bond.atom1_index + 1, bond.atom2_index + 1])
             )
-            bond.fractional_bond_order = bond_orders[tuple(sorted_atom_indices)]
+            bond.fractional_bond_order = np.mean(
+                bond_orders[tuple(sorted_atom_indices)]
+            )
 
 
 # =============================================================================================
@@ -5800,7 +5877,6 @@ class ToolkitRegistry:
 # =============================================================================================
 
 # Create global toolkit registry, where all available toolkits are registered
-# TODO: Should this be all lowercase since it's not a constant?
 GLOBAL_TOOLKIT_REGISTRY = ToolkitRegistry(
     toolkit_precedence=[
         OpenEyeToolkitWrapper,

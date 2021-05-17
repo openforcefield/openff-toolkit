@@ -48,7 +48,8 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx.ext.intersphinx',
     'nbsphinx',
-    'm2r2', # render markdown
+    # 'm2r2', # render markdown
+    'myst_parser'
     ]
 
 # Autodoc settings
@@ -63,16 +64,27 @@ autodoc_default_options = {
 # Disable NumPy style attributes/methods expecting every method to have its own docs page
 numpydoc_class_members_toctree = False
 
-_python_doc_base = 'http://docs.python.org/3.6'
+_python_doc_base = 'https://docs.python.org/3.6'
 intersphinx_mapping = {
     _python_doc_base: None,
-    'http://docs.scipy.org/doc/numpy': None,
-    'http://docs.scipy.org/doc/scipy/reference': None,
-    'http://scikit-learn.org/stable': None
+    'https://numpy.org/doc/stable': None,
+    'https://docs.scipy.org/doc/scipy/reference': None,
+    'https://scikit-learn.org/stable': None
 }
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
+
+# Extensions for the myst parser
+myst_enable_extensions = [
+    "dollarmath",
+    "colon_fence",
+    "smartquotes",
+    "replacements",
+    "deflist"
+]
+# Stop myst from disabling MathJax's $...$ and $$...$$ environments
+myst_update_mathjax = False
 
 # Source parsers
 #source_parsers = {

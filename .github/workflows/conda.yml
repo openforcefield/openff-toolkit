@@ -11,44 +11,54 @@ on:
 
 jobs:
   test:
-    name: Test on ${{ matrix.cfg.os }}, Python ${{ matrix.python-version }}, OpenEye=${{ matrix.openeye }}
-    runs-on: ${{ matrix.cfg.os }}
+    name: Test on ${{ matrix.os }}, Python ${{ matrix.cfg.python-version }}, OpenEye=${{ matrix.cfg.openeye }}
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        python-version:
-          - 3.6
-          - 3.7
-        openeye:
-          - "true"
-          - "false"
+        os:
+          - ubuntu-latest
+          - macos-latest
         cfg:
-          - os: ubuntu-latest
-          - os: macOS-latest
+          - python-version: 3.7
+            openeye: "true"
+
+          - python-version: 3.7
+            openeye: "false"
+
+          - python-version: 3.8
+            openeye: "true"
+
+          - python-version: 3.8
+            openeye: "false"
+
+            # Add a 3.9 + OE build when OETK are released on 3.9
+          - python-version: 3.9
+            openeye: "false"
 
     env:
-      CI_OS: ${{ matrix.cfg.os }}
-      OPENEYE: ${{ matrix.openeye }}
-      PYVER: ${{ matrix.python-version }}
+      CI_OS: ${{ matrix.os }}
+      OPENEYE: ${{ matrix.cfg.openeye }}
+      PYVER: ${{ matrix.cfg.python-version }}
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
       PACKAGE: openff-toolkit
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v2.3.4
 
-      - uses: conda-incubator/setup-miniconda@v2
+      - uses: conda-incubator/setup-miniconda@v2.1.1
         name: Vanilla install from conda
-        if: ${{ matrix.openeye == 'false' }}
+        if: ${{ matrix.cfg.openeye == 'false' }}
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: ${{ matrix.cfg.python-version }}
           activate-environment: test
           environment-file: devtools/conda-envs/conda.yaml
           auto-activate-base: false
-      - uses: conda-incubator/setup-miniconda@v2
+      - uses: conda-incubator/setup-miniconda@v2.1.1
         name: Install from conda with OpenEye
-        if: ${{ matrix.openeye == 'true' }}
+        if: ${{ matrix.cfg.openeye == 'true' }}
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: ${{ matrix.cfg.python-version }}
           activate-environment: test
           environment-file: devtools/conda-envs/conda_oe.yaml
           auto-activate-base: false
@@ -124,9 +134,6 @@ jobs:
             python -c "import openeye; print(openeye.oechem.OEChemIsLicensed())"
           fi
 
-          PYTEST_ARGS=" -r fE --tb=short --runslow"
-          PYTEST_ARGS+=" --ignore=openff/toolkit/tests/test_links.py"
-          pytest $PYTEST_ARGS openff
-          PYTEST_ARGS=" -r fE --tb=short"
+          PYTEST_ARGS=" -r fE --tb=short --runslow openff/toolkit/tests/conftest.py"
           PYTEST_ARGS+=" --ignore=openff/toolkit/tests/test_links.py"
           pytest $PYTEST_ARGS openff

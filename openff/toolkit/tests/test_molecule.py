@@ -52,6 +52,7 @@ from openff.toolkit.topology.molecule import (
     FrozenMolecule,
     InvalidConformerError,
     Molecule,
+    SmilesParsingError,
 )
 from openff.toolkit.utils import get_data_file_path
 from openff.toolkit.utils.toolkits import (
@@ -81,7 +82,7 @@ def assert_molecule_is_equal(molecule1, molecule2, msg):
         raise AssertionError(msg)
 
 
-def is_four_memebered_ring_torsion(torsion):
+def is_four_membered_ring_torsion(torsion):
     """Check that three atoms in the given torsion form a four-membered ring."""
     # Push a copy of the first and second atom in the end to make the code simpler.
     torsion = list(torsion) + [torsion[0], torsion[1]]
@@ -96,7 +97,7 @@ def is_four_memebered_ring_torsion(torsion):
     return is_four_membered_ring
 
 
-def is_three_memebered_ring_torsion(torsion):
+def is_three_membered_ring_torsion(torsion):
     """Check that three atoms in the given torsion form a three-membered ring.
 
     In order to be 4 atoms with a three-membered ring, there must be
@@ -248,12 +249,18 @@ rdkit_drugbank_undefined_stereo_mols = {
     "DrugBank_3930",
     "DrugBank_5043",
     "DrugBank_5418",
+    "DrugBank_7124",
+    "DrugBank_6865",
 }
 
 
 # Missing stereo in OE but not RDK:  'DrugBank_2987', 'DrugBank_3502', 'DrugBank_4161',
 # 'DrugBank_4162', 'DrugBank_6531', 'DrugBank_1700',
-drugbank_stereogenic_in_rdkit_but_not_openeye = {"DrugBank_5329"}
+drugbank_stereogenic_in_rdkit_but_not_openeye = {
+    "DrugBank_5329",
+    "DrugBank_7124",
+    "DrugBank_6865",
+}
 
 # Some molecules are _valid_ in both OETK and RDKit, but will fail if you try
 # to convert from one to the other, since OE adds stereo that RDKit doesn't
@@ -314,6 +321,20 @@ class TestAtom:
             assert atom.formal_charge == formal_charge
             assert atom.is_aromatic == is_aromatic
             assert atom.name == this_element.name
+
+    def test_set_molecule(self):
+        """Test appropriately setting a molecule with no errors"""
+        mol = Molecule.from_smiles("CCO")
+        atom = Atom(6, 0, False)
+        atom.molecule = mol
+
+    def test_set_molecule_error(self):
+        """Test setting molecule for atom with molecule raises error"""
+        mol = Molecule.from_smiles("CCO")
+        atom = Atom(6, 0, False)
+        atom.molecule = mol
+        with pytest.raises(AssertionError, match="already has an associated molecule"):
+            atom.molecule = mol
 
 
 class TestMolecule:
@@ -501,6 +522,18 @@ class TestMolecule:
 
         smiles2 = molecule2.to_smiles(toolkit_registry=toolkit_wrapper)
         assert smiles1 == smiles2
+
+    @pytest.mark.parametrize(
+        "smiles, expected", [("[Cl:1]Cl", {0: 1}), ("[Cl:1][Cl:2]", {0: 1, 1: 2})]
+    )
+    @pytest.mark.parametrize(
+        "toolkit_class", [OpenEyeToolkitWrapper, RDKitToolkitWrapper]
+    )
+    def test_from_smiles_with_map(self, smiles, expected, toolkit_class):
+        if not (toolkit_class.is_available()):
+            pytest.skip(f"Required toolkit {toolkit_class} is unavailable")
+        molecule = Molecule.from_smiles(smiles, toolkit_registry=toolkit_class())
+        assert molecule.properties["atom_map"] == expected
 
     smiles_types = [
         {"isomeric": True, "explicit_hydrogens": True, "mapped": True, "error": None},
@@ -1824,6 +1857,66 @@ class TestMolecule:
         else:
             pytest.skip("Required toolkit is unavailable")
 
+    @pytest.mark.parametrize(
+        "toolkit_class", [OpenEyeToolkitWrapper, RDKitToolkitWrapper]
+    )
+    @pytest.mark.parametrize(
+        "smiles, undefined_only, expected",
+        [
+            (
+                "FC(Br)(Cl)[C@@H](Br)(Cl)",
+                False,
+                [
+                    "F[C@](Br)(Cl)[C@@H](Br)(Cl)",
+                    "F[C@](Br)(Cl)[C@H](Br)(Cl)",
+                    "F[C@@](Br)(Cl)[C@@H](Br)(Cl)",
+                    "F[C@@](Br)(Cl)[C@H](Br)(Cl)",
+                ],
+            ),
+            (
+                "FC(Br)(Cl)[C@@H](Br)(Cl)",
+                True,
+                ["F[C@](Br)(Cl)[C@@H](Br)(Cl)", "F[C@@](Br)(Cl)[C@@H](Br)(Cl)"],
+            ),
+            ("F[C@H](Cl)Br", False, ["F[C@@H](Cl)Br"]),
+            ("F[C@H](Cl)Br", True, []),
+        ],
+    )
+    def test_enumerating_stereo_partially_defined(
+        self, toolkit_class, smiles, undefined_only, expected
+    ):
+        """Test the enumerating stereo of molecules with partially defined chirality"""
+
+        if not toolkit_class.is_available():
+            pytest.skip("Required toolkit is unavailable")
+
+        toolkit = toolkit_class()
+
+        # test undefined only
+        mol = Molecule.from_smiles(
+            smiles, toolkit_registry=toolkit, allow_undefined_stereo=True
+        )
+        stereoisomers = mol.enumerate_stereoisomers(
+            undefined_only=undefined_only, rationalise=False
+        )
+
+        # Ensure that the results of the enumeration are what the test expects.
+        # This roundtrips the expected output from SMILES --> OFFMol --> SMILES,
+        # since the SMILES for stereoisomers generated in this test may change depending
+        # on which cheminformatics toolkit is used.
+        expected = {
+            Molecule.from_smiles(stereoisomer, allow_undefined_stereo=True).to_smiles(
+                explicit_hydrogens=True, isomeric=True, mapped=False
+            )
+            for stereoisomer in expected
+        }
+        actual = {
+            stereoisomer.to_smiles(explicit_hydrogens=True, isomeric=True, mapped=False)
+            for stereoisomer in stereoisomers
+        }
+
+        assert expected == actual
+
     @requires_rdkit
     def test_from_pdb_and_smiles(self):
         """Test the ability to make a valid molecule using RDKit and SMILES together"""
@@ -1900,10 +1993,15 @@ class TestMolecule:
 
         assert_check()
         assert qcschema.extras["test_tag"] == "test"
-        # now run again when no extras
+        assert qcschema.extras[
+            "canonical_isomeric_explicit_hydrogen_mapped_smiles"
+        ] == ethanol.to_smiles(mapped=True)
+        # # now run again with no extras passed, only cmiles entry will be present with fix-720
         qcschema = ethanol.to_qcschema()
         assert_check()
-        assert qcschema.extras is None
+        assert qcschema.extras[
+            "canonical_isomeric_explicit_hydrogen_mapped_smiles"
+        ] == ethanol.to_smiles(mapped=True)
 
     @requires_pkg("qcportal")
     def test_from_qcschema_no_client(self):
@@ -2004,7 +2102,8 @@ class TestMolecule:
 
     @requires_pkg("qcportal")
     def test_qcschema_round_trip(self):
-        """Test making a molecule from qcschema then converting back"""
+        """Test making a molecule from qcschema then converting back
+        Checking whether qca_mol and mol created from/to qcschema are the same or not"""
 
         # get a molecule qcschema
         import qcportal as ptl
@@ -2022,7 +2121,7 @@ class TestMolecule:
         qcschema = mol.to_qcschema()
         assert qcschema.atom_labels.tolist() == qca_mol.atom_labels.tolist()
         assert qcschema.symbols.tolist() == qca_mol.symbols.tolist()
-        # due to conversion useing different programs there is a slight difference here
+        # due to conversion using different programs there is a slight difference here
         assert qcschema.geometry.flatten().tolist() == pytest.approx(
             qca_mol.geometry.flatten().tolist(), rel=1.0e-5
         )
@@ -2038,6 +2137,78 @@ class TestMolecule:
         assert qcschema.molecular_multiplicity == qca_mol.molecular_multiplicity
         assert qcschema.real.all() == qca_mol.real.all()
 
+    @requires_pkg("qcportal")
+    def test_qcschema_round_trip_from_to_from(self):
+        """Test making a molecule from qca record using from_qcschema,
+        then converting back to qcschema using to_qcschema,
+         and then reading that again using from_qcschema"""
+
+        # get a molecule qcschema
+        import qcportal as ptl
+
+        client = ptl.FractalClient()
+        ds = client.get_collection(
+            "TorsionDriveDataset", "OpenFF-benchmark-ligand-fragments-v1.0"
+        )
+        # grab an entry from the torsiondrive data set
+        entry = ds.get_entry(
+            "[H]c1[c:1]([c:2](c(c(c1[H])N([H])C(=O)[H])[H])[C:3]2=C(C(=C([S:4]2)[H])OC([H])([H])[H])Br)[H]"
+        )
+        # now make the molecule from the record instance with the geometry
+        mol_qca_record = Molecule.from_qcschema(entry, client)
+        off_qcschema = mol_qca_record.to_qcschema()
+        mol_using_from_off_qcschema = Molecule.from_qcschema(off_qcschema)
+        assert_molecule_is_equal(
+            mol_qca_record,
+            mol_using_from_off_qcschema,
+            "Molecule roundtrip to/from_qcschema failed",
+        )
+
+    @requires_pkg("qcportal")
+    def test_qcschema_round_trip_raise_error(self):
+        """Test making a molecule from qcschema,
+        reaching inner except block where everything fails"""
+
+        # get a molecule qcschema
+        import qcportal as ptl
+
+        client = ptl.FractalClient()
+        ds = client.get_collection(
+            "TorsionDriveDataset", "OpenFF-benchmark-ligand-fragments-v1.0"
+        )
+        # grab an entry from the torsiondrive data set
+        entry = ds.get_entry(
+            "[H]c1[c:1]([c:2](c(c(c1[H])N([H])C(=O)[H])[H])[C:3]2=C(C(=C([S:4]2)[H])OC([H])([H])[H])Br)[H]"
+        )
+        del entry.attributes["canonical_isomeric_explicit_hydrogen_mapped_smiles"]
+        # now make the molecule from the record instance with the geometry
+        with pytest.raises(KeyError):
+            mol_qca_record = Molecule.from_qcschema(entry, client)
+
+    @requires_pkg("qcportal")
+    def test_qcschema_molecule_record_round_trip_from_to_from(self):
+        """Test making a molecule from qca record using from_qcschema,
+        then converting back to qcschema using to_qcschema,
+         and then reading that again using from_qcschema"""
+
+        # get a molecule qcschema
+        import qcportal as ptl
+
+        client = ptl.FractalClient()
+
+        record = client.query_molecules(molecular_formula="C16H20N3O5")[0]
+
+        # now make the molecule from the record instance with the geometry
+        mol_qca_record = Molecule.from_qcschema(record, client)
+        off_qcschema = mol_qca_record.to_qcschema()
+        mol_using_from_off_qcschema = Molecule.from_qcschema(off_qcschema)
+
+        assert_molecule_is_equal(
+            mol_qca_record,
+            mol_using_from_off_qcschema,
+            "Molecule roundtrip to/from_qcschema failed",
+        )
+
     def test_from_mapped_smiles(self):
         """Test making the molecule from issue #412 using both toolkits to ensure the issue
         is fixed."""
@@ -2050,6 +2221,20 @@ class TestMolecule:
         # make sure the atom map is not exposed
         with pytest.raises(KeyError):
             mapping = mol._properties["atom_map"]
+
+    @pytest.mark.parametrize(
+        "toolkit_class", [OpenEyeToolkitWrapper, RDKitToolkitWrapper]
+    )
+    def test_from_mapped_smiles_partial(self, toolkit_class):
+        """Test that creating a molecule from a partially mapped SMILES raises an
+        exception."""
+        if not (toolkit_class.is_available()):
+            pytest.skip(f"Required toolkit {toolkit_class} is unavailable")
+        with pytest.raises(
+            SmilesParsingError,
+            match="The mapped smiles does not contain enough indexes",
+        ):
+            Molecule.from_mapped_smiles("[Cl:1][Cl]", toolkit_registry=toolkit_class())
 
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_n_particles(self, molecule):
@@ -2097,8 +2282,8 @@ class TestMolecule:
 
             assert (
                 is_chain
-                or is_three_memebered_ring_torsion(proper)
-                or is_four_memebered_ring_torsion(proper)
+                or is_three_membered_ring_torsion(proper)
+                or is_four_membered_ring_torsion(proper)
             )
 
     @pytest.mark.parametrize("molecule", mini_drug_bank())
@@ -2116,7 +2301,7 @@ class TestMolecule:
                 or (improper[0].is_bonded_to(improper[3]))
                 or (improper[2].is_bonded_to(improper[3]))
             )
-            assert is_not_cyclic or is_three_memebered_ring_torsion(improper)
+            assert is_not_cyclic or is_three_membered_ring_torsion(improper)
 
     @pytest.mark.parametrize(
         ("molecule", "n_impropers", "n_pruned"),
@@ -2155,7 +2340,7 @@ class TestMolecule:
         common_torsions = molecule.propers & molecule.impropers
         if len(common_torsions) > 0:
             for torsion in common_torsions:
-                assert is_three_memebered_ring_torsion(torsion)
+                assert is_three_membered_ring_torsion(torsion)
 
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_total_charge(self, molecule):

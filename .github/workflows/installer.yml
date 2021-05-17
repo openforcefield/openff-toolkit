@@ -13,21 +13,16 @@ jobs:
       fail-fast: false
       matrix:
         os: [macOS-latest, ubuntu-latest]
-        python-version: [3.6, 3.7]
+        python-version: [3.7, 3.8, 3.9]
 
     env:
       CI_OS: ${{ matrix.os }}
       PYVER: ${{ matrix.python-version }}
 
     steps:
-    - uses: actions/checkout@v2
-      
-    - name: Wait for 2 hours if triggered by a release
-      if: (github.event_name == 'release') || (github.event_name == 'prerelease')
-      run:
-        sleep 7200
+    - uses: actions/checkout@v2.3.4
 
-    - uses: conda-incubator/setup-miniconda@v2
+    - uses: conda-incubator/setup-miniconda@v2.1.1
       with:
         python-version: ${{ matrix.python-version }}
         activate-environment: constructor

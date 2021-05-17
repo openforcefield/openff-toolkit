@@ -96,18 +96,18 @@ def _get_installed_offxml_dir_paths():
 
 def get_available_force_fields(full_paths=False):
     """
-     Get the filenames of all available .offxml force field files.
+    Get the filenames of all available .offxml force field files.
 
-     Availability is determined by what is discovered through the
-    `openforcefield.smirnoff_forcefield_directory` entry point. If the
-    `openff-forcefields` package is installed, this should include several
-    .offxml files such as `openff-1.0.0.offxml`.
+    Availability is determined by what is discovered through the
+    ``openforcefield.smirnoff_forcefield_directory`` entry point. If the
+    ``openff-forcefields`` package is installed, this should include several
+    .offxml files such as ``openff-1.0.0.offxml``\ .
 
      Parameters
      ----------
      full_paths : bool, default=False
-         If False, return the name of each available *.offxml file.
-         If True, return the full path to each available .offxml file.
+         If False, return the name of each available \*.offxml file.
+         If True, return the full path to each available \*.offxml file.
 
      Returns
      -------
@@ -1094,11 +1094,13 @@ class ForceField:
 
             # Determine the actual path of the file.
             # TODO: What is desired toolkit behavior if two files with the desired name are available?
-            for dir_path in searched_dirs_paths:
-                file_path = os.path.join(dir_path, source)
-                if os.path.isfile(file_path):
-                    source = file_path
-                    break
+            dir_paths = [pathlib.Path(path) for path in searched_dirs_paths]
+            for dir_path in dir_paths:
+                for file_path in dir_path.glob("**/*.offxml"):
+                    # Cannot compare filenames alone, source can be test_forcefield/...
+                    if str(file_path).lower().endswith(source.lower()):
+                        source = str(file_path.absolute())
+                        break
 
         # Process all SMIRNOFF definition files or objects
         # QUESTION: Allow users to specify force field URLs so they can pull force field definitions from the web too?
@@ -1377,7 +1379,7 @@ class ForceField:
         Parameters
         ----------
         topology : openff.toolkit.topology.Topology
-            The ``Topology`` corresponding to the ``System`` object to be created.
+            The ``Topology`` corresponding to the OpenMM ``System`` object to be created.
         positions : simtk.unit.Quantity of dimension (natoms,3) with units compatible with angstroms
             The positions corresponding to the ``System`` object to be created
 

@@ -14,6 +14,7 @@ New pluggable handlers can be created by creating subclasses of :class:`Paramete
 
 __all__ = [
     "SMIRNOFFSpecError",
+    "SMIRNOFFSpecUnimplementedError",
     "IncompatibleParameterError",
     "FractionalBondOrderInterpolationMethodUnsupportedError",
     "NotEnoughPointsForInterpolationError",
@@ -90,6 +91,12 @@ class SMIRNOFFSpecError(MessageException):
     """
 
     pass
+
+
+class SMIRNOFFSpecUnimplementedError(MessageException):
+    """
+    Exception for when a portion of the SMIRNOFF specification is not yet implemented.
+    """
 
 
 class FractionalBondOrderInterpolationMethodUnsupportedError(MessageException):
@@ -300,10 +307,10 @@ class ParameterAttribute:
     attributes have the ``default`` set to the special type ``UNDEFINED``.
 
     Converters can be both static or instance functions/methods with
-    respective signatures
+    respective signatures::
 
-    converter(value): -> converted_value
-    converter(instance, parameter_attribute, value): -> converted_value
+        converter(value): -> converted_value
+        converter(instance, parameter_attribute, value): -> converted_value
 
     A decorator syntax is available (see example below).
 
@@ -392,6 +399,7 @@ class ParameterAttribute:
     2.0
 
     The custom converter associated to attr_int_to_float converts only integers instead.
+
     >>> my_par.attr_int_to_float = 3
     >>> my_par.attr_int_to_float
     3.0
@@ -407,10 +415,11 @@ class ParameterAttribute:
 
         pass
 
-    def __init__(self, default=UNDEFINED, unit=None, converter=None):
+    def __init__(self, default=UNDEFINED, unit=None, converter=None, docstring=""):
         self.default = default
         self._unit = unit
         self._converter = converter
+        self.__doc__ = docstring
 
     def __set_name__(self, owner, name):
         self._name = "_" + name
@@ -651,7 +660,7 @@ class IndexedMappedParameterAttribute(ParameterAttribute):
     For example, torsions with fractional bond orders have parameters such as
     k1_bondorder1, k1_bondorder2, k2_bondorder1, k2_bondorder2, ..., and
     ``IndexedMappedParameterAttribute`` can be used to encapsulate the sequence of
-    terms as mappings (typically, `dict`s) of their components.
+    terms as mappings (typically, ``dict``\ s) of their components.
 
     The only substantial difference with ``IndexedParameterAttribute`` is that
     only sequences of mappings are supported as values and converters and units are
@@ -1761,7 +1770,7 @@ class ParameterType(_ParameterAttributeHandler):
 
     Parameter attributes that can be indexed can be handled with the
     ``IndexedParameterAttribute``. These support unit validation and
-    converters exactly as ``ParameterAttribute``s, but the validation/conversion
+    converters exactly as ``ParameterAttribute``\ s, but the validation/conversion
     is performed for each indexed attribute.
 
     >>> class MyTorsionType(ParameterType):
@@ -1841,8 +1850,8 @@ class ParameterType(_ParameterAttributeHandler):
 # PARAMETER HANDLERS
 #
 # The following classes are Handlers that know how to create Force
-# subclasses and add them to a System that is being created. Each Handler
-# class must define three methods:
+# subclasses and add them to an OpenMM System that is being created. Each
+# Handler class must define three methods:
 # 1) a constructor which takes as input hierarchical dictionaries of data
 #    conformant to the SMIRNOFF spec;
 # 2) a create_force() method that constructs the Force object and adds it
@@ -2305,7 +2314,7 @@ class ParameterHandler(_ParameterAttributeHandler):
             reference_molecule.get_bond_between(atom_i, atom_j)
 
     def assign_parameters(self, topology, system):
-        """Assign parameters for the given Topology to the specified System object.
+        """Assign parameters for the given Topology to the specified OpenMM ``System`` object.
 
         Parameters
         ----------
@@ -2318,7 +2327,7 @@ class ParameterHandler(_ParameterAttributeHandler):
         pass
 
     def postprocess_system(self, topology, system, **kwargs):
-        """Allow the force to perform a a final post-processing pass on the System following parameter assignment, if needed.
+        """Allow the force to perform a a final post-processing pass on the OpenMM ``System`` following parameter assignment, if needed.
 
         Parameters
         ----------
@@ -2827,7 +2836,6 @@ class BondHandler(ParameterHandler):
                 )
                 match.reference_molecule.assign_fractional_bond_orders(
                     toolkit_registry=toolkit_registry,
-                    use_conformers=match.reference_molecule.conformers,
                     bond_order_model=self.fractional_bondorder_method.lower(),
                 )
 
@@ -3234,7 +3242,6 @@ class ProperTorsionHandler(ParameterHandler):
                 )
                 match.reference_molecule.assign_fractional_bond_orders(
                     toolkit_registry=toolkit_registry,
-                    use_conformers=match.reference_molecule.conformers,
                     bond_order_model=self.fractional_bondorder_method.lower(),
                 )
 
@@ -3674,7 +3681,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
     cutoff = ParameterAttribute(default=9.0 * unit.angstrom, unit=unit.angstrom)
     switch_width = ParameterAttribute(default=0.0 * unit.angstrom, unit=unit.angstrom)
     method = ParameterAttribute(
-        default="PME", converter=_allow_only(["Coulomb", "PME"])
+        default="PME", converter=_allow_only(["Coulomb", "PME", "reaction-field"])
     )
 
     # TODO: Use _allow_only when ParameterAttribute will support multiple converters (it'll be easy when we switch to use the attrs library)
@@ -3851,7 +3858,6 @@ class ElectrostaticsHandler(_NonbondedHandler):
             self.mark_charges_assigned(ref_mol, topology)
 
         # Set the nonbonded method
-        settings_matched = False
         current_nb_method = force.getNonbondedMethod()
 
         # First, check whether the vdWHandler set the nonbonded method to LJPME, because that means
@@ -3873,7 +3879,6 @@ class ElectrostaticsHandler(_NonbondedHandler):
             if topology.box_vectors is None:
                 assert current_nb_method == openmm.NonbondedForce.NoCutoff
                 force.setCutoffDistance(self.cutoff)
-                settings_matched = True
                 # raise IncompatibleParameterError("Electrostatics handler received PME method keyword, but a nonperiodic"
                 #                                  " topology. Use of PME electrostatics requires a periodic topology.")
             else:
@@ -3885,14 +3890,11 @@ class ElectrostaticsHandler(_NonbondedHandler):
                     force.setCutoffDistance(9.0 * unit.angstrom)
                     force.setEwaldErrorTolerance(1.0e-4)
 
-            settings_matched = True
-
         # If vdWHandler set the nonbonded method to NoCutoff, then we don't need to change anything
         elif self.method == "Coulomb":
             if topology.box_vectors is None:
                 # (vdWHandler will have already set this to NoCutoff)
                 assert current_nb_method == openmm.NonbondedForce.NoCutoff
-                settings_matched = True
             else:
                 raise IncompatibleParameterError(
                     "Electrostatics method set to Coulomb, and topology is periodic. "
@@ -3904,26 +3906,15 @@ class ElectrostaticsHandler(_NonbondedHandler):
         # If the vdWHandler set the nonbonded method to PME, then ensure that it has the same cutoff
         elif self.method == "reaction-field":
             if topology.box_vectors is None:
-                # (vdWHandler will have already set this to NoCutoff)
-                assert current_nb_method == openmm.NonbondedForce.NoCutoff
-                settings_matched = True
-            else:
-                raise IncompatibleParameterError(
-                    "Electrostatics method set to reaction-field. In the future, "
-                    "this will lead to use of OpenMM's CutoffPeriodic or CutoffNonPeriodic"
-                    " Nonbonded force method, however this is not supported in the "
-                    "current Open Force Field Toolkit"
+                raise SMIRNOFFSpecError(
+                    "Electrostatics method reaction-field can only be applied to a periodic system."
                 )
 
-        if not settings_matched:
-            raise IncompatibleParameterError(
-                "Unable to support provided vdW method, electrostatics "
-                "method ({}), and topology periodicity ({}) selections. Additional "
-                "options for nonbonded treatment may be added in future versions "
-                "of the Open Force Field Toolkit.".format(
-                    self.method, topology.box_vectors is not None
+            else:
+                raise SMIRNOFFSpecUnimplementedError(
+                    "Electrostatics method reaction-field is supported in the SMIRNOFF specification "
+                    "but not yet implemented in the OpenFF Toolkit."
                 )
-            )
 
     def postprocess_system(self, system, topology, **kwargs):
         force = super().create_force(system, topology, **kwargs)
@@ -4897,16 +4888,16 @@ class VirtualSiteHandler(_NonbondedHandler):
         None
         """
 
-        if vsite_name in self._virtual_site_types and replace == False:
+        if vsite_name in self._virtual_site_types and not replace:
             raise DuplicateVirtualSiteTypeException(
                 "VirtualSite type {} already registered for handler {} and replace=False".format(
                     vsite_name, self.__class__
                 )
             )
         self._virtual_site_types[vsite_name] = vsite_cls
-        self._parameters = [
-            param for param in self._parameters if param.type != vsite_name
-        ]
+        self._parameters = ParameterList(
+            [param for param in self._parameters if param.type != vsite_name]
+        )
 
     @property
     def virtual_site_types(self):

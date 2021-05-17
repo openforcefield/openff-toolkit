@@ -1,4 +1,4 @@
-.. _utils ::
+.. _utils :
 
 Utilities
 =========
@@ -90,6 +90,19 @@ Serialization support
 
     Serializable
 
+Collections
+---------------------
+
+Custom collections for the toolkit
+
+.. currentmodule:: openff.toolkit.utils.collections
+.. autosummary::
+    :nosignatures:
+    :toctree: api/generated/
+
+    ValidatedList
+    ValidatedDict
+
 Miscellaneous utilities
 -----------------------
 
@@ -107,3 +120,4 @@ Miscellaneous utility functions.
     convert_0_1_smirnoff_to_0_2
     convert_0_2_smirnoff_to_0_3
     get_molecule_parameterIDs
+    unit_to_string
