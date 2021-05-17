@@ -40,6 +40,7 @@ __all__ = [
     "GBSAHandler",
     "ToolkitAM1BCCHandler",
     "VirtualSiteHandler",
+    "_ParameterTermKey",
 ]
 
 
@@ -55,7 +56,7 @@ import logging
 import re
 from collections import OrderedDict, defaultdict
 from enum import Enum
-from itertools import combinations
+from itertools import combinations, repeat
 
 from simtk import openmm, unit
 
@@ -877,6 +878,10 @@ class _ParameterAttributeHandler:
 
     """
 
+    # this keeps a list of all possible terms from each type. The exercised
+    # terms (the ones that the XML param uses) will be a subset of these
+    _term_names = []
+
     def __init__(self, allow_cosmetic_attributes=False, **kwargs):
         """
         Initialize parameter and cosmetic attributes.
@@ -893,6 +898,14 @@ class _ParameterAttributeHandler:
         # A list that may be populated to record the cosmetic attributes
         # read from a SMIRNOFF data source.
         self._cosmetic_attribs = []
+
+        # this is a immutable list for the user to select which terms are available
+        # for this parameter
+        self._term_names_all = []
+
+        # a user-mutable list that will select the terms to enumerate through
+        # This should be public, but we keep private to hide it from docs
+        self._term_names_active = []
 
         # Do not modify the original data.
         smirnoff_data = copy.deepcopy(kwargs)
@@ -918,11 +931,16 @@ class _ParameterAttributeHandler:
             )
             raise SMIRNOFFSpecError(msg)
 
+        # if type(self) is ElectrostaticsHandler:
+        #     breakpoint()
         # Finally, set attributes of this ParameterType and handle cosmetic attributes.
         allowed_attributes = set(self._get_parameter_attributes().keys())
         for key, val in smirnoff_data.items():
             if key in allowed_attributes:
                 setattr(self, key, val)
+                if key in self._term_names:
+                    self._term_names_all.append(key)
+                    self._term_names_active.append(key)
             # Handle all unknown kwargs as cosmetic so we can write them back out
             elif allow_cosmetic_attributes:
                 self.add_cosmetic_attribute(key, val)
@@ -933,6 +951,137 @@ class _ParameterAttributeHandler:
                     "'allow_cosmetic_attributes=True'"
                 )
                 raise SMIRNOFFSpecError(msg)
+
+    def _terms(self):
+        """
+        Generate a list of active term keys. These keys are can be used to find the
+        specific value. The order the keys will be the same, and will only differ
+        if the order is manually changed, or the list of active terms is changed.
+
+        This should be public, but we make it private to hide from docs
+
+        Returns
+        -------
+        List[:class:`openff.toolkit.typing.engines.smirnoff.parameters._ParameterTermKey`]
+        """
+
+        active_terms = self._term_names_active
+
+        for term in active_terms:
+            # handle iterable params (indexed, mapped, etc) separately from single vals
+            term_attr = getattr(self, term)
+            if type(term_attr) is unit.Quantity:  # scalar with units e.g. bond length
+                yield (term,)
+            elif not hasattr(
+                term_attr, "__iter__"
+            ):  # scalar with no units e.g. periodicity
+                yield (term,)
+            elif issubclass(type(term_attr), (list, dict)):  # e.g. torsion k
+                # this hasn't really been tested with mapped params, e.g. when
+                # it is a dict, since it has an odd addressing scheme. TODO!
+                # here we see we just throw a number at the end...
+                # Maybe todo is implement some type of __iter__ in these
+                yield from iter((term + str(i),) for i, _ in enumerate(term_attr, 1))
+
+    def _terms_set_active(self, terms=None):
+        """
+        Set which terms should be generated when queried.
+
+        This should be public, but we make it private to hide from docs
+
+        Parameters
+        ----------
+        keys : List[str] or None, default None
+            A list of keys that should be active. If keys is None, all terms are
+            activated. An empty list will deactivate all terms.
+        
+        Returns
+        -------
+        None
+
+        """
+
+        if terms is None:
+            self._term_names_active = self._term_names_all.copy()
+        else:
+            if type(terms) is str:
+                terms = [terms]
+            self._term_names_active = [
+                term for term in terms if term in self._term_names_all
+            ]
+
+    def _terms_get_active(self):
+        """
+        Query the parameter terms which are active, i.e. the terms that would be
+        returned by calling meth:`self._terms`
+
+        This should be public, but we make it private to hide from docs
+
+        Parameters
+        ----------
+        keys : List[str] or None, default None
+            A list of keys that should be active. If keys is None, all terms are
+            activated. An empty list will deactivate all terms.
+        
+        Returns
+        -------
+        set[str]
+
+        """
+        return set(self._term_names_active)
+
+    def _term_select(self, term_key):
+        """
+        Get the term specified by the term key. The term keys are determined by calling
+        meth:`self._terms`.
+
+        See :class:`openff.toolkit.typing.engines.smirnoff.ForceField` for more details
+
+        This should be public, but we make it private to hide from docs
+
+        Parameters
+        ----------
+        term_key : :class:`openff.toolkit.typing.engines.smirnoff.parameters._ParameterTermKey`
+            The parameter key used to access a specific term
+
+        Returns
+        -------
+        :class:`simtk.unit.Quantity`, `int`, or `float`, depending on what the key
+        addresses
+        None if term was not found
+
+        See also
+        --------
+        :meth:`openff.toolkit.typing.engines.smirnoff.ForceField._term_select`
+        """
+
+        term = term_key[0]
+        # terms can have numbers at the end, so just check the base
+        if any(term.startswith(base_term) for base_term in self._term_names_active):
+            term_attr = getattr(self, term)
+            return term_attr
+        else:
+            return None
+
+    def _term_map_topology(self, topology):
+
+        # default for handlers that don't process molecule indices
+        return {}
+
+    def _terms_loaded(self):
+        """
+        Query the unique parameter terms which were loaded/set. If loading a FF from
+        file, this would return all terms detected. The returned set will contain
+        unique names.
+
+        Parameters
+        ----------
+        
+        Returns
+        -------
+        set[str]
+        """
+        return set(self._term_names_all)
 
     def _process_mapped_attributes(self, smirnoff_data):
         kwargs = list(smirnoff_data.keys())
@@ -1672,6 +1821,14 @@ class ParameterList(list):
         return parameter_list
 
 
+class ParameterTerm:
+    def __init__(self, name, value):
+
+        self.name = name
+        self.value = value / value.unit
+        self.unit = value.unit
+
+
 # TODO: Rename to better reflect role as parameter base class?
 class ParameterType(_ParameterAttributeHandler):
     """
@@ -1808,6 +1965,9 @@ class ParameterType(_ParameterAttributeHandler):
     smirks = ParameterAttribute()
     id = ParameterAttribute(default=None)
     parent_id = ParameterAttribute(default=None)
+
+    # Empty list means there are no modifiable parameteres
+    _term_names = []
 
     @smirks.converter
     def smirks(self, attr, smirks):
@@ -2005,6 +2165,169 @@ class ParameterHandler(_ParameterAttributeHandler):
     def parameters(self):
         """The ParameterList that holds this ParameterHandler's parameter objects"""
         return self._parameters
+
+    def _terms(self):
+        """
+        Generate a list of active term keys. These keys are can be used to find the
+        specific value. The order the keys will be the same, and will only differ
+        if the order is manually changed, or the list of active terms is changed.
+
+        This should be public, but we make it private to hide from docs
+
+        Returns
+        -------
+        Generator[:class:`openff.toolkit.typing.engines.smirnoff.parameters._ParameterTermKey`]
+
+        """
+
+        yield from super()._terms()
+        for param in self._parameters:
+            yield from zip(repeat(param.smirks), param._terms())
+
+    def _terms_set_active(self, terms=None):
+        """
+        Set which terms should be generated when queried.
+
+        This should be public, but we make it private to hide from docs
+
+        Parameters
+        ----------
+        keys : List[str] or None, default None
+            A list of keys that should be active. If keys is None, all terms are
+            activated. An empty list will deactivate all terms.
+
+        Returns
+        -------
+        None
+
+        """
+
+        super()._terms_set_active(terms)
+        for param in self._parameters:
+            param._terms_set_active(terms)
+
+    def _terms_get_active(self):
+        """
+        Query the parameter terms which are active, i.e. the terms that would be
+        returned by calling :meth:`self._terms`
+
+        This should be public, but we make it private to hide from docs
+
+        Parameters
+        ----------
+        keys : List[str] or None, default None
+            A list of keys that should be active. If keys is None, all terms are
+            activated. An empty list will deactivate all terms.
+
+        Returns
+        -------
+        set[str]
+
+        """
+
+        terms = set()
+        terms.update(super()._terms_get_active())
+        for param in self._parameters:
+            terms.update(param._terms_get_active())
+        return terms
+
+    def _terms_loaded(self):
+        """
+        Query the unique parameter terms which were loaded/set. If loading a FF from
+        file, this would return all terms detected. The returned set will contain
+        unique names.
+
+        This should be public, but we make it private to hide from docs
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+        set[str]
+        """
+
+        terms = set()
+        terms.update(super()._terms_loaded())
+        for param in self._parameters:
+            terms.update(param._terms_loaded())
+        return terms
+
+    def _term_select(self, term_key):
+        """
+        Get the term specified by the term key. The term keys are determined by calling
+        meth:`self._terms`.
+
+        See :class:`openff.toolkit.typing.engines.smirnoff.ForceField` for more details
+
+        This should be public, but we make it private to hide from docs
+
+        Parameters
+        ----------
+        term_key : :class:`openff.toolkit.typing.engines.smirnoff.parameters._ParameterTermKey`
+            The parameter key used to access a specific term
+
+        Returns
+        -------
+        :class:`simtk.unit.Quantity`, `int`, or `float`, depending on what the key
+        addresses
+        None if term was not found
+
+        See also
+        --------
+        :meth:`openff.toolkit.typing.engines.smirnoff.ForceField._term_select`
+        """
+
+        leading_key = term_key[0]
+
+        term_attr = getattr(self, leading_key, None)
+
+        if term_attr is not None:
+            if len(term_key) == 1:
+                return term_attr
+            if type(term_key[1]) is not str:
+                return term_key[1]
+
+        else:
+            for param in self._parameters:
+
+                if term_key[0] == param.smirks:
+                    return param._term_select(term_key[1])
+
+    def _term_map_topology(self, topology):
+        """
+        Map the molecule valence indices to FF parameter terms. Similar to
+        `label_molecules`, but returns the parameter terms individually, rather than
+        the nested labels.
+
+        This should be public, but we make it private to hide from docs
+
+        Parameters
+        ----------
+        topology : openff.toolkit.topology.Topology
+            A Topology object containing one or more unique molecules to be labeled
+
+        Returns
+        -------
+        Dict[tuple[int], List[openff.toolkit.typing.engines.smirnoff.parameters._ParameterTermKey]]
+        """
+
+        parameter_matches = {}
+        matches = self.find_matches(topology)
+
+        for match in matches:
+
+            param = matches[
+                match
+            ].parameter_type  # this is the actual parameter, not the type
+
+            match = matches.__class__.key_transform(match)
+            mol_key = (topology, match)
+            for term in param._terms():
+                term_key = (self.TAGNAME, (param.smirks, term))
+                parameter_matches.setdefault(mol_key, []).append(term_key)
+
+        return parameter_matches
 
     @property
     def TAGNAME(self):
@@ -2654,6 +2977,9 @@ class BondHandler(ParameterHandler):
             default=None, unit=unit.kilocalorie_per_mole / unit.angstrom ** 2
         )
 
+        # possible terms that could be loaded; also specifies the ordering
+        _term_names = ["length", "length_bondorder", "k", "k_bondorder"]
+
         def __init__(self, **kwargs):
             # these checks enforce mutually-exclusive parameterattribute specifications
             has_k = "k" in kwargs.keys()
@@ -2936,6 +3262,9 @@ class AngleHandler(ParameterHandler):
         _VALENCE_TYPE = "Angle"  # ChemicalEnvironment valence type string expected by SMARTS string for this Handler
         _ELEMENT_NAME = "Angle"
 
+        # possible terms that could be loaded; also specifies the ordering
+        _term_names = ["angle", "k"]
+
         angle = ParameterAttribute(unit=unit.degree)
         k = ParameterAttribute(unit=unit.kilocalorie_per_mole / unit.degree ** 2)
 
@@ -3041,6 +3370,9 @@ class ProperTorsionHandler(ParameterHandler):
         k_bondorder = IndexedMappedParameterAttribute(
             default=None, unit=unit.kilocalorie_per_mole
         )
+
+        # possible terms that could be loaded; also specifies the ordering
+        _term_names = ["periodicity", "k", "k_bondorder", "phase", "idivf"]
 
     _TAGNAME = "ProperTorsions"  # SMIRNOFF tag name to process
     _KWARGS = ["partial_bond_orders_from_molecules"]
@@ -3293,6 +3625,10 @@ class ImproperTorsionHandler(ParameterHandler):
         k = IndexedParameterAttribute(unit=unit.kilocalorie_per_mole)
         idivf = IndexedParameterAttribute(default=None, converter=float)
 
+        # no interpolation??
+        # possible terms that could be loaded; also specifies the ordering
+        _term_names = ["periodicity", "k", "phase", "idivf"]
+
     _TAGNAME = "ImproperTorsions"  # SMIRNOFF tag name to process
     _INFOTYPE = ImproperTorsionType  # info type to store
     _OPENMMTYPE = openmm.PeriodicTorsionForce  # OpenMM force class to create
@@ -3498,6 +3834,9 @@ class vdWHandler(_NonbondedHandler):
         sigma = ParameterAttribute(default=None, unit=unit.angstrom)
         rmin_half = ParameterAttribute(default=None, unit=unit.angstrom)
 
+        # possible terms that could be loaded; also specifies the ordering
+        _term_names = ["epsilon", "sigma", "rmin_half"]
+
         def __init__(self, **kwargs):
             sigma = kwargs.get("sigma", None)
             rmin_half = kwargs.get("rmin_half", None)
@@ -3562,6 +3901,8 @@ class vdWHandler(_NonbondedHandler):
     method = ParameterAttribute(
         default="cutoff", converter=_allow_only(["cutoff", "PME"])
     )
+    # possible terms that could be loaded; also specifies the ordering
+    _term_names = ["scale12", "scale13", "scale14", "scale15", "cutoff", "switch_width"]
 
     # TODO: Use _allow_only when ParameterAttribute will support multiple converters (it'll be easy when we switch to use the attrs library)
     @scale12.converter
@@ -3683,6 +4024,9 @@ class ElectrostaticsHandler(_NonbondedHandler):
     method = ParameterAttribute(
         default="PME", converter=_allow_only(["Coulomb", "PME", "reaction-field"])
     )
+
+    # possible terms that could be loaded; also specifies the ordering
+    _term_names = ["scale12", "scale13", "scale14", "scale15", "cutoff", "switch_width"]
 
     # TODO: Use _allow_only when ParameterAttribute will support multiple converters (it'll be easy when we switch to use the attrs library)
     @scale12.converter
@@ -3976,6 +4320,9 @@ class LibraryChargeHandler(_NonbondedHandler):
         name = ParameterAttribute(default=None)
         charge = IndexedParameterAttribute(unit=unit.elementary_charge)
 
+        # possible terms that could be loaded; also specifies the ordering
+        _term_names = ["charge"]
+
         def __init__(self, **kwargs):
             super().__init__(**kwargs)
             unique_tags, connectivity = GLOBAL_TOOLKIT_REGISTRY.call(
@@ -4215,6 +4562,9 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
 
         charge_increment = IndexedParameterAttribute(unit=unit.elementary_charge)
 
+        # possible terms that could be loaded; also specifies the ordering
+        _term_names = ["charge_increment"]
+
         def __init__(self, **kwargs):
             super().__init__(**kwargs)
             unique_tags, connectivity = GLOBAL_TOOLKIT_REGISTRY.call(
@@ -4413,6 +4763,9 @@ class GBSAHandler(ParameterHandler):
         radius = ParameterAttribute(unit=unit.angstrom)
         scale = ParameterAttribute(converter=float)
 
+        # possible terms that could be loaded; also specifies the ordering
+        _term_names = ["radius", "scale"]
+
     _TAGNAME = "GBSA"
     _INFOTYPE = GBSAType
     _OPENMMTYPE = openmm.GBSAOBCForce
@@ -4437,6 +4790,15 @@ class GBSAHandler(ParameterHandler):
         unit=unit.calorie / unit.mole / unit.angstrom ** 2,
     )
     solvent_radius = ParameterAttribute(default=1.4 * unit.angstrom, unit=unit.angstrom)
+
+    # possible terms that could be loaded; also specifies the ordering
+    _term_names = [
+        "solvent_dielectric",
+        "solute_dielectric",
+        "sa_model",
+        "surface_area_penalty",
+        "solvent_radius",
+    ]
 
     def _validate_parameters(self):
         """
@@ -4899,6 +5261,110 @@ class VirtualSiteHandler(_NonbondedHandler):
             [param for param in self._parameters if param.type != vsite_name]
         )
 
+    def _terms(self):
+        """
+        Generate a list of active term keys. These keys are can be used to find the
+        specific value. The order the keys will be the same, and will only differ
+        if the order is manually changed, or the list of active terms is changed.
+
+        This should be public, but we make it private to hide from docs
+
+        Returns
+        -------
+        List[:class:`openff.toolkit.typing.engines.smirnoff.parameters._ParameterTermKey`]
+        """
+        for param in self._parameters:
+            yield from zip(
+                repeat(param.smirks),
+                zip(repeat(param.type), zip(repeat(param.name), param._terms())),
+            )
+
+    def _term_select(self, term_key):
+        """
+        Get the term specified by the term key. The term keys are determined by calling
+        meth:`self._terms`.
+
+        See :class:`openff.toolkit.typing.engines.smirnoff.ForceField` for more details
+
+        This should be public, but we make it private to hide from docs
+
+        Parameters
+        ----------
+        term_key : :class:`openff.toolkit.typing.engines.smirnoff.parameters._ParameterTermKey`
+            The parameter key used to access a specific term
+
+        Returns
+        -------
+        :class:`simtk.unit.Quantity`, `int`, or `float`, depending on what the key
+        addresses
+        None if term was not found
+
+        See also
+        --------
+        :meth:`openff.toolkit.typing.engines.smirnoff.ForceField._term_select`
+        """
+
+        leading_key = term_key[0]
+
+        term_attr = getattr(self, leading_key, None)
+
+        if term_attr is not None:
+
+            if len(term_key) == 1:
+                return term_attr
+            if type(term_key[1]) is not str:
+                return term_key[1]
+
+        else:
+            for param in self._parameters:
+                if (
+                    term_key[0] == param.smirks
+                    and term_key[1][0] == param.type
+                    and term_key[1][1][0] == param.name
+                ):
+                    return param._term_select(term_key[1][1][1])
+
+    def _term_map_topology(self, topology):
+        """
+        Map the molecule valence indices to FF parameter terms. Similar to
+        `label_molecules`, but returns the parameter terms individually, rather than
+        the nested labels.
+
+        This should be public, but we make it private to hide from docs
+
+        Parameters
+        ----------
+        topology : openff.toolkit.topology.Topology
+            A Topology object containing one or more unique molecules to be labeled
+
+        Returns
+        -------
+        Dict[tuple[int], List[openff.toolkit.typing.engines.smirnoff.parameters._ParameterTermKey]]
+        """
+
+        parameter_matches = {}
+        matches = self.find_matches(topology)
+
+        for match in matches:
+            for parameter in matches[match]:
+
+                param = (
+                    parameter.parameter_type
+                )  # this is the actual parameter, not the type
+
+                match = param.transformed_dict_cls.key_transform(match)
+                mol_key = (topology, match)
+
+                for term in param._terms():
+
+                    term_key = (
+                        self.TAGNAME,
+                        (param.smirks, (param.type, (param.name, term))),
+                    )
+                    parameter_matches.setdefault(mol_key, []).append(term_key)
+
+        return parameter_matches
+
     @property
     def virtual_site_types(self):
         """
@@ -5018,6 +5484,9 @@ class VirtualSiteHandler(_NonbondedHandler):
         )
         sigma = ParameterAttribute(default=0.0 * unit.angstrom, unit=unit.angstrom)
         rmin_half = ParameterAttribute(default=None, unit=unit.angstrom)
+
+        # base terms; these will need to be modified for each type if new ones are added
+        _term_names = ["epsilon", "sigma", "rmin_half", "distance", "charge_increment"]
 
         # Here we define the default sorting behavior if we need to sort the
         # atom key into a canonical ordering
@@ -5209,6 +5678,8 @@ class VirtualSiteHandler(_NonbondedHandler):
 
         _vsite_type = "BondCharge"
 
+        _term_names = ["epsilon", "sigma", "rmin_half", "distance", "charge_increment"]
+
         def add_virtual_site(self, molecule, orientations, replace=False):
             """
             Add a virtual site to the molecule
@@ -5249,6 +5720,16 @@ class VirtualSiteHandler(_NonbondedHandler):
 
         _vsite_type = "MonovalentLonePair"
 
+        _term_names = [
+            "epsilon",
+            "sigma",
+            "rmin_half",
+            "distance",
+            "charge_increment",
+            "outOfPlaneAngle",
+            "inPlaneAngle",
+        ]
+
         def add_virtual_site(self, molecule, orientations, replace=False):
             """
             Add a virtual site to the molecule
@@ -5285,6 +5766,15 @@ class VirtualSiteHandler(_NonbondedHandler):
         """
 
         outOfPlaneAngle = ParameterAttribute(unit=unit.degree)
+
+        _term_names = [
+            "epsilon",
+            "sigma",
+            "rmin_half",
+            "distance",
+            "charge_increment",
+            "outOfPlaneAngle",
+        ]
 
         _vsite_type = "DivalentLonePair"
 
@@ -5325,6 +5815,8 @@ class VirtualSiteHandler(_NonbondedHandler):
         transformed_dict_cls = ImproperDict
 
         _vsite_type = "TrivalentLonePair"
+
+        _term_names = ["epsilon", "sigma", "rmin_half", "distance", "charge_increment"]
 
         def __init__(self, **kwargs):
             """
@@ -5838,6 +6330,72 @@ class VirtualSiteHandler(_NonbondedHandler):
 
         return ids
 
+class _ParameterTermKey(tuple):
+    """
+    A tuple typedef of nested tuples that aims to give a serialized key to uniquely
+    identify every term in the FF.
+
+    This tuple therefore uniquely identifies every individual term in either the
+    FF/ParameterHandler/ParameterType. This structure gives a quasi-regular way
+    to access any of these terms. Processing/handling of these keys are slightly
+    different for each object, and therefore the shape of this key will depend
+    on who/what generated it. For example, term keys produced by FF objects
+    should only be handled by FF objects, and likewise for subsequent levels.
+
+    The only normal structure to this tuple is that it is recursively defined as
+
+    T[x] = (str, T[x-1])
+    T[0] = (str,)
+
+    noting that the argument above is mathematical, and would be reversed if
+    considering actual tuple address indices (0 would refer to the deepest tuple of the 
+    structure; x would refer to the top-most level). We see that the LHS is always a
+    string, and the RHS is always a tuple (of the same type).
+
+    As an implementational example, the general shape of this structure is, for a FF-
+    level key:
+
+    (ParameterHandler.TAGNAME, (SMIRKS, (term, )))
+
+    ParameterHandlers would understand:
+
+    (SMIRKS, (term, ))
+
+    And lastly ParameterType would understand:
+
+    (term, )
+
+    The only current exception to this is virtual sites, which cannot uniquely identify
+    a virtual site type solely by a SMIRKS pattern. In this case, the VS handler
+    produces and understands keys of the form:
+
+    (VirtualSiteHandler.TAGNAME, (SMIRKS, (VirtualSiteType, (name, (term, )))))
+
+    And therefore the handler would only understand tuples of the form
+
+    (SMIRKS, (VirtualSiteType, (name, (term, ))))
+
+    and the individual virtual site types would understand
+
+    (term, )
+    
+    etc. etc.
+
+    Finally, term names that are indexed, e.g. k1, k2, are handled in the way the
+    specialized objects implement them via custom `getattr` (as are normal terms which
+    use a vanilla `getattr`). This means we can throw the term "k" around when we
+    activate/deactivate, which would prevent accessing the single k attr in the
+    ParameterType. But, when getattr or setattr is called on the type using the
+    name "k1", the appropriate index is handled. For vanilla terms, the regular thing
+    occurs when calling getattr/setattr on "k".
+
+    Supplying this term key to the appropriate `_term_select` method will return
+    the value corresponding to it.
+
+    To use this in place of `label_molecules` to get an individual term mapping,
+    use `_term_map_topology` instead (and note it takes a topology rather than a
+    molecule).
+    """
 
 if __name__ == "__main__":
     import doctest

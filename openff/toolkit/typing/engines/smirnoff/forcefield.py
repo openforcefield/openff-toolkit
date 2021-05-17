@@ -36,12 +36,16 @@ import logging
 import os
 import pathlib
 from collections import OrderedDict
+from itertools import repeat
 
 from simtk import openmm
 
 from openff.toolkit.topology.molecule import DEFAULT_AROMATICITY_MODEL
 from openff.toolkit.typing.engines.smirnoff.io import ParameterIOHandler
-from openff.toolkit.typing.engines.smirnoff.parameters import ParameterHandler
+from openff.toolkit.typing.engines.smirnoff.parameters import (
+    ParameterHandler,
+    _ParameterTermKey,
+)
 from openff.toolkit.typing.engines.smirnoff.plugins import load_handler_plugins
 from openff.toolkit.utils.utils import (
     MessageException,
@@ -1133,6 +1137,160 @@ class ForceField:
         msg += f"Valid formats are: {valid_formats}\n"
         msg += f"Parsing failed with the following error:\n{exception_msg}\n"
         raise IOError(msg)
+
+    def _terms(self):
+        """
+        Generate a list of active term keys. These keys are can be used to find the
+        specific value. The order the keys will be the same, and will only differ
+        if the order is manually changed, or the list of active terms is changed.
+
+        This should be public, but we make it private to hide from docs
+
+        Returns
+        -------
+        Generator[:class:`openff.toolkit.typing.engines.smirnoff.parameters._ParameterTermKey`]
+
+        """
+
+        for ph_name in self._parameter_handlers:
+            ph = self.get_parameter_handler(ph_name)
+            yield from zip(repeat(ph_name), ph.terms())
+
+    def _terms_set_active(self, terms=None):
+        """
+        Set which terms should be generated when queried.
+
+        This should be public, but we make it private to hide from docs
+
+        Parameters
+        ----------
+        keys : List[str] or None, default None
+            A list of keys that should be active. If keys is None, all terms are
+            activated. An empty list will deactivate all terms.
+
+        Returns
+        -------
+        None
+
+        """
+
+        for ph_name in self._parameter_handlers:
+            ph = self.get_parameter_handler(ph_name)
+            ph.terms_set_active(terms)
+
+    def _terms_get_active(self):
+        """
+        Query the parameter terms which are active, i.e. the terms that would be
+        returned by calling :meth:`self.terms`
+
+        This should be public, but we make it private to hide from docs
+
+        Parameters
+        ----------
+        keys : List[str] or None, default None
+            A list of keys that should be active. If keys is None, all terms are
+            activated. An empty list will deactivate all terms.
+
+        Returns
+        -------
+        set[str]
+
+        """
+
+        terms = set()
+        for ph_name in self._parameter_handlers:
+            ph = self.get_parameter_handler(ph_name)
+            terms.update(ph.terms_get_active())
+
+        return terms
+
+    def _terms_loaded(self):
+        """
+        Query the unique parameter terms which were loaded/set. If loading a FF from
+        file, this would return all terms detected. The returned set will contain
+        unique names.
+
+        This should be public, but we make it private to hide from docs
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+        set[str]
+        """
+
+        terms = set()
+        for ph_name in self._parameter_handlers:
+            ph = self.get_parameter_handler(ph_name)
+            terms.update(ph.terms_loaded())
+
+        return terms
+
+    def _term_select(self, term_key: _ParameterTermKey):
+        """
+        Get the term specified by the term key. The term keys are determined by calling
+        meth:`self.terms`.
+
+        Because the term key is addressed by the object that produced it, one should
+        ensure that the key is at the right level. For example, the forcefield class
+        will generate keys that have parameter handlers at the top level, and therefore
+        selecting a term from a forcefield object will require the key to contain
+        a parameter handler address at the top level of the key.
+
+        This should be public, but we make it private to hide from docs
+
+        Parameters
+        ----------
+        term_key : :class:`openff.toolkit.typing.engines.smirnoff.parameters._ParameterTermKey`
+            The parameter key used to access a specific term
+
+        Returns
+        -------
+        :class:`simtk.unit.Quantity`, `int`, or `float`, depending on what the key
+        addresses
+        None if term was not found
+
+        See also
+        --------
+        :class:`openff.toolkit.typing.engines.smirnoff.parameters._ParameterTermKey`
+
+        """
+
+        ph_name = term_key[0]
+
+        if ph_name in self._parameter_handlers:
+            ph = self.get_parameter_handler(ph_name)
+
+            return ph.term_select(term_key[1])
+
+    def _term_map_topology(self, topology):
+        """
+        Map the molecule valence indices to FF parameter terms. Similar to
+        `label_molecules`, but returns the parameter terms individually, rather than
+        the nested labels.
+
+        This should be public, but we make it private to hide from docs
+
+        Parameters
+        ----------
+        topology : openff.toolkit.topology.Topology
+            A Topology object containing one or more unique molecules to be labeled
+
+        Returns
+        -------
+        Dict[tuple[int], List[openff.toolkit.typing.engines.smirnoff.parameters._ParameterTermKey]]
+        """
+
+        assignments = {}
+        for parameter_handler in self._parameter_handlers.values():
+
+            ph_assignments = parameter_handler._term_map_topology(topology)
+
+            for atoms, terms in ph_assignments.items():
+                assignments.setdefault(atoms, []).extend(terms)
+
+        return assignments
 
     def to_string(self, io_format="XML", discard_cosmetic_attributes=False):
         """
