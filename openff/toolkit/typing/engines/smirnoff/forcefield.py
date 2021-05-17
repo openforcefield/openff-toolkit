@@ -1154,7 +1154,7 @@ class ForceField:
 
         for ph_name in self._parameter_handlers:
             ph = self.get_parameter_handler(ph_name)
-            yield from zip(repeat(ph_name), ph.terms())
+            yield from zip(repeat(ph_name), ph._terms())
 
     def _terms_set_active(self, terms=None):
         """
@@ -1176,12 +1176,12 @@ class ForceField:
 
         for ph_name in self._parameter_handlers:
             ph = self.get_parameter_handler(ph_name)
-            ph.terms_set_active(terms)
+            ph._terms_set_active(terms)
 
     def _terms_get_active(self):
         """
         Query the parameter terms which are active, i.e. the terms that would be
-        returned by calling :meth:`self.terms`
+        returned by calling :meth:`self._terms`
 
         This should be public, but we make it private to hide from docs
 
@@ -1200,7 +1200,7 @@ class ForceField:
         terms = set()
         for ph_name in self._parameter_handlers:
             ph = self.get_parameter_handler(ph_name)
-            terms.update(ph.terms_get_active())
+            terms.update(ph._terms_get_active())
 
         return terms
 
@@ -1223,14 +1223,14 @@ class ForceField:
         terms = set()
         for ph_name in self._parameter_handlers:
             ph = self.get_parameter_handler(ph_name)
-            terms.update(ph.terms_loaded())
+            terms.update(ph._terms_loaded())
 
         return terms
 
     def _term_select(self, term_key: _ParameterTermKey):
         """
         Get the term specified by the term key. The term keys are determined by calling
-        meth:`self.terms`.
+        :meth:`self._terms`.
 
         Because the term key is addressed by the object that produced it, one should
         ensure that the key is at the right level. For example, the forcefield class
@@ -1262,7 +1262,7 @@ class ForceField:
         if ph_name in self._parameter_handlers:
             ph = self.get_parameter_handler(ph_name)
 
-            return ph.term_select(term_key[1])
+            return ph._term_select(term_key[1])
 
     def _term_map_topology(self, topology):
         """

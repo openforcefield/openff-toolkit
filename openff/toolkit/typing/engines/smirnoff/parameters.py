@@ -994,7 +994,7 @@ class _ParameterAttributeHandler:
         keys : List[str] or None, default None
             A list of keys that should be active. If keys is None, all terms are
             activated. An empty list will deactivate all terms.
-        
+
         Returns
         -------
         None
@@ -1022,7 +1022,7 @@ class _ParameterAttributeHandler:
         keys : List[str] or None, default None
             A list of keys that should be active. If keys is None, all terms are
             activated. An empty list will deactivate all terms.
-        
+
         Returns
         -------
         set[str]
@@ -1076,7 +1076,7 @@ class _ParameterAttributeHandler:
 
         Parameters
         ----------
-        
+
         Returns
         -------
         set[str]
@@ -6330,6 +6330,7 @@ class VirtualSiteHandler(_NonbondedHandler):
 
         return ids
 
+
 class _ParameterTermKey(tuple):
     """
     A tuple typedef of nested tuples that aims to give a serialized key to uniquely
@@ -6348,7 +6349,7 @@ class _ParameterTermKey(tuple):
     T[0] = (str,)
 
     noting that the argument above is mathematical, and would be reversed if
-    considering actual tuple address indices (0 would refer to the deepest tuple of the 
+    considering actual tuple address indices (0 would refer to the deepest tuple of the
     structure; x would refer to the top-most level). We see that the LHS is always a
     string, and the RHS is always a tuple (of the same type).
 
@@ -6378,7 +6379,7 @@ class _ParameterTermKey(tuple):
     and the individual virtual site types would understand
 
     (term, )
-    
+
     etc. etc.
 
     Finally, term names that are indexed, e.g. k1, k2, are handled in the way the
@@ -6396,6 +6397,7 @@ class _ParameterTermKey(tuple):
     use `_term_map_topology` instead (and note it takes a topology rather than a
     molecule).
     """
+
 
 if __name__ == "__main__":
     import doctest
