@@ -5027,6 +5027,7 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         partial_charge_method=None,
         use_conformers=None,
         strict_n_conformers=False,
+        round_partial_charges=True,
         _cls=None,
     ):
         """
@@ -5211,6 +5212,10 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
                 for index, token in enumerate(text_charges):
                     charges[index] = float(token)
                 # TODO: Ensure that the atoms in charged.mol2 are in the same order as in molecule.sdf
+
+        if round_partial_charges:
+            charge_offset = (molecule.total_charge/unit.elementary_charge - sum(charges)) / molecule.n_atoms
+            charges += charge_offset
         charges = unit.Quantity(charges, unit.elementary_charge)
         molecule.partial_charges = charges
 
