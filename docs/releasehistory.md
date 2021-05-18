@@ -10,6 +10,9 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### New features and behaviors changed
 
+- [PR #917](https://github.com/openforcefield/openforcefield/pull/917):
+  [`ForceField.create_openff_system`] Ensures that the cutoff of the `NonbondedForce` is set to 
+  the cutoff of the `vdWHandler` when it and a `Electrostatics` handler are present in the force field.
 - [PR #850](https://github.com/openforcefield/openforcefield/pull/850):
   [`OpenEyeToolkitWrapper.is_available`](openff.toolkit.utils.toolkits.OpenEyeToolkitWrapper.is_available)
   now returns `True` if _any_ OpenEye tools are licensed (and installed). This allows, i.e,
