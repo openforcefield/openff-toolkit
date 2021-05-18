@@ -8,6 +8,13 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ## Current Development
 
+### New features and behaviors changed
+
+- [PR #850](https://github.com/openforcefield/openforcefield/pull/850):
+  [`OpenEyeToolkitWrapper.is_available`](openff.toolkit.utils.toolkits.OpenEyeToolkitWrapper.is_available)
+  now returns `True` if _any_ OpenEye tools are licensed (and installed). This allows, i.e,
+  use of functionality that requires `OEChem` without having an `OEOmega` license.
+
 ### Examples added
 
 - [PR #763](https://github.com/openforcefield/openff-toolkit/pull/763): 
