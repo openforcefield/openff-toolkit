@@ -1173,7 +1173,7 @@ class TestTopology(TestCase):
 )
 def test_nth_degree_neighbors(n_degrees, num_pairs):
     pass
-    smiles = ["c1ccccc1", "c1ncnc1"]
+    smiles = ["c1ccccc1", "N1ONON1"]
     topology = Topology.from_molecules([Molecule.from_smiles(smi) for smi in smiles])
 
     # See test_molecule.TestMolecule.test_nth_degree_neighbors_rings for values
