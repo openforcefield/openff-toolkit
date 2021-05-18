@@ -44,9 +44,9 @@ jobs:
       PACKAGE: openff-toolkit
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v2.3.4
 
-      - uses: conda-incubator/setup-miniconda@v2
+      - uses: conda-incubator/setup-miniconda@v2.1.1
         name: Vanilla install from conda
         if: ${{ matrix.cfg.openeye == 'false' }}
         with:
@@ -54,7 +54,7 @@ jobs:
           activate-environment: test
           environment-file: devtools/conda-envs/conda.yaml
           auto-activate-base: false
-      - uses: conda-incubator/setup-miniconda@v2
+      - uses: conda-incubator/setup-miniconda@v2.1.1
         name: Install from conda with OpenEye
         if: ${{ matrix.cfg.openeye == 'true' }}
         with:

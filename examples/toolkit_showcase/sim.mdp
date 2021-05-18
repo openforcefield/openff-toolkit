@@ -1,0 +1,63 @@
+; MDP file for the Parsley 1.3.0 force field
+
+;    INTEGRATION - MD
+integrator             = md ; leapfrog integrator
+dt                     = 0.002 ; 2 fs time step
+nsteps                 = 5000 ; 10 ps
+nstcomm                = 1000 ; remove COM motion every 2 ps
+
+;    OUTPUT CONTROL
+; Strangely, this is where GROMACS sets all its output control
+; mdrun switches don't change anything
+nstxout                = 0 ; only last ; Steps between writing coords to uncompressed output trajectory
+nstvout                = 0 ; only last ; Steps between writing velocities to uncompressed output trajectory
+nstfout                = 0 ; never ; Steps between writing forces to uncompressed output trajectory
+nstlog                 = 500 ; 1 ps ; Steps between writing energies to log file
+nstenergy              = 500 ; 1 ps ; Steps between writing energies to energy file
+nstxout-compressed     = 500 ; 1 ps ; Steps between writing coords to compressed output trajectory
+compressed-x-precision = 1000 ; Trajectory compression is lossy; this is the precision of that compression
+
+;    CUTOFF SCHEME - verlet
+; Verlet is faster, more parallelisable, more accurate, supports GPUs
+; Only use group for the legacy interactions it supports
+cutoff-scheme          = Verlet ; Neighbor searching with a Verlet buffer
+
+;    COULOMB INTERACTIONS
+coulombtype            = PME ; Use Particle Mesh Ewald to compute long-range electrostatic interactions
+rcoulomb               = 0.9 ; Cutoff for short-range electrostatics; tuned for performance at runtime by GROMACS
+
+;    LJ INTERACTIONS
+vdwtype                = Cut-off ; Use a cut-off for vdW interactions
+vdw-modifier           = force-switch ; Smoothly switch off the LJ interactions
+rvdw                   = 0.9 ; Distance cutoff for the vdW interactions
+rvdw-switch            = 0.8 ; where to start switching off the LJ force
+DispCorr               = EnerPres ; Correct the energy and pressure for long range dispersion errors
+
+;    TEMPERATURE COUPLING
+tcoupl                 = V-rescale ; Use the robust temperature coupling scheme from Bussi et al
+tc-grps                = system ; V-rescale supports coupling to the entire system, rather than seperating protein and solvent
+tau-t                  = 1.0 ; Time constant of coupling
+ref-t                  = 300.00 ; Target 300 K temperature
+
+;    PRESSURE COUPLING
+pcoupl                 = C-rescale ; Use the robust pressure coupling scheme from Bussi et al, introduced in GROMACS 2021
+pcoupltype             = isotropic ; Equal scaling in all directions
+tau-p                  = 1.0 ; Time constant of coupling
+compressibility        = 4.5e-5 ; Compressibility of water
+ref-p                  = 1.0 ; Target 1 atmosphere pressure
+
+;    VELOCITY GENERATION
+gen-vel                = yes ; Generate initial velocities
+gen-temp               = 300.00 ; Generate velocities at 300 K
+gen-seed               = -1 ; -1 uses a random seed
+
+;    CONSTRAINTS - MD
+; Constraints on bonds with Hydrogen permits 2 fs time step
+; LINCS is faster and more stable
+; Use SHAKE if you need angle constraints
+constraints            = h-bonds ; Use constraints rather than harmonics for bonds involving Hydrogen
+constraint-algorithm   = LINCS ; Use fast and stable LINCS constraint algorithm
+continuation           = no ; Apply constraints to the initial configuration (important since energy minimisation was unconstrained)
+lincs-order            = 4 ; Increase if you get LINCS errors
+lincs-iter             = 1 ; Increase if you get LINCS errors
+
