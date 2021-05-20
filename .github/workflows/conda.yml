@@ -20,6 +20,9 @@ jobs:
           - ubuntu-latest
           - macos-latest
         cfg:
+          - python-version: 3.6
+            openeye: "true"
+            
           - python-version: 3.7
             openeye: "true"
 
