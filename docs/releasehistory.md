@@ -10,6 +10,11 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### New features and behaviors changed
 
+- [PR #923](https://github.com/openforcefield/openforcefield/pull/923): Adds
+  [`Molecule.nth_degree_neighbors`](openff.toolkit.topology.Molecule.nth_degree_neighbors),
+  [`Topology.nth_degree_neighbors`](openff.toolkit.topology.Topology.nth_degree_neighbors),
+  [`TopologyMolecule.nth_degree_neighbors`](openff.toolkit.topology.TopologyMolecule.nth_degree_neighbors),
+  which returns pairs of atoms that are separated in a t molecule or topology ny _excactly_ N atoms.
 - [PR #917](https://github.com/openforcefield/openforcefield/pull/917):
   [`ForceField.create_openff_system`] Ensures that the cutoff of the `NonbondedForce` is set to 
   the cutoff of the `vdWHandler` when it and a `Electrostatics` handler are present in the force field.

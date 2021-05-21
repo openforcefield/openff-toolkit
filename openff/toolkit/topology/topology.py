@@ -1218,6 +1218,11 @@ class TopologyMolecule:
             self._reference_molecule.amber_impropers
         )
 
+    def nth_degree_neighbors(self, n_degrees: int):
+        return self._convert_to_topology_atom_tuples(
+            self._reference_molecule.nth_degree_neighbors(n_degrees=n_degrees)
+        )
+
     @property
     def virtual_site_start_topology_index(self):
         """Get the topology index of the first virtual site in this TopologyMolecule"""
@@ -1858,6 +1863,11 @@ class Topology(Serializable):
         for topology_molecule in self._topology_molecules:
             for amber_improper in topology_molecule.amber_impropers:
                 yield amber_improper
+
+    def nth_degree_neighbors(self, n_degrees: int):
+        for topology_molecule in self._topology_molecules:
+            for pair in topology_molecule.nth_degree_neighbors(n_degrees=n_degrees):
+                yield pair
 
     class _ChemicalEnvironmentMatch:
         """Represents the match of a given chemical environment query, storing
