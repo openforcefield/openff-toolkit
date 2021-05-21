@@ -47,11 +47,11 @@ jobs:
       NB_ARGS: -v --nbval-lax --ignore=examples/deprecated
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v2.3.4
         with:
           fetch-depth: 2
 
-      - uses: conda-incubator/setup-miniconda@v2
+      - uses: conda-incubator/setup-miniconda@v2.1.1
         name: Install with only RDKit
         if: ${{ matrix.cfg.rdkit == 'TRUE' && matrix.cfg.openeye == 'FALSE' }}
         with:
@@ -59,7 +59,7 @@ jobs:
           activate-environment: test
           environment-file: devtools/conda-envs/rdkit.yaml
           auto-activate-base: false
-      - uses: conda-incubator/setup-miniconda@v2
+      - uses: conda-incubator/setup-miniconda@v2.1.1
         name: Install with OpenEye toolkits
         if: ${{ matrix.cfg.rdkit == 'FALSE' && matrix.cfg.openeye == 'TRUE' }}
         with:
@@ -125,7 +125,7 @@ jobs:
           pytest $NB_ARGS examples
 
       - name: Codecov
-        uses: codecov/codecov-action@v1
+        uses: codecov/codecov-action@v1.5.0
         with:
           file: ./coverage.xml
           fail_ci_if_error: true
