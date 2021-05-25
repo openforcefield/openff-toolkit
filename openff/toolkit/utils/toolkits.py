@@ -2211,6 +2211,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         partial_charge_method=None,
         use_conformers=None,
         strict_n_conformers=False,
+        round_partial_charges=True,
         _cls=None,
     ):
         """
@@ -2238,6 +2239,10 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         strict_n_conformers : bool, default=False
             Whether to raise an exception if an invalid number of conformers is provided for the given charge method.
             If this is False and an invalid number of conformers is found, a warning will be raised.
+        round_partial_charges : bool, default=True
+            Whether to round partial charges so that they sum to the total formal charge of the molecule.
+            This is used to prevent accumulation of rounding errors when the original partial charges are stored
+            at low precision.
         _cls : class
             Molecule constructor
 
@@ -2394,12 +2399,25 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         # Extract and return charges
         ## TODO: Make sure atom mapping remains constant
 
+        # Calculate the per-atom offset that would need to be applied to clear rounding errors
+        # (to the precision of a Python float)
+        charge_sum = sum([oeatom.GetPartialCharge() for oeatom in oemol.GetAtoms()])
+
+        if round_partial_charges:
+            charge_offset = (
+                molecule.total_charge / unit.elementary_charge - charge_sum
+            ) / molecule.n_atoms
+        else:
+            charge_offset = 0.0
+
+        # Extract the list of charges, taking into account possible indexing differences
         charges = unit.Quantity(
             np.zeros(shape=oemol.NumAtoms(), dtype=np.float64), unit.elementary_charge
         )
+
         for oeatom in oemol.GetAtoms():
             index = oeatom.GetIdx()
-            charge = oeatom.GetPartialCharge()
+            charge = oeatom.GetPartialCharge() + charge_offset
             charge = charge * unit.elementary_charge
             charges[index] = charge
 
@@ -5052,6 +5070,10 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         strict_n_conformers : bool, default=False
             Whether to raise an exception if an invalid number of conformers is provided for the given charge method.
             If this is False and an invalid number of conformers is found, a warning will be raised.
+        round_partial_charges : bool, default=True
+            Whether to round partial charges so that they sum to the total formal charge of the molecule.
+            This is used to prevent accumulation of rounding errors when the original partial charges are stored
+            at low precision.
         _cls : class
             Molecule constructor
 
@@ -5064,8 +5086,6 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
 
         import os
         import subprocess
-
-        from openff.toolkit.topology import Molecule
 
         if partial_charge_method is None:
             partial_charge_method = "am1-mulliken"
@@ -5214,7 +5234,9 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
                 # TODO: Ensure that the atoms in charged.mol2 are in the same order as in molecule.sdf
 
         if round_partial_charges:
-            charge_offset = (molecule.total_charge/unit.elementary_charge - sum(charges)) / molecule.n_atoms
+            charge_offset = (
+                molecule.total_charge / unit.elementary_charge - sum(charges)
+            ) / molecule.n_atoms
             charges += charge_offset
         charges = unit.Quantity(charges, unit.elementary_charge)
         molecule.partial_charges = charges

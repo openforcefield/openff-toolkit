@@ -1210,7 +1210,7 @@ class TestOpenEyeToolkitWrapper:
         for pc in molecule._partial_charges:
             charge_sum += pc
             abs_charge_sum += abs(pc)
-        assert abs(charge_sum) < 0.005 * unit.elementary_charge
+        assert abs(charge_sum) < 1e-8 * unit.elementary_charge
         assert abs_charge_sum > 0.25 * unit.elementary_charge
 
     def test_assign_partial_charges_am1bcc_net_charge(self):

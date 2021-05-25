@@ -4386,16 +4386,6 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
                     if top_particle_idx in charges_to_assign:
                         charges_to_assign[top_particle_idx] += charge_increment
 
-            # Adjust charges to account for rounding errors
-            #charge_sum = 0. * unit.elementary_charge
-            #for charge_to_assign in charges_to_assign.values():
-            #    charge_sum += charge_to_assign
-            #formal_charge = ref_mol.total_charge
-            #charge_offset = (formal_charge - charge_sum) / ref_mol.n_particles
-            #for particle_idx in charges_to_assign:
-            #    charges_to_assign[particle_idx] += charge_offset
-
-
             # Set the incremented charges on the System particles
             for topology_particle_index, charge_to_assign in charges_to_assign.items():
                 _, sigma, epsilon = force.getParticleParameters(topology_particle_index)
