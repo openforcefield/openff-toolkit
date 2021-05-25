@@ -24,6 +24,7 @@ dependencies:
   - openmm
   - openff-forcefields
   - smirnoff99Frosst
+  - cachetools
   - pyyaml
   - toml
   - bson

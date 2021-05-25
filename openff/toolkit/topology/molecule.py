@@ -38,6 +38,7 @@ import warnings
 from collections import OrderedDict
 from copy import deepcopy
 from typing import Optional, Union
+from cached_property import cached_property
 
 import networkx as nx
 import numpy as np
@@ -462,7 +463,7 @@ class Atom(Particle):
         # for vsite in self._vsites:
         #    yield vsite
 
-    @property
+    @cached_property
     def molecule_atom_index(self):
         """
         The index of this Atom within the the list of atoms in ``Molecules``.
@@ -2043,6 +2044,20 @@ class FrozenMolecule(Serializable):
         """
         return hash(self.to_smiles())
 
+    #@cached_property
+    def ordered_connection_table_hash(self):
+        if self._ordered_connection_table_hash is not None:
+            return self._ordered_connection_table_hash
+        
+        id = ''
+        for atom in self.atoms:
+            id += f'{atom.element.symbol}_{atom.formal_charge}_{atom.stereochemistry}__'
+        for bond in self.bonds:
+            id += f'{bond.bond_order}_{bond.stereochemistry}_{bond.atom1_index}_{bond.atom2_index}__'
+        #return hash(id)
+        self._ordered_connection_table_hash = hash(id)
+        return self._ordered_connection_table_hash
+
     @classmethod
     def from_dict(cls, molecule_dict):
         """
@@ -3035,6 +3050,10 @@ class FrozenMolecule(Serializable):
         self._cached_smiles = None
         # TODO: Clear fractional bond orders
         self._rings = None
+        self._ordered_connection_table_hash = None
+        for atom in self.atoms:
+            if 'molecule_atom_index' in atom.__dict__:
+                del atom.__dict__['molecule_atom_index']
 
     def to_networkx(self):
         """Generate a NetworkX undirected graph from the Molecule.
@@ -5070,8 +5089,9 @@ class FrozenMolecule(Serializable):
 
         return new_molecule
 
-    @OpenEyeToolkitWrapper.requires_toolkit()
-    def to_openeye(self, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
+    def to_openeye(self,
+                   toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
+                   aromaticity_model=DEFAULT_AROMATICITY_MODEL):
         """
         Create an OpenEye molecule
 
@@ -5101,8 +5121,8 @@ class FrozenMolecule(Serializable):
         >>> oemol = molecule.to_openeye()
 
         """
-        toolkit = OpenEyeToolkitWrapper()
-        return toolkit.to_openeye(self, aromaticity_model=aromaticity_model)
+        #toolkit = OpenEyeToolkitWrapper()
+        return toolkit_registry.to_openeye(self, aromaticity_model=aromaticity_model)
 
     def _construct_angles(self):
         """
