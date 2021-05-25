@@ -3989,6 +3989,19 @@ class LibraryChargeHandler(_NonbondedHandler):
                     f"tagged atoms and charges"
                 )
 
+        @classmethod
+        def from_molecule(cls, molecule):
+            """Construct a LibraryChargeType from a molecule with existing partial charges."""
+            if molecule.partial_charges is None:
+                raise ValueError("Input molecule is missing partial charges.")
+
+            smirks = molecule.to_smiles(mapped=True)
+            charges = molecule.partial_charges
+
+            library_charge_type = cls(smirks=smirks, charge=charges)
+
+            return library_charge_type
+
     _TAGNAME = "LibraryCharges"  # SMIRNOFF tag name to process
     _INFOTYPE = LibraryChargeType  # info type to store
     _DEPENDENCIES = [vdWHandler, ElectrostaticsHandler]

@@ -3383,6 +3383,37 @@ class TestForceFieldChargeAssignment:
                 all_charges_zero = False
         assert not (all_charges_zero)
 
+    def test_library_charges_from_molecule(self):
+        """Test that constructing a LibraryChargeHandler from partial charges on Molecule objects
+        produces the same result as using the `charge_from_molecules` kwarg."""
+        # TODO: Remove this test if `charge_from_molecules` is depcreated (#806)
+        mol = Molecule.from_mapped_smiles(
+            "[C:1]([C:2]([O:3][H:9])([H:7])[H:8])([H:4])([H:5])[H:6]"
+        )
+        mol.partial_charges = np.linspace(-0.4, 0.4, 9) * unit.elementary_charge
+
+        test_forcefield = ForceField("test_forcefields/test_forcefield.offxml")
+        using_kwarg = test_forcefield.create_openmm_system(
+            topology=mol.to_topology(), charge_from_molecules=[mol]
+        )
+
+        library_charges = LibraryChargeHandler.LibraryChargeType.from_molecule(mol)
+        test_forcefield.register_parameter_handler(LibraryChargeHandler(version=0.3))
+        test_forcefield["LibraryCharges"].add_parameter(parameter=library_charges)
+        using_library_charges = test_forcefield.create_openmm_system(
+            topology=mol.to_topology()
+        )
+
+        for force1 in using_kwarg.getForces():
+            if type(force1) == openmm.NonbondedForce:
+                charges1 = [force1.getParticleParameters(i)[0] for i in range(9)]
+
+        for force2 in using_library_charges.getForces():
+            if type(force2) == openmm.NonbondedForce:
+                charges2 = [force2.getParticleParameters(i)[0] for i in range(9)]
+
+        assert charges1 == charges2, [(x - y) for x, y in zip(charges1, charges2)]
+
 
 # ======================================================================
 # TEST CONSTRAINTS
