@@ -26,6 +26,7 @@ from numpy.testing import assert_almost_equal
 from simtk import openmm, unit
 
 from openff.toolkit.tests.utils import (
+    compare_partial_charges,
     get_14_scaling_factors,
     requires_openeye,
     requires_openeye_mol2,
@@ -3383,14 +3384,13 @@ class TestForceFieldChargeAssignment:
                 all_charges_zero = False
         assert not (all_charges_zero)
 
-    def test_library_charges_from_molecule(self):
+    def test_library_charges_from_molecule_manual(self):
         """Test that constructing a LibraryChargeHandler from partial charges on Molecule objects
-        produces the same result as using the `charge_from_molecules` kwarg."""
+        produces the same result as using the `charge_from_molecules` kwarg. while manually
+        setting the molecule's partial charges to arbitrary non-physical values"""
         # TODO: Remove this test if `charge_from_molecules` is depcreated (#806)
-        mol = Molecule.from_mapped_smiles(
-            "[Cl:1]/[C:2]([H:3])=[C:4]([H:5])/[F:6]]"
-        )
-        mol.partial_charges = np.linspace(-0.25, 0.25, 6) * unit.elementary_charge
+        mol = Molecule.from_mapped_smiles("[Cl:1][C:2]#[C:3][F:4]")
+        mol.partial_charges = np.linspace(-0.3, 0.3, 4) * unit.elementary_charge
 
         test_forcefield = ForceField("test_forcefields/test_forcefield.offxml")
         using_kwarg = test_forcefield.create_openmm_system(
@@ -3404,15 +3404,28 @@ class TestForceFieldChargeAssignment:
             topology=mol.to_topology()
         )
 
-        for force1 in using_kwarg.getForces():
-            if type(force1) == openmm.NonbondedForce:
-                charges1 = [force1.getParticleParameters(i)[0] for i in range(9)]
+        compare_partial_charges(using_kwarg, using_library_charges)
 
-        for force2 in using_library_charges.getForces():
-            if type(force2) == openmm.NonbondedForce:
-                charges2 = [force2.getParticleParameters(i)[0] for i in range(9)]
+    def test_library_charges_from_molecule_assigned(self):
+        """Test that constructing a LibraryChargeHandler from partial charges on Molecule objects
+        produces the same result as using the `charge_from_molecules` kwarg. while manually
+        setting the molecule's partial charges to arbitrary non-physical values"""
+        mol = Molecule.from_smiles("CCO")
+        mol.assign_partial_charges(partial_charge_method="mmff94")
 
-        assert charges1 == charges2, [(x - y) for x, y in zip(charges1, charges2)]
+        test_forcefield = ForceField("test_forcefields/test_forcefield.offxml")
+        using_kwarg = test_forcefield.create_openmm_system(
+            topology=mol.to_topology(), charge_from_molecules=[mol]
+        )
+
+        library_charges = LibraryChargeHandler.LibraryChargeType.from_molecule(mol)
+        test_forcefield.register_parameter_handler(LibraryChargeHandler(version=0.3))
+        test_forcefield["LibraryCharges"].add_parameter(parameter=library_charges)
+        using_library_charges = test_forcefield.create_openmm_system(
+            topology=mol.to_topology()
+        )
+
+        compare_partial_charges(using_kwarg, using_library_charges)
 
 
 # ======================================================================
