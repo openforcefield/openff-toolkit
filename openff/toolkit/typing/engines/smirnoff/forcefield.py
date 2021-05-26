@@ -1505,6 +1505,34 @@ class ForceField:
             raise KeyError(msg)
         return ph_class
 
+    def get_partial_charges(self, molecule, **kwargs):
+        """Generate the partial charges for the given molecule in this force field.
+
+        As any `ParameterHandler` may in principle modify charges, the entire
+        force field must be applied to the molecule to produce the charges.
+        Calls to this method from incorrectly or incompletely specified `ForceField`
+        objects thus may raise an exception.
+
+        Parameters
+        ----------
+        molecule : openff.toolkit.topology.Molecule
+            The ``Molecule`` corresponding to the system to be parameterized
+        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry, optional. default=GLOBAL_TOOLKIT_REGISTRY
+            The toolkit registry to use for operations like conformer generation and
+            partial charge assignment.
+
+        Returns
+        -------
+        charges : simtk.unit.Quantity with shape (n_atoms,) with units compatible with elemental charge
+            The partial charges of the provided molecule in this force field.
+
+        """
+        _, top_with_charges = self.create_openmm_system(
+            molecule.to_topology(), return_topology=True, **kwargs
+        )
+        charges = [*top_with_charges.reference_molecules][0].partial_charges
+        return charges
+
     def __getitem__(self, val):
         """
         Syntax sugar for lookikng up a ParameterHandler. Note that only

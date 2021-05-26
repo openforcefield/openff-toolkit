@@ -310,7 +310,7 @@ xml_ff_torsion_bo_standard_supersede = """<?xml version='1.0' encoding='ASCII'?>
 
 def round_charge(xml):
     """Round charge fields in a serialized OpenMM system to 2 decimal places"""
-    # Example Particle line: 				<Particle eps=".4577296" q="-.09709000587463379" sig=".1908"/>
+    # Example Particle line:                <Particle eps=".4577296" q="-.09709000587463379" sig=".1908"/>
     xmlsp = xml.split(' q="')
     for index, chunk in enumerate(xmlsp):
         # Skip file before first q=
@@ -4905,6 +4905,32 @@ class TestSmirnoffVersionConverter:
             ignore_charges=True,
             ignore_improper_folds=True,
         )
+
+
+class TestForceFieldGetPartialCharges:
+    def get_partial_charges(self, mol, ff):
+        system = ff.create_openmm_system(mol.to_topology())
+        nbforce = [
+            f for f in system.getForces() if isinstance(f, openmm.openmm.NonbondedForce)
+        ][0]
+
+        n_particles = nbforce.getNumParticles()
+        charges = [nbforce.getParticleParameters(i)[0] for i in range(n_particles)]
+
+        return unit.Quantity(charges)
+
+    def test_get_partial_charges(self):
+        ethanol: Molecule = create_ethanol()
+        ff: ForceField = ForceField("test_forcefields/test_forcefield.offxml")
+
+        ethanol_partial_charges = self.get_partial_charges(ethanol, ff)
+
+        partial_charges = ff.get_partial_charges(ethanol)
+
+        assert (
+            ethanol_partial_charges - partial_charges < 1.0e-6 * unit.elementary_charge
+        ).all()
+        assert partial_charges.shape == (ethanol.n_atoms,)
 
 
 @pytest.mark.skip(reason="Needs to be updated for 0.2.0 syntax")
