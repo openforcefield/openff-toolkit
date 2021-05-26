@@ -3388,9 +3388,9 @@ class TestForceFieldChargeAssignment:
         produces the same result as using the `charge_from_molecules` kwarg."""
         # TODO: Remove this test if `charge_from_molecules` is depcreated (#806)
         mol = Molecule.from_mapped_smiles(
-            "[C:1]([C:2]([O:3][H:9])([H:7])[H:8])([H:4])([H:5])[H:6]"
+            "[Cl:1]/[C:2]([H:3])=[C:4]([H:5])/[F:6]]"
         )
-        mol.partial_charges = np.linspace(-0.4, 0.4, 9) * unit.elementary_charge
+        mol.partial_charges = np.linspace(-0.25, 0.25, 6) * unit.elementary_charge
 
         test_forcefield = ForceField("test_forcefields/test_forcefield.offxml")
         using_kwarg = test_forcefield.create_openmm_system(
