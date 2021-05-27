@@ -1659,7 +1659,7 @@ class TestOpenEyeToolkitWrapper:
     @pytest.mark.slow
     def test_max_substructure_matches_can_handle_large_molecule(self):
         """Test OpenEyeToolkitWrapper substructure search handles more than the default of MaxMatches = 1024
-        See https://github.com/openforcefield/openff-toolkit/pull/509
+        See https://github.com/openforcefield/openff-toolkit/pull/509 .
         """
 
         tk = OpenEyeToolkitWrapper()
