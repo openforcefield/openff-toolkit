@@ -5,8 +5,10 @@ Tools for generating library of substructures from the Chemical Component
 Dictionary (CCD).
 """
 
+from collections import defaultdict
 from openff.toolkit.topology import Molecule
 from CifFile import ReadCif
+import json
 from mendeleev import element
 import rdkit
 import openff
@@ -14,6 +16,61 @@ import openff
 #     remove_charge_and_bond_order_from_imidazole,
 #     remove_charge_and_bond_order_from_guanidinium
 # )
+
+
+# Amber ff porting functions
+def remove_charge_and_bond_order_from_guanidinium(rdmol):
+    """
+    To correct for chemical perception issues with possible resonance states of arginine,
+    remove all charge from the guanidinium group, and set all bond orders to 4. This will
+    mark the resonant bonds with a unique "$" character in the SMARTS, which we can later
+    replace.
+    """
+    for atom in rdmol.GetAtoms():
+        # print(dir(atom))
+        if atom.GetAtomicNum() != 6:  # element.symbol != "C":
+            continue
+        nitrogen_neighbors = 0
+        for neighbor in atom.GetNeighbors():
+            if neighbor.GetAtomicNum() == 7:
+                nitrogen_neighbors += 1
+        if nitrogen_neighbors != 3:
+            continue
+        atom.SetFormalCharge(0)
+        for neighbor in atom.GetNeighbors():
+            neighbor.SetFormalCharge(0)
+        for bond in atom.GetBonds():
+            # Set bond order 4, which will produce a "$" character. We later replace this with "~".
+            # print(dir(bond))
+            bond.SetBondType(rdkit.Chem.BondType.QUADRUPLE)
+            # bond.SetBondType(Chem.BondType.AROMATIC)
+            # bond.SetBondType(Chem.BondType.OTHER)
+
+
+def remove_charge_and_bond_order_from_imidazole(rdmol):
+    """
+    To correct for chemical perception issues with possible resonance states of histidine,
+    remove all charge from the imidazole group, and set all bond orders to 4. This will
+    mark the resonant bonds with a unique "$" character in the SMARTS, which we can later
+    replace.
+    """
+    # matches = offmol.chemical_environment_matches('[C:1]1~[C:2]~[N:3]~[C:4]~[N:5]1')
+    imidazole_substructure = rdkit.Chem.MolFromSmarts('[C:1]1~[C:2]~[N:3]~[C:4]~[N:5]1')
+    matches = rdmol.GetSubstructMatches(imidazole_substructure)
+    all_imidazole_atoms = set()
+    for match in matches:
+        for idx in match:
+            all_imidazole_atoms.add(idx)
+
+    for atom in rdmol.GetAtoms():
+        if atom.GetIdx() in all_imidazole_atoms:
+            atom.SetFormalCharge(0)
+
+    for bond in rdmol.GetBonds():
+        # print(dir(bond))
+        if ((bond.GetBeginAtomIdx() in all_imidazole_atoms) and
+                (bond.GetEndAtomIdx() in all_imidazole_atoms)):
+            bond.SetBondType(rdkit.Chem.BondType.QUADRUPLE)
 
 
 class CifSubstructures:
@@ -33,10 +90,10 @@ class CifSubstructures:
         """
         Create object with substructures data from CIF files.
         """
-        self.data = {}  # Dictionary where to store substructures data
+        self.data = defaultdict(list)  # Dictionary where to store substructures data
         self._cif_multi_entry_object = None
 
-    def from_file(self, cif_file, discard_keyword='FRAGMENT'):
+    def from_file(self, cif_file, discard_keyword='FRAGMENT', include_leaving=False):
         """
         Reads cif formatted file and fills substructure information.
 
@@ -44,18 +101,24 @@ class CifSubstructures:
         __________
         cif_file : str or file-like object
             File path string, URL or file-like object.
+        discard_keyword : str, optional, default='FRAGMENT'
+            Keyword in _chem_comp.name for filtering out entries. Default is 'FRAGMENT'.
+        include_leaving : bool, optional, default=False
+            Whether to include leaving atoms marked in _chem_comp_atom.pdbx_leaving_atom_flag
         """
         # read cif file
         self._cif_multi_entry_object = ReadCif(cif_file)
         # fill data dictionary
-        self._fill_substructure_data(discard_keyword=discard_keyword)
+        self._fill_substructure_data(discard_keyword=discard_keyword, include_leaving=include_leaving)
 
-    def to_json(self, indent=None):
+    def to_json_file(self, output_file, indent=None):
         """
         Return a JSON serialized representation.
 
         Parameters
         __________
+        output_file : str
+            Path string for output file.
         indent : int, optional, default=None
             If not None, will pretty-print with specified number of spaces for indentation.
 
@@ -64,7 +127,8 @@ class CifSubstructures:
         serialized : str
             A JSON serialized representation of the object.
         """
-        return NotImplementedError
+        with open(output_file, 'w') as library_file:
+            json.dump(self.data, library_file, indent=indent)
 
     @staticmethod
     def _generate_atom_symbol_number_dictionary(cif_entry):
@@ -198,8 +262,8 @@ class CifSubstructures:
             # print(dir(atom))
             atom.SetNoImplicit(True)
 
-        # remove_charge_and_bond_order_from_imidazole(submol)
-        # remove_charge_and_bond_order_from_guanidinium(submol)
+        remove_charge_and_bond_order_from_imidazole(submol)
+        remove_charge_and_bond_order_from_guanidinium(submol)
         return submol
 
     def _get_smiles(self,
@@ -233,6 +297,80 @@ class CifSubstructures:
         smiles = smiles.replace('$', '~')
         return smiles
 
+    def _add_entry_data_to_known_smiles(self,
+                                        entry_data,
+                                        include_leaving,
+                                        discard_keyword,
+                                        additional_leaving=list()):
+        """
+
+        """
+        offmol = Molecule()
+        # Skip entries matching discard filtering keyword in comp name
+        comp_name = entry_data['_chem_comp.name']
+        if discard_keyword in comp_name:
+            return
+        # Gather necessary data for creating/adding atoms
+        atoms_information = self._gather_atoms_information(entry_data)
+        atom_names = atoms_information[0]
+        atomic_numbers = atoms_information[1]
+        formal_charges = atoms_information[2]
+        are_aromatic = atoms_information[3]
+        stereochemistry = atoms_information[4]
+        leaving_atoms_list = atoms_information[5]
+        if len(additional_leaving) != 0:
+            for atom_idx, atom_name in enumerate(atom_names):
+                if atom_name in additional_leaving:
+                    leaving_atoms_list[atom_idx] = 'Y'
+        # add atoms
+        for atom_idx in range(len(atom_names)):
+            if include_leaving:
+                # Add all atoms
+                offmol.add_atom(atomic_numbers[atom_idx],
+                                formal_charges[atom_idx],
+                                are_aromatic[atom_idx],
+                                stereochemistry=stereochemistry[atom_idx],
+                                name=atom_names[atom_idx]
+                                )
+            else:
+                # Add only not leaving atoms
+                if leaving_atoms_list[atom_idx] == 'N':
+                    offmol.add_atom(atomic_numbers[atom_idx],
+                                    formal_charges[atom_idx],
+                                    are_aromatic[atom_idx],
+                                    stereochemistry=stereochemistry[atom_idx],
+                                    name=atom_names[atom_idx]
+                                    )
+        # Gather information for bonds
+        bonds_information = self._gather_bonds_information(entry_data)
+        atom1_name_list = bonds_information[0]
+        atom2_name_list = bonds_information[1]
+        bond_order_list = bonds_information[2]
+        is_aromatic_bond_list = bonds_information[3]
+        stereochemistry_bond_list = bonds_information[4]
+        # add bonds
+        # TODO: What about fractional bond order?
+        for bond_idx in range(len(atom1_name_list)):
+            try:
+                offmol.add_bond(self._get_atom_by_name(offmol, atom1_name_list[bond_idx]),
+                                self._get_atom_by_name(offmol, atom2_name_list[bond_idx]),
+                                bond_order_list[bond_idx],
+                                is_aromatic_bond_list[bond_idx],
+                                stereochemistry=stereochemistry_bond_list[bond_idx]
+                                )
+            # TODO: Broad exception. We should raise a specific error.
+            except Exception:  # happens when atom is not found, i.e. no leaving atoms.
+                continue
+        # Get smiles
+        atom_indices = list(range(offmol.n_atoms))
+        smiles = self._get_smiles(offmol,
+                                  indices=atom_indices,
+                                  label_indices=atom_indices)
+        # Only take three letter code for key
+        entry_code = entry_data['_chem_comp.three_letter_code']
+        if smiles not in self.data[entry_code]:
+            self.data[entry_code].append(smiles)
+
     def _fill_substructure_data(self, discard_keyword='FRAGMENT', include_leaving=False):
         """
         Fills data dictionary with the substructure information.
@@ -244,63 +382,29 @@ class CifSubstructures:
         include_leaving : bool, optional, default=False
             Whether to include leaving atoms marked in _chem_comp_atom.pdbx_leaving_atom_flag
         """
+        # Clear current dictionary information
+        self.data = defaultdict(list)
+        override_dict = {
+            #LYN
+            'lys_lfoh_dhz3': ['H2'],
+            #GLU
+            'glu_lfoh_dhe2': ['H2'],
+            #HIE
+            'his_lfoh_dhd1': ['H2'],
+            #ASP
+            'asp_lfoh_dhd2': ['H2'],
+            #HID
+            'his_lfoh_dhe2': ['H2'],
+            #CYX
+            'cys': ['HG']
+        }
         for entry, entry_data in self._cif_multi_entry_object.items():
             # create empty molecule to fill with data
-            offmol = Molecule()
-            # Skip entries matching discard filtering keyword in comp name
-            comp_name = entry_data['_chem_comp.name']
-            if discard_keyword in comp_name:
-                continue
-            # Gather necessary data for creating/adding atoms
-            atoms_information = self._gather_atoms_information(entry_data)
-            atom_names = atoms_information[0]
-            atomic_numbers = atoms_information[1]
-            formal_charges = atoms_information[2]
-            are_aromatic = atoms_information[3]
-            stereochemistry = atoms_information[4]
-            leaving_atoms_list = atoms_information[5]
-            # add atoms
-            for atom_idx in range(len(atom_names)):
-                if include_leaving:
-                    # Add all atoms
-                    offmol.add_atom(atomic_numbers[atom_idx],
-                                    formal_charges[atom_idx],
-                                    are_aromatic[atom_idx],
-                                    stereochemistry=stereochemistry[atom_idx],
-                                    name=atom_names[atom_idx]
-                                    )
-                else:
-                    # Add only not leaving atoms
-                    if leaving_atoms_list[atom_idx] == 'N':
-                        offmol.add_atom(atomic_numbers[atom_idx],
-                                        formal_charges[atom_idx],
-                                        are_aromatic[atom_idx],
-                                        stereochemistry=stereochemistry[atom_idx],
-                                        name=atom_names[atom_idx]
-                                        )
-            # Gather information for bonds
-            bonds_information = self._gather_bonds_information(entry_data)
-            atom1_name_list = bonds_information[0]
-            atom2_name_list = bonds_information[1]
-            bond_order_list = bonds_information[2]
-            is_aromatic_bond_list = bonds_information[3]
-            stereochemistry_bond_list = bonds_information[4]
-            # add bonds
-            # TODO: What about fractional bond order?
-            for bond_idx in range(len(atom1_name_list)):
-                try:
-                    offmol.add_bond(self._get_atom_by_name(offmol, atom1_name_list[bond_idx]),
-                                    self._get_atom_by_name(offmol, atom2_name_list[bond_idx]),
-                                    bond_order_list[bond_idx],
-                                    is_aromatic_bond_list[bond_idx],
-                                    stereochemistry=stereochemistry_bond_list[bond_idx]
-                                    )
-                # TODO: Broad exception. We should raise a specific error.
-                except Exception:  # happens when atom is not found, i.e. no leaving atoms.
-                    continue
-            # Get smiles
-            atom_indices = list(range(offmol.n_atoms))
-            smiles = self._get_smiles(offmol,
-                                      indices=atom_indices,
-                                      label_indices=atom_indices)
-            self.data[entry] = smiles
+            # if 'LYS' in entry:
+            #     continue
+            self._add_entry_data_to_known_smiles(entry_data, include_leaving, discard_keyword)
+            if entry in override_dict:
+                self._add_entry_data_to_known_smiles(entry_data,
+                                                     include_leaving,
+                                                     discard_keyword,
+                                                     override_dict[entry])
