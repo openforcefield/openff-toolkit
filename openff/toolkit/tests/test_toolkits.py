@@ -1657,8 +1657,10 @@ class TestOpenEyeToolkitWrapper:
             )
 
     @pytest.mark.slow
-    def test_substructure_search_on_large_molecule(self):
-        """Test OpenEyeToolkitWrapper substructure search when a large number hits are found"""
+    def test_max_substructure_matches_can_handle_large_molecule(self):
+        """Test OpenEyeToolkitWrapper substructure search handles more than the default of MaxMatches = 1024
+        See https://github.com/openforcefield/openff-toolkit/pull/509 .
+        """
 
         tk = OpenEyeToolkitWrapper()
         smiles = "C" * 600
@@ -2804,9 +2806,10 @@ class TestRDKitToolkitWrapper:
             assert offatom.is_aromatic is rdatom.GetIsAromatic()
 
     @pytest.mark.slow
-    def test_substructure_search_on_large_molecule(self):
-        """Test RDKitToolkitWrapper substructure search when a large number hits are found"""
-
+    def test_max_substructure_matches_can_handle_large_molecule(self):
+        """Test RDKitToolkitWrapper substructure search handles more than the default of maxMatches = 1000
+        See https://github.com/openforcefield/openff-toolkit/pull/509 .
+        """
         tk = RDKitToolkitWrapper()
         smiles = "C" * 3000
         molecule = tk.from_smiles(smiles)
