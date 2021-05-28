@@ -61,11 +61,16 @@ from openff.toolkit.utils.toolkits import (
     ToolkitWrapper,
     UndefinedStereochemistryError,
 )
-from openff.toolkit.utils.utils import MissingDependencyError, MessageException, requires_package
+from openff.toolkit.utils.utils import (
+    MissingDependencyError,
+    MessageException,
+    requires_package,
+)
 
 
 class NotAttachedToMoleculeError(MessageException):
     """Exception for when a component does not belong to a Molecule object, but is queried"""
+
 
 class InvalidAtomMetadataError(MessageException):
     """The program attempted to set atom metadata to an invalid type"""
@@ -154,6 +159,7 @@ class Particle(Serializable):
 # Atom
 # =============================================================================================
 
+
 class AtomMetadataDict(UserDict):
     def __init__(self, *args, **kwargs):
         self.data = {}
@@ -161,11 +167,16 @@ class AtomMetadataDict(UserDict):
 
     def __setitem__(self, key, value):
         if not isinstance(key, str):
-            raise InvalidAtomMetadataError(f"Attempted to set atom metadata with a non-string key. (key: {key}")
+            raise InvalidAtomMetadataError(
+                f"Attempted to set atom metadata with a non-string key. (key: {key}"
+            )
         if not isinstance(value, (str, int)):
-            raise InvalidAtomMetadataError(f"Attempted to set atom metadata with a non-string or integer "
-                                           f"value. (value: {value}")
+            raise InvalidAtomMetadataError(
+                f"Attempted to set atom metadata with a non-string or integer "
+                f"value. (value: {value}"
+            )
         super().__setitem__(key, value)
+
 
 class Atom(Particle):
     """
@@ -193,7 +204,7 @@ class Atom(Particle):
         name=None,
         molecule=None,
         stereochemistry=None,
-        metadata=None
+        metadata=None,
     ):
         """
         Create an immutable Atom object.
@@ -247,7 +258,6 @@ class Atom(Particle):
         else:
             self._metadata = AtomMetadataDict(metadata)
 
-
     # TODO: We can probably avoid an explicit call and determine this dynamically
     #   from self._molecule (maybe caching the result) to get rid of some bookkeeping.
     def add_bond(self, bond):
@@ -295,14 +305,12 @@ class Atom(Particle):
         """Create an Atom from a dict representation."""
         return cls(**atom_dict)
 
-
     @property
     def metadata(self):
         """
         The atom's metadata dictionary
         """
         return self._metadata
-
 
     @property
     def formal_charge(self):
@@ -2072,17 +2080,17 @@ class FrozenMolecule(Serializable):
         """
         return hash(self.to_smiles())
 
-    #@cached_property
+    # @cached_property
     def ordered_connection_table_hash(self):
         if self._ordered_connection_table_hash is not None:
             return self._ordered_connection_table_hash
-        
-        id = ''
+
+        id = ""
         for atom in self.atoms:
-            id += f'{atom.element.symbol}_{atom.formal_charge}_{atom.stereochemistry}__'
+            id += f"{atom.element.symbol}_{atom.formal_charge}_{atom.stereochemistry}__"
         for bond in self.bonds:
-            id += f'{bond.bond_order}_{bond.stereochemistry}_{bond.atom1_index}_{bond.atom2_index}__'
-        #return hash(id)
+            id += f"{bond.bond_order}_{bond.stereochemistry}_{bond.atom1_index}_{bond.atom2_index}__"
+        # return hash(id)
         self._ordered_connection_table_hash = hash(id)
         return self._ordered_connection_table_hash
 
@@ -3080,8 +3088,8 @@ class FrozenMolecule(Serializable):
         self._rings = None
         self._ordered_connection_table_hash = None
         for atom in self.atoms:
-            if 'molecule_atom_index' in atom.__dict__:
-                del atom.__dict__['molecule_atom_index']
+            if "molecule_atom_index" in atom.__dict__:
+                del atom.__dict__["molecule_atom_index"]
 
     def to_networkx(self):
         """Generate a NetworkX undirected graph from the Molecule.
@@ -3211,7 +3219,13 @@ class FrozenMolecule(Serializable):
         return rotatable_bonds
 
     def _add_atom(
-        self, atomic_number, formal_charge, is_aromatic, stereochemistry=None, name=None, metadata=None
+        self,
+        atomic_number,
+        formal_charge,
+        is_aromatic,
+        stereochemistry=None,
+        name=None,
+        metadata=None,
     ):
         """
         Add an atom
@@ -5118,9 +5132,11 @@ class FrozenMolecule(Serializable):
 
         return new_molecule
 
-    def to_openeye(self,
-                   toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
-                   aromaticity_model=DEFAULT_AROMATICITY_MODEL):
+    def to_openeye(
+        self,
+        toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
+        aromaticity_model=DEFAULT_AROMATICITY_MODEL,
+    ):
         """
         Create an OpenEye molecule
 
@@ -5150,7 +5166,7 @@ class FrozenMolecule(Serializable):
         >>> oemol = molecule.to_openeye()
 
         """
-        #toolkit = OpenEyeToolkitWrapper()
+        # toolkit = OpenEyeToolkitWrapper()
         return toolkit_registry.to_openeye(self, aromaticity_model=aromaticity_model)
 
     def _construct_angles(self):
@@ -5457,7 +5473,13 @@ class Molecule(FrozenMolecule):
 
     # TODO: Change this to add_atom(Atom) to improve encapsulation and extensibility?
     def add_atom(
-        self, atomic_number, formal_charge, is_aromatic, stereochemistry=None, name=None, metadata=None
+        self,
+        atomic_number,
+        formal_charge,
+        is_aromatic,
+        stereochemistry=None,
+        name=None,
+        metadata=None,
     ):
         """
         Add an atom
@@ -5504,7 +5526,7 @@ class Molecule(FrozenMolecule):
             is_aromatic,
             stereochemistry=stereochemistry,
             name=name,
-            metadata=metadata
+            metadata=metadata,
         )
         return atom_index
 
