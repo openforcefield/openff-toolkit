@@ -86,12 +86,14 @@ class CifSubstructures:
         """
         Create object with substructures data from CIF files.
         """
-        self.data = defaultdict(list)  # Dictionary where to store substructures data
+        self.data = defaultdict(defaultdict)  # Dictionary where to store substructures data
         self._cif_multi_entry_object = None
 
     def from_file(self, cif_file, include_leaving=False,  discard_keyword='FRAGMENT'):
         """
         Reads cif formatted file and fills substructure information.
+
+        Sequential runs combine information from different files.
 
         Parameters
         __________
@@ -125,6 +127,15 @@ class CifSubstructures:
         """
         with open(output_file, 'w') as library_file:
             json.dump(self.data, library_file, indent=indent)
+
+    def clear_data(self):
+        """
+        Clears current data structures read from files.
+
+        Useful if you want to start reading cif files from scratch.
+        """
+        self.data = defaultdict(defaultdict)
+        self._cif_multi_entry_object = None
 
     @staticmethod
     def _generate_atom_symbol_number_dictionary(cif_entry):
@@ -376,7 +387,7 @@ class CifSubstructures:
         # Only take three letter code for key
         entry_code = entry_data['_chem_comp.three_letter_code']
         if smiles not in self.data[entry_code]:
-            self.data[entry_code].append(smiles)
+            self.data[entry_code][smiles] = atom_names
 
     def _fill_substructure_data(self, include_leaving=False, discard_keyword='FRAGMENT'):
         """
@@ -389,8 +400,6 @@ class CifSubstructures:
         include_leaving : bool, optional, default=False
             Whether to include leaving atoms marked in _chem_comp_atom.pdbx_leaving_atom_flag
         """
-        # Clear current dictionary information
-        self.data = defaultdict(list)
         override_dict = {
             #LYN
             'lys_lfoh_dhz3': ['H2'],
