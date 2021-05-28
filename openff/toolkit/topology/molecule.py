@@ -227,6 +227,10 @@ class Atom(Particle):
             Either 'R' or 'S' for specified stereochemistry, or None for ambiguous stereochemistry
         name : str, optional, default=None
             An optional name to be associated with the atom
+        metadata : dict[str: (int, str)], default=None
+            An optional dictionary where keys are strings and values are strings or ints. This is intended
+            to record atom-level information used to inform hierarchy definition and iteration, such as
+            grouping atom by residue and chain.
 
         Examples
         --------
@@ -3242,6 +3246,10 @@ class FrozenMolecule(Serializable):
             Either 'R' or 'S' for specified stereochemistry, or None if stereochemistry is irrelevant
         name : str, optional, default=None
             An optional name for the atom
+        metadata : dict[str: (int, str)], default=None
+            An optional dictionary where keys are strings and values are strings or ints. This is intended
+            to record atom-level information used to inform hierarchy definition and iteration, such as
+            grouping atom by residue and chain.
 
         Returns
         -------
@@ -5496,6 +5504,10 @@ class Molecule(FrozenMolecule):
             Either 'R' or 'S' for specified stereochemistry, or None if stereochemistry is irrelevant
         name : str, optional, default=None
             An optional name for the atom
+        metadata : dict[str: (int, str)], default=None
+            An optional dictionary where keys are strings and values are strings or ints. This is intended
+            to record atom-level information used to inform hierarchy definition and iteration, such as
+            grouping atom by residue and chain.
 
         Returns
         -------
