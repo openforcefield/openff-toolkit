@@ -50,10 +50,10 @@ from openff.toolkit.topology import NotBondedError
 from openff.toolkit.topology.molecule import (
     Atom,
     FrozenMolecule,
+    InvalidAtomMetadataError,
     InvalidConformerError,
     Molecule,
     SmilesParsingError,
-    InvalidAtomMetadataError,
 )
 from openff.toolkit.utils import get_data_file_path
 from openff.toolkit.utils.toolkits import (

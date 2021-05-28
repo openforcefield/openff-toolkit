@@ -65,9 +65,9 @@ from collections import defaultdict
 from distutils.spawn import find_executable
 from functools import wraps
 from typing import TYPE_CHECKING, List, Optional, Tuple
-from cachetools import LRUCache, cached
 
 import numpy as np
+from cachetools import LRUCache, cached
 from simtk import unit
 
 from openff.toolkit.utils.utils import (
@@ -4569,7 +4569,6 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         # else:
         #    # Only the OEAroModel_MDL is supported for now
         #    raise ValueError("Unknown aromaticity model: {}".aromaticity_models)
-
         # Set up query.
         qmol = Chem.MolFromSmarts(smirks)  # cannot catch the error
         if qmol is None:

@@ -38,18 +38,15 @@ import warnings
 from collections import OrderedDict, UserDict
 from copy import deepcopy
 from typing import Optional, Union
-from cached_property import cached_property
 
 import networkx as nx
 import numpy as np
+from cached_property import cached_property
 from simtk import unit
 from simtk.openmm.app import Element, element
 
 import openff.toolkit
-from openff.toolkit.utils import (
-    quantity_to_string,
-    string_to_quantity,
-)
+from openff.toolkit.utils import quantity_to_string, string_to_quantity
 from openff.toolkit.utils.serialization import Serializable
 from openff.toolkit.utils.toolkits import (
     DEFAULT_AROMATICITY_MODEL,
@@ -62,8 +59,8 @@ from openff.toolkit.utils.toolkits import (
     UndefinedStereochemistryError,
 )
 from openff.toolkit.utils.utils import (
-    MissingDependencyError,
     MessageException,
+    MissingDependencyError,
     requires_package,
 )
 
