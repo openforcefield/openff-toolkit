@@ -16,10 +16,10 @@ These are common to several test modules.
 # =============================================================================================
 
 
-from openff.toolkit.topology.molecule import Molecule
-
 import numpy as np
 from simtk import unit
+
+from openff.toolkit.topology.molecule import Molecule
 
 
 def create_cis_1_2_dichloroethene():
