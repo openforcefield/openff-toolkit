@@ -25,29 +25,26 @@ import pytest
 from numpy.testing import assert_almost_equal
 from simtk import openmm, unit
 
+from openff.toolkit.tests.create_molecules import (
+    create_acetaldehyde,
+    create_acetate,
+    create_ammonia,
+    create_benzene_no_aromatic,
+    create_cis_1_2_dichloroethene,
+    create_cyclohexane,
+    create_dinitrogen,
+    create_dioxygen,
+    create_ethanol,
+    create_reversed_ethanol,
+    create_water,
+)
 from openff.toolkit.tests.utils import (
     get_14_scaling_factors,
     requires_openeye,
     requires_openeye_mol2,
     requires_rdkit,
 )
-
-from openff.toolkit.tests.create_molecules import (
-    create_cis_1_2_dichloroethene,
-    create_ethanol,
-    create_reversed_ethanol,
-    create_benzene_no_aromatic,
-    create_acetaldehyde,
-    create_water,
-    create_ammonia,
-    create_acetate,
-    create_cyclohexane,
-    create_dioxygen,
-    create_dinitrogen,
-)
-
 from openff.toolkit.topology import Molecule, Topology
-
 from openff.toolkit.typing.engines.smirnoff import (
     ElectrostaticsHandler,
     ForceField,
