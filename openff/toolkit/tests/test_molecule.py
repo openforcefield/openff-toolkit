@@ -53,6 +53,7 @@ from openff.toolkit.topology.molecule import (
     InvalidConformerError,
     Molecule,
     SmilesParsingError,
+    InvalidAtomMetadataError
 )
 from openff.toolkit.utils import get_data_file_path
 from openff.toolkit.utils.toolkits import (
@@ -321,6 +322,37 @@ class TestAtom:
             assert atom.formal_charge == formal_charge
             assert atom.is_aromatic == is_aromatic
             assert atom.name == this_element.name
+
+    def test_atom_metadata(self):
+        """Test that atom metadata behaves as expected"""
+        metadata = {'resname':'ALA', 'resnum':1, 'chain':'3'}
+        # Create an atom with metadata
+
+        atom = Atom(6, 0, False, metadata=metadata)
+
+        assert atom.metadata == metadata
+
+        # Roundtrip that atom to/from dict
+        atom2 = Atom.from_dict(atom.to_dict())
+        assert atom.metadata == atom2.metadata
+
+        # Make an atom that initially has no metadata, then add the metadata and ensure that
+        # it's equivalent to the atom constructed with the same metadata initially
+        atom3 = Atom(6, 0, False)
+        assert atom3.metadata == {}
+
+        for key, val in metadata.items():
+            atom3.metadata[key] = val
+
+        assert atom3.metadata == metadata
+        assert atom3.to_dict() == atom.to_dict()
+
+        # Ensure that invalid types raise appropriate errors
+        with pytest.raises(InvalidAtomMetadataError, match='non-string key') as excinfo:
+            atom3.metadata[1] = 'one'
+        with pytest.raises(InvalidAtomMetadataError, match='non-string or integer value') as excinfo:
+            atom3.metadata['length'] = 3. * unit.angstrom
+
 
     def test_set_molecule(self):
         """Test appropriately setting a molecule with no errors"""

@@ -35,7 +35,7 @@ Molecular chemical entity representation and routines to interface with cheminfo
 
 import operator
 import warnings
-from collections import OrderedDict
+from collections import OrderedDict, UserDict
 from copy import deepcopy
 from typing import Optional, Union
 from cached_property import cached_property
@@ -47,7 +47,6 @@ from simtk.openmm.app import Element, element
 
 import openff.toolkit
 from openff.toolkit.utils import (
-    MessageException,
     quantity_to_string,
     string_to_quantity,
 )
@@ -62,11 +61,14 @@ from openff.toolkit.utils.toolkits import (
     ToolkitWrapper,
     UndefinedStereochemistryError,
 )
-from openff.toolkit.utils.utils import MissingDependencyError, requires_package
+from openff.toolkit.utils.utils import MissingDependencyError, MessageException, requires_package
 
 
 class NotAttachedToMoleculeError(MessageException):
     """Exception for when a component does not belong to a Molecule object, but is queried"""
+
+class InvalidAtomMetadataError(MessageException):
+    """The program attempted to set atom metadata to an invalid type"""
 
 
 # =============================================================================================
@@ -152,6 +154,18 @@ class Particle(Serializable):
 # Atom
 # =============================================================================================
 
+class AtomMetadataDict(UserDict):
+    def __init__(self, *args, **kwargs):
+        self.data = {}
+        self.update(dict(*args, **kwargs))
+
+    def __setitem__(self, key, value):
+        if not isinstance(key, str):
+            raise InvalidAtomMetadataError(f"Attempted to set atom metadata with a non-string key. (key: {key}")
+        if not isinstance(value, (str, int)):
+            raise InvalidAtomMetadataError(f"Attempted to set atom metadata with a non-string or integer "
+                                           f"value. (value: {value}")
+        super().__setitem__(key, value)
 
 class Atom(Particle):
     """
@@ -179,6 +193,7 @@ class Atom(Particle):
         name=None,
         molecule=None,
         stereochemistry=None,
+        metadata=None
     ):
         """
         Create an immutable Atom object.
@@ -227,6 +242,11 @@ class Atom(Particle):
         # self._molecule_atom_index = molecule_atom_index
         self._bonds = list()
         self._virtual_sites = list()
+        if metadata is None:
+            self._metadata = AtomMetadataDict()
+        else:
+            self._metadata = AtomMetadataDict(metadata)
+
 
     # TODO: We can probably avoid an explicit call and determine this dynamically
     #   from self._molecule (maybe caching the result) to get rid of some bookkeeping.
@@ -265,6 +285,7 @@ class Atom(Particle):
         atom_dict["stereochemistry"] = self._stereochemistry
         # TODO: Should we let atoms have names?
         atom_dict["name"] = self._name
+        atom_dict["metadata"] = self._metadata
         # TODO: Should this be implicit in the atom ordering when saved?
         # atom_dict['molecule_atom_index'] = self._molecule_atom_index
         return atom_dict
@@ -272,9 +293,16 @@ class Atom(Particle):
     @classmethod
     def from_dict(cls, atom_dict):
         """Create an Atom from a dict representation."""
-        ## TODO: classmethod or static method? Classmethod is needed for Bond, so it have
-        ## its _molecule set and then look up the Atom on each side of it by ID
-        return cls.__init__(*atom_dict)
+        return cls(**atom_dict)
+
+
+    @property
+    def metadata(self):
+        """
+        The atom's metadata dictionary
+        """
+        return self._metadata
+
 
     @property
     def formal_charge(self):
@@ -3183,7 +3211,7 @@ class FrozenMolecule(Serializable):
         return rotatable_bonds
 
     def _add_atom(
-        self, atomic_number, formal_charge, is_aromatic, stereochemistry=None, name=None
+        self, atomic_number, formal_charge, is_aromatic, stereochemistry=None, name=None, metadata=None
     ):
         """
         Add an atom
@@ -3231,6 +3259,7 @@ class FrozenMolecule(Serializable):
             is_aromatic,
             stereochemistry=stereochemistry,
             name=name,
+            metadata=metadata,
             molecule=self,
         )
         self._atoms.append(atom)
@@ -5428,7 +5457,7 @@ class Molecule(FrozenMolecule):
 
     # TODO: Change this to add_atom(Atom) to improve encapsulation and extensibility?
     def add_atom(
-        self, atomic_number, formal_charge, is_aromatic, stereochemistry=None, name=None
+        self, atomic_number, formal_charge, is_aromatic, stereochemistry=None, name=None, metadata=None
     ):
         """
         Add an atom
@@ -5475,6 +5504,7 @@ class Molecule(FrozenMolecule):
             is_aromatic,
             stereochemistry=stereochemistry,
             name=name,
+            metadata=metadata
         )
         return atom_index
 
