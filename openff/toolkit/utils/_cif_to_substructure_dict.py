@@ -12,10 +12,6 @@ import json
 from mendeleev import element
 import rdkit
 import openff
-# from amber-ff-porting.ConvertResidueParameters import (
-#     remove_charge_and_bond_order_from_imidazole,
-#     remove_charge_and_bond_order_from_guanidinium
-# )
 
 
 # Amber ff porting functions
@@ -93,7 +89,7 @@ class CifSubstructures:
         self.data = defaultdict(list)  # Dictionary where to store substructures data
         self._cif_multi_entry_object = None
 
-    def from_file(self, cif_file, discard_keyword='FRAGMENT', include_leaving=False):
+    def from_file(self, cif_file, include_leaving=False,  discard_keyword='FRAGMENT'):
         """
         Reads cif formatted file and fills substructure information.
 
@@ -109,7 +105,7 @@ class CifSubstructures:
         # read cif file
         self._cif_multi_entry_object = ReadCif(cif_file)
         # fill data dictionary
-        self._fill_substructure_data(discard_keyword=discard_keyword, include_leaving=include_leaving)
+        self._fill_substructure_data(include_leaving=include_leaving, discard_keyword=discard_keyword,)
 
     def to_json_file(self, output_file, indent=None):
         """
@@ -297,13 +293,24 @@ class CifSubstructures:
         smiles = smiles.replace('$', '~')
         return smiles
 
-    def _add_entry_data_to_known_smiles(self,
-                                        entry_data,
-                                        include_leaving,
-                                        discard_keyword,
-                                        additional_leaving=list()):
+    def _add_substructure_data_entry(self,
+                                     entry_data,
+                                     include_leaving,
+                                     discard_keyword,
+                                     additional_leaving=None):
         """
+        Read substructure from entry data in cif file and fill data object with smiles.
 
+        Parameters
+        __________
+        entry_data : CifFile.StarFile.StarBlock
+            Cif file entry data object from pycifrw module.
+        include_leaving : bool, optional, default=False
+            Whether to include leaving atoms marked in _chem_comp_atom.pdbx_leaving_atom_flag
+        discard_keyword : str, optional, default='FRAGMENT'
+            Keyword in _chem_comp.name for filtering out entries. Default is 'FRAGMENT'.
+        additional_leaving : None or List, default=None
+            Additional list of atoms in entry to treat as leaving atoms.
         """
         offmol = Molecule()
         # Skip entries matching discard filtering keyword in comp name
@@ -318,7 +325,7 @@ class CifSubstructures:
         are_aromatic = atoms_information[3]
         stereochemistry = atoms_information[4]
         leaving_atoms_list = atoms_information[5]
-        if len(additional_leaving) != 0:
+        if additional_leaving:
             for atom_idx, atom_name in enumerate(atom_names):
                 if atom_name in additional_leaving:
                     leaving_atoms_list[atom_idx] = 'Y'
@@ -371,7 +378,7 @@ class CifSubstructures:
         if smiles not in self.data[entry_code]:
             self.data[entry_code].append(smiles)
 
-    def _fill_substructure_data(self, discard_keyword='FRAGMENT', include_leaving=False):
+    def _fill_substructure_data(self, include_leaving=False, discard_keyword='FRAGMENT'):
         """
         Fills data dictionary with the substructure information.
 
@@ -402,9 +409,9 @@ class CifSubstructures:
             # create empty molecule to fill with data
             # if 'LYS' in entry:
             #     continue
-            self._add_entry_data_to_known_smiles(entry_data, include_leaving, discard_keyword)
+            self._add_substructure_data_entry(entry_data, include_leaving, discard_keyword)
             if entry in override_dict:
-                self._add_entry_data_to_known_smiles(entry_data,
-                                                     include_leaving,
-                                                     discard_keyword,
-                                                     override_dict[entry])
+                self._add_substructure_data_entry(entry_data,
+                                                  include_leaving,
+                                                  discard_keyword,
+                                                  override_dict[entry])
