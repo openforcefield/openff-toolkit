@@ -20,7 +20,7 @@ import pytest
 from simtk import unit
 from simtk.openmm.app import element
 
-from openff.toolkit.tests.test_forcefield import (
+from openff.toolkit.tests.create_molecules import (
     create_cyclohexane,
     create_ethanol,
     create_reversed_ethanol,
@@ -932,10 +932,6 @@ class TestTopology(TestCase):
         """
         from tempfile import NamedTemporaryFile
 
-        from openff.toolkit.tests.test_forcefield import (
-            create_ethanol,
-            create_reversed_ethanol,
-        )
         from openff.toolkit.topology import Molecule, Topology
 
         topology = Topology()
