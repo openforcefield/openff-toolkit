@@ -227,14 +227,14 @@ class TagSortedDict(_TransformedDict):
     transforming the atom indices in any way will cause that information to be lost.
 
     Because deduplication is needed, we still must avoid the expected situation
-    where must not allow two permutations of the same atoms to coexist. For example,
-    a parameter may have matched the indices (2, 0, 1), however a paramter with higher
-    priority also matches the same indices, but the tagged order is (1, 0, 2), and
-    we need to make sure both keys don't exist (or else two parameters will apply to
-    the same atoms). We allow the ability to query using either permutation and get
+    where we must not allow two permutations of the same atoms to coexist. For example,
+    a parameter may have matched the indices (2, 0, 1), however a parameter with higher
+    priority also matches the same indices, but the tagged order is (1, 0, 2). We need
+    to make sure both keys don't exist, or else two parameters will apply to
+    the same atoms. We allow the ability to query using either permutation and get
     identical behavior. The defining feature here, then, is that the stored indices are
     in tagged order, but one can supply any permutation and it will resolve to the
-    stored value.
+    stored value/parameter.
 
     As a subtle behavior, one must be careful if an external key is used that was not
     supplied from the TagSortedDict object itself. For example:
@@ -243,8 +243,8 @@ class TagSortedDict(_TransformedDict):
         >>> y = x[(5, 0, 2)]
 
     The variable y will be 100, but this does not mean the tagged order is (5, 0, 2)
-    as it was supplied. One should either use keys only from __iter__ (e.g.
-    `for k in x` or one must transform the key:
+    as it was supplied from the external tuple. One should either use keys only from
+    __iter__ (e.g.  `for k in x`) or one must transform the key:
 
         >>> key = (5, 0, 2)
         >>> y = x[key]
@@ -261,12 +261,12 @@ class TagSortedDict(_TransformedDict):
 
     def __init__(self, *args, **kwargs):
 
-        # because keytransform is O(n) due to needing to check the sorted keys,
+        # Because keytransform is O(n) due to needing to check the sorted keys,
         # we cache the sorted keys separately to make keytransform O(1) at
         # the expense of storage. This is also better in the long run if the
-        # key is long and repetively sorting isn't a negligible cost.
+        # key is long and repeatedly sorting isn't a negligible cost.
 
-        # set this before calling super init, since super will call the get/set
+        # Set this before calling super init, since super will call the get/set
         # methods implemented here as it populates self via args/kwargs,
         # which will automatically populate _sorted
         self._sorted = SortedDict()
@@ -281,8 +281,8 @@ class TagSortedDict(_TransformedDict):
         key = tuple(key)
         tr_key = self.__keytransform__(key)
         if key != tr_key:
-            # this means our new key is a permutation of an existing,
-            # so we should replace it
+            # this means our new key is a permutation of an existing, so we should
+            # replace it
             del self.store[tr_key]
         self.store[key] = value
         # save the sorted version for faster keytransform
@@ -292,13 +292,13 @@ class TagSortedDict(_TransformedDict):
         """Give the key permutation that is currently stored"""
         # we check if there is a permutation clash by saving the sorted version of
         # each key. If the sorted version of the key exists, then the return value
-        # corresponds to the explicit permutationwe are storing in self (the public
+        # corresponds to the explicit permutation we are storing in self (the public
         # facing key). This permutation may or may not be the same as the key argument
         # supplied. If the key is not present, then no transformation should be done
         # and we should return the key as is.
 
-        # as stated in __init__, the alternative is to, on each call, sorted the save
-        # permutations and check if it is equal to the sorted key parameter. In this
+        # As stated in __init__, the alternative is to, on each call, sort the saved
+        # permutations and check if it is equal to the sorted supplied key. In this
         # sense, self._sorted is a cache/lookup table.
         key = tuple(key)
         return self._sorted.get(key, key)
@@ -308,6 +308,9 @@ class TagSortedDict(_TransformedDict):
         return self.__keytransform__(key)
 
     def clear(self):
+        """
+        Clear the contents
+        """
         self.store.clear()
         self._stored.clear()
 
