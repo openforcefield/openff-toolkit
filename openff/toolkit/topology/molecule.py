@@ -40,6 +40,7 @@ from copy import deepcopy
 from typing import Optional, Union
 from cached_property import cached_property
 
+import json
 import networkx as nx
 import numpy as np
 from simtk import unit
@@ -50,6 +51,8 @@ from openff.toolkit.utils import (
     MessageException,
     quantity_to_string,
     string_to_quantity,
+    get_data_file_path,
+    remove_subsets_from_list,
 )
 from openff.toolkit.utils.serialization import Serializable
 from openff.toolkit.utils.toolkits import (
@@ -5802,6 +5805,27 @@ class Molecule(FrozenMolecule):
                 return Image(png)
 
         raise ValueError("Could not find an appropriate backend")
+
+    def perceive_residues(self):
+        """
+        Perceive residue substructure and fill atoms metadata accordingly.
+        """
+        # Read substructure dictionary file
+        substructure_file_path = get_data_file_path('proteins/aa_residues_substructures.json')
+        with open(substructure_file_path, 'r') as subfile:
+            substructure_dictionary = json.load(subfile)
+        for residue_name, smarts_dict in substructure_dictionary.items():
+            matches = [match for smarts in smarts_dict for match in self.chemical_environment_matches(smarts)]
+            matches_unique = set(tuple(sorted(match)) for match in matches)
+            if matches_unique:
+                matching_data[residue_name] = remove_subsets_from_list(matches_unique)
+        # Filling atom metadata
+        resnum_counter = 1  # Counter for residue numbers
+        for resname, atom_idx_list in matching_data.items():
+            for atom_idx in atom_idx_list:
+                current_atom = self.atoms[atom_idx]
+                current_atom.metadata['resname'] = resname
+        #return matching_data
 
     def _ipython_display_(self):
         from IPython.display import display
