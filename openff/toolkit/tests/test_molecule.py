@@ -3277,6 +3277,19 @@ class TestMolecule:
 
         assert isinstance(mol.visualize(backend="openeye"), IPython.core.display.Image)
 
+    def test_perceive_residues_nterminal_alanine(self):
+        """Test residue perception with NTerminal form of Alanine."""
+        offmol = Molecule.from_file(
+            get_data_file_path('proteins/NTerminal_ALA.sdf')
+        )
+        # Perceive residue substructures
+        offmol.perceive_residues()
+        for atom in offmol.atoms:
+            assert atom.metadata['resname'] == 'ALA'
+            assert atom.metadata['chain'] == 'A'
+            assert atom.metadata['resnum'] == 1
+
+
 
 class MyMol(FrozenMolecule):
     """
