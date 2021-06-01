@@ -7,6 +7,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 * `micro` increments represent bugfix releases or improvements in documentation
 
 ## Current Development
+- [PR #964](https://github.com/openforcefield/openff-toolkit/pull/964): Adds initial implementation
+  of atom metadata dictionaries. 
 
 ### Examples added
 
