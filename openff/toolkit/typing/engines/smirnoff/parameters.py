@@ -4294,9 +4294,6 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
             ``matches[particle_indices]`` is the ``ParameterType`` object
             matching the tuple of particle indices in ``entity``.
         """
-        # Using SortedDict here leads to the desired deduplication behavior, BUT it mangles the order
-        # of the atom indices in the keys. Thankfully, the Match objects that are values in `matches` contain
-        # `match.environment_match.topology_atom_indices`, which has the tuple in the correct order
         matches = self._find_matches(entity, transformed_dict_cls=TagSortedDict)
         return matches
 
