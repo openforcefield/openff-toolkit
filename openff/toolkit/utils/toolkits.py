@@ -65,9 +65,9 @@ from collections import defaultdict
 from distutils.spawn import find_executable
 from functools import wraps
 from typing import TYPE_CHECKING, List, Optional, Tuple
-from cachetools import LRUCache, cached
 
 import numpy as np
+from cachetools import LRUCache, cached
 from simtk import unit
 
 from openff.toolkit.utils.utils import (
@@ -169,7 +169,10 @@ class AntechamberNotFoundError(MessageException):
 # UTILITY FUNCTIONS
 # =============================================================================================
 
-def mol_to_ctab_and_aro_key(self, molecule, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
+
+def mol_to_ctab_and_aro_key(
+    self, molecule, aromaticity_model=DEFAULT_AROMATICITY_MODEL
+):
     return f"{molecule.ordered_connection_table_hash()}-{aromaticity_model}"
 
 
@@ -1491,9 +1494,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         return molecule
 
-
-
     to_openeye_cache = LRUCache(maxsize=4096)
+
     @cached(to_openeye_cache, key=mol_to_ctab_and_aro_key)
     def to_openeye(self, molecule, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
         """
@@ -2685,13 +2687,13 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         # OEPrepareSearch will clobber our desired aromaticity model if we don't sync up mol and qmol ahead of time
         # Prepare molecule
-        #oechem.OEClearAromaticFlags(mol)
-        #oechem.OEAssignAromaticFlags(mol, oearomodel)
+        # oechem.OEClearAromaticFlags(mol)
+        # oechem.OEAssignAromaticFlags(mol, oearomodel)
 
         # If aromaticity model was provided, prepare query molecule
         oechem.OEClearAromaticFlags(qmol)
         oechem.OEAssignAromaticFlags(qmol, oearomodel)
-        #oechem.OEAssignHybridization(mol)
+        # oechem.OEAssignHybridization(mol)
         oechem.OEAssignHybridization(qmol)
 
         # Build list of matches
@@ -4211,6 +4213,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         return offmol
 
     to_rdkit_cache = LRUCache(maxsize=4096)
+
     @cached(to_rdkit_cache, key=mol_to_ctab_and_aro_key)
     def to_rdkit(self, molecule, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
         """
@@ -4558,15 +4561,14 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         from rdkit import Chem
 
         # Make a copy of the molecule
-        #rdmol = Chem.Mol(rdmol)
+        # rdmol = Chem.Mol(rdmol)
         # Use designated aromaticity model
-        #if aromaticity_model == "OEAroModel_MDL":
+        # if aromaticity_model == "OEAroModel_MDL":
         #    Chem.SanitizeMol(rdmol, Chem.SANITIZE_ALL ^ Chem.SANITIZE_SETAROMATICITY)
         #    Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_MDL)
-        #else:
+        # else:
         #    # Only the OEAroModel_MDL is supported for now
         #    raise ValueError("Unknown aromaticity model: {}".aromaticity_models)
-
         # Set up query.
         qmol = Chem.MolFromSmarts(smirks)  # cannot catch the error
         if qmol is None:
