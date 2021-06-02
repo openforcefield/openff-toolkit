@@ -1530,6 +1530,12 @@ class ForceField:
         _, top_with_charges = self.create_openmm_system(
             molecule.to_topology(), return_topology=True, **kwargs
         )
+
+        if top_with_charges.n_topology_virtual_sites != 0:
+            raise ValueError(
+                "get_partial_charges is not supported on molecules with virtual sites"
+            )
+
         charges = [*top_with_charges.reference_molecules][0].partial_charges
         return charges
 
