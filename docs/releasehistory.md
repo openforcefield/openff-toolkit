@@ -8,6 +8,32 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ## Current Development
 
+### New features and behaviors changed
+
+- [PR #923](https://github.com/openforcefield/openforcefield/pull/923): Adds
+  [`Molecule.nth_degree_neighbors`](openff.toolkit.topology.Molecule.nth_degree_neighbors),
+  [`Topology.nth_degree_neighbors`](openff.toolkit.topology.Topology.nth_degree_neighbors),
+  [`TopologyMolecule.nth_degree_neighbors`](openff.toolkit.topology.TopologyMolecule.nth_degree_neighbors),
+  which returns pairs of atoms that are separated in a t molecule or topology ny _excactly_ N atoms.
+- [PR #917](https://github.com/openforcefield/openforcefield/pull/917):
+  [`ForceField.create_openff_system`] Ensures that the cutoff of the `NonbondedForce` is set to 
+  the cutoff of the `vdWHandler` when it and a `Electrostatics` handler are present in the force field.
+- [PR #850](https://github.com/openforcefield/openforcefield/pull/850):
+  [`OpenEyeToolkitWrapper.is_available`](openff.toolkit.utils.toolkits.OpenEyeToolkitWrapper.is_available)
+  now returns `True` if _any_ OpenEye tools are licensed (and installed). This allows, i.e,
+  use of functionality that requires `OEChem` without having an `OEOmega` license.
+
+### Examples added
+
+- [PR #763](https://github.com/openforcefield/openff-toolkit/pull/763): 
+  Adds an introductory example showcasing the toolkit parameterizing a protein-ligand simulation.
+- [PR #934](https://github.com/openforcefield/openff-toolkit/pull/934) 
+  and [conda-forge/openff-toolkit-feedstock#9](https://github.com/conda-forge/openff-toolkit-feedstock/pull/9): 
+  Added `openff-toolkit-examples` Conda package for easy installation of examples and their 
+  dependencies. Simply `conda install -c conda-forge openff-toolkit-examples` and then run 
+  the `openff-toolkit-examples` script to copy the examples suite to a convenient place to 
+  run them!
+
 ## 0.9.2 Minor feature and bugfix release
 
 ### New features and behaviors changed

@@ -3796,6 +3796,54 @@ class FrozenMolecule(Serializable):
         }
         return amber_impropers
 
+    def _nth_degree_neighbors(self, n_degrees):
+        import networkx as nx
+
+        mol_graph = self.to_networkx()
+
+        for node_i in mol_graph.nodes:
+            for node_j in mol_graph.nodes:
+                if node_i == node_j:
+                    continue
+
+                path_length = nx.shortest_path_length(mol_graph, node_i, node_j)
+
+                if path_length == n_degrees:
+                    if node_i > node_j:
+                        continue
+                    yield (self.atoms[node_i], self.atoms[node_j])
+
+    def nth_degree_neighbors(self, n_degrees):
+        """
+        Return canonicalized pairs of atoms whose shortest separation is _exactly_ n bonds.
+        Only pairs with increasing atom indices are returned.
+
+        Parameters
+        ----------
+        n: int
+            The number of bonds separating atoms in each pair
+
+        Returns
+        -------
+        neighbors: iterator of tuple of Atom
+            Tuples (len 2) of atom that are separated by `n` bonds.
+
+        Note that the criteria relies on minimum distances; when there are multiple valid
+        paths between atoms, such as atoms in rings, the shortest path is considered here
+        For example, two atoms in "meta" positions with respect to each other in a benzene
+        are separated by two paths, one length 2 bonds and the other length 4 bonds. This
+        function would consider them to be 2 apart and would not include them if `n=4` was
+        passed.
+
+        """
+        if n_degrees <= 0:
+            raise ValueError(
+                "Cannot consider neighbors separated by 0 or fewer atoms. Asked to consider "
+                f"path lengths of {n_degrees}."
+            )
+        else:
+            return self._nth_degree_neighbors(n_degrees=n_degrees)
+
     @property
     def total_charge(self):
         """

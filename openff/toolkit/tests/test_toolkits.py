@@ -1657,8 +1657,10 @@ class TestOpenEyeToolkitWrapper:
             )
 
     @pytest.mark.slow
-    def test_substructure_search_on_large_molecule(self):
-        """Test OpenEyeToolkitWrapper substructure search when a large number hits are found"""
+    def test_max_substructure_matches_can_handle_large_molecule(self):
+        """Test OpenEyeToolkitWrapper substructure search handles more than the default of MaxMatches = 1024
+        See https://github.com/openforcefield/openff-toolkit/pull/509 .
+        """
 
         tk = OpenEyeToolkitWrapper()
         smiles = "C" * 600
@@ -2804,9 +2806,10 @@ class TestRDKitToolkitWrapper:
             assert offatom.is_aromatic is rdatom.GetIsAromatic()
 
     @pytest.mark.slow
-    def test_substructure_search_on_large_molecule(self):
-        """Test RDKitToolkitWrapper substructure search when a large number hits are found"""
-
+    def test_max_substructure_matches_can_handle_large_molecule(self):
+        """Test RDKitToolkitWrapper substructure search handles more than the default of maxMatches = 1000
+        See https://github.com/openforcefield/openff-toolkit/pull/509 .
+        """
         tk = RDKitToolkitWrapper()
         smiles = "C" * 3000
         molecule = tk.from_smiles(smiles)
@@ -3953,3 +3956,43 @@ class TestToolkitRegistry:
                 partial_charge_method="NotARealChargeMethod",
                 raise_exception_types=[],
             )
+
+
+@requires_openeye
+def test_license_check(monkeypatch):
+    def MockIsLicensed():
+        return False
+
+    from openeye import oeiupac
+
+    assert oeiupac.OEIUPACIsLicensed()
+
+    from openff.toolkit.utils.toolkits import OpenEyeToolkitWrapper
+
+    assert OpenEyeToolkitWrapper.is_available()
+
+    # Mock OEIUPACIsLicensed to return False ...
+    monkeypatch.setattr(oeiupac, "OEIUPACIsLicensed", MockIsLicensed)
+
+    # ... ensure that the oeiupac module reflects this
+    assert not oeiupac.OEIUPACIsLicensed()
+
+    # ... and ensure that the toolkit wrapper is **still** available
+    assert OpenEyeToolkitWrapper()._check_licenses()
+    assert OpenEyeToolkitWrapper().is_available()
+
+    from openff.toolkit.utils.toolkits import requires_openeye_module
+
+    @requires_openeye_module("oeszybki")
+    def func_using_extraneous_openeye_module():
+        pass
+
+    with pytest.raises(Exception, match="currently use oeszybki"):
+        func_using_extraneous_openeye_module()
+
+    @requires_openeye_module("oeiupac")
+    def func_using_unlicsensed_openeye_module():
+        pass
+
+    with pytest.raises(AssertionError):
+        func_using_unlicsensed_openeye_module()
