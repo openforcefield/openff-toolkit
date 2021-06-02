@@ -17,6 +17,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
   [`OpenEyeToolkitWrapper.is_available`](openff.toolkit.utils.toolkits.OpenEyeToolkitWrapper.is_available)
   now returns `True` if _any_ OpenEye tools are licensed (and installed). This allows, i.e,
   use of functionality that requires `OEChem` without having an `OEOmega` license.
+- [PR #956](https://github.com/openforcefield/openforcefield/pull/956): Added `ForceField.get_partial_charges()` to more easily get the partial charges assigned by a force field, and modified `Molecule.assign_partial_charges()` to take a force field as a method.
 
 ### Examples added
 
