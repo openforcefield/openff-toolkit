@@ -2748,7 +2748,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         .. note :: Currently, the only supported ``aromaticity_model`` is ``OEAroModel_MDL``
 
         """
-        oemol = self.to_openeye(molecule)
+        oemol, _ = self._connection_table_to_openeye(molecule)
         return self._find_smarts_matches(
             oemol, smarts, aromaticity_model=aromaticity_model
         )
@@ -4651,7 +4651,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         .. note :: Currently, the only supported ``aromaticity_model`` is ``OEAroModel_MDL``
 
         """
-        rdmol = self.to_rdkit(molecule, aromaticity_model=aromaticity_model)
+        rdmol = self._connectivity_table_to_rdkit(molecule, aromaticity_model=aromaticity_model)
         return self._find_smarts_matches(
             rdmol, smarts, aromaticity_model="OEAroModel_MDL"
         )
