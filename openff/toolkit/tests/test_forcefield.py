@@ -4908,8 +4908,12 @@ class TestSmirnoffVersionConverter:
 
 
 class TestForceFieldGetPartialCharges:
-    def get_partial_charges_from_create_openmm_system(self, mol, ff):
-        system = ff.create_openmm_system(mol.to_topology())
+    """Tests for the ForceField.get_partial_charges method."""
+
+    @staticmethod
+    def get_partial_charges_from_create_openmm_system(mol, force_field):
+        """Helper method to compute partial charges from a generated openmm System."""
+        system = force_field.create_openmm_system(mol.to_topology())
         nbforce = [
             f for f in system.getForces() if isinstance(f, openmm.openmm.NonbondedForce)
         ][0]
@@ -4920,12 +4924,15 @@ class TestForceFieldGetPartialCharges:
         return unit.Quantity(charges)
 
     def test_get_partial_charges(self):
+        """Test that ethanol charges are computed correctly."""
         ethanol: Molecule = create_ethanol()
-        ff: ForceField = ForceField("test_forcefields/test_forcefield.offxml")
+        force_field: ForceField = ForceField("test_forcefields/test_forcefield.offxml")
 
-        ethanol_partial_charges = self.get_partial_charges(ethanol, ff)
+        ethanol_partial_charges = self.get_partial_charges_from_create_openmm_system(
+            ethanol, force_field
+        )
 
-        partial_charges = ff.get_partial_charges(ethanol)
+        partial_charges = force_field.get_partial_charges(ethanol)
 
         assert (
             ethanol_partial_charges - partial_charges < 1.0e-6 * unit.elementary_charge
