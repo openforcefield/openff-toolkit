@@ -3634,7 +3634,7 @@ class vdWHandler(_NonbondedHandler):
                 #                             "must be provided")
             else:
                 force.setNonbondedMethod(openmm.NonbondedForce.LJPME)
-                force.setCutoffDistance(9.0 * unit.angstrom)
+                force.setCutoffDistance(self.cutoff)
                 force.setEwaldErrorTolerance(1.0e-4)
 
         # If method is cutoff, then we currently support openMM's PME for periodic system and NoCutoff for nonperiodic
