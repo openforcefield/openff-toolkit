@@ -54,6 +54,7 @@ from openff.toolkit.topology.molecule import (
     Molecule,
     SmilesParsingError,
 )
+from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.toolkit.utils import get_data_file_path
 from openff.toolkit.utils.toolkits import (
     AmberToolsToolkitWrapper,
@@ -61,7 +62,6 @@ from openff.toolkit.utils.toolkits import (
     RDKitToolkitWrapper,
     ToolkitRegistry,
 )
-from openff.toolkit.typing.engines.smirnoff import ForceField
 
 # =============================================================================================
 # TEST UTILITIES
