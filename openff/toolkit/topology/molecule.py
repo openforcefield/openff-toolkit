@@ -170,7 +170,7 @@ class AtomMetadataDict(UserDict):
         if not isinstance(value, (str, int)):
             raise InvalidAtomMetadataError(
                 f"Attempted to set atom metadata with a non-string or integer "
-                f"value. (value: {value}"
+                f"value. (value: {value})"
             )
         super().__setitem__(key, value)
 
@@ -296,7 +296,7 @@ class Atom(Particle):
         atom_dict["stereochemistry"] = self._stereochemistry
         # TODO: Should we let atoms have names?
         atom_dict["name"] = self._name
-        atom_dict["metadata"] = self._metadata
+        atom_dict["metadata"] = dict(self._metadata)
         # TODO: Should this be implicit in the atom ordering when saved?
         # atom_dict['molecule_atom_index'] = self._molecule_atom_index
         return atom_dict
