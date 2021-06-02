@@ -1497,8 +1497,11 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
     to_openeye_cache = LRUCache(maxsize=4096)
 
     @cached(to_openeye_cache, key=mol_to_ctab_and_aro_key)
-    def _connection_table_to_openeye(self, molecule, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
+    def _connection_table_to_openeye(
+        self, molecule, aromaticity_model=DEFAULT_AROMATICITY_MODEL
+    ):
         from openeye import oechem
+
         if hasattr(oechem, aromaticity_model):
             oe_aro_model = getattr(oechem, aromaticity_model)
         else:
@@ -1513,12 +1516,12 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         for atom in molecule.atoms:
             oeatom = oemol.NewAtom(atom.atomic_number)
             oeatom.SetFormalCharge(
-                atom.formal_charge.value_in_unit(unit.elementary_charge))
+                atom.formal_charge.value_in_unit(unit.elementary_charge)
+            )
             # TODO: Do we want to provide _any_ pathway for Atom.is_aromatic to influence the OEMol?
             # oeatom.SetAromatic(atom.is_aromatic)
             oemol_atoms.append(oeatom)
             map_atoms[atom.molecule_atom_index] = oeatom.GetIdx()
-
 
         # Add bonds
         oemol_bonds = list()  # list of corresponding oemol bonds
@@ -1658,7 +1661,10 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         """
         from openeye import oechem
-        oemol, off_to_oe_idx = self._connection_table_to_openeye(molecule, aromaticity_model=aromaticity_model)
+
+        oemol, off_to_oe_idx = self._connection_table_to_openeye(
+            molecule, aromaticity_model=aromaticity_model
+        )
         oemol = oechem.OEMol(oemol)
         # if not(molecule.name is None):
         oe_to_off_idx = dict([(j, i) for i, j in off_to_oe_idx.items()])
@@ -1673,10 +1679,12 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             oe_atom.SetData("name", off_atom.name)
 
             if off_atom.partial_charge is None:
-                oe_atom.SetPartialCharge(float('nan'))
+                oe_atom.SetPartialCharge(float("nan"))
             else:
-                oe_atom.SetPartialCharge(off_atom.partial_charge / unit.elementary_charge)
-            #oeatom.SetPartialCharge(1.)
+                oe_atom.SetPartialCharge(
+                    off_atom.partial_charge / unit.elementary_charge
+                )
+            # oeatom.SetPartialCharge(1.)
         assert None not in oemol_atoms
 
         oemol_bonds = [None] * molecule.n_bonds  # list of corresponding oemol bonds
@@ -4227,7 +4235,9 @@ class RDKitToolkitWrapper(ToolkitWrapper):
     to_rdkit_cache = LRUCache(maxsize=4096)
 
     @cached(to_rdkit_cache, key=mol_to_ctab_and_aro_key)
-    def _connectivity_table_to_rdkit(self, molecule, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
+    def _connectivity_table_to_rdkit(
+        self, molecule, aromaticity_model=DEFAULT_AROMATICITY_MODEL
+    ):
         from rdkit import Chem
 
         # Create an editable RDKit molecule
@@ -4283,7 +4293,6 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             rdmol,
             Chem.SANITIZE_ALL ^ Chem.SANITIZE_ADJUSTHS ^ Chem.SANITIZE_SETAROMATICITY,
         )
-
 
         # Fix for aromaticity being lost
         if aromaticity_model == "OEAroModel_MDL":
@@ -4348,7 +4357,6 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         rdmol.UpdatePropertyCache(strict=False)
         Chem.GetSSSR(rdmol)
 
-
         # Forcefully assign stereo information on the atoms that RDKit
         # can't figure out. This must be done last as calling AssignStereochemistry
         # again will delete these properties (see #196).
@@ -4356,7 +4364,6 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             rdatom.SetProp("_CIPCode", stereochemistry)
 
         return rdmol
-
 
     def to_rdkit(self, molecule, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
         """
@@ -4389,7 +4396,9 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         from rdkit import Chem, Geometry
 
         # Convert the OFF molecule's connectivity table to RDKit, returning a cached rdmol if possible
-        rdmol = self._connectivity_table_to_rdkit(molecule, aromaticity_model=aromaticity_model)
+        rdmol = self._connectivity_table_to_rdkit(
+            molecule, aromaticity_model=aromaticity_model
+        )
         # In case a cached rdmol was returned, make a copy of it
         rdmol = Chem.RWMol(rdmol)
         # Set name
@@ -4410,7 +4419,6 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             else:
                 # Shove everything else into a string
                 rdmol.SetProp(name, str(value))
-
 
         for index, atom in enumerate(molecule.atoms):
             rdatom = rdmol.GetAtomWithIdx(index)
@@ -4448,7 +4456,6 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             # Note: We could put this outside the "if" statement, which would result in all partial charges in the
             #       resulting file being set to "n/a" if they weren't set in the Open Force Field Toolkit ``Molecule``
             Chem.CreateAtomDoublePropertyList(rdmol, "PartialCharge")
-
 
         # Return non-editable version
         return Chem.Mol(rdmol)
@@ -4651,7 +4658,9 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         .. note :: Currently, the only supported ``aromaticity_model`` is ``OEAroModel_MDL``
 
         """
-        rdmol = self._connectivity_table_to_rdkit(molecule, aromaticity_model=aromaticity_model)
+        rdmol = self._connectivity_table_to_rdkit(
+            molecule, aromaticity_model=aromaticity_model
+        )
         return self._find_smarts_matches(
             rdmol, smarts, aromaticity_model="OEAroModel_MDL"
         )

@@ -4607,7 +4607,11 @@ class FrozenMolecule(Serializable):
         )
         return molecule
 
-    def to_rdkit(self, aromaticity_model=DEFAULT_AROMATICITY_MODEL, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+    def to_rdkit(
+        self,
+        aromaticity_model=DEFAULT_AROMATICITY_MODEL,
+        toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
+    ):
         """
         Create an RDKit molecule
 
@@ -4634,11 +4638,13 @@ class FrozenMolecule(Serializable):
         >>> rdmol = molecule.to_rdkit()
 
         """
-        #toolkit = RDKitToolkitWrapper()
+        # toolkit = RDKitToolkitWrapper()
         if isinstance(toolkit_registry, ToolkitWrapper):
             return toolkit_registry.to_rdkit(self, aromaticity_model=aromaticity_model)
         else:
-            return toolkit_registry.call('to_rdkit', self, aromaticity_model=aromaticity_model)
+            return toolkit_registry.call(
+                "to_rdkit", self, aromaticity_model=aromaticity_model
+            )
 
     @classmethod
     @OpenEyeToolkitWrapper.requires_toolkit()
@@ -5175,9 +5181,13 @@ class FrozenMolecule(Serializable):
         """
         # toolkit = OpenEyeToolkitWrapper()
         if isinstance(toolkit_registry, ToolkitWrapper):
-            return toolkit_registry.to_openeye(self, aromaticity_model=aromaticity_model)
+            return toolkit_registry.to_openeye(
+                self, aromaticity_model=aromaticity_model
+            )
         else:
-            return toolkit_registry.call('to_openeye', self, aromaticity_model=aromaticity_model)
+            return toolkit_registry.call(
+                "to_openeye", self, aromaticity_model=aromaticity_model
+            )
 
     def _construct_angles(self):
         """
