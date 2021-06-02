@@ -2343,6 +2343,47 @@ class TestMolecule:
             for torsion in common_torsions:
                 assert is_three_membered_ring_torsion(torsion)
 
+    def test_nth_degree_neighbors_basic(self):
+        benzene = Molecule.from_smiles("c1ccccc1")
+
+        with pytest.raises(ValueError, match="0 or fewer atoms"):
+            benzene.nth_degree_neighbors(n_degrees=0)
+
+        with pytest.raises(ValueError, match="0 or fewer atoms"):
+            benzene.nth_degree_neighbors(n_degrees=-1)
+
+        # 3 proper torsions have 1-4 pairs that are duplicates of other torsions, i.e.
+        # torsions 0-1-2-3 0-5-4-3 where #s are the indices of carbons in the ring
+        n_14_pairs = len([*benzene.nth_degree_neighbors(n_degrees=3)])
+        assert n_14_pairs == benzene.n_propers - 3
+
+        for pair in benzene.nth_degree_neighbors(n_degrees=3):
+            assert pair[0].molecule_particle_index < pair[1].molecule_particle_index
+
+    @pytest.mark.parametrize(
+        ("smiles", "n_degrees", "num_pairs"),
+        [
+            ("c1ccccc1", 6, 0),
+            ("c1ccccc1", 5, 3),
+            ("c1ccccc1", 4, 12),
+            ("c1ccccc1", 3, 21),
+            ("N1ONON1", 4, 2),
+            ("N1ONON1", 3, 7),
+            ("C1#CO1", 2, 0),
+            ("C1#CO1", 1, 3),
+            ("C1CO1", 4, 0),
+            ("C1CO1", 2, 10),
+            ("C1=C=C=C=1", 4, 0),
+            ("C1=C=C=C=1", 3, 0),
+            ("C1=C=C=C=1", 2, 2),
+        ],
+    )
+    def test_nth_degree_neighbors_rings(self, smiles, n_degrees, num_pairs):
+        molecule = Molecule.from_smiles(smiles)
+
+        num_pairs_found = len([*molecule.nth_degree_neighbors(n_degrees=n_degrees)])
+        assert num_pairs_found == num_pairs
+
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_total_charge(self, molecule):
         """Test total charge"""

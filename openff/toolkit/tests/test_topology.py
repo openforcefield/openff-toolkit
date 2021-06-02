@@ -102,6 +102,7 @@ def test_cheminformatics_toolkit_is_installed():
         raise Exception(msg)
 
 
+# TODO: Refactor this to pytest
 class TestTopology(TestCase):
     def setUp(self):
         self.empty_molecule = Molecule()
@@ -1159,3 +1160,22 @@ class TestTopology(TestCase):
             "[C][C:1]-[C:2]-[O:3]", toolkit_registry=toolkit_wrapper
         )
         assert len(matches) == 0
+
+
+@pytest.mark.parametrize(
+    ("n_degrees", "num_pairs"),
+    [
+        (6, 0),
+        (5, 3),
+        (4, 14),
+        (3, 28),
+    ],
+)
+def test_nth_degree_neighbors(n_degrees, num_pairs):
+    pass
+    smiles = ["c1ccccc1", "N1ONON1"]
+    topology = Topology.from_molecules([Molecule.from_smiles(smi) for smi in smiles])
+
+    # See test_molecule.TestMolecule.test_nth_degree_neighbors_rings for values
+    num_pairs_found = len([*topology.nth_degree_neighbors(n_degrees=n_degrees)])
+    assert num_pairs_found == num_pairs

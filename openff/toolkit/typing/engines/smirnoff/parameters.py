@@ -3634,7 +3634,7 @@ class vdWHandler(_NonbondedHandler):
                 #                             "must be provided")
             else:
                 force.setNonbondedMethod(openmm.NonbondedForce.LJPME)
-                force.setCutoffDistance(9.0 * unit.angstrom)
+                force.setCutoffDistance(self.cutoff)
                 force.setEwaldErrorTolerance(1.0e-4)
 
         # If method is cutoff, then we currently support openMM's PME for periodic system and NoCutoff for nonperiodic
@@ -3889,7 +3889,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
                     # There's no need to check for matching cutoff/tolerance here since both are hard-coded defaults
                 else:
                     force.setNonbondedMethod(openmm.NonbondedForce.PME)
-                    force.setCutoffDistance(9.0 * unit.angstrom)
+                    force.setCutoffDistance(self.cutoff)
                     force.setEwaldErrorTolerance(1.0e-4)
 
         # If vdWHandler set the nonbonded method to NoCutoff, then we don't need to change anything
