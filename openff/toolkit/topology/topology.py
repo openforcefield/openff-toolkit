@@ -214,6 +214,107 @@ class SortedDict(_TransformedDict):
         return key
 
 
+class UnsortedDict(_TransformedDict):
+    ...
+
+
+class TagSortedDict(_TransformedDict):
+    """
+    A dictionary where keys are kept unsorted, but only allows one permutation of a key
+    to exist. Certain situations require that atom indices are not transformed in any
+    way, such as when the tagged order of a match is needed downstream. For example a
+    parameter using charge increments needs the ordering of the tagged match, and so
+    transforming the atom indices in any way will cause that information to be lost.
+
+    Because deduplication is needed, we still must avoid the expected situation
+    where we must not allow two permutations of the same atoms to coexist. For example,
+    a parameter may have matched the indices (2, 0, 1), however a parameter with higher
+    priority also matches the same indices, but the tagged order is (1, 0, 2). We need
+    to make sure both keys don't exist, or else two parameters will apply to
+    the same atoms. We allow the ability to query using either permutation and get
+    identical behavior. The defining feature here, then, is that the stored indices are
+    in tagged order, but one can supply any permutation and it will resolve to the
+    stored value/parameter.
+
+    As a subtle behavior, one must be careful if an external key is used that was not
+    supplied from the TagSortedDict object itself. For example:
+
+        >>> x = TagSortedDict({(2, 5, 0): 100})
+        >>> y = x[(5, 0, 2)]
+
+    The variable y will be 100, but this does not mean the tagged order is (5, 0, 2)
+    as it was supplied from the external tuple. One should either use keys only from
+    __iter__ (e.g.  `for k in x`) or one must transform the key:
+
+        >>> key = (5, 0, 2)
+        >>> y = x[key]
+        >>> key = x.key_transform(key)
+
+    Where `key` will now be `(2, 5, 0)`, as it is the key stored. One can overwrite
+    this key with the new one as expected:
+
+        >>> key = (5, 0, 2)
+        >>> x[key] = 50
+
+    Now the key `(2, 5, 0)` will no longer exist, as it was replaced with `(5, 0, 2)`.
+    """
+
+    def __init__(self, *args, **kwargs):
+
+        # Because keytransform is O(n) due to needing to check the sorted keys,
+        # we cache the sorted keys separately to make keytransform O(1) at
+        # the expense of storage. This is also better in the long run if the
+        # key is long and repeatedly sorting isn't a negligible cost.
+
+        # Set this before calling super init, since super will call the get/set
+        # methods implemented here as it populates self via args/kwargs,
+        # which will automatically populate _sorted
+        self._sorted = SortedDict()
+
+        super().__init__(*args, **kwargs)
+
+    def __setitem__(self, key, value):
+        """
+        Set the key to value, but only allow one permutation of key to exist. The
+        key argument will replace the old permutation:value if it exists.
+        """
+        key = tuple(key)
+        tr_key = self.__keytransform__(key)
+        if key != tr_key:
+            # this means our new key is a permutation of an existing, so we should
+            # replace it
+            del self.store[tr_key]
+        self.store[key] = value
+        # save the sorted version for faster keytransform
+        self._sorted[key] = key
+
+    def __keytransform__(self, key):
+        """Give the key permutation that is currently stored"""
+        # we check if there is a permutation clash by saving the sorted version of
+        # each key. If the sorted version of the key exists, then the return value
+        # corresponds to the explicit permutation we are storing in self (the public
+        # facing key). This permutation may or may not be the same as the key argument
+        # supplied. If the key is not present, then no transformation should be done
+        # and we should return the key as is.
+
+        # As stated in __init__, the alternative is to, on each call, sort the saved
+        # permutations and check if it is equal to the sorted supplied key. In this
+        # sense, self._sorted is a cache/lookup table.
+        key = tuple(key)
+        return self._sorted.get(key, key)
+
+    def key_transform(self, key):
+        key = tuple(key)
+        return self.__keytransform__(key)
+
+    def clear(self):
+        """
+        Clear the contents
+        """
+        self.store.clear()
+        self._stored.clear()
+
+
 class ImproperDict(_TransformedDict):
     """Symmetrize improper torsions."""
 
