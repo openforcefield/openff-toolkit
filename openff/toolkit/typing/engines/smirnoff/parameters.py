@@ -2063,11 +2063,15 @@ class ParameterHandler(_ParameterAttributeHandler):
             The SMIRKS pattern (if str) or index (if int) of the parameter directly after where
             the new parameter will be added
 
-        Note that one of (parameter_kwargs, parameter) must be specified
-        Note that when `before` and `after` are both None, the new parameter will be appended
-            to the END of the parameter list.
-        Note that when `before` and `after` are both specified, the new parameter
-            will be added immediately after the parameter matching the `after` pattern or index.
+        Note the following behavior:
+          * Either `parameter_kwargs` or `parameter` must be specified.
+          * When `before` and `after` are both `None`, the new parameter will be appended
+            to the **END** of the parameter list.
+          * When `before` and `after` are both specified, the new parameter will be added immediately
+            after the parameter matching the `after` pattern or index.
+          * The order of parameters in a parameter list can have significant impacts on parameter assignment. For details,
+            see the [SMIRNOFF](https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html#smirnoff-parameter-specification-is-hierarchical)
+            specification.
 
         Examples
         --------
