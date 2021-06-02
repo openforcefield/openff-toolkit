@@ -2909,6 +2909,7 @@ class FrozenMolecule(Serializable):
         partial_charge_method,
         strict_n_conformers=False,
         use_conformers=None,
+        force_field=None,
         toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
     ):
         """
@@ -2924,6 +2925,8 @@ class FrozenMolecule(Serializable):
             If this is False and an invalid number of conformers is found, a warning will be raised.
         use_conformers : iterable of simtk.unit.Quantity-wrapped numpy arrays, each with shape (n_atoms, 3) and dimension of distance. Optional, default=None
             Coordinates to use for partial charge calculation. If None, an appropriate number of conformers will be generated.
+        force_field : openff.toolkit.typing.engines.smirnoff.ForceField
+            ForceField to assign charges from when partial_charge_method is set to "forcefield". Cannot be used with use_conformers, as the conformers are specified by the force field.
         toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for the calculation.
 
@@ -2939,7 +2942,15 @@ class FrozenMolecule(Serializable):
             If an invalid object is passed as the toolkit_registry parameter
 
         """
-        if isinstance(toolkit_registry, ToolkitRegistry):
+        if partial_charge_method.lower() == "forcefield":
+            if use_conformers is not None:
+                raise ValueError(
+                    "Cannot specify use_conformers with partial charge method 'forcefield'"
+                )
+            self.partial_charges = force_field.get_partial_charges(
+                self, toolkit_registry=toolkit_registry
+            )
+        elif isinstance(toolkit_registry, ToolkitRegistry):
             # We may need to try several toolkitwrappers to find one
             # that supports the desired partial charge method, so we
             # tell the ToolkitRegistry to continue trying ToolkitWrappers
