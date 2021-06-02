@@ -5,6 +5,7 @@ Tools for generating library of substructures from the Chemical Component
 Dictionary (CCD).
 """
 
+import copy
 from collections import defaultdict
 from openff.toolkit.topology import Molecule
 from CifFile import ReadCif
@@ -330,25 +331,28 @@ class CifSubstructures:
             return
         # Gather necessary data for creating/adding atoms
         atoms_information = self._gather_atoms_information(entry_data)
-        atom_names = atoms_information[0]
+        atom_names_orig = atoms_information[0]
+        n_atoms = len(atom_names_orig)  # number of atoms in entry
         atomic_numbers = atoms_information[1]
         formal_charges = atoms_information[2]
         are_aromatic = atoms_information[3]
         stereochemistry = atoms_information[4]
         leaving_atoms_list = atoms_information[5]
         if additional_leaving:
-            for atom_idx, atom_name in enumerate(atom_names):
+            for atom_idx, atom_name in enumerate(atom_names_orig):
                 if atom_name in additional_leaving:
                     leaving_atoms_list[atom_idx] = 'Y'
+        # copy atom names to object that can be modified if not leaving atoms
+        atom_names = copy.copy(atom_names_orig)
         # add atoms
-        for atom_idx in range(len(atom_names)):
+        for atom_idx in range(len(atom_names_orig)):
             if include_leaving:
                 # Add all atoms
                 offmol.add_atom(atomic_numbers[atom_idx],
                                 formal_charges[atom_idx],
                                 are_aromatic[atom_idx],
                                 stereochemistry=stereochemistry[atom_idx],
-                                name=atom_names[atom_idx]
+                                name=atom_names_orig[atom_idx]
                                 )
             else:
                 # Add only not leaving atoms
@@ -357,8 +361,11 @@ class CifSubstructures:
                                     formal_charges[atom_idx],
                                     are_aromatic[atom_idx],
                                     stereochemistry=stereochemistry[atom_idx],
-                                    name=atom_names[atom_idx]
+                                    name=atom_names_orig[atom_idx]
                                     )
+                else:
+                    # Remove original leaving atom name from current atom names
+                    atom_names.remove(atom_names_orig[atom_idx])
         # Gather information for bonds
         bonds_information = self._gather_bonds_information(entry_data)
         atom1_name_list = bonds_information[0]
@@ -384,7 +391,7 @@ class CifSubstructures:
         smiles = self._get_smiles(offmol,
                                   indices=atom_indices,
                                   label_indices=atom_indices)
-        # Only take three letter code for key
+        # Only take three letter code for key -- Note it uses the new atom_names list
         entry_code = entry_data['_chem_comp.three_letter_code']
         if smiles not in self.data[entry_code]:
             self.data[entry_code][smiles] = atom_names
