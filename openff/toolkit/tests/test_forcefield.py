@@ -4908,7 +4908,7 @@ class TestSmirnoffVersionConverter:
 
 
 class TestForceFieldGetPartialCharges:
-    def get_partial_charges(self, mol, ff):
+    def get_partial_charges_from_create_openmm_system(self, mol, ff):
         system = ff.create_openmm_system(mol.to_topology())
         nbforce = [
             f for f in system.getForces() if isinstance(f, openmm.openmm.NonbondedForce)
