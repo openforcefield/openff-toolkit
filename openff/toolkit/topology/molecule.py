@@ -1370,31 +1370,6 @@ class BondChargeVirtualSite(VirtualSite):
         return self._openmm_virtual_site(atoms)
 
 
-class _LonePairVirtualSite(VirtualSite):
-    """Private base class for mono/di/trivalent lone pair virtual sites."""
-
-    # This is unused and can be deleted? Originally this was for the n-valent
-    # lone pair sites, but since they all used a different number of parameters
-    # (mono has two angles, di has one, tri has none), the validation machinery
-    # really made this convenience class not useful since extra terms
-    # are not accepted during XML parsing, and/or you need to specify values for
-    # every defined term
-
-    @classmethod
-    def from_dict(cls, vsite_dict):
-        base_dict = deepcopy(vsite_dict)
-
-        # Make sure it's the right type of virtual site
-        assert vsite_dict["vsite_type"] == cls.__name__
-        base_dict.pop("vsite_type", None)
-        base_dict.pop("distance", None)
-        base_dict.pop("out_of_plane_angle", None)
-        base_dict.pop("in_plane_angle", None)
-        vsite = super().from_dict(**base_dict)
-        vsite._distance = string_to_quantity(vsite_dict["distance"])
-        return vsite
-
-
 class MonovalentLonePairVirtualSite(VirtualSite):
     """
     A particle representing a "Monovalent Lone Pair"-type virtual site, in which the location of the charge is specified by the positions of three atoms. This is originally intended for situations like a carbonyl, and allows placement of a virtual site S at a specified distance d, in_plane_angle, and out_of_plane_angle relative to a central atom and two connected atoms.
