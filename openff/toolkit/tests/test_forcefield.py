@@ -33,9 +33,11 @@ from openff.toolkit.tests.utils import (
 )
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff import (
+    ElectrostaticsHandler,
     ForceField,
     FractionalBondOrderInterpolationMethodUnsupportedError,
     IncompatibleParameterError,
+    LibraryChargeHandler,
     ParameterHandler,
     ParameterLookupError,
     SMIRNOFFAromaticityError,
@@ -44,6 +46,7 @@ from openff.toolkit.typing.engines.smirnoff import (
     ToolkitAM1BCCHandler,
     XMLParameterIOHandler,
     get_available_force_fields,
+    vdWHandler,
 )
 from openff.toolkit.utils import get_data_file_path
 from openff.toolkit.utils.toolkits import (
@@ -1581,6 +1584,102 @@ class TestForceField:
         vdw_cutoff = forcefield["vdW"].cutoff
         e_cutoff = forcefield["Electrostatics"].cutoff
         assert found_cutoff == vdw_cutoff == e_cutoff
+
+    def test_vdw_cutoff_overrides_electrostatics(self):
+        topology = Molecule.from_smiles("[#18]").to_topology()
+        topology.box_vectors = [3, 3, 3] * unit.nanometer
+
+        force_field = ForceField()
+
+        vdw_handler = vdWHandler(version=0.3)
+        vdw_handler.method = "cutoff"
+        vdw_handler.cutoff = 6.0 * unit.angstrom
+        vdw_handler.scale14 = 1.0
+
+        vdw_handler.add_parameter(
+            {
+                "smirks": "[#18:1]",
+                "epsilon": 1.0 * unit.kilojoules_per_mole,
+                "sigma": 1.0 * unit.angstrom,
+            }
+        )
+        force_field.register_parameter_handler(vdw_handler)
+
+        electrostatics_handler = ElectrostaticsHandler(version=0.3)
+        electrostatics_handler.cutoff = 7.0 * unit.angstrom
+        electrostatics_handler.method = "PME"
+        force_field.register_parameter_handler(electrostatics_handler)
+
+        library_charges = LibraryChargeHandler(version=0.3)
+        library_charges.add_parameter(
+            {
+                "smirks": "[#18:1]",
+                "charge1": 0.0 * unit.elementary_charge,
+            }
+        )
+        force_field.register_parameter_handler(library_charges)
+
+        system = force_field.create_openmm_system(topology)
+
+        assert np.isclose(
+            system.getForce(0).getCutoffDistance().value_in_unit(unit.angstrom), 6.0
+        )
+
+        # Ensure an exception is raised when the electrostatics cutoff is meaningful
+        # and mismatched
+        force_field.deregister_parameter_handler(force_field["Electrostatics"])
+
+        # TODO: Don't change the box vectors once this case is supported
+        topology.box_vectors = None
+        electrostatics_handler.method = "Coulomb"
+        force_field.register_parameter_handler(electrostatics_handler)
+
+        with pytest.raises(IncompatibleParameterError, match="cutoff must equal"):
+            force_field.create_openmm_system(topology)
+
+    def test_nondefault_nonbonded_cutoff(self):
+        """Test that the cutoff of the NonbondedForce is set properly when vdW and Electrostatics cutoffs
+        are identical but not the psuedo-default value of 9.0 A."""
+        topology = Molecule.from_smiles("[#18]").to_topology()
+        topology.box_vectors = [3, 3, 3] * unit.nanometer
+
+        force_field = ForceField()
+
+        vdw_handler = vdWHandler(version=0.3)
+        vdw_handler.method = "cutoff"
+        vdw_handler.cutoff = 7.89 * unit.angstrom
+        vdw_handler.scale14 = 1.0
+
+        vdw_handler.add_parameter(
+            {
+                "smirks": "[#18:1]",
+                "epsilon": 1.0 * unit.kilojoules_per_mole,
+                "sigma": 1.0 * unit.angstrom,
+            }
+        )
+        force_field.register_parameter_handler(vdw_handler)
+
+        electrostatics_handler = ElectrostaticsHandler(version=0.3)
+        electrostatics_handler.cutoff = 7.89 * unit.angstrom
+        electrostatics_handler.method = "PME"
+        force_field.register_parameter_handler(electrostatics_handler)
+
+        library_charges = LibraryChargeHandler(version=0.3)
+        library_charges.add_parameter(
+            {
+                "smirks": "[#18:1]",
+                "charge1": 0.0 * unit.elementary_charge,
+            }
+        )
+        force_field.register_parameter_handler(library_charges)
+
+        system = force_field.create_openmm_system(topology)
+
+        found_cutoff = (
+            system.getForce(0).getCutoffDistance().value_in_unit(unit.angstrom)
+        )
+
+        assert abs(found_cutoff - 7.89) < 1e-6
 
     @pytest.mark.parametrize("inputs", nonbonded_resolution_matrix)
     def test_nonbonded_method_resolution(self, inputs):
