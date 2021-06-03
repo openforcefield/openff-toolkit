@@ -678,14 +678,14 @@ class VirtualParticle(Particle):
 
         Parameters
         ----------
-        atom_positions : :class:`simtk.unit.Quantity` of unit [Length] wrapping a
+        atom_positions : :class:`simtk.unit.Quantity` of dimension [Length] wrapping a
         numpy.ndarray
             The positions of all atoms in the molecule. The array is the size (N, 3)
             where N is the number of atoms in the molecule.
 
         Returns
         -------
-        :class:`simtk.unit.Quantity` of unit [Length] in unit Angstroms wrapping a
+        :class:`simtk.unit.Quantity` of dimension [Length] in unit Angstroms wrapping a
         numpy.ndarray
             The positions of the virtual particles belonging to this virtual site.
             The array is the size (M, 3) where M is the number of virtual particles
@@ -1545,7 +1545,7 @@ class MonovalentLonePairVirtualSite(VirtualSite):
 
         Returns
         -------
-        :class:`simtk.unit.Quantity` of unit [Length] wrapping a list of displacements
+        :class:`simtk.unit.Quantity` of dimension [Length] wrapping a list of displacements
         in the local frame for the x, y, and z directions.
         """
 
@@ -6177,7 +6177,7 @@ class Molecule(FrozenMolecule):
         atoms : list of four :class:`openff.toolkit.topology.molecule.Atom` objects
             The four atoms defining the virtual site's position
 
-        distance : simtk.unit.Quantity of unit [Length] wrapping a scalar
+        distance : simtk.unit.Quantity of dimension [Length] wrapping a scalar
 
         epsilon : float
             Epsilon term for VdW properties of virtual site. Default is None.
