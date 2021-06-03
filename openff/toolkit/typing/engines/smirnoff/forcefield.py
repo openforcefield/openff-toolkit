@@ -43,10 +43,9 @@ from simtk import openmm
 from openff.toolkit.topology.molecule import DEFAULT_AROMATICITY_MODEL
 from openff.toolkit.typing.engines.smirnoff.io import ParameterIOHandler
 from openff.toolkit.typing.engines.smirnoff.parameters import (
-    ParameterHandler,
-    _ParameterTermKey,
     IncompatibleParameterError,
     ParameterHandler,
+    _ParameterTermKey,
 )
 from openff.toolkit.typing.engines.smirnoff.plugins import load_handler_plugins
 from openff.toolkit.utils.utils import (
