@@ -1017,7 +1017,9 @@ class _ParameterAttributeHandler:
             if type(terms) is str:
                 terms = [terms]
             self._term_names_active.clear()
-            self._term_names_active.extend(filter(lambda x: x in self._term_names_all, terms))
+            self._term_names_active.extend(
+                filter(lambda x: x in self._term_names_all, terms)
+            )
 
     def _terms_get_active(self):
         """
