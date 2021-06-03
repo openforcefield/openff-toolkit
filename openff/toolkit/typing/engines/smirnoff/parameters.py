@@ -909,7 +909,7 @@ class _ParameterAttributeHandler:
 
         # this is a immutable list for the user to select which terms are available
         # for this parameter
-        self._term_names_all = []
+        self._term_names_all = ()
 
         # a user-mutable list that will select the terms to enumerate through
         # This should be public, but we keep private to hide it from docs
@@ -947,7 +947,6 @@ class _ParameterAttributeHandler:
             if key in allowed_attributes:
                 setattr(self, key, val)
                 if key in self._term_names:
-                    self._term_names_all.append(key)
                     self._term_names_active.append(key)
             # Handle all unknown kwargs as cosmetic so we can write them back out
             elif allow_cosmetic_attributes:
@@ -959,6 +958,8 @@ class _ParameterAttributeHandler:
                     "'allow_cosmetic_attributes=True'"
                 )
                 raise SMIRNOFFSpecError(msg)
+
+        self._term_names_all = tuple(self._term_names_active)
 
     def _terms(self):
         """
@@ -1010,13 +1011,13 @@ class _ParameterAttributeHandler:
         """
 
         if terms is None:
-            self._term_names_active = self._term_names_all.copy()
+            self._term_names_active.clear()
+            self._term_names_active.extend(self._term_names_all)
         else:
             if type(terms) is str:
                 terms = [terms]
-            self._term_names_active = [
-                term for term in terms if term in self._term_names_all
-            ]
+            self._term_names_active.clear()
+            self._term_names_active.extend(filter(lambda x: x in self._term_names_all, terms))
 
     def _terms_get_active(self):
         """
