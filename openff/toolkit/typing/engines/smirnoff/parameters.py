@@ -61,7 +61,13 @@ from itertools import combinations
 
 from simtk import openmm, unit
 
-from openff.toolkit.topology import ImproperDict, SortedDict, Topology, ValenceDict
+from openff.toolkit.topology import (
+    ImproperDict,
+    TagSortedDict,
+    Topology,
+    UnsortedDict,
+    ValenceDict,
+)
 from openff.toolkit.topology.molecule import Molecule
 from openff.toolkit.typing.chemistry import ChemicalEnvironment
 from openff.toolkit.utils.collections import ValidatedDict, ValidatedList
@@ -4288,10 +4294,7 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
             ``matches[particle_indices]`` is the ``ParameterType`` object
             matching the tuple of particle indices in ``entity``.
         """
-        # Using SortedDict here leads to the desired deduplication behavior, BUT it mangles the order
-        # of the atom indices in the keys. Thankfully, the Match objects that are values in `matches` contain
-        # `match.environment_match.topology_atom_indices`, which has the tuple in the correct order
-        matches = self._find_matches(entity, transformed_dict_cls=SortedDict)
+        matches = self._find_matches(entity, transformed_dict_cls=TagSortedDict)
         return matches
 
     def create_force(self, system, topology, **kwargs):
@@ -5387,7 +5390,7 @@ class VirtualSiteHandler(_NonbondedHandler):
     def _find_matches(
         self,
         entity,
-        transformed_dict_cls=ValenceDict,
+        transformed_dict_cls=UnsortedDict,
         use_named_slots=False,
         expand_permutations=False,
     ):
@@ -5618,7 +5621,7 @@ class VirtualSiteHandler(_NonbondedHandler):
         """
         return self._find_matches(
             entity,
-            transformed_dict_cls=dict,
+            transformed_dict_cls=UnsortedDict,
             use_named_slots=True,
             expand_permutations=expand_permutations,
         )
