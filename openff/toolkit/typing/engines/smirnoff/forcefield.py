@@ -1189,9 +1189,6 @@ class ForceField:
 
         Parameters
         ----------
-        keys : List[str] or None, default None
-            A list of keys that should be active. If keys is None, all terms are
-            activated. An empty list will deactivate all terms.
 
         Returns
         -------

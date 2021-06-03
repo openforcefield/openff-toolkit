@@ -1024,15 +1024,12 @@ class _ParameterAttributeHandler:
     def _terms_get_active(self):
         """
         Query the parameter terms which are active, i.e. the terms that would be
-        returned by calling meth:`self._terms`
+        returned by calling :meth:`self._terms`
 
         This should be public, but we make it private to hide from docs
 
         Parameters
         ----------
-        keys : List[str] or None, default None
-            A list of keys that should be active. If keys is None, all terms are
-            activated. An empty list will deactivate all terms.
 
         Returns
         -------
@@ -2226,9 +2223,6 @@ class ParameterHandler(_ParameterAttributeHandler):
 
         Parameters
         ----------
-        keys : List[str] or None, default None
-            A list of keys that should be active. If keys is None, all terms are
-            activated. An empty list will deactivate all terms.
 
         Returns
         -------
