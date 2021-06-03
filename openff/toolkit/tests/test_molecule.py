@@ -2912,7 +2912,15 @@ class TestMolecule:
         assert molecule.to_dict() == molecule2.to_dict()
 
     def test_bond_charge_virtual_site_position_symmetric(self):
-        # from openff.toolkit.tests.test_forcefields import create_water
+        """
+        Test for expected positions of virtual sites when created through the molecule
+        API. This uses symmetric, which will add both orientations of the atoms to
+        create two particles for the vsite.
+
+        The order of the positions is the same as the order of the particles as they
+        appear in the molecule using Molecule.particles
+        """
+
         import openff.toolkit.tests.test_forcefield
 
         molecule = openff.toolkit.tests.test_forcefield.create_water()
@@ -2959,7 +2967,14 @@ class TestMolecule:
         assert np.allclose(vsite_pos, expected)
 
     def test_bond_charge_virtual_site_position(self):
-        # from openff.toolkit.tests.test_forcefields import create_water
+        """
+        Test for expected positions of virtual sites when created through the molecule
+        API. 
+
+        The order of the positions is the same as the order of the particles as they
+        appear in the molecule using Molecule.particles
+        """
+
         import openff.toolkit.tests.test_forcefield
 
         molecule = openff.toolkit.tests.test_forcefield.create_water()
@@ -3006,6 +3021,19 @@ class TestMolecule:
         assert np.allclose(vsite_pos, expected)
 
     def test_monovalent_lone_pair_virtual_site_position_symmetric(self):
+        """
+        Test for expected positions of virtual sites when created through the molecule
+        API. This uses symmetric, which will add both orientations of the atoms to
+        create two particles for the vsite.
+
+        Note: symmetric with Monovalent is a bit counterintuitive. Since the particles
+        origin is placed on the first atom, using a "symmetric" definition will flip
+        the ordering, causing another particle to be placed on the third atom, reflected
+        on the xy plane between the first particle.
+
+        The order of the positions is the same as the order of the particles as they
+        appear in the molecule using Molecule.particles
+        """
 
         import openff.toolkit.tests.test_forcefield
 
@@ -3054,6 +3082,13 @@ class TestMolecule:
         assert np.allclose(vsite_pos, expected)
 
     def test_monovalent_lone_pair_virtual_site_position(self):
+        """
+        Test for expected positions of virtual sites when created through the molecule
+        API. 
+
+        The order of the positions is the same as the order of the particles as they
+        appear in the molecule using Molecule.particles
+        """
 
         import openff.toolkit.tests.test_forcefield
 
@@ -3102,6 +3137,13 @@ class TestMolecule:
         assert np.allclose(vsite_pos, expected)
 
     def test_divalent_lone_pair_virtual_site_position(self):
+        """
+        Test for expected positions of virtual sites when created through the molecule
+        API. 
+
+        The order of the positions is the same as the order of the particles as they
+        appear in the molecule using Molecule.particles
+        """
 
         import openff.toolkit.tests.test_forcefield
 
@@ -3148,6 +3190,19 @@ class TestMolecule:
         assert np.allclose(vsite_pos, expected)
 
     def test_divalent_lone_pair_virtual_site_position_symmetric(self):
+        """
+        Test for expected positions of virtual sites when created through the molecule
+        API. This uses symmetric, which will add both orientations of the atoms to
+        create two particles for the vsite.
+
+        Note: symmetric with Monovalent is a bit counterintuitive. Since the particles
+        origin is placed on the first atom, using a "symmetric" definition will flip
+        the ordering, causing another particle to be placed on the third atom, reflected
+        on the xy plane between the first particle.
+
+        The order of the positions is the same as the order of the particles as they
+        appear in the molecule using Molecule.particles
+        """
 
         import openff.toolkit.tests.test_forcefield
 
@@ -3194,6 +3249,13 @@ class TestMolecule:
         assert np.allclose(vsite_pos, expected)
 
     def test_trivalent_lone_pair_virtual_site_position(self):
+        """
+        Test for expected positions of virtual sites when created through the molecule
+        API. 
+
+        The order of the positions is the same as the order of the particles as they
+        appear in the molecule using Molecule.particles
+        """
 
         import openff.toolkit.tests.test_forcefield
 
