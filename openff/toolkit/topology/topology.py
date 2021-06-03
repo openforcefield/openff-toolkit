@@ -312,7 +312,7 @@ class TagSortedDict(_TransformedDict):
         Clear the contents
         """
         self.store.clear()
-        self._stored.clear()
+        self._sorted.clear()
 
 
 class ImproperDict(_TransformedDict):
