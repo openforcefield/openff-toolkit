@@ -40,6 +40,7 @@ from openff.toolkit.topology import (
     Molecule,
     Topology,
     ValenceDict,
+    TagSortedDict,
 )
 from openff.toolkit.utils import (
     BASIC_CHEMINFORMATICS_TOOLKITS,
@@ -1179,3 +1180,117 @@ def test_nth_degree_neighbors(n_degrees, num_pairs):
     # See test_molecule.TestMolecule.test_nth_degree_neighbors_rings for values
     num_pairs_found = len([*topology.nth_degree_neighbors(n_degrees=n_degrees)])
     assert num_pairs_found == num_pairs
+
+
+def _tagsorted_dict_init_ref_key(tsd):
+
+    if tsd is None:
+        tsd = TagSortedDict()
+
+        ref_key = (0, 1, 2)
+        tsd[ref_key] = 5
+    else:
+        ref_key = next(x for x in tsd)
+
+    return tsd, ref_key
+
+
+@pytest.mark.parametrize("tsd", [None, TagSortedDict({(0, 1, 2): 5})])
+def test_tagsorted_dict_deduplication(tsd):
+    """Test that all permutations of a key are present if one permutation is stored"""
+
+    import itertools
+
+    tsd, ref_key = _tagsorted_dict_init_ref_key(tsd)
+
+    # only has one key, but all permutations match
+    for key in itertools.permutations(ref_key):
+        assert key in tsd
+
+    assert len(tsd) == 1
+
+@pytest.mark.parametrize("tsd", [None, TagSortedDict({(0, 1, 2): 5})])
+def test_tagsorted_dict_permutation_equivalence(tsd):
+    """Test that all permutations of a key would return the same result"""
+
+    import itertools
+
+    tsd, ref_key = _tagsorted_dict_init_ref_key(tsd)
+
+    # lookups using any permutation will give the same return
+    for key in itertools.permutations(ref_key):
+        assert tsd[key] == 5
+
+    assert len(tsd) == 1
+
+
+@pytest.mark.parametrize("tsd", [None, TagSortedDict({(0, 1, 2): 5})])
+def test_tagsorted_dict_key_transform(tsd):
+    """Test that all key permutations transform to the same stored single key
+    permutation"""
+
+    import itertools
+
+    tsd, ref_key = _tagsorted_dict_init_ref_key(tsd)
+
+    # all permutations should resolve to ref_key
+    for key in itertools.permutations(ref_key):
+        tr_key = tsd.key_transform(key)
+        assert tr_key == ref_key
+
+    assert len(tsd) == 1
+
+
+@pytest.mark.parametrize("tsd", [None, TagSortedDict({(0, 1, 2): 5})])
+def test_tagsorted_dict_modify(tsd):
+    """Test that modifying a key with another permutation replaces the original key"""
+
+    import itertools
+
+    tsd, ref_key = _tagsorted_dict_init_ref_key(tsd)
+
+    # replace the ref_key since this is a permutation of it
+    mod_key = (1, 0, 2)
+    tsd[mod_key] = 6
+
+    keys = list(tsd)
+    assert ref_key not in keys
+
+    for key in itertools.permutations(ref_key):
+        assert key in tsd
+
+    assert len(tsd) == 1 # should not be 2
+
+@pytest.mark.parametrize("tsd", [TagSortedDict({(0, 1, 2): 5, (1,2): 4})])
+def test_tagsorted_dict_multiple_keys(tsd):
+    """Test the use of multiple keys with similar values but different length"""
+
+    import itertools
+
+    tsd, ref_key = _tagsorted_dict_init_ref_key(tsd)
+
+    # replace the ref_key since this is a permutation of it
+    mod_key = (1, 0, 2)
+    tsd[mod_key] = 6
+
+    keys = list(tsd)
+    assert ref_key not in keys # ensure original key is gone
+
+    for key in itertools.permutations(ref_key):
+        assert key in tsd
+    
+    assert tsd[(2,1)] == 4 # should be unchanged
+    assert len(tsd) == 2 # should not be 3
+
+@pytest.mark.parametrize("tsd", [TagSortedDict({(0, 1, 2): 5, (1,2): 4})])
+def test_tagsorted_dict_clear(tsd):
+    """Test the clear method"""
+
+    import itertools
+
+    tsd, ref_key = _tagsorted_dict_init_ref_key(tsd)
+
+    tsd.clear()
+
+    assert len(tsd) == 0
+
