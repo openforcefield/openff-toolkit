@@ -3795,12 +3795,6 @@ class FrozenMolecule(Serializable):
         vsite = BondChargeVirtualSite(atoms, distance, **kwargs)
 
         self._add_virtual_site(vsite, replace=replace)
-
-        # If we invalidate, we can never generate virtual sites after
-        # conformers are generated. This seems off. Since virtual sites
-        # do not seem to affect anything cached, we keep it.
-        # self._invalidate_cached_properties()
-
         return self._virtual_sites.index(vsite)
 
     def _add_monovalent_lone_pair_virtual_site(
