@@ -2329,7 +2329,7 @@ class ParameterHandler(_ParameterAttributeHandler):
                 match
             ].parameter_type  # this is the actual parameter, not the type
 
-            match = matches.__class__.key_transform(match)
+            match = matches.key_transform(match)
             mol_key = (topology, match)
             for term in param._terms():
                 term_key = (self.TAGNAME, (param.smirks, term))
@@ -5357,7 +5357,7 @@ class VirtualSiteHandler(_NonbondedHandler):
                     parameter.parameter_type
                 )  # this is the actual parameter, not the type
 
-                match = param.transformed_dict_cls.key_transform(match)
+                # match = param.transformed_dict_cls.key_transform(match)
                 mol_key = (topology, match)
 
                 for term in param._terms():
@@ -5657,8 +5657,13 @@ class VirtualSiteHandler(_NonbondedHandler):
             # has the match setting, which ultimately decides which orientations
             # to include.
             if self.match == "once":
-                key = self.transformed_dict_cls.key_transform(orientations[0])
-                orientations = [key]
+                # key = self.transformed_dict_cls.key_transform(orientations[0])
+                # keep the orientation ordering, as it matches the tagged order
+                # sorting the key as the first orientation will cause memory
+                # of the tagged order to be lost, as the atoms are in canon order
+                # Therefore, we use orientations to specify how to draw the sites,
+                # but also to figure out charge increment values
+                orientations = orientations[:1]
                 # else all matches wanted, so keep whatever was matched.
 
             base_args = {
