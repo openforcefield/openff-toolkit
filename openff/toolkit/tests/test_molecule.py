@@ -2941,7 +2941,7 @@ class TestMolecule:
             replace=False,
             symmetric=True,
         )
-        expected = np.array([[1.1, 0.0, 0.0],[-0.1, 0.0, 0.0]])
+        expected = np.array([[1.1, 0.0, 0.0], [-0.1, 0.0, 0.0]])
 
         vsite_pos = molecule.compute_virtual_site_positions_from_conformer(0)
         vsite_pos = vsite_pos / vsite_pos.unit
@@ -3038,7 +3038,7 @@ class TestMolecule:
             in_plane_angle=in_plane_angle,
             symmetric=True,
         )
-        expected = np.array([[1.0, 0.0, -0.2],[0.0, 1.0, 0.2]])
+        expected = np.array([[1.0, 0.0, -0.2], [0.0, 1.0, 0.2]])
 
         vsite_pos = molecule.compute_virtual_site_positions_from_conformer(0)
         vsite_pos = vsite_pos / vsite_pos.unit
@@ -3178,7 +3178,7 @@ class TestMolecule:
             out_of_plane_angle=out_of_plane_angle,
             symmetric=True,
         )
-        expected = np.array([[0.0, 0.0, -0.2],[0.0, 0.0, 0.2]])
+        expected = np.array([[0.0, 0.0, -0.2], [0.0, 0.0, 0.2]])
 
         vsite_pos = molecule.compute_virtual_site_positions_from_conformer(0)
         vsite_pos = vsite_pos / vsite_pos.unit
