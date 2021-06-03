@@ -2969,7 +2969,7 @@ class TestMolecule:
     def test_bond_charge_virtual_site_position(self):
         """
         Test for expected positions of virtual sites when created through the molecule
-        API. 
+        API.
 
         The order of the positions is the same as the order of the particles as they
         appear in the molecule using Molecule.particles
@@ -3084,7 +3084,7 @@ class TestMolecule:
     def test_monovalent_lone_pair_virtual_site_position(self):
         """
         Test for expected positions of virtual sites when created through the molecule
-        API. 
+        API.
 
         The order of the positions is the same as the order of the particles as they
         appear in the molecule using Molecule.particles
@@ -3139,7 +3139,7 @@ class TestMolecule:
     def test_divalent_lone_pair_virtual_site_position(self):
         """
         Test for expected positions of virtual sites when created through the molecule
-        API. 
+        API.
 
         The order of the positions is the same as the order of the particles as they
         appear in the molecule using Molecule.particles
@@ -3251,7 +3251,7 @@ class TestMolecule:
     def test_trivalent_lone_pair_virtual_site_position(self):
         """
         Test for expected positions of virtual sites when created through the molecule
-        API. 
+        API.
 
         The order of the positions is the same as the order of the particles as they
         appear in the molecule using Molecule.particles
