@@ -38,9 +38,9 @@ from openff.toolkit.topology import (
     InvalidPeriodicityError,
     MissingUniqueMoleculesError,
     Molecule,
+    TagSortedDict,
     Topology,
     ValenceDict,
-    TagSortedDict,
 )
 from openff.toolkit.utils import (
     BASIC_CHEMINFORMATICS_TOOLKITS,
