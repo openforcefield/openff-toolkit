@@ -12,6 +12,13 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Bugfixes
 
+- [PR #965](https://github.com/openforcefield/openforcefield/pull/965): Adds
+  [`TagSortedDict`](openff.toolkit.topology.TagSortedDict),
+  which is used primarily when atom indices need to be stored in a specific order, such
+  as a tagged SMIRKS match. `ChargeIncrementModelHandler._find_matches` now uses
+  `TagSortedDict` rather than `SortedDict`, meaning, the atom order returned by
+  `ForceField.label_molecules` is in tagged order for `ChargeIncrementModelHandler`,
+  for example.
 - [PR #923](https://github.com/openforcefield/openforcefield/pull/923): Adds
   [`Molecule.nth_degree_neighbors`](openff.toolkit.topology.Molecule.nth_degree_neighbors),
   [`Topology.nth_degree_neighbors`](openff.toolkit.topology.Topology.nth_degree_neighbors),
