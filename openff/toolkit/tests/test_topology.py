@@ -1209,6 +1209,7 @@ def test_tagsorted_dict_deduplication(tsd):
 
     assert len(tsd) == 1
 
+
 @pytest.mark.parametrize("tsd", [None, TagSortedDict({(0, 1, 2): 5})])
 def test_tagsorted_dict_permutation_equivalence(tsd):
     """Test that all permutations of a key would return the same result"""
@@ -1259,9 +1260,10 @@ def test_tagsorted_dict_modify(tsd):
     for key in itertools.permutations(ref_key):
         assert key in tsd
 
-    assert len(tsd) == 1 # should not be 2
+    assert len(tsd) == 1  # should not be 2
 
-@pytest.mark.parametrize("tsd", [TagSortedDict({(0, 1, 2): 5, (1,2): 4})])
+
+@pytest.mark.parametrize("tsd", [TagSortedDict({(0, 1, 2): 5, (1, 2): 4})])
 def test_tagsorted_dict_multiple_keys(tsd):
     """Test the use of multiple keys with similar values but different length"""
 
@@ -1274,15 +1276,16 @@ def test_tagsorted_dict_multiple_keys(tsd):
     tsd[mod_key] = 6
 
     keys = list(tsd)
-    assert ref_key not in keys # ensure original key is gone
+    assert ref_key not in keys  # ensure original key is gone
 
     for key in itertools.permutations(ref_key):
         assert key in tsd
-    
-    assert tsd[(2,1)] == 4 # should be unchanged
-    assert len(tsd) == 2 # should not be 3
 
-@pytest.mark.parametrize("tsd", [TagSortedDict({(0, 1, 2): 5, (1,2): 4})])
+    assert tsd[(2, 1)] == 4  # should be unchanged
+    assert len(tsd) == 2  # should not be 3
+
+
+@pytest.mark.parametrize("tsd", [TagSortedDict({(0, 1, 2): 5, (1, 2): 4})])
 def test_tagsorted_dict_clear(tsd):
     """Test the clear method"""
 
@@ -1293,4 +1296,3 @@ def test_tagsorted_dict_clear(tsd):
     tsd.clear()
 
     assert len(tsd) == 0
-
