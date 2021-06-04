@@ -3776,8 +3776,9 @@ class _NonbondedHandler(ParameterHandler):
         if len(existing) == 0:
             force = self._OPENMMTYPE()
             system.addForce(force)
-            # Create all particles.
-            for _ in topology.topology_particles:
+            # Create all atom particles. Virtual site particles are handled in
+            # in its own handler
+            for _ in topology.topology_atoms:
                 force.addParticle(0.0, 1.0, 0.0)
         else:
             force = existing[0]
@@ -3978,7 +3979,7 @@ class vdWHandler(_NonbondedHandler):
                 #                             "must be provided")
             else:
                 force.setNonbondedMethod(openmm.NonbondedForce.LJPME)
-                force.setCutoffDistance(9.0 * unit.angstrom)
+                force.setCutoffDistance(self.cutoff)
                 force.setEwaldErrorTolerance(1.0e-4)
 
         # If method is cutoff, then we currently support openMM's PME for periodic system and NoCutoff for nonperiodic
@@ -4236,7 +4237,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
                     # There's no need to check for matching cutoff/tolerance here since both are hard-coded defaults
                 else:
                     force.setNonbondedMethod(openmm.NonbondedForce.PME)
-                    force.setCutoffDistance(9.0 * unit.angstrom)
+                    force.setCutoffDistance(self.cutoff)
                     force.setEwaldErrorTolerance(1.0e-4)
 
         # If vdWHandler set the nonbonded method to NoCutoff, then we don't need to change anything
@@ -5421,7 +5422,7 @@ class VirtualSiteHandler(_NonbondedHandler):
         else:
 
             raise SMIRNOFFSpecError(
-                'VirtualSiteHander exclusion policy not understood. Set "exclusion_policy" to one of {}'.format(
+                'VirtualSiteHandler exclusion policy not understood. Set "exclusion_policy" to one of {}'.format(
                     _exclusion_policies_implemented
                 )
             )
@@ -6065,7 +6066,7 @@ class VirtualSiteHandler(_NonbondedHandler):
         # somewhere else
 
         logger.debug("Creating OpenFF virtual site representations...")
-        topology = self._create_openff_virtual_sites(topology)
+        topology = self.create_openff_virtual_sites(topology)
 
         # The toolkit now has a representation of the vsites in the topology,
         # and here we create the OpenMM parameters/objects/exclusions
@@ -6193,7 +6194,7 @@ class VirtualSiteHandler(_NonbondedHandler):
 
         return combined_orientations
 
-    def _create_openff_virtual_sites(self, topology):
+    def create_openff_virtual_sites(self, topology):
 
         for molecule in topology.reference_molecules:
 

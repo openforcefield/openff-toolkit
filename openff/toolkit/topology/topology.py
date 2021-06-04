@@ -220,7 +220,8 @@ class UnsortedDict(_TransformedDict):
 
 class TagSortedDict(_TransformedDict):
     """
-    A dictionary where keys are kept unsorted, but only allows one permutation of a key
+
+    A dictionary where keys, consisting of tuples of atom indices, are kept unsorted, but only allows one permutation of a key
     to exist. Certain situations require that atom indices are not transformed in any
     way, such as when the tagged order of a match is needed downstream. For example a
     parameter using charge increments needs the ordering of the tagged match, and so
@@ -312,7 +313,8 @@ class TagSortedDict(_TransformedDict):
         Clear the contents
         """
         self.store.clear()
-        self._stored.clear()
+
+        self._sorted.clear()
 
 
 class ImproperDict(_TransformedDict):
