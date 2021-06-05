@@ -1,0 +1,192 @@
+code {
+    font-family: "Roboto Mono", "Courier New", Courier, monospace;
+}
+
+.md-content dl.module dt,
+.md-content dl.class dt,
+.md-content dl.exception dt,
+.md-content dl.function dt,
+.md-content dl.decorator dt,
+.md-content dl.data dt,
+.md-content dl.method dt,
+.md-content dl.attribute dt {
+    font-weight: bold;
+}
+
+.md-content dl.module:not(.docutils) dt,
+.md-content dl.class:not(.docutils) dt,
+.md-content dl.exception:not(.docutils) dt,
+.md-content dl.function:not(.docutils) dt,
+.md-content dl.decorator:not(.docutils) dt,
+.md-content dl.data:not(.docutils) dt,
+.md-content dl.method:not(.docutils) dt,
+.md-content dl.attribute:not(.docutils) dt {
+    display: table;
+    margin: 6px 0;
+        margin-top: 6px;
+    font-size: 90%;
+    line-height: normal;
+    background: #e7f2fa;
+    color: #2980B9;
+    border-top: solid 3px #6ab0de;
+    padding: 1rem;
+    position: relative;
+    min-width: 80%;
+}
+
+.md-content dl.module:not(.docutils) dl dt,
+.md-content dl.class:not(.docutils) dl dt,
+.md-content dl.exception:not(.docutils) dl dt,
+.md-content dl.function:not(.docutils) dl dt,
+.md-content dl.decorator:not(.docutils) dl dt,
+.md-content dl.data:not(.docutils) dl dt,
+.md-content dl.method:not(.docutils) dl dt,
+.md-content dl.attribute:not(.docutils) dl dt {
+    margin-bottom: 6px;
+    border: none;
+        border-left-color: currentcolor;
+        border-left-style: none;
+        border-left-width: medium;
+    border-left: solid 3px #ccc;
+    background: #f0f0f0;
+    color: #555;
+    padding: 0.3rem;
+    min-width: 50%;
+}
+
+.md-content dl.module:not(.docutils) .property,
+.md-content dl.class:not(.docutils) .property,
+.md-content dl.exception:not(.docutils) .property,
+.md-content dl.function:not(.docutils) .property,
+.md-content dl.decorator:not(.docutils) .property,
+.md-content dl.data:not(.docutils) .property,
+.md-content dl.method:not(.docutils) .property,
+.md-content dl.attribute:not(.docutils) .property {
+    display: inline-block;
+    padding-right: 8px;
+}
+
+.md-content dl.module:not(.docutils) code.descclassname,
+.md-content dl.class:not(.docutils) code.descclassname,
+.md-content dl.exception:not(.docutils) code.descclassname,
+.md-content dl.function:not(.docutils) code.descclassname,
+.md-content dl.decorator:not(.docutils) code.descclassname,
+.md-content dl.data:not(.docutils) code.descclassname,
+.md-content dl.method:not(.docutils) code.descclassname,
+.md-content dl.attribute:not(.docutils) code.descclassname {
+    background-color: transparent;
+    border: none;
+    padding: 0;
+    font-size: 100% !important;
+}
+
+.md-content dl.module:not(.docutils) code.descname,
+.md-content dl.class:not(.docutils) code.descname,
+.md-content dl.exception:not(.docutils) code.descname,
+.md-content dl.function:not(.docutils) code.descname,
+.md-content dl.decorator:not(.docutils) code.descname,
+.md-content dl.data:not(.docutils) code.descname,
+.md-content dl.method:not(.docutils) code.descname,
+.md-content dl.attribute:not(.docutils) code.descname {
+    background-color: transparent;
+    border: none;
+    padding: 0;
+    font-size: 100% !important;
+    font-weight: bold;
+}
+
+.md-content dl.module .viewcode-link,
+.md-content dl.class .viewcode-link,
+.md-content dl.exception .viewcode-link,
+.md-content dl.function .viewcode-link,
+.md-content dl.decorator .viewcode-link,
+.md-content dl.data .viewcode-link,
+.md-content dl.method .viewcode-link,
+.md-content dl.attribute .viewcode-link {
+    display: inline-block;
+    color: #27AE60;
+    float: right;
+    margin: 0.1rem;
+    font-size: 0.7rem;
+}
+
+.md-content dl.module .headerlink,
+.md-content dl.class .headerlink,
+.md-content dl.exception .headerlink,
+.md-content dl.function .headerlink,
+.md-content dl.decorator .headerlink,
+.md-content dl.data .headerlink,
+.md-content dl.method .headerlink,
+.md-content dl.attribute .headerlink {
+    display: inline-block;
+    color: #e83e8c !important;
+    margin: 0.1rem;
+    transform: none;
+    float: right;
+    opacity: 1;
+    font-size: 0.7rem;
+}
+
+.md-content dl.module .sig-param .o,
+.md-content dl.class .sig-param .o,
+.md-content dl.exception .sig-param .o,
+.md-content dl.function .sig-param .o,
+.md-content dl.decorator .sig-param .o,
+.md-content dl.data .sig-param .o,
+.md-content dl.method .sig-param .o,
+.md-content dl.attribute .sig-param .o {
+    color: #F03A21;
+    padding-left: 0.25rem;
+    padding-right: 0.25rem;
+}
+
+.md-content dl.module .sig-param .n,
+.md-content dl.class .sig-param .n,
+.md-content dl.exception .sig-param .n,
+.md-content dl.function .sig-param .n,
+.md-content dl.decorator .sig-param .n,
+.md-content dl.data .sig-param .n,
+.md-content dl.method .sig-param .n,
+.md-content dl.attribute .sig-param .n {
+    color: #015480;
+    font-family: "Roboto Mono", "Courier New", Courier, monospace;
+}
+
+.md-content dl.module .sig-param .default_value,
+.md-content dl.class .sig-param .default_value,
+.md-content dl.exception .sig-param .default_value,
+.md-content dl.function .sig-param .default_value,
+.md-content dl.decorator .sig-param .default_value,
+.md-content dl.data .sig-param .default_value,
+.md-content dl.method .sig-param .default_value,
+.md-content dl.attribute .sig-param .default_value {
+    color: #2F9ED2;
+}
+
+.md-content em.sig-param::before {
+  content: "\A        ";
+  white-space: pre;
+}
+
+.md-content em.sig-param+.sig-paren::before {
+  content: "\A";
+  white-space: pre;
+}
+
+.md-content dl .classifier {
+    font-style: italic;
+}
+
+.md-content dl.simple dt strong {
+    font-family: "Roboto Mono", "Courier New", Courier, monospace;
+}
+
+.md-content pre .gp {
+  -webkit-user-select: none; /* Safari */
+  -ms-user-select: none; /* IE 10 and IE 11 */
+  user-select: none; /* Standard syntax */
+}
+
+.md-content p:not(.admonition-title, .admonition p) {
+    max-width: 30rem;
+}

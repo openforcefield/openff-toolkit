@@ -1,0 +1,103 @@
+@charset "UTF-8";
+@font-face {
+ font-family:DefaultFont;
+ src:url(https://openforcefield.org/fonts/Montserrat/Montserrat-Light.ttf)
+ font-weight:100
+}
+@font-face {
+ font-family:DefaultFont;
+ src:url(https://openforcefield.org/fonts/Montserrat/Montserrat-Regular.ttf)
+ font-weight:200
+}
+@font-face {
+ font-family:DefaultFont;
+ src:url(https://openforcefield.org/fonts/Montserrat/Montserrat-Medium.ttf);
+ font-weight:400
+}
+@font-face {
+ font-family:DefaultFont;
+ src:url(https://openforcefield.org/fonts/Montserrat/Montserrat-SemiBold.ttf)
+ font-weight:500
+}
+@font-face {
+ font-family:DefaultFont;
+ src:url(https://openforcefield.org/fonts/Montserrat/Montserrat-Bold.ttf);
+ font-weight:600
+}
+
+@font-face {
+ font-family:MenuFont;
+ src:url(https://openforcefield.org/fonts/Montserrat/Montserrat-SemiBold.ttf)
+}
+
+
+body {
+    font-family: DefaultFont;
+}
+
+a.md-logo {
+    margin: 0;
+    padding: 0;
+}
+
+/* These four heights and padding-tops should be equal*/
+.md-header {
+    height: 60px;
+}
+.md-container {
+    padding-top: 60px;
+}
+a.md-logo img {
+    height: 60px;
+    width: auto;
+}
+
+.md-nav--primary .md-nav__link::after {
+    display: none;
+}
+
+@media only screen and (min-width:76.1875em){
+    .md-sidebar__nav__buttons {
+        display: none;
+    }
+}
+@media only screen and (max-width:76.1875em){
+    .md-sidebar__nav__buttons {
+        position: absolute;
+        top: 0px;
+        left: 0px;
+        padding: 0.2rem;
+    }
+}
+
+.caption-text {
+    font-weight:300;
+    letter-spacing:-.01em
+    margin:2rem 0 .8rem;
+    font-size:1.25rem;
+    line-height:1.4;
+}
+
+.md-nav__link .caption-text {
+    font-size:0.85rem;
+    line-height:1.4;
+}
+
+.sidebar_toc_link {
+    margin-left: 1.3rem;
+    font-size: 0.7rem;
+}
+
+.md-nav__item .caption {
+    line-height:1.0;
+    padding: 0.2rem 0.8rem
+}
+
+.md-footer-meta {
+    background-color: #100928;
+}
+
+
+.md-footer-nav {
+    background-color: #100928;
+}

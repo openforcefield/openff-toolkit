@@ -1,0 +1,35 @@
+<nav class="md-nav md-nav--primary" data-md-level="0">
+  <label class="md-nav__title md-nav__title--site" for="__drawer">
+    <div class="md-flex md-sidebar__nav__buttons">
+
+      <div class="md-flex__cell md-flex__cell--stretch">
+        <a href="{{ pathto(master_doc)|e }}" title="{{ docstitle|striptags|e }}" class="md-logo">
+          {% if theme_logo_icon %}
+            <i class="md-icon">{{ theme_logo_icon }}</i>
+          {% else %}
+            <img src="{{ pathto('_static/' ~ logo, 1) }}" alt="{{ html_title }} logo">
+          {% endif %}
+        </a>
+      </div>
+
+      <div class="md-flex__cell md-flex__cell--shrink">
+        <a href="https://openforcefield.org/"
+             class="md-logo">
+          <img src="{{ pathto('_static/openforcefield_v2_white on blue.svg', 1) }}"
+                     alt="Open Force Field Initiative logo">
+        </a>
+      </div>
+
+
+    </div>
+    <a href="{{ pathto(master_doc)|e }}"
+       title="{{ docstitle|striptags|e }}">{{ theme_nav_title or shorttitle }}</a>
+
+  </label>
+  {%- if theme_repo_url %}
+    <div class="md-nav__source">
+      {% include "repo.html" %}
+    </div>
+  {% endif %}
+  {% include "globaltoc.html" %}
+</nav>

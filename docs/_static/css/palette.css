@@ -1,0 +1,193 @@
+/*Primary colour*/
+button[data-md-color-primary=openff-blue] {
+    background-color: #015480
+}
+
+[data-md-color-primary=openff-blue] .md-typeset a {
+    color: #015480
+}
+
+[data-md-color-primary=openff-blue] .md-header,
+[data-md-color-primary=openff-blue] .md-hero {
+    background-color: #015480
+}
+
+[data-md-color-primary=openff-blue] .md-nav__link--active,
+[data-md-color-primary=openff-blue] .md-nav__link:active {
+    color: #015480
+}
+
+[data-md-color-primary=openff-blue] .md-nav__item--nested>.md-nav__link {
+    color: inherit
+}
+
+@media only screen and (max-width:59.9375em) {
+    [data-md-color-primary=openff-blue] .md-nav__source {
+        background-color: rgba(1, 84, 128, .9675)
+    }
+}
+
+@media only screen and (max-width:76.1875em) {
+    html [data-md-color-primary=openff-blue] .md-nav--primary .md-nav__title--site {
+        background-color: #015480
+    }
+}
+
+@media only screen and (min-width:76.25em) {
+    [data-md-color-primary=openff-blue] .md-tabs {
+        background-color: #015480
+    }
+}
+
+button[data-md-color-primary=openff-blue] {
+    background-color: #015480
+}
+
+/****  Accent colours  ****/
+
+/* Toolkit light blue */
+button[data-md-color-accent=openff-toolkit-blue] {
+    background-color: #2F9ED2
+}
+
+[data-md-color-accent=openff-toolkit-blue] .md-typeset a:active,
+[data-md-color-accent=openff-toolkit-blue] .md-typeset a:hover {
+    color: #2F9ED2
+}
+
+[data-md-color-accent=openff-toolkit-blue] .md-typeset .codehilite pre::-webkit-scrollbar-thumb:hover,
+[data-md-color-accent=openff-toolkit-blue] .md-typeset pre code::-webkit-scrollbar-thumb:hover {
+    background-color: #2F9ED2
+}
+
+[data-md-color-accent=openff-toolkit-blue] .md-nav__link:focus,
+[data-md-color-accent=openff-toolkit-blue] .md-nav__link:hover,
+[data-md-color-accent=openff-toolkit-blue] .md-typeset .footnote li:hover .footnote-backref:hover,
+[data-md-color-accent=openff-toolkit-blue] .md-typeset .footnote li:target .footnote-backref,
+[data-md-color-accent=openff-toolkit-blue] .md-typeset .md-clipboard:active:before,
+[data-md-color-accent=openff-toolkit-blue] .md-typeset .md-clipboard:hover:before,
+[data-md-color-accent=openff-toolkit-blue] .md-typeset [id] .headerlink:focus,
+[data-md-color-accent=openff-toolkit-blue] .md-typeset [id]:hover .headerlink:hover,
+[data-md-color-accent=openff-toolkit-blue] .md-typeset [id]:target .headerlink {
+    color: #2F9ED2
+}
+
+[data-md-color-accent=openff-toolkit-blue] .md-search__scrollwrap::-webkit-scrollbar-thumb:hover {
+    background-color: #2F9ED2
+}
+
+[data-md-color-accent=openff-toolkit-blue] .md-search-result__link:hover,
+[data-md-color-accent=openff-toolkit-blue] .md-search-result__link[data-md-state=active] {
+    background-color: rgba(47, 158, 210, .1)
+}
+
+[data-md-color-accent=openff-toolkit-blue] .md-sidebar__scrollwrap::-webkit-scrollbar-thumb:hover {
+    background-color: #2F9ED2
+}
+
+[data-md-color-accent=openff-toolkit-blue] .md-source-file:hover:before {
+    background-color: #2F9ED2
+}
+
+[data-md-color-accent=openff-toolkit-blue] .md-nav__link .caption-text {
+    color: #2F9ED2;
+}
+
+
+/* Dataset yellow */
+button[data-md-color-accent=openff-dataset-yellow] {
+    background-color: #F08521
+}
+
+[data-md-color-accent=openff-dataset-yellow] .md-typeset a:active,
+[data-md-color-accent=openff-dataset-yellow] .md-typeset a:hover {
+    color: #F08521
+}
+
+[data-md-color-accent=openff-dataset-yellow] .md-typeset .codehilite pre::-webkit-scrollbar-thumb:hover,
+[data-md-color-accent=openff-dataset-yellow] .md-typeset pre code::-webkit-scrollbar-thumb:hover {
+    background-color: #F08521
+}
+
+[data-md-color-accent=openff-dataset-yellow] .md-nav__link:focus,
+[data-md-color-accent=openff-dataset-yellow] .md-nav__link:hover,
+[data-md-color-accent=openff-dataset-yellow] .md-typeset .footnote li:hover .footnote-backref:hover,
+[data-md-color-accent=openff-dataset-yellow] .md-typeset .footnote li:target .footnote-backref,
+[data-md-color-accent=openff-dataset-yellow] .md-typeset .md-clipboard:active:before,
+[data-md-color-accent=openff-dataset-yellow] .md-typeset .md-clipboard:hover:before,
+[data-md-color-accent=openff-dataset-yellow] .md-typeset [id] .headerlink:focus,
+[data-md-color-accent=openff-dataset-yellow] .md-typeset [id]:hover .headerlink:hover,
+[data-md-color-accent=openff-dataset-yellow] .md-typeset [id]:target .headerlink {
+    color: #F08521
+}
+
+[data-md-color-accent=openff-dataset-yellow] .md-search__scrollwrap::-webkit-scrollbar-thumb:hover {
+    background-color: #F08521
+}
+
+[data-md-color-accent=openff-dataset-yellow] .md-search-result__link:hover,
+[data-md-color-accent=openff-dataset-yellow] .md-search-result__link[data-md-state=active] {
+    background-color: rgba(240, 133, 33, .1)
+}
+
+[data-md-color-accent=openff-dataset-yellow] .md-sidebar__scrollwrap::-webkit-scrollbar-thumb:hover {
+    background-color: #F08521
+}
+
+[data-md-color-accent=openff-dataset-yellow] .md-source-file:hover:before {
+    background-color: #F08521
+}
+
+[data-md-color-accent=openff-dataset-yellow] .md-nav__link .caption-text {
+    color: #F08521;
+}
+
+
+/* Evaluator orange */
+button[data-md-color-accent=openff-evaluator-orange] {
+    background-color: #F03A21
+}
+
+[data-md-color-accent=openff-evaluator-orange] .md-typeset a:active,
+[data-md-color-accent=openff-evaluator-orange] .md-typeset a:hover {
+    color: #F03A21
+}
+
+[data-md-color-accent=openff-evaluator-orange] .md-typeset .codehilite pre::-webkit-scrollbar-thumb:hover,
+[data-md-color-accent=openff-evaluator-orange] .md-typeset pre code::-webkit-scrollbar-thumb:hover {
+    background-color: #F03A21
+}
+
+[data-md-color-accent=openff-evaluator-orange] .md-nav__link:focus,
+[data-md-color-accent=openff-evaluator-orange] .md-nav__link:hover,
+[data-md-color-accent=openff-evaluator-orange] .md-typeset .footnote li:hover .footnote-backref:hover,
+[data-md-color-accent=openff-evaluator-orange] .md-typeset .footnote li:target .footnote-backref,
+[data-md-color-accent=openff-evaluator-orange] .md-typeset .md-clipboard:active:before,
+[data-md-color-accent=openff-evaluator-orange] .md-typeset .md-clipboard:hover:before,
+[data-md-color-accent=openff-evaluator-orange] .md-typeset [id] .headerlink:focus,
+[data-md-color-accent=openff-evaluator-orange] .md-typeset [id]:hover .headerlink:hover,
+[data-md-color-accent=openff-evaluator-orange] .md-typeset [id]:target .headerlink {
+    color: #F03A21
+}
+
+[data-md-color-accent=openff-evaluator-orange] .md-search__scrollwrap::-webkit-scrollbar-thumb:hover {
+    background-color: #F03A21
+}
+
+[data-md-color-accent=openff-evaluator-orange] .md-search-result__link:hover,
+[data-md-color-accent=openff-evaluator-orange] .md-search-result__link[data-md-state=active] {
+    background-color: rgba(240, 58, 33, .1)
+}
+
+[data-md-color-accent=openff-evaluator-orange] .md-sidebar__scrollwrap::-webkit-scrollbar-thumb:hover {
+    background-color: #F03A21
+}
+
+[data-md-color-accent=openff-evaluator-orange] .md-source-file:hover:before {
+    background-color: #F03A21
+}
+
+[data-md-color-accent=openff-evaluator-orange] .md-nav__link .caption-text {
+    color: #F03A21;
+}
+

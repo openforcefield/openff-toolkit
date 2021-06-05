@@ -46,7 +46,6 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx.ext.intersphinx",
     "nbsphinx",
-    # 'm2r2', # render markdown
     "myst_parser",
 ]
 
@@ -93,14 +92,13 @@ myst_update_mathjax = False
 # You can specify multiple suffix as a list of string:
 #
 source_suffix = [".rst", ".md"]
-# source_suffix = '.rst'
 
 # The master toctree document.
 master_doc = "index"
 
 # General information about the project.
 project = "OpenFF Toolkit"
-copyright = "2016-2019 Open Force Field Initiative"
+copyright = "2016-2021 Open Force Field Initiative"
 author = "Open Force Field Initiative"
 
 # The version info for the project you're documenting, acts as replacement for
@@ -141,9 +139,13 @@ todo_include_todos = False
 #
 # html_theme = "alabaster"
 # html_theme = "bootstrap"
-# html_theme = "sphinx_material"
+html_theme = "sphinx_material"
 # html_theme = "cloud"
-html_theme = "press"
+# html_theme = "press"
+
+html_title = "OpenFF Toolkit Documentation"
+html_short_title = "OpenFF Toolkit Docs"
+html_favicon = "_static/favicon.svg"
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -153,28 +155,55 @@ html_theme = "press"
 
 # (Optional) Logo. Should be small enough to fit the navbar (ideally 24x24).
 # Path should be relative to the ``_static`` files directory.
-html_logo = "_static/openff_toolkit_v1_full-color.png"
+html_logo = "_static/openff_toolkit_v1_white on darkblue.svg"
 
 # Theme options are theme-specific and customize the look and feel of a
 # theme further.
 html_theme_options = {
-    "external_links": [
-        (
-            "openff-toolkit on Github",
-            "https://github.com/openforcefield/openff-toolkit",
-        ),
-        ("The Open Force Field Initiative", "https://openforcefield.org"),
-    ]
+    # Repository integration
+    # Set the repo url for the link to appear
+    "repo_url": "https://github.com/openforcefield/openff-toolkit",
+    # The name of the repo. If must be set if repo_url is set
+    "repo_name": "openff-toolkit",
+    # Must be one of github, gitlab or bitbucket
+    "repo_type": "github",
+    # TOC Tree generation
+    # The maximum depth of the global TOC; set it to -1 to allow unlimited depth
+    "globaltoc_depth": 2,
+    # If true, TOC entries that are not ancestors of the current page are collapsed
+    "globaltoc_collapse": True,
+    # If true, the global TOC tree will also contain hidden entries
+    "globaltoc_includehidden": False,
+    # Colour for the top nav bar and links, among other things
+    # "openff-blue" is defined in _static/css/palette.css
+    "color_primary": "openff-blue",
+    # Colour for sidebar captions and other accents
+    # "openff-toolkit-blue", "openff-dataset-yellow", and "openff-evaluator-orange"
+    # are all defined in _static/css/palette.css
+    "color_accent": "openff-toolkit-blue",
+    # Text to appear at the top of the home page in a "hero" div. Must be a
+    # dict[str, str] of the form pagename: hero text, e.g., {'index': 'text on index'}
+    "heroes": {},
+    # Content Minification for deployment, prettification for debugging
+    "html_minify": False,
+    "html_prettify": False,
+    "css_minify": False,
+    # Include the master document at the top of the page in the breadcrumb bar.
+    # You must also set this to true if you want to override the rootrellink block, in which
+    # case the content of the overridden block will appear
+    "master_doc": True,
 }
 
 # # Sidebars
-html_sidebars = {"**": ["util/searchbox.html", "util/sidetoc.html"]}
+html_sidebars = {"**": ["logo-text.html", "globaltoc.html", "searchbox.html"]}
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ["_static"]
 # CSS:
-html_css_files = ["css/custom.css"]
+html_css_files = ["css/theme.css", "css/palette.css", "css/apiref.css"]
+templates_path = ["_templates"]
+html_show_sourcelink = False
 
 
 # Custom sidebar templates, must be a dictionary that maps document names
