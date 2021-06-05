@@ -6,7 +6,7 @@ dependencies:
     # readthedocs dependencies
     - numpydoc
     - nbsphinx
-    - sphinx_bootstrap_theme
+    - sphinx-material
     - myst-parser>=0.14
     - testpath==0.3.1
     - docutils

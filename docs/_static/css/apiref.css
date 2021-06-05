@@ -175,6 +175,7 @@ code {
 
 .md-content dl .classifier {
     font-style: italic;
+    font-weight: 200;
 }
 
 .md-content dl.simple dt strong {
