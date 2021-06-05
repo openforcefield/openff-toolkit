@@ -83,7 +83,7 @@ a.md-logo img {
     line-height:1.4;
 }
 
-.sidebar_toc_link {
+a.md-nav__link:not(.caption) {
     margin-left: 1.3rem;
     font-size: 0.7rem;
 }
