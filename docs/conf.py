@@ -60,6 +60,9 @@ autodoc_default_options = {
 
 # Disable NumPy style attributes/methods expecting every method to have its own docs page
 numpydoc_class_members_toctree = False
+# Disable numpydoc rendering methods twice
+# https://stackoverflow.com/questions/34216659/sphinx-autosummary-produces-two-summaries-for-each-class
+numpydoc_show_class_members = False
 
 _python_doc_base = "https://docs.python.org/3.6"
 intersphinx_mapping = {
