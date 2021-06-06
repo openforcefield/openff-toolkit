@@ -96,7 +96,13 @@ a.md-logo img {
     line-height:1.4;
 }
 
-.md-sidebar--primary .md-nav__item ul.md-nav__list,
+@media only screen and (max-width:76.1875em){
+    .md-sidebar--primary .md-nav__item ul.md-nav__list {
+        margin-left: 1.2rem;
+        font-size: 0.6rem;
+    }
+}
+
 .md-sidebar--primary .md-nav__link:not(.caption) {
     margin-left: 1.3rem;
     font-size: 0.7rem;
