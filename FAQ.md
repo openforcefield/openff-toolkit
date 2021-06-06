@@ -51,8 +51,10 @@ Essentially, anything which provides the full identity of what you want to simul
 
 We recommend that you install the toolkit in a fresh conda environment, explicitly passing the channels to be used, in-order:
 
-    conda create -n <my_new_env> -c conda-forge openff-toolkit
-    conda activate <my_new_env>
+``` shell-session
+$ conda create -n <my_new_env> -c conda-forge openff-toolkit
+$ conda activate <my_new_env>
+```
 
 Installing into a new environment avoids forcing conda to satisfy the dependencies of both the toolkit and all existing packages in that environment.
 Taking the approach that conda environments are generally disposable, even ephemeral, minimizes the chances for hard-to-diagnose dependency issues.

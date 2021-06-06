@@ -207,6 +207,12 @@ html_sidebars = {
         "searchbox.html",
         "localtoc.html",
     ],
+    "faq": [
+        "logo-text.html",
+        "globaltoc.html",
+        "searchbox.html",
+        "localtoc.html",
+    ],
 }
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
