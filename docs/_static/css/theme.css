@@ -1,3 +1,4 @@
+/* Add the OpenFF fonts */
 @charset "UTF-8";
 @font-face {
  font-family:DefaultFont;
@@ -30,32 +31,40 @@
  src:url(https://openforcefield.org/fonts/Montserrat/Montserrat-SemiBold.ttf)
 }
 
-
 body {
     font-family: DefaultFont;
 }
 
+/* Let the logo itself govern its padding and margins */
 a.md-logo {
     margin: 0;
     padding: 0;
 }
 
-/* These four heights and padding-tops should be equal*/
-.md-header {
-    height: 60px;
-}
-.md-container {
-    padding-top: 60px;
+/* Fix the sizes of the logos
+   These three heights/padding-tops must be equal
+   Relies on changes to header.html and sidebar.html */
+@media only screen and (min-width:76.1875em){
+    .md-header {
+        height: 60px;
+    }
+    .md-container {
+        padding-top: 60px;
+    }
 }
 a.md-logo img {
     height: 60px;
     width: auto;
 }
 
+/* Hide the link in the pull out draw to the localtoc*/
 .md-nav--primary .md-nav__link::after {
     display: none;
 }
 
+/* Place logos for this project and the Initiative
+   in the pull-out draw on small screens and the nav
+   bar on large screens*/
 @media only screen and (min-width:76.1875em){
     .md-sidebar__nav__buttons {
         display: none;
@@ -70,7 +79,9 @@ a.md-logo img {
     }
 }
 
-.caption-text {
+
+/* Format captions in text the same way we format <h2> */
+.md-main .md-content .caption-text {
     font-weight:300;
     letter-spacing:-.01em
     margin:2rem 0 .8rem;
@@ -78,26 +89,66 @@ a.md-logo img {
     line-height:1.4;
 }
 
-.md-nav__link .caption-text {
+/* Display captions and link hierarchy clearly and
+   distinctly in the globaltoc */
+.md-sidebar--primary .md-nav__link .caption-text {
     font-size:0.85rem;
     line-height:1.4;
 }
 
-a.md-nav__link:not(.caption) {
+.md-sidebar--primary .md-nav__item ul.md-nav__list,
+.md-sidebar--primary .md-nav__link:not(.caption) {
     margin-left: 1.3rem;
     font-size: 0.7rem;
 }
 
-.md-nav__item .caption {
+.md-sidebar--primary .md-nav__item .caption {
     line-height:1.0;
     padding: 0.2rem 0.8rem
 }
 
+/* Match the footer background to openforcefield.org */
 .md-footer-meta {
     background-color: #100928;
 }
-
-
 .md-footer-nav {
     background-color: #100928;
 }
+
+/* Make the pull-out drawer a fraction of screen width on smaller screens */
+@media only screen and (max-width:76.1875em){
+    .md-sidebar--primary{
+        left: -40vw;
+        width: 40vw;
+    }
+    [dir=rtl] .md-sidebar--primary{
+        right: -40vw;
+    }
+    [data-md-toggle=drawer]:checked~.md-container .md-sidebar--primary{
+        -webkit-transform:translateX(40vw);
+        transform:translateX(40vw);
+    }
+    [dir=rtl] [data-md-toggle=drawer]:checked~.md-container .md-sidebar--primary{
+        -webkit-transform:translateX(-40vw);
+        transform:translateX(-40vw);
+    }
+}
+
+@media only screen and (max-width:40em){
+    .md-sidebar--primary{
+        left: -90vw;
+        width: 90vw;
+    }
+    [dir=rtl] .md-sidebar--primary{
+        right: -90vw;
+    }
+    [data-md-toggle=drawer]:checked~.md-container .md-sidebar--primary{
+        -webkit-transform:translateX(90vw);
+        transform:translateX(90vw);
+    }
+    [dir=rtl] [data-md-toggle=drawer]:checked~.md-container .md-sidebar--primary{
+        -webkit-transform:translateX(-90vw);
+        transform:translateX(-90vw);
+    }
+}
+
