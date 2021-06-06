@@ -196,3 +196,12 @@ code {
 .md-main .highlight .viewcode-back {
     float: right;
 }
+
+table.longtable.docutils tr {
+    border-collapse: unset;
+    border: none;
+    font-size: 0.7rem;
+}
+table.longtable.docutils tr.row-odd {
+    background-color: hsla(0,0%,92.5%,.5);
+}
