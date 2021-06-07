@@ -3310,19 +3310,160 @@ class TestMolecule:
 
         assert isinstance(mol.visualize(backend="openeye"), IPython.core.display.Image)
 
-    def test_perceive_residues_nterminal_alanine(self):
-        """Test residue perception with NTerminal form of Alanine."""
+    def test_perceive_residues_natoms_nterminal_alanine(self):
+        """Test number of matches atoms in residue perception with NTerminal form of Alanine."""
         offmol = Molecule.from_file(
             get_data_file_path('proteins/NTerminal_ALA.sdf')
         )
         # Perceive residue substructures
         offmol.perceive_residues()
+        counter = 0  # matched atom counter
         for atom in offmol.atoms:
-            assert atom.metadata['resname'] == 'ALA'
-            assert atom.metadata['chain'] == 'A'
-            assert atom.metadata['resnum'] == 1
+            if atom.metadata:
+                counter += 1
+        # Number of atoms in NTerminal cap is 6
+        assert counter == offmol.n_atoms - 6
 
+    def test_perceive_residues_natoms_cterminal_alanine(self):
+        """Test number of matches atoms in residue perception with CTerminal form of Alanine."""
+        offmol = Molecule.from_file(
+            get_data_file_path('proteins/CTerminal_ALA.sdf')
+        )
+        # Perceive residue substructures
+        offmol.perceive_residues()
+        counter = 0  # matched atom counter
+        for atom in offmol.atoms:
+            if atom.metadata:
+                counter += 1
+        # Number of atoms in CTerminal cap is 6
+        assert counter == offmol.n_atoms - 6
 
+    def test_perceive_residues_natoms_mainchain_alanine(self):
+        """Test number of matches atoms in residue perception with MainChain form of Alanine."""
+        offmol = Molecule.from_file(
+            get_data_file_path('proteins/MainChain_ALA.sdf')
+        )
+        # Perceive residue substructures
+        offmol.perceive_residues()
+        counter = 0  # matched atom counter
+        unlabelled_counter = 0  # unmatched atom counter
+        for atom in offmol.atoms:
+            if atom.metadata:
+                counter += 1
+            else:
+                unlabelled_counter += 1
+        # Number of atoms in MainChain caps is 12
+        assert unlabelled_counter == 12
+        assert counter == offmol.n_atoms - 12
+
+    def test_perceive_residues_natoms_mainchain_glutamic_acid(self):
+        """Test number of matches atoms in residue perception with MainChain form of Glutamic acid."""
+        offmol = Molecule.from_file(
+            get_data_file_path('proteins/MainChain_GLU.sdf')
+        )
+        # Perceive residue substructures
+        offmol.perceive_residues()
+        counter = 0  # matched atom counter
+        unlabelled_counter = 0  # unmatched atom counter
+        for atom in offmol.atoms:
+            if atom.metadata:
+                counter += 1
+            else:
+                unlabelled_counter += 1
+        # Number of atoms in MainChain caps is 12
+        assert unlabelled_counter == 12
+        assert counter == offmol.n_atoms - 12
+
+    def test_perceive_residues_natoms_mainchain_charged_glutamic_acid(self):
+        """Test number of matches atoms in residue perception with MainChain form of charged
+         Glutamic acid."""
+        offmol = Molecule.from_file(
+            get_data_file_path('proteins/MainChain_GLH.sdf')
+        )
+        # Perceive residue substructures
+        offmol.perceive_residues()
+        counter = 0  # matched atom counter
+        unlabelled_counter = 0  # unmatched atom counter
+        for atom in offmol.atoms:
+            if atom.metadata:
+                counter += 1
+            else:
+                unlabelled_counter += 1
+        # Number of atoms in MainChain caps is 12
+        assert unlabelled_counter == 12
+        assert counter == offmol.n_atoms - 12
+
+    def test_perceive_residues_natoms_mainchain_arginine(self):
+        """Test number of matches atoms in residue perception with MainChain form of Alanine."""
+        offmol = Molecule.from_file(
+            get_data_file_path('proteins/MainChain_ARG.sdf')
+        )
+        # Perceive residue substructures
+        offmol.perceive_residues()
+        counter = 0  # matched atom counter
+        unlabelled_counter = 0  # unmatched atom counter
+        for atom in offmol.atoms:
+            if atom.metadata:
+                counter += 1
+            else:
+                unlabelled_counter += 1
+        # Number of atoms in MainChain caps is 12
+        assert unlabelled_counter == 12
+        assert counter == offmol.n_atoms - 12
+
+    def test_perceive_residues_natoms_mainchain_histidine(self):
+        """Test number of matches atoms in residue perception with MainChain form of neutral
+        state of Histidine."""
+        offmol = Molecule.from_file(
+            get_data_file_path('proteins/MainChain_HIE.sdf')
+        )
+        # Perceive residue substructures
+        offmol.perceive_residues()
+        counter = 0  # matched atom counter
+        unlabelled_counter = 0  # unmatched atom counter
+        for atom in offmol.atoms:
+            if atom.metadata:
+                counter += 1
+            else:
+                unlabelled_counter += 1
+        # Number of atoms in MainChain caps is 12
+        assert unlabelled_counter == 12
+        assert counter == offmol.n_atoms - 12
+
+    def test_perceive_residues_natoms_cyxteine(self):
+        """Test number of atoms matched for residue perception of disulfide bond form
+        of cysteine."""
+        offmol = Molecule.from_file(
+            get_data_file_path('proteins/MainChain_CYX.sdf')
+        )
+        # Perceive residue substructures
+        offmol.perceive_residues()
+        counter = 0  # matched atom counter
+        unlabelled_counter = 0  # unmatched atom counter
+        for atom in offmol.atoms:
+            if atom.metadata:
+                counter += 1
+            else:
+                unlabelled_counter += 1
+        # Number of atoms in MainChain caps is 24 (two capped cysteine molecules)
+        assert unlabelled_counter == 24
+        assert counter == offmol.n_atoms - 24
+
+    @pytest.mark.slow
+    def test_perceive_residues_natoms_t4(self):
+        """Test number of atoms matched for residue perception of free from of
+        T4 lysozyme."""
+        offmol = Molecule.from_file(
+            get_data_file_path('proteins/T4-protein.sdf')
+        )
+        # Perceive residue substructures
+        offmol.perceive_residues()
+        counter = 0  # matched atom counter
+        unlabelled_counter = 0  # unmatched atom counter
+        for atom in offmol.atoms:
+            if atom.metadata:
+                counter += 1
+        assert counter == offmol.n_atoms
 
 class MyMol(FrozenMolecule):
     """
