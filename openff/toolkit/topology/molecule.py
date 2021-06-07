@@ -5874,66 +5874,43 @@ class Molecule(FrozenMolecule):
         """
         # Read substructure dictionary file
         substructure_file_path = get_data_file_path('proteins/aa_residues_substructures.json')
-        matching_data = dict()
         with open(substructure_file_path, 'r') as subfile:
             substructure_dictionary = json.load(subfile)
-        resnum_counter = 1  # Counter for residue numbers
-        resname_to_indices_and_atomnames = defaultdict(list)
+        all_matches = list()
         for residue_name, smarts_dict in substructure_dictionary.items():
-            matches = []
-            atom_names = []
-            #atom_names = smarts_dict['atom_names']
+            matches = dict()
             for smarts in smarts_dict:
                 for match in self.chemical_environment_matches(smarts):
-                    matches.append(match)
-            # matches = [match for smarts in smarts_dict for match in self.chemical_environment_matches(smarts)]
-            # here matches looks like
+                    matches[match] = smarts
+                    all_matches.append({'atom_idxs': match,
+                                        'atom_idxs_set': set(match),
+                                        'smarts': smarts,
+                                        'residue_name': residue_name,
+                                        'atom_names': smarts_dict[smarts]})
 
-            # Filter matches to only contain the FIRST instance of each unique match
-            match_sets = [set(i) for i in matches]
-            for match_idx in range(len(matches)-1, 0, -1):
-                if match_sets[match_idx] in match_sets[:match_idx]:
-                    matches.pop(match_idx)
+        # Remove matches that are subsets of other matches
+        # give precedence to the SMARTS defined at the end of the file
+        match_idxs_to_delete = set()
+        for match_idx in range(len(all_matches)-1, 0, -1):
+            this_match_set = all_matches[match_idx]['atom_idxs_set']
+            for match_before_this_idx in range(match_idx):
+                match_before_this_set = all_matches[match_before_this_idx]['atom_idxs_set']
+                n_overlapping_atoms = len(this_match_set.intersection(match_before_this_set))
+                if n_overlapping_atoms > 0:
+                    match_idxs_to_delete.add(match_before_this_idx)
 
-            #matches_unique = set(tuple(sorted(match)) for match in matches)
-            matches_no_subsets = remove_subsets_from_list(matches)
-            for match in matches_no_subsets:
-                resname_to_indices_and_atomnames[residue_name].append([match, atom_names])
+        match_idxs_to_delete_list = sorted(list(match_idxs_to_delete), reverse=True)
+        for match_idx in match_idxs_to_delete_list:
+            all_matches.pop(match_idx)
 
-        #resname_to_indices_and_atomnames.sort(key=)
-        # sort the matches dictionary by the lowest atom index in each match
-        print(resname_to_indices_and_atomnames)
-        sorted_rtiaa = dict(sorted(resname_to_indices_and_atomnames.items(), key=lambda x:min(x[1][0][0])))
-        print(sorted_rtiaa)
-        for idx, (key, val) in enumerate(sorted_rtiaa.items()):
-            #sorted_rtiaa[key].append(idx+1)
-            resname = key
-            atom_indices = val[0]
-            #atom_names = val[1]
-            atom_names = ['a' for i in atom_indices]
-            resnum = idx + 1
-            for atom_idx, atom_name in zip(atom_indices, atom_names):
-                current_atom = self.atoms[atom_idx]
-                current_atom.metadata['residue_name'] = resname
-                current_atom.metadata['atom_name'] = atom_name
-                current_atom.metadata['residue_number'] = resnum
+        all_matches.sort(key=lambda x: min(x['atom_idxs']))
 
-
-            #if matches:
-            #    for residue_count, atom_indices in enumerate(remove_subsets_from_list(matches)):
-            #        matching_data[atom_indices] = residue_name
-
-            #matches_unique = set(tuple(sorted(match)) for match in matches)
-            #if matches_unique:
-            #    for residue_count, atom_indices in enumerate(remove_subsets_from_list(matches_unique)):
-            #        matching_data[atom_indices] = residue_name
-
-        # Filling atom metadata
-        # for resname, atom_idx_list in matching_data.items():
-        #     for atom_idx in chain.from_iterable(atom_idx_list):
-        #         current_atom = self.atoms[atom_idx]
-        #         current_atom.metadata['resname'] = resname
-        return matching_data
+        # Now the matches have been deduplicated and de-subsetted
+        for residue_num, match_dict in enumerate(all_matches):
+            for smarts_idx, atom_idx in enumerate(match_dict['atom_idxs']):
+                self.atoms[atom_idx].metadata['residue_name'] = match_dict['residue_name']
+                self.atoms[atom_idx].metadata['residue_number'] = residue_num + 1
+                self.atoms[atom_idx].metadata['atom_name'] = match_dict['atom_names'][smarts_idx]
 
     def _ipython_display_(self):
         from IPython.display import display
