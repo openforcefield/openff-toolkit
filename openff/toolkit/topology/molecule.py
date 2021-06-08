@@ -5893,11 +5893,16 @@ class Molecule(FrozenMolecule):
         match_idxs_to_delete = set()
         for match_idx in range(len(all_matches)-1, 0, -1):
             this_match_set = all_matches[match_idx]['atom_idxs_set']
+            this_match_set_size = len(this_match_set)
             for match_before_this_idx in range(match_idx):
                 match_before_this_set = all_matches[match_before_this_idx]['atom_idxs_set']
+                match_before_this_set_size = len(match_before_this_set)
                 n_overlapping_atoms = len(this_match_set.intersection(match_before_this_set))
                 if n_overlapping_atoms > 0:
-                    match_idxs_to_delete.add(match_before_this_idx)
+                    if match_before_this_set_size < this_match_set_size:
+                        match_idxs_to_delete.add(match_before_this_idx)
+                    else:
+                        match_idxs_to_delete.add(match_idx)
 
         match_idxs_to_delete_list = sorted(list(match_idxs_to_delete), reverse=True)
         for match_idx in match_idxs_to_delete_list:
