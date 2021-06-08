@@ -34,6 +34,13 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
   the `openff-toolkit-examples` script to copy the examples suite to a convenient place to 
   run them!
 
+### Tests updated
+
+- [PR #963](https://github.com/openforcefield/openff-toolkit/pull/963):
+  Several tests modules used functions from test_forcefield.py that created an OpenFF Molecule
+  without a toolkit. These functions are now in their own module so they can be imported directly,
+  without the overhead of going through test_forcefield.
+
 ## 0.9.2 Minor feature and bugfix release
 
 ### New features and behaviors changed
