@@ -205,3 +205,8 @@ table.longtable.docutils tr {
 table.longtable.docutils tr.row-odd {
     background-color: hsla(0,0%,92.5%,.5);
 }
+
+/* Make code links bold */
+a code, a .pre, a pre {
+    font-weight: bold;
+}
