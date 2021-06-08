@@ -3412,10 +3412,10 @@ class TestMolecule:
         assert counter == offmol.n_atoms - 12
 
     def test_perceive_residues_natoms_mainchain_histidine(self):
-        """Test number of matches atoms in residue perception with MainChain form of neutral
+        """Test number of matches atoms in residue perception with MainChain form of protonated
         state of Histidine."""
         offmol = Molecule.from_file(
-            get_data_file_path('proteins/MainChain_HIE.sdf')
+            get_data_file_path('proteins/MainChain_HIP.sdf')
         )
         # Perceive residue substructures
         offmol.perceive_residues()
