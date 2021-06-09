@@ -42,7 +42,7 @@ a.md-logo {
 }
 
 /* Fix the sizes of the logos
-   These three heights/padding-tops must be equal
+   These five heights/padding-tops/margin-tops must be equal
    Relies on changes to header.html and sidebar.html */
 @media only screen and (min-width:76.1875em){
     .md-header {
@@ -55,6 +55,17 @@ a.md-logo {
 a.md-logo img {
     height: 60px;
     width: auto;
+}
+.md-typeset h1[id]::before,
+.md-typeset h2[id]::before,
+.md-typeset h3[id]::before,
+.md-typeset h4[id]::before,
+.md-typeset h5[id]::before,
+.md-typeset h6[id]::before {
+    display: block;
+    margin-top: -60px;
+    padding-top: 60px;
+    content: "";
 }
 
 /* Hide the link in the pull out draw to the localtoc*/
@@ -158,3 +169,9 @@ a.md-logo img {
     }
 }
 
+/* Set the colours for code spans */
+/* Consider updating this to match the pygments style */
+.md-typeset code, .md-typeset pre {
+    background-color: #f0f0f0;
+    color: #37474f;
+}
