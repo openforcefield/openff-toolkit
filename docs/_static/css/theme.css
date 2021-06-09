@@ -178,8 +178,8 @@ dt:target {
 /* Set the colours for code spans */
 /* Consider updating this to match the pygments style */
 .md-typeset code, .md-typeset pre {
-    background-color: #f0f0f0;
-    color: #37474f;
+    background-color: #f8f8f8;
+    color: #000000;
 }
 
 /* Show the sections of the current page in the global TOC only when the local TOC is absent */
