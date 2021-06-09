@@ -108,6 +108,17 @@ background and border theming can't happen */
     border-color: #555;
 }
 
+.md-content dl.module:not(.docutils) dt:target,
+.md-content dl.class:not(.docutils) dt:target,
+.md-content dl.exception:not(.docutils) dt:target,
+.md-content dl.function:not(.docutils) dt:target,
+.md-content dl.decorator:not(.docutils) dt:target,
+.md-content dl.data:not(.docutils) dt:target,
+.md-content dl.method:not(.docutils) dt:target,
+.md-content dl.attribute:not(.docutils) dt:target {
+    width: 100%
+}
+
 .md-content dl.module:not(.docutils) .property,
 .md-content dl.class:not(.docutils) .property,
 .md-content dl.exception:not(.docutils) .property,
