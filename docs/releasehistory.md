@@ -49,6 +49,9 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
     - :py:meth:`VirtualSite.local_frame_positions`
   - Adding virtual sites via the `Molecule` API now have defaults for `sigma`, `epsilon`, and `charge_increment`
     set to 0 with appropriate units, rather than `None`
+- [PR #956](https://github.com/openforcefield/openforcefield/pull/956): Added `ForceField.get_partial_charges()` 
+  to more easily compute the partial charges assigned by a force field for a molecule.
+
 
 ### Bugfixes
 
