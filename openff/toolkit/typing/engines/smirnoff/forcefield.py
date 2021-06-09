@@ -1314,8 +1314,12 @@ class ForceField:
         if topology.box_vectors is not None:
             system.setDefaultPeriodicBoxVectors(*topology.box_vectors)
 
-        # Add particles (both atoms and virtual sites) with appropriate masses
-        for atom in topology.topology_particles:
+        # Add atom particles with appropriate masses
+        # Virtual site particle creation is handled in the parameter handler
+        # create_force call
+        # This means that even though virtual sites may have been created via
+        # the molecule API, an empty VirtualSites tag must exist in the FF
+        for atom in topology.topology_atoms:
             system.addParticle(atom.atom.mass)
 
         # Determine the order in which to process ParameterHandler objects in order to satisfy dependencies

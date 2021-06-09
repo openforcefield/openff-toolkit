@@ -2178,9 +2178,16 @@ class TestForceFieldVirtualSites:
             )
         return
 
+    import functools
+
     charge_unit = unit.elementary_charge
     epsilon_unit = unit.kilocalorie_per_mole
     sigma_unit = unit.angstrom
+    length_unit = unit.angstrom
+
+    as_charge = functools.partial(unit.Quantity, unit=charge_unit)
+    as_epsilon = functools.partial(unit.Quantity, unit=epsilon_unit)
+    as_sigma = functools.partial(unit.Quantity, unit=sigma_unit)
 
     ############################################################################
     # Bond charge virtual site test data
@@ -2197,9 +2204,9 @@ class TestForceFieldVirtualSites:
             "xml": xml_ff_virtual_sites_bondcharge_match_once,
             "smi": None,
             "assert_physics": (
-                (+0.2 * charge_unit, None, None),
-                (+0.2 * charge_unit, None, None),
-                (-0.4 * charge_unit, 0.2 * sigma_unit, 0.2 * epsilon_unit),
+                (as_charge(+0.2), None, None),
+                (as_charge(+0.2), None, None),
+                (as_charge(-0.4), as_sigma(0.2), as_epsilon(0.2)),
             ),
             "mol": create_dinitrogen(),
         }
@@ -2213,9 +2220,9 @@ class TestForceFieldVirtualSites:
             "xml": xml_ff_virtual_sites_bondcharge_match_once,
             "smi": None,
             "assert_physics": (
-                (+0.1 * charge_unit, None, None),
-                (+0.1 * charge_unit, None, None),
-                (-0.2 * charge_unit, 0.1 * sigma_unit, 0.1 * epsilon_unit),
+                (as_charge(+0.1), None, None),
+                (as_charge(+0.1), None, None),
+                (as_charge(-0.2), as_sigma(0.1), as_epsilon(0.1)),
             ),
             "mol": create_dioxygen(),
         }
@@ -2228,10 +2235,10 @@ class TestForceFieldVirtualSites:
             "xml": xml_ff_virtual_sites_bondcharge_match_all,
             "smi": None,
             "assert_physics": (
-                (+0.4 * charge_unit, None, None),
-                (+0.4 * charge_unit, None, None),
-                (-0.4 * charge_unit, 0.2 * sigma_unit, 0.2 * epsilon_unit),
-                (-0.4 * charge_unit, 0.2 * sigma_unit, 0.2 * epsilon_unit),
+                (as_charge(+0.4), None, None),
+                (as_charge(+0.4), None, None),
+                (as_charge(-0.4), as_sigma(0.2), as_epsilon(0.2)),
+                (as_charge(-0.4), as_sigma(0.2), as_epsilon(0.2)),
             ),
             "mol": create_dinitrogen(),
         }
@@ -2248,10 +2255,10 @@ class TestForceFieldVirtualSites:
             "xml": xml_ff_virtual_sites_bondcharge_match_once_two_names,
             "smi": None,
             "assert_physics": (
-                (+0.3 * charge_unit, None, None),
-                (+0.3 * charge_unit, None, None),
-                (-0.2 * charge_unit, 0.1 * sigma_unit, 0.1 * epsilon_unit),
-                (-0.4 * charge_unit, 0.2 * sigma_unit, 0.2 * epsilon_unit),
+                (as_charge(+0.3), None, None),
+                (as_charge(+0.3), None, None),
+                (as_charge(-0.2), as_sigma(0.1), as_epsilon(0.1)),
+                (as_charge(-0.4), as_sigma(0.2), as_epsilon(0.2)),
             ),
             "mol": create_dinitrogen(),
         }
@@ -2263,14 +2270,14 @@ class TestForceFieldVirtualSites:
             "xml": xml_ff_virtual_sites_monovalent_match_once,
             "smi": None,
             "assert_physics": (
-                (+0.2 * charge_unit, None, None),
-                (+0.2 * charge_unit, None, None),
-                (+0.2 * charge_unit, None, None),
-                (+0.0 * charge_unit, None, None),
-                (+0.0 * charge_unit, None, None),
-                (+0.0 * charge_unit, None, None),
-                (+0.0 * charge_unit, None, None),
-                (-0.6 * charge_unit, 0.2 * sigma_unit, 0.2 * epsilon_unit),
+                (as_charge(+0.2), None, None),
+                (as_charge(+0.2), None, None),
+                (as_charge(+0.2), None, None),
+                (as_charge(+0.0), None, None),
+                (as_charge(+0.0), None, None),
+                (as_charge(+0.0), None, None),
+                (as_charge(+0.0), None, None),
+                (as_charge(-0.6), as_sigma(0.2), as_epsilon(0.2)),
             ),
             "mol": create_acetaldehyde(),
         }
@@ -2287,11 +2294,11 @@ class TestForceFieldVirtualSites:
             "xml": xml_ff_virtual_sites_divalent_match_all,
             "smi": None,
             "assert_physics": (
-                (+0.4820 * charge_unit, None, None),
-                (+0.0000 * charge_unit, None, None),
-                (+0.4820 * charge_unit, None, None),
-                (-0.4820 * charge_unit, 3.12 * sigma_unit, 0.16 * epsilon_unit),
-                (-0.4820 * charge_unit, 3.12 * sigma_unit, 0.16 * epsilon_unit),
+                (as_charge(+0.4820), None, None),
+                (as_charge(+0.0000), None, None),
+                (as_charge(+0.4820), None, None),
+                (as_charge(-0.4820), as_sigma(3.12), as_epsilon(0.16)),
+                (as_charge(-0.4820), as_sigma(3.12), as_epsilon(0.16)),
             ),
             "mol": create_water(),
         }
@@ -2307,11 +2314,11 @@ class TestForceFieldVirtualSites:
             "xml": xml_ff_virtual_sites_trivalent_match_once,
             "smi": None,
             "assert_physics": (
-                (+0.0000 * charge_unit, None, None),
-                (+1.0000 * charge_unit, None, None),
-                (+0.0000 * charge_unit, None, None),
-                (+0.0000 * charge_unit, None, None),
-                (-1.0000 * charge_unit, 0.00 * sigma_unit, 0.00 * epsilon_unit),
+                (as_charge(+0.0000), None, None),
+                (as_charge(+1.0000), None, None),
+                (as_charge(+0.0000), None, None),
+                (as_charge(+0.0000), None, None),
+                (as_charge(-1.0000), as_sigma(0.00), as_epsilon(0.00)),
             ),
             "mol": create_ammonia(),
         }
