@@ -40,6 +40,7 @@ from openff.toolkit.typing.engines.smirnoff import (
     LibraryChargeHandler,
     ParameterHandler,
     ParameterLookupError,
+    PartialChargeVirtualSitesError,
     SMIRNOFFAromaticityError,
     SMIRNOFFSpecError,
     SMIRNOFFSpecUnimplementedError,
@@ -302,6 +303,29 @@ xml_ff_torsion_bo_standard_supersede = """<?xml version='1.0' encoding='ASCII'?>
 </SMIRNOFF>
 """
 
+xml_ff_virtual_sites_monovalent_match_once = """<?xml version="1.0" encoding="utf-8"?>
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+    <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
+        <Bond smirks="[*:1]~[*:2]" id="b999" k="500.0 * kilocalories_per_mole/angstrom**2" length="1.1 * angstrom"/>
+    </Bonds>
+    <VirtualSites version="0.3">
+        <VirtualSite
+            type="MonovalentLonePair"
+            name="EP"
+            smirks="[#8:1]~[#6:2]~[#6:3]"
+            distance="0.1*angstrom"
+            charge_increment1="0.1*elementary_charge"
+            charge_increment2="0.1*elementary_charge"
+            charge_increment3="0.1*elementary_charge"
+            sigma="0.1*angstrom"
+            epsilon="0.1*kilocalories_per_mole"
+            inPlaneAngle="110.*degree"
+            outOfPlaneAngle="41*degree"
+            match="once" >
+        </VirtualSite>
+    </VirtualSites>
+</SMIRNOFF>
+"""
 
 # ======================================================================
 # TEST UTILITY FUNCTIONS
@@ -310,7 +334,7 @@ xml_ff_torsion_bo_standard_supersede = """<?xml version='1.0' encoding='ASCII'?>
 
 def round_charge(xml):
     """Round charge fields in a serialized OpenMM system to 2 decimal places"""
-    # Example Particle line: 				<Particle eps=".4577296" q="-.09709000587463379" sig=".1908"/>
+    # Example Particle line:                <Particle eps=".4577296" q="-.09709000587463379" sig=".1908"/>
     xmlsp = xml.split(' q="')
     for index, chunk in enumerate(xmlsp):
         # Skip file before first q=
@@ -4956,6 +4980,50 @@ class TestSmirnoffVersionConverter:
             ignore_charges=True,
             ignore_improper_folds=True,
         )
+
+
+class TestForceFieldGetPartialCharges:
+    """Tests for the ForceField.get_partial_charges method."""
+
+    @staticmethod
+    def get_partial_charges_from_create_openmm_system(mol, force_field):
+        """Helper method to compute partial charges from a generated openmm System."""
+        system = force_field.create_openmm_system(mol.to_topology())
+        nbforce = [
+            f for f in system.getForces() if isinstance(f, openmm.openmm.NonbondedForce)
+        ][0]
+
+        n_particles = nbforce.getNumParticles()
+        charges = [nbforce.getParticleParameters(i)[0] for i in range(n_particles)]
+
+        return unit.Quantity(charges)
+
+    def test_get_partial_charges(self):
+        """Test that ethanol charges are computed correctly."""
+        ethanol: Molecule = create_ethanol()
+        force_field: ForceField = ForceField("test_forcefields/test_forcefield.offxml")
+
+        ethanol_partial_charges = self.get_partial_charges_from_create_openmm_system(
+            ethanol, force_field
+        )
+
+        partial_charges = force_field.get_partial_charges(ethanol)
+
+        assert (
+            ethanol_partial_charges - partial_charges < 1.0e-6 * unit.elementary_charge
+        ).all()
+        assert partial_charges.shape == (ethanol.n_atoms,)
+
+    def test_get_partial_charges_vsites(self):
+        """Test that a molecule with virtual sites raises an error."""
+        ethanol: Molecule = create_ethanol()
+        force_field: ForceField = ForceField(
+            "test_forcefields/test_forcefield.offxml",
+            xml_ff_virtual_sites_monovalent_match_once,
+        )
+
+        with pytest.raises(PartialChargeVirtualSitesError):
+            force_field.get_partial_charges(ethanol)
 
 
 @pytest.mark.skip(reason="Needs to be updated for 0.2.0 syntax")
