@@ -175,16 +175,21 @@ dt:target {
     }
 }
 
-/* Set the colours for code spans */
-/* Consider updating this to match the pygments style */
-.md-typeset code, .md-typeset pre {
-    background-color: #f8f8f8;
-    color: #000000;
-}
-
 /* Show the sections of the current page in the global TOC only when the local TOC is absent */
 @media only screen and (min-width:60em){
     .redundant_navigation {
         display: None;
     }
+}
+
+/* Unset the colours for code spans so the pygments
+style actually shows up, and so that links can be recognised */
+.md-typeset code, .md-typeset pre {
+    background-color: unset;
+    color: unset;
+}
+/* Set the background colour for `code spans`. Consider
+changing this to match the Pygments style */
+.md-typeset code.docutils.literal {
+    background-color: #f8f8f8;
 }
