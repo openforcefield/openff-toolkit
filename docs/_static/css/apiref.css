@@ -89,7 +89,7 @@ background and border theming can't happen */
 .md-content dl.data:not(.docutils) dt:target + dd,
 .md-content dl.method:not(.docutils) dt:target + dd,
 .md-content dl.attribute:not(.docutils) dt:target + dd {
-    border: solid 3px #6ab0de;
+    border: solid 3px #2980B9;
         border-right: none;
         border-top: none;
     margin-left: 0px;
