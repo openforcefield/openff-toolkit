@@ -12,6 +12,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Bugfixes
 
+- [PR #978](https://github.com/openforcefield/openff-toolkit/pull/978) Adds support for
+  dummy atoms in Molecule equality checking
 - [PR #965](https://github.com/openforcefield/openforcefield/pull/965): Adds
   [`TagSortedDict`](openff.toolkit.topology.TagSortedDict),
   which is used primarily when atom indices need to be stored in a specific order, such
