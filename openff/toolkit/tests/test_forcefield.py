@@ -43,6 +43,7 @@ from openff.toolkit.typing.engines.smirnoff import (
     SMIRNOFFAromaticityError,
     SMIRNOFFSpecError,
     SMIRNOFFSpecUnimplementedError,
+    PartialChargeVirtualSitesError,
     ToolkitAM1BCCHandler,
     XMLParameterIOHandler,
     get_available_force_fields,
@@ -5014,7 +5015,7 @@ class TestForceFieldGetPartialCharges:
             xml_ff_virtual_sites_monovalent_match_once,
         )
 
-        with pytest.raises(ValueError):
+        with pytest.raises(PartialChargeVirtualSitesError):
             force_field.get_partial_charges(ethanol)
 
 
