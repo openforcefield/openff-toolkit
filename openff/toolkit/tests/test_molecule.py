@@ -54,7 +54,6 @@ from openff.toolkit.topology.molecule import (
     Molecule,
     SmilesParsingError,
 )
-from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.toolkit.utils import get_data_file_path
 from openff.toolkit.utils.toolkits import (
     AmberToolsToolkitWrapper,
@@ -3115,28 +3114,6 @@ class TestMolecule:
         )
         recomputed_charges = molecule._partial_charges
         assert np.allclose(initial_charges, recomputed_charges, atol=0.002)
-
-    def test_assign_partial_charges_from_force_field(self):
-        """Test computation/retrieval of partial charges as specified by a force field."""
-        ethanol: Molecule = create_ethanol()
-        force_field: ForceField = ForceField("test_forcefields/test_forcefield.offxml")
-
-        ref_partial_charges = force_field.get_partial_charges(ethanol)
-
-        ethanol.assign_partial_charges("forcefield", force_field=force_field)
-
-        assert (
-            ref_partial_charges - ethanol.partial_charges
-            < 1.0e-6 * unit.elementary_charge
-        ).all()
-        assert ethanol.partial_charges.shape == (ethanol.n_atoms,)
-
-        # Using a force field is mutually exclusive with specifying conformers
-        with pytest.raises(ValueError):
-            ethanol.generate_conformers()
-            ethanol.assign_partial_charges(
-                "forcefield", force_field=force_field, use_conformers=ethanol.conformers
-            )
 
     @pytest.mark.parametrize("toolkit", ["openeye", "rdkit"])
     def test_apply_elf_conformer_selection(self, toolkit):
