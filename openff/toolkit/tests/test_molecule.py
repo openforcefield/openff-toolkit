@@ -3707,6 +3707,10 @@ class TestMolecule:
 
         assert isinstance(mol.visualize(backend="openeye"), IPython.core.display.Image)
 
+    def test_equality_with_dummy_atoms(self):
+        mol = Molecule.from_smiles("[*]H")
+        assert mol == mol
+
 
 class MyMol(FrozenMolecule):
     """

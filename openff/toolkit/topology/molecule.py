@@ -3012,8 +3012,14 @@ class FrozenMolecule(Serializable):
         """
 
         # Do a quick hill formula check first
-        if Molecule.to_hill_formula(mol1) != Molecule.to_hill_formula(mol2):
-            return False, None
+        try:
+            mol1hill = Molecule.to_hill_formula(mol1)
+            mol2hill = Molecule.to_hill_formula(mol2)
+        except KeyError:
+            pass
+        else:
+            if mol1hill != mol2hill:
+                return False, None
 
         # Build the user defined matching functions
         def node_match_func(x, y):
