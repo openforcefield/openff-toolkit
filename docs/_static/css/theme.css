@@ -175,3 +175,10 @@ a.md-logo img {
     background-color: #f0f0f0;
     color: #37474f;
 }
+
+/* Show the sections of the current page in the global TOC only when the local TOC is absent */
+@media only screen and (min-width:60em){
+    .redundant_navigation {
+        display: None;
+    }
+}
