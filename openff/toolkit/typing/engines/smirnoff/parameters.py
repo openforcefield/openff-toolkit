@@ -36,6 +36,8 @@ __all__ = [
     "AngleHandler",
     "ProperTorsionHandler",
     "ImproperTorsionHandler",
+    "ElectrostaticsHandler",
+    "LibraryChargeHandler",
     "vdWHandler",
     "GBSAHandler",
     "ToolkitAM1BCCHandler",
@@ -59,7 +61,13 @@ from itertools import combinations
 
 from simtk import openmm, unit
 
-from openff.toolkit.topology import ImproperDict, SortedDict, Topology, ValenceDict
+from openff.toolkit.topology import (
+    ImproperDict,
+    TagSortedDict,
+    Topology,
+    UnsortedDict,
+    ValenceDict,
+)
 from openff.toolkit.topology.molecule import Molecule
 from openff.toolkit.typing.chemistry import ChemicalEnvironment
 from openff.toolkit.utils.collections import ValidatedDict, ValidatedList
@@ -2061,11 +2069,15 @@ class ParameterHandler(_ParameterAttributeHandler):
             The SMIRKS pattern (if str) or index (if int) of the parameter directly after where
             the new parameter will be added
 
-        Note that one of (parameter_kwargs, parameter) must be specified
-        Note that when `before` and `after` are both None, the new parameter will be appended
-            to the END of the parameter list.
-        Note that when `before` and `after` are both specified, the new parameter
-            will be added immediately after the parameter matching the `after` pattern or index.
+        Note the following behavior:
+          * Either `parameter_kwargs` or `parameter` must be specified.
+          * When `before` and `after` are both `None`, the new parameter will be appended
+            to the **END** of the parameter list.
+          * When `before` and `after` are both specified, the new parameter will be added immediately
+            after the parameter matching the `after` pattern or index.
+          * The order of parameters in a parameter list can have significant impacts on parameter assignment. For details,
+            see the [SMIRNOFF](https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html#smirnoff-parameter-specification-is-hierarchical)
+            specification.
 
         Examples
         --------
@@ -3435,8 +3447,9 @@ class _NonbondedHandler(ParameterHandler):
         if len(existing) == 0:
             force = self._OPENMMTYPE()
             system.addForce(force)
-            # Create all particles.
-            for _ in topology.topology_particles:
+            # Create all atom particles. Virtual site particles are handled in
+            # in its own handler
+            for _ in topology.topology_atoms:
                 force.addParticle(0.0, 1.0, 0.0)
         else:
             force = existing[0]
@@ -3632,7 +3645,7 @@ class vdWHandler(_NonbondedHandler):
                 #                             "must be provided")
             else:
                 force.setNonbondedMethod(openmm.NonbondedForce.LJPME)
-                force.setCutoffDistance(9.0 * unit.angstrom)
+                force.setCutoffDistance(self.cutoff)
                 force.setEwaldErrorTolerance(1.0e-4)
 
         # If method is cutoff, then we currently support openMM's PME for periodic system and NoCutoff for nonperiodic
@@ -3887,7 +3900,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
                     # There's no need to check for matching cutoff/tolerance here since both are hard-coded defaults
                 else:
                     force.setNonbondedMethod(openmm.NonbondedForce.PME)
-                    force.setCutoffDistance(9.0 * unit.angstrom)
+                    force.setCutoffDistance(self.cutoff)
                     force.setEwaldErrorTolerance(1.0e-4)
 
         # If vdWHandler set the nonbonded method to NoCutoff, then we don't need to change anything
@@ -4286,10 +4299,7 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
             ``matches[particle_indices]`` is the ``ParameterType`` object
             matching the tuple of particle indices in ``entity``.
         """
-        # Using SortedDict here leads to the desired deduplication behavior, BUT it mangles the order
-        # of the atom indices in the keys. Thankfully, the Match objects that are values in `matches` contain
-        # `match.environment_match.topology_atom_indices`, which has the tuple in the correct order
-        matches = self._find_matches(entity, transformed_dict_cls=SortedDict)
+        matches = self._find_matches(entity, transformed_dict_cls=TagSortedDict)
         return matches
 
     def create_force(self, system, topology, **kwargs):
@@ -4953,7 +4963,7 @@ class VirtualSiteHandler(_NonbondedHandler):
         else:
 
             raise SMIRNOFFSpecError(
-                'VirtualSiteHander exclusion policy not understood. Set "exclusion_policy" to one of {}'.format(
+                'VirtualSiteHandler exclusion policy not understood. Set "exclusion_policy" to one of {}'.format(
                     _exclusion_policies_implemented
                 )
             )
@@ -5385,7 +5395,7 @@ class VirtualSiteHandler(_NonbondedHandler):
     def _find_matches(
         self,
         entity,
-        transformed_dict_cls=ValenceDict,
+        transformed_dict_cls=UnsortedDict,
         use_named_slots=False,
         expand_permutations=False,
     ):
@@ -5566,7 +5576,7 @@ class VirtualSiteHandler(_NonbondedHandler):
         # somewhere else
 
         logger.debug("Creating OpenFF virtual site representations...")
-        topology = self._create_openff_virtual_sites(topology)
+        topology = self.create_openff_virtual_sites(topology)
 
         # The toolkit now has a representation of the vsites in the topology,
         # and here we create the OpenMM parameters/objects/exclusions
@@ -5616,7 +5626,7 @@ class VirtualSiteHandler(_NonbondedHandler):
         """
         return self._find_matches(
             entity,
-            transformed_dict_cls=dict,
+            transformed_dict_cls=UnsortedDict,
             use_named_slots=True,
             expand_permutations=expand_permutations,
         )
@@ -5694,7 +5704,7 @@ class VirtualSiteHandler(_NonbondedHandler):
 
         return combined_orientations
 
-    def _create_openff_virtual_sites(self, topology):
+    def create_openff_virtual_sites(self, topology):
 
         for molecule in topology.reference_molecules:
 

@@ -33,17 +33,21 @@ from openff.toolkit.tests.utils import (
 )
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff import (
+    ElectrostaticsHandler,
     ForceField,
     FractionalBondOrderInterpolationMethodUnsupportedError,
     IncompatibleParameterError,
+    LibraryChargeHandler,
     ParameterHandler,
     ParameterLookupError,
+    PartialChargeVirtualSitesError,
     SMIRNOFFAromaticityError,
     SMIRNOFFSpecError,
     SMIRNOFFSpecUnimplementedError,
     ToolkitAM1BCCHandler,
     XMLParameterIOHandler,
     get_available_force_fields,
+    vdWHandler,
 )
 from openff.toolkit.utils import get_data_file_path
 from openff.toolkit.utils.toolkits import (
@@ -299,6 +303,29 @@ xml_ff_torsion_bo_standard_supersede = """<?xml version='1.0' encoding='ASCII'?>
 </SMIRNOFF>
 """
 
+xml_ff_virtual_sites_monovalent_match_once = """<?xml version="1.0" encoding="utf-8"?>
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+    <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
+        <Bond smirks="[*:1]~[*:2]" id="b999" k="500.0 * kilocalories_per_mole/angstrom**2" length="1.1 * angstrom"/>
+    </Bonds>
+    <VirtualSites version="0.3">
+        <VirtualSite
+            type="MonovalentLonePair"
+            name="EP"
+            smirks="[#8:1]~[#6:2]~[#6:3]"
+            distance="0.1*angstrom"
+            charge_increment1="0.1*elementary_charge"
+            charge_increment2="0.1*elementary_charge"
+            charge_increment3="0.1*elementary_charge"
+            sigma="0.1*angstrom"
+            epsilon="0.1*kilocalories_per_mole"
+            inPlaneAngle="110.*degree"
+            outOfPlaneAngle="41*degree"
+            match="once" >
+        </VirtualSite>
+    </VirtualSites>
+</SMIRNOFF>
+"""
 
 # ======================================================================
 # TEST UTILITY FUNCTIONS
@@ -307,7 +334,7 @@ xml_ff_torsion_bo_standard_supersede = """<?xml version='1.0' encoding='ASCII'?>
 
 def round_charge(xml):
     """Round charge fields in a serialized OpenMM system to 2 decimal places"""
-    # Example Particle line: 				<Particle eps=".4577296" q="-.09709000587463379" sig=".1908"/>
+    # Example Particle line:                <Particle eps=".4577296" q="-.09709000587463379" sig=".1908"/>
     xmlsp = xml.split(' q="')
     for index, chunk in enumerate(xmlsp):
         # Skip file before first q=
@@ -1582,6 +1609,102 @@ class TestForceField:
         e_cutoff = forcefield["Electrostatics"].cutoff
         assert found_cutoff == vdw_cutoff == e_cutoff
 
+    def test_vdw_cutoff_overrides_electrostatics(self):
+        topology = Molecule.from_smiles("[#18]").to_topology()
+        topology.box_vectors = [3, 3, 3] * unit.nanometer
+
+        force_field = ForceField()
+
+        vdw_handler = vdWHandler(version=0.3)
+        vdw_handler.method = "cutoff"
+        vdw_handler.cutoff = 6.0 * unit.angstrom
+        vdw_handler.scale14 = 1.0
+
+        vdw_handler.add_parameter(
+            {
+                "smirks": "[#18:1]",
+                "epsilon": 1.0 * unit.kilojoules_per_mole,
+                "sigma": 1.0 * unit.angstrom,
+            }
+        )
+        force_field.register_parameter_handler(vdw_handler)
+
+        electrostatics_handler = ElectrostaticsHandler(version=0.3)
+        electrostatics_handler.cutoff = 7.0 * unit.angstrom
+        electrostatics_handler.method = "PME"
+        force_field.register_parameter_handler(electrostatics_handler)
+
+        library_charges = LibraryChargeHandler(version=0.3)
+        library_charges.add_parameter(
+            {
+                "smirks": "[#18:1]",
+                "charge1": 0.0 * unit.elementary_charge,
+            }
+        )
+        force_field.register_parameter_handler(library_charges)
+
+        system = force_field.create_openmm_system(topology)
+
+        assert np.isclose(
+            system.getForce(0).getCutoffDistance().value_in_unit(unit.angstrom), 6.0
+        )
+
+        # Ensure an exception is raised when the electrostatics cutoff is meaningful
+        # and mismatched
+        force_field.deregister_parameter_handler(force_field["Electrostatics"])
+
+        # TODO: Don't change the box vectors once this case is supported
+        topology.box_vectors = None
+        electrostatics_handler.method = "Coulomb"
+        force_field.register_parameter_handler(electrostatics_handler)
+
+        with pytest.raises(IncompatibleParameterError, match="cutoff must equal"):
+            force_field.create_openmm_system(topology)
+
+    def test_nondefault_nonbonded_cutoff(self):
+        """Test that the cutoff of the NonbondedForce is set properly when vdW and Electrostatics cutoffs
+        are identical but not the psuedo-default value of 9.0 A."""
+        topology = Molecule.from_smiles("[#18]").to_topology()
+        topology.box_vectors = [3, 3, 3] * unit.nanometer
+
+        force_field = ForceField()
+
+        vdw_handler = vdWHandler(version=0.3)
+        vdw_handler.method = "cutoff"
+        vdw_handler.cutoff = 7.89 * unit.angstrom
+        vdw_handler.scale14 = 1.0
+
+        vdw_handler.add_parameter(
+            {
+                "smirks": "[#18:1]",
+                "epsilon": 1.0 * unit.kilojoules_per_mole,
+                "sigma": 1.0 * unit.angstrom,
+            }
+        )
+        force_field.register_parameter_handler(vdw_handler)
+
+        electrostatics_handler = ElectrostaticsHandler(version=0.3)
+        electrostatics_handler.cutoff = 7.89 * unit.angstrom
+        electrostatics_handler.method = "PME"
+        force_field.register_parameter_handler(electrostatics_handler)
+
+        library_charges = LibraryChargeHandler(version=0.3)
+        library_charges.add_parameter(
+            {
+                "smirks": "[#18:1]",
+                "charge1": 0.0 * unit.elementary_charge,
+            }
+        )
+        force_field.register_parameter_handler(library_charges)
+
+        system = force_field.create_openmm_system(topology)
+
+        found_cutoff = (
+            system.getForce(0).getCutoffDistance().value_in_unit(unit.angstrom)
+        )
+
+        assert abs(found_cutoff - 7.89) < 1e-6
+
     @pytest.mark.parametrize("inputs", nonbonded_resolution_matrix)
     def test_nonbonded_method_resolution(self, inputs):
         """Test predefined permutations of input options to ensure nonbonded handling is correctly resolved"""
@@ -2055,9 +2178,16 @@ class TestForceFieldVirtualSites:
             )
         return
 
+    import functools
+
     charge_unit = unit.elementary_charge
     epsilon_unit = unit.kilocalorie_per_mole
     sigma_unit = unit.angstrom
+    length_unit = unit.angstrom
+
+    as_charge = functools.partial(unit.Quantity, unit=charge_unit)
+    as_epsilon = functools.partial(unit.Quantity, unit=epsilon_unit)
+    as_sigma = functools.partial(unit.Quantity, unit=sigma_unit)
 
     ############################################################################
     # Bond charge virtual site test data
@@ -2074,9 +2204,9 @@ class TestForceFieldVirtualSites:
             "xml": xml_ff_virtual_sites_bondcharge_match_once,
             "smi": None,
             "assert_physics": (
-                (+0.2 * charge_unit, None, None),
-                (+0.2 * charge_unit, None, None),
-                (-0.4 * charge_unit, 0.2 * sigma_unit, 0.2 * epsilon_unit),
+                (as_charge(+0.2), None, None),
+                (as_charge(+0.2), None, None),
+                (as_charge(-0.4), as_sigma(0.2), as_epsilon(0.2)),
             ),
             "mol": create_dinitrogen(),
         }
@@ -2090,9 +2220,9 @@ class TestForceFieldVirtualSites:
             "xml": xml_ff_virtual_sites_bondcharge_match_once,
             "smi": None,
             "assert_physics": (
-                (+0.1 * charge_unit, None, None),
-                (+0.1 * charge_unit, None, None),
-                (-0.2 * charge_unit, 0.1 * sigma_unit, 0.1 * epsilon_unit),
+                (as_charge(+0.1), None, None),
+                (as_charge(+0.1), None, None),
+                (as_charge(-0.2), as_sigma(0.1), as_epsilon(0.1)),
             ),
             "mol": create_dioxygen(),
         }
@@ -2105,10 +2235,10 @@ class TestForceFieldVirtualSites:
             "xml": xml_ff_virtual_sites_bondcharge_match_all,
             "smi": None,
             "assert_physics": (
-                (+0.4 * charge_unit, None, None),
-                (+0.4 * charge_unit, None, None),
-                (-0.4 * charge_unit, 0.2 * sigma_unit, 0.2 * epsilon_unit),
-                (-0.4 * charge_unit, 0.2 * sigma_unit, 0.2 * epsilon_unit),
+                (as_charge(+0.4), None, None),
+                (as_charge(+0.4), None, None),
+                (as_charge(-0.4), as_sigma(0.2), as_epsilon(0.2)),
+                (as_charge(-0.4), as_sigma(0.2), as_epsilon(0.2)),
             ),
             "mol": create_dinitrogen(),
         }
@@ -2125,10 +2255,10 @@ class TestForceFieldVirtualSites:
             "xml": xml_ff_virtual_sites_bondcharge_match_once_two_names,
             "smi": None,
             "assert_physics": (
-                (+0.3 * charge_unit, None, None),
-                (+0.3 * charge_unit, None, None),
-                (-0.2 * charge_unit, 0.1 * sigma_unit, 0.1 * epsilon_unit),
-                (-0.4 * charge_unit, 0.2 * sigma_unit, 0.2 * epsilon_unit),
+                (as_charge(+0.3), None, None),
+                (as_charge(+0.3), None, None),
+                (as_charge(-0.2), as_sigma(0.1), as_epsilon(0.1)),
+                (as_charge(-0.4), as_sigma(0.2), as_epsilon(0.2)),
             ),
             "mol": create_dinitrogen(),
         }
@@ -2140,14 +2270,14 @@ class TestForceFieldVirtualSites:
             "xml": xml_ff_virtual_sites_monovalent_match_once,
             "smi": None,
             "assert_physics": (
-                (+0.2 * charge_unit, None, None),
-                (+0.2 * charge_unit, None, None),
-                (+0.2 * charge_unit, None, None),
-                (+0.0 * charge_unit, None, None),
-                (+0.0 * charge_unit, None, None),
-                (+0.0 * charge_unit, None, None),
-                (+0.0 * charge_unit, None, None),
-                (-0.6 * charge_unit, 0.2 * sigma_unit, 0.2 * epsilon_unit),
+                (as_charge(+0.2), None, None),
+                (as_charge(+0.2), None, None),
+                (as_charge(+0.2), None, None),
+                (as_charge(+0.0), None, None),
+                (as_charge(+0.0), None, None),
+                (as_charge(+0.0), None, None),
+                (as_charge(+0.0), None, None),
+                (as_charge(-0.6), as_sigma(0.2), as_epsilon(0.2)),
             ),
             "mol": create_acetaldehyde(),
         }
@@ -2164,11 +2294,11 @@ class TestForceFieldVirtualSites:
             "xml": xml_ff_virtual_sites_divalent_match_all,
             "smi": None,
             "assert_physics": (
-                (+0.4820 * charge_unit, None, None),
-                (+0.0000 * charge_unit, None, None),
-                (+0.4820 * charge_unit, None, None),
-                (-0.4820 * charge_unit, 3.12 * sigma_unit, 0.16 * epsilon_unit),
-                (-0.4820 * charge_unit, 3.12 * sigma_unit, 0.16 * epsilon_unit),
+                (as_charge(+0.4820), None, None),
+                (as_charge(+0.0000), None, None),
+                (as_charge(+0.4820), None, None),
+                (as_charge(-0.4820), as_sigma(3.12), as_epsilon(0.16)),
+                (as_charge(-0.4820), as_sigma(3.12), as_epsilon(0.16)),
             ),
             "mol": create_water(),
         }
@@ -2184,11 +2314,11 @@ class TestForceFieldVirtualSites:
             "xml": xml_ff_virtual_sites_trivalent_match_once,
             "smi": None,
             "assert_physics": (
-                (+0.0000 * charge_unit, None, None),
-                (+1.0000 * charge_unit, None, None),
-                (+0.0000 * charge_unit, None, None),
-                (+0.0000 * charge_unit, None, None),
-                (-1.0000 * charge_unit, 0.00 * sigma_unit, 0.00 * epsilon_unit),
+                (as_charge(+0.0000), None, None),
+                (as_charge(+1.0000), None, None),
+                (as_charge(+0.0000), None, None),
+                (as_charge(+0.0000), None, None),
+                (as_charge(-1.0000), as_sigma(0.00), as_epsilon(0.00)),
             ),
             "mol": create_ammonia(),
         }
@@ -4850,6 +4980,50 @@ class TestSmirnoffVersionConverter:
             ignore_charges=True,
             ignore_improper_folds=True,
         )
+
+
+class TestForceFieldGetPartialCharges:
+    """Tests for the ForceField.get_partial_charges method."""
+
+    @staticmethod
+    def get_partial_charges_from_create_openmm_system(mol, force_field):
+        """Helper method to compute partial charges from a generated openmm System."""
+        system = force_field.create_openmm_system(mol.to_topology())
+        nbforce = [
+            f for f in system.getForces() if isinstance(f, openmm.openmm.NonbondedForce)
+        ][0]
+
+        n_particles = nbforce.getNumParticles()
+        charges = [nbforce.getParticleParameters(i)[0] for i in range(n_particles)]
+
+        return unit.Quantity(charges)
+
+    def test_get_partial_charges(self):
+        """Test that ethanol charges are computed correctly."""
+        ethanol: Molecule = create_ethanol()
+        force_field: ForceField = ForceField("test_forcefields/test_forcefield.offxml")
+
+        ethanol_partial_charges = self.get_partial_charges_from_create_openmm_system(
+            ethanol, force_field
+        )
+
+        partial_charges = force_field.get_partial_charges(ethanol)
+
+        assert (
+            ethanol_partial_charges - partial_charges < 1.0e-6 * unit.elementary_charge
+        ).all()
+        assert partial_charges.shape == (ethanol.n_atoms,)
+
+    def test_get_partial_charges_vsites(self):
+        """Test that a molecule with virtual sites raises an error."""
+        ethanol: Molecule = create_ethanol()
+        force_field: ForceField = ForceField(
+            "test_forcefields/test_forcefield.offxml",
+            xml_ff_virtual_sites_monovalent_match_once,
+        )
+
+        with pytest.raises(PartialChargeVirtualSitesError):
+            force_field.get_partial_charges(ethanol)
 
 
 @pytest.mark.skip(reason="Needs to be updated for 0.2.0 syntax")
