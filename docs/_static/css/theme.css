@@ -42,7 +42,7 @@ a.md-logo {
 }
 
 /* Fix the sizes of the logos
-   These five heights/padding-tops/margin-tops must be equal
+   These seven heights/padding-tops/margin-tops must be equal
    Relies on changes to header.html and sidebar.html */
 @media only screen and (min-width:76.1875em){
     .md-header {
@@ -66,6 +66,12 @@ a.md-logo img {
     margin-top: -60px;
     padding-top: 60px;
     content: "";
+    visibility: hidden;
+    pointer-events: none;
+}
+dt:target {
+    margin-top: -60px;
+    padding-top: 70px;
 }
 
 /* Hide the link in the pull out draw to the localtoc*/
