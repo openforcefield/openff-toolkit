@@ -4544,41 +4544,9 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         connections = tuple(sorted(list(connections)))
         unique_tags = tuple(sorted(list(unique_tags)))
         return unique_tags, connections
-    
-    def _match_smarts_with_heavy_atoms_first(self, rdmol, qmol, match_kwargs):
-        from rdkit import Chem
-        from rdkit.Chem import rdFMCS
 
-        for i, atom in enumerate(qmol.GetAtoms()):
-            atom.SetIntProp("index", i)
-        
-        remove_params = Chem.rdmolops.RemoveHsParameters()
-        remove_params.removeWithQuery = True
-        heavy_query = Chem.RemoveHs(qmol, remove_params, sanitize=False)
-        assert heavy_query.GetNumAtoms() < qmol.GetNumAtoms()
-        heavy_to_qmol = [atom.GetIntProp("index") for atom in heavy_query.GetAtoms()]
-        query_atoms = []
-        for i in range(len(heavy_to_qmol)):
-            query_atoms.append(Chem.Atom(i + 2))
-
-        full_matches = set()
-
-        for heavy_match in rdmol.GetSubstructMatches(heavy_query, **match_kwargs):
-            rdmol_copy = Chem.RWMol(rdmol)
-            qmol_copy = Chem.RWMol(qmol)
-            # pin atoms by isotope
-            for heavy_index, rdmol_index in enumerate(heavy_match):
-                qmol_index = heavy_to_qmol[heavy_index]
-                qmol_copy.ReplaceAtom(qmol_index, query_atoms[heavy_index])
-                rdmol_copy.ReplaceAtom(rdmol_index, query_atoms[heavy_index])
-
-            rdmol_copy.UpdatePropertyCache(strict=False)
-            qmol_copy.UpdatePropertyCache(strict=False)
-            h_matches = rdmol_copy.GetSubstructMatches(qmol_copy, **match_kwargs)
-            full_matches |= set(h_matches)
-        return full_matches
-
-    def _find_smarts_matches(self, rdmol, smirks, aromaticity_model="OEAroModel_MDL",
+    @staticmethod
+    def _find_smarts_matches(rdmol, smirks, aromaticity_model="OEAroModel_MDL",
                              unique=False, max_matches=None, match_heavy_first=False):
         """Find all sets of atoms in the provided RDKit molecule that match the provided SMARTS string.
 
@@ -4607,6 +4575,36 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         """
         from rdkit import Chem
+
+        def _match_smarts_with_heavy_atoms_first(rdmol, qmol, match_kwargs):
+            for i, atom in enumerate(qmol.GetAtoms()):
+                atom.SetIntProp("index", i)
+            
+            remove_params = Chem.rdmolops.RemoveHsParameters()
+            remove_params.removeWithQuery = True
+            heavy_query = Chem.RemoveHs(qmol, remove_params, sanitize=False)
+            assert heavy_query.GetNumAtoms() < qmol.GetNumAtoms()
+            heavy_to_qmol = [atom.GetIntProp("index") for atom in heavy_query.GetAtoms()]
+            query_atoms = []
+            for i in range(len(heavy_to_qmol)):
+                query_atoms.append(Chem.Atom(i + 2))
+
+            full_matches = set()
+
+            for heavy_match in rdmol.GetSubstructMatches(heavy_query, **match_kwargs):
+                rdmol_copy = Chem.RWMol(rdmol)
+                qmol_copy = Chem.RWMol(qmol)
+                # pin atoms by isotope
+                for heavy_index, rdmol_index in enumerate(heavy_match):
+                    qmol_index = heavy_to_qmol[heavy_index]
+                    qmol_copy.ReplaceAtom(qmol_index, query_atoms[heavy_index])
+                    rdmol_copy.ReplaceAtom(rdmol_index, query_atoms[heavy_index])
+
+                rdmol_copy.UpdatePropertyCache(strict=False)
+                qmol_copy.UpdatePropertyCache(strict=False)
+                h_matches = rdmol_copy.GetSubstructMatches(qmol_copy, **match_kwargs)
+                full_matches |= set(h_matches)
+            return full_matches
 
         # Make a copy of the molecule
         rdmol = Chem.Mol(rdmol)
@@ -4639,7 +4637,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         match_kwargs = dict(uniquify=unique, maxMatches=max_matches, useChirality=True)
         n_heavy, n_h = qmol.GetNumHeavyAtoms(), qmol.GetNumAtoms() - qmol.GetNumHeavyAtoms()
         if match_heavy_first:
-            full_matches = self._match_smarts_with_heavy_atoms_first(rdmol, qmol, match_kwargs)
+            full_matches = _match_smarts_with_heavy_atoms_first(rdmol, qmol, match_kwargs)
         else:
             full_matches = rdmol.GetSubstructMatches(qmol, **match_kwargs)
         
