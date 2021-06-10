@@ -4455,7 +4455,7 @@ class FrozenMolecule(Serializable):
         return "".join(formula)
 
     def chemical_environment_matches(
-        self, query, unique=False, max_matches=None, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY
+        self, query, unique=False, max_matches=None, match_heavy_first=False, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY
     ):
         """Retrieve all matches for a given chemical environment query.
 
@@ -4499,9 +4499,9 @@ class FrozenMolecule(Serializable):
         # TODO: Simplify this by requiring a toolkit registry for the molecule?
         # TODO: Do we have to pass along an aromaticity model?
         if isinstance(toolkit_registry, ToolkitRegistry):
-            matches = toolkit_registry.call("find_smarts_matches", self, smirks, unique=unique, max_matches=max_matches)
+            matches = toolkit_registry.call("find_smarts_matches", self, smirks, unique=unique, max_matches=max_matches, match_heavy_first=match_heavy_first)
         elif isinstance(toolkit_registry, ToolkitWrapper):
-            matches = toolkit_registry.find_smarts_matches(self, smirks, unique=unique, max_matches=max_matches)
+            matches = toolkit_registry.find_smarts_matches(self, smirks, unique=unique, max_matches=max_matches, match_heavy_first=match_heavy_first)
         else:
             raise InvalidToolkitRegistryError(
                 "'toolkit_registry' must be either a ToolkitRegistry or a ToolkitWrapper"

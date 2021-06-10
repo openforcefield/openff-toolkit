@@ -2241,7 +2241,7 @@ class ParameterHandler(_ParameterAttributeHandler):
         #  Should we reduce its scope and have a check here to make sure entity is a Topology?
         return self._find_matches(entity)
 
-    def _find_matches(self, entity, transformed_dict_cls=ValenceDict, unique=False):
+    def _find_matches(self, entity, transformed_dict_cls=ValenceDict, unique=False, match_heavy_first=False):
         """Implement find_matches() and allow using a difference valence dictionary.
         Parameters
         ----------
@@ -2269,7 +2269,7 @@ class ParameterHandler(_ParameterAttributeHandler):
             matches_for_this_type = {}
 
             for environment_match in entity.chemical_environment_matches(
-                parameter_type.smirks, unique=unique,
+                parameter_type.smirks, unique=unique, match_heavy_first=match_heavy_first,
             ):
                 # Update the matches for this parameter type.
                 handler_match = self._Match(parameter_type, environment_match)
@@ -4004,7 +4004,7 @@ class LibraryChargeHandler(_NonbondedHandler):
     _INFOTYPE = LibraryChargeType  # info type to store
     _DEPENDENCIES = [vdWHandler, ElectrostaticsHandler]
 
-    def find_matches(self, entity, unique=False):
+    def find_matches(self, entity, unique=False, match_heavy_first=False):
         """Find the elements of the topology/molecule matched by a parameter type.
 
         Parameters
@@ -4021,7 +4021,7 @@ class LibraryChargeHandler(_NonbondedHandler):
 
         # TODO: Right now, this method is only ever called with an entity that is a Topology.
         #  Should we reduce its scope and have a check here to make sure entity is a Topology?
-        return self._find_matches(entity, transformed_dict_cls=dict, unique=unique)
+        return self._find_matches(entity, transformed_dict_cls=dict, unique=unique, match_heavy_first=match_heavy_first)
 
     def create_force(self, system, topology, **kwargs):
         force = super().create_force(system, topology, **kwargs)
