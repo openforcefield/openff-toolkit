@@ -4583,18 +4583,15 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             remove_params = Chem.rdmolops.RemoveHsParameters()
             remove_params.removeWithQuery = True
             heavy_query = Chem.RemoveHs(qmol, remove_params, sanitize=False)
-            assert heavy_query.GetNumAtoms() < qmol.GetNumAtoms()
             heavy_to_qmol = [atom.GetIntProp("index") for atom in heavy_query.GetAtoms()]
-            query_atoms = []
-            for i in range(len(heavy_to_qmol)):
-                query_atoms.append(Chem.Atom(i + 2))
+            query_atoms = [Chem.Atom(i + 2) for i in range(len(heavy_to_qmol))]
 
             full_matches = set()
 
             for heavy_match in rdmol.GetSubstructMatches(heavy_query, **match_kwargs):
                 rdmol_copy = Chem.RWMol(rdmol)
                 qmol_copy = Chem.RWMol(qmol)
-                # pin atoms by isotope
+                # pin atoms by atom type
                 for heavy_index, rdmol_index in enumerate(heavy_match):
                     qmol_index = heavy_to_qmol[heavy_index]
                     qmol_copy.ReplaceAtom(qmol_index, query_atoms[heavy_index])
