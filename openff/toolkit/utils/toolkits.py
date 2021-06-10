@@ -2623,7 +2623,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
     @staticmethod
     def _find_smarts_matches(
-        oemol, smarts, aromaticity_model=DEFAULT_AROMATICITY_MODEL
+        oemol, smarts, aromaticity_model=DEFAULT_AROMATICITY_MODEL,
+        unique=False, max_matches=None,
     ):
         """Find all sets of atoms in the provided OpenEye molecule that match the provided SMARTS string.
 
@@ -2688,9 +2689,9 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         # Build list of matches
         # TODO: The MoleculeImage mapping should preserve ordering of template molecule for equivalent atoms
         #       and speed matching for larger molecules.
-        unique = False  # We require all matches, not just one of each kind
+        max_matches = int(max_matches) if max_matches is not None else 0
         substructure_search = OESubSearch(qmol)
-        substructure_search.SetMaxMatches(0)
+        substructure_search.SetMaxMatches(max_matches)
         oechem.OEPrepareSearch(mol, substructure_search)
         matches = list()
         for match in substructure_search.Match(mol, unique):
@@ -2707,7 +2708,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             matches.append(tuple(atom_indices))
         return matches
 
-    def find_smarts_matches(self, molecule, smarts, aromaticity_model="OEAroModel_MDL"):
+    def find_smarts_matches(self, molecule, smarts, aromaticity_model="OEAroModel_MDL",
+                            unique=False, max_matches=None):
         """
         Find all SMARTS matches for the specified molecule, using the specified aromaticity model.
 
@@ -2727,7 +2729,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         """
         oemol = self.to_openeye(molecule)
         return self._find_smarts_matches(
-            oemol, smarts, aromaticity_model=aromaticity_model
+            oemol, smarts, aromaticity_model=aromaticity_model,
+            unique=unique, max_matches=max_matches,
         )
 
 
@@ -4543,7 +4546,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         return unique_tags, connections
 
     @staticmethod
-    def _find_smarts_matches(rdmol, smirks, aromaticity_model="OEAroModel_MDL"):
+    def _find_smarts_matches(rdmol, smirks, aromaticity_model="OEAroModel_MDL",
+                             unique=False, max_matches=None):
         """Find all sets of atoms in the provided RDKit molecule that match the provided SMARTS string.
 
         Parameters
@@ -4602,16 +4606,17 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         # choose the largest unsigned int without overflow
         # since the C++ signature is a uint
-        max_matches = np.iinfo(np.uintc).max
+        max_matches = int(max_matches) if max_matches is not None else np.iinfo(np.uintc).max
         for match in rdmol.GetSubstructMatches(
-            qmol, uniquify=False, maxMatches=max_matches, useChirality=True
+            qmol, uniquify=unique, maxMatches=max_matches, useChirality=True
         ):
             mas = [match[x] for x in map_list]
             matches.append(tuple(mas))
 
         return matches
 
-    def find_smarts_matches(self, molecule, smarts, aromaticity_model="OEAroModel_MDL"):
+    def find_smarts_matches(self, molecule, smarts, aromaticity_model="OEAroModel_MDL",
+                            unique=False, max_matches=None):
         """
         Find all SMARTS matches for the specified molecule, using the specified aromaticity model.
 
@@ -4631,7 +4636,8 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         """
         rdmol = self.to_rdkit(molecule, aromaticity_model=aromaticity_model)
         return self._find_smarts_matches(
-            rdmol, smarts, aromaticity_model="OEAroModel_MDL"
+            rdmol, smarts, aromaticity_model="OEAroModel_MDL",
+            unique=unique, max_matches=max_matches,
         )
 
     # --------------------------------
