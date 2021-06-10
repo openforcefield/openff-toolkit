@@ -3,10 +3,10 @@ channels:
     - conda-forge
     - defaults
 dependencies:
+    - pip
     # readthedocs dependencies
     - numpydoc
     - nbsphinx
-    - sphinx_bootstrap_theme
     - myst-parser>=0.14
     - testpath==0.3.1
     - docutils
@@ -27,3 +27,6 @@ dependencies:
     - xmltodict
     - pyyaml
     - cairo >=1.16
+    # Theme
+    - pip:
+        git+https://github.com/openforcefield/openff-sphinx-theme.git@master
