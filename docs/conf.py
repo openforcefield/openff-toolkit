@@ -87,8 +87,6 @@ myst_enable_extensions = [
     "replacements",
     "deflist",
 ]
-# Stop myst from disabling MathJax's $...$ and $$...$$ environments
-myst_update_mathjax = False
 
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
