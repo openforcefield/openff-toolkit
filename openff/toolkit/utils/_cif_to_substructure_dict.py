@@ -90,7 +90,13 @@ class CifSubstructures:
         self.data = defaultdict(defaultdict)  # Dictionary where to store substructures data
         self._cif_multi_entry_object = None
 
-    def from_file(self, cif_file, include_leaving=False,  discard_keyword='FRAGMENT'):
+    def from_file(self,
+                  cif_file,
+                  include_leaving=False,
+                  discard_keyword='FRAGMENT',
+                  replace_quadruple_bond_with_any: bool = True,
+                  remove_charge_bond_order_resonant: bool = True
+                  ):
         """
         Reads cif formatted file and fills substructure information.
 
@@ -100,15 +106,23 @@ class CifSubstructures:
         __________
         cif_file : str or file-like object
             File path string, URL or file-like object.
-        discard_keyword : str, optional, default='FRAGMENT'
-            Keyword in _chem_comp.name for filtering out entries. Default is 'FRAGMENT'.
         include_leaving : bool, optional, default=False
             Whether to include leaving atoms marked in _chem_comp_atom.pdbx_leaving_atom_flag
+        discard_keyword : str, optional, default='FRAGMENT'
+            Keyword in _chem_comp.name for filtering out entries. Default is 'FRAGMENT'.
+        remove_charge_bond_order_resonant: bool, optional, default=True
+            Removes bond order and charge information from guanidium and imidazole resonant groups.
+        replace_quadruple_bond_with_any: bool, optional, default=True:
+            Replace expected unique quadruple bond symbol ($) with any order symbol (~) in smarts patterns.
         """
         # read cif file
         self._cif_multi_entry_object = ReadCif(cif_file)
         # fill data dictionary
-        self._fill_substructure_data(include_leaving=include_leaving, discard_keyword=discard_keyword,)
+        self._fill_substructure_data(include_leaving=include_leaving,
+                                     discard_keyword=discard_keyword,
+                                     replace_quadruple_bond_with_any=replace_quadruple_bond_with_any,
+                                     remove_charge_bond_order_resonant=remove_charge_bond_order_resonant
+                                     )
 
     def to_json_file(self, output_file, indent=None):
         """
@@ -241,7 +255,9 @@ class CifSubstructures:
     @staticmethod
     def _get_subrdmol(rdmol: rdkit.Chem.rdchem.Mol,
                       indices: list = [],
-                      sanitize: bool = False):
+                      sanitize: bool = False,
+                      remove_charge_bond_order_resonant: bool = True
+                      ):
         """
         Create new sub-molecule from selected atom indices
 
@@ -270,13 +286,18 @@ class CifSubstructures:
             # print(dir(atom))
             atom.SetNoImplicit(True)
 
-        remove_charge_and_bond_order_from_imidazole(submol)
-        remove_charge_and_bond_order_from_guanidinium(submol)
+        if remove_charge_bond_order_resonant:
+            remove_charge_and_bond_order_from_imidazole(submol)
+            remove_charge_and_bond_order_from_guanidinium(submol)
         return submol
 
     def _get_smiles(self,
-                   mol: openff.toolkit.topology.molecule.Molecule,
-                   indices: list = [], label_indices: list = []):
+                    mol: openff.toolkit.topology.molecule.Molecule,
+                    indices: list = [],
+                    label_indices: list = [],
+                    replace_quadruple_bond_with_any: bool = True,
+                    remove_charge_bond_order_resonant: bool = True,
+                    ):
         """
         Get SMARTS of selected atoms in molecule
 
@@ -300,16 +321,24 @@ class CifSubstructures:
             at = rdmol.GetAtomWithIdx(int(lix))
             at.SetAtomMapNum(i)
         indices = sorted(set(indices) | set(label_indices))
-        submol = self._get_subrdmol(rdmol, indices)
+        submol = self._get_subrdmol(rdmol,
+                                    indices,
+                                    remove_charge_bond_order_resonant=remove_charge_bond_order_resonant
+                                    )
         smiles = rdkit.Chem.MolToSmiles(submol, allHsExplicit=True)
-        smiles = smiles.replace('$', '~')
+        # TODO: This doesn't seem to be having an effect. It is replacing bond orders regardless.
+        if replace_quadruple_bond_with_any:
+            smiles = smiles.replace('$', '~')
         return smiles
 
     def _add_substructure_data_entry(self,
                                      entry_data,
                                      include_leaving,
                                      discard_keyword,
-                                     additional_leaving=None):
+                                     additional_leaving=None,
+                                     replace_quadruple_bond_with_any: bool = True,
+                                     remove_charge_bond_order_resonant: bool = True
+                                     ):
         """
         Read substructure from entry data in cif file and fill data object with smiles.
 
@@ -390,13 +419,21 @@ class CifSubstructures:
         atom_indices = list(range(offmol.n_atoms))
         smiles = self._get_smiles(offmol,
                                   indices=atom_indices,
-                                  label_indices=atom_indices)
+                                  label_indices=atom_indices,
+                                  replace_quadruple_bond_with_any=replace_quadruple_bond_with_any,
+                                  remove_charge_bond_order_resonant=remove_charge_bond_order_resonant
+                                  )
         # Only take three letter code for key -- Note it uses the new atom_names list
         entry_code = entry_data['_chem_comp.three_letter_code']
         if smiles not in self.data[entry_code]:
             self.data[entry_code][smiles] = atom_names
 
-    def _fill_substructure_data(self, include_leaving=False, discard_keyword='FRAGMENT'):
+    def _fill_substructure_data(self,
+                                include_leaving=False,
+                                discard_keyword='FRAGMENT',
+                                replace_quadruple_bond_with_any: bool = True,
+                                remove_charge_bond_order_resonant: bool = True
+                                ):
         """
         Fills data dictionary with the substructure information.
 
@@ -425,9 +462,17 @@ class CifSubstructures:
             # create empty molecule to fill with data
             # if 'LYS' in entry:
             #     continue
-            self._add_substructure_data_entry(entry_data, include_leaving, discard_keyword)
+            self._add_substructure_data_entry(entry_data,
+                                              include_leaving,
+                                              discard_keyword,
+                                              replace_quadruple_bond_with_any=replace_quadruple_bond_with_any,
+                                              remove_charge_bond_order_resonant=remove_charge_bond_order_resonant
+                                              )
             if entry in override_dict:
                 self._add_substructure_data_entry(entry_data,
                                                   include_leaving,
                                                   discard_keyword,
-                                                  override_dict[entry])
+                                                  override_dict[entry],
+                                                  replace_quadruple_bond_with_any=replace_quadruple_bond_with_any,
+                                                  remove_charge_bond_order_resonant=remove_charge_bond_order_resonant
+                                                  )
