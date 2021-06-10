@@ -66,6 +66,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 - [PR #763](https://github.com/openforcefield/openff-toolkit/pull/763): 
   Adds an introductory example showcasing the toolkit parameterizing a protein-ligand simulation.
+- [PR #955](https://github.com/openforcefield/openff-toolkit/pull/955): Refreshed the force field modification example
 - [PR #934](https://github.com/openforcefield/openff-toolkit/pull/934) 
   and [conda-forge/openff-toolkit-feedstock#9](https://github.com/conda-forge/openff-toolkit-feedstock/pull/9): 
   Added `openff-toolkit-examples` Conda package for easy installation of examples and their 
