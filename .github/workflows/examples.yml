@@ -96,7 +96,7 @@ jobs:
         shell: bash -l {0}
         run: |
           # Remove the packaged openff-toolkit, installed as a dependency of openmmforcefields
-          conda remove --force openff-toolkit
+          conda remove --force openff-toolkit-base
           python setup.py develop --no-deps
 
       - name: Environment Information
