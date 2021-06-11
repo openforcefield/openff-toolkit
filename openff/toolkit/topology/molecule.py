@@ -40,6 +40,7 @@ from copy import deepcopy
 from typing import Optional, Union
 from itertools import chain
 
+
 import json
 import networkx as nx
 import numpy as np
@@ -66,7 +67,6 @@ from openff.toolkit.utils.utils import (
     requires_package,
     get_data_file_path,
     remove_subsets_from_list,
-)
 
 
 class NotAttachedToMoleculeError(MessageException):
@@ -174,7 +174,7 @@ class AtomMetadataDict(UserDict):
         if not isinstance(value, (str, int)):
             raise InvalidAtomMetadataError(
                 f"Attempted to set atom metadata with a non-string or integer "
-                f"value. (value: {value}"
+                f"value. (value: {value})"
             )
         super().__setitem__(key, value)
 
@@ -4611,8 +4611,11 @@ class FrozenMolecule(Serializable):
         )
         return molecule
 
-    @RDKitToolkitWrapper.requires_toolkit()
-    def to_rdkit(self, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
+    def to_rdkit(
+        self,
+        aromaticity_model=DEFAULT_AROMATICITY_MODEL,
+        toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
+    ):
         """
         Create an RDKit molecule
 
@@ -4639,8 +4642,13 @@ class FrozenMolecule(Serializable):
         >>> rdmol = molecule.to_rdkit()
 
         """
-        toolkit = RDKitToolkitWrapper()
-        return toolkit.to_rdkit(self, aromaticity_model=aromaticity_model)
+        # toolkit = RDKitToolkitWrapper()
+        if isinstance(toolkit_registry, ToolkitWrapper):
+            return toolkit_registry.to_rdkit(self, aromaticity_model=aromaticity_model)
+        else:
+            return toolkit_registry.call(
+                "to_rdkit", self, aromaticity_model=aromaticity_model
+            )
 
     @classmethod
     @OpenEyeToolkitWrapper.requires_toolkit()
@@ -5176,7 +5184,14 @@ class FrozenMolecule(Serializable):
 
         """
         # toolkit = OpenEyeToolkitWrapper()
-        return toolkit_registry.to_openeye(self, aromaticity_model=aromaticity_model)
+        if isinstance(toolkit_registry, ToolkitWrapper):
+            return toolkit_registry.to_openeye(
+                self, aromaticity_model=aromaticity_model
+            )
+        else:
+            return toolkit_registry.call(
+                "to_openeye", self, aromaticity_model=aromaticity_model
+            )
 
     def _construct_angles(self):
         """

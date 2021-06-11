@@ -1496,53 +1496,11 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
     to_openeye_cache = LRUCache(maxsize=4096)
 
+
     @cached(to_openeye_cache, key=mol_to_ctab_and_aro_key)
-    def to_openeye(self, molecule, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
-        """
-        Create an OpenEye molecule using the specified aromaticity model
-
-        ``OEAtom`` s have a different set of allowed value for partial
-        charges than ``openff.toolkit.topology.Molecule``\ s. In the
-        OpenEye toolkits, partial charges are stored on individual
-        ``OEAtom``\ s, and their values are initialized to ``0.0``. In
-        the Open Force Field Toolkit, an``openff.toolkit.topology.Molecule``'s
-        ``partial_charges`` attribute is initialized to ``None`` and can
-        be set to a ``simtk.unit.Quantity``-wrapped numpy array with
-        units of elementary charge. The Open Force Field Toolkit
-        considers an ``OEMol`` where every ``OEAtom`` has a partial
-        charge of ``float('nan')`` to be equivalent to an Open Force
-        Field Toolkit ``Molecule``'s ``partial_charges = None``. This
-        assumption is made in both ``to_openeye`` and ``from_openeye``.
-
-        .. todo ::
-
-           * Should the aromaticity model be specified in some other way?
-
-        .. warning :: This API is experimental and subject to change.
-
-        Parameters
-        ----------
-        molecule : openff.toolkit.topology.molecule.Molecule object
-            The molecule to convert to an OEMol
-        aromaticity_model : str, optional, default=DEFAULT_AROMATICITY_MODEL
-            The aromaticity model to use
-
-        Returns
-        -------
-        oemol : openeye.oechem.OEMol
-            An OpenEye molecule
-
-        Examples
-        --------
-
-        Create an OpenEye molecule from a Molecule
-
-        >>> from openff.toolkit.topology import Molecule
-        >>> toolkit_wrapper = OpenEyeToolkitWrapper()
-        >>> molecule = Molecule.from_smiles('CC')
-        >>> oemol = toolkit_wrapper.to_openeye(molecule)
-
-        """
+    def _connection_table_to_openeye(
+        self, molecule, aromaticity_model=DEFAULT_AROMATICITY_MODEL
+    ):
         from openeye import oechem
 
         if hasattr(oechem, aromaticity_model):
@@ -1553,36 +1511,28 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             )
 
         oemol = oechem.OEMol()
-        # if not(molecule.name is None):
-        oemol.SetTitle(molecule.name)
-        map_atoms = {}  # {off_idx : oe_idx}
         # Add atoms
+        map_atoms = {}  # {off_idx : oe_idx}
         oemol_atoms = list()  # list of corresponding oemol atoms
         for atom in molecule.atoms:
             oeatom = oemol.NewAtom(atom.atomic_number)
             oeatom.SetFormalCharge(
                 atom.formal_charge.value_in_unit(unit.elementary_charge)
-            )  # simtk.unit.Quantity(1, unit.elementary_charge)
+            )
             # TODO: Do we want to provide _any_ pathway for Atom.is_aromatic to influence the OEMol?
             # oeatom.SetAromatic(atom.is_aromatic)
-            oeatom.SetData("name", atom.name)
-            oeatom.SetPartialCharge(float("nan"))
             oemol_atoms.append(oeatom)
             map_atoms[atom.molecule_atom_index] = oeatom.GetIdx()
 
         # Add bonds
         oemol_bonds = list()  # list of corresponding oemol bonds
         for bond in molecule.bonds:
-            # atom1_index = molecule.atoms.index(bond.atom1)
-            # atom2_index = molecule.atoms.index(bond.atom2)
             atom1_index = bond.atom1_index
             atom2_index = bond.atom2_index
             oebond = oemol.NewBond(oemol_atoms[atom1_index], oemol_atoms[atom2_index])
             oebond.SetOrder(bond.bond_order)
             # TODO: Do we want to provide _any_ pathway for Bond.is_aromatic to influence the OEMol?
             # oebond.SetAromatic(bond.is_aromatic)
-            if not (bond.fractional_bond_order is None):
-                oebond.SetData("fractional_bond_order", bond.fractional_bond_order)
             oemol_bonds.append(oebond)
 
         oechem.OEAssignAromaticFlags(oemol, oe_aro_model)
@@ -1658,13 +1608,105 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                         "Programming error: OpenEye bond stereochemistry assumptions failed."
                     )
 
+        # Clean Up phase
+        # The only feature of a molecule that wasn't perceived above seemed to be ring connectivity, better to run it
+        # here then for someone to inquire about ring sizes and get 0 when it shouldn't be
+        oechem.OEFindRingAtomsAndBonds(oemol)
+
+        return oemol, map_atoms
+
+    def to_openeye(self, molecule, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
+        """
+        Create an OpenEye molecule using the specified aromaticity model
+
+        ``OEAtom`` s have a different set of allowed value for partial
+        charges than ``openff.toolkit.topology.Molecule``\ s. In the
+        OpenEye toolkits, partial charges are stored on individual
+        ``OEAtom``\ s, and their values are initialized to ``0.0``. In
+        the Open Force Field Toolkit, an``openff.toolkit.topology.Molecule``'s
+        ``partial_charges`` attribute is initialized to ``None`` and can
+        be set to a ``simtk.unit.Quantity``-wrapped numpy array with
+        units of elementary charge. The Open Force Field Toolkit
+        considers an ``OEMol`` where every ``OEAtom`` has a partial
+        charge of ``float('nan')`` to be equivalent to an Open Force
+        Field Toolkit ``Molecule``'s ``partial_charges = None``. This
+        assumption is made in both ``to_openeye`` and ``from_openeye``.
+
+        .. todo ::
+
+           * Should the aromaticity model be specified in some other way?
+
+        .. warning :: This API is experimental and subject to change.
+
+        Parameters
+        ----------
+        molecule : openff.toolkit.topology.molecule.Molecule object
+            The molecule to convert to an OEMol
+        aromaticity_model : str, optional, default=DEFAULT_AROMATICITY_MODEL
+            The aromaticity model to use
+
+        Returns
+        -------
+        oemol : openeye.oechem.OEMol
+            An OpenEye molecule
+
+        Examples
+        --------
+
+        Create an OpenEye molecule from a Molecule
+
+        >>> from openff.toolkit.topology import Molecule
+        >>> toolkit_wrapper = OpenEyeToolkitWrapper()
+        >>> molecule = Molecule.from_smiles('CC')
+        >>> oemol = toolkit_wrapper.to_openeye(molecule)
+
+        """
+        from openeye import oechem
+
+        oemol, off_to_oe_idx = self._connection_table_to_openeye(
+            molecule, aromaticity_model=aromaticity_model
+        )
+        oemol = oechem.OEMol(oemol)
+        # if not(molecule.name is None):
+        oe_to_off_idx = dict([(j, i) for i, j in off_to_oe_idx.items()])
+
+        oemol.SetTitle(molecule.name)
+        # Make lists of OE atoms and OE bonds in the same order as the OFF atoms and OFF bonds
+        oemol_atoms = [None] * molecule.n_atoms  # list of corresponding oemol atoms
+        for oe_atom in oemol.GetAtoms():
+            oe_idx = oe_atom.GetIdx()
+            oemol_atoms[oe_to_off_idx[oe_idx]] = oe_atom
+            off_atom = molecule.atoms[oe_to_off_idx[oe_idx]]
+            oe_atom.SetData("name", off_atom.name)
+
+            if off_atom.partial_charge is None:
+                oe_atom.SetPartialCharge(float("nan"))
+            else:
+                oe_atom.SetPartialCharge(
+                    off_atom.partial_charge / unit.elementary_charge
+                )
+            # oeatom.SetPartialCharge(1.)
+        assert None not in oemol_atoms
+
+        oemol_bonds = [None] * molecule.n_bonds  # list of corresponding oemol bonds
+        for oe_bond in oemol.GetBonds():
+            at1_off_idx = oe_to_off_idx[oe_bond.GetBgnIdx()]
+            at2_off_idx = oe_to_off_idx[oe_bond.GetEndIdx()]
+            off_bond = molecule.get_bond_between(at1_off_idx, at2_off_idx)
+            off_bond_idx = off_bond.molecule_bond_index
+            oemol_bonds[off_bond_idx] = oe_bond
+            if off_bond.fractional_bond_order is not None:
+                oe_bond.SetData("fractional_bond_order", off_bond.fractional_bond_order)
+
+        assert None not in oemol_bonds
+
         # Retain conformations, if present
         if molecule.n_conformers != 0:
             oemol.DeleteConfs()
             for conf in molecule._conformers:
                 # OE needs a 1 x (3*n_Atoms) double array as input
                 flat_coords = np.zeros(shape=oemol.NumAtoms() * 3, dtype=np.float64)
-                for index, oe_idx in map_atoms.items():
+                for index, oe_idx in off_to_oe_idx.items():
                     (x, y, z) = conf[index, :] / unit.angstrom
                     flat_coords[(3 * oe_idx)] = x
                     flat_coords[(3 * oe_idx) + 1] = y
@@ -1673,30 +1715,9 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 oecoords = oechem.OEFloatArray(flat_coords)
                 oemol.NewConf(oecoords)
 
-        # Retain charges, if present. All atoms are initialized above with a partial charge of NaN.
-        if molecule._partial_charges is not None:
-            oe_indexed_charges = np.zeros(shape=molecule.n_atoms, dtype=np.float64)
-            for off_idx, charge in enumerate(molecule._partial_charges):
-                oe_idx = map_atoms[off_idx]
-                charge_unitless = charge / unit.elementary_charge
-                oe_indexed_charges[oe_idx] = charge_unitless
-            # TODO: This loop below fails if we try to use an "enumerate"-style loop.
-            #  It's worth investigating whether we make this assumption elsewhere in the codebase, since
-            #  the OE docs may indicate that this sort of usage is a very bad thing to do.
-            #  https://docs.eyesopen.com/toolkits/python/oechemtk/atombondindices.html#indices-for-molecule-lookup-considered-harmful
-            # for oe_idx, oe_atom in enumerate(oemol.GetAtoms()):
-            for oe_atom in oemol.GetAtoms():
-                oe_idx = oe_atom.GetIdx()
-                oe_atom.SetPartialCharge(oe_indexed_charges[oe_idx])
-
         # Retain properties, if present
         for key, value in molecule.properties.items():
             oechem.OESetSDData(oemol, str(key), str(value))
-
-        # Clean Up phase
-        # The only feature of a molecule that wasn't perceived above seemed to be ring connectivity, better to run it
-        # here then for someone to inquire about ring sizes and get 0 when it shouldn't be
-        oechem.OEFindRingAtomsAndBonds(oemol)
 
         return oemol
 
@@ -2736,7 +2757,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         .. note :: Currently, the only supported ``aromaticity_model`` is ``OEAroModel_MDL``
 
         """
-        oemol = self.to_openeye(molecule)
+        oemol, _ = self._connection_table_to_openeye(molecule)
         return self._find_smarts_matches(
             oemol, smarts, aromaticity_model=aromaticity_model
         )
@@ -4213,59 +4234,14 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         return offmol
 
     to_rdkit_cache = LRUCache(maxsize=4096)
-
     @cached(to_rdkit_cache, key=mol_to_ctab_and_aro_key)
-    def to_rdkit(self, molecule, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
-        """
-        Create an RDKit molecule
-
-        Requires the RDKit to be installed.
-
-        .. warning :: This API is experimental and subject to change.
-
-        Parameters
-        ----------
-        aromaticity_model : str, optional, default=DEFAULT_AROMATICITY_MODEL
-            The aromaticity model to use
-
-        Returns
-        -------
-        rdmol : rkit.RDMol
-            An RDKit molecule
-
-        Examples
-        --------
-
-        Convert a molecule to RDKit
-
-        >>> from openff.toolkit.topology import Molecule
-        >>> ethanol = Molecule.from_smiles('CCO')
-        >>> rdmol = ethanol.to_rdkit()
-
-        """
-        from rdkit import Chem, Geometry
+    def _connectivity_table_to_rdkit(
+        self, molecule, aromaticity_model=DEFAULT_AROMATICITY_MODEL
+    ):
+        from rdkit import Chem
 
         # Create an editable RDKit molecule
         rdmol = Chem.RWMol()
-
-        # Set name
-        # TODO: What is the best practice for how this should be named?
-        if not (molecule.name is None):
-            rdmol.SetProp("_Name", molecule.name)
-
-        # TODO: Set other properties
-        for name, value in molecule.properties.items():
-            if type(value) == str:
-                rdmol.SetProp(name, value)
-            elif type(value) == int:
-                rdmol.SetIntProp(name, value)
-            elif type(value) == float:
-                rdmol.SetDoubleProp(name, value)
-            elif type(value) == bool:
-                rdmol.SetBoolProp(name, value)
-            else:
-                # Shove everything else into a string
-                rdmol.SetProp(name, str(value))
 
         _bondtypes = {
             1: Chem.BondType.SINGLE,
@@ -4284,7 +4260,6 @@ class RDKitToolkitWrapper(ToolkitWrapper):
                 atom.formal_charge.value_in_unit(unit.elementary_charge)
             )
             rdatom.SetIsAromatic(atom.is_aromatic)
-            rdatom.SetProp("_Name", atom.name)
 
             ## Stereo handling code moved to after bonds are added
             if atom.stereochemistry == "S":
@@ -4306,10 +4281,6 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             )
             rdmol.AddBond(*atom_indices)
             rdbond = rdmol.GetBondBetweenAtoms(*atom_indices)
-            if not (bond.fractional_bond_order is None):
-                rdbond.SetDoubleProp(
-                    "fractional_bond_order", bond.fractional_bond_order
-                )
             # Assign bond type, which is based on order unless it is aromatic
             if bond.is_aromatic:
                 rdbond.SetBondType(_bondtypes[1.5])
@@ -4382,6 +4353,88 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         # Copy bond stereo info from molecule to rdmol.
         self._assign_rdmol_bonds_stereo(molecule, rdmol)
 
+        # Cleanup the rdmol
+        rdmol.UpdatePropertyCache(strict=False)
+        Chem.GetSSSR(rdmol)
+
+        # Forcefully assign stereo information on the atoms that RDKit
+        # can't figure out. This must be done last as calling AssignStereochemistry
+        # again will delete these properties (see #196).
+        for rdatom, stereochemistry in undefined_stereo_atoms.items():
+            rdatom.SetProp("_CIPCode", stereochemistry)
+
+        return rdmol
+
+    def to_rdkit(self, molecule, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
+        """
+        Create an RDKit molecule
+
+        Requires the RDKit to be installed.
+
+        .. warning :: This API is experimental and subject to change.
+
+        Parameters
+        ----------
+        aromaticity_model : str, optional, default=DEFAULT_AROMATICITY_MODEL
+            The aromaticity model to use
+
+        Returns
+        -------
+        rdmol : rkit.RDMol
+            An RDKit molecule
+
+        Examples
+        --------
+
+        Convert a molecule to RDKit
+
+        >>> from openff.toolkit.topology import Molecule
+        >>> ethanol = Molecule.from_smiles('CCO')
+        >>> rdmol = ethanol.to_rdkit()
+
+        """
+        from rdkit import Chem, Geometry
+
+        # Convert the OFF molecule's connectivity table to RDKit, returning a cached rdmol if possible
+        rdmol = self._connectivity_table_to_rdkit(
+            molecule, aromaticity_model=aromaticity_model
+        )
+        # In case a cached rdmol was returned, make a copy of it
+        rdmol = Chem.RWMol(rdmol)
+        # Set name
+        # TODO: What is the best practice for how this should be named?
+        if not (molecule.name is None):
+            rdmol.SetProp("_Name", molecule.name)
+
+        # TODO: Set other properties
+        for name, value in molecule.properties.items():
+            if type(value) == str:
+                rdmol.SetProp(name, value)
+            elif type(value) == int:
+                rdmol.SetIntProp(name, value)
+            elif type(value) == float:
+                rdmol.SetDoubleProp(name, value)
+            elif type(value) == bool:
+                rdmol.SetBoolProp(name, value)
+            else:
+                # Shove everything else into a string
+                rdmol.SetProp(name, str(value))
+
+        for index, atom in enumerate(molecule.atoms):
+            rdatom = rdmol.GetAtomWithIdx(index)
+            rdatom.SetProp("_Name", atom.name)
+
+        for bond in molecule.bonds:
+            atom_indices = (
+                bond.atom1.molecule_atom_index,
+                bond.atom2.molecule_atom_index,
+            )
+            rdbond = rdmol.GetBondBetweenAtoms(*atom_indices)
+            if not (bond.fractional_bond_order is None):
+                rdbond.SetDoubleProp(
+                    "fractional_bond_order", bond.fractional_bond_order
+                )
+
         # Set coordinates if we have them
         if molecule._conformers:
             for conformer in molecule._conformers:
@@ -4393,7 +4446,6 @@ class RDKitToolkitWrapper(ToolkitWrapper):
 
         # Retain charges, if present
         if not (molecule._partial_charges is None):
-
             rdk_indexed_charges = np.zeros(shape=molecule.n_atoms, dtype=float)
             for atom_idx, charge in enumerate(molecule._partial_charges):
                 charge_unitless = charge.value_in_unit(unit.elementary_charge)
@@ -4404,16 +4456,6 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             # Note: We could put this outside the "if" statement, which would result in all partial charges in the
             #       resulting file being set to "n/a" if they weren't set in the Open Force Field Toolkit ``Molecule``
             Chem.CreateAtomDoublePropertyList(rdmol, "PartialCharge")
-
-        # Cleanup the rdmol
-        rdmol.UpdatePropertyCache(strict=False)
-        Chem.GetSSSR(rdmol)
-
-        # Forcefully assign stereo information on the atoms that RDKit
-        # can't figure out. This must be done last as calling AssignStereochemistry
-        # again will delete these properties (see #196).
-        for rdatom, stereochemistry in undefined_stereo_atoms.items():
-            rdatom.SetProp("_CIPCode", stereochemistry)
 
         # Return non-editable version
         return Chem.Mol(rdmol)
@@ -4616,7 +4658,9 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         .. note :: Currently, the only supported ``aromaticity_model`` is ``OEAroModel_MDL``
 
         """
-        rdmol = self.to_rdkit(molecule, aromaticity_model=aromaticity_model)
+        rdmol = self._connectivity_table_to_rdkit(
+            molecule, aromaticity_model=aromaticity_model
+        )
         return self._find_smarts_matches(
             rdmol, smarts, aromaticity_model="OEAroModel_MDL"
         )
