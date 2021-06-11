@@ -623,17 +623,17 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
     @classmethod
     def _check_licenses(cls):
-        """Check license of all known OpenEye tools. Returns True if all are found
+        """Check license of all known OpenEye tools. Returns True if any are found
         to be licensed, False if any are not."""
-        all_licensed = True
         for (tool, license_func) in cls._license_functions.items():
             try:
                 module = importlib.import_module("openeye." + tool)
             except (ImportError, ModuleNotFoundError):
-                return False
+                continue
             else:
-                all_licensed &= getattr(module, license_func)()
-        return all_licensed
+                if getattr(module, license_func)():
+                    return True
+        return False
 
     @classmethod
     def is_available(cls):
@@ -2761,6 +2761,31 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         return self._find_smarts_matches(
             oemol, smarts, aromaticity_model=aromaticity_model
         )
+
+
+def requires_openeye_module(module_name):
+    def inner_decorator(function):
+        @wraps(function)
+        def wrapper(*args, **kwargs):
+            try:
+                module = importlib.import_module("openeye." + module_name)
+            except (ImportError, ModuleNotFoundError):
+                # TODO: Custom exception
+                raise Exception("openeye." + module_name)
+            try:
+                license_func = OpenEyeToolkitWrapper._license_functions[module_name]
+            except KeyError:
+                # TODO: Custom exception
+                raise Exception(f"we do not currently use {module_name}")
+
+            # TODO: Custom exception
+            assert getattr(module, license_func)()
+
+            return function(*args, **kwargs)
+
+        return wrapper
+
+    return inner_decorator
 
 
 class RDKitToolkitWrapper(ToolkitWrapper):
