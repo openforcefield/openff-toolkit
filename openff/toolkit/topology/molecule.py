@@ -35,10 +35,13 @@ Molecular chemical entity representation and routines to interface with cheminfo
 
 import operator
 import warnings
-from collections import OrderedDict, UserDict
+from collections import OrderedDict, UserDict, defaultdict
 from copy import deepcopy
 from typing import Optional, Union
+from itertools import chain
 
+
+import json
 import networkx as nx
 import numpy as np
 from cached_property import cached_property
@@ -62,7 +65,8 @@ from openff.toolkit.utils.utils import (
     MessageException,
     MissingDependencyError,
     requires_package,
-)
+    get_data_file_path,
+    remove_subsets_from_list,
 
 
 class NotAttachedToMoleculeError(MessageException):
@@ -5878,6 +5882,55 @@ class Molecule(FrozenMolecule):
                 return Image(png)
 
         raise ValueError("Could not find an appropriate backend")
+
+    def perceive_residues(self):
+        """
+        Perceive residue substructure and fill atoms metadata accordingly.
+        """
+        # Read substructure dictionary file
+        substructure_file_path = get_data_file_path('proteins/aa_residues_substructures.json')
+        with open(substructure_file_path, 'r') as subfile:
+            substructure_dictionary = json.load(subfile)
+        all_matches = list()
+        for residue_name, smarts_dict in substructure_dictionary.items():
+            matches = dict()
+            for smarts in smarts_dict:
+                for match in self.chemical_environment_matches(smarts):
+                    matches[match] = smarts
+                    all_matches.append({'atom_idxs': match,
+                                        'atom_idxs_set': set(match),
+                                        'smarts': smarts,
+                                        'residue_name': residue_name,
+                                        'atom_names': smarts_dict[smarts]})
+
+        # Remove matches that are subsets of other matches
+        # give precedence to the SMARTS defined at the end of the file
+        match_idxs_to_delete = set()
+        for match_idx in range(len(all_matches)-1, 0, -1):
+            this_match_set = all_matches[match_idx]['atom_idxs_set']
+            this_match_set_size = len(this_match_set)
+            for match_before_this_idx in range(match_idx):
+                match_before_this_set = all_matches[match_before_this_idx]['atom_idxs_set']
+                match_before_this_set_size = len(match_before_this_set)
+                n_overlapping_atoms = len(this_match_set.intersection(match_before_this_set))
+                if n_overlapping_atoms > 0:
+                    if match_before_this_set_size < this_match_set_size:
+                        match_idxs_to_delete.add(match_before_this_idx)
+                    else:
+                        match_idxs_to_delete.add(match_idx)
+
+        match_idxs_to_delete_list = sorted(list(match_idxs_to_delete), reverse=True)
+        for match_idx in match_idxs_to_delete_list:
+            all_matches.pop(match_idx)
+
+        all_matches.sort(key=lambda x: min(x['atom_idxs']))
+
+        # Now the matches have been deduplicated and de-subsetted
+        for residue_num, match_dict in enumerate(all_matches):
+            for smarts_idx, atom_idx in enumerate(match_dict['atom_idxs']):
+                self.atoms[atom_idx].metadata['residue_name'] = match_dict['residue_name']
+                self.atoms[atom_idx].metadata['residue_number'] = residue_num + 1
+                self.atoms[atom_idx].metadata['atom_name'] = match_dict['atom_names'][smarts_idx]
 
     def _ipython_display_(self):
         from IPython.display import display

@@ -1496,6 +1496,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
     to_openeye_cache = LRUCache(maxsize=4096)
 
+
     @cached(to_openeye_cache, key=mol_to_ctab_and_aro_key)
     def _connection_table_to_openeye(
         self, molecule, aromaticity_model=DEFAULT_AROMATICITY_MODEL
@@ -4233,7 +4234,6 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         return offmol
 
     to_rdkit_cache = LRUCache(maxsize=4096)
-
     @cached(to_rdkit_cache, key=mol_to_ctab_and_aro_key)
     def _connectivity_table_to_rdkit(
         self, molecule, aromaticity_model=DEFAULT_AROMATICITY_MODEL
