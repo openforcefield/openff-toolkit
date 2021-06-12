@@ -68,7 +68,7 @@ from openff.toolkit.utils.utils import (
     requires_package,
     get_data_file_path,
     remove_subsets_from_list,
-
+)
 
 class NotAttachedToMoleculeError(MessageException):
     """Exception for when a component does not belong to a Molecule object, but is queried"""
