@@ -7,33 +7,30 @@ dependencies:
     # Base depends
   - python
   - pip
-
-    # Testing
+  - packaging
+  - openmm
+  - openff-forcefields
+  - smirnoff99Frosst
+  - numpy
+  - networkx
+  - ambertools
+  - rdkit
+  - mdtraj
+  - xmltodict
+    # Test-only/optional/dev
   - pytest
   - pytest-cov
   - nbval
   - codecov
   - coverage
-  - numpy
-  - networkx
-  - ambertools
-  - rdkit
   - openeye-toolkits
-  - packaging
   - black
   - isort
-
-    # Removed until a new release which targets openff-toolkit is made.
-#  - openmmforcefields
-  - openmm
-  - openff-forcefields
-  - smirnoff99Frosst
+  - openmmforcefields
   - pyyaml
   - toml
   - bson
   - msgpack-python
-  - xmltodict
   - qcelemental
   - qcportal
   - qcengine
-  - mdtraj
