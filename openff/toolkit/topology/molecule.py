@@ -33,6 +33,7 @@ Molecular chemical entity representation and routines to interface with cheminfo
 # GLOBAL IMPORTS
 # =============================================================================================
 
+import copy
 import operator
 import warnings
 from abc import abstractmethod
@@ -3432,6 +3433,10 @@ class FrozenMolecule(Serializable):
             If an invalid object is passed as the toolkit_registry parameter
 
         """
+        molcopy = self.canonical_order_atoms()
+        _, copy_to_self = self.are_isomorphic(self, molcopy,
+                                              return_atom_map=True)
+
         if isinstance(toolkit_registry, ToolkitRegistry):
             # We may need to try several toolkitwrappers to find one
             # that supports the desired partial charge method, so we
@@ -3439,7 +3444,7 @@ class FrozenMolecule(Serializable):
             # if one raises an error (raise_exception_types=[])
             toolkit_registry.call(
                 "assign_partial_charges",
-                molecule=self,
+                molecule=molcopy,
                 partial_charge_method=partial_charge_method,
                 use_conformers=use_conformers,
                 strict_n_conformers=strict_n_conformers,
@@ -3449,7 +3454,7 @@ class FrozenMolecule(Serializable):
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
             toolkit.assign_partial_charges(
-                self,
+                molcopy,
                 partial_charge_method=partial_charge_method,
                 use_conformers=use_conformers,
                 strict_n_conformers=strict_n_conformers,
@@ -3460,6 +3465,9 @@ class FrozenMolecule(Serializable):
                 f"Invalid toolkit_registry passed to assign_partial_charges."
                 f"Expected ToolkitRegistry or ToolkitWrapper. Got  {type(toolkit_registry)}"
             )
+        
+        reindex = [copy_to_self[i] for i in range(self.n_atoms)]
+        self.partial_charges = molcopy.partial_charges[reindex]
 
     def assign_fractional_bond_orders(
         self,
