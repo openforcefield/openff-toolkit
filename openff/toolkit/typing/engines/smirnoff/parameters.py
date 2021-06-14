@@ -2241,7 +2241,7 @@ class ParameterHandler(_ParameterAttributeHandler):
         #  Should we reduce its scope and have a check here to make sure entity is a Topology?
         return self._find_matches(entity)
 
-    def _find_matches(self, entity, transformed_dict_cls=ValenceDict, unique=False, match_heavy_first=False):
+    def _find_matches(self, entity, transformed_dict_cls=ValenceDict, unique=True, match_heavy_first=True):
         """Implement find_matches() and allow using a difference valence dictionary.
         Parameters
         ----------
@@ -4004,7 +4004,7 @@ class LibraryChargeHandler(_NonbondedHandler):
     _INFOTYPE = LibraryChargeType  # info type to store
     _DEPENDENCIES = [vdWHandler, ElectrostaticsHandler]
 
-    def find_matches(self, entity, unique=False, match_heavy_first=False):
+    def find_matches(self, entity, unique=True, match_heavy_first=True):
         """Find the elements of the topology/molecule matched by a parameter type.
 
         Parameters
