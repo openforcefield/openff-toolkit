@@ -553,18 +553,18 @@ class ModuleToolkitWrapper(ToolkitWrapper):
         self._copy_module_properties(mod)
 
     def _copy_module_properties(self, mod):
-        self._toolkit_name = mod.toolkit_name
+        #self._toolkit_name = mod.toolkit_name
         self._toolkit_version = mod.toolkit_version
         self._toolkit_installation_instructions = mod.toolkit_installation_instructions
-        self._toolkit_file_read_formats = mod.toolkit_file_read_formats
-        self._toolkit_file_write_formats = mod.toolkit_file_write_formats
+        self._toolkit_file_read_formats = mod.get_file_read_formats()
+        self._toolkit_file_write_formats = mod.get_file_write_formats()
         
         for name, obj in mod.__dict__.items():
             if hasattr(obj, "_openff_info") and obj._openff_info["published"]:
-                assert not name.startswith("_")
                 setattr(self, name, obj)
 
 class OpenEyeToolkitWrapper(ModuleToolkitWrapper):
+    _toolkit_name = "OpenEye Toolkit"
     module_name = "openff.toolkit.utils.openeye_wrapper"
             
     
@@ -596,6 +596,7 @@ def requires_openeye_module(module_name):
 
 
 class RDKitToolkitWrapper(ModuleToolkitWrapper):
+    _toolkit_name = "The RDKit"
     module_name = "openff.toolkit.utils.rdkit_wrapper"
 
 

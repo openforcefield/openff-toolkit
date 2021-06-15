@@ -1,6 +1,9 @@
 import math
+import itertools
+
 import numpy as np
 from simtk import unit
+import copy
 
 from typing import List, Optional, Tuple
 
@@ -9,6 +12,7 @@ from .toolkits import (
     publish,
     DEFAULT_AROMATICITY_MODEL,
     UndefinedStereochemistryError,
+    ChargeMethodUnavailableError,
     ToolkitUnavailableException,
     logger,
     )
@@ -56,7 +60,10 @@ else:
     toolkit_version = None
     
 
-def toolkit_file_write_formats():
+def get_file_read_formats():
+    return toolkit_file_read_formats
+    
+def get_file_write_formats():
     """
     List of file formats that this toolkit can write.
     """
@@ -871,6 +878,8 @@ def assign_partial_charges(
 
     molecule.partial_charges = charges * unit.elementary_charge
 
+# XXX Needed by test_toolkits(), which inspect the internals.
+@publish()
 def _elf_is_problematic_conformer(
     molecule: "Molecule", conformer: unit.Quantity
 ) -> Tuple[bool, Optional[str]]:
@@ -894,7 +903,7 @@ def _elf_is_problematic_conformer(
     from rdkit.Chem.rdMolTransforms import GetDihedralRad
 
     # Create a copy of the molecule which contains only this conformer.
-    molecule_copy = Chem.Mol(molecule)
+    molecule_copy = copy.deepcopy(molecule)
     molecule_copy._conformers = [conformer]
 
     rdkit_molecule = molecule_copy.to_rdkit()
@@ -918,6 +927,8 @@ def _elf_is_problematic_conformer(
 
     return False, None
 
+# XXX Needed by test_toolkits(), which inspect the internals.
+@publish()
 def _elf_prune_problematic_conformers(
     molecule: "Molecule"
 ) -> List[unit.Quantity]:
@@ -953,6 +964,8 @@ def _elf_prune_problematic_conformers(
 
     return valid_conformers
 
+# XXX Needed by test_toolkits(), which inspect the internals.
+@publish()
 def _elf_compute_electrostatic_energy(
     molecule: "Molecule", conformer: unit.Quantity
 ) -> float:
@@ -1023,6 +1036,8 @@ def _elf_compute_electrostatic_energy(
 
     return 0.5 * interaction_energies.sum()
 
+# XXX Needed by test_toolkits(), which inspect the internals.
+@publish()
 def _elf_compute_rms_matrix(molecule: "Molecule") -> np.ndarray:
     """Computes the symmetric RMS matrix of all conformers in a molecule taking
     only heavy atoms into account.
@@ -1062,6 +1077,8 @@ def _elf_compute_rms_matrix(molecule: "Molecule") -> np.ndarray:
     rms_matrix += rms_matrix.T
     return rms_matrix
 
+# XXX Needed by test_toolkits(), which inspect the internals.
+@publish()
 def _elf_select_diverse_conformers(
     molecule: "Molecule",
     ranked_conformers: List[unit.Quantity],
@@ -1108,7 +1125,7 @@ def _elf_select_diverse_conformers(
     """
 
     # Compute the RMS between all pairs of conformers
-    molecule = Chem.Mol(molecule)
+    molecule = copy.deepcopy(molecule)
     molecule.conformers.clear()
 
     for conformer in ranked_conformers:
@@ -1199,7 +1216,7 @@ def apply_elf_conformer_selection(
         return
 
     # Copy the input molecule so we can directly perturb it within the method.
-    molecule_copy = Chem.Mol(molecule)
+    molecule_copy = copy.deepcopy(molecule)
 
     # Prune any problematic conformers, such as trans-COOH configurations.
     conformers = _elf_prune_problematic_conformers(molecule_copy)

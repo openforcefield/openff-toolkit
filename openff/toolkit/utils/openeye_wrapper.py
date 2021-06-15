@@ -1,4 +1,8 @@
 import math
+import re
+import tempfile
+import os.path
+
 import numpy as np
 from simtk import unit
 from collections import defaultdict
@@ -12,6 +16,7 @@ from .toolkits import (
     InvalidIUPACNameError,
     ChargeMethodUnavailableError,
     ChargeCalculationError,
+    GAFFAtomTypeWarning,
     logger # don't change the __name__ # XXX ?
     )
 
@@ -68,7 +73,6 @@ if _is_installed:
 else:
     toolkit_version = None
 
-
 toolkit_file_read_formats = [
     "CAN",
     "CDX",
@@ -118,6 +122,12 @@ toolkit_file_write_formats = [
     "USM",
     "XYC",
     ]
+    
+def get_file_read_formats():
+    return toolkit_file_read_formats
+
+def get_file_write_formats():
+    return toolkit_file_write_formats
 
 
 def _import_openeye_tool(name):
@@ -368,7 +378,7 @@ def _turn_oemolbase_sd_charges_into_partial_charges(oemol):
             return True
     return False
 
-def _check_mol2_gaff_atom_type1(molecule, file_path=None):
+def _check_mol2_gaff_atom_type(molecule, file_path=None):
     """Attempts to detect the presence of GAFF atom types in a molecule loaded from a mol2 file.
 
     For now, this raises a ``GAFFAtomTypeWarning`` if the molecule
@@ -410,6 +420,85 @@ def _check_mol2_gaff_atom_type1(molecule, file_path=None):
             warnings.warn(warn_msg, GAFFAtomTypeWarning)
 
 
+@publish()
+def to_file_obj(molecule, file_obj, file_format):
+    """
+    Writes an OpenFF Molecule to a file-like object
+
+    Parameters
+    ----------
+    molecule : an OpenFF Molecule
+        The molecule to write
+    file_obj
+        The file-like object to write to
+    file_format
+        The format for writing the molecule data
+
+    """
+    with tempfile.TemporaryDirectory() as tmpdir:
+        outfile = os.path.join(f"tmp_molecule.{file_format}")
+        to_file(molecule, outfile, file_format)
+        with open(outfile) as infile:
+            file_obj.write(infile.read())
+
+@publish()
+def to_file(molecule, file_path, file_format):
+    """
+    Writes an OpenFF Molecule to a file-like object
+
+    Parameters
+    ----------
+    molecule : an OpenFF Molecule
+        The molecule to write
+    file_path
+        The file path to write to.
+    file_format
+        The format for writing the molecule data
+
+    """
+    from openeye import oechem
+
+    set_format = _get_format_setter(file_format)
+    oemol = to_openeye(molecule)
+    ofs = oechem.oemolostream(file_path)
+    set_format(ofs)
+    
+    # OFFTK strictly treats SDF as a single-conformer format.
+    # We need to override OETK's behavior here if the user is saving a multiconformer molecule.
+
+    # Remove all but the first conformer when writing to SDF as we only support single conformer format
+    if (file_format.lower() == "sdf") and oemol.NumConfs() > 1:
+        conf1 = [conf for conf in oemol.GetConfs()][0]
+        flat_coords = list()
+        for idx, coord in conf1.GetCoords().items():
+            flat_coords.extend(coord)
+        oemol.DeleteConfs()
+        oecoords = oechem.OEFloatArray(flat_coords)
+        oemol.NewConf(oecoords)
+    # We're standardizing on putting partial charges into SDFs under the `atom.dprop.PartialCharge` property
+    if (file_format.lower() == "sdf") and (molecule.partial_charges is not None):
+        partial_charges_list = [
+            oeatom.GetPartialCharge() for oeatom in oemol.GetAtoms()
+        ]
+        partial_charges_str = " ".join([f"{val:f}" for val in partial_charges_list])
+        # TODO: "dprop" means "double precision" -- Is there any way to make Python more accurately
+        #  describe/infer the proper data type?
+        oechem.OESetSDData(oemol, "atom.dprop.PartialCharge", partial_charges_str)
+
+    # If the file format is "pdb" using OEWriteMolecule() rearranges the atoms (hydrogens are pushed to the bottom)
+    # Issue #475 (https://github.com/openforcefield/openff-toolkit/issues/475)
+    # dfhahn's workaround: Using OEWritePDBFile does not alter the atom arrangement
+    if file_format.lower() == "pdb":
+        if oemol.NumConfs() > 1:
+            for conf in oemol.GetConfs():
+                oechem.OEWritePDBFile(ofs, conf, oechem.OEOFlavor_PDB_BONDS)
+        else:
+            oechem.OEWritePDBFile(ofs, oemol, oechem.OEOFlavor_PDB_BONDS)
+    else:
+        oechem.OEWriteMolecule(ofs, oemol)
+    ofs.close()
+
+        
 @publish()
 def enumerate_protomers(molecule, max_states=10):
     """
@@ -1542,6 +1631,7 @@ def apply_elf_conformer_selection(
 
 _SUPPORTED_CHARGE_METHODS = None
 def _get_supported_charge_methods():
+    global _SUPPORTED_CHARGE_METHODS
     if _SUPPORTED_CHARGE_METHODS is not None:
         return _SUPPORTED_CHARGE_METHODS
     _SUPPORTED_CHARGE_METHODS = {

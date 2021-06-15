@@ -2489,13 +2489,13 @@ class TestRDKitToolkitWrapper:
     def test_elf_is_problematic_conformer_acid(
         self, formic_acid_molecule, formic_acid_conformers
     ):
-        problematic, reason = RDKitToolkitWrapper._elf_is_problematic_conformer(
+        problematic, reason = RDKitToolkitWrapper()._elf_is_problematic_conformer(
             formic_acid_molecule, formic_acid_conformers["cis"]
         )
         assert not problematic
         assert reason is None
 
-        problematic, reason = RDKitToolkitWrapper._elf_is_problematic_conformer(
+        problematic, reason = RDKitToolkitWrapper()._elf_is_problematic_conformer(
             formic_acid_molecule, formic_acid_conformers["trans"]
         )
         assert problematic
@@ -2507,7 +2507,7 @@ class TestRDKitToolkitWrapper:
 
         formic_acid_molecule._conformers = [*formic_acid_conformers.values()]
 
-        pruned_conformers = RDKitToolkitWrapper._elf_prune_problematic_conformers(
+        pruned_conformers = RDKitToolkitWrapper()._elf_prune_problematic_conformers(
             formic_acid_molecule
         )
 
@@ -2540,7 +2540,7 @@ class TestRDKitToolkitWrapper:
         )
 
         # Compute the conformers electrostatic energy.
-        computed_energy = RDKitToolkitWrapper._elf_compute_electrostatic_energy(
+        computed_energy = RDKitToolkitWrapper()._elf_compute_electrostatic_energy(
             formic_acid_molecule, conformer * unit.angstrom
         )
         # q_O1 * q_H2 / d_O1,H2 + q_H1 * q_H2 / d_H1,H2
@@ -2553,7 +2553,7 @@ class TestRDKitToolkitWrapper:
         formic_acid_molecule.add_conformer(np.random.random((5, 3)) * unit.angstrom)
         formic_acid_molecule.add_conformer(np.random.random((5, 3)) * unit.angstrom)
 
-        rms_matrix = RDKitToolkitWrapper._elf_compute_rms_matrix(formic_acid_molecule)
+        rms_matrix = RDKitToolkitWrapper()._elf_compute_rms_matrix(formic_acid_molecule)
 
         assert rms_matrix.shape == (2, 2)
 
@@ -2587,7 +2587,7 @@ class TestRDKitToolkitWrapper:
         n_methyl_aniline.add_conformer(flipped_conformer * unit.angstrom)
 
         # Compute the RMS matrix.
-        rms_matrix = RDKitToolkitWrapper._elf_compute_rms_matrix(n_methyl_aniline)
+        rms_matrix = RDKitToolkitWrapper()._elf_compute_rms_matrix(n_methyl_aniline)
 
         assert rms_matrix.shape == (2, 2)
         assert np.allclose(rms_matrix, 0.0, atol=1e-7)
@@ -2608,7 +2608,7 @@ class TestRDKitToolkitWrapper:
         formic_acid_molecule.add_conformer(formic_acid_molecule.conformers[0] * 1.1)
         formic_acid_molecule.add_conformer(formic_acid_molecule.conformers[0] * 1.2)
 
-        conformers = RDKitToolkitWrapper._elf_select_diverse_conformers(
+        conformers = RDKitToolkitWrapper()._elf_select_diverse_conformers(
             formic_acid_molecule, formic_acid_molecule.conformers, 2, rms_tolerance
         )
 
@@ -3957,7 +3957,7 @@ class TestToolkitRegistry:
                 raise_exception_types=[],
             )
 
-
+@pytest.mark.skip("Proposed toolkit API changes always cache license checks")
 @requires_openeye
 def test_license_check(monkeypatch):
     def MockIsLicensed():
