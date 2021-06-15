@@ -797,7 +797,7 @@ def from_openeye(oemol, allow_undefined_stereo=False, _cls=None):
 def _get_unspecified_stereo_message(oemol, problematic_atoms, problematic_bonds):
     def oeatom_to_str(oeatom):
         return (
-            f"atomic num: {oeatom.GetAtomicNum}, "
+            f"atomic num: {oeatom.GetAtomicNum()}, "
             f"name: {oeatom.GetAtomicNum()}, "
             f"idx: {oeatom.GetIdx()}, "
             f"aromatic: {oeatom.IsAromatic()}, "
