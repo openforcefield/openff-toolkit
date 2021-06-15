@@ -1,13 +1,18 @@
 import math
 import numpy as np
 from simtk import unit
-
+from collections import defaultdict
 
 from .toolkits import (
     ToolkitUnavailableException,
     publish,
     DEFAULT_AROMATICITY_MODEL,
     BuiltInToolkitWrapper,
+    UndefinedStereochemistryError,
+    InvalidIUPACNameError,
+    ChargeMethodUnavailableError,
+    ChargeCalculationError,
+    logger # don't change the __name__ # XXX ?
     )
 
 toolkit_name = "OpenEye Toolkit"
@@ -212,7 +217,7 @@ def from_file_obj(
         ifs, allow_undefined_stereo, file_path=None, _cls=_cls)
 
 def _read_oemolistream_molecules(
-        ifs, allow_undefined_stereo, file_path, _cls
+        oemolistream, allow_undefined_stereo, file_path, _cls
         ):
     """
     Reads and return the Molecules in a OEMol input stream.
@@ -237,8 +242,9 @@ def _read_oemolistream_molecules(
     """
     mols = list()
 
-    is_sdf = (ifs.GetFormat() == oechem.OEFormat_SDF)
-    is_mol2 = (ifs.GetFormat() == oechem.OEFormat_MOL2)
+    _cls = _get_cls(_cls)
+    is_sdf = (oemolistream.GetFormat() == oechem.OEFormat_SDF)
+    is_mol2 = (oemolistream.GetFormat() == oechem.OEFormat_MOL2)
     
     oemol = oechem.OEMol()
     while oechem.OEReadMolecule(oemolistream, oemol):
@@ -248,7 +254,7 @@ def _read_oemolistream_molecules(
 
         # If this is either a multi-conformer or multi-molecule SD file, check to see if there are partial charges
         if is_sdf and hasattr(oemol, "GetConfs"):
-            mols.extend(_iter_conformers_as_molecules(oemol))
+            mols.extend(_iter_conformers_as_molecules(oemol, allow_undefined_stereo, _cls))
         else:
             # In case this is being read from a SINGLE-molecule SD
             # file, convert the SD field where we stash partial
@@ -269,7 +275,7 @@ def _read_oemolistream_molecules(
 
     return mols
 
-def _iter_conformers_as_molecules(oemol):
+def _iter_conformers_as_molecules(oemol, allow_undefined_stereo, _cls):
     # The openFF toolkit treats each conformer in a "multiconformer" SDF as
     # a separate molecule.
     # https://github.com/openforcefield/openff-toolkit/issues/202
@@ -691,7 +697,7 @@ def from_openeye(oemol, allow_undefined_stereo=False, _cls=None):
                 problematic_bonds.append(oebond)
     
     if unspec_chiral or unspec_db:
-        msg = _get_unspecified_stereo_message(problematic_atoms, problematic_bonds)
+        msg = _get_unspecified_stereo_message(oemol, problematic_atoms, problematic_bonds)
         if allow_undefined_stereo:
             msg = "Warning (not error because allow_undefined_stereo=True): " + msg
             logger.warning(msg)
@@ -808,7 +814,7 @@ def _get_unspecified_stereo_message(oemol, problematic_atoms, problematic_bonds)
 
     if problematic_atoms:
         lines.append("Problematic atoms are:")
-        for problematic_atom in problematic_atoms:
+        for oeatom in problematic_atoms:
             lines.append(f"Atom {oeatom_to_str(oeatom)} with bonds:")
 
             for oebond in oeatom.GetBonds():

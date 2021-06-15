@@ -4,7 +4,14 @@ from simtk import unit
 
 from typing import List, Optional, Tuple
 
-from .toolkits import (ToolkitUnavailableException, publish, DEFAULT_AROMATICITY_MODEL)
+from .toolkits import (
+    ToolkitUnavailableException,
+    publish,
+    DEFAULT_AROMATICITY_MODEL,
+    UndefinedStereochemistryError,
+    ToolkitUnavailableException,
+    logger,
+    )
 
 toolkit_name = "RDKit Toolkit"
 
