@@ -17,8 +17,6 @@ from .toolkits import (
     logger,
     )
 
-toolkit_name = "RDKit Toolkit"
-
 toolkit_name = "The RDKit"
 
 toolkit_installation_instructions = (
@@ -58,7 +56,9 @@ if _is_installed:
     }
 else:
     toolkit_version = None
-    
+
+def get_toolkit_version():
+    return toolkit_version
 
 def get_file_read_formats():
     return toolkit_file_read_formats

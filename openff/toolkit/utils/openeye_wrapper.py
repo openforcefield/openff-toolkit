@@ -73,6 +73,9 @@ if _is_installed:
 else:
     toolkit_version = None
 
+def get_toolkit_version():
+    return toolkit_version
+
 toolkit_file_read_formats = [
     "CAN",
     "CDX",
