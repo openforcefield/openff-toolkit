@@ -439,7 +439,7 @@ def to_file_obj(molecule, file_obj, file_format):
 
     """
     with tempfile.TemporaryDirectory() as tmpdir:
-        outfile = os.path.join(f"tmp_molecule.{file_format}")
+        outfile = os.path.join(tmpdir, f"tmp_molecule.{file_format}")
         to_file(molecule, outfile, file_format)
         with open(outfile) as infile:
             file_obj.write(infile.read())
