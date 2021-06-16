@@ -8,10 +8,8 @@ Open Force Field Toolkit
 
 A modern, extensible library for molecular mechanics force field science from the `Open Force Field Initiative <http://openforcefield.org>`_
 
-Getting started
----------------
-
 .. toctree::
+   :caption: Getting started
    :maxdepth: 1
 
    installation
@@ -19,10 +17,8 @@ Getting started
    releasehistory
    faq
 
-Using the toolkit
------------------
-
 .. toctree::
+   :caption: Using the toolkit
    :maxdepth: 1
 
    concepts
@@ -30,10 +26,8 @@ Using the toolkit
    virtualsites
    developing
 
-API documentation
------------------
-
 .. toctree::
+  :caption: API documentation
   :maxdepth: 1
 
   topology
