@@ -650,7 +650,8 @@ class TestMolecule:
             # first we need to make the cache key for the default input
             isomeric, explicit_hydrogens, mapped = True, True, False
             cache_key = (
-                toolkit.to_smiles.__qualname__
+                toolkit.to_smiles.__module__
+                + toolkit.to_smiles.__qualname__
                 + str(isomeric)
                 + str(explicit_hydrogens)
                 + str(mapped)

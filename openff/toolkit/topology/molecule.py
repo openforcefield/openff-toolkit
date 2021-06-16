@@ -2726,7 +2726,8 @@ class FrozenMolecule(Serializable):
         # if a SMILES was already cached for this molecule. This will return, for example
         # "RDKitToolkitWrapper.to_smiles"
         smiles_hash = (
-            to_smiles_method.__qualname__
+            to_smiles_method.__module__
+            + to_smiles_method.__qualname__
             + str(isomeric)
             + str(explicit_hydrogens)
             + str(mapped)
