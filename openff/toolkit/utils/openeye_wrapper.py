@@ -175,7 +175,7 @@ def _get_cls(_cls):
 
 @publish()
 def from_object(obj, allow_undefined_stereo=False, _cls=None):
-    if not isinstance(obj, oechem.OEMolBase):
+    if isinstance(obj, oechem.OEMolBase):
         return from_openeye(
             oemol = obj,
             allow_undefined_stereo = allow_undefined_stereo,
@@ -583,12 +583,15 @@ def enumerate_stereoisomers(
             omega.SetStrictStereo(True)
             mol = oechem.OEMol(isomer)
             status = omega(mol)
-            if not status:
-                continue
+            if status:
+                isomol = from_openeye(mol, _cls=molecule.__class__)
+                if isomol != molecule:
+                    molecules.append(isomol)
 
-        isomol = from_openeye(mol, _cls = molecule.__class__)
-        if isomol != molecule:
-            molecules.append(isomol)
+        else:
+            isomol = from_openeye(isomer, _cls=molecule.__class__)
+            if isomol != molecule:
+                molecules.append(isomol)
 
     return molecules[:max_isomers]
 
@@ -945,9 +948,9 @@ def to_openeye(molecule, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
     Create an OpenEye molecule using the specified aromaticity model
 
     ``OEAtom`` s have a different set of allowed value for partial
-    charges than ``openff.toolkit.topology.Molecule``\ s. In the
+    charges than ``openff.toolkit.topology.Molecule`` s. In the
     OpenEye toolkits, partial charges are stored on individual
-    ``OEAtom``\ s, and their values are initialized to ``0.0``. In
+    ``OEAtom`` s, and their values are initialized to ``0.0``. In
     the Open Force Field Toolkit, an``openff.toolkit.topology.Molecule``'s
     ``partial_charges`` attribute is initialized to ``None`` and can
     be set to a ``simtk.unit.Quantity``-wrapped numpy array with
@@ -1499,7 +1502,7 @@ def from_iupac(iupac_name, allow_undefined_stereo=False, _cls=None, **kwargs):
 def generate_conformers(
     molecule, n_conformers=1, rms_cutoff=None, clear_existing=True
 ):
-    """
+    r"""
     Generate molecule conformers using OpenEye Omega.
 
     .. warning :: This API is experimental and subject to change.

@@ -1919,7 +1919,7 @@ def find_smarts_matches(molecule, smarts, aromaticity_model="OEAroModel_MDL"):
 # Stereochemistry RDKit utilities.
 # --------------------------------
 
-# XXX Why is this here?
+@publish()
 def find_rings(molecule):
     """Find the rings in a given molecule.
 
