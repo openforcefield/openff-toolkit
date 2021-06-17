@@ -1422,130 +1422,18 @@ class ForceField:
 
         """
         raise NotImplementedError
-        # import parmed
-        # TODO: Automagically handle expansion of virtual sites? Or is Topology supposed to do that?
 
-        # Create OpenMM System
-        # system = self.create_openmm_system(
-        #    topology, **kwargs)
-
-        # Create a ParmEd Structure object
-        # structure = parmed.openmm.topsystem.load_topology(
-        #    topology.to_openmm(), system, positions)
-        #
-        # return structure
-
-    @requires_package("openff.system")
+    @requires_package("openff.interchange")
     @requires_package("mdtraj")
-    def _create_openff_system(self, topology, box=None):
+    def _create_openff_interchange(self, topology, box=None):
         """
-        Create an OpenFF system object from a ForceField, Topology, and (optionally) box vectors.
+        Create an OpenFF Interchange object from a ForceField, Topology, and (optionally) box vectors.
 
-        WARNING: This API is experimental and not suitable for use.
+        WARNING: This API and functionality are experimental and not suitable for production.
         """
-        import mdtraj as md
-        from openff.system.components.mdtraj import OFFBioTop
-        from openff.system.components.smirnoff import (
-            ElectrostaticsMetaHandler,
-            SMIRNOFFBondHandler,
-            SMIRNOFFChargeIncrementHandler,
-            SMIRNOFFLibraryChargeHandler,
-            SMIRNOFFvdWHandler,
-        )
-        from openff.system.components.system import System
-        from openff.system.stubs import _MAPPING
+        from openff.interchange.components.interchange import Interchange
 
-        openff_sys = System()
-
-        openff_sys.topology = OFFBioTop(topology)
-        openff_sys.topology.mdtop = md.Topology.from_openmm(topology.to_openmm())
-
-        for parameter_handler_name in self.registered_parameter_handlers:
-            if parameter_handler_name in {
-                "Electrostatics",
-                "ToolkitAM1BCC",
-                "LibraryCharges",
-                "ChargeIncrementModel",
-                "Constraints",
-            }:
-                continue
-            elif parameter_handler_name == "Bonds":
-                if "Constraints" in self.registered_parameter_handlers:
-                    constraint_handler = self["Constraints"]
-                else:
-                    constraint_handler = None
-                potential_handler, constraints = SMIRNOFFBondHandler.from_toolkit(
-                    bond_handler=self["Bonds"],
-                    topology=topology,
-                    constraint_handler=constraint_handler,
-                )
-                openff_sys.handlers.update({"Bonds": potential_handler})
-                if constraint_handler is not None:
-                    openff_sys.handlers.update({"Constraints": constraints})
-            elif parameter_handler_name in {
-                "Angles",
-                "ProperTorsions",
-                "ImproperTorsions",
-            }:
-                parameter_handler = self[parameter_handler_name]
-                POTENTIAL_HANDLER_CLASS = _MAPPING[parameter_handler.__class__]
-                potential_handler = POTENTIAL_HANDLER_CLASS.from_toolkit(
-                    parameter_handler=parameter_handler, topology=topology
-                )
-                openff_sys.handlers.update({parameter_handler_name: potential_handler})
-            elif parameter_handler_name == "vdW":
-                potential_handler = SMIRNOFFvdWHandler._from_toolkit(
-                    parameter_handler=self["vdW"], topology=topology
-                )
-                openff_sys.handlers.update({parameter_handler_name: potential_handler})
-
-        if "Electrostatics" in self.registered_parameter_handlers:
-            electrostatics = ElectrostaticsMetaHandler(
-                scale_13=self["Electrostatics"].scale13,
-                scale_14=self["Electrostatics"].scale14,
-                scale_15=self["Electrostatics"].scale15,
-                method=self["Electrostatics"].method.lower(),
-                cutoff=self["Electrostatics"].cutoff,
-            )
-            if "ToolkitAM1BCC" in self.registered_parameter_handlers:
-                electrostatics.cache_charges(
-                    partial_charge_method="am1bcc", topology=topology
-                )
-                electrostatics.charges = electrostatics.cache["am1bcc"]
-
-            if "LibraryCharges" in self.registered_parameter_handlers:
-                library_charges = SMIRNOFFLibraryChargeHandler()
-                library_charges.store_matches(self["LibraryCharges"], topology)
-                library_charges.store_potentials(self["LibraryCharges"])
-                openff_sys.handlers.update({"LibraryCharges": electrostatics})
-
-                electrostatics.apply_library_charges(library_charges)
-
-            if "ChargeIncrementModel" in self.registered_parameter_handlers:
-                charge_increments = SMIRNOFFChargeIncrementHandler()
-                charge_increments.store_matches(self["ChargeIncrementModel"], topology)
-                charge_increments.store_potentials(self["ChargeIncrementModel"])
-                openff_sys.handlers.update({"LibraryCharges": electrostatics})
-
-                if charge_increments.partial_charge_method not in electrostatics.cache:
-                    electrostatics.cache_charges(
-                        partial_charge_method=charge_increments.partial_charge_method,
-                        topology=topology,
-                    )
-                electrostatics.charges = electrostatics.cache[
-                    charge_increments.partial_charge_method
-                ]
-
-                electrostatics.apply_charge_increments(charge_increments)
-
-            openff_sys.handlers.update({"Electrostatics": electrostatics})
-
-        if box is None and topology.box_vectors is not None:
-            openff_sys.box = topology.box_vectors
-        else:
-            openff_sys.box = box
-
-        return openff_sys
+        return Interchange.from_smirnoff(force_field=self, topology=topology, box=box)
 
     def label_molecules(self, topology):
         """Return labels for a list of molecules corresponding to parameters from this force field.

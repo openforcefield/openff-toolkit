@@ -2,6 +2,7 @@ name: test
 channels:
   - openeye
   - conda-forge
+  - conda-forge/label/openff-interchange_rc
 
 dependencies:
     # Base depends
@@ -33,3 +34,4 @@ dependencies:
   - qcportal
   - qcengine
   - mdtraj
+  - openff-interchange

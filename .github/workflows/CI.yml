@@ -112,15 +112,6 @@ jobs:
         run: |
           python setup.py develop --no-deps
 
-      - name: Install experimental packages and dependencies
-        shell: bash -l {0}
-        run: |
-          pip install git+git://github.com/openforcefield/openff-system.git
-          pip install git+git://github.com/mattwthompson/openff-units.git
-          pip install git+git://github.com/mattwthompson/openff-utilities.git
-
-          conda install ele mdtraj -c conda-forge -yq
-
       - name: Check installed toolkits
         shell: bash -l {0}
         run: |
