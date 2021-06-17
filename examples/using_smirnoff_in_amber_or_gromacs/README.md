@@ -1,6 +1,6 @@
 ## Export OpenFF-generated OpenMM System to AMBER and GROMACS files
 
-[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/openforcefield/openff-toolkit/d129d0c1f3399aa3e2611443210fce526bc62dd6)
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/openforcefield/openff-toolkit/latest?filepath=examples%2Fusing_smirnoff_in_amber_or_gromacs%2Fconvert_to_amber_gromacs.ipynb)
 
 This example shows how you can convert an OpenMM `System` generated with the Open Forcefield Toolkit, which can be simulated natively with OpenMM, into AMBER prmtop/inpcrd and GROMACS top/gro input files through the ParmEd library.
 
