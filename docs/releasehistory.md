@@ -10,6 +10,10 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### New features and behaviors changed
 
+- [PR #954](https://github.com/openforcefield/openforcefield/pull/954): Adds
+  [`LibraryChargeType.from_molecule`](openff.toolkit.typing.engines.smirnoff.parameters.LibraryChargeHandler.LibraryChargeType.from_molecule)
+  which returns a `LibraryChargeType` object that will match the full molecule being parameterized, and assign
+  it the same partial charges as are set on the input molecule.
 - [PR #923](https://github.com/openforcefield/openforcefield/pull/923): Adds
   [`Molecule.nth_degree_neighbors`](openff.toolkit.topology.Molecule.nth_degree_neighbors),
   [`Topology.nth_degree_neighbors`](openff.toolkit.topology.Topology.nth_degree_neighbors),
