@@ -39,6 +39,7 @@ from openff.toolkit.tests.create_molecules import (
     create_water,
 )
 from openff.toolkit.tests.utils import (
+    compare_partial_charges,
     get_14_scaling_factors,
     requires_openeye,
     requires_openeye_mol2,
@@ -3196,6 +3197,49 @@ class TestForceFieldChargeAssignment:
             if q != 0.0 * unit.elementary_charge:
                 all_charges_zero = False
         assert not (all_charges_zero)
+
+    def test_library_charges_from_molecule_manual(self):
+        """Test that constructing a LibraryChargeHandler from partial charges on Molecule objects
+        produces the same result as using the `charge_from_molecules` kwarg. while manually
+        setting the molecule's partial charges to arbitrary non-physical values"""
+        # TODO: Remove this test if `charge_from_molecules` is depcreated (#806)
+        mol = Molecule.from_mapped_smiles("[Cl:1][C:2]#[C:3][F:4]")
+        mol.partial_charges = np.linspace(-0.3, 0.3, 4) * unit.elementary_charge
+
+        test_forcefield = ForceField("test_forcefields/test_forcefield.offxml")
+        using_kwarg = test_forcefield.create_openmm_system(
+            topology=mol.to_topology(), charge_from_molecules=[mol]
+        )
+
+        library_charges = LibraryChargeHandler.LibraryChargeType.from_molecule(mol)
+        test_forcefield.register_parameter_handler(LibraryChargeHandler(version=0.3))
+        test_forcefield["LibraryCharges"].add_parameter(parameter=library_charges)
+        using_library_charges = test_forcefield.create_openmm_system(
+            topology=mol.to_topology()
+        )
+
+        compare_partial_charges(using_kwarg, using_library_charges)
+
+    def test_library_charges_from_molecule_assigned(self):
+        """Test that constructing a LibraryChargeHandler from partial charges on Molecule objects
+        produces the same result as using the `charge_from_molecules` kwarg. while manually
+        setting the molecule's partial charges to arbitrary non-physical values"""
+        mol = Molecule.from_smiles("CCO")
+        mol.assign_partial_charges(partial_charge_method="mmff94")
+
+        test_forcefield = ForceField("test_forcefields/test_forcefield.offxml")
+        using_kwarg = test_forcefield.create_openmm_system(
+            topology=mol.to_topology(), charge_from_molecules=[mol]
+        )
+
+        library_charges = LibraryChargeHandler.LibraryChargeType.from_molecule(mol)
+        test_forcefield.register_parameter_handler(LibraryChargeHandler(version=0.3))
+        test_forcefield["LibraryCharges"].add_parameter(parameter=library_charges)
+        using_library_charges = test_forcefield.create_openmm_system(
+            topology=mol.to_topology()
+        )
+
+        compare_partial_charges(using_kwarg, using_library_charges)
 
 
 # ======================================================================
