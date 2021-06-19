@@ -96,7 +96,7 @@ jobs:
         shell: bash -l {0}
         run: |
           # Remove the packaged openff-toolkit, installed as a dependency of openmmforcefields
-          conda remove --force openff-toolkit
+          conda remove --force openff-toolkit-base
           python setup.py develop --no-deps
 
       - name: Environment Information
@@ -125,7 +125,7 @@ jobs:
           pytest $NB_ARGS examples
 
       - name: Codecov
-        uses: codecov/codecov-action@v1.5.0
+        uses: codecov/codecov-action@v1.5.2
         with:
           file: ./coverage.xml
           fail_ci_if_error: true
