@@ -23,6 +23,7 @@ __all__ = [
     "SMIRNOFFVersionError",
     "SMIRNOFFAromaticityError",
     "ParseError",
+    "PartialChargeVirtualSitesError",
     "ForceField",
 ]
 
@@ -162,6 +163,14 @@ class SMIRNOFFAromaticityError(MessageException):
 class ParseError(MessageException):
     """
     Error for when a SMIRNOFF data structure is not parseable by a ForceField
+    """
+
+    pass
+
+
+class PartialChargeVirtualSitesError(MessageException):
+    """
+    Exception thrown when partial charges cannot be computed for a Molecule because the ForceField applies virtual sites.
     """
 
     pass
@@ -1508,6 +1517,71 @@ class ForceField:
             )
             raise KeyError(msg)
         return ph_class
+
+    def get_partial_charges(self, molecule, **kwargs):
+        """Generate the partial charges for the given molecule in this force field.
+
+        Parameters
+        ----------
+        molecule : :class:`openff.toolkit.topology.Molecule`
+            The ``Molecule`` corresponding to the system to be parameterized
+        toolkit_registry : :class:`openff.toolkit.utils.toolkits.ToolkitRegistry`, default=GLOBAL_TOOLKIT_REGISTRY
+            The toolkit registry to use for operations like conformer generation and
+            partial charge assignment.
+
+        Returns
+        -------
+        charges : ``simtk.unit.Quantity`` with shape ``(n_atoms,)`` and dimensions of charge
+            The partial charges of the provided molecule in this force field.
+
+        Raises
+        ------
+        PartialChargeVirtualSitesError
+            If the ``ForceField`` applies virtual sites to the ``Molecule``.
+            ``get_partial_charges`` cannot identify which virtual site charges
+            may belong to which atoms in this case.
+
+        Other exceptions
+            As any ``ParameterHandler`` may in principle modify charges, the entire
+            force field must be applied to the molecule to produce the charges.
+            Calls to this method from incorrectly or incompletely specified ``ForceField``
+            objects thus may raise an exception.
+
+        Examples
+        --------
+
+        >>> from openff.toolkit.typing.engines.smirnoff import ForceField, Molecule
+        >>> ethanol = Molecule.from_smiles('CCO')
+        >>> force_field = ForceField('test_forcefields/test_forcefield.offxml')
+
+        Assign partial charges to the molecule according to the force field:
+
+        >>> ethanol.partial_charges = force_field.get_partial_charges(ethanol)
+
+        Use the assigned partial charges when creating an OpenMM ``System``:
+
+        >>> topology = ethanol.to_topology()
+        >>> system = forcefield.create_openmm_system(
+        ...    topology,
+        ...    charge_from_molecules=[ethanol]
+        ... )
+
+        This is especially useful when you want to create multiple systems
+        with the same molecule or molecules, as it allows the expensive
+        charge calculation to be cached.
+
+        """
+        _, top_with_charges = self.create_openmm_system(
+            molecule.to_topology(), return_topology=True, **kwargs
+        )
+
+        if top_with_charges.n_topology_virtual_sites != 0:
+            raise PartialChargeVirtualSitesError(
+                "get_partial_charges is not supported on molecules with virtual sites"
+            )
+
+        charges = [*top_with_charges.reference_molecules][0].partial_charges
+        return charges
 
     def __getitem__(self, val):
         """

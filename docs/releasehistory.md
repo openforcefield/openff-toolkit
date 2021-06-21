@@ -10,15 +10,10 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### New features and behaviors changed
 
-### Bugfixes
-
-- [PR #965](https://github.com/openforcefield/openforcefield/pull/965): Adds
-  [`TagSortedDict`](openff.toolkit.topology.TagSortedDict),
-  which is used primarily when atom indices need to be stored in a specific order, such
-  as a tagged SMIRKS match. `ChargeIncrementModelHandler._find_matches` now uses
-  `TagSortedDict` rather than `SortedDict`, meaning, the atom order returned by
-  `ForceField.label_molecules` is in tagged order for `ChargeIncrementModelHandler`,
-  for example.
+- [PR #954](https://github.com/openforcefield/openforcefield/pull/954): Adds
+  [`LibraryChargeType.from_molecule`](openff.toolkit.typing.engines.smirnoff.parameters.LibraryChargeHandler.LibraryChargeType.from_molecule)
+  which returns a `LibraryChargeType` object that will match the full molecule being parameterized, and assign
+  it the same partial charges as are set on the input molecule.
 - [PR #923](https://github.com/openforcefield/openforcefield/pull/923): Adds
   [`Molecule.nth_degree_neighbors`](openff.toolkit.topology.Molecule.nth_degree_neighbors),
   [`Topology.nth_degree_neighbors`](openff.toolkit.topology.Topology.nth_degree_neighbors),
@@ -49,6 +44,9 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
     - :py:meth:`VirtualSite.local_frame_positions`
   - Adding virtual sites via the `Molecule` API now have defaults for `sigma`, `epsilon`, and `charge_increment`
     set to 0 with appropriate units, rather than `None`
+- [PR #956](https://github.com/openforcefield/openforcefield/pull/956): Added `ForceField.get_partial_charges()` 
+  to more easily compute the partial charges assigned by a force field for a molecule.
+
 
 ### Bugfixes
 
@@ -63,12 +61,20 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 - [PR #763](https://github.com/openforcefield/openff-toolkit/pull/763): 
   Adds an introductory example showcasing the toolkit parameterizing a protein-ligand simulation.
+- [PR #955](https://github.com/openforcefield/openff-toolkit/pull/955): Refreshed the force field modification example
 - [PR #934](https://github.com/openforcefield/openff-toolkit/pull/934) 
   and [conda-forge/openff-toolkit-feedstock#9](https://github.com/conda-forge/openff-toolkit-feedstock/pull/9): 
   Added `openff-toolkit-examples` Conda package for easy installation of examples and their 
   dependencies. Simply `conda install -c conda-forge openff-toolkit-examples` and then run 
   the `openff-toolkit-examples` script to copy the examples suite to a convenient place to 
   run them!
+
+### Tests updated
+
+- [PR #963](https://github.com/openforcefield/openff-toolkit/pull/963):
+  Several tests modules used functions from test_forcefield.py that created an OpenFF Molecule
+  without a toolkit. These functions are now in their own module so they can be imported directly,
+  without the overhead of going through test_forcefield.
 
 ## 0.9.2 Minor feature and bugfix release
 

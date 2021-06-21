@@ -2069,11 +2069,15 @@ class ParameterHandler(_ParameterAttributeHandler):
             The SMIRKS pattern (if str) or index (if int) of the parameter directly after where
             the new parameter will be added
 
-        Note that one of (parameter_kwargs, parameter) must be specified
-        Note that when `before` and `after` are both None, the new parameter will be appended
-            to the END of the parameter list.
-        Note that when `before` and `after` are both specified, the new parameter
-            will be added immediately after the parameter matching the `after` pattern or index.
+        Note the following behavior:
+          * Either `parameter_kwargs` or `parameter` must be specified.
+          * When `before` and `after` are both `None`, the new parameter will be appended
+            to the **END** of the parameter list.
+          * When `before` and `after` are both specified, the new parameter will be added immediately
+            after the parameter matching the `after` pattern or index.
+          * The order of parameters in a parameter list can have significant impacts on parameter assignment. For details,
+            see the [SMIRNOFF](https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html#smirnoff-parameter-specification-is-hierarchical)
+            specification.
 
         Examples
         --------
@@ -3995,6 +3999,19 @@ class LibraryChargeHandler(_NonbondedHandler):
                     f"LibraryCharge {self} was initialized with unequal number of "
                     f"tagged atoms and charges"
                 )
+
+        @classmethod
+        def from_molecule(cls, molecule):
+            """Construct a LibraryChargeType from a molecule with existing partial charges."""
+            if molecule.partial_charges is None:
+                raise ValueError("Input molecule is missing partial charges.")
+
+            smirks = molecule.to_smiles(mapped=True)
+            charges = molecule.partial_charges
+
+            library_charge_type = cls(smirks=smirks, charge=charges)
+
+            return library_charge_type
 
     _TAGNAME = "LibraryCharges"  # SMIRNOFF tag name to process
     _INFOTYPE = LibraryChargeType  # info type to store
