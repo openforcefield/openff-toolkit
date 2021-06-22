@@ -128,7 +128,7 @@ todo_include_todos = False
 html_theme = "openff_sphinx_theme"
 
 # (Optional) Logo and favicon
-html_logo = "_static/images/logos/openff_toolkit_v1_full-color.png"
+html_logo = "_static/images/logos/openff_toolkit_v1_white.png"
 html_favicon = "_static/images/favicon.svg"
 
 # Theme options are theme-specific and customize the look and feel of a
