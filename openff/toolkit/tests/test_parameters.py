@@ -2063,6 +2063,20 @@ class TestLibraryChargeHandler:
                 smirks="[#6:1]-[#7:2]-[#6]", charge1=0.05 * unit.elementary_charge
             )
 
+    def test_library_charge_type_from_molecule(self):
+        mol = Molecule.from_smiles("CCO")
+
+        with pytest.raises(ValueError, match="missing partial"):
+            LibraryChargeHandler.LibraryChargeType.from_molecule(mol)
+
+        mol.partial_charges = numpy.linspace(-0.4, 0.4, 9) * unit.elementary_charge
+
+        library_charges = LibraryChargeHandler.LibraryChargeType.from_molecule(mol)
+
+        assert isinstance(library_charges, LibraryChargeHandler.LibraryChargeType)
+        assert library_charges.smirks == mol.to_smiles(mapped=True)
+        assert library_charges.charge == [*mol.partial_charges]
+
 
 class TestChargeIncrementModelHandler:
     def test_create_charge_increment_model_handler(self):

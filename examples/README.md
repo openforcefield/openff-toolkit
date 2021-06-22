@@ -4,6 +4,8 @@ The following examples are available in [the OpenFF toolkit repository](https://
 
 ## Index of provided examples
 
+* [toolkit_showcase](https://github.com/openforcefield/openff-toolkit/tree/latest/examples/toolkit_showcase) - parameterize a protein-ligand system with an OpenFF force field, simulate the resulting system, and visualize the result in the notebook
+* [forcefield_modification](https://github.com/openforcefield/openff-toolkit/tree/latest/examples/forcefield_modification) - modify force field parameters and evaluate how system energy changes
 * [conformer_energies](https://github.com/openforcefield/openff-toolkit/tree/latest/examples/conformer_energies) - compute conformer energies of one or more small molecules using a SMIRNOFF force field
 * [SMIRNOFF_simulation](https://github.com/openforcefield/openff-toolkit/tree/latest/examples/SMIRNOFF_simulation) - simulation of a molecule in the gas phase with the SMIRNOFF force field format
 * [forcefield_modification](https://github.com/openforcefield/openff-toolkit/tree/latest/examples/forcefield_modification) - modify force field parameters and evaluate how system energy changes
