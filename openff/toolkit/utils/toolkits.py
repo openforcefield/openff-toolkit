@@ -82,7 +82,7 @@ from .constants import (
     ALLOWED_FRACTIONAL_BOND_ORDER_MODELS,
     DEFAULT_CHARGE_MODEL,
     ALLOWED_CHARGE_MODELS,
-    )
+)
 
 from .exceptions import (
     MessageException,
@@ -101,7 +101,7 @@ from .exceptions import (
     ChargeCalculationError,
     InvalidIUPACNameError,
     AntechamberNotFoundError,
-    )
+)
 
 from .openeye_wrapper import OpenEyeToolkitWrapper, requires_openeye_module
 from .rdkit_wrapper import RDKitToolkitWrapper

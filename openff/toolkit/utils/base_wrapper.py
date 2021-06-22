@@ -12,7 +12,7 @@ from .exceptions import (
     IncorrectNumConformersError,
     IncorrectNumConformersWarning,
     ToolkitUnavailableException,
-    )
+)
 
 # =============================================================================================
 # Implementation
