@@ -2,9 +2,7 @@
 Wrapper class providing a minimal consistent interface to the `RDKit <http://www.rdkit.org/>`.
 """
 
-__all__ = (
-    "RDKitToolkitWrapper",
-)
+__all__ = ("RDKitToolkitWrapper",)
 
 
 # =============================================================================================
@@ -26,12 +24,12 @@ if TYPE_CHECKING:
 # =============================================================================================
 # LOCAL IMPORTS
 # =============================================================================================
-    
+
 from . import base_wrapper
 
 from .constants import (
     DEFAULT_AROMATICITY_MODEL,
-    )
+)
 
 from .exceptions import (
     AntechamberNotFoundError,
@@ -41,7 +39,7 @@ from .exceptions import (
     ToolkitUnavailableException,
     UndefinedStereochemistryError,
 )
-    
+
 # =============================================================================================
 # CONFIGURE LOGGER
 # =============================================================================================
@@ -51,6 +49,7 @@ logger = logging.getLogger(__name__)
 # =============================================================================================
 # IMPLEMENTATION
 # =============================================================================================
+
 
 class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
     """
@@ -2260,5 +2259,3 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                     paired_bonds[bond_indices].append(neighbor_rdbonds[1 - i])
                 except KeyError:
                     paired_bonds[bond_indices] = [neighbor_rdbonds[1 - i]]
-
-

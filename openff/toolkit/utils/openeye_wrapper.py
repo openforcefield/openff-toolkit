@@ -2,9 +2,7 @@
 Wrapper class providing a minimal consistent interface to the `OpenEye Toolkit <https://docs.eyesopen.com/toolkits/python/quickstart-python/index.html>`_
 """
 
-__all__ = (
-    "OpenEyeToolkitWrapper",
-    )
+__all__ = ("OpenEyeToolkitWrapper",)
 
 
 # =============================================================================================
@@ -48,12 +46,12 @@ from .exceptions import (
     MessageException,
     ToolkitUnavailableException,
     UndefinedStereochemistryError,
-    )
+)
 
 from .utils import (
     temporary_cd,
     inherit_docstrings,
-    )
+)
 
 # =============================================================================================
 # CONFIGURE LOGGER
@@ -65,7 +63,6 @@ logger = logging.getLogger(__name__)
 # =============================================================================================
 # IMPLEMENTATION
 # =============================================================================================
-
 
 
 @inherit_docstrings

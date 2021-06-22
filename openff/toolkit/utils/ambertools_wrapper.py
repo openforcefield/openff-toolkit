@@ -2,9 +2,7 @@
 Wrapper class providing a minimal consistent interface to `AmberTools <http://ambermd.org/AmberTools.php>`_.
 """
 
-__all__ = (
-    "AmberToolsToolkitWrapper",
-    )
+__all__ = ("AmberToolsToolkitWrapper",)
 
 # =============================================================================================
 # GLOBAL IMPORTS
@@ -30,17 +28,18 @@ from .exceptions import (
     ChargeMethodUnavailableError,
     InvalidToolkitError,
     ToolkitUnavailableException,
-    )
+)
 
 from . import rdkit_wrapper
 
 from .utils import (
     temporary_cd,
-    )
+)
 
 # =============================================================================================
 # IMPLEMENTATION
 # =============================================================================================
+
 
 class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
     """
@@ -583,4 +582,3 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
             bond.fractional_bond_order = np.mean(
                 bond_orders[tuple(sorted_atom_indices)]
             )
-

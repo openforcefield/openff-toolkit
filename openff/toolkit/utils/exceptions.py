@@ -1,4 +1,3 @@
-
 __all__ = (
     "MessageException",
     "IncompatibleUnitError",
@@ -109,4 +108,3 @@ class InvalidIUPACNameError(MessageException):
 
 class AntechamberNotFoundError(MessageException):
     """The antechamber executable was not found"""
-

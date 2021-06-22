@@ -21,56 +21,48 @@ Currently supported toolkits:
 """
 __all__ = (
     # constants
-   'DEFAULT_AROMATICITY_MODEL',
-   'ALLOWED_AROMATICITY_MODELS',
-   'DEFAULT_FRACTIONAL_BOND_ORDER_MODEL',
-   'ALLOWED_FRACTIONAL_BOND_ORDER_MODELS',
-   'DEFAULT_CHARGE_MODEL',
-   'ALLOWED_CHARGE_MODELS',
-
-   # exceptions and warnings
-   'MessageException',
-   'IncompatibleUnitError',
-   'MissingDependencyError',
-   'MissingPackageError',
-   'ToolkitUnavailableException',
-   'LicenseError',
-   'InvalidToolkitError',
-   'InvalidToolkitRegistryError',
-   'UndefinedStereochemistryError',
-   'GAFFAtomTypeWarning',
-   'ChargeMethodUnavailableError',
-   'IncorrectNumConformersError',
-   'IncorrectNumConformersWarning',
-   'ChargeCalculationError',
-   'InvalidIUPACNameError',
-   'AntechamberNotFoundError',
-
-   # base_wrapper
-   'ToolkitWrapper',
-
-   # builtin_wrapper
-   'BuiltInToolkitWrapper',
-
-   # openeye_wrapper
-   'OpenEyeToolkitWrapper',
-
-   # rdkit_wrapper
-   'RDKitToolkitWrapper',
-
-   # ambertools_wrapper
-   'AmberToolsToolkitWrapper',
-
-   # toolkit_registry
-   'ToolkitRegistry',
-
-   # in this module
-   'GLOBAL_TOOLKIT_REGISTRY',
-   'OPENEYE_AVAILABLE',
-   'RDKIT_AVAILABLE',
-   'AMBERTOOLS_AVAILABLE',
-   'BASIC_CHEMINFORMATICS_TOOLKITS',
-    )
+    "DEFAULT_AROMATICITY_MODEL",
+    "ALLOWED_AROMATICITY_MODELS",
+    "DEFAULT_FRACTIONAL_BOND_ORDER_MODEL",
+    "ALLOWED_FRACTIONAL_BOND_ORDER_MODELS",
+    "DEFAULT_CHARGE_MODEL",
+    "ALLOWED_CHARGE_MODELS",
+    # exceptions and warnings
+    "MessageException",
+    "IncompatibleUnitError",
+    "MissingDependencyError",
+    "MissingPackageError",
+    "ToolkitUnavailableException",
+    "LicenseError",
+    "InvalidToolkitError",
+    "InvalidToolkitRegistryError",
+    "UndefinedStereochemistryError",
+    "GAFFAtomTypeWarning",
+    "ChargeMethodUnavailableError",
+    "IncorrectNumConformersError",
+    "IncorrectNumConformersWarning",
+    "ChargeCalculationError",
+    "InvalidIUPACNameError",
+    "AntechamberNotFoundError",
+    # base_wrapper
+    "ToolkitWrapper",
+    # builtin_wrapper
+    "BuiltInToolkitWrapper",
+    # openeye_wrapper
+    "OpenEyeToolkitWrapper",
+    # rdkit_wrapper
+    "RDKitToolkitWrapper",
+    # ambertools_wrapper
+    "AmberToolsToolkitWrapper",
+    # toolkit_registry
+    "ToolkitRegistry",
+    # in this module
+    "GLOBAL_TOOLKIT_REGISTRY",
+    "OPENEYE_AVAILABLE",
+    "RDKIT_AVAILABLE",
+    "AMBERTOOLS_AVAILABLE",
+    "BASIC_CHEMINFORMATICS_TOOLKITS",
+)
 
 
 # =============================================================================================
@@ -111,12 +103,11 @@ from .exceptions import *
 from .base_wrapper import ToolkitWrapper
 from .builtin_wrapper import BuiltInToolkitWrapper
 
-from .openeye_wrapper import (OpenEyeToolkitWrapper, requires_openeye_module)
+from .openeye_wrapper import OpenEyeToolkitWrapper, requires_openeye_module
 from .rdkit_wrapper import RDKitToolkitWrapper
 from .ambertools_wrapper import AmberToolsToolkitWrapper
 
 from .toolkit_registry import ToolkitRegistry
-
 
 
 # =============================================================================================
@@ -193,31 +184,37 @@ def _check_all():
         rdkit_wrapper,
         ambertools_wrapper,
         toolkit_registry,
-        )
+    )
+
     expected_all = []
     for module in (
-            constants,
-            exceptions,
-            base_wrapper,
-            builtin_wrapper,
-            openeye_wrapper,
-            rdkit_wrapper,
-            ambertools_wrapper,
-            toolkit_registry,
-            ):
+        constants,
+        exceptions,
+        base_wrapper,
+        builtin_wrapper,
+        openeye_wrapper,
+        rdkit_wrapper,
+        ambertools_wrapper,
+        toolkit_registry,
+    ):
         expected_all.extend(module.__all__)
 
-    expected_all.extend([
-        'GLOBAL_TOOLKIT_REGISTRY',
-        'OPENEYE_AVAILABLE',
-        'RDKIT_AVAILABLE',
-        'AMBERTOOLS_AVAILABLE',
-        'BASIC_CHEMINFORMATICS_TOOLKITS',
-        ])
+    expected_all.extend(
+        [
+            "GLOBAL_TOOLKIT_REGISTRY",
+            "OPENEYE_AVAILABLE",
+            "RDKIT_AVAILABLE",
+            "AMBERTOOLS_AVAILABLE",
+            "BASIC_CHEMINFORMATICS_TOOLKITS",
+        ]
+    )
 
     unexpected = set(__all__) - set(expected_all)
     missing = set(expected_all) - set(__all__)
     if unexpected or missing:
-        raise AssertionError(("Mismatch between module and submodule __all__", unexpected, missing))
+        raise AssertionError(
+            ("Mismatch between module and submodule __all__", unexpected, missing)
+        )
+
 
 _check_all()

@@ -1,9 +1,7 @@
 """
 Built-in ToolkitWrapper for very basic functionality. This is intended for use in testing and not much more.
 """
-__all__ = (
-    "BuiltInToolkitWrapper",
-    )
+__all__ = ("BuiltInToolkitWrapper",)
 
 # =============================================================================================
 # GLOBAL IMPORTS
@@ -20,11 +18,11 @@ from . import base_wrapper
 
 from .exceptions import (
     ChargeMethodUnavailableError,
-    )
+)
 
 from .utils import (
     inherit_docstrings,
-    )
+)
 
 # =============================================================================================
 # Implementation
@@ -143,4 +141,3 @@ class BuiltInToolkitWrapper(base_wrapper.ToolkitWrapper):
                 partial_charges[part_idx] = particle.formal_charge
 
         molecule.partial_charges = partial_charges
-

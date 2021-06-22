@@ -1,8 +1,6 @@
 "Base class for the toolkit wrappers. Defines the public API and some shared methods"
 
-__all__ = (
-    "ToolkitWrapper",
-)
+__all__ = ("ToolkitWrapper",)
 
 # =============================================================================================
 # GLOBAL IMPORTS
@@ -17,11 +15,12 @@ from functools import wraps
 from .exceptions import (
     IncorrectNumConformersError,
     IncorrectNumConformersWarning,
-    )
+)
 
 # =============================================================================================
 # Implementation
 # =============================================================================================
+
 
 class ToolkitWrapper:
     """

@@ -1,15 +1,13 @@
 "Registry for ToolkitWrapper objects"
 
-__all__ = (
-    "ToolkitRegistry",
-    )
-    
+__all__ = ("ToolkitRegistry",)
+
 # =============================================================================================
 # GLOBAL IMPORTS
 # =============================================================================================
 
 import inspect
-    
+
 # =============================================================================================
 # LOCAL IMPORTS
 # =============================================================================================
@@ -17,11 +15,11 @@ import inspect
 from .exceptions import (
     InvalidToolkitError,
     ToolkitUnavailableException,
-    )
+)
 
 from .utils import (
     all_subclasses,
-    )
+)
 
 from .base_wrapper import ToolkitWrapper
 from .builtin_wrapper import BuiltInToolkitWrapper
@@ -33,6 +31,7 @@ from .ambertools_wrapper import AmberToolsToolkitWrapper
 # =============================================================================================
 # Implementation
 # =============================================================================================
+
 
 class ToolkitRegistry:
     """

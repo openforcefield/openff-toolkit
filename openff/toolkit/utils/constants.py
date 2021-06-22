@@ -5,8 +5,8 @@ __all__ = (
     "ALLOWED_FRACTIONAL_BOND_ORDER_MODELS",
     "DEFAULT_CHARGE_MODEL",
     "ALLOWED_CHARGE_MODELS",
-    )
-    
+)
+
 
 # =============================================================================================
 # SUPPORTED MODELS
@@ -22,4 +22,3 @@ ALLOWED_FRACTIONAL_BOND_ORDER_MODELS = ["Wiberg"]
 
 DEFAULT_CHARGE_MODEL = "AM1-BCC"  # TODO: Should this be `AM1-BCC`, or should we encode BCCs explicitly via AM1-CM2 preprocessing?
 ALLOWED_CHARGE_MODELS = ["AM1-BCC"]  # TODO: Which models do we want to support?
-
