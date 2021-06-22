@@ -29,4 +29,4 @@ dependencies:
     - cairo >=1.16
     # Theme
     - pip:
-        - git+https://github.com/openforcefield/openff-sphinx-theme.git@master
+        - git+https://github.com/openforcefield/openff-sphinx-theme.git@main

@@ -128,7 +128,7 @@ todo_include_todos = False
 html_theme = "openff_sphinx_theme"
 
 # (Optional) Logo and favicon
-html_logo = "_static/images/logos/openff_toolkit_v1_white-on-darkblue.svg"
+html_logo = "_static/images/logos/openff_toolkit_v1_full-color.png"
 html_favicon = "_static/images/favicon.svg"
 
 # Theme options are theme-specific and customize the look and feel of a
@@ -150,6 +150,7 @@ html_theme_options = {
     "html_minify": True,
     "html_prettify": False,
     "css_minify": True,
+    "master_doc": False,
 }
 
 # Add any paths that contain custom static files (such as style sheets) here,
@@ -160,19 +161,7 @@ html_static_path = ["_static"]
 # Custom sidebar templates, must be a dictionary that maps document names
 # to template names.
 html_sidebars = {
-    "**": ["logo-text.html", "globaltoc.html", "searchbox.html"],
-    "developing": [
-        "logo-text.html",
-        "globaltoc.html",
-        "searchbox.html",
-        "localtoc.html",
-    ],
-    "faq": [
-        "logo-text.html",
-        "globaltoc.html",
-        "searchbox.html",
-        "localtoc.html",
-    ],
+    "**": ["globaltoc.html", "searchbox.html", "localtoc.html"],
 }
 
 
