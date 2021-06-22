@@ -21,7 +21,6 @@ from .exceptions import (
     AntechamberNotFoundError,
     ChargeCalculationError,
     ChargeMethodUnavailableError,
-    InvalidToolkitError,
     ToolkitUnavailableException,
 )
 from .utils import temporary_cd
@@ -170,8 +169,6 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
         charge_method = SUPPORTED_CHARGE_METHODS[partial_charge_method]
 
         if _cls is None:
-            from openff.toolkit.topology.molecule import Molecule
-
             _cls = Molecule
 
         # Make a temporary copy of the molecule, since we'll be messing with its conformers
@@ -471,8 +468,6 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
             )
 
         if _cls is None:
-            from openff.toolkit.topology.molecule import Molecule
-
             _cls = Molecule
 
         # Make a copy since we'll be messing with this molecule's conformers

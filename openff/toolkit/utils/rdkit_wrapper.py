@@ -24,10 +24,8 @@ if TYPE_CHECKING:
 from . import base_wrapper
 from .constants import DEFAULT_AROMATICITY_MODEL
 from .exceptions import (
-    AntechamberNotFoundError,
-    ChargeCalculationError,
     ChargeMethodUnavailableError,
-    InvalidToolkitError,
+    InvalidConformerError,
     ToolkitUnavailableException,
     UndefinedStereochemistryError,
 )
@@ -185,8 +183,6 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         """
 
         from rdkit import Chem
-
-        from openff.toolkit.topology.molecule import InvalidConformerError, Molecule
 
         # Make the molecule from smiles
         offmol = self.from_smiles(

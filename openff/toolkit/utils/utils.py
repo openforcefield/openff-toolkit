@@ -38,7 +38,7 @@ import logging
 
 from simtk import unit
 
-from .exceptions import IncompatibleUnitError, MessageException, MissingDependencyError
+from .exceptions import IncompatibleUnitError, MissingDependencyError
 
 # =============================================================================================
 # CONFIGURE LOGGER

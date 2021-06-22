@@ -8,7 +8,11 @@ __all__ = ("ToolkitWrapper",)
 
 from functools import wraps
 
-from .exceptions import IncorrectNumConformersError, IncorrectNumConformersWarning
+from .exceptions import (
+    IncorrectNumConformersError,
+    IncorrectNumConformersWarning,
+    ToolkitUnavailableException,
+    )
 
 # =============================================================================================
 # Implementation

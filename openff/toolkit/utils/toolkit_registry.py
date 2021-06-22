@@ -381,6 +381,6 @@ class ToolkitRegistry:
         raise ValueError(msg)
 
     def __repr__(self):
-        return f"ToolkitRegistry containing " + ", ".join(
+        return "ToolkitRegistry containing " + ", ".join(
             [tk.toolkit_name for tk in self._toolkits]
         )

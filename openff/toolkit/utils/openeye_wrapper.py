@@ -10,10 +10,7 @@ __all__ = ("OpenEyeToolkitWrapper",)
 # IMPORTS
 # =============================================================================================
 
-import copy
 import importlib
-import inspect
-import itertools
 import logging
 import re
 import tempfile
@@ -30,15 +27,11 @@ if TYPE_CHECKING:
 from . import base_wrapper
 from .constants import DEFAULT_AROMATICITY_MODEL
 from .exceptions import (
-    AntechamberNotFoundError,
     ChargeCalculationError,
     ChargeMethodUnavailableError,
     GAFFAtomTypeWarning,
-    IncorrectNumConformersError,
     InvalidIUPACNameError,
-    InvalidToolkitError,
     LicenseError,
-    MessageException,
     ToolkitUnavailableException,
     UndefinedStereochemistryError,
 )
@@ -1853,8 +1846,6 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         charge_method = SUPPORTED_CHARGE_METHODS[partial_charge_method]
 
         if _cls is None:
-            from openff.toolkit.topology.molecule import Molecule
-
             _cls = Molecule
 
         # Make a temporary copy of the molecule, since we'll be messing with its conformers
