@@ -25,7 +25,6 @@ from . import base_wrapper
 from .constants import DEFAULT_AROMATICITY_MODEL
 from .exceptions import (
     ChargeMethodUnavailableError,
-    InvalidConformerError,
     ToolkitUnavailableException,
     UndefinedStereochemistryError,
 )
@@ -219,6 +218,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             return new_mol
 
         else:
+            from openff.toolkit.topology.molecule import InvalidConformerError
+
             raise InvalidConformerError("The PDB and SMILES structures do not match.")
 
     def from_file(

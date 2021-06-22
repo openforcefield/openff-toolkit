@@ -76,33 +76,31 @@ from .ambertools_wrapper import AmberToolsToolkitWrapper
 from .base_wrapper import ToolkitWrapper
 from .builtin_wrapper import BuiltInToolkitWrapper
 from .constants import (
-    DEFAULT_AROMATICITY_MODEL,
     ALLOWED_AROMATICITY_MODELS,
-    DEFAULT_FRACTIONAL_BOND_ORDER_MODEL,
-    ALLOWED_FRACTIONAL_BOND_ORDER_MODELS,
-    DEFAULT_CHARGE_MODEL,
     ALLOWED_CHARGE_MODELS,
+    ALLOWED_FRACTIONAL_BOND_ORDER_MODELS,
+    DEFAULT_AROMATICITY_MODEL,
+    DEFAULT_CHARGE_MODEL,
+    DEFAULT_FRACTIONAL_BOND_ORDER_MODEL,
 )
-
 from .exceptions import (
-    MessageException,
+    AntechamberNotFoundError,
+    ChargeCalculationError,
+    ChargeMethodUnavailableError,
+    GAFFAtomTypeWarning,
     IncompatibleUnitError,
+    IncorrectNumConformersError,
+    IncorrectNumConformersWarning,
+    InvalidIUPACNameError,
+    InvalidToolkitError,
+    InvalidToolkitRegistryError,
+    LicenseError,
+    MessageException,
     MissingDependencyError,
     MissingPackageError,
     ToolkitUnavailableException,
-    LicenseError,
-    InvalidToolkitError,
-    InvalidToolkitRegistryError,
     UndefinedStereochemistryError,
-    GAFFAtomTypeWarning,
-    ChargeMethodUnavailableError,
-    IncorrectNumConformersError,
-    IncorrectNumConformersWarning,
-    ChargeCalculationError,
-    InvalidIUPACNameError,
-    AntechamberNotFoundError,
 )
-
 from .openeye_wrapper import OpenEyeToolkitWrapper, requires_openeye_module
 from .rdkit_wrapper import RDKitToolkitWrapper
 from .toolkit_registry import ToolkitRegistry
