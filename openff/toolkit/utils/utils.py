@@ -878,7 +878,7 @@ def convert_0_1_smirnoff_to_0_2(smirnoff_data_0_1):
         "cutoff_unit": "angstrom",
     }
     for key, val in vdw_section_additions.items():
-        if not key in smirnoff_data["SMIRNOFF"]["vdW"].keys():
+        if key not in smirnoff_data["SMIRNOFF"]["vdW"].keys():
             logger.warning(
                 f"0.1 SMIRNOFF spec file does not contain '{key}' attribute for 'NonBondedMethod/vdW'' tag. "
                 f"The SMIRNOFF spec converter is assuming it has a value of '{val}'"

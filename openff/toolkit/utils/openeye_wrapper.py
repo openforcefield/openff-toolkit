@@ -1,5 +1,6 @@
 """
-Wrapper class providing a minimal consistent interface to the `OpenEye Toolkit <https://docs.eyesopen.com/toolkits/python/quickstart-python/index.html>`_
+Wrapper class providing a minimal consistent interface to
+the `OpenEye Toolkit <https://docs.eyesopen.com/toolkits/python/quickstart-python/index.html>`_
 """
 
 __all__ = ("OpenEyeToolkitWrapper",)
@@ -192,7 +193,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
     def from_object(self, obj, allow_undefined_stereo=False, _cls=None):
         """
-        If given an OEMol (or OEMol-derived object), this function will load it into an openff.toolkit.topology.molecule
+        Convert an OEMol (or OEMol-derived object) into an openff.toolkit.topology.molecule
 
         Parameters
         ----------
@@ -1313,8 +1314,8 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
     def to_inchi(self, molecule, fixed_hydrogens=False):
         """
         Create an InChI string for the molecule using the RDKit Toolkit.
-        InChI is a standardised representation that does not capture tautomers unless specified using the fixed hydrogen
-        layer.
+        InChI is a standardised representation that does not capture tautomers
+        unless specified using the fixed hydrogen layer.
 
         For information on InChi see here https://iupac.org/who-we-are/divisions/division-details/inchi/
 
@@ -1324,8 +1325,8 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             The molecule to convert into a SMILES.
 
         fixed_hydrogens: bool, default=False
-            If a fixed hydrogen layer should be added to the InChI, if `True` this will produce a non standard specific
-            InChI string of the molecule.
+            If a fixed hydrogen layer should be added to the InChI, if `True` this
+            will produce a non standard specific InChI string of the molecule.
 
         Returns
         --------
@@ -1350,8 +1351,8 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
     def to_inchikey(self, molecule, fixed_hydrogens=False):
         """
         Create an InChIKey for the molecule using the RDKit Toolkit.
-        InChIKey is a standardised representation that does not capture tautomers unless specified using the fixed hydrogen
-        layer.
+        InChIKey is a standardised representation that does not capture tautomers
+        unless specified using the fixed hydrogen layer.
 
         For information on InChi see here https://iupac.org/who-we-are/divisions/division-details/inchi/
 
@@ -1768,10 +1769,13 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             The charge model to use. One of ['amberff94', 'mmff', 'mmff94', `am1-mulliken`, 'am1bcc',
             'am1bccnosymspt', 'am1bccelf10']
             If None, 'am1-mulliken' will be used.
-        use_conformers : iterable of simtk.unit.Quantity-wrapped numpy arrays, each with shape (n_atoms, 3) and dimension of distance. Optional, default = None
-            Coordinates to use for partial charge calculation. If None, an appropriate number of conformers will be generated.
+        use_conformers : iterable of simtk.unit.Quantity-wrapped numpy arrays, each with
+            shape (n_atoms, 3) and dimension of distance. Optional, default = None
+            Coordinates to use for partial charge calculation. If None, an appropriate number
+            of conformers will be generated.
         strict_n_conformers : bool, default=False
-            Whether to raise an exception if an invalid number of conformers is provided for the given charge method.
+            Whether to raise an exception if an invalid number of conformers is provided for the
+            given charge method.
             If this is False and an invalid number of conformers is found, a warning will be raised.
         _cls : class
             Molecule constructor
@@ -1915,8 +1919,9 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                 errfs.str().decode("UTF-8")
             ):
                 logger.warning(
-                    f"Warning: charge assignment involving ELF10 conformer selection failed due to a known bug (toolkit issue "
-                    f"#346). Downgrading to {oe_charge_engine.__name__} charge assignment for this molecule. More information"
+                    f"Warning: charge assignment involving ELF10 conformer selection failed due to a "
+                    f"known bug (toolkit issue #346). Downgrading to {oe_charge_engine.__name__} "
+                    f"charge assignment for this molecule. More information "
                     f"is available at https://github.com/openforcefield/openff-toolkit/issues/346"
                 )
                 quacpac_status = oequacpac.OEAssignCharges(oemol, oe_charge_engine())
@@ -1927,7 +1932,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             )
 
         # Extract and return charges
-        ## TODO: Make sure atom mapping remains constant
+        # TODO: Make sure atom mapping remains constant
 
         charges = unit.Quantity(
             np.zeros(shape=oemol.NumAtoms(), dtype=np.float64), unit.elementary_charge
@@ -1956,7 +1961,8 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         ----------
         molecule : Molecule
             Molecule for which partial charges are to be computed
-        use_conformers : iterable of simtk.unit.Quantity-wrapped numpy arrays, each with shape (n_atoms, 3) and dimension of distance. Optional, default = None
+        use_conformers : iterable of simtk.unit.Quantity-wrapped numpy arrays, each with
+            shape (n_atoms, 3) and dimension of distance. Optional, default = None
             Coordinates to use for partial charge calculation. If None, an appropriate number of conformers
             will be generated.
         strict_n_conformers : bool, default=False
@@ -2001,7 +2007,8 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         bond_order_model : str, optional, default=None
             The charge model to use. One of ['am1-wiberg', 'am1-wiberg-elf10',
             'pm3-wiberg', 'pm3-wiberg-elf10']. If None, 'am1-wiberg' will be used.
-        use_conformers : iterable of simtk.unit.Quantity(np.array) with shape (n_atoms, 3) and dimension of distance, optional, default=None
+        use_conformers : iterable of simtk.unit.Quantity(np.array) with shape (n_atoms, 3) and
+            dimension of distance, optional, default=None
             The conformers to use for fractional bond order calculation. If None, an
             appropriate number of conformers will be generated by an available
             ToolkitWrapper. If the chosen ``bond_order_model`` is an ELF variant, the ELF
@@ -2121,9 +2128,10 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         unique_tags : tuple of int
             A sorted tuple of all unique tagged atom map indices.
         tagged_atom_connectivity : tuple of tuples of int, shape n_tagged_bonds x 2
-            A tuple of tuples, where each inner tuple is a pair of tagged atoms (tag_idx_1, tag_idx_2) which are
-            bonded. The inner tuples are ordered smallest-to-largest, and the tuple of tuples is ordered
-            lexically. So the return value for an improper torsion would be ((1, 2), (2, 3), (2, 4)).
+            A tuple of tuples, where each inner tuple is a pair of tagged atoms
+            (tag_idx_1, tag_idx_2) which are bonded. The inner tuples are ordered
+            smallest-to-largest, and the tuple of tuples is ordered lexically. The
+            return value for an improper torsion would be ((1, 2), (2, 3), (2, 4)).
 
         Raises
         ------
@@ -2168,7 +2176,8 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             oemol to process with the SMIRKS in order to find matches
         smarts : str
             SMARTS string with any number of sequentially tagged atoms.
-            If there are N tagged atoms numbered 1..N, the resulting matches will be N-tuples of atoms that match the corresponding tagged atoms.
+            If there are N tagged atoms numbered 1..N, the resulting matches will be N-tuples of
+            atoms that match the corresponding tagged atoms.
         aromaticity_model : str, optional, default=None
             OpenEye aromaticity model designation as a string, such as ``OEAroModel_MDL``.
             Molecule is prepared with this aromaticity model prior to querying.
@@ -2179,11 +2188,13 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             matches[index] is an N-tuple of atom numbers from the ``oemol``
             Matches are returned in no guaranteed order.
             # TODO: What is returned if no matches are found? An empty list, or None?
-            # TODO: Ensure that SMARTS numbers 1, 2, 3... are rendered into order of returnd matches indexed by 0, 1, 2...
+            # TODO: Ensure that SMARTS numbers 1, 2, 3... are rendered into order of returned
+            #    matches indexed by 0, 1, 2...
 
         .. notes ::
 
-           * Raises ``LicenseError`` if valid OpenEye tools license is not found, rather than causing program to terminate
+           * Raises ``LicenseError`` if valid OpenEye tools license is not found, rather than
+               causing program to terminate
            * Raises ``ValueError`` if ``smarts`` query is malformed
 
         """
@@ -2209,7 +2220,8 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         else:
             raise ValueError("Error: provided aromaticity model must be a string.")
 
-        # OEPrepareSearch will clobber our desired aromaticity model if we don't sync up mol and qmol ahead of time
+        # OEPrepareSearch will clobber our desired aromaticity model if we don't sync up mol
+        # and qmol ahead of time.
         # Prepare molecule
         oechem.OEClearAromaticFlags(mol)
         oechem.OEAssignAromaticFlags(mol, oearomodel)

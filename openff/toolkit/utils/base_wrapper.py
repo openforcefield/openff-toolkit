@@ -128,7 +128,8 @@ class ToolkitWrapper:
             The file to read the molecule from
         file_format : str
             Format specifier, usually file suffix (eg. 'MOL2', 'SMI')
-            Note that not all toolkits support all formats. Check ToolkitWrapper.toolkit_file_read_formats for details.
+            Note that not all toolkits support all formats. Check
+            ToolkitWrapper.toolkit_file_read_formats for details.
         allow_undefined_stereo : bool, default=False
             If false, raises an exception if any molecules contain undefined stereochemistry.
         _cls : class
@@ -145,8 +146,9 @@ class ToolkitWrapper:
         self, file_obj, file_format, allow_undefined_stereo=False, _cls=None
     ):
         """
-        Return an openff.toolkit.topology.Molecule from a file-like object (an object with a ".read()" method using this
-         toolkit.
+        Return an openff.toolkit.topology.Molecule from a file-like object (an object with
+        a ".read()" method using this toolkit.
+
 
         Parameters
         ----------
@@ -154,10 +156,11 @@ class ToolkitWrapper:
             The file-like object to read the molecule from
         file_format : str
             Format specifier, usually file suffix (eg. 'MOL2', 'SMI')
-            Note that not all toolkits support all formats. Check ToolkitWrapper.toolkit_file_read_formats for details.
+            Note that not all toolkits support all formats. Check
+            ToolkitWrapper.toolkit_file_read_formats for details.
         allow_undefined_stereo : bool, default=False
-            If false, raises an exception if any molecules contain undefined stereochemistry. If false, the function
-            skips loading the molecule.
+            If false, raises an exception if any molecules contain undefined stereochemistry.
+            If false, the function skips loading the molecule.
         _cls : class
             Molecule constructor
 
@@ -197,7 +200,8 @@ class ToolkitWrapper:
         Raises
         ------
         IncorrectNumConformersError
-            If the wrong number of conformers is attached to the input molecule, and strict_n_conformers is True.
+            If the wrong number of conformers is attached to the input molecule, and
+            strict_n_conformers is True.
         """
         import warnings
 

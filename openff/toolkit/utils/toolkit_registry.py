@@ -7,6 +7,7 @@ __all__ = ("ToolkitRegistry",)
 # =============================================================================================
 
 import inspect
+import logging
 
 from .ambertools_wrapper import AmberToolsToolkitWrapper
 from .base_wrapper import ToolkitWrapper
@@ -15,6 +16,13 @@ from .exceptions import InvalidToolkitError, ToolkitUnavailableException
 from .openeye_wrapper import OpenEyeToolkitWrapper
 from .rdkit_wrapper import RDKitToolkitWrapper
 from .utils import all_subclasses
+
+# =============================================================================================
+# CONFIGURE LOGGER
+# =============================================================================================
+
+logger = logging.getLogger(__name__)
+
 
 # =============================================================================================
 # Implementation
@@ -302,7 +310,8 @@ class ToolkitRegistry:
         msg += "Available toolkits are: {}\n".format(self.registered_toolkits)
         raise NotImplementedError(msg)
 
-    # TODO: Can we instead register available methods directly with `ToolkitRegistry`, so we can just use `ToolkitRegistry.method()`?
+    # TODO: Can we instead register available methods directly with `ToolkitRegistry`,
+    # so we can just use `ToolkitRegistry.method()`?
     def call(self, method_name, *args, raise_exception_types=None, **kwargs):
         """
         Execute the requested method by attempting to use all registered toolkits in order of precedence.

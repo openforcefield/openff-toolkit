@@ -239,7 +239,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             The file to read the molecule from
         file_format : str
             Format specifier, usually file suffix (eg. 'MOL2', 'SMI')
-            Note that not all toolkits support all formats. Check ToolkitWrapper.toolkit_file_read_formats for details.
+            Note that not all toolkits support all formats. Check
+            ToolkitWrapper.toolkit_file_read_formats for details.
         allow_undefined_stereo : bool, default=False
             If false, raises an exception if oemol contains undefined stereochemistry.
         _cls : class
@@ -294,12 +295,13 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         elif file_format == "PDB":
             raise Exception(
-                "RDKit can not safely read PDBs on their own. Information about bond order and aromaticity "
-                "is likely to be lost. To read a PDB using RDKit use Molecule.from_pdb_and_smiles()"
+                "RDKit can not safely read PDBs on their own. Information about bond order "
+                "and aromaticity is likely to be lost. To read a PDB using RDKit use "
+                "Molecule.from_pdb_and_smiles()"
             )
             # TODO: See if we can implement PDB+mol/smi combinations to get complete bond information.
-            #  testing to see if we can make a molecule from smiles and then use the PDB conformer as the geometry
-            #  and just reorder the molecule
+            #  testing to see if we can make a molecule from smiles and then use the PDB
+            #  conformer as the geometry and just reorder the molecule
             # https://github.com/openforcefield/openff-toolkit/issues/121
             # rdmol = Chem.MolFromPDBFile(file_path, removeHs=False)
             # mol = Molecule.from_rdkit(rdmol, _cls=_cls)
@@ -312,8 +314,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         self, file_obj, file_format, allow_undefined_stereo=False, _cls=None
     ):
         """
-        Return an openff.toolkit.topology.Molecule from a file-like object (an object with a ".read()" method using
-        this toolkit.
+        Return an openff.toolkit.topology.Molecule from a file-like object using this toolkit.
+
+        A file-like object is an object with a ".read()" method.
 
         .. warning :: This API is experimental and subject to change.
 
@@ -323,7 +326,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             The file-like object to read the molecule from
         file_format : str
             Format specifier, usually file suffix (eg. 'MOL2', 'SMI')
-            Note that not all toolkits support all formats. Check ToolkitWrapper.toolkit_file_read_formats for details.
+            Note that not all toolkits support all formats. Check
+            ToolkitWrapper.toolkit_file_read_formats for details.
         allow_undefined_stereo : bool, default=False
             If false, raises an exception if oemol contains undefined stereochemistry.
         _cls : class
@@ -565,8 +569,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
     def to_smiles(self, molecule, isomeric=True, explicit_hydrogens=True, mapped=False):
         """
         Uses the RDKit toolkit to convert a Molecule into a SMILES string.
-        A partially mapped smiles can also be generated for atoms of interest by supplying an `atom_map` to the
-        properties dictionary.
+        A partially mapped smiles can also be generated for atoms of interest by supplying
+        an `atom_map` to the properties dictionary.
 
         Parameters
         ----------
@@ -577,10 +581,11 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         explicit_hydrogens: bool optional, default=True
             return a smiles string containing all hydrogens explicitly
         mapped: bool optional, default=False
-            return a explicit hydrogen mapped smiles, the atoms to be mapped can be controlled by supplying an
-            atom map into the properties dictionary. If no mapping is passed all atoms will be mapped in order, else
-            an atom map dictionary from the current atom index to the map id should be supplied with no duplicates.
-            The map ids (values) should start from 0 or 1.
+            return a explicit hydrogen mapped smiles, the atoms to be mapped can be controlled by
+            supplying an atom map into the properties dictionary. If no mapping is passed all
+            atoms will be mapped in order, else an atom map dictionary from the current atom
+            index to the map id should be supplied with no duplicates. The map ids (values) should
+            start from 0 or 1.
 
         Returns
         -------
@@ -769,7 +774,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
     def generate_conformers(
         self, molecule, n_conformers=1, rms_cutoff=None, clear_existing=True, _cls=None
     ):
-        """
+        r"""
         Generate molecule conformers using RDKit.
 
         .. warning :: This API is experimental and subject to change.
@@ -777,7 +782,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         .. todo ::
 
            * which parameters should we expose? (or can we implement a general system with \*\*kwargs?)
-           * will the coordinates be returned in the OpenFF Molecule's own indexing system? Or is there a chance that they'll get reindexed when we convert the input into an RDMol?
+           * will the coordinates be returned in the OpenFF Molecule's own indexing system?
+               Or is there a chance that they'll get reindexed when we convert the input into an RDMol?
 
         Parameters
         ----------
@@ -800,7 +806,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         if rms_cutoff is None:
             rms_cutoff = 1.0 * unit.angstrom
         rdmol = self.to_rdkit(molecule)
-        # TODO: This generates way more conformations than omega, given the same nConfs and RMS threshold. Is there some way to set an energy cutoff as well?
+        # TODO: This generates way more conformations than omega, given the same
+        # nConfs and RMS threshold. Is there some way to set an energy cutoff as well?
         AllChem.EmbedMultipleConfs(
             rdmol,
             numConfs=n_conformers,
@@ -843,10 +850,13 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                         (MMFF). This method does not make use of conformers, and hence
                         ``use_conformers`` and ``strict_n_conformers`` will not impact
                         the partial charges produced.
-        use_conformers : iterable of simtk.unit.Quantity-wrapped numpy arrays, each with shape (n_atoms, 3) and dimension of distance. Optional, default = None
-            Coordinates to use for partial charge calculation. If None, an appropriate number of conformers will be generated.
+        use_conformers : iterable of simtk.unit.Quantity-wrapped numpy arrays, each with
+            shape (n_atoms, 3) and dimension of distance. Optional, default = None
+            Coordinates to use for partial charge calculation. If None, an appropriate number of
+            conformers will be generated.
         strict_n_conformers : bool, default=False
-            Whether to raise an exception if an invalid number of conformers is provided for the given charge method.
+            Whether to raise an exception if an invalid number of conformers is provided for
+            the given charge method.
             If this is False and an invalid number of conformers is found, a warning will be raised.
         _cls : class
             Molecule constructor
@@ -1450,8 +1460,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             )
             map_bonds[rdb_idx] = bond_index
 
-        # Now fill in the cached (structure-dependent) properties. We have to have the 2D structure of the molecule
-        # in place first, because each call to add_atom and add_bond invalidates all cached properties
+        # Now fill in the cached (structure-dependent) properties. We have to have the 2D
+        # structure of the molecule in place first, because each call to add_atom and
+        # add_bond invalidates all cached properties
         for rdb in rdmol.GetBonds():
             rdb_idx = rdb.GetIdx()
             offb_idx = map_bonds[rdb_idx]
@@ -1585,7 +1596,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             rdatom.SetIsAromatic(atom.is_aromatic)
             rdatom.SetProp("_Name", atom.name)
 
-            ## Stereo handling code moved to after bonds are added
+            # Stereo handling code moved to after bonds are added
             if atom.stereochemistry == "S":
                 rdatom.SetChiralTag(Chem.CHI_TETRAHEDRAL_CW)
             elif atom.stereochemistry == "R":
@@ -1700,8 +1711,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             for atom_idx, rdk_atom in enumerate(rdmol.GetAtoms()):
                 rdk_atom.SetDoubleProp("PartialCharge", rdk_indexed_charges[atom_idx])
 
-            # Note: We could put this outside the "if" statement, which would result in all partial charges in the
-            #       resulting file being set to "n/a" if they weren't set in the Open Force Field Toolkit ``Molecule``
+            # Note: We could put this outside the "if" statement, which would result in all
+            #     partial charges in the resulting file being set to "n/a" if they weren't
+            #     set in the Open Force Field Toolkit ``Molecule``
             Chem.CreateAtomDoublePropertyList(rdmol, "PartialCharge")
 
         # Cleanup the rdmol
@@ -1720,8 +1732,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
     def to_inchi(self, molecule, fixed_hydrogens=False):
         """
         Create an InChI string for the molecule using the RDKit Toolkit.
-        InChI is a standardised representation that does not capture tautomers unless specified using the fixed hydrogen
-        layer.
+        InChI is a standardised representation that does not capture tautomers
+        unless specified using the fixed hydrogen layer.
 
         For information on InChi see here https://iupac.org/who-we-are/divisions/division-details/inchi/
 
@@ -1731,8 +1743,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             The molecule to convert into a SMILES.
 
         fixed_hydrogens: bool, default=False
-            If a fixed hydrogen layer should be added to the InChI, if `True` this will produce a non standard specific
-            InChI string of the molecule.
+            If a fixed hydrogen layer should be added to the InChI, if `True` this will produce a
+            non standard specific InChI string of the molecule.
 
         Returns
         --------
@@ -1752,8 +1764,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
     def to_inchikey(self, molecule, fixed_hydrogens=False):
         """
         Create an InChIKey for the molecule using the RDKit Toolkit.
-        InChIKey is a standardised representation that does not capture tautomers unless specified using the fixed hydrogen
-        layer.
+        InChIKey is a standardised representation that does not capture tautomers
+        unless specified using the fixed hydrogen layer.
 
         For information on InChi see here https://iupac.org/who-we-are/divisions/division-details/inchi/
 
@@ -1763,8 +1775,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             The molecule to convert into a SMILES.
 
         fixed_hydrogens: bool, default=False
-            If a fixed hydrogen layer should be added to the InChI, if `True` this will produce a non standard specific
-            InChI string of the molecule.
+            If a fixed hydrogen layer should be added to the InChI, if `True` this will
+            produce a non standard specific InChI string of the molecule.
 
         Returns
         --------
@@ -1796,9 +1808,10 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         unique_tags : tuple of int
             A sorted tuple of all unique tagged atom map indices.
         tagged_atom_connectivity : tuple of tuples of int, shape n_tagged_bonds x 2
-            A tuple of tuples, where each inner tuple is a pair of tagged atoms (tag_idx_1, tag_idx_2) which are
-            bonded. The inner tuples are ordered smallest-to-largest, and the tuple of tuples is ordered
-            lexically. So the return value for an improper torsion would be ((1, 2), (2, 3), (2, 4)).
+            A tuple of tuples, where each inner tuple is a pair of tagged atoms (tag_idx_1, tag_idx_2)
+             which are bonded. The inner tuples are ordered smallest-to-largest, and the tuple of
+             tuples is ordered lexically. So the return value for an improper torsion would be
+             ((1, 2), (2, 3), (2, 4)).
 
         Raises
         ------
@@ -1839,7 +1852,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             rdmol to process with the SMIRKS in order to find matches
         smarts : str
             SMARTS string with any number of sequentially tagged atoms.
-            If there are N tagged atoms numbered 1..N, the resulting matches will be N-tuples of atoms that match the corresponding tagged atoms.
+            If there are N tagged atoms numbered 1..N, the resulting matches will be
+            N-tuples of atoms that match the corresponding tagged atoms.
         aromaticity_model : str, optional, default='OEAroModel_MDL'
             OpenEye aromaticity model designation as a string, such as ``OEAroModel_MDL``.
             Molecule is prepared with this aromaticity model prior to querying.
@@ -1850,7 +1864,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             matches[index] is an N-tuple of atom numbers from the ``rdmol``
             Matches are returned in no guaranteed order.
             # TODO: What is returned if no matches are found? An empty list, or None?
-            # TODO: Ensure that SMARTS numbers 1, 2, 3... are rendered into order of returnd matches indexed by 0, 1, 2...
+            # TODO: Ensure that SMARTS numbers 1, 2, 3... are rendered into order of
+            #    returned matches indexed by 0, 1, 2...
 
         .. notes ::
 

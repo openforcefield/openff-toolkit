@@ -1,5 +1,5 @@
 """
-Built-in ToolkitWrapper for very basic functionality. This is intended for use in testing and not much more.
+Built-in ToolkitWrapper for very basic functionality. Intended for testing and not much more.
 """
 __all__ = ("BuiltInToolkitWrapper",)
 
@@ -22,7 +22,7 @@ from .utils import inherit_docstrings
 @inherit_docstrings
 class BuiltInToolkitWrapper(base_wrapper.ToolkitWrapper):
     """
-    Built-in ToolkitWrapper for very basic functionality. This is intended for use in testing and not much more.
+    Built-in ToolkitWrapper for very basic functionality. Intended for testing and not much more.
 
     .. warning :: This API is experimental and subject to change.
     """
@@ -48,8 +48,10 @@ class BuiltInToolkitWrapper(base_wrapper.ToolkitWrapper):
         _cls=None,
     ):
         """
-        Compute partial charges with the built-in toolkit using simple arithmetic operations, and assign
-        the new values to the partial_charges attribute.
+
+        Compute partial charges with the built-in toolkit using simple arithmetic operations,
+        and assign the new values to the partial_charges attribute.
+
 
         .. warning :: This API is experimental and subject to change.
 
@@ -58,12 +60,15 @@ class BuiltInToolkitWrapper(base_wrapper.ToolkitWrapper):
         molecule : openff.toolkit.topology.Molecule
             Molecule for which partial charges are to be computed
         partial_charge_method: str, optional, default=None
-            The charge model to use. One of ['zeros', 'formal_charge']. If None, 'formal_charge' will be used.
-        use_conformers : iterable of simtk.unit.Quantity-wrapped numpy arrays, each with shape (n_atoms, 3) and dimension of distance. Optional, default = None
-            Coordinates to use for partial charge calculation. If None, an appropriate number of conformers
-            will be generated.
+            The charge model to use. One of ['zeros', 'formal_charge']. If None, 'formal_charge'
+            will be used.
+        use_conformers : iterable of simtk.unit.Quantity-wrapped numpy arrays, each with shape
+            (n_atoms, 3) and dimension of distance. Optional, default = None
+            Coordinates to use for partial charge calculation. If None, an appropriate number
+            of conformers will be generated.
         strict_n_conformers : bool, default=False
-            Whether to raise an exception if an invalid number of conformers is provided for the given charge method.
+            Whether to raise an exception if an invalid number of conformers is provided for the
+            given charge method.
             If this is False and an invalid number of conformers is found, a warning will be raised
             instead of an Exception.
         _cls : class
@@ -71,10 +76,10 @@ class BuiltInToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Raises
         ------
-        ChargeMethodUnavailableError if the requested charge method can not be handled by this toolkit
+        ChargeMethodUnavailableError if this toolkit cannot handle the requested charge method
 
-        IncorrectNumConformersError if strict_n_conformers is True and use_conformers is provided and specifies an
-        invalid number of conformers for the requested method
+        IncorrectNumConformersError if strict_n_conformers is True and use_conformers is provided
+        and specifies an invalid number of conformers for the requested method
 
         ChargeCalculationError if the charge calculation is supported by this toolkit, but fails
         """
