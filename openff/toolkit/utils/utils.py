@@ -38,6 +38,7 @@ import logging
 
 from simtk import unit
 
+from .exceptions import MessageException  # Needed for backward compatibility
 from .exceptions import IncompatibleUnitError, MissingDependencyError
 
 # =============================================================================================
