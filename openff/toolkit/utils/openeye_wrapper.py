@@ -6,7 +6,7 @@ __all__ = ("OpenEyeToolkitWrapper",)
 
 
 # =============================================================================================
-# GLOBAL IMPORTS
+# IMPORTS
 # =============================================================================================
 
 import copy
@@ -26,32 +26,22 @@ from simtk import unit
 if TYPE_CHECKING:
     from openforcefield.topology.molecule import Molecule
 
-# =============================================================================================
-# LOCAL IMPORTS
-# =============================================================================================
-
 from . import base_wrapper
-
 from .constants import DEFAULT_AROMATICITY_MODEL
-
 from .exceptions import (
     AntechamberNotFoundError,
     ChargeCalculationError,
     ChargeMethodUnavailableError,
+    GAFFAtomTypeWarning,
     IncorrectNumConformersError,
     InvalidIUPACNameError,
     InvalidToolkitError,
-    GAFFAtomTypeWarning,
     LicenseError,
     MessageException,
     ToolkitUnavailableException,
     UndefinedStereochemistryError,
 )
-
-from .utils import (
-    temporary_cd,
-    inherit_docstrings,
-)
+from .utils import inherit_docstrings, temporary_cd
 
 # =============================================================================================
 # CONFIGURE LOGGER

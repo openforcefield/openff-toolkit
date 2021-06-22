@@ -66,7 +66,7 @@ __all__ = (
 
 
 # =============================================================================================
-# GLOBAL IMPORTS
+# IMPORTS
 # =============================================================================================
 
 import copy
@@ -88,26 +88,23 @@ if TYPE_CHECKING:
     from openforcefield.topology.molecule import Molecule
 
 # =============================================================================================
+# LOCAL IMPORTS
+# =============================================================================================
+
+from .ambertools_wrapper import AmberToolsToolkitWrapper
+from .base_wrapper import ToolkitWrapper
+from .builtin_wrapper import BuiltInToolkitWrapper
+from .constants import *
+from .exceptions import *
+from .openeye_wrapper import OpenEyeToolkitWrapper, requires_openeye_module
+from .rdkit_wrapper import RDKitToolkitWrapper
+from .toolkit_registry import ToolkitRegistry
+
+# =============================================================================================
 # CONFIGURE LOGGER
 # =============================================================================================
 
 logger = logging.getLogger(__name__)
-
-# =============================================================================================
-# LOCAL IMPORTS
-# =============================================================================================
-
-from .constants import *
-from .exceptions import *
-
-from .base_wrapper import ToolkitWrapper
-from .builtin_wrapper import BuiltInToolkitWrapper
-
-from .openeye_wrapper import OpenEyeToolkitWrapper, requires_openeye_module
-from .rdkit_wrapper import RDKitToolkitWrapper
-from .ambertools_wrapper import AmberToolsToolkitWrapper
-
-from .toolkit_registry import ToolkitRegistry
 
 
 # =============================================================================================
@@ -176,13 +173,13 @@ if (
 # Consistency check that the __all__ is correct.
 def _check_all():
     from . import (
-        constants,
-        exceptions,
+        ambertools_wrapper,
         base_wrapper,
         builtin_wrapper,
+        constants,
+        exceptions,
         openeye_wrapper,
         rdkit_wrapper,
-        ambertools_wrapper,
         toolkit_registry,
     )
 

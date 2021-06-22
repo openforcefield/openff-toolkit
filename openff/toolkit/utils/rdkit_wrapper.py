@@ -6,7 +6,7 @@ __all__ = ("RDKitToolkitWrapper",)
 
 
 # =============================================================================================
-# GLOBAL IMPORTS
+# IMPORTS
 # =============================================================================================
 
 import copy
@@ -21,16 +21,8 @@ from simtk import unit
 if TYPE_CHECKING:
     from openforcefield.topology.molecule import Molecule
 
-# =============================================================================================
-# LOCAL IMPORTS
-# =============================================================================================
-
 from . import base_wrapper
-
-from .constants import (
-    DEFAULT_AROMATICITY_MODEL,
-)
-
+from .constants import DEFAULT_AROMATICITY_MODEL
 from .exceptions import (
     AntechamberNotFoundError,
     ChargeCalculationError,

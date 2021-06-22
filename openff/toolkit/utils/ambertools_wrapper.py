@@ -5,23 +5,18 @@ Wrapper class providing a minimal consistent interface to `AmberTools <http://am
 __all__ = ("AmberToolsToolkitWrapper",)
 
 # =============================================================================================
-# GLOBAL IMPORTS
+# IMPORTS
 # =============================================================================================
 
-from collections import defaultdict
-from distutils.spawn import find_executable
 import subprocess
 import tempfile
+from collections import defaultdict
+from distutils.spawn import find_executable
 
 import numpy as np
 from simtk import unit
 
-# =============================================================================================
-# LOCAL IMPORTS
-# =============================================================================================
-
-from . import base_wrapper
-
+from . import base_wrapper, rdkit_wrapper
 from .exceptions import (
     AntechamberNotFoundError,
     ChargeCalculationError,
@@ -29,12 +24,7 @@ from .exceptions import (
     InvalidToolkitError,
     ToolkitUnavailableException,
 )
-
-from . import rdkit_wrapper
-
-from .utils import (
-    temporary_cd,
-)
+from .utils import temporary_cd
 
 # =============================================================================================
 # IMPLEMENTATION

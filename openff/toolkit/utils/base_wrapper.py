@@ -3,19 +3,12 @@
 __all__ = ("ToolkitWrapper",)
 
 # =============================================================================================
-# GLOBAL IMPORTS
+# IMPORTS
 # =============================================================================================
 
 from functools import wraps
 
-# =============================================================================================
-# LOCAL IMPORTS
-# =============================================================================================
-
-from .exceptions import (
-    IncorrectNumConformersError,
-    IncorrectNumConformersWarning,
-)
+from .exceptions import IncorrectNumConformersError, IncorrectNumConformersWarning
 
 # =============================================================================================
 # Implementation

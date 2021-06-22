@@ -4,25 +4,15 @@ Built-in ToolkitWrapper for very basic functionality. This is intended for use i
 __all__ = ("BuiltInToolkitWrapper",)
 
 # =============================================================================================
-# GLOBAL IMPORTS
+# IMPORTS
 # =============================================================================================
 
 import numpy as np
 from simtk import unit
 
-# =============================================================================================
-# LOCAL IMPORTS
-# =============================================================================================
-
 from . import base_wrapper
-
-from .exceptions import (
-    ChargeMethodUnavailableError,
-)
-
-from .utils import (
-    inherit_docstrings,
-)
+from .exceptions import ChargeMethodUnavailableError
+from .utils import inherit_docstrings
 
 # =============================================================================================
 # Implementation

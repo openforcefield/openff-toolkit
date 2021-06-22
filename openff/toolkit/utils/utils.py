@@ -38,16 +38,7 @@ import logging
 
 from simtk import unit
 
-# =============================================================================================
-# LOCAL IMPORTS
-# =============================================================================================
-
-from .exceptions import (
-    MessageException,
-    IncompatibleUnitError,
-    MissingDependencyError,
-)
-
+from .exceptions import IncompatibleUnitError, MessageException, MissingDependencyError
 
 # =============================================================================================
 # CONFIGURE LOGGER

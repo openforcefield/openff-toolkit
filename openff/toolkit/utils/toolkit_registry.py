@@ -3,30 +3,18 @@
 __all__ = ("ToolkitRegistry",)
 
 # =============================================================================================
-# GLOBAL IMPORTS
+# IMPORTS
 # =============================================================================================
 
 import inspect
 
-# =============================================================================================
-# LOCAL IMPORTS
-# =============================================================================================
-
-from .exceptions import (
-    InvalidToolkitError,
-    ToolkitUnavailableException,
-)
-
-from .utils import (
-    all_subclasses,
-)
-
+from .ambertools_wrapper import AmberToolsToolkitWrapper
 from .base_wrapper import ToolkitWrapper
 from .builtin_wrapper import BuiltInToolkitWrapper
+from .exceptions import InvalidToolkitError, ToolkitUnavailableException
 from .openeye_wrapper import OpenEyeToolkitWrapper
 from .rdkit_wrapper import RDKitToolkitWrapper
-from .ambertools_wrapper import AmberToolsToolkitWrapper
-
+from .utils import all_subclasses
 
 # =============================================================================================
 # Implementation
