@@ -2241,8 +2241,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             If this is False and an invalid number of conformers is found, a warning will be raised.
         round_partial_charges : bool, default=True
             Whether to round partial charges so that they sum to the total formal charge of the molecule.
-            This is used to prevent accumulation of rounding errors when the original partial charges are stored
-            at low precision.
+            This is used to prevent accumulation of rounding errors when the partial charge generation method has
+            low precision.
         _cls : class
             Molecule constructor
 
@@ -2255,8 +2255,6 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         import numpy as np
         from openeye import oechem, oequacpac
-
-        from openff.toolkit.topology import Molecule
 
         SUPPORTED_CHARGE_METHODS = {
             "am1bcc": {
@@ -5072,8 +5070,8 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
             If this is False and an invalid number of conformers is found, a warning will be raised.
         round_partial_charges : bool, default=True
             Whether to round partial charges so that they sum to the total formal charge of the molecule.
-            This is used to prevent accumulation of rounding errors when the original partial charges are stored
-            at low precision.
+            This is used to prevent accumulation of rounding errors when the partial charge generation method has
+            low precision.
         _cls : class
             Molecule constructor
 
