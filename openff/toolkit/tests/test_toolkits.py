@@ -28,6 +28,8 @@ from openff.toolkit.tests.create_molecules import (
     create_cyclohexane,
     create_ethanol,
     create_reversed_ethanol,
+    create_ammonia,
+    create_cyclic_n3
 )
 from openff.toolkit.tests.utils import (
     requires_ambertools,
@@ -2835,6 +2837,28 @@ class TestAmberToolsToolkitWrapper:
             charge_sum += pc
             abs_charge_sum += abs(pc)
         assert abs(charge_sum) < 1e-8 * unit.elementary_charge
+        assert abs_charge_sum > 0.25 * unit.elementary_charge
+
+    def test_assign_partial_charges_am1bcc_no_rounding(self):
+        """Test AmberToolsToolkitWrapper assign_partial_charges() with am1bcc"""
+        toolkit_registry = ToolkitRegistry(
+            toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper]
+        )
+        # Use a cyclic N3H3 molecule since this is likely to produce a rounding error
+        # Antechamber outputs 6 digits after the decimal in charges.txt, so I (Jeff) don't know
+        # why this N3H3 molecule ends up with an error of 1e-3, but it's the smallest reproducing
+        # case of this that I could find.
+        molecule = create_cyclic_n3()
+        molecule.assign_partial_charges(
+            partial_charge_method="am1bcc", toolkit_registry=toolkit_registry, round_partial_charges=False
+        )
+        charge_sum = 0 * unit.elementary_charge
+        abs_charge_sum = 0 * unit.elementary_charge
+        for pc in molecule._partial_charges:
+            charge_sum += pc
+            abs_charge_sum += abs(pc)
+        # Rounding error should be on the order of 1e-3
+        assert 1e-2 > abs(charge_sum / unit.elementary_charge) > 1e-4
         assert abs_charge_sum > 0.25 * unit.elementary_charge
 
     def test_assign_partial_charges_am1bcc_net_charge(self):
