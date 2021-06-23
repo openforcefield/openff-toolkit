@@ -40,7 +40,6 @@ import openff.toolkit
 # ones.
 extensions = [
     "sphinx.ext.autodoc",
-    # 'sphinx.ext.napoleon',
     "numpydoc",
     "sphinx.ext.autosummary",
     "sphinx.ext.doctest",
@@ -48,9 +47,8 @@ extensions = [
     "sphinx.ext.mathjax",
     "sphinx.ext.viewcode",
     "sphinx.ext.intersphinx",
-    "nbsphinx",
-    # 'm2r2', # render markdown
-    "myst_parser",
+    "myst_nb",
+    # "myst_parser",
 ]
 
 # Autodoc settings
@@ -74,6 +72,7 @@ intersphinx_mapping = {
     "https://numpy.org/doc/stable": None,
     "https://docs.scipy.org/doc/scipy/reference": None,
     "https://scikit-learn.org/stable": None,
+    "http://docs.openmm.org/latest/api-python/": None,
 }
 
 # Add any paths that contain templates here, relative to this directory.
@@ -90,7 +89,7 @@ myst_enable_extensions = [
 
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
-source_suffix = [".rst", ".md"]
+source_suffix = [".rst", ".md", ".ipynb"]
 
 # The master toctree document.
 master_doc = "index"
