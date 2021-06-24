@@ -40,7 +40,6 @@ from collections import OrderedDict
 from copy import deepcopy
 from typing import Optional, Union
 
-import networkx as nx
 import numpy as np
 from simtk import unit
 from simtk.openmm.app import Element, element
@@ -3082,14 +3081,25 @@ class FrozenMolecule(Serializable):
                         SMARTS, toolkit_registry=toolkit_registry
                     )
                 return ref_mol.to_networkx()
-            elif isinstance(data, nx.Graph):
-                return data
+
+            elif data.__class__.__name__ == "Graph":
+                # Defer loading networkx (slow) until it's needed
+                import networkx as nx
+
+                # If the class is named "Graph", make sure it's a networkx.Graph
+                if isinstance(data, nx.Graph):
+                    return data
+                else:
+                    raise NotImplementedError(
+                        f"Found data type {type(data)} that is named 'Graph'"
+                        "but it not a networkx.Graph"
+                    )
 
             else:
                 raise NotImplementedError(
                     f"The input type {type(data)} is not supported,"
                     f"please supply an openff.toolkit.topology.molecule.Molecule,"
-                    f"openff.toolkit.topology.topology.TopologyMolecule or networkx "
+                    f"openff.toolkit.topology.topology.TopologyMolecule or networkx.Graph "
                     f"representation of the molecule."
                 )
 
