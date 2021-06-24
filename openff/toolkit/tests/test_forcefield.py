@@ -4240,7 +4240,10 @@ class TestForceFieldParameterAssignment:
         for bond1, bond2 in zip(
             omm_sys_top.topology_bonds, mod_omm_sys_top.topology_bonds
         ):
-            assert bond1.bond.fractional_bond_order == bond2.bond.fractional_bond_order
+            # 'approx()' because https://github.com/openforcefield/openff-toolkit/issues/994
+            assert bond1.bond.fractional_bond_order == pytest.approx(
+                bond2.bond.fractional_bond_order
+            )
 
     def test_fractional_bond_order_ignore_existing_confs(self):
         """Test that previously-defined bond orders in the topology are overwritten"""
