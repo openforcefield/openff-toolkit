@@ -3058,6 +3058,8 @@ class FrozenMolecule(Serializable):
         # Here we should work out what data type we have, also deal with lists?
         def to_networkx(data):
             """For the given data type, return the networkx graph"""
+            import networkx as nx
+
             from openff.toolkit.topology import TopologyMolecule
 
             if strip_pyrimidal_n_atom_stereo:
@@ -3082,18 +3084,8 @@ class FrozenMolecule(Serializable):
                     )
                 return ref_mol.to_networkx()
 
-            elif data.__class__.__name__ == "Graph":
-                # Defer loading networkx (slow) until it's needed
-                import networkx as nx
-
-                # If the class is named "Graph", make sure it's a networkx.Graph
-                if isinstance(data, nx.Graph):
-                    return data
-                else:
-                    raise NotImplementedError(
-                        f"Found data type {type(data)} that is named 'Graph'"
-                        "but it not a networkx.Graph"
-                    )
+            elif isinstance(data, nx.Graph):
+                return data
 
             else:
                 raise NotImplementedError(
