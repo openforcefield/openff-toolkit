@@ -17,6 +17,7 @@ import io
 import logging
 import os
 import pathlib
+import re
 from tempfile import NamedTemporaryFile
 from typing import Dict
 
@@ -93,7 +94,7 @@ def load_mini_drug_bank():
         if not record:
             # Ignore the final record
             continue
-        name = record.partition(b"\n")[0].decode("utf8")
+        name = record.partition(b"\n")[0].strip().decode("utf8")
         record += sep
         table[name] = DrugBankRecord(name, record)
 
@@ -109,6 +110,31 @@ def get_mini_drug_bank(names):
 
 
 # These tables are for the entire DrugBank set, though we only test a subset.
+
+rdkit_parse_failures = set(
+    [
+        "DrugBank_2799",
+        "DrugBank_5415",
+        "DrugBank_3046",
+        "DrugBank_472",
+        "DrugBank_794",
+        "DrugBank_3655",
+        "DrugBank_3739",
+        "DrugBank_6353",
+        "DrugBank_1570",
+        "DrugBank_1594",
+        "DrugBank_1659",
+        "DrugBank_1661",
+        "DrugBank_4346",
+        "DrugBank_1802",
+        "DrugBank_6947",
+        "DrugBank_7049",
+        "DrugBank_4865",
+        "DrugBank_2465",
+        "DrugBank_2467",
+    ]
+)
+
 openeye_inchi_stereochemistry_lost = [
     "DrugBank_2799",
     "DrugBank_5414",
@@ -670,6 +696,36 @@ class TestOpenEyeToolkitWrapper:
 
         off_molecule = Molecule.from_openeye(oemol)
         assert off_molecule.properties["atom_map"] == expected_map
+
+    @pytest.mark.parametrize(
+        "record",
+        get_mini_drug_bank(
+            [
+                "DrugBank_2824",
+                "DrugBank_246",
+                "DrugBank_320",
+                "DrugBank_5804",
+                "DrugBank_794",
+                "DrugBank_3565",
+                "DrugBank_977",
+                "DrugBank_4161",
+                "DrugBank_6531",
+                "DrugBank_1564",
+                "DrugBank_1700",
+                "DrugBank_4346",
+                "DrugBank_4580",
+                "DrugBank_4662",
+                "DrugBank_7108",
+                "DrugBank_7124",
+                "DrugBank_2237",
+            ]
+        ),
+    )
+    def test_mini_drugbank_to_openeye(self, record):
+        toolkit = OpenEyeToolkitWrapper()
+        molecule = record.get_molecule(toolkit)
+        oemol = molecule.to_openeye()
+        assert oemol.GetTitle() == record.name
 
     @pytest.mark.parametrize("record", get_mini_drug_bank(["DrugBank_5373"]))
     def test_to_inchi(self, record):
@@ -1881,6 +1937,47 @@ class TestRDKitToolkitWrapper:
             smiles_expl, toolkit_registry=toolkit_wrapper, hydrogens_are_explicit=False
         )
         assert offmol.n_atoms == 4
+
+    @pytest.mark.parametrize(
+        "record",
+        get_mini_drug_bank(
+            [
+                "DrugBank_2800",
+                "DrugBank_5414",
+                "DrugBank_5449",
+                "DrugBank_2987",
+                "DrugBank_3028",
+                "DrugBank_3046",
+                "DrugBank_390",
+                "DrugBank_3358",
+                "DrugBank_5900",
+                "DrugBank_3479",
+                "DrugBank_6103",
+                "DrugBank_3913",
+                "DrugBank_1538",
+                "DrugBank_4188",
+                "DrugBank_6775",
+                "DrugBank_6865",
+                "DrugBank_4580",
+                "DrugBank_7108",
+                "DrugBank_7124",
+                "DrugBank_2095",
+                "DrugBank_2178",
+                "DrugBank_2570",
+                "DrugBank_2585",
+                "DrugBank_2684",
+            ]
+        ),
+    )
+    def test_mini_drugbank_to_rdkit(self, record):
+        toolkit = RDKitToolkitWrapper()
+        if record.name in rdkit_parse_failures:
+            with pytest.raises(AssertionError, match=re.escape(record.name)):
+                molecule = record.get_molecule(toolkit)
+        else:
+            molecule = record.get_molecule(toolkit)
+            rdmol = molecule.to_rdkit()
+            assert rdmol.GetProp("_Name"), record.name
 
     @pytest.mark.parametrize("record", get_mini_drug_bank(["DrugBank_5373"]))
     def test_to_inchi(self, record):
