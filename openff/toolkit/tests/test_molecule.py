@@ -409,7 +409,7 @@ class TestMolecule:
     @pytest.mark.parametrize("record", get_mini_drug_bank(["DrugBank_5373"]))
     def test_bson_serialization(self, record):
         """Test serialization of a molecule object to and from BSON."""
-        record = record.to_molecule()
+        record = record.get_molecule()
         serialized = molecule.to_bson()
         molecule_copy = Molecule.from_bson(serialized)
         assert molecule == molecule_copy
