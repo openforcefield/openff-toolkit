@@ -25,6 +25,7 @@ TODO:
 
 import copy
 import os
+import pathlib
 import pickle
 from tempfile import NamedTemporaryFile
 
@@ -159,69 +160,67 @@ def is_three_membered_ring_torsion(torsion):
 # FIXTURES
 # =============================================================================================
 
+if OpenEyeToolkitWrapper.is_available():
+    openeye_toolkit = OpenEyeToolkitWrapper()
+else:
+    openeye_toolkit = None
 
-def mini_drug_bank(xfail_mols=None, wip_mols=None):
-    """Load the full MiniDrugBank into Molecule objects.
+# During import stage, read the Tripos records in memory but don't
+# process them. When requested (via .get_molecule()) use OEChem to
+# convert the record to a molecule. Cache the molecule for later
+# use. Only return copies, as the test code may modify the molecule.
 
-    Parameters
-    ----------
-    xfail_mols : Dict[str, str or None]
-        Dictionary mapping the molecule names that are allowed to
-        failed to the failure reason.
-    wip_mols : Dict[str, str or None]
-        Dictionary mapping the molecule names that are work in progress
-        to the failure reason.
+class DrugBankRecord:
+    def __init__(self, name, record):
+        self.name = name
+        self.record = record
+        self._molecule = None # Cache
 
-    """
-    # If we have already loaded the data set, return the cached one.
-    if mini_drug_bank.molecules is not None:
-        molecules = mini_drug_bank.molecules
-    else:
-        # Load the dataset.
-        file_path = get_data_file_path("molecules/MiniDrugBank_tripos.mol2")
-        try:
-            # We need OpenEye to parse the molecules, but pytest execute this
-            # whether or not the test class is skipped so if OE is not available
-            # we just return an empty list of test cases as a workaround.
-            molecules = Molecule.from_file(file_path, allow_undefined_stereo=True)
-        except NotImplementedError as e:
-            assert "No toolkits in registry can read file" in str(e)
-            mini_drug_bank.molecules = []
-            return []
-        else:
-            mini_drug_bank.molecules = molecules
+    def get_molecule(self):
+        if self._molecule is None:
+            with NamedTemporaryFile(mode="w+b", suffix=".mol2") as tmpfile:
+                tmpfile.write(self.record)
+                tmpfile.flush()
+                molecules = openeye_toolkit.from_file(
+                    tmpfile.name,
+                    "sdf",
+                    allow_undefined_stereo=True,
+                )
+            assert len(molecules) == 1, self.name
+            self._molecule = molecules[0]
+        
+        # Always make a copy as some test routines modify the molecule
+        return copy.deepcopy(self._molecule)
 
-    # Check if we need to mark anything.
-    if xfail_mols is None and wip_mols is None:
-        return molecules
+# Make a table mapping each molecule's name to a DrugBankRecord
+def load_mini_drug_bank():
+    content = pathlib.Path(
+        get_data_file_path("molecules/MiniDrugBank_tripos.mol2")
+    ).read_bytes()
+    table = {}
 
-    # Handle mutable default.
-    if xfail_mols is None:
-        xfail_mols = {}
-    if wip_mols is None:
-        wip_mols = {}
-    # There should be no molecule in both dictionaries.
-    assert len(set(xfail_mols).intersection(set(wip_mols))) == 0
+    # This parser is only good enough for this file.
+    sep = b"@<TRIPOS>MOLECULE\n"
+    assert content.startswith(sep)
 
-    # Don't modify the cached molecules.
-    molecules = copy.deepcopy(molecules)
-    for i, mol in enumerate(molecules):
-        if mol.name in xfail_mols:
-            marker = pytest.mark.xfail(reason=xfail_mols[mol.name])
-        elif mol.name in wip_mols:
-            marker = pytest.mark.wip(reason=wip_mols[mol.name])
-        else:
-            marker = None
+    for record in content.split(sep):
+        if not record:
+            # Ignore the initial record
+            continue
+        # We've removed the first line. The new second line is the name.
+        name = record.partition(b"\n")[0].strip().decode("utf8")
+        record = sep + record
+        table[name] = DrugBankRecord(name, record)
 
-        if marker is not None:
-            molecules[i] = pytest.param(mol, marks=marker)
+    return table
 
-    return molecules
+# Map name -> binary record
+mini_drug_bank_table = load_mini_drug_bank()
 
-
-# Use a "static" variable as a workaround as fixtures cannot be
-# used inside pytest.mark.parametrize (see issue #349 in pytest).
-mini_drug_bank.molecules = None
+# Return records by name
+def get_mini_drug_bank(names):
+    return [mini_drug_bank_table[name] for name in names]
+    
 
 # All the molecules that raise UndefinedStereochemistryError when read by OETK()
 openeye_drugbank_undefined_stereo_mols = {
@@ -337,6 +336,7 @@ class TestAtom:
             atom.molecule = mol
 
 
+
 class TestMolecule:
     """Test Molecule class."""
 
@@ -344,54 +344,85 @@ class TestMolecule:
 
     # Test serialization {to|from}_{dict|yaml|toml|json|bson|xml|messagepack|pickle}
 
-    @pytest.mark.parametrize("molecule", mini_drug_bank())
-    def test_dict_serialization(self, molecule):
+    @requires_openeye
+    @pytest.mark.parametrize("record", get_mini_drug_bank([
+        "DrugBank_165",
+        "DrugBank_423",
+        "DrugBank_443",
+        "DrugBank_3565",
+        "DrugBank_977",
+        "DrugBank_4346",
+        "DrugBank_1722",
+        "DrugBank_4468",
+        "DrugBank_4580",
+        "DrugBank_7108",
+        "DrugBank_2077",
+        "DrugBank_7124",
+        "DrugBank_2148",
+        "DrugBank_2208",
+        "DrugBank_2237",
+        "DrugBank_2538",
+        "DrugBank_2642",
+        "DrugBank_2728",
+        ]))
+    def test_dict_serialization(self, record):
         """Test serialization of a molecule object to and from dict."""
+        molecule = record.get_molecule()
         serialized = molecule.to_dict()
         molecule_copy = Molecule.from_dict(serialized)
         assert molecule == molecule_copy
         assert molecule_copy.n_conformers == molecule.n_conformers
         assert np.allclose(molecule_copy.conformers[0], molecule.conformers[0])
 
+    # to_yaml() uses to_dict() so only look at the differential
+    @requires_openeye
     @requires_pkg("yaml")
-    @pytest.mark.parametrize("molecule", mini_drug_bank())
-    def test_yaml_serialization(self, molecule):
+    @pytest.mark.parametrize("record", get_mini_drug_bank(["DrugBank_5373"]))
+    def test_yaml_serialization(self, record):
         """Test serialization of a molecule object to and from YAML."""
+        molecule = record.get_molecule()
         serialized = molecule.to_yaml()
         molecule_copy = Molecule.from_yaml(serialized)
         assert molecule == molecule_copy
         assert molecule_copy.n_conformers == molecule.n_conformers
         assert np.allclose(molecule_copy.conformers[0], molecule.conformers[0])
 
+    @requires_openeye
     @requires_pkg("toml")
-    @pytest.mark.parametrize("molecule", mini_drug_bank())
-    def test_toml_serialization(self, molecule):
+    def test_toml_serialization(self):
         """Test serialization of a molecule object to and from TOML."""
         # TODO: Test round-trip, on mini_drug_bank, when implemented
         mol = Molecule.from_smiles("CCO")
         with pytest.raises(NotImplementedError):
             mol.to_toml()
 
+    # to_bson() uses to_dict() so only look at the differential
+    @requires_openeye
     @requires_pkg("bson")
-    @pytest.mark.parametrize("molecule", mini_drug_bank())
-    def test_bson_serialization(self, molecule):
+    @pytest.mark.parametrize("record", get_mini_drug_bank(["DrugBank_5373"]))
+    def test_bson_serialization(self, record):
         """Test serialization of a molecule object to and from BSON."""
+        record = record.to_molecule()
         serialized = molecule.to_bson()
         molecule_copy = Molecule.from_bson(serialized)
         assert molecule == molecule_copy
         assert molecule_copy.n_conformers == molecule.n_conformers
         assert np.allclose(molecule_copy.conformers[0], molecule.conformers[0])
 
-    @pytest.mark.parametrize("molecule", mini_drug_bank())
-    def test_json_serialization(self, molecule):
+    # to_json() uses to_dict() so only look at the differential
+    @requires_openeye
+    @pytest.mark.parametrize("record", get_mini_drug_bank(["DrugBank_5373"]))
+    def test_json_serialization(self, record):
         """Test serialization of a molecule object to and from JSON."""
+        # XXX TODO: need to test both w/ and w/o conformers.
+        molecule = record.get_molecule()
         molecule_copy = Molecule.from_json(molecule.to_json())
         assert molecule_copy == molecule
         assert molecule_copy.n_conformers == molecule.n_conformers
         assert np.allclose(molecule_copy.conformers[0], molecule.conformers[0])
 
-    @pytest.mark.parametrize("molecule", mini_drug_bank())
-    def test_xml_serialization(self, molecule):
+    @requires_openeye
+    def test_xml_serialization(self):
         """Test serialization of a molecule object to and from XML."""
         # TODO: Test round-trip, on mini_drug_bank, when from_xml is implemented
         mol = Molecule.from_smiles("CCO")
@@ -399,25 +430,31 @@ class TestMolecule:
         with pytest.raises(NotImplementedError):
             Molecule.from_xml(serialized)
 
+    # to_json() uses to_dict() so only look at the differential
+    @requires_openeye
     @requires_pkg("msgpack")
-    @pytest.mark.parametrize("molecule", mini_drug_bank())
-    def test_messagepack_serialization(self, molecule):
+    @pytest.mark.parametrize("record", get_mini_drug_bank(["DrugBank_5373"]))
+    def test_messagepack_serialization(self, record):
         """Test serialization of a molecule object to and from messagepack."""
+        molecule = record.get_molecule()
         serialized = molecule.to_messagepack()
         molecule_copy = Molecule.from_messagepack(serialized)
         assert molecule == molecule_copy
         assert molecule_copy.n_conformers == molecule.n_conformers
         assert np.allclose(molecule_copy.conformers[0], molecule.conformers[0])
 
-    @pytest.mark.parametrize("molecule", mini_drug_bank())
-    def test_pickle_serialization(self, molecule):
+    # Adding more tests doesn't improve coverage.
+    @requires_openeye
+    @pytest.mark.parametrize("record", get_mini_drug_bank(["DrugBank_5373"]))
+    def test_pickle_serialization(self, record):
         """Test round-trip pickling of a molecule object."""
+        molecule = record.get_molecule()
         serialized = pickle.dumps(molecule)
         molecule_copy = pickle.loads(serialized)
         assert molecule == molecule_copy
         assert molecule_copy.n_conformers == molecule.n_conformers
         assert np.allclose(molecule_copy.conformers[0], molecule.conformers[0])
-
+            
     @requires_pkg("yaml")
     @requires_pkg("toml")
     @requires_pkg("msgpack")
@@ -471,10 +508,14 @@ class TestMolecule:
         assert len(molecule.atoms) == 0
         assert len(molecule.bonds) == 0
 
-    @pytest.mark.parametrize("molecule", mini_drug_bank())
-    def test_create_copy(self, molecule):
+    # Adding more tests doesn't improve coverage.
+    @requires_openeye
+    @pytest.mark.parametrize("record", get_mini_drug_bank(["DrugBank_5373"]))
+    def test_create_copy(self, record):
         """Test copy constructor."""
+        molecule = record.get_molecule()
         molecule_copy = Molecule(molecule)
+        assert molecule_copy is not molecule
         assert molecule_copy == molecule
 
         # Test that the "properties" dict of both molecules is unique
@@ -482,12 +523,49 @@ class TestMolecule:
         molecule_copy.properties["aaa"] = "bbb"
         assert "aaa" not in molecule.properties
 
+    @requires_openeye
     @pytest.mark.parametrize("toolkit", [OpenEyeToolkitWrapper, RDKitToolkitWrapper])
-    @pytest.mark.parametrize("molecule", mini_drug_bank())
-    def test_to_from_smiles(self, molecule, toolkit):
+    @pytest.mark.parametrize("record", get_mini_drug_bank([
+        "DrugBank_5415",
+        "DrugBank_2987",
+        "DrugBank_5555",
+        "DrugBank_5804",
+        "DrugBank_5900",
+        "DrugBank_3479",
+        "DrugBank_3565",
+        "DrugBank_3693",
+        "DrugBank_3817",
+        "DrugBank_6232",
+        "DrugBank_3913",
+        "DrugBank_6295",
+        "DrugBank_1538",
+        "DrugBank_1742",
+        "DrugBank_6722",
+        "DrugBank_1791",
+        "DrugBank_4434",
+        "DrugBank_4468",
+        "DrugBank_1864",
+        "DrugBank_6865",
+        "DrugBank_4580",
+        "DrugBank_4593",
+        "DrugBank_1962",
+        "DrugBank_7108",
+        "DrugBank_2178",
+        "DrugBank_2186",
+        "DrugBank_2210",
+        "DrugBank_2237",
+        "DrugBank_4959",
+        "DrugBank_2519",
+        "DrugBank_2684",
+        "DrugBank_2686",
+        "DrugBank_5329",
+        "DrugBank_4346"]))
+    def test_to_from_smiles(self, record, toolkit):
         """Test round-trip creation from SMILES"""
         if not toolkit.is_available():
             pytest.skip("Required toolkit is unavailable")
+
+        molecule = record.get_molecule()
 
         if toolkit == RDKitToolkitWrapper:
             # Skip the test if OpenEye assigns stereochemistry but RDKit doesn't (since then, the
@@ -497,6 +575,7 @@ class TestMolecule:
                     "Molecule is stereogenic in OpenEye (which loaded this dataset), but not RDKit, so it "
                     "is impossible to make a valid RDMol in this test"
                 )
+                
             undefined_stereo_mols = rdkit_drugbank_undefined_stereo_mols
         elif toolkit == OpenEyeToolkitWrapper:
             undefined_stereo_mols = openeye_drugbank_undefined_stereo_mols
@@ -731,15 +810,18 @@ class TestMolecule:
                 f"The required toolkit ({toolkit_class.toolkit_name}) is not available."
             )
 
-    @pytest.mark.parametrize("molecule", mini_drug_bank())
-    def test_unique_atom_names(self, molecule):
+    # XXX Why does this need mini DrugBank at all?
+    @requires_openeye
+    @pytest.mark.parametrize("record", get_mini_drug_bank(["DrugBank_5373"]))
+    def test_unique_atom_names(self, record):
         """Test molecules have unique atom names"""
+        molecule = record.get_molecule()
         # The dataset we load in has atom names, so let's strip them first
         # to ensure that we can fail the uniqueness check
         for atom in molecule.atoms:
             atom.name = ""
         assert not (molecule.has_unique_atom_names)
-        # Then genreate unique atom names using the built in algorithm
+        # Then generate unique atom names using the built-in algorithm
         molecule.generate_unique_atom_names()
         # Check that the molecule has unique atom names
         assert molecule.has_unique_atom_names
@@ -839,32 +921,78 @@ class TestMolecule:
             filename = get_data_file_path("molecules/zinc-subset-tripos.mol2.gz")
             molecule = Molecule(filename, allow_undefined_stereo=True)
 
-    @pytest.mark.parametrize("molecule", mini_drug_bank())
-    def test_create_from_serialized(self, molecule):
+    @requires_openeye
+    @pytest.mark.parametrize("record", get_mini_drug_bank(["DrugBank_5373"]))
+    def test_create_from_serialized(self, record):
         """Test standard constructor taking the output of __getstate__()."""
+        molecule = record.get_molecule()
         serialized_molecule = molecule.__getstate__()
         molecule_copy = Molecule(serialized_molecule)
         assert molecule == molecule_copy
 
-    @pytest.mark.parametrize("molecule", mini_drug_bank())
-    def test_to_from_dict(self, molecule):
+    @requires_openeye
+    @pytest.mark.parametrize("record", get_mini_drug_bank(["DrugBank_5373"]))
+    def test_to_from_dict(self, record):
         """Test that conversion/creation of a molecule to and from a dict is consistent."""
+        molecule = record.get_molecule()
         serialized = molecule.to_dict()
         molecule_copy = Molecule.from_dict(serialized)
         assert molecule == molecule_copy
 
-    @pytest.mark.parametrize("molecule", mini_drug_bank())
-    def test_to_networkx(self, molecule):
+    @requires_openeye
+    @pytest.mark.parametrize("record", get_mini_drug_bank(["DrugBank_5373"]))
+    def test_to_networkx(self, record):
         """Test conversion to NetworkX graph."""
+        molecule = record.get_molecule()
         graph = molecule.to_networkx()
 
     @requires_rdkit
-    @pytest.mark.parametrize("molecule", mini_drug_bank())
-    def test_to_from_rdkit(self, molecule):
+    @requires_openeye
+    @pytest.mark.parametrize("record", get_mini_drug_bank([
+        "DrugBank_5415",
+        "DrugBank_2987",
+        "DrugBank_293",
+        "DrugBank_3087",
+        "DrugBank_423",
+        "DrugBank_443",
+        "DrugBank_5737",
+        "DrugBank_5804",
+        "DrugBank_5900",
+        "DrugBank_3479",
+        "DrugBank_3693",
+        "DrugBank_3913",
+        "DrugBank_6295",
+        "DrugBank_6509",
+        "DrugBank_1538",
+        "DrugBank_1700",
+        "DrugBank_4346",
+        "DrugBank_4434",
+        "DrugBank_6775",
+        "DrugBank_1849",
+        "DrugBank_1864",
+        "DrugBank_4580",
+        "DrugBank_4593",
+        "DrugBank_7108",
+        "DrugBank_2077",
+        "DrugBank_7124",
+        "DrugBank_2148",
+        "DrugBank_2178",
+        "DrugBank_2210",
+        "DrugBank_2237",
+        "DrugBank_4959",
+        "DrugBank_2519",
+        "DrugBank_2563",
+        "DrugBank_2585",
+        "DrugBank_2642",
+        "DrugBank_2684",
+        "DrugBank_2686",
+        "DrugBank_2728"]))
+    def test_to_from_rdkit(self, record):
         """Test that conversion/creation of a molecule to and from an RDKit rdmol is consistent."""
         # import pickle
         from openff.toolkit.utils.toolkits import UndefinedStereochemistryError
 
+        molecule = record.get_molecule()
         undefined_stereo = molecule.name in rdkit_drugbank_undefined_stereo_mols
 
         toolkit_wrapper = RDKitToolkitWrapper()
@@ -944,9 +1072,11 @@ class TestMolecule:
             cholesterol, Molecule.from_iupac(cholesterol_iupac)
         )
 
-    @pytest.mark.parametrize("molecule", mini_drug_bank())
-    def test_to_from_topology(self, molecule):
+    @requires_openeye
+    @pytest.mark.parametrize("record", get_mini_drug_bank(["DrugBank_5373"]))
+    def test_to_from_topology(self, record):
         """Test that conversion/creation of a molecule to and from a Topology is consistent."""
+        molecule = record.get_molecule()
         topology = molecule.to_topology()
         molecule_copy = Molecule.from_topology(topology)
         assert molecule == molecule_copy
@@ -1152,24 +1282,47 @@ class TestMolecule:
                     assert atom_coords.split()[1:] == coords
 
     # TODO: Should there be an equivalent toolkit test and leave this as an integration test?
-    @pytest.mark.parametrize("molecule", mini_drug_bank())
+    @requires_openeye
+    @pytest.mark.parametrize("record", get_mini_drug_bank([
+        # Minimal set needed for full code coveage with mol2 + sdf
+        "DrugBank_390",
+        "DrugBank_423",
+        "DrugBank_443",
+        "DrugBank_5847",
+        "DrugBank_3502",
+        "DrugBank_3565",
+        "DrugBank_4161",
+        "DrugBank_1538",
+        "DrugBank_4217",
+        "DrugBank_4346",
+        "DrugBank_1722",
+        "DrugBank_4468",
+        "DrugBank_4580",
+        "DrugBank_7108",
+        "DrugBank_2077",
+        "DrugBank_2148",
+        "DrugBank_2519",
+        "DrugBank_2642",
+        "DrugBank_2728"]))
     @pytest.mark.parametrize(
         "format",
         [
             "mol2",
             "sdf",
-            pytest.param(
-                "pdb",
-                marks=pytest.mark.wip(
-                    reason="Read from pdb has not been implemented properly yet"
-                ),
-            ),
+            ## pytest.param(
+            ##     "pdb",
+            ##     marks=pytest.mark.wip(
+            ##         reason="Read from pdb has not been implemented properly yet"
+            ##     ),
+            ## ),
         ],
     )
-    def test_to_from_file(self, molecule, format):
+    def test_to_from_file(self, record, format):
         """Test that conversion/creation of a molecule to and from a file is consistent."""
         from openff.toolkit.utils.toolkits import UndefinedStereochemistryError
 
+        molecule = record.get_molecule()
+        
         # TODO: Test all file capabilities; the current test is minimal
         # TODO: This is only for OE. Expand to both OE and RDKit toolkits.
         # Molecules that are known to raise UndefinedStereochemistryError.
@@ -1199,10 +1352,30 @@ class TestMolecule:
             # NOTE: We can't read pdb files and expect chemical information to be preserved
 
     @requires_openeye
-    @pytest.mark.parametrize("molecule", mini_drug_bank())
-    def test_to_from_oemol(self, molecule):
+    @pytest.mark.parametrize("record", get_mini_drug_bank([
+        "DrugBank_5418",
+        "DrugBank_423",
+        "DrugBank_443",
+        "DrugBank_3565",
+        "DrugBank_977",
+        "DrugBank_6531",
+        "DrugBank_4346",
+        "DrugBank_1722",
+        "DrugBank_4468",
+        "DrugBank_4580",
+        "DrugBank_7108",
+        "DrugBank_2077",
+        "DrugBank_7124",
+        "DrugBank_2148",
+        "DrugBank_2237",
+        "DrugBank_2519",
+        "DrugBank_2642",
+        "DrugBank_2728"]))
+    def test_to_from_oemol(self, record):
         """Test that conversion/creation of a molecule to and from a OEMol is consistent."""
         from openff.toolkit.utils.toolkits import UndefinedStereochemistryError
+
+        molecule = record.get_molecule()
 
         # Known failures raise an UndefinedStereochemistryError, but
         # the round-trip SMILES representation with the OpenEyeToolkit
@@ -2236,40 +2409,61 @@ class TestMolecule:
         ):
             Molecule.from_mapped_smiles("[Cl:1][Cl]", toolkit_registry=toolkit_class())
 
-    @pytest.mark.parametrize("molecule", mini_drug_bank())
-    def test_n_particles(self, molecule):
+    @requires_openeye
+    @pytest.mark.parametrize("record", get_mini_drug_bank(["DrugBank_423", "DrugBank_293"]))
+    def test_n_particles(self, record):
         """Test n_particles property"""
-        n_particles = sum([1 for particle in molecule.particles])
+        molecule = record.get_molecule()
+        n_particles = sum(1 for particle in molecule.particles)
         assert n_particles == molecule.n_particles
 
-    @pytest.mark.parametrize("molecule", mini_drug_bank())
-    def test_n_atoms(self, molecule):
+    # XXX Are there times where n_atoms != n_particles?
+    @requires_openeye
+    @pytest.mark.parametrize("record", get_mini_drug_bank(["DrugBank_423", "DrugBank_293"]))
+    def test_n_atoms(self, record):
         """Test n_atoms property"""
-        n_atoms = sum([1 for atom in molecule.atoms])
+        molecule = record.get_molecule()
+        n_atoms = sum(1 for atom in molecule.atoms)
         assert n_atoms == molecule.n_atoms
 
-    @pytest.mark.parametrize("molecule", mini_drug_bank())
-    def test_n_virtual_sites(self, molecule):
+    # XXX No DrugBank record has virtual sites!!!
+    @requires_openeye
+    @pytest.mark.parametrize("record", get_mini_drug_bank(["DrugBank_5373"]))
+    def test_n_virtual_sites(self, record):
         """Test n_virtual_sites property"""
-        n_virtual_sites = sum([1 for virtual_site in molecule.virtual_sites])
+        molecule = record.get_molecule()
+        n_virtual_sites = sum(1 for virtual_site in molecule.virtual_sites)
         assert n_virtual_sites == molecule.n_virtual_sites
 
-    @pytest.mark.parametrize("molecule", mini_drug_bank())
-    def test_n_bonds(self, molecule):
+    @requires_openeye
+    @pytest.mark.parametrize("record", get_mini_drug_bank(["DrugBank_5373"]))
+    def test_n_bonds(self, record):
         """Test n_bonds property"""
-        n_bonds = sum([1 for bond in molecule.bonds])
+        molecule = record.get_molecule()
+        n_bonds = sum(1 for bond in molecule.bonds)
         assert n_bonds == molecule.n_bonds
 
-    @pytest.mark.parametrize("molecule", mini_drug_bank())
-    def test_angles(self, molecule):
+    @requires_openeye
+    @pytest.mark.parametrize("record", get_mini_drug_bank(["DrugBank_5373"]))
+    def test_angles(self, record):
         """Test angles property"""
+        molecule = record.get_molecule()
         for angle in molecule.angles:
             assert angle[0].is_bonded_to(angle[1])
             assert angle[1].is_bonded_to(angle[2])
 
-    @pytest.mark.parametrize("molecule", mini_drug_bank())
-    def test_propers(self, molecule):
+    @requires_openeye
+    @pytest.mark.parametrize("record", get_mini_drug_bank([
+        # Coverage found this minimal set.
+        "DrugBank_5516", 
+        "DrugBank_246",
+        "DrugBank_1391",
+        "DrugBank_2077",
+        "DrugBank_2642",
+        ]))
+    def test_propers(self, record):
         """Test propers property"""
+        molecule = record.get_molecule()
         for proper in molecule.propers:
             # The bonds should be in order 0-1-2-3 unless the
             # atoms form a three- or four-membered ring.
@@ -2285,10 +2479,17 @@ class TestMolecule:
                 or is_three_membered_ring_torsion(proper)
                 or is_four_membered_ring_torsion(proper)
             )
-
-    @pytest.mark.parametrize("molecule", mini_drug_bank())
-    def test_impropers(self, molecule):
+    
+    @requires_openeye
+    @pytest.mark.parametrize("record", get_mini_drug_bank([
+        "DrugBank_5373",
+        "DrugBank_5516",
+        "DrugBank_2077",
+        "DrugBank_2642"]))
+    def test_impropers(self, record):
         """Test impropers property"""
+        molecule = record.get_molecule()
+
         for improper in molecule.impropers:
             assert improper[0].is_bonded_to(improper[1])
             assert improper[1].is_bonded_to(improper[2])
@@ -2329,9 +2530,15 @@ class TestMolecule:
             )
             assert mod_imp in mol.amber_impropers
 
-    @pytest.mark.parametrize("molecule", mini_drug_bank())
-    def test_torsions(self, molecule):
+    @requires_openeye
+    @pytest.mark.parametrize("record", get_mini_drug_bank([
+        "DrugBank_5373",
+        "DrugBank_6739",
+        "DrugBank_2077",
+        "DrugBank_2642"]))
+    def test_torsions(self, record):
         """Test torsions property"""
+        molecule = record.get_molecule()
         # molecule.torsions should be exactly equal to the union of propers and impropers.
         assert set(molecule.torsions) == set(molecule.propers) | set(molecule.impropers)
 
@@ -2383,9 +2590,15 @@ class TestMolecule:
         num_pairs_found = len([*molecule.nth_degree_neighbors(n_degrees=n_degrees)])
         assert num_pairs_found == num_pairs
 
-    @pytest.mark.parametrize("molecule", mini_drug_bank())
-    def test_total_charge(self, molecule):
+    @requires_openeye
+    @pytest.mark.parametrize("record", get_mini_drug_bank([
+        "DrugBank_2052",  # -4
+        "DrugBank_5354",  #  0
+        "DrugBank_2543",  #  +2
+        ]))
+    def test_total_charge(self, record):
         """Test total charge"""
+        molecule = record.get_molecule()
         charge_sum = 0 * unit.elementary_charge
         for atom in molecule.atoms:
             charge_sum += atom.formal_charge
@@ -2395,14 +2608,35 @@ class TestMolecule:
     # Test magic methods.
     # ----------------------------------------------------
 
-    def test_equality(self):
+    # Pairs found by minimal coverage of the NxN/2 matrix
+    @requires_openeye
+    @pytest.mark.parametrize("pair", [
+        ("DrugBank_165", "DrugBank_165"),
+        ("DrugBank_416", "DrugBank_423"),
+        ("DrugBank_442", "DrugBank_443"),
+        ("DrugBank_5847", "DrugBank_5847"),
+        ("DrugBank_3565", "DrugBank_3565"),
+        ("DrugBank_977", "DrugBank_977"),
+        ("DrugBank_4346", "DrugBank_4346"),
+        ("DrugBank_1722", "DrugBank_1722"),
+        ("DrugBank_4468", "DrugBank_4468"),
+        ("DrugBank_4580", "DrugBank_4580"),
+        ("DrugBank_7108", "DrugBank_7108"),
+        ("DrugBank_2065", "DrugBank_2077"),
+        ("DrugBank_7124", "DrugBank_7124"),
+        ("DrugBank_2148", "DrugBank_2148"),
+        ("DrugBank_2237", "DrugBank_2237"),
+        ("DrugBank_2642", "DrugBank_2651"),
+        ("DrugBank_2728", "DrugBank_2728")])
+    def test_equality(self, pair):
         """Test equality operator"""
-        molecules = mini_drug_bank()
-        nmolecules = len(molecules)
-        # TODO: Performance improvements should let us un-restrict this test
-        for i in range(nmolecules):
-            for j in range(i, min(i + 3, nmolecules)):
-                assert (molecules[i] == molecules[j]) == (i == j)
+        name1, name2 = pair
+        mol1, mol2 = get_mini_drug_bank(pair)
+
+        if name1 == name2:
+            assert mol1 == mol2
+        else:
+            assert mol1 != mol2
 
     # ----------------------
     # Test Molecule methods.
@@ -2556,9 +2790,11 @@ class TestMolecule:
         with pytest.raises(Exception) as excinfo:
             molecule.add_conformer(conf_unitless)
 
-    @pytest.mark.parametrize("molecule", mini_drug_bank())
-    def test_add_atoms_and_bonds(self, molecule):
+    @requires_openeye
+    @pytest.mark.parametrize("record", get_mini_drug_bank(["DrugBank_5373"]))
+    def test_add_atoms_and_bonds(self, record):
         """Test the creation of a molecule from the addition of atoms and bonds"""
+        molecule = record.get_molecule()
         molecule_copy = Molecule()
         for atom in molecule.atoms:
             molecule_copy.add_atom(
@@ -2589,11 +2825,13 @@ class TestMolecule:
 
         assert molecule == molecule_copy
 
-    @pytest.mark.parametrize("molecule", mini_drug_bank())
-    def test_add_virtual_site_units(self, molecule):
+    @requires_openeye
+    @pytest.mark.parametrize("record", get_mini_drug_bank(["DrugBank_5373"]))
+    def test_add_virtual_site_units(self, record):
         """
         Tests the unit type checking of the VirtualSite base class
         """
+        molecule = record.get_molecule()
 
         # TODO: Should these be using BondChargeVirtualSite, or should we just call the base class (which does the unit checks) directly?
 
@@ -2722,13 +2960,13 @@ class TestMolecule:
         orientations1 = [vp.orientation for vp in vps1]
         assert len(set(orientations1) & {(0, 1)}) == 1
 
-    @pytest.mark.parametrize("molecule", mini_drug_bank())
-    def test_add_bond_charge_virtual_site(self, molecule):
+    @requires_openeye
+    @pytest.mark.parametrize("record", get_mini_drug_bank(["DrugBank_5373"]))
+    def test_add_bond_charge_virtual_site(self, record):
         """Test the addition of a BondChargeVirtualSite to a molecule.
         Also tests many of the inputs of the parent VirtualSite class
         """
-        # Do not modify the original molecule.
-        molecule = copy.deepcopy(molecule)
+        molecule = record.get_molecule()
 
         atom1 = molecule.atoms[0]
         atom2 = molecule.atoms[1]
@@ -2782,11 +3020,11 @@ class TestMolecule:
 
     # TODO: Make a test for to_dict and from_dict for VirtualSites (even though they're currently just unloaded using
     #      (for example) Molecule._add_bond_virtual_site functions
-    @pytest.mark.parametrize("molecule", mini_drug_bank())
-    def test_add_monovalent_lone_pair_virtual_site(self, molecule):
+    @requires_openeye
+    @pytest.mark.parametrize("record", get_mini_drug_bank(["DrugBank_5373"]))
+    def test_add_monovalent_lone_pair_virtual_site(self, record):
         """Test addition of a MonovalentLonePairVirtualSite to the Molecule"""
-        # Do not modify the original molecule.
-        molecule = copy.deepcopy(molecule)
+        molecule = record.get_molecule()
 
         atom1 = molecule.atoms[0]
         atom2 = molecule.atoms[1]
@@ -2852,11 +3090,12 @@ class TestMolecule:
         molecule2 = Molecule.from_dict(molecule_dict)
         assert molecule.to_dict() == molecule2.to_dict()
 
-    @pytest.mark.parametrize("molecule", mini_drug_bank())
-    def test_add_divalent_lone_pair_virtual_site(self, molecule):
+    @requires_openeye
+    @pytest.mark.parametrize("record", get_mini_drug_bank(["DrugBank_5373"]))
+    def test_add_divalent_lone_pair_virtual_site(self, record):
         """Test addition of a DivalentLonePairVirtualSite to the Molecule"""
         # Do not modify the original molecule.
-        molecule = copy.deepcopy(molecule)
+        molecule = record.get_molecule()
 
         atom1 = molecule.atoms[0]
         atom2 = molecule.atoms[1]
@@ -2883,11 +3122,12 @@ class TestMolecule:
         molecule2 = Molecule.from_dict(molecule_dict)
         assert molecule_dict == molecule2.to_dict()
 
-    @pytest.mark.parametrize("molecule", mini_drug_bank())
-    def test_add_trivalent_lone_pair_virtual_site(self, molecule):
+    @requires_openeye
+    @pytest.mark.parametrize("record", get_mini_drug_bank(["DrugBank_5373"]))
+    def test_add_trivalent_lone_pair_virtual_site(self, record):
         """Test addition of a TrivalentLonePairVirtualSite to the Molecule"""
         # Do not modify the original molecule.
-        molecule = copy.deepcopy(molecule)
+        molecule = record.get_molecule()
 
         atom1 = molecule.atoms[0]
         atom2 = molecule.atoms[1]
@@ -3574,9 +3814,6 @@ class TestMolecule:
         # TODO: Test only one molecule for speed?
         # TODO: Do we need to deepcopy each molecule, or is setUp called separately for each test method?
 
-        # Do not modify the original molecules.
-        molecules = copy.deepcopy(mini_drug_bank())
-
         toolkits_to_bondorder_method = {
             (OpenEyeToolkitWrapper,): ["am1-wiberg", "pm3-wiberg"]
         }
@@ -3585,9 +3822,12 @@ class TestMolecule:
         for toolkits in list(toolkits_to_bondorder_method.keys()):
             toolkit_registry = ToolkitRegistry(toolkit_precedence=toolkits)
             for bond_order_model in toolkits_to_bondorder_method[toolkits]:
-                for molecule in molecules[
-                    :5
-                ]:  # Just test first five molecules for speed
+                # Just test first five molecules for speed
+                molecules = [record.get_molecule() for record in get_mini_drug_bank([
+                    "DrugBank_5354", "DrugBank_2791", "DrugBank_5373",
+                    "DrugBank_2799", "DrugBank_2800"])]
+                
+                for molecule in molecules:
                     molecule.generate_conformers(toolkit_registry=toolkit_registry)
                     molecule.assign_fractional_bond_orders(
                         bond_order_model=bond_order_model,
