@@ -170,6 +170,11 @@ else:
 # convert the record to a molecule. Cache the molecule for later
 # use. Only return copies, as the test code may modify the molecule.
 
+# NOTE: this differs somewhat from the SDF reader in test_toolkits.py:
+#   - This reads a .mol2 file, not an .sdf
+#   - get_molecule() always uses OpenEyeToolkitWrapper to parse
+#       the record, and always return a copy of the parsed record;
+
 
 class DrugBankRecord:
     def __init__(self, name, record):
@@ -209,21 +214,26 @@ def load_mini_drug_bank():
         if not record:
             # Ignore the initial record
             continue
-        # We've removed the first line. The new second line is the name.
+        # We've removed the first line. The new first line is the name.
         name = record.partition(b"\n")[0].strip().decode("utf8")
+        # Restore the real first line.
         record = sep + record
         table[name] = DrugBankRecord(name, record)
 
     return table
 
 
-# Map name -> binary record
+# Map name -> DrugBankRecord
 mini_drug_bank_table = load_mini_drug_bank()
 
-# Return records by name
+# Return DrugBankRecords by name
 def get_mini_drug_bank(names):
     return [mini_drug_bank_table[name] for name in names]
 
+
+# The following tables were identified with the full data set,
+# although these tests only use a selected subset, based on coverage
+# minimization.
 
 # All the molecules that raise UndefinedStereochemistryError when read by OETK()
 openeye_drugbank_undefined_stereo_mols = {

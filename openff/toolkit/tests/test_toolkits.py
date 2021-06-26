@@ -63,8 +63,18 @@ from openff.toolkit.utils.toolkits import (
 # =============================================================================================
 
 
+# During import stage, read the SD records in memory but don't process
+# them. When requested (via .get_molecule(toolkit)) use the given
+# toolkit to parse the record and return a new molecule.
+
+# NOTE: this differs somewhat from the SDF reader in test_molecule.py:
+#   - This reads an .sdf file, not a .mol2
+#   - get_molecule() takes a toolkit wrapper and re-parses the
+#       record for each call.
+
+
 class DrugBankRecord:
-    def __init__(self, name, record):
+    def __init__(self, name: str, record: bytes):
         self.name = name
         self.record = record
 
@@ -81,6 +91,11 @@ class DrugBankRecord:
         return molecules[0]
 
 
+# Split the file up into records. The search for "$$$$" is too simple
+# for a general-purpose reader, but all this needs to do is handle
+# MiniDrugBank.sdf.
+
+
 def load_mini_drug_bank():
     content = pathlib.Path(
         get_data_file_path("molecules/MiniDrugBank.sdf")
@@ -94,6 +109,7 @@ def load_mini_drug_bank():
         if not record:
             # Ignore the final record
             continue
+        # The first line (the title line) is the record name.
         name = record.partition(b"\n")[0].strip().decode("utf8")
         record += sep
         table[name] = DrugBankRecord(name, record)
@@ -101,10 +117,10 @@ def load_mini_drug_bank():
     return table
 
 
-# Map name -> binary record
+# Map name -> DrugBankRecord
 mini_drug_bank_table = load_mini_drug_bank()
 
-
+# Return DrugBankRecords by name
 def get_mini_drug_bank(names):
     return [mini_drug_bank_table[name] for name in names]
 
