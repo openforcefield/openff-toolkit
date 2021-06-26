@@ -3403,7 +3403,7 @@ class FrozenMolecule(Serializable):
         strict_n_conformers=False,
         use_conformers=None,
         toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
-        round_partial_charges=True
+        normalize_partial_charges=True
     ):
         """
         Calculate partial atomic charges for this molecule using an underlying toolkit, and assign
@@ -3420,10 +3420,10 @@ class FrozenMolecule(Serializable):
             Coordinates to use for partial charge calculation. If None, an appropriate number of conformers will be generated.
         toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for the calculation.
-        round_partial_charges : bool, default=True
-            Whether to round partial charges so that they sum to the total formal charge of the molecule.
-            This is used to prevent accumulation of rounding errors when the original partial charges are stored
-            at low precision.
+        normalize_partial_charges : bool, default=True
+            Whether to offset partial charges so that they sum to the total formal charge of the molecule.
+            This is used to prevent accumulation of rounding errors when the partial charge assignment method
+            returns values at limited precision.
         Examples
         --------
 
@@ -3447,7 +3447,7 @@ class FrozenMolecule(Serializable):
                 partial_charge_method=partial_charge_method,
                 use_conformers=use_conformers,
                 strict_n_conformers=strict_n_conformers,
-                round_partial_charges=round_partial_charges,
+                normalize_partial_charges=normalize_partial_charges,
                 raise_exception_types=[],
                 _cls=self.__class__,
             )
@@ -3458,7 +3458,7 @@ class FrozenMolecule(Serializable):
                 partial_charge_method=partial_charge_method,
                 use_conformers=use_conformers,
                 strict_n_conformers=strict_n_conformers,
-                round_partial_charges=round_partial_charges,
+                normalize_partial_charges=normalize_partial_charges,
                 _cls=self.__class__,
             )
         else:
@@ -3466,6 +3466,21 @@ class FrozenMolecule(Serializable):
                 f"Invalid toolkit_registry passed to assign_partial_charges."
                 f"Expected ToolkitRegistry or ToolkitWrapper. Got  {type(toolkit_registry)}"
             )
+
+    def _normalize_partial_charges(self):
+        """
+        Add offsets to each partial charge to ensure that they sum to the formal charge of the molecule,
+        to the limit of a python float's precision. Modifies the partial charges in-place.
+        """
+        expected_charge = self.total_charge
+
+        current_charge = 0. * unit.elementary_charge
+        for pc in self.partial_charges:
+            current_charge += pc
+
+        charge_offset = (expected_charge - current_charge) / self.n_atoms
+
+        self.partial_charges += charge_offset
 
     def assign_fractional_bond_orders(
         self,

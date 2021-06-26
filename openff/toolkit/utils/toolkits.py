@@ -432,6 +432,7 @@ class BuiltInToolkitWrapper(ToolkitWrapper):
         partial_charge_method=None,
         use_conformers=None,
         strict_n_conformers=False,
+        normalize_partial_charges=True,
         _cls=None,
     ):
         """
@@ -453,6 +454,10 @@ class BuiltInToolkitWrapper(ToolkitWrapper):
             Whether to raise an exception if an invalid number of conformers is provided for the given charge method.
             If this is False and an invalid number of conformers is found, a warning will be raised
             instead of an Exception.
+        normalize_partial_charges : bool, default=True
+            Whether to offset partial charges so that they sum to the total formal charge of the molecule.
+            This is used to prevent accumulation of rounding errors when the partial charge generation method has
+            low precision.
         _cls : class
             Molecule constructor
 
@@ -518,6 +523,9 @@ class BuiltInToolkitWrapper(ToolkitWrapper):
                 partial_charges[part_idx] = particle.formal_charge
 
         molecule.partial_charges = partial_charges
+
+        if normalize_partial_charges:
+            molecule._normalize_partial_charges()
 
 
 @inherit_docstrings
@@ -2211,7 +2219,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         partial_charge_method=None,
         use_conformers=None,
         strict_n_conformers=False,
-        round_partial_charges=True,
+        normalize_partial_charges=True,
         _cls=None,
     ):
         """
@@ -2239,8 +2247,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         strict_n_conformers : bool, default=False
             Whether to raise an exception if an invalid number of conformers is provided for the given charge method.
             If this is False and an invalid number of conformers is found, a warning will be raised.
-        round_partial_charges : bool, default=True
-            Whether to round partial charges so that they sum to the total formal charge of the molecule.
+        normalize_partial_charges : bool, default=True
+            Whether to offset partial charges so that they sum to the total formal charge of the molecule.
             This is used to prevent accumulation of rounding errors when the partial charge generation method has
             low precision.
         _cls : class
@@ -2397,17 +2405,6 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         # Extract and return charges
         ## TODO: Make sure atom mapping remains constant
 
-        # Calculate the per-atom offset that would need to be applied to clear rounding errors
-        # (to the precision of a Python float)
-        charge_sum = sum([oeatom.GetPartialCharge() for oeatom in oemol.GetAtoms()])
-
-        if round_partial_charges:
-            charge_offset = (
-                molecule.total_charge / unit.elementary_charge - charge_sum
-            ) / molecule.n_atoms
-        else:
-            charge_offset = 0.0
-
         # Extract the list of charges, taking into account possible indexing differences
         charges = unit.Quantity(
             np.zeros(shape=oemol.NumAtoms(), dtype=np.float64), unit.elementary_charge
@@ -2415,11 +2412,14 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         for oeatom in oemol.GetAtoms():
             index = oeatom.GetIdx()
-            charge = oeatom.GetPartialCharge() + charge_offset
+            charge = oeatom.GetPartialCharge()
             charge = charge * unit.elementary_charge
             charges[index] = charge
 
         molecule.partial_charges = charges
+
+        if normalize_partial_charges:
+            molecule._normalize_partial_charges()
 
     def compute_partial_charges_am1bcc(
         self, molecule, use_conformers=None, strict_n_conformers=False
@@ -3553,6 +3553,7 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         partial_charge_method=None,
         use_conformers=None,
         strict_n_conformers=False,
+        normalize_partial_charges=True,
         _cls=None,
     ):
         """
@@ -3577,6 +3578,10 @@ class RDKitToolkitWrapper(ToolkitWrapper):
         strict_n_conformers : bool, default=False
             Whether to raise an exception if an invalid number of conformers is provided for the given charge method.
             If this is False and an invalid number of conformers is found, a warning will be raised.
+        normalize_partial_charges : bool, default=True
+            Whether to offset partial charges so that they sum to the total formal charge of the molecule.
+            This is used to prevent accumulation of rounding errors when the partial charge generation method has
+            low precision.
         _cls : class
             Molecule constructor
 
@@ -3619,6 +3624,9 @@ class RDKitToolkitWrapper(ToolkitWrapper):
             )
 
         molecule.partial_charges = charges * unit.elementary_charge
+
+        if normalize_partial_charges:
+            molecule._normalize_partial_charges()
 
     @classmethod
     def _elf_is_problematic_conformer(
@@ -5043,7 +5051,7 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         partial_charge_method=None,
         use_conformers=None,
         strict_n_conformers=False,
-        round_partial_charges=True,
+        normalize_partial_charges=True,
         _cls=None,
     ):
         """
@@ -5068,8 +5076,8 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         strict_n_conformers : bool, default=False
             Whether to raise an exception if an invalid number of conformers is provided for the given charge method.
             If this is False and an invalid number of conformers is found, a warning will be raised.
-        round_partial_charges : bool, default=True
-            Whether to round partial charges so that they sum to the total formal charge of the molecule.
+        normalize_partial_charges : bool, default=True
+            Whether to offset partial charges so that they sum to the total formal charge of the molecule.
             This is used to prevent accumulation of rounding errors when the partial charge generation method has
             low precision.
         _cls : class
@@ -5231,13 +5239,11 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
                     charges[index] = float(token)
                 # TODO: Ensure that the atoms in charged.mol2 are in the same order as in molecule.sdf
 
-        if round_partial_charges:
-            charge_offset = (
-                molecule.total_charge / unit.elementary_charge - sum(charges)
-            ) / molecule.n_atoms
-            charges += charge_offset
-        charges = unit.Quantity(charges, unit.elementary_charge)
-        molecule.partial_charges = charges
+        molecule.partial_charges = charges * unit.elementary_charge
+
+        if normalize_partial_charges:
+            molecule._normalize_partial_charges()
+
 
     def compute_partial_charges_am1bcc(
         self, molecule, use_conformers=None, strict_n_conformers=False
