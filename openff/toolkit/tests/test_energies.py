@@ -24,7 +24,7 @@ def test_reference(constrained, mol):
     by version 0.8.0 of the toolkit"""
     # TODO: Also test periodic vs. vacuum
     with open(
-        get_data_file_path("reference_energies/reference_after_802.json"), "r"
+        get_data_file_path("reference_energies/reference_after_948.json"), "r"
     ) as fi:
         reference = json.loads(fi.read())
 
