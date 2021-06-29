@@ -3659,11 +3659,11 @@ class TestMolecule:
     @requires_rdkit
     def test_visualize_rdkit(self):
         """Test that the visualize method returns an expected object when using RDKit to generate a 2-D representation"""
-        import rdkit
+        import IPython
 
         mol = Molecule().from_smiles("CCO")
 
-        assert isinstance(mol.visualize(backend="rdkit"), rdkit.Chem.rdchem.Mol)
+        assert isinstance(mol.visualize(backend="rdkit"), IPython.core.display.SVG)
 
     @pytest.mark.skipif(
         has_pkg("rdkit"),
