@@ -6261,7 +6261,9 @@ class Molecule(FrozenMolecule):
 
         return self._add_conformer(coordinates)
 
-    def visualize(self, backend="rdkit", width=500, height=300):
+    def visualize(
+        self, backend="rdkit", width=500, height=300, explicit_hydrogens=False
+    ):
         """
         Render a visualization of the molecule in Jupyter
 
@@ -6276,17 +6278,21 @@ class Molecule(FrozenMolecule):
 
         width : int, optional, default=500
             Width of the generated representation (only applicable to
-            ``backend=openeye``)
+            ``backend=openeye`` or ``backend=rdkit``)
         height : int, optional, default=300
             Width of the generated representation (only applicable to
-            ``backend=openeye``)
+            ``backend=openeye`` or ``backend=rdkit``)
+        explicit_hydrogens : bool, optional, default=False
+            Whether to explicitly depict hydrogen atoms (only applicable to
+            ``backend=rdkit``)
 
         Returns
         -------
         object
             Depending on the backend chosen:
 
-            - rdkit, openeye → IPython.display.Image
+            - rdkit → IPython.display.SVG
+            - openeye → IPython.display.Image
             - nglview → nglview.NGLWidget
 
         """
@@ -6312,14 +6318,26 @@ class Molecule(FrozenMolecule):
                 )
         if backend == "rdkit":
             if RDKIT_AVAILABLE:
-                from rdkit.Chem.Draw import IPythonConsole
+                from IPython.display import SVG
+                from rdkit.Chem.Draw import rdMolDraw2D, rdDepictor
+                from rdkit.Chem.rdmolops import RemoveHs
 
-                return self.to_rdkit()
+                rdDepictor.SetPreferCoordGen(True)
+
+                rdmol = self.to_rdkit()
+                if not explicit_hydrogens:
+                    rdmol = RemoveHs(rdmol)
+
+                drawer = rdMolDraw2D.MolDraw2DSVG(width, height)
+                drawer.DrawMolecule(rdmol)
+                drawer.FinishDrawing()
+
+                return SVG(drawer.GetDrawingText())
             else:
                 warnings.warn(
                     "RDKit was requested as a visualization backend but "
                     "it was not found to be installed. Falling back to "
-                    "trying to using OpenEye for visualization."
+                    "trying to use OpenEye for visualization."
                 )
                 backend = "openeye"
         if backend == "openeye":
