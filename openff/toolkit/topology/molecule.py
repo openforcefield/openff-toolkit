@@ -6319,7 +6319,7 @@ class Molecule(FrozenMolecule):
         if backend == "rdkit":
             if RDKIT_AVAILABLE:
                 from IPython.display import SVG
-                from rdkit.Chem.Draw import rdMolDraw2D, rdDepictor
+                from rdkit.Chem.Draw import rdDepictor, rdMolDraw2D
                 from rdkit.Chem.rdmolops import RemoveHs
 
                 rdmol = self.to_rdkit()
