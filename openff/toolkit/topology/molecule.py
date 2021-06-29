@@ -40,7 +40,6 @@ from collections import OrderedDict
 from copy import deepcopy
 from typing import Optional, Union
 
-import networkx as nx
 import numpy as np
 from simtk import unit
 from simtk.openmm.app import Element, element
@@ -3059,6 +3058,8 @@ class FrozenMolecule(Serializable):
         # Here we should work out what data type we have, also deal with lists?
         def to_networkx(data):
             """For the given data type, return the networkx graph"""
+            import networkx as nx
+
             from openff.toolkit.topology import TopologyMolecule
 
             if strip_pyrimidal_n_atom_stereo:
@@ -3082,6 +3083,7 @@ class FrozenMolecule(Serializable):
                         SMARTS, toolkit_registry=toolkit_registry
                     )
                 return ref_mol.to_networkx()
+
             elif isinstance(data, nx.Graph):
                 return data
 
@@ -3089,7 +3091,7 @@ class FrozenMolecule(Serializable):
                 raise NotImplementedError(
                     f"The input type {type(data)} is not supported,"
                     f"please supply an openff.toolkit.topology.molecule.Molecule,"
-                    f"openff.toolkit.topology.topology.TopologyMolecule or networkx "
+                    f"openff.toolkit.topology.topology.TopologyMolecule or networkx.Graph "
                     f"representation of the molecule."
                 )
 
