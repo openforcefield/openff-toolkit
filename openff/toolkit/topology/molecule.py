@@ -6322,11 +6322,12 @@ class Molecule(FrozenMolecule):
                 from rdkit.Chem.Draw import rdMolDraw2D, rdDepictor
                 from rdkit.Chem.rdmolops import RemoveHs
 
-                rdDepictor.SetPreferCoordGen(True)
-
                 rdmol = self.to_rdkit()
                 if not explicit_hydrogens:
                     rdmol = RemoveHs(rdmol)
+
+                rdDepictor.SetPreferCoordGen(True)
+                rdDepictor.Compute2DCoords(rdmol)
 
                 drawer = rdMolDraw2D.MolDraw2DSVG(width, height)
                 drawer.DrawMolecule(rdmol)
