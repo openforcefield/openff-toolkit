@@ -5244,7 +5244,6 @@ class AmberToolsToolkitWrapper(ToolkitWrapper):
         if normalize_partial_charges:
             molecule._normalize_partial_charges()
 
-
     def compute_partial_charges_am1bcc(
         self, molecule, use_conformers=None, strict_n_conformers=False
     ):

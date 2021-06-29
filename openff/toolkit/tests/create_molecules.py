@@ -218,6 +218,7 @@ def create_cyclic_n3h3():
     mol.add_bond(2, 5, 1, False)  # N3 - H3
     return mol
 
+
 def create_acetate():
     """
     Creates an openff.toolkit.topology.Molecule representation of

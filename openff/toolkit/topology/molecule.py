@@ -3403,7 +3403,7 @@ class FrozenMolecule(Serializable):
         strict_n_conformers=False,
         use_conformers=None,
         toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
-        normalize_partial_charges=True
+        normalize_partial_charges=True,
     ):
         """
         Calculate partial atomic charges for this molecule using an underlying toolkit, and assign
@@ -3474,7 +3474,7 @@ class FrozenMolecule(Serializable):
         """
         expected_charge = self.total_charge
 
-        current_charge = 0. * unit.elementary_charge
+        current_charge = 0.0 * unit.elementary_charge
         for pc in self.partial_charges:
             current_charge += pc
 

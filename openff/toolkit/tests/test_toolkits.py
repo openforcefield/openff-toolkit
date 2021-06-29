@@ -29,7 +29,7 @@ from openff.toolkit.tests.create_molecules import (
     create_ethanol,
     create_reversed_ethanol,
     create_ammonia,
-    create_cyclic_n3h3
+    create_cyclic_n3h3,
 )
 from openff.toolkit.tests.utils import (
     requires_ambertools,
@@ -2850,7 +2850,9 @@ class TestAmberToolsToolkitWrapper:
         # case of this that I could find.
         molecule = create_cyclic_n3h3()
         molecule.assign_partial_charges(
-            partial_charge_method="am1bcc", toolkit_registry=toolkit_registry, normalize_partial_charges=False
+            partial_charge_method="am1bcc",
+            toolkit_registry=toolkit_registry,
+            normalize_partial_charges=False,
         )
         charge_sum = 0 * unit.elementary_charge
         abs_charge_sum = 0 * unit.elementary_charge
