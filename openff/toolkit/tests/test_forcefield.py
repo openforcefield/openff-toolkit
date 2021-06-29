@@ -931,7 +931,7 @@ class TestForceField:
 
         assert hash(default_case) == hash(lower_case)
 
-    def test_do_not_load_in_nested_dir(self):
+    def test_do_not_load_in_child_dir(self):
         """Ensure force field XML files in nested subdirectories are not loaded
         when not explicitly pointed to."""
         nested_directory = os.path.join("a", "b", "c")
