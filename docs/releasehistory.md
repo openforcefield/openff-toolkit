@@ -28,24 +28,25 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
   use of functionality that requires `OEChem` without having an `OEOmega` license.
 - [PR #909](https://github.com/openforcefield/openforcefield/pull/909): Virtual site positions can now
   be computed directly in the toolkit. This functionality is accessed through
-  - :py:meth:`FrozenMolecule.compute_virtual_site_positions_from_conformer`
-  - :py:meth:`VirtualSite.compute_virtual_site_positions_from_conformer`
-  - :py:meth:`VirtualParticle.compute_position_from_conformer`
-  - :py:meth:`FrozenMolecule.compute_virtual_site_positions_from_atom_positions`
-  - :py:meth:`VirtualSite.compute_virtual_site_positions_from_atom_positions`
-  - :py:meth:`VirtualParticle.compute_position_from_atom_positions`
+  - {py:meth}`FrozenMolecule.compute_virtual_site_positions_from_conformer`
+  - {py:meth}`VirtualSite.compute_virtual_site_positions_from_conformer`
+  - {py:meth}`VirtualParticle.compute_position_from_conformer`
+  - {py:meth}`FrozenMolecule.compute_virtual_site_positions_from_atom_positions`
+  - {py:meth}`VirtualSite.compute_virtual_site_positions_from_atom_positions`
+  - {py:meth}`VirtualParticle.compute_position_from_atom_positions`
     where the positions can be computed from a stored conformer, or an input vector of atom positions.
   - Tests have been added (`TestMolecule.test_*_virtual_site_position`) to check for sane behavior. The tests do
     not directly compare OpenMM position equivalence, but offline tests show that they are equivalent.
-  - The helper method :py:meth:`VirtualSiteHandler._create_openff_virtual_sites` is now public,
+  - The helper method {py:meth}`VirtualSiteHandler._create_openff_virtual_sites` is now public,
     which returns a modified topology with virtual sites added.
   - Virtual sites now expose the parameters used to create its local frame via the read-only properties
-    - :py:meth:`VirtualSite.local_frame_weights`
-    - :py:meth:`VirtualSite.local_frame_positions`
+    - {py:meth}`VirtualSite.local_frame_weights`
+    - {py:meth}`VirtualSite.local_frame_positions`
   - Adding virtual sites via the `Molecule` API now have defaults for `sigma`, `epsilon`, and `charge_increment`
     set to 0 with appropriate units, rather than `None`
 - [PR #956](https://github.com/openforcefield/openforcefield/pull/956): Added `ForceField.get_partial_charges()` 
   to more easily compute the partial charges assigned by a force field for a molecule.
+- [PR #1001](https://github.com/openforcefield/openff-toolkit/pull/1001): Revamped the [`Molecule.visualize()`](openff.toolkit.topology.Molecule.visualize) method's `rdkit` backend for more pleasing and idiomatic 2D visualization by default.
 
 
 ### Bugfixes
