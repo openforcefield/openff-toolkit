@@ -1103,13 +1103,14 @@ class ForceField:
             # Finally, search in openff/toolkit/data/.
             # TODO: Remove this when smirnoff99Frosst 1.0.9 will be released.
             searched_dirs_paths.append(get_data_file_path(""))
+            searched_dirs_paths.append(get_data_file_path("test_forcefields"))
+            searched_dirs_paths.append(get_data_file_path("test_forcefields/old"))
 
             # Determine the actual path of the file.
             # TODO: What is desired toolkit behavior if two files with the desired name are available?
             for dir_path in searched_dirs_paths:
-                file_path = pathlib.Path(dir_path) / source
-                if os.path.isfile(file_path):
-                    # Cannot compare filenames alone, source can be test_forcefield/...
+                dir_path = pathlib.Path(dir_path)
+                for file_path in dir_path.glob("*.offxml"):
                     if str(file_path).lower().endswith(source.lower()):
                         source = str(file_path.absolute())
                         break
