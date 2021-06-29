@@ -931,6 +931,25 @@ class TestForceField:
 
         assert hash(default_case) == hash(lower_case)
 
+    def test_do_not_load_in_nested_dir(self):
+        """Ensure force field XML files in nested subdirectories are not loaded
+        when not explicitly pointed to."""
+        nested_directory = os.path.join("a", "b", "c")
+        os.makedirs(nested_directory, exist_ok=True)
+
+        # Create a FF in a nested directory
+        ForceField("openff-1.0.0.offxml").to_file(
+            os.path.join(nested_directory, "force-field.offxml")
+        )
+
+        # Check that the file does not exist in the current working directory.
+        assert not os.path.isfile("force-field.offxml")
+
+        with pytest.raises(
+            OSError, match="Source force-field.offxml could not be read."
+        ):
+            ForceField("force-field.offxml")
+
     @pytest.mark.parametrize("full_path", [(True, False)])
     @pytest.mark.parametrize("force_field_file", [*get_available_force_fields()])
     def test_get_available_force_fields_loadable(self, full_path, force_field_file):
