@@ -350,7 +350,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         if (file_format == "MOL") or (file_format == "SDF"):
             # TODO: Iterate over all mols in file_data
             for rdmol in Chem.ForwardSDMolSupplier(file_obj):
-                mol = self.from_rdkit(rdmol, _cls=_cls)
+                mol = self.from_rdkit(rdmol, allow_undefined_stereo=allow_undefined_stereo, _cls=_cls)
                 mols.append(mol)
 
         if file_format == "SMI":
