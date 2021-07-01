@@ -52,6 +52,10 @@ def get_oeformat(file_format):
     from openeye import oechem
     
     file_format = file_format.upper()
+    # XXX This is what RDKit does. Should be supported here too?
+    if file_format == "MOL":
+        file_format = "SDF"
+        
     oeformat = getattr(oechem, "OEFormat_" + file_format, None)
     if oeformat is None:
         raise ValueError(f"Unsupported file format: {file_format}")
