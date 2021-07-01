@@ -307,7 +307,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         # Configure input molecule stream.
         ifs = oechem.oemolistream()
         ifs.openstring(file_obj.read())
-        oeformat = getattr(oechem, "OEFormat_" + file_format)
+        oeformat = getattr(oechem, "OEFormat_" + file_format.upper())
         ifs.SetFormat(oeformat)
 
         return self._read_oemolistream_molecules(ifs, allow_undefined_stereo, _cls=_cls)
