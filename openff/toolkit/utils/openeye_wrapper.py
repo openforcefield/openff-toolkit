@@ -274,7 +274,10 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         """
         from openeye import oechem
 
+        oeformat = get_oeformat(file_format)
         ifs = oechem.oemolistream(file_path)
+        ifs.SetFormat(oeformat)
+        
         return self._read_oemolistream_molecules(
             ifs, allow_undefined_stereo, file_path=file_path, _cls=_cls
         )
