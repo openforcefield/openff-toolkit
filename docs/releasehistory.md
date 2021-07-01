@@ -50,6 +50,10 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Bugfixes
 
+- [PR #1003](https://github.com/openforcefield/openforcefield/pull/1003): Fixes
+  [Issue #1000](https://github.com/openforcefield/openff-toolkit/issues/1000), where a stereochemistry
+  warning is sometimes erroneously emitted when loading a stereogenic molecule using
+  [Molecule.from_pdb_and_smiles](openff.toolkit.topology.Molecule.from_pdb_and_smiles) 
 - [PR #1002](https://github.com/openforcefield/openforcefield/pull/1002): Fixes a bug in which OFFXML files could
   inadvertently be loaded from subdirectories.
 - [PR #969](https://github.com/openforcefield/openforcefield/pull/969): Fixes a bug in which the cutoff distance
