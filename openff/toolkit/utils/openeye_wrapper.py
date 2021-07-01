@@ -48,6 +48,14 @@ logger = logging.getLogger(__name__)
 # IMPLEMENTATION
 # =============================================================================================
 
+def get_oeformat(file_format):
+    from openeye import oechem
+    
+    file_format = file_format.upper()
+    oeformat = getattr(oechem, "OEFormat_" + file_format, None)
+    if oeformat is None:
+        raise ValueError(f"Unsupported file format: {file_format}")
+    return oeformat
 
 @inherit_docstrings
 class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
@@ -307,7 +315,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         # Configure input molecule stream.
         ifs = oechem.oemolistream()
         ifs.openstring(file_obj.read())
-        oeformat = getattr(oechem, "OEFormat_" + file_format.upper())
+        oeformat = get_oeformat(file_format)
         ifs.SetFormat(oeformat)
 
         return self._read_oemolistream_molecules(ifs, allow_undefined_stereo, _cls=_cls)
@@ -351,7 +359,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         oemol = self.to_openeye(molecule)
         ofs = oechem.oemolostream(file_path)
-        openeye_format = getattr(oechem, "OEFormat_" + file_format.upper())
+        openeye_format = get_oeformat(file_format)
         ofs.SetFormat(openeye_format)
 
         # OFFTK strictly treats SDF as a single-conformer format.
