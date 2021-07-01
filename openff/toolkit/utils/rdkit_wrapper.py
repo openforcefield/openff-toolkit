@@ -12,6 +12,7 @@ __all__ = ("RDKitToolkitWrapper",)
 import copy
 import importlib
 import itertools
+import tempfile
 import logging
 from typing import TYPE_CHECKING, List, Optional, Tuple
 
@@ -353,14 +354,21 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 mols.append(mol)
 
         if file_format == "SMI":
-            # TODO: Find a cleaner way to parse SMILES lines
-            file_data = file_obj.read()
-            lines = [line.strip() for line in file_data.split("\n")]
-            # remove blank lines
-            lines.remove("")
-            for line in lines:
-                mol = self.from_smiles(line, _cls=_cls)
-                mols.append(mol)
+            # There's no good way to create a SmilesMolSuppler from a string
+            # other than to use a temporary file.
+            with tempfile.NamedTemporaryFile(suffix=".smi") as tmpfile:
+                content = file_obj.read()
+                if isinstance(content, str):
+                    # Support the older API, whihc required Unicode strings
+                    tmpfile.write(content.encode("utf8"))
+                else:
+                    tmpfile.write(content)
+                tmpfile.flush()
+                return self.from_file(
+                    tmpfile.name,
+                    "SMI",
+                    allow_undefined_stereo = allow_undefined_stereo,
+                    _cls = _cls)
 
         elif file_format == "PDB":
             raise Exception(
