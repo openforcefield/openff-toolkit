@@ -1212,7 +1212,30 @@ class TestOpenEyeToolkitWrapper:
         for pc in molecule._partial_charges:
             charge_sum += pc
             abs_charge_sum += abs(pc)
-        assert abs(charge_sum) < 1e-8 * unit.elementary_charge
+        assert abs(charge_sum) < 1e-10 * unit.elementary_charge
+        assert abs_charge_sum > 0.25 * unit.elementary_charge
+
+    def test_assign_partial_charges_am1bcc_no_normalization(self):
+        """Test OpenEyeToolkitWrapper assign_partial_charges() with am1bcc, with
+        normalize_partial_charges=False"""
+        toolkit_registry = ToolkitRegistry(
+            toolkit_precedence=[OpenEyeToolkitWrapper]
+        )
+        # Use a cyclic N3H3 molecule, since the threefold symmetry makes it likely to expose rounding
+        # errors. (can we find a cyclic molecule with exactly 3 atoms?)
+        molecule = create_cyclic_n3h3()
+        molecule.assign_partial_charges(
+            partial_charge_method="am1bcc",
+            toolkit_registry=toolkit_registry,
+            normalize_partial_charges=False,
+        )
+        charge_sum = 0 * unit.elementary_charge
+        abs_charge_sum = 0 * unit.elementary_charge
+        for pc in molecule._partial_charges:
+            charge_sum += pc
+            abs_charge_sum += abs(pc)
+        # Rounding error should be on the order of 1e-3
+        assert 1e-7 > abs(charge_sum / unit.elementary_charge) > 1e-8
         assert abs_charge_sum > 0.25 * unit.elementary_charge
 
     def test_assign_partial_charges_am1bcc_net_charge(self):
