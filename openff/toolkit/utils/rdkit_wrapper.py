@@ -353,7 +353,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 mol = self.from_rdkit(rdmol, allow_undefined_stereo=allow_undefined_stereo, _cls=_cls)
                 mols.append(mol)
 
-        if file_format == "SMI":
+        elif file_format == "SMI":
             # There's no good way to create a SmilesMolSuppler from a string
             # other than to use a temporary file.
             with tempfile.NamedTemporaryFile(suffix=".smi") as tmpfile:
@@ -381,6 +381,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             # rdmol = Chem.MolFromPDBBlock(file_data)
             # mol = Molecule.from_rdkit(rdmol, _cls=_cls)
             # mols.append(mol)
+
+        else:
+            raise ValueError(f"Unsupported file format: {file_format}")
         # TODO: TDT file support
         return mols
 
