@@ -1225,11 +1225,7 @@ class TestOpenEyeToolkitWrapper:
         charge_sum = 0 * unit.elementary_charge
         for pc in molecule._partial_charges:
             charge_sum += pc
-        assert (
-            -0.999 * unit.elementary_charge
-            > charge_sum
-            > -1.001 * unit.elementary_charge
-        )
+        assert 1e-10 > abs((charge_sum - molecule.total_charge) / unit.elementary_charge)
 
     def test_assign_partial_charges_am1bcc_wrong_n_confs(self):
         """
@@ -1269,7 +1265,7 @@ class TestOpenEyeToolkitWrapper:
         charge_sum = 0.0 * unit.elementary_charge
         for pc in molecule.partial_charges:
             charge_sum += pc
-        assert -1.0e-5 < charge_sum.value_in_unit(unit.elementary_charge) < 1.0e-5
+        assert 1.0e-10 > abs(charge_sum.value_in_unit(unit.elementary_charge))
 
     @pytest.mark.parametrize("partial_charge_method", ["am1bcc", "am1-mulliken"])
     def test_assign_partial_charges_conformer_dependence(self, partial_charge_method):
@@ -1314,7 +1310,7 @@ class TestOpenEyeToolkitWrapper:
         charge_sum = 0.0 * unit.elementary_charge
         for pc in molecule.partial_charges:
             charge_sum += pc
-        assert -1.0e-5 < charge_sum.value_in_unit(unit.elementary_charge) + 1.0 < 1.0e-5
+        assert -1.0e-10 < abs(charge_sum.value_in_unit(unit.elementary_charge) + 1.0)
 
     def test_assign_partial_charges_bad_charge_method(self):
         """Test OpenEyeToolkitWrapper assign_partial_charges() for a nonexistent charge method"""
@@ -2836,11 +2832,12 @@ class TestAmberToolsToolkitWrapper:
         for pc in molecule._partial_charges:
             charge_sum += pc
             abs_charge_sum += abs(pc)
-        assert abs(charge_sum) < 1e-8 * unit.elementary_charge
+        assert abs(charge_sum) < 1e-10 * unit.elementary_charge
         assert abs_charge_sum > 0.25 * unit.elementary_charge
 
-    def test_assign_partial_charges_am1bcc_no_rounding(self):
-        """Test AmberToolsToolkitWrapper assign_partial_charges() with am1bcc"""
+    def test_assign_partial_charges_am1bcc_no_normalization(self):
+        """Test AmberToolsToolkitWrapper assign_partial_charges() with am1bcc, with
+        normalize_partial_charges=False"""
         toolkit_registry = ToolkitRegistry(
             toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper]
         )
@@ -2876,7 +2873,7 @@ class TestAmberToolsToolkitWrapper:
         for pc in molecule._partial_charges:
             charge_sum += pc
         assert (
-            -0.99 * unit.elementary_charge > charge_sum > -1.01 * unit.elementary_charge
+            1e-10 > abs((charge_sum / unit.elementary_charge) + 1)
         )
 
     def test_assign_partial_charges_am1bcc_wrong_n_confs(self):
@@ -2976,7 +2973,7 @@ class TestAmberToolsToolkitWrapper:
         charge_sum = 0.0 * unit.elementary_charge
         for pc in molecule.partial_charges:
             charge_sum += pc
-        assert -1.0e-5 < charge_sum.value_in_unit(unit.elementary_charge) < 1.0e-5
+        assert 1e-10 > charge_sum.value_in_unit(unit.elementary_charge)
 
     @pytest.mark.xfail(strict=False)
     @pytest.mark.parametrize("partial_charge_method", ["am1bcc", "am1-mulliken"])
@@ -3028,7 +3025,7 @@ class TestAmberToolsToolkitWrapper:
         charge_sum = 0.0 * unit.elementary_charge
         for pc in molecule.partial_charges:
             charge_sum += pc
-        assert -1.01 < charge_sum.value_in_unit(unit.elementary_charge) < -0.99
+        assert 1e-10 > abs((charge_sum / unit.elementary_charge) + 1)
 
     def test_assign_partial_charges_bad_charge_method(self):
         """Test AmberToolsToolkitWrapper assign_partial_charges() for a nonexistent charge method"""
