@@ -39,6 +39,8 @@ logger = logging.getLogger(__name__)
 # IMPLEMENTATION
 # =============================================================================================
 
+def normalize_file_format(file_format):
+    return file_format.upper()
 
 class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
     """
@@ -250,7 +252,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         """
         from rdkit import Chem
 
-        file_format = file_format.upper()
+        file_format = normalize_file_format(file_format)
 
         mols = list()
         if (file_format == "MOL") or (file_format == "SDF"):
@@ -339,6 +341,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         mols = []
 
+        file_format = normalize_file_format(file_format)
+        
         if (file_format == "MOL") or (file_format == "SDF"):
             # TODO: Iterate over all mols in file_data
             for rdmol in Chem.ForwardSDMolSupplier(file_obj):
@@ -387,7 +391,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         """
 
-        file_format = file_format.upper()
+        file_format = normalize_file_format(file_format)
+        
         rdmol = self.to_rdkit(molecule)
         try:
             writer = self._toolkit_file_write_formats[file_format](file_obj)
