@@ -5,9 +5,6 @@ Utility subroutines
 """
 
 __all__ = [
-    "MessageException",
-    "IncompatibleUnitError",
-    "MissingDependencyError",
     "requires_package",
     "inherit_docstrings",
     "all_subclasses",
@@ -41,50 +38,14 @@ import logging
 
 from simtk import unit
 
+from .exceptions import MessageException  # Needed for backward compatibility
+from .exceptions import IncompatibleUnitError, MissingDependencyError
+
 # =============================================================================================
 # CONFIGURE LOGGER
 # =============================================================================================
 
 logger = logging.getLogger(__name__)
-
-
-# =============================================================================================
-# COMMON EXCEPTION TYPES
-# =============================================================================================
-
-
-class MessageException(Exception):
-    """A base class for exceptions that print out a string given in their constructor"""
-
-    def __init__(self, msg):
-        super().__init__(self, msg)
-        self.msg = msg
-
-    def __str__(self):
-        return self.msg
-
-
-class IncompatibleUnitError(MessageException):
-    """
-    Exception for when a parameter is in the wrong units for a ParameterHandler's unit system
-    """
-
-    pass
-
-
-class MissingDependencyError(MessageException):
-    """
-    Exception for when an optional dependency is needed but not installed
-
-    """
-
-    def __init__(self, package_name):
-        self.msg = (
-            f"Missing dependency {package_name}. Try installing it "
-            f"with\n\n$ conda install {package_name} -c conda-forge"
-        )
-
-        super().__init__(self.msg)
 
 
 # =============================================================================================
@@ -918,7 +879,7 @@ def convert_0_1_smirnoff_to_0_2(smirnoff_data_0_1):
         "cutoff_unit": "angstrom",
     }
     for key, val in vdw_section_additions.items():
-        if not key in smirnoff_data["SMIRNOFF"]["vdW"].keys():
+        if key not in smirnoff_data["SMIRNOFF"]["vdW"].keys():
             logger.warning(
                 f"0.1 SMIRNOFF spec file does not contain '{key}' attribute for 'NonBondedMethod/vdW'' tag. "
                 f"The SMIRNOFF spec converter is assuming it has a value of '{val}'"
