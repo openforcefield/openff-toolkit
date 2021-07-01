@@ -74,13 +74,15 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ### Tests updated
 
 - [PR #963](https://github.com/openforcefield/openff-toolkit/pull/963):
-  Several tests modules used functions from test_forcefield.py that created an OpenFF Molecule
+  Several tests modules used functions from `test_forcefield.py` that created an OpenFF Molecule
   without a toolkit. These functions are now in their own module so they can be imported directly,
-  without the overhead of going through test_forcefield.
+  without the overhead of going through `test_forcefield`.
 - [PR #997](https://github.com/openforcefield/openff-toolkit/pull/997):
   Several XML snippets in `test_forcefield.py` that were scattered around inside of classes and
   functions are now moved to the module level.
-
+- [PR #999]https://github.com/openforcefield/openff-toolkit/pull/999):
+  The execution time for the unittest suite was reduced by removing
+  many test cases that did not contribute to overall test assurance.
 
 ## 0.9.2 Minor feature and bugfix release
 
