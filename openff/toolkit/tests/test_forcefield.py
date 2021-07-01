@@ -39,6 +39,7 @@ from openff.toolkit.tests.create_molecules import (
     create_water,
 )
 from openff.toolkit.tests.utils import (
+    compare_partial_charges,
     get_14_scaling_factors,
     requires_openeye,
     requires_openeye_mol2,
@@ -75,11 +76,6 @@ from openff.toolkit.utils.toolkits import (
 # GLOBAL CONSTANTS
 # ======================================================================
 
-# File paths.
-TIP3P_SDF_FILE_PATH = get_data_file_path(
-    os.path.join("systems", "monomers", "water.sdf")
-)
-
 XML_FF_GENERICS = """<?xml version='1.0' encoding='ASCII'?>
 <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
   <Bonds version="0.3">
@@ -102,8 +98,13 @@ XML_FF_GENERICS = """<?xml version='1.0' encoding='ASCII'?>
 </SMIRNOFF>
 """
 
-simple_xml_ff = str.encode(
-    """<?xml version='1.0' encoding='ASCII'?>
+xml_without_section_version = """<?xml version="1.0" encoding="ASCII"?>
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+  <ToolkitAM1BCC/>
+</SMIRNOFF>
+"""
+
+xml_simple_ff = """<?xml version='1.0' encoding='ASCII'?>
 <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
   <Bonds version="0.3">
     <Bond smirks="[#6X4:1]-[#6X4:2]" id="b1" k="620.0 * kilocalories_per_mole/angstrom**2" length="1.526 * angstrom"/>
@@ -131,7 +132,6 @@ simple_xml_ff = str.encode(
   <ToolkitAM1BCC version="0.3"/>
 </SMIRNOFF>
 """
-)
 
 xml_ff_w_comments = """<?xml version='1.0' encoding='ASCII'?>
 <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
@@ -166,6 +166,13 @@ xml_ff_w_comments = """<?xml version='1.0' encoding='ASCII'?>
 </SMIRNOFF>
 """
 
+xml_missing_torsion = """
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+  <ProperTorsions version="0.3" potential="k*(1+cos(periodicity*theta-phase))">
+    <Proper smirks="[#99:1]-[#99X4:2]-[#99:3]-[#99:4]" id="t1" idivf1="1" k1="0.156 * kilocalories_per_mole" periodicity1="3" phase1="0.0 * degree"/>
+  </ProperTorsions>
+</SMIRNOFF>
+"""
 
 xml_ff_w_cosmetic_elements = """<?xml version='1.0' encoding='ASCII'?>
 <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
@@ -339,6 +346,359 @@ xml_ff_virtual_sites_monovalent_match_once = """<?xml version="1.0" encoding="ut
     </VirtualSites>
 </SMIRNOFF>
 """
+
+xml_tip5p = """<?xml version="1.0" encoding="utf-8"?>
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+    <LibraryCharges version="0.3">
+            <LibraryCharge name="tip5p" smirks="[#1:1]-[#8X2H2+0:2]-[#1:3]" charge1="0.*elementary_charge" charge2="0.*elementary_charge" charge3="0.*elementary_charge"/>
+    </LibraryCharges>
+    <vdW version="0.3" potential="Lennard-Jones-12-6" combining_rules="Lorentz-Berthelot" scale12="0.0" scale13="0.0" scale14="0.5" scale15="1.0" switch_width="1.0 * angstrom" cutoff="9.0 * angstrom" method="cutoff">
+            <Atom smirks="[#1:1]-[#8X2H2+0]-[#1]" epsilon="0. * mole**-1 * kilojoule" id="n35" sigma="1 * nanometer"/>
+            <Atom smirks="[#1]-[#8X2H2+0:1]-[#1]" epsilon="0.66944 * mole**-1 * kilojoule" id="n35" sigma="0.312 * nanometer"/>
+    </vdW>
+     <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
+        <Bond smirks="[#1:1]-[#8X2H2+0:2]-[#1]" length="0.9572 * angstrom" k="462750.4 * nanometer**-2 * mole**-1 * kilojoule" id="b1" />   
+    </Bonds>
+    <Angles version="0.3" potential="harmonic">
+        <Angle smirks="[#1:1]-[#8X2H2+0:2]-[#1:3]" angle="1.82421813418 * radian" k="836.8 * mole**-1 * radian**-2 * kilojoule" id="a1" />
+    </Angles>
+    <VirtualSites version="0.3" exclusion_policy="parents">
+        <VirtualSite
+            type="DivalentLonePair"
+            name="EP"
+            smirks="[#1:1]-[#8X2H2+0:2]-[#1:3]"
+            distance="0.70 * angstrom"
+            charge_increment1="0.1205*elementary_charge"
+            charge_increment2="0.0*elementary_charge"
+            charge_increment3="0.1205*elementary_charge"
+            sigma="1.0*angstrom"
+            epsilon="0.0*kilocalories_per_mole"
+            outOfPlaneAngle="54.71384225*degree"
+            match="all_permutations" >
+        </VirtualSite>
+    </VirtualSites>
+    <Electrostatics version="0.3" method="PME" scale12="0.0" scale13="0.0" scale14="0.833333" scale15="1.0" switch_width="0.0 * angstrom" cutoff="9.0 * angstrom"/>
+  <Constraints version="0.3">
+    <Constraint smirks="[#1:1]-[#8X2H2+0:2]-[#1]" id="c1" distance="0.9572 * angstrom"/>
+    <Constraint smirks="[#1:1]-[#8X2H2+0]-[#1:2]" id="c2" distance="1.5139006545247014 * angstrom"/>
+  </Constraints>
+</SMIRNOFF>
+"""
+
+xml_gbsa_ff = """<?xml version='1.0' encoding='ASCII'?>
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+    <GBSA version="0.3" gb_model="HCT" solvent_dielectric="78.5" solute_dielectric="1" sa_model="None" surface_area_penalty="5.4*calories/mole/angstroms**2" solvent_radius="1.4*angstroms">
+          <Atom smirks="[*:1]" radius="0.15*nanometer" scale="0.8"/>
+    </GBSA>
+</SMIRNOFF>
+"""
+
+xml_charge_increment_model_ff_no_missing_cis = """
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+  <Electrostatics version="0.3" method="PME" scale12="0.0" scale13="0.0" scale14="0.833333" cutoff="9.0 * angstrom"/>
+  <ChargeIncrementModel version="0.3" number_of_conformers="1" partial_charge_method="formal_charge">
+    <ChargeIncrement smirks="[#6X4:1]-[#8:2]" charge_increment1="-0.06*elementary_charge" charge_increment2="0.06*elementary_charge"/>
+    <ChargeIncrement smirks="[#6X4:1]-[#1:2]" charge_increment1="-0.01*elementary_charge" charge_increment2="0.01*elementary_charge"/>
+    <ChargeIncrement smirks="[C:1][C:2][O:3]" charge_increment1="0.2*elementary_charge" charge_increment2="-0.1*elementary_charge" charge_increment3="-0.1*elementary_charge"/>
+  </ChargeIncrementModel>
+</SMIRNOFF>"""
+
+xml_charge_increment_model_ff_one_less_ci = """
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+  <Electrostatics version="0.3" method="PME" scale12="0.0" scale13="0.0" scale14="0.833333" cutoff="9.0 * angstrom"/>
+  <ChargeIncrementModel version="0.3" number_of_conformers="1" partial_charge_method="formal_charge">
+    <ChargeIncrement smirks="[#6X4:1]-[#8:2]" charge_increment1="-0.06*elementary_charge" charge_increment2="0.06*elementary_charge"/>
+    <ChargeIncrement smirks="[#6X4:1]-[#1:2]" charge_increment1="-0.01*elementary_charge"/>
+    <ChargeIncrement smirks="[C:1][C:2][O:3]" charge_increment1="0.2*elementary_charge" charge_increment2="-0.1*elementary_charge"/>
+  </ChargeIncrementModel>
+</SMIRNOFF>"""
+
+xml_charge_increment_model_ff_ethanol = """
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+  <Electrostatics version="0.3" method="PME" scale12="0.0" scale13="0.0" scale14="0.833333" cutoff="9.0 * angstrom"/>
+  <ChargeIncrementModel version="0.3" number_of_conformers="1" partial_charge_method="formal_charge">
+    <ChargeIncrement smirks="[#6X4:1]-[#8:2]" charge_increment1="-0.05*elementary_charge" charge_increment2="0.05*elementary_charge"/>
+    <ChargeIncrement smirks="[C:1][C:2][O:3]" charge_increment1="0.2*elementary_charge" charge_increment2="-0.1*elementary_charge" charge_increment3="-0.1*elementary_charge"/>
+  </ChargeIncrementModel>
+</SMIRNOFF>"""
+
+xml_charge_increment_model_ff_net_charge = """
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+  <Electrostatics version="0.3" method="PME" scale12="0.0" scale13="0.0" scale14="0.833333" cutoff="9.0 * angstrom"/>
+  <ChargeIncrementModel version="0.3" number_of_conformers="1" partial_charge_method="formal_charge">
+    <ChargeIncrement smirks="[#6X3:1]-[#8X1-1:2]" charge_increment1="-0.05*elementary_charge" charge_increment2="0.05*elementary_charge"/>
+    <ChargeIncrement smirks="[#6X3:1]=[#8X1:2]" charge_increment1="0.2*elementary_charge" charge_increment2="-0.2*elementary_charge"/>
+  </ChargeIncrementModel>
+</SMIRNOFF>"""
+
+xml_charge_increment_model_ff_override = """
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+  <Electrostatics version="0.3" method="PME" scale12="0.0" scale13="0.0" scale14="0.833333" cutoff="9.0 * angstrom"/>
+  <ChargeIncrementModel version="0.3" number_of_conformers="1" partial_charge_method="formal_charge">
+    <ChargeIncrement smirks="[#1:1]-[#6:2]([#1:3])([#1:4])" charge_increment1="0.123*elementary_charge" charge_increment2="0.369*elementary_charge" charge_increment3="-0.123*elementary_charge" charge_increment4="0.123*elementary_charge"/>
+    <ChargeIncrement smirks="[#6X4:1]([#1:2])([#1:3])([#1:4])" charge_increment1="0.3*elementary_charge" charge_increment2="-0.1*elementary_charge" charge_increment3="-0.1*elementary_charge" charge_increment4="-0.1*elementary_charge"/>
+  </ChargeIncrementModel>
+</SMIRNOFF>"""
+
+xml_charge_increment_model_ff_both_apply = """
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+  <Electrostatics version="0.3" method="PME" scale12="0.0" scale13="0.0" scale14="0.833333" cutoff="9.0 * angstrom"/>
+  <ChargeIncrementModel version="0.3" number_of_conformers="0" partial_charge_method="formal_charge">
+    <ChargeIncrement smirks="[#6X4:1]([#1:2])([#1:3])([#1:4])" charge_increment1="0.3*elementary_charge" charge_increment2="-0.1*elementary_charge" charge_increment3="-0.1*elementary_charge" charge_increment4="-0.1*elementary_charge"/>
+    <ChargeIncrement smirks="[#6X4:1][#6X4:2][#8]" charge_increment1="0.05*elementary_charge" charge_increment2="-0.05*elementary_charge"/>
+  </ChargeIncrementModel>
+</SMIRNOFF>"""
+
+xml_charge_increment_model_ff_match_once = """
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+  <Electrostatics version="0.3" method="PME" scale12="0.0" scale13="0.0" scale14="0.833333" cutoff="9.0 * angstrom"/>
+  <ChargeIncrementModel version="0.3" number_of_conformers="1" partial_charge_method="formal_charge">
+    <ChargeIncrement smirks="[#6X4:1]([#1:2])[#6][#8]" charge_increment1="0.1*elementary_charge" charge_increment2="-0.1*elementary_charge"/>
+  </ChargeIncrementModel>
+</SMIRNOFF>"""
+
+xml_charge_increment_model_ff_match_two = """
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+  <Electrostatics version="0.3" method="PME" scale12="0.0" scale13="0.0" scale14="0.833333" cutoff="9.0 * angstrom"/>
+  <ChargeIncrementModel version="0.3" number_of_conformers="1" partial_charge_method="formal_charge">
+    <ChargeIncrement smirks="[#6X4:1]([#1:2])([#1:3])[#6][#8]" charge_increment1="0.1*elementary_charge" charge_increment2="-0.05*elementary_charge" charge_increment3="-0.05*elementary_charge"/>
+  </ChargeIncrementModel>
+</SMIRNOFF>"""
+
+xml_charge_increment_model_ff_match_all = """
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+  <Electrostatics version="0.3" method="PME" scale12="0.0" scale13="0.0" scale14="0.833333" cutoff="9.0 * angstrom"/>
+  <ChargeIncrementModel version="0.3" number_of_conformers="1" partial_charge_method="formal_charge">
+    <ChargeIncrement smirks="[#6X4:1]([#1:2])([#1:3])([#1:4])" charge_increment1="0.3*elementary_charge" charge_increment2="-0.1*elementary_charge" charge_increment3="-0.1*elementary_charge" charge_increment4="-0.1*elementary_charge"/>
+  </ChargeIncrementModel>
+</SMIRNOFF>"""
+
+xml_ff_virtual_sites_bondcharge_match_once = """<?xml version="1.0" encoding="utf-8"?>
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+    <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
+      <Bond smirks="[*:1]~[*:2]" id="b999" k="500.0 * kilocalories_per_mole/angstrom**2" length="1.1 * angstrom"/>
+    </Bonds>
+    <VirtualSites version="0.3">
+        <VirtualSite
+            type="BondCharge"
+            name="EP"
+            smirks="[*:1]~[*:2]"
+            distance="0.1*angstrom"
+            charge_increment1="0.1*elementary_charge"
+            charge_increment2="0.1*elementary_charge"
+            sigma="0.1*angstrom"
+            epsilon="0.1*kilocalories_per_mole"
+            match="once" >
+        </VirtualSite>
+        <VirtualSite
+            type="BondCharge"
+            name="EP"
+            smirks="[#7:1]~[#7:2]"
+            distance="0.2*angstrom"
+            charge_increment1="0.2*elementary_charge"
+            charge_increment2="0.2*elementary_charge"
+            sigma="0.2*angstrom"
+            epsilon="0.2*kilocalories_per_mole"
+            match="all_permutations" >
+        </VirtualSite>
+        <VirtualSite
+            type="BondCharge"
+            name="EP"
+            smirks="[#7:1]~[#7:2]"
+            distance="0.2*nanometers"
+            charge_increment1="0.2*elementary_charge"
+            charge_increment2="0.2*elementary_charge"
+            sigma="0.2*angstrom"
+            epsilon="0.2*kilocalories_per_mole"
+            match="once" >
+        </VirtualSite>
+    </VirtualSites>
+</SMIRNOFF>
+"""
+
+xml_ff_virtual_sites_bondcharge_match_all = """<?xml version="1.0" encoding="utf-8"?>
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+    <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
+      <Bond smirks="[*:1]~[*:2]" id="b999" k="500.0 * kilocalories_per_mole/angstrom**2" length="1.1 * angstrom"/>
+    </Bonds>
+    <VirtualSites version="0.3">
+        <VirtualSite
+            type="BondCharge"
+            name="EP"
+            smirks="[*:1]~[*:2]"
+            distance="0.1*angstrom"
+            charge_increment1="0.1*elementary_charge"
+            charge_increment2="0.1*elementary_charge"
+            sigma="0.1*angstrom"
+            epsilon="0.1*kilocalories_per_mole"
+            match="once" >
+        </VirtualSite>
+        <VirtualSite
+            type="BondCharge"
+            name="EP"
+            smirks="[#7:1]~[#7:2]"
+            distance="0.2*angstrom"
+            charge_increment1="0.2*elementary_charge"
+            charge_increment2="0.2*elementary_charge"
+            sigma="0.2*angstrom"
+            epsilon="0.2*kilocalories_per_mole"
+            match="once" >
+        </VirtualSite>
+        <VirtualSite
+            type="BondCharge"
+            name="EP"
+            smirks="[#7:1]~[#7:2]"
+            distance="0.2*angstrom"
+            charge_increment1="0.2*elementary_charge"
+            charge_increment2="0.2*elementary_charge"
+            sigma="0.2*angstrom"
+            epsilon="0.2*kilocalories_per_mole"
+            match="all_permutations" >
+        </VirtualSite>
+    </VirtualSites>
+</SMIRNOFF>
+"""
+
+xml_ff_virtual_sites_bondcharge_match_once_two_names = """<?xml version="1.0" encoding="utf-8"?>
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+    <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
+      <Bond smirks="[*:1]~[*:2]" id="b999" k="500.0 * kilocalories_per_mole/angstrom**2" length="1.1 * angstrom"/>
+    </Bonds>
+    <VirtualSites version="0.3">
+        <VirtualSite
+            type="BondCharge"
+            name="EP1"
+            smirks="[*:1]~[*:2]"
+            distance="0.1*angstrom"
+            charge_increment1="0.1*elementary_charge"
+            charge_increment2="0.1*elementary_charge"
+            sigma="0.1*angstrom"
+            epsilon="0.1*kilocalories_per_mole"
+            match="once" >
+        </VirtualSite>
+        <VirtualSite
+            type="BondCharge"
+            name="EP2"
+            smirks="[*:1]~[*:2]"
+            distance="0.2*angstrom"
+            charge_increment1="0.2*elementary_charge"
+            charge_increment2="0.2*elementary_charge"
+            sigma="0.2*angstrom"
+            epsilon="0.2*kilocalories_per_mole"
+            match="once" >
+        </VirtualSite>
+    </VirtualSites>
+</SMIRNOFF>
+"""
+
+xml_ff_virtual_sites_monovalent_match_once = """<?xml version="1.0" encoding="utf-8"?>
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+    <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
+      <Bond smirks="[*:1]~[*:2]" id="b999" k="500.0 * kilocalories_per_mole/angstrom**2" length="1.1 * angstrom"/>
+    </Bonds>
+    <VirtualSites version="0.3">
+        <VirtualSite
+            type="MonovalentLonePair"
+            name="EP"
+            smirks="[#8:1]~[#6:2]~[#6:3]"
+            distance="0.1*angstrom"
+            charge_increment1="0.1*elementary_charge"
+            charge_increment2="0.1*elementary_charge"
+            charge_increment3="0.1*elementary_charge"
+            sigma="0.1*angstrom"
+            epsilon="0.1*kilocalories_per_mole"
+            inPlaneAngle="110.*degree"
+            outOfPlaneAngle="41*degree"
+            match="once" >
+        </VirtualSite>
+        <VirtualSite
+            type="MonovalentLonePair"
+            name="EP"
+            smirks="[#8:1]=[#6:2]-[#6:3]"
+            distance="0.2*angstrom"
+            charge_increment1="0.2*elementary_charge"
+            charge_increment2="0.2*elementary_charge"
+            charge_increment3="0.2*elementary_charge"
+            sigma="0.2*angstrom"
+            epsilon="0.2*kilocalories_per_mole"
+            inPlaneAngle="120.*degree"
+            outOfPlaneAngle="42*degree"
+            match="once" >
+        </VirtualSite>
+    </VirtualSites>
+</SMIRNOFF>
+"""
+
+xml_ff_virtual_sites_divalent_match_all = """<?xml version="1.0" encoding="ASCII"?>
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+    <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
+      <Bond smirks="[*:1]~[*:2]" id="b999" k="500.0 * kilocalories_per_mole/angstrom**2" length="1.1 * angstrom"/>
+    </Bonds>
+    <VirtualSites version="0.3">
+        <VirtualSite
+            type="DivalentLonePair"
+            name="EP"
+            smirks="[#1:1]-[#8X2H2+0:2]-[#1:3]"
+            distance="0.70 * angstrom"
+            charge_increment1="0.241*elementary_charge"
+            charge_increment2="0.0*elementary_charge"
+            charge_increment3="0.241*elementary_charge"
+            sigma="3.12*angstrom"
+            epsilon="0.16*kilocalories_per_mole"
+            outOfPlaneAngle="54.71384225*degree"
+            match="all_permutations" >
+        </VirtualSite>
+    </VirtualSites>
+</SMIRNOFF>
+"""
+
+xml_ff_virtual_sites_trivalent_match_once = """<?xml version="1.0" encoding="ASCII"?>
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+    <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
+      <Bond smirks="[*:1]~[*:2]" id="b999" k="500.0 * kilocalories_per_mole/angstrom**2" length="1.1 * angstrom"/>
+    </Bonds>
+    <VirtualSites version="0.3">
+        <VirtualSite
+            type="TrivalentLonePair"
+            name="EP"
+            smirks="[*:1]-[#7X3:2](-[*:3])-[*:4]"
+            distance="0.50 * angstrom"
+            charge_increment1="0.0*elementary_charge"
+            charge_increment2="1.0*elementary_charge"
+            charge_increment3="0.0*elementary_charge"
+            charge_increment4="0.0*elementary_charge"
+            sigma="0.0*angstrom"
+            epsilon="0.0*kilocalories_per_mole"
+            match="once" >
+        </VirtualSite>
+    </VirtualSites>
+</SMIRNOFF>
+"""
+
+xml_ff_virtual_sites_trivalent_match_all = """
+<?xml version="1.0" encoding="ASCII"?>
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+    <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
+      <Bond smirks="[*:1]~[*:2]" id="b999" k="500.0 * kilocalories_per_mole/angstrom**2" length="1.1 * angstrom"/>
+    </Bonds>
+    <VirtualSites version="0.3">
+        <VirtualSite
+            type="TrivalentLonePair"
+            name="EP"
+            smirks="[*:1]-[#7X3:2]-([*:3])-[*:4]"
+            distance="0.70 * angstrom"
+            charge_increment1="0.1*elementary_charge"
+            charge_increment2="0.1*elementary_charge"
+            charge_increment3="0.1*elementary_charge"
+            charge_increment4="0.1*elementary_charge"
+            sigma="0.1*angstrom"
+            epsilon="0.1*kilocalories_per_mole"
+            match="once" >
+        </VirtualSite>
+    </VirtualSites>
+</SMIRNOFF>
+"""
+
 
 # ======================================================================
 # TEST UTILITY FUNCTIONS
@@ -571,6 +931,25 @@ class TestForceField:
 
         assert hash(default_case) == hash(lower_case)
 
+    def test_do_not_load_in_child_dir(self, tmp_path):
+        """Ensure force field XML files in nested subdirectories are not loaded
+        when not explicitly pointed to."""
+        nested_directory = os.path.join("a", "b", "c")
+        os.makedirs(nested_directory, exist_ok=True)
+
+        # Create a FF in a nested directory
+        ForceField("openff-1.0.0.offxml").to_file(
+            os.path.join(nested_directory, "force-field.offxml")
+        )
+
+        # Check that the file does not exist in the current working directory.
+        assert not os.path.isfile("force-field.offxml")
+
+        with pytest.raises(
+            OSError, match="Source force-field.offxml could not be read."
+        ):
+            ForceField("force-field.offxml")
+
     @pytest.mark.parametrize("full_path", [(True, False)])
     @pytest.mark.parametrize("force_field_file", [*get_available_force_fields()])
     def test_get_available_force_fields_loadable(self, full_path, force_field_file):
@@ -677,7 +1056,7 @@ class TestForceField:
         forcefield = ForceField(iter(urls))
 
     def test_create_forcefield_from_xml_string(self):
-        forcefield = ForceField(simple_xml_ff)
+        forcefield = ForceField(xml_simple_ff)
         assert len(forcefield._parameter_handlers["Bonds"]._parameters) == 3
         assert len(forcefield._parameter_handlers["Angles"]._parameters) == 2
         assert len(forcefield._parameter_handlers["ProperTorsions"]._parameters) == 3
@@ -715,7 +1094,7 @@ class TestForceField:
         """
         import pickle
 
-        forcefield_1 = ForceField(simple_xml_ff)
+        forcefield_1 = ForceField(xml_simple_ff)
         pickled = pickle.dumps(forcefield_1)
         forcefield_2 = pickle.loads(pickled)
         assert forcefield_1.to_string() == forcefield_2.to_string()
@@ -739,7 +1118,7 @@ class TestForceField:
         """
         Test writing a ForceField to an XML string
         """
-        forcefield_1 = ForceField(simple_xml_ff)
+        forcefield_1 = ForceField(xml_simple_ff)
         string_1 = forcefield_1.to_string("XML")
         forcefield_2 = ForceField(string_1)
         string_2 = forcefield_2.to_string("XML")
@@ -822,7 +1201,7 @@ class TestForceField:
         # These files will be deleted once garbage collection runs (end of this function)
         iofile1 = NamedTemporaryFile(suffix="." + file_path_extension)
         iofile2 = NamedTemporaryFile(suffix="." + file_path_extension)
-        forcefield_1 = ForceField(simple_xml_ff)
+        forcefield_1 = ForceField(xml_simple_ff)
         forcefield_1.to_file(iofile1.name, io_format=specified_format)
         forcefield_2 = ForceField(iofile1.name)
         forcefield_2.to_file(iofile2.name, io_format=specified_format)
@@ -908,18 +1287,13 @@ class TestForceField:
             match="Missing version while trying to construct "
             "<class 'openff.toolkit.typing.engines."
             "smirnoff.parameters.ToolkitAM1BCCHandler'>.",
-        ) as excinfo:
-            ff = ForceField(
-                '<?xml version="1.0" encoding="ASCII"?>'
-                '<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">'
-                "  <ToolkitAM1BCC/>"
-                "</SMIRNOFF>"
-            )
+        ):
+            ForceField(xml_without_section_version)
 
     def test_load_two_sources(self):
         """Test loading data from two SMIRNOFF data sources"""
         ff = ForceField(
-            simple_xml_ff, xml_ff_w_cosmetic_elements, allow_cosmetic_attributes=True
+            xml_simple_ff, xml_ff_w_cosmetic_elements, allow_cosmetic_attributes=True
         )
         assert len(ff.get_parameter_handler("Bonds").parameters) == 5
 
@@ -960,28 +1334,21 @@ class TestForceField:
 
     def test_load_two_sources_incompatible_tags(self):
         """Test loading data from two SMIRNOFF data sources which have incompatible physics"""
-        # Make an XML force field with a modifiedvdW 1-4 scaling factor
+        # Make an XML force field with a modified vdW 1-4 scaling factor
         nonstandard_xml_ff = xml_ff_w_comments.replace('scale14="0.5"', 'scale14="1.0"')
         with pytest.raises(
             IncompatibleParameterError,
             match="handler value: 0.5, incompatible value: 1.0",
-        ) as excinfo:
-            ff = ForceField(simple_xml_ff, nonstandard_xml_ff)
+        ):
+            ForceField(xml_simple_ff, nonstandard_xml_ff)
 
     def test_gbsahandler_sa_model_none(self):
         """
         Ensure that string values of "None" are correctly interpreted in the GBSAHandler's sa_model field
         """
-        gbsa_ff_xml = """<?xml version='1.0' encoding='ASCII'?>
-<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-    <GBSA version="0.3" gb_model="HCT" solvent_dielectric="78.5" solute_dielectric="1" sa_model="None" surface_area_penalty="5.4*calories/mole/angstroms**2" solvent_radius="1.4*angstroms">
-          <Atom smirks="[*:1]" radius="0.15*nanometer" scale="0.8"/>
-    </GBSA>
-</SMIRNOFF>
-"""
         from openff.toolkit.typing.engines.smirnoff import ForceField
 
-        ff = ForceField(gbsa_ff_xml)
+        ForceField(xml_gbsa_ff)
 
     @pytest.mark.parametrize(
         "toolkit_registry,registry_description", toolkit_registries
@@ -1057,15 +1424,7 @@ class TestForceField:
             UnassignedProperTorsionParameterException,
         )
 
-        forcefield = ForceField(
-            """
-<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-  <ProperTorsions version="0.3" potential="k*(1+cos(periodicity*theta-phase))">
-    <Proper smirks="[#99:1]-[#99X4:2]-[#99:3]-[#99:4]" id="t1" idivf1="1" k1="0.156 * kilocalories_per_mole" periodicity1="3" phase1="0.0 * degree"/>
-  </ProperTorsions>
-</SMIRNOFF>
-"""
-        )
+        forcefield = ForceField(xml_missing_torsion)
         pdbfile = app.PDBFile(get_data_file_path("systems/test_systems/1_ethanol.pdb"))
         molecules = [create_ethanol()]
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
@@ -1073,8 +1432,8 @@ class TestForceField:
             UnassignedProperTorsionParameterException,
             match="- Topology indices [(]5, 0, 1, 6[)]: "
             r"names and elements [(](H\d+)? H[)], [(](C\d+)? C[)], [(](C\d+)? C[)], [(](H\d+)? H[)],",
-        ) as excinfo:
-            omm_system = forcefield.create_openmm_system(topology)
+        ):
+            forcefield.create_openmm_system(topology)
 
     @pytest.mark.parametrize(
         "toolkit_registry,registry_description", toolkit_registries
@@ -1575,7 +1934,7 @@ class TestForceField:
     )
     def test_deregister_parameter_handler(self, to_deregister):
         """Ensure that ForceField.deregister_parameter_handler behaves correctly"""
-        ff = ForceField(simple_xml_ff)
+        ff = ForceField(xml_simple_ff)
         # Make sure the handler is present in the test force field
         handler_found = False
         for handler in ff._parameter_handlers.values():
@@ -1661,233 +2020,6 @@ trivalent_parameters_args = []
 
 
 class TestForceFieldVirtualSites:
-
-    xml_ff_virtual_sites_bondcharge_match_once = """<?xml version="1.0" encoding="utf-8"?>
-    <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-        <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
-          <Bond smirks="[*:1]~[*:2]" id="b999" k="500.0 * kilocalories_per_mole/angstrom**2" length="1.1 * angstrom"/>
-        </Bonds>
-        <VirtualSites version="0.3">
-            <VirtualSite
-                type="BondCharge"
-                name="EP"
-                smirks="[*:1]~[*:2]"
-                distance="0.1*angstrom"
-                charge_increment1="0.1*elementary_charge"
-                charge_increment2="0.1*elementary_charge"
-                sigma="0.1*angstrom"
-                epsilon="0.1*kilocalories_per_mole"
-                match="once" >
-            </VirtualSite>
-            <VirtualSite
-                type="BondCharge"
-                name="EP"
-                smirks="[#7:1]~[#7:2]"
-                distance="0.2*angstrom"
-                charge_increment1="0.2*elementary_charge"
-                charge_increment2="0.2*elementary_charge"
-                sigma="0.2*angstrom"
-                epsilon="0.2*kilocalories_per_mole"
-                match="all_permutations" >
-            </VirtualSite>
-            <VirtualSite
-                type="BondCharge"
-                name="EP"
-                smirks="[#7:1]~[#7:2]"
-                distance="0.2*nanometers"
-                charge_increment1="0.2*elementary_charge"
-                charge_increment2="0.2*elementary_charge"
-                sigma="0.2*angstrom"
-                epsilon="0.2*kilocalories_per_mole"
-                match="once" >
-            </VirtualSite>
-        </VirtualSites>
-    </SMIRNOFF>
-    """
-
-    xml_ff_virtual_sites_bondcharge_match_all = """<?xml version="1.0" encoding="utf-8"?>
-    <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-        <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
-          <Bond smirks="[*:1]~[*:2]" id="b999" k="500.0 * kilocalories_per_mole/angstrom**2" length="1.1 * angstrom"/>
-        </Bonds>
-        <VirtualSites version="0.3">
-            <VirtualSite
-                type="BondCharge"
-                name="EP"
-                smirks="[*:1]~[*:2]"
-                distance="0.1*angstrom"
-                charge_increment1="0.1*elementary_charge"
-                charge_increment2="0.1*elementary_charge"
-                sigma="0.1*angstrom"
-                epsilon="0.1*kilocalories_per_mole"
-                match="once" >
-            </VirtualSite>
-            <VirtualSite
-                type="BondCharge"
-                name="EP"
-                smirks="[#7:1]~[#7:2]"
-                distance="0.2*angstrom"
-                charge_increment1="0.2*elementary_charge"
-                charge_increment2="0.2*elementary_charge"
-                sigma="0.2*angstrom"
-                epsilon="0.2*kilocalories_per_mole"
-                match="once" >
-            </VirtualSite>
-            <VirtualSite
-                type="BondCharge"
-                name="EP"
-                smirks="[#7:1]~[#7:2]"
-                distance="0.2*angstrom"
-                charge_increment1="0.2*elementary_charge"
-                charge_increment2="0.2*elementary_charge"
-                sigma="0.2*angstrom"
-                epsilon="0.2*kilocalories_per_mole"
-                match="all_permutations" >
-            </VirtualSite>
-        </VirtualSites>
-    </SMIRNOFF>
-    """
-
-    xml_ff_virtual_sites_bondcharge_match_once_two_names = """<?xml version="1.0" encoding="utf-8"?>
-    <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-        <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
-          <Bond smirks="[*:1]~[*:2]" id="b999" k="500.0 * kilocalories_per_mole/angstrom**2" length="1.1 * angstrom"/>
-        </Bonds>
-        <VirtualSites version="0.3">
-            <VirtualSite
-                type="BondCharge"
-                name="EP1"
-                smirks="[*:1]~[*:2]"
-                distance="0.1*angstrom"
-                charge_increment1="0.1*elementary_charge"
-                charge_increment2="0.1*elementary_charge"
-                sigma="0.1*angstrom"
-                epsilon="0.1*kilocalories_per_mole"
-                match="once" >
-            </VirtualSite>
-            <VirtualSite
-                type="BondCharge"
-                name="EP2"
-                smirks="[*:1]~[*:2]"
-                distance="0.2*angstrom"
-                charge_increment1="0.2*elementary_charge"
-                charge_increment2="0.2*elementary_charge"
-                sigma="0.2*angstrom"
-                epsilon="0.2*kilocalories_per_mole"
-                match="once" >
-            </VirtualSite>
-        </VirtualSites>
-    </SMIRNOFF>
-    """
-
-    xml_ff_virtual_sites_monovalent_match_once = """<?xml version="1.0" encoding="utf-8"?>
-    <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-        <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
-          <Bond smirks="[*:1]~[*:2]" id="b999" k="500.0 * kilocalories_per_mole/angstrom**2" length="1.1 * angstrom"/>
-        </Bonds>
-        <VirtualSites version="0.3">
-            <VirtualSite
-                type="MonovalentLonePair"
-                name="EP"
-                smirks="[#8:1]~[#6:2]~[#6:3]"
-                distance="0.1*angstrom"
-                charge_increment1="0.1*elementary_charge"
-                charge_increment2="0.1*elementary_charge"
-                charge_increment3="0.1*elementary_charge"
-                sigma="0.1*angstrom"
-                epsilon="0.1*kilocalories_per_mole"
-                inPlaneAngle="110.*degree"
-                outOfPlaneAngle="41*degree"
-                match="once" >
-            </VirtualSite>
-            <VirtualSite
-                type="MonovalentLonePair"
-                name="EP"
-                smirks="[#8:1]=[#6:2]-[#6:3]"
-                distance="0.2*angstrom"
-                charge_increment1="0.2*elementary_charge"
-                charge_increment2="0.2*elementary_charge"
-                charge_increment3="0.2*elementary_charge"
-                sigma="0.2*angstrom"
-                epsilon="0.2*kilocalories_per_mole"
-                inPlaneAngle="120.*degree"
-                outOfPlaneAngle="42*degree"
-                match="once" >
-            </VirtualSite>
-        </VirtualSites>
-    </SMIRNOFF>
-    """
-
-    xml_ff_virtual_sites_divalent_match_all = """<?xml version="1.0" encoding="ASCII"?>
-    <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-        <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
-          <Bond smirks="[*:1]~[*:2]" id="b999" k="500.0 * kilocalories_per_mole/angstrom**2" length="1.1 * angstrom"/>
-        </Bonds>
-        <VirtualSites version="0.3">
-            <VirtualSite
-                type="DivalentLonePair"
-                name="EP"
-                smirks="[#1:1]-[#8X2H2+0:2]-[#1:3]"
-                distance="0.70 * angstrom"
-                charge_increment1="0.241*elementary_charge"
-                charge_increment2="0.0*elementary_charge"
-                charge_increment3="0.241*elementary_charge"
-                sigma="3.12*angstrom"
-                epsilon="0.16*kilocalories_per_mole"
-                outOfPlaneAngle="54.71384225*degree"
-                match="all_permutations" >
-            </VirtualSite>
-        </VirtualSites>
-    </SMIRNOFF>
-    """
-
-    xml_ff_virtual_sites_trivalent_match_once = """<?xml version="1.0" encoding="ASCII"?>
-    <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-        <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
-          <Bond smirks="[*:1]~[*:2]" id="b999" k="500.0 * kilocalories_per_mole/angstrom**2" length="1.1 * angstrom"/>
-        </Bonds>
-        <VirtualSites version="0.3">
-            <VirtualSite
-                type="TrivalentLonePair"
-                name="EP"
-                smirks="[*:1]-[#7X3:2](-[*:3])-[*:4]"
-                distance="0.50 * angstrom"
-                charge_increment1="0.0*elementary_charge"
-                charge_increment2="1.0*elementary_charge"
-                charge_increment3="0.0*elementary_charge"
-                charge_increment4="0.0*elementary_charge"
-                sigma="0.0*angstrom"
-                epsilon="0.0*kilocalories_per_mole"
-                match="once" >
-            </VirtualSite>
-        </VirtualSites>
-    </SMIRNOFF>
-    """
-
-    xml_ff_virtual_sites_trivalent_match_all = """
-    <?xml version="1.0" encoding="ASCII"?>
-    <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-        <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
-          <Bond smirks="[*:1]~[*:2]" id="b999" k="500.0 * kilocalories_per_mole/angstrom**2" length="1.1 * angstrom"/>
-        </Bonds>
-        <VirtualSites version="0.3">
-            <VirtualSite
-                type="TrivalentLonePair"
-                name="EP"
-                smirks="[*:1]-[#7X3:2]-([*:3])-[*:4]"
-                distance="0.70 * angstrom"
-                charge_increment1="0.1*elementary_charge"
-                charge_increment2="0.1*elementary_charge"
-                charge_increment3="0.1*elementary_charge"
-                charge_increment4="0.1*elementary_charge"
-                sigma="0.1*angstrom"
-                epsilon="0.1*kilocalories_per_mole"
-                match="once" >
-            </VirtualSite>
-        </VirtualSites>
-    </SMIRNOFF>
-    """
-
     def _test_physical_parameters(self, tkr, xml, smi, assert_physics, mol=None):
 
         from simtk.openmm import NonbondedForce
@@ -2297,16 +2429,8 @@ class TestForceFieldChargeAssignment:
 
     def test_charge_increment_model_forward_and_reverse_ethanol(self):
         """Test application of ChargeIncrements to the same molecule with different orderings in the topology"""
-        test_charge_increment_model_ff = """
-        <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-          <Electrostatics version="0.3" method="PME" scale12="0.0" scale13="0.0" scale14="0.833333" cutoff="9.0 * angstrom"/>
-          <ChargeIncrementModel version="0.3" number_of_conformers="1" partial_charge_method="formal_charge">
-            <ChargeIncrement smirks="[#6X4:1]-[#8:2]" charge_increment1="-0.05*elementary_charge" charge_increment2="0.05*elementary_charge"/>
-            <ChargeIncrement smirks="[C:1][C:2][O:3]" charge_increment1="0.2*elementary_charge" charge_increment2="-0.1*elementary_charge" charge_increment3="-0.1*elementary_charge"/>
-          </ChargeIncrementModel>
-        </SMIRNOFF>"""
         file_path = get_data_file_path("test_forcefields/test_forcefield.offxml")
-        ff = ForceField(file_path, test_charge_increment_model_ff)
+        ff = ForceField(file_path, xml_charge_increment_model_ff_ethanol)
         del ff._parameter_handlers["ToolkitAM1BCC"]
         top = Topology.from_molecules([create_ethanol(), create_reversed_ethanol()])
         sys = ff.create_openmm_system(top)
@@ -2345,29 +2469,11 @@ class TestForceFieldChargeAssignment:
         than tagged atom. We test this by making two equivalent (one with fully explicit CIs, the other with some
         implicit CIa) FFs and ensuring that both perform the same parameterization.
         """
-        test_charge_increment_model_ff_no_missing_cis = """
-        <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-          <Electrostatics version="0.3" method="PME" scale12="0.0" scale13="0.0" scale14="0.833333" cutoff="9.0 * angstrom"/>
-          <ChargeIncrementModel version="0.3" number_of_conformers="1" partial_charge_method="formal_charge">
-            <ChargeIncrement smirks="[#6X4:1]-[#8:2]" charge_increment1="-0.06*elementary_charge" charge_increment2="0.06*elementary_charge"/>
-            <ChargeIncrement smirks="[#6X4:1]-[#1:2]" charge_increment1="-0.01*elementary_charge" charge_increment2="0.01*elementary_charge"/>
-            <ChargeIncrement smirks="[C:1][C:2][O:3]" charge_increment1="0.2*elementary_charge" charge_increment2="-0.1*elementary_charge" charge_increment3="-0.1*elementary_charge"/>
-          </ChargeIncrementModel>
-        </SMIRNOFF>"""
-        test_charge_increment_model_ff_one_less_ci = """
-        <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-          <Electrostatics version="0.3" method="PME" scale12="0.0" scale13="0.0" scale14="0.833333" cutoff="9.0 * angstrom"/>
-          <ChargeIncrementModel version="0.3" number_of_conformers="1" partial_charge_method="formal_charge">
-            <ChargeIncrement smirks="[#6X4:1]-[#8:2]" charge_increment1="-0.06*elementary_charge" charge_increment2="0.06*elementary_charge"/>
-            <ChargeIncrement smirks="[#6X4:1]-[#1:2]" charge_increment1="-0.01*elementary_charge"/>
-            <ChargeIncrement smirks="[C:1][C:2][O:3]" charge_increment1="0.2*elementary_charge" charge_increment2="-0.1*elementary_charge"/>
-          </ChargeIncrementModel>
-        </SMIRNOFF>"""
         # Make a FF from each OFFXML string
         file_path = get_data_file_path("test_forcefields/test_forcefield.offxml")
-        ff1 = ForceField(file_path, test_charge_increment_model_ff_one_less_ci)
+        ff1 = ForceField(file_path, xml_charge_increment_model_ff_one_less_ci)
         del ff1._parameter_handlers["ToolkitAM1BCC"]
-        ff2 = ForceField(file_path, test_charge_increment_model_ff_no_missing_cis)
+        ff2 = ForceField(file_path, xml_charge_increment_model_ff_no_missing_cis)
         del ff2._parameter_handlers["ToolkitAM1BCC"]
         top = Topology.from_molecules([create_ethanol()])
         # Make a system from each FF
@@ -2455,16 +2561,8 @@ class TestForceFieldChargeAssignment:
         """Test application of charge increments on a molecule with a net charge"""
         from simtk import unit
 
-        test_charge_increment_model_ff = """
-        <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-          <Electrostatics version="0.3" method="PME" scale12="0.0" scale13="0.0" scale14="0.833333" cutoff="9.0 * angstrom"/>
-          <ChargeIncrementModel version="0.3" number_of_conformers="1" partial_charge_method="formal_charge">
-            <ChargeIncrement smirks="[#6X3:1]-[#8X1-1:2]" charge_increment1="-0.05*elementary_charge" charge_increment2="0.05*elementary_charge"/>
-            <ChargeIncrement smirks="[#6X3:1]=[#8X1:2]" charge_increment1="0.2*elementary_charge" charge_increment2="-0.2*elementary_charge"/>
-          </ChargeIncrementModel>
-        </SMIRNOFF>"""
         file_path = get_data_file_path("test_forcefields/test_forcefield.offxml")
-        ff = ForceField(file_path, test_charge_increment_model_ff)
+        ff = ForceField(file_path, xml_charge_increment_model_ff_net_charge)
         del ff._parameter_handlers["ToolkitAM1BCC"]
 
         acetate = create_acetate()
@@ -2487,17 +2585,10 @@ class TestForceFieldChargeAssignment:
         ethanol = create_ethanol()
         top = ethanol.to_topology()
 
+        file_path = get_data_file_path("test_forcefields/test_forcefield.offxml")
         # Test a charge increment that matches all C-H bonds at once
         # (this should be applied once: C0-H3-H4-H5)
-        test_charge_increment_model_ff = """
-        <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-          <Electrostatics version="0.3" method="PME" scale12="0.0" scale13="0.0" scale14="0.833333" cutoff="9.0 * angstrom"/>
-          <ChargeIncrementModel version="0.3" number_of_conformers="1" partial_charge_method="formal_charge">
-            <ChargeIncrement smirks="[#6X4:1]([#1:2])([#1:3])([#1:4])" charge_increment1="0.3*elementary_charge" charge_increment2="-0.1*elementary_charge" charge_increment3="-0.1*elementary_charge" charge_increment4="-0.1*elementary_charge"/>
-          </ChargeIncrementModel>
-        </SMIRNOFF>"""
-        file_path = get_data_file_path("test_forcefields/test_forcefield.offxml")
-        ff = ForceField(file_path, test_charge_increment_model_ff)
+        ff = ForceField(file_path, xml_charge_increment_model_ff_match_all)
         del ff._parameter_handlers["ToolkitAM1BCC"]
 
         sys = ff.create_openmm_system(top)
@@ -2523,15 +2614,7 @@ class TestForceFieldChargeAssignment:
 
         # Test a charge increment that matches two C-H bonds at a time
         # (this should be applied 3 times: C0-H3-H4, C0-H3-H5, C0-H4-H5)
-        test_charge_increment_model_ff = """
-        <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-          <Electrostatics version="0.3" method="PME" scale12="0.0" scale13="0.0" scale14="0.833333" cutoff="9.0 * angstrom"/>
-          <ChargeIncrementModel version="0.3" number_of_conformers="1" partial_charge_method="formal_charge">
-            <ChargeIncrement smirks="[#6X4:1]([#1:2])([#1:3])[#6][#8]" charge_increment1="0.1*elementary_charge" charge_increment2="-0.05*elementary_charge" charge_increment3="-0.05*elementary_charge"/>
-          </ChargeIncrementModel>
-        </SMIRNOFF>"""
-        file_path = get_data_file_path("test_forcefields/test_forcefield.offxml")
-        ff = ForceField(file_path, test_charge_increment_model_ff)
+        ff = ForceField(file_path, xml_charge_increment_model_ff_match_two)
         del ff._parameter_handlers["ToolkitAM1BCC"]
 
         sys = ff.create_openmm_system(top)
@@ -2557,15 +2640,7 @@ class TestForceFieldChargeAssignment:
 
         # Test a charge increment that matches ONE C-H bond at a time
         # (this should be applied three times: C0-H3, C0-H4, C0-H5)
-        test_charge_increment_model_ff = """
-        <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-          <Electrostatics version="0.3" method="PME" scale12="0.0" scale13="0.0" scale14="0.833333" cutoff="9.0 * angstrom"/>
-          <ChargeIncrementModel version="0.3" number_of_conformers="1" partial_charge_method="formal_charge">
-            <ChargeIncrement smirks="[#6X4:1]([#1:2])[#6][#8]" charge_increment1="0.1*elementary_charge" charge_increment2="-0.1*elementary_charge"/>
-          </ChargeIncrementModel>
-        </SMIRNOFF>"""
-        file_path = get_data_file_path("test_forcefields/test_forcefield.offxml")
-        ff = ForceField(file_path, test_charge_increment_model_ff)
+        ff = ForceField(file_path, xml_charge_increment_model_ff_match_once)
         del ff._parameter_handlers["ToolkitAM1BCC"]
 
         sys = ff.create_openmm_system(top)
@@ -2594,16 +2669,8 @@ class TestForceFieldChargeAssignment:
         same atoms, regardless of order"""
         from simtk import unit
 
-        test_charge_increment_model_ff = """
-        <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-          <Electrostatics version="0.3" method="PME" scale12="0.0" scale13="0.0" scale14="0.833333" cutoff="9.0 * angstrom"/>
-          <ChargeIncrementModel version="0.3" number_of_conformers="1" partial_charge_method="formal_charge">
-            <ChargeIncrement smirks="[#1:1]-[#6:2]([#1:3])([#1:4])" charge_increment1="0.123*elementary_charge" charge_increment2="0.369*elementary_charge" charge_increment3="-0.123*elementary_charge" charge_increment4="0.123*elementary_charge"/>
-            <ChargeIncrement smirks="[#6X4:1]([#1:2])([#1:3])([#1:4])" charge_increment1="0.3*elementary_charge" charge_increment2="-0.1*elementary_charge" charge_increment3="-0.1*elementary_charge" charge_increment4="-0.1*elementary_charge"/>
-          </ChargeIncrementModel>
-        </SMIRNOFF>"""
         file_path = get_data_file_path("test_forcefields/test_forcefield.offxml")
-        ff = ForceField(file_path, test_charge_increment_model_ff)
+        ff = ForceField(file_path, xml_charge_increment_model_ff_override)
         del ff._parameter_handlers["ToolkitAM1BCC"]
 
         ethanol = create_ethanol()
@@ -2634,16 +2701,8 @@ class TestForceFieldChargeAssignment:
         a partially-overlapping set of atoms"""
         from simtk import unit
 
-        test_charge_increment_model_ff = """
-        <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-          <Electrostatics version="0.3" method="PME" scale12="0.0" scale13="0.0" scale14="0.833333" cutoff="9.0 * angstrom"/>
-          <ChargeIncrementModel version="0.3" number_of_conformers="0" partial_charge_method="formal_charge">
-            <ChargeIncrement smirks="[#6X4:1]([#1:2])([#1:3])([#1:4])" charge_increment1="0.3*elementary_charge" charge_increment2="-0.1*elementary_charge" charge_increment3="-0.1*elementary_charge" charge_increment4="-0.1*elementary_charge"/>
-            <ChargeIncrement smirks="[#6X4:1][#6X4:2][#8]" charge_increment1="0.05*elementary_charge" charge_increment2="-0.05*elementary_charge"/>
-          </ChargeIncrementModel>
-        </SMIRNOFF>"""
         file_path = get_data_file_path("test_forcefields/test_forcefield.offxml")
-        ff = ForceField(file_path, test_charge_increment_model_ff)
+        ff = ForceField(file_path, xml_charge_increment_model_ff_both_apply)
         del ff._parameter_handlers["ToolkitAM1BCC"]
 
         ethanol = create_ethanol()
@@ -3197,6 +3256,49 @@ class TestForceFieldChargeAssignment:
                 all_charges_zero = False
         assert not (all_charges_zero)
 
+    def test_library_charges_from_molecule_manual(self):
+        """Test that constructing a LibraryChargeHandler from partial charges on Molecule objects
+        produces the same result as using the `charge_from_molecules` kwarg. while manually
+        setting the molecule's partial charges to arbitrary non-physical values"""
+        # TODO: Remove this test if `charge_from_molecules` is depcreated (#806)
+        mol = Molecule.from_mapped_smiles("[Cl:1][C:2]#[C:3][F:4]")
+        mol.partial_charges = np.linspace(-0.3, 0.3, 4) * unit.elementary_charge
+
+        test_forcefield = ForceField("test_forcefields/test_forcefield.offxml")
+        using_kwarg = test_forcefield.create_openmm_system(
+            topology=mol.to_topology(), charge_from_molecules=[mol]
+        )
+
+        library_charges = LibraryChargeHandler.LibraryChargeType.from_molecule(mol)
+        test_forcefield.register_parameter_handler(LibraryChargeHandler(version=0.3))
+        test_forcefield["LibraryCharges"].add_parameter(parameter=library_charges)
+        using_library_charges = test_forcefield.create_openmm_system(
+            topology=mol.to_topology()
+        )
+
+        compare_partial_charges(using_kwarg, using_library_charges)
+
+    def test_library_charges_from_molecule_assigned(self):
+        """Test that constructing a LibraryChargeHandler from partial charges on Molecule objects
+        produces the same result as using the `charge_from_molecules` kwarg. while manually
+        setting the molecule's partial charges to arbitrary non-physical values"""
+        mol = Molecule.from_smiles("CCO")
+        mol.assign_partial_charges(partial_charge_method="mmff94")
+
+        test_forcefield = ForceField("test_forcefields/test_forcefield.offxml")
+        using_kwarg = test_forcefield.create_openmm_system(
+            topology=mol.to_topology(), charge_from_molecules=[mol]
+        )
+
+        library_charges = LibraryChargeHandler.LibraryChargeType.from_molecule(mol)
+        test_forcefield.register_parameter_handler(LibraryChargeHandler(version=0.3))
+        test_forcefield["LibraryCharges"].add_parameter(parameter=library_charges)
+        using_library_charges = test_forcefield.create_openmm_system(
+            topology=mol.to_topology()
+        )
+
+        compare_partial_charges(using_kwarg, using_library_charges)
+
 
 # ======================================================================
 # TEST CONSTRAINTS
@@ -3738,48 +3840,9 @@ class TestForceFieldParameterAssignment:
         )
 
     def test_tip5p_dimer_energy(self):
-        """ """
-
-        tip5p_offxml = """<?xml version="1.0" encoding="utf-8"?>
-<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-    <LibraryCharges version="0.3">
-            <LibraryCharge name="tip5p" smirks="[#1:1]-[#8X2H2+0:2]-[#1:3]" charge1="0.*elementary_charge" charge2="0.*elementary_charge" charge3="0.*elementary_charge"/>
-    </LibraryCharges>
-    <vdW version="0.3" potential="Lennard-Jones-12-6" combining_rules="Lorentz-Berthelot" scale12="0.0" scale13="0.0" scale14="0.5" scale15="1.0" switch_width="1.0 * angstrom" cutoff="9.0 * angstrom" method="cutoff">
-            <Atom smirks="[#1:1]-[#8X2H2+0]-[#1]" epsilon="0. * mole**-1 * kilojoule" id="n35" sigma="1 * nanometer"/>
-            <Atom smirks="[#1]-[#8X2H2+0:1]-[#1]" epsilon="0.66944 * mole**-1 * kilojoule" id="n35" sigma="0.312 * nanometer"/>
-    </vdW>
-     <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
-        <Bond smirks="[#1:1]-[#8X2H2+0:2]-[#1]" length="0.9572 * angstrom" k="462750.4 * nanometer**-2 * mole**-1 * kilojoule" id="b1" />   
-    </Bonds>
-    <Angles version="0.3" potential="harmonic">
-        <Angle smirks="[#1:1]-[#8X2H2+0:2]-[#1:3]" angle="1.82421813418 * radian" k="836.8 * mole**-1 * radian**-2 * kilojoule" id="a1" />
-    </Angles>
-    <VirtualSites version="0.3" exclusion_policy="parents">
-        <VirtualSite
-            type="DivalentLonePair"
-            name="EP"
-            smirks="[#1:1]-[#8X2H2+0:2]-[#1:3]"
-            distance="0.70 * angstrom"
-            charge_increment1="0.1205*elementary_charge"
-            charge_increment2="0.0*elementary_charge"
-            charge_increment3="0.1205*elementary_charge"
-            sigma="1.0*angstrom"
-            epsilon="0.0*kilocalories_per_mole"
-            outOfPlaneAngle="54.71384225*degree"
-            match="all_permutations" >
-        </VirtualSite>
-    </VirtualSites>
-    <Electrostatics version="0.3" method="PME" scale12="0.0" scale13="0.0" scale14="0.833333" scale15="1.0" switch_width="0.0 * angstrom" cutoff="9.0 * angstrom"/>
-  <Constraints version="0.3">
-    <Constraint smirks="[#1:1]-[#8X2H2+0:2]-[#1]" id="c1" distance="0.9572 * angstrom"/>
-    <Constraint smirks="[#1:1]-[#8X2H2+0]-[#1:2]" id="c2" distance="1.5139006545247014 * angstrom"/>
-  </Constraints>
-</SMIRNOFF>
-"""
         from openff.toolkit.tests.utils import evaluate_molecules_off
 
-        off_ff = ForceField("test_forcefields/test_forcefield.offxml", tip5p_offxml)
+        off_ff = ForceField("test_forcefields/test_forcefield.offxml", xml_tip5p)
 
         molecule1 = create_water()
         molecule1.atoms[0].name = "O"
@@ -4196,7 +4259,10 @@ class TestForceFieldParameterAssignment:
         for bond1, bond2 in zip(
             omm_sys_top.topology_bonds, mod_omm_sys_top.topology_bonds
         ):
-            assert bond1.bond.fractional_bond_order == bond2.bond.fractional_bond_order
+            # 'approx()' because https://github.com/openforcefield/openff-toolkit/issues/994
+            assert bond1.bond.fractional_bond_order == pytest.approx(
+                bond2.bond.fractional_bond_order
+            )
 
     def test_fractional_bond_order_ignore_existing_confs(self):
         """Test that previously-defined bond orders in the topology are overwritten"""
