@@ -190,7 +190,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             smiles, allow_undefined_stereo=allow_undefined_stereo, _cls=_cls
         )
 
-        # Make another molecule from the PDB, allow stero errors here they are expected
+        # Make another molecule from the PDB. We squelch stereo errors here, since
+        # RDKit's PDB loader doesn't attempt to perceive stereochemistry, bond order,
+        # or formal charge (and we don't need those here).
         prev_log_level = logger.getEffectiveLevel()
         logger.setLevel(logging.ERROR)
         pdbmol = self.from_rdkit(
