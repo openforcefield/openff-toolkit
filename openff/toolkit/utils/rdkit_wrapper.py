@@ -307,6 +307,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             # mols.append(mol)
             # TODO: Add SMI, TDT(?) support
 
+        else:
+            raise ValueError(f"Unsupported file format: {file_format}")
+        
         return mols
 
     def from_file_obj(
