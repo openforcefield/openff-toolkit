@@ -189,12 +189,15 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         )
 
         # Make another molecule from the PDB, allow stero errors here they are expected
+        prev_log_level = logger.getEffectiveLevel()
+        logger.setLevel(logging.ERROR)
         pdbmol = self.from_rdkit(
             Chem.MolFromPDBFile(file_path, removeHs=False),
             allow_undefined_stereo=True,
             hydrogens_are_explicit=True,
             _cls=_cls,
         )
+        logger.setLevel(prev_log_level)
 
         # check isomorphic and get the mapping if true the mapping will be
         # Dict[pdb_index: offmol_index] sorted by pdb_index
