@@ -436,9 +436,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 writer_func = self._toolkit_file_write_formats[file_format]
             except KeyError:
                 raise ValueError(
-                    f"The requested file type ({file_format}) is not supported to be written using "
-                    f"RDKitToolkitWrapper."
-                )
+                    f"Unsupported file format: {file_format})"
+                ) from None
             rdmol = self.to_rdkit(molecule)
             writer = writer_func(file_obj)
             try:

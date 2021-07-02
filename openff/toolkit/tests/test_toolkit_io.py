@@ -913,6 +913,12 @@ class BaseToFileIO:
         with pytest.raises(ValueError, match = "Need a text mode file object like StringIO or a file opened with mode 't'"):
             self.toolkit_wrapper.to_file_obj(ETHANOL, f, "smi")
 
+    # === Test unsupported format
+
+    def test_to_file_qwe_format_raises_exception(self):
+        with tempfile.NamedTemporaryFile(suffix=".smi") as fileobj:
+            with pytest.raises(ValueError, match=f"Unsupported file format: QWE"):
+                self.toolkit_wrapper.to_file(ETHANOL, fileobj.name, "QWE")
 
 @pytest.mark.usefixtures("init_toolkit", "tmpdir")
 class TestOpenEyeToolkitToFileIO(BaseToFileIO):
