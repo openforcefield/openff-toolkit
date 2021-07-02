@@ -427,7 +427,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             # Special case for SMILES
             smiles = self.to_smiles(molecule)
             name = molecule.name
-            if name is None:
+            if name is not None:
                 output_line = f"{smiles} {name}\n"
             else:
                 output_line = f"{smiles}\n"
