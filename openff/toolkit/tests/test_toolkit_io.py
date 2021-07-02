@@ -680,6 +680,10 @@ class FileManager:
     caffeine_3d_sdf = FilenameDescriptor(CAFFEINE_3D_SDF)
     caffeine_smi = FilenameDescriptor(CAFFEINE_SMI)
 
+    # Used to test that file_format overrides any automatic file detection.
+    caffeine_not_smi = FilenameDescriptor(CAFFEINE_2D_SDF)
+    caffeine_not_sdf = FilenameDescriptor(CAFFEINE_SMI)
+    
     ## aspirin_2d_sdf = FilenameDescriptor(ASPIRIN_2D_SDF)
     ## aspirin_3d_sdf = FilenameDescriptor(ASPIRIN_3D_SDF)
     ## aspirin_smi = FilenameDescriptor(ASPIRIN_SMI)
@@ -753,7 +757,7 @@ class BaseFromFileIO:
         assert len(mols) == 1
         mol = mols[0]
         assert mol.name == "caffeine"
-
+    
     # == Test reading two molecules from an SDF
 
     def test_from_file_sdf_two_molecules(self):
@@ -826,6 +830,16 @@ class BaseFromFileIO:
         mols = self.toolkit_wrapper.from_file_obj(file_obj_manager.three_mols_smi, "SMI")
         self._test_from_smi_two_molecules(mols)
         
+    # == Test that file_format overrides the extension
+
+    def test_from_file_sdf_ignores_filename_extension(self):
+        mols = self.toolkit_wrapper.from_file(file_manager.caffeine_not_smi, "sdf")
+        self._test_from_sdf_ignores_file_format_case(mols)
+    
+    def test_from_file_smi_ignores_filename_extension(self):
+        mols = self.toolkit_wrapper.from_file(file_manager.caffeine_not_sdf, "smi")
+        self._test_from_smi_ignores_file_format_case(mols)
+    
     # == Test format "qwe" raises an exception
 
     def test_from_file_qwe_format_raises_exception(self):
