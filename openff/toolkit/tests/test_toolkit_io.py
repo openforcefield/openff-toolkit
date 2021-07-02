@@ -24,6 +24,7 @@ from numpy.testing import assert_allclose
 from simtk import unit
 
 from openff.toolkit.tests import create_molecules
+from openff.toolkit.tests.utils import requires_openeye, requires_rdkit
 from openff.toolkit.topology.molecule import Molecule
 from openff.toolkit.utils import OpenEyeToolkitWrapper, RDKitToolkitWrapper, exceptions
 
@@ -863,12 +864,14 @@ def init_toolkit(request):
 
 
 @pytest.mark.usefixtures("init_toolkit")
+@requires_openeye
 class TestOpenEyeToolkitFromFileIO(BaseFromFileIO):
     toolkit_wrapper_class = OpenEyeToolkitWrapper
     tk_mol_name = "OEMol"
 
 
 @pytest.mark.usefixtures("init_toolkit")
+@requires_rdkit
 class TestRDKitToolkitFromFileIO(BaseFromFileIO):
     toolkit_wrapper_class = RDKitToolkitWrapper
     tk_mol_name = "RDMol"
@@ -975,11 +978,13 @@ class BaseToFileIO:
 
 
 @pytest.mark.usefixtures("init_toolkit", "tmpdir")
+@requires_openeye
 class TestOpenEyeToolkitToFileIO(BaseToFileIO):
     toolkit_wrapper_class = OpenEyeToolkitWrapper
 
 
 @pytest.mark.usefixtures("init_toolkit", "tmpdir")
+@requires_rdkit
 class TestRDKitToolkitToFileIO(BaseToFileIO):
     toolkit_wrapper_class = RDKitToolkitWrapper
 
@@ -1065,12 +1070,14 @@ class BaseSmiles:
 
 
 @pytest.mark.usefixtures("init_toolkit")
+@requires_openeye
 class TestOpenEyeToolkitSmiles(BaseSmiles):
     toolkit_wrapper_class = OpenEyeToolkitWrapper
     tk_mol_name = "OEMol"
 
 
 @pytest.mark.usefixtures("init_toolkit")
+@requires_rdkit
 class TestRDKitToolkitSmiles(BaseSmiles):
     toolkit_wrapper_class = RDKitToolkitWrapper
     tk_mol_name = "RDMol"
