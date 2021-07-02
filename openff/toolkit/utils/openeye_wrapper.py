@@ -37,7 +37,7 @@ from .exceptions import (
     UndefinedStereochemistryError,
     ParseError,
 )
-from .utils import inherit_docstrings, temporary_cd
+from .utils import inherit_docstrings
 
 # =============================================================================================
 # CONFIGURE LOGGER
