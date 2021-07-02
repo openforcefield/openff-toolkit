@@ -13,6 +13,7 @@ __all__ = ("OpenEyeToolkitWrapper",)
 import importlib
 import logging
 import re
+import pathlib
 import tempfile
 from collections import defaultdict
 from functools import wraps
@@ -341,11 +342,18 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             The format for writing the molecule data
 
         """
+        # This function requires a text-mode file_obj.
+        try:
+            file_obj.write("")
+        except TypeError:
+            # Switch to a ValueError and use a more informative exception
+            # message to match RDKit.
+            raise ValueError("Need a text mode file object like StringIO or a file opened with mode 't'") from None
+
         with tempfile.TemporaryDirectory() as tmpdir:
-            with temporary_cd(tmpdir):
-                outfile = "temp_molecule." + file_format
-                self.to_file(molecule, outfile, file_format)
-                file_data = open(outfile).read()
+            path = pathlib.Path(tmpdir, f"input.{file_format.lower()}")
+            self.to_file(molecule, str(path), file_format)
+            file_data = path.read_text()
             file_obj.write(file_data)
 
     def to_file(self, molecule, file_path, file_format):

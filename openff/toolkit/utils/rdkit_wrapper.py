@@ -43,26 +43,13 @@ logger = logging.getLogger(__name__)
 def normalize_file_format(file_format):
     return file_format.upper()
 
-def open_smi_writer(toolkit_wrapper, file_obj):
-    return SmilesWriter(toolkit_wrapper, file_obj)
-
-class SmilesWriter:
-    def __init__(self, toolkit_wrapper, file_obj):
-        self.toolkit_wrapper = toolkit_wrapper
-        self.file_obj = file_obj
-        
-    def write(self, mol):
-        smiles  = self.toolkit_wrapper.to_smiles(mol)
-        name = mol.name
-        if name is not None:
-            output_line = f"{smiles} {name}\n"
-        else:
-            output_line = f"{smiles}\n"
-            
-        self.file_obj.write(output_line)
-
-    def close(self):
-        pass
+def _require_text_file_obj(file_obj):
+    try:
+        file_obj.write("")
+    except TypeError:
+        # Switch to a ValueError and use a more informative exception
+        # message to match RDKit's toolkit writer.
+        raise ValueError("Need a text mode file object like StringIO or a file opened with mode 't'") from None
         
 
 class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
@@ -432,8 +419,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         -------
 
         """
-
         file_format = normalize_file_format(file_format)
+        _require_text_file_obj(file_obj)
         
         if file_format == "SMI":
             # Special case for SMILES

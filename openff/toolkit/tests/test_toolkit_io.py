@@ -887,9 +887,10 @@ class BaseToFileIO:
         f.seek(0)
         assert_is_ethanol_sdf(f)
 
-    ## def test_to_file_obj_sdf_with_bytesio(self):
-    ##     f = BytesIO()
-    ##     self.toolkit_wrapper.to_file_obj(ETHANOL, f, "sdf")
+    def test_to_file_obj_sdf_with_bytesio(self):
+        f = BytesIO()
+        with pytest.raises(ValueError, match = "Need a text mode file object like StringIO or a file opened with mode 't'"):
+            self.toolkit_wrapper.to_file_obj(ETHANOL, f, "sdf")
 
     # === Test variations of "smi"
 
@@ -907,10 +908,10 @@ class BaseToFileIO:
         f.seek(0)
         assert_is_ethanol_smi(f)
 
-    ## def test_to_file_obj_smi_with_bytesio(self):
-    ##     f = BytesIO()
-    ##     self.toolkit_wrapper.to_file_obj(ETHANOL, f, "sdf")
-            
+    def test_to_file_obj_smi_with_bytesio(self):
+        f = BytesIO()
+        with pytest.raises(ValueError, match = "Need a text mode file object like StringIO or a file opened with mode 't'"):
+            self.toolkit_wrapper.to_file_obj(ETHANOL, f, "smi")
 
 
 @pytest.mark.usefixtures("init_toolkit", "tmpdir")
