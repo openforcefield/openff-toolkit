@@ -778,6 +778,21 @@ class BaseFromFileIO:
         assert mol.n_bonds == 25
         assert mol.n_conformers == 0
 
+    # == Test reading two molecules from a SMILES file
+
+    def test_from_file_smi_two_molecules(self):
+        mols = self.toolkit_wrapper.from_file(file_manager.two_mols_smi, "SMI")
+        self._test_from_smi_two_molecules(mols)
+
+    def test_from_file_obj_sdf_two_molecules(self):
+        mols = self.toolkit_wrapper.from_file_obj(file_obj_manager.two_mols_smi, "SMI")
+        self._test_from_smi_two_molecules(mols)
+
+    def _test_from_smi_two_molecules(self, mols):
+        assert len(mols) == 2
+        assert mols[0].name == "CHEMBL113"
+        assert mols[1].name == "ASPIRIN"
+        
     # == Test format "qwe" raises an exception
 
     def test_from_file_qwe_format_raises_exception(self):
