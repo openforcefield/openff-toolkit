@@ -837,6 +837,13 @@ class TestRDKitToolkitFileIO(BaseFileIO):
     toolkit_wrapper_class = RDKitToolkitWrapper
     tk_mol_name = "RDMol"
 
+    def test_from_file_obj_smi_supports_stringio(self):
+        # Backwards compability. Older versions of OpenFF supported
+        # string-based file objects, but not file-based ones.
+        with open(file_manager.caffeine_smi) as file_obj:
+            mol = self.toolkit_wrapper.from_file_obj(file_obj, "SMI")[0]
+        assert mol.name == "CHEMBL113"
+        
 
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__] + sys.argv[1:]))

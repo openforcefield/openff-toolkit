@@ -225,6 +225,32 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
             raise InvalidConformerError("The PDB and SMILES structures do not match.")
 
+    def _process_sdf_supplier(self, sdf_supplier, allow_undefined_stereo, _cls):
+        "Helper function to process RDKit molecules from an SDF input source"
+        from rdkit import Chem
+        
+        for rdmol in sdf_supplier:
+            if rdmol is None:
+                continue
+
+            # Sanitize the molecules (fails on nitro groups)
+            try:
+                Chem.SanitizeMol(
+                    rdmol,
+                    Chem.SANITIZE_ALL
+                    ^ Chem.SANITIZE_SETAROMATICITY
+                    ^ Chem.SANITIZE_ADJUSTHS,
+                )
+                Chem.AssignStereochemistryFrom3D(rdmol)
+            except ValueError as e:
+                logger.warning(rdmol.GetProp("_Name") + " " + str(e))
+                continue
+            Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_MDL)
+            mol = self.from_rdkit(
+                rdmol, allow_undefined_stereo=allow_undefined_stereo, _cls=_cls
+            )
+            yield mol
+        
     def from_file(
         self, file_path, file_format, allow_undefined_stereo=False, _cls=None
     ):
@@ -257,29 +283,10 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         mols = list()
         if (file_format == "MOL") or (file_format == "SDF"):
-            for rdmol in Chem.SupplierFromFilename(
+            sdf_supplier = Chem.SupplierFromFilename(
                 file_path, removeHs=False, sanitize=False, strictParsing=True
-            ):
-                if rdmol is None:
-                    continue
-
-                # Sanitize the molecules (fails on nitro groups)
-                try:
-                    Chem.SanitizeMol(
-                        rdmol,
-                        Chem.SANITIZE_ALL
-                        ^ Chem.SANITIZE_SETAROMATICITY
-                        ^ Chem.SANITIZE_ADJUSTHS,
-                    )
-                    Chem.AssignStereochemistryFrom3D(rdmol)
-                except ValueError as e:
-                    logger.warning(rdmol.GetProp("_Name") + " " + str(e))
-                    continue
-                Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_MDL)
-                mol = self.from_rdkit(
-                    rdmol, allow_undefined_stereo=allow_undefined_stereo, _cls=_cls
-                )
-                mols.append(mol)
+            )
+            mols.extend(self._process_sdf_supplier(sdf_supplier, allow_undefined_stereo=allow_undefined_stereo, _cls=_cls))
 
         elif file_format == "SMI":
             # TODO: We have to do some special stuff when we import SMILES (currently
@@ -349,10 +356,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         
         if (file_format == "MOL") or (file_format == "SDF"):
             # TODO: Iterate over all mols in file_data
-            for rdmol in Chem.ForwardSDMolSupplier(file_obj):
-                mol = self.from_rdkit(rdmol, allow_undefined_stereo=allow_undefined_stereo, _cls=_cls)
-                mols.append(mol)
-
+            sdf_supplier = Chem.ForwardSDMolSupplier(file_obj, removeHs=False, sanitize=False, strictParsing=True)
+            mols.extend(self._process_sdf_supplier(sdf_supplier, allow_undefined_stereo=allow_undefined_stereo, _cls=_cls))
+            
         elif file_format == "SMI":
             # There's no good way to create a SmilesMolSuppler from a string
             # other than to use a temporary file.
