@@ -12,8 +12,8 @@ __all__ = ("RDKitToolkitWrapper",)
 import copy
 import importlib
 import itertools
-import tempfile
 import logging
+import tempfile
 from typing import TYPE_CHECKING, List, Optional, Tuple
 
 import numpy as np
@@ -26,9 +26,9 @@ from . import base_wrapper
 from .constants import DEFAULT_AROMATICITY_MODEL
 from .exceptions import (
     ChargeMethodUnavailableError,
+    ParseError,
     ToolkitUnavailableException,
     UndefinedStereochemistryError,
-    ParseError,
 )
 
 # =============================================================================================
@@ -41,8 +41,10 @@ logger = logging.getLogger(__name__)
 # IMPLEMENTATION
 # =============================================================================================
 
+
 def normalize_file_format(file_format):
     return file_format.upper()
+
 
 def _require_text_file_obj(file_obj):
     try:
@@ -50,8 +52,10 @@ def _require_text_file_obj(file_obj):
     except TypeError:
         # Switch to a ValueError and use a more informative exception
         # message to match RDKit's toolkit writer.
-        raise ValueError("Need a text mode file object like StringIO or a file opened with mode 't'") from None
-        
+        raise ValueError(
+            "Need a text mode file object like StringIO or a file opened with mode 't'"
+        ) from None
+
 
 class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
     """
@@ -88,7 +92,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             self._toolkit_file_write_formats = {
                 "SDF": Chem.SDWriter,
                 "MOL": Chem.SDWriter,
-                "SMI": None,   # Special support to use to_smiles() instead of RDKit's SmilesWriter
+                "SMI": None,  # Special support to use to_smiles() instead of RDKit's SmilesWriter
                 "PDB": Chem.PDBWriter,
                 "TDT": Chem.TDTWriter,
             }
@@ -238,7 +242,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
     def _process_sdf_supplier(self, sdf_supplier, allow_undefined_stereo, _cls):
         "Helper function to process RDKit molecules from an SDF input source"
         from rdkit import Chem
-        
+
         for rdmol in sdf_supplier:
             if rdmol is None:
                 continue
@@ -260,7 +264,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 rdmol, allow_undefined_stereo=allow_undefined_stereo, _cls=_cls
             )
             yield mol
-        
+
     def from_file(
         self, file_path, file_format, allow_undefined_stereo=False, _cls=None
     ):
@@ -296,7 +300,13 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             sdf_supplier = Chem.SupplierFromFilename(
                 file_path, removeHs=False, sanitize=False, strictParsing=True
             )
-            mols.extend(self._process_sdf_supplier(sdf_supplier, allow_undefined_stereo=allow_undefined_stereo, _cls=_cls))
+            mols.extend(
+                self._process_sdf_supplier(
+                    sdf_supplier,
+                    allow_undefined_stereo=allow_undefined_stereo,
+                    _cls=_cls,
+                )
+            )
 
         elif file_format == "SMI":
             # TODO: We have to do some special stuff when we import SMILES (currently
@@ -327,7 +337,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         else:
             raise ValueError(f"Unsupported file format: {file_format}")
-        
+
         return mols
 
     def from_file_obj(
@@ -363,12 +373,20 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         mols = []
 
         file_format = normalize_file_format(file_format)
-        
+
         if (file_format == "MOL") or (file_format == "SDF"):
             # TODO: Iterate over all mols in file_data
-            sdf_supplier = Chem.ForwardSDMolSupplier(file_obj, removeHs=False, sanitize=False, strictParsing=True)
-            mols.extend(self._process_sdf_supplier(sdf_supplier, allow_undefined_stereo=allow_undefined_stereo, _cls=_cls))
-            
+            sdf_supplier = Chem.ForwardSDMolSupplier(
+                file_obj, removeHs=False, sanitize=False, strictParsing=True
+            )
+            mols.extend(
+                self._process_sdf_supplier(
+                    sdf_supplier,
+                    allow_undefined_stereo=allow_undefined_stereo,
+                    _cls=_cls,
+                )
+            )
+
         elif file_format == "SMI":
             # There's no good way to create a SmilesMolSuppler from a string
             # other than to use a temporary file.
@@ -383,8 +401,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 return self.from_file(
                     tmpfile.name,
                     "SMI",
-                    allow_undefined_stereo = allow_undefined_stereo,
-                    _cls = _cls)
+                    allow_undefined_stereo=allow_undefined_stereo,
+                    _cls=_cls,
+                )
 
         elif file_format == "PDB":
             raise Exception(
@@ -422,7 +441,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         """
         file_format = normalize_file_format(file_format)
         _require_text_file_obj(file_obj)
-        
+
         if file_format == "SMI":
             # Special case for SMILES
             smiles = self.to_smiles(molecule)
@@ -436,16 +455,13 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             try:
                 writer_func = self._toolkit_file_write_formats[file_format]
             except KeyError:
-                raise ValueError(
-                    f"Unsupported file format: {file_format})"
-                ) from None
+                raise ValueError(f"Unsupported file format: {file_format})") from None
             rdmol = self.to_rdkit(molecule)
             writer = writer_func(file_obj)
             try:
                 writer.write(rdmol)
             finally:
                 writer.close()
-        
 
     def to_file(self, molecule, file_path, file_format):
         """
@@ -715,7 +731,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         rdmol = Chem.MolFromSmiles(smiles, sanitize=False)
         if rdmol is None:
             raise ParseError("Unable to parse the SMILES string")
-        
+
         # strip the atom map from the molecule if it has one
         # so we don't affect the sterochemistry tags
         for atom in rdmol.GetAtoms():

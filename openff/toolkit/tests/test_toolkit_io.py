@@ -13,21 +13,19 @@ Tests for I/O functionality of the toolkit wrappers
 # =============================================================================================
 
 import os
-import sys
-from io import BytesIO, StringIO
-import pytest
 import pathlib
+import sys
 import tempfile
+from io import BytesIO, StringIO
+
 import numpy as np
+import pytest
 from numpy.testing import assert_allclose
 from simtk import unit
 
-from openff.toolkit.utils import OpenEyeToolkitWrapper, RDKitToolkitWrapper
-from openff.toolkit.utils import exceptions
-from openff.toolkit.topology.molecule import Molecule
-
 from openff.toolkit.tests import create_molecules
-
+from openff.toolkit.topology.molecule import Molecule
+from openff.toolkit.utils import OpenEyeToolkitWrapper, RDKitToolkitWrapper, exceptions
 
 # ================================================================
 # Data records used for testing.
@@ -86,23 +84,28 @@ CAFFEINE
 $$$$
 """
 
-CAFFEINE_2D_COORDS = np.array([
-    
-    (-1.1875, -9.6542, 0.0000),
-    (-1.1875, -8.9625, 0.0000),
-    (-1.8125, -10.0292, 0.0000),
-    (-2.4167, -8.9625, 0.0000),
-    (-2.4167, -9.6542, 0.0000),
-    (-1.8125, -8.6000, 0.0000),
-    (-0.5000, -9.8917, 0.0000),
-    (-0.5000, -8.7625, 0.0000),
-    (-0.1125, -9.3042, 0.0000),
-    (-3.0250, -10.0375, 0.0000),
-    (-1.8125, -7.8917, 0.0000),
-    (-1.8125, -10.7417, 0.0000),
-    (-3.0250, -8.6000, 0.0000),
-    (-0.2917, -8.0750, 0.0000),
-    ], np.double) * unit.angstrom
+CAFFEINE_2D_COORDS = (
+    np.array(
+        [
+            (-1.1875, -9.6542, 0.0000),
+            (-1.1875, -8.9625, 0.0000),
+            (-1.8125, -10.0292, 0.0000),
+            (-2.4167, -8.9625, 0.0000),
+            (-2.4167, -9.6542, 0.0000),
+            (-1.8125, -8.6000, 0.0000),
+            (-0.5000, -9.8917, 0.0000),
+            (-0.5000, -8.7625, 0.0000),
+            (-0.1125, -9.3042, 0.0000),
+            (-3.0250, -10.0375, 0.0000),
+            (-1.8125, -7.8917, 0.0000),
+            (-1.8125, -10.7417, 0.0000),
+            (-3.0250, -8.6000, 0.0000),
+            (-0.2917, -8.0750, 0.0000),
+        ],
+        np.double,
+    )
+    * unit.angstrom
+)
 
 
 # From https://www.ebi.ac.uk/chembl/compound_report_card/CHEMBL113/
@@ -286,32 +289,38 @@ M  END
 $$$$
 """
 
-CAFFEINE_3D_COORDS = np.array([
-    (0.4700,    2.5688,    0.0006),
-    (-3.1271,   -0.4436,   -0.0003),
-    (-0.9686,   -1.3125,    0.0000),
-    (2.2182,    0.1412,   -0.0003),
-    (-1.3477,    1.0797,   -0.0001),
-    (1.4119,   -1.9372,    0.0002),
-    (0.8579,    0.2592,   -0.0008),
-    (0.3897,   -1.0264,   -0.0004),
-    (0.0307,    1.4220,   -0.0006),
-    (-1.9061,   -0.2495,   -0.0004),
-    (2.5032,   -1.1998,    0.0003),
-    (-1.4276,   -2.6960,    0.0008),
-    (3.1926,    1.2061,    0.0003),
-    (-2.2969,    2.1881,    0.0007),
-    (3.5163,   -1.5787,    0.0008),
-    (-1.0451,   -3.1973,   -0.8937),
-    (-2.5186,   -2.7596,    0.0011),
-    (-1.0447,   -3.1963,    0.8957),
-    (4.1992,    0.7801,    0.0002),
-    (3.0468,    1.8092,   -0.8992),
-    (3.0466,    1.8083,    0.9004),
-    (-1.8087,    3.1651,   -0.0003),
-    (-2.9322,    2.1027,    0.8881),
-    (-2.9346,    2.1021,   -0.8849),
-    ], np.double) * unit.angstrom
+CAFFEINE_3D_COORDS = (
+    np.array(
+        [
+            (0.4700, 2.5688, 0.0006),
+            (-3.1271, -0.4436, -0.0003),
+            (-0.9686, -1.3125, 0.0000),
+            (2.2182, 0.1412, -0.0003),
+            (-1.3477, 1.0797, -0.0001),
+            (1.4119, -1.9372, 0.0002),
+            (0.8579, 0.2592, -0.0008),
+            (0.3897, -1.0264, -0.0004),
+            (0.0307, 1.4220, -0.0006),
+            (-1.9061, -0.2495, -0.0004),
+            (2.5032, -1.1998, 0.0003),
+            (-1.4276, -2.6960, 0.0008),
+            (3.1926, 1.2061, 0.0003),
+            (-2.2969, 2.1881, 0.0007),
+            (3.5163, -1.5787, 0.0008),
+            (-1.0451, -3.1973, -0.8937),
+            (-2.5186, -2.7596, 0.0011),
+            (-1.0447, -3.1963, 0.8957),
+            (4.1992, 0.7801, 0.0002),
+            (3.0468, 1.8092, -0.8992),
+            (3.0466, 1.8083, 0.9004),
+            (-1.8087, 3.1651, -0.0003),
+            (-2.9322, 2.1027, 0.8881),
+            (-2.9346, 2.1021, -0.8849),
+        ],
+        np.double,
+    )
+    * unit.angstrom
+)
 
 # ========================================================
 # Various records for aspirin
@@ -606,13 +615,16 @@ $$$$
 # Used to test that _cls is passed correctly
 # ========================================================
 
+
 class SingingMolecule(Molecule):
     def sing(self):
         return "The hills are alive with sound of music!"
 
+
 # ========================================================
 # Manage the input files
 # ========================================================
+
 
 class FilenameDescriptor:
     def __init__(self, content):
@@ -623,7 +635,7 @@ class FilenameDescriptor:
         basename, _, ext = name.rpartition("_")
         self.filename = f"{basename}.{ext}"
 
-    def __get__(self, obj, objtype = None):
+    def __get__(self, obj, objtype=None):
         # Have we been called before?
         filename = getattr(obj, self.private_name, None)
         if filename is None:
@@ -634,7 +646,7 @@ class FilenameDescriptor:
             # Save the filename to obj's private_name.
             filename = str(file_path)
             setattr(obj, self.private_name, filename)
-            
+
         # Return the path as a string
         return filename
 
@@ -643,41 +655,44 @@ class FileManager:
     def __init__(self, temporary_directory):
         # Use Python's object lifetime to manage directory cleanup
         self.temporary_directory = temporary_directory
-        
+
         self.dir_path = pathlib.Path(temporary_directory.name)
 
     caffeine_2d_sdf = FilenameDescriptor(CAFFEINE_2D_SDF)
     caffeine_3d_sdf = FilenameDescriptor(CAFFEINE_3D_SDF)
     caffeine_smi = FilenameDescriptor(CAFFEINE_SMI)
-    
+
     aspirin_2d_sdf = FilenameDescriptor(ASPIRIN_2D_SDF)
     aspirin_3d_sdf = FilenameDescriptor(ASPIRIN_3D_SDF)
     aspirin_smi = FilenameDescriptor(ASPIRIN_SMI)
 
     chebi_1148_sdf = FilenameDescriptor(CHEBI_1148_SDF)
 
-    
+
 file_manager = FileManager(tempfile.TemporaryDirectory())
+
 
 class FileobjDescriptor:
     def __init__(self, content):
         self.content = content.encode("utf8")
 
-    def __get__(self, obj, objtype = None):
+    def __get__(self, obj, objtype=None):
         # Have we been called before?
         return BytesIO(self.content)
+
 
 class FileObjManager:
     caffeine_2d_sdf = FileobjDescriptor(CAFFEINE_2D_SDF)
     caffeine_3d_sdf = FileobjDescriptor(CAFFEINE_3D_SDF)
     caffeine_smi = FileobjDescriptor(CAFFEINE_SMI)
-    
+
     aspirin_2d_sdf = FileobjDescriptor(ASPIRIN_2D_SDF)
     aspirin_3d_sdf = FileobjDescriptor(ASPIRIN_3D_SDF)
     aspirin_smi = FileobjDescriptor(ASPIRIN_SMI)
 
     chebi_1148_sdf = FileobjDescriptor(CHEBI_1148_SDF)
-    
+
+
 fileobj_manager = FileObjManager()
 
 # ========================================================
@@ -695,7 +710,9 @@ class BaseFromFileIO:
 
     @pytest.mark.parametrize("file_format", ("SDF", "sdf", "sdF", "MOL", "mol"))
     def test_from_file_obj_sdf_ignores_file_format_case(self, file_format):
-        mols = self.toolkit_wrapper.from_file_obj(fileobj_manager.caffeine_2d_sdf, file_format)
+        mols = self.toolkit_wrapper.from_file_obj(
+            fileobj_manager.caffeine_2d_sdf, file_format
+        )
         self._test_from_sdf_ignores_file_format_case(mols)
 
     def _test_from_sdf_ignores_file_format_case(self, mols):
@@ -704,7 +721,7 @@ class BaseFromFileIO:
         assert mol.name == "caffeine"
 
     # == Test variations of "smi" format
-        
+
     @pytest.mark.parametrize("file_format", ("SMI", "smi", "sMi"))
     def test_from_file_smi_ignores_file_format_case(self, file_format):
         mols = self.toolkit_wrapper.from_file(file_manager.caffeine_smi, file_format)
@@ -712,7 +729,9 @@ class BaseFromFileIO:
 
     @pytest.mark.parametrize("file_format", ("SMI", "smi", "sMi"))
     def test_from_fileobj_smi_ignores_file_format_case(self, file_format):
-        mols = self.toolkit_wrapper.from_file_obj(fileobj_manager.caffeine_smi, file_format)
+        mols = self.toolkit_wrapper.from_file_obj(
+            fileobj_manager.caffeine_smi, file_format
+        )
         self._test_from_smi_ignores_file_format_case(mols)
 
     def _test_from_smi_ignores_file_format_case(self, mols):
@@ -726,24 +745,29 @@ class BaseFromFileIO:
     # == Test format "qwe" raises an exception
 
     def test_from_file_qwe_format_raises_exception(self):
-        with pytest.raises(ValueError, match = "Unsupported file format: QWE"):
-            mols = self.toolkit_wrapper.from_file(file_manager.caffeine_2d_sdf, file_format = "qwe")
-            
+        with pytest.raises(ValueError, match="Unsupported file format: QWE"):
+            mols = self.toolkit_wrapper.from_file(
+                file_manager.caffeine_2d_sdf, file_format="qwe"
+            )
+
     def test_from_file_obj_qwe_format_raises_exception(self):
-        with pytest.raises(ValueError, match = "Unsupported file format: QWE"):
-            mols = self.toolkit_wrapper.from_file_obj(fileobj_manager.caffeine_2d_sdf, file_format = "qwe")
-            
-        
+        with pytest.raises(ValueError, match="Unsupported file format: QWE"):
+            mols = self.toolkit_wrapper.from_file_obj(
+                fileobj_manager.caffeine_2d_sdf, file_format="qwe"
+            )
+
     # == Test reading SDF 2D coordinates
-        
+
     def test_from_file_2D_sdf_coords(self):
         mol = self.toolkit_wrapper.from_file(file_manager.caffeine_2d_sdf, "sdf")[0]
         self._test_2D_sdf_coords(mol)
 
     def test_from_file_obj_2D_sdf_coords(self):
-        mol = self.toolkit_wrapper.from_file_obj(fileobj_manager.caffeine_2d_sdf, "sdf")[0]
+        mol = self.toolkit_wrapper.from_file_obj(
+            fileobj_manager.caffeine_2d_sdf, "sdf"
+        )[0]
         self._test_2D_sdf_coords(mol)
-        
+
     def _test_2D_sdf_coords(self, mol):
         assert mol.n_atoms == 24
         assert mol.n_bonds == 25
@@ -753,16 +777,18 @@ class BaseFromFileIO:
         assert conformer.unit == unit.angstrom
 
         # Beyond this are the hydrogens, which are added by algorithm.
-        assert_allclose(conformer[:CAFFEINE_2D_COORDS.shape[0]], CAFFEINE_2D_COORDS)
-        
+        assert_allclose(conformer[: CAFFEINE_2D_COORDS.shape[0]], CAFFEINE_2D_COORDS)
+
     # == Test reading SDF 3D coordinates
-    
+
     def test_from_file_3D_sdf_keeps_hydrogens(self):
         mol = self.toolkit_wrapper.from_file(file_manager.caffeine_3d_sdf, "sdf")[0]
         self._test_3D_sdf_keeps_hydrogens(mol)
-        
+
     def test_from_file_obj_3D_sdf_keeps_hydrogens(self):
-        mol = self.toolkit_wrapper.from_file_obj(fileobj_manager.caffeine_3d_sdf, "sdf")[0]
+        mol = self.toolkit_wrapper.from_file_obj(
+            fileobj_manager.caffeine_3d_sdf, "sdf"
+        )[0]
         self._test_3D_sdf_keeps_hydrogens(mol)
 
     def _test_3D_sdf_keeps_hydrogens(self, mol):
@@ -780,54 +806,67 @@ class BaseFromFileIO:
 
     def test_from_file_with_undefined_stereo(self):
         with pytest.raises(
-                exceptions.UndefinedStereochemistryError,
-                match = f"Unable to make OFFMol from {self.tk_mol_name}: {self.tk_mol_name} has unspecified stereochemistry",
-                ):
+            exceptions.UndefinedStereochemistryError,
+            match=f"Unable to make OFFMol from {self.tk_mol_name}: {self.tk_mol_name} has unspecified stereochemistry",
+        ):
             self.toolkit_wrapper.from_file(file_manager.chebi_1148_sdf, "sdf")
 
     def test_from_file_obj_with_undefined_stereo(self):
         with pytest.raises(
-                exceptions.UndefinedStereochemistryError,
-                match = f"Unable to make OFFMol from {self.tk_mol_name}: {self.tk_mol_name} has unspecified stereochemistry",
-                ):
+            exceptions.UndefinedStereochemistryError,
+            match=f"Unable to make OFFMol from {self.tk_mol_name}: {self.tk_mol_name} has unspecified stereochemistry",
+        ):
             self.toolkit_wrapper.from_file_obj(fileobj_manager.chebi_1148_sdf, "sdf")
 
     def test_from_file_with_undefined_stereo_allowed(self):
-        self.toolkit_wrapper.from_file(file_manager.chebi_1148_sdf, "sdf", allow_undefined_stereo=True)[0]
+        self.toolkit_wrapper.from_file(
+            file_manager.chebi_1148_sdf, "sdf", allow_undefined_stereo=True
+        )[0]
 
     def test_from_file_obj_with_undefined_stereo_allowed(self):
-        self.toolkit_wrapper.from_file_obj(fileobj_manager.chebi_1148_sdf, "sdf", allow_undefined_stereo=True)[0]
-
+        self.toolkit_wrapper.from_file_obj(
+            fileobj_manager.chebi_1148_sdf, "sdf", allow_undefined_stereo=True
+        )[0]
 
     # == Test passing in a user-defined _cls
 
-    @pytest.mark.parametrize("name,file_format", [("caffeine_2d_sdf", "SDF"), ("caffeine_smi", "SMI")])
+    @pytest.mark.parametrize(
+        "name,file_format", [("caffeine_2d_sdf", "SDF"), ("caffeine_smi", "SMI")]
+    )
     def test_from_file_handles_cls(self, name, file_format):
         filename = getattr(file_manager, name)
-        mol = self.toolkit_wrapper.from_file(filename, file_format, _cls = SingingMolecule)[0]
+        mol = self.toolkit_wrapper.from_file(
+            filename, file_format, _cls=SingingMolecule
+        )[0]
         mol.sing()
 
-    @pytest.mark.parametrize("name,file_format", [("caffeine_2d_sdf", "SDF"), ("caffeine_smi", "SMI")])
+    @pytest.mark.parametrize(
+        "name,file_format", [("caffeine_2d_sdf", "SDF"), ("caffeine_smi", "SMI")]
+    )
     def test_from_file_handles_cls(self, name, file_format):
         file_obj = getattr(fileobj_manager, name)
-        mol = self.toolkit_wrapper.from_file_obj(file_obj, file_format, _cls = SingingMolecule)[0]
+        mol = self.toolkit_wrapper.from_file_obj(
+            file_obj, file_format, _cls=SingingMolecule
+        )[0]
         mol.sing()
-        
-    
+
     ## def to_file_obj(self):
     ##     molecule, file_obj, file_format
 
     ## def to_file(self):
     ##     pass
 
+
 @pytest.fixture(scope="class")
 def init_toolkit(request):
     request.cls.toolkit_wrapper = request.cls.toolkit_wrapper_class()
+
 
 @pytest.mark.usefixtures("init_toolkit")
 class TestOpenEyeToolkitFromFileIO(BaseFromFileIO):
     toolkit_wrapper_class = OpenEyeToolkitWrapper
     tk_mol_name = "OEMol"
+
 
 @pytest.mark.usefixtures("init_toolkit")
 class TestRDKitToolkitFromFileIO(BaseFromFileIO):
@@ -841,9 +880,11 @@ class TestRDKitToolkitFromFileIO(BaseFromFileIO):
             mol = self.toolkit_wrapper.from_file_obj(file_obj, "SMI")[0]
         assert mol.name == "CHEMBL113"
 
+
 # ========================================================
 # Base class to test to_file() and to_file_obj()
 # ========================================================
+
 
 @pytest.fixture(scope="class")
 def tmpdir(request):
@@ -854,10 +895,11 @@ def tmpdir(request):
 
 
 def assert_is_ethanol_sdf(f):
-    assert f.readline() == "ethanol\n" # title line
-    f.readline() # ignore next two lines
+    assert f.readline() == "ethanol\n"  # title line
+    f.readline()  # ignore next two lines
     f.readline()
-    assert f.readline()[:6] == "  9  8" # check 9 atoms, 8 bonds
+    assert f.readline()[:6] == "  9  8"  # check 9 atoms, 8 bonds
+
 
 def assert_is_ethanol_smi(f):
     line = f.readline()
@@ -865,16 +907,17 @@ def assert_is_ethanol_smi(f):
     assert_is_ethanol_smiles(line.split()[0])
     assert not f.readline(), "should only have one line"
 
+
 def assert_is_ethanol_smiles(smiles):
     assert smiles.count("[H]") == 6
     assert smiles.count("O") == 1
     assert smiles.count("C") == 2
-    
-        
+
+
 class BaseToFileIO:
     def get_tmpfile(self, name):
         return os.path.join(self.tmpdir.name, name)
-    
+
     # == Test variations of "sdf" and "mol"
 
     @pytest.mark.parametrize("format_name", ["SDF", "sdf", "sDf", "mol", "MOL"])
@@ -893,7 +936,10 @@ class BaseToFileIO:
 
     def test_to_file_obj_sdf_with_bytesio(self):
         f = BytesIO()
-        with pytest.raises(ValueError, match = "Need a text mode file object like StringIO or a file opened with mode 't'"):
+        with pytest.raises(
+            ValueError,
+            match="Need a text mode file object like StringIO or a file opened with mode 't'",
+        ):
             self.toolkit_wrapper.to_file_obj(ETHANOL, f, "sdf")
 
     # === Test variations of "smi"
@@ -914,7 +960,10 @@ class BaseToFileIO:
 
     def test_to_file_obj_smi_with_bytesio(self):
         f = BytesIO()
-        with pytest.raises(ValueError, match = "Need a text mode file object like StringIO or a file opened with mode 't'"):
+        with pytest.raises(
+            ValueError,
+            match="Need a text mode file object like StringIO or a file opened with mode 't'",
+        ):
             self.toolkit_wrapper.to_file_obj(ETHANOL, f, "smi")
 
     # === Test unsupported format
@@ -924,9 +973,11 @@ class BaseToFileIO:
             with pytest.raises(ValueError, match=f"Unsupported file format: QWE"):
                 self.toolkit_wrapper.to_file(ETHANOL, fileobj.name, "QWE")
 
+
 @pytest.mark.usefixtures("init_toolkit", "tmpdir")
 class TestOpenEyeToolkitToFileIO(BaseToFileIO):
     toolkit_wrapper_class = OpenEyeToolkitWrapper
+
 
 @pytest.mark.usefixtures("init_toolkit", "tmpdir")
 class TestRDKitToolkitToFileIO(BaseToFileIO):
@@ -937,6 +988,7 @@ class TestRDKitToolkitToFileIO(BaseToFileIO):
 # Base class to test SMILES parsing
 # ========================================================
 
+
 class BaseSmiles:
     def test_parse_methane_with_implicit_Hs(self):
         mol = self.toolkit_wrapper.from_smiles("C")
@@ -944,26 +996,29 @@ class BaseSmiles:
         assert mol.n_atoms == 5
         assert mol.n_bonds == 4
         assert mol.partial_charges is None
-        
+
     def test_parse_methane_with_implicit_Hs_but_said_they_are_explicit(self):
         with pytest.raises(
-                ValueError,
-                match = (
-                    "'hydrogens_are_explicit' was specified as True, but (OpenEye|RDKit) [Tt]oolkit interpreted SMILES "
-                    "[^ ]+ as having implicit hydrogen. If this SMILES is intended to express all explicit hydrogens "
-                    f"in the molecule, then you should construct the desired molecule as an {self.tk_mol_name}"
-                    )):
+            ValueError,
+            match=(
+                "'hydrogens_are_explicit' was specified as True, but (OpenEye|RDKit) [Tt]oolkit interpreted SMILES "
+                "[^ ]+ as having implicit hydrogen. If this SMILES is intended to express all explicit hydrogens "
+                f"in the molecule, then you should construct the desired molecule as an {self.tk_mol_name}"
+            ),
+        ):
             mol = self.toolkit_wrapper.from_smiles("C", hydrogens_are_explicit=True)
-    
+
     def test_parse_methane_with_explicit_Hs(self):
         mol = self.toolkit_wrapper.from_smiles("[C]([H])([H])([H])([H])")
         # add hydrogens
         assert mol.n_atoms == 5
         assert mol.n_bonds == 4
         assert molecule.partial_charges is None
-    
+
     def test_parse_methane_with_explicit_Hs(self):
-        mol = self.toolkit_wrapper.from_smiles("[C]([H])([H])([H])([H])", hydrogens_are_explicit=True)
+        mol = self.toolkit_wrapper.from_smiles(
+            "[C]([H])([H])([H])([H])", hydrogens_are_explicit=True
+        )
         # add hydrogens
         assert mol.n_atoms == 5
         assert mol.n_bonds == 4
@@ -976,10 +1031,13 @@ class BaseSmiles:
 
     @pytest.mark.parametrize(
         "title, smiles",
-        [("unspec_chiral_smiles", r"C\C(F)=C(/F)CC(C)(Cl)Br"),
-         ("spec_chiral_smiles", r"C\C(F)=C(/F)C[C@@](C)(Cl)Br"),
-         ("unspec_db_smiles", r"CC(F)=C(F)C[C@@](C)(Cl)Br"),
-         ("spec_db_smiles", r"C\C(F)=C(/F)C[C@@](C)(Cl)Br"),])
+        [
+            ("unspec_chiral_smiles", r"C\C(F)=C(/F)CC(C)(Cl)Br"),
+            ("spec_chiral_smiles", r"C\C(F)=C(/F)C[C@@](C)(Cl)Br"),
+            ("unspec_db_smiles", r"CC(F)=C(F)C[C@@](C)(Cl)Br"),
+            ("spec_db_smiles", r"C\C(F)=C(/F)C[C@@](C)(Cl)Br"),
+        ],
+    )
     def test_smiles_missing_stereochemistry(self, title, smiles):
         if "unspec" in title:
             with pytest.raises(exceptions.UndefinedStereochemistryError):
@@ -995,7 +1053,7 @@ class BaseSmiles:
     def test_from_smiles_with_atom_map(self, smiles, expected_map):
         mol = self.toolkit_wrapper.from_smiles(smiles)
         assert mol.properties["atom_map"] == expected_map
-        
+
     def test_ethanol_to_smiles(self):
         smiles = self.toolkit_wrapper.to_smiles(ETHANOL)
         assert_is_ethanol_smiles(smiles)
@@ -1006,18 +1064,17 @@ class BaseSmiles:
         assert_is_ethanol_smiles(smiles)
 
 
-            
 @pytest.mark.usefixtures("init_toolkit")
 class TestOpenEyeToolkitSmiles(BaseSmiles):
     toolkit_wrapper_class = OpenEyeToolkitWrapper
     tk_mol_name = "OEMol"
+
 
 @pytest.mark.usefixtures("init_toolkit")
 class TestRDKitToolkitSmiles(BaseSmiles):
     toolkit_wrapper_class = RDKitToolkitWrapper
     tk_mol_name = "RDMol"
 
-    
-    
+
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__] + sys.argv[1:]))
