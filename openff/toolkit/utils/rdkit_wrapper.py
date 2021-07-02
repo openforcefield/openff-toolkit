@@ -297,7 +297,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         mols = list()
         if (file_format == "MOL") or (file_format == "SDF"):
-            sdf_supplier = Chem.SupplierFromFilename(
+            sdf_supplier = Chem.ForwardSDMolSupplier(
                 file_path, removeHs=False, sanitize=False, strictParsing=True
             )
             mols.extend(
