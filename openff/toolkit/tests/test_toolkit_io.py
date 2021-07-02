@@ -989,9 +989,23 @@ class BaseSmiles:
             mol = self.toolkit_wrapper.from_smiles(smiles)
         assert mol.n_atoms == 18
 
+    @pytest.mark.parametrize(
+        "smiles, expected_map", [("[Cl:1][H]", {0: 1}), ("[Cl:1][H:2]", {0: 1, 1: 2})]
+    )
+    def test_from_smiles_with_atom_map(self, smiles, expected_map):
+        mol = self.toolkit_wrapper.from_smiles(smiles)
+        assert mol.properties["atom_map"] == expected_map
+        
     def test_ethanol_to_smiles(self):
         smiles = self.toolkit_wrapper.to_smiles(ETHANOL)
         assert_is_ethanol_smiles(smiles)
+
+    def test_round_trip_ethanol_to_smiles_adds_hydrogens(self):
+        mol = self.toolkit_wrapper.from_smiles("CCO")
+        smiles = self.toolkit_wrapper.to_smiles(mol)
+        assert_is_ethanol_smiles(smiles)
+
+
             
 @pytest.mark.usefixtures("init_toolkit")
 class TestOpenEyeToolkitSmiles(BaseSmiles):
