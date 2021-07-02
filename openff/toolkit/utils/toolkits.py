@@ -99,6 +99,7 @@ from .exceptions import (
     MessageException,
     MissingDependencyError,
     MissingPackageError,
+    ParseError,
     ToolkitUnavailableException,
     UndefinedStereochemistryError,
 )
