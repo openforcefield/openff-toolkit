@@ -283,7 +283,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         oeformat = get_oeformat(file_format)
         ifs = oechem.oemolistream(file_path)
         if not ifs.IsValid():
-            # Get Python to report ane error message, if possible.
+            # Get Python to report an error message, if possible.
             # This can distinguish between FileNotFound, IsADirectoryError, etc.
             open(file_path).close()
             # If that worked, then who knows. Fail anyway.
@@ -382,6 +382,13 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         oemol = self.to_openeye(molecule)
         ofs = oechem.oemolostream(file_path)
+        if not ofs.IsValid():
+            # Get Python to report an error message, if possible.
+            # This can distinguish between PermissionError, IsADirectoryError, etc.
+            open(file_path, "wb").close()
+            # If that worked, then who knows. Fail anyway.
+            raise OSError("Unable to open file")
+            
         openeye_format = get_oeformat(file_format)
         ofs.SetFormat(openeye_format)
         

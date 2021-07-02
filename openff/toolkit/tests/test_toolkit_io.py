@@ -1068,12 +1068,20 @@ class BaseToFileIO:
         ):
             self.toolkit_wrapper.to_file_obj(ETHANOL, f, "smi")
 
-    # === Test unsupported format
+    # === Test format "qwe" raises an exception
 
     def test_to_file_qwe_format_raises_exception(self):
         with tempfile.NamedTemporaryFile(suffix=".smi") as fileobj:
             with pytest.raises(ValueError, match=f"Unsupported file format: QWE"):
                 self.toolkit_wrapper.to_file(ETHANOL, fileobj.name, "QWE")
+
+    # === Test writing to a file that does not exist
+
+    @pytest.mark.parametrize("format_name", ["smi", "sdf", "mol"])
+    def test_to_file_when_the_file_does_not_exist(self, format_name):
+        filename = self.get_tmpfile("does/not/exist.smi")
+        with pytest.raises(OSError):
+            self.toolkit_wrapper.to_file(ETHANOL, filename, format_name)
 
 
 @pytest.mark.usefixtures("init_toolkit", "tmpdir")
