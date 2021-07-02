@@ -58,6 +58,22 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
   was not set to the value specified by the vdW and Electrostatics handlers.
 - [PR #909](https://github.com/openforcefield/openforcefield/pull/909): It is now possible to create an
   OpenMM system with virtual sites created via the `Molecule` virtual site API
+- [PR  #1006](https://github.com/openforcefield/openff-toolkit/pull/1006)
+  Many small fixes to the toolkit wrapper I/O for better error
+  handling, improved consistency between reading from a file vs. file
+  object, and improved consistency between the RDKit and OEChem
+  toolkit wrappers. For the full list see
+  [Issue #1005](https://github.com/openforcefield/openff-toolkit/issues/1005). Some
+  of the more significant changes are:
+  - RDKitToolkitWrapper's `from_file_obj()` now uses the same
+    structure normaliation as `from_file()`.
+  - Writing to a SMILES file now uses the same SMILES as
+  `to_smiles()`, and (for RDKit) does not include a header line.
+  - `from_smiles()` now raises an `openff.toolkit.utils.ParseError` if
+  the SMILES could not be parsed.
+  - OEChem input and output files now raise an OSError if the file
+  could not be opened.
+  - All input file object readers now support file objects open in binary mode.
 
 ### Examples added
 
