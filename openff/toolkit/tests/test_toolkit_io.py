@@ -23,7 +23,7 @@ from simtk import unit
 
 from openff.toolkit.utils import OpenEyeToolkitWrapper, RDKitToolkitWrapper
 from openff.toolkit.utils import exceptions
-
+from openff.toolkit.topology.molecule import Molecule
 
 # ====================================
 # Data records used for testing.
@@ -596,6 +596,14 @@ $$$$
 """
 
 # ============================
+# Used to test that _cls is passed correctly
+# ============================
+
+class SingingMolecule(Molecule):
+    def sing(self):
+        return "The hills are alive with sound of music!"
+
+# ============================
 # Manage the input files
 # ============================
 
@@ -712,7 +720,7 @@ class BaseFileIO:
         assert mol.n_bonds == 25
         assert mol.n_conformers == 0
 
-    # == Test format "qwe"
+    # == Test format "qwe" raises an exception
 
     def test_from_file_qwe_format_raises_exception(self):
         with pytest.raises(ValueError, match = "Unsupported file format: QWE"):
@@ -723,10 +731,17 @@ class BaseFileIO:
             mols = self.toolkit_wrapper.from_file_obj(fileobj_manager.caffeine_2d_sdf, file_format = "qwe")
             
         
-    # == Test reading SDF 2D and 3D coordinates
+    # == Test reading SDF 2D coordinates
         
     def test_from_file_2D_sdf_coords(self):
         mol = self.toolkit_wrapper.from_file(file_manager.caffeine_2d_sdf, "sdf")[0]
+        self._test_2D_sdf_coords(mol)
+
+    def test_from_file_obj_2D_sdf_coords(self):
+        mol = self.toolkit_wrapper.from_file_obj(fileobj_manager.caffeine_2d_sdf, "sdf")[0]
+        self._test_2D_sdf_coords(mol)
+        
+    def _test_2D_sdf_coords(self, mol):
         assert mol.n_atoms == 24
         assert mol.n_bonds == 25
         assert mol.n_conformers == 1
@@ -737,8 +752,17 @@ class BaseFileIO:
         # Beyond this are the hydrogens, which are added by algorithm.
         assert_allclose(conformer[:CAFFEINE_2D_COORDS.shape[0]], CAFFEINE_2D_COORDS)
         
+    # == Test reading SDF 3D coordinates
+    
     def test_from_file_3D_sdf_keeps_hydrogens(self):
         mol = self.toolkit_wrapper.from_file(file_manager.caffeine_3d_sdf, "sdf")[0]
+        self._test_3D_sdf_keeps_hydrogens(mol)
+        
+    def test_from_file_obj_3D_sdf_keeps_hydrogens(self):
+        mol = self.toolkit_wrapper.from_file_obj(fileobj_manager.caffeine_3d_sdf, "sdf")[0]
+        self._test_3D_sdf_keeps_hydrogens(mol)
+
+    def _test_3D_sdf_keeps_hydrogens(self, mol):
         assert mol.n_atoms == 24
         assert mol.n_bonds == 25
         assert mol.n_conformers == 1
@@ -772,6 +796,21 @@ class BaseFileIO:
         self.toolkit_wrapper.from_file_obj(fileobj_manager.chebi_1148_sdf, "sdf", allow_undefined_stereo=True)[0]
 
 
+    # == Test passing in a user-defined _cls
+
+    @pytest.mark.parametrize("name,file_format", [("caffeine_2d_sdf", "SDF"), ("caffeine_smi", "SMI")])
+    def test_from_file_handles_cls(self, name, file_format):
+        filename = getattr(file_manager, name)
+        mol = self.toolkit_wrapper.from_file(filename, file_format, _cls = SingingMolecule)[0]
+        mol.sing()
+
+    @pytest.mark.parametrize("name,file_format", [("caffeine_2d_sdf", "SDF"), ("caffeine_smi", "SMI")])
+    def test_from_file_handles_cls(self, name, file_format):
+        file_obj = getattr(fileobj_manager, name)
+        mol = self.toolkit_wrapper.from_file_obj(file_obj, file_format, _cls = SingingMolecule)[0]
+        mol.sing()
+        
+    
     ## def test_from_file(selffile_path, file_format, allow_undefined_stereo=False, _cls=None):
     ##     pass
 
