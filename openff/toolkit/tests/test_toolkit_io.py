@@ -28,16 +28,16 @@ from openff.toolkit.topology.molecule import Molecule
 
 from openff.toolkit.tests import create_molecules
 
-# ====================================
+# ================================================================
 # Data records used for testing.
-# ====================================
+# ================================================================
 
 ETHANOL = create_molecules.create_ethanol()
 ETHANOL.name = "ethanol"
 
-# ============================
+# ========================================================
 # Various records for caffeine
-# ============================
+# ========================================================
 
 # From https://www.ebi.ac.uk/chembl/compound_report_card/CHEMBL113/
 CAFFEINE_2D_SDF = """\
@@ -312,9 +312,9 @@ CAFFEINE_3D_COORDS = np.array([
     (-2.9346,    2.1021,   -0.8849),
     ], np.double) * unit.angstrom
 
-# ============================
+# ========================================================
 # Various records for aspirin
-# ============================
+# ========================================================
 
 
 # From https://www.ebi.ac.uk/chembl/compound_report_card/CHEMBL25/
@@ -566,9 +566,9 @@ $$$$
 """
 
 
-# ============================
+# ========================================================
 # CHEBI:1148 triggers 'allow_undefined_stereo' exceptions
-# ============================
+# ========================================================
 
 CHEBI_1148_SDF = """\
 CHEBI:1148
@@ -601,17 +601,17 @@ CHEBI:1148
 $$$$
 """
 
-# ============================
+# ========================================================
 # Used to test that _cls is passed correctly
-# ============================
+# ========================================================
 
 class SingingMolecule(Molecule):
     def sing(self):
         return "The hills are alive with sound of music!"
 
-# ============================
+# ========================================================
 # Manage the input files
-# ============================
+# ========================================================
 
 class FilenameDescriptor:
     def __init__(self, content):
@@ -679,9 +679,9 @@ class FileObjManager:
     
 fileobj_manager = FileObjManager()
 
-# ============================
+# ========================================================
 # Base class to test from_file() and from_file_obj()
-# ============================
+# ========================================================
 
 
 class BaseFromFileIO:
@@ -840,9 +840,9 @@ class TestRDKitToolkitFromFileIO(BaseFromFileIO):
             mol = self.toolkit_wrapper.from_file_obj(file_obj, "SMI")[0]
         assert mol.name == "CHEMBL113"
 
-# ============================
+# ========================================================
 # Base class to test to_file() and to_file_obj()
-# ============================
+# ========================================================
 
 @pytest.fixture(scope="class")
 def tmpdir(request):
@@ -923,12 +923,61 @@ class BaseToFileIO:
 @pytest.mark.usefixtures("init_toolkit", "tmpdir")
 class TestOpenEyeToolkitToFileIO(BaseToFileIO):
     toolkit_wrapper_class = OpenEyeToolkitWrapper
-    tk_mol_name = "OEMol"
 
 @pytest.mark.usefixtures("init_toolkit", "tmpdir")
 class TestRDKitToolkitToFileIO(BaseToFileIO):
     toolkit_wrapper_class = RDKitToolkitWrapper
-    tk_mol_name = "RDMol"
+
+
+# ========================================================
+# Base class to test SMILES parsing
+# ========================================================
+
+class BaseSmiles:
+    def test_parse_methane_with_implicit_Hs(self):
+        mol = self.toolkit_wrapper.from_smiles("C")
+        # add hydrogens
+        assert mol.n_atoms == 5
+        assert mol.n_bonds == 4
         
+    def test_parse_methane_with_implicit_Hs_but_said_they_are_explicit(self):
+        with pytest.raises(
+                ValueError,
+                match = (
+                    "'hydrogens_are_explicit' was specified as True, but (OpenEye|RDKit) [Tt]oolkit interpreted SMILES "
+                    "[^ ]+ as having implicit hydrogen. If this SMILES is intended to express all explicit hydrogens "
+                    f"in the molecule, then you should construct the desired molecule as an {self.tk_mol_name}"
+                    )):
+            mol = self.toolkit_wrapper.from_smiles("C", hydrogens_are_explicit=True)
+    
+    def test_parse_methane_with_explicit_Hs(self):
+        mol = self.toolkit_wrapper.from_smiles("[C]([H])([H])([H])([H])")
+        # add hydrogens
+        assert mol.n_atoms == 5
+        assert mol.n_bonds == 4
+    
+    def test_parse_methane_with_explicit_Hs(self):
+        mol = self.toolkit_wrapper.from_smiles("[C]([H])([H])([H])([H])", hydrogens_are_explicit=True)
+        # add hydrogens
+        assert mol.n_atoms == 5
+        assert mol.n_bonds == 4
+
+    def test_parse_bad_smiles(self):
+        with pytest.raises(ValueError, match="Unable to parse the SMILES string"):
+            mol = self.toolkit_wrapper.from_smiles("QWERT")
+        
+    
+@pytest.mark.usefixtures("init_toolkit")
+class TestOpenEyeToolkitSmiles(BaseSmiles):
+    toolkit_wrapper_class = OpenEyeToolkitWrapper
+    tk_mol_name = "OEMol"
+
+@pytest.mark.usefixtures("init_toolkit")
+class TestRDKitToolkitSmiles(BaseSmiles):
+    toolkit_wrapper_class = RDKitToolkitWrapper
+    tk_mol_name = "RDMol"
+
+    
+    
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__] + sys.argv[1:]))
