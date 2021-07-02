@@ -2444,11 +2444,15 @@ class TestRDKitToolkitWrapper:
         molecule.assign_partial_charges(
             toolkit_registry=toolkit_registry,
             partial_charge_method=partial_charge_method,
+            # the partial charges returned by this method already have no rounding errors that require normalization
+            # so this is just testing that the kwarg remains accessible
+            normalize_partial_charges=False,
         )
         charge_sum = 0.0 * unit.elementary_charge
         for pc in molecule.partial_charges:
             charge_sum += pc
-        assert -1.0e-5 < charge_sum.value_in_unit(unit.elementary_charge) < 1.0e-5
+        assert 1.0e-10 > abs(charge_sum / unit.elementary_charge)
+
 
     @pytest.mark.parametrize("partial_charge_method", ["mmff94"])
     def test_assign_partial_charges_net_charge(self, partial_charge_method):
@@ -2466,7 +2470,7 @@ class TestRDKitToolkitWrapper:
         charge_sum = 0.0 * unit.elementary_charge
         for pc in molecule.partial_charges:
             charge_sum += pc
-        assert -1.0e-5 < charge_sum.value_in_unit(unit.elementary_charge) + 1.0 < 1.0e-5
+        assert 1.0e-10 > abs((charge_sum / unit.elementary_charge) + 1.0)
 
     def test_assign_partial_charges_bad_charge_method(self):
         """Test RDKitToolkitWrapper assign_partial_charges() for a nonexistent charge method"""
@@ -3343,11 +3347,14 @@ class TestBuiltInToolkitWrapper:
         molecule.assign_partial_charges(
             toolkit_registry=toolkit_registry,
             partial_charge_method=partial_charge_method,
+            # The normalize_partial_charges kwarg won't cause a measurable effect here, this just
+            # tests that the kwarg remains accepted.
+            normalize_partial_charges=False
         )
         charge_sum = 0.0 * unit.elementary_charge
         for pc in molecule.partial_charges:
             charge_sum += pc
-        assert -1.0e-6 < charge_sum.value_in_unit(unit.elementary_charge) < 1.0e-6
+        assert 1.0e-10 > abs(charge_sum / unit.elementary_charge)
 
     @pytest.mark.parametrize("partial_charge_method", ["formal_charge"])
     def test_assign_partial_charges_net_charge(self, partial_charge_method):
@@ -3365,7 +3372,7 @@ class TestBuiltInToolkitWrapper:
         charge_sum = 0.0 * unit.elementary_charge
         for pc in molecule.partial_charges:
             charge_sum += pc
-        assert -1.0e-6 < charge_sum.value_in_unit(unit.elementary_charge) + 1.0 < 1.0e-6
+        assert 1.0e-10 > abs(charge_sum.value_in_unit(unit.elementary_charge) + 1.0)
 
     def test_assign_partial_charges_bad_charge_method(self):
         """Test BuiltInToolkitWrapper assign_partial_charges() for a nonexistent charge method"""
