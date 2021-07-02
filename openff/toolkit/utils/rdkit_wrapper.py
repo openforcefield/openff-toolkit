@@ -314,6 +314,11 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             # worthwhile to parse the SMILES file ourselves and pass each SMILES
             # through the from_smiles function instead
             for rdmol in Chem.SmilesMolSupplier(file_path, titleLine=False):
+                if rdmol is None:
+                    # Skip any lines that could not be processed.
+                    # This is consistent with the SDF reader and with
+                    # the OpenEye toolkit wrapper.
+                    continue
                 rdmol = Chem.AddHs(rdmol)
                 mol = self.from_rdkit(
                     rdmol, allow_undefined_stereo=allow_undefined_stereo, _cls=_cls
