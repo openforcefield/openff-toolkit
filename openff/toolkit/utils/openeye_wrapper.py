@@ -282,6 +282,13 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         oeformat = get_oeformat(file_format)
         ifs = oechem.oemolistream(file_path)
+        if not ifs.IsValid():
+            # Get Python to report ane error message, if possible.
+            # This can distinguish between FileNotFound, IsADirectoryError, etc.
+            open(file_path).close()
+            # If that worked, then who knows. Fail anyway.
+            raise OSError("Unable to open file")
+        
         ifs.SetFormat(oeformat)
         
         return self._read_oemolistream_molecules(

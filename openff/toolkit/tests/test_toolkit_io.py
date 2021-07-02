@@ -840,6 +840,14 @@ class BaseFromFileIO:
                 file_obj_manager.caffeine_2d_sdf, file_format="qwe"
             )
 
+    # == Test when a file doesn't exist
+
+    @pytest.mark.parametrize("file_format", ["smi", "sdf", "mol"])
+    def test_from_file_when_the_filename_does_not_exist(self, file_format):
+        filename = f"/qwelkjpath/to/file/that/does/not/exist/asdflkjasdf.{file_format}"
+        with pytest.raises(OSError):
+            self.toolkit_wrapper.from_file(filename, file_format=file_format)
+
     # == Test reading SDF 2D coordinates
 
     def test_from_file_2D_sdf_coords(self):
