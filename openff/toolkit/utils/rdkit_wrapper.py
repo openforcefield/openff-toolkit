@@ -28,6 +28,7 @@ from .exceptions import (
     ChargeMethodUnavailableError,
     ToolkitUnavailableException,
     UndefinedStereochemistryError,
+    ParseError,
 )
 
 # =============================================================================================
@@ -712,6 +713,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         from rdkit import Chem
 
         rdmol = Chem.MolFromSmiles(smiles, sanitize=False)
+        if rdmol is None:
+            raise ParseError("Unable to parse the SMILES string")
+        
         # strip the atom map from the molecule if it has one
         # so we don't affect the sterochemistry tags
         for atom in rdmol.GetAtoms():

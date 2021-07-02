@@ -35,6 +35,7 @@ from .exceptions import (
     LicenseError,
     ToolkitUnavailableException,
     UndefinedStereochemistryError,
+    ParseError,
 )
 from .utils import inherit_docstrings, temporary_cd
 
@@ -1521,7 +1522,8 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         from openeye import oechem
 
         oemol = oechem.OEGraphMol()
-        oechem.OESmilesToMol(oemol, smiles)
+        if not oechem.OESmilesToMol(oemol, smiles):
+            raise ParseError("Unable to parse the SMILES string")
         if not (hydrogens_are_explicit):
             result = oechem.OEAddExplicitHydrogens(oemol)
             if not result:
