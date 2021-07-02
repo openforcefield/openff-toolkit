@@ -627,11 +627,22 @@ class SingingMolecule(Molecule):
 # ========================================================
 
 
+# This code manages a temporary directory.
+# Data files can be found inside that directory.
+# They are created when needed, and stored for later use.
+
+# These descriptors make it possible to ask for
+# `file_manager.name_sdf' and get the path to the named file inside
+# the directory.
+
+
 class FilenameDescriptor:
     def __init__(self, content):
         self.content = content
 
     def __set_name__(self, owner, name):
+        # Figure out the descriptor name, and
+        # the variable name used to store the filename.
         self.private_name = f"_{name}_filename"
         basename, _, ext = name.rpartition("_")
         self.filename = f"{basename}.{ext}"
@@ -673,6 +684,10 @@ class FileManager:
 file_manager = FileManager(tempfile.TemporaryDirectory())
 
 
+# This is similar to the FilenameDescriptor excpet that it returns a
+# BytesIO.
+
+
 class FileobjDescriptor:
     def __init__(self, content):
         self.content = content.encode("utf8")
@@ -694,7 +709,7 @@ class FileObjManager:
     chebi_1148_sdf = FileobjDescriptor(CHEBI_1148_SDF)
 
 
-fileobj_manager = FileObjManager()
+file_obj_manager = FileObjManager()
 
 # ========================================================
 # Base class to test from_file() and from_file_obj()
@@ -712,7 +727,7 @@ class BaseFromFileIO:
     @pytest.mark.parametrize("file_format", ("SDF", "sdf", "sdF", "MOL", "mol"))
     def test_from_file_obj_sdf_ignores_file_format_case(self, file_format):
         mols = self.toolkit_wrapper.from_file_obj(
-            fileobj_manager.caffeine_2d_sdf, file_format
+            file_obj_manager.caffeine_2d_sdf, file_format
         )
         self._test_from_sdf_ignores_file_format_case(mols)
 
@@ -731,7 +746,7 @@ class BaseFromFileIO:
     @pytest.mark.parametrize("file_format", ("SMI", "smi", "sMi"))
     def test_from_fileobj_smi_ignores_file_format_case(self, file_format):
         mols = self.toolkit_wrapper.from_file_obj(
-            fileobj_manager.caffeine_smi, file_format
+            file_obj_manager.caffeine_smi, file_format
         )
         self._test_from_smi_ignores_file_format_case(mols)
 
@@ -754,7 +769,7 @@ class BaseFromFileIO:
     def test_from_file_obj_qwe_format_raises_exception(self):
         with pytest.raises(ValueError, match="Unsupported file format: QWE"):
             mols = self.toolkit_wrapper.from_file_obj(
-                fileobj_manager.caffeine_2d_sdf, file_format="qwe"
+                file_obj_manager.caffeine_2d_sdf, file_format="qwe"
             )
 
     # == Test reading SDF 2D coordinates
@@ -765,7 +780,7 @@ class BaseFromFileIO:
 
     def test_from_file_obj_2D_sdf_coords(self):
         mol = self.toolkit_wrapper.from_file_obj(
-            fileobj_manager.caffeine_2d_sdf, "sdf"
+            file_obj_manager.caffeine_2d_sdf, "sdf"
         )[0]
         self._test_2D_sdf_coords(mol)
 
@@ -788,7 +803,7 @@ class BaseFromFileIO:
 
     def test_from_file_obj_3D_sdf_keeps_hydrogens(self):
         mol = self.toolkit_wrapper.from_file_obj(
-            fileobj_manager.caffeine_3d_sdf, "sdf"
+            file_obj_manager.caffeine_3d_sdf, "sdf"
         )[0]
         self._test_3D_sdf_keeps_hydrogens(mol)
 
@@ -817,7 +832,7 @@ class BaseFromFileIO:
             exceptions.UndefinedStereochemistryError,
             match=f"Unable to make OFFMol from {self.tk_mol_name}: {self.tk_mol_name} has unspecified stereochemistry",
         ):
-            self.toolkit_wrapper.from_file_obj(fileobj_manager.chebi_1148_sdf, "sdf")
+            self.toolkit_wrapper.from_file_obj(file_obj_manager.chebi_1148_sdf, "sdf")
 
     def test_from_file_with_undefined_stereo_allowed(self):
         self.toolkit_wrapper.from_file(
@@ -826,7 +841,7 @@ class BaseFromFileIO:
 
     def test_from_file_obj_with_undefined_stereo_allowed(self):
         self.toolkit_wrapper.from_file_obj(
-            fileobj_manager.chebi_1148_sdf, "sdf", allow_undefined_stereo=True
+            file_obj_manager.chebi_1148_sdf, "sdf", allow_undefined_stereo=True
         )[0]
 
     # == Test passing in a user-defined _cls
@@ -845,17 +860,11 @@ class BaseFromFileIO:
         "name,file_format", [("caffeine_2d_sdf", "SDF"), ("caffeine_smi", "SMI")]
     )
     def test_from_file_handles_cls(self, name, file_format):
-        file_obj = getattr(fileobj_manager, name)
+        file_obj = getattr(file_obj_manager, name)
         mol = self.toolkit_wrapper.from_file_obj(
             file_obj, file_format, _cls=SingingMolecule
         )[0]
         mol.sing()
-
-    ## def to_file_obj(self):
-    ##     molecule, file_obj, file_format
-
-    ## def to_file(self):
-    ##     pass
 
 
 @pytest.fixture(scope="class")
