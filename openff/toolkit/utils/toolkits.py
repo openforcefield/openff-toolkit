@@ -45,6 +45,7 @@ __all__ = (
     "ChargeCalculationError",
     "InvalidIUPACNameError",
     "AntechamberNotFoundError",
+    "ParseError",
     # base_wrapper
     "ToolkitWrapper",
     # builtin_wrapper
