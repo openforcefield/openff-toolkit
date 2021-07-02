@@ -28,6 +28,7 @@ from openff.toolkit.topology.molecule import Molecule
 
 from openff.toolkit.tests import create_molecules
 
+
 # ================================================================
 # Data records used for testing.
 # ================================================================
@@ -860,11 +861,14 @@ def assert_is_ethanol_sdf(f):
 
 def assert_is_ethanol_smi(f):
     line = f.readline()
-    ## assert line in ("CCO ethanol\n", "OCC ethanol\n")
-    assert line.count("[H]") == 6
-    assert line.count("O") == 1
-    assert line.count("C") == 2
+    assert "ethanol" in line
+    assert_is_ethanol_smiles(line.split()[0])
     assert not f.readline(), "should only have one line"
+
+def assert_is_ethanol_smiles(smiles):
+    assert smiles.count("[H]") == 6
+    assert smiles.count("O") == 1
+    assert smiles.count("C") == 2
     
         
 class BaseToFileIO:
@@ -936,9 +940,10 @@ class TestRDKitToolkitToFileIO(BaseToFileIO):
 class BaseSmiles:
     def test_parse_methane_with_implicit_Hs(self):
         mol = self.toolkit_wrapper.from_smiles("C")
-        # add hydrogens
+        # adds hydrogens
         assert mol.n_atoms == 5
         assert mol.n_bonds == 4
+        assert mol.partial_charges is None
         
     def test_parse_methane_with_implicit_Hs_but_said_they_are_explicit(self):
         with pytest.raises(
@@ -955,6 +960,7 @@ class BaseSmiles:
         # add hydrogens
         assert mol.n_atoms == 5
         assert mol.n_bonds == 4
+        assert molecule.partial_charges is None
     
     def test_parse_methane_with_explicit_Hs(self):
         mol = self.toolkit_wrapper.from_smiles("[C]([H])([H])([H])([H])", hydrogens_are_explicit=True)
@@ -965,8 +971,28 @@ class BaseSmiles:
     def test_parse_bad_smiles(self):
         with pytest.raises(ValueError, match="Unable to parse the SMILES string"):
             mol = self.toolkit_wrapper.from_smiles("QWERT")
-        
-    
+
+    ### Copied from test_toolkits.py
+
+    @pytest.mark.parametrize(
+        "title, smiles",
+        [("unspec_chiral_smiles", r"C\C(F)=C(/F)CC(C)(Cl)Br"),
+         ("spec_chiral_smiles", r"C\C(F)=C(/F)C[C@@](C)(Cl)Br"),
+         ("unspec_db_smiles", r"CC(F)=C(F)C[C@@](C)(Cl)Br"),
+         ("spec_db_smiles", r"C\C(F)=C(/F)C[C@@](C)(Cl)Br"),])
+    def test_smiles_missing_stereochemistry(self, title, smiles):
+        if "unspec" in title:
+            with pytest.raises(exceptions.UndefinedStereochemistryError):
+                self.toolkit_wrapper.from_smiles(smiles)
+            mol = self.toolkit_wrapper.from_smiles(smiles, allow_undefined_stereo=True)
+        else:
+            mol = self.toolkit_wrapper.from_smiles(smiles)
+        assert mol.n_atoms == 18
+
+    def test_ethanol_to_smiles(self):
+        smiles = self.toolkit_wrapper.to_smiles(ETHANOL)
+        assert_is_ethanol_smiles(smiles)
+            
 @pytest.mark.usefixtures("init_toolkit")
 class TestOpenEyeToolkitSmiles(BaseSmiles):
     toolkit_wrapper_class = OpenEyeToolkitWrapper
