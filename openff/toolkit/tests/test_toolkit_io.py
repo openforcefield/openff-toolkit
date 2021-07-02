@@ -611,12 +611,14 @@ CHEBI:1148
 $$$$
 """
 
-TWO_MOLS_SDF = (CAFFEINE_2D_SDF + ASPIRIN_2D_SDF)
-TWO_MOLS_SMI = (CAFFEINE_SMI + ASPIRIN_SMI)
+TWO_MOLS_SDF = CAFFEINE_2D_SDF + ASPIRIN_2D_SDF
+TWO_MOLS_SMI = CAFFEINE_SMI + ASPIRIN_SMI
 
 # Force invalid records to ensure the invalid one is skipped
-THREE_MOLS_SDF = (CAFFEINE_2D_SDF + CAFFEINE_3D_SDF.replace("24 25", "20 29") + ASPIRIN_2D_SDF)
-THREE_MOLS_SMI = (CAFFEINE_SMI + "Q" + CAFFEINE_SMI + ASPIRIN_SMI)
+THREE_MOLS_SDF = (
+    CAFFEINE_2D_SDF + CAFFEINE_3D_SDF.replace("24 25", "20 29") + ASPIRIN_2D_SDF
+)
+THREE_MOLS_SMI = CAFFEINE_SMI + "Q" + CAFFEINE_SMI + ASPIRIN_SMI
 
 # ========================================================
 # Used to test that _cls is passed correctly
@@ -683,11 +685,11 @@ class FileManager:
     # Used to test that file_format overrides any automatic file detection.
     caffeine_not_smi = FilenameDescriptor(CAFFEINE_2D_SDF)
     caffeine_not_sdf = FilenameDescriptor(CAFFEINE_SMI)
-    
+
     ## aspirin_2d_sdf = FilenameDescriptor(ASPIRIN_2D_SDF)
     ## aspirin_3d_sdf = FilenameDescriptor(ASPIRIN_3D_SDF)
     ## aspirin_smi = FilenameDescriptor(ASPIRIN_SMI)
-    
+
     two_mols_sdf = FilenameDescriptor(TWO_MOLS_SDF)
     two_mols_smi = FilenameDescriptor(TWO_MOLS_SMI)
 
@@ -724,10 +726,10 @@ class FileObjManager:
 
     two_mols_sdf = FileobjDescriptor(TWO_MOLS_SDF)
     two_mols_smi = FileobjDescriptor(TWO_MOLS_SMI)
-    
+
     three_mols_sdf = FileobjDescriptor(THREE_MOLS_SDF)
     three_mols_smi = FileobjDescriptor(THREE_MOLS_SMI)
-    
+
     chebi_1148_sdf = FileobjDescriptor(CHEBI_1148_SDF)
 
 
@@ -757,7 +759,7 @@ class BaseFromFileIO:
         assert len(mols) == 1
         mol = mols[0]
         assert mol.name == "caffeine"
-    
+
     # == Test reading two molecules from an SDF
 
     def test_from_file_sdf_two_molecules(self):
@@ -772,7 +774,7 @@ class BaseFromFileIO:
         assert len(mols) == 2
         assert mols[0].name == "caffeine"
         assert mols[1].name == "aspirin"
-        
+
     # == Test skipping an error molecule from an SDF
 
     def test_from_file_sdf_three_molecules(self):
@@ -780,7 +782,9 @@ class BaseFromFileIO:
         self._test_from_sdf_two_molecules(mols)
 
     def test_from_file_obj_sdf_three_molecules(self):
-        mols = self.toolkit_wrapper.from_file_obj(file_obj_manager.three_mols_sdf, "SDF")
+        mols = self.toolkit_wrapper.from_file_obj(
+            file_obj_manager.three_mols_sdf, "SDF"
+        )
         self._test_from_sdf_two_molecules(mols)
 
     # == Test variations of "smi" format
@@ -819,7 +823,7 @@ class BaseFromFileIO:
         assert len(mols) == 2
         assert mols[0].name == "CHEMBL113"
         assert mols[1].name == "ASPIRIN"
-        
+
     # == Test skipping an error molecule from a SMI
 
     def test_from_file_smi_three_molecules(self):
@@ -827,19 +831,21 @@ class BaseFromFileIO:
         self._test_from_smi_two_molecules(mols)
 
     def test_from_file_obj_smi_three_molecules(self):
-        mols = self.toolkit_wrapper.from_file_obj(file_obj_manager.three_mols_smi, "SMI")
+        mols = self.toolkit_wrapper.from_file_obj(
+            file_obj_manager.three_mols_smi, "SMI"
+        )
         self._test_from_smi_two_molecules(mols)
-        
+
     # == Test that file_format overrides the extension
 
     def test_from_file_sdf_ignores_filename_extension(self):
         mols = self.toolkit_wrapper.from_file(file_manager.caffeine_not_smi, "sdf")
         self._test_from_sdf_ignores_file_format_case(mols)
-    
+
     def test_from_file_smi_ignores_filename_extension(self):
         mols = self.toolkit_wrapper.from_file(file_manager.caffeine_not_sdf, "smi")
         self._test_from_smi_ignores_file_format_case(mols)
-    
+
     # == Test format "qwe" raises an exception
 
     def test_from_file_qwe_format_raises_exception(self):

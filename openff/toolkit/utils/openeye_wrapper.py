@@ -12,8 +12,8 @@ __all__ = ("OpenEyeToolkitWrapper",)
 
 import importlib
 import logging
-import re
 import pathlib
+import re
 import tempfile
 from collections import defaultdict
 from functools import wraps
@@ -33,9 +33,9 @@ from .exceptions import (
     GAFFAtomTypeWarning,
     InvalidIUPACNameError,
     LicenseError,
+    ParseError,
     ToolkitUnavailableException,
     UndefinedStereochemistryError,
-    ParseError,
 )
 from .utils import inherit_docstrings
 
@@ -50,18 +50,20 @@ logger = logging.getLogger(__name__)
 # IMPLEMENTATION
 # =============================================================================================
 
+
 def get_oeformat(file_format):
     from openeye import oechem
-    
+
     file_format = file_format.upper()
     # XXX This is what RDKit does. Should be supported here too?
     if file_format == "MOL":
         file_format = "SDF"
-        
+
     oeformat = getattr(oechem, "OEFormat_" + file_format, None)
     if oeformat is None:
         raise ValueError(f"Unsupported file format: {file_format}")
     return oeformat
+
 
 @inherit_docstrings
 class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
@@ -288,9 +290,9 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             open(file_path).close()
             # If that worked, then who knows. Fail anyway.
             raise OSError("Unable to open file")
-        
+
         ifs.SetFormat(oeformat)
-        
+
         return self._read_oemolistream_molecules(
             ifs, allow_undefined_stereo, file_path=file_path, _cls=_cls
         )
@@ -356,7 +358,9 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         except TypeError:
             # Switch to a ValueError and use a more informative exception
             # message to match RDKit.
-            raise ValueError("Need a text mode file object like StringIO or a file opened with mode 't'") from None
+            raise ValueError(
+                "Need a text mode file object like StringIO or a file opened with mode 't'"
+            ) from None
 
         with tempfile.TemporaryDirectory() as tmpdir:
             path = pathlib.Path(tmpdir, f"input.{file_format.lower()}")
@@ -388,12 +392,15 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             open(file_path, "wb").close()
             # If that worked, then who knows. Fail anyway.
             raise OSError("Unable to open file")
-            
+
         openeye_format = get_oeformat(file_format)
         ofs.SetFormat(openeye_format)
-        
+
         if openeye_format == oechem.OEFormat_SMI:
-            ofs.SetFlavor(openeye_format, self._get_smiles_flavor(isomeric=True, explicit_hydrogens=True))
+            ofs.SetFlavor(
+                openeye_format,
+                self._get_smiles_flavor(isomeric=True, explicit_hydrogens=True),
+            )
 
         # OFFTK strictly treats SDF as a single-conformer format.
         # We need to override OETK's behavior here if the user is saving a multiconformer molecule.
@@ -1262,7 +1269,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
     def _get_smiles_flavor(self, isomeric, explicit_hydrogens):
         from openeye import oechem
-        
+
         # this sets up the default settings following the old DEFAULT flag
         # more information on flags can be found here
         # <https://docs.eyesopen.com/toolkits/python/oechemtk/OEChemConstants/OESMILESFlag.html#OEChem::OESMILESFlag>
@@ -1284,7 +1291,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             smiles_options |= oechem.OESMILESFlag_Hydrogens
 
         return smiles_options
-        
+
     def to_smiles(self, molecule, isomeric=True, explicit_hydrogens=True, mapped=False):
         """
         Uses the OpenEye toolkit to convert a Molecule into a SMILES string.
@@ -1315,7 +1322,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         oemol = self.to_openeye(molecule)
 
         smiles_options = self._get_smiles_flavor(isomeric, explicit_hydrogens)
-            
+
         if mapped:
             assert explicit_hydrogens is True, (
                 "Mapped smiles require all hydrogens and "
