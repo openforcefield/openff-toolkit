@@ -331,7 +331,6 @@ CAFFEINE_3D_COORDS = (
 # From https://www.ebi.ac.uk/chembl/compound_report_card/CHEMBL25/
 ASPIRIN_2D_SDF = """\
 aspirin
-
      RDKit          2D
 
  13 13  0  0  0  0  0  0  0  0999 V2000
@@ -674,9 +673,12 @@ class FileManager:
     caffeine_3d_sdf = FilenameDescriptor(CAFFEINE_3D_SDF)
     caffeine_smi = FilenameDescriptor(CAFFEINE_SMI)
 
-    aspirin_2d_sdf = FilenameDescriptor(ASPIRIN_2D_SDF)
-    aspirin_3d_sdf = FilenameDescriptor(ASPIRIN_3D_SDF)
-    aspirin_smi = FilenameDescriptor(ASPIRIN_SMI)
+    ## aspirin_2d_sdf = FilenameDescriptor(ASPIRIN_2D_SDF)
+    ## aspirin_3d_sdf = FilenameDescriptor(ASPIRIN_3D_SDF)
+    ## aspirin_smi = FilenameDescriptor(ASPIRIN_SMI)
+    
+    two_mols_sdf = FilenameDescriptor(CAFFEINE_2D_SDF + ASPIRIN_2D_SDF)
+    two_mols_smi = FilenameDescriptor(CAFFEINE_SMI + ASPIRIN_SMI)
 
     chebi_1148_sdf = FilenameDescriptor(CHEBI_1148_SDF)
 
@@ -706,6 +708,9 @@ class FileObjManager:
     aspirin_3d_sdf = FileobjDescriptor(ASPIRIN_3D_SDF)
     aspirin_smi = FileobjDescriptor(ASPIRIN_SMI)
 
+    two_mols_sdf = FileobjDescriptor(CAFFEINE_2D_SDF + ASPIRIN_2D_SDF)
+    two_mols_smi = FileobjDescriptor(CAFFEINE_SMI + ASPIRIN_SMI)
+    
     chebi_1148_sdf = FileobjDescriptor(CHEBI_1148_SDF)
 
 
@@ -736,6 +741,21 @@ class BaseFromFileIO:
         mol = mols[0]
         assert mol.name == "caffeine"
 
+    # == Test reading two molecules from an SDF
+
+    def test_from_file_sdf_two_molecules(self):
+        mols = self.toolkit_wrapper.from_file(file_manager.two_mols_sdf, "SDF")
+        self._test_from_sdf_two_molecules(mols)
+
+    def test_from_file_obj_sdf_two_molecules(self):
+        mols = self.toolkit_wrapper.from_file_obj(file_obj_manager.two_mols_sdf, "SDF")
+        self._test_from_sdf_two_molecules(mols)
+
+    def _test_from_sdf_two_molecules(self, mols):
+        assert len(mols) == 2
+        assert mols[0].name == "caffeine"
+        assert mols[1].name == "aspirin"
+        
     # == Test variations of "smi" format
 
     @pytest.mark.parametrize("file_format", ("SMI", "smi", "sMi"))
