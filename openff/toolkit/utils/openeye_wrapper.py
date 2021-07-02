@@ -368,6 +368,9 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         ofs = oechem.oemolostream(file_path)
         openeye_format = get_oeformat(file_format)
         ofs.SetFormat(openeye_format)
+        
+        if openeye_format == oechem.OEFormat_SMI:
+            ofs.SetFlavor(openeye_format, self._get_smiles_flavor(isomeric=True, explicit_hydrogens=True))
 
         # OFFTK strictly treats SDF as a single-conformer format.
         # We need to override OETK's behavior here if the user is saving a multiconformer molecule.
@@ -1234,6 +1237,31 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         return oemol
 
+    def _get_smiles_flavor(self, isomeric, explicit_hydrogens):
+        from openeye import oechem
+        
+        # this sets up the default settings following the old DEFAULT flag
+        # more information on flags can be found here
+        # <https://docs.eyesopen.com/toolkits/python/oechemtk/OEChemConstants/OESMILESFlag.html#OEChem::OESMILESFlag>
+        smiles_options = (
+            oechem.OESMILESFlag_Canonical
+            | oechem.OESMILESFlag_Isotopes
+            | oechem.OESMILESFlag_RGroups
+        )
+
+        # check if we want an isomeric smiles
+        if isomeric:
+            # add the atom and bond stereo flags
+            smiles_options |= (
+                oechem.OESMILESFlag_AtomStereo | oechem.OESMILESFlag_BondStereo
+            )
+
+        if explicit_hydrogens:
+            # add the hydrogen flag
+            smiles_options |= oechem.OESMILESFlag_Hydrogens
+
+        return smiles_options
+        
     def to_smiles(self, molecule, isomeric=True, explicit_hydrogens=True, mapped=False):
         """
         Uses the OpenEye toolkit to convert a Molecule into a SMILES string.
@@ -1263,26 +1291,8 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         oemol = self.to_openeye(molecule)
 
-        # this sets up the default settings following the old DEFAULT flag
-        # more information on flags can be found here
-        # <https://docs.eyesopen.com/toolkits/python/oechemtk/OEChemConstants/OESMILESFlag.html#OEChem::OESMILESFlag>
-        smiles_options = (
-            oechem.OESMILESFlag_Canonical
-            | oechem.OESMILESFlag_Isotopes
-            | oechem.OESMILESFlag_RGroups
-        )
-
-        # check if we want an isomeric smiles
-        if isomeric:
-            # add the atom and bond stereo flags
-            smiles_options |= (
-                oechem.OESMILESFlag_AtomStereo | oechem.OESMILESFlag_BondStereo
-            )
-
-        if explicit_hydrogens:
-            # add the hydrogen flag
-            smiles_options |= oechem.OESMILESFlag_Hydrogens
-
+        smiles_options = self._get_smiles_flavor(isomeric, explicit_hydrogens)
+            
         if mapped:
             assert explicit_hydrogens is True, (
                 "Mapped smiles require all hydrogens and "

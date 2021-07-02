@@ -12,8 +12,9 @@ Tests for I/O functionality of the toolkit wrappers
 # GLOBAL IMPORTS
 # =============================================================================================
 
+import os
 import sys
-from io import BytesIO
+from io import BytesIO, StringIO
 import pytest
 import pathlib
 import tempfile
@@ -25,9 +26,14 @@ from openff.toolkit.utils import OpenEyeToolkitWrapper, RDKitToolkitWrapper
 from openff.toolkit.utils import exceptions
 from openff.toolkit.topology.molecule import Molecule
 
+from openff.toolkit.tests import create_molecules
+
 # ====================================
 # Data records used for testing.
 # ====================================
+
+ETHANOL = create_molecules.create_ethanol()
+ETHANOL.name = "ethanol"
 
 # ============================
 # Various records for caffeine
@@ -674,15 +680,11 @@ class FileObjManager:
 fileobj_manager = FileObjManager()
 
 # ============================
-# Base class
+# Base class to test from_file() and from_file_obj()
 # ============================
 
 
-
-class BaseFileIO:
-    def setUpClass(self):
-        addClassCleanup
-
+class BaseFromFileIO:
     # == Test variations of "sdf" and "mol"
 
     @pytest.mark.parametrize("file_format", ("SDF", "sdf", "sdF", "MOL", "mol"))
@@ -811,12 +813,6 @@ class BaseFileIO:
         mol.sing()
         
     
-    ## def test_from_file(selffile_path, file_format, allow_undefined_stereo=False, _cls=None):
-    ##     pass
-
-    ## def test_from_file_obj(self):
-    ##     pass
-
     ## def to_file_obj(self):
     ##     molecule, file_obj, file_format
 
@@ -828,12 +824,12 @@ def init_toolkit(request):
     request.cls.toolkit_wrapper = request.cls.toolkit_wrapper_class()
 
 @pytest.mark.usefixtures("init_toolkit")
-class TestOpenEyeToolkitFileIO(BaseFileIO):
+class TestOpenEyeToolkitFromFileIO(BaseFromFileIO):
     toolkit_wrapper_class = OpenEyeToolkitWrapper
     tk_mol_name = "OEMol"
 
 @pytest.mark.usefixtures("init_toolkit")
-class TestRDKitToolkitFileIO(BaseFileIO):
+class TestRDKitToolkitFromFileIO(BaseFromFileIO):
     toolkit_wrapper_class = RDKitToolkitWrapper
     tk_mol_name = "RDMol"
 
@@ -843,7 +839,89 @@ class TestRDKitToolkitFileIO(BaseFileIO):
         with open(file_manager.caffeine_smi) as file_obj:
             mol = self.toolkit_wrapper.from_file_obj(file_obj, "SMI")[0]
         assert mol.name == "CHEMBL113"
-        
 
+# ============================
+# Base class to test to_file() and to_file_obj()
+# ============================
+
+@pytest.fixture(scope="class")
+def tmpdir(request):
+    request.cls.tmpdir = tmpdir = tempfile.TemporaryDirectory()
+    with tmpdir:
+        yield
+    request.cls.tmpdir = None
+
+
+def assert_is_ethanol_sdf(f):
+    assert f.readline() == "ethanol\n" # title line
+    f.readline() # ignore next two lines
+    f.readline()
+    assert f.readline()[:6] == "  9  8" # check 9 atoms, 8 bonds
+
+def assert_is_ethanol_smi(f):
+    line = f.readline()
+    ## assert line in ("CCO ethanol\n", "OCC ethanol\n")
+    assert line.count("[H]") == 6
+    assert line.count("O") == 1
+    assert line.count("C") == 2
+    assert not f.readline(), "should only have one line"
+    
+        
+class BaseToFileIO:
+    def get_tmpfile(self, name):
+        return os.path.join(self.tmpdir.name, name)
+    
+    # == Test variations of "sdf" and "mol"
+
+    @pytest.mark.parametrize("format_name", ["SDF", "sdf", "sDf", "mol", "MOL"])
+    def test_to_file_sdf(self, format_name):
+        filename = self.get_tmpfile("abc.xyz")
+        self.toolkit_wrapper.to_file(ETHANOL, filename, format_name)
+        with open(filename) as f:
+            assert_is_ethanol_sdf(f)
+
+    @pytest.mark.parametrize("format_name", ["SDF", "sdf", "sDf", "mol", "MOL"])
+    def test_to_file_obj_sdf(self, format_name):
+        f = StringIO()
+        self.toolkit_wrapper.to_file_obj(ETHANOL, f, format_name)
+        f.seek(0)
+        assert_is_ethanol_sdf(f)
+
+    ## def test_to_file_obj_sdf_with_bytesio(self):
+    ##     f = BytesIO()
+    ##     self.toolkit_wrapper.to_file_obj(ETHANOL, f, "sdf")
+
+    # === Test variations of "smi"
+
+    @pytest.mark.parametrize("format_name", ["SMI", "smi", "sMi"])
+    def test_to_file_smi(self, format_name):
+        filename = self.get_tmpfile("abc.xyz")
+        self.toolkit_wrapper.to_file(ETHANOL, filename, format_name)
+        with open(filename) as f:
+            assert_is_ethanol_smi(f)
+
+    @pytest.mark.parametrize("format_name", ["SMI", "smi", "sMi"])
+    def test_to_file_obj_smi(self, format_name):
+        f = StringIO()
+        self.toolkit_wrapper.to_file_obj(ETHANOL, f, format_name)
+        f.seek(0)
+        assert_is_ethanol_smi(f)
+
+    ## def test_to_file_obj_smi_with_bytesio(self):
+    ##     f = BytesIO()
+    ##     self.toolkit_wrapper.to_file_obj(ETHANOL, f, "sdf")
+            
+
+
+@pytest.mark.usefixtures("init_toolkit", "tmpdir")
+class TestOpenEyeToolkitToFileIO(BaseToFileIO):
+    toolkit_wrapper_class = OpenEyeToolkitWrapper
+    tk_mol_name = "OEMol"
+
+@pytest.mark.usefixtures("init_toolkit", "tmpdir")
+class TestRDKitToolkitToFileIO(BaseToFileIO):
+    toolkit_wrapper_class = RDKitToolkitWrapper
+    tk_mol_name = "RDMol"
+        
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__] + sys.argv[1:]))

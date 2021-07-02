@@ -43,6 +43,28 @@ logger = logging.getLogger(__name__)
 def normalize_file_format(file_format):
     return file_format.upper()
 
+def open_smi_writer(toolkit_wrapper, file_obj):
+    return SmilesWriter(toolkit_wrapper, file_obj)
+
+class SmilesWriter:
+    def __init__(self, toolkit_wrapper, file_obj):
+        self.toolkit_wrapper = toolkit_wrapper
+        self.file_obj = file_obj
+        
+    def write(self, mol):
+        smiles  = self.toolkit_wrapper.to_smiles(mol)
+        name = mol.name
+        if name is not None:
+            output_line = f"{smiles} {name}\n"
+        else:
+            output_line = f"{smiles}\n"
+            
+        self.file_obj.write(output_line)
+
+    def close(self):
+        pass
+        
+
 class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
     """
     RDKit toolkit wrapper
@@ -78,7 +100,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             self._toolkit_file_write_formats = {
                 "SDF": Chem.SDWriter,
                 "MOL": Chem.SDWriter,
-                "SMI": Chem.SmilesWriter,
+                "SMI": None,   # Special support to use to_smiles() instead of RDKit's SmilesWriter
                 "PDB": Chem.PDBWriter,
                 "TDT": Chem.TDTWriter,
             }
@@ -413,17 +435,30 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         file_format = normalize_file_format(file_format)
         
-        rdmol = self.to_rdkit(molecule)
-        try:
-            writer = self._toolkit_file_write_formats[file_format](file_obj)
-            writer.write(rdmol)
-            writer.close()
-        # if we can not write to that file type catch the error here
-        except KeyError:
-            raise ValueError(
-                f"The requested file type ({file_format}) is not supported to be written using "
-                f"RDKitToolkitWrapper."
-            )
+        if file_format == "SMI":
+            # Special case for SMILES
+            smiles = self.to_smiles(molecule)
+            name = molecule.name
+            if name is None:
+                output_line = f"{smiles} {name}\n"
+            else:
+                output_line = f"{smiles}\n"
+            file_obj.write(output_line)
+        else:
+            try:
+                writer_func = self._toolkit_file_write_formats[file_format]
+            except KeyError:
+                raise ValueError(
+                    f"The requested file type ({file_format}) is not supported to be written using "
+                    f"RDKitToolkitWrapper."
+                )
+            rdmol = self.to_rdkit(molecule)
+            writer = writer_func(file_obj)
+            try:
+                writer.write(rdmol)
+            finally:
+                writer.close()
+        
 
     def to_file(self, molecule, file_path, file_format):
         """
