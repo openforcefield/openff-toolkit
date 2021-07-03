@@ -398,7 +398,10 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             with tempfile.NamedTemporaryFile(suffix=".smi") as tmpfile:
                 content = file_obj.read()
                 if isinstance(content, str):
-                    # Support the older API, whihc required Unicode strings
+                    # Backwards compatibility. Older versions of OpenFF supported
+                    # file objects in "t"ext mode, but not file objects
+                    # in "b"inary mode. Now we expect all input file objects
+                    # to handle binary mode, but don't want to break older code.
                     tmpfile.write(content.encode("utf8"))
                 else:
                     tmpfile.write(content)
