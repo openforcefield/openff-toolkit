@@ -46,6 +46,14 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
     set to 0 with appropriate units, rather than `None`
 - [PR #956](https://github.com/openforcefield/openforcefield/pull/956): Added `ForceField.get_partial_charges()` 
   to more easily compute the partial charges assigned by a force field for a molecule.
+- [PR  #1006](https://github.com/openforcefield/openff-toolkit/pull/1006):
+  Changed the SMILES file output in the `to_file()` RDKit and OpenEye
+  wrappers so the outputted SMILES is the one from `to_smiles()`, with
+  explicit hydrogens, rather than the toolkit's default of implicit hydrogens.
+- [PR  #1006](https://github.com/openforcefield/openff-toolkit/pull/1006):
+  Changed the SMILES output format for the RDKit wrapper's `to_file()`
+  so it does not include a header line. This improves the consistency
+  between the OpenEye and RDKit output formats.
 
 
 ### Bugfixes
@@ -58,17 +66,15 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
   was not set to the value specified by the vdW and Electrostatics handlers.
 - [PR #909](https://github.com/openforcefield/openforcefield/pull/909): It is now possible to create an
   OpenMM system with virtual sites created via the `Molecule` virtual site API
-- [PR  #1006](https://github.com/openforcefield/openff-toolkit/pull/1006)
+- [PR  #1006](https://github.com/openforcefield/openff-toolkit/pull/1006):
   Many small fixes to the toolkit wrapper I/O for better error
   handling, improved consistency between reading from a file vs. file
   object, and improved consistency between the RDKit and OEChem
   toolkit wrappers. For the full list see
   [Issue #1005](https://github.com/openforcefield/openff-toolkit/issues/1005). Some
-  of the more significant changes are:
+  of the more significant fixes are:
   - RDKitToolkitWrapper's `from_file_obj()` now uses the same
     structure normaliation as `from_file()`.
-  - Writing to a SMILES file now uses the same SMILES as
-  `to_smiles()`, and (for RDKit) does not include a header line.
   - `from_smiles()` now raises an `openff.toolkit.utils.ParseError` if
   the SMILES could not be parsed.
   - OEChem input and output files now raise an OSError if the file
