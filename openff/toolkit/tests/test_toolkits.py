@@ -1207,11 +1207,8 @@ class TestOpenEyeToolkitWrapper:
         molecule.assign_partial_charges(
             partial_charge_method="am1bcc", toolkit_registry=toolkit_registry
         )  # , charge_model=charge_model)
-        charge_sum = 0 * unit.elementary_charge
-        abs_charge_sum = 0 * unit.elementary_charge
-        for pc in molecule._partial_charges:
-            charge_sum += pc
-            abs_charge_sum += abs(pc)
+        charge_sum = sum(molecule.partial_charges, 0.0 * unit.elementary_charge)
+        abs_charge_sum = sum(abs(molecule.partial_charges), 0.0 * unit.elementary_charge)
         assert abs(charge_sum) < 1e-10 * unit.elementary_charge
         assert abs_charge_sum > 0.25 * unit.elementary_charge
 
@@ -1229,11 +1226,8 @@ class TestOpenEyeToolkitWrapper:
             toolkit_registry=toolkit_registry,
             normalize_partial_charges=False,
         )
-        charge_sum = 0 * unit.elementary_charge
-        abs_charge_sum = 0 * unit.elementary_charge
-        for pc in molecule._partial_charges:
-            charge_sum += pc
-            abs_charge_sum += abs(pc)
+        charge_sum = sum(molecule.partial_charges, 0.0 * unit.elementary_charge)
+        abs_charge_sum = sum(abs(molecule.partial_charges), 0.0 * unit.elementary_charge)
         # Rounding error should be on the order of 1e-3
         assert 1e-7 > abs(charge_sum / unit.elementary_charge) > 1e-8
         assert abs_charge_sum > 0.25 * unit.elementary_charge
@@ -1245,9 +1239,7 @@ class TestOpenEyeToolkitWrapper:
         molecule.assign_partial_charges(
             partial_charge_method="am1bcc", toolkit_registry=toolkit_registry
         )
-        charge_sum = 0 * unit.elementary_charge
-        for pc in molecule._partial_charges:
-            charge_sum += pc
+        charge_sum = sum(molecule.partial_charges, 0.0 * unit.elementary_charge)
         assert 1e-10 > abs((charge_sum - molecule.total_charge) / unit.elementary_charge)
 
     def test_assign_partial_charges_am1bcc_wrong_n_confs(self):
@@ -1285,9 +1277,7 @@ class TestOpenEyeToolkitWrapper:
             toolkit_registry=toolkit_registry,
             partial_charge_method=partial_charge_method,
         )
-        charge_sum = 0.0 * unit.elementary_charge
-        for pc in molecule.partial_charges:
-            charge_sum += pc
+        charge_sum = sum(molecule.partial_charges, 0.0 * unit.elementary_charge)
         assert 1.0e-10 > abs(charge_sum.value_in_unit(unit.elementary_charge))
 
     @pytest.mark.parametrize("partial_charge_method", ["am1bcc", "am1-mulliken"])
@@ -1330,9 +1320,7 @@ class TestOpenEyeToolkitWrapper:
             toolkit_registry=toolkit_registry,
             partial_charge_method=partial_charge_method,
         )
-        charge_sum = 0.0 * unit.elementary_charge
-        for pc in molecule.partial_charges:
-            charge_sum += pc
+        charge_sum = sum(molecule.partial_charges, 0.0 * unit.elementary_charge)
         assert -1.0e-10 < abs(charge_sum.value_in_unit(unit.elementary_charge) + 1.0)
 
     def test_assign_partial_charges_bad_charge_method(self):
@@ -2448,9 +2436,7 @@ class TestRDKitToolkitWrapper:
             # so this is just testing that the kwarg remains accessible
             normalize_partial_charges=False,
         )
-        charge_sum = 0.0 * unit.elementary_charge
-        for pc in molecule.partial_charges:
-            charge_sum += pc
+        charge_sum = sum(molecule.partial_charges, 0.0 * unit.elementary_charge)
         assert 1.0e-10 > abs(charge_sum / unit.elementary_charge)
 
 
@@ -2467,9 +2453,7 @@ class TestRDKitToolkitWrapper:
             toolkit_registry=toolkit_registry,
             partial_charge_method=partial_charge_method,
         )
-        charge_sum = 0.0 * unit.elementary_charge
-        for pc in molecule.partial_charges:
-            charge_sum += pc
+        charge_sum = sum(molecule.partial_charges, 0.0 * unit.elementary_charge)
         assert 1.0e-10 > abs((charge_sum / unit.elementary_charge) + 1.0)
 
     def test_assign_partial_charges_bad_charge_method(self):
@@ -2854,11 +2838,8 @@ class TestAmberToolsToolkitWrapper:
         molecule.assign_partial_charges(
             partial_charge_method="am1bcc", toolkit_registry=toolkit_registry
         )
-        charge_sum = 0 * unit.elementary_charge
-        abs_charge_sum = 0 * unit.elementary_charge
-        for pc in molecule._partial_charges:
-            charge_sum += pc
-            abs_charge_sum += abs(pc)
+        charge_sum = sum(molecule.partial_charges, 0.0 * unit.elementary_charge)
+        abs_charge_sum = sum(abs(molecule.partial_charges), 0.0 * unit.elementary_charge)
         assert abs(charge_sum) < 1e-10 * unit.elementary_charge
         assert abs_charge_sum > 0.25 * unit.elementary_charge
 
@@ -2878,11 +2859,8 @@ class TestAmberToolsToolkitWrapper:
             toolkit_registry=toolkit_registry,
             normalize_partial_charges=False,
         )
-        charge_sum = 0 * unit.elementary_charge
-        abs_charge_sum = 0 * unit.elementary_charge
-        for pc in molecule._partial_charges:
-            charge_sum += pc
-            abs_charge_sum += abs(pc)
+        charge_sum = sum(molecule.partial_charges, 0.0 * unit.elementary_charge)
+        abs_charge_sum = sum(abs(molecule.partial_charges), 0.0 * unit.elementary_charge)
         # Rounding error should be on the order of 1e-3
         assert 1e-2 > abs(charge_sum / unit.elementary_charge) > 1e-4
         assert abs_charge_sum > 0.25 * unit.elementary_charge
@@ -2896,9 +2874,7 @@ class TestAmberToolsToolkitWrapper:
         molecule.assign_partial_charges(
             partial_charge_method="am1bcc", toolkit_registry=toolkit_registry
         )
-        charge_sum = 0 * unit.elementary_charge
-        for pc in molecule._partial_charges:
-            charge_sum += pc
+        charge_sum = sum(molecule.partial_charges, 0.0 * unit.elementary_charge)
         assert (
             1e-10 > abs((charge_sum / unit.elementary_charge) + 1)
         )
@@ -2997,9 +2973,7 @@ class TestAmberToolsToolkitWrapper:
             toolkit_registry=toolkit_registry,
             partial_charge_method=partial_charge_method,
         )
-        charge_sum = 0.0 * unit.elementary_charge
-        for pc in molecule.partial_charges:
-            charge_sum += pc
+        charge_sum = sum(molecule.partial_charges, 0.0 * unit.elementary_charge)
         assert 1e-10 > charge_sum.value_in_unit(unit.elementary_charge)
 
     @pytest.mark.xfail(strict=False)
@@ -3049,9 +3023,7 @@ class TestAmberToolsToolkitWrapper:
             toolkit_registry=toolkit_registry,
             partial_charge_method=partial_charge_method,
         )
-        charge_sum = 0.0 * unit.elementary_charge
-        for pc in molecule.partial_charges:
-            charge_sum += pc
+        charge_sum = sum(molecule.partial_charges, 0.0 * unit.elementary_charge)
         assert 1e-10 > abs((charge_sum / unit.elementary_charge) + 1)
 
     def test_assign_partial_charges_bad_charge_method(self):
@@ -3351,9 +3323,7 @@ class TestBuiltInToolkitWrapper:
             # tests that the kwarg remains accepted.
             normalize_partial_charges=False
         )
-        charge_sum = 0.0 * unit.elementary_charge
-        for pc in molecule.partial_charges:
-            charge_sum += pc
+        charge_sum = sum(molecule.partial_charges, 0.0 * unit.elementary_charge)
         assert 1.0e-10 > abs(charge_sum / unit.elementary_charge)
 
     @pytest.mark.parametrize("partial_charge_method", ["formal_charge"])
@@ -3369,9 +3339,7 @@ class TestBuiltInToolkitWrapper:
             toolkit_registry=toolkit_registry,
             partial_charge_method=partial_charge_method,
         )
-        charge_sum = 0.0 * unit.elementary_charge
-        for pc in molecule.partial_charges:
-            charge_sum += pc
+        charge_sum = sum(molecule.partial_charges, 0.0 * unit.elementary_charge)
         assert 1.0e-10 > abs(charge_sum.value_in_unit(unit.elementary_charge) + 1.0)
 
     def test_assign_partial_charges_bad_charge_method(self):
