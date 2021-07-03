@@ -47,13 +47,12 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 - [PR #956](https://github.com/openforcefield/openforcefield/pull/956): Added `ForceField.get_partial_charges()` 
   to more easily compute the partial charges assigned by a force field for a molecule.
 - [PR  #1006](https://github.com/openforcefield/openff-toolkit/pull/1006):
-  Changed the SMILES file output in the `to_file()` RDKit and OpenEye
-  wrappers so the outputted SMILES is the one from `to_smiles()`, with
-  explicit hydrogens, rather than the toolkit's default of implicit hydrogens.
-- [PR  #1006](https://github.com/openforcefield/openff-toolkit/pull/1006):
-  Changed the SMILES output format for the RDKit wrapper's `to_file()`
-  so it does not include a header line. This improves the consistency
-  between the OpenEye and RDKit output formats.
+  Two behavior changes in the SMILES output for `to_file()` and `to_file_obj()`:
+  - The RDKit and OpenEye wrappers now output the same SMILES as `to_smiles()`.
+   This uses explicit hydrogens rather than the toolkit's default of implicit hydrogens.
+  - The RDKit wrapper no longer includes a header line. This improves
+  the consistency between the OpenEye and RDKit outputs.
+
 
 
 ### Bugfixes
