@@ -10,7 +10,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### New features and behaviors changed
 
-- [PR #XXX](https://github.com/openforcefield/openforcefield/pull/XXX): Resolves
+- [PR #1007](https://github.com/openforcefield/openforcefield/pull/1007): Resolves
   [Issue #456](https://github.com/openforcefield/openff-toolkit/issues/456) by adding the 
   `normalize_partial_charges` (default is `True`) keyword argument to 
   [`Molecule.assign_partial_charges`](openff.toolkit.topology.Molecule.assign_partial_charges),
