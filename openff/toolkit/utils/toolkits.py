@@ -2342,6 +2342,14 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 max_confs=charge_method["max_confs"],
                 strict_n_conformers=strict_n_conformers,
             )
+        
+        # TODO: HACK FOR MINIMIZING OEMOL STRUCTURES
+        # TODO: DO NOT INCLUDE IN ACTUAL TOOLKIT
+        from rdkit.Chem import AllChem
+        rdmol = mol_copy.to_rdmol()
+        AllChem.UFFOptimizeMoleculeConfs(rdmol, numThreads=0,
+                                     maxIters=2000)
+        mol_copy = Molecule.from_rdkit(rdmol)
 
         oemol = mol_copy.to_openeye()
 
