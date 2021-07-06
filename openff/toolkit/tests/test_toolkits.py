@@ -1823,6 +1823,14 @@ class TestRDKitToolkitWrapper:
         )
         assert offmol.n_atoms == 4
 
+    def test_disconnected_smiles(self):
+        toolkit_wrapper = RDKitToolkitWrapper()
+
+        from openff.toolkit.utils.exceptions import DisconnectedMoleculesError
+
+        with pytest.raises(DisconnectedMoleculesError):
+            Molecule.from_smiles("[Na+].[Cl-]", toolkit_registry=toolkit_wrapper)
+
     @pytest.mark.parametrize("molecule", get_mini_drug_bank(RDKitToolkitWrapper))
     def test_to_inchi(self, molecule):
         """Test conversion to standard and non-standard InChI"""

@@ -82,6 +82,11 @@ class UndefinedStereochemistryError(MessageException):
     """A molecule was attempted to be loaded with undefined stereochemistry"""
 
 
+class DisconnectedMoleculesError(BaseException):
+    """A SMILES string representing disconnected molecules was passed to a method
+    that does not support disconnected molecules/fragments."""
+
+
 class GAFFAtomTypeWarning(RuntimeWarning):
     """A warning raised if a loaded mol2 file possibly uses GAFF atom types."""
 

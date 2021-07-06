@@ -25,6 +25,7 @@ from . import base_wrapper
 from .constants import DEFAULT_AROMATICITY_MODEL
 from .exceptions import (
     ChargeMethodUnavailableError,
+    DisconnectedMoleculesError,
     ToolkitUnavailableException,
     UndefinedStereochemistryError,
 )
@@ -674,6 +675,11 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 atom.SetProp("_map_idx", str(atom.GetAtomMapNum()))
                 # set it back to zero
                 atom.SetAtomMapNum(0)
+
+        if len(Chem.rdmolops.GetMolFrags(rdmol)) > 1:
+            raise DisconnectedMoleculesError(
+                "Parsing SMILES of disconnected fragments is not currently supported"
+            )
 
         # Chem.SanitizeMol calls updatePropertyCache so we don't need to call it ourselves
         # https://www.rdkit.org/docs/cppapi/namespaceRDKit_1_1MolOps.html#a8d831787aaf2d65d9920c37b25b476f5
