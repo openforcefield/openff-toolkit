@@ -173,18 +173,20 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         The molecule is created and sanitised based on the SMILES string, we then find a mapping
         between this molecule and one from the PDB based only on atomic number and connections.
-        The SMILES molecule is then reindex to match the PDB, the conformer is attached and the
+        The SMILES molecule is then reindexed to match the PDB, the conformer is attached, and the
         molecule returned.
+
+        Note that any stereochemistry in the molecule is set by the SMILES, and not the coordinates
+        of the PDB.
 
         Parameters
         ----------
         file_path: str
             PDB file path
         smiles : str
-            a valid smiles string for the pdb, used for seterochemistry and bond order
-
+            a valid smiles string for the pdb, used for stereochemistry, formal charges, and bond order
         allow_undefined_stereo : bool, default=False
-            If false, raises an exception if oemol contains undefined stereochemistry.
+            If false, raises an exception if SMILES contains undefined stereochemistry.
         _cls : class
             Molecule constructor
 
@@ -205,13 +207,18 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             smiles, allow_undefined_stereo=allow_undefined_stereo, _cls=_cls
         )
 
-        # Make another molecule from the PDB, allow stero errors here they are expected
+        # Make another molecule from the PDB. We squelch stereo errors here, since
+        # RDKit's PDB loader doesn't attempt to perceive stereochemistry, bond order,
+        # or formal charge (and we don't need those here).
+        prev_log_level = logger.getEffectiveLevel()
+        logger.setLevel(logging.ERROR)
         pdbmol = self.from_rdkit(
             Chem.MolFromPDBFile(file_path, removeHs=False),
             allow_undefined_stereo=True,
             hydrogens_are_explicit=True,
             _cls=_cls,
         )
+        logger.setLevel(prev_log_level)
 
         # check isomorphic and get the mapping if true the mapping will be
         # Dict[pdb_index: offmol_index] sorted by pdb_index
