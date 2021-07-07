@@ -962,6 +962,7 @@ class BaseFromFileIO:
         )[0]
         mol.sing()
 
+
 # Create the appropriate toolkit wrapper for each test class instance.
 #
 # We could create them at the module level, but this would require
@@ -973,6 +974,7 @@ class BaseFromFileIO:
 #
 # The wrappers are stateless, so specify it as class fixture, instead
 # of creating a new instance for each test
+
 
 @pytest.fixture(scope="class")
 def init_toolkit(request):
