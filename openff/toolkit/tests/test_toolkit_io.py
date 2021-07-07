@@ -815,7 +815,7 @@ class BaseFromFileIO:
         mols = self.toolkit_wrapper.from_file(file_manager.two_mols_smi, "SMI")
         self._test_from_smi_two_molecules(mols)
 
-    def test_from_file_obj_sdf_two_molecules(self):
+    def test_from_file_obj_smi_two_molecules(self):
         mols = self.toolkit_wrapper.from_file_obj(file_obj_manager.two_mols_smi, "SMI")
         self._test_from_smi_two_molecules(mols)
 
@@ -955,7 +955,7 @@ class BaseFromFileIO:
     @pytest.mark.parametrize(
         "name,file_format", [("caffeine_2d_sdf", "SDF"), ("caffeine_smi", "SMI")]
     )
-    def test_from_file_handles_cls(self, name, file_format):
+    def test_from_file_obj_handles_cls(self, name, file_format):
         file_obj = getattr(file_obj_manager, name)
         mol = self.toolkit_wrapper.from_file_obj(
             file_obj, file_format, _cls=SingingMolecule
