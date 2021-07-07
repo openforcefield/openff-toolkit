@@ -962,6 +962,17 @@ class BaseFromFileIO:
         )[0]
         mol.sing()
 
+# Create the appropriate toolkit wrapper for each test class instance.
+#
+# We could create them at the module level, but this would require
+# re-doing the license checks that @requires_openeye and
+# @requires_rdkit already do. Instead, let those decorators handle the
+# license check, and use pytest's fixture system to create the
+# instance given the appropriate wrapper class defined in the
+# subclass.
+#
+# The wrappers are stateless, so specify it as class fixture, instead
+# of creating a new instance for each test
 
 @pytest.fixture(scope="class")
 def init_toolkit(request):
