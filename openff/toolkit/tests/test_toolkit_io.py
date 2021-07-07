@@ -1142,9 +1142,9 @@ class BaseSmiles:
         # add hydrogens
         assert mol.n_atoms == 5
         assert mol.n_bonds == 4
-        assert molecule.partial_charges is None
+        assert mol.partial_charges is None
 
-    def test_parse_methane_with_explicit_Hs(self):
+    def test_parse_methane_with_explicit_Hs_and_say_they_are_explicit(self):
         mol = self.toolkit_wrapper.from_smiles(
             "[C]([H])([H])([H])([H])", hydrogens_are_explicit=True
         )
