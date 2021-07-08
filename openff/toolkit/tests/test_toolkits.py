@@ -25,11 +25,11 @@ from simtk import unit
 from openff.toolkit.tests.create_molecules import (
     create_acetaldehyde,
     create_acetate,
+    create_ammonia,
+    create_cyclic_n3h3,
     create_cyclohexane,
     create_ethanol,
     create_reversed_ethanol,
-    create_ammonia,
-    create_cyclic_n3h3,
 )
 from openff.toolkit.tests.utils import (
     requires_ambertools,
