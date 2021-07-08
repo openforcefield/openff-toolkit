@@ -906,7 +906,6 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         if normalize_partial_charges:
             molecule._normalize_partial_charges()
 
-
     @classmethod
     def _elf_is_problematic_conformer(
         cls, molecule: "Molecule", conformer: unit.Quantity
