@@ -12,6 +12,7 @@ __all__ = ("OpenEyeToolkitWrapper",)
 
 import importlib
 import logging
+import pathlib
 import re
 import tempfile
 from collections import defaultdict
@@ -32,10 +33,11 @@ from .exceptions import (
     GAFFAtomTypeWarning,
     InvalidIUPACNameError,
     LicenseError,
+    ParseError,
     ToolkitUnavailableException,
     UndefinedStereochemistryError,
 )
-from .utils import inherit_docstrings, temporary_cd
+from .utils import inherit_docstrings
 
 # =============================================================================================
 # CONFIGURE LOGGER
@@ -47,6 +49,20 @@ logger = logging.getLogger(__name__)
 # =============================================================================================
 # IMPLEMENTATION
 # =============================================================================================
+
+
+def get_oeformat(file_format):
+    from openeye import oechem
+
+    file_format = file_format.upper()
+    # XXX This is what RDKit does. Should be supported here too?
+    if file_format == "MOL":
+        file_format = "SDF"
+
+    oeformat = getattr(oechem, "OEFormat_" + file_format, None)
+    if oeformat is None:
+        raise ValueError(f"Unsupported file format: {file_format}")
+    return oeformat
 
 
 @inherit_docstrings
@@ -266,7 +282,17 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         """
         from openeye import oechem
 
+        oeformat = get_oeformat(file_format)
         ifs = oechem.oemolistream(file_path)
+        if not ifs.IsValid():
+            # Get Python to report an error message, if possible.
+            # This can distinguish between FileNotFound, IsADirectoryError, etc.
+            open(file_path).close()
+            # If that worked, then who knows. Fail anyway.
+            raise OSError("Unable to open file")
+
+        ifs.SetFormat(oeformat)
+
         return self._read_oemolistream_molecules(
             ifs, allow_undefined_stereo, file_path=file_path, _cls=_cls
         )
@@ -307,7 +333,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         # Configure input molecule stream.
         ifs = oechem.oemolistream()
         ifs.openstring(file_obj.read())
-        oeformat = getattr(oechem, "OEFormat_" + file_format)
+        oeformat = get_oeformat(file_format)
         ifs.SetFormat(oeformat)
 
         return self._read_oemolistream_molecules(ifs, allow_undefined_stereo, _cls=_cls)
@@ -326,11 +352,20 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             The format for writing the molecule data
 
         """
+        # This function requires a text-mode file_obj.
+        try:
+            file_obj.write("")
+        except TypeError:
+            # Switch to a ValueError and use a more informative exception
+            # message to match RDKit.
+            raise ValueError(
+                "Need a text mode file object like StringIO or a file opened with mode 't'"
+            ) from None
+
         with tempfile.TemporaryDirectory() as tmpdir:
-            with temporary_cd(tmpdir):
-                outfile = "temp_molecule." + file_format
-                self.to_file(molecule, outfile, file_format)
-                file_data = open(outfile).read()
+            path = pathlib.Path(tmpdir, f"input.{file_format.lower()}")
+            self.to_file(molecule, str(path), file_format)
+            file_data = path.read_text()
             file_obj.write(file_data)
 
     def to_file(self, molecule, file_path, file_format):
@@ -351,8 +386,21 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         oemol = self.to_openeye(molecule)
         ofs = oechem.oemolostream(file_path)
-        openeye_format = getattr(oechem, "OEFormat_" + file_format.upper())
+        if not ofs.IsValid():
+            # Get Python to report an error message, if possible.
+            # This can distinguish between PermissionError, IsADirectoryError, etc.
+            open(file_path, "wb").close()
+            # If that worked, then who knows. Fail anyway.
+            raise OSError("Unable to open file")
+
+        openeye_format = get_oeformat(file_format)
         ofs.SetFormat(openeye_format)
+
+        if openeye_format == oechem.OEFormat_SMI:
+            ofs.SetFlavor(
+                openeye_format,
+                self._get_smiles_flavor(isomeric=True, explicit_hydrogens=True),
+            )
 
         # OFFTK strictly treats SDF as a single-conformer format.
         # We need to override OETK's behavior here if the user is saving a multiconformer molecule.
@@ -1219,6 +1267,31 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         return oemol
 
+    def _get_smiles_flavor(self, isomeric, explicit_hydrogens):
+        from openeye import oechem
+
+        # this sets up the default settings following the old DEFAULT flag
+        # more information on flags can be found here
+        # <https://docs.eyesopen.com/toolkits/python/oechemtk/OEChemConstants/OESMILESFlag.html#OEChem::OESMILESFlag>
+        smiles_options = (
+            oechem.OESMILESFlag_Canonical
+            | oechem.OESMILESFlag_Isotopes
+            | oechem.OESMILESFlag_RGroups
+        )
+
+        # check if we want an isomeric smiles
+        if isomeric:
+            # add the atom and bond stereo flags
+            smiles_options |= (
+                oechem.OESMILESFlag_AtomStereo | oechem.OESMILESFlag_BondStereo
+            )
+
+        if explicit_hydrogens:
+            # add the hydrogen flag
+            smiles_options |= oechem.OESMILESFlag_Hydrogens
+
+        return smiles_options
+
     def to_smiles(self, molecule, isomeric=True, explicit_hydrogens=True, mapped=False):
         """
         Uses the OpenEye toolkit to convert a Molecule into a SMILES string.
@@ -1248,25 +1321,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         oemol = self.to_openeye(molecule)
 
-        # this sets up the default settings following the old DEFAULT flag
-        # more information on flags can be found here
-        # <https://docs.eyesopen.com/toolkits/python/oechemtk/OEChemConstants/OESMILESFlag.html#OEChem::OESMILESFlag>
-        smiles_options = (
-            oechem.OESMILESFlag_Canonical
-            | oechem.OESMILESFlag_Isotopes
-            | oechem.OESMILESFlag_RGroups
-        )
-
-        # check if we want an isomeric smiles
-        if isomeric:
-            # add the atom and bond stereo flags
-            smiles_options |= (
-                oechem.OESMILESFlag_AtomStereo | oechem.OESMILESFlag_BondStereo
-            )
-
-        if explicit_hydrogens:
-            # add the hydrogen flag
-            smiles_options |= oechem.OESMILESFlag_Hydrogens
+        smiles_options = self._get_smiles_flavor(isomeric, explicit_hydrogens)
 
         if mapped:
             assert explicit_hydrogens is True, (
@@ -1488,7 +1543,8 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         from openeye import oechem
 
         oemol = oechem.OEGraphMol()
-        oechem.OESmilesToMol(oemol, smiles)
+        if not oechem.OESmilesToMol(oemol, smiles):
+            raise ParseError("Unable to parse the SMILES string")
         if not (hydrogens_are_explicit):
             result = oechem.OEAddExplicitHydrogens(oemol)
             if not result:

@@ -5492,18 +5492,20 @@ class FrozenMolecule(Serializable):
 
         The molecule is created and sanitised based on the SMILES string, we then find a mapping
         between this molecule and one from the PDB based only on atomic number and connections.
-        The SMILES molecule is then reindex to match the PDB, the conformer is attached and the
+        The SMILES molecule is then reindexed to match the PDB, the conformer is attached, and the
         molecule returned.
+
+        Note that any stereochemistry in the molecule is set by the SMILES, and not the coordinates
+        of the PDB.
 
         Parameters
         ----------
         file_path: str
             PDB file path
         smiles : str
-            a valid smiles string for the pdb, used for seterochemistry and bond order
-
+            a valid smiles string for the pdb, used for stereochemistry, formal charges, and bond order
         allow_undefined_stereo : bool, default=False
-            If false, raises an exception if oemol contains undefined stereochemistry.
+            If false, raises an exception if SMILES contains undefined stereochemistry.
 
         Returns
         --------
