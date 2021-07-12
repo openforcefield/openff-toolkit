@@ -621,6 +621,276 @@ THREE_MOLS_SDF = (
 THREE_MOLS_SMI = CAFFEINE_SMI + "Q" + CAFFEINE_SMI + ASPIRIN_SMI
 
 # ========================================================
+# Used to test for records with disconnected molecules
+# ========================================================
+
+TABLE_SALT_SDF = """\
+table salt
+     RDKit
+
+  2  0  0  0  0  0  0  0  0  0999 V2000
+    0.0000    0.0000    0.0000 Na  0  0  0  0  0 15  0  0  0  0  0  0
+    0.0000    0.0000    0.0000 Cl  0  0  0  0  0 15  0  0  0  0  0  0
+M  CHG  2   1   1   2  -1
+M  END
+$$$$
+"""
+
+# ========================================================
+# Used to test for records with an R-group
+# ========================================================
+
+METHYL_GROUP_SDF = """\
+methyl group
+     RDKit
+
+  2  1  0  0  0  0  0  0  0  0999 V2000
+    0.0000    0.0000    0.0000 R   0  0  0  0  0  0  0  0  0  0  0  0
+    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+  1  2  1  0
+M  END
+$$$$
+"""
+
+# ========================================================
+# Used to test for records with an unexpected bond type
+# ========================================================
+
+CHEBI_52729_SDF = """\
+
+Marvin  07090914422D          
+
+ 78 91  0  0  0  0            999 V2000
+    4.4196   -7.2777    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    5.1341   -6.8652    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    5.8486   -7.2777    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    6.5631   -6.8652    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    7.2775   -7.2777    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    6.5631   -6.0402    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0
+    5.1341   -6.0402    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0
+    3.7522   -6.7927    0.0000 S   0  0  0  0  0  0  0  0  0  0  0  0
+    3.0848   -7.2777    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    3.3397   -8.0623    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    4.1647   -8.0623    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    7.9920   -6.8652    0.0000 F   0  0  0  0  0  0  0  0  0  0  0  0
+    7.2775   -8.1027    0.0000 F   0  0  0  0  0  0  0  0  0  0  0  0
+    7.9920   -7.6902    0.0000 F   0  0  0  0  0  0  0  0  0  0  0  0
+    2.6693   -5.4838    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    3.0818   -4.7694    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    2.6693   -4.0549    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    3.0818   -3.3404    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    2.6693   -2.6259    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    3.9068   -3.3404    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0
+    3.9068   -4.7694    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0
+    3.1543   -6.1513    0.0000 S   0  0  0  0  0  0  0  0  0  0  0  0
+    2.6693   -6.8187    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    1.8848   -6.5638    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    1.8848   -5.7388    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    3.0818   -1.9115    0.0000 F   0  0  0  0  0  0  0  0  0  0  0  0
+    1.8443   -2.6259    0.0000 F   0  0  0  0  0  0  0  0  0  0  0  0
+    2.2568   -1.9115    0.0000 F   0  0  0  0  0  0  0  0  0  0  0  0
+    8.9428   -5.4589    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    8.5303   -4.7444    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    8.9428   -4.0299    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    8.5303   -3.3155    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    8.9428   -2.6010    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    7.7053   -3.3155    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0
+    7.7053   -4.7444    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0
+    8.4579   -6.1263    0.0000 S   0  0  0  0  0  0  0  0  0  0  0  0
+    8.9428   -6.7937    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    9.7274   -6.5388    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    9.7274   -5.7138    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    8.5303   -1.8865    0.0000 F   0  0  0  0  0  0  0  0  0  0  0  0
+    9.7678   -2.6010    0.0000 F   0  0  0  0  0  0  0  0  0  0  0  0
+    9.3553   -1.8865    0.0000 F   0  0  0  0  0  0  0  0  0  0  0  0
+    5.7161    1.6500    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    5.0016    1.2375    0.0000 N   0  0  0  0  0  0  0  0  0  0  0  0
+    5.0016    0.4125    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    5.7161    0.0000    0.0000 N   0  0  0  0  0  0  0  0  0  0  0  0
+    6.4305    0.4125    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    6.4305    1.2375    0.0000 N   0  0  0  0  0  0  0  0  0  0  0  0
+    5.7161    2.4750    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    5.7161    4.1251    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    5.0016    3.7125    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    5.0016    2.8875    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    6.4305    2.8875    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    6.4305    3.7125    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    5.7161    4.9501    0.0000 N   0  0  0  0  0  0  0  0  0  0  0  0
+    6.4305    5.3626    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    6.4305    6.1876    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    5.0016    5.3626    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    4.2871    4.9501    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    3.4972    0.2380    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    3.0268   -0.4103    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    3.5260   -1.0966    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    4.3049   -0.8248    0.0000 N   0  0  0  0  0  0  0  0  0  0  0  0
+    4.2871    0.0000    0.0000 N   0  0  0  0  0  0  0  0  0  0  0  0
+    2.3407    1.0772    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    1.8561    0.4095    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    2.1922   -0.3440    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    3.1612    0.9915    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    7.9349    0.2380    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    8.4053   -0.4103    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    7.9062   -1.0966    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    7.1272   -0.8248    0.0000 N   0  0  0  0  0  0  0  0  0  0  0  0
+    7.1450    0.0000    0.0000 N   0  0  0  0  0  0  0  0  0  0  0  0
+    9.0915    1.0772    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    9.5760    0.4095    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    9.2400   -0.3440    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    8.2710    0.9915    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    5.8929   -4.3018    0.0000 Eu  0  0  0  0  0  0  0  0  0  0  0  0
+  1  2  1  0  0  0  0
+  2  3  1  0  0  0  0
+  3  4  2  0  0  0  0
+  4  5  1  0  0  0  0
+  4  6  1  0  0  0  0
+  2  7  2  0  0  0  0
+ 11  1  2  0  0  0  0
+  8  1  1  0  0  0  0
+  8  9  1  0  0  0  0
+  9 10  2  0  0  0  0
+ 10 11  1  0  0  0  0
+  5 12  1  0  0  0  0
+  5 13  1  0  0  0  0
+  5 14  1  0  0  0  0
+ 15 16  1  0  0  0  0
+ 25 15  2  0  0  0  0
+ 22 15  1  0  0  0  0
+ 16 17  1  0  0  0  0
+ 16 21  2  0  0  0  0
+ 17 18  2  0  0  0  0
+ 18 19  1  0  0  0  0
+ 18 20  1  0  0  0  0
+ 19 26  1  0  0  0  0
+ 19 27  1  0  0  0  0
+ 19 28  1  0  0  0  0
+ 22 23  1  0  0  0  0
+ 23 24  2  0  0  0  0
+ 24 25  1  0  0  0  0
+ 29 30  1  0  0  0  0
+ 39 29  2  0  0  0  0
+ 36 29  1  0  0  0  0
+ 30 31  1  0  0  0  0
+ 30 35  2  0  0  0  0
+ 31 32  2  0  0  0  0
+ 32 33  1  0  0  0  0
+ 32 34  1  0  0  0  0
+ 33 40  1  0  0  0  0
+ 33 41  1  0  0  0  0
+ 33 42  1  0  0  0  0
+ 36 37  1  0  0  0  0
+ 37 38  2  0  0  0  0
+ 38 39  1  0  0  0  0
+ 43 44  2  0  0  0  0
+ 43 48  1  0  0  0  0
+ 44 45  1  0  0  0  0
+ 45 46  2  0  0  0  0
+ 46 47  1  0  0  0  0
+ 47 48  2  0  0  0  0
+ 43 49  1  0  0  0  0
+ 52 49  2  0  0  0  0
+ 49 53  1  0  0  0  0
+ 50 51  2  0  0  0  0
+ 50 54  1  0  0  0  0
+ 51 52  1  0  0  0  0
+ 53 54  2  0  0  0  0
+ 50 55  1  0  0  0  0
+ 55 56  1  0  0  0  0
+ 56 57  1  0  0  0  0
+ 55 58  1  0  0  0  0
+ 58 59  1  0  0  0  0
+ 47 73  1  0  0  0  0
+ 45 64  1  0  0  0  0
+ 60 64  1  0  0  0  0
+ 61 62  1  0  0  0  0
+ 62 63  2  0  0  0  0
+ 63 64  1  0  0  0  0
+ 60 68  2  0  0  0  0
+ 61 60  1  0  0  0  0
+ 67 61  2  0  0  0  0
+ 65 66  2  0  0  0  0
+ 65 68  1  0  0  0  0
+ 66 67  1  0  0  0  0
+ 69 73  1  0  0  0  0
+ 69 77  2  0  0  0  0
+ 70 69  1  0  0  0  0
+ 70 71  1  0  0  0  0
+ 76 70  2  0  0  0  0
+ 71 72  2  0  0  0  0
+ 72 73  1  0  0  0  0
+ 74 75  2  0  0  0  0
+ 74 77  1  0  0  0  0
+ 75 76  1  0  0  0  0
+ 20 78  1  0  0  0  0
+ 34 78  1  0  0  0  0
+  6 78  1  0  0  0  0
+ 21 78  8  0  0  0  0
+  7 78  8  0  0  0  0
+ 35 78  8  0  0  0  0
+ 46 78  8  0  0  0  0
+ 72 78  8  0  0  0  0
+ 63 78  8  0  0  0  0
+M  STY  6   1 DAT   2 DAT   3 DAT   4 DAT   5 DAT   6 DAT
+M  SAL   1  2  21  78
+M  SDT   1 MRV_COORDINATE_BOND_TYPE                              
+M  SDD   1     0.0000    0.0000    DR    ALL  0       0  
+M  SED   1 86
+M  SAL   2  2   7  78
+M  SDT   2 MRV_COORDINATE_BOND_TYPE                              
+M  SDD   2     0.0000    0.0000    DR    ALL  0       0  
+M  SED   2 87
+M  SAL   3  2  35  78
+M  SDT   3 MRV_COORDINATE_BOND_TYPE                              
+M  SDD   3     0.0000    0.0000    DR    ALL  0       0  
+M  SED   3 88
+M  SAL   4  2  46  78
+M  SDT   4 MRV_COORDINATE_BOND_TYPE                              
+M  SDD   4     0.0000    0.0000    DR    ALL  0       0  
+M  SED   4 89
+M  SAL   5  2  72  78
+M  SDT   5 MRV_COORDINATE_BOND_TYPE                              
+M  SDD   5     0.0000    0.0000    DR    ALL  0       0  
+M  SED   5 90
+M  SAL   6  2  63  78
+M  SDT   6 MRV_COORDINATE_BOND_TYPE                              
+M  SDD   6     0.0000    0.0000    DR    ALL  0       0  
+M  SED   6 91
+M  END
+> <ID>
+CHEBI:52729
+
+> <NAME>
+Eu(tta)3DEADIT
+
+> <DEFINITION>
+A europium coordination entity composed of europium(III) coordinated to 4-[4,6-di(1H-indazol-1-yl)-1,3,5-triazin-2-yl]-N,N-diethylaniline and three 4,4,4-trifluoro-1-(thiophen-2-yl)butane-1,3-dione units.
+
+> <STAR>
+3
+
+> <IUPAC_NAME>
+{4-[4,6-di(1H-indazol-1-yl-kappaN(2))-1,3,5-triazin-2-yl-kappaN(5)]-N,N-diethylaniline}{tris[4,4,4-trifluoro-3-(hydroxy-kappaO)-1-(thiophen-2-yl)but-2-en-1-onato-kappaO]}europium
+
+> <FORMULA>
+C51H36EuF9N8O6S3
+
+> <MASS>
+1276.02600
+
+> <MONOISOTOPIC_MASS>
+1276.09885
+
+> <CHARGE>
+0
+
+> <SMILES>
+CCN(CC)c1ccc(cc1)-c1nc([nH]c(n1)-n1[nH]cc2ccccc12)-n1[nH]cc2ccccc12.FC(F)(F)C(\\O[Eu](O\\C(=C/C(=O)c1cccs1)C(F)(F)F)O\\C(=C/C(=O)c1cccs1)C(F)(F)F)=C\\C(=O)c1cccs1
+
+$$$$
+"""
+
+
+# ========================================================
 # Used to test that _cls is passed correctly
 # ========================================================
 
@@ -702,7 +972,7 @@ class FileManager:
 file_manager = FileManager(tempfile.TemporaryDirectory())
 
 
-# This is similar to the FilenameDescriptor excpet that it returns a
+# This is similar to the FilenameDescriptor except that it returns a
 # BytesIO.
 
 
@@ -731,6 +1001,10 @@ class FileObjManager:
     three_mols_smi = FileobjDescriptor(THREE_MOLS_SMI)
 
     chebi_1148_sdf = FileobjDescriptor(CHEBI_1148_SDF)
+
+    table_salt_sdf = FileobjDescriptor(TABLE_SALT_SDF)
+    methyl_group_sdf = FileobjDescriptor(METHYL_GROUP_SDF)
+    chebi_52729_sdf = FileobjDescriptor(CHEBI_52729_SDF)
 
 
 file_obj_manager = FileObjManager()
@@ -1209,5 +1483,106 @@ class TestRDKitToolkitSmiles(BaseSmiles):
     tk_mol_name = "RDMol"
 
 
+# ========================================================
+# Base class to test checks for unsupported chemsitry
+# ========================================================
+
+def test_unsupported_chemistry_exception_hierarchy():
+    assert issubclass(
+        exceptions.DisconnectedMoleculesError,
+        exceptions.UnsupportedChemistryError
+        )
+    assert issubclass(
+        exceptions.UnsupportedAtomTypeError,
+        exceptions.UnsupportedChemistryError
+        )
+    assert issubclass(
+        exceptions.UnsupportedBondTypeError,
+        exceptions.UnsupportedChemistryError
+        )
+    
+class BaseUnsupportedChemistry:
+    def test_smiles_disconnected(self):
+        with pytest.raises(
+                exceptions.DisconnectedMoleculesError,
+                match = "OpenFF does not currently support input structures with more than one disconnected molecule",
+                ):
+            self.toolkit_wrapper.from_smiles("[Na+].[Cl-]")
+
+    def test_smiles_connected_but_with_dot_disconnect(self):
+        mol = self.toolkit_wrapper.from_smiles("C1.C1")
+        assert mol.n_atoms == 8
+        
+    def test_smiles_with_wildcard(self):
+        with pytest.raises(
+                exceptions.UnsupportedAtomTypeError,
+                match = "OpenFF does not support atoms with an atomic number of 0"):
+            mol = self.toolkit_wrapper.from_smiles("*C")
+
+    def test_inchi_disconnected(self):
+        with pytest.raises(
+                exceptions.DisconnectedMoleculesError,
+                match = "OpenFF does not currently support input structures with more than one disconnected molecule",
+                ):
+            # [Na+].[Cl-]
+            self.toolkit_wrapper.from_inchi("InChI=1S/ClH.Na/h1H;/q;+1/p-1")
+            # InChI doesn't accept atoms with element number 0 so can't test for that case.
+            
+    def test_sdf_disconnected(self):
+        with pytest.raises(
+                exceptions.DisconnectedMoleculesError,
+                match = "OpenFF does not currently support input structures with more than one disconnected molecule",
+                ):
+            self.toolkit_wrapper.from_file_obj(file_obj_manager.table_salt_sdf, "sdf")
+
+    def test_sdf_with_R_group(self):
+        with pytest.raises(
+                exceptions.UnsupportedAtomTypeError,
+                match = "OpenFF does not support atoms with an atomic number of 0",
+                ):
+            self.toolkit_wrapper.from_file_obj(file_obj_manager.methyl_group_sdf, "sdf")
+        
+
+@pytest.mark.usefixtures("init_toolkit")
+@requires_openeye
+class TestOpenEyeToolkitUnsupportedChemistry(BaseUnsupportedChemistry):
+    toolkit_wrapper_class = OpenEyeToolkitWrapper
+    tk_mol_name = "OEMol"
+
+
+    def test_empty_rdmol_is_accepted(self):
+        # This verifies the for the number of components is ">1" not "!=1".
+        from openeye import oechem
+        rdmol = oechem.OEGraphMol()
+        mol = self.toolkit_wrapper.from_object(rdmol)
+        assert mol.n_atoms == 0
+
+    ## def test_sdf_with_any_bond(self):
+    ##     raise AssertionError("Cannot test - OEChem handles it without a problem.)
+    
+@pytest.mark.usefixtures("init_toolkit")
+@requires_rdkit
+class TestRDKitToolkitUnsupportedChemistry(BaseUnsupportedChemistry):
+    toolkit_wrapper_class = RDKitToolkitWrapper
+    tk_mol_name = "RDMol"
+
+    def test_empty_rdmol_is_accepted(self):
+        # This verifies the for the number of components is ">1" not "!=1".
+        from rdkit import Chem
+        rdmol = Chem.Mol()
+        mol = self.toolkit_wrapper.from_object(rdmol)
+        assert mol.n_atoms == 0
+
+    def test_sdf_with_any_bond(self):
+        with pytest.raises(
+                exceptions.UnsupportedBondTypeError,
+                match = "OpenFF does not currently support RDKit molecules with a bond of type UNSPECIFIED",
+                ):
+            self.toolkit_wrapper.from_file_obj(file_obj_manager.chebi_52729_sdf, "sdf")
+
+
+    
+    
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__] + sys.argv[1:]))
+

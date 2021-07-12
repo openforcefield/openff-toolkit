@@ -38,6 +38,10 @@ __all__ = (
     "InvalidToolkitError",
     "InvalidToolkitRegistryError",
     "UndefinedStereochemistryError",
+    "UnsupportedChemistryError",
+    "DisconnectedMoleculesError",
+    "UnsupportedAtomTypeError",
+    "UnsupportedBondTypeError",
     "GAFFAtomTypeWarning",
     "ChargeMethodUnavailableError",
     "IncorrectNumConformersError",
@@ -88,6 +92,7 @@ from .exceptions import (
     AntechamberNotFoundError,
     ChargeCalculationError,
     ChargeMethodUnavailableError,
+    DisconnectedMoleculesError,
     GAFFAtomTypeWarning,
     IncompatibleUnitError,
     IncorrectNumConformersError,
@@ -102,6 +107,9 @@ from .exceptions import (
     ParseError,
     ToolkitUnavailableException,
     UndefinedStereochemistryError,
+    UnsupportedAtomTypeError,
+    UnsupportedBondTypeError,
+    UnsupportedChemistryError,
 )
 from .openeye_wrapper import OpenEyeToolkitWrapper, requires_openeye_module
 from .rdkit_wrapper import RDKitToolkitWrapper

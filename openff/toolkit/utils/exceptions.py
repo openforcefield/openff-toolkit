@@ -8,6 +8,10 @@ __all__ = (
     "InvalidToolkitError",
     "InvalidToolkitRegistryError",
     "UndefinedStereochemistryError",
+    "UnsupportedChemistryError",
+    "DisconnectedMoleculesError",
+    "UnsupportedAtomTypeError",
+    "UnsupportedBondTypeError",
     "GAFFAtomTypeWarning",
     "ChargeMethodUnavailableError",
     "IncorrectNumConformersError",
@@ -81,6 +85,22 @@ class InvalidToolkitRegistryError(MessageException):
 
 class UndefinedStereochemistryError(MessageException):
     """A molecule was attempted to be loaded with undefined stereochemistry"""
+
+
+class UnsupportedChemistryError(MessageException):
+    """An input structure uses a chemistry representation that OpenFF does not support"""
+
+
+class DisconnectedMoleculesError(UnsupportedChemistryError):
+    """An input structure contains two or more disconnected molecules, which OpenFF does not support"""
+
+
+class UnsupportedAtomTypeError(UnsupportedChemistryError):
+    """An input structure contains an atom type (eg, '*' or 'R1'), which OpenFF does not support"""
+
+
+class UnsupportedBondTypeError(UnsupportedChemistryError):
+    """An input structure contains a bond type which OpenFF does not support"""
 
 
 class GAFFAtomTypeWarning(RuntimeWarning):
