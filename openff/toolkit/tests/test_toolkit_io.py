@@ -1487,61 +1487,61 @@ class TestRDKitToolkitSmiles(BaseSmiles):
 # Base class to test checks for unsupported chemsitry
 # ========================================================
 
+
 def test_unsupported_chemistry_exception_hierarchy():
     assert issubclass(
-        exceptions.DisconnectedMoleculesError,
-        exceptions.UnsupportedChemistryError
-        )
+        exceptions.DisconnectedMoleculesError, exceptions.UnsupportedChemistryError
+    )
     assert issubclass(
-        exceptions.UnsupportedAtomTypeError,
-        exceptions.UnsupportedChemistryError
-        )
+        exceptions.UnsupportedAtomTypeError, exceptions.UnsupportedChemistryError
+    )
     assert issubclass(
-        exceptions.UnsupportedBondTypeError,
-        exceptions.UnsupportedChemistryError
-        )
-    
+        exceptions.UnsupportedBondTypeError, exceptions.UnsupportedChemistryError
+    )
+
+
 class BaseUnsupportedChemistry:
     def test_smiles_disconnected(self):
         with pytest.raises(
-                exceptions.DisconnectedMoleculesError,
-                match = "OpenFF does not currently support input structures with more than one disconnected molecule",
-                ):
+            exceptions.DisconnectedMoleculesError,
+            match="OpenFF does not currently support input structures with more than one disconnected molecule",
+        ):
             self.toolkit_wrapper.from_smiles("[Na+].[Cl-]")
 
     def test_smiles_connected_but_with_dot_disconnect(self):
         mol = self.toolkit_wrapper.from_smiles("C1.C1")
         assert mol.n_atoms == 8
-        
+
     def test_smiles_with_wildcard(self):
         with pytest.raises(
-                exceptions.UnsupportedAtomTypeError,
-                match = "OpenFF does not support atoms with an atomic number of 0"):
+            exceptions.UnsupportedAtomTypeError,
+            match="OpenFF does not support atoms with an atomic number of 0",
+        ):
             mol = self.toolkit_wrapper.from_smiles("*C")
 
     def test_inchi_disconnected(self):
         with pytest.raises(
-                exceptions.DisconnectedMoleculesError,
-                match = "OpenFF does not currently support input structures with more than one disconnected molecule",
-                ):
+            exceptions.DisconnectedMoleculesError,
+            match="OpenFF does not currently support input structures with more than one disconnected molecule",
+        ):
             # [Na+].[Cl-]
             self.toolkit_wrapper.from_inchi("InChI=1S/ClH.Na/h1H;/q;+1/p-1")
             # InChI doesn't accept atoms with element number 0 so can't test for that case.
-            
+
     def test_sdf_disconnected(self):
         with pytest.raises(
-                exceptions.DisconnectedMoleculesError,
-                match = "OpenFF does not currently support input structures with more than one disconnected molecule",
-                ):
+            exceptions.DisconnectedMoleculesError,
+            match="OpenFF does not currently support input structures with more than one disconnected molecule",
+        ):
             self.toolkit_wrapper.from_file_obj(file_obj_manager.table_salt_sdf, "sdf")
 
     def test_sdf_with_R_group(self):
         with pytest.raises(
-                exceptions.UnsupportedAtomTypeError,
-                match = "OpenFF does not support atoms with an atomic number of 0",
-                ):
+            exceptions.UnsupportedAtomTypeError,
+            match="OpenFF does not support atoms with an atomic number of 0",
+        ):
             self.toolkit_wrapper.from_file_obj(file_obj_manager.methyl_group_sdf, "sdf")
-        
+
 
 @pytest.mark.usefixtures("init_toolkit")
 @requires_openeye
@@ -1549,17 +1549,18 @@ class TestOpenEyeToolkitUnsupportedChemistry(BaseUnsupportedChemistry):
     toolkit_wrapper_class = OpenEyeToolkitWrapper
     tk_mol_name = "OEMol"
 
-
     def test_empty_rdmol_is_accepted(self):
         # This verifies the for the number of components is ">1" not "!=1".
         from openeye import oechem
+
         rdmol = oechem.OEGraphMol()
         mol = self.toolkit_wrapper.from_object(rdmol)
         assert mol.n_atoms == 0
 
     ## def test_sdf_with_any_bond(self):
     ##     raise AssertionError("Cannot test - OEChem handles it without a problem.)
-    
+
+
 @pytest.mark.usefixtures("init_toolkit")
 @requires_rdkit
 class TestRDKitToolkitUnsupportedChemistry(BaseUnsupportedChemistry):
@@ -1569,20 +1570,18 @@ class TestRDKitToolkitUnsupportedChemistry(BaseUnsupportedChemistry):
     def test_empty_rdmol_is_accepted(self):
         # This verifies the for the number of components is ">1" not "!=1".
         from rdkit import Chem
+
         rdmol = Chem.Mol()
         mol = self.toolkit_wrapper.from_object(rdmol)
         assert mol.n_atoms == 0
 
     def test_sdf_with_any_bond(self):
         with pytest.raises(
-                exceptions.UnsupportedBondTypeError,
-                match = "OpenFF does not currently support RDKit molecules with a bond of type UNSPECIFIED",
-                ):
+            exceptions.UnsupportedBondTypeError,
+            match="OpenFF does not currently support RDKit molecules with a bond of type UNSPECIFIED",
+        ):
             self.toolkit_wrapper.from_file_obj(file_obj_manager.chebi_52729_sdf, "sdf")
 
 
-    
-    
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__] + sys.argv[1:]))
-

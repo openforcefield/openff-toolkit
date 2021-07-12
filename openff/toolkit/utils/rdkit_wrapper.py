@@ -26,12 +26,12 @@ from . import base_wrapper
 from .constants import DEFAULT_AROMATICITY_MODEL
 from .exceptions import (
     ChargeMethodUnavailableError,
-    ParseError,
     DisconnectedMoleculesError,
-    UnsupportedAtomTypeError,
-    UnsupportedBondTypeError,
+    ParseError,
     ToolkitUnavailableException,
     UndefinedStereochemistryError,
+    UnsupportedAtomTypeError,
+    UnsupportedBondTypeError,
 )
 
 # =============================================================================================
@@ -65,23 +65,29 @@ def check_for_unsupported_chemistry(rdmol):
     check_for_unsupported_atom_type(rdmol)
     check_for_unsupported_bond_type(rdmol)
 
+
 def check_for_disconnected_molecules(rdmol):
     from rdkit import Chem
+
     if len(Chem.rdmolops.GetMolFrags(rdmol)) > 1:
         raise DisconnectedMoleculesError(
             "OpenFF does not currently support input structures with more than one disconnected molecule"
-            )
-    
+        )
+
+
 def check_for_unsupported_atom_type(rdmol):
     from rdkit import Chem
+
     for atom in rdmol.GetAtoms():
         if atom.GetAtomicNum() == 0:
             raise UnsupportedAtomTypeError(
                 "OpenFF does not support atoms with an atomic number of 0"
-                )
+            )
+
 
 def check_for_unsupported_bond_type(rdmol):
     from rdkit import Chem
+
     # NOTE: keep this set synchronized with the dictionary in to_rdkit()
     supported_bondtypes = {
         Chem.BondType.SINGLE,
@@ -92,15 +98,16 @@ def check_for_unsupported_bond_type(rdmol):
         Chem.BondType.QUINTUPLE,
         Chem.BondType.HEXTUPLE,
         Chem.BondType.ONEANDAHALF,
-        }
-    
+    }
+
     for bond in rdmol.GetBonds():
         bond_type = bond.GetBondType()
         if bond_type not in supported_bondtypes:
             raise UnsupportedBondTypeError(
                 f"OpenFF does not currently support RDKit molecules with a bond of type {bond_type}"
-                )
-    
+            )
+
+
 class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
     """
     RDKit toolkit wrapper
@@ -790,7 +797,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         rdmol = Chem.MolFromSmiles(smiles, sanitize=False)
         if rdmol is None:
             raise ParseError("Unable to parse the SMILES string")
-        
+
         # strip the atom map from the molecule if it has one
         # so we don't affect the sterochemistry tags
         for atom in rdmol.GetAtoms():
@@ -1450,7 +1457,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         # Check that it doesn't contain unexpected chemistry
         check_for_unsupported_chemistry(rdmol)
-        
+
         # Make a copy of the RDKit Mol as we'll need to change it (e.g. assign stereo).
         rdmol = Chem.Mol(rdmol)
 

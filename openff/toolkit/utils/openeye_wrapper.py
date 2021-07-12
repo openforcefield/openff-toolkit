@@ -30,15 +30,15 @@ from .constants import DEFAULT_AROMATICITY_MODEL
 from .exceptions import (
     ChargeCalculationError,
     ChargeMethodUnavailableError,
+    DisconnectedMoleculesError,
     GAFFAtomTypeWarning,
     InvalidIUPACNameError,
-    DisconnectedMoleculesError,
-    UnsupportedAtomTypeError,
-    UnsupportedBondTypeError,
     LicenseError,
     ParseError,
     ToolkitUnavailableException,
     UndefinedStereochemistryError,
+    UnsupportedAtomTypeError,
+    UnsupportedBondTypeError,
 )
 from .utils import inherit_docstrings
 
@@ -67,26 +67,30 @@ def get_oeformat(file_format):
         raise ValueError(f"Unsupported file format: {file_format}")
     return oeformat
 
+
 def check_for_unsupported_chemistry(oemol):
     check_for_disconnected_molecules(oemol)
     check_for_unsupported_atom_type(oemol)
     check_for_unsupported_bond_type(oemol)
 
+
 def check_for_disconnected_molecules(oemol):
     from openeye import oechem
-    
+
     num_components, components = oechem.OEDetermineComponents(oemol)
     if num_components > 1:
         raise DisconnectedMoleculesError(
             "OpenFF does not currently support input structures with more than one disconnected molecule"
-            )
-    
+        )
+
+
 def check_for_unsupported_atom_type(oemol):
     for atom in oemol.GetAtoms():
         if atom.GetAtomicNum() == 0:
             raise UnsupportedAtomTypeError(
                 "OpenFF does not support atoms with an atomic number of 0"
-                )
+            )
+
 
 def check_for_unsupported_bond_type(oemol):
     # So far there's no failure case for OpenEye.
@@ -910,7 +914,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         # Check that it doesn't contain unexpected chemistry
         check_for_unsupported_chemistry(oemol)
-        
+
         # Add explicit hydrogens if they're implicit
         if oechem.OEHasImplicitHydrogens(oemol):
             oechem.OEAddExplicitHydrogens(oemol)
