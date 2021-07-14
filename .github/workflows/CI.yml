@@ -129,7 +129,7 @@ jobs:
           fi
           if [[ "$RDKIT" == false ]]; then
             if [[ $(conda list | grep rdkit) ]]; then
-              conda remove --force rdkit --yes
+              conda remove --force rdkit ambertools --yes
             fi
             python -c "from openff.toolkit.utils.toolkits import RDKIT_AVAILABLE; assert not RDKIT_AVAILABLE, 'RDKit unexpectedly found'"
           fi
