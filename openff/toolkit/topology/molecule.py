@@ -4639,7 +4639,8 @@ class FrozenMolecule(Serializable):
         if topology.n_topology_molecules != 1:
             raise ValueError("Topology must contain exactly one molecule")
         molecule = [i for i in topology.reference_molecules][0]
-        return cls(molecule)
+        remapped_mol = molecule.remap(topology.topology_molecules[0]._ref_to_top_index)
+        return cls(remapped_mol)
 
     def to_topology(self):
         """
