@@ -4,8 +4,12 @@ Serialization mix-in
 
 .. todo ::
 
-   Currently, the ``openff-toolkit`` toolkit package requires a number of dependencies to support all of these serialization protocols.
-   Instead, should we not include these by default, and instead raise a helpful exception with installation instructions if one of the serialization schemes is called but the requisite library is not installed?
+   Currently, the ``openff-toolkit`` toolkit package requires a number
+   of dependencies to support all of these serialization protocols.
+   Instead, should we not include these by default, and instead raise
+   a helpful exception with installation instructions if one of the
+   serialization schemes is called but the requisite library is not
+   installed?
 
 """
 
@@ -25,7 +29,9 @@ from openff.toolkit.utils.utils import requires_package
 class Serializable(abc.ABC):
     """Mix-in to add serialization and deserialization support via JSON, YAML, BSON, TOML, MessagePack, and XML.
 
-    For more information on these formats, see: `JSON <https://www.json.org/>`_, `BSON <http://bsonspec.org/>`_, `YAML <http://yaml.org/>`_, `TOML <https://github.com/toml-lang/toml>`_, `MessagePack <https://msgpack.org/index.html>`_, and `XML <https://www.w3.org/XML/>`_.
+    For more information on these formats, see: `JSON <https://www.json.org/>`_,
+    `BSON <http://bsonspec.org/>`_, `YAML <http://yaml.org/>`_, `TOML <https://github.com/toml-lang/toml>`_,
+    `MessagePack <https://msgpack.org/index.html>`_, and `XML <https://www.w3.org/XML/>`_.
 
     To use this mix-in, the class inheriting from this class must have implemented ``to_dict()`` and ``from_dict()`` methods
     that utilize dictionaries containing only serialiable Python objects.
