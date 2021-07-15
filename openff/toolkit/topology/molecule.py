@@ -40,7 +40,6 @@ from collections import OrderedDict
 from copy import deepcopy
 from typing import Optional, Union
 
-import networkx as nx
 import numpy as np
 from simtk import unit
 from simtk.openmm.app import Element, element
@@ -3059,6 +3058,8 @@ class FrozenMolecule(Serializable):
         # Here we should work out what data type we have, also deal with lists?
         def to_networkx(data):
             """For the given data type, return the networkx graph"""
+            import networkx as nx
+
             from openff.toolkit.topology import TopologyMolecule
 
             if strip_pyrimidal_n_atom_stereo:
@@ -3082,6 +3083,7 @@ class FrozenMolecule(Serializable):
                         SMARTS, toolkit_registry=toolkit_registry
                     )
                 return ref_mol.to_networkx()
+
             elif isinstance(data, nx.Graph):
                 return data
 
@@ -3089,7 +3091,7 @@ class FrozenMolecule(Serializable):
                 raise NotImplementedError(
                     f"The input type {type(data)} is not supported,"
                     f"please supply an openff.toolkit.topology.molecule.Molecule,"
-                    f"openff.toolkit.topology.topology.TopologyMolecule or networkx "
+                    f"openff.toolkit.topology.topology.TopologyMolecule or networkx.Graph "
                     f"representation of the molecule."
                 )
 
@@ -5468,18 +5470,20 @@ class FrozenMolecule(Serializable):
 
         The molecule is created and sanitised based on the SMILES string, we then find a mapping
         between this molecule and one from the PDB based only on atomic number and connections.
-        The SMILES molecule is then reindex to match the PDB, the conformer is attached and the
+        The SMILES molecule is then reindexed to match the PDB, the conformer is attached, and the
         molecule returned.
+
+        Note that any stereochemistry in the molecule is set by the SMILES, and not the coordinates
+        of the PDB.
 
         Parameters
         ----------
         file_path: str
             PDB file path
         smiles : str
-            a valid smiles string for the pdb, used for seterochemistry and bond order
-
+            a valid smiles string for the pdb, used for stereochemistry, formal charges, and bond order
         allow_undefined_stereo : bool, default=False
-            If false, raises an exception if oemol contains undefined stereochemistry.
+            If false, raises an exception if SMILES contains undefined stereochemistry.
 
         Returns
         --------
