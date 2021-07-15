@@ -76,6 +76,11 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
   without a toolkit. These functions are now in their own module so they can be imported directly,
   without the overhead of going through test_forcefield.
 
+### Improved documentation and warnings
+
+- [PR #995](https://github.com/openforcefield/openff-toolkit/pull/995):
+  Add a ["cookbook"](users/molecule_cookbook) demonstrating every way to make a `Molecule` object.
+
 ## 0.9.2 Minor feature and bugfix release
 
 ### New features and behaviors changed
