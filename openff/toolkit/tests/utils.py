@@ -1818,3 +1818,21 @@ def get_14_scaling_factors(omm_sys: openmm.System) -> Tuple[List, List]:
             vdw_14.append(eps / (eps_i * eps_j) ** 0.5)
 
     return coul_14, vdw_14
+
+
+def compare_partial_charges(system1, system2):
+    assert (
+        system1.getNumParticles() == system2.getNumParticles()
+    ), "Systems do not have the same number of particles"
+
+    n_particles = system1.getNumParticles()
+
+    for force1 in system1.getForces():
+        if type(force1) == openmm.NonbondedForce:
+            charges1 = [force1.getParticleParameters(i)[0] for i in range(n_particles)]
+
+    for force2 in system2.getForces():
+        if type(force2) == openmm.NonbondedForce:
+            charges2 = [force2.getParticleParameters(i)[0] for i in range(n_particles)]
+
+    assert charges1 == charges2, [(x - y) for x, y in zip(charges1, charges2)]

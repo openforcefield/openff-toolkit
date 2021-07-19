@@ -32,7 +32,7 @@ import numpy as np
 import pytest
 from simtk import unit
 
-from openff.toolkit.tests.test_forcefield import (
+from openff.toolkit.tests.create_molecules import (
     create_acetaldehyde,
     create_benzene_no_aromatic,
     create_cis_1_2_dichloroethene,
@@ -2342,6 +2342,47 @@ class TestMolecule:
             for torsion in common_torsions:
                 assert is_three_membered_ring_torsion(torsion)
 
+    def test_nth_degree_neighbors_basic(self):
+        benzene = Molecule.from_smiles("c1ccccc1")
+
+        with pytest.raises(ValueError, match="0 or fewer atoms"):
+            benzene.nth_degree_neighbors(n_degrees=0)
+
+        with pytest.raises(ValueError, match="0 or fewer atoms"):
+            benzene.nth_degree_neighbors(n_degrees=-1)
+
+        # 3 proper torsions have 1-4 pairs that are duplicates of other torsions, i.e.
+        # torsions 0-1-2-3 0-5-4-3 where #s are the indices of carbons in the ring
+        n_14_pairs = len([*benzene.nth_degree_neighbors(n_degrees=3)])
+        assert n_14_pairs == benzene.n_propers - 3
+
+        for pair in benzene.nth_degree_neighbors(n_degrees=3):
+            assert pair[0].molecule_particle_index < pair[1].molecule_particle_index
+
+    @pytest.mark.parametrize(
+        ("smiles", "n_degrees", "num_pairs"),
+        [
+            ("c1ccccc1", 6, 0),
+            ("c1ccccc1", 5, 3),
+            ("c1ccccc1", 4, 12),
+            ("c1ccccc1", 3, 21),
+            ("N1ONON1", 4, 2),
+            ("N1ONON1", 3, 7),
+            ("C1#CO1", 2, 0),
+            ("C1#CO1", 1, 3),
+            ("C1CO1", 4, 0),
+            ("C1CO1", 2, 10),
+            ("C1=C=C=C=1", 4, 0),
+            ("C1=C=C=C=1", 3, 0),
+            ("C1=C=C=C=1", 2, 2),
+        ],
+    )
+    def test_nth_degree_neighbors_rings(self, smiles, n_degrees, num_pairs):
+        molecule = Molecule.from_smiles(smiles)
+
+        num_pairs_found = len([*molecule.nth_degree_neighbors(n_degrees=n_degrees)])
+        assert num_pairs_found == num_pairs
+
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_total_charge(self, molecule):
         """Test total charge"""
@@ -2869,6 +2910,395 @@ class TestMolecule:
         molecule_dict = molecule.to_dict()
         molecule2 = Molecule.from_dict(molecule_dict)
         assert molecule.to_dict() == molecule2.to_dict()
+
+    def test_bond_charge_virtual_site_position_symmetric(self):
+        """
+        Test for expected positions of virtual sites when created through the molecule
+        API. This uses symmetric, which will add both orientations of the atoms to
+        create two particles for the vsite.
+
+        The order of the positions is the same as the order of the particles as they
+        appear in the molecule using Molecule.particles
+        """
+
+        import openff.toolkit.tests.test_forcefield
+
+        molecule = openff.toolkit.tests.test_forcefield.create_water()
+        # molecule = create_water()
+
+        # a 90 degree water molecule on the xy plane
+        molecule.add_conformer(
+            unit.Quantity(
+                np.array(
+                    [
+                        [1.0, 0.0, 0.0],
+                        [0.0, 0.0, 0.0],
+                        [0.0, 1.0, 0.0],
+                    ]
+                ),
+                unit.angstrom,
+            )
+        )
+
+        atom1 = molecule.atoms[0]
+        atom2 = molecule.atoms[1]
+        distance = 0.1 * unit.angstrom
+        vsite1_index = molecule.add_bond_charge_virtual_site(
+            [atom1, atom2],
+            distance,
+            replace=False,
+            symmetric=True,
+        )
+        expected = np.array([[1.1, 0.0, 0.0], [-0.1, 0.0, 0.0]])
+
+        vsite_pos = molecule.compute_virtual_site_positions_from_conformer(0)
+        vsite_pos = vsite_pos / vsite_pos.unit
+
+        assert vsite_pos.shape == (2, 3)
+        assert np.allclose(vsite_pos, expected)
+
+        conformer = molecule.conformers[0]
+        vsite_pos = molecule.compute_virtual_site_positions_from_atom_positions(
+            conformer
+        )
+        vsite_pos = vsite_pos / vsite_pos.unit
+
+        assert vsite_pos.shape == (2, 3)
+        assert np.allclose(vsite_pos, expected)
+
+    def test_bond_charge_virtual_site_position(self):
+        """
+        Test for expected positions of virtual sites when created through the molecule
+        API.
+
+        The order of the positions is the same as the order of the particles as they
+        appear in the molecule using Molecule.particles
+        """
+
+        import openff.toolkit.tests.test_forcefield
+
+        molecule = openff.toolkit.tests.test_forcefield.create_water()
+        # molecule = create_water()
+
+        # a 90 degree water molecule on the xy plane
+        molecule.add_conformer(
+            unit.Quantity(
+                np.array(
+                    [
+                        [1.0, 0.0, 0.0],
+                        [0.0, 0.0, 0.0],
+                        [0.0, 1.0, 0.0],
+                    ]
+                ),
+                unit.angstrom,
+            )
+        )
+
+        atom1 = molecule.atoms[0]
+        atom2 = molecule.atoms[1]
+        distance = 0.1 * unit.angstrom
+        vsite1_index = molecule.add_bond_charge_virtual_site(
+            [atom1, atom2],
+            distance,
+            replace=False,
+            symmetric=False,
+        )
+        expected = np.array([[1.1, 0.0, 0.0]])
+
+        vsite_pos = molecule.compute_virtual_site_positions_from_conformer(0)
+        vsite_pos = vsite_pos / vsite_pos.unit
+
+        assert vsite_pos.shape == (1, 3)
+        assert np.allclose(vsite_pos, expected)
+
+        conformer = molecule.conformers[0]
+        vsite_pos = molecule.compute_virtual_site_positions_from_atom_positions(
+            conformer
+        )
+        vsite_pos = vsite_pos / vsite_pos.unit
+
+        assert vsite_pos.shape == (1, 3)
+        assert np.allclose(vsite_pos, expected)
+
+    def test_monovalent_lone_pair_virtual_site_position_symmetric(self):
+        """
+        Test for expected positions of virtual sites when created through the molecule
+        API. This uses symmetric, which will add both orientations of the atoms to
+        create two particles for the vsite.
+
+        Note: symmetric with Monovalent is a bit counterintuitive. Since the particles
+        origin is placed on the first atom, using a "symmetric" definition will flip
+        the ordering, causing another particle to be placed on the third atom, reflected
+        on the xy plane between the first particle.
+
+        The order of the positions is the same as the order of the particles as they
+        appear in the molecule using Molecule.particles
+        """
+
+        import openff.toolkit.tests.test_forcefield
+
+        molecule = openff.toolkit.tests.test_forcefield.create_water()
+
+        # a 90 degree water molecule on the xy plane
+        molecule.add_conformer(
+            unit.Quantity(
+                np.array(
+                    [
+                        [1.0, 0.0, 0.0],
+                        [0.0, 0.0, 0.0],
+                        [0.0, 1.0, 0.0],
+                    ]
+                ),
+                unit.angstrom,
+            )
+        )
+
+        atom1 = molecule.atoms[0]
+        atom2 = molecule.atoms[1]
+        atom3 = molecule.atoms[2]
+        distance = 0.2 * unit.angstrom
+        out_of_plane_angle = 90 * unit.degree
+        in_plane_angle = 180 * unit.degree
+        vsite1_index = molecule.add_monovalent_lone_pair_virtual_site(
+            [atom1, atom2, atom3],
+            distance,
+            out_of_plane_angle=out_of_plane_angle,
+            in_plane_angle=in_plane_angle,
+            symmetric=True,
+        )
+        expected = np.array([[1.0, 0.0, -0.2], [0.0, 1.0, 0.2]])
+
+        vsite_pos = molecule.compute_virtual_site_positions_from_conformer(0)
+        vsite_pos = vsite_pos / vsite_pos.unit
+        assert vsite_pos.shape == (2, 3)
+        assert np.allclose(vsite_pos, expected)
+
+        conformer = molecule.conformers[0]
+        vsite_pos = molecule.compute_virtual_site_positions_from_atom_positions(
+            conformer
+        )
+        vsite_pos = vsite_pos / vsite_pos.unit
+        assert vsite_pos.shape == (2, 3)
+        assert np.allclose(vsite_pos, expected)
+
+    def test_monovalent_lone_pair_virtual_site_position(self):
+        """
+        Test for expected positions of virtual sites when created through the molecule
+        API.
+
+        The order of the positions is the same as the order of the particles as they
+        appear in the molecule using Molecule.particles
+        """
+
+        import openff.toolkit.tests.test_forcefield
+
+        molecule = openff.toolkit.tests.test_forcefield.create_water()
+
+        # a 90 degree water molecule on the xy plane
+        molecule.add_conformer(
+            unit.Quantity(
+                np.array(
+                    [
+                        [1.0, 0.0, 0.0],
+                        [0.0, 0.0, 0.0],
+                        [0.0, 1.0, 0.0],
+                    ]
+                ),
+                unit.angstrom,
+            )
+        )
+
+        atom1 = molecule.atoms[0]
+        atom2 = molecule.atoms[1]
+        atom3 = molecule.atoms[2]
+        distance = 0.2 * unit.angstrom
+        out_of_plane_angle = 90 * unit.degree
+        in_plane_angle = 180 * unit.degree
+        vsite1_index = molecule.add_monovalent_lone_pair_virtual_site(
+            [atom1, atom2, atom3],
+            distance,
+            out_of_plane_angle=out_of_plane_angle,
+            in_plane_angle=in_plane_angle,
+            symmetric=False,
+        )
+        expected = np.array([[1.0, 0.0, -0.2]])
+
+        vsite_pos = molecule.compute_virtual_site_positions_from_conformer(0)
+        vsite_pos = vsite_pos / vsite_pos.unit
+        assert vsite_pos.shape == (1, 3)
+        assert np.allclose(vsite_pos, expected)
+
+        conformer = molecule.conformers[0]
+        vsite_pos = molecule.compute_virtual_site_positions_from_atom_positions(
+            conformer
+        )
+        vsite_pos = vsite_pos / vsite_pos.unit
+        assert vsite_pos.shape == (1, 3)
+        assert np.allclose(vsite_pos, expected)
+
+    def test_divalent_lone_pair_virtual_site_position(self):
+        """
+        Test for expected positions of virtual sites when created through the molecule
+        API.
+
+        The order of the positions is the same as the order of the particles as they
+        appear in the molecule using Molecule.particles
+        """
+
+        import openff.toolkit.tests.test_forcefield
+
+        molecule = openff.toolkit.tests.test_forcefield.create_water()
+
+        # a 90 degree water molecule on the xy plane
+        molecule.add_conformer(
+            unit.Quantity(
+                np.array(
+                    [
+                        [1.0, 0.0, 0.0],
+                        [0.0, 0.0, 0.0],
+                        [0.0, 1.0, 0.0],
+                    ]
+                ),
+                unit.angstrom,
+            )
+        )
+
+        atom1 = molecule.atoms[0]
+        atom2 = molecule.atoms[1]
+        atom3 = molecule.atoms[2]
+        distance = 0.2 * unit.angstrom
+        out_of_plane_angle = 90 * unit.degree
+        vsite1_index = molecule.add_divalent_lone_pair_virtual_site(
+            [atom1, atom2, atom3],
+            distance,
+            out_of_plane_angle=out_of_plane_angle,
+            symmetric=False,
+        )
+        expected = np.array([[0.0, 0.0, -0.2]])
+
+        vsite_pos = molecule.compute_virtual_site_positions_from_conformer(0)
+        vsite_pos = vsite_pos / vsite_pos.unit
+        assert vsite_pos.shape == (1, 3)
+        assert np.allclose(vsite_pos, expected)
+
+        conformer = molecule.conformers[0]
+        vsite_pos = molecule.compute_virtual_site_positions_from_atom_positions(
+            conformer
+        )
+        vsite_pos = vsite_pos / vsite_pos.unit
+        assert vsite_pos.shape == (1, 3)
+        assert np.allclose(vsite_pos, expected)
+
+    def test_divalent_lone_pair_virtual_site_position_symmetric(self):
+        """
+        Test for expected positions of virtual sites when created through the molecule
+        API. This uses symmetric, which will add both orientations of the atoms to
+        create two particles for the vsite.
+
+        Note: symmetric with Monovalent is a bit counterintuitive. Since the particles
+        origin is placed on the first atom, using a "symmetric" definition will flip
+        the ordering, causing another particle to be placed on the third atom, reflected
+        on the xy plane between the first particle.
+
+        The order of the positions is the same as the order of the particles as they
+        appear in the molecule using Molecule.particles
+        """
+
+        import openff.toolkit.tests.test_forcefield
+
+        molecule = openff.toolkit.tests.test_forcefield.create_water()
+
+        # a 90 degree water molecule on the xy plane
+        molecule.add_conformer(
+            unit.Quantity(
+                np.array(
+                    [
+                        [1.0, 0.0, 0.0],
+                        [0.0, 0.0, 0.0],
+                        [0.0, 1.0, 0.0],
+                    ]
+                ),
+                unit.angstrom,
+            )
+        )
+
+        atom1 = molecule.atoms[0]
+        atom2 = molecule.atoms[1]
+        atom3 = molecule.atoms[2]
+        distance = 0.2 * unit.angstrom
+        out_of_plane_angle = 90 * unit.degree
+        vsite1_index = molecule.add_divalent_lone_pair_virtual_site(
+            [atom1, atom2, atom3],
+            distance,
+            out_of_plane_angle=out_of_plane_angle,
+            symmetric=True,
+        )
+        expected = np.array([[0.0, 0.0, -0.2], [0.0, 0.0, 0.2]])
+
+        vsite_pos = molecule.compute_virtual_site_positions_from_conformer(0)
+        vsite_pos = vsite_pos / vsite_pos.unit
+        assert vsite_pos.shape == (2, 3)
+        assert np.allclose(vsite_pos, expected)
+
+        conformer = molecule.conformers[0]
+        vsite_pos = molecule.compute_virtual_site_positions_from_atom_positions(
+            conformer
+        )
+        vsite_pos = vsite_pos / vsite_pos.unit
+        assert vsite_pos.shape == (2, 3)
+        assert np.allclose(vsite_pos, expected)
+
+    def test_trivalent_lone_pair_virtual_site_position(self):
+        """
+        Test for expected positions of virtual sites when created through the molecule
+        API.
+
+        The order of the positions is the same as the order of the particles as they
+        appear in the molecule using Molecule.particles
+        """
+
+        import openff.toolkit.tests.test_forcefield
+
+        molecule = openff.toolkit.tests.test_forcefield.create_ammonia()
+
+        # an ammonia; the central nitrogen .5 above the hydrogen, which all lie one
+        # an xy plane
+        molecule.add_conformer(
+            unit.Quantity(
+                np.array(
+                    [
+                        [1.0, 0.0, 0.0],
+                        [0.0, 0.0, 0.5],
+                        [-0.5, 0.5, 0.0],
+                        [-0.5, -0.5, 0.0],
+                    ]
+                ),
+                unit.angstrom,
+            )
+        )
+
+        atom1 = molecule.atoms[0]
+        atom2 = molecule.atoms[1]
+        atom3 = molecule.atoms[2]
+        atom4 = molecule.atoms[3]
+        distance = 1.0 * unit.angstrom
+        vsite1_index = molecule.add_trivalent_lone_pair_virtual_site(
+            [atom1, atom2, atom3, atom4], distance, symmetric=False
+        )
+        expected = np.array([[0.0, 0.0, 1.5]])
+
+        vsite_pos = molecule.compute_virtual_site_positions_from_conformer(0)
+        vsite_pos = vsite_pos / vsite_pos.unit
+        assert vsite_pos.shape == (1, 3)
+        assert np.allclose(vsite_pos, expected)
+
+        conformer = molecule.conformers[0]
+        vsite_pos = molecule.compute_virtual_site_positions_from_atom_positions(
+            conformer
+        )
+        vsite_pos = vsite_pos / vsite_pos.unit
+        assert vsite_pos.shape == (1, 3)
+        assert np.allclose(vsite_pos, expected)
 
     @requires_openeye
     def test_chemical_environment_matches_OE(self):
