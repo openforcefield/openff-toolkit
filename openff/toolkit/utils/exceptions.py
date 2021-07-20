@@ -43,13 +43,13 @@ class OpenFFToolkitException(BaseException):
     """Base exception for custom exceptions raised by the OpenFF Toolkit"""
 
 
-class IncompatibleUnitError(MessageException):
+class IncompatibleUnitError(OpenFFToolkitException):
     """
     Exception for when a parameter is in the wrong units for a ParameterHandler's unit system
     """
 
 
-class MissingDependencyError(MessageException):
+class MissingDependencyError(OpenFFToolkitException):
     """
     Exception for when an optional dependency is needed but not installed
 
@@ -64,11 +64,11 @@ class MissingDependencyError(MessageException):
         super().__init__(self.msg)
 
 
-class MissingPackageError(MessageException):
+class MissingPackageError(OpenFFToolkitException):
     """This function requires a package that is not installed."""
 
 
-class ToolkitUnavailableException(MessageException):
+class ToolkitUnavailableException(OpenFFToolkitException):
     """The requested toolkit is unavailable."""
 
     # TODO: Allow toolkit to be specified and used in formatting/printing exception.
@@ -78,15 +78,15 @@ class LicenseError(ToolkitUnavailableException):
     """This function requires a license that cannot be found."""
 
 
-class InvalidToolkitError(MessageException):
+class InvalidToolkitError(OpenFFToolkitException):
     """A non-toolkit object was received when a toolkit object was expected"""
 
 
-class InvalidToolkitRegistryError(MessageException):
+class InvalidToolkitRegistryError(OpenFFToolkitException):
     """An object other than a ToolkitRegistry or toolkit wrapper was received"""
 
 
-class UndefinedStereochemistryError(MessageException):
+class UndefinedStereochemistryError(OpenFFToolkitException):
     """A molecule was attempted to be loaded with undefined stereochemistry"""
 
 
@@ -94,11 +94,11 @@ class GAFFAtomTypeWarning(RuntimeWarning):
     """A warning raised if a loaded mol2 file possibly uses GAFF atom types."""
 
 
-class ChargeMethodUnavailableError(MessageException):
+class ChargeMethodUnavailableError(OpenFFToolkitException):
     """A toolkit does not support the requested partial_charge_method combination"""
 
 
-class IncorrectNumConformersError(MessageException):
+class IncorrectNumConformersError(OpenFFToolkitException):
     """The requested partial_charge_method expects a different number of conformers than was provided"""
 
 
@@ -106,15 +106,15 @@ class IncorrectNumConformersWarning(Warning):
     """The requested partial_charge_method expects a different number of conformers than was provided"""
 
 
-class ChargeCalculationError(MessageException):
+class ChargeCalculationError(OpenFFToolkitException):
     """An unhandled error occured in an external toolkit during charge calculation"""
 
 
-class InvalidIUPACNameError(MessageException):
+class InvalidIUPACNameError(OpenFFToolkitException):
     """Failed to parse IUPAC name"""
 
 
-class AntechamberNotFoundError(MessageException):
+class AntechamberNotFoundError(OpenFFToolkitException):
     """The antechamber executable was not found"""
 
 
@@ -136,106 +136,106 @@ class SmilesParsingError(Exception):
     """
 
 
-class NotAttachedToMoleculeError(MessageException):
+class NotAttachedToMoleculeError(OpenFFToolkitException):
     """Exception for when a component does not belong to a Molecule object, but is queried"""
 
 
-class DuplicateUniqueMoleculeError(MessageException):
+class DuplicateUniqueMoleculeError(OpenFFToolkitException):
     """
     Exception for when the user provides indistinguishable unique molecules when trying to identify atoms from a PDB
     """
 
 
-class NotBondedError(MessageException):
+class NotBondedError(OpenFFToolkitException):
     """
     Exception for when a function requires a bond between two atoms, but none is present
     """
 
 
-class InvalidBoxVectorsError(MessageException):
+class InvalidBoxVectorsError(OpenFFToolkitException):
     """
     Exception for setting invalid box vectors
     """
 
 
-class InvalidPeriodicityError(MessageException):
+class InvalidPeriodicityError(OpenFFToolkitException):
     """
     Exception for setting invalid periodicity
     """
 
 
-class MissingUniqueMoleculesError(MessageException):
+class MissingUniqueMoleculesError(OpenFFToolkitException):
     """
     Exception for a when unique_molecules is required but not found
     """
 
 
-class SMIRKSMismatchError(MessageException):
+class SMIRKSMismatchError(OpenFFToolkitException):
     """
     Exception for cases where smirks are inappropriate
     for the environment type they are being parsed into
     """
 
 
-class SMIRKSParsingError(MessageException):
+class SMIRKSParsingError(OpenFFToolkitException):
     """
     Exception for when SMIRKS are not parseable for any environment
     """
 
 
-class ParameterHandlerRegistrationError(MessageException):
+class ParameterHandlerRegistrationError(OpenFFToolkitException):
     """
     Exception for errors in ParameterHandler registration
     """
 
 
-class SMIRNOFFVersionError(MessageException):
+class SMIRNOFFVersionError(OpenFFToolkitException):
     """
     Exception thrown when an incompatible SMIRNOFF version data structure in attempted to be read.
     """
 
 
-class SMIRNOFFAromaticityError(MessageException):
+class SMIRNOFFAromaticityError(OpenFFToolkitException):
     """
     Exception thrown when an incompatible SMIRNOFF aromaticity model is checked for compatibility.
     """
 
 
-class ParseError(MessageException):
+class ParseError(OpenFFToolkitException):
     """
     Error for when a SMIRNOFF data structure is not parseable by a ForceField
     """
 
 
-class PartialChargeVirtualSitesError(MessageException):
+class PartialChargeVirtualSitesError(OpenFFToolkitException):
     """
     Exception thrown when partial charges cannot be computed for a Molecule because the ForceField applies virtual sites.
     """
 
 
-class SMIRNOFFSpecError(MessageException):
+class SMIRNOFFSpecError(OpenFFToolkitException):
     """
     Exception for when data is noncompliant with the SMIRNOFF data specification.
     """
 
 
-class SMIRNOFFSpecUnimplementedError(MessageException):
+class SMIRNOFFSpecUnimplementedError(OpenFFToolkitException):
     """
     Exception for when a portion of the SMIRNOFF specification is not yet implemented.
     """
 
 
-class FractionalBondOrderInterpolationMethodUnsupportedError(MessageException):
+class FractionalBondOrderInterpolationMethodUnsupportedError(OpenFFToolkitException):
     """
     Exception for when an unsupported fractional bond order interpolation assignment method is called.
     """
 
 
-class NotEnoughPointsForInterpolationError(MessageException):
+class NotEnoughPointsForInterpolationError(OpenFFToolkitException):
     """Exception for when less than two points are provided for interpolation"""
 
 
-class IncompatibleParameterError(MessageException):
+class IncompatibleParameterError(OpenFFToolkitException):
     """
     Exception for when a set of parameters is scientifically/technically incompatible with another
     """
@@ -265,11 +265,11 @@ class NonintegralMoleculeChargeException(Exception):
     """Exception raised when the partial charges on a molecule do not sum up to its formal charge."""
 
 
-class DuplicateParameterError(MessageException):
+class DuplicateParameterError(OpenFFToolkitException):
     """Exception raised when trying to add a ParameterType that already exists"""
 
 
-class ParameterLookupError(MessageException):
+class ParameterLookupError(OpenFFToolkitException):
     """Exception raised when something goes wrong in a parameter lookup in
     ParameterHandler.__getitem__"""
 
