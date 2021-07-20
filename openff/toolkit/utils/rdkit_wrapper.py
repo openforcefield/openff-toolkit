@@ -26,7 +26,7 @@ from openff.toolkit.utils import base_wrapper
 from openff.toolkit.utils.constants import DEFAULT_AROMATICITY_MODEL
 from openff.toolkit.utils.exceptions import (
     ChargeMethodUnavailableError,
-    ParseError,
+    SMILESParseError,
     ToolkitUnavailableException,
     UndefinedStereochemistryError,
 )
@@ -745,7 +745,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         rdmol = Chem.MolFromSmiles(smiles, sanitize=False)
         if rdmol is None:
-            raise ParseError("Unable to parse the SMILES string")
+            raise SMILESParseError("Unable to parse the SMILES string")
 
         # strip the atom map from the molecule if it has one
         # so we don't affect the sterochemistry tags

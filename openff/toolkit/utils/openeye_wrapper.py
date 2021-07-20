@@ -33,7 +33,7 @@ from openff.toolkit.utils.exceptions import (
     GAFFAtomTypeWarning,
     InvalidIUPACNameError,
     LicenseError,
-    ParseError,
+    SMILESParseError,
     ToolkitUnavailableException,
     UndefinedStereochemistryError,
 )
@@ -1544,7 +1544,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         oemol = oechem.OEGraphMol()
         if not oechem.OESmilesToMol(oemol, smiles):
-            raise ParseError("Unable to parse the SMILES string")
+            raise SMILESParseError("Unable to parse the SMILES string")
         if not (hydrogens_are_explicit):
             result = oechem.OEAddExplicitHydrogens(oemol)
             if not result:

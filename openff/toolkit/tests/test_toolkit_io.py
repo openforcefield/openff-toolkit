@@ -27,7 +27,10 @@ from openff.toolkit.tests import create_molecules
 from openff.toolkit.tests.utils import requires_openeye, requires_rdkit
 from openff.toolkit.topology.molecule import Molecule
 from openff.toolkit.utils import OpenEyeToolkitWrapper, RDKitToolkitWrapper
-from openff.toolkit.utils.exceptions import ParseError, UndefinedStereochemistryError
+from openff.toolkit.utils.exceptions import (
+    SMILESParseError,
+    UndefinedStereochemistryError,
+)
 
 # ================================================================
 # Data records used for testing.
@@ -1156,7 +1159,7 @@ class BaseSmiles:
         assert mol.n_bonds == 4
 
     def test_parse_bad_smiles(self):
-        with pytest.raises(ParseError, match="Unable to parse the SMILES string"):
+        with pytest.raises(SMILESParseError, match="Unable to parse the SMILES string"):
             mol = self.toolkit_wrapper.from_smiles("QWERT")
 
     ### Copied from test_toolkits.py

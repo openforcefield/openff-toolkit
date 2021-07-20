@@ -1,17 +1,17 @@
 class MessageException(Exception):
     """DEPRECATED: A base class for exceptions that print out a string given in their constructor"""
 
-    import warnings
+    def __init__(self):
+        import warnings
 
-    # Must "turn on" DeprecationWawrning, see https://stackoverflow.com/a/60486394/4248961
-    warnings.filterwarnings("default", category=DeprecationWarning, module=__name__)
-
-    warnings.warn(
-        "MessageException is deprecated and will be removed in a future release of the OpenFF Toolkit."
-        "All custom exceptions now inherit from OpenFFToolkitException, which should be used as a "
-        "replacement for MessageException. (`from openff.toolkit.utils.exceptions import OpenFFToolkitException`",
-        DeprecationWarning,
-    )
+        # Must "turn on" DeprecationWawrning, see https://stackoverflow.com/a/60486394/4248961
+        warnings.filterwarnings("default", category=DeprecationWarning, module=__name__)
+        warnings.warn(
+            "MessageException is DEPRECATED and will be removed in a future release of the OpenFF Toolkit."
+            "All custom exceptions now inherit from OpenFFToolkitException, which should be used as a "
+            "replacement for MessageException. (`from openff.toolkit.utils.exceptions import OpenFFToolkitException`",
+            DeprecationWarning,
+        )
 
 
 class OpenFFToolkitException(Exception):
@@ -93,7 +93,7 @@ class AntechamberNotFoundError(OpenFFToolkitException):
     """The antechamber executable was not found"""
 
 
-class ParseError(ValueError):
+class SMILESParseError(ValueError):
     """The record couple not be parsed into the given format"""
 
 
@@ -176,10 +176,28 @@ class SMIRNOFFAromaticityError(OpenFFToolkitException):
     """
 
 
-class ParseError(OpenFFToolkitException):
+class ParseError(Exception):
+    """DEPRECATED: Error for when a SMIRNOFF data structure is not parseable by a ForceField"""
+
+    def __init__(self):
+        import warnings
+
+        warnings.filterwarnings("default", category=DeprecationWarning, module=__name__)
+
+        warnings.warn(
+            "ParseError is DEPRECATED and will be removed in a future release of the OpenFF Toolkit."
+            "Use SMIRNOFFParseErorr instead (`from openff.toolkit.utils.exceptions import "
+            "SMIRNOFFParseError`)",
+            DeprecationWarning,
+        )
+
+
+class SMIRNOFFParseError(OpenFFToolkitException, ParseError):
     """
     Error for when a SMIRNOFF data structure is not parseable by a ForceField
     """
+
+    # TODO: Remove ParseError altogether by v0.11.0
 
 
 class PartialChargeVirtualSitesError(OpenFFToolkitException):

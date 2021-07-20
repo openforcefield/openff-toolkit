@@ -136,11 +136,15 @@ def test_sort_smirnoff_dict():
     )
 
 
-@pytest.mark.xfail
 def test_import_message_exception_raises_warning(caplog):
     # TODO: Remove when removing MessageException
     deprecation_msg = (
-        "deprecated and will be removed in a future release of the OpenFF Toolkit"
+        "DEPRECATED and will be removed in a future release of the OpenFF Toolkit"
     )
+    from openff.toolkit.utils.exceptions import MessageException
+
     with pytest.warns(DeprecationWarning, match=deprecation_msg):
-        from openff.toolkit.utils.exceptions import MessageException
+        try:
+            raise MessageException
+        except MessageException:
+            pass

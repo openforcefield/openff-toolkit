@@ -22,6 +22,7 @@ __all__ = [
     "ParameterHandlerRegistrationError",
     "SMIRNOFFVersionError",
     "SMIRNOFFAromaticityError",
+    "SMIRNOFFParseError",
     "ParseError",
     "PartialChargeVirtualSitesError",
     "ForceField",
@@ -52,6 +53,7 @@ from openff.toolkit.utils.exceptions import (
     ParseError,
     PartialChargeVirtualSitesError,
     SMIRNOFFAromaticityError,
+    SMIRNOFFParseError,
     SMIRNOFFVersionError,
 )
 from openff.toolkit.utils.utils import (
@@ -942,7 +944,9 @@ class ForceField:
         elif "SMIRFF" in smirnoff_data:
             version = smirnoff_data["SMIRFF"]["version"]
         else:
-            raise ParseError("'version' attribute must be specified in SMIRNOFF tag")
+            raise SMIRNOFFParseError(
+                "'version' attribute must be specified in SMIRNOFF tag"
+            )
 
         self._check_smirnoff_version_compatibility(str(version))
         # Convert 0.1 spec files to 0.3 SMIRNOFF data format by converting
@@ -959,7 +963,7 @@ class ForceField:
 
         # Ensure that SMIRNOFF is a top-level key of the dict
         if not ("SMIRNOFF" in smirnoff_data):
-            raise ParseError(
+            raise SMIRNOFFParseError(
                 "'SMIRNOFF' must be a top-level key in the SMIRNOFF object model"
             )
 
@@ -970,7 +974,7 @@ class ForceField:
             self.aromaticity_model = aromaticity_model
 
         elif self._aromaticity_model is None:
-            raise ParseError(
+            raise SMIRNOFFParseError(
                 "'aromaticity_model' attribute must be specified in SMIRNOFF "
                 "tag, or contained in a previously-loaded SMIRNOFF data source"
             )
@@ -1093,14 +1097,14 @@ class ForceField:
             try:
                 smirnoff_data = parameter_io_handler.parse_file(source)
                 return smirnoff_data
-            except ParseError as e:
+            except SMIRNOFFParseError as e:
                 exception_msg = e.msg
             except (FileNotFoundError, OSError):
                 # If this is not a file path or a file handle, attempt parsing as a string.
                 try:
                     smirnoff_data = parameter_io_handler.parse_string(source)
                     return smirnoff_data
-                except ParseError as e:
+                except SMIRNOFFParseError as e:
                     exception_msg = e.args[0]
 
         # If we haven't returned by now, the parsing was unsuccessful

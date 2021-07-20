@@ -35,7 +35,6 @@ from openff.toolkit.utils.exceptions import (
     InvalidBoxVectorsError,
     InvalidPeriodicityError,
     MissingUniqueMoleculesError,
-    NotAttachedToMoleculeError,
     NotBondedError,
 )
 from openff.toolkit.utils.serialization import Serializable

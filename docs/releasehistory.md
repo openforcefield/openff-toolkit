@@ -8,6 +8,19 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ## Current Development
 
+### Behaviors changed
+
+- [PR #1021](https://github.com/openforcefield/openforcefield/pull/1021): Renames
+  [`openff.toolkit.utils.exceptions.ParseError`](openff.toolkit.utils.exceptions.ParseError) to
+  [`openff.toolkit.utils.exceptions.SMILESParseError`](openff.toolkit.utils.exceptions.SMILESParseError) to
+  avoid a conflict with an indentically-named exception in the SMIRNOFF XML parsing code.
+- [PR #1021](https://github.com/openforcefield/openforcefield/pull/1021): Renames and moves
+  [`openff.toolkit.typing.engines.smirnoff.forcefield.ParseError`](openff.toolkit.typing.engines.smirnoff.forcefield.ParseError) to
+  [`openff.toolkit.utiles.exceptions.SMIRNOFFParseError`](openff.toolkit.utiles.exceptions.SMIRNOFFParseError).
+  This `ParseError` is deprecated and will be removed in a future release.
+
+## Current Development
+
 ### New features and behaviors changed
 
 - [PR #954](https://github.com/openforcefield/openforcefield/pull/954): Adds
