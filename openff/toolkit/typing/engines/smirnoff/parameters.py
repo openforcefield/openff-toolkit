@@ -13,6 +13,20 @@ New pluggable handlers can be created by creating subclasses of :class:`Paramete
 """
 
 __all__ = [
+    "DuplicateParameterError",
+    "DuplicateVirtualSiteTypeException",
+    "FractionalBondOrderInterpolationMethodUnsupportedError",
+    "IncompatibleParameterError",
+    "NonintegralMoleculeChargeException",
+    "NotEnoughPointsForInterpolationError",
+    "ParameterLookupError",
+    "SMIRNOFFSpecError",
+    "SMIRNOFFSpecUnimplementedError",
+    "UnassignedAngleParameterException",
+    "UnassignedBondParameterException",
+    "UnassignedMoleculeChargeException",
+    "UnassignedProperTorsionParameterException",
+    "UnassignedValenceParameterException",
     "NonbondedMethod",
     "ParameterList",
     "ParameterType",
