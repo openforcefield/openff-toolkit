@@ -1,7 +1,7 @@
 class MessageException(Exception):
     """DEPRECATED: A base class for exceptions that print out a string given in their constructor"""
 
-    def __init__(self):
+    def __init__(self, msg):
         import warnings
 
         # Must "turn on" DeprecationWawrning, see https://stackoverflow.com/a/60486394/4248961
@@ -12,10 +12,22 @@ class MessageException(Exception):
             "replacement for MessageException. (`from openff.toolkit.utils.exceptions import OpenFFToolkitException`",
             DeprecationWarning,
         )
+        super().__init__(msg)
+        self.msg = msg
+
+    def __str__(self):
+        return self.msg
 
 
 class OpenFFToolkitException(Exception):
     """Base exception for custom exceptions raised by the OpenFF Toolkit"""
+
+    def __init__(self, msg):
+        super().__init__(msg)
+        self.msg = msg
+
+    def __str__(self):
+        return self.msg
 
 
 class IncompatibleUnitError(OpenFFToolkitException):
@@ -179,7 +191,7 @@ class SMIRNOFFAromaticityError(OpenFFToolkitException):
 class ParseError(Exception):
     """DEPRECATED: Error for when a SMIRNOFF data structure is not parseable by a ForceField"""
 
-    def __init__(self):
+    def __init__(self, msg):
         import warnings
 
         warnings.filterwarnings("default", category=DeprecationWarning, module=__name__)
@@ -190,6 +202,11 @@ class ParseError(Exception):
             "SMIRNOFFParseError`)",
             DeprecationWarning,
         )
+        super().__init__(msg)
+        self.msg = msg
+
+    def __str__(self):
+        return self.msg
 
 
 class SMIRNOFFParseError(OpenFFToolkitException, ParseError):
