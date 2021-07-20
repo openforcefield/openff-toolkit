@@ -13,16 +13,6 @@ New pluggable handlers can be created by creating subclasses of :class:`Paramete
 """
 
 __all__ = [
-    "SMIRNOFFSpecError",
-    "SMIRNOFFSpecUnimplementedError",
-    "IncompatibleParameterError",
-    "FractionalBondOrderInterpolationMethodUnsupportedError",
-    "NotEnoughPointsForInterpolationError",
-    "UnassignedValenceParameterException",
-    "UnassignedBondParameterException",
-    "UnassignedAngleParameterException",
-    "DuplicateVirtualSiteTypeException",
-    "ParameterLookupError",
     "NonbondedMethod",
     "ParameterList",
     "ParameterType",
@@ -71,10 +61,25 @@ from openff.toolkit.topology import (
 from openff.toolkit.topology.molecule import Molecule
 from openff.toolkit.typing.chemistry import ChemicalEnvironment
 from openff.toolkit.utils.collections import ValidatedDict, ValidatedList
+from openff.toolkit.utils.exceptions import (
+    DuplicateParameterError,
+    DuplicateVirtualSiteTypeException,
+    FractionalBondOrderInterpolationMethodUnsupportedError,
+    IncompatibleParameterError,
+    NonintegralMoleculeChargeException,
+    NotEnoughPointsForInterpolationError,
+    ParameterLookupError,
+    SMIRNOFFSpecError,
+    SMIRNOFFSpecUnimplementedError,
+    UnassignedAngleParameterException,
+    UnassignedBondParameterException,
+    UnassignedMoleculeChargeException,
+    UnassignedProperTorsionParameterException,
+    UnassignedValenceParameterException,
+)
 from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
 from openff.toolkit.utils.utils import (
     IncompatibleUnitError,
-    MessageException,
     all_subclasses,
     attach_units,
     extract_serialized_units_from_dict,
@@ -86,98 +91,6 @@ from openff.toolkit.utils.utils import (
 # =============================================================================================
 
 logger = logging.getLogger(__name__)
-
-
-# ======================================================================
-# CUSTOM EXCEPTIONS
-# ======================================================================
-
-
-class SMIRNOFFSpecError(MessageException):
-    """
-    Exception for when data is noncompliant with the SMIRNOFF data specification.
-    """
-
-    pass
-
-
-class SMIRNOFFSpecUnimplementedError(MessageException):
-    """
-    Exception for when a portion of the SMIRNOFF specification is not yet implemented.
-    """
-
-
-class FractionalBondOrderInterpolationMethodUnsupportedError(MessageException):
-    """
-    Exception for when an unsupported fractional bond order interpolation assignment method is called.
-    """
-
-    pass
-
-
-class NotEnoughPointsForInterpolationError(MessageException):
-    """Exception for when less than two points are provided for interpolation"""
-
-    pass
-
-
-class IncompatibleParameterError(MessageException):
-    """
-    Exception for when a set of parameters is scientifically/technically incompatible with another
-    """
-
-    pass
-
-
-class UnassignedValenceParameterException(Exception):
-    """Exception raised when there are valence terms for which a ParameterHandler can't find parameters."""
-
-    pass
-
-
-class UnassignedBondParameterException(UnassignedValenceParameterException):
-    """Exception raised when there are bond terms for which a ParameterHandler can't find parameters."""
-
-    pass
-
-
-class UnassignedAngleParameterException(UnassignedValenceParameterException):
-    """Exception raised when there are angle terms for which a ParameterHandler can't find parameters."""
-
-    pass
-
-
-class UnassignedProperTorsionParameterException(UnassignedValenceParameterException):
-    """Exception raised when there are proper torsion terms for which a ParameterHandler can't find parameters."""
-
-    pass
-
-
-class UnassignedMoleculeChargeException(Exception):
-    """Exception raised when no charge method is able to assign charges to a molecule."""
-
-    pass
-
-
-class NonintegralMoleculeChargeException(Exception):
-    """Exception raised when the partial charges on a molecule do not sum up to its formal charge."""
-
-    pass
-
-
-class DuplicateParameterError(MessageException):
-    """Exception raised when trying to add a ParameterType that already exists"""
-
-
-class ParameterLookupError(MessageException):
-    """Exception raised when something goes wrong in a parameter lookup in
-    ParameterHandler.__getitem__"""
-
-
-class DuplicateVirtualSiteTypeException(Exception):
-    """Exception raised when trying to register two different virtual site classes with the same 'type'"""
-
-    pass
 
 
 # ======================================================================

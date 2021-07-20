@@ -15,11 +15,8 @@ Tests for callback utility classes and functions.
 
 import pytest
 
-from openff.toolkit.utils.callback import (
-    Callbackable,
-    CallbackRegistrationError,
-    callback_method,
-)
+from openff.toolkit.utils.callback import Callbackable, callback_method
+from openff.toolkit.utils.exceptions import CallbackRegistrationError
 
 # =====================================================================
 # UTILITY CLASSES AND FUNCTIONS

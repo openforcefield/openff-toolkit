@@ -9,15 +9,16 @@ Tests for utility methods
 
 """
 
-# =============================================================================================
-# GLOBAL IMPORTS
-# =============================================================================================
-
 import ast
 import os
 
 import pytest
 from simtk import unit
+
+# =============================================================================================
+# GLOBAL IMPORTS
+# =============================================================================================
+
 
 # =============================================================================================
 # TESTS
@@ -133,3 +134,13 @@ def test_sort_smirnoff_dict():
     assert smirnoff_dict == OrderedDict(
         sort_smirnoff_dict(forcefield._to_smirnoff_data())
     )
+
+
+@pytest.mark.xfail
+def test_import_message_exception_raises_warning(caplog):
+    # TODO: Remove when removing MessageException
+    deprecation_msg = (
+        "deprecated and will be removed in a future release of the OpenFF Toolkit"
+    )
+    with pytest.warns(DeprecationWarning, match=deprecation_msg):
+        from openff.toolkit.utils.exceptions import MessageException

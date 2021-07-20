@@ -49,21 +49,25 @@ from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff import (
     ElectrostaticsHandler,
     ForceField,
-    FractionalBondOrderInterpolationMethodUnsupportedError,
-    IncompatibleParameterError,
     LibraryChargeHandler,
     ParameterHandler,
-    ParameterLookupError,
-    PartialChargeVirtualSitesError,
-    SMIRNOFFAromaticityError,
-    SMIRNOFFSpecError,
-    SMIRNOFFSpecUnimplementedError,
     ToolkitAM1BCCHandler,
     XMLParameterIOHandler,
     get_available_force_fields,
     vdWHandler,
 )
 from openff.toolkit.utils import get_data_file_path
+from openff.toolkit.utils.exceptions import (
+    FractionalBondOrderInterpolationMethodUnsupportedError,
+    IncompatibleParameterError,
+    NonintegralMoleculeChargeException,
+    ParameterLookupError,
+    PartialChargeVirtualSitesError,
+    SMIRNOFFAromaticityError,
+    SMIRNOFFSpecError,
+    SMIRNOFFSpecUnimplementedError,
+    UnassignedMoleculeChargeException,
+)
 from openff.toolkit.utils.toolkits import (
     AmberToolsToolkitWrapper,
     ChargeMethodUnavailableError,
@@ -2322,10 +2326,6 @@ class TestForceFieldChargeAssignment:
         """Test skipping charge generation and instead getting charges from the original Molecule"""
         from simtk.openmm import app
 
-        from openff.toolkit.typing.engines.smirnoff.parameters import (
-            NonintegralMoleculeChargeException,
-        )
-
         # Create an ethanol molecule without using a toolkit
         ethanol = create_ethanol()
         ethanol.partial_charges[0] = 1.0 * unit.elementary_charge
@@ -3175,10 +3175,6 @@ class TestForceFieldChargeAssignment:
     ):
         """Fail to assign charges to a molecule because not all atoms can be assigned"""
         from simtk.openmm import NonbondedForce
-
-        from openff.toolkit.typing.engines.smirnoff.parameters import (
-            UnassignedMoleculeChargeException,
-        )
 
         molecules = [Molecule.from_file(get_data_file_path("molecules/toluene.sdf"))]
         top = Topology.from_molecules(molecules)
