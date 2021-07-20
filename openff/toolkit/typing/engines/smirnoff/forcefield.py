@@ -28,10 +28,6 @@ __all__ = [
 ]
 
 
-# =============================================================================================
-# GLOBAL IMPORTS
-# =============================================================================================
-
 import copy
 import logging
 import os
@@ -47,8 +43,18 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     ParameterHandler,
 )
 from openff.toolkit.typing.engines.smirnoff.plugins import load_handler_plugins
+
+# =============================================================================================
+# GLOBAL IMPORTS
+# =============================================================================================
+from openff.toolkit.utils.exceptions import (
+    ParameterHandlerRegistrationError,
+    ParseError,
+    PartialChargeVirtualSitesError,
+    SMIRNOFFAromaticityError,
+    SMIRNOFFVersionError,
+)
 from openff.toolkit.utils.utils import (
-    MessageException,
     all_subclasses,
     convert_0_1_smirnoff_to_0_2,
     convert_0_2_smirnoff_to_0_3,
@@ -134,46 +140,6 @@ def get_available_force_fields(full_paths=False):
 MAX_SUPPORTED_VERSION = (
     "1.0"  # maximum version of the SMIRNOFF spec supported by this SMIRNOFF force field
 )
-
-
-class ParameterHandlerRegistrationError(MessageException):
-    """
-    Exception for errors in ParameterHandler registration
-    """
-
-    pass
-
-
-class SMIRNOFFVersionError(MessageException):
-    """
-    Exception thrown when an incompatible SMIRNOFF version data structure in attempted to be read.
-    """
-
-    pass
-
-
-class SMIRNOFFAromaticityError(MessageException):
-    """
-    Exception thrown when an incompatible SMIRNOFF aromaticity model is checked for compatibility.
-    """
-
-    pass
-
-
-class ParseError(MessageException):
-    """
-    Error for when a SMIRNOFF data structure is not parseable by a ForceField
-    """
-
-    pass
-
-
-class PartialChargeVirtualSitesError(MessageException):
-    """
-    Exception thrown when partial charges cannot be computed for a Molecule because the ForceField applies virtual sites.
-    """
-
-    pass
 
 
 # =============================================================================================
@@ -1135,7 +1101,7 @@ class ForceField:
                     smirnoff_data = parameter_io_handler.parse_string(source)
                     return smirnoff_data
                 except ParseError as e:
-                    exception_msg = e.msg
+                    exception_msg = e.args[0]
 
         # If we haven't returned by now, the parsing was unsuccessful
         valid_formats = [
