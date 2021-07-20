@@ -141,10 +141,6 @@ def test_import_message_exception_raises_warning(caplog):
     deprecation_msg = (
         "DEPRECATED and will be removed in a future release of the OpenFF Toolkit"
     )
-    from openff.toolkit.utils.exceptions import MessageException
 
     with pytest.warns(DeprecationWarning, match=deprecation_msg):
-        try:
-            raise MessageException
-        except MessageException:
-            pass
+        from openff.toolkit.utils.exceptions import MessageException

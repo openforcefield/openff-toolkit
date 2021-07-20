@@ -1,22 +1,25 @@
-class MessageException(Exception):
+import warnings
+
+deprecated_names = ["MessageException", "ParseError"]
+
+
+def __getattr__(name):
+    if name in deprecated_names:
+        warnings.filterwarnings("default", category=DeprecationWarning)
+        warning_msg = f"{name} is DEPRECATED and will be removed in a future release of the OpenFF Toolkit."
+        if name == "MessageException":
+            warning_msg += (
+                " All custom exceptions now inherit from OpenFFToolkitException, "
+                "which should be used as a replacement for MessageException. Import it via "
+                "`from openff.toolkit.utils.exceptions import OpenFFToolkitException`."
+            )
+        warnings.warn(warning_msg, DeprecationWarning)
+        return globals()[f"_Deprecated{name}"]
+    raise AttributeError(f"module {__name__} has no attribute {name}")
+
+
+class _DeprecatedMessageException(Exception):
     """DEPRECATED: A base class for exceptions that print out a string given in their constructor"""
-
-    def __init__(self, msg):
-        import warnings
-
-        # Must "turn on" DeprecationWawrning, see https://stackoverflow.com/a/60486394/4248961
-        warnings.filterwarnings("default", category=DeprecationWarning, module=__name__)
-        warnings.warn(
-            "MessageException is DEPRECATED and will be removed in a future release of the OpenFF Toolkit."
-            "All custom exceptions now inherit from OpenFFToolkitException, which should be used as a "
-            "replacement for MessageException. (`from openff.toolkit.utils.exceptions import OpenFFToolkitException`",
-            DeprecationWarning,
-        )
-        super().__init__(msg)
-        self.msg = msg
-
-    def __str__(self):
-        return self.msg
 
 
 class OpenFFToolkitException(Exception):
@@ -188,20 +191,10 @@ class SMIRNOFFAromaticityError(OpenFFToolkitException):
     """
 
 
-class ParseError(Exception):
+class _DeprecatedParseError(Exception):
     """DEPRECATED: Error for when a SMIRNOFF data structure is not parseable by a ForceField"""
 
     def __init__(self, msg):
-        import warnings
-
-        warnings.filterwarnings("default", category=DeprecationWarning, module=__name__)
-
-        warnings.warn(
-            "ParseError is DEPRECATED and will be removed in a future release of the OpenFF Toolkit."
-            "Use SMIRNOFFParseErorr instead (`from openff.toolkit.utils.exceptions import "
-            "SMIRNOFFParseError`)",
-            DeprecationWarning,
-        )
         super().__init__(msg)
         self.msg = msg
 
@@ -209,7 +202,7 @@ class ParseError(Exception):
         return self.msg
 
 
-class SMIRNOFFParseError(OpenFFToolkitException, ParseError):
+class SMIRNOFFParseError(OpenFFToolkitException, _DeprecatedParseError):
     """
     Error for when a SMIRNOFF data structure is not parseable by a ForceField
     """
