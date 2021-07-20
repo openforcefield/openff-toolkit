@@ -9,13 +9,16 @@ __all__ = ("ToolkitRegistry",)
 import inspect
 import logging
 
-from .ambertools_wrapper import AmberToolsToolkitWrapper
-from .base_wrapper import ToolkitWrapper
-from .builtin_wrapper import BuiltInToolkitWrapper
-from .exceptions import InvalidToolkitError, ToolkitUnavailableException
-from .openeye_wrapper import OpenEyeToolkitWrapper
-from .rdkit_wrapper import RDKitToolkitWrapper
-from .utils import all_subclasses
+from openff.toolkit.utils.ambertools_wrapper import AmberToolsToolkitWrapper
+from openff.toolkit.utils.base_wrapper import ToolkitWrapper
+from openff.toolkit.utils.builtin_wrapper import BuiltInToolkitWrapper
+from openff.toolkit.utils.exceptions import (
+    InvalidToolkitError,
+    ToolkitUnavailableException,
+)
+from openff.toolkit.utils.openeye_wrapper import OpenEyeToolkitWrapper
+from openff.toolkit.utils.rdkit_wrapper import RDKitToolkitWrapper
+from openff.toolkit.utils.utils import all_subclasses
 
 # =============================================================================================
 # CONFIGURE LOGGER

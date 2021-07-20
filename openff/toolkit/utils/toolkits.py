@@ -47,6 +47,17 @@ __all__ = [
 
 import logging
 
+from openff.toolkit.utils.ambertools_wrapper import AmberToolsToolkitWrapper
+from openff.toolkit.utils.base_wrapper import ToolkitWrapper
+from openff.toolkit.utils.builtin_wrapper import BuiltInToolkitWrapper
+from openff.toolkit.utils.constants import (
+    ALLOWED_AROMATICITY_MODELS,
+    ALLOWED_CHARGE_MODELS,
+    ALLOWED_FRACTIONAL_BOND_ORDER_MODELS,
+    DEFAULT_AROMATICITY_MODEL,
+    DEFAULT_CHARGE_MODEL,
+    DEFAULT_FRACTIONAL_BOND_ORDER_MODEL,
+)
 from openff.toolkit.utils.exceptions import (
     AntechamberNotFoundError,
     ChargeCalculationError,
@@ -71,18 +82,6 @@ from openff.toolkit.utils.openeye_wrapper import (
 )
 from openff.toolkit.utils.rdkit_wrapper import RDKitToolkitWrapper
 from openff.toolkit.utils.toolkit_registry import ToolkitRegistry
-
-from .ambertools_wrapper import AmberToolsToolkitWrapper
-from .base_wrapper import ToolkitWrapper
-from .builtin_wrapper import BuiltInToolkitWrapper
-from .constants import (
-    ALLOWED_AROMATICITY_MODELS,
-    ALLOWED_CHARGE_MODELS,
-    ALLOWED_FRACTIONAL_BOND_ORDER_MODELS,
-    DEFAULT_AROMATICITY_MODEL,
-    DEFAULT_CHARGE_MODEL,
-    DEFAULT_FRACTIONAL_BOND_ORDER_MODEL,
-)
 
 # =============================================================================================
 # CONFIGURE LOGGER

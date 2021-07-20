@@ -1,28 +1,3 @@
-__all__ = (
-    "MessageException",
-    "IncompatibleUnitError",
-    "MissingDependencyError",
-    "MissingPackageError",
-    "ToolkitUnavailableException",
-    "LicenseError",
-    "InvalidToolkitError",
-    "InvalidToolkitRegistryError",
-    "UndefinedStereochemistryError",
-    "GAFFAtomTypeWarning",
-    "ChargeMethodUnavailableError",
-    "IncorrectNumConformersError",
-    "IncorrectNumConformersWarning",
-    "ChargeCalculationError",
-    "InvalidIUPACNameError",
-    "AntechamberNotFoundError",
-    "ParseError",
-)
-
-# =============================================================================================
-# COMMON EXCEPTION TYPES
-# =============================================================================================
-
-
 class MessageException(Exception):
     """DEPRECATED: A base class for exceptions that print out a string given in their constructor"""
 
@@ -39,7 +14,7 @@ class MessageException(Exception):
     )
 
 
-class OpenFFToolkitException(BaseException):
+class OpenFFToolkitException(Exception):
     """Base exception for custom exceptions raised by the OpenFF Toolkit"""
 
 

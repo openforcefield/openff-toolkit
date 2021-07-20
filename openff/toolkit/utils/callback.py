@@ -62,8 +62,6 @@ def callback_method(func=None, events=()):
 
     return callbacked_func
 
-    pass
-
 
 class Callbackable:
     """A base class for registering and handling callbacks.

@@ -22,9 +22,9 @@ from simtk import unit
 if TYPE_CHECKING:
     from openforcefield.topology.molecule import Molecule
 
-from . import base_wrapper
-from .constants import DEFAULT_AROMATICITY_MODEL
-from .exceptions import (
+from openff.toolkit.utils import base_wrapper
+from openff.toolkit.utils.constants import DEFAULT_AROMATICITY_MODEL
+from openff.toolkit.utils.exceptions import (
     ChargeMethodUnavailableError,
     ParseError,
     ToolkitUnavailableException,

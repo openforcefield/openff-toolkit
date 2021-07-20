@@ -16,14 +16,14 @@ from distutils.spawn import find_executable
 import numpy as np
 from simtk import unit
 
-from . import base_wrapper, rdkit_wrapper
-from .exceptions import (
+from openff.toolkit.utils import base_wrapper, rdkit_wrapper
+from openff.toolkit.utils.exceptions import (
     AntechamberNotFoundError,
     ChargeCalculationError,
     ChargeMethodUnavailableError,
     ToolkitUnavailableException,
 )
-from .utils import temporary_cd
+from openff.toolkit.utils.utils import temporary_cd
 
 # =============================================================================================
 # IMPLEMENTATION
