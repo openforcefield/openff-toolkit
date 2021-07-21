@@ -125,7 +125,7 @@ jobs:
           pytest $NB_ARGS examples
 
       - name: Codecov
-        uses: codecov/codecov-action@v1.5.2
+        uses: codecov/codecov-action@v2.0.1
         with:
           file: ./coverage.xml
           fail_ci_if_error: true
