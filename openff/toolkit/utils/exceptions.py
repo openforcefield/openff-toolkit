@@ -15,7 +15,7 @@ __all__ = (
     "ChargeCalculationError",
     "InvalidIUPACNameError",
     "AntechamberNotFoundError",
-    "SMILESParsingError",
+    "SMILESParseError",
 )
 
 # =============================================================================================
@@ -111,5 +111,5 @@ class AntechamberNotFoundError(MessageException):
     """The antechamber executable was not found"""
 
 
-class SMILESParsingError(MessageException, ValueError):
+class SMILESParseError(MessageException, ValueError):
     """The record couple not be parsed into the given format"""

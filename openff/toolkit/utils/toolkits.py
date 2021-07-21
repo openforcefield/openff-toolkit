@@ -45,7 +45,7 @@ __all__ = (
     "ChargeCalculationError",
     "InvalidIUPACNameError",
     "AntechamberNotFoundError",
-    "SMILESParsingError",
+    "SMILESParseError",
     # base_wrapper
     "ToolkitWrapper",
     # builtin_wrapper
@@ -99,7 +99,7 @@ from .exceptions import (
     MessageException,
     MissingDependencyError,
     MissingPackageError,
-    SMILESParsingError,
+    SMILESParseError,
     ToolkitUnavailableException,
     UndefinedStereochemistryError,
 )

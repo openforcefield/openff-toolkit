@@ -1156,7 +1156,7 @@ class BaseSmiles:
 
     def test_parse_bad_smiles(self):
         with pytest.raises(
-            exceptions.SMILESParsingError, match="Unable to parse the SMILES string"
+            exceptions.SMILESParseError, match="Unable to parse the SMILES string"
         ):
             mol = self.toolkit_wrapper.from_smiles("QWERT")
 
