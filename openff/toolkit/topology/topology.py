@@ -2327,7 +2327,11 @@ class Topology(Serializable):
         from simtk.openmm.app import Aromatic, Double, Single
         from simtk.openmm.app import Topology as OMMTopology
         from simtk.openmm.app import Triple
-        from simtk.openmm.app.element import Element as OMMElement
+
+        try:
+            from simtk.openmm.app.element import Element as OMMElement
+        except ImportError:
+            from openmm.app.element import Element as OMMElement
 
         omm_topology = OMMTopology()
 
