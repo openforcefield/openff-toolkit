@@ -2,6 +2,7 @@ name: test
 channels:
   - openeye
   - conda-forge
+  - conda-forge/label/openmm_rc
 
 dependencies:
     # Base depends
@@ -21,7 +22,7 @@ dependencies:
   - packaging
     # Removed until a new release which targets openff-toolkit is made.
 #  - openmmforcefields
-  - openmm
+  - openmm =7.6beta
   - openff-forcefields
   - smirnoff99Frosst
   - pyyaml
