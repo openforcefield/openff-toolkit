@@ -5,6 +5,7 @@ on:
     branches:
       - "master"
       - "maintenance/.*"
+      - "openmm-7.6beta"
   pull_request:
     branches:
       - "master"
