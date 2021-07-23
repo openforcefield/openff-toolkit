@@ -157,7 +157,7 @@ jobs:
           pytest -v --doctest-glob="docs/*.rst" docs/
 
       - name: Codecov
-        uses: codecov/codecov-action@v2.0.1
+        uses: codecov/codecov-action@v2.0.2
         with:
           file: ./coverage.xml
           fail_ci_if_error: true
