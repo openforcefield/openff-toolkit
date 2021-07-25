@@ -10,6 +10,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### New features and behaviors changed
 
+- [PR #1027](https://github.com/openforcefield/openforcefield/pull/1027): Corrects interconversion of Molecule objects with OEMol objects by ensuring atom names are correctly accessible via the `OEAtomBase.GetName()` and `OEAtomBase.SetName()` methods, rather that the non-standard `OEAtomBase.GetData("name")` and `OEAtomBase.SetData("name", name)`.
 - [PR #954](https://github.com/openforcefield/openforcefield/pull/954): Adds
   [`LibraryChargeType.from_molecule`](openff.toolkit.typing.engines.smirnoff.parameters.LibraryChargeHandler.LibraryChargeType.from_molecule)
   which returns a `LibraryChargeType` object that will match the full molecule being parameterized, and assign
@@ -44,7 +45,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
     - :py:meth:`VirtualSite.local_frame_positions`
   - Adding virtual sites via the `Molecule` API now have defaults for `sigma`, `epsilon`, and `charge_increment`
     set to 0 with appropriate units, rather than `None`
-- [PR #956](https://github.com/openforcefield/openforcefield/pull/956): Added `ForceField.get_partial_charges()` 
+- [PR #956](https://github.com/openforcefield/openforcefield/pull/956): Added `ForceField.get_partial_charges()`
   to more easily compute the partial charges assigned by a force field for a molecule.
 - [PR  #1006](https://github.com/openforcefield/openff-toolkit/pull/1006):
   Two behavior changes in the SMILES output for `to_file()` and `to_file_obj()`:
@@ -60,7 +61,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 - [PR #1003](https://github.com/openforcefield/openforcefield/pull/1003): Fixes
   [Issue #1000](https://github.com/openforcefield/openff-toolkit/issues/1000), where a stereochemistry
   warning is sometimes erroneously emitted when loading a stereogenic molecule using
-  [Molecule.from_pdb_and_smiles](openff.toolkit.topology.Molecule.from_pdb_and_smiles) 
+  [Molecule.from_pdb_and_smiles](openff.toolkit.topology.Molecule.from_pdb_and_smiles)
 - [PR #1002](https://github.com/openforcefield/openforcefield/pull/1002): Fixes a bug in which OFFXML files could
   inadvertently be loaded from subdirectories.
 - [PR #969](https://github.com/openforcefield/openforcefield/pull/969): Fixes a bug in which the cutoff distance
@@ -86,14 +87,14 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Examples added
 
-- [PR #763](https://github.com/openforcefield/openff-toolkit/pull/763): 
+- [PR #763](https://github.com/openforcefield/openff-toolkit/pull/763):
   Adds an introductory example showcasing the toolkit parameterizing a protein-ligand simulation.
 - [PR #955](https://github.com/openforcefield/openff-toolkit/pull/955): Refreshed the force field modification example
-- [PR #934](https://github.com/openforcefield/openff-toolkit/pull/934) 
-  and [conda-forge/openff-toolkit-feedstock#9](https://github.com/conda-forge/openff-toolkit-feedstock/pull/9): 
-  Added `openff-toolkit-examples` Conda package for easy installation of examples and their 
-  dependencies. Simply `conda install -c conda-forge openff-toolkit-examples` and then run 
-  the `openff-toolkit-examples` script to copy the examples suite to a convenient place to 
+- [PR #934](https://github.com/openforcefield/openff-toolkit/pull/934)
+  and [conda-forge/openff-toolkit-feedstock#9](https://github.com/conda-forge/openff-toolkit-feedstock/pull/9):
+  Added `openff-toolkit-examples` Conda package for easy installation of examples and their
+  dependencies. Simply `conda install -c conda-forge openff-toolkit-examples` and then run
+  the `openff-toolkit-examples` script to copy the examples suite to a convenient place to
   run them!
 
 ### Tests updated
@@ -111,60 +112,60 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### New features and behaviors changed
 
-- [PR #762](https://github.com/openforcefield/openforcefield/pull/762): 
+- [PR #762](https://github.com/openforcefield/openforcefield/pull/762):
   [`Molecule.from_rdkit`](openff.toolkit.topology.Molecule.from_rdkit) now converts
-  implicit hydrogens into explicit hydrogens by default. This change may affect 
-  [`RDKitToolkitWrapper/Molecule.from_smiles`](openff.toolkit.utils.toolkits.RDKitToolkitWrapper.from_smiles), 
-  [`from_mapped_smiles`](openff.toolkit.topology.Molecule.from_mapped_smiles), 
-  [`from_file`](openff.toolkit.utils.toolkits.RDKitToolkitWrapper.from_file), 
-  [`from_file_obj`](openff.toolkit.utils.toolkits.RDKitToolkitWrapper.from_file_obj), 
-  [`from_inchi`](openff.toolkit.utils.toolkits.RDKitToolkitWrapper.from_inchi), and 
-  [`from_qcschema`](openff.toolkit.topology.Molecule.from_qcschema). 
+  implicit hydrogens into explicit hydrogens by default. This change may affect
+  [`RDKitToolkitWrapper/Molecule.from_smiles`](openff.toolkit.utils.toolkits.RDKitToolkitWrapper.from_smiles),
+  [`from_mapped_smiles`](openff.toolkit.topology.Molecule.from_mapped_smiles),
+  [`from_file`](openff.toolkit.utils.toolkits.RDKitToolkitWrapper.from_file),
+  [`from_file_obj`](openff.toolkit.utils.toolkits.RDKitToolkitWrapper.from_file_obj),
+  [`from_inchi`](openff.toolkit.utils.toolkits.RDKitToolkitWrapper.from_inchi), and
+  [`from_qcschema`](openff.toolkit.topology.Molecule.from_qcschema).
   This new behavior can be disabled using the
-  `hydrogens_are_explicit=True` keyword argument to 
-  [`from_smiles`](openff.toolkit.utils.toolkits.RDKitToolkitWrapper.from_smiles), 
-  or loading the molecule into the desired explicit protonation state in RDKit, then calling 
-  [`from_rdkit`](openff.toolkit.utils.toolkits.RDKitToolkitWrapper.from_rdkit) on the RDKit molecule with 
+  `hydrogens_are_explicit=True` keyword argument to
+  [`from_smiles`](openff.toolkit.utils.toolkits.RDKitToolkitWrapper.from_smiles),
+  or loading the molecule into the desired explicit protonation state in RDKit, then calling
+  [`from_rdkit`](openff.toolkit.utils.toolkits.RDKitToolkitWrapper.from_rdkit) on the RDKit molecule with
   `hydrogens_are_explicit=True`.
-- [PR #894](https://github.com/openforcefield/openforcefield/pull/894): Calls to 
-  [`Molecule.from_openeye`](openff.toolkit.topology.Molecule.from_openeye), 
-  [`Molecule.from_rdkit`](openff.toolkit.topology.Molecule.from_rdkit), 
-  [`Molecule.from_smiles`](openff.toolkit.topology.Molecule.from_smiles), 
-  [`OpenEyeToolkitWrapper.from_smiles`](openff.toolkit.utils.toolkits.OpenEyeToolkitWrapper.from_smiles), and 
-  [`RDKitToolkitWrapper.from_smiles`](openff.toolkit.utils.toolkits.RDKitToolkitWrapper.from_smiles) 
-  will now load atom maps into the the resulting 
+- [PR #894](https://github.com/openforcefield/openforcefield/pull/894): Calls to
+  [`Molecule.from_openeye`](openff.toolkit.topology.Molecule.from_openeye),
+  [`Molecule.from_rdkit`](openff.toolkit.topology.Molecule.from_rdkit),
+  [`Molecule.from_smiles`](openff.toolkit.topology.Molecule.from_smiles),
+  [`OpenEyeToolkitWrapper.from_smiles`](openff.toolkit.utils.toolkits.OpenEyeToolkitWrapper.from_smiles), and
+  [`RDKitToolkitWrapper.from_smiles`](openff.toolkit.utils.toolkits.RDKitToolkitWrapper.from_smiles)
+  will now load atom maps into the the resulting
   `Molecule's` `offmol.properties['atom_map']` field, even if not all atoms have map indices assigned.
-- [PR #904](https://github.com/openforcefield/openforcefield/pull/904): 
-  [`TopologyAtom`](openff.toolkit.topology.TopologyAtom.element) objects now have 
+- [PR #904](https://github.com/openforcefield/openforcefield/pull/904):
+  [`TopologyAtom`](openff.toolkit.topology.TopologyAtom.element) objects now have
   an element getter [`TopologyAtom.element`](openff.toolkit.topology.TopologyAtom.element).
 
 ### Bugfixes
 
-- [PR #891](https://github.com/openforcefield/openforcefield/pull/891): Calls to 
-  [`Molecule/OpenEyeToolkitWrapper.from_openeye`](openff.toolkit.utils.toolkits.OpenEyeToolkitWrapper.from_openeye) 
+- [PR #891](https://github.com/openforcefield/openforcefield/pull/891): Calls to
+  [`Molecule/OpenEyeToolkitWrapper.from_openeye`](openff.toolkit.utils.toolkits.OpenEyeToolkitWrapper.from_openeye)
   no longer mutate the input OE molecule.
-- [PR #897](https://github.com/openforcefield/openforcefield/pull/897): Fixes enumeration of stereoisomers for 
-  molecules with already defined stereochemistry using 
+- [PR #897](https://github.com/openforcefield/openforcefield/pull/897): Fixes enumeration of stereoisomers for
+  molecules with already defined stereochemistry using
   [`RDKitToolkitWrapper.enumerate_stereoisomers`](openff.toolkit.utils.toolkits.RDKitToolkitWrapper.enumerate_stereoisomers).
-- [PR #859](https://github.com/openforcefield/openforcefield/pull/859): Makes 
-  [`RDKitToolkitWrapper.enumerate_tautomers`](openff.toolkit.utils.toolkits.RDKitToolkitWrapper.enumerate_tautomers) 
-  actually use the `max_states` keyword argument during tautomer generation, which will reduce resource use in some 
-  cases. 
+- [PR #859](https://github.com/openforcefield/openforcefield/pull/859): Makes
+  [`RDKitToolkitWrapper.enumerate_tautomers`](openff.toolkit.utils.toolkits.RDKitToolkitWrapper.enumerate_tautomers)
+  actually use the `max_states` keyword argument during tautomer generation, which will reduce resource use in some
+  cases.
 
 ### Improved documentation and warnings
-- [PR #862](https://github.com/openforcefield/openforcefield/pull/862): Clarify that `System` objects produced by the 
-  toolkit are OpenMM `System`s in anticipation of forthcoming OpenFF `System`s. Fixes 
+- [PR #862](https://github.com/openforcefield/openforcefield/pull/862): Clarify that `System` objects produced by the
+  toolkit are OpenMM `System`s in anticipation of forthcoming OpenFF `System`s. Fixes
   [Issue #618](https://github.com/openforcefield/openforcefield/issues/618).
-- [PR #863](https://github.com/openforcefield/openff-toolkit/pull/863): Documented how to build the docs in the 
+- [PR #863](https://github.com/openforcefield/openff-toolkit/pull/863): Documented how to build the docs in the
   developers guide.
-- [PR #870](https://github.com/openforcefield/openff-toolkit/pull/870): Reorganised documentation to improve 
+- [PR #870](https://github.com/openforcefield/openff-toolkit/pull/870): Reorganised documentation to improve
   discoverability and allow future additions.
-- [PR #871](https://github.com/openforcefield/openff-toolkit/pull/871): Changed Markdown parser from m2r2 to MyST for 
+- [PR #871](https://github.com/openforcefield/openff-toolkit/pull/871): Changed Markdown parser from m2r2 to MyST for
   improved documentation rendering.
-- [PR #880](https://github.com/openforcefield/openff-toolkit/pull/880): Cleanup and partial rewrite of the developer's 
+- [PR #880](https://github.com/openforcefield/openff-toolkit/pull/880): Cleanup and partial rewrite of the developer's
   guide.
-- [PR #906](https://github.com/openforcefield/openff-toolkit/pull/906): Cleaner instructions on how to setup 
-  development environment. 
+- [PR #906](https://github.com/openforcefield/openff-toolkit/pull/906): Cleaner instructions on how to setup
+  development environment.
 
 :::{TODO}
 - Translate previous release history to MyST markdown
@@ -184,7 +185,7 @@ New features
 - `PR #831 <https://github.com/openforcefield/openff-toolkit/pull/831>`_: Expose ELF conformer selection through the
   OpenEye wrapper.
 - `PR #790 <https://github.com/openforcefield/openforcefield/pull/790>`_: Fixes `Issue #720
-  <https://github.com/openforcefield/openforcefield/issues/720>`_ where qcschema roundtrip to/from results 
+  <https://github.com/openforcefield/openforcefield/issues/720>`_ where qcschema roundtrip to/from results
   in an error due to missing cmiles entry in attributes.
 - `PR #793 <https://github.com/openforcefield/openff-toolkit/pull/793>`_: Add an initial ELF conformer selection
   implementation which uses RDKit.
@@ -358,8 +359,8 @@ Behavior Changed
 New features
 """"""""""""
 - `PR #751 <https://github.com/openforcefield/openff-toolkit/pull/751>`_: Adds
-  ``LicenseError``, a subclass of ``ToolkitUnavailableException`` which is raised when attempting to 
-  add a cheminformatics :py:class:`ToolkitWrapper <openff.toolkit.utils.toolkits.ToolkitWrapper>` for 
+  ``LicenseError``, a subclass of ``ToolkitUnavailableException`` which is raised when attempting to
+  add a cheminformatics :py:class:`ToolkitWrapper <openff.toolkit.utils.toolkits.ToolkitWrapper>` for
   a toolkit that is installed but unlicensed.
 - `PR #678 <https://github.com/openforcefield/openff-toolkit/pull/678>`_: Adds
   :py:meth:`ForceField.deregister_parameter_handler <openff.toolkit.typing.engines.smirnoff.forcefield.ForceField.deregister_parameter_handler>`.
@@ -524,7 +525,7 @@ API-breaking changes
 Tests added
 """""""""""
 
-- `PR #548 <https://github.com/openforcefield/openff-toolkit/pull/548>`_: Adds test for 
+- `PR #548 <https://github.com/openforcefield/openff-toolkit/pull/548>`_: Adds test for
 
   - The virtual site parameter handler
   - TIP5P water dimer energy and positions
@@ -592,7 +593,7 @@ Bugfixes
   toolkit from issuing a warning caused by doing stereo-specific smarts searches on certain
   structures.
 - `PR #724 <https://github.com/openforcefield/openff-toolkit/pull/724>`_: Closes issue `Issue #502
-  <https://github.com/openforcefield/openff-toolkit/issues/502>`_ Adding a utility function Topology.to_file() to 
+  <https://github.com/openforcefield/openff-toolkit/issues/502>`_ Adding a utility function Topology.to_file() to
   write topology and positions to a "PDB" file using openmm backend for pdb file write.
 
 Tests added
@@ -602,7 +603,7 @@ Tests added
 - `PR #715 <https://github.com/openforcefield/openff-toolkit/pull/715>`_: Adds tests for pdb file writes using OE
   backend.
 - `PR #724 <https://github.com/openforcefield/openff-toolkit/pull/724>`_: Adds tests for the utility function Topology.to_file().
-  
+
 
 0.7.1 - OETK2020 Compatibility and Minor Update
 -----------------------------------------------
@@ -653,7 +654,7 @@ New features
 """"""""""""
 - `PR #632 <https://github.com/openforcefield/openff-toolkit/pull/632>`_: Adds
   :py:class:`ForceField.registered_parameter_handlers <openff.toolkit.typing.engines.smirnoff.forcefield.ForceField>`
-- `PR #614 <https://github.com/openforcefield/openff-toolkit/pull/614>`_: Adds 
+- `PR #614 <https://github.com/openforcefield/openff-toolkit/pull/614>`_: Adds
   :py:class:`ToolkitRegistry.deregister_toolkit <openff.toolkit.utils.toolkits.ToolkitRegistry>`
   to de-register registered toolkits, which can include toolkit wrappers loaded into ``GLOBAL_TOOLKIT_REGISTRY``
   by default.
@@ -983,7 +984,7 @@ New features
 - `PR #573 <https://github.com/openforcefield/openff-toolkit/pull/573>`_:
   Adds ``quacpac`` error output to ``quacpac`` failure in ``Molecule.compute_partial_charges_am1bcc``.
 - `PR #560 <https://github.com/openforcefield/openff-toolkit/issues/560>`_: Added visualization method to the the Molecule class.
-- `PR #620 <https://github.com/openforcefield/openff-toolkit/pull/620>`_: Added the ability to register parameter handlers via entry point plugins. This functionality is accessible by initializing a ``ForceField`` with the ``load_plugins=True`` keyword argument. 
+- `PR #620 <https://github.com/openforcefield/openff-toolkit/pull/620>`_: Added the ability to register parameter handlers via entry point plugins. This functionality is accessible by initializing a ``ForceField`` with the ``load_plugins=True`` keyword argument.
 - `PR #582 <https://github.com/openforcefield/openff-toolkit/pull/582>`_: Added fractional bond order interpolation
   Adds `return_topology` kwarg to
   :py:meth:`Forcefield.create_openmm_system <openff.toolkit.typing.engines.smirnoff.forcefield.ForceField.create_openmm_system>`,

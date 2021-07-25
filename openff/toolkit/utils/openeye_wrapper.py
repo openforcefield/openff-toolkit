@@ -971,9 +971,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                 oemol, oeatom
             )
             # stereochemistry = self._openeye_cip_atom_stereochemistry(oemol, oeatom)
-            name = ""
-            if oeatom.HasData("name"):
-                name = oeatom.GetData("name")
+            name = oeatom.GetName()
             atom_index = molecule._add_atom(
                 atomic_number,
                 formal_charge,
@@ -1132,7 +1130,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             )  # simtk.unit.Quantity(1, unit.elementary_charge)
             # TODO: Do we want to provide _any_ pathway for Atom.is_aromatic to influence the OEMol?
             # oeatom.SetAromatic(atom.is_aromatic)
-            oeatom.SetData("name", atom.name)
+            oeatom.SetName(atom.name)
             oeatom.SetPartialCharge(float("nan"))
             oemol_atoms.append(oeatom)
             map_atoms[atom.molecule_atom_index] = oeatom.GetIdx()
