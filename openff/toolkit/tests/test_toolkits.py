@@ -758,7 +758,7 @@ class TestOpenEyeToolkitWrapper:
     def test_atom_names_round_trip(self):
         """Test that atom names are correctly preserved in a round trip"""
         # Create a molecule with unique atom names
-        molecule = Molecule.from_smiles('c1ccccc1')
+        molecule = Molecule.from_smiles("c1ccccc1")
         molecule.generate_unique_atom_names()
         # Convert it to an OEMol
         oemol = molecule.to_openeye()
@@ -767,7 +767,7 @@ class TestOpenEyeToolkitWrapper:
             assert oeatom.GetName() == atom.name
         # Change the OEMol atom names
         for index, oeatom in enumerate(oemol.GetAtoms()):
-            oeatom.SetName(f'X{index}')
+            oeatom.SetName(f"X{index}")
         # Round trip back to molecule
         molecule2 = molecule.from_openeye(oemol)
         # Compare atom names
