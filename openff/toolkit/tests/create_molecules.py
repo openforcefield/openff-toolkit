@@ -199,6 +199,26 @@ def create_ammonia():
     return mol
 
 
+def create_cyclic_n3h3():
+    """
+    Creates an openff.toolkit.topology.Molecule representation of N3H3 through the API
+    """
+    mol = Molecule()
+    mol.add_atom(7, 0, False)  # N1
+    mol.add_atom(7, 0, False)  # N2
+    mol.add_atom(7, 0, False)  # N3
+    mol.add_atom(1, 0, False)  # H1
+    mol.add_atom(1, 0, False)  # H2
+    mol.add_atom(1, 0, False)  # H3
+    mol.add_bond(0, 1, 1, False)  # N1 - N2
+    mol.add_bond(1, 2, 1, False)  # N2 - N3
+    mol.add_bond(2, 0, 1, False)  # N1 - N3
+    mol.add_bond(0, 3, 1, False)  # N1 - H1
+    mol.add_bond(1, 4, 1, False)  # N2 - H2
+    mol.add_bond(2, 5, 1, False)  # N3 - H3
+    return mol
+
+
 def create_acetate():
     """
     Creates an openff.toolkit.topology.Molecule representation of
