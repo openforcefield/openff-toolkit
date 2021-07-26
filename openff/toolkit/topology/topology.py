@@ -2329,9 +2329,9 @@ class Topology(Serializable):
         from simtk.openmm.app import Triple
 
         try:
-            from simtk.openmm.app.element import Element as OMMElement
-        except ImportError:
             from openmm.app.element import Element as OMMElement
+        except ImportError:
+            from simtk.openmm.app.element import Element as OMMElement
 
         omm_topology = OMMTopology()
 
