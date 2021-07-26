@@ -78,7 +78,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
   of the more significant fixes are:
   - RDKitToolkitWrapper's `from_file_obj()` now uses the same
     structure normaliation as `from_file()`.
-  - `from_smiles()` now raises an `openff.toolkit.utils.ParseError` if
+  - `from_smiles()` now raises an `openff.toolkit.utils.exceptions.SMILESParsingError` if
   the SMILES could not be parsed.
   - OEChem input and output files now raise an OSError if the file
   could not be opened.
