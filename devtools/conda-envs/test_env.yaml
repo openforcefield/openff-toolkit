@@ -2,14 +2,13 @@ name: test
 channels:
   - openeye
   - conda-forge
-  - conda-forge/label/openmm_rc
 
 dependencies:
     # Base depends
   - python
   - pip
   - packaging
-  - openmm =7.6beta
+  - openmm
   - openff-forcefields
   - smirnoff99Frosst
   - numpy
