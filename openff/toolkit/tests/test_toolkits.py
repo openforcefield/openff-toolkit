@@ -757,6 +757,25 @@ class TestOpenEyeToolkitWrapper:
         with pytest.raises(InvalidIUPACNameError):
             toolkit.from_iupac(".BETA.-PINENE")
 
+    def test_atom_names_round_trip(self):
+        """Test that atom names are correctly preserved in a round trip"""
+        # Create a molecule with unique atom names
+        molecule = Molecule.from_smiles("c1ccccc1")
+        molecule.generate_unique_atom_names()
+        # Convert it to an OEMol
+        oemol = molecule.to_openeye()
+        # Compare atom names
+        for oeatom, atom in zip(oemol.GetAtoms(), molecule.atoms):
+            assert oeatom.GetName() == atom.name
+        # Change the OEMol atom names
+        for index, oeatom in enumerate(oemol.GetAtoms()):
+            oeatom.SetName(f"X{index}")
+        # Round trip back to molecule
+        molecule2 = molecule.from_openeye(oemol)
+        # Compare atom names
+        for oeatom, atom2 in zip(oemol.GetAtoms(), molecule2.atoms):
+            assert oeatom.GetName() == atom2.name
+
     def test_write_multiconformer_pdb(self):
         """
         Make sure OpenEye can write multi conformer PDB files.
