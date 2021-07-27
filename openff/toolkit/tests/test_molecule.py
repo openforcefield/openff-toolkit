@@ -3603,11 +3603,12 @@ class TestMolecule:
                     # fbo2 = [bond.fractional_bond_order for bond in molecule.bonds]
                     # np.testing.assert_allclose(fbo1, fbo2, atol=1.e-4)
 
+    @requires_openeye
     @pytest.mark.parametrize("model", ["AM1-Wiberg", "am1-wiberg"])
     @pytest.mark.parametrize(
         "toolkit", [OpenEyeToolkitWrapper, AmberToolsToolkitWrapper]
     )
-    def test_bond_order_method_parsing(self, model, toolkit):
+    def test_bond_order_method_passing(self, model, toolkit):
         """Test that different calls to Molecule.assign_fractional_bond_orders do not
         produce unexpected errors, but do not asses validity of results"""
         mol = Molecule.from_smiles("CCO")
