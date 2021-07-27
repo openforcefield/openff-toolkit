@@ -42,6 +42,7 @@ from openff.toolkit.tests.create_molecules import (
 )
 from openff.toolkit.tests.utils import (
     has_pkg,
+    requires_ambertools,
     requires_openeye,
     requires_pkg,
     requires_rdkit,
@@ -3603,6 +3604,7 @@ class TestMolecule:
                     # fbo2 = [bond.fractional_bond_order for bond in molecule.bonds]
                     # np.testing.assert_allclose(fbo1, fbo2, atol=1.e-4)
 
+    @requires_ambertools
     @requires_openeye
     @pytest.mark.parametrize("model", ["AM1-Wiberg", "am1-wiberg"])
     @pytest.mark.parametrize(
