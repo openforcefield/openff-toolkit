@@ -33,7 +33,7 @@ from .exceptions import (
     GAFFAtomTypeWarning,
     InvalidIUPACNameError,
     LicenseError,
-    ParseError,
+    SMILESParseError,
     ToolkitUnavailableException,
     UndefinedStereochemistryError,
 )
@@ -1542,7 +1542,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         oemol = oechem.OEGraphMol()
         if not oechem.OESmilesToMol(oemol, smiles):
-            raise ParseError("Unable to parse the SMILES string")
+            raise SMILESParseError("Unable to parse the SMILES string")
         if not (hydrogens_are_explicit):
             result = oechem.OEAddExplicitHydrogens(oemol)
             if not result:
@@ -1794,6 +1794,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         partial_charge_method=None,
         use_conformers=None,
         strict_n_conformers=False,
+        normalize_partial_charges=True,
         _cls=None,
     ):
         """
@@ -1824,6 +1825,10 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             Whether to raise an exception if an invalid number of conformers is provided for the
             given charge method.
             If this is False and an invalid number of conformers is found, a warning will be raised.
+        normalize_partial_charges : bool, default=True
+            Whether to offset partial charges so that they sum to the total formal charge of the molecule.
+            This is used to prevent accumulation of rounding errors when the partial charge generation method has
+            low precision.
         _cls : class
             Molecule constructor
 
@@ -1978,7 +1983,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         # Extract and return charges
         # TODO: Make sure atom mapping remains constant
-
+        # Extract the list of charges, taking into account possible indexing differences
         charges = unit.Quantity(
             np.zeros(shape=oemol.NumAtoms(), dtype=np.float64), unit.elementary_charge
         )
@@ -1989,6 +1994,9 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             charges[index] = charge
 
         molecule.partial_charges = charges
+
+        if normalize_partial_charges:
+            molecule._normalize_partial_charges()
 
     def compute_partial_charges_am1bcc(
         self, molecule, use_conformers=None, strict_n_conformers=False
