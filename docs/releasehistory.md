@@ -69,6 +69,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Bugfixes
 
+- [PR #1024](https://github.com/openforcefield/openforcefield/pull/1024): Small changes
+  for compatibility with OpenMM 7.6.
 - [PR #1003](https://github.com/openforcefield/openforcefield/pull/1003): Fixes
   [Issue #1000](https://github.com/openforcefield/openff-toolkit/issues/1000), where a stereochemistry
   warning is sometimes erroneously emitted when loading a stereogenic molecule using
