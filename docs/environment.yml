@@ -5,9 +5,9 @@ channels:
 dependencies:
     # readthedocs dependencies
     - numpydoc
-    - nbsphinx
+    - myst-nb
+    - myst-parser>=0.13.6
     - sphinx_bootstrap_theme
-    - myst-parser>=0.14
     - testpath==0.3.1
     - docutils
     # conda build dependencies

@@ -25,10 +25,11 @@ Using the toolkit
 .. toctree::
    :maxdepth: 1
 
-   concepts
-   smirnoff
-   virtualsites
-   developing
+   users/concepts
+   users/molecule_cookbook
+   users/smirnoff
+   users/virtualsites
+   users/developing
 
 API documentation
 -----------------
