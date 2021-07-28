@@ -79,6 +79,7 @@ be explored by selecting which toolkit(s) are and are not registered.
     OpenEyeToolkitWrapper
     RDKitToolkitWrapper
     AmberToolsToolkitWrapper
+    BuiltInToolkitWrapper
 
 Serialization support
 ---------------------

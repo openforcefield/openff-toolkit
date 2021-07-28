@@ -5718,8 +5718,24 @@ class VirtualSiteHandler(_NonbondedHandler):
         return combined_orientations
 
     def create_openff_virtual_sites(self, topology):
+        """
+        Returns a modified version of the input topology with VirtualSites added.
 
-        for molecule in topology.reference_molecules:
+        Parameters
+        ----------
+        topology : openff.toolkit.topology.Topology
+            Topology to add virtual sites to.
+
+        Returns
+        ---------
+        return_topology : openff.toolkit.topology.Topology
+            Copy of the input topology with VirtualSites added.
+
+        """
+
+        return_topology = copy.deepcopy(topology)
+
+        for molecule in return_topology.reference_molecules:
 
             """The following two lines below should be avoided but is left
             until a better solution is found (see #699). The issue is that a
@@ -5727,7 +5743,7 @@ class VirtualSiteHandler(_NonbondedHandler):
             FrozenMolecules. However, the signature is different, as they return
             different results.
 
-            Also, we are using a topology to retreive the indices for the
+            Also, we are using a topology to retrieve the indices for the
             matches, but then using those indices as a direct `Atom` object
             lookup in the molecule. This is unsafe because there is no reason to
             believe that the indices should be consistent. However, there is
@@ -5747,10 +5763,9 @@ class VirtualSiteHandler(_NonbondedHandler):
             for vsite_type, orientations in virtual_sites:
                 vsite_type.add_virtual_site(molecule, orientations, replace=True)
 
-        return topology
+        return return_topology
 
     def _create_openmm_virtual_sites(self, system, force, topology, ref_mol):
-
         """
         Here we must assume that
             1. All atoms in the topology are already present
