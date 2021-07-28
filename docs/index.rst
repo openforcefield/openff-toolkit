@@ -21,10 +21,11 @@ A modern, extensible library for molecular mechanics force field science from th
    :caption: Using the toolkit
    :maxdepth: 1
 
-   concepts
-   smirnoff
-   virtualsites
-   developing
+   users/concepts
+   users/molecule_cookbook
+   users/smirnoff
+   users/virtualsites
+   users/developing
 
 .. toctree::
   :caption: API documentation
