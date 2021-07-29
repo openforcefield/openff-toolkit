@@ -5719,23 +5719,16 @@ class VirtualSiteHandler(_NonbondedHandler):
 
     def create_openff_virtual_sites(self, topology):
         """
-        Returns a modified version of the input topology with VirtualSites added.
+        Modifies the input topology to contain VirtualSites assigned by this handler.
 
         Parameters
         ----------
         topology : openff.toolkit.topology.Topology
             Topology to add virtual sites to.
 
-        Returns
-        ---------
-        return_topology : openff.toolkit.topology.Topology
-            Copy of the input topology with VirtualSites added.
-
         """
 
-        return_topology = copy.deepcopy(topology)
-
-        for molecule in return_topology.reference_molecules:
+        for molecule in topology.reference_molecules:
 
             """The following two lines below should be avoided but is left
             until a better solution is found (see #699). The issue is that a
@@ -5763,7 +5756,6 @@ class VirtualSiteHandler(_NonbondedHandler):
             for vsite_type, orientations in virtual_sites:
                 vsite_type.add_virtual_site(molecule, orientations, replace=True)
 
-        return return_topology
 
     def _create_openmm_virtual_sites(self, system, force, topology, ref_mol):
         """
