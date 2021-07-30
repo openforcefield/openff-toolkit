@@ -2014,7 +2014,13 @@ class Topology(Serializable):
             self._topology_atom_indices = topology_atom_indices
 
     def chemical_environment_matches(
-        self, query, aromaticity_model="MDL", unique=False, max_matches=None, match_heavy_first=False, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY
+        self,
+        query,
+        aromaticity_model="MDL",
+        unique=False,
+        max_matches=None,
+        match_heavy_first=False,
+        toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
     ):
         """
         Retrieve all matches for a given chemical environment query.
@@ -2060,7 +2066,11 @@ class Topology(Serializable):
             # This will automatically attempt to match chemically identical atoms in
             # a canonical order within the Topology
             ref_mol_matches = ref_mol.chemical_environment_matches(
-                smarts, unique=unique, max_matches=max_matches, match_heavy_first=match_heavy_first, toolkit_registry=toolkit_registry
+                smarts,
+                unique=unique,
+                max_matches=max_matches,
+                match_heavy_first=match_heavy_first,
+                toolkit_registry=toolkit_registry,
             )
 
             if len(ref_mol_matches) == 0:
@@ -2327,7 +2337,11 @@ class Topology(Serializable):
         from simtk.openmm.app import Aromatic, Double, Single
         from simtk.openmm.app import Topology as OMMTopology
         from simtk.openmm.app import Triple
-        from simtk.openmm.app.element import Element as OMMElement
+
+        try:
+            from openmm.app.element import Element as OMMElement
+        except ImportError:
+            from simtk.openmm.app.element import Element as OMMElement
 
         omm_topology = OMMTopology()
 
