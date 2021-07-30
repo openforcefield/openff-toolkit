@@ -99,8 +99,12 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
   could not be opened.
   - All input file object readers now support file objects open in binary mode.
 
-### Examples added
+### Examples added and updated
 
+- [PR #1033](https://github.com/openforcefield/openff-toolkit/pull/1033): Incorporated findings from
+  [Issue #1019](https://github.com/openforcefield/openff-toolkit/issues/1005), addressing a problem with using ParmEd
+  to combine systems. Previously 1-4 interactions were scaled to 0 when ParmEd was used to combine OpenFF-derived 
+  ligand parameters with terms from AMBER prmtop files. (Thanks @callumjd!)
 - [PR #763](https://github.com/openforcefield/openff-toolkit/pull/763):
   Adds an introductory example showcasing the toolkit parameterizing a protein-ligand simulation.
 - [PR #955](https://github.com/openforcefield/openff-toolkit/pull/955): Refreshed the force field modification example
