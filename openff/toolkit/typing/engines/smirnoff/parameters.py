@@ -5589,7 +5589,7 @@ class VirtualSiteHandler(_NonbondedHandler):
         # somewhere else
 
         logger.debug("Creating OpenFF virtual site representations...")
-        topology = self.create_openff_virtual_sites(topology)
+        self.create_openff_virtual_sites(topology)
 
         # The toolkit now has a representation of the vsites in the topology,
         # and here we create the OpenMM parameters/objects/exclusions
@@ -5718,6 +5718,14 @@ class VirtualSiteHandler(_NonbondedHandler):
         return combined_orientations
 
     def create_openff_virtual_sites(self, topology):
+        """
+        Modifies the input topology to contain VirtualSites assigned by this handler.
+
+        Parameters
+        ----------
+        topology : openff.toolkit.topology.Topology
+            Topology to add virtual sites to.
+        """
 
         for molecule in topology.reference_molecules:
 
@@ -5727,7 +5735,7 @@ class VirtualSiteHandler(_NonbondedHandler):
             FrozenMolecules. However, the signature is different, as they return
             different results.
 
-            Also, we are using a topology to retreive the indices for the
+            Also, we are using a topology to retrieve the indices for the
             matches, but then using those indices as a direct `Atom` object
             lookup in the molecule. This is unsafe because there is no reason to
             believe that the indices should be consistent. However, there is
@@ -5747,7 +5755,6 @@ class VirtualSiteHandler(_NonbondedHandler):
             for vsite_type, orientations in virtual_sites:
                 vsite_type.add_virtual_site(molecule, orientations, replace=True)
 
-        return topology
 
     def _create_openmm_virtual_sites(self, system, force, topology, ref_mol):
 
