@@ -3809,9 +3809,7 @@ class TestForceFieldParameterAssignment:
 
         off_nonbonded_force.setReactionFieldDielectric(1.0)
 
-        # Not sure if zeroing the switching width is essential -- This might only make a difference
-        # in the energy if we tested on a molecule larger than the 9A cutoff
-        # off_nonbonded_force.setSwitchingDistance(0)
+        # TODO: look into if switching distance is relevant #882
 
         # Create Contexts
         integrator = openmm.VerletIntegrator(1.0 * unit.femtoseconds)
@@ -3824,11 +3822,9 @@ class TestForceFieldParameterAssignment:
         # Get context energies
         amber_energy = get_context_potential_energy(amber_context, positions)
         off_energy = get_context_potential_energy(off_context, positions)
-
         # Very handy for debugging
         # print(openmm.XmlSerializer.serialize(off_gbsa_force))
         # print(openmm.XmlSerializer.serialize(amber_gbsa_force))
-
         # Ensure that the GBSA energies (which we put into ForceGroup 1) are identical
         # For Platform=OpenCL, we do get "=="-level identical numbers, but for "Reference", we don't.
         # assert amber_energy[1] == off_energy[1]
@@ -3836,7 +3832,11 @@ class TestForceFieldParameterAssignment:
 
         # Ensure that all system energies are the same
         compare_system_energies(
-            off_omm_system, amber_omm_system, positions, by_force_type=False
+            off_omm_system,
+            amber_omm_system,
+            positions,
+            by_force_type=False,
+            atol=1.0e-4,
         )
 
     def test_tip5p_dimer_energy(self):
