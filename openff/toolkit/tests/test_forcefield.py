@@ -3834,7 +3834,7 @@ class TestForceFieldParameterAssignment:
             amber_omm_system,
             positions,
             by_force_type=False,
-            atol=1.0e-5,
+            atol=1.0e-4,
         )
 
     def test_tip5p_dimer_energy(self):
