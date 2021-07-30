@@ -26,7 +26,7 @@ from . import base_wrapper
 from .constants import DEFAULT_AROMATICITY_MODEL
 from .exceptions import (
     ChargeMethodUnavailableError,
-    ParseError,
+    SMILESParseError,
     ToolkitUnavailableException,
     UndefinedStereochemistryError,
 )
@@ -745,7 +745,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         rdmol = Chem.MolFromSmiles(smiles, sanitize=False)
         if rdmol is None:
-            raise ParseError("Unable to parse the SMILES string")
+            raise SMILESParseError("Unable to parse the SMILES string")
 
         # strip the atom map from the molecule if it has one
         # so we don't affect the sterochemistry tags
@@ -909,6 +909,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         partial_charge_method=None,
         use_conformers=None,
         strict_n_conformers=False,
+        normalize_partial_charges=True,
         _cls=None,
     ):
         """
@@ -936,6 +937,10 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             Whether to raise an exception if an invalid number of conformers is provided for
             the given charge method.
             If this is False and an invalid number of conformers is found, a warning will be raised.
+        normalize_partial_charges : bool, default=True
+            Whether to offset partial charges so that they sum to the total formal charge of the molecule.
+            This is used to prevent accumulation of rounding errors when the partial charge generation method has
+            low precision.
         _cls : class
             Molecule constructor
 
@@ -978,6 +983,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             )
 
         molecule.partial_charges = charges * unit.elementary_charge
+
+        if normalize_partial_charges:
+            molecule._normalize_partial_charges()
 
     @classmethod
     def _elf_is_problematic_conformer(

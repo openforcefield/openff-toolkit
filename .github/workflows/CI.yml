@@ -4,11 +4,11 @@ on:
   push:
     branches:
       - "master"
-      - "maintenance/.+"
+      - "maintenance/.*"
   pull_request:
     branches:
       - "master"
-      - "maintenance/.+"
+      - "maintenance/.*"
   schedule:
     # Nightly tests run on master by default:
     #   Scheduled workflows run on the latest commit on the default or base branch.
@@ -159,7 +159,7 @@ jobs:
           pytest -v --doctest-glob="docs/*.rst" docs/
 
       - name: Codecov
-        uses: codecov/codecov-action@v1.5.2
+        uses: codecov/codecov-action@v2.0.2
         with:
           file: ./coverage.xml
           fail_ci_if_error: true
