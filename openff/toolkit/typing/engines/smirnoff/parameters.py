@@ -5755,7 +5755,6 @@ class VirtualSiteHandler(_NonbondedHandler):
             for vsite_type, orientations in virtual_sites:
                 vsite_type.add_virtual_site(molecule, orientations, replace=True)
 
-
     def _create_openmm_virtual_sites(self, system, force, topology, ref_mol):
 
         """
