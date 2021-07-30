@@ -3822,7 +3822,9 @@ class TestForceFieldParameterAssignment:
         # Get context energies
         amber_energy = get_context_potential_energy(amber_context, positions)
         off_energy = get_context_potential_energy(off_context, positions)
-
+        # Very handy for debugging
+        # print(openmm.XmlSerializer.serialize(off_gbsa_force))
+        # print(openmm.XmlSerializer.serialize(amber_gbsa_force))
         # Ensure that the GBSA energies (which we put into ForceGroup 1) are identical
         # For Platform=OpenCL, we do get "=="-level identical numbers, but for "Reference", we don't.
         # assert amber_energy[1] == off_energy[1]

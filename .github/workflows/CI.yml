@@ -145,11 +145,9 @@ jobs:
         run: |
           PYTEST_ARGS+=" --ignore=openff/toolkit/tests/test_examples.py"
           PYTEST_ARGS+=" --ignore=openff/toolkit/tests/test_links.py"
-          # REVERT BEFORE MERGE
-          # if [[ "$GITHUB_EVENT_NAME" == "schedule" ]]; then
-          #   PYTEST_ARGS+=" --runslow"
-          # fi
-          PYTEST_ARGS+=" --runslow"
+          if [[ "$GITHUB_EVENT_NAME" == "schedule" ]]; then
+            PYTEST_ARGS+=" --runslow"
+          fi
           pytest $PYTEST_ARGS openff/toolkit/tests/
 
       - name: Run code snippets in docs
@@ -163,4 +161,3 @@ jobs:
         with:
           file: ./coverage.xml
           fail_ci_if_error: true
-
