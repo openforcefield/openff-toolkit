@@ -4128,18 +4128,23 @@ class TestForceFieldParameterAssignment:
         forcefield = ForceField("test_forcefields/test_forcefield.offxml")
         topology = Topology.from_molecules(molecule)
 
-        labels = forcefield.label_molecules(topology)[0]
+        labels = forcefield.label_molecules(
+            topology,
+            match_heavy_first=True,
+            unique=True,
+        )[0]
         assert len(labels["Bonds"]) == 2654
         assert len(labels["Angles"]) == 4789
         assert len(labels["ProperTorsions"]) == 6973
         assert len(labels["ImproperTorsions"]) == 528
 
-        fn = forcefield.create_openmm_system
-        omm_system = fn(
+        omm_system = forcefield.create_openmm_system(
             topology,
             charge_from_molecules=[molecule],
             toolkit_registry=toolkit_registry,
             allow_nonintegral_charges=False,
+            match_heavy_first=True,
+            uique=True,
         )
 
     def test_modified_14_factors(self):

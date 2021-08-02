@@ -2028,10 +2028,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             int(max_matches) if max_matches is not None else np.iinfo(np.uintc).max
         )
         match_kwargs = dict(uniquify=unique, maxMatches=max_matches, useChirality=True)
-        n_heavy, n_h = (
-            qmol.GetNumHeavyAtoms(),
-            qmol.GetNumAtoms() - qmol.GetNumHeavyAtoms(),
-        )
+        # These variables are un-used, do they serve a purpose?
+        # n_heavy = qmol.GetNumHeavyAtoms()
+        # n_h = qmol.GetNumAtoms() - n_heavy
         if match_heavy_first:
             full_matches = _match_smarts_with_heavy_atoms_first(
                 rdmol, qmol, match_kwargs

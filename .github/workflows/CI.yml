@@ -145,9 +145,11 @@ jobs:
         run: |
           PYTEST_ARGS+=" --ignore=openff/toolkit/tests/test_examples.py"
           PYTEST_ARGS+=" --ignore=openff/toolkit/tests/test_links.py"
-          if [[ "$GITHUB_EVENT_NAME" == "schedule" ]]; then
-            PYTEST_ARGS+=" --runslow"
-          fi
+          # Switch back to cron-only before merging
+          # if [[ "$GITHUB_EVENT_NAME" == "schedule" ]]; then
+          #   PYTEST_ARGS+=" --runslow"
+          # fi
+          PYTEST_ARGS+=" --runslow"
           pytest $PYTEST_ARGS openff/toolkit/tests/
 
       - name: Run code snippets in docs

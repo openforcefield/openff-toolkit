@@ -1283,6 +1283,11 @@ class ForceField:
         toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry, optional. default=GLOBAL_TOOLKIT_REGISTRY
             The toolkit registry to use for operations like conformer generation and
             partial charge assignment.
+        unique : bool, default=False
+            If True, SMARTS matching will enumerate every possible combination of atoms.
+        match_heavy_first : bool, default=False,
+            If True, for each heavy match, SMARTS matching pins heavy atoms and enumerates though the remaining
+            hydrogen atoms.
 
         Returns
         -------
@@ -1435,7 +1440,7 @@ class ForceField:
         #
         # return structure
 
-    def label_molecules(self, topology):
+    def label_molecules(self, topology, **kwargs):
         """Return labels for a list of molecules corresponding to parameters from this force field.
         For each molecule, a dictionary of force types is returned, and for each force type,
         each force term is provided with the atoms involved, the parameter id assigned, and the corresponding SMIRKS.
@@ -1476,7 +1481,7 @@ class ForceField:
                 if type(parameter_handler) == VirtualSiteHandler:
                     param_is_list = True
 
-                matches = parameter_handler.find_matches(top_mol)
+                matches = parameter_handler.find_matches(top_mol, **kwargs)
 
                 # Remove the chemical environment matches from the
                 # matched results.

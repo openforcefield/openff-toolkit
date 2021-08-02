@@ -2222,7 +2222,7 @@ class ParameterHandler(_ParameterAttributeHandler):
             self._parameter_type = parameter_type
             self._environment_match = environment_match
 
-    def find_matches(self, entity):
+    def find_matches(self, entity, **kwargs):
         """Find the elements of the topology/molecule matched by a parameter type.
 
         Parameters
@@ -2629,7 +2629,7 @@ class ConstraintHandler(ParameterHandler):
     _OPENMMTYPE = None  # don't create a corresponding OpenMM Force class
 
     def create_force(self, system, topology, **kwargs):
-        constraint_matches = self.find_matches(topology)
+        constraint_matches = self.find_matches(topology, **kwargs)
         for (atoms, constraint_match) in constraint_matches.items():
             # Update constrained atom pairs in topology
             # topology.add_constraint(*atoms, constraint.distance)
@@ -3351,7 +3351,7 @@ class ImproperTorsionHandler(ParameterHandler):
             tolerance_attrs=float_attrs_to_compare,
         )
 
-    def find_matches(self, entity):
+    def find_matches(self, entity, **kwargs):
         """Find the improper torsions in the topology/molecule matched by a parameter type.
 
         Parameters
@@ -4311,7 +4311,7 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
             identical_attrs=string_attrs_to_compare + int_attrs_to_compare,
         )
 
-    def find_matches(self, entity):
+    def find_matches(self, entity, **kwargs):
         """Find the elements of the topology/molecule matched by a parameter type.
 
         Parameters
