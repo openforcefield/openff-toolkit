@@ -4130,9 +4130,8 @@ class TestForceFieldParameterAssignment:
 
         labels = forcefield.label_molecules(
             topology,
-            match_heavy_first=True,
-            unique=True,
         )[0]
+
         assert len(labels["Bonds"]) == 2654
         assert len(labels["Angles"]) == 4789
         assert len(labels["ProperTorsions"]) == 6973
@@ -4143,8 +4142,6 @@ class TestForceFieldParameterAssignment:
             charge_from_molecules=[molecule],
             toolkit_registry=toolkit_registry,
             allow_nonintegral_charges=False,
-            match_heavy_first=True,
-            uique=True,
         )
 
     def test_modified_14_factors(self):
