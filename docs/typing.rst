@@ -63,6 +63,10 @@ For more information, see ``examples/forcefield_modification``.
     LibraryChargeHandler.LibraryChargeType
     GBSAHandler.GBSAType
     ChargeIncrementModelHandler.ChargeIncrementType
+    VirtualSiteHandler.VirtualSiteBondChargeType
+    VirtualSiteHandler.VirtualSiteMonovalentLonePairType
+    VirtualSiteHandler.VirtualSiteDivalentLonePairType
+    VirtualSiteHandler.VirtualSiteTrivalentLonePairType
 
 Parameter Handlers
 ~~~~~~~~~~~~~~~~~~
@@ -87,6 +91,7 @@ During ``System`` creation, each ``ParameterHandler`` registered to a ``ForceFie
     ToolkitAM1BCCHandler
     GBSAHandler
     ChargeIncrementModelHandler
+    VirtualSiteHandler
 
 Parameter I/O Handlers
 ~~~~~~~~~~~~~~~~~~~~~~
