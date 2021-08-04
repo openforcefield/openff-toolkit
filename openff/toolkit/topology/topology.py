@@ -1320,6 +1320,26 @@ class TopologyMolecule:
         )
 
     def nth_degree_neighbors(self, n_degrees: int):
+        """
+        Return canonicalized pairs of atoms whose shortest separation is `exactly` n bonds.
+        Only pairs with increasing atom indices are returned.
+        Parameters
+        ----------
+        n: int
+            The number of bonds separating atoms in each pair
+        Returns
+        -------
+        neighbors: iterator of tuple of TopologyAtom
+            Tuples (len 2) of atom that are separated by ``n`` bonds.
+        Notes
+        -----
+        The criteria used here relies on minimum distances; when there are multiple valid
+        paths between atoms, such as atoms in rings, the shortest path is considered.
+        For example, two atoms in "meta" positions with respect to each other in a benzene
+        are separated by two paths, one length 2 bonds and the other length 4 bonds. This
+        function would consider them to be 2 apart and would not include them if ``n=4`` was
+        passed.
+        """
         return self._convert_to_topology_atom_tuples(
             self._reference_molecule.nth_degree_neighbors(n_degrees=n_degrees)
         )
@@ -1966,6 +1986,26 @@ class Topology(Serializable):
                 yield amber_improper
 
     def nth_degree_neighbors(self, n_degrees: int):
+        """
+        Return canonicalized pairs of atoms whose shortest separation is `exactly` n bonds.
+        Only pairs with increasing atom indices are returned.
+        Parameters
+        ----------
+        n: int
+            The number of bonds separating atoms in each pair
+        Returns
+        -------
+        neighbors: iterator of tuple of TopologyAtom
+            Tuples (len 2) of atom that are separated by ``n`` bonds.
+        Notes
+        -----
+        The criteria used here relies on minimum distances; when there are multiple valid
+        paths between atoms, such as atoms in rings, the shortest path is considered.
+        For example, two atoms in "meta" positions with respect to each other in a benzene
+        are separated by two paths, one length 2 bonds and the other length 4 bonds. This
+        function would consider them to be 2 apart and would not include them if ``n=4`` was
+        passed.
+        """
         for topology_molecule in self._topology_molecules:
             for pair in topology_molecule.nth_degree_neighbors(n_degrees=n_degrees):
                 yield pair
