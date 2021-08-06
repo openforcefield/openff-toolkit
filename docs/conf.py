@@ -20,14 +20,13 @@
 import os
 import sys
 
-sys.path.insert(0, os.path.abspath("."))
-
+import openff.toolkit
 import sphinx
-
 # bootstrap theme
 import sphinx_bootstrap_theme
 
-import openff.toolkit
+sys.path.insert(0, os.path.abspath("."))
+
 
 # -- General configuration ------------------------------------------------
 
@@ -40,7 +39,6 @@ import openff.toolkit
 # ones.
 extensions = [
     "sphinx.ext.autodoc",
-    # 'sphinx.ext.napoleon',
     "numpydoc",
     "sphinx.ext.autosummary",
     "sphinx.ext.doctest",
@@ -48,9 +46,8 @@ extensions = [
     "sphinx.ext.mathjax",
     "sphinx.ext.viewcode",
     "sphinx.ext.intersphinx",
-    "nbsphinx",
-    # 'm2r2', # render markdown
-    "myst_parser",
+    "myst_nb",
+    # "myst_parser",
 ]
 
 # Autodoc settings
@@ -74,6 +71,10 @@ intersphinx_mapping = {
     "https://numpy.org/doc/stable": None,
     "https://docs.scipy.org/doc/scipy/reference": None,
     "https://scikit-learn.org/stable": None,
+    "http://docs.openmm.org/latest/api-python/": None,
+    "https://www.rdkit.org/docs": None,
+    "https://docs.eyesopen.com/toolkits/python/": None,
+    "https://www.mdtraj.org/1.9.5/": None,
 }
 
 # Add any paths that contain templates here, relative to this directory.
@@ -88,9 +89,15 @@ myst_enable_extensions = [
     "deflist",
 ]
 
+# Myst NB settings
+# Execute all notebooks on build
+jupyter_execute_notebooks = "force"
+# List of notebooks NOT to execute (use output stored in notebook instead)
+execution_excludepatterns = []
+
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
-source_suffix = [".rst", ".md"]
+source_suffix = [".rst", ".md", ".ipynb"]
 
 # The master toctree document.
 master_doc = "index"
