@@ -3606,6 +3606,7 @@ class TestMolecule:
 
     @requires_ambertools
     @requires_openeye
+    @pytest.mark.slow
     @pytest.mark.parametrize("model", ["AM1-Wiberg", "am1-wiberg"])
     @pytest.mark.parametrize(
         "toolkit", [OpenEyeToolkitWrapper, AmberToolsToolkitWrapper]
