@@ -4128,9 +4128,7 @@ class TestForceFieldParameterAssignment:
         forcefield = ForceField("test_forcefields/test_forcefield.offxml")
         topology = Topology.from_molecules(molecule)
 
-        labels = forcefield.label_molecules(
-            topology,
-        )[0]
+        labels = forcefield.label_molecules(topology)[0]
 
         assert len(labels["Bonds"]) == 2654
         assert len(labels["Angles"]) == 4789

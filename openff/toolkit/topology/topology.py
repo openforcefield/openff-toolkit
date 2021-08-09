@@ -2059,7 +2059,6 @@ class Topology(Serializable):
         aromaticity_model="MDL",
         unique=False,
         max_matches=None,
-        match_heavy_first=False,
         toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
     ):
         """
@@ -2109,7 +2108,6 @@ class Topology(Serializable):
                 smarts,
                 unique=unique,
                 max_matches=max_matches,
-                match_heavy_first=match_heavy_first,
                 toolkit_registry=toolkit_registry,
             )
 

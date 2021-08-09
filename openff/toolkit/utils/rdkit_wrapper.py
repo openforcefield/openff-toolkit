@@ -1935,7 +1935,6 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         aromaticity_model="OEAroModel_MDL",
         unique=False,
         max_matches=None,
-        match_heavy_first=False,
     ):
         """Find all sets of atoms in the provided RDKit molecule that match the provided SMARTS string.
 
@@ -2031,7 +2030,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         # These variables are un-used, do they serve a purpose?
         # n_heavy = qmol.GetNumHeavyAtoms()
         # n_h = qmol.GetNumAtoms() - n_heavy
-        if match_heavy_first:
+        # TODO: if match_heavy_first: ...
+        if False:
             full_matches = _match_smarts_with_heavy_atoms_first(
                 rdmol, qmol, match_kwargs
             )
@@ -2049,7 +2049,6 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         aromaticity_model="OEAroModel_MDL",
         unique=False,
         max_matches=None,
-        match_heavy_first=False,
     ):
         """
         Find all SMARTS matches for the specified molecule, using the specified aromaticity model.
@@ -2075,7 +2074,6 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             aromaticity_model="OEAroModel_MDL",
             unique=unique,
             max_matches=max_matches,
-            match_heavy_first=match_heavy_first,
         )
 
     # --------------------------------

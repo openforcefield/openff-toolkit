@@ -2222,13 +2222,15 @@ class ParameterHandler(_ParameterAttributeHandler):
             self._parameter_type = parameter_type
             self._environment_match = environment_match
 
-    def find_matches(self, entity, **kwargs):
+    def find_matches(self, entity, unique=False):
         """Find the elements of the topology/molecule matched by a parameter type.
 
         Parameters
         ----------
         entity : openff.toolkit.topology.Topology
             Topology to search.
+        unique : bool, default=False
+            If True, SMARTS matching will enumerate every possible combination of atoms.
 
         Returns
         ---------
@@ -2246,7 +2248,6 @@ class ParameterHandler(_ParameterAttributeHandler):
         entity,
         transformed_dict_cls=ValenceDict,
         unique=False,
-        match_heavy_first=False,
     ):
         """Implement find_matches() and allow using a difference valence dictionary.
         Parameters
@@ -2258,6 +2259,9 @@ class ParameterHandler(_ParameterAttributeHandler):
             will determine how groups of atom indices are stored
             and accessed (e.g for angles indices should be 0-1-2
             and not 2-1-0).
+        unique : bool, default=False
+            If True, SMARTS matching will enumerate every possible combination of atoms.
+
         Returns
         ---------
         matches : `transformed_dict_cls` of ParameterHandlerMatch
@@ -2277,7 +2281,6 @@ class ParameterHandler(_ParameterAttributeHandler):
             for environment_match in entity.chemical_environment_matches(
                 parameter_type.smirks,
                 unique=unique,
-                match_heavy_first=match_heavy_first,
             ):
                 # Update the matches for this parameter type.
                 handler_match = self._Match(parameter_type, environment_match)
@@ -3351,7 +3354,7 @@ class ImproperTorsionHandler(ParameterHandler):
             tolerance_attrs=float_attrs_to_compare,
         )
 
-    def find_matches(self, entity, **kwargs):
+    def find_matches(self, entity, unique=False):
         """Find the improper torsions in the topology/molecule matched by a parameter type.
 
         Parameters
@@ -4025,9 +4028,9 @@ class LibraryChargeHandler(_NonbondedHandler):
     _INFOTYPE = LibraryChargeType  # info type to store
     _DEPENDENCIES = [vdWHandler, ElectrostaticsHandler]
 
-    _KWARGS = ["match_heavy_first", "unique"]
+    _KWARGS = ["unique"]
 
-    def find_matches(self, entity, **kwargs):
+    def find_matches(self, entity, unique=True):
         """Find the elements of the topology/molecule matched by a parameter type.
 
         Parameters
@@ -4048,7 +4051,6 @@ class LibraryChargeHandler(_NonbondedHandler):
             entity,
             transformed_dict_cls=dict,
             unique=unique,
-            match_heavy_first=match_heavy_first,
         )
 
     def create_force(self, system, topology, **kwargs):
@@ -4313,7 +4315,7 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
             identical_attrs=string_attrs_to_compare + int_attrs_to_compare,
         )
 
-    def find_matches(self, entity, **kwargs):
+    def find_matches(self, entity, unique=False):
         """Find the elements of the topology/molecule matched by a parameter type.
 
         Parameters

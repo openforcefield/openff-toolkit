@@ -2224,7 +2224,6 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         aromaticity_model=DEFAULT_AROMATICITY_MODEL,
         unique=False,
         max_matches=None,
-        match_heavy_first=False,
     ):
         """Find all sets of atoms in the provided OpenEye molecule that match the provided SMARTS string.
 
@@ -2319,7 +2318,6 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         aromaticity_model="OEAroModel_MDL",
         unique=False,
         max_matches=None,
-        match_heavy_first=False,
     ):
         """
         Find all SMARTS matches for the specified molecule, using the specified aromaticity model.

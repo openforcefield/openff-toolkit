@@ -4483,7 +4483,6 @@ class FrozenMolecule(Serializable):
         query,
         unique=False,
         max_matches=None,
-        match_heavy_first=False,
         toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
     ):
         """Retrieve all matches for a given chemical environment query.
@@ -4534,7 +4533,6 @@ class FrozenMolecule(Serializable):
                 smirks,
                 unique=unique,
                 max_matches=max_matches,
-                match_heavy_first=match_heavy_first,
             )
         elif isinstance(toolkit_registry, ToolkitWrapper):
             matches = toolkit_registry.find_smarts_matches(
@@ -4542,7 +4540,6 @@ class FrozenMolecule(Serializable):
                 smirks,
                 unique=unique,
                 max_matches=max_matches,
-                match_heavy_first=match_heavy_first,
             )
         else:
             raise InvalidToolkitRegistryError(
