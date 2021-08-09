@@ -14,6 +14,12 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
   in which capitalization of the `bond_order_model` sometimes matters.
 
 
+### Tests updated
+
+- [PR #1017](https://github.com/openforcefield/openforcefield/pull/1017): Ensures that OpenEye-only CI builds really
+  do lack both AmberTools and RDKit.  
+
+
 ## 0.10.0 Improvements for force field fitting
 
 ### New features and behaviors changed
