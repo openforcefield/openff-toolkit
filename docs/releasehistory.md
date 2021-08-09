@@ -8,6 +8,12 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ## Current development
 
+### Bugfixes
+
+- [PR #1030](https://github.com/openforcefield/openforcefield/pull/1030): Fixes a bug
+  in which capitalization of the `bond_order_model` sometimes matters.
+
+
 ### Tests updated
 
 - [PR #1017](https://github.com/openforcefield/openforcefield/pull/1017): Ensures that OpenEye-only CI builds really
