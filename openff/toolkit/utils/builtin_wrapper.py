@@ -45,6 +45,7 @@ class BuiltInToolkitWrapper(base_wrapper.ToolkitWrapper):
         partial_charge_method=None,
         use_conformers=None,
         strict_n_conformers=False,
+        normalize_partial_charges=True,
         _cls=None,
     ):
         """
@@ -71,6 +72,10 @@ class BuiltInToolkitWrapper(base_wrapper.ToolkitWrapper):
             given charge method.
             If this is False and an invalid number of conformers is found, a warning will be raised
             instead of an Exception.
+        normalize_partial_charges : bool, default=True
+            Whether to offset partial charges so that they sum to the total formal charge of the molecule.
+            This is used to prevent accumulation of rounding errors when the partial charge generation method has
+            low precision.
         _cls : class
             Molecule constructor
 
@@ -136,3 +141,6 @@ class BuiltInToolkitWrapper(base_wrapper.ToolkitWrapper):
                 partial_charges[part_idx] = particle.formal_charge
 
         molecule.partial_charges = partial_charges
+
+        if normalize_partial_charges:
+            molecule._normalize_partial_charges()

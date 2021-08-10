@@ -971,9 +971,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                 oemol, oeatom
             )
             # stereochemistry = self._openeye_cip_atom_stereochemistry(oemol, oeatom)
-            name = ""
-            if oeatom.HasData("name"):
-                name = oeatom.GetData("name")
+            name = oeatom.GetName()
             atom_index = molecule._add_atom(
                 atomic_number,
                 formal_charge,
@@ -1132,7 +1130,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             )  # simtk.unit.Quantity(1, unit.elementary_charge)
             # TODO: Do we want to provide _any_ pathway for Atom.is_aromatic to influence the OEMol?
             # oeatom.SetAromatic(atom.is_aromatic)
-            oeatom.SetData("name", atom.name)
+            oeatom.SetName(atom.name)
             oeatom.SetPartialCharge(float("nan"))
             oemol_atoms.append(oeatom)
             map_atoms[atom.molecule_atom_index] = oeatom.GetIdx()
@@ -1796,6 +1794,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         partial_charge_method=None,
         use_conformers=None,
         strict_n_conformers=False,
+        normalize_partial_charges=True,
         _cls=None,
     ):
         """
@@ -1826,6 +1825,10 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             Whether to raise an exception if an invalid number of conformers is provided for the
             given charge method.
             If this is False and an invalid number of conformers is found, a warning will be raised.
+        normalize_partial_charges : bool, default=True
+            Whether to offset partial charges so that they sum to the total formal charge of the molecule.
+            This is used to prevent accumulation of rounding errors when the partial charge generation method has
+            low precision.
         _cls : class
             Molecule constructor
 
@@ -1980,7 +1983,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         # Extract and return charges
         # TODO: Make sure atom mapping remains constant
-
+        # Extract the list of charges, taking into account possible indexing differences
         charges = unit.Quantity(
             np.zeros(shape=oemol.NumAtoms(), dtype=np.float64), unit.elementary_charge
         )
@@ -1991,6 +1994,9 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             charges[index] = charge
 
         molecule.partial_charges = charges
+
+        if normalize_partial_charges:
+            molecule._normalize_partial_charges()
 
     def compute_partial_charges_am1bcc(
         self, molecule, use_conformers=None, strict_n_conformers=False
@@ -2075,6 +2081,8 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         if bond_order_model is None:
             bond_order_model = "am1-wiberg"
+
+        bond_order_model = bond_order_model.lower()
 
         is_elf_method = bond_order_model in ["am1-wiberg-elf10", "pm3-wiberg-elf10"]
 

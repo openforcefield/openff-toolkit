@@ -72,6 +72,7 @@ from openff.toolkit.utils.exceptions import (
     LicenseError,
     MissingDependencyError,
     MissingPackageError,
+    SMILESParseError,
     ToolkitUnavailableException,
     UndefinedStereochemistryError,
 )
