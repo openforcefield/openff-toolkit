@@ -2230,7 +2230,8 @@ class ParameterHandler(_ParameterAttributeHandler):
         entity : openff.toolkit.topology.Topology
             Topology to search.
         unique : bool, default=False
-            If True, SMARTS matching will enumerate every possible combination of atoms.
+            If False, SMARTS matching will enumerate every valid permutation of matching atoms. 
+            If True, only one order of each unique match will be returned.
 
         Returns
         ---------
@@ -2260,7 +2261,8 @@ class ParameterHandler(_ParameterAttributeHandler):
             and accessed (e.g for angles indices should be 0-1-2
             and not 2-1-0).
         unique : bool, default=False
-            If True, SMARTS matching will enumerate every possible combination of atoms.
+            If False, SMARTS matching will enumerate every valid permutation of matching atoms. 
+            If True, only one order of each unique match will be returned.
 
         Returns
         ---------
