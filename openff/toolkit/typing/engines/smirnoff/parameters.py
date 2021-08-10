@@ -69,6 +69,7 @@ from openff.toolkit.topology import (
     ValenceDict,
 )
 from openff.toolkit.topology.molecule import Molecule
+from openff.toolkit.topology.topology import NotBondedError
 from openff.toolkit.typing.chemistry import ChemicalEnvironment
 from openff.toolkit.utils.collections import ValidatedDict, ValidatedList
 from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
@@ -2821,7 +2822,13 @@ class BondHandler(ParameterHandler):
             # particle_indices = tuple([ atom.particle_index for atom in atoms ])
 
             # Ensure atoms are actually bonded correct pattern in Topology
-            self._assert_correct_connectivity(bond_match)
+            try:
+                self._assert_correct_connectivity(bond_match)
+            except NotBondedError as e:
+                smirks = bond_match.parameter_type.smirks
+                raise NotBondedError(
+                    f"While processing bond with SMIRKS {smirks}: " + e.msg
+                )
 
             # topology.assert_bonded(atoms[0], atoms[1])
             bond_params = bond_match.parameter_type
@@ -2997,7 +3004,13 @@ class AngleHandler(ParameterHandler):
             # Ensure atoms are actually bonded correct pattern in Topology
             # for (i, j) in [(0, 1), (1, 2)]:
             #     topology.assert_bonded(atoms[i], atoms[j])
-            self._assert_correct_connectivity(angle_match)
+            try:
+                self._assert_correct_connectivity(angle_match)
+            except NotBondedError as e:
+                smirks = angle_match.parameter_type.smirks
+                raise NotBondedError(
+                    f"While processing angle with SMIRKS {smirks}: " + e.msg
+                )
 
             if (
                 topology.is_constrained(atoms[0], atoms[1])
@@ -3147,7 +3160,13 @@ class ProperTorsionHandler(ParameterHandler):
         for (atom_indices, torsion_match) in torsion_matches.items():
             # Ensure atoms are actually bonded correct pattern in Topology
             # Currently does nothing
-            self._assert_correct_connectivity(torsion_match)
+            try:
+                self._assert_correct_connectivity(torsion_match)
+            except NotBondedError as e:
+                smirks = torsion_match.parameter_type.smirks
+                raise NotBondedError(
+                    f"While processing torsion with SMIRKS {smirks}: " + e.msg
+                )
 
             if torsion_match.parameter_type.k_bondorder is None:
                 # TODO: add a check here that we have same number of terms for
@@ -3378,7 +3397,15 @@ class ImproperTorsionHandler(ParameterHandler):
             # For impropers, central atom is atom 1
             # for (i, j) in [(0, 1), (1, 2), (1, 3)]:
             #     topology.assert_bonded(atom_indices[i], atom_indices[j])
-            self._assert_correct_connectivity(improper_match, [(0, 1), (1, 2), (1, 3)])
+            try:
+                self._assert_correct_connectivity(
+                    improper_match, [(0, 1), (1, 2), (1, 3)]
+                )
+            except NotBondedError as e:
+                smirks = improper_match.parameter_type.smirks
+                raise NotBondedError(
+                    f"While processing improper with SMIRKS {smirks}: " + e.msg
+                )
 
             improper = improper_match.parameter_type
 
