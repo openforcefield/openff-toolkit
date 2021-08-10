@@ -2632,7 +2632,7 @@ class ConstraintHandler(ParameterHandler):
     _OPENMMTYPE = None  # don't create a corresponding OpenMM Force class
 
     def create_force(self, system, topology, **kwargs):
-        constraint_matches = self.find_matches(topology, **kwargs)
+        constraint_matches = self.find_matches(topology)
         for (atoms, constraint_match) in constraint_matches.items():
             # Update constrained atom pairs in topology
             # topology.add_constraint(*atoms, constraint.distance)

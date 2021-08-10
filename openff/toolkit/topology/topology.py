@@ -2058,7 +2058,6 @@ class Topology(Serializable):
         query,
         aromaticity_model="MDL",
         unique=False,
-        max_matches=None,
         toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
     ):
         """
@@ -2107,7 +2106,6 @@ class Topology(Serializable):
             ref_mol_matches = ref_mol.chemical_environment_matches(
                 smarts,
                 unique=unique,
-                max_matches=max_matches,
                 toolkit_registry=toolkit_registry,
             )
 

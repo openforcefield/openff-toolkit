@@ -1934,7 +1934,6 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         smirks,
         aromaticity_model="OEAroModel_MDL",
         unique=False,
-        max_matches=None,
     ):
         """Find all sets of atoms in the provided RDKit molecule that match the provided SMARTS string.
 
@@ -2023,20 +2022,14 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         # choose the largest unsigned int without overflow
         # since the C++ signature is a uint
-        max_matches = (
-            int(max_matches) if max_matches is not None else np.iinfo(np.uintc).max
-        )
+        # TODO: max_matches = int(max_matches) if max_matches is not None else np.iinfo(np.uintc).max
+        max_matches = np.iinfo(np.uintc).max
         match_kwargs = dict(uniquify=unique, maxMatches=max_matches, useChirality=True)
         # These variables are un-used, do they serve a purpose?
         # n_heavy = qmol.GetNumHeavyAtoms()
         # n_h = qmol.GetNumAtoms() - n_heavy
-        # TODO: if match_heavy_first: ...
-        if False:
-            full_matches = _match_smarts_with_heavy_atoms_first(
-                rdmol, qmol, match_kwargs
-            )
-        else:
-            full_matches = rdmol.GetSubstructMatches(qmol, **match_kwargs)
+        # TODO: if match_heavy_first: full_matches = _match_smarts_with_heavy_atoms_first(...)
+        full_matches = rdmol.GetSubstructMatches(qmol, **match_kwargs)
 
         matches = [tuple(match[x] for x in map_list) for match in full_matches]
 
@@ -2048,7 +2041,6 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         smarts,
         aromaticity_model="OEAroModel_MDL",
         unique=False,
-        max_matches=None,
     ):
         """
         Find all SMARTS matches for the specified molecule, using the specified aromaticity model.
@@ -2073,7 +2065,6 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             smarts,
             aromaticity_model="OEAroModel_MDL",
             unique=unique,
-            max_matches=max_matches,
         )
 
     # --------------------------------
