@@ -101,12 +101,6 @@ jobs:
         run: |
           echo "${OE_LICENSE_TEXT}" > ${OE_LICENSE}
 
-      - name: Environment Information
-        shell: bash -l {0}
-        run: |
-          conda info
-          conda list
-
       - name: Install package
         shell: bash -l {0}
         run: |
@@ -131,8 +125,17 @@ jobs:
             if [[ $(conda list | grep rdkit) ]]; then
               conda remove --force rdkit --yes
             fi
+            if [[ $(conda list | grep ambertools) ]]; then
+              conda remove --force ambertools --yes
+            fi
             python -c "from openff.toolkit.utils.toolkits import RDKIT_AVAILABLE; assert not RDKIT_AVAILABLE, 'RDKit unexpectedly found'"
           fi
+
+      - name: Environment Information
+        shell: bash -l {0}
+        run: |
+          conda info
+          conda list
 
       - name: Check links
         shell: bash -l {0}

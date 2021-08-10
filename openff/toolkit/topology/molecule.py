@@ -3519,6 +3519,8 @@ class FrozenMolecule(Serializable):
             If an invalid object is passed as the toolkit_registry parameter
 
         """
+        bond_order_model = bond_order_model.lower()
+
         if isinstance(toolkit_registry, ToolkitRegistry):
             return toolkit_registry.call(
                 "assign_fractional_bond_orders",
@@ -3528,7 +3530,6 @@ class FrozenMolecule(Serializable):
             )
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
-            bond_order_model = bond_order_model.lower()
             return toolkit.assign_fractional_bond_orders(
                 self, bond_order_model=bond_order_model, use_conformers=use_conformers
             )
