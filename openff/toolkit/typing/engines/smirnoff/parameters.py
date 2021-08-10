@@ -2230,7 +2230,7 @@ class ParameterHandler(_ParameterAttributeHandler):
         entity : openff.toolkit.topology.Topology
             Topology to search.
         unique : bool, default=False
-            If False, SMARTS matching will enumerate every valid permutation of matching atoms. 
+            If False, SMARTS matching will enumerate every valid permutation of matching atoms.
             If True, only one order of each unique match will be returned.
 
         Returns
@@ -2242,7 +2242,7 @@ class ParameterHandler(_ParameterAttributeHandler):
 
         # TODO: Right now, this method is only ever called with an entity that is a Topology.
         #  Should we reduce its scope and have a check here to make sure entity is a Topology?
-        return self._find_matches(entity)
+        return self._find_matches(entity, unique=unique)
 
     def _find_matches(
         self,
@@ -2261,7 +2261,7 @@ class ParameterHandler(_ParameterAttributeHandler):
             and accessed (e.g for angles indices should be 0-1-2
             and not 2-1-0).
         unique : bool, default=False
-            If False, SMARTS matching will enumerate every valid permutation of matching atoms. 
+            If False, SMARTS matching will enumerate every valid permutation of matching atoms.
             If True, only one order of each unique match will be returned.
 
         Returns
@@ -3371,7 +3371,9 @@ class ImproperTorsionHandler(ParameterHandler):
             matching the 4-tuple of atom indices in ``entity``.
 
         """
-        return self._find_matches(entity, transformed_dict_cls=ImproperDict)
+        return self._find_matches(
+            entity, transformed_dict_cls=ImproperDict, unique=unique
+        )
 
     def create_force(self, system, topology, **kwargs):
         # force = super(ImproperTorsionHandler, self).create_force(system, topology, **kwargs)
@@ -4331,7 +4333,9 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
             ``matches[particle_indices]`` is the ``ParameterType`` object
             matching the tuple of particle indices in ``entity``.
         """
-        matches = self._find_matches(entity, transformed_dict_cls=TagSortedDict)
+        matches = self._find_matches(
+            entity, transformed_dict_cls=TagSortedDict, unique=unique
+        )
         return matches
 
     def create_force(self, system, topology, **kwargs):
@@ -5640,7 +5644,7 @@ class VirtualSiteHandler(_NonbondedHandler):
             other_handler, identical_attrs=string_attrs_to_compare
         )
 
-    def find_matches(self, entity, expand_permutations=True):
+    def find_matches(self, entity, expand_permutations=True, unique=False):
         """Find the virtual sites in the topology/molecule matched by a
         parameter type.
 
@@ -5661,6 +5665,7 @@ class VirtualSiteHandler(_NonbondedHandler):
             transformed_dict_cls=UnsortedDict,
             use_named_slots=True,
             expand_permutations=expand_permutations,
+            unique=unique,
         )
 
     def _apply_charge_increment(self, force, atom_key, charge_increment):

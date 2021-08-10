@@ -1965,7 +1965,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         """
         from rdkit import Chem
 
-        # This code is part of a possible performance optimization that hasn't been validated 
+        # This code is part of a possible performance optimization that hasn't been validated
         # for production use yet.
         def _match_smarts_with_heavy_atoms_first(rdmol, qmol, match_kwargs):
             for i, atom in enumerate(qmol.GetAtoms()):
