@@ -5660,12 +5660,15 @@ class VirtualSiteHandler(_NonbondedHandler):
             matching the n-tuple of atom indices in ``entity``.
 
         """
+        if unique:
+            raise NotImplementedError(
+                "`unique=True` not implemented in VirtualSiteHandler"
+            )
         return self._find_matches(
             entity,
             transformed_dict_cls=UnsortedDict,
             use_named_slots=True,
             expand_permutations=expand_permutations,
-            unique=unique,
         )
 
     def _apply_charge_increment(self, force, atom_key, charge_increment):
