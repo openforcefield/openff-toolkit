@@ -29,3 +29,6 @@ dependencies:
     - xmltodict
     - pyyaml
     - cairo >=1.16
+
+    - pip:
+        - moldoc

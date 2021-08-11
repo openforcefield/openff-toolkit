@@ -6385,6 +6385,37 @@ class Molecule(FrozenMolecule):
         except ValueError:
             pass
 
+    @requires_package("moldoc")
+    def to_moldoc(self):
+        """Convert this Molecule to a moldoc.molecule.
+
+        A conformer(s) is required. If the Moleculue has multiple conformers,
+        only the first one is used.
+        """
+        from moldoc import molecule as docmol
+
+        if self.n_conformers < 1:
+            raise Exception(
+                "3-D visualization with `moldoc` requires conformer(s). Try "
+                "running `molecule.generate_conformers(n_conformers=1)`."
+            )
+        atoms = [
+            docmol.Atom(
+                self.atoms[i].atomic_number,
+                self.conformers[0][i].value_in_unit(unit.angstrom),
+            )
+            for i in range(self.n_atoms)
+        ]
+        bonds = [
+            docmol.Bond(bond.atom1_index, bond.atom2_index, bond.bond_order)
+            for bond in self.bonds
+        ]
+
+        return docmol.Molecule(
+            atoms=atoms,
+            bonds=bonds,
+        )
+
 
 class InvalidConformerError(Exception):
     """

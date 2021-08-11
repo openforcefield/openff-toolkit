@@ -48,6 +48,7 @@ extensions = [
     "sphinx.ext.intersphinx",
     "myst_nb",
     # "myst_parser",
+    "moldoc",
 ]
 
 # Autodoc settings
