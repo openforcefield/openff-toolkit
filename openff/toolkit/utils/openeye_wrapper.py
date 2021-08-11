@@ -2082,6 +2082,8 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         if bond_order_model is None:
             bond_order_model = "am1-wiberg"
 
+        bond_order_model = bond_order_model.lower()
+
         is_elf_method = bond_order_model in ["am1-wiberg-elf10", "pm3-wiberg-elf10"]
 
         if use_conformers is None:

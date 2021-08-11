@@ -1,5 +1,7 @@
 name: openforcefield
 channels:
+    # Avoids crashing RTD machines by pulling an empty cudatoolkit pacakge
+    - jaimergp/label/unsupported-cudatoolkit-shim
     - conda-forge
     - defaults
 dependencies:
