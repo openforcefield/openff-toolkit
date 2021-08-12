@@ -20,6 +20,13 @@ def __getattr__(name):
 
 class _DeprecatedMessageException(Exception):
     """DEPRECATED: A base class for exceptions that print out a string given in their constructor"""
+    
+   def __init__(self, msg):
+        super().__init__(self, msg)
+        self.msg = msg
+
+    def __str__(self):
+        return self.msg
 
 
 class OpenFFToolkitException(Exception):
@@ -97,7 +104,7 @@ class IncorrectNumConformersWarning(Warning):
 
 
 class ChargeCalculationError(OpenFFToolkitException):
-    """An unhandled error occured in an external toolkit during charge calculation"""
+    """An unhandled error occurred in an external toolkit during charge calculation"""
 
 
 class InvalidIUPACNameError(OpenFFToolkitException):
@@ -109,20 +116,20 @@ class AntechamberNotFoundError(OpenFFToolkitException):
 
 
 class SMILESParseError(ValueError):
-    """The record couple not be parsed into the given format"""
+    """The record could not be parsed into the given format"""
 
 
 class InvalidConformerError(Exception):
     """
     This error is raised when the conformer added to the molecule
     has a different connectivity to that already defined.
-    or anyother conformer related issues.
+    or any other conformer related issues.
     """
 
 
 class SmilesParsingError(Exception):
     """
-    This error is rasied when parsing a smiles string results in an error.
+    This error is raised when parsing a SMILES string results in an error.
     """
 
 
@@ -156,7 +163,7 @@ class InvalidPeriodicityError(OpenFFToolkitException):
 
 class MissingUniqueMoleculesError(OpenFFToolkitException):
     """
-    Exception for a when unique_molecules is required but not found
+    Exception for when unique_molecules is required but not found
     """
 
 
@@ -181,7 +188,7 @@ class ParameterHandlerRegistrationError(OpenFFToolkitException):
 
 class SMIRNOFFVersionError(OpenFFToolkitException):
     """
-    Exception thrown when an incompatible SMIRNOFF version data structure in attempted to be read.
+    Exception thrown when an incompatible SMIRNOFF version data structure is attempted to be read.
     """
 
 
