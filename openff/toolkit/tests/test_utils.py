@@ -16,11 +16,6 @@ import pytest
 from simtk import unit
 
 # =============================================================================================
-# GLOBAL IMPORTS
-# =============================================================================================
-
-
-# =============================================================================================
 # TESTS
 # =============================================================================================
 
@@ -138,9 +133,12 @@ def test_sort_smirnoff_dict():
 
 def test_import_message_exception_raises_warning(caplog):
     # TODO: Remove when removing MessageException
-    deprecation_msg = (
-        "DEPRECATED and will be removed in a future release of the OpenFF Toolkit"
-    )
+    msg = "DEPRECATED and will be removed in a future release of the OpenFF Toolkit"
 
-    with pytest.warns(DeprecationWarning, match=deprecation_msg):
+    with pytest.warns(DeprecationWarning, match=msg):
         from openff.toolkit.utils.exceptions import MessageException
+
+    with pytest.warns(None) as rec:
+        from openff.toolkit.utils.exceptions import SMILESParseError
+
+    assert len(rec) == 0

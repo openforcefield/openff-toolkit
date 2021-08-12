@@ -14,9 +14,6 @@ __all__ = [
 import functools
 import inspect
 
-# =====================================================================
-# GLOBAL IMPORTS
-# =====================================================================
 from openff.toolkit.utils.exceptions import CallbackRegistrationError
 
 # =====================================================================

@@ -29,10 +29,6 @@ Molecular chemical entity representation and routines to interface with cheminfo
 
 """
 
-# =============================================================================================
-# GLOBAL IMPORTS
-# =============================================================================================
-
 import operator
 import warnings
 from abc import abstractmethod

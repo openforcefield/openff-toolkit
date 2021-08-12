@@ -44,10 +44,6 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     ParameterHandler,
 )
 from openff.toolkit.typing.engines.smirnoff.plugins import load_handler_plugins
-
-# =============================================================================================
-# GLOBAL IMPORTS
-# =============================================================================================
 from openff.toolkit.utils.exceptions import (
     ParameterHandlerRegistrationError,
     ParseError,

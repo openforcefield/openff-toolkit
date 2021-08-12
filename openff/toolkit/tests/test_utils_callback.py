@@ -9,10 +9,6 @@ Tests for callback utility classes and functions.
 
 """
 
-# =====================================================================
-# GLOBAL IMPORTS
-# =====================================================================
-
 import pytest
 
 from openff.toolkit.utils.callback import Callbackable, callback_method

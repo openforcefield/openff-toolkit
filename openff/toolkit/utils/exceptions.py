@@ -20,8 +20,8 @@ def __getattr__(name):
 
 class _DeprecatedMessageException(Exception):
     """DEPRECATED: A base class for exceptions that print out a string given in their constructor"""
-    
-   def __init__(self, msg):
+
+    def __init__(self, msg):
         super().__init__(self, msg)
         self.msg = msg
 

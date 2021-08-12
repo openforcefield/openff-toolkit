@@ -4,11 +4,6 @@ Wrapper class providing a minimal consistent interface to the `RDKit <http://www
 
 __all__ = ("RDKitToolkitWrapper",)
 
-
-# =============================================================================================
-# IMPORTS
-# =============================================================================================
-
 import copy
 import importlib
 import itertools

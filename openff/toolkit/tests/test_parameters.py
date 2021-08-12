@@ -9,11 +9,6 @@ Test classes and function in module openff.toolkit.typing.engines.smirnoff.param
 
 """
 
-
-# ======================================================================
-# GLOBAL IMPORTS
-# ======================================================================
-
 import numpy
 import pytest
 from numpy.testing import assert_almost_equal

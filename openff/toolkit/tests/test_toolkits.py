@@ -9,9 +9,6 @@ Tests for cheminformatics toolkit wrappers
 
 """
 
-# =============================================================================================
-# GLOBAL IMPORTS
-# =============================================================================================
 import logging
 import os
 from tempfile import NamedTemporaryFile
