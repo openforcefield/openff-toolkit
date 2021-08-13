@@ -3115,6 +3115,8 @@ class FrozenMolecule(Serializable):
         # Here we should work out what data type we have, also deal with lists?
         def to_networkx(data):
             """For the given data type, return the networkx graph"""
+            import networkx as nx
+
             from openff.toolkit.topology import TopologyMolecule
 
             if strip_pyrimidal_n_atom_stereo:
@@ -3138,6 +3140,7 @@ class FrozenMolecule(Serializable):
                         SMARTS, toolkit_registry=toolkit_registry
                     )
                 return ref_mol.to_networkx()
+
             elif isinstance(data, nx.Graph):
                 return data
 
@@ -3145,7 +3148,7 @@ class FrozenMolecule(Serializable):
                 raise NotImplementedError(
                     f"The input type {type(data)} is not supported,"
                     f"please supply an openff.toolkit.topology.molecule.Molecule,"
-                    f"openff.toolkit.topology.topology.TopologyMolecule or networkx "
+                    f"openff.toolkit.topology.topology.TopologyMolecule or networkx.Graph "
                     f"representation of the molecule."
                 )
 
@@ -3459,6 +3462,7 @@ class FrozenMolecule(Serializable):
         strict_n_conformers=False,
         use_conformers=None,
         toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
+        normalize_partial_charges=True,
     ):
         """
         Calculate partial atomic charges for this molecule using an underlying toolkit, and assign
@@ -3475,6 +3479,10 @@ class FrozenMolecule(Serializable):
             Coordinates to use for partial charge calculation. If None, an appropriate number of conformers will be generated.
         toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for the calculation.
+        normalize_partial_charges : bool, default=True
+            Whether to offset partial charges so that they sum to the total formal charge of the molecule.
+            This is used to prevent accumulation of rounding errors when the partial charge assignment method
+            returns values at limited precision.
 
         Examples
         --------
@@ -3499,6 +3507,7 @@ class FrozenMolecule(Serializable):
                 partial_charge_method=partial_charge_method,
                 use_conformers=use_conformers,
                 strict_n_conformers=strict_n_conformers,
+                normalize_partial_charges=normalize_partial_charges,
                 raise_exception_types=[],
                 _cls=self.__class__,
             )
@@ -3509,6 +3518,7 @@ class FrozenMolecule(Serializable):
                 partial_charge_method=partial_charge_method,
                 use_conformers=use_conformers,
                 strict_n_conformers=strict_n_conformers,
+                normalize_partial_charges=normalize_partial_charges,
                 _cls=self.__class__,
             )
         else:
@@ -3516,6 +3526,21 @@ class FrozenMolecule(Serializable):
                 f"Invalid toolkit_registry passed to assign_partial_charges."
                 f"Expected ToolkitRegistry or ToolkitWrapper. Got  {type(toolkit_registry)}"
             )
+
+    def _normalize_partial_charges(self):
+        """
+        Add offsets to each partial charge to ensure that they sum to the formal charge of the molecule,
+        to the limit of a python float's precision. Modifies the partial charges in-place.
+        """
+        expected_charge = self.total_charge
+
+        current_charge = 0.0 * unit.elementary_charge
+        for pc in self.partial_charges:
+            current_charge += pc
+
+        charge_offset = (expected_charge - current_charge) / self.n_atoms
+
+        self.partial_charges += charge_offset
 
     def assign_fractional_bond_orders(
         self,
@@ -5547,18 +5572,20 @@ class FrozenMolecule(Serializable):
 
         The molecule is created and sanitised based on the SMILES string, we then find a mapping
         between this molecule and one from the PDB based only on atomic number and connections.
-        The SMILES molecule is then reindex to match the PDB, the conformer is attached and the
+        The SMILES molecule is then reindexed to match the PDB, the conformer is attached, and the
         molecule returned.
+
+        Note that any stereochemistry in the molecule is set by the SMILES, and not the coordinates
+        of the PDB.
 
         Parameters
         ----------
         file_path: str
             PDB file path
         smiles : str
-            a valid smiles string for the pdb, used for seterochemistry and bond order
-
+            a valid smiles string for the pdb, used for stereochemistry, formal charges, and bond order
         allow_undefined_stereo : bool, default=False
-            If false, raises an exception if oemol contains undefined stereochemistry.
+            If false, raises an exception if SMILES contains undefined stereochemistry.
 
         Returns
         --------

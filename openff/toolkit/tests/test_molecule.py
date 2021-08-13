@@ -32,7 +32,7 @@ import numpy as np
 import pytest
 from simtk import unit
 
-from openff.toolkit.tests.test_forcefield import (
+from openff.toolkit.tests.create_molecules import (
     create_acetaldehyde,
     create_benzene_no_aromatic,
     create_cis_1_2_dichloroethene,
