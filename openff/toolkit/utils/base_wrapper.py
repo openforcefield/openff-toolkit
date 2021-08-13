@@ -14,9 +14,15 @@ from .exceptions import (
     ToolkitUnavailableException,
 )
 
+from .constants import DEFAULT_AROMATICITY_MODEL
 # =============================================================================================
 # Implementation
 # =============================================================================================
+
+def _mol_to_ctab_and_aro_key(
+        self, molecule, aromaticity_model=DEFAULT_AROMATICITY_MODEL
+):
+    return f"{molecule.ordered_connection_table_hash()}-{aromaticity_model}"
 
 
 class ToolkitWrapper:
@@ -121,6 +127,7 @@ class ToolkitWrapper:
 
         """
         return self._toolkit_version
+
 
     def from_file(self, file_path, file_format, allow_undefined_stereo=False):
         """
