@@ -59,6 +59,9 @@ jobs:
           activate-environment: test
           environment-file: devtools/conda-envs/rdkit.yaml
           auto-activate-base: false
+          miniforge-version: latest
+          miniforge-variant: Mambaforge
+          use-mamba: true
       - uses: conda-incubator/setup-miniconda@v2.1.1
         name: Install with OpenEye toolkits
         if: ${{ matrix.cfg.rdkit == 'FALSE' && matrix.cfg.openeye == 'TRUE' }}
@@ -67,6 +70,9 @@ jobs:
           activate-environment: test
           environment-file: devtools/conda-envs/openeye.yaml
           auto-activate-base: false
+          miniforge-version: latest
+          miniforge-variant: Mambaforge
+          use-mamba: true
 
       - name: Install additional example dependencies
         shell: bash -l {0}
