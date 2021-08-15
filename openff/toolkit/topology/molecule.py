@@ -6261,9 +6261,7 @@ class Molecule(FrozenMolecule):
 
         return self._add_conformer(coordinates)
 
-    def visualize(
-        self, backend="rdkit", width=500, height=300, explicit_hydrogens=False
-    ):
+    def visualize(self, backend="rdkit", width=500, height=300, show_hydrogens=True):
         """
         Render a visualization of the molecule in Jupyter
 
@@ -6282,9 +6280,9 @@ class Molecule(FrozenMolecule):
         height : int, optional, default=300
             Width of the generated representation (only applicable to
             ``backend=openeye`` or ``backend=rdkit``)
-        explicit_hydrogens : bool, optional, default=False
+        show_hydrogens : bool, optional, default=True
             Whether to explicitly depict hydrogen atoms (only applicable to
-            ``backend=rdkit``)
+            ``backend=openeye`` or ``backend=rdkit``)
 
         Returns
         -------
@@ -6299,6 +6297,7 @@ class Molecule(FrozenMolecule):
         from openff.toolkit.utils.toolkits import OPENEYE_AVAILABLE, RDKIT_AVAILABLE
 
         backend = backend.lower()
+        print(backend)
 
         if backend == "nglview":
             try:
@@ -6323,7 +6322,7 @@ class Molecule(FrozenMolecule):
                 from rdkit.Chem.rdmolops import RemoveHs
 
                 rdmol = self.to_rdkit()
-                if not explicit_hydrogens:
+                if not show_hydrogens:
                     rdmol = RemoveHs(rdmol)
 
                 rdDepictor.SetPreferCoordGen(True)
@@ -6351,6 +6350,9 @@ class Molecule(FrozenMolecule):
                 opts = oedepict.OE2DMolDisplayOptions(
                     width, height, oedepict.OEScale_AutoScale
                 )
+
+                if show_hydrogens:
+                    opts.SetHydrogenStyle(oedepict.OEHydrogenStyle_ImplicitAll)
 
                 oedepict.OEPrepareDepiction(oemol)
                 img = oedepict.OEImage(width, height)
