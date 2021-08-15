@@ -6297,7 +6297,6 @@ class Molecule(FrozenMolecule):
         from openff.toolkit.utils.toolkits import OPENEYE_AVAILABLE, RDKIT_AVAILABLE
 
         backend = backend.lower()
-        print(backend)
 
         if backend == "nglview":
             try:
