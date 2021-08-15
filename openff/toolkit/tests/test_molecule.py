@@ -42,6 +42,7 @@ from openff.toolkit.tests.create_molecules import (
 )
 from openff.toolkit.tests.utils import (
     has_pkg,
+    requires_ambertools,
     requires_openeye,
     requires_pkg,
     requires_rdkit,
@@ -3602,6 +3603,32 @@ class TestMolecule:
                     #                                        toolkit_registry=toolkit_registry)
                     # fbo2 = [bond.fractional_bond_order for bond in molecule.bonds]
                     # np.testing.assert_allclose(fbo1, fbo2, atol=1.e-4)
+
+    @requires_ambertools
+    @requires_openeye
+    @pytest.mark.slow
+    @pytest.mark.parametrize("model", ["AM1-Wiberg", "am1-wiberg"])
+    @pytest.mark.parametrize(
+        "toolkit", [OpenEyeToolkitWrapper, AmberToolsToolkitWrapper]
+    )
+    def test_bond_order_method_passing(self, model, toolkit):
+        """Test that different calls to Molecule.assign_fractional_bond_orders do not
+        produce unexpected errors, but do not asses validity of results"""
+        mol = Molecule.from_smiles("CCO")
+
+        mol.assign_fractional_bond_orders(
+            bond_order_model=model,
+        )
+
+        mol.assign_fractional_bond_orders(
+            bond_order_model=model,
+            toolkit_registry=toolkit(),
+        )
+
+        mol.assign_fractional_bond_orders(
+            bond_order_model=model,
+            toolkit_registry=ToolkitRegistry([toolkit()]),
+        )
 
     def test_get_bond_between(self):
         """Test Molecule.get_bond_between"""

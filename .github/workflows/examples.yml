@@ -75,7 +75,7 @@ jobs:
 
           # Remove rdkit if it is not being tested, as it is a dependency of openmmforcefields
           if [[ "$RDKIT" == false ]]; then
-            conda remove --force rdkit
+            conda remove --force rdkit ambertools
           fi
 
       - name: Additional info about the build
@@ -125,7 +125,7 @@ jobs:
           pytest $NB_ARGS examples
 
       - name: Codecov
-        uses: codecov/codecov-action@v1.5.2
+        uses: codecov/codecov-action@v2.0.2
         with:
           file: ./coverage.xml
           fail_ci_if_error: true
