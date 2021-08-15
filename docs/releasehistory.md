@@ -8,11 +8,24 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ## Current development
 
+### New features
+
+- [PR #1036](https://github.com/openforcefield/openforcefield/pull/1036): SMARTS matching
+  logic for library charges was updated to use only one unique match instead of
+  enumerating all possible matches. This results in faster matching, particularly
+  with larger moldules.
+
 ### Bugfixes
 
 - [PR #1030](https://github.com/openforcefield/openforcefield/pull/1030): Fixes a bug
   in which capitalization of the `bond_order_model` sometimes matters.
 
+### Behavior changed
+
+- [PR #1036](https://github.com/openforcefield/openforcefield/pull/1036): SMARTS matching
+  logic for library charges was updated to use only one unique match. No adverse side effects
+  were found in testing, but could bad behavior may possibly exist in some unknown caes.
+  Note that the default behavior for other parameter handlers was not updated.
 
 ### Tests updated
 
