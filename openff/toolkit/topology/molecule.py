@@ -6346,10 +6346,9 @@ class Molecule(FrozenMolecule):
             if (
                 width is not None
                 or height is not None
-                or show_all_hydrogens is not None
-            ):
+            ) or not show_all_hydrogens:
                 raise ValueError(
-                    "The width, height, and show_hydrogens arguments do not apply to the nglview backend."
+                    "The width, height, and show_all_hydrogens arguments do not apply to the nglview backend."
                 )
 
             if self.conformers:
