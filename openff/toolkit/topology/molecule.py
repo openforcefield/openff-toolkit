@@ -6348,6 +6348,7 @@ class Molecule(FrozenMolecule):
                 or height is not None
                 or show_all_hydrogens is not None
             ):
+                # TODO: More specific exception
                 raise ValueError(
                     "The width, height, and show_hydrogens arguments do not apply to the nglview backend."
                 )
@@ -6359,6 +6360,7 @@ class Molecule(FrozenMolecule):
                 widget = nv.NGLWidget(trajectory_like)
                 return widget
             else:
+                # TODO: More specific exception
                 raise ValueError(
                     "Visualizing with NGLview requires that the molecule has "
                     "conformers."
@@ -6418,6 +6420,7 @@ class Molecule(FrozenMolecule):
                 png = oedepict.OEWriteImageToString("png", img)
                 return Image(png)
 
+        # TODO: More specific exception
         raise ValueError("Could not find an appropriate backend")
 
     def _ipython_display_(self):
