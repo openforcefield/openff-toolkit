@@ -6299,7 +6299,11 @@ class Molecule(FrozenMolecule):
         return self._add_conformer(coordinates)
 
     def visualize(
-        self, backend="rdkit", width=None, height=None, show_all_hydrogens=None
+        self,
+        backend="rdkit",
+        width=None,
+        height=None,
+        show_all_hydrogens=True,
     ):
         """
         Render a visualization of the molecule in Jupyter
