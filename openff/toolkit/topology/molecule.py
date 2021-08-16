@@ -6298,7 +6298,9 @@ class Molecule(FrozenMolecule):
 
         return self._add_conformer(coordinates)
 
-    def visualize(self, backend="rdkit", width=500, height=300, show_hydrogens=True):
+    def visualize(
+        self, backend="rdkit", width=None, height=None, show_all_hydrogens=None
+    ):
         """
         Render a visualization of the molecule in Jupyter
 
@@ -6317,8 +6319,8 @@ class Molecule(FrozenMolecule):
         height : int, optional, default=300
             Width of the generated representation (only applicable to
             ``backend=openeye`` or ``backend=rdkit``)
-        show_hydrogens : bool, optional, default=True
-            Whether to explicitly depict hydrogen atoms (only applicable to
+        show_all_hydrogens : bool, optional, default=True
+            Whether to explicitly depict all hydrogen atoms. (only applicable to
             ``backend=openeye`` or ``backend=rdkit``)
 
         Returns
@@ -6340,6 +6342,16 @@ class Molecule(FrozenMolecule):
                 import nglview as nv
             except ImportError:
                 raise MissingDependencyError("nglview")
+
+            if (
+                width is not None
+                or height is not None
+                or show_all_hydrogens is not None
+            ):
+                raise ValueError(
+                    "The width, height, and show_hydrogens arguments do not apply to the nglview backend."
+                )
+
             if self.conformers:
                 from openff.toolkit.utils.viz import _OFFTrajectoryNGLView
 
@@ -6351,6 +6363,11 @@ class Molecule(FrozenMolecule):
                     "Visualizing with NGLview requires that the molecule has "
                     "conformers."
                 )
+
+        width = 500 if width is None else width
+        height = 300 if height is None else height
+        show_all_hydrogens = True if show_all_hydrogens is None else show_all_hydrogens
+
         if backend == "rdkit":
             if RDKIT_AVAILABLE:
                 from IPython.display import SVG
@@ -6358,11 +6375,15 @@ class Molecule(FrozenMolecule):
                 from rdkit.Chem.rdmolops import RemoveHs
 
                 rdmol = self.to_rdkit()
-                if not show_hydrogens:
-                    rdmol = RemoveHs(rdmol)
+
+                if not show_all_hydrogens:
+                    # updateExplicitCount: Keep a record of the hydrogens we remove.
+                    # This is used in visualization to distinguish eg radicals from normal species
+                    rdmol = RemoveHs(rdmol, updateExplicitCount=True)
 
                 rdDepictor.SetPreferCoordGen(True)
                 rdDepictor.Compute2DCoords(rdmol)
+                rdmol = rdMolDraw2D.PrepareMolForDrawing(rdmol)
 
                 drawer = rdMolDraw2D.MolDraw2DSVG(width, height)
                 drawer.DrawMolecule(rdmol)
@@ -6387,7 +6408,7 @@ class Molecule(FrozenMolecule):
                     width, height, oedepict.OEScale_AutoScale
                 )
 
-                if show_hydrogens:
+                if show_all_hydrogens:
                     opts.SetHydrogenStyle(oedepict.OEHydrogenStyle_ImplicitAll)
 
                 oedepict.OEPrepareDepiction(oemol)

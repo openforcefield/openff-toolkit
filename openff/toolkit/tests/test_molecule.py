@@ -3724,6 +3724,14 @@ class TestMolecule:
         # Ensure an NGLView widget is returned
         assert isinstance(mol.visualize(backend="nglview"), nglview.NGLWidget)
 
+        # Providing other arguments is an error
+        with pytest.raises(ValueError):
+            mol.visualize(backend="nglview", width=100)
+        with pytest.raises(ValueError):
+            mol.visualize(backend="nglview", height=100)
+        with pytest.raises(ValueError):
+            mol.visualize(backend="nglview", show_all_hydrogens=True)
+
     @requires_pkg("ipython")
     @requires_openeye
     def test_visualize_openeye(self):
