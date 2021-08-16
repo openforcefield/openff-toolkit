@@ -93,12 +93,18 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
   - Virtual sites now expose the parameters used to create its local frame via the read-only properties
     - [`VirtualSite.local_frame_weights`](openff.toolkit.topology.VirtualSite.local_frame_weights)
     - [`VirtualSite.local_frame_position`](openff.toolkit.topology.VirtualSite.local_frame_position)
+  - Adding virtual sites via the `Molecule` API now have defaults for `sigma`, `epsilon`, and `charge_increment`
+    set to 0 with appropriate units, rather than `None`
+- [PR #956](https://github.com/openforcefield/openforcefield/pull/956): Added 
+  [`ForceField.get_partial_charges()`](openff.toolkit.typing.engines.smirnoff.forcefield.ForceField.get_partial_charges)
+  to more easily compute the partial charges assigned by a force field for a molecule.
 - [PR  #1006](https://github.com/openforcefield/openff-toolkit/pull/1006):
   Two behavior changes in the SMILES output for `to_file()` and `to_file_obj()`:
   - The RDKit and OpenEye wrappers now output the same SMILES as `to_smiles()`.
    This uses explicit hydrogens rather than the toolkit's default of implicit hydrogens.
   - The RDKit wrapper no longer includes a header line. This improves
   the consistency between the OpenEye and RDKit outputs.
+
 
 
 ### Bugfixes
