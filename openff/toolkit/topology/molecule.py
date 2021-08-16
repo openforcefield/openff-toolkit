@@ -6343,14 +6343,16 @@ class Molecule(FrozenMolecule):
             except ImportError:
                 raise MissingDependencyError("nglview")
 
-            if (
-                width is not None
-                or height is not None
-                or show_all_hydrogens is not None
-            ):
+            if width is not None or height is not None:
                 # TODO: More specific exception
                 raise ValueError(
-                    "The width, height, and show_hydrogens arguments do not apply to the nglview backend."
+                    "The width, height, and show_all_hydrogens arguments do not apply to the nglview backend."
+                )
+            elif not show_all_hydrogens:
+                # TODO: More specific exception
+                # TODO: Implement this? Should be able to just strip hydrogens from the PDB
+                raise ValueError(
+                    "show_all_hydrogens=False is not supported by the nglview backend"
                 )
 
             if self.conformers:

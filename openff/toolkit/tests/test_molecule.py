@@ -3682,6 +3682,8 @@ class TestMolecule:
         assert len([atom for atom in mol.atoms if atom.is_in_ring]) == n_atom_rings
         assert len([bond for bond in mol.bonds if bond.is_in_ring]) == n_bond_rings
 
+
+class TestMoleculeVisualization:
     @requires_pkg("IPython")
     @requires_rdkit
     def test_visualize_rdkit(self):
@@ -3730,7 +3732,7 @@ class TestMolecule:
         with pytest.raises(ValueError):
             mol.visualize(backend="nglview", height=100)
         with pytest.raises(ValueError):
-            mol.visualize(backend="nglview", show_all_hydrogens=True)
+            mol.visualize(backend="nglview", show_all_hydrogens=False)
 
     @requires_pkg("IPython")
     @requires_openeye
