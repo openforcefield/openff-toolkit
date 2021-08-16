@@ -292,4 +292,6 @@ class XMLParameterIOHandler(ParameterIOHandler):
             del smirnoff_data["SMIRNOFF"][key]
             smirnoff_data["SMIRNOFF"][key] = value
 
-        return xmltodict.unparse(smirnoff_data, pretty=True)
+        return xmltodict.unparse(smirnoff_data,
+                                 pretty=True,
+                                 indent=' '*4)
