@@ -1426,9 +1426,9 @@ class ForceField:
 
     @requires_package("openff.interchange")
     @requires_package("mdtraj")
-    def _create_openff_interchange(self, topology, box=None):
+    def _to_interchange(self, topology, box=None):
         """
-        Create an OpenFF Interchange object from a ForceField, Topology, and (optionally) box vectors.
+        Create an Interchange object from a ForceField, Topology, and (optionally) box vectors.
 
         WARNING: This API and functionality are experimental and not suitable for production.
         """
