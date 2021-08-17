@@ -1770,6 +1770,16 @@ class TestOpenEyeToolkitWrapper:
         # TODO: Add test for aromaticity
         # TODO: Add test and molecule functionality for isotopes
 
+    def test_find_matches_unique(self):
+        """Test the expected behavior of the `unique` argument in find_matches"""
+        smirks = "[C:1]~[C:2]~[C:3]"
+        tk = OpenEyeToolkitWrapper()
+
+        mol = Molecule.from_smiles("CCC")
+
+        assert len(tk.find_smarts_matches(mol, smirks, unique=True)) == 1
+        assert len(tk.find_smarts_matches(mol, smirks, unique=False)) == 2
+
 
 @requires_rdkit
 class TestRDKitToolkitWrapper:
@@ -2810,6 +2820,16 @@ class TestRDKitToolkitWrapper:
             ignore_functional_groups=terminal_backwards
         )
         assert bonds == []
+
+    def test_find_matches_unique(self):
+        """Test the expected behavior of the `unique` argument in find_matches"""
+        smirks = "[C:1]~[C:2]~[C:3]"
+        tk = RDKitToolkitWrapper()
+
+        mol = Molecule.from_smiles("CCC")
+
+        assert len(tk.find_smarts_matches(mol, smirks, unique=True)) == 1
+        assert len(tk.find_smarts_matches(mol, smirks, unique=False)) == 2
 
     def test_to_rdkit_losing_aromaticity_(self):
         # test the example given in issue #513
