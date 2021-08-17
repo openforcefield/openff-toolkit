@@ -1155,7 +1155,9 @@ class BaseSmiles:
         assert mol.n_bonds == 4
 
     def test_parse_bad_smiles(self):
-        with pytest.raises(ValueError, match="Unable to parse the SMILES string"):
+        with pytest.raises(
+            exceptions.SMILESParseError, match="Unable to parse the SMILES string"
+        ):
             mol = self.toolkit_wrapper.from_smiles("QWERT")
 
     ### Copied from test_toolkits.py
