@@ -3,12 +3,10 @@ repos:
   rev: 1.1.0
   hooks:
     - id: nbqa-pyupgrade
+      files: ^examples/((?!deprecated).)*$
       args:
-        - --nbqa-mutate
         - --py37-plus
     - id: nbqa-isort
-      args:
-        - --nbqa-mutate
+      files: ^examples/((?!deprecated).)*$
     - id: nbqa-black
-      args:
-        - --nbqa-mutate
+      files: ^examples/((?!deprecated).)*$
