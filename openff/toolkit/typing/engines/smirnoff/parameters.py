@@ -2222,13 +2222,16 @@ class ParameterHandler(_ParameterAttributeHandler):
             self._parameter_type = parameter_type
             self._environment_match = environment_match
 
-    def find_matches(self, entity):
+    def find_matches(self, entity, unique=False):
         """Find the elements of the topology/molecule matched by a parameter type.
 
         Parameters
         ----------
         entity : openff.toolkit.topology.Topology
             Topology to search.
+        unique : bool, default=False
+            If False, SMARTS matching will enumerate every valid permutation of matching atoms.
+            If True, only one order of each unique match will be returned.
 
         Returns
         ---------
@@ -2239,9 +2242,14 @@ class ParameterHandler(_ParameterAttributeHandler):
 
         # TODO: Right now, this method is only ever called with an entity that is a Topology.
         #  Should we reduce its scope and have a check here to make sure entity is a Topology?
-        return self._find_matches(entity)
+        return self._find_matches(entity, unique=unique)
 
-    def _find_matches(self, entity, transformed_dict_cls=ValenceDict):
+    def _find_matches(
+        self,
+        entity,
+        transformed_dict_cls=ValenceDict,
+        unique=False,
+    ):
         """Implement find_matches() and allow using a difference valence dictionary.
         Parameters
         ----------
@@ -2252,6 +2260,10 @@ class ParameterHandler(_ParameterAttributeHandler):
             will determine how groups of atom indices are stored
             and accessed (e.g for angles indices should be 0-1-2
             and not 2-1-0).
+        unique : bool, default=False
+            If False, SMARTS matching will enumerate every valid permutation of matching atoms.
+            If True, only one order of each unique match will be returned.
+
         Returns
         ---------
         matches : `transformed_dict_cls` of ParameterHandlerMatch
@@ -2269,7 +2281,8 @@ class ParameterHandler(_ParameterAttributeHandler):
             matches_for_this_type = {}
 
             for environment_match in entity.chemical_environment_matches(
-                parameter_type.smirks
+                parameter_type.smirks,
+                unique=unique,
             ):
                 # Update the matches for this parameter type.
                 handler_match = self._Match(parameter_type, environment_match)
@@ -3343,7 +3356,7 @@ class ImproperTorsionHandler(ParameterHandler):
             tolerance_attrs=float_attrs_to_compare,
         )
 
-    def find_matches(self, entity):
+    def find_matches(self, entity, unique=False):
         """Find the improper torsions in the topology/molecule matched by a parameter type.
 
         Parameters
@@ -3358,7 +3371,9 @@ class ImproperTorsionHandler(ParameterHandler):
             matching the 4-tuple of atom indices in ``entity``.
 
         """
-        return self._find_matches(entity, transformed_dict_cls=ImproperDict)
+        return self._find_matches(
+            entity, transformed_dict_cls=ImproperDict, unique=unique
+        )
 
     def create_force(self, system, topology, **kwargs):
         # force = super(ImproperTorsionHandler, self).create_force(system, topology, **kwargs)
@@ -4017,7 +4032,7 @@ class LibraryChargeHandler(_NonbondedHandler):
     _INFOTYPE = LibraryChargeType  # info type to store
     _DEPENDENCIES = [vdWHandler, ElectrostaticsHandler]
 
-    def find_matches(self, entity):
+    def find_matches(self, entity, unique=True):
         """Find the elements of the topology/molecule matched by a parameter type.
 
         Parameters
@@ -4034,7 +4049,11 @@ class LibraryChargeHandler(_NonbondedHandler):
 
         # TODO: Right now, this method is only ever called with an entity that is a Topology.
         #  Should we reduce its scope and have a check here to make sure entity is a Topology?
-        return self._find_matches(entity, transformed_dict_cls=dict)
+        return self._find_matches(
+            entity,
+            transformed_dict_cls=dict,
+            unique=unique,
+        )
 
     def create_force(self, system, topology, **kwargs):
         force = super().create_force(system, topology, **kwargs)
@@ -4298,7 +4317,7 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
             identical_attrs=string_attrs_to_compare + int_attrs_to_compare,
         )
 
-    def find_matches(self, entity):
+    def find_matches(self, entity, unique=False):
         """Find the elements of the topology/molecule matched by a parameter type.
 
         Parameters
@@ -4312,7 +4331,9 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
             ``matches[particle_indices]`` is the ``ParameterType`` object
             matching the tuple of particle indices in ``entity``.
         """
-        matches = self._find_matches(entity, transformed_dict_cls=TagSortedDict)
+        matches = self._find_matches(
+            entity, transformed_dict_cls=TagSortedDict, unique=unique
+        )
         return matches
 
     def create_force(self, system, topology, **kwargs):
@@ -5589,7 +5610,7 @@ class VirtualSiteHandler(_NonbondedHandler):
         # somewhere else
 
         logger.debug("Creating OpenFF virtual site representations...")
-        topology = self.create_openff_virtual_sites(topology)
+        self.create_openff_virtual_sites(topology)
 
         # The toolkit now has a representation of the vsites in the topology,
         # and here we create the OpenMM parameters/objects/exclusions
@@ -5621,7 +5642,7 @@ class VirtualSiteHandler(_NonbondedHandler):
             other_handler, identical_attrs=string_attrs_to_compare
         )
 
-    def find_matches(self, entity, expand_permutations=True):
+    def find_matches(self, entity, expand_permutations=True, unique=False):
         """Find the virtual sites in the topology/molecule matched by a
         parameter type.
 
@@ -5637,6 +5658,10 @@ class VirtualSiteHandler(_NonbondedHandler):
             matching the n-tuple of atom indices in ``entity``.
 
         """
+        if unique:
+            raise NotImplementedError(
+                "`unique=True` not implemented in VirtualSiteHandler"
+            )
         return self._find_matches(
             entity,
             transformed_dict_cls=UnsortedDict,
@@ -5718,6 +5743,14 @@ class VirtualSiteHandler(_NonbondedHandler):
         return combined_orientations
 
     def create_openff_virtual_sites(self, topology):
+        """
+        Modifies the input topology to contain VirtualSites assigned by this handler.
+
+        Parameters
+        ----------
+        topology : openff.toolkit.topology.Topology
+            Topology to add virtual sites to.
+        """
 
         for molecule in topology.reference_molecules:
 
@@ -5727,7 +5760,7 @@ class VirtualSiteHandler(_NonbondedHandler):
             FrozenMolecules. However, the signature is different, as they return
             different results.
 
-            Also, we are using a topology to retreive the indices for the
+            Also, we are using a topology to retrieve the indices for the
             matches, but then using those indices as a direct `Atom` object
             lookup in the molecule. This is unsafe because there is no reason to
             believe that the indices should be consistent. However, there is
@@ -5746,8 +5779,6 @@ class VirtualSiteHandler(_NonbondedHandler):
             # for the virtual site to represent multiple particles
             for vsite_type, orientations in virtual_sites:
                 vsite_type.add_virtual_site(molecule, orientations, replace=True)
-
-        return topology
 
     def _create_openmm_virtual_sites(self, system, force, topology, ref_mol):
 

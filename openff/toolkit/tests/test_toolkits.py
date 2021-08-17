@@ -25,6 +25,8 @@ from simtk import unit
 from openff.toolkit.tests.create_molecules import (
     create_acetaldehyde,
     create_acetate,
+    create_ammonia,
+    create_cyclic_n3h3,
     create_cyclohexane,
     create_ethanol,
     create_reversed_ethanol,
@@ -755,6 +757,25 @@ class TestOpenEyeToolkitWrapper:
         with pytest.raises(InvalidIUPACNameError):
             toolkit.from_iupac(".BETA.-PINENE")
 
+    def test_atom_names_round_trip(self):
+        """Test that atom names are correctly preserved in a round trip"""
+        # Create a molecule with unique atom names
+        molecule = Molecule.from_smiles("c1ccccc1")
+        molecule.generate_unique_atom_names()
+        # Convert it to an OEMol
+        oemol = molecule.to_openeye()
+        # Compare atom names
+        for oeatom, atom in zip(oemol.GetAtoms(), molecule.atoms):
+            assert oeatom.GetName() == atom.name
+        # Change the OEMol atom names
+        for index, oeatom in enumerate(oemol.GetAtoms()):
+            oeatom.SetName(f"X{index}")
+        # Round trip back to molecule
+        molecule2 = molecule.from_openeye(oemol)
+        # Compare atom names
+        for oeatom, atom2 in zip(oemol.GetAtoms(), molecule2.atoms):
+            assert oeatom.GetName() == atom2.name
+
     def test_write_multiconformer_pdb(self):
         """
         Make sure OpenEye can write multi conformer PDB files.
@@ -1205,12 +1226,31 @@ class TestOpenEyeToolkitWrapper:
         molecule.assign_partial_charges(
             partial_charge_method="am1bcc", toolkit_registry=toolkit_registry
         )  # , charge_model=charge_model)
-        charge_sum = 0 * unit.elementary_charge
-        abs_charge_sum = 0 * unit.elementary_charge
-        for pc in molecule._partial_charges:
-            charge_sum += pc
-            abs_charge_sum += abs(pc)
-        assert abs(charge_sum) < 0.005 * unit.elementary_charge
+        charge_sum = sum(molecule.partial_charges, 0.0 * unit.elementary_charge)
+        abs_charge_sum = sum(
+            abs(molecule.partial_charges), 0.0 * unit.elementary_charge
+        )
+        assert abs(charge_sum) < 1e-10 * unit.elementary_charge
+        assert abs_charge_sum > 0.25 * unit.elementary_charge
+
+    def test_assign_partial_charges_am1bcc_no_normalization(self):
+        """Test OpenEyeToolkitWrapper assign_partial_charges() with am1bcc, with
+        normalize_partial_charges=False"""
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=[OpenEyeToolkitWrapper])
+        # Use a cyclic N3H3 molecule, since the threefold symmetry makes it likely to expose rounding
+        # errors. (can we find a cyclic molecule with exactly 3 atoms?)
+        molecule = create_cyclic_n3h3()
+        molecule.assign_partial_charges(
+            partial_charge_method="am1bcc",
+            toolkit_registry=toolkit_registry,
+            normalize_partial_charges=False,
+        )
+        charge_sum = sum(molecule.partial_charges, 0.0 * unit.elementary_charge)
+        abs_charge_sum = sum(
+            abs(molecule.partial_charges), 0.0 * unit.elementary_charge
+        )
+        # Rounding error should be on the order of 1e-3
+        assert 1e-7 > abs(charge_sum / unit.elementary_charge) > 1e-8
         assert abs_charge_sum > 0.25 * unit.elementary_charge
 
     def test_assign_partial_charges_am1bcc_net_charge(self):
@@ -1220,13 +1260,9 @@ class TestOpenEyeToolkitWrapper:
         molecule.assign_partial_charges(
             partial_charge_method="am1bcc", toolkit_registry=toolkit_registry
         )
-        charge_sum = 0 * unit.elementary_charge
-        for pc in molecule._partial_charges:
-            charge_sum += pc
-        assert (
-            -0.999 * unit.elementary_charge
-            > charge_sum
-            > -1.001 * unit.elementary_charge
+        charge_sum = sum(molecule.partial_charges, 0.0 * unit.elementary_charge)
+        assert 1e-10 > abs(
+            (charge_sum - molecule.total_charge) / unit.elementary_charge
         )
 
     def test_assign_partial_charges_am1bcc_wrong_n_confs(self):
@@ -1264,10 +1300,8 @@ class TestOpenEyeToolkitWrapper:
             toolkit_registry=toolkit_registry,
             partial_charge_method=partial_charge_method,
         )
-        charge_sum = 0.0 * unit.elementary_charge
-        for pc in molecule.partial_charges:
-            charge_sum += pc
-        assert -1.0e-5 < charge_sum.value_in_unit(unit.elementary_charge) < 1.0e-5
+        charge_sum = sum(molecule.partial_charges, 0.0 * unit.elementary_charge)
+        assert 1.0e-10 > abs(charge_sum.value_in_unit(unit.elementary_charge))
 
     @pytest.mark.parametrize("partial_charge_method", ["am1bcc", "am1-mulliken"])
     def test_assign_partial_charges_conformer_dependence(self, partial_charge_method):
@@ -1309,10 +1343,8 @@ class TestOpenEyeToolkitWrapper:
             toolkit_registry=toolkit_registry,
             partial_charge_method=partial_charge_method,
         )
-        charge_sum = 0.0 * unit.elementary_charge
-        for pc in molecule.partial_charges:
-            charge_sum += pc
-        assert -1.0e-5 < charge_sum.value_in_unit(unit.elementary_charge) + 1.0 < 1.0e-5
+        charge_sum = sum(molecule.partial_charges, 0.0 * unit.elementary_charge)
+        assert -1.0e-10 < abs(charge_sum.value_in_unit(unit.elementary_charge) + 1.0)
 
     def test_assign_partial_charges_bad_charge_method(self):
         """Test OpenEyeToolkitWrapper assign_partial_charges() for a nonexistent charge method"""
@@ -1737,6 +1769,16 @@ class TestOpenEyeToolkitWrapper:
 
         # TODO: Add test for aromaticity
         # TODO: Add test and molecule functionality for isotopes
+
+    def test_find_matches_unique(self):
+        """Test the expected behavior of the `unique` argument in find_matches"""
+        smirks = "[C:1]~[C:2]~[C:3]"
+        tk = OpenEyeToolkitWrapper()
+
+        mol = Molecule.from_smiles("CCC")
+
+        assert len(tk.find_smarts_matches(mol, smirks, unique=True)) == 1
+        assert len(tk.find_smarts_matches(mol, smirks, unique=False)) == 2
 
 
 @requires_rdkit
@@ -2423,11 +2465,12 @@ class TestRDKitToolkitWrapper:
         molecule.assign_partial_charges(
             toolkit_registry=toolkit_registry,
             partial_charge_method=partial_charge_method,
+            # the partial charges returned by this method already have no rounding errors that require normalization
+            # so this is just testing that the kwarg remains accessible
+            normalize_partial_charges=False,
         )
-        charge_sum = 0.0 * unit.elementary_charge
-        for pc in molecule.partial_charges:
-            charge_sum += pc
-        assert -1.0e-5 < charge_sum.value_in_unit(unit.elementary_charge) < 1.0e-5
+        charge_sum = sum(molecule.partial_charges, 0.0 * unit.elementary_charge)
+        assert 1.0e-10 > abs(charge_sum / unit.elementary_charge)
 
     @pytest.mark.parametrize("partial_charge_method", ["mmff94"])
     def test_assign_partial_charges_net_charge(self, partial_charge_method):
@@ -2442,10 +2485,8 @@ class TestRDKitToolkitWrapper:
             toolkit_registry=toolkit_registry,
             partial_charge_method=partial_charge_method,
         )
-        charge_sum = 0.0 * unit.elementary_charge
-        for pc in molecule.partial_charges:
-            charge_sum += pc
-        assert -1.0e-5 < charge_sum.value_in_unit(unit.elementary_charge) + 1.0 < 1.0e-5
+        charge_sum = sum(molecule.partial_charges, 0.0 * unit.elementary_charge)
+        assert 1.0e-10 > abs((charge_sum / unit.elementary_charge) + 1.0)
 
     def test_assign_partial_charges_bad_charge_method(self):
         """Test RDKitToolkitWrapper assign_partial_charges() for a nonexistent charge method"""
@@ -2780,6 +2821,16 @@ class TestRDKitToolkitWrapper:
         )
         assert bonds == []
 
+    def test_find_matches_unique(self):
+        """Test the expected behavior of the `unique` argument in find_matches"""
+        smirks = "[C:1]~[C:2]~[C:3]"
+        tk = RDKitToolkitWrapper()
+
+        mol = Molecule.from_smiles("CCC")
+
+        assert len(tk.find_smarts_matches(mol, smirks, unique=True)) == 1
+        assert len(tk.find_smarts_matches(mol, smirks, unique=False)) == 2
+
     def test_to_rdkit_losing_aromaticity_(self):
         # test the example given in issue #513
         # <https://github.com/openforcefield/openff-toolkit/issues/513>
@@ -2829,12 +2880,35 @@ class TestAmberToolsToolkitWrapper:
         molecule.assign_partial_charges(
             partial_charge_method="am1bcc", toolkit_registry=toolkit_registry
         )
-        charge_sum = 0 * unit.elementary_charge
-        abs_charge_sum = 0 * unit.elementary_charge
-        for pc in molecule._partial_charges:
-            charge_sum += pc
-            abs_charge_sum += abs(pc)
-        assert abs(charge_sum) < 0.001 * unit.elementary_charge
+        charge_sum = sum(molecule.partial_charges, 0.0 * unit.elementary_charge)
+        abs_charge_sum = sum(
+            abs(molecule.partial_charges), 0.0 * unit.elementary_charge
+        )
+        assert abs(charge_sum) < 1e-10 * unit.elementary_charge
+        assert abs_charge_sum > 0.25 * unit.elementary_charge
+
+    def test_assign_partial_charges_am1bcc_no_normalization(self):
+        """Test AmberToolsToolkitWrapper assign_partial_charges() with am1bcc, with
+        normalize_partial_charges=False"""
+        toolkit_registry = ToolkitRegistry(
+            toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper]
+        )
+        # Use a cyclic N3H3 molecule since this is likely to produce a rounding error
+        # Antechamber outputs 6 digits after the decimal in charges.txt, so I (Jeff) don't know
+        # why this N3H3 molecule ends up with an error of 1e-3, but it's the smallest reproducing
+        # case of this that I could find.
+        molecule = create_cyclic_n3h3()
+        molecule.assign_partial_charges(
+            partial_charge_method="am1bcc",
+            toolkit_registry=toolkit_registry,
+            normalize_partial_charges=False,
+        )
+        charge_sum = sum(molecule.partial_charges, 0.0 * unit.elementary_charge)
+        abs_charge_sum = sum(
+            abs(molecule.partial_charges), 0.0 * unit.elementary_charge
+        )
+        # Rounding error should be on the order of 1e-3
+        assert 1e-2 > abs(charge_sum / unit.elementary_charge) > 1e-4
         assert abs_charge_sum > 0.25 * unit.elementary_charge
 
     def test_assign_partial_charges_am1bcc_net_charge(self):
@@ -2846,12 +2920,8 @@ class TestAmberToolsToolkitWrapper:
         molecule.assign_partial_charges(
             partial_charge_method="am1bcc", toolkit_registry=toolkit_registry
         )
-        charge_sum = 0 * unit.elementary_charge
-        for pc in molecule._partial_charges:
-            charge_sum += pc
-        assert (
-            -0.99 * unit.elementary_charge > charge_sum > -1.01 * unit.elementary_charge
-        )
+        charge_sum = sum(molecule.partial_charges, 0.0 * unit.elementary_charge)
+        assert 1e-10 > abs((charge_sum / unit.elementary_charge) + 1)
 
     def test_assign_partial_charges_am1bcc_wrong_n_confs(self):
         """
@@ -2947,10 +3017,8 @@ class TestAmberToolsToolkitWrapper:
             toolkit_registry=toolkit_registry,
             partial_charge_method=partial_charge_method,
         )
-        charge_sum = 0.0 * unit.elementary_charge
-        for pc in molecule.partial_charges:
-            charge_sum += pc
-        assert -1.0e-5 < charge_sum.value_in_unit(unit.elementary_charge) < 1.0e-5
+        charge_sum = sum(molecule.partial_charges, 0.0 * unit.elementary_charge)
+        assert 1e-10 > charge_sum.value_in_unit(unit.elementary_charge)
 
     @pytest.mark.xfail(strict=False)
     @pytest.mark.parametrize("partial_charge_method", ["am1bcc", "am1-mulliken"])
@@ -2999,10 +3067,8 @@ class TestAmberToolsToolkitWrapper:
             toolkit_registry=toolkit_registry,
             partial_charge_method=partial_charge_method,
         )
-        charge_sum = 0.0 * unit.elementary_charge
-        for pc in molecule.partial_charges:
-            charge_sum += pc
-        assert -1.01 < charge_sum.value_in_unit(unit.elementary_charge) < -0.99
+        charge_sum = sum(molecule.partial_charges, 0.0 * unit.elementary_charge)
+        assert 1e-10 > abs((charge_sum / unit.elementary_charge) + 1)
 
     def test_assign_partial_charges_bad_charge_method(self):
         """Test AmberToolsToolkitWrapper assign_partial_charges() for a nonexistent charge method"""
@@ -3297,11 +3363,12 @@ class TestBuiltInToolkitWrapper:
         molecule.assign_partial_charges(
             toolkit_registry=toolkit_registry,
             partial_charge_method=partial_charge_method,
+            # The normalize_partial_charges kwarg won't cause a measurable effect here, this just
+            # tests that the kwarg remains accepted.
+            normalize_partial_charges=False,
         )
-        charge_sum = 0.0 * unit.elementary_charge
-        for pc in molecule.partial_charges:
-            charge_sum += pc
-        assert -1.0e-6 < charge_sum.value_in_unit(unit.elementary_charge) < 1.0e-6
+        charge_sum = sum(molecule.partial_charges, 0.0 * unit.elementary_charge)
+        assert 1.0e-10 > abs(charge_sum / unit.elementary_charge)
 
     @pytest.mark.parametrize("partial_charge_method", ["formal_charge"])
     def test_assign_partial_charges_net_charge(self, partial_charge_method):
@@ -3316,10 +3383,8 @@ class TestBuiltInToolkitWrapper:
             toolkit_registry=toolkit_registry,
             partial_charge_method=partial_charge_method,
         )
-        charge_sum = 0.0 * unit.elementary_charge
-        for pc in molecule.partial_charges:
-            charge_sum += pc
-        assert -1.0e-6 < charge_sum.value_in_unit(unit.elementary_charge) + 1.0 < 1.0e-6
+        charge_sum = sum(molecule.partial_charges, 0.0 * unit.elementary_charge)
+        assert 1.0e-10 > abs(charge_sum.value_in_unit(unit.elementary_charge) + 1.0)
 
     def test_assign_partial_charges_bad_charge_method(self):
         """Test BuiltInToolkitWrapper assign_partial_charges() for a nonexistent charge method"""

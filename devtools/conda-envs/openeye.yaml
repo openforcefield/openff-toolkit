@@ -17,7 +17,7 @@ dependencies:
   - coverage
   - numpy
   - networkx
-  - ambertools
+  - parmed
   - openeye-toolkits
   - packaging
     # Removed until a new release which targets openff-toolkit is made.

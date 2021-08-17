@@ -1120,6 +1120,9 @@ class TestForceField:
         """
         forcefield_1 = ForceField(xml_simple_ff)
         string_1 = forcefield_1.to_string("XML")
+        # Ensure that we have spaces instead of tabs
+        assert "    " in string_1
+        assert "\t" not in string_1
         forcefield_2 = ForceField(string_1)
         string_2 = forcefield_2.to_string("XML")
         assert string_1 == string_2
@@ -3809,9 +3812,7 @@ class TestForceFieldParameterAssignment:
 
         off_nonbonded_force.setReactionFieldDielectric(1.0)
 
-        # Not sure if zeroing the switching width is essential -- This might only make a difference
-        # in the energy if we tested on a molecule larger than the 9A cutoff
-        # off_nonbonded_force.setSwitchingDistance(0)
+        # TODO: look into if switching distance is relevant #882
 
         # Create Contexts
         integrator = openmm.VerletIntegrator(1.0 * unit.femtoseconds)
@@ -3824,11 +3825,9 @@ class TestForceFieldParameterAssignment:
         # Get context energies
         amber_energy = get_context_potential_energy(amber_context, positions)
         off_energy = get_context_potential_energy(off_context, positions)
-
         # Very handy for debugging
         # print(openmm.XmlSerializer.serialize(off_gbsa_force))
         # print(openmm.XmlSerializer.serialize(amber_gbsa_force))
-
         # Ensure that the GBSA energies (which we put into ForceGroup 1) are identical
         # For Platform=OpenCL, we do get "=="-level identical numbers, but for "Reference", we don't.
         # assert amber_energy[1] == off_energy[1]
@@ -3836,7 +3835,11 @@ class TestForceFieldParameterAssignment:
 
         # Ensure that all system energies are the same
         compare_system_energies(
-            off_omm_system, amber_omm_system, positions, by_force_type=False
+            off_omm_system,
+            amber_omm_system,
+            positions,
+            by_force_type=False,
+            atol=1.0e-4,
         )
 
     def test_tip5p_dimer_energy(self):
@@ -4129,13 +4132,13 @@ class TestForceFieldParameterAssignment:
         topology = Topology.from_molecules(molecule)
 
         labels = forcefield.label_molecules(topology)[0]
+
         assert len(labels["Bonds"]) == 2654
         assert len(labels["Angles"]) == 4789
         assert len(labels["ProperTorsions"]) == 6973
         assert len(labels["ImproperTorsions"]) == 528
 
-        fn = forcefield.create_openmm_system
-        omm_system = fn(
+        omm_system = forcefield.create_openmm_system(
             topology,
             charge_from_molecules=[molecule],
             toolkit_registry=toolkit_registry,
