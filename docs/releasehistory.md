@@ -22,6 +22,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Behavior changed
 
+- [PR #1046](https://github.com/openforcefield/openforcefield/pull/1046): Changes OFFXML output to
+  replace tabs with 4 spaces to standardize representation in different text viewers. 
 - [PR #1036](https://github.com/openforcefield/openforcefield/pull/1036): SMARTS matching
   logic for library charges was updated to use only one unique match. No adverse side effects
   were found in testing, but could bad behavior may possibly exist in some unknown caes.
