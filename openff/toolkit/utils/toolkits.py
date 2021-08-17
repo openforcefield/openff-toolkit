@@ -21,14 +21,12 @@ Currently supported toolkits:
 
 """
 __all__ = (
-    # constants
     "DEFAULT_AROMATICITY_MODEL",
     "ALLOWED_AROMATICITY_MODELS",
     "DEFAULT_FRACTIONAL_BOND_ORDER_MODEL",
     "ALLOWED_FRACTIONAL_BOND_ORDER_MODELS",
     "DEFAULT_CHARGE_MODEL",
     "ALLOWED_CHARGE_MODELS",
-    # exceptions and warnings
     "MessageException",
     "IncompatibleUnitError",
     "MissingDependencyError",
@@ -39,6 +37,11 @@ __all__ = (
     "InvalidToolkitRegistryError",
     "UndefinedStereochemistryError",
     "GAFFAtomTypeWarning",
+    "ToolkitWrapper",
+    "OpenEyeToolkitWrapper",
+    "RDKitToolkitWrapper",
+    "AmberToolsToolkitWrapper",
+    "BuiltInToolkitWrapper",
     "ChargeMethodUnavailableError",
     "IncorrectNumConformersError",
     "IncorrectNumConformersWarning",
@@ -46,19 +49,7 @@ __all__ = (
     "InvalidIUPACNameError",
     "AntechamberNotFoundError",
     "SMILESParseError",
-    # base_wrapper
-    "ToolkitWrapper",
-    # builtin_wrapper
-    "BuiltInToolkitWrapper",
-    # openeye_wrapper
-    "OpenEyeToolkitWrapper",
-    # rdkit_wrapper
-    "RDKitToolkitWrapper",
-    # ambertools_wrapper
-    "AmberToolsToolkitWrapper",
-    # toolkit_registry
     "ToolkitRegistry",
-    # in this module
     "GLOBAL_TOOLKIT_REGISTRY",
     "OPENEYE_AVAILABLE",
     "RDKIT_AVAILABLE",
