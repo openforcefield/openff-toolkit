@@ -32,6 +32,10 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
   logic for library charges was updated to use only one unique match. No adverse side effects
   were found in testing, but could bad behavior may possibly exist in some unknown caes.
   Note that the default behavior for other parameter handlers was not updated.
+- [PR #1001](https://github.com/openforcefield/openff-toolkit/pull/1001): RDKit `Mol` objects 
+  created through the [`Molecule.to_rdkit()`](openff.toolkit.topology.Molecule.to_rdkit)
+  method have the `NoImplicit` property set to `True` on all atoms. This prevents RDKit from
+  incorrectly adding hydrogen atoms to to molecule. 
 
 ### Tests updated
 
