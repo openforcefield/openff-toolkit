@@ -29,7 +29,7 @@ class _DeprecatedMessageException(Exception):
         return self.msg
 
 
-class OpenFFToolkitException(Exception):
+class OpenFFToolkitException(_DeprecatedMessageException):
     """Base exception for custom exceptions raised by the OpenFF Toolkit"""
 
     def __init__(self, msg):
