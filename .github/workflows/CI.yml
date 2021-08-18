@@ -113,6 +113,7 @@ jobs:
       - name: Install package
         shell: bash -l {0}
         run: |
+          conda remove --force openff-toolkit openff-toolkit-base
           python setup.py develop --no-deps
 
       - name: Check installed toolkits
