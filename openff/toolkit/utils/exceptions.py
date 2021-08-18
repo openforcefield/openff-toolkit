@@ -2,7 +2,9 @@ import warnings
 
 deprecated_names = ["MessageException", "ParseError"]
 
-
+# TODO: Remove in January 2022
+# TODO: When _DepcreatedMessageException is removed, this should be removed. Also
+#       include in release notes that ParseError no longer exists
 def __getattr__(name):
     if name in deprecated_names:
         warnings.filterwarnings("default", category=DeprecationWarning)
@@ -18,6 +20,7 @@ def __getattr__(name):
     raise AttributeError(f"module {__name__} has no attribute {name}")
 
 
+# TODO: Remove in January 2022
 class _DeprecatedMessageException(Exception):
     """DEPRECATED: A base class for exceptions that print out a string given in their constructor"""
 
@@ -29,6 +32,8 @@ class _DeprecatedMessageException(Exception):
         return self.msg
 
 
+# TODO: Remove _DeprecatedMessageException (the import here and its definition above)
+# and make this exception only import from Exception
 class OpenFFToolkitException(_DeprecatedMessageException):
     """Base exception for custom exceptions raised by the OpenFF Toolkit"""
 
@@ -198,6 +203,7 @@ class SMIRNOFFAromaticityError(OpenFFToolkitException):
     """
 
 
+# TODO: Remove in January 2022
 class _DeprecatedParseError(Exception):
     """DEPRECATED: Error for when a SMIRNOFF data structure is not parseable by a ForceField"""
 
