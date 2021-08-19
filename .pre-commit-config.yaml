@@ -1,4 +1,16 @@
 repos:
+- repo: https://github.com/psf/black
+  rev: 21.7b0
+  hooks:
+  - id: black
+    files: ^openff
+    args: [--check]
+- repo: https://github.com/PyCQA/isort
+  rev: 5.9.3
+  hooks:
+  - id: isort
+    files: ^openff
+    args: [--check]
 - repo: https://github.com/nbQA-dev/nbQA
   rev: 1.1.0
   hooks:
