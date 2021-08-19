@@ -1,0 +1,12 @@
+repos:
+- repo: https://github.com/nbQA-dev/nbQA
+  rev: 1.1.0
+  hooks:
+    - id: nbqa-pyupgrade
+      files: ^examples/((?!deprecated).)*$
+      args:
+        - --py37-plus
+    - id: nbqa-isort
+      files: ^examples/((?!deprecated).)*$
+    - id: nbqa-black
+      files: ^examples/((?!deprecated).)*$

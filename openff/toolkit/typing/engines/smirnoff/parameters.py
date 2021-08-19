@@ -69,6 +69,7 @@ from openff.toolkit.topology import (
     ValenceDict,
 )
 from openff.toolkit.topology.molecule import Molecule
+from openff.toolkit.topology.topology import NotBondedError
 from openff.toolkit.typing.chemistry import ChemicalEnvironment
 from openff.toolkit.utils.collections import ValidatedDict, ValidatedList
 from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
@@ -2222,13 +2223,16 @@ class ParameterHandler(_ParameterAttributeHandler):
             self._parameter_type = parameter_type
             self._environment_match = environment_match
 
-    def find_matches(self, entity):
+    def find_matches(self, entity, unique=False):
         """Find the elements of the topology/molecule matched by a parameter type.
 
         Parameters
         ----------
         entity : openff.toolkit.topology.Topology
             Topology to search.
+        unique : bool, default=False
+            If False, SMARTS matching will enumerate every valid permutation of matching atoms.
+            If True, only one order of each unique match will be returned.
 
         Returns
         ---------
@@ -2239,9 +2243,14 @@ class ParameterHandler(_ParameterAttributeHandler):
 
         # TODO: Right now, this method is only ever called with an entity that is a Topology.
         #  Should we reduce its scope and have a check here to make sure entity is a Topology?
-        return self._find_matches(entity)
+        return self._find_matches(entity, unique=unique)
 
-    def _find_matches(self, entity, transformed_dict_cls=ValenceDict):
+    def _find_matches(
+        self,
+        entity,
+        transformed_dict_cls=ValenceDict,
+        unique=False,
+    ):
         """Implement find_matches() and allow using a difference valence dictionary.
         Parameters
         ----------
@@ -2252,6 +2261,10 @@ class ParameterHandler(_ParameterAttributeHandler):
             will determine how groups of atom indices are stored
             and accessed (e.g for angles indices should be 0-1-2
             and not 2-1-0).
+        unique : bool, default=False
+            If False, SMARTS matching will enumerate every valid permutation of matching atoms.
+            If True, only one order of each unique match will be returned.
+
         Returns
         ---------
         matches : `transformed_dict_cls` of ParameterHandlerMatch
@@ -2269,7 +2282,8 @@ class ParameterHandler(_ParameterAttributeHandler):
             matches_for_this_type = {}
 
             for environment_match in entity.chemical_environment_matches(
-                parameter_type.smirks
+                parameter_type.smirks,
+                unique=unique,
             ):
                 # Update the matches for this parameter type.
                 handler_match = self._Match(parameter_type, environment_match)
@@ -2821,7 +2835,13 @@ class BondHandler(ParameterHandler):
             # particle_indices = tuple([ atom.particle_index for atom in atoms ])
 
             # Ensure atoms are actually bonded correct pattern in Topology
-            self._assert_correct_connectivity(bond_match)
+            try:
+                self._assert_correct_connectivity(bond_match)
+            except NotBondedError as e:
+                smirks = bond_match.parameter_type.smirks
+                raise NotBondedError(
+                    f"While processing bond with SMIRKS {smirks}: " + e.msg
+                )
 
             # topology.assert_bonded(atoms[0], atoms[1])
             bond_params = bond_match.parameter_type
@@ -2997,7 +3017,13 @@ class AngleHandler(ParameterHandler):
             # Ensure atoms are actually bonded correct pattern in Topology
             # for (i, j) in [(0, 1), (1, 2)]:
             #     topology.assert_bonded(atoms[i], atoms[j])
-            self._assert_correct_connectivity(angle_match)
+            try:
+                self._assert_correct_connectivity(angle_match)
+            except NotBondedError as e:
+                smirks = angle_match.parameter_type.smirks
+                raise NotBondedError(
+                    f"While processing angle with SMIRKS {smirks}: " + e.msg
+                )
 
             if (
                 topology.is_constrained(atoms[0], atoms[1])
@@ -3147,7 +3173,13 @@ class ProperTorsionHandler(ParameterHandler):
         for (atom_indices, torsion_match) in torsion_matches.items():
             # Ensure atoms are actually bonded correct pattern in Topology
             # Currently does nothing
-            self._assert_correct_connectivity(torsion_match)
+            try:
+                self._assert_correct_connectivity(torsion_match)
+            except NotBondedError as e:
+                smirks = torsion_match.parameter_type.smirks
+                raise NotBondedError(
+                    f"While processing torsion with SMIRKS {smirks}: " + e.msg
+                )
 
             if torsion_match.parameter_type.k_bondorder is None:
                 # TODO: add a check here that we have same number of terms for
@@ -3343,7 +3375,7 @@ class ImproperTorsionHandler(ParameterHandler):
             tolerance_attrs=float_attrs_to_compare,
         )
 
-    def find_matches(self, entity):
+    def find_matches(self, entity, unique=False):
         """Find the improper torsions in the topology/molecule matched by a parameter type.
 
         Parameters
@@ -3358,7 +3390,9 @@ class ImproperTorsionHandler(ParameterHandler):
             matching the 4-tuple of atom indices in ``entity``.
 
         """
-        return self._find_matches(entity, transformed_dict_cls=ImproperDict)
+        return self._find_matches(
+            entity, transformed_dict_cls=ImproperDict, unique=unique
+        )
 
     def create_force(self, system, topology, **kwargs):
         # force = super(ImproperTorsionHandler, self).create_force(system, topology, **kwargs)
@@ -3378,7 +3412,15 @@ class ImproperTorsionHandler(ParameterHandler):
             # For impropers, central atom is atom 1
             # for (i, j) in [(0, 1), (1, 2), (1, 3)]:
             #     topology.assert_bonded(atom_indices[i], atom_indices[j])
-            self._assert_correct_connectivity(improper_match, [(0, 1), (1, 2), (1, 3)])
+            try:
+                self._assert_correct_connectivity(
+                    improper_match, [(0, 1), (1, 2), (1, 3)]
+                )
+            except NotBondedError as e:
+                smirks = improper_match.parameter_type.smirks
+                raise NotBondedError(
+                    f"While processing improper with SMIRKS {smirks}: " + e.msg
+                )
 
             improper = improper_match.parameter_type
 
@@ -4017,7 +4059,7 @@ class LibraryChargeHandler(_NonbondedHandler):
     _INFOTYPE = LibraryChargeType  # info type to store
     _DEPENDENCIES = [vdWHandler, ElectrostaticsHandler]
 
-    def find_matches(self, entity):
+    def find_matches(self, entity, unique=True):
         """Find the elements of the topology/molecule matched by a parameter type.
 
         Parameters
@@ -4034,7 +4076,11 @@ class LibraryChargeHandler(_NonbondedHandler):
 
         # TODO: Right now, this method is only ever called with an entity that is a Topology.
         #  Should we reduce its scope and have a check here to make sure entity is a Topology?
-        return self._find_matches(entity, transformed_dict_cls=dict)
+        return self._find_matches(
+            entity,
+            transformed_dict_cls=dict,
+            unique=unique,
+        )
 
     def create_force(self, system, topology, **kwargs):
         force = super().create_force(system, topology, **kwargs)
@@ -4298,7 +4344,7 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
             identical_attrs=string_attrs_to_compare + int_attrs_to_compare,
         )
 
-    def find_matches(self, entity):
+    def find_matches(self, entity, unique=False):
         """Find the elements of the topology/molecule matched by a parameter type.
 
         Parameters
@@ -4312,7 +4358,9 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
             ``matches[particle_indices]`` is the ``ParameterType`` object
             matching the tuple of particle indices in ``entity``.
         """
-        matches = self._find_matches(entity, transformed_dict_cls=TagSortedDict)
+        matches = self._find_matches(
+            entity, transformed_dict_cls=TagSortedDict, unique=unique
+        )
         return matches
 
     def create_force(self, system, topology, **kwargs):
@@ -5621,7 +5669,7 @@ class VirtualSiteHandler(_NonbondedHandler):
             other_handler, identical_attrs=string_attrs_to_compare
         )
 
-    def find_matches(self, entity, expand_permutations=True):
+    def find_matches(self, entity, expand_permutations=True, unique=False):
         """Find the virtual sites in the topology/molecule matched by a
         parameter type.
 
@@ -5637,6 +5685,10 @@ class VirtualSiteHandler(_NonbondedHandler):
             matching the n-tuple of atom indices in ``entity``.
 
         """
+        if unique:
+            raise NotImplementedError(
+                "`unique=True` not implemented in VirtualSiteHandler"
+            )
         return self._find_matches(
             entity,
             transformed_dict_cls=UnsortedDict,
