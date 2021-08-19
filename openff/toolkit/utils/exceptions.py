@@ -205,15 +205,8 @@ class SMIRNOFFAromaticityError(OpenFFToolkitException):
 
 
 # TODO: Remove in January 2022
-class _DeprecatedParseError(Exception):
+class _DeprecatedParseError(_DeprecatedMessageException):
     """DEPRECATED: Error for when a SMIRNOFF data structure is not parseable by a ForceField"""
-
-    def __init__(self, msg):
-        super().__init__(msg)
-        self.msg = msg
-
-    def __str__(self):
-        return self.msg
 
 
 class SMIRNOFFParseError(OpenFFToolkitException, _DeprecatedParseError):
