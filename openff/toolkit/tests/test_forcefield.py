@@ -1120,6 +1120,9 @@ class TestForceField:
         """
         forcefield_1 = ForceField(xml_simple_ff)
         string_1 = forcefield_1.to_string("XML")
+        # Ensure that we have spaces instead of tabs
+        assert "    " in string_1
+        assert "\t" not in string_1
         forcefield_2 = ForceField(string_1)
         string_2 = forcefield_2.to_string("XML")
         assert string_1 == string_2
@@ -4129,13 +4132,13 @@ class TestForceFieldParameterAssignment:
         topology = Topology.from_molecules(molecule)
 
         labels = forcefield.label_molecules(topology)[0]
+
         assert len(labels["Bonds"]) == 2654
         assert len(labels["Angles"]) == 4789
         assert len(labels["ProperTorsions"]) == 6973
         assert len(labels["ImproperTorsions"]) == 528
 
-        fn = forcefield.create_openmm_system
-        omm_system = fn(
+        omm_system = forcefield.create_openmm_system(
             topology,
             charge_from_molecules=[molecule],
             toolkit_registry=toolkit_registry,

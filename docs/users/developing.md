@@ -345,6 +345,28 @@ isort openff
 
 Anything not covered above is currently up to personal preference, but this may change as new linters are added.
 
+### Pre-commit
+
+The [`pre-commit`](https://pre-commit.com/) tool can _optionally_ be used to automate some or all of the above style checks. It automatically runs other programs ("hooks") when you run `git commit`. It aborts the commit with an exit code if any of the hooks fail, i.e. if `black` reformats code. This project uses `pre-commit ci`, a free service that enforces style on GitHub using the `pre-commit` framework in CI.
+
+To use `pre-commit` locally, first install it:
+
+```shell
+conda conda install pre-commit -c conda-forge  # also available via pip
+```
+
+Then, install the pre-commit hooks (note that it installs the linters into an isolated virtual environment, not the current conda environment):
+
+```
+pre-commit install
+```
+
+Hooks will now run automatically before commits. Once installed, they should run in a total of a few seconds.
+
+If `pre-commit` is not used by the developer and style issues are found, a `pre-commit.ci` bot may commit directly to a PR to make these fixes. This bot should only ever alter styl and never make functional changes to code.
+
+Note that tests (too slow) and type-checking (weird reasons) are not run by `pre-commit`. You should still manually run tests before commiting code.
+
 ## Supported Python versions
 
 The OpenFF Toolkit roughly follows [NEP 29](https://numpy.org/neps/nep-0029-deprecation_policy.html). 

@@ -59,6 +59,9 @@ jobs:
           activate-environment: test
           environment-file: devtools/conda-envs/rdkit.yaml
           auto-activate-base: false
+          miniforge-version: latest
+          miniforge-variant: Mambaforge
+          use-mamba: true
       - uses: conda-incubator/setup-miniconda@v2.1.1
         name: Install with OpenEye toolkits
         if: ${{ matrix.cfg.rdkit == 'FALSE' && matrix.cfg.openeye == 'TRUE' }}
@@ -67,11 +70,14 @@ jobs:
           activate-environment: test
           environment-file: devtools/conda-envs/openeye.yaml
           auto-activate-base: false
+          miniforge-version: latest
+          miniforge-variant: Mambaforge
+          use-mamba: true
 
       - name: Install additional example dependencies
         shell: bash -l {0}
         run: |
-          conda env update --file examples/environment.yaml --name test
+          mamba env update --file examples/environment.yaml --name test
 
           # Remove rdkit if it is not being tested, as it is a dependency of openmmforcefields
           if [[ "$RDKIT" == false ]]; then

@@ -32,3 +32,4 @@ dependencies:
   - qcportal
   - qcengine
   - mdtraj
+  - openff-interchange
