@@ -1924,7 +1924,12 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         return unique_tags, connections
 
     @staticmethod
-    def _find_smarts_matches(rdmol, smirks, aromaticity_model="OEAroModel_MDL"):
+    def _find_smarts_matches(
+        rdmol,
+        smirks,
+        aromaticity_model="OEAroModel_MDL",
+        unique=False,
+    ):
         """Find all sets of atoms in the provided RDKit molecule that match the provided SMARTS string.
 
         Parameters
@@ -1955,6 +1960,38 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         """
         from rdkit import Chem
 
+        # This code is part of a possible performance optimization that hasn't been validated
+        # for production use yet.
+        def _match_smarts_with_heavy_atoms_first(rdmol, qmol, match_kwargs):
+            for i, atom in enumerate(qmol.GetAtoms()):
+                atom.SetIntProp("index", i)
+
+            remove_params = Chem.rdmolops.RemoveHsParameters()
+            remove_params.removeWithQuery = True
+            heavy_query = Chem.RemoveHs(qmol, remove_params, sanitize=False)
+            heavy_to_qmol = [
+                atom.GetIntProp("index") for atom in heavy_query.GetAtoms()
+            ]
+            query_atoms = [Chem.Atom(i + 2) for i in range(len(heavy_to_qmol))]
+
+            full_matches = set()
+
+            for heavy_match in rdmol.GetSubstructMatches(heavy_query, **match_kwargs):
+                rdmol_copy = Chem.RWMol(rdmol)
+                qmol_copy = Chem.RWMol(qmol)
+                # pin atoms by atom type
+                for heavy_index, rdmol_index in enumerate(heavy_match):
+                    qmol_index = heavy_to_qmol[heavy_index]
+                    qmol_copy.ReplaceAtom(qmol_index, query_atoms[heavy_index])
+                    rdmol_copy.ReplaceAtom(rdmol_index, query_atoms[heavy_index])
+
+                rdmol_copy.UpdatePropertyCache(strict=False)
+                qmol_copy.UpdatePropertyCache(strict=False)
+                h_matches = rdmol_copy.GetSubstructMatches(qmol_copy, **match_kwargs)
+                full_matches |= set(h_matches)
+
+            return full_matches
+
         # Make a copy of the molecule
         rdmol = Chem.Mol(rdmol)
         # Use designated aromaticity model
@@ -1980,21 +2017,28 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 idx_map[smirks_index - 1] = atom.GetIdx()
         map_list = [idx_map[x] for x in sorted(idx_map)]
 
-        # Perform matching
-        matches = list()
-
         # choose the largest unsigned int without overflow
         # since the C++ signature is a uint
+        # TODO: max_matches = int(max_matches) if max_matches is not None else np.iinfo(np.uintc).max
         max_matches = np.iinfo(np.uintc).max
-        for match in rdmol.GetSubstructMatches(
-            qmol, uniquify=False, maxMatches=max_matches, useChirality=True
-        ):
-            mas = [match[x] for x in map_list]
-            matches.append(tuple(mas))
+        match_kwargs = dict(uniquify=unique, maxMatches=max_matches, useChirality=True)
+        # These variables are un-used, do they serve a purpose?
+        # n_heavy = qmol.GetNumHeavyAtoms()
+        # n_h = qmol.GetNumAtoms() - n_heavy
+        # TODO: if match_heavy_first: full_matches = _match_smarts_with_heavy_atoms_first(...)
+        full_matches = rdmol.GetSubstructMatches(qmol, **match_kwargs)
+
+        matches = [tuple(match[x] for x in map_list) for match in full_matches]
 
         return matches
 
-    def find_smarts_matches(self, molecule, smarts, aromaticity_model="OEAroModel_MDL"):
+    def find_smarts_matches(
+        self,
+        molecule,
+        smarts,
+        aromaticity_model="OEAroModel_MDL",
+        unique=False,
+    ):
         """
         Find all SMARTS matches for the specified molecule, using the specified aromaticity model.
 
@@ -2014,7 +2058,10 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         """
         rdmol = self.to_rdkit(molecule, aromaticity_model=aromaticity_model)
         return self._find_smarts_matches(
-            rdmol, smarts, aromaticity_model="OEAroModel_MDL"
+            rdmol,
+            smarts,
+            aromaticity_model="OEAroModel_MDL",
+            unique=unique,
         )
 
     # --------------------------------
