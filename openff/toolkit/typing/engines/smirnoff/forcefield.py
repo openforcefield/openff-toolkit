@@ -54,6 +54,7 @@ from openff.toolkit.utils.utils import (
     convert_0_2_smirnoff_to_0_3,
     convert_all_quantities_to_string,
     convert_all_strings_to_quantity,
+    requires_package,
 )
 
 # =============================================================================================
@@ -1422,18 +1423,18 @@ class ForceField:
 
         """
         raise NotImplementedError
-        # import parmed
-        # TODO: Automagically handle expansion of virtual sites? Or is Topology supposed to do that?
 
-        # Create OpenMM System
-        # system = self.create_openmm_system(
-        #    topology, **kwargs)
+    @requires_package("openff.interchange")
+    @requires_package("mdtraj")
+    def _to_interchange(self, topology, box=None):
+        """
+        Create an Interchange object from a ForceField, Topology, and (optionally) box vectors.
 
-        # Create a ParmEd Structure object
-        # structure = parmed.openmm.topsystem.load_topology(
-        #    topology.to_openmm(), system, positions)
-        #
-        # return structure
+        WARNING: This API and functionality are experimental and not suitable for production.
+        """
+        from openff.interchange.components.interchange import Interchange
+
+        return Interchange.from_smirnoff(force_field=self, topology=topology, box=box)
 
     def label_molecules(self, topology):
         """Return labels for a list of molecules corresponding to parameters from this force field.
