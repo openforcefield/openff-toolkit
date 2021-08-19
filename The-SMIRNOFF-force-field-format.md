@@ -278,7 +278,7 @@ This tag is not permanent and may be phased out in future versions of the spec.
 :::
 
 This tag calculates partial charges using the default settings of the highest-priority cheminformatics toolkit that can perform [AM1-BCC charge assignment](https://docs.eyesopen.com/toolkits/python/quacpactk/molchargetheory.html#am1bcc-charges).
-Currently, if the OpenEye toolkit is licensed and available, this will use QuacPac configured to generate charges using [AM1-BCC ELF10](https://docs.eyesopen.com/toolkits/python/quacpactk/OEProtonClasses/OEAM1BCCELF10Charges.html) for each unique molecule in the topology.
+Currently, if the OpenEye toolkit is licensed and available, this will use QuacPac configured to generate charges using [AM1-BCC](https://docs.eyesopen.com/toolkits/python/quacpactk/OEProtonClasses/OEAM1BCCCharges.html) for each unique molecule in the topology.
 Otherwise [RDKit](https://rdkit.org/) will be used for initial conformer generation and the [AmberTools antechamber/sqm software](https://ambermd.org/AmberTools.php) will be used for charge calculation.
 
 If this tag is specified for a force field, conformer generation will be performed regardless of whether conformations of the input molecule were provided.
