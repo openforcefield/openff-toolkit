@@ -120,11 +120,11 @@ class AntechamberNotFoundError(OpenFFToolkitException):
     """The antechamber executable was not found"""
 
 
-class SMILESParseError(ValueError):
+class SMILESParseError(OpenFFToolkitException, ValueError):
     """The record could not be parsed into the given format"""
 
 
-class InvalidConformerError(Exception):
+class InvalidConformerError(OpenFFToolkitException):
     """
     This error is raised when the conformer added to the molecule
     has a different connectivity to that already defined.
@@ -132,7 +132,8 @@ class InvalidConformerError(Exception):
     """
 
 
-class SmilesParsingError(Exception):
+# TODO: Remove in favor of SMILESParseError? They are used in different modules
+class SmilesParsingError(OpenFFToolkitException):
     """
     This error is raised when parsing a SMILES string results in an error.
     """
@@ -257,7 +258,7 @@ class IncompatibleParameterError(OpenFFToolkitException):
     """
 
 
-class UnassignedValenceParameterException(Exception):
+class UnassignedValenceParameterException(OpenFFToolkitException):
     """Exception raised when there are valence terms for which a ParameterHandler can't find parameters."""
 
 
@@ -273,11 +274,11 @@ class UnassignedProperTorsionParameterException(UnassignedValenceParameterExcept
     """Exception raised when there are proper torsion terms for which a ParameterHandler can't find parameters."""
 
 
-class UnassignedMoleculeChargeException(Exception):
+class UnassignedMoleculeChargeException(OpenFFToolkitException):
     """Exception raised when no charge method is able to assign charges to a molecule."""
 
 
-class NonintegralMoleculeChargeException(Exception):
+class NonintegralMoleculeChargeException(OpenFFToolkitException):
     """Exception raised when the partial charges on a molecule do not sum up to its formal charge."""
 
 
@@ -290,9 +291,9 @@ class ParameterLookupError(OpenFFToolkitException):
     ParameterHandler.__getitem__"""
 
 
-class DuplicateVirtualSiteTypeException(Exception):
+class DuplicateVirtualSiteTypeException(OpenFFToolkitException):
     """Exception raised when trying to register two different virtual site classes with the same 'type'"""
 
 
-class CallbackRegistrationError(TypeError):
+class CallbackRegistrationError(OpenFFToolkitException, TypeError):
     """Error raised when callback registration fails."""

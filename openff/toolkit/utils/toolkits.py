@@ -55,7 +55,7 @@ __all__ = (
     "RDKIT_AVAILABLE",
     "AMBERTOOLS_AVAILABLE",
     "BASIC_CHEMINFORMATICS_TOOLKITS",
-]
+)
 
 
 import logging
