@@ -22,15 +22,12 @@ __all__ = [
     "ParameterHandlerRegistrationError",
     "SMIRNOFFVersionError",
     "SMIRNOFFAromaticityError",
+    "SMIRNOFFParseError",
     "ParseError",
     "PartialChargeVirtualSitesError",
     "ForceField",
 ]
 
-
-# =============================================================================================
-# GLOBAL IMPORTS
-# =============================================================================================
 
 import copy
 import logging
@@ -47,8 +44,15 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     ParameterHandler,
 )
 from openff.toolkit.typing.engines.smirnoff.plugins import load_handler_plugins
+from openff.toolkit.utils.exceptions import (
+    ParameterHandlerRegistrationError,
+    ParseError,
+    PartialChargeVirtualSitesError,
+    SMIRNOFFAromaticityError,
+    SMIRNOFFParseError,
+    SMIRNOFFVersionError,
+)
 from openff.toolkit.utils.utils import (
-    MessageException,
     all_subclasses,
     convert_0_1_smirnoff_to_0_2,
     convert_0_2_smirnoff_to_0_3,
@@ -135,46 +139,6 @@ def get_available_force_fields(full_paths=False):
 MAX_SUPPORTED_VERSION = (
     "1.0"  # maximum version of the SMIRNOFF spec supported by this SMIRNOFF force field
 )
-
-
-class ParameterHandlerRegistrationError(MessageException):
-    """
-    Exception for errors in ParameterHandler registration
-    """
-
-    pass
-
-
-class SMIRNOFFVersionError(MessageException):
-    """
-    Exception thrown when an incompatible SMIRNOFF version data structure in attempted to be read.
-    """
-
-    pass
-
-
-class SMIRNOFFAromaticityError(MessageException):
-    """
-    Exception thrown when an incompatible SMIRNOFF aromaticity model is checked for compatibility.
-    """
-
-    pass
-
-
-class ParseError(MessageException):
-    """
-    Error for when a SMIRNOFF data structure is not parseable by a ForceField
-    """
-
-    pass
-
-
-class PartialChargeVirtualSitesError(MessageException):
-    """
-    Exception thrown when partial charges cannot be computed for a Molecule because the ForceField applies virtual sites.
-    """
-
-    pass
 
 
 # =============================================================================================
@@ -977,7 +941,9 @@ class ForceField:
         elif "SMIRFF" in smirnoff_data:
             version = smirnoff_data["SMIRFF"]["version"]
         else:
-            raise ParseError("'version' attribute must be specified in SMIRNOFF tag")
+            raise SMIRNOFFParseError(
+                "'version' attribute must be specified in SMIRNOFF tag"
+            )
 
         self._check_smirnoff_version_compatibility(str(version))
         # Convert 0.1 spec files to 0.3 SMIRNOFF data format by converting
@@ -994,7 +960,7 @@ class ForceField:
 
         # Ensure that SMIRNOFF is a top-level key of the dict
         if not ("SMIRNOFF" in smirnoff_data):
-            raise ParseError(
+            raise SMIRNOFFParseError(
                 "'SMIRNOFF' must be a top-level key in the SMIRNOFF object model"
             )
 
@@ -1005,7 +971,7 @@ class ForceField:
             self.aromaticity_model = aromaticity_model
 
         elif self._aromaticity_model is None:
-            raise ParseError(
+            raise SMIRNOFFParseError(
                 "'aromaticity_model' attribute must be specified in SMIRNOFF "
                 "tag, or contained in a previously-loaded SMIRNOFF data source"
             )
@@ -1128,15 +1094,15 @@ class ForceField:
             try:
                 smirnoff_data = parameter_io_handler.parse_file(source)
                 return smirnoff_data
-            except ParseError as e:
+            except SMIRNOFFParseError as e:
                 exception_msg = e.msg
             except (FileNotFoundError, OSError):
                 # If this is not a file path or a file handle, attempt parsing as a string.
                 try:
                     smirnoff_data = parameter_io_handler.parse_string(source)
                     return smirnoff_data
-                except ParseError as e:
-                    exception_msg = e.msg
+                except SMIRNOFFParseError as e:
+                    exception_msg = e.args[0]
 
         # If we haven't returned by now, the parsing was unsuccessful
         valid_formats = [

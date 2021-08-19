@@ -29,10 +29,6 @@ Molecular chemical entity representation and routines to interface with cheminfo
 
 """
 
-# =============================================================================================
-# GLOBAL IMPORTS
-# =============================================================================================
-
 import operator
 import warnings
 from abc import abstractmethod
@@ -45,10 +41,11 @@ from simtk import unit
 from simtk.openmm.app import Element, element
 
 import openff.toolkit
-from openff.toolkit.utils import (
-    MessageException,
-    quantity_to_string,
-    string_to_quantity,
+from openff.toolkit.utils import quantity_to_string, string_to_quantity
+from openff.toolkit.utils.exceptions import (
+    InvalidConformerError,
+    NotAttachedToMoleculeError,
+    SmilesParsingError,
 )
 from openff.toolkit.utils.serialization import Serializable
 from openff.toolkit.utils.toolkits import (
@@ -62,11 +59,6 @@ from openff.toolkit.utils.toolkits import (
     UndefinedStereochemistryError,
 )
 from openff.toolkit.utils.utils import MissingDependencyError, requires_package
-
-
-class NotAttachedToMoleculeError(MessageException):
-    """Exception for when a component does not belong to a Molecule object, but is queried"""
-
 
 # =============================================================================================
 # GLOBAL PARAMETERS
@@ -6396,21 +6388,3 @@ class Molecule(FrozenMolecule):
             return display(self.visualize(backend="openeye"))
         except ValueError:
             pass
-
-
-class InvalidConformerError(Exception):
-    """
-    This error is raised when the conformer added to the molecule
-    has a different connectivity to that already defined.
-    or anyother conformer related issues.
-    """
-
-    pass
-
-
-class SmilesParsingError(Exception):
-    """
-    This error is rasied when parsing a smiles string results in an error.
-    """
-
-    pass

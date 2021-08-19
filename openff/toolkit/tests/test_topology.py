@@ -9,10 +9,6 @@ Tests for Topology
 
 """
 
-# =============================================================================================
-# GLOBAL IMPORTS
-# =============================================================================================
-
 from unittest import TestCase
 
 import numpy as np
@@ -32,11 +28,7 @@ from openff.toolkit.tests.utils import (
     requires_rdkit,
 )
 from openff.toolkit.topology import (
-    DuplicateUniqueMoleculeError,
     ImproperDict,
-    InvalidBoxVectorsError,
-    InvalidPeriodicityError,
-    MissingUniqueMoleculesError,
     Molecule,
     TagSortedDict,
     Topology,
@@ -48,6 +40,12 @@ from openff.toolkit.utils import (
     RDKIT_AVAILABLE,
     OpenEyeToolkitWrapper,
     RDKitToolkitWrapper,
+)
+from openff.toolkit.utils.exceptions import (
+    DuplicateUniqueMoleculeError,
+    InvalidBoxVectorsError,
+    InvalidPeriodicityError,
+    MissingUniqueMoleculesError,
 )
 
 # =============================================================================================
@@ -1169,7 +1167,6 @@ class TestTopology(TestCase):
     ],
 )
 def test_nth_degree_neighbors(n_degrees, num_pairs):
-    pass
     smiles = ["c1ccccc1", "N1ONON1"]
     topology = Topology.from_molecules([Molecule.from_smiles(smi) for smi in smiles])
 
