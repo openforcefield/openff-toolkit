@@ -5,6 +5,7 @@ on:
     branches:
       - "master"
       - "maintenance/.*"
+      - "lily/check-regression"
   pull_request:
     branches:
       - "master"

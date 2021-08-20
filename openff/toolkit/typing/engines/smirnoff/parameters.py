@@ -1338,7 +1338,7 @@ class _ParameterAttributeHandler:
         """
         # If no filter is specified, get all the parameters.
         if filter is None:
-            filter = lambda x: True
+            def filter(x): return True
 
         # Go through MRO and retrieve also parents descriptors. The function
         # inspect.getmembers() automatically resolves the MRO, but it also
@@ -1812,7 +1812,8 @@ class ParameterHandler(_ParameterAttributeHandler):
 
     """
 
-    _TAGNAME = None  # str of section type handled by this ParameterHandler (XML element name for SMIRNOFF XML representation)
+    # str of section type handled by this ParameterHandler (XML element name for SMIRNOFF XML representation)
+    _TAGNAME = None
     _INFOTYPE = None  # container class with type information that will be stored in self._parameters
     _OPENMMTYPE = None  # OpenMM Force class (or None if no equivalent)
     _DEPENDENCIES = (
@@ -4117,11 +4118,16 @@ class ToolkitAM1BCCHandler(_NonbondedHandler):
                 # We don't need to generate conformers here, since that will be done by default in
                 # compute_partial_charges with am1bcc if the use_conformers kwarg isn't defined
                 ref_mol.assign_partial_charges(
-                    partial_charge_method="am1bcc", toolkit_registry=toolkit_registry
+                    partial_charge_method="am1bccelf10", toolkit_registry=toolkit_registry
                 )
             except Exception as e:
-                warnings.warn(str(e), Warning)
-                continue
+                try:
+                    ref_mol.assign_partial_charges(
+                        partial_charge_method="am1bcc", toolkit_registry=toolkit_registry
+                    )
+                except:
+                    warnings.warn(str(e), Warning)
+                    continue
 
             # Assign charges to relevant atoms
             for topology_molecule in topology._reference_molecule_to_topology_molecules[
@@ -4549,7 +4555,7 @@ class GBSAHandler(ParameterHandler):
             "OBC2": simtk.openmm.GBSAOBCForce,
             # It's tempting to do use the class below, but the customgbforce
             # version of OBC2 doesn't provide setSolventRadius()
-            #'OBC2': simtk.openmm.app.internal.customgbforces.GBSAOBC2Force,
+            # 'OBC2': simtk.openmm.app.internal.customgbforces.GBSAOBC2Force,
         }
         openmm_force_type = force_map[self.gb_model]
 
@@ -5730,7 +5736,6 @@ class VirtualSiteHandler(_NonbondedHandler):
                 vsite_type.add_virtual_site(molecule, orientations, replace=True)
 
     def _create_openmm_virtual_sites(self, system, force, topology, ref_mol):
-
         """
         Here we must assume that
             1. All atoms in the topology are already present
