@@ -21,6 +21,7 @@ from openff.toolkit.utils import base_wrapper
 from openff.toolkit.utils.constants import DEFAULT_AROMATICITY_MODEL
 from openff.toolkit.utils.exceptions import (
     ChargeMethodUnavailableError,
+    ConformerGenerationError,
     SMILESParseError,
     ToolkitUnavailableException,
     UndefinedStereochemistryError,
@@ -888,6 +889,10 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             randomSeed=1,
             # params=AllChem.ETKDG()
         )
+
+        if rdmol.GetNumConformers() == 0:
+            raise ConformerGenerationError("RDKit conformer generation failed.")
+
         molecule2 = self.from_rdkit(
             rdmol, allow_undefined_stereo=True, _cls=molecule.__class__
         )

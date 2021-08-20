@@ -26,6 +26,7 @@ from openff.toolkit.utils.constants import DEFAULT_AROMATICITY_MODEL
 from openff.toolkit.utils.exceptions import (
     ChargeCalculationError,
     ChargeMethodUnavailableError,
+    ConformerGenerationError,
     GAFFAtomTypeWarning,
     InvalidIUPACNameError,
     LicenseError,
@@ -1689,7 +1690,9 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             omega.SetStrictStereo(False)
             new_status = omega(oemol)
             if new_status is False:
-                raise Exception("OpenEye Omega conformer generation failed")
+                raise ConformerGenerationError(
+                    "OpenEye Omega conformer generation failed"
+                )
 
         molecule2 = self.from_openeye(
             oemol, allow_undefined_stereo=True, _cls=molecule.__class__

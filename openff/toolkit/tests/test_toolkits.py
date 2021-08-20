@@ -37,6 +37,7 @@ from openff.toolkit.topology.molecule import Molecule
 from openff.toolkit.utils import get_data_file_path
 from openff.toolkit.utils.exceptions import (
     ChargeMethodUnavailableError,
+    ConformerGenerationError,
     IncorrectNumConformersError,
     IncorrectNumConformersWarning,
     InvalidIUPACNameError,
@@ -1158,6 +1159,15 @@ class TestOpenEyeToolkitWrapper:
             toolkit_registry=toolkit_wrapper,
         )
         assert molecule2.n_conformers == 10
+
+    @pytest.mark.slow
+    def test_generate_conformers_failure(self):
+        toolkit = OpenEyeToolkitWrapper()
+
+        molecule = Molecule.from_smiles(100 * "CC")
+
+        with pytest.raises(ConformerGenerationError, match="Omega conf.*fail"):
+            toolkit.generate_conformers(molecule, n_conformers=1)
 
     def test_apply_elf_conformer_selection(self):
         """Test applying the ELF10 method."""
@@ -2453,6 +2463,15 @@ class TestRDKitToolkitWrapper:
             toolkit_registry=toolkit_wrapper,
         )
         assert molecule2.n_conformers == 10
+
+    @pytest.mark.slow
+    def test_generate_conformers_failure(self):
+        toolkit = RDKitToolkitWrapper()
+
+        molecule = Molecule.from_smiles(100 * "CC")
+
+        with pytest.raises(ConformerGenerationError, match="RDKit conf.*fail"):
+            toolkit.generate_conformers(molecule, n_conformers=1)
 
     @pytest.mark.parametrize("partial_charge_method", ["mmff94"])
     def test_assign_partial_charges_neutral(self, partial_charge_method):
