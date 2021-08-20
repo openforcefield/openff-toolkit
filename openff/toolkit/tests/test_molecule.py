@@ -52,6 +52,7 @@ from openff.toolkit.topology.molecule import (
     SmilesParsingError,
 )
 from openff.toolkit.utils import get_data_file_path
+from openff.toolkit.utils.exceptions import ConformerGenerationError
 from openff.toolkit.utils.toolkits import (
     AmberToolsToolkitWrapper,
     OpenEyeToolkitWrapper,
@@ -3677,6 +3678,23 @@ class TestMolecule:
 
         assert len([atom for atom in mol.atoms if atom.is_in_ring]) == n_atom_rings
         assert len([bond for bond in mol.bonds if bond.is_in_ring]) == n_bond_rings
+
+    @requires_rdkit
+    @requires_openeye
+    @pytest.mark.slow
+    def test_conformer_generation_failure(self):
+        # This test seems possibly redundant, is it needed?
+        molecule = Molecule.from_smiles(100 * "CC")
+
+        with pytest.raises(ConformerGenerationError, match="Omega conf.*fail"):
+            molecule.generate_conformers(
+                n_conformers=1, toolkit_registry=OpenEyeToolkitWrapper()
+            )
+
+        with pytest.raises(ConformerGenerationError, match="RDKit conf.*fail"):
+            molecule.generate_conformers(
+                n_conformers=1, toolkit_registry=RDKitToolkitWrapper()
+            )
 
     @requires_pkg("ipython")
     @requires_rdkit
