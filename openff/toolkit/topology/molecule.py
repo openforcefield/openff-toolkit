@@ -43,7 +43,6 @@ from simtk.openmm.app import Element, element
 import openff.toolkit
 from openff.toolkit.utils import quantity_to_string, string_to_quantity
 from openff.toolkit.utils.exceptions import (
-    ConformerGenerationError,
     InvalidConformerError,
     NotAttachedToMoleculeError,
     SmilesParsingError,
