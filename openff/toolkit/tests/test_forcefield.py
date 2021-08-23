@@ -13,7 +13,6 @@ Tests for forcefield class
 import copy
 import itertools
 import os
-from collections import OrderedDict
 from tempfile import NamedTemporaryFile
 
 import numpy as np
@@ -2073,50 +2072,44 @@ class TestForceFieldVirtualSites:
 
     # First test that one vsite is added, and that the last parameter
     # is chosen over the top-most wildcard match
-    opts = OrderedDict(
-        {
-            "xml": xml_ff_virtual_sites_bondcharge_match_once,
-            "smi": None,
-            "assert_physics": (
-                (as_charge(+0.2), None, None),
-                (as_charge(+0.2), None, None),
-                (as_charge(-0.4), as_sigma(0.2), as_epsilon(0.2)),
-            ),
-            "mol": create_dinitrogen(),
-        }
-    )
+    opts = {
+        "xml": xml_ff_virtual_sites_bondcharge_match_once,
+        "smi": None,
+        "assert_physics": (
+            (as_charge(+0.2), None, None),
+            (as_charge(+0.2), None, None),
+            (as_charge(-0.4), as_sigma(0.2), as_epsilon(0.2)),
+        ),
+        "mol": create_dinitrogen(),
+    }
     bond_charge_parameters_args.append(opts)
 
     # Test the wildcard match at the top, which means the other parameters
     # should be skipped
-    opts = OrderedDict(
-        {
-            "xml": xml_ff_virtual_sites_bondcharge_match_once,
-            "smi": None,
-            "assert_physics": (
-                (as_charge(+0.1), None, None),
-                (as_charge(+0.1), None, None),
-                (as_charge(-0.2), as_sigma(0.1), as_epsilon(0.1)),
-            ),
-            "mol": create_dioxygen(),
-        }
-    )
+    opts = {
+        "xml": xml_ff_virtual_sites_bondcharge_match_once,
+        "smi": None,
+        "assert_physics": (
+            (as_charge(+0.1), None, None),
+            (as_charge(+0.1), None, None),
+            (as_charge(-0.2), as_sigma(0.1), as_epsilon(0.1)),
+        ),
+        "mol": create_dioxygen(),
+    }
     bond_charge_parameters_args.append(opts)
 
     # Test the wildcard match where match is 0-1 and 1-0, giving two particles
-    opts = OrderedDict(
-        {
-            "xml": xml_ff_virtual_sites_bondcharge_match_all,
-            "smi": None,
-            "assert_physics": (
-                (as_charge(+0.4), None, None),
-                (as_charge(+0.4), None, None),
-                (as_charge(-0.4), as_sigma(0.2), as_epsilon(0.2)),
-                (as_charge(-0.4), as_sigma(0.2), as_epsilon(0.2)),
-            ),
-            "mol": create_dinitrogen(),
-        }
-    )
+    opts = {
+        "xml": xml_ff_virtual_sites_bondcharge_match_all,
+        "smi": None,
+        "assert_physics": (
+            (as_charge(+0.4), None, None),
+            (as_charge(+0.4), None, None),
+            (as_charge(-0.4), as_sigma(0.2), as_epsilon(0.2)),
+            (as_charge(-0.4), as_sigma(0.2), as_epsilon(0.2)),
+        ),
+        "mol": create_dinitrogen(),
+    }
     bond_charge_parameters_args.append(opts)
 
     ############################################################################
@@ -2124,38 +2117,34 @@ class TestForceFieldVirtualSites:
     ############################################################################
 
     # Test that using different names allows for multiple virtual sites
-    opts = OrderedDict(
-        {
-            "xml": xml_ff_virtual_sites_bondcharge_match_once_two_names,
-            "smi": None,
-            "assert_physics": (
-                (as_charge(+0.3), None, None),
-                (as_charge(+0.3), None, None),
-                (as_charge(-0.2), as_sigma(0.1), as_epsilon(0.1)),
-                (as_charge(-0.4), as_sigma(0.2), as_epsilon(0.2)),
-            ),
-            "mol": create_dinitrogen(),
-        }
-    )
+    opts = {
+        "xml": xml_ff_virtual_sites_bondcharge_match_once_two_names,
+        "smi": None,
+        "assert_physics": (
+            (as_charge(+0.3), None, None),
+            (as_charge(+0.3), None, None),
+            (as_charge(-0.2), as_sigma(0.1), as_epsilon(0.1)),
+            (as_charge(-0.4), as_sigma(0.2), as_epsilon(0.2)),
+        ),
+        "mol": create_dinitrogen(),
+    }
     bond_charge_parameters_args.append(opts)
 
-    opts = OrderedDict(
-        {
-            "xml": xml_ff_virtual_sites_monovalent_match_once,
-            "smi": None,
-            "assert_physics": (
-                (as_charge(+0.2), None, None),
-                (as_charge(+0.2), None, None),
-                (as_charge(+0.2), None, None),
-                (as_charge(+0.0), None, None),
-                (as_charge(+0.0), None, None),
-                (as_charge(+0.0), None, None),
-                (as_charge(+0.0), None, None),
-                (as_charge(-0.6), as_sigma(0.2), as_epsilon(0.2)),
-            ),
-            "mol": create_acetaldehyde(),
-        }
-    )
+    opts = {
+        "xml": xml_ff_virtual_sites_monovalent_match_once,
+        "smi": None,
+        "assert_physics": (
+            (as_charge(+0.2), None, None),
+            (as_charge(+0.2), None, None),
+            (as_charge(+0.2), None, None),
+            (as_charge(+0.0), None, None),
+            (as_charge(+0.0), None, None),
+            (as_charge(+0.0), None, None),
+            (as_charge(+0.0), None, None),
+            (as_charge(-0.6), as_sigma(0.2), as_epsilon(0.2)),
+        ),
+        "mol": create_acetaldehyde(),
+    }
     monovalent_parameters_args.append(opts)
 
     ############################################################################
@@ -2163,40 +2152,36 @@ class TestForceFieldVirtualSites:
     ############################################################################
 
     # A TIP5P definition from OpenMM
-    opts = OrderedDict(
-        {
-            "xml": xml_ff_virtual_sites_divalent_match_all,
-            "smi": None,
-            "assert_physics": (
-                (as_charge(+0.4820), None, None),
-                (as_charge(+0.0000), None, None),
-                (as_charge(+0.4820), None, None),
-                (as_charge(-0.4820), as_sigma(3.12), as_epsilon(0.16)),
-                (as_charge(-0.4820), as_sigma(3.12), as_epsilon(0.16)),
-            ),
-            "mol": create_water(),
-        }
-    )
+    opts = {
+        "xml": xml_ff_virtual_sites_divalent_match_all,
+        "smi": None,
+        "assert_physics": (
+            (as_charge(+0.4820), None, None),
+            (as_charge(+0.0000), None, None),
+            (as_charge(+0.4820), None, None),
+            (as_charge(-0.4820), as_sigma(3.12), as_epsilon(0.16)),
+            (as_charge(-0.4820), as_sigma(3.12), as_epsilon(0.16)),
+        ),
+        "mol": create_water(),
+    }
     divalent_parameters_args.append(opts)
 
     ############################################################################
     # Trivalent virtual site test data
     ############################################################################
 
-    opts = OrderedDict(
-        {
-            "xml": xml_ff_virtual_sites_trivalent_match_once,
-            "smi": None,
-            "assert_physics": (
-                (as_charge(+0.0000), None, None),
-                (as_charge(+1.0000), None, None),
-                (as_charge(+0.0000), None, None),
-                (as_charge(+0.0000), None, None),
-                (as_charge(-1.0000), as_sigma(0.00), as_epsilon(0.00)),
-            ),
-            "mol": create_ammonia(),
-        }
-    )
+    opts = {
+        "xml": xml_ff_virtual_sites_trivalent_match_once,
+        "smi": None,
+        "assert_physics": (
+            (as_charge(+0.0000), None, None),
+            (as_charge(+1.0000), None, None),
+            (as_charge(+0.0000), None, None),
+            (as_charge(+0.0000), None, None),
+            (as_charge(-1.0000), as_sigma(0.00), as_epsilon(0.00)),
+        ),
+        "mol": create_ammonia(),
+    }
     trivalent_parameters_args.append(opts)
 
     @pytest.mark.parametrize(

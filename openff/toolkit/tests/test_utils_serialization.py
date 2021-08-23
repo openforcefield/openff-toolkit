@@ -150,5 +150,5 @@ class TestUtilsSMIRNOFFSerialization(TestUtilsSerialization):
         filename = get_data_file_path("test_forcefields/test_forcefield.offxml")
         with open(filename, "r") as f:
             xml = f.read()
-            dictionary = xmltodict.parse(xml)
+            dictionary = xmltodict.parse(xml, dict_constructor=dict)
             cls.thing = DictionaryContainer(dictionary)

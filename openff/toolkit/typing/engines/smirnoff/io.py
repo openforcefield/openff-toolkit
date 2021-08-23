@@ -209,7 +209,7 @@ class XMLParameterIOHandler(ParameterIOHandler):
 
         # Parse XML file
         try:
-            smirnoff_data = xmltodict.parse(data, attr_prefix="")
+            smirnoff_data = xmltodict.parse(data, attr_prefix="", dict_constructor=dict)
             return smirnoff_data
         except ExpatError as e:
             raise SMIRNOFFParseError(str(e))

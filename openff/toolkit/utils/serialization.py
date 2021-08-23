@@ -279,16 +279,8 @@ class Serializable(abc.ABC):
             A YAML serialized representation of the object
 
         """
-        from collections import OrderedDict
-
         import yaml
 
-        yaml.SafeDumper.add_representer(
-            OrderedDict,
-            lambda dumper, value: self._represent_odict(
-                dumper, u"tag:yaml.org,2002:map", value
-            ),
-        )
         d = self.to_dict()
         return yaml.safe_dump(d, width=180)
 
@@ -311,17 +303,16 @@ class Serializable(abc.ABC):
             Instantiated object
 
         """
-        from collections import OrderedDict
-
         import yaml
 
-        yaml.SafeDumper.add_representer(
-            OrderedDict,
-            lambda dumper, value: self._represent_odict(
-                dumper, u"tag:yaml.org,2002:map", value
-            ),
-        )
-        d = yaml.safe_load(serialized)
+        # yaml.SafeDumper.add_representer(
+        #     dict,
+        #     lambda dumper, value: self._represent_odict(
+        #         dumper, u"tag:yaml.org,2002:map", value
+        #     ),
+        # )
+        # d = yaml.safe_load(serialized)
+        d = yaml.load(serialized)
         return cls.from_dict(d)
 
     @requires_package("msgpack")

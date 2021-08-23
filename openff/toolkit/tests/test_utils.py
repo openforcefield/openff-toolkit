@@ -116,8 +116,6 @@ def test_dimensionless_units():
 
 
 def test_sort_smirnoff_dict():
-    from collections import OrderedDict
-
     from openff.toolkit.typing.engines.smirnoff import ForceField
     from openff.toolkit.utils.utils import sort_smirnoff_dict
 
@@ -126,9 +124,7 @@ def test_sort_smirnoff_dict():
 
     # Ensure data is not created or destroyed
     # dict.__eq__ does not check order
-    assert smirnoff_dict == OrderedDict(
-        sort_smirnoff_dict(forcefield._to_smirnoff_data())
-    )
+    assert smirnoff_dict == sort_smirnoff_dict(forcefield._to_smirnoff_data())
 
 
 def test_import_message_exception_raises_warning(caplog):

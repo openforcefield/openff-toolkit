@@ -18,7 +18,6 @@ Class definitions to represent a molecular system and its chemical components
 """
 
 import itertools
-from collections import OrderedDict
 from collections.abc import MutableMapping
 
 import numpy as np
@@ -55,7 +54,7 @@ class _TransformedDict(MutableMapping):
     """
 
     def __init__(self, *args, **kwargs):
-        self.store = OrderedDict()
+        self.store = dict()
         self.update(dict(*args, **kwargs))  # use the free update to set keys
 
     def __getitem__(self, key):
@@ -122,24 +121,18 @@ class ValenceDict(_TransformedDict):
         assert len(key) < 4
         refkey = __class__.key_transform(key)
         if len(key) == 2:
-            permutations = OrderedDict(
-                {(refkey[0], refkey[1]): 0, (refkey[1], refkey[0]): 1}
-            )
+            permutations = dict({(refkey[0], refkey[1]): 0, (refkey[1], refkey[0]): 1})
         elif len(key) == 3:
-            permutations = OrderedDict(
-                {
-                    (refkey[0], refkey[1], refkey[2]): 0,
-                    (refkey[2], refkey[1], refkey[0]): 1,
-                }
-            )
+            permutations = {
+                (refkey[0], refkey[1], refkey[2]): 0,
+                (refkey[2], refkey[1], refkey[0]): 1,
+            }
         else:
             # For a proper, only forward/backward makes sense
-            permutations = OrderedDict(
-                {
-                    (refkey[0], refkey[1], refkey[2], refkey[3]): 0,
-                    (refkey[3], refkey[1], refkey[2], refkey[0]): 1,
-                }
-            )
+            permutations = {
+                (refkey[0], refkey[1], refkey[2], refkey[3]): 0,
+                (refkey[3], refkey[1], refkey[2], refkey[0]): 1,
+            }
         if possible is not None:
             i = 0
             # If the possible permutations were provided, ensure that `possible` is a SUBSET of `permutations`
@@ -316,16 +309,14 @@ class ImproperDict(_TransformedDict):
         """
         assert len(key) == 4
         refkey = __class__.key_transform(key)
-        permutations = OrderedDict(
-            {
-                (refkey[0], refkey[1], refkey[2], refkey[3]): 0,
-                (refkey[0], refkey[1], refkey[3], refkey[2]): 1,
-                (refkey[2], refkey[1], refkey[0], refkey[3]): 2,
-                (refkey[2], refkey[1], refkey[3], refkey[0]): 3,
-                (refkey[3], refkey[1], refkey[0], refkey[2]): 4,
-                (refkey[3], refkey[1], refkey[2], refkey[0]): 5,
-            }
-        )
+        permutations = {
+            (refkey[0], refkey[1], refkey[2], refkey[3]): 0,
+            (refkey[0], refkey[1], refkey[3], refkey[2]): 1,
+            (refkey[2], refkey[1], refkey[0], refkey[3]): 2,
+            (refkey[2], refkey[1], refkey[3], refkey[0]): 3,
+            (refkey[3], refkey[1], refkey[0], refkey[2]): 4,
+            (refkey[3], refkey[1], refkey[2], refkey[0]): 5,
+        }
         if possible is not None:
             assert all(
                 [p in permutations for p in possible]
@@ -1417,7 +1408,7 @@ class Topology(Serializable):
             self.copy_initializer(other)
         elif isinstance(other, FrozenMolecule):
             self.from_molecules([other])
-        elif isinstance(other, OrderedDict):
+        elif isinstance(other, dict):
             self._initialize_from_dict(other)
 
     def _initialize(self):
@@ -1429,7 +1420,7 @@ class Topology(Serializable):
         self._box_vectors = None
         # self._reference_molecule_dicts = set()
         # TODO: Look into weakref and what it does. Having multiple topologies might cause a memory leak.
-        self._reference_molecule_to_topology_molecules = OrderedDict()
+        self._reference_molecule_to_topology_molecules = dict()
         self._topology_molecules = list()
 
     @property

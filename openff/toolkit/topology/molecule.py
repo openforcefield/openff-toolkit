@@ -32,7 +32,6 @@ Molecular chemical entity representation and routines to interface with cheminfo
 import operator
 import warnings
 from abc import abstractmethod
-from collections import OrderedDict
 from copy import deepcopy
 from typing import Optional, Union
 
@@ -249,7 +248,7 @@ class Atom(Particle):
     def to_dict(self):
         """Return a dict representation of the atom."""
         # TODO
-        atom_dict = OrderedDict()
+        atom_dict = dict()
         atom_dict["atomic_number"] = self._atomic_number
         atom_dict["formal_charge"] = self._formal_charge / unit.elementary_charge
         atom_dict["is_aromatic"] = self._is_aromatic
@@ -874,7 +873,7 @@ class VirtualSite(Particle):
 
         """
         # Each subclass should have its own to_dict
-        vsite_dict = OrderedDict()
+        vsite_dict = dict()
         vsite_dict["name"] = self._name
         vsite_dict["atoms"] = tuple([i.molecule_atom_index for i in self.atoms])
         vsite_dict["charge_increments"] = quantity_to_string(self._charge_increments)
@@ -1993,7 +1992,7 @@ class Bond(Serializable):
         Return a dict representation of the bond.
 
         """
-        bond_dict = OrderedDict()
+        bond_dict = dict()
         bond_dict["atom1"] = self.atom1.molecule_atom_index
         bond_dict["atom2"] = self.atom2.molecule_atom_index
         bond_dict["bond_order"] = self._bond_order
@@ -2278,7 +2277,7 @@ class FrozenMolecule(Serializable):
                 # TODO: This will need to be updated once FrozenMolecules and Molecules are significantly different
                 self._copy_initializer(other)
                 loaded = True
-            if isinstance(other, OrderedDict) and not (loaded):
+            if isinstance(other, dict) and not (loaded):
                 self.__setstate__(other)
                 loaded = True
 
@@ -2411,13 +2410,13 @@ class FrozenMolecule(Serializable):
 
         Returns
         -------
-        molecule_dict : OrderedDict
+        molecule_dict : dict
             A dictionary representation of the molecule.
 
         """
         from openff.toolkit.utils.utils import serialize_numpy
 
-        molecule_dict = OrderedDict()
+        molecule_dict = dict()
         molecule_dict["name"] = self._name
         ## From Jeff: If we go the properties-as-dict route, then _properties should, at
         ## the top level, be a dict. Should we go through recursively and ensure all values are dicts too?
@@ -2478,7 +2477,7 @@ class FrozenMolecule(Serializable):
 
         Parameters
         ----------
-        molecule_dict : OrderedDict
+        molecule_dict : dict
             A dictionary representation of the molecule.
 
         Returns
@@ -2498,7 +2497,7 @@ class FrozenMolecule(Serializable):
 
         Parameters
         ----------
-        molecule_dict : OrderedDict
+        molecule_dict : dict
             A dictionary representation of the molecule.
         """
         # TODO: Provide useful exception messages if there are any failures

@@ -33,7 +33,6 @@ import copy
 import logging
 import os
 import pathlib
-from collections import OrderedDict
 
 from simtk import openmm
 
@@ -343,18 +342,14 @@ class ForceField:
             False  # if True, will disable checking compatibility version
         )
         self._aromaticity_model = None
-        self._parameter_handler_classes = (
-            OrderedDict()
-        )  # Parameter handler classes that _can_ be initialized if needed
-        self._parameter_handlers = (
-            OrderedDict()
-        )  # ParameterHandler classes to be instantiated for each parameter type
-        self._parameter_io_handler_classes = (
-            OrderedDict()
-        )  # ParameterIOHandler classes that _can_ be initialiazed if needed
-        self._parameter_io_handlers = (
-            OrderedDict()
-        )  # ParameterIO classes to be used for each file type
+        # Parameter handler classes that _can_ be initialized if needed
+        self._parameter_handler_classes = dict()
+        # ParameterHandler classes to be instantiated for each parameter type
+        self._parameter_handlers = dict()
+        # ParameterIOHandler classes that _can_ be initialiazed if needed
+        self._parameter_io_handler_classes = dict()
+        # ParameterIO classes to be used for each file type
+        self._parameter_io_handlers = dict()
         self._author = None
         self._date = None
 
@@ -882,18 +877,18 @@ class ForceField:
 
     def _to_smirnoff_data(self, discard_cosmetic_attributes=False):
         """
-        Convert this ForceField and all related ParameterHandlers to an OrderedDict representing a SMIRNOFF
+        Convert this ForceField and all related ParameterHandlers to an dict representing a SMIRNOFF
         data object.
 
         Returns
         -------
-        smirnoff_dict : OrderedDict
-            A nested OrderedDict representing this ForceField as a SMIRNOFF data object.
+        smirnoff_dict : dict
+            A nested dict representing this ForceField as a SMIRNOFF data object.
         discard_cosmetic_attributes : bool, optional. Default=False
             Whether to discard any non-spec attributes stored in the ForceField.
 
         """
-        l1_dict = OrderedDict()
+        l1_dict = dict()
 
         # Assume we will write out SMIRNOFF data in compliance with the max supported spec version
         l1_dict["version"] = self._MAX_SUPPORTED_SMIRNOFF_VERSION
@@ -915,7 +910,7 @@ class ForceField:
                 discard_cosmetic_attributes=discard_cosmetic_attributes
             )
 
-        smirnoff_dict = OrderedDict()
+        smirnoff_dict = dict()
         smirnoff_dict["SMIRNOFF"] = l1_dict
         smirnoff_dict = convert_all_quantities_to_string(smirnoff_dict)
         return smirnoff_dict
@@ -927,7 +922,7 @@ class ForceField:
 
         Parameters
         ----------
-        smirnoff_data : OrderedDict
+        smirnoff_data : dict
             A representation of a SMIRNOFF-format data structure. Begins at top-level 'SMIRNOFF' key.
         allow_cosmetic_attributes : bool, optional. Default = False
             Whether to permit non-spec kwargs in smirnoff_data.
@@ -1015,7 +1010,7 @@ class ForceField:
                 parameter_list_tagname = infotype._ELEMENT_NAME
             except AttributeError:
                 # The ParameterHandler doesn't have ParameterTypes (e.g. ToolkitAM1BCCHandler).
-                parameter_list_dict = {}
+                parameter_list_dict = dict()
             else:
                 parameter_list_dict = section_dict.pop(parameter_list_tagname, {})
 
@@ -1054,7 +1049,7 @@ class ForceField:
 
         Returns
         -------
-        smirnoff_data : OrderedDict
+        smirnoff_data : dict
             A representation of a SMIRNOFF-format data structure. Begins at top-level 'SMIRNOFF' key.
 
         """
