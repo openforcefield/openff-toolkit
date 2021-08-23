@@ -4121,13 +4121,8 @@ class ToolkitAM1BCCHandler(_NonbondedHandler):
                     partial_charge_method="am1bccelf10", toolkit_registry=toolkit_registry
                 )
             except Exception as e:
-                try:
-                    ref_mol.assign_partial_charges(
-                        partial_charge_method="am1bcc", toolkit_registry=toolkit_registry
-                    )
-                except:
-                    warnings.warn(str(e), Warning)
-                    continue
+                warnings.warn(str(e), Warning)
+                continue
 
             # Assign charges to relevant atoms
             for topology_molecule in topology._reference_molecule_to_topology_molecules[
