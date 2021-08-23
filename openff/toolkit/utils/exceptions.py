@@ -290,3 +290,8 @@ class DuplicateVirtualSiteTypeException(OpenFFToolkitException):
 
 class CallbackRegistrationError(OpenFFToolkitException, TypeError):
     """Error raised when callback registration fails."""
+
+
+class MissingIndexedAttributeError(OpenFFToolkitException, IndexError,
+                                   KeyError, AttributeError):
+    """Error raised when an indexed attribute does not exist"""

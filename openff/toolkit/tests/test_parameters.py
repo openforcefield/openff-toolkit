@@ -42,6 +42,7 @@ from openff.toolkit.utils.exceptions import (
     ParameterLookupError,
     SMIRNOFFSpecError,
     SMIRNOFFVersionError,
+    MissingIndexedAttributeError,
 )
 
 # ======================================================================
@@ -333,6 +334,40 @@ class TestInterpolation:
 class TestParameterAttributeHandler:
     """Test suite for the base class _ParameterAttributeHandler."""
 
+    def test_access_get_set_single_indexed_attribute_legacy(self):
+        """Single indexed attributes such as k1 can be accessed through normal attribute syntax."""
+
+        class MyParameterType(_ParameterAttributeHandler):
+            k = IndexedParameterAttribute()
+
+        my_parameter = MyParameterType(k=[1, 2, 3])
+
+        # Getting the attribute works.
+        assert my_parameter.k1 == 1
+        assert my_parameter.k2 == 2
+        assert my_parameter.k3 == 3
+
+        # So does setting it.
+        my_parameter.k2 = 5
+        assert my_parameter.k2 == 5
+        assert my_parameter.k == [1, 5, 3]
+
+        # Accessing k4 raises an index error.
+        with pytest.raises(
+            IndexError, match="'k4' is out of bounds for indexed attribute 'k'"
+        ):
+            my_parameter.k4
+        with pytest.raises(
+            IndexError, match="'k4' is out of bounds for indexed attribute 'k'"
+        ):
+            my_parameter.k4 = 2
+
+        # For other attributes, the behavior is normal.
+        with pytest.raises(AttributeError, match="has no attribute 'x'"):
+            my_parameter.x
+        # Monkey-patching.
+        my_parameter.x = 3
+
     def test_access_get_set_single_indexed_attribute(self):
         """Single indexed attributes such as k1 can be accessed through normal attribute syntax."""
 
@@ -353,11 +388,13 @@ class TestParameterAttributeHandler:
 
         # Accessing k4 raises an index error.
         with pytest.raises(
-            IndexError, match="'k4' is out of bound for indexed attribute 'k'"
+            MissingIndexedAttributeError,
+            match="'k4' is out of bounds for indexed attribute 'k'",
         ):
             my_parameter.k4
         with pytest.raises(
-            IndexError, match="'k4' is out of bound for indexed attribute 'k'"
+            MissingIndexedAttributeError,
+            match="'k4' is out of bounds for indexed attribute 'k'",
         ):
             my_parameter.k4 = 2
 
@@ -366,6 +403,16 @@ class TestParameterAttributeHandler:
             my_parameter.x
         # Monkey-patching.
         my_parameter.x = 3
+
+    def test_hasattr(self):
+        """Single indexed attributes such as k1 can be accessed through normal attribute syntax."""
+
+        class MyParameterType(_ParameterAttributeHandler):
+            k = IndexedParameterAttribute()
+
+        my_parameter = MyParameterType(k=[1, 2, 3])
+        assert hasattr(my_parameter, "k3")
+        assert not hasattr(my_parameter, "k4")
 
     def test_mro_access_get_set_single_indexed_attribute(self):
         """Attribute access is forwarded correctly to the next MRO classes."""
