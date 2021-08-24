@@ -76,6 +76,7 @@ from openff.toolkit.utils.exceptions import (
     DuplicateVirtualSiteTypeException,
     FractionalBondOrderInterpolationMethodUnsupportedError,
     IncompatibleParameterError,
+    MissingIndexedAttributeError,
     NonintegralMoleculeChargeException,
     NotEnoughPointsForInterpolationError,
     ParameterLookupError,
@@ -86,7 +87,6 @@ from openff.toolkit.utils.exceptions import (
     UnassignedMoleculeChargeException,
     UnassignedProperTorsionParameterException,
     UnassignedValenceParameterException,
-    MissingIndexedAttributeError,
 )
 from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
 from openff.toolkit.utils.utils import (

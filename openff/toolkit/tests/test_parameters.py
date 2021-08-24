@@ -38,11 +38,11 @@ from openff.toolkit.utils.exceptions import (
     DuplicateParameterError,
     IncompatibleParameterError,
     IncompatibleUnitError,
+    MissingIndexedAttributeError,
     NotEnoughPointsForInterpolationError,
     ParameterLookupError,
     SMIRNOFFSpecError,
     SMIRNOFFVersionError,
-    MissingIndexedAttributeError,
 )
 
 # ======================================================================
