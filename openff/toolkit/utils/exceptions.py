@@ -113,7 +113,7 @@ class ChargeCalculationError(OpenFFToolkitException):
 
 
 class ConformerGenerationError(OpenFFToolkitException):
-    """Conformer generation via a wrapped toolkit faiiled."""
+    """Conformer generation via a wrapped toolkit failed."""
 
 
 class InvalidIUPACNameError(OpenFFToolkitException):
