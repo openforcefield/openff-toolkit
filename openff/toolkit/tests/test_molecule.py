@@ -3695,6 +3695,9 @@ class TestMolecule:
                 n_conformers=1, toolkit_registry=RDKitToolkitWrapper()
             )
 
+        with pytest.raises(ValueError, match="No registered.*generate_conf"):
+            molecule.generate_conformers(n_conformers=1)
+
     @requires_pkg("ipython")
     @requires_rdkit
     def test_visualize_rdkit(self):

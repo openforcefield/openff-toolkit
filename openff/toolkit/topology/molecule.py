@@ -3224,6 +3224,7 @@ class FrozenMolecule(Serializable):
                 n_conformers=n_conformers,
                 rms_cutoff=rms_cutoff,
                 clear_existing=clear_existing,
+                raise_exception_types=[],
             )
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
