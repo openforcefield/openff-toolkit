@@ -3681,10 +3681,9 @@ class TestMolecule:
 
     @requires_rdkit
     @requires_openeye
-    @pytest.mark.slow
     def test_conformer_generation_failure(self):
         # This test seems possibly redundant, is it needed?
-        molecule = Molecule.from_smiles(100 * "CC")
+        molecule = Molecule.from_smiles("F[U](F)(F)(F)(F)F")
 
         with pytest.raises(ConformerGenerationError, match="Omega conf.*fail"):
             molecule.generate_conformers(

@@ -1160,11 +1160,10 @@ class TestOpenEyeToolkitWrapper:
         )
         assert molecule2.n_conformers == 10
 
-    @pytest.mark.slow
     def test_generate_conformers_failure(self):
         toolkit = OpenEyeToolkitWrapper()
 
-        molecule = Molecule.from_smiles(100 * "CC")
+        molecule = Molecule.from_smiles("F[U](F)(F)(F)(F)F")
 
         with pytest.raises(ConformerGenerationError, match="Omega conf.*fail"):
             toolkit.generate_conformers(molecule, n_conformers=1)
@@ -2464,11 +2463,10 @@ class TestRDKitToolkitWrapper:
         )
         assert molecule2.n_conformers == 10
 
-    @pytest.mark.slow
     def test_generate_conformers_failure(self):
         toolkit = RDKitToolkitWrapper()
 
-        molecule = Molecule.from_smiles(100 * "CC")
+        molecule = Molecule.from_smiles("F[U](F)(F)(F)(F)F")
 
         with pytest.raises(ConformerGenerationError, match="RDKit conf.*fail"):
             toolkit.generate_conformers(molecule, n_conformers=1)
