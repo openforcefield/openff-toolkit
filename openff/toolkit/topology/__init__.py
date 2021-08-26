@@ -1,16 +1,15 @@
-from openff.toolkit.topology.molecule import (
+from openff.toolkit.topology.components import (
     Atom,
     Bond,
     BondChargeVirtualSite,
     DivalentLonePairVirtualSite,
-    FrozenMolecule,
-    Molecule,
     MonovalentLonePairVirtualSite,
     Particle,
     TrivalentLonePairVirtualSite,
     VirtualParticle,
     VirtualSite,
 )
+from openff.toolkit.topology.molecule import FrozenMolecule, Molecule
 from openff.toolkit.topology.topology import (
     DuplicateUniqueMoleculeError,
     ImproperDict,
