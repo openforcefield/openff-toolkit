@@ -25,8 +25,6 @@ from openff.toolkit.tests.create_molecules import (
     create_acetaldehyde,
     create_acetate,
     create_ammonia,
-    create_benzene_no_aromatic,
-    create_cis_1_2_dichloroethene,
     create_cyclohexane,
     create_dinitrogen,
     create_dioxygen,

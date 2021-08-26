@@ -1282,8 +1282,6 @@ def test_tagsorted_dict_multiple_keys(tsd):
 def test_tagsorted_dict_clear(tsd):
     """Test the clear method"""
 
-    import itertools
-
     tsd, ref_key = _tagsorted_dict_init_ref_key(tsd)
 
     tsd.clear()
