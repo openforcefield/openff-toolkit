@@ -1289,7 +1289,7 @@ class TestForceField:
             SMIRNOFFSpecError,
             match="Missing version while trying to construct "
             "<class 'openff.toolkit.typing.engines."
-            "smirnoff.parameters.ToolkitAM1BCCHandler'>.",
+            "smirnoff.parameter_handlers.ToolkitAM1BCCHandler'>.",
         ):
             ForceField(xml_without_section_version)
 
