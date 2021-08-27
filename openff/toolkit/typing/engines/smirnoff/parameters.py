@@ -47,7 +47,6 @@ __all__ = [
     "ToolkitAM1BCCHandler",
     "VirtualSiteHandler",
 ]
-
 import abc
 import copy
 import functools
@@ -57,6 +56,7 @@ import re
 from collections import OrderedDict, defaultdict
 from enum import Enum
 from itertools import combinations
+from typing import Any, List, Optional, Type, Union
 
 from simtk import openmm, unit
 
@@ -1731,16 +1731,16 @@ class ParameterType(_ParameterAttributeHandler):
     """
 
     # ChemicalEnvironment valence type string expected by SMARTS string for this Handler
-    _VALENCE_TYPE = None
+    _VALENCE_TYPE: Optional[str] = None
     # The string mapping to this ParameterType in a SMIRNOFF data source
-    _ELEMENT_NAME = None
+    _ELEMENT_NAME: Optional[str] = None
 
     # Parameter attributes shared among all parameter types.
     smirks = ParameterAttribute()
     id = ParameterAttribute(default=None)
     parent_id = ParameterAttribute(default=None)
 
-    @smirks.converter
+    @smirks.converter  # type: ignore[no-redef]
     def smirks(self, attr, smirks):
         # Validate the SMIRKS string to ensure it matches the expected
         # parameter type, raising an exception if it is invalid or doesn't
@@ -1812,26 +1812,27 @@ class ParameterHandler(_ParameterAttributeHandler):
 
     """
 
-    _TAGNAME = None  # str of section type handled by this ParameterHandler (XML element name for SMIRNOFF XML representation)
-    _INFOTYPE = None  # container class with type information that will be stored in self._parameters
-    _OPENMMTYPE = None  # OpenMM Force class (or None if no equivalent)
-    _DEPENDENCIES = (
-        None  # list of ParameterHandler classes that must precede this, or None
-    )
+    # str of section type handled by this ParameterHandler (XML element name for SMIRNOFF XML representation)
+    _TAGNAME: Optional[str] = None
+    # container class with type information that will be stored in self._parameters
+    _INFOTYPE: Optional[Any] = None
+    # OpenMM Force class (or None if no equivalent)
+    _OPENMMTYPE: Optional[str] = None
+    # list of ParameterHandler classes that must precede this, or None
+    _DEPENDENCIES: Optional[Any] = None
 
-    _KWARGS = []  # Kwargs to catch when create_force is called
-    _SMIRNOFF_VERSION_INTRODUCED = (
-        0.0  # the earliest version of SMIRNOFF spec that supports this ParameterHandler
-    )
-    _SMIRNOFF_VERSION_DEPRECATED = (
-        None  # if deprecated, the first SMIRNOFF version number it is no longer used
-    )
+    # Kwargs to catch when create_force is called
+    _KWARGS: List[str] = []
+    # the earliest version of SMIRNOFF spec that supports this ParameterHandler
+    _SMIRNOFF_VERSION_INTRODUCED = 0.0
+    _SMIRNOFF_VERSION_DEPRECATED = None
+    # if deprecated, the first SMIRNOFF version number it is no longer used
     _MIN_SUPPORTED_SECTION_VERSION = 0.3
     _MAX_SUPPORTED_SECTION_VERSION = 0.3
 
     version = ParameterAttribute()
 
-    @version.converter
+    @version.converter  # type: ignore[no-redef]
     def version(self, attr, new_version):
         """
         Raise a parsing exception if the given section version is unsupported.
@@ -3541,7 +3542,7 @@ class vdWHandler(_NonbondedHandler):
     )
 
     # TODO: Use _allow_only when ParameterAttribute will support multiple converters (it'll be easy when we switch to use the attrs library)
-    @scale12.converter
+    @scale12.converter  # type: ignore[no-redef]
     def scale12(self, attrs, new_scale12):
         if new_scale12 != 0.0:
             raise SMIRNOFFSpecError(
@@ -3550,7 +3551,7 @@ class vdWHandler(_NonbondedHandler):
             )
         return new_scale12
 
-    @scale13.converter
+    @scale13.converter  # type: ignore[no-redef]
     def scale13(self, attrs, new_scale13):
         if new_scale13 != 0.0:
             raise SMIRNOFFSpecError(
@@ -3559,7 +3560,7 @@ class vdWHandler(_NonbondedHandler):
             )
         return new_scale13
 
-    @scale15.converter
+    @scale15.converter  # type: ignore[no-redef]
     def scale15(self, attrs, new_scale15):
         if new_scale15 != 1.0:
             raise SMIRNOFFSpecError(
@@ -3662,7 +3663,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
     )
 
     # TODO: Use _allow_only when ParameterAttribute will support multiple converters (it'll be easy when we switch to use the attrs library)
-    @scale12.converter
+    @scale12.converter  # type: ignore[no-redef]
     def scale12(self, attrs, new_scale12):
         if new_scale12 != 0.0:
             raise SMIRNOFFSpecError(
@@ -3671,7 +3672,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
             )
         return new_scale12
 
-    @scale13.converter
+    @scale13.converter  # type: ignore[no-redef]
     def scale13(self, attrs, new_scale13):
         if new_scale13 != 0.0:
             raise SMIRNOFFSpecError(
@@ -3680,7 +3681,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
             )
         return new_scale13
 
-    @scale15.converter
+    @scale15.converter  # type: ignore[no-redef]
     def scale15(self, attrs, new_scale15):
         if new_scale15 != 1.0:
             raise SMIRNOFFSpecError(
@@ -3689,7 +3690,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
             )
         return new_scale15
 
-    @switch_width.converter
+    @switch_width.converter  # type: ignore[no-redef]
     def switch_width(self, attr, new_switch_width):
         if self.switch_width != 0.0 * unit.angstrom:
             raise IncompatibleParameterError(
@@ -4910,7 +4911,7 @@ class VirtualSiteHandler(_NonbondedHandler):
 
         return self._virtual_site_types
 
-    @exclusion_policy.converter
+    @exclusion_policy.converter  # type: ignore[no-redef]
     def exclusion_policy(self, attr, policy):
         """
         Convert and validate the exclusion policy specified in the VirtualSiteHandler
@@ -4967,7 +4968,8 @@ class VirtualSiteHandler(_NonbondedHandler):
         # using this generic selector as a type
         _ELEMENT_NAME = "VirtualSite"
 
-        _enable_types = {}
+        # TODO: This is never used - remove?
+        _enable_types = {}  # type: ignore
 
         def __new__(cls, **attrs):
 
@@ -5014,13 +5016,13 @@ class VirtualSiteHandler(_NonbondedHandler):
 
         # Here we define the default sorting behavior if we need to sort the
         # atom key into a canonical ordering
-        transformed_dict_cls = ValenceDict
+        transformed_dict_cls: Union[Type[ValenceDict], Type[ImproperDict]] = ValenceDict
 
         # Value of None indicates "not a valid type" or "not an actual implemented type".
         # To enable/register a new virtual site type, make a subclass and set its
         # _vsite_type to what would need to be provided in the OFFXML "type" attr,
         # e.g. type="BondCharge" would mean _vsite_type="BondCharge"
-        _vsite_type = None
+        _vsite_type: Optional[str] = None
 
         @classmethod
         def vsite_type(cls):
@@ -5093,7 +5095,7 @@ class VirtualSiteHandler(_NonbondedHandler):
         #             "VirtualSite not given a type. Set type to one of:\n" + valid_types
         #         )
 
-        @match.converter
+        @match.converter  # type: ignore[no-redef]
         def match(self, attr, match):
             """
             Convert and validate the virtual site type specified in the VirtualSite element

@@ -17,8 +17,8 @@ __all__ = [
     "XMLParameterIOHandler",
 ]
 
-
 import logging
+from typing import Optional
 
 import xmltodict
 from simtk import unit
@@ -83,7 +83,7 @@ class ParameterIOHandler:
     Base class for handling serialization/deserialization of SMIRNOFF ForceField objects
     """
 
-    _FORMAT = None
+    _FORMAT: Optional[str] = None
 
     def __init__(self):
         """

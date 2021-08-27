@@ -3089,7 +3089,7 @@ class FrozenMolecule(Serializable):
 
         mol1_netx = to_networkx(mol1)
         mol2_netx = to_networkx(mol2)
-        from networkx.algorithms.isomorphism import GraphMatcher
+        from networkx.algorithms.isomorphism import GraphMatcher  # type: ignore
 
         GM = GraphMatcher(
             mol1_netx, mol2_netx, node_match=node_match_func, edge_match=edge_match_func
@@ -3340,7 +3340,7 @@ class FrozenMolecule(Serializable):
             )
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
-            toolkit.apply_elf_conformer_selection(
+            toolkit.apply_elf_conformer_selection(  # type: ignore[attr-defined]
                 self, molecule=self, percentage=percentage, limit=limit, **kwargs
             )
         else:
@@ -6341,7 +6341,7 @@ class Molecule(FrozenMolecule):
                 )
         if backend == "rdkit":
             if RDKIT_AVAILABLE:
-                from rdkit.Chem.Draw import IPythonConsole
+                from rdkit.Chem.Draw import IPythonConsole  # type: ignore[import]
 
                 return self.to_rdkit()
             else:
