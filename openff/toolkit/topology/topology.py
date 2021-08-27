@@ -2478,65 +2478,6 @@ class Topology(Serializable):
         )
 
     # TODO: Jeff prepended an underscore on this before 0.2.0 release to remove it from the API.
-    #       Before exposing this, we should look carefully at the information that is preserved/lost during this
-    #       conversion, and make it clear what would happen to this information in a round trip. For example,
-    #       we should know what would happen to formal and partial bond orders and charges, stereochemistry, and
-    #       multi-conformer information. It will be important to document these risks to users, as all of these
-    #       factors could lead to unintended behavior during system parameterization.
-    def _to_mdtraj(self):
-        """
-        Create an MDTraj Topology object.
-
-        Returns
-        ----------
-        mdtraj_topology : mdtraj.Topology
-            An MDTraj Topology object
-        #"""
-        import mdtraj as md
-
-        return md.Topology.from_openmm(self.to_openmm())
-
-    @staticmethod
-    def from_parmed(parmed_structure, unique_molecules=None):
-        """
-        .. warning:: This functionality will be implemented in a future toolkit release.
-
-        Construct an OpenFF Topology object from a ParmEd Structure object.
-
-        Parameters
-        ----------
-        parmed_structure : parmed.Structure
-            A ParmEd structure object
-        unique_molecules : iterable of objects that can be used to construct unique Molecule objects
-            All unique molecules must be provided, in any order, though multiple copies of each molecule are allowed.
-            The atomic elements and bond connectivity will be used to match the reference molecules
-            to molecule graphs appearing in the structure's ``topology`` object. If bond orders are present in the
-            structure's ``topology`` object, these will be used in matching as well.
-
-        Returns
-        -------
-        topology : openff.toolkit.topology.Topology
-            An OpenFF Topology object
-        """
-        # TODO: Implement functionality
-        raise NotImplementedError
-
-    def to_parmed(self):
-        """
-
-        .. warning:: This functionality will be implemented in a future toolkit release.
-
-        Create a ParmEd Structure object.
-
-        Returns
-        ----------
-        parmed_structure : parmed.Structure
-            A ParmEd Structure objecft
-        """
-        # TODO: Implement functionality
-        raise NotImplementedError
-
-    # TODO: Jeff prepended an underscore on this before 0.2.0 release to remove it from the API.
     #       This function is deprecated and expects the OpenEye toolkit. We need to discuss what
     #       to do with this functionality in light of our move to the ToolkitWrapper architecture.
     #       Also, as written, this function implies several things about our toolkit's ability to
