@@ -6,6 +6,7 @@ channels:
 dependencies:
     # Base depends
   - openff-toolkit
+  - openmm >=7.5,<7.6.0a
 
   - openmmforcefields
   - openeye-toolkits
