@@ -6,10 +6,6 @@ the `OpenEye Toolkit <https://docs.eyesopen.com/toolkits/python/quickstart-pytho
 __all__ = ("OpenEyeToolkitWrapper",)
 
 
-# =============================================================================================
-# IMPORTS
-# =============================================================================================
-
 import importlib
 import logging
 import pathlib
@@ -25,9 +21,9 @@ from simtk import unit
 if TYPE_CHECKING:
     from openforcefield.topology.molecule import Molecule
 
-from . import base_wrapper
-from .constants import DEFAULT_AROMATICITY_MODEL
-from .exceptions import (
+from openff.toolkit.utils import base_wrapper
+from openff.toolkit.utils.constants import DEFAULT_AROMATICITY_MODEL
+from openff.toolkit.utils.exceptions import (
     ChargeCalculationError,
     ChargeMethodUnavailableError,
     GAFFAtomTypeWarning,
@@ -37,7 +33,7 @@ from .exceptions import (
     ToolkitUnavailableException,
     UndefinedStereochemistryError,
 )
-from .utils import inherit_docstrings
+from openff.toolkit.utils.utils import inherit_docstrings
 
 # =============================================================================================
 # CONFIGURE LOGGER

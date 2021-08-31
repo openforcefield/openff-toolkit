@@ -27,7 +27,6 @@ __all__ = (
     "ALLOWED_FRACTIONAL_BOND_ORDER_MODELS",
     "DEFAULT_CHARGE_MODEL",
     "ALLOWED_CHARGE_MODELS",
-    "MessageException",
     "IncompatibleUnitError",
     "MissingDependencyError",
     "MissingPackageError",
@@ -58,16 +57,13 @@ __all__ = (
 )
 
 
-# =============================================================================================
-# IMPORTS
-# =============================================================================================
-
 import logging
+import warnings
 
-from .ambertools_wrapper import AmberToolsToolkitWrapper
-from .base_wrapper import ToolkitWrapper
-from .builtin_wrapper import BuiltInToolkitWrapper
-from .constants import (
+from openff.toolkit.utils.ambertools_wrapper import AmberToolsToolkitWrapper
+from openff.toolkit.utils.base_wrapper import ToolkitWrapper
+from openff.toolkit.utils.builtin_wrapper import BuiltInToolkitWrapper
+from openff.toolkit.utils.constants import (
     ALLOWED_AROMATICITY_MODELS,
     ALLOWED_CHARGE_MODELS,
     ALLOWED_FRACTIONAL_BOND_ORDER_MODELS,
@@ -75,7 +71,7 @@ from .constants import (
     DEFAULT_CHARGE_MODEL,
     DEFAULT_FRACTIONAL_BOND_ORDER_MODEL,
 )
-from .exceptions import (
+from openff.toolkit.utils.exceptions import (
     AntechamberNotFoundError,
     ChargeCalculationError,
     ChargeMethodUnavailableError,
@@ -87,16 +83,31 @@ from .exceptions import (
     InvalidToolkitError,
     InvalidToolkitRegistryError,
     LicenseError,
-    MessageException,
     MissingDependencyError,
     MissingPackageError,
     SMILESParseError,
     ToolkitUnavailableException,
     UndefinedStereochemistryError,
 )
-from .openeye_wrapper import OpenEyeToolkitWrapper, requires_openeye_module
-from .rdkit_wrapper import RDKitToolkitWrapper
-from .toolkit_registry import ToolkitRegistry
+from openff.toolkit.utils.openeye_wrapper import (
+    OpenEyeToolkitWrapper,
+    requires_openeye_module,
+)
+from openff.toolkit.utils.rdkit_wrapper import RDKitToolkitWrapper
+from openff.toolkit.utils.toolkit_registry import ToolkitRegistry
+
+deprecated_names = ["MessageException"]
+
+# TODO: Remove in January 2022, see _DeprecatedMessageException in openff/toolkit/utils/exceptions.py
+def __getattr__(name):
+    if name in deprecated_names:
+        warnings.filterwarnings("default", category=DeprecationWarning)
+        from openff.toolkit.utils.exceptions import MessageException
+
+        return MessageException
+        # return globals()[f"MessageException"]
+    raise AttributeError(f"module {__name__} has no attribute {name}")
+
 
 # =============================================================================================
 # CONFIGURE LOGGER
@@ -156,7 +167,7 @@ if (
     )
     == 0
 ):
-    from .utils import all_subclasses
+    from openff.toolkit.utils import all_subclasses
 
     msg = "WARNING: No basic cheminformatics toolkits are available.\n"
     msg += "At least one basic toolkit is required to handle SMARTS matching and file I/O. \n"

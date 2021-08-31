@@ -13,16 +13,20 @@ New pluggable handlers can be created by creating subclasses of :class:`Paramete
 """
 
 __all__ = [
+    "DuplicateParameterError",
+    "DuplicateVirtualSiteTypeException",
+    "FractionalBondOrderInterpolationMethodUnsupportedError",
+    "IncompatibleParameterError",
+    "NonintegralMoleculeChargeException",
+    "NotEnoughPointsForInterpolationError",
+    "ParameterLookupError",
     "SMIRNOFFSpecError",
     "SMIRNOFFSpecUnimplementedError",
-    "IncompatibleParameterError",
-    "FractionalBondOrderInterpolationMethodUnsupportedError",
-    "NotEnoughPointsForInterpolationError",
-    "UnassignedValenceParameterException",
-    "UnassignedBondParameterException",
     "UnassignedAngleParameterException",
-    "DuplicateVirtualSiteTypeException",
-    "ParameterLookupError",
+    "UnassignedBondParameterException",
+    "UnassignedMoleculeChargeException",
+    "UnassignedProperTorsionParameterException",
+    "UnassignedValenceParameterException",
     "NonbondedMethod",
     "ParameterList",
     "ParameterType",
@@ -44,11 +48,6 @@ __all__ = [
     "VirtualSiteHandler",
 ]
 
-
-# =============================================================================================
-# GLOBAL IMPORTS
-# =============================================================================================
-
 import abc
 import copy
 import functools
@@ -69,12 +68,28 @@ from openff.toolkit.topology import (
     ValenceDict,
 )
 from openff.toolkit.topology.molecule import Molecule
+from openff.toolkit.topology.topology import NotBondedError
 from openff.toolkit.typing.chemistry import ChemicalEnvironment
 from openff.toolkit.utils.collections import ValidatedDict, ValidatedList
+from openff.toolkit.utils.exceptions import (
+    DuplicateParameterError,
+    DuplicateVirtualSiteTypeException,
+    FractionalBondOrderInterpolationMethodUnsupportedError,
+    IncompatibleParameterError,
+    NonintegralMoleculeChargeException,
+    NotEnoughPointsForInterpolationError,
+    ParameterLookupError,
+    SMIRNOFFSpecError,
+    SMIRNOFFSpecUnimplementedError,
+    UnassignedAngleParameterException,
+    UnassignedBondParameterException,
+    UnassignedMoleculeChargeException,
+    UnassignedProperTorsionParameterException,
+    UnassignedValenceParameterException,
+)
 from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
 from openff.toolkit.utils.utils import (
     IncompatibleUnitError,
-    MessageException,
     all_subclasses,
     attach_units,
     extract_serialized_units_from_dict,
@@ -86,98 +101,6 @@ from openff.toolkit.utils.utils import (
 # =============================================================================================
 
 logger = logging.getLogger(__name__)
-
-
-# ======================================================================
-# CUSTOM EXCEPTIONS
-# ======================================================================
-
-
-class SMIRNOFFSpecError(MessageException):
-    """
-    Exception for when data is noncompliant with the SMIRNOFF data specification.
-    """
-
-    pass
-
-
-class SMIRNOFFSpecUnimplementedError(MessageException):
-    """
-    Exception for when a portion of the SMIRNOFF specification is not yet implemented.
-    """
-
-
-class FractionalBondOrderInterpolationMethodUnsupportedError(MessageException):
-    """
-    Exception for when an unsupported fractional bond order interpolation assignment method is called.
-    """
-
-    pass
-
-
-class NotEnoughPointsForInterpolationError(MessageException):
-    """Exception for when less than two points are provided for interpolation"""
-
-    pass
-
-
-class IncompatibleParameterError(MessageException):
-    """
-    Exception for when a set of parameters is scientifically/technically incompatible with another
-    """
-
-    pass
-
-
-class UnassignedValenceParameterException(Exception):
-    """Exception raised when there are valence terms for which a ParameterHandler can't find parameters."""
-
-    pass
-
-
-class UnassignedBondParameterException(UnassignedValenceParameterException):
-    """Exception raised when there are bond terms for which a ParameterHandler can't find parameters."""
-
-    pass
-
-
-class UnassignedAngleParameterException(UnassignedValenceParameterException):
-    """Exception raised when there are angle terms for which a ParameterHandler can't find parameters."""
-
-    pass
-
-
-class UnassignedProperTorsionParameterException(UnassignedValenceParameterException):
-    """Exception raised when there are proper torsion terms for which a ParameterHandler can't find parameters."""
-
-    pass
-
-
-class UnassignedMoleculeChargeException(Exception):
-    """Exception raised when no charge method is able to assign charges to a molecule."""
-
-    pass
-
-
-class NonintegralMoleculeChargeException(Exception):
-    """Exception raised when the partial charges on a molecule do not sum up to its formal charge."""
-
-    pass
-
-
-class DuplicateParameterError(MessageException):
-    """Exception raised when trying to add a ParameterType that already exists"""
-
-
-class ParameterLookupError(MessageException):
-    """Exception raised when something goes wrong in a parameter lookup in
-    ParameterHandler.__getitem__"""
-
-
-class DuplicateVirtualSiteTypeException(Exception):
-    """Exception raised when trying to register two different virtual site classes with the same 'type'"""
-
-    pass
 
 
 # ======================================================================
@@ -2834,7 +2757,13 @@ class BondHandler(ParameterHandler):
             # particle_indices = tuple([ atom.particle_index for atom in atoms ])
 
             # Ensure atoms are actually bonded correct pattern in Topology
-            self._assert_correct_connectivity(bond_match)
+            try:
+                self._assert_correct_connectivity(bond_match)
+            except NotBondedError as e:
+                smirks = bond_match.parameter_type.smirks
+                raise NotBondedError(
+                    f"While processing bond with SMIRKS {smirks}: " + e.msg
+                )
 
             # topology.assert_bonded(atoms[0], atoms[1])
             bond_params = bond_match.parameter_type
@@ -3010,7 +2939,13 @@ class AngleHandler(ParameterHandler):
             # Ensure atoms are actually bonded correct pattern in Topology
             # for (i, j) in [(0, 1), (1, 2)]:
             #     topology.assert_bonded(atoms[i], atoms[j])
-            self._assert_correct_connectivity(angle_match)
+            try:
+                self._assert_correct_connectivity(angle_match)
+            except NotBondedError as e:
+                smirks = angle_match.parameter_type.smirks
+                raise NotBondedError(
+                    f"While processing angle with SMIRKS {smirks}: " + e.msg
+                )
 
             if (
                 topology.is_constrained(atoms[0], atoms[1])
@@ -3160,7 +3095,13 @@ class ProperTorsionHandler(ParameterHandler):
         for (atom_indices, torsion_match) in torsion_matches.items():
             # Ensure atoms are actually bonded correct pattern in Topology
             # Currently does nothing
-            self._assert_correct_connectivity(torsion_match)
+            try:
+                self._assert_correct_connectivity(torsion_match)
+            except NotBondedError as e:
+                smirks = torsion_match.parameter_type.smirks
+                raise NotBondedError(
+                    f"While processing torsion with SMIRKS {smirks}: " + e.msg
+                )
 
             if torsion_match.parameter_type.k_bondorder is None:
                 # TODO: add a check here that we have same number of terms for
@@ -3393,7 +3334,15 @@ class ImproperTorsionHandler(ParameterHandler):
             # For impropers, central atom is atom 1
             # for (i, j) in [(0, 1), (1, 2), (1, 3)]:
             #     topology.assert_bonded(atom_indices[i], atom_indices[j])
-            self._assert_correct_connectivity(improper_match, [(0, 1), (1, 2), (1, 3)])
+            try:
+                self._assert_correct_connectivity(
+                    improper_match, [(0, 1), (1, 2), (1, 3)]
+                )
+            except NotBondedError as e:
+                smirks = improper_match.parameter_type.smirks
+                raise NotBondedError(
+                    f"While processing improper with SMIRKS {smirks}: " + e.msg
+                )
 
             improper = improper_match.parameter_type
 

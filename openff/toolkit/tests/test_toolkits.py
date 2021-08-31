@@ -9,9 +9,6 @@ Tests for cheminformatics toolkit wrappers
 
 """
 
-# =============================================================================================
-# GLOBAL IMPORTS
-# =============================================================================================
 import logging
 import os
 from tempfile import NamedTemporaryFile
@@ -38,22 +35,24 @@ from openff.toolkit.tests.utils import (
 )
 from openff.toolkit.topology.molecule import Molecule
 from openff.toolkit.utils import get_data_file_path
-from openff.toolkit.utils.toolkits import (
-    GLOBAL_TOOLKIT_REGISTRY,
-    AmberToolsToolkitWrapper,
-    BuiltInToolkitWrapper,
+from openff.toolkit.utils.exceptions import (
     ChargeMethodUnavailableError,
-    GAFFAtomTypeWarning,
     IncorrectNumConformersError,
     IncorrectNumConformersWarning,
     InvalidIUPACNameError,
     InvalidToolkitError,
+    ToolkitUnavailableException,
+    UndefinedStereochemistryError,
+)
+from openff.toolkit.utils.toolkits import (
+    GLOBAL_TOOLKIT_REGISTRY,
+    AmberToolsToolkitWrapper,
+    BuiltInToolkitWrapper,
+    GAFFAtomTypeWarning,
     OpenEyeToolkitWrapper,
     RDKitToolkitWrapper,
     ToolkitRegistry,
-    ToolkitUnavailableException,
     ToolkitWrapper,
-    UndefinedStereochemistryError,
 )
 
 # =============================================================================================
