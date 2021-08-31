@@ -51,7 +51,16 @@ $ conda update -c conda-forge openff-toolkit
 
 Note that this may update other packages or install new packages if the most recent release of the Toolkit requires it.
 
-## Alternative method: Single-file installer
+## Installing from source
+
+The OpenFF Toolkit has a lot of dependencies, so we strongly encourage installation with a package manager. The [developer's guide](install_dev) describes setting up a development environment. If you're sure you want to install from source, check the [`conda-forge` recipe](https://github.com/conda-forge/openff-toolkit-feedstock/blob/master/recipe/meta.yaml) for current dependencies, install them, download and extract the source distribution from [GitHub](https://github.com/openforcefield/openff-toolkit/releases), and then run `setup.py`:
+
+```shell-session
+$ cd openff-toolkit
+$ python setup.py install
+```
+
+## Single-file installer
 
 As of release 0.4.1, single-file installers are available for each Open Force Field Toolkit release.
 These are provided primarily for users who do not have access to the Anaconda cloud for installing packages.
@@ -111,17 +120,17 @@ Though a `builtin` toolkit is provided, it implements only a small number of fun
 
 There are certain differences in toolkit behavior between RDKit/AmberTools and OpenEye when reading a small fraction of molecules, and we encourage you to report any unexpected behavior that may be caused by toolkit differences to our [issue tracker](https://github.com/openforcefield/openff-toolkit/issues).
 
-#### RDKit 
+### RDKit 
 
 RDKit is a free and open source chemistry toolkit installed by default with the `openff-toolkit` package. 
 It provides most of the functionality that the OpenFF Toolkit relies on.
 
-#### AmberTools 
+### AmberTools 
 
 AmberTools is a collection of free tools provided with the Amber MD software and installed by default with the `openff-toolkit` package. 
 It provides a free implementation of functionality required by OpenFF Toolkit and not provided by RDKit.
 
-#### OpenEye
+### OpenEye
 
 The OpenFF Toolkit can optionally make use of the [OpenEye toolkit](https://www.eyesopen.com/toolkit-development) if the user has a license key installed.
 Academic laboratories intending to release results into the public domain can [obtain a free license key](https://www.eyesopen.com/licensing-philosophy), while other users (including academics intending to use the software for purposes of generating protected intellectual property) must [pay to obtain a license](https://www.eyesopen.com/pricing).
@@ -134,5 +143,3 @@ $ conda install -c openeye -c conda-forge openeye-toolkits
 
 Though OpenEye can be installed for free, using it requires a license file. 
 No essential `openff-toolkit` release capabilities *require* the OpenEye toolkit, but the Open Force Field developers make use of it in parameterizing new open source force fields.
-
-
