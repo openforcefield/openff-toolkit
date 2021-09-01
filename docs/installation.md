@@ -27,10 +27,14 @@ Installation via the Conda package manager is the preferred method since all dep
 The OpenFF Toolkit is pure Python, and we expect it to work on any platform that supports its dependencies.
 Our automated testing takes place on both MacOS and Ubuntu Linux.
 For Windows support, we recommend using the [Windows Subsystem for Linux](https://docs.microsoft.com/en-us/windows/wsl/install-win10) (WSL) to run a Linux system integrated into Windows.
+We strongly suggest using WSL2, if your hardware supports it, for a smoother experience.
+WSL2 requires virtualization support in hardware.
+This is available on most modern CPUs, but may require activation in the BIOS.
+
 Once WSL is configured, installing and using the Toolkit is done exactly as it would be for Linux.
 
 :::{note}
-WSL2 does support GPU acceleration, at least with nvidia cards, but setting it up [takes some work](https://developer.nvidia.com/cuda/wsl).
+WSL2 [does support](https://docs.microsoft.com/en-us/windows/wsl/tutorials/gpu-compute) GPU compute, at least with nvidia cards, but setting it up [takes some work](https://developer.nvidia.com/cuda/wsl).
 :::
 
 (conda_envs)=
