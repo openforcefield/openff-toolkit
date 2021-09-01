@@ -3678,15 +3678,17 @@ class TestMolecule:
         assert len([atom for atom in mol.atoms if atom.is_in_ring]) == n_atom_rings
         assert len([bond for bond in mol.bonds if bond.is_in_ring]) == n_bond_rings
 
-    @requires_pkg("ipython")
+
+class TestMoleculeVisualization:
+    @requires_pkg("IPython")
     @requires_rdkit
     def test_visualize_rdkit(self):
         """Test that the visualize method returns an expected object when using RDKit to generate a 2-D representation"""
-        import rdkit
+        import IPython
 
         mol = Molecule().from_smiles("CCO")
 
-        assert isinstance(mol.visualize(backend="rdkit"), rdkit.Chem.rdchem.Mol)
+        assert isinstance(mol.visualize(backend="rdkit"), IPython.core.display.SVG)
 
     @pytest.mark.skipif(
         has_pkg("rdkit"),
@@ -3720,7 +3722,15 @@ class TestMolecule:
         # Ensure an NGLView widget is returned
         assert isinstance(mol.visualize(backend="nglview"), nglview.NGLWidget)
 
-    @requires_pkg("ipython")
+        # Providing other arguments is an error
+        with pytest.raises(ValueError):
+            mol.visualize(backend="nglview", width=100)
+        with pytest.raises(ValueError):
+            mol.visualize(backend="nglview", height=100)
+        with pytest.raises(ValueError):
+            mol.visualize(backend="nglview", show_all_hydrogens=False)
+
+    @requires_pkg("IPython")
     @requires_openeye
     def test_visualize_openeye(self):
         """Test that the visualize method returns an expected object when using OpenEye to generate a 2-D representation"""
