@@ -70,6 +70,9 @@ jobs:
           activate-environment: test
           environment-file: devtools/conda-envs/test_env.yaml
           auto-activate-base: false
+          miniforge-version: latest
+          miniforge-variant: Mambaforge
+          use-mamba: true
       - uses: conda-incubator/setup-miniconda@v2.1.1
         name: Install only RDKit
         if: ${{ matrix.cfg.rdkit == 'TRUE' && matrix.cfg.openeye == 'FALSE' }}
@@ -78,6 +81,9 @@ jobs:
           activate-environment: test
           environment-file: devtools/conda-envs/rdkit.yaml
           auto-activate-base: false
+          miniforge-version: latest
+          miniforge-variant: Mambaforge
+          use-mamba: true
       - uses: conda-incubator/setup-miniconda@v2.1.1
         name: Install with OpenEye toolkits
         if: ${{ matrix.cfg.rdkit == 'FALSE' && matrix.cfg.openeye == 'TRUE' }}
@@ -86,6 +92,9 @@ jobs:
           activate-environment: test
           environment-file: devtools/conda-envs/openeye.yaml
           auto-activate-base: false
+          miniforge-version: latest
+          miniforge-variant: Mambaforge
+          use-mamba: true
 
       - name: Additional info about the build
         shell: bash -l {0}
@@ -104,6 +113,7 @@ jobs:
       - name: Install package
         shell: bash -l {0}
         run: |
+          conda remove --force openff-toolkit openff-toolkit-base
           python setup.py develop --no-deps
 
       - name: Check installed toolkits
@@ -160,7 +170,7 @@ jobs:
           pytest -v --doctest-glob="docs/*.rst" docs/
 
       - name: Codecov
-        uses: codecov/codecov-action@v2.0.2
+        uses: codecov/codecov-action@v2.0.3
         with:
           file: ./coverage.xml
           fail_ci_if_error: true

@@ -8,11 +8,26 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ## Current development
 
+### New features
+
+- [PR #1036](https://github.com/openforcefield/openforcefield/pull/1036): SMARTS matching
+  logic for library charges was updated to use only one unique match instead of
+  enumerating all possible matches. This results in faster matching, particularly
+  with larger moldules.
+
 ### Bugfixes
 
 - [PR #1030](https://github.com/openforcefield/openforcefield/pull/1030): Fixes a bug
   in which capitalization of the `bond_order_model` sometimes matters.
 
+### Behavior changed
+
+- [PR #1046](https://github.com/openforcefield/openforcefield/pull/1046): Changes OFFXML output to
+  replace tabs with 4 spaces to standardize representation in different text viewers. 
+- [PR #1036](https://github.com/openforcefield/openforcefield/pull/1036): SMARTS matching
+  logic for library charges was updated to use only one unique match. No adverse side effects
+  were found in testing, but could bad behavior may possibly exist in some unknown caes.
+  Note that the default behavior for other parameter handlers was not updated.
 
 ### Tests updated
 
@@ -21,6 +36,19 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 
 ## 0.10.0 Improvements for force field fitting
+
+### Behaviors changed
+
+- [PR #1021](https://github.com/openforcefield/openforcefield/pull/1021): Renames
+  [`openff.toolkit.utils.exceptions.ParseError`](openff.toolkit.utils.exceptions.ParseError) to
+  [`openff.toolkit.utils.exceptions.SMILESParseError`](openff.toolkit.utils.exceptions.SMILESParseError) to
+  avoid a conflict with an identically-named exception in the SMIRNOFF XML parsing code.
+- [PR #1021](https://github.com/openforcefield/openforcefield/pull/1021): Renames and moves
+  [`openff.toolkit.typing.engines.smirnoff.forcefield.ParseError`](openff.toolkit.typing.engines.smirnoff.forcefield.ParseError) to
+  [`openff.toolkit.utils.exceptions.SMIRNOFFParseError`](openff.toolkit.utils.exceptions.SMIRNOFFParseError).
+  This `ParseError` is deprecated and will be removed in a future release.
+
+## Current Development
 
 ### New features and behaviors changed
 

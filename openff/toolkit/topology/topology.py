@@ -17,10 +17,6 @@ Class definitions to represent a molecular system and its chemical components
 
 """
 
-# =============================================================================================
-# GLOBAL IMPORTS
-# =============================================================================================
-
 import itertools
 from collections import OrderedDict
 from collections.abc import MutableMapping
@@ -30,7 +26,13 @@ from simtk import unit
 from simtk.openmm import app
 
 from openff.toolkit.typing.chemistry import ChemicalEnvironment
-from openff.toolkit.utils import MessageException
+from openff.toolkit.utils.exceptions import (
+    DuplicateUniqueMoleculeError,
+    InvalidBoxVectorsError,
+    InvalidPeriodicityError,
+    MissingUniqueMoleculesError,
+    NotBondedError,
+)
 from openff.toolkit.utils.serialization import Serializable
 from openff.toolkit.utils.toolkits import (
     ALLOWED_AROMATICITY_MODELS,
@@ -39,49 +41,6 @@ from openff.toolkit.utils.toolkits import (
     DEFAULT_AROMATICITY_MODEL,
     GLOBAL_TOOLKIT_REGISTRY,
 )
-
-# =============================================================================================
-# Exceptions
-# =============================================================================================
-
-
-class DuplicateUniqueMoleculeError(MessageException):
-    """
-    Exception for when the user provides indistinguishable unique molecules when trying to identify atoms from a PDB
-    """
-
-    pass
-
-
-class NotBondedError(MessageException):
-    """
-    Exception for when a function requires a bond between two atoms, but none is present
-    """
-
-    pass
-
-
-class InvalidBoxVectorsError(MessageException):
-    """
-    Exception for setting invalid box vectors
-    """
-
-
-class InvalidPeriodicityError(MessageException):
-    """
-    Exception for setting invalid periodicity
-    """
-
-
-class MissingUniqueMoleculesError(MessageException):
-    """
-    Exception for a when unique_molecules is required but not found
-    """
-
-
-# =============================================================================================
-# PRIVATE SUBROUTINES
-# =============================================================================================
 
 
 class _TransformedDict(MutableMapping):
@@ -2054,7 +2013,11 @@ class Topology(Serializable):
             self._topology_atom_indices = topology_atom_indices
 
     def chemical_environment_matches(
-        self, query, aromaticity_model="MDL", toolkit_registry=GLOBAL_TOOLKIT_REGISTRY
+        self,
+        query,
+        aromaticity_model="MDL",
+        unique=False,
+        toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
     ):
         """
         Retrieve all matches for a given chemical environment query.
@@ -2100,7 +2063,9 @@ class Topology(Serializable):
             # This will automatically attempt to match chemically identical atoms in
             # a canonical order within the Topology
             ref_mol_matches = ref_mol.chemical_environment_matches(
-                smarts, toolkit_registry=toolkit_registry
+                smarts,
+                unique=unique,
+                toolkit_registry=toolkit_registry,
             )
 
             if len(ref_mol_matches) == 0:

@@ -10,9 +10,9 @@ __all__ = ("BuiltInToolkitWrapper",)
 import numpy as np
 from simtk import unit
 
-from . import base_wrapper
-from .exceptions import ChargeMethodUnavailableError
-from .utils import inherit_docstrings
+from openff.toolkit.utils import base_wrapper
+from openff.toolkit.utils.exceptions import ChargeMethodUnavailableError
+from openff.toolkit.utils.utils import inherit_docstrings
 
 # =============================================================================================
 # Implementation

@@ -9,42 +9,40 @@ Test classes and function in module openff.toolkit.typing.engines.smirnoff.param
 
 """
 
-
-# ======================================================================
-# GLOBAL IMPORTS
-# ======================================================================
-
 import numpy
 import pytest
 from numpy.testing import assert_almost_equal
 from simtk import unit
 
 from openff.toolkit.topology import Molecule
-from openff.toolkit.typing.engines.smirnoff import SMIRNOFFVersionError
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     BondHandler,
     ChargeIncrementModelHandler,
-    DuplicateParameterError,
     GBSAHandler,
     ImproperTorsionHandler,
-    IncompatibleParameterError,
     IndexedParameterAttribute,
     LibraryChargeHandler,
-    NotEnoughPointsForInterpolationError,
     ParameterAttribute,
     ParameterHandler,
     ParameterList,
-    ParameterLookupError,
     ParameterType,
     ProperTorsionHandler,
-    SMIRNOFFSpecError,
     VirtualSiteHandler,
     _linear_inter_or_extrapolate,
     _ParameterAttributeHandler,
     vdWHandler,
 )
-from openff.toolkit.utils import IncompatibleUnitError, detach_units
+from openff.toolkit.utils import detach_units
 from openff.toolkit.utils.collections import ValidatedList
+from openff.toolkit.utils.exceptions import (
+    DuplicateParameterError,
+    IncompatibleParameterError,
+    IncompatibleUnitError,
+    NotEnoughPointsForInterpolationError,
+    ParameterLookupError,
+    SMIRNOFFSpecError,
+    SMIRNOFFVersionError,
+)
 
 # ======================================================================
 # Test ParameterAttribute descriptor

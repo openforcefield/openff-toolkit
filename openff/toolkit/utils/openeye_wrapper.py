@@ -6,10 +6,6 @@ the `OpenEye Toolkit <https://docs.eyesopen.com/toolkits/python/quickstart-pytho
 __all__ = ("OpenEyeToolkitWrapper",)
 
 
-# =============================================================================================
-# IMPORTS
-# =============================================================================================
-
 import importlib
 import logging
 import pathlib
@@ -25,9 +21,9 @@ from simtk import unit
 if TYPE_CHECKING:
     from openforcefield.topology.molecule import Molecule
 
-from . import base_wrapper
-from .constants import DEFAULT_AROMATICITY_MODEL
-from .exceptions import (
+from openff.toolkit.utils import base_wrapper
+from openff.toolkit.utils.constants import DEFAULT_AROMATICITY_MODEL
+from openff.toolkit.utils.exceptions import (
     ChargeCalculationError,
     ChargeMethodUnavailableError,
     GAFFAtomTypeWarning,
@@ -37,7 +33,7 @@ from .exceptions import (
     ToolkitUnavailableException,
     UndefinedStereochemistryError,
 )
-from .utils import inherit_docstrings
+from openff.toolkit.utils.utils import inherit_docstrings
 
 # =============================================================================================
 # CONFIGURE LOGGER
@@ -2221,7 +2217,10 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
     @staticmethod
     def _find_smarts_matches(
-        oemol, smarts, aromaticity_model=DEFAULT_AROMATICITY_MODEL
+        oemol,
+        smarts,
+        aromaticity_model=DEFAULT_AROMATICITY_MODEL,
+        unique=False,
     ):
         """Find all sets of atoms in the provided OpenEye molecule that match the provided SMARTS string.
 
@@ -2290,9 +2289,10 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         # Build list of matches
         # TODO: The MoleculeImage mapping should preserve ordering of template molecule for equivalent atoms
         #       and speed matching for larger molecules.
-        unique = False  # We require all matches, not just one of each kind
         substructure_search = OESubSearch(qmol)
-        substructure_search.SetMaxMatches(0)
+        # TODO: max_matches = int(max_matches) if max_matches is not None else 0
+        max_matches = 0
+        substructure_search.SetMaxMatches(max_matches)
         oechem.OEPrepareSearch(mol, substructure_search)
         matches = list()
         for match in substructure_search.Match(mol, unique):
@@ -2309,7 +2309,13 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             matches.append(tuple(atom_indices))
         return matches
 
-    def find_smarts_matches(self, molecule, smarts, aromaticity_model="OEAroModel_MDL"):
+    def find_smarts_matches(
+        self,
+        molecule,
+        smarts,
+        aromaticity_model="OEAroModel_MDL",
+        unique=False,
+    ):
         """
         Find all SMARTS matches for the specified molecule, using the specified aromaticity model.
 
@@ -2329,7 +2335,10 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         """
         oemol = self.to_openeye(molecule)
         return self._find_smarts_matches(
-            oemol, smarts, aromaticity_model=aromaticity_model
+            oemol,
+            smarts,
+            aromaticity_model=aromaticity_model,
+            unique=unique,
         )
 
 

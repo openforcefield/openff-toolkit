@@ -9,11 +9,6 @@ Test classes and function in module openff.toolkit.typing.engines.smirnoff.io.
 
 """
 
-
-# =============================================================================================
-# GLOBAL IMPORTS
-# =============================================================================================
-
 import pytest
 
 from openff.toolkit.typing.engines.smirnoff.io import XMLParameterIOHandler
