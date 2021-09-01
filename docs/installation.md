@@ -5,8 +5,7 @@
 ## Installing via `conda`
 
 The simplest way to install the Open Force Field Toolkit is via the [conda](https://docs.conda.io/en/latest/) package manager.
-We publish [packages](https://github.com/conda-forge/openff-toolkit-feedstock) via [`conda-forge`](https://conda-forge.org/) for any platform supported by our dependencies. 
-This includes Linux, MacOS, and Windows operating systems on x86_64 hardware.
+We publish [packages](https://github.com/conda-forge/openff-toolkit-feedstock) via [`conda-forge`](https://conda-forge.org/).
 
 If you are using the [Anaconda](https://www.anaconda.com/products/individual#Downloads) scientific Python distribution, you already have the `conda` package manager installed.
 If not, the quickest way to get started is to install the [Miniconda](https://docs.conda.io/en/latest/miniconda.html) distribution, a lightweight, minimal installation of Python and the Conda package manager.
@@ -21,6 +20,17 @@ $ conda install -c conda-forge openff-toolkit
 
 :::{note}
 Installation via the Conda package manager is the preferred method since all dependencies are automatically fetched and installed for you.
+:::
+
+### OS support
+
+The OpenFF Toolkit is pure Python, and we expect it to work on any platform that supports its dependencies.
+Our automated testing takes place on both MacOS and Ubuntu Linux.
+For Windows support, we recommend using the [Windows Subsystem for Linux](https://docs.microsoft.com/en-us/windows/wsl/install-win10) (WSL) to run a Linux system integrated into Windows.
+Once WSL is configured, installing and using the Toolkit is done exactly as it would be for Linux.
+
+:::{note}
+WSL2 does support GPU acceleration, at least with nvidia cards, but setting it up [takes some work](https://developer.nvidia.com/cuda/wsl).
 :::
 
 (conda_envs)=
