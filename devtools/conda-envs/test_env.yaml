@@ -30,6 +30,6 @@ dependencies:
   - bson
   - msgpack-python
   - qcelemental
-  # qcportal
+  - qcportal
   - qcengine
   - openff-interchange
