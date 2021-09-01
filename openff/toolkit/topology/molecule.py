@@ -6290,7 +6290,13 @@ class Molecule(FrozenMolecule):
 
         return self._add_conformer(coordinates)
 
-    def visualize(self, backend="rdkit", width=500, height=300):
+    def visualize(
+        self,
+        backend="rdkit",
+        width=None,
+        height=None,
+        show_all_hydrogens=True,
+    ):
         """
         Render a visualization of the molecule in Jupyter
 
@@ -6305,17 +6311,21 @@ class Molecule(FrozenMolecule):
 
         width : int, optional, default=500
             Width of the generated representation (only applicable to
-            ``backend=openeye``)
+            ``backend=openeye`` or ``backend=rdkit``)
         height : int, optional, default=300
             Width of the generated representation (only applicable to
-            ``backend=openeye``)
+            ``backend=openeye`` or ``backend=rdkit``)
+        show_all_hydrogens : bool, optional, default=True
+            Whether to explicitly depict all hydrogen atoms. (only applicable to
+            ``backend=openeye`` or ``backend=rdkit``)
 
         Returns
         -------
         object
             Depending on the backend chosen:
 
-            - rdkit, openeye → IPython.display.Image
+            - rdkit → IPython.display.SVG
+            - openeye → IPython.display.Image
             - nglview → nglview.NGLWidget
 
         """
@@ -6328,6 +6338,19 @@ class Molecule(FrozenMolecule):
                 import nglview as nv
             except ImportError:
                 raise MissingDependencyError("nglview")
+
+            if width is not None or height is not None:
+                # TODO: More specific exception
+                raise ValueError(
+                    "The width, height, and show_all_hydrogens arguments do not apply to the nglview backend."
+                )
+            elif not show_all_hydrogens:
+                # TODO: More specific exception
+                # TODO: Implement this? Should be able to just strip hydrogens from the PDB
+                raise ValueError(
+                    "show_all_hydrogens=False is not supported by the nglview backend"
+                )
+
             if self.conformers:
                 from openff.toolkit.utils.viz import _OFFTrajectoryNGLView
 
@@ -6335,20 +6358,43 @@ class Molecule(FrozenMolecule):
                 widget = nv.NGLWidget(trajectory_like)
                 return widget
             else:
+                # TODO: More specific exception
                 raise ValueError(
                     "Visualizing with NGLview requires that the molecule has "
                     "conformers."
                 )
+
+        width = 500 if width is None else width
+        height = 300 if height is None else height
+        show_all_hydrogens = True if show_all_hydrogens is None else show_all_hydrogens
+
         if backend == "rdkit":
             if RDKIT_AVAILABLE:
-                from rdkit.Chem.Draw import IPythonConsole
+                from IPython.display import SVG
+                from rdkit.Chem.Draw import rdDepictor, rdMolDraw2D
+                from rdkit.Chem.rdmolops import RemoveHs
 
-                return self.to_rdkit()
+                rdmol = self.to_rdkit()
+
+                if not show_all_hydrogens:
+                    # updateExplicitCount: Keep a record of the hydrogens we remove.
+                    # This is used in visualization to distinguish eg radicals from normal species
+                    rdmol = RemoveHs(rdmol, updateExplicitCount=True)
+
+                rdDepictor.SetPreferCoordGen(True)
+                rdDepictor.Compute2DCoords(rdmol)
+                rdmol = rdMolDraw2D.PrepareMolForDrawing(rdmol)
+
+                drawer = rdMolDraw2D.MolDraw2DSVG(width, height)
+                drawer.DrawMolecule(rdmol)
+                drawer.FinishDrawing()
+
+                return SVG(drawer.GetDrawingText())
             else:
                 warnings.warn(
                     "RDKit was requested as a visualization backend but "
                     "it was not found to be installed. Falling back to "
-                    "trying to using OpenEye for visualization."
+                    "trying to use OpenEye for visualization."
                 )
                 backend = "openeye"
         if backend == "openeye":
@@ -6362,6 +6408,9 @@ class Molecule(FrozenMolecule):
                     width, height, oedepict.OEScale_AutoScale
                 )
 
+                if show_all_hydrogens:
+                    opts.SetHydrogenStyle(oedepict.OEHydrogenStyle_ImplicitAll)
+
                 oedepict.OEPrepareDepiction(oemol)
                 img = oedepict.OEImage(width, height)
                 display = oedepict.OE2DMolDisplay(oemol, opts)
@@ -6369,6 +6418,7 @@ class Molecule(FrozenMolecule):
                 png = oedepict.OEWriteImageToString("png", img)
                 return Image(png)
 
+        # TODO: More specific exception
         raise ValueError("Could not find an appropriate backend")
 
     def _ipython_display_(self):
