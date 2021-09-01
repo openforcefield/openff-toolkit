@@ -32,6 +32,7 @@ WSL2 requires virtualization support in hardware.
 This is available on most modern CPUs, but may require activation in the BIOS.
 
 Once WSL is configured, installing and using the Toolkit is done exactly as it would be for Linux.
+Note that by default, Jupyter Notebook will not be able to open a browser window and will log an error on startup; just ignore the error and open the link it provides in your ordinary Windows web browser.
 
 :::{note}
 WSL2 [does support](https://docs.microsoft.com/en-us/windows/wsl/tutorials/gpu-compute) GPU compute, at least with nvidia cards, but setting it up [takes some work](https://developer.nvidia.com/cuda/wsl).
