@@ -1,7 +1,9 @@
+from openff.toolkit.tests.utils import requires_pkg
 from openff.toolkit.topology import Molecule
 from openff.toolkit.typing.engines.smirnoff.forcefield import ForceField
 
 
+@requires_pkg("openff.interchange")
 def test_basic_construction():
     top = Molecule.from_smiles("C").to_topology()
     parsley = ForceField("openff-1.0.0.offxml")
