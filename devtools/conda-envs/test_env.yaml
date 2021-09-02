@@ -7,7 +7,7 @@ dependencies:
   - python
   - pip
   - packaging
-  - openmm ==7.5
+  - openmm
   - openff-forcefields
   - smirnoff99Frosst
   - numpy
