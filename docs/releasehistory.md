@@ -36,6 +36,10 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
   created through the [`Molecule.to_rdkit()`](openff.toolkit.topology.Molecule.to_rdkit)
   method have the `NoImplicit` property set to `True` on all atoms. This prevents RDKit from
   incorrectly adding hydrogen atoms to to molecule. 
+- [PR #1058](https://github.com/openforcefield/openforcefield/pull/1058): Removes the unimplemented methods
+  [`ForceField.create_parmed_structure`](openff.toolkit.typing.engines.smirnoff.ForceField.create_parmed_structure),
+  [`Topology.to_parmed`](openff.toolkit.topology.Topology.to_parmed), and
+  [`Topology.from_parmed`](openff.toolkit.topology.Topology.from_parmed).
 
 ### Tests updated
 
