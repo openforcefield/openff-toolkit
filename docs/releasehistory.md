@@ -28,6 +28,11 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
   logic for library charges was updated to use only one unique match. No adverse side effects
   were found in testing, but could bad behavior may possibly exist in some unknown caes.
   Note that the default behavior for other parameter handlers was not updated.
+- [PR #1058](https://github.com/openforcefield/openforcefield/pull/1058): Removes the unimplemented methods
+  [`ForceField.create_parmed_structure`](openff.toolkit.typing.engines.smirnoff.ForceField.create_parmed_structure),
+  [`Topology.to_parmed`](openff.toolkit.topology.Topology.to_parmed),
+  [`Topology.from_parmed`](openff.toolkit.topology.Topology.from_parmed), and
+  [`Topology.from_parmed`](openff.toolkit.topology.Topology.from_parmed).
 
 ### Tests updated
 
