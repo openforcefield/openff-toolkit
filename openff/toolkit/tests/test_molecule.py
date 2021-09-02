@@ -26,7 +26,13 @@ from tempfile import NamedTemporaryFile
 
 import numpy as np
 import pytest
-from simtk import unit
+
+try:
+    from openmm import unit
+    from openmm.app import element
+except ImportError:
+    from simtk import unit
+    from simtk.openmm.app import element
 
 from openff.toolkit.tests.create_molecules import (
     create_acetaldehyde,
@@ -293,8 +299,6 @@ class TestAtom:
 
     def test_atom_properties(self):
         """Test that atom properties are correctly populated and gettable"""
-        from simtk.openmm.app import element
-
         formal_charge = 0 * unit.elementary_charge
         is_aromatic = False
         # Attempt to create all elements supported by OpenMM
@@ -2407,9 +2411,6 @@ class TestMolecule:
 
     def test_add_conformers(self):
         """Test addition of conformers to a molecule"""
-        import numpy as np
-        from simtk import unit
-
         # Define a methane molecule
         molecule = Molecule()
         molecule.name = "methane"
@@ -3302,8 +3303,6 @@ class TestMolecule:
         """Test chemical environment matches"""
         # TODO: Move this to test_toolkits, test all available toolkits
         # Create chiral molecule
-        from simtk.openmm.app import element
-
         toolkit_wrapper = OpenEyeToolkitWrapper()
         molecule = Molecule()
         atom_C = molecule.add_atom(
@@ -3373,8 +3372,6 @@ class TestMolecule:
     def test_chemical_environment_matches_RDKit(self):
         """Test chemical environment matches"""
         # Create chiral molecule
-        from simtk.openmm.app import element
-
         toolkit_wrapper = RDKitToolkitWrapper()
         molecule = Molecule()
         atom_C = molecule.add_atom(
@@ -3455,9 +3452,6 @@ class TestMolecule:
         """Test computation/retrieval of partial charges"""
         # TODO: Test only one molecule for speed?
         # TODO: Do we need to deepcopy each molecule, or is setUp called separately for each test method?
-        import numpy as np
-        from simtk import unit
-
         # Do not modify original molecules.
         # molecules = copy.deepcopy(mini_drug_bank())
         # In principle, testing for charge assignment over a wide set of molecules is important, but
