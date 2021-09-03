@@ -25,11 +25,11 @@ import numpy as np
 
 try:
     from openmm import app, unit
-    from openmm.app import Aromatic, Double, Element, Single, Triple
+    from openmm.app import Aromatic, Double, Single, Triple
 except ImportError:
     from simtk import unit
     from simtk.openmm import app
-    from simtk.openmm.app import Element, Aromatic, Double, Single, Triple
+    from simtk.openmm.app import Aromatic, Double, Single, Triple
 
 from openff.toolkit.typing.chemistry import ChemicalEnvironment
 from openff.toolkit.utils.exceptions import (
