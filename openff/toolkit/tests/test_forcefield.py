@@ -1630,25 +1630,6 @@ class TestForceField:
         force_field = ForceField("test_forcefields/test_forcefield.offxml")
         force_field.create_openmm_system(topology, toolkit_registry=toolkit_registry)
 
-    @pytest.mark.skip(
-        reason="We will not support going directly to ParmEd for now."
-        "We will instead feed OpenMM System objects to ParmEd "
-        "for further processing."
-    )
-    def test_parameterize_ethanol_to_parmed(self):
-        forcefield = ForceField("test_forcefields/test_forcefield.offxml")
-        pdbfile = app.PDBFile(get_data_file_path("systems/test_systems/1_ethanol.pdb"))
-        # toolkit_wrapper = RDKitToolkitWrapper()
-        molecules = [
-            Molecule.from_file(get_data_file_path(name))
-            for name in ("molecules/ethanol.mol2",)
-        ]
-        topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
-
-        parmed_system = forcefield.create_parmed_structure(
-            topology, positions=pdbfile.getPositions()
-        )
-
     @pytest.mark.parametrize(
         "toolkit_registry,registry_description", toolkit_registries
     )

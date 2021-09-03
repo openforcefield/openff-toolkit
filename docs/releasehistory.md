@@ -14,6 +14,10 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
   logic for library charges was updated to use only one unique match instead of
   enumerating all possible matches. This results in faster matching, particularly
   with larger moldules.
+- [PR #1001](https://github.com/openforcefield/openff-toolkit/pull/1001): Revamped the 
+  [`Molecule.visualize()`](openff.toolkit.topology.Molecule.visualize) method's `rdkit` 
+  backend for more pleasing and idiomatic 2D visualization by default.
+
 
 ### Bugfixes
 
@@ -28,6 +32,14 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
   logic for library charges was updated to use only one unique match. No adverse side effects
   were found in testing, but could bad behavior may possibly exist in some unknown caes.
   Note that the default behavior for other parameter handlers was not updated.
+- [PR #1001](https://github.com/openforcefield/openff-toolkit/pull/1001): RDKit `Mol` objects 
+  created through the [`Molecule.to_rdkit()`](openff.toolkit.topology.Molecule.to_rdkit)
+  method have the `NoImplicit` property set to `True` on all atoms. This prevents RDKit from
+  incorrectly adding hydrogen atoms to to molecule. 
+- [PR #1058](https://github.com/openforcefield/openforcefield/pull/1058): Removes the unimplemented methods
+  [`ForceField.create_parmed_structure`](openff.toolkit.typing.engines.smirnoff.ForceField.create_parmed_structure),
+  [`Topology.to_parmed`](openff.toolkit.topology.Topology.to_parmed), and
+  [`Topology.from_parmed`](openff.toolkit.topology.Topology.from_parmed).
 
 ### Tests updated
 

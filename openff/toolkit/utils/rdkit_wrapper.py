@@ -1687,6 +1687,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             elif atom.stereochemistry == "R":
                 rdatom.SetChiralTag(Chem.CHI_TETRAHEDRAL_CCW)
 
+            # Stop rdkit from adding implicit hydrogens
+            rdatom.SetNoImplicit(True)
+
             rd_index = rdmol.AddAtom(rdatom)
 
             # Let's make sure al the atom indices in the two molecules

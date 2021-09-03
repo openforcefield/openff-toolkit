@@ -1373,26 +1373,6 @@ class ForceField:
         else:
             return system
 
-    def create_parmed_structure(self, topology, positions, **kwargs):
-        """Create a ParmEd Structure object representing the interactions for the specified Topology with the current force field
-
-        This method creates a `ParmEd <http://github.com/parmed/parmed>`_ ``Structure`` object containing a topology, positions, and parameters.
-
-        Parameters
-        ----------
-        topology : openff.toolkit.topology.Topology
-            The ``Topology`` corresponding to the OpenMM ``System`` object to be created.
-        positions : openmm.unit.Quantity of dimension (natoms,3) with units compatible with angstroms
-            The positions corresponding to the ``System`` object to be created
-
-        Returns
-        -------
-        structure : parmed.Structure
-            The newly created ``parmed.Structure`` object
-
-        """
-        raise NotImplementedError
-
     @requires_package("openff.interchange")
     @requires_package("mdtraj")
     def _to_interchange(self, topology, box=None):
