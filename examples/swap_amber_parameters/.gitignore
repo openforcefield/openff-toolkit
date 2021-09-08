@@ -1,0 +1,8 @@
+*.inpcrd
+*.prmtop
+*.pdb
+*.sdf
+*.crd
+*.gro
+*.top
+*.nc
