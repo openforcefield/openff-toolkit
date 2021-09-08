@@ -155,7 +155,9 @@ jobs:
 
       - name: Run mypy
         shell: bash -l {0}
-        if: ${{ matrix.cfg.rdkit == 'true' && matrix.cfg.openeye == 'TRUE' }}
+        # Try to prevent failure from preventing later steps, but also display red X
+        # https://stackoverflow.com/a/62112985/4248961
+        if: ${{ matrix.cfg.rdkit == 'true' && matrix.cfg.openeye == 'TRUE' }} | always()
         run: |
           mypy --namespace-packages -p "openff.toolkit"
 
