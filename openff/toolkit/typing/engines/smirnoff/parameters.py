@@ -1740,7 +1740,7 @@ class ParameterType(_ParameterAttributeHandler):
     id = ParameterAttribute(default=None)
     parent_id = ParameterAttribute(default=None)
 
-    @smirks.converter  # type: ignore[no-redef]
+    @smirks.converter
     def smirks(self, attr, smirks):
         # Validate the SMIRKS string to ensure it matches the expected
         # parameter type, raising an exception if it is invalid or doesn't
@@ -1832,7 +1832,7 @@ class ParameterHandler(_ParameterAttributeHandler):
 
     version = ParameterAttribute()
 
-    @version.converter  # type: ignore[no-redef]
+    @version.converter
     def version(self, attr, new_version):
         """
         Raise a parsing exception if the given section version is unsupported.
@@ -3542,7 +3542,7 @@ class vdWHandler(_NonbondedHandler):
     )
 
     # TODO: Use _allow_only when ParameterAttribute will support multiple converters (it'll be easy when we switch to use the attrs library)
-    @scale12.converter  # type: ignore[no-redef]
+    @scale12.converter
     def scale12(self, attrs, new_scale12):
         if new_scale12 != 0.0:
             raise SMIRNOFFSpecError(
@@ -3551,7 +3551,7 @@ class vdWHandler(_NonbondedHandler):
             )
         return new_scale12
 
-    @scale13.converter  # type: ignore[no-redef]
+    @scale13.converter
     def scale13(self, attrs, new_scale13):
         if new_scale13 != 0.0:
             raise SMIRNOFFSpecError(
@@ -3560,7 +3560,7 @@ class vdWHandler(_NonbondedHandler):
             )
         return new_scale13
 
-    @scale15.converter  # type: ignore[no-redef]
+    @scale15.converter
     def scale15(self, attrs, new_scale15):
         if new_scale15 != 1.0:
             raise SMIRNOFFSpecError(
@@ -3663,7 +3663,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
     )
 
     # TODO: Use _allow_only when ParameterAttribute will support multiple converters (it'll be easy when we switch to use the attrs library)
-    @scale12.converter  # type: ignore[no-redef]
+    @scale12.converter
     def scale12(self, attrs, new_scale12):
         if new_scale12 != 0.0:
             raise SMIRNOFFSpecError(
@@ -3672,7 +3672,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
             )
         return new_scale12
 
-    @scale13.converter  # type: ignore[no-redef]
+    @scale13.converter
     def scale13(self, attrs, new_scale13):
         if new_scale13 != 0.0:
             raise SMIRNOFFSpecError(
@@ -3681,7 +3681,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
             )
         return new_scale13
 
-    @scale15.converter  # type: ignore[no-redef]
+    @scale15.converter
     def scale15(self, attrs, new_scale15):
         if new_scale15 != 1.0:
             raise SMIRNOFFSpecError(
@@ -3690,7 +3690,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
             )
         return new_scale15
 
-    @switch_width.converter  # type: ignore[no-redef]
+    @switch_width.converter
     def switch_width(self, attr, new_switch_width):
         if self.switch_width != 0.0 * unit.angstrom:
             raise IncompatibleParameterError(
@@ -4911,7 +4911,7 @@ class VirtualSiteHandler(_NonbondedHandler):
 
         return self._virtual_site_types
 
-    @exclusion_policy.converter  # type: ignore[no-redef]
+    @exclusion_policy.converter
     def exclusion_policy(self, attr, policy):
         """
         Convert and validate the exclusion policy specified in the VirtualSiteHandler
@@ -5095,7 +5095,7 @@ class VirtualSiteHandler(_NonbondedHandler):
         #             "VirtualSite not given a type. Set type to one of:\n" + valid_types
         #         )
 
-        @match.converter  # type: ignore[no-redef]
+        @match.converter
         def match(self, attr, match):
             """
             Convert and validate the virtual site type specified in the VirtualSite element

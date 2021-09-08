@@ -157,7 +157,7 @@ jobs:
         shell: bash -l {0}
         if: ${{ matrix.cfg.rdkit == 'true' && matrix.cfg.openeye == 'TRUE' }}
         run: |
-          mypy --show-error-codes --warn-unused-configs --warn-unused-ignores --namespace-packages -p "openff.toolkit"
+          mypy --namespace-packages -p "openff.toolkit"
 
       - name: Run unit tests
         shell: bash -l {0}

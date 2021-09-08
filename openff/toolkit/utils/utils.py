@@ -428,12 +428,12 @@ def _(obj):
     return obj
 
 
-@object_to_quantity.register(str)  # type: ignore[no-redef]
+@object_to_quantity.register(str)
 def _(obj):
     return string_to_quantity(obj)
 
 
-@object_to_quantity.register(int)  # type: ignore[no-redef]
+@object_to_quantity.register(int)
 @object_to_quantity.register(float)
 def _(obj):
     return unit.Quantity(obj)
