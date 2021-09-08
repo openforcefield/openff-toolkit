@@ -157,7 +157,7 @@ jobs:
         shell: bash -l {0}
         # Try to prevent failure from preventing later steps, but also display red X
         # https://stackoverflow.com/a/62112985/4248961
-        if: ${{ matrix.cfg.rdkit == 'true' && matrix.cfg.openeye == 'TRUE' }} && always()
+        if: ${{ matrix.cfg.rdkit == 'true' && matrix.cfg.openeye == 'TRUE' }}
         run: |
           mypy --namespace-packages -p "openff.toolkit"
 
