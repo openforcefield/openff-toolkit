@@ -5,6 +5,8 @@ repos:
   - id: black
     files: ^openff
     args: [--check]
+  - id: black-jupyter
+    files: ^examples/((?!deprecated).)*$
 - repo: https://github.com/PyCQA/isort
   rev: 5.9.3
   hooks:
@@ -19,6 +21,4 @@ repos:
       args:
         - --py37-plus
     - id: nbqa-isort
-      files: ^examples/((?!deprecated).)*$
-    - id: nbqa-black
       files: ^examples/((?!deprecated).)*$
