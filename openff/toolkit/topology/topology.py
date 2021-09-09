@@ -2110,57 +2110,6 @@ class Topology(Serializable):
         # Implement abstract method Serializable.to_dict()
         raise NotImplementedError()  # TODO
 
-    # TODO: Merge this into Molecule.from_networkx if/when we implement that.
-    # TODO: can we now remove this as we have the ability to do this in the Molecule class?
-    @staticmethod
-    def _networkx_to_hill_formula(mol_graph):
-        """
-        Convert a networkX representation of a molecule to a molecule formula. Used in printing out
-        informative error messages when a molecule from an openmm topology can't be matched.
-
-        Parameters
-        ----------
-        mol_graph : a networkX graph
-            The graph representation of a molecule
-
-        Returns
-        -------
-        formula : str
-            The molecular formula of the graph molecule
-        """
-        from simtk.openmm.app import Element
-
-        # Make a flat list of all atomic numbers in the molecule
-        atom_nums = []
-        for idx in mol_graph.nodes:
-            atom_nums.append(mol_graph.nodes[idx]["atomic_number"])
-
-        # Count the number of instances of each atomic number
-        at_num_to_counts = dict([(unq, atom_nums.count(unq)) for unq in atom_nums])
-
-        symbol_to_counts = {}
-        # Check for C and H first, to make a correct hill formula (remember dicts in python 3.6+ are ordered)
-        if 6 in at_num_to_counts:
-            symbol_to_counts["C"] = at_num_to_counts[6]
-            del at_num_to_counts[6]
-
-        if 1 in at_num_to_counts:
-            symbol_to_counts["H"] = at_num_to_counts[1]
-            del at_num_to_counts[1]
-
-        # Now count instances of all elements other than C and H, in order of ascending atomic number
-        sorted_atom_nums = sorted(at_num_to_counts.keys())
-        for atom_num in sorted_atom_nums:
-            symbol_to_counts[
-                Element.getByAtomicNumber(atom_num).symbol
-            ] = at_num_to_counts[atom_num]
-
-        # Finally format the formula as string
-        formula = ""
-        for ele, count in symbol_to_counts.items():
-            formula += f"{ele}{count}"
-        return formula
-
     @classmethod
     def from_openmm(cls, openmm_topology, unique_molecules=None):
         """
@@ -2477,64 +2426,20 @@ class Topology(Serializable):
             mdtraj_topology.to_openmm(), unique_molecules=unique_molecules
         )
 
-    # TODO: Jeff prepended an underscore on this before 0.2.0 release to remove it from the API.
-    #       Before exposing this, we should look carefully at the information that is preserved/lost during this
-    #       conversion, and make it clear what would happen to this information in a round trip. For example,
-    #       we should know what would happen to formal and partial bond orders and charges, stereochemistry, and
-    #       multi-conformer information. It will be important to document these risks to users, as all of these
-    #       factors could lead to unintended behavior during system parameterization.
+    # Avoid removing this method, even though it is private and would not be difficult for most
+    # users to replace. Also avoid making it public as round-trips with MDTraj are likely
+    # to not preserve necessary information.
     def _to_mdtraj(self):
         """
         Create an MDTraj Topology object.
-
         Returns
         ----------
         mdtraj_topology : mdtraj.Topology
             An MDTraj Topology object
-        #"""
+        """
         import mdtraj as md
 
         return md.Topology.from_openmm(self.to_openmm())
-
-    @staticmethod
-    def from_parmed(parmed_structure, unique_molecules=None):
-        """
-        .. warning:: This functionality will be implemented in a future toolkit release.
-
-        Construct an OpenFF Topology object from a ParmEd Structure object.
-
-        Parameters
-        ----------
-        parmed_structure : parmed.Structure
-            A ParmEd structure object
-        unique_molecules : iterable of objects that can be used to construct unique Molecule objects
-            All unique molecules must be provided, in any order, though multiple copies of each molecule are allowed.
-            The atomic elements and bond connectivity will be used to match the reference molecules
-            to molecule graphs appearing in the structure's ``topology`` object. If bond orders are present in the
-            structure's ``topology`` object, these will be used in matching as well.
-
-        Returns
-        -------
-        topology : openff.toolkit.topology.Topology
-            An OpenFF Topology object
-        """
-        # TODO: Implement functionality
-        raise NotImplementedError
-
-    def to_parmed(self):
-        """
-
-        .. warning:: This functionality will be implemented in a future toolkit release.
-
-        Create a ParmEd Structure object.
-
-        Returns
-        ----------
-        parmed_structure : parmed.Structure
-            A ParmEd Structure objecft
-        """
-        # TODO: Implement functionality
-        raise NotImplementedError
 
     # TODO: Jeff prepended an underscore on this before 0.2.0 release to remove it from the API.
     #       This function is deprecated and expects the OpenEye toolkit. We need to discuss what
