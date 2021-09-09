@@ -1111,13 +1111,13 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         ).reshape(-1, 1)
 
         # Build an exclusion list for 1-2 and 1-3 interactions.
-        excluded_pairs = {
+        excluded_x, excluded_y = zip(*{
             *[(bond.atom1_index, bond.atom2_index) for bond in molecule.bonds],
             *[
                 (angle[0].molecule_atom_index, angle[-1].molecule_atom_index)
                 for angle in molecule.angles
             ],
-        }
+        })
 
         # Build the distance matrix between all pairs of atoms.
         coordinates = conformer.value_in_unit(unit.angstrom)
@@ -1140,9 +1140,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         # Multiply by the charge products.
         charge_products = partial_charges @ partial_charges.T
 
-        for x, y in excluded_pairs:
-            charge_products[x, y] = 0.0
-            charge_products[y, x] = 0.0
+        charge_products[excluded_x, excluded_y] = 0.0
+        charge_products[excluded_y, excluded_x] = 0.0
 
         interaction_energies = inverse_distances * charge_products
 
