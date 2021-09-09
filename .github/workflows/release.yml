@@ -6,7 +6,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
 
-    - name: Update latest tag
+    - name: Update stable tag
       uses: richardsimko/update-tag@v1
       with:
         tag_name: stable
