@@ -20,7 +20,10 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 
 ### Bugfixes
-
+- [PR #1052](https://github.com/openforcefield/openff-toolkit/pull/1052>): Fixes
+  [Issue #986](<https://github.com/openforcefield/openff-toolkit/issues/986>)
+  by raising a subclass of `AttributeError` in
+  `_ParameterAttributeHandler.__getattr__`
 - [PR #1030](https://github.com/openforcefield/openforcefield/pull/1030): Fixes a bug
   in which capitalization of the `bond_order_model` sometimes matters.
 
