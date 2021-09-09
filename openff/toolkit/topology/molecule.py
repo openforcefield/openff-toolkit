@@ -6473,7 +6473,7 @@ class Molecule(FrozenMolecule):
         Perceive residue substructure and fill atoms metadata accordingly.
         """
         # Read substructure dictionary file
-        substructure_file_path = get_data_file_path('proteins/aa_residues_substructures.json')
+        substructure_file_path = get_data_file_path('proteins/aa_residues_substructures_with_caps.json')
         with open(substructure_file_path, 'r') as subfile:
             substructure_dictionary = json.load(subfile)
         all_matches = list()

@@ -3778,8 +3778,7 @@ class TestMolecule:
         for atom in offmol.atoms:
             if atom.metadata:
                 counter += 1
-        # Number of atoms in NTerminal cap is 6
-        assert counter == offmol.n_atoms - 6
+        assert counter == offmol.n_atoms
 
     def test_perceive_residues_natoms_cterminal_alanine(self):
         """Test number of matches atoms in residue perception with CTerminal form of Alanine."""
@@ -3792,8 +3791,7 @@ class TestMolecule:
         for atom in offmol.atoms:
             if atom.metadata:
                 counter += 1
-        # Number of atoms in CTerminal cap is 6
-        assert counter == offmol.n_atoms - 6
+        assert counter == offmol.n_atoms
 
     def test_perceive_residues_natoms_mainchain_alanine(self):
         """Test number of matches atoms in residue perception with MainChain form of Alanine."""
@@ -3803,15 +3801,10 @@ class TestMolecule:
         # Perceive residue substructures
         offmol.perceive_residues()
         counter = 0  # matched atom counter
-        unlabelled_counter = 0  # unmatched atom counter
         for atom in offmol.atoms:
             if atom.metadata:
                 counter += 1
-            else:
-                unlabelled_counter += 1
-        # Number of atoms in MainChain caps is 12
-        assert unlabelled_counter == 12
-        assert counter == offmol.n_atoms - 12
+        assert counter == offmol.n_atoms
 
     def test_perceive_residues_natoms_mainchain_glutamic_acid(self):
         """Test number of matches atoms in residue perception with MainChain form of Glutamic acid."""
@@ -3821,15 +3814,10 @@ class TestMolecule:
         # Perceive residue substructures
         offmol.perceive_residues()
         counter = 0  # matched atom counter
-        unlabelled_counter = 0  # unmatched atom counter
         for atom in offmol.atoms:
             if atom.metadata:
                 counter += 1
-            else:
-                unlabelled_counter += 1
-        # Number of atoms in MainChain caps is 12
-        assert unlabelled_counter == 12
-        assert counter == offmol.n_atoms - 12
+        assert counter == offmol.n_atoms
 
     def test_perceive_residues_natoms_mainchain_charged_glutamic_acid(self):
         """Test number of matches atoms in residue perception with MainChain form of charged
@@ -3840,15 +3828,10 @@ class TestMolecule:
         # Perceive residue substructures
         offmol.perceive_residues()
         counter = 0  # matched atom counter
-        unlabelled_counter = 0  # unmatched atom counter
         for atom in offmol.atoms:
             if atom.metadata:
                 counter += 1
-            else:
-                unlabelled_counter += 1
-        # Number of atoms in MainChain caps is 12
-        assert unlabelled_counter == 12
-        assert counter == offmol.n_atoms - 12
+        assert counter == offmol.n_atoms
 
     def test_perceive_residues_natoms_mainchain_arginine(self):
         """Test number of matches atoms in residue perception with MainChain form of Alanine."""
@@ -3858,15 +3841,10 @@ class TestMolecule:
         # Perceive residue substructures
         offmol.perceive_residues()
         counter = 0  # matched atom counter
-        unlabelled_counter = 0  # unmatched atom counter
         for atom in offmol.atoms:
             if atom.metadata:
                 counter += 1
-            else:
-                unlabelled_counter += 1
-        # Number of atoms in MainChain caps is 12
-        assert unlabelled_counter == 12
-        assert counter == offmol.n_atoms - 12
+        assert counter == offmol.n_atoms
 
     def test_perceive_residues_natoms_mainchain_histidine(self):
         """Test number of matches atoms in residue perception with MainChain form of protonated
@@ -3877,15 +3855,10 @@ class TestMolecule:
         # Perceive residue substructures
         offmol.perceive_residues()
         counter = 0  # matched atom counter
-        unlabelled_counter = 0  # unmatched atom counter
         for atom in offmol.atoms:
             if atom.metadata:
                 counter += 1
-            else:
-                unlabelled_counter += 1
-        # Number of atoms in MainChain caps is 12
-        assert unlabelled_counter == 12
-        assert counter == offmol.n_atoms - 12
+        assert counter == offmol.n_atoms
 
     def test_perceive_residues_natoms_cyxteine(self):
         """Test number of atoms matched for residue perception of disulfide bond form
@@ -3896,15 +3869,10 @@ class TestMolecule:
         # Perceive residue substructures
         offmol.perceive_residues()
         counter = 0  # matched atom counter
-        unlabelled_counter = 0  # unmatched atom counter
         for atom in offmol.atoms:
             if atom.metadata:
                 counter += 1
-            else:
-                unlabelled_counter += 1
-        # Number of atoms in MainChain caps is 24 (two capped cysteine molecules)
-        assert unlabelled_counter == 24
-        assert counter == offmol.n_atoms - 24
+        assert counter == offmol.n_atoms
 
     @pytest.mark.slow
     def test_perceive_residues_natoms_t4(self):
