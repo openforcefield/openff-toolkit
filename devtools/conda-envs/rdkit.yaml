@@ -20,7 +20,7 @@ dependencies:
   - packaging
     # Removed until a new release which targets openff-toolkit is made.
 #  - openmmforcefields
-  - openmm ==7.5
+  - openmm ==7.6
   - openff-forcefields
   - smirnoff99Frosst
   - pyyaml
