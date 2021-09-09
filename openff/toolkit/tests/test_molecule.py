@@ -52,6 +52,7 @@ from openff.toolkit.topology.molecule import (
     SmilesParsingError,
 )
 from openff.toolkit.utils import get_data_file_path
+from openff.toolkit.utils.exceptions import ConformerGenerationError
 from openff.toolkit.utils.toolkits import (
     AmberToolsToolkitWrapper,
     OpenEyeToolkitWrapper,
@@ -3677,6 +3678,35 @@ class TestMolecule:
 
         assert len([atom for atom in mol.atoms if atom.is_in_ring]) == n_atom_rings
         assert len([bond for bond in mol.bonds if bond.is_in_ring]) == n_bond_rings
+
+    @requires_rdkit
+    @requires_openeye
+    def test_conformer_generation_failure(self):
+        # This test seems possibly redundant, is it needed?
+        molecule = Molecule.from_smiles("F[U](F)(F)(F)(F)F")
+
+        with pytest.raises(ConformerGenerationError, match="Omega conf.*fail"):
+            molecule.generate_conformers(
+                n_conformers=1, toolkit_registry=OpenEyeToolkitWrapper()
+            )
+
+        with pytest.raises(ConformerGenerationError, match="RDKit conf.*fail"):
+            molecule.generate_conformers(
+                n_conformers=1, toolkit_registry=RDKitToolkitWrapper()
+            )
+
+        with pytest.raises(ValueError) as execption:
+            molecule.generate_conformers(n_conformers=1)
+
+            # pytest's checking of the string representation of this exception does not seem
+            # to play well with how it's constructed currently, so manually compare contents
+            exception_as_str = str(exception)
+            assert (
+                "No registered toolkits can provide the capability" in exception_as_str
+            )
+            assert "generate_conformers" in exception_as_str
+            assert "OpenEye Omega conformer generation failed" in exception_as_str
+            assert "RDKit conformer generation failed" in exception_as_str
 
 
 class TestMoleculeVisualization:
