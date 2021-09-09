@@ -3695,8 +3695,18 @@ class TestMolecule:
                 n_conformers=1, toolkit_registry=RDKitToolkitWrapper()
             )
 
-        with pytest.raises(ValueError, match="No registered.*generate_conf"):
+        with pytest.raises(ValueError) as execption:
             molecule.generate_conformers(n_conformers=1)
+
+            # pytest's checking of the string representation of this exception does not seem
+            # to play well with how it's constructed currently, so manually compare contents
+            exception_as_str = str(exception)
+            assert (
+                "No registered toolkits can provide the capability" in exception_as_str
+            )
+            assert "generate_conformers" in exception_as_str
+            assert "OpenEye Omega conformer generation failed" in exception_as_str
+            assert "RDKit conformer generation failed" in exception_as_str
 
     @requires_pkg("ipython")
     @requires_rdkit
