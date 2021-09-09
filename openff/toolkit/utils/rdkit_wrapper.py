@@ -12,7 +12,11 @@ import tempfile
 from typing import TYPE_CHECKING, List, Optional, Tuple
 
 import numpy as np
-from simtk import unit
+
+try:
+    from openmm import unit
+except ImportError:
+    from simtk import unit
 
 if TYPE_CHECKING:
     from openforcefield.topology.molecule import Molecule
@@ -865,7 +869,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             The molecule to generate conformers for.
         n_conformers : int, default=1
             Maximum number of conformers to generate.
-        rms_cutoff : simtk.Quantity-wrapped float, in units of distance, optional, default=None
+        rms_cutoff : openmm.Quantity-wrapped float, in units of distance, optional, default=None
             The minimum RMS value at which two conformers are considered redundant and one is deleted.
             If None, the cutoff is set to 1 Angstrom
 
@@ -929,7 +933,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                         (MMFF). This method does not make use of conformers, and hence
                         ``use_conformers`` and ``strict_n_conformers`` will not impact
                         the partial charges produced.
-        use_conformers : iterable of simtk.unit.Quantity-wrapped numpy arrays, each with
+        use_conformers : iterable of openmm.unit.Quantity-wrapped numpy arrays, each with
             shape (n_atoms, 3) and dimension of distance. Optional, default = None
             Coordinates to use for partial charge calculation. If None, an appropriate number of
             conformers will be generated.

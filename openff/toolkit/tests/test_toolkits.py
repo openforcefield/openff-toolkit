@@ -17,7 +17,11 @@ from typing import Dict
 import numpy as np
 import pytest
 from numpy.testing import assert_almost_equal
-from simtk import unit
+
+try:
+    from openmm import unit
+except ImportError:
+    from simtk import unit
 
 from openff.toolkit.tests.create_molecules import (
     create_acetaldehyde,
