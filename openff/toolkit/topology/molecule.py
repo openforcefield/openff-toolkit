@@ -42,7 +42,6 @@ except ImportError:
     from simtk.openmm import LocalCoordinatesSite
     from simtk.openmm.app import Element, element
 
-import openff.toolkit
 from openff.toolkit.utils import quantity_to_string, string_to_quantity
 from openff.toolkit.utils.exceptions import (
     InvalidConformerError,
@@ -2233,12 +2232,10 @@ class FrozenMolecule(Serializable):
             # if there turned out to be no way to load this input
             value_errors = list()
 
-            if isinstance(other, openff.toolkit.topology.FrozenMolecule) and not (
-                loaded
-            ):
+            if isinstance(other, FrozenMolecule) and not (loaded):
                 self._copy_initializer(other)
                 loaded = True
-            if isinstance(other, openff.toolkit.topology.Molecule) and not (loaded):
+            if isinstance(other, Molecule) and not (loaded):
                 # TODO: This will need to be updated once FrozenMolecules and Molecules are significantly different
                 self._copy_initializer(other)
                 loaded = True

@@ -30,11 +30,13 @@ except ImportError:
 
 from openff.toolkit.tests.create_molecules import (
     create_acetaldehyde,
+    create_ammonia,
     create_benzene_no_aromatic,
     create_cis_1_2_dichloroethene,
     create_cyclohexane,
     create_ethanol,
     create_reversed_ethanol,
+    create_water,
 )
 from openff.toolkit.tests.utils import (
     has_pkg,
@@ -2900,11 +2902,7 @@ class TestMolecule:
         The order of the positions is the same as the order of the particles as they
         appear in the molecule using Molecule.particles
         """
-
-        import openff.toolkit.tests.test_forcefield
-
-        molecule = openff.toolkit.tests.test_forcefield.create_water()
-        # molecule = create_water()
+        molecule = create_water()
 
         # a 90 degree water molecule on the xy plane
         molecule.add_conformer(
@@ -2954,11 +2952,7 @@ class TestMolecule:
         The order of the positions is the same as the order of the particles as they
         appear in the molecule using Molecule.particles
         """
-
-        import openff.toolkit.tests.test_forcefield
-
-        molecule = openff.toolkit.tests.test_forcefield.create_water()
-        # molecule = create_water()
+        molecule = create_water()
 
         # a 90 degree water molecule on the xy plane
         molecule.add_conformer(
@@ -3014,10 +3008,7 @@ class TestMolecule:
         The order of the positions is the same as the order of the particles as they
         appear in the molecule using Molecule.particles
         """
-
-        import openff.toolkit.tests.test_forcefield
-
-        molecule = openff.toolkit.tests.test_forcefield.create_water()
+        molecule = create_water()
 
         # a 90 degree water molecule on the xy plane
         molecule.add_conformer(
@@ -3069,10 +3060,7 @@ class TestMolecule:
         The order of the positions is the same as the order of the particles as they
         appear in the molecule using Molecule.particles
         """
-
-        import openff.toolkit.tests.test_forcefield
-
-        molecule = openff.toolkit.tests.test_forcefield.create_water()
+        molecule = create_water()
 
         # a 90 degree water molecule on the xy plane
         molecule.add_conformer(
@@ -3124,10 +3112,7 @@ class TestMolecule:
         The order of the positions is the same as the order of the particles as they
         appear in the molecule using Molecule.particles
         """
-
-        import openff.toolkit.tests.test_forcefield
-
-        molecule = openff.toolkit.tests.test_forcefield.create_water()
+        molecule = create_water()
 
         # a 90 degree water molecule on the xy plane
         molecule.add_conformer(
@@ -3183,10 +3168,7 @@ class TestMolecule:
         The order of the positions is the same as the order of the particles as they
         appear in the molecule using Molecule.particles
         """
-
-        import openff.toolkit.tests.test_forcefield
-
-        molecule = openff.toolkit.tests.test_forcefield.create_water()
+        molecule = create_water()
 
         # a 90 degree water molecule on the xy plane
         molecule.add_conformer(
@@ -3236,10 +3218,7 @@ class TestMolecule:
         The order of the positions is the same as the order of the particles as they
         appear in the molecule using Molecule.particles
         """
-
-        import openff.toolkit.tests.test_forcefield
-
-        molecule = openff.toolkit.tests.test_forcefield.create_ammonia()
+        molecule = create_ammonia()
 
         # an ammonia; the central nitrogen .5 above the hydrogen, which all lie one
         # an xy plane
