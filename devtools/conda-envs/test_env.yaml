@@ -33,3 +33,4 @@ dependencies:
   - qcportal
   - qcengine
   - openff-interchange
+  - openff-units
