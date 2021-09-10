@@ -4015,14 +4015,21 @@ class FrozenMolecule(Serializable):
                 "Given {}, expected {}".format(coordinates.shape, new_conf.shape)
             )
 
-        try:
-            new_conf[:] = coordinates
-        except AttributeError as e:
-            print(e)
+        if not hasattr(coordinates, "units"):
             raise Exception(
                 "Coordinates passed to Molecule._add_conformer without units. Ensure that coordinates are "
                 "of type openmm.units.Quantity"
             )
+
+        if not coordinates.units.is_compatible_with(unit.angstrom):
+            raise Exception(
+                "Coordinates passed to Molecule._add_conformer with incompatible units. "
+                "Ensure that units are dimension of length."
+            )
+        try:
+            new_conf[:] = coordinates
+        except AttributeError as e:
+            print(e)
 
         if self._conformers is None:
             # TODO should we checking that the exact same conformer is not in the list already?
@@ -4890,7 +4897,7 @@ class FrozenMolecule(Serializable):
         for i, geometry in enumerate(conformers, 1):
             xyz_data.write(f"{self.n_atoms}\n" + title(end))
             for j, atom_coords in enumerate(geometry.m_as(unit.angstrom)):
-                x, y, z = atom_coords._value
+                x, y, z = atom_coords
                 xyz_data.write(
                     f"{self.atoms[j].element.symbol}       {x: .10f}   {y: .10f}   {z: .10f}\n"
                 )
@@ -5493,7 +5500,7 @@ class FrozenMolecule(Serializable):
                 np.array(mol["geometry"], float).reshape(-1, 3), unit.bohr
             )
             try:
-                offmol._add_conformer(geometry.m_as(unit.angstrom))
+                offmol._add_conformer(geometry.to(unit.angstrom))
                 # in case this molecule didn't come from a server at all
                 if "id" in mol:
                     initial_ids[mol["id"]] = offmol.n_conformers - 1

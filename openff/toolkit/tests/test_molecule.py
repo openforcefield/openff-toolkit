@@ -26,12 +26,11 @@ from tempfile import NamedTemporaryFile
 
 import numpy as np
 import pytest
+from openff.units import unit
 
 try:
-    from openmm import unit
     from openmm.app import element
 except ImportError:
-    from simtk import unit
     from simtk.openmm.app import element
 
 from openff.toolkit.tests.create_molecules import (
@@ -1989,8 +1988,7 @@ class TestMolecule:
             assert connectivity == qcschema.connectivity
             assert symbols == qcschema.symbols.tolist()
             assert (
-                qcschema.geometry.all()
-                == ethanol.conformers[0].in_units_of(unit.bohr).all()
+                qcschema.geometry.all() == ethanol.conformers[0].m_as(unit.bohr).all()
             )
 
         assert_check()
