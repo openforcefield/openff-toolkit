@@ -13,12 +13,14 @@ from unittest import TestCase
 
 import numpy as np
 import pytest
+from openff.units import unit
 
 try:
-    from openmm import app, unit
+    from openmm import app
+    from openmm import unit as openmm_unit
     from openmm.app import element
 except ImportError:
-    from simtk import unit
+    from simtk import unit as openmm_unit
     from simtk.openmm import app
     from simtk.openmm.app import element
 

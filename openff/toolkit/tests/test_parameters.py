@@ -12,12 +12,7 @@ Test classes and function in module openff.toolkit.typing.engines.smirnoff.param
 import numpy
 import pytest
 from numpy.testing import assert_almost_equal
-
-try:
-    import openmm
-    from openmm import unit
-except ImportError:
-    from simtk import unit, openmm
+from openff.units import unit
 
 from openff.toolkit.topology import Molecule
 from openff.toolkit.typing.engines.smirnoff.parameters import (
@@ -90,7 +85,7 @@ class TestParameterAttribute:
 
         class MyParameter:
             attr_unit = ParameterAttribute(
-                unit=unit.kilocalories_per_mole / unit.angstrom ** 2
+                unit=unit.kilocalorie / unit.mole / unit.angstrom ** 2
             )
 
         my_par = MyParameter()
@@ -100,13 +95,12 @@ class TestParameterAttribute:
             my_par.attr_unit = 3.0
         # TypeError is raised when setting a value with incorrect units.
         with pytest.raises(IncompatibleUnitError, match="should have units of"):
-            my_par.attr_unit = 3.0 * unit.kilocalories_per_mole
-
+            my_par.attr_unit = 3.0 * unit.kilocalorie / unit.mole
         # Otherwise the attribute is assigned correctly.
-        value = 3.0 * unit.kilocalories_per_mole / unit.angstrom ** 2
+        value = 3.0 * unit.kilocalorie / unit.mole / unit.angstrom ** 2
         my_par.attr_unit = value
         assert my_par.attr_unit == value
-        assert my_par.attr_unit.unit == value.unit
+        assert my_par.attr_unit.units == value.units
 
     def test_quantity_string_parsing(self):
         """ParameterAttributes attached to units convert strings into Quantity objects."""
@@ -118,7 +112,7 @@ class TestParameterAttribute:
 
         my_par.attr_unit = "3.0*meter/second**2"
         assert my_par.attr_unit == 3.0 * unit.meter / unit.second ** 2
-        assert my_par.attr_unit.unit == unit.meter / unit.second ** 2
+        assert my_par.attr_unit.units == unit.meter / unit.second ** 2
 
         # Assigning incorrect units still raises an error.
         with pytest.raises(IncompatibleUnitError, match="should have units of"):
@@ -282,17 +276,17 @@ class TestInterpolation:
     def test_linear_inter_or_extrapolate(self, fractional_bond_order, k_interpolated):
         """Test that linear interpolation works as expected"""
         k_bondorder = {
-            1: 1 * unit.kilocalorie_per_mole,
-            2: 1.8 * unit.kilocalorie_per_mole,
+            1: 1 * unit.kilocalorie / unit.mole,
+            2: 1.8 * unit.kilocalorie / unit.mole,
         }
 
         k = _linear_inter_or_extrapolate(k_bondorder, fractional_bond_order)
-        assert_almost_equal(k / k.unit, k_interpolated)
+        assert_almost_equal(k.m, k_interpolated)
 
     def test_linear_inter_or_extrapolate_one_point(self):
         """Test that linear interpolation raises an error if attempted with just one point"""
         k_bondorder = {
-            2: 1.8 * unit.kilocalorie_per_mole,
+            2: 1.8 * unit.kilocalorie / unit.mole,
         }
         with pytest.raises(NotEnoughPointsForInterpolationError) as excinfo:
             k = _linear_inter_or_extrapolate(k_bondorder, 1)
@@ -306,25 +300,25 @@ class TestInterpolation:
     ):
         """Test that linear interpolation works as expected for three terms"""
         k_bondorder = {
-            1: 1 * unit.kilocalorie_per_mole,
-            2: 1.8 * unit.kilocalorie_per_mole,
-            3: 2.5 * unit.kilocalorie_per_mole,
+            1: 1 * unit.kilocalorie / unit.mole,
+            2: 1.8 * unit.kilocalorie / unit.mole,
+            3: 2.5 * unit.kilocalorie / unit.mole,
         }
 
         k = _linear_inter_or_extrapolate(k_bondorder, fractional_bond_order)
-        assert_almost_equal(k / k.unit, k_interpolated)
+        assert_almost_equal(k.m, k_interpolated)
 
     def test_linear_inter_or_extrapolate_below_zero(self):
         """Test that linear interpolation does not error if resulting k less than 0"""
         k_bondorder = {
-            1: 1 * unit.kilocalorie_per_mole,
-            2: 2.3 * unit.kilocalorie_per_mole,
+            1: 1 * unit.kilocalorie / unit.mole,
+            2: 2.3 * unit.kilocalorie / unit.mole,
         }
 
         fractional_bond_order = 0.2
         k = _linear_inter_or_extrapolate(k_bondorder, fractional_bond_order)
 
-        assert k / k.unit < 0
+        assert k.m < 0
 
 
 class TestParameterAttributeHandler:
@@ -416,7 +410,7 @@ class TestParameterAttributeHandler:
 class TestParameterHandler:
 
     length = 1 * unit.angstrom
-    k = 10 * unit.kilocalorie_per_mole / unit.angstrom ** 2
+    k = 10 * unit.kilocalorie / unit.mole / unit.angstrom ** 2
 
     def test_tagname(self):
         """Test the TAGNAME getter and default behavior"""
@@ -566,22 +560,22 @@ class TestParameterHandler:
             {
                 "smirks": "[*:1]-[*:2]",
                 "length": 1 * unit.angstrom,
-                "k": 10 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
+                "k": 10 * unit.kilocalorie / unit.mole / unit.angstrom ** 2,
             }
         )
         bh.add_parameter(
             {
                 "smirks": "[*:1]=[*:2]",
                 "length": 0.2 * unit.nanometer,
-                "k": 0.4 * unit.kilojoule_per_mole / unit.nanometer ** 2,
+                "k": 0.4 * unit.kilojoule / unit.mole / unit.nanometer ** 2,
             }
         )
         bh_dict = bh.to_dict()
         assert bh_dict["Bond"][0]["length"] == unit.Quantity(
-            value=1, unit=unit.angstrom
+            value=1, units=unit.angstrom
         )
         assert bh_dict["Bond"][1]["length"] == unit.Quantity(
-            value=2, unit=unit.angstrom
+            value=2, units=unit.angstrom
         )
 
     def test_to_dict_maintain_units(self):
@@ -591,21 +585,21 @@ class TestParameterHandler:
             {
                 "smirks": "[*:1]-[*:2]",
                 "length": 1 * unit.angstrom,
-                "k": 10 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
+                "k": 10 * unit.kilocalorie / unit.mole / unit.angstrom ** 2,
             }
         )
         bh.add_parameter(
             {
                 "smirks": "[*:1]=[*:2]",
                 "length": 0.2 * unit.nanometer,
-                "k": 0.4 * unit.kilojoule_per_mole / unit.nanometer ** 2,
+                "k": 0.4 * unit.kilojoule / unit.mole / unit.nanometer ** 2,
             }
         )
         bh_dict = bh.to_dict()
         assert bh_dict["Bond"][0]["length"] == unit.Quantity(1.0, unit.angstrom)
-        assert bh_dict["Bond"][0]["length"].unit == unit.angstrom
+        assert bh_dict["Bond"][0]["length"].units == unit.angstrom
         assert bh_dict["Bond"][1]["length"] == unit.Quantity(0.2, unit.nanometer)
-        assert bh_dict["Bond"][1]["length"].unit == unit.nanometer
+        assert bh_dict["Bond"][1]["length"].units == unit.nanometer
 
     def test_missing_section_version(self):
         """Test that exceptions are raised if invalid or improper section versions are provided during intialization"""
@@ -677,14 +671,14 @@ class TestParameterHandler:
             {
                 "smirks": "[*:1]-[*:2]",
                 "length": 1 * unit.angstrom,
-                "k": 10 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
+                "k": 10 * unit.kilocalorie / unit.mole / unit.angstrom ** 2,
             }
         )
         bh.add_parameter(
             {
                 "smirks": "[*:1]=[*:2]",
                 "length": 0.2 * unit.nanometer,
-                "k": 0.4 * unit.kilojoule_per_mole / unit.nanometer ** 2,
+                "k": 0.4 * unit.kilojoule / unit.mole / unit.nanometer ** 2,
             }
         )
 
@@ -714,7 +708,7 @@ class TestParameterHandler:
             {
                 "smirks": "[*:1]-[*:2]",
                 "length": 1 * unit.angstrom,
-                "k": 10 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
+                "k": 10 * unit.kilocalorie / unit.mole / unit.angstrom ** 2,
                 "id": "b0",
             }
         )
@@ -725,7 +719,7 @@ class TestParameterHandler:
 
         assert params[0].length == unit.Quantity(1.0, unit.angstrom)
         assert params[0].k == unit.Quantity(
-            10.0, unit.kilocalorie_per_mole / unit.angstrom ** 2
+            10.0, unit.kilocalorie / unit.mole / unit.angstrom ** 2
         )
 
         # Ensure a query with no matches returns an empty list
@@ -746,7 +740,7 @@ class TestParameterHandler:
             {
                 "smirks": "[#1:1]-[#6:2]",
                 "length": 1 * unit.angstrom,
-                "k": 10 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
+                "k": 10 * unit.kilocalorie / unit.mole / unit.angstrom ** 2,
                 "id": "b1",
             }
         )
@@ -906,17 +900,17 @@ class TestParameterList:
         p1 = BondHandler.BondType(
             smirks="[*:1]-[*:2]",
             length=1.01 * unit.angstrom,
-            k=5 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
+            k=5 * unit.kilocalorie / unit.mole / unit.angstrom ** 2,
         )
         p2 = BondHandler.BondType(
             smirks="[*:1]=[*:2]",
             length=1.02 * unit.angstrom,
-            k=6 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
+            k=6 * unit.kilocalorie / unit.mole / unit.angstrom ** 2,
         )
         p3 = BondHandler.BondType(
             smirks="[*:1]#[*:3]",
             length=1.03 * unit.angstrom,
-            k=7 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
+            k=7 * unit.kilocalorie / unit.mole / unit.angstrom ** 2,
         )
         parameter_list = ParameterList([p1, p2, p3])
         ser_param_list = parameter_list.to_list()
@@ -928,17 +922,17 @@ class TestParameterList:
         p1 = BondHandler.BondType(
             smirks="[*:1]-[*:2]",
             length=1.01 * unit.angstrom,
-            k=5 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
+            k=5 * unit.kilocalorie / unit.mole / unit.angstrom ** 2,
         )
         p2 = BondHandler.BondType(
             smirks="[*:1]=[*:2]",
             length=1.02 * unit.angstrom,
-            k=6 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
+            k=6 * unit.kilocalorie / unit.mole / unit.angstrom ** 2,
         )
         p3 = BondHandler.BondType(
             smirks="[*:1]#[*:3]",
             length=1.03 * unit.angstrom,
-            k=7 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
+            k=7 * unit.kilocalorie / unit.mole / unit.angstrom ** 2,
         )
         parameter_list = ParameterList([p1, p2, p3])
         param_dict_list = parameter_list.to_list()
@@ -1130,10 +1124,11 @@ class TestBondType:
         p1 = BondHandler.BondType(
             smirks="[*:1]-[*:2]",
             length=1.02 * unit.angstrom,
-            k=5 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
+            k=5 * unit.kilocalorie / unit.mole / unit.angstrom ** 2,
         )
         param_dict = p1.to_dict()
         param_dict_unitless, attached_units = detach_units(param_dict)
+
         assert param_dict_unitless == {
             "smirks": "[*:1]-[*:2]",
             "length": 1.02,
@@ -1151,9 +1146,9 @@ class TestBondType:
         Test the parsing of a BondType with k_bondorder1/2/3 definitions
         """
         length = 1.4 * unit.angstrom
-        k1 = 101 * unit.kilocalorie_per_mole / unit.angstrom ** 2
-        k2 = 202 * unit.kilocalorie_per_mole / unit.angstrom ** 2
-        k3 = 303 * unit.kilocalorie_per_mole / unit.angstrom ** 2
+        k1 = 101 * unit.kilocalorie / unit.mole / unit.angstrom ** 2
+        k2 = 202 * unit.kilocalorie / unit.mole / unit.angstrom ** 2
+        k3 = 303 * unit.kilocalorie / unit.mole / unit.angstrom ** 2
 
         param = BondHandler.BondType(
             smirks="[*:1]-[*:2]",
@@ -1172,9 +1167,9 @@ class TestBondType:
         length = 1.4 * unit.angstrom
         length1 = 1.5 * unit.angstrom
         length2 = 1.3 * unit.angstrom
-        k = 50 * unit.kilocalorie_per_mole / unit.angstrom ** 2
-        k1 = 101 * unit.kilocalorie_per_mole / unit.angstrom ** 2
-        k2 = 202 * unit.kilocalorie_per_mole / unit.angstrom ** 2
+        k = 50 * unit.kilocalorie / unit.mole / unit.angstrom ** 2
+        k1 = 101 * unit.kilocalorie / unit.mole / unit.angstrom ** 2
+        k2 = 202 * unit.kilocalorie / unit.mole / unit.angstrom ** 2
 
         with pytest.raises(SMIRNOFFSpecError, match="Either k or k_bondorder"):
             BondHandler.BondType(
@@ -1215,7 +1210,7 @@ class TestBondType:
         p1 = BondHandler.BondType(
             smirks="[*:1]-[*:2]",
             length=1.02 * unit.angstrom,
-            k=5 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
+            k=5 * unit.kilocalorie / unit.mole / unit.angstrom ** 2,
         )
         param_dict = p1.to_dict()
         param_dict_unitless, attached_units = detach_units(
@@ -1231,12 +1226,12 @@ class TestBondType:
         p1 = BondHandler.BondType(
             smirks="[*:1]-[*:2]",
             length=1.02 * unit.angstrom,
-            k=5 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
+            k=5 * unit.kilocalorie / unit.mole / unit.angstrom ** 2,
         )
         param_dict = p1.to_dict()
         with pytest.raises(
             ValueError,
-            match="Requested output unit calorie is not compatible with quantity unit angstrom .",
+            match="Requested output unit cal is not compatible with quantity unit Å.",
         ) as context:
             param_dict_unitless, attached_units = detach_units(
                 param_dict, output_units={"length_unit": unit.calorie}
@@ -1249,7 +1244,7 @@ class TestBondType:
         p1 = BondHandler.BondType(
             smirks="[*:1]-[*:2]",
             length=1.02 * unit.angstrom,
-            k=5 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
+            k=5 * unit.kilocalorie / unit.mole / unit.angstrom ** 2,
             id="b1",
         )
         param_dict = p1.to_dict()
@@ -1262,7 +1257,7 @@ class TestBondType:
         p1 = BondHandler.BondType(
             smirks="[*:1]-[*:2]",
             length=1.02 * unit.angstrom,
-            k=5 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
+            k=5 * unit.kilocalorie / unit.mole / unit.angstrom ** 2,
             pilot="alice",
             allow_cosmetic_attributes=True,
         )
@@ -1276,7 +1271,7 @@ class TestBondType:
         p1 = BondHandler.BondType(
             smirks="[*:1]-[*:2]",
             length=1.02 * unit.angstrom,
-            k=5 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
+            k=5 * unit.kilocalorie / unit.mole / unit.angstrom ** 2,
             pilot="alice",
             allow_cosmetic_attributes=True,
         )
@@ -1293,7 +1288,7 @@ class TestBondType:
             p1 = BondHandler.BondType(
                 smirks="[*:1]-[*:2]",
                 length=1.02 * unit.angstrom,
-                k=5 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
+                k=5 * unit.kilocalorie / unit.mole / unit.angstrom ** 2,
                 pilot="alice",
                 allow_cosmetic_attributes=False,
             )
@@ -1305,7 +1300,7 @@ class TestBondType:
         p1 = BondHandler.BondType(
             smirks="[*:1]-[*:2]",
             length=1.02 * unit.angstrom,
-            k=5 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
+            k=5 * unit.kilocalorie / unit.mole / unit.angstrom ** 2,
         )
         # Ensure the cosmetic attribute is present by default during output
         p1.add_cosmetic_attribute("pilot", "alice")
@@ -1337,8 +1332,8 @@ class TestBondHandler:
     ):
         """Test that linear interpolation works as expected"""
         k_bondorder = {
-            1: 101 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
-            2: 123 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
+            1: 101 * unit.kilocalorie / unit.mole / unit.angstrom ** 2,
+            2: 123 * unit.kilocalorie / unit.mole / unit.angstrom ** 2,
         }
 
         length_bondorder = {
@@ -1348,8 +1343,8 @@ class TestBondHandler:
 
         k = _linear_inter_or_extrapolate(k_bondorder, fractional_bond_order)
         length = _linear_inter_or_extrapolate(length_bondorder, fractional_bond_order)
-        assert_almost_equal(k / k.unit, k_interpolated, 1)
-        assert_almost_equal(length / length.unit, length_interpolated, 2)
+        assert_almost_equal(k.m, k_interpolated, 1)
+        assert_almost_equal(length.m, length_interpolated, 2)
 
     def test_different_defaults_03_04(self):
         """Ensure that the 0.3 and 0.4 versions' defaults are correctly set"""
@@ -1383,10 +1378,10 @@ class TestProperTorsionType:
             smirks="[*:1]-[*:2]-[*:3]-[*:4]",
             phase1=30 * unit.degree,
             periodicity1=2,
-            k1=5 * unit.kilocalorie_per_mole,
+            k1=5 * unit.kilocalorie / unit.mole,
         )
         param_dict = p1.to_dict()
-        assert ("k1", 5 * unit.kilocalorie_per_mole) in param_dict.items()
+        assert ("k1", 5 * unit.kilocalorie / unit.mole) in param_dict.items()
         assert ("phase1", 30 * unit.degree) in param_dict.items()
         assert ("periodicity1", 2) in param_dict.items()
         assert "idivf" not in param_dict
@@ -1399,12 +1394,12 @@ class TestProperTorsionType:
             smirks="[*:1]-[*:2]-[*:3]-[*:4]",
             phase1=30 * unit.degree,
             periodicity1=2,
-            k1=5 * unit.kilocalorie_per_mole,
+            k1=5 * unit.kilocalorie / unit.mole,
             idivf1=4,
         )
 
         param_dict = p1.to_dict()
-        assert ("k1", 5 * unit.kilocalorie_per_mole) in param_dict.items()
+        assert ("k1", 5 * unit.kilocalorie / unit.mole) in param_dict.items()
         assert ("phase1", 30 * unit.degree) in param_dict.items()
         assert ("periodicity1", 2) in param_dict.items()
         assert ("idivf1", 4) in param_dict.items()
@@ -1417,16 +1412,16 @@ class TestProperTorsionType:
             smirks="[*:1]-[*:2]-[*:3]-[*:4]",
             phase1=30 * unit.degree,
             periodicity1=2,
-            k1=5 * unit.kilocalorie_per_mole,
+            k1=5 * unit.kilocalorie / unit.mole,
             phase2=31 * unit.degree,
             periodicity2=3,
-            k2=6 * unit.kilocalorie_per_mole,
+            k2=6 * unit.kilocalorie / unit.mole,
         )
         param_dict = p1.to_dict()
-        assert param_dict["k1"] == 5 * unit.kilocalorie_per_mole
+        assert param_dict["k1"] == 5 * unit.kilocalorie / unit.mole
         assert param_dict["phase1"] == 30 * unit.degree
         assert param_dict["periodicity1"] == 2
-        assert param_dict["k2"] == 6 * unit.kilocalorie_per_mole
+        assert param_dict["k2"] == 6 * unit.kilocalorie / unit.mole
         assert param_dict["phase2"] == 31 * unit.degree
         assert param_dict["periodicity2"] == 3
 
@@ -1442,10 +1437,10 @@ class TestProperTorsionType:
                 smirks="[*:1]-[*:2]-[*:3]-[*:4]",
                 phase1=30 * unit.degree,
                 periodicity1=2,
-                k1=5 * unit.kilocalorie_per_mole,
+                k1=5 * unit.kilocalorie / unit.mole,
                 phase3=31 * unit.degree,
                 periodicity3=3,
-                k3=6 * unit.kilocalorie_per_mole,
+                k3=6 * unit.kilocalorie / unit.mole,
             )
 
     def test_multi_term_proper_torsion_bad_units(self):
@@ -1460,10 +1455,10 @@ class TestProperTorsionType:
                 smirks="[*:1]-[*:2]-[*:3]-[*:4]",
                 phase1=30 * unit.degree,
                 periodicity1=2,
-                k1=5 * unit.kilocalorie_per_mole,
+                k1=5 * unit.kilocalorie / unit.mole,
                 phase2=31 * unit.angstrom,  # This should be caught
                 periodicity2=3,
-                k2=6 * unit.kilocalorie_per_mole,
+                k2=6 * unit.kilocalorie / unit.mole,
             )
 
     def test_single_term_proper_torsion_bo(self):
@@ -1474,12 +1469,15 @@ class TestProperTorsionType:
             smirks="[*:1]-[*:2]~[*:3]-[*:4]",
             phase1=30 * unit.degree,
             periodicity1=2,
-            k1_bondorder1=1 * unit.kilocalorie_per_mole,
-            k1_bondorder2=1.8 * unit.kilocalorie_per_mole,
+            k1_bondorder1=1 * unit.kilocalorie / unit.mole,
+            k1_bondorder2=1.8 * unit.kilocalorie / unit.mole,
         )
         param_dict = p1.to_dict()
-        assert ("k1_bondorder1", 1 * unit.kilocalorie_per_mole) in param_dict.items()
-        assert ("k1_bondorder2", 1.8 * unit.kilocalorie_per_mole) in param_dict.items()
+        assert ("k1_bondorder1", 1 * unit.kilocalorie / unit.mole) in param_dict.items()
+        assert (
+            "k1_bondorder2",
+            1.8 * unit.kilocalorie / unit.mole,
+        ) in param_dict.items()
         assert ("phase1", 30 * unit.degree) in param_dict.items()
         assert ("periodicity1", 2) in param_dict.items()
         assert "idivf" not in param_dict
@@ -1499,14 +1497,17 @@ class TestProperTorsionType:
             smirks="[*:1]-[*:2]-[*:3]-[*:4]",
             phase1=30 * unit.degree,
             periodicity1=2,
-            k1_bondorder1=1 * unit.kilocalorie_per_mole,
-            k1_bondorder2=1.8 * unit.kilocalorie_per_mole,
+            k1_bondorder1=1 * unit.kilocalorie / unit.mole,
+            k1_bondorder2=1.8 * unit.kilocalorie / unit.mole,
             idivf1=4,
         )
 
         param_dict = p1.to_dict()
-        assert ("k1_bondorder1", 1 * unit.kilocalorie_per_mole) in param_dict.items()
-        assert ("k1_bondorder2", 1.8 * unit.kilocalorie_per_mole) in param_dict.items()
+        assert ("k1_bondorder1", 1 * unit.kilocalorie / unit.mole) in param_dict.items()
+        assert (
+            "k1_bondorder2",
+            1.8 * unit.kilocalorie / unit.mole,
+        ) in param_dict.items()
         assert ("phase1", 30 * unit.degree) in param_dict.items()
         assert ("periodicity1", 2) in param_dict.items()
         assert ("idivf1", 4) in param_dict.items()
@@ -1519,20 +1520,20 @@ class TestProperTorsionType:
             smirks="[*:1]-[*:2]-[*:3]-[*:4]",
             phase1=30 * unit.degree,
             periodicity1=2,
-            k1_bondorder1=1 * unit.kilocalorie_per_mole,
-            k1_bondorder2=1.8 * unit.kilocalorie_per_mole,
+            k1_bondorder1=1 * unit.kilocalorie / unit.mole,
+            k1_bondorder2=1.8 * unit.kilocalorie / unit.mole,
             phase2=31 * unit.degree,
             periodicity2=3,
-            k2_bondorder1=1.2 * unit.kilocalorie_per_mole,
-            k2_bondorder2=1.9 * unit.kilocalorie_per_mole,
+            k2_bondorder1=1.2 * unit.kilocalorie / unit.mole,
+            k2_bondorder2=1.9 * unit.kilocalorie / unit.mole,
         )
         param_dict = p1.to_dict()
-        assert param_dict["k1_bondorder1"] == 1 * unit.kilocalorie_per_mole
-        assert param_dict["k1_bondorder2"] == 1.8 * unit.kilocalorie_per_mole
+        assert param_dict["k1_bondorder1"] == 1 * unit.kilocalorie / unit.mole
+        assert param_dict["k1_bondorder2"] == 1.8 * unit.kilocalorie / unit.mole
         assert param_dict["phase1"] == 30 * unit.degree
         assert param_dict["periodicity1"] == 2
-        assert param_dict["k2_bondorder1"] == 1.2 * unit.kilocalorie_per_mole
-        assert param_dict["k2_bondorder2"] == 1.9 * unit.kilocalorie_per_mole
+        assert param_dict["k2_bondorder1"] == 1.2 * unit.kilocalorie / unit.mole
+        assert param_dict["k2_bondorder2"] == 1.9 * unit.kilocalorie / unit.mole
         assert param_dict["phase2"] == 31 * unit.degree
         assert param_dict["periodicity2"] == 3
 
@@ -1544,21 +1545,21 @@ class TestProperTorsionType:
             smirks="[*:1]-[*:2]-[*:3]-[*:4]",
             phase1=30 * unit.degree,
             periodicity1=2,
-            k1_bondorder1=1 * unit.kilocalorie_per_mole,
-            k1_bondorder2=1.8 * unit.kilocalorie_per_mole,
+            k1_bondorder1=1 * unit.kilocalorie / unit.mole,
+            k1_bondorder2=1.8 * unit.kilocalorie / unit.mole,
             phase2=31 * unit.degree,
             periodicity2=3,
-            k2_bondorder1=1.2 * unit.kilocalorie_per_mole,
-            k2_bondorder2=1.9 * unit.kilocalorie_per_mole,
+            k2_bondorder1=1.2 * unit.kilocalorie / unit.mole,
+            k2_bondorder2=1.9 * unit.kilocalorie / unit.mole,
         )
 
-        assert p1.k1_bondorder1 == 1.0 * unit.kilocalorie_per_mole
-        p1.k1_bondorder1 = 2.0 * unit.kilocalorie_per_mole
-        assert p1.k1_bondorder1 == 2.0 * unit.kilocalorie_per_mole
+        assert p1.k1_bondorder1 == 1.0 * unit.kilocalorie / unit.mole
+        p1.k1_bondorder1 = 2.0 * unit.kilocalorie / unit.mole
+        assert p1.k1_bondorder1 == 2.0 * unit.kilocalorie / unit.mole
 
-        assert p1.k2_bondorder2 == 1.9 * unit.kilocalorie_per_mole
-        p1.k2_bondorder2 = 2.9 * unit.kilocalorie_per_mole
-        assert p1.k2_bondorder2 == 2.9 * unit.kilocalorie_per_mole
+        assert p1.k2_bondorder2 == 1.9 * unit.kilocalorie / unit.mole
+        p1.k2_bondorder2 = 2.9 * unit.kilocalorie / unit.mole
+        assert p1.k2_bondorder2 == 2.9 * unit.kilocalorie / unit.mole
 
     def test_multi_term_proper_torsion_bo_skip_index(self):
         """
@@ -1573,12 +1574,12 @@ class TestProperTorsionType:
                 smirks="[*:1]-[*:2]-[*:3]-[*:4]",
                 phase1=30 * unit.degree,
                 periodicity1=2,
-                k1_bondorder1=1 * unit.kilocalorie_per_mole,
-                k1_bondorder2=1.8 * unit.kilocalorie_per_mole,
+                k1_bondorder1=1 * unit.kilocalorie / unit.mole,
+                k1_bondorder2=1.8 * unit.kilocalorie / unit.mole,
                 phase3=31 * unit.degree,
                 periodicity3=3,
-                k3_bondorder1=1.2 * unit.kilocalorie_per_mole,
-                k3_bondorder2=1.9 * unit.kilocalorie_per_mole,
+                k3_bondorder1=1.2 * unit.kilocalorie / unit.mole,
+                k3_bondorder2=1.9 * unit.kilocalorie / unit.mole,
             )
 
     def test_single_term_single_bo_exception(self):
@@ -1589,7 +1590,7 @@ class TestProperTorsionType:
             smirks="[*:1]-[*:2]~[*:3]-[*:4]",
             phase1=30 * unit.degree,
             periodicity1=2,
-            k1_bondorder1=1 * unit.kilocalorie_per_mole,
+            k1_bondorder1=1 * unit.kilocalorie / unit.mole,
         )
 
     def test_multi_term_single_bo_exception(self):
@@ -1601,10 +1602,10 @@ class TestProperTorsionType:
             smirks="[*:1]-[*:2]-[*:3]-[*:4]",
             phase1=30 * unit.degree,
             periodicity1=2,
-            k1_bondorder1=1 * unit.kilocalorie_per_mole,
+            k1_bondorder1=1 * unit.kilocalorie / unit.mole,
             phase2=31 * unit.degree,
             periodicity2=3,
-            k2_bondorder1=1.2 * unit.kilocalorie_per_mole,
+            k2_bondorder1=1.2 * unit.kilocalorie / unit.mole,
         )
 
 
@@ -1652,7 +1653,7 @@ class TestvdWHandler:
         vdw_handler.add_parameter(
             {
                 "smirks": "[#18:1]",
-                "epsilon": 1.0 * unit.kilojoules_per_mole,
+                "epsilon": 1.0 * unit.kilojoules / unit.mole,
                 "sigma": 1.0 * unit.angstrom,
             }
         )
@@ -1698,30 +1699,30 @@ class TestvdWType:
         data = {
             "smirks": "[*:1]",
             "rmin_half": 0.5 * unit.angstrom,
-            "epsilon": 0.5 * unit.kilocalorie_per_mole,
+            "epsilon": 0.5 * unit.kilocalorie / unit.mole,
         }
         param = vdWHandler.vdWType(**data)
 
         assert param.sigma is not None
         assert param.rmin_half is not None
         assert numpy.isclose(
-            param.sigma.value_in_unit(unit.angstrom),
-            (2.0 * param.rmin_half / 2 ** (1 / 6)).value_in_unit(unit.angstrom),
+            param.sigma.m_as(unit.angstrom),
+            (2.0 * param.rmin_half / 2 ** (1 / 6)).m_as(unit.angstrom),
         )
         assert "sigma" not in param.to_dict()
         assert "rmin_half" in param.to_dict()
 
         param.sigma = param.sigma
 
-        assert numpy.isclose(param.rmin_half.value_in_unit(unit.angstrom), 0.5)
+        assert numpy.isclose(param.rmin_half.m_as(unit.angstrom), 0.5)
         assert "sigma" in param.to_dict()
         assert "rmin_half" not in param.to_dict()
 
         param.rmin_half = param.rmin_half
 
         assert numpy.isclose(
-            param.sigma.value_in_unit(unit.angstrom),
-            (2.0 * param.rmin_half / 2 ** (1 / 6)).value_in_unit(unit.angstrom),
+            param.sigma.m_as(unit.angstrom),
+            (2.0 * param.rmin_half / 2 ** (1 / 6)).m_as(unit.angstrom),
         )
         assert "sigma" not in param.to_dict()
         assert "rmin_half" in param.to_dict()
@@ -1810,7 +1811,7 @@ class TestVirtualSiteHandler:
             distance=1.0 * unit.angstrom,
             charge_increment=[1.0, 1.0] * unit.elementary_charge,
             sigma=0.0 * unit.angstrom,
-            epsilon=1.0 * unit.kilocalorie_per_mole,
+            epsilon=1.0 * unit.kilocalorie / unit.mole,
             match="once",
         )
 
@@ -1839,7 +1840,7 @@ class TestVirtualSiteHandler:
             outOfPlaneAngle=30 * unit.degree,
             inPlaneAngle=30 * unit.degree,
             sigma=0.0 * unit.angstrom,
-            epsilon=1.0 * unit.kilocalorie_per_mole,
+            epsilon=1.0 * unit.kilocalorie / unit.mole,
             match="once",
         )
 
@@ -1873,7 +1874,7 @@ class TestVirtualSiteHandler:
             charge_increment=[1.0, 1.0, 1.0] * unit.elementary_charge,
             outOfPlaneAngle=30 * unit.degree,
             sigma=0.0 * unit.angstrom,
-            epsilon=1.0 * unit.kilocalorie_per_mole,
+            epsilon=1.0 * unit.kilocalorie / unit.mole,
             match="once",
         )
 
@@ -1905,7 +1906,7 @@ class TestVirtualSiteHandler:
             distance=1.0 * unit.angstrom,
             charge_increment=[1.0, 1.0, 1.0, 1.0] * unit.elementary_charge,
             sigma=0.0 * unit.angstrom,
-            epsilon=1.0 * unit.kilocalorie_per_mole,
+            epsilon=1.0 * unit.kilocalorie / unit.mole,
             match="once",
         )
 
@@ -1936,7 +1937,7 @@ class TestVirtualSiteHandler:
             distance=1.0 * unit.angstrom,
             charge_increment=[1.0, 1.0, 1.0, 1.0] * unit.elementary_charge,
             sigma=0.0 * unit.angstrom,
-            epsilon=1.0 * unit.kilocalorie_per_mole,
+            epsilon=1.0 * unit.kilocalorie / unit.mole,
             match="all_permutations",
         )
         with pytest.raises(

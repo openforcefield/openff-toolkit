@@ -33,11 +33,8 @@ import contextlib
 import functools
 import logging
 
-try:
-    from openmm import unit
-except ImportError:
-    from simtk import unit
-
+from openff.units import unit
+from openmm import unit as openmm_unit
 
 from openff.toolkit.utils.exceptions import (
     IncompatibleUnitError,
@@ -170,6 +167,10 @@ def get_data_file_path(relative_path):
 
 
 def unit_to_string(input_unit):
+    return str(input_unit)
+
+
+def _unit_to_string(input_unit):
     """
     Serialize a openmm.unit.Unit and return it as a string.
 
@@ -184,7 +185,7 @@ def unit_to_string(input_unit):
         The serialized unit.
     """
 
-    if input_unit == unit.dimensionless:
+    if input_unit == openmm_unit.dimensionless:
         return "dimensionless"
 
     # Decompose output_unit into a tuples of (base_dimension_unit, exponent)
@@ -207,6 +208,10 @@ def unit_to_string(input_unit):
 
 
 def quantity_to_string(input_quantity):
+    return str(input_quantity)
+
+
+def _quantity_to_string(input_quantity):
     """
     Serialize a openmm.unit.Quantity to a string.
 
@@ -309,6 +314,15 @@ def string_to_unit(unit_string):
 
 
 def string_to_quantity(quantity_string):
+    try:
+        return unit.Quantity(quantity_string)
+    except:
+        if "OE" in quantity_string:
+            return quantity_string
+        raise Exception(quantity_string)
+
+
+def _string_to_quantity(quantity_string):
     """
     Takes a string representation of a quantity and returns a openmm.unit.Quantity
 
@@ -397,7 +411,7 @@ def convert_all_quantities_to_string(smirnoff_data):
         for index, item in enumerate(smirnoff_data):
             smirnoff_data[index] = convert_all_quantities_to_string(item)
         obj_to_return = smirnoff_data
-    elif isinstance(smirnoff_data, unit.Quantity):
+    elif isinstance(smirnoff_data, openmm_unit.Quantity):
         obj_to_return = quantity_to_string(smirnoff_data)
     else:
         obj_to_return = smirnoff_data
@@ -425,6 +439,13 @@ def object_to_quantity(object):
     """
     # If we can't find a custom type, we treat this as a generic iterator.
     return [object_to_quantity(sub_obj) for sub_obj in object]
+
+
+@object_to_quantity.register(openmm_unit.Quantity)
+def _(obj):
+    from openff.units.openmm import from_openmm
+
+    return from_openmm(obj)
 
 
 @object_to_quantity.register(unit.Quantity)
@@ -473,7 +494,7 @@ def check_units_are_compatible(object_name, object, unit_to_check, context=None)
             check_units_are_compatible(
                 object_name, sub_object, unit_to_check, context=context
             )
-    elif isinstance(object, unit.Quantity):
+    elif isinstance(object, openmm_unit.Quantity):
         if not object.unit.is_compatible(unit_to_check):
             msg = (
                 f"{context}{object_name} with "
@@ -629,13 +650,13 @@ def detach_units(unit_bearing_dict, output_units=None):
         if unit_key in output_units:
             output_unit = output_units[unit_key]
         else:
-            output_unit = value.unit
-        if not (output_unit.is_compatible(value.unit)):
+            output_unit = value.units
+        if not (output_unit.is_compatible_with(value.units)):
             raise ValueError(
                 "Requested output unit {} is not compatible with "
-                "quantity unit {} .".format(output_unit, value.unit)
+                "quantity unit {}.".format(output_unit, value.units)
             )
-        unitless_dict[key] = value.value_in_unit(output_unit)
+        unitless_dict[key] = value.m_as(output_unit)
         unit_dict[unit_key] = output_unit
 
     return unitless_dict, unit_dict

@@ -24,12 +24,9 @@ from collections.abc import MutableMapping
 import numpy as np
 
 try:
-    from openmm import app, unit
-    from openmm.app import Aromatic, Double, Single, Triple
+    from openmm import unit as openmm_unit
 except ImportError:
-    from simtk import unit
-    from simtk.openmm import app
-    from simtk.openmm.app import Aromatic, Double, Single, Triple
+    from simtk import unit as openmm_unit
 
 from openff.toolkit.typing.chemistry import ChemicalEnvironment
 from openff.toolkit.utils.exceptions import (
@@ -1557,9 +1554,9 @@ class Topology(Serializable):
             return
         if not hasattr(box_vectors, "unit"):
             raise InvalidBoxVectorsError("Given unitless box vectors")
-        if not (unit.angstrom.is_compatible(box_vectors.unit)):
+        if not box_vectors.units not in unit.nm.compatible_units():
             raise InvalidBoxVectorsError(
-                "Attempting to set box vectors in units that are incompatible with openmm.unit.Angstrom"
+                f"Cannot set box vectors with quantities with unit {box_vectors.units}"
             )
 
         if hasattr(box_vectors, "shape"):
@@ -2140,6 +2137,12 @@ class Topology(Serializable):
 
         from openff.toolkit.topology.molecule import Molecule
 
+        # TODO: Simply decorate with @requires_package("openmm") when simtk compatibility no longer needed
+        try:
+            from openmm import app
+        except ImportError:
+            from simtk.openmm import app
+
         # Check to see if the openMM system has defined bond orders, by looping over all Bonds in the Topology.
         omm_has_bond_orders = True
         for omm_bond in openmm_topology.bonds():
@@ -2284,10 +2287,13 @@ class Topology(Serializable):
         openmm_topology : openmm.app.Topology
             An OpenMM Topology object
         """
+        # TODO: Simply decorate with @requires_package("openmm") when simtk compatibility no longer needed
         try:
+            from openmm import app
             from openmm.app import Topology as OMMTopology
             from openmm.app.element import Element as OMMElement
         except ImportError:
+            from simtk.openmm import app
             from simtk.openmm.app import Topology as OMMTopology
             from simtk.openmm.app.element import Element as OMMElement
 
@@ -2347,13 +2353,14 @@ class Topology(Serializable):
                 omm_atoms.append(omm_atom)
 
         # Add all bonds.
-        bond_types = {1: Single, 2: Double, 3: Triple}
+        bond_types = {1: app.Single, 2: app.Double, 3: app.Triple}
         for bond in self.topology_bonds:
             atom1, atom2 = bond.atoms
             atom1_idx, atom2_idx = atom1.topology_atom_index, atom2.topology_atom_index
-            bond_type = (
-                Aromatic if bond.bond.is_aromatic else bond_types[bond.bond_order]
-            )
+            if bond.bond.is_aromatic:
+                bond_type = app.Aromatic
+            else:
+                bond_type = bond_types[bond.bond_order]
             omm_topology.addBond(
                 omm_atoms[atom1_idx],
                 omm_atoms[atom2_idx],
@@ -2392,8 +2399,8 @@ class Topology(Serializable):
 
         """
         openmm_top = self.to_openmm()
-        if not isinstance(positions, unit.Quantity):
-            positions = positions * unit.angstrom
+        if not isinstance(positions, openmm_unit.Quantity):
+            positions = positions * openmm_unit.angstrom
 
         file_format = file_format.upper()
         if file_format != "PDB":
@@ -2628,7 +2635,9 @@ class Topology(Serializable):
             )
 
         dic = mol.GetCoords()
-        positions = [Vec3(v[0], v[1], v[2]) for k, v in dic.items()] * unit.angstrom
+        positions = [
+            Vec3(v[0], v[1], v[2]) for k, v in dic.items()
+        ] * openmm_unit.angstrom
 
         return topology, positions
 
@@ -2726,7 +2735,7 @@ class Topology(Serializable):
             particle_indices = [
                 atom.particle_index for atom in self.topology_atoms
             ]  # get particle indices
-            pos = positions[particle_indices].value_in_units_of(unit.angstrom)
+            pos = positions[particle_indices].m_as(unit.angstrom)
             pos = list(itertools.chain.from_iterable(pos))
             oe_mol.SetCoords(pos)
             oechem.OESetDimensionFromCoords(oe_mol)

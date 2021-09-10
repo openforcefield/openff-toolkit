@@ -12,11 +12,7 @@ These are common to several test modules.
 """
 
 import numpy as np
-
-try:
-    from openmm import unit
-except ImportError:
-    from simtk import unit
+from openff.units import unit
 
 from openff.toolkit.topology.molecule import Molecule
 

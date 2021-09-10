@@ -37,18 +37,19 @@ from copy import deepcopy
 from typing import Optional, Union
 
 import numpy as np
+from openff.units import unit
 
 try:
-    from openmm import LocalCoordinatesSite, unit
-    from openmm.app import Element, element
+    from openmm import LocalCoordinatesSite
+    from openmm import unit as openmm_unit
 except ImportError:
-    from simtk import unit
+    from simtk import unit as openmm_unit
     from simtk.openmm import LocalCoordinatesSite
-    from simtk.openmm.app import Element, element
 
 import openff.toolkit
 from openff.toolkit.utils import quantity_to_string, string_to_quantity
 from openff.toolkit.utils.exceptions import (
+    IncompatibleUnitError,
     InvalidConformerError,
     NotAttachedToMoleculeError,
     SmilesParsingError,
@@ -190,7 +191,7 @@ class Atom(Particle):
         ----------
         atomic_number : int
             Atomic number of the atom
-        formal_charge : int or openmm.unit.Quantity-wrapped int with dimension "charge"
+        formal_charge : int or openff.units.unit.Quantity-wrapped int with dimension "charge"
             Formal charge of the atom
         is_aromatic : bool
             If True, atom is aromatic; if False, not aromatic
@@ -213,6 +214,9 @@ class Atom(Particle):
         """
         self._atomic_number = atomic_number
         # Use the setter here, since it will handle either ints or Quantities
+        if hasattr(formal_charge, "units"):
+            if formal_charge.units == unit.dimensionless:
+                raise Exception
         self.formal_charge = formal_charge
         self._is_aromatic = is_aromatic
         self._stereochemistry = stereochemistry
@@ -257,7 +261,7 @@ class Atom(Particle):
         # TODO
         atom_dict = OrderedDict()
         atom_dict["atomic_number"] = self._atomic_number
-        atom_dict["formal_charge"] = self._formal_charge / unit.elementary_charge
+        atom_dict["formal_charge"] = self._formal_charge.m_as(unit.elementary_charge)
         atom_dict["is_aromatic"] = self._is_aromatic
         atom_dict["stereochemistry"] = self._stereochemistry
         # TODO: Should we let atoms have names?
@@ -282,16 +286,18 @@ class Atom(Particle):
 
     @formal_charge.setter
     def formal_charge(self, other):
-        from openff.toolkit.utils.utils import check_units_are_compatible
-
         """
         Set the atom's formal charge. Accepts either ints or openmm.unit.Quantity-wrapped ints with units of charge.
         """
         if isinstance(other, int):
             self._formal_charge = other * unit.elementary_charge
         else:
-            check_units_are_compatible("formal charge", other, unit.elementary_charge)
-            self._formal_charge = other
+            if other.units in unit.elementary_charge.compatible_units():
+                self._formal_charge = other
+            else:
+                raise IncompatibleUnitError(
+                    f"Cannot set formal charge with a quantity with units {other.units}"
+                )
 
     @property
     def partial_charge(self):
@@ -344,7 +350,12 @@ class Atom(Particle):
         -------
         openmm.openmm.app.element.Element
         """
-        return element.Element.getByAtomicNumber(self._atomic_number)
+        try:
+            from openmm.app.element import Element
+        except ImportError:
+            from simtk.openmm.app.element import Element
+
+        return Element.getByAtomicNumber(self._atomic_number)
 
     @property
     def atomic_number(self):
@@ -596,7 +607,7 @@ class VirtualParticle(Particle):
 
         originwt, xdir, ydir = self.virtual_site.local_frame_weights
         disp = self.virtual_site.local_frame_position
-        _unit = disp.unit
+        _unit = disp.units
         x, y, z = disp / _unit
 
         # this pulls the correct ordering of the atoms
@@ -772,7 +783,7 @@ class VirtualSite(Particle):
 
         # set sane defaults for OpenMM
         if epsilon is None and rmin_half is None:
-            epsilon = 0.0 * unit.kilocalorie_per_mole
+            epsilon = 0.0 * unit.kilocalorie / unit.mole
         if sigma is None and rmin_half is None:
             sigma = 0.0 * unit.angstrom
 
@@ -812,26 +823,27 @@ class VirtualSite(Particle):
         if sigma is None:
             self._sigma = None
         else:
-            assert hasattr(sigma, "unit")
-            assert unit.angstrom.is_compatible(sigma.unit)
-            self._sigma = sigma.in_units_of(unit.angstrom)
+            assert hasattr(sigma, "units")
+            assert sigma.units in unit.angstrom.compatible_units()
+            self._sigma = sigma.m_as(unit.angstrom)
 
         if epsilon is None:
             self._epsilon = None
         else:
-            assert hasattr(epsilon, "unit")
-            assert (unit.kilojoule_per_mole).is_compatible(epsilon.unit)
-            self._epsilon = epsilon.in_units_of(unit.kilojoule_per_mole)
+            assert hasattr(epsilon, "units")
+            kj_mol = unit.kilojoule / unit.mole
+            assert epsilon.units.is_compatible_with(kj_mol)
+            self._epsilon = epsilon.m_as(kj_mol)
 
         if charge_increments is None:
             self._charge_increments = None
         else:
             for ci in charge_increments:
-                assert hasattr(ci, "unit")
-                assert unit.elementary_charges.is_compatible(ci.unit)
+                assert hasattr(ci, "units")
+                assert ci.units in unit.elementary_charges.compatible_units()
             self._charge_increments = [
-                ci.value_in_unit(unit.elementary_charges) for ci in charge_increments
-            ] * unit.elementary_charges
+                ci.m_as(unit.elementary_charges) for ci in charge_increments
+            ] * unit.elementary_charge
 
         self._atoms = list()
 
@@ -1177,7 +1189,7 @@ class VirtualSite(Particle):
         positions = []
         for vp in self.particles:
             vp_pos = vp.compute_position_from_conformer(conformer_idx)
-            positions.append(vp_pos.value_in_unit(unit.angstrom))
+            positions.append(vp_pos.m_as(unit.angstrom))
 
         return unit.Quantity(np.array(positions).reshape(-1, 3), unit=unit.angstrom)
 
@@ -1204,7 +1216,7 @@ class VirtualSite(Particle):
         positions = []
         for vp in self.particles:
             vp_pos = vp.compute_position_from_atom_positions(atom_positions)
-            positions.extend(vp_pos.value_in_unit(unit.angstrom))
+            positions.extend(vp_pos.m_as(unit.angstrom))
 
         return unit.Quantity(np.array(positions).reshape(-1, 3), unit=unit.angstrom)
 
@@ -1255,8 +1267,8 @@ class BondChargeVirtualSite(VirtualSite):
             The permutations of the matched atoms that should be used to define
             the orientation of each virtual site particle
         """
-        assert hasattr(distance, "unit")
-        assert unit.angstrom.is_compatible(distance.unit)
+        assert hasattr(distance, "units")
+        assert distance.units in unit.nanometer.compatible_units()
 
         super().__init__(
             atoms,
@@ -1267,7 +1279,7 @@ class BondChargeVirtualSite(VirtualSite):
             name=name,
             orientations=orientations,
         )
-        self._distance = distance.in_units_of(unit.angstrom)
+        self._distance = distance.m_as(unit.angstrom)
 
     def __eq__(self, other):
         return super().__eq__(other)
@@ -1342,7 +1354,7 @@ class BondChargeVirtualSite(VirtualSite):
         # towards the center of the other atoms, we want the
         # vsite to point away from the unit vector to achieve the desired
         # distance
-        _unit = self._distance.unit
+        _unit = self._distance.units
         pos = _unit * [-self._distance / _unit, 0.0, 0.0]
 
         return pos
@@ -1414,12 +1426,12 @@ class MonovalentLonePairVirtualSite(VirtualSite):
         """
         # assert isinstance(distance, unit.Quantity)
         # TODO: Check for proper number of atoms
-        assert hasattr(distance, "unit")
-        assert unit.angstrom.is_compatible(distance.unit)
-        assert hasattr(in_plane_angle, "unit")
-        assert unit.degree.is_compatible(in_plane_angle.unit)
-        assert hasattr(out_of_plane_angle, "unit")
-        assert unit.degree.is_compatible(out_of_plane_angle.unit)
+        assert hasattr(distance, "units")
+        assert unit.angstrom.is_compatible_with(distance.units)
+        assert hasattr(in_plane_angle, "units")
+        assert unit.degree.is_compatible_with(in_plane_angle.units)
+        assert hasattr(out_of_plane_angle, "units")
+        assert unit.degree.is_compatible_with(out_of_plane_angle.units)
 
         assert len(atoms) == 3
         super().__init__(
@@ -1431,9 +1443,9 @@ class MonovalentLonePairVirtualSite(VirtualSite):
             name=name,
             orientations=orientations,
         )
-        self._distance = distance.in_units_of(unit.angstrom)
-        self._out_of_plane_angle = out_of_plane_angle.in_units_of(unit.degree)
-        self._in_plane_angle = in_plane_angle.in_units_of(unit.degree)
+        self._distance = distance.m_as(unit.angstrom)
+        self._out_of_plane_angle = out_of_plane_angle.m_as(unit.degree)
+        self._in_plane_angle = in_plane_angle.m_as(unit.degree)
 
     def to_dict(self):
         vsite_dict = super().to_dict()
@@ -1518,10 +1530,10 @@ class MonovalentLonePairVirtualSite(VirtualSite):
         in the local frame for the x, y, and z directions.
         """
 
-        theta = self._in_plane_angle.value_in_unit(unit.radians)
-        psi = self._out_of_plane_angle.value_in_unit(unit.radians)
+        theta = self._in_plane_angle.m_as(unit.radians)
+        psi = self._out_of_plane_angle.m_as(unit.radians)
 
-        _unit = self._distance.unit
+        _unit = self._distance.units
         pos = unit.Quantity(
             [
                 self._distance / _unit * np.cos(theta) * np.cos(psi),
@@ -1594,11 +1606,11 @@ class DivalentLonePairVirtualSite(VirtualSite):
             The permutations of the matched atoms that should be used to define
             the orientation of each virtual site particle
         """
-        assert hasattr(distance, "unit")
-        assert unit.angstrom.is_compatible(distance.unit)
+        assert hasattr(distance, "units")
+        assert unit.angstrom.is_compatible_with(distance.units)
 
-        assert hasattr(out_of_plane_angle, "unit")
-        assert unit.degree.is_compatible(out_of_plane_angle.unit)
+        assert hasattr(out_of_plane_angle, "units")
+        assert unit.degree.is_compatible_with(out_of_plane_angle.units)
 
         assert len(atoms) == 3
         super().__init__(
@@ -1610,8 +1622,8 @@ class DivalentLonePairVirtualSite(VirtualSite):
             name=name,
             orientations=orientations,
         )
-        self._distance = distance.in_units_of(unit.angstrom)
-        self._out_of_plane_angle = out_of_plane_angle.in_units_of(unit.degree)
+        self._distance = distance.m_as(unit.angstrom)
+        self._out_of_plane_angle = out_of_plane_angle.m_as(unit.degree)
 
     def __eq__(self, other):
         return super().__eq__(other)
@@ -1689,9 +1701,9 @@ class DivalentLonePairVirtualSite(VirtualSite):
         displacements in the local frame for the x, y, and z directions.
         """
 
-        theta = self._out_of_plane_angle.value_in_unit(unit.radians)
+        theta = self._out_of_plane_angle.m_as(unit.radians)
 
-        _unit = self._distance.unit
+        _unit = self._distance.units
 
         pos = _unit * [
             -self._distance / _unit * np.cos(theta),
@@ -1761,8 +1773,8 @@ class TrivalentLonePairVirtualSite(VirtualSite):
         """
         assert len(atoms) == 4
 
-        assert hasattr(distance, "unit")
-        assert unit.angstrom.is_compatible(distance.unit)
+        assert hasattr(distance, "units")
+        assert unit.angstrom.is_compatible_with(distance.units)
 
         super().__init__(
             atoms,
@@ -1773,7 +1785,7 @@ class TrivalentLonePairVirtualSite(VirtualSite):
             name=name,
             orientations=orientations,
         )
-        self._distance = distance.in_units_of(unit.angstrom)
+        self._distance = distance.m_as(unit.angstrom)
 
     def __eq__(self, other):
         return super().__eq__(other)
@@ -1846,7 +1858,7 @@ class TrivalentLonePairVirtualSite(VirtualSite):
         displacements in the local frame for the x, y, and z directions.
         """
 
-        _unit = self._distance.unit
+        _unit = self._distance.units
         pos = unit.Quantity([-self._distance / _unit, 0.0, 0.0], unit=_unit)
 
         return pos
@@ -2449,7 +2461,7 @@ class FrozenMolecule(Serializable):
                 "conformers_unit"
             ] = "angstrom"  # Have this defined as a class variable?
             for conf in self._conformers:
-                conf_unitless = conf / unit.angstrom
+                conf_unitless = conf.m_as(unit.angstrom)
                 conf_serialized, conf_shape = serialize_numpy((conf_unitless))
                 molecule_dict["conformers"].append(conf_serialized)
         if self._partial_charges is None:
@@ -2457,7 +2469,7 @@ class FrozenMolecule(Serializable):
             molecule_dict["partial_charges_unit"] = None
 
         else:
-            charges_unitless = self._partial_charges / unit.elementary_charge
+            charges_unitless = self._partial_charges.m_as(unit.elementary_charge)
             charges_serialized, charges_shape = serialize_numpy(charges_unitless)
             molecule_dict["partial_charges"] = charges_serialized
             molecule_dict["partial_charges_unit"] = "elementary_charge"
@@ -3293,7 +3305,7 @@ class FrozenMolecule(Serializable):
 
         for vsite in self.virtual_sites:
             vsite_pos = vsite.compute_positions_from_atom_positions(atom_positions)
-            positions.append(vsite_pos.value_in_unit(unit.angstrom))
+            positions.append(vsite_pos.m_as(unit.angstrom))
 
         return unit.Quantity(np.array(positions).reshape(-1, 3), unit=unit.angstrom)
 
@@ -4044,12 +4056,11 @@ class FrozenMolecule(Serializable):
         if charges is None:
             self._partial_charges = None
         else:
-            assert hasattr(charges, "unit")
-            assert unit.elementary_charge.is_compatible(charges.unit)
+            assert hasattr(charges, "units")
+            assert charges.units in unit.elementary_charge.compatible_units()
             assert charges.shape == (self.n_atoms,)
 
-            charges_ec = charges.in_units_of(unit.elementary_charge)
-            self._partial_charges = charges_ec
+            self._partial_charges = charges
 
     @property
     def n_particles(self):
@@ -4452,6 +4463,11 @@ class FrozenMolecule(Serializable):
 
         # create the counter dictionary using chemical symbols
         from collections import Counter
+
+        try:
+            from openmm.app.element import Element
+        except ImportError:
+            from simtk.openmm.app.element import Element
 
         atom_symbol_counts = Counter(
             Element.getByAtomicNumber(atom_num).symbol for atom_num in atom_nums
@@ -4873,7 +4889,7 @@ class FrozenMolecule(Serializable):
         # add the data to the xyz_data list
         for i, geometry in enumerate(conformers, 1):
             xyz_data.write(f"{self.n_atoms}\n" + title(end))
-            for j, atom_coords in enumerate(geometry.in_units_of(unit.angstrom)):
+            for j, atom_coords in enumerate(geometry.m_as(unit.angstrom)):
                 x, y, z = atom_coords._value
                 xyz_data.write(
                     f"{self.atoms[j].element.symbol}       {x: .10f}   {y: .10f}   {z: .10f}\n"
@@ -5226,12 +5242,16 @@ class FrozenMolecule(Serializable):
             No conformer found at the given index.
 
         """
+        try:
+            from openmm.app.element import Element
+        except ImportError:
+            from simtk.openmm.app.element import Element
 
         import qcelemental as qcel
 
         # get/ check the geometry
         try:
-            geometry = self.conformers[conformer].in_units_of(unit.bohr)
+            geometry = self.conformers[conformer].m_as(unit.bohr)
         except (IndexError, TypeError):
             raise InvalidConformerError(
                 "The molecule must have a conformation to produce a valid qcschema; "
@@ -5239,7 +5259,7 @@ class FrozenMolecule(Serializable):
             )
 
         # Gather the required qcschema data
-        charge = self.total_charge / unit.elementary_charge
+        charge = self.total_charge.m_as(unit.elementary_charge)
         connectivity = [
             (bond.atom1_index, bond.atom2_index, bond.bond_order) for bond in self.bonds
         ]
@@ -5473,7 +5493,7 @@ class FrozenMolecule(Serializable):
                 np.array(mol["geometry"], float).reshape(-1, 3), unit.bohr
             )
             try:
-                offmol._add_conformer(geometry.in_units_of(unit.angstrom))
+                offmol._add_conformer(geometry.m_as(unit.angstrom))
                 # in case this molecule didn't come from a server at all
                 if "id" in mol:
                     initial_ids[mol["id"]] = offmol.n_conformers - 1
@@ -5634,7 +5654,7 @@ class FrozenMolecule(Serializable):
         if self.partial_charges is not None:
             new_charges = np.zeros(self.n_atoms)
             for i in range(self.n_atoms):
-                new_charges[i] = self.partial_charges[new_to_cur[i]].value_in_unit(
+                new_charges[i] = self.partial_charges[new_to_cur[i]].m_as(
                     unit.elementary_charge
                 )
             new_molecule.partial_charges = new_charges * unit.elementary_charge
@@ -5644,9 +5664,7 @@ class FrozenMolecule(Serializable):
             for conformer in self.conformers:
                 new_conformer = np.zeros((self.n_atoms, 3))
                 for i in range(self.n_atoms):
-                    new_conformer[i] = conformer[new_to_cur[i]].value_in_unit(
-                        unit.angstrom
-                    )
+                    new_conformer[i] = conformer[new_to_cur[i]].m_as(unit.angstrom)
                 new_molecule._add_conformer(new_conformer * unit.angstrom)
 
         # move any properties across

@@ -17,11 +17,7 @@ from io import BytesIO, StringIO
 import numpy as np
 import pytest
 from numpy.testing import assert_allclose
-
-try:
-    from openmm import unit
-except ImportError:
-    from simtk import unit
+from openff.units import unit
 
 from openff.toolkit.tests import create_molecules
 from openff.toolkit.tests.utils import requires_openeye, requires_rdkit
@@ -890,7 +886,7 @@ class BaseFromFileIO:
         assert mol.n_conformers == 1
         conformer = mol.conformers[0]
         assert conformer.shape == (24, 3)
-        assert conformer.unit == unit.angstrom
+        assert conformer.units == unit.angstrom
 
         # Beyond this are the hydrogens, which are added by algorithm.
         assert_allclose(conformer[: CAFFEINE_2D_COORDS.shape[0]], CAFFEINE_2D_COORDS)
@@ -913,7 +909,7 @@ class BaseFromFileIO:
         assert mol.n_conformers == 1
         conformer = mol.conformers[0]
         assert conformer.shape == (24, 3)
-        assert conformer.unit == unit.angstrom
+        assert conformer.units == unit.angstrom
 
         # All hydrogens are explicit in the file
         assert_allclose(conformer, CAFFEINE_3D_COORDS)

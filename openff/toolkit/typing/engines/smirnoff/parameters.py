@@ -47,7 +47,6 @@ __all__ = [
     "ToolkitAM1BCCHandler",
     "VirtualSiteHandler",
 ]
-
 import abc
 import copy
 import functools
@@ -58,11 +57,8 @@ from collections import OrderedDict, defaultdict
 from enum import Enum
 from itertools import combinations
 
-try:
-    import openmm
-    from openmm import unit
-except ImportError:
-    from simtk import openmm, unit
+import openmm
+from openff.units import unit
 
 from openff.toolkit.topology import (
     ImproperDict,
@@ -414,7 +410,7 @@ class ParameterAttribute:
 
             # Check if units are compatible.
             try:
-                if not self._unit.is_compatible(value.unit):
+                if not self._unit.is_compatible_with(value.units):
                     raise IncompatibleUnitError(
                         f"{self.name}={value} should have units of {self._unit}"
                     )
@@ -714,7 +710,7 @@ class _ParameterAttributeHandler:
 
     >>> class ParameterTypeOrHandler(_ParameterAttributeHandler):
     ...     length = ParameterAttribute(unit=unit.angstrom)
-    ...     k = ParameterAttribute(unit=unit.kilocalorie_per_mole / unit.angstrom**2)
+    ...     k = ParameterAttribute(unit=unit.kilocalorie / unit.mole / unit.angstrom**2)
     ...
 
     ``_ParameterAttributeHandler`` and the descriptors take care of performing
@@ -723,7 +719,7 @@ class _ParameterAttributeHandler:
 
     >>> my_par = ParameterTypeOrHandler(
     ...     length='1.01 * angstrom',
-    ...     k=5 * unit.kilocalorie_per_mole / unit.angstrom**2
+    ...     k=5 * unit.kilocalorie / unit.mole / unit.angstrom**2
     ... )
 
     Note that ``_ParameterAttributeHandler`` took care of implementing
@@ -791,13 +787,13 @@ class _ParameterAttributeHandler:
 
     >>> class MyTorsionType(_ParameterAttributeHandler):
     ...     periodicity = IndexedParameterAttribute(converter=int)
-    ...     k = IndexedParameterAttribute(unit=unit.kilocalorie_per_mole)
+    ...     k = IndexedParameterAttribute(unit=unit.kilocalorie / unit.mole)
     ...
     >>> my_par = MyTorsionType(
     ...     periodicity1=2,
-    ...     k1=5 * unit.kilocalorie_per_mole,
+    ...     k1=5 * unit.kilocalorie / unit.mole,
     ...     periodicity2='3',
-    ...     k2=6 * unit.kilocalorie_per_mole,
+    ...     k2=6 * unit.kilocalorie / unit.mole,
     ... )
     >>> my_par.periodicity
     [2, 3]
@@ -1644,7 +1640,7 @@ class ParameterType(_ParameterAttributeHandler):
     ...     _VALENCE_TYPE = 'Bond'
     ...     _ELEMENT_NAME = 'Bond'
     ...     length = ParameterAttribute(unit=unit.angstrom)
-    ...     k = ParameterAttribute(unit=unit.kilocalorie_per_mole / unit.angstrom**2)
+    ...     k = ParameterAttribute(unit=unit.kilocalorie / unit.mole / unit.angstrom**2)
     ...
 
     The parameter automatically inherits the required smirks attribute
@@ -1655,7 +1651,7 @@ class ParameterType(_ParameterAttributeHandler):
     >>> my_par = MyBondParameter(
     ...     smirks='[*:1]-[*:2]',
     ...     length='1.01 * angstrom',
-    ...     k=5 * unit.kilocalorie_per_mole / unit.angstrom**2
+    ...     k=5 * unit.kilocalorie / unit.mole / unit.angstrom**2
     ... )
     >>> my_par.length
     Quantity(value=1.01, unit=angstrom)
@@ -1712,14 +1708,14 @@ class ParameterType(_ParameterAttributeHandler):
     ...     _VALENCE_TYPE = 'ProperTorsion'
     ...     _ELEMENT_NAME = 'Proper'
     ...     periodicity = IndexedParameterAttribute(converter=int)
-    ...     k = IndexedParameterAttribute(unit=unit.kilocalorie_per_mole)
+    ...     k = IndexedParameterAttribute(unit=unit.kilocalorie / unit.mole)
     ...
     >>> my_par = MyTorsionType(
     ...     smirks='[*:1]-[*:2]-[*:3]-[*:4]',
     ...     periodicity1=2,
-    ...     k1=5 * unit.kilocalorie_per_mole,
+    ...     k1=5 * unit.kilocalorie / unit.mole,
     ...     periodicity2='3',
-    ...     k2=6 * unit.kilocalorie_per_mole,
+    ...     k2=6 * unit.kilocalorie / unit.mole,
     ... )
     >>> my_par.periodicity
     [2, 3]
@@ -2016,7 +2012,7 @@ class ParameterHandler(_ParameterAttributeHandler):
         >>> from openmm import unit
         >>> bh = BondHandler(skip_version_check=True)
         >>> length = 1.5 * unit.angstrom
-        >>> k = 100 * unit.kilocalorie_per_mole / unit.angstrom ** 2
+        >>> k = 100 * unit.kilocalorie / unit.mole / unit.angstrom ** 2
         >>> bh.add_parameter({'smirks': '[*:1]-[*:2]', 'length': length, 'k': k, 'id': 'b1'})
         >>> bh.add_parameter({'smirks': '[*:1]=[*:2]', 'length': length, 'k': k, 'id': 'b2'})
         >>> bh.add_parameter({'smirks': '[*:1]#[*:2]', 'length': length, 'k': k, 'id': 'b3'})
@@ -2097,7 +2093,7 @@ class ParameterHandler(_ParameterAttributeHandler):
         ...     {
         ...         'smirks': '[*:1]-[*:2]',
         ...         'length': 1*unit.angstrom,
-        ...         'k': 10*unit.kilocalorie_per_mole/unit.angstrom**2,
+        ...         'k': 10*unit.kilocalorie / unit.mole/unit.angstrom**2,
         ...     }
         ... )
 
@@ -2597,13 +2593,13 @@ class BondHandler(ParameterHandler):
 
         length = ParameterAttribute(default=None, unit=unit.angstrom)
         k = ParameterAttribute(
-            default=None, unit=unit.kilocalorie_per_mole / unit.angstrom ** 2
+            default=None, unit=unit.kilocalorie / unit.mole / unit.angstrom ** 2
         )
 
         # fractional bond order params
         length_bondorder = MappedParameterAttribute(default=None, unit=unit.angstrom)
         k_bondorder = MappedParameterAttribute(
-            default=None, unit=unit.kilocalorie_per_mole / unit.angstrom ** 2
+            default=None, unit=unit.kilocalorie / unit.mole / unit.angstrom ** 2
         )
 
         def __init__(self, **kwargs):
@@ -2895,7 +2891,7 @@ class AngleHandler(ParameterHandler):
         _ELEMENT_NAME = "Angle"
 
         angle = ParameterAttribute(unit=unit.degree)
-        k = ParameterAttribute(unit=unit.kilocalorie_per_mole / unit.degree ** 2)
+        k = ParameterAttribute(unit=unit.kilocalorie / unit.mole / unit.degree ** 2)
 
     _TAGNAME = "Angles"  # SMIRNOFF tag name to process
     _INFOTYPE = AngleType  # class to hold force type info
@@ -2998,12 +2994,12 @@ class ProperTorsionHandler(ParameterHandler):
 
         periodicity = IndexedParameterAttribute(converter=int)
         phase = IndexedParameterAttribute(unit=unit.degree)
-        k = IndexedParameterAttribute(default=None, unit=unit.kilocalorie_per_mole)
+        k = IndexedParameterAttribute(default=None, unit=unit.kilocalorie / unit.mole)
         idivf = IndexedParameterAttribute(default=None, converter=float)
 
         # fractional bond order params
         k_bondorder = IndexedMappedParameterAttribute(
-            default=None, unit=unit.kilocalorie_per_mole
+            default=None, unit=unit.kilocalorie / unit.mole
         )
 
     _TAGNAME = "ProperTorsions"  # SMIRNOFF tag name to process
@@ -3260,7 +3256,7 @@ class ImproperTorsionHandler(ParameterHandler):
 
         periodicity = IndexedParameterAttribute(converter=int)
         phase = IndexedParameterAttribute(unit=unit.degree)
-        k = IndexedParameterAttribute(unit=unit.kilocalorie_per_mole)
+        k = IndexedParameterAttribute(unit=unit.kilocalorie / unit.mole)
         idivf = IndexedParameterAttribute(default=None, converter=float)
 
     _TAGNAME = "ImproperTorsions"  # SMIRNOFF tag name to process
@@ -3475,7 +3471,7 @@ class vdWHandler(_NonbondedHandler):
         _VALENCE_TYPE = "Atom"  # ChemicalEnvironment valence type expected for SMARTS
         _ELEMENT_NAME = "Atom"
 
-        epsilon = ParameterAttribute(unit=unit.kilocalorie_per_mole)
+        epsilon = ParameterAttribute(unit=unit.kilocalorie / unit.mole)
         sigma = ParameterAttribute(default=None, unit=unit.angstrom)
         rmin_half = ParameterAttribute(default=None, unit=unit.angstrom)
 
@@ -5008,7 +5004,8 @@ class VirtualSiteHandler(_NonbondedHandler):
         type = ParameterAttribute(converter=str)
         match = ParameterAttribute(default="all_permutations")  # has custom converter
         epsilon = ParameterAttribute(
-            default=0.0 * unit.kilocalorie_per_mole, unit=unit.kilocalorie_per_mole
+            default=0.0 * unit.kilocalorie / unit.mole,
+            unit=unit.kilocalorie / unit.mole,
         )
         sigma = ParameterAttribute(default=0.0 * unit.angstrom, unit=unit.angstrom)
         rmin_half = ParameterAttribute(default=None, unit=unit.angstrom)
@@ -5045,7 +5042,7 @@ class VirtualSiteHandler(_NonbondedHandler):
                 kwargs["sigma"] = 0.0 * unit.angstrom
 
             if kwargs.get("epsilon", None) is None:
-                kwargs["epsilon"] = 0.0 * unit.kilocalorie_per_mole
+                kwargs["epsilon"] = 0.0 * unit.kilocalorie / unit.mole
 
             super().__init__(**kwargs)
 
