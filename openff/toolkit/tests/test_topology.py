@@ -706,7 +706,7 @@ class TestTopology(TestCase):
         # The round-trip OpenFF Topology is identical to the original.
         # The reference molecules are the same.
         n_original = off_topology.n_reference_molecules
-        n_copy = off_topology_copy.n_reference_molecule
+        n_copy = off_topology_copy.n_reference_molecules
         assert n_original == n_copy
 
         reference_molecules_copy = list(off_topology_copy.reference_molecules)
