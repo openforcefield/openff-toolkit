@@ -3944,7 +3944,9 @@ class FrozenMolecule(Serializable):
             The index of the bond in the molecule
 
         """
-        if isinstance(atom1, int) and isinstance(atom2, int):
+        if isinstance(atom1, (int, np.integer)) and isinstance(
+            atom2, (int, np.integer)
+        ):
             atom1_atom = self.atoms[atom1]
             atom2_atom = self.atoms[atom2]
         elif isinstance(atom1, Atom) and isinstance(atom2, Atom):
