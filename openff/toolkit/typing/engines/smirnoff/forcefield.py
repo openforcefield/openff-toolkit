@@ -1,8 +1,3 @@
-#!/usr/bin/env python
-
-# =============================================================================================
-# MODULE DOCSTRING
-# =============================================================================================
 """
 Parameter assignment tools for the SMIRNOFF (SMIRKS Native Open Force Field) format.
 
@@ -64,15 +59,7 @@ from openff.toolkit.utils.utils import (
     requires_package,
 )
 
-# =============================================================================================
-# CONFIGURE LOGGER
-# =============================================================================================
-
 logger = logging.getLogger(__name__)
-
-# =============================================================================================
-# PRIVATE METHODS
-# =============================================================================================
 
 # Directory paths used by ForceField to discover offxml files.
 _installed_offxml_dir_paths = []
@@ -113,7 +100,7 @@ def get_available_force_fields(full_paths=False):
     Availability is determined by what is discovered through the
     ``openforcefield.smirnoff_forcefield_directory`` entry point. If the
     ``openff-forcefields`` package is installed, this should include several
-    .offxml files such as ``openff-1.0.0.offxml``\ .
+    .offxml files such as ``openff-1.0.0.offxml``.
 
      Parameters
      ----------
@@ -143,10 +130,6 @@ MAX_SUPPORTED_VERSION = (
     "1.0"  # maximum version of the SMIRNOFF spec supported by this SMIRNOFF force field
 )
 
-
-# =============================================================================================
-# FORCEFIELD
-# =============================================================================================
 
 # QUESTION: How should we document private object fields?
 
@@ -381,11 +364,15 @@ class ForceField:
         if (not self.disable_version_check) and (
             (
                 packaging.version.parse(str(version))
-                > packaging.version.parse(str(self._MAX_SUPPORTED_SMIRNOFF_VERSION))
+                > packaging.version.parse(  # noqa
+                    str(self._MAX_SUPPORTED_SMIRNOFF_VERSION)
+                )
             )
-            or (
+            or (  # noqa
                 packaging.version.parse(str(version))
-                < packaging.version.parse(str(self._MIN_SUPPORTED_SMIRNOFF_VERSION))
+                < packaging.version.parse(  # noqa
+                    str(self._MIN_SUPPORTED_SMIRNOFF_VERSION)
+                )
             )
         ):
             raise SMIRNOFFVersionError(
@@ -680,7 +667,7 @@ class ForceField:
                     for atomset in assigned_terms
                 ]
             )
-        except TypeError as te:
+        except TypeError:
             topology_set = set([atom.index for atom in topological_terms])
             assigned_set = set([atomset[0] for atomset in assigned_terms])
 
@@ -692,7 +679,7 @@ class ForceField:
                     for atom_index in atomset:
                         atom = atoms[atom_index]
                         msg += f" {atom.residue.index:5} {atom.residue.name:3} {atom.name:3}"
-                except TypeError as te:
+                except TypeError:
                     atom = atoms[atomset]
                     msg += (
                         f" {atom.residue.index:5} {atom.residue.name:3} {atom.name:3}"
@@ -872,7 +859,7 @@ class ForceField:
         # Ensure that we are working with an iterable
         try:
             sources = iter(sources)
-        except TypeError as te:
+        except TypeError:
             # Make iterable object
             sources = [sources]
 

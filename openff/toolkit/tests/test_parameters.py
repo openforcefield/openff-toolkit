@@ -1,9 +1,3 @@
-#!/usr/bin/env python
-
-# ======================================================================
-# MODULE DOCSTRING
-# ======================================================================
-
 """
 Test classes and function in module openff.toolkit.typing.engines.smirnoff.parameters.
 
@@ -48,10 +42,6 @@ from openff.toolkit.utils.exceptions import (
     SMIRNOFFSpecError,
     SMIRNOFFVersionError,
 )
-
-# ======================================================================
-# Test ParameterAttribute descriptor
-# ======================================================================
 
 
 class TestParameterAttribute:
@@ -406,11 +396,6 @@ class TestParameterAttributeHandler:
         my_parameter.assert_getattr()
         my_parameter.a1
         my_parameter.assert_getattr()
-
-
-# ======================================================================
-# Test ParameterHandler
-# ======================================================================
 
 
 class TestParameterHandler:

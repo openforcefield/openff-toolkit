@@ -18,7 +18,7 @@ jobs:
 
       - name: Install linters
         run: |
-          pip install black isort
+          pip install black isort flake8
 
       - name: Run black
         run: |
@@ -27,3 +27,8 @@ jobs:
       - name: Run isort
         run: |
           isort --check openff
+
+      - name: Run flake8
+        run: |
+          flake8 openff
+

@@ -1,8 +1,3 @@
-#!/usr/bin/env python
-
-# =============================================================================================
-# MODULE DOCSTRING
-# =============================================================================================
 """
 Molecular chemical entity representation and routines to interface with cheminformatics toolkits
 
@@ -24,7 +19,8 @@ Molecular chemical entity representation and routines to interface with cheminfo
      read multiple molecules via ``Molecules.from_file()``.
    * Should we allow the removal of atoms too?
    * Should invalidation of cached properties be handled via something like a tracked list?
-   * Refactor toolkit encapsulation to generalize and provide only a few major toolkit methods and toolkit objects that can be queried for features
+   * Refactor toolkit encapsulation to generalize and provide only a few major toolkit methods and
+     toolkit objects that can be queried for features
    * Speed up overall import time by putting non-global imports only where they are needed
 
 """
@@ -66,24 +62,12 @@ from openff.toolkit.utils.toolkits import (
 )
 from openff.toolkit.utils.utils import MissingDependencyError, requires_package
 
-# =============================================================================================
-# GLOBAL PARAMETERS
-# =============================================================================================
-
 # TODO: Can we have the `ALLOWED_*_MODELS` list automatically appear in the docstrings below?
 # TODO: Should `ALLOWED_*_MODELS` be objects instead of strings?
 # TODO: Should these be imported from `openff.toolkit.cheminformatics.aromaticity_models` and `.bondorder_models`?
 
 # TODO: Allow all OpenEye aromaticity models to be used with OpenEye names?
 #       Only support OEAroModel_MDL in RDKit version?
-
-# =============================================================================================
-# PRIVATE SUBROUTINES
-# =============================================================================================
-
-# =============================================================================================
-# Particle
-# =============================================================================================
 
 
 class Particle(Serializable):
@@ -104,7 +88,7 @@ class Particle(Serializable):
 
             * Should we have a single unique ``Molecule`` for each molecule
               type in the system, or if we have multiple copies of the same
-              molecule, should we have multiple ``Molecule``\ s?
+              molecule, should we have multiple ``Molecule``s?
 
         """
         return self._molecule
@@ -145,11 +129,6 @@ class Particle(Serializable):
         raise NotImplementedError()  # TODO
 
 
-# =============================================================================================
-# Atom
-# =============================================================================================
-
-
 class Atom(Particle):
     """
     A particle representing a chemical atom.
@@ -160,7 +139,8 @@ class Atom(Particle):
 
        * Should ``Atom`` objects be immutable or mutable?
        * Do we want to support the addition of arbitrary additional properties,
-         such as floating point quantities (e.g. ``charge``), integral quantities (such as ``id`` or ``serial`` index in a PDB file),
+         such as floating point quantities (e.g. ``charge``), integral quantities
+         (such as ``id`` or ``serial`` index in a PDB file),
          or string labels (such as Lennard-Jones types)?
 
     .. todo :: Allow atoms to have associated properties.
@@ -220,7 +200,7 @@ class Atom(Particle):
             name = ""
         self._name = name
         self._molecule = molecule
-        ## From Jeff: I'm going to assume that this is implicit in the parent Molecule's ordering of atoms
+        # From Jeff: I'm going to assume that this is implicit in the parent Molecule's ordering of atoms
         # self._molecule_atom_index = molecule_atom_index
         self._bonds = list()
         self._virtual_sites = list()
@@ -269,8 +249,8 @@ class Atom(Particle):
     @classmethod
     def from_dict(cls, atom_dict):
         """Create an Atom from a dict representation."""
-        ## TODO: classmethod or static method? Classmethod is needed for Bond, so it have
-        ## its _molecule set and then look up the Atom on each side of it by ID
+        # TODO: classmethod or static method? Classmethod is needed for Bond, so it have
+        # its _molecule set and then look up the Atom on each side of it by ID
         return cls.__init__(*atom_dict)
 
     @property
@@ -507,11 +487,6 @@ class Atom(Particle):
         )
 
 
-# =============================================================================================
-# VirtualParticle
-# =============================================================================================
-
-
 class VirtualParticle(Particle):
     """
     A single particle owned by a VirtualSite
@@ -691,11 +666,6 @@ class VirtualParticle(Particle):
         """
 
         return self._position(atom_positions)
-
-
-# =============================================================================================
-# VirtualSite
-# =============================================================================================
 
 
 class VirtualSite(Particle):
@@ -1928,10 +1898,6 @@ class TrivalentLonePairVirtualSite(VirtualSite):
 # def neighbors(self):
 #    return (self._neighbor1, self._neighbor2)
 
-# =============================================================================================
-# Bond
-# =============================================================================================
-
 
 class Bond(Serializable):
     """
@@ -2106,10 +2072,6 @@ class Bond(Serializable):
         )
 
 
-# =============================================================================================
-# Molecule
-# =============================================================================================
-
 # TODO: How do we automatically trigger invalidation of cached properties if an ``Atom``, ``Bond``, or ``VirtualSite`` is modified,
 #       rather than added/deleted via the API? The simplest resolution is simply to make them immutable.
 
@@ -2176,8 +2138,7 @@ class FrozenMolecule(Serializable):
              Read just the first molecule, or raise an exception if more
              than one molecule is found?
 
-           * Should we also support SMILES strings or IUPAC names for
-             ``other``\ ?
+           * Should we also support SMILES strings or IUPAC names for ``other``?
 
         Parameters
         ----------
@@ -2422,8 +2383,8 @@ class FrozenMolecule(Serializable):
 
         molecule_dict = OrderedDict()
         molecule_dict["name"] = self._name
-        ## From Jeff: If we go the properties-as-dict route, then _properties should, at
-        ## the top level, be a dict. Should we go through recursively and ensure all values are dicts too?
+        # From Jeff: If we go the properties-as-dict route, then _properties should, at
+        # the top level, be a dict. Should we go through recursively and ensure all values are dicts too?
         molecule_dict["atoms"] = [atom.to_dict() for atom in self._atoms]
         molecule_dict["virtual_sites"] = [
             vsite.to_dict() for vsite in self._virtual_sites
@@ -2719,12 +2680,10 @@ class FrozenMolecule(Serializable):
         # Get a string representation of the function containing the toolkit name so we can check
         # if a SMILES was already cached for this molecule. This will return, for example
         # "RDKitToolkitWrapper.to_smiles"
-        smiles_hash = (
-            to_smiles_method.__qualname__
-            + str(isomeric)
-            + str(explicit_hydrogens)
-            + str(mapped)
-        )
+        smiles_hash = to_smiles_method.__qualname__
+        smiles_hash += str(isomeric)
+        smiles_hash += str(explicit_hydrogens)
+        smiles_hash += str(mapped)
         smiles_hash += str(self._properties.get("atom_map", None))
         # Check to see if a SMILES for this molecule was already cached using this method
         if smiles_hash in self._cached_smiles:
@@ -3745,9 +3704,9 @@ class FrozenMolecule(Serializable):
                 else:
                     error_msg = (
                         "Attempted to add the new virtual site:\n{}\n"
-                        + "to molecule: \n{}\nAnother vsite with the same type "
-                        + "already exists and replace=False. Existing vsite "
-                        + "is:\n{}\n"
+                        "to molecule: \n{}\nAnother vsite with the same type "
+                        "already exists and replace=False. Existing vsite "
+                        "is:\n{}\n"
                     ).format(vsite, self, existing_vsite)
                     raise Exception(error_msg)
         if not replaced:
@@ -4771,12 +4730,12 @@ class FrozenMolecule(Serializable):
                 # to the error message that will hopefully reduce this confusion.
                 if file_format == "MOL2" and RDKitToolkitWrapper.is_available():
                     msg += (
-                        f"RDKit does not fully support input of molecules from mol2 format unless they "
-                        f"have Corina atom types, and this is not common in the simulation community. For this "
-                        f"reason, the Open Force Field Toolkit does not use "
-                        f"RDKit to read .mol2. Consider reading from SDF instead. If you would like to attempt "
-                        f"to use RDKit to read mol2 anyway, you can load the molecule of interest into an RDKit "
-                        f"molecule and use openff.toolkit.topology.Molecule.from_rdkit, but we do not recommend this."
+                        "RDKit does not fully support input of molecules from mol2 format unless they "
+                        "have Corina atom types, and this is not common in the simulation community. For this "
+                        "reason, the Open Force Field Toolkit does not use "
+                        "RDKit to read .mol2. Consider reading from SDF instead. If you would like to attempt "
+                        "to use RDKit to read mol2 anyway, you can load the molecule of interest into an RDKit "
+                        "molecule and use openff.toolkit.topology.Molecule.from_rdkit, but we do not recommend this."
                     )
                 elif file_format == "PDB" and RDKitToolkitWrapper.is_available():
                     msg += (

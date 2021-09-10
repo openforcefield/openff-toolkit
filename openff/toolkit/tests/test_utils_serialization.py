@@ -1,9 +1,3 @@
-#!/usr/bin/env python
-
-# =============================================================================================
-# MODULE DOCSTRING
-# =============================================================================================
-
 """
 Tests for utility methods for serialization
 
@@ -13,10 +7,6 @@ import pytest
 
 from openff.toolkit.tests.utils import requires_pkg
 from openff.toolkit.utils.serialization import Serializable
-
-# =============================================================================================
-# TESTS
-# =============================================================================================
 
 
 class Thing(Serializable):

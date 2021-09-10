@@ -1,8 +1,3 @@
-#!/usr/bin/env python
-
-# =============================================================================================
-# MODULE DOCSTRING
-# =============================================================================================
 """
 Parameter handlers for the SMIRNOFF force field engine
 
@@ -100,16 +95,7 @@ from openff.toolkit.utils.utils import (
     object_to_quantity,
 )
 
-# =============================================================================================
-# CONFIGURE LOGGER
-# =============================================================================================
-
 logger = logging.getLogger(__name__)
-
-
-# ======================================================================
-# ENUM TYPES
-# ======================================================================
 
 
 class NonbondedMethod(Enum):
@@ -122,11 +108,6 @@ class NonbondedMethod(Enum):
     CutoffNonPeriodic = 2
     Ewald = 3
     PME = 4
-
-
-# ======================================================================
-# UTILITY FUNCTIONS
-# ======================================================================
 
 
 def _linear_inter_or_extrapolate(points_dict, x_query):
@@ -186,19 +167,19 @@ def _linear_inter_or_extrapolate(points_dict, x_query):
     # extrapolate for fractional bond orders below our lowest defined bond order
     elif below is None:
         bond_orders = sorted(points_dict)
-        k = points_dict[bond_orders[0]] - (
-            (points_dict[bond_orders[1]] - points_dict[bond_orders[0]])
-            / (bond_orders[1] - bond_orders[0])
-        ) * (bond_orders[0] - x_query)
+        y0 = points_dict[bond_orders[0]]
+        y_diff = points_dict[bond_orders[1]] - points_dict[bond_orders[0]]
+        x_diff = bond_orders[1] - bond_orders[0]
+        k = y0 - y_diff / x_diff * (bond_orders[0] - x_query)
         return k
 
     # extrapolate for fractional bond orders above our highest defined bond order
     elif above is None:
         bond_orders = sorted(points_dict)
-        k = points_dict[bond_orders[-1]] + (
-            (points_dict[bond_orders[-1]] - points_dict[bond_orders[-2]])
-            / (bond_orders[-1] - bond_orders[-2])
-        ) * (x_query - bond_orders[-1])
+        y0 = points_dict[bond_orders[-1]]
+        y_diff = points_dict[bond_orders[-1]] - points_dict[bond_orders[-2]]
+        x_diff = bond_orders[-1] - bond_orders[-2]
+        k = y0 + y_diff / x_diff * (x_query - bond_orders[-1])
         return k
 
 
@@ -226,10 +207,6 @@ def _allow_only(allowed_values):
 
     return _value_checker
 
-
-# ======================================================================
-# PARAMETER ATTRIBUTES
-# ======================================================================
 
 # TODO: Think about adding attrs to the dependencies and inherit from attr.ib
 class ParameterAttribute:
@@ -1342,7 +1319,7 @@ class _ParameterAttributeHandler:
         """
         # If no filter is specified, get all the parameters.
         if filter is None:
-            filter = lambda x: True
+            filter = lambda x: True  # noqa
 
         # Go through MRO and retrieve also parents descriptors. The function
         # inspect.getmembers() automatically resolves the MRO, but it also
@@ -1409,10 +1386,6 @@ class _ParameterAttributeHandler:
         required.update(optional)
         return required
 
-
-# ======================================================================
-# PARAMETER TYPE/LIST
-# ======================================================================
 
 # We can't actually make this derive from dict, because it's possible for the user to change SMIRKS
 # of parameters already in the list, which would cause the ParameterType object's SMIRKS and
@@ -2533,9 +2506,6 @@ class ParameterHandler(_ParameterAttributeHandler):
         return self.parameters[val]
 
 
-# =============================================================================================
-
-
 class ConstraintHandler(ParameterHandler):
     """Handle SMIRNOFF ``<Constraints>`` tags
 
@@ -2574,9 +2544,6 @@ class ConstraintHandler(ParameterHandler):
             else:
                 system.addConstraint(*atoms, constraint.distance)
                 topology.add_constraint(*atoms, constraint.distance)
-
-
-# =============================================================================================
 
 
 class BondHandler(ParameterHandler):
@@ -2876,9 +2843,6 @@ class BondHandler(ParameterHandler):
         )
 
 
-# =============================================================================================
-
-
 class AngleHandler(ParameterHandler):
     """Handle SMIRNOFF ``<AngleForce>`` tags
 
@@ -2977,8 +2941,6 @@ class AngleHandler(ParameterHandler):
             exception_cls=UnassignedAngleParameterException,
         )
 
-
-# =============================================================================================
 
 # TODO: There's a lot of duplicated code in ProperTorsionHandler and ImproperTorsionHandler
 class ProperTorsionHandler(ParameterHandler):
@@ -4550,7 +4512,7 @@ class GBSAHandler(ParameterHandler):
             "OBC2": simtk.openmm.GBSAOBCForce,
             # It's tempting to do use the class below, but the customgbforce
             # version of OBC2 doesn't provide setSolventRadius()
-            #'OBC2': simtk.openmm.app.internal.customgbforces.GBSAOBC2Force,
+            # 'OBC2': simtk.openmm.app.internal.customgbforces.GBSAOBC2Force,
         }
         openmm_force_type = force_map[self.gb_model]
 

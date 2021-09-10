@@ -3,10 +3,6 @@ Built-in ToolkitWrapper for very basic functionality. Intended for testing and n
 """
 __all__ = ("BuiltInToolkitWrapper",)
 
-# =============================================================================================
-# IMPORTS
-# =============================================================================================
-
 import numpy as np
 
 try:
@@ -17,10 +13,6 @@ except ImportError:
 from openff.toolkit.utils import base_wrapper
 from openff.toolkit.utils.exceptions import ChargeMethodUnavailableError
 from openff.toolkit.utils.utils import inherit_docstrings
-
-# =============================================================================================
-# Implementation
-# =============================================================================================
 
 
 @inherit_docstrings

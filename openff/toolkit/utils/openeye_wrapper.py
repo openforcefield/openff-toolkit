@@ -40,16 +40,7 @@ from openff.toolkit.utils.exceptions import (
 )
 from openff.toolkit.utils.utils import inherit_docstrings
 
-# =============================================================================================
-# CONFIGURE LOGGER
-# =============================================================================================
-
 logger = logging.getLogger(__name__)
-
-
-# =============================================================================================
-# IMPLEMENTATION
-# =============================================================================================
 
 
 def get_oeformat(file_format):
@@ -1274,8 +1265,8 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         # <https://docs.eyesopen.com/toolkits/python/oechemtk/OEChemConstants/OESMILESFlag.html#OEChem::OESMILESFlag>
         smiles_options = (
             oechem.OESMILESFlag_Canonical
-            | oechem.OESMILESFlag_Isotopes
-            | oechem.OESMILESFlag_RGroups
+            | oechem.OESMILESFlag_Isotopes  # noqa
+            | oechem.OESMILESFlag_RGroups  # noqa
         )
 
         # check if we want an isomeric smiles
@@ -1495,7 +1486,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         for bond in oemol.GetBonds():
             if (
                 bond.GetBgn().GetAtomicNum() != oechem.OEElemNo_H
-                and bond.GetEnd().GetAtomicNum() != oechem.OEElemNo_H
+                and bond.GetEnd().GetAtomicNum() != oechem.OEElemNo_H  # noqa
             ):
                 vbnd.append(bond)
         oemol.OrderBonds(vbnd)

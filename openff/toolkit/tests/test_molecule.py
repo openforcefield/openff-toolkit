@@ -1,9 +1,3 @@
-#!/usr/bin/env python
-
-# =============================================================================================
-# MODULE DOCSTRING
-# =============================================================================================
-
 """
 Tests for molecular topology representations
 
@@ -65,10 +59,6 @@ from openff.toolkit.utils.toolkits import (
     RDKitToolkitWrapper,
     ToolkitRegistry,
 )
-
-# =============================================================================================
-# TEST UTILITIES
-# =============================================================================================
 
 
 def assert_molecule_is_equal(molecule1, molecule2, msg):
@@ -157,11 +147,6 @@ def is_three_membered_ring_torsion(torsion):
 
     # This is a torsion including a three-membered ring.
     return True
-
-
-# =============================================================================================
-# FIXTURES
-# =============================================================================================
 
 
 def mini_drug_bank(xfail_mols=None, wip_mols=None):
@@ -274,10 +259,6 @@ drugbank_stereogenic_in_oe_but_not_rdkit = {
     "DrugBank_1849",
     "DrugBank_2141",
 }
-
-# =============================================================================================
-# TESTS
-# =============================================================================================
 
 
 class TestAtom:
@@ -837,7 +818,7 @@ class TestMolecule:
 
         # Ensure that attempting to initialize a single Molecule from a file
         # containing multiple molecules raises a ValueError
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(ValueError):
             filename = get_data_file_path("molecules/zinc-subset-tripos.mol2.gz")
             molecule = Molecule(filename, allow_undefined_stereo=True)
 
@@ -2470,7 +2451,7 @@ class TestMolecule:
             ),
             unit.angstrom,
         )
-        with pytest.raises(Exception) as excinfo:
+        with pytest.raises(Exception):
             molecule.add_conformer(conf_missing_z)
 
         conf_too_few_atoms = unit.Quantity(
@@ -2484,7 +2465,7 @@ class TestMolecule:
             ),
             unit.angstrom,
         )
-        with pytest.raises(Exception) as excinfo:
+        with pytest.raises(Exception):
             molecule.add_conformer(conf_too_few_atoms)
 
         # Add a conformer with too many coordinates
@@ -2501,12 +2482,12 @@ class TestMolecule:
             ),
             unit.angstrom,
         )
-        with pytest.raises(Exception) as excinfo:
+        with pytest.raises(Exception):
             molecule.add_conformer(conf_too_many_atoms)
 
         # Add a conformer with no coordinates
         conf_no_coordinates = unit.Quantity(np.array([]), unit.angstrom)
-        with pytest.raises(Exception) as excinfo:
+        with pytest.raises(Exception):
             molecule.add_conformer(conf_no_coordinates)
 
         # Add a conforer with units of nanometers
@@ -2539,7 +2520,7 @@ class TestMolecule:
             ),
             unit.joule,
         )
-        with pytest.raises(Exception) as excinfo:
+        with pytest.raises(Exception):
             molecule.add_conformer(conf_nonsense_units)
 
         # Add a conformer with no units
@@ -2552,7 +2533,7 @@ class TestMolecule:
                 [13.0, 14.0, 15],
             ]
         )
-        with pytest.raises(Exception) as excinfo:
+        with pytest.raises(Exception):
             molecule.add_conformer(conf_unitless)
 
     @pytest.mark.parametrize("molecule", mini_drug_bank())
@@ -2576,7 +2557,7 @@ class TestMolecule:
                 fractional_bond_order=bond.fractional_bond_order,
             )
         # Try to add the final bond twice, which should raise an Exception
-        with pytest.raises(Exception) as excinfo:
+        with pytest.raises(Exception):
             molecule_copy.add_bond(
                 bond.atom1_index,
                 bond.atom2_index,
@@ -2619,13 +2600,13 @@ class TestMolecule:
         atoms = (atom1, atom2)
 
         # Try to feed in unitless sigma
-        with pytest.raises(Exception) as excinfo:
+        with pytest.raises(Exception):
             molecule.add_bond_charge_virtual_site(
                 atoms, distance, epsilon=epsilon, sigma=sigma_unitless, replace=True
             )
 
         # Try to feed in unitless rmin_half
-        with pytest.raises(Exception) as excinfo:
+        with pytest.raises(Exception):
             molecule.add_bond_charge_virtual_site(
                 atoms,
                 distance,
@@ -2635,7 +2616,7 @@ class TestMolecule:
             )
 
         # Try to feed in unitless epsilon
-        with pytest.raises(Exception) as excinfo:
+        with pytest.raises(Exception):
             molecule.add_bond_charge_virtual_site(
                 atoms,
                 distance,
@@ -2646,7 +2627,7 @@ class TestMolecule:
             )
 
         # Try to feed in unitless charges
-        with pytest.raises(Exception) as excinfo:
+        with pytest.raises(Exception):
             molecule.add_bond_charge_virtual_site(
                 atoms,
                 distance,
@@ -2655,7 +2636,7 @@ class TestMolecule:
             )
 
         # We shouldn't be able to give both rmin_half and sigma VdW parameters.
-        with pytest.raises(Exception) as excinfo:
+        with pytest.raises(Exception):
             molecule.add_bond_charge_virtual_site(
                 [atom1, atom2],
                 distance,
@@ -2678,7 +2659,7 @@ class TestMolecule:
         # TODO: Test the @property getters for sigma, epsilon, and rmin_half
 
         # We should have to give as many charge increments as atoms (len(charge_increments)) = 4
-        with pytest.raises(Exception) as excinfo:
+        with pytest.raises(Exception):
             molecule.add_bond_charge_virtual_site(
                 atoms, distance, charge_increments=[0.0], replace=True
             )
@@ -2739,7 +2720,7 @@ class TestMolecule:
         distance = distance_unitless * unit.angstrom
 
         # Try to feed in a unitless distance
-        with pytest.raises(AssertionError) as excinfo:
+        with pytest.raises(AssertionError):
             vsite1_index = molecule.add_bond_charge_virtual_site(
                 [atom1, atom2], distance_unitless
             )
@@ -2803,7 +2784,7 @@ class TestMolecule:
         atoms = (atom1, atom2, atom3)
 
         # Try passing in a unitless distance
-        with pytest.raises(AssertionError) as excinfo:
+        with pytest.raises(AssertionError):
             vsite1_index = molecule.add_monovalent_lone_pair_virtual_site(
                 atoms,
                 distance_unitless,
@@ -2813,7 +2794,7 @@ class TestMolecule:
             )
 
         # Try passing in a unitless out_of_plane_angle
-        with pytest.raises(AssertionError) as excinfo:
+        with pytest.raises(AssertionError):
             vsite1_index = molecule.add_monovalent_lone_pair_virtual_site(
                 atoms,
                 distance,
@@ -2823,7 +2804,7 @@ class TestMolecule:
             )
 
         # Try passing in a unitless in_plane_angle
-        with pytest.raises(AssertionError) as excinfo:
+        with pytest.raises(AssertionError):
             vsite1_index = molecule.add_monovalent_lone_pair_virtual_site(
                 atoms,
                 distance,
@@ -2833,7 +2814,7 @@ class TestMolecule:
             )
 
         # Try giving two atoms
-        with pytest.raises(AssertionError) as excinfo:
+        with pytest.raises(AssertionError):
             vsite1_index = molecule.add_monovalent_lone_pair_virtual_site(
                 [atom1, atom2],
                 distance,
@@ -2871,7 +2852,7 @@ class TestMolecule:
         )
 
         # test giving too few atoms
-        with pytest.raises(AssertionError) as excinfo:
+        with pytest.raises(AssertionError):
             vsite1_index = molecule.add_divalent_lone_pair_virtual_site(
                 [atom1, atom2],
                 distance,
@@ -2900,7 +2881,7 @@ class TestMolecule:
             replace=False,
         )
         # Test for assertion when giving too few atoms
-        with pytest.raises(AssertionError) as excinfo:
+        with pytest.raises(AssertionError):
             vsite1_index = molecule.add_trivalent_lone_pair_virtual_site(
                 [atom1, atom2, atom3],
                 distance,

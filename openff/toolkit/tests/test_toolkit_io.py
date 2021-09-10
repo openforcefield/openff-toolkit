@@ -1,8 +1,3 @@
-#!/usr/bin/env python
-# =============================================================================================
-# MODULE DOCSTRING
-# =============================================================================================
-
 """
 Tests for I/O functionality of the toolkit wrappers
 
@@ -32,16 +27,9 @@ from openff.toolkit.utils.exceptions import (
     UndefinedStereochemistryError,
 )
 
-# ================================================================
-# Data records used for testing.
-# ================================================================
-
 ETHANOL = create_molecules.create_ethanol()
 ETHANOL.name = "ethanol"
 
-# ========================================================
-# Various records for caffeine
-# ========================================================
 
 # From https://www.ebi.ac.uk/chembl/compound_report_card/CHEMBL113/
 CAFFEINE_2D_SDF = """\
@@ -89,28 +77,26 @@ CAFFEINE
 $$$$
 """
 
-CAFFEINE_2D_COORDS = (
-    np.array(
-        [
-            (-1.1875, -9.6542, 0.0000),
-            (-1.1875, -8.9625, 0.0000),
-            (-1.8125, -10.0292, 0.0000),
-            (-2.4167, -8.9625, 0.0000),
-            (-2.4167, -9.6542, 0.0000),
-            (-1.8125, -8.6000, 0.0000),
-            (-0.5000, -9.8917, 0.0000),
-            (-0.5000, -8.7625, 0.0000),
-            (-0.1125, -9.3042, 0.0000),
-            (-3.0250, -10.0375, 0.0000),
-            (-1.8125, -7.8917, 0.0000),
-            (-1.8125, -10.7417, 0.0000),
-            (-3.0250, -8.6000, 0.0000),
-            (-0.2917, -8.0750, 0.0000),
-        ],
-        np.double,
-    )
-    * unit.angstrom
+_CAFFEINE_2D_COORDS = np.array(
+    [
+        (-1.1875, -9.6542, 0.0000),
+        (-1.1875, -8.9625, 0.0000),
+        (-1.8125, -10.0292, 0.0000),
+        (-2.4167, -8.9625, 0.0000),
+        (-2.4167, -9.6542, 0.0000),
+        (-1.8125, -8.6000, 0.0000),
+        (-0.5000, -9.8917, 0.0000),
+        (-0.5000, -8.7625, 0.0000),
+        (-0.1125, -9.3042, 0.0000),
+        (-3.0250, -10.0375, 0.0000),
+        (-1.8125, -7.8917, 0.0000),
+        (-1.8125, -10.7417, 0.0000),
+        (-3.0250, -8.6000, 0.0000),
+        (-0.2917, -8.0750, 0.0000),
+    ],
+    np.double,
 )
+CAFFEINE_2D_COORDS = _CAFFEINE_2D_COORDS * unit.angstrom
 
 
 # From https://www.ebi.ac.uk/chembl/compound_report_card/CHEMBL113/
@@ -294,42 +280,36 @@ M  END
 $$$$
 """
 
-CAFFEINE_3D_COORDS = (
-    np.array(
-        [
-            (0.4700, 2.5688, 0.0006),
-            (-3.1271, -0.4436, -0.0003),
-            (-0.9686, -1.3125, 0.0000),
-            (2.2182, 0.1412, -0.0003),
-            (-1.3477, 1.0797, -0.0001),
-            (1.4119, -1.9372, 0.0002),
-            (0.8579, 0.2592, -0.0008),
-            (0.3897, -1.0264, -0.0004),
-            (0.0307, 1.4220, -0.0006),
-            (-1.9061, -0.2495, -0.0004),
-            (2.5032, -1.1998, 0.0003),
-            (-1.4276, -2.6960, 0.0008),
-            (3.1926, 1.2061, 0.0003),
-            (-2.2969, 2.1881, 0.0007),
-            (3.5163, -1.5787, 0.0008),
-            (-1.0451, -3.1973, -0.8937),
-            (-2.5186, -2.7596, 0.0011),
-            (-1.0447, -3.1963, 0.8957),
-            (4.1992, 0.7801, 0.0002),
-            (3.0468, 1.8092, -0.8992),
-            (3.0466, 1.8083, 0.9004),
-            (-1.8087, 3.1651, -0.0003),
-            (-2.9322, 2.1027, 0.8881),
-            (-2.9346, 2.1021, -0.8849),
-        ],
-        np.double,
-    )
-    * unit.angstrom
+_CAFFEINE_3D_COORDS = np.array(
+    [
+        (0.4700, 2.5688, 0.0006),
+        (-3.1271, -0.4436, -0.0003),
+        (-0.9686, -1.3125, 0.0000),
+        (2.2182, 0.1412, -0.0003),
+        (-1.3477, 1.0797, -0.0001),
+        (1.4119, -1.9372, 0.0002),
+        (0.8579, 0.2592, -0.0008),
+        (0.3897, -1.0264, -0.0004),
+        (0.0307, 1.4220, -0.0006),
+        (-1.9061, -0.2495, -0.0004),
+        (2.5032, -1.1998, 0.0003),
+        (-1.4276, -2.6960, 0.0008),
+        (3.1926, 1.2061, 0.0003),
+        (-2.2969, 2.1881, 0.0007),
+        (3.5163, -1.5787, 0.0008),
+        (-1.0451, -3.1973, -0.8937),
+        (-2.5186, -2.7596, 0.0011),
+        (-1.0447, -3.1963, 0.8957),
+        (4.1992, 0.7801, 0.0002),
+        (3.0468, 1.8092, -0.8992),
+        (3.0466, 1.8083, 0.9004),
+        (-1.8087, 3.1651, -0.0003),
+        (-2.9322, 2.1027, 0.8881),
+        (-2.9346, 2.1021, -0.8849),
+    ],
+    np.double,
 )
-
-# ========================================================
-# Various records for aspirin
-# ========================================================
+CAFFEINE_3D_COORDS = _CAFFEINE_3D_COORDS * unit.angstrom
 
 
 # From https://www.ebi.ac.uk/chembl/compound_report_card/CHEMBL25/
@@ -580,13 +560,11 @@ $$$$
 """
 
 
-# ========================================================
 # CHEBI:1148 triggers 'allow_undefined_stereo' exceptions
-# ========================================================
 
 CHEBI_1148_SDF = """\
 CHEBI:1148
-  Marvin  09120817212D          
+  Marvin  09120817212D
 
   7  6  0  0  0  0            999 V2000
     1.4289   -0.1650    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0
@@ -624,9 +602,7 @@ THREE_MOLS_SDF = (
 )
 THREE_MOLS_SMI = CAFFEINE_SMI + "Q" + CAFFEINE_SMI + ASPIRIN_SMI
 
-# ========================================================
 # Used to test that _cls is passed correctly
-# ========================================================
 
 
 class SingingMolecule(Molecule):
@@ -634,9 +610,7 @@ class SingingMolecule(Molecule):
         return "The hills are alive with sound of music!"
 
 
-# ========================================================
 # Manage the input files
-# ========================================================
 
 
 # This code manages a temporary directory.
@@ -690,9 +664,9 @@ class FileManager:
     caffeine_not_smi = FilenameDescriptor(CAFFEINE_2D_SDF)
     caffeine_not_sdf = FilenameDescriptor(CAFFEINE_SMI)
 
-    ## aspirin_2d_sdf = FilenameDescriptor(ASPIRIN_2D_SDF)
-    ## aspirin_3d_sdf = FilenameDescriptor(ASPIRIN_3D_SDF)
-    ## aspirin_smi = FilenameDescriptor(ASPIRIN_SMI)
+    # aspirin_2d_sdf = FilenameDescriptor(ASPIRIN_2D_SDF)
+    # aspirin_3d_sdf = FilenameDescriptor(ASPIRIN_3D_SDF)
+    # aspirin_smi = FilenameDescriptor(ASPIRIN_SMI)
 
     two_mols_sdf = FilenameDescriptor(TWO_MOLS_SDF)
     two_mols_smi = FilenameDescriptor(TWO_MOLS_SMI)
@@ -724,9 +698,9 @@ class FileObjManager:
     caffeine_3d_sdf = FileobjDescriptor(CAFFEINE_3D_SDF)
     caffeine_smi = FileobjDescriptor(CAFFEINE_SMI)
 
-    ## aspirin_2d_sdf = FileobjDescriptor(ASPIRIN_2D_SDF)
-    ## aspirin_3d_sdf = FileobjDescriptor(ASPIRIN_3D_SDF)
-    ## aspirin_smi = FileobjDescriptor(ASPIRIN_SMI)
+    # aspirin_2d_sdf = FileobjDescriptor(ASPIRIN_2D_SDF)
+    # aspirin_3d_sdf = FileobjDescriptor(ASPIRIN_3D_SDF)
+    # aspirin_smi = FileobjDescriptor(ASPIRIN_SMI)
 
     two_mols_sdf = FileobjDescriptor(TWO_MOLS_SDF)
     two_mols_smi = FileobjDescriptor(TWO_MOLS_SMI)
@@ -738,10 +712,6 @@ class FileObjManager:
 
 
 file_obj_manager = FileObjManager()
-
-# ========================================================
-# Base class to test from_file() and from_file_obj()
-# ========================================================
 
 
 class BaseFromFileIO:
@@ -854,13 +824,13 @@ class BaseFromFileIO:
 
     def test_from_file_qwe_format_raises_exception(self):
         with pytest.raises(ValueError, match="Unsupported file format: QWE"):
-            mols = self.toolkit_wrapper.from_file(
+            self.toolkit_wrapper.from_file(
                 file_manager.caffeine_2d_sdf, file_format="qwe"
             )
 
     def test_from_file_obj_qwe_format_raises_exception(self):
         with pytest.raises(ValueError, match="Unsupported file format: QWE"):
-            mols = self.toolkit_wrapper.from_file_obj(
+            self.toolkit_wrapper.from_file_obj(
                 file_obj_manager.caffeine_2d_sdf, file_format="qwe"
             )
 
@@ -1006,11 +976,6 @@ class TestRDKitToolkitFromFileIO(BaseFromFileIO):
         assert mol.name == "CHEMBL113"
 
 
-# ========================================================
-# Base class to test to_file() and to_file_obj()
-# ========================================================
-
-
 @pytest.fixture(scope="class")
 def tmpdir(request):
     request.cls.tmpdir = tmpdir = tempfile.TemporaryDirectory()
@@ -1091,14 +1056,14 @@ class BaseToFileIO:
         ):
             self.toolkit_wrapper.to_file_obj(ETHANOL, f, "smi")
 
-    # === Test format "qwe" raises an exception
+    # Test format "qwe" raises an exception
 
     def test_to_file_qwe_format_raises_exception(self):
         with tempfile.NamedTemporaryFile(suffix=".smi") as fileobj:
-            with pytest.raises(ValueError, match=f"Unsupported file format: QWE"):
+            with pytest.raises(ValueError, match="Unsupported file format: QWE"):
                 self.toolkit_wrapper.to_file(ETHANOL, fileobj.name, "QWE")
 
-    # === Test writing to a file that does not exist
+    # Test writing to a file that does not exist
 
     @pytest.mark.parametrize("format_name", ["smi", "sdf", "mol"])
     def test_to_file_when_the_file_does_not_exist(self, format_name):
@@ -1119,11 +1084,6 @@ class TestRDKitToolkitToFileIO(BaseToFileIO):
     toolkit_wrapper_class = RDKitToolkitWrapper
 
 
-# ========================================================
-# Base class to test SMILES parsing
-# ========================================================
-
-
 class BaseSmiles:
     def test_parse_methane_with_implicit_Hs(self):
         mol = self.toolkit_wrapper.from_smiles("C")
@@ -1141,7 +1101,7 @@ class BaseSmiles:
                 f"in the molecule, then you should construct the desired molecule as an {self.tk_mol_name}"
             ),
         ):
-            mol = self.toolkit_wrapper.from_smiles("C", hydrogens_are_explicit=True)
+            self.toolkit_wrapper.from_smiles("C", hydrogens_are_explicit=True)
 
     def test_parse_methane_with_explicit_Hs(self):
         mol = self.toolkit_wrapper.from_smiles("[C]([H])([H])([H])([H])")
@@ -1160,9 +1120,9 @@ class BaseSmiles:
 
     def test_parse_bad_smiles(self):
         with pytest.raises(SMILESParseError, match="Unable to parse the SMILES string"):
-            mol = self.toolkit_wrapper.from_smiles("QWERT")
+            self.toolkit_wrapper.from_smiles("QWERT")
 
-    ### Copied from test_toolkits.py
+    # Copied from test_toolkits.py
 
     @pytest.mark.parametrize(
         "title, smiles",

@@ -1,9 +1,3 @@
-#!/usr/bin/env python
-
-# =============================================================================================
-# MODULE DOCSTRING
-# =============================================================================================
-
 """
 Test classes and function in module openff.toolkit.typing.engines.smirnoff.io.
 
@@ -12,10 +6,6 @@ Test classes and function in module openff.toolkit.typing.engines.smirnoff.io.
 import pytest
 
 from openff.toolkit.typing.engines.smirnoff.io import XMLParameterIOHandler
-
-# =============================================================================================
-# QUANTITY PARSING UTILITIES
-# =============================================================================================
 
 
 class TestXMLParameterIOHandler:

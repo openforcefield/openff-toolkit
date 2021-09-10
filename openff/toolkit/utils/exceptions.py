@@ -2,6 +2,7 @@ import warnings
 
 deprecated_names = ["MessageException", "ParseError"]
 
+
 # TODO: Remove in January 2022
 # TODO: When _DepcreatedMessageException is removed, this should be removed. Also
 #       include in release notes that ParseError no longer exists

@@ -1,9 +1,3 @@
-#!/usr/bin/env python
-
-# =============================================================================================
-# MODULE DOCSTRING
-# =============================================================================================
-
 """
 Tests for cheminformatics toolkit wrappers
 
@@ -26,7 +20,6 @@ except ImportError:
 from openff.toolkit.tests.create_molecules import (
     create_acetaldehyde,
     create_acetate,
-    create_ammonia,
     create_cyclic_n3h3,
     create_cyclohexane,
     create_ethanol,
@@ -59,10 +52,6 @@ from openff.toolkit.utils.toolkits import (
     ToolkitRegistry,
     ToolkitWrapper,
 )
-
-# =============================================================================================
-# FIXTURES
-# =============================================================================================
 
 
 def get_mini_drug_bank(toolkit_class, xfail_mols=None):
@@ -278,33 +267,28 @@ def formic_acid_molecule() -> Molecule:
 @pytest.fixture()
 def formic_acid_conformers() -> Dict[str, unit.Quantity]:
 
+    cis_coords = np.array(
+        [
+            [-0.95927322, -0.91789997, 0.36333418],
+            [-0.34727824, 0.12828046, 0.22784603],
+            [0.82766682, 0.26871252, -0.42284882],
+            [-0.67153811, 1.10376000, 0.61921501],
+            [1.15035689, -0.58282924, -0.78766006],
+        ]
+    )
+    trans_coords = np.array(
+        [
+            [-0.95927322, -0.91789997, 0.36333418],
+            [-0.34727824, 0.12828046, 0.22784603],
+            [0.82766682, 0.26871252, -0.42284882],
+            [-0.67153811, 1.10376000, 0.61921501],
+            [1.14532626, 1.19679034, -0.41266876],
+        ]
+    )
     return {
-        "cis": np.array(
-            [
-                [-0.95927322, -0.91789997, 0.36333418],
-                [-0.34727824, 0.12828046, 0.22784603],
-                [0.82766682, 0.26871252, -0.42284882],
-                [-0.67153811, 1.10376000, 0.61921501],
-                [1.15035689, -0.58282924, -0.78766006],
-            ]
-        )
-        * unit.angstrom,
-        "trans": np.array(
-            [
-                [-0.95927322, -0.91789997, 0.36333418],
-                [-0.34727824, 0.12828046, 0.22784603],
-                [0.82766682, 0.26871252, -0.42284882],
-                [-0.67153811, 1.10376000, 0.61921501],
-                [1.14532626, 1.19679034, -0.41266876],
-            ]
-        )
-        * unit.angstrom,
+        "cis": cis_coords * unit.angstrom,
+        "trans": trans_coords * unit.angstrom,
     }
-
-
-# =============================================================================================
-# TESTS
-# =============================================================================================
 
 
 @requires_openeye
@@ -342,7 +326,7 @@ class TestOpenEyeToolkitWrapper:
             ("spec_db_smiles", spec_db_smiles, False),
         ]:
             if raises_exception:
-                with pytest.raises(UndefinedStereochemistryError) as context:
+                with pytest.raises(UndefinedStereochemistryError):
                     Molecule.from_smiles(smiles, toolkit_registry=toolkit_wrapper)
                 Molecule.from_smiles(
                     smiles,
@@ -383,10 +367,8 @@ class TestOpenEyeToolkitWrapper:
             r"[H]C([H])([H])/C(=C(/C([H])([H])[C@@](C([H])([H])[H])(Cl)Br)\F)/F"
         )
         molecule = Molecule.from_smiles(input_smiles, toolkit_registry=toolkit_wrapper)
-        assert (
-            molecule.to_smiles(toolkit_registry=toolkit_wrapper)
-            == expected_output_smiles
-        )
+        output_smiles = molecule.to_smiles(toolkit_registry=toolkit_wrapper)
+        assert output_smiles == expected_output_smiles
 
         # Populate core molecule property fields
         molecule.name = "Alice"
@@ -479,10 +461,8 @@ class TestOpenEyeToolkitWrapper:
             pc1_ul = pc1 / unit.elementary_charge
             pc2_ul = pc2 / unit.elementary_charge
             assert_almost_equal(pc1_ul, pc2_ul, decimal=6)
-        assert (
-            molecule2.to_smiles(toolkit_registry=toolkit_wrapper)
-            == expected_output_smiles
-        )
+        output_smiles = molecule2.to_smiles(toolkit_registry=toolkit_wrapper)
+        assert output_smiles == expected_output_smiles
 
     def test_to_from_openeye_core_props_unset(self):
         """Test OpenEyeToolkitWrapper to_openeye() and from_openeye() when given empty core property fields"""
@@ -495,10 +475,8 @@ class TestOpenEyeToolkitWrapper:
             r"[H]C([H])([H])/C(=C(/C([H])([H])[C@](C([H])([H])[H])(Cl)Br)\F)/F"
         )
         molecule = Molecule.from_smiles(input_smiles, toolkit_registry=toolkit_wrapper)
-        assert (
-            molecule.to_smiles(toolkit_registry=toolkit_wrapper)
-            == expected_output_smiles
-        )
+        output_smiles = molecule.to_smiles(toolkit_registry=toolkit_wrapper)
+        assert output_smiles == expected_output_smiles
 
         # Ensure one atom has its stereochemistry specified
         central_carbon_stereo_specified = False
@@ -531,10 +509,8 @@ class TestOpenEyeToolkitWrapper:
         assert molecule.partial_charges is None
         assert molecule2.partial_charges is None
 
-        assert (
-            molecule2.to_smiles(toolkit_registry=toolkit_wrapper)
-            == expected_output_smiles
-        )
+        output_smiles = molecule2.to_smiles(toolkit_registry=toolkit_wrapper)
+        assert output_smiles == expected_output_smiles
 
     def test_to_from_openeye_none_partial_charges(self):
         """Test to ensure that to_openeye and from_openeye correctly handle None partial charges"""
@@ -613,7 +589,7 @@ class TestOpenEyeToolkitWrapper:
         with pytest.raises(
             ValueError,
             match="but OpenEye Toolkit interpreted SMILES 'C#C' as having implicit hydrogen",
-        ) as excinfo:
+        ):
             offmol = Molecule.from_smiles(
                 smiles_impl,
                 toolkit_registry=toolkit_wrapper,
@@ -815,10 +791,8 @@ class TestOpenEyeToolkitWrapper:
         water.add_atom(1, 0, False)
         water.add_bond(0, 1, 1, False)
         water.add_bond(1, 2, 1, False)
-        water.add_conformer(
-            np.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]])
-            * unit.angstrom
-        )
+        coords = np.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]])
+        water.add_conformer(coords * unit.angstrom)
         sio = StringIO()
         water.to_file(sio, "pdb", toolkit_registry=toolkit)
         water_from_pdb = sio.getvalue()
@@ -1367,7 +1341,7 @@ class TestOpenEyeToolkitWrapper:
         # which means it will only ever return ValueError
         with pytest.raises(
             ValueError, match="is not available from OpenEyeToolkitWrapper"
-        ) as excinfo:
+        ):
             molecule.assign_partial_charges(
                 toolkit_registry=toolkit_registry,
                 partial_charge_method="NotARealChargeMethod",
@@ -1377,7 +1351,7 @@ class TestOpenEyeToolkitWrapper:
         with pytest.raises(
             ChargeMethodUnavailableError,
             match="is not available from OpenEyeToolkitWrapper",
-        ) as excinfo:
+        ):
             OETKW = OpenEyeToolkitWrapper()
             OETKW.assign_partial_charges(
                 molecule=molecule, partial_charge_method="NotARealChargeMethod"
@@ -1901,7 +1875,7 @@ class TestRDKitToolkitWrapper:
         toolkit = RDKitToolkitWrapper()
         inchi = "InChI=1S/ksbfksfksfksbfks"
         with pytest.raises(RuntimeError):
-            mol = Molecule.from_inchi(inchi, toolkit_registry=toolkit)
+            Molecule.from_inchi(inchi, toolkit_registry=toolkit)
 
     inchi_data = [
         {
@@ -2980,8 +2954,7 @@ class TestAmberToolsToolkitWrapper:
         # which should raise the first error encountered
         with pytest.raises(
             ValueError,
-            match=f"has 2 conformers, but charge method 'am1bcc' "
-            f"expects exactly 1.",
+            match="has 2 conformers, but charge method 'am1bcc' expects exactly 1.",
         ):
             molecule.assign_partial_charges(
                 partial_charge_method="am1bcc",
@@ -2996,8 +2969,7 @@ class TestAmberToolsToolkitWrapper:
         # in a failed task together in a single ValueError.
         with pytest.raises(
             ValueError,
-            match=f"has 2 conformers, but charge method 'am1bcc' "
-            f"expects exactly 1.",
+            match="has 2 conformers, but charge method 'am1bcc' expects exactly 1.",
         ):
             toolkit_registry.call(
                 "assign_partial_charges",
@@ -3012,8 +2984,7 @@ class TestAmberToolsToolkitWrapper:
         # confs, and specify strict_n_conformers, which should produce an IncorrectNumConformersError
         with pytest.raises(
             IncorrectNumConformersError,
-            match=f"has 2 conformers, but charge method 'am1bcc' "
-            f"expects exactly 1.",
+            match="has 2 conformers, but charge method 'am1bcc' expects exactly 1.",
         ):
             ATTKW = AmberToolsToolkitWrapper()
             ATTKW.assign_partial_charges(
@@ -3466,7 +3437,7 @@ class TestBuiltInToolkitWrapper:
         # was thrown inside them, so we just check for a ValueError here
         with pytest.raises(
             ValueError,
-            match=f"has 1 conformers, but charge method 'zeros' " f"expects exactly 0.",
+            match="has 1 conformers, but charge method 'zeros' expects exactly 0.",
         ):
             molecule.assign_partial_charges(
                 toolkit_registry=toolkit_registry,
@@ -3479,7 +3450,7 @@ class TestBuiltInToolkitWrapper:
         # confs, and specify strict_n_conformers, which should produce an IncorrectNumConformersError
         with pytest.raises(
             IncorrectNumConformersError,
-            match=f"has 1 conformers, but charge method 'zeros' " f"expects exactly 0.",
+            match="has 1 conformers, but charge method 'zeros' expects exactly 0.",
         ):
             BITKW = BuiltInToolkitWrapper()
             BITKW.assign_partial_charges(
@@ -3498,7 +3469,7 @@ class TestToolkitWrapper:
         tkw = ToolkitWrapper()
         mol = create_ethanol()
 
-        ## Test molecule with no conformers
+        # Test molecule with no conformers
         # Check with no min or max should pass
         tkw._check_n_conformers(mol, "nocharge")
         # Check with min=1 should warn
@@ -3534,7 +3505,7 @@ class TestToolkitWrapper:
         # Check with max=1 should pass
         tkw._check_n_conformers(mol, "nocharge", max_confs=1, strict_n_conformers=True)
 
-        ## Test molecule with conformers
+        # Test molecule with conformers
         # Add some conformers
         mol.generate_conformers(n_conformers=1)
         for _ in range(9):
@@ -3543,7 +3514,7 @@ class TestToolkitWrapper:
         # Check with no min or max should pass
         tkw._check_n_conformers(mol, "nocharge")
 
-        ## min_confs checks
+        # min_confs checks
         # Check with min=1 should be fine
         tkw._check_n_conformers(mol, "nocharge", min_confs=1)
         # Check with min=10 should be fine
@@ -3563,7 +3534,7 @@ class TestToolkitWrapper:
                 mol, "nocharge", min_confs=11, strict_n_conformers=True
             )
 
-        ## max_confs checks
+        # max_confs checks
         # Check with max=1 and strict_n_conformers should raise an error
         with pytest.raises(
             IncorrectNumConformersError,
@@ -3577,7 +3548,7 @@ class TestToolkitWrapper:
         # Check with max=11 and strict_n_conformers should be OK
         tkw._check_n_conformers(mol, "nocharge", max_confs=11, strict_n_conformers=True)
 
-        ## min_confs and max_confs checks
+        # min_confs and max_confs checks
         # Check with max=10 and min=10 and strict_n_conformers should be OK
         tkw._check_n_conformers(
             mol, "nocharge", min_confs=10, max_confs=10, strict_n_conformers=True

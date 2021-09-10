@@ -13,6 +13,11 @@ repos:
   - id: isort
     files: ^openff
     args: [--check]
+- repo: https://github.com/PyCQA/flake8
+  rev: 3.9.2
+  hooks:
+  - id: flake8
+    files: ^openff
 - repo: https://github.com/nbQA-dev/nbQA
   rev: 1.1.0
   hooks:

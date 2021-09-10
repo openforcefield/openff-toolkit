@@ -1,8 +1,3 @@
-#!/usr/bin/env python
-
-# =============================================================================================
-# MODULE DOCSTRING
-# =============================================================================================
 """
 Class definitions to represent a molecular system and its chemical components
 
@@ -349,16 +344,6 @@ class ImproperDict(_TransformedDict):
         return __class__.key_transform(key)
 
 
-# =============================================================================================
-# TOPOLOGY OBJECTS
-# =============================================================================================
-
-
-# =============================================================================================
-# TopologyAtom
-# =============================================================================================
-
-
 class TopologyAtom(Serializable):
     """
     A TopologyAtom is a lightweight data structure that represents a single openff.toolkit.topology.molecule.Atom in
@@ -456,10 +441,8 @@ class TopologyAtom(Serializable):
         mapped_molecule_atom_index = self._topology_molecule._ref_to_top_index[
             self._atom.molecule_atom_index
         ]
-        return (
-            self._topology_molecule.atom_start_topology_index
-            + mapped_molecule_atom_index
-        )
+        start_index = self._topology_molecule.atom_start_topology_index
+        return start_index + mapped_molecule_atom_index
 
     @property
     def topology_particle_index(self):
@@ -525,11 +508,6 @@ class TopologyAtom(Serializable):
     # TODO: Add all atom properties here? Or just make people use TopologyAtom.atom for that?
 
 
-# =============================================================================================
-# TopologyBond
-# =============================================================================================
-
-
 class TopologyBond(Serializable):
     """
     A TopologyBond is a lightweight data structure that represents a single openff.toolkit.topology.molecule.Bond in
@@ -590,10 +568,8 @@ class TopologyBond(Serializable):
         int
             The index of this bond in its parent topology.
         """
-        return (
-            self._topology_molecule.bond_start_topology_index
-            + self._bond.molecule_bond_index
-        )
+        start_index = self._topology_molecule.bond_start_topology_index
+        return start_index + self._bond.molecule_bond_index
 
     @property
     def molecule(self):
@@ -639,11 +615,6 @@ class TopologyBond(Serializable):
         """Static constructor from dictionary representation."""
         # Implement abstract method Serializable.to_dict()
         raise NotImplementedError()  # TODO
-
-
-# =============================================================================================
-# TopologyVirtualSite
-# =============================================================================================
 
 
 class TopologyVirtualSite(Serializable):
@@ -738,10 +709,8 @@ class TopologyVirtualSite(Serializable):
         int
             The index of this virtual site in its parent topology.
         """
-        return (
-            self._topology_molecule.virtual_site_start_topology_index
-            + self._virtual_site.molecule_virtual_site_index
-        )
+        start_index = self._topology_molecule.virtual_site_start_topology_index
+        return start_index + self._virtual_site.molecule_virtual_site_index
 
     @property
     def n_particles(self):
@@ -848,11 +817,6 @@ class TopologyVirtualSite(Serializable):
         raise NotImplementedError()  # TODO
 
 
-# =============================================================================================
-# TopologyVirtualParticle
-# =============================================================================================
-
-
 class TopologyVirtualParticle(TopologyVirtualSite):
     def __init__(self, virtual_site, virtual_particle, topology_molecule):
         self._virtual_site = virtual_site
@@ -893,11 +857,6 @@ class TopologyVirtualParticle(TopologyVirtualSite):
                 break
 
         return offset + self._virtual_site.topology_virtual_particle_start_index
-
-
-# =============================================================================================
-# TopologyMolecule
-# =============================================================================================
 
 
 class TopologyMolecule:
@@ -1346,10 +1305,6 @@ class TopologyMolecule:
 
 # TODO: pick back up figuring out how we want TopologyMolecules to know their starting TopologyParticle indices
 
-# =============================================================================================
-# Topology
-# =============================================================================================
-
 # TODO: Revise documentation and remove chains
 
 
@@ -1468,7 +1423,7 @@ class Topology(Serializable):
         # Ensure that we are working with an iterable
         try:
             iter(molecules)
-        except TypeError as te:
+        except TypeError:
             # Make iterable object
             molecules = [molecules]
 
@@ -1523,7 +1478,7 @@ class Topology(Serializable):
             Aromaticity model to use. One of: ['OEAroModel_MDL']
         """
 
-        if not aromaticity_model in ALLOWED_AROMATICITY_MODELS:
+        if aromaticity_model not in ALLOWED_AROMATICITY_MODELS:
             msg = "Aromaticity model must be one of {}; specified '{}'".format(
                 ALLOWED_AROMATICITY_MODELS, aromaticity_model
             )
@@ -1628,7 +1583,7 @@ class Topology(Serializable):
             Allowed values: ['AM1-BCC']
             * ``AM1-BCC``: Canonical AM1-BCC scheme
         """
-        if not charge_model in ALLOWED_CHARGE_MODELS:
+        if charge_model not in ALLOWED_CHARGE_MODELS:
             raise ValueError(
                 "Charge model must be one of {}; specified '{}'".format(
                     ALLOWED_CHARGE_MODELS, charge_model
@@ -1671,7 +1626,7 @@ class Topology(Serializable):
             Fractional bond order model to use. One of: ['Wiberg']
 
         """
-        if not fractional_bond_order_model in ALLOWED_FRACTIONAL_BOND_ORDER_MODELS:
+        if fractional_bond_order_model not in ALLOWED_FRACTIONAL_BOND_ORDER_MODELS:
             raise ValueError(
                 "Fractional bond order model must be one of {}; specified '{}'".format(
                     ALLOWED_FRACTIONAL_BOND_ORDER_MODELS, fractional_bond_order_model
@@ -2449,7 +2404,7 @@ class Topology(Serializable):
     #       handle biopolymers. We need to discuss how much of this functionality we will expose
     #       and how we can make our toolkit's current scope clear to users..
     @staticmethod
-    def _from_openeye(oemol):
+    def _from_openeye(oemol):  # noqa
         """
         Create a Molecule from an OpenEye molecule.
 
@@ -2466,13 +2421,15 @@ class Topology(Serializable):
             An OpenFF molecule
 
         """
+        from openeye import oechem
+
         # TODO: Convert this to cls.from_molecules(Molecule.from_openeye())?
         # OE Hierarchical molecule view
         hv = oechem.OEHierView(
             oemol,
             oechem.OEAssumption_BondedResidue
-            + oechem.OEAssumption_ResPerceived
-            + oechem.OEAssumption_PDBOrder,
+            + oechem.OEAssumption_ResPerceived  # noqa
+            + oechem.OEAssumption_PDBOrder,  # noqa
         )
 
         # Create empty OpenMM Topology
@@ -2539,8 +2496,8 @@ class Topology(Serializable):
             # The amide bond is made by Carbon and Nitrogen atoms
             if not (
                 atomB.IsCarbon()
-                and atomE.IsNitrogen()
-                or (atomB.IsNitrogen() and atomE.IsCarbon())
+                and atomE.IsNitrogen()  # noqa
+                or (atomB.IsNitrogen() and atomE.IsCarbon())  # noqa
             ):
                 return False
 
@@ -2638,7 +2595,9 @@ class Topology(Serializable):
     #       It also expects Topology to be organized by chain, which is not currently the case.
     #       Bringing this function back would require non-trivial engineering and testing, and we
     #       would want to discuss what "guarantee" of correctness it could offer.
-    def _to_openeye(self, positions=None, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
+    def _to_openeye(
+        self, positions=None, aromaticity_model=DEFAULT_AROMATICITY_MODEL
+    ):  # noqa
         """
         Create an OpenEye OEMol from the topology
 
@@ -2655,6 +2614,8 @@ class Topology(Serializable):
         NOTE: This comes from https://github.com/oess/oeommtools/blob/master/oeommtools/utils.py
 
         """
+        from openeye import oechem
+
         oe_mol = oechem.OEMol()
 
         # Python set used to identify atoms that are not in protein residues

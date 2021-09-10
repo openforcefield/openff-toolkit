@@ -1,9 +1,3 @@
-#!/usr/bin/env python
-
-# =============================================================================================
-# MODULE DOCSTRING
-# =============================================================================================
-
 """
 Tests for Topology
 
@@ -54,10 +48,6 @@ from openff.toolkit.utils.exceptions import (
     MissingUniqueMoleculesError,
 )
 
-# =============================================================================================
-# UTILITY FUNCTIONS
-# =============================================================================================
-
 
 def assert_tuple_of_atoms_equal(
     atom_tuples1, atom_tuples2, transformed_dict_cls=ValenceDict
@@ -92,10 +82,6 @@ def assert_tuple_of_atoms_equal(
         atom_indices.append(valence_dict)
     assert set(atom_indices[0]) == set(atom_indices[1])
 
-
-# =============================================================================================
-# TESTS
-# =============================================================================================
 
 # IF we've done our jobs right, it shouldn't matter which toolkit the tests for Topology run using (both's behaviors
 # should be indistinguishable)
@@ -309,8 +295,8 @@ class TestTopology(TestCase):
         """Test Topology.atom function (atom lookup from index)"""
         topology = Topology()
         topology.add_molecule(self.ethane_from_smiles)
-        with self.assertRaises(Exception) as context:
-            topology_atom = topology.atom(-1)
+        with self.assertRaises(Exception):
+            topology.atom(-1)
 
         # Make sure we get 2 carbons and 8 hydrogens
         n_carbons = 0
@@ -323,8 +309,8 @@ class TestTopology(TestCase):
         assert n_carbons == 2
         assert n_hydrogens == 6
 
-        with self.assertRaises(Exception) as context:
-            topology_atom = topology.atom(8)
+        with self.assertRaises(Exception):
+            topology.atom(8)
 
     def test_topology_atom_element(self):
         """Test getters of TopologyAtom element and atomic number"""
@@ -347,8 +333,8 @@ class TestTopology(TestCase):
         topology = Topology()
         topology.add_molecule(self.ethane_from_smiles)
         topology.add_molecule(self.ethene_from_smiles)
-        with self.assertRaises(Exception) as context:
-            topology_atom = topology.bond(-1)
+        with self.assertRaises(Exception):
+            topology.bond(-1)
 
         n_single_bonds = 0
         n_double_bonds = 0
@@ -377,8 +363,8 @@ class TestTopology(TestCase):
         assert n_cc_bonds == 2
         assert n_ch_bonds == 10
 
-        with self.assertRaises(Exception) as context:
-            topology_bond = topology.bond(12)
+        with self.assertRaises(Exception):
+            topology.bond(12)
 
     def test_get_virtual_site(self):
         """Test Topology.virtual_site function (get virtual site from index)"""
@@ -387,10 +373,10 @@ class TestTopology(TestCase):
         assert topology.n_topology_virtual_sites == 2
         topology.add_molecule(self.propane_from_smiles_w_vsites)
         assert topology.n_topology_virtual_sites == 4
-        with self.assertRaises(Exception) as context:
-            topology_vsite = topology.virtual_site(-1)
-        with self.assertRaises(Exception) as context:
-            topology_vsite = topology.virtual_site(4)
+        with self.assertRaises(Exception):
+            topology.virtual_site(-1)
+        with self.assertRaises(Exception):
+            topology.virtual_site(4)
         topology_vsite1 = topology.virtual_site(0)
         topology_vsite2 = topology.virtual_site(1)
         topology_vsite3 = topology.virtual_site(2)
@@ -476,10 +462,9 @@ class TestTopology(TestCase):
         for top_vs, expected_indices in zip(
             topology.topology_virtual_sites, virtual_site_topology_atom_indices
         ):
-            assert (
-                tuple([at.topology_particle_index for at in top_vs.atoms])
-                == expected_indices
-            )
+            found_indices = tuple([at.topology_particle_index for at in top_vs.atoms])
+            assert found_indices == expected_indices
+
             assert top_vs.atom(0).topology_particle_index == expected_indices[0]
             assert top_vs.atom(1).topology_particle_index == expected_indices[1]
 
@@ -492,7 +477,7 @@ class TestTopology(TestCase):
         topology.assert_bonded(1, 2)
         # C-H bond
         topology.assert_bonded(0, 4)
-        with self.assertRaises(Exception) as context:
+        with self.assertRaises(Exception):
             topology.assert_bonded(0, 2)
 
     def test_angles(self):
@@ -667,12 +652,8 @@ class TestTopology(TestCase):
         )
 
         molecules = [create_ethanol()]
-        with pytest.raises(
-            ValueError, match="No match found for molecule C6H12"
-        ) as excinfo:
-            topology = Topology.from_openmm(
-                pdbfile.topology, unique_molecules=molecules
-            )
+        with pytest.raises(ValueError, match="No match found for molecule C6H12"):
+            Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
 
     def test_from_openmm_missing_conect(self):
         """
@@ -694,10 +675,8 @@ class TestTopology(TestCase):
             "information. If this molecule is coming from "
             "PDB, please ensure that the file contains CONECT "
             "records.",
-        ) as excinfo:
-            topology = Topology.from_openmm(
-                pdbfile.topology, unique_molecules=molecules
-            )
+        ):
+            Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
 
     def test_to_from_openmm(self):
         """Test a round-trip OpenFF -> OpenMM -> OpenFF Topology."""
@@ -726,10 +705,10 @@ class TestTopology(TestCase):
 
         # The round-trip OpenFF Topology is identical to the original.
         # The reference molecules are the same.
-        assert (
-            off_topology.n_reference_molecules
-            == off_topology_copy.n_reference_molecules
-        )
+        n_original = off_topology.n_reference_molecules
+        n_copy = off_topology_copy.n_reference_molecule
+        assert n_original == n_copy
+
         reference_molecules_copy = list(off_topology_copy.reference_molecules)
         for ref_mol_idx, ref_mol in enumerate(off_topology.reference_molecules):
             assert ref_mol == reference_molecules_copy[ref_mol_idx]
@@ -982,10 +961,8 @@ class TestTopology(TestCase):
                 "molecules/cyclohexane.mol2",
             )
         ]
-        with self.assertRaises(DuplicateUniqueMoleculeError) as context:
-            topology = Topology.from_openmm(
-                pdbfile.topology, unique_molecules=molecules
-            )
+        with self.assertRaises(DuplicateUniqueMoleculeError):
+            Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
 
     @pytest.mark.skip
     def test_from_openmm_distinguish_using_stereochemistry(self):
