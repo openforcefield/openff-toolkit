@@ -14,7 +14,7 @@ repos:
     files: ^openff
     args: [--check]
 - repo: https://github.com/nbQA-dev/nbQA
-  rev: 1.1.0
+  rev: 1.1.1
   hooks:
     - id: nbqa-pyupgrade
       files: ^examples/((?!deprecated).)*$
