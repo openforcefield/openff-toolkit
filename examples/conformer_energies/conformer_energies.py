@@ -34,7 +34,7 @@ def compute_conformer_energies_from_file(filename):
         f"{n_molecules} unique molecule(s) loaded, with {n_conformers} total conformers"
     )
 
-    # Load the openff-1.1.0 force field appropriate for vacuum calculations (without constraints)
+    # Load the openff-2.0.0 force field appropriate for vacuum calculations (without constraints)
     from openff.toolkit.typing.engines.smirnoff import ForceField
 
     forcefield = ForceField("openff_unconstrained-2.0.0.offxml")
