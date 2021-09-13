@@ -40,6 +40,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
   [`ForceField.create_parmed_structure`](openff.toolkit.typing.engines.smirnoff.ForceField.create_parmed_structure),
   [`Topology.to_parmed`](openff.toolkit.topology.Topology.to_parmed), and
   [`Topology.from_parmed`](openff.toolkit.topology.Topology.from_parmed).
+- [PR #1065](https://github.com/openforcefield/openforcefield/pull/1065): The example `conformer_energies.py` script
+  now uses the Sage 2.0.0 force field.
 
 ### Tests updated
 
@@ -47,7 +49,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
   do lack both AmberTools and RDKit.  
 
 ### Improved documentation and warnings
- - [PR #1065](https://github.com/openforcefield/openforcefield/pull/1017): Example notebooks were updated to use the Sage Open Force Field
+ - [PR #1065](https://github.com/openforcefield/openforcefield/pull/1017): Example notebooks were updated to use the
+   Sage Open Force Field
 
 ## 0.10.0 Improvements for force field fitting
 
