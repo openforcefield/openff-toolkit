@@ -10,6 +10,17 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### New features
 
+- [PR #1050](https://github.com/openforcefield/openforcefield/pull/1050): Conformer generation
+  failures in
+  [`OpenEyeToolkitWrapper.generate_conformers`](openff.toolkit.utils.toolkits.OpenEyeToolkitWrapper.generate_conformers), and
+  [`RDKitToolkitWrapper.generate_conformers`](openff.toolkit.utils.toolkits.RDKitToolkitWrapper.generate_conformers)
+  now each raise
+  [`openff.toolkit.utils.exceptions.ConformerGenerationError`](openff.toolkit.utils.exceptions.ConformerGenerationError)
+  if conformer generation fails. The same behavior occurs in
+  [`Molecule.generate_conformers`](openff.toolkit.topology.Molecule.generate_conformers), but only
+  when the ``toolkit_registry`` argument is a
+  [`ToolkitWrapper`](openff.toolkit.utils.toolkits.ToolkitWrapper), not when it is a
+  [`ToolkitRegistry`](openff.toolkit.utils.toolkits.ToolkitRegistry). See also an entry in the "Behavior changed" section.
 - [PR #1036](https://github.com/openforcefield/openforcefield/pull/1036): SMARTS matching
   logic for library charges was updated to use only one unique match instead of
   enumerating all possible matches. This results in faster matching, particularly
@@ -26,6 +37,11 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Behavior changed
 
+- [PR #1050](https://github.com/openforcefield/openforcefield/pull/1050): In
+  [`Molecule.generate_conformers`](openff.toolkit.topology.Molecule.generate_conformers), a single
+  toolkit wrapper failing to generate conformers is no longer fatal, but if all wrappers in a registry
+  fail, then a `ValueError` will be raised. This mirrors the behavior of
+  [`Molecule.assign_partial_charges`](openff.toolkit.topology.Molecule.assign_partial_charges).
 - [PR #1046](https://github.com/openforcefield/openforcefield/pull/1046): Changes OFFXML output to
   replace tabs with 4 spaces to standardize representation in different text viewers. 
 - [PR #1036](https://github.com/openforcefield/openforcefield/pull/1036): SMARTS matching
