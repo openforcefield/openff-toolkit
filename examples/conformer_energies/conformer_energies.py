@@ -37,7 +37,8 @@ def compute_conformer_energies_from_file(filename):
     # Load the openff-2.0.0 force field appropriate for vacuum calculations (without constraints)
     from openff.toolkit.typing.engines.smirnoff import ForceField
 
-    forcefield = ForceField("openff_unconstrained-2.0.0.offxml")
+    forcefield_str = "openff_unconstrained-2.0.0.offxml"
+    forcefield = ForceField(forcefield_str)
     # Loop over molecules and minimize each conformer
     for molecule in molecules:
         # If the molecule doesn't have a name, set mol.name to be the hill formula
@@ -58,7 +59,9 @@ def compute_conformer_energies_from_file(filename):
 
         # Print text header
         print(
-            "Conformer         Initial PE         Minimized PE       RMS between initial and minimized conformer"
+            "Using force field",
+            forcefield_str,
+            "\nConformer         Initial PE         Minimized PE       RMS between initial and minimized conformer",
         )
         output = [
             [
