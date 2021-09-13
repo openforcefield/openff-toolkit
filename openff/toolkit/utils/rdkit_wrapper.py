@@ -1124,16 +1124,20 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         # Build the distance matrix between all pairs of atoms.
         coordinates = conformer.value_in_unit(unit.angstrom)
 
-        # (a - b)^2 = a^2 - 2ab + b^2
-        ab = coordinates.dot(coordinates.T)
+        # Equation 1: (a - b)^2 = a^2 - 2ab + b^2
+        # distances_squared will eventually wind up as the squared distances
+        # although it is first computed as the ab portion of Eq 1
+        distances_squared = coordinates.dot(coordinates.T)
         # np.einsum is both faster than np.diag, and not read-only
-        diag = np.einsum("ii->i", ab)
-        # modifying in-place lets us take advantage of diag
-        ab += ab - diag - diag[..., np.newaxis]
+        # we know that a^2 == b^2 == diag(ab)
+        diag = np.einsum("ii->i", distances_squared)
+        # we modify in-place so we can use the `diag` view
+        # to make the diagonals 0
+        distances_squared += distances_squared - diag - diag[..., np.newaxis]
         # Handle edge cases where the squared distance is slightly negative due to
         # precision issues
-        diag[:] = -0.0
-        distances = np.sqrt(-ab)
+        diag[:] = -0.0  # this is somewhat faster than np.fill_diagonal
+        distances = np.sqrt(-distances_squared)
 
         inverse_distances = np.reciprocal(
             distances, out=np.zeros_like(distances), where=~np.isclose(distances, 0.0)
