@@ -56,12 +56,17 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
   [`ForceField.create_parmed_structure`](openff.toolkit.typing.engines.smirnoff.ForceField.create_parmed_structure),
   [`Topology.to_parmed`](openff.toolkit.topology.Topology.to_parmed), and
   [`Topology.from_parmed`](openff.toolkit.topology.Topology.from_parmed).
+- [PR #1065](https://github.com/openforcefield/openforcefield/pull/1065): The example `conformer_energies.py` script
+  now uses the Sage 2.0.0 force field.
 
 ### Tests updated
 
 - [PR #1017](https://github.com/openforcefield/openforcefield/pull/1017): Ensures that OpenEye-only CI builds really
   do lack both AmberTools and RDKit.  
 
+### Improved documentation and warnings
+ - [PR #1065](https://github.com/openforcefield/openforcefield/pull/1017): Example notebooks were updated to use the
+   Sage Open Force Field
 
 ## 0.10.0 Improvements for force field fitting
 
@@ -75,8 +80,6 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
   [`openff.toolkit.typing.engines.smirnoff.forcefield.ParseError`](openff.toolkit.typing.engines.smirnoff.forcefield.ParseError) to
   [`openff.toolkit.utils.exceptions.SMIRNOFFParseError`](openff.toolkit.utils.exceptions.SMIRNOFFParseError).
   This `ParseError` is deprecated and will be removed in a future release.
-
-## Current Development
 
 ### New features and behaviors changed
 
@@ -143,8 +146,6 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
    This uses explicit hydrogens rather than the toolkit's default of implicit hydrogens.
   - The RDKit wrapper no longer includes a header line. This improves
   the consistency between the OpenEye and RDKit outputs.
-
-
 
 ### Bugfixes
 
