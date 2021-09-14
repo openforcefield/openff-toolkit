@@ -58,7 +58,11 @@ from collections import OrderedDict, defaultdict
 from enum import Enum
 from itertools import combinations
 
-from simtk import openmm, unit
+try:
+    import openmm
+    from openmm import unit
+except ImportError:
+    from simtk import openmm, unit
 
 from openff.toolkit.topology import (
     ImproperDict,
@@ -129,18 +133,18 @@ class NonbondedMethod(Enum):
 def _linear_inter_or_extrapolate(points_dict, x_query):
     """
     Linearly interpolate or extrapolate based on a piecewise linear function defined by a set of points.
-    This function is designed to work with key:value pairs where the value may be a simtk.unit.Quantity.
+    This function is designed to work with key:value pairs where the value may be a openmm.unit.Quantity.
 
     Parameters
     ----------
-    points_dict : dict{float: float or float-valued simtk.unit.Quantity}
+    points_dict : dict{float: float or float-valued openmm.unit.Quantity}
         A dictionary with each item representing a point, where the key is the X value and the value is the Y value.
     x_query : float
         The X value of the point to interpolate or extrapolate.
 
     Returns
     -------
-    y_value : float or float-valued simtk.unit.Quantity
+    y_value : float or float-valued openmm.unit.Quantity
         The result of interpolation/extrapolation.
     """
 
@@ -251,7 +255,7 @@ class ParameterAttribute:
     default : object, optional
         When specified, the descriptor makes this attribute optional by
         attaching a default value to it.
-    unit : simtk.unit.Quantity, optional
+    unit : openmm.unit.Quantity, optional
         When specified, only quantities with compatible units are allowed
         to be set, and string expressions are automatically parsed into a
         ``Quantity``.
@@ -290,7 +294,7 @@ class ParameterAttribute:
 
     The attribute allow automatic conversion and validation of units.
 
-    >>> from simtk import unit
+    >>> from openmm import unit
     >>> class MyParameter:
     ...     attr_quantity = ParameterAttribute(unit=unit.angstrom)
     ...
@@ -455,7 +459,7 @@ class IndexedParameterAttribute(ParameterAttribute):
     default : object, optional
         When specified, the descriptor makes this attribute optional by
         attaching a default value to it.
-    unit : simtk.unit.Quantity, optional
+    unit : openmm.unit.Quantity, optional
         When specified, only sequences of quantities with compatible units
         are allowed to be set.
     converter : callable, optional
@@ -476,7 +480,7 @@ class IndexedParameterAttribute(ParameterAttribute):
 
     Create an optional indexed attribute with unit of angstrom.
 
-    >>> from simtk import unit
+    >>> from openmm import unit
     >>> class MyParameter:
     ...     length = IndexedParameterAttribute(default=None, unit=unit.angstrom)
     ...
@@ -532,7 +536,7 @@ class MappedParameterAttribute(ParameterAttribute):
     default : object, optional
         When specified, the descriptor makes this attribute optional by
         attaching a default value to it.
-    unit : simtk.unit.Quantity, optional
+    unit : openmm.unit.Quantity, optional
         When specified, only sequences of mappings where values are quantities with
         compatible units are allowed to be set.
     converter : callable, optional
@@ -551,7 +555,7 @@ class MappedParameterAttribute(ParameterAttribute):
 
     Create an optional indexed attribute with unit of angstrom.
 
-    >>> from simtk import unit
+    >>> from openmm import unit
     >>> class MyParameter:
     ...     length = MappedParameterAttribute(default=None, unit=unit.angstrom)
     ...
@@ -608,7 +612,7 @@ class IndexedMappedParameterAttribute(ParameterAttribute):
     default : object, optional
         When specified, the descriptor makes this attribute optional by
         attaching a default value to it.
-    unit : simtk.unit.Quantity, optional
+    unit : openmm.unit.Quantity, optional
         When specified, only sequences of mappings where values are quantities with
         compatible units are allowed to be set.
     converter : callable, optional
@@ -627,7 +631,7 @@ class IndexedMappedParameterAttribute(ParameterAttribute):
 
     Create an optional indexed attribute with unit of angstrom.
 
-    >>> from simtk import unit
+    >>> from openmm import unit
     >>> class MyParameter:
     ...     length = IndexedMappedParameterAttribute(default=None, unit=unit.angstrom)
     ...
@@ -2002,7 +2006,7 @@ class ParameterHandler(_ParameterAttributeHandler):
 
         Given an existing parameter handler and a new parameter to add to it:
 
-        >>> from simtk import unit
+        >>> from openmm import unit
         >>> bh = BondHandler(skip_version_check=True)
         >>> length = 1.5 * unit.angstrom
         >>> k = 100 * unit.kilocalorie_per_mole / unit.angstrom ** 2
@@ -2080,7 +2084,7 @@ class ParameterHandler(_ParameterAttributeHandler):
 
         Create a parameter handler and populate it with some data.
 
-        >>> from simtk import unit
+        >>> from openmm import unit
         >>> handler = BondHandler(skip_version_check=True)
         >>> handler.add_parameter(
         ...     {
@@ -2262,7 +2266,7 @@ class ParameterHandler(_ParameterAttributeHandler):
         topology : openff.toolkit.topology.Topology
             The Topology for which parameters are to be assigned.
             Either a new Force will be created or parameters will be appended to an existing Force.
-        system : simtk.openmm.System
+        system : openmm.System
             The OpenMM System object to add the Force (or append new parameters) to.
         """
         pass
@@ -2275,7 +2279,7 @@ class ParameterHandler(_ParameterAttributeHandler):
         topology : openff.toolkit.topology.Topology
             The Topology for which parameters are to be assigned.
             Either a new Force will be created or parameters will be appended to an existing Force.
-        system : simtk.openmm.System
+        system : openmm.System
             The OpenMM System object to add the Force (or append new parameters) to.
         """
         pass
@@ -3736,9 +3740,6 @@ class ElectrostaticsHandler(_NonbondedHandler):
         match_found : bool
             Whether a match was found. If True, the input molecule will have been modified in-place.
         """
-
-        import simtk.unit
-
         # Check each charge_mol for whether it's isomorphic to the input molecule
         for charge_mol in charge_mols:
             ismorphic, topology_atom_map = Molecule.are_isomorphic(
@@ -3757,7 +3758,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
                 # Set the partial charges
                 # Make a copy of the charge molecule's charges array (this way it's the right shape)
                 temp_mol_charges = copy.deepcopy(
-                    simtk.unit.Quantity(charge_mol.partial_charges)
+                    openmm.unit.Quantity(charge_mol.partial_charges)
                 )
                 for charge_idx, ref_idx in topology_atom_map.items():
                     temp_mol_charges[ref_idx] = charge_mol.partial_charges[charge_idx]
@@ -4578,9 +4579,9 @@ class GBSAHandler(ParameterHandler):
             # WARNING: The lines below aren't equivalent. The NonbondedForce and
             # CustomGBForce NonbondedMethod enums have different meanings.
             # More details:
-            # http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.NonbondedForce.html
-            # http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.GBSAOBCForce.html
-            # http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.CustomGBForce.html
+            # http://docs.openmm.org/latest/api-python/generated/openmm.openmm.NonbondedForce.html
+            # http://docs.openmm.org/latest/api-python/generated/openmm.openmm.GBSAOBCForce.html
+            # http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomGBForce.html
 
             # gbsa_force.setNonbondedMethod(simtk.openmm.NonbondedForce.CutoffPeriodic)
             gbsa_force.setNonbondedMethod(simtk.openmm.CustomGBForce.CutoffPeriodic)

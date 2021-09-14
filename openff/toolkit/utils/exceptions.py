@@ -112,6 +112,10 @@ class ChargeCalculationError(OpenFFToolkitException):
     """An unhandled error occurred in an external toolkit during charge calculation"""
 
 
+class ConformerGenerationError(OpenFFToolkitException):
+    """Conformer generation via a wrapped toolkit failed."""
+
+
 class InvalidIUPACNameError(OpenFFToolkitException):
     """Failed to parse IUPAC name"""
 

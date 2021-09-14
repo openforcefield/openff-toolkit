@@ -12,7 +12,12 @@ Test classes and function in module openff.toolkit.typing.engines.smirnoff.param
 import numpy
 import pytest
 from numpy.testing import assert_almost_equal
-from simtk import unit
+
+try:
+    import openmm
+    from openmm import unit
+except ImportError:
+    from simtk import unit, openmm
 
 from openff.toolkit.topology import Molecule
 from openff.toolkit.typing.engines.smirnoff.parameters import (
@@ -277,8 +282,6 @@ class TestInterpolation:
     )
     def test_linear_inter_or_extrapolate(self, fractional_bond_order, k_interpolated):
         """Test that linear interpolation works as expected"""
-        from simtk import unit
-
         k_bondorder = {
             1: 1 * unit.kilocalorie_per_mole,
             2: 1.8 * unit.kilocalorie_per_mole,
@@ -289,8 +292,6 @@ class TestInterpolation:
 
     def test_linear_inter_or_extrapolate_one_point(self):
         """Test that linear interpolation raises an error if attempted with just one point"""
-        from simtk import unit
-
         k_bondorder = {
             2: 1.8 * unit.kilocalorie_per_mole,
         }
@@ -305,8 +306,6 @@ class TestInterpolation:
         self, fractional_bond_order, k_interpolated
     ):
         """Test that linear interpolation works as expected for three terms"""
-        from simtk import unit
-
         k_bondorder = {
             1: 1 * unit.kilocalorie_per_mole,
             2: 1.8 * unit.kilocalorie_per_mole,
@@ -318,8 +317,6 @@ class TestInterpolation:
 
     def test_linear_inter_or_extrapolate_below_zero(self):
         """Test that linear interpolation does not error if resulting k less than 0"""
-        from simtk import unit
-
         k_bondorder = {
             1: 1 * unit.kilocalorie_per_mole,
             2: 2.3 * unit.kilocalorie_per_mole,
@@ -464,8 +461,6 @@ class TestParameterAttributeHandler:
 
 
 class TestParameterHandler:
-
-    from simtk import unit
 
     length = 1 * unit.angstrom
     k = 10 * unit.kilocalorie_per_mole / unit.angstrom ** 2
@@ -613,8 +608,6 @@ class TestParameterHandler:
         different units (proper behavior is to convert all quantities to the last-
         read unit)
         """
-        from simtk import unit
-
         bh = BondHandler(skip_version_check=True)
         bh.add_parameter(
             {
@@ -640,8 +633,6 @@ class TestParameterHandler:
 
     def test_to_dict_maintain_units(self):
         """Test ParameterHandler.to_dict() function when parameters were provided in different units"""
-        from simtk import unit
-
         bh = BondHandler(skip_version_check=True)
         bh.add_parameter(
             {
@@ -728,8 +719,6 @@ class TestParameterHandler:
         different units (proper behavior is to convert all quantities to the last-
         read unit)
         """
-        from simtk import unit
-
         bh = BondHandler(skip_version_check=True)
         bh.add_parameter(
             {
@@ -766,8 +755,6 @@ class TestParameterHandler:
 
     def test_get_parameter(self):
         """Test that ParameterHandler.get_parameter can lookup function"""
-        from simtk import unit
-
         bh = BondHandler(skip_version_check=True, allow_cosmetic_attributes=True)
 
         bh.add_parameter(
@@ -963,8 +950,6 @@ class TestParameterList:
 
     def test_to_list(self):
         """Test basic ParameterList.to_list() function, ensuring units are preserved"""
-        from simtk import unit
-
         p1 = BondHandler.BondType(
             smirks="[*:1]-[*:2]",
             length=1.01 * unit.angstrom,
@@ -987,8 +972,6 @@ class TestParameterList:
 
     def test_round_trip(self):
         """Test basic ParameterList.to_list() function and constructor"""
-        from simtk import unit
-
         p1 = BondHandler.BondType(
             smirks="[*:1]-[*:2]",
             length=1.01 * unit.angstrom,
@@ -1191,8 +1174,6 @@ class TestBondType:
         """
         Test BondType to_dict.
         """
-        from simtk import unit
-
         p1 = BondHandler.BondType(
             smirks="[*:1]-[*:2]",
             length=1.02 * unit.angstrom,
@@ -1216,8 +1197,6 @@ class TestBondType:
         """
         Test the parsing of a BondType with k_bondorder1/2/3 definitions
         """
-        from simtk import unit
-
         length = 1.4 * unit.angstrom
         k1 = 101 * unit.kilocalorie_per_mole / unit.angstrom ** 2
         k2 = 202 * unit.kilocalorie_per_mole / unit.angstrom ** 2
@@ -1237,8 +1216,6 @@ class TestBondType:
         """
         Test the over/underspecification of k/k_bondorderN are caught
         """
-        from simtk import unit
-
         length = 1.4 * unit.angstrom
         length1 = 1.5 * unit.angstrom
         length2 = 1.3 * unit.angstrom
@@ -1282,8 +1259,6 @@ class TestBondType:
         """
         Test BondType to_dict with custom output units.
         """
-        from simtk import unit
-
         p1 = BondHandler.BondType(
             smirks="[*:1]-[*:2]",
             length=1.02 * unit.angstrom,
@@ -1300,8 +1275,6 @@ class TestBondType:
         """
         Test ParameterType to_dict with invalid output units.
         """
-        from simtk import unit
-
         p1 = BondHandler.BondType(
             smirks="[*:1]-[*:2]",
             length=1.02 * unit.angstrom,
@@ -1320,8 +1293,6 @@ class TestBondType:
         """
         Test ParameterTypes' ability to store and write out optional attributes passed to __init__()
         """
-        from simtk import unit
-
         p1 = BondHandler.BondType(
             smirks="[*:1]-[*:2]",
             length=1.02 * unit.angstrom,
@@ -1335,8 +1306,6 @@ class TestBondType:
         """
         Test ParameterTypes' ability to store and write out cosmetic attributes passed to __init__()
         """
-        from simtk import unit
-
         p1 = BondHandler.BondType(
             smirks="[*:1]-[*:2]",
             length=1.02 * unit.angstrom,
@@ -1351,8 +1320,6 @@ class TestBondType:
         """
         Test ParameterTypes' ability to ignore cosmetic attributes passed to __init__() if instructed
         """
-        from simtk import unit
-
         p1 = BondHandler.BondType(
             smirks="[*:1]-[*:2]",
             length=1.02 * unit.angstrom,
@@ -1367,8 +1334,6 @@ class TestBondType:
         """
         Test that ParameterTypes raise an error on receiving unexpected attributes passed to __init__()
         """
-        from simtk import unit
-
         with pytest.raises(
             SMIRNOFFSpecError, match="Unexpected kwarg (pilot: alice)*"
         ) as context:
@@ -1384,8 +1349,6 @@ class TestBondType:
         """
         Test adding and deleting cosmetic attributes for already-initialized ParameterType objects
         """
-        from simtk import unit
-
         p1 = BondHandler.BondType(
             smirks="[*:1]-[*:2]",
             length=1.02 * unit.angstrom,
@@ -1420,8 +1383,6 @@ class TestBondHandler:
         self, fractional_bond_order, k_interpolated, length_interpolated
     ):
         """Test that linear interpolation works as expected"""
-        from simtk import unit
-
         k_bondorder = {
             1: 101 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
             2: 123 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
@@ -1465,8 +1426,6 @@ class TestProperTorsionType:
         """
         Test creation and serialization of a single-term proper torsion
         """
-        from simtk import unit
-
         p1 = ProperTorsionHandler.ProperTorsionType(
             smirks="[*:1]-[*:2]-[*:3]-[*:4]",
             phase1=30 * unit.degree,
@@ -1483,8 +1442,6 @@ class TestProperTorsionType:
         """
         Test creation and serialization of a single-term proper torsion
         """
-        from simtk import unit
-
         p1 = ProperTorsionHandler.ProperTorsionType(
             smirks="[*:1]-[*:2]-[*:3]-[*:4]",
             phase1=30 * unit.degree,
@@ -1503,8 +1460,6 @@ class TestProperTorsionType:
         """
         Test creation and serialization of a multi-term proper torsion
         """
-        from simtk import unit
-
         p1 = ProperTorsionHandler.ProperTorsionType(
             smirks="[*:1]-[*:2]-[*:3]-[*:4]",
             phase1=30 * unit.degree,
@@ -1527,8 +1482,6 @@ class TestProperTorsionType:
         Test creation and serialization of a multi-term proper torsion where
         the indices are not consecutive and a SMIRNOFFSpecError is raised
         """
-        from simtk import unit
-
         with pytest.raises(
             SMIRNOFFSpecError, match="Unexpected kwarg \(phase3: 31 deg\)*."
         ) as context:
@@ -1547,8 +1500,6 @@ class TestProperTorsionType:
         Test creation and serialization of a multi-term proper torsion where
         one of the terms has incorrect units
         """
-        from simtk import unit
-
         with pytest.raises(
             IncompatibleUnitError, match="should have units of"
         ) as context:
@@ -1566,8 +1517,6 @@ class TestProperTorsionType:
         """
         Test creation and serialization of a single-term proper torsion with bond order interpolation.
         """
-        from simtk import unit
-
         p1 = ProperTorsionHandler.ProperTorsionType(
             smirks="[*:1]-[*:2]~[*:3]-[*:4]",
             phase1=30 * unit.degree,
@@ -1593,8 +1542,6 @@ class TestProperTorsionType:
         With `idivf1` specified.
 
         """
-        from simtk import unit
-
         p1 = ProperTorsionHandler.ProperTorsionType(
             smirks="[*:1]-[*:2]-[*:3]-[*:4]",
             phase1=30 * unit.degree,
@@ -1615,8 +1562,6 @@ class TestProperTorsionType:
         """
         Test creation and serialization of a multi-term proper torsion with bond order interpolation.
         """
-        from simtk import unit
-
         p1 = ProperTorsionHandler.ProperTorsionType(
             smirks="[*:1]-[*:2]-[*:3]-[*:4]",
             phase1=30 * unit.degree,
@@ -1642,8 +1587,6 @@ class TestProperTorsionType:
         """
         Test getters and setters of a multi-term proper torsion with bond order interpolation.
         """
-        from simtk import unit
-
         p1 = ProperTorsionHandler.ProperTorsionType(
             smirks="[*:1]-[*:2]-[*:3]-[*:4]",
             phase1=30 * unit.degree,
@@ -1670,8 +1613,6 @@ class TestProperTorsionType:
         the indices are not consecutive and a SMIRNOFFSpecError is raised
         AND we are doing bond order interpolation
         """
-        from simtk import unit
-
         with pytest.raises(
             SMIRNOFFSpecError, match="Unexpected kwarg \(k3_bondorder1*."
         ) as context:
@@ -1689,8 +1630,6 @@ class TestProperTorsionType:
 
     def test_single_term_single_bo_exception(self):
         """Test behavior where a single bond order term is specified for a single k"""
-        from simtk import unit
-
         # raises no error, as checks are handled at parameterization
         # we may add a `validate` method later that is called manually by user when they want it
         p1 = ProperTorsionHandler.ProperTorsionType(
@@ -1702,8 +1641,6 @@ class TestProperTorsionType:
 
     def test_multi_term_single_bo_exception(self):
         """Test behavior where a single bond order term is specified for each of multiple k"""
-        from simtk import unit
-
         # TODO : currently raises no error, as checks are handled at parameterization
         # is this a spec thing that we should be checking?
         # if so, it will be painful to implement
@@ -1752,8 +1689,6 @@ class TestProperTorsionHandler:
 class TestvdWHandler:
     def test_create_force_defaults(self):
         """Test that create_force works on a vdWHandler with all default values"""
-        from simtk import openmm
-
         # Create a dummy topology containing only argon and give it a set of
         # box vectors.
         topology = Molecule.from_smiles("[Ar]").to_topology()
@@ -2247,8 +2182,6 @@ class TestChargeIncrementModelHandler:
 class TestGBSAHandler:
     def test_create_default_gbsahandler(self):
         """Test creation of an empty GBSAHandler, with all default attributes"""
-        from simtk import unit
-
         gbsa_handler = GBSAHandler(skip_version_check=True)
         assert gbsa_handler.gb_model == "OBC1"
         assert gbsa_handler.solvent_dielectric == 78.5
@@ -2262,8 +2195,6 @@ class TestGBSAHandler:
 
     def test_gbsahandler_setters(self):
         """Test creation of an empty GBSAHandler, with all default attributes"""
-        from simtk import unit
-
         gbsa_handler = GBSAHandler(skip_version_check=True)
 
         gbsa_handler.gb_model = "OBC2"
@@ -2307,8 +2238,6 @@ class TestGBSAHandler:
         """
         Test the check_handler_compatibility function of GBSAHandler
         """
-        from simtk import unit
-
         gbsa_handler_1 = GBSAHandler(skip_version_check=True)
         gbsa_handler_2 = GBSAHandler(skip_version_check=True)
 
