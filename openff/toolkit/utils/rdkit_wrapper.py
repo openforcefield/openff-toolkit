@@ -988,6 +988,38 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         if normalize_partial_charges:
             molecule._normalize_partial_charges()
 
+    def to_networkx(self, offmol):
+        """
+        Builds networkx graph from RDKit molecule.
+
+        .. warning: Experimental API. This does not handle unspecified bond types well.
+        """
+        import networkx
+        from rdkit import Chem
+
+        rdmol = offmol.to_rdkit()
+
+        rdmol_graph = networkx.Graph()
+        for atom in rdmol.GetAtoms():
+            rdmol_graph.add_node(
+                atom.GetIdx(), atomic_number=atom.GetAtomicNum(), formal_charge=atom.GetFormalCharge()
+            )
+        for bond in rdmol.GetBonds():
+            bond_type = bond.GetBondType()
+
+            # TODO: Is there a cleaner way to undo the guanidinium/imidazole hack that went into making
+            # the AA substructures? Should we have a second substructure dict?
+            if bond_type == Chem.rdchem.BondType.UNSPECIFIED:
+                # THIS IS BAD -- Will leave unsatisfied valences and give wrong hydrogen count
+                bond_type = Chem.rdchem.BondType.SINGLE
+            # TODO: Fix "bond order any" hacks for ARG and HIS, since we won't be able to recover those here
+            rdmol_graph.add_edge(
+                bond.GetBeginAtomIdx(),
+                bond.GetEndAtomIdx(),
+                bond_order=bond_type
+            )
+        return rdmol_graph
+
     @classmethod
     def _elf_is_problematic_conformer(
         cls, molecule: "Molecule", conformer: unit.Quantity

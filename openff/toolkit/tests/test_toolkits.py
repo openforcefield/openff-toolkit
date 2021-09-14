@@ -2823,6 +2823,14 @@ class TestRDKitToolkitWrapper:
         for (offatom, rdatom) in zip(mol.atoms, rdmol.GetAtoms()):
             assert offatom.is_aromatic is rdatom.GetIsAromatic()
 
+    @pytest.mark.parametrize("molecule", get_mini_drug_bank(RDKitToolkitWrapper))
+    def test_to_networkx(self, molecule):
+        """Converts every mini drug bank molecule to networkx graph. Checks number of nodes and edges."""
+        toolkit = RDKitToolkitWrapper()
+        graph = toolkit.to_networkx(molecule)
+        assert molecule.n_atoms == graph.number_of_nodes()
+        assert molecule.n_bonds == graph.number_of_edges()
+
     @pytest.mark.slow
     def test_max_substructure_matches_can_handle_large_molecule(self):
         """Test RDKitToolkitWrapper substructure search handles more than the default of maxMatches = 1000
