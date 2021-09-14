@@ -294,6 +294,7 @@ def string_to_unit(unit_string):
     output_unit: openmm.unit.Quantity
         The deserialized unit from the string
     """
+    return unit.Unit(unit_string)
     import ast
 
     output_unit = _ast_eval(ast.parse(unit_string, mode="eval").body)

@@ -13,11 +13,12 @@ import ast
 import os
 
 import pytest
+from openff.units import unit
 
 try:
-    from openmm import unit
+    from openmm import unit as openmm_unit
 except ImportError:
-    from simtk import unit
+    from simtk import unit as openmm_unit
 
 # =============================================================================================
 # TESTS
@@ -87,16 +88,19 @@ def test_get_data_file_path():
 @pytest.mark.parametrize(
     "unit_string,expected_unit",
     [
-        ("kilocalories_per_mole", unit.kilocalories_per_mole),
+        ("kilocalories_per_mole", openmm_unit.kilocalories_per_mole),
         (
             "kilocalories_per_mole/angstrom**2",
-            unit.kilocalories_per_mole / unit.angstrom ** 2,
+            openmm_unit.kilocalories_per_mole / openmm_unit.angstrom ** 2,
         ),
-        ("joule/(mole * nanometer**2)", unit.joule / (unit.mole * unit.nanometer ** 2)),
-        ("picosecond**(-1)", unit.picosecond ** (-1)),
-        ("300.0 * kelvin", 300 * unit.kelvin),
-        ("1 * kilojoule + 500 * joule", 1.5 * unit.kilojoule),
-        ("1 / meter", 1.0 / unit.meter),
+        (
+            "joule/(mole * nanometer**2)",
+            openmm_unit.joule / (openmm_unit.mole * openmm_unit.nanometer ** 2),
+        ),
+        ("picosecond**(-1)", openmm_unit.picosecond ** (-1)),
+        ("300.0 * kelvin", 300 * openmm_unit.kelvin),
+        ("1 * kilojoule + 500 * joule", 1.5 * openmm_unit.kilojoule),
+        ("1 / meter", 1.0 / openmm_unit.meter),
     ],
 )
 def test_ast_eval(unit_string, expected_unit):
