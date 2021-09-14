@@ -19,13 +19,17 @@ from tempfile import NamedTemporaryFile
 import numpy as np
 import pytest
 from numpy.testing import assert_almost_equal
+from openff.units import unit
 
 try:
     import openmm
-    from openmm import NonbondedForce, Platform, XmlSerializer, app, unit
+    from openff.units.openmm import from_openmm
+    from openmm import NonbondedForce, Platform, XmlSerializer, app
+    from openmm import unit as openmm_unit
 except ImportError:
-    from simtk import openmm, unit
+    from simtk import openmm, unit as openmm_unit
     from simtk.openmm import app, XmlSerializer, Platform, NonbondedForce
+    from openff.units.simtk import from_simtk as from_openmm
 
 from openff.toolkit.tests.create_molecules import (
     create_acetaldehyde,
@@ -1671,7 +1675,7 @@ class TestForceField:
             if isinstance(f, openmm.NonbondedForce):
                 nonbonded_force = f
 
-        found_cutoff = nonbonded_force.getCutoffDistance()
+        found_cutoff = from_openmm(nonbonded_force.getCutoffDistance())
         vdw_cutoff = forcefield["vdW"].cutoff
         e_cutoff = forcefield["Electrostatics"].cutoff
         assert found_cutoff == vdw_cutoff == e_cutoff
@@ -1713,7 +1717,8 @@ class TestForceField:
         system = force_field.create_openmm_system(topology)
 
         assert np.isclose(
-            system.getForce(0).getCutoffDistance().value_in_unit(unit.angstrom), 6.0
+            system.getForce(0).getCutoffDistance().value_in_unit(openmm_unit.angstrom),
+            6.0,
         )
 
         # Ensure an exception is raised when the electrostatics cutoff is meaningful
@@ -1767,7 +1772,7 @@ class TestForceField:
         system = force_field.create_openmm_system(topology)
 
         found_cutoff = (
-            system.getForce(0).getCutoffDistance().value_in_unit(unit.angstrom)
+            system.getForce(0).getCutoffDistance().value_in_unit(openmm_unit.angstrom)
         )
 
         assert abs(found_cutoff - 7.89) < 1e-6
@@ -2020,9 +2025,9 @@ class TestForceFieldVirtualSites:
     sigma_unit = unit.angstrom
     length_unit = unit.angstrom
 
-    as_charge = functools.partial(unit.Quantity, unit=charge_unit)
-    as_epsilon = functools.partial(unit.Quantity, unit=epsilon_unit)
-    as_sigma = functools.partial(unit.Quantity, unit=sigma_unit)
+    as_charge = functools.partial(unit.Quantity, units=charge_unit)
+    as_epsilon = functools.partial(unit.Quantity, units=epsilon_unit)
+    as_sigma = functools.partial(unit.Quantity, units=sigma_unit)
 
     ############################################################################
     # Bond charge virtual site test data
@@ -4713,7 +4718,7 @@ class TestForceFieldGetPartialCharges:
         n_particles = nbforce.getNumParticles()
         charges = [nbforce.getParticleParameters(i)[0] for i in range(n_particles)]
 
-        return unit.Quantity(charges)
+        return openmm_unit.Quantity(charges)
 
     def test_get_partial_charges(self):
         """Test that ethanol charges are computed correctly."""

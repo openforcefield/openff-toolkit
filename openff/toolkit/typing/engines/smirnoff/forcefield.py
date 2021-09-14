@@ -35,11 +35,6 @@ import os
 import pathlib
 from collections import OrderedDict
 
-try:
-    import openmm
-except ImportError:
-    from simtk import openmm
-
 from openff.toolkit.topology.molecule import DEFAULT_AROMATICITY_MODEL
 from openff.toolkit.typing.engines.smirnoff.io import ParameterIOHandler
 from openff.toolkit.typing.engines.smirnoff.parameters import (
@@ -1264,6 +1259,13 @@ class ForceField:
             during parameterization.
 
         """
+        try:
+            import openmm
+            from openff.units.openmm import to_openmm
+        except ImportError:
+            from openff.units.simtk_ import to_simtk as to_openmm
+            from simtk import openmm
+
         return_topology = kwargs.pop("return_topology", False)
 
         # Make a deep copy of the topology so we don't accidentally modify it
@@ -1283,7 +1285,7 @@ class ForceField:
 
         # Set periodic boundary conditions if specified
         if topology.box_vectors is not None:
-            system.setDefaultPeriodicBoxVectors(*topology.box_vectors)
+            system.setDefaultPeriodicBoxVectors(*to_openmm(topology.box_vectors))
 
         # Add atom particles with appropriate masses
         # Virtual site particle creation is handled in the parameter handler
@@ -1359,7 +1361,7 @@ class ForceField:
             coul_method = self.get_parameter_handler("Electrostatics").method
             if vdw_cutoff != coul_cutoff:
                 if coul_method == "PME":
-                    nonbonded_force.setCutoffDistance(vdw_cutoff)
+                    nonbonded_force.setCutoffDistance(to_openmm(vdw_cutoff))
                 else:
                     raise IncompatibleParameterError(
                         "In its current implementation of the OpenFF Toolkit, with "

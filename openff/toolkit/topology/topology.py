@@ -1555,14 +1555,19 @@ class Topology(Serializable):
             return
         if not hasattr(box_vectors, "units"):
             raise InvalidBoxVectorsError("Given unitless box vectors")
-        if box_vectors.units not in unit.nm.compatible_units():
+        # Unit.compatible_units() returns False with itself, for some reason
+        if (
+            box_vectors.units != unit.nm
+            and box_vectors.units not in unit.nm.compatible_units()
+        ):
             raise InvalidBoxVectorsError(
                 f"Cannot set box vectors with quantities with unit {box_vectors.units}"
             )
 
         if hasattr(box_vectors, "shape"):
             if box_vectors.shape == (3,):
-                box_vectors *= np.eye(3)
+                # Cannot multiply in-place without ufunc support in Pint
+                box_vectors = box_vectors * np.eye(3)
             if box_vectors.shape != (3, 3):
                 raise InvalidBoxVectorsError(
                     f"Box vectors must be shape (3, 3). Found shape {box_vectors.shape}"
@@ -2140,8 +2145,10 @@ class Topology(Serializable):
 
         # TODO: Simply decorate with @requires_package("openmm") when simtk compatibility no longer needed
         try:
+            from openff.units.openmm import from_openmm
             from openmm import app
         except ImportError:
+            from openff.units.simtk import from_simtk
             from simtk.openmm import app
 
         # Check to see if the openMM system has defined bond orders, by looping over all Bonds in the Topology.
@@ -2260,7 +2267,7 @@ class Topology(Serializable):
                 local_topology_to_reference_index=local_top_to_ref_index,
             )
 
-        topology.box_vectors = openmm_topology.getPeriodicBoxVectors()
+        topology.box_vectors = from_openmm(openmm_topology.getPeriodicBoxVectors())
         # TODO: How can we preserve metadata from the openMM topology when creating the OFF topology?
         return topology
 
@@ -2976,7 +2983,7 @@ class Topology(Serializable):
         # Check that constraint hasn't already been specified.
         if (iatom, jatom) in self._constrained_atom_pairs:
             existing_distance = self._constrained_atom_pairs[(iatom, jatom)]
-            if unit.is_quantity(existing_distance) and (distance is True):
+            if isinstance(existing_distance, unit.Quantity) and distance is True:
                 raise Exception(
                     f"Atoms ({iatom},{jatom}) already constrained with distance {existing_distance} but attempting to override with unspecified distance"
                 )

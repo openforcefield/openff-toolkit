@@ -2443,10 +2443,12 @@ class ParameterHandler(_ParameterAttributeHandler):
             other_val = getattr(other, attr)
             # Strip quantities of their units before comparison.
             try:
-                u = this_val.unit
+                u = this_val.units
+                u = other_val.units
             except AttributeError:
                 return this_val, other_val
-            return this_val / u, other_val / u
+            assert this_val.units == other_val.units
+            return this_val.m_as(u), other_val.m_as(u)
 
         for attr in identical_attrs:
             this_val, other_val = get_unitless_values(attr)
@@ -2460,7 +2462,13 @@ class ParameterHandler(_ParameterAttributeHandler):
                 )
 
         for attr in tolerance_attrs:
-            this_val, other_val = get_unitless_values(attr)
+            try:
+                this_val, other_val = get_unitless_values(attr)
+            except AttributeError:
+                # import ipdb; ipdb.set_trace()
+                raise AttributeError(
+                    f"Mismatch found with {attr=}, {this_val=}, {other_val=}"
+                )
             if abs(this_val - other_val) > tolerance:
                 raise IncompatibleParameterError(
                     "Difference between '{}' values is beyond allowed tolerance {}. "
@@ -2569,7 +2577,7 @@ class ConstraintHandler(ParameterHandler):
             if constraint.distance is None:
                 topology.add_constraint(*atoms, True)
             else:
-                system.addConstraint(*atoms, constraint.distance)
+                system.addConstraint(*atoms, to_openmm(constraint.distance))
                 topology.add_constraint(*atoms, constraint.distance)
 
 
@@ -2845,7 +2853,7 @@ class BondHandler(ParameterHandler):
             is_constrained = topology.is_constrained(*topology_atom_indices)
             if not is_constrained:
                 # Add harmonic bond to HarmonicBondForce
-                force.addBond(*topology_atom_indices, length, k)
+                force.addBond(*topology_atom_indices, to_openmm(length), to_openmm(k))
             else:
                 # Handle constraints.
                 # Atom pair is constrained; we don't need to add a bond term.
@@ -2855,7 +2863,7 @@ class BondHandler(ParameterHandler):
                     # Mark that we have now assigned a specific constraint distance to this constraint.
                     topology.add_constraint(*topology_atom_indices, length)
                     # Add the constraint to the System.
-                    system.addConstraint(*topology_atom_indices, length)
+                    system.addConstraint(*topology_atom_indices, to_openmm(length))
                     # system.addConstraint(*particle_indices, length)
 
         logger.info(
@@ -2958,7 +2966,7 @@ class AngleHandler(ParameterHandler):
                 continue
 
             angle = angle_match.parameter_type
-            force.addAngle(*atoms, angle.angle, angle.k)
+            force.addAngle(*atoms, to_openmm(angle.angle), to_openmm(angle.k))
 
         logger.info(
             "{} angles added ({} skipped due to constraints)".format(
@@ -3155,15 +3163,14 @@ class ProperTorsionHandler(ParameterHandler):
                     "The OpenForceField toolkit hasn't implemented "
                     "support for the torsion `idivf` value of 'auto'"
                 )
-
             force.addTorsion(
                 atom_indices[0],
                 atom_indices[1],
                 atom_indices[2],
                 atom_indices[3],
                 periodicity,
-                phase,
-                k / idivf,
+                to_openmm(phase),
+                to_openmm(k / idivf),
             )
 
     def _assign_fractional_bond_orders(
@@ -3234,8 +3241,8 @@ class ProperTorsionHandler(ParameterHandler):
                 atom_indices[2],
                 atom_indices[3],
                 periodicity,
-                phase,
-                k / idivf,
+                to_openmm(phase),
+                to_openmm(k / idivf),
             )
 
 
@@ -3379,8 +3386,8 @@ class ImproperTorsionHandler(ParameterHandler):
                         p[1],
                         p[2],
                         improper_periodicity,
-                        improper_phase,
-                        improper_k / improper_idivf,
+                        to_openmm(improper_phase),
+                        to_openmm(improper_k / improper_idivf),
                     )
         logger.info(
             "{} impropers added, each applied in a six-fold trefoil".format(
@@ -3923,7 +3930,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
                 q, _, _ = force.getParticleParameters(
                     top_particle.topology_particle_index
                 )
-                partial_charge_sum += q
+                partial_charge_sum += q * unit.elementary_charge
             if (
                 abs(formal_charge_sum - partial_charge_sum)
                 > 0.01 * unit.elementary_charge
@@ -4063,9 +4070,10 @@ class LibraryChargeHandler(_NonbondedHandler):
                 _, sigma, epsilon = force.getParticleParameters(top_particle_idx)
                 force.setParticleParameters(
                     top_particle_idx,
-                    atom_assignments[top_particle_idx],
-                    to_openmm(sigma),
-                    to_openmm(epsilon),
+                    atom_assignments[top_particle_idx].m_as(unit.elementary_charge),
+                    # atom_assignments[top_particle_idx],
+                    sigma,
+                    epsilon,
                 )
 
             ref_mols_assigned.add(top_mol.reference_molecule)
@@ -4151,7 +4159,7 @@ class ToolkitAM1BCCHandler(_NonbondedHandler):
 
                     particle_charge = ref_mol._partial_charges[ref_mol_particle_index]
 
-                    # Retrieve nonbonded parameters for reference atom (charge not set yet)
+                    # Retrieve nonbonded parameters, as floats, for reference atom (charge not set yet)
                     _, sigma, epsilon = force.getParticleParameters(
                         topology_particle_index
                     )
@@ -4159,8 +4167,8 @@ class ToolkitAM1BCCHandler(_NonbondedHandler):
                     force.setParticleParameters(
                         topology_particle_index,
                         to_openmm(particle_charge),
-                        to_openmm(sigma),
-                        to_openmm(epsilon),
+                        sigma,
+                        epsilon,
                     )
             # Finally, mark that charges were assigned for this reference molecule
             self.mark_charges_assigned(ref_mol, topology)
@@ -4648,10 +4656,10 @@ class GBSAHandler(ParameterHandler):
 
         if self.gb_model == "OBC2":
             for particle_param in params_to_add:
-                gbsa_force.addParticle(*particle_param)
+                gbsa_force.addParticle([to_openmm(param) for param in particle_param])
         else:
             for particle_param in params_to_add:
-                gbsa_force.addParticle(particle_param)
+                gbsa_force.addParticle([to_openmm(param) for param in particle_param])
             # We have to call finalize() for models that inherit from CustomAmberGBForceBase,
             # otherwise the added particles aren't actually passed to the underlying CustomGBForce
             gbsa_force.finalize()
@@ -5828,7 +5836,9 @@ class VirtualSiteHandler(_NonbondedHandler):
             )
 
             system.setVirtualSite(vsite_idx, omm_vsite)
-            force.addParticle(vsite_q, sigma, ljtype.epsilon)
+            force.addParticle(
+                to_openmm(vsite_q), to_openmm(sigma), to_openmm(ljtype.epsilon)
+            )
 
             logger.debug(f"Added virtual site particle with charge {vsite_q}")
             logger.debug(f"  charge_increments: {vsite.charge_increments}")
