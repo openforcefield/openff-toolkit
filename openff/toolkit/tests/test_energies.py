@@ -5,10 +5,11 @@ import pytest
 
 try:
     import openmm
-    from openmm import unit
+    from openff.units.openmm import to_openmm
+    from openmm import unit as openmm_unit
 except ImportError:
-    from simtk import unit, openmm
-
+    from simtk import unit as openmm_unit, openmm
+    from openff.units.simtk import to_simtk as to_openmm
 
 from openff.toolkit.tests.utils import get_data_file_path, requires_rdkit
 from openff.toolkit.topology import Molecule, Topology
@@ -49,7 +50,7 @@ def test_reference(constrained, mol):
     derived_energy = _get_energy(simulation=simulation, positions=positions)
 
     np.testing.assert_almost_equal(
-        actual=derived_energy / unit.kilojoule_per_mole,
+        actual=derived_energy.value_in_unit(openmm_unit.kilojoule_per_mole),
         desired=reference_energy,
         decimal=5,
     )
@@ -77,7 +78,9 @@ def generate_reference():
             if not constrained:
                 name += "un"
             name += "constrained"
-            reference.update({name: energy / unit.kilojoule_per_mole})
+            reference.update(
+                {name: energy.value_in_unit(openmm_unit.kilojoule_per_mole)}
+            )
 
     import openff.toolkit
 
@@ -103,9 +106,7 @@ def _build_system(mol, constrained):
         off_top = Topology()
         for mol_i in mol:
             off_top.add_molecule(mol_i)
-        positions = (
-            np.vstack([mol[0].conformers[0], mol[1].conformers[0]]) * unit.angstrom
-        )
+        positions = np.vstack([mol[0].conformers[0], mol[1].conformers[0]])
 
     from openff.toolkit.utils.toolkits import (
         AmberToolsToolkitWrapper,
@@ -125,7 +126,7 @@ def _build_system(mol, constrained):
 def _build_simulation(omm_sys, off_top):
     """Given an OpenMM System, initialize a barebones OpenMM Simulation."""
     # Use OpenMM to compute initial and minimized energy for all conformers
-    integrator = openmm.VerletIntegrator(1 * unit.femtoseconds)
+    integrator = openmm.VerletIntegrator(1 * openmm_unit.femtoseconds)
     platform = openmm.Platform.getPlatformByName("Reference")
     omm_top = off_top.to_openmm()
     simulation = openmm.app.Simulation(omm_top, omm_sys, integrator, platform)
@@ -135,7 +136,7 @@ def _build_simulation(omm_sys, off_top):
 
 def _get_energy(simulation, positions):
     """Given an OpenMM simulation and position, return its energy"""
-    simulation.context.setPositions(positions)
+    simulation.context.setPositions(to_openmm(positions))
     state = simulation.context.getState(getEnergy=True, getPositions=True)
     energy = state.getPotentialEnergy()
 
