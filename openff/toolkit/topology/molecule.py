@@ -6474,8 +6474,8 @@ class Molecule(FrozenMolecule):
 
         Parameters
         ----------
-        substructure_file_path : str
-            Path to substructure library file in JSON format.
+        substructure_file_path : str, optional, default=None
+            Path to substructure library file in JSON format. Defaults to using built-in substructure file.
         """
         # Read substructure dictionary file
         if not substructure_file_path:
