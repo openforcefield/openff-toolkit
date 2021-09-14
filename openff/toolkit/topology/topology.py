@@ -22,6 +22,7 @@ from collections import OrderedDict
 from collections.abc import MutableMapping
 
 import numpy as np
+from openff.units import unit
 
 try:
     from openmm import unit as openmm_unit
@@ -1552,9 +1553,9 @@ class Topology(Serializable):
         if box_vectors is None:
             self._box_vectors = None
             return
-        if not hasattr(box_vectors, "unit"):
+        if not hasattr(box_vectors, "units"):
             raise InvalidBoxVectorsError("Given unitless box vectors")
-        if not box_vectors.units not in unit.nm.compatible_units():
+        if box_vectors.units not in unit.nm.compatible_units():
             raise InvalidBoxVectorsError(
                 f"Cannot set box vectors with quantities with unit {box_vectors.units}"
             )

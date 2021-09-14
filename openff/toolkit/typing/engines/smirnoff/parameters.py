@@ -59,6 +59,7 @@ from itertools import combinations
 
 import openmm
 from openff.units import unit
+from openff.units.openmm import to_openmm
 
 from openff.toolkit.topology import (
     ImproperDict,
@@ -3609,7 +3610,7 @@ class vdWHandler(_NonbondedHandler):
                 #                             "must be provided")
             else:
                 force.setNonbondedMethod(openmm.NonbondedForce.LJPME)
-                force.setCutoffDistance(self.cutoff)
+                force.setCutoffDistance(to_openmm(self.cutoff))
                 force.setEwaldErrorTolerance(1.0e-4)
 
         # If method is cutoff, then we currently support openMM's PME for periodic system and NoCutoff for nonperiodic
@@ -3620,7 +3621,7 @@ class vdWHandler(_NonbondedHandler):
             else:
                 force.setNonbondedMethod(openmm.NonbondedForce.PME)
                 force.setUseDispersionCorrection(True)
-                force.setCutoffDistance(self.cutoff)
+                force.setCutoffDistance(to_openmm(self.cutoff))
 
         # Iterate over all defined Lennard-Jones types, allowing later matches to override earlier ones.
         atom_matches = self.find_matches(topology)
@@ -3633,7 +3634,9 @@ class vdWHandler(_NonbondedHandler):
                 sigma = 2.0 * ljtype.rmin_half / (2.0 ** (1.0 / 6.0))
             else:
                 sigma = ljtype.sigma
-            force.setParticleParameters(atom_idx, 0.0, sigma, ljtype.epsilon)
+            force.setParticleParameters(
+                atom_idx, 0.0, to_openmm(sigma), to_openmm(ljtype.epsilon)
+            )
 
         # Check that no atoms (n.b. not particles) are missing force parameters.
         self._check_all_valence_terms_assigned(
@@ -3825,7 +3828,10 @@ class ElectrostaticsHandler(_NonbondedHandler):
                     )
                     # Set the nonbonded force with the partial charge
                     force.setParticleParameters(
-                        topology_particle_index, particle_charge, sigma, epsilon
+                        topology_particle_index,
+                        particle_charge,
+                        to_openmm(sigma),
+                        to_openmm(epsilon),
                     )
 
             # Finally, mark that charges were assigned for this reference molecule
@@ -3852,7 +3858,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
             # TODO: This is an assumption right now, and a bad one. See issue #219
             if topology.box_vectors is None:
                 assert current_nb_method == openmm.NonbondedForce.NoCutoff
-                force.setCutoffDistance(self.cutoff)
+                force.setCutoffDistance(to_openmm(self.cutoff))
                 # raise IncompatibleParameterError("Electrostatics handler received PME method keyword, but a nonperiodic"
                 #                                  " topology. Use of PME electrostatics requires a periodic topology.")
             else:
@@ -3861,7 +3867,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
                     # There's no need to check for matching cutoff/tolerance here since both are hard-coded defaults
                 else:
                     force.setNonbondedMethod(openmm.NonbondedForce.PME)
-                    force.setCutoffDistance(self.cutoff)
+                    force.setCutoffDistance(to_openmm(self.cutoff))
                     force.setEwaldErrorTolerance(1.0e-4)
 
         # If vdWHandler set the nonbonded method to NoCutoff, then we don't need to change anything
@@ -4056,7 +4062,10 @@ class LibraryChargeHandler(_NonbondedHandler):
             for top_particle_idx in top_particle_idxs:
                 _, sigma, epsilon = force.getParticleParameters(top_particle_idx)
                 force.setParticleParameters(
-                    top_particle_idx, atom_assignments[top_particle_idx], sigma, epsilon
+                    top_particle_idx,
+                    atom_assignments[top_particle_idx],
+                    to_openmm(sigma),
+                    to_openmm(epsilon),
                 )
 
             ref_mols_assigned.add(top_mol.reference_molecule)
@@ -4148,7 +4157,10 @@ class ToolkitAM1BCCHandler(_NonbondedHandler):
                     )
                     # Set the nonbonded force with the partial charge
                     force.setParticleParameters(
-                        topology_particle_index, particle_charge, sigma, epsilon
+                        topology_particle_index,
+                        to_openmm(particle_charge),
+                        to_openmm(sigma),
+                        to_openmm(epsilon),
                     )
             # Finally, mark that charges were assigned for this reference molecule
             self.mark_charges_assigned(ref_mol, topology)
@@ -4181,10 +4193,16 @@ class ToolkitAM1BCCHandler(_NonbondedHandler):
                     charge1 += bond.increment
                     # Update charges
                     force.setParticleParameters(
-                        particle_indices[0], charge0, sigma0, epsilon0
+                        particle_indices[0],
+                        to_openmm(charge0),
+                        to_openmm(sigma0),
+                        to_openmm(epsilon0),
                     )
                     force.setParticleParameters(
-                        particle_indices[1], charge1, sigma1, epsilon1
+                        particle_indices[1],
+                        to_openmm(charge1),
+                        to_openmm(sigma1),
+                        to_openmm(epsilon1),
                     )
                     # TODO: Calculate exceptions
 
@@ -4378,7 +4396,10 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
             for topology_particle_index, charge_to_assign in charges_to_assign.items():
                 _, sigma, epsilon = force.getParticleParameters(topology_particle_index)
                 force.setParticleParameters(
-                    topology_particle_index, charge_to_assign, sigma, epsilon
+                    topology_particle_index,
+                    to_openmm(charge_to_assign),
+                    to_openmm(sigma),
+                    to_openmm(epsilon),
                 )
 
             # Finally, mark that charges were assigned for this reference molecule
@@ -5623,7 +5644,9 @@ class VirtualSiteHandler(_NonbondedHandler):
             o_charge, o_sigma, o_epsilon = force.getParticleParameters(atom)
             vsite_charge -= charge_increment[charge_i]
             o_charge += charge_increment[charge_i]
-            force.setParticleParameters(atom, o_charge, o_sigma, o_epsilon)
+            force.setParticleParameters(
+                atom, to_openmm(o_charge), to_openmm(o_sigma), to_openmm(o_epsilon)
+            )
         return vsite_charge
 
     def _same_virtual_site_type(self, vs_i, vs_j):

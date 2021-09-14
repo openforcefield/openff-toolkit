@@ -1643,10 +1643,12 @@ class TestProperTorsionHandler:
 class TestvdWHandler:
     def test_create_force_defaults(self):
         """Test that create_force works on a vdWHandler with all default values"""
+        import openmm
+
         # Create a dummy topology containing only argon and give it a set of
         # box vectors.
         topology = Molecule.from_smiles("[Ar]").to_topology()
-        topology.box_vectors = unit.Quantity(numpy.eye(3) * 20 * unit.angstrom)
+        topology.box_vectors = unit.Quantity(numpy.eye(3) * 20, unit.angstrom)
 
         # create a VdW handler with only parameters for argon.
         vdw_handler = vdWHandler(version=0.3)

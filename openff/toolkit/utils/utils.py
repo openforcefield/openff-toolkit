@@ -314,12 +314,14 @@ def string_to_unit(unit_string):
 
 
 def string_to_quantity(quantity_string):
+    from tokenize import TokenError
+
+    import pint
+
     try:
         return unit.Quantity(quantity_string)
-    except:
-        if "OE" in quantity_string:
-            return quantity_string
-        raise Exception(quantity_string)
+    except (pint.errors.UndefinedUnitError, TokenError):
+        return quantity_string
 
 
 def _string_to_quantity(quantity_string):
@@ -455,7 +457,12 @@ def _(obj):
 
 @object_to_quantity.register(str)
 def _(obj):
-    return string_to_quantity(obj)
+    import pint
+
+    try:
+        return string_to_quantity(obj)
+    except pint.errors.UndefinedUnitError:
+        raise ValueError
 
 
 @object_to_quantity.register(int)
