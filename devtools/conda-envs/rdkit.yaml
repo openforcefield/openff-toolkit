@@ -34,3 +34,5 @@ dependencies:
   - mdtraj
   - openff-interchange
   - openff-units
+  - pip:
+      - git+git://github.com/openforcefield/openff-units.git@smirnoff-per-mol

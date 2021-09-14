@@ -24,11 +24,6 @@ from collections.abc import MutableMapping
 import numpy as np
 from openff.units import unit
 
-try:
-    from openmm import unit as openmm_unit
-except ImportError:
-    from simtk import unit as openmm_unit
-
 from openff.toolkit.typing.chemistry import ChemicalEnvironment
 from openff.toolkit.utils.exceptions import (
     DuplicateUniqueMoleculeError,
@@ -2643,9 +2638,7 @@ class Topology(Serializable):
             )
 
         dic = mol.GetCoords()
-        positions = [
-            Vec3(v[0], v[1], v[2]) for k, v in dic.items()
-        ] * openmm_unit.angstrom
+        positions = [Vec3(v[0], v[1], v[2]) for k, v in dic.items()] * unit.angstrom
 
         return topology, positions
 
