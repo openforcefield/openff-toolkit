@@ -6468,12 +6468,18 @@ class Molecule(FrozenMolecule):
 
         raise ValueError("Could not find an appropriate backend")
 
-    def perceive_residues(self):
+    def perceive_residues(self, substructure_file_path=None):
         """
         Perceive residue substructure and fill atoms metadata accordingly.
+
+        Parameters
+        ----------
+        substructure_file_path : str
+            Path to substructure library file in JSON format.
         """
         # Read substructure dictionary file
-        substructure_file_path = get_data_file_path('proteins/aa_residues_substructures.json')
+        if not substructure_file_path:
+            substructure_file_path = get_data_file_path('proteins/aa_residues_substructures.json')
         with open(substructure_file_path, 'r') as subfile:
             substructure_dictionary = json.load(subfile)
         all_matches = list()
