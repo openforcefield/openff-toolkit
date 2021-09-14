@@ -3771,7 +3771,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
                 # Set the partial charges
                 # Make a copy of the charge molecule's charges array (this way it's the right shape)
                 temp_mol_charges = copy.deepcopy(
-                    openmm.unit.Quantity(charge_mol.partial_charges)
+                    unit.Quantity(charge_mol.partial_charges)
                 )
                 for charge_idx, ref_idx in topology_atom_map.items():
                     temp_mol_charges[ref_idx] = charge_mol.partial_charges[charge_idx]
@@ -3836,9 +3836,9 @@ class ElectrostaticsHandler(_NonbondedHandler):
                     # Set the nonbonded force with the partial charge
                     force.setParticleParameters(
                         topology_particle_index,
-                        particle_charge,
-                        to_openmm(sigma),
-                        to_openmm(epsilon),
+                        particle_charge.m,
+                        sigma,
+                        epsilon,
                     )
 
             # Finally, mark that charges were assigned for this reference molecule
@@ -4197,20 +4197,20 @@ class ToolkitAM1BCCHandler(_NonbondedHandler):
                         particle_indices[1]
                     )
                     # Apply bond charge increment
-                    charge0 -= bond.increment
-                    charge1 += bond.increment
+                    charge0 -= bond.increment.m_as(unit.elementary_charge)
+                    charge1 += bond.increment.m_as(unit.elementary_charge)
                     # Update charges
                     force.setParticleParameters(
                         particle_indices[0],
-                        to_openmm(charge0),
-                        to_openmm(sigma0),
-                        to_openmm(epsilon0),
+                        charge0,
+                        sigma0,
+                        epsilon0,
                     )
                     force.setParticleParameters(
                         particle_indices[1],
-                        to_openmm(charge1),
-                        to_openmm(sigma1),
-                        to_openmm(epsilon1),
+                        charge1,
+                        sigma1,
+                        epsilon1,
                     )
                     # TODO: Calculate exceptions
 
@@ -4406,8 +4406,8 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
                 force.setParticleParameters(
                     topology_particle_index,
                     to_openmm(charge_to_assign),
-                    to_openmm(sigma),
-                    to_openmm(epsilon),
+                    sigma,
+                    epsilon,
                 )
 
             # Finally, mark that charges were assigned for this reference molecule
