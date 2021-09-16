@@ -1002,6 +1002,30 @@ class TestTopology(TestCase):
         # process doesn't encode stereochemistry.
         raise NotImplementedError
 
+    def test_to_networkx_from_openmm_basic_creation(self):
+        """Test creation of networkx graph from openmm topology."""
+        from simtk.openmm.app import PDBFile
+        # Read openmm topology from PDB file
+        pdb = PDBFile(
+            get_data_file_path('proteins/MainChain_CYX_HID.pdb')
+        )
+        omm_topology = pdb.topology
+        openmm_graph = Topology._to_networkx_from_openmm(omm_topology)
+        assert omm_topology.getNumAtoms() == openmm_graph.number_of_nodes()
+        assert omm_topology.getNumBonds() == openmm_graph.number_of_edges()
+
+    def test_to_networkx_from_openmm_metadata(self):
+        """Test all bond and charge information gets into the graph data."""
+        # from simtk.openmm.app import PDBFile
+        # # Read openff molecule from SDF
+        # offmol = Molecule.from_file(get_data_file_path('proteins/MainChain_CYX_HID.sdf'))
+        # # Read openmm topology from PDB file
+        # pdb = PDBFile(get_data_file_path('proteins/MainChain_CYX_HID.pdb'))
+        # omm_topology = pdb.topology
+        # openmm_graph = Topology._to_networkx_from_openmm(omm_topology)
+        raise NotImplementedError
+
+
     def test_to_openmm_assign_unique_atom_names(self):
         """
         Ensure that OFF topologies with no pre-existing atom names have unique
