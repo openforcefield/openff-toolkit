@@ -3767,13 +3767,14 @@ class TestMolecule:
 
         assert isinstance(mol.visualize(backend="openeye"), IPython.core.display.Image)
 
-    def test_perceive_residues_natoms_nterminal_alanine(self):
+    @pytest.mark.parametrize("strict_chirality", (True, False))
+    def test_perceive_residues_natoms_nterminal_alanine(self, strict_chirality):
         """Test number of matches atoms in residue perception with NTerminal form of Alanine."""
         offmol = Molecule.from_file(
             get_data_file_path('proteins/NTerminal_ALA.sdf')
         )
         # Perceive residue substructures
-        offmol.perceive_residues()
+        offmol.perceive_residues(strict_chirality=strict_chirality)
         counter = 0  # matched atom counter
         for atom in offmol.atoms:
             if atom.metadata:
@@ -3781,13 +3782,14 @@ class TestMolecule:
         # Number of atoms in NTerminal cap is 6
         assert counter == offmol.n_atoms - 6
 
-    def test_perceive_residues_natoms_cterminal_alanine(self):
+    @pytest.mark.parametrize("strict_chirality", (True, False))
+    def test_perceive_residues_natoms_cterminal_alanine(self, strict_chirality):
         """Test number of matches atoms in residue perception with CTerminal form of Alanine."""
         offmol = Molecule.from_file(
             get_data_file_path('proteins/CTerminal_ALA.sdf')
         )
         # Perceive residue substructures
-        offmol.perceive_residues()
+        offmol.perceive_residues(strict_chirality=strict_chirality)
         counter = 0  # matched atom counter
         for atom in offmol.atoms:
             if atom.metadata:
@@ -3795,13 +3797,14 @@ class TestMolecule:
         # Number of atoms in CTerminal cap is 6
         assert counter == offmol.n_atoms - 6
 
-    def test_perceive_residues_natoms_mainchain_alanine(self):
+    @pytest.mark.parametrize("strict_chirality", (True, False))
+    def test_perceive_residues_natoms_mainchain_alanine(self, strict_chirality):
         """Test number of matches atoms in residue perception with MainChain form of Alanine."""
         offmol = Molecule.from_file(
             get_data_file_path('proteins/MainChain_ALA.sdf')
         )
         # Perceive residue substructures
-        offmol.perceive_residues()
+        offmol.perceive_residues(strict_chirality=strict_chirality)
         counter = 0  # matched atom counter
         unlabelled_counter = 0  # unmatched atom counter
         for atom in offmol.atoms:
@@ -3813,13 +3816,14 @@ class TestMolecule:
         assert unlabelled_counter == 12
         assert counter == offmol.n_atoms - 12
 
-    def test_perceive_residues_natoms_mainchain_glutamic_acid(self):
+    @pytest.mark.parametrize("strict_chirality", (True, False))
+    def test_perceive_residues_natoms_mainchain_glutamic_acid(self, strict_chirality):
         """Test number of matches atoms in residue perception with MainChain form of Glutamic acid."""
         offmol = Molecule.from_file(
             get_data_file_path('proteins/MainChain_GLU.sdf')
         )
         # Perceive residue substructures
-        offmol.perceive_residues()
+        offmol.perceive_residues(strict_chirality=strict_chirality)
         counter = 0  # matched atom counter
         unlabelled_counter = 0  # unmatched atom counter
         for atom in offmol.atoms:
@@ -3831,14 +3835,15 @@ class TestMolecule:
         assert unlabelled_counter == 12
         assert counter == offmol.n_atoms - 12
 
-    def test_perceive_residues_natoms_mainchain_charged_glutamic_acid(self):
+    @pytest.mark.parametrize("strict_chirality", (True, False))
+    def test_perceive_residues_natoms_mainchain_charged_glutamic_acid(self, strict_chirality):
         """Test number of matches atoms in residue perception with MainChain form of charged
          Glutamic acid."""
         offmol = Molecule.from_file(
             get_data_file_path('proteins/MainChain_GLH.sdf')
         )
         # Perceive residue substructures
-        offmol.perceive_residues()
+        offmol.perceive_residues(strict_chirality=strict_chirality)
         counter = 0  # matched atom counter
         unlabelled_counter = 0  # unmatched atom counter
         for atom in offmol.atoms:
@@ -3850,13 +3855,14 @@ class TestMolecule:
         assert unlabelled_counter == 12
         assert counter == offmol.n_atoms - 12
 
-    def test_perceive_residues_natoms_mainchain_arginine(self):
+    @pytest.mark.parametrize("strict_chirality", (True, False))
+    def test_perceive_residues_natoms_mainchain_arginine(self, strict_chirality):
         """Test number of matches atoms in residue perception with MainChain form of Alanine."""
         offmol = Molecule.from_file(
             get_data_file_path('proteins/MainChain_ARG.sdf')
         )
         # Perceive residue substructures
-        offmol.perceive_residues()
+        offmol.perceive_residues(strict_chirality=strict_chirality)
         counter = 0  # matched atom counter
         unlabelled_counter = 0  # unmatched atom counter
         for atom in offmol.atoms:
@@ -3868,14 +3874,15 @@ class TestMolecule:
         assert unlabelled_counter == 12
         assert counter == offmol.n_atoms - 12
 
-    def test_perceive_residues_natoms_mainchain_histidine(self):
+    @pytest.mark.parametrize("strict_chirality", (True, False))
+    def test_perceive_residues_natoms_mainchain_histidine(self, strict_chirality):
         """Test number of matches atoms in residue perception with MainChain form of protonated
         state of Histidine."""
         offmol = Molecule.from_file(
             get_data_file_path('proteins/MainChain_HIP.sdf')
         )
         # Perceive residue substructures
-        offmol.perceive_residues()
+        offmol.perceive_residues(strict_chirality=strict_chirality)
         counter = 0  # matched atom counter
         unlabelled_counter = 0  # unmatched atom counter
         for atom in offmol.atoms:
@@ -3887,14 +3894,15 @@ class TestMolecule:
         assert unlabelled_counter == 12
         assert counter == offmol.n_atoms - 12
 
-    def test_perceive_residues_natoms_cyxteine(self):
+    @pytest.mark.parametrize("strict_chirality", (True, False))
+    def test_perceive_residues_natoms_cyxteine(self, strict_chirality):
         """Test number of atoms matched for residue perception of disulfide bond form
         of cysteine."""
         offmol = Molecule.from_file(
             get_data_file_path('proteins/MainChain_CYX.sdf')
         )
         # Perceive residue substructures
-        offmol.perceive_residues()
+        offmol.perceive_residues(strict_chirality=strict_chirality)
         counter = 0  # matched atom counter
         unlabelled_counter = 0  # unmatched atom counter
         for atom in offmol.atoms:
@@ -3907,14 +3915,15 @@ class TestMolecule:
         assert counter == offmol.n_atoms - 24
 
     @pytest.mark.slow
-    def test_perceive_residues_natoms_t4(self):
+    @pytest.mark.parametrize("strict_chirality", (True, False))
+    def test_perceive_residues_natoms_t4(self, strict_chirality):
         """Test number of atoms matched for residue perception of free from of
         T4 lysozyme."""
         offmol = Molecule.from_file(
             get_data_file_path('proteins/T4-protein.sdf')
         )
         # Perceive residue substructures
-        offmol.perceive_residues()
+        offmol.perceive_residues(strict_chirality=strict_chirality)
         counter = 0  # matched atom counter
         unlabelled_counter = 0  # unmatched atom counter
         for atom in offmol.atoms:
