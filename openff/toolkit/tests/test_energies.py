@@ -2,7 +2,13 @@ import json
 
 import numpy as np
 import pytest
-from simtk import unit
+
+try:
+    import openmm
+    from openmm import unit
+except ImportError:
+    from simtk import unit, openmm
+
 
 from openff.toolkit.tests.utils import get_data_file_path, requires_rdkit
 from openff.toolkit.topology import Molecule, Topology
@@ -118,8 +124,6 @@ def _build_system(mol, constrained):
 
 def _build_simulation(omm_sys, off_top):
     """Given an OpenMM System, initialize a barebones OpenMM Simulation."""
-    from simtk import openmm
-
     # Use OpenMM to compute initial and minimized energy for all conformers
     integrator = openmm.VerletIntegrator(1 * unit.femtoseconds)
     platform = openmm.Platform.getPlatformByName("Reference")

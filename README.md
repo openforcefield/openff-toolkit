@@ -52,7 +52,7 @@ Example SMIRNOFF `.offxml` force field definitions can be found in [`openff/tool
 
 ### Working with SMIRNOFF parameter sets
 
-The SMIRNOFF `ForceField` class is essentially a drop-in replacement for the [OpenMM `ForceField` class](http://docs.openmm.org/latest/api-python/generated/simtk.openmm.app.forcefield.ForceField.html#simtk.openmm.app.forcefield.ForceField).
+The SMIRNOFF `ForceField` class is essentially a drop-in replacement for the [OpenMM `ForceField` class](http://docs.openmm.org/latest/api-python/generated/openmm.app.forcefield.ForceField.html#simtk.openmm.app.forcefield.ForceField).
 
 ```python
 # Load a molecule into the OpenFF Molecule object
