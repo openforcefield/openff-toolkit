@@ -988,9 +988,13 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         if normalize_partial_charges:
             molecule._normalize_partial_charges()
 
-    def to_networkx(self, offmol):
+    # TODO: This shouldn't live here!! FIX
+    @staticmethod
+    def _to_networkx(offmol):
         """
         Builds networkx graph from RDKit molecule.
+
+        Meant to be used as helper method for comparing graphs when reading molecules from PDB.
 
         .. warning: Experimental API. This does not handle unspecified bond types well.
         """
