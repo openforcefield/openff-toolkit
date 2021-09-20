@@ -39,6 +39,12 @@ from openff.toolkit.tests.create_molecules import (
     create_cyclohexane,
     create_ethanol,
     create_reversed_ethanol,
+    dipeptide,
+    dipeptide_residues_perceived,
+    dipeptide_hierarchy_perceived,
+    cyx,
+    cyx_residues_perceived,
+    cyx_hierarchy_perceived
 )
 from openff.toolkit.tests.utils import (
     has_pkg,
@@ -4005,3 +4011,62 @@ class TestMoleculeSubclass:
         orig_mol = Molecule.from_smiles("CCO")
         mol = MyMol.from_dict(orig_mol.to_dict())
         assert isinstance(mol, MyMol)
+
+
+class TestHierarchies:
+
+    def test_nothing_perceived_dipeptide(self, dipeptide):
+        with pytest.raises(KeyError) as context:
+            assert None == dipeptide.atoms[0].metadata['residue_name']
+        with pytest.raises(KeyError) as context:
+            assert 'ALA' == dipeptide.atoms[10].metadata['residue_name']
+        with pytest.raises(KeyError) as context:
+            assert 1 == dipeptide.atoms[10].metadata['residue_number']
+        with pytest.raises(AttributeError) as context:
+            dipeptide.residues[0]
+
+    def test_residues_perceived_dipeptide(self, dipeptide_residues_perceived):
+        print(dipeptide_residues_perceived.atoms[10].metadata)
+        assert 'residue_name' not in dipeptide_residues_perceived.atoms[0].metadata.keys()
+        assert 'ALA' == dipeptide_residues_perceived.atoms[10].metadata['residue_name']
+        assert 1 == dipeptide_residues_perceived.atoms[10].metadata['residue_number']
+        with pytest.raises(AttributeError) as context:
+            type(dipeptide_residues_perceived.residues[10])
+
+    def test_add_delete_hierarchy_scheme(self, dipeptide_residues_perceived):
+        dipeptide_residues_perceived.add_hierarchy_scheme(('residue_number',), 'res_by_num')
+        # Redundant hier schemes are OK as long as their iter name is different
+        dipeptide_residues_perceived.add_hierarchy_scheme(('residue_number',), 'res_by_num2')
+        # Redundant hier schemes are NOT OK if their iter name is already used
+        with pytest.raises(AssertionError) as context:
+            dipeptide_residues_perceived.add_hierarchy_scheme(('residue_number',), 'res_by_num')
+
+        with pytest.raises(AttributeError) as context:
+            dipeptide_residues_perceived.res_by_num[0]
+
+        dipeptide_residues_perceived.perceive_hierarchy(['res_by_num'])
+
+        assert dipeptide_residues_perceived.res_by_num[1].residue_number == 1
+        # Since we only perceived res_by_num above, residues should not be defined
+        with pytest.raises(AttributeError) as context:
+            dipeptide_residues_perceived.residues[0]
+        # Delete the hierarchyscheme and ensure that the iterators are no longer available
+        dipeptide_residues_perceived.delete_hierarchy_scheme('res_by_num')
+        with pytest.raises(AttributeError) as context:
+            dipeptide_residues_perceived.res_by_num[0]
+
+    def test_hierarchy_perceived_dipeptide(self, dipeptide_hierarchy_perceived):
+        assert dipeptide_hierarchy_perceived.residues[0].chain == 'None'
+        assert dipeptide_hierarchy_perceived.residues[0].residue_name == 'None'
+        assert dipeptide_hierarchy_perceived.residues[0].residue_number == 'None'
+        assert dipeptide_hierarchy_perceived.residues[1].chain == 'None'
+        assert dipeptide_hierarchy_perceived.residues[1].residue_name == 'ALA'
+        assert dipeptide_hierarchy_perceived.residues[1].residue_number == 1
+
+    def test_hierarchy_perceived_information_propagation(self, dipeptide_hierarchy_perceived):
+        # Ensure that updating atom metadata doesn't update the iterators until the hierarchy is re-perceived
+        for atom in dipeptide_hierarchy_perceived.atoms:
+            atom.metadata['chain'] = 'A'
+        assert ('A', 'None', 'None') != dipeptide_hierarchy_perceived.residues[0].identifier
+        dipeptide_hierarchy_perceived.perceive_hierarchy()
+        assert ('A', 'None', 'None') == dipeptide_hierarchy_perceived.residues[0].identifier
