@@ -6468,14 +6468,40 @@ class Molecule(FrozenMolecule):
 
         raise ValueError("Could not find an appropriate backend")
 
-    def perceive_residues(self):
+    def perceive_residues(self, substructure_file_path=None, strict_chirality=True):
         """
         Perceive residue substructure and fill atoms metadata accordingly.
+
+        Perceives residues by matching substructures in the current molecule with a substructure dictionary file,
+        using SMARTS.
+
+        Parameters
+        ----------
+        substructure_file_path : str, optional, default=None
+            Path to substructure library file in JSON format. Defaults to using built-in substructure file.
+        strict_chirality: bool, optional, default=True
+            Whether to use strict chirality symbols (stereomarks) for substructure matchings with SMARTS.
         """
         # Read substructure dictionary file
-        substructure_file_path = get_data_file_path('proteins/aa_residues_substructures.json')
+        if not substructure_file_path:
+            substructure_file_path = get_data_file_path('proteins/aa_residues_substructures_with_caps.json')
         with open(substructure_file_path, 'r') as subfile:
             substructure_dictionary = json.load(subfile)
+
+        # TODO: Think of a better way to deal with no strict chirality case
+        # if ignoring strict chirality, remove/update keys in inner dictionary
+        if not strict_chirality:
+            # make a copy of substructure dict
+            substructure_dictionary_no_chirality = deepcopy(substructure_dictionary)
+            # Update inner key (SMARTS) maintaining its value
+            for res_name, inner_dict in substructure_dictionary.items():
+                for smarts, atom_types in inner_dict.items():
+                    smarts_no_chirality = smarts.replace('@', '')  # remove @ in smarts
+                    substructure_dictionary_no_chirality[res_name][smarts_no_chirality] = \
+                        substructure_dictionary_no_chirality[res_name].pop(smarts)  # update key
+            # replace with the new substructure dictionary
+            substructure_dictionary = substructure_dictionary_no_chirality
+
         all_matches = list()
         for residue_name, smarts_dict in substructure_dictionary.items():
             matches = dict()
