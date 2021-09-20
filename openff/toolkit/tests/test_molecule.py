@@ -3879,6 +3879,25 @@ class TestMoleculeResiduePerception:
                 counter += 1
         assert counter == offmol.n_atoms
 
+    def test_perceive_residues_cyclic_peptide_chirality(self, strict_chirality):
+        """Test residue perception failing in cyclic peptide with different chiralities."""
+        smiles = '[H]c1c(c(c(c(c1[H])[H])C([H])([H])[C@]2(C(=O)N([C@](C(=O)N([C@@](C(=O)N3[C@@](C(=O)N2[H])'\
+        '(C(C(C3([H])[H])([H])[H])([H])[H])[H])([H])C([H])([H])[H])[H])([H])C([H])([H])C4=C(N(c5c4c(c(c(c5[H])'\
+        '[H])[H])[H])[H])[H])[H])[H])[H])[H]'
+        offmol = Molecule.from_smiles(smiles)
+        # perceive residues
+        offmol.perceive_residues(strict_chirality=strict_chirality)
+        counter = 0  # matched atom counter
+        for atom in offmol.atoms:
+            if atom.metadata:
+                counter += 1
+        if strict_chirality:
+            # Make sure it fails if strict_chirality=True
+            with pytest.raises(AssertionError):
+                assert counter == offmol.n_atoms
+        else:
+            assert counter == offmol.n_atoms
+
     @pytest.mark.slow
     def test_perceive_residues_natoms_t4(self, strict_chirality):
         """Test number of atoms matched for residue perception of free from of
