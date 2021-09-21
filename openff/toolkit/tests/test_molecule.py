@@ -4048,12 +4048,14 @@ class TestHierarchies:
             dipeptide.residues[0]
 
     def test_residues_perceived_dipeptide(self, dipeptide_residues_perceived):
-        print(dipeptide_residues_perceived.atoms[10].metadata)
-        assert 'residue_name' not in dipeptide_residues_perceived.atoms[0].metadata.keys()
+        print(dipeptide_residues_perceived.atoms[0].metadata)
+        assert 'ACE' == dipeptide_residues_perceived.atoms[0].metadata['residue_name']
+        assert 1 == dipeptide_residues_perceived.atoms[0].metadata['residue_number']
         assert 'ALA' == dipeptide_residues_perceived.atoms[10].metadata['residue_name']
-        assert 1 == dipeptide_residues_perceived.atoms[10].metadata['residue_number']
+        assert 2 == dipeptide_residues_perceived.atoms[10].metadata['residue_number']
+
         with pytest.raises(AttributeError) as context:
-            type(dipeptide_residues_perceived.residues[10])
+            type(dipeptide_residues_perceived.residues[0])
 
     def test_add_delete_hierarchy_scheme(self, dipeptide_residues_perceived):
         dipeptide_residues_perceived.add_hierarchy_scheme(('residue_number',), 'res_by_num')
@@ -4082,8 +4084,11 @@ class TestHierarchies:
         assert dipeptide_hierarchy_perceived.residues[0].residue_name == 'None'
         assert dipeptide_hierarchy_perceived.residues[0].residue_number == 'None'
         assert dipeptide_hierarchy_perceived.residues[1].chain == 'None'
-        assert dipeptide_hierarchy_perceived.residues[1].residue_name == 'ALA'
+        assert dipeptide_hierarchy_perceived.residues[1].residue_name == 'ACE'
         assert dipeptide_hierarchy_perceived.residues[1].residue_number == 1
+        assert dipeptide_hierarchy_perceived.residues[2].chain == 'None'
+        assert dipeptide_hierarchy_perceived.residues[2].residue_name == 'ALA'
+        assert dipeptide_hierarchy_perceived.residues[2].residue_number == 2
 
     def test_hierarchy_perceived_information_propagation(self, dipeptide_hierarchy_perceived):
         # Ensure that updating atom metadata doesn't update the iterators until the hierarchy is re-perceived
