@@ -71,20 +71,15 @@ from openff.toolkit.utils.toolkits import (
     ToolkitWrapper,
     UndefinedStereochemistryError,
 )
-from openff.toolkit.utils.utils import (
-    MessageException,
-    MissingDependencyError,
+from openff.toolkit.utils.exceptions import (
+    NotAttachedToMoleculeError,
+    InvalidAtomMetadataError,
+)
+from openff.toolkit.utils import (
     requires_package,
     get_data_file_path,
     remove_subsets_from_list,
 )
-
-class NotAttachedToMoleculeError(MessageException):
-    """Exception for when a component does not belong to a Molecule object, but is queried"""
-
-
-class InvalidAtomMetadataError(MessageException):
-    """The program attempted to set atom metadata to an invalid type"""
 
 
 

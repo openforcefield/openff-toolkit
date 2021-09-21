@@ -147,6 +147,10 @@ class NotAttachedToMoleculeError(OpenFFToolkitException):
     """Exception for when a component does not belong to a Molecule object, but is queried"""
 
 
+class InvalidAtomMetadataError(OpenFFToolkitException):
+    """The program attempted to set atom metadata to an invalid type"""
+
+
 class DuplicateUniqueMoleculeError(OpenFFToolkitException):
     """
     Exception for when the user provides indistinguishable unique molecules when trying to identify atoms from a PDB
