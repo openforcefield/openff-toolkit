@@ -11,14 +11,13 @@ These are common to several test modules.
 
 """
 
-# =============================================================================================
-# GLOBAL IMPORTS
-# =============================================================================================
-
-
 import numpy as np
-from simtk import unit
 import pytest
+
+try:
+    from openmm import unit
+except ImportError:
+    from simtk import unit
 
 from openff.toolkit.topology.molecule import Molecule
 from openff.toolkit.utils import get_data_file_path

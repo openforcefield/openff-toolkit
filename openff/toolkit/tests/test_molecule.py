@@ -19,10 +19,6 @@ TODO:
 
 """
 
-# =============================================================================================
-# GLOBAL IMPORTS
-# =============================================================================================
-
 import copy
 import os
 import pickle
@@ -30,7 +26,13 @@ from tempfile import NamedTemporaryFile
 
 import numpy as np
 import pytest
-from simtk import unit
+
+try:
+    from openmm import unit
+    from openmm.app import element
+except ImportError:
+    from simtk import unit
+    from simtk.openmm.app import element
 
 from openff.toolkit.tests.create_molecules import (
     create_acetaldehyde,
@@ -63,6 +65,7 @@ from openff.toolkit.topology.molecule import (
     SmilesParsingError,
 )
 from openff.toolkit.utils import get_data_file_path
+from openff.toolkit.utils.exceptions import ConformerGenerationError
 from openff.toolkit.utils.toolkits import (
     AmberToolsToolkitWrapper,
     OpenEyeToolkitWrapper,
@@ -304,8 +307,6 @@ class TestAtom:
 
     def test_atom_properties(self):
         """Test that atom properties are correctly populated and gettable"""
-        from simtk.openmm.app import element
-
         formal_charge = 0 * unit.elementary_charge
         is_aromatic = False
         # Attempt to create all elements supported by OpenMM
@@ -2450,9 +2451,6 @@ class TestMolecule:
 
     def test_add_conformers(self):
         """Test addition of conformers to a molecule"""
-        import numpy as np
-        from simtk import unit
-
         # Define a methane molecule
         molecule = Molecule()
         molecule.name = "methane"
@@ -3345,8 +3343,6 @@ class TestMolecule:
         """Test chemical environment matches"""
         # TODO: Move this to test_toolkits, test all available toolkits
         # Create chiral molecule
-        from simtk.openmm.app import element
-
         toolkit_wrapper = OpenEyeToolkitWrapper()
         molecule = Molecule()
         atom_C = molecule.add_atom(
@@ -3416,8 +3412,6 @@ class TestMolecule:
     def test_chemical_environment_matches_RDKit(self):
         """Test chemical environment matches"""
         # Create chiral molecule
-        from simtk.openmm.app import element
-
         toolkit_wrapper = RDKitToolkitWrapper()
         molecule = Molecule()
         atom_C = molecule.add_atom(
@@ -3498,9 +3492,6 @@ class TestMolecule:
         """Test computation/retrieval of partial charges"""
         # TODO: Test only one molecule for speed?
         # TODO: Do we need to deepcopy each molecule, or is setUp called separately for each test method?
-        import numpy as np
-        from simtk import unit
-
         # Do not modify original molecules.
         # molecules = copy.deepcopy(mini_drug_bank())
         # In principle, testing for charge assignment over a wide set of molecules is important, but
@@ -3721,15 +3712,46 @@ class TestMolecule:
         assert len([atom for atom in mol.atoms if atom.is_in_ring]) == n_atom_rings
         assert len([bond for bond in mol.bonds if bond.is_in_ring]) == n_bond_rings
 
-    @requires_pkg("ipython")
+    @requires_rdkit
+    @requires_openeye
+    def test_conformer_generation_failure(self):
+        # This test seems possibly redundant, is it needed?
+        molecule = Molecule.from_smiles("F[U](F)(F)(F)(F)F")
+
+        with pytest.raises(ConformerGenerationError, match="Omega conf.*fail"):
+            molecule.generate_conformers(
+                n_conformers=1, toolkit_registry=OpenEyeToolkitWrapper()
+            )
+
+        with pytest.raises(ConformerGenerationError, match="RDKit conf.*fail"):
+            molecule.generate_conformers(
+                n_conformers=1, toolkit_registry=RDKitToolkitWrapper()
+            )
+
+        with pytest.raises(ValueError) as execption:
+            molecule.generate_conformers(n_conformers=1)
+
+            # pytest's checking of the string representation of this exception does not seem
+            # to play well with how it's constructed currently, so manually compare contents
+            exception_as_str = str(exception)
+            assert (
+                "No registered toolkits can provide the capability" in exception_as_str
+            )
+            assert "generate_conformers" in exception_as_str
+            assert "OpenEye Omega conformer generation failed" in exception_as_str
+            assert "RDKit conformer generation failed" in exception_as_str
+
+
+class TestMoleculeVisualization:
+    @requires_pkg("IPython")
     @requires_rdkit
     def test_visualize_rdkit(self):
         """Test that the visualize method returns an expected object when using RDKit to generate a 2-D representation"""
-        import rdkit
+        import IPython
 
         mol = Molecule().from_smiles("CCO")
 
-        assert isinstance(mol.visualize(backend="rdkit"), rdkit.Chem.rdchem.Mol)
+        assert isinstance(mol.visualize(backend="rdkit"), IPython.core.display.SVG)
 
     @pytest.mark.skipif(
         has_pkg("rdkit"),
@@ -3763,7 +3785,15 @@ class TestMolecule:
         # Ensure an NGLView widget is returned
         assert isinstance(mol.visualize(backend="nglview"), nglview.NGLWidget)
 
-    @requires_pkg("ipython")
+        # Providing other arguments is an error
+        with pytest.raises(ValueError):
+            mol.visualize(backend="nglview", width=100)
+        with pytest.raises(ValueError):
+            mol.visualize(backend="nglview", height=100)
+        with pytest.raises(ValueError):
+            mol.visualize(backend="nglview", show_all_hydrogens=False)
+
+    @requires_pkg("IPython")
     @requires_openeye
     def test_visualize_openeye(self):
         """Test that the visualize method returns an expected object when using OpenEye to generate a 2-D representation"""
@@ -3773,154 +3803,146 @@ class TestMolecule:
 
         assert isinstance(mol.visualize(backend="openeye"), IPython.core.display.Image)
 
-    def test_perceive_residues_natoms_nterminal_alanine(self):
+
+@pytest.mark.parametrize("strict_chirality", (True, False))
+class TestMoleculeResiduePerception:
+    """Test residue perception of Molecule class."""
+
+    def test_perceive_residues_natoms_nterminal_alanine(self, strict_chirality):
         """Test number of matches atoms in residue perception with NTerminal form of Alanine."""
         offmol = Molecule.from_file(
             get_data_file_path('proteins/NTerminal_ALA.sdf')
         )
         # Perceive residue substructures
-        offmol.perceive_residues()
+        offmol.perceive_residues(strict_chirality=strict_chirality)
         counter = 0  # matched atom counter
         for atom in offmol.atoms:
             if atom.metadata:
                 counter += 1
-        # Number of atoms in NTerminal cap is 6
-        assert counter == offmol.n_atoms - 6
+        assert counter == offmol.n_atoms
 
-    def test_perceive_residues_natoms_cterminal_alanine(self):
+    def test_perceive_residues_natoms_cterminal_alanine(self, strict_chirality):
         """Test number of matches atoms in residue perception with CTerminal form of Alanine."""
         offmol = Molecule.from_file(
             get_data_file_path('proteins/CTerminal_ALA.sdf')
         )
         # Perceive residue substructures
-        offmol.perceive_residues()
+        offmol.perceive_residues(strict_chirality=strict_chirality)
         counter = 0  # matched atom counter
         for atom in offmol.atoms:
             if atom.metadata:
                 counter += 1
-        # Number of atoms in CTerminal cap is 6
-        assert counter == offmol.n_atoms - 6
+        assert counter == offmol.n_atoms
 
-    def test_perceive_residues_natoms_mainchain_alanine(self):
+    def test_perceive_residues_natoms_mainchain_alanine(self, strict_chirality):
         """Test number of matches atoms in residue perception with MainChain form of Alanine."""
         offmol = Molecule.from_file(
             get_data_file_path('proteins/MainChain_ALA.sdf')
         )
         # Perceive residue substructures
-        offmol.perceive_residues()
+        offmol.perceive_residues(strict_chirality=strict_chirality)
         counter = 0  # matched atom counter
-        unlabelled_counter = 0  # unmatched atom counter
         for atom in offmol.atoms:
             if atom.metadata:
                 counter += 1
-            else:
-                unlabelled_counter += 1
-        # Number of atoms in MainChain caps is 12
-        assert unlabelled_counter == 12
-        assert counter == offmol.n_atoms - 12
+        assert counter == offmol.n_atoms
 
-    def test_perceive_residues_natoms_mainchain_glutamic_acid(self):
+    def test_perceive_residues_natoms_mainchain_glutamic_acid(self, strict_chirality):
         """Test number of matches atoms in residue perception with MainChain form of Glutamic acid."""
         offmol = Molecule.from_file(
             get_data_file_path('proteins/MainChain_GLU.sdf')
         )
         # Perceive residue substructures
-        offmol.perceive_residues()
+        offmol.perceive_residues(strict_chirality=strict_chirality)
         counter = 0  # matched atom counter
-        unlabelled_counter = 0  # unmatched atom counter
         for atom in offmol.atoms:
             if atom.metadata:
                 counter += 1
-            else:
-                unlabelled_counter += 1
-        # Number of atoms in MainChain caps is 12
-        assert unlabelled_counter == 12
-        assert counter == offmol.n_atoms - 12
+        assert counter == offmol.n_atoms
 
-    def test_perceive_residues_natoms_mainchain_charged_glutamic_acid(self):
+    def test_perceive_residues_natoms_mainchain_charged_glutamic_acid(self, strict_chirality):
         """Test number of matches atoms in residue perception with MainChain form of charged
          Glutamic acid."""
         offmol = Molecule.from_file(
             get_data_file_path('proteins/MainChain_GLH.sdf')
         )
         # Perceive residue substructures
-        offmol.perceive_residues()
+        offmol.perceive_residues(strict_chirality=strict_chirality)
         counter = 0  # matched atom counter
-        unlabelled_counter = 0  # unmatched atom counter
         for atom in offmol.atoms:
             if atom.metadata:
                 counter += 1
-            else:
-                unlabelled_counter += 1
-        # Number of atoms in MainChain caps is 12
-        assert unlabelled_counter == 12
-        assert counter == offmol.n_atoms - 12
+        assert counter == offmol.n_atoms
 
-    def test_perceive_residues_natoms_mainchain_arginine(self):
+    def test_perceive_residues_natoms_mainchain_arginine(self, strict_chirality):
         """Test number of matches atoms in residue perception with MainChain form of Alanine."""
         offmol = Molecule.from_file(
             get_data_file_path('proteins/MainChain_ARG.sdf')
         )
         # Perceive residue substructures
-        offmol.perceive_residues()
+        offmol.perceive_residues(strict_chirality=strict_chirality)
         counter = 0  # matched atom counter
-        unlabelled_counter = 0  # unmatched atom counter
         for atom in offmol.atoms:
             if atom.metadata:
                 counter += 1
-            else:
-                unlabelled_counter += 1
-        # Number of atoms in MainChain caps is 12
-        assert unlabelled_counter == 12
-        assert counter == offmol.n_atoms - 12
+        assert counter == offmol.n_atoms
 
-    def test_perceive_residues_natoms_mainchain_histidine(self):
+    def test_perceive_residues_natoms_mainchain_histidine(self, strict_chirality):
         """Test number of matches atoms in residue perception with MainChain form of protonated
         state of Histidine."""
         offmol = Molecule.from_file(
             get_data_file_path('proteins/MainChain_HIP.sdf')
         )
         # Perceive residue substructures
-        offmol.perceive_residues()
+        offmol.perceive_residues(strict_chirality=strict_chirality)
         counter = 0  # matched atom counter
-        unlabelled_counter = 0  # unmatched atom counter
         for atom in offmol.atoms:
             if atom.metadata:
                 counter += 1
-            else:
-                unlabelled_counter += 1
-        # Number of atoms in MainChain caps is 12
-        assert unlabelled_counter == 12
-        assert counter == offmol.n_atoms - 12
+        assert counter == offmol.n_atoms
 
-    def test_perceive_residues_natoms_cyxteine(self):
+    def test_perceive_residues_natoms_cyxteine(self, strict_chirality):
         """Test number of atoms matched for residue perception of disulfide bond form
         of cysteine."""
         offmol = Molecule.from_file(
             get_data_file_path('proteins/MainChain_CYX.sdf')
         )
         # Perceive residue substructures
-        offmol.perceive_residues()
+        offmol.perceive_residues(strict_chirality=strict_chirality)
         counter = 0  # matched atom counter
-        unlabelled_counter = 0  # unmatched atom counter
         for atom in offmol.atoms:
             if atom.metadata:
                 counter += 1
-            else:
-                unlabelled_counter += 1
-        # Number of atoms in MainChain caps is 24 (two capped cysteine molecules)
-        assert unlabelled_counter == 24
-        assert counter == offmol.n_atoms - 24
+        assert counter == offmol.n_atoms
+
+    def test_perceive_residues_cyclic_peptide_chirality(self, strict_chirality):
+        """Test residue perception failing in cyclic peptide with different chiralities."""
+        smiles = '[H]c1c(c(c(c(c1[H])[H])C([H])([H])[C@]2(C(=O)N([C@](C(=O)N([C@@](C(=O)N3[C@@](C(=O)N2[H])'\
+        '(C(C(C3([H])[H])([H])[H])([H])[H])[H])([H])C([H])([H])[H])[H])([H])C([H])([H])C4=C(N(c5c4c(c(c(c5[H])'\
+        '[H])[H])[H])[H])[H])[H])[H])[H])[H]'
+        offmol = Molecule.from_smiles(smiles)
+        # perceive residues
+        offmol.perceive_residues(strict_chirality=strict_chirality)
+        counter = 0  # matched atom counter
+        for atom in offmol.atoms:
+            if atom.metadata:
+                counter += 1
+        if strict_chirality:
+            # Make sure it fails if strict_chirality=True
+            with pytest.raises(AssertionError):
+                assert counter == offmol.n_atoms
+        else:
+            assert counter == offmol.n_atoms
 
     @pytest.mark.slow
-    def test_perceive_residues_natoms_t4(self):
+    def test_perceive_residues_natoms_t4(self, strict_chirality):
         """Test number of atoms matched for residue perception of free from of
         T4 lysozyme."""
         offmol = Molecule.from_file(
             get_data_file_path('proteins/T4-protein.sdf')
         )
         # Perceive residue substructures
-        offmol.perceive_residues()
+        offmol.perceive_residues(strict_chirality=strict_chirality)
         counter = 0  # matched atom counter
         unlabelled_counter = 0  # unmatched atom counter
         for atom in offmol.atoms:

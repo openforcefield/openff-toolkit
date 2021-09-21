@@ -29,33 +29,8 @@ __all__ = [
     "ImproperChemicalEnvironment",
 ]
 
-
-# ==============================================================================
-# GLOBAL IMPORTS
-# ==============================================================================
-
-from openff.toolkit.utils.toolkits import (
-    GLOBAL_TOOLKIT_REGISTRY,
-    MessageException,
-    ToolkitWrapper,
-)
-
-
-class SMIRKSMismatchError(MessageException):
-    """
-    Exception for cases where smirks are inappropriate
-    for the environment type they are being parsed into
-    """
-
-    pass
-
-
-class SMIRKSParsingError(MessageException):
-    """
-    Exception for when SMIRKS are not parseable for any environment
-    """
-
-    pass
+from openff.toolkit.utils.exceptions import SMIRKSMismatchError, SMIRKSParsingError
+from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY, ToolkitWrapper
 
 
 class ChemicalEnvironment:

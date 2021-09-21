@@ -9,10 +9,6 @@ Tests for utility methods for serialization
 
 """
 
-# =============================================================================================
-# GLOBAL IMPORTS
-# =============================================================================================
-
 import pytest
 
 from openff.toolkit.tests.utils import requires_pkg

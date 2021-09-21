@@ -7,17 +7,14 @@ Utility classes and functions to create objects supporting callback registration
 
 __all__ = [
     "callback_method",
-    "CallbackRegistrationError",
     "Callbackable",
 ]
 
 
-# =====================================================================
-# GLOBAL IMPORTS
-# =====================================================================
-
 import functools
 import inspect
+
+from openff.toolkit.utils.exceptions import CallbackRegistrationError
 
 # =====================================================================
 # CALLBACKABLE CLASSES
@@ -61,12 +58,6 @@ def callback_method(func=None, events=()):
     callbacked_func._callback_events = set(events)
 
     return callbacked_func
-
-
-class CallbackRegistrationError(TypeError):
-    """Error raised when callback registration fails."""
-
-    pass
 
 
 class Callbackable:

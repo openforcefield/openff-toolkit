@@ -8,7 +8,7 @@ __all__ = ("ToolkitWrapper",)
 
 from functools import wraps
 
-from .exceptions import (
+from openff.toolkit.utils.exceptions import (
     IncorrectNumConformersError,
     IncorrectNumConformersWarning,
     ToolkitUnavailableException,
