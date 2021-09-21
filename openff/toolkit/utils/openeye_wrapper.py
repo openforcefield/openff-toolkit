@@ -6,10 +6,6 @@ the `OpenEye Toolkit <https://docs.eyesopen.com/toolkits/python/quickstart-pytho
 __all__ = ("OpenEyeToolkitWrapper",)
 
 
-# =============================================================================================
-# IMPORTS
-# =============================================================================================
-
 import importlib
 import logging
 import pathlib
@@ -20,17 +16,23 @@ from functools import wraps
 from typing import TYPE_CHECKING, List, Optional, Tuple
 from cachetools import LRUCache, cached
 
+
 import numpy as np
-from simtk import unit
+
+try:
+    from openmm import unit
+except ImportError:
+    from simtk import unit
 
 if TYPE_CHECKING:
     from openforcefield.topology.molecule import Molecule
 
-from . import base_wrapper
-from .constants import DEFAULT_AROMATICITY_MODEL
-from .exceptions import (
+from openff.toolkit.utils import base_wrapper
+from openff.toolkit.utils.constants import DEFAULT_AROMATICITY_MODEL
+from openff.toolkit.utils.exceptions import (
     ChargeCalculationError,
     ChargeMethodUnavailableError,
+    ConformerGenerationError,
     GAFFAtomTypeWarning,
     InvalidIUPACNameError,
     LicenseError,
@@ -38,7 +40,7 @@ from .exceptions import (
     ToolkitUnavailableException,
     UndefinedStereochemistryError,
 )
-from .utils import inherit_docstrings
+from openff.toolkit.utils.utils import inherit_docstrings
 
 # =============================================================================================
 # CONFIGURE LOGGER
@@ -836,7 +838,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         are stored on individual ``OEAtom`` s, and their values are initialized to ``0.0``.
         In the Open Force Field Toolkit, an ``openff.toolkit.topology.Molecule``'s
         ``partial_charges`` attribute is initialized to ``None`` and can be set to a
-        ``simtk.unit.Quantity``-wrapped numpy array with units of
+        ``openmm.unit.Quantity``-wrapped numpy array with units of
         elementary charge. The Open Force
         Field Toolkit considers an ``OEMol`` where every ``OEAtom`` has a partial
         charge of ``float('nan')`` to be equivalent to an Open Force Field Toolkit `Molecule`'s
@@ -1182,40 +1184,50 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         return oemol, map_atoms
 
     def to_openeye(self, molecule, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
-        """
+        r"""
         Create an OpenEye molecule using the specified aromaticity model
+
         ``OEAtom`` s have a different set of allowed value for partial
         charges than ``openff.toolkit.topology.Molecule``\ s. In the
         OpenEye toolkits, partial charges are stored on individual
         ``OEAtom``\ s, and their values are initialized to ``0.0``. In
         the Open Force Field Toolkit, an``openff.toolkit.topology.Molecule``'s
         ``partial_charges`` attribute is initialized to ``None`` and can
-        be set to a ``simtk.unit.Quantity``-wrapped numpy array with
+        be set to a ``openmm.unit.Quantity``-wrapped numpy array with
         units of elementary charge. The Open Force Field Toolkit
         considers an ``OEMol`` where every ``OEAtom`` has a partial
         charge of ``float('nan')`` to be equivalent to an Open Force
         Field Toolkit ``Molecule``'s ``partial_charges = None``. This
         assumption is made in both ``to_openeye`` and ``from_openeye``.
+
         .. todo ::
+
            * Should the aromaticity model be specified in some other way?
+
         .. warning :: This API is experimental and subject to change.
+
         Parameters
         ----------
         molecule : openff.toolkit.topology.molecule.Molecule object
             The molecule to convert to an OEMol
         aromaticity_model : str, optional, default=DEFAULT_AROMATICITY_MODEL
             The aromaticity model to use
+
         Returns
         -------
         oemol : openeye.oechem.OEMol
             An OpenEye molecule
+
         Examples
         --------
+
         Create an OpenEye molecule from a Molecule
+
         >>> from openff.toolkit.topology import Molecule
         >>> toolkit_wrapper = OpenEyeToolkitWrapper()
         >>> molecule = Molecule.from_smiles('CC')
         >>> oemol = toolkit_wrapper.to_openeye(molecule)
+
         """
         from openeye import oechem
 
@@ -1681,7 +1693,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             The molecule to generate conformers for.
         n_conformers : int, default=1
             The maximum number of conformers to generate.
-        rms_cutoff : simtk.Quantity-wrapped float, in units of distance, optional, default=None
+        rms_cutoff : openmm.unit.Quantity-wrapped float, in units of distance, optional, default=None
             The minimum RMS value at which two conformers are considered redundant and one is deleted.
             If None, the cutoff is set to 1 Angstrom
         clear_existing : bool, default=True
@@ -1707,7 +1719,9 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             omega.SetStrictStereo(False)
             new_status = omega(oemol)
             if new_status is False:
-                raise Exception("OpenEye Omega conformer generation failed")
+                raise ConformerGenerationError(
+                    "OpenEye Omega conformer generation failed"
+                )
 
         molecule2 = self.from_openeye(
             oemol, allow_undefined_stereo=True, _cls=molecule.__class__
@@ -1831,7 +1845,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             The charge model to use. One of ['amberff94', 'mmff', 'mmff94', `am1-mulliken`, 'am1bcc',
             'am1bccnosymspt', 'am1bccelf10']
             If None, 'am1-mulliken' will be used.
-        use_conformers : iterable of simtk.unit.Quantity-wrapped numpy arrays, each with
+        use_conformers : iterable of openmm.unit.Quantity-wrapped numpy arrays, each with
             shape (n_atoms, 3) and dimension of distance. Optional, default = None
             Coordinates to use for partial charge calculation. If None, an appropriate number
             of conformers will be generated.
@@ -2028,7 +2042,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         ----------
         molecule : Molecule
             Molecule for which partial charges are to be computed
-        use_conformers : iterable of simtk.unit.Quantity-wrapped numpy arrays, each with
+        use_conformers : iterable of openmm.unit.Quantity-wrapped numpy arrays, each with
             shape (n_atoms, 3) and dimension of distance. Optional, default = None
             Coordinates to use for partial charge calculation. If None, an appropriate number of conformers
             will be generated.
@@ -2074,7 +2088,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         bond_order_model : str, optional, default=None
             The charge model to use. One of ['am1-wiberg', 'am1-wiberg-elf10',
             'pm3-wiberg', 'pm3-wiberg-elf10']. If None, 'am1-wiberg' will be used.
-        use_conformers : iterable of simtk.unit.Quantity(np.array) with shape (n_atoms, 3) and
+        use_conformers : iterable of openmm.unit.Quantity(np.array) with shape (n_atoms, 3) and
             dimension of distance, optional, default=None
             The conformers to use for fractional bond order calculation. If None, an
             appropriate number of conformers will be generated by an available
@@ -2235,7 +2249,10 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
     @staticmethod
     def _find_smarts_matches(
-        oemol, smarts, aromaticity_model=DEFAULT_AROMATICITY_MODEL
+        oemol,
+        smarts,
+        aromaticity_model=DEFAULT_AROMATICITY_MODEL,
+        unique=False,
     ):
         """Find all sets of atoms in the provided OpenEye molecule that match the provided SMARTS string.
 
@@ -2304,9 +2321,10 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         # Build list of matches
         # TODO: The MoleculeImage mapping should preserve ordering of template molecule for equivalent atoms
         #       and speed matching for larger molecules.
-        unique = False  # We require all matches, not just one of each kind
         substructure_search = OESubSearch(qmol)
-        substructure_search.SetMaxMatches(0)
+        # TODO: max_matches = int(max_matches) if max_matches is not None else 0
+        max_matches = 0
+        substructure_search.SetMaxMatches(max_matches)
         oechem.OEPrepareSearch(mol, substructure_search)
         matches = list()
         for match in substructure_search.Match(mol, unique):
@@ -2323,7 +2341,13 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             matches.append(tuple(atom_indices))
         return matches
 
-    def find_smarts_matches(self, molecule, smarts, aromaticity_model="OEAroModel_MDL"):
+    def find_smarts_matches(
+        self,
+        molecule,
+        smarts,
+        aromaticity_model="OEAroModel_MDL",
+        unique=False,
+    ):
         """
         Find all SMARTS matches for the specified molecule, using the specified aromaticity model.
 
@@ -2343,7 +2367,10 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         """
         oemol, _ = self._connection_table_to_openeye(molecule)
         return self._find_smarts_matches(
-            oemol, smarts, aromaticity_model=aromaticity_model
+            oemol,
+            smarts,
+            aromaticity_model=aromaticity_model,
+            unique=unique,
         )
 
 

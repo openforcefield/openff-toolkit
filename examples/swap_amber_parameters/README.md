@@ -1,6 +1,6 @@
 ## Taking an AMBER system and replacing the ligand parameters with OpenFF parameters
 
-[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/openforcefield/openff-toolkit/latest?filepath=examples%2Fswap_amber_parameters%2F)
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/openforcefield/openff-toolkit/stable?filepath=examples%2Fswap_amber_parameters%2F)
 
 These examples illustrate how the [ParmEd](http://parmed.github.io/ParmEd/html/index.html) utility can be used to take a fully parameterized (and solvated) protein-ligand system and replace the ligand parameters with those from OpenFF. In this case, the system uses an AMBER protein force field, ions, and TIP3P water, and we replace the GAFF ligand parameters with OpenFF 1.0 parameters, writing out the resulting fully parameterized system.
 

@@ -57,6 +57,9 @@ jobs:
           activate-environment: test
           environment-file: devtools/conda-envs/conda.yaml
           auto-activate-base: false
+          miniforge-version: latest
+          miniforge-variant: Mambaforge
+          use-mamba: true
       - uses: conda-incubator/setup-miniconda@v2.1.1
         name: Install from conda with OpenEye
         if: ${{ matrix.cfg.openeye == 'true' }}
@@ -65,6 +68,9 @@ jobs:
           activate-environment: test
           environment-file: devtools/conda-envs/conda_oe.yaml
           auto-activate-base: false
+          miniforge-version: latest
+          miniforge-variant: Mambaforge
+          use-mamba: true
 
       - name: Additional info about the build
         shell: bash -l {0}
