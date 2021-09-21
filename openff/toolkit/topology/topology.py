@@ -1438,6 +1438,53 @@ class Topology(Serializable):
         self._reference_molecule_to_topology_molecules = OrderedDict()
         self._topology_molecules = list()
 
+    def to_smiles(
+        self,
+        isomeric=True,
+        explicit_hydrogens=True,
+        mapped=False,
+        toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
+    ):
+        """
+        Generate a single SMILES string for the topology of the entire system, each molecule has there smiles created
+        and concatenated using a `.` separator. If mapping is required the indexing will run over every atom in the system.
+
+        .. note :: RDKit and OpenEye versions will not necessarily return the same representation.
+
+        Parameters
+        ----------
+        isomeric: bool optional, default= True
+            return an isomeric smiles
+        explicit_hydrogens: bool optional, default=True
+            return a smiles string containing all hydrogens explicitly
+        mapped: bool optional, default=False
+            return a explicit hydrogen mapped smiles, the atoms to be mapped can be controlled by supplying an
+            atom map into the properties dictionary. If no mapping is passed all atoms will be mapped in order, else
+            an atom map dictionary from the current atom index to the map id should be supplied with no duplicates.
+            The map ids (values) should start from 0 or 1.
+        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
+            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES conversion
+
+        Returns
+        -------
+            A single SMILES string encoding the topology of the whole system.
+        """
+        total_atoms = 1
+        smiles = []
+        for mol in self.topology_molecules:
+            ref_mol = mol.reference_molecule
+            mapping = dict((i, i + total_atoms) for i in range(ref_mol.n_atoms))
+            ref_mol.properties["atom_map"] = mapping
+            total_atoms += ref_mol.n_atoms
+            smiles.append(
+                ref_mol.to_smiles(
+                    isomeric=isomeric,
+                    explicit_hydrogens=explicit_hydrogens,
+                    mapped=mapped,
+                )
+            )
+        return ".".join(smiles)
+
     @property
     def reference_molecules(self):
         """
