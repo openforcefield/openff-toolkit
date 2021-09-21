@@ -24,13 +24,18 @@ Class definitions to represent a molecular system and its chemical components
 import itertools
 from collections import OrderedDict
 from collections.abc import MutableMapping
+import copy
+import warnings
 
 import numpy as np
 from simtk import unit
 from simtk.openmm import app
 
 from openff.toolkit.typing.chemistry import ChemicalEnvironment
-from openff.toolkit.utils import MessageException
+from openff.toolkit.topology import Molecule
+from openff.toolkit.utils import (MessageException,
+                                  quantity_to_string,
+                                  string_to_quantity)
 from openff.toolkit.utils.serialization import Serializable
 from openff.toolkit.utils.toolkits import (
     ALLOWED_AROMATICITY_MODELS,
@@ -394,7 +399,7 @@ class ImproperDict(_TransformedDict):
 # =============================================================================================
 
 
-class TopologyAtom(Serializable):
+class _TopologyAtom(Serializable):
     """
     A TopologyAtom is a lightweight data structure that represents a single openff.toolkit.topology.molecule.Atom in
     a Topology. A TopologyAtom consists of two references -- One to its fully detailed "atom", an
@@ -488,6 +493,7 @@ class TopologyAtom(Serializable):
         int
             The index of this atom in its parent topology.
         """
+        raise NotImplementedError()
         mapped_molecule_atom_index = self._topology_molecule._ref_to_top_index[
             self._atom.molecule_atom_index
         ]
@@ -565,7 +571,7 @@ class TopologyAtom(Serializable):
 # =============================================================================================
 
 
-class TopologyBond(Serializable):
+class _TopologyBond(Serializable):
     """
     A TopologyBond is a lightweight data structure that represents a single openff.toolkit.topology.molecule.Bond in
     a Topology. A TopologyBond consists of two references -- One to its fully detailed "bond", an
@@ -681,7 +687,7 @@ class TopologyBond(Serializable):
 # =============================================================================================
 
 
-class TopologyVirtualSite(Serializable):
+class _TopologyVirtualSite(Serializable):
     """
     A TopologyVirtualSite is a lightweight data structure that represents a single
     openff.toolkit.topology.molecule.VirtualSite in a Topology. A TopologyVirtualSite consists of two references --
@@ -888,7 +894,7 @@ class TopologyVirtualSite(Serializable):
 # =============================================================================================
 
 
-class TopologyVirtualParticle(TopologyVirtualSite):
+class _TopologyVirtualParticle(_TopologyVirtualSite):
     def __init__(self, virtual_site, virtual_particle, topology_molecule):
         self._virtual_site = virtual_site
         self._virtual_particle = virtual_particle
@@ -935,7 +941,7 @@ class TopologyVirtualParticle(TopologyVirtualSite):
 # =============================================================================================
 
 
-class TopologyMolecule:
+class _TopologyMolecule:
     """
     TopologyMolecules are built to be an efficient way to store large numbers of copies of the same molecule for
     parameterization and system preparation.
@@ -1470,8 +1476,9 @@ class Topology(Serializable):
         self._box_vectors = None
         # self._reference_molecule_dicts = set()
         # TODO: Look into weakref and what it does. Having multiple topologies might cause a memory leak.
-        self._reference_molecule_to_topology_molecules = OrderedDict()
-        self._topology_molecules = list()
+        #self._reference_molecule_to_topology_molecules = OrderedDict()
+        #self._topology_molecules = list()
+        self._molecules = list()
 
     @property
     def reference_molecules(self):
@@ -1482,8 +1489,7 @@ class Topology(Serializable):
         -------
         iterable of openff.toolkit.topology.Molecule
         """
-        for ref_mol in self._reference_molecule_to_topology_molecules.keys():
-            yield ref_mol
+        return self._molecules
 
     @classmethod
     def from_molecules(cls, molecules):
@@ -1737,7 +1743,7 @@ class Topology(Serializable):
         -------
         n_topology_molecules : int
         """
-        return len(self._topology_molecules)
+        return len(self._molecules)
 
     @property
     def topology_molecules(self):
@@ -1747,7 +1753,18 @@ class Topology(Serializable):
         -------
         topology_molecules : Iterable of TopologyMolecule
         """
-        return self._topology_molecules
+        # TODO: Put deprecation warning here
+        return self.molecules
+
+    @property
+    def molecules(self):
+        """Returns an iterator over all the Molecules in this Topology
+
+        Returns
+        -------
+        molecules : Iterable of Molecule
+        """
+        return self._molecules
 
     @property
     def n_topology_atoms(self):
@@ -1761,10 +1778,10 @@ class Topology(Serializable):
         n_atoms = 0
         for reference_molecule in self.reference_molecules:
             n_atoms_per_topology_molecule = reference_molecule.n_atoms
-            n_instances_of_topology_molecule = len(
-                self._reference_molecule_to_topology_molecules[reference_molecule]
-            )
-            n_atoms += n_atoms_per_topology_molecule * n_instances_of_topology_molecule
+            #n_instances_of_topology_molecule = len(
+            #    self._reference_molecule_to_topology_molecules[reference_molecule]
+            #)
+            n_atoms += n_atoms_per_topology_molecule
         return n_atoms
 
     @property
@@ -1776,9 +1793,85 @@ class Topology(Serializable):
         -------
         topology_atoms : Iterable of TopologyAtom
         """
-        for topology_molecule in self._topology_molecules:
+        for topology_molecule in self._molecules:
             for atom in topology_molecule.atoms:
                 yield atom
+
+    def atom_index(self, atom):
+        """
+        Returns the index of a given atom in this topology
+
+        Parameters
+        ----------
+        atom : openff.toolkit.topology.Atom
+
+        Returns
+        -------
+        index : int
+            The index of the given atom in this topology
+        """
+        topology_molecule_atom_start_index = 0
+        for molecule in self.molecules:
+            if molecule is atom.molecule:
+                return molecule.molecule_atom_index(atom) + topology_molecule_atom_start_index
+            else:
+                topology_molecule_atom_start_index += molecule.n_atoms
+        raise Exception('Atom not found in this Topology')
+
+    def particle_index(self, particle):
+        """
+        Returns the index of a given particle in this topology
+
+        Parameters
+        ----------
+        particle : openff.toolkit.topology.Particle
+
+        Returns
+        -------
+        index : int
+            The index of the given particle in this topology
+        """
+        topology_molecule_particle_start_index = 0
+        for molecule in self.molecules:
+            if molecule is particle.molecule:
+                return molecule.particle_index(particle) + topology_molecule_particle_start_index
+            else:
+                topology_molecule_particle_start_index += molecule.n_particles
+        raise Exception('Particle not found in this Topology')
+
+    def topology_virtual_site_particle_start_index(self, virtual_site):
+        """
+        Returns the topology particle index of the first particle of this virtual site.
+
+        Parameters
+        ----------
+        virtual_site : openff.toolkit.topology.VirtualSite
+
+        Returns
+        -------
+        index : int
+            The topology particle index of the first particle in this virtual site.
+        """
+        first_particle = next(virtual_site.particles)
+        return self.particle_index(first_particle)
+
+    def topology_molecule_index(self, molecule):
+        """
+        Returns the index of a given molecule in this topology
+
+        Parameters
+        ----------
+        molecule : openff.toolkit.topology.FrozenMolecule
+
+        Returns
+        -------
+        index : int
+            The index of the given molecule in this topology
+        """
+        for index, topology_molecule in enumerate(self.molecules):
+            if molecule is topology_molecule:
+                return index
+        raise Exception('Molecule not found in this Topology')
 
     @property
     def n_topology_bonds(self):
@@ -1792,10 +1885,10 @@ class Topology(Serializable):
         n_bonds = 0
         for reference_molecule in self.reference_molecules:
             n_bonds_per_topology_molecule = reference_molecule.n_bonds
-            n_instances_of_topology_molecule = len(
-                self._reference_molecule_to_topology_molecules[reference_molecule]
-            )
-            n_bonds += n_bonds_per_topology_molecule * n_instances_of_topology_molecule
+            #n_instances_of_topology_molecule = len(
+            #    self._reference_molecule_to_topology_molecules[reference_molecule]
+            #)
+            n_bonds += n_bonds_per_topology_molecule
         return n_bonds
 
     @property
@@ -1806,7 +1899,7 @@ class Topology(Serializable):
         -------
         topology_bonds : Iterable of TopologyBond
         """
-        for topology_molecule in self._topology_molecules:
+        for topology_molecule in self._molecules:
             for bond in topology_molecule.bonds:
                 yield bond
 
@@ -1822,11 +1915,11 @@ class Topology(Serializable):
         n_particles = 0
         for reference_molecule in self.reference_molecules:
             n_particles_per_topology_molecule = reference_molecule.n_particles
-            n_instances_of_topology_molecule = len(
-                self._reference_molecule_to_topology_molecules[reference_molecule]
-            )
+           # n_instances_of_topology_molecule = len(
+           #     self._reference_molecule_to_topology_molecules[reference_molecule]
+           # )
             n_particles += (
-                n_particles_per_topology_molecule * n_instances_of_topology_molecule
+                n_particles_per_topology_molecule
             )
         return n_particles
 
@@ -1840,10 +1933,10 @@ class Topology(Serializable):
         --------
         topology_particles : Iterable of TopologyAtom and TopologyVirtualSite
         """
-        for topology_molecule in self._topology_molecules:
+        for topology_molecule in self._molecules:
             for atom in topology_molecule.atoms:
                 yield atom
-        for topology_molecule in self._topology_molecules:
+        for topology_molecule in self._molecules:
             for vs in topology_molecule.virtual_sites:
                 for vp in vs.particles:
                     yield vp
@@ -1851,22 +1944,30 @@ class Topology(Serializable):
     @property
     def n_topology_virtual_sites(self):
         """
+        Deprecated - Use Topology.n_virtual_sites instead.
+        """
+        warnings.warn("Topology.n_topology_virtual_sites is deprecated. Use Topology.n_virtual_sites instead")
+        return self.n_virtual_sites
+
+    @property
+    def n_virtual_sites(self):
+        """
         Returns the number of TopologyVirtualSites in in this Topology.
 
         Returns
         -------
         n_virtual_sites : iterable of TopologyVirtualSites
         """
+
         n_virtual_sites = 0
         for reference_molecule in self.reference_molecules:
             n_virtual_sites_per_topology_molecule = reference_molecule.n_virtual_sites
-            n_instances_of_topology_molecule = len(
-                self._reference_molecule_to_topology_molecules[reference_molecule]
-            )
             n_virtual_sites += (
-                n_virtual_sites_per_topology_molecule * n_instances_of_topology_molecule
+                n_virtual_sites_per_topology_molecule
             )
         return n_virtual_sites
+
+
 
     @property
     def topology_virtual_sites(self):
@@ -1876,43 +1977,55 @@ class Topology(Serializable):
         -------
         topology_virtual_sites : Iterable of TopologyVirtualSite
         """
-        for topology_molecule in self._topology_molecules:
-            for virtual_site in topology_molecule.virtual_sites:
+        warnings.warn("The TopologyX object classes are being deprecated. Use 'virtual_sites' instead.",
+                      DeprecationWarning)
+        return self.virtual_sites
+
+    @property
+    def virtual_sites(self):
+        """Get an iterator over the virtual sites in this Topology
+
+        Returns
+        -------
+        virtual_sites : Iterable of VirtualSite
+        """
+        for molecule in self._molecules:
+            for virtual_site in molecule.virtual_sites:
                 yield virtual_site
 
     @property
     def n_angles(self):
         """int: number of angles in this Topology."""
-        return sum(mol.n_angles for mol in self._topology_molecules)
+        return sum(mol.n_angles for mol in self._molecules)
 
     @property
     def angles(self):
         """Iterable of Tuple[TopologyAtom]: iterator over the angles in this Topology."""
-        for topology_molecule in self._topology_molecules:
+        for topology_molecule in self._molecules:
             for angle in topology_molecule.angles:
                 yield angle
 
     @property
     def n_propers(self):
         """int: number of proper torsions in this Topology."""
-        return sum(mol.n_propers for mol in self._topology_molecules)
+        return sum(mol.n_propers for mol in self._molecules)
 
     @property
     def propers(self):
         """Iterable of Tuple[TopologyAtom]: iterator over the proper torsions in this Topology."""
-        for topology_molecule in self._topology_molecules:
+        for topology_molecule in self._molecules:
             for proper in topology_molecule.propers:
                 yield proper
 
     @property
     def n_impropers(self):
         """int: number of possible improper torsions in this Topology."""
-        return sum(mol.n_impropers for mol in self._topology_molecules)
+        return sum(mol.n_impropers for mol in self._molecules)
 
     @property
     def impropers(self):
         """Iterable of Tuple[TopologyAtom]: iterator over the possible improper torsions in this Topology."""
-        for topology_molecule in self._topology_molecules:
+        for topology_molecule in self._molecules:
             for improper in topology_molecule.impropers:
                 yield improper
 
@@ -1951,7 +2064,7 @@ class Topology(Serializable):
         impropers, amber_impropers
 
         """
-        for topology_molecule in self._topology_molecules:
+        for topology_molecule in self._molecules:
             for smirnoff_improper in topology_molecule.smirnoff_impropers:
                 yield smirnoff_improper
 
@@ -1981,7 +2094,7 @@ class Topology(Serializable):
         --------
         impropers, smirnoff_impropers
         """
-        for topology_molecule in self._topology_molecules:
+        for topology_molecule in self._molecules:
             for amber_improper in topology_molecule.amber_impropers:
                 yield amber_improper
 
@@ -2006,7 +2119,7 @@ class Topology(Serializable):
         function would consider them to be 2 apart and would not include them if ``n=4`` was
         passed.
         """
-        for topology_molecule in self._topology_molecules:
+        for topology_molecule in self._molecules:
             for pair in topology_molecule.nth_degree_neighbors(n_degrees=n_degrees):
                 yield pair
 
@@ -2134,16 +2247,57 @@ class Topology(Serializable):
                     matches.append(environment_match)
         return matches
 
+    def copy_initializer(self, other):
+        other_dict = copy.deepcopy(other.to_dict())
+        self._initialize_from_dict(other_dict)
+
     def to_dict(self):
-        """Convert to dictionary representation."""
-        # Implement abstract method Serializable.to_dict()
-        raise NotImplementedError()  # TODO
+        return_dict = dict()
+        return_dict['aromaticity_model'] = self._aromaticity_model
+        return_dict['constrained_atom_pairs'] = dict()
+        for constrained_atom_pair, distance in self._constrained_atom_pairs.items():
+            return_dict['constrained_atom_pairs'][constrained_atom_pair] = quantity_to_string(distance)
+
+        if self._box_vectors is None:
+            return_dict['box_vectors'] = None
+        else:
+            return_dict['box_vectors'] = copy.deepcopy(quantity_to_string(self._box_vectors))
+        return_dict['molecules'] = [mol.to_dict() for mol in self._molecules]
+        return return_dict
 
     @classmethod
-    def from_dict(cls, d):
-        """Static constructor from dictionary representation."""
-        # Implement abstract method Serializable.to_dict()
-        raise NotImplementedError()  # TODO
+    def from_dict(cls, topology_dict):
+        """
+        Create a new Topology from a dictionary representation
+
+        Parameters
+        ----------
+        topology_dict : OrderedDict
+            A dictionary representation of the topology.
+
+        Returns
+        -------
+        topology : Topology
+            A Topology created from the dictionary representation
+
+        """
+        topology = cls()
+        topology._initialize_from_dict(topology_dict)
+        return topology
+
+
+    def _initialize_from_dict(self, topology_dict):
+        self._aromaticity_model = topology_dict['aromaticity_model']
+        for pair, distance in topology_dict['constrained_atom_pairs']:
+            deserialized_distance = string_to_quantity(distance)
+            self.add_constraint(pair, deserialized_distance)
+        if topology_dict['box_vectors'] is None:
+            self._box_vectors = None
+        else:
+            self.box_vectors = string_to_quantity(topology_dict['box_vectors'])
+        for molecule_dict in topology_dict['molecules']:
+            new_mol = Molecule.from_dict(molecule_dict)
+            self.add_molecule(new_mol)
 
     # TODO: Merge this into Molecule.from_networkx if/when we implement that.
     # TODO: can we now remove this as we have the ability to do this in the Molecule class?
@@ -2333,7 +2487,7 @@ class Topology(Serializable):
             )
             topology.add_molecule(
                 graph_to_unq_mol[unq_mol_G],
-                local_topology_to_reference_index=local_top_to_ref_index,
+                #local_topology_to_reference_index=local_top_to_ref_index,
             )
 
         topology.box_vectors = openmm_topology.getPeriodicBoxVectors()
@@ -2344,12 +2498,8 @@ class Topology(Serializable):
         """
         Create an OpenMM Topology object.
 
-        The OpenMM ``Topology`` object will have one residue per topology
-        molecule. Currently, the number of chains depends on how many copies
-        of the same molecule are in the ``Topology``. Molecules with more
-        than 5 copies are all assigned to a single chain, otherwise one
-        chain is created for each molecule. This behavior may change in
-        the future.
+        The OpenMM ``Topology`` object will have one residue and chain per
+        molecule.
 
         Parameters
         ----------
@@ -2390,51 +2540,66 @@ class Topology(Serializable):
         # We need to iterate over the topology molecules if we want to
         # keep track of chains/residues as Atom.topology_molecule is
         # instantiated every time and can't be used as a key.
-        for topology_molecule in self.topology_molecules:
-            for atom in topology_molecule.atoms:
-                reference_molecule = topology_molecule.reference_molecule
-                n_molecules = len(
-                    self._reference_molecule_to_topology_molecules[reference_molecule]
-                )
+        for molecule in self.molecules:
+            molecule_id = self.topology_molecule_index(molecule)
+            residue_id = molecule.name
+            for atom in molecule.atoms:
+                #reference_molecule = topology_molecule#.reference_molecule
+                n_molecules = 1
+                #n_molecules = len(
+                #    self._reference_molecule_to_topology_molecules[reference_molecule]
+                #)
 
-                # Add 1 chain per molecule unless there are more than 5 copies,
-                # in which case we add a single chain for all of them.
-                if n_molecules <= 5:
-                    # We associate a chain to each molecule.
-                    key_molecule = topology_molecule
-                else:
-                    # We associate a chain to all the topology molecule.
-                    key_molecule = reference_molecule
+                assert not(hasattr(molecule, 'residues'))
+                #Get rid of this logic, replace chain with topology_molecule_index and residue with molecule.name
+                #Later override these using atom metadata/hierarchyiterators if possible
+                ## Add 1 chain per molecule unless there are more than 5 copies,
+                ## in which case we add a single chain for all of them.
+                #if n_molecules <= 5:
+                #    # We associate a chain to each molecule.
+                #    key_molecule = topology_molecule
+                #else:
+                #    # We associate a chain to all the topology molecule.
+                #    key_molecule = reference_molecule
 
                 # Create a new chain if it doesn't exit.
+                #try:
+                #    chain = mol_to_chains[key_molecule]
+                #except KeyError:
+                #    chain = omm_topology.addChain()
+                #    mol_to_chains[key_molecule] = chain
                 try:
-                    chain = mol_to_chains[key_molecule]
+                    chain = mol_to_chains[molecule_id]
                 except KeyError:
                     chain = omm_topology.addChain()
-                    mol_to_chains[key_molecule] = chain
+                    mol_to_chains[molecule_id] = chain
 
-                # Add one molecule for each topology molecule.
+                # Add one residue for each topology molecule.
                 try:
-                    residue = mol_to_residues[topology_molecule]
+                    residue = mol_to_residues[molecule_id]
                 except KeyError:
-                    residue = omm_topology.addResidue(reference_molecule.name, chain)
-                    mol_to_residues[topology_molecule] = residue
+                    residue = omm_topology.addResidue(residue_id, chain)
+                    mol_to_residues[molecule_id] = residue
 
                 # Add atom.
                 element = OMMElement.getByAtomicNumber(atom.atomic_number)
-                omm_atom = omm_topology.addAtom(atom.atom.name, element, residue)
+                #omm_atom = omm_topology.addAtom(atom.atom.name, element, residue)
+                omm_atom = omm_topology.addAtom(atom.name, element, residue)
 
                 # Make sure that OpenFF and OpenMM Topology atoms have the same indices.
-                assert atom.topology_atom_index == int(omm_atom.id) - 1
+                #assert atom.topology_atom_index == int(omm_atom.id) - 1
+                #print(self.topology_atom_index(atom))
+                assert self.topology_atom_index(atom) == int(omm_atom.id) - 1
                 omm_atoms.append(omm_atom)
 
         # Add all bonds.
         bond_types = {1: Single, 2: Double, 3: Triple}
         for bond in self.topology_bonds:
             atom1, atom2 = bond.atoms
-            atom1_idx, atom2_idx = atom1.topology_atom_index, atom2.topology_atom_index
+            atom1_idx, atom2_idx = self.topology_atom_index(atom1), self.topology_atom_index(atom2)
             bond_type = (
-                Aromatic if bond.bond.is_aromatic else bond_types[bond.bond_order]
+                #Aromatic if bond.bond.is_aromatic else bond_types[bond.bond_order]
+                Aromatic if bond.is_aromatic else bond_types[bond.bond_order]
             )
             omm_topology.addBond(
                 omm_atoms[atom1_idx],
@@ -2934,7 +3099,7 @@ class Topology(Serializable):
         assert 0 <= atom_topology_index < self.n_topology_atoms
         this_molecule_start_index = 0
         next_molecule_start_index = 0
-        for topology_molecule in self._topology_molecules:
+        for topology_molecule in self._molecules:
             next_molecule_start_index += topology_molecule.n_atoms
             if next_molecule_start_index > atom_topology_index:
                 atom_molecule_index = atom_topology_index - this_molecule_start_index
@@ -2967,15 +3132,15 @@ class Topology(Serializable):
 
         """
         assert type(vsite_topology_index) is int
-        assert 0 <= vsite_topology_index < self.n_topology_virtual_sites
+        assert 0 <= vsite_topology_index < self.n_virtual_sites
         this_molecule_start_index = 0
         next_molecule_start_index = 0
-        for topology_molecule in self._topology_molecules:
-            next_molecule_start_index += topology_molecule.n_virtual_sites
+        for molecule in self._molecules:
+            next_molecule_start_index += molecule.n_virtual_sites
             if next_molecule_start_index > vsite_topology_index:
                 vsite_molecule_index = vsite_topology_index - this_molecule_start_index
-                return topology_molecule.virtual_site(vsite_molecule_index)
-            this_molecule_start_index += topology_molecule.n_virtual_sites
+                return molecule.virtual_site(vsite_molecule_index)
+            this_molecule_start_index += molecule.n_virtual_sites
 
     def bond(self, bond_topology_index):
         """
@@ -2994,7 +3159,7 @@ class Topology(Serializable):
         assert 0 <= bond_topology_index < self.n_topology_bonds
         this_molecule_start_index = 0
         next_molecule_start_index = 0
-        for topology_molecule in self._topology_molecules:
+        for topology_molecule in self._molecules:
             next_molecule_start_index += topology_molecule.n_bonds
             if next_molecule_start_index > bond_topology_index:
                 bond_molecule_index = bond_topology_index - this_molecule_start_index
@@ -3013,7 +3178,11 @@ class Topology(Serializable):
         """
         pass
 
-    def add_molecule(self, molecule, local_topology_to_reference_index=None):
+    def add_molecule(self, molecule):
+        self._molecules.append(copy.deepcopy(molecule))
+
+    # Outdated now that topologies contain full copies of molecules
+    def _add_molecule(self, molecule, local_topology_to_reference_index=None):
         """Add a Molecule to the Topology. You can optionally request that the atoms be added to the Topology in
         a different order than they appear in the Molecule.
 
@@ -3131,3 +3300,24 @@ class Topology(Serializable):
             return self._constrained_atom_pairs[(iatom, jatom)]
         else:
             return False
+
+
+    def hierarchy_iterator(self, iter_name):
+        '''
+        Get a HierarchyElement iterator from all of the molecules in this topology that provide the appropriately
+        named iterator. This iterator will yield HierarchyElements sorted first by the order that molecules are
+        listed in the Topology, and second by the specific sorting of HierarchyElements defined in each molecule.
+
+        Parameters
+        ----------
+        iter_name: string
+            The iterator name associated with the HierarchyScheme to retrieve (for example 'residues' or 'chains')
+
+        Returns
+        -------
+        iterator of HierarchyElement
+        '''
+        for molecule in self._molecules:
+            if hasattr(molecule, iter_name):
+                for item in getattr(molecule, iter_name):
+                    yield item

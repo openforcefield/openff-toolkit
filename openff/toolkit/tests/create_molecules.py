@@ -451,8 +451,3 @@ def tip5_water():
     )
     return molecule
 
-#@pytest.fixture
-#def ethane_from_smiles_w_vsites():
-
-#@pytest.fixture
-#def ethane_from_smiles_w_vsites():
