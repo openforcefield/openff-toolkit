@@ -35,7 +35,10 @@ import pathlib
 from collections import OrderedDict
 from typing import List
 
-from simtk import openmm
+try:
+    import openmm
+except ImportError:
+    from simtk import openmm
 
 from openff.toolkit.topology.molecule import DEFAULT_AROMATICITY_MODEL
 from openff.toolkit.typing.engines.smirnoff.io import ParameterIOHandler
@@ -153,7 +156,7 @@ MAX_SUPPORTED_VERSION = (
 class ForceField:
     """A factory that assigns SMIRNOFF parameters to a molecular system
 
-    :class:`ForceField` is a factory that constructs an OpenMM :class:`simtk.openmm.System` object from a
+    :class:`ForceField` is a factory that constructs an OpenMM :class:`openmm.System` object from a
     :class:`openff.toolkit.topology.Topology` object defining a (bio)molecular system containing one or more molecules.
 
     When a :class:`ForceField` object is created from one or more specified SMIRNOFF serialized representations,
@@ -1253,7 +1256,7 @@ class ForceField:
 
         Returns
         -------
-        system : simtk.openmm.System
+        system : openmm.System
             The newly created OpenMM System corresponding to the specified ``topology``
         topology : openff.toolkit.topology.Topology, optional.
             If the `return_topology` keyword argument is used, this method will also return a Topology. This
@@ -1479,7 +1482,7 @@ class ForceField:
 
         Returns
         -------
-        charges : ``simtk.unit.Quantity`` with shape ``(n_atoms,)`` and dimensions of charge
+        charges : ``openmm.unit.Quantity`` with shape ``(n_atoms,)`` and dimensions of charge
             The partial charges of the provided molecule in this force field.
 
         Raises

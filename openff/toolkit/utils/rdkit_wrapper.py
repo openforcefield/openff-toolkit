@@ -12,7 +12,11 @@ import tempfile
 from typing import TYPE_CHECKING, List, Optional, Tuple
 
 import numpy as np
-from simtk import unit
+
+try:
+    from openmm import unit
+except ImportError:
+    from simtk import unit
 
 if TYPE_CHECKING:
     from openff.toolkit.topology.molecule import Molecule
@@ -21,6 +25,7 @@ from openff.toolkit.utils import base_wrapper
 from openff.toolkit.utils.constants import DEFAULT_AROMATICITY_MODEL
 from openff.toolkit.utils.exceptions import (
     ChargeMethodUnavailableError,
+    ConformerGenerationError,
     SMILESParseError,
     ToolkitUnavailableException,
     UndefinedStereochemistryError,
@@ -864,7 +869,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             The molecule to generate conformers for.
         n_conformers : int, default=1
             Maximum number of conformers to generate.
-        rms_cutoff : simtk.Quantity-wrapped float, in units of distance, optional, default=None
+        rms_cutoff : openmm.Quantity-wrapped float, in units of distance, optional, default=None
             The minimum RMS value at which two conformers are considered redundant and one is deleted.
             If None, the cutoff is set to 1 Angstrom
 
@@ -881,13 +886,17 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         rdmol = self.to_rdkit(molecule)
         # TODO: This generates way more conformations than omega, given the same
         # nConfs and RMS threshold. Is there some way to set an energy cutoff as well?
-        AllChem.EmbedMultipleConfs(
+        conformer_generation_status = AllChem.EmbedMultipleConfs(
             rdmol,
             numConfs=n_conformers,
             pruneRmsThresh=rms_cutoff / unit.angstrom,
             randomSeed=1,
             # params=AllChem.ETKDG()
         )
+
+        if not conformer_generation_status:
+            raise ConformerGenerationError("RDKit conformer generation failed.")
+
         molecule2 = self.from_rdkit(
             rdmol, allow_undefined_stereo=True, _cls=molecule.__class__
         )
@@ -924,7 +933,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                         (MMFF). This method does not make use of conformers, and hence
                         ``use_conformers`` and ``strict_n_conformers`` will not impact
                         the partial charges produced.
-        use_conformers : iterable of simtk.unit.Quantity-wrapped numpy arrays, each with
+        use_conformers : iterable of openmm.unit.Quantity-wrapped numpy arrays, each with
             shape (n_atoms, 3) and dimension of distance. Optional, default = None
             Coordinates to use for partial charge calculation. If None, an appropriate number of
             conformers will be generated.

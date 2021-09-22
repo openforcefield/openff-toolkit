@@ -21,7 +21,11 @@ import logging
 from typing import Optional
 
 import xmltodict
-from simtk import unit
+
+try:
+    from openmm import unit
+except ImportError:
+    from simtk import unit
 
 # =============================================================================================
 # CONFIGURE LOGGER
@@ -64,10 +68,10 @@ def _ast_unit_eval(node):
     elif isinstance(node, ast.UnaryOp):  # <operator>( <operand> ) e.g., -1
         return operators[type(node.op)](_ast_unit_eval(node.operand))
     elif isinstance(node, ast.Name):
-        # Check if this is a simtk unit.
+        # Check if this is a openmm unit.
         u = getattr(unit, node.id)
         if not isinstance(u, unit.Unit):
-            raise ValueError("No unit named {} found in simtk.unit.".format(node.id))
+            raise ValueError("No unit named {} found in openmm.unit.".format(node.id))
         return u
     else:
         raise TypeError(node)

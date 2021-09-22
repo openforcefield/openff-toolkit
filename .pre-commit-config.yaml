@@ -1,10 +1,12 @@
 repos:
 - repo: https://github.com/psf/black
-  rev: 21.8b0
+  rev: 21.9b0
   hooks:
   - id: black
     files: ^openff
     args: [--check]
+  - id: black-jupyter
+    files: ^examples/((?!deprecated).)*$
 - repo: https://github.com/PyCQA/isort
   rev: 5.9.3
   hooks:
@@ -12,13 +14,11 @@ repos:
     files: ^openff
     args: [--check]
 - repo: https://github.com/nbQA-dev/nbQA
-  rev: 1.1.0
+  rev: 1.1.1
   hooks:
     - id: nbqa-pyupgrade
       files: ^examples/((?!deprecated).)*$
       args:
         - --py37-plus
     - id: nbqa-isort
-      files: ^examples/((?!deprecated).)*$
-    - id: nbqa-black
       files: ^examples/((?!deprecated).)*$
