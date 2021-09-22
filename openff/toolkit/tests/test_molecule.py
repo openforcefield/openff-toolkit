@@ -41,12 +41,12 @@ from openff.toolkit.tests.create_molecules import (
     create_cyclohexane,
     create_ethanol,
     create_reversed_ethanol,
-    dipeptide,
-    dipeptide_residues_perceived,
-    dipeptide_hierarchy_perceived,
     cyx,
+    cyx_hierarchy_perceived,
     cyx_residues_perceived,
-    cyx_hierarchy_perceived
+    dipeptide,
+    dipeptide_hierarchy_perceived,
+    dipeptide_residues_perceived,
 )
 from openff.toolkit.tests.utils import (
     has_pkg,
@@ -3810,9 +3810,7 @@ class TestMoleculeResiduePerception:
 
     def test_perceive_residues_natoms_nterminal_alanine(self, strict_chirality):
         """Test number of matches atoms in residue perception with NTerminal form of Alanine."""
-        offmol = Molecule.from_file(
-            get_data_file_path('proteins/NTerminal_ALA.sdf')
-        )
+        offmol = Molecule.from_file(get_data_file_path("proteins/NTerminal_ALA.sdf"))
         # Perceive residue substructures
         offmol.perceive_residues(strict_chirality=strict_chirality)
         counter = 0  # matched atom counter
@@ -3823,9 +3821,7 @@ class TestMoleculeResiduePerception:
 
     def test_perceive_residues_natoms_cterminal_alanine(self, strict_chirality):
         """Test number of matches atoms in residue perception with CTerminal form of Alanine."""
-        offmol = Molecule.from_file(
-            get_data_file_path('proteins/CTerminal_ALA.sdf')
-        )
+        offmol = Molecule.from_file(get_data_file_path("proteins/CTerminal_ALA.sdf"))
         # Perceive residue substructures
         offmol.perceive_residues(strict_chirality=strict_chirality)
         counter = 0  # matched atom counter
@@ -3836,9 +3832,7 @@ class TestMoleculeResiduePerception:
 
     def test_perceive_residues_natoms_mainchain_alanine(self, strict_chirality):
         """Test number of matches atoms in residue perception with MainChain form of Alanine."""
-        offmol = Molecule.from_file(
-            get_data_file_path('proteins/MainChain_ALA.sdf')
-        )
+        offmol = Molecule.from_file(get_data_file_path("proteins/MainChain_ALA.sdf"))
         # Perceive residue substructures
         offmol.perceive_residues(strict_chirality=strict_chirality)
         counter = 0  # matched atom counter
@@ -3849,9 +3843,7 @@ class TestMoleculeResiduePerception:
 
     def test_perceive_residues_natoms_mainchain_glutamic_acid(self, strict_chirality):
         """Test number of matches atoms in residue perception with MainChain form of Glutamic acid."""
-        offmol = Molecule.from_file(
-            get_data_file_path('proteins/MainChain_GLU.sdf')
-        )
+        offmol = Molecule.from_file(get_data_file_path("proteins/MainChain_GLU.sdf"))
         # Perceive residue substructures
         offmol.perceive_residues(strict_chirality=strict_chirality)
         counter = 0  # matched atom counter
@@ -3860,12 +3852,12 @@ class TestMoleculeResiduePerception:
                 counter += 1
         assert counter == offmol.n_atoms
 
-    def test_perceive_residues_natoms_mainchain_charged_glutamic_acid(self, strict_chirality):
+    def test_perceive_residues_natoms_mainchain_charged_glutamic_acid(
+        self, strict_chirality
+    ):
         """Test number of matches atoms in residue perception with MainChain form of charged
-         Glutamic acid."""
-        offmol = Molecule.from_file(
-            get_data_file_path('proteins/MainChain_GLH.sdf')
-        )
+        Glutamic acid."""
+        offmol = Molecule.from_file(get_data_file_path("proteins/MainChain_GLH.sdf"))
         # Perceive residue substructures
         offmol.perceive_residues(strict_chirality=strict_chirality)
         counter = 0  # matched atom counter
@@ -3876,9 +3868,7 @@ class TestMoleculeResiduePerception:
 
     def test_perceive_residues_natoms_mainchain_arginine(self, strict_chirality):
         """Test number of matches atoms in residue perception with MainChain form of Alanine."""
-        offmol = Molecule.from_file(
-            get_data_file_path('proteins/MainChain_ARG.sdf')
-        )
+        offmol = Molecule.from_file(get_data_file_path("proteins/MainChain_ARG.sdf"))
         # Perceive residue substructures
         offmol.perceive_residues(strict_chirality=strict_chirality)
         counter = 0  # matched atom counter
@@ -3890,9 +3880,7 @@ class TestMoleculeResiduePerception:
     def test_perceive_residues_natoms_mainchain_histidine(self, strict_chirality):
         """Test number of matches atoms in residue perception with MainChain form of protonated
         state of Histidine."""
-        offmol = Molecule.from_file(
-            get_data_file_path('proteins/MainChain_HIP.sdf')
-        )
+        offmol = Molecule.from_file(get_data_file_path("proteins/MainChain_HIP.sdf"))
         # Perceive residue substructures
         offmol.perceive_residues(strict_chirality=strict_chirality)
         counter = 0  # matched atom counter
@@ -3904,9 +3892,7 @@ class TestMoleculeResiduePerception:
     def test_perceive_residues_natoms_cyxteine(self, strict_chirality):
         """Test number of atoms matched for residue perception of disulfide bond form
         of cysteine."""
-        offmol = Molecule.from_file(
-            get_data_file_path('proteins/MainChain_CYX.sdf')
-        )
+        offmol = Molecule.from_file(get_data_file_path("proteins/MainChain_CYX.sdf"))
         # Perceive residue substructures
         offmol.perceive_residues(strict_chirality=strict_chirality)
         counter = 0  # matched atom counter
@@ -3917,9 +3903,11 @@ class TestMoleculeResiduePerception:
 
     def test_perceive_residues_cyclic_peptide_chirality(self, strict_chirality):
         """Test residue perception failing in cyclic peptide with different chiralities."""
-        smiles = '[H]c1c(c(c(c(c1[H])[H])C([H])([H])[C@]2(C(=O)N([C@](C(=O)N([C@@](C(=O)N3[C@@](C(=O)N2[H])'\
-        '(C(C(C3([H])[H])([H])[H])([H])[H])[H])([H])C([H])([H])[H])[H])([H])C([H])([H])C4=C(N(c5c4c(c(c(c5[H])'\
-        '[H])[H])[H])[H])[H])[H])[H])[H])[H]'
+        smiles = (
+            "[H]c1c(c(c(c(c1[H])[H])C([H])([H])[C@]2(C(=O)N([C@](C(=O)N([C@@](C(=O)N3[C@@](C(=O)N2[H])"
+            "(C(C(C3([H])[H])([H])[H])([H])[H])[H])([H])C([H])([H])[H])[H])([H])C([H])([H])C4=C(N(c5c4c(c(c(c5[H])"
+            "[H])[H])[H])[H])[H])[H])[H])[H])[H]"
+        )
         offmol = Molecule.from_smiles(smiles)
         # perceive residues
         offmol.perceive_residues(strict_chirality=strict_chirality)
@@ -3938,9 +3926,7 @@ class TestMoleculeResiduePerception:
     def test_perceive_residues_natoms_t4(self, strict_chirality):
         """Test number of atoms matched for residue perception of free from of
         T4 lysozyme."""
-        offmol = Molecule.from_file(
-            get_data_file_path('proteins/T4-protein.sdf')
-        )
+        offmol = Molecule.from_file(get_data_file_path("proteins/T4-protein.sdf"))
         # Perceive residue substructures
         offmol.perceive_residues(strict_chirality=strict_chirality)
         counter = 0  # matched atom counter
@@ -3949,6 +3935,7 @@ class TestMoleculeResiduePerception:
             if atom.metadata:
                 counter += 1
         assert counter == offmol.n_atoms
+
 
 class MyMol(FrozenMolecule):
     """
@@ -4036,64 +4023,75 @@ class TestMoleculeSubclass:
 
 
 class TestHierarchies:
-
     def test_nothing_perceived_dipeptide(self, dipeptide):
         with pytest.raises(KeyError) as context:
-            assert None == dipeptide.atoms[0].metadata['residue_name']
+            assert None == dipeptide.atoms[0].metadata["residue_name"]
         with pytest.raises(KeyError) as context:
-            assert 'ALA' == dipeptide.atoms[10].metadata['residue_name']
+            assert "ALA" == dipeptide.atoms[10].metadata["residue_name"]
         with pytest.raises(KeyError) as context:
-            assert 1 == dipeptide.atoms[10].metadata['residue_number']
+            assert 1 == dipeptide.atoms[10].metadata["residue_number"]
         with pytest.raises(AttributeError) as context:
             dipeptide.residues[0]
 
     def test_residues_perceived_dipeptide(self, dipeptide_residues_perceived):
         print(dipeptide_residues_perceived.atoms[0].metadata)
-        assert 'ACE' == dipeptide_residues_perceived.atoms[0].metadata['residue_name']
-        assert 1 == dipeptide_residues_perceived.atoms[0].metadata['residue_number']
-        assert 'ALA' == dipeptide_residues_perceived.atoms[10].metadata['residue_name']
-        assert 2 == dipeptide_residues_perceived.atoms[10].metadata['residue_number']
+        assert "ACE" == dipeptide_residues_perceived.atoms[0].metadata["residue_name"]
+        assert 1 == dipeptide_residues_perceived.atoms[0].metadata["residue_number"]
+        assert "ALA" == dipeptide_residues_perceived.atoms[10].metadata["residue_name"]
+        assert 2 == dipeptide_residues_perceived.atoms[10].metadata["residue_number"]
 
         with pytest.raises(AttributeError) as context:
             type(dipeptide_residues_perceived.residues[0])
 
     def test_add_delete_hierarchy_scheme(self, dipeptide_residues_perceived):
-        dipeptide_residues_perceived.add_hierarchy_scheme(('residue_number',), 'res_by_num')
+        dipeptide_residues_perceived.add_hierarchy_scheme(
+            ("residue_number",), "res_by_num"
+        )
         # Redundant hier schemes are OK as long as their iter name is different
-        dipeptide_residues_perceived.add_hierarchy_scheme(('residue_number',), 'res_by_num2')
+        dipeptide_residues_perceived.add_hierarchy_scheme(
+            ("residue_number",), "res_by_num2"
+        )
         # Redundant hier schemes are NOT OK if their iter name is already used
         with pytest.raises(AssertionError) as context:
-            dipeptide_residues_perceived.add_hierarchy_scheme(('residue_number',), 'res_by_num')
+            dipeptide_residues_perceived.add_hierarchy_scheme(
+                ("residue_number",), "res_by_num"
+            )
 
         with pytest.raises(AttributeError) as context:
             dipeptide_residues_perceived.res_by_num[0]
 
-        dipeptide_residues_perceived.perceive_hierarchy(['res_by_num'])
+        dipeptide_residues_perceived.perceive_hierarchy(["res_by_num"])
 
         assert dipeptide_residues_perceived.res_by_num[1].residue_number == 1
         # Since we only perceived res_by_num above, residues should not be defined
         with pytest.raises(AttributeError) as context:
             dipeptide_residues_perceived.residues[0]
         # Delete the hierarchyscheme and ensure that the iterators are no longer available
-        dipeptide_residues_perceived.delete_hierarchy_scheme('res_by_num')
+        dipeptide_residues_perceived.delete_hierarchy_scheme("res_by_num")
         with pytest.raises(AttributeError) as context:
             dipeptide_residues_perceived.res_by_num[0]
 
     def test_hierarchy_perceived_dipeptide(self, dipeptide_hierarchy_perceived):
-        assert dipeptide_hierarchy_perceived.residues[0].chain == 'None'
-        assert dipeptide_hierarchy_perceived.residues[0].residue_name == 'None'
-        assert dipeptide_hierarchy_perceived.residues[0].residue_number == 'None'
-        assert dipeptide_hierarchy_perceived.residues[1].chain == 'None'
-        assert dipeptide_hierarchy_perceived.residues[1].residue_name == 'ACE'
+        assert dipeptide_hierarchy_perceived.residues[0].chain == "None"
+        assert dipeptide_hierarchy_perceived.residues[0].residue_name == "None"
+        assert dipeptide_hierarchy_perceived.residues[0].residue_number == "None"
+        assert dipeptide_hierarchy_perceived.residues[1].chain == "None"
+        assert dipeptide_hierarchy_perceived.residues[1].residue_name == "ACE"
         assert dipeptide_hierarchy_perceived.residues[1].residue_number == 1
-        assert dipeptide_hierarchy_perceived.residues[2].chain == 'None'
-        assert dipeptide_hierarchy_perceived.residues[2].residue_name == 'ALA'
+        assert dipeptide_hierarchy_perceived.residues[2].chain == "None"
+        assert dipeptide_hierarchy_perceived.residues[2].residue_name == "ALA"
         assert dipeptide_hierarchy_perceived.residues[2].residue_number == 2
 
-    def test_hierarchy_perceived_information_propagation(self, dipeptide_hierarchy_perceived):
+    def test_hierarchy_perceived_information_propagation(
+        self, dipeptide_hierarchy_perceived
+    ):
         # Ensure that updating atom metadata doesn't update the iterators until the hierarchy is re-perceived
         for atom in dipeptide_hierarchy_perceived.atoms:
-            atom.metadata['chain'] = 'A'
-        assert ('A', 'None', 'None') != dipeptide_hierarchy_perceived.residues[0].identifier
+            atom.metadata["chain"] = "A"
+        assert ("A", "None", "None") != dipeptide_hierarchy_perceived.residues[
+            0
+        ].identifier
         dipeptide_hierarchy_perceived.perceive_hierarchy()
-        assert ('A', 'None', 'None') == dipeptide_hierarchy_perceived.residues[0].identifier
+        assert ("A", "None", "None") == dipeptide_hierarchy_perceived.residues[
+            0
+        ].identifier

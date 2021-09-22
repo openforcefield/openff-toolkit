@@ -6,13 +6,15 @@ Dictionary (CCD).
 """
 
 import copy
-from collections import defaultdict
-from openff.toolkit.topology import Molecule
-from CifFile import ReadCif
 import json
-from mendeleev import element
+from collections import defaultdict
+
 import rdkit
+from CifFile import ReadCif
+from mendeleev import element
+
 import openff
+from openff.toolkit.topology import Molecule
 
 
 # Amber ff porting functions
@@ -52,7 +54,7 @@ def remove_charge_and_bond_order_from_imidazole(rdmol):
     replace.
     """
     # matches = offmol.chemical_environment_matches('[C:1]1~[C:2]~[N:3]~[C:4]~[N:5]1')
-    imidazole_substructure = rdkit.Chem.MolFromSmarts('[C:1]1~[C:2]~[N:3]~[C:4]~[N:5]1')
+    imidazole_substructure = rdkit.Chem.MolFromSmarts("[C:1]1~[C:2]~[N:3]~[C:4]~[N:5]1")
     matches = rdmol.GetSubstructMatches(imidazole_substructure)
     all_imidazole_atoms = set()
     for match in matches:
@@ -65,8 +67,9 @@ def remove_charge_and_bond_order_from_imidazole(rdmol):
 
     for bond in rdmol.GetBonds():
         # print(dir(bond))
-        if ((bond.GetBeginAtomIdx() in all_imidazole_atoms) and
-                (bond.GetEndAtomIdx() in all_imidazole_atoms)):
+        if (bond.GetBeginAtomIdx() in all_imidazole_atoms) and (
+            bond.GetEndAtomIdx() in all_imidazole_atoms
+        ):
             bond.SetBondType(rdkit.Chem.BondType.QUADRUPLE)
 
 
@@ -76,27 +79,25 @@ class CifSubstructures:
     """
 
     # bond order dictionary translation from mmcif
-    bond_order_dict = {
-        'SING': 1,
-        'DOUB': 2,
-        'TRIP': 3,
-        'QUAD': 4
-    }
+    bond_order_dict = {"SING": 1, "DOUB": 2, "TRIP": 3, "QUAD": 4}
 
     def __init__(self):
         """
         Create object with substructures data from CIF files.
         """
-        self.data = defaultdict(defaultdict)  # Dictionary where to store substructures data
+        self.data = defaultdict(
+            defaultdict
+        )  # Dictionary where to store substructures data
         self._cif_multi_entry_object = None
 
-    def from_file(self,
-                  cif_file,
-                  include_leaving=False,
-                  discard_keyword='FRAGMENT',
-                  replace_quadruple_bond_with_any: bool = True,
-                  remove_charge_bond_order_resonant: bool = True
-                  ):
+    def from_file(
+        self,
+        cif_file,
+        include_leaving=False,
+        discard_keyword="FRAGMENT",
+        replace_quadruple_bond_with_any: bool = True,
+        remove_charge_bond_order_resonant: bool = True,
+    ):
         """
         Reads cif formatted file and fills substructure information.
 
@@ -118,11 +119,12 @@ class CifSubstructures:
         # read cif file
         self._cif_multi_entry_object = ReadCif(cif_file)
         # fill data dictionary
-        self._fill_substructure_data(include_leaving=include_leaving,
-                                     discard_keyword=discard_keyword,
-                                     replace_quadruple_bond_with_any=replace_quadruple_bond_with_any,
-                                     remove_charge_bond_order_resonant=remove_charge_bond_order_resonant
-                                     )
+        self._fill_substructure_data(
+            include_leaving=include_leaving,
+            discard_keyword=discard_keyword,
+            replace_quadruple_bond_with_any=replace_quadruple_bond_with_any,
+            remove_charge_bond_order_resonant=remove_charge_bond_order_resonant,
+        )
 
     def to_json_file(self, output_file, indent=None):
         """
@@ -140,7 +142,7 @@ class CifSubstructures:
         serialized : str
             A JSON serialized representation of the object.
         """
-        with open(output_file, 'w') as library_file:
+        with open(output_file, "w") as library_file:
             json.dump(self.data, library_file, indent=indent)
 
     def clear_data(self):
@@ -167,15 +169,15 @@ class CifSubstructures:
         symbol_to_num_dict : dict
             Atom symbol to atomic number (key, value) dictionary.
         """
-        atom_symbol_list = cif_entry['_chem_comp_atom.type_symbol']
+        atom_symbol_list = cif_entry["_chem_comp_atom.type_symbol"]
         elements = element(atom_symbol_list)
         atomic_nums_list = []
         for element_ in elements:
             atomic_nums_list.append(element_.atomic_number)
         # Create dictionary
-        symbol_to_num_dict = {symbol: number
-                              for symbol, number
-                              in zip(atom_symbol_list, atomic_nums_list)}
+        symbol_to_num_dict = {
+            symbol: number for symbol, number in zip(atom_symbol_list, atomic_nums_list)
+        }
         return symbol_to_num_dict
 
     @staticmethod
@@ -212,22 +214,31 @@ class CifSubstructures:
         atom_information_array : tuple
             Multidimensional tuple with atoms information.
         """
-        symbol_to_num_dict = self._generate_atom_symbol_number_dictionary(cif_entry_data)
-        atom_names = cif_entry_data['_chem_comp_atom.atom_id']
-        atomic_numbers = [symbol_to_num_dict[x]
-                          for x in cif_entry_data['_chem_comp_atom.type_symbol']]
-        formal_charges = [int(x) for x in cif_entry_data['_chem_comp_atom.charge']]
-        is_aromatic = [False if x == 'N' else True
-                       for x in cif_entry_data['_chem_comp_atom.pdbx_aromatic_flag']]
-        stereochemistry = [None if x == 'N' else x
-                           for x in cif_entry_data['_chem_comp_atom.pdbx_stereo_config']]
-        leaving_atoms_list = cif_entry_data['_chem_comp_atom.pdbx_leaving_atom_flag']
-        return atom_names, \
-            atomic_numbers,\
-            formal_charges,\
-            is_aromatic, \
-            stereochemistry,\
-            leaving_atoms_list
+        symbol_to_num_dict = self._generate_atom_symbol_number_dictionary(
+            cif_entry_data
+        )
+        atom_names = cif_entry_data["_chem_comp_atom.atom_id"]
+        atomic_numbers = [
+            symbol_to_num_dict[x] for x in cif_entry_data["_chem_comp_atom.type_symbol"]
+        ]
+        formal_charges = [int(x) for x in cif_entry_data["_chem_comp_atom.charge"]]
+        is_aromatic = [
+            False if x == "N" else True
+            for x in cif_entry_data["_chem_comp_atom.pdbx_aromatic_flag"]
+        ]
+        stereochemistry = [
+            None if x == "N" else x
+            for x in cif_entry_data["_chem_comp_atom.pdbx_stereo_config"]
+        ]
+        leaving_atoms_list = cif_entry_data["_chem_comp_atom.pdbx_leaving_atom_flag"]
+        return (
+            atom_names,
+            atomic_numbers,
+            formal_charges,
+            is_aromatic,
+            stereochemistry,
+            leaving_atoms_list,
+        )
 
     def _gather_bonds_information(self, cif_entry_data):
         """
@@ -238,26 +249,35 @@ class CifSubstructures:
         bond_information_array : tuple
             Multidimensional tuple with bonds information.
         """
-        atom1_name_list = cif_entry_data['_chem_comp_bond.atom_id_1']
-        atom2_name_list = cif_entry_data['_chem_comp_bond.atom_id_2']
-        bond_order_list = [self.bond_order_dict[x]
-                           for x in cif_entry_data['_chem_comp_bond.value_order']]
-        is_aromatic_bond_list = [False if x == 'N' else True
-                                 for x in cif_entry_data['_chem_comp_bond.pdbx_aromatic_flag']]
-        stereochemistry_bond_list = [None if x == 'N' else x
-                                     for x in cif_entry_data['_chem_comp_bond.pdbx_stereo_config']]
-        return atom1_name_list, \
-            atom2_name_list,\
-            bond_order_list,\
-            is_aromatic_bond_list, \
-            stereochemistry_bond_list
+        atom1_name_list = cif_entry_data["_chem_comp_bond.atom_id_1"]
+        atom2_name_list = cif_entry_data["_chem_comp_bond.atom_id_2"]
+        bond_order_list = [
+            self.bond_order_dict[x]
+            for x in cif_entry_data["_chem_comp_bond.value_order"]
+        ]
+        is_aromatic_bond_list = [
+            False if x == "N" else True
+            for x in cif_entry_data["_chem_comp_bond.pdbx_aromatic_flag"]
+        ]
+        stereochemistry_bond_list = [
+            None if x == "N" else x
+            for x in cif_entry_data["_chem_comp_bond.pdbx_stereo_config"]
+        ]
+        return (
+            atom1_name_list,
+            atom2_name_list,
+            bond_order_list,
+            is_aromatic_bond_list,
+            stereochemistry_bond_list,
+        )
 
     @staticmethod
-    def _get_subrdmol(rdmol: rdkit.Chem.rdchem.Mol,
-                      indices: list = [],
-                      sanitize: bool = False,
-                      remove_charge_bond_order_resonant: bool = True
-                      ):
+    def _get_subrdmol(
+        rdmol: rdkit.Chem.rdchem.Mol,
+        indices: list = [],
+        sanitize: bool = False,
+        remove_charge_bond_order_resonant: bool = True,
+    ):
         """
         Create new sub-molecule from selected atom indices
 
@@ -275,8 +295,9 @@ class CifSubstructures:
         rdkit.Chem.rdchem.Mol: subset of molecule
         """
         submol = rdkit.Chem.RWMol(rdmol)
-        ix = sorted([at.GetIdx() for at in rdmol.GetAtoms()
-                     if at.GetIdx() not in indices])
+        ix = sorted(
+            [at.GetIdx() for at in rdmol.GetAtoms() if at.GetIdx() not in indices]
+        )
         for i in ix[::-1]:
             submol.RemoveAtom(int(i))
         if sanitize:
@@ -291,13 +312,14 @@ class CifSubstructures:
             remove_charge_and_bond_order_from_guanidinium(submol)
         return submol
 
-    def _get_smiles(self,
-                    mol: openff.toolkit.topology.molecule.Molecule,
-                    indices: list = [],
-                    label_indices: list = [],
-                    replace_quadruple_bond_with_any: bool = True,
-                    remove_charge_bond_order_resonant: bool = True,
-                    ):
+    def _get_smiles(
+        self,
+        mol: openff.toolkit.topology.molecule.Molecule,
+        indices: list = [],
+        label_indices: list = [],
+        replace_quadruple_bond_with_any: bool = True,
+        remove_charge_bond_order_resonant: bool = True,
+    ):
         """
         Get SMARTS of selected atoms in molecule
 
@@ -321,24 +343,26 @@ class CifSubstructures:
             at = rdmol.GetAtomWithIdx(int(lix))
             at.SetAtomMapNum(i)
         indices = sorted(set(indices) | set(label_indices))
-        submol = self._get_subrdmol(rdmol,
-                                    indices,
-                                    remove_charge_bond_order_resonant=remove_charge_bond_order_resonant
-                                    )
+        submol = self._get_subrdmol(
+            rdmol,
+            indices,
+            remove_charge_bond_order_resonant=remove_charge_bond_order_resonant,
+        )
         smiles = rdkit.Chem.MolToSmiles(submol, allHsExplicit=True)
         # TODO: This doesn't seem to be having an effect. It is replacing bond orders regardless.
         if replace_quadruple_bond_with_any:
-            smiles = smiles.replace('$', '~')
+            smiles = smiles.replace("$", "~")
         return smiles
 
-    def _add_substructure_data_entry(self,
-                                     entry_data,
-                                     include_leaving,
-                                     discard_keyword,
-                                     additional_leaving=None,
-                                     replace_quadruple_bond_with_any: bool = True,
-                                     remove_charge_bond_order_resonant: bool = True
-                                     ):
+    def _add_substructure_data_entry(
+        self,
+        entry_data,
+        include_leaving,
+        discard_keyword,
+        additional_leaving=None,
+        replace_quadruple_bond_with_any: bool = True,
+        remove_charge_bond_order_resonant: bool = True,
+    ):
         """
         Read substructure from entry data in cif file and fill data object with smiles.
 
@@ -355,7 +379,7 @@ class CifSubstructures:
         """
         offmol = Molecule()
         # Skip entries matching discard filtering keyword in comp name
-        comp_name = entry_data['_chem_comp.name']
+        comp_name = entry_data["_chem_comp.name"]
         if discard_keyword in comp_name:
             return
         # Gather necessary data for creating/adding atoms
@@ -370,28 +394,30 @@ class CifSubstructures:
         if additional_leaving:
             for atom_idx, atom_name in enumerate(atom_names_orig):
                 if atom_name in additional_leaving:
-                    leaving_atoms_list[atom_idx] = 'Y'
+                    leaving_atoms_list[atom_idx] = "Y"
         # copy atom names to object that can be modified if not leaving atoms
         atom_names = copy.copy(atom_names_orig)
         # add atoms
         for atom_idx in range(len(atom_names_orig)):
             if include_leaving:
                 # Add all atoms
-                offmol.add_atom(atomic_numbers[atom_idx],
-                                formal_charges[atom_idx],
-                                are_aromatic[atom_idx],
-                                stereochemistry=stereochemistry[atom_idx],
-                                name=atom_names_orig[atom_idx]
-                                )
+                offmol.add_atom(
+                    atomic_numbers[atom_idx],
+                    formal_charges[atom_idx],
+                    are_aromatic[atom_idx],
+                    stereochemistry=stereochemistry[atom_idx],
+                    name=atom_names_orig[atom_idx],
+                )
             else:
                 # Add only not leaving atoms
-                if leaving_atoms_list[atom_idx] == 'N':
-                    offmol.add_atom(atomic_numbers[atom_idx],
-                                    formal_charges[atom_idx],
-                                    are_aromatic[atom_idx],
-                                    stereochemistry=stereochemistry[atom_idx],
-                                    name=atom_names_orig[atom_idx]
-                                    )
+                if leaving_atoms_list[atom_idx] == "N":
+                    offmol.add_atom(
+                        atomic_numbers[atom_idx],
+                        formal_charges[atom_idx],
+                        are_aromatic[atom_idx],
+                        stereochemistry=stereochemistry[atom_idx],
+                        name=atom_names_orig[atom_idx],
+                    )
                 else:
                     # Remove original leaving atom name from current atom names
                     atom_names.remove(atom_names_orig[atom_idx])
@@ -406,34 +432,37 @@ class CifSubstructures:
         # TODO: What about fractional bond order?
         for bond_idx in range(len(atom1_name_list)):
             try:
-                offmol.add_bond(self._get_atom_by_name(offmol, atom1_name_list[bond_idx]),
-                                self._get_atom_by_name(offmol, atom2_name_list[bond_idx]),
-                                bond_order_list[bond_idx],
-                                is_aromatic_bond_list[bond_idx],
-                                stereochemistry=stereochemistry_bond_list[bond_idx]
-                                )
+                offmol.add_bond(
+                    self._get_atom_by_name(offmol, atom1_name_list[bond_idx]),
+                    self._get_atom_by_name(offmol, atom2_name_list[bond_idx]),
+                    bond_order_list[bond_idx],
+                    is_aromatic_bond_list[bond_idx],
+                    stereochemistry=stereochemistry_bond_list[bond_idx],
+                )
             # TODO: Broad exception. We should raise a specific error.
             except Exception:  # happens when atom is not found, i.e. no leaving atoms.
                 continue
         # Get smiles
         atom_indices = list(range(offmol.n_atoms))
-        smiles = self._get_smiles(offmol,
-                                  indices=atom_indices,
-                                  label_indices=atom_indices,
-                                  replace_quadruple_bond_with_any=replace_quadruple_bond_with_any,
-                                  remove_charge_bond_order_resonant=remove_charge_bond_order_resonant
-                                  )
+        smiles = self._get_smiles(
+            offmol,
+            indices=atom_indices,
+            label_indices=atom_indices,
+            replace_quadruple_bond_with_any=replace_quadruple_bond_with_any,
+            remove_charge_bond_order_resonant=remove_charge_bond_order_resonant,
+        )
         # Only take three letter code for key -- Note it uses the new atom_names list
-        entry_code = entry_data['_chem_comp.three_letter_code']
+        entry_code = entry_data["_chem_comp.three_letter_code"]
         if smiles not in self.data[entry_code]:
             self.data[entry_code][smiles] = atom_names
 
-    def _fill_substructure_data(self,
-                                include_leaving=False,
-                                discard_keyword='FRAGMENT',
-                                replace_quadruple_bond_with_any: bool = True,
-                                remove_charge_bond_order_resonant: bool = True
-                                ):
+    def _fill_substructure_data(
+        self,
+        include_leaving=False,
+        discard_keyword="FRAGMENT",
+        replace_quadruple_bond_with_any: bool = True,
+        remove_charge_bond_order_resonant: bool = True,
+    ):
         """
         Fills data dictionary with the substructure information.
 
@@ -445,34 +474,36 @@ class CifSubstructures:
             Whether to include leaving atoms marked in _chem_comp_atom.pdbx_leaving_atom_flag
         """
         override_dict = {
-            #LYN
-            'lys_lfoh_dhz3': ['H2'],
-            #GLU
-            'glu_lfoh_dhe2': ['H2'],
-            #HIE
-            'his_lfoh_dhd1': ['H2'],
-            #ASP
-            'asp_lfoh_dhd2': ['H2'],
-            #HID
-            'his_lfoh_dhe2': ['H2'],
-            #CYX
-            'cys': ['HG']
+            # LYN
+            "lys_lfoh_dhz3": ["H2"],
+            # GLU
+            "glu_lfoh_dhe2": ["H2"],
+            # HIE
+            "his_lfoh_dhd1": ["H2"],
+            # ASP
+            "asp_lfoh_dhd2": ["H2"],
+            # HID
+            "his_lfoh_dhe2": ["H2"],
+            # CYX
+            "cys": ["HG"],
         }
         for entry, entry_data in self._cif_multi_entry_object.items():
             # create empty molecule to fill with data
             # if 'LYS' in entry:
             #     continue
-            self._add_substructure_data_entry(entry_data,
-                                              include_leaving,
-                                              discard_keyword,
-                                              replace_quadruple_bond_with_any=replace_quadruple_bond_with_any,
-                                              remove_charge_bond_order_resonant=remove_charge_bond_order_resonant
-                                              )
+            self._add_substructure_data_entry(
+                entry_data,
+                include_leaving,
+                discard_keyword,
+                replace_quadruple_bond_with_any=replace_quadruple_bond_with_any,
+                remove_charge_bond_order_resonant=remove_charge_bond_order_resonant,
+            )
             if entry in override_dict:
-                self._add_substructure_data_entry(entry_data,
-                                                  include_leaving,
-                                                  discard_keyword,
-                                                  override_dict[entry],
-                                                  replace_quadruple_bond_with_any=replace_quadruple_bond_with_any,
-                                                  remove_charge_bond_order_resonant=remove_charge_bond_order_resonant
-                                                  )
+                self._add_substructure_data_entry(
+                    entry_data,
+                    include_leaving,
+                    discard_keyword,
+                    override_dict[entry],
+                    replace_quadruple_bond_with_any=replace_quadruple_bond_with_any,
+                    remove_charge_bond_order_resonant=remove_charge_bond_order_resonant,
+                )

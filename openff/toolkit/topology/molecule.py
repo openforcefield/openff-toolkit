@@ -29,21 +29,19 @@ Molecular chemical entity representation and routines to interface with cheminfo
 
 """
 
+import json
 import operator
 import warnings
 from abc import abstractmethod
 from collections import OrderedDict, UserDict, defaultdict
 from copy import deepcopy
-from typing import Optional, Union
 from itertools import chain
-from packaging import version
+from typing import Optional, Union
 
-
-import json
 import networkx as nx
 import numpy as np
 from cached_property import cached_property
-
+from packaging import version
 
 try:
     from openmm import LocalCoordinatesSite, unit
@@ -54,8 +52,15 @@ except ImportError:
     from simtk.openmm.app import Element, element
 
 import openff.toolkit
-from openff.toolkit.utils import quantity_to_string, string_to_quantity
+from openff.toolkit.utils import (
+    get_data_file_path,
+    quantity_to_string,
+    remove_subsets_from_list,
+    requires_package,
+    string_to_quantity,
+)
 from openff.toolkit.utils.exceptions import (
+    InvalidAtomMetadataError,
     InvalidConformerError,
     NotAttachedToMoleculeError,
     SmilesParsingError,
@@ -71,17 +76,6 @@ from openff.toolkit.utils.toolkits import (
     ToolkitWrapper,
     UndefinedStereochemistryError,
 )
-from openff.toolkit.utils.exceptions import (
-    NotAttachedToMoleculeError,
-    InvalidAtomMetadataError,
-)
-from openff.toolkit.utils import (
-    requires_package,
-    get_data_file_path,
-    remove_subsets_from_list,
-)
-
-
 
 # =============================================================================================
 # GLOBAL PARAMETERS
@@ -2512,9 +2506,9 @@ class FrozenMolecule(Serializable):
             molecule_dict["partial_charges"] = charges_serialized
             molecule_dict["partial_charges_unit"] = "elementary_charge"
 
-        molecule_dict['hierarchy_schemes'] = dict()
+        molecule_dict["hierarchy_schemes"] = dict()
         for iter_name, hier_scheme in self._hierarchy_schemes.items():
-            molecule_dict['hierarchy_schemes'][iter_name] = hier_scheme.to_dict()
+            molecule_dict["hierarchy_schemes"][iter_name] = hier_scheme.to_dict()
 
         return molecule_dict
 
@@ -2668,14 +2662,18 @@ class FrozenMolecule(Serializable):
 
         self._properties = molecule_dict["properties"]
 
-        for iter_name, hierarchy_scheme_dict in molecule_dict['hierarchy_schemes'].items():
-            new_hier_scheme = self.add_hierarchy_scheme(hierarchy_scheme_dict['uniqueness_criteria'],
-                                                        iter_name,
-                                                        )
+        for iter_name, hierarchy_scheme_dict in molecule_dict[
+            "hierarchy_schemes"
+        ].items():
+            new_hier_scheme = self.add_hierarchy_scheme(
+                hierarchy_scheme_dict["uniqueness_criteria"],
+                iter_name,
+            )
             # hierarchy_scheme = self._hierarchy_schemes[iter_name]
-            for element_dict in hierarchy_scheme_dict['hierarchy_elements']:
-                new_hier_scheme.add_hierarchy_element(element_dict['identifier'],
-                                                      element_dict['particle_indices'])
+            for element_dict in hierarchy_scheme_dict["hierarchy_elements"]:
+                new_hier_scheme.add_hierarchy_element(
+                    element_dict["identifier"], element_dict["particle_indices"]
+                )
             self._expose_hierarchy_scheme(iter_name)
 
     def __repr__(self):
@@ -2703,7 +2701,6 @@ class FrozenMolecule(Serializable):
         self._partial_charges = None
         self._conformers = None  # Optional conformers
         self._hierarchy_schemes = dict()
-
 
     def _copy_initializer(self, other):
         """
@@ -2739,14 +2736,17 @@ class FrozenMolecule(Serializable):
         return Molecule.are_isomorphic(self, other, return_atom_map=False)[0]
 
     def _add_default_hierarchy_schemes(self):
-        self.add_hierarchy_scheme(('chain', 'residue_number', 'residue_name'), 'residues')
-        self.add_hierarchy_scheme(('chain',), 'chains')
+        self.add_hierarchy_scheme(
+            ("chain", "residue_number", "residue_name"), "residues"
+        )
+        self.add_hierarchy_scheme(("chain",), "chains")
 
-    def add_hierarchy_scheme(self,
-                             uniqueness_criteria,
-                             iterator_name,
-                             ):
-        '''
+    def add_hierarchy_scheme(
+        self,
+        uniqueness_criteria,
+        iterator_name,
+    ):
+        """
         Parameters
         ----------
         uniqueness_criteria : tuple of str
@@ -2760,35 +2760,36 @@ class FrozenMolecule(Serializable):
         -------
         new_hier_scheme : openff.toolkit.topology.HierarchyScheme
             The newly created HierarchyScheme
-        '''
+        """
         assert iterator_name not in self._hierarchy_schemes
-        new_hier_scheme = HierarchyScheme(self,
-                                          uniqueness_criteria,
-                                          iterator_name,
-                                          # sort_func=sort_func
-                                          )
+        new_hier_scheme = HierarchyScheme(
+            self,
+            uniqueness_criteria,
+            iterator_name,
+            # sort_func=sort_func
+        )
         self._hierarchy_schemes[iterator_name] = new_hier_scheme
         return new_hier_scheme
 
     def delete_hierarchy_scheme(self, iter_name):
-        '''
+        """
         Parameters
         ----------
         iter_name : str
-        '''
+        """
         self._hierarchy_schemes.pop(iter_name)
         if hasattr(self, iter_name):
             delattr(self, iter_name)
 
     def perceive_hierarchy(self, iter_names=None):
-        '''
+        """
         Parameters
         ----------
         iter_names : Iterable of str, Optional
             Only perceive hierarchy for HierarchySchemes that expose specific iterator names.
             If not provided, all known hierarchies will be perceived, overwriting previous
             results if applicable.
-        '''
+        """
         if iter_names is None:
             iter_names = self._hierarchy_schemes.keys()
 
@@ -2799,9 +2800,7 @@ class FrozenMolecule(Serializable):
 
     def _expose_hierarchy_scheme(self, iter_name):
         assert iter_name in self._hierarchy_schemes
-        setattr(self,
-                iter_name,
-                self._hierarchy_schemes[iter_name].hierarchy_elements)
+        setattr(self, iter_name, self._hierarchy_schemes[iter_name].hierarchy_elements)
 
     def to_smiles(
         self,
@@ -6630,8 +6629,10 @@ class Molecule(FrozenMolecule):
         """
         # Read substructure dictionary file
         if not substructure_file_path:
-            substructure_file_path = get_data_file_path('proteins/aa_residues_substructures_with_caps.json')
-        with open(substructure_file_path, 'r') as subfile:
+            substructure_file_path = get_data_file_path(
+                "proteins/aa_residues_substructures_with_caps.json"
+            )
+        with open(substructure_file_path, "r") as subfile:
             substructure_dictionary = json.load(subfile)
 
         # TODO: Think of a better way to deal with no strict chirality case
@@ -6642,9 +6643,12 @@ class Molecule(FrozenMolecule):
             # Update inner key (SMARTS) maintaining its value
             for res_name, inner_dict in substructure_dictionary.items():
                 for smarts, atom_types in inner_dict.items():
-                    smarts_no_chirality = smarts.replace('@', '')  # remove @ in smarts
-                    substructure_dictionary_no_chirality[res_name][smarts_no_chirality] = \
-                        substructure_dictionary_no_chirality[res_name].pop(smarts)  # update key
+                    smarts_no_chirality = smarts.replace("@", "")  # remove @ in smarts
+                    substructure_dictionary_no_chirality[res_name][
+                        smarts_no_chirality
+                    ] = substructure_dictionary_no_chirality[res_name].pop(
+                        smarts
+                    )  # update key
             # replace with the new substructure dictionary
             substructure_dictionary = substructure_dictionary_no_chirality
 
@@ -6654,22 +6658,30 @@ class Molecule(FrozenMolecule):
             for smarts in smarts_dict:
                 for match in self.chemical_environment_matches(smarts):
                     matches[match] = smarts
-                    all_matches.append({'atom_idxs': match,
-                                        'atom_idxs_set': set(match),
-                                        'smarts': smarts,
-                                        'residue_name': residue_name,
-                                        'atom_names': smarts_dict[smarts]})
+                    all_matches.append(
+                        {
+                            "atom_idxs": match,
+                            "atom_idxs_set": set(match),
+                            "smarts": smarts,
+                            "residue_name": residue_name,
+                            "atom_names": smarts_dict[smarts],
+                        }
+                    )
 
         # Remove matches that are subsets of other matches
         # give precedence to the SMARTS defined at the end of the file
         match_idxs_to_delete = set()
-        for match_idx in range(len(all_matches)-1, 0, -1):
-            this_match_set = all_matches[match_idx]['atom_idxs_set']
+        for match_idx in range(len(all_matches) - 1, 0, -1):
+            this_match_set = all_matches[match_idx]["atom_idxs_set"]
             this_match_set_size = len(this_match_set)
             for match_before_this_idx in range(match_idx):
-                match_before_this_set = all_matches[match_before_this_idx]['atom_idxs_set']
+                match_before_this_set = all_matches[match_before_this_idx][
+                    "atom_idxs_set"
+                ]
                 match_before_this_set_size = len(match_before_this_set)
-                n_overlapping_atoms = len(this_match_set.intersection(match_before_this_set))
+                n_overlapping_atoms = len(
+                    this_match_set.intersection(match_before_this_set)
+                )
                 if n_overlapping_atoms > 0:
                     if match_before_this_set_size < this_match_set_size:
                         match_idxs_to_delete.add(match_before_this_idx)
@@ -6680,14 +6692,18 @@ class Molecule(FrozenMolecule):
         for match_idx in match_idxs_to_delete_list:
             all_matches.pop(match_idx)
 
-        all_matches.sort(key=lambda x: min(x['atom_idxs']))
+        all_matches.sort(key=lambda x: min(x["atom_idxs"]))
 
         # Now the matches have been deduplicated and de-subsetted
         for residue_num, match_dict in enumerate(all_matches):
-            for smarts_idx, atom_idx in enumerate(match_dict['atom_idxs']):
-                self.atoms[atom_idx].metadata['residue_name'] = match_dict['residue_name']
-                self.atoms[atom_idx].metadata['residue_number'] = residue_num + 1
-                self.atoms[atom_idx].metadata['atom_name'] = match_dict['atom_names'][smarts_idx]
+            for smarts_idx, atom_idx in enumerate(match_dict["atom_idxs"]):
+                self.atoms[atom_idx].metadata["residue_name"] = match_dict[
+                    "residue_name"
+                ]
+                self.atoms[atom_idx].metadata["residue_number"] = residue_num + 1
+                self.atoms[atom_idx].metadata["atom_name"] = match_dict["atom_names"][
+                    smarts_idx
+                ]
 
     def _ipython_display_(self):
         from IPython.display import display
@@ -6710,7 +6726,7 @@ class Molecule(FrozenMolecule):
 
 class HierarchyScheme:
     def __init__(self, parent, uniqueness_criteria, iterator_name):
-        '''
+        """
         A HierarchyScheme contains the information needed to perceive HierarchyElements from a
         Molecule containing atoms with metadata
 
@@ -6721,7 +6737,7 @@ class HierarchyScheme:
         iterator_name : str
             Name of the iterator that will be exposed to access the HierarchyElements generated
             by this scheme
-        '''
+        """
         self.parent = parent
         self.uniqueness_criteria = uniqueness_criteria
         self.iterator_name = iterator_name
@@ -6729,17 +6745,19 @@ class HierarchyScheme:
         self.hierarchy_elements = list()
 
     def to_dict(self):
-        '''
+        """
         Serialize this object to a basic dict of strings, ints, and floats
-        '''
+        """
         return_dict = dict()
-        return_dict['uniqueness_criteria'] = self.uniqueness_criteria
-        return_dict['iterator_name'] = self.iterator_name
-        return_dict['hierarchy_elements'] = [e.to_dict() for e in self.hierarchy_elements]
+        return_dict["uniqueness_criteria"] = self.uniqueness_criteria
+        return_dict["iterator_name"] = self.iterator_name
+        return_dict["hierarchy_elements"] = [
+            e.to_dict() for e in self.hierarchy_elements
+        ]
         return return_dict
 
     def perceive_hierarchy(self):
-        '''
+        """
         Groups the particles of the parent of this HierarchyScheme according to their
         metadata, and creates HierarchyElements suitable for iteration over the parent.
         Particles missing the metadata fields in this HierarchyScheme's
@@ -6749,8 +6767,9 @@ class HierarchyScheme:
         The HierarchyElements in this HierarchyScheme's `hierarchy_elements` attribute are STATIC -
         That is, they are updated only when `perceive_hierarchy` is run, NOT on-the-fly when
         atom metadata is modified.
-        '''
+        """
         from collections import defaultdict
+
         self.hierarchy_elements = list()
         # Determine which particles should get added to which HierarchyElements
         hier_eles_to_add = defaultdict(list)
@@ -6760,7 +6779,7 @@ class HierarchyScheme:
                 if field_key in particle.metadata:
                     particle_key.append(particle.metadata[field_key])
                 else:
-                    particle_key.append('None')
+                    particle_key.append("None")
 
             hier_eles_to_add[tuple(particle_key)].append(particle)
 
@@ -6772,7 +6791,7 @@ class HierarchyScheme:
         self.sort_hierarchy_elements()
 
     def add_hierarchy_element(self, identifier, particle_indices):
-        '''
+        """
         Instantiate a new HierarchyElement belonging to this HierarchyScheme.
         This is the main way to instantiate new HierarchyElements.
 
@@ -6781,42 +6800,44 @@ class HierarchyScheme:
         identifier : tuple of str and int
             uniqueness tuple
         particle_indicess : iterable int
-        '''
+        """
         new_hier_ele = HierarchyElement(self, identifier, particle_indices)
         self.hierarchy_elements.append(new_hier_ele)
         return new_hier_ele
 
     def sort_hierarchy_elements(self):
-        '''
+        """
         Semantically sort the HierarchyElements belonging to this object, according to
         their identifiers.
-        '''
+        """
         # hard-code the sort_func value here, since it's hard to serialize safely
-        sort_func = lambda x: version.parse('.'.join([str(i) for i in x.identifier]))
+        sort_func = lambda x: version.parse(".".join([str(i) for i in x.identifier]))
         self.hierarchy_elements.sort(key=sort_func)
 
 
 class HierarchyElement:
     def __init__(self, scheme, identifier, particle_indices):
-        '''
+        """
         scheme : HierarchyScheme
         id : tuple of str and int
             uniqueness tuple
         particle_indicess : iterable int
-        '''
+        """
         self.scheme = scheme
         self.identifier = identifier
         self.particle_indices = deepcopy(particle_indices)
-        for id_component, uniqueness_component in zip(identifier, scheme.uniqueness_criteria):
+        for id_component, uniqueness_component in zip(
+            identifier, scheme.uniqueness_criteria
+        ):
             setattr(self, uniqueness_component, id_component)
 
     def to_dict(self):
-        '''
+        """
         Serialize this object to a basic dict of strings, ints, and floats
-        '''
+        """
         return_dict = dict()
-        return_dict['identifier'] = self.identifier
-        return_dict['particle_indices'] = self.particle_indices
+        return_dict["identifier"] = self.identifier
+        return_dict["particle_indices"] = self.particle_indices
         return return_dict
 
     @property
@@ -6843,8 +6864,7 @@ class HierarchyElement:
         return self.scheme.parent
 
     def __str__(self):
-        return f'HierarchyElement {self.identifier} containing {len(self.particles)} particles'
+        return f"HierarchyElement {self.identifier} containing {len(self.particles)} particles"
 
     def __repr__(self):
         return self.__str__()
-

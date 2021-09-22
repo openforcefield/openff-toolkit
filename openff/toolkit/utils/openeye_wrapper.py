@@ -14,10 +14,9 @@ import tempfile
 from collections import defaultdict
 from functools import wraps
 from typing import TYPE_CHECKING, List, Optional, Tuple
-from cachetools import LRUCache, cached
-
 
 import numpy as np
+from cachetools import LRUCache, cached
 
 try:
     from openmm import unit
@@ -1065,6 +1064,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         return molecule
 
     to_openeye_cache = LRUCache(maxsize=4096)
+
     @cached(to_openeye_cache, key=base_wrapper._mol_to_ctab_and_aro_key)
     def _connection_table_to_openeye(
         self, molecule, aromaticity_model=DEFAULT_AROMATICITY_MODEL
@@ -1245,7 +1245,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             oe_idx = oe_atom.GetIdx()
             oemol_atoms[oe_to_off_idx[oe_idx]] = oe_atom
             off_atom = molecule.atoms[oe_to_off_idx[oe_idx]]
-            #oe_atom.SetData("name", off_atom.name)
+            # oe_atom.SetData("name", off_atom.name)
             oe_atom.SetName(off_atom.name)
 
             if off_atom.partial_charge is None:
@@ -1289,7 +1289,6 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             oechem.OESetSDData(oemol, str(key), str(value))
 
         return oemol
-
 
     def _get_smiles_flavor(self, isomeric, explicit_hydrogens):
         from openeye import oechem
@@ -2309,13 +2308,13 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         # OEPrepareSearch will clobber our desired aromaticity model if we don't sync up mol
         # and qmol ahead of time.
         # Prepare molecule
-        #oechem.OEClearAromaticFlags(mol)
-        #oechem.OEAssignAromaticFlags(mol, oearomodel)
+        # oechem.OEClearAromaticFlags(mol)
+        # oechem.OEAssignAromaticFlags(mol, oearomodel)
 
         # If aromaticity model was provided, prepare query molecule
         oechem.OEClearAromaticFlags(qmol)
         oechem.OEAssignAromaticFlags(qmol, oearomodel)
-        #oechem.OEAssignHybridization(mol)
+        # oechem.OEAssignHybridization(mol)
         oechem.OEAssignHybridization(qmol)
 
         # Build list of matches
