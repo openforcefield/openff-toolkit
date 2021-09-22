@@ -2,7 +2,6 @@ name: test
 channels:
   - openeye
   - conda-forge
-
 dependencies:
     # Base depends
   - python
@@ -33,3 +32,4 @@ dependencies:
   - qcelemental
   - qcportal
   - qcengine
+  - openff-interchange

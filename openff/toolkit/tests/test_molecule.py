@@ -19,10 +19,6 @@ TODO:
 
 """
 
-# =============================================================================================
-# GLOBAL IMPORTS
-# =============================================================================================
-
 import copy
 import os
 import pickle
@@ -30,7 +26,13 @@ from tempfile import NamedTemporaryFile
 
 import numpy as np
 import pytest
-from simtk import unit
+
+try:
+    from openmm import unit
+    from openmm.app import element
+except ImportError:
+    from simtk import unit
+    from simtk.openmm.app import element
 
 from openff.toolkit.tests.create_molecules import (
     create_acetaldehyde,
@@ -56,6 +58,7 @@ from openff.toolkit.topology.molecule import (
     SmilesParsingError,
 )
 from openff.toolkit.utils import get_data_file_path
+from openff.toolkit.utils.exceptions import ConformerGenerationError
 from openff.toolkit.utils.toolkits import (
     AmberToolsToolkitWrapper,
     OpenEyeToolkitWrapper,
@@ -297,8 +300,6 @@ class TestAtom:
 
     def test_atom_properties(self):
         """Test that atom properties are correctly populated and gettable"""
-        from simtk.openmm.app import element
-
         formal_charge = 0 * unit.elementary_charge
         is_aromatic = False
         # Attempt to create all elements supported by OpenMM
@@ -2411,9 +2412,6 @@ class TestMolecule:
 
     def test_add_conformers(self):
         """Test addition of conformers to a molecule"""
-        import numpy as np
-        from simtk import unit
-
         # Define a methane molecule
         molecule = Molecule()
         molecule.name = "methane"
@@ -3306,8 +3304,6 @@ class TestMolecule:
         """Test chemical environment matches"""
         # TODO: Move this to test_toolkits, test all available toolkits
         # Create chiral molecule
-        from simtk.openmm.app import element
-
         toolkit_wrapper = OpenEyeToolkitWrapper()
         molecule = Molecule()
         atom_C = molecule.add_atom(
@@ -3377,8 +3373,6 @@ class TestMolecule:
     def test_chemical_environment_matches_RDKit(self):
         """Test chemical environment matches"""
         # Create chiral molecule
-        from simtk.openmm.app import element
-
         toolkit_wrapper = RDKitToolkitWrapper()
         molecule = Molecule()
         atom_C = molecule.add_atom(
@@ -3459,9 +3453,6 @@ class TestMolecule:
         """Test computation/retrieval of partial charges"""
         # TODO: Test only one molecule for speed?
         # TODO: Do we need to deepcopy each molecule, or is setUp called separately for each test method?
-        import numpy as np
-        from simtk import unit
-
         # Do not modify original molecules.
         # molecules = copy.deepcopy(mini_drug_bank())
         # In principle, testing for charge assignment over a wide set of molecules is important, but
@@ -3682,15 +3673,46 @@ class TestMolecule:
         assert len([atom for atom in mol.atoms if atom.is_in_ring]) == n_atom_rings
         assert len([bond for bond in mol.bonds if bond.is_in_ring]) == n_bond_rings
 
-    @requires_pkg("ipython")
+    @requires_rdkit
+    @requires_openeye
+    def test_conformer_generation_failure(self):
+        # This test seems possibly redundant, is it needed?
+        molecule = Molecule.from_smiles("F[U](F)(F)(F)(F)F")
+
+        with pytest.raises(ConformerGenerationError, match="Omega conf.*fail"):
+            molecule.generate_conformers(
+                n_conformers=1, toolkit_registry=OpenEyeToolkitWrapper()
+            )
+
+        with pytest.raises(ConformerGenerationError, match="RDKit conf.*fail"):
+            molecule.generate_conformers(
+                n_conformers=1, toolkit_registry=RDKitToolkitWrapper()
+            )
+
+        with pytest.raises(ValueError) as execption:
+            molecule.generate_conformers(n_conformers=1)
+
+            # pytest's checking of the string representation of this exception does not seem
+            # to play well with how it's constructed currently, so manually compare contents
+            exception_as_str = str(exception)
+            assert (
+                "No registered toolkits can provide the capability" in exception_as_str
+            )
+            assert "generate_conformers" in exception_as_str
+            assert "OpenEye Omega conformer generation failed" in exception_as_str
+            assert "RDKit conformer generation failed" in exception_as_str
+
+
+class TestMoleculeVisualization:
+    @requires_pkg("IPython")
     @requires_rdkit
     def test_visualize_rdkit(self):
         """Test that the visualize method returns an expected object when using RDKit to generate a 2-D representation"""
-        import rdkit
+        import IPython
 
         mol = Molecule().from_smiles("CCO")
 
-        assert isinstance(mol.visualize(backend="rdkit"), rdkit.Chem.rdchem.Mol)
+        assert isinstance(mol.visualize(backend="rdkit"), IPython.core.display.SVG)
 
     @pytest.mark.skipif(
         has_pkg("rdkit"),
@@ -3724,7 +3746,15 @@ class TestMolecule:
         # Ensure an NGLView widget is returned
         assert isinstance(mol.visualize(backend="nglview"), nglview.NGLWidget)
 
-    @requires_pkg("ipython")
+        # Providing other arguments is an error
+        with pytest.raises(ValueError):
+            mol.visualize(backend="nglview", width=100)
+        with pytest.raises(ValueError):
+            mol.visualize(backend="nglview", height=100)
+        with pytest.raises(ValueError):
+            mol.visualize(backend="nglview", show_all_hydrogens=False)
+
+    @requires_pkg("IPython")
     @requires_openeye
     def test_visualize_openeye(self):
         """Test that the visualize method returns an expected object when using OpenEye to generate a 2-D representation"""

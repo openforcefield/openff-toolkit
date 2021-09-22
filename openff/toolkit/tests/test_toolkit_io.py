@@ -8,10 +8,6 @@ Tests for I/O functionality of the toolkit wrappers
 
 """
 
-# =============================================================================================
-# GLOBAL IMPORTS
-# =============================================================================================
-
 import os
 import pathlib
 import sys
@@ -21,12 +17,20 @@ from io import BytesIO, StringIO
 import numpy as np
 import pytest
 from numpy.testing import assert_allclose
-from simtk import unit
+
+try:
+    from openmm import unit
+except ImportError:
+    from simtk import unit
 
 from openff.toolkit.tests import create_molecules
 from openff.toolkit.tests.utils import requires_openeye, requires_rdkit
 from openff.toolkit.topology.molecule import Molecule
-from openff.toolkit.utils import OpenEyeToolkitWrapper, RDKitToolkitWrapper, exceptions
+from openff.toolkit.utils import OpenEyeToolkitWrapper, RDKitToolkitWrapper
+from openff.toolkit.utils.exceptions import (
+    SMILESParseError,
+    UndefinedStereochemistryError,
+)
 
 # ================================================================
 # Data records used for testing.
@@ -918,14 +922,14 @@ class BaseFromFileIO:
 
     def test_from_file_with_undefined_stereo(self):
         with pytest.raises(
-            exceptions.UndefinedStereochemistryError,
+            UndefinedStereochemistryError,
             match=f"Unable to make OFFMol from {self.tk_mol_name}: {self.tk_mol_name} has unspecified stereochemistry",
         ):
             self.toolkit_wrapper.from_file(file_manager.chebi_1148_sdf, "sdf")
 
     def test_from_file_obj_with_undefined_stereo(self):
         with pytest.raises(
-            exceptions.UndefinedStereochemistryError,
+            UndefinedStereochemistryError,
             match=f"Unable to make OFFMol from {self.tk_mol_name}: {self.tk_mol_name} has unspecified stereochemistry",
         ):
             self.toolkit_wrapper.from_file_obj(file_obj_manager.chebi_1148_sdf, "sdf")
@@ -1155,9 +1159,7 @@ class BaseSmiles:
         assert mol.n_bonds == 4
 
     def test_parse_bad_smiles(self):
-        with pytest.raises(
-            exceptions.SMILESParseError, match="Unable to parse the SMILES string"
-        ):
+        with pytest.raises(SMILESParseError, match="Unable to parse the SMILES string"):
             mol = self.toolkit_wrapper.from_smiles("QWERT")
 
     ### Copied from test_toolkits.py
@@ -1173,7 +1175,7 @@ class BaseSmiles:
     )
     def test_smiles_missing_stereochemistry(self, title, smiles):
         if "unspec" in title:
-            with pytest.raises(exceptions.UndefinedStereochemistryError):
+            with pytest.raises(UndefinedStereochemistryError):
                 self.toolkit_wrapper.from_smiles(smiles)
             mol = self.toolkit_wrapper.from_smiles(smiles, allow_undefined_stereo=True)
         else:

@@ -6,9 +6,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
 
-    - name: Update latest tag
+    - name: Update stable tag
       uses: richardsimko/update-tag@v1
       with:
-        tag_name: latest
+        tag_name: stable
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

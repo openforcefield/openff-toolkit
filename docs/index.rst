@@ -51,7 +51,9 @@ Using ``Molecule.to_moldoc()``:  # Make this link to the method
 Getting started
 ---------------
 
+=======
 .. toctree::
+   :caption: Getting started
    :maxdepth: 1
 
    installation
@@ -59,10 +61,8 @@ Getting started
    releasehistory
    faq
 
-Using the toolkit
------------------
-
 .. toctree::
+   :caption: Using the toolkit
    :maxdepth: 1
 
    users/concepts
@@ -71,10 +71,8 @@ Using the toolkit
    users/virtualsites
    users/developing
 
-API documentation
------------------
-
 .. toctree::
+  :caption: API documentation
   :maxdepth: 1
 
   topology

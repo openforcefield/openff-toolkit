@@ -20,13 +20,10 @@
 import os
 import sys
 
-import openff.toolkit
-import sphinx
-# bootstrap theme
-import sphinx_bootstrap_theme
-
 sys.path.insert(0, os.path.abspath("."))
 
+import openff.toolkit
+import sphinx
 
 # -- General configuration ------------------------------------------------
 
@@ -46,6 +43,7 @@ extensions = [
     "sphinx.ext.mathjax",
     "sphinx.ext.viewcode",
     "sphinx.ext.intersphinx",
+    "openff_sphinx_theme",
     "myst_nb",
     # "myst_parser",
     "moldoc",
@@ -129,10 +127,6 @@ language = None
 # This patterns also effect to html_static_path and html_extra_path
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
-# The name of the Pygments (syntax highlighting) style to use.
-pygments_style = "sphinx"
-# pygments_style = 'paraiso-dark'
-
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = False
 
@@ -141,68 +135,34 @@ todo_include_todos = False
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = "bootstrap"
-html_theme_path = sphinx_bootstrap_theme.get_html_theme_path()
+html_theme = "openff_sphinx_theme"
 
-# (Optional) Logo. Should be small enough to fit the navbar (ideally 24x24).
-# Path should be relative to the ``_static`` files directory.
-html_logo = "_static/openforcefield.png"
+# (Optional) Logo and favicon
+html_logo = "_static/images/logos/openff_toolkit_v1_white.png"
+html_favicon = "_static/images/favicon.svg"
 
 # Theme options are theme-specific and customize the look and feel of a
 # theme further.
 html_theme_options = {
-    # Disable the sidebar, since it takes up too much space
-    "nosidebar": True,
-    # Navigation bar title. (Default: ``project`` value)
-    "navbar_title": "OpenFF Toolkit",
-    # Tab name for entire site. (Default: "Site")
-    "navbar_site_name": "OpenFF Toolkit",
-    # A list of tuples containing pages or urls to link to.
-    # Valid tuples should be in the following forms:
-    #    (name, page)                 # a link to a page
-    #    (name, "/aa/bb", 1)          # a link to an arbitrary relative url
-    #    (name, "http://example.com", True) # arbitrary absolute url
-    # Note the "1" or "True" value above as the third argument to indicate
-    # an arbitrary url.
-    "navbar_links": [
-        # ("Examples", "https://github.com/openforcefield/openff-toolkit/tree/master/examples", True),
-        ("Open Force Field Initiative", "http://openforcefield.org", True),
-    ],
-    # Render the next and previous page links in navbar. (Default: true)
-    "navbar_sidebarrel": True,
-    # Render the current pages TOC in the navbar. (Default: true)
-    "navbar_pagenav": True,
-    # Tab name for the current pages TOC. (Default: "Page")
-    "navbar_pagenav_name": "Page",
-    # Global TOC depth for "site" navbar tab. (Default: 1)
-    # Switching to -1 shows all levels.
-    "globaltoc_depth": 2,
-    # Include hidden TOCs in Site navbar?
-    #
-    # Note: If this is "false", you cannot have mixed ``:hidden:`` and
-    # non-hidden ``toctree`` directives in the same page, or else the build
-    # will break.
-    #
-    # Values: "true" (default) or "false"
-    "globaltoc_includehidden": "true",
-    # HTML navbar class (Default: "navbar") to attach to <div> element.
-    # For black navbar, do "navbar navbar-inverse"
-    "navbar_class": "navbar navbar-inverse",
-    # Fix navigation bar to top of page?
-    # Values: "true" (default) or "false"
-    "navbar_fixed_top": "false",
-    # Location of link to source.
-    # Options are "nav" (default), "footer" or anything else to exclude.
-    "source_link_position": "nav",
-    # Bootswatch (http://bootswatch.com/) theme.
-    #
-    # Options are nothing (default) or the name of a valid theme
-    # such as "cosmo" or "sandstone".
-    "bootswatch_theme": "yeti",
-    # Choose Bootstrap version.
-    # Values: "3" (default) or "2" (in quotes)
-    "bootstrap_version": "3",
+    # Repository integration
+    # Set the repo url for the link to appear
+    "repo_url": "https://github.com/openforcefield/openff-toolkit",
+    # The name of the repo. If must be set if repo_url is set
+    "repo_name": "openff-toolkit",
+    # Must be one of github, gitlab or bitbucket
+    "repo_type": "github",
+    # Colour for sidebar captions and other accents. One of
+    # openff-toolkit-blue, openff-dataset-yellow, openff-evaluator-orange,
+    # red, pink, purple, deep-purple, indigo, blue, light-blue, cyan,
+    # teal, green, light-green, lime, yellow, amber, orange, deep-orange
+    "color_accent": "openff-toolkit-blue",
+    # Content Minification for deployment, prettification for debugging
+    "html_minify": False,
+    "html_prettify": False,
+    "css_minify": True,
+    "master_doc": False,
 }
+
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
@@ -210,18 +170,9 @@ html_static_path = ["_static"]
 
 # Custom sidebar templates, must be a dictionary that maps document names
 # to template names.
-#
-# This is required for the alabaster theme
-# refs: http://alabaster.readthedocs.io/en/latest/installation.html#sidebars
-# html_sidebars = {
-#    '**': [
-#        'about.html',
-#        'navigation.html',
-#        'relations.html',  # needs 'show_related': True theme option to display
-#        'searchbox.html',
-#        'donate.html',
-#    ]
-# }
+html_sidebars = {
+    "**": ["globaltoc.html", "searchbox.html", "localtoc.html"],
+}
 
 
 # -- Options for HTMLHelp output ------------------------------------------
