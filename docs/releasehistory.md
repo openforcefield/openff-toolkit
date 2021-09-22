@@ -67,6 +67,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ### Improved documentation and warnings
  - [PR #1065](https://github.com/openforcefield/openforcefield/pull/1017): Example notebooks were updated to use the
    Sage Open Force Field
+ - [PR #1062](https://github.com/openforcefield/openforcefield/pull/1062): 
+   Rewrote installation guide for clarity and comprehensiveness.
 
 ## 0.10.0 Improvements for force field fitting
 
