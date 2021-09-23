@@ -7,6 +7,7 @@ __all__ = ("ToolkitWrapper",)
 # =============================================================================================
 
 from functools import wraps
+from typing import Optional
 
 from openff.toolkit.utils.exceptions import (
     IncorrectNumConformersError,
@@ -26,12 +27,12 @@ class ToolkitWrapper:
     .. warning :: This API is experimental and subject to change.
     """
 
-    _is_available = None  # True if toolkit is available
-    _toolkit_version = None
-    _toolkit_name = None  # Name of the toolkit
-    _toolkit_installation_instructions = (
-        None  # Installation instructions for the toolkit
-    )
+    _is_available: Optional[bool] = None  # True if toolkit is available
+    _toolkit_version: Optional[str] = None
+    _toolkit_name: Optional[str] = None  # Name of the toolkit
+    _toolkit_installation_instructions: Optional[
+        str
+    ] = None  # Installation instructions for the toolkit
 
     # @staticmethod
     # TODO: Right now, to access the class definition, I have to make this a classmethod

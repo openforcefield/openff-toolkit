@@ -28,12 +28,12 @@ __all__ = [
     "ForceField",
 ]
 
-
 import copy
 import logging
 import os
 import pathlib
 from collections import OrderedDict
+from typing import List
 
 try:
     import openmm
@@ -75,10 +75,10 @@ logger = logging.getLogger(__name__)
 # =============================================================================================
 
 # Directory paths used by ForceField to discover offxml files.
-_installed_offxml_dir_paths = []
+_installed_offxml_dir_paths: List[str] = []
 
 
-def _get_installed_offxml_dir_paths():
+def _get_installed_offxml_dir_paths() -> List[str]:
     """Return the list of directory paths where to search for offxml files.
 
     This function load the information by calling all the entry points
