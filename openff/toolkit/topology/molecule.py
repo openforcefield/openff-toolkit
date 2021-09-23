@@ -5181,6 +5181,38 @@ class FrozenMolecule(Serializable):
         )
         return molecule
 
+    @requires_package("mmic_openff")
+    def to_mmschema(self, version, **kwargs):
+        """
+        Returns MMElemental Molecule that complies with the MMSchema speficiation.
+
+        Parameters
+        ----------
+        version : int
+            MMSchema version.
+
+        kwargs : dict
+            Additional keyword arguments to pass to the constructor.
+
+        Returns
+        ---------
+        mmelemental.models.Molecule
+            An MMElemental Molecule.
+
+        Examples
+        --------
+        Create MMElemental Molecule:
+
+        >>> mol = Molecule.from_smiles('CC')
+        >>> mm_mol = mol.to_mmschema()
+
+        """
+
+        import mmic_openff
+
+        offmol_wrapper = mmic_openff.models.OpenFFMol(data=self)
+        return offmol_wrapper.to_schema(version, **kwargs)
+
     @requires_package("qcelemental")
     def to_qcschema(self, multiplicity=1, conformer=0, extras=None):
         """
@@ -5330,6 +5362,44 @@ class FrozenMolecule(Serializable):
         adjusted_mapping = dict((current, new - 1) for current, new in mapping.items())
 
         return offmol.remap(adjusted_mapping, current_to_new=True)
+
+    @classmethod
+    @requires_package("mmic_openff")
+    def from_mmschema(cls, schema_object, version=None, **kwargs):
+        """
+        Returns a :class:`Molecule` from an MMElemental Molecule object.
+
+        Parameters
+        ----------
+        schema_object : mmelemental.models.Molecule
+            MMElemental molecule object that adheres to the MMSchema spec.
+
+        version : int, default=None
+            MMSchema version. Overrides schema_object.schema_version.
+
+        kwargs : dict
+            Additional keyword arguments to pass to the constructor.
+
+        Returns
+        ---------
+        openff.toolkit.topology.molecule.Molecule
+            An OpenFF molecule object.
+
+        Examples
+        --------
+        Create Molecule from MMElemental Molecule:
+
+        >>> import mmelemental
+        >>> mm_mol = mmelemental.models.Molecule(symbols=["C", "C"])
+        >>> offmol = Molecule.from_mmschema(mm_mol)
+
+        """
+
+        import mmic_openff
+
+        return mmic_openff.models.OpenFFMol.from_schema(
+            schema_object, version, **kwargs
+        ).data
 
     @classmethod
     @requires_package("qcelemental")
