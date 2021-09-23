@@ -80,6 +80,7 @@ from openff.toolkit.utils.exceptions import (
     DuplicateVirtualSiteTypeException,
     FractionalBondOrderInterpolationMethodUnsupportedError,
     IncompatibleParameterError,
+    MissingIndexedAttributeError,
     NonintegralMoleculeChargeException,
     NotEnoughPointsForInterpolationError,
     ParameterLookupError,
@@ -1085,35 +1086,30 @@ class _ParameterAttributeHandler:
 
         # Check if this is an indexed_mapped attribute.
         if (
-            (key is not None)
-            and (index is not None)
+            key is not None
+            and index is not None
             and attr_name in self._get_indexed_mapped_parameter_attributes()
         ):
             indexed_mapped_attr_value = getattr(self, attr_name)
             try:
                 return indexed_mapped_attr_value[index][key]
             except (IndexError, KeyError) as err:
-                if not err.args:
-                    err.args = ("",)
-                err.args = err.args + (
-                    f"'{item}' is out of bound for indexed attribute '{attr_name}'",
+                raise MissingIndexedAttributeError(
+                    f"{str(err)} '{item}' is out of bounds for indexed attribute '{attr_name}'"
                 )
-                raise
 
         # Otherwise, try indexed attribute
         # Separate the indexed attribute name from the list index.
         attr_name, index = self._split_attribute_index(item)
 
         # Check if this is an indexed attribute.
-        if (
-            index is not None
-        ) and attr_name in self._get_indexed_parameter_attributes():
+        if index is not None and attr_name in self._get_indexed_parameter_attributes():
             indexed_attr_value = getattr(self, attr_name)
             try:
                 return indexed_attr_value[index]
             except IndexError:
-                raise IndexError(
-                    f"'{item}' is out of bound for indexed attribute '{attr_name}'"
+                raise MissingIndexedAttributeError(
+                    f"'{item}' is out of bounds for indexed attribute '{attr_name}'"
                 )
 
         # Otherwise, forward the search to the next class in the MRO.
@@ -1148,12 +1144,9 @@ class _ParameterAttributeHandler:
                 indexed_mapped_attr_value[index][mapkey] = value
                 return
             except (IndexError, KeyError) as err:
-                if not err.args:
-                    err.args = ("",)
-                err.args = err.args + (
-                    f"'{key}' is out of bound for indexed attribute '{attr_name}'",
+                raise MissingIndexedAttributeError(
+                    f"{str(err)} '{key}' is out of bounds for indexed attribute '{attr_name}'"
                 )
-                raise
 
         # Otherwise, try indexed attribute
         # Separate the indexed attribute name from the list index.
@@ -1169,8 +1162,8 @@ class _ParameterAttributeHandler:
                 indexed_attr_value[index] = value
                 return
             except IndexError:
-                raise IndexError(
-                    f"'{key}' is out of bound for indexed attribute '{attr_name}'"
+                raise MissingIndexedAttributeError(
+                    f"'{key}' is out of bounds for indexed attribute '{attr_name}'"
                 )
 
         # Forward the request to the next class in the MRO.
