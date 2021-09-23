@@ -291,13 +291,25 @@ class Atom(Particle):
         """
         if isinstance(other, int):
             self._formal_charge = other * unit.elementary_charge
-        else:
+        elif isinstance(other, unit.Quantity):
             if other.units in unit.elementary_charge.compatible_units():
                 self._formal_charge = other
             else:
                 raise IncompatibleUnitError(
                     f"Cannot set formal charge with a quantity with units {other.units}"
                 )
+        elif isinstance(other, openmm_unit.Quantity):
+            from openff.units.openmm import from_openmm
+
+            converted = from_openmm(other)
+            if converted.units in unit.elementary_charge.compatible_units():
+                self._formal_charge = converted
+            else:
+                raise IncompatibleUnitError(
+                    f"Cannot set formal charge with a quantity with units {converted.units}"
+                )
+        else:
+            raise ValueError
 
     @property
     def partial_charge(self):
@@ -4015,17 +4027,24 @@ class FrozenMolecule(Serializable):
                 "Given {}, expected {}".format(coordinates.shape, new_conf.shape)
             )
 
-        if not hasattr(coordinates, "units"):
+        if isinstance(new_conf, unit.Quantity):
+            if not coordinates.units.is_compatible_with(unit.angstrom):
+                raise Exception(
+                    "Coordinates passed to Molecule._add_conformer with incompatible units. "
+                    "Ensure that units are dimension of length."
+                )
+        elif isinstance(new_conf, openmm_unit.Quantity):
+            if not coordinates.unit.is_compatible(openmm_unit.meter):
+                raise Exception(
+                    "Coordinates passed to Molecule._add_conformer with incompatible units. "
+                    "Ensure that units are dimension of length."
+                )
+        else:
             raise Exception(
                 "Coordinates passed to Molecule._add_conformer without units. Ensure that coordinates are "
-                "of type openmm.units.Quantity"
+                "of type openmm.unit.Quantity or openff.units.unit.Quantity"
             )
 
-        if not coordinates.units.is_compatible_with(unit.angstrom):
-            raise Exception(
-                "Coordinates passed to Molecule._add_conformer with incompatible units. "
-                "Ensure that units are dimension of length."
-            )
         try:
             new_conf[:] = coordinates
         except AttributeError as e:
@@ -4062,12 +4081,16 @@ class FrozenMolecule(Serializable):
         """
         if charges is None:
             self._partial_charges = None
-        else:
-            assert hasattr(charges, "units")
-            assert charges.units in unit.elementary_charge.compatible_units()
-            assert charges.shape == (self.n_atoms,)
+        elif charges.shape == (self.n_atoms,):
+            if isinstance(charges, unit.Quantity):
+                if charges.units in unit.elementary_charge.compatible_units():
+                    self._partial_charges = charges
+            elif isinstance(charges, openmm_unit.Quantity):
+                from openff.units.openmm import from_openmm
 
-            self._partial_charges = charges
+                converted = from_openmm(charges)
+                if converted.units in unit.elementary_charge.compatible_units():
+                    self._partial_charges = converted
 
     @property
     def n_particles(self):
