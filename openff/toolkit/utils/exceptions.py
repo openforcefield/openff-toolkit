@@ -298,3 +298,8 @@ class DuplicateVirtualSiteTypeException(OpenFFToolkitException):
 
 class CallbackRegistrationError(OpenFFToolkitException, TypeError):
     """Error raised when callback registration fails."""
+
+
+class HierarchySchemeWithIteratorNameAlreadyRegisteredException(OpenFFToolkitException):
+    """Exception raised when trying to register a HierarchyScheme to a molecule
+    that already has one with the same iterator name"""

@@ -63,6 +63,7 @@ from openff.toolkit.topology.molecule import (
     InvalidConformerError,
     Molecule,
     SmilesParsingError,
+    HierarchySchemeWithIteratorNameAlreadyRegisteredException
 )
 from openff.toolkit.utils import get_data_file_path
 from openff.toolkit.utils.exceptions import ConformerGenerationError
@@ -4034,7 +4035,6 @@ class TestHierarchies:
             dipeptide.residues[0]
 
     def test_residues_perceived_dipeptide(self, dipeptide_residues_perceived):
-        print(dipeptide_residues_perceived.atoms[0].metadata)
         assert "ACE" == dipeptide_residues_perceived.atoms[0].metadata["residue_name"]
         assert 1 == dipeptide_residues_perceived.atoms[0].metadata["residue_number"]
         assert "ALA" == dipeptide_residues_perceived.atoms[10].metadata["residue_name"]
@@ -4051,8 +4051,10 @@ class TestHierarchies:
         dipeptide_residues_perceived.add_hierarchy_scheme(
             ("residue_number",), "res_by_num2"
         )
+
         # Redundant hier schemes are NOT OK if their iter name is already used
-        with pytest.raises(AssertionError):
+        with pytest.raises(HierarchySchemeWithIteratorNameAlreadyRegisteredException,
+                           match='Can not add iterator with name "res_by_num" to this topology'):
             dipeptide_residues_perceived.add_hierarchy_scheme(
                 ("residue_number",), "res_by_num"
             )
@@ -4072,15 +4074,30 @@ class TestHierarchies:
             dipeptide_residues_perceived.res_by_num[0]
 
     def test_hierarchy_perceived_dipeptide(self, dipeptide_hierarchy_perceived):
+        assert str(dipeptide_hierarchy_perceived.residues[0]) == "HierarchyElement ('None', 'None', 'None') of iterator 'residues' containing 1 particle(s)"
         assert dipeptide_hierarchy_perceived.residues[0].chain == "None"
         assert dipeptide_hierarchy_perceived.residues[0].residue_name == "None"
         assert dipeptide_hierarchy_perceived.residues[0].residue_number == "None"
+        assert set(dipeptide_hierarchy_perceived.residues[0].particle_indices) == {15}
+
+        assert str(dipeptide_hierarchy_perceived.residues[1]) == "HierarchyElement ('None', 1, 'ACE') of iterator 'residues' containing 6 particle(s)"
         assert dipeptide_hierarchy_perceived.residues[1].chain == "None"
         assert dipeptide_hierarchy_perceived.residues[1].residue_name == "ACE"
         assert dipeptide_hierarchy_perceived.residues[1].residue_number == 1
+        assert set(dipeptide_hierarchy_perceived.residues[1].particle_indices) == {0, 1, 2, 3, 4, 5}
+
+        assert str(dipeptide_hierarchy_perceived.residues[2]) == "HierarchyElement ('None', 2, 'ALA') of iterator 'residues' containing 10 particle(s)"
         assert dipeptide_hierarchy_perceived.residues[2].chain == "None"
         assert dipeptide_hierarchy_perceived.residues[2].residue_name == "ALA"
         assert dipeptide_hierarchy_perceived.residues[2].residue_number == 2
+        assert set(dipeptide_hierarchy_perceived.residues[2].particle_indices) == {6, 7, 8, 9, 10, 11, 12, 13, 14, 16}
+
+        for residue in dipeptide_hierarchy_perceived.residues:
+            if residue.identifier == ("None", "None", "None"):
+                continue
+            for particle in residue.particles:
+                assert particle.metadata['residue_name'] == residue.residue_name
+                assert particle.metadata['residue_number'] == residue.residue_number
 
     def test_hierarchy_perceived_information_propagation(
         self, dipeptide_hierarchy_perceived
