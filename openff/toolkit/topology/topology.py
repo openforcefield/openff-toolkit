@@ -88,6 +88,9 @@ class MissingUniqueMoleculesError(MessageException):
 # PRIVATE SUBROUTINES
 # =============================================================================================
 
+def _TOPOLOGY_DEPRECATION_WARNING(old_method, new_method):
+    warnings.warn(f'Topology.{old_method} is deprecated. Use Topology.{new_method} instead.',
+                  DeprecationWarning)
 
 class _TransformedDict(MutableMapping):
     """A dictionary that transform and sort keys.
@@ -1767,9 +1770,9 @@ class Topology(Serializable):
         return self._molecules
 
     @property
-    def n_topology_atoms(self):
+    def n_atoms(self):
         """
-        Returns the number of topology atoms in in this Topology.
+        Returns the number of  atoms in in this Topology.
 
         Returns
         -------
@@ -1778,23 +1781,19 @@ class Topology(Serializable):
         n_atoms = 0
         for reference_molecule in self.reference_molecules:
             n_atoms_per_topology_molecule = reference_molecule.n_atoms
-            #n_instances_of_topology_molecule = len(
-            #    self._reference_molecule_to_topology_molecules[reference_molecule]
-            #)
             n_atoms += n_atoms_per_topology_molecule
         return n_atoms
 
     @property
-    def topology_atoms(self):
-        """Returns an iterator over the atoms in this Topology. These will be in ascending order of topology index (Note
-        that this is not necessarily the same as the reference molecule index)
+    def atoms(self):
+        """Returns an iterator over the atoms in this Topology. These will be in ascending order of topology index.
 
         Returns
         -------
         topology_atoms : Iterable of TopologyAtom
         """
-        for topology_molecule in self._molecules:
-            for atom in topology_molecule.atoms:
+        for molecule in self._molecules:
+            for atom in molecule.atoms:
                 yield atom
 
     def atom_index(self, atom):
@@ -1839,9 +1838,9 @@ class Topology(Serializable):
                 topology_molecule_particle_start_index += molecule.n_particles
         raise Exception('Particle not found in this Topology')
 
-    def topology_virtual_site_particle_start_index(self, virtual_site):
+    def virtual_site_particle_start_index(self, virtual_site):
         """
-        Returns the topology particle index of the first particle of this virtual site.
+        Returns the  particle index of the first particle of this virtual site.
 
         Parameters
         ----------
@@ -1855,7 +1854,7 @@ class Topology(Serializable):
         first_particle = next(virtual_site.particles)
         return self.particle_index(first_particle)
 
-    def topology_molecule_index(self, molecule):
+    def molecule_index(self, molecule):
         """
         Returns the index of a given molecule in this topology
 
@@ -1874,21 +1873,17 @@ class Topology(Serializable):
         raise Exception('Molecule not found in this Topology')
 
     @property
-    def n_topology_bonds(self):
+    def n_bonds(self):
         """
-        Returns the number of TopologyBonds in in this Topology.
+        Returns the number of Bonds in in this Topology.
 
         Returns
         -------
         n_bonds : int
         """
         n_bonds = 0
-        for reference_molecule in self.reference_molecules:
-            n_bonds_per_topology_molecule = reference_molecule.n_bonds
-            #n_instances_of_topology_molecule = len(
-            #    self._reference_molecule_to_topology_molecules[reference_molecule]
-            #)
-            n_bonds += n_bonds_per_topology_molecule
+        for molecule in self.molecules:
+            n_bonds += molecule.n_bonds
         return n_bonds
 
     @property
@@ -1897,62 +1892,48 @@ class Topology(Serializable):
 
         Returns
         -------
-        topology_bonds : Iterable of TopologyBond
+        bonds : Iterable of Bond
         """
         for topology_molecule in self._molecules:
             for bond in topology_molecule.bonds:
                 yield bond
 
     @property
-    def n_topology_particles(self):
+    def n_particles(self):
         """
-        Returns the number of topology particles (TopologyAtoms and TopologyVirtualSites) in in this Topology.
+        Returns the number of particles (Atoms and VirtualParticles) in in this Topology.
 
         Returns
         -------
-        n_topology_particles : int
+        n_particles : int
         """
         n_particles = 0
-        for reference_molecule in self.reference_molecules:
-            n_particles_per_topology_molecule = reference_molecule.n_particles
-           # n_instances_of_topology_molecule = len(
-           #     self._reference_molecule_to_topology_molecules[reference_molecule]
-           # )
-            n_particles += (
-                n_particles_per_topology_molecule
-            )
+        for molecule in self.molecules:
+            n_particles += molecule.n_particles
         return n_particles
 
     @property
-    def topology_particles(self):
-        """Returns an iterator over the particles (TopologyAtoms and TopologyVirtualSites) in this Topology. The
-        TopologyAtoms will be in order of ascending Topology index (Note that this may differ from the
-        order of atoms in the reference molecule index).
+    def particles(self):
+        """
+        Returns an iterator over the particles (Atoms and VirtualParticles) in this Topology. The
+        particles will be in order of ascending Topology index.
 
         Returns
         --------
-        topology_particles : Iterable of TopologyAtom and TopologyVirtualSite
+        particles : Iterable of Atom and VirtualParticle
         """
-        for topology_molecule in self._molecules:
-            for atom in topology_molecule.atoms:
+        for molecule in self.molecules:
+            for atom in molecule.atoms:
                 yield atom
-        for topology_molecule in self._molecules:
-            for vs in topology_molecule.virtual_sites:
+        for molecule in self.molecules:
+            for vs in molecule.virtual_sites:
                 for vp in vs.particles:
                     yield vp
 
     @property
-    def n_topology_virtual_sites(self):
-        """
-        Deprecated - Use Topology.n_virtual_sites instead.
-        """
-        warnings.warn("Topology.n_topology_virtual_sites is deprecated. Use Topology.n_virtual_sites instead")
-        return self.n_virtual_sites
-
-    @property
     def n_virtual_sites(self):
         """
-        Returns the number of TopologyVirtualSites in in this Topology.
+        Returns the number of VirtualSites in in this Topology.
 
         Returns
         -------
@@ -1960,26 +1941,9 @@ class Topology(Serializable):
         """
 
         n_virtual_sites = 0
-        for reference_molecule in self.reference_molecules:
-            n_virtual_sites_per_topology_molecule = reference_molecule.n_virtual_sites
-            n_virtual_sites += (
-                n_virtual_sites_per_topology_molecule
-            )
+        for molecule in self.molecules:
+            n_virtual_sites += molecule.n_virtual_sites
         return n_virtual_sites
-
-
-
-    @property
-    def topology_virtual_sites(self):
-        """Get an iterator over the virtual sites in this Topology
-
-        Returns
-        -------
-        topology_virtual_sites : Iterable of TopologyVirtualSite
-        """
-        warnings.warn("The TopologyX object classes are being deprecated. Use 'virtual_sites' instead.",
-                      DeprecationWarning)
-        return self.virtual_sites
 
     @property
     def virtual_sites(self):
@@ -2000,9 +1964,9 @@ class Topology(Serializable):
 
     @property
     def angles(self):
-        """Iterable of Tuple[TopologyAtom]: iterator over the angles in this Topology."""
-        for topology_molecule in self._molecules:
-            for angle in topology_molecule.angles:
+        """Iterable of Tuple[Atom]: iterator over the angles in this Topology."""
+        for molecule in self._molecules:
+            for angle in molecule.angles:
                 yield angle
 
     @property
@@ -2013,8 +1977,8 @@ class Topology(Serializable):
     @property
     def propers(self):
         """Iterable of Tuple[TopologyAtom]: iterator over the proper torsions in this Topology."""
-        for topology_molecule in self._molecules:
-            for proper in topology_molecule.propers:
+        for molecule in self.molecules:
+            for proper in molecule.propers:
                 yield proper
 
     @property
@@ -2025,8 +1989,8 @@ class Topology(Serializable):
     @property
     def impropers(self):
         """Iterable of Tuple[TopologyAtom]: iterator over the possible improper torsions in this Topology."""
-        for topology_molecule in self._molecules:
-            for improper in topology_molecule.impropers:
+        for molecule in self._molecules:
+            for improper in molecule.impropers:
                 yield improper
 
     @property
@@ -2064,8 +2028,8 @@ class Topology(Serializable):
         impropers, amber_impropers
 
         """
-        for topology_molecule in self._molecules:
-            for smirnoff_improper in topology_molecule.smirnoff_impropers:
+        for molecule in self.molecules:
+            for smirnoff_improper in molecule.smirnoff_impropers:
                 yield smirnoff_improper
 
     @property
@@ -2094,8 +2058,10 @@ class Topology(Serializable):
         --------
         impropers, smirnoff_impropers
         """
-        for topology_molecule in self._molecules:
-            for amber_improper in topology_molecule.amber_impropers:
+        1/0
+        # Was this always broken? If this returns atom INDICES then this was never in topology order
+        for molecule in self.molecules:
+            for amber_improper in molecule.amber_impropers:
                 yield amber_improper
 
     def nth_degree_neighbors(self, n_degrees: int):
@@ -2108,7 +2074,7 @@ class Topology(Serializable):
             The number of bonds separating atoms in each pair
         Returns
         -------
-        neighbors: iterator of tuple of TopologyAtom
+        neighbors: iterator of tuple of Atom
             Tuples (len 2) of atom that are separated by ``n`` bonds.
         Notes
         -----
@@ -2119,8 +2085,8 @@ class Topology(Serializable):
         function would consider them to be 2 apart and would not include them if ``n=4`` was
         passed.
         """
-        for topology_molecule in self._molecules:
-            for pair in topology_molecule.nth_degree_neighbors(n_degrees=n_degrees):
+        for molecule in self.molecules:
+            for pair in molecule.nth_degree_neighbors(n_degrees=n_degrees):
                 yield pair
 
     class _ChemicalEnvironmentMatch:
@@ -3321,3 +3287,95 @@ class Topology(Serializable):
             if hasattr(molecule, iter_name):
                 for item in getattr(molecule, iter_name):
                     yield item
+
+    # DEPRECATED API POINTS
+    @property
+    def n_topology_atoms(self):
+        """
+        Returns the number of atoms in in this Topology.
+
+        Returns
+        -------
+        n_topology_atoms : int
+        """
+        _TOPOLOGY_DEPRECATION_WARNING('n_topology_atom', 'n_atoms')
+        return self.n_atoms
+
+    @property
+    def topology_atoms(self):
+        """
+        Returns an iterator over the atoms in this Topology. These will be in ascending order of topology index.
+
+        Returns
+        -------
+        topology_atoms : Iterable of Atom
+        """
+        _TOPOLOGY_DEPRECATION_WARNING('topology_atoms', 'atoms')
+        return self.atoms
+
+    @property
+    def n_topology_bonds(self):
+        """
+        Returns the number of bonds in in this Topology.
+
+        Returns
+        -------
+        n_bonds : int
+        """
+        _TOPOLOGY_DEPRECATION_WARNING('n_topology_bonds', 'n_bonds')
+        return self.n_bonds
+
+    @property
+    def topology_bonds(self):
+        """Returns an iterator over the bonds in this Topology
+
+        Returns
+        -------
+        topology_bonds : Iterable of Bond
+        """
+        _TOPOLOGY_DEPRECATION_WARNING('topology_bonds', 'bonds')
+        return self.bonds
+
+    @property
+    def n_topology_particles(self):
+        """
+        Returns the number of topology particles (TopologyAtoms and TopologyVirtualSites) in in this Topology.
+
+        Returns
+        -------
+        n_topology_particles : int
+        """
+        _TOPOLOGY_DEPRECATION_WARNING('n_topology_particles', 'n_particles')
+        return self.n_particles
+
+    @property
+    def topology_particles(self):
+        """Returns an iterator over the particles (TopologyAtoms and TopologyVirtualSites) in this Topology. The
+        TopologyAtoms will be in order of ascending Topology index.
+
+        Returns
+        --------
+        topology_particles : Iterable of TopologyAtom and TopologyVirtualSite
+        """
+        _TOPOLOGY_DEPRECATION_WARNING('topology_particles', 'particles')
+        return self.particles
+
+
+    @property
+    def n_topology_virtual_sites(self):
+        """
+        Deprecated - Use Topology.n_virtual_sites instead.
+        """
+        _TOPOLOGY_DEPRECATION_WARNING('n_topology_virtual_sites', 'n_virtual_sites')
+        return self.n_virtual_sites
+
+    @property
+    def topology_virtual_sites(self):
+        """Get an iterator over the virtual sites in this Topology
+
+        Returns
+        -------
+        topology_virtual_sites : Iterable of TopologyVirtualSite
+        """
+        _TOPOLOGY_DEPRECATION_WARNING('topology_virtual_sites', 'virtual_sites')
+        return self.virtual_sites
