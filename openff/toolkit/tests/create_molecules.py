@@ -458,4 +458,3 @@ def tip5_water():
         symmetric=True,
     )
     return molecule
-

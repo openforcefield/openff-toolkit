@@ -64,6 +64,7 @@ from openff.toolkit.utils.exceptions import (
     InvalidConformerError,
     NotAttachedToMoleculeError,
     SmilesParsingError,
+    HierarchySchemeNotFoundException,
     HierarchySchemeWithIteratorNameAlreadyRegisteredException,
 )
 from openff.toolkit.utils.serialization import Serializable
@@ -2761,17 +2762,28 @@ class FrozenMolecule(Serializable):
             The newly created HierarchyScheme
         """
         if iterator_name in self._hierarchy_schemes:
-            msg = f'Can not add iterator with name "{iterator_name}" to this topology, as iterator ' \
-                  f'name is already used by {self._hierarchy_schemes[iterator_name]}'
+            msg = (
+                f'Can not add iterator with name "{iterator_name}" to this topology, as iterator '
+                f"name is already used by {self._hierarchy_schemes[iterator_name]}"
+            )
             raise HierarchySchemeWithIteratorNameAlreadyRegisteredException(msg)
         new_hier_scheme = HierarchyScheme(
             self,
             uniqueness_criteria,
             iterator_name,
-            # sort_func=sort_func
         )
         self._hierarchy_schemes[iterator_name] = new_hier_scheme
         return new_hier_scheme
+
+    @property
+    def hierarchy_schemes(self):
+        """
+        Returns
+        -------
+        A dict of the form {str: HierarchyScheme}
+            The HierarchySchemes associated with this Molecule.
+        """
+        return self._hierarchy_schemes
 
     def delete_hierarchy_scheme(self, iter_name):
         """
@@ -2779,6 +2791,11 @@ class FrozenMolecule(Serializable):
         ----------
         iter_name : str
         """
+        if not iter_name in self._hierarchy_schemes:
+            raise HierarchySchemeNotFoundException(
+                f'Can not delete HierarchyScheme with name "{iter_name}" '
+                f"because no HierarchyScheme with that iterator name exists"
+            )
         self._hierarchy_schemes.pop(iter_name)
         if hasattr(self, iter_name):
             delattr(self, iter_name)
@@ -6817,11 +6834,14 @@ class HierarchyScheme:
         self.hierarchy_elements.sort(key=sort_func)
 
     def __str__(self):
-        return f"HierarchyScheme with uniqueness_criteria '{self.uniqueness_criteria}', iterator_name " \
-               f"'{self.iterator_name}', and {len(self.hierarchy_elements)} elements"
+        return (
+            f"HierarchyScheme with uniqueness_criteria '{self.uniqueness_criteria}', iterator_name "
+            f"'{self.iterator_name}', and {len(self.hierarchy_elements)} elements"
+        )
 
     def __repr__(self):
         return self.__str__()
+
 
 class HierarchyElement:
     def __init__(self, scheme, identifier, particle_indices):
@@ -6872,8 +6892,10 @@ class HierarchyElement:
         return self.scheme.parent
 
     def __str__(self):
-        return f"HierarchyElement {self.identifier} of iterator '{self.scheme.iterator_name}' containing " \
-               f"{len(self.particle_indices)} particle(s)"
+        return (
+            f"HierarchyElement {self.identifier} of iterator '{self.scheme.iterator_name}' containing "
+            f"{len(self.particle_indices)} particle(s)"
+        )
 
     def __repr__(self):
         return self.__str__()

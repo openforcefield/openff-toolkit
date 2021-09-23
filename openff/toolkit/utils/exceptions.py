@@ -301,5 +301,11 @@ class CallbackRegistrationError(OpenFFToolkitException, TypeError):
 
 
 class HierarchySchemeWithIteratorNameAlreadyRegisteredException(OpenFFToolkitException):
-    """Exception raised when trying to register a HierarchyScheme to a molecule
+    """Exception raised when trying to add a HierarchyScheme to a molecule
     that already has one with the same iterator name"""
+
+
+# TODO: Should be a subclass of KeyError? Should be replaced by KeyError?
+class HierarchySchemeNotFoundException(OpenFFToolkitException):
+    """Exception raised when trying to access a HierarchyScheme from a molecule
+    that doesn't have one with the given iterator name"""
