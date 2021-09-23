@@ -4024,7 +4024,7 @@ class TestMoleculeSubclass:
 
 class TestHierarchies:
     def test_nothing_perceived_dipeptide(self, dipeptide):
-        with pytest.raises(KeyError) as context:
+        with pytest.raises(KeyError):
             assert None == dipeptide.atoms[0].metadata["residue_name"]
         with pytest.raises(KeyError) as context:
             assert "ALA" == dipeptide.atoms[10].metadata["residue_name"]

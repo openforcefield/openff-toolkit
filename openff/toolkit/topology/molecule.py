@@ -2786,7 +2786,7 @@ class FrozenMolecule(Serializable):
         Parameters
         ----------
         iter_names : Iterable of str, Optional
-            Only perceive hierarchy for HierarchySchemes that expose specific iterator names.
+            Only perceive hierarchy for HierarchySchemes that expose these iterator names.
             If not provided, all known hierarchies will be perceived, overwriting previous
             results if applicable.
         """
