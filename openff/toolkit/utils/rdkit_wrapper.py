@@ -19,7 +19,7 @@ except ImportError:
     from simtk import unit
 
 if TYPE_CHECKING:
-    from openforcefield.topology.molecule import Molecule
+    from openff.toolkit.topology.molecule import Molecule
 
 from openff.toolkit.utils import base_wrapper
 from openff.toolkit.utils.constants import DEFAULT_AROMATICITY_MODEL
@@ -529,7 +529,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         """
         from rdkit import Chem
-        from rdkit.Chem.EnumerateStereoisomers import (
+        from rdkit.Chem.EnumerateStereoisomers import (  # type: ignore[import]
             EnumerateStereoisomers,
             StereoEnumerationOptions,
         )
@@ -582,7 +582,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         """
 
         from rdkit import Chem
-        from rdkit.Chem.MolStandardize import rdMolStandardize
+        from rdkit.Chem.MolStandardize import rdMolStandardize  # type: ignore[import]
 
         enumerator = rdMolStandardize.TautomerEnumerator()
         enumerator.SetMaxTautomers(max_states)
@@ -1012,7 +1012,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             is, a string message explaing why. If the conformer is not problematic, the
             second return value will be none.
         """
-        from rdkit.Chem.rdMolTransforms import GetDihedralRad
+        from rdkit.Chem.rdMolTransforms import GetDihedralRad  # type: ignore[import]
 
         # Create a copy of the molecule which contains only this conformer.
         molecule_copy = copy.deepcopy(molecule)
