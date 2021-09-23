@@ -1615,8 +1615,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             offmol.partial_charges = None
         return offmol
 
-
     to_rdkit_cache = LRUCache(maxsize=4096)
+
     @cached(to_rdkit_cache, key=base_wrapper._mol_to_ctab_and_aro_key)
     def _connection_table_to_rdkit(
         self, molecule, aromaticity_model=DEFAULT_AROMATICITY_MODEL
@@ -1838,7 +1838,6 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         # Return non-editable version
         return Chem.Mol(rdmol)
 
-
     def to_inchi(self, molecule, fixed_hydrogens=False):
         """
         Create an InChI string for the molecule using the RDKit Toolkit.
@@ -2022,12 +2021,12 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             return full_matches
 
         # Make a copy of the molecule
-        #rdmol = Chem.Mol(rdmol)
+        # rdmol = Chem.Mol(rdmol)
         # Use designated aromaticity model
-        #if aromaticity_model == "OEAroModel_MDL":
+        # if aromaticity_model == "OEAroModel_MDL":
         #    Chem.SanitizeMol(rdmol, Chem.SANITIZE_ALL ^ Chem.SANITIZE_SETAROMATICITY)
         #    Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_MDL)
-        #else:
+        # else:
         #    # Only the OEAroModel_MDL is supported for now
         #    raise ValueError("Unknown aromaticity model: {}".aromaticity_models)
 
