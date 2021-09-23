@@ -2601,10 +2601,14 @@ class FrozenMolecule(Serializable):
         self._properties = molecule_dict["properties"]
 
     def __repr__(self):
-        """Return the SMILES of this molecule"""
-        return "Molecule with name '{}' and SMILES '{}'".format(
-            self.name, self.to_smiles()
-        )
+        """Return a summary of this molecule; SMILES if valid, Hill formula if not."""
+        description = f"Molecule with name '{self.name}'"
+        try:
+            smiles = self.to_smiles()
+        except:
+            hill = Molecule.to_hill_formula(self)
+            return description + f" with bad SMILES and Hill formula '{hill}'"
+        return description + f" and SMILES '{smiles}'"
 
     def __getstate__(self):
         return self.to_dict()

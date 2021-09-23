@@ -484,6 +484,29 @@ class TestMolecule:
         molecule_copy.properties["aaa"] = "bbb"
         assert "aaa" not in molecule.properties
 
+    @pytest.mark.skipif(
+        has_pkg("openeye"),
+        reason="Test requires that OpenEye is not installed",
+    )
+    def test_repr_bad_smiles(self):
+        """Test that the repr falls back to Hill formula if to_smiles fails."""
+
+        assert "bad" not in Molecule.from_smiles("CC").__repr__()
+
+        # OpenEye will report a smiles of ClCl(Cl)C without error, so only test with RDKit unless we
+        # can come up with a molecule that OpenEyeToolkitWrapper.to_smiles() will reliably fail on
+
+        molecule = Molecule()
+        molecule.add_atom(17, 0, False)
+        molecule.add_atom(17, 0, False)
+        molecule.add_atom(17, 0, False)
+
+        molecule.add_bond(0, 1, 1, False)
+        molecule.add_bond(0, 2, 1, False)
+
+        expected_repr = "Molecule with name '' with bad SMILES and Hill formula 'Cl3'"
+        assert molecule.__repr__() == expected_repr
+
     @pytest.mark.parametrize("toolkit", [OpenEyeToolkitWrapper, RDKitToolkitWrapper])
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_to_from_smiles(self, molecule, toolkit):
