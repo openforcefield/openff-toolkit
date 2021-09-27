@@ -2362,7 +2362,7 @@ class FrozenMolecule(Serializable):
         for atom in self.atoms:
             symbol = atom.element.symbol
             element_counts[symbol] += 1
-            atom.name = symbol + str(element_counts[symbol])
+            atom.name = symbol + str(element_counts[symbol]) + "x"
 
     def _validate(self):
         """

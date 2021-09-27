@@ -753,6 +753,7 @@ class TestMolecule:
         assert (
             len(set([atom.name for atom in molecule.atoms])) == molecule.n_atoms
         ) == molecule.has_unique_atom_names
+        assert all("x" in a.name for a in molecule.atoms)
 
     inchi_data = [
         {
