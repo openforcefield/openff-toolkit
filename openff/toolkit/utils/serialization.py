@@ -13,10 +13,6 @@ Serialization mix-in
 
 """
 
-# =============================================================================================
-# GLOBAL IMPORTS
-# =============================================================================================
-
 import abc
 
 from openff.toolkit.utils.utils import requires_package
@@ -321,7 +317,7 @@ class Serializable(abc.ABC):
 
         yaml.SafeDumper.add_representer(
             OrderedDict,
-            lambda dumper, value: self._represent_odict(
+            lambda dumper, value: self._represent_odict(  # type: ignore[name-defined]
                 dumper, u"tag:yaml.org,2002:map", value
             ),
         )

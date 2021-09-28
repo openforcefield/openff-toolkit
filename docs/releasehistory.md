@@ -11,19 +11,82 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 - [PR #964](https://github.com/openforcefield/openff-toolkit/pull/964): Adds initial implementation
   of atom metadata dictionaries. 
   
-### Bugfixes
+### New features
 
+- [PR #1050](https://github.com/openforcefield/openforcefield/pull/1050): Conformer generation
+  failures in
+  [`OpenEyeToolkitWrapper.generate_conformers`](openff.toolkit.utils.toolkits.OpenEyeToolkitWrapper.generate_conformers), and
+  [`RDKitToolkitWrapper.generate_conformers`](openff.toolkit.utils.toolkits.RDKitToolkitWrapper.generate_conformers)
+  now each raise
+  [`openff.toolkit.utils.exceptions.ConformerGenerationError`](openff.toolkit.utils.exceptions.ConformerGenerationError)
+  if conformer generation fails. The same behavior occurs in
+  [`Molecule.generate_conformers`](openff.toolkit.topology.Molecule.generate_conformers), but only
+  when the ``toolkit_registry`` argument is a
+  [`ToolkitWrapper`](openff.toolkit.utils.toolkits.ToolkitWrapper), not when it is a
+  [`ToolkitRegistry`](openff.toolkit.utils.toolkits.ToolkitRegistry). See also an entry in the "Behavior changed" section.
+- [PR #1036](https://github.com/openforcefield/openforcefield/pull/1036): SMARTS matching
+  logic for library charges was updated to use only one unique match instead of
+  enumerating all possible matches. This results in faster matching, particularly
+  with larger moldules.
+- [PR #1001](https://github.com/openforcefield/openff-toolkit/pull/1001): Revamped the 
+  [`Molecule.visualize()`](openff.toolkit.topology.Molecule.visualize) method's `rdkit` 
+  backend for more pleasing and idiomatic 2D visualization by default.
+
+
+### Bugfixes
+- [PR #1052](https://github.com/openforcefield/openff-toolkit/pull/1052>): Fixes
+  [Issue #986](<https://github.com/openforcefield/openff-toolkit/issues/986>)
+  by raising a subclass of `AttributeError` in
+  `_ParameterAttributeHandler.__getattr__`
 - [PR #1030](https://github.com/openforcefield/openforcefield/pull/1030): Fixes a bug
   in which capitalization of the `bond_order_model` sometimes matters.
 
+### Behavior changed
+
+- [PR #1050](https://github.com/openforcefield/openforcefield/pull/1050): In
+  [`Molecule.generate_conformers`](openff.toolkit.topology.Molecule.generate_conformers), a single
+  toolkit wrapper failing to generate conformers is no longer fatal, but if all wrappers in a registry
+  fail, then a `ValueError` will be raised. This mirrors the behavior of
+  [`Molecule.assign_partial_charges`](openff.toolkit.topology.Molecule.assign_partial_charges).
+- [PR #1046](https://github.com/openforcefield/openforcefield/pull/1046): Changes OFFXML output to
+  replace tabs with 4 spaces to standardize representation in different text viewers. 
+- [PR #1036](https://github.com/openforcefield/openforcefield/pull/1036): SMARTS matching
+  logic for library charges was updated to use only one unique match. No adverse side effects
+  were found in testing, but could bad behavior may possibly exist in some unknown caes.
+  Note that the default behavior for other parameter handlers was not updated.
+- [PR #1001](https://github.com/openforcefield/openff-toolkit/pull/1001): RDKit `Mol` objects 
+  created through the [`Molecule.to_rdkit()`](openff.toolkit.topology.Molecule.to_rdkit)
+  method have the `NoImplicit` property set to `True` on all atoms. This prevents RDKit from
+  incorrectly adding hydrogen atoms to to molecule. 
+- [PR #1058](https://github.com/openforcefield/openforcefield/pull/1058): Removes the unimplemented methods
+  [`ForceField.create_parmed_structure`](openff.toolkit.typing.engines.smirnoff.ForceField.create_parmed_structure),
+  [`Topology.to_parmed`](openff.toolkit.topology.Topology.to_parmed), and
+  [`Topology.from_parmed`](openff.toolkit.topology.Topology.from_parmed).
+- [PR #1065](https://github.com/openforcefield/openforcefield/pull/1065): The example `conformer_energies.py` script
+  now uses the Sage 2.0.0 force field.
 
 ### Tests updated
 - [PR #1017](https://github.com/openforcefield/openforcefield/pull/1017): Ensures that OpenEye-only CI builds really
   do lack both AmberTools and RDKit.  
 
+### Improved documentation and warnings
+ - [PR #1065](https://github.com/openforcefield/openforcefield/pull/1017): Example notebooks were updated to use the
+   Sage Open Force Field
+ - [PR #1062](https://github.com/openforcefield/openforcefield/pull/1062): 
+   Rewrote installation guide for clarity and comprehensiveness.
 
 ## 0.10.0 Improvements for force field fitting
 
+### Behaviors changed
+
+- [PR #1021](https://github.com/openforcefield/openforcefield/pull/1021): Renames
+  [`openff.toolkit.utils.exceptions.ParseError`](openff.toolkit.utils.exceptions.ParseError) to
+  [`openff.toolkit.utils.exceptions.SMILESParseError`](openff.toolkit.utils.exceptions.SMILESParseError) to
+  avoid a conflict with an identically-named exception in the SMIRNOFF XML parsing code.
+- [PR #1021](https://github.com/openforcefield/openforcefield/pull/1021): Renames and moves
+  [`openff.toolkit.typing.engines.smirnoff.forcefield.ParseError`](openff.toolkit.typing.engines.smirnoff.forcefield.ParseError) to
+  [`openff.toolkit.utils.exceptions.SMIRNOFFParseError`](openff.toolkit.utils.exceptions.SMIRNOFFParseError).
+  This `ParseError` is deprecated and will be removed in a future release.
 
 ### New features and behaviors changed
 
@@ -90,8 +153,6 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
    This uses explicit hydrogens rather than the toolkit's default of implicit hydrogens.
   - The RDKit wrapper no longer includes a header line. This improves
   the consistency between the OpenEye and RDKit outputs.
-
-
 
 ### Bugfixes
 

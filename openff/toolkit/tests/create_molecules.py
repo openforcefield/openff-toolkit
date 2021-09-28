@@ -11,15 +11,16 @@ These are common to several test modules.
 
 """
 
-# =============================================================================================
-# GLOBAL IMPORTS
-# =============================================================================================
-
-
 import numpy as np
-from simtk import unit
+
 import pytest
 
+try:
+    from openmm import unit
+except ImportError:
+    from simtk import unit
+
+from openff.toolkit.tests.utils import requires_openeye
 from openff.toolkit.topology.molecule import Molecule
 from openff.toolkit.utils import get_data_file_path
 from openff.toolkit.tests.utils import requires_openeye
@@ -320,7 +321,7 @@ def create_dinitrogen():
 
 @pytest.fixture
 def dipeptide():
-    dipeptide = Molecule.from_file(get_data_file_path('proteins/CTerminal_ALA.sdf'))
+    dipeptide = Molecule.from_file(get_data_file_path("proteins/CTerminal_ALA.sdf"))
     return dipeptide
 
 @pytest.fixture
@@ -336,10 +337,12 @@ def dipeptide_hierarchy_perceived(dipeptide_residues_perceived):
     dipeptide_residues_perceived.perceive_hierarchy()
     return dipeptide_residues_perceived
 
+
 @pytest.fixture
 def cyx():
-    cyx = Molecule.from_file(get_data_file_path('proteins/MainChain_CYX.sdf'))
+    cyx = Molecule.from_file(get_data_file_path("proteins/MainChain_CYX.sdf"))
     return cyx
+
 
 @pytest.fixture
 def cyx_residues_perceived(cyx):
@@ -362,7 +365,7 @@ def empty_molecule():
 def ethane_from_smiles():
     return Molecule.from_smiles("CC")
 
-@pytest.fixture
+  @pytest.fixture
 def ethene_from_smiles():
     return Molecule.from_smiles("C=C")
 
@@ -450,4 +453,3 @@ def tip5_water():
         symmetric=True,
     )
     return molecule
-
