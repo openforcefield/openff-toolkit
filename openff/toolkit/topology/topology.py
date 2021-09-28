@@ -1812,7 +1812,7 @@ class Topology(Serializable):
         topology_molecule_atom_start_index = 0
         for molecule in self.molecules:
             if molecule is atom.molecule:
-                return molecule.molecule_atom_index(atom) + topology_molecule_atom_start_index
+                return molecule.atom_index(atom) + topology_molecule_atom_start_index
             else:
                 topology_molecule_atom_start_index += molecule.n_atoms
         raise Exception('Atom not found in this Topology')
@@ -1887,15 +1887,15 @@ class Topology(Serializable):
         return n_bonds
 
     @property
-    def topology_bonds(self):
+    def bonds(self):
         """Returns an iterator over the bonds in this Topology
 
         Returns
         -------
         bonds : Iterable of Bond
         """
-        for topology_molecule in self._molecules:
-            for bond in topology_molecule.bonds:
+        for molecule in self.molecules:
+            for bond in molecule.bonds:
                 yield bond
 
     @property
@@ -2173,44 +2173,42 @@ class Topology(Serializable):
         # of that molecule in the Topology object.
         matches = list()
 
-        for ref_mol in self.reference_molecules:
+        for molecule in self.molecules:
 
             # Find all atomsets that match this definition in the reference molecule
             # This will automatically attempt to match chemically identical atoms in
             # a canonical order within the Topology
-            ref_mol_matches = ref_mol.chemical_environment_matches(
+            mol_matches = molecule.chemical_environment_matches(
                 smarts, toolkit_registry=toolkit_registry
             )
 
-            if len(ref_mol_matches) == 0:
+            if len(mol_matches) == 0:
                 continue
-
-            # Unroll corresponding atom indices over all instances of this molecule.
-            for topology_molecule in self._reference_molecule_to_topology_molecules[
-                ref_mol
-            ]:
+            #
+            # # Unroll corresponding atom indices over all instances of this molecule.
+            # for topology_molecule in self._reference_molecule_to_topology_molecules[
+            #     ref_mol
+            # ]:
 
                 # topology_molecule_start_index = topology_molecule.atom_start_topology_index
 
-                # Loop over matches
-                for reference_match in ref_mol_matches:
+            # Loop over matches
+            for match in mol_matches:
 
-                    # Collect indices of matching TopologyAtoms.
-                    topology_atom_indices = []
-                    for reference_molecule_atom_index in reference_match:
-                        reference_atom = topology_molecule.reference_molecule.atoms[
-                            reference_molecule_atom_index
-                        ]
-                        topology_atom = TopologyAtom(reference_atom, topology_molecule)
-                        topology_atom_indices.append(
-                            topology_atom.topology_particle_index
-                        )
-
-                    environment_match = Topology._ChemicalEnvironmentMatch(
-                        tuple(reference_match), ref_mol, tuple(topology_atom_indices)
+                # Collect indices of matching TopologyAtoms.
+                topology_atom_indices = []
+                for molecule_atom_index in match:
+                    reference_atom = molecule.atoms[molecule_atom_index]
+                    #topology_atom = TopologyAtom(reference_atom, topology_molecule)
+                    topology_atom_indices.append(
+                        self.atom_index(reference_atom)
                     )
 
-                    matches.append(environment_match)
+                environment_match = Topology._ChemicalEnvironmentMatch(
+                    tuple(match), molecule, tuple(topology_atom_indices)
+                )
+
+                matches.append(environment_match)
         return matches
 
     def copy_initializer(self, other):
@@ -2507,7 +2505,7 @@ class Topology(Serializable):
         # keep track of chains/residues as Atom.topology_molecule is
         # instantiated every time and can't be used as a key.
         for molecule in self.molecules:
-            molecule_id = self.topology_molecule_index(molecule)
+            molecule_id = self.molecule_index(molecule)
             residue_id = molecule.name
             for atom in molecule.atoms:
                 #reference_molecule = topology_molecule#.reference_molecule
@@ -2555,14 +2553,14 @@ class Topology(Serializable):
                 # Make sure that OpenFF and OpenMM Topology atoms have the same indices.
                 #assert atom.topology_atom_index == int(omm_atom.id) - 1
                 #print(self.topology_atom_index(atom))
-                assert self.topology_atom_index(atom) == int(omm_atom.id) - 1
+                assert self.atom_index(atom) == int(omm_atom.id) - 1
                 omm_atoms.append(omm_atom)
 
         # Add all bonds.
         bond_types = {1: Single, 2: Double, 3: Triple}
         for bond in self.topology_bonds:
             atom1, atom2 = bond.atoms
-            atom1_idx, atom2_idx = self.topology_atom_index(atom1), self.topology_atom_index(atom2)
+            atom1_idx, atom2_idx = self.atom_index(atom1), self.atom_index(atom2)
             bond_type = (
                 #Aromatic if bond.bond.is_aromatic else bond_types[bond.bond_order]
                 Aromatic if bond.is_aromatic else bond_types[bond.bond_order]
@@ -3007,10 +3005,12 @@ class Topology(Serializable):
             The bond between i and j.
 
         """
+        from openff.toolkit.topology import Atom
+
         if (type(i) is int) and (type(j) is int):
             atomi = self.atom(i)
             atomj = self.atom(j)
-        elif (type(i) is TopologyAtom) and (type(j) is TopologyAtom):
+        elif (type(i) is Atom) and (type(j) is Atom):
             atomi = i
             atomj = j
         else:
@@ -3019,12 +3019,12 @@ class Topology(Serializable):
                 "got {} and {}".format(i, j)
             )
 
-        for top_bond in atomi.topology_bonds:
-            for top_atom in top_bond.atoms:
-                if top_atom == atomi:
+        for bond in atomi.bonds:
+            for atom in bond.atoms:
+                if atom == atomi:
                     continue
-                if top_atom == atomj:
-                    return top_bond
+                if atom == atomj:
+                    return bond
 
         raise NotBondedError("No bond between atom {} and {}".format(i, j))
 

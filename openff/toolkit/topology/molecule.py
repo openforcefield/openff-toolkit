@@ -3213,8 +3213,6 @@ class FrozenMolecule(Serializable):
             """For the given data type, return the networkx graph"""
             import networkx as nx
 
-            from openff.toolkit.topology import TopologyMolecule
-
             if strip_pyrimidal_n_atom_stereo:
                 SMARTS = "[N+0X3:1](-[*])(-[*])(-[*])"
 
@@ -3227,15 +3225,15 @@ class FrozenMolecule(Serializable):
                         SMARTS, toolkit_registry=toolkit_registry
                     )
                 return data.to_networkx()
-            elif isinstance(data, TopologyMolecule):
-                # TopologyMolecule class instance
-                if strip_pyrimidal_n_atom_stereo:
-                    # Make a copy of the molecule so we don't modify the original
-                    ref_mol = deepcopy(data.reference_molecule)
-                    ref_mol.strip_atom_stereochemistry(
-                        SMARTS, toolkit_registry=toolkit_registry
-                    )
-                return ref_mol.to_networkx()
+            # elif isinstance(data, TopologyMolecule):
+            #     # TopologyMolecule class instance
+            #     if strip_pyrimidal_n_atom_stereo:
+            #         # Make a copy of the molecule so we don't modify the original
+            #         ref_mol = deepcopy(data.reference_molecule)
+            #         ref_mol.strip_atom_stereochemistry(
+            #             SMARTS, toolkit_registry=toolkit_registry
+            #         )
+            #     return ref_mol.to_networkx()
 
             elif isinstance(data, nx.Graph):
                 return data
@@ -4708,8 +4706,6 @@ class FrozenMolecule(Serializable):
 
         import networkx as nx
 
-        from openff.toolkit.topology import TopologyMolecule
-
         # check for networkx then assuming we have a Molecule or TopologyMolecule instance just try and
         # extract the info. Note we do not type check the TopologyMolecule due to cyclic dependencies
         if isinstance(molecule, nx.Graph):
@@ -4717,8 +4713,8 @@ class FrozenMolecule(Serializable):
                 dict(molecule.nodes(data="atomic_number", default=1)).values()
             )
 
-        elif isinstance(molecule, TopologyMolecule):
-            atom_nums = [atom.atomic_number for atom in molecule.atoms]
+        #elif isinstance(molecule, TopologyMolecule):
+        #    atom_nums = [atom.atomic_number for atom in molecule.atoms]
 
         elif isinstance(molecule, FrozenMolecule):
             atom_nums = [atom.atomic_number for atom in molecule.atoms]

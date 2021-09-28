@@ -4336,10 +4336,10 @@ class TestForceFieldParameterAssignment:
 
         # Check that the returned topology has the correct bond order
         for bond1, bond2 in zip(
-            omm_sys_top.topology_bonds, mod_omm_sys_top.topology_bonds
+            omm_sys_top.bonds, mod_omm_sys_top.bonds
         ):
             assert np.isclose(
-                bond1.bond.fractional_bond_order, bond2.bond.fractional_bond_order
+                bond1.fractional_bond_order, bond2.fractional_bond_order
             )
 
     @pytest.mark.parametrize(

@@ -1338,11 +1338,10 @@ class TestMolecule:
         molecule_file = Molecule.from_file(get_data_file_path("molecules/ethanol.sdf"))
         assert molecule_smiles.hill_formula == molecule_file.hill_formula
         # make sure the topology molecule gives the same formula
-        from openff.toolkit.topology.topology import Topology, TopologyMolecule
+        from openff.toolkit.topology.topology import Topology
 
         topology = Topology.from_molecules(molecule_smiles)
-        topmol = TopologyMolecule(molecule_smiles, topology)
-        assert molecule_smiles.hill_formula == Molecule.to_hill_formula(topmol)
+        assert molecule_smiles.hill_formula == Molecule.to_hill_formula(topology.molecules[0])
         # make sure the networkx matches
         assert molecule_smiles.hill_formula == Molecule.to_hill_formula(
             molecule_smiles.to_networkx()
@@ -1380,14 +1379,14 @@ class TestMolecule:
         # check matching with nx.Graph with full matching
         assert ethanol.is_isomorphic_with(ethanol_reverse.to_networkx()) is True
         # check matching with a TopologyMolecule class
-        from openff.toolkit.topology.topology import Topology, TopologyMolecule
+        from openff.toolkit.topology.topology import Topology
 
         topology = Topology.from_molecules(ethanol)
-        topmol = TopologyMolecule(ethanol, topology)
+        #topmol = TopologyMolecule(ethanol, topology)
         assert (
             Molecule.are_isomorphic(
                 ethanol,
-                topmol,
+                topology.molecules[0],
                 aromatic_matching=False,
                 formal_charge_matching=False,
                 bond_order_matching=False,
