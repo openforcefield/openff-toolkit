@@ -60,12 +60,12 @@ from openff.toolkit.utils import (
     string_to_quantity,
 )
 from openff.toolkit.utils.exceptions import (
+    HierarchySchemeNotFoundException,
+    HierarchySchemeWithIteratorNameAlreadyRegisteredException,
     InvalidAtomMetadataError,
     InvalidConformerError,
     NotAttachedToMoleculeError,
     SmilesParsingError,
-    HierarchySchemeNotFoundException,
-    HierarchySchemeWithIteratorNameAlreadyRegisteredException,
 )
 from openff.toolkit.utils.serialization import Serializable
 from openff.toolkit.utils.toolkits import (
@@ -2833,9 +2833,7 @@ class FrozenMolecule(Serializable):
 
     def _expose_hierarchy_scheme(self, iter_name):
         assert iter_name in self._hierarchy_schemes
-        setattr(self,
-                iter_name,
-                self._hierarchy_schemes[iter_name].hierarchy_elements)
+        setattr(self, iter_name, self._hierarchy_schemes[iter_name].hierarchy_elements)
 
     def to_smiles(
         self,
@@ -4324,7 +4322,6 @@ class FrozenMolecule(Serializable):
             ptl for vsite in self._virtual_sites for ptl in vsite.particles
         ]
 
-
     def particle_index(self, particle):
         """
         Returns the index of a given particle in this molecule
@@ -4341,7 +4338,6 @@ class FrozenMolecule(Serializable):
         for index, mol_particle in enumerate(self.particles):
             if particle is mol_particle:
                 return index
-
 
     @property
     def atoms(self):
@@ -4438,7 +4434,7 @@ class FrozenMolecule(Serializable):
         for index, mol_vsite in enumerate(self._virtual_sites):
             if virtual_site is mol_vsite:
                 return index
-        raise Exception('VirtualSite not found in Molecule')
+        raise Exception("VirtualSite not found in Molecule")
 
     def virtual_site_particle_start_index(self, virtual_site):
         """
@@ -4735,7 +4731,7 @@ class FrozenMolecule(Serializable):
                 dict(molecule.nodes(data="atomic_number", default=1)).values()
             )
 
-        #elif isinstance(molecule, TopologyMolecule):
+        # elif isinstance(molecule, TopologyMolecule):
         #    atom_nums = [atom.atomic_number for atom in molecule.atoms]
 
         elif isinstance(molecule, FrozenMolecule):
@@ -6889,7 +6885,6 @@ class HierarchyScheme:
         self.iterator_name = iterator_name
 
         self.hierarchy_elements = list()
-
 
     def to_dict(self):
         """

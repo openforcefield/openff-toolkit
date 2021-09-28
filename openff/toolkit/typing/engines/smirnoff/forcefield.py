@@ -1326,8 +1326,10 @@ class ForceField:
         # QUESTION: Will we want to do this for *all* cases, or would we ever want flexibility here?
         bond_particle_indices = []
 
-        bond_particle_indices = [(topology.particle_index(bond.atom1),
-                                  topology.particle_index(bond.atom2)) for bond in topology.bonds]
+        bond_particle_indices = [
+            (topology.particle_index(bond.atom1), topology.particle_index(bond.atom2))
+            for bond in topology.bonds
+        ]
 
         # for molecule in topology.topology_molecules:
         #

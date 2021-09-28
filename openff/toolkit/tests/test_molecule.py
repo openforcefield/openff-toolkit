@@ -59,12 +59,12 @@ from openff.toolkit.topology import NotBondedError
 from openff.toolkit.topology.molecule import (
     Atom,
     FrozenMolecule,
+    HierarchySchemeNotFoundException,
+    HierarchySchemeWithIteratorNameAlreadyRegisteredException,
     InvalidAtomMetadataError,
     InvalidConformerError,
     Molecule,
     SmilesParsingError,
-    HierarchySchemeNotFoundException,
-    HierarchySchemeWithIteratorNameAlreadyRegisteredException,
 )
 from openff.toolkit.utils import get_data_file_path
 from openff.toolkit.utils.exceptions import ConformerGenerationError
@@ -1344,7 +1344,9 @@ class TestMolecule:
         from openff.toolkit.topology.topology import Topology
 
         topology = Topology.from_molecules(molecule_smiles)
-        assert molecule_smiles.hill_formula == Molecule.to_hill_formula(topology.molecules[0])
+        assert molecule_smiles.hill_formula == Molecule.to_hill_formula(
+            topology.molecules[0]
+        )
         # make sure the networkx matches
         assert molecule_smiles.hill_formula == Molecule.to_hill_formula(
             molecule_smiles.to_networkx()
@@ -1385,7 +1387,7 @@ class TestMolecule:
         from openff.toolkit.topology.topology import Topology
 
         topology = Topology.from_molecules(ethanol)
-        #topmol = TopologyMolecule(ethanol, topology)
+        # topmol = TopologyMolecule(ethanol, topology)
         assert (
             Molecule.are_isomorphic(
                 ethanol,
@@ -4021,7 +4023,6 @@ class TestMoleculeSubclass:
         orig_mol = Molecule.from_smiles("CCO")
         mol = MyMol.from_dict(orig_mol.to_dict())
         assert isinstance(mol, MyMol)
-
 
     def test_nothing_perceived_dipeptide(self, dipeptide):
         """Test that loading a "vanilla" molecule from SDF does not assign atom metadata"""

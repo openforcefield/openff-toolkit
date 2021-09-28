@@ -2869,7 +2869,7 @@ class BondHandler(ParameterHandler):
             bond_matches,
             topology,
             valence_terms,
-            exception_cls=UnassignedBondParameterException
+            exception_cls=UnassignedBondParameterException,
         )
 
 
@@ -3424,7 +3424,9 @@ class _NonbondedHandler(ParameterHandler):
     def _init_charges_assigned(self, topology):
         topology._molecule_to_charge_method = dict()
         for molecule in topology.molecules:
-            topology._molecule_to_charge_method[topology.molecule_index(molecule)] = None
+            topology._molecule_to_charge_method[
+                topology.molecule_index(molecule)
+            ] = None
 
     def mark_charges_assigned(self, molecule, topology):
         """
@@ -3438,7 +3440,9 @@ class _NonbondedHandler(ParameterHandler):
             The topology to record this information on.
         """
         # TODO: Change this to interface with system object instead of topology once we move away from OMM's System
-        topology._molecule_to_charge_method[topology.molecule_index(molecule)] = self.__class__
+        topology._molecule_to_charge_method[
+            topology.molecule_index(molecule)
+        ] = self.__class__
 
     @staticmethod
     def check_charges_assigned(molecule, topology):
@@ -3459,7 +3463,10 @@ class _NonbondedHandler(ParameterHandler):
 
         """
         # TODO: Change this to interface with system object instead of topology once we move away from OMM's System
-        return topology._molecule_to_charge_method[topology.molecule_index(molecule)] is not None
+        return (
+            topology._molecule_to_charge_method[topology.molecule_index(molecule)]
+            is not None
+        )
 
 
 class vdWHandler(_NonbondedHandler):
@@ -3646,10 +3653,9 @@ class vdWHandler(_NonbondedHandler):
         #     assigned_terms=atom_matches, valence_terms=list(topology.topology_atoms)
         # )
         self._check_all_valence_terms_assigned(
-            atom_matches,
-            topology,
-            [(atom,) for atom in topology.atoms]
+            atom_matches, topology, [(atom,) for atom in topology.atoms]
         )
+
 
 class ElectrostaticsHandler(_NonbondedHandler):
     """Handles SMIRNOFF ``<Electrostatics>`` tags.
@@ -3832,9 +3838,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
                 particle_charge = molecule.partial_charges[molecule_particle_index]
 
                 # Retrieve nonbonded parameters for reference atom (charge not set yet)
-                _, sigma, epsilon = force.getParticleParameters(
-                    topology_particle_index
-                )
+                _, sigma, epsilon = force.getParticleParameters(topology_particle_index)
                 # Set the nonbonded force with the partial charge
                 force.setParticleParameters(
                     topology_particle_index, particle_charge, sigma, epsilon
@@ -3926,9 +3930,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
             formal_charge_sum = molecule.total_charge
             partial_charge_sum = 0.0 * unit.elementary_charge
             for particle in molecule.particles:
-                q, _, _ = force.getParticleParameters(
-                    topology.particle_index(particle)
-                )
+                q, _, _ = force.getParticleParameters(topology.particle_index(particle))
                 partial_charge_sum += q
             if (
                 abs(formal_charge_sum - partial_charge_sum)
@@ -4052,7 +4054,9 @@ class LibraryChargeHandler(_NonbondedHandler):
                 continue
 
             # Ensure all of the atoms in this mol are covered, otherwise skip it
-            top_particle_idxs = [topology.particle_index(atom) for atom in molecule.atoms]
+            top_particle_idxs = [
+                topology.particle_index(atom) for atom in molecule.atoms
+            ]
             if (
                 len(set(top_particle_idxs).intersection(assignable_atoms))
                 != molecule.n_atoms
@@ -4156,9 +4160,7 @@ class ToolkitAM1BCCHandler(_NonbondedHandler):
                 particle_charge = molecule.partial_charges[molecule_atom_index]
 
                 # Retrieve nonbonded parameters for reference atom (charge not set yet)
-                _, sigma, epsilon = force.getParticleParameters(
-                    topology_particle_index
-                )
+                _, sigma, epsilon = force.getParticleParameters(topology_particle_index)
                 # Set the nonbonded force with the partial charge
                 force.setParticleParameters(
                     topology_particle_index, particle_charge, sigma, epsilon
@@ -4334,7 +4336,7 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
             for particle in molecule.particles:
                 topology_particle_index = topology.particle_index(particle)
                 molecule_particle_index = molecule.particle_index(particle)
-                #topology_particle_index = topology_particle.topology_particle_index
+                # topology_particle_index = topology_particle.topology_particle_index
                 # if type(topology_particle) is TopologyAtom:
                 #     ref_mol_particle_index = (
                 #         topology_particle.atom.molecule_particle_index
@@ -4650,9 +4652,7 @@ class GBSAHandler(ParameterHandler):
 
         # Check that no atoms (n.b. not particles) are missing force parameters.
         self._check_all_valence_terms_assigned(
-            atom_matches,
-            topology,
-            [(atom,) for atom in topology.atoms]
+            atom_matches, topology, [(atom,) for atom in topology.atoms]
         )
 
         system.addForce(gbsa_force)

@@ -12,7 +12,6 @@ These are common to several test modules.
 """
 
 import numpy as np
-
 import pytest
 
 try:
@@ -23,7 +22,6 @@ except ImportError:
 from openff.toolkit.tests.utils import requires_openeye
 from openff.toolkit.topology.molecule import Molecule
 from openff.toolkit.utils import get_data_file_path
-from openff.toolkit.tests.utils import requires_openeye
 
 
 def create_cis_1_2_dichloroethene():
@@ -319,16 +317,19 @@ def create_dinitrogen():
     dinitrogen.partial_charges = charges
     return dinitrogen
 
+
 @pytest.fixture
 def dipeptide():
     dipeptide = Molecule.from_file(get_data_file_path("proteins/CTerminal_ALA.sdf"))
     return dipeptide
+
 
 @pytest.fixture
 def dipeptide_residues_perceived(dipeptide):
     dipeptide = Molecule(dipeptide)
     dipeptide.perceive_residues()
     return dipeptide
+
 
 @pytest.fixture
 def dipeptide_hierarchy_perceived(dipeptide_residues_perceived):
@@ -350,6 +351,7 @@ def cyx_residues_perceived(cyx):
     cyx.perceive_residues()
     return cyx
 
+
 @pytest.fixture
 def cyx_hierarchy_perceived(cyx_residues_perceived):
     cyx_residues_perceived = Molecule(cyx_residues_perceived)
@@ -357,26 +359,32 @@ def cyx_hierarchy_perceived(cyx_residues_perceived):
     cyx_residues_perceived.perceive_hierarchy()
     return cyx_residues_perceived
 
+
 @pytest.fixture
 def empty_molecule():
     return Molecule()
+
 
 @pytest.fixture
 def ethane_from_smiles():
     return Molecule.from_smiles("CC")
 
-  @pytest.fixture
+
+@pytest.fixture
 def ethene_from_smiles():
     return Molecule.from_smiles("C=C")
+
 
 @pytest.fixture
 def propane_from_smiles():
     return Molecule.from_smiles("CCC")
 
+
 @pytest.fixture
 def toluene_from_sdf():
     filename = get_data_file_path("molecules/toluene.sdf")
     return Molecule.from_file(filename)
+
 
 @requires_openeye
 @pytest.fixture
@@ -385,19 +393,17 @@ def toluene_from_charged_mol2():
     # TODO: This will require openeye to load
     return Molecule.from_file(filename)
 
+
 @pytest.fixture
 def charged_methylamine_from_smiles():
-    return Molecule.from_smiles(
-        "[H]C([H])([H])[N+]([H])([H])[H]"
-    )
+    return Molecule.from_smiles("[H]C([H])([H])[N+]([H])([H])[H]")
+
 
 @pytest.fixture
 def ethane_from_smiles_w_vsites():
     molecule = Molecule.from_smiles("CC")
     carbons = [atom for atom in molecule.atoms if atom.atomic_number == 6]
-    c0_hydrogens = [
-        atom for atom in carbons[0].bonded_atoms if atom.atomic_number == 1
-    ]
+    c0_hydrogens = [atom for atom in carbons[0].bonded_atoms if atom.atomic_number == 1]
     molecule.add_bond_charge_virtual_site(
         (carbons[0], carbons[1]),
         0.1 * unit.angstrom,
@@ -418,9 +424,7 @@ def propane_from_smiles_w_vsites():
     # Make a propane with virtual sites
     molecule = Molecule.from_smiles("CCC")
     carbons = [atom for atom in molecule.atoms if atom.atomic_number == 6]
-    c0_hydrogens = [
-        atom for atom in carbons[0].bonded_atoms if atom.atomic_number == 1
-    ]
+    c0_hydrogens = [atom for atom in carbons[0].bonded_atoms if atom.atomic_number == 1]
     # This will add *two* particles (symmetric=True), *one* virtual site
     molecule.add_monovalent_lone_pair_virtual_site(
         (c0_hydrogens[0], carbons[0], carbons[1]),
@@ -438,6 +442,7 @@ def propane_from_smiles_w_vsites():
         symmetric=False,
     )
     return molecule
+
 
 @pytest.fixture
 def tip5_water():

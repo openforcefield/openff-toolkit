@@ -11,7 +11,7 @@ from openff.toolkit.topology.molecule import (
     VirtualParticle,
     VirtualSite,
 )
-from openff.toolkit.topology.topology import (
+from openff.toolkit.topology.topology import (  # TopologyAtom,; TopologyBond,; TopologyMolecule,; TopologyVirtualParticle,; TopologyVirtualSite,
     DuplicateUniqueMoleculeError,
     ImproperDict,
     InvalidBoxVectorsError,
@@ -21,11 +21,6 @@ from openff.toolkit.topology.topology import (
     SortedDict,
     TagSortedDict,
     Topology,
-    #TopologyAtom,
-    #TopologyBond,
-    #TopologyMolecule,
-    #TopologyVirtualParticle,
-    #TopologyVirtualSite,
     UnsortedDict,
     ValenceDict,
 )
