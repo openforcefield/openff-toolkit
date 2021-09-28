@@ -11,6 +11,7 @@ Tests for Topology
 
 import numpy as np
 import pytest
+import itertools
 
 try:
     from openmm import app, unit
@@ -1173,13 +1174,17 @@ class TestTopology:
         top.add_molecule(dipeptide_hierarchy_perceived)
         top.add_molecule(cyx_hierarchy_perceived)
         residues = list(top.hierarchy_iterator("residues"))
-        assert len(residues) == 5
+        assert len(residues) == 9
         expected_ids = [
             ("None", "None", "None"),
-            ("None", 1, "ALA"),
-            ("None", "None", "None"),
-            ("None", 1, "CYS"),
+            ("None", 1, "ACE"),
+            ("None", 2, "ALA"),
+            ("None", 1, "ACE"),
             ("None", 2, "CYS"),
+            ("None", 3, "NME"),
+            ("None", 4, "ACE"),
+            ("None", 5, "CYS"),
+            ("None", 6, "NME"),
         ]
         for expected_id, residue in zip(expected_ids, residues):
             assert expected_id == residue.identifier

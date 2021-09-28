@@ -2036,8 +2036,6 @@ class Topology(Serializable):
         --------
         impropers, smirnoff_impropers
         """
-        1 / 0
-        # Was this always broken? If this returns atom INDICES then this was never in topology order
         for molecule in self.molecules:
             for amber_improper in molecule.amber_impropers:
                 yield amber_improper
