@@ -234,7 +234,7 @@ def mini_drug_bank(xfail_mols=None, wip_mols=None):
 
 # Use a "static" variable as a workaround as fixtures cannot be
 # used inside pytest.mark.parametrize (see issue #349 in pytest).
-mini_drug_bank.molecules = None
+mini_drug_bank.molecules = None  # type: ignore
 
 # All the molecules that raise UndefinedStereochemistryError when read by OETK()
 openeye_drugbank_undefined_stereo_mols = {

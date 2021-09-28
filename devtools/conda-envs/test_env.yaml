@@ -34,3 +34,12 @@ dependencies:
   - qcportal
   - qcengine
   - openff-interchange
+  # Typing
+  - mypy
+  - typing-extensions
+  - pip:
+    - types-pkg_resources
+    - types-setuptools
+    - types-toml
+    - types-PyYAML
+    - mongo-types
