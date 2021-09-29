@@ -128,6 +128,10 @@ class SMILESParseError(OpenFFToolkitException, ValueError):
     """The record could not be parsed into the given format"""
 
 
+class RadicalsNotSupportedError(OpenFFToolkitException):
+    """The OpenFF Toolkit does not currently support parsing molecules with radicals."""
+
+
 class InvalidConformerError(OpenFFToolkitException):
     """
     This error is raised when the conformer added to the molecule
