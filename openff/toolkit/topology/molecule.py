@@ -598,8 +598,7 @@ class VirtualParticle(Particle):
 
         originwt, xdir, ydir = self.virtual_site.local_frame_weights
         disp = self.virtual_site.local_frame_position
-        _unit = disp.unit
-        x, y, z = disp / _unit
+        x, y, z = disp.value_in_unit(disp.unit)
 
         # this pulls the correct ordering of the atoms
         pos = []
@@ -628,7 +627,7 @@ class VirtualParticle(Particle):
 
         position = origin + x * xaxis + y * yaxis + z * zaxis
 
-        return unit.Quantity(position, unit=_unit)
+        return unit.Quantity(position, unit=disp.unit)
 
     def _extract_position_from_conformer(self, conformation):
 
@@ -1344,8 +1343,8 @@ class BondChargeVirtualSite(VirtualSite):
         # towards the center of the other atoms, we want the
         # vsite to point away from the unit vector to achieve the desired
         # distance
-        _unit = self._distance.unit
-        pos = _unit * [-self._distance / _unit, 0.0, 0.0]
+        distance_unit = self._distance.unit
+        pos = distance_unit * [-self._distance.value_in_unit(distance_unit), 0.0, 0.0]
 
         return pos
 
@@ -1523,14 +1522,18 @@ class MonovalentLonePairVirtualSite(VirtualSite):
         theta = self._in_plane_angle.value_in_unit(unit.radians)
         psi = self._out_of_plane_angle.value_in_unit(unit.radians)
 
-        _unit = self._distance.unit
+        distance_unit = self._distance.unit
         pos = unit.Quantity(
             [
-                self._distance / _unit * np.cos(theta) * np.cos(psi),
-                self._distance / _unit * np.sin(theta) * np.cos(psi),
-                self._distance / _unit * np.sin(psi),
+                self._distance.value_in_unit(distance_unit)
+                * np.cos(theta)
+                * np.cos(psi),
+                self._distance.value_in_unit(distance_unit)
+                * np.sin(theta)
+                * np.cos(psi),
+                self._distance.value_in_unit(distance_unit) * np.sin(psi),
             ],
-            unit=_unit,
+            unit=distance_unit,
         )
 
         return pos
@@ -1693,12 +1696,12 @@ class DivalentLonePairVirtualSite(VirtualSite):
 
         theta = self._out_of_plane_angle.value_in_unit(unit.radians)
 
-        _unit = self._distance.unit
+        distance_unit = self._distance.unit
 
-        pos = _unit * [
-            -self._distance / _unit * np.cos(theta),
+        pos = distance_unit * [
+            -self._distance.value_in_unit(distance_unit) * np.cos(theta),
             0.0,
-            self._distance / _unit * np.sin(theta),
+            self._distance.value_in_unit(distance_unit) * np.sin(theta),
         ]  # pos of the vsite in local crds
         return pos
 
@@ -1848,8 +1851,10 @@ class TrivalentLonePairVirtualSite(VirtualSite):
         displacements in the local frame for the x, y, and z directions.
         """
 
-        _unit = self._distance.unit
-        pos = unit.Quantity([-self._distance / _unit, 0.0, 0.0], unit=_unit)
+        distance_unit = self._distance.unit
+        pos = unit.Quantity(
+            [-self._distance.value_in_unit(distance_unit), 0.0, 0.0], unit=distance_unit
+        )
 
         return pos
 
