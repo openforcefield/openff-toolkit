@@ -1805,15 +1805,9 @@ class Topology(Serializable):
         index : int
             The index of the given particle in this topology
         """
-        topology_molecule_particle_start_index = 0
-        for molecule in self.molecules:
-            if molecule is particle.molecule:
-                return (
-                    molecule.particle_index(particle)
-                    + topology_molecule_particle_start_index
-                )
-            else:
-                topology_molecule_particle_start_index += molecule.n_particles
+        for index, topology_particle in enumerate(self.particles):
+            if particle is topology_particle:
+                return index
         raise Exception("Particle not found in this Topology")
 
     def virtual_site_particle_start_index(self, virtual_site):
@@ -1849,6 +1843,51 @@ class Topology(Serializable):
             if molecule is topology_molecule:
                 return index
         raise Exception("Molecule not found in this Topology")
+
+    def molecule_atom_start_index(self, molecule):
+        """
+        Returns the index of a molecule's first atom in this topology
+
+        Parameters
+        ----------
+        molecule : openff.toolkit.topology.FrozenMolecule
+
+        Returns
+        -------
+        index : int
+        """
+        return self.atom_index(molecule.atoms[0])
+
+
+    def molecule_particle_start_index(self, molecule):
+        """
+        Returns the index of a molecule's first particle in this topology
+
+        Parameters
+        ----------
+        molecule : openff.toolkit.topology.FrozenMolecule
+
+        Returns
+        -------
+        index : int
+        """
+        return self.particle_index(molecule.particles[0])
+
+
+
+    def molecule_virtual_particle_start_index(self, molecule):
+        """
+        Returns the index of a molecule's first virtual particle in this topology
+
+        Parameters
+        ----------
+        molecule : openff.toolkit.topology.FrozenMolecule
+
+        Returns
+        -------
+        index : int
+        """
+        return self.particle_index(molecule.virtual_sites[0].particles[0])
 
     @property
     def n_bonds(self):
@@ -2381,10 +2420,13 @@ class Topology(Serializable):
                     for top_index, ref_index in top_to_ref_index
                 ]
             )
-            topology.add_molecule(
-                graph_to_unq_mol[unq_mol_G],
-                # local_topology_to_reference_index=local_top_to_ref_index,
-            )
+            unq_mol = graph_to_unq_mol[unq_mol_G]
+            remapped_mol = unq_mol.remap(local_top_to_ref_index, current_to_new=False)
+            topology.add_molecule(remapped_mol)
+            #topology.add_molecule(
+            #    graph_to_unq_mol[unq_mol_G],
+            #    local_topology_to_reference_index=local_top_to_ref_index,
+            #)
 
         topology.box_vectors = openmm_topology.getPeriodicBoxVectors()
         # TODO: How can we preserve metadata from the openMM topology when creating the OFF topology?

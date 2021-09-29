@@ -3780,7 +3780,8 @@ class ElectrostaticsHandler(_NonbondedHandler):
                     openmm.unit.Quantity(charge_mol.partial_charges)
                 )
                 for charge_idx, ref_idx in topology_atom_map.items():
-                    temp_mol_charges[ref_idx] = charge_mol.partial_charges[charge_idx]
+                    temp_mol_charges[charge_idx] = charge_mol.partial_charges[ref_idx]
+                    # temp_mol_charges[ref_idx] = charge_mol.partial_charges[charge_idx]
                 molecule.partial_charges = temp_mol_charges
                 return True
 
@@ -4075,11 +4076,11 @@ class LibraryChargeHandler(_NonbondedHandler):
                     top_particle_idx, atom_assignments[top_particle_idx], sigma, epsilon
                 )
 
-            ref_mols_assigned.add(molecule)
-
+            # ref_mols_assigned.add(molecule)
+            self.mark_charges_assigned(molecule, topology)
         # Finally, mark that charges were assigned for this reference molecule
-        for assigned_mol in ref_mols_assigned:
-            self.mark_charges_assigned(assigned_mol, topology)
+        # for assigned_mol in ref_mols_assigned:
+        #     self.mark_charges_assigned(assigned_mol, topology)
 
 
 class ToolkitAM1BCCHandler(_NonbondedHandler):
@@ -5714,7 +5715,7 @@ class VirtualSiteHandler(_NonbondedHandler):
             Topology to add virtual sites to.
         """
 
-        for molecule in topology.reference_molecules:
+        for molecule in topology.molecules:
 
             """The following two lines below should be avoided but is left
             until a better solution is found (see #699). The issue is that a
@@ -5742,7 +5743,7 @@ class VirtualSiteHandler(_NonbondedHandler):
             for vsite_type, orientations in virtual_sites:
                 vsite_type.add_virtual_site(molecule, orientations, replace=True)
 
-    def _create_openmm_virtual_sites(self, system, force, topology, ref_mol):
+    def _create_openmm_virtual_sites(self, system, force, topology, molecule):
 
         """
         Here we must assume that
@@ -5759,32 +5760,32 @@ class VirtualSiteHandler(_NonbondedHandler):
         standpoint, to require them to be.
         """
 
-        for vsite in ref_mol.virtual_sites:
+        for vsite in molecule.virtual_sites:
             ref_key = [atom.molecule_atom_index for atom in vsite.atoms]
             logger.debug("VSite ref_key: {}".format(ref_key))
 
-            ms = topology._reference_molecule_to_topology_molecules[ref_mol]
-            for top_mol in ms:
-                logger.debug("top_mol: {}".format(top_mol))
+            # ms = topology._reference_molecule_to_topology_molecules[ref_mol]
+            # for top_mol in ms:
+            logger.debug("molecule: {}".format(molecule))
 
-                ids = self._create_openmm_virtual_particle(
-                    system, force, top_mol, vsite, ref_key
-                )
+            ids = self._create_openmm_virtual_particle(
+                system, force, molecule, vsite, ref_key, topology
+            )
 
-                # Go and exclude each of the vsite particles; this makes
-                # sense because these particles cannot "feel" forces, only
-                # exert them
-                policy = self._parameter_to_policy[self.exclusion_policy]
-                if policy.value != self._ExclusionPolicy.NONE.value:
-                    # Default here is to always exclude vsites which are
-                    # of the same virtual site. Their positions are rigid,
-                    # and so any energy that would be added to the system
-                    # due to their pairwise interaction would not make sense.
-                    for i, j in combinations(ids, 2):
-                        logger.debug("Excluding vsite {} vsite {}".format(i, j))
-                        force.addException(i, j, 0.0, 0.0, 0.0, replace=True)
+            # Go and exclude each of the vsite particles; this makes
+            # sense because these particles cannot "feel" forces, only
+            # exert them
+            policy = self._parameter_to_policy[self.exclusion_policy]
+            if policy.value != self._ExclusionPolicy.NONE.value:
+                # Default here is to always exclude vsites which are
+                # of the same virtual site. Their positions are rigid,
+                # and so any energy that would be added to the system
+                # due to their pairwise interaction would not make sense.
+                for i, j in combinations(ids, 2):
+                    logger.debug("Excluding vsite {} vsite {}".format(i, j))
+                    force.addException(i, j, 0.0, 0.0, 0.0, replace=True)
 
-    def _create_openmm_virtual_particle(self, system, force, top_mol, vsite, ref_key):
+    def _create_openmm_virtual_particle(self, system, force, molecule, vsite, ref_key, topology):
 
         policy = self._parameter_to_policy[self.exclusion_policy]
 
@@ -5795,7 +5796,7 @@ class VirtualSiteHandler(_NonbondedHandler):
             sort_key = [orientation.index(i) for i in ref_key]
             atom_key = [ref_key[i] for i in sort_key]
             logger.debug("sort_key: {}".format(sort_key))
-            atom_key = [top_mol.atom_start_topology_index + i for i in atom_key]
+            atom_key = [topology.molecule_atom_start_index(molecule) + i for i in atom_key]
 
             omm_vsite = vsite.get_openmm_virtual_site(atom_key)
             vsite_q = self._apply_charge_increment(

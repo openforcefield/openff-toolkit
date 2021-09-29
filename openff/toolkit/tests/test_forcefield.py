@@ -4175,8 +4175,8 @@ class TestForceFieldParameterAssignment:
             omm_sys_top.topology_bonds, mod_omm_sys_top.topology_bonds
         ):
             # 'approx()' because https://github.com/openforcefield/openff-toolkit/issues/994
-            assert bond1.bond.fractional_bond_order == pytest.approx(
-                bond2.bond.fractional_bond_order
+            assert bond1.fractional_bond_order == pytest.approx(
+                bond2.fractional_bond_order
             )
 
     def test_fractional_bond_order_ignore_existing_confs(self):
