@@ -23,17 +23,17 @@ __all__ = [
     "SMIRNOFFVersionError",
     "SMIRNOFFAromaticityError",
     "SMIRNOFFParseError",
-    "ParseError",
     "PartialChargeVirtualSitesError",
     "ForceField",
 ]
-
 
 import copy
 import logging
 import os
 import pathlib
+import warnings
 from collections import OrderedDict
+from typing import List
 
 try:
     import openmm
@@ -49,7 +49,6 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
 from openff.toolkit.typing.engines.smirnoff.plugins import load_handler_plugins
 from openff.toolkit.utils.exceptions import (
     ParameterHandlerRegistrationError,
-    ParseError,
     PartialChargeVirtualSitesError,
     SMIRNOFFAromaticityError,
     SMIRNOFFParseError,
@@ -64,6 +63,23 @@ from openff.toolkit.utils.utils import (
     requires_package,
 )
 
+deprecated_names = ["ParseError"]
+
+
+def __getattr__(name):
+    if name in deprecated_names:
+        warnings.filterwarnings("default", category=DeprecationWarning)
+        warning_msg = f"{name} is DEPRECATED and will be removed in a future release of the OpenFF Toolkit."
+        warnings.warn(warning_msg, DeprecationWarning)
+
+        if name == "ParseError":
+            from openff.toolkit.utils.exceptions import _DeprecatedParseError
+
+            return _DeprecatedParseError
+
+    raise AttributeError(f"module {__name__} has no attribute {name}")
+
+
 # =============================================================================================
 # CONFIGURE LOGGER
 # =============================================================================================
@@ -75,10 +91,10 @@ logger = logging.getLogger(__name__)
 # =============================================================================================
 
 # Directory paths used by ForceField to discover offxml files.
-_installed_offxml_dir_paths = []
+_installed_offxml_dir_paths: List[str] = []
 
 
-def _get_installed_offxml_dir_paths():
+def _get_installed_offxml_dir_paths() -> List[str]:
     """Return the list of directory paths where to search for offxml files.
 
     This function load the information by calling all the entry points

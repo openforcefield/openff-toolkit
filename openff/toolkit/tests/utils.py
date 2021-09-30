@@ -1175,7 +1175,7 @@ def _get_torsion_force_parameters(force, system, ignored_parameters):
         torsion_key = [atom1, atom2, atom3, atom4]
         if len(set(torsion_key)) != 4:
             raise ValueError(
-                "Torsion {} is defined on less than 4 atoms: {}".format(torsion_key)
+                f"Torsion {torsion_idx} is defined on less than 4 atoms: {torsion_key}"
             )
 
         # Check if this is proper or not.

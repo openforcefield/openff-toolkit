@@ -1030,7 +1030,7 @@ class TestForceField:
         forcefield = ForceField(iter(file_paths))
 
     @pytest.mark.skip(reason="Needs to be updated for 0.2.0 syntax")
-    def test_create_gbsa():
+    def test_create_gbsa(self):
         """Test reading of ffxml files with GBSA support."""
         forcefield = ForceField("test_forcefields/Frosst_AlkEthOH_GBSA.offxml")
 
@@ -2213,20 +2213,21 @@ class TestForceFieldVirtualSites:
         self._test_physical_parameters(toolkit_registry, *args.values())
 
 
-class TestForceFieldChargeAssignment:
-    def generate_monatomic_ions():
-        return (
-            ("Li+", +1 * unit.elementary_charge),
-            ("Na+", +1 * unit.elementary_charge),
-            ("K+", +1 * unit.elementary_charge),
-            ("Rb+", +1 * unit.elementary_charge),
-            ("Cs+", +1 * unit.elementary_charge),
-            ("F-", -1 * unit.elementary_charge),
-            ("Cl-", -1 * unit.elementary_charge),
-            ("Br-", -1 * unit.elementary_charge),
-            ("I-", -1 * unit.elementary_charge),
-        )
+def generate_monatomic_ions():
+    return (
+        ("Li+", +1 * unit.elementary_charge),
+        ("Na+", +1 * unit.elementary_charge),
+        ("K+", +1 * unit.elementary_charge),
+        ("Rb+", +1 * unit.elementary_charge),
+        ("Cs+", +1 * unit.elementary_charge),
+        ("F-", -1 * unit.elementary_charge),
+        ("Cl-", -1 * unit.elementary_charge),
+        ("Br-", -1 * unit.elementary_charge),
+        ("I-", -1 * unit.elementary_charge),
+    )
 
+
+class TestForceFieldChargeAssignment:
     @pytest.mark.parametrize(
         "toolkit_registry,registry_description", toolkit_registries
     )
