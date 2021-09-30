@@ -596,6 +596,8 @@ class VirtualParticle(Particle):
         # implemented types are correct, so we are interested in cases
         # where custom virtual sites cause breakage.
 
+        atom_positions_unit = atom_positions.unit
+
         originwt, xdir, ydir = self.virtual_site.local_frame_weights
         disp = self.virtual_site.local_frame_position
         x, y, z = disp.value_in_unit(disp.unit)
@@ -627,7 +629,7 @@ class VirtualParticle(Particle):
 
         position = origin + x * xaxis + y * yaxis + z * zaxis
 
-        return unit.Quantity(position, unit=atom_positions.unit)
+        return unit.Quantity(position, unit=atom_positions_unit)
 
     def _extract_position_from_conformer(self, conformation):
 
