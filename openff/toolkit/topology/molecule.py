@@ -2362,6 +2362,11 @@ class FrozenMolecule(Serializable):
         for atom in self.atoms:
             symbol = atom.element.symbol
             element_counts[symbol] += 1
+            # TODO: It may be worth exposing this as a user option, i.e. to avoid multiple ligands
+            # parameterized with OpenFF clashing because they have atom names like O1x, H3x, etc.
+            # i.e. an optional argument could enable a user to `generate_unique_atom_names(blah="y")
+            # to have one ligand be O1y, etc.
+            # https://github.com/openforcefield/openff-toolkit/pull/1096#pullrequestreview-767227391
             atom.name = symbol + str(element_counts[symbol]) + "x"
 
     def _validate(self):
