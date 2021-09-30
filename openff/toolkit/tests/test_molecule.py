@@ -3477,10 +3477,14 @@ class TestMolecule:
         initial_charges = molecule._partial_charges
 
         # Make sure everything isn't 0s
-        assert (abs(initial_charges / unit.elementary_charge) > 0.01).any()
+        assert (abs(initial_charges.value_in_unit(unit.elementary_charge)) > 0.01).any()
         # Check total charge
-        charges_sum_unitless = initial_charges.sum() / unit.elementary_charge
-        total_charge_unitless = molecule.total_charge / unit.elementary_charge
+        charges_sum_unitless = initial_charges.sum().value_in_unit(
+            unit.elementary_charge
+        )
+        total_charge_unitless = molecule.total_charge.value_in_unit(
+            unit.elementary_charge
+        )
         # if abs(charges_sum_unitless - total_charge_unitless) > 0.0001:
         # print(
         #     "molecule {}    charge_sum {}     molecule.total_charge {}".format(
