@@ -627,7 +627,7 @@ class VirtualParticle(Particle):
 
         position = origin + x * xaxis + y * yaxis + z * zaxis
 
-        return unit.Quantity(position, unit=disp.unit)
+        return unit.Quantity(position, unit=atom_positions.unit)
 
     def _extract_position_from_conformer(self, conformation):
 
