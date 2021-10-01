@@ -37,6 +37,9 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
   `_ParameterAttributeHandler.__getattr__`
 - [PR #1030](https://github.com/openforcefield/openforcefield/pull/1030): Fixes a bug
   in which capitalization of the `bond_order_model` sometimes matters.
+- [PR #1101](https://github.com/openforcefield/openff-toolkit/pull/1101/files): Fixes a bug
+  in which calling `to_qcschema` on a molecule with no connectivity feeds
+  `QCElemental.Molecule` an empty list for the `connectivity` field; now feeds `None`
 
 ### Behavior changed
 
