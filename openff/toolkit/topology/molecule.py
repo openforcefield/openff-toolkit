@@ -5276,7 +5276,8 @@ class FrozenMolecule(Serializable):
         schema_dict = {
             "symbols": symbols,
             "geometry": geometry,
-            "connectivity": connectivity,
+            # If we have no bonds we must supply None
+            "connectivity": connectivity if connectivity else None,
             "molecular_charge": charge,
             "molecular_multiplicity": multiplicity,
             "extras": extras,
