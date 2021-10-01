@@ -2007,6 +2007,20 @@ class TestMolecule:
         ] == ethanol.to_smiles(mapped=True)
 
     @requires_pkg("qcportal")
+    def test_to_qcschema_no_connections(self):
+        mol = Molecule.from_mapped_smiles("[Br-:1].[K+:2]")
+        mol.add_conformer(
+            unit.Quantity(
+                np.array(
+                    [[0.188518, 0.015684, 0.001562], [0.148794, 0.21268, 0.11992]]
+                ),
+                unit.nanometers,
+            )
+        )
+        qcschema = mol.to_qcschema()
+        assert qcschema.connectivity is None
+
+    @requires_pkg("qcportal")
     def test_from_qcschema_no_client(self):
         """Test the ability to make molecules from QCArchive record instances and dicts"""
 
