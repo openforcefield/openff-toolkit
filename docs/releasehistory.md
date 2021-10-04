@@ -10,6 +10,11 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 - [PR #964](https://github.com/openforcefield/openff-toolkit/pull/964): Adds initial implementation
   of atom metadata dictionaries. 
+- [PR #1097](https://github.com/openforcefield/openff-toolkit/pull/1097): Deprecates TopologyMolecule. 
+- [PR #1097](https://github.com/openforcefield/openff-toolkit/pull/1097): Topology.from_openmm  
+  is no longer guaranteed to maintain the ordering of bonds, but now explicitly guarantees that it maintains 
+  the order of atoms (Neither of these ordering guarantees were explicitly documented before, but this may be a 
+  change from the previous behavior). 
   
 ### New features
 

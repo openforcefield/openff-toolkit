@@ -2290,6 +2290,9 @@ class Topology(Serializable):
         """
         Construct an OpenFF Topology object from an OpenMM Topology object.
 
+        This method guarantees that the order of atoms in the input OpenMM Topology will be the same as the ordering
+        of atoms in the output OpenFF Topology. However it does not guarantee the order of the bonds will be the same.
+
         Parameters
         ----------
         openmm_topology : openmm.app.Topology
