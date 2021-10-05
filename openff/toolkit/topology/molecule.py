@@ -3244,15 +3244,6 @@ class FrozenMolecule(Serializable):
                         SMARTS, toolkit_registry=toolkit_registry
                     )
                 return data.to_networkx()
-            # elif isinstance(data, TopologyMolecule):
-            #     # TopologyMolecule class instance
-            #     if strip_pyrimidal_n_atom_stereo:
-            #         # Make a copy of the molecule so we don't modify the original
-            #         ref_mol = deepcopy(data.reference_molecule)
-            #         ref_mol.strip_atom_stereochemistry(
-            #             SMARTS, toolkit_registry=toolkit_registry
-            #         )
-            #     return ref_mol.to_networkx()
 
             elif isinstance(data, nx.Graph):
                 return data

@@ -3649,9 +3649,6 @@ class vdWHandler(_NonbondedHandler):
             force.setParticleParameters(atom_idx, 0.0, sigma, ljtype.epsilon)
 
         # Check that no atoms (n.b. not particles) are missing force parameters.
-        # self._check_all_valence_terms_assigned(
-        #     assigned_terms=atom_matches, valence_terms=list(topology.topology_atoms)
-        # )
         self._check_all_valence_terms_assigned(
             atom_matches, topology, [(atom,) for atom in topology.atoms]
         )
@@ -3781,7 +3778,6 @@ class ElectrostaticsHandler(_NonbondedHandler):
                 )
                 for charge_idx, ref_idx in topology_atom_map.items():
                     temp_mol_charges[charge_idx] = charge_mol.partial_charges[ref_idx]
-                    # temp_mol_charges[ref_idx] = charge_mol.partial_charges[charge_idx]
                 molecule.partial_charges = temp_mol_charges
                 return True
 
@@ -3810,29 +3806,8 @@ class ElectrostaticsHandler(_NonbondedHandler):
             if not (charges_from_charge_mol):
                 continue
 
-            # Otherwise, the molecule is in the charge_from_molecules list, and we should assign charges to all
-            # instances of it in this topology.
-            # for topology_molecule in topology._reference_molecule_to_topology_molecules[
-            #     ref_mol
-            # ]:
-
+            # Otherwise, the molecule is in the charge_from_molecules list, and we should assign charges to it
             for particle in molecule.particles:
-
-                # if type(particle) is Atom:
-                #     ref_mol_particle_index = (
-                #         topology_particle.atom.molecule_particle_index
-                #     )
-                # elif type(topology_particle) is TopologyVirtualSite:
-                #     ref_mol_particle_index = (
-                #         topology_particle.virtual_site.molecule_particle_index
-                #     )
-                # else:
-                #     raise ValueError(
-                #         f"Particles of type {type(topology_particle)} are not supported"
-                #     )
-
-                # topology_particle_index = topology_particle.topology_particle_index
-
                 topology_particle_index = topology.particle_index(particle)
                 molecule_particle_index = molecule.particle_index(particle)
 
@@ -4075,12 +4050,10 @@ class LibraryChargeHandler(_NonbondedHandler):
                 force.setParticleParameters(
                     top_particle_idx, atom_assignments[top_particle_idx], sigma, epsilon
                 )
-
-            # ref_mols_assigned.add(molecule)
+            # Finally, mark that charges were assigned for this molecule
             self.mark_charges_assigned(molecule, topology)
-        # Finally, mark that charges were assigned for this reference molecule
-        # for assigned_mol in ref_mols_assigned:
-        #     self.mark_charges_assigned(assigned_mol, topology)
+
+
 
 
 class ToolkitAM1BCCHandler(_NonbondedHandler):
@@ -4137,27 +4110,9 @@ class ToolkitAM1BCCHandler(_NonbondedHandler):
                 continue
 
             # Assign charges to relevant atoms
-            # for topology_molecule in topology._reference_molecule_to_topology_molecules[
-            #     ref_mol
-            # ]:
             for atom in molecule.atoms:
                 molecule_atom_index = molecule.atom_index(atom)
                 topology_particle_index = topology.particle_index(atom)
-                # if type(topology_particle) is TopologyAtom:
-                #     ref_mol_particle_index = (
-                #         topology_particle.atom.molecule_particle_index
-                #     )
-                # elif type(topology_particle) is TopologyVirtualSite:
-                #     ref_mol_particle_index = (
-                #         topology_particle.virtual_site.molecule_particle_index
-                #     )
-                # else:
-                #     raise ValueError(
-                #         f"Particles of type {type(topology_particle)} are not supported"
-                #     )
-                #
-                # topology_particle_index = topology_particle.topology_particle_index
-
                 particle_charge = molecule.partial_charges[molecule_atom_index]
 
                 # Retrieve nonbonded parameters for reference atom (charge not set yet)
@@ -4331,21 +4286,9 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
             charges_to_assign = {}
 
             # Assign initial, un-incremented charges to relevant atoms
-            # for topology_molecule in topology._reference_molecule_to_topology_molecules[
-            #     ref_mol
-            # ]:
             for particle in molecule.particles:
                 topology_particle_index = topology.particle_index(particle)
                 molecule_particle_index = molecule.particle_index(particle)
-                # topology_particle_index = topology_particle.topology_particle_index
-                # if type(topology_particle) is TopologyAtom:
-                #     ref_mol_particle_index = (
-                #         topology_particle.atom.molecule_particle_index
-                #     )
-                # if type(topology_particle) is TopologyVirtualSite:
-                #     ref_mol_particle_index = (
-                #         topology_particle.virtual_site.molecule_particle_index
-                #     )
                 particle_charge = molecule.partial_charges[molecule_particle_index]
                 charges_to_assign[topology_particle_index] = particle_charge
 
@@ -5764,8 +5707,6 @@ class VirtualSiteHandler(_NonbondedHandler):
             ref_key = [atom.molecule_atom_index for atom in vsite.atoms]
             logger.debug("VSite ref_key: {}".format(ref_key))
 
-            # ms = topology._reference_molecule_to_topology_molecules[ref_mol]
-            # for top_mol in ms:
             logger.debug("molecule: {}".format(molecule))
 
             ids = self._create_openmm_virtual_particle(

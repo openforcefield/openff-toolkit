@@ -1331,23 +1331,6 @@ class ForceField:
             for bond in topology.bonds
         ]
 
-        # for molecule in topology.topology_molecules:
-        #
-        #     top_mol_particle_start_index = topology_molecule.atom_start_topology_index
-        #
-        #     for topology_bond in topology_molecule.bonds:
-        #         top_index_1 = topology_molecule._ref_to_top_index[
-        #             topology_bond.bond.atom1_index
-        #         ]
-        #         top_index_2 = topology_molecule._ref_to_top_index[
-        #             topology_bond.bond.atom2_index
-        #         ]
-        #
-        #         top_index_1 += top_mol_particle_start_index
-        #         top_index_2 += top_mol_particle_start_index
-        #
-        #         bond_particle_indices.append((top_index_1, top_index_2))
-
         # TODO: Can we generalize this to allow for `CustomNonbondedForce` implementations too?
         forces = [system.getForce(i) for i in range(system.getNumForces())]
         nonbonded_force = [f for f in forces if type(f) == openmm.NonbondedForce][0]

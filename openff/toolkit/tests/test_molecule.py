@@ -1387,7 +1387,6 @@ class TestMolecule:
         from openff.toolkit.topology.topology import Topology
 
         topology = Topology.from_molecules(ethanol)
-        # topmol = TopologyMolecule(ethanol, topology)
         assert (
             Molecule.are_isomorphic(
                 ethanol,
@@ -4023,6 +4022,8 @@ class TestMoleculeSubclass:
         orig_mol = Molecule.from_smiles("CCO")
         mol = MyMol.from_dict(orig_mol.to_dict())
         assert isinstance(mol, MyMol)
+
+class TestHierarchies:
 
     def test_nothing_perceived_dipeptide(self, dipeptide):
         """Test that loading a "vanilla" molecule from SDF does not assign atom metadata"""
