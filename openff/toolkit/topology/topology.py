@@ -1480,7 +1480,7 @@ class Topology(Serializable):
                 #    self._reference_molecule_to_topology_molecules[reference_molecule]
                 # )
 
-                assert not (hasattr(molecule, "residues"))
+                #assert not (hasattr(molecule, "residues"))
                 # Get rid of this logic, replace chain with topology_molecule_index and residue with molecule.name
                 # Later override these using atom metadata/hierarchyiterators if possible
                 ## Add 1 chain per molecule unless there are more than 5 copies,

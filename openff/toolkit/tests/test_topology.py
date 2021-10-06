@@ -649,7 +649,7 @@ class TestTopology:
         assert n_double_bonds == 6
         assert n_aromatic_bonds == 12
 
-        # Check that there is one residue for each molecule.
+        # Check that there is one residue and chain for each molecule.
         assert omm_topology.getNumResidues() == 3
         assert omm_topology.getNumChains() == 3
 

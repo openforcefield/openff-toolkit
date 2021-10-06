@@ -3289,9 +3289,6 @@ class FrozenMolecule(Serializable):
         ----------
         other: openff.toolkit.topology.Molecule or TopologyMolecule or nx.Graph()
 
-        return_atom_map: bool, default=False, optional
-            will return an optional dict containing the atomic mapping.
-
         aromatic_matching: bool, default=True, optional
         compare the aromatic attributes of bonds and atoms.
 
