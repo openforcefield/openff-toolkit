@@ -426,8 +426,6 @@ class Topology(Serializable):
         # Assign cheminformatics models
         model = DEFAULT_AROMATICITY_MODEL
         self._aromaticity_model = model
-        # self._fractional_bond_order_model = DEFAULT_FRACTIONAL_BOND_ORDER_MODEL
-        # self._charge_model = DEFAULT_CHARGE_MODEL
 
         # Initialize storage
         self._initialize()
@@ -449,8 +447,6 @@ class Topology(Serializable):
         self._box_vectors = None
         # self._reference_molecule_dicts = set()
         # TODO: Look into weakref and what it does. Having multiple topologies might cause a memory leak.
-        # self._reference_molecule_to_topology_molecules = OrderedDict()
-        # self._topology_molecules = list()
         self._molecules = list()
 
     @property
@@ -852,20 +848,6 @@ class Topology(Serializable):
         index : int
         """
         return self.atom_index(molecule.atoms[0])
-
-    def molecule_particle_start_index(self, molecule):
-        """
-        Returns the index of a molecule's first particle in this topology
-
-        Parameters
-        ----------
-        molecule : openff.toolkit.topology.FrozenMolecule
-
-        Returns
-        -------
-        index : int
-        """
-        return self.particle_index(molecule.particles[0])
 
     def molecule_virtual_particle_start_index(self, molecule):
         """
