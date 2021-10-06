@@ -257,7 +257,9 @@ class Atom(Particle):
         # TODO
         atom_dict = OrderedDict()
         atom_dict["atomic_number"] = self._atomic_number
-        atom_dict["formal_charge"] = self._formal_charge / unit.elementary_charge
+        atom_dict["formal_charge"] = self._formal_charge.value_in_unit(
+            unit.elementary_charge
+        )
         atom_dict["is_aromatic"] = self._is_aromatic
         atom_dict["stereochemistry"] = self._stereochemistry
         # TODO: Should we let atoms have names?
@@ -594,10 +596,11 @@ class VirtualParticle(Particle):
         # implemented types are correct, so we are interested in cases
         # where custom virtual sites cause breakage.
 
+        atom_positions_unit = atom_positions.unit
+
         originwt, xdir, ydir = self.virtual_site.local_frame_weights
         disp = self.virtual_site.local_frame_position
-        _unit = disp.unit
-        x, y, z = disp / _unit
+        x, y, z = disp.value_in_unit(disp.unit)
 
         # this pulls the correct ordering of the atoms
         pos = []
@@ -626,7 +629,7 @@ class VirtualParticle(Particle):
 
         position = origin + x * xaxis + y * yaxis + z * zaxis
 
-        return unit.Quantity(position, unit=_unit)
+        return unit.Quantity(position, unit=atom_positions_unit)
 
     def _extract_position_from_conformer(self, conformation):
 
@@ -1342,8 +1345,8 @@ class BondChargeVirtualSite(VirtualSite):
         # towards the center of the other atoms, we want the
         # vsite to point away from the unit vector to achieve the desired
         # distance
-        _unit = self._distance.unit
-        pos = _unit * [-self._distance / _unit, 0.0, 0.0]
+        distance_unit = self._distance.unit
+        pos = distance_unit * [-self._distance.value_in_unit(distance_unit), 0.0, 0.0]
 
         return pos
 
@@ -1521,14 +1524,18 @@ class MonovalentLonePairVirtualSite(VirtualSite):
         theta = self._in_plane_angle.value_in_unit(unit.radians)
         psi = self._out_of_plane_angle.value_in_unit(unit.radians)
 
-        _unit = self._distance.unit
+        distance_unit = self._distance.unit
         pos = unit.Quantity(
             [
-                self._distance / _unit * np.cos(theta) * np.cos(psi),
-                self._distance / _unit * np.sin(theta) * np.cos(psi),
-                self._distance / _unit * np.sin(psi),
+                self._distance.value_in_unit(distance_unit)
+                * np.cos(theta)
+                * np.cos(psi),
+                self._distance.value_in_unit(distance_unit)
+                * np.sin(theta)
+                * np.cos(psi),
+                self._distance.value_in_unit(distance_unit) * np.sin(psi),
             ],
-            unit=_unit,
+            unit=distance_unit,
         )
 
         return pos
@@ -1691,12 +1698,12 @@ class DivalentLonePairVirtualSite(VirtualSite):
 
         theta = self._out_of_plane_angle.value_in_unit(unit.radians)
 
-        _unit = self._distance.unit
+        distance_unit = self._distance.unit
 
-        pos = _unit * [
-            -self._distance / _unit * np.cos(theta),
+        pos = distance_unit * [
+            -self._distance.value_in_unit(distance_unit) * np.cos(theta),
             0.0,
-            self._distance / _unit * np.sin(theta),
+            self._distance.value_in_unit(distance_unit) * np.sin(theta),
         ]  # pos of the vsite in local crds
         return pos
 
@@ -1846,8 +1853,10 @@ class TrivalentLonePairVirtualSite(VirtualSite):
         displacements in the local frame for the x, y, and z directions.
         """
 
-        _unit = self._distance.unit
-        pos = unit.Quantity([-self._distance / _unit, 0.0, 0.0], unit=_unit)
+        distance_unit = self._distance.unit
+        pos = unit.Quantity(
+            [-self._distance.value_in_unit(distance_unit), 0.0, 0.0], unit=distance_unit
+        )
 
         return pos
 
@@ -2362,7 +2371,12 @@ class FrozenMolecule(Serializable):
         for atom in self.atoms:
             symbol = atom.element.symbol
             element_counts[symbol] += 1
-            atom.name = symbol + str(element_counts[symbol])
+            # TODO: It may be worth exposing this as a user option, i.e. to avoid multiple ligands
+            # parameterized with OpenFF clashing because they have atom names like O1x, H3x, etc.
+            # i.e. an optional argument could enable a user to `generate_unique_atom_names(blah="y")
+            # to have one ligand be O1y, etc.
+            # https://github.com/openforcefield/openff-toolkit/pull/1096#pullrequestreview-767227391
+            atom.name = symbol + str(element_counts[symbol]) + "x"
 
     def _validate(self):
         """
@@ -2449,7 +2463,7 @@ class FrozenMolecule(Serializable):
                 "conformers_unit"
             ] = "angstrom"  # Have this defined as a class variable?
             for conf in self._conformers:
-                conf_unitless = conf / unit.angstrom
+                conf_unitless = conf.value_in_unit(unit.angstrom)
                 conf_serialized, conf_shape = serialize_numpy((conf_unitless))
                 molecule_dict["conformers"].append(conf_serialized)
         if self._partial_charges is None:
@@ -2457,7 +2471,9 @@ class FrozenMolecule(Serializable):
             molecule_dict["partial_charges_unit"] = None
 
         else:
-            charges_unitless = self._partial_charges / unit.elementary_charge
+            charges_unitless = self._partial_charges.value_in_unit(
+                unit.elementary_charge
+            )
             charges_serialized, charges_shape = serialize_numpy(charges_unitless)
             molecule_dict["partial_charges"] = charges_serialized
             molecule_dict["partial_charges_unit"] = "elementary_charge"
@@ -3096,7 +3112,7 @@ class FrozenMolecule(Serializable):
 
         mol1_netx = to_networkx(mol1)
         mol2_netx = to_networkx(mol2)
-        from networkx.algorithms.isomorphism import GraphMatcher
+        from networkx.algorithms.isomorphism import GraphMatcher  # type: ignore
 
         GM = GraphMatcher(
             mol1_netx, mol2_netx, node_match=node_match_func, edge_match=edge_match_func
@@ -3348,7 +3364,7 @@ class FrozenMolecule(Serializable):
             )
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
-            toolkit.apply_elf_conformer_selection(
+            toolkit.apply_elf_conformer_selection(  # type: ignore[attr-defined]
                 self, molecule=self, percentage=percentage, limit=limit, **kwargs
             )
         else:
@@ -5243,7 +5259,7 @@ class FrozenMolecule(Serializable):
             )
 
         # Gather the required qcschema data
-        charge = self.total_charge / unit.elementary_charge
+        charge = self.total_charge.value_in_unit(unit.elementary_charge)
         connectivity = [
             (bond.atom1_index, bond.atom2_index, bond.bond_order) for bond in self.bonds
         ]
@@ -5264,7 +5280,8 @@ class FrozenMolecule(Serializable):
         schema_dict = {
             "symbols": symbols,
             "geometry": geometry,
-            "connectivity": connectivity,
+            # If we have no bonds we must supply None
+            "connectivity": connectivity if connectivity else None,
             "molecular_charge": charge,
             "molecular_multiplicity": multiplicity,
             "extras": extras,
@@ -6379,8 +6396,11 @@ class Molecule(FrozenMolecule):
         if backend == "rdkit":
             if RDKIT_AVAILABLE:
                 from IPython.display import SVG
-                from rdkit.Chem.Draw import rdDepictor, rdMolDraw2D
-                from rdkit.Chem.rdmolops import RemoveHs
+                from rdkit.Chem.Draw import (  # type: ignore[import]
+                    rdDepictor,
+                    rdMolDraw2D,
+                )
+                from rdkit.Chem.rdmolops import RemoveHs  # type: ignore[import]
 
                 rdmol = self.to_rdkit()
 

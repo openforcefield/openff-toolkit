@@ -288,7 +288,7 @@ class TestInterpolation:
         }
 
         k = _linear_inter_or_extrapolate(k_bondorder, fractional_bond_order)
-        assert_almost_equal(k / k.unit, k_interpolated)
+        assert_almost_equal(k.value_in_unit(k.unit), k_interpolated)
 
     def test_linear_inter_or_extrapolate_one_point(self):
         """Test that linear interpolation raises an error if attempted with just one point"""
@@ -313,7 +313,7 @@ class TestInterpolation:
         }
 
         k = _linear_inter_or_extrapolate(k_bondorder, fractional_bond_order)
-        assert_almost_equal(k / k.unit, k_interpolated)
+        assert_almost_equal(k.value_in_unit(k.unit), k_interpolated)
 
     def test_linear_inter_or_extrapolate_below_zero(self):
         """Test that linear interpolation does not error if resulting k less than 0"""
@@ -325,7 +325,7 @@ class TestInterpolation:
         fractional_bond_order = 0.2
         k = _linear_inter_or_extrapolate(k_bondorder, fractional_bond_order)
 
-        assert k / k.unit < 0
+        assert k.value_in_unit(k.unit) < 0
 
 
 class TestParameterAttributeHandler:
@@ -1395,8 +1395,8 @@ class TestBondHandler:
 
         k = _linear_inter_or_extrapolate(k_bondorder, fractional_bond_order)
         length = _linear_inter_or_extrapolate(length_bondorder, fractional_bond_order)
-        assert_almost_equal(k / k.unit, k_interpolated, 1)
-        assert_almost_equal(length / length.unit, length_interpolated, 2)
+        assert_almost_equal(k.value_in_unit(k.unit), k_interpolated, 1)
+        assert_almost_equal(length.value_in_unit(length.unit), length_interpolated, 2)
 
     def test_different_defaults_03_04(self):
         """Ensure that the 0.3 and 0.4 versions' defaults are correctly set"""

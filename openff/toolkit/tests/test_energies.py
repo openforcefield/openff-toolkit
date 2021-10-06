@@ -49,7 +49,7 @@ def test_reference(constrained, mol):
     derived_energy = _get_energy(simulation=simulation, positions=positions)
 
     np.testing.assert_almost_equal(
-        actual=derived_energy / unit.kilojoule_per_mole,
+        actual=derived_energy.value_in_unit(unit.kilojoule_per_mole),
         desired=reference_energy,
         decimal=5,
     )
@@ -77,7 +77,7 @@ def generate_reference():
             if not constrained:
                 name += "un"
             name += "constrained"
-            reference.update({name: energy / unit.kilojoule_per_mole})
+            reference.update({name: energy.value_in_unit(unit.kilojoule_per_mole)})
 
     import openff.toolkit
 
