@@ -4719,9 +4719,6 @@ class FrozenMolecule(Serializable):
                 dict(molecule.nodes(data="atomic_number", default=1)).values()
             )
 
-        # elif isinstance(molecule, TopologyMolecule):
-        #    atom_nums = [atom.atomic_number for atom in molecule.atoms]
-
         elif isinstance(molecule, FrozenMolecule):
             atom_nums = [atom.atomic_number for atom in molecule.atoms]
 

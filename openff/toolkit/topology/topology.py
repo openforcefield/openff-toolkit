@@ -1393,10 +1393,6 @@ class Topology(Serializable):
             unq_mol = graph_to_unq_mol[unq_mol_G]
             remapped_mol = unq_mol.remap(local_top_to_ref_index, current_to_new=False)
             topology.add_molecule(remapped_mol)
-            # topology.add_molecule(
-            #    graph_to_unq_mol[unq_mol_G],
-            #    local_topology_to_reference_index=local_top_to_ref_index,
-            # )
 
         topology.box_vectors = openmm_topology.getPeriodicBoxVectors()
         # TODO: How can we preserve metadata from the openMM topology when creating the OFF topology?
