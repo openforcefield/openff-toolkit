@@ -485,8 +485,8 @@ class TestMolecule:
         assert "aaa" not in molecule.properties
 
     @pytest.mark.skipif(
-        has_pkg("openeye"),
-        reason="Test requires that OpenEye is not installed",
+        (has_pkg("openeye") and not(has_pkg("rdkit"))),
+        reason="Test requires that RDKit is installed, but OpenEye is not installed",
     )
     def test_repr_bad_smiles(self):
         """Test that the repr falls back to Hill formula if to_smiles fails."""
