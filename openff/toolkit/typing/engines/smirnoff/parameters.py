@@ -4018,7 +4018,6 @@ class LibraryChargeHandler(_NonbondedHandler):
 
         # Keep track of the reference molecules that this successfully assigns charges to, so we can
         # mark them and subsequent charge generation handlers won't override the values
-        ref_mols_assigned = set()
 
         # Check to see whether the set contains any complete molecules, and remove the matches if not.
         for molecule in topology.molecules:
@@ -4052,8 +4051,6 @@ class LibraryChargeHandler(_NonbondedHandler):
                 )
             # Finally, mark that charges were assigned for this molecule
             self.mark_charges_assigned(molecule, topology)
-
-
 
 
 class ToolkitAM1BCCHandler(_NonbondedHandler):
@@ -5726,7 +5723,9 @@ class VirtualSiteHandler(_NonbondedHandler):
                     logger.debug("Excluding vsite {} vsite {}".format(i, j))
                     force.addException(i, j, 0.0, 0.0, 0.0, replace=True)
 
-    def _create_openmm_virtual_particle(self, system, force, molecule, vsite, ref_key, topology):
+    def _create_openmm_virtual_particle(
+        self, system, force, molecule, vsite, ref_key, topology
+    ):
 
         policy = self._parameter_to_policy[self.exclusion_policy]
 
@@ -5737,7 +5736,9 @@ class VirtualSiteHandler(_NonbondedHandler):
             sort_key = [orientation.index(i) for i in ref_key]
             atom_key = [ref_key[i] for i in sort_key]
             logger.debug("sort_key: {}".format(sort_key))
-            atom_key = [topology.molecule_atom_start_index(molecule) + i for i in atom_key]
+            atom_key = [
+                topology.molecule_atom_start_index(molecule) + i for i in atom_key
+            ]
 
             omm_vsite = vsite.get_openmm_virtual_site(atom_key)
             vsite_q = self._apply_charge_increment(

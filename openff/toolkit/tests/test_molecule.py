@@ -4023,8 +4023,8 @@ class TestMoleculeSubclass:
         mol = MyMol.from_dict(orig_mol.to_dict())
         assert isinstance(mol, MyMol)
 
-class TestHierarchies:
 
+class TestHierarchies:
     def test_nothing_perceived_dipeptide(self, dipeptide):
         """Test that loading a "vanilla" molecule from SDF does not assign atom metadata"""
         with pytest.raises(KeyError):

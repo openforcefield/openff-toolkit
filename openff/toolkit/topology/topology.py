@@ -35,10 +35,7 @@ except ImportError:
 
 from openff.toolkit.topology import Molecule
 from openff.toolkit.typing.chemistry import ChemicalEnvironment
-from openff.toolkit.utils import (
-    quantity_to_string,
-    string_to_quantity,
-)
+from openff.toolkit.utils import quantity_to_string, string_to_quantity
 from openff.toolkit.utils.exceptions import (
     DuplicateUniqueMoleculeError,
     InvalidBoxVectorsError,
@@ -856,7 +853,6 @@ class Topology(Serializable):
         """
         return self.atom_index(molecule.atoms[0])
 
-
     def molecule_particle_start_index(self, molecule):
         """
         Returns the index of a molecule's first particle in this topology
@@ -870,8 +866,6 @@ class Topology(Serializable):
         index : int
         """
         return self.particle_index(molecule.particles[0])
-
-
 
     def molecule_virtual_particle_start_index(self, molecule):
         """
@@ -1417,10 +1411,10 @@ class Topology(Serializable):
             unq_mol = graph_to_unq_mol[unq_mol_G]
             remapped_mol = unq_mol.remap(local_top_to_ref_index, current_to_new=False)
             topology.add_molecule(remapped_mol)
-            #topology.add_molecule(
+            # topology.add_molecule(
             #    graph_to_unq_mol[unq_mol_G],
             #    local_topology_to_reference_index=local_top_to_ref_index,
-            #)
+            # )
 
         topology.box_vectors = openmm_topology.getPeriodicBoxVectors()
         # TODO: How can we preserve metadata from the openMM topology when creating the OFF topology?
@@ -1480,7 +1474,7 @@ class Topology(Serializable):
                 #    self._reference_molecule_to_topology_molecules[reference_molecule]
                 # )
 
-                #assert not (hasattr(molecule, "residues"))
+                # assert not (hasattr(molecule, "residues"))
                 # Get rid of this logic, replace chain with topology_molecule_index and residue with molecule.name
                 # Later override these using atom metadata/hierarchyiterators if possible
                 ## Add 1 chain per molecule unless there are more than 5 copies,
