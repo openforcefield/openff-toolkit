@@ -5008,6 +5008,230 @@ class FrozenMolecule(Serializable):
 
         return mols
 
+    @classmethod
+    def from_pdb(cls, file_path):
+        from rdkit import Chem
+        import networkx as nx
+        from networkx.algorithms import isomorphism
+
+        def rdmol_to_networkx(rdmol):
+            rdmol_G = nx.Graph()
+            for atom in rdmol.GetAtoms():
+                rdmol_G.add_node(
+                    atom.GetIdx(), atomic_number=atom.GetAtomicNum(), formal_charge=atom.GetFormalCharge()
+                )
+            for bond in rdmol.GetBonds():
+                bond_type = bond.GetBondType()
+
+                # TODO: Is there a cleaner way to undo the guanidinium/imidazole hack that went into making
+                # the AA substructures? Should we have a second substructure dict?
+                if bond_type == Chem.rdchem.BondType.UNSPECIFIED:
+                    raise Exception
+                    bond_type = Chem.rdchem.BondType.SINGLE  # <<< THIS IS BAD -- Will leave unsatisfied valences and give wrong hydrogen count
+                    # bond_type = Chem.rdchem.BondType.AROMATIC
+                    # bond_type = Chem.rdchem.BondType.ONEANDAHALF
+                # TODO: Fix "bond order any" hacks for ARG and HIS, since we won't be able to recover those here
+                rdmol_G.add_edge(
+                    bond.GetBeginAtomIdx(), bond.GetEndAtomIdx(),
+                    # bond_order=bond.GetBondTypeAsDouble()
+                    bond_order=bond_type
+                )
+            return rdmol_G
+
+        def protein_from_openmm(substructure_library, openmm_topology):
+            """
+            Construct an OpenFF Topology object from an OpenMM Topology object.
+
+            Parameters
+            ----------
+            openmm_topology : simtk.openmm.app.Topology
+                An OpenMM Topology object
+            unique_molecules : iterable of objects that can be used to construct unique Molecule objects
+                All unique molecules must be provided, in any order, though multiple copies of each molecule are allowed.
+                The atomic elements and bond connectivity will be used to match the reference molecules
+                to molecule graphs appearing in the OpenMM ``Topology``. If bond orders are present in the
+                OpenMM ``Topology``, these will be used in matching as well.
+
+            Returns
+            -------
+            topology : openff.toolkit.topology.Topology
+                An OpenFF Topology object
+            """
+            import networkx as nx
+
+            from openff.toolkit.topology.molecule import Molecule
+
+            # Check to see if the openMM system has defined bond orders, by looping over all Bonds in the Topology.
+            # omm_has_bond_orders = True
+            # for omm_bond in openmm_topology.bonds():
+            #    if omm_bond.order is None:
+            #        omm_has_bond_orders = False
+
+            # if unique_molecules is None:
+            #    raise MissingUniqueMoleculesError(
+            #        "Topology.from_openmm requires a list of Molecule objects "
+            #        "passed as unique_molecules, but None was passed."
+            #    )
+
+            # Convert all unique mols to graphs
+            # topology = cls()
+
+            # Convert all openMM mols to graphs
+
+            omm_topology_G = nx.Graph()
+            for atom in openmm_topology.atoms():
+                omm_topology_G.add_node(
+                    atom.index, atomic_number=atom.element.atomic_number, formal_charge=0.
+                )
+
+            for bond in openmm_topology.bonds():
+                omm_topology_G.add_edge(
+                    bond.atom1.index, bond.atom2.index, bond_order=Chem.rdchem.BondType.SINGLE  # bond.order
+                )
+
+            # Try matching this substructure to the whole molecule graph
+            node_match = isomorphism.categorical_node_match('atomic_number', -1)
+
+            all_rdmol_graphs = []
+            already_assigned_nodes = set()
+            already_assigned_edges = set()
+
+            non_isomorphic_count = 0
+            for res_name in substructure_dictionary:
+                # TODO: This is a hack for the moment since we don't have a more sohpisticated way to resolve clashes
+                # so it just does the biggest substructures first
+                sorted_substructure_smarts = sorted(substructure_dictionary[res_name], key=len, reverse=True)
+                non_isomorphic_flag = True
+                for substructure_smarts in sorted_substructure_smarts:
+                    rdmol = Chem.MolFromSmarts(substructure_smarts)
+                    rdmol_G = rdmol_to_networkx(rdmol)
+                    # all_rdmol_graphs.append(rdmol_G)
+                    GM = isomorphism.GraphMatcher(omm_topology_G, rdmol_G, node_match=node_match)
+                    if GM.subgraph_is_isomorphic():
+                        print(res_name)
+
+                        # print(GM)
+                        # print(dir(GM))
+                        for omm_idx_2_rdk_idx in GM.subgraph_isomorphisms_iter():
+                            assert len(omm_idx_2_rdk_idx) == rdmol.GetNumAtoms()
+                            # print(omm_idx_2_rdk_idx)
+                            for omm_idx, rdk_idx in omm_idx_2_rdk_idx.items():
+                                if omm_idx in already_assigned_nodes:
+                                    continue
+                                already_assigned_nodes.add(omm_idx)
+                                omm_topology_G.nodes[omm_idx]['formal_charge'] = rdmol_G.nodes[rdk_idx]['formal_charge']
+
+                            rdk_idx_2_omm_idx = dict([(j, i) for i, j in omm_idx_2_rdk_idx.items()])
+                            for edge in rdmol_G.edges:
+                                # print(edge)
+
+                                # print(dir(edge))
+                                # print(rdmol_G.get_edge_data(*edge))
+                                # 1/0
+                                omm_edge_idx = rdk_idx_2_omm_idx[edge[0]], rdk_idx_2_omm_idx[edge[1]]
+                                if omm_edge_idx in already_assigned_edges:
+                                    continue
+                                already_assigned_edges.add(tuple(omm_edge_idx))
+                                omm_topology_G.get_edge_data(*omm_edge_idx)['bond_order'] = \
+                                rdmol_G.get_edge_data(*edge)['bond_order']
+                        non_isomorphic_flag = False
+                if non_isomorphic_flag:
+                    non_isomorphic_count += 1
+            print(f"Non isomorphic residues: {non_isomorphic_count}")
+
+            return omm_topology_G
+        from openff.toolkit.utils import get_data_file_path
+        substructure_file_path = get_data_file_path('proteins/aa_residues_substructures_explicit_bond_orders_with_caps.json')
+
+        with open(substructure_file_path, 'r') as subfile:
+            substructure_dictionary = json.load(subfile)
+        from simtk.openmm.app import PDBFile
+        from openff.toolkit.utils import get_data_file_path
+
+        pdb = PDBFile(file_path)
+        omm_topology_G = protein_from_openmm(substructure_dictionary, pdb.topology)
+
+        _bondtypes = {
+            # 0: Chem.BondType.AROMATIC,
+            1: Chem.BondType.SINGLE,
+            1.5: Chem.BondType.AROMATIC,
+            2: Chem.BondType.DOUBLE,
+            3: Chem.BondType.TRIPLE,
+            4: Chem.BondType.QUADRUPLE,
+            5: Chem.BondType.QUINTUPLE,
+            6: Chem.BondType.HEXTUPLE,
+            7: Chem.BondType.ONEANDAHALF,
+        }
+
+        rdmol = Chem.RWMol()
+
+        for node_idx, node_data in omm_topology_G.nodes.items():
+            print(node_idx, node_data)
+            # node_data = omm_topology_G.get_node_data(node)
+            rdatom = Chem.Atom(node_data['atomic_number'])
+            formal_charge = int(node_data['formal_charge'])
+            print(f'Formal charge: {formal_charge}')
+            rdatom.SetFormalCharge(formal_charge  # * unit.elementary_charge
+                                   # atom.formal_charge.value_in_unit(unit.elementary_charge)
+                                   )
+            # rdatom.SetIsAromatic(atom.is_aromatic)
+            # rdatom.SetProp("_Name", atom.name)
+
+            # TODO: Pull in stereochemistry
+
+            ## Stereo handling code moved to after bonds are added
+            # if atom.stereochemistry == "S":
+            #    rdatom.SetChiralTag(Chem.CHI_TETRAHEDRAL_CW)
+            # elif atom.stereochemistry == "R":
+            #    rdatom.SetChiralTag(Chem.CHI_TETRAHEDRAL_CCW)
+
+            rd_index = rdmol.AddAtom(rdatom)
+            # print(rd_index)
+
+            # Let's make sure al the atom indices in the two molecules
+            # are the same, otherwise we need to create an atom map.
+            # assert index == atom.molecule_atom_index
+            # assert index == node_idx
+
+        for edge, edge_data in omm_topology_G.edges.items():
+            print(edge, edge_data)
+            # atom_indices = (
+            #    edge[0],
+            #    edge[1],
+            # )
+            rdmol.AddBond(*edge)
+            rdbond = rdmol.GetBondBetweenAtoms(*edge)
+            # Assign bond type, which is based on order unless it is aromatic
+            # if bond.is_aromatic:
+            #    rdbond.SetBondType(_bondtypes[1.5])
+            #    rdbond.SetIsAromatic(True)
+            # else:
+            # rdbond.SetBondType(_bondtypes[edge_data['bond_order']])
+            rdbond.SetBondType(edge_data['bond_order'])
+            rdbond.SetIsAromatic(False)
+
+        # Get bond information for N 604
+        # n_604 = rdmol.GetAtomWithIdx(604)
+        # for bond in n_604.GetBonds():
+        #     print(bond.GetBondType())
+
+        print(f"Number of atoms before sanitization: {len(rdmol.GetAtoms())}")
+
+        # TODO: Remove this hack for the uncapped C terminal once we've updated the substructure dict
+        rdmol.GetBondBetweenAtoms(rdmol.GetNumAtoms() - 1, rdmol.GetNumAtoms() - 3).SetBondType(Chem.BondType.SINGLE)
+        rdmol.GetAtomWithIdx(rdmol.GetNumAtoms() - 1).SetFormalCharge(-1)
+        Chem.SanitizeMol(
+            rdmol,
+            Chem.SANITIZE_ALL ^ Chem.SANITIZE_ADJUSTHS,  # ^ Chem.SANITIZE_SETAROMATICITY,
+        )
+
+        print(f"Number of atoms after sanitization: {len(rdmol.GetAtoms())}")
+
+        # offmol = Molecule.from_rdkit(rdmol, allow_undefined_stereo=True)
+        offmol = cls.from_rdkit(rdmol, allow_undefined_stereo=True, hydrogens_are_explicit=True)
+        print(f"OFFMol number of atoms: {offmol.n_atoms}")
+        return offmol
+
     def _to_xyz_file(self, file_path):
         """
         Write the current molecule and its conformers to a multiframe xyz file, if the molecule

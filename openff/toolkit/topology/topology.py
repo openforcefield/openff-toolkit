@@ -2468,7 +2468,7 @@ class Topology(Serializable):
 
         # Read substructure dictionary file
         if not substructure_file_path:
-            substructure_file_path = get_data_file_path('proteins/aa_residues_substructures_explicit_bond_orders.json')
+            substructure_file_path = get_data_file_path('proteins/aa_residues_substructures_explicit_bond_orders_with_caps.json')
 
         # Read substructure file
         with open(substructure_file_path, 'r') as subfile:

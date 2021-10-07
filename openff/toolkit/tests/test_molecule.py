@@ -4023,7 +4023,9 @@ class TestMoleculeSubclass:
         mol = MyMol.from_dict(orig_mol.to_dict())
         assert isinstance(mol, MyMol)
 
-
+    def test_molecule_from_pdb(self):
+        offmol = Molecule.from_pdb(get_data_file_path('proteins/T4-protein.pdb'))
+        assert offmol.n_atoms == 2634
 class TestHierarchies:
     def test_nothing_perceived_dipeptide(self, dipeptide):
         """Test that loading a "vanilla" molecule from SDF does not assign atom metadata"""
