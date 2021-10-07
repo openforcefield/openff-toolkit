@@ -11,15 +11,17 @@ These are common to several test modules.
 
 """
 
-# =============================================================================================
-# GLOBAL IMPORTS
-# =============================================================================================
-
-
 import numpy as np
-from simtk import unit
+import pytest
 
+try:
+    from openmm import unit
+except ImportError:
+    from simtk import unit
+
+from openff.toolkit.tests.utils import requires_openeye
 from openff.toolkit.topology.molecule import Molecule
+from openff.toolkit.utils import get_data_file_path
 
 
 def create_cis_1_2_dichloroethene():
@@ -314,3 +316,145 @@ def create_dinitrogen():
     charges = unit.Quantity(np.array([0.0, 0.0]), unit.elementary_charge)
     dinitrogen.partial_charges = charges
     return dinitrogen
+
+
+@pytest.fixture
+def dipeptide():
+    dipeptide = Molecule.from_file(get_data_file_path("proteins/CTerminal_ALA.sdf"))
+    return dipeptide
+
+
+@pytest.fixture
+def dipeptide_residues_perceived(dipeptide):
+    dipeptide = Molecule(dipeptide)
+    dipeptide.perceive_residues()
+    return dipeptide
+
+
+@pytest.fixture
+def dipeptide_hierarchy_perceived(dipeptide_residues_perceived):
+    dipeptide_residues_perceived = Molecule(dipeptide_residues_perceived)
+    dipeptide_residues_perceived._add_default_hierarchy_schemes()
+    dipeptide_residues_perceived.perceive_hierarchy()
+    return dipeptide_residues_perceived
+
+
+@pytest.fixture
+def cyx():
+    cyx = Molecule.from_file(get_data_file_path("proteins/MainChain_CYX.sdf"))
+    return cyx
+
+
+@pytest.fixture
+def cyx_residues_perceived(cyx):
+    cyx = Molecule(cyx)
+    cyx.perceive_residues()
+    return cyx
+
+
+@pytest.fixture
+def cyx_hierarchy_perceived(cyx_residues_perceived):
+    cyx_residues_perceived = Molecule(cyx_residues_perceived)
+    cyx_residues_perceived._add_default_hierarchy_schemes()
+    cyx_residues_perceived.perceive_hierarchy()
+    return cyx_residues_perceived
+
+
+@pytest.fixture
+def empty_molecule():
+    return Molecule()
+
+
+@pytest.fixture
+def ethane_from_smiles():
+    return Molecule.from_smiles("CC")
+
+
+@pytest.fixture
+def ethene_from_smiles():
+    return Molecule.from_smiles("C=C")
+
+
+@pytest.fixture
+def propane_from_smiles():
+    return Molecule.from_smiles("CCC")
+
+
+@pytest.fixture
+def toluene_from_sdf():
+    filename = get_data_file_path("molecules/toluene.sdf")
+    return Molecule.from_file(filename)
+
+
+@requires_openeye
+@pytest.fixture
+def toluene_from_charged_mol2():
+    filename = get_data_file_path("molecules/toluene_charged.mol2")
+    # TODO: This will require openeye to load
+    return Molecule.from_file(filename)
+
+
+@pytest.fixture
+def charged_methylamine_from_smiles():
+    return Molecule.from_smiles("[H]C([H])([H])[N+]([H])([H])[H]")
+
+
+@pytest.fixture
+def ethane_from_smiles_w_vsites():
+    molecule = Molecule.from_smiles("CC")
+    carbons = [atom for atom in molecule.atoms if atom.atomic_number == 6]
+    c0_hydrogens = [atom for atom in carbons[0].bonded_atoms if atom.atomic_number == 1]
+    molecule.add_bond_charge_virtual_site(
+        (carbons[0], carbons[1]),
+        0.1 * unit.angstrom,
+        charge_increments=[0.1, 0.05] * unit.elementary_charge,
+    )
+    molecule.add_monovalent_lone_pair_virtual_site(
+        (c0_hydrogens[0], carbons[0], carbons[1]),
+        0.2 * unit.angstrom,
+        20 * unit.degree,
+        25 * unit.degree,
+        charge_increments=[0.01, 0.02, 0.03] * unit.elementary_charge,
+    )
+    return molecule
+
+
+@pytest.fixture
+def propane_from_smiles_w_vsites():
+    # Make a propane with virtual sites
+    molecule = Molecule.from_smiles("CCC")
+    carbons = [atom for atom in molecule.atoms if atom.atomic_number == 6]
+    c0_hydrogens = [atom for atom in carbons[0].bonded_atoms if atom.atomic_number == 1]
+    # This will add *two* particles (symmetric=True), *one* virtual site
+    molecule.add_monovalent_lone_pair_virtual_site(
+        (c0_hydrogens[0], carbons[0], carbons[1]),
+        0.2 * unit.angstrom,
+        20 * unit.degree,
+        25 * unit.degree,
+        charge_increments=[0.01, 0.02, 0.03] * unit.elementary_charge,
+        symmetric=True,
+    )
+    # This will add *one* particle (symmetric=False), *one* virtual site
+    molecule.add_bond_charge_virtual_site(
+        (carbons[0], carbons[1]),
+        0.1 * unit.angstrom,
+        charge_increments=[0.1, 0.05] * unit.elementary_charge,
+        symmetric=False,
+    )
+    return molecule
+
+
+@pytest.fixture
+def tip5_water():
+    # Make a TIP5 water
+    molecule = Molecule.from_smiles("[H][O][H]")
+    O1 = [atom for atom in molecule.atoms if atom.atomic_number == 8][0]
+    H1, H2 = [atom for atom in O1.bonded_atoms if atom.atomic_number == 1]
+    molecule.add_divalent_lone_pair_virtual_site(
+        (H1, O1, H2),
+        0.7 * unit.angstrom,
+        54.71384225 * unit.degree,
+        charge_increments=[0.1205, 0.00, 0.1205] * unit.elementary_charge,
+        symmetric=True,
+    )
+    return molecule

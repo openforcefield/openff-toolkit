@@ -17,15 +17,15 @@ __all__ = [
     "XMLParameterIOHandler",
 ]
 
-
-# =============================================================================================
-# GLOBAL IMPORTS
-# =============================================================================================
-
 import logging
+from typing import Optional
 
 import xmltodict
-from simtk import unit
+
+try:
+    from openmm import unit
+except ImportError:
+    from simtk import unit
 
 # =============================================================================================
 # CONFIGURE LOGGER
@@ -68,10 +68,10 @@ def _ast_unit_eval(node):
     elif isinstance(node, ast.UnaryOp):  # <operator>( <operand> ) e.g., -1
         return operators[type(node.op)](_ast_unit_eval(node.operand))
     elif isinstance(node, ast.Name):
-        # Check if this is a simtk unit.
+        # Check if this is a openmm unit.
         u = getattr(unit, node.id)
         if not isinstance(u, unit.Unit):
-            raise ValueError("No unit named {} found in simtk.unit.".format(node.id))
+            raise ValueError("No unit named {} found in openmm.unit.".format(node.id))
         return u
     else:
         raise TypeError(node)
@@ -87,7 +87,7 @@ class ParameterIOHandler:
     Base class for handling serialization/deserialization of SMIRNOFF ForceField objects
     """
 
-    _FORMAT = None
+    _FORMAT: Optional[str] = None
 
     def __init__(self):
         """
@@ -180,7 +180,7 @@ class XMLParameterIOHandler(ParameterIOHandler):
 
         Raises
         ------
-        ParseError
+        SMIRNOFFParseError
             If the XML cannot be processed.
         FileNotFoundError
             If the file could not found.
@@ -199,7 +199,7 @@ class XMLParameterIOHandler(ParameterIOHandler):
     def parse_string(self, data):
         """Parse a SMIRNOFF force field definition in XML format.
 
-        A ``ParseError`` is raised if the XML cannot be processed.
+        A ``SMIRNOFFParseError`` is raised if the XML cannot be processed.
 
         Parameters
         ----------
@@ -209,14 +209,14 @@ class XMLParameterIOHandler(ParameterIOHandler):
         """
         from pyexpat import ExpatError
 
-        from openff.toolkit.typing.engines.smirnoff.forcefield import ParseError
+        from openff.toolkit.utils.exceptions import SMIRNOFFParseError
 
         # Parse XML file
         try:
             smirnoff_data = xmltodict.parse(data, attr_prefix="")
             return smirnoff_data
         except ExpatError as e:
-            raise ParseError(str(e))
+            raise SMIRNOFFParseError(str(e))
 
     def to_file(self, file_path, smirnoff_data):
         """Write the current force field parameter set to a file.
@@ -292,4 +292,4 @@ class XMLParameterIOHandler(ParameterIOHandler):
             del smirnoff_data["SMIRNOFF"][key]
             smirnoff_data["SMIRNOFF"][key] = value
 
-        return xmltodict.unparse(smirnoff_data, pretty=True)
+        return xmltodict.unparse(smirnoff_data, pretty=True, indent=" " * 4)

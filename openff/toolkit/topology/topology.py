@@ -17,20 +17,28 @@ Class definitions to represent a molecular system and its chemical components
 
 """
 
-# =============================================================================================
-# GLOBAL IMPORTS
-# =============================================================================================
-
 import itertools
 from collections import OrderedDict
 from collections.abc import MutableMapping
 
 import numpy as np
-from simtk import unit
-from simtk.openmm import app
+
+try:
+    from openmm import app, unit
+    from openmm.app import Aromatic, Double, Single, Triple
+except ImportError:
+    from simtk import unit
+    from simtk.openmm import app
+    from simtk.openmm.app import Aromatic, Double, Single, Triple
 
 from openff.toolkit.typing.chemistry import ChemicalEnvironment
-from openff.toolkit.utils import MessageException
+from openff.toolkit.utils.exceptions import (
+    DuplicateUniqueMoleculeError,
+    InvalidBoxVectorsError,
+    InvalidPeriodicityError,
+    MissingUniqueMoleculesError,
+    NotBondedError,
+)
 from openff.toolkit.utils.serialization import Serializable
 from openff.toolkit.utils.toolkits import (
     ALLOWED_AROMATICITY_MODELS,
@@ -39,49 +47,6 @@ from openff.toolkit.utils.toolkits import (
     DEFAULT_AROMATICITY_MODEL,
     GLOBAL_TOOLKIT_REGISTRY,
 )
-
-# =============================================================================================
-# Exceptions
-# =============================================================================================
-
-
-class DuplicateUniqueMoleculeError(MessageException):
-    """
-    Exception for when the user provides indistinguishable unique molecules when trying to identify atoms from a PDB
-    """
-
-    pass
-
-
-class NotBondedError(MessageException):
-    """
-    Exception for when a function requires a bond between two atoms, but none is present
-    """
-
-    pass
-
-
-class InvalidBoxVectorsError(MessageException):
-    """
-    Exception for setting invalid box vectors
-    """
-
-
-class InvalidPeriodicityError(MessageException):
-    """
-    Exception for setting invalid periodicity
-    """
-
-
-class MissingUniqueMoleculesError(MessageException):
-    """
-    Exception for a when unique_molecules is required but not found
-    """
-
-
-# =============================================================================================
-# PRIVATE SUBROUTINES
-# =============================================================================================
 
 
 class _TransformedDict(MutableMapping):
@@ -452,7 +417,7 @@ class TopologyAtom(Serializable):
 
         Returns
         -------
-        simtk.openmm.app.element.Element
+        openmm.app.element.Element
         """
         return self._atom.element
 
@@ -1403,7 +1368,7 @@ class Topology(Serializable):
 
     Import some utilities
 
-    >>> from simtk.openmm import app
+    >>> from openmm import app
     >>> from openff.toolkit.tests.utils import get_data_file_path, get_packmol_pdb_file_path
     >>> pdb_filepath = get_packmol_pdb_file_path('cyclohexane_ethanol_0.4_0.6')
     >>> monomer_names = ('cyclohexane', 'ethanol')
@@ -1571,7 +1536,7 @@ class Topology(Serializable):
 
         Returns
         -------
-        box_vectors : simtk.unit.Quantity wrapped numpy array of shape (3, 3)
+        box_vectors : openmm.unit.Quantity wrapped numpy array of shape (3, 3)
             The unit-wrapped box vectors of this topology
         """
         return self._box_vectors
@@ -1583,7 +1548,7 @@ class Topology(Serializable):
 
         Parameters
         ----------
-        box_vectors : simtk.unit.Quantity wrapped numpy array of shape (3, 3)
+        box_vectors : openmm.unit.Quantity wrapped numpy array of shape (3, 3)
             The unit-wrapped box vectors
 
         """
@@ -1594,7 +1559,7 @@ class Topology(Serializable):
             raise InvalidBoxVectorsError("Given unitless box vectors")
         if not (unit.angstrom.is_compatible(box_vectors.unit)):
             raise InvalidBoxVectorsError(
-                "Attempting to set box vectors in units that are incompatible with simtk.unit.Angstrom"
+                "Attempting to set box vectors in units that are incompatible with openmm.unit.Angstrom"
             )
 
         if hasattr(box_vectors, "shape"):
@@ -2054,7 +2019,11 @@ class Topology(Serializable):
             self._topology_atom_indices = topology_atom_indices
 
     def chemical_environment_matches(
-        self, query, aromaticity_model="MDL", toolkit_registry=GLOBAL_TOOLKIT_REGISTRY
+        self,
+        query,
+        aromaticity_model="MDL",
+        unique=False,
+        toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
     ):
         """
         Retrieve all matches for a given chemical environment query.
@@ -2100,7 +2069,9 @@ class Topology(Serializable):
             # This will automatically attempt to match chemically identical atoms in
             # a canonical order within the Topology
             ref_mol_matches = ref_mol.chemical_environment_matches(
-                smarts, toolkit_registry=toolkit_registry
+                smarts,
+                unique=unique,
+                toolkit_registry=toolkit_registry,
             )
 
             if len(ref_mol_matches) == 0:
@@ -2145,57 +2116,6 @@ class Topology(Serializable):
         # Implement abstract method Serializable.to_dict()
         raise NotImplementedError()  # TODO
 
-    # TODO: Merge this into Molecule.from_networkx if/when we implement that.
-    # TODO: can we now remove this as we have the ability to do this in the Molecule class?
-    @staticmethod
-    def _networkx_to_hill_formula(mol_graph):
-        """
-        Convert a networkX representation of a molecule to a molecule formula. Used in printing out
-        informative error messages when a molecule from an openmm topology can't be matched.
-
-        Parameters
-        ----------
-        mol_graph : a networkX graph
-            The graph representation of a molecule
-
-        Returns
-        -------
-        formula : str
-            The molecular formula of the graph molecule
-        """
-        from simtk.openmm.app import Element
-
-        # Make a flat list of all atomic numbers in the molecule
-        atom_nums = []
-        for idx in mol_graph.nodes:
-            atom_nums.append(mol_graph.nodes[idx]["atomic_number"])
-
-        # Count the number of instances of each atomic number
-        at_num_to_counts = dict([(unq, atom_nums.count(unq)) for unq in atom_nums])
-
-        symbol_to_counts = {}
-        # Check for C and H first, to make a correct hill formula (remember dicts in python 3.6+ are ordered)
-        if 6 in at_num_to_counts:
-            symbol_to_counts["C"] = at_num_to_counts[6]
-            del at_num_to_counts[6]
-
-        if 1 in at_num_to_counts:
-            symbol_to_counts["H"] = at_num_to_counts[1]
-            del at_num_to_counts[1]
-
-        # Now count instances of all elements other than C and H, in order of ascending atomic number
-        sorted_atom_nums = sorted(at_num_to_counts.keys())
-        for atom_num in sorted_atom_nums:
-            symbol_to_counts[
-                Element.getByAtomicNumber(atom_num).symbol
-            ] = at_num_to_counts[atom_num]
-
-        # Finally format the formula as string
-        formula = ""
-        for ele, count in symbol_to_counts.items():
-            formula += f"{ele}{count}"
-        return formula
-
     @classmethod
     def from_openmm(cls, openmm_topology, unique_molecules=None):
         """
@@ -2203,7 +2123,7 @@ class Topology(Serializable):
 
         Parameters
         ----------
-        openmm_topology : simtk.openmm.app.Topology
+        openmm_topology : openmm.app.Topology
             An OpenMM Topology object
         unique_molecules : iterable of objects that can be used to construct unique Molecule objects
             All unique molecules must be provided, in any order, though multiple copies of each molecule are allowed.
@@ -2361,16 +2281,14 @@ class Topology(Serializable):
 
         Returns
         -------
-        openmm_topology : simtk.openmm.app.Topology
+        openmm_topology : openmm.app.Topology
             An OpenMM Topology object
         """
-        from simtk.openmm.app import Aromatic, Double, Single
-        from simtk.openmm.app import Topology as OMMTopology
-        from simtk.openmm.app import Triple
-
         try:
+            from openmm.app import Topology as OMMTopology
             from openmm.app.element import Element as OMMElement
         except ImportError:
+            from simtk.openmm.app import Topology as OMMTopology
             from simtk.openmm.app.element import Element as OMMElement
 
         omm_topology = OMMTopology()
@@ -2467,18 +2385,15 @@ class Topology(Serializable):
         ----------
         filename : str
             name of the pdb file to write to
-        positions : n_atoms x 3 numpy array or simtk.unit.Quantity-wrapped n_atoms x 3 iterable
+        positions : n_atoms x 3 numpy array or openmm.unit.Quantity-wrapped n_atoms x 3 iterable
             Can be an openmm 'quantity' object which has atomic positions as a list of Vec3s along with associated units, otherwise a 3D array of UNITLESS numbers are considered as "Angstroms" by default
         file_format : str
             Output file format. Case insensitive. Currently only supported value is "pdb".
 
         """
-        from simtk.openmm.app import PDBFile
-        from simtk.unit import Quantity, angstroms
-
         openmm_top = self.to_openmm()
-        if not isinstance(positions, Quantity):
-            positions = positions * angstroms
+        if not isinstance(positions, unit.Quantity):
+            positions = positions * unit.angstrom
 
         file_format = file_format.upper()
         if file_format != "PDB":
@@ -2486,7 +2401,7 @@ class Topology(Serializable):
 
         # writing to PDB file
         with open(filename, "w") as outfile:
-            PDBFile.writeFile(openmm_top, positions, outfile, keepIds)
+            app.PDBFile.writeFile(openmm_top, positions, outfile, keepIds)
 
     @staticmethod
     def from_mdtraj(mdtraj_topology, unique_molecules=None):
@@ -2512,64 +2427,20 @@ class Topology(Serializable):
             mdtraj_topology.to_openmm(), unique_molecules=unique_molecules
         )
 
-    # TODO: Jeff prepended an underscore on this before 0.2.0 release to remove it from the API.
-    #       Before exposing this, we should look carefully at the information that is preserved/lost during this
-    #       conversion, and make it clear what would happen to this information in a round trip. For example,
-    #       we should know what would happen to formal and partial bond orders and charges, stereochemistry, and
-    #       multi-conformer information. It will be important to document these risks to users, as all of these
-    #       factors could lead to unintended behavior during system parameterization.
+    # Avoid removing this method, even though it is private and would not be difficult for most
+    # users to replace. Also avoid making it public as round-trips with MDTraj are likely
+    # to not preserve necessary information.
     def _to_mdtraj(self):
         """
         Create an MDTraj Topology object.
-
         Returns
         ----------
         mdtraj_topology : mdtraj.Topology
             An MDTraj Topology object
-        #"""
+        """
         import mdtraj as md
 
         return md.Topology.from_openmm(self.to_openmm())
-
-    @staticmethod
-    def from_parmed(parmed_structure, unique_molecules=None):
-        """
-        .. warning:: This functionality will be implemented in a future toolkit release.
-
-        Construct an OpenFF Topology object from a ParmEd Structure object.
-
-        Parameters
-        ----------
-        parmed_structure : parmed.Structure
-            A ParmEd structure object
-        unique_molecules : iterable of objects that can be used to construct unique Molecule objects
-            All unique molecules must be provided, in any order, though multiple copies of each molecule are allowed.
-            The atomic elements and bond connectivity will be used to match the reference molecules
-            to molecule graphs appearing in the structure's ``topology`` object. If bond orders are present in the
-            structure's ``topology`` object, these will be used in matching as well.
-
-        Returns
-        -------
-        topology : openff.toolkit.topology.Topology
-            An OpenFF Topology object
-        """
-        # TODO: Implement functionality
-        raise NotImplementedError
-
-    def to_parmed(self):
-        """
-
-        .. warning:: This functionality will be implemented in a future toolkit release.
-
-        Create a ParmEd Structure object.
-
-        Returns
-        ----------
-        parmed_structure : parmed.Structure
-            A ParmEd Structure objecft
-        """
-        # TODO: Implement functionality
-        raise NotImplementedError
 
     @staticmethod
     def _to_networkx_from_openmm(openmm_topology, substructure_file_path=None):
@@ -2863,7 +2734,7 @@ class Topology(Serializable):
         -------
         oemol : openeye.oechem.OEMol
             An OpenEye molecule
-        positions : simtk.unit.Quantity with shape [nparticles,3], optional, default=None
+        positions : openmm.unit.Quantity with shape [nparticles,3], optional, default=None
             Positions to use in constructing OEMol.
             If virtual sites are present in the Topology, these indices will be skipped.
 
@@ -3172,7 +3043,7 @@ class Topology(Serializable):
         iatom, jatom : Atom
             Atoms to mark as constrained
             These atoms may be bonded or not in the Topology
-        distance : simtk.unit.Quantity, optional, default=True
+        distance : openmm.unit.Quantity, optional, default=True
             Constraint distance
             ``True`` if distance has yet to be determined
             ``False`` if constraint is to be removed
@@ -3208,7 +3079,7 @@ class Topology(Serializable):
 
         Returns
         -------
-        distance : simtk.unit.Quantity or bool
+        distance : openmm.unit.Quantity or bool
             True if constrained but constraints have not yet been applied
             Distance if constraint has already been added to System
 

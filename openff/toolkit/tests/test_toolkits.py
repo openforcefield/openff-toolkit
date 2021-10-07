@@ -9,9 +9,6 @@ Tests for cheminformatics toolkit wrappers
 
 """
 
-# =============================================================================================
-# GLOBAL IMPORTS
-# =============================================================================================
 import logging
 import os
 from tempfile import NamedTemporaryFile
@@ -20,7 +17,11 @@ from typing import Dict
 import numpy as np
 import pytest
 from numpy.testing import assert_almost_equal
-from simtk import unit
+
+try:
+    from openmm import unit
+except ImportError:
+    from simtk import unit
 
 from openff.toolkit.tests.create_molecules import (
     create_acetaldehyde,
@@ -38,22 +39,25 @@ from openff.toolkit.tests.utils import (
 )
 from openff.toolkit.topology.molecule import Molecule
 from openff.toolkit.utils import get_data_file_path
-from openff.toolkit.utils.toolkits import (
-    GLOBAL_TOOLKIT_REGISTRY,
-    AmberToolsToolkitWrapper,
-    BuiltInToolkitWrapper,
+from openff.toolkit.utils.exceptions import (
     ChargeMethodUnavailableError,
-    GAFFAtomTypeWarning,
+    ConformerGenerationError,
     IncorrectNumConformersError,
     IncorrectNumConformersWarning,
     InvalidIUPACNameError,
     InvalidToolkitError,
+    ToolkitUnavailableException,
+    UndefinedStereochemistryError,
+)
+from openff.toolkit.utils.toolkits import (
+    GLOBAL_TOOLKIT_REGISTRY,
+    AmberToolsToolkitWrapper,
+    BuiltInToolkitWrapper,
+    GAFFAtomTypeWarning,
     OpenEyeToolkitWrapper,
     RDKitToolkitWrapper,
     ToolkitRegistry,
-    ToolkitUnavailableException,
     ToolkitWrapper,
-    UndefinedStereochemistryError,
 )
 
 # =============================================================================================
@@ -1160,6 +1164,14 @@ class TestOpenEyeToolkitWrapper:
         )
         assert molecule2.n_conformers == 10
 
+    def test_generate_conformers_failure(self):
+        toolkit = OpenEyeToolkitWrapper()
+
+        molecule = Molecule.from_smiles("F[U](F)(F)(F)(F)F")
+
+        with pytest.raises(ConformerGenerationError, match="Omega conf.*fail"):
+            toolkit.generate_conformers(molecule, n_conformers=1)
+
     def test_apply_elf_conformer_selection(self):
         """Test applying the ELF10 method."""
 
@@ -1769,6 +1781,16 @@ class TestOpenEyeToolkitWrapper:
 
         # TODO: Add test for aromaticity
         # TODO: Add test and molecule functionality for isotopes
+
+    def test_find_matches_unique(self):
+        """Test the expected behavior of the `unique` argument in find_matches"""
+        smirks = "[C:1]~[C:2]~[C:3]"
+        tk = OpenEyeToolkitWrapper()
+
+        mol = Molecule.from_smiles("CCC")
+
+        assert len(tk.find_smarts_matches(mol, smirks, unique=True)) == 1
+        assert len(tk.find_smarts_matches(mol, smirks, unique=False)) == 2
 
 
 @requires_rdkit
@@ -2445,6 +2467,14 @@ class TestRDKitToolkitWrapper:
         )
         assert molecule2.n_conformers == 10
 
+    def test_generate_conformers_failure(self):
+        toolkit = RDKitToolkitWrapper()
+
+        molecule = Molecule.from_smiles("F[U](F)(F)(F)(F)F")
+
+        with pytest.raises(ConformerGenerationError, match="RDKit conf.*fail"):
+            toolkit.generate_conformers(molecule, n_conformers=1)
+
     @pytest.mark.parametrize("partial_charge_method", ["mmff94"])
     def test_assign_partial_charges_neutral(self, partial_charge_method):
         """Test RDKitToolkitWrapper assign_partial_charges()"""
@@ -2810,6 +2840,16 @@ class TestRDKitToolkitWrapper:
             ignore_functional_groups=terminal_backwards
         )
         assert bonds == []
+
+    def test_find_matches_unique(self):
+        """Test the expected behavior of the `unique` argument in find_matches"""
+        smirks = "[C:1]~[C:2]~[C:3]"
+        tk = RDKitToolkitWrapper()
+
+        mol = Molecule.from_smiles("CCC")
+
+        assert len(tk.find_smarts_matches(mol, smirks, unique=True)) == 1
+        assert len(tk.find_smarts_matches(mol, smirks, unique=False)) == 2
 
     def test_to_rdkit_losing_aromaticity_(self):
         # test the example given in issue #513

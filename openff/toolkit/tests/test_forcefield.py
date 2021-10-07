@@ -10,10 +10,6 @@ Tests for forcefield class
 """
 
 
-# =============================================================================================
-# GLOBAL IMPORTS
-# =============================================================================================
-
 import copy
 import itertools
 import os
@@ -23,7 +19,13 @@ from tempfile import NamedTemporaryFile
 import numpy as np
 import pytest
 from numpy.testing import assert_almost_equal
-from simtk import openmm, unit
+
+try:
+    import openmm
+    from openmm import NonbondedForce, Platform, XmlSerializer, app, unit
+except ImportError:
+    from simtk import openmm, unit
+    from simtk.openmm import app, XmlSerializer, Platform, NonbondedForce
 
 from openff.toolkit.tests.create_molecules import (
     create_acetaldehyde,
@@ -49,21 +51,25 @@ from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff import (
     ElectrostaticsHandler,
     ForceField,
-    FractionalBondOrderInterpolationMethodUnsupportedError,
-    IncompatibleParameterError,
     LibraryChargeHandler,
     ParameterHandler,
-    ParameterLookupError,
-    PartialChargeVirtualSitesError,
-    SMIRNOFFAromaticityError,
-    SMIRNOFFSpecError,
-    SMIRNOFFSpecUnimplementedError,
     ToolkitAM1BCCHandler,
     XMLParameterIOHandler,
     get_available_force_fields,
     vdWHandler,
 )
 from openff.toolkit.utils import get_data_file_path
+from openff.toolkit.utils.exceptions import (
+    FractionalBondOrderInterpolationMethodUnsupportedError,
+    IncompatibleParameterError,
+    NonintegralMoleculeChargeException,
+    ParameterLookupError,
+    PartialChargeVirtualSitesError,
+    SMIRNOFFAromaticityError,
+    SMIRNOFFSpecError,
+    SMIRNOFFSpecUnimplementedError,
+    UnassignedMoleculeChargeException,
+)
 from openff.toolkit.utils.toolkits import (
     AmberToolsToolkitWrapper,
     ChargeMethodUnavailableError,
@@ -1024,7 +1030,7 @@ class TestForceField:
         forcefield = ForceField(iter(file_paths))
 
     @pytest.mark.skip(reason="Needs to be updated for 0.2.0 syntax")
-    def test_create_gbsa():
+    def test_create_gbsa(self):
         """Test reading of ffxml files with GBSA support."""
         forcefield = ForceField("test_forcefields/Frosst_AlkEthOH_GBSA.offxml")
 
@@ -1120,6 +1126,9 @@ class TestForceField:
         """
         forcefield_1 = ForceField(xml_simple_ff)
         string_1 = forcefield_1.to_string("XML")
+        # Ensure that we have spaces instead of tabs
+        assert "    " in string_1
+        assert "\t" not in string_1
         forcefield_2 = ForceField(string_1)
         string_2 = forcefield_2.to_string("XML")
         assert string_1 == string_2
@@ -1354,8 +1363,6 @@ class TestForceField:
         "toolkit_registry,registry_description", toolkit_registries
     )
     def test_parameterize_ethanol(self, toolkit_registry, registry_description):
-        from simtk.openmm import app
-
         forcefield = ForceField("test_forcefields/test_forcefield.offxml")
         pdbfile = app.PDBFile(get_data_file_path("systems/test_systems/1_ethanol.pdb"))
         molecules = [create_ethanol()]
@@ -1399,8 +1406,6 @@ class TestForceField:
     ):
         """Test parameterizing ethanol, but failing because custom handler classes can not resolve
         which order to run in"""
-        from simtk.openmm import app
-
         # from openff.toolkit.typing.engines.smirnoff.parameters import BondHandler, AngleHandler, ConstraintHandler
 
         forcefield = ForceField("test_forcefields/test_forcefield.offxml")
@@ -1418,8 +1423,6 @@ class TestForceField:
             )
 
     def test_parameterize_ethanol_missing_torsion(self):
-        from simtk.openmm import app
-
         from openff.toolkit.typing.engines.smirnoff.parameters import (
             UnassignedProperTorsionParameterException,
         )
@@ -1442,8 +1445,6 @@ class TestForceField:
         self, toolkit_registry, registry_description
     ):
         """Test parameterizing a periodic system of two distinct molecules"""
-        from simtk.openmm import app
-
         forcefield = ForceField("test_forcefields/test_forcefield.offxml")
         pdbfile = app.PDBFile(
             get_data_file_path("systems/test_systems/1_cyclohexane_1_ethanol.pdb")
@@ -1463,8 +1464,6 @@ class TestForceField:
         self, toolkit_registry, registry_description
     ):
         """Test parametrizing a nonperiodic system of two distinct molecules"""
-        from simtk.openmm import app
-
         forcefield = ForceField("test_forcefields/test_forcefield.offxml")
         pdbfile = app.PDBFile(
             get_data_file_path("systems/test_systems/1_cyclohexane_1_ethanol.pdb")
@@ -1494,8 +1493,6 @@ class TestForceField:
         """Test parameterizing a large system of several distinct molecules.
         This test is very slow, so it is only run if the --runslow option is provided to pytest.
         """
-        from simtk.openmm import app
-
         forcefield = ForceField("test_forcefields/test_forcefield.offxml")
         box_file_path = get_data_file_path(
             os.path.join("systems", "packmol_boxes", box)
@@ -1524,8 +1521,6 @@ class TestForceField:
         The results of both should be identical.
         """
         toolkit_registry = ToolkitRegistry(toolkit_precedence=[OpenEyeToolkitWrapper])
-        from simtk.openmm import XmlSerializer, app
-
         forcefield = ForceField("test_forcefields/test_forcefield.offxml")
         pdbfile = app.PDBFile(get_data_file_path("systems/test_systems/1_ethanol.pdb"))
         # Load the unique molecules with one atom ordering
@@ -1563,9 +1558,6 @@ class TestForceField:
         Test parameterizing the same PDB, using reference mol2s that have different atom orderings.
         The results of both should be identical.
         """
-
-        from simtk.openmm import XmlSerializer, app
-
         toolkit_registry = ToolkitRegistry(
             toolkit_precedence=[RDKitToolkitWrapper, AmberToolsToolkitWrapper]
         )
@@ -1638,27 +1630,6 @@ class TestForceField:
         force_field = ForceField("test_forcefields/test_forcefield.offxml")
         force_field.create_openmm_system(topology, toolkit_registry=toolkit_registry)
 
-    @pytest.mark.skip(
-        reason="We will not support going directly to ParmEd for now."
-        "We will instead feed OpenMM System objects to ParmEd "
-        "for further processing."
-    )
-    def test_parameterize_ethanol_to_parmed(self):
-        from simtk.openmm import app
-
-        forcefield = ForceField("test_forcefields/test_forcefield.offxml")
-        pdbfile = app.PDBFile(get_data_file_path("systems/test_systems/1_ethanol.pdb"))
-        # toolkit_wrapper = RDKitToolkitWrapper()
-        molecules = [
-            Molecule.from_file(get_data_file_path(name))
-            for name in ("molecules/ethanol.mol2",)
-        ]
-        topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
-
-        parmed_system = forcefield.create_parmed_structure(
-            topology, positions=pdbfile.getPositions()
-        )
-
     @pytest.mark.parametrize(
         "toolkit_registry,registry_description", toolkit_registries
     )
@@ -1666,8 +1637,6 @@ class TestForceField:
         self, toolkit_registry, registry_description
     ):
         """Test to ensure an exception is raised when an unrecognized kwarg is passed"""
-        from simtk.openmm import app
-
         file_path = get_data_file_path("test_forcefields/test_forcefield.offxml")
         forcefield = ForceField(file_path)
         pdbfile = app.PDBFile(get_data_file_path("systems/test_systems/1_ethanol.pdb"))
@@ -1806,8 +1775,6 @@ class TestForceField:
     @pytest.mark.parametrize("inputs", nonbonded_resolution_matrix)
     def test_nonbonded_method_resolution(self, inputs):
         """Test predefined permutations of input options to ensure nonbonded handling is correctly resolved"""
-        from simtk.openmm import app
-
         vdw_method = inputs["vdw_method"]
         electrostatics_method = inputs["electrostatics_method"]
         has_periodic_box = inputs["has_periodic_box"]
@@ -2021,9 +1988,6 @@ trivalent_parameters_args = []
 
 class TestForceFieldVirtualSites:
     def _test_physical_parameters(self, tkr, xml, smi, assert_physics, mol=None):
-
-        from simtk.openmm import NonbondedForce
-
         file_path = get_data_file_path("test_forcefields/test_forcefield.offxml")
         forcefield = ForceField(file_path, xml)
         if mol is None:
@@ -2249,20 +2213,21 @@ class TestForceFieldVirtualSites:
         self._test_physical_parameters(toolkit_registry, *args.values())
 
 
-class TestForceFieldChargeAssignment:
-    def generate_monatomic_ions():
-        return (
-            ("Li+", +1 * unit.elementary_charge),
-            ("Na+", +1 * unit.elementary_charge),
-            ("K+", +1 * unit.elementary_charge),
-            ("Rb+", +1 * unit.elementary_charge),
-            ("Cs+", +1 * unit.elementary_charge),
-            ("F-", -1 * unit.elementary_charge),
-            ("Cl-", -1 * unit.elementary_charge),
-            ("Br-", -1 * unit.elementary_charge),
-            ("I-", -1 * unit.elementary_charge),
-        )
+def generate_monatomic_ions():
+    return (
+        ("Li+", +1 * unit.elementary_charge),
+        ("Na+", +1 * unit.elementary_charge),
+        ("K+", +1 * unit.elementary_charge),
+        ("Rb+", +1 * unit.elementary_charge),
+        ("Cs+", +1 * unit.elementary_charge),
+        ("F-", -1 * unit.elementary_charge),
+        ("Cl-", -1 * unit.elementary_charge),
+        ("Br-", -1 * unit.elementary_charge),
+        ("I-", -1 * unit.elementary_charge),
+    )
 
+
+class TestForceFieldChargeAssignment:
     @pytest.mark.parametrize(
         "toolkit_registry,registry_description", toolkit_registries
     )
@@ -2270,8 +2235,6 @@ class TestForceFieldChargeAssignment:
         """Test skipping charge generation and instead getting charges from the original Molecule"""
         # Create an ethanol molecule without using a toolkit
         molecules = [create_ethanol()]
-
-        from simtk.openmm import NonbondedForce, app
 
         file_path = get_data_file_path("test_forcefields/test_forcefield.offxml")
         forcefield = ForceField(file_path)
@@ -2320,12 +2283,6 @@ class TestForceFieldChargeAssignment:
     )
     def test_nonintegral_charge_exception(self, toolkit_registry, registry_description):
         """Test skipping charge generation and instead getting charges from the original Molecule"""
-        from simtk.openmm import app
-
-        from openff.toolkit.typing.engines.smirnoff.parameters import (
-            NonintegralMoleculeChargeException,
-        )
-
         # Create an ethanol molecule without using a toolkit
         ethanol = create_ethanol()
         ethanol.partial_charges[0] = 1.0 * unit.elementary_charge
@@ -2365,8 +2322,6 @@ class TestForceFieldChargeAssignment:
         cyclohexane = create_cyclohexane()
         molecules = [ethanol, cyclohexane]
 
-        from simtk.openmm import NonbondedForce, app
-
         file_path = get_data_file_path("test_forcefields/test_forcefield.offxml")
         forcefield = ForceField(file_path)
         pdbfile = app.PDBFile(
@@ -2397,8 +2352,6 @@ class TestForceFieldChargeAssignment:
 
     def test_library_charges_to_single_water(self):
         """Test assigning charges to one water molecule using library charges"""
-        from simtk.openmm import NonbondedForce
-
         ff = ForceField(
             "test_forcefields/test_forcefield.offxml", "test_forcefields/tip3p.offxml"
         )
@@ -2559,8 +2512,6 @@ class TestForceFieldChargeAssignment:
 
     def test_charge_increment_model_net_charge(self):
         """Test application of charge increments on a molecule with a net charge"""
-        from simtk import unit
-
         file_path = get_data_file_path("test_forcefields/test_forcefield.offxml")
         ff = ForceField(file_path, xml_charge_increment_model_ff_net_charge)
         del ff._parameter_handlers["ToolkitAM1BCC"]
@@ -2580,8 +2531,6 @@ class TestForceFieldChargeAssignment:
 
     def test_charge_increment_model_deduplicate_symmetric_matches(self):
         """Test that chargeincrementmodelhandler deduplicates symmetric matches"""
-        from simtk import unit
-
         ethanol = create_ethanol()
         top = ethanol.to_topology()
 
@@ -2667,8 +2616,6 @@ class TestForceFieldChargeAssignment:
     def test_charge_increment_model_completely_overlapping_matches_override(self):
         """Ensure that DIFFERENT chargeincrements override one another if they apply to the
         same atoms, regardless of order"""
-        from simtk import unit
-
         file_path = get_data_file_path("test_forcefields/test_forcefield.offxml")
         ff = ForceField(file_path, xml_charge_increment_model_ff_override)
         del ff._parameter_handlers["ToolkitAM1BCC"]
@@ -2699,8 +2646,6 @@ class TestForceFieldChargeAssignment:
     def test_charge_increment_model_partially_overlapping_matches_both_apply(self):
         """Ensure that DIFFERENT chargeincrements BOTH get applied if they match
         a partially-overlapping set of atoms"""
-        from simtk import unit
-
         file_path = get_data_file_path("test_forcefields/test_forcefield.offxml")
         ff = ForceField(file_path, xml_charge_increment_model_ff_both_apply)
         del ff._parameter_handlers["ToolkitAM1BCC"]
@@ -2766,8 +2711,6 @@ class TestForceFieldChargeAssignment:
     def test_library_charge_hierarchy(self):
         """Test assigning charges to one water molecule using library charges, where two LCs match and the
         assignment is determined by order they are added to the force field"""
-        from simtk.openmm import NonbondedForce
-
         # Test with xml_OH_library_charges_xml loaded last, which should assign dummy partial charges
         ff = ForceField(
             "test_forcefields/test_forcefield.offxml",
@@ -2803,8 +2746,6 @@ class TestForceFieldChargeAssignment:
 
     def test_library_charges_to_two_waters(self):
         """Test assigning charges to two water molecules using library charges"""
-        from simtk.openmm import NonbondedForce
-
         ff = ForceField(
             "test_forcefields/test_forcefield.offxml", "test_forcefields/tip3p.offxml"
         )
@@ -2830,8 +2771,6 @@ class TestForceFieldChargeAssignment:
 
     def test_library_charges_to_three_ethanols_different_atom_ordering(self):
         """Test assigning charges to three ethanols with different atom orderings"""
-        from simtk.openmm import NonbondedForce
-
         # Define a library charge parameter for ethanol (C1-C2-O3) where C1 has charge -0.2, and its Hs have -0.02,
         # C2 has charge -0.1 and its Hs have -0.01, and O3 has charge 0.3, and its H has charge 0.08
 
@@ -2906,8 +2845,6 @@ class TestForceFieldChargeAssignment:
     @pytest.mark.parametrize("monatomic_ion,formal_charge", generate_monatomic_ions())
     def test_library_charges_monatomic_ions(self, monatomic_ion, formal_charge):
         """Test assigning library charges to each of the monatomic ions in openff-1.1.0.xml"""
-        from simtk.openmm import NonbondedForce
-
         ff = ForceField(
             "test_forcefields/test_forcefield.offxml",
             "test_forcefields/ion_charges.offxml",
@@ -2924,8 +2861,6 @@ class TestForceFieldChargeAssignment:
     def test_charge_method_hierarchy(self):
         """Ensure that molecules are parameterized by charge_from_molecules first, then library charges
         if not applicable, then AM1BCC otherwise"""
-        from simtk.openmm import NonbondedForce
-
         ff = ForceField(
             "test_forcefields/test_forcefield.offxml",
             xml_CH_zeroes_library_charges_xml,
@@ -3087,8 +3022,6 @@ class TestForceFieldChargeAssignment:
     def test_assign_charges_to_molecule_in_parts_using_multiple_library_charges(self):
         """Test assigning charges to parts of a molecule using two library charge lines. Note that these LibraryCharge
         SMIRKS have partial overlap, so this also tests that the hierarchy is correctly obeyed."""
-        from simtk.openmm import NonbondedForce
-
         ff = ForceField(
             "test_forcefields/test_forcefield.offxml",
             xml_ethanol_library_charges_in_parts_ff,
@@ -3130,8 +3063,6 @@ class TestForceFieldChargeAssignment:
     def test_assign_charges_using_library_charges_by_single_atoms(self):
         """Test assigning charges to parts of a molecule using per-atom library charges. Note that these LibraryCharge
         SMIRKS will match multiple atoms, so this is also a test of correct usage of the parameter hierarchy.."""
-        from simtk.openmm import NonbondedForce
-
         ff = ForceField(
             "test_forcefields/test_forcefield.offxml",
             xml_ethanol_library_charges_by_atom_ff,
@@ -3174,12 +3105,6 @@ class TestForceFieldChargeAssignment:
         self,
     ):
         """Fail to assign charges to a molecule because not all atoms can be assigned"""
-        from simtk.openmm import NonbondedForce
-
-        from openff.toolkit.typing.engines.smirnoff.parameters import (
-            UnassignedMoleculeChargeException,
-        )
-
         molecules = [Molecule.from_file(get_data_file_path("molecules/toluene.sdf"))]
         top = Topology.from_molecules(molecules)
 
@@ -3225,8 +3150,6 @@ class TestForceFieldChargeAssignment:
         """Ensure that charges are set on returned topology if the user specifies 'return_topology=True' in
         create_openmm_system"""
         # TODO: Should this test also cover multiple unique molecules?
-        from simtk.openmm import NonbondedForce
-
         mol = create_acetate()
         ff = ForceField("test_forcefields/test_forcefield.offxml", *additional_offxmls)
         charge_mols = []
@@ -3606,8 +3529,6 @@ class TestForceFieldParameterAssignment:
         ff_system = ff.create_openmm_system(molecule.to_topology())
 
         # Load OpenMM System created with the 0.1 version of the toolkit.
-        from simtk import openmm
-
         with open(xml_file_path, "r") as f:
             xml_system = openmm.XmlSerializer.deserialize(f.read())
 
@@ -3641,10 +3562,7 @@ class TestForceFieldParameterAssignment:
         Regression test on HCT, OBC1, and OBC2 GBSA models. This test ensures that the
         SMIRNOFF-based GBSA models match the equivalent OpenMM implementations.
         """
-
         import parmed as pmd
-        from simtk import openmm
-        from simtk.openmm import Platform
 
         from openff.toolkit.tests.utils import (
             compare_system_energies,
@@ -3940,10 +3858,7 @@ class TestForceFieldParameterAssignment:
     def test_molecule_energy_gb_no_sa(self, zero_charges, gbsa_model):
         """Test creating a GBSA system without a surface energy term, and validate its energy
         against the same system made using OpenMM's AMBER GBSA functionality"""
-        import numpy as np
         import parmed as pmd
-        from simtk import openmm
-        from simtk.openmm import Platform
 
         from openff.toolkit.tests.utils import (
             compare_system_energies,
@@ -4129,13 +4044,13 @@ class TestForceFieldParameterAssignment:
         topology = Topology.from_molecules(molecule)
 
         labels = forcefield.label_molecules(topology)[0]
+
         assert len(labels["Bonds"]) == 2654
         assert len(labels["Angles"]) == 4789
         assert len(labels["ProperTorsions"]) == 6973
         assert len(labels["ImproperTorsions"]) == 528
 
-        fn = forcefield.create_openmm_system
-        omm_system = fn(
+        omm_system = forcefield.create_openmm_system(
             topology,
             charge_from_molecules=[molecule],
             toolkit_registry=toolkit_registry,
@@ -4770,8 +4685,6 @@ class TestSmirnoffVersionConverter:
         ff_system = ff.create_openmm_system(molecule.to_topology())
 
         # Load OpenMM System created with the 0.1 version of the toolkit.
-        from simtk import openmm
-
         with open(xml_file_path, "r") as f:
             xml_system = openmm.XmlSerializer.deserialize(f.read())
 
