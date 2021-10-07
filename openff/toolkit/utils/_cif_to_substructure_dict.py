@@ -123,8 +123,6 @@ class CifSubstructures:
                                      replace_quadruple_bond_with_any=replace_quadruple_bond_with_any,
                                      remove_charge_bond_order_resonant=remove_charge_bond_order_resonant
                                      )
-        # Automatically patch known problems - better that this explodes when things are fixed
-        self._patch_known_problems()
 
     def to_json_file(self, output_file, indent=4):
         """
@@ -490,3 +488,32 @@ class CifSubstructures:
         #new_smarts = "[N:1]1[C@@:2]([C:3]=[O:4])([H:8])[C:5]([H:9])([H:10])[C:6]([H:11])([H:12])[C:7]1([H:13])[H:14]"
         #self.data['PRO'][new_smarts] = self.data['PRO'][old_smarts]
         self.data['PRO'].pop(old_smarts)
+
+        # Add common caps
+        self.data['ACE'] = {
+            "[C:1](=[O:2])[C:3]([H:4])([H:5])[H:6]": [
+                "C",
+                "O",
+                "CH3",
+                "H1",
+                "H2",
+                "H3"
+            ]
+        }
+        self.data["NME"] = {
+            "[N:1]([C:2]([H:4])([H:5])[H:6])[H:3]": [
+                "N",
+                "C",
+                "HN2",
+                "H1",
+                "H2",
+                "H3"
+            ]
+        }
+        self.data["NH2"] = {
+            "[N:1]([H:2])[H:3]": [
+                "N",
+                "HN1",
+                "HN2"
+            ]
+        }
