@@ -31,6 +31,10 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 
 ### Bugfixes
+- [PR #1087](https://github.com/openforcefield/openff-toolkit/pull/1087>): Fixes
+  [Issue #1073](<https://github.com/openforcefield/openff-toolkit/issues/1073>) in which
+  [`Molecule.__repr__`](openff.toolkit.topology.Molecule.__repr__) can fail if the molecule
+  fails by reporting a Hill formula instaed.
 - [PR #1052](https://github.com/openforcefield/openff-toolkit/pull/1052>): Fixes
   [Issue #986](<https://github.com/openforcefield/openff-toolkit/issues/986>)
   by raising a subclass of `AttributeError` in
