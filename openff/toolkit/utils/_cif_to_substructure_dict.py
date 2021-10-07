@@ -123,8 +123,10 @@ class CifSubstructures:
                                      replace_quadruple_bond_with_any=replace_quadruple_bond_with_any,
                                      remove_charge_bond_order_resonant=remove_charge_bond_order_resonant
                                      )
+        # Automatically patch known problems - better that this explodes when things are fixed
+        self._patch_known_problems()
 
-    def to_json_file(self, output_file, indent=None):
+    def to_json_file(self, output_file, indent=4):
         """
         Return a JSON serialized representation.
 
@@ -132,7 +134,7 @@ class CifSubstructures:
         __________
         output_file : str
             Path string for output file.
-        indent : int, optional, default=None
+        indent : int, optional, default=4
             If not None, will pretty-print with specified number of spaces for indentation.
 
         Returns
@@ -476,3 +478,15 @@ class CifSubstructures:
                                                   replace_quadruple_bond_with_any=replace_quadruple_bond_with_any,
                                                   remove_charge_bond_order_resonant=remove_charge_bond_order_resonant
                                                   )
+
+    def _patch_known_problems(self):
+        """
+        Monkey-patching known problems with current aa-variants-v1.cif from CCD.
+
+        .. warning: Needed as of Oct-06-2021
+        """
+        # Fix PRO smarts substructure
+        old_smarts = "[N-:1]1[C@@:2]([C-:3]=[O:4])([H:8])[C:5]([H:9])([H:10])[C:6]([H:11])([H:12])[C:7]1([H:13])[H:14]"
+        #new_smarts = "[N:1]1[C@@:2]([C:3]=[O:4])([H:8])[C:5]([H:9])([H:10])[C:6]([H:11])([H:12])[C:7]1([H:13])[H:14]"
+        #self.data['PRO'][new_smarts] = self.data['PRO'][old_smarts]
+        self.data['PRO'].pop(old_smarts)
