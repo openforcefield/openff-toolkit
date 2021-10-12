@@ -1555,7 +1555,7 @@ class TestForceField:
     @requires_rdkit
     def test_parameterize_ethanol_different_reference_ordering_rdkit(self):
         """
-        Test parameterizing the same PDB, using reference mol2s that have different atom orderings.
+        Test parameterizing the same PDB, using reference sdfs that have different atom orderings.
         The results of both should be identical.
         """
         toolkit_registry = ToolkitRegistry(
@@ -4175,8 +4175,8 @@ class TestForceFieldParameterAssignment:
             omm_sys_top.topology_bonds, mod_omm_sys_top.topology_bonds
         ):
             # 'approx()' because https://github.com/openforcefield/openff-toolkit/issues/994
-            assert bond1.bond.fractional_bond_order == pytest.approx(
-                bond2.bond.fractional_bond_order
+            assert bond1.fractional_bond_order == pytest.approx(
+                bond2.fractional_bond_order
             )
 
     def test_fractional_bond_order_ignore_existing_confs(self):
@@ -4250,12 +4250,8 @@ class TestForceFieldParameterAssignment:
             )
 
         # Check that the returned topology has the correct bond order
-        for bond1, bond2 in zip(
-            omm_sys_top.topology_bonds, mod_omm_sys_top.topology_bonds
-        ):
-            assert np.isclose(
-                bond1.bond.fractional_bond_order, bond2.bond.fractional_bond_order
-            )
+        for bond1, bond2 in zip(omm_sys_top.bonds, mod_omm_sys_top.bonds):
+            assert np.isclose(bond1.fractional_bond_order, bond2.fractional_bond_order)
 
     @pytest.mark.parametrize(
         (

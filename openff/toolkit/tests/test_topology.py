@@ -8,8 +8,8 @@
 Tests for Topology
 
 """
+
 import itertools
-from unittest import TestCase
 
 import numpy as np
 import pytest
@@ -22,11 +22,7 @@ except ImportError:
     from simtk.openmm import app
     from simtk.openmm.app import element
 
-from openff.toolkit.tests.create_molecules import (
-    create_cyclohexane,
-    create_ethanol,
-    create_reversed_ethanol,
-)
+from openff.toolkit.tests.create_molecules import *
 from openff.toolkit.tests.utils import (
     get_data_file_path,
     requires_openeye,
@@ -34,11 +30,13 @@ from openff.toolkit.tests.utils import (
     requires_rdkit,
 )
 from openff.toolkit.topology import (
+    Atom,
     ImproperDict,
     Molecule,
     TagSortedDict,
     Topology,
     ValenceDict,
+    VirtualParticle,
 )
 from openff.toolkit.utils import (
     BASIC_CHEMINFORMATICS_TOOLKITS,
@@ -108,83 +106,11 @@ def test_cheminformatics_toolkit_is_installed():
 
 
 # TODO: Refactor this to pytest
-class TestTopology(TestCase):
-    def setUp(self):
-        self.empty_molecule = Molecule()
-        self.ethane_from_smiles = Molecule.from_smiles("CC")
-        self.ethene_from_smiles = Molecule.from_smiles("C=C")
-        self.propane_from_smiles = Molecule.from_smiles("CCC")
-
-        filename = get_data_file_path("molecules/toluene.sdf")
-        self.toluene_from_sdf = Molecule.from_file(filename)
-        if OpenEyeToolkitWrapper.is_available():
-            filename = get_data_file_path("molecules/toluene_charged.mol2")
-            # TODO: This will require openeye to load
-            self.toluene_from_charged_mol2 = Molecule.from_file(filename)
-        self.charged_methylamine_from_smiles = Molecule.from_smiles(
-            "[H]C([H])([H])[N+]([H])([H])[H]"
-        )
-
-        molecule = Molecule.from_smiles("CC")
-        carbons = [atom for atom in molecule.atoms if atom.atomic_number == 6]
-        c0_hydrogens = [
-            atom for atom in carbons[0].bonded_atoms if atom.atomic_number == 1
-        ]
-        molecule.add_bond_charge_virtual_site(
-            (carbons[0], carbons[1]),
-            0.1 * unit.angstrom,
-            charge_increments=[0.1, 0.05] * unit.elementary_charge,
-        )
-        molecule.add_monovalent_lone_pair_virtual_site(
-            (c0_hydrogens[0], carbons[0], carbons[1]),
-            0.2 * unit.angstrom,
-            20 * unit.degree,
-            25 * unit.degree,
-            charge_increments=[0.01, 0.02, 0.03] * unit.elementary_charge,
-        )
-        self.ethane_from_smiles_w_vsites = Molecule(molecule)
-
-        # Make a propane with virtual sites
-        molecule = Molecule.from_smiles("CCC")
-        carbons = [atom for atom in molecule.atoms if atom.atomic_number == 6]
-        c0_hydrogens = [
-            atom for atom in carbons[0].bonded_atoms if atom.atomic_number == 1
-        ]
-        # This will add *two* particles (symmetric=True), *one* virtual site
-        molecule.add_monovalent_lone_pair_virtual_site(
-            (c0_hydrogens[0], carbons[0], carbons[1]),
-            0.2 * unit.angstrom,
-            20 * unit.degree,
-            25 * unit.degree,
-            charge_increments=[0.01, 0.02, 0.03] * unit.elementary_charge,
-            symmetric=True,
-        )
-        # This will add *one* particle (symmetric=False), *one* virtual site
-        molecule.add_bond_charge_virtual_site(
-            (carbons[0], carbons[1]),
-            0.1 * unit.angstrom,
-            charge_increments=[0.1, 0.05] * unit.elementary_charge,
-            symmetric=False,
-        )
-        self.propane_from_smiles_w_vsites = Molecule(molecule)
-
-        # Make a TIP5 water
-        molecule = Molecule.from_smiles("[H][O][H]")
-        O1 = [atom for atom in molecule.atoms if atom.atomic_number == 8][0]
-        H1, H2 = [atom for atom in O1.bonded_atoms if atom.atomic_number == 1]
-        molecule.add_divalent_lone_pair_virtual_site(
-            (H1, O1, H2),
-            0.7 * unit.angstrom,
-            54.71384225 * unit.degree,
-            charge_increments=[0.1205, 0.00, 0.1205] * unit.elementary_charge,
-            symmetric=True,
-        )
-        self.tip5_water = Molecule(molecule)
-
+class TestTopology:
     def test_empty(self):
         """Test creation of empty topology"""
         topology = Topology()
-        assert topology.n_reference_molecules == 0
+        # assert topology.n_reference_molecules == 0
         assert topology.n_topology_molecules == 0
         assert topology.n_topology_atoms == 0
         assert topology.n_topology_bonds == 0
@@ -210,7 +136,7 @@ class TestTopology(TestCase):
             bad_units_vectors,
             unitless_vectors,
         ]:
-            with self.assertRaises(InvalidBoxVectorsError):
+            with pytest.raises(InvalidBoxVectorsError):
                 topology.box_vectors = bad_vectors
             assert topology.box_vectors is None
 
@@ -235,11 +161,11 @@ class TestTopology(TestCase):
         solvent_box.box_vectors = None
         assert solvent_box.is_periodic is False
 
-    def test_from_smiles(self):
+    def test_from_smiles(self, ethane_from_smiles):
         """Test creation of a OpenFF Topology object from a SMILES string"""
-        topology = Topology.from_molecules(self.ethane_from_smiles)
+        topology = Topology.from_molecules(ethane_from_smiles)
 
-        assert topology.n_reference_molecules == 1
+        # assert topology.n_reference_molecules == 1
         assert topology.n_topology_molecules == 1
         assert topology.n_topology_atoms == 8
         assert topology.n_topology_bonds == 7
@@ -248,9 +174,9 @@ class TestTopology(TestCase):
         assert topology.box_vectors is None
         assert len(topology.constrained_atom_pairs.items()) == 0
 
-        topology.add_molecule(self.ethane_from_smiles)
+        topology.add_molecule(ethane_from_smiles)
 
-        assert topology.n_reference_molecules == 1
+        # assert topology.n_reference_molecules == 1
         assert topology.n_topology_molecules == 2
         assert topology.n_topology_atoms == 16
         assert topology.n_topology_bonds == 14
@@ -259,57 +185,57 @@ class TestTopology(TestCase):
         assert topology.box_vectors is None
         assert len(topology.constrained_atom_pairs.items()) == 0
 
-    def test_from_smiles_unique_mols(self):
+    def test_from_smiles_unique_mols(self, ethane_from_smiles, propane_from_smiles):
         """Test the addition of two different molecules to a topology"""
-        topology = Topology.from_molecules(
-            [self.ethane_from_smiles, self.propane_from_smiles]
-        )
+        topology = Topology.from_molecules([ethane_from_smiles, propane_from_smiles])
         assert topology.n_topology_molecules == 2
-        assert topology.n_reference_molecules == 2
+        # assert topology.n_reference_molecules == 2
 
-    def test_n_topology_atoms(self):
+    def test_n_topology_atoms(self, ethane_from_smiles):
         """Test n_atoms function"""
         topology = Topology()
         assert topology.n_topology_atoms == 0
         assert topology.n_topology_bonds == 0
-        topology.add_molecule(self.ethane_from_smiles)
+        topology.add_molecule(ethane_from_smiles)
         assert topology.n_topology_atoms == 8
         assert topology.n_topology_bonds == 7
 
-    def test_n_topology_atoms_with_vsites(self):
+    def test_n_topology_atoms_with_vsites(
+        self, ethane_from_smiles_w_vsites, tip5_water
+    ):
         """Test n_atoms function when vsites are present"""
         topology = Topology()
         assert topology.n_topology_atoms == 0
         assert topology.n_topology_bonds == 0
-        topology.add_molecule(self.ethane_from_smiles_w_vsites)
+        topology.add_molecule(ethane_from_smiles_w_vsites)
         assert topology.n_topology_atoms == 8
         assert topology.n_topology_bonds == 7
 
         topology = Topology()
         assert topology.n_topology_atoms == 0
         assert topology.n_topology_bonds == 0
-        topology.add_molecule(self.tip5_water)
+        topology.add_molecule(tip5_water)
         assert topology.n_topology_atoms == 3
         assert topology.n_topology_bonds == 2
 
-    def test_n_topology_virtual_sites(self):
+    def test_n_topology_virtual_sites(self, ethane_from_smiles_w_vsites, tip5_water):
         """Test n_atoms function"""
         topology = Topology()
         assert topology.n_topology_virtual_sites == 0
-        topology.add_molecule(self.ethane_from_smiles_w_vsites)
+        topology.add_molecule(ethane_from_smiles_w_vsites)
         assert topology.n_topology_virtual_sites == 2
 
         topology = Topology()
         assert topology.n_topology_virtual_sites == 0
-        topology.add_molecule(self.tip5_water)
+        topology.add_molecule(tip5_water)
         assert topology.n_topology_virtual_sites == 1
         assert topology.n_topology_particles == 5
 
-    def test_get_atom(self):
+    def test_get_atom(self, ethane_from_smiles):
         """Test Topology.atom function (atom lookup from index)"""
         topology = Topology()
-        topology.add_molecule(self.ethane_from_smiles)
-        with self.assertRaises(Exception) as context:
+        topology.add_molecule(ethane_from_smiles)
+        with pytest.raises(Exception) as context:
             topology_atom = topology.atom(-1)
 
         # Make sure we get 2 carbons and 8 hydrogens
@@ -323,13 +249,13 @@ class TestTopology(TestCase):
         assert n_carbons == 2
         assert n_hydrogens == 6
 
-        with self.assertRaises(Exception) as context:
+        with pytest.raises(Exception) as context:
             topology_atom = topology.atom(8)
 
-    def test_topology_atom_element(self):
+    def test_topology_atom_element(self, toluene_from_sdf):
         """Test getters of TopologyAtom element and atomic number"""
         topology = Topology()
-        topology.add_molecule(self.toluene_from_sdf)
+        topology.add_molecule(toluene_from_sdf)
 
         first_element = topology.atom(0).element
         eighth_element = topology.atom(7).element
@@ -342,12 +268,12 @@ class TestTopology(TestCase):
         assert first_element == element.carbon
         assert eighth_element == element.hydrogen
 
-    def test_get_bond(self):
+    def test_get_bond(self, ethane_from_smiles, ethene_from_smiles):
         """Test Topology.bond function (bond lookup from index)"""
         topology = Topology()
-        topology.add_molecule(self.ethane_from_smiles)
-        topology.add_molecule(self.ethene_from_smiles)
-        with self.assertRaises(Exception) as context:
+        topology.add_molecule(ethane_from_smiles)
+        topology.add_molecule(ethene_from_smiles)
+        with pytest.raises(Exception) as context:
             topology_atom = topology.bond(-1)
 
         n_single_bonds = 0
@@ -377,19 +303,21 @@ class TestTopology(TestCase):
         assert n_cc_bonds == 2
         assert n_ch_bonds == 10
 
-        with self.assertRaises(Exception) as context:
+        with pytest.raises(Exception) as context:
             topology_bond = topology.bond(12)
 
-    def test_get_virtual_site(self):
+    def test_get_virtual_site(
+        self, ethane_from_smiles_w_vsites, propane_from_smiles_w_vsites
+    ):
         """Test Topology.virtual_site function (get virtual site from index)"""
         topology = Topology()
-        topology.add_molecule(self.ethane_from_smiles_w_vsites)
+        topology.add_molecule(ethane_from_smiles_w_vsites)
         assert topology.n_topology_virtual_sites == 2
-        topology.add_molecule(self.propane_from_smiles_w_vsites)
+        topology.add_molecule(propane_from_smiles_w_vsites)
         assert topology.n_topology_virtual_sites == 4
-        with self.assertRaises(Exception) as context:
+        with pytest.raises(Exception) as context:
             topology_vsite = topology.virtual_site(-1)
-        with self.assertRaises(Exception) as context:
+        with pytest.raises(Exception) as context:
             topology_vsite = topology.virtual_site(4)
         topology_vsite1 = topology.virtual_site(0)
         topology_vsite2 = topology.virtual_site(1)
@@ -410,95 +338,102 @@ class TestTopology(TestCase):
         # There are four virtual sites -- Two BondCharges with 2 atoms, and two MonovalentLonePairs with 3 atoms
         assert n_equal_atoms == 10
 
-    def test_topology_particles_virtualsites_indexed_last(self):
+    def test_topology_particles_virtualsites_indexed_last(
+        self, ethane_from_smiles_w_vsites, propane_from_smiles_w_vsites
+    ):
         """
         Test to ensure that virtualsites are strictly indexed after all atoms
         in topology.particles
         """
-        from openff.toolkit.topology import TopologyAtom, TopologyVirtualParticle
+        # from openff.toolkit.topology import TopologyAtom, TopologyVirtualParticle
 
         topology = Topology()
-        topology.add_molecule(self.ethane_from_smiles_w_vsites)
-        topology.add_molecule(self.propane_from_smiles_w_vsites)
+        topology.add_molecule(ethane_from_smiles_w_vsites)
+        topology.add_molecule(propane_from_smiles_w_vsites)
 
         # Iterate through all TopologyParticles, ensuring that all atoms appear
         # before all virtualsides
         reading_atoms = True
         for particle in topology.topology_particles:
             if reading_atoms:
-                if isinstance(particle, TopologyAtom):
+                if isinstance(particle, Atom):
                     pass
                 else:
                     reading_atoms = False
             elif not (reading_atoms):
-                assert isinstance(particle, TopologyVirtualParticle)
+                assert isinstance(particle, VirtualParticle)
 
-    def test_topology_virtual_site_particle_start_index(self):
+    def test_topology_virtual_site_particle_start_index(
+        self, propane_from_smiles_w_vsites
+    ):
 
         topology = Topology()
-        topology.add_molecule(self.propane_from_smiles_w_vsites)
-        assert topology.virtual_site(0).topology_virtual_particle_start_index == 11
-        assert topology.virtual_site(1).topology_virtual_particle_start_index == 13
+        topology.add_molecule(propane_from_smiles_w_vsites)
+        vsites = list(topology.virtual_sites)
+        assert topology.virtual_site_particle_start_index(vsites[0]) == 11
+        assert topology.virtual_site_particle_start_index(vsites[1]) == 13
 
-    def test_topology_virtual_site_n_particles(self):
+    def test_topology_virtual_site_n_particles(
+        self, propane_from_smiles_w_vsites, tip5_water
+    ):
         """
         Test if the virtual sites report the correct number of particles
         """
         topology = Topology()
-        topology.add_molecule(self.propane_from_smiles_w_vsites)
+        topology.add_molecule(propane_from_smiles_w_vsites)
         assert topology.virtual_site(0).n_particles == 2
         assert topology.virtual_site(1).n_particles == 1
 
         topology = Topology()
-        topology.add_molecule(self.tip5_water)
+        topology.add_molecule(tip5_water)
         assert topology.virtual_site(0).n_particles == 2
 
-    def test_topology_virtualsites_atom_indexing(self):
-        """
-        Add multiple instances of the same molecule, but in a different
-        order, and ensure that virtual site particles are indexed correctly
-        """
-        topology = Topology()
+    # def test_topology_virtualsites_atom_indexing(self):
+    #     """
+    #     Add multiple instances of the same molecule, but in a different
+    #     order, and ensure that virtual site particles are indexed correctly
+    #     """
+    #     topology = Topology()
+    #
+    #     topology.add_molecule(create_ethanol())
+    #     topology.add_molecule(create_ethanol())
+    #     topology.add_molecule(create_reversed_ethanol())
+    #
+    #     # Add a virtualsite to the reference ethanol
+    #     for ref_mol in topology.reference_molecules:
+    #         atoms = [ref_mol.atoms[i] for i in [0, 1]]
+    #         ref_mol._add_bond_charge_virtual_site(
+    #             atoms,
+    #             0.5 * unit.angstrom,
+    #         )
+    #
+    #     virtual_site_topology_atom_indices = [(0, 1), (9, 10), (26, 25)]
+    #     for top_vs, expected_indices in zip(
+    #         topology.topology_virtual_sites, virtual_site_topology_atom_indices
+    #     ):
+    #         assert (
+    #             tuple([topology.atom_index(at) for at in top_vs.atoms])
+    #             == expected_indices
+    #         )
+    #         assert topology.atom_index(top_vs.atoms[0]) == expected_indices[0]
+    #         assert topology.atom_index(top_vs.atoms[1]) == expected_indices[1]
 
-        topology.add_molecule(create_ethanol())
-        topology.add_molecule(create_ethanol())
-        topology.add_molecule(create_reversed_ethanol())
-
-        # Add a virtualsite to the reference ethanol
-        for ref_mol in topology.reference_molecules:
-            atoms = [ref_mol.atoms[i] for i in [0, 1]]
-            ref_mol._add_bond_charge_virtual_site(
-                atoms,
-                0.5 * unit.angstrom,
-            )
-
-        virtual_site_topology_atom_indices = [(0, 1), (9, 10), (26, 25)]
-        for top_vs, expected_indices in zip(
-            topology.topology_virtual_sites, virtual_site_topology_atom_indices
-        ):
-            assert (
-                tuple([at.topology_particle_index for at in top_vs.atoms])
-                == expected_indices
-            )
-            assert top_vs.atom(0).topology_particle_index == expected_indices[0]
-            assert top_vs.atom(1).topology_particle_index == expected_indices[1]
-
-    def test_is_bonded(self):
+    def test_is_bonded(self, propane_from_smiles_w_vsites):
         """Test Topology.virtual_site function (get virtual site from index)"""
         topology = Topology()
-        topology.add_molecule(self.propane_from_smiles_w_vsites)
+        topology.add_molecule(propane_from_smiles_w_vsites)
         topology.assert_bonded(0, 1)
         topology.assert_bonded(1, 0)
         topology.assert_bonded(1, 2)
         # C-H bond
         topology.assert_bonded(0, 4)
-        with self.assertRaises(Exception) as context:
+        with pytest.raises(Exception) as context:
             topology.assert_bonded(0, 2)
 
-    def test_angles(self):
+    def test_angles(self, ethane_from_smiles, propane_from_smiles):
         """Topology.angles should return image angles of all topology molecules."""
-        molecule1 = self.ethane_from_smiles
-        molecule2 = self.propane_from_smiles
+        molecule1 = ethane_from_smiles
+        molecule2 = propane_from_smiles
 
         # Create topology.
         topology = Topology()
@@ -515,15 +450,14 @@ class TestTopology(TestCase):
         mol_angle_atoms1 = list(molecule1.angles)
         mol_angle_atoms2 = list(molecule2.angles)
         top_angle_atoms1 = [
-            tuple(a._atom for a in atoms)
-            for atoms in topology_angles[: molecule1.n_angles]
+            tuple(a for a in atoms) for atoms in topology_angles[: molecule1.n_angles]
         ]
         top_angle_atoms2 = [
-            tuple(a._atom for a in atoms)
+            tuple(a for a in atoms)
             for atoms in topology_angles[molecule1.n_angles : 2 * molecule1.n_angles]
         ]
         top_angle_atoms3 = [
-            tuple(a._atom for a in atoms)
+            tuple(a for a in atoms)
             for atoms in topology_angles[2 * molecule1.n_angles :]
         ]
 
@@ -531,10 +465,10 @@ class TestTopology(TestCase):
         assert_tuple_of_atoms_equal(top_angle_atoms2, mol_angle_atoms1)
         assert_tuple_of_atoms_equal(top_angle_atoms3, mol_angle_atoms2)
 
-    def test_propers(self):
+    def test_propers(self, ethane_from_smiles, propane_from_smiles):
         """Topology.propers should return image propers torsions of all topology molecules."""
-        molecule1 = self.ethane_from_smiles
-        molecule2 = self.propane_from_smiles
+        molecule1 = ethane_from_smiles
+        molecule2 = propane_from_smiles
 
         # Create topology.
         topology = Topology()
@@ -551,15 +485,14 @@ class TestTopology(TestCase):
         mol_proper_atoms1 = list(molecule1.propers)
         mol_proper_atoms2 = list(molecule2.propers)
         top_proper_atoms1 = [
-            tuple(a._atom for a in atoms)
-            for atoms in topology_propers[: molecule1.n_propers]
+            tuple(a for a in atoms) for atoms in topology_propers[: molecule1.n_propers]
         ]
         top_proper_atoms2 = [
-            tuple(a._atom for a in atoms)
+            tuple(a for a in atoms)
             for atoms in topology_propers[molecule1.n_propers : 2 * molecule1.n_propers]
         ]
         top_proper_atoms3 = [
-            tuple(a._atom for a in atoms)
+            tuple(a for a in atoms)
             for atoms in topology_propers[2 * molecule1.n_propers :]
         ]
 
@@ -567,10 +500,10 @@ class TestTopology(TestCase):
         assert_tuple_of_atoms_equal(top_proper_atoms2, mol_proper_atoms1)
         assert_tuple_of_atoms_equal(top_proper_atoms3, mol_proper_atoms2)
 
-    def test_impropers(self):
+    def test_impropers(self, ethane_from_smiles, propane_from_smiles):
         """Topology.impropers should return image impropers torsions of all topology molecules."""
-        molecule1 = self.ethane_from_smiles
-        molecule2 = self.propane_from_smiles
+        molecule1 = ethane_from_smiles
+        molecule2 = propane_from_smiles
 
         # Create topology.
         topology = Topology()
@@ -587,17 +520,17 @@ class TestTopology(TestCase):
         mol_improper_atoms1 = list(molecule1.impropers)
         mol_improper_atoms2 = list(molecule2.impropers)
         top_improper_atoms1 = [
-            tuple(a._atom for a in atoms)
+            tuple(a for a in atoms)
             for atoms in topology_impropers[: molecule1.n_impropers]
         ]
         top_improper_atoms2 = [
-            tuple(a._atom for a in atoms)
+            tuple(a for a in atoms)
             for atoms in topology_impropers[
                 molecule1.n_impropers : 2 * molecule1.n_impropers
             ]
         ]
         top_improper_atoms3 = [
-            tuple(a._atom for a in atoms)
+            tuple(a for a in atoms)
             for atoms in topology_impropers[2 * molecule1.n_impropers :]
         ]
 
@@ -657,7 +590,7 @@ class TestTopology(TestCase):
         molecules = [create_ethanol(), create_cyclohexane()]
 
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
-        assert topology.n_reference_molecules == 2
+        # assert topology.n_reference_molecules == 2
         assert topology.n_topology_molecules == 239
 
     def test_from_openmm_missing_reference(self):
@@ -715,7 +648,7 @@ class TestTopology(TestCase):
         assert n_double_bonds == 6
         assert n_aromatic_bonds == 12
 
-        # Check that there is one residue for each molecule.
+        # Check that there is one residue and chain for each molecule.
         assert omm_topology.getNumResidues() == 3
         assert omm_topology.getNumChains() == 3
 
@@ -747,12 +680,16 @@ class TestTopology(TestCase):
 
         # Check bonds.
         for bond_idx, bond in enumerate(off_topology.topology_bonds):
-            bond_copy = off_topology_copy.bond(bond_idx)
+            # bond_copy = off_topology_copy.bond(bond_idx)
+            bond_copy = off_topology_copy.get_bond_between(
+                off_topology.atom_index(bond.atoms[0]),
+                off_topology.atom_index(bond.atoms[1]),
+            )
             bond_atoms = [a.atomic_number for a in bond.atoms]
             bond_atoms_copy = [a.atomic_number for a in bond_copy.atoms]
             assert bond_atoms == bond_atoms_copy
             assert bond.bond_order == bond_copy.bond_order
-            assert bond.bond.is_aromatic == bond_copy.bond.is_aromatic
+            assert bond.is_aromatic == bond_copy.is_aromatic
 
     @requires_pkg("mdtraj")
     def test_from_mdtraj(self):
@@ -982,7 +919,7 @@ class TestTopology(TestCase):
                 "molecules/cyclohexane.mol2",
             )
         ]
-        with self.assertRaises(DuplicateUniqueMoleculeError) as context:
+        with pytest.raises(DuplicateUniqueMoleculeError) as context:
             topology = Topology.from_openmm(
                 pdbfile.topology, unique_molecules=molecules
             )
@@ -1145,6 +1082,44 @@ class TestTopology(TestCase):
             "[C][C:1]-[C:2]-[O:3]", toolkit_registry=toolkit_wrapper
         )
         assert len(matches) == 0
+
+    def test_topology_hierarchy_iterators(
+        self,
+        dipeptide,
+        dipeptide_residues_perceived,
+        dipeptide_hierarchy_perceived,
+        cyx_hierarchy_perceived,
+    ):
+        top = Topology()
+        # Ensure that an empty topology has no residues defined
+        residues = list(top.hierarchy_iterator("residues"))
+        assert len(residues) == 0
+        # Ensure that a topology with no metadata has no residues defined
+        top.add_molecule(dipeptide)
+        residues = list(top.hierarchy_iterator("residues"))
+        assert len(residues) == 0
+        # Ensure that a topology with metadata, but no hierarchy perception has no residues defined
+        top.add_molecule(dipeptide_residues_perceived)
+        residues = list(top.hierarchy_iterator("residues"))
+        assert len(residues) == 0
+        # Ensure that adding molecules WITH hierarchy perceived DOES give the topology residues to iterate over
+        top.add_molecule(dipeptide_hierarchy_perceived)
+        top.add_molecule(cyx_hierarchy_perceived)
+        residues = list(top.hierarchy_iterator("residues"))
+        assert len(residues) == 9
+        expected_ids = [
+            ("None", "None", "None"),
+            ("None", 1, "ACE"),
+            ("None", 2, "ALA"),
+            ("None", 1, "ACE"),
+            ("None", 2, "CYS"),
+            ("None", 3, "NME"),
+            ("None", 4, "ACE"),
+            ("None", 5, "CYS"),
+            ("None", 6, "NME"),
+        ]
+        for expected_id, residue in zip(expected_ids, residues):
+            assert expected_id == residue.identifier
 
 
 @pytest.mark.parametrize(
