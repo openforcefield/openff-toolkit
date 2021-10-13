@@ -2,7 +2,17 @@ from openff.toolkit.utils._cif_to_substructure_dict import CifSubstructures
 from openff.toolkit.utils import get_data_file_path
 
 cif_object = CifSubstructures()
-cif_object.from_file('/home/ijpulidos/workdir/data/aa-variants-v1.cif', include_leaving=False, replace_quadruple_bond_with_any=False, remove_charge_bond_order_resonant=False)
+cif_object.from_file('/home/ijpulidos/workdir/data/aa-variants-v1.cif',
+                     include_leaving=False,
+                     replace_quadruple_bond_with_any=False,
+                     remove_charge_bond_order_resonant=False
+                     )
+cif_object.from_file('/home/ijpulidos/workdir/data/aa-variants-v1.cif',
+                     include_leaving=True,
+                     replace_quadruple_bond_with_any=False,
+                     remove_charge_bond_order_resonant=False
+                     )
+
 
 # Automatically patch known problems - better that this explodes when things are fixed
 cif_object._patch_known_problems()

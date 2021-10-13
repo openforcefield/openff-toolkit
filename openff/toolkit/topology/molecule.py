@@ -5086,7 +5086,7 @@ class FrozenMolecule(Serializable):
 
             for bond in openmm_topology.bonds():
                 omm_topology_G.add_edge(
-                    bond.atom1.index, bond.atom2.index, bond_order=Chem.rdchem.BondType.SINGLE  # bond.order
+                    bond.atom1.index, bond.atom2.index, bond_order=Chem.rdchem.BondType.UNSPECIFIED  # bond.order
                 )
 
             # Try matching this substructure to the whole molecule graph
@@ -5137,7 +5137,12 @@ class FrozenMolecule(Serializable):
                         non_isomorphic_flag = False
                 if non_isomorphic_flag:
                     non_isomorphic_count += 1
-            print(f"Non isomorphic residues: {non_isomorphic_count}")
+            # print(f"Non isomorphic residues: {non_isomorphic_count}")
+            print(f"N. of assigned nodes: {len(already_assigned_nodes)} -- N. of atoms: {len(list(openmm_topology.atoms()))}")
+            print(f"N. of assigned edges: {len(already_assigned_edges)} -- N. of bonds: {len(list(openmm_topology.bonds()))}")
+            # assert len(already_assigned_nodes) == len(list(openmm_topology.atoms()))
+            # assert len(already_assigned_edges) == len(list(openmm_topology.bonds()))
+
 
             return omm_topology_G
         from openff.toolkit.utils import get_data_file_path
