@@ -5226,6 +5226,12 @@ class FrozenMolecule(Serializable):
         # TODO: Remove this hack for the uncapped C terminal once we've updated the substructure dict
         #rdmol.GetBondBetweenAtoms(rdmol.GetNumAtoms() - 1, rdmol.GetNumAtoms() - 3).SetBondType(Chem.BondType.SINGLE)
         #rdmol.GetAtomWithIdx(rdmol.GetNumAtoms() - 1).SetFormalCharge(-1)
+        # rdmol.GetBondBetweenAtoms(rdmol.GetNumAtoms() - 1, rdmol.GetNumAtoms() - 3).SetBondType(Chem.BondType.SINGLE)
+        offmol.get_bond_between(offmol.n_atoms-1, offmol.n_atoms-3).bond_order = 1
+        # rdmol.GetAtomWithIdx(rdmol.GetNumAtoms() - 1).SetFormalCharge(-1)
+        offmol.atoms[offmol.n_atoms-1].formal_charge = -1
+        # TODO: Does openff mol has some sanitization API point?
+        rdmol = offmol.to_rdkit()
         Chem.SanitizeMol(
             rdmol,
             Chem.SANITIZE_ALL ^ Chem.SANITIZE_ADJUSTHS,  # ^ Chem.SANITIZE_SETAROMATICITY,
