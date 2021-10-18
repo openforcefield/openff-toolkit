@@ -2703,6 +2703,7 @@ class FrozenMolecule(Serializable):
         self._partial_charges = None
         self._conformers = None  # Optional conformers
         self._hierarchy_schemes = dict()
+        self._invalidate_cached_properties()
 
     def _copy_initializer(self, other):
         """
@@ -5223,8 +5224,8 @@ class FrozenMolecule(Serializable):
         print(f"Number of atoms before sanitization: {len(rdmol.GetAtoms())}")
 
         # TODO: Remove this hack for the uncapped C terminal once we've updated the substructure dict
-        rdmol.GetBondBetweenAtoms(rdmol.GetNumAtoms() - 1, rdmol.GetNumAtoms() - 3).SetBondType(Chem.BondType.SINGLE)
-        rdmol.GetAtomWithIdx(rdmol.GetNumAtoms() - 1).SetFormalCharge(-1)
+        #rdmol.GetBondBetweenAtoms(rdmol.GetNumAtoms() - 1, rdmol.GetNumAtoms() - 3).SetBondType(Chem.BondType.SINGLE)
+        #rdmol.GetAtomWithIdx(rdmol.GetNumAtoms() - 1).SetFormalCharge(-1)
         Chem.SanitizeMol(
             rdmol,
             Chem.SANITIZE_ALL ^ Chem.SANITIZE_ADJUSTHS,  # ^ Chem.SANITIZE_SETAROMATICITY,
