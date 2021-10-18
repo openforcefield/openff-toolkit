@@ -3951,6 +3951,24 @@ class TestMoleculeFromPDB:
         offmol = Molecule.from_pdb(get_data_file_path("proteins/T4-protein.pdb"))
         assert offmol.n_atoms == expected_n_atoms
 
+    def test_molecule_from_pdb_mainchain_ala_dipeptide(self):
+        offmol = Molecule.from_pdb(get_data_file_path('proteins/MainChain_ALA.pdb'))
+        assert offmol.n_atoms == 22
+        expected_mol = Molecule.from_smiles('CC(=O)N[C@H](C)C(=O)NC')
+        assert offmol.is_isomorphic_with(expected_mol, atom_stereochemistry_matching=False)
+
+    def test_molecule_from_pdb_cterm_ala_dipeptide(self):
+        offmol = Molecule.from_pdb(get_data_file_path('proteins/CTerminal_ALA.pdb'))
+        assert offmol.n_atoms == 17
+        expected_mol = Molecule.from_smiles('CC(=O)N[C@H](C)C(=O)[O-]')
+        assert offmol.is_isomorphic_with(expected_mol, atom_stereochemistry_matching=False)
+
+    def test_molecule_from_pdb_nterm_ala_dipeptide(self):
+        offmol = Molecule.from_pdb(get_data_file_path('proteins/NTerminal_ALA.pdb'))
+        assert offmol.n_atoms == 18
+        expected_mol = Molecule.from_smiles('[N+H3][C@H](C)C(=O)NC')
+        assert offmol.is_isomorphic_with(expected_mol, atom_stereochemistry_matching=False)
+
     def test_from_pdb_t4_smiles_roundtrip(self):
         """Creation of Molecule from an uncapped T4 lysozyme PDB file."""
         pdb_file = get_data_file_path("proteins/T4-protein.pdb")
@@ -4051,28 +4069,6 @@ class TestMoleculeSubclass:
         orig_mol = Molecule.from_smiles("CCO")
         mol = MyMol.from_dict(orig_mol.to_dict())
         assert isinstance(mol, MyMol)
-
-    def test_molecule_from_pdb_t4(self):
-        offmol = Molecule.from_pdb(get_data_file_path('proteins/T4-protein.pdb'))
-        assert offmol.n_atoms == 2634
-
-    def test_molecule_from_pdb_mainchain_ala_dipeptide(self):
-        offmol = Molecule.from_pdb(get_data_file_path('proteins/MainChain_ALA.pdb'))
-        assert offmol.n_atoms == 22
-        expected_mol = Molecule.from_smiles('CC(=O)N[C@H](C)C(=O)NC')
-        assert offmol.is_isomorphic_with(expected_mol, atom_stereochemistry_matching=False)
-
-    def test_molecule_from_pdb_cterm_ala_dipeptide(self):
-        offmol = Molecule.from_pdb(get_data_file_path('proteins/CTerminal_ALA.pdb'))
-        assert offmol.n_atoms == 17
-        expected_mol = Molecule.from_smiles('CC(=O)N[C@H](C)C(=O)[O-]')
-        assert offmol.is_isomorphic_with(expected_mol, atom_stereochemistry_matching=False)
-
-    def test_molecule_from_pdb_nterm_ala_dipeptide(self):
-        offmol = Molecule.from_pdb(get_data_file_path('proteins/NTerminal_ALA.pdb'))
-        assert offmol.n_atoms == 18
-        expected_mol = Molecule.from_smiles('[N+H3][C@H](C)C(=O)NC')
-        assert offmol.is_isomorphic_with(expected_mol, atom_stereochemistry_matching=False)
 
 
 class TestHierarchies:
