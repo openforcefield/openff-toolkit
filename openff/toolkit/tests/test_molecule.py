@@ -3939,6 +3939,35 @@ class TestMoleculeResiduePerception:
         assert counter == offmol.n_atoms
 
 
+class TestMoleculeFromPDB:
+    """
+    Test creation of cheminformatics-rich openff Molecule from PDB files.
+    """
+    # TODO: Implement all the tests
+    def test_from_pdb_t4_n_atoms(self):
+        """Test off Molecule contains expected number of atoms from T4 pdb."""
+        # We expect/know the molecule contains this number of atoms
+        expected_n_atoms = 2634
+        offmol = Molecule.from_pdb(get_data_file_path("proteins/T4-protein.pdb"))
+        assert offmol.n_atoms == expected_n_atoms
+
+    def test_from_pdb_t4_smiles_roundtrip(self):
+        """Creation of Molecule from an uncapped T4 lysozyme PDB file."""
+        pdb_file = get_data_file_path("proteins/T4-protein.pdb")
+        offmol = Molecule.from_pdb(pdb_file)
+        rdkit_mol_smiles = Molecule.from_rdkit(offmol.to_rdkit(), allow_undefined_stereo=True).to_smiles()
+        assert offmol.to_smiles() == rdkit_mol_smiles
+
+    def test_from_pdb_t4_n_residues(self):
+        """Test number of residues when creating Molecule from T4 PDB"""
+        expected_n_residues = 164
+        raise NotImplementedError
+
+    def test_from_pdb_t4_atom_metadata(self):
+        """Test to check the metadata from T4 pdb is filled correctly."""
+        raise NotImplementedError
+
+
 class MyMol(FrozenMolecule):
     """
     Lightweight FrozenMolecule subclass for molecule-subclass tests below
