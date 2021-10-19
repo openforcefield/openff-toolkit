@@ -592,6 +592,15 @@ class CifSubstructures:
         #self.data['PRO'][new_smarts] = self.data['PRO'][old_smarts]
         self.data['PRO'].pop(old_smarts)
 
+        # Remove entries with N-, since these are artifactual and will mess things up
+        for aa_name in self.data.keys():
+            smarts_to_pop = list()
+            for smarts in self.data[aa_name]:
+                if 'N-' in smarts:
+                    smarts_to_pop.append(smarts)
+            for smarts in smarts_to_pop:
+                self.data[aa_name].pop(smarts)
+
         # Add common caps
         self.data['ACE'] = {
             "[C:1](=[O:2])[C:3]([H:4])([H:5])[H:6]": [
@@ -626,5 +635,11 @@ class CifSubstructures:
                 "O",
                 "N",
                 "H1",
+            ]
+        }
+        self.data["DISULFIDE"] = {
+            "[S:1][S:2]": [
+                "SG",
+                "SG",
             ]
         }

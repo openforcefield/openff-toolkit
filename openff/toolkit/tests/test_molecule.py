@@ -3957,16 +3957,80 @@ class TestMoleculeFromPDB:
         expected_mol = Molecule.from_smiles('CC(=O)N[C@H](C)C(=O)NC')
         assert offmol.is_isomorphic_with(expected_mol, atom_stereochemistry_matching=False)
 
+    def test_molecule_from_pdb_mainchain_ala_tripeptide(self):
+        offmol = Molecule.from_pdb(get_data_file_path('proteins/MainChain_ALA_ALA.pdb'))
+        assert offmol.n_atoms == 32
+        expected_mol = Molecule.from_smiles('CC(=O)N[C@H](C)C(=O)N[C@H](C)C(=O)NC')
+        assert offmol.is_isomorphic_with(expected_mol, atom_stereochemistry_matching=False)
+
     def test_molecule_from_pdb_cterm_ala_dipeptide(self):
         offmol = Molecule.from_pdb(get_data_file_path('proteins/CTerminal_ALA.pdb'))
         assert offmol.n_atoms == 17
         expected_mol = Molecule.from_smiles('CC(=O)N[C@H](C)C(=O)[O-]')
         assert offmol.is_isomorphic_with(expected_mol, atom_stereochemistry_matching=False)
 
+    def test_molecule_from_pdb_cterm_ala_tripeptide(self):
+        offmol = Molecule.from_pdb(get_data_file_path('proteins/CTerminal_ALA_ALA.pdb'))
+        assert offmol.n_atoms == 27
+        expected_mol = Molecule.from_smiles('CC(=O)N[C@H](C)C(=O)N[C@H](C)C(=O)[O-]')
+        assert offmol.is_isomorphic_with(expected_mol, atom_stereochemistry_matching=False)
+
     def test_molecule_from_pdb_nterm_ala_dipeptide(self):
         offmol = Molecule.from_pdb(get_data_file_path('proteins/NTerminal_ALA.pdb'))
         assert offmol.n_atoms == 18
         expected_mol = Molecule.from_smiles('[N+H3][C@H](C)C(=O)NC')
+        assert offmol.is_isomorphic_with(expected_mol, atom_stereochemistry_matching=False)
+
+    def test_molecule_from_pdb_mainchain_arg_dipeptide(self):
+        offmol = Molecule.from_pdb(get_data_file_path('proteins/MainChain_ARG.pdb'))
+        assert offmol.n_atoms == 36
+        expected_mol = Molecule.from_smiles('CC(=O)N[C@H](CCCNC(N)=[N+H2])C(=O)NC')
+        assert offmol.is_isomorphic_with(expected_mol, atom_stereochemistry_matching=False)
+
+    def test_molecule_from_pdb_cterm_arg_dipeptide(self):
+        offmol = Molecule.from_pdb(get_data_file_path('proteins/CTerminal_ARG.pdb'))
+        assert offmol.n_atoms == 31
+        expected_mol = Molecule.from_smiles('CC(=O)N[C@H](CCCNC(N)=[N+H2])C(=O)[O-]')
+        assert offmol.is_isomorphic_with(expected_mol, atom_stereochemistry_matching=False)
+
+    def test_molecule_from_pdb_mainchain_cys_dipeptide(self):
+        offmol = Molecule.from_pdb(get_data_file_path('proteins/MainChain_CYS.pdb'))
+        assert offmol.n_atoms == 23
+        expected_mol = Molecule.from_smiles('CC(=O)N[C@H](CS)C(=O)NC')
+        assert offmol.is_isomorphic_with(expected_mol, atom_stereochemistry_matching=False)
+
+    def test_molecule_from_pdb_mainchain_cyx_dipeptide(self):
+        offmol = Molecule.from_pdb(get_data_file_path('proteins/MainChain_CYX.pdb'))
+        assert offmol.n_atoms == 44
+        expected_mol = Molecule.from_smiles('CC(=O)N[C@H](CSSC[C@H](NC(=O)C)C(=O)NC)C(=O)NC')
+        assert offmol.is_isomorphic_with(expected_mol, atom_stereochemistry_matching=False)
+
+    def test_molecule_from_pdb_mainchain_hid_dipeptide(self):
+        offmol = Molecule.from_pdb(get_data_file_path('proteins/MainChain_HID.pdb'))
+        assert offmol.n_atoms == 29
+        assert offmol.total_charge == 0 * unit.elementary_charge
+        expected_mol = Molecule.from_smiles('CC(=O)N[C@H](CC1[NH]C=NC=1)C(=O)NC')
+        assert offmol.is_isomorphic_with(expected_mol, atom_stereochemistry_matching=False)
+
+    def test_molecule_from_pdb_mainchain_hie_dipeptide(self):
+        offmol = Molecule.from_pdb(get_data_file_path('proteins/MainChain_HIE.pdb'))
+        assert offmol.n_atoms == 29
+        assert offmol.total_charge == 0 * unit.elementary_charge
+        expected_mol = Molecule.from_smiles('CC(=O)N[C@H](CC1N=C[NH]C=1)C(=O)NC')
+        assert offmol.is_isomorphic_with(expected_mol, atom_stereochemistry_matching=False)
+
+    def test_molecule_from_pdb_mainchain_hip_dipeptide(self):
+        offmol = Molecule.from_pdb(get_data_file_path('proteins/MainChain_HIP.pdb'))
+        assert offmol.n_atoms == 30
+        assert offmol.total_charge == 1 * unit.elementary_charge
+        expected_mol = Molecule.from_smiles('CC(=O)N[C@H](CC1[N+H]=CNC=1)C(=O)NC')
+        assert offmol.is_isomorphic_with(expected_mol, atom_stereochemistry_matching=False)
+
+    def test_molecule_from_pdb_mainchain_pro_dipeptide(self):
+        offmol = Molecule.from_pdb(get_data_file_path('proteins/MainChain_PRO.pdb'))
+        assert offmol.n_atoms == 30
+        assert offmol.total_charge == 0 * unit.elementary_charge
+        expected_mol = Molecule.from_smiles('CC(=O)N1[C@H](CCC1)C(=O)NC')
         assert offmol.is_isomorphic_with(expected_mol, atom_stereochemistry_matching=False)
 
     def test_from_pdb_t4_smiles_roundtrip(self):
