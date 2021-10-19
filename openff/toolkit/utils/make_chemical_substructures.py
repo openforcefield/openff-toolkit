@@ -18,16 +18,9 @@ if not os.path.exists('aa-variants-v1.cif'):
 
 cif_object = CifSubstructures()
 cif_object.from_file('aa-variants-v1.cif',
-                     include_leaving=False,
                      replace_quadruple_bond_with_any=False,
                      remove_charge_bond_order_resonant=False
                      )
-cif_object.from_file('aa-variants-v1.cif',
-                     include_leaving=True,
-                     replace_quadruple_bond_with_any=False,
-                     remove_charge_bond_order_resonant=False
-                     )
-
 
 # Automatically patch known problems - better that this explodes when things are fixed
 cif_object._patch_known_problems()

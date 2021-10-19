@@ -5016,6 +5016,16 @@ class FrozenMolecule(Serializable):
         from networkx.algorithms import isomorphism
 
         def rdmol_to_networkx(rdmol):
+            _bondtypes = {
+                # 0: Chem.BondType.AROMATIC,
+                Chem.BondType.SINGLE: 1,
+                Chem.BondType.AROMATIC: 1.5,
+                Chem.BondType.DOUBLE: 2,
+                Chem.BondType.TRIPLE: 3,
+                Chem.BondType.QUADRUPLE: 4,
+                Chem.BondType.QUINTUPLE: 5,
+                Chem.BondType.HEXTUPLE:6 ,
+            }
             rdmol_G = nx.Graph()
             for atom in rdmol.GetAtoms():
                 rdmol_G.add_node(
@@ -5035,7 +5045,7 @@ class FrozenMolecule(Serializable):
                 rdmol_G.add_edge(
                     bond.GetBeginAtomIdx(), bond.GetEndAtomIdx(),
                     # bond_order=bond.GetBondTypeAsDouble()
-                    bond_order=bond_type
+                    bond_order=_bondtypes[bond_type]
                 )
             return rdmol_G
 
@@ -5110,6 +5120,7 @@ class FrozenMolecule(Serializable):
                     GM = isomorphism.GraphMatcher(omm_topology_G, rdmol_G, node_match=node_match)
                     if GM.subgraph_is_isomorphic():
                         print(res_name)
+                        print(substructure_smarts)
 
                         # print(GM)
                         # print(dir(GM))
@@ -5157,29 +5168,24 @@ class FrozenMolecule(Serializable):
         pdb = PDBFile(file_path)
         omm_topology_G = protein_from_openmm(substructure_dictionary, pdb.topology)
 
-        _bondtypes = {
-            # 0: Chem.BondType.AROMATIC,
-            1: Chem.BondType.SINGLE,
-            1.5: Chem.BondType.AROMATIC,
-            2: Chem.BondType.DOUBLE,
-            3: Chem.BondType.TRIPLE,
-            4: Chem.BondType.QUADRUPLE,
-            5: Chem.BondType.QUINTUPLE,
-            6: Chem.BondType.HEXTUPLE,
-            7: Chem.BondType.ONEANDAHALF,
-        }
+
 
         rdmol = Chem.RWMol()
+        offmol = Molecule()
 
         for node_idx, node_data in omm_topology_G.nodes.items():
             print(node_idx, node_data)
             # node_data = omm_topology_G.get_node_data(node)
-            rdatom = Chem.Atom(node_data['atomic_number'])
+            # rdatom = Chem.Atom(node_data['atomic_number'])
             formal_charge = int(node_data['formal_charge'])
             print(f'Formal charge: {formal_charge}')
-            rdatom.SetFormalCharge(formal_charge  # * unit.elementary_charge
-                                   # atom.formal_charge.value_in_unit(unit.elementary_charge)
-                                   )
+            offmol.add_atom(node_data['atomic_number'],
+                            int(node_data['formal_charge']),
+                            False, #node_data['is_aromatic']=="Y"
+                                )
+            # rdatom.SetFormalCharge(formal_charge  # * unit.elementary_charge
+            #                        # atom.formal_charge.value_in_unit(unit.elementary_charge)
+            #                        )
             # rdatom.SetIsAromatic(atom.is_aromatic)
             # rdatom.SetProp("_Name", atom.name)
 
@@ -5191,7 +5197,7 @@ class FrozenMolecule(Serializable):
             # elif atom.stereochemistry == "R":
             #    rdatom.SetChiralTag(Chem.CHI_TETRAHEDRAL_CCW)
 
-            rd_index = rdmol.AddAtom(rdatom)
+            # rd_index = rdmol.AddAtom(rdatom)
             # print(rd_index)
 
             # Let's make sure al the atom indices in the two molecules
@@ -5205,16 +5211,20 @@ class FrozenMolecule(Serializable):
             #    edge[0],
             #    edge[1],
             # )
-            rdmol.AddBond(*edge)
-            rdbond = rdmol.GetBondBetweenAtoms(*edge)
+            offmol.add_bond(edge[0],
+                            edge[1],
+                            edge_data['bond_order'],
+                            False)
+            # rdmol.AddBond(*edge)
+            # rdbond = rdmol.GetBondBetweenAtoms(*edge)
             # Assign bond type, which is based on order unless it is aromatic
             # if bond.is_aromatic:
             #    rdbond.SetBondType(_bondtypes[1.5])
             #    rdbond.SetIsAromatic(True)
             # else:
             # rdbond.SetBondType(_bondtypes[edge_data['bond_order']])
-            rdbond.SetBondType(edge_data['bond_order'])
-            rdbond.SetIsAromatic(False)
+            # rdbond.SetBondType(edge_data['bond_order'])
+            # rdbond.SetIsAromatic(False)
 
         # Get bond information for N 604
         # n_604 = rdmol.GetAtomWithIdx(604)
@@ -5227,9 +5237,9 @@ class FrozenMolecule(Serializable):
         #rdmol.GetBondBetweenAtoms(rdmol.GetNumAtoms() - 1, rdmol.GetNumAtoms() - 3).SetBondType(Chem.BondType.SINGLE)
         #rdmol.GetAtomWithIdx(rdmol.GetNumAtoms() - 1).SetFormalCharge(-1)
         # rdmol.GetBondBetweenAtoms(rdmol.GetNumAtoms() - 1, rdmol.GetNumAtoms() - 3).SetBondType(Chem.BondType.SINGLE)
-        offmol.get_bond_between(offmol.n_atoms-1, offmol.n_atoms-3).bond_order = 1
+        #offmol.get_bond_between(offmol.n_atoms-1, offmol.n_atoms-3).bond_order = 1
         # rdmol.GetAtomWithIdx(rdmol.GetNumAtoms() - 1).SetFormalCharge(-1)
-        offmol.atoms[offmol.n_atoms-1].formal_charge = -1
+        #offmol.atoms[offmol.n_atoms-1].formal_charge = -1
         # TODO: Does openff mol has some sanitization API point?
         rdmol = offmol.to_rdkit()
         Chem.SanitizeMol(
