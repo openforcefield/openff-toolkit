@@ -5109,7 +5109,8 @@ class FrozenMolecule(Serializable):
 
             non_isomorphic_count = 0
             for res_name in substructure_dictionary:
-                # TODO: This is a hack for the moment since we don't have a more sohpisticated way to resolve clashes
+                # TODO: Match peptide bonds in a way that they won't mis-label ring-closing C on PRO sidechain as CA
+                # TODO: This is a hack for the moment since we don't have a more sophisticated way to resolve clashes
                 # so it just does the biggest substructures first
                 sorted_substructure_smarts = sorted(substructure_dictionary[res_name], key=len, reverse=True)
                 non_isomorphic_flag = True
