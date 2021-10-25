@@ -4224,7 +4224,7 @@ class TestHierarchies:
 
         dipeptide_residues_perceived.perceive_hierarchy(["res_by_num"])
 
-        assert dipeptide_residues_perceived.res_by_num[1].residue_number == 1
+        assert dipeptide_residues_perceived.res_by_num[0].residue_number == 1
         # Since we only perceived res_by_num above, residues should not be defined
         with pytest.raises(AttributeError):
             dipeptide_residues_perceived.residues[0]
@@ -4243,52 +4243,24 @@ class TestHierarchies:
         """Test populating and accessing HierarchyElements"""
         assert (
             str(dipeptide_hierarchy_perceived.residues[0])
-            == "HierarchyElement ('None', 'None', 'None') of iterator 'residues' containing 1 particle(s)"
+            == "HierarchyElement ('None', 1, 'ACE') of iterator 'residues' containing 6 particle(s)"
         )
         assert dipeptide_hierarchy_perceived.residues[0].chain == "None"
-        assert dipeptide_hierarchy_perceived.residues[0].residue_name == "None"
-        assert dipeptide_hierarchy_perceived.residues[0].residue_number == "None"
-        assert set(dipeptide_hierarchy_perceived.residues[0].particle_indices) == {15}
+        assert dipeptide_hierarchy_perceived.residues[0].residue_name == "ACE"
+        assert dipeptide_hierarchy_perceived.residues[0].residue_number == 1
+        assert set(dipeptide_hierarchy_perceived.residues[0].particle_indices) == set(range(6))
 
         assert (
             str(dipeptide_hierarchy_perceived.residues[1])
-            == "HierarchyElement ('None', 1, 'ACE') of iterator 'residues' containing 6 particle(s)"
+            == "HierarchyElement ('None', 2, 'ALA') of iterator 'residues' containing 11 particle(s)"
         )
         assert dipeptide_hierarchy_perceived.residues[1].chain == "None"
-        assert dipeptide_hierarchy_perceived.residues[1].residue_name == "ACE"
-        assert dipeptide_hierarchy_perceived.residues[1].residue_number == 1
-        assert set(dipeptide_hierarchy_perceived.residues[1].particle_indices) == {
-            0,
-            1,
-            2,
-            3,
-            4,
-            5,
-        }
+        assert dipeptide_hierarchy_perceived.residues[1].residue_name == "ALA"
+        assert dipeptide_hierarchy_perceived.residues[1].residue_number == 2
+        assert set(dipeptide_hierarchy_perceived.residues[1].particle_indices) == set(range(6,17))
 
-        assert (
-            str(dipeptide_hierarchy_perceived.residues[2])
-            == "HierarchyElement ('None', 2, 'ALA') of iterator 'residues' containing 10 particle(s)"
-        )
-        assert dipeptide_hierarchy_perceived.residues[2].chain == "None"
-        assert dipeptide_hierarchy_perceived.residues[2].residue_name == "ALA"
-        assert dipeptide_hierarchy_perceived.residues[2].residue_number == 2
-        assert set(dipeptide_hierarchy_perceived.residues[2].particle_indices) == {
-            6,
-            7,
-            8,
-            9,
-            10,
-            11,
-            12,
-            13,
-            14,
-            16,
-        }
 
         for residue in dipeptide_hierarchy_perceived.residues:
-            if residue.identifier == ("None", "None", "None"):
-                continue
             for particle in residue.particles:
                 assert particle.metadata["residue_name"] == residue.residue_name
                 assert particle.metadata["residue_number"] == residue.residue_number
@@ -4299,10 +4271,10 @@ class TestHierarchies:
         """Ensure that updating atom metadata doesn't update the iterators until the hierarchy is re-perceived"""
         for atom in dipeptide_hierarchy_perceived.atoms:
             atom.metadata["chain"] = "A"
-        assert ("A", "None", "None") != dipeptide_hierarchy_perceived.residues[
+        assert ("A", 1, "ACE") != dipeptide_hierarchy_perceived.residues[
             0
         ].identifier
         dipeptide_hierarchy_perceived.perceive_hierarchy()
-        assert ("A", "None", "None") == dipeptide_hierarchy_perceived.residues[
+        assert ("A", 1, "ACE") == dipeptide_hierarchy_perceived.residues[
             0
         ].identifier
