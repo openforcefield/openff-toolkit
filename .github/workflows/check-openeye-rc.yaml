@@ -1,0 +1,30 @@
+# Adapted from from below link on 10/25/21
+# https://github.com/openpathsampling/openpathsampling/blob/master/.github/workflows/check-openmm-rc.yml
+# See also https://github.com/openmm/openmm/issues/3232#issuecomment-909478595
+#
+# If a recent RC is found, trigger a second workflow to test against it.
+# See also: test-openeye-rc.yml / check-openmm/rc.yaml
+name: "Check for OpenEye Toolkits RC"
+on:
+  schedule:
+    - cron: "0 9 * * *"
+
+jobs:
+  check-rc:
+    if: ${{ github.repository == 'openforcefield/openff-toolkit' }}
+    runs-on: ubuntu-latest
+    name: "Check for OpenEye RC"
+    steps:
+      - uses: actions/checkout@v2
+      - uses: dwhswenson/conda-rc-check@main
+        id: checkrc
+        with:
+          channel: openeye
+          package: openeye-toolkits
+          ndays: 3
+          labels: rc
+      - uses: benc-uk/workflow-dispatch@v1
+        with:
+          workflow: Test OpenEye Toolkits Release Candidate
+          token: ${{ secrets.DISPATCH_TOKEN }}
+        if: ${{ steps.checkrc.outputs.hasrc == 'True' }}

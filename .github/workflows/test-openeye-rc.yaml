@@ -1,0 +1,172 @@
+# Adapted from from below link on 10/25/21
+# https://github.com/openpathsampling/openpathsampling/blob/master/.github/workflows/check-openmm-rc.yml
+# See also https://github.com/openmm/openmm/issues/3232#issuecomment-909478595
+#
+# See also: check-openmm-rc.yml / test-openmm-rc.yaml
+name: "Test OpenEye Toolkits Release Candidate"
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    if: (github.event_name == 'schedule' && github.repository == 'openforcefield/openff-toolkit') || (github.event_name != 'schedule')
+    name: Test on ${{ matrix.os }}, Python ${{ matrix.cfg.python-version }}, RDKit=${{ matrix.cfg.rdkit }}, OpenEye=${{ matrix.cfg.openeye }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+        cfg:
+          - python-version: 3.7
+            rdkit: "true"
+            openeye: "false"
+
+          - python-version: 3.7
+            rdkit: "false"
+            openeye: "true"
+
+          - python-version: 3.7
+            rdkit: "true"
+            openeye: "true"
+
+          - python-version: 3.8
+            rdkit: "true"
+            openeye: "false"
+
+          - python-version: 3.9
+            rdkit: "true"
+            openeye: "false"
+
+    env:
+      CI_OS: ${{ matrix.os }}
+      RDKIT: ${{ matrix.cfg.rdkit }}
+      OPENEYE: ${{ matrix.cfg.openeye }}
+      PYVER: ${{ matrix.cfg.python-version }}
+      OE_LICENSE: ${{ github.workspace }}/oe_license.txt
+      PACKAGE: openff
+      PYTEST_ARGS: -r fE --tb=short --cov=openff --cov-config=setup.cfg --cov-append --cov-report=xml
+      NB_ARGS: -v --nbval-lax --ignore=examples/deprecated
+
+    steps:
+      - uses: actions/checkout@v2.3.5
+        with:
+          fetch-depth: 2
+
+      - uses: conda-incubator/setup-miniconda@v2.1.1
+        name: Install both RDKit and OpenEye toolkits
+        if: ${{ matrix.cfg.rdkit == 'TRUE' && matrix.cfg.openeye == 'TRUE' }}
+        with:
+          python-version: ${{ matrix.cfg.python-version }}
+          activate-environment: test
+          environment-file: devtools/conda-envs/test_env.yaml
+          auto-activate-base: false
+          miniforge-version: latest
+          miniforge-variant: Mambaforge
+          use-mamba: true
+      - uses: conda-incubator/setup-miniconda@v2.1.1
+        name: Install with OpenEye toolkits
+        if: ${{ matrix.cfg.rdkit == 'FALSE' && matrix.cfg.openeye == 'TRUE' }}
+        with:
+          python-version: ${{ matrix.cfg.python-version }}
+          activate-environment: test
+          environment-file: devtools/conda-envs/openeye.yaml
+          auto-activate-base: false
+          miniforge-version: latest
+          miniforge-variant: Mambaforge
+          use-mamba: true
+
+      - name: Additional info about the build
+        shell: bash -l {0}
+        run: |
+          uname -a
+          df -h
+          ulimit -a
+
+      - name: Make oe_license.txt file from GH org secret "OE_LICENSE"
+        shell: bash
+        env:
+          OE_LICENSE_TEXT: ${{ secrets.OE_LICENSE }}
+        run: |
+          echo "${OE_LICENSE_TEXT}" > ${OE_LICENSE}
+
+      - name: Install package
+        shell: bash -l {0}
+        run: |
+          conda remove --force openff-toolkit openff-toolkit-base
+          python setup.py develop --no-deps
+
+      - name: Check installed toolkits
+        shell: bash -l {0}
+        run: |
+          if [[ "$OPENEYE" == true ]]; then
+            python -c "from openff.toolkit.utils.toolkits import OPENEYE_AVAILABLE; assert OPENEYE_AVAILABLE, 'OpenEye unavailable'"
+          fi
+          if [[ "$OPENEYE" == false ]]; then
+            if [[ $(conda list | grep openeye-toolkits) ]]; then
+              conda remove --force openeye-toolkits --yes
+            fi
+            python -c "from openff.toolkit.utils.toolkits import OPENEYE_AVAILABLE; assert not OPENEYE_AVAILABLE, 'OpenEye unexpectedly found'"
+          fi
+          if [[ "$RDKIT" == true ]]; then
+            python -c "from openff.toolkit.utils.toolkits import RDKIT_AVAILABLE; assert RDKIT_AVAILABLE, 'RDKit unavailable'"
+          fi
+          if [[ "$RDKIT" == false ]]; then
+            if [[ $(conda list | grep rdkit) ]]; then
+              conda remove --force rdkit --yes
+            fi
+            if [[ $(conda list | grep ambertools) ]]; then
+              conda remove --force ambertools --yes
+            fi
+            python -c "from openff.toolkit.utils.toolkits import RDKIT_AVAILABLE; assert not RDKIT_AVAILABLE, 'RDKit unexpectedly found'"
+          fi
+
+      - name: Install OpenMM RC
+        run: |
+          # Will this reliably install an RC over the last release, which was installed
+          # from the environment files?
+          mamba install -c conda-forge/label/openmm_rc -c conda-forge openmm
+
+      - name: Environment Information
+        shell: bash -l {0}
+        run: |
+          conda info
+          conda list
+
+      - name: Check links
+        shell: bash -l {0}
+        if: ${{ matrix.cfg.rdkit == 'true' && matrix.cfg.openeye == 'TRUE' }}
+        run: |
+          pytest -r fE --tb=short openff/toolkit/tests/test_links.py
+
+      - name: Run mypy
+        shell: bash -l {0}
+        # Try to prevent failure from preventing later steps, but also display red X
+        # https://stackoverflow.com/a/62112985/4248961
+        if: ${{ matrix.cfg.rdkit == 'true' && matrix.cfg.openeye == 'TRUE' }}
+        run: |
+          mypy --namespace-packages -p "openff.toolkit"
+
+      - name: Run unit tests
+        shell: bash -l {0}
+        run: |
+          PYTEST_ARGS+=" --ignore=openff/toolkit/tests/test_examples.py"
+          PYTEST_ARGS+=" --ignore=openff/toolkit/tests/test_links.py"
+          if [[ "$GITHUB_EVENT_NAME" == "schedule" ]]; then
+            PYTEST_ARGS+=" --runslow"
+          fi
+          pytest $PYTEST_ARGS openff/toolkit/tests/
+
+      - name: Run code snippets in docs
+        shell: bash -l {0}
+        if: ${{ matrix.cfg.rdkit == 'TRUE' && matrix.cfg.openeye == 'TRUE' }}
+        run: |
+          pytest -v --doctest-glob="docs/*.rst" docs/
+
+      - name: Codecov
+        uses: codecov/codecov-action@v2.1.0
+        with:
+          file: ./coverage.xml
+          fail_ci_if_error: true
