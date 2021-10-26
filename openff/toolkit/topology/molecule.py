@@ -2362,7 +2362,10 @@ class FrozenMolecule(Serializable):
     def generate_unique_atom_names(self):
         """
         Generate unique atom names using element name and number of times that element has occurred
-        e.g. 'C1', 'H1', 'O1', 'C2', ...
+        e.g. 'C1x', 'H1x', 'O1x', 'C2x', ...
+
+        The character 'x' is appended to these generated names to reduce the odds that they clash with an atom name or
+        type imported from another source.
 
         """
         from collections import defaultdict
