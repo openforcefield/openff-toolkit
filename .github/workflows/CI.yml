@@ -153,6 +153,14 @@ jobs:
         run: |
           pytest -r fE --tb=short openff/toolkit/tests/test_links.py
 
+      - name: Run mypy
+        shell: bash -l {0}
+        # Try to prevent failure from preventing later steps, but also display red X
+        # https://stackoverflow.com/a/62112985/4248961
+        if: ${{ matrix.cfg.rdkit == 'true' && matrix.cfg.openeye == 'TRUE' }}
+        run: |
+          mypy --namespace-packages -p "openff.toolkit"
+
       - name: Run unit tests
         shell: bash -l {0}
         run: |
