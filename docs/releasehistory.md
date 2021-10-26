@@ -45,7 +45,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
   logic for library charges was updated to use only one unique match instead of
   enumerating all possible matches. This results in faster matching, particularly
   with larger molecules. No adverse side effects
-  were found in testing, but could bad behavior may possibly exist in some unknown cases.
+  were found in testing, but bad behavior may possibly exist in some unknown cases.
   Note that the default behavior for other parameter handlers was not updated.
 - [PR #1001](https://github.com/openforcefield/openff-toolkit/pull/1001): Revamped the 
   [`Molecule.visualize()`](openff.toolkit.topology.Molecule.visualize) method's `rdkit` 
@@ -53,7 +53,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 - [PR #1087](https://github.com/openforcefield/openff-toolkit/pull/1087): Fixes
   [Issue #1073](https://github.com/openforcefield/openff-toolkit/issues/1073) in which
   [`Molecule.__repr__`](openff.toolkit.topology.Molecule.__repr__) fails if the molecule can not be represented as 
-  a SMILES. Now, if SMILES generation fails, the molecule will be described by its Hill formula.
+  a SMILES pattern. Now, if SMILES generation fails, the molecule will be described by its Hill formula.
 - [PR #1052](https://github.com/openforcefield/openff-toolkit/pull/1052): Fixes
   [Issue #986](https://github.com/openforcefield/openff-toolkit/issues/986)
   by raising a subclass of `AttributeError` in
