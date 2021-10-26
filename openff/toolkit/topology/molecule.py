@@ -5092,7 +5092,11 @@ class FrozenMolecule(Serializable):
             omm_topology_G = nx.Graph()
             for atom in openmm_topology.atoms():
                 omm_topology_G.add_node(
-                    atom.index, atomic_number=atom.element.atomic_number, formal_charge=0.
+                    atom.index,
+                    atomic_number=atom.element.atomic_number,
+                    formal_charge=0.,
+                    residue_name=atom.residue.name,
+                    residue_number=atom.residue.index
                 )
 
             for bond in openmm_topology.bonds():
@@ -5182,8 +5186,9 @@ class FrozenMolecule(Serializable):
             print(f'Formal charge: {formal_charge}')
             offmol.add_atom(node_data['atomic_number'],
                             int(node_data['formal_charge']),
-                            False, #node_data['is_aromatic']=="Y"
-                                )
+                            False,
+                            metadata={'residue_name': node_data['residue_name'], 'residue_number': node_data['residue_number']}
+                            )
             # rdatom.SetFormalCharge(formal_charge  # * unit.elementary_charge
             #                        # atom.formal_charge.value_in_unit(unit.elementary_charge)
             #                        )
