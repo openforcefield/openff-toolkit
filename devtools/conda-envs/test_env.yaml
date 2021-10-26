@@ -29,8 +29,3 @@ dependencies:
   - toml
   - bson
   - msgpack-python
-  - qcelemental
-  - qcportal
-  - qcengine
-  - openff-interchange
-
