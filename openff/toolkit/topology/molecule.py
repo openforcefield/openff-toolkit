@@ -5172,6 +5172,7 @@ class FrozenMolecule(Serializable):
 
 
             return omm_topology_G
+
         from openff.toolkit.utils import get_data_file_path
         substructure_file_path = get_data_file_path('proteins/aa_residues_substructures_explicit_bond_orders_with_caps.json')
 
@@ -5182,9 +5183,6 @@ class FrozenMolecule(Serializable):
         pdb = PDBFile(file_path)
         omm_topology_G = _openmm_topology_to_networkx(substructure_dictionary, pdb.topology)
 
-
-
-        rdmol = Chem.RWMol()
         offmol = Molecule()
 
         for node_idx, node_data in omm_topology_G.nodes.items():
@@ -5202,9 +5200,6 @@ class FrozenMolecule(Serializable):
             # rdatom.SetIsAromatic(atom.is_aromatic)
             # rdatom.SetProp("_Name", atom.name)
 
-
-
-
         for edge, edge_data in omm_topology_G.edges.items():
             print(edge, edge_data)
             offmol.add_bond(edge[0],
@@ -5212,8 +5207,10 @@ class FrozenMolecule(Serializable):
                             edge_data['bond_order'],
                             False)
 
+        # Retrieve metadata to be recovered after roundtrip to rdkit land
+        atoms_metadata = [atom.metadata for atom in offmol.atoms]
 
-        print(f"Number of atoms before sanitization: {len(rdmol.GetAtoms())}")
+        print(f"Number of atoms before sanitization: {offmol.n_atoms}")
         # TODO: Pull in coordinates and assign stereochemistry
         # offmol.add_conformer()
         # TODO: Ensure that this assigns aromaticity
@@ -5225,7 +5222,13 @@ class FrozenMolecule(Serializable):
 
         print(f"Number of atoms after sanitization: {len(rdmol.GetAtoms())}")
 
+
         offmol = cls.from_rdkit(rdmol, allow_undefined_stereo=True, hydrogens_are_explicit=True)
+
+        # Recover metadata. Atom order is expected to be the same as in rdkit
+        for atom, metadata in zip(offmol.atoms, atoms_metadata):
+            atom.metadata.update(metadata)
+
         print(f"OFFMol number of atoms: {offmol.n_atoms}")
         return offmol
 
