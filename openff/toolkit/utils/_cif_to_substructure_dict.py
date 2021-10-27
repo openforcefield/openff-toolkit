@@ -669,6 +669,12 @@ class CifSubstructures:
                 "HN2"
             ]
         }
+
+    def _add_common_linkages(self):
+        """
+        .. warning: Needed as of Oct-21-2021
+        """
+
         self.data["PEPTIDE_BOND"] = {
             "[C:1](=[O:2])[N:3]([C:4])": [
                 "C",

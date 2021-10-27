@@ -21,7 +21,8 @@ cif_object.from_file('aa-variants-v1.cif',
                      replace_quadruple_bond_with_any=True,
                      remove_charge_bond_order_resonant=True)
 
-# Automatically patch known problems - better that this explodes when things are fixed
+# Automatically add known substructures that are missing from aa_variants but expected by force fields (like ACE and
+# NME caps)
 cif_object._add_common_substructures()
 
 output_file = get_data_file_path('proteins/T4-protein.sdf').replace('T4-protein.sdf', 'aa_residues_substructures_with_caps.json')
