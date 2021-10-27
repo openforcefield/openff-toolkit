@@ -1106,9 +1106,8 @@ class TestTopology:
         top.add_molecule(dipeptide_hierarchy_perceived)
         top.add_molecule(cyx_hierarchy_perceived)
         residues = list(top.hierarchy_iterator("residues"))
-        assert len(residues) == 9
+        assert len(residues) == 8
         expected_ids = [
-            ("None", "None", "None"),
             ("None", 1, "ACE"),
             ("None", 2, "ALA"),
             ("None", 1, "ACE"),

@@ -93,7 +93,6 @@ class CifSubstructures:
     def from_file(
         self,
         cif_file,
-        include_leaving=False,
         discard_keyword="FRAGMENT",
         replace_quadruple_bond_with_any: bool = True,
         remove_charge_bond_order_resonant: bool = True,
@@ -107,8 +106,6 @@ class CifSubstructures:
         __________
         cif_file : str or file-like object
             File path string, URL or file-like object.
-        include_leaving : bool, optional, default=False
-            Whether to include leaving atoms marked in _chem_comp_atom.pdbx_leaving_atom_flag
         discard_keyword : str, optional, default='FRAGMENT'
             Keyword in _chem_comp.name for filtering out entries. Default is 'FRAGMENT'.
         remove_charge_bond_order_resonant: bool, optional, default=True
@@ -120,13 +117,12 @@ class CifSubstructures:
         self._cif_multi_entry_object = ReadCif(cif_file)
         # fill data dictionary
         self._fill_substructure_data(
-            include_leaving=include_leaving,
             discard_keyword=discard_keyword,
             replace_quadruple_bond_with_any=replace_quadruple_bond_with_any,
             remove_charge_bond_order_resonant=remove_charge_bond_order_resonant,
         )
 
-    def to_json_file(self, output_file, indent=None):
+    def to_json_file(self, output_file, indent=4):
         """
         Return a JSON serialized representation.
 
@@ -134,7 +130,7 @@ class CifSubstructures:
         __________
         output_file : str
             Path string for output file.
-        indent : int, optional, default=None
+        indent : int, optional, default=4
             If not None, will pretty-print with specified number of spaces for indentation.
 
         Returns
@@ -356,92 +352,62 @@ class CifSubstructures:
 
     def _add_substructure_data_entry(
         self,
-        entry_data,
-        include_leaving,
-        discard_keyword,
-        additional_leaving=None,
+        atoms_information,
+        bonds_information,
+        entry_code,
         replace_quadruple_bond_with_any: bool = True,
         remove_charge_bond_order_resonant: bool = True,
-    ):
+        ):
         """
         Read substructure from entry data in cif file and fill data object with smiles.
 
         Parameters
         __________
-        entry_data : CifFile.StarFile.StarBlock
-            Cif file entry data object from pycifrw module.
-        include_leaving : bool, optional, default=False
-            Whether to include leaving atoms marked in _chem_comp_atom.pdbx_leaving_atom_flag
-        discard_keyword : str, optional, default='FRAGMENT'
-            Keyword in _chem_comp.name for filtering out entries. Default is 'FRAGMENT'.
-        additional_leaving : None or List, default=None
-            Additional list of atoms in entry to treat as leaving atoms.
+        atoms_information : list[tuple[str,int]]
+            Iterable of tuple of atom info.
+            Currently [atom_name, element, formal_charge, is_aromatic, stereo, is_leaving]
+        bonds_information : list[tuple[str,int]]
+            Iterable of tuple of bond info.
+            Currently [atom1_name, atom2_name, bond_order, is_aromatic, stereo]
         """
         offmol = Molecule()
-        # Skip entries matching discard filtering keyword in comp name
-        comp_name = entry_data["_chem_comp.name"]
-        if discard_keyword in comp_name:
-            return
-        # Gather necessary data for creating/adding atoms
-        atoms_information = self._gather_atoms_information(entry_data)
-        atom_names_orig = atoms_information[0]
-        n_atoms = len(atom_names_orig)  # number of atoms in entry
-        atomic_numbers = atoms_information[1]
-        formal_charges = atoms_information[2]
-        are_aromatic = atoms_information[3]
-        stereochemistry = atoms_information[4]
-        leaving_atoms_list = atoms_information[5]
-        if additional_leaving:
-            for atom_idx, atom_name in enumerate(atom_names_orig):
-                if atom_name in additional_leaving:
-                    leaving_atoms_list[atom_idx] = "Y"
-        # copy atom names to object that can be modified if not leaving atoms
-        atom_names = copy.copy(atom_names_orig)
+
+        atom_name_to_idx = dict()
         # add atoms
-        for atom_idx in range(len(atom_names_orig)):
-            if include_leaving:
-                # Add all atoms
-                offmol.add_atom(
-                    atomic_numbers[atom_idx],
-                    formal_charges[atom_idx],
-                    are_aromatic[atom_idx],
-                    stereochemistry=stereochemistry[atom_idx],
-                    name=atom_names_orig[atom_idx],
-                )
-            else:
-                # Add only not leaving atoms
-                if leaving_atoms_list[atom_idx] == "N":
-                    offmol.add_atom(
-                        atomic_numbers[atom_idx],
-                        formal_charges[atom_idx],
-                        are_aromatic[atom_idx],
-                        stereochemistry=stereochemistry[atom_idx],
-                        name=atom_names_orig[atom_idx],
-                    )
-                else:
-                    # Remove original leaving atom name from current atom names
-                    atom_names.remove(atom_names_orig[atom_idx])
-        # Gather information for bonds
-        bonds_information = self._gather_bonds_information(entry_data)
-        atom1_name_list = bonds_information[0]
-        atom2_name_list = bonds_information[1]
-        bond_order_list = bonds_information[2]
-        is_aromatic_bond_list = bonds_information[3]
-        stereochemistry_bond_list = bonds_information[4]
-        # add bonds
-        # TODO: What about fractional bond order?
-        for bond_idx in range(len(atom1_name_list)):
-            try:
-                offmol.add_bond(
-                    self._get_atom_by_name(offmol, atom1_name_list[bond_idx]),
-                    self._get_atom_by_name(offmol, atom2_name_list[bond_idx]),
-                    bond_order_list[bond_idx],
-                    is_aromatic_bond_list[bond_idx],
-                    stereochemistry=stereochemistry_bond_list[bond_idx],
-                )
-            # TODO: Broad exception. We should raise a specific error.
-            except Exception:  # happens when atom is not found, i.e. no leaving atoms.
-                continue
+        for (atom_name,
+             atomic_number,
+             formal_charge,
+             is_aromatic,
+             stereochemistry,
+             is_leaving) in atoms_information:
+            # if include_leaving:
+            # Add all atoms
+            atom_idx = offmol.add_atom(
+                            atomic_number,
+                            formal_charge,
+                            is_aromatic,
+                            stereochemistry=stereochemistry,
+                            name=atom_name,
+                        )
+            atom_name_to_idx[atom_name] = atom_idx
+        for (atom1_name,
+             atom2_name,
+             bond_order,
+             is_aromatic,
+             stereochemistry) in bonds_information:
+            # try:
+            atom1_idx = atom_name_to_idx[atom1_name]
+            atom2_idx = atom_name_to_idx[atom2_name]
+            offmol.add_bond(
+                atom1_idx,
+                atom2_idx,
+                bond_order,
+                is_aromatic=is_aromatic,
+                stereochemistry=stereochemistry,
+            )
+            # # TODO: Broad exception. We should raise a specific error.
+            # except Exception:  # happens when atom is not found, i.e. no leaving atoms.
+            #     continue
         # Get smiles
         atom_indices = list(range(offmol.n_atoms))
         smiles = self._get_smiles(
@@ -451,18 +417,16 @@ class CifSubstructures:
             replace_quadruple_bond_with_any=replace_quadruple_bond_with_any,
             remove_charge_bond_order_resonant=remove_charge_bond_order_resonant,
         )
-        # Only take three letter code for key -- Note it uses the new atom_names list
-        entry_code = entry_data["_chem_comp.three_letter_code"]
         if smiles not in self.data[entry_code]:
+            atom_names = [atom_info[0] for atom_info in atoms_information]
             self.data[entry_code][smiles] = atom_names
 
     def _fill_substructure_data(
         self,
-        include_leaving=False,
         discard_keyword="FRAGMENT",
         replace_quadruple_bond_with_any: bool = True,
         remove_charge_bond_order_resonant: bool = True,
-    ):
+        ):
         """
         Fills data dictionary with the substructure information.
 
@@ -470,9 +434,12 @@ class CifSubstructures:
         __________
         discard_keyword : str, optional, default='FRAGMENT'
             Keyword in _chem_comp.name for filtering out entries. Default is 'FRAGMENT'.
-        include_leaving : bool, optional, default=False
-            Whether to include leaving atoms marked in _chem_comp_atom.pdbx_leaving_atom_flag
         """
+        # override_dict contains atoms that we DO want to treat as leaving, even
+        # though the actual entries don't have them flagged as leaving. The "H2" entries 
+        # in this list are hydrogens attached to the backbone N, which are (for some reason)
+        # recorded as NH2, with neither H marked as "leaving", which causes the
+        # substructures to be unable to match main-chain appearances of the amino acids.
         override_dict = {
             # LYN
             "lys_lfoh_dhz3": ["H2"],
@@ -487,23 +454,238 @@ class CifSubstructures:
             # CYX
             "cys": ["HG"],
         }
+
         for entry, entry_data in self._cif_multi_entry_object.items():
-            # create empty molecule to fill with data
-            # if 'LYS' in entry:
-            #     continue
-            self._add_substructure_data_entry(
-                entry_data,
-                include_leaving,
-                discard_keyword,
-                replace_quadruple_bond_with_any=replace_quadruple_bond_with_any,
-                remove_charge_bond_order_resonant=remove_charge_bond_order_resonant,
-            )
-            if entry in override_dict:
+            # Skip entries matching discard filtering keyword in comp name
+            comp_name = entry_data["_chem_comp.name"]
+            if discard_keyword in comp_name:
+                continue
+            # Gather necessary data for creating/adding atoms
+            atoms_information = [*zip(*self._gather_atoms_information(entry_data))]
+            # Gather information for bonds
+            bonds_information = [*zip(*self._gather_bonds_information(entry_data))]
+
+            for override_list in override_dict.get(entry, []):
+                for idx, atom in enumerate(atoms_information):
+                    if atom[0] in override_list:
+                        new_atom_tuple = (atom[0],
+                                           atom[1],
+                                           atom[2],
+                                           atom[3],
+                                           atom[4],
+                                           "Y",
+                                               )
+                        atoms_information[idx] = new_atom_tuple
+            # Only take three letter code for key -- Note it uses the new atom_names list
+            entry_code = entry_data["_chem_comp.three_letter_code"]
+            # Generate structures with permutations of leaving atoms. For example, if a COH
+            # motif has -OH group marked as leaving, this will add
+            # 1) the O- intermediate where only the H has left, as well as
+            # 2) the structure with the entire OH removed.
+            # Only atoms marked as "leaving" may have their formal charge changed by
+            # this function, so the remaining C when the OH is removed still has a
+            # neutral charge.
+            info_tuples = self._recursive_prepare_atom_bond_info(atoms_information,
+                                                                 bonds_information,
+                                                                 return_list=list())
+
+            # Also add a structure with ALL leaving atoms removed
+            atoms_info_copy = copy.deepcopy(atoms_information)
+            bonds_info_copy = copy.deepcopy(bonds_information)
+            atom_idxs_to_remove = [idx for idx, at in enumerate(atoms_info_copy) if at[5] == "Y"]
+            atom_names_to_remove = [atoms_info_copy[idx][0] for idx in atom_idxs_to_remove]
+            bond_idxs_to_remove = list()
+            for bond_idx, bond in enumerate(bonds_info_copy):
+                if (bond[0] in atom_names_to_remove) or (bond[1] in atom_names_to_remove):
+                    bond_idxs_to_remove.append(bond_idx)
+
+            for atom_idx_to_remove in atom_idxs_to_remove[::-1]:
+                atoms_info_copy.pop(atom_idx_to_remove)
+            for bond_idx_to_remove in bond_idxs_to_remove[::-1]:
+                bonds_info_copy.pop(bond_idx_to_remove)
+            info_tuples.append((atoms_info_copy, bonds_info_copy))
+
+            # Generate substructure entries for all prepared substructures
+            for atoms_information, bonds_information in info_tuples:
                 self._add_substructure_data_entry(
-                    entry_data,
-                    include_leaving,
-                    discard_keyword,
-                    override_dict[entry],
+                    atoms_information,
+                    bonds_information,
+                    entry_code,
                     replace_quadruple_bond_with_any=replace_quadruple_bond_with_any,
                     remove_charge_bond_order_resonant=remove_charge_bond_order_resonant,
-                )
+                    )
+
+    def _recursive_prepare_atom_bond_info(self,
+                                          atoms_info,
+                                          bonds_info,
+                                          return_list=list()):
+        """
+        This method makes permutations of the substructure with leaving atoms left and removed.
+        If some leaving atoms are bound to other leaving atoms, this method produces all permutations
+        of the leaving atom chains that are possible without creating a disconnected molecular graph.
+
+        If multiple leaving atoms form a chain, then this method attempts to keep the graph chemically
+        valid by subtracting one from the formal charge of each leaving atom when its neighbor is removed.
+        However non-leaving atoms will never have their formal charge changed.
+
+        Parameters
+        ----------
+        atoms_info : list[tuple[str,int]]
+            Iterable of tuple of atom info.
+            Currently [atom_name, element, formal_charge, is_aromatic, stereo, is_leaving]
+        bonds_info : list[tuple[str,int]]
+            Iterable of tuple of bond info.
+            Currently [atom1_name, atom2_name, bond_order, is_aromatic, stereo]
+        """
+        return_list.append((atoms_info, bonds_info))
+        for leaving_atom_idx, leaving_atom_info_tuple in enumerate(atoms_info):
+            # If the atom isn't leaving then we don't need to do anything
+            if leaving_atom_info_tuple[5] == "N":
+                continue
+            # If the atom IS leaving, then find any bonds it's involved in
+            leaving_atom_name = leaving_atom_info_tuple[0]
+            involved_bond_indices = list()
+            for bond_idx, bond_info_tuple in enumerate(bonds_info):
+                if leaving_atom_name in bond_info_tuple[:2]:
+                    involved_bond_indices.append(bond_idx)
+            # If this leaving atom is involved in more than one bond, then
+            # don't remove it, since doing so would disconnect the molecule
+            if len(involved_bond_indices) != 1:
+                continue
+            atoms_info_copy = copy.deepcopy(atoms_info)
+            bonds_info_copy = copy.deepcopy(bonds_info)
+
+            # Determine whether the neighbor of the leaving atom is also leaving
+            bond_info_tuple = bonds_info[involved_bond_indices[0]]
+            neighbor_atom_name = [name for name in bond_info_tuple[:2] if name != leaving_atom_name][0]
+            for neighbor_atom_idx, neighbor_atom_info_tuple in enumerate(atoms_info):
+                if neighbor_atom_info_tuple[0] != neighbor_atom_name:
+                    continue
+                neighbor_atom_is_also_leaving = neighbor_atom_info_tuple[5] == "Y"
+                # If the neighbor atom is ALSO leaving, then deduct 1 from its formal charge
+                if neighbor_atom_is_also_leaving:
+                    new_atom_tuple = (neighbor_atom_info_tuple[0],
+                                      neighbor_atom_info_tuple[1],
+                                      neighbor_atom_info_tuple[2]-1,
+                                      neighbor_atom_info_tuple[3],
+                                      neighbor_atom_info_tuple[4],
+                                      neighbor_atom_info_tuple[5]
+                                      )
+                    atoms_info_copy[neighbor_atom_idx] = new_atom_tuple
+            atoms_info_copy.pop(leaving_atom_idx)
+            bonds_info_copy.pop(involved_bond_indices[0])
+            return_list = self._recursive_prepare_atom_bond_info(atoms_info_copy,
+                                                                 bonds_info_copy,
+                                                                 return_list=return_list)
+
+        return return_list
+
+    def _patch_known_problems(self):
+        """
+        Monkey-patching known problems with current aa-variants-v1.cif from CCD.
+
+        .. warning: Needed as of Oct-21-2021
+        """
+
+        substructures_to_fix = {'PRO': [("[N-:1]1[C@@:2]([C-:3]=[O:4])([H:8])[C:5]([H:9])([H:10])[C:6]([H:11])([H:12])[C:7]1([H:13])[H:14]",
+                                         "[N:1]1[C@@:2]([C:3]=[O:4])([H:8])[C:5]([H:9])([H:10])[C:6]([H:11])([H:12])[C:7]1([H:13])[H:14]"
+                                        ),],
+                                'HIS':[("[N:1]([C@:2]([C:3](=[O:4])[O:11][H:18])([C:5]([C:6]1=[C:8]([H:16])[N-:10][C:9]([H:17])=[N+:7]1[H:15])([H:13])[H:14])[H:12])([H:19])[H:20]",
+                                        "[N:1]([C@:2]([C:3](=[O:4])[O:11][H:18])([C:5]([C:6]1=[C:8]([H:16])[N:10]=[C:9]([H:17])[N:7]1[H:15])([H:13])[H:14])[H:12])([H:19])[H:20]"
+                                        ),
+                                       ("[N:1]([C@:2]([C:3](=[O:4])[O-:11])([C:5]([C:6]1=[C:8]([H:16])[N-:10][C:9]([H:17])=[N+:7]1[H:15])([H:13])[H:14])[H:12])([H:18])[H:19]",
+                                        "[N:1]([C@:2]([C:3](=[O:4])[O-:11])([C:5]([C:6]1=[C:8]([H:16])[N:10]=[C:9]([H:17])[N:7]1[H:15])([H:13])[H:14])[H:12])([H:18])[H:19]"
+                                        ),
+                                       ("[N:1]([C@:2]([C:3]=[O:4])([C:5]([C:6]1=[C:8]([H:15])[N-:10][C:9]([H:16])=[N+:7]1[H:14])([H:12])[H:13])[H:11])([H:17])[H:18]",
+                                        "[N:1]([C@:2]([C:3]=[O:4])([C:5]([C:6]1=[C:8]([H:15])[N:10]=[C:9]([H:16])[N:7]1[H:14])([H:12])[H:13])[H:11])([H:17])[H:18]"
+                                        ),
+                                       ("[N:1]([C@:2]([C:3]=[O:4])([C:5]([C:6]1=[C:8]([H:15])[N-:10][C:9]([H:16])=[N+:7]1[H:14])([H:12])[H:13])[H:11])[H:17]",
+                                        "[N:1]([C@:2]([C:3]=[O:4])([C:5]([C:6]1=[C:8]([H:15])[N:10]=[C:9]([H:16])[N:7]1[H:14])([H:12])[H:13])[H:11])[H:17]"
+                                        ),
+                                       ("[N:1]([C@:2]([C:3](=[O:4])[O-:11])([C:5]([C:6]1=[C:8]([H:16])[N-:10][C:9]([H:17])=[N+:7]1[H:15])([H:13])[H:14])[H:12])[H:18]",
+                                        "[N:1]([C@:2]([C:3](=[O:4])[O-:11])([C:5]([C:6]1=[C:8]([H:16])[N:10]=[C:9]([H:17])[N:7]1[H:15])([H:13])[H:14])[H:12])[H:18]"
+                                        ),
+                                       ("[N:1]([C@:2]([C:3](=[O:4])[O:11][H:18])([C:5]([C:6]1=[C:8]([H:16])[N-:10][C:9]([H:17])=[N+:7]1[H:15])([H:13])[H:14])[H:12])[H:19]",
+                                        "[N:1]([C@:2]([C:3](=[O:4])[O:11][H:18])([C:5]([C:6]1=[C:8]([H:16])[N:10]=[C:9]([H:17])[N:7]1[H:15])([H:13])[H:14])[H:12])[H:19]"
+                                        ),
+                                       ("[N+:1]([C@:2]([C:3](=[O:4])[O-:11])([C:5]([C:6]1=[C:8]([H:16])[N-:10][C:9]([H:17])=[N+:7]1[H:15])([H:13])[H:14])[H:12])([H:18])([H:19])[H:20]",
+                                        "[N+:1]([C@:2]([C:3](=[O:4])[O-:11])([C:5]([C:6]1=[C:8]([H:16])[N:10]=[C:9]([H:17])[N:7]1[H:15])([H:13])[H:14])[H:12])([H:18])([H:19])[H:20]"
+                                        ),
+                                       ("[N+:1]([C@:2]([C:3]=[O:4])([C:5]([C:6]1=[C:8]([H:15])[N-:10][C:9]([H:16])=[N+:7]1[H:14])([H:12])[H:13])[H:11])([H:17])([H:18])[H:19]",
+                                        "[N+:1]([C@:2]([C:3]=[O:4])([C:5]([C:6]1=[C:8]([H:15])[N:10]=[C:9]([H:16])[N:7]1[H:14])([H:12])[H:13])[H:11])([H:17])([H:18])[H:19]")
+                                       ],
+                                "TRP": [("[N:1]([C@:2]([C:3](=[O:4])[O:15][H:24])([C:5]([C:6]1=[C:7]([H:19])[N-:9][c:10]2[c:8]1[c:11]([H:20])[c:13]([H:22])[c:14]([H:23])[c:12]2[H:21])([H:17])[H:18])[H:16])([H:25])[H:26]",
+                                         "[N:1]([C@:2]([C:3](=[O:4])[O:15][H:24])([C:5]([C:6]1=[C:7]([H:19])[N:9][c:10]2[c:8]1[c:11]([H:20])[c:13]([H:22])[c:14]([H:23])[c:12]2[H:21])([H:17])[H:18])[H:16])([H:25])[H:26]"
+                                         ),
+                                        ("[N:1]([C@:2]([C:3](=[O:4])[O-:15])([C:5]([C:6]1=[C:7]([H:19])[N-:9][c:10]2[c:8]1[c:11]([H:20])[c:13]([H:22])[c:14]([H:23])[c:12]2[H:21])([H:17])[H:18])[H:16])([H:24])[H:25]",
+                                         "[N:1]([C@:2]([C:3](=[O:4])[O-:15])([C:5]([C:6]1=[C:7]([H:19])[N:9][c:10]2[c:8]1[c:11]([H:20])[c:13]([H:22])[c:14]([H:23])[c:12]2[H:21])([H:17])[H:18])[H:16])([H:24])[H:25]"
+                                         ),
+                                        ("[N:1]([C@:2]([C:3]=[O:4])([C:5]([C:6]1=[C:7]([H:18])[N-:9][c:10]2[c:8]1[c:11]([H:19])[c:13]([H:21])[c:14]([H:22])[c:12]2[H:20])([H:16])[H:17])[H:15])([H:23])[H:24]",
+                                         "[N:1]([C@:2]([C:3]=[O:4])([C:5]([C:6]1=[C:7]([H:18])[N:9][c:10]2[c:8]1[c:11]([H:19])[c:13]([H:21])[c:14]([H:22])[c:12]2[H:20])([H:16])[H:17])[H:15])([H:23])[H:24]"
+                                         ),
+                                        ("[N+:1]([C@:2]([C:3](=[O:4])[O-:15])([C:5]([C:6]1=[C:7]([H:19])[N-:9][c:10]2[c:8]1[c:11]([H:20])[c:13]([H:22])[c:14]([H:23])[c:12]2[H:21])([H:17])[H:18])[H:16])([H:24])([H:25])[H:26]",
+                                         "[N+:1]([C@:2]([C:3](=[O:4])[O-:15])([C:5]([C:6]1=[C:7]([H:19])[N:9][c:10]2[c:8]1[c:11]([H:20])[c:13]([H:22])[c:14]([H:23])[c:12]2[H:21])([H:17])[H:18])[H:16])([H:24])([H:25])[H:26]"
+                                         ),
+                                        ("[N+:1]([C@:2]([C:3]=[O:4])([C:5]([C:6]1=[C:7]([H:18])[N-:9][c:10]2[c:8]1[c:11]([H:19])[c:13]([H:21])[c:14]([H:22])[c:12]2[H:20])([H:16])[H:17])[H:15])([H:23])([H:24])[H:25]",
+                                         "[N+:1]([C@:2]([C:3]=[O:4])([C:5]([C:6]1=[C:7]([H:18])[N:9][c:10]2[c:8]1[c:11]([H:19])[c:13]([H:21])[c:14]([H:22])[c:12]2[H:20])([H:16])[H:17])[H:15])([H:23])([H:24])[H:25]"
+                                         )
+                                        ]}
+        # Fix PRO smarts substructure
+        for aa_name, replacement_list in substructures_to_fix.items():
+            for (old_smarts, new_smarts) in replacement_list:
+                self.data[aa_name][new_smarts] = self.data[aa_name][old_smarts]
+                self.data[aa_name].pop(old_smarts)
+
+    def _add_common_substructures(self):
+        """
+        .. warning: Needed as of Oct-21-2021
+        """
+
+        # Add common caps
+        self.data['ACE'] = {
+            "[C:1](=[O:2])[C:3]([H:4])([H:5])[H:6]": [
+                "C",
+                "O",
+                "CH3",
+                "H1",
+                "H2",
+                "H3"
+            ]
+        }
+        self.data["NME"] = {
+            "[N:1]([C:2]([H:4])([H:5])[H:6])[H:3]": [
+                "N",
+                "C",
+                "H",
+                "H1",
+                "H2",
+                "H3"
+            ]
+        }
+        self.data["NH2"] = {
+            "[N:1]([H:2])[H:3]": [
+                "N",
+                "HN1",
+                "HN2"
+            ]
+        }
+
+    def _add_common_linkages(self):
+        """
+        .. warning: Needed as of Oct-21-2021
+        """
+
+        self.data["PEPTIDE_BOND"] = {
+            "[C:1](=[O:2])[N:3]([C:4])": [
+                "C",
+                "O",
+                "N",
+                "CA",
+            ]
+        }
+        self.data["DISULFIDE"] = {
+            "[S:1][S:2]": [
+                "SG",
+                "SG",
+            ]
+        }
