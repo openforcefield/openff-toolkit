@@ -60,12 +60,12 @@ from openff.toolkit.utils import (
     string_to_quantity,
 )
 from openff.toolkit.utils.exceptions import (
+    HierarchySchemeNotFoundException,
+    HierarchySchemeWithIteratorNameAlreadyRegisteredException,
     InvalidAtomMetadataError,
     InvalidConformerError,
     NotAttachedToMoleculeError,
     SmilesParsingError,
-    HierarchySchemeNotFoundException,
-    HierarchySchemeWithIteratorNameAlreadyRegisteredException,
 )
 from openff.toolkit.utils.serialization import Serializable
 from openff.toolkit.utils.toolkits import (
@@ -506,6 +506,20 @@ class Atom(Particle):
         # for vsite in self._vsites:
         #    yield vsite
 
+    def virtual_site(self, index: int):
+        """
+        Get virtual_site with a specified index.
+
+        Parameters
+        ----------
+        index : int
+
+        Returns
+        -------
+        virtual_site : openff.toolkit.topology.VirtualSite
+        """
+        return self._virtual_sites[index]
+
     @cached_property
     def molecule_atom_index(self):
         """
@@ -520,7 +534,7 @@ class Atom(Particle):
     @property
     def molecule_particle_index(self):
         """
-        The index of this Atom within the the list of particles in the parent ``Molecule``.
+        The index of this Particle within the the list of particles in the parent ``Molecule``.
         Note that this can be different from ``molecule_atom_index``.
 
         """
@@ -3219,8 +3233,6 @@ class FrozenMolecule(Serializable):
             """For the given data type, return the networkx graph"""
             import networkx as nx
 
-            from openff.toolkit.topology import TopologyMolecule
-
             if strip_pyrimidal_n_atom_stereo:
                 SMARTS = "[N+0X3:1](-[*])(-[*])(-[*])"
 
@@ -3233,15 +3245,6 @@ class FrozenMolecule(Serializable):
                         SMARTS, toolkit_registry=toolkit_registry
                     )
                 return data.to_networkx()
-            elif isinstance(data, TopologyMolecule):
-                # TopologyMolecule class instance
-                if strip_pyrimidal_n_atom_stereo:
-                    # Make a copy of the molecule so we don't modify the original
-                    ref_mol = deepcopy(data.reference_molecule)
-                    ref_mol.strip_atom_stereochemistry(
-                        SMARTS, toolkit_registry=toolkit_registry
-                    )
-                return ref_mol.to_networkx()
 
             elif isinstance(data, nx.Graph):
                 return data
@@ -3286,9 +3289,6 @@ class FrozenMolecule(Serializable):
         Parameters
         ----------
         other: openff.toolkit.topology.Molecule or TopologyMolecule or nx.Graph()
-
-        return_atom_map: bool, default=False, optional
-            will return an optional dict containing the atomic mapping.
 
         aromatic_matching: bool, default=True, optional
         compare the aromatic attributes of bonds and atoms.
@@ -4311,12 +4311,60 @@ class FrozenMolecule(Serializable):
             ptl for vsite in self._virtual_sites for ptl in vsite.particles
         ]
 
+    def particle_index(self, particle):
+        """
+        Returns the index of a given particle in this molecule
+
+        Parameters
+        ----------
+        particle : openff.toolkit.topology.Particle
+
+        Returns
+        -------
+        index : int
+            The index of the given particle in this molecule
+        """
+        for index, mol_particle in enumerate(self.particles):
+            if particle is mol_particle:
+                return index
+
     @property
     def atoms(self):
         """
         Iterate over all Atom objects.
         """
         return self._atoms
+
+    def atom(self, index: int):
+        """
+        Get atom with a specified index.
+
+        Parameters
+        ----------
+        index : int
+
+        Returns
+        -------
+        atom : openff.toolkit.topology.Atom
+        """
+        return self._atoms[index]
+
+    def atom_index(self, atom):
+        """
+        Returns the index of a given atom in this molecule
+
+        Parameters
+        ----------
+        atom : openff.toolkit.topology.Atom
+
+        Returns
+        -------
+        index : int
+            The index of the given atom in this molecule
+        """
+        for index, mol_atom in enumerate(self.atoms):
+            if atom is mol_atom:
+                return index
 
     @property
     def conformers(self):
@@ -4344,12 +4392,74 @@ class FrozenMolecule(Serializable):
         """
         return self._virtual_sites
 
+    def virtual_site(self, index: int):
+        """
+        Get virtual_site with a specified index.
+
+        Parameters
+        ----------
+        index : int
+
+        Returns
+        -------
+        virtual_site : openff.toolkit.topology.VirtualSite
+        """
+        return self._virtual_sites[index]
+
+    def virtual_site_index(self, virtual_site):
+        """
+        Get the molecule index of a particular virtual site.
+        Note that a virtual site may have multiple virtual particles, and that the index returned by this method
+        does not correspond to the virtual _particle_ index. For that, use the `particle_index` method.
+
+        Parameters
+        ----------
+        virtual_site : openff.toolkit.topology.VirtualSite
+
+        Returns
+        -------
+        index : int
+        """
+        for index, mol_vsite in enumerate(self._virtual_sites):
+            if virtual_site is mol_vsite:
+                return index
+        raise Exception("VirtualSite not found in Molecule")
+
+    def virtual_site_particle_start_index(self, virtual_site):
+        """
+        Returns the molecule particle index of the first particle of this virtual site.
+
+        Parameters
+        ----------
+        virtual_site : openff.toolkit.topology.VirtualSite
+
+        Returns
+        -------
+        index : int
+        """
+        first_particle = virtual_site.particles[0]
+        return self.particle_index(first_particle)
+
     @property
     def bonds(self):
         """
         Iterate over all Bond objects.
         """
         return self._bonds
+
+    def bond(self, index: int):
+        """
+        Get bond with the specified index.
+
+        Parameters
+        ----------
+        index : int
+
+        Returns
+        -------
+        bond : openff.toolkit.topology.Bond
+        """
+        return self._bonds[index]
 
     @property
     def angles(self):
@@ -4603,17 +4713,12 @@ class FrozenMolecule(Serializable):
 
         import networkx as nx
 
-        from openff.toolkit.topology import TopologyMolecule
-
         # check for networkx then assuming we have a Molecule or TopologyMolecule instance just try and
         # extract the info. Note we do not type check the TopologyMolecule due to cyclic dependencies
         if isinstance(molecule, nx.Graph):
             atom_nums = list(
                 dict(molecule.nodes(data="atomic_number", default=1)).values()
             )
-
-        elif isinstance(molecule, TopologyMolecule):
-            atom_nums = [atom.atomic_number for atom in molecule.atoms]
 
         elif isinstance(molecule, FrozenMolecule):
             atom_nums = [atom.atomic_number for atom in molecule.atoms]

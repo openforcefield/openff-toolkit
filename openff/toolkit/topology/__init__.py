@@ -21,11 +21,6 @@ from openff.toolkit.topology.topology import (
     SortedDict,
     TagSortedDict,
     Topology,
-    TopologyAtom,
-    TopologyBond,
-    TopologyMolecule,
-    TopologyVirtualParticle,
-    TopologyVirtualSite,
     UnsortedDict,
     ValenceDict,
 )

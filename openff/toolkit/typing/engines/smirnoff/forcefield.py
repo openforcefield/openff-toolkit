@@ -1291,7 +1291,7 @@ class ForceField:
         # This means that even though virtual sites may have been created via
         # the molecule API, an empty VirtualSites tag must exist in the FF
         for atom in topology.topology_atoms:
-            system.addParticle(atom.atom.mass)
+            system.addParticle(atom.mass)
 
         # Determine the order in which to process ParameterHandler objects in order to satisfy dependencies
         parameter_handlers = self._resolve_parameter_handler_order()
@@ -1326,22 +1326,10 @@ class ForceField:
         # QUESTION: Will we want to do this for *all* cases, or would we ever want flexibility here?
         bond_particle_indices = []
 
-        for topology_molecule in topology.topology_molecules:
-
-            top_mol_particle_start_index = topology_molecule.atom_start_topology_index
-
-            for topology_bond in topology_molecule.bonds:
-                top_index_1 = topology_molecule._ref_to_top_index[
-                    topology_bond.bond.atom1_index
-                ]
-                top_index_2 = topology_molecule._ref_to_top_index[
-                    topology_bond.bond.atom2_index
-                ]
-
-                top_index_1 += top_mol_particle_start_index
-                top_index_2 += top_mol_particle_start_index
-
-                bond_particle_indices.append((top_index_1, top_index_2))
+        bond_particle_indices = [
+            (topology.particle_index(bond.atom1), topology.particle_index(bond.atom2))
+            for bond in topology.bonds
+        ]
 
         # TODO: Can we generalize this to allow for `CustomNonbondedForce` implementations too?
         forces = [system.getForce(i) for i in range(system.getNumForces())]
