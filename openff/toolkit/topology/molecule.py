@@ -5050,17 +5050,15 @@ class FrozenMolecule(Serializable):
             for bond in rdmol.GetBonds():
                 bond_type = bond.GetBondType()
 
-                # TODO: Is there a cleaner way to undo the guanidinium/imidazole hack that went into making
-                # the AA substructures? Should we have a second substructure dict?
+                # All bonds in the graph should have been explicitly assigned by this point.
                 if bond_type == Chem.rdchem.BondType.UNSPECIFIED:
                     raise Exception
-                    bond_type = Chem.rdchem.BondType.SINGLE  # <<< THIS IS BAD -- Will leave unsatisfied valences and give wrong hydrogen count
+                    #bond_type = Chem.rdchem.BondType.SINGLE
                     # bond_type = Chem.rdchem.BondType.AROMATIC
                     # bond_type = Chem.rdchem.BondType.ONEANDAHALF
                 # TODO: Fix "bond order any" hacks for ARG and HIS, since we won't be able to recover those here
                 rdmol_G.add_edge(
                     bond.GetBeginAtomIdx(), bond.GetEndAtomIdx(),
-                    # bond_order=bond.GetBondTypeAsDouble()
                     bond_order=_bondtypes[bond_type]
                 )
             return rdmol_G
@@ -5104,8 +5102,8 @@ class FrozenMolecule(Serializable):
                     bond.atom1.index, bond.atom2.index, bond_order=Chem.rdchem.BondType.UNSPECIFIED  # bond.order
                 )
                 # Assign sequential negative numbers as atomic numbers for hydrogens attached to the same heavy atom.
-                # We do the same to the substructure templates that are used for matching. This makes it so we
-                # don't deal with redundant self-symmetric matches.
+                # We do the same to the substructure templates that are used for matching. This saves runtime because
+                # it removes redundant self-symmetric matches.
                 if bond.atom1.element.atomic_number == 1:
                     h_index = bond.atom1.index
                     heavy_atom_index = bond.atom2.index
@@ -5118,7 +5116,6 @@ class FrozenMolecule(Serializable):
                     omm_topology_G.nodes[h_index]['atomic_number'] = -1 * n_hydrogens[heavy_atom_index]
 
             # Try matching this substructure to the whole molecule graph
-            #node_match = isomorphism.categorical_node_match(['atomic_number', 'residue_name'], [-1, 'UNK'])
             node_match = isomorphism.categorical_node_match(['atomic_number', 'already_matched'], [-100, False])
 
             all_rdmol_graphs = []
@@ -5135,12 +5132,9 @@ class FrozenMolecule(Serializable):
                     rdmol = Chem.MolFromSmarts(substructure_smarts)
                     rdmol_G = _rdmol_to_networkx(rdmol, res_name)
                     GM = isomorphism.GraphMatcher(omm_topology_G, rdmol_G, node_match=node_match)
-                    #GM = isomorphism.ISMAGS(omm_topology_G, rdmol_G, node_match=node_match)
                     if GM.subgraph_is_isomorphic():
                         print(res_name)
                         print(substructure_smarts)
-
-                        #for omm_idx_2_rdk_idx in GM.subgraph_isomorphisms_iter(symmetry=True):
                         for omm_idx_2_rdk_idx in GM.subgraph_isomorphisms_iter():
                             assert len(omm_idx_2_rdk_idx) == rdmol.GetNumAtoms()
                             for omm_idx, rdk_idx in omm_idx_2_rdk_idx.items():
@@ -5194,11 +5188,6 @@ class FrozenMolecule(Serializable):
                             False,
                             metadata={'residue_name': node_data['residue_name'], 'residue_number': node_data['residue_number']}
                             )
-            # rdatom.SetFormalCharge(formal_charge  # * unit.elementary_charge
-            #                        # atom.formal_charge.value_in_unit(unit.elementary_charge)
-            #                        )
-            # rdatom.SetIsAromatic(atom.is_aromatic)
-            # rdatom.SetProp("_Name", atom.name)
 
         for edge, edge_data in omm_topology_G.edges.items():
             print(edge, edge_data)
@@ -5212,16 +5201,18 @@ class FrozenMolecule(Serializable):
 
         print(f"Number of atoms before sanitization: {offmol.n_atoms}")
         # TODO: Pull in coordinates and assign stereochemistry
-        # offmol.add_conformer()
+        coords = np.array([[*vec3.value_in_unit(unit.angstrom)] for vec3 in pdb.getPositions()]) * unit.angstrom
+
+        offmol.add_conformer(coords)
         # TODO: Ensure that this assigns aromaticity
         rdmol = offmol.to_rdkit()
         Chem.SanitizeMol(
             rdmol,
             Chem.SANITIZE_ALL ^ Chem.SANITIZE_ADJUSTHS,  # ^ Chem.SANITIZE_SETAROMATICITY,
         )
+        Chem.AssignStereochemistryFrom3D(rdmol)
 
         print(f"Number of atoms after sanitization: {len(rdmol.GetAtoms())}")
-
 
         offmol = cls.from_rdkit(rdmol, allow_undefined_stereo=True, hydrogens_are_explicit=True)
 

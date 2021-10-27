@@ -1549,7 +1549,6 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             # Determine bond aromaticity and Kekulized bond order
             is_aromatic = rdb.GetIsAromatic()
             order = rdb.GetBondTypeAsDouble()
-            assert order >= 0.9
             # Convert floating-point bond order to integral bond order
             order = int(order)
 
