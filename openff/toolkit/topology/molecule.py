@@ -5161,7 +5161,6 @@ class FrozenMolecule(Serializable):
                     #bond_type = Chem.rdchem.BondType.SINGLE
                     # bond_type = Chem.rdchem.BondType.AROMATIC
                     # bond_type = Chem.rdchem.BondType.ONEANDAHALF
-                # TODO: Fix "bond order any" hacks for ARG and HIS, since we won't be able to recover those here
                 rdmol_G.add_edge(
                     bond.GetBeginAtomIdx(), bond.GetEndAtomIdx(),
                     bond_order=_bondtypes[bond_type]
@@ -5197,6 +5196,7 @@ class FrozenMolecule(Serializable):
                     atom.index,
                     atomic_number=atom.element.atomic_number,
                     formal_charge=0.,
+                    atom_name=atom.name,
                     residue_name=atom.residue.name,
                     residue_number=atom.residue.index
                 )
@@ -5223,7 +5223,6 @@ class FrozenMolecule(Serializable):
             # Try matching this substructure to the whole molecule graph
             node_match = isomorphism.categorical_node_match(['atomic_number', 'already_matched'], [-100, False])
 
-            all_rdmol_graphs = []
             already_assigned_nodes = set()
             already_assigned_edges = set()
 
@@ -5291,7 +5290,9 @@ class FrozenMolecule(Serializable):
             offmol.add_atom(node_data['atomic_number'],
                             int(node_data['formal_charge']),
                             False,
-                            metadata={'residue_name': node_data['residue_name'], 'residue_number': node_data['residue_number']}
+                            metadata={'residue_name': node_data['residue_name'],
+                                      'residue_number': node_data['residue_number'],
+                                      'atom_name': node_data['atom_name']}
                             )
 
         for edge, edge_data in omm_topology_G.edges.items():

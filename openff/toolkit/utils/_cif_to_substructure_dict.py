@@ -656,7 +656,7 @@ class CifSubstructures:
             "[N:1]([C:2]([H:4])([H:5])[H:6])[H:3]": [
                 "N",
                 "C",
-                "HN2",
+                "H",
                 "H1",
                 "H2",
                 "H3"
