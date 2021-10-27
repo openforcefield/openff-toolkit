@@ -3978,19 +3978,19 @@ class TestMoleculeFromPDB:
     def test_molecule_from_pdb_nterm_ala_dipeptide(self):
         offmol = Molecule.from_pdb(get_data_file_path('proteins/NTerminal_ALA.pdb'))
         assert offmol.n_atoms == 18
-        expected_mol = Molecule.from_smiles('[N+H3][C@H](C)C(=O)NC')
+        expected_mol = Molecule.from_smiles('[N+]([H])([H])([H])[C@H](C)C(=O)NC')
         assert offmol.is_isomorphic_with(expected_mol, atom_stereochemistry_matching=False)
 
     def test_molecule_from_pdb_mainchain_arg_dipeptide(self):
         offmol = Molecule.from_pdb(get_data_file_path('proteins/MainChain_ARG.pdb'))
         assert offmol.n_atoms == 36
-        expected_mol = Molecule.from_smiles('CC(=O)N[C@H](CCCNC(N)=[N+H2])C(=O)NC')
+        expected_mol = Molecule.from_smiles('CC(=O)N[C@H](CCCNC(N)=[N+]([H])[H])C(=O)NC')
         assert offmol.is_isomorphic_with(expected_mol, atom_stereochemistry_matching=False)
 
     def test_molecule_from_pdb_cterm_arg_dipeptide(self):
         offmol = Molecule.from_pdb(get_data_file_path('proteins/CTerminal_ARG.pdb'))
         assert offmol.n_atoms == 31
-        expected_mol = Molecule.from_smiles('CC(=O)N[C@H](CCCNC(N)=[N+H2])C(=O)[O-]')
+        expected_mol = Molecule.from_smiles('CC(=O)N[C@H](CCCNC(N)=[N+]([H])([H]))C(=O)[O-]')
         assert offmol.is_isomorphic_with(expected_mol, atom_stereochemistry_matching=False)
 
     def test_molecule_from_pdb_mainchain_cys_dipeptide(self):
@@ -4034,7 +4034,7 @@ class TestMoleculeFromPDB:
         assert sum([1 for atom in offmol.atoms if atom.is_aromatic]) == 5
         assert sum([1 for bond in offmol.bonds if bond.is_aromatic]) == 5
 
-        expected_mol = Molecule.from_smiles('CC(=O)N[C@H](CC1[N+H]=CNC=1)C(=O)NC')
+        expected_mol = Molecule.from_smiles('CC(=O)N[C@H](CC1[N+]([H])=CNC=1)C(=O)NC')
         assert offmol.is_isomorphic_with(expected_mol,
                                          atom_stereochemistry_matching=False,
                                          aromatic_matching=False)
@@ -4072,7 +4072,7 @@ class TestMoleculeFromPDB:
         assert sum([1 for atom in offmol.atoms if atom.is_aromatic]) == 9
         assert sum([1 for bond in offmol.bonds if bond.is_aromatic]) == 10
 
-        expected_mol = Molecule.from_smiles('[N+H3][C@H](CC1C2=CC=CC=C2NC=1)C(=O)NC')
+        expected_mol = Molecule.from_smiles('[N+]([H])([H])([H])[C@H](CC1C2=CC=CC=C2NC=1)C(=O)NC')
         assert offmol.is_isomorphic_with(expected_mol,
                                          atom_stereochemistry_matching=False,
                                          aromatic_matching=False,
