@@ -93,6 +93,24 @@ jupyter_execute_notebooks = "force"
 # List of notebooks NOT to execute (use output stored in notebook instead)
 execution_excludepatterns = []
 
+
+# sphinx-notfound-page
+# https://github.com/readthedocs/sphinx-notfound-page
+# Renders a 404 page with absolute links
+import importlib
+
+if importlib.util.find_spec("notfound"):
+    extensions.append("notfound.extension")
+
+    notfound_context = {
+        "title": "404: File Not Found",
+        "body": """
+    <h1>File Not Found</h1>
+    <p>Sorry, we couldn't find that page.</p>
+    <p>Try using the search box or go to the homepage.</p>
+    """,
+    }
+
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
 source_suffix = [".rst", ".md", ".ipynb"]
