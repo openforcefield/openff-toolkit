@@ -105,9 +105,9 @@ if importlib.util.find_spec("notfound"):
     notfound_context = {
         "title": "404: File Not Found",
         "body": """
-    <h1>File Not Found</h1>
+    <h1>404: File Not Found</h1>
     <p>Sorry, we couldn't find that page.</p>
-    <p>Try using the search box or go to the homepage.</p>
+    <p>Try using the search box or use the navigation menu on the left.</p>
     """,
     }
 
