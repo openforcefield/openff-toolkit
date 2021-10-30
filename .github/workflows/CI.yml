@@ -59,7 +59,7 @@ jobs:
       NB_ARGS: -v --nbval-lax --ignore=examples/deprecated
 
     steps:
-      - uses: actions/checkout@v2.3.4
+      - uses: actions/checkout@v2.3.5
         with:
           fetch-depth: 2
 

@@ -3243,7 +3243,10 @@ class TestForceFieldConstraints:
                 molecule.atoms[atom2_idx].element.symbol,
             }
             assert atom_elements == bond_elements
-            assert np.isclose(distance / unit.angstrom, bond_length / unit.angstrom)
+            assert np.isclose(
+                distance.value_in_unit(unit.angstrom),
+                bond_length.value_in_unit(unit.angstrom),
+            )
 
     def test_constraints_hbonds(self):
         """Test that hydrogen bonds constraints are applied correctly to a ethane molecule."""
@@ -3822,12 +3825,13 @@ class TestForceFieldParameterAssignment:
         ref_ene = 0.0011797690240 * unit.kilojoule_per_mole
 
         assert np.allclose(
-            off_crds / unit.angstrom, ref_crds_with_vsite / unit.angstrom
+            off_crds.value_in_unit(unit.angstrom),
+            ref_crds_with_vsite.value_in_unit(unit.angstrom),
         )
         # allow 1% error in energy difference (default is .001%)
         assert np.allclose(
-            off_ene / unit.kilocalorie_per_mole,
-            ref_ene / unit.kilocalorie_per_mole,
+            off_ene.value_in_unit(unit.kilocalorie_per_mole),
+            ref_ene.value_in_unit(unit.kilocalorie_per_mole),
             rtol=0.05,
         )
 

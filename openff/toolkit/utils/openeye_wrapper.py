@@ -1275,14 +1275,30 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             for conf in molecule._conformers:
                 # OE needs a 1 x (3*n_Atoms) double array as input
                 flat_coords = np.zeros(shape=oemol.NumAtoms() * 3, dtype=np.float64)
-                for index, oe_idx in off_to_oe_idx.items():
-                    (x, y, z) = conf[index, :] / unit.angstrom
+                for index, oe_idx in map_atoms.items():
+                    (x, y, z) = conf[index, :].value_in_unit(unit.angstrom)
                     flat_coords[(3 * oe_idx)] = x
                     flat_coords[(3 * oe_idx) + 1] = y
                     flat_coords[(3 * oe_idx) + 2] = z
 
                 oecoords = oechem.OEFloatArray(flat_coords)
                 oemol.NewConf(oecoords)
+
+        # Retain charges, if present. All atoms are initialized above with a partial charge of NaN.
+        if molecule._partial_charges is not None:
+            oe_indexed_charges = np.zeros(shape=molecule.n_atoms, dtype=np.float64)
+            for off_idx, charge in enumerate(molecule._partial_charges):
+                oe_idx = map_atoms[off_idx]
+                charge_unitless = charge.value_in_unit(unit.elementary_charge)
+                oe_indexed_charges[oe_idx] = charge_unitless
+            # TODO: This loop below fails if we try to use an "enumerate"-style loop.
+            #  It's worth investigating whether we make this assumption elsewhere in the codebase, since
+            #  the OE docs may indicate that this sort of usage is a very bad thing to do.
+            #  https://docs.eyesopen.com/toolkits/python/oechemtk/atombondindices.html#indices-for-molecule-lookup-considered-harmful
+            # for oe_idx, oe_atom in enumerate(oemol.GetAtoms()):
+            for oe_atom in oemol.GetAtoms():
+                oe_idx = oe_atom.GetIdx()
+                oe_atom.SetPartialCharge(oe_indexed_charges[oe_idx])
 
         # Retain properties, if present
         for key, value in molecule.properties.items():

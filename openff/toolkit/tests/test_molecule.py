@@ -525,6 +525,29 @@ class TestMolecule:
         molecule_copy.properties["aaa"] = "bbb"
         assert "aaa" not in molecule.properties
 
+    @pytest.mark.skipif(
+        not (has_pkg("rdkit") and not (has_pkg("openeye"))),
+        reason="Test requires that RDKit is installed, but OpenEye is not installed",
+    )
+    def test_repr_bad_smiles(self):
+        """Test that the repr falls back to Hill formula if to_smiles fails."""
+
+        assert "bad" not in Molecule.from_smiles("CC").__repr__()
+
+        # OpenEye will report a smiles of ClCl(Cl)C without error, so only test with RDKit unless we
+        # can come up with a molecule that OpenEyeToolkitWrapper.to_smiles() will reliably fail on
+
+        molecule = Molecule()
+        molecule.add_atom(17, 0, False)
+        molecule.add_atom(17, 0, False)
+        molecule.add_atom(17, 0, False)
+
+        molecule.add_bond(0, 1, 1, False)
+        molecule.add_bond(0, 2, 1, False)
+
+        expected_repr = "Molecule with name '' with bad SMILES and Hill formula 'Cl3'"
+        assert molecule.__repr__() == expected_repr
+
     @pytest.mark.parametrize("toolkit", [OpenEyeToolkitWrapper, RDKitToolkitWrapper])
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_to_from_smiles(self, molecule, toolkit):
@@ -794,6 +817,7 @@ class TestMolecule:
         assert (
             len(set([atom.name for atom in molecule.atoms])) == molecule.n_atoms
         ) == molecule.has_unique_atom_names
+        assert all("x" in a.name for a in molecule.atoms)
 
     inchi_data = [
         {
@@ -2045,6 +2069,20 @@ class TestMolecule:
         assert qcschema.extras[
             "canonical_isomeric_explicit_hydrogen_mapped_smiles"
         ] == ethanol.to_smiles(mapped=True)
+
+    @requires_pkg("qcportal")
+    def test_to_qcschema_no_connections(self):
+        mol = Molecule.from_mapped_smiles("[Br-:1].[K+:2]")
+        mol.add_conformer(
+            unit.Quantity(
+                np.array(
+                    [[0.188518, 0.015684, 0.001562], [0.148794, 0.21268, 0.11992]]
+                ),
+                unit.nanometers,
+            )
+        )
+        qcschema = mol.to_qcschema()
+        assert qcschema.connectivity is None
 
     @requires_pkg("qcportal")
     def test_from_qcschema_no_client(self):
@@ -3517,10 +3555,14 @@ class TestMolecule:
         initial_charges = molecule._partial_charges
 
         # Make sure everything isn't 0s
-        assert (abs(initial_charges / unit.elementary_charge) > 0.01).any()
+        assert (abs(initial_charges.value_in_unit(unit.elementary_charge)) > 0.01).any()
         # Check total charge
-        charges_sum_unitless = initial_charges.sum() / unit.elementary_charge
-        total_charge_unitless = molecule.total_charge / unit.elementary_charge
+        charges_sum_unitless = initial_charges.sum().value_in_unit(
+            unit.elementary_charge
+        )
+        total_charge_unitless = molecule.total_charge.value_in_unit(
+            unit.elementary_charge
+        )
         # if abs(charges_sum_unitless - total_charge_unitless) > 0.0001:
         # print(
         #     "molecule {}    charge_sum {}     molecule.total_charge {}".format(
