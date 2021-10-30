@@ -520,16 +520,18 @@ class Atom(Particle):
         """
         return self._virtual_sites[index]
 
-    @cached_property
+    @property
     def molecule_atom_index(self):
         """
-        The index of this Atom within the the list of atoms in ``Molecules``.
+        The index of this Atom within the the list of atoms in the parent ``Molecule``.
         Note that this can be different from ``molecule_particle_index``.
-
         """
         if self._molecule is None:
             raise ValueError("This Atom does not belong to a Molecule object")
-        return self._molecule.atoms.index(self)
+        if "_molecule_atom_index" in self.__dict__:
+            return self._molecule_atom_index
+        self._molecule_atom_index = self._molecule.atoms.index(self)
+        return self._molecule_atom_index
 
     @property
     def molecule_particle_index(self):
@@ -4362,9 +4364,7 @@ class FrozenMolecule(Serializable):
         index : int
             The index of the given atom in this molecule
         """
-        for index, mol_atom in enumerate(self.atoms):
-            if atom is mol_atom:
-                return index
+        return atom.molecule_atom_index
 
     @property
     def conformers(self):
