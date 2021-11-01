@@ -2227,7 +2227,7 @@ class TestMolecule:
             mol_qca_record = Molecule.from_qcschema(entry, client)
 
     @requires_pkg("qcportal")
-    @pytest.mark.flaky(reruns=5)
+    @pytest.mark.flaky(reruns=10)
     def test_qcschema_molecule_record_round_trip_from_to_from(self):
         """Test making a molecule from qca record using from_qcschema,
         then converting back to qcschema using to_qcschema,
