@@ -22,8 +22,14 @@ from collections import OrderedDict
 from collections.abc import MutableMapping
 
 import numpy as np
-from simtk import unit
-from simtk.openmm import app
+
+try:
+    from openmm import app, unit
+    from openmm.app import Aromatic, Double, Single, Triple
+except ImportError:
+    from simtk import unit
+    from simtk.openmm import app
+    from simtk.openmm.app import Aromatic, Double, Single, Triple
 
 from openff.toolkit.typing.chemistry import ChemicalEnvironment
 from openff.toolkit.utils.exceptions import (
@@ -411,7 +417,7 @@ class TopologyAtom(Serializable):
 
         Returns
         -------
-        simtk.openmm.app.element.Element
+        openmm.app.element.Element
         """
         return self._atom.element
 
@@ -1362,7 +1368,7 @@ class Topology(Serializable):
 
     Import some utilities
 
-    >>> from simtk.openmm import app
+    >>> from openmm import app
     >>> from openff.toolkit.tests.utils import get_data_file_path, get_packmol_pdb_file_path
     >>> pdb_filepath = get_packmol_pdb_file_path('cyclohexane_ethanol_0.4_0.6')
     >>> monomer_names = ('cyclohexane', 'ethanol')
@@ -1530,7 +1536,7 @@ class Topology(Serializable):
 
         Returns
         -------
-        box_vectors : simtk.unit.Quantity wrapped numpy array of shape (3, 3)
+        box_vectors : openmm.unit.Quantity wrapped numpy array of shape (3, 3)
             The unit-wrapped box vectors of this topology
         """
         return self._box_vectors
@@ -1542,7 +1548,7 @@ class Topology(Serializable):
 
         Parameters
         ----------
-        box_vectors : simtk.unit.Quantity wrapped numpy array of shape (3, 3)
+        box_vectors : openmm.unit.Quantity wrapped numpy array of shape (3, 3)
             The unit-wrapped box vectors
 
         """
@@ -1553,7 +1559,7 @@ class Topology(Serializable):
             raise InvalidBoxVectorsError("Given unitless box vectors")
         if not (unit.angstrom.is_compatible(box_vectors.unit)):
             raise InvalidBoxVectorsError(
-                "Attempting to set box vectors in units that are incompatible with simtk.unit.Angstrom"
+                "Attempting to set box vectors in units that are incompatible with openmm.unit.Angstrom"
             )
 
         if hasattr(box_vectors, "shape"):
@@ -2117,7 +2123,7 @@ class Topology(Serializable):
 
         Parameters
         ----------
-        openmm_topology : simtk.openmm.app.Topology
+        openmm_topology : openmm.app.Topology
             An OpenMM Topology object
         unique_molecules : iterable of objects that can be used to construct unique Molecule objects
             All unique molecules must be provided, in any order, though multiple copies of each molecule are allowed.
@@ -2275,16 +2281,14 @@ class Topology(Serializable):
 
         Returns
         -------
-        openmm_topology : simtk.openmm.app.Topology
+        openmm_topology : openmm.app.Topology
             An OpenMM Topology object
         """
-        from simtk.openmm.app import Aromatic, Double, Single
-        from simtk.openmm.app import Topology as OMMTopology
-        from simtk.openmm.app import Triple
-
         try:
+            from openmm.app import Topology as OMMTopology
             from openmm.app.element import Element as OMMElement
         except ImportError:
+            from simtk.openmm.app import Topology as OMMTopology
             from simtk.openmm.app.element import Element as OMMElement
 
         omm_topology = OMMTopology()
@@ -2381,18 +2385,15 @@ class Topology(Serializable):
         ----------
         filename : str
             name of the pdb file to write to
-        positions : n_atoms x 3 numpy array or simtk.unit.Quantity-wrapped n_atoms x 3 iterable
+        positions : n_atoms x 3 numpy array or openmm.unit.Quantity-wrapped n_atoms x 3 iterable
             Can be an openmm 'quantity' object which has atomic positions as a list of Vec3s along with associated units, otherwise a 3D array of UNITLESS numbers are considered as "Angstroms" by default
         file_format : str
             Output file format. Case insensitive. Currently only supported value is "pdb".
 
         """
-        from simtk.openmm.app import PDBFile
-        from simtk.unit import Quantity, angstroms
-
         openmm_top = self.to_openmm()
-        if not isinstance(positions, Quantity):
-            positions = positions * angstroms
+        if not isinstance(positions, unit.Quantity):
+            positions = positions * unit.angstrom
 
         file_format = file_format.upper()
         if file_format != "PDB":
@@ -2400,7 +2401,7 @@ class Topology(Serializable):
 
         # writing to PDB file
         with open(filename, "w") as outfile:
-            PDBFile.writeFile(openmm_top, positions, outfile, keepIds)
+            app.PDBFile.writeFile(openmm_top, positions, outfile, keepIds)
 
     @staticmethod
     def from_mdtraj(mdtraj_topology, unique_molecules=None):
@@ -2647,7 +2648,7 @@ class Topology(Serializable):
         -------
         oemol : openeye.oechem.OEMol
             An OpenEye molecule
-        positions : simtk.unit.Quantity with shape [nparticles,3], optional, default=None
+        positions : openmm.unit.Quantity with shape [nparticles,3], optional, default=None
             Positions to use in constructing OEMol.
             If virtual sites are present in the Topology, these indices will be skipped.
 
@@ -2956,7 +2957,7 @@ class Topology(Serializable):
         iatom, jatom : Atom
             Atoms to mark as constrained
             These atoms may be bonded or not in the Topology
-        distance : simtk.unit.Quantity, optional, default=True
+        distance : openmm.unit.Quantity, optional, default=True
             Constraint distance
             ``True`` if distance has yet to be determined
             ``False`` if constraint is to be removed
@@ -2992,7 +2993,7 @@ class Topology(Serializable):
 
         Returns
         -------
-        distance : simtk.unit.Quantity or bool
+        distance : openmm.unit.Quantity or bool
             True if constrained but constraints have not yet been applied
             Distance if constraint has already been added to System
 

@@ -258,7 +258,7 @@ Development of new toolkit features generally proceeds in the following stages:
     Contributions run on forks are still welcome, especially as features that do not interact directly with the OpenEye Toolktis are not likely affected by this limitation.
 
 
-
+(install_dev)=
 ### Setting up a development environment
 
 1. Install the `conda` package manager as part of the Anaconda Distribution from [here](https://www.anaconda.com/distribution/)

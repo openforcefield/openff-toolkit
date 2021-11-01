@@ -26,7 +26,13 @@ from tempfile import NamedTemporaryFile
 
 import numpy as np
 import pytest
-from simtk import unit
+
+try:
+    from openmm import unit
+    from openmm.app import element
+except ImportError:
+    from simtk import unit
+    from simtk.openmm.app import element
 
 from openff.toolkit.tests.create_molecules import (
     create_acetaldehyde,
@@ -52,6 +58,7 @@ from openff.toolkit.topology.molecule import (
     SmilesParsingError,
 )
 from openff.toolkit.utils import get_data_file_path
+from openff.toolkit.utils.exceptions import ConformerGenerationError
 from openff.toolkit.utils.toolkits import (
     AmberToolsToolkitWrapper,
     OpenEyeToolkitWrapper,
@@ -218,7 +225,7 @@ def mini_drug_bank(xfail_mols=None, wip_mols=None):
 
 # Use a "static" variable as a workaround as fixtures cannot be
 # used inside pytest.mark.parametrize (see issue #349 in pytest).
-mini_drug_bank.molecules = None
+mini_drug_bank.molecules = None  # type: ignore
 
 # All the molecules that raise UndefinedStereochemistryError when read by OETK()
 openeye_drugbank_undefined_stereo_mols = {
@@ -293,8 +300,6 @@ class TestAtom:
 
     def test_atom_properties(self):
         """Test that atom properties are correctly populated and gettable"""
-        from simtk.openmm.app import element
-
         formal_charge = 0 * unit.elementary_charge
         is_aromatic = False
         # Attempt to create all elements supported by OpenMM
@@ -478,6 +483,29 @@ class TestMolecule:
         # (see https://github.com/openforcefield/openff-toolkit/pull/786)
         molecule_copy.properties["aaa"] = "bbb"
         assert "aaa" not in molecule.properties
+
+    @pytest.mark.skipif(
+        not (has_pkg("rdkit") and not (has_pkg("openeye"))),
+        reason="Test requires that RDKit is installed, but OpenEye is not installed",
+    )
+    def test_repr_bad_smiles(self):
+        """Test that the repr falls back to Hill formula if to_smiles fails."""
+
+        assert "bad" not in Molecule.from_smiles("CC").__repr__()
+
+        # OpenEye will report a smiles of ClCl(Cl)C without error, so only test with RDKit unless we
+        # can come up with a molecule that OpenEyeToolkitWrapper.to_smiles() will reliably fail on
+
+        molecule = Molecule()
+        molecule.add_atom(17, 0, False)
+        molecule.add_atom(17, 0, False)
+        molecule.add_atom(17, 0, False)
+
+        molecule.add_bond(0, 1, 1, False)
+        molecule.add_bond(0, 2, 1, False)
+
+        expected_repr = "Molecule with name '' with bad SMILES and Hill formula 'Cl3'"
+        assert molecule.__repr__() == expected_repr
 
     @pytest.mark.parametrize("toolkit", [OpenEyeToolkitWrapper, RDKitToolkitWrapper])
     @pytest.mark.parametrize("molecule", mini_drug_bank())
@@ -748,6 +776,7 @@ class TestMolecule:
         assert (
             len(set([atom.name for atom in molecule.atoms])) == molecule.n_atoms
         ) == molecule.has_unique_atom_names
+        assert all("x" in a.name for a in molecule.atoms)
 
     inchi_data = [
         {
@@ -2001,6 +2030,20 @@ class TestMolecule:
         ] == ethanol.to_smiles(mapped=True)
 
     @requires_pkg("qcportal")
+    def test_to_qcschema_no_connections(self):
+        mol = Molecule.from_mapped_smiles("[Br-:1].[K+:2]")
+        mol.add_conformer(
+            unit.Quantity(
+                np.array(
+                    [[0.188518, 0.015684, 0.001562], [0.148794, 0.21268, 0.11992]]
+                ),
+                unit.nanometers,
+            )
+        )
+        qcschema = mol.to_qcschema()
+        assert qcschema.connectivity is None
+
+    @requires_pkg("qcportal")
     def test_from_qcschema_no_client(self):
         """Test the ability to make molecules from QCArchive record instances and dicts"""
 
@@ -2407,9 +2450,6 @@ class TestMolecule:
 
     def test_add_conformers(self):
         """Test addition of conformers to a molecule"""
-        import numpy as np
-        from simtk import unit
-
         # Define a methane molecule
         molecule = Molecule()
         molecule.name = "methane"
@@ -3302,8 +3342,6 @@ class TestMolecule:
         """Test chemical environment matches"""
         # TODO: Move this to test_toolkits, test all available toolkits
         # Create chiral molecule
-        from simtk.openmm.app import element
-
         toolkit_wrapper = OpenEyeToolkitWrapper()
         molecule = Molecule()
         atom_C = molecule.add_atom(
@@ -3373,8 +3411,6 @@ class TestMolecule:
     def test_chemical_environment_matches_RDKit(self):
         """Test chemical environment matches"""
         # Create chiral molecule
-        from simtk.openmm.app import element
-
         toolkit_wrapper = RDKitToolkitWrapper()
         molecule = Molecule()
         atom_C = molecule.add_atom(
@@ -3455,9 +3491,6 @@ class TestMolecule:
         """Test computation/retrieval of partial charges"""
         # TODO: Test only one molecule for speed?
         # TODO: Do we need to deepcopy each molecule, or is setUp called separately for each test method?
-        import numpy as np
-        from simtk import unit
-
         # Do not modify original molecules.
         # molecules = copy.deepcopy(mini_drug_bank())
         # In principle, testing for charge assignment over a wide set of molecules is important, but
@@ -3481,10 +3514,14 @@ class TestMolecule:
         initial_charges = molecule._partial_charges
 
         # Make sure everything isn't 0s
-        assert (abs(initial_charges / unit.elementary_charge) > 0.01).any()
+        assert (abs(initial_charges.value_in_unit(unit.elementary_charge)) > 0.01).any()
         # Check total charge
-        charges_sum_unitless = initial_charges.sum() / unit.elementary_charge
-        total_charge_unitless = molecule.total_charge / unit.elementary_charge
+        charges_sum_unitless = initial_charges.sum().value_in_unit(
+            unit.elementary_charge
+        )
+        total_charge_unitless = molecule.total_charge.value_in_unit(
+            unit.elementary_charge
+        )
         # if abs(charges_sum_unitless - total_charge_unitless) > 0.0001:
         # print(
         #     "molecule {}    charge_sum {}     molecule.total_charge {}".format(
@@ -3677,6 +3714,35 @@ class TestMolecule:
 
         assert len([atom for atom in mol.atoms if atom.is_in_ring]) == n_atom_rings
         assert len([bond for bond in mol.bonds if bond.is_in_ring]) == n_bond_rings
+
+    @requires_rdkit
+    @requires_openeye
+    def test_conformer_generation_failure(self):
+        # This test seems possibly redundant, is it needed?
+        molecule = Molecule.from_smiles("F[U](F)(F)(F)(F)F")
+
+        with pytest.raises(ConformerGenerationError, match="Omega conf.*fail"):
+            molecule.generate_conformers(
+                n_conformers=1, toolkit_registry=OpenEyeToolkitWrapper()
+            )
+
+        with pytest.raises(ConformerGenerationError, match="RDKit conf.*fail"):
+            molecule.generate_conformers(
+                n_conformers=1, toolkit_registry=RDKitToolkitWrapper()
+            )
+
+        with pytest.raises(ValueError) as execption:
+            molecule.generate_conformers(n_conformers=1)
+
+            # pytest's checking of the string representation of this exception does not seem
+            # to play well with how it's constructed currently, so manually compare contents
+            exception_as_str = str(exception)
+            assert (
+                "No registered toolkits can provide the capability" in exception_as_str
+            )
+            assert "generate_conformers" in exception_as_str
+            assert "OpenEye Omega conformer generation failed" in exception_as_str
+            assert "RDKit conformer generation failed" in exception_as_str
 
 
 class TestMoleculeVisualization:

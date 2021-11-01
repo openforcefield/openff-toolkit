@@ -156,7 +156,7 @@ html_theme_options = {
     # teal, green, light-green, lime, yellow, amber, orange, deep-orange
     "color_accent": "openff-toolkit-blue",
     # Content Minification for deployment, prettification for debugging
-    "html_minify": True,
+    "html_minify": False,
     "html_prettify": False,
     "css_minify": True,
     "master_doc": False,

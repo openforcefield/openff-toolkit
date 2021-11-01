@@ -12,15 +12,20 @@ import tempfile
 from typing import TYPE_CHECKING, List, Optional, Tuple
 
 import numpy as np
-from simtk import unit
+
+try:
+    from openmm import unit
+except ImportError:
+    from simtk import unit
 
 if TYPE_CHECKING:
-    from openforcefield.topology.molecule import Molecule
+    from openff.toolkit.topology.molecule import Molecule
 
 from openff.toolkit.utils import base_wrapper
 from openff.toolkit.utils.constants import DEFAULT_AROMATICITY_MODEL
 from openff.toolkit.utils.exceptions import (
     ChargeMethodUnavailableError,
+    ConformerGenerationError,
     SMILESParseError,
     ToolkitUnavailableException,
     UndefinedStereochemistryError,
@@ -524,7 +529,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         """
         from rdkit import Chem
-        from rdkit.Chem.EnumerateStereoisomers import (
+        from rdkit.Chem.EnumerateStereoisomers import (  # type: ignore[import]
             EnumerateStereoisomers,
             StereoEnumerationOptions,
         )
@@ -577,7 +582,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         """
 
         from rdkit import Chem
-        from rdkit.Chem.MolStandardize import rdMolStandardize
+        from rdkit.Chem.MolStandardize import rdMolStandardize  # type: ignore[import]
 
         enumerator = rdMolStandardize.TautomerEnumerator()
         enumerator.SetMaxTautomers(max_states)
@@ -864,7 +869,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             The molecule to generate conformers for.
         n_conformers : int, default=1
             Maximum number of conformers to generate.
-        rms_cutoff : simtk.Quantity-wrapped float, in units of distance, optional, default=None
+        rms_cutoff : openmm.Quantity-wrapped float, in units of distance, optional, default=None
             The minimum RMS value at which two conformers are considered redundant and one is deleted.
             If None, the cutoff is set to 1 Angstrom
 
@@ -881,13 +886,17 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         rdmol = self.to_rdkit(molecule)
         # TODO: This generates way more conformations than omega, given the same
         # nConfs and RMS threshold. Is there some way to set an energy cutoff as well?
-        AllChem.EmbedMultipleConfs(
+        conformer_generation_status = AllChem.EmbedMultipleConfs(
             rdmol,
             numConfs=n_conformers,
-            pruneRmsThresh=rms_cutoff / unit.angstrom,
+            pruneRmsThresh=rms_cutoff.value_in_unit(unit.angstrom),
             randomSeed=1,
             # params=AllChem.ETKDG()
         )
+
+        if not conformer_generation_status:
+            raise ConformerGenerationError("RDKit conformer generation failed.")
+
         molecule2 = self.from_rdkit(
             rdmol, allow_undefined_stereo=True, _cls=molecule.__class__
         )
@@ -924,7 +933,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                         (MMFF). This method does not make use of conformers, and hence
                         ``use_conformers`` and ``strict_n_conformers`` will not impact
                         the partial charges produced.
-        use_conformers : iterable of simtk.unit.Quantity-wrapped numpy arrays, each with
+        use_conformers : iterable of openmm.unit.Quantity-wrapped numpy arrays, each with
             shape (n_atoms, 3) and dimension of distance. Optional, default = None
             Coordinates to use for partial charge calculation. If None, an appropriate number of
             conformers will be generated.
@@ -1003,7 +1012,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             is, a string message explaing why. If the conformer is not problematic, the
             second return value will be none.
         """
-        from rdkit.Chem.rdMolTransforms import GetDihedralRad
+        from rdkit.Chem.rdMolTransforms import GetDihedralRad  # type: ignore[import]
 
         # Create a copy of the molecule which contains only this conformer.
         molecule_copy = copy.deepcopy(molecule)
@@ -1102,25 +1111,33 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         ).reshape(-1, 1)
 
         # Build an exclusion list for 1-2 and 1-3 interactions.
-        excluded_pairs = {
-            *[(bond.atom1_index, bond.atom2_index) for bond in molecule.bonds],
-            *[
-                (angle[0].molecule_atom_index, angle[-1].molecule_atom_index)
-                for angle in molecule.angles
-            ],
-        }
+        excluded_x, excluded_y = zip(
+            *{
+                *[(bond.atom1_index, bond.atom2_index) for bond in molecule.bonds],
+                *[
+                    (angle[0].molecule_atom_index, angle[-1].molecule_atom_index)
+                    for angle in molecule.angles
+                ],
+            }
+        )
 
         # Build the distance matrix between all pairs of atoms.
         coordinates = conformer.value_in_unit(unit.angstrom)
 
-        distances = np.sqrt(
-            np.sum(np.square(coordinates)[:, np.newaxis, :], axis=2)
-            - 2 * coordinates.dot(coordinates.T)
-            + np.sum(np.square(coordinates), axis=1)
-        )
+        # Equation 1: (a - b)^2 = a^2 - 2ab + b^2
+        # distances_squared will eventually wind up as the squared distances
+        # although it is first computed as the ab portion of Eq 1
+        distances_squared = coordinates.dot(coordinates.T)
+        # np.einsum is both faster than np.diag, and not read-only
+        # we know that a^2 == b^2 == diag(ab)
+        diag = np.einsum("ii->i", distances_squared)
+        # we modify in-place so we can use the `diag` view
+        # to make the diagonals 0
+        distances_squared += distances_squared - diag - diag[..., np.newaxis]
         # Handle edge cases where the squared distance is slightly negative due to
         # precision issues
-        np.fill_diagonal(distances, 0.0)
+        diag[:] = -0.0  # this is somewhat faster than np.fill_diagonal
+        distances = np.sqrt(-distances_squared)
 
         inverse_distances = np.reciprocal(
             distances, out=np.zeros_like(distances), where=~np.isclose(distances, 0.0)
@@ -1129,9 +1146,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         # Multiply by the charge products.
         charge_products = partial_charges @ partial_charges.T
 
-        for x, y in excluded_pairs:
-            charge_products[x, y] = 0.0
-            charge_products[y, x] = 0.0
+        charge_products[excluded_x, excluded_y] = 0.0
+        charge_products[excluded_y, excluded_x] = 0.0
 
         interaction_energies = inverse_distances * charge_products
 
