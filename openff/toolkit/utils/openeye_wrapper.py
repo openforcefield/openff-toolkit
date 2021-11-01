@@ -1275,7 +1275,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             for conf in molecule._conformers:
                 # OE needs a 1 x (3*n_Atoms) double array as input
                 flat_coords = np.zeros(shape=oemol.NumAtoms() * 3, dtype=np.float64)
-                for index, oe_idx in map_atoms.items():
+                for index, oe_idx in off_to_oe_idx.items():
                     (x, y, z) = conf[index, :].value_in_unit(unit.angstrom)
                     flat_coords[(3 * oe_idx)] = x
                     flat_coords[(3 * oe_idx) + 1] = y
@@ -1288,7 +1288,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         if molecule._partial_charges is not None:
             oe_indexed_charges = np.zeros(shape=molecule.n_atoms, dtype=np.float64)
             for off_idx, charge in enumerate(molecule._partial_charges):
-                oe_idx = map_atoms[off_idx]
+                oe_idx = off_to_oe_idx[off_idx]
                 charge_unitless = charge.value_in_unit(unit.elementary_charge)
                 oe_indexed_charges[oe_idx] = charge_unitless
             # TODO: This loop below fails if we try to use an "enumerate"-style loop.
