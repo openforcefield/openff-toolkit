@@ -3033,29 +3033,35 @@ class FrozenMolecule(Serializable):
         """
         from openff.toolkit.topology import TopologyMolecule
 
-        # Do a quick hill formula check first
-        if isinstance(mol1, (FrozenMolecule, TopologyMolecule)):
-            hill_formula1 = mol1.to_hill_formula()
-        else:
-            try:
-                hill_formula1 = _networkx_graph_to_hill_formula(mol1)
-            except Exception:
-                raise RuntimeError(
-                    "mol1 must be a FrozenMolecule or TopologyMolecule or nx.Graph()"
-                )
+        if False:
+            # Do a quick hill formula check first
+            if isinstance(mol1, (FrozenMolecule, TopologyMolecule)):
+                hill_formula1 = mol1.to_hill_formula()
+            else:
+                try:
+                    hill_formula1 = _networkx_graph_to_hill_formula(mol1)
+                except Exception:
+                    raise RuntimeError(
+                        "mol1 must be a FrozenMolecule or TopologyMolecule or nx.Graph()"
+                    )
 
-        if isinstance(mol2, (FrozenMolecule, TopologyMolecule)):
-            hill_formula2 = mol2.to_hill_formula()
-        else:
-            try:
-                hill_formula2 = _networkx_graph_to_hill_formula(mol2)
-            except Exception:
-                raise RuntimeError(
-                    "mol2 must be a FrozenMolecule or TopologyMolecule or nx.Graph()"
-                )
+            if isinstance(mol2, (FrozenMolecule, TopologyMolecule)):
+                try:
+                    hill_formula2 = mol2.to_hill_formula()
+                except Exception:
+                    import ipdb
 
-        if hill_formula1 != hill_formula2:
-            return False, None
+                    ipdb.set_trace()
+            else:
+                try:
+                    hill_formula2 = _networkx_graph_to_hill_formula(mol2)
+                except Exception:
+                    raise RuntimeError(
+                        "mol2 must be a FrozenMolecule or TopologyMolecule or nx.Graph()"
+                    )
+
+            if hill_formula1 != hill_formula2:
+                return False, None
 
         # Build the user defined matching functions
         def node_match_func(x, y):
