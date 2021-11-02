@@ -117,6 +117,7 @@ jobs:
           if [[ "$RDKIT" == false ]]; then
             PYTEST_ARGS+=" --ignore=examples/check_dataset_parameter_coverage"
             PYTEST_ARGS+=" --ignore=examples/QCArchive_interface"
+            PYTEST_ARGS+=" --ignore=examples/using_smirnoff_in_amber_or_gromacs"
           fi
           pytest $PYTEST_ARGS openff/toolkit/tests/test_examples.py
 
