@@ -56,6 +56,7 @@ from openff.toolkit.topology.molecule import (
     InvalidConformerError,
     Molecule,
     SmilesParsingError,
+    _networkx_graph_to_hill_formula,
 )
 from openff.toolkit.utils import get_data_file_path
 from openff.toolkit.utils.exceptions import ConformerGenerationError
@@ -1329,8 +1330,8 @@ class TestMolecule:
         topology = Topology.from_molecules(molecule_smiles)
         topmol = TopologyMolecule(molecule_smiles, topology)
         assert molecule_smiles.hill_formula == Molecule.to_hill_formula(topmol)
-        # make sure the networkx matches
-        assert molecule_smiles.hill_formula == Molecule.to_hill_formula(
+
+        assert molecule_smiles.hill_formula == _networkx_graph_to_hill_formula(
             molecule_smiles.to_networkx()
         )
 

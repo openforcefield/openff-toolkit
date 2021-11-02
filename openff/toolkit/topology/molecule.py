@@ -34,9 +34,12 @@ import warnings
 from abc import abstractmethod
 from collections import OrderedDict
 from copy import deepcopy
-from typing import Optional, Union
+from typing import TYPE_CHECKING, List, Optional, Union
 
 import numpy as np
+
+if TYPE_CHECKING:
+    import networkx as nx
 
 try:
     from openmm import LocalCoordinatesSite, unit
@@ -2625,7 +2628,7 @@ class FrozenMolecule(Serializable):
         try:
             smiles = self.to_smiles()
         except:
-            hill = Molecule.to_hill_formula(self)
+            hill = self.to_hill_formula()
             return description + f" with bad SMILES and Hill formula '{hill}'"
         return description + f" and SMILES '{smiles}'"
 
@@ -3028,9 +3031,30 @@ class FrozenMolecule(Serializable):
             [Dict[int,int]] ordered by mol1 indexing {mol1_index: mol2_index}
             If molecules are not isomorphic given input arguments, will return None instead of dict.
         """
+        from openff.toolkit.topology import TopologyMolecule
 
         # Do a quick hill formula check first
-        if Molecule.to_hill_formula(mol1) != Molecule.to_hill_formula(mol2):
+        if isinstance(mol1, (FrozenMolecule, TopologyMolecule)):
+            hill_formula1 = mol1.to_hill_formula()
+        else:
+            try:
+                hill_formula1 = _networkx_graph_to_hill_formula(mol1)
+            except Exception:
+                raise RuntimeError(
+                    "mol1 must be a FrozenMolecule or TopologyMolecule or nx.Graph()"
+                )
+
+        if isinstance(mol2, (FrozenMolecule, TopologyMolecule)):
+            hill_formula2 = mol2.to_hill_formula()
+        else:
+            try:
+                hill_formula2 = _networkx_graph_to_hill_formula(mol2)
+            except Exception:
+                raise RuntimeError(
+                    "mol2 must be a FrozenMolecule or TopologyMolecule or nx.Graph()"
+                )
+
+        if hill_formula1 != hill_formula2:
             return False, None
 
         # Build the user defined matching functions
@@ -4422,19 +4446,11 @@ class FrozenMolecule(Serializable):
         """
         Get the Hill formula of the molecule
         """
-        return Molecule.to_hill_formula(self)
+        return self.to_hill_formula()
 
-    @staticmethod
-    def to_hill_formula(molecule):
+    def to_hill_formula(self) -> str:
         """
-        Generate the Hill formula from either a :class:`FrozenMolecule`, :class:`TopologyMolecule` or
-        ``nx.Graph()`` of the molecule
-
-        .. TODO: Set up Intersphinx for nx.Graph(), above
-
-        Parameters
-        -----------
-        molecule : FrozenMolecule, TopologyMolecule or nx.Graph()
+        Generate the Hill formula of this molecule.
 
         Returns
         ----------
@@ -4444,59 +4460,9 @@ class FrozenMolecule(Serializable):
         -----------
         NotImplementedError : if the molecule is not of one of the specified types.
         """
+        atom_nums = [atom.atomic_number for atom in self.atoms]
 
-        import networkx as nx
-
-        from openff.toolkit.topology import TopologyMolecule
-
-        # check for networkx then assuming we have a Molecule or TopologyMolecule instance just try and
-        # extract the info. Note we do not type check the TopologyMolecule due to cyclic dependencies
-        if isinstance(molecule, nx.Graph):
-            atom_nums = list(
-                dict(molecule.nodes(data="atomic_number", default=1)).values()
-            )
-
-        elif isinstance(molecule, TopologyMolecule):
-            atom_nums = [atom.atomic_number for atom in molecule.atoms]
-
-        elif isinstance(molecule, FrozenMolecule):
-            atom_nums = [atom.atomic_number for atom in molecule.atoms]
-
-        else:
-            raise NotImplementedError(
-                f"The input type {type(molecule)} is not supported,"
-                f"please supply an openff.toolkit.topology.molecule.Molecule,"
-                f"openff.toolkit.topology.topology.TopologyMolecule or networkx representaion "
-                f"of the molecule."
-            )
-
-        # make a correct hill formula representation following this guide
-        # https://en.wikipedia.org/wiki/Chemical_formula#Hill_system
-
-        # create the counter dictionary using chemical symbols
-        from collections import Counter
-
-        atom_symbol_counts = Counter(
-            Element.getByAtomicNumber(atom_num).symbol for atom_num in atom_nums
-        )
-
-        formula = []
-        # Check for C and H first, to make a correct hill formula
-        for el in ["C", "H"]:
-            if el in atom_symbol_counts:
-                count = atom_symbol_counts.pop(el)
-                formula.append(el)
-                if count > 1:
-                    formula.append(str(count))
-
-        # now get the rest of the elements in alphabetical ordering
-        for el in sorted(atom_symbol_counts.keys()):
-            count = atom_symbol_counts.pop(el)
-            formula.append(el)
-            if count > 1:
-                formula.append(str(count))
-
-        return "".join(formula)
+        return _atom_nums_to_hill_formula(atom_nums)
 
     def chemical_environment_matches(
         self,
@@ -6469,3 +6435,57 @@ class Molecule(FrozenMolecule):
             return display(self.visualize(backend="openeye"))
         except ValueError:
             pass
+
+
+@requires_package("networkx")
+def _networkx_graph_to_hill_formula(graph: "nx.Graph") -> str:
+    """
+    Convert a NetworkX graph to a Hill formula.
+
+    Parameters
+    ----------
+    graph : nx.Graph
+        The graph to convert.
+
+    Returns
+    -------
+    str
+        The Hill formula corresponding to the graph.
+
+    """
+    import networkx as nx
+
+    if not isinstance(graph, nx.Graph):
+        raise Exception("The graph must be a NetworkX graph.")
+
+    atom_nums = list(dict(graph.nodes(data="atomic_number", default=1)).values())
+    return _atom_nums_to_hill_formula(atom_nums)
+
+
+def _atom_nums_to_hill_formula(atom_nums: List[int]) -> str:
+    """
+    Given a `Counter` object of atom counts by atomic number, generate the corresponding
+    Hill formula. See https://en.wikipedia.org/wiki/Chemical_formula#Hill_system"""
+    from collections import Counter
+
+    atom_symbol_counts = Counter(
+        Element.getByAtomicNumber(atom_num).symbol for atom_num in atom_nums
+    )
+
+    formula = []
+    # Check for C and H first, to make a correct hill formula
+    for el in ["C", "H"]:
+        if el in atom_symbol_counts:
+            count = atom_symbol_counts.pop(el)
+            formula.append(el)
+            if count > 1:
+                formula.append(str(count))
+
+    # now get the rest of the elements in alphabetical ordering
+    for el in sorted(atom_symbol_counts.keys()):
+        count = atom_symbol_counts.pop(el)
+        formula.append(el)
+        if count > 1:
+            formula.append(str(count))
+
+    return "".join(formula)
