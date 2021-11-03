@@ -106,8 +106,15 @@ if importlib.util.find_spec("notfound"):
         "title": "404: File Not Found",
         "body": """
     <h1>404: File Not Found</h1>
-    <p>Sorry, we couldn't find that page.</p>
-    <p>Try using the search box or use the navigation menu on the left.</p>
+    <p>
+        Sorry, we couldn't find that page. This often happens as a result of
+        following an outdated link. Please check the
+        <a href="https://open-forcefield-toolkit.readthedocs.io/en/stable/">latest stable version</a>
+        of the docs, unless you're sure you want an earlier version, and
+        try using the search box or the navigation menu on the left.
+    </p>
+    <p>
+    </p>
     """,
     }
 
