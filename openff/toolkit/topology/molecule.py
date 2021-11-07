@@ -5184,7 +5184,7 @@ class FrozenMolecule(Serializable):
     @requires_package("mmic_openff")
     def to_mmschema(self, version, **kwargs):
         """
-        Returns MMElemental Molecule that complies with the MMSchema speficiation.
+        Returns MMElemental Molecule object that complies with the MMSchema speficiation.
 
         Parameters
         ----------
@@ -5197,7 +5197,7 @@ class FrozenMolecule(Serializable):
         Returns
         ---------
         mmelemental.models.Molecule
-            An MMElemental Molecule.
+            MMElemental Molecule object.
 
         Examples
         --------
@@ -5367,7 +5367,7 @@ class FrozenMolecule(Serializable):
     @requires_package("mmic_openff")
     def from_mmschema(cls, schema_object, version=None, **kwargs):
         """
-        Returns a :class:`Molecule` from an MMElemental Molecule object.
+        Returns a :class:`Molecule` object from MElemental Molecule object.
 
         Parameters
         ----------
@@ -5383,14 +5383,14 @@ class FrozenMolecule(Serializable):
         Returns
         ---------
         openff.toolkit.topology.molecule.Molecule
-            An OpenFF molecule object.
+            OpenFF molecule object.
 
         Examples
         --------
         Create Molecule from MMElemental Molecule:
 
         >>> import mmelemental
-        >>> mm_mol = mmelemental.models.Molecule(symbols=["C", "C"])
+        >>> mm_mol = mmelemental.models.Molecule(symbols=["O", "H", "H"])
         >>> offmol = Molecule.from_mmschema(mm_mol)
 
         """
