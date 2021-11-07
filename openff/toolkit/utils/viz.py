@@ -1,7 +1,10 @@
 import uuid
 from io import StringIO
 
-from simtk import unit
+try:
+    from openmm import unit
+except ImportError:
+    from simtk import unit
 
 try:
     from nglview import Trajectory as _NGLViewTrajectory
@@ -27,7 +30,7 @@ class _OFFTrajectoryNGLView(_NGLViewTrajectory):
         self.id = str(uuid.uuid4())
 
     def get_coordinates(self, index):
-        return self.molecule.conformers[index] / unit.angstrom
+        return self.molecule.conformers[index].value_in_unit(unit.angstrom)
 
     @property
     def n_frames(self):

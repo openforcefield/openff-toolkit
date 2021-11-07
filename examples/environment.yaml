@@ -16,3 +16,4 @@ dependencies:
   - mdtraj
   - numpy
   - openmm
+  - openff-forcefields >=2.0.0

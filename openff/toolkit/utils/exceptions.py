@@ -112,6 +112,10 @@ class ChargeCalculationError(OpenFFToolkitException):
     """An unhandled error occurred in an external toolkit during charge calculation"""
 
 
+class ConformerGenerationError(OpenFFToolkitException):
+    """Conformer generation via a wrapped toolkit failed."""
+
+
 class InvalidIUPACNameError(OpenFFToolkitException):
     """Failed to parse IUPAC name"""
 
@@ -290,3 +294,9 @@ class DuplicateVirtualSiteTypeException(OpenFFToolkitException):
 
 class CallbackRegistrationError(OpenFFToolkitException, TypeError):
     """Error raised when callback registration fails."""
+
+
+class MissingIndexedAttributeError(
+    OpenFFToolkitException, IndexError, KeyError, AttributeError
+):
+    """Error raised when an indexed attribute does not exist"""

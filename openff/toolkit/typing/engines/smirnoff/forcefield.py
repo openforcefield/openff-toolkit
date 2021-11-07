@@ -23,19 +23,22 @@ __all__ = [
     "SMIRNOFFVersionError",
     "SMIRNOFFAromaticityError",
     "SMIRNOFFParseError",
-    "ParseError",
     "PartialChargeVirtualSitesError",
     "ForceField",
 ]
-
 
 import copy
 import logging
 import os
 import pathlib
+import warnings
 from collections import OrderedDict
+from typing import List
 
-from simtk import openmm
+try:
+    import openmm
+except ImportError:
+    from simtk import openmm
 
 from openff.toolkit.topology.molecule import DEFAULT_AROMATICITY_MODEL
 from openff.toolkit.typing.engines.smirnoff.io import ParameterIOHandler
@@ -46,7 +49,6 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
 from openff.toolkit.typing.engines.smirnoff.plugins import load_handler_plugins
 from openff.toolkit.utils.exceptions import (
     ParameterHandlerRegistrationError,
-    ParseError,
     PartialChargeVirtualSitesError,
     SMIRNOFFAromaticityError,
     SMIRNOFFParseError,
@@ -61,6 +63,23 @@ from openff.toolkit.utils.utils import (
     requires_package,
 )
 
+deprecated_names = ["ParseError"]
+
+
+def __getattr__(name):
+    if name in deprecated_names:
+        warnings.filterwarnings("default", category=DeprecationWarning)
+        warning_msg = f"{name} is DEPRECATED and will be removed in a future release of the OpenFF Toolkit."
+        warnings.warn(warning_msg, DeprecationWarning)
+
+        if name == "ParseError":
+            from openff.toolkit.utils.exceptions import _DeprecatedParseError
+
+            return _DeprecatedParseError
+
+    raise AttributeError(f"module {__name__} has no attribute {name}")
+
+
 # =============================================================================================
 # CONFIGURE LOGGER
 # =============================================================================================
@@ -72,10 +91,10 @@ logger = logging.getLogger(__name__)
 # =============================================================================================
 
 # Directory paths used by ForceField to discover offxml files.
-_installed_offxml_dir_paths = []
+_installed_offxml_dir_paths: List[str] = []
 
 
-def _get_installed_offxml_dir_paths():
+def _get_installed_offxml_dir_paths() -> List[str]:
     """Return the list of directory paths where to search for offxml files.
 
     This function load the information by calling all the entry points
@@ -153,7 +172,7 @@ MAX_SUPPORTED_VERSION = (
 class ForceField:
     """A factory that assigns SMIRNOFF parameters to a molecular system
 
-    :class:`ForceField` is a factory that constructs an OpenMM :class:`simtk.openmm.System` object from a
+    :class:`ForceField` is a factory that constructs an OpenMM :class:`openmm.System` object from a
     :class:`openff.toolkit.topology.Topology` object defining a (bio)molecular system containing one or more molecules.
 
     When a :class:`ForceField` object is created from one or more specified SMIRNOFF serialized representations,
@@ -1253,7 +1272,7 @@ class ForceField:
 
         Returns
         -------
-        system : simtk.openmm.System
+        system : openmm.System
             The newly created OpenMM System corresponding to the specified ``topology``
         topology : openff.toolkit.topology.Topology, optional.
             If the `return_topology` keyword argument is used, this method will also return a Topology. This
@@ -1479,7 +1498,7 @@ class ForceField:
 
         Returns
         -------
-        charges : ``simtk.unit.Quantity`` with shape ``(n_atoms,)`` and dimensions of charge
+        charges : ``openmm.unit.Quantity`` with shape ``(n_atoms,)`` and dimensions of charge
             The partial charges of the provided molecule in this force field.
 
         Raises

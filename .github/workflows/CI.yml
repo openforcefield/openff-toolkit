@@ -58,7 +58,7 @@ jobs:
       NB_ARGS: -v --nbval-lax --ignore=examples/deprecated
 
     steps:
-      - uses: actions/checkout@v2.3.4
+      - uses: actions/checkout@v2.3.5
         with:
           fetch-depth: 2
 
@@ -153,6 +153,14 @@ jobs:
         run: |
           pytest -r fE --tb=short openff/toolkit/tests/test_links.py
 
+      - name: Run mypy
+        shell: bash -l {0}
+        # Try to prevent failure from preventing later steps, but also display red X
+        # https://stackoverflow.com/a/62112985/4248961
+        if: ${{ matrix.cfg.rdkit == 'true' && matrix.cfg.openeye == 'TRUE' }}
+        run: |
+          mypy --namespace-packages -p "openff.toolkit"
+
       - name: Run unit tests
         shell: bash -l {0}
         run: |
@@ -170,7 +178,7 @@ jobs:
           pytest -v --doctest-glob="docs/*.rst" docs/
 
       - name: Codecov
-        uses: codecov/codecov-action@v2.0.3
+        uses: codecov/codecov-action@v2.1.0
         with:
           file: ./coverage.xml
           fail_ci_if_error: true
