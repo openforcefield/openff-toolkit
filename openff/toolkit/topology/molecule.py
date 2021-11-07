@@ -1233,7 +1233,8 @@ class BondChargeVirtualSite(VirtualSite):
         """
         Create a bond charge-type virtual site, in which the location of the charge is specified by the position of two atoms. This supports placement of a virtual site S along a vector between two specified atoms, e.g. to allow for a sigma hole for halogens or similar contexts. With positive values of the distance, the virtual site lies outside the first indexed atom.
 
-        TODO: One of the examples on https://open-forcefield-toolkit.readthedocs.io/en/topology/smirnoff.html#virtualsites-virtual-sites-for-off-atom-charges has a BondCharge defined with three atoms -- How does that work?
+        TODO: One of the examples in the SMIRNOFF spec has a BondCharge defined with three atoms -- How does that work?
+        https://openforcefield.github.io/standards/standards/smirnoff/#virtualsites-virtual-sites-for-off-atom-charges
 
         Parameters
         ----------
@@ -4272,7 +4273,7 @@ class FrozenMolecule(Serializable):
         those indices may change when this molecule is added to a Topology.
 
         For more details on the use of three-fold ('trefoil') impropers, see
-        https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html#impropertorsions
+        https://openforcefield.github.io/standards/standards/smirnoff/#impropertorsions
 
         Returns
         -------
