@@ -119,7 +119,6 @@ jobs:
           if [[ "$RDKIT" == false ]]; then
             PYTEST_ARGS+=" --ignore=examples/check_dataset_parameter_coverage"
             PYTEST_ARGS+=" --ignore=examples/QCArchive_interface"
-            PYTEST_ARGS+=" --ignore=examples/using_smirnoff_in_amber_or_gromacs"
           fi
           pytest $PYTEST_ARGS openff/toolkit/tests/test_examples.py
 
@@ -130,6 +129,7 @@ jobs:
             NB_ARGS+=" --ignore=examples/QCArchive_interface"
             NB_ARGS+=" --ignore=examples/check_dataset_parameter_coverage"
             NB_ARGS+=" --ignore=examples/conformer_energies"
+            NB_ARGS+=" --ignore=examples/using_smirnoff_in_amber_or_gromacs"
           fi
           pytest $NB_ARGS examples
 
