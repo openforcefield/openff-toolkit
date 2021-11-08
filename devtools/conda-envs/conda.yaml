@@ -8,4 +8,5 @@ dependencies:
 
   - openmmforcefields
   - pytest
+  - pytest-rerunfailures
   - nbval
