@@ -27,11 +27,11 @@ jobs:
           - ubuntu-latest
           - macos-latest
         cfg:
-          - python-version: 3.7
+          - python-version: 3.9
             rdkit: "true"
             openeye: "false"
 
-          - python-version: 3.7
+          - python-version: 3.9
             rdkit: "false"
             openeye: "true"
 
