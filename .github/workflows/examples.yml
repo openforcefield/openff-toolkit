@@ -122,6 +122,13 @@ jobs:
           fi
           pytest $PYTEST_ARGS openff/toolkit/tests/test_examples.py
 
+      - name: Run only the Amber/GROMACS notebooks
+        shell: bash -l {0}
+        run: |
+          if [[ "$RDKIT" == true ]]; then
+            pytest $NB_ARGS examples/using_smirnoff_in_amber_or_gromacs/
+          fi
+
       - name: Run example notebooks
         shell: bash -l {0}
         run: |
