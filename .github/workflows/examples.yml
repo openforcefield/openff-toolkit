@@ -61,7 +61,7 @@ jobs:
           auto-activate-base: false
           miniforge-version: latest
           miniforge-variant: Mambaforge
-          use-mamba: false
+          use-mamba: true
       - uses: conda-incubator/setup-miniconda@v2.1.1
         name: Install with OpenEye toolkits
         if: ${{ matrix.cfg.rdkit == 'FALSE' && matrix.cfg.openeye == 'TRUE' }}
