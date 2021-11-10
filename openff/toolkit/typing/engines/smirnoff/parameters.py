@@ -1997,7 +1997,7 @@ class ParameterHandler(_ParameterAttributeHandler):
           * When `before` and `after` are both specified, the new parameter will be added immediately
             after the parameter matching the `after` pattern or index.
           * The order of parameters in a parameter list can have significant impacts on parameter assignment. For details,
-            see the [SMIRNOFF](https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html#smirnoff-parameter-specification-is-hierarchical)
+            see the [SMIRNOFF](https://openforcefield.github.io/standards/standards/smirnoff/#smirnoff-parameter-specification-is-hierarchical)
             specification.
 
         Examples
