@@ -1331,7 +1331,7 @@ class TestMolecule:
         topmol = TopologyMolecule(molecule, topology)
         assert molecule.hill_formula == Molecule._object_to_hill_formula(topmol)
         assert molecule.hill_formula == Molecule._object_to_hill_formula(
-            molecule.to_networkx
+            molecule.to_networkx()
         )
 
         assert molecule.hill_formula == _networkx_graph_to_hill_formula(
