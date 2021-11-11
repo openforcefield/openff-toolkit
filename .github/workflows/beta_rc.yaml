@@ -1,6 +1,7 @@
 name: Weekly test against upstream beta and RC builds
 
 on: workflow_dispatch
+on: push
 # on:
 #   schedule:
 #     - cron: "0 0 * * 0"
