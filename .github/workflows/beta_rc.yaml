@@ -1,0 +1,96 @@
+name: Weekly test against upstream beta and RC builds
+
+on: workflow_dispatch
+# on:
+#   schedule:
+#     - cron: "0 0 * * 0"
+
+jobs:
+  test:
+    name: Test beta and RC builds on on ${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+        python-version:
+          - 3.7
+          - 3.8
+          - 3.9
+
+    env:
+      OE_LICENSE: ${{ github.workspace }}/oe_license.txt
+      PYTEST_ARGS: -r fE --tb=short --cov=openff --cov-config=setup.cfg --cov-append --cov-report=xml
+
+    steps:
+      - uses: actions/checkout@v2.3.5
+        with:
+          fetch-depth: 2
+
+      - uses: conda-incubator/setup-miniconda@v2.1.1
+        name: Install everything with betas and RCs
+        with:
+          python-version: ${{ matrix.python-version }}
+          activate-environment: test
+          environment-file: devtools/conda-envs/beta_rc_env.yaml
+          auto-activate-base: false
+          miniforge-version: latest
+          miniforge-variant: Mambaforge
+          use-mamba: true
+
+      - name: Additional info about the build
+        shell: bash -l {0}
+        run: |
+          uname -a
+          df -h
+          ulimit -a
+
+      - name: Make oe_license.txt file from GH org secret "OE_LICENSE"
+        shell: bash
+        env:
+          OE_LICENSE_TEXT: ${{ secrets.OE_LICENSE }}
+        run: |
+          echo "${OE_LICENSE_TEXT}" > ${OE_LICENSE}
+
+      - name: Install package
+        shell: bash -l {0}
+        run: |
+          conda remove --force openff-toolkit openff-toolkit-base
+          python setup.py develop --no-deps
+
+      - name: Environment Information
+        shell: bash -l {0}
+        run: |
+          conda info
+          conda list
+
+      - name: Check links
+        shell: bash -l {0}
+        run: |
+          pytest -r fE --tb=short openff/toolkit/tests/test_links.py
+
+      - name: Run unit tests
+        shell: bash -l {0}
+        run: |
+          PYTEST_ARGS+=" --ignore=openff/toolkit/tests/test_examples.py"
+          PYTEST_ARGS+=" --ignore=openff/toolkit/tests/test_links.py"
+          PYTEST_ARGS+=" --runslow"
+          pytest $PYTEST_ARGS openff/toolkit/tests/
+
+      - name: Run code snippets in docs
+        shell: bash -l {0}
+        run: |
+          pytest -v --doctest-glob="docs/*.rst" docs/
+
+      - name: Run mypy
+        shell: bash -l {0}
+        run: |
+          mypy --namespace-packages -p "openff.toolkit"
+
+      - name: Codecov
+        uses: codecov/codecov-action@v2.1.0
+        with:
+          file: ./coverage.xml
+          fail_ci_if_error: true
