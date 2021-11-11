@@ -2118,6 +2118,7 @@ class TestMolecule:
     ]
 
     @requires_pkg("qcportal")
+    @pytest.mark.flaky(reruns=5)
     @pytest.mark.parametrize("input_data", client_examples)
     def test_from_qcschema_with_client(self, input_data):
         """For each of the examples try and make a offmol using the instance and dict and check they match"""
@@ -2230,6 +2231,7 @@ class TestMolecule:
             mol_qca_record = Molecule.from_qcschema(entry, client)
 
     @requires_pkg("qcportal")
+    @pytest.mark.flaky(reruns=10)
     def test_qcschema_molecule_record_round_trip_from_to_from(self):
         """Test making a molecule from qca record using from_qcschema,
         then converting back to qcschema using to_qcschema,
@@ -3851,6 +3853,7 @@ class TestMoleculeSubclass:
 
     @requires_pkg("qcelemental")
     @requires_pkg("qcportal")
+    @pytest.mark.flaky(reruns=5)
     def test_molecule_subclass_from_qcschema(self):
         """Ensure that the right type of object is returned when running MyMol.from_qcschema"""
         import qcportal as ptl
