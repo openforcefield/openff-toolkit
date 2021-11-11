@@ -41,6 +41,8 @@ import numpy as np
 if TYPE_CHECKING:
     import networkx as nx
 
+    from openff.toolkit.topology import TopologyMolecule
+
 try:
     from openmm import LocalCoordinatesSite, unit
     from openmm.app import Element, element
