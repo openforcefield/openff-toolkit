@@ -1307,11 +1307,11 @@ class TestMolecule:
     def test_hill_formula(self):
         """Test that making the hill formula is consistent between input methods and ordering"""
         # make sure smiles match reference
-        molecule_smiles = create_ethanol()
-        assert molecule_smiles.hill_formula == "C2H6O"
+        molecule = create_ethanol()
+        assert molecule.hill_formula == "C2H6O"
         # make sure is not order dependent
-        molecule_smiles_reverse = create_reversed_ethanol()
-        assert molecule_smiles.hill_formula == molecule_smiles_reverse.hill_formula
+        molecule_reverse = create_reversed_ethanol()
+        assert molecule.hill_formula == molecule_reverse.hill_formula
         # make sure single element names are put first
         order_mol = Molecule.from_smiles("C(Br)CB")
         assert order_mol.hill_formula == "C2H6BBr"
@@ -1323,16 +1323,19 @@ class TestMolecule:
         assert br_i.hill_formula == "BrI"
         # make sure files and smiles match
         molecule_file = Molecule.from_file(get_data_file_path("molecules/ethanol.sdf"))
-        assert molecule_smiles.hill_formula == molecule_file.hill_formula
+        assert molecule.hill_formula == molecule_file.hill_formula
         # make sure the topology molecule gives the same formula
         from openff.toolkit.topology.topology import Topology, TopologyMolecule
 
-        topology = Topology.from_molecules(molecule_smiles)
-        topmol = TopologyMolecule(molecule_smiles, topology)
-        assert molecule_smiles.hill_formula == Molecule.to_hill_formula(topmol)
+        topology = Topology.from_molecules(molecule)
+        topmol = TopologyMolecule(molecule, topology)
+        assert molecule.hill_formula == Molecule._object_to_hill_formula(topmol)
+        assert molecule.hill_formula == Molecule._object_to_hill_formula(
+            molecule.to_networkx
+        )
 
-        assert molecule_smiles.hill_formula == _networkx_graph_to_hill_formula(
-            molecule_smiles.to_networkx()
+        assert molecule.hill_formula == _networkx_graph_to_hill_formula(
+            molecule.to_networkx()
         )
 
     def test_isomorphic_general(self):

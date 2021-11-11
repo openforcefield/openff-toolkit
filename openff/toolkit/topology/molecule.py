@@ -3031,6 +3031,12 @@ class FrozenMolecule(Serializable):
             [Dict[int,int]] ordered by mol1 indexing {mol1_index: mol2_index}
             If molecules are not isomorphic given input arguments, will return None instead of dict.
         """
+        # Do a quick hill formula check first
+        if Molecule._object_to_hill_formula(mol1) != Molecule._object_to_hill_formula(
+            mol2
+        ):
+            return False, None
+
         # Build the user defined matching functions
         def node_match_func(x, y):
             # always match by atleast atomic number
@@ -4437,6 +4443,27 @@ class FrozenMolecule(Serializable):
         atom_nums = [atom.atomic_number for atom in self.atoms]
 
         return _atom_nums_to_hill_formula(atom_nums)
+
+    @staticmethod
+    def _object_to_hill_formula(obj: Union["Molecule", "nx.Graph"]) -> str:
+        """Take a Molecule or NetworkX graph and generate its Hill formula.
+        This provides a backdoor to the old functionality of Molecule.to_hill_formula, which
+        was a static method that duck-typed inputs of Molecule or graph objects."""
+        import networkx as nx
+
+        from openff.toolkit.topology.topology import TopologyMolecule
+
+        if isinstance(obj, FrozenMolecule):
+            return obj.to_hill_formula()
+        elif isinstance(obj, TopologyMolecule):
+            return _topologymolecule_to_hill_formula(obj)
+        elif isinstance(obj, nx.Graph):
+            return _networkx_graph_to_hill_formula(obj)
+        else:
+            raise RuntimeError(
+                f"Unsupport object of type {type(obj)} passed to "
+                "Molecule._object_to_hill_formula"
+            )
 
     def chemical_environment_matches(
         self,
@@ -6411,7 +6438,6 @@ class Molecule(FrozenMolecule):
             pass
 
 
-@requires_package("networkx")
 def _networkx_graph_to_hill_formula(graph: "nx.Graph") -> str:
     """
     Convert a NetworkX graph to a Hill formula.
@@ -6433,6 +6459,31 @@ def _networkx_graph_to_hill_formula(graph: "nx.Graph") -> str:
         raise Exception("The graph must be a NetworkX graph.")
 
     atom_nums = list(dict(graph.nodes(data="atomic_number", default=1)).values())
+    return _atom_nums_to_hill_formula(atom_nums)
+
+
+def _topologymolecule_to_hill_formula(topology_molecule: "TopologyMolecule") -> str:
+    """
+    Convert a TopologyMolecule to a Hill formula.
+
+    This function exists only to maintain backwards-compatibility with the old
+    behavior of Molecule.to_hill_formulat of Molecule.to_hill_formula, which was
+    a static method that duck-typed inputs of Molecule or graph objects. When
+    `TopologyMolecule` is removed, this should also be removed.
+
+    Parameters
+    ----------
+    topology_molecule : TopologyMolecule
+        The TopologyMolecule to convert.
+
+    Returns
+    -------
+    str
+        The Hill formula corresponding to the TopologyMolecule.
+
+    """
+    atom_nums = [atom.atomic_number for atom in topology_molecule.atoms]
+
     return _atom_nums_to_hill_formula(atom_nums)
 
 
