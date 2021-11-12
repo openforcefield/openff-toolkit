@@ -3,6 +3,7 @@ name: Weekly test against upstream beta and RC builds
 on:
   schedule:
     - cron: "0 0 * * 0"
+  workflow_dispatch:
 
 jobs:
   test:
