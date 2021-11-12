@@ -38,6 +38,7 @@ jobs:
           miniforge-version: latest
           miniforge-variant: Mambaforge
           use-mamba: true
+          channel-priority: strict
 
       - name: Additional info about the build
         shell: bash -l {0}
