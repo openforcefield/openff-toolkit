@@ -1197,6 +1197,11 @@ class Topology(Serializable):
                 matches.append(environment_match)
         return matches
 
+    def find_identical_molecules_heuristic(self):
+        for mol1_idx, mol1 in enumerate(self.molecules):
+            for mol2_idx, mol2 in enumerate(self.molecules[mol1_idx+1:]):
+                pass
+
     def copy_initializer(self, other):
         other_dict = copy.deepcopy(other.to_dict())
         self._initialize_from_dict(other_dict)

@@ -3142,6 +3142,21 @@ class FrozenMolecule(Serializable):
 
         return molecule
 
+    def _is_exactly_the_same(self, other):
+
+        for atom1, atom2 in zip(self.atoms, other.atoms):
+            if ((atom1.atomic_number != atom2.atomic_number) or
+                (atom1.formal_charge != atom2.formal_charge) or
+                (atom1.stereochemistry != atom2.stereochemistry)):
+                return False
+        for bond1, bond2 in zip(self.bonds, other.bonds):
+            if ((bond1.atom1_index != bond2.atom1_index) or
+                (bond1.atom2_index != bond2.atom2_index) or
+                (bond1.stereochemistry != bond2.stereochemistry)):
+                return False
+        return True
+
+
     @staticmethod
     def are_isomorphic(
         mol1,
