@@ -1,7 +1,6 @@
 name: test
 channels:
   - conda-forge/label/openmm_rc
-  - openeye/label/beta
   - openeye/label/rc
   - openeye
   - conda-forge
