@@ -29,6 +29,16 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest]
         python-version: [3.7, 3.8, 3.9]
+        cfg:
+          - rdkit: true
+            openeye: true
+            envfile: test_env
+            jobname: RDKit and OpenEye
+            toolkit_checks: RDKIT OPENEYE
+            packages_to_remove: ''
+
+
+        
         rdkit: [true, false]
         openeye: [true, false]
         exclude:
@@ -55,7 +65,7 @@ jobs:
           if [[ ${{ matrix.openeye }} == true && ${{ matrix.rdkit }} == true ]]; then
               echo "ENVFILE=test_env" >> $GITHUB_ENV
               echo "JOBNAME='RDKit and OpenEye'" >> $GITHUB_ENV
-              echo "TOOLKIT_CHECKS=RDKIT OPENEYE" >> $GITHUB_ENV
+              echo "TOOLKIT_CHECKS='RDKIT OPENEYE'" >> $GITHUB_ENV
               echo "PACKAGES_TO_REMOVE=''" >> $GITHUB_ENV
           fi
 
