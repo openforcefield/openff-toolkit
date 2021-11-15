@@ -56,7 +56,7 @@ jobs:
       NB_ARGS: -v --nbval-lax --ignore=examples/deprecated
 
     steps:
-      - uses: actions/checkout@v2.3.5
+      - uses: actions/checkout@v2.4.0
         with:
           fetch-depth: 2
 
@@ -65,7 +65,7 @@ jobs:
           if [[ ${{ matrix.openeye }} == true && ${{ matrix.rdkit }} == true ]]; then
               echo "ENVFILE=test_env" >> $GITHUB_ENV
               echo "JOBNAME='RDKit and OpenEye'" >> $GITHUB_ENV
-              echo "TOOLKIT_CHECKS='RDKIT OPENEYE'" >> $GITHUB_ENV
+              echo "TOOLKIT_CHECKS=('RDKIT' 'OPENEYE')" >> $GITHUB_ENV
               echo "PACKAGES_TO_REMOVE=''" >> $GITHUB_ENV
           fi
 
@@ -73,7 +73,7 @@ jobs:
               echo "ENVFILE=openeye" >> $GITHUB_ENV
               echo "JOBNAME='OpenEye'" >> $GITHUB_ENV
               echo "TOOLKIT_CHECKS=OPENEYE" >> $GITHUB_ENV
-              echo "PACKAGES_TO_REMOVE='ambertools rdkit'" >> $GITHUB_ENV
+              echo "PACKAGES_TO_REMOVE=('ambertools' 'rdkit')" >> $GITHUB_ENV
           fi
 
           if [[ ${{ matrix.openeye }} == false && ${{ matrix.rdkit }} == true ]]; then
