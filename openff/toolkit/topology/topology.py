@@ -445,9 +445,8 @@ class Topology(Serializable):
         self._aromaticity_model = DEFAULT_AROMATICITY_MODEL
         self._constrained_atom_pairs = dict()
         self._box_vectors = None
-        # self._reference_molecule_dicts = set()
-        # TODO: Look into weakref and what it does. Having multiple topologies might cause a memory leak.
         self._molecules = list()
+        self._cached_chemically_identical_molecules = None
 
     @property
     def reference_molecules(self):
@@ -1172,10 +1171,27 @@ class Topology(Serializable):
                 matches.append(environment_match)
         return matches
 
-    def find_identical_molecules_heuristic(self):
-        for mol1_idx, mol1 in enumerate(self.molecules):
-            for mol2_idx, mol2 in enumerate(self.molecules[mol1_idx+1:]):
-                pass
+    def group_chemically_identical_molecules(self):
+        if self._cached_chemically_identical_molecules is not None:
+            return self._cached_chemically_identical_molecules
+
+        self._cached_chemically_identical_molecules = dict()
+        already_matched_mols = set()
+
+        for mol1_idx in range(self.n_molecules):
+            if mol1_idx in already_matched_mols:
+                continue
+            mol1 = self.molecules[mol1_idx]
+            self._cached_chemically_identical_molecules[mol1_idx] = (mol1_idx, {i:i for i in range(mol1.n_atoms)})
+            for mol2_idx in range(mol1_idx+1, self.n_molecules):
+                if mol2_idx in already_matched_mols:
+                    continue
+                mol2 = self.molecules[mol2_idx]
+                are_isomorphic, atom_map = Molecule.are_isomorphic(mol1, mol2, return_atom_map=True)
+                if are_isomorphic:
+                    self._cached_chemically_identical_molecules[mol2_idx] = (mol1_idx, atom_map)
+                    already_matched_mols.add(mol2_idx)
+        return self._cached_chemically_identical_molecules
 
     def copy_initializer(self, other):
         other_dict = copy.deepcopy(other.to_dict())
@@ -2019,6 +2035,8 @@ class Topology(Serializable):
 
     def add_molecule(self, molecule):
         self._molecules.append(copy.deepcopy(molecule))
+        self._cached_chemically_identical_molecules = None
+        return len(self._molecules)
 
     # Outdated now that topologies contain full copies of molecules
     def _add_molecule(self, molecule, local_topology_to_reference_index=None):

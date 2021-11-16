@@ -3142,17 +3142,18 @@ class FrozenMolecule(Serializable):
 
         return molecule
 
-    def _is_exactly_the_same(self, other):
-
+    def _is_exactly_the_same_as(self, other):
         for atom1, atom2 in zip(self.atoms, other.atoms):
             if ((atom1.atomic_number != atom2.atomic_number) or
-                (atom1.formal_charge != atom2.formal_charge) or
-                (atom1.stereochemistry != atom2.stereochemistry)):
+                    (atom1.formal_charge != atom2.formal_charge) or
+                    (atom1.is_aromatic != atom2.is_aromatic) or
+               (atom1.stereochemistry != atom2.stereochemistry)):
                 return False
         for bond1, bond2 in zip(self.bonds, other.bonds):
             if ((bond1.atom1_index != bond2.atom1_index) or
-                (bond1.atom2_index != bond2.atom2_index) or
-                (bond1.stereochemistry != bond2.stereochemistry)):
+               (bond1.atom2_index != bond2.atom2_index) or
+               (bond1.is_aromatic != bond2.is_aromatic) or
+               (bond1.stereochemistry != bond2.stereochemistry)):
                 return False
         return True
 
@@ -3225,8 +3226,13 @@ class FrozenMolecule(Serializable):
         """
 
         # Do a quick hill formula check first
-        if Molecule.to_hill_formula(mol1) != Molecule.to_hill_formula(mol2):
+        if FrozenMolecule.to_hill_formula(mol1) != FrozenMolecule.to_hill_formula(mol2):
             return False, None
+
+        # Do a quick check to see whether the inputs are totally identical (including being in the same atom order)
+        if isinstance(mol1, FrozenMolecule) and isinstance(mol2, FrozenMolecule):
+            if mol1._is_exactly_the_same_as(mol2):
+                return True, {i:i for i in range(mol1.n_atoms)}
 
         # Build the user defined matching functions
         def node_match_func(x, y):

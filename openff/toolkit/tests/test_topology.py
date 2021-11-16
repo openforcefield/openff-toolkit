@@ -1015,6 +1015,21 @@ class TestTopology:
         # and 12 atoms named "", for a total of 3 unique atom names
         assert len(atom_names) == 3
 
+    def test_group_chemically_identical_molecules(self):
+        from pprint import pprint
+        top = Topology()
+        pprint(top.group_chemically_identical_molecules())
+        top.add_molecule(create_ethanol())
+        pprint(top.group_chemically_identical_molecules())
+        top.add_molecule(create_reversed_ethanol())
+        pprint(top.group_chemically_identical_molecules())
+        top.add_molecule(create_cyclohexane())
+        pprint(top.group_chemically_identical_molecules())
+        top.add_molecule(create_ethanol())
+        pprint(top.group_chemically_identical_molecules())
+        1/0
+
+
     @requires_openeye
     def test_chemical_environments_matches_OE(self):
         """Test Topology.chemical_environment_matches"""
