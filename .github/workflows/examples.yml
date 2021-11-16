@@ -101,6 +101,8 @@ jobs:
       - name: Install package
         shell: bash -l {0}
         run: |
+          pip install git+https://github.com/openforcefield/openff-interchange.git@skip-drivers
+
           # Remove the packaged openff-toolkit, installed as a dependency of openmmforcefields
           conda remove --force openff-toolkit-base
           python setup.py develop --no-deps
@@ -127,6 +129,7 @@ jobs:
             NB_ARGS+=" --ignore=examples/QCArchive_interface"
             NB_ARGS+=" --ignore=examples/check_dataset_parameter_coverage"
             NB_ARGS+=" --ignore=examples/conformer_energies"
+            NB_ARGS+=" --ignore=examples/using_smirnoff_in_amber_or_gromacs"
           fi
           pytest $NB_ARGS examples
 
