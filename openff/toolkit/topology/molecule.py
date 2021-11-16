@@ -30,9 +30,14 @@ import warnings
 from abc import abstractmethod
 from collections import OrderedDict
 from copy import deepcopy
-from typing import Optional, Union
+from typing import TYPE_CHECKING, List, Optional, Union
 
 import numpy as np
+
+if TYPE_CHECKING:
+    import networkx as nx
+
+    from openff.toolkit.topology import TopologyMolecule
 
 try:
     from openmm import LocalCoordinatesSite, unit
@@ -236,7 +241,9 @@ class Atom(Particle):
         # TODO
         atom_dict = OrderedDict()
         atom_dict["atomic_number"] = self._atomic_number
-        atom_dict["formal_charge"] = self._formal_charge / unit.elementary_charge
+        atom_dict["formal_charge"] = self._formal_charge.value_in_unit(
+            unit.elementary_charge
+        )
         atom_dict["is_aromatic"] = self._is_aromatic
         atom_dict["stereochemistry"] = self._stereochemistry
         # TODO: Should we let atoms have names?
@@ -568,10 +575,11 @@ class VirtualParticle(Particle):
         # implemented types are correct, so we are interested in cases
         # where custom virtual sites cause breakage.
 
+        atom_positions_unit = atom_positions.unit
+
         originwt, xdir, ydir = self.virtual_site.local_frame_weights
         disp = self.virtual_site.local_frame_position
-        _unit = disp.unit
-        x, y, z = disp / _unit
+        x, y, z = disp.value_in_unit(disp.unit)
 
         # this pulls the correct ordering of the atoms
         pos = []
@@ -600,7 +608,7 @@ class VirtualParticle(Particle):
 
         position = origin + x * xaxis + y * yaxis + z * zaxis
 
-        return unit.Quantity(position, unit=_unit)
+        return unit.Quantity(position, unit=atom_positions_unit)
 
     def _extract_position_from_conformer(self, conformation):
 
@@ -1199,7 +1207,8 @@ class BondChargeVirtualSite(VirtualSite):
         """
         Create a bond charge-type virtual site, in which the location of the charge is specified by the position of two atoms. This supports placement of a virtual site S along a vector between two specified atoms, e.g. to allow for a sigma hole for halogens or similar contexts. With positive values of the distance, the virtual site lies outside the first indexed atom.
 
-        TODO: One of the examples on https://open-forcefield-toolkit.readthedocs.io/en/topology/smirnoff.html#virtualsites-virtual-sites-for-off-atom-charges has a BondCharge defined with three atoms -- How does that work?
+        TODO: One of the examples in the SMIRNOFF spec has a BondCharge defined with three atoms -- How does that work?
+        https://openforcefield.github.io/standards/standards/smirnoff/#virtualsites-virtual-sites-for-off-atom-charges
 
         Parameters
         ----------
@@ -1311,8 +1320,8 @@ class BondChargeVirtualSite(VirtualSite):
         # towards the center of the other atoms, we want the
         # vsite to point away from the unit vector to achieve the desired
         # distance
-        _unit = self._distance.unit
-        pos = _unit * [-self._distance / _unit, 0.0, 0.0]
+        distance_unit = self._distance.unit
+        pos = distance_unit * [-self._distance.value_in_unit(distance_unit), 0.0, 0.0]
 
         return pos
 
@@ -1490,14 +1499,15 @@ class MonovalentLonePairVirtualSite(VirtualSite):
         theta = self._in_plane_angle.value_in_unit(unit.radians)
         psi = self._out_of_plane_angle.value_in_unit(unit.radians)
 
-        _unit = self._distance.unit
+        distance_unit = self._distance.unit
+        unitless_distance = self._distance.value_in_unit(distance_unit)
         pos = unit.Quantity(
             [
-                self._distance / _unit * np.cos(theta) * np.cos(psi),
-                self._distance / _unit * np.sin(theta) * np.cos(psi),
-                self._distance / _unit * np.sin(psi),
+                unitless_distance * np.cos(theta) * np.cos(psi),
+                unitless_distance * np.sin(theta) * np.cos(psi),
+                unitless_distance * np.sin(psi),
             ],
-            unit=_unit,
+            unit=distance_unit,
         )
 
         return pos
@@ -1660,12 +1670,12 @@ class DivalentLonePairVirtualSite(VirtualSite):
 
         theta = self._out_of_plane_angle.value_in_unit(unit.radians)
 
-        _unit = self._distance.unit
+        distance_unit = self._distance.unit
 
-        pos = _unit * [
-            -self._distance / _unit * np.cos(theta),
+        pos = distance_unit * [
+            -self._distance.value_in_unit(distance_unit) * np.cos(theta),
             0.0,
-            self._distance / _unit * np.sin(theta),
+            self._distance.value_in_unit(distance_unit) * np.sin(theta),
         ]  # pos of the vsite in local crds
         return pos
 
@@ -1815,8 +1825,10 @@ class TrivalentLonePairVirtualSite(VirtualSite):
         displacements in the local frame for the x, y, and z directions.
         """
 
-        _unit = self._distance.unit
-        pos = unit.Quantity([-self._distance / _unit, 0.0, 0.0], unit=_unit)
+        distance_unit = self._distance.unit
+        pos = unit.Quantity(
+            [-self._distance.value_in_unit(distance_unit), 0.0, 0.0], unit=distance_unit
+        )
 
         return pos
 
@@ -2311,7 +2323,10 @@ class FrozenMolecule(Serializable):
     def generate_unique_atom_names(self):
         """
         Generate unique atom names using element name and number of times that element has occurred
-        e.g. 'C1', 'H1', 'O1', 'C2', ...
+        e.g. 'C1x', 'H1x', 'O1x', 'C2x', ...
+
+        The character 'x' is appended to these generated names to reduce the odds that they clash with an atom name or
+        type imported from another source.
 
         """
         from collections import defaultdict
@@ -2320,7 +2335,12 @@ class FrozenMolecule(Serializable):
         for atom in self.atoms:
             symbol = atom.element.symbol
             element_counts[symbol] += 1
-            atom.name = symbol + str(element_counts[symbol])
+            # TODO: It may be worth exposing this as a user option, i.e. to avoid multiple ligands
+            # parameterized with OpenFF clashing because they have atom names like O1x, H3x, etc.
+            # i.e. an optional argument could enable a user to `generate_unique_atom_names(blah="y")
+            # to have one ligand be O1y, etc.
+            # https://github.com/openforcefield/openff-toolkit/pull/1096#pullrequestreview-767227391
+            atom.name = symbol + str(element_counts[symbol]) + "x"
 
     def _validate(self):
         """
@@ -2407,7 +2427,7 @@ class FrozenMolecule(Serializable):
                 "conformers_unit"
             ] = "angstrom"  # Have this defined as a class variable?
             for conf in self._conformers:
-                conf_unitless = conf / unit.angstrom
+                conf_unitless = conf.value_in_unit(unit.angstrom)
                 conf_serialized, conf_shape = serialize_numpy((conf_unitless))
                 molecule_dict["conformers"].append(conf_serialized)
         if self._partial_charges is None:
@@ -2415,7 +2435,9 @@ class FrozenMolecule(Serializable):
             molecule_dict["partial_charges_unit"] = None
 
         else:
-            charges_unitless = self._partial_charges / unit.elementary_charge
+            charges_unitless = self._partial_charges.value_in_unit(
+                unit.elementary_charge
+            )
             charges_serialized, charges_shape = serialize_numpy(charges_unitless)
             molecule_dict["partial_charges"] = charges_serialized
             molecule_dict["partial_charges_unit"] = "elementary_charge"
@@ -2559,10 +2581,14 @@ class FrozenMolecule(Serializable):
         self._properties = molecule_dict["properties"]
 
     def __repr__(self):
-        """Return the SMILES of this molecule"""
-        return "Molecule with name '{}' and SMILES '{}'".format(
-            self.name, self.to_smiles()
-        )
+        """Return a summary of this molecule; SMILES if valid, Hill formula if not."""
+        description = f"Molecule with name '{self.name}'"
+        try:
+            smiles = self.to_smiles()
+        except:  # noqa
+            hill = self.to_hill_formula()
+            return description + f" with bad SMILES and Hill formula '{hill}'"
+        return description + f" and SMILES '{smiles}'"
 
     def __getstate__(self):
         return self.to_dict()
@@ -2961,9 +2987,10 @@ class FrozenMolecule(Serializable):
             [Dict[int,int]] ordered by mol1 indexing {mol1_index: mol2_index}
             If molecules are not isomorphic given input arguments, will return None instead of dict.
         """
-
         # Do a quick hill formula check first
-        if Molecule.to_hill_formula(mol1) != Molecule.to_hill_formula(mol2):
+        if Molecule._object_to_hill_formula(mol1) != Molecule._object_to_hill_formula(
+            mol2
+        ):
             return False, None
 
         # Build the user defined matching functions
@@ -3048,7 +3075,7 @@ class FrozenMolecule(Serializable):
 
         mol1_netx = to_networkx(mol1)
         mol2_netx = to_networkx(mol2)
-        from networkx.algorithms.isomorphism import GraphMatcher
+        from networkx.algorithms.isomorphism import GraphMatcher  # type: ignore
 
         GM = GraphMatcher(
             mol1_netx, mol2_netx, node_match=node_match_func, edge_match=edge_match_func
@@ -3300,7 +3327,7 @@ class FrozenMolecule(Serializable):
             )
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
-            toolkit.apply_elf_conformer_selection(
+            toolkit.apply_elf_conformer_selection(  # type: ignore[attr-defined]
                 self, molecule=self, percentage=percentage, limit=limit, **kwargs
             )
         else:
@@ -4203,7 +4230,7 @@ class FrozenMolecule(Serializable):
         those indices may change when this molecule is added to a Topology.
 
         For more details on the use of three-fold ('trefoil') impropers, see
-        https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html#impropertorsions
+        https://openforcefield.github.io/standards/standards/smirnoff/#impropertorsions
 
         Returns
         -------
@@ -4355,19 +4382,11 @@ class FrozenMolecule(Serializable):
         """
         Get the Hill formula of the molecule
         """
-        return Molecule.to_hill_formula(self)
+        return self.to_hill_formula()
 
-    @staticmethod
-    def to_hill_formula(molecule):
+    def to_hill_formula(self) -> str:
         """
-        Generate the Hill formula from either a :class:`FrozenMolecule`, :class:`TopologyMolecule` or
-        ``nx.Graph()`` of the molecule
-
-        .. TODO: Set up Intersphinx for nx.Graph(), above
-
-        Parameters
-        -----------
-        molecule : FrozenMolecule, TopologyMolecule or nx.Graph()
+        Generate the Hill formula of this molecule.
 
         Returns
         ----------
@@ -4377,59 +4396,30 @@ class FrozenMolecule(Serializable):
         -----------
         NotImplementedError : if the molecule is not of one of the specified types.
         """
+        atom_nums = [atom.atomic_number for atom in self.atoms]
 
+        return _atom_nums_to_hill_formula(atom_nums)
+
+    @staticmethod
+    def _object_to_hill_formula(obj: Union["Molecule", "nx.Graph"]) -> str:
+        """Take a Molecule or NetworkX graph and generate its Hill formula.
+        This provides a backdoor to the old functionality of Molecule.to_hill_formula, which
+        was a static method that duck-typed inputs of Molecule or graph objects."""
         import networkx as nx
 
-        from openff.toolkit.topology import TopologyMolecule
+        from openff.toolkit.topology.topology import TopologyMolecule
 
-        # check for networkx then assuming we have a Molecule or TopologyMolecule instance just try and
-        # extract the info. Note we do not type check the TopologyMolecule due to cyclic dependencies
-        if isinstance(molecule, nx.Graph):
-            atom_nums = list(
-                dict(molecule.nodes(data="atomic_number", default=1)).values()
-            )
-
-        elif isinstance(molecule, TopologyMolecule):
-            atom_nums = [atom.atomic_number for atom in molecule.atoms]
-
-        elif isinstance(molecule, FrozenMolecule):
-            atom_nums = [atom.atomic_number for atom in molecule.atoms]
-
+        if isinstance(obj, FrozenMolecule):
+            return obj.to_hill_formula()
+        elif isinstance(obj, TopologyMolecule):
+            return _topologymolecule_to_hill_formula(obj)
+        elif isinstance(obj, nx.Graph):
+            return _networkx_graph_to_hill_formula(obj)
         else:
-            raise NotImplementedError(
-                f"The input type {type(molecule)} is not supported,"
-                f"please supply an openff.toolkit.topology.molecule.Molecule,"
-                f"openff.toolkit.topology.topology.TopologyMolecule or networkx representaion "
-                f"of the molecule."
+            raise RuntimeError(
+                f"Unsupport object of type {type(obj)} passed to "
+                "Molecule._object_to_hill_formula"
             )
-
-        # make a correct hill formula representation following this guide
-        # https://en.wikipedia.org/wiki/Chemical_formula#Hill_system
-
-        # create the counter dictionary using chemical symbols
-        from collections import Counter
-
-        atom_symbol_counts = Counter(
-            Element.getByAtomicNumber(atom_num).symbol for atom_num in atom_nums
-        )
-
-        formula = []
-        # Check for C and H first, to make a correct hill formula
-        for el in ["C", "H"]:
-            if el in atom_symbol_counts:
-                count = atom_symbol_counts.pop(el)
-                formula.append(el)
-                if count > 1:
-                    formula.append(str(count))
-
-        # now get the rest of the elements in alphabetical ordering
-        for el in sorted(atom_symbol_counts.keys()):
-            count = atom_symbol_counts.pop(el)
-            formula.append(el)
-            if count > 1:
-                formula.append(str(count))
-
-        return "".join(formula)
 
     def chemical_environment_matches(
         self,
@@ -5195,7 +5185,7 @@ class FrozenMolecule(Serializable):
             )
 
         # Gather the required qcschema data
-        charge = self.total_charge / unit.elementary_charge
+        charge = self.total_charge.value_in_unit(unit.elementary_charge)
         connectivity = [
             (bond.atom1_index, bond.atom2_index, bond.bond_order) for bond in self.bonds
         ]
@@ -5216,7 +5206,8 @@ class FrozenMolecule(Serializable):
         schema_dict = {
             "symbols": symbols,
             "geometry": geometry,
-            "connectivity": connectivity,
+            # If we have no bonds we must supply None
+            "connectivity": connectivity if connectivity else None,
             "molecular_charge": charge,
             "molecular_multiplicity": multiplicity,
             "extras": extras,
@@ -6331,8 +6322,11 @@ class Molecule(FrozenMolecule):
         if backend == "rdkit":
             if RDKIT_AVAILABLE:
                 from IPython.display import SVG
-                from rdkit.Chem.Draw import rdDepictor, rdMolDraw2D
-                from rdkit.Chem.rdmolops import RemoveHs
+                from rdkit.Chem.Draw import (  # type: ignore[import]
+                    rdDepictor,
+                    rdMolDraw2D,
+                )
+                from rdkit.Chem.rdmolops import RemoveHs  # type: ignore[import]
 
                 rdmol = self.to_rdkit()
 
@@ -6398,3 +6392,81 @@ class Molecule(FrozenMolecule):
             return display(self.visualize(backend="openeye"))
         except ValueError:
             pass
+
+
+def _networkx_graph_to_hill_formula(graph: "nx.Graph") -> str:
+    """
+    Convert a NetworkX graph to a Hill formula.
+
+    Parameters
+    ----------
+    graph : nx.Graph
+        The graph to convert.
+
+    Returns
+    -------
+    str
+        The Hill formula corresponding to the graph.
+
+    """
+    import networkx as nx
+
+    if not isinstance(graph, nx.Graph):
+        raise Exception("The graph must be a NetworkX graph.")
+
+    atom_nums = list(dict(graph.nodes(data="atomic_number", default=1)).values())
+    return _atom_nums_to_hill_formula(atom_nums)
+
+
+def _topologymolecule_to_hill_formula(topology_molecule: "TopologyMolecule") -> str:
+    """
+    Convert a TopologyMolecule to a Hill formula.
+
+    This function exists only to maintain backwards-compatibility with the old
+    behavior of Molecule.to_hill_formulat of Molecule.to_hill_formula, which was
+    a static method that duck-typed inputs of Molecule or graph objects. When
+    `TopologyMolecule` is removed, this should also be removed.
+
+    Parameters
+    ----------
+    topology_molecule : TopologyMolecule
+        The TopologyMolecule to convert.
+
+    Returns
+    -------
+    str
+        The Hill formula corresponding to the TopologyMolecule.
+
+    """
+    atom_nums = [atom.atomic_number for atom in topology_molecule.atoms]
+
+    return _atom_nums_to_hill_formula(atom_nums)
+
+
+def _atom_nums_to_hill_formula(atom_nums: List[int]) -> str:
+    """
+    Given a `Counter` object of atom counts by atomic number, generate the corresponding
+    Hill formula. See https://en.wikipedia.org/wiki/Chemical_formula#Hill_system"""
+    from collections import Counter
+
+    atom_symbol_counts = Counter(
+        Element.getByAtomicNumber(atom_num).symbol for atom_num in atom_nums
+    )
+
+    formula = []
+    # Check for C and H first, to make a correct hill formula
+    for el in ["C", "H"]:
+        if el in atom_symbol_counts:
+            count = atom_symbol_counts.pop(el)
+            formula.append(el)
+            if count > 1:
+                formula.append(str(count))
+
+    # now get the rest of the elements in alphabetical ordering
+    for el in sorted(atom_symbol_counts.keys()):
+        count = atom_symbol_counts.pop(el)
+        formula.append(el)
+        if count > 1:
+            formula.append(str(count))
+
+    return "".join(formula)

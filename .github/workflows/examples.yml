@@ -47,7 +47,7 @@ jobs:
       NB_ARGS: -v --nbval-lax --ignore=examples/deprecated
 
     steps:
-      - uses: actions/checkout@v2.3.4
+      - uses: actions/checkout@v2.4.0
         with:
           fetch-depth: 2
 
@@ -101,6 +101,8 @@ jobs:
       - name: Install package
         shell: bash -l {0}
         run: |
+          pip install git+https://github.com/openforcefield/openff-interchange.git@skip-drivers
+
           # Remove the packaged openff-toolkit, installed as a dependency of openmmforcefields
           conda remove --force openff-toolkit-base
           python setup.py develop --no-deps
@@ -127,11 +129,12 @@ jobs:
             NB_ARGS+=" --ignore=examples/QCArchive_interface"
             NB_ARGS+=" --ignore=examples/check_dataset_parameter_coverage"
             NB_ARGS+=" --ignore=examples/conformer_energies"
+            NB_ARGS+=" --ignore=examples/using_smirnoff_in_amber_or_gromacs"
           fi
           pytest $NB_ARGS examples
 
       - name: Codecov
-        uses: codecov/codecov-action@v2.0.3
+        uses: codecov/codecov-action@v2.1.0
         with:
           file: ./coverage.xml
           fail_ci_if_error: true

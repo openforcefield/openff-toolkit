@@ -1008,7 +1008,7 @@ class TestForceField:
         ForceField(iter(file_paths))
 
     @pytest.mark.skip(reason="Needs to be updated for 0.2.0 syntax")
-    def test_create_gbsa():
+    def test_create_gbsa(self):
         """Test reading of ffxml files with GBSA support."""
         ForceField("test_forcefields/Frosst_AlkEthOH_GBSA.offxml")
 
@@ -2185,20 +2185,21 @@ class TestForceFieldVirtualSites:
         self._test_physical_parameters(toolkit_registry, *args.values())
 
 
-class TestForceFieldChargeAssignment:
-    def generate_monatomic_ions():
-        return (
-            ("Li+", +1 * unit.elementary_charge),
-            ("Na+", +1 * unit.elementary_charge),
-            ("K+", +1 * unit.elementary_charge),
-            ("Rb+", +1 * unit.elementary_charge),
-            ("Cs+", +1 * unit.elementary_charge),
-            ("F-", -1 * unit.elementary_charge),
-            ("Cl-", -1 * unit.elementary_charge),
-            ("Br-", -1 * unit.elementary_charge),
-            ("I-", -1 * unit.elementary_charge),
-        )
+def generate_monatomic_ions():
+    return (
+        ("Li+", +1 * unit.elementary_charge),
+        ("Na+", +1 * unit.elementary_charge),
+        ("K+", +1 * unit.elementary_charge),
+        ("Rb+", +1 * unit.elementary_charge),
+        ("Cs+", +1 * unit.elementary_charge),
+        ("F-", -1 * unit.elementary_charge),
+        ("Cl-", -1 * unit.elementary_charge),
+        ("Br-", -1 * unit.elementary_charge),
+        ("I-", -1 * unit.elementary_charge),
+    )
 
+
+class TestForceFieldChargeAssignment:
     @pytest.mark.parametrize(
         "toolkit_registry,registry_description", toolkit_registries
     )
@@ -3203,7 +3204,10 @@ class TestForceFieldConstraints:
                 molecule.atoms[atom2_idx].element.symbol,
             }
             assert atom_elements == bond_elements
-            assert np.isclose(distance / unit.angstrom, bond_length / unit.angstrom)
+            assert np.isclose(
+                distance.value_in_unit(unit.angstrom),
+                bond_length.value_in_unit(unit.angstrom),
+            )
 
     def test_constraints_hbonds(self):
         """Test that hydrogen bonds constraints are applied correctly to a ethane molecule."""
@@ -3771,12 +3775,13 @@ class TestForceFieldParameterAssignment:
         ref_ene = 0.0011797690240 * unit.kilojoule_per_mole
 
         assert np.allclose(
-            off_crds / unit.angstrom, ref_crds_with_vsite / unit.angstrom
+            off_crds.value_in_unit(unit.angstrom),
+            ref_crds_with_vsite.value_in_unit(unit.angstrom),
         )
         # allow 1% error in energy difference (default is .001%)
         assert np.allclose(
-            off_ene / unit.kilocalorie_per_mole,
-            ref_ene / unit.kilocalorie_per_mole,
+            off_ene.value_in_unit(unit.kilocalorie_per_mole),
+            ref_ene.value_in_unit(unit.kilocalorie_per_mole),
             rtol=0.05,
         )
 

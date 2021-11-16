@@ -12,8 +12,8 @@ __all__ = [
     "XMLParameterIOHandler",
 ]
 
-
 import logging
+from typing import Optional
 
 import xmltodict
 
@@ -68,7 +68,7 @@ class ParameterIOHandler:
     Base class for handling serialization/deserialization of SMIRNOFF ForceField objects
     """
 
-    _FORMAT = None
+    _FORMAT: Optional[str] = None
 
     def __init__(self):
         """
@@ -152,7 +152,7 @@ class XMLParameterIOHandler(ParameterIOHandler):
         ----------
         source : str or io.RawIOBase
             File path of file-like object implementing a ``read()`` method
-            specifying a SMIRNOFF force field definition in `the SMIRNOFF XML format <https://github.com/openforcefield/openff-toolkit/blob/master/The-SMIRNOFF-force-field-format.md>`_.
+            specifying a SMIRNOFF force field definition in `the SMIRNOFF XML format <https://openforcefield.github.io/standards/standards/smirnoff/#xml-representation>`_.
 
         Raises
         ------
@@ -180,7 +180,7 @@ class XMLParameterIOHandler(ParameterIOHandler):
         Parameters
         ----------
         data : str
-            A SMIRNOFF force field definition in `the SMIRNOFF XML format <https://github.com/openforcefield/openff-toolkit/blob/master/The-SMIRNOFF-force-field-format.md>`_.
+            A SMIRNOFF force field definition in `the SMIRNOFF XML format <https://openforcefield.github.io/standards/standards/smirnoff/#xml-representation>`_.
 
         """
         from pyexpat import ExpatError

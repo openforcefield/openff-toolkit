@@ -208,7 +208,7 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
         # Compute charges
         with tempfile.TemporaryDirectory() as tmpdir:
             with temporary_cd(tmpdir):
-                net_charge = mol_copy.total_charge / unit.elementary_charge
+                net_charge = mol_copy.total_charge.value_in_unit(unit.elementary_charge)
                 # Write out molecule in SDF format
                 # TODO: How should we handle multiple conformers?
                 self._rdkit_toolkit_wrapper.to_file(

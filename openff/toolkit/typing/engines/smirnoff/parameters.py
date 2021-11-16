@@ -42,7 +42,6 @@ __all__ = [
     "ToolkitAM1BCCHandler",
     "VirtualSiteHandler",
 ]
-
 import abc
 import copy
 import functools
@@ -52,6 +51,7 @@ import re
 from collections import OrderedDict, defaultdict
 from enum import Enum
 from itertools import combinations
+from typing import Any, List, Optional, Type, Union
 
 try:
     import openmm
@@ -75,6 +75,7 @@ from openff.toolkit.utils.exceptions import (
     DuplicateVirtualSiteTypeException,
     FractionalBondOrderInterpolationMethodUnsupportedError,
     IncompatibleParameterError,
+    MissingIndexedAttributeError,
     NonintegralMoleculeChargeException,
     NotEnoughPointsForInterpolationError,
     ParameterLookupError,
@@ -1062,35 +1063,30 @@ class _ParameterAttributeHandler:
 
         # Check if this is an indexed_mapped attribute.
         if (
-            (key is not None)
-            and (index is not None)
+            key is not None
+            and index is not None
             and attr_name in self._get_indexed_mapped_parameter_attributes()
         ):
             indexed_mapped_attr_value = getattr(self, attr_name)
             try:
                 return indexed_mapped_attr_value[index][key]
             except (IndexError, KeyError) as err:
-                if not err.args:
-                    err.args = ("",)
-                err.args = err.args + (
-                    f"'{item}' is out of bound for indexed attribute '{attr_name}'",
+                raise MissingIndexedAttributeError(
+                    f"{str(err)} '{item}' is out of bounds for indexed attribute '{attr_name}'"
                 )
-                raise
 
         # Otherwise, try indexed attribute
         # Separate the indexed attribute name from the list index.
         attr_name, index = self._split_attribute_index(item)
 
         # Check if this is an indexed attribute.
-        if (
-            index is not None
-        ) and attr_name in self._get_indexed_parameter_attributes():
+        if index is not None and attr_name in self._get_indexed_parameter_attributes():
             indexed_attr_value = getattr(self, attr_name)
             try:
                 return indexed_attr_value[index]
             except IndexError:
-                raise IndexError(
-                    f"'{item}' is out of bound for indexed attribute '{attr_name}'"
+                raise MissingIndexedAttributeError(
+                    f"'{item}' is out of bounds for indexed attribute '{attr_name}'"
                 )
 
         # Otherwise, forward the search to the next class in the MRO.
@@ -1125,12 +1121,9 @@ class _ParameterAttributeHandler:
                 indexed_mapped_attr_value[index][mapkey] = value
                 return
             except (IndexError, KeyError) as err:
-                if not err.args:
-                    err.args = ("",)
-                err.args = err.args + (
-                    f"'{key}' is out of bound for indexed attribute '{attr_name}'",
+                raise MissingIndexedAttributeError(
+                    f"{str(err)} '{key}' is out of bounds for indexed attribute '{attr_name}'"
                 )
-                raise
 
         # Otherwise, try indexed attribute
         # Separate the indexed attribute name from the list index.
@@ -1146,8 +1139,8 @@ class _ParameterAttributeHandler:
                 indexed_attr_value[index] = value
                 return
             except IndexError:
-                raise IndexError(
-                    f"'{key}' is out of bound for indexed attribute '{attr_name}'"
+                raise MissingIndexedAttributeError(
+                    f"'{key}' is out of bounds for indexed attribute '{attr_name}'"
                 )
 
         # Forward the request to the next class in the MRO.
@@ -1708,9 +1701,9 @@ class ParameterType(_ParameterAttributeHandler):
     """
 
     # ChemicalEnvironment valence type string expected by SMARTS string for this Handler
-    _VALENCE_TYPE = None
+    _VALENCE_TYPE: Optional[str] = None
     # The string mapping to this ParameterType in a SMIRNOFF data source
-    _ELEMENT_NAME = None
+    _ELEMENT_NAME: Optional[str] = None
 
     # Parameter attributes shared among all parameter types.
     smirks = ParameterAttribute()
@@ -1789,20 +1782,21 @@ class ParameterHandler(_ParameterAttributeHandler):
 
     """
 
-    _TAGNAME = None  # str of section type handled by this ParameterHandler (XML element name for SMIRNOFF XML representation)
-    _INFOTYPE = None  # container class with type information that will be stored in self._parameters
-    _OPENMMTYPE = None  # OpenMM Force class (or None if no equivalent)
-    _DEPENDENCIES = (
-        None  # list of ParameterHandler classes that must precede this, or None
-    )
+    # str of section type handled by this ParameterHandler (XML element name for SMIRNOFF XML representation)
+    _TAGNAME: Optional[str] = None
+    # container class with type information that will be stored in self._parameters
+    _INFOTYPE: Optional[Any] = None
+    # OpenMM Force class (or None if no equivalent)
+    _OPENMMTYPE: Optional[str] = None
+    # list of ParameterHandler classes that must precede this, or None
+    _DEPENDENCIES: Optional[Any] = None
 
-    _KWARGS = []  # Kwargs to catch when create_force is called
-    _SMIRNOFF_VERSION_INTRODUCED = (
-        0.0  # the earliest version of SMIRNOFF spec that supports this ParameterHandler
-    )
-    _SMIRNOFF_VERSION_DEPRECATED = (
-        None  # if deprecated, the first SMIRNOFF version number it is no longer used
-    )
+    # Kwargs to catch when create_force is called
+    _KWARGS: List[str] = []
+    # the earliest version of SMIRNOFF spec that supports this ParameterHandler
+    _SMIRNOFF_VERSION_INTRODUCED = 0.0
+    _SMIRNOFF_VERSION_DEPRECATED = None
+    # if deprecated, the first SMIRNOFF version number it is no longer used
     _MIN_SUPPORTED_SECTION_VERSION = 0.3
     _MAX_SUPPORTED_SECTION_VERSION = 0.3
 
@@ -1976,7 +1970,7 @@ class ParameterHandler(_ParameterAttributeHandler):
           * When `before` and `after` are both specified, the new parameter will be added immediately
             after the parameter matching the `after` pattern or index.
           * The order of parameters in a parameter list can have significant impacts on parameter assignment. For details,
-            see the [SMIRNOFF](https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html#smirnoff-parameter-specification-is-hierarchical)
+            see the [SMIRNOFF](https://openforcefield.github.io/standards/standards/smirnoff/#smirnoff-parameter-specification-is-hierarchical)
             specification.
 
         Examples
@@ -4930,7 +4924,8 @@ class VirtualSiteHandler(_NonbondedHandler):
         # using this generic selector as a type
         _ELEMENT_NAME = "VirtualSite"
 
-        _enable_types = {}
+        # TODO: This is never used - remove?
+        _enable_types = {}  # type: ignore
 
         def __new__(cls, **attrs):
 
@@ -4977,13 +4972,13 @@ class VirtualSiteHandler(_NonbondedHandler):
 
         # Here we define the default sorting behavior if we need to sort the
         # atom key into a canonical ordering
-        transformed_dict_cls = ValenceDict
+        transformed_dict_cls: Union[Type[ValenceDict], Type[ImproperDict]] = ValenceDict
 
         # Value of None indicates "not a valid type" or "not an actual implemented type".
         # To enable/register a new virtual site type, make a subclass and set its
         # _vsite_type to what would need to be provided in the OFFXML "type" attr,
         # e.g. type="BondCharge" would mean _vsite_type="BondCharge"
-        _vsite_type = None
+        _vsite_type: Optional[str] = None
 
         @classmethod
         def vsite_type(cls):

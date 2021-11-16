@@ -5,97 +5,81 @@
 ## Installing via `conda`
 
 The simplest way to install the Open Force Field Toolkit is via the [conda](https://docs.conda.io/en/latest/) package manager.
-Packages are provided on the [`conda-forge` channel](https://conda-forge.org/) for Linux, OS X, and Win platforms.
-The [`openff-toolkit` Anaconda Cloud page](https://anaconda.org/conda-forge/openff-toolkit) has useful instructions and [download statistics](https://anaconda.org/conda-forge/openff-toolkit/files).
+We publish [packages](https://github.com/conda-forge/openff-toolkit-feedstock) via [`conda-forge`](https://conda-forge.org/).
 
-If you are using the [Anaconda](https://www.anaconda.com/products/individual#Downloads) scientific Python distribution, you already have the `conda`package manager installed.
-If not, the quickest way to get started is to install the [Miniconda](https://docs.conda.io/en/latest/miniconda.html) distribution, a lightweight minimal installation of Anaconda Python.
+If you are using the [Anaconda](https://www.anaconda.com/products/individual#Downloads) scientific Python distribution, you already have the `conda` package manager installed.
+If not, the quickest way to get started is to install the [Miniconda](https://docs.conda.io/en/latest/miniconda.html) distribution, a lightweight, minimal installation of Python and the Conda package manager.
+See the [conda](https://conda.io/projects/conda/en/latest/user-guide/install/index.html) documentation for detailed installation instructions.
+We recommend [Miniforge](https://github.com/conda-forge/miniforge#readme), a drop-in replacement for Miniconda that uses the community-run `conda-forge` channel by default.
 
-On Linux, you can install the Python 3 version into `$HOME/miniconda3` with (on `bash` systems):
-
-```shell-session
-$ wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
-$ bash ./Miniconda3-latest-Linux-x86_64.sh -b -p $HOME/miniconda3
-$ source ~/miniconda3/etc/profile.d/conda.sh
-$ conda activate base
-```
-
-On MacOS, use the `osx` binary
+Once Conda is installed, use it to install the OpenFF Toolkit:
 
 ```shell-session
-$ curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -O
-$ bash ./Miniconda3-latest-MacOSX-x86_64.sh -b -p $HOME/miniconda3
-$ source ~/miniconda3/etc/profile.d/conda.sh
-$ conda activate base
+$ conda install -c conda-forge openff-toolkit
 ```
-
-You may want to add the new `source ~/miniconda3/etc/profile.d/conda.sh` line to your `~/.bashrc` file to ensure Anaconda Python can enabled in subsequent terminal sessions.
-`conda activate base` will need to be run in each subsequent terminal session to return to the environment where the toolkit will be installed.
-
-Note that `openff-toolkit` will be installed into this local Python installation, so that you will not need to worry about disrupting existing Python installations.
 
 :::{note}
 Installation via the Conda package manager is the preferred method since all dependencies are automatically fetched and installed for you.
 :::
 
-### Required dependencies
+### OS support
 
-The `openff-toolkit` makes use of the [Conda Forge ](https://conda-forge.org/) free and open source community package repository:
+The OpenFF Toolkit is pure Python, and we expect it to work on any platform that supports its dependencies.
+Our automated testing takes place on both MacOS and Ubuntu Linux.
+For Windows support, we recommend using the [Windows Subsystem for Linux](https://docs.microsoft.com/en-us/windows/wsl/install-win10) (WSL) to run a Linux system integrated into Windows.
+We strongly suggest using WSL2, if your hardware supports it, for a smoother experience.
+WSL2 requires virtualization support in hardware.
+This is available on most modern CPUs, but may require activation in the BIOS.
 
-```shell-session
-$ conda config --add channels conda-forge
-$ conda update --all
-```
-
-This only needs to be done once.
-
-:::{note}
-If automation is required, provide the `--yes` argument to `conda update` and `conda install` comamnds.
-More information on the `conda` command-line API can be found in the [Conda online documentation ](https://conda.io/docs/commands.html).
-:::
-
-### Release build
-
-You can install the latest stable release build of `openff-toolkit` via the `conda` package manager with
-
-```shell-session
-$ conda config --add channels conda-forge
-$ conda install openff-toolkit
-```
-
-This version is recommended for all users not actively developing new force field parameterization algorithms.
+Once WSL is configured, installing and using the Toolkit is done exactly as it would be for Linux.
+Note that by default, Jupyter Notebook will not be able to open a browser window and will log an error on startup; just ignore the error and open the link it provides in your ordinary Windows web browser.
 
 :::{note}
-The Conda package manager will install dependencies from binary packages automatically, including difficult-to-install packages such as OpenMM, numpy, and scipy. This is really the easiest way to get started.
+WSL2 [does support](https://docs.microsoft.com/en-us/windows/wsl/tutorials/gpu-compute) GPU compute, at least with nvidia cards, but setting it up [takes some work](https://developer.nvidia.com/cuda/wsl).
 :::
+
+(conda_envs)=
+
+### Conda environments
+
+Conda environments that mix packages from the default channels and `conda-forge` can become inconsistent; to prevent this mixing, we recommend using `conda-forge` for all packages. The easiest way to do this is to install Conda with [Miniforge](https://github.com/conda-forge/miniforge#readme).
+
+If you already have a complex environment, or you wish to install a version of the Toolkit that is incompatible with other software you have installed, you can install the Toolkit into a new environment:
+
+```shell-session
+$ conda create -c conda-forge --name offtk openff-toolkit
+```
+
+An environment must be activated in any new shell session to use the software installed in it:
+
+```shell-session
+$ conda activate offtk
+```
 
 ### Upgrading your installation
 
 To update an earlier `conda` installation of `openff-toolkit` to the latest release version, you can use `conda update`:
 
 ```shell-session
-$ conda update openff-toolkit
+$ conda update -c conda-forge openff-toolkit
 ```
 
-### Optional dependencies
+Note that this may update other packages or install new packages if the most recent release of the Toolkit requires it.
 
-This toolkit can optionally make use of the [OpenEye toolkit ](https://www.eyesopen.com/toolkit-development) if the user has a license key installed.
-Academic laboratories intending to release results into the public domain can [obtain a free license key ](https://www.eyesopen.com/licensing-philosophy), while other users (including academics intending to use the software for purposes of generating protected intellectual property) must [pay to obtain a license ](https://www.eyesopen.com/pricing).
+## Installing from source
 
-To install the OpenEye toolkits (provided you have a valid license file):
+The OpenFF Toolkit has a lot of dependencies, so we strongly encourage installation with a package manager. The [developer's guide](install_dev) describes setting up a development environment. If you're sure you want to install from source, check the [`conda-forge` recipe](https://github.com/conda-forge/openff-toolkit-feedstock/blob/master/recipe/meta.yaml) for current dependencies, install them, download and extract the source distribution from [GitHub](https://github.com/openforcefield/openff-toolkit/releases), and then run `setup.py`:
 
 ```shell-session
-$ conda install --yes -c openeye openeye-toolkits
+$ cd openff-toolkit
+$ python setup.py install
 ```
 
-No essential `openff-toolkit` release capabilities *require* the OpenEye toolkit, but the Open Force Field developers make use of it in parameterizing new open source force fields.
-It is known that there are certain differences in toolkit behavior between RDKit and OpenEye when reading a small fraction of molecules, and we encourage you to report any unexpected behavior that may be caused by toolkit differences to our [issue tracker ](https://github.com/openforcefield/openff-toolkit/issues).
-
-## Alternative method: Single-file installer
+## Single-file installer
 
 As of release 0.4.1, single-file installers are available for each Open Force Field Toolkit release.
 These are provided primarily for users who do not have access to the Anaconda cloud for installing packages.
-These installers have few requirements beyond a Linux or OSX operating system and will, in one command, produce a functional Python executable containing the Open Force Field Toolkit, as well as all required dependencies.
+These installers have few requirements beyond a Linux or MacOS operating system and will, in one command, produce a functional Python executable containing the Open Force Field Toolkit, as well as all required dependencies.
 The installers are very similar to the widely-used Miniconda `*.sh` files.
 Accordingly, installation using the "single-file installer" does not require root access.
 
@@ -123,7 +107,7 @@ When prompted, we recommend NOT making modifications to your `bash_profile`.
 
 :::{warning}
 We recommend that you do not install this package as root.
-Conda is intended to support on-the-fly creation of several independent environments, and managing a multi-user Conda installation is [somewhat involved.](https://docs.conda.io/projects/conda/en/latest/user-guide/configuration/admin-multi-user-install.html)
+Conda is intended to support on-the-fly creation of several independent environments, and managing a multi-user Conda installation is [complicated.](https://docs.conda.io/projects/conda/en/latest/user-guide/configuration/admin-multi-user-install.html)
 :::
 
 ### Usage
@@ -135,18 +119,42 @@ $ source <install_directory>/etc/profile.d/conda.sh
 $ conda activate base
 ```
 
-Once the `base` environment is activated, your system will default to use Python (and other executables) from the newly installed Conda environment.
+Once the `base` environment is activated, your system will default to use Python (and other executables) from the newly installed Conda environment. For more information about Conda environments, see {ref}`conda_envs`
 
-### Installing optional OpenEye toolkits
+## Optional dependencies (toolkits)
 
-We're waiting on permission to redistribute the OpenEye toolkits inside the single-file installer, so for now the installers only ship with the open-source backend (RDKit+AmberTools).
-With this in mind, the Conda environment created by the installer *contains the Conda package manager itself*, which can be used to install the OpenEye toolkits if you have access to the Anaconda cloud.
+The OpenFF Toolkit outsources many common computational chemistry algorithms to other toolkits. 
+Only one such toolkit is needed to gain access to all of the OpenFF Toolkit's features. 
+If more than one is available, the Toolkit allows the user to specify their preference with the `toolkit_registry` argument to most functions and methods.
+
+The `openff-toolkit` package installs everything needed to run the toolkit, including the optional dependencies RDKit and AmberTools. 
+To install only the hard dependencies and provide your own optional dependencies, install the `openff-toolkit-base` package.
+
+The OpenFF Toolkit requires an external toolkit for most functions. 
+Though a `builtin` toolkit is provided, it implements only a small number of functions and is intended primarily for testing.
+
+There are certain differences in toolkit behavior between RDKit/AmberTools and OpenEye when reading a small fraction of molecules, and we encourage you to report any unexpected behavior that may be caused by toolkit differences to our [issue tracker](https://github.com/openforcefield/openff-toolkit/issues).
+
+### RDKit 
+
+RDKit is a free and open source chemistry toolkit installed by default with the `openff-toolkit` package. 
+It provides most of the functionality that the OpenFF Toolkit relies on.
+
+### AmberTools 
+
+AmberTools is a collection of free tools provided with the Amber MD software and installed by default with the `openff-toolkit` package. 
+It provides a free implementation of functionality required by OpenFF Toolkit and not provided by RDKit.
+
+### OpenEye
+
+The OpenFF Toolkit can optionally make use of the [OpenEye toolkit](https://www.eyesopen.com/toolkit-development) if the user has a license key installed.
+Academic laboratories intending to release results into the public domain can [obtain a free license key](https://www.eyesopen.com/licensing-philosophy), while other users (including academics intending to use the software for purposes of generating protected intellectual property) must [pay to obtain a license](https://www.eyesopen.com/pricing).
+
+To install the OpenEye toolkits:
 
 ```shell-session
-$ conda install -c openeye openeye-toolkits
+$ conda install -c openeye -c conda-forge openeye-toolkits
 ```
 
-:::{note}
-The OpenEye Toolkits Conda package still requires a valid OpenEye license file to run.
-:::
-
+Though OpenEye can be installed for free, using it requires a license file. 
+No essential `openff-toolkit` release capabilities *require* the OpenEye toolkit, but the Open Force Field developers make use of it in parameterizing new open source force fields.

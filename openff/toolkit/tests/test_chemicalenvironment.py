@@ -1,3 +1,5 @@
+from typing import List
+
 import pytest
 
 from openff.toolkit.typing.chemistry import (
@@ -12,7 +14,7 @@ from openff.toolkit.utils.exceptions import SMIRKSMismatchError, SMIRKSParsingEr
 from openff.toolkit.utils.toolkits import OPENEYE_AVAILABLE
 
 # TODO: Evaluate which tests in this file should be moved to test_toolkits
-toolkits = []
+toolkits: List = []
 if OPENEYE_AVAILABLE:
     from openff.toolkit.utils.toolkits import OpenEyeToolkitWrapper, RDKitToolkitWrapper
 

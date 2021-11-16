@@ -10,4 +10,5 @@ dependencies:
   - openmmforcefields
   - openeye-toolkits
   - pytest
+  - pytest-rerunfailures
   - nbval

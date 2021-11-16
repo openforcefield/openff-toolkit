@@ -37,6 +37,7 @@ from openff.toolkit.utils.exceptions import (
     DuplicateParameterError,
     IncompatibleParameterError,
     IncompatibleUnitError,
+    MissingIndexedAttributeError,
     NotEnoughPointsForInterpolationError,
     ParameterLookupError,
     SMIRNOFFSpecError,
@@ -277,7 +278,7 @@ class TestInterpolation:
         }
 
         k = _linear_inter_or_extrapolate(k_bondorder, fractional_bond_order)
-        assert_almost_equal(k / k.unit, k_interpolated)
+        assert_almost_equal(k.value_in_unit(k.unit), k_interpolated)
 
     def test_linear_inter_or_extrapolate_one_point(self):
         """Test that linear interpolation raises an error if attempted with just one point"""
@@ -302,7 +303,7 @@ class TestInterpolation:
         }
 
         k = _linear_inter_or_extrapolate(k_bondorder, fractional_bond_order)
-        assert_almost_equal(k / k.unit, k_interpolated)
+        assert_almost_equal(k.value_in_unit(k.unit), k_interpolated)
 
     def test_linear_inter_or_extrapolate_below_zero(self):
         """Test that linear interpolation does not error if resulting k less than 0"""
@@ -314,11 +315,45 @@ class TestInterpolation:
         fractional_bond_order = 0.2
         k = _linear_inter_or_extrapolate(k_bondorder, fractional_bond_order)
 
-        assert k / k.unit < 0
+        assert k.value_in_unit(k.unit) < 0
 
 
 class TestParameterAttributeHandler:
     """Test suite for the base class _ParameterAttributeHandler."""
+
+    def test_access_get_set_single_indexed_attribute_legacy(self):
+        """Single indexed attributes such as k1 can be accessed through normal attribute syntax."""
+
+        class MyParameterType(_ParameterAttributeHandler):
+            k = IndexedParameterAttribute()
+
+        my_parameter = MyParameterType(k=[1, 2, 3])
+
+        # Getting the attribute works.
+        assert my_parameter.k1 == 1
+        assert my_parameter.k2 == 2
+        assert my_parameter.k3 == 3
+
+        # So does setting it.
+        my_parameter.k2 = 5
+        assert my_parameter.k2 == 5
+        assert my_parameter.k == [1, 5, 3]
+
+        # Accessing k4 raises an index error.
+        with pytest.raises(
+            IndexError, match="'k4' is out of bounds for indexed attribute 'k'"
+        ):
+            my_parameter.k4
+        with pytest.raises(
+            IndexError, match="'k4' is out of bounds for indexed attribute 'k'"
+        ):
+            my_parameter.k4 = 2
+
+        # For other attributes, the behavior is normal.
+        with pytest.raises(AttributeError, match="has no attribute 'x'"):
+            my_parameter.x
+        # Monkey-patching.
+        my_parameter.x = 3
 
     def test_access_get_set_single_indexed_attribute(self):
         """Single indexed attributes such as k1 can be accessed through normal attribute syntax."""
@@ -340,11 +375,13 @@ class TestParameterAttributeHandler:
 
         # Accessing k4 raises an index error.
         with pytest.raises(
-            IndexError, match="'k4' is out of bound for indexed attribute 'k'"
+            MissingIndexedAttributeError,
+            match="'k4' is out of bounds for indexed attribute 'k'",
         ):
             my_parameter.k4
         with pytest.raises(
-            IndexError, match="'k4' is out of bound for indexed attribute 'k'"
+            MissingIndexedAttributeError,
+            match="'k4' is out of bounds for indexed attribute 'k'",
         ):
             my_parameter.k4 = 2
 
@@ -353,6 +390,16 @@ class TestParameterAttributeHandler:
             my_parameter.x
         # Monkey-patching.
         my_parameter.x = 3
+
+    def test_hasattr(self):
+        """Single indexed attributes such as k1 can be accessed through normal attribute syntax."""
+
+        class MyParameterType(_ParameterAttributeHandler):
+            k = IndexedParameterAttribute()
+
+        my_parameter = MyParameterType(k=[1, 2, 3])
+        assert hasattr(my_parameter, "k3")
+        assert not hasattr(my_parameter, "k4")
 
     def test_mro_access_get_set_single_indexed_attribute(self):
         """Attribute access is forwarded correctly to the next MRO classes."""
@@ -1333,8 +1380,8 @@ class TestBondHandler:
 
         k = _linear_inter_or_extrapolate(k_bondorder, fractional_bond_order)
         length = _linear_inter_or_extrapolate(length_bondorder, fractional_bond_order)
-        assert_almost_equal(k / k.unit, k_interpolated, 1)
-        assert_almost_equal(length / length.unit, length_interpolated, 2)
+        assert_almost_equal(k.value_in_unit(k.unit), k_interpolated, 1)
+        assert_almost_equal(length.value_in_unit(length.unit), length_interpolated, 2)
 
     def test_different_defaults_03_04(self):
         """Ensure that the 0.3 and 0.4 versions' defaults are correctly set"""
