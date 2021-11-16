@@ -48,6 +48,8 @@ if TYPE_CHECKING:
     from openff.units.unit import Quantity
 
 from cached_property import cached_property
+from openmm import LocalCoordinatesSite, unit
+from openmm.app import Element, element
 from packaging import version
 
 import openff.toolkit
@@ -7396,6 +7398,31 @@ def _networkx_graph_to_hill_formula(graph: "nx.Graph") -> str:
         raise Exception("The graph must be a NetworkX graph.")
 
     atom_nums = list(dict(graph.nodes(data="atomic_number", default=1)).values())
+    return _atom_nums_to_hill_formula(atom_nums)
+
+
+def _topologymolecule_to_hill_formula(topology_molecule: "TopologyMolecule") -> str:
+    """
+    Convert a TopologyMolecule to a Hill formula.
+
+    This function exists only to maintain backwards-compatibility with the old
+    behavior of Molecule.to_hill_formulat of Molecule.to_hill_formula, which was
+    a static method that duck-typed inputs of Molecule or graph objects. When
+    `TopologyMolecule` is removed, this should also be removed.
+
+    Parameters
+    ----------
+    topology_molecule : TopologyMolecule
+        The TopologyMolecule to convert.
+
+    Returns
+    -------
+    str
+        The Hill formula corresponding to the TopologyMolecule.
+
+    """
+    atom_nums = [atom.atomic_number for atom in topology_molecule.atoms]
+
     return _atom_nums_to_hill_formula(atom_nums)
 
 
