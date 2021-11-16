@@ -101,8 +101,6 @@ jobs:
       - name: Install package
         shell: bash -l {0}
         run: |
-          pip install git+https://github.com/openforcefield/openff-interchange.git@skip-drivers
-
           # Remove the packaged openff-toolkit, installed as a dependency of openmmforcefields
           conda remove --force openff-toolkit-base
           python setup.py develop --no-deps
