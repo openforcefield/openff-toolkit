@@ -8,6 +8,11 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ## Current Development
 
+### Examples added
+
+- [PR #1113](https://github.com/openforcefield/openff-toolkit/pull/1113): Updates the Amber/GROMACS
+  example to use Interchange.
+
 
 ## 0.10.1 Minor feature and bugfix release
 
