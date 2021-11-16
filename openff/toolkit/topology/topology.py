@@ -23,6 +23,7 @@ from collections.abc import MutableMapping
 
 import numpy as np
 from openff.units import unit
+from openff.utilities import requires_package
 
 from openff.toolkit.typing.chemistry import ChemicalEnvironment
 from openff.toolkit.utils.exceptions import (
@@ -2266,10 +2267,13 @@ class Topology(Serializable):
                 local_topology_to_reference_index=local_top_to_ref_index,
             )
 
-        topology.box_vectors = from_openmm(openmm_topology.getPeriodicBoxVectors())
+        if openmm_topology.getPeriodicBoxVectors() is not None:
+            topology.box_vectors = from_openmm(openmm_topology.getPeriodicBoxVectors())
+
         # TODO: How can we preserve metadata from the openMM topology when creating the OFF topology?
         return topology
 
+    @requires_package("openmm")
     def to_openmm(self, ensure_unique_atom_names=True):
         """
         Create an OpenMM Topology object.
@@ -2379,6 +2383,7 @@ class Topology(Serializable):
             omm_topology.setPeriodicBoxVectors(self.box_vectors)
         return omm_topology
 
+    @requires_package("openmm")
     def to_file(self, filename, positions, file_format="PDB", keepIds=False):
         """
         Save coordinates and topology to a PDB file.
@@ -2405,9 +2410,14 @@ class Topology(Serializable):
             Output file format. Case insensitive. Currently only supported value is "pdb".
 
         """
+        from openmm import app
+        from openmm import unit as openmm_unit
+
         openmm_top = self.to_openmm()
         if not isinstance(positions, openmm_unit.Quantity):
-            positions = positions * openmm_unit.angstrom
+            from openff.units.openmm import to_openmm
+
+            positions = to_openmm(positions)
 
         file_format = file_format.upper()
         if file_format != "PDB":

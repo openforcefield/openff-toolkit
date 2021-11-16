@@ -28,7 +28,6 @@ Molecular chemical entity representation and routines to interface with cheminfo
    * Speed up overall import time by putting non-global imports only where they are needed
 
 """
-
 import operator
 import warnings
 from abc import abstractmethod
@@ -37,6 +36,7 @@ from copy import deepcopy
 from typing import TYPE_CHECKING, List, Optional, Union
 
 import numpy as np
+from mdtraj.core.element import Element
 from openff.units import unit
 
 if TYPE_CHECKING:
@@ -52,7 +52,6 @@ except ImportError:
     from simtk.openmm import LocalCoordinatesSite
 
 import openff.toolkit
-from openff.toolkit.utils import quantity_to_string, string_to_quantity
 from openff.toolkit.utils.exceptions import (
     IncompatibleUnitError,
     InvalidConformerError,
@@ -70,7 +69,14 @@ from openff.toolkit.utils.toolkits import (
     ToolkitWrapper,
     UndefinedStereochemistryError,
 )
-from openff.toolkit.utils.utils import MissingDependencyError, requires_package
+from openff.toolkit.utils.utils import (
+    MissingDependencyError,
+    dict_to_quantity,
+    quantity_to_dict,
+    quantity_to_string,
+    requires_package,
+    string_to_quantity,
+)
 
 # =============================================================================================
 # GLOBAL PARAMETERS
@@ -844,7 +850,7 @@ class VirtualSite(Particle):
         else:
             assert hasattr(sigma, "units")
             assert sigma.units in unit.angstrom.compatible_units()
-            self._sigma = sigma.m_as(unit.angstrom)
+            self._sigma = sigma.to(unit.angstrom)
 
         if epsilon is None:
             self._epsilon = None
@@ -852,7 +858,7 @@ class VirtualSite(Particle):
             assert hasattr(epsilon, "units")
             kj_mol = unit.kilojoule / unit.mole
             assert epsilon.units.is_compatible_with(kj_mol)
-            self._epsilon = epsilon.m_as(kj_mol)
+            self._epsilon = epsilon.to(kj_mol)
 
         if charge_increments is None:
             self._charge_increments = None
@@ -914,11 +920,11 @@ class VirtualSite(Particle):
         vsite_dict = OrderedDict()
         vsite_dict["name"] = self._name
         vsite_dict["atoms"] = tuple([i.molecule_atom_index for i in self.atoms])
-        vsite_dict["charge_increments"] = quantity_to_string(self._charge_increments)
+        vsite_dict["charge_increments"] = quantity_to_dict(self._charge_increments)
 
-        vsite_dict["epsilon"] = quantity_to_string(self._epsilon)
+        vsite_dict["epsilon"] = quantity_to_dict(self._epsilon)
 
-        vsite_dict["sigma"] = quantity_to_string(self._sigma)
+        vsite_dict["sigma"] = quantity_to_dict(self._sigma)
         vsite_dict["orientations"] = self._orientations
 
         # skip packing the particles; they are created dynamically
@@ -934,13 +940,13 @@ class VirtualSite(Particle):
         vsite_dict_units = deepcopy(vsite_dict)
 
         # Attach units to epsilon term
-        vsite_dict_units["epsilon"] = string_to_quantity(vsite_dict["epsilon"])
-        vsite_dict_units["sigma"] = string_to_quantity(vsite_dict["sigma"])
-        vsite_dict_units["charge_increments"] = string_to_quantity(
+        vsite_dict_units["epsilon"] = dict_to_quantity(vsite_dict["epsilon"])
+        vsite_dict_units["sigma"] = dict_to_quantity(vsite_dict["sigma"])
+        vsite_dict_units["charge_increments"] = dict_to_quantity(
             vsite_dict["charge_increments"]
         )
 
-        vsite_dict_units["orientation"] = cls._orientation
+        vsite_dict_units["orientations"] = cls._orientation
 
         return VirtualSite(**vsite_dict_units)
 
@@ -1299,14 +1305,14 @@ class BondChargeVirtualSite(VirtualSite):
             name=name,
             orientations=orientations,
         )
-        self._distance = distance.m_as(unit.angstrom)
+        self._distance = distance.to(unit.angstrom)
 
     def __eq__(self, other):
         return super().__eq__(other)
 
     def to_dict(self):
         vsite_dict = super().to_dict()
-        vsite_dict["distance"] = quantity_to_string(self._distance)
+        vsite_dict["distance"] = quantity_to_dict(self._distance)
 
         vsite_dict["vsite_type"] = self.type
         vsite_dict["orientations"] = self._orientations
@@ -1321,7 +1327,7 @@ class BondChargeVirtualSite(VirtualSite):
         base_dict.pop("vsite_type")
         base_dict.pop("distance")
         vsite = super().from_dict(**base_dict)
-        vsite._distance = string_to_quantity(vsite_dict["distance"])
+        vsite._distance = dict_to_quantity(vsite_dict["distance"])
         return vsite
 
     @property
@@ -1463,15 +1469,16 @@ class MonovalentLonePairVirtualSite(VirtualSite):
             name=name,
             orientations=orientations,
         )
-        self._distance = distance.m_as(unit.angstrom)
-        self._out_of_plane_angle = out_of_plane_angle.m_as(unit.degree)
-        self._in_plane_angle = in_plane_angle.m_as(unit.degree)
+        self._distance = distance.to(unit.angstrom)
+        self._out_of_plane_angle = out_of_plane_angle.to(unit.degree)
+        self._in_plane_angle = in_plane_angle.to(unit.degree)
 
     def to_dict(self):
         vsite_dict = super().to_dict()
-        vsite_dict["distance"] = quantity_to_string(self._distance)
-        vsite_dict["out_of_plane_angle"] = quantity_to_string(self._out_of_plane_angle)
-        vsite_dict["in_plane_angle"] = quantity_to_string(self._in_plane_angle)
+        vsite_dict["distance"] = quantity_to_dict(self._distance)
+
+        vsite_dict["out_of_plane_angle"] = quantity_to_dict(self._out_of_plane_angle)
+        vsite_dict["in_plane_angle"] = quantity_to_dict(self._in_plane_angle)
         vsite_dict["vsite_type"] = self.type
         return vsite_dict
 
@@ -1495,8 +1502,8 @@ class MonovalentLonePairVirtualSite(VirtualSite):
         """
         # The function is overridden only to have a custom docstring.
         vsite = super().from_dict(vsite_dict)
-        vsite._out_of_plane_angle = string_to_quantity(vsite_dict["out_of_plane_angle"])
-        vsite._in_plane_angle = string_to_quantity(vsite_dict["in_plane_angle"])
+        vsite._out_of_plane_angle = dict_to_quantity(vsite_dict["out_of_plane_angle"])
+        vsite._in_plane_angle = dict_to_quantity(vsite_dict["in_plane_angle"])
         return vsite
 
     @property
@@ -1550,8 +1557,8 @@ class MonovalentLonePairVirtualSite(VirtualSite):
         in the local frame for the x, y, and z directions.
         """
 
-        theta = self._in_plane_angle.m_as(unit.radians)
-        psi = self._out_of_plane_angle.m_as(unit.radians)
+        theta = self._in_plane_angle.to(unit.radians)
+        psi = self._out_of_plane_angle.to(unit.radians)
 
         distance_unit = self._distance.units
         pos = unit.Quantity(
@@ -1646,16 +1653,16 @@ class DivalentLonePairVirtualSite(VirtualSite):
             name=name,
             orientations=orientations,
         )
-        self._distance = distance.m_as(unit.angstrom)
-        self._out_of_plane_angle = out_of_plane_angle.m_as(unit.degree)
+        self._distance = distance.to(unit.angstrom)
+        self._out_of_plane_angle = out_of_plane_angle.to(unit.degree)
 
     def __eq__(self, other):
         return super().__eq__(other)
 
     def to_dict(self):
         vsite_dict = super().to_dict()
-        vsite_dict["distance"] = quantity_to_string(self._distance)
-        vsite_dict["out_of_plane_angle"] = quantity_to_string(self._out_of_plane_angle)
+        vsite_dict["distance"] = quantity_to_dict(self._distance)
+        vsite_dict["out_of_plane_angle"] = quantity_to_dict(self._out_of_plane_angle)
         vsite_dict["vsite_type"] = self.type
         return vsite_dict
 
@@ -1676,7 +1683,7 @@ class DivalentLonePairVirtualSite(VirtualSite):
         """
         # The function is overridden only to have a custom docstring.
         vsite = super().from_dict(vsite_dict)
-        vsite._out_of_plane_angle = string_to_quantity(vsite_dict["out_of_plane_angle"])
+        vsite._out_of_plane_angle = dict_to_quantity(vsite_dict["out_of_plane_angle"])
         return vsite
 
     @property
@@ -1725,7 +1732,7 @@ class DivalentLonePairVirtualSite(VirtualSite):
         displacements in the local frame for the x, y, and z directions.
         """
 
-        theta = self._out_of_plane_angle.m_as(unit.radians)
+        theta = self._out_of_plane_angle.to(unit.radians)
 
         distance_unit = self._distance.units
 
@@ -1809,14 +1816,14 @@ class TrivalentLonePairVirtualSite(VirtualSite):
             name=name,
             orientations=orientations,
         )
-        self._distance = distance.m_as(unit.angstrom)
+        self._distance = distance.to(unit.angstrom)
 
     def __eq__(self, other):
         return super().__eq__(other)
 
     def to_dict(self):
         vsite_dict = super().to_dict()
-        vsite_dict["distance"] = quantity_to_string(self._distance)
+        vsite_dict["distance"] = quantity_to_dict(self._distance)
         vsite_dict["vsite_type"] = self.type
         return vsite_dict
 
@@ -2561,9 +2568,9 @@ class FrozenMolecule(Serializable):
             vsite_dict_units = deepcopy(vsite_dict)
 
             # Attach units to epsilon term
-            vsite_dict_units["epsilon"] = string_to_quantity(vsite_dict["epsilon"])
-            vsite_dict_units["sigma"] = string_to_quantity(vsite_dict["sigma"])
-            vsite_dict_units["charge_increments"] = string_to_quantity(
+            vsite_dict_units["epsilon"] = dict_to_quantity(vsite_dict["epsilon"])
+            vsite_dict_units["sigma"] = dict_to_quantity(vsite_dict["sigma"])
+            vsite_dict_units["charge_increments"] = dict_to_quantity(
                 vsite_dict["charge_increments"]
             )
             vsite_dict_units["orientations"] = vsite_dict["orientations"]
@@ -2574,39 +2581,31 @@ class FrozenMolecule(Serializable):
             vsite_dict_units["atoms"] = atoms
             if vsite_dict_units["vsite_type"] == "BondChargeVirtualSite":
                 del vsite_dict_units["vsite_type"]
-                vsite_dict_units["distance"] = string_to_quantity(
-                    vsite_dict["distance"]
-                )
+                vsite_dict_units["distance"] = dict_to_quantity(vsite_dict["distance"])
                 self._add_bond_charge_virtual_site(**vsite_dict_units)
 
             elif vsite_dict_units["vsite_type"] == "MonovalentLonePairVirtualSite":
                 del vsite_dict_units["vsite_type"]
-                vsite_dict_units["distance"] = string_to_quantity(
-                    vsite_dict["distance"]
-                )
-                vsite_dict_units["in_plane_angle"] = string_to_quantity(
+                vsite_dict_units["distance"] = dict_to_quantity(vsite_dict["distance"])
+                vsite_dict_units["in_plane_angle"] = dict_to_quantity(
                     vsite_dict["in_plane_angle"]
                 )
-                vsite_dict_units["out_of_plane_angle"] = string_to_quantity(
+                vsite_dict_units["out_of_plane_angle"] = dict_to_quantity(
                     vsite_dict["out_of_plane_angle"]
                 )
                 self._add_monovalent_lone_pair_virtual_site(**vsite_dict_units)
 
             elif vsite_dict_units["vsite_type"] == "DivalentLonePairVirtualSite":
                 del vsite_dict_units["vsite_type"]
-                vsite_dict_units["distance"] = string_to_quantity(
-                    vsite_dict["distance"]
-                )
-                vsite_dict_units["out_of_plane_angle"] = string_to_quantity(
+                vsite_dict_units["distance"] = dict_to_quantity(vsite_dict["distance"])
+                vsite_dict_units["out_of_plane_angle"] = dict_to_quantity(
                     vsite_dict["out_of_plane_angle"]
                 )
                 self._add_divalent_lone_pair_virtual_site(**vsite_dict_units)
 
             elif vsite_dict_units["vsite_type"] == "TrivalentLonePairVirtualSite":
                 del vsite_dict_units["vsite_type"]
-                vsite_dict_units["distance"] = string_to_quantity(
-                    vsite_dict["distance"]
-                )
+                vsite_dict_units["distance"] = dict_to_quantity(vsite_dict["distance"])
                 self._add_trivalent_lone_pair_virtual_site(**vsite_dict_units)
 
             else:

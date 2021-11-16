@@ -207,6 +207,17 @@ def _unit_to_string(input_unit):
     return unit_string
 
 
+def quantity_to_dict(input_quantity):
+    return {
+        "value": input_quantity.magnitude,
+        "unit": str(input_quantity.units),
+    }
+
+
+def dict_to_quantity(input_dict):
+    return input_dict["value"] * unit.Unit(input_dict["unit"])
+
+
 def quantity_to_string(input_quantity):
     return str(input_quantity)
 

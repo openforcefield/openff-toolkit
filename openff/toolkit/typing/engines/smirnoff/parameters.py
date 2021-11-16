@@ -2460,7 +2460,6 @@ class ParameterHandler(_ParameterAttributeHandler):
             try:
                 this_val, other_val = get_unitless_values(attr)
             except AttributeError:
-                # import ipdb; ipdb.set_trace()
                 raise AttributeError(
                     f"Mismatch found with {attr=}, {this_val=}, {other_val=}"
                 )
