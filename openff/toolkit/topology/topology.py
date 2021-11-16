@@ -689,41 +689,16 @@ class Topology(Serializable):
             )
         self._fractional_bond_order_model = fractional_bond_order_model
 
+
     @property
-    def n_reference_molecules(self):
-        """
-        Returns the number of reference (unique) molecules in in this Topology.
+    def n_molecules(self):
+        """Returns the number of molecules in this Topology
 
         Returns
         -------
-        n_reference_molecules : int
-        """
-        count = 0
-        for i in self.reference_molecules:
-            count += 1
-        return count
-
-    @property
-    def n_topology_molecules(self):
-        """
-        Returns the number of topology molecules in in this Topology.
-
-        Returns
-        -------
-        n_topology_molecules : int
+        n_molecules : Iterable of Molecule
         """
         return len(self._molecules)
-
-    @property
-    def topology_molecules(self):
-        """Returns an iterator over all the TopologyMolecules in this Topology
-
-        Returns
-        -------
-        topology_molecules : Iterable of TopologyMolecule
-        """
-        # TODO: Put deprecation warning here
-        return self.molecules
 
     @property
     def molecules(self):
@@ -2275,3 +2250,39 @@ class Topology(Serializable):
         """
         _TOPOLOGY_DEPRECATION_WARNING("topology_virtual_sites", "virtual_sites")
         return self.virtual_sites
+
+
+    @property
+    def n_reference_molecules(self):
+        """
+        Returns the number of reference (unique) molecules in in this Topology.
+
+        Returns
+        -------
+        n_reference_molecules : int
+        """
+        _TOPOLOGY_DEPRECATION_WARNING("n_reference_molecules", "n_molecules")
+        return self.n_molecules
+
+    @property
+    def n_topology_molecules(self):
+        """
+        Returns the number of topology molecules in in this Topology.
+
+        Returns
+        -------
+        n_topology_molecules : int
+        """
+        _TOPOLOGY_DEPRECATION_WARNING("n_topology_molecules", "n_molecules")
+        return self.n_molecules
+
+    @property
+    def topology_molecules(self):
+        """Returns an iterator over all the TopologyMolecules in this Topology
+
+        Returns
+        -------
+        topology_molecules : Iterable of TopologyMolecule
+        """
+        _TOPOLOGY_DEPRECATION_WARNING("topology_molecules", "molecules")
+        return self.molecules
