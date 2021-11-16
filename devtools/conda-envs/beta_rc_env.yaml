@@ -1,0 +1,46 @@
+name: test
+channels:
+  - conda-forge/label/openmm_rc
+  - openeye/label/rc
+  - openeye
+  - conda-forge
+dependencies:
+    # Base depends
+  - python
+  - pip
+  - packaging
+  - openmm
+  - openff-forcefields
+  - smirnoff99Frosst
+  - numpy
+  - networkx
+  - ambertools
+  - rdkit
+  - mdtraj
+  - xmltodict
+    # Test-only/optional/dev
+  - pytest
+  - pytest-cov
+  - nbval
+  - codecov
+  - coverage
+  - openeye-toolkits
+  - black
+  - isort
+  - pyyaml
+  - toml
+  - bson
+  - msgpack-python
+  - qcelemental
+  - qcportal
+  - qcengine
+  - openff-interchange
+  # Typing
+  - mypy
+  - typing-extensions
+  - pip:
+    - types-pkg_resources
+    - types-setuptools
+    - types-toml
+    - types-PyYAML
+    - mongo-types

@@ -23,17 +23,17 @@ __all__ = [
     "SMIRNOFFVersionError",
     "SMIRNOFFAromaticityError",
     "SMIRNOFFParseError",
-    "ParseError",
     "PartialChargeVirtualSitesError",
     "ForceField",
 ]
-
 
 import copy
 import logging
 import os
 import pathlib
+import warnings
 from collections import OrderedDict
+from typing import List
 
 from openff.toolkit.topology.molecule import DEFAULT_AROMATICITY_MODEL
 from openff.toolkit.typing.engines.smirnoff.io import ParameterIOHandler
@@ -44,7 +44,6 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
 from openff.toolkit.typing.engines.smirnoff.plugins import load_handler_plugins
 from openff.toolkit.utils.exceptions import (
     ParameterHandlerRegistrationError,
-    ParseError,
     PartialChargeVirtualSitesError,
     SMIRNOFFAromaticityError,
     SMIRNOFFParseError,
@@ -59,6 +58,23 @@ from openff.toolkit.utils.utils import (
     requires_package,
 )
 
+deprecated_names = ["ParseError"]
+
+
+def __getattr__(name):
+    if name in deprecated_names:
+        warnings.filterwarnings("default", category=DeprecationWarning)
+        warning_msg = f"{name} is DEPRECATED and will be removed in a future release of the OpenFF Toolkit."
+        warnings.warn(warning_msg, DeprecationWarning)
+
+        if name == "ParseError":
+            from openff.toolkit.utils.exceptions import _DeprecatedParseError
+
+            return _DeprecatedParseError
+
+    raise AttributeError(f"module {__name__} has no attribute {name}")
+
+
 # =============================================================================================
 # CONFIGURE LOGGER
 # =============================================================================================
@@ -70,10 +86,10 @@ logger = logging.getLogger(__name__)
 # =============================================================================================
 
 # Directory paths used by ForceField to discover offxml files.
-_installed_offxml_dir_paths = []
+_installed_offxml_dir_paths: List[str] = []
 
 
-def _get_installed_offxml_dir_paths():
+def _get_installed_offxml_dir_paths() -> List[str]:
     """Return the list of directory paths where to search for offxml files.
 
     This function load the information by calling all the entry points
@@ -255,7 +271,7 @@ class ForceField:
         ----------
         sources : string or file-like object or open file handle or URL (or iterable of these)
             A list of files defining the SMIRNOFF force field to be loaded.
-            Currently, only `the SMIRNOFF XML format <https://github.com/openforcefield/openff-toolkit/blob/master/The-SMIRNOFF-force-field-format.md>`_ is supported.
+            Currently, only `the SMIRNOFF XML format <https://openforcefield.github.io/standards/standards/smirnoff/>`_ is supported.
             Each entry may be an absolute file path, a path relative to the current working directory, a path relative to this module's data subdirectory
             (for built in force fields), or an open file-like object with a ``read()`` method from which the force field XML data can be loaded.
             If multiple files are specified, any top-level tags that are repeated will be merged if they are compatible,
@@ -849,7 +865,7 @@ class ForceField:
         ----------
         sources : string or file-like object or open file handle or URL (or iterable of these)
             A list of files defining the SMIRNOFF force field to be loaded.
-            Currently, only `the SMIRNOFF XML format <https://github.com/openforcefield/openff-toolkit/blob/master/The-SMIRNOFF-force-field-format.md>`_ is supported.
+            Currently, only `the SMIRNOFF XML format <https://openforcefield.github.io/standards/standards/smirnoff/>`_ is supported.
             Each entry may be an absolute file path, a path relative to the current working directory, a path relative to this module's data subdirectory
             (for built in force fields), or an open file-like object with a ``read()`` method from which the force field XML data can be loaded.
             If multiple files are specified, any top-level tags that are repeated will be merged if they are compatible,
@@ -1046,7 +1062,7 @@ class ForceField:
         source : str or bytes
             sources : string or file-like object or open file handle or URL (or iterable of these)
             A list of files defining the SMIRNOFF force field to be loaded
-            Currently, only `the SMIRNOFF XML format <https://github.com/openforcefield/openff-toolkit/blob/master/The-SMIRNOFF-force-field-format.md>`_ is supported.
+            Currently, only `the SMIRNOFF XML format <https://openforcefield.github.io/standards/standards/smirnoff/>`_ is supported.
             Each entry may be an absolute file path, a path relative to the current working directory, a path relative to this module's data subdirectory
             (for built in force fields), or an open file-like object with a ``read()`` method from which the force field XML data can be loaded.
 

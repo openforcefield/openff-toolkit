@@ -19,7 +19,7 @@ import numpy as np
 from openff.units import unit
 
 if TYPE_CHECKING:
-    from openforcefield.topology.molecule import Molecule
+    from openff.toolkit.topology.molecule import Molecule
 
 from openff.toolkit.utils import base_wrapper
 from openff.toolkit.utils.constants import DEFAULT_AROMATICITY_MODEL

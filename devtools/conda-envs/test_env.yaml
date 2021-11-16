@@ -19,6 +19,7 @@ dependencies:
     # Test-only/optional/dev
   - pytest
   - pytest-cov
+  - pytest-rerunfailures
   - nbval
   - codecov
   - coverage
@@ -34,5 +35,12 @@ dependencies:
   - qcengine
   - openff-interchange
   - openff-units
+  # Typing
+  - mypy
+  - typing-extensions
   - pip:
-      - git+git://github.com/openforcefield/openff-units.git@smirnoff-per-mol
+    - types-pkg_resources
+    - types-setuptools
+    - types-toml
+    - types-PyYAML
+    - mongo-types

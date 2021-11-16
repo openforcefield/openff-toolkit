@@ -93,6 +93,31 @@ jupyter_execute_notebooks = "force"
 # List of notebooks NOT to execute (use output stored in notebook instead)
 execution_excludepatterns = []
 
+
+# sphinx-notfound-page
+# https://github.com/readthedocs/sphinx-notfound-page
+# Renders a 404 page with absolute links
+import importlib
+
+if importlib.util.find_spec("notfound"):
+    extensions.append("notfound.extension")
+
+    notfound_context = {
+        "title": "404: File Not Found",
+        "body": """
+    <h1>404: File Not Found</h1>
+    <p>
+        Sorry, we couldn't find that page. This often happens as a result of
+        following an outdated link. Please check the
+        <a href="https://open-forcefield-toolkit.readthedocs.io/en/stable/">latest stable version</a>
+        of the docs, unless you're sure you want an earlier version, and
+        try using the search box or the navigation menu on the left.
+    </p>
+    <p>
+    </p>
+    """,
+    }
+
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
 source_suffix = [".rst", ".md", ".ipynb"]
@@ -156,7 +181,7 @@ html_theme_options = {
     # teal, green, light-green, lime, yellow, amber, orange, deep-orange
     "color_accent": "openff-toolkit-blue",
     # Content Minification for deployment, prettification for debugging
-    "html_minify": True,
+    "html_minify": False,
     "html_prettify": False,
     "css_minify": True,
     "master_doc": False,

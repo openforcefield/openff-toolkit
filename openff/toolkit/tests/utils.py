@@ -1175,7 +1175,7 @@ def _get_torsion_force_parameters(force, system, ignored_parameters):
         torsion_key = [atom1, atom2, atom3, atom4]
         if len(set(torsion_key)) != 4:
             raise ValueError(
-                "Torsion {} is defined on less than 4 atoms: {}".format(torsion_key)
+                f"Torsion {torsion_idx} is defined on less than 4 atoms: {torsion_key}"
             )
 
         # Check if this is proper or not.
@@ -1808,12 +1808,12 @@ def get_14_scaling_factors(omm_sys: openmm.System) -> Tuple[List, List]:
         i, j, q, sig, eps = nonbond_force.getExceptionParameters(exception_idx)
 
         # Trust that q == 0 covers the cases of 1-2, 1-3, and truly being 0
-        if q / unit.elementary_charge ** 2 != 0:
+        if q.value_in_unit(unit.elementary_charge ** 2) != 0:
             q_i = nonbond_force.getParticleParameters(i)[0]
             q_j = nonbond_force.getParticleParameters(j)[0]
             coul_14.append(q / (q_i * q_j))
 
-        if eps / unit.kilojoule_per_mole != 0:
+        if eps.value_in_unit(unit.kilojoule_per_mole) != 0:
             eps_i = nonbond_force.getParticleParameters(i)[2]
             eps_j = nonbond_force.getParticleParameters(j)[2]
             vdw_14.append(eps / (eps_i * eps_j) ** 0.5)
