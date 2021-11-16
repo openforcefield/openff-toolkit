@@ -1526,6 +1526,18 @@ class TestMolecule:
             is inputs["result"]
         )
 
+        assert (
+            benzene.is_isomorphic_with(
+                benzene_no_aromatic,
+                aromatic_matching=inputs["aromatic_matching"],
+                formal_charge_matching=inputs["formal_charge_matching"],
+                bond_order_matching=inputs["bond_order_matching"],
+                atom_stereochemistry_matching=inputs["atom_stereochemistry_matching"],
+                bond_stereochemistry_matching=inputs["bond_stereochemistry_matching"],
+            )
+            is inputs["result"]
+        )
+
     @requires_openeye
     def test_strip_atom_stereochemistry(self):
         """Test the basic behavior of strip_atom_stereochemistry"""
