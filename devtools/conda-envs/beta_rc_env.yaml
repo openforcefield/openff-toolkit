@@ -1,5 +1,7 @@
 name: test
 channels:
+  - conda-forge/label/openmm_rc
+  - openeye/label/rc
   - openeye
   - conda-forge
 dependencies:
@@ -19,7 +21,6 @@ dependencies:
     # Test-only/optional/dev
   - pytest
   - pytest-cov
-  - pytest-rerunfailures
   - nbval
   - codecov
   - coverage
