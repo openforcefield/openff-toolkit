@@ -56,14 +56,14 @@ jobs:
               echo "ENVFILE=test_env" >> $GITHUB_ENV
               echo "JOBNAME='RDKit and OpenEye'" >> $GITHUB_ENV
               echo "TOOLKIT_CHECKS=RDKIT OPENEYE" >> $GITHUB_ENV
-              echo "PACKAGES_TO_REMOVE=''" >> $GITHUB_ENV
+              echo "PACKAGES_TO_REMOVE=" >> $GITHUB_ENV
           fi
 
           if [[ ${{ matrix.openeye }} == true && ${{ matrix.rdkit }} == false ]]; then
               echo "ENVFILE=openeye" >> $GITHUB_ENV
               echo "JOBNAME='OpenEye'" >> $GITHUB_ENV
               echo "TOOLKIT_CHECKS=OPENEYE" >> $GITHUB_ENV
-              echo "PACKAGES_TO_REMOVE='ambertools rdkit'" >> $GITHUB_ENV
+              echo "PACKAGES_TO_REMOVE=ambertools rdkit" >> $GITHUB_ENV
           fi
 
           if [[ ${{ matrix.openeye }} == false && ${{ matrix.rdkit }} == true ]]; then
@@ -105,10 +105,11 @@ jobs:
 
       - name: Remove undesired toolkits
         run: |
-          if [[ ${{ env.PACKAGES_TO_REMOVE }} ]]; then
+          if [ ! -z "${{ env.PACKAGES_TO_REMOVE }}" ]; then
             for cpkg in ${{ env.PACKAGES_TO_REMOVE }}; do
-              echo $cpkg
-              if [[ $(conda list | grep $cpkg) ]]; then conda remove --force $cpkg --yes ; fi
+              cmd='if [[ $(conda list | grep $cpkg) ]]; then conda remove --force $cpkg --yes ; fi'
+              echo $cmd
+              eval ${cmd}
             done
           fi
 
@@ -117,6 +118,15 @@ jobs:
           for tk in ${{ env.TOOLKIT_CHECKS }}; do
             python -c "from openff.toolkit.utils.toolkits import ${tk}_AVAILABLE; assert ${tk}_AVAILABLE, '${tk} unavailable'"
           done
+
+      - name: Check uninstalled toolkits
+        run: |
+          if [ ! -z "${{ env.PACKAGES_TO_REMOVE }}" ]; then
+            for tk in ${{ env.PACKAGES_TO_REMOVE }}; do
+              TK=$(echo ${tk%-*} | tr 'a-z' 'A-Z')
+              python -c "from openff.toolkit.utils.toolkits import ${TK}_AVAILABLE; assert not ${TK}_AVAILABLE, '${TK} available'"
+            done
+          fi
 
       - name: Environment Information
         run: |
