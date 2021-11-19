@@ -54,21 +54,21 @@ jobs:
         run: |
           if [[ ${{ matrix.openeye }} == true && ${{ matrix.rdkit }} == true ]]; then
               echo "ENVFILE=test_env" >> $GITHUB_ENV
-              echo "JOBNAME='RDKit and OpenEye'" >> $GITHUB_ENV
+              echo "JOBNAME=RDKit and OpenEye" >> $GITHUB_ENV
               echo "TOOLKIT_CHECKS=RDKIT OPENEYE" >> $GITHUB_ENV
               echo "PACKAGES_TO_REMOVE=" >> $GITHUB_ENV
           fi
 
           if [[ ${{ matrix.openeye }} == true && ${{ matrix.rdkit }} == false ]]; then
               echo "ENVFILE=openeye" >> $GITHUB_ENV
-              echo "JOBNAME='OpenEye'" >> $GITHUB_ENV
+              echo "JOBNAME=OpenEye" >> $GITHUB_ENV
               echo "TOOLKIT_CHECKS=OPENEYE" >> $GITHUB_ENV
               echo "PACKAGES_TO_REMOVE=ambertools rdkit" >> $GITHUB_ENV
           fi
 
           if [[ ${{ matrix.openeye }} == false && ${{ matrix.rdkit }} == true ]]; then
               echo "ENVFILE=rdkit" >> $GITHUB_ENV
-              echo "JOBNAME='RDKit'" >> $GITHUB_ENV
+              echo "JOBNAME=RDKit" >> $GITHUB_ENV
               echo "TOOLKIT_CHECKS=RDKIT" >> $GITHUB_ENV
               echo "PACKAGES_TO_REMOVE=openeye-toolkits" >> $GITHUB_ENV
           fi
@@ -107,9 +107,7 @@ jobs:
         run: |
           if [ ! -z "${{ env.PACKAGES_TO_REMOVE }}" ]; then
             for cpkg in ${{ env.PACKAGES_TO_REMOVE }}; do
-              cmd='if [[ $(conda list | grep $cpkg) ]]; then conda remove --force $cpkg --yes ; fi'
-              echo $cmd
-              eval ${cmd}
+              if [[ $(conda list | grep $cpkg) ]]; then conda remove --force $cpkg --yes ; fi
             done
           fi
 
@@ -138,8 +136,6 @@ jobs:
         run: pytest -r fE --tb=short openff/toolkit/tests/test_links.py
 
       - name: Run mypy
-        # Try to prevent failure from preventing later steps, but also display red X
-        # https://stackoverflow.com/a/62112985/4248961
         if: ${{ matrix.rdkit == true && matrix.openeye == true }}
         run: mypy --namespace-packages -p "openff.toolkit"
 
