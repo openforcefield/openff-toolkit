@@ -2215,7 +2215,11 @@ class Topology(Serializable):
                     match_found = True
                     break
             if match_found is False:
-                hill_formula = Molecule.to_hill_formula(omm_mol_G)
+                from openff.toolkit.topology.molecule import (
+                    _networkx_graph_to_hill_formula,
+                )
+
+                hill_formula = _networkx_graph_to_hill_formula(omm_mol_G)
                 msg = f"No match found for molecule {hill_formula}. "
                 probably_missing_conect = [
                     "C",

@@ -8,6 +8,17 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ## Current Development
 
+### Behaviors changed and bugfixes
+
+- [PR #1118](https://github.com/openforcefield/openforcefield/pull/1118):
+  [`Molecule.to_hill_formula`](openff.toolkit.topology.Molecule.to_hill_formula) is now a class method
+  and no longer accepts input of NetworkX graphs.
+
+### Examples added
+
+- [PR #1113](https://github.com/openforcefield/openff-toolkit/pull/1113): Updates the Amber/GROMACS
+  example to use Interchange.
+
 
 ## 0.10.1 Minor feature and bugfix release
 
