@@ -2461,7 +2461,8 @@ class ParameterHandler(_ParameterAttributeHandler):
                 this_val, other_val = get_unitless_values(attr)
             except AttributeError:
                 raise AttributeError(
-                    f"Mismatch found with {attr=}, {this_val=}, {other_val=}"
+                    f"Mismatch found with attr={attr}, this_val={this_val}, "
+                    f"other_val={other_val}"
                 )
             if abs(this_val - other_val) > tolerance:
                 raise IncompatibleParameterError(
