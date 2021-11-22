@@ -38,6 +38,7 @@ from typing import TYPE_CHECKING, List, Optional, Union
 import numpy as np
 from mdtraj.core.element import Element
 from openff.units import unit
+from openff.units.openmm import to_openmm
 
 if TYPE_CHECKING:
     import networkx as nx
@@ -1189,7 +1190,7 @@ class VirtualSite(Particle):
         originwt, xdir, ydir = self.local_frame_weights
         pos = self.local_frame_position
 
-        return LocalCoordinatesSite(atoms, originwt, xdir, ydir, pos)
+        return LocalCoordinatesSite(atoms, originwt, xdir, ydir, to_openmm(pos))
 
     def compute_positions_from_conformer(self, conformer_idx):
         """
