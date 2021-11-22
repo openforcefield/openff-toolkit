@@ -3272,8 +3272,8 @@ class TestForceFieldConstraints:
             }
             assert atom_elements == bond_elements
             assert np.isclose(
-                distance.value_in_unit(unit.angstrom),
-                bond_length.value_in_unit(unit.angstrom),
+                distance.value_in_unit(openmm_unit.angstrom),
+                bond_length.m_as(unit.angstrom),
             )
 
     def test_constraints_hbonds(self):
