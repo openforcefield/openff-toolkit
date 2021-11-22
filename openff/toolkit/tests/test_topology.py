@@ -841,7 +841,7 @@ class TestTopology(TestCase):
         count = 1
         coord = None
         with NamedTemporaryFile(suffix=".pdb") as iofile:
-            positions_nanometer = positions_angstrom.in_units_of(unit.nanometer)
+            positions_nanometer = positions_angstrom.to(unit.nanometer)
             topology.to_file(iofile.name, positions_nanometer)
             data = open(iofile.name).readlines()
             for line in data:
@@ -853,7 +853,7 @@ class TestTopology(TestCase):
         count = 1
         coord = "abc"
         with NamedTemporaryFile(suffix=".pdb") as iofile:
-            positions_unitless = positions_angstrom._value
+            positions_unitless = positions_angstrom.m
             topology.to_file(iofile.name, positions_unitless)
             data = open(iofile.name).readlines()
             for line in data:
@@ -915,7 +915,7 @@ class TestTopology(TestCase):
         topology = Topology()
         lines = []
         with NamedTemporaryFile(suffix=".pdb") as iofile:
-            topology.to_file(iofile.name, [])
+            topology.to_file(iofile.name, [] * unit.nanometer)
             data = open(iofile.name).readlines()
             for line in data:
                 lines.append(line.split())

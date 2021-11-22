@@ -2415,6 +2415,9 @@ class Topology(Serializable):
 
         openmm_top = self.to_openmm()
         if not isinstance(positions, openmm_unit.Quantity):
+            if isinstance(positions, np.ndarray):
+                positions = unit.Quantity(positions, unit.angstroms)
+
             from openff.units.openmm import to_openmm
 
             positions = to_openmm(positions)
