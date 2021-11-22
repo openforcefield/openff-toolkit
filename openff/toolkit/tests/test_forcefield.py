@@ -940,7 +940,7 @@ class TestForceField:
     def test_do_not_load_in_child_dir(self, tmp_path):
         """Ensure force field XML files in nested subdirectories are not loaded
         when not explicitly pointed to."""
-        nested_directory = os.path.join("a", "b", "c")
+        nested_directory = tmp_path / os.path.join("a", "b", "c")
         os.makedirs(nested_directory, exist_ok=True)
 
         # Create a FF in a nested directory
