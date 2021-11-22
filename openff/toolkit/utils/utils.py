@@ -313,22 +313,6 @@ def string_to_unit(unit_string):
     return unit.Unit(unit_string)
     import ast
 
-    output_unit = _ast_eval(ast.parse(unit_string, mode="eval").body)
-    return output_unit
-
-    # if (serialized['unitless_value'] is None) and (serialized['unit'] is None):
-    #    return None
-    # quantity_unit = None
-    # for unit_name, power in serialized['unit']:
-    #    unit_name = unit_name.replace(
-    #        ' ', '_')  # Convert eg. 'elementary charge' to 'elementary_charge'
-    #    if quantity_unit is None:
-    #        quantity_unit = (getattr(unit, unit_name)**power)
-    #    else:
-    #        quantity_unit *= (getattr(unit, unit_name)**power)
-    # quantity = unit.Quantity(serialized['unitless_value'], quantity_unit)
-    # return quantity
-
 
 def string_to_quantity(quantity_string):
     from tokenize import TokenError

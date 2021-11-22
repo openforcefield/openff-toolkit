@@ -4149,13 +4149,13 @@ class TestForceFieldParameterAssignment:
 
         np.testing.assert_almost_equal(
             actual=get_14_scaling_factors(sys_no_vdw)[0],
-            desired=ff_no_vdw["Electrostatics"].scale14,
+            desired=ff_no_vdw["Electrostatics"].scale14.m,
             decimal=8,
         )
 
         np.testing.assert_almost_equal(
             actual=get_14_scaling_factors(sys_no_electrostatics)[1],
-            desired=ff_no_electrostatics["vdW"].scale14,
+            desired=ff_no_electrostatics["vdW"].scale14.m,
             decimal=8,
         )
 

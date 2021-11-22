@@ -85,33 +85,6 @@ def test_get_data_file_path():
     assert os.path.exists(filename)
 
 
-@pytest.mark.parametrize(
-    "unit_string,expected_unit",
-    [
-        ("kilocalories_per_mole", openmm_unit.kilocalories_per_mole),
-        (
-            "kilocalories_per_mole/angstrom**2",
-            openmm_unit.kilocalories_per_mole / openmm_unit.angstrom ** 2,
-        ),
-        (
-            "joule/(mole * nanometer**2)",
-            openmm_unit.joule / (openmm_unit.mole * openmm_unit.nanometer ** 2),
-        ),
-        ("picosecond**(-1)", openmm_unit.picosecond ** (-1)),
-        ("300.0 * kelvin", 300 * openmm_unit.kelvin),
-        ("1 * kilojoule + 500 * joule", 1.5 * openmm_unit.kilojoule),
-        ("1 / meter", 1.0 / openmm_unit.meter),
-    ],
-)
-def test_ast_eval(unit_string, expected_unit):
-    """Test that _ast_eval() correctly parses string quantities."""
-    from openff.toolkit.utils.utils import _ast_eval
-
-    ast_root_node = ast.parse(unit_string, mode="eval").body
-    parsed_units = _ast_eval(ast_root_node)
-    assert parsed_units == expected_unit
-
-
 def test_dimensionless_units():
     from openff.toolkit.utils.utils import string_to_unit, unit_to_string
 
