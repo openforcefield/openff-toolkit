@@ -1294,7 +1294,7 @@ class BondChargeVirtualSite(VirtualSite):
             the orientation of each virtual site particle
         """
         assert hasattr(distance, "units")
-        assert distance.units in unit.nanometer.compatible_units()
+        assert distance.units.is_compatible_with(unit.nanometer)
 
         super().__init__(
             atoms,

@@ -1694,7 +1694,7 @@ def coords_from_off_mols(mols, conformer_id=0, unit=unit.angstrom):
     unit : openmm.unit, default=unit.angstrom
         The units to convert the coordinates to
     """
-    xyz = np.vstack([mol.conformers[conformer_id].value_in_unit(unit) for mol in mols])
+    xyz = np.vstack([mol.conformers[conformer_id].m_as(unit) for mol in mols])
     return xyz * unit
 
 

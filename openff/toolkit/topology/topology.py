@@ -2144,7 +2144,7 @@ class Topology(Serializable):
             from openff.units.openmm import from_openmm
             from openmm import app
         except ImportError:
-            from openff.units.simtk import from_simtk
+            from openff.units.simtk import from_simtk as from_openmm
             from simtk.openmm import app
 
         # Check to see if the openMM system has defined bond orders, by looping over all Bonds in the Topology.
@@ -2300,10 +2300,12 @@ class Topology(Serializable):
         """
         # TODO: Simply decorate with @requires_package("openmm") when simtk compatibility no longer needed
         try:
+            from openff.units.openmm import to_openmm
             from openmm import app
             from openmm.app import Topology as OMMTopology
             from openmm.app.element import Element as OMMElement
         except ImportError:
+            from openff.units.simtk import to_simtk as to_openmm
             from simtk.openmm import app
             from simtk.openmm.app import Topology as OMMTopology
             from simtk.openmm.app.element import Element as OMMElement
@@ -2380,7 +2382,7 @@ class Topology(Serializable):
             )
 
         if self.box_vectors is not None:
-            omm_topology.setPeriodicBoxVectors(self.box_vectors)
+            omm_topology.setPeriodicBoxVectors(to_openmm(self.box_vectors))
         return omm_topology
 
     @requires_package("openmm")

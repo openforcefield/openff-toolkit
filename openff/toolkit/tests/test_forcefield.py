@@ -20,6 +20,7 @@ import numpy as np
 import pytest
 from numpy.testing import assert_almost_equal
 from openff.units import unit
+from openff.units.openmm import from_openmm, to_openmm
 
 try:
     import openmm
@@ -2010,12 +2011,10 @@ class TestForceFieldVirtualSites:
 
         for particle_index, expected in enumerate(assert_physics):
             parameters = nonbondedForce.getParticleParameters(particle_index)
-            assert all(
-                [
-                    (b is None or np.isclose(a / a.unit, b / a.unit))
-                    for a, b in zip(parameters, expected)
-                ]
-            )
+            for found, reference in zip(parameters, expected):
+                if reference is None:
+                    continue
+                assert np.allclose(from_openmm(found), reference)
         return
 
     import functools
@@ -3497,9 +3496,9 @@ class TestForceFieldParameterAssignment:
         # Translate the molecules a little to avoid overlapping atoms.
         positions = copy.deepcopy(structure_mixture.positions)
         translate_vectors = [
-            np.array([1.0, 0.0, 0.0]) * unit.nanometer,
-            np.array([0.0, 1.0, 0.0]) * unit.nanometer,
-            np.array([0.0, 0.0, 1.0]) * unit.nanometer,
+            np.array([1.0, 0.0, 0.0]) * openmm_unit.nanometer,
+            np.array([0.0, 1.0, 0.0]) * openmm_unit.nanometer,
+            np.array([0.0, 0.0, 1.0]) * openmm_unit.nanometer,
             # Leave the fourth molecule where it is.
         ]
         current_atom_idx = 0
@@ -3612,7 +3611,7 @@ class TestForceFieldParameterAssignment:
         # Give each atom a unique name, otherwise OpenMM will complain
         for idx, atom in enumerate(molecule.atoms):
             atom.name = f"{atom.element.symbol}{idx}"
-        positions = molecule.conformers[0]
+        positions = to_openmm(molecule.conformers[0])
 
         off_gbsas = {
             "HCT": "test_forcefields/GBSA_HCT-1.0.offxml",
@@ -3761,7 +3760,7 @@ class TestForceFieldParameterAssignment:
         # TODO: look into if switching distance is relevant #882
 
         # Create Contexts
-        integrator = openmm.VerletIntegrator(1.0 * unit.femtoseconds)
+        integrator = openmm.VerletIntegrator(1.0 * openmm_unit.femtoseconds)
         platform = Platform.getPlatformByName("Reference")
         amber_context = openmm.Context(amber_omm_system, integrator, platform)
         off_context = openmm.Context(
@@ -3777,7 +3776,9 @@ class TestForceFieldParameterAssignment:
         # Ensure that the GBSA energies (which we put into ForceGroup 1) are identical
         # For Platform=OpenCL, we do get "=="-level identical numbers, but for "Reference", we don't.
         # assert amber_energy[1] == off_energy[1]
-        assert abs(amber_energy[1] - off_energy[1]) < 1e-5 * unit.kilojoule / unit.mole
+        assert (
+            abs(amber_energy[1] - off_energy[1]) < 1e-5 * openmm_unit.kilojoule_per_mole
+        )
 
         # Ensure that all system energies are the same
         compare_system_energies(
@@ -4031,7 +4032,7 @@ class TestForceFieldParameterAssignment:
         off_gbsa_force.setForceGroup(1)
 
         # Create Contexts
-        integrator = openmm.VerletIntegrator(1.0 * unit.femtoseconds)
+        integrator = openmm.VerletIntegrator(1.0 * openmm_unit.femtoseconds)
         platform = Platform.getPlatformByName("Reference")
         amber_context = openmm.Context(amber_omm_system, integrator, platform)
         off_context = openmm.Context(
@@ -4049,13 +4050,15 @@ class TestForceFieldParameterAssignment:
         # Ensure that the GBSA energies (which we put into ForceGroup 1) are identical
         # For Platform=OpenCL, we do get "=="-level identical numbers, but for "Reference", we don't.
         # assert amber_energy[1] == off_energy[1]
-        assert abs(amber_energy[1] - off_energy[1]) < 1e-5 * unit.kilojoule / unit.mole
+        assert (
+            abs(amber_energy[1] - off_energy[1]) < 1e-5 * openmm_unit.kilojoule_per_mole
+        )
 
         # If charges are zero, the GB energy component should be 0, so the total GBSA energy should be 0
         if zero_charges:
-            assert amber_energy[1] == 0.0 * unit.kilojoule / unit.mole
+            assert amber_energy[1]._value == 0.0
         else:
-            assert amber_energy[1] != 0.0 * unit.kilojoule / unit.mole
+            assert amber_energy[1]._value != 0.0
 
         # Ensure that all system energies are the same
         compare_system_energies(
@@ -4149,13 +4152,13 @@ class TestForceFieldParameterAssignment:
 
         np.testing.assert_almost_equal(
             actual=get_14_scaling_factors(sys_no_vdw)[0],
-            desired=ff_no_vdw["Electrostatics"].scale14.m,
+            desired=ff_no_vdw["Electrostatics"].scale14,
             decimal=8,
         )
 
         np.testing.assert_almost_equal(
             actual=get_14_scaling_factors(sys_no_electrostatics)[1],
-            desired=ff_no_electrostatics["vdW"].scale14.m,
+            desired=ff_no_electrostatics["vdW"].scale14,
             decimal=8,
         )
 
@@ -4753,8 +4756,8 @@ class TestForceFieldGetPartialCharges:
         ethanol: Molecule = create_ethanol()
         force_field: ForceField = ForceField("test_forcefields/test_forcefield.offxml")
 
-        ethanol_partial_charges = self.get_partial_charges_from_create_openmm_system(
-            ethanol, force_field
+        ethanol_partial_charges = from_openmm(
+            self.get_partial_charges_from_create_openmm_system(ethanol, force_field)
         )
 
         partial_charges = force_field.get_partial_charges(ethanol)

@@ -4578,7 +4578,7 @@ class GBSAHandler(ParameterHandler):
             amber_cutoff = None
         else:
             amber_cutoff = nonbonded_force.getCutoffDistance().value_in_unit(
-                unit.nanometer
+                openmm.unit.nanometer
             )
 
         if self.gb_model == "OBC2":
@@ -4623,7 +4623,7 @@ class GBSAHandler(ParameterHandler):
             if self.sa_model is None:
                 gbsa_force.setSurfaceAreaEnergy(0)
             else:
-                gbsa_force.setSurfaceAreaEnergy(self.surface_area_penalty)
+                gbsa_force.setSurfaceAreaEnergy(to_openmm(self.surface_area_penalty))
 
         # Iterate over all defined GBSA types, allowing later matches to override earlier ones.
         atom_matches = self.find_matches(topology)
@@ -4646,15 +4646,19 @@ class GBSAHandler(ParameterHandler):
         for atom_key, atom_match in atom_matches.items():
             atom_idx = atom_key[0]
             gbsatype = atom_match.parameter_type
-            charge, _, _2 = nonbonded_force.getParticleParameters(atom_idx)
-            params_to_add[atom_idx] = [charge, gbsatype.radius, gbsatype.scale]
+            charge, _, _ = nonbonded_force.getParticleParameters(atom_idx)
+            params_to_add[atom_idx] = [
+                charge,
+                to_openmm(gbsatype.radius),
+                gbsatype.scale,
+            ]
 
         if self.gb_model == "OBC2":
             for particle_param in params_to_add:
-                gbsa_force.addParticle([to_openmm(param) for param in particle_param])
+                gbsa_force.addParticle(*particle_param)
         else:
             for particle_param in params_to_add:
-                gbsa_force.addParticle([to_openmm(param) for param in particle_param])
+                gbsa_force.addParticle(particle_param)
             # We have to call finalize() for models that inherit from CustomAmberGBForceBase,
             # otherwise the added particles aren't actually passed to the underlying CustomGBForce
             gbsa_force.finalize()
@@ -5647,9 +5651,12 @@ class VirtualSiteHandler(_NonbondedHandler):
         for charge_i, atom in enumerate(atom_key):
             o_charge, o_sigma, o_epsilon = force.getParticleParameters(atom)
             vsite_charge -= charge_increment[charge_i]
-            o_charge += charge_increment[charge_i]
+            o_charge += to_openmm(charge_increment[charge_i])
             force.setParticleParameters(
-                atom, to_openmm(o_charge), to_openmm(o_sigma), to_openmm(o_epsilon)
+                atom,
+                o_charge,
+                o_sigma,
+                o_epsilon,
             )
         return vsite_charge
 

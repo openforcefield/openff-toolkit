@@ -28,10 +28,10 @@ __all__ = [
     "get_molecule_parameterIDs",
 ]
 
-
 import contextlib
 import functools
 import logging
+from typing import Union
 
 import numpy as np
 from openff.units import unit
@@ -314,15 +314,27 @@ def string_to_unit(unit_string):
     import ast
 
 
-def string_to_quantity(quantity_string):
+def string_to_quantity(quantity_string) -> Union[str, unit.Quantity]:
+    """Attempt to parse a string into a unit.Quantity.
+
+    Note that dimensionless floats and ints are returns as floats or ints, not Quantity objects.
+    """
+
     from tokenize import TokenError
 
-    import pint
+    from pint import UndefinedUnitError
 
     try:
-        return unit.Quantity(quantity_string)
-    except (pint.errors.UndefinedUnitError, TokenError):
+        quantity = unit.Quantity(quantity_string)
+    except (TokenError, UndefinedUnitError):
         return quantity_string
+
+    # TODO: Should intentionally unitless array-likes be Quantity objects
+    #       or their raw representation?
+    if (quantity.units == unit.dimensionless) and isinstance(quantity.m, (int, float)):
+        quantity = quantity.m
+
+    return quantity
 
 
 def _string_to_quantity(quantity_string):
