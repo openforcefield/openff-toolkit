@@ -2993,7 +2993,7 @@ class TestMolecule:
         expected = np.array([[1.1, 0.0, 0.0], [-0.1, 0.0, 0.0]])
 
         vsite_pos = molecule.compute_virtual_site_positions_from_conformer(0)
-        vsite_pos = vsite_pos / vsite_pos.unit
+        vsite_pos = vsite_pos.m
 
         assert vsite_pos.shape == (2, 3)
         assert np.allclose(vsite_pos, expected)
@@ -3002,7 +3002,7 @@ class TestMolecule:
         vsite_pos = molecule.compute_virtual_site_positions_from_atom_positions(
             conformer
         )
-        vsite_pos = vsite_pos / vsite_pos.unit
+        vsite_pos = vsite_pos.m
 
         assert vsite_pos.shape == (2, 3)
         assert np.allclose(vsite_pos, expected)
@@ -3047,7 +3047,7 @@ class TestMolecule:
         expected = np.array([[1.1, 0.0, 0.0]])
 
         vsite_pos = molecule.compute_virtual_site_positions_from_conformer(0)
-        vsite_pos = vsite_pos / vsite_pos.unit
+        vsite_pos = vsite_pos.m
 
         assert vsite_pos.shape == (1, 3)
         assert np.allclose(vsite_pos, expected)
@@ -3056,7 +3056,7 @@ class TestMolecule:
         vsite_pos = molecule.compute_virtual_site_positions_from_atom_positions(
             conformer
         )
-        vsite_pos = vsite_pos / vsite_pos.unit
+        vsite_pos = vsite_pos.m
 
         assert vsite_pos.shape == (1, 3)
         assert np.allclose(vsite_pos, expected)
@@ -3110,7 +3110,7 @@ class TestMolecule:
         expected = np.array([[1.0, 0.0, -0.2], [0.0, 1.0, 0.2]])
 
         vsite_pos = molecule.compute_virtual_site_positions_from_conformer(0)
-        vsite_pos = vsite_pos / vsite_pos.unit
+        vsite_pos = vsite_pos.m
         assert vsite_pos.shape == (2, 3)
         assert np.allclose(vsite_pos, expected)
 
@@ -3118,7 +3118,7 @@ class TestMolecule:
         vsite_pos = molecule.compute_virtual_site_positions_from_atom_positions(
             conformer
         )
-        vsite_pos = vsite_pos / vsite_pos.unit
+        vsite_pos = vsite_pos.m
         assert vsite_pos.shape == (2, 3)
         assert np.allclose(vsite_pos, expected)
 
@@ -3165,7 +3165,7 @@ class TestMolecule:
         expected = np.array([[1.0, 0.0, -0.2]])
 
         vsite_pos = molecule.compute_virtual_site_positions_from_conformer(0)
-        vsite_pos = vsite_pos / vsite_pos.unit
+        vsite_pos = vsite_pos.m
         assert vsite_pos.shape == (1, 3)
         assert np.allclose(vsite_pos, expected)
 
@@ -3173,7 +3173,7 @@ class TestMolecule:
         vsite_pos = molecule.compute_virtual_site_positions_from_atom_positions(
             conformer
         )
-        vsite_pos = vsite_pos / vsite_pos.unit
+        vsite_pos = vsite_pos.m
         assert vsite_pos.shape == (1, 3)
         assert np.allclose(vsite_pos, expected)
 
@@ -3218,7 +3218,7 @@ class TestMolecule:
         expected = np.array([[0.0, 0.0, -0.2]])
 
         vsite_pos = molecule.compute_virtual_site_positions_from_conformer(0)
-        vsite_pos = vsite_pos / vsite_pos.unit
+        vsite_pos = vsite_pos.m
         assert vsite_pos.shape == (1, 3)
         assert np.allclose(vsite_pos, expected)
 
@@ -3226,7 +3226,7 @@ class TestMolecule:
         vsite_pos = molecule.compute_virtual_site_positions_from_atom_positions(
             conformer
         )
-        vsite_pos = vsite_pos / vsite_pos.unit
+        vsite_pos = vsite_pos.m
         assert vsite_pos.shape == (1, 3)
         assert np.allclose(vsite_pos, expected)
 
@@ -3277,7 +3277,7 @@ class TestMolecule:
         expected = np.array([[0.0, 0.0, -0.2], [0.0, 0.0, 0.2]])
 
         vsite_pos = molecule.compute_virtual_site_positions_from_conformer(0)
-        vsite_pos = vsite_pos / vsite_pos.unit
+        vsite_pos = vsite_pos.m
         assert vsite_pos.shape == (2, 3)
         assert np.allclose(vsite_pos, expected)
 
@@ -3285,7 +3285,7 @@ class TestMolecule:
         vsite_pos = molecule.compute_virtual_site_positions_from_atom_positions(
             conformer
         )
-        vsite_pos = vsite_pos / vsite_pos.unit
+        vsite_pos = vsite_pos.m
         assert vsite_pos.shape == (2, 3)
         assert np.allclose(vsite_pos, expected)
 
@@ -3329,7 +3329,7 @@ class TestMolecule:
         expected = np.array([[0.0, 0.0, 1.5]])
 
         vsite_pos = molecule.compute_virtual_site_positions_from_conformer(0)
-        vsite_pos = vsite_pos / vsite_pos.unit
+        vsite_pos = vsite_pos.m
         assert vsite_pos.shape == (1, 3)
         assert np.allclose(vsite_pos, expected)
 
@@ -3337,7 +3337,7 @@ class TestMolecule:
         vsite_pos = molecule.compute_virtual_site_positions_from_atom_positions(
             conformer
         )
-        vsite_pos = vsite_pos / vsite_pos.unit
+        vsite_pos = vsite_pos.m
         assert vsite_pos.shape == (1, 3)
         assert np.allclose(vsite_pos, expected)
 
@@ -3518,14 +3518,10 @@ class TestMolecule:
         initial_charges = molecule._partial_charges
 
         # Make sure everything isn't 0s
-        assert (abs(initial_charges.value_in_unit(unit.elementary_charge)) > 0.01).any()
+        assert (abs(initial_charges.m_as(unit.elementary_charge)) > 0.01).any()
         # Check total charge
-        charges_sum_unitless = initial_charges.sum().value_in_unit(
-            unit.elementary_charge
-        )
-        total_charge_unitless = molecule.total_charge.value_in_unit(
-            unit.elementary_charge
-        )
+        charges_sum_unitless = initial_charges.sum().m_as(unit.elementary_charge)
+        total_charge_unitless = molecule.total_charge.m_as(unit.elementary_charge)
         # if abs(charges_sum_unitless - total_charge_unitless) > 0.0001:
         # print(
         #     "molecule {}    charge_sum {}     molecule.total_charge {}".format(
@@ -3602,8 +3598,8 @@ class TestMolecule:
         assert len(elf10_conformers) == 1
 
         assert np.allclose(
-            elf10_conformers[0].value_in_unit(unit.angstrom),
-            initial_conformers[1].value_in_unit(unit.angstrom),
+            elf10_conformers[0].m_as(unit.angstrom),
+            initial_conformers[1].m_as(unit.angstrom),
         )
 
     @requires_openeye

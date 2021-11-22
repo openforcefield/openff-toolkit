@@ -628,12 +628,11 @@ class VirtualParticle(Particle):
         # implemented types are correct, so we are interested in cases
         # where custom virtual sites cause breakage.
 
-        atom_positions_unit = atom_positions.unit
+        atom_positions_unit = atom_positions.units
 
         originwt, xdir, ydir = self.virtual_site.local_frame_weights
         disp = self.virtual_site.local_frame_position
-        _unit = disp.units
-        x, y, z = disp / _unit
+        x, y, z = disp.m
 
         # this pulls the correct ordering of the atoms
         pos = []
@@ -662,7 +661,7 @@ class VirtualParticle(Particle):
 
         position = origin + x * xaxis + y * yaxis + z * zaxis
 
-        return unit.Quantity(position, unit=atom_positions_unit)
+        return unit.Quantity(position, units=atom_positions_unit)
 
     def _extract_position_from_conformer(self, conformation):
 
@@ -1216,7 +1215,7 @@ class VirtualSite(Particle):
             vp_pos = vp.compute_position_from_conformer(conformer_idx)
             positions.append(vp_pos.m_as(unit.angstrom))
 
-        return unit.Quantity(np.array(positions).reshape(-1, 3), unit=unit.angstrom)
+        return unit.Quantity(np.array(positions).reshape(-1, 3), units=unit.angstrom)
 
     def compute_positions_from_atom_positions(self, atom_positions):
         """
@@ -1243,7 +1242,7 @@ class VirtualSite(Particle):
             vp_pos = vp.compute_position_from_atom_positions(atom_positions)
             positions.extend(vp_pos.m_as(unit.angstrom))
 
-        return unit.Quantity(np.array(positions).reshape(-1, 3), unit=unit.angstrom)
+        return unit.Quantity(np.array(positions).reshape(-1, 3), units=unit.angstrom)
 
 
 class BondChargeVirtualSite(VirtualSite):
@@ -1381,7 +1380,7 @@ class BondChargeVirtualSite(VirtualSite):
         # vsite to point away from the unit vector to achieve the desired
         # distance
         _unit = self._distance.units
-        pos = _unit * [-self._distance / _unit, 0.0, 0.0]
+        pos = _unit * [-self._distance.m_as(_unit), 0.0, 0.0]
 
         return pos
 
@@ -1557,21 +1556,17 @@ class MonovalentLonePairVirtualSite(VirtualSite):
         in the local frame for the x, y, and z directions.
         """
 
-        theta = self._in_plane_angle.to(unit.radians)
-        psi = self._out_of_plane_angle.to(unit.radians)
+        theta = self._in_plane_angle.m_as(unit.radians)
+        psi = self._out_of_plane_angle.m_as(unit.radians)
 
         distance_unit = self._distance.units
         pos = unit.Quantity(
             [
-                self._distance.value_in_unit(distance_unit)
-                * np.cos(theta)
-                * np.cos(psi),
-                self._distance.value_in_unit(distance_unit)
-                * np.sin(theta)
-                * np.cos(psi),
-                self._distance.value_in_unit(distance_unit) * np.sin(psi),
+                self._distance.m_as(distance_unit) * np.cos(theta) * np.cos(psi),
+                self._distance.m_as(distance_unit) * np.sin(theta) * np.cos(psi),
+                self._distance.m_as(distance_unit) * np.sin(psi),
             ],
-            unit=distance_unit,
+            units=distance_unit,
         )
 
         return pos
@@ -1732,14 +1727,13 @@ class DivalentLonePairVirtualSite(VirtualSite):
         displacements in the local frame for the x, y, and z directions.
         """
 
-        theta = self._out_of_plane_angle.to(unit.radians)
+        theta = self._out_of_plane_angle.m_as(unit.radians)
 
         distance_unit = self._distance.units
-
         pos = distance_unit * [
-            -self._distance.value_in_unit(distance_unit) * np.cos(theta),
+            -self._distance.m_as(distance_unit) * np.cos(theta),
             0.0,
-            self._distance.value_in_unit(distance_unit) * np.sin(theta),
+            self._distance.m_as(distance_unit) * np.sin(theta),
         ]  # pos of the vsite in local crds
         return pos
 
@@ -1890,7 +1884,7 @@ class TrivalentLonePairVirtualSite(VirtualSite):
         """
 
         distance_unit = self._distance.units
-        pos = unit.Quantity([-self._distance / _unit, 0.0, 0.0], unit=distance_unit)
+        pos = unit.Quantity([-self._distance.m, 0.0, 0.0], units=distance_unit)
 
         return pos
 
@@ -3343,7 +3337,7 @@ class FrozenMolecule(Serializable):
             vsite_pos = vsite.compute_positions_from_atom_positions(atom_positions)
             positions.append(vsite_pos.m_as(unit.angstrom))
 
-        return unit.Quantity(np.array(positions).reshape(-1, 3), unit=unit.angstrom)
+        return unit.Quantity(np.array(positions).reshape(-1, 3), units=unit.angstrom)
 
     def apply_elf_conformer_selection(
         self,

@@ -33,6 +33,7 @@ import contextlib
 import functools
 import logging
 
+import numpy as np
 from openff.units import unit
 from openmm import unit as openmm_unit
 
@@ -208,8 +209,12 @@ def _unit_to_string(input_unit):
 
 
 def quantity_to_dict(input_quantity):
+    value = input_quantity.magnitude
+    if isinstance(value, np.ndarray):
+        value = value.tolist()
+
     return {
-        "value": input_quantity.magnitude,
+        "value": value,
         "unit": str(input_quantity.units),
     }
 
