@@ -2438,12 +2438,11 @@ class ParameterHandler(_ParameterAttributeHandler):
             other_val = getattr(other, attr)
             # Strip quantities of their units before comparison.
             try:
-                u = this_val.units
-                u = other_val.units
+                this_val.units
             except AttributeError:
                 return this_val, other_val
             assert this_val.units == other_val.units
-            return this_val.m_as(u), other_val.m_as(u)
+            return this_val.m, other_val.m
 
         for attr in identical_attrs:
             this_val, other_val = get_unitless_values(attr)

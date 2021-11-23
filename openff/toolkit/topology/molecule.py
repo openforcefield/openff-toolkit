@@ -74,9 +74,7 @@ from openff.toolkit.utils.utils import (
     MissingDependencyError,
     dict_to_quantity,
     quantity_to_dict,
-    quantity_to_string,
     requires_package,
-    string_to_quantity,
 )
 
 # =============================================================================================

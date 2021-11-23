@@ -1279,7 +1279,7 @@ class ForceField:
             import openmm
             from openff.units.openmm import to_openmm
         except ImportError:
-            from openff.units.simtk_ import to_simtk as to_openmm
+            from openff.units.simtk import to_simtk as to_openmm
             from simtk import openmm
 
         return_topology = kwargs.pop("return_topology", False)

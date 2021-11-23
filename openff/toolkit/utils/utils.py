@@ -311,7 +311,6 @@ def string_to_unit(unit_string):
         The deserialized unit from the string
     """
     return unit.Unit(unit_string)
-    import ast
 
 
 def string_to_quantity(quantity_string) -> Union[str, unit.Quantity]:
