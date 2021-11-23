@@ -4040,8 +4040,8 @@ class TestForceFieldParameterAssignment:
         )
 
         # Get context energies
-        amber_energy = get_context_potential_energy(amber_context, positions)
-        off_energy = get_context_potential_energy(off_context, positions)
+        amber_energy = get_context_potential_energy(amber_context, to_openmm(positions))
+        off_energy = get_context_potential_energy(off_context, to_openmm(positions))
 
         # Very handy for debugging
         # print(openmm.XmlSerializer.serialize(off_gbsa_force))
@@ -4062,7 +4062,7 @@ class TestForceFieldParameterAssignment:
 
         # Ensure that all system energies are the same
         compare_system_energies(
-            off_omm_system, amber_omm_system, positions, by_force_type=False
+            off_omm_system, amber_omm_system, to_openmm(positions), by_force_type=False
         )
 
     @pytest.mark.slow
