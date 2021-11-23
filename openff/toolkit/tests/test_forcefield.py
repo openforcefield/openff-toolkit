@@ -3851,16 +3851,16 @@ class TestForceFieldParameterAssignment:
             * unit.nanometer
         )
 
-        ref_ene = 0.0011797690240 * unit.kilojoule_per_mole
+        ref_ene = 0.0011797690240 * openmm_unit.kilojoule_per_mole
 
         assert np.allclose(
-            off_crds.value_in_unit(unit.angstrom),
-            ref_crds_with_vsite.value_in_unit(unit.angstrom),
+            off_crds.m_as(unit.angstrom),
+            ref_crds_with_vsite.m_as(unit.angstrom),
         )
         # allow 1% error in energy difference (default is .001%)
         assert np.allclose(
-            off_ene.value_in_unit(unit.kilocalorie_per_mole),
-            ref_ene.value_in_unit(unit.kilocalorie_per_mole),
+            off_ene.value_in_unit(openmm_unit.kilocalorie_per_mole),
+            ref_ene.value_in_unit(openmm_unit.kilocalorie_per_mole),
             rtol=0.05,
         )
 
