@@ -56,6 +56,7 @@ autodoc_default_options = {
     "inherited-members": True,
     "member-order": "bysource",
 }
+autodoc_preserve_defaults = True
 
 # Disable NumPy style attributes/methods expecting every method to have its own docs page
 numpydoc_class_members_toctree = False
