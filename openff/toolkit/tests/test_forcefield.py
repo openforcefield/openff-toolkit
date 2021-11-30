@@ -731,6 +731,20 @@ def round_charge(xml):
     return ' q="'.join(xmlsp)
 
 
+def generate_monatomic_ions():
+    return (
+        ("Li+", +1 * openmm_unit.elementary_charge),
+        ("Na+", +1 * openmm_unit.elementary_charge),
+        ("K+", +1 * openmm_unit.elementary_charge),
+        ("Rb+", +1 * openmm_unit.elementary_charge),
+        ("Cs+", +1 * openmm_unit.elementary_charge),
+        ("F-", -1 * openmm_unit.elementary_charge),
+        ("Cl-", -1 * openmm_unit.elementary_charge),
+        ("Br-", -1 * openmm_unit.elementary_charge),
+        ("I-", -1 * openmm_unit.elementary_charge),
+    )
+
+
 nonbonded_resolution_matrix = [
     {
         "vdw_method": "cutoff",
@@ -2218,19 +2232,6 @@ class TestForceFieldVirtualSites:
 
 
 class TestForceFieldChargeAssignment:
-    def generate_monatomic_ions():
-        return (
-            ("Li+", +1 * openmm_unit.elementary_charge),
-            ("Na+", +1 * openmm_unit.elementary_charge),
-            ("K+", +1 * openmm_unit.elementary_charge),
-            ("Rb+", +1 * openmm_unit.elementary_charge),
-            ("Cs+", +1 * openmm_unit.elementary_charge),
-            ("F-", -1 * openmm_unit.elementary_charge),
-            ("Cl-", -1 * openmm_unit.elementary_charge),
-            ("Br-", -1 * openmm_unit.elementary_charge),
-            ("I-", -1 * openmm_unit.elementary_charge),
-        )
-
     @pytest.mark.parametrize(
         "toolkit_registry,registry_description", toolkit_registries
     )
