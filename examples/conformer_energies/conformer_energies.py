@@ -2,9 +2,7 @@ import argparse
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.utils import RDKitToolkitWrapper
 from rdkit.Chem import rdMolAlign
-import numpy as np
 from simtk import openmm, unit as openmm_unit
-from openff.units import unit
 from openff.units.openmm import to_openmm, from_openmm
 
 
