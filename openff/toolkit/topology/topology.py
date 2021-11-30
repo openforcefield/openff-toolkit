@@ -707,7 +707,22 @@ class Topology(Serializable):
         -------
         molecules : Iterable of Molecule
         """
-        return self._molecules
+        # Yields instead of returning the list itself. This prevents user from modifying the list
+        # outside the Topology's knowledge. This is essential to make sure that atom index caches
+        # invalidate themselves during appropriate events.
+        for molecule in self._molecules:
+            yield molecule
+
+
+    def molecule(self, index):
+        """
+        Returns the molecule with a given index in this Topology.
+
+        Returns
+        -------
+        molecule : openff.toolkit.topology.Molecule
+        """
+        return self._molecules[index]
 
     @property
     def n_atoms(self):
@@ -1140,12 +1155,19 @@ class Topology(Serializable):
         # of that molecule in the Topology object.
         matches = list()
 
-        for molecule in self.molecules:
+        identity_maps = self.identify_chemically_identical_molecules()
+        # Convert molecule identity maps into groups of identical molecules
+        groupings = {}
+        for molecule_idx in identity_maps.keys():
+            unique_mol, atom_map = identity_maps[molecule_idx]
+            groupings[unique_mol] = groupings.get(unique_mol, list()) + [[molecule_idx, atom_map]]
 
+        for unique_mol_idx, group in groupings.items():
+            unique_mol = self.molecule(unique_mol_idx)
             # Find all atomsets that match this definition in the reference molecule
             # This will automatically attempt to match chemically identical atoms in
             # a canonical order within the Topology
-            mol_matches = molecule.chemical_environment_matches(
+            mol_matches = unique_mol.chemical_environment_matches(
                 smarts,
                 unique=unique,
                 toolkit_registry=toolkit_registry,
@@ -1154,39 +1176,77 @@ class Topology(Serializable):
             if len(mol_matches) == 0:
                 continue
 
-            # Loop over matches
-            for match in mol_matches:
+            for mol_instance_idx, atom_map in group:
+                mol_instance = self.molecule(mol_instance_idx)
+                # Loop over matches
+                for match in mol_matches:
 
-                # Collect indices of matching TopologyAtoms.
-                topology_atom_indices = []
-                for molecule_atom_index in match:
-                    reference_atom = molecule.atoms[molecule_atom_index]
-                    # topology_atom = TopologyAtom(reference_atom, topology_molecule)
-                    topology_atom_indices.append(self.atom_index(reference_atom))
+                    # Collect indices of matching TopologyAtoms.
+                    topology_atom_indices = []
+                    for molecule_atom_index in match:
+                        atom = mol_instance.atom(atom_map[molecule_atom_index])
+                        topology_atom_indices.append(self.atom_index(atom))
 
-                environment_match = Topology._ChemicalEnvironmentMatch(
-                    tuple(match), molecule, tuple(topology_atom_indices)
-                )
+                    environment_match = Topology._ChemicalEnvironmentMatch(
+                        tuple(match), unique_mol, tuple(topology_atom_indices)
+                    )
 
-                matches.append(environment_match)
+                    matches.append(environment_match)
         return matches
 
-    def group_chemically_identical_molecules(self):
+    def identify_chemically_identical_molecules(self):
+        """
+        Efficiently perform an all-by-all isomorphism check for the molecules in this Topology. This method
+        uses the strictest form of isomorphism checking, which will NOT match distinct kekule structures of
+        multiple resonance forms of the same molecule, or different kekulizations of aromatic systems.
+
+        Returns
+        -------
+        identical_molecules : {int: (int, {int: int})}
+            A mapping from the index of each molecule in the topology to (the index of the first appearance of
+            a chemically equivalent molecule in the topology, and a mapping from the atom indices of this molecule to
+            the atom indices of that chemically equivalent molecule).
+            ``identical_molecules[molecule_idx] = (unique_molecule_idx, {molecule_atom_idx, unique_molecule_atom_idx})``
+
+        >>> from openff.toolkit.topology import Molecule, Topology
+        >>> # Create a water ordered as OHH
+        >>> water1 = Molecule()
+        >>> water1.add_atom(8, 0, False)
+        >>> water1.add_atom(1, 0, False)
+        >>> water1.add_atom(1, 0, False)
+        >>> water1.add_bond(0, 1, 1, False)
+        >>> water1.add_bond(0, 2, 1, False)
+
+        >>> # Create a different water ordered as HOH
+        >>> water2 = Molecule()
+        >>> water2.add_atom(1, 0, False)
+        >>> water2.add_atom(8, 0, False)
+        >>> water2.add_atom(1, 0, False)
+        >>> water2.add_bond(0, 1, 1, False)
+        >>> water2.add_bond(1, 2, 1, False)
+
+        >>> top = Topology.from_molecules([water1, water2])
+        >>> top.identify_chemically_identical_molecules()
+
+        {0: (0, {0: 0, 1: 1, 2: 2}), 1: (0, {0: 1, 1: 0, 2: 2})}
+        """
+        # Check whether this was run previously, and a cached result is available.
         if self._cached_chemically_identical_molecules is not None:
             return self._cached_chemically_identical_molecules
 
+        # If a cached result isn't available, recalculate the identity maps.
         self._cached_chemically_identical_molecules = dict()
         already_matched_mols = set()
 
         for mol1_idx in range(self.n_molecules):
             if mol1_idx in already_matched_mols:
                 continue
-            mol1 = self.molecules[mol1_idx]
+            mol1 = self.molecule(mol1_idx)
             self._cached_chemically_identical_molecules[mol1_idx] = (mol1_idx, {i:i for i in range(mol1.n_atoms)})
             for mol2_idx in range(mol1_idx+1, self.n_molecules):
                 if mol2_idx in already_matched_mols:
                     continue
-                mol2 = self.molecules[mol2_idx]
+                mol2 = self.molecule(mol2_idx)
                 are_isomorphic, atom_map = Molecule.are_isomorphic(mol1, mol2, return_atom_map=True)
                 if are_isomorphic:
                     self._cached_chemically_identical_molecules[mol2_idx] = (mol1_idx, atom_map)
