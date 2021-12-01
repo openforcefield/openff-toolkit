@@ -4357,6 +4357,25 @@ class FrozenMolecule(Serializable):
             ptl for vsite in self._virtual_sites for ptl in vsite.particles
         ]
 
+
+    def particle(self, index: int):
+        """
+        Get particle with a specified index.
+
+        Parameters
+        ----------
+        index : int
+
+        Returns
+        -------
+        atom or virtualparticle : openff.toolkit.topology.Atom or VirtualParticle
+        """
+        if index <= self.n_atoms:
+            return self.atom(index)
+        else:
+            index -= self.n_atoms
+            return self.virtual_particle(index)
+
     def particle_index(self, particle):
         """
         Returns the index of a given particle in this molecule
@@ -4373,6 +4392,50 @@ class FrozenMolecule(Serializable):
         for index, mol_particle in enumerate(self.particles):
             if particle is mol_particle:
                 return index
+
+    @property
+    def virtual_particles(self):
+        """
+        Iterate over all virtual particle objects.
+        """
+
+        return [
+            ptl for vsite in self._virtual_sites for ptl in vsite.particles
+        ]
+
+
+    def virtual_particle(self, index: int):
+        """
+        Get virtual particle with a specified index.
+
+        Parameters
+        ----------
+        index : int
+
+        Returns
+        -------
+        virtualparticle : openff.toolkit.topology.VirtualParticle
+        """
+        for ptl_idx, ptl in enumerate(self.virtual_particles):
+            if index == ptl_idx:
+                return ptl
+
+    def virtual_particle_index(self, particle):
+        """
+        Returns the index of a given virtual particle in this molecule
+
+        Parameters
+        ----------
+        virtual_particle : openff.toolkit.topology.VirtualParticle
+
+        Returns
+        -------
+        index : int
+            The index of the given virtual particle in this molecule
+        """
+        for ptl_idx, ptl in enumerate(self.virtual_particles):
+            if ptl is particle:
+                return ptl_idx
 
     @property
     def atoms(self):
