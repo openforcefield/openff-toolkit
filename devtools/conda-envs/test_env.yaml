@@ -24,6 +24,7 @@ dependencies:
   - codecov
   - coverage
   - openeye-toolkits
+  - cachetools
   - black
   - isort
   - pyyaml

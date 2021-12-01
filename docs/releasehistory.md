@@ -8,6 +8,14 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ## Current Development
 
+- [PR #964](https://github.com/openforcefield/openff-toolkit/pull/964): Adds initial implementation
+  of atom metadata dictionaries. 
+- [PR #1097](https://github.com/openforcefield/openff-toolkit/pull/1097): Deprecates TopologyMolecule. 
+- [PR #1097](https://github.com/openforcefield/openff-toolkit/pull/1097): Topology.from_openmm  
+  is no longer guaranteed to maintain the ordering of bonds, but now explicitly guarantees that it maintains 
+  the order of atoms (Neither of these ordering guarantees were explicitly documented before, but this may be a 
+  change from the previous behavior). 
+  
 ### Behaviors changed and bugfixes
 
 - [PR #1118](https://github.com/openforcefield/openforcefield/pull/1118):
@@ -82,7 +90,6 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
   `QCElemental.Molecule` an empty list for the `connectivity` field; now feeds `None`.
 
 ### Tests updated
-
 - [PR #1017](https://github.com/openforcefield/openforcefield/pull/1017): Ensures that OpenEye-only CI builds really
   do lack both AmberTools and RDKit.  
 

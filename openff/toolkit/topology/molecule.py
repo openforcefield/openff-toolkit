@@ -28,13 +28,16 @@ Molecular chemical entity representation and routines to interface with cheminfo
    * Speed up overall import time by putting non-global imports only where they are needed
 
 """
+import json
 import operator
 import warnings
 from abc import abstractmethod
-from collections import OrderedDict
+from collections import OrderedDict, UserDict, defaultdict
 from copy import deepcopy
+from itertools import chain
 from typing import TYPE_CHECKING, List, Optional, Union
 
+import networkx as nx
 import numpy as np
 from mdtraj.core.element import Element
 from openff.units import unit
@@ -43,7 +46,8 @@ from openff.units.openmm import to_openmm
 if TYPE_CHECKING:
     import networkx as nx
 
-    from openff.toolkit.topology import TopologyMolecule
+from cached_property import cached_property
+from packaging import version
 
 try:
     from openmm import LocalCoordinatesSite
@@ -53,8 +57,18 @@ except ImportError:
     from simtk.openmm import LocalCoordinatesSite
 
 import openff.toolkit
+from openff.toolkit.utils import (
+    get_data_file_path,
+    quantity_to_string,
+    remove_subsets_from_list,
+    requires_package,
+    string_to_quantity,
+)
 from openff.toolkit.utils.exceptions import (
+    HierarchySchemeNotFoundException,
+    HierarchySchemeWithIteratorNameAlreadyRegisteredException,
     IncompatibleUnitError,
+    InvalidAtomMetadataError,
     InvalidConformerError,
     NotAttachedToMoleculeError,
     SmilesParsingError,
@@ -161,6 +175,24 @@ class Particle(Serializable):
 # =============================================================================================
 
 
+class AtomMetadataDict(UserDict):
+    def __init__(self, *args, **kwargs):
+        self.data = {}
+        self.update(dict(*args, **kwargs))
+
+    def __setitem__(self, key, value):
+        if not isinstance(key, str):
+            raise InvalidAtomMetadataError(
+                f"Attempted to set atom metadata with a non-string key. (key: {key}"
+            )
+        if not isinstance(value, (str, int)):
+            raise InvalidAtomMetadataError(
+                f"Attempted to set atom metadata with a non-string or integer "
+                f"value. (value: {value})"
+            )
+        super().__setitem__(key, value)
+
+
 class Atom(Particle):
     """
     A particle representing a chemical atom.
@@ -187,6 +219,7 @@ class Atom(Particle):
         name=None,
         molecule=None,
         stereochemistry=None,
+        metadata=None,
     ):
         """
         Create an immutable Atom object.
@@ -209,6 +242,10 @@ class Atom(Particle):
             Either 'R' or 'S' for specified stereochemistry, or None for ambiguous stereochemistry
         name : str, optional, default=None
             An optional name to be associated with the atom
+        metadata : dict[str: (int, str)], default=None
+            An optional dictionary where keys are strings and values are strings or ints. This is intended
+            to record atom-level information used to inform hierarchy definition and iteration, such as
+            grouping atom by residue and chain.
 
         Examples
         --------
@@ -238,6 +275,10 @@ class Atom(Particle):
         # self._molecule_atom_index = molecule_atom_index
         self._bonds = list()
         self._virtual_sites = list()
+        if metadata is None:
+            self._metadata = AtomMetadataDict()
+        else:
+            self._metadata = AtomMetadataDict(metadata)
 
     # TODO: We can probably avoid an explicit call and determine this dynamically
     #   from self._molecule (maybe caching the result) to get rid of some bookkeeping.
@@ -276,6 +317,7 @@ class Atom(Particle):
         atom_dict["stereochemistry"] = self._stereochemistry
         # TODO: Should we let atoms have names?
         atom_dict["name"] = self._name
+        atom_dict["metadata"] = dict(self._metadata)
         # TODO: Should this be implicit in the atom ordering when saved?
         # atom_dict['molecule_atom_index'] = self._molecule_atom_index
         return atom_dict
@@ -283,9 +325,14 @@ class Atom(Particle):
     @classmethod
     def from_dict(cls, atom_dict):
         """Create an Atom from a dict representation."""
-        ## TODO: classmethod or static method? Classmethod is needed for Bond, so it have
-        ## its _molecule set and then look up the Atom on each side of it by ID
-        return cls.__init__(*atom_dict)
+        return cls(**atom_dict)
+
+    @property
+    def metadata(self):
+        """
+        The atom's metadata dictionary
+        """
+        return self._metadata
 
     @property
     def formal_charge(self):
@@ -493,21 +540,37 @@ class Atom(Particle):
         # for vsite in self._vsites:
         #    yield vsite
 
+    def virtual_site(self, index: int):
+        """
+        Get virtual_site with a specified index.
+
+        Parameters
+        ----------
+        index : int
+
+        Returns
+        -------
+        virtual_site : openff.toolkit.topology.VirtualSite
+        """
+        return self._virtual_sites[index]
+
     @property
     def molecule_atom_index(self):
         """
-        The index of this Atom within the the list of atoms in ``Molecules``.
+        The index of this Atom within the the list of atoms in the parent ``Molecule``.
         Note that this can be different from ``molecule_particle_index``.
-
         """
         if self._molecule is None:
             raise ValueError("This Atom does not belong to a Molecule object")
-        return self._molecule.atoms.index(self)
+        if "_molecule_atom_index" in self.__dict__:
+            return self._molecule_atom_index
+        self._molecule_atom_index = self._molecule.atoms.index(self)
+        return self._molecule_atom_index
 
     @property
     def molecule_particle_index(self):
         """
-        The index of this Atom within the the list of particles in the parent ``Molecule``.
+        The index of this Particle within the the list of particles in the parent ``Molecule``.
         Note that this can be different from ``molecule_atom_index``.
 
         """
@@ -2506,6 +2569,10 @@ class FrozenMolecule(Serializable):
             molecule_dict["partial_charges"] = charges_serialized
             molecule_dict["partial_charges_unit"] = "elementary_charge"
 
+        molecule_dict["hierarchy_schemes"] = dict()
+        for iter_name, hier_scheme in self._hierarchy_schemes.items():
+            molecule_dict["hierarchy_schemes"][iter_name] = hier_scheme.to_dict()
+
         return molecule_dict
 
     def __hash__(self):
@@ -2517,6 +2584,20 @@ class FrozenMolecule(Serializable):
         string
         """
         return hash(self.to_smiles())
+
+    # @cached_property
+    def ordered_connection_table_hash(self):
+        if self._ordered_connection_table_hash is not None:
+            return self._ordered_connection_table_hash
+
+        id = ""
+        for atom in self.atoms:
+            id += f"{atom.element.symbol}_{atom.formal_charge}_{atom.stereochemistry}__"
+        for bond in self.bonds:
+            id += f"{bond.bond_order}_{bond.stereochemistry}_{bond.atom1_index}_{bond.atom2_index}__"
+        # return hash(id)
+        self._ordered_connection_table_hash = hash(id)
+        return self._ordered_connection_table_hash
 
     @classmethod
     def from_dict(cls, molecule_dict):
@@ -2636,6 +2717,20 @@ class FrozenMolecule(Serializable):
 
         self._properties = molecule_dict["properties"]
 
+        for iter_name, hierarchy_scheme_dict in molecule_dict[
+            "hierarchy_schemes"
+        ].items():
+            new_hier_scheme = self.add_hierarchy_scheme(
+                hierarchy_scheme_dict["uniqueness_criteria"],
+                iter_name,
+            )
+            # hierarchy_scheme = self._hierarchy_schemes[iter_name]
+            for element_dict in hierarchy_scheme_dict["hierarchy_elements"]:
+                new_hier_scheme.add_hierarchy_element(
+                    element_dict["identifier"], element_dict["particle_indices"]
+                )
+            self._expose_hierarchy_scheme(iter_name)
+
     def __repr__(self):
         """Return a summary of this molecule; SMILES if valid, Hill formula if not."""
         description = f"Molecule with name '{self.name}'"
@@ -2664,6 +2759,8 @@ class FrozenMolecule(Serializable):
         # self._cached_properties = None # Cached properties (such as partial charges) can be recomputed as needed
         self._partial_charges = None
         self._conformers = None  # Optional conformers
+        self._hierarchy_schemes = dict()
+        self._invalidate_cached_properties()
 
     def _copy_initializer(self, other):
         """
@@ -2697,6 +2794,90 @@ class FrozenMolecule(Serializable):
         # updated to use the new isomorphic checking method, with full matching
         # TODO the doc string did not match the previous function what matching should this method do?
         return Molecule.are_isomorphic(self, other, return_atom_map=False)[0]
+
+    def _add_default_hierarchy_schemes(self):
+        self.add_hierarchy_scheme(
+            ("chain", "residue_number", "residue_name"), "residues"
+        )
+        self.add_hierarchy_scheme(("chain",), "chains")
+
+    def add_hierarchy_scheme(
+        self,
+        uniqueness_criteria,
+        iterator_name,
+    ):
+        """
+        Parameters
+        ----------
+        uniqueness_criteria : tuple of str
+        iterator_name : str
+            Name of the iterator that will be exposed to access the HierarchyElements generated
+            by this scheme
+
+        Returns
+        -------
+        new_hier_scheme : openff.toolkit.topology.HierarchyScheme
+            The newly created HierarchyScheme
+        """
+        if iterator_name in self._hierarchy_schemes:
+            msg = (
+                f'Can not add iterator with name "{iterator_name}" to this topology, as iterator '
+                f"name is already used by {self._hierarchy_schemes[iterator_name]}"
+            )
+            raise HierarchySchemeWithIteratorNameAlreadyRegisteredException(msg)
+        new_hier_scheme = HierarchyScheme(
+            self,
+            uniqueness_criteria,
+            iterator_name,
+        )
+        self._hierarchy_schemes[iterator_name] = new_hier_scheme
+        return new_hier_scheme
+
+    @property
+    def hierarchy_schemes(self):
+        """
+        Returns
+        -------
+        A dict of the form {str: HierarchyScheme}
+            The HierarchySchemes associated with this Molecule.
+        """
+        return self._hierarchy_schemes
+
+    def delete_hierarchy_scheme(self, iter_name):
+        """
+        Parameters
+        ----------
+        iter_name : str
+        """
+        if not iter_name in self._hierarchy_schemes:
+            raise HierarchySchemeNotFoundException(
+                f'Can not delete HierarchyScheme with name "{iter_name}" '
+                f"because no HierarchyScheme with that iterator name exists"
+            )
+        self._hierarchy_schemes.pop(iter_name)
+        if hasattr(self, iter_name):
+            delattr(self, iter_name)
+
+    def perceive_hierarchy(self, iter_names=None):
+        """
+        Parameters
+        ----------
+        iter_names : Iterable of str, Optional
+            Only perceive hierarchy for HierarchySchemes that expose these iterator names.
+            If not provided, all known hierarchies will be perceived, overwriting previous
+            results if applicable.
+        """
+        if iter_names is None:
+            iter_names = self._hierarchy_schemes.keys()
+
+        for iter_name in iter_names:
+            hierarchy_scheme = self._hierarchy_schemes[iter_name]
+            hierarchy_scheme.perceive_hierarchy()
+            self._expose_hierarchy_scheme(iter_name)
+
+    def _expose_hierarchy_scheme(self, iter_name):
+        assert iter_name in self._hierarchy_schemes
+        setattr(self, iter_name, self._hierarchy_schemes[iter_name].hierarchy_elements)
 
     def to_smiles(
         self,
@@ -3004,8 +3185,8 @@ class FrozenMolecule(Serializable):
 
         Parameters
         ----------
-        mol1 : an openff.toolkit.topology.molecule.FrozenMolecule or TopologyMolecule or nx.Graph()
-        mol2 : an openff.toolkit.topology.molecule.FrozenMolecule or TopologyMolecule or nx.Graph()
+        mol1 : an openff.toolkit.topology.molecule.FrozenMolecule or nx.Graph()
+        mol2 : an openff.toolkit.topology.molecule.FrozenMolecule or nx.Graph()
             The molecule to test for isomorphism.
 
         return_atom_map: bool, default=False, optional
@@ -3096,8 +3277,6 @@ class FrozenMolecule(Serializable):
             """For the given data type, return the networkx graph"""
             import networkx as nx
 
-            from openff.toolkit.topology import TopologyMolecule
-
             if strip_pyrimidal_n_atom_stereo:
                 SMARTS = "[N+0X3:1](-[*])(-[*])(-[*])"
 
@@ -3110,15 +3289,6 @@ class FrozenMolecule(Serializable):
                         SMARTS, toolkit_registry=toolkit_registry
                     )
                 return data.to_networkx()
-            elif isinstance(data, TopologyMolecule):
-                # TopologyMolecule class instance
-                if strip_pyrimidal_n_atom_stereo:
-                    # Make a copy of the molecule so we don't modify the original
-                    ref_mol = deepcopy(data.reference_molecule)
-                    ref_mol.strip_atom_stereochemistry(
-                        SMARTS, toolkit_registry=toolkit_registry
-                    )
-                return ref_mol.to_networkx()
 
             elif isinstance(data, nx.Graph):
                 return data
@@ -3126,9 +3296,8 @@ class FrozenMolecule(Serializable):
             else:
                 raise NotImplementedError(
                     f"The input type {type(data)} is not supported,"
-                    f"please supply an openff.toolkit.topology.molecule.Molecule,"
-                    f"openff.toolkit.topology.topology.TopologyMolecule or networkx.Graph "
-                    f"representation of the molecule."
+                    f"please supply an openff.toolkit.topology.molecule.Molecule "
+                    f"or networkx.Graph representation of the molecule."
                 )
 
         mol1_netx = to_networkx(mol1)
@@ -3155,17 +3324,14 @@ class FrozenMolecule(Serializable):
 
     def is_isomorphic_with(self, other, **kwargs):
         """
-        Check if the molecule is isomorphic with the other molecule which can be an openff.toolkit.topology.Molecule,
-        or TopologyMolecule or nx.Graph(). Full matching is done using the options described bellow.
+        Check if the molecule is isomorphic with the other molecule which can be an openff.toolkit.topology.Molecule
+        or nx.Graph(). Full matching is done using the options described bellow.
 
         .. warning :: This API is experimental and subject to change.
 
         Parameters
         ----------
-        other: openff.toolkit.topology.Molecule or TopologyMolecule or nx.Graph()
-
-        return_atom_map: bool, default=False, optional
-            will return an optional dict containing the atomic mapping.
+        other: openff.toolkit.topology.Molecule or nx.Graph()
 
         aromatic_matching: bool, default=True, optional
         compare the aromatic attributes of bonds and atoms.
@@ -3590,6 +3756,10 @@ class FrozenMolecule(Serializable):
         self._cached_smiles = None
         # TODO: Clear fractional bond orders
         self._rings = None
+        self._ordered_connection_table_hash = None
+        for atom in self.atoms:
+            if "molecule_atom_index" in atom.__dict__:
+                del atom.__dict__["molecule_atom_index"]
 
     def to_networkx(self):
         """Generate a NetworkX undirected graph from the Molecule.
@@ -3719,7 +3889,13 @@ class FrozenMolecule(Serializable):
         return rotatable_bonds
 
     def _add_atom(
-        self, atomic_number, formal_charge, is_aromatic, stereochemistry=None, name=None
+        self,
+        atomic_number,
+        formal_charge,
+        is_aromatic,
+        stereochemistry=None,
+        name=None,
+        metadata=None,
     ):
         """
         Add an atom
@@ -3736,6 +3912,10 @@ class FrozenMolecule(Serializable):
             Either 'R' or 'S' for specified stereochemistry, or None if stereochemistry is irrelevant
         name : str, optional, default=None
             An optional name for the atom
+        metadata : dict[str: (int, str)], default=None
+            An optional dictionary where keys are strings and values are strings or ints. This is intended
+            to record atom-level information used to inform hierarchy definition and iteration, such as
+            grouping atom by residue and chain.
 
         Returns
         -------
@@ -3767,6 +3947,7 @@ class FrozenMolecule(Serializable):
             is_aromatic,
             stereochemistry=stereochemistry,
             name=name,
+            metadata=metadata,
             molecule=self,
         )
         self._atoms.append(atom)
@@ -4190,12 +4371,58 @@ class FrozenMolecule(Serializable):
             ptl for vsite in self._virtual_sites for ptl in vsite.particles
         ]
 
+    def particle_index(self, particle):
+        """
+        Returns the index of a given particle in this molecule
+
+        Parameters
+        ----------
+        particle : openff.toolkit.topology.Particle
+
+        Returns
+        -------
+        index : int
+            The index of the given particle in this molecule
+        """
+        for index, mol_particle in enumerate(self.particles):
+            if particle is mol_particle:
+                return index
+
     @property
     def atoms(self):
         """
         Iterate over all Atom objects.
         """
         return self._atoms
+
+    def atom(self, index: int):
+        """
+        Get atom with a specified index.
+
+        Parameters
+        ----------
+        index : int
+
+        Returns
+        -------
+        atom : openff.toolkit.topology.Atom
+        """
+        return self._atoms[index]
+
+    def atom_index(self, atom):
+        """
+        Returns the index of a given atom in this molecule
+
+        Parameters
+        ----------
+        atom : openff.toolkit.topology.Atom
+
+        Returns
+        -------
+        index : int
+            The index of the given atom in this molecule
+        """
+        return atom.molecule_atom_index
 
     @property
     def conformers(self):
@@ -4223,12 +4450,74 @@ class FrozenMolecule(Serializable):
         """
         return self._virtual_sites
 
+    def virtual_site(self, index: int):
+        """
+        Get virtual_site with a specified index.
+
+        Parameters
+        ----------
+        index : int
+
+        Returns
+        -------
+        virtual_site : openff.toolkit.topology.VirtualSite
+        """
+        return self._virtual_sites[index]
+
+    def virtual_site_index(self, virtual_site):
+        """
+        Get the molecule index of a particular virtual site.
+        Note that a virtual site may have multiple virtual particles, and that the index returned by this method
+        does not correspond to the virtual _particle_ index. For that, use the `particle_index` method.
+
+        Parameters
+        ----------
+        virtual_site : openff.toolkit.topology.VirtualSite
+
+        Returns
+        -------
+        index : int
+        """
+        for index, mol_vsite in enumerate(self._virtual_sites):
+            if virtual_site is mol_vsite:
+                return index
+        raise Exception("VirtualSite not found in Molecule")
+
+    def virtual_site_particle_start_index(self, virtual_site):
+        """
+        Returns the molecule particle index of the first particle of this virtual site.
+
+        Parameters
+        ----------
+        virtual_site : openff.toolkit.topology.VirtualSite
+
+        Returns
+        -------
+        index : int
+        """
+        first_particle = virtual_site.particles[0]
+        return self.particle_index(first_particle)
+
     @property
     def bonds(self):
         """
         Iterate over all Bond objects.
         """
         return self._bonds
+
+    def bond(self, index: int):
+        """
+        Get bond with the specified index.
+
+        Parameters
+        ----------
+        index : int
+
+        Returns
+        -------
+        bond : openff.toolkit.topology.Bond
+        """
+        return self._bonds[index]
 
     @property
     def angles(self):
@@ -4482,12 +4771,8 @@ class FrozenMolecule(Serializable):
         was a static method that duck-typed inputs of Molecule or graph objects."""
         import networkx as nx
 
-        from openff.toolkit.topology.topology import TopologyMolecule
-
         if isinstance(obj, FrozenMolecule):
             return obj.to_hill_formula()
-        elif isinstance(obj, TopologyMolecule):
-            return _topologymolecule_to_hill_formula(obj)
         elif isinstance(obj, nx.Graph):
             return _networkx_graph_to_hill_formula(obj)
         else:
@@ -4851,6 +5136,258 @@ class FrozenMolecule(Serializable):
 
         return mols
 
+    @classmethod
+    def from_pdb(cls, file_path):
+        import networkx as nx
+        from networkx.algorithms import isomorphism
+        from rdkit import Chem
+
+        def _rdmol_to_networkx(rdmol, res_name):
+            _bondtypes = {
+                # 0: Chem.BondType.AROMATIC,
+                Chem.BondType.SINGLE: 1,
+                Chem.BondType.AROMATIC: 1.5,
+                Chem.BondType.DOUBLE: 2,
+                Chem.BondType.TRIPLE: 3,
+                Chem.BondType.QUADRUPLE: 4,
+                Chem.BondType.QUINTUPLE: 5,
+                Chem.BondType.HEXTUPLE: 6,
+            }
+            rdmol_G = nx.Graph()
+            n_hydrogens = [0] * rdmol.GetNumAtoms()
+            for atom in rdmol.GetAtoms():
+                atomic_number = atom.GetAtomicNum()
+                # Assign sequential negative numbers as atomic numbers for hydrogens attached to the same heavy atom.
+                # We do the same to hydrogens in the protein graph. This makes it so we
+                # don't have to deal with redundant self-symmetric matches.
+                if atomic_number == 1:
+                    heavy_atom_idx = atom.GetNeighbors()[0].GetIdx()
+                    n_hydrogens[heavy_atom_idx] += 1
+                    atomic_number = -1 * n_hydrogens[heavy_atom_idx]
+
+                rdmol_G.add_node(
+                    atom.GetIdx(),
+                    atomic_number=atomic_number,
+                    formal_charge=atom.GetFormalCharge(),
+                )
+                # These substructures (and only these substructures) should be able to overlap previous matches.
+                # They handle bonds between substructures.
+                if res_name in ["PEPTIDE_BOND", "DISULFIDE"]:
+                    rdmol_G.nodes[atom.GetIdx()]["already_matched"] = True
+            for bond in rdmol.GetBonds():
+                bond_type = bond.GetBondType()
+
+                # All bonds in the graph should have been explicitly assigned by this point.
+                if bond_type == Chem.rdchem.BondType.UNSPECIFIED:
+                    raise Exception
+                    # bond_type = Chem.rdchem.BondType.SINGLE
+                    # bond_type = Chem.rdchem.BondType.AROMATIC
+                    # bond_type = Chem.rdchem.BondType.ONEANDAHALF
+                rdmol_G.add_edge(
+                    bond.GetBeginAtomIdx(),
+                    bond.GetEndAtomIdx(),
+                    bond_order=_bondtypes[bond_type],
+                )
+            return rdmol_G
+
+        def _openmm_topology_to_networkx(substructure_library, openmm_topology):
+            """
+            Construct an OpenFF Topology object from an OpenMM Topology object.
+
+            Parameters
+            ----------
+            substructure_library : dict{str:list[str, list[str]]}
+                A dictionary of substructures. substructure_library[aa_name] = list[tagged SMARTS, list[atom_names]]
+            openmm_topology : simtk.openmm.app.Topology
+                An OpenMM Topology object
+
+            Returns
+            -------
+            omm_topology_G : networkx graph
+                A networkX graph representation of the openmm topology with chemical information added from the
+                substructure dictionary. Atoms are nodes and bonds are edges.
+                Nodes (atoms) have attributes for `atomic_number` (int) and `formal_charge` (int).
+                Edges (bonds) have attributes for `bond_order` (Chem.rdchem.BondType).
+                Any edges that are not assgined a bond order will have the value Chem.rdchem.BondType.UNSPECIFIED
+                and should be considered an error.
+            """
+            import networkx as nx
+
+            omm_topology_G = nx.Graph()
+            for atom in openmm_topology.atoms():
+                omm_topology_G.add_node(
+                    atom.index,
+                    atomic_number=atom.element.atomic_number,
+                    formal_charge=0.0,
+                    atom_name=atom.name,
+                    residue_name=atom.residue.name,
+                    residue_number=atom.residue.index,
+                )
+
+            n_hydrogens = [0] * openmm_topology.getNumAtoms()
+            for bond in openmm_topology.bonds():
+                omm_topology_G.add_edge(
+                    bond.atom1.index,
+                    bond.atom2.index,
+                    bond_order=Chem.rdchem.BondType.UNSPECIFIED,  # bond.order
+                )
+                # Assign sequential negative numbers as atomic numbers for hydrogens attached to the same heavy atom.
+                # We do the same to the substructure templates that are used for matching. This saves runtime because
+                # it removes redundant self-symmetric matches.
+                if bond.atom1.element.atomic_number == 1:
+                    h_index = bond.atom1.index
+                    heavy_atom_index = bond.atom2.index
+                    n_hydrogens[heavy_atom_index] += 1
+                    omm_topology_G.nodes[h_index]["atomic_number"] = (
+                        -1 * n_hydrogens[heavy_atom_index]
+                    )
+                if bond.atom2.element.atomic_number == 1:
+                    h_index = bond.atom2.index
+                    heavy_atom_index = bond.atom1.index
+                    n_hydrogens[heavy_atom_index] += 1
+                    omm_topology_G.nodes[h_index]["atomic_number"] = (
+                        -1 * n_hydrogens[heavy_atom_index]
+                    )
+
+            # Try matching this substructure to the whole molecule graph
+            node_match = isomorphism.categorical_node_match(
+                ["atomic_number", "already_matched"], [-100, False]
+            )
+
+            already_assigned_nodes = set()
+            already_assigned_edges = set()
+
+            non_isomorphic_count = 0
+            for res_name in substructure_library:
+                # TODO: This is a hack for the moment since we don't have a more sophisticated way to resolve clashes
+                # so it just does the biggest substructures first
+                sorted_substructure_smarts = sorted(
+                    substructure_library[res_name], key=len, reverse=True
+                )
+                non_isomorphic_flag = True
+                for substructure_smarts in sorted_substructure_smarts:
+                    rdmol = Chem.MolFromSmarts(substructure_smarts)
+                    rdmol_G = _rdmol_to_networkx(rdmol, res_name)
+                    GM = isomorphism.GraphMatcher(
+                        omm_topology_G, rdmol_G, node_match=node_match
+                    )
+                    if GM.subgraph_is_isomorphic():
+                        print(res_name)
+                        print(substructure_smarts)
+                        for omm_idx_2_rdk_idx in GM.subgraph_isomorphisms_iter():
+                            assert len(omm_idx_2_rdk_idx) == rdmol.GetNumAtoms()
+                            for omm_idx, rdk_idx in omm_idx_2_rdk_idx.items():
+                                if omm_idx in already_assigned_nodes:
+                                    continue
+                                already_assigned_nodes.add(omm_idx)
+                                # Negative atomic numbers are really hydrogen, so we reassign them to be atomic number
+                                # 1 once they've been matched
+                                if omm_topology_G.nodes[omm_idx]["atomic_number"] < 0:
+                                    omm_topology_G.nodes[omm_idx]["atomic_number"] = 1
+                                omm_topology_G.nodes[omm_idx][
+                                    "formal_charge"
+                                ] = rdmol_G.nodes[rdk_idx]["formal_charge"]
+                                omm_topology_G.nodes[omm_idx]["already_matched"] = True
+                            rdk_idx_2_omm_idx = dict(
+                                [(j, i) for i, j in omm_idx_2_rdk_idx.items()]
+                            )
+                            for edge in rdmol_G.edges:
+                                omm_edge_idx = (
+                                    rdk_idx_2_omm_idx[edge[0]],
+                                    rdk_idx_2_omm_idx[edge[1]],
+                                )
+                                if omm_edge_idx in already_assigned_edges:
+                                    continue
+                                already_assigned_edges.add(tuple(omm_edge_idx))
+                                omm_topology_G.get_edge_data(*omm_edge_idx)[
+                                    "bond_order"
+                                ] = rdmol_G.get_edge_data(*edge)["bond_order"]
+                        non_isomorphic_flag = False
+                if non_isomorphic_flag:
+                    non_isomorphic_count += 1
+            # print(f"Non isomorphic residues: {non_isomorphic_count}")
+            print(
+                f"N. of assigned nodes: {len(already_assigned_nodes)} -- N. of atoms: {len(list(openmm_topology.atoms()))}"
+            )
+            print(
+                f"N. of assigned edges: {len(already_assigned_edges)} -- N. of bonds: {len(list(openmm_topology.bonds()))}"
+            )
+            # assert len(already_assigned_nodes) == len(list(openmm_topology.atoms()))
+            # assert len(already_assigned_edges) == len(list(openmm_topology.bonds()))
+
+            return omm_topology_G
+
+        from openff.toolkit.utils import get_data_file_path
+
+        substructure_file_path = get_data_file_path(
+            "proteins/aa_residues_substructures_explicit_bond_orders_with_caps.json"
+        )
+
+        with open(substructure_file_path, "r") as subfile:
+            substructure_dictionary = json.load(subfile)
+        from simtk.openmm.app import PDBFile
+
+        pdb = PDBFile(file_path)
+        omm_topology_G = _openmm_topology_to_networkx(
+            substructure_dictionary, pdb.topology
+        )
+
+        offmol = Molecule()
+
+        for node_idx, node_data in omm_topology_G.nodes.items():
+            print(node_idx, node_data)
+            formal_charge = int(node_data["formal_charge"])
+            print(f"Formal charge: {formal_charge}")
+            offmol.add_atom(
+                node_data["atomic_number"],
+                int(node_data["formal_charge"]),
+                False,
+                metadata={
+                    "residue_name": node_data["residue_name"],
+                    "residue_number": node_data["residue_number"],
+                    "atom_name": node_data["atom_name"],
+                },
+            )
+
+        for edge, edge_data in omm_topology_G.edges.items():
+            print(edge, edge_data)
+            offmol.add_bond(edge[0], edge[1], edge_data["bond_order"], False)
+
+        # Retrieve metadata to be recovered after roundtrip to rdkit land
+        atoms_metadata = [atom.metadata for atom in offmol.atoms]
+
+        print(f"Number of atoms before sanitization: {offmol.n_atoms}")
+        # TODO: Pull in coordinates and assign stereochemistry
+        coords = (
+            np.array(
+                [[*vec3.value_in_unit(unit.angstrom)] for vec3 in pdb.getPositions()]
+            )
+            * unit.angstrom
+        )
+
+        offmol.add_conformer(coords)
+        # TODO: Ensure that this assigns aromaticity
+        rdmol = offmol.to_rdkit()
+        Chem.SanitizeMol(
+            rdmol,
+            Chem.SANITIZE_ALL
+            ^ Chem.SANITIZE_ADJUSTHS,  # ^ Chem.SANITIZE_SETAROMATICITY,
+        )
+        Chem.AssignStereochemistryFrom3D(rdmol)
+
+        print(f"Number of atoms after sanitization: {len(rdmol.GetAtoms())}")
+
+        offmol = cls.from_rdkit(
+            rdmol, allow_undefined_stereo=True, hydrogens_are_explicit=True
+        )
+
+        # Recover metadata. Atom order is expected to be the same as in rdkit
+        for atom, metadata in zip(offmol.atoms, atoms_metadata):
+            atom.metadata.update(metadata)
+
+        print(f"OFFMol number of atoms: {offmol.n_atoms}")
+        return offmol
+
     def _to_xyz_file(self, file_path):
         """
         Write the current molecule and its conformers to a multiframe xyz file, if the molecule
@@ -5135,8 +5672,11 @@ class FrozenMolecule(Serializable):
         )
         return molecule
 
-    @RDKitToolkitWrapper.requires_toolkit()
-    def to_rdkit(self, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
+    def to_rdkit(
+        self,
+        aromaticity_model=DEFAULT_AROMATICITY_MODEL,
+        toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
+    ):
         """
         Create an RDKit molecule
 
@@ -5163,8 +5703,13 @@ class FrozenMolecule(Serializable):
         >>> rdmol = molecule.to_rdkit()
 
         """
-        toolkit = RDKitToolkitWrapper()
-        return toolkit.to_rdkit(self, aromaticity_model=aromaticity_model)
+        # toolkit = RDKitToolkitWrapper()
+        if isinstance(toolkit_registry, ToolkitWrapper):
+            return toolkit_registry.to_rdkit(self, aromaticity_model=aromaticity_model)
+        else:
+            return toolkit_registry.call(
+                "to_rdkit", self, aromaticity_model=aromaticity_model
+            )
 
     @classmethod
     @OpenEyeToolkitWrapper.requires_toolkit()
@@ -5678,8 +6223,11 @@ class FrozenMolecule(Serializable):
 
         return new_molecule
 
-    @OpenEyeToolkitWrapper.requires_toolkit()
-    def to_openeye(self, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
+    def to_openeye(
+        self,
+        toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
+        aromaticity_model=DEFAULT_AROMATICITY_MODEL,
+    ):
         """
         Create an OpenEye molecule
 
@@ -5709,8 +6257,15 @@ class FrozenMolecule(Serializable):
         >>> oemol = molecule.to_openeye()
 
         """
-        toolkit = OpenEyeToolkitWrapper()
-        return toolkit.to_openeye(self, aromaticity_model=aromaticity_model)
+        # toolkit = OpenEyeToolkitWrapper()
+        if isinstance(toolkit_registry, ToolkitWrapper):
+            return toolkit_registry.to_openeye(
+                self, aromaticity_model=aromaticity_model
+            )
+        else:
+            return toolkit_registry.call(
+                "to_openeye", self, aromaticity_model=aromaticity_model
+            )
 
     def _construct_angles(self):
         """
@@ -6016,7 +6571,13 @@ class Molecule(FrozenMolecule):
 
     # TODO: Change this to add_atom(Atom) to improve encapsulation and extensibility?
     def add_atom(
-        self, atomic_number, formal_charge, is_aromatic, stereochemistry=None, name=None
+        self,
+        atomic_number,
+        formal_charge,
+        is_aromatic,
+        stereochemistry=None,
+        name=None,
+        metadata=None,
     ):
         """
         Add an atom
@@ -6033,6 +6594,10 @@ class Molecule(FrozenMolecule):
             Either ``'R'`` or ``'S'`` for specified stereochemistry, or ``None`` if stereochemistry is irrelevant
         name : str, optional
             An optional name for the atom
+        metadata : dict[str: (int, str)], default=None
+            An optional dictionary where keys are strings and values are strings or ints. This is intended
+            to record atom-level information used to inform hierarchy definition and iteration, such as
+            grouping atom by residue and chain.
 
         Returns
         -------
@@ -6063,6 +6628,7 @@ class Molecule(FrozenMolecule):
             is_aromatic,
             stereochemistry=stereochemistry,
             name=name,
+            metadata=metadata,
         )
         return atom_index
 
@@ -6452,6 +7018,98 @@ class Molecule(FrozenMolecule):
         # TODO: More specific exception
         raise ValueError("Could not find an appropriate backend")
 
+    def perceive_residues(self, substructure_file_path=None, strict_chirality=True):
+        """
+        Perceive residue substructure and fill atoms metadata accordingly.
+
+        Perceives residues by matching substructures in the current molecule with a substructure dictionary file,
+        using SMARTS.
+
+        Parameters
+        ----------
+        substructure_file_path : str, optional, default=None
+            Path to substructure library file in JSON format. Defaults to using built-in substructure file.
+        strict_chirality: bool, optional, default=True
+            Whether to use strict chirality symbols (stereomarks) for substructure matchings with SMARTS.
+        """
+        # Read substructure dictionary file
+        if not substructure_file_path:
+            substructure_file_path = get_data_file_path(
+                "proteins/aa_residues_substructures_with_caps.json"
+            )
+        with open(substructure_file_path, "r") as subfile:
+            substructure_dictionary = json.load(subfile)
+
+        # TODO: Think of a better way to deal with no strict chirality case
+        # if ignoring strict chirality, remove/update keys in inner dictionary
+        if not strict_chirality:
+            # make a copy of substructure dict
+            substructure_dictionary_no_chirality = deepcopy(substructure_dictionary)
+            # Update inner key (SMARTS) maintaining its value
+            for res_name, inner_dict in substructure_dictionary.items():
+                for smarts, atom_types in inner_dict.items():
+                    smarts_no_chirality = smarts.replace("@", "")  # remove @ in smarts
+                    substructure_dictionary_no_chirality[res_name][
+                        smarts_no_chirality
+                    ] = substructure_dictionary_no_chirality[res_name].pop(
+                        smarts
+                    )  # update key
+            # replace with the new substructure dictionary
+            substructure_dictionary = substructure_dictionary_no_chirality
+
+        all_matches = list()
+        for residue_name, smarts_dict in substructure_dictionary.items():
+            matches = dict()
+            for smarts in smarts_dict:
+                for match in self.chemical_environment_matches(smarts):
+                    matches[match] = smarts
+                    all_matches.append(
+                        {
+                            "atom_idxs": match,
+                            "atom_idxs_set": set(match),
+                            "smarts": smarts,
+                            "residue_name": residue_name,
+                            "atom_names": smarts_dict[smarts],
+                        }
+                    )
+
+        # Remove matches that are subsets of other matches
+        # give precedence to the SMARTS defined at the end of the file
+        match_idxs_to_delete = set()
+        for match_idx in range(len(all_matches) - 1, 0, -1):
+            this_match_set = all_matches[match_idx]["atom_idxs_set"]
+            this_match_set_size = len(this_match_set)
+            for match_before_this_idx in range(match_idx):
+                match_before_this_set = all_matches[match_before_this_idx][
+                    "atom_idxs_set"
+                ]
+                match_before_this_set_size = len(match_before_this_set)
+                n_overlapping_atoms = len(
+                    this_match_set.intersection(match_before_this_set)
+                )
+                if n_overlapping_atoms > 0:
+                    if match_before_this_set_size < this_match_set_size:
+                        match_idxs_to_delete.add(match_before_this_idx)
+                    else:
+                        match_idxs_to_delete.add(match_idx)
+
+        match_idxs_to_delete_list = sorted(list(match_idxs_to_delete), reverse=True)
+        for match_idx in match_idxs_to_delete_list:
+            all_matches.pop(match_idx)
+
+        all_matches.sort(key=lambda x: min(x["atom_idxs"]))
+
+        # Now the matches have been deduplicated and de-subsetted
+        for residue_num, match_dict in enumerate(all_matches):
+            for smarts_idx, atom_idx in enumerate(match_dict["atom_idxs"]):
+                self.atoms[atom_idx].metadata["residue_name"] = match_dict[
+                    "residue_name"
+                ]
+                self.atoms[atom_idx].metadata["residue_number"] = residue_num + 1
+                self.atoms[atom_idx].metadata["atom_name"] = match_dict["atom_names"][
+                    smarts_idx
+                ]
+
     def _ipython_display_(self):
         from IPython.display import display
 
@@ -6495,31 +7153,6 @@ def _networkx_graph_to_hill_formula(graph: "nx.Graph") -> str:
     return _atom_nums_to_hill_formula(atom_nums)
 
 
-def _topologymolecule_to_hill_formula(topology_molecule: "TopologyMolecule") -> str:
-    """
-    Convert a TopologyMolecule to a Hill formula.
-
-    This function exists only to maintain backwards-compatibility with the old
-    behavior of Molecule.to_hill_formulat of Molecule.to_hill_formula, which was
-    a static method that duck-typed inputs of Molecule or graph objects. When
-    `TopologyMolecule` is removed, this should also be removed.
-
-    Parameters
-    ----------
-    topology_molecule : TopologyMolecule
-        The TopologyMolecule to convert.
-
-    Returns
-    -------
-    str
-        The Hill formula corresponding to the TopologyMolecule.
-
-    """
-    atom_nums = [atom.atomic_number for atom in topology_molecule.atoms]
-
-    return _atom_nums_to_hill_formula(atom_nums)
-
-
 def _atom_nums_to_hill_formula(atom_nums: List[int]) -> str:
     """
     Given a `Counter` object of atom counts by atomic number, generate the corresponding
@@ -6547,3 +7180,161 @@ def _atom_nums_to_hill_formula(atom_nums: List[int]) -> str:
             formula.append(str(count))
 
     return "".join(formula)
+
+
+class HierarchyScheme:
+    def __init__(self, parent, uniqueness_criteria, iterator_name):
+        """
+        A HierarchyScheme contains the information needed to perceive HierarchyElements from a
+        Molecule containing atoms with metadata
+
+        Parameters
+        ----------
+        parent : openff.toolkit.topology.FrozenMolecule
+        uniqueness_criteria : tuple of str
+        iterator_name : str
+            Name of the iterator that will be exposed to access the HierarchyElements generated
+            by this scheme
+        """
+        self.parent = parent
+        self.uniqueness_criteria = uniqueness_criteria
+        self.iterator_name = iterator_name
+
+        self.hierarchy_elements = list()
+
+    def to_dict(self):
+        """
+        Serialize this object to a basic dict of strings, ints, and floats
+        """
+        return_dict = dict()
+        return_dict["uniqueness_criteria"] = self.uniqueness_criteria
+        return_dict["iterator_name"] = self.iterator_name
+        return_dict["hierarchy_elements"] = [
+            e.to_dict() for e in self.hierarchy_elements
+        ]
+        return return_dict
+
+    def perceive_hierarchy(self):
+        """
+        Groups the particles of the parent of this HierarchyScheme according to their
+        metadata, and creates HierarchyElements suitable for iteration over the parent.
+        Particles missing the metadata fields in this HierarchyScheme's
+        uniqueness_criteria tuple will have those spots populated with the string 'None'.
+
+        This method overwrites the HierarchyScheme's `hierarchy_elements` attribute in place.
+        The HierarchyElements in this HierarchyScheme's `hierarchy_elements` attribute are STATIC -
+        That is, they are updated only when `perceive_hierarchy` is run, NOT on-the-fly when
+        atom metadata is modified.
+        """
+        from collections import defaultdict
+
+        self.hierarchy_elements = list()
+        # Determine which particles should get added to which HierarchyElements
+        hier_eles_to_add = defaultdict(list)
+        for particle in self.parent.particles:
+            particle_key = list()
+            for field_key in self.uniqueness_criteria:
+                if field_key in particle.metadata:
+                    particle_key.append(particle.metadata[field_key])
+                else:
+                    particle_key.append("None")
+
+            hier_eles_to_add[tuple(particle_key)].append(particle)
+
+        # Create the actual HierarchyElements
+        for particle_key, particles_to_add in hier_eles_to_add.items():
+            particle_indices = [p.molecule_particle_index for p in particles_to_add]
+            self.add_hierarchy_element(particle_key, particle_indices)
+
+        self.sort_hierarchy_elements()
+
+    def add_hierarchy_element(self, identifier, particle_indices):
+        """
+        Instantiate a new HierarchyElement belonging to this HierarchyScheme.
+        This is the main way to instantiate new HierarchyElements.
+
+        Parameters
+        ----------
+        identifier : tuple of str and int
+            uniqueness tuple
+        particle_indices : iterable int
+        """
+        new_hier_ele = HierarchyElement(self, identifier, particle_indices)
+        self.hierarchy_elements.append(new_hier_ele)
+        return new_hier_ele
+
+    def sort_hierarchy_elements(self):
+        """
+        Semantically sort the HierarchyElements belonging to this object, according to
+        their identifiers.
+        """
+        # hard-code the sort_func value here, since it's hard to serialize safely
+        sort_func = lambda x: version.parse(".".join([str(i) for i in x.identifier]))
+        self.hierarchy_elements.sort(key=sort_func)
+
+    def __str__(self):
+        return (
+            f"HierarchyScheme with uniqueness_criteria '{self.uniqueness_criteria}', iterator_name "
+            f"'{self.iterator_name}', and {len(self.hierarchy_elements)} elements"
+        )
+
+    def __repr__(self):
+        return self.__str__()
+
+
+class HierarchyElement:
+    def __init__(self, scheme, identifier, particle_indices):
+        """
+        scheme : HierarchyScheme
+        id : tuple of str and int
+            uniqueness tuple
+        particle_indicess : iterable int
+        """
+        self.scheme = scheme
+        self.identifier = identifier
+        self.particle_indices = deepcopy(particle_indices)
+        for id_component, uniqueness_component in zip(
+            identifier, scheme.uniqueness_criteria
+        ):
+            setattr(self, uniqueness_component, id_component)
+
+    def to_dict(self):
+        """
+        Serialize this object to a basic dict of strings, ints, and floats
+        """
+        return_dict = dict()
+        return_dict["identifier"] = self.identifier
+        return_dict["particle_indices"] = self.particle_indices
+        return return_dict
+
+    @property
+    def particles(self):
+        for particle_index in self.particle_indices:
+            yield self.parent.particles[particle_index]
+
+    def particle(self, index: int):
+        """
+        Get particle with a specified index.
+
+        Parameters
+        ----------
+        index : int
+
+        Returns
+        -------
+        particle : openff.toolkit.topology.Particle
+        """
+        return self.parent.particles[self.particle_indices[index]]
+
+    @property
+    def parent(self):
+        return self.scheme.parent
+
+    def __str__(self):
+        return (
+            f"HierarchyElement {self.identifier} of iterator '{self.scheme.iterator_name}' containing "
+            f"{len(self.particle_indices)} particle(s)"
+        )
+
+    def __repr__(self):
+        return self.__str__()

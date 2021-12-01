@@ -12,6 +12,7 @@ import tempfile
 from typing import TYPE_CHECKING, List, Optional, Tuple
 
 import numpy as np
+from cachetools import LRUCache, cached
 from openff.units import unit
 
 if TYPE_CHECKING:
@@ -1617,58 +1618,16 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             offmol.partial_charges = None
         return offmol
 
-    @classmethod
-    def to_rdkit(cls, molecule, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
-        """
-        Create an RDKit molecule
+    to_rdkit_cache = LRUCache(maxsize=4096)
 
-        Requires the RDKit to be installed.
-
-        .. warning :: This API is experimental and subject to change.
-
-        Parameters
-        ----------
-        aromaticity_model : str, optional, default=DEFAULT_AROMATICITY_MODEL
-            The aromaticity model to use
-
-        Returns
-        -------
-        rdmol : rkit.RDMol
-            An RDKit molecule
-
-        Examples
-        --------
-
-        Convert a molecule to RDKit
-
-        >>> from openff.toolkit.topology import Molecule
-        >>> ethanol = Molecule.from_smiles('CCO')
-        >>> rdmol = ethanol.to_rdkit()
-
-        """
-        from rdkit import Chem, Geometry
+    @cached(to_rdkit_cache, key=base_wrapper._mol_to_ctab_and_aro_key)
+    def _connection_table_to_rdkit(
+        self, molecule, aromaticity_model=DEFAULT_AROMATICITY_MODEL
+    ):
+        from rdkit import Chem
 
         # Create an editable RDKit molecule
         rdmol = Chem.RWMol()
-
-        # Set name
-        # TODO: What is the best practice for how this should be named?
-        if not (molecule.name is None):
-            rdmol.SetProp("_Name", molecule.name)
-
-        # TODO: Set other properties
-        for name, value in molecule.properties.items():
-            if type(value) == str:
-                rdmol.SetProp(name, value)
-            elif type(value) == int:
-                rdmol.SetIntProp(name, value)
-            elif type(value) == float:
-                rdmol.SetDoubleProp(name, value)
-            elif type(value) == bool:
-                rdmol.SetBoolProp(name, value)
-            else:
-                # Shove everything else into a string
-                rdmol.SetProp(name, str(value))
 
         _bondtypes = {
             1: Chem.BondType.SINGLE,
@@ -1685,9 +1644,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             rdatom = Chem.Atom(atom.atomic_number)
             rdatom.SetFormalCharge(atom.formal_charge.m_as(unit.elementary_charge))
             rdatom.SetIsAromatic(atom.is_aromatic)
-            rdatom.SetProp("_Name", atom.name)
 
-            # Stereo handling code moved to after bonds are added
+            ## Stereo handling code moved to after bonds are added
             if atom.stereochemistry == "S":
                 rdatom.SetChiralTag(Chem.CHI_TETRAHEDRAL_CW)
             elif atom.stereochemistry == "R":
@@ -1710,10 +1668,6 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             )
             rdmol.AddBond(*atom_indices)
             rdbond = rdmol.GetBondBetweenAtoms(*atom_indices)
-            if not (bond.fractional_bond_order is None):
-                rdbond.SetDoubleProp(
-                    "fractional_bond_order", bond.fractional_bond_order
-                )
             # Assign bond type, which is based on order unless it is aromatic
             if bond.is_aromatic:
                 rdbond.SetBondType(_bondtypes[1.5])
@@ -1784,7 +1738,81 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             raise RuntimeError(err_msg)
 
         # Copy bond stereo info from molecule to rdmol.
-        cls._assign_rdmol_bonds_stereo(molecule, rdmol)
+        self._assign_rdmol_bonds_stereo(molecule, rdmol)
+
+        # Cleanup the rdmol
+        rdmol.UpdatePropertyCache(strict=False)
+        Chem.GetSSSR(rdmol)
+
+        # Forcefully assign stereo information on the atoms that RDKit
+        # can't figure out. This must be done last as calling AssignStereochemistry
+        # again will delete these properties (see #196).
+        for rdatom, stereochemistry in undefined_stereo_atoms.items():
+            rdatom.SetProp("_CIPCode", stereochemistry)
+
+        return rdmol
+
+    def to_rdkit(self, molecule, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
+        """
+        Create an RDKit molecule
+        Requires the RDKit to be installed.
+        .. warning :: This API is experimental and subject to change.
+        Parameters
+        ----------
+        aromaticity_model : str, optional, default=DEFAULT_AROMATICITY_MODEL
+            The aromaticity model to use
+        Returns
+        -------
+        rdmol : rkit.RDMol
+            An RDKit molecule
+        Examples
+        --------
+        Convert a molecule to RDKit
+        >>> from openff.toolkit.topology import Molecule
+        >>> ethanol = Molecule.from_smiles('CCO')
+        >>> rdmol = ethanol.to_rdkit()
+        """
+        from rdkit import Chem, Geometry
+
+        # Convert the OFF molecule's connectivity table to RDKit, returning a cached rdmol if possible
+        rdmol = self._connection_table_to_rdkit(
+            molecule, aromaticity_model=aromaticity_model
+        )
+        # In case a cached rdmol was returned, make a copy of it
+        rdmol = Chem.RWMol(rdmol)
+        # Set name
+        # TODO: What is the best practice for how this should be named?
+        if not (molecule.name is None):
+            rdmol.SetProp("_Name", molecule.name)
+
+        # TODO: Set other properties
+        for name, value in molecule.properties.items():
+            if type(value) == str:
+                rdmol.SetProp(name, value)
+            elif type(value) == int:
+                rdmol.SetIntProp(name, value)
+            elif type(value) == float:
+                rdmol.SetDoubleProp(name, value)
+            elif type(value) == bool:
+                rdmol.SetBoolProp(name, value)
+            else:
+                # Shove everything else into a string
+                rdmol.SetProp(name, str(value))
+
+        for index, atom in enumerate(molecule.atoms):
+            rdatom = rdmol.GetAtomWithIdx(index)
+            rdatom.SetProp("_Name", atom.name)
+
+        for bond in molecule.bonds:
+            atom_indices = (
+                bond.atom1.molecule_atom_index,
+                bond.atom2.molecule_atom_index,
+            )
+            rdbond = rdmol.GetBondBetweenAtoms(*atom_indices)
+            if not (bond.fractional_bond_order is None):
+                rdbond.SetDoubleProp(
+                    "fractional_bond_order", bond.fractional_bond_order
+                )
 
         # Set coordinates if we have them
         if molecule._conformers:
@@ -1797,7 +1825,6 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         # Retain charges, if present
         if not (molecule._partial_charges is None):
-
             rdk_indexed_charges = np.zeros(shape=molecule.n_atoms, dtype=float)
             for atom_idx, charge in enumerate(molecule._partial_charges):
                 charge_unitless = charge.m_as(unit.elementary_charge)
@@ -1805,20 +1832,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             for atom_idx, rdk_atom in enumerate(rdmol.GetAtoms()):
                 rdk_atom.SetDoubleProp("PartialCharge", rdk_indexed_charges[atom_idx])
 
-            # Note: We could put this outside the "if" statement, which would result in all
-            #     partial charges in the resulting file being set to "n/a" if they weren't
-            #     set in the Open Force Field Toolkit ``Molecule``
+            # Note: We could put this outside the "if" statement, which would result in all partial charges in the
+            #       resulting file being set to "n/a" if they weren't set in the Open Force Field Toolkit ``Molecule``
             Chem.CreateAtomDoublePropertyList(rdmol, "PartialCharge")
-
-        # Cleanup the rdmol
-        rdmol.UpdatePropertyCache(strict=False)
-        Chem.GetSSSR(rdmol)
-
-        # Forcefully assign stereo information on the atoms that RDKit
-        # can't figure out. This must be done last as calling AssignStereochemistry
-        # again will delete these properties (see #196).
-        for rdatom, stereochemistry in undefined_stereo_atoms.items():
-            rdatom.SetProp("_CIPCode", stereochemistry)
 
         # Return non-editable version
         return Chem.Mol(rdmol)
@@ -2006,14 +2022,14 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             return full_matches
 
         # Make a copy of the molecule
-        rdmol = Chem.Mol(rdmol)
+        # rdmol = Chem.Mol(rdmol)
         # Use designated aromaticity model
-        if aromaticity_model == "OEAroModel_MDL":
-            Chem.SanitizeMol(rdmol, Chem.SANITIZE_ALL ^ Chem.SANITIZE_SETAROMATICITY)
-            Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_MDL)
-        else:
-            # Only the OEAroModel_MDL is supported for now
-            raise ValueError("Unknown aromaticity model: {}".aromaticity_models)
+        # if aromaticity_model == "OEAroModel_MDL":
+        #    Chem.SanitizeMol(rdmol, Chem.SANITIZE_ALL ^ Chem.SANITIZE_SETAROMATICITY)
+        #    Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_MDL)
+        # else:
+        #    # Only the OEAroModel_MDL is supported for now
+        #    raise ValueError("Unknown aromaticity model: {}".aromaticity_models)
 
         # Set up query.
         qmol = Chem.MolFromSmarts(smirks)  # cannot catch the error
@@ -2069,7 +2085,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         .. note :: Currently, the only supported ``aromaticity_model`` is ``OEAroModel_MDL``
 
         """
-        rdmol = self.to_rdkit(molecule, aromaticity_model=aromaticity_model)
+        rdmol = self._connection_table_to_rdkit(
+            molecule, aromaticity_model=aromaticity_model
+        )
         return self._find_smarts_matches(
             rdmol,
             smarts,

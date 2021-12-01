@@ -2326,6 +2326,7 @@ class ParameterHandler(_ParameterAttributeHandler):
     def _check_all_valence_terms_assigned(
         cls,
         assigned_terms,
+        topology,
         valence_terms,
         exception_cls=UnassignedValenceParameterException,
     ):
@@ -2335,15 +2336,21 @@ class ParameterHandler(_ParameterAttributeHandler):
         ----------
         assigned_terms : ValenceDict
             Atom index tuples defining added valence terms.
-        valence_terms : Iterable[TopologyAtom] or Iterable[Iterable[TopologyAtom]]
-            Atom or atom tuples defining topological valence terms.
+        topology : Topology
+            The topology that matching was performed on.
+        valence_terms :  Iterable[Iterable[Atom]]
+            Atom tuples defining topological valence terms.
         exception_cls : UnassignedValenceParameterException
             A specific exception class to raise to allow catching only specific
             types of errors.
 
-        """
-        from openff.toolkit.topology import TopologyAtom
+        Raises
+        ------
+        exception : exception_cls
+            An exception with a customizable type. As documented in the Parameters section, this defaults
+            to UnassignedValenceParameterException.
 
+        """
         # Provided there are no duplicates in either list,
         # or something weird like a bond has been added to
         # a torsions list - this should work just fine I think.
@@ -2360,12 +2367,12 @@ class ParameterHandler(_ParameterAttributeHandler):
         # the order of atom indices doesn't matter for comparison.
         valence_terms_dict = assigned_terms.__class__()
         for atoms in valence_terms:
-            try:
-                # valence_terms is a list of TopologyAtom tuples.
-                atom_indices = (a.topology_particle_index for a in atoms)
-            except TypeError:
-                # valence_terms is a list of TopologyAtom.
-                atom_indices = (atoms.topology_particle_index,)
+            # try:
+            # valence_terms is a list of TopologyAtom tuples.
+            atom_indices = (topology.particle_index(a) for a in atoms)
+            # except TypeError:
+            #     # valence_terms is a list of TopologyAtom.
+            #     atom_indices = (topology.particle_index(atoms),)
             valence_terms_dict[atom_indices] = atoms
 
         # Check that both valence dictionaries have the same keys (i.e. terms).
@@ -2379,26 +2386,21 @@ class ParameterHandler(_ParameterAttributeHandler):
 
         if len(unassigned_terms) > 0:
 
-            unassigned_topology_atom_tuples = []
+            unassigned_atom_tuples = []
 
-            # Gain access to the relevant topology
-            if type(valence_terms[0]) is TopologyAtom:
-                topology = valence_terms[0].topology_molecule.topology
-            else:
-                topology = valence_terms[0][0].topology_molecule.topology
             unassigned_str = ""
             for unassigned_tuple in unassigned_terms:
                 unassigned_str += "\n- Topology indices " + str(unassigned_tuple)
                 unassigned_str += ": names and elements "
 
-                unassigned_topology_atoms = []
+                unassigned_atoms = []
 
                 # Pull and add additional helpful info on missing terms
                 for atom_idx in unassigned_tuple:
-                    topology_atom = topology.atom(atom_idx)
-                    unassigned_topology_atoms.append(topology_atom)
-                    unassigned_str += f"({topology_atom.atom.name} {topology_atom.atom.element.symbol}), "
-                unassigned_topology_atom_tuples.append(tuple(unassigned_topology_atoms))
+                    atom = topology.atom(atom_idx)
+                    unassigned_atoms.append(atom)
+                    unassigned_str += f"({atom.name} {atom.element.symbol}), "
+                unassigned_atom_tuples.append(tuple(unassigned_atoms))
             err_msg += (
                 "{parameter_handler} was not able to find parameters for the following valence terms:\n"
                 "{unassigned_str}"
@@ -2414,7 +2416,7 @@ class ParameterHandler(_ParameterAttributeHandler):
         if err_msg != "":
             err_msg += "\n"
             exception = exception_cls(err_msg)
-            exception.unassigned_topology_atom_tuples = unassigned_topology_atom_tuples
+            exception.unassigned_topology_atom_tuples = unassigned_atom_tuples
             exception.handler_class = cls
             raise exception
 
@@ -2733,8 +2735,8 @@ class BondHandler(ParameterHandler):
         # then the old results should be erased/cached and overwritten with the
         # new ones. It will be easier to handle this at the level of caching
         # the results of molecule.assign_fractional_bond_orders
-        for top_bond in topology.topology_bonds:
-            top_bond.bond.fractional_bond_order = None
+        for bond in topology.bonds:
+            bond.fractional_bond_order = None
 
         # check whether any of the reference molecules in the topology
         # are in the partial_bond_orders_from_molecules list
@@ -2867,10 +2869,11 @@ class BondHandler(ParameterHandler):
         )
 
         # Check that no topological bonds are missing force parameters.
-        valence_terms = [list(b.atoms) for b in topology.topology_bonds]
+        valence_terms = [list(b.atoms) for b in topology.bonds]
         self._check_all_valence_terms_assigned(
-            assigned_terms=bond_matches,
-            valence_terms=valence_terms,
+            bond_matches,
+            topology,
+            valence_terms,
             exception_cls=UnassignedBondParameterException,
         )
 
@@ -2971,8 +2974,9 @@ class AngleHandler(ParameterHandler):
 
         # Check that no topological angles are missing force parameters
         self._check_all_valence_terms_assigned(
-            assigned_terms=angle_matches,
-            valence_terms=list(topology.angles),
+            angle_matches,
+            topology,
+            list(topology.angles),
             exception_cls=UnassignedAngleParameterException,
         )
 
@@ -3074,8 +3078,8 @@ class ProperTorsionHandler(ParameterHandler):
         # then the old results should be erased/cached and overwritten with the
         # new ones. It will be easier to handle this at the level of caching
         # the results of molecule.assign_fractional_bond_orders
-        for top_bond in topology.topology_bonds:
-            top_bond.bond.fractional_bond_order = None
+        for bond in topology.bonds:
+            bond.fractional_bond_order = None
 
         # check whether any of the reference molecules in the topology
         # are in the partial_bond_orders_from_molecules list
@@ -3135,8 +3139,9 @@ class ProperTorsionHandler(ParameterHandler):
         # onto the system. It seems like John's proposed System object would do
         # exactly this.
         self._check_all_valence_terms_assigned(
-            assigned_terms=torsion_matches,
-            valence_terms=list(topology.propers),
+            torsion_matches,
+            topology,
+            list(topology.propers),
             exception_cls=UnassignedProperTorsionParameterException,
         )
 
@@ -3400,10 +3405,8 @@ class _NonbondedHandler(ParameterHandler):
         # initialize a dict for that here.
         # TODO: This should be an attribute of the _system_, not the _topology_. However, since we're still using
         #  OpenMM's System class, I am storing this data on the OFF Topology until we make an OFF System class.
-        if not hasattr(topology, "_ref_mol_to_charge_method"):
-            topology._ref_mol_to_charge_method = {
-                ref_mol: None for ref_mol in topology.reference_molecules
-            }
+        if not hasattr(topology, "_molecule_to_charge_method"):
+            self._init_charges_assigned(topology)
 
         # Retrieve the system's OpenMM NonbondedForce
         existing = [system.getForce(i) for i in range(system.getNumForces())]
@@ -3422,28 +3425,37 @@ class _NonbondedHandler(ParameterHandler):
 
         return force
 
-    def mark_charges_assigned(self, ref_mol, topology):
+    def _init_charges_assigned(self, topology):
+        topology._molecule_to_charge_method = dict()
+        for molecule in topology.molecules:
+            topology._molecule_to_charge_method[
+                topology.molecule_index(molecule)
+            ] = None
+
+    def mark_charges_assigned(self, molecule, topology):
         """
         Record that charges have been assigned for a reference molecule.
 
         Parameters
         ----------
-        ref_mol : openff.toolkit.topology.Molecule
+        molecule : openff.toolkit.topology.Molecule
             The molecule to mark as having charges assigned
         topology : openff.toolkit.topology.Topology
             The topology to record this information on.
         """
         # TODO: Change this to interface with system object instead of topology once we move away from OMM's System
-        topology._ref_mol_to_charge_method[ref_mol] = self.__class__
+        topology._molecule_to_charge_method[
+            topology.molecule_index(molecule)
+        ] = self.__class__
 
     @staticmethod
-    def check_charges_assigned(ref_mol, topology):
+    def check_charges_assigned(molecule, topology):
         """
-        Check whether charges have been assigned for a reference molecule.
+        Check whether charges have been assigned for a molecule.
 
         Parameters
         ----------
-        ref_mol : openff.toolkit.topology.Molecule
+        molecule : openff.toolkit.topology.Molecule
             The molecule to check for having charges assigned
         topology : openff.toolkit.topology.Topology
             The topology to query for this information
@@ -3455,7 +3467,10 @@ class _NonbondedHandler(ParameterHandler):
 
         """
         # TODO: Change this to interface with system object instead of topology once we move away from OMM's System
-        return topology._ref_mol_to_charge_method[ref_mol] is not None
+        return (
+            topology._molecule_to_charge_method[topology.molecule_index(molecule)]
+            is not None
+        )
 
 
 class vdWHandler(_NonbondedHandler):
@@ -3641,7 +3656,7 @@ class vdWHandler(_NonbondedHandler):
 
         # Check that no atoms (n.b. not particles) are missing force parameters.
         self._check_all_valence_terms_assigned(
-            assigned_terms=atom_matches, valence_terms=list(topology.topology_atoms)
+            atom_matches, topology, [(atom,) for atom in topology.atoms]
         )
 
 
@@ -3768,7 +3783,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
                     unit.Quantity(charge_mol.partial_charges)
                 )
                 for charge_idx, ref_idx in topology_atom_map.items():
-                    temp_mol_charges[ref_idx] = charge_mol.partial_charges[charge_idx]
+                    temp_mol_charges[charge_idx] = charge_mol.partial_charges[ref_idx]
                 molecule.partial_charges = temp_mol_charges
                 return True
 
@@ -3776,67 +3791,43 @@ class ElectrostaticsHandler(_NonbondedHandler):
         return False
 
     def create_force(self, system, topology, **kwargs):
-        from openff.toolkit.topology import TopologyAtom, TopologyVirtualSite
 
         force = super().create_force(system, topology, **kwargs)
 
         # See if each molecule should have charges assigned by the charge_from_molecules kwarg
-        for ref_mol in topology.reference_molecules:
+        for molecule in topology.molecules:
 
             # If charges were already assigned, skip this molecule
-            if self.check_charges_assigned(ref_mol, topology):
+            if self.check_charges_assigned(molecule, topology):
                 continue
 
             # First, check whether any of the reference molecules in the topology are in the charge_from_mol list
             charges_from_charge_mol = False
             if "charge_from_molecules" in kwargs:
                 charges_from_charge_mol = self.assign_charge_from_molecules(
-                    ref_mol, kwargs["charge_from_molecules"]
+                    molecule, kwargs["charge_from_molecules"]
                 )
 
             # If this reference molecule wasn't in the charge_from_molecules list, end this iteration
             if not (charges_from_charge_mol):
                 continue
 
-            # Otherwise, the molecule is in the charge_from_molecules list, and we should assign charges to all
-            # instances of it in this topology.
-            for topology_molecule in topology._reference_molecule_to_topology_molecules[
-                ref_mol
-            ]:
+            # Otherwise, the molecule is in the charge_from_molecules list, and we should assign charges to it
+            for particle in molecule.particles:
+                topology_particle_index = topology.particle_index(particle)
+                molecule_particle_index = molecule.particle_index(particle)
 
-                for topology_particle in topology_molecule.particles:
+                particle_charge = molecule.partial_charges[molecule_particle_index]
 
-                    if type(topology_particle) is TopologyAtom:
-                        ref_mol_particle_index = (
-                            topology_particle.atom.molecule_particle_index
-                        )
-                    elif type(topology_particle) is TopologyVirtualSite:
-                        ref_mol_particle_index = (
-                            topology_particle.virtual_site.molecule_particle_index
-                        )
-                    else:
-                        raise ValueError(
-                            f"Particles of type {type(topology_particle)} are not supported"
-                        )
-
-                    topology_particle_index = topology_particle.topology_particle_index
-
-                    particle_charge = ref_mol._partial_charges[ref_mol_particle_index]
-
-                    # Retrieve nonbonded parameters for reference atom (charge not set yet)
-                    _, sigma, epsilon = force.getParticleParameters(
-                        topology_particle_index
-                    )
-                    # Set the nonbonded force with the partial charge
-                    force.setParticleParameters(
-                        topology_particle_index,
-                        particle_charge.m,
-                        sigma,
-                        epsilon,
-                    )
+                # Retrieve nonbonded parameters for reference atom (charge not set yet)
+                _, sigma, epsilon = force.getParticleParameters(topology_particle_index)
+                # Set the nonbonded force with the partial charge
+                force.setParticleParameters(
+                    topology_particle_index, particle_charge, sigma, epsilon
+                )
 
             # Finally, mark that charges were assigned for this reference molecule
-            self.mark_charges_assigned(ref_mol, topology)
+            self.mark_charges_assigned(molecule, topology)
 
         # Set the nonbonded method
         current_nb_method = force.getNonbondedMethod()
@@ -3914,25 +3905,23 @@ class ElectrostaticsHandler(_NonbondedHandler):
         # Unless check is disabled, ensure that the sum of partial charges on a molecule
         # add up to approximately its formal charge
         allow_nonintegral_charges = kwargs.get("allow_nonintegral_charges", False)
-        for top_mol in topology.topology_molecules:
+        for molecule in topology.molecules:
             # Skip check if user manually disables it.
             if allow_nonintegral_charges:
                 continue
-            formal_charge_sum = top_mol.reference_molecule.total_charge
+            formal_charge_sum = molecule.total_charge
             partial_charge_sum = 0.0 * unit.elementary_charge
-            for top_particle in top_mol.particles:
-                q, _, _ = force.getParticleParameters(
-                    top_particle.topology_particle_index
-                )
-                partial_charge_sum += q * unit.elementary_charge
+            for particle in molecule.particles:
+                q, _, _ = force.getParticleParameters(topology.particle_index(particle))
+                partial_charge_sum += from_openmm(q)
             if (
                 abs(formal_charge_sum - partial_charge_sum)
                 > 0.01 * unit.elementary_charge
             ):
                 msg = (
                     f"Partial charge sum ({partial_charge_sum}) "
-                    f"for molecule '{top_mol.reference_molecule.name}' (SMILES "
-                    f"{top_mol.reference_molecule.to_smiles()} does not equal formal charge sum "
+                    f"for molecule '{molecule.name}' (SMILES "
+                    f"{molecule.to_smiles()} does not equal formal charge sum "
                     f"({formal_charge_sum}). To override this error, provide the "
                     f"'allow_nonintegral_charges=True' keyword to ForceField.create_openmm_system"
                 )
@@ -4035,22 +4024,23 @@ class LibraryChargeHandler(_NonbondedHandler):
 
         # Keep track of the reference molecules that this successfully assigns charges to, so we can
         # mark them and subsequent charge generation handlers won't override the values
-        ref_mols_assigned = set()
 
         # Check to see whether the set contains any complete molecules, and remove the matches if not.
-        for top_mol in topology.topology_molecules:
+        for molecule in topology.molecules:
 
             # Make a temporary copy of ref_mol to assign charges from charge_mol
 
             # If charges were already assigned, skip this molecule
-            if self.check_charges_assigned(top_mol.reference_molecule, topology):
+            if self.check_charges_assigned(molecule, topology):
                 continue
 
             # Ensure all of the atoms in this mol are covered, otherwise skip it
-            top_particle_idxs = [atom.topology_particle_index for atom in top_mol.atoms]
+            top_particle_idxs = [
+                topology.particle_index(atom) for atom in molecule.atoms
+            ]
             if (
                 len(set(top_particle_idxs).intersection(assignable_atoms))
-                != top_mol.n_atoms
+                != molecule.n_atoms
             ):
                 logger.debug(
                     "Entire molecule is not covered. Skipping library charge assignment."
@@ -4069,12 +4059,8 @@ class LibraryChargeHandler(_NonbondedHandler):
                     sigma,
                     epsilon,
                 )
-
-            ref_mols_assigned.add(top_mol.reference_molecule)
-
-        # Finally, mark that charges were assigned for this reference molecule
-        for assigned_mol in ref_mols_assigned:
-            self.mark_charges_assigned(assigned_mol, topology)
+            # Finally, mark that charges were assigned for this molecule
+            self.mark_charges_assigned(molecule, topology)
 
 
 class ToolkitAM1BCCHandler(_NonbondedHandler):
@@ -4108,15 +4094,14 @@ class ToolkitAM1BCCHandler(_NonbondedHandler):
     def create_force(self, system, topology, **kwargs):
         import warnings
 
-        from openff.toolkit.topology import TopologyAtom, TopologyVirtualSite
         from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
 
         force = super().create_force(system, topology, **kwargs)
 
-        for ref_mol in topology.reference_molecules:
+        for molecule in topology.molecules:
 
             # If charges were already assigned, skip this molecule
-            if self.check_charges_assigned(ref_mol, topology):
+            if self.check_charges_assigned(molecule, topology):
                 continue
 
             # If the molecule wasn't already assigned charge values, calculate them here
@@ -4124,7 +4109,7 @@ class ToolkitAM1BCCHandler(_NonbondedHandler):
             try:
                 # We don't need to generate conformers here, since that will be done by default in
                 # compute_partial_charges with am1bcc if the use_conformers kwarg isn't defined
-                ref_mol.assign_partial_charges(
+                molecule.assign_partial_charges(
                     partial_charge_method="am1bcc", toolkit_registry=toolkit_registry
                 )
             except Exception as e:
@@ -4132,40 +4117,19 @@ class ToolkitAM1BCCHandler(_NonbondedHandler):
                 continue
 
             # Assign charges to relevant atoms
-            for topology_molecule in topology._reference_molecule_to_topology_molecules[
-                ref_mol
-            ]:
-                for topology_particle in topology_molecule.atoms:
-                    if type(topology_particle) is TopologyAtom:
-                        ref_mol_particle_index = (
-                            topology_particle.atom.molecule_particle_index
-                        )
-                    elif type(topology_particle) is TopologyVirtualSite:
-                        ref_mol_particle_index = (
-                            topology_particle.virtual_site.molecule_particle_index
-                        )
-                    else:
-                        raise ValueError(
-                            f"Particles of type {type(topology_particle)} are not supported"
-                        )
+            for atom in molecule.atoms:
+                molecule_atom_index = molecule.atom_index(atom)
+                topology_particle_index = topology.particle_index(atom)
+                particle_charge = molecule.partial_charges[molecule_atom_index]
 
-                    topology_particle_index = topology_particle.topology_particle_index
-
-                    particle_charge = ref_mol._partial_charges[ref_mol_particle_index]
-
-                    # Retrieve nonbonded parameters, as floats, for reference atom (charge not set yet)
-                    _, sigma, epsilon = force.getParticleParameters(
-                        topology_particle_index
-                    )
-                    # Set the nonbonded force with the partial charge
-                    force.setParticleParameters(
-                        topology_particle_index,
-                        to_openmm(particle_charge),
-                        sigma,
-                        epsilon,
-                    )
+                # Retrieve nonbonded parameters for reference atom (charge not set yet)
+                _, sigma, epsilon = force.getParticleParameters(topology_particle_index)
+                # Set the nonbonded force with the partial charge
+                force.setParticleParameters(
+                    topology_particle_index, to_openmm(particle_charge), sigma, epsilon
+                )
             # Finally, mark that charges were assigned for this reference molecule
-            self.mark_charges_assigned(ref_mol, topology)
+            self.mark_charges_assigned(molecule, topology)
 
     # TODO: Move chargeModel and library residue charges to SMIRNOFF spec
     def postprocess_system(self, system, topology, **kwargs):
@@ -4305,8 +4269,6 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
     def create_force(self, system, topology, **kwargs):
         import warnings
 
-        from openff.toolkit.topology import TopologyAtom, TopologyVirtualSite
-
         # We only want one instance of this force type
         existing = [system.getForce(i) for i in range(system.getNumForces())]
         existing = [f for f in existing if type(f) == self._OPENMMTYPE]
@@ -4316,17 +4278,17 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
         else:
             force = existing[0]
 
-        for ref_mol in topology.reference_molecules:
+        for molecule in topology.molecules:
 
             # If charges were already assigned, skip this molecule
-            if self.check_charges_assigned(ref_mol, topology):
+            if self.check_charges_assigned(molecule, topology):
                 continue
 
             toolkit_registry = kwargs.get("toolkit_registry", GLOBAL_TOOLKIT_REGISTRY)
             try:
                 # If the molecule wasn't assigned parameters from a manually-input charge_mol, calculate them here
-                ref_mol.generate_conformers(n_conformers=self.number_of_conformers)
-                ref_mol.assign_partial_charges(
+                molecule.generate_conformers(n_conformers=self.number_of_conformers)
+                molecule.assign_partial_charges(
                     partial_charge_method=self.partial_charge_method,
                     toolkit_registry=toolkit_registry,
                 )
@@ -4337,21 +4299,11 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
             charges_to_assign = {}
 
             # Assign initial, un-incremented charges to relevant atoms
-            for topology_molecule in topology._reference_molecule_to_topology_molecules[
-                ref_mol
-            ]:
-                for topology_particle in topology_molecule.particles:
-                    topology_particle_index = topology_particle.topology_particle_index
-                    if type(topology_particle) is TopologyAtom:
-                        ref_mol_particle_index = (
-                            topology_particle.atom.molecule_particle_index
-                        )
-                    if type(topology_particle) is TopologyVirtualSite:
-                        ref_mol_particle_index = (
-                            topology_particle.virtual_site.molecule_particle_index
-                        )
-                    particle_charge = ref_mol._partial_charges[ref_mol_particle_index]
-                    charges_to_assign[topology_particle_index] = particle_charge
+            for particle in molecule.particles:
+                topology_particle_index = topology.particle_index(particle)
+                molecule_particle_index = molecule.particle_index(particle)
+                particle_charge = molecule.partial_charges[molecule_particle_index]
+                charges_to_assign[topology_particle_index] = particle_charge
 
             # Find SMARTS-based matches for charge increments
             charge_increment_matches = self.find_matches(topology)
@@ -4405,7 +4357,7 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
                 )
 
             # Finally, mark that charges were assigned for this reference molecule
-            self.mark_charges_assigned(ref_mol, topology)
+            self.mark_charges_assigned(molecule, topology)
 
 
 class GBSAHandler(ParameterHandler):
@@ -4664,7 +4616,7 @@ class GBSAHandler(ParameterHandler):
 
         # Check that no atoms (n.b. not particles) are missing force parameters.
         self._check_all_valence_terms_assigned(
-            assigned_terms=atom_matches, valence_terms=list(topology.topology_atoms)
+            atom_matches, topology, [(atom,) for atom in topology.atoms]
         )
 
         system.addForce(gbsa_force)
@@ -5732,7 +5684,7 @@ class VirtualSiteHandler(_NonbondedHandler):
             Topology to add virtual sites to.
         """
 
-        for molecule in topology.reference_molecules:
+        for molecule in topology.molecules:
 
             """The following two lines below should be avoided but is left
             until a better solution is found (see #699). The issue is that a
@@ -5760,7 +5712,7 @@ class VirtualSiteHandler(_NonbondedHandler):
             for vsite_type, orientations in virtual_sites:
                 vsite_type.add_virtual_site(molecule, orientations, replace=True)
 
-    def _create_openmm_virtual_sites(self, system, force, topology, ref_mol):
+    def _create_openmm_virtual_sites(self, system, force, topology, molecule):
 
         """
         Here we must assume that
@@ -5777,32 +5729,32 @@ class VirtualSiteHandler(_NonbondedHandler):
         standpoint, to require them to be.
         """
 
-        for vsite in ref_mol.virtual_sites:
+        for vsite in molecule.virtual_sites:
             ref_key = [atom.molecule_atom_index for atom in vsite.atoms]
             logger.debug("VSite ref_key: {}".format(ref_key))
 
-            ms = topology._reference_molecule_to_topology_molecules[ref_mol]
-            for top_mol in ms:
-                logger.debug("top_mol: {}".format(top_mol))
+            logger.debug("molecule: {}".format(molecule))
 
-                ids = self._create_openmm_virtual_particle(
-                    system, force, top_mol, vsite, ref_key
-                )
+            ids = self._create_openmm_virtual_particle(
+                system, force, molecule, vsite, ref_key, topology
+            )
 
-                # Go and exclude each of the vsite particles; this makes
-                # sense because these particles cannot "feel" forces, only
-                # exert them
-                policy = self._parameter_to_policy[self.exclusion_policy]
-                if policy.value != self._ExclusionPolicy.NONE.value:
-                    # Default here is to always exclude vsites which are
-                    # of the same virtual site. Their positions are rigid,
-                    # and so any energy that would be added to the system
-                    # due to their pairwise interaction would not make sense.
-                    for i, j in combinations(ids, 2):
-                        logger.debug("Excluding vsite {} vsite {}".format(i, j))
-                        force.addException(i, j, 0.0, 0.0, 0.0, replace=True)
+            # Go and exclude each of the vsite particles; this makes
+            # sense because these particles cannot "feel" forces, only
+            # exert them
+            policy = self._parameter_to_policy[self.exclusion_policy]
+            if policy.value != self._ExclusionPolicy.NONE.value:
+                # Default here is to always exclude vsites which are
+                # of the same virtual site. Their positions are rigid,
+                # and so any energy that would be added to the system
+                # due to their pairwise interaction would not make sense.
+                for i, j in combinations(ids, 2):
+                    logger.debug("Excluding vsite {} vsite {}".format(i, j))
+                    force.addException(i, j, 0.0, 0.0, 0.0, replace=True)
 
-    def _create_openmm_virtual_particle(self, system, force, top_mol, vsite, ref_key):
+    def _create_openmm_virtual_particle(
+        self, system, force, molecule, vsite, ref_key, topology
+    ):
 
         policy = self._parameter_to_policy[self.exclusion_policy]
 
@@ -5813,7 +5765,9 @@ class VirtualSiteHandler(_NonbondedHandler):
             sort_key = [orientation.index(i) for i in ref_key]
             atom_key = [ref_key[i] for i in sort_key]
             logger.debug("sort_key: {}".format(sort_key))
-            atom_key = [top_mol.atom_start_topology_index + i for i in atom_key]
+            atom_key = [
+                topology.molecule_atom_start_index(molecule) + i for i in atom_key
+            ]
 
             omm_vsite = vsite.get_openmm_virtual_site(atom_key)
             vsite_q = self._apply_charge_increment(

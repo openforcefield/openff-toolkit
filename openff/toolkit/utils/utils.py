@@ -26,6 +26,7 @@ __all__ = [
     "convert_0_1_smirnoff_to_0_2",
     "convert_0_2_smirnoff_to_0_3",
     "get_molecule_parameterIDs",
+    "remove_subsets_from_list",
 ]
 
 import contextlib
@@ -1115,3 +1116,28 @@ def sort_smirnoff_dict(data):
             # Handle metadata or the bottom of a recursive dict
             sorted_dict[key] = val
     return sorted_dict
+
+
+def remove_subsets_from_list(some_list):
+    """
+    Remove overlapping sublists (subsets) from given list.
+
+    Parameters
+    __________
+    some_list : list
+        List of objects to remove subsets from.
+
+    Returns
+    _______
+    unique_sets : set
+        Set containing only the unique subsets.
+    """
+    some_set = set(some_list)
+    remove_set = set()
+    for element in some_set:
+        for other_element in some_set:
+            is_subset = set(element).issubset(other_element)
+            if element != other_element and is_subset:
+                remove_set.add(element)
+    unique_sets = some_set - remove_set
+    return unique_sets

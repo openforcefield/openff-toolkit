@@ -147,6 +147,10 @@ class NotAttachedToMoleculeError(OpenFFToolkitException):
     """Exception for when a component does not belong to a Molecule object, but is queried"""
 
 
+class InvalidAtomMetadataError(OpenFFToolkitException):
+    """The program attempted to set atom metadata to an invalid type"""
+
+
 class DuplicateUniqueMoleculeError(OpenFFToolkitException):
     """
     Exception for when the user provides indistinguishable unique molecules when trying to identify atoms from a PDB
@@ -294,6 +298,17 @@ class DuplicateVirtualSiteTypeException(OpenFFToolkitException):
 
 class CallbackRegistrationError(OpenFFToolkitException, TypeError):
     """Error raised when callback registration fails."""
+
+
+class HierarchySchemeWithIteratorNameAlreadyRegisteredException(OpenFFToolkitException):
+    """Exception raised when trying to add a HierarchyScheme to a molecule
+    that already has one with the same iterator name"""
+
+
+# TODO: Should be a subclass of KeyError? Should be replaced by KeyError?
+class HierarchySchemeNotFoundException(OpenFFToolkitException):
+    """Exception raised when trying to access a HierarchyScheme from a molecule
+    that doesn't have one with the given iterator name"""
 
 
 class MissingIndexedAttributeError(
