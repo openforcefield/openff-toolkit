@@ -52,7 +52,7 @@ Essentially, anything which provides the full identity of what you want to simul
 
 ## I understand the risks and want to perform bond and formal charge inference anyway
 
-If you are unable to provide a molecule in the formats recommended above and want to attempt to infer the bond orders and atomic formal charges, there are tools available elsewhere that can provide guesses for this problem. These tools are not perfect, and the inference problem itself is poorly defined, so you should review each output closely (see our [Core Concepts](users/concepts.html) for an explanation of what information is needed to construct an OpenFF Molecule). Some tools we know of include:
+If you are unable to provide a molecule in the formats recommended above and want to attempt to infer the bond orders and atomic formal charges, there are tools available elsewhere that can provide guesses for this problem. These tools are not perfect, and the inference problem itself is poorly defined, so you should review each output closely (see our [Core Concepts](users/concepts) for an explanation of what information is needed to construct an OpenFF Molecule). Some tools we know of include:
 
 - the OpenEye toolkits' [`OEPerceiveBondOrders`](https://docs.eyesopen.com/toolkits/python/oechemtk/OEChemFunctions/OEPerceiveBondOrders.html) functionality
 - [MDAnalysis' RDKit converter](https://docs.mdanalysis.org/stable/documentation_pages/converters/RDKit.html?highlight=rdkit#module-MDAnalysis.converters.RDKit), with an [example here](https://github.com/openforcefield/openff-toolkit/issues/1126#issuecomment-969712195)
