@@ -5360,7 +5360,10 @@ class FrozenMolecule(Serializable):
         # TODO: Pull in coordinates and assign stereochemistry
         coords = (
             np.array(
-                [[*vec3.value_in_unit(unit.angstrom)] for vec3 in pdb.getPositions()]
+                [
+                    [*vec3.value_in_unit(openmm_unit.angstrom)]
+                    for vec3 in pdb.getPositions()
+                ]
             )
             * unit.angstrom
         )

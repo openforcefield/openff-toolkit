@@ -1517,7 +1517,7 @@ class Topology(Serializable):
             atom1_idx, atom2_idx = self.atom_index(atom1), self.atom_index(atom2)
             bond_type = (
                 # Aromatic if bond.bond.is_aromatic else bond_types[bond.bond_order]
-                Aromatic
+                app.Aromatic
                 if bond.is_aromatic
                 else bond_types[bond.bond_order]
             )

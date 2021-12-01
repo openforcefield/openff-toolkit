@@ -60,7 +60,7 @@ from typing import Any, List, Optional, Type, Union
 
 import openmm
 from openff.units import unit
-from openff.units.openmm import to_openmm
+from openff.units.openmm import from_openmm, to_openmm
 
 from openff.toolkit.topology import (
     ImproperDict,
@@ -3823,7 +3823,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
                 _, sigma, epsilon = force.getParticleParameters(topology_particle_index)
                 # Set the nonbonded force with the partial charge
                 force.setParticleParameters(
-                    topology_particle_index, particle_charge, sigma, epsilon
+                    topology_particle_index, to_openmm(particle_charge), sigma, epsilon
                 )
 
             # Finally, mark that charges were assigned for this reference molecule
@@ -4503,7 +4503,7 @@ class GBSAHandler(ParameterHandler):
         )
 
     def create_force(self, system, topology, **kwargs):
-        import simtk
+        import openmm
 
         self._validate_parameters()
 
@@ -4516,9 +4516,9 @@ class GBSAHandler(ParameterHandler):
 
         # No previous GBSAForce should exist, so we're safe just making one here.
         force_map = {
-            "HCT": simtk.openmm.app.internal.customgbforces.GBSAHCTForce,
-            "OBC1": simtk.openmm.app.internal.customgbforces.GBSAOBC1Force,
-            "OBC2": simtk.openmm.GBSAOBCForce,
+            "HCT": openmm.app.internal.customgbforces.GBSAHCTForce,
+            "OBC1": openmm.app.internal.customgbforces.GBSAOBC1Force,
+            "OBC2": openmm.GBSAOBCForce,
             # It's tempting to do use the class below, but the customgbforce
             # version of OBC2 doesn't provide setSolventRadius()
             #'OBC2': simtk.openmm.app.internal.customgbforces.GBSAOBC2Force,
@@ -4562,10 +4562,10 @@ class GBSAHandler(ParameterHandler):
             # http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomGBForce.html
 
             # gbsa_force.setNonbondedMethod(simtk.openmm.NonbondedForce.CutoffPeriodic)
-            gbsa_force.setNonbondedMethod(simtk.openmm.CustomGBForce.CutoffPeriodic)
+            gbsa_force.setNonbondedMethod(openmm.CustomGBForce.CutoffPeriodic)
         else:
             # gbsa_force.setNonbondedMethod(simtk.openmm.NonbondedForce.NoCutoff)
-            gbsa_force.setNonbondedMethod(simtk.openmm.CustomGBForce.NoCutoff)
+            gbsa_force.setNonbondedMethod(openmm.CustomGBForce.NoCutoff)
 
         # Add all GBSA terms to the system. Note that this will have been done above
         if self.gb_model == "OBC2":
