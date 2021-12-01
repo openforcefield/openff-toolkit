@@ -1369,7 +1369,7 @@ class TestMolecule:
 
         topology = Topology.from_molecules(molecule_smiles)
         assert molecule_smiles.hill_formula == Molecule.to_hill_formula(
-            topology.molecules[0]
+            [*topology.molecules][0]
         )
         # make sure the networkx matches
         assert molecule_smiles.hill_formula == Molecule.to_hill_formula(
@@ -1414,7 +1414,7 @@ class TestMolecule:
         assert (
             Molecule.are_isomorphic(
                 ethanol,
-                topology.molecules[0],
+                [*topology.molecules][0],
                 aromatic_matching=False,
                 formal_charge_matching=False,
                 bond_order_matching=False,
