@@ -42,7 +42,7 @@ XYZ files generally only contain elements and positions, and are therefore simil
 
 For application of SMIRNOFF force fields, we recommend that you begin your work with formats which provide the chemical identity of your small molecule (including formal charge and bond order).
 This means we recommend one of the following or equivalent:
-- A `.mol`, `.sdf`, or `.mol2` file or files for the molecules comprising your system, with correct bond orders and formal charges. (Note: Do NOT generate this from a simulation package or tool which does not have access to bond order information; you may end up with a correct-seeming file, but the bond orders will be incorrect)
+- A `.sdf`, `.mol`, or `.mol2` file or files for the molecules comprising your system, with correct bond orders and formal charges. (Note: Do NOT generate this from a simulation package or tool which does not have access to bond order information; you may end up with a correct-seeming file, but the bond orders will be incorrect)
 - Isomeric SMILES strings for the components of your system
 - InCHI strings for the components of your system
 - Chemical Identity Registry numbers for the components of your system
