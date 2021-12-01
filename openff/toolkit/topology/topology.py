@@ -1202,30 +1202,8 @@ class Topology(Serializable):
             describing all of the instances of that chemical species in the topology. Each instance is a
             two-membered list where the first element is the topology molecule index, and the second element
             is a dict describing the atom map from the unique molecule to the instance of it in the topology.
-        """
-        identity_maps = self.identify_chemically_identical_molecules()
-        # Convert molecule identity maps into groups of identical molecules
-        groupings = {}
-        for molecule_idx in identity_maps.keys():
-            unique_mol, atom_map = identity_maps[molecule_idx]
-            groupings[unique_mol] = groupings.get(unique_mol, list()) + [[molecule_idx, atom_map]]
-        return groupings
 
-    def identify_chemically_identical_molecules(self):
-        """
-        Efficiently perform an all-by-all isomorphism check for the molecules in this Topology. This method
-        uses the strictest form of isomorphism checking, which will NOT match distinct kekule structures of
-        multiple resonance forms of the same molecule, or different kekulizations of aromatic systems.
-
-        Returns
-        -------
-        identical_molecules : {int: (int, {int: int})}
-            A mapping from the index of each molecule in the topology to (the index of the first appearance of
-            a chemically equivalent molecule in the topology, and a mapping from the atom indices of this molecule to
-            the atom indices of that chemically equivalent molecule).
-            ``identical_molecules[molecule_idx] = (unique_molecule_idx, {molecule_atom_idx, unique_molecule_atom_idx})``
-
-        >>> from openff.toolkit.topology import Molecule, Topology
+                >>> from openff.toolkit.topology import Molecule, Topology
         >>> # Create a water ordered as OHH
         >>> water1 = Molecule()
         >>> water1.add_atom(8, 0, False)
@@ -1243,9 +1221,31 @@ class Topology(Serializable):
         >>> water2.add_bond(1, 2, 1, False)
 
         >>> top = Topology.from_molecules([water1, water2])
-        >>> top.identify_chemically_identical_molecules()
+        >>> top.identical_molecule_groups
 
-        {0: (0, {0: 0, 1: 1, 2: 2}), 1: (0, {0: 1, 1: 0, 2: 2})}
+        {0: [[0, {0: 0, 1: 1, 2: 2}], [1, {0: 1, 1: 0, 2: 2}]]}
+        """
+        identity_maps = self._identify_chemically_identical_molecules()
+        # Convert molecule identity maps into groups of identical molecules
+        groupings = {}
+        for molecule_idx in identity_maps.keys():
+            unique_mol, atom_map = identity_maps[molecule_idx]
+            groupings[unique_mol] = groupings.get(unique_mol, list()) + [[molecule_idx, atom_map]]
+        return groupings
+
+    def _identify_chemically_identical_molecules(self):
+        """
+        Efficiently perform an all-by-all isomorphism check for the molecules in this Topology. This method
+        uses the strictest form of isomorphism checking, which will NOT match distinct kekule structures of
+        multiple resonance forms of the same molecule, or different kekulizations of aromatic systems.
+
+        Returns
+        -------
+        identical_molecules : {int: (int, {int: int})}
+            A mapping from the index of each molecule in the topology to (the index of the first appearance of
+            a chemically equivalent molecule in the topology, and a mapping from the atom indices of this molecule to
+            the atom indices of that chemically equivalent molecule).
+            ``identical_molecules[molecule_idx] = (unique_molecule_idx, {molecule_atom_idx, unique_molecule_atom_idx})``
         """
         # Check whether this was run previously, and a cached result is available.
         if self._cached_chemically_identical_molecules is not None:
