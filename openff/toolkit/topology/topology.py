@@ -1155,12 +1155,7 @@ class Topology(Serializable):
         # of that molecule in the Topology object.
         matches = list()
 
-        identity_maps = self.identify_chemically_identical_molecules()
-        # Convert molecule identity maps into groups of identical molecules
-        groupings = {}
-        for molecule_idx in identity_maps.keys():
-            unique_mol, atom_map = identity_maps[molecule_idx]
-            groupings[unique_mol] = groupings.get(unique_mol, list()) + [[molecule_idx, atom_map]]
+        groupings = self.identical_molecule_groups
 
         for unique_mol_idx, group in groupings.items():
             unique_mol = self.molecule(unique_mol_idx)
@@ -1193,6 +1188,28 @@ class Topology(Serializable):
 
                     matches.append(environment_match)
         return matches
+
+    @property
+    def identical_molecule_groups(self):
+        """
+        Returns groups of chemically identical molecules, identified by index and atom map.
+
+        Returns
+        -------
+        identical_molecule_groups : {int:[[int: {int: int}]]}
+            A dict of the form {unique_mol_idx : [[topology_mol_idx, atom_map],...].
+            A dict where each key is the topology molecule index of a unique chemical species, and each value is a list
+            describing all of the instances of that chemical species in the topology. Each instance is a
+            two-membered list where the first element is the topology molecule index, and the second element
+            is a dict describing the atom map from the unique molecule to the instance of it in the topology.
+        """
+        identity_maps = self.identify_chemically_identical_molecules()
+        # Convert molecule identity maps into groups of identical molecules
+        groupings = {}
+        for molecule_idx in identity_maps.keys():
+            unique_mol, atom_map = identity_maps[molecule_idx]
+            groupings[unique_mol] = groupings.get(unique_mol, list()) + [[molecule_idx, atom_map]]
+        return groupings
 
     def identify_chemically_identical_molecules(self):
         """
