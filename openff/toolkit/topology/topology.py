@@ -1579,6 +1579,7 @@ class Topology(Serializable):
         with open(filename, "w") as outfile:
             app.PDBFile.writeFile(openmm_top, positions, outfile, keepIds)
 
+    @requires_package("mdtraj")
     @staticmethod
     def from_mdtraj(mdtraj_topology, unique_molecules=None):
         """
@@ -1606,6 +1607,7 @@ class Topology(Serializable):
     # Avoid removing this method, even though it is private and would not be difficult for most
     # users to replace. Also avoid making it public as round-trips with MDTraj are likely
     # to not preserve necessary information.
+    @requires_package("mdtraj")
     def _to_mdtraj(self):
         """
         Create an MDTraj Topology object.

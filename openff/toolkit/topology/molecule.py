@@ -39,7 +39,7 @@ from typing import TYPE_CHECKING, List, Optional, Union
 
 import networkx as nx
 import numpy as np
-from mdtraj.core.element import Element
+from mendeleev import element
 from openff.units import unit
 from openff.units.openmm import to_openmm
 
@@ -417,14 +417,9 @@ class Atom(Particle):
 
         Returns
         -------
-        openmm.openmm.app.element.Element
+        mendeleev.models.Element
         """
-        try:
-            from openmm.app.element import Element
-        except ImportError:
-            from simtk.openmm.app.element import Element
-
-        return Element.getByAtomicNumber(self._atomic_number)
+        return element(self._atomic_number)
 
     @property
     def atomic_number(self):
@@ -5792,11 +5787,6 @@ class FrozenMolecule(Serializable):
             No conformer found at the given index.
 
         """
-        try:
-            from openmm.app.element import Element
-        except ImportError:
-            from simtk.openmm.app.element import Element
-
         import qcelemental as qcel
 
         # get/ check the geometry
@@ -5813,9 +5803,7 @@ class FrozenMolecule(Serializable):
         connectivity = [
             (bond.atom1_index, bond.atom2_index, bond.bond_order) for bond in self.bonds
         ]
-        symbols = [
-            Element.getByAtomicNumber(atom.atomic_number).symbol for atom in self.atoms
-        ]
+        symbols = [element(atom.atomic_number).symbol for atom in self.atoms]
         if extras is not None:
             extras[
                 "canonical_isomeric_explicit_hydrogen_mapped_smiles"
@@ -7159,9 +7147,7 @@ def _atom_nums_to_hill_formula(atom_nums: List[int]) -> str:
     Hill formula. See https://en.wikipedia.org/wiki/Chemical_formula#Hill_system"""
     from collections import Counter
 
-    atom_symbol_counts = Counter(
-        Element.getByAtomicNumber(atom_num).symbol for atom_num in atom_nums
-    )
+    atom_symbol_counts = Counter(element(atom_num).symbol for atom_num in atom_nums)
 
     formula = []
     # Check for C and H first, to make a correct hill formula
