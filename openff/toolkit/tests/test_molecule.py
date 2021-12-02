@@ -4178,11 +4178,13 @@ class TestMoleculeFromPDB:
         ).to_smiles()
         assert offmol.to_smiles() == rdkit_mol_smiles
 
+    @pytest.mark.xfail()
     def test_from_pdb_t4_n_residues(self):
         """Test number of residues when creating Molecule from T4 PDB"""
         expected_n_residues = 164
         raise NotImplementedError
 
+    @pytest.mark.xfail()
     def test_from_pdb_t4_atom_metadata(self):
         """Test to check the metadata from T4 pdb is filled correctly."""
         raise NotImplementedError
