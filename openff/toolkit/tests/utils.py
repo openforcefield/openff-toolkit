@@ -20,13 +20,9 @@ import textwrap
 from typing import List, Tuple
 
 import numpy as np
+import openmm
 import pytest
-
-try:
-    import openmm
-    from openmm import unit
-except ImportError:
-    from simtk import openmm, unit
+from openmm import unit
 
 from openff.toolkit.utils import (
     AmberToolsToolkitWrapper,

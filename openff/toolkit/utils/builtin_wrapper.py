@@ -8,11 +8,7 @@ __all__ = ("BuiltInToolkitWrapper",)
 # =============================================================================================
 
 import numpy as np
-
-try:
-    from openmm import unit
-except ImportError:
-    from simtk import unit
+from openmm import unit
 
 from openff.toolkit.utils import base_wrapper
 from openff.toolkit.utils.exceptions import ChargeMethodUnavailableError

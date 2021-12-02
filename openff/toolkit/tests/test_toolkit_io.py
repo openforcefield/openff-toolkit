@@ -17,11 +17,7 @@ from io import BytesIO, StringIO
 import numpy as np
 import pytest
 from numpy.testing import assert_allclose
-
-try:
-    from openmm import unit
-except ImportError:
-    from simtk import unit
+from openmm import unit
 
 from openff.toolkit.tests import create_molecules
 from openff.toolkit.tests.utils import requires_openeye, requires_rdkit

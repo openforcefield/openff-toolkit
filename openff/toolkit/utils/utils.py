@@ -34,11 +34,7 @@ import contextlib
 import functools
 import logging
 
-try:
-    from openmm import unit
-except ImportError:
-    from simtk import unit
-
+from openmm import unit
 
 from openff.toolkit.utils.exceptions import (
     IncompatibleUnitError,

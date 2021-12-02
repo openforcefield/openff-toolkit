@@ -10,14 +10,10 @@ Test classes and function in module openff.toolkit.typing.engines.smirnoff.param
 """
 
 import numpy
+import openmm
 import pytest
 from numpy.testing import assert_almost_equal
-
-try:
-    import openmm
-    from openmm import unit
-except ImportError:
-    from simtk import unit, openmm
+from openmm import unit
 
 from openff.toolkit.topology import Molecule
 from openff.toolkit.typing.engines.smirnoff.parameters import (

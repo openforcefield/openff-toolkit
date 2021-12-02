@@ -13,11 +13,7 @@ import ast
 import os
 
 import pytest
-
-try:
-    from openmm import unit
-except ImportError:
-    from simtk import unit
+from openmm import unit
 
 # =============================================================================================
 # TESTS

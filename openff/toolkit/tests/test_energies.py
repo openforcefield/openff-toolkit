@@ -1,14 +1,9 @@
 import json
 
 import numpy as np
+import openmm
 import pytest
-
-try:
-    import openmm
-    from openmm import unit
-except ImportError:
-    from simtk import unit, openmm
-
+from openmm import unit
 
 from openff.toolkit.tests.utils import get_data_file_path, requires_rdkit
 from openff.toolkit.topology import Molecule, Topology

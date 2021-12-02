@@ -21,11 +21,7 @@ import logging
 from typing import Optional
 
 import xmltodict
-
-try:
-    from openmm import unit
-except ImportError:
-    from simtk import unit
+from openmm import unit
 
 # =============================================================================================
 # CONFIGURE LOGGER

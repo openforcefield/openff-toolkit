@@ -24,14 +24,8 @@ from collections import OrderedDict
 from collections.abc import MutableMapping
 
 import numpy as np
-
-try:
-    from openmm import app, unit
-    from openmm.app import Aromatic, Double, Single, Triple
-except ImportError:
-    from simtk import unit
-    from simtk.openmm import app
-    from simtk.openmm.app import Aromatic, Double, Single, Triple
+from openmm import app, unit
+from openmm.app import Aromatic, Double, Single, Triple
 
 from openff.toolkit.topology import Molecule
 from openff.toolkit.typing.chemistry import ChemicalEnvironment
@@ -688,7 +682,6 @@ class Topology(Serializable):
             )
         self._fractional_bond_order_model = fractional_bond_order_model
 
-
     @property
     def n_molecules(self):
         """Returns the number of molecules in this Topology
@@ -712,7 +705,6 @@ class Topology(Serializable):
         # invalidate themselves during appropriate events.
         for molecule in self._molecules:
             yield molecule
-
 
     def molecule(self, index):
         """
@@ -1230,7 +1222,9 @@ class Topology(Serializable):
         groupings = {}
         for molecule_idx in identity_maps.keys():
             unique_mol, atom_map = identity_maps[molecule_idx]
-            groupings[unique_mol] = groupings.get(unique_mol, list()) + [[molecule_idx, atom_map]]
+            groupings[unique_mol] = groupings.get(unique_mol, list()) + [
+                [molecule_idx, atom_map]
+            ]
         return groupings
 
     def _identify_chemically_identical_molecules(self):
@@ -1259,14 +1253,22 @@ class Topology(Serializable):
             if mol1_idx in already_matched_mols:
                 continue
             mol1 = self.molecule(mol1_idx)
-            self._cached_chemically_identical_molecules[mol1_idx] = (mol1_idx, {i:i for i in range(mol1.n_atoms)})
-            for mol2_idx in range(mol1_idx+1, self.n_molecules):
+            self._cached_chemically_identical_molecules[mol1_idx] = (
+                mol1_idx,
+                {i: i for i in range(mol1.n_atoms)},
+            )
+            for mol2_idx in range(mol1_idx + 1, self.n_molecules):
                 if mol2_idx in already_matched_mols:
                     continue
                 mol2 = self.molecule(mol2_idx)
-                are_isomorphic, atom_map = Molecule.are_isomorphic(mol1, mol2, return_atom_map=True)
+                are_isomorphic, atom_map = Molecule.are_isomorphic(
+                    mol1, mol2, return_atom_map=True
+                )
                 if are_isomorphic:
-                    self._cached_chemically_identical_molecules[mol2_idx] = (mol1_idx, atom_map)
+                    self._cached_chemically_identical_molecules[mol2_idx] = (
+                        mol1_idx,
+                        atom_map,
+                    )
                     already_matched_mols.add(mol2_idx)
         return self._cached_chemically_identical_molecules
 
@@ -1491,12 +1493,8 @@ class Topology(Serializable):
         openmm_topology : openmm.app.Topology
             An OpenMM Topology object
         """
-        try:
-            from openmm.app import Topology as OMMTopology
-            from openmm.app.element import Element as OMMElement
-        except ImportError:
-            from simtk.openmm.app import Topology as OMMTopology
-            from simtk.openmm.app.element import Element as OMMElement
+        from openmm.app import Topology as OMMTopology
+        from openmm.app.element import Element as OMMElement
 
         omm_topology = OMMTopology()
 
@@ -2345,7 +2343,6 @@ class Topology(Serializable):
         """
         _TOPOLOGY_DEPRECATION_WARNING("topology_virtual_sites", "virtual_sites")
         return self.virtual_sites
-
 
     @property
     def n_reference_molecules(self):

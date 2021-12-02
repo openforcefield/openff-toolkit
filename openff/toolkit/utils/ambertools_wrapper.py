@@ -14,11 +14,7 @@ from collections import defaultdict
 from distutils.spawn import find_executable
 
 import numpy as np
-
-try:
-    from openmm import unit
-except ImportError:
-    from simtk import unit
+from openmm import unit
 
 from openff.toolkit.utils import base_wrapper, rdkit_wrapper
 from openff.toolkit.utils.exceptions import (

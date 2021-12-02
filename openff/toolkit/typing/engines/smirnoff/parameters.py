@@ -58,11 +58,8 @@ from enum import Enum
 from itertools import combinations
 from typing import Any, List, Optional, Type, Union
 
-try:
-    import openmm
-    from openmm import unit
-except ImportError:
-    from simtk import openmm, unit
+import openmm
+from openmm import unit
 
 from openff.toolkit.topology import (
     ImproperDict,
@@ -3811,17 +3808,24 @@ class ElectrostaticsHandler(_NonbondedHandler):
 
             # Otherwise, the molecule is in the charge_from_molecules list, and we should assign charges to it
             for unique_mol_particle in unique_mol.particles:
-                unique_mol_particle_index = unique_mol.particle_index(unique_mol_particle)
+                unique_mol_particle_index = unique_mol.particle_index(
+                    unique_mol_particle
+                )
                 particle_charge = unique_mol.partial_charges[unique_mol_particle_index]
                 for mol_instance_idx, atom_map in group:
                     mol_instance = topology.molecule(mol_instance_idx)
                     mol_instance_particle_index = atom_map[unique_mol_particle_index]
-                    mol_instance_particle = mol_instance.particle(mol_instance_particle_index)
-                    mol_instance_particle_top_idx =  topology.particle_index(mol_instance_particle)
-
+                    mol_instance_particle = mol_instance.particle(
+                        mol_instance_particle_index
+                    )
+                    mol_instance_particle_top_idx = topology.particle_index(
+                        mol_instance_particle
+                    )
 
                     # Retrieve nonbonded parameters for reference atom (charge not set yet)
-                    _, sigma, epsilon = force.getParticleParameters(mol_instance_particle_top_idx)
+                    _, sigma, epsilon = force.getParticleParameters(
+                        mol_instance_particle_top_idx
+                    )
                     # Set the nonbonded force with the partial charge
                     force.setParticleParameters(
                         mol_instance_particle_top_idx, particle_charge, sigma, epsilon
@@ -4125,7 +4129,9 @@ class ToolkitAM1BCCHandler(_NonbondedHandler):
                     topology_particle_index = topology.particle_index(mol_instance_atom)
 
                     # Retrieve nonbonded parameters for reference atom (charge not set yet)
-                    _, sigma, epsilon = force.getParticleParameters(topology_particle_index)
+                    _, sigma, epsilon = force.getParticleParameters(
+                        topology_particle_index
+                    )
                     # Set the nonbonded force with the partial charge
                     force.setParticleParameters(
                         topology_particle_index, particle_charge, sigma, epsilon
@@ -4304,8 +4310,12 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
                 for mol_instance_idx, atom_map in group:
                     mol_instance = topology.molecule(mol_instance_idx)
                     mol_instance_particle_index = atom_map[unique_mol_particle_index]
-                    mol_instance_particle = mol_instance.particle(mol_instance_particle_index)
-                    topology_particle_index = topology.particle_index(mol_instance_particle)
+                    mol_instance_particle = mol_instance.particle(
+                        mol_instance_particle_index
+                    )
+                    topology_particle_index = topology.particle_index(
+                        mol_instance_particle
+                    )
                     charges_to_assign[topology_particle_index] = particle_charge
 
             # Find SMARTS-based matches for charge increments
@@ -4505,7 +4515,7 @@ class GBSAHandler(ParameterHandler):
         )
 
     def create_force(self, system, topology, **kwargs):
-        import simtk
+        import openmm
 
         self._validate_parameters()
 
@@ -4518,9 +4528,9 @@ class GBSAHandler(ParameterHandler):
 
         # No previous GBSAForce should exist, so we're safe just making one here.
         force_map = {
-            "HCT": simtk.openmm.app.internal.customgbforces.GBSAHCTForce,
-            "OBC1": simtk.openmm.app.internal.customgbforces.GBSAOBC1Force,
-            "OBC2": simtk.openmm.GBSAOBCForce,
+            "HCT": openmm.app.internal.customgbforces.GBSAHCTForce,
+            "OBC1": openmm.app.internal.customgbforces.GBSAOBC1Force,
+            "OBC2": openmm.GBSAOBCForce,
             # It's tempting to do use the class below, but the customgbforce
             # version of OBC2 doesn't provide setSolventRadius()
             #'OBC2': simtk.openmm.app.internal.customgbforces.GBSAOBC2Force,
@@ -4564,10 +4574,10 @@ class GBSAHandler(ParameterHandler):
             # http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomGBForce.html
 
             # gbsa_force.setNonbondedMethod(simtk.openmm.NonbondedForce.CutoffPeriodic)
-            gbsa_force.setNonbondedMethod(simtk.openmm.CustomGBForce.CutoffPeriodic)
+            gbsa_force.setNonbondedMethod(openmm.CustomGBForce.CutoffPeriodic)
         else:
             # gbsa_force.setNonbondedMethod(simtk.openmm.NonbondedForce.NoCutoff)
-            gbsa_force.setNonbondedMethod(simtk.openmm.CustomGBForce.NoCutoff)
+            gbsa_force.setNonbondedMethod(openmm.CustomGBForce.NoCutoff)
 
         # Add all GBSA terms to the system. Note that this will have been done above
         if self.gb_model == "OBC2":

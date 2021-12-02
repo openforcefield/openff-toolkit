@@ -13,11 +13,7 @@ from typing import TYPE_CHECKING, List, Optional, Tuple
 
 import numpy as np
 from cachetools import LRUCache, cached
-
-try:
-    from openmm import unit
-except ImportError:
-    from simtk import unit
+from openmm import unit
 
 if TYPE_CHECKING:
     from openff.toolkit.topology.molecule import Molecule

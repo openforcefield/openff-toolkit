@@ -1,10 +1,7 @@
 import uuid
 from io import StringIO
 
-try:
-    from openmm import unit
-except ImportError:
-    from simtk import unit
+from openmm import unit
 
 try:
     from nglview import Trajectory as _NGLViewTrajectory

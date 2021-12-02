@@ -35,10 +35,7 @@ import warnings
 from collections import OrderedDict
 from typing import List
 
-try:
-    import openmm
-except ImportError:
-    from simtk import openmm
+import openmm
 
 from openff.toolkit.topology.molecule import DEFAULT_AROMATICITY_MODEL
 from openff.toolkit.typing.engines.smirnoff.io import ParameterIOHandler
