@@ -3988,6 +3988,7 @@ class TestMoleculeResiduePerception:
         assert counter == offmol.n_atoms
 
 
+@pytest.mark.xfail()
 class TestMoleculeFromPDB:
     """
     Test creation of cheminformatics-rich openff Molecule from PDB files.
