@@ -1504,10 +1504,9 @@ class Topology(Serializable):
         openmm_topology : openmm.app.Topology
             An OpenMM Topology object
         """
-        from openmm.app import Topology as OMMTopology
-        from openmm.app.element import Element as OMMElement
+        from openmm import app
 
-        omm_topology = OMMTopology()
+        omm_topology = app.Topology()
 
         # Create unique atom names
         if ensure_unique_atom_names:
@@ -1566,7 +1565,7 @@ class Topology(Serializable):
                     mol_to_residues[molecule_id] = residue
 
                 # Add atom.
-                element = OMMElement.getByAtomicNumber(atom.atomic_number)
+                element = app.Element.getByAtomicNumber(atom.atomic_number)
                 # omm_atom = omm_topology.addAtom(atom.atom.name, element, residue)
                 omm_atom = omm_topology.addAtom(atom.name, element, residue)
 
@@ -1645,8 +1644,9 @@ class Topology(Serializable):
         with open(filename, "w") as outfile:
             app.PDBFile.writeFile(openmm_top, positions, outfile, keepIds)
 
-    @requires_package("mdtraj")
+    # Should this be a staticmethod or a classmethod?
     @staticmethod
+    @requires_package("mdtraj")
     def from_mdtraj(mdtraj_topology, unique_molecules=None):
         """
         Construct an OpenFF Topology object from an MDTraj Topology object.

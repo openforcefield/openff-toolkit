@@ -46,7 +46,6 @@ if TYPE_CHECKING:
     import networkx as nx
 
 from cached_property import cached_property
-from openmm import LocalCoordinatesSite, unit
 from packaging import version
 
 import openff.toolkit

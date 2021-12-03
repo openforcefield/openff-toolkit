@@ -27,7 +27,7 @@ from tempfile import NamedTemporaryFile
 import numpy as np
 import pytest
 from openff.units import unit
-from openmm import unit
+from openmm import unit as openmm_unit
 from openmm.app import element
 
 from openff.toolkit.tests.create_molecules import (
