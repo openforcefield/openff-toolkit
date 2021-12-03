@@ -9,7 +9,6 @@ Tests for utility methods
 
 """
 
-import ast
 import os
 
 import pytest

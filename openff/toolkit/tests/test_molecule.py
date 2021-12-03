@@ -64,7 +64,6 @@ from openff.toolkit.topology.molecule import (
     InvalidConformerError,
     Molecule,
     SmilesParsingError,
-    _networkx_graph_to_hill_formula,
 )
 from openff.toolkit.utils import get_data_file_path
 from openff.toolkit.utils.exceptions import ConformerGenerationError
@@ -4155,6 +4154,7 @@ class TestMoleculeFromPDB:
             expected_mol, atom_stereochemistry_matching=False
         )
 
+    @pytest.mark.slow
     def test_from_pdb_t4_smiles_roundtrip(self):
         """Creation of Molecule from an uncapped T4 lysozyme PDB file."""
         pdb_file = get_data_file_path("proteins/T4-protein.pdb")

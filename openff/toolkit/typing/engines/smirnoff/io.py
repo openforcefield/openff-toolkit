@@ -22,59 +22,11 @@ from typing import Optional
 
 import xmltodict
 
-try:
-    from openmm import unit
-except ImportError:
-    from simtk import unit
-
 # =============================================================================================
 # CONFIGURE LOGGER
 # =============================================================================================
 
 logger = logging.getLogger(__name__)
-
-
-# =============================================================================================
-# QUANTITY PARSING UTILITIES
-# =============================================================================================
-
-
-def _ast_unit_eval(node):
-    """
-    Performs a safe algebraic syntax tree evaluation of a unit.
-
-    This will likely be replaced by the native implementation in Pint
-    if/when we'll switch over to Pint units.
-    """
-    import ast
-    import operator as op
-
-    operators = {
-        ast.Add: op.add,
-        ast.Sub: op.sub,
-        ast.Mult: op.mul,
-        ast.Div: op.truediv,
-        ast.Pow: op.pow,
-        ast.BitXor: op.xor,
-        ast.USub: op.neg,
-    }
-
-    if isinstance(node, ast.Num):  # <number>
-        return node.n
-    elif isinstance(node, ast.BinOp):  # <left> <operator> <right>
-        return operators[type(node.op)](
-            _ast_unit_eval(node.left), _ast_unit_eval(node.right)
-        )
-    elif isinstance(node, ast.UnaryOp):  # <operator>( <operand> ) e.g., -1
-        return operators[type(node.op)](_ast_unit_eval(node.operand))
-    elif isinstance(node, ast.Name):
-        # Check if this is a openmm unit.
-        u = getattr(unit, node.id)
-        if not isinstance(u, unit.Unit):
-            raise ValueError("No unit named {} found in openmm.unit.".format(node.id))
-        return u
-    else:
-        raise TypeError(node)
 
 
 # =============================================================================================

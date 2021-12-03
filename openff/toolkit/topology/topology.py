@@ -1249,6 +1249,7 @@ class Topology(Serializable):
             self.add_molecule(new_mol)
 
     @classmethod
+    @requires_package("openmm")
     def from_openmm(cls, openmm_topology, unique_molecules=None):
         """
         Construct an OpenFF Topology object from an OpenMM Topology object.
@@ -1272,16 +1273,9 @@ class Topology(Serializable):
             An OpenFF Topology object
         """
         import networkx as nx
+        from openff.units.openmm import from_openmm
 
         from openff.toolkit.topology.molecule import Molecule
-
-        # TODO: Simply decorate with @requires_package("openmm") when simtk compatibility no longer needed
-        try:
-            from openff.units.openmm import from_openmm
-            from openmm import app
-        except ImportError:
-            from openff.units.simtk import from_simtk as from_openmm
-            from simtk.openmm import app
 
         # Check to see if the openMM system has defined bond orders, by looping over all Bonds in the Topology.
         omm_has_bond_orders = True
@@ -1579,6 +1573,7 @@ class Topology(Serializable):
         with open(filename, "w") as outfile:
             app.PDBFile.writeFile(openmm_top, positions, outfile, keepIds)
 
+    @requires_package("mdtraj")
     @staticmethod
     def from_mdtraj(mdtraj_topology, unique_molecules=None):
         """
@@ -1606,6 +1601,7 @@ class Topology(Serializable):
     # Avoid removing this method, even though it is private and would not be difficult for most
     # users to replace. Also avoid making it public as round-trips with MDTraj are likely
     # to not preserve necessary information.
+    @requires_package("mdtraj")
     def _to_mdtraj(self):
         """
         Create an MDTraj Topology object.

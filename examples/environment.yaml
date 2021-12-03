@@ -12,6 +12,7 @@ dependencies:
   - qcportal
   - qcengine
   - openmmforcefields
+  - mendeleev
   # Below are dependencies of the toolkit; they are listed here as a reference
   - mdtraj
   - numpy

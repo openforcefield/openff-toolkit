@@ -18,6 +18,7 @@ dependencies:
   - networkx
   - ambertools
   - rdkit
+  - mendeleev
   - packaging
     # Removed until a new release which targets openff-toolkit is made.
 #  - openmmforcefields

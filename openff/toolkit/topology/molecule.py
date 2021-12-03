@@ -32,14 +32,13 @@ import json
 import operator
 import warnings
 from abc import abstractmethod
-from collections import OrderedDict, UserDict, defaultdict
+from collections import OrderedDict, UserDict
 from copy import deepcopy
-from itertools import chain
 from typing import TYPE_CHECKING, List, Optional, Union
 
 import networkx as nx
 import numpy as np
-from mdtraj.core.element import Element
+from mendeleev import element
 from openff.units import unit
 from openff.units.openmm import to_openmm
 
@@ -49,21 +48,8 @@ if TYPE_CHECKING:
 from cached_property import cached_property
 from packaging import version
 
-try:
-    from openmm import LocalCoordinatesSite
-    from openmm import unit as openmm_unit
-except ImportError:
-    from simtk import unit as openmm_unit
-    from simtk.openmm import LocalCoordinatesSite
-
 import openff.toolkit
-from openff.toolkit.utils import (
-    get_data_file_path,
-    quantity_to_string,
-    remove_subsets_from_list,
-    requires_package,
-    string_to_quantity,
-)
+from openff.toolkit.utils import get_data_file_path, requires_package
 from openff.toolkit.utils.exceptions import (
     HierarchySchemeNotFoundException,
     HierarchySchemeWithIteratorNameAlreadyRegisteredException,
@@ -355,7 +341,15 @@ class Atom(Particle):
                 raise IncompatibleUnitError(
                     f"Cannot set formal charge with a quantity with units {other.units}"
                 )
-        elif isinstance(other, openmm_unit.Quantity):
+        elif hasattr(other, "unit"):
+            from openmm import unit as openmm_unit
+
+            if not isinstance(other, openmm_unit.Quantity):
+                raise IncompatibleUnitError(
+                    "Unsupported type passed to formal_charge setter. "
+                    "Found object of type {type(other)}."
+                )
+
             from openff.units.openmm import from_openmm
 
             converted = from_openmm(other)
@@ -417,14 +411,9 @@ class Atom(Particle):
 
         Returns
         -------
-        openmm.openmm.app.element.Element
+        mendeleev.models.Element
         """
-        try:
-            from openmm.app.element import Element
-        except ImportError:
-            from simtk.openmm.app.element import Element
-
-        return Element.getByAtomicNumber(self._atomic_number)
+        return element(self._atomic_number)
 
     @property
     def atomic_number(self):
@@ -1247,6 +1236,7 @@ class VirtualSite(Particle):
             self.name, self.type, self.atoms, self.n_particles
         )
 
+    @requires_package("openmm")
     def _openmm_virtual_site(self, atoms):
         originwt, xdir, ydir = self.local_frame_weights
         pos = self.local_frame_position
@@ -4231,7 +4221,15 @@ class FrozenMolecule(Serializable):
                     "Coordinates passed to Molecule._add_conformer with incompatible units. "
                     "Ensure that units are dimension of length."
                 )
-        elif isinstance(new_conf, openmm_unit.Quantity):
+        elif hasattr(new_conf, "unit"):
+            from openmm import unit as openmm_unit
+
+            if not isinstance(other, openmm_unit.Quantity):
+                raise IncompatibleUnitError(
+                    "Unsupported type passed to formal_charge setter. "
+                    "Found object of type {type(other)}."
+                )
+
             if not coordinates.unit.is_compatible(openmm_unit.meter):
                 raise Exception(
                     "Coordinates passed to Molecule._add_conformer with incompatible units. "
@@ -4283,12 +4281,21 @@ class FrozenMolecule(Serializable):
             if isinstance(charges, unit.Quantity):
                 if charges.units in unit.elementary_charge.compatible_units():
                     self._partial_charges = charges
-            elif isinstance(charges, openmm_unit.Quantity):
-                from openff.units.openmm import from_openmm
+            if hasattr(charges, "unit"):
+                from openmm import unit as openmm_unit
 
-                converted = from_openmm(charges)
-                if converted.units in unit.elementary_charge.compatible_units():
-                    self._partial_charges = converted
+                if not isinstance(other, openmm_unit.Quantity):
+                    raise IncompatibleUnitError(
+                        "Unsupported type passed to partial_charges setter. "
+                        "Found object of type {type(charges)}."
+                    )
+
+                elif isinstance(charges, openmm_unit.Quantity):
+                    from openff.units.openmm import from_openmm
+
+                    converted = from_openmm(charges)
+                    if converted.units in unit.elementary_charge.compatible_units():
+                        self._partial_charges = converted
 
     @property
     def n_particles(self):
@@ -5137,9 +5144,12 @@ class FrozenMolecule(Serializable):
         return mols
 
     @classmethod
+    @requires_package("openmm")
     def from_pdb(cls, file_path):
         import networkx as nx
         from networkx.algorithms import isomorphism
+        from openmm import unit as openmm_unit
+        from openmm.app import PDBFile
         from rdkit import Chem
 
         def _rdmol_to_networkx(rdmol, res_name):
@@ -5325,7 +5335,6 @@ class FrozenMolecule(Serializable):
 
         with open(substructure_file_path, "r") as subfile:
             substructure_dictionary = json.load(subfile)
-        from simtk.openmm.app import PDBFile
 
         pdb = PDBFile(file_path)
         omm_topology_G = _openmm_topology_to_networkx(
@@ -5795,11 +5804,6 @@ class FrozenMolecule(Serializable):
             No conformer found at the given index.
 
         """
-        try:
-            from openmm.app.element import Element
-        except ImportError:
-            from simtk.openmm.app.element import Element
-
         import qcelemental as qcel
 
         # get/ check the geometry
@@ -5816,9 +5820,7 @@ class FrozenMolecule(Serializable):
         connectivity = [
             (bond.atom1_index, bond.atom2_index, bond.bond_order) for bond in self.bonds
         ]
-        symbols = [
-            Element.getByAtomicNumber(atom.atomic_number).symbol for atom in self.atoms
-        ]
+        symbols = [element(atom.atomic_number).symbol for atom in self.atoms]
         if extras is not None:
             extras[
                 "canonical_isomeric_explicit_hydrogen_mapped_smiles"
@@ -7162,9 +7164,7 @@ def _atom_nums_to_hill_formula(atom_nums: List[int]) -> str:
     Hill formula. See https://en.wikipedia.org/wiki/Chemical_formula#Hill_system"""
     from collections import Counter
 
-    atom_symbol_counts = Counter(
-        Element.getByAtomicNumber(atom_num).symbol for atom_num in atom_nums
-    )
+    atom_symbol_counts = Counter(element(atom_num).symbol for atom_num in atom_nums)
 
     formula = []
     # Check for C and H first, to make a correct hill formula

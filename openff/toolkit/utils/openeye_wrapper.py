@@ -13,7 +13,7 @@ import re
 import tempfile
 from collections import defaultdict
 from functools import wraps
-from typing import TYPE_CHECKING, List, Optional, Tuple
+from typing import TYPE_CHECKING
 
 import numpy as np
 from cachetools import LRUCache, cached

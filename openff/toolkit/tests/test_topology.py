@@ -14,15 +14,7 @@ import itertools
 import numpy as np
 import pytest
 from openff.units import unit
-
-try:
-    from openmm import app
-    from openmm import unit as openmm_unit
-    from openmm.app import element
-except ImportError:
-    from simtk import unit as openmm_unit
-    from simtk.openmm import app
-    from simtk.openmm.app import element
+from openmm import app
 
 from openff.toolkit.tests.create_molecules import *
 from openff.toolkit.tests.utils import (
@@ -256,6 +248,9 @@ class TestTopology:
 
     def test_topology_atom_element(self, toluene_from_sdf):
         """Test getters of TopologyAtom element and atomic number"""
+        from mendeleev import element
+        from mendeleev.models import Element
+
         topology = Topology()
         topology.add_molecule(toluene_from_sdf)
 
@@ -263,12 +258,12 @@ class TestTopology:
         eighth_element = topology.atom(7).element
 
         # Check if types/instances are correct
-        assert isinstance(first_element, element.Element)
-        assert isinstance(eighth_element, element.Element)
+        assert isinstance(first_element, Element)
+        assert isinstance(eighth_element, Element)
 
         # Make sure first is a carbon element and eighth is a hydrogen element
-        assert first_element == element.carbon
-        assert eighth_element == element.hydrogen
+        assert first_element.symbol == element(6).symbol
+        assert eighth_element.symbol == element(1).symbol
 
     def test_get_bond(self, ethane_from_smiles, ethene_from_smiles):
         """Test Topology.bond function (bond lookup from index)"""
