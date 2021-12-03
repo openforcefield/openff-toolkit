@@ -15,13 +15,13 @@ __all__ = [
     "string_to_unit",
     "string_to_quantity",
     "object_to_quantity",
-    "check_units_are_compatible",
+    # "check_units_are_compatible",
     "extract_serialized_units_from_dict",
     "attach_units",
     "detach_units",
     "serialize_numpy",
     "deserialize_numpy",
-    "convert_all_quantities_to_string",
+    # "convert_all_quantities_to_string",
     "convert_all_strings_to_quantity",
     "convert_0_1_smirnoff_to_0_2",
     "convert_0_2_smirnoff_to_0_3",
@@ -36,7 +36,6 @@ from typing import Union
 
 import numpy as np
 from openff.units import unit
-from openmm import unit as openmm_unit
 
 from openff.toolkit.utils.exceptions import (
     IncompatibleUnitError,
@@ -170,43 +169,6 @@ def get_data_file_path(relative_path):
 
 def unit_to_string(input_unit):
     return str(input_unit)
-
-
-def _unit_to_string(input_unit):
-    """
-    Serialize a openmm.unit.Unit and return it as a string.
-
-    Parameters
-    ----------
-    input_unit : A openmm.unit.Unit
-        The Unit object to serialize
-
-    Returns
-    -------
-    unit_string : str
-        The serialized unit.
-    """
-
-    if input_unit == openmm_unit.dimensionless:
-        return "dimensionless"
-
-    # Decompose output_unit into a tuples of (base_dimension_unit, exponent)
-    unit_string = None
-
-    for unit_component in input_unit.iter_base_or_scaled_units():
-        unit_component_name = unit_component[0].name
-        # Convert, for example "elementary charge" --> "elementary_charge"
-        unit_component_name = unit_component_name.replace(" ", "_")
-        if unit_component[1] == 1:
-            contribution = "{}".format(unit_component_name)
-        else:
-            contribution = "{}**{}".format(unit_component_name, int(unit_component[1]))
-        if unit_string is None:
-            unit_string = contribution
-        else:
-            unit_string += " * {}".format(contribution)
-
-    return unit_string
 
 
 def quantity_to_dict(input_quantity):
@@ -426,8 +388,8 @@ def convert_all_quantities_to_string(smirnoff_data):
         for index, item in enumerate(smirnoff_data):
             smirnoff_data[index] = convert_all_quantities_to_string(item)
         obj_to_return = smirnoff_data
-    elif isinstance(smirnoff_data, openmm_unit.Quantity):
-        obj_to_return = quantity_to_string(smirnoff_data)
+    # elif isinstance(smirnoff_data, openmm_unit.Quantity):
+    #     obj_to_return = quantity_to_string(smirnoff_data)
     else:
         obj_to_return = smirnoff_data
 
@@ -456,13 +418,6 @@ def object_to_quantity(object):
     return [object_to_quantity(sub_obj) for sub_obj in object]
 
 
-@object_to_quantity.register(openmm_unit.Quantity)
-def _(obj):
-    from openff.units.openmm import from_openmm
-
-    return from_openmm(obj)
-
-
 @object_to_quantity.register(unit.Quantity)
 def _(obj):
     return obj
@@ -482,51 +437,6 @@ def _(obj):
 @object_to_quantity.register(float)
 def _(obj):
     return unit.Quantity(obj)
-
-
-def check_units_are_compatible(object_name, object, unit_to_check, context=None):
-    """
-    Checks whether a openmm.unit.Quantity or list of openmm.unit.Quantitys is compatible with given unit.
-
-    Parameters
-    ----------
-    object_name : string
-        Name of object, used in printing exception.
-    object : A openmm.unit.Quantity or list of openmm.unit.Quantitys
-    unit_to_check : A openmm.unit.Unit
-    context : string, optional. Default=None
-        Additional information to provide at the beginning of the exception message if raised
-
-    Raises
-    ------
-    IncompatibleUnitError
-    """
-
-    # If context is not provided, explicitly make it a blank string
-    if context is None:
-        context = ""
-    # Otherwise add a space after the end of it to correct message printing
-    else:
-        context += " "
-
-    if isinstance(object, list):
-        for sub_object in object:
-            check_units_are_compatible(
-                object_name, sub_object, unit_to_check, context=context
-            )
-    elif isinstance(object, openmm_unit.Quantity):
-        if not object.unit.is_compatible(unit_to_check):
-            msg = (
-                f"{context}{object_name} with "
-                f"value {object} is incompatible with expected unit {unit_to_check}"
-            )
-            raise IncompatibleUnitError(msg)
-    else:
-        msg = (
-            f"{context}{object_name} with "
-            f"value {object} is incompatible with expected unit {unit_to_check}"
-        )
-        raise IncompatibleUnitError(msg)
 
 
 def extract_serialized_units_from_dict(input_dict):

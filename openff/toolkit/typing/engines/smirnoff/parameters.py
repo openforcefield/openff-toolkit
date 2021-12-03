@@ -58,9 +58,8 @@ from enum import Enum
 from itertools import combinations
 from typing import Any, List, Optional, Type, Union
 
-import openmm
 from openff.units import unit
-from openff.units.openmm import to_openmm
+from openff.utilities import requires_package
 
 from openff.toolkit.topology import (
     ImproperDict,
@@ -2561,7 +2560,10 @@ class ConstraintHandler(ParameterHandler):
     _INFOTYPE = ConstraintType
     _OPENMMTYPE = None  # don't create a corresponding OpenMM Force class
 
+    @requires_package("openmm")
     def create_force(self, system, topology, **kwargs):
+        from openff.units.openmm import to_openmm
+
         constraint_matches = self.find_matches(topology)
         for (atoms, constraint_match) in constraint_matches.items():
             # Update constrained atom pairs in topology
@@ -2642,7 +2644,7 @@ class BondHandler(ParameterHandler):
 
     _TAGNAME = "Bonds"  # SMIRNOFF tag name to process
     _INFOTYPE = BondType  # class to hold force type info
-    _OPENMMTYPE = openmm.HarmonicBondForce  # OpenMM force class to create
+    _OPENMMTYPE = "HarmonicBondForce"
     _DEPENDENCIES = [ConstraintHandler]  # ConstraintHandler must be executed first
     _MAX_SUPPORTED_SECTION_VERSION = 0.4
 
@@ -2713,14 +2715,19 @@ class BondHandler(ParameterHandler):
                     f"(handler value: {self.potential}, incompatible value: {other_handler.potential}"
                 )
 
+    @requires_package("openmm")
     def create_force(self, system, topology, **kwargs):
+        import openmm
+        from openff.units.openmm import to_openmm
+
+        openmm_type = getattr(openmm, self._OPENMMTYPE)
         # Create or retrieve existing OpenMM Force object
         # TODO: The commented line below should replace the system.getForce search
         # force = super(BondHandler, self).create_force(system, topology, **kwargs)
         existing = [system.getForce(i) for i in range(system.getNumForces())]
-        existing = [f for f in existing if type(f) == self._OPENMMTYPE]
+        existing = [f for f in existing if type(f) == openmm_type]
         if len(existing) == 0:
-            force = self._OPENMMTYPE()
+            force = openmm_type()
             system.addForce(force)
         else:
             force = existing[0]
@@ -2901,7 +2908,7 @@ class AngleHandler(ParameterHandler):
 
     _TAGNAME = "Angles"  # SMIRNOFF tag name to process
     _INFOTYPE = AngleType  # class to hold force type info
-    _OPENMMTYPE = openmm.HarmonicAngleForce  # OpenMM force class to create
+    _OPENMMTYPE = "HarmonicAngleForce"
     _DEPENDENCIES = [ConstraintHandler]  # ConstraintHandler must be executed first
 
     potential = ParameterAttribute(default="harmonic")
@@ -2925,12 +2932,17 @@ class AngleHandler(ParameterHandler):
             other_handler, identical_attrs=string_attrs_to_compare
         )
 
+    @requires_package("openmm")
     def create_force(self, system, topology, **kwargs):
+        import openmm
+
+        openmm_type = getattr(openmm, self._OPENMMTYPE)
+
         # force = super(AngleHandler, self).create_force(system, topology, **kwargs)
         existing = [system.getForce(i) for i in range(system.getNumForces())]
-        existing = [f for f in existing if type(f) == self._OPENMMTYPE]
+        existing = [f for f in existing if type(f) == openmm_type]
         if len(existing) == 0:
-            force = self._OPENMMTYPE()
+            force = openmm_type()
             system.addForce(force)
         else:
             force = existing[0]
@@ -3012,7 +3024,7 @@ class ProperTorsionHandler(ParameterHandler):
     _TAGNAME = "ProperTorsions"  # SMIRNOFF tag name to process
     _KWARGS = ["partial_bond_orders_from_molecules"]
     _INFOTYPE = ProperTorsionType  # info type to store
-    _OPENMMTYPE = openmm.PeriodicTorsionForce  # OpenMM force class to create
+    _OPENMMTYPE = "PeriodicTorsionForce"
     _MAX_SUPPORTED_SECTION_VERSION = 0.4
 
     potential = ParameterAttribute(
@@ -3057,13 +3069,18 @@ class ProperTorsionHandler(ParameterHandler):
             tolerance_attrs=float_attrs_to_compare,
         )
 
+    @requires_package("openmm")
     def create_force(self, system, topology, **kwargs):
+        import openmm
+        from openff.units.openmm import to_openmm
+
+        openmm_type = getattr(openmm, self._OPENMMTYPE)
         # force = super(ProperTorsionHandler, self).create_force(system, topology, **kwargs)
         existing = [system.getForce(i) for i in range(system.getNumForces())]
-        existing = [f for f in existing if type(f) == self._OPENMMTYPE]
+        existing = [f for f in existing if type(f) == openmm_type]
 
         if len(existing) == 0:
-            force = self._OPENMMTYPE()
+            force = openmm_type()
             system.addForce(force)
         else:
             force = existing[0]
@@ -3268,7 +3285,7 @@ class ImproperTorsionHandler(ParameterHandler):
 
     _TAGNAME = "ImproperTorsions"  # SMIRNOFF tag name to process
     _INFOTYPE = ImproperTorsionType  # info type to store
-    _OPENMMTYPE = openmm.PeriodicTorsionForce  # OpenMM force class to create
+    _OPENMMTYPE = "PeriodicTorsionForce"
 
     potential = ParameterAttribute(
         default="k*(1+cos(periodicity*theta-phase))",
@@ -3323,13 +3340,18 @@ class ImproperTorsionHandler(ParameterHandler):
             entity, transformed_dict_cls=ImproperDict, unique=unique
         )
 
+    @requires_package("openmm")
     def create_force(self, system, topology, **kwargs):
+        import openmm
+        from openff.units.openmm import to_openmm
+
+        openmm_type = getattr(openmm, self._OPENMMTYPE)
         # force = super(ImproperTorsionHandler, self).create_force(system, topology, **kwargs)
         # force = super().create_force(system, topology, **kwargs)
         existing = [system.getForce(i) for i in range(system.getNumForces())]
-        existing = [f for f in existing if type(f) == openmm.PeriodicTorsionForce]
+        existing = [f for f in existing if type(f) == openmm_type]
         if len(existing) == 0:
-            force = openmm.PeriodicTorsionForce()
+            force = openmm_type()
             system.addForce(force)
         else:
             force = existing[0]
@@ -3398,9 +3420,14 @@ class ImproperTorsionHandler(ParameterHandler):
 class _NonbondedHandler(ParameterHandler):
     """Base class for ParameterHandlers that deal with OpenMM NonbondedForce objects."""
 
-    _OPENMMTYPE = openmm.NonbondedForce
+    _OPENMMTYPE = "NonbondedForce"
 
+    @requires_package("openmm")
     def create_force(self, system, topology, **kwargs):
+        import openmm
+        from openff.units.openmm import to_openmm
+
+        openmm_type = getattr(openmm, self._OPENMMTYPE)
         # If we aren't yet keeping track of which molecules' charges have been assigned by which charge methods,
         # initialize a dict for that here.
         # TODO: This should be an attribute of the _system_, not the _topology_. However, since we're still using
@@ -3410,11 +3437,11 @@ class _NonbondedHandler(ParameterHandler):
 
         # Retrieve the system's OpenMM NonbondedForce
         existing = [system.getForce(i) for i in range(system.getNumForces())]
-        existing = [f for f in existing if type(f) == self._OPENMMTYPE]
+        existing = [f for f in existing if type(f) == openmm_type]
 
         # If there isn't yet one, initialize it and populate it with particles
         if len(existing) == 0:
-            force = self._OPENMMTYPE()
+            force = openmm_type()
             system.addForce(force)
             # Create all atom particles. Virtual site particles are handled in
             # in its own handler
@@ -3613,7 +3640,11 @@ class vdWHandler(_NonbondedHandler):
             tolerance=self._SCALETOL,
         )
 
+    @requires_package("openmm")
     def create_force(self, system, topology, **kwargs):
+        import openmm
+        from openff.units.openmm import to_openmm
+
         force = super().create_force(system, topology, **kwargs)
 
         # If we're using PME, then the only possible openMM Nonbonded type is LJPME
@@ -3790,7 +3821,9 @@ class ElectrostaticsHandler(_NonbondedHandler):
         # If no match was found, return False
         return False
 
+    @requires_package("openmm")
     def create_force(self, system, topology, **kwargs):
+        from openff.units.openmm import to_openmm
 
         force = super().create_force(system, topology, **kwargs)
 
@@ -3997,7 +4030,10 @@ class LibraryChargeHandler(_NonbondedHandler):
             unique=unique,
         )
 
+    @requires_package("openmm")
     def create_force(self, system, topology, **kwargs):
+        from openff.units.openmm import to_openmm
+
         force = super().create_force(system, topology, **kwargs)
 
         # Iterate over all defined library charge parameters, allowing later matches to override earlier ones.
@@ -4055,7 +4091,6 @@ class LibraryChargeHandler(_NonbondedHandler):
                 force.setParticleParameters(
                     top_particle_idx,
                     atom_assignments[top_particle_idx].m_as(unit.elementary_charge),
-                    # atom_assignments[top_particle_idx],
                     sigma,
                     epsilon,
                 )
@@ -4091,8 +4126,11 @@ class ToolkitAM1BCCHandler(_NonbondedHandler):
         """
         pass
 
+    @requires_package("openmm")
     def create_force(self, system, topology, **kwargs):
         import warnings
+
+        from openff.units.openmm import to_openmm
 
         from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
 
@@ -4266,14 +4304,18 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
         )
         return matches
 
+    @requires_package("openmm")
     def create_force(self, system, topology, **kwargs):
         import warnings
 
+        from openff.units.openmm import to_openmm
+
+        openmm_type = getattr(openmm, self._OPENMMTYPE)
         # We only want one instance of this force type
         existing = [system.getForce(i) for i in range(system.getNumForces())]
-        existing = [f for f in existing if type(f) == self._OPENMMTYPE]
+        existing = [f for f in existing if type(f) == openmm_type]
         if len(existing) == 0:
-            force = self._OPENMMTYPE()
+            force = openmm_type()
             system.addForce(force)
         else:
             force = existing[0]
@@ -4380,7 +4422,7 @@ class GBSAHandler(ParameterHandler):
 
     _TAGNAME = "GBSA"
     _INFOTYPE = GBSAType
-    _OPENMMTYPE = openmm.GBSAOBCForce
+    _OPENMMTYPE = "GBSAOBCForce"
     # It's important that this runs AFTER partial charges are assigned to all particles, since this will need to
     # collect and assign them to the GBSA particles
     _DEPENDENCIES = [
@@ -4502,8 +4544,10 @@ class GBSAHandler(ParameterHandler):
             tolerance=self._SCALETOL,
         )
 
+    @requires_package("openmm")
     def create_force(self, system, topology, **kwargs):
         import simtk
+        from openff.units.openmm import to_openmm
 
         self._validate_parameters()
 
@@ -5520,6 +5564,7 @@ class VirtualSiteHandler(_NonbondedHandler):
 
         return matches
 
+    @requires_package("openmm")
     def create_force(self, system, topology, **kwargs):
         """
 
@@ -5529,6 +5574,8 @@ class VirtualSiteHandler(_NonbondedHandler):
         Returns
         -------
         """
+        from openff.units.openmm import to_openmm
+
         force = super().create_force(system, topology, **kwargs)
 
         # Separate the logic of adding vsites in the oFF state and the OpenMM
@@ -5674,6 +5721,7 @@ class VirtualSiteHandler(_NonbondedHandler):
 
         return combined_orientations
 
+    @requires_package("openmm")
     def create_openff_virtual_sites(self, topology):
         """
         Modifies the input topology to contain VirtualSites assigned by this handler.

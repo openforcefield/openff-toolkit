@@ -49,13 +49,6 @@ if TYPE_CHECKING:
 from cached_property import cached_property
 from packaging import version
 
-try:
-    from openmm import LocalCoordinatesSite
-    from openmm import unit as openmm_unit
-except ImportError:
-    from simtk import unit as openmm_unit
-    from simtk.openmm import LocalCoordinatesSite
-
 import openff.toolkit
 from openff.toolkit.utils import (
     get_data_file_path,
@@ -1242,6 +1235,7 @@ class VirtualSite(Particle):
             self.name, self.type, self.atoms, self.n_particles
         )
 
+    @requires_package("openmm")
     def _openmm_virtual_site(self, atoms):
         originwt, xdir, ydir = self.local_frame_weights
         pos = self.local_frame_position
@@ -5132,6 +5126,7 @@ class FrozenMolecule(Serializable):
         return mols
 
     @classmethod
+    @requires_package("openmm")
     def from_pdb(cls, file_path):
         import networkx as nx
         from networkx.algorithms import isomorphism
@@ -5355,7 +5350,10 @@ class FrozenMolecule(Serializable):
         # TODO: Pull in coordinates and assign stereochemistry
         coords = (
             np.array(
-                [[*vec3.value_in_unit(unit.angstrom)] for vec3 in pdb.getPositions()]
+                [
+                    [*vec3.value_in_unit(openmm_unit.angstrom)]
+                    for vec3 in pdb.getPositions()
+                ]
             )
             * unit.angstrom
         )
