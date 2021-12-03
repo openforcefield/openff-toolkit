@@ -1238,6 +1238,8 @@ class VirtualSite(Particle):
 
     @requires_package("openmm")
     def _openmm_virtual_site(self, atoms):
+        from openmm import LocalCoordinatesSite
+
         originwt, xdir, ydir = self.local_frame_weights
         pos = self.local_frame_position
 

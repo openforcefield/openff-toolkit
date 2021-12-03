@@ -77,6 +77,7 @@ from openff.toolkit.utils.exceptions import (
     DuplicateVirtualSiteTypeException,
     FractionalBondOrderInterpolationMethodUnsupportedError,
     IncompatibleParameterError,
+    IncompatibleUnitError,
     MissingIndexedAttributeError,
     NonintegralMoleculeChargeException,
     NotEnoughPointsForInterpolationError,
@@ -91,7 +92,6 @@ from openff.toolkit.utils.exceptions import (
 )
 from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
 from openff.toolkit.utils.utils import (
-    IncompatibleUnitError,
     all_subclasses,
     attach_units,
     extract_serialized_units_from_dict,
@@ -2935,6 +2935,7 @@ class AngleHandler(ParameterHandler):
     @requires_package("openmm")
     def create_force(self, system, topology, **kwargs):
         import openmm
+        from openff.units.openmm import to_openmm
 
         openmm_type = getattr(openmm, self._OPENMMTYPE)
 
@@ -3162,6 +3163,7 @@ class ProperTorsionHandler(ParameterHandler):
         )
 
     def _assign_torsion(self, atom_indices, torsion_match, force):
+        from openff.units.openmm import to_openmm
 
         torsion_params = torsion_match.parameter_type
 
@@ -3191,6 +3193,8 @@ class ProperTorsionHandler(ParameterHandler):
     def _assign_fractional_bond_orders(
         self, atom_indices, torsion_match, force, **kwargs
     ):
+        from openff.units.openmm import to_openmm
+
         from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
 
         torsion_params = torsion_match.parameter_type
@@ -3821,6 +3825,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
 
     @requires_package("openmm")
     def create_force(self, system, topology, **kwargs):
+        import openmm
         from openff.units.openmm import to_openmm
 
         force = super().create_force(system, topology, **kwargs)
@@ -3868,7 +3873,10 @@ class ElectrostaticsHandler(_NonbondedHandler):
                     )
                     # Set the nonbonded force with the partial charge
                     force.setParticleParameters(
-                        mol_instance_particle_top_idx, particle_charge, sigma, epsilon
+                        mol_instance_particle_top_idx,
+                        to_openmm(particle_charge),
+                        sigma,
+                        epsilon,
                     )
 
                     # Finally, mark that charges were assigned for this reference molecule
@@ -3934,6 +3942,8 @@ class ElectrostaticsHandler(_NonbondedHandler):
                 )
 
     def postprocess_system(self, system, topology, **kwargs):
+        from openff.units.openmm import from_openmm
+
         force = super().create_force(system, topology, **kwargs)
         # Check to ensure all molecules have had charges assigned
         uncharged_mols = []
@@ -4138,6 +4148,8 @@ class ToolkitAM1BCCHandler(_NonbondedHandler):
     def create_force(self, system, topology, **kwargs):
         import warnings
 
+        from openff.units.openmm import to_openmm
+
         from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
 
         force = super().create_force(system, topology, **kwargs)
@@ -4179,13 +4191,17 @@ class ToolkitAM1BCCHandler(_NonbondedHandler):
                     )
                     # Set the nonbonded force with the partial charge
                     force.setParticleParameters(
-                        topology_particle_index, particle_charge, sigma, epsilon
+                        topology_particle_index,
+                        to_openmm(particle_charge),
+                        sigma,
+                        epsilon,
                     )
                     # Finally, mark that charges were assigned for this reference molecule
                     self.mark_charges_assigned(mol_instance, topology)
 
     # TODO: Move chargeModel and library residue charges to SMIRNOFF spec
     def postprocess_system(self, system, topology, **kwargs):
+        from openff.units.openmm import to_openmm
 
         bond_matches = self.find_matches(topology)
 
@@ -4213,13 +4229,13 @@ class ToolkitAM1BCCHandler(_NonbondedHandler):
                     # Update charges
                     force.setParticleParameters(
                         particle_indices[0],
-                        charge0,
+                        to_openmm(charge0),
                         sigma0,
                         epsilon0,
                     )
                     force.setParticleParameters(
                         particle_indices[1],
-                        charge1,
+                        to_openmm(charge1),
                         sigma1,
                         epsilon1,
                     )
@@ -4323,6 +4339,7 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
     def create_force(self, system, topology, **kwargs):
         import warnings
 
+        import openmm
         from openff.units.openmm import to_openmm
 
         openmm_type = getattr(openmm, self._OPENMMTYPE)
@@ -5670,6 +5687,8 @@ class VirtualSiteHandler(_NonbondedHandler):
         )
 
     def _apply_charge_increment(self, force, atom_key, charge_increment):
+        from openff.units.openmm import to_openmm
+
         vsite_charge = charge_increment[0]
         vsite_charge *= 0.0
         for charge_i, atom in enumerate(atom_key):
@@ -5829,6 +5848,7 @@ class VirtualSiteHandler(_NonbondedHandler):
     def _create_openmm_virtual_particle(
         self, system, force, molecule, vsite, ref_key, topology
     ):
+        from openff.units.openmm import to_openmm
 
         policy = self._parameter_to_policy[self.exclusion_policy]
 

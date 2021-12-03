@@ -1594,6 +1594,8 @@ class Topology(Serializable):
             )
 
         if self.box_vectors is not None:
+            from openff.units.openmm import to_openmm
+
             omm_topology.setPeriodicBoxVectors(to_openmm(self.box_vectors))
         return omm_topology
 
