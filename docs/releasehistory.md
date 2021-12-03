@@ -16,6 +16,19 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
   the order of atoms (Neither of these ordering guarantees were explicitly documented before, but this may be a 
   change from the previous behavior). 
   
+### Behaviors changed and bugfixes
+
+- [PR #1118](https://github.com/openforcefield/openforcefield/pull/1118):
+  [`Molecule.to_hill_formula`](openff.toolkit.topology.Molecule.to_hill_formula) is now a class method
+  and no longer accepts input of NetworkX graphs.
+- [PR #1130](https://github.com/openforcefield/openforcefield/pull/1130): Running unit tests will
+  no longer generate force field files in the local directory.
+
+### Examples added
+
+- [PR #1113](https://github.com/openforcefield/openff-toolkit/pull/1113): Updates the Amber/GROMACS
+  example to use Interchange.
+
 
 ## 0.10.1 Minor feature and bugfix release
 
@@ -531,7 +544,7 @@ the previous specification, this new style of ``ChargeIncrement`` must specify a
 section version of ``0.4``. All ``0.3``-compatible ``ChargeIncrement`` parameters are compatible with
 the ``0.4`` ``ChargeIncrementModel`` specification.
 
-More details and examples of this change are available in `The ChargeIncrementModel tag in the SMIRNOFF specification <https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html#chargeincrementmodel-small-molecule-and-fragment-charges>`_
+More details and examples of this change are available in `The ChargeIncrementModel tag in the SMIRNOFF specification <https://openforcefield.github.io/standards/standards/smirnoff/#chargeincrementmodel-small-molecule-and-fragment-charges>`_
 
 
 New features
@@ -823,7 +836,7 @@ There are also a number of new features, such as:
 
 **Major Feature: Support for the SMIRNOFF ChargeIncrementModel tag**
 
-`The ChargeIncrementModel tag in the SMIRNOFF specification <https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html#chargeincrementmodel-small-molecule-and-fragment-charges>`_
+`The ChargeIncrementModel tag in the SMIRNOFF specification <https://openforcefield.github.io/standards/standards/smirnoff/#chargeincrementmodel-small-molecule-and-fragment-charges>`_
 provides analagous functionality to AM1-BCC, except that instead of AM1-Mulliken charges, a number of different charge
 methods can be called, and instead of a fixed library of two-atom charge corrections, an arbitrary number of
 SMIRKS-based, N-atom charge corrections can be defined in the SMIRNOFF format.
@@ -876,7 +889,7 @@ that a certain aromatic bond's order is 1.53, maybe rotations about that bond ca
 53% of the way between the single and double bond k values.
 
 Full details of how to define a torsion-interpolating SMIRNOFF force fields are available in
-`the ProperTorsions section of the SMIRNOFF specification <https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html#fractional-torsion-bond-orders>`_.
+`the ProperTorsions section of the SMIRNOFF specification <https://openforcefield.github.io/standards/standards/smirnoff/#fractional-torsion-bond-orders>`_.
 
 Behavior changed
 """"""""""""""""
@@ -1004,7 +1017,7 @@ New features
 - `PR #471 <https://github.com/openforcefield/openff-toolkit/pull/471>`_: Closes
   `Issue #208 <https://github.com/openforcefield/openff-toolkit/issues/208>`_
   by implementing support for the
-  ``ChargeIncrementModel`` tag in the `SMIRNOFF specification <https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html#chargeincrementmodel-small-molecule-and-fragment-charges>`_.
+  ``ChargeIncrementModel`` tag in the `SMIRNOFF specification <https://openforcefield.github.io/standards/standards/smirnoff/#chargeincrementmodel-small-molecule-and-fragment-charges>`_.
 - `PR #471 <https://github.com/openforcefield/openff-toolkit/pull/471>`_: Implements
   ``Molecule.assign_partial_charges``, which calls one of the newly-implemented
   ``OpenEyeToolkitWrapper.assign_partial_charges``, and
@@ -1220,7 +1233,7 @@ Examples added
 -----------------------
 
 This release adds support for a new SMIRKS-based charge assignment method,
-`Library Charges <https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html#librarycharges-library-charges-for-polymeric-residues-and-special-solvent-models>`_.
+`Library Charges <https://openforcefield.github.io/standards/standards/smirnoff/#librarycharges-library-charges-for-polymeric-residues-and-special-solvent-models>`_.
 The addition of more charge assignment methods opens the door for new types of
 experimentation, but also introduces several complex behaviors and failure modes.
 Accordingly, we have made changes
@@ -1242,7 +1255,7 @@ New features
 - `PR #433 <https://github.com/openforcefield/openff-toolkit/pull/433>`_: Closes
   `Issue #25 <https://github.com/openforcefield/openff-toolkit/issues/25>`_ by adding
   initial support for the
-  `LibraryCharges tag in the SMIRNOFF specification <https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html#librarycharges-library-charges-for-polymeric-residues-and-special-solvent-models>`_
+  `LibraryCharges tag in the SMIRNOFF specification <https://openforcefield.github.io/standards/standards/smirnoff/#librarycharges-library-charges-for-polymeric-residues-and-special-solvent-models>`_
   using
   :py:class:`LibraryChargeHandler <openff.toolkit.typing.engines.smirnoff.parameters.LibraryChargeHandler>`.
   For a molecule to have charges assigned using Library Charges, all of its atoms must be covered by
@@ -1429,7 +1442,7 @@ Files removed
 -----------------------------------------------------
 
 This release adds support for the
-`GBSA tag in the SMIRNOFF specification <https://open-forcefield-toolkit.readthedocs.io/en/0.5.0/smirnoff.html#gbsa>`_.
+`GBSA tag in the SMIRNOFF specification <https://openforcefield.github.io/standards/standards/smirnoff/#gbsa>`_.
 Currently, the ``HCT``, ``OBC1``, and ``OBC2`` models (corresponding to AMBER keywords
 ``igb=1``, ``2``, and ``5``, respectively) are supported, with the ``OBC2`` implementation being
 the most flexible. Unfortunately, systems produced
@@ -1451,7 +1464,7 @@ New features
 - `PR #363 <https://github.com/openforcefield/openff-toolkit/pull/363>`_: Implements
   :py:class:`GBSAHandler <openff.toolkit.typing.engines.smirnoff.parameters.GBSAHandler>`,
   which supports the
-  `GBSA tag in the SMIRNOFF specification <https://open-forcefield-toolkit.readthedocs.io/en/0.5.0/smirnoff.html#gbsa>`_.
+  `GBSA tag in the SMIRNOFF specification <https://openforcefield.github.io/standards/standards/smirnoff/#gbsa>`_.
   Currently, only GBSAHandlers with ``gb_model="OBC2"`` support
   setting non-default values for the ``surface_area_penalty`` term (default ``5.4*calories/mole/angstroms**2``),
   though users can zero the SA term for ``OBC1`` and ``HCT`` models by setting ``sa_model="None"``.
@@ -1459,7 +1472,7 @@ New features
   Files containing experimental SMIRNOFF-format implementations of ``HCT``, ``OBC1``, and ``OBC2`` are
   included with this release (see below). Additional details of these models, including literature references,
   are available on the
-  `SMIRNOFF specification page <https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html#supported-generalized-born-gb-models>`_.
+  `SMIRNOFF specification page <https://openforcefield.github.io/standards/standards/smirnoff/#supported-generalized-born-gb-models>`_.
 
     .. warning :: The current release of ParmEd
       `can not transfer GBSA models produced by the Open Force Field Toolkit
@@ -1724,7 +1737,7 @@ This version of the toolkit introduces many new features on the way to a 1.0.0 r
 New features
 """"""""""""
 
-* Major overhaul, resulting in the creation of the `SMIRNOFF 0.2 specification <https://open-forcefield-toolkit.readthedocs.io/en/master/smirnoff.html>`_ and its XML representation
+* Major overhaul, resulting in the creation of the `SMIRNOFF 0.2 specification <https://open-forcefield-toolkit.readthedocs.io/en/0.2.0/smirnoff.html>`_ and its XML representation
 * Updated API and infrastructure for reference SMIRNOFF :class:`ForceField <openff.toolkit.typing.engines.smirnoff.forcefield.ForceField>` implementation
 * Implementation of modular :class:`ParameterHandler <openff.toolkit.typing.engines.smirnoff.parameters.ParameterHandler>` classes which process the topology to add all necessary forces to the system.
 * Implementation of modular :class:`ParameterIOHandler <openff.toolkit.typing.engines.smirnoff.io.ParameterIOHandler>` classes for reading/writing different serialized SMIRNOFF force field representations

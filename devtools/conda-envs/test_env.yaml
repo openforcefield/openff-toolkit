@@ -7,22 +7,27 @@ dependencies:
   - python
   - pip
   - packaging
-  - openmm
+  - openmm >=7.6
   - openff-forcefields
+  - openff-units >=0.1.4
+  - openff-utilities
   - smirnoff99Frosst
   - numpy
   - networkx
   - ambertools
   - rdkit
-  - mdtraj
+  - mendeleev
   - xmltodict
+  - mendeleev
     # Test-only/optional/dev
   - pytest
   - pytest-cov
+  - pytest-rerunfailures
   - nbval
   - codecov
   - coverage
   - openeye-toolkits
+  - mdtraj
   - cachetools
   - black
   - isort
@@ -34,6 +39,7 @@ dependencies:
   - qcportal
   - qcengine
   - openff-interchange
+  - mdtraj
   # Typing
   - mypy
   - typing-extensions

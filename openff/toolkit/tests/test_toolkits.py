@@ -17,11 +17,7 @@ from typing import Dict
 import numpy as np
 import pytest
 from numpy.testing import assert_almost_equal
-
-try:
-    from openmm import unit
-except ImportError:
-    from simtk import unit
+from openff.units import unit
 
 from openff.toolkit.tests.create_molecules import (
     create_acetaldehyde,
@@ -476,8 +472,8 @@ class TestOpenEyeToolkitWrapper:
             assert bond1.to_dict() == bond2.to_dict()
         assert (molecule.conformers[0] == molecule2.conformers[0]).all()
         for pc1, pc2 in zip(molecule._partial_charges, molecule2._partial_charges):
-            pc1_ul = pc1.value_in_unit(unit.elementary_charge)
-            pc2_ul = pc2.value_in_unit(unit.elementary_charge)
+            pc1_ul = pc1.m_as(unit.elementary_charge)
+            pc2_ul = pc2.m_as(unit.elementary_charge)
             assert_almost_equal(pc1_ul, pc2_ul, decimal=6)
         assert (
             molecule2.to_smiles(toolkit_registry=toolkit_wrapper)
@@ -554,11 +550,9 @@ class TestOpenEyeToolkitWrapper:
             oeatom.SetPartialCharge(float("nan"))
             break
         eth_from_oe = Molecule.from_openeye(oemol)
-        assert math.isnan(
-            eth_from_oe.partial_charges[0].value_in_unit(unit.elementary_charge)
-        )
+        assert math.isnan(eth_from_oe.partial_charges[0].m_as(unit.elementary_charge))
         for pc in eth_from_oe.partial_charges[1:]:
-            assert not math.isnan(pc.value_in_unit(unit.elementary_charge))
+            assert not math.isnan(pc.m_as(unit.elementary_charge))
         # Then, set all the OEMol's partial charges to nan, and ensure that
         # from_openeye produces an OFFMol with partial_charges = None
         for oeatom in oemol.GetAtoms():
@@ -867,7 +861,7 @@ class TestOpenEyeToolkitWrapper:
         # The first molecule in the SDF has the following properties and charges:
         assert molecules[0].properties["test_property_key"] == "test_property_value"
         np.testing.assert_allclose(
-            molecules[0].partial_charges.value_in_unit(unit.elementary_charge),
+            molecules[0].partial_charges.m_as(unit.elementary_charge),
             [-0.108680, 0.027170, 0.027170, 0.027170, 0.027170],
         )
         # The second molecule in the SDF has the following properties and charges:
@@ -877,7 +871,7 @@ class TestOpenEyeToolkitWrapper:
             == "another_test_property_value"
         )
         np.testing.assert_allclose(
-            molecules[1].partial_charges.value_in_unit(unit.elementary_charge),
+            molecules[1].partial_charges.m_as(unit.elementary_charge),
             [0.027170, 0.027170, 0.027170, 0.027170, -0.108680],
         )
 
@@ -959,8 +953,8 @@ class TestOpenEyeToolkitWrapper:
                 iofile.name, file_format="SDF", toolkit_registry=toolkit_wrapper
             )
         np.testing.assert_allclose(
-            ethanol.partial_charges.value_in_unit(unit.elementary_charge),
-            ethanol2.partial_charges.value_in_unit(unit.elementary_charge),
+            ethanol.partial_charges.m_as(unit.elementary_charge),
+            ethanol2.partial_charges.m_as(unit.elementary_charge),
         )
         assert ethanol2.properties["test_property"] == "test_value"
 
@@ -1007,11 +1001,9 @@ class TestOpenEyeToolkitWrapper:
         assert "test_prop" in data
         assert "<atom.dprop.PartialCharge>" in data
         # Ensure the first conformer's first atom's X coordinate is in the file
-        assert str(ethanol.conformers[0][0][0].value_in_unit(unit.angstrom))[:5] in data
+        assert str(ethanol.conformers[0][0][0].to(unit.angstrom))[:5] in data
         # Ensure the SECOND conformer's first atom's X coordinate is NOT in the file
-        assert (
-            str(ethanol.conformers[1][0][0].in_units_of(unit.angstrom))[:5] not in data
-        )
+        assert str(ethanol.conformers[1][0][0].to(unit.angstrom))[:5] not in data
 
     def test_get_mol2_coordinates(self):
         """Test OpenEyeToolkitWrapper for importing a single set of molecule coordinates"""
@@ -1021,7 +1013,7 @@ class TestOpenEyeToolkitWrapper:
         assert len(molecule1.conformers) == 1
         assert molecule1.conformers[0].shape == (15, 3)
         assert_almost_equal(
-            molecule1.conformers[0][5][1].value_in_unit(unit.angstrom), 22.98, decimal=2
+            molecule1.conformers[0][5][1].m_as(unit.angstrom), 22.98, decimal=2
         )
 
         # Test loading from file-like object
@@ -1033,7 +1025,7 @@ class TestOpenEyeToolkitWrapper:
         assert len(molecule2.conformers) == 1
         assert molecule2.conformers[0].shape == (15, 3)
         assert_almost_equal(
-            molecule2.conformers[0][5][1].value_in_unit(unit.angstrom), 22.98, decimal=2
+            molecule2.conformers[0][5][1].m_as(unit.angstrom), 22.98, decimal=2
         )
 
         # Test loading from gzipped mol2
@@ -1047,7 +1039,7 @@ class TestOpenEyeToolkitWrapper:
         assert len(molecule3.conformers) == 1
         assert molecule3.conformers[0].shape == (15, 3)
         assert_almost_equal(
-            molecule3.conformers[0][5][1].value_in_unit(unit.angstrom), 22.98, decimal=2
+            molecule3.conformers[0][5][1].m_as(unit.angstrom), 22.98, decimal=2
         )
 
     def test_get_mol2_charges(self):
@@ -1080,8 +1072,8 @@ class TestOpenEyeToolkitWrapper:
             unit.elementary_charge,
         )
         for pc1, pc2 in zip(molecule._partial_charges, target_charges):
-            pc1_ul = pc1.value_in_unit(unit.elementary_charge)
-            pc2_ul = pc2.value_in_unit(unit.elementary_charge)
+            pc1_ul = pc1.m_as(unit.elementary_charge)
+            pc2_ul = pc2.m_as(unit.elementary_charge)
             assert_almost_equal(pc1_ul, pc2_ul, decimal=4)
 
     def test_mol2_charges_roundtrip(self):
@@ -1101,8 +1093,8 @@ class TestOpenEyeToolkitWrapper:
                 iofile.name, file_format="mol2", toolkit_registry=toolkit_wrapper
             )
         np.testing.assert_allclose(
-            ethanol.partial_charges.value_in_unit(unit.elementary_charge),
-            ethanol2.partial_charges.value_in_unit(unit.elementary_charge),
+            ethanol.partial_charges.m_as(unit.elementary_charge),
+            ethanol2.partial_charges.m_as(unit.elementary_charge),
         )
 
         # Now test with no properties or charges
@@ -1229,8 +1221,8 @@ class TestOpenEyeToolkitWrapper:
         assert len(elf10_conformers) == 1
 
         assert np.allclose(
-            elf10_conformers[0].value_in_unit(unit.angstrom),
-            initial_conformers[1].value_in_unit(unit.angstrom),
+            elf10_conformers[0].m_as(unit.angstrom),
+            initial_conformers[1].m_as(unit.angstrom),
         )
 
     def test_assign_partial_charges_am1bcc(self):
@@ -1239,11 +1231,10 @@ class TestOpenEyeToolkitWrapper:
         molecule = create_ethanol()
         molecule.assign_partial_charges(
             partial_charge_method="am1bcc", toolkit_registry=toolkit_registry
-        )  # , charge_model=charge_model)
-        charge_sum = sum(molecule.partial_charges, 0.0 * unit.elementary_charge)
-        abs_charge_sum = sum(
-            abs(molecule.partial_charges), 0.0 * unit.elementary_charge
         )
+        charge_sum = np.sum(molecule.partial_charges)
+        abs_charge_sum = np.sum(abs(molecule.partial_charges))
+
         assert abs(charge_sum) < 1e-10 * unit.elementary_charge
         assert abs_charge_sum > 0.25 * unit.elementary_charge
 
@@ -1259,12 +1250,11 @@ class TestOpenEyeToolkitWrapper:
             toolkit_registry=toolkit_registry,
             normalize_partial_charges=False,
         )
-        charge_sum = sum(molecule.partial_charges, 0.0 * unit.elementary_charge)
-        abs_charge_sum = sum(
-            abs(molecule.partial_charges), 0.0 * unit.elementary_charge
-        )
+        charge_sum = np.sum(molecule.partial_charges)
+        abs_charge_sum = np.sum(abs(molecule.partial_charges))
         # Rounding error should be on the order of 1e-3
-        assert 1e-7 > abs(charge_sum.value_in_unit(unit.elementary_charge)) > 1e-8
+
+        assert 1e-7 > abs(charge_sum.m_as(unit.elementary_charge)) > 1e-8
         assert abs_charge_sum > 0.25 * unit.elementary_charge
 
     def test_assign_partial_charges_am1bcc_net_charge(self):
@@ -1274,9 +1264,9 @@ class TestOpenEyeToolkitWrapper:
         molecule.assign_partial_charges(
             partial_charge_method="am1bcc", toolkit_registry=toolkit_registry
         )
-        charge_sum = sum(molecule.partial_charges, 0.0 * unit.elementary_charge)
+        charge_sum = np.sum(molecule.partial_charges)
         assert 1e-10 > abs(
-            (charge_sum - molecule.total_charge).value_in_unit(unit.elementary_charge)
+            (charge_sum - molecule.total_charge).m_as(unit.elementary_charge)
         )
 
     def test_assign_partial_charges_am1bcc_wrong_n_confs(self):
@@ -1314,8 +1304,8 @@ class TestOpenEyeToolkitWrapper:
             toolkit_registry=toolkit_registry,
             partial_charge_method=partial_charge_method,
         )
-        charge_sum = sum(molecule.partial_charges, 0.0 * unit.elementary_charge)
-        assert 1.0e-10 > abs(charge_sum.value_in_unit(unit.elementary_charge))
+        charge_sum = np.sum(molecule.partial_charges)
+        assert 1.0e-10 > abs(charge_sum.m_as(unit.elementary_charge))
 
     @pytest.mark.parametrize("partial_charge_method", ["am1bcc", "am1-mulliken"])
     def test_assign_partial_charges_conformer_dependence(self, partial_charge_method):
@@ -1357,8 +1347,8 @@ class TestOpenEyeToolkitWrapper:
             toolkit_registry=toolkit_registry,
             partial_charge_method=partial_charge_method,
         )
-        charge_sum = sum(molecule.partial_charges, 0.0 * unit.elementary_charge)
-        assert -1.0e-10 < abs(charge_sum.value_in_unit(unit.elementary_charge) + 1.0)
+        charge_sum = np.sum(molecule.partial_charges)
+        assert -1.0e-10 < abs(charge_sum.m_as(unit.elementary_charge) + 1.0)
 
     def test_assign_partial_charges_bad_charge_method(self):
         """Test OpenEyeToolkitWrapper assign_partial_charges() for a nonexistent charge method"""
@@ -2103,8 +2093,8 @@ class TestRDKitToolkitWrapper:
             assert bond1.to_dict() == bond2.to_dict()
         assert (molecule.conformers[0] == molecule2.conformers[0]).all()
         for pc1, pc2 in zip(molecule._partial_charges, molecule2._partial_charges):
-            pc1_ul = pc1.value_in_unit(unit.elementary_charge)
-            pc2_ul = pc2.value_in_unit(unit.elementary_charge)
+            pc1_ul = pc1.m_as(unit.elementary_charge)
+            pc2_ul = pc2.m_as(unit.elementary_charge)
             assert_almost_equal(pc1_ul, pc2_ul, decimal=6)
         assert (
             molecule2.to_smiles(toolkit_registry=toolkit_wrapper)
@@ -2215,7 +2205,7 @@ class TestRDKitToolkitWrapper:
         assert len(molecule.conformers) == 1
         assert molecule.conformers[0].shape == (15, 3)
         assert_almost_equal(
-            molecule.conformers[0][5][1].value_in_unit(unit.angstrom), 2.0104, decimal=4
+            molecule.conformers[0][5][1].m_as(unit.angstrom), 2.0104, decimal=4
         )
 
     def test_read_sdf_charges(self):
@@ -2339,7 +2329,7 @@ class TestRDKitToolkitWrapper:
         # The first molecule in the SDF has the following properties and charges:
         assert molecules[0].properties["test_property_key"] == "test_property_value"
         np.testing.assert_allclose(
-            molecules[0].partial_charges.value_in_unit(unit.elementary_charge),
+            molecules[0].partial_charges.m_as(unit.elementary_charge),
             [-0.108680, 0.027170, 0.027170, 0.027170, 0.027170],
         )
         # The second molecule in the SDF has the following properties and charges:
@@ -2349,7 +2339,7 @@ class TestRDKitToolkitWrapper:
             == "another_test_property_value"
         )
         np.testing.assert_allclose(
-            molecules[1].partial_charges.value_in_unit(unit.elementary_charge),
+            molecules[1].partial_charges.m_as(unit.elementary_charge),
             [0.027170, 0.027170, 0.027170, 0.027170, -0.108680],
         )
 
@@ -2382,11 +2372,9 @@ class TestRDKitToolkitWrapper:
         assert "test_prop" in data
         assert "<atom.dprop.PartialCharge>" in data
         # Ensure the first conformer's first atom's X coordinate is in the file
-        assert str(ethanol.conformers[0][0][0].value_in_unit(unit.angstrom))[:5] in data
+        assert str(ethanol.conformers[0][0][0].m_as(unit.angstrom))[:5] in data
         # Ensure the SECOND conformer's first atom's X coordinate is NOT in the file
-        assert (
-            str(ethanol.conformers[1][0][0].in_units_of(unit.angstrom))[:5] not in data
-        )
+        assert str(ethanol.conformers[1][0][0].m_as(unit.angstrom))[:5] not in data
 
     def test_write_multiconformer_pdb(self):
         """
@@ -2491,8 +2479,8 @@ class TestRDKitToolkitWrapper:
             # so this is just testing that the kwarg remains accessible
             normalize_partial_charges=False,
         )
-        charge_sum = sum(molecule.partial_charges, 0.0 * unit.elementary_charge)
-        assert 1.0e-10 > abs(charge_sum.value_in_unit(unit.elementary_charge))
+        charge_sum = np.sum(molecule.partial_charges)
+        assert 1.0e-10 > abs(charge_sum.m_as(unit.elementary_charge))
 
     @pytest.mark.parametrize("partial_charge_method", ["mmff94"])
     def test_assign_partial_charges_net_charge(self, partial_charge_method):
@@ -2507,8 +2495,8 @@ class TestRDKitToolkitWrapper:
             toolkit_registry=toolkit_registry,
             partial_charge_method=partial_charge_method,
         )
-        charge_sum = sum(molecule.partial_charges, 0.0 * unit.elementary_charge)
-        assert 1.0e-10 > abs((charge_sum.value_in_unit(unit.elementary_charge)) + 1.0)
+        charge_sum = np.sum(molecule.partial_charges)
+        assert 1.0e-10 > abs(charge_sum.m_as(unit.elementary_charge) + 1.0)
 
     def test_assign_partial_charges_bad_charge_method(self):
         """Test RDKitToolkitWrapper assign_partial_charges() for a nonexistent charge method"""
@@ -2563,8 +2551,8 @@ class TestRDKitToolkitWrapper:
 
         assert len(pruned_conformers) == 1
         assert np.allclose(
-            formic_acid_conformers["cis"].value_in_unit(unit.angstrom),
-            pruned_conformers[0].value_in_unit(unit.angstrom),
+            formic_acid_conformers["cis"].m_as(unit.angstrom),
+            pruned_conformers[0].m_as(unit.angstrom),
         )
 
     def test_elf_compute_electrostatic_energy(self, formic_acid_molecule: Molecule):
@@ -2622,7 +2610,7 @@ class TestRDKitToolkitWrapper:
         n_methyl_aniline.generate_conformers(n_conformers=1)
 
         # Add a second conformer with the benzene ring flipped 180
-        original_conformer = n_methyl_aniline.conformers[0].value_in_unit(unit.angstrom)
+        original_conformer = n_methyl_aniline.conformers[0].m_as(unit.angstrom)
 
         ring_atoms = RDKitToolkitWrapper().find_smarts_matches(
             n_methyl_aniline,
@@ -2666,10 +2654,8 @@ class TestRDKitToolkitWrapper:
 
         for elf_index, original_index in expected_conformer_map.items():
             assert np.allclose(
-                conformers[elf_index].value_in_unit(unit.angstrom),
-                formic_acid_molecule.conformers[original_index].value_in_unit(
-                    unit.angstrom
-                ),
+                conformers[elf_index].m_as(unit.angstrom),
+                formic_acid_molecule.conformers[original_index].m_as(unit.angstrom),
             )
 
     def test_apply_elf_conformer_selection(self):
@@ -2727,8 +2713,8 @@ class TestRDKitToolkitWrapper:
         assert len(elf10_conformers) == 1
 
         assert np.allclose(
-            elf10_conformers[0].value_in_unit(unit.angstrom),
-            initial_conformers[1].value_in_unit(unit.angstrom),
+            elf10_conformers[0].m_as(unit.angstrom),
+            initial_conformers[1].m_as(unit.angstrom),
         )
 
     def test_apply_elf_conformer_selection_acid(
@@ -2754,8 +2740,8 @@ class TestRDKitToolkitWrapper:
         assert "Molecules which contain COOH functional groups in a" in caplog.text
 
         assert np.allclose(
-            formic_acid_molecule.conformers[0].value_in_unit(unit.angstrom),
-            formic_acid_conformers["cis"].value_in_unit(unit.angstrom),
+            formic_acid_molecule.conformers[0].m_as(unit.angstrom),
+            formic_acid_conformers["cis"].m_as(unit.angstrom),
         )
 
         # Check that an exception is raised if no conformers remain after removing the
@@ -2902,10 +2888,9 @@ class TestAmberToolsToolkitWrapper:
         molecule.assign_partial_charges(
             partial_charge_method="am1bcc", toolkit_registry=toolkit_registry
         )
-        charge_sum = sum(molecule.partial_charges, 0.0 * unit.elementary_charge)
-        abs_charge_sum = sum(
-            abs(molecule.partial_charges), 0.0 * unit.elementary_charge
-        )
+        charge_sum = np.sum(molecule.partial_charges)
+        abs_charge_sum = np.sum(abs(molecule.partial_charges))
+
         assert abs(charge_sum) < 1e-10 * unit.elementary_charge
         assert abs_charge_sum > 0.25 * unit.elementary_charge
 
@@ -2925,12 +2910,12 @@ class TestAmberToolsToolkitWrapper:
             toolkit_registry=toolkit_registry,
             normalize_partial_charges=False,
         )
-        charge_sum = sum(molecule.partial_charges, 0.0 * unit.elementary_charge)
-        abs_charge_sum = sum(
-            abs(molecule.partial_charges), 0.0 * unit.elementary_charge
-        )
+
+        charge_sum = np.sum(molecule.partial_charges)
+        abs_charge_sum = np.sum(abs(molecule.partial_charges))
+
         # Rounding error should be on the order of 1e-3
-        assert 1e-2 > abs(charge_sum.value_in_unit(unit.elementary_charge)) > 1e-4
+        assert 1e-2 > abs(charge_sum.m_as(unit.elementary_charge)) > 1e-4
         assert abs_charge_sum > 0.25 * unit.elementary_charge
 
     def test_assign_partial_charges_am1bcc_net_charge(self):
@@ -2942,8 +2927,8 @@ class TestAmberToolsToolkitWrapper:
         molecule.assign_partial_charges(
             partial_charge_method="am1bcc", toolkit_registry=toolkit_registry
         )
-        charge_sum = sum(molecule.partial_charges, 0.0 * unit.elementary_charge)
-        assert 1e-10 > abs((charge_sum.value_in_unit(unit.elementary_charge)) + 1)
+        charge_sum = np.sum(molecule.partial_charges)
+        assert 1e-10 > abs(charge_sum.m_as(unit.elementary_charge) + 1)
 
     def test_assign_partial_charges_am1bcc_wrong_n_confs(self):
         """
@@ -3039,8 +3024,8 @@ class TestAmberToolsToolkitWrapper:
             toolkit_registry=toolkit_registry,
             partial_charge_method=partial_charge_method,
         )
-        charge_sum = sum(molecule.partial_charges, 0.0 * unit.elementary_charge)
-        assert 1e-10 > charge_sum.value_in_unit(unit.elementary_charge)
+        charge_sum = np.sum(molecule.partial_charges)
+        assert 1e-10 > charge_sum.m_as(unit.elementary_charge)
 
     @pytest.mark.xfail(strict=False)
     @pytest.mark.parametrize("partial_charge_method", ["am1bcc", "am1-mulliken"])
@@ -3089,8 +3074,8 @@ class TestAmberToolsToolkitWrapper:
             toolkit_registry=toolkit_registry,
             partial_charge_method=partial_charge_method,
         )
-        charge_sum = sum(molecule.partial_charges, 0.0 * unit.elementary_charge)
-        assert 1e-10 > abs((charge_sum.value_in_unit(unit.elementary_charge)) + 1)
+        charge_sum = np.sum(molecule.partial_charges)
+        assert 1e-10 > abs(charge_sum.m_as(unit.elementary_charge) + 1)
 
     def test_assign_partial_charges_bad_charge_method(self):
         """Test AmberToolsToolkitWrapper assign_partial_charges() for a nonexistent charge method"""
@@ -3389,8 +3374,8 @@ class TestBuiltInToolkitWrapper:
             # tests that the kwarg remains accepted.
             normalize_partial_charges=False,
         )
-        charge_sum = sum(molecule.partial_charges, 0.0 * unit.elementary_charge)
-        assert 1.0e-10 > abs(charge_sum.value_in_unit(unit.elementary_charge))
+        charge_sum = np.sum(molecule.partial_charges)
+        assert 1.0e-10 > abs(charge_sum.m_as(unit.elementary_charge))
 
     @pytest.mark.parametrize("partial_charge_method", ["formal_charge"])
     def test_assign_partial_charges_net_charge(self, partial_charge_method):
@@ -3405,8 +3390,8 @@ class TestBuiltInToolkitWrapper:
             toolkit_registry=toolkit_registry,
             partial_charge_method=partial_charge_method,
         )
-        charge_sum = sum(molecule.partial_charges, 0.0 * unit.elementary_charge)
-        assert 1.0e-10 > abs(charge_sum.value_in_unit(unit.elementary_charge) + 1.0)
+        charge_sum = np.sum(molecule.partial_charges)
+        assert 1.0e-10 > abs(charge_sum.m_as(unit.elementary_charge) + 1.0)
 
     def test_assign_partial_charges_bad_charge_method(self):
         """Test BuiltInToolkitWrapper assign_partial_charges() for a nonexistent charge method"""

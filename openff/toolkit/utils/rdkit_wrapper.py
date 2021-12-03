@@ -13,11 +13,7 @@ from typing import TYPE_CHECKING, List, Optional, Tuple
 
 import numpy as np
 from cachetools import LRUCache, cached
-
-try:
-    from openmm import unit
-except ImportError:
-    from simtk import unit
+from openff.units import unit
 
 if TYPE_CHECKING:
     from openff.toolkit.topology.molecule import Molecule
@@ -890,7 +886,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         conformer_generation_status = AllChem.EmbedMultipleConfs(
             rdmol,
             numConfs=n_conformers,
-            pruneRmsThresh=rms_cutoff.value_in_unit(unit.angstrom),
+            pruneRmsThresh=rms_cutoff.m_as(unit.angstrom),
             randomSeed=1,
             # params=AllChem.ETKDG()
         )
@@ -1108,7 +1104,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             raise ValueError("The molecule has no partial charges assigned.")
 
         partial_charges = np.abs(
-            molecule.partial_charges.value_in_unit(unit.elementary_charge)
+            molecule.partial_charges.m_as(unit.elementary_charge)
         ).reshape(-1, 1)
 
         # Build an exclusion list for 1-2 and 1-3 interactions.
@@ -1123,7 +1119,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         )
 
         # Build the distance matrix between all pairs of atoms.
-        coordinates = conformer.value_in_unit(unit.angstrom)
+        coordinates = conformer.m_as(unit.angstrom)
 
         # Equation 1: (a - b)^2 = a^2 - 2ab + b^2
         # distances_squared will eventually wind up as the squared distances
@@ -1265,7 +1261,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             closed_mask[
                 np.any(
                     rms_matrix[closed_list[: i + 1], :]
-                    < rms_tolerance.value_in_unit(unit.angstrom),
+                    < rms_tolerance.m_as(unit.angstrom),
                     axis=0,
                 )
             ] = True
@@ -1599,8 +1595,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 offmol._add_conformer(positions)
 
         partial_charges = unit.Quantity(
-            np.zeros(shape=offmol.n_atoms, dtype=np.float64),
-            unit=unit.elementary_charge,
+            value=np.zeros(shape=offmol.n_atoms, dtype=np.float64),
+            units=unit.elementary_charge,
         )
 
         any_atom_has_partial_charge = False
@@ -1646,9 +1642,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         for index, atom in enumerate(molecule.atoms):
             rdatom = Chem.Atom(atom.atomic_number)
-            rdatom.SetFormalCharge(
-                atom.formal_charge.value_in_unit(unit.elementary_charge)
-            )
+            rdatom.SetFormalCharge(atom.formal_charge.m_as(unit.elementary_charge))
             rdatom.SetIsAromatic(atom.is_aromatic)
 
             ## Stereo handling code moved to after bonds are added
@@ -1825,7 +1819,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             for conformer in molecule._conformers:
                 rdmol_conformer = Chem.Conformer()
                 for atom_idx in range(molecule.n_atoms):
-                    x, y, z = conformer[atom_idx, :].value_in_unit(unit.angstrom)
+                    x, y, z = conformer[atom_idx, :].m_as(unit.angstrom)
                     rdmol_conformer.SetAtomPosition(atom_idx, Geometry.Point3D(x, y, z))
                 rdmol.AddConformer(rdmol_conformer, assignId=True)
 
@@ -1833,7 +1827,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         if not (molecule._partial_charges is None):
             rdk_indexed_charges = np.zeros(shape=molecule.n_atoms, dtype=float)
             for atom_idx, charge in enumerate(molecule._partial_charges):
-                charge_unitless = charge.value_in_unit(unit.elementary_charge)
+                charge_unitless = charge.m_as(unit.elementary_charge)
                 rdk_indexed_charges[atom_idx] = charge_unitless
             for atom_idx, rdk_atom in enumerate(rdmol.GetAtoms()):
                 rdk_atom.SetDoubleProp("PartialCharge", rdk_indexed_charges[atom_idx])

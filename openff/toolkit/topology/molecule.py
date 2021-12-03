@@ -28,40 +28,32 @@ Molecular chemical entity representation and routines to interface with cheminfo
    * Speed up overall import time by putting non-global imports only where they are needed
 
 """
-
 import json
 import operator
 import warnings
 from abc import abstractmethod
-from collections import OrderedDict, UserDict, defaultdict
+from collections import OrderedDict, UserDict
 from copy import deepcopy
-from itertools import chain
-from typing import Optional, Union
+from typing import TYPE_CHECKING, List, Optional, Union
 
 import networkx as nx
 import numpy as np
+from mendeleev import element
+from openff.units import unit
+from openff.units.openmm import to_openmm
+
+if TYPE_CHECKING:
+    import networkx as nx
+
 from cached_property import cached_property
 from packaging import version
 
-try:
-    from openmm import LocalCoordinatesSite, unit
-    from openmm.app import Element, element
-except ImportError:
-    from simtk import unit
-    from simtk.openmm import LocalCoordinatesSite
-    from simtk.openmm.app import Element, element
-
 import openff.toolkit
-from openff.toolkit.utils import (
-    get_data_file_path,
-    quantity_to_string,
-    remove_subsets_from_list,
-    requires_package,
-    string_to_quantity,
-)
+from openff.toolkit.utils import get_data_file_path, requires_package
 from openff.toolkit.utils.exceptions import (
     HierarchySchemeNotFoundException,
     HierarchySchemeWithIteratorNameAlreadyRegisteredException,
+    IncompatibleUnitError,
     InvalidAtomMetadataError,
     InvalidConformerError,
     NotAttachedToMoleculeError,
@@ -77,6 +69,12 @@ from openff.toolkit.utils.toolkits import (
     ToolkitRegistry,
     ToolkitWrapper,
     UndefinedStereochemistryError,
+)
+from openff.toolkit.utils.utils import (
+    MissingDependencyError,
+    dict_to_quantity,
+    quantity_to_dict,
+    requires_package,
 )
 
 # =============================================================================================
@@ -222,7 +220,7 @@ class Atom(Particle):
         ----------
         atomic_number : int
             Atomic number of the atom
-        formal_charge : int or openmm.unit.Quantity-wrapped int with dimension "charge"
+        formal_charge : int or openff.units.unit.Quantity-wrapped int with dimension "charge"
             Formal charge of the atom
         is_aromatic : bool
             If True, atom is aromatic; if False, not aromatic
@@ -249,6 +247,9 @@ class Atom(Particle):
         """
         self._atomic_number = atomic_number
         # Use the setter here, since it will handle either ints or Quantities
+        if hasattr(formal_charge, "units"):
+            if formal_charge.units == unit.dimensionless:
+                raise Exception
         self.formal_charge = formal_charge
         self._is_aromatic = is_aromatic
         self._stereochemistry = stereochemistry
@@ -297,9 +298,7 @@ class Atom(Particle):
         # TODO
         atom_dict = OrderedDict()
         atom_dict["atomic_number"] = self._atomic_number
-        atom_dict["formal_charge"] = self._formal_charge.value_in_unit(
-            unit.elementary_charge
-        )
+        atom_dict["formal_charge"] = self._formal_charge.m_as(unit.elementary_charge)
         atom_dict["is_aromatic"] = self._is_aromatic
         atom_dict["stereochemistry"] = self._stereochemistry
         # TODO: Should we let atoms have names?
@@ -330,16 +329,38 @@ class Atom(Particle):
 
     @formal_charge.setter
     def formal_charge(self, other):
-        from openff.toolkit.utils.utils import check_units_are_compatible
-
         """
         Set the atom's formal charge. Accepts either ints or openmm.unit.Quantity-wrapped ints with units of charge.
         """
         if isinstance(other, int):
             self._formal_charge = other * unit.elementary_charge
+        elif isinstance(other, unit.Quantity):
+            if other.units in unit.elementary_charge.compatible_units():
+                self._formal_charge = other
+            else:
+                raise IncompatibleUnitError(
+                    f"Cannot set formal charge with a quantity with units {other.units}"
+                )
+        elif hasattr(other, "unit"):
+            from openmm import unit as openmm_unit
+
+            if not isinstance(other, openmm_unit.Quantity):
+                raise IncompatibleUnitError(
+                    "Unsupported type passed to formal_charge setter. "
+                    "Found object of type {type(other)}."
+                )
+
+            from openff.units.openmm import from_openmm
+
+            converted = from_openmm(other)
+            if converted.units in unit.elementary_charge.compatible_units():
+                self._formal_charge = converted
+            else:
+                raise IncompatibleUnitError(
+                    f"Cannot set formal charge with a quantity with units {converted.units}"
+                )
         else:
-            check_units_are_compatible("formal charge", other, unit.elementary_charge)
-            self._formal_charge = other
+            raise ValueError
 
     @property
     def partial_charge(self):
@@ -390,9 +411,9 @@ class Atom(Particle):
 
         Returns
         -------
-        openmm.openmm.app.element.Element
+        mendeleev.models.Element
         """
-        return element.Element.getByAtomicNumber(self._atomic_number)
+        return element(self._atomic_number)
 
     @property
     def atomic_number(self):
@@ -658,11 +679,11 @@ class VirtualParticle(Particle):
         # implemented types are correct, so we are interested in cases
         # where custom virtual sites cause breakage.
 
-        atom_positions_unit = atom_positions.unit
+        atom_positions_unit = atom_positions.units
 
         originwt, xdir, ydir = self.virtual_site.local_frame_weights
         disp = self.virtual_site.local_frame_position
-        x, y, z = disp.value_in_unit(disp.unit)
+        x, y, z = disp.m
 
         # this pulls the correct ordering of the atoms
         pos = []
@@ -691,7 +712,7 @@ class VirtualParticle(Particle):
 
         position = origin + x * xaxis + y * yaxis + z * zaxis
 
-        return unit.Quantity(position, unit=atom_positions_unit)
+        return unit.Quantity(position, units=atom_positions_unit)
 
     def _extract_position_from_conformer(self, conformation):
 
@@ -837,7 +858,7 @@ class VirtualSite(Particle):
 
         # set sane defaults for OpenMM
         if epsilon is None and rmin_half is None:
-            epsilon = 0.0 * unit.kilocalorie_per_mole
+            epsilon = 0.0 * unit.kilocalorie / unit.mole
         if sigma is None and rmin_half is None:
             sigma = 0.0 * unit.angstrom
 
@@ -877,26 +898,27 @@ class VirtualSite(Particle):
         if sigma is None:
             self._sigma = None
         else:
-            assert hasattr(sigma, "unit")
-            assert unit.angstrom.is_compatible(sigma.unit)
-            self._sigma = sigma.in_units_of(unit.angstrom)
+            assert hasattr(sigma, "units")
+            assert sigma.units in unit.angstrom.compatible_units()
+            self._sigma = sigma.to(unit.angstrom)
 
         if epsilon is None:
             self._epsilon = None
         else:
-            assert hasattr(epsilon, "unit")
-            assert (unit.kilojoule_per_mole).is_compatible(epsilon.unit)
-            self._epsilon = epsilon.in_units_of(unit.kilojoule_per_mole)
+            assert hasattr(epsilon, "units")
+            kj_mol = unit.kilojoule / unit.mole
+            assert epsilon.units.is_compatible_with(kj_mol)
+            self._epsilon = epsilon.to(kj_mol)
 
         if charge_increments is None:
             self._charge_increments = None
         else:
             for ci in charge_increments:
-                assert hasattr(ci, "unit")
-                assert unit.elementary_charges.is_compatible(ci.unit)
+                assert hasattr(ci, "units")
+                assert ci.units in unit.elementary_charges.compatible_units()
             self._charge_increments = [
-                ci.value_in_unit(unit.elementary_charges) for ci in charge_increments
-            ] * unit.elementary_charges
+                ci.m_as(unit.elementary_charges) for ci in charge_increments
+            ] * unit.elementary_charge
 
         self._atoms = list()
 
@@ -948,11 +970,11 @@ class VirtualSite(Particle):
         vsite_dict = OrderedDict()
         vsite_dict["name"] = self._name
         vsite_dict["atoms"] = tuple([i.molecule_atom_index for i in self.atoms])
-        vsite_dict["charge_increments"] = quantity_to_string(self._charge_increments)
+        vsite_dict["charge_increments"] = quantity_to_dict(self._charge_increments)
 
-        vsite_dict["epsilon"] = quantity_to_string(self._epsilon)
+        vsite_dict["epsilon"] = quantity_to_dict(self._epsilon)
 
-        vsite_dict["sigma"] = quantity_to_string(self._sigma)
+        vsite_dict["sigma"] = quantity_to_dict(self._sigma)
         vsite_dict["orientations"] = self._orientations
 
         # skip packing the particles; they are created dynamically
@@ -968,13 +990,13 @@ class VirtualSite(Particle):
         vsite_dict_units = deepcopy(vsite_dict)
 
         # Attach units to epsilon term
-        vsite_dict_units["epsilon"] = string_to_quantity(vsite_dict["epsilon"])
-        vsite_dict_units["sigma"] = string_to_quantity(vsite_dict["sigma"])
-        vsite_dict_units["charge_increments"] = string_to_quantity(
+        vsite_dict_units["epsilon"] = dict_to_quantity(vsite_dict["epsilon"])
+        vsite_dict_units["sigma"] = dict_to_quantity(vsite_dict["sigma"])
+        vsite_dict_units["charge_increments"] = dict_to_quantity(
             vsite_dict["charge_increments"]
         )
 
-        vsite_dict_units["orientation"] = cls._orientation
+        vsite_dict_units["orientations"] = cls._orientation
 
         return VirtualSite(**vsite_dict_units)
 
@@ -1214,11 +1236,14 @@ class VirtualSite(Particle):
             self.name, self.type, self.atoms, self.n_particles
         )
 
+    @requires_package("openmm")
     def _openmm_virtual_site(self, atoms):
+        from openmm import LocalCoordinatesSite
+
         originwt, xdir, ydir = self.local_frame_weights
         pos = self.local_frame_position
 
-        return LocalCoordinatesSite(atoms, originwt, xdir, ydir, pos)
+        return LocalCoordinatesSite(atoms, originwt, xdir, ydir, to_openmm(pos))
 
     def compute_positions_from_conformer(self, conformer_idx):
         """
@@ -1242,9 +1267,9 @@ class VirtualSite(Particle):
         positions = []
         for vp in self.particles:
             vp_pos = vp.compute_position_from_conformer(conformer_idx)
-            positions.append(vp_pos.value_in_unit(unit.angstrom))
+            positions.append(vp_pos.m_as(unit.angstrom))
 
-        return unit.Quantity(np.array(positions).reshape(-1, 3), unit=unit.angstrom)
+        return unit.Quantity(np.array(positions).reshape(-1, 3), units=unit.angstrom)
 
     def compute_positions_from_atom_positions(self, atom_positions):
         """
@@ -1269,9 +1294,9 @@ class VirtualSite(Particle):
         positions = []
         for vp in self.particles:
             vp_pos = vp.compute_position_from_atom_positions(atom_positions)
-            positions.extend(vp_pos.value_in_unit(unit.angstrom))
+            positions.extend(vp_pos.m_as(unit.angstrom))
 
-        return unit.Quantity(np.array(positions).reshape(-1, 3), unit=unit.angstrom)
+        return unit.Quantity(np.array(positions).reshape(-1, 3), units=unit.angstrom)
 
 
 class BondChargeVirtualSite(VirtualSite):
@@ -1295,7 +1320,8 @@ class BondChargeVirtualSite(VirtualSite):
         """
         Create a bond charge-type virtual site, in which the location of the charge is specified by the position of two atoms. This supports placement of a virtual site S along a vector between two specified atoms, e.g. to allow for a sigma hole for halogens or similar contexts. With positive values of the distance, the virtual site lies outside the first indexed atom.
 
-        TODO: One of the examples on https://open-forcefield-toolkit.readthedocs.io/en/topology/smirnoff.html#virtualsites-virtual-sites-for-off-atom-charges has a BondCharge defined with three atoms -- How does that work?
+        TODO: One of the examples in the SMIRNOFF spec has a BondCharge defined with three atoms -- How does that work?
+        https://openforcefield.github.io/standards/standards/smirnoff/#virtualsites-virtual-sites-for-off-atom-charges
 
         Parameters
         ----------
@@ -1320,8 +1346,8 @@ class BondChargeVirtualSite(VirtualSite):
             The permutations of the matched atoms that should be used to define
             the orientation of each virtual site particle
         """
-        assert hasattr(distance, "unit")
-        assert unit.angstrom.is_compatible(distance.unit)
+        assert hasattr(distance, "units")
+        assert distance.units.is_compatible_with(unit.nanometer)
 
         super().__init__(
             atoms,
@@ -1332,14 +1358,14 @@ class BondChargeVirtualSite(VirtualSite):
             name=name,
             orientations=orientations,
         )
-        self._distance = distance.in_units_of(unit.angstrom)
+        self._distance = distance.to(unit.angstrom)
 
     def __eq__(self, other):
         return super().__eq__(other)
 
     def to_dict(self):
         vsite_dict = super().to_dict()
-        vsite_dict["distance"] = quantity_to_string(self._distance)
+        vsite_dict["distance"] = quantity_to_dict(self._distance)
 
         vsite_dict["vsite_type"] = self.type
         vsite_dict["orientations"] = self._orientations
@@ -1354,7 +1380,7 @@ class BondChargeVirtualSite(VirtualSite):
         base_dict.pop("vsite_type")
         base_dict.pop("distance")
         vsite = super().from_dict(**base_dict)
-        vsite._distance = string_to_quantity(vsite_dict["distance"])
+        vsite._distance = dict_to_quantity(vsite_dict["distance"])
         return vsite
 
     @property
@@ -1407,8 +1433,8 @@ class BondChargeVirtualSite(VirtualSite):
         # towards the center of the other atoms, we want the
         # vsite to point away from the unit vector to achieve the desired
         # distance
-        distance_unit = self._distance.unit
-        pos = distance_unit * [-self._distance.value_in_unit(distance_unit), 0.0, 0.0]
+        _unit = self._distance.units
+        pos = _unit * [-self._distance.m_as(_unit), 0.0, 0.0]
 
         return pos
 
@@ -1479,12 +1505,12 @@ class MonovalentLonePairVirtualSite(VirtualSite):
         """
         # assert isinstance(distance, unit.Quantity)
         # TODO: Check for proper number of atoms
-        assert hasattr(distance, "unit")
-        assert unit.angstrom.is_compatible(distance.unit)
-        assert hasattr(in_plane_angle, "unit")
-        assert unit.degree.is_compatible(in_plane_angle.unit)
-        assert hasattr(out_of_plane_angle, "unit")
-        assert unit.degree.is_compatible(out_of_plane_angle.unit)
+        assert hasattr(distance, "units")
+        assert unit.angstrom.is_compatible_with(distance.units)
+        assert hasattr(in_plane_angle, "units")
+        assert unit.degree.is_compatible_with(in_plane_angle.units)
+        assert hasattr(out_of_plane_angle, "units")
+        assert unit.degree.is_compatible_with(out_of_plane_angle.units)
 
         assert len(atoms) == 3
         super().__init__(
@@ -1496,15 +1522,16 @@ class MonovalentLonePairVirtualSite(VirtualSite):
             name=name,
             orientations=orientations,
         )
-        self._distance = distance.in_units_of(unit.angstrom)
-        self._out_of_plane_angle = out_of_plane_angle.in_units_of(unit.degree)
-        self._in_plane_angle = in_plane_angle.in_units_of(unit.degree)
+        self._distance = distance.to(unit.angstrom)
+        self._out_of_plane_angle = out_of_plane_angle.to(unit.degree)
+        self._in_plane_angle = in_plane_angle.to(unit.degree)
 
     def to_dict(self):
         vsite_dict = super().to_dict()
-        vsite_dict["distance"] = quantity_to_string(self._distance)
-        vsite_dict["out_of_plane_angle"] = quantity_to_string(self._out_of_plane_angle)
-        vsite_dict["in_plane_angle"] = quantity_to_string(self._in_plane_angle)
+        vsite_dict["distance"] = quantity_to_dict(self._distance)
+
+        vsite_dict["out_of_plane_angle"] = quantity_to_dict(self._out_of_plane_angle)
+        vsite_dict["in_plane_angle"] = quantity_to_dict(self._in_plane_angle)
         vsite_dict["vsite_type"] = self.type
         return vsite_dict
 
@@ -1528,8 +1555,8 @@ class MonovalentLonePairVirtualSite(VirtualSite):
         """
         # The function is overridden only to have a custom docstring.
         vsite = super().from_dict(vsite_dict)
-        vsite._out_of_plane_angle = string_to_quantity(vsite_dict["out_of_plane_angle"])
-        vsite._in_plane_angle = string_to_quantity(vsite_dict["in_plane_angle"])
+        vsite._out_of_plane_angle = dict_to_quantity(vsite_dict["out_of_plane_angle"])
+        vsite._in_plane_angle = dict_to_quantity(vsite_dict["in_plane_angle"])
         return vsite
 
     @property
@@ -1583,21 +1610,17 @@ class MonovalentLonePairVirtualSite(VirtualSite):
         in the local frame for the x, y, and z directions.
         """
 
-        theta = self._in_plane_angle.value_in_unit(unit.radians)
-        psi = self._out_of_plane_angle.value_in_unit(unit.radians)
+        theta = self._in_plane_angle.m_as(unit.radians)
+        psi = self._out_of_plane_angle.m_as(unit.radians)
 
-        distance_unit = self._distance.unit
+        distance_unit = self._distance.units
         pos = unit.Quantity(
             [
-                self._distance.value_in_unit(distance_unit)
-                * np.cos(theta)
-                * np.cos(psi),
-                self._distance.value_in_unit(distance_unit)
-                * np.sin(theta)
-                * np.cos(psi),
-                self._distance.value_in_unit(distance_unit) * np.sin(psi),
+                self._distance.m_as(distance_unit) * np.cos(theta) * np.cos(psi),
+                self._distance.m_as(distance_unit) * np.sin(theta) * np.cos(psi),
+                self._distance.m_as(distance_unit) * np.sin(psi),
             ],
-            unit=distance_unit,
+            units=distance_unit,
         )
 
         return pos
@@ -1663,11 +1686,11 @@ class DivalentLonePairVirtualSite(VirtualSite):
             The permutations of the matched atoms that should be used to define
             the orientation of each virtual site particle
         """
-        assert hasattr(distance, "unit")
-        assert unit.angstrom.is_compatible(distance.unit)
+        assert hasattr(distance, "units")
+        assert unit.angstrom.is_compatible_with(distance.units)
 
-        assert hasattr(out_of_plane_angle, "unit")
-        assert unit.degree.is_compatible(out_of_plane_angle.unit)
+        assert hasattr(out_of_plane_angle, "units")
+        assert unit.degree.is_compatible_with(out_of_plane_angle.units)
 
         assert len(atoms) == 3
         super().__init__(
@@ -1679,16 +1702,16 @@ class DivalentLonePairVirtualSite(VirtualSite):
             name=name,
             orientations=orientations,
         )
-        self._distance = distance.in_units_of(unit.angstrom)
-        self._out_of_plane_angle = out_of_plane_angle.in_units_of(unit.degree)
+        self._distance = distance.to(unit.angstrom)
+        self._out_of_plane_angle = out_of_plane_angle.to(unit.degree)
 
     def __eq__(self, other):
         return super().__eq__(other)
 
     def to_dict(self):
         vsite_dict = super().to_dict()
-        vsite_dict["distance"] = quantity_to_string(self._distance)
-        vsite_dict["out_of_plane_angle"] = quantity_to_string(self._out_of_plane_angle)
+        vsite_dict["distance"] = quantity_to_dict(self._distance)
+        vsite_dict["out_of_plane_angle"] = quantity_to_dict(self._out_of_plane_angle)
         vsite_dict["vsite_type"] = self.type
         return vsite_dict
 
@@ -1709,7 +1732,7 @@ class DivalentLonePairVirtualSite(VirtualSite):
         """
         # The function is overridden only to have a custom docstring.
         vsite = super().from_dict(vsite_dict)
-        vsite._out_of_plane_angle = string_to_quantity(vsite_dict["out_of_plane_angle"])
+        vsite._out_of_plane_angle = dict_to_quantity(vsite_dict["out_of_plane_angle"])
         return vsite
 
     @property
@@ -1758,14 +1781,13 @@ class DivalentLonePairVirtualSite(VirtualSite):
         displacements in the local frame for the x, y, and z directions.
         """
 
-        theta = self._out_of_plane_angle.value_in_unit(unit.radians)
+        theta = self._out_of_plane_angle.m_as(unit.radians)
 
-        distance_unit = self._distance.unit
-
+        distance_unit = self._distance.units
         pos = distance_unit * [
-            -self._distance.value_in_unit(distance_unit) * np.cos(theta),
+            -self._distance.m_as(distance_unit) * np.cos(theta),
             0.0,
-            self._distance.value_in_unit(distance_unit) * np.sin(theta),
+            self._distance.m_as(distance_unit) * np.sin(theta),
         ]  # pos of the vsite in local crds
         return pos
 
@@ -1830,8 +1852,8 @@ class TrivalentLonePairVirtualSite(VirtualSite):
         """
         assert len(atoms) == 4
 
-        assert hasattr(distance, "unit")
-        assert unit.angstrom.is_compatible(distance.unit)
+        assert hasattr(distance, "units")
+        assert unit.angstrom.is_compatible_with(distance.units)
 
         super().__init__(
             atoms,
@@ -1842,14 +1864,14 @@ class TrivalentLonePairVirtualSite(VirtualSite):
             name=name,
             orientations=orientations,
         )
-        self._distance = distance.in_units_of(unit.angstrom)
+        self._distance = distance.to(unit.angstrom)
 
     def __eq__(self, other):
         return super().__eq__(other)
 
     def to_dict(self):
         vsite_dict = super().to_dict()
-        vsite_dict["distance"] = quantity_to_string(self._distance)
+        vsite_dict["distance"] = quantity_to_dict(self._distance)
         vsite_dict["vsite_type"] = self.type
         return vsite_dict
 
@@ -1915,10 +1937,8 @@ class TrivalentLonePairVirtualSite(VirtualSite):
         displacements in the local frame for the x, y, and z directions.
         """
 
-        distance_unit = self._distance.unit
-        pos = unit.Quantity(
-            [-self._distance.value_in_unit(distance_unit), 0.0, 0.0], unit=distance_unit
-        )
+        distance_unit = self._distance.units
+        pos = unit.Quantity([-self._distance.m, 0.0, 0.0], units=distance_unit)
 
         return pos
 
@@ -2528,7 +2548,7 @@ class FrozenMolecule(Serializable):
                 "conformers_unit"
             ] = "angstrom"  # Have this defined as a class variable?
             for conf in self._conformers:
-                conf_unitless = conf.value_in_unit(unit.angstrom)
+                conf_unitless = conf.m_as(unit.angstrom)
                 conf_serialized, conf_shape = serialize_numpy((conf_unitless))
                 molecule_dict["conformers"].append(conf_serialized)
         if self._partial_charges is None:
@@ -2536,9 +2556,7 @@ class FrozenMolecule(Serializable):
             molecule_dict["partial_charges_unit"] = None
 
         else:
-            charges_unitless = self._partial_charges.value_in_unit(
-                unit.elementary_charge
-            )
+            charges_unitless = self._partial_charges.m_as(unit.elementary_charge)
             charges_serialized, charges_shape = serialize_numpy(charges_unitless)
             molecule_dict["partial_charges"] = charges_serialized
             molecule_dict["partial_charges_unit"] = "elementary_charge"
@@ -2616,9 +2634,9 @@ class FrozenMolecule(Serializable):
             vsite_dict_units = deepcopy(vsite_dict)
 
             # Attach units to epsilon term
-            vsite_dict_units["epsilon"] = string_to_quantity(vsite_dict["epsilon"])
-            vsite_dict_units["sigma"] = string_to_quantity(vsite_dict["sigma"])
-            vsite_dict_units["charge_increments"] = string_to_quantity(
+            vsite_dict_units["epsilon"] = dict_to_quantity(vsite_dict["epsilon"])
+            vsite_dict_units["sigma"] = dict_to_quantity(vsite_dict["sigma"])
+            vsite_dict_units["charge_increments"] = dict_to_quantity(
                 vsite_dict["charge_increments"]
             )
             vsite_dict_units["orientations"] = vsite_dict["orientations"]
@@ -2629,39 +2647,31 @@ class FrozenMolecule(Serializable):
             vsite_dict_units["atoms"] = atoms
             if vsite_dict_units["vsite_type"] == "BondChargeVirtualSite":
                 del vsite_dict_units["vsite_type"]
-                vsite_dict_units["distance"] = string_to_quantity(
-                    vsite_dict["distance"]
-                )
+                vsite_dict_units["distance"] = dict_to_quantity(vsite_dict["distance"])
                 self._add_bond_charge_virtual_site(**vsite_dict_units)
 
             elif vsite_dict_units["vsite_type"] == "MonovalentLonePairVirtualSite":
                 del vsite_dict_units["vsite_type"]
-                vsite_dict_units["distance"] = string_to_quantity(
-                    vsite_dict["distance"]
-                )
-                vsite_dict_units["in_plane_angle"] = string_to_quantity(
+                vsite_dict_units["distance"] = dict_to_quantity(vsite_dict["distance"])
+                vsite_dict_units["in_plane_angle"] = dict_to_quantity(
                     vsite_dict["in_plane_angle"]
                 )
-                vsite_dict_units["out_of_plane_angle"] = string_to_quantity(
+                vsite_dict_units["out_of_plane_angle"] = dict_to_quantity(
                     vsite_dict["out_of_plane_angle"]
                 )
                 self._add_monovalent_lone_pair_virtual_site(**vsite_dict_units)
 
             elif vsite_dict_units["vsite_type"] == "DivalentLonePairVirtualSite":
                 del vsite_dict_units["vsite_type"]
-                vsite_dict_units["distance"] = string_to_quantity(
-                    vsite_dict["distance"]
-                )
-                vsite_dict_units["out_of_plane_angle"] = string_to_quantity(
+                vsite_dict_units["distance"] = dict_to_quantity(vsite_dict["distance"])
+                vsite_dict_units["out_of_plane_angle"] = dict_to_quantity(
                     vsite_dict["out_of_plane_angle"]
                 )
                 self._add_divalent_lone_pair_virtual_site(**vsite_dict_units)
 
             elif vsite_dict_units["vsite_type"] == "TrivalentLonePairVirtualSite":
                 del vsite_dict_units["vsite_type"]
-                vsite_dict_units["distance"] = string_to_quantity(
-                    vsite_dict["distance"]
-                )
+                vsite_dict_units["distance"] = dict_to_quantity(vsite_dict["distance"])
                 self._add_trivalent_lone_pair_virtual_site(**vsite_dict_units)
 
             else:
@@ -2719,7 +2729,7 @@ class FrozenMolecule(Serializable):
         try:
             smiles = self.to_smiles()
         except:
-            hill = Molecule.to_hill_formula(self)
+            hill = self.to_hill_formula()
             return description + f" with bad SMILES and Hill formula '{hill}'"
         return description + f" and SMILES '{smiles}'"
 
@@ -3144,19 +3154,22 @@ class FrozenMolecule(Serializable):
 
     def _is_exactly_the_same_as(self, other):
         for atom1, atom2 in zip(self.atoms, other.atoms):
-            if ((atom1.atomic_number != atom2.atomic_number) or
-                    (atom1.formal_charge != atom2.formal_charge) or
-                    (atom1.is_aromatic != atom2.is_aromatic) or
-               (atom1.stereochemistry != atom2.stereochemistry)):
+            if (
+                (atom1.atomic_number != atom2.atomic_number)
+                or (atom1.formal_charge != atom2.formal_charge)
+                or (atom1.is_aromatic != atom2.is_aromatic)
+                or (atom1.stereochemistry != atom2.stereochemistry)
+            ):
                 return False
         for bond1, bond2 in zip(self.bonds, other.bonds):
-            if ((bond1.atom1_index != bond2.atom1_index) or
-               (bond1.atom2_index != bond2.atom2_index) or
-               (bond1.is_aromatic != bond2.is_aromatic) or
-               (bond1.stereochemistry != bond2.stereochemistry)):
+            if (
+                (bond1.atom1_index != bond2.atom1_index)
+                or (bond1.atom2_index != bond2.atom2_index)
+                or (bond1.is_aromatic != bond2.is_aromatic)
+                or (bond1.stereochemistry != bond2.stereochemistry)
+            ):
                 return False
         return True
-
 
     @staticmethod
     def are_isomorphic(
@@ -3183,8 +3196,8 @@ class FrozenMolecule(Serializable):
 
         Parameters
         ----------
-        mol1 : an openff.toolkit.topology.molecule.FrozenMolecule or TopologyMolecule or nx.Graph()
-        mol2 : an openff.toolkit.topology.molecule.FrozenMolecule or TopologyMolecule or nx.Graph()
+        mol1 : an openff.toolkit.topology.molecule.FrozenMolecule or nx.Graph()
+        mol2 : an openff.toolkit.topology.molecule.FrozenMolecule or nx.Graph()
             The molecule to test for isomorphism.
 
         return_atom_map: bool, default=False, optional
@@ -3224,15 +3237,16 @@ class FrozenMolecule(Serializable):
             [Dict[int,int]] ordered by mol1 indexing {mol1_index: mol2_index}
             If molecules are not isomorphic given input arguments, will return None instead of dict.
         """
-
         # Do a quick hill formula check first
-        if FrozenMolecule.to_hill_formula(mol1) != FrozenMolecule.to_hill_formula(mol2):
+        if Molecule._object_to_hill_formula(mol1) != Molecule._object_to_hill_formula(
+            mol2
+        ):
             return False, None
 
         # Do a quick check to see whether the inputs are totally identical (including being in the same atom order)
         if isinstance(mol1, FrozenMolecule) and isinstance(mol2, FrozenMolecule):
             if mol1._is_exactly_the_same_as(mol2):
-                return True, {i:i for i in range(mol1.n_atoms)}
+                return True, {i: i for i in range(mol1.n_atoms)}
 
         # Build the user defined matching functions
         def node_match_func(x, y):
@@ -3298,9 +3312,8 @@ class FrozenMolecule(Serializable):
             else:
                 raise NotImplementedError(
                     f"The input type {type(data)} is not supported,"
-                    f"please supply an openff.toolkit.topology.molecule.Molecule,"
-                    f"openff.toolkit.topology.topology.TopologyMolecule or networkx.Graph "
-                    f"representation of the molecule."
+                    f"please supply an openff.toolkit.topology.molecule.Molecule "
+                    f"or networkx.Graph representation of the molecule."
                 )
 
         mol1_netx = to_networkx(mol1)
@@ -3327,14 +3340,14 @@ class FrozenMolecule(Serializable):
 
     def is_isomorphic_with(self, other, **kwargs):
         """
-        Check if the molecule is isomorphic with the other molecule which can be an openff.toolkit.topology.Molecule,
-        or TopologyMolecule or nx.Graph(). Full matching is done using the options described bellow.
+        Check if the molecule is isomorphic with the other molecule which can be an openff.toolkit.topology.Molecule
+        or nx.Graph(). Full matching is done using the options described bellow.
 
         .. warning :: This API is experimental and subject to change.
 
         Parameters
         ----------
-        other: openff.toolkit.topology.Molecule or TopologyMolecule or nx.Graph()
+        other: openff.toolkit.topology.Molecule or nx.Graph()
 
         aromatic_matching: bool, default=True, optional
         compare the aromatic attributes of bonds and atoms.
@@ -3503,9 +3516,9 @@ class FrozenMolecule(Serializable):
 
         for vsite in self.virtual_sites:
             vsite_pos = vsite.compute_positions_from_atom_positions(atom_positions)
-            positions.append(vsite_pos.value_in_unit(unit.angstrom))
+            positions.append(vsite_pos.m_as(unit.angstrom))
 
-        return unit.Quantity(np.array(positions).reshape(-1, 3), unit=unit.angstrom)
+        return unit.Quantity(np.array(positions).reshape(-1, 3), units=unit.angstrom)
 
     def apply_elf_conformer_selection(
         self,
@@ -4228,14 +4241,36 @@ class FrozenMolecule(Serializable):
                 "Given {}, expected {}".format(coordinates.shape, new_conf.shape)
             )
 
+        if isinstance(new_conf, unit.Quantity):
+            if not coordinates.units.is_compatible_with(unit.angstrom):
+                raise Exception(
+                    "Coordinates passed to Molecule._add_conformer with incompatible units. "
+                    "Ensure that units are dimension of length."
+                )
+        elif hasattr(new_conf, "unit"):
+            from openmm import unit as openmm_unit
+
+            if not isinstance(other, openmm_unit.Quantity):
+                raise IncompatibleUnitError(
+                    "Unsupported type passed to formal_charge setter. "
+                    "Found object of type {type(other)}."
+                )
+
+            if not coordinates.unit.is_compatible(openmm_unit.meter):
+                raise Exception(
+                    "Coordinates passed to Molecule._add_conformer with incompatible units. "
+                    "Ensure that units are dimension of length."
+                )
+        else:
+            raise Exception(
+                "Coordinates passed to Molecule._add_conformer without units. Ensure that coordinates are "
+                "of type openmm.unit.Quantity or openff.units.unit.Quantity"
+            )
+
         try:
             new_conf[:] = coordinates
         except AttributeError as e:
             print(e)
-            raise Exception(
-                "Coordinates passed to Molecule._add_conformer without units. Ensure that coordinates are "
-                "of type openmm.units.Quantity"
-            )
 
         if self._conformers is None:
             # TODO should we checking that the exact same conformer is not in the list already?
@@ -4268,13 +4303,25 @@ class FrozenMolecule(Serializable):
         """
         if charges is None:
             self._partial_charges = None
-        else:
-            assert hasattr(charges, "unit")
-            assert unit.elementary_charge.is_compatible(charges.unit)
-            assert charges.shape == (self.n_atoms,)
+        elif charges.shape == (self.n_atoms,):
+            if isinstance(charges, unit.Quantity):
+                if charges.units in unit.elementary_charge.compatible_units():
+                    self._partial_charges = charges
+            if hasattr(charges, "unit"):
+                from openmm import unit as openmm_unit
 
-            charges_ec = charges.in_units_of(unit.elementary_charge)
-            self._partial_charges = charges_ec
+                if not isinstance(other, openmm_unit.Quantity):
+                    raise IncompatibleUnitError(
+                        "Unsupported type passed to partial_charges setter. "
+                        "Found object of type {type(charges)}."
+                    )
+
+                elif isinstance(charges, openmm_unit.Quantity):
+                    from openff.units.openmm import from_openmm
+
+                    converted = from_openmm(charges)
+                    if converted.units in unit.elementary_charge.compatible_units():
+                        self._partial_charges = converted
 
     @property
     def n_particles(self):
@@ -4357,7 +4404,6 @@ class FrozenMolecule(Serializable):
             ptl for vsite in self._virtual_sites for ptl in vsite.particles
         ]
 
-
     def particle(self, index: int):
         """
         Get particle with a specified index.
@@ -4399,10 +4445,7 @@ class FrozenMolecule(Serializable):
         Iterate over all virtual particle objects.
         """
 
-        return [
-            ptl for vsite in self._virtual_sites for ptl in vsite.particles
-        ]
-
+        return [ptl for vsite in self._virtual_sites for ptl in vsite.particles]
 
     def virtual_particle(self, index: int):
         """
@@ -4643,7 +4686,7 @@ class FrozenMolecule(Serializable):
         those indices may change when this molecule is added to a Topology.
 
         For more details on the use of three-fold ('trefoil') impropers, see
-        https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html#impropertorsions
+        https://openforcefield.github.io/standards/standards/smirnoff/#impropertorsions
 
         Returns
         -------
@@ -4795,19 +4838,11 @@ class FrozenMolecule(Serializable):
         """
         Get the Hill formula of the molecule
         """
-        return Molecule.to_hill_formula(self)
+        return self.to_hill_formula()
 
-    @staticmethod
-    def to_hill_formula(molecule):
+    def to_hill_formula(self) -> str:
         """
-        Generate the Hill formula from either a :class:`FrozenMolecule`, :class:`TopologyMolecule` or
-        ``nx.Graph()`` of the molecule
-
-        .. TODO: Set up Intersphinx for nx.Graph(), above
-
-        Parameters
-        -----------
-        molecule : FrozenMolecule, TopologyMolecule or nx.Graph()
+        Generate the Hill formula of this molecule.
 
         Returns
         ----------
@@ -4817,54 +4852,26 @@ class FrozenMolecule(Serializable):
         -----------
         NotImplementedError : if the molecule is not of one of the specified types.
         """
+        atom_nums = [atom.atomic_number for atom in self.atoms]
 
+        return _atom_nums_to_hill_formula(atom_nums)
+
+    @staticmethod
+    def _object_to_hill_formula(obj: Union["Molecule", "nx.Graph"]) -> str:
+        """Take a Molecule or NetworkX graph and generate its Hill formula.
+        This provides a backdoor to the old functionality of Molecule.to_hill_formula, which
+        was a static method that duck-typed inputs of Molecule or graph objects."""
         import networkx as nx
 
-        # check for networkx then assuming we have a Molecule or TopologyMolecule instance just try and
-        # extract the info. Note we do not type check the TopologyMolecule due to cyclic dependencies
-        if isinstance(molecule, nx.Graph):
-            atom_nums = list(
-                dict(molecule.nodes(data="atomic_number", default=1)).values()
-            )
-
-        elif isinstance(molecule, FrozenMolecule):
-            atom_nums = [atom.atomic_number for atom in molecule.atoms]
-
+        if isinstance(obj, FrozenMolecule):
+            return obj.to_hill_formula()
+        elif isinstance(obj, nx.Graph):
+            return _networkx_graph_to_hill_formula(obj)
         else:
-            raise NotImplementedError(
-                f"The input type {type(molecule)} is not supported,"
-                f"please supply an openff.toolkit.topology.molecule.Molecule,"
-                f"openff.toolkit.topology.topology.TopologyMolecule or networkx representaion "
-                f"of the molecule."
+            raise RuntimeError(
+                f"Unsupport object of type {type(obj)} passed to "
+                "Molecule._object_to_hill_formula"
             )
-
-        # make a correct hill formula representation following this guide
-        # https://en.wikipedia.org/wiki/Chemical_formula#Hill_system
-
-        # create the counter dictionary using chemical symbols
-        from collections import Counter
-
-        atom_symbol_counts = Counter(
-            Element.getByAtomicNumber(atom_num).symbol for atom_num in atom_nums
-        )
-
-        formula = []
-        # Check for C and H first, to make a correct hill formula
-        for el in ["C", "H"]:
-            if el in atom_symbol_counts:
-                count = atom_symbol_counts.pop(el)
-                formula.append(el)
-                if count > 1:
-                    formula.append(str(count))
-
-        # now get the rest of the elements in alphabetical ordering
-        for el in sorted(atom_symbol_counts.keys()):
-            count = atom_symbol_counts.pop(el)
-            formula.append(el)
-            if count > 1:
-                formula.append(str(count))
-
-        return "".join(formula)
 
     def chemical_environment_matches(
         self,
@@ -5222,10 +5229,13 @@ class FrozenMolecule(Serializable):
         return mols
 
     @classmethod
+    @requires_package("openmm")
     def from_pdb(cls, file_path):
-        from rdkit import Chem
         import networkx as nx
         from networkx.algorithms import isomorphism
+        from openmm import unit as openmm_unit
+        from openmm.app import PDBFile
+        from rdkit import Chem
 
         def _rdmol_to_networkx(rdmol, res_name):
             _bondtypes = {
@@ -5236,7 +5246,7 @@ class FrozenMolecule(Serializable):
                 Chem.BondType.TRIPLE: 3,
                 Chem.BondType.QUADRUPLE: 4,
                 Chem.BondType.QUINTUPLE: 5,
-                Chem.BondType.HEXTUPLE:6 ,
+                Chem.BondType.HEXTUPLE: 6,
             }
             rdmol_G = nx.Graph()
             n_hydrogens = [0] * rdmol.GetNumAtoms()
@@ -5257,20 +5267,21 @@ class FrozenMolecule(Serializable):
                 )
                 # These substructures (and only these substructures) should be able to overlap previous matches.
                 # They handle bonds between substructures.
-                if res_name in ['PEPTIDE_BOND', 'DISULFIDE']:
-                    rdmol_G.nodes[atom.GetIdx()]['already_matched'] = True
+                if res_name in ["PEPTIDE_BOND", "DISULFIDE"]:
+                    rdmol_G.nodes[atom.GetIdx()]["already_matched"] = True
             for bond in rdmol.GetBonds():
                 bond_type = bond.GetBondType()
 
                 # All bonds in the graph should have been explicitly assigned by this point.
                 if bond_type == Chem.rdchem.BondType.UNSPECIFIED:
                     raise Exception
-                    #bond_type = Chem.rdchem.BondType.SINGLE
+                    # bond_type = Chem.rdchem.BondType.SINGLE
                     # bond_type = Chem.rdchem.BondType.AROMATIC
                     # bond_type = Chem.rdchem.BondType.ONEANDAHALF
                 rdmol_G.add_edge(
-                    bond.GetBeginAtomIdx(), bond.GetEndAtomIdx(),
-                    bond_order=_bondtypes[bond_type]
+                    bond.GetBeginAtomIdx(),
+                    bond.GetEndAtomIdx(),
+                    bond_order=_bondtypes[bond_type],
                 )
             return rdmol_G
 
@@ -5282,7 +5293,7 @@ class FrozenMolecule(Serializable):
             ----------
             substructure_library : dict{str:list[str, list[str]]}
                 A dictionary of substructures. substructure_library[aa_name] = list[tagged SMARTS, list[atom_names]]
-            openmm_topology : simtk.openmm.app.Topology
+            openmm_topology : openmm.app.Topology
                 An OpenMM Topology object
 
             Returns
@@ -5302,16 +5313,18 @@ class FrozenMolecule(Serializable):
                 omm_topology_G.add_node(
                     atom.index,
                     atomic_number=atom.element.atomic_number,
-                    formal_charge=0.,
+                    formal_charge=0.0,
                     atom_name=atom.name,
                     residue_name=atom.residue.name,
-                    residue_number=atom.residue.index
+                    residue_number=atom.residue.index,
                 )
 
             n_hydrogens = [0] * openmm_topology.getNumAtoms()
             for bond in openmm_topology.bonds():
                 omm_topology_G.add_edge(
-                    bond.atom1.index, bond.atom2.index, bond_order=Chem.rdchem.BondType.UNSPECIFIED  # bond.order
+                    bond.atom1.index,
+                    bond.atom2.index,
+                    bond_order=Chem.rdchem.BondType.UNSPECIFIED,  # bond.order
                 )
                 # Assign sequential negative numbers as atomic numbers for hydrogens attached to the same heavy atom.
                 # We do the same to the substructure templates that are used for matching. This saves runtime because
@@ -5320,15 +5333,21 @@ class FrozenMolecule(Serializable):
                     h_index = bond.atom1.index
                     heavy_atom_index = bond.atom2.index
                     n_hydrogens[heavy_atom_index] += 1
-                    omm_topology_G.nodes[h_index]['atomic_number'] = -1 * n_hydrogens[heavy_atom_index]
+                    omm_topology_G.nodes[h_index]["atomic_number"] = (
+                        -1 * n_hydrogens[heavy_atom_index]
+                    )
                 if bond.atom2.element.atomic_number == 1:
                     h_index = bond.atom2.index
                     heavy_atom_index = bond.atom1.index
                     n_hydrogens[heavy_atom_index] += 1
-                    omm_topology_G.nodes[h_index]['atomic_number'] = -1 * n_hydrogens[heavy_atom_index]
+                    omm_topology_G.nodes[h_index]["atomic_number"] = (
+                        -1 * n_hydrogens[heavy_atom_index]
+                    )
 
             # Try matching this substructure to the whole molecule graph
-            node_match = isomorphism.categorical_node_match(['atomic_number', 'already_matched'], [-100, False])
+            node_match = isomorphism.categorical_node_match(
+                ["atomic_number", "already_matched"], [-100, False]
+            )
 
             already_assigned_nodes = set()
             already_assigned_edges = set()
@@ -5337,12 +5356,16 @@ class FrozenMolecule(Serializable):
             for res_name in substructure_library:
                 # TODO: This is a hack for the moment since we don't have a more sophisticated way to resolve clashes
                 # so it just does the biggest substructures first
-                sorted_substructure_smarts = sorted(substructure_library[res_name], key=len, reverse=True)
+                sorted_substructure_smarts = sorted(
+                    substructure_library[res_name], key=len, reverse=True
+                )
                 non_isomorphic_flag = True
                 for substructure_smarts in sorted_substructure_smarts:
                     rdmol = Chem.MolFromSmarts(substructure_smarts)
                     rdmol_G = _rdmol_to_networkx(rdmol, res_name)
-                    GM = isomorphism.GraphMatcher(omm_topology_G, rdmol_G, node_match=node_match)
+                    GM = isomorphism.GraphMatcher(
+                        omm_topology_G, rdmol_G, node_match=node_match
+                    )
                     if GM.subgraph_is_isomorphic():
                         print(res_name)
                         print(substructure_smarts)
@@ -5354,80 +5377,107 @@ class FrozenMolecule(Serializable):
                                 already_assigned_nodes.add(omm_idx)
                                 # Negative atomic numbers are really hydrogen, so we reassign them to be atomic number
                                 # 1 once they've been matched
-                                if omm_topology_G.nodes[omm_idx]['atomic_number'] < 0:
-                                    omm_topology_G.nodes[omm_idx]['atomic_number'] = 1
-                                omm_topology_G.nodes[omm_idx]['formal_charge'] = rdmol_G.nodes[rdk_idx]['formal_charge']
-                                omm_topology_G.nodes[omm_idx]['already_matched'] = True
-                            rdk_idx_2_omm_idx = dict([(j, i) for i, j in omm_idx_2_rdk_idx.items()])
+                                if omm_topology_G.nodes[omm_idx]["atomic_number"] < 0:
+                                    omm_topology_G.nodes[omm_idx]["atomic_number"] = 1
+                                omm_topology_G.nodes[omm_idx][
+                                    "formal_charge"
+                                ] = rdmol_G.nodes[rdk_idx]["formal_charge"]
+                                omm_topology_G.nodes[omm_idx]["already_matched"] = True
+                            rdk_idx_2_omm_idx = dict(
+                                [(j, i) for i, j in omm_idx_2_rdk_idx.items()]
+                            )
                             for edge in rdmol_G.edges:
-                                omm_edge_idx = rdk_idx_2_omm_idx[edge[0]], rdk_idx_2_omm_idx[edge[1]]
+                                omm_edge_idx = (
+                                    rdk_idx_2_omm_idx[edge[0]],
+                                    rdk_idx_2_omm_idx[edge[1]],
+                                )
                                 if omm_edge_idx in already_assigned_edges:
                                     continue
                                 already_assigned_edges.add(tuple(omm_edge_idx))
-                                omm_topology_G.get_edge_data(*omm_edge_idx)['bond_order'] = \
-                                rdmol_G.get_edge_data(*edge)['bond_order']
+                                omm_topology_G.get_edge_data(*omm_edge_idx)[
+                                    "bond_order"
+                                ] = rdmol_G.get_edge_data(*edge)["bond_order"]
                         non_isomorphic_flag = False
                 if non_isomorphic_flag:
                     non_isomorphic_count += 1
             # print(f"Non isomorphic residues: {non_isomorphic_count}")
-            print(f"N. of assigned nodes: {len(already_assigned_nodes)} -- N. of atoms: {len(list(openmm_topology.atoms()))}")
-            print(f"N. of assigned edges: {len(already_assigned_edges)} -- N. of bonds: {len(list(openmm_topology.bonds()))}")
+            print(
+                f"N. of assigned nodes: {len(already_assigned_nodes)} -- N. of atoms: {len(list(openmm_topology.atoms()))}"
+            )
+            print(
+                f"N. of assigned edges: {len(already_assigned_edges)} -- N. of bonds: {len(list(openmm_topology.bonds()))}"
+            )
             # assert len(already_assigned_nodes) == len(list(openmm_topology.atoms()))
             # assert len(already_assigned_edges) == len(list(openmm_topology.bonds()))
-
 
             return omm_topology_G
 
         from openff.toolkit.utils import get_data_file_path
-        substructure_file_path = get_data_file_path('proteins/aa_residues_substructures_explicit_bond_orders_with_caps.json')
 
-        with open(substructure_file_path, 'r') as subfile:
+        substructure_file_path = get_data_file_path(
+            "proteins/aa_residues_substructures_explicit_bond_orders_with_caps.json"
+        )
+
+        with open(substructure_file_path, "r") as subfile:
             substructure_dictionary = json.load(subfile)
-        from simtk.openmm.app import PDBFile
+        from openmm.app import PDBFile
 
         pdb = PDBFile(file_path)
-        omm_topology_G = _openmm_topology_to_networkx(substructure_dictionary, pdb.topology)
+        omm_topology_G = _openmm_topology_to_networkx(
+            substructure_dictionary, pdb.topology
+        )
 
         offmol = Molecule()
 
         for node_idx, node_data in omm_topology_G.nodes.items():
             print(node_idx, node_data)
-            formal_charge = int(node_data['formal_charge'])
-            print(f'Formal charge: {formal_charge}')
-            offmol.add_atom(node_data['atomic_number'],
-                            int(node_data['formal_charge']),
-                            False,
-                            metadata={'residue_name': node_data['residue_name'],
-                                      'residue_number': node_data['residue_number'],
-                                      'atom_name': node_data['atom_name']}
-                            )
+            formal_charge = int(node_data["formal_charge"])
+            print(f"Formal charge: {formal_charge}")
+            offmol.add_atom(
+                node_data["atomic_number"],
+                int(node_data["formal_charge"]),
+                False,
+                metadata={
+                    "residue_name": node_data["residue_name"],
+                    "residue_number": node_data["residue_number"],
+                    "atom_name": node_data["atom_name"],
+                },
+            )
 
         for edge, edge_data in omm_topology_G.edges.items():
             print(edge, edge_data)
-            offmol.add_bond(edge[0],
-                            edge[1],
-                            edge_data['bond_order'],
-                            False)
+            offmol.add_bond(edge[0], edge[1], edge_data["bond_order"], False)
 
         # Retrieve metadata to be recovered after roundtrip to rdkit land
         atoms_metadata = [atom.metadata for atom in offmol.atoms]
 
         print(f"Number of atoms before sanitization: {offmol.n_atoms}")
         # TODO: Pull in coordinates and assign stereochemistry
-        coords = np.array([[*vec3.value_in_unit(unit.angstrom)] for vec3 in pdb.getPositions()]) * unit.angstrom
+        coords = (
+            np.array(
+                [
+                    [*vec3.value_in_unit(openmm_unit.angstrom)]
+                    for vec3 in pdb.getPositions()
+                ]
+            )
+            * unit.angstrom
+        )
 
         offmol.add_conformer(coords)
         # TODO: Ensure that this assigns aromaticity
         rdmol = offmol.to_rdkit()
         Chem.SanitizeMol(
             rdmol,
-            Chem.SANITIZE_ALL ^ Chem.SANITIZE_ADJUSTHS,  # ^ Chem.SANITIZE_SETAROMATICITY,
+            Chem.SANITIZE_ALL
+            ^ Chem.SANITIZE_ADJUSTHS,  # ^ Chem.SANITIZE_SETAROMATICITY,
         )
         Chem.AssignStereochemistryFrom3D(rdmol)
 
         print(f"Number of atoms after sanitization: {len(rdmol.GetAtoms())}")
 
-        offmol = cls.from_rdkit(rdmol, allow_undefined_stereo=True, hydrogens_are_explicit=True)
+        offmol = cls.from_rdkit(
+            rdmol, allow_undefined_stereo=True, hydrogens_are_explicit=True
+        )
 
         # Recover metadata. Atom order is expected to be the same as in rdkit
         for atom, metadata in zip(offmol.atoms, atoms_metadata):
@@ -5479,8 +5529,8 @@ class FrozenMolecule(Serializable):
         # add the data to the xyz_data list
         for i, geometry in enumerate(conformers, 1):
             xyz_data.write(f"{self.n_atoms}\n" + title(end))
-            for j, atom_coords in enumerate(geometry.in_units_of(unit.angstrom)):
-                x, y, z = atom_coords._value
+            for j, atom_coords in enumerate(geometry.m_as(unit.angstrom)):
+                x, y, z = atom_coords
                 xyz_data.write(
                     f"{self.atoms[j].element.symbol}       {x: .10f}   {y: .10f}   {z: .10f}\n"
                 )
@@ -5840,12 +5890,11 @@ class FrozenMolecule(Serializable):
             No conformer found at the given index.
 
         """
-
         import qcelemental as qcel
 
         # get/ check the geometry
         try:
-            geometry = self.conformers[conformer].in_units_of(unit.bohr)
+            geometry = self.conformers[conformer].m_as(unit.bohr)
         except (IndexError, TypeError):
             raise InvalidConformerError(
                 "The molecule must have a conformation to produce a valid qcschema; "
@@ -5853,13 +5902,11 @@ class FrozenMolecule(Serializable):
             )
 
         # Gather the required qcschema data
-        charge = self.total_charge.value_in_unit(unit.elementary_charge)
+        charge = self.total_charge.m_as(unit.elementary_charge)
         connectivity = [
             (bond.atom1_index, bond.atom2_index, bond.bond_order) for bond in self.bonds
         ]
-        symbols = [
-            Element.getByAtomicNumber(atom.atomic_number).symbol for atom in self.atoms
-        ]
+        symbols = [element(atom.atomic_number).symbol for atom in self.atoms]
         if extras is not None:
             extras[
                 "canonical_isomeric_explicit_hydrogen_mapped_smiles"
@@ -6088,7 +6135,7 @@ class FrozenMolecule(Serializable):
                 np.array(mol["geometry"], float).reshape(-1, 3), unit.bohr
             )
             try:
-                offmol._add_conformer(geometry.in_units_of(unit.angstrom))
+                offmol._add_conformer(geometry.to(unit.angstrom))
                 # in case this molecule didn't come from a server at all
                 if "id" in mol:
                     initial_ids[mol["id"]] = offmol.n_conformers - 1
@@ -6249,7 +6296,7 @@ class FrozenMolecule(Serializable):
         if self.partial_charges is not None:
             new_charges = np.zeros(self.n_atoms)
             for i in range(self.n_atoms):
-                new_charges[i] = self.partial_charges[new_to_cur[i]].value_in_unit(
+                new_charges[i] = self.partial_charges[new_to_cur[i]].m_as(
                     unit.elementary_charge
                 )
             new_molecule.partial_charges = new_charges * unit.elementary_charge
@@ -6259,9 +6306,7 @@ class FrozenMolecule(Serializable):
             for conformer in self.conformers:
                 new_conformer = np.zeros((self.n_atoms, 3))
                 for i in range(self.n_atoms):
-                    new_conformer[i] = conformer[new_to_cur[i]].value_in_unit(
-                        unit.angstrom
-                    )
+                    new_conformer[i] = conformer[new_to_cur[i]].m_as(unit.angstrom)
                 new_molecule._add_conformer(new_conformer * unit.angstrom)
 
         # move any properties across
@@ -7173,6 +7218,57 @@ class Molecule(FrozenMolecule):
             return display(self.visualize(backend="openeye"))
         except ValueError:
             pass
+
+
+def _networkx_graph_to_hill_formula(graph: "nx.Graph") -> str:
+    """
+    Convert a NetworkX graph to a Hill formula.
+
+    Parameters
+    ----------
+    graph : nx.Graph
+        The graph to convert.
+
+    Returns
+    -------
+    str
+        The Hill formula corresponding to the graph.
+
+    """
+    import networkx as nx
+
+    if not isinstance(graph, nx.Graph):
+        raise Exception("The graph must be a NetworkX graph.")
+
+    atom_nums = list(dict(graph.nodes(data="atomic_number", default=1)).values())
+    return _atom_nums_to_hill_formula(atom_nums)
+
+
+def _atom_nums_to_hill_formula(atom_nums: List[int]) -> str:
+    """
+    Given a `Counter` object of atom counts by atomic number, generate the corresponding
+    Hill formula. See https://en.wikipedia.org/wiki/Chemical_formula#Hill_system"""
+    from collections import Counter
+
+    atom_symbol_counts = Counter(element(atom_num).symbol for atom_num in atom_nums)
+
+    formula = []
+    # Check for C and H first, to make a correct hill formula
+    for el in ["C", "H"]:
+        if el in atom_symbol_counts:
+            count = atom_symbol_counts.pop(el)
+            formula.append(el)
+            if count > 1:
+                formula.append(str(count))
+
+    # now get the rest of the elements in alphabetical ordering
+    for el in sorted(atom_symbol_counts.keys()):
+        count = atom_symbol_counts.pop(el)
+        formula.append(el)
+        if count > 1:
+            formula.append(str(count))
+
+    return "".join(formula)
 
 
 class HierarchyScheme:

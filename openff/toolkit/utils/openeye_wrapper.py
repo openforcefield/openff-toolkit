@@ -13,15 +13,11 @@ import re
 import tempfile
 from collections import defaultdict
 from functools import wraps
-from typing import TYPE_CHECKING, List, Optional, Tuple
+from typing import TYPE_CHECKING
 
 import numpy as np
 from cachetools import LRUCache, cached
-
-try:
-    from openmm import unit
-except ImportError:
-    from simtk import unit
+from openff.units import unit
 
 if TYPE_CHECKING:
     from openff.toolkit.topology.molecule import Molecule
@@ -961,7 +957,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         for dp in oechem.OEGetSDDataPairs(oemol):
             molecule._properties[dp.GetTag()] = dp.GetValue()
 
-        map_atoms = dict()  # {oemol_idx: molecule_idx}
+        off_to_oe_idx = dict()  # {oemol_idx: molecule_idx}
         atom_mapping = {}
         for oeatom in oemol.GetAtoms():
             oe_idx = oeatom.GetIdx()
@@ -981,7 +977,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                 stereochemistry=stereochemistry,
                 name=name,
             )
-            map_atoms[
+            off_to_oe_idx[
                 oe_idx
             ] = atom_index  # store for mapping oeatom to molecule atom indices below
             atom_mapping[atom_index] = map_id
@@ -995,8 +991,8 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             }
 
         for oebond in oemol.GetBonds():
-            atom1_index = map_atoms[oebond.GetBgnIdx()]
-            atom2_index = map_atoms[oebond.GetEndIdx()]
+            atom1_index = off_to_oe_idx[oebond.GetBgnIdx()]
+            atom2_index = off_to_oe_idx[oebond.GetEndIdx()]
             bond_order = oebond.GetOrder()
             is_aromatic = oebond.IsAromatic()
             stereochemistry = OpenEyeToolkitWrapper._openeye_cip_bond_stereochemistry(
@@ -1031,7 +1027,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                     off_atom_coords = unit.Quantity(
                         conf.GetCoords()[oe_id], unit.angstrom
                     )
-                    off_atom_index = map_atoms[oe_id]
+                    off_atom_index = off_to_oe_idx[oe_id]
                     positions[off_atom_index, :] = off_atom_coords
                 if (positions == 0 * unit.angstrom).all() and n_atoms > 1:
                     continue
@@ -1040,7 +1036,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         # Copy partial charges, if present
         partial_charges = unit.Quantity(
             np.zeros(shape=molecule.n_atoms, dtype=np.float64),
-            unit=unit.elementary_charge,
+            unit.elementary_charge,
         )
 
         # If all OEAtoms have a partial charge of NaN, then the OFFMol should
@@ -1048,7 +1044,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         any_partial_charge_is_not_nan = False
         for oe_atom in oemol.GetAtoms():
             oe_idx = oe_atom.GetIdx()
-            off_idx = map_atoms[oe_idx]
+            off_idx = off_to_oe_idx[oe_idx]
             unitless_charge = oe_atom.GetPartialCharge()
             if not math.isnan(unitless_charge):
                 any_partial_charge_is_not_nan = True
@@ -1080,17 +1076,15 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         oemol = oechem.OEMol()
         # Add atoms
-        map_atoms = {}  # {off_idx : oe_idx}
+        off_to_oe_idx = {}  # {off_idx : oe_idx}
         oemol_atoms = list()  # list of corresponding oemol atoms
         for atom in molecule.atoms:
             oeatom = oemol.NewAtom(atom.atomic_number)
-            oeatom.SetFormalCharge(
-                atom.formal_charge.value_in_unit(unit.elementary_charge)
-            )
+            oeatom.SetFormalCharge(atom.formal_charge.m_as(unit.elementary_charge))
             # TODO: Do we want to provide _any_ pathway for Atom.is_aromatic to influence the OEMol?
             # oeatom.SetAromatic(atom.is_aromatic)
             oemol_atoms.append(oeatom)
-            map_atoms[atom.molecule_atom_index] = oeatom.GetIdx()
+            off_to_oe_idx[atom.molecule_atom_index] = oeatom.GetIdx()
 
         # Add bonds
         oemol_bonds = list()  # list of corresponding oemol bonds
@@ -1181,7 +1175,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         # here then for someone to inquire about ring sizes and get 0 when it shouldn't be
         oechem.OEFindRingAtomsAndBonds(oemol)
 
-        return oemol, map_atoms
+        return oemol, off_to_oe_idx
 
     def to_openeye(self, molecule, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
         r"""
@@ -1252,7 +1246,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                 oe_atom.SetPartialCharge(float("nan"))
             else:
                 oe_atom.SetPartialCharge(
-                    off_atom.partial_charge / unit.elementary_charge
+                    off_atom.partial_charge.m_as(unit.elementary_charge)
                 )
             # oeatom.SetPartialCharge(1.)
         assert None not in oemol_atoms
@@ -1276,7 +1270,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                 # OE needs a 1 x (3*n_Atoms) double array as input
                 flat_coords = np.zeros(shape=oemol.NumAtoms() * 3, dtype=np.float64)
                 for index, oe_idx in off_to_oe_idx.items():
-                    (x, y, z) = conf[index, :].value_in_unit(unit.angstrom)
+                    (x, y, z) = conf[index, :].m_as(unit.angstrom)
                     flat_coords[(3 * oe_idx)] = x
                     flat_coords[(3 * oe_idx) + 1] = y
                     flat_coords[(3 * oe_idx) + 2] = z
@@ -1285,11 +1279,12 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                 oemol.NewConf(oecoords)
 
         # Retain charges, if present. All atoms are initialized above with a partial charge of NaN.
-        if molecule._partial_charges is not None:
+        if molecule.partial_charges is not None:
             oe_indexed_charges = np.zeros(shape=molecule.n_atoms, dtype=np.float64)
-            for off_idx, charge in enumerate(molecule._partial_charges):
+            assert hasattr(molecule.partial_charges, "units")
+            for off_idx, charge in enumerate(molecule.partial_charges):
                 oe_idx = off_to_oe_idx[off_idx]
-                charge_unitless = charge.value_in_unit(unit.elementary_charge)
+                charge_unitless = charge.m_as(unit.elementary_charge)
                 oe_indexed_charges[oe_idx] = charge_unitless
             # TODO: This loop below fails if we try to use an "enumerate"-style loop.
             #  It's worth investigating whether we make this assumption elsewhere in the codebase, since
@@ -1725,7 +1720,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         if rms_cutoff is None:
             omega.SetRMSThreshold(1.0)
         else:
-            omega.SetRMSThreshold(rms_cutoff.value_in_unit(unit.angstrom))
+            omega.SetRMSThreshold(rms_cutoff.m_as(unit.angstrom))
         # Don't generate random stereoisomer if not specified
         omega.SetStrictStereo(True)
         status = omega(oemol)
@@ -2174,7 +2169,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         # Convert the conformers into OE friendly objects to make setting them one
         # at a time easier.
         oe_conformers = [
-            oechem.OEFloatArray(conformer.value_in_unit(unit.angstrom).flatten())
+            oechem.OEFloatArray(conformer.m_as(unit.angstrom).flatten())
             for conformer in temp_mol.conformers
         ]
 

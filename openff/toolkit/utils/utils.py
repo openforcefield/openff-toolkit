@@ -15,13 +15,13 @@ __all__ = [
     "string_to_unit",
     "string_to_quantity",
     "object_to_quantity",
-    "check_units_are_compatible",
+    # "check_units_are_compatible",
     "extract_serialized_units_from_dict",
     "attach_units",
     "detach_units",
     "serialize_numpy",
     "deserialize_numpy",
-    "convert_all_quantities_to_string",
+    # "convert_all_quantities_to_string",
     "convert_all_strings_to_quantity",
     "convert_0_1_smirnoff_to_0_2",
     "convert_0_2_smirnoff_to_0_3",
@@ -29,21 +29,15 @@ __all__ = [
     "remove_subsets_from_list",
 ]
 
-
 import contextlib
 import functools
 import logging
+from typing import Union
 
-try:
-    from openmm import unit
-except ImportError:
-    from simtk import unit
+import numpy as np
+from openff.units import unit
 
-
-from openff.toolkit.utils.exceptions import (
-    IncompatibleUnitError,
-    MissingDependencyError,
-)
+from openff.toolkit.utils.exceptions import MissingDependencyError
 
 # =============================================================================================
 # CONFIGURE LOGGER
@@ -171,43 +165,29 @@ def get_data_file_path(relative_path):
 
 
 def unit_to_string(input_unit):
-    """
-    Serialize a openmm.unit.Unit and return it as a string.
+    return str(input_unit)
 
-    Parameters
-    ----------
-    input_unit : A openmm.unit.Unit
-        The Unit object to serialize
 
-    Returns
-    -------
-    unit_string : str
-        The serialized unit.
-    """
+def quantity_to_dict(input_quantity):
+    value = input_quantity.magnitude
+    if isinstance(value, np.ndarray):
+        value = value.tolist()
 
-    if input_unit == unit.dimensionless:
-        return "dimensionless"
+    return {
+        "value": value,
+        "unit": str(input_quantity.units),
+    }
 
-    # Decompose output_unit into a tuples of (base_dimension_unit, exponent)
-    unit_string = None
 
-    for unit_component in input_unit.iter_base_or_scaled_units():
-        unit_component_name = unit_component[0].name
-        # Convert, for example "elementary charge" --> "elementary_charge"
-        unit_component_name = unit_component_name.replace(" ", "_")
-        if unit_component[1] == 1:
-            contribution = "{}".format(unit_component_name)
-        else:
-            contribution = "{}**{}".format(unit_component_name, int(unit_component[1]))
-        if unit_string is None:
-            unit_string = contribution
-        else:
-            unit_string += " * {}".format(contribution)
-
-    return unit_string
+def dict_to_quantity(input_dict):
+    return input_dict["value"] * unit.Unit(input_dict["unit"])
 
 
 def quantity_to_string(input_quantity):
+    return str(input_quantity)
+
+
+def _quantity_to_string(input_quantity):
     """
     Serialize a openmm.unit.Quantity to a string.
 
@@ -290,26 +270,33 @@ def string_to_unit(unit_string):
     output_unit: openmm.unit.Quantity
         The deserialized unit from the string
     """
-    import ast
-
-    output_unit = _ast_eval(ast.parse(unit_string, mode="eval").body)
-    return output_unit
-
-    # if (serialized['unitless_value'] is None) and (serialized['unit'] is None):
-    #    return None
-    # quantity_unit = None
-    # for unit_name, power in serialized['unit']:
-    #    unit_name = unit_name.replace(
-    #        ' ', '_')  # Convert eg. 'elementary charge' to 'elementary_charge'
-    #    if quantity_unit is None:
-    #        quantity_unit = (getattr(unit, unit_name)**power)
-    #    else:
-    #        quantity_unit *= (getattr(unit, unit_name)**power)
-    # quantity = unit.Quantity(serialized['unitless_value'], quantity_unit)
-    # return quantity
+    return unit.Unit(unit_string)
 
 
-def string_to_quantity(quantity_string):
+def string_to_quantity(quantity_string) -> Union[str, unit.Quantity]:
+    """Attempt to parse a string into a unit.Quantity.
+
+    Note that dimensionless floats and ints are returns as floats or ints, not Quantity objects.
+    """
+
+    from tokenize import TokenError
+
+    from pint import UndefinedUnitError
+
+    try:
+        quantity = unit.Quantity(quantity_string)
+    except (TokenError, UndefinedUnitError):
+        return quantity_string
+
+    # TODO: Should intentionally unitless array-likes be Quantity objects
+    #       or their raw representation?
+    if (quantity.units == unit.dimensionless) and isinstance(quantity.m, (int, float)):
+        quantity = quantity.m
+
+    return quantity
+
+
+def _string_to_quantity(quantity_string):
     """
     Takes a string representation of a quantity and returns a openmm.unit.Quantity
 
@@ -398,8 +385,8 @@ def convert_all_quantities_to_string(smirnoff_data):
         for index, item in enumerate(smirnoff_data):
             smirnoff_data[index] = convert_all_quantities_to_string(item)
         obj_to_return = smirnoff_data
-    elif isinstance(smirnoff_data, unit.Quantity):
-        obj_to_return = quantity_to_string(smirnoff_data)
+    # elif isinstance(smirnoff_data, openmm_unit.Quantity):
+    #     obj_to_return = quantity_to_string(smirnoff_data)
     else:
         obj_to_return = smirnoff_data
 
@@ -435,58 +422,18 @@ def _(obj):
 
 @object_to_quantity.register(str)
 def _(obj):
-    return string_to_quantity(obj)
+    import pint
+
+    try:
+        return string_to_quantity(obj)
+    except pint.errors.UndefinedUnitError:
+        raise ValueError
 
 
 @object_to_quantity.register(int)
 @object_to_quantity.register(float)
 def _(obj):
     return unit.Quantity(obj)
-
-
-def check_units_are_compatible(object_name, object, unit_to_check, context=None):
-    """
-    Checks whether a openmm.unit.Quantity or list of openmm.unit.Quantitys is compatible with given unit.
-
-    Parameters
-    ----------
-    object_name : string
-        Name of object, used in printing exception.
-    object : A openmm.unit.Quantity or list of openmm.unit.Quantitys
-    unit_to_check : A openmm.unit.Unit
-    context : string, optional. Default=None
-        Additional information to provide at the beginning of the exception message if raised
-
-    Raises
-    ------
-    IncompatibleUnitError
-    """
-
-    # If context is not provided, explicitly make it a blank string
-    if context is None:
-        context = ""
-    # Otherwise add a space after the end of it to correct message printing
-    else:
-        context += " "
-
-    if isinstance(object, list):
-        for sub_object in object:
-            check_units_are_compatible(
-                object_name, sub_object, unit_to_check, context=context
-            )
-    elif isinstance(object, unit.Quantity):
-        if not object.unit.is_compatible(unit_to_check):
-            msg = (
-                f"{context}{object_name} with "
-                f"value {object} is incompatible with expected unit {unit_to_check}"
-            )
-            raise IncompatibleUnitError(msg)
-    else:
-        msg = (
-            f"{context}{object_name} with "
-            f"value {object} is incompatible with expected unit {unit_to_check}"
-        )
-        raise IncompatibleUnitError(msg)
 
 
 def extract_serialized_units_from_dict(input_dict):
@@ -630,13 +577,13 @@ def detach_units(unit_bearing_dict, output_units=None):
         if unit_key in output_units:
             output_unit = output_units[unit_key]
         else:
-            output_unit = value.unit
-        if not (output_unit.is_compatible(value.unit)):
+            output_unit = value.units
+        if not (output_unit.is_compatible_with(value.units)):
             raise ValueError(
                 "Requested output unit {} is not compatible with "
-                "quantity unit {} .".format(output_unit, value.unit)
+                "quantity unit {}.".format(output_unit, value.units)
             )
-        unitless_dict[key] = value.value_in_unit(output_unit)
+        unitless_dict[key] = value.m_as(output_unit)
         unit_dict[unit_key] = output_unit
 
     return unitless_dict, unit_dict

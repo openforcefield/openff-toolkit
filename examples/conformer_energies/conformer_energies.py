@@ -2,8 +2,8 @@ import argparse
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.utils import RDKitToolkitWrapper
 from rdkit.Chem import rdMolAlign
-import numpy as np
-from simtk import openmm, unit
+from simtk import openmm, unit as openmm_unit
+from openff.units.openmm import to_openmm, from_openmm
 
 
 def compute_conformer_energies_from_file(filename):
@@ -52,7 +52,7 @@ def compute_conformer_energies_from_file(filename):
         print(f"Parametrizing {molecule.name} (may take a moment to calculate charges)")
         system = forcefield.create_openmm_system(off_top)
         # Use OpenMM to compute initial and minimized energy for all conformers
-        integrator = openmm.VerletIntegrator(1 * unit.femtoseconds)
+        integrator = openmm.VerletIntegrator(1 * openmm_unit.femtoseconds)
         platform = openmm.Platform.getPlatformByName("Reference")
         omm_top = off_top.to_openmm()
         simulation = openmm.app.Simulation(omm_top, system, integrator, platform)
@@ -72,7 +72,7 @@ def compute_conformer_energies_from_file(filename):
             ]
         ]
         for conformer_index, conformer in enumerate(molecule.conformers):
-            simulation.context.setPositions(conformer)
+            simulation.context.setPositions(to_openmm(conformer))
             orig_potential = simulation.context.getState(
                 getEnergy=True
             ).getPotentialEnergy()
@@ -82,10 +82,8 @@ def compute_conformer_energies_from_file(filename):
 
             # Calculate the RMSD between the initial and minimized conformer
             min_coords = min_state.getPositions()
-            min_coords = (
-                np.array([[atom.x, atom.y, atom.z] for atom in min_coords])
-                * unit.nanometer
-            )
+            min_coords = from_openmm(min_coords)
+
             mol_copy._conformers = None
             mol_copy.add_conformer(conformer)
             mol_copy.add_conformer(min_coords)
@@ -106,16 +104,16 @@ def compute_conformer_energies_from_file(filename):
                 % (
                     conformer_index + 1,
                     molecule.n_conformers,
-                    orig_potential / unit.kilocalories_per_mole,
-                    min_potential / unit.kilocalories_per_mole,
+                    orig_potential.value_in_unit(openmm_unit.kilocalories_per_mole),
+                    min_potential.value_in_unit(openmm_unit.kilocalories_per_mole),
                     minimization_rms,
                 )
             )
             output.append(
                 [
                     str(conformer_index + 1),
-                    f"{orig_potential/unit.kilocalories_per_mole:.3f}",
-                    f"{min_potential/unit.kilocalories_per_mole:.3f}",
+                    f"{orig_potential/openmm_unit.kilocalories_per_mole:.3f}",
+                    f"{min_potential/openmm_unit.kilocalories_per_mole:.3f}",
                     f"{minimization_rms:.3f}",
                 ]
             )

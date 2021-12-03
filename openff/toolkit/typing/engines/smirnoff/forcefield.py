@@ -35,11 +35,6 @@ import warnings
 from collections import OrderedDict
 from typing import List
 
-try:
-    import openmm
-except ImportError:
-    from simtk import openmm
-
 from openff.toolkit.topology.molecule import DEFAULT_AROMATICITY_MODEL
 from openff.toolkit.typing.engines.smirnoff.io import ParameterIOHandler
 from openff.toolkit.typing.engines.smirnoff.parameters import (
@@ -276,7 +271,7 @@ class ForceField:
         ----------
         sources : string or file-like object or open file handle or URL (or iterable of these)
             A list of files defining the SMIRNOFF force field to be loaded.
-            Currently, only `the SMIRNOFF XML format <https://github.com/openforcefield/openff-toolkit/blob/master/The-SMIRNOFF-force-field-format.md>`_ is supported.
+            Currently, only `the SMIRNOFF XML format <https://openforcefield.github.io/standards/standards/smirnoff/>`_ is supported.
             Each entry may be an absolute file path, a path relative to the current working directory, a path relative to this module's data subdirectory
             (for built in force fields), or an open file-like object with a ``read()`` method from which the force field XML data can be loaded.
             If multiple files are specified, any top-level tags that are repeated will be merged if they are compatible,
@@ -870,7 +865,7 @@ class ForceField:
         ----------
         sources : string or file-like object or open file handle or URL (or iterable of these)
             A list of files defining the SMIRNOFF force field to be loaded.
-            Currently, only `the SMIRNOFF XML format <https://github.com/openforcefield/openff-toolkit/blob/master/The-SMIRNOFF-force-field-format.md>`_ is supported.
+            Currently, only `the SMIRNOFF XML format <https://openforcefield.github.io/standards/standards/smirnoff/>`_ is supported.
             Each entry may be an absolute file path, a path relative to the current working directory, a path relative to this module's data subdirectory
             (for built in force fields), or an open file-like object with a ``read()`` method from which the force field XML data can be loaded.
             If multiple files are specified, any top-level tags that are repeated will be merged if they are compatible,
@@ -1067,7 +1062,7 @@ class ForceField:
         source : str or bytes
             sources : string or file-like object or open file handle or URL (or iterable of these)
             A list of files defining the SMIRNOFF force field to be loaded
-            Currently, only `the SMIRNOFF XML format <https://github.com/openforcefield/openff-toolkit/blob/master/The-SMIRNOFF-force-field-format.md>`_ is supported.
+            Currently, only `the SMIRNOFF XML format <https://openforcefield.github.io/standards/standards/smirnoff/>`_ is supported.
             Each entry may be an absolute file path, a path relative to the current working directory, a path relative to this module's data subdirectory
             (for built in force fields), or an open file-like object with a ``read()`` method from which the force field XML data can be loaded.
 
@@ -1244,6 +1239,7 @@ class ForceField:
     # TODO: How do we know if the system is periodic or not?
     # TODO: Should we also accept a Molecule as an alternative to a Topology?
 
+    @requires_package("openmm")
     def create_openmm_system(self, topology, **kwargs):
         """Create an OpenMM System representing the interactions for the specified Topology with the current force field
 
@@ -1280,6 +1276,9 @@ class ForceField:
             during parameterization.
 
         """
+        import openmm
+        from openff.units.openmm import to_openmm
+
         return_topology = kwargs.pop("return_topology", False)
 
         # Make a deep copy of the topology so we don't accidentally modify it
@@ -1299,7 +1298,7 @@ class ForceField:
 
         # Set periodic boundary conditions if specified
         if topology.box_vectors is not None:
-            system.setDefaultPeriodicBoxVectors(*topology.box_vectors)
+            system.setDefaultPeriodicBoxVectors(*to_openmm(topology.box_vectors))
 
         # Add atom particles with appropriate masses
         # Virtual site particle creation is handled in the parameter handler
@@ -1363,7 +1362,7 @@ class ForceField:
             coul_method = self.get_parameter_handler("Electrostatics").method
             if vdw_cutoff != coul_cutoff:
                 if coul_method == "PME":
-                    nonbonded_force.setCutoffDistance(vdw_cutoff)
+                    nonbonded_force.setCutoffDistance(to_openmm(vdw_cutoff))
                 else:
                     raise IncompatibleParameterError(
                         "In its current implementation of the OpenFF Toolkit, with "
@@ -1378,7 +1377,6 @@ class ForceField:
             return system
 
     @requires_package("openff.interchange")
-    @requires_package("mdtraj")
     def _to_interchange(self, topology, box=None):
         """
         Create an Interchange object from a ForceField, Topology, and (optionally) box vectors.

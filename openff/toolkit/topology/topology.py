@@ -24,14 +24,8 @@ from collections import OrderedDict
 from collections.abc import MutableMapping
 
 import numpy as np
-
-try:
-    from openmm import app, unit
-    from openmm.app import Aromatic, Double, Single, Triple
-except ImportError:
-    from simtk import unit
-    from simtk.openmm import app
-    from simtk.openmm.app import Aromatic, Double, Single, Triple
+from openff.units import unit
+from openff.utilities import requires_package
 
 from openff.toolkit.topology import Molecule
 from openff.toolkit.typing.chemistry import ChemicalEnvironment
@@ -364,9 +358,6 @@ class ImproperDict(_TransformedDict):
         return __class__.key_transform(key)
 
 
-# TODO: Revise documentation and remove chains
-
-
 class Topology(Serializable):
     """
     A Topology is a chemical representation of a system containing one or more molecules appearing in a specified order.
@@ -564,16 +555,21 @@ class Topology(Serializable):
         if box_vectors is None:
             self._box_vectors = None
             return
-        if not hasattr(box_vectors, "unit"):
+        if not hasattr(box_vectors, "units"):
             raise InvalidBoxVectorsError("Given unitless box vectors")
-        if not (unit.angstrom.is_compatible(box_vectors.unit)):
+        # Unit.compatible_units() returns False with itself, for some reason
+        if (
+            box_vectors.units != unit.nm
+            and box_vectors.units not in unit.nm.compatible_units()
+        ):
             raise InvalidBoxVectorsError(
-                "Attempting to set box vectors in units that are incompatible with openmm.unit.Angstrom"
+                f"Cannot set box vectors with quantities with unit {box_vectors.units}"
             )
 
         if hasattr(box_vectors, "shape"):
             if box_vectors.shape == (3,):
-                box_vectors *= np.eye(3)
+                # Cannot multiply in-place without ufunc support in Pint
+                box_vectors = box_vectors * np.eye(3)
             if box_vectors.shape != (3, 3):
                 raise InvalidBoxVectorsError(
                     f"Box vectors must be shape (3, 3). Found shape {box_vectors.shape}"
@@ -688,7 +684,6 @@ class Topology(Serializable):
             )
         self._fractional_bond_order_model = fractional_bond_order_model
 
-
     @property
     def n_molecules(self):
         """Returns the number of molecules in this Topology
@@ -712,7 +707,6 @@ class Topology(Serializable):
         # invalidate themselves during appropriate events.
         for molecule in self._molecules:
             yield molecule
-
 
     def molecule(self, index):
         """
@@ -990,7 +984,7 @@ class Topology(Serializable):
         of these three terms will always return a consistent energy.
 
         For more details on the use of three-fold ('trefoil') impropers, see
-        https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html#impropertorsions
+        https://openforcefield.github.io/standards/standards/smirnoff/#impropertorsions
 
         .. todo:: Offer a way to do the keytransform and get the final 3 orderings in this
                   method? How can we keep this logic synced up with the parameterization
@@ -1230,7 +1224,9 @@ class Topology(Serializable):
         groupings = {}
         for molecule_idx in identity_maps.keys():
             unique_mol, atom_map = identity_maps[molecule_idx]
-            groupings[unique_mol] = groupings.get(unique_mol, list()) + [[molecule_idx, atom_map]]
+            groupings[unique_mol] = groupings.get(unique_mol, list()) + [
+                [molecule_idx, atom_map]
+            ]
         return groupings
 
     def _identify_chemically_identical_molecules(self):
@@ -1259,14 +1255,22 @@ class Topology(Serializable):
             if mol1_idx in already_matched_mols:
                 continue
             mol1 = self.molecule(mol1_idx)
-            self._cached_chemically_identical_molecules[mol1_idx] = (mol1_idx, {i:i for i in range(mol1.n_atoms)})
-            for mol2_idx in range(mol1_idx+1, self.n_molecules):
+            self._cached_chemically_identical_molecules[mol1_idx] = (
+                mol1_idx,
+                {i: i for i in range(mol1.n_atoms)},
+            )
+            for mol2_idx in range(mol1_idx + 1, self.n_molecules):
                 if mol2_idx in already_matched_mols:
                     continue
                 mol2 = self.molecule(mol2_idx)
-                are_isomorphic, atom_map = Molecule.are_isomorphic(mol1, mol2, return_atom_map=True)
+                are_isomorphic, atom_map = Molecule.are_isomorphic(
+                    mol1, mol2, return_atom_map=True
+                )
                 if are_isomorphic:
-                    self._cached_chemically_identical_molecules[mol2_idx] = (mol1_idx, atom_map)
+                    self._cached_chemically_identical_molecules[mol2_idx] = (
+                        mol1_idx,
+                        atom_map,
+                    )
                     already_matched_mols.add(mol2_idx)
         return self._cached_chemically_identical_molecules
 
@@ -1326,6 +1330,7 @@ class Topology(Serializable):
             self.add_molecule(new_mol)
 
     @classmethod
+    @requires_package("openmm")
     def from_openmm(cls, openmm_topology, unique_molecules=None):
         """
         Construct an OpenFF Topology object from an OpenMM Topology object.
@@ -1349,6 +1354,7 @@ class Topology(Serializable):
             An OpenFF Topology object
         """
         import networkx as nx
+        from openff.units.openmm import from_openmm
 
         from openff.toolkit.topology.molecule import Molecule
 
@@ -1427,7 +1433,11 @@ class Topology(Serializable):
                     match_found = True
                     break
             if match_found is False:
-                hill_formula = Molecule.to_hill_formula(omm_mol_G)
+                from openff.toolkit.topology.molecule import (
+                    _networkx_graph_to_hill_formula,
+                )
+
+                hill_formula = _networkx_graph_to_hill_formula(omm_mol_G)
                 msg = f"No match found for molecule {hill_formula}. "
                 probably_missing_conect = [
                     "C",
@@ -1467,10 +1477,13 @@ class Topology(Serializable):
             remapped_mol = unq_mol.remap(local_top_to_ref_index, current_to_new=False)
             topology.add_molecule(remapped_mol)
 
-        topology.box_vectors = openmm_topology.getPeriodicBoxVectors()
+        if openmm_topology.getPeriodicBoxVectors() is not None:
+            topology.box_vectors = from_openmm(openmm_topology.getPeriodicBoxVectors())
+
         # TODO: How can we preserve metadata from the openMM topology when creating the OFF topology?
         return topology
 
+    @requires_package("openmm")
     def to_openmm(self, ensure_unique_atom_names=True):
         """
         Create an OpenMM Topology object.
@@ -1491,14 +1504,9 @@ class Topology(Serializable):
         openmm_topology : openmm.app.Topology
             An OpenMM Topology object
         """
-        try:
-            from openmm.app import Topology as OMMTopology
-            from openmm.app.element import Element as OMMElement
-        except ImportError:
-            from simtk.openmm.app import Topology as OMMTopology
-            from simtk.openmm.app.element import Element as OMMElement
+        from openmm import app
 
-        omm_topology = OMMTopology()
+        omm_topology = app.Topology()
 
         # Create unique atom names
         if ensure_unique_atom_names:
@@ -1557,7 +1565,7 @@ class Topology(Serializable):
                     mol_to_residues[molecule_id] = residue
 
                 # Add atom.
-                element = OMMElement.getByAtomicNumber(atom.atomic_number)
+                element = app.Element.getByAtomicNumber(atom.atomic_number)
                 # omm_atom = omm_topology.addAtom(atom.atom.name, element, residue)
                 omm_atom = omm_topology.addAtom(atom.name, element, residue)
 
@@ -1568,13 +1576,13 @@ class Topology(Serializable):
                 omm_atoms.append(omm_atom)
 
         # Add all bonds.
-        bond_types = {1: Single, 2: Double, 3: Triple}
+        bond_types = {1: app.Single, 2: app.Double, 3: app.Triple}
         for bond in self.topology_bonds:
             atom1, atom2 = bond.atoms
             atom1_idx, atom2_idx = self.atom_index(atom1), self.atom_index(atom2)
             bond_type = (
                 # Aromatic if bond.bond.is_aromatic else bond_types[bond.bond_order]
-                Aromatic
+                app.Aromatic
                 if bond.is_aromatic
                 else bond_types[bond.bond_order]
             )
@@ -1586,9 +1594,12 @@ class Topology(Serializable):
             )
 
         if self.box_vectors is not None:
-            omm_topology.setPeriodicBoxVectors(self.box_vectors)
+            from openff.units.openmm import to_openmm
+
+            omm_topology.setPeriodicBoxVectors(to_openmm(self.box_vectors))
         return omm_topology
 
+    @requires_package("openmm")
     def to_file(self, filename, positions, file_format="PDB", keepIds=False):
         """
         Save coordinates and topology to a PDB file.
@@ -1615,9 +1626,17 @@ class Topology(Serializable):
             Output file format. Case insensitive. Currently only supported value is "pdb".
 
         """
+        from openmm import app
+        from openmm import unit as openmm_unit
+
         openmm_top = self.to_openmm()
-        if not isinstance(positions, unit.Quantity):
-            positions = positions * unit.angstrom
+        if not isinstance(positions, openmm_unit.Quantity):
+            if isinstance(positions, np.ndarray):
+                positions = unit.Quantity(positions, unit.angstroms)
+
+            from openff.units.openmm import to_openmm
+
+            positions = to_openmm(positions)
 
         file_format = file_format.upper()
         if file_format != "PDB":
@@ -1627,7 +1646,9 @@ class Topology(Serializable):
         with open(filename, "w") as outfile:
             app.PDBFile.writeFile(openmm_top, positions, outfile, keepIds)
 
+    # Should this be a staticmethod or a classmethod?
     @staticmethod
+    @requires_package("mdtraj")
     def from_mdtraj(mdtraj_topology, unique_molecules=None):
         """
         Construct an OpenFF Topology object from an MDTraj Topology object.
@@ -1654,6 +1675,7 @@ class Topology(Serializable):
     # Avoid removing this method, even though it is private and would not be difficult for most
     # users to replace. Also avoid making it public as round-trips with MDTraj are likely
     # to not preserve necessary information.
+    @requires_package("mdtraj")
     def _to_mdtraj(self):
         """
         Create an MDTraj Topology object.
@@ -1950,7 +1972,7 @@ class Topology(Serializable):
             particle_indices = [
                 atom.particle_index for atom in self.topology_atoms
             ]  # get particle indices
-            pos = positions[particle_indices].value_in_units_of(unit.angstrom)
+            pos = positions[particle_indices].m_as(unit.angstrom)
             pos = list(itertools.chain.from_iterable(pos))
             oe_mol.SetCoords(pos)
             oechem.OESetDimensionFromCoords(oe_mol)
@@ -2198,7 +2220,7 @@ class Topology(Serializable):
         # Check that constraint hasn't already been specified.
         if (iatom, jatom) in self._constrained_atom_pairs:
             existing_distance = self._constrained_atom_pairs[(iatom, jatom)]
-            if unit.is_quantity(existing_distance) and (distance is True):
+            if isinstance(existing_distance, unit.Quantity) and distance is True:
                 raise Exception(
                     f"Atoms ({iatom},{jatom}) already constrained with distance {existing_distance} but attempting to override with unspecified distance"
                 )
@@ -2345,7 +2367,6 @@ class Topology(Serializable):
         """
         _TOPOLOGY_DEPRECATION_WARNING("topology_virtual_sites", "virtual_sites")
         return self.virtual_sites
-
 
     @property
     def n_reference_molecules(self):

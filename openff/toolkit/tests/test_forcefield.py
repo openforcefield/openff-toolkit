@@ -17,15 +17,13 @@ from collections import OrderedDict
 from tempfile import NamedTemporaryFile
 
 import numpy as np
+import openmm
 import pytest
 from numpy.testing import assert_almost_equal
-
-try:
-    import openmm
-    from openmm import NonbondedForce, Platform, XmlSerializer, app, unit
-except ImportError:
-    from simtk import openmm, unit
-    from simtk.openmm import app, XmlSerializer, Platform, NonbondedForce
+from openff.units import unit
+from openff.units.openmm import from_openmm, to_openmm
+from openmm import NonbondedForce, Platform, XmlSerializer, app
+from openmm import unit as openmm_unit
 
 from openff.toolkit.tests.create_molecules import (
     create_acetaldehyde,
@@ -726,6 +724,20 @@ def round_charge(xml):
     return ' q="'.join(xmlsp)
 
 
+def generate_monatomic_ions():
+    return (
+        ("Li+", +1 * openmm_unit.elementary_charge),
+        ("Na+", +1 * openmm_unit.elementary_charge),
+        ("K+", +1 * openmm_unit.elementary_charge),
+        ("Rb+", +1 * openmm_unit.elementary_charge),
+        ("Cs+", +1 * openmm_unit.elementary_charge),
+        ("F-", -1 * openmm_unit.elementary_charge),
+        ("Cl-", -1 * openmm_unit.elementary_charge),
+        ("Br-", -1 * openmm_unit.elementary_charge),
+        ("I-", -1 * openmm_unit.elementary_charge),
+    )
+
+
 nonbonded_resolution_matrix = [
     {
         "vdw_method": "cutoff",
@@ -940,7 +952,7 @@ class TestForceField:
     def test_do_not_load_in_child_dir(self, tmp_path):
         """Ensure force field XML files in nested subdirectories are not loaded
         when not explicitly pointed to."""
-        nested_directory = os.path.join("a", "b", "c")
+        nested_directory = tmp_path / os.path.join("a", "b", "c")
         os.makedirs(nested_directory, exist_ok=True)
 
         # Create a FF in a nested directory
@@ -1671,7 +1683,7 @@ class TestForceField:
             if isinstance(f, openmm.NonbondedForce):
                 nonbonded_force = f
 
-        found_cutoff = nonbonded_force.getCutoffDistance()
+        found_cutoff = from_openmm(nonbonded_force.getCutoffDistance())
         vdw_cutoff = forcefield["vdW"].cutoff
         e_cutoff = forcefield["Electrostatics"].cutoff
         assert found_cutoff == vdw_cutoff == e_cutoff
@@ -1713,7 +1725,8 @@ class TestForceField:
         system = force_field.create_openmm_system(topology)
 
         assert np.isclose(
-            system.getForce(0).getCutoffDistance().value_in_unit(unit.angstrom), 6.0
+            system.getForce(0).getCutoffDistance().value_in_unit(openmm_unit.angstrom),
+            6.0,
         )
 
         # Ensure an exception is raised when the electrostatics cutoff is meaningful
@@ -1767,7 +1780,7 @@ class TestForceField:
         system = force_field.create_openmm_system(topology)
 
         found_cutoff = (
-            system.getForce(0).getCutoffDistance().value_in_unit(unit.angstrom)
+            system.getForce(0).getCutoffDistance().value_in_unit(openmm_unit.angstrom)
         )
 
         assert abs(found_cutoff - 7.89) < 1e-6
@@ -2005,12 +2018,10 @@ class TestForceFieldVirtualSites:
 
         for particle_index, expected in enumerate(assert_physics):
             parameters = nonbondedForce.getParticleParameters(particle_index)
-            assert all(
-                [
-                    (b is None or np.isclose(a / a.unit, b / a.unit))
-                    for a, b in zip(parameters, expected)
-                ]
-            )
+            for found, reference in zip(parameters, expected):
+                if reference is None:
+                    continue
+                assert np.allclose(from_openmm(found), reference)
         return
 
     import functools
@@ -2020,9 +2031,9 @@ class TestForceFieldVirtualSites:
     sigma_unit = unit.angstrom
     length_unit = unit.angstrom
 
-    as_charge = functools.partial(unit.Quantity, unit=charge_unit)
-    as_epsilon = functools.partial(unit.Quantity, unit=epsilon_unit)
-    as_sigma = functools.partial(unit.Quantity, unit=sigma_unit)
+    as_charge = functools.partial(unit.Quantity, units=charge_unit)
+    as_epsilon = functools.partial(unit.Quantity, units=epsilon_unit)
+    as_sigma = functools.partial(unit.Quantity, units=sigma_unit)
 
     ############################################################################
     # Bond charge virtual site test data
@@ -2213,20 +2224,6 @@ class TestForceFieldVirtualSites:
         self._test_physical_parameters(toolkit_registry, *args.values())
 
 
-def generate_monatomic_ions():
-    return (
-        ("Li+", +1 * unit.elementary_charge),
-        ("Na+", +1 * unit.elementary_charge),
-        ("K+", +1 * unit.elementary_charge),
-        ("Rb+", +1 * unit.elementary_charge),
-        ("Cs+", +1 * unit.elementary_charge),
-        ("F-", -1 * unit.elementary_charge),
-        ("Cl-", -1 * unit.elementary_charge),
-        ("Br-", -1 * unit.elementary_charge),
-        ("I-", -1 * unit.elementary_charge),
-    )
-
-
 class TestForceFieldChargeAssignment:
     @pytest.mark.parametrize(
         "toolkit_registry,registry_description", toolkit_registries
@@ -2247,9 +2244,9 @@ class TestForceFieldChargeAssignment:
             f for f in omm_system.getForces() if type(f) == NonbondedForce
         ][0]
         expected_charges = (
-            (0, -0.4 * unit.elementary_charge),
-            (1, -0.3 * unit.elementary_charge),
-            (2, -0.2 * unit.elementary_charge),
+            (0, -0.4 * openmm_unit.elementary_charge),
+            (1, -0.3 * openmm_unit.elementary_charge),
+            (2, -0.2 * openmm_unit.elementary_charge),
         )
         for particle_index, expected_charge in expected_charges:
             q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
@@ -2270,9 +2267,9 @@ class TestForceFieldChargeAssignment:
             f for f in omm_system2.getForces() if type(f) == NonbondedForce
         ][0]
         expected_charges2 = (
-            (0, -0.2 * unit.elementary_charge),
-            (1, -0.4 * unit.elementary_charge),
-            (2, -0.3 * unit.elementary_charge),
+            (0, -0.2 * openmm_unit.elementary_charge),
+            (1, -0.4 * openmm_unit.elementary_charge),
+            (2, -0.3 * openmm_unit.elementary_charge),
         )
         for particle_index, expected_charge in expected_charges2:
             q, sigma, epsilon = nonbondedForce2.getParticleParameters(particle_index)
@@ -2339,9 +2336,9 @@ class TestForceFieldChargeAssignment:
             f for f in omm_system.getForces() if type(f) == NonbondedForce
         ][0]
         expected_charges = (
-            (18, -0.4 * unit.elementary_charge),
-            (19, -0.3 * unit.elementary_charge),
-            (20, -0.2 * unit.elementary_charge),
+            (18, -0.4 * openmm_unit.elementary_charge),
+            (19, -0.3 * openmm_unit.elementary_charge),
+            (20, -0.2 * openmm_unit.elementary_charge),
         )
         for particle_index, expected_charge in expected_charges:
             q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
@@ -2362,7 +2359,7 @@ class TestForceFieldChargeAssignment:
         nonbondedForce = [
             f for f in omm_system.getForces() if type(f) == NonbondedForce
         ][0]
-        expected_charges = [-0.834, 0.417, 0.417] * unit.elementary_charge
+        expected_charges = [-0.834, 0.417, 0.417] * openmm_unit.elementary_charge
         for particle_index, expected_charge in enumerate(expected_charges):
             q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
             assert q == expected_charge
@@ -2411,10 +2408,12 @@ class TestForceFieldChargeAssignment:
             -0.05,
             -0.15,
             0.2,
-        ] * unit.elementary_charge
+        ] * openmm_unit.elementary_charge
         for idx, expected_charge in enumerate(expected_charges):
             charge, _, _ = nonbonded_force.getParticleParameters(idx)
-            assert abs(charge - expected_charge) < 1.0e-6 * unit.elementary_charge
+            assert (
+                abs(charge - expected_charge) < 1.0e-6 * openmm_unit.elementary_charge
+            )
 
     def test_charge_increment_model_one_less_ci_than_tagged_atom(self):
         """
@@ -2455,11 +2454,13 @@ class TestForceFieldChargeAssignment:
             0.01,
             0.01,
             0.0,
-        ] * unit.elementary_charge
+        ] * openmm_unit.elementary_charge
         for idx, expected_charge in enumerate(expected_charges):
             charge1, _, _ = nonbonded_force1.getParticleParameters(idx)
             charge2, _, _ = nonbonded_force2.getParticleParameters(idx)
-            assert abs(charge1 - expected_charge) < 1.0e-6 * unit.elementary_charge
+            assert (
+                abs(charge1 - expected_charge) < 1.0e-6 * openmm_unit.elementary_charge
+            )
             assert charge1 == charge2
 
     def test_charge_increment_model_invalid_number_of_cis(self):
@@ -2524,10 +2525,20 @@ class TestForceFieldChargeAssignment:
             for force in sys.getForces()
             if isinstance(force, openmm.NonbondedForce)
         ][0]
-        expected_charges = [0, 0.15, -0.2, -0.95, 0, 0, 0] * unit.elementary_charge
+        expected_charges = [
+            0,
+            0.15,
+            -0.2,
+            -0.95,
+            0,
+            0,
+            0,
+        ] * openmm_unit.elementary_charge
         for idx, expected_charge in enumerate(expected_charges):
             charge, _, _ = nonbonded_force.getParticleParameters(idx)
-            assert abs(charge - expected_charge) < 1.0e-6 * unit.elementary_charge
+            assert (
+                abs(charge - expected_charge) < 1.0e-6 * openmm_unit.elementary_charge
+            )
 
     def test_charge_increment_model_deduplicate_symmetric_matches(self):
         """Test that chargeincrementmodelhandler deduplicates symmetric matches"""
@@ -2556,10 +2567,12 @@ class TestForceFieldChargeAssignment:
             0.0,
             0.0,
             0.0,
-        ] * unit.elementary_charge
+        ] * openmm_unit.elementary_charge
         for idx, expected_charge in enumerate(expected_charges):
             charge, _, _ = nonbonded_force.getParticleParameters(idx)
-            assert abs(charge - expected_charge) < 1.0e-6 * unit.elementary_charge
+            assert (
+                abs(charge - expected_charge) < 1.0e-6 * openmm_unit.elementary_charge
+            )
 
         # Test a charge increment that matches two C-H bonds at a time
         # (this should be applied 3 times: C0-H3-H4, C0-H3-H5, C0-H4-H5)
@@ -2582,10 +2595,12 @@ class TestForceFieldChargeAssignment:
             0.0,
             0.0,
             0.0,
-        ] * unit.elementary_charge
+        ] * openmm_unit.elementary_charge
         for idx, expected_charge in enumerate(expected_charges):
             charge, _, _ = nonbonded_force.getParticleParameters(idx)
-            assert abs(charge - expected_charge) < 1.0e-6 * unit.elementary_charge
+            assert (
+                abs(charge - expected_charge) < 1.0e-6 * openmm_unit.elementary_charge
+            )
 
         # Test a charge increment that matches ONE C-H bond at a time
         # (this should be applied three times: C0-H3, C0-H4, C0-H5)
@@ -2608,10 +2623,12 @@ class TestForceFieldChargeAssignment:
             0.0,
             0.0,
             0.0,
-        ] * unit.elementary_charge
+        ] * openmm_unit.elementary_charge
         for idx, expected_charge in enumerate(expected_charges):
             charge, _, _ = nonbonded_force.getParticleParameters(idx)
-            assert abs(charge - expected_charge) < 1.0e-6 * unit.elementary_charge
+            assert (
+                abs(charge - expected_charge) < 1.0e-6 * openmm_unit.elementary_charge
+            )
 
     def test_charge_increment_model_completely_overlapping_matches_override(self):
         """Ensure that DIFFERENT chargeincrements override one another if they apply to the
@@ -2638,10 +2655,12 @@ class TestForceFieldChargeAssignment:
             0.0,
             0.0,
             0.0,
-        ] * unit.elementary_charge
+        ] * openmm_unit.elementary_charge
         for idx, expected_charge in enumerate(expected_charges):
             charge, _, _ = nonbonded_force.getParticleParameters(idx)
-            assert abs(charge - expected_charge) < 1.0e-6 * unit.elementary_charge
+            assert (
+                abs(charge - expected_charge) < 1.0e-6 * openmm_unit.elementary_charge
+            )
 
     def test_charge_increment_model_partially_overlapping_matches_both_apply(self):
         """Ensure that DIFFERENT chargeincrements BOTH get applied if they match
@@ -2668,10 +2687,12 @@ class TestForceFieldChargeAssignment:
             0.0,
             0.0,
             0.0,
-        ] * unit.elementary_charge
+        ] * openmm_unit.elementary_charge
         for idx, expected_charge in enumerate(expected_charges):
             charge, _, _ = nonbonded_force.getParticleParameters(idx)
-            assert abs(charge - expected_charge) < 1.0e-6 * unit.elementary_charge
+            assert (
+                abs(charge - expected_charge) < 1.0e-6 * openmm_unit.elementary_charge
+            )
 
     @pytest.mark.parametrize("inputs", partial_charge_method_resolution_matrix)
     def test_partial_charge_resolution(self, inputs):
@@ -2724,7 +2745,7 @@ class TestForceFieldChargeAssignment:
         nonbondedForce = [
             f for f in omm_system.getForces() if type(f) == NonbondedForce
         ][0]
-        expected_charges = [-2.0, 1.0, 1.0] * unit.elementary_charge
+        expected_charges = [-2.0, 1.0, 1.0] * openmm_unit.elementary_charge
         for particle_index, expected_charge in enumerate(expected_charges):
             q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
             assert q == expected_charge
@@ -2739,7 +2760,7 @@ class TestForceFieldChargeAssignment:
         nonbondedForce = [
             f for f in omm_system.getForces() if type(f) == NonbondedForce
         ][0]
-        expected_charges = [-0.834, 0.417, 0.417] * unit.elementary_charge
+        expected_charges = [-0.834, 0.417, 0.417] * openmm_unit.elementary_charge
         for particle_index, expected_charge in enumerate(expected_charges):
             q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
             assert q == expected_charge
@@ -2764,7 +2785,7 @@ class TestForceFieldChargeAssignment:
             -0.834,
             0.417,
             0.417,
-        ] * unit.elementary_charge
+        ] * openmm_unit.elementary_charge
         for particle_index, expected_charge in enumerate(expected_charges):
             q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
             assert q == expected_charge
@@ -2837,7 +2858,7 @@ class TestForceFieldChargeAssignment:
             0.3,
             -0.1,
             -0.2,
-        ] * unit.elementary_charge
+        ] * openmm_unit.elementary_charge
         for particle_index, expected_charge in enumerate(expected_charges):
             q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
             assert q == expected_charge
@@ -3001,7 +3022,7 @@ class TestForceFieldChargeAssignment:
             -0.834,
             0.417,
             0.417,
-        ] * unit.elementary_charge
+        ] * openmm_unit.elementary_charge
 
         # Ensure that the first four molecules have exactly the charges we intended
         for particle_index, expected_charge in enumerate(expected_charges):
@@ -3017,7 +3038,7 @@ class TestForceFieldChargeAssignment:
         q, sigma, epsilon = nonbondedForce.getParticleParameters(
             top.n_topology_atoms - 1
         )
-        assert q == -1.0 * unit.elementary_charge
+        assert q == -1.0 * openmm_unit.elementary_charge
 
     def test_assign_charges_to_molecule_in_parts_using_multiple_library_charges(self):
         """Test assigning charges to parts of a molecule using two library charge lines. Note that these LibraryCharge
@@ -3055,7 +3076,7 @@ class TestForceFieldChargeAssignment:
             -0.02,
             -0.01,
             -0.01,
-        ] * unit.elementary_charge
+        ] * openmm_unit.elementary_charge
         for particle_index, expected_charge in enumerate(expected_charges):
             q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
             assert q == expected_charge
@@ -3096,7 +3117,7 @@ class TestForceFieldChargeAssignment:
             -0.02,
             -0.01,
             -0.01,
-        ] * unit.elementary_charge
+        ] * openmm_unit.elementary_charge
         for particle_index, expected_charge in enumerate(expected_charges):
             q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
             assert q == expected_charge
@@ -3174,7 +3195,7 @@ class TestForceFieldChargeAssignment:
             ref_mol_from_ret_top.partial_charges
         ):
             q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
-            assert q == ref_mol_charge
+            assert from_openmm(q) == ref_mol_charge
             if q != 0.0 * unit.elementary_charge:
                 all_charges_zero = False
         assert not (all_charges_zero)
@@ -3244,8 +3265,8 @@ class TestForceFieldConstraints:
             }
             assert atom_elements == bond_elements
             assert np.isclose(
-                distance.value_in_unit(unit.angstrom),
-                bond_length.value_in_unit(unit.angstrom),
+                distance.value_in_unit(openmm_unit.angstrom),
+                bond_length.m_as(unit.angstrom),
             )
 
     def test_constraints_hbonds(self):
@@ -3469,9 +3490,9 @@ class TestForceFieldParameterAssignment:
         # Translate the molecules a little to avoid overlapping atoms.
         positions = copy.deepcopy(structure_mixture.positions)
         translate_vectors = [
-            np.array([1.0, 0.0, 0.0]) * unit.nanometer,
-            np.array([0.0, 1.0, 0.0]) * unit.nanometer,
-            np.array([0.0, 0.0, 1.0]) * unit.nanometer,
+            np.array([1.0, 0.0, 0.0]) * openmm_unit.nanometer,
+            np.array([0.0, 1.0, 0.0]) * openmm_unit.nanometer,
+            np.array([0.0, 0.0, 1.0]) * openmm_unit.nanometer,
             # Leave the fourth molecule where it is.
         ]
         current_atom_idx = 0
@@ -3584,7 +3605,7 @@ class TestForceFieldParameterAssignment:
         # Give each atom a unique name, otherwise OpenMM will complain
         for idx, atom in enumerate(molecule.atoms):
             atom.name = f"{atom.element.symbol}{idx}"
-        positions = molecule.conformers[0]
+        positions = to_openmm(molecule.conformers[0])
 
         off_gbsas = {
             "HCT": "test_forcefields/GBSA_HCT-1.0.offxml",
@@ -3733,7 +3754,7 @@ class TestForceFieldParameterAssignment:
         # TODO: look into if switching distance is relevant #882
 
         # Create Contexts
-        integrator = openmm.VerletIntegrator(1.0 * unit.femtoseconds)
+        integrator = openmm.VerletIntegrator(1.0 * openmm_unit.femtoseconds)
         platform = Platform.getPlatformByName("Reference")
         amber_context = openmm.Context(amber_omm_system, integrator, platform)
         off_context = openmm.Context(
@@ -3749,7 +3770,9 @@ class TestForceFieldParameterAssignment:
         # Ensure that the GBSA energies (which we put into ForceGroup 1) are identical
         # For Platform=OpenCL, we do get "=="-level identical numbers, but for "Reference", we don't.
         # assert amber_energy[1] == off_energy[1]
-        assert abs(amber_energy[1] - off_energy[1]) < 1e-5 * unit.kilojoule / unit.mole
+        assert (
+            abs(amber_energy[1] - off_energy[1]) < 1e-5 * openmm_unit.kilojoule_per_mole
+        )
 
         # Ensure that all system energies are the same
         compare_system_energies(
@@ -3822,16 +3845,16 @@ class TestForceFieldParameterAssignment:
             * unit.nanometer
         )
 
-        ref_ene = 0.0011797690240 * unit.kilojoule_per_mole
+        ref_ene = 0.0011797690240 * openmm_unit.kilojoule_per_mole
 
         assert np.allclose(
-            off_crds.value_in_unit(unit.angstrom),
-            ref_crds_with_vsite.value_in_unit(unit.angstrom),
+            off_crds.m_as(unit.angstrom),
+            ref_crds_with_vsite.m_as(unit.angstrom),
         )
         # allow 1% error in energy difference (default is .001%)
         assert np.allclose(
-            off_ene.value_in_unit(unit.kilocalorie_per_mole),
-            ref_ene.value_in_unit(unit.kilocalorie_per_mole),
+            off_ene.value_in_unit(openmm_unit.kilocalorie_per_mole),
+            ref_ene.value_in_unit(openmm_unit.kilocalorie_per_mole),
             rtol=0.05,
         )
 
@@ -4003,7 +4026,7 @@ class TestForceFieldParameterAssignment:
         off_gbsa_force.setForceGroup(1)
 
         # Create Contexts
-        integrator = openmm.VerletIntegrator(1.0 * unit.femtoseconds)
+        integrator = openmm.VerletIntegrator(1.0 * openmm_unit.femtoseconds)
         platform = Platform.getPlatformByName("Reference")
         amber_context = openmm.Context(amber_omm_system, integrator, platform)
         off_context = openmm.Context(
@@ -4011,8 +4034,8 @@ class TestForceFieldParameterAssignment:
         )
 
         # Get context energies
-        amber_energy = get_context_potential_energy(amber_context, positions)
-        off_energy = get_context_potential_energy(off_context, positions)
+        amber_energy = get_context_potential_energy(amber_context, to_openmm(positions))
+        off_energy = get_context_potential_energy(off_context, to_openmm(positions))
 
         # Very handy for debugging
         # print(openmm.XmlSerializer.serialize(off_gbsa_force))
@@ -4021,17 +4044,19 @@ class TestForceFieldParameterAssignment:
         # Ensure that the GBSA energies (which we put into ForceGroup 1) are identical
         # For Platform=OpenCL, we do get "=="-level identical numbers, but for "Reference", we don't.
         # assert amber_energy[1] == off_energy[1]
-        assert abs(amber_energy[1] - off_energy[1]) < 1e-5 * unit.kilojoule / unit.mole
+        assert (
+            abs(amber_energy[1] - off_energy[1]) < 1e-5 * openmm_unit.kilojoule_per_mole
+        )
 
         # If charges are zero, the GB energy component should be 0, so the total GBSA energy should be 0
         if zero_charges:
-            assert amber_energy[1] == 0.0 * unit.kilojoule / unit.mole
+            assert amber_energy[1]._value == 0.0
         else:
-            assert amber_energy[1] != 0.0 * unit.kilojoule / unit.mole
+            assert amber_energy[1]._value != 0.0
 
         # Ensure that all system energies are the same
         compare_system_energies(
-            off_omm_system, amber_omm_system, positions, by_force_type=False
+            off_omm_system, amber_omm_system, to_openmm(positions), by_force_type=False
         )
 
     @pytest.mark.slow
@@ -4714,15 +4739,15 @@ class TestForceFieldGetPartialCharges:
         n_particles = nbforce.getNumParticles()
         charges = [nbforce.getParticleParameters(i)[0] for i in range(n_particles)]
 
-        return unit.Quantity(charges)
+        return openmm_unit.Quantity(charges)
 
     def test_get_partial_charges(self):
         """Test that ethanol charges are computed correctly."""
         ethanol: Molecule = create_ethanol()
         force_field: ForceField = ForceField("test_forcefields/test_forcefield.offxml")
 
-        ethanol_partial_charges = self.get_partial_charges_from_create_openmm_system(
-            ethanol, force_field
+        ethanol_partial_charges = from_openmm(
+            self.get_partial_charges_from_create_openmm_system(ethanol, force_field)
         )
 
         partial_charges = force_field.get_partial_charges(ethanol)

@@ -11,18 +11,22 @@ dependencies:
     # Testing
   - pytest
   - pytest-cov
+  - pytest-rerunfailures
   - nbval
   - codecov
   - coverage
   - numpy
   - networkx
-  - parmed
+  - parmed  # ???
+  - mendeleev
   - openeye-toolkits
   - packaging
     # Removed until a new release which targets openff-toolkit is made.
 #  - openmmforcefields
   - openmm
   - openff-forcefields
+  - openff-units
+  - openff-utilities
   - smirnoff99Frosst
   - cachetools
   - pyyaml

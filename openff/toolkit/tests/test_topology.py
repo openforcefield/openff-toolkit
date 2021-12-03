@@ -13,14 +13,8 @@ import itertools
 
 import numpy as np
 import pytest
-
-try:
-    from openmm import app, unit
-    from openmm.app import element
-except ImportError:
-    from simtk import unit
-    from simtk.openmm import app
-    from simtk.openmm.app import element
+from openff.units import unit
+from openmm import app
 
 from openff.toolkit.tests.create_molecules import *
 from openff.toolkit.tests.utils import (
@@ -254,6 +248,9 @@ class TestTopology:
 
     def test_topology_atom_element(self, toluene_from_sdf):
         """Test getters of TopologyAtom element and atomic number"""
+        from mendeleev import element
+        from mendeleev.models import Element
+
         topology = Topology()
         topology.add_molecule(toluene_from_sdf)
 
@@ -261,12 +258,12 @@ class TestTopology:
         eighth_element = topology.atom(7).element
 
         # Check if types/instances are correct
-        assert isinstance(first_element, element.Element)
-        assert isinstance(eighth_element, element.Element)
+        assert isinstance(first_element, Element)
+        assert isinstance(eighth_element, Element)
 
         # Make sure first is a carbon element and eighth is a hydrogen element
-        assert first_element == element.carbon
-        assert eighth_element == element.hydrogen
+        assert first_element.symbol == element(6).symbol
+        assert eighth_element.symbol == element(1).symbol
 
     def test_get_bond(self, ethane_from_smiles, ethene_from_smiles):
         """Test Topology.bond function (bond lookup from index)"""
@@ -776,7 +773,7 @@ class TestTopology:
         count = 1
         coord = None
         with NamedTemporaryFile(suffix=".pdb") as iofile:
-            positions_nanometer = positions_angstrom.in_units_of(unit.nanometer)
+            positions_nanometer = positions_angstrom.to(unit.nanometer)
             topology.to_file(iofile.name, positions_nanometer)
             data = open(iofile.name).readlines()
             for line in data:
@@ -788,7 +785,7 @@ class TestTopology:
         count = 1
         coord = "abc"
         with NamedTemporaryFile(suffix=".pdb") as iofile:
-            positions_unitless = positions_angstrom._value
+            positions_unitless = positions_angstrom.m
             topology.to_file(iofile.name, positions_unitless)
             data = open(iofile.name).readlines()
             for line in data:
@@ -850,7 +847,7 @@ class TestTopology:
         topology = Topology()
         lines = []
         with NamedTemporaryFile(suffix=".pdb") as iofile:
-            topology.to_file(iofile.name, [])
+            topology.to_file(iofile.name, [] * unit.nanometer)
             data = open(iofile.name).readlines()
             for line in data:
                 lines.append(line.split())
@@ -1027,31 +1024,36 @@ class TestTopology:
         # Test for correct behavior with topology of one ethanol
         top.add_molecule(create_ethanol())
         groupings = top.identical_molecule_groups
+
         def assert_first_ethanol_is_grouped_correctly(groupings):
             assert groupings[0][0] == [0, {i: i for i in range(9)}]
+
         assert_first_ethanol_is_grouped_correctly(groupings)
 
         # Add an ethanol in reversed order
         top.add_molecule(create_reversed_ethanol())
         groupings = top.identical_molecule_groups
+
         def assert_reversed_ethanol_is_grouped_correctly(groupings):
             # Ensure that the second ethanol knows it's the same chemical species as the first ethanol
             assert groupings[0][1][0] == 1
             # Ensure that the second ethanol has the heavy atoms reversed
-            assert groupings[0][1][1][0] == 8 # C
-            assert groupings[0][1][1][1] == 7 # C
-            assert groupings[0][1][1][2] == 6 # O
+            assert groupings[0][1][1][0] == 8  # C
+            assert groupings[0][1][1][1] == 7  # C
+            assert groupings[0][1][1][2] == 6  # O
             # (we only check the hydroxyl H, since the other Hs have multiple valid matches)
-            assert groupings[0][1][1][8] == 0 # HO
+            assert groupings[0][1][1][8] == 0  # HO
 
         assert_first_ethanol_is_grouped_correctly(groupings)
         assert_reversed_ethanol_is_grouped_correctly(groupings)
 
         # Add a cyclohexane, which should be unique from all the other molecules
         top.add_molecule(create_cyclohexane())
+
         def assert_cyclohexane_is_grouped_correctly(groupings):
             assert len(groupings[2]) == 1
             assert groupings[2][0] == [2, {i: i for i in range(18)}]
+
         groupings = top.identical_molecule_groups
         assert_first_ethanol_is_grouped_correctly(groupings)
         assert_reversed_ethanol_is_grouped_correctly(groupings)
@@ -1059,6 +1061,7 @@ class TestTopology:
 
         # Add a third ethanol, in the same order as the first
         top.add_molecule(create_ethanol())
+
         def assert_last_ethanol_is_grouped_correctly(groupings):
             # Ensure that the last ethanol knows it's the same chemical species as the first ethanol
             assert groupings[0][2][0] == 3
@@ -1068,6 +1071,7 @@ class TestTopology:
             assert groupings[0][2][1][2] == 2
             # Ensure that the second ethanol has the hydroxyl hydrogen matched correctly
             assert groupings[0][2][1][8] == 8
+
         groupings = top.identical_molecule_groups
         assert_first_ethanol_is_grouped_correctly(groupings)
         assert_reversed_ethanol_is_grouped_correctly(groupings)

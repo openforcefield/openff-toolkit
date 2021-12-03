@@ -58,11 +58,8 @@ from enum import Enum
 from itertools import combinations
 from typing import Any, List, Optional, Type, Union
 
-try:
-    import openmm
-    from openmm import unit
-except ImportError:
-    from simtk import openmm, unit
+from openff.units import unit
+from openff.utilities import requires_package
 
 from openff.toolkit.topology import (
     ImproperDict,
@@ -80,6 +77,7 @@ from openff.toolkit.utils.exceptions import (
     DuplicateVirtualSiteTypeException,
     FractionalBondOrderInterpolationMethodUnsupportedError,
     IncompatibleParameterError,
+    IncompatibleUnitError,
     MissingIndexedAttributeError,
     NonintegralMoleculeChargeException,
     NotEnoughPointsForInterpolationError,
@@ -94,7 +92,6 @@ from openff.toolkit.utils.exceptions import (
 )
 from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
 from openff.toolkit.utils.utils import (
-    IncompatibleUnitError,
     all_subclasses,
     attach_units,
     extract_serialized_units_from_dict,
@@ -415,7 +412,7 @@ class ParameterAttribute:
 
             # Check if units are compatible.
             try:
-                if not self._unit.is_compatible(value.unit):
+                if not self._unit.is_compatible_with(value.units):
                     raise IncompatibleUnitError(
                         f"{self.name}={value} should have units of {self._unit}"
                     )
@@ -715,7 +712,7 @@ class _ParameterAttributeHandler:
 
     >>> class ParameterTypeOrHandler(_ParameterAttributeHandler):
     ...     length = ParameterAttribute(unit=unit.angstrom)
-    ...     k = ParameterAttribute(unit=unit.kilocalorie_per_mole / unit.angstrom**2)
+    ...     k = ParameterAttribute(unit=unit.kilocalorie / unit.mole / unit.angstrom**2)
     ...
 
     ``_ParameterAttributeHandler`` and the descriptors take care of performing
@@ -724,7 +721,7 @@ class _ParameterAttributeHandler:
 
     >>> my_par = ParameterTypeOrHandler(
     ...     length='1.01 * angstrom',
-    ...     k=5 * unit.kilocalorie_per_mole / unit.angstrom**2
+    ...     k=5 * unit.kilocalorie / unit.mole / unit.angstrom**2
     ... )
 
     Note that ``_ParameterAttributeHandler`` took care of implementing
@@ -792,13 +789,13 @@ class _ParameterAttributeHandler:
 
     >>> class MyTorsionType(_ParameterAttributeHandler):
     ...     periodicity = IndexedParameterAttribute(converter=int)
-    ...     k = IndexedParameterAttribute(unit=unit.kilocalorie_per_mole)
+    ...     k = IndexedParameterAttribute(unit=unit.kilocalorie / unit.mole)
     ...
     >>> my_par = MyTorsionType(
     ...     periodicity1=2,
-    ...     k1=5 * unit.kilocalorie_per_mole,
+    ...     k1=5 * unit.kilocalorie / unit.mole,
     ...     periodicity2='3',
-    ...     k2=6 * unit.kilocalorie_per_mole,
+    ...     k2=6 * unit.kilocalorie / unit.mole,
     ... )
     >>> my_par.periodicity
     [2, 3]
@@ -1637,7 +1634,7 @@ class ParameterType(_ParameterAttributeHandler):
     ...     _VALENCE_TYPE = 'Bond'
     ...     _ELEMENT_NAME = 'Bond'
     ...     length = ParameterAttribute(unit=unit.angstrom)
-    ...     k = ParameterAttribute(unit=unit.kilocalorie_per_mole / unit.angstrom**2)
+    ...     k = ParameterAttribute(unit=unit.kilocalorie / unit.mole / unit.angstrom**2)
     ...
 
     The parameter automatically inherits the required smirks attribute
@@ -1648,7 +1645,7 @@ class ParameterType(_ParameterAttributeHandler):
     >>> my_par = MyBondParameter(
     ...     smirks='[*:1]-[*:2]',
     ...     length='1.01 * angstrom',
-    ...     k=5 * unit.kilocalorie_per_mole / unit.angstrom**2
+    ...     k=5 * unit.kilocalorie / unit.mole / unit.angstrom**2
     ... )
     >>> my_par.length
     Quantity(value=1.01, unit=angstrom)
@@ -1705,14 +1702,14 @@ class ParameterType(_ParameterAttributeHandler):
     ...     _VALENCE_TYPE = 'ProperTorsion'
     ...     _ELEMENT_NAME = 'Proper'
     ...     periodicity = IndexedParameterAttribute(converter=int)
-    ...     k = IndexedParameterAttribute(unit=unit.kilocalorie_per_mole)
+    ...     k = IndexedParameterAttribute(unit=unit.kilocalorie / unit.mole)
     ...
     >>> my_par = MyTorsionType(
     ...     smirks='[*:1]-[*:2]-[*:3]-[*:4]',
     ...     periodicity1=2,
-    ...     k1=5 * unit.kilocalorie_per_mole,
+    ...     k1=5 * unit.kilocalorie / unit.mole,
     ...     periodicity2='3',
-    ...     k2=6 * unit.kilocalorie_per_mole,
+    ...     k2=6 * unit.kilocalorie / unit.mole,
     ... )
     >>> my_par.periodicity
     [2, 3]
@@ -1997,7 +1994,7 @@ class ParameterHandler(_ParameterAttributeHandler):
           * When `before` and `after` are both specified, the new parameter will be added immediately
             after the parameter matching the `after` pattern or index.
           * The order of parameters in a parameter list can have significant impacts on parameter assignment. For details,
-            see the [SMIRNOFF](https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html#smirnoff-parameter-specification-is-hierarchical)
+            see the [SMIRNOFF](https://openforcefield.github.io/standards/standards/smirnoff/#smirnoff-parameter-specification-is-hierarchical)
             specification.
 
         Examples
@@ -2010,7 +2007,7 @@ class ParameterHandler(_ParameterAttributeHandler):
         >>> from openmm import unit
         >>> bh = BondHandler(skip_version_check=True)
         >>> length = 1.5 * unit.angstrom
-        >>> k = 100 * unit.kilocalorie_per_mole / unit.angstrom ** 2
+        >>> k = 100 * unit.kilocalorie / unit.mole / unit.angstrom ** 2
         >>> bh.add_parameter({'smirks': '[*:1]-[*:2]', 'length': length, 'k': k, 'id': 'b1'})
         >>> bh.add_parameter({'smirks': '[*:1]=[*:2]', 'length': length, 'k': k, 'id': 'b2'})
         >>> bh.add_parameter({'smirks': '[*:1]#[*:2]', 'length': length, 'k': k, 'id': 'b3'})
@@ -2091,7 +2088,7 @@ class ParameterHandler(_ParameterAttributeHandler):
         ...     {
         ...         'smirks': '[*:1]-[*:2]',
         ...         'length': 1*unit.angstrom,
-        ...         'k': 10*unit.kilocalorie_per_mole/unit.angstrom**2,
+        ...         'k': 10*unit.kilocalorie / unit.mole/unit.angstrom**2,
         ...     }
         ... )
 
@@ -2442,10 +2439,11 @@ class ParameterHandler(_ParameterAttributeHandler):
             other_val = getattr(other, attr)
             # Strip quantities of their units before comparison.
             try:
-                u = this_val.unit
+                this_val.units
             except AttributeError:
                 return this_val, other_val
-            return this_val / u, other_val / u
+            assert this_val.units == other_val.units
+            return this_val.m, other_val.m
 
         for attr in identical_attrs:
             this_val, other_val = get_unitless_values(attr)
@@ -2459,7 +2457,13 @@ class ParameterHandler(_ParameterAttributeHandler):
                 )
 
         for attr in tolerance_attrs:
-            this_val, other_val = get_unitless_values(attr)
+            try:
+                this_val, other_val = get_unitless_values(attr)
+            except AttributeError:
+                raise AttributeError(
+                    f"Mismatch found with attr={attr}, this_val={this_val}, "
+                    f"other_val={other_val}"
+                )
             if abs(this_val - other_val) > tolerance:
                 raise IncompatibleParameterError(
                     "Difference between '{}' values is beyond allowed tolerance {}. "
@@ -2556,7 +2560,10 @@ class ConstraintHandler(ParameterHandler):
     _INFOTYPE = ConstraintType
     _OPENMMTYPE = None  # don't create a corresponding OpenMM Force class
 
+    @requires_package("openmm")
     def create_force(self, system, topology, **kwargs):
+        from openff.units.openmm import to_openmm
+
         constraint_matches = self.find_matches(topology)
         for (atoms, constraint_match) in constraint_matches.items():
             # Update constrained atom pairs in topology
@@ -2568,7 +2575,7 @@ class ConstraintHandler(ParameterHandler):
             if constraint.distance is None:
                 topology.add_constraint(*atoms, True)
             else:
-                system.addConstraint(*atoms, constraint.distance)
+                system.addConstraint(*atoms, to_openmm(constraint.distance))
                 topology.add_constraint(*atoms, constraint.distance)
 
 
@@ -2593,13 +2600,13 @@ class BondHandler(ParameterHandler):
 
         length = ParameterAttribute(default=None, unit=unit.angstrom)
         k = ParameterAttribute(
-            default=None, unit=unit.kilocalorie_per_mole / unit.angstrom ** 2
+            default=None, unit=unit.kilocalorie / unit.mole / unit.angstrom ** 2
         )
 
         # fractional bond order params
         length_bondorder = MappedParameterAttribute(default=None, unit=unit.angstrom)
         k_bondorder = MappedParameterAttribute(
-            default=None, unit=unit.kilocalorie_per_mole / unit.angstrom ** 2
+            default=None, unit=unit.kilocalorie / unit.mole / unit.angstrom ** 2
         )
 
         def __init__(self, **kwargs):
@@ -2637,7 +2644,7 @@ class BondHandler(ParameterHandler):
 
     _TAGNAME = "Bonds"  # SMIRNOFF tag name to process
     _INFOTYPE = BondType  # class to hold force type info
-    _OPENMMTYPE = openmm.HarmonicBondForce  # OpenMM force class to create
+    _OPENMMTYPE = "HarmonicBondForce"
     _DEPENDENCIES = [ConstraintHandler]  # ConstraintHandler must be executed first
     _MAX_SUPPORTED_SECTION_VERSION = 0.4
 
@@ -2708,14 +2715,19 @@ class BondHandler(ParameterHandler):
                     f"(handler value: {self.potential}, incompatible value: {other_handler.potential}"
                 )
 
+    @requires_package("openmm")
     def create_force(self, system, topology, **kwargs):
+        import openmm
+        from openff.units.openmm import to_openmm
+
+        openmm_type = getattr(openmm, self._OPENMMTYPE)
         # Create or retrieve existing OpenMM Force object
         # TODO: The commented line below should replace the system.getForce search
         # force = super(BondHandler, self).create_force(system, topology, **kwargs)
         existing = [system.getForce(i) for i in range(system.getNumForces())]
-        existing = [f for f in existing if type(f) == self._OPENMMTYPE]
+        existing = [f for f in existing if type(f) == openmm_type]
         if len(existing) == 0:
-            force = self._OPENMMTYPE()
+            force = openmm_type()
             system.addForce(force)
         else:
             force = existing[0]
@@ -2844,7 +2856,7 @@ class BondHandler(ParameterHandler):
             is_constrained = topology.is_constrained(*topology_atom_indices)
             if not is_constrained:
                 # Add harmonic bond to HarmonicBondForce
-                force.addBond(*topology_atom_indices, length, k)
+                force.addBond(*topology_atom_indices, to_openmm(length), to_openmm(k))
             else:
                 # Handle constraints.
                 # Atom pair is constrained; we don't need to add a bond term.
@@ -2854,7 +2866,7 @@ class BondHandler(ParameterHandler):
                     # Mark that we have now assigned a specific constraint distance to this constraint.
                     topology.add_constraint(*topology_atom_indices, length)
                     # Add the constraint to the System.
-                    system.addConstraint(*topology_atom_indices, length)
+                    system.addConstraint(*topology_atom_indices, to_openmm(length))
                     # system.addConstraint(*particle_indices, length)
 
         logger.info(
@@ -2892,11 +2904,11 @@ class AngleHandler(ParameterHandler):
         _ELEMENT_NAME = "Angle"
 
         angle = ParameterAttribute(unit=unit.degree)
-        k = ParameterAttribute(unit=unit.kilocalorie_per_mole / unit.degree ** 2)
+        k = ParameterAttribute(unit=unit.kilocalorie / unit.mole / unit.degree ** 2)
 
     _TAGNAME = "Angles"  # SMIRNOFF tag name to process
     _INFOTYPE = AngleType  # class to hold force type info
-    _OPENMMTYPE = openmm.HarmonicAngleForce  # OpenMM force class to create
+    _OPENMMTYPE = "HarmonicAngleForce"
     _DEPENDENCIES = [ConstraintHandler]  # ConstraintHandler must be executed first
 
     potential = ParameterAttribute(default="harmonic")
@@ -2920,12 +2932,18 @@ class AngleHandler(ParameterHandler):
             other_handler, identical_attrs=string_attrs_to_compare
         )
 
+    @requires_package("openmm")
     def create_force(self, system, topology, **kwargs):
+        import openmm
+        from openff.units.openmm import to_openmm
+
+        openmm_type = getattr(openmm, self._OPENMMTYPE)
+
         # force = super(AngleHandler, self).create_force(system, topology, **kwargs)
         existing = [system.getForce(i) for i in range(system.getNumForces())]
-        existing = [f for f in existing if type(f) == self._OPENMMTYPE]
+        existing = [f for f in existing if type(f) == openmm_type]
         if len(existing) == 0:
-            force = self._OPENMMTYPE()
+            force = openmm_type()
             system.addForce(force)
         else:
             force = existing[0]
@@ -2958,7 +2976,7 @@ class AngleHandler(ParameterHandler):
                 continue
 
             angle = angle_match.parameter_type
-            force.addAngle(*atoms, angle.angle, angle.k)
+            force.addAngle(*atoms, to_openmm(angle.angle), to_openmm(angle.k))
 
         logger.info(
             "{} angles added ({} skipped due to constraints)".format(
@@ -2996,18 +3014,18 @@ class ProperTorsionHandler(ParameterHandler):
 
         periodicity = IndexedParameterAttribute(converter=int)
         phase = IndexedParameterAttribute(unit=unit.degree)
-        k = IndexedParameterAttribute(default=None, unit=unit.kilocalorie_per_mole)
+        k = IndexedParameterAttribute(default=None, unit=unit.kilocalorie / unit.mole)
         idivf = IndexedParameterAttribute(default=None, converter=float)
 
         # fractional bond order params
         k_bondorder = IndexedMappedParameterAttribute(
-            default=None, unit=unit.kilocalorie_per_mole
+            default=None, unit=unit.kilocalorie / unit.mole
         )
 
     _TAGNAME = "ProperTorsions"  # SMIRNOFF tag name to process
     _KWARGS = ["partial_bond_orders_from_molecules"]
     _INFOTYPE = ProperTorsionType  # info type to store
-    _OPENMMTYPE = openmm.PeriodicTorsionForce  # OpenMM force class to create
+    _OPENMMTYPE = "PeriodicTorsionForce"
     _MAX_SUPPORTED_SECTION_VERSION = 0.4
 
     potential = ParameterAttribute(
@@ -3052,13 +3070,17 @@ class ProperTorsionHandler(ParameterHandler):
             tolerance_attrs=float_attrs_to_compare,
         )
 
+    @requires_package("openmm")
     def create_force(self, system, topology, **kwargs):
+        import openmm
+
+        openmm_type = getattr(openmm, self._OPENMMTYPE)
         # force = super(ProperTorsionHandler, self).create_force(system, topology, **kwargs)
         existing = [system.getForce(i) for i in range(system.getNumForces())]
-        existing = [f for f in existing if type(f) == self._OPENMMTYPE]
+        existing = [f for f in existing if type(f) == openmm_type]
 
         if len(existing) == 0:
-            force = self._OPENMMTYPE()
+            force = openmm_type()
             system.addForce(force)
         else:
             force = existing[0]
@@ -3141,6 +3163,7 @@ class ProperTorsionHandler(ParameterHandler):
         )
 
     def _assign_torsion(self, atom_indices, torsion_match, force):
+        from openff.units.openmm import to_openmm
 
         torsion_params = torsion_match.parameter_type
 
@@ -3157,20 +3180,21 @@ class ProperTorsionHandler(ParameterHandler):
                     "The OpenForceField toolkit hasn't implemented "
                     "support for the torsion `idivf` value of 'auto'"
                 )
-
             force.addTorsion(
                 atom_indices[0],
                 atom_indices[1],
                 atom_indices[2],
                 atom_indices[3],
                 periodicity,
-                phase,
-                k / idivf,
+                to_openmm(phase),
+                to_openmm(k / idivf),
             )
 
     def _assign_fractional_bond_orders(
         self, atom_indices, torsion_match, force, **kwargs
     ):
+        from openff.units.openmm import to_openmm
+
         from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
 
         torsion_params = torsion_match.parameter_type
@@ -3236,8 +3260,8 @@ class ProperTorsionHandler(ParameterHandler):
                 atom_indices[2],
                 atom_indices[3],
                 periodicity,
-                phase,
-                k / idivf,
+                to_openmm(phase),
+                to_openmm(k / idivf),
             )
 
 
@@ -3259,12 +3283,12 @@ class ImproperTorsionHandler(ParameterHandler):
 
         periodicity = IndexedParameterAttribute(converter=int)
         phase = IndexedParameterAttribute(unit=unit.degree)
-        k = IndexedParameterAttribute(unit=unit.kilocalorie_per_mole)
+        k = IndexedParameterAttribute(unit=unit.kilocalorie / unit.mole)
         idivf = IndexedParameterAttribute(default=None, converter=float)
 
     _TAGNAME = "ImproperTorsions"  # SMIRNOFF tag name to process
     _INFOTYPE = ImproperTorsionType  # info type to store
-    _OPENMMTYPE = openmm.PeriodicTorsionForce  # OpenMM force class to create
+    _OPENMMTYPE = "PeriodicTorsionForce"
 
     potential = ParameterAttribute(
         default="k*(1+cos(periodicity*theta-phase))",
@@ -3319,13 +3343,18 @@ class ImproperTorsionHandler(ParameterHandler):
             entity, transformed_dict_cls=ImproperDict, unique=unique
         )
 
+    @requires_package("openmm")
     def create_force(self, system, topology, **kwargs):
+        import openmm
+        from openff.units.openmm import to_openmm
+
+        openmm_type = getattr(openmm, self._OPENMMTYPE)
         # force = super(ImproperTorsionHandler, self).create_force(system, topology, **kwargs)
         # force = super().create_force(system, topology, **kwargs)
         existing = [system.getForce(i) for i in range(system.getNumForces())]
-        existing = [f for f in existing if type(f) == openmm.PeriodicTorsionForce]
+        existing = [f for f in existing if type(f) == openmm_type]
         if len(existing) == 0:
-            force = openmm.PeriodicTorsionForce()
+            force = openmm_type()
             system.addForce(force)
         else:
             force = existing[0]
@@ -3381,8 +3410,8 @@ class ImproperTorsionHandler(ParameterHandler):
                         p[1],
                         p[2],
                         improper_periodicity,
-                        improper_phase,
-                        improper_k / improper_idivf,
+                        to_openmm(improper_phase),
+                        to_openmm(improper_k / improper_idivf),
                     )
         logger.info(
             "{} impropers added, each applied in a six-fold trefoil".format(
@@ -3394,9 +3423,13 @@ class ImproperTorsionHandler(ParameterHandler):
 class _NonbondedHandler(ParameterHandler):
     """Base class for ParameterHandlers that deal with OpenMM NonbondedForce objects."""
 
-    _OPENMMTYPE = openmm.NonbondedForce
+    _OPENMMTYPE = "NonbondedForce"
 
+    @requires_package("openmm")
     def create_force(self, system, topology, **kwargs):
+        import openmm
+
+        openmm_type = getattr(openmm, self._OPENMMTYPE)
         # If we aren't yet keeping track of which molecules' charges have been assigned by which charge methods,
         # initialize a dict for that here.
         # TODO: This should be an attribute of the _system_, not the _topology_. However, since we're still using
@@ -3406,11 +3439,11 @@ class _NonbondedHandler(ParameterHandler):
 
         # Retrieve the system's OpenMM NonbondedForce
         existing = [system.getForce(i) for i in range(system.getNumForces())]
-        existing = [f for f in existing if type(f) == self._OPENMMTYPE]
+        existing = [f for f in existing if type(f) == openmm_type]
 
         # If there isn't yet one, initialize it and populate it with particles
         if len(existing) == 0:
-            force = self._OPENMMTYPE()
+            force = openmm_type()
             system.addForce(force)
             # Create all atom particles. Virtual site particles are handled in
             # in its own handler
@@ -3484,7 +3517,7 @@ class vdWHandler(_NonbondedHandler):
         _VALENCE_TYPE = "Atom"  # ChemicalEnvironment valence type expected for SMARTS
         _ELEMENT_NAME = "Atom"
 
-        epsilon = ParameterAttribute(unit=unit.kilocalorie_per_mole)
+        epsilon = ParameterAttribute(unit=unit.kilocalorie / unit.mole)
         sigma = ParameterAttribute(default=None, unit=unit.angstrom)
         rmin_half = ParameterAttribute(default=None, unit=unit.angstrom)
 
@@ -3609,7 +3642,11 @@ class vdWHandler(_NonbondedHandler):
             tolerance=self._SCALETOL,
         )
 
+    @requires_package("openmm")
     def create_force(self, system, topology, **kwargs):
+        import openmm
+        from openff.units.openmm import to_openmm
+
         force = super().create_force(system, topology, **kwargs)
 
         # If we're using PME, then the only possible openMM Nonbonded type is LJPME
@@ -3622,7 +3659,7 @@ class vdWHandler(_NonbondedHandler):
                 #                             "must be provided")
             else:
                 force.setNonbondedMethod(openmm.NonbondedForce.LJPME)
-                force.setCutoffDistance(self.cutoff)
+                force.setCutoffDistance(to_openmm(self.cutoff))
                 force.setEwaldErrorTolerance(1.0e-4)
 
         # If method is cutoff, then we currently support openMM's PME for periodic system and NoCutoff for nonperiodic
@@ -3633,7 +3670,7 @@ class vdWHandler(_NonbondedHandler):
             else:
                 force.setNonbondedMethod(openmm.NonbondedForce.PME)
                 force.setUseDispersionCorrection(True)
-                force.setCutoffDistance(self.cutoff)
+                force.setCutoffDistance(to_openmm(self.cutoff))
 
         # Iterate over all defined Lennard-Jones types, allowing later matches to override earlier ones.
         atom_matches = self.find_matches(topology)
@@ -3646,7 +3683,9 @@ class vdWHandler(_NonbondedHandler):
                 sigma = 2.0 * ljtype.rmin_half / (2.0 ** (1.0 / 6.0))
             else:
                 sigma = ljtype.sigma
-            force.setParticleParameters(atom_idx, 0.0, sigma, ljtype.epsilon)
+            force.setParticleParameters(
+                atom_idx, 0.0, to_openmm(sigma), to_openmm(ljtype.epsilon)
+            )
 
         # Check that no atoms (n.b. not particles) are missing force parameters.
         self._check_all_valence_terms_assigned(
@@ -3774,7 +3813,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
                 # Set the partial charges
                 # Make a copy of the charge molecule's charges array (this way it's the right shape)
                 temp_mol_charges = copy.deepcopy(
-                    openmm.unit.Quantity(charge_mol.partial_charges)
+                    unit.Quantity(charge_mol.partial_charges)
                 )
                 for charge_idx, ref_idx in topology_atom_map.items():
                     temp_mol_charges[charge_idx] = charge_mol.partial_charges[ref_idx]
@@ -3784,7 +3823,10 @@ class ElectrostaticsHandler(_NonbondedHandler):
         # If no match was found, return False
         return False
 
+    @requires_package("openmm")
     def create_force(self, system, topology, **kwargs):
+        import openmm
+        from openff.units.openmm import to_openmm
 
         force = super().create_force(system, topology, **kwargs)
 
@@ -3811,20 +3853,30 @@ class ElectrostaticsHandler(_NonbondedHandler):
 
             # Otherwise, the molecule is in the charge_from_molecules list, and we should assign charges to it
             for unique_mol_particle in unique_mol.particles:
-                unique_mol_particle_index = unique_mol.particle_index(unique_mol_particle)
+                unique_mol_particle_index = unique_mol.particle_index(
+                    unique_mol_particle
+                )
                 particle_charge = unique_mol.partial_charges[unique_mol_particle_index]
                 for mol_instance_idx, atom_map in group:
                     mol_instance = topology.molecule(mol_instance_idx)
                     mol_instance_particle_index = atom_map[unique_mol_particle_index]
-                    mol_instance_particle = mol_instance.particle(mol_instance_particle_index)
-                    mol_instance_particle_top_idx =  topology.particle_index(mol_instance_particle)
-
+                    mol_instance_particle = mol_instance.particle(
+                        mol_instance_particle_index
+                    )
+                    mol_instance_particle_top_idx = topology.particle_index(
+                        mol_instance_particle
+                    )
 
                     # Retrieve nonbonded parameters for reference atom (charge not set yet)
-                    _, sigma, epsilon = force.getParticleParameters(mol_instance_particle_top_idx)
+                    _, sigma, epsilon = force.getParticleParameters(
+                        mol_instance_particle_top_idx
+                    )
                     # Set the nonbonded force with the partial charge
                     force.setParticleParameters(
-                        mol_instance_particle_top_idx, particle_charge, sigma, epsilon
+                        mol_instance_particle_top_idx,
+                        to_openmm(particle_charge),
+                        sigma,
+                        epsilon,
                     )
 
                     # Finally, mark that charges were assigned for this reference molecule
@@ -3851,7 +3903,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
             # TODO: This is an assumption right now, and a bad one. See issue #219
             if topology.box_vectors is None:
                 assert current_nb_method == openmm.NonbondedForce.NoCutoff
-                force.setCutoffDistance(self.cutoff)
+                force.setCutoffDistance(to_openmm(self.cutoff))
                 # raise IncompatibleParameterError("Electrostatics handler received PME method keyword, but a nonperiodic"
                 #                                  " topology. Use of PME electrostatics requires a periodic topology.")
             else:
@@ -3860,7 +3912,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
                     # There's no need to check for matching cutoff/tolerance here since both are hard-coded defaults
                 else:
                     force.setNonbondedMethod(openmm.NonbondedForce.PME)
-                    force.setCutoffDistance(self.cutoff)
+                    force.setCutoffDistance(to_openmm(self.cutoff))
                     force.setEwaldErrorTolerance(1.0e-4)
 
         # If vdWHandler set the nonbonded method to NoCutoff, then we don't need to change anything
@@ -3890,6 +3942,8 @@ class ElectrostaticsHandler(_NonbondedHandler):
                 )
 
     def postprocess_system(self, system, topology, **kwargs):
+        from openff.units.openmm import from_openmm
+
         force = super().create_force(system, topology, **kwargs)
         # Check to ensure all molecules have had charges assigned
         uncharged_mols = []
@@ -3914,7 +3968,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
             partial_charge_sum = 0.0 * unit.elementary_charge
             for particle in molecule.particles:
                 q, _, _ = force.getParticleParameters(topology.particle_index(particle))
-                partial_charge_sum += q
+                partial_charge_sum += from_openmm(q)
             if (
                 abs(formal_charge_sum - partial_charge_sum)
                 > 0.01 * unit.elementary_charge
@@ -3998,6 +4052,7 @@ class LibraryChargeHandler(_NonbondedHandler):
             unique=unique,
         )
 
+    @requires_package("openmm")
     def create_force(self, system, topology, **kwargs):
         force = super().create_force(system, topology, **kwargs)
 
@@ -4052,7 +4107,10 @@ class LibraryChargeHandler(_NonbondedHandler):
             for top_particle_idx in top_particle_idxs:
                 _, sigma, epsilon = force.getParticleParameters(top_particle_idx)
                 force.setParticleParameters(
-                    top_particle_idx, atom_assignments[top_particle_idx], sigma, epsilon
+                    top_particle_idx,
+                    atom_assignments[top_particle_idx].m_as(unit.elementary_charge),
+                    sigma,
+                    epsilon,
                 )
             # Finally, mark that charges were assigned for this molecule
             self.mark_charges_assigned(molecule, topology)
@@ -4086,8 +4144,11 @@ class ToolkitAM1BCCHandler(_NonbondedHandler):
         """
         pass
 
+    @requires_package("openmm")
     def create_force(self, system, topology, **kwargs):
         import warnings
+
+        from openff.units.openmm import to_openmm
 
         from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
 
@@ -4125,16 +4186,22 @@ class ToolkitAM1BCCHandler(_NonbondedHandler):
                     topology_particle_index = topology.particle_index(mol_instance_atom)
 
                     # Retrieve nonbonded parameters for reference atom (charge not set yet)
-                    _, sigma, epsilon = force.getParticleParameters(topology_particle_index)
+                    _, sigma, epsilon = force.getParticleParameters(
+                        topology_particle_index
+                    )
                     # Set the nonbonded force with the partial charge
                     force.setParticleParameters(
-                        topology_particle_index, particle_charge, sigma, epsilon
+                        topology_particle_index,
+                        to_openmm(particle_charge),
+                        sigma,
+                        epsilon,
                     )
                     # Finally, mark that charges were assigned for this reference molecule
                     self.mark_charges_assigned(mol_instance, topology)
 
     # TODO: Move chargeModel and library residue charges to SMIRNOFF spec
     def postprocess_system(self, system, topology, **kwargs):
+        from openff.units.openmm import to_openmm
 
         bond_matches = self.find_matches(topology)
 
@@ -4157,14 +4224,20 @@ class ToolkitAM1BCCHandler(_NonbondedHandler):
                         particle_indices[1]
                     )
                     # Apply bond charge increment
-                    charge0 -= bond.increment
-                    charge1 += bond.increment
+                    charge0 -= bond.increment.m_as(unit.elementary_charge)
+                    charge1 += bond.increment.m_as(unit.elementary_charge)
                     # Update charges
                     force.setParticleParameters(
-                        particle_indices[0], charge0, sigma0, epsilon0
+                        particle_indices[0],
+                        to_openmm(charge0),
+                        sigma0,
+                        epsilon0,
                     )
                     force.setParticleParameters(
-                        particle_indices[1], charge1, sigma1, epsilon1
+                        particle_indices[1],
+                        to_openmm(charge1),
+                        sigma1,
+                        epsilon1,
                     )
                     # TODO: Calculate exceptions
 
@@ -4262,14 +4335,19 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
         )
         return matches
 
+    @requires_package("openmm")
     def create_force(self, system, topology, **kwargs):
         import warnings
 
+        import openmm
+        from openff.units.openmm import to_openmm
+
+        openmm_type = getattr(openmm, self._OPENMMTYPE)
         # We only want one instance of this force type
         existing = [system.getForce(i) for i in range(system.getNumForces())]
-        existing = [f for f in existing if type(f) == self._OPENMMTYPE]
+        existing = [f for f in existing if type(f) == openmm_type]
         if len(existing) == 0:
-            force = self._OPENMMTYPE()
+            force = openmm_type()
             system.addForce(force)
         else:
             force = existing[0]
@@ -4304,8 +4382,12 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
                 for mol_instance_idx, atom_map in group:
                     mol_instance = topology.molecule(mol_instance_idx)
                     mol_instance_particle_index = atom_map[unique_mol_particle_index]
-                    mol_instance_particle = mol_instance.particle(mol_instance_particle_index)
-                    topology_particle_index = topology.particle_index(mol_instance_particle)
+                    mol_instance_particle = mol_instance.particle(
+                        mol_instance_particle_index
+                    )
+                    topology_particle_index = topology.particle_index(
+                        mol_instance_particle
+                    )
                     charges_to_assign[topology_particle_index] = particle_charge
 
             # Find SMARTS-based matches for charge increments
@@ -4353,7 +4435,10 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
             for topology_particle_index, charge_to_assign in charges_to_assign.items():
                 _, sigma, epsilon = force.getParticleParameters(topology_particle_index)
                 force.setParticleParameters(
-                    topology_particle_index, charge_to_assign, sigma, epsilon
+                    topology_particle_index,
+                    to_openmm(charge_to_assign),
+                    sigma,
+                    epsilon,
                 )
 
             # Finally, mark that charges were assigned for this reference molecule
@@ -4382,7 +4467,7 @@ class GBSAHandler(ParameterHandler):
 
     _TAGNAME = "GBSA"
     _INFOTYPE = GBSAType
-    _OPENMMTYPE = openmm.GBSAOBCForce
+    _OPENMMTYPE = "GBSAOBCForce"
     # It's important that this runs AFTER partial charges are assigned to all particles, since this will need to
     # collect and assign them to the GBSA particles
     _DEPENDENCIES = [
@@ -4504,8 +4589,10 @@ class GBSAHandler(ParameterHandler):
             tolerance=self._SCALETOL,
         )
 
+    @requires_package("openmm")
     def create_force(self, system, topology, **kwargs):
-        import simtk
+        import openmm
+        from openff.units.openmm import to_openmm
 
         self._validate_parameters()
 
@@ -4518,9 +4605,9 @@ class GBSAHandler(ParameterHandler):
 
         # No previous GBSAForce should exist, so we're safe just making one here.
         force_map = {
-            "HCT": simtk.openmm.app.internal.customgbforces.GBSAHCTForce,
-            "OBC1": simtk.openmm.app.internal.customgbforces.GBSAOBC1Force,
-            "OBC2": simtk.openmm.GBSAOBCForce,
+            "HCT": openmm.app.internal.customgbforces.GBSAHCTForce,
+            "OBC1": openmm.app.internal.customgbforces.GBSAOBC1Force,
+            "OBC2": openmm.GBSAOBCForce,
             # It's tempting to do use the class below, but the customgbforce
             # version of OBC2 doesn't provide setSolventRadius()
             #'OBC2': simtk.openmm.app.internal.customgbforces.GBSAOBC2Force,
@@ -4531,7 +4618,7 @@ class GBSAHandler(ParameterHandler):
             amber_cutoff = None
         else:
             amber_cutoff = nonbonded_force.getCutoffDistance().value_in_unit(
-                unit.nanometer
+                openmm.unit.nanometer
             )
 
         if self.gb_model == "OBC2":
@@ -4564,10 +4651,10 @@ class GBSAHandler(ParameterHandler):
             # http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomGBForce.html
 
             # gbsa_force.setNonbondedMethod(simtk.openmm.NonbondedForce.CutoffPeriodic)
-            gbsa_force.setNonbondedMethod(simtk.openmm.CustomGBForce.CutoffPeriodic)
+            gbsa_force.setNonbondedMethod(openmm.CustomGBForce.CutoffPeriodic)
         else:
             # gbsa_force.setNonbondedMethod(simtk.openmm.NonbondedForce.NoCutoff)
-            gbsa_force.setNonbondedMethod(simtk.openmm.CustomGBForce.NoCutoff)
+            gbsa_force.setNonbondedMethod(openmm.CustomGBForce.NoCutoff)
 
         # Add all GBSA terms to the system. Note that this will have been done above
         if self.gb_model == "OBC2":
@@ -4576,7 +4663,7 @@ class GBSAHandler(ParameterHandler):
             if self.sa_model is None:
                 gbsa_force.setSurfaceAreaEnergy(0)
             else:
-                gbsa_force.setSurfaceAreaEnergy(self.surface_area_penalty)
+                gbsa_force.setSurfaceAreaEnergy(to_openmm(self.surface_area_penalty))
 
         # Iterate over all defined GBSA types, allowing later matches to override earlier ones.
         atom_matches = self.find_matches(topology)
@@ -4599,8 +4686,12 @@ class GBSAHandler(ParameterHandler):
         for atom_key, atom_match in atom_matches.items():
             atom_idx = atom_key[0]
             gbsatype = atom_match.parameter_type
-            charge, _, _2 = nonbonded_force.getParticleParameters(atom_idx)
-            params_to_add[atom_idx] = [charge, gbsatype.radius, gbsatype.scale]
+            charge, _, _ = nonbonded_force.getParticleParameters(atom_idx)
+            params_to_add[atom_idx] = [
+                charge,
+                to_openmm(gbsatype.radius),
+                gbsatype.scale,
+            ]
 
         if self.gb_model == "OBC2":
             for particle_param in params_to_add:
@@ -4982,7 +5073,8 @@ class VirtualSiteHandler(_NonbondedHandler):
         type = ParameterAttribute(converter=str)
         match = ParameterAttribute(default="all_permutations")  # has custom converter
         epsilon = ParameterAttribute(
-            default=0.0 * unit.kilocalorie_per_mole, unit=unit.kilocalorie_per_mole
+            default=0.0 * unit.kilocalorie / unit.mole,
+            unit=unit.kilocalorie / unit.mole,
         )
         sigma = ParameterAttribute(default=0.0 * unit.angstrom, unit=unit.angstrom)
         rmin_half = ParameterAttribute(default=None, unit=unit.angstrom)
@@ -5019,7 +5111,7 @@ class VirtualSiteHandler(_NonbondedHandler):
                 kwargs["sigma"] = 0.0 * unit.angstrom
 
             if kwargs.get("epsilon", None) is None:
-                kwargs["epsilon"] = 0.0 * unit.kilocalorie_per_mole
+                kwargs["epsilon"] = 0.0 * unit.kilocalorie / unit.mole
 
             super().__init__(**kwargs)
 
@@ -5517,6 +5609,7 @@ class VirtualSiteHandler(_NonbondedHandler):
 
         return matches
 
+    @requires_package("openmm")
     def create_force(self, system, topology, **kwargs):
         """
 
@@ -5594,13 +5687,20 @@ class VirtualSiteHandler(_NonbondedHandler):
         )
 
     def _apply_charge_increment(self, force, atom_key, charge_increment):
+        from openff.units.openmm import to_openmm
+
         vsite_charge = charge_increment[0]
         vsite_charge *= 0.0
         for charge_i, atom in enumerate(atom_key):
             o_charge, o_sigma, o_epsilon = force.getParticleParameters(atom)
             vsite_charge -= charge_increment[charge_i]
-            o_charge += charge_increment[charge_i]
-            force.setParticleParameters(atom, o_charge, o_sigma, o_epsilon)
+            o_charge += to_openmm(charge_increment[charge_i])
+            force.setParticleParameters(
+                atom,
+                o_charge,
+                o_sigma,
+                o_epsilon,
+            )
         return vsite_charge
 
     def _same_virtual_site_type(self, vs_i, vs_j):
@@ -5666,6 +5766,7 @@ class VirtualSiteHandler(_NonbondedHandler):
 
         return combined_orientations
 
+    @requires_package("openmm")
     def create_openff_virtual_sites(self, topology):
         """
         Modifies the input topology to contain VirtualSites assigned by this handler.
@@ -5747,6 +5848,7 @@ class VirtualSiteHandler(_NonbondedHandler):
     def _create_openmm_virtual_particle(
         self, system, force, molecule, vsite, ref_key, topology
     ):
+        from openff.units.openmm import to_openmm
 
         policy = self._parameter_to_policy[self.exclusion_policy]
 
@@ -5784,7 +5886,9 @@ class VirtualSiteHandler(_NonbondedHandler):
             )
 
             system.setVirtualSite(vsite_idx, omm_vsite)
-            force.addParticle(vsite_q, sigma, ljtype.epsilon)
+            force.addParticle(
+                to_openmm(vsite_q), to_openmm(sigma), to_openmm(ljtype.epsilon)
+            )
 
             logger.debug(f"Added virtual site particle with charge {vsite_q}")
             logger.debug(f"  charge_increments: {vsite.charge_increments}")

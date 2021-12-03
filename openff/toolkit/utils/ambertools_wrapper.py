@@ -14,11 +14,7 @@ from collections import defaultdict
 from distutils.spawn import find_executable
 
 import numpy as np
-
-try:
-    from openmm import unit
-except ImportError:
-    from simtk import unit
+from openff.units import unit
 
 from openff.toolkit.utils import base_wrapper, rdkit_wrapper
 from openff.toolkit.utils.exceptions import (
@@ -216,7 +212,7 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
         # Compute charges
         with tempfile.TemporaryDirectory() as tmpdir:
             with temporary_cd(tmpdir):
-                net_charge = mol_copy.total_charge.value_in_unit(unit.elementary_charge)
+                net_charge = mol_copy.total_charge.m_as(unit.elementary_charge)
                 # Write out molecule in SDF format
                 # TODO: How should we handle multiple conformers?
                 self._rdkit_toolkit_wrapper.to_file(

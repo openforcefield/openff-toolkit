@@ -20,13 +20,11 @@ import textwrap
 from typing import List, Tuple
 
 import numpy as np
+import openmm
 import pytest
-
-try:
-    import openmm
-    from openmm import unit
-except ImportError:
-    from simtk import openmm, unit
+from openff.units import unit
+from openff.units.openmm import to_openmm
+from openmm import unit as openmm_unit
 
 from openff.toolkit.utils import (
     AmberToolsToolkitWrapper,
@@ -359,7 +357,7 @@ def quantities_allclose(quantity1, quantity2, **kwargs):
         True if the two quantities are close, False otherwise.
 
     """
-    if isinstance(quantity1, unit.Quantity):
+    if isinstance(quantity1, openmm_unit.Quantity):
         # Check that the two Quantities have compatible units.
         if not quantity1.unit.is_compatible(quantity2.unit):
             raise ValueError(
@@ -367,8 +365,8 @@ def quantities_allclose(quantity1, quantity2, **kwargs):
                 "{} and {}".format(quantity1.unit, quantity2.unit)
             )
         # Compare the values stripped of the units.
-        quantity1 = quantity1.value_in_unit_system(unit.md_unit_system)
-        quantity2 = quantity2.value_in_unit_system(unit.md_unit_system)
+        quantity1 = quantity1.value_in_unit_system(openmm_unit.md_unit_system)
+        quantity2 = quantity2.value_in_unit_system(openmm_unit.md_unit_system)
     return np.allclose(quantity1, quantity2, **kwargs)
 
 
@@ -495,7 +493,7 @@ def compare_context_energies(
 
     # If by_force_group is True, then the return value will be a
     # dictionary and we need to compare force group by force group.
-    if isinstance(potential_energy1, unit.Quantity):
+    if isinstance(potential_energy1, openmm_unit.Quantity):
         raise_assert(
             assertion=quantities_allclose(
                 potential_energy1, potential_energy2, rtol=rtol, atol=atol
@@ -652,7 +650,7 @@ def compare_system_energies(
                 )
 
     # Create Contexts and compare the energies.
-    integrator = openmm.VerletIntegrator(1.0 * unit.femtoseconds)
+    integrator = openmm.VerletIntegrator(1.0 * openmm_unit.femtoseconds)
     context1 = openmm.Context(system1, integrator)
     context2 = openmm.Context(system2, copy.deepcopy(integrator))
 
@@ -1040,7 +1038,7 @@ def _get_bond_force_parameters(force, _, ignored_parameters):
         atom1, atom2, r0, k = force.getBondParameters(bond_idx)
 
         # Ignore bonds with 0.0 spring constant that don't affect the energy.
-        if (k / k.unit) == 0.0:
+        if k._value == 0.0:
             continue
 
         # Reorder the bond to have a canonical key.
@@ -1060,7 +1058,7 @@ def _get_angle_force_parameters(force, _, ignored_parameters):
         atom1, atom2, atom3, theta0, k = force.getAngleParameters(angle_idx)
 
         # Ignore angles with 0.0 spring constant that don't affect the energy.
-        if (k / k.unit) == 0.0:
+        if k._value == 0.00:
             continue
 
         # Reorder the bond to have a canonical key.
@@ -1083,7 +1081,7 @@ def _get_nonbonded_force_parameters(force, _, ignored_parameters):
         particle_parameters[particle_idx] = _ParametersComparer(
             charge=charge, epsilon=epsilon
         )
-        if (epsilon / epsilon.unit) != 0.0:
+        if epsilon._value != 0.0:
             particle_parameters[particle_idx].parameters["sigma"] = sigma
         particle_parameters[particle_idx].remove_parameters(ignored_parameters)
 
@@ -1100,7 +1098,7 @@ def _get_nonbonded_force_parameters(force, _, ignored_parameters):
         exception_parameters[exception_key] = _ParametersComparer(
             charge=chargeprod, epsilon=epsilon
         )
-        if (epsilon / epsilon.unit) != 0.0:
+        if epsilon._value != 0.0:
             exception_parameters[exception_key].parameters["sigma"] = sigma
         exception_parameters[exception_key].remove_parameters(ignored_parameters)
 
@@ -1169,7 +1167,7 @@ def _get_torsion_force_parameters(force, system, ignored_parameters):
         )
 
         # Ignore torsions that don't contribute to the energy.
-        if (k / k.unit) == 0.0:
+        if k._value == 0.0:
             continue
 
         torsion_key = [atom1, atom2, atom3, atom4]
@@ -1623,7 +1621,7 @@ def openmm_evaluate_vsites_and_energy(omm_top, omm_sys, atom_xyz_in_nm, minimize
         The potential energy
     """
 
-    integ = openmm.VerletIntegrator(1.0 * unit.femtoseconds)
+    integ = openmm.VerletIntegrator(1.0 * openmm_unit.femtoseconds)
 
     sim = openmm.app.Simulation(omm_top, omm_sys, integ)
     pos = sim.context.getState(getPositions=True).getPositions()
@@ -1640,7 +1638,7 @@ def openmm_evaluate_vsites_and_energy(omm_top, omm_sys, atom_xyz_in_nm, minimize
     state = sim.context.getState(getEnergy=True, getPositions=True)
     ene = state.getPotentialEnergy()
     pos = [
-        list(xyz) for xyz in state.getPositions().value_in_unit(unit.nanometer)
+        list(xyz) for xyz in state.getPositions().value_in_unit(openmm_unit.nanometer)
     ] * unit.nanometer
     return pos, ene
 
@@ -1694,7 +1692,7 @@ def coords_from_off_mols(mols, conformer_id=0, unit=unit.angstrom):
     unit : openmm.unit, default=unit.angstrom
         The units to convert the coordinates to
     """
-    xyz = np.vstack([mol.conformers[conformer_id].value_in_unit(unit) for mol in mols])
+    xyz = np.vstack([mol.conformers[conformer_id].m_as(unit) for mol in mols])
     return xyz * unit
 
 
@@ -1725,7 +1723,7 @@ def evaluate_molecules_omm(water, ff, minimize=False):
     top = Topology.from_molecules(water).to_openmm()
 
     # get the oFF topology and the positions
-    atom_xyz = coords_from_off_mols(water, unit=unit.nanometer)
+    atom_xyz = to_openmm(coords_from_off_mols(water, unit=unit.nanometer))
 
     # first pass; no virtual sites
     omm_modeller = openmm.app.Modeller(top, atom_xyz)
@@ -1776,7 +1774,7 @@ def evaluate_molecules_off(molecules, forcefield, minimize=False):
 
     # get the oFF topology and the positions
     top = Topology.from_molecules(molecules)
-    atom_xyz = coords_from_off_mols(molecules, unit=unit.nanometer)
+    atom_xyz = to_openmm(coords_from_off_mols(molecules, unit=unit.nanometer))
 
     # IMPORTANT! The new system has the virtual sites, but the oFF top does not as there is no API yet to do so
     sys = forcefield.create_openmm_system(top, allow_nonintegral_charges=True)
@@ -1808,12 +1806,12 @@ def get_14_scaling_factors(omm_sys: openmm.System) -> Tuple[List, List]:
         i, j, q, sig, eps = nonbond_force.getExceptionParameters(exception_idx)
 
         # Trust that q == 0 covers the cases of 1-2, 1-3, and truly being 0
-        if q.value_in_unit(unit.elementary_charge ** 2) != 0:
+        if q._value != 0:
             q_i = nonbond_force.getParticleParameters(i)[0]
             q_j = nonbond_force.getParticleParameters(j)[0]
             coul_14.append(q / (q_i * q_j))
 
-        if eps.value_in_unit(unit.kilojoule_per_mole) != 0:
+        if eps._value != 0:
             eps_i = nonbond_force.getParticleParameters(i)[2]
             eps_j = nonbond_force.getParticleParameters(j)[2]
             vdw_14.append(eps / (eps_i * eps_j) ** 0.5)
