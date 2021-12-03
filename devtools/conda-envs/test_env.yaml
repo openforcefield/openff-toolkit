@@ -40,7 +40,6 @@ dependencies:
   - qcengine
   - openff-interchange
   - mdtraj
->>>>>>> upstream/no-simtk
   # Typing
   - mypy
   - typing-extensions
