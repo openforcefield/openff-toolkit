@@ -14,7 +14,7 @@ dependencies:
   - networkx
   - ambertools
   - rdkit
-  - mdtraj
+  - mendeleev
   - xmltodict
     # Test-only/optional/dev
   - pytest
@@ -24,6 +24,7 @@ dependencies:
   - codecov
   - coverage
   - openeye-toolkits
+  - mdtraj
   - cachetools
   - black
   - isort

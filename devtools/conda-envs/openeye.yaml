@@ -17,7 +17,8 @@ dependencies:
   - coverage
   - numpy
   - networkx
-  - parmed
+  - parmed  # ???
+  - mendeleev
   - openeye-toolkits
   - packaging
     # Removed until a new release which targets openff-toolkit is made.

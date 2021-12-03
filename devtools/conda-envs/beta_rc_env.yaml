@@ -16,9 +16,10 @@ dependencies:
   - networkx
   - ambertools
   - rdkit
-  - mdtraj
+  - mendeleev
   - xmltodict
     # Test-only/optional/dev
+  - mdtraj
   - pytest
   - pytest-cov
   - nbval
