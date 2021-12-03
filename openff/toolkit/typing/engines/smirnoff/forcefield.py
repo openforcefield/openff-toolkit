@@ -1276,12 +1276,8 @@ class ForceField:
             during parameterization.
 
         """
-        try:
-            import openmm
-            from openff.units.openmm import to_openmm
-        except ImportError:
-            from openff.units.simtk import to_simtk as to_openmm
-            from simtk import openmm
+        import openmm
+        from openff.units.openmm import to_openmm
 
         return_topology = kwargs.pop("return_topology", False)
 
