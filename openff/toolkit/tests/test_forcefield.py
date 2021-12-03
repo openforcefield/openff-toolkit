@@ -17,20 +17,13 @@ from collections import OrderedDict
 from tempfile import NamedTemporaryFile
 
 import numpy as np
+import openmm
 import pytest
 from numpy.testing import assert_almost_equal
 from openff.units import unit
 from openff.units.openmm import from_openmm, to_openmm
-
-try:
-    import openmm
-    from openff.units.openmm import from_openmm
-    from openmm import NonbondedForce, Platform, XmlSerializer, app
-    from openmm import unit as openmm_unit
-except ImportError:
-    from simtk import openmm, unit as openmm_unit
-    from simtk.openmm import app, XmlSerializer, Platform, NonbondedForce
-    from openff.units.simtk import from_simtk as from_openmm
+from openmm import NonbondedForce, Platform, XmlSerializer, app
+from openmm import unit as openmm_unit
 
 from openff.toolkit.tests.create_molecules import (
     create_acetaldehyde,

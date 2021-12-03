@@ -27,11 +27,8 @@ from tempfile import NamedTemporaryFile
 import numpy as np
 import pytest
 from openff.units import unit
-
-try:
-    from openmm.app import element
-except ImportError:
-    from simtk.openmm.app import element
+from openmm import unit
+from openmm.app import element
 
 from openff.toolkit.tests.create_molecules import (
     create_acetaldehyde,
@@ -1409,7 +1406,7 @@ class TestMolecule:
         assert (
             Molecule.are_isomorphic(
                 ethanol,
-                topology.molecules[0],
+                [*topology.molecules][0],
                 aromatic_matching=False,
                 formal_charge_matching=False,
                 bond_order_matching=False,
@@ -1518,6 +1515,18 @@ class TestMolecule:
                 atom_stereochemistry_matching=inputs["atom_stereochemistry_matching"],
                 bond_stereochemistry_matching=inputs["bond_stereochemistry_matching"],
             )[0]
+            is inputs["result"]
+        )
+
+        assert (
+            benzene.is_isomorphic_with(
+                benzene_no_aromatic,
+                aromatic_matching=inputs["aromatic_matching"],
+                formal_charge_matching=inputs["formal_charge_matching"],
+                bond_order_matching=inputs["bond_order_matching"],
+                atom_stereochemistry_matching=inputs["atom_stereochemistry_matching"],
+                bond_stereochemistry_matching=inputs["bond_stereochemistry_matching"],
+            )
             is inputs["result"]
         )
 
@@ -3973,6 +3982,7 @@ class TestMoleculeResiduePerception:
         assert counter == offmol.n_atoms
 
 
+@pytest.mark.xfail()
 class TestMoleculeFromPDB:
     """
     Test creation of cheminformatics-rich openff Molecule from PDB files.
@@ -4164,11 +4174,13 @@ class TestMoleculeFromPDB:
         ).to_smiles()
         assert offmol.to_smiles() == rdkit_mol_smiles
 
+    @pytest.mark.xfail()
     def test_from_pdb_t4_n_residues(self):
         """Test number of residues when creating Molecule from T4 PDB"""
         expected_n_residues = 164
         raise NotImplementedError
 
+    @pytest.mark.xfail()
     def test_from_pdb_t4_atom_metadata(self):
         """Test to check the metadata from T4 pdb is filled correctly."""
         raise NotImplementedError

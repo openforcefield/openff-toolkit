@@ -436,9 +436,8 @@ class Topology(Serializable):
         self._aromaticity_model = DEFAULT_AROMATICITY_MODEL
         self._constrained_atom_pairs = dict()
         self._box_vectors = None
-        # self._reference_molecule_dicts = set()
-        # TODO: Look into weakref and what it does. Having multiple topologies might cause a memory leak.
         self._molecules = list()
+        self._cached_chemically_identical_molecules = None
 
     @property
     def reference_molecules(self):
@@ -686,40 +685,14 @@ class Topology(Serializable):
         self._fractional_bond_order_model = fractional_bond_order_model
 
     @property
-    def n_reference_molecules(self):
-        """
-        Returns the number of reference (unique) molecules in in this Topology.
+    def n_molecules(self):
+        """Returns the number of molecules in this Topology
 
         Returns
         -------
-        n_reference_molecules : int
-        """
-        count = 0
-        for i in self.reference_molecules:
-            count += 1
-        return count
-
-    @property
-    def n_topology_molecules(self):
-        """
-        Returns the number of topology molecules in in this Topology.
-
-        Returns
-        -------
-        n_topology_molecules : int
+        n_molecules : Iterable of Molecule
         """
         return len(self._molecules)
-
-    @property
-    def topology_molecules(self):
-        """Returns an iterator over all the TopologyMolecules in this Topology
-
-        Returns
-        -------
-        topology_molecules : Iterable of TopologyMolecule
-        """
-        # TODO: Put deprecation warning here
-        return self.molecules
 
     @property
     def molecules(self):
@@ -729,7 +702,21 @@ class Topology(Serializable):
         -------
         molecules : Iterable of Molecule
         """
-        return self._molecules
+        # Yields instead of returning the list itself. This prevents user from modifying the list
+        # outside the Topology's knowledge. This is essential to make sure that atom index caches
+        # invalidate themselves during appropriate events.
+        for molecule in self._molecules:
+            yield molecule
+
+    def molecule(self, index):
+        """
+        Returns the molecule with a given index in this Topology.
+
+        Returns
+        -------
+        molecule : openff.toolkit.topology.Molecule
+        """
+        return self._molecules[index]
 
     @property
     def n_atoms(self):
@@ -1162,12 +1149,14 @@ class Topology(Serializable):
         # of that molecule in the Topology object.
         matches = list()
 
-        for molecule in self.molecules:
+        groupings = self.identical_molecule_groups
 
+        for unique_mol_idx, group in groupings.items():
+            unique_mol = self.molecule(unique_mol_idx)
             # Find all atomsets that match this definition in the reference molecule
             # This will automatically attempt to match chemically identical atoms in
             # a canonical order within the Topology
-            mol_matches = molecule.chemical_environment_matches(
+            mol_matches = unique_mol.chemical_environment_matches(
                 smarts,
                 unique=unique,
                 toolkit_registry=toolkit_registry,
@@ -1176,22 +1165,114 @@ class Topology(Serializable):
             if len(mol_matches) == 0:
                 continue
 
-            # Loop over matches
-            for match in mol_matches:
+            for mol_instance_idx, atom_map in group:
+                mol_instance = self.molecule(mol_instance_idx)
+                # Loop over matches
+                for match in mol_matches:
 
-                # Collect indices of matching TopologyAtoms.
-                topology_atom_indices = []
-                for molecule_atom_index in match:
-                    reference_atom = molecule.atoms[molecule_atom_index]
-                    # topology_atom = TopologyAtom(reference_atom, topology_molecule)
-                    topology_atom_indices.append(self.atom_index(reference_atom))
+                    # Collect indices of matching TopologyAtoms.
+                    topology_atom_indices = []
+                    for molecule_atom_index in match:
+                        atom = mol_instance.atom(atom_map[molecule_atom_index])
+                        topology_atom_indices.append(self.atom_index(atom))
 
-                environment_match = Topology._ChemicalEnvironmentMatch(
-                    tuple(match), molecule, tuple(topology_atom_indices)
-                )
+                    environment_match = Topology._ChemicalEnvironmentMatch(
+                        tuple(match), unique_mol, tuple(topology_atom_indices)
+                    )
 
-                matches.append(environment_match)
+                    matches.append(environment_match)
         return matches
+
+    @property
+    def identical_molecule_groups(self):
+        """
+        Returns groups of chemically identical molecules, identified by index and atom map.
+
+        Returns
+        -------
+        identical_molecule_groups : {int:[[int: {int: int}]]}
+            A dict of the form {unique_mol_idx : [[topology_mol_idx, atom_map],...].
+            A dict where each key is the topology molecule index of a unique chemical species, and each value is a list
+            describing all of the instances of that chemical species in the topology. Each instance is a
+            two-membered list where the first element is the topology molecule index, and the second element
+            is a dict describing the atom map from the unique molecule to the instance of it in the topology.
+
+                >>> from openff.toolkit.topology import Molecule, Topology
+        >>> # Create a water ordered as OHH
+        >>> water1 = Molecule()
+        >>> water1.add_atom(8, 0, False)
+        >>> water1.add_atom(1, 0, False)
+        >>> water1.add_atom(1, 0, False)
+        >>> water1.add_bond(0, 1, 1, False)
+        >>> water1.add_bond(0, 2, 1, False)
+
+        >>> # Create a different water ordered as HOH
+        >>> water2 = Molecule()
+        >>> water2.add_atom(1, 0, False)
+        >>> water2.add_atom(8, 0, False)
+        >>> water2.add_atom(1, 0, False)
+        >>> water2.add_bond(0, 1, 1, False)
+        >>> water2.add_bond(1, 2, 1, False)
+
+        >>> top = Topology.from_molecules([water1, water2])
+        >>> top.identical_molecule_groups
+
+        {0: [[0, {0: 0, 1: 1, 2: 2}], [1, {0: 1, 1: 0, 2: 2}]]}
+        """
+        identity_maps = self._identify_chemically_identical_molecules()
+        # Convert molecule identity maps into groups of identical molecules
+        groupings = {}
+        for molecule_idx in identity_maps.keys():
+            unique_mol, atom_map = identity_maps[molecule_idx]
+            groupings[unique_mol] = groupings.get(unique_mol, list()) + [
+                [molecule_idx, atom_map]
+            ]
+        return groupings
+
+    def _identify_chemically_identical_molecules(self):
+        """
+        Efficiently perform an all-by-all isomorphism check for the molecules in this Topology. This method
+        uses the strictest form of isomorphism checking, which will NOT match distinct kekule structures of
+        multiple resonance forms of the same molecule, or different kekulizations of aromatic systems.
+
+        Returns
+        -------
+        identical_molecules : {int: (int, {int: int})}
+            A mapping from the index of each molecule in the topology to (the index of the first appearance of
+            a chemically equivalent molecule in the topology, and a mapping from the atom indices of this molecule to
+            the atom indices of that chemically equivalent molecule).
+            ``identical_molecules[molecule_idx] = (unique_molecule_idx, {molecule_atom_idx, unique_molecule_atom_idx})``
+        """
+        # Check whether this was run previously, and a cached result is available.
+        if self._cached_chemically_identical_molecules is not None:
+            return self._cached_chemically_identical_molecules
+
+        # If a cached result isn't available, recalculate the identity maps.
+        self._cached_chemically_identical_molecules = dict()
+        already_matched_mols = set()
+
+        for mol1_idx in range(self.n_molecules):
+            if mol1_idx in already_matched_mols:
+                continue
+            mol1 = self.molecule(mol1_idx)
+            self._cached_chemically_identical_molecules[mol1_idx] = (
+                mol1_idx,
+                {i: i for i in range(mol1.n_atoms)},
+            )
+            for mol2_idx in range(mol1_idx + 1, self.n_molecules):
+                if mol2_idx in already_matched_mols:
+                    continue
+                mol2 = self.molecule(mol2_idx)
+                are_isomorphic, atom_map = Molecule.are_isomorphic(
+                    mol1, mol2, return_atom_map=True
+                )
+                if are_isomorphic:
+                    self._cached_chemically_identical_molecules[mol2_idx] = (
+                        mol1_idx,
+                        atom_map,
+                    )
+                    already_matched_mols.add(mol2_idx)
+        return self._cached_chemically_identical_molecules
 
     def copy_initializer(self, other):
         other_dict = copy.deepcopy(other.to_dict())
@@ -1423,17 +1504,8 @@ class Topology(Serializable):
         openmm_topology : openmm.app.Topology
             An OpenMM Topology object
         """
-        # TODO: Simply decorate with @requires_package("openmm") when simtk compatibility no longer needed
-        try:
-            from openff.units.openmm import to_openmm
-            from openmm import app
-            from openmm.app import Topology as OMMTopology
-            from openmm.app.element import Element as OMMElement
-        except ImportError:
-            from openff.units.simtk import to_simtk as to_openmm
-            from simtk.openmm import app
-            from simtk.openmm.app import Topology as OMMTopology
-            from simtk.openmm.app.element import Element as OMMElement
+        from openmm.app import Topology as OMMTopology
+        from openmm.app.element import Element as OMMElement
 
         omm_topology = OMMTopology()
 
@@ -2060,6 +2132,8 @@ class Topology(Serializable):
 
     def add_molecule(self, molecule):
         self._molecules.append(copy.deepcopy(molecule))
+        self._cached_chemically_identical_molecules = None
+        return len(self._molecules)
 
     # Outdated now that topologies contain full copies of molecules
     def _add_molecule(self, molecule, local_topology_to_reference_index=None):
@@ -2291,3 +2365,38 @@ class Topology(Serializable):
         """
         _TOPOLOGY_DEPRECATION_WARNING("topology_virtual_sites", "virtual_sites")
         return self.virtual_sites
+
+    @property
+    def n_reference_molecules(self):
+        """
+        Returns the number of reference (unique) molecules in in this Topology.
+
+        Returns
+        -------
+        n_reference_molecules : int
+        """
+        _TOPOLOGY_DEPRECATION_WARNING("n_reference_molecules", "n_molecules")
+        return self.n_molecules
+
+    @property
+    def n_topology_molecules(self):
+        """
+        Returns the number of topology molecules in in this Topology.
+
+        Returns
+        -------
+        n_topology_molecules : int
+        """
+        _TOPOLOGY_DEPRECATION_WARNING("n_topology_molecules", "n_molecules")
+        return self.n_molecules
+
+    @property
+    def topology_molecules(self):
+        """Returns an iterator over all the TopologyMolecules in this Topology
+
+        Returns
+        -------
+        topology_molecules : Iterable of TopologyMolecule
+        """
+        _TOPOLOGY_DEPRECATION_WARNING("topology_molecules", "molecules")
+        return self.molecules

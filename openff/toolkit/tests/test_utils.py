@@ -14,11 +14,6 @@ import os
 import pytest
 from openff.units import unit
 
-try:
-    from openmm import unit as openmm_unit
-except ImportError:
-    from simtk import unit as openmm_unit
-
 # =============================================================================================
 # TESTS
 # =============================================================================================

@@ -1012,6 +1012,72 @@ class TestTopology:
         # and 12 atoms named "", for a total of 3 unique atom names
         assert len(atom_names) == 3
 
+    def test_group_chemically_identical_molecules(self):
+        """Test behavior and caching of Topology.group_chemically_identical_molecules"""
+        from pprint import pprint
+
+        top = Topology()
+
+        # Test for correct behavior with empty topology
+        assert top._identify_chemically_identical_molecules() == {}
+
+        # Test for correct behavior with topology of one ethanol
+        top.add_molecule(create_ethanol())
+        groupings = top.identical_molecule_groups
+
+        def assert_first_ethanol_is_grouped_correctly(groupings):
+            assert groupings[0][0] == [0, {i: i for i in range(9)}]
+
+        assert_first_ethanol_is_grouped_correctly(groupings)
+
+        # Add an ethanol in reversed order
+        top.add_molecule(create_reversed_ethanol())
+        groupings = top.identical_molecule_groups
+
+        def assert_reversed_ethanol_is_grouped_correctly(groupings):
+            # Ensure that the second ethanol knows it's the same chemical species as the first ethanol
+            assert groupings[0][1][0] == 1
+            # Ensure that the second ethanol has the heavy atoms reversed
+            assert groupings[0][1][1][0] == 8  # C
+            assert groupings[0][1][1][1] == 7  # C
+            assert groupings[0][1][1][2] == 6  # O
+            # (we only check the hydroxyl H, since the other Hs have multiple valid matches)
+            assert groupings[0][1][1][8] == 0  # HO
+
+        assert_first_ethanol_is_grouped_correctly(groupings)
+        assert_reversed_ethanol_is_grouped_correctly(groupings)
+
+        # Add a cyclohexane, which should be unique from all the other molecules
+        top.add_molecule(create_cyclohexane())
+
+        def assert_cyclohexane_is_grouped_correctly(groupings):
+            assert len(groupings[2]) == 1
+            assert groupings[2][0] == [2, {i: i for i in range(18)}]
+
+        groupings = top.identical_molecule_groups
+        assert_first_ethanol_is_grouped_correctly(groupings)
+        assert_reversed_ethanol_is_grouped_correctly(groupings)
+        assert_cyclohexane_is_grouped_correctly(groupings)
+
+        # Add a third ethanol, in the same order as the first
+        top.add_molecule(create_ethanol())
+
+        def assert_last_ethanol_is_grouped_correctly(groupings):
+            # Ensure that the last ethanol knows it's the same chemical species as the first ethanol
+            assert groupings[0][2][0] == 3
+            # Ensure that the second ethanol has the heavy atoms matched correctly
+            assert groupings[0][2][1][0] == 0
+            assert groupings[0][2][1][1] == 1
+            assert groupings[0][2][1][2] == 2
+            # Ensure that the second ethanol has the hydroxyl hydrogen matched correctly
+            assert groupings[0][2][1][8] == 8
+
+        groupings = top.identical_molecule_groups
+        assert_first_ethanol_is_grouped_correctly(groupings)
+        assert_reversed_ethanol_is_grouped_correctly(groupings)
+        assert_cyclohexane_is_grouped_correctly(groupings)
+        assert_last_ethanol_is_grouped_correctly(groupings)
+
     @requires_openeye
     def test_chemical_environments_matches_OE(self):
         """Test Topology.chemical_environment_matches"""

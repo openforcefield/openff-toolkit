@@ -25,6 +25,8 @@ dependencies:
 #  - openmmforcefields
   - openmm
   - openff-forcefields
+  - openff-units
+  - openff-utilities
   - smirnoff99Frosst
   - cachetools
   - pyyaml
@@ -37,4 +39,3 @@ dependencies:
   - qcengine
   - mdtraj
   - openff-interchange
-  - openff-units >=0.1.4

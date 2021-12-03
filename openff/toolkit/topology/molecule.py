@@ -46,6 +46,7 @@ if TYPE_CHECKING:
     import networkx as nx
 
 from cached_property import cached_property
+from openmm import LocalCoordinatesSite, unit
 from packaging import version
 
 import openff.toolkit
@@ -3150,6 +3151,25 @@ class FrozenMolecule(Serializable):
 
         return molecule
 
+    def _is_exactly_the_same_as(self, other):
+        for atom1, atom2 in zip(self.atoms, other.atoms):
+            if (
+                (atom1.atomic_number != atom2.atomic_number)
+                or (atom1.formal_charge != atom2.formal_charge)
+                or (atom1.is_aromatic != atom2.is_aromatic)
+                or (atom1.stereochemistry != atom2.stereochemistry)
+            ):
+                return False
+        for bond1, bond2 in zip(self.bonds, other.bonds):
+            if (
+                (bond1.atom1_index != bond2.atom1_index)
+                or (bond1.atom2_index != bond2.atom2_index)
+                or (bond1.is_aromatic != bond2.is_aromatic)
+                or (bond1.stereochemistry != bond2.stereochemistry)
+            ):
+                return False
+        return True
+
     @staticmethod
     def are_isomorphic(
         mol1,
@@ -3221,6 +3241,11 @@ class FrozenMolecule(Serializable):
             mol2
         ):
             return False, None
+
+        # Do a quick check to see whether the inputs are totally identical (including being in the same atom order)
+        if isinstance(mol1, FrozenMolecule) and isinstance(mol2, FrozenMolecule):
+            if mol1._is_exactly_the_same_as(mol2):
+                return True, {i: i for i in range(mol1.n_atoms)}
 
         # Build the user defined matching functions
         def node_match_func(x, y):
@@ -4378,6 +4403,24 @@ class FrozenMolecule(Serializable):
             ptl for vsite in self._virtual_sites for ptl in vsite.particles
         ]
 
+    def particle(self, index: int):
+        """
+        Get particle with a specified index.
+
+        Parameters
+        ----------
+        index : int
+
+        Returns
+        -------
+        atom or virtualparticle : openff.toolkit.topology.Atom or VirtualParticle
+        """
+        if index <= self.n_atoms:
+            return self.atom(index)
+        else:
+            index -= self.n_atoms
+            return self.virtual_particle(index)
+
     def particle_index(self, particle):
         """
         Returns the index of a given particle in this molecule
@@ -4394,6 +4437,47 @@ class FrozenMolecule(Serializable):
         for index, mol_particle in enumerate(self.particles):
             if particle is mol_particle:
                 return index
+
+    @property
+    def virtual_particles(self):
+        """
+        Iterate over all virtual particle objects.
+        """
+
+        return [ptl for vsite in self._virtual_sites for ptl in vsite.particles]
+
+    def virtual_particle(self, index: int):
+        """
+        Get virtual particle with a specified index.
+
+        Parameters
+        ----------
+        index : int
+
+        Returns
+        -------
+        virtualparticle : openff.toolkit.topology.VirtualParticle
+        """
+        for ptl_idx, ptl in enumerate(self.virtual_particles):
+            if index == ptl_idx:
+                return ptl
+
+    def virtual_particle_index(self, particle):
+        """
+        Returns the index of a given virtual particle in this molecule
+
+        Parameters
+        ----------
+        virtual_particle : openff.toolkit.topology.VirtualParticle
+
+        Returns
+        -------
+        index : int
+            The index of the given virtual particle in this molecule
+        """
+        for ptl_idx, ptl in enumerate(self.virtual_particles):
+            if ptl is particle:
+                return ptl_idx
 
     @property
     def atoms(self):
@@ -5208,7 +5292,7 @@ class FrozenMolecule(Serializable):
             ----------
             substructure_library : dict{str:list[str, list[str]]}
                 A dictionary of substructures. substructure_library[aa_name] = list[tagged SMARTS, list[atom_names]]
-            openmm_topology : simtk.openmm.app.Topology
+            openmm_topology : openmm.app.Topology
                 An OpenMM Topology object
 
             Returns
@@ -5335,6 +5419,7 @@ class FrozenMolecule(Serializable):
 
         with open(substructure_file_path, "r") as subfile:
             substructure_dictionary = json.load(subfile)
+        from openmm.app import PDBFile
 
         pdb = PDBFile(file_path)
         omm_topology_G = _openmm_topology_to_networkx(

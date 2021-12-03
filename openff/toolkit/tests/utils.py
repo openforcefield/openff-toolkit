@@ -20,16 +20,11 @@ import textwrap
 from typing import List, Tuple
 
 import numpy as np
+import openmm
 import pytest
 from openff.units import unit
-
-try:
-    import openmm
-    from openff.units.openmm import to_openmm
-    from openmm import unit as openmm_unit
-except ImportError:
-    from simtk import openmm, unit as openmm_unit
-    from openff.units.simtk import to_simtk as to_openmm
+from openff.units.openmm import to_openmm
+from openmm import unit as openmm_unit
 
 from openff.toolkit.utils import (
     AmberToolsToolkitWrapper,

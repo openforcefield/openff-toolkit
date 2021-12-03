@@ -37,10 +37,7 @@ from typing import Union
 import numpy as np
 from openff.units import unit
 
-from openff.toolkit.utils.exceptions import (
-    IncompatibleUnitError,
-    MissingDependencyError,
-)
+from openff.toolkit.utils.exceptions import MissingDependencyError
 
 # =============================================================================================
 # CONFIGURE LOGGER

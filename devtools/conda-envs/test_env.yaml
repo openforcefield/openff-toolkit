@@ -7,8 +7,10 @@ dependencies:
   - python
   - pip
   - packaging
-  - openmm
+  - openmm >=7.6
   - openff-forcefields
+  - openff-units >=0.1.4
+  - openff-utilities
   - smirnoff99Frosst
   - numpy
   - networkx
@@ -16,6 +18,7 @@ dependencies:
   - rdkit
   - mendeleev
   - xmltodict
+  - mendeleev
     # Test-only/optional/dev
   - pytest
   - pytest-cov
@@ -36,7 +39,8 @@ dependencies:
   - qcportal
   - qcengine
   - openff-interchange
-  - openff-units >=0.1.4
+  - mdtraj
+>>>>>>> upstream/no-simtk
   # Typing
   - mypy
   - typing-extensions

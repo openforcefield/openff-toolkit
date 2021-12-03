@@ -1239,6 +1239,7 @@ class ForceField:
     # TODO: How do we know if the system is periodic or not?
     # TODO: Should we also accept a Molecule as an alternative to a Topology?
 
+    @requires_package("openmm")
     def create_openmm_system(self, topology, **kwargs):
         """Create an OpenMM System representing the interactions for the specified Topology with the current force field
 
