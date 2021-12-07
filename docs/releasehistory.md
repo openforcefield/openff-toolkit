@@ -15,6 +15,11 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
   and no longer accepts input of NetworkX graphs.
 - [PR #1130](https://github.com/openforcefield/openforcefield/pull/1130): Running unit tests will
   no longer generate force field files in the local directory.
+- [PR #1149](https://github.com/openforcefield/openforcefield/pull/1149):
+  [`TopologyAtom`](openff.toolkit.topology.TopologyAtom),
+  [`TopologyBond`](openff.toolkit.topology.TopologyBond), and
+  [`TopologyVirtualSite`](openff.toolkit.topology.TopologyVirtualSite) now properly reference their
+  reference molecule from their `.molecule` attribute.
 
 ### Examples added
 
