@@ -349,8 +349,8 @@ class TestTopology(TestCase):
         bond = [*topology.topology_bonds][0]
         atom = [*topology.topology_atoms][0]
 
-        assert bond.molecule == reference_molecule
-        assert atom.molecule == reference_molecule
+        assert bond.molecule is reference_molecule
+        assert atom.molecule is reference_molecule
 
     def test_get_bond(self):
         """Test Topology.bond function (bond lookup from index)"""
