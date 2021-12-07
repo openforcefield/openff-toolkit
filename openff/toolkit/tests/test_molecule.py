@@ -59,7 +59,10 @@ from openff.toolkit.topology.molecule import (
     _networkx_graph_to_hill_formula,
 )
 from openff.toolkit.utils import get_data_file_path
-from openff.toolkit.utils.exceptions import ConformerGenerationError
+from openff.toolkit.utils.exceptions import (
+    ConformerGenerationError,
+    UnsupportedFileTypeError,
+)
 from openff.toolkit.utils.toolkits import (
     AmberToolsToolkitWrapper,
     OpenEyeToolkitWrapper,
@@ -1946,6 +1949,10 @@ class TestMolecule:
         }
 
         assert expected == actual
+
+    def test_from_xyz_unsupported(self):
+        with pytest.raises(UnsupportedFileTypeError):
+            Molecule.from_file("foo.xyz", file_format="xyz")
 
     @requires_rdkit
     def test_from_pdb_and_smiles(self):
