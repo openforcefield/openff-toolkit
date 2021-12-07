@@ -342,6 +342,16 @@ class TestTopology(TestCase):
         assert first_element == element.carbon
         assert eighth_element == element.hydrogen
 
+    def test_topology_bond_atom_molecule(self):
+        topology = Molecule.from_smiles("CC").to_topology()
+        reference_molecule = [*topology.reference_molecules][0]
+
+        bond = [*topology.topology_bonds][0]
+        atom = [*topology.topology_atoms][0]
+
+        assert bond.molecule == reference_molecule
+        assert atom.molecule == reference_molecule
+
     def test_get_bond(self):
         """Test Topology.bond function (bond lookup from index)"""
         topology = Topology()
