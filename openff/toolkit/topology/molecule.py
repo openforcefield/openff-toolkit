@@ -3890,7 +3890,6 @@ class FrozenMolecule(Serializable):
             If an invalid object is passed as the toolkit_registry parameter
 
         """
-        bond_order_model = bond_order_model.lower()
 
         if isinstance(toolkit_registry, ToolkitRegistry):
             return toolkit_registry.call(
