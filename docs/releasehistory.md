@@ -19,6 +19,11 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
   (`UnsupportedFileTypeError`](openff.toolkit.utils.exceptions.UnsupportedFileTypeError) and
   descriptive error message when attempting to use
   [`Molecule.from_file`](openff.toolkit.topology.Molecule.from_file) to parse XYZ/`.xyz` files.
+- [PR #1149](https://github.com/openforcefield/openforcefield/pull/1149):
+  [`TopologyAtom`](openff.toolkit.topology.TopologyAtom),
+  [`TopologyBond`](openff.toolkit.topology.TopologyBond), and
+  [`TopologyVirtualSite`](openff.toolkit.topology.TopologyVirtualSite) now properly reference their
+  reference molecule from their `.molecule` attribute.
 
 ### Examples added
 
