@@ -441,7 +441,7 @@ class TopologyAtom(Serializable):
         -------
         openff.toolkit.topology.molecule.Molecule
         """
-        return self._topology_molecule.molecule
+        return self._topology_molecule.reference_molecule
 
     @property
     def topology_atom_index(self):
@@ -604,7 +604,7 @@ class TopologyBond(Serializable):
         -------
         openff.toolkit.topology.molecule.Molecule
         """
-        return self._topology_molecule.molecule
+        return self._topology_molecule.reference_molecule
 
     @property
     def bond_order(self):
@@ -818,7 +818,7 @@ class TopologyVirtualSite(Serializable):
         -------
         openff.toolkit.topology.molecule.Molecule
         """
-        return self._topology_molecule.molecule
+        return self._topology_molecule.reference_molecule
 
     @property
     def type(self):
