@@ -15,6 +15,11 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
   and no longer accepts input of NetworkX graphs.
 - [PR #1130](https://github.com/openforcefield/openforcefield/pull/1130): Running unit tests will
   no longer generate force field files in the local directory.
+- [PR #1153](https://github.com/openforcefield/openforcefield/pull/1153): Fixes
+  [Issue #1152](https://github.com/openforcefield/openff-toolkit/issues/1052) in which running 
+  [`Molecule.generate_conformers`](openff.toolkit.topology.Molecule.generate_conformers)
+  using the OpenEye backend would use the stereochemistry from an existing conformer instead 
+  of the stereochemistry from the molecular graph, leading to undefined behavior if the molecule had a 2D conformer. 
 
 ### Examples added
 
