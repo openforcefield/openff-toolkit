@@ -121,32 +121,6 @@ print(value_roundtrip)
   and no longer accepts input of NetworkX graphs.
 - [PR #1130](https://github.com/openforcefield/openforcefield/pull/1130): Running unit tests will
   no longer generate force field files in the local directory.
-- [PR #1182](https://github.com/openforcefield/openforcefield/pull/1182): Removes `Atom.element`,
-  thereby also removing `Atom.element.symbol`, `Atom.element.mass` and `Atom.element.atomic_number`.
-  These are replaced with corresponding properties directly on the
-  [`Atom`](openff.toolkit.topology.molecule.Atom) class:
-  [`Atom.symbol`](openff.toolkit.topology.molecule.Atom.symbol),
-  [`Atom.mass`](openff.toolkit.topology.molecule.Atom.mass), and
-  [`Atom.atomic_number`](openff.toolkit.topology.molecule.Atom.atomic_number).
-- [PR #1209](https://github.com/openforcefield/openforcefield/pull/1209): Fixes 
-  [Issue #1073](https://github.com/openforcefield/openff-toolkit/issues/1073), where the
-  `fractional_bondorder_method` kwarg to the 
-  [`BondHandler`](openff.toolkit.typing.engines.smirnoff.parameters.BondHandler) initializer 
-  was being ignored.
-- [PR #1214](https://github.com/openforcefield/openforcefield/pull/1214): A long overdue fix
-  for [Issue #837](https://github.com/openforcefield/openff-toolkit/issues/837)! If OpenEye is
-  available, the `ToolkitAM1BCCHandler` will use the ELF10 method to select conformers for AM1BCC
-  charge assignment. 
-- [PR #1160](https://github.com/openforcefield/openforcefield/pull/1160): Fixes the bug identified in
-  [Issue #1159](https://github.com/openforcefield/openff-toolkit/issues/1159), in which the order of 
-  atoms defining a `BondChargeVirtualSite` (and possibly other virtual sites types too) might be reversed 
-  if the `match` attribute of the virtual site has a value of `"once"`.
-- [PR #1231](https://github.com/openforcefield/openforcefield/pull/1231): Fixes
-  [Issue #1181](https://github.com/openforcefield/openff-toolkit/issues/1181) and
-  [Issue #1190](https://github.com/openforcefield/openff-toolkit/issues/1190), where in rare cases 
-  double bond stereo would cause `to_rdkit` to raise an error. The transfer of double bond stereochemistry
-  from OpenFF's E/Z representation to RDKit's local representation is now handled as a constraint
-  satisfaction problem.
 
 ### Examples added
 
