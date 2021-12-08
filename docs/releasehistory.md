@@ -15,6 +15,10 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
   and no longer accepts input of NetworkX graphs.
 - [PR #1130](https://github.com/openforcefield/openforcefield/pull/1130): Running unit tests will
   no longer generate force field files in the local directory.
+- [PR #1148](https://github.com/openforcefield/openforcefield/pull/1148): Adds a new exception
+  (`UnsupportedFileTypeError`](openff.toolkit.utils.exceptions.UnsupportedFileTypeError) and
+  descriptive error message when attempting to use
+  [`Molecule.from_file`](openff.toolkit.topology.Molecule.from_file) to parse XYZ/`.xyz` files.
 
 ### Examples added
 
