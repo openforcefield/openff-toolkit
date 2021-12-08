@@ -16,9 +16,9 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 - [PR #1130](https://github.com/openforcefield/openforcefield/pull/1130): Running unit tests will
   no longer generate force field files in the local directory.
 - [PR #1151](https://github.com/openforcefield/openforcefield/pull/1151): Fixes 
-  [Issue #1151](https://github.com/openforcefield/openff-toolkit/issues/1151), in which calling 
-  [`Molecule.assign_fractional_bond_orders`](openff.toolkit.topology.Molecule.assign_fractional_bond_orders) with all
-  default arguments would lead to an error as a result of trying to lowercase `None`.
+  [Issue #1150](https://github.com/openforcefield/openff-toolkit/issues/1150), in which calling 
+  [`Molecule.assign_fractional_bond_orders`](openff.toolkit.topology.Molecule.assign_fractional_bond_orders)
+  with all default arguments would lead to an error as a result of trying to lowercase `None`.
 
 
 ### Examples added
