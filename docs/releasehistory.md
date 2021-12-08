@@ -20,6 +20,11 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
   [`Molecule.assign_fractional_bond_orders`](openff.toolkit.topology.Molecule.assign_fractional_bond_orders)
   with all default arguments would lead to an error as a result of trying to lowercase `None`.
 
+- [PR #1149](https://github.com/openforcefield/openforcefield/pull/1149):
+  [`TopologyAtom`](openff.toolkit.topology.TopologyAtom),
+  [`TopologyBond`](openff.toolkit.topology.TopologyBond), and
+  [`TopologyVirtualSite`](openff.toolkit.topology.TopologyVirtualSite) now properly reference their
+  reference molecule from their `.molecule` attribute.
 
 ### Examples added
 
