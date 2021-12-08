@@ -1675,8 +1675,14 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             Whether to overwrite existing conformers for the molecule
         """
         from openeye import oeomega
+        import copy
 
-        oemol = self.to_openeye(molecule)
+        # Copy the molecule and scrub the conformers so that omega HAS to read stereo from graph mol
+        # See https://github.com/openforcefield/openff-toolkit/issues/1152
+        mol_copy = copy.deepcopy(molecule)
+        mol_copy._conformers = None
+
+        oemol = self.to_openeye(mol_copy)
         omega = oeomega.OEOmega()
         omega.SetMaxConfs(n_conformers)
         omega.SetCanonOrder(False)
