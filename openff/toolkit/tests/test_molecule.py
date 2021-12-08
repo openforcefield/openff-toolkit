@@ -3655,6 +3655,9 @@ class TestMolecule:
         produce unexpected errors, but do not asses validity of results"""
         mol = Molecule.from_smiles("CCO")
 
+        # Test that default model works
+        mol.assign_fractional_bond_orders()
+
         mol.assign_fractional_bond_orders(
             bond_order_model=model,
         )
