@@ -1674,8 +1674,9 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         clear_existing : bool, default=True
             Whether to overwrite existing conformers for the molecule
         """
-        from openeye import oeomega
         import copy
+
+        from openeye import oeomega
 
         # Copy the molecule and scrub the conformers so that omega HAS to read stereo from graph mol
         # See https://github.com/openforcefield/openff-toolkit/issues/1152
