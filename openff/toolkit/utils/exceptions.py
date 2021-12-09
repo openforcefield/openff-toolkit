@@ -300,3 +300,7 @@ class MissingIndexedAttributeError(
     OpenFFToolkitException, IndexError, KeyError, AttributeError
 ):
     """Error raised when an indexed attribute does not exist"""
+
+
+class UnsupportedFileTypeError(OpenFFToolkitException):
+    """Error raised when attempting to parse an unsupported file type."""
