@@ -660,6 +660,7 @@ def serialize_numpy(np_array):
     shape : tuple of ints
         The shape of the serialized array
     """
+    import numpy as np
 
     bigendian_float = np.dtype(float).newbyteorder(">")
     bigendian_array = np_array.astype(bigendian_float)
