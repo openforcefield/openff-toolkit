@@ -661,9 +661,8 @@ def serialize_numpy(np_array):
         The shape of the serialized array
     """
 
-    # bigendian_float = np.dtype(float).newbyteorder(">")
-    # bigendian_array = np_array.astype(bigendian_float)
-    bigendian_array = np_array.newbyteorder(">")
+    bigendian_float = np.dtype(float).newbyteorder(">")
+    bigendian_array = np_array.astype(bigendian_float)
     serialized = bigendian_array.tobytes()
     shape = np_array.shape
     return serialized, shape
@@ -692,9 +691,7 @@ def deserialize_numpy(serialized_np, shape):
     if isinstance(serialized_np, list):
         np_array = np.array(serialized_np)
     if isinstance(serialized_np, bytes):
-        dt = np.dtype("float")
-        dt.newbyteorder(">")  # set to big-endian
-        # dt = np.dtype("float").newbyteorder(">")
+        dt = np.dtype("float").newbyteorder(">")
         np_array = np.frombuffer(serialized_np, dtype=dt)
     np_array = np_array.reshape(shape)
     return np_array
