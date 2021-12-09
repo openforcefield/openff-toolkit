@@ -121,6 +121,7 @@ print(value_roundtrip)
   and no longer accepts input of NetworkX graphs.
 - [PR #1130](https://github.com/openforcefield/openforcefield/pull/1130): Running unit tests will
   no longer generate force field files in the local directory.
+<<<<<<< HEAD
 - [PR #1182](https://github.com/openforcefield/openforcefield/pull/1182): Removes `Atom.element`,
   thereby also removing `Atom.element.symbol`, `Atom.element.mass` and `Atom.element.atomic_number`.
   These are replaced with corresponding properties directly on the
@@ -249,6 +250,10 @@ print(value_roundtrip)
   no longer generate force field files in the local directory.
 - [PR #1148](https://github.com/openforcefield/openforcefield/pull/1148): Adds a new exception
   [`UnsupportedFileTypeError`](openff.toolkit.utils.exceptions.UnsupportedFileTypeError) and
+=======
+- [PR #1148](https://github.com/openforcefield/openforcefield/pull/1148): Adds a new exception
+  (`UnsupportedFileTypeError`](openff.toolkit.utils.exceptions.UnsupportedFileTypeError) and
+>>>>>>> 444254a9 (Add specific exception for Molecule.from_file with XYZ files (#1148))
   descriptive error message when attempting to use
   [`Molecule.from_file`](openff.toolkit.topology.Molecule.from_file) to parse XYZ/`.xyz` files.
 - [PR #1153](https://github.com/openforcefield/openforcefield/pull/1153): Fixes

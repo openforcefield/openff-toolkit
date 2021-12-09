@@ -323,3 +323,7 @@ class UnsupportedMoleculeConversionError(OpenFFToolkitException):
 
 class InconsistentStereochemistryError(OpenFFToolkitException):
     """Error raised when stereochemistry is inconsistent before and after conversions between molecule representations."""
+
+
+class UnsupportedFileTypeError(OpenFFToolkitException):
+    """Error raised when attempting to parse an unsupported file type."""

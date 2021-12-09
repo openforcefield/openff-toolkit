@@ -65,6 +65,7 @@ from openff.toolkit.utils.exceptions import (
     ConformerGenerationError,
     IncompatibleUnitError,
     InvalidConformerError,
+    UnsupportedFileTypeError,
 )
 from openff.toolkit.utils.toolkits import (
     AmberToolsToolkitWrapper,
@@ -1986,6 +1987,10 @@ class TestMolecule:
         }
 
         assert expected == actual
+
+    def test_from_xyz_unsupported(self):
+        with pytest.raises(UnsupportedFileTypeError):
+            Molecule.from_file("foo.xyz", file_format="xyz")
 
     @requires_rdkit
     def test_from_pdb_and_smiles(self):
