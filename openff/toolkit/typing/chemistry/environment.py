@@ -29,6 +29,8 @@ __all__ = [
     "ImproperChemicalEnvironment",
 ]
 
+from typing import Optional
+
 from openff.toolkit.utils.exceptions import SMIRKSMismatchError, SMIRKSParsingError
 from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY, ToolkitWrapper
 
@@ -36,7 +38,7 @@ from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY, ToolkitWrappe
 class ChemicalEnvironment:
     """Chemical environment abstract base class used for validating SMIRKS"""
 
-    _expected_type = None
+    _expected_type: Optional[str] = None
 
     def __init__(
         self,
