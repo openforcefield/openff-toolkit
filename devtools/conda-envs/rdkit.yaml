@@ -10,6 +10,7 @@ dependencies:
     # Testing
   - pytest
   - pytest-cov
+  - pytest-rerunfailures
   - nbval
   - codecov
   - coverage
