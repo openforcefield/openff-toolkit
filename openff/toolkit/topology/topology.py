@@ -1446,8 +1446,11 @@ class Topology(Serializable):
         toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
     ):
         """
-        Generate a single SMILES string for the topology of the entire system, each molecule has there smiles created
-        and concatenated using a `.` separator. If mapping is required the indexing will run over every atom in the system.
+        Generate a single SMILES string for the topology of the entire system, each molecule has its smiles created
+        and concatenated using a `.` separator. If mapping is required the indexing will run over every atom in the
+        system.
+
+        This method will return the molecules in the order of their topology molecule index.
 
         .. note :: RDKit and OpenEye versions will not necessarily return the same representation.
 
@@ -1469,20 +1472,25 @@ class Topology(Serializable):
         -------
             A single SMILES string encoding the topology of the whole system.
         """
-        total_atoms = 1
+        import copy
+
         smiles = []
-        for mol in self.topology_molecules:
-            ref_mol = mol.reference_molecule
-            mapping = dict((i, i + total_atoms) for i in range(ref_mol.n_atoms))
-            ref_mol.properties["atom_map"] = mapping
-            total_atoms += ref_mol.n_atoms
+        for top_mol in self.topology_molecules:
+            ref_mol_copy = copy.deepcopy(top_mol.reference_molecule)
+            ref_mol_copy.properties["atom_map"] = dict()
+            for atom in top_mol.atoms:
+                ref_mol_copy.properties["atom_map"][
+                    atom.atom.molecule_atom_index
+                ] = atom.topology_atom_index
             smiles.append(
-                ref_mol.to_smiles(
+                ref_mol_copy.to_smiles(
                     isomeric=isomeric,
                     explicit_hydrogens=explicit_hydrogens,
                     mapped=mapped,
+                    toolkit_registry=toolkit_registry,
                 )
             )
+
         return ".".join(smiles)
 
     @property
