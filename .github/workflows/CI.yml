@@ -5,6 +5,7 @@ on:
     branches:
       - "master"
       - "maintenance/.*"
+      - "lily/*"
   pull_request:
     branches:
       - "master"
