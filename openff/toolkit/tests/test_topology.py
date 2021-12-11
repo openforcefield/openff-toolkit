@@ -329,8 +329,8 @@ class TestTopology(TestCase):
         assert (
             topology.to_smiles(mapped=True, toolkit_registry=rdktkw)
             == "[C:1]([C:2]([O:3][H:9])([H:7])[H:8])([H:4])([H:5])[H:6]."
-               "[H:9][O:10][H:11]."
-               "[H:12][O:18][C:19]([H:13])([H:14])[C:20]([H:15])([H:16])[H:17]"
+            "[H:9][O:10][H:11]."
+            "[H:12][O:18][C:19]([H:13])([H:14])[C:20]([H:15])([H:16])[H:17]"
         )
 
     def test_n_topology_atoms(self):
