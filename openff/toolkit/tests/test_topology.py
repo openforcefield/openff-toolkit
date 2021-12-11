@@ -26,6 +26,7 @@ from openff.toolkit.tests.create_molecules import (
     create_cyclohexane,
     create_ethanol,
     create_reversed_ethanol,
+    create_water,
 )
 from openff.toolkit.tests.utils import (
     get_data_file_path,
@@ -46,6 +47,7 @@ from openff.toolkit.utils import (
     RDKIT_AVAILABLE,
     OpenEyeToolkitWrapper,
     RDKitToolkitWrapper,
+    ToolkitRegistry,
 )
 from openff.toolkit.utils.exceptions import (
     DuplicateUniqueMoleculeError,
@@ -266,6 +268,70 @@ class TestTopology(TestCase):
         )
         assert topology.n_topology_molecules == 2
         assert topology.n_reference_molecules == 2
+
+    @requires_openeye
+    def test_to_smiles_openeye(self):
+        """Test converting a topology to a mapped smiles"""
+        topology = Topology()
+        oetkw = OpenEyeToolkitWrapper()
+        assert topology.to_smiles() == ""
+        topology.add_molecule(create_ethanol())
+        assert (
+            topology.to_smiles(toolkit_registry=oetkw)
+            == "[H]C([H])([H])C([H])([H])O[H]"
+        )
+        assert (
+            topology.to_smiles(explicit_hydrogens=False, toolkit_registry=oetkw)
+            == "CCO"
+        )
+        assert (
+            topology.to_smiles(mapped=True, toolkit_registry=oetkw)
+            == "[H:4][C:1]([H:5])([H:6])[C:2]([H:7])([H:8])[O:3][H:9]"
+        )
+        topology.add_molecule(create_water())
+        topology.add_molecule(create_reversed_ethanol())
+        assert (
+            topology.to_smiles(toolkit_registry=oetkw)
+            == "[H]C([H])([H])C([H])([H])O[H].[H]O[H].[H]C([H])([H])C([H])([H])O[H]"
+        )
+        assert (
+            topology.to_smiles(mapped=True, toolkit_registry=oetkw)
+            == "[H:4][C:1]([H:5])([H:6])[C:2]([H:7])([H:8])[O:3][H:9]."
+            "[H:9][O:10][H:11]."
+            "[H:15][C:20]([H:16])([H:17])[C:19]([H:13])([H:14])[O:18][H:12]"
+        )
+
+    @requires_rdkit
+    def test_to_smiles_rdkit(self):
+        """Test converting a topology to a mapped smiles"""
+        topology = Topology()
+        rdktkw = RDKitToolkitWrapper()
+        assert topology.to_smiles() == ""
+        topology.add_molecule(create_ethanol())
+        assert (
+            topology.to_smiles(toolkit_registry=rdktkw)
+            == "[H][O][C]([H])([H])[C]([H])([H])[H]"
+        )
+        assert (
+            topology.to_smiles(explicit_hydrogens=False, toolkit_registry=rdktkw)
+            == "CCO"
+        )
+        assert (
+            topology.to_smiles(mapped=True, toolkit_registry=rdktkw)
+            == "[C:1]([C:2]([O:3][H:9])([H:7])[H:8])([H:4])([H:5])[H:6]"
+        )
+        topology.add_molecule(create_water())
+        topology.add_molecule(create_reversed_ethanol())
+        assert (
+            topology.to_smiles(toolkit_registry=rdktkw)
+            == "[H][O][C]([H])([H])[C]([H])([H])[H].[H][O][H].[H][O][C]([H])([H])[C]([H])([H])[H]"
+        )
+        assert (
+            topology.to_smiles(mapped=True, toolkit_registry=rdktkw)
+            == "[C:1]([C:2]([O:3][H:9])([H:7])[H:8])([H:4])([H:5])[H:6]."
+               "[H:9][O:10][H:11]."
+               "[H:12][O:18][C:19]([H:13])([H:14])[C:20]([H:15])([H:16])[H:17]"
+        )
 
     def test_n_topology_atoms(self):
         """Test n_atoms function"""
