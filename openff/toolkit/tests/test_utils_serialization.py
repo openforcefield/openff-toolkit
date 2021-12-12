@@ -10,6 +10,7 @@ Tests for utility methods for serialization
 """
 
 import numpy as np
+from numpy.testing import assert_allclose
 import pytest
 
 from openff.toolkit.tests.utils import requires_pkg
@@ -134,12 +135,22 @@ class TestNumPySerialization:
             b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xf0?\x00\x00\x00\x00\x00\x00\x00@'
         )
 
-    def test_deserialize_endianness(self):
+    @pytest.mark.parametrize("endian, last_number", [
+        (">", 3.16202e-322),
+        ("<", 2)
+    ])
+    def test_deserialize_endianness(self, endian, last_number):
         """Test that arrays are deserialized as big-endian"""
-        dtype = np.dtype(float).newbyteorder("<")
+        dtype = np.dtype(float).newbyteorder(endian)
         arr = np.arange(3).astype(dtype)
         deserialized = deserialize_numpy(arr.tobytes(), arr.shape)
-        np.testing.assert_allclose(arr, deserialized)
+        np.testing.assert_allclose(deserialized[-1], last_number)
+
+    @pytest.mark.parametrize("endian", [">", "<"])
+    def test_roundtrip(self, endian):
+        dtype = np.dtype(float).newbyteorder(endian)
+        arr = np.arange(3).astype(dtype)
+        assert_allclose(deserialize_numpy(*serialize_numpy(arr)), arr)
 
 
 class DictionaryContainer(Serializable):
