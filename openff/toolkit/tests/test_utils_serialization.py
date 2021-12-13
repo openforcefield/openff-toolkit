@@ -134,19 +134,15 @@ class TestNumPySerialization:
             b"\x00\x00\x00\x00\x00\x00\x00\x00?\xf0\x00\x00\x00\x00\x00\x00@\x00\x00\x00\x00\x00\x00\x00"
         )
 
-    @pytest.mark.parametrize(
-        "dtype",
-        [
-            (np.dtype(float).newbyteorder(">")),
-            (np.dtype(float).newbyteorder("<")),
-        ],
-    )
-    def test_deserialize_endianness(self, dtype):
-        """Test that arrays are deserialized as big-endian"""
+    @pytest.mark.parametrize("endian", [">", "<"])
+    def test_deserialize_endianness(self, endian):
+        """Test that arrays are deserialized as big-endian, and that
+        the deserialization breaks if the input is little-endian."""
         dt_bigendian = np.dtype(float).newbyteorder(">")
-        arr = np.arange(3).astype(float).astype(dt_bigendian)
+        dt_input = np.dtype(float).newbyteorder(endian)
+        arr = np.arange(3, dtype=dt_input)
         deserialized = deserialize_numpy(arr.tobytes(), arr.shape)
-        np.testing.assert_allclose(arr, deserialized)
+        assert np.allclose(arr, deserialized) == (endian == ">")
 
 
 class DictionaryContainer(Serializable):

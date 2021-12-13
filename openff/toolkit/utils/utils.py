@@ -27,17 +27,15 @@ __all__ = [
     "convert_0_2_smirnoff_to_0_3",
     "get_molecule_parameterIDs",
 ]
-
-
 import contextlib
 import functools
 import logging
+from typing import List, Tuple, Union
 
 try:
     from openmm import unit
 except ImportError:
     from simtk import unit
-
 
 from openff.toolkit.utils.exceptions import (
     IncompatibleUnitError,
@@ -641,9 +639,9 @@ def detach_units(unit_bearing_dict, output_units=None):
     return unitless_dict, unit_dict
 
 
-def serialize_numpy(np_array):
+def serialize_numpy(np_array) -> Tuple[bytes, Tuple[int]]:
     """
-    Serializes a numpy array into a JSON-compatible string. Leverages the numpy.save function,
+    Serializes a numpy array into a JSON-compatible big-endian bytestring. Leverages the numpy.save function,
     thereby preserving the shape of the input array
 
     from https://stackoverflow.com/questions/30698004/how-can-i-serialize-a-numpy-array-while-preserving-matrix-dimensions#30699208
@@ -655,8 +653,8 @@ def serialize_numpy(np_array):
 
     Returns
     -------
-    serialized : str
-        A serialized representation of the numpy array.
+    serialized : bytes
+        A big-endian bytestring of the NumPy array.
     shape : tuple of ints
         The shape of the serialized array
     """
@@ -669,9 +667,10 @@ def serialize_numpy(np_array):
     return serialized, shape
 
 
-def deserialize_numpy(serialized_np, shape):
+def deserialize_numpy(serialized_np: Union[bytes, List], shape: Tuple[int]):
     """
-    Deserializes a numpy array from a JSON-compatible string.
+    Deserializes a numpy array from a JSON-compatible bytestring. The input, if a bytestring, is
+    assumed to be in big-endian byte order.
 
     from https://stackoverflow.com/questions/30698004/how-can-i-serialize-a-numpy-array-while-preserving-matrix-dimensions#30699208
 
