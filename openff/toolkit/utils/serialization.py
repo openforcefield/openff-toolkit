@@ -483,11 +483,13 @@ def _prep_numpy_data_for_json(data):
         if isinstance(val, dict):
             data[key] = _prep_numpy_data_for_json(val)
         if isinstance(val, bytes):
-            data[key] = np.frombuffer(val, dtype=dt).tolist()
+            data[key] = np.frombuffer(val, dtype=big_endian_float).tolist()
         if isinstance(val, list):
             # Fairly hard-coded for case of Molecule.conformers being a List[np.array]
             # A more general solution should safely recurse through lists like dicts
             for i, element in enumerate(val):
                 if isinstance(element, bytes):
-                    data[key][i] = np.frombuffer(element, big_endian_float).tolist()
+                    data[key][i] = np.frombuffer(
+                        element, dtype=big_endian_float
+                    ).tolist()
     return data
