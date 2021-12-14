@@ -270,17 +270,6 @@ print(value_roundtrip)
   reference molecule from their `.molecule` attribute.
 - [PR #1155](https://github.com/openforcefield/openforcefield/pull/1155): Ensures big-endian
   byte order of NumPy arrays when serialized to dictionaries or files formats except JSON.
-- [PR #1163](https://github.com/openforcefield/openforcefield/pull/1163): Fixes the bug identified in
-  [Issue #1161](https://github.com/openforcefield/openff-toolkit/issues/1161), which was caused by the use
-  of the deprecated `pkg_resources` package. Now the recommended `importlib_metadata` package is used instead.
-
-
-### Breaking changes
-- [PR #1118](https://github.com/openforcefield/openforcefield/pull/1118):
-  [`Molecule.to_hill_formula`](openff.toolkit.topology.Molecule.to_hill_formula) is now a class method
-  and no longer accepts input of NetworkX graphs.
-- [PR #1156](https://github.com/openforcefield/openforcefield/pull/1156): Removes `ParseError` and
-  `MessageException`, which has been deprecated since version 0.10.0.
 
 ### Examples added
 
