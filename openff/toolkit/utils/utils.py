@@ -641,10 +641,7 @@ def detach_units(unit_bearing_dict, output_units=None):
 
 def serialize_numpy(np_array) -> Tuple[bytes, Tuple[int]]:
     """
-    Serializes a numpy array into a JSON-compatible big-endian bytestring. Leverages the numpy.save function,
-    thereby preserving the shape of the input array
-
-    from https://stackoverflow.com/questions/30698004/how-can-i-serialize-a-numpy-array-while-preserving-matrix-dimensions#30699208
+    Serializes a numpy array into a big-endian bytestring and tuple representing its shape.
 
     Parameters
     ----------
@@ -669,10 +666,8 @@ def serialize_numpy(np_array) -> Tuple[bytes, Tuple[int]]:
 
 def deserialize_numpy(serialized_np: Union[bytes, List], shape: Tuple[int]):
     """
-    Deserializes a numpy array from a JSON-compatible bytestring. The input, if a bytestring, is
+    Deserializes a numpy array from a bytestring or list. The input, if a bytestring, is
     assumed to be in big-endian byte order.
-
-    from https://stackoverflow.com/questions/30698004/how-can-i-serialize-a-numpy-array-while-preserving-matrix-dimensions#30699208
 
     Parameters
     ----------
