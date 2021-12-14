@@ -33,6 +33,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
   [`TopologyBond`](openff.toolkit.topology.TopologyBond), and
   [`TopologyVirtualSite`](openff.toolkit.topology.TopologyVirtualSite) now properly reference their
   reference molecule from their `.molecule` attribute.
+- [PR #1155](https://github.com/openforcefield/openforcefield/pull/1155): Ensures big-endian
+  byte order of NumPy arrays when serialized to dictionaries or files formats except JSON.
 
 ### Examples added
 
