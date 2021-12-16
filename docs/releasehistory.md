@@ -35,6 +35,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
   reference molecule from their `.molecule` attribute.
 - [PR #1155](https://github.com/openforcefield/openforcefield/pull/1155): Ensures big-endian
   byte order of NumPy arrays when serialized to dictionaries or files formats except JSON.
+- [PR #1156](https://github.com/openforcefield/openforcefield/pull/1156): Removes `ParseError` and
+  `MessageException`, which has been deprecated since version 0.10.0.
 
 ### Examples added
 
