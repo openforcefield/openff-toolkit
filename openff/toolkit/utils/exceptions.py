@@ -1,6 +1,3 @@
-import warnings
-
-
 class OpenFFToolkitException(Exception):
     """Base exception for custom exceptions raised by the OpenFF Toolkit"""
 
