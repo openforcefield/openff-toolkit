@@ -1,40 +1,7 @@
 import warnings
 
-deprecated_names = ["MessageException", "ParseError"]
 
-# TODO: Remove in January 2022
-# TODO: When _DepcreatedMessageException is removed, this should be removed. Also
-#       include in release notes that ParseError no longer exists
-def __getattr__(name):
-    if name in deprecated_names:
-        warnings.filterwarnings("default", category=DeprecationWarning)
-        warning_msg = f"{name} is DEPRECATED and will be removed in a future release of the OpenFF Toolkit."
-        if name == "MessageException":
-            warning_msg += (
-                " All custom exceptions now inherit from OpenFFToolkitException, "
-                "which should be used as a replacement for MessageException. Import it via "
-                "`from openff.toolkit.utils.exceptions import OpenFFToolkitException`."
-            )
-        warnings.warn(warning_msg, DeprecationWarning)
-        return globals()[f"_Deprecated{name}"]
-    raise AttributeError(f"module {__name__} has no attribute {name}")
-
-
-# TODO: Remove in January 2022
-class _DeprecatedMessageException(Exception):
-    """DEPRECATED: A base class for exceptions that print out a string given in their constructor"""
-
-    def __init__(self, msg):
-        super().__init__(self, msg)
-        self.msg = msg
-
-    def __str__(self):
-        return self.msg
-
-
-# TODO: Remove _DeprecatedMessageException (the import here and its definition above)
-# and make this exception only import from Exception
-class OpenFFToolkitException(_DeprecatedMessageException):
+class OpenFFToolkitException(Exception):
     """Base exception for custom exceptions raised by the OpenFF Toolkit"""
 
     def __init__(self, msg):
@@ -208,12 +175,7 @@ class SMIRNOFFAromaticityError(OpenFFToolkitException):
     """
 
 
-# TODO: Remove in January 2022
-class _DeprecatedParseError(_DeprecatedMessageException):
-    """DEPRECATED: Error for when a SMIRNOFF data structure is not parseable by a ForceField"""
-
-
-class SMIRNOFFParseError(OpenFFToolkitException, _DeprecatedParseError):
+class SMIRNOFFParseError(OpenFFToolkitException):
     """
     Error for when a SMIRNOFF data structure is not parseable by a ForceField
     """
