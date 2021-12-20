@@ -243,6 +243,58 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
             raise InvalidConformerError("The PDB and SMILES structures do not match.")
 
+    def _smarts_to_networkx(self, substructure_smarts, res_name):
+        from rdkit import Chem
+        import networkx as nx
+        rdmol = Chem.MolFromSmarts(substructure_smarts)
+
+        _bondtypes = {
+            # 0: Chem.BondType.AROMATIC,
+            Chem.BondType.SINGLE: 1,
+            Chem.BondType.AROMATIC: 1.5,
+            Chem.BondType.DOUBLE: 2,
+            Chem.BondType.TRIPLE: 3,
+            Chem.BondType.QUADRUPLE: 4,
+            Chem.BondType.QUINTUPLE: 5,
+            Chem.BondType.HEXTUPLE: 6,
+        }
+        rdmol_G = nx.Graph()
+        n_hydrogens = [0] * rdmol.GetNumAtoms()
+        for atom in rdmol.GetAtoms():
+            atomic_number = atom.GetAtomicNum()
+            # Assign sequential negative numbers as atomic numbers for hydrogens attached to the same heavy atom.
+            # We do the same to hydrogens in the protein graph. This makes it so we
+            # don't have to deal with redundant self-symmetric matches.
+            # if atomic_number == 1:
+            #     heavy_atom_idx = atom.GetNeighbors()[0].GetIdx()
+            #     n_hydrogens[heavy_atom_idx] += 1
+            #     atomic_number = -1 * n_hydrogens[heavy_atom_idx]
+
+            rdmol_G.add_node(
+                atom.GetIdx(),
+                atomic_number=atomic_number,
+                formal_charge=atom.GetFormalCharge(),
+            )
+            # These substructures (and only these substructures) should be able to overlap previous matches.
+            # They handle bonds between substructures.
+            if res_name in ["PEPTIDE_BOND", "DISULFIDE"]:
+                rdmol_G.nodes[atom.GetIdx()]["already_matched"] = True
+        for bond in rdmol.GetBonds():
+            bond_type = bond.GetBondType()
+
+            # All bonds in the graph should have been explicitly assigned by this point.
+            if bond_type == Chem.rdchem.BondType.UNSPECIFIED:
+                raise Exception
+                # bond_type = Chem.rdchem.BondType.SINGLE
+                # bond_type = Chem.rdchem.BondType.AROMATIC
+                # bond_type = Chem.rdchem.BondType.ONEANDAHALF
+            rdmol_G.add_edge(
+                bond.GetBeginAtomIdx(),
+                bond.GetEndAtomIdx(),
+                bond_order=_bondtypes[bond_type],
+            )
+        return rdmol_G
+
     def _process_sdf_supplier(self, sdf_supplier, allow_undefined_stereo, _cls):
         "Helper function to process RDKit molecules from an SDF input source"
         from rdkit import Chem

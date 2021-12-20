@@ -569,6 +569,63 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         return mols
 
+    def _smarts_to_networkx(self, substructure_smarts, res_name):
+        from openeye import oechem
+        import networkx as nx
+        qmol = oechem.OEQMol()
+        if not oechem.OEParseSmarts(qmol, substructure_smarts):
+            raise ValueError(f"Error parsing SMARTS '{substructure_smarts}'")
+
+        oechem.OEAssignHybridization(qmol)
+
+        _bondtypes = {
+            # 0: Chem.BondType.AROMATIC,
+            Chem.BondType.SINGLE: 1,
+            Chem.BondType.AROMATIC: 1.5,
+            Chem.BondType.DOUBLE: 2,
+            Chem.BondType.TRIPLE: 3,
+            Chem.BondType.QUADRUPLE: 4,
+            Chem.BondType.QUINTUPLE: 5,
+            Chem.BondType.HEXTUPLE: 6,
+        }
+        graph = nx.Graph()
+        n_hydrogens = [0] * qmol.GetNumAtoms()
+        for atom in rdmol.GetAtoms():
+            atomic_number = atom.GetAtomicNum()
+            # Assign sequential negative numbers as atomic numbers for hydrogens attached to the same heavy atom.
+            # We do the same to hydrogens in the protein graph. This makes it so we
+            # don't have to deal with redundant self-symmetric matches.
+            # if atomic_number == 1:
+            #     heavy_atom_idx = atom.GetNeighbors()[0].GetIdx()
+            #     n_hydrogens[heavy_atom_idx] += 1
+            #     atomic_number = -1 * n_hydrogens[heavy_atom_idx]
+
+            rdmol_G.add_node(
+                atom.GetIdx(),
+                atomic_number=atomic_number,
+                formal_charge=atom.GetFormalCharge(),
+            )
+            # These substructures (and only these substructures) should be able to overlap previous matches.
+            # They handle bonds between substructures.
+            if res_name in ["PEPTIDE_BOND", "DISULFIDE"]:
+                rdmol_G.nodes[atom.GetIdx()]["already_matched"] = True
+        for bond in rdmol.GetBonds():
+            bond_type = bond.GetBondType()
+
+            # All bonds in the graph should have been explicitly assigned by this point.
+            if bond_type == Chem.rdchem.BondType.UNSPECIFIED:
+                raise Exception
+                # bond_type = Chem.rdchem.BondType.SINGLE
+                # bond_type = Chem.rdchem.BondType.AROMATIC
+                # bond_type = Chem.rdchem.BondType.ONEANDAHALF
+            rdmol_G.add_edge(
+                bond.GetBeginAtomIdx(),
+                bond.GetEndAtomIdx(),
+                bond_order=_bondtypes[bond_type],
+            )
+        return rdmol_G
+
+
     def enumerate_protomers(self, molecule, max_states=10):
         """
         Enumerate the formal charges of a molecule to generate different protomoers.

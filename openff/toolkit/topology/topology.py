@@ -1329,6 +1329,27 @@ class Topology(Serializable):
             new_mol = Molecule.from_dict(molecule_dict)
             self.add_molecule(new_mol)
 
+    @staticmethod
+    @requires_package("openmm")
+    def _openmm_topology_to_networkx(openmm_topology):
+        import networkx as nx
+        # Convert all openMM mols to graphs
+        omm_topology_G = nx.Graph()
+        for atom in openmm_topology.atoms():
+            omm_topology_G.add_node(
+                atom.index,
+                atomic_number=atom.element.atomic_number,
+                atom_name=atom.name,
+                residue_name=atom.residue.name,
+                residue_id=atom.residue.id,
+                chain_id=atom.residue.chain.id
+            )
+        for bond in openmm_topology.bonds():
+            omm_topology_G.add_edge(
+                bond.atom1.index, bond.atom2.index, bond_order=bond.order
+            )
+        return omm_topology_G
+
     @classmethod
     @requires_package("openmm")
     def from_openmm(cls, openmm_topology, unique_molecules=None):
@@ -1395,17 +1416,7 @@ class Topology(Serializable):
                     raise DuplicateUniqueMoleculeError(msg)
             graph_to_unq_mol[unq_mol_graph] = unq_mol
 
-        # Convert all openMM mols to graphs
-        omm_topology_G = nx.Graph()
-        for atom in openmm_topology.atoms():
-            omm_topology_G.add_node(
-                atom.index, atomic_number=atom.element.atomic_number
-            )
-        for bond in openmm_topology.bonds():
-            omm_topology_G.add_edge(
-                bond.atom1.index, bond.atom2.index, bond_order=bond.order
-            )
-
+        omm_topology_G = cls._openmm_topology_to_networkx(openmm_topology)
         # For each connected subgraph (molecule) in the topology, find its match in unique_molecules
         topology_molecules_to_add = list()
         for omm_mol_G in (
@@ -1428,7 +1439,7 @@ class Topology(Serializable):
                     # Take the first valid atom indexing map
                     first_topology_atom_index = min(mapping.keys())
                     topology_molecules_to_add.append(
-                        (first_topology_atom_index, unq_mol_G, mapping.items())
+                        (first_topology_atom_index, unq_mol_G, mapping.items(), omm_mol_G)
                     )
                     match_found = True
                     break
@@ -1466,7 +1477,7 @@ class Topology(Serializable):
         # The connected_component_subgraph function above may have scrambled the molecule order, so sort molecules
         # by their first atom's topology index
         topology_molecules_to_add.sort(key=lambda x: x[0])
-        for first_index, unq_mol_G, top_to_ref_index in topology_molecules_to_add:
+        for first_index, unq_mol_G, top_to_ref_index, omm_mol_G in topology_molecules_to_add:
             local_top_to_ref_index = dict(
                 [
                     (top_index - first_index, ref_index)
@@ -1475,6 +1486,12 @@ class Topology(Serializable):
             )
             unq_mol = graph_to_unq_mol[unq_mol_G]
             remapped_mol = unq_mol.remap(local_top_to_ref_index, current_to_new=False)
+            # Transfer hierarchy metadata from openmm mol graph to offmol metadata
+            for omm_atom, off_atom in zip(omm_mol_G.nodes, remapped_mol.atoms):
+                off_atom.name = omm_mol_G.nodes[omm_atom]['name']
+                off_atom.metadata['residue_name'] = omm_mol_G.nodes[omm_atom]['residue_name']
+                off_atom.metadata['residue_num'] = omm_mol_G.nodes[omm_atom]['residue_id']
+                off_atom.metadata['chain'] = omm_mol_G.nodes[omm_atom]['chain_id']
             topology.add_molecule(remapped_mol)
 
         if openmm_topology.getPeriodicBoxVectors() is not None:
