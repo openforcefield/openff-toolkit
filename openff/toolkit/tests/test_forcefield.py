@@ -22,10 +22,10 @@ from numpy.testing import assert_almost_equal
 
 try:
     import openmm
-    from openmm import NonbondedForce, Platform, XmlSerializer, app, unit
+    from openmm import NonbondedForce, Platform, XmlSerializer, app, unit, System
 except ImportError:
     from simtk import openmm, unit
-    from simtk.openmm import app, XmlSerializer, Platform, NonbondedForce
+    from simtk.openmm import app, XmlSerializer, Platform, NonbondedForce, System
 
 from openff.toolkit.tests.create_molecules import (
     create_acetaldehyde,
@@ -2217,9 +2217,6 @@ class TestForceFieldVirtualSites:
         Test that orientation-mangling bug from https://github.com/openforcefield/openff-toolkit/issues/1159
         is resolved.
         """
-        from openff.toolkit.typing.engines.smirnoff import ForceField
-        from openmm import unit
-
         force_field = ForceField()
 
         vsite_handler = force_field.get_parameter_handler("VirtualSites")
@@ -2237,11 +2234,7 @@ class TestForceFieldVirtualSites:
             }
         )
 
-        from openff.toolkit.topology import Molecule
-
         molecule = Molecule.from_mapped_smiles("[O:2]=[C:1]=[O:3]")
-
-        from openmm import System
 
         omm_system: System
         omm_system, topology = force_field.create_openmm_system(
