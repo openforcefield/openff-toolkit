@@ -2238,9 +2238,11 @@ class TestForceFieldVirtualSites:
         )
 
         from openff.toolkit.topology import Molecule
+
         molecule = Molecule.from_mapped_smiles("[O:2]=[C:1]=[O:3]")
 
         from openmm import System
+
         omm_system: System
         omm_system, topology = force_field.create_openmm_system(
             molecule.to_topology(), return_topology=True
@@ -2259,10 +2261,14 @@ class TestForceFieldVirtualSites:
 
             omm_v_site = omm_system.getVirtualSite(i)
 
-            omm_particle_tuples.append(tuple(omm_v_site.getParticle(j) for j in range(omm_v_site.getNumParticles())))
-        assert (1,0) in omm_particle_tuples
-        assert (2,0) in omm_particle_tuples
-
+            omm_particle_tuples.append(
+                tuple(
+                    omm_v_site.getParticle(j)
+                    for j in range(omm_v_site.getNumParticles())
+                )
+            )
+        assert (1, 0) in omm_particle_tuples
+        assert (2, 0) in omm_particle_tuples
 
 
 def generate_monatomic_ions():
