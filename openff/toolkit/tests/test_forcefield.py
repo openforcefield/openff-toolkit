@@ -2212,6 +2212,58 @@ class TestForceFieldVirtualSites:
 
         self._test_physical_parameters(toolkit_registry, *args.values())
 
+    def test_orientation_preserved_if_match_once(self):
+        """
+        Test that orientation-mangling bug from https://github.com/openforcefield/openff-toolkit/issues/1159
+        is resolved.
+        """
+        from openff.toolkit.typing.engines.smirnoff import ForceField
+        from openmm import unit
+
+        force_field = ForceField()
+
+        vsite_handler = force_field.get_parameter_handler("VirtualSites")
+        vsite_handler.add_parameter(
+            parameter_kwargs={
+                "smirks": "[#6:2]=[#8:1]",
+                "name": "EP",
+                "type": "BondCharge",
+                "distance": 0.7 * unit.nanometers,
+                "match": "once",
+                "charge_increment1": 0.2 * unit.elementary_charge,
+                "charge_increment2": 0.1 * unit.elementary_charge,
+                "sigma": 1.0 * unit.angstrom,
+                "epsilon": 2.0 / 4.184 * unit.kilocalorie_per_mole,
+            }
+        )
+
+        from openff.toolkit.topology import Molecule
+        molecule = Molecule.from_mapped_smiles("[O:2]=[C:1]=[O:3]")
+
+        from openmm import System
+        omm_system: System
+        omm_system, topology = force_field.create_openmm_system(
+            molecule.to_topology(), return_topology=True
+        )
+
+        for molecule in topology.reference_molecules:
+            for v_site in molecule.virtual_sites:
+                for particle in v_site.particles:
+                    print(particle.orientation)
+
+        omm_particle_tuples = []
+        for i in range(omm_system.getNumParticles()):
+
+            if not omm_system.isVirtualSite(i):
+                continue
+
+            omm_v_site = omm_system.getVirtualSite(i)
+
+            omm_particle_tuples.append(tuple(omm_v_site.getParticle(j) for j in range(omm_v_site.getNumParticles())))
+        assert (1,0) in omm_particle_tuples
+        assert (2,0) in omm_particle_tuples
+
+
 
 def generate_monatomic_ions():
     return (
