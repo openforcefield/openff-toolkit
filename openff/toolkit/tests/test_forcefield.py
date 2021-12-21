@@ -22,7 +22,7 @@ from numpy.testing import assert_almost_equal
 
 try:
     import openmm
-    from openmm import NonbondedForce, Platform, XmlSerializer, app, unit, System
+    from openmm import NonbondedForce, Platform, System, XmlSerializer, app, unit
 except ImportError:
     from simtk import openmm, unit
     from simtk.openmm import app, XmlSerializer, Platform, NonbondedForce, System
