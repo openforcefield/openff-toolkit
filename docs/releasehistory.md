@@ -35,6 +35,10 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
   reference molecule from their `.molecule` attribute.
 - [PR #1155](https://github.com/openforcefield/openforcefield/pull/1155): Ensures big-endian
   byte order of NumPy arrays when serialized to dictionaries or files formats except JSON.
+- [PR #1160](https://github.com/openforcefield/openforcefield/pull/1160): Fixes the bug identified in
+  [Issue #1159](https://github.com/openforcefield/openff-toolkit/issues/1159), in which the order of 
+  atoms defining a `BondChargeVirtualSite` (and possibly other virtual sites types too) might be reversed 
+  if the `match` attribute of the virtual site has a value of `"once"`.
 
 ### Examples added
 
