@@ -2241,10 +2241,6 @@ class TestForceFieldVirtualSites:
             molecule.to_topology(), return_topology=True
         )
 
-        for molecule in topology.reference_molecules:
-            for v_site in molecule.virtual_sites:
-                for particle in v_site.particles:
-                    print(particle.orientation)
 
         omm_particle_tuples = []
         for i in range(omm_system.getNumParticles()):
@@ -2262,6 +2258,12 @@ class TestForceFieldVirtualSites:
             )
         assert (1, 0) in omm_particle_tuples
         assert (2, 0) in omm_particle_tuples
+        for molecule in topology.reference_molecules:
+            for v_site in molecule.virtual_sites:
+                for particle in v_site.particles:
+                    # correct particle.orientation is (1,0) and (2,0)
+                    # and not (0, 1), (0, 2)
+                    assert particle.orientation in omm_particle_tuples
 
 
 def generate_monatomic_ions():
