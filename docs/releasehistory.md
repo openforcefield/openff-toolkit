@@ -254,6 +254,7 @@ print(value_roundtrip)
 - [PR #1153](https://github.com/openforcefield/openforcefield/pull/1153): Fixes
   [Issue #1152](https://github.com/openforcefield/openff-toolkit/issues/1052) in which running
   [`Molecule.generate_conformers`](openff.toolkit.topology.Molecule.generate_conformers)
+<<<<<<< HEAD
   using the OpenEye backend would use the stereochemistry from an existing conformer instead
   of the stereochemistry from the molecular graph, leading to undefined behavior if the molecule had a 2D conformer.
 - [PR #1158](https://github.com/openforcefield/openff-toolkit/pull/1158): Fixes the default
@@ -261,6 +262,15 @@ print(value_roundtrip)
   NGLview is not installed.
 - [PR #1151](https://github.com/openforcefield/openforcefield/pull/1151): Fixes
   [Issue #1150](https://github.com/openforcefield/openff-toolkit/issues/1150), in which calling
+=======
+  using the OpenEye backend would use the stereochemistry from an existing conformer instead 
+  of the stereochemistry from the molecular graph, leading to undefined behavior if the molecule had a 2D conformer. 
+- [PR #1158](https://github.com/openforcefield/openff-toolkit/pull/1158): Fixes the default
+  representation of [`Molecule`](openff.toolkit.topology.Molecule) failing in Jupyter notebooks when
+  NGLview is not installed.
+- [PR #1151](https://github.com/openforcefield/openforcefield/pull/1151): Fixes 
+  [Issue #1150](https://github.com/openforcefield/openff-toolkit/issues/1150), in which calling 
+>>>>>>> 8aed5856 (Fix Molecule._ipython_display_ breaking without nglview (#1158))
   [`Molecule.assign_fractional_bond_orders`](openff.toolkit.topology.Molecule.assign_fractional_bond_orders)
   with all default arguments would lead to an error as a result of trying to lowercase `None`.
 - [PR #1149](https://github.com/openforcefield/openforcefield/pull/1149):
