@@ -2241,7 +2241,6 @@ class TestForceFieldVirtualSites:
             molecule.to_topology(), return_topology=True
         )
 
-
         omm_particle_tuples = []
         for i in range(omm_system.getNumParticles()):
 
