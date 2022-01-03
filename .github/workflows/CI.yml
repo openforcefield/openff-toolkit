@@ -136,7 +136,7 @@ jobs:
         run: pytest -r fE --tb=short openff/toolkit/tests/test_links.py
 
       - name: Run mypy
-        if: ${{ matrix.rdkit == true && matrix.openeye == true && }}
+        if: ${{ matrix.rdkit == true && matrix.openeye == true }}
         run: mypy --namespace-packages -p "openff.toolkit"
 
       - name: Run unit tests
