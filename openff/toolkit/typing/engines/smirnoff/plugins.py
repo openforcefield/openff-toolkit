@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 SUPPORTED_PLUGIN_NAMES = ["handlers"]  # io_handlers could be supported in future.
 
 
-def _load_handler_plugins(handler_name, expected_type):
+def _load_handler_plugins(handler_name: str, expected_type):
     """Loads parameter handler plugins of a specified type which have been registered
     with the ``entrypoint`` plugin system.
 
@@ -44,15 +44,15 @@ def _load_handler_plugins(handler_name, expected_type):
         handler plugins the expected class type is ``ParameterIOHandler``. Any
         classes not matching the expected type will be skipped.
     """
-    import pkg_resources
+    from importlib_metadata import entry_points
 
     discovered_plugins = []
 
     if handler_name not in SUPPORTED_PLUGIN_NAMES:
         raise NotImplementedError()
 
-    for entry_point in pkg_resources.iter_entry_points(
-        f"openff.toolkit.plugins.{handler_name}"
+    for entry_point in entry_points().select(
+        group=f"openff.toolkit.plugins.{handler_name}"
     ):
 
         try:
