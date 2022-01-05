@@ -1488,7 +1488,7 @@ class Topology(Serializable):
             remapped_mol = unq_mol.remap(local_top_to_ref_index, current_to_new=False)
             # Transfer hierarchy metadata from openmm mol graph to offmol metadata
             for omm_atom, off_atom in zip(omm_mol_G.nodes, remapped_mol.atoms):
-                off_atom.name = omm_mol_G.nodes[omm_atom]['name']
+                off_atom.name = omm_mol_G.nodes[omm_atom]['atom_name']
                 off_atom.metadata['residue_name'] = omm_mol_G.nodes[omm_atom]['residue_name']
                 off_atom.metadata['residue_num'] = omm_mol_G.nodes[omm_atom]['residue_id']
                 off_atom.metadata['chain'] = omm_mol_G.nodes[omm_atom]['chain_id']

@@ -5230,7 +5230,7 @@ class FrozenMolecule(Serializable):
 
     @classmethod
     @requires_package("openmm")
-    def from_pdb(cls, file_path):
+    def from_pdb(cls, file_path, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         import networkx as nx
         from networkx.algorithms import isomorphism
         from openmm import unit as openmm_unit
@@ -5311,6 +5311,8 @@ class FrozenMolecule(Serializable):
             #         residue_name=atom.residue.name,
             #         residue_number=atom.residue.index,
             #     )
+
+            # Don't modify the input graph
             import copy
             omm_topology_G = copy.deepcopy(omm_topology_G)
 
@@ -5334,10 +5336,16 @@ class FrozenMolecule(Serializable):
                 )
                 non_isomorphic_flag = True
                 for substructure_smarts in sorted_substructure_smarts:
-                    rdmol_G = toolkit_registry.call('_smarts_to_networkx', substructure_smarts, res_name)
-                    _make_hydrogens_negative_in_networkx_graph(rdmol_G)
+                    substructure_graph = toolkit_registry.call('_smarts_to_networkx', substructure_smarts)
+                    # These substructures (and only these substructures) should be able to overlap previous matches.
+                    # They handle bonds between substructures.
+                    if res_name in ["PEPTIDE_BOND", "DISULFIDE"]:
+                        for node in substructure_graph.nodes:
+                            substructure_graph.nodes[node]["already_matched"] = True
+
+                    _make_hydrogens_negative_in_networkx_graph(substructure_graph)
                     GM = isomorphism.GraphMatcher(
-                        omm_topology_G, rdmol_G, node_match=node_match
+                        omm_topology_G, substructure_graph, node_match=node_match
                     )
                     if GM.subgraph_is_isomorphic():
                         print(res_name)
@@ -5345,17 +5353,18 @@ class FrozenMolecule(Serializable):
                         for omm_idx_2_rdk_idx in GM.subgraph_isomorphisms_iter():
                             #assert len(omm_idx_2_rdk_idx) == rdmol.GetNumAtoms()
                             for omm_idx, rdk_idx in omm_idx_2_rdk_idx.items():
+                                # TODO: What should we do with atoms that aren't mapped in the substructure?
                                 if omm_idx in already_assigned_nodes:
                                     continue
                                 already_assigned_nodes.add(omm_idx)
                                 omm_topology_G.nodes[omm_idx][
                                     "formal_charge"
-                                ] = rdmol_G.nodes[rdk_idx]["formal_charge"]
+                                ] = substructure_graph.nodes[rdk_idx]["formal_charge"]
                                 omm_topology_G.nodes[omm_idx]["already_matched"] = True
                             rdk_idx_2_omm_idx = dict(
                                 [(j, i) for i, j in omm_idx_2_rdk_idx.items()]
                             )
-                            for edge in rdmol_G.edges:
+                            for edge in substructure_graph.edges:
                                 omm_edge_idx = (
                                     rdk_idx_2_omm_idx[edge[0]],
                                     rdk_idx_2_omm_idx[edge[1]],
@@ -5365,7 +5374,7 @@ class FrozenMolecule(Serializable):
                                 already_assigned_edges.add(tuple(omm_edge_idx))
                                 omm_topology_G.get_edge_data(*omm_edge_idx)[
                                     "bond_order"
-                                ] = rdmol_G.get_edge_data(*edge)["bond_order"]
+                                ] = substructure_graph.get_edge_data(*edge)["bond_order"]
                         non_isomorphic_flag = False
                 if non_isomorphic_flag:
                     non_isomorphic_count += 1
@@ -5388,6 +5397,8 @@ class FrozenMolecule(Serializable):
         '''
         To dos
              * Remove/hide this function, route traffic through Topology.from_openmm/from_pdb
+             * Handle loading custom substructure dicts
+             * Don't assign info to non-tagged atoms (?)
              
              
         Turn OMM topology into naive networkx graph (Topology._omm_to_networkx)
@@ -5403,7 +5414,7 @@ class FrozenMolecule(Serializable):
         Check whether any element numbers are negative or formal charges are unset and raise an informative error (Molecule._from_pdb_check_atoms_assigned)
         Make hydrogens positive
         Turn nx graph into offmol (Molecule.from_networkx)
-        Use a toolkitwrapper to percieve stereo from 3D (oetkw and rdktkw.assign_stereo_from_3d)
+        Use a toolkitwrapper to percieve aro and stereo from 3D (oetkw and rdktkw.assign_stereo_from_3d)
         '''
 
         substructure_file_path = get_data_file_path(
@@ -5419,7 +5430,7 @@ class FrozenMolecule(Serializable):
         omm_topology_G = Topology._openmm_topology_to_networkx(pdb.topology)
 
         omm_topology_G = _add_chemical_info_to_networkx_graph(
-            substructure_dictionary, omm_topology_G
+            substructure_dictionary, omm_topology_G, toolkit_registry=toolkit_registry
         )
 
         offmol = Molecule()
@@ -5444,11 +5455,10 @@ class FrozenMolecule(Serializable):
             print(edge, edge_data)
             offmol.add_bond(edge[0], edge[1], edge_data["bond_order"], False)
 
-        # Retrieve metadata to be recovered after roundtrip to rdkit land
-        atoms_metadata = [atom.metadata for atom in offmol.atoms]
+        # # Retrieve metadata to be recovered after roundtrip to rdkit land
+        # atoms_metadata = [atom.metadata for atom in offmol.atoms]
 
         print(f"Number of atoms before sanitization: {offmol.n_atoms}")
-        # TODO: Pull in coordinates and assign stereochemistry
         coords = (
             np.array(
                 [
@@ -5461,23 +5471,17 @@ class FrozenMolecule(Serializable):
 
         offmol.add_conformer(coords)
         # TODO: Ensure that this assigns aromaticity
-        rdmol = offmol.to_rdkit()
-        Chem.SanitizeMol(
-            rdmol,
-            Chem.SANITIZE_ALL
-            ^ Chem.SANITIZE_ADJUSTHS,  # ^ Chem.SANITIZE_SETAROMATICITY,
-        )
-        Chem.AssignStereochemistryFrom3D(rdmol)
+        offmol_w_stereo_and_aro = toolkit_registry.call('_assign_aromaticity_and_stereo_from_3d', offmol)
+        assert offmol_w_stereo_and_aro.n_atoms == offmol.n_atoms
+        for stereo_aro_atom, atom in zip(offmol_w_stereo_and_aro.atoms, offmol.atoms):
+            atom.stereochemistry = stereo_aro_atom.stereochemistry
+            atom._is_aromatic = stereo_aro_atom.is_aromatic
+        for stereo_aro_bond, bond in zip(offmol_w_stereo_and_aro.bonds, offmol.bonds):
+            bond._is_aromatic = stereo_aro_bond.is_aromatic
 
-        print(f"Number of atoms after sanitization: {len(rdmol.GetAtoms())}")
-
-        offmol = cls.from_rdkit(
-            rdmol, allow_undefined_stereo=True, hydrogens_are_explicit=True
-        )
-
-        # Recover metadata. Atom order is expected to be the same as in rdkit
-        for atom, metadata in zip(offmol.atoms, atoms_metadata):
-            atom.metadata.update(metadata)
+        # # Recover metadata. Atom order is expected to be the same as in rdkit
+        # for atom, metadata in zip(offmol.atoms, atoms_metadata):
+        #     atom.metadata.update(metadata)
 
         print(f"OFFMol number of atoms: {offmol.n_atoms}")
         return offmol
