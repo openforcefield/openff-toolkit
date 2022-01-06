@@ -54,15 +54,13 @@ def _load_handler_plugins(handler_name: str, expected_type):
     for entry_point in entry_points().select(
         group=f"openff.toolkit.plugins.{handler_name}"
     ):
-
         try:
             discovered_plugins.append(entry_point.load())
-        except ImportError:
+        except (ImportError, AttributeError):
             logger.exception(f"Could not load the {entry_point} plugin")
             continue
 
     valid_plugins = []
-
     for discovered_plugin in discovered_plugins:
 
         if not issubclass(discovered_plugin, expected_type):
