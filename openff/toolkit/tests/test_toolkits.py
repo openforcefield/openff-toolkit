@@ -4044,7 +4044,7 @@ def test_license_check(monkeypatch):
     assert OpenEyeToolkitWrapper()._check_licenses()
     assert OpenEyeToolkitWrapper().is_available()
 
-    from openff.toolkit.utils.toolkits import requires_openeye_module
+    from openff.toolkit.utils.openeye_wrapper import requires_openeye_module
 
     @requires_openeye_module("oeszybki")
     def func_using_extraneous_openeye_module():

@@ -10,9 +10,6 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Behaviors changed and bugfixes
 
-- [PR #1118](https://github.com/openforcefield/openforcefield/pull/1118):
-  [`Molecule.to_hill_formula`](openff.toolkit.topology.Molecule.to_hill_formula) is now a class method
-  and no longer accepts input of NetworkX graphs.
 - [PR #1130](https://github.com/openforcefield/openforcefield/pull/1130): Running unit tests will
   no longer generate force field files in the local directory.
 - [PR #1148](https://github.com/openforcefield/openforcefield/pull/1148): Adds a new exception
@@ -42,6 +39,13 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
   [Issue #1159](https://github.com/openforcefield/openff-toolkit/issues/1159), in which the order of 
   atoms defining a `BondChargeVirtualSite` (and possibly other virtual sites types too) might be reversed 
   if the `match` attribute of the virtual site has a value of `"once"`.
+
+### Breaking changes
+- [PR #1118](https://github.com/openforcefield/openforcefield/pull/1118):
+  [`Molecule.to_hill_formula`](openff.toolkit.topology.Molecule.to_hill_formula) is now a class method
+  and no longer accepts input of NetworkX graphs.
+- [PR #1156](https://github.com/openforcefield/openforcefield/pull/1156): Removes `ParseError` and
+  `MessageException`, which has been deprecated since version 0.10.0.
 
 ### Examples added
 
