@@ -101,7 +101,7 @@ jobs:
 
       - name: Install package
         run: |
-          conda remove --force openff-toolkit openff-toolkit-base
+          # conda remove --force openff-toolkit openff-toolkit-base
           python setup.py develop --no-deps
 
       - name: Remove undesired toolkits
