@@ -1240,7 +1240,24 @@ class ForceField:
     # TODO: Should we also accept a Molecule as an alternative to a Topology?
 
     @requires_package("openmm")
-    def create_openmm_system(self, topology, **kwargs):
+    def create_openmm_system(self, topology, use_interchange=True, **kwargs):
+        """Create an OpenMM System from this ForceField and a Topology.
+
+        Parameters
+        ----------
+        topology : openforcefield.topology.Topology
+            The ``Topology`` which is to be parameterized with this ``ForceField``.
+        use_interchange : bool, optional, default=True
+            Whether to use the Interchange module in creation of an OpenMM ``System``.
+
+        """
+        if use_interchange:
+            return self._to_interchange(topology, **kwargs).to_openmm()
+        else:
+            return self._old_create_openmm_system(topology, **kwargs)
+
+    @requires_package("openmm")
+    def _old_create_openmm_system(self, topology, **kwargs):
         """Create an OpenMM System representing the interactions for the specified Topology with the current force field
 
         Parameters
