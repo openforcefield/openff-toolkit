@@ -5172,8 +5172,7 @@ class VirtualSiteHandler(_NonbondedHandler):
             # has the match setting, which ultimately decides which orientations
             # to include.
             if self.match == "once":
-                key = self.transformed_dict_cls.key_transform(orientations[0])
-                orientations = [key]
+                orientations = [orientations[0]]
                 # else all matches wanted, so keep whatever was matched.
 
             base_args = {

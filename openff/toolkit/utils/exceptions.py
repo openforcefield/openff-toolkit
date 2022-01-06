@@ -15,7 +15,7 @@ class IncompatibleUnitError(OpenFFToolkitException):
     """
 
 
-class MissingDependencyError(OpenFFToolkitException):
+class MissingDependencyError(OpenFFToolkitException, ImportError):
     """
     Exception for when an optional dependency is needed but not installed
 
