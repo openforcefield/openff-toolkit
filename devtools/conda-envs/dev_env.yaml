@@ -1,0 +1,51 @@
+name: pr-1165-env
+channels:
+  - openeye
+  - conda-forge
+dependencies:
+    # Base depends
+  - python
+  - pip
+  - packaging
+  - openmm >=7.6
+  - openff-forcefields
+  - openff-units >=0.1.4
+  - openff-utilities
+  - smirnoff99Frosst
+  - numpy
+  - networkx
+  - ambertools
+  - rdkit
+  - mendeleev
+  - xmltodict
+  - mendeleev
+    # Test-only/optional/dev
+  - pytest
+  - pytest-cov
+  - pytest-rerunfailures
+  - nbval
+  - codecov
+  - coverage
+  - openeye-toolkits
+  - mdtraj
+  - cachetools
+  - black
+  - isort
+  - pyyaml
+  - toml
+  - bson
+  - msgpack-python
+  - qcelemental
+  - qcportal
+  - qcengine
+  - mdtraj
+  # Typing
+  - mypy
+  - typing-extensions
+  - pip:
+    - types-pkg_resources
+    - types-setuptools
+    - types-toml
+    - types-PyYAML
+    - mongo-types
+    - git+https://github.com/openforcefield/openff-interchange.git@topology-refactor

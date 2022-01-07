@@ -1380,8 +1380,11 @@ class TestForceField:
         molecules = [create_ethanol()]
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
 
+        # TODO: specify desired toolkit_registry behavior in Interchange
         omm_system = forcefield.create_openmm_system(
-            topology, toolkit_registry=toolkit_registry
+            topology,
+            toolkit_registry=toolkit_registry,
+            use_interchange=False,
         )
 
     @pytest.fixture()
@@ -1430,8 +1433,11 @@ class TestForceField:
             match="Unable to resolve order in which to run ParameterHandlers. "
             "Dependencies do not form a directed acyclic graph",
         ) as excinfo:
+            # TODO: specify desired toolkit_registry behavior in Interchange
             omm_system = forcefield.create_openmm_system(
-                topology, toolkit_registry=toolkit_registry
+                topology,
+                toolkit_registry=toolkit_registry,
+                use_interchange=False,
             )
 
     def test_parameterize_ethanol_missing_torsion(self):
@@ -1522,7 +1528,8 @@ class TestForceField:
         )
 
         omm_system = forcefield.create_openmm_system(
-            topology, toolkit_registry=toolkit_registry
+            topology,
+            toolkit_registry=toolkit_registry,
         )
         # TODO: Add check to ensure system energy is finite
 
@@ -1541,8 +1548,11 @@ class TestForceField:
             pdbfile.topology,
             unique_molecules=molecules1,
         )
+        # TODO: specify desired toolkit_registry behavior in Interchange
         omm_system1 = forcefield.create_openmm_system(
-            topology1, toolkit_registry=toolkit_registry
+            topology1,
+            toolkit_registry=toolkit_registry,
+            use_interchange=False,
         )
         # Load the unique molecules with a different atom ordering
         molecules2 = [
@@ -1553,7 +1563,9 @@ class TestForceField:
             unique_molecules=molecules2,
         )
         omm_system2 = forcefield.create_openmm_system(
-            topology2, toolkit_registry=toolkit_registry
+            topology2,
+            toolkit_registry=toolkit_registry,
+            use_interchange=False,
         )
 
         serialized_1 = XmlSerializer.serialize(omm_system1)
@@ -1582,8 +1594,11 @@ class TestForceField:
             pdbfile.topology,
             unique_molecules=molecules1,
         )
+        # TODO: specify desired toolkit_registry behavior in Interchange
         omm_system1 = forcefield.create_openmm_system(
-            topology1, toolkit_registry=toolkit_registry
+            topology1,
+            toolkit_registry=toolkit_registry,
+            use_interchange=False,
         )
 
         # Load the unique molecules with a different atom ordering
@@ -1595,7 +1610,9 @@ class TestForceField:
             unique_molecules=molecules2,
         )
         omm_system2 = forcefield.create_openmm_system(
-            topology2, toolkit_registry=toolkit_registry
+            topology2,
+            toolkit_registry=toolkit_registry,
+            use_interchange=False,
         )
 
         serialized_1 = XmlSerializer.serialize(omm_system1)
@@ -1623,7 +1640,10 @@ class TestForceField:
         topology = Topology.from_molecules([molecule])
 
         force_field = ForceField("test_forcefields/test_forcefield.offxml")
-        force_field.create_openmm_system(topology, toolkit_registry=toolkit_registry)
+        # TODO: specify desired toolkit_registry behavior in Interchange
+        force_field.create_openmm_system(
+            topology, toolkit_registry=toolkit_registry, use_interchange=False
+        )
 
     @requires_openeye
     def test_parameterize_mol_missing_stereo_openeye(self):
@@ -1640,7 +1660,10 @@ class TestForceField:
         topology = Topology.from_molecules([molecule])
 
         force_field = ForceField("test_forcefields/test_forcefield.offxml")
-        force_field.create_openmm_system(topology, toolkit_registry=toolkit_registry)
+        # TODO: specify desired toolkit_registry behavior in Interchange
+        force_field.create_openmm_system(
+            topology, toolkit_registry=toolkit_registry, use_interchange=False
+        )
 
     @pytest.mark.parametrize(
         "toolkit_registry,registry_description", toolkit_registries
@@ -1660,8 +1683,12 @@ class TestForceField:
             ValueError,
             match=".* not used by any registered force Handler: {'invalid_kwarg'}.*",
         ) as e:
+            # TODO: specify desired toolkit_registry behavior in Interchange
             omm_system = forcefield.create_openmm_system(
-                topology, invalid_kwarg="aaa", toolkit_registry=toolkit_registry
+                topology,
+                invalid_kwarg="aaa",
+                toolkit_registry=toolkit_registry,
+                use_interchange=False,
             )
 
     @pytest.mark.parametrize("mod_cuoff", [True, False])
@@ -1810,7 +1837,9 @@ class TestForceField:
             forcefield.get_parameter_handler(
                 "Electrostatics", {}
             ).method = electrostatics_method
-            omm_system = forcefield.create_openmm_system(topology)
+            omm_system = forcefield.create_openmm_system(
+                topology, use_interchange=False
+            )
             nonbond_method_matched = False
             for f_idx in range(omm_system.getNumForces()):
                 force = omm_system.getForce(f_idx)
@@ -1825,7 +1854,9 @@ class TestForceField:
                 forcefield.get_parameter_handler(
                     "Electrostatics", {}
                 ).method = electrostatics_method
-                omm_system = forcefield.create_openmm_system(topology)
+                omm_system = forcefield.create_openmm_system(
+                    topology, use_interchange=False
+                )
 
     def test_registered_parameter_handlers(self):
         """Test registered_parameter_handlers property"""
