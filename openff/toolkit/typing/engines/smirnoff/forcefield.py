@@ -1257,7 +1257,7 @@ class ForceField:
 
         """
         if use_interchange:
-            return self.to_interchange(topology, **kwargs).to_openmm()
+            return self.create_interchange(topology, **kwargs).to_openmm()
         else:
             return self._old_create_openmm_system(topology, **kwargs)
 
@@ -1399,7 +1399,7 @@ class ForceField:
             return system
 
     @requires_package("openff.interchange")
-    def to_interchange(self, topology: "Topology", box=None):
+    def create_interchange(self, topology: "Topology", box=None):
         """
         Create an Interchange object from a ForceField, Topology, and (optionally) box vectors.
 
