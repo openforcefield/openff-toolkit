@@ -5399,6 +5399,7 @@ class FrozenMolecule(Serializable):
              * Remove/hide this function, route traffic through Topology.from_openmm/from_pdb
              * Handle loading custom substructure dicts
              * Don't assign info to non-tagged atoms (?)
+             * Make spec for molecule/residue info, and where it goes in to/from rdkit/openeye/openmm
              
              
         Turn OMM topology into naive networkx graph (Topology._omm_to_networkx)
