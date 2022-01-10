@@ -56,6 +56,7 @@ autodoc_default_options = {
     "inherited-members": True,
     "member-order": "bysource",
 }
+autodoc_preserve_defaults = True
 
 # Disable NumPy style attributes/methods expecting every method to have its own docs page
 numpydoc_class_members_toctree = False
@@ -92,6 +93,31 @@ myst_enable_extensions = [
 jupyter_execute_notebooks = "force"
 # List of notebooks NOT to execute (use output stored in notebook instead)
 execution_excludepatterns = []
+
+
+# sphinx-notfound-page
+# https://github.com/readthedocs/sphinx-notfound-page
+# Renders a 404 page with absolute links
+import importlib
+
+if importlib.util.find_spec("notfound"):
+    extensions.append("notfound.extension")
+
+    notfound_context = {
+        "title": "404: File Not Found",
+        "body": """
+    <h1>404: File Not Found</h1>
+    <p>
+        Sorry, we couldn't find that page. This often happens as a result of
+        following an outdated link. Please check the
+        <a href="https://open-forcefield-toolkit.readthedocs.io/en/stable/">latest stable version</a>
+        of the docs, unless you're sure you want an earlier version, and
+        try using the search box or the navigation menu on the left.
+    </p>
+    <p>
+    </p>
+    """,
+    }
 
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:

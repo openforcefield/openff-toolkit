@@ -15,7 +15,7 @@ specification, the toolkit [`Molecule`](openff.toolkit.topology.Molecule) object
 
 Virtual sites can be added to a System in two ways:
 
-* SMIRNOFF Force Fields can contain a [VirtualSites tag](smirnoff.html#virtualsites-virtual-sites-for-off-atom-charges),
+* SMIRNOFF Force Fields can contain a [VirtualSites tag](https://openforcefield.github.io/standards/standards/smirnoff/#virtualsites-virtual-sites-for-off-atom-charges),
   specifying the addition of virtual sites according to SMARTS-based rules.
 * Virtual sites can be added to a [`Molecule`](openff.toolkit.topology.Molecule), and
   these will appear in the final OpenMM system if a virtual site handler is present

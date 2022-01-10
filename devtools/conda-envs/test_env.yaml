@@ -19,6 +19,7 @@ dependencies:
     # Test-only/optional/dev
   - pytest
   - pytest-cov
+  - pytest-rerunfailures
   - nbval
   - codecov
   - coverage

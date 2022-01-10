@@ -3,6 +3,7 @@ name: binder-env
 channels:
   - conda-forge
   - defaults
+  - bioconda
 dependencies:
   # Let conda pull in the toolkit and its deps
   - openff-toolkit
@@ -13,3 +14,6 @@ dependencies:
   - qcportal
   - qcengine
   - openmmforcefields
+  - openff-interchange >=0.1.2
+  - gromacs
+  - lammps

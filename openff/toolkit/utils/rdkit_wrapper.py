@@ -889,7 +889,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         conformer_generation_status = AllChem.EmbedMultipleConfs(
             rdmol,
             numConfs=n_conformers,
-            pruneRmsThresh=rms_cutoff / unit.angstrom,
+            pruneRmsThresh=rms_cutoff.value_in_unit(unit.angstrom),
             randomSeed=1,
             # params=AllChem.ETKDG()
         )

@@ -56,9 +56,13 @@ from openff.toolkit.topology.molecule import (
     InvalidConformerError,
     Molecule,
     SmilesParsingError,
+    _networkx_graph_to_hill_formula,
 )
 from openff.toolkit.utils import get_data_file_path
-from openff.toolkit.utils.exceptions import ConformerGenerationError
+from openff.toolkit.utils.exceptions import (
+    ConformerGenerationError,
+    UnsupportedFileTypeError,
+)
 from openff.toolkit.utils.toolkits import (
     AmberToolsToolkitWrapper,
     OpenEyeToolkitWrapper,
@@ -484,6 +488,29 @@ class TestMolecule:
         molecule_copy.properties["aaa"] = "bbb"
         assert "aaa" not in molecule.properties
 
+    @pytest.mark.skipif(
+        not (has_pkg("rdkit") and not (has_pkg("openeye"))),
+        reason="Test requires that RDKit is installed, but OpenEye is not installed",
+    )
+    def test_repr_bad_smiles(self):
+        """Test that the repr falls back to Hill formula if to_smiles fails."""
+
+        assert "bad" not in Molecule.from_smiles("CC").__repr__()
+
+        # OpenEye will report a smiles of ClCl(Cl)C without error, so only test with RDKit unless we
+        # can come up with a molecule that OpenEyeToolkitWrapper.to_smiles() will reliably fail on
+
+        molecule = Molecule()
+        molecule.add_atom(17, 0, False)
+        molecule.add_atom(17, 0, False)
+        molecule.add_atom(17, 0, False)
+
+        molecule.add_bond(0, 1, 1, False)
+        molecule.add_bond(0, 2, 1, False)
+
+        expected_repr = "Molecule with name '' with bad SMILES and Hill formula 'Cl3'"
+        assert molecule.__repr__() == expected_repr
+
     @pytest.mark.parametrize("toolkit", [OpenEyeToolkitWrapper, RDKitToolkitWrapper])
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_to_from_smiles(self, molecule, toolkit):
@@ -753,6 +780,7 @@ class TestMolecule:
         assert (
             len(set([atom.name for atom in molecule.atoms])) == molecule.n_atoms
         ) == molecule.has_unique_atom_names
+        assert all("x" in a.name for a in molecule.atoms)
 
     inchi_data = [
         {
@@ -1282,11 +1310,11 @@ class TestMolecule:
     def test_hill_formula(self):
         """Test that making the hill formula is consistent between input methods and ordering"""
         # make sure smiles match reference
-        molecule_smiles = create_ethanol()
-        assert molecule_smiles.hill_formula == "C2H6O"
+        molecule = create_ethanol()
+        assert molecule.hill_formula == "C2H6O"
         # make sure is not order dependent
-        molecule_smiles_reverse = create_reversed_ethanol()
-        assert molecule_smiles.hill_formula == molecule_smiles_reverse.hill_formula
+        molecule_reverse = create_reversed_ethanol()
+        assert molecule.hill_formula == molecule_reverse.hill_formula
         # make sure single element names are put first
         order_mol = Molecule.from_smiles("C(Br)CB")
         assert order_mol.hill_formula == "C2H6BBr"
@@ -1298,16 +1326,19 @@ class TestMolecule:
         assert br_i.hill_formula == "BrI"
         # make sure files and smiles match
         molecule_file = Molecule.from_file(get_data_file_path("molecules/ethanol.sdf"))
-        assert molecule_smiles.hill_formula == molecule_file.hill_formula
+        assert molecule.hill_formula == molecule_file.hill_formula
         # make sure the topology molecule gives the same formula
         from openff.toolkit.topology.topology import Topology, TopologyMolecule
 
-        topology = Topology.from_molecules(molecule_smiles)
-        topmol = TopologyMolecule(molecule_smiles, topology)
-        assert molecule_smiles.hill_formula == Molecule.to_hill_formula(topmol)
-        # make sure the networkx matches
-        assert molecule_smiles.hill_formula == Molecule.to_hill_formula(
-            molecule_smiles.to_networkx()
+        topology = Topology.from_molecules(molecule)
+        topmol = TopologyMolecule(molecule, topology)
+        assert molecule.hill_formula == Molecule._object_to_hill_formula(topmol)
+        assert molecule.hill_formula == Molecule._object_to_hill_formula(
+            molecule.to_networkx()
+        )
+
+        assert molecule.hill_formula == _networkx_graph_to_hill_formula(
+            molecule.to_networkx()
         )
 
     def test_isomorphic_general(self):
@@ -1919,6 +1950,10 @@ class TestMolecule:
 
         assert expected == actual
 
+    def test_from_xyz_unsupported(self):
+        with pytest.raises(UnsupportedFileTypeError):
+            Molecule.from_file("foo.xyz", file_format="xyz")
+
     @requires_rdkit
     def test_from_pdb_and_smiles(self):
         """Test the ability to make a valid molecule using RDKit and SMILES together"""
@@ -2006,6 +2041,20 @@ class TestMolecule:
         ] == ethanol.to_smiles(mapped=True)
 
     @requires_pkg("qcportal")
+    def test_to_qcschema_no_connections(self):
+        mol = Molecule.from_mapped_smiles("[Br-:1].[K+:2]")
+        mol.add_conformer(
+            unit.Quantity(
+                np.array(
+                    [[0.188518, 0.015684, 0.001562], [0.148794, 0.21268, 0.11992]]
+                ),
+                unit.nanometers,
+            )
+        )
+        qcschema = mol.to_qcschema()
+        assert qcschema.connectivity is None
+
+    @requires_pkg("qcportal")
     def test_from_qcschema_no_client(self):
         """Test the ability to make molecules from QCArchive record instances and dicts"""
 
@@ -2076,6 +2125,7 @@ class TestMolecule:
     ]
 
     @requires_pkg("qcportal")
+    @pytest.mark.flaky(reruns=5)
     @pytest.mark.parametrize("input_data", client_examples)
     def test_from_qcschema_with_client(self, input_data):
         """For each of the examples try and make a offmol using the instance and dict and check they match"""
@@ -2188,6 +2238,7 @@ class TestMolecule:
             mol_qca_record = Molecule.from_qcschema(entry, client)
 
     @requires_pkg("qcportal")
+    @pytest.mark.flaky(reruns=10)
     def test_qcschema_molecule_record_round_trip_from_to_from(self):
         """Test making a molecule from qca record using from_qcschema,
         then converting back to qcschema using to_qcschema,
@@ -3476,10 +3527,14 @@ class TestMolecule:
         initial_charges = molecule._partial_charges
 
         # Make sure everything isn't 0s
-        assert (abs(initial_charges / unit.elementary_charge) > 0.01).any()
+        assert (abs(initial_charges.value_in_unit(unit.elementary_charge)) > 0.01).any()
         # Check total charge
-        charges_sum_unitless = initial_charges.sum() / unit.elementary_charge
-        total_charge_unitless = molecule.total_charge / unit.elementary_charge
+        charges_sum_unitless = initial_charges.sum().value_in_unit(
+            unit.elementary_charge
+        )
+        total_charge_unitless = molecule.total_charge.value_in_unit(
+            unit.elementary_charge
+        )
         # if abs(charges_sum_unitless - total_charge_unitless) > 0.0001:
         # print(
         #     "molecule {}    charge_sum {}     molecule.total_charge {}".format(
@@ -3606,6 +3661,9 @@ class TestMolecule:
         """Test that different calls to Molecule.assign_fractional_bond_orders do not
         produce unexpected errors, but do not asses validity of results"""
         mol = Molecule.from_smiles("CCO")
+
+        # Test that default model works
+        mol.assign_fractional_bond_orders()
 
         mol.assign_fractional_bond_orders(
             bond_order_model=model,
@@ -3764,6 +3822,15 @@ class TestMoleculeVisualization:
 
         assert isinstance(mol.visualize(backend="openeye"), IPython.core.display.Image)
 
+    @pytest.mark.skipif(
+        has_pkg("nglview"),
+        reason="Test requires that NGLview is not installed",
+    )
+    def test_ipython_repr_no_nglview(self):
+        """Test that the default Molecule repr does not break when nglview is not installed"""
+        molecule = Molecule().from_smiles("CCO")
+        molecule._ipython_display_()
+
 
 class MyMol(FrozenMolecule):
     """
@@ -3805,6 +3872,7 @@ class TestMoleculeSubclass:
 
     @requires_pkg("qcelemental")
     @requires_pkg("qcportal")
+    @pytest.mark.flaky(reruns=5)
     def test_molecule_subclass_from_qcschema(self):
         """Ensure that the right type of object is returned when running MyMol.from_qcschema"""
         import qcportal as ptl

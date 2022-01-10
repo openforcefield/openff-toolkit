@@ -17,3 +17,7 @@ dependencies:
   - numpy
   - openmm
   - openff-forcefields >=2.0.0
+  - openff-interchange >=0.1.3
+  - gromacs
+  - lammps
+  - ambertools

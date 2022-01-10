@@ -27,17 +27,15 @@ __all__ = [
     "convert_0_2_smirnoff_to_0_3",
     "get_molecule_parameterIDs",
 ]
-
-
 import contextlib
 import functools
 import logging
+from typing import List, Tuple, Union
 
 try:
     from openmm import unit
 except ImportError:
     from simtk import unit
-
 
 from openff.toolkit.utils.exceptions import (
     IncompatibleUnitError,
@@ -641,12 +639,9 @@ def detach_units(unit_bearing_dict, output_units=None):
     return unitless_dict, unit_dict
 
 
-def serialize_numpy(np_array):
+def serialize_numpy(np_array) -> Tuple[bytes, Tuple[int]]:
     """
-    Serializes a numpy array into a JSON-compatible string. Leverages the numpy.save function,
-    thereby preserving the shape of the input array
-
-    from https://stackoverflow.com/questions/30698004/how-can-i-serialize-a-numpy-array-while-preserving-matrix-dimensions#30699208
+    Serializes a numpy array into a big-endian bytestring and tuple representing its shape.
 
     Parameters
     ----------
@@ -655,23 +650,24 @@ def serialize_numpy(np_array):
 
     Returns
     -------
-    serialized : str
-        A serialized representation of the numpy array.
+    serialized : bytes
+        A big-endian bytestring of the NumPy array.
     shape : tuple of ints
         The shape of the serialized array
     """
+    import numpy as np
 
-    bigendian_array = np_array.newbyteorder(">")
+    bigendian_float = np.dtype(float).newbyteorder(">")
+    bigendian_array = np_array.astype(bigendian_float)
     serialized = bigendian_array.tobytes()
     shape = np_array.shape
     return serialized, shape
 
 
-def deserialize_numpy(serialized_np, shape):
+def deserialize_numpy(serialized_np: Union[bytes, List], shape: Tuple[int]):
     """
-    Deserializes a numpy array from a JSON-compatible string.
-
-    from https://stackoverflow.com/questions/30698004/how-can-i-serialize-a-numpy-array-while-preserving-matrix-dimensions#30699208
+    Deserializes a numpy array from a bytestring or list. The input, if a bytestring, is
+    assumed to be in big-endian byte order.
 
     Parameters
     ----------
@@ -690,8 +686,7 @@ def deserialize_numpy(serialized_np, shape):
     if isinstance(serialized_np, list):
         np_array = np.array(serialized_np)
     if isinstance(serialized_np, bytes):
-        dt = np.dtype("float")
-        dt.newbyteorder(">")  # set to big-endian
+        dt = np.dtype("float").newbyteorder(">")
         np_array = np.frombuffer(serialized_np, dtype=dt)
     np_array = np_array.reshape(shape)
     return np_array

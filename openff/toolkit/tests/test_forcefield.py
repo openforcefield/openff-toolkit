@@ -22,10 +22,10 @@ from numpy.testing import assert_almost_equal
 
 try:
     import openmm
-    from openmm import NonbondedForce, Platform, XmlSerializer, app, unit
+    from openmm import NonbondedForce, Platform, System, XmlSerializer, app, unit
 except ImportError:
     from simtk import openmm, unit
-    from simtk.openmm import app, XmlSerializer, Platform, NonbondedForce
+    from simtk.openmm import app, XmlSerializer, Platform, NonbondedForce, System
 
 from openff.toolkit.tests.create_molecules import (
     create_acetaldehyde,
@@ -940,7 +940,7 @@ class TestForceField:
     def test_do_not_load_in_child_dir(self, tmp_path):
         """Ensure force field XML files in nested subdirectories are not loaded
         when not explicitly pointed to."""
-        nested_directory = os.path.join("a", "b", "c")
+        nested_directory = tmp_path / os.path.join("a", "b", "c")
         os.makedirs(nested_directory, exist_ok=True)
 
         # Create a FF in a nested directory
@@ -2212,6 +2212,58 @@ class TestForceFieldVirtualSites:
 
         self._test_physical_parameters(toolkit_registry, *args.values())
 
+    def test_orientation_preserved_if_match_once(self):
+        """
+        Test that orientation-mangling bug from https://github.com/openforcefield/openff-toolkit/issues/1159
+        is resolved.
+        """
+        force_field = ForceField()
+
+        vsite_handler = force_field.get_parameter_handler("VirtualSites")
+        vsite_handler.add_parameter(
+            parameter_kwargs={
+                "smirks": "[#6:2]=[#8:1]",
+                "name": "EP",
+                "type": "BondCharge",
+                "distance": 0.7 * unit.nanometers,
+                "match": "once",
+                "charge_increment1": 0.2 * unit.elementary_charge,
+                "charge_increment2": 0.1 * unit.elementary_charge,
+                "sigma": 1.0 * unit.angstrom,
+                "epsilon": 2.0 / 4.184 * unit.kilocalorie_per_mole,
+            }
+        )
+
+        molecule = Molecule.from_mapped_smiles("[O:2]=[C:1]=[O:3]")
+
+        omm_system: System
+        omm_system, topology = force_field.create_openmm_system(
+            molecule.to_topology(), return_topology=True
+        )
+
+        omm_particle_tuples = []
+        for i in range(omm_system.getNumParticles()):
+
+            if not omm_system.isVirtualSite(i):
+                continue
+
+            omm_v_site = omm_system.getVirtualSite(i)
+
+            omm_particle_tuples.append(
+                tuple(
+                    omm_v_site.getParticle(j)
+                    for j in range(omm_v_site.getNumParticles())
+                )
+            )
+        assert (1, 0) in omm_particle_tuples
+        assert (2, 0) in omm_particle_tuples
+        for molecule in topology.reference_molecules:
+            for v_site in molecule.virtual_sites:
+                for particle in v_site.particles:
+                    # correct particle.orientation is (1,0) and (2,0)
+                    # and not (0, 1), (0, 2)
+                    assert particle.orientation in omm_particle_tuples
+
 
 def generate_monatomic_ions():
     return (
@@ -3243,7 +3295,10 @@ class TestForceFieldConstraints:
                 molecule.atoms[atom2_idx].element.symbol,
             }
             assert atom_elements == bond_elements
-            assert np.isclose(distance / unit.angstrom, bond_length / unit.angstrom)
+            assert np.isclose(
+                distance.value_in_unit(unit.angstrom),
+                bond_length.value_in_unit(unit.angstrom),
+            )
 
     def test_constraints_hbonds(self):
         """Test that hydrogen bonds constraints are applied correctly to a ethane molecule."""
@@ -3822,12 +3877,13 @@ class TestForceFieldParameterAssignment:
         ref_ene = 0.0011797690240 * unit.kilojoule_per_mole
 
         assert np.allclose(
-            off_crds / unit.angstrom, ref_crds_with_vsite / unit.angstrom
+            off_crds.value_in_unit(unit.angstrom),
+            ref_crds_with_vsite.value_in_unit(unit.angstrom),
         )
         # allow 1% error in energy difference (default is .001%)
         assert np.allclose(
-            off_ene / unit.kilocalorie_per_mole,
-            ref_ene / unit.kilocalorie_per_mole,
+            off_ene.value_in_unit(unit.kilocalorie_per_mole),
+            ref_ene.value_in_unit(unit.kilocalorie_per_mole),
             rtol=0.05,
         )
 

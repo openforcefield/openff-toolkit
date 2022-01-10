@@ -1997,7 +1997,7 @@ class ParameterHandler(_ParameterAttributeHandler):
           * When `before` and `after` are both specified, the new parameter will be added immediately
             after the parameter matching the `after` pattern or index.
           * The order of parameters in a parameter list can have significant impacts on parameter assignment. For details,
-            see the [SMIRNOFF](https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html#smirnoff-parameter-specification-is-hierarchical)
+            see the [SMIRNOFF](https://openforcefield.github.io/standards/standards/smirnoff/#smirnoff-parameter-specification-is-hierarchical)
             specification.
 
         Examples
@@ -5172,8 +5172,7 @@ class VirtualSiteHandler(_NonbondedHandler):
             # has the match setting, which ultimately decides which orientations
             # to include.
             if self.match == "once":
-                key = self.transformed_dict_cls.key_transform(orientations[0])
-                orientations = [key]
+                orientations = [orientations[0]]
                 # else all matches wanted, so keep whatever was matched.
 
             base_args = {

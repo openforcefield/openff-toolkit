@@ -23,7 +23,6 @@ __all__ = [
     "SMIRNOFFVersionError",
     "SMIRNOFFAromaticityError",
     "SMIRNOFFParseError",
-    "ParseError",
     "PartialChargeVirtualSitesError",
     "ForceField",
 ]
@@ -49,7 +48,6 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
 from openff.toolkit.typing.engines.smirnoff.plugins import load_handler_plugins
 from openff.toolkit.utils.exceptions import (
     ParameterHandlerRegistrationError,
-    ParseError,
     PartialChargeVirtualSitesError,
     SMIRNOFFAromaticityError,
     SMIRNOFFParseError,
@@ -95,11 +93,11 @@ def _get_installed_offxml_dir_paths() -> List[str]:
     """
     global _installed_offxml_dir_paths
     if len(_installed_offxml_dir_paths) == 0:
-        from pkg_resources import iter_entry_points
+        from importlib_metadata import entry_points
 
         # Find all registered entry points that should return a list of
         # paths to directories where to search for offxml files.
-        for entry_point in iter_entry_points(
+        for entry_point in entry_points().select(
             group="openforcefield.smirnoff_forcefield_directory"
         ):
             _installed_offxml_dir_paths.extend(entry_point.load()())
@@ -260,7 +258,7 @@ class ForceField:
         ----------
         sources : string or file-like object or open file handle or URL (or iterable of these)
             A list of files defining the SMIRNOFF force field to be loaded.
-            Currently, only `the SMIRNOFF XML format <https://github.com/openforcefield/openff-toolkit/blob/master/The-SMIRNOFF-force-field-format.md>`_ is supported.
+            Currently, only `the SMIRNOFF XML format <https://openforcefield.github.io/standards/standards/smirnoff/>`_ is supported.
             Each entry may be an absolute file path, a path relative to the current working directory, a path relative to this module's data subdirectory
             (for built in force fields), or an open file-like object with a ``read()`` method from which the force field XML data can be loaded.
             If multiple files are specified, any top-level tags that are repeated will be merged if they are compatible,
@@ -854,7 +852,7 @@ class ForceField:
         ----------
         sources : string or file-like object or open file handle or URL (or iterable of these)
             A list of files defining the SMIRNOFF force field to be loaded.
-            Currently, only `the SMIRNOFF XML format <https://github.com/openforcefield/openff-toolkit/blob/master/The-SMIRNOFF-force-field-format.md>`_ is supported.
+            Currently, only `the SMIRNOFF XML format <https://openforcefield.github.io/standards/standards/smirnoff/>`_ is supported.
             Each entry may be an absolute file path, a path relative to the current working directory, a path relative to this module's data subdirectory
             (for built in force fields), or an open file-like object with a ``read()`` method from which the force field XML data can be loaded.
             If multiple files are specified, any top-level tags that are repeated will be merged if they are compatible,
@@ -1051,7 +1049,7 @@ class ForceField:
         source : str or bytes
             sources : string or file-like object or open file handle or URL (or iterable of these)
             A list of files defining the SMIRNOFF force field to be loaded
-            Currently, only `the SMIRNOFF XML format <https://github.com/openforcefield/openff-toolkit/blob/master/The-SMIRNOFF-force-field-format.md>`_ is supported.
+            Currently, only `the SMIRNOFF XML format <https://openforcefield.github.io/standards/standards/smirnoff/>`_ is supported.
             Each entry may be an absolute file path, a path relative to the current working directory, a path relative to this module's data subdirectory
             (for built in force fields), or an open file-like object with a ``read()`` method from which the force field XML data can be loaded.
 

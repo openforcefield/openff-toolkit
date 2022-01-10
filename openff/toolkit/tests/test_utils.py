@@ -133,16 +133,3 @@ def test_sort_smirnoff_dict():
     assert smirnoff_dict == OrderedDict(
         sort_smirnoff_dict(forcefield._to_smirnoff_data())
     )
-
-
-def test_import_message_exception_raises_warning(caplog):
-    # TODO: Remove when removing MessageException
-    msg = "DEPRECATED and will be removed in a future release of the OpenFF Toolkit"
-
-    with pytest.warns(DeprecationWarning, match=msg):
-        from openff.toolkit.utils.exceptions import MessageException
-
-    with pytest.warns(None) as rec:
-        from openff.toolkit.utils.exceptions import SMILESParseError
-
-    assert len(rec) == 0
