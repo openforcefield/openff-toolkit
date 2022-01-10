@@ -1026,7 +1026,7 @@ class TestTopology:
         groupings = top.identical_molecule_groups
 
         def assert_first_ethanol_is_grouped_correctly(groupings):
-            assert groupings[0][0] == [0, {i: i for i in range(9)}]
+            assert groupings[0][0] == {0: {i: i for i in range(9)}}
 
         assert_first_ethanol_is_grouped_correctly(groupings)
 
@@ -1036,7 +1036,7 @@ class TestTopology:
 
         def assert_reversed_ethanol_is_grouped_correctly(groupings):
             # Ensure that the second ethanol knows it's the same chemical species as the first ethanol
-            assert groupings[0][1][0] == 1
+            assert next(iter(groupings[0][1])) == 1
             # Ensure that the second ethanol has the heavy atoms reversed
             assert groupings[0][1][1][0] == 8  # C
             assert groupings[0][1][1][1] == 7  # C
@@ -1052,7 +1052,7 @@ class TestTopology:
 
         def assert_cyclohexane_is_grouped_correctly(groupings):
             assert len(groupings[2]) == 1
-            assert groupings[2][0] == [2, {i: i for i in range(18)}]
+            assert groupings[2][0] == {2: {i: i for i in range(18)}}
 
         groupings = top.identical_molecule_groups
         assert_first_ethanol_is_grouped_correctly(groupings)
@@ -1064,13 +1064,14 @@ class TestTopology:
 
         def assert_last_ethanol_is_grouped_correctly(groupings):
             # Ensure that the last ethanol knows it's the same chemical species as the first ethanol
-            assert groupings[0][2][0] == 3
+            assert len(groupings) == 2
+            assert next(iter(groupings[0][2])) == 3
             # Ensure that the second ethanol has the heavy atoms matched correctly
-            assert groupings[0][2][1][0] == 0
-            assert groupings[0][2][1][1] == 1
-            assert groupings[0][2][1][2] == 2
+            assert groupings[0][2][3][0] == 0
+            assert groupings[0][2][3][1] == 1
+            assert groupings[0][2][3][2] == 2
             # Ensure that the second ethanol has the hydroxyl hydrogen matched correctly
-            assert groupings[0][2][1][8] == 8
+            assert groupings[0][2][3][8] == 8
 
         groupings = top.identical_molecule_groups
         assert_first_ethanol_is_grouped_correctly(groupings)
