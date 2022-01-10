@@ -50,6 +50,13 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
   of the deprecated `pkg_resources` package. Now the recommended `importlib_metadata` package is used instead.
 
 
+### Breaking changes
+- [PR #1118](https://github.com/openforcefield/openforcefield/pull/1118):
+  [`Molecule.to_hill_formula`](openff.toolkit.topology.Molecule.to_hill_formula) is now a class method
+  and no longer accepts input of NetworkX graphs.
+- [PR #1156](https://github.com/openforcefield/openforcefield/pull/1156): Removes `ParseError` and
+  `MessageException`, which has been deprecated since version 0.10.0.
+
 ### Examples added
 
 - [PR #1113](https://github.com/openforcefield/openff-toolkit/pull/1113): Updates the Amber/GROMACS
