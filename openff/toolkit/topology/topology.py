@@ -16,12 +16,12 @@ Class definitions to represent a molecular system and its chemical components
    * Use `attrs <http://www.attrs.org/>`_ for object setter boilerplate?
 
 """
-
 import copy
 import itertools
 import warnings
 from collections import OrderedDict
 from collections.abc import MutableMapping
+from typing import Dict, List, Tuple
 
 import numpy as np
 from openff.units import unit
@@ -1184,20 +1184,20 @@ class Topology(Serializable):
         return matches
 
     @property
-    def identical_molecule_groups(self):
+    def identical_molecule_groups(self) -> Dict[int, List[Dict[int, Dict[int, int]]]]:
         """
         Returns groups of chemically identical molecules, identified by index and atom map.
 
         Returns
         -------
-        identical_molecule_groups : {int:[[int: {int: int}]]}
-            A dict of the form {unique_mol_idx : [[topology_mol_idx, atom_map],...].
+        identical_molecule_groups : {int:[{int: {int: int}}]}
+            A dict of the form {unique_mol_idx : [{topology_mol_idx: atom_map},...].
             A dict where each key is the topology molecule index of a unique chemical species, and each value is a list
             describing all of the instances of that chemical species in the topology. Each instance is a
             two-membered list where the first element is the topology molecule index, and the second element
             is a dict describing the atom map from the unique molecule to the instance of it in the topology.
 
-                >>> from openff.toolkit.topology import Molecule, Topology
+        >>> from openff.toolkit.topology import Molecule, Topology
         >>> # Create a water ordered as OHH
         >>> water1 = Molecule()
         >>> water1.add_atom(8, 0, False)
@@ -1217,19 +1217,21 @@ class Topology(Serializable):
         >>> top = Topology.from_molecules([water1, water2])
         >>> top.identical_molecule_groups
 
-        {0: [[0, {0: 0, 1: 1, 2: 2}], [1, {0: 1, 1: 0, 2: 2}]]}
+        {0: [{0, {0: 0, 1: 1, 2: 2}}, {1, {0: 1, 1: 0, 2: 2}}]}
         """
         identity_maps = self._identify_chemically_identical_molecules()
         # Convert molecule identity maps into groups of identical molecules
-        groupings = {}
+        groupings: Dict[int, List] = {}
         for molecule_idx in identity_maps.keys():
             unique_mol, atom_map = identity_maps[molecule_idx]
             groupings[unique_mol] = groupings.get(unique_mol, list()) + [
-                [molecule_idx, atom_map]
+                {molecule_idx: atom_map}
             ]
         return groupings
 
-    def _identify_chemically_identical_molecules(self):
+    def _identify_chemically_identical_molecules(
+        self,
+    ) -> Dict[int, Tuple[int, Dict[int, int]]]:
         """
         Efficiently perform an all-by-all isomorphism check for the molecules in this Topology. This method
         uses the strictest form of isomorphism checking, which will NOT match distinct kekule structures of
