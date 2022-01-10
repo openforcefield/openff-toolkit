@@ -1185,13 +1185,14 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         n_conformers = len(molecule.conformers)
 
+        # rdkit does not have conformer indices but conformer "ids"
         conformer_ids = [conf.GetId() for conf in rdkit_molecule.GetConformers()]
 
         # Compute the RMS matrix making sure to take into account any automorhism (e.g
         # a phenyl or nitro substituent flipped 180 degrees.
         rms_matrix = np.zeros((n_conformers, n_conformers))
 
-        for i, j in itertools.combinations(conformer_ids, 2):
+        for i, j in itertools.combinations(np.arange(n_conformers), 2):
 
             rms_matrix[i, j] = AllChem.GetBestRMS(
                 rdkit_molecule,
