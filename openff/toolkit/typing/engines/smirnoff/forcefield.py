@@ -93,11 +93,11 @@ def _get_installed_offxml_dir_paths() -> List[str]:
     """
     global _installed_offxml_dir_paths
     if len(_installed_offxml_dir_paths) == 0:
-        from pkg_resources import iter_entry_points
+        from importlib_metadata import entry_points
 
         # Find all registered entry points that should return a list of
         # paths to directories where to search for offxml files.
-        for entry_point in iter_entry_points(
+        for entry_point in entry_points().select(
             group="openforcefield.smirnoff_forcefield_directory"
         ):
             _installed_offxml_dir_paths.extend(entry_point.load()())
