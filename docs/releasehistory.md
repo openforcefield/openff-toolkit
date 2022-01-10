@@ -6,6 +6,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 * `minor` increments add features but do not break API compatibility
 * `micro` increments represent bugfix releases or improvements in documentation
 
+<<<<<<< HEAD
 ## Migration guide
 
 ### Units
@@ -245,6 +246,22 @@ print(value_roundtrip)
   [Issue #1159](https://github.com/openforcefield/openff-toolkit/issues/1159), in which the order of
   atoms defining a `BondChargeVirtualSite` (and possibly other virtual sites types too) might be reversed
   if the `match` attribute of the virtual site has a value of `"once"`.
+=======
+## 0.10.2 Bugfix release
+
+### API-breaking changes
+
+- [PR #1118](https://github.com/openforcefield/openforcefield/pull/1118):
+  [`Molecule.to_hill_formula`](openff.toolkit.topology.Molecule.to_hill_formula) is now a class method
+  and no longer accepts input of NetworkX graphs.
+ 
+### Behaviors changed and bugfixes
+
+- [PR #1160](https://github.com/openforcefield/openforcefield/pull/1160): Fixes a major bug identified in
+  [Issue #1159](https://github.com/openforcefield/openff-toolkit/issues/1159), in which the order of 
+  atoms defining a `BondChargeVirtualSite` (and possibly other virtual sites types too) might be reversed 
+  if the `match` attribute of the virtual site has a value of `"once"`.
+>>>>>>> 7fa8343b (Migrate `pkg_resources` uses to `importlib_metadata` (#1163))
 - [PR #1130](https://github.com/openforcefield/openforcefield/pull/1130): Running unit tests will
   no longer generate force field files in the local directory.
 - [PR #1148](https://github.com/openforcefield/openforcefield/pull/1148): Adds a new exception
@@ -271,7 +288,11 @@ print(value_roundtrip)
 - [PR #1155](https://github.com/openforcefield/openforcefield/pull/1155): Ensures big-endian
   byte order of NumPy arrays when serialized to dictionaries or files formats except JSON.
 - [PR #1163](https://github.com/openforcefield/openforcefield/pull/1163): Fixes the bug identified in
+<<<<<<< HEAD
   [Issue #1161](https://github.com/openforcefield/openff-toolkit/issues/1161), which was caused by the use
+=======
+  [Issue #1161](https://github.com/openforcefield/openff-toolkit/issues/1161), which was caused by the use 
+>>>>>>> 7fa8343b (Migrate `pkg_resources` uses to `importlib_metadata` (#1163))
   of the deprecated `pkg_resources` package. Now the recommended `importlib_metadata` package is used instead.
 
 
