@@ -31,7 +31,6 @@ import copy
 import logging
 import os
 import pathlib
-import warnings
 from collections import OrderedDict
 from typing import List
 
@@ -62,23 +61,6 @@ from openff.toolkit.utils.utils import (
     convert_all_strings_to_quantity,
     requires_package,
 )
-
-deprecated_names = ["ParseError"]
-
-
-def __getattr__(name):
-    if name in deprecated_names:
-        warnings.filterwarnings("default", category=DeprecationWarning)
-        warning_msg = f"{name} is DEPRECATED and will be removed in a future release of the OpenFF Toolkit."
-        warnings.warn(warning_msg, DeprecationWarning)
-
-        if name == "ParseError":
-            from openff.toolkit.utils.exceptions import _DeprecatedParseError
-
-            return _DeprecatedParseError
-
-    raise AttributeError(f"module {__name__} has no attribute {name}")
-
 
 # =============================================================================================
 # CONFIGURE LOGGER
