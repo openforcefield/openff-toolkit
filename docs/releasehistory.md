@@ -6,6 +6,9 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 * `minor` increments add features but do not break API compatibility
 * `micro` increments represent bugfix releases or improvements in documentation
 
+## Current development
+
+
 ## 0.10.2 Bugfix release
 
 ### API-breaking changes
