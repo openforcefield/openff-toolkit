@@ -1779,9 +1779,16 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         # Check to make sure the call to OE was succesful, and re-route any
         # non-fatal warnings to the correct logger.
-        if not status:
+        if output_string and not status:
             raise RuntimeError("\n" + output_string)
-        elif len(output_string) > 0:
+        elif not status:
+            raise RuntimeError(
+                "OpenEye failed to select conformers, but did not return any output. "
+                "This most commonly occurs when the Molecule does not have enough conformers to "
+                "select from. Try calling Molecule.apply_elf_conformer_selection() again after "
+                "running Molecule.generate_conformers() with a much larger value of n_conformers."
+            )
+        elif output_string:
             logger.warning(output_string)
 
         # Extract and store the ELF conformers on the input molecule.
