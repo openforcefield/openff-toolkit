@@ -3376,7 +3376,7 @@ class FrozenMolecule(Serializable):
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
             toolkit.apply_elf_conformer_selection(  # type: ignore[attr-defined]
-                self, molecule=self, percentage=percentage, limit=limit, **kwargs
+                molecule=self, percentage=percentage, limit=limit, **kwargs
             )
         else:
             raise InvalidToolkitRegistryError(
