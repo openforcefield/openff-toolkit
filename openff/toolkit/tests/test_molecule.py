@@ -3551,18 +3551,22 @@ class TestMolecule:
         recomputed_charges = molecule._partial_charges
         assert np.allclose(initial_charges, recomputed_charges, atol=0.002)
 
-    @pytest.mark.parametrize("toolkit", ["openeye", "rdkit"])
-    def test_apply_elf_conformer_selection(self, toolkit):
+    @pytest.mark.parametrize(
+        "toolkit_wrapper", [OpenEyeToolkitWrapper, RDKitToolkitWrapper]
+    )
+    @pytest.mark.parametrize("use_registry", [True, False])
+    def test_apply_elf_conformer_selection(self, toolkit_wrapper, use_registry):
         """Test applying the ELF10 method."""
 
-        if toolkit == "openeye":
+        if toolkit_wrapper == OpenEyeToolkitWrapper:
             pytest.importorskip("openeye")
-            toolkit_registry = ToolkitRegistry(
-                toolkit_precedence=[OpenEyeToolkitWrapper]
-            )
-        elif toolkit == "rdkit":
+        elif toolkit_wrapper == RDKitToolkitWrapper:
             pytest.importorskip("rdkit")
-            toolkit_registry = ToolkitRegistry(toolkit_precedence=[RDKitToolkitWrapper])
+
+        if use_registry:
+            toolkit = toolkit_wrapper()
+        else:
+            toolkit = ToolkitRegistry(toolkit_precedence=[toolkit_wrapper])
 
         molecule = Molecule.from_file(
             get_data_file_path(os.path.join("molecules", "z_3_hydroxy_propenal.sdf")),
@@ -3605,7 +3609,7 @@ class TestMolecule:
         molecule._conformers = [*initial_conformers]
 
         # Apply ELF10
-        molecule.apply_elf_conformer_selection(toolkit_registry=toolkit_registry)
+        molecule.apply_elf_conformer_selection(toolkit_registry=toolkit)
         elf10_conformers = molecule.conformers
 
         assert len(elf10_conformers) == 1
