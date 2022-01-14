@@ -2122,12 +2122,14 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         is_elf_method = bond_order_model in ["am1-wiberg-elf10", "pm3-wiberg-elf10"]
 
         if use_conformers is None:
-            temp_mol.generate_conformers(
+            self.generate_conformers(
+                molecule=temp_mol,
                 n_conformers=1 if not is_elf_method else 500,
                 # 0.05 is the recommended RMS when generating a 'Dense' amount of
                 # conformers using Omega: https://docs.eyesopen.com/toolkits/python/
                 # omegatk/OEConfGenConstants/OEFragBuilderMode.html.
                 rms_cutoff=None if not is_elf_method else 0.05 * unit.angstrom,
+                make_carboxylic_acids_cis=is_elf_method,
             )
         else:
             temp_mol._conformers = None
