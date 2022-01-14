@@ -3619,6 +3619,80 @@ class TestMolecule:
             initial_conformers[1].value_in_unit(unit.angstrom),
         )
 
+    def test_make_carboxylic_acids_cis(self):
+        offmol = Molecule.from_smiles("CC(O)=O")
+
+        # cis methanoic (formic) acid
+        cis_xyz = unit.Quantity(
+            value=np.array(
+                [
+                    [-1.02844071, 0.34484008, -0.13397247],
+                    [-1.6529808, 0.61047715, 1.19898856],
+                    [-0.95982963, 1.56161928, 1.87139809],
+                    [-2.65173483, 0.05333299, 1.62961793],
+                    [-0.28333247, -0.44931144, -0.04270577],
+                    [-1.79993558, 0.06760395, -0.85680676],
+                    [-0.53051436, 1.2521683, -0.48778746],
+                    [-1.35536134, 1.75175381, 2.74874902],
+                ]
+            ),
+            unit=unit.angstrom,
+        )
+
+        # trans methanoic (formic) acid
+        trans_xyz = unit.Quantity(
+            value=np.array(
+                [
+                    [-1.02844071, 0.34484008, -0.13397247],
+                    [-1.6529808, 0.61047715, 1.19898856],
+                    [-0.95982963, 1.56161928, 1.87139809],
+                    [-2.65173483, 0.05333299, 1.62961793],
+                    [-0.28333247, -0.44931144, -0.04270577],
+                    [-1.79993558, 0.06760395, -0.85680676],
+                    [-0.53051436, 1.2521683, -0.48778746],
+                    [-0.18957424, 1.88568068, 1.35755765],
+                ]
+            ),
+            unit=unit.angstrom,
+        )
+
+        offmol._conformers = [trans_xyz, cis_xyz]
+        expected_conformers = [cis_xyz, cis_xyz]
+
+        offmol._make_carboxylic_acids_cis()
+
+        assert np.all(
+            np.asarray(offmol.conformers) - np.asarray(expected_conformers) < 1e-5
+        )
+
+        offmol_lots = Molecule.from_smiles("C(O)(=O)c1ccccc1CCC(O)=O")
+        offmol_lots.generate_conformers(
+            n_conformers=1000, rms_cutoff=0.05 * unit.angstrom
+        )
+        offmol_lots._make_carboxylic_acids_cis()
+
+        def dihedral(p):
+            """Compute dihedral of array p with shape (4,3)
+            from http://stackoverflow.com/q/20305272/1128289"""
+            b = p[:-1] - p[1:]
+            b[0] *= -1
+            v = np.array(
+                [v - (v.dot(b[1]) / b[1].dot(b[1])) * b[1] for v in [b[0], b[2]]]
+            )
+            # Normalize vectors
+            v /= np.sqrt(np.einsum("...i,...i", v, v)).reshape(-1, 1)
+            b1 = b[1] / np.linalg.norm(b[1])
+            x = np.dot(v[0], v[1])
+            m = np.cross(v[0], b1)
+            y = np.dot(m, v[1])
+            return np.degrees(np.arctan2(y, x))
+
+        for cooh in offmol_lots.chemical_environment_matches("[C:2]([O:3][H:4])=[O:1]"):
+            cooh_xyz = np.asarray(offmol_lots.conformers)[:, cooh, :]
+
+            for p in cooh_xyz:
+                assert -90 < dihedral(p) < 90
+
     @requires_openeye
     def test_assign_fractional_bond_orders(self):
         """Test assignment of fractional bond orders"""

@@ -3275,6 +3275,147 @@ class FrozenMolecule(Serializable):
                 )
             )
 
+    def _make_carboxylic_acids_cis(self):
+        """
+        Rotate dihedral angle of any conformers with trans COOH groups so they are cis
+
+        Carboxylic acid groups almost always exist in nature in the cis conformation,
+        with the hydrogen atom in between the two oxygen atoms::
+
+                  O----H
+                 /
+                /
+               /
+            --C
+               \\
+                \\
+                  O
+
+        However, the OpenEye toolkit frequently produces carboxylic acid geometries
+        in the unrealistic trans conformation::
+
+             H----O
+                 /
+                /
+               /
+            --C
+               \\
+                \\
+                  O
+
+        This method converts all conformers in the Molecule with the trans conformation
+        into the corresponding cis conformer by rotating the OH bond around the CO bond
+        by 180 degrees. Carboxylic acids that are already cis are unchanged. Carboxylic
+        acid groups are considered cis if their O-C-O-H dihedral angle is acute.
+        """
+
+        # Return early if there are no conformers
+        if not self._conformers:
+            return
+
+        # Convert all conformers into one big array
+        conformers = np.asarray(
+            [q.value_in_unit(unit.angstrom) for q in self._conformers]
+        )
+
+        # Pull out the coordinates of all carboxylic acid groups into cooh_xyz
+        # cooh_xyz is an array with shape (n_cooh_groups, n_conformers, 4, 3)
+        cooh_indices = self.chemical_environment_matches("[C:2]([O:3][H:4])=[O:1]")
+        n_conformers, n_cooh_groups = len(conformers), len(cooh_indices)
+        cooh_xyz = conformers[:, cooh_indices, :]
+        assert cooh_xyz.shape == (n_conformers, n_cooh_groups, 4, 3)
+
+        def dot(a, b):
+            """Compute dot product along last axis of arrays"""
+            return np.sum(a * b, axis=-1)[..., np.newaxis]
+
+        def norm(a):
+            """Compute norm along last axis of array"""
+            return np.linalg.norm(a, axis=-1)[..., np.newaxis]
+
+        def dihedral(a):
+            """Compute dihedrals of array with shape (..., 4, 3)"""
+            # Praxeolitic formula
+            # 1 sqrt, 1 cross product
+            # from https://stackoverflow.com/questions/20305272/dihedral-torsion-angle-from-four-points-in-cartesian-coordinates-in-python
+            p0 = a[..., 0, :]
+            p1 = a[..., 1, :]
+            p2 = a[..., 2, :]
+            p3 = a[..., 3, :]
+
+            b0 = -1.0 * (p1 - p0)
+            b1 = p2 - p1
+            b2 = p3 - p2
+
+            # normalize b1 so that it does not influence magnitude of vector
+            # rejections that come next
+            b1 /= norm(b1)
+
+            # vector rejections
+            # v = projection of b0 onto plane perpendicular to b1
+            #   = b0 minus component that aligns with b1
+            # w = projection of b2 onto plane perpendicular to b1
+            #   = b2 minus component that aligns with b1
+            v = b0 - dot(b0, b1) * b1
+            w = b2 - dot(b2, b1) * b1
+
+            # angle between v and w in a plane is the torsion angle
+            # v and w may not be normalized but that's fine since tan is y/x
+            x = dot(v, w)
+            y = dot(np.cross(b1, v), w)
+            return np.arctan2(y, x)
+
+        dihedrals = dihedral(cooh_xyz)
+        assert dihedrals.shape == (n_conformers, n_cooh_groups, 1)
+        dihedrals.shape = (n_conformers, n_cooh_groups, 1, 1)
+
+        # Get indices of trans COOH groups
+        trans_indices = np.logical_not(
+            np.logical_and((-np.pi / 2) < dihedrals, dihedrals < (np.pi / 2))
+        )
+        # Expand array so it can be used to index cooh_xyz
+        trans_indices = np.repeat(trans_indices, repeats=4, axis=2)
+        trans_indices = np.repeat(trans_indices, repeats=3, axis=3)
+        # Get indices of individual atoms in trans COOH groups (except terminal O)
+        trans_indices_h = trans_indices.copy()
+        trans_indices_h[:, :, (0, 1, 2), :] = False
+        trans_indices_c = trans_indices.copy()
+        trans_indices_c[:, :, (0, 2, 3), :] = False
+        trans_indices_o = trans_indices.copy()
+        trans_indices_o[:, :, (0, 1, 3), :] = False
+
+        # Rotate OH around CO bond
+        # We want to rotate H 180 degrees around the CO bond (b1)
+        c = cooh_xyz[trans_indices_c].reshape(-1, 3)
+        o = cooh_xyz[trans_indices_o].reshape(-1, 3)
+        h = cooh_xyz[trans_indices_h].reshape(-1, 3)
+        # Axis is defined as the line from the origin along a unit vector, so
+        # move C to the origin and normalize
+        point = h - c
+        axis = o - c
+        axis /= norm(axis)
+        # Do the rotation
+        # https://en.wikipedia.org/wiki/Rotation_matrix#Rotation_matrix_from_axis_and_angle
+        rotated = axis * (dot(axis, point)) - np.cross(np.cross(axis, point), axis)
+        # Move rotated point back to original coordinates
+        rotated = rotated + c
+
+        # Safety check that bond length hasn't changed
+        assert np.all(norm(rotated - o) - norm(h - o) < 1e-5)
+
+        # Update the coordinates
+        cooh_xyz[trans_indices_h] = rotated.reshape((-1))
+
+        # Safety check that dihedral has been corrected
+        dih_test = dihedral(cooh_xyz)
+        assert np.all(np.logical_and((-np.pi / 2) < dih_test, dih_test < (np.pi / 2)))
+
+        # Update conformers with rotated coordinates
+        conformers[:, cooh_indices, :] = cooh_xyz
+
+        # Return conformers to original type
+        self._conformers = [conf * unit.angstrom for conf in conformers]
+
     def compute_virtual_site_positions_from_conformer(self, conformer_idx):
         """
         Compute the position of all virtual sites given an existing
