@@ -18,10 +18,10 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
   [`Molecule.assign_fractional_bond_orders()`] methods. This should work around most instances
   of the OpenEye Omega bug where trans carboxylic acids are more common than they should be.
 
-[`Molecule.apply_elf_conformer_selection()`]: openff.interchange.topology.Molecule.apply_elf_conformer_selection
-[`Molecule.generate_conformers()`]: openff.interchange.topology.Molecule.generate_conformers
-[`Molecule.assign_partial_charges()`]: openff.interchange.topology.Molecule.assign_partial_charges
-[`Molecule.assign_fractional_bond_orders()`]: openff.interchange.topology.Molecule.assign_fractional_bond_orders
+[`Molecule.apply_elf_conformer_selection()`]: openff.toolkit.topology.Molecule.apply_elf_conformer_selection
+[`Molecule.generate_conformers()`]: openff.toolkit.topology.Molecule.generate_conformers
+[`Molecule.assign_partial_charges()`]: openff.toolkit.topology.Molecule.assign_partial_charges
+[`Molecule.assign_fractional_bond_orders()`]: openff.toolkit.topology.Molecule.assign_fractional_bond_orders
 
 ## 0.10.2 Bugfix release
 
