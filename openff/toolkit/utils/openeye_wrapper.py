@@ -1649,7 +1649,12 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         return molecule
 
     def generate_conformers(
-        self, molecule, n_conformers=1, rms_cutoff=None, clear_existing=True
+        self,
+        molecule,
+        n_conformers=1,
+        rms_cutoff=None,
+        clear_existing=True,
+        make_carboxylic_acids_cis=False,
     ):
         r"""
         Generate molecule conformers using OpenEye Omega.
@@ -1673,6 +1678,9 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             If None, the cutoff is set to 1 Angstrom
         clear_existing : bool, default=True
             Whether to overwrite existing conformers for the molecule
+        make_carboxylic_acids_cis: bool, default=False
+            Guarantee all conformers have exclusively cis carboxylic acid groups (COOH)
+            by rotating the proton in any trans carboxylic acids 180 degrees around the C-O bond.
         """
         import copy
 
@@ -1715,6 +1723,9 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         for conformer in molecule2._conformers:
             molecule._add_conformer(conformer)
 
+        if make_carboxylic_acids_cis:
+            molecule._make_carboxylic_acids_cis()
+
     def apply_elf_conformer_selection(
         self,
         molecule: "Molecule",
@@ -1731,8 +1742,13 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         -----
         * The input molecule should have a large set of conformers already
           generated to select the ELF conformers from.
-        * The selected conformers will be retained in the `molecule.conformers` list
+        * The selected conformers will be retained in the ``molecule.conformers`` list
           while unselected conformers will be discarded.
+        * Conformers generated with the OpenEye toolkit often include trans
+          carboxylic acids (COOH). These are unphysical and will be rejected by
+          ``apply_elf_conformer_selection``. If no conformers are selected, try
+          re-running ``generate_conformers`` with the ``make_carboxylic_acids_cis``
+          argument set to ``True``
 
         See Also
         --------
@@ -1786,7 +1802,8 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                 "OpenEye failed to select conformers, but did not return any output. "
                 "This most commonly occurs when the Molecule does not have enough conformers to "
                 "select from. Try calling Molecule.apply_elf_conformer_selection() again after "
-                "running Molecule.generate_conformers() with a much larger value of n_conformers."
+                "running Molecule.generate_conformers() with a much larger value of n_conformers "
+                "or with make_carboxylic_acids_cis=True."
             )
         elif output_string:
             logger.warning(output_string)
@@ -1935,6 +1952,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                     mol_copy,
                     n_conformers=charge_method["rec_confs"],
                     rms_cutoff=0.25 * unit.angstrom,
+                    make_carboxylic_acids_cis=True,
                 )
                 # TODO: What's a "best practice" RMS cutoff to use here?
         else:
