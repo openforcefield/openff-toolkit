@@ -70,7 +70,7 @@ conda activate <my_new_env>
 Installing into a new environment avoids forcing conda to satisfy the dependencies of both the toolkit and all existing packages in that environment.
 Taking the approach that conda environments are generally disposable, even ephemeral, minimizes the chances for hard-to-diagnose dependency issues.
 
-## My conda installation of the toolkit STILL doesn't appear to work. 
+## My conda installation of the toolkit STILL doesn't appear to work.
 
 Many of our users encounter issues that are ultimately due to their terminal finding a different `conda` at higher priority in their `PATH` than the `conda` deployment where OpenFF is installed. To fix this, find the conda deployment where OpenFF is installed. Then, if that folder is something like `~/miniconda3`, run in the terminal:
 
@@ -98,3 +98,46 @@ entry_points={
 ```
 
 Where `get_my_new_force_field_paths` is a function in the `my_package` module providing a list of strings holding the paths to the directories to search. You should also rename `my_new_force_field_paths` to suit your force field. See [`openff-forcefields`](https://github.com/openforcefield/openff-forcefields/blob/ed0d904/setup.py#L57-L61) for an example.
+
+## What does "unconstrained" mean in a force field name?
+
+Each release of an [OpenFF force field](https://github.com/openforcefield/openff-forcefields/tree/master/openforcefields/offxml) has two associated `.offxml` files: one unadorned (for example, `openff-2.0.0.offxml`) and one labelled "unconstrained" (`openff_unconstrained-2.0.0.offxml`). This reflects the presence or absence of holonomic constraints on hydrogen-involving bonds in the force field specification.
+
+Typically, OpenFF force fields treat bonds with a harmonic potential according to Hooke's law. With this treatment, bonds involving hydrogen atoms have a much higher vibration frequency than any other part of a typical biochemical system. By constraining these bonds to a fixed length, MD time steps can be increased past 1 fs, improving simulation performance. These bond vibrations are not structurally important to proteins, and in any case involve quantum effects like tunneling that are not modeled by the classical mechanics of a harmonic potential.
+
+While we recommend hydrogen-involving bond constraints and a time step of 2 fs for ordinary use, some other specialist uses require a harmonic treatment. The unconstrained force fields are provided for these uses.
+
+Use the constrained force field:
+ - When running MD with a time step greater than 1 fs
+
+Use the unconstrained force field:
+ - When computing single point energy calculations or energy minimisation, or other circumstances when the force must be continuous in position
+ - When running MD with a time step of 1 fs (or less)
+ - When bond lengths may deviate from equilibrium
+ - When fitting a force field, both because many fitting techniques require continuity and because deviations from equilibrium bond length may be important
+
+Starting with v2.0.0 (Sage), TIP3P water is included in OpenFF force fields. The geometry of TIP3P water is always constrained, even in the unconstrained force fields.
+
+## How do I add or remove constraints from my own force field?
+
+Constrained force fields released by OpenFF include full bond parameters, which are needed to specify the equilibrium bond length. Hydrogen-involving bonds are constrained with a single constraint entry in a `.offxml` file:
+
+```xml
+<Constraints version="0.3">
+    <!-- constrain all bonds to hydrogen to their equilibrium bond length -->
+    <Constraint smirks="[#1:1]-[*:2]" id="c1"></Constraint>
+</Constraints>
+```
+
+Adding or removing this line will convert a force field between its constrained and unconstrained configurations. A [`ForceField`](openff.toolkit.typing.engines.smirnoff.forcefield) object can constrain its bonds involving hydrogen by adding the relevant parameter to its `'Constraints'` parameter handler:
+
+```python
+ch = force_field.get_parameter_handler('Constraints')
+ch.add_parameter(smirks="[#1:1]-[*:2]")
+```
+
+Constraints can be removed from bonds involving hydrogen by removing the corresponding parameter:
+
+```python
+del forcefield['Constraints']["[#1:1]-[*:2]"]
+```
