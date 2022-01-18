@@ -116,6 +116,8 @@ class TestTopology:
 
     def test_reinitialization_box_vectors(self):
         topology = Topology()
+        assert Topology(topology).box_vectors is None
+
         topology.box_vectors = [1, 2, 3] * unit.nanometer
         topology_copy = Topology(topology)
 
