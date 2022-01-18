@@ -114,6 +114,13 @@ class TestTopology:
         assert not topology.is_periodic
         assert len(topology.constrained_atom_pairs.items()) == 0
 
+    def test_reinitialization_box_vectors(self):
+        topology = Topology()
+        topology.box_vectors = [1, 2, 3] * unit.nanometer
+        topology_copy = Topology(topology)
+
+        assert (topology.box_vectors == topology_copy.box_vectors).all()
+
     def test_box_vectors(self):
         """Test the getter and setter for box_vectors"""
         topology = Topology()
