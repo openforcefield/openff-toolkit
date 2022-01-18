@@ -8,6 +8,10 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ## Current development
 
+### Improved documentation and warnings
+
+- [PR #1173](https://github.com/openforcefield/openforcefield/pull/1173): Expand
+  on the SMIRNOFF section of the toolkit docs
 
 ## 0.10.2 Bugfix release
 
