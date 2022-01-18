@@ -574,9 +574,13 @@ class Topology(Serializable):
                 raise InvalidBoxVectorsError(
                     f"Box vectors must be shape (3, 3). Found shape {box_vectors.shape}"
                 )
-        elif isinstance(box_vectors._value, list):
+        elif isinstance(box_vectors, list):
             if len(box_vectors) == 3:
-                box_vectors._value *= np.eye(3)
+                box_vectors = box_vectors * np.eye(3)
+            else:
+                raise InvalidBoxVectorsError(
+                    f"Box vectors must be shape (3, 3). Found shape {box_vectors.shape}"
+                )
 
         self._box_vectors = box_vectors
 
@@ -1279,6 +1283,8 @@ class Topology(Serializable):
         self._initialize_from_dict(other_dict)
 
     def to_dict(self):
+        from openff.toolkit.utils.utils import serialize_numpy
+
         return_dict = dict()
         return_dict["aromaticity_model"] = self._aromaticity_model
         return_dict["constrained_atom_pairs"] = dict()
@@ -1289,10 +1295,18 @@ class Topology(Serializable):
 
         if self._box_vectors is None:
             return_dict["box_vectors"] = None
+            return_dict["box_vectors_unit"] = None
         else:
-            return_dict["box_vectors"] = copy.deepcopy(
-                quantity_to_string(self._box_vectors)
+            box_vectors_unitless = self.box_vectors.m_as(unit.nanometer)
+            box_vectors_serialized, box_vectors_shape = serialize_numpy(
+                box_vectors_unitless
             )
+            if box_vectors_shape != (3, 3):
+                raise RuntimeError(
+                    f"Box vectors are assumed to be (3, 3); found shape {box_vectors_shape}"
+                )
+            return_dict["box_vectors"] = box_vectors_serialized
+            return_dict["box_vectors_unit"] = "nanometer"
         return_dict["molecules"] = [mol.to_dict() for mol in self._molecules]
         return return_dict
 
@@ -1317,14 +1331,26 @@ class Topology(Serializable):
         return topology
 
     def _initialize_from_dict(self, topology_dict):
+        from openff.toolkit.utils.utils import deserialize_numpy
+
         self._aromaticity_model = topology_dict["aromaticity_model"]
         for pair, distance in topology_dict["constrained_atom_pairs"]:
             deserialized_distance = string_to_quantity(distance)
             self.add_constraint(pair, deserialized_distance)
+
         if topology_dict["box_vectors"] is None:
             self._box_vectors = None
         else:
-            self.box_vectors = string_to_quantity(topology_dict["box_vectors"])
+            # The box_vectors setters _should_ ensure (3, 3) shape, and
+            # to_dict enforces this at serialization time
+            charges_shape = (self.n_atoms,)
+            box_vectors_unitless = deserialize_numpy(
+                topology_dict["box_vectors"],
+                (3, 3),
+            )
+            box_vectors_unit = getattr(unit, topology_dict["box_vectors_unit"])
+            self.box_vectors = unit.Quantity(box_vectors_unitless, box_vectors_unit)
+
         for molecule_dict in topology_dict["molecules"]:
             new_mol = Molecule.from_dict(molecule_dict)
             self.add_molecule(new_mol)
