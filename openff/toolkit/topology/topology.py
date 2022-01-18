@@ -1343,7 +1343,6 @@ class Topology(Serializable):
         else:
             # The box_vectors setters _should_ ensure (3, 3) shape, and
             # to_dict enforces this at serialization time
-            charges_shape = (self.n_atoms,)
             box_vectors_unitless = deserialize_numpy(
                 topology_dict["box_vectors"],
                 (3, 3),
