@@ -574,6 +574,7 @@ class Topology(Serializable):
                 raise InvalidBoxVectorsError(
                     f"Box vectors must be shape (3, 3). Found shape {box_vectors.shape}"
                 )
+        # TODO: Add logic to check whether this is a 3x3 list of lists and tell user to provide a 3x3 numpy array instead
         elif isinstance(box_vectors, list):
             if len(box_vectors) == 3:
                 box_vectors = box_vectors * np.eye(3)
