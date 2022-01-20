@@ -576,7 +576,7 @@ class Topology(Serializable):
                 )
         else:
             raise InvalidBoxVectorsError(
-                f"Cannot set box vectors with object of type {box_vectors.shape}"
+                f"Cannot set box vectors with object of type {type(box_vectors)}"
             )
 
         self._box_vectors = box_vectors

@@ -142,6 +142,7 @@ class TestTopology:
         for bad_vectors in [
             bad_shape_vectors,
             bad_units_vectors,
+            bad_type_vectors,
             unitless_vectors,
         ]:
             with pytest.raises(InvalidBoxVectorsError):
