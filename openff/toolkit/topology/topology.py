@@ -574,13 +574,10 @@ class Topology(Serializable):
                 raise InvalidBoxVectorsError(
                     f"Box vectors must be shape (3, 3). Found shape {box_vectors.shape}"
                 )
-        elif isinstance(box_vectors, list):
-            if len(box_vectors) == 3:
-                box_vectors = box_vectors * np.eye(3)
-            else:
-                raise InvalidBoxVectorsError(
-                    f"Box vectors must be shape (3, 3). Found shape {box_vectors.shape}"
-                )
+        else:
+            raise InvalidBoxVectorsError(
+                f"Cannot set box vectors with object of type {box_vectors.shape}"
+            )
 
         self._box_vectors = box_vectors
 
