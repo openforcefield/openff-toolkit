@@ -36,12 +36,11 @@ from collections import OrderedDict, UserDict
 from copy import deepcopy
 from typing import TYPE_CHECKING, List, Optional, Union
 
+import mendeleev
 import networkx as nx
 import numpy as np
-import mendeleev
 from mendeleev import element
 from mendeleev.fetch import fetch_table
-
 from openff.units import unit
 from openff.units.openmm import to_openmm
 
@@ -7259,8 +7258,9 @@ def _atom_nums_to_hill_formula(atom_nums: List[int]) -> str:
     Hill formula. See https://en.wikipedia.org/wiki/Chemical_formula#Hill_system"""
     from collections import Counter
 
-    atom_symbol_counts = Counter(_ATOMIC_NUMBERS_TO_ELEMENTS[atom_num].symbol
-                                 for atom_num in atom_nums)
+    atom_symbol_counts = Counter(
+        _ATOMIC_NUMBERS_TO_ELEMENTS[atom_num].symbol for atom_num in atom_nums
+    )
 
     formula = []
     # Check for C and H first, to make a correct hill formula

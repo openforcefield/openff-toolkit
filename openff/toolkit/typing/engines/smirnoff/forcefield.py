@@ -1242,9 +1242,13 @@ class ForceField:
     # TODO: How do we know if the system is periodic or not?
     # TODO: Should we also accept a Molecule as an alternative to a Topology?
 
+    # TODO: Fall back to old code path if Interchange not installed?
     @requires_package("openmm")
     def create_openmm_system(
-        self, topology: "Topology", use_interchange=True, **kwargs
+        self,
+        topology: "Topology",
+        use_interchange: bool = True,
+        **kwargs,
     ):
         """Create an OpenMM System from this ForceField and a Topology.
 
@@ -1257,7 +1261,9 @@ class ForceField:
 
         """
         if use_interchange:
-            return self.create_interchange(topology, **kwargs).to_openmm()
+            return self.create_interchange(topology, **kwargs,).to_openmm(
+                combine_nonbonded_forces=True,
+            )
         else:
             return self._old_create_openmm_system(topology, **kwargs)
 
