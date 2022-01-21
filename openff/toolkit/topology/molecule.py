@@ -38,7 +38,10 @@ from typing import TYPE_CHECKING, List, Optional, Union
 
 import networkx as nx
 import numpy as np
+import mendeleev
 from mendeleev import element
+from mendeleev.fetch import fetch_table
+
 from openff.units import unit
 from openff.units.openmm import to_openmm
 
@@ -80,6 +83,12 @@ from openff.toolkit.utils.utils import (
 # =============================================================================================
 # GLOBAL PARAMETERS
 # =============================================================================================
+
+_MENDELEEV_ELEMENTS_DATAFRAME = fetch_table("elements")
+_ATOMIC_NUMBERS_TO_ELEMENTS = {
+    row.atomic_number: getattr(mendeleev, row.symbol)
+    for row in _MENDELEEV_ELEMENTS_DATAFRAME.itertuples()
+}
 
 # TODO: Can we have the `ALLOWED_*_MODELS` list automatically appear in the docstrings below?
 # TODO: Should `ALLOWED_*_MODELS` be objects instead of strings?
@@ -413,7 +422,7 @@ class Atom(Particle):
         -------
         mendeleev.models.Element
         """
-        return element(self._atomic_number)
+        return _ATOMIC_NUMBERS_TO_ELEMENTS[self.atomic_number]
 
     @property
     def atomic_number(self):
@@ -5906,7 +5915,7 @@ class FrozenMolecule(Serializable):
         connectivity = [
             (bond.atom1_index, bond.atom2_index, bond.bond_order) for bond in self.bonds
         ]
-        symbols = [element(atom.atomic_number).symbol for atom in self.atoms]
+        symbols = [atom.element.symbol for atom in self.atoms]
         if extras is not None:
             extras[
                 "canonical_isomeric_explicit_hydrogen_mapped_smiles"
@@ -7250,7 +7259,8 @@ def _atom_nums_to_hill_formula(atom_nums: List[int]) -> str:
     Hill formula. See https://en.wikipedia.org/wiki/Chemical_formula#Hill_system"""
     from collections import Counter
 
-    atom_symbol_counts = Counter(element(atom_num).symbol for atom_num in atom_nums)
+    atom_symbol_counts = Counter(_ATOMIC_NUMBERS_TO_ELEMENTS[atom_num].symbol
+                                 for atom_num in atom_nums)
 
     formula = []
     # Check for C and H first, to make a correct hill formula
