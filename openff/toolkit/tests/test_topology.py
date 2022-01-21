@@ -114,27 +114,47 @@ class TestTopology:
         assert not topology.is_periodic
         assert len(topology.constrained_atom_pairs.items()) == 0
 
+    def test_reinitialization_box_vectors(self):
+        topology = Topology()
+        assert Topology(topology).box_vectors is None
+
+        topology.box_vectors = [1, 2, 3] * unit.nanometer
+        topology_copy = Topology(topology)
+
+        assert (topology.box_vectors == topology_copy.box_vectors).all()
+
     def test_box_vectors(self):
         """Test the getter and setter for box_vectors"""
         topology = Topology()
-        good_box_vectors = unit.Quantity(np.eye(3) * 20 * unit.angstrom)
-        one_dim_vectors = unit.Quantity(np.ones(3) * 20 * unit.angstrom)
-        list_vectors = [20, 20, 20] * unit.angstrom
-        bad_shape_vectors = unit.Quantity(np.ones(2) * 20 * unit.angstrom)
-        bad_units_vectors = unit.Quantity(np.ones(3) * 20 * unit.year)
+        good_box_vectors = unit.Quantity(np.eye(3) * 20, unit.angstrom)
+        one_dim_vectors = unit.Quantity(np.ones(3) * 20, unit.angstrom)
+        list_vectors = unit.Quantity([20, 20, 20], unit.angstrom)
+        list_list_vectors = unit.Quantity(
+            [[20, 0, 0], [0, 20, 0], [0, 0, 20]], unit.angstrom
+        )
+        bad_shape_vectors = unit.Quantity(np.ones(2) * 20, unit.angstrom)
+        bad_units_vectors = unit.Quantity(np.ones(3) * 20, unit.year)
+        bad_type_vectors = unit.Quantity(1.0, unit.nanometer)
         unitless_vectors = np.array([10, 20, 30])
+
         assert topology.box_vectors is None
 
         for bad_vectors in [
             bad_shape_vectors,
             bad_units_vectors,
+            bad_type_vectors,
             unitless_vectors,
         ]:
             with pytest.raises(InvalidBoxVectorsError):
                 topology.box_vectors = bad_vectors
             assert topology.box_vectors is None
 
-        for good_vectors in [good_box_vectors, one_dim_vectors, list_vectors]:
+        for good_vectors in [
+            good_box_vectors,
+            one_dim_vectors,
+            list_vectors,
+            list_list_vectors,
+        ]:
             topology.box_vectors = good_vectors
             assert (topology.box_vectors == good_vectors * np.eye(3)).all()
 
