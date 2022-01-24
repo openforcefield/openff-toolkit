@@ -3620,8 +3620,10 @@ class TestMolecule:
         )
 
     def test_make_carboxylic_acids_cis(self):
-        offmol = Molecule.from_smiles("CC(O)=O")
-
+        # First, check that we get exactly the right coords for cis and trans formic acid
+        offmol = Molecule.from_mapped_smiles(
+            "[H:5][C:1]([H:6])([H:7])[C:2](=[O:4])[O:3][H:8]"
+        )
         # cis methanoic (formic) acid
         cis_xyz = unit.Quantity(
             value=np.array(
@@ -3662,14 +3664,28 @@ class TestMolecule:
         offmol._make_carboxylic_acids_cis()
 
         assert np.all(
-            np.asarray(offmol.conformers) - np.asarray(expected_conformers) < 1e-5
+            np.abs(np.asarray(offmol.conformers) - np.asarray(expected_conformers))
+            < 1e-5
         )
+
+        # OK, we've checked a single conformer in great detail, now lets check
+        # a thousand quickly but less robustly
 
         offmol_lots = Molecule.from_smiles("C(O)(=O)c1ccccc1CCC(O)=O")
         offmol_lots.generate_conformers(
-            n_conformers=1000, rms_cutoff=0.05 * unit.angstrom
+            n_conformers=1000,
+            rms_cutoff=0.05 * unit.angstrom,
         )
+        # Keep a vectorized copy of conformers
+        initial_conformers = np.array(offmol_lots.conformers)
+        assert initial_conformers is not offmol_lots.conformers
+
+        # Apply the transformation
         offmol_lots._make_carboxylic_acids_cis()
+
+        # Vectorize the final conformers
+        final_conformers = np.array(offmol_lots.conformers)
+        assert initial_conformers is not final_conformers
 
         def dihedral(p):
             """Compute dihedral of array p with shape (4,3)
@@ -3687,11 +3703,24 @@ class TestMolecule:
             y = np.dot(m, v[1])
             return np.degrees(np.arctan2(y, x))
 
+        # Thorough tests on each COOH group, without Numpy linearization for easy checking
         for cooh in offmol_lots.chemical_environment_matches("[C:2]([O:3][H:4])=[O:1]"):
-            cooh_xyz = np.asarray(offmol_lots.conformers)[:, cooh, :]
+            cooh_xyz_init = initial_conformers[:, cooh, :]
+            cooh_xyz_fin = final_conformers[:, cooh, :]
 
-            for p in cooh_xyz:
-                assert -90 < dihedral(p) < 90
+            for i, f in zip(cooh_xyz_init, cooh_xyz_fin):
+                # Check that all final dihedral angles are cis
+                assert -90 < dihedral(f) < 90
+                # Check that the OH bond length hasn't changed
+                oh_bond_length_init = np.linalg.norm(i[2, :] - i[3, :], axis=-1)
+                oh_bond_length_fin = np.linalg.norm(i[2, :] - i[3, :], axis=-1)
+                assert np.abs(oh_bond_length_init - oh_bond_length_fin) < 1e-5
+
+        # Check that only the H in COOH groups has moved
+        cooh_h_indices = offmol_lots.chemical_environment_matches("[C]([O][H:1])=[O]")
+        initial_conformers = np.delete(initial_conformers, cooh_h_indices, axis=1)
+        final_conformers = np.delete(final_conformers, cooh_h_indices, axis=1)
+        assert np.all(initial_conformers == final_conformers)
 
     @requires_openeye
     def test_assign_fractional_bond_orders(self):
