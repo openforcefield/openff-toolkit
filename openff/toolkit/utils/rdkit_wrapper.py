@@ -850,7 +850,13 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         return molecule
 
     def generate_conformers(
-        self, molecule, n_conformers=1, rms_cutoff=None, clear_existing=True, _cls=None
+        self,
+        molecule,
+        n_conformers=1,
+        rms_cutoff=None,
+        clear_existing=True,
+        _cls=None,
+        make_carboxylic_acids_cis=False,
     ):
         r"""
         Generate molecule conformers using RDKit.
@@ -877,6 +883,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             Whether to overwrite existing conformers for the molecule.
         _cls : class
             Molecule constructor
+        make_carboxylic_acids_cis: bool, default=False
+            Guarantee all conformers have exclusively cis carboxylic acid groups (COOH)
+            by rotating the proton in any trans carboxylic acids 180 degrees around the C-O bond.
 
         """
         from rdkit.Chem import AllChem
@@ -906,6 +915,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         for conformer in molecule2._conformers:
             molecule._add_conformer(conformer)
+
+        if make_carboxylic_acids_cis:
+            molecule._make_carboxylic_acids_cis()
 
     def assign_partial_charges(
         self,

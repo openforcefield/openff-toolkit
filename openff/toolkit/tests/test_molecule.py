@@ -3675,6 +3675,7 @@ class TestMolecule:
         offmol_lots.generate_conformers(
             n_conformers=1000,
             rms_cutoff=0.05 * unit.angstrom,
+            make_carboxylic_acids_cis=False,
         )
         # Keep a vectorized copy of conformers
         initial_conformers = np.array(offmol_lots.conformers)
