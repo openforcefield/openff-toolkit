@@ -3400,15 +3400,8 @@ class FrozenMolecule(Serializable):
         # Move rotated point back to original coordinates
         rotated = rotated + c
 
-        # Safety check that bond length hasn't changed
-        assert np.all(norm(rotated - o) - norm(h - o) < 1e-5)
-
         # Update the coordinates
         cooh_xyz[trans_indices_h] = rotated.reshape((-1))
-
-        # Safety check that dihedral has been corrected
-        dih_test = dihedral(cooh_xyz)
-        assert np.all(np.logical_and((-np.pi / 2) < dih_test, dih_test < (np.pi / 2)))
 
         # Update conformers with rotated coordinates
         conformers[:, cooh_indices, :] = cooh_xyz
