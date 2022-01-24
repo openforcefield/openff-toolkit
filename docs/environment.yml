@@ -10,7 +10,6 @@ dependencies:
     - numpydoc
     - myst-nb
     - myst-parser>=0.13.6
-    - testpath==0.3.1
     - docutils
     - sphinx-notfound-page
     # conda build dependencies
