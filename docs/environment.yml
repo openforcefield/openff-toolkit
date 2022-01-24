@@ -14,7 +14,7 @@ dependencies:
     - docutils
     - sphinx-notfound-page
     # conda build dependencies
-    - python
+    - python==3.8.0
     - setuptools
     - numpy
     - openmm
