@@ -1,9 +1,10 @@
 # SMIRNOFF (SMIRks Native Open Force Field)
 
-:::{hint} 
-The actual text of the SMIRNOFF specification has been moved to the
-[standards repository].
-:::
+## The SMIRNOFF specification
+
+The SMIRNOFF specification can be found in the OpenFF [standards repository].
+
+## SMIRNOFF and the Toolkit
 
 OpenFF releases all its force fields in SMIRNOFF format. SMIRNOFF is a format
 developed by OpenFF; its specification can be found in our
@@ -74,3 +75,8 @@ general or as specific as needed.
 [standards repository]: https://openforcefield.github.io/standards/standards/smirnoff/
 [`Interchange`]: openff.interchange.components.interchange.Interchange
 [producing input files and data]: openff.interchange:using/output
+
+:::{hint} 
+This page is not the SMIRNOFF spec; it has been moved to the
+[standards repository].
+:::
