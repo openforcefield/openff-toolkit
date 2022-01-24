@@ -3332,7 +3332,6 @@ class FrozenMolecule(Serializable):
         )
 
         # Pull out the coordinates of all carboxylic acid groups into cooh_xyz
-        # cooh_xyz is an array with shape (n_cooh_groups, n_conformers, 4, 3)
         cooh_indices = self.chemical_environment_matches(
             "[C:2]([O:3][H:4])=[O:1]", toolkit_registry=toolkit_registry
         )
