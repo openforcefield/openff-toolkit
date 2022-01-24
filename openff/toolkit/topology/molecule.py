@@ -3283,7 +3283,7 @@ class FrozenMolecule(Serializable):
                 )
             )
 
-    def _make_carboxylic_acids_cis(self):
+    def _make_carboxylic_acids_cis(self, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """
         Rotate dihedral angle of any conformers with trans COOH groups so they are cis
 
@@ -3315,6 +3315,11 @@ class FrozenMolecule(Serializable):
         into the corresponding cis conformer by rotating the OH bond around the CO bond
         by 180 degrees. Carboxylic acids that are already cis are unchanged. Carboxylic
         acid groups are considered cis if their O-C-O-H dihedral angle is acute.
+
+        Parameters
+        ----------
+        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
+            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
         """
 
         # Return early if there are no conformers
@@ -3328,7 +3333,9 @@ class FrozenMolecule(Serializable):
 
         # Pull out the coordinates of all carboxylic acid groups into cooh_xyz
         # cooh_xyz is an array with shape (n_cooh_groups, n_conformers, 4, 3)
-        cooh_indices = self.chemical_environment_matches("[C:2]([O:3][H:4])=[O:1]")
+        cooh_indices = self.chemical_environment_matches(
+            "[C:2]([O:3][H:4])=[O:1]", toolkit_registry=toolkit_registry
+        )
         n_conformers, n_cooh_groups = len(conformers), len(cooh_indices)
         cooh_xyz = conformers[:, cooh_indices, :]
         assert cooh_xyz.shape == (n_conformers, n_cooh_groups, 4, 3)

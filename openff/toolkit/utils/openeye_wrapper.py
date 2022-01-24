@@ -1724,7 +1724,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             molecule._add_conformer(conformer)
 
         if make_carboxylic_acids_cis:
-            molecule._make_carboxylic_acids_cis()
+            molecule._make_carboxylic_acids_cis(toolkit_registry=self)
 
     def apply_elf_conformer_selection(
         self,

@@ -917,7 +917,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             molecule._add_conformer(conformer)
 
         if make_carboxylic_acids_cis:
-            molecule._make_carboxylic_acids_cis()
+            molecule._make_carboxylic_acids_cis(toolkit_registry=self)
 
     def assign_partial_charges(
         self,
