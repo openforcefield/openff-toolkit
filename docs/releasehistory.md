@@ -11,11 +11,11 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ### Behaviors changed and bugfixes
 
 - [PR #1171](https://github.com/openforcefield/openforcefield/pull/1171): Failure of 
-  [`Molecule.apply_elf_conformer_selection()`] from excluding all available conformations
-  now provides a better error. The `make_carboxylic_acids_cis` argument has been added to 
-  [`Molecule.generate_conformers()`] to mitigate a common cause of this error. Trans carboxylic 
-  acids are now automatically converted to in the [`Molecule.assign_partial_charges()`] and 
-  [`Molecule.assign_fractional_bond_orders()`] methods. This should work around most instances
+  [`Molecule.apply_elf_conformer_selection()`] due to excluding all available conformations ([Issue #428] (https://github.com/openforcefield/openff-toolkit/issues/428) )
+  now provides a better error. The `make_carboxylic_acids_cis` argument (`False` by default) has been added to 
+  [`Molecule.generate_conformers()`] to mitigate a common cause of this error. By setting this argument to `True` in internal use of this method, trans carboxylic 
+  acids are no longer generated in [`Molecule.assign_partial_charges()`] and 
+  [`Molecule.assign_fractional_bond_orders()`] methods (though users may still pass trans conformers in, they'll just be pruned by ELF methods). This should work around most instances
   of the OpenEye Omega bug where trans carboxylic acids are more common than they should be.
 
 [`Molecule.apply_elf_conformer_selection()`]: openff.toolkit.topology.Molecule.apply_elf_conformer_selection
