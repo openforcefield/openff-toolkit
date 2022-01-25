@@ -36,7 +36,7 @@ import sphinx
 # ones.
 extensions = [
     "sphinx.ext.autodoc",
-    "numpydoc",
+    "sphinx.ext.napoleon",
     "sphinx.ext.autosummary",
     "sphinx.ext.doctest",
     "sphinx.ext.todo",
@@ -57,12 +57,13 @@ autodoc_default_options = {
     "member-order": "bysource",
 }
 autodoc_preserve_defaults = True
+autodoc_typehints_format = "short"
 
-# Disable NumPy style attributes/methods expecting every method to have its own docs page
-numpydoc_class_members_toctree = False
-# Disable numpydoc rendering methods twice
-# https://stackoverflow.com/questions/34216659/sphinx-autosummary-produces-two-summaries-for-each-class
-numpydoc_show_class_members = False
+napoleon_numpy_docstring = True
+napoleon_google_docstring = False
+napoleon_attr_annotations = True
+napoleon_custom_sections = [("attributes", "params_style")]
+napoleon_use_rtype = False
 
 _python_doc_base = "https://docs.python.org/3.6"
 intersphinx_mapping = {
