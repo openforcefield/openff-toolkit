@@ -845,7 +845,9 @@ class ForceField:
         allow_cosmetic_attributes : bool, optional. Default = False
             Whether to permit non-spec kwargs present in the source.
 
-        .. notes ::
+        Notes
+        -----
+
            * New SMIRNOFF sections are handled independently, as if they were specified in the same file.
            * If a SMIRNOFF section that has already been read appears again, its definitions are appended to the end of the previously-read
              definitions if the sections are configured with compatible attributes; otherwise, an ``IncompatibleTagException`` is raised.
