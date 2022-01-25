@@ -113,16 +113,16 @@ def get_available_force_fields(full_paths=False):
     ``openff-forcefields`` package is installed, this should include several
     .offxml files such as ``openff-1.0.0.offxml``\ .
 
-     Parameters
-     ----------
-     full_paths : bool, default=False
-         If False, return the name of each available \*.offxml file.
-         If True, return the full path to each available \*.offxml file.
+    Parameters
+    ----------
+    full_paths : bool, default=False
+        If False, return the name of each available \*.offxml file.
+        If True, return the full path to each available \*.offxml file.
 
-     Returns
-     -------
-     available_force_fields : List[str]
-         List of available force field files
+    Returns
+    -------
+    available_force_fields : List[str]
+        List of available force field files
 
     """
     installed_paths = _get_installed_offxml_dir_paths()
@@ -167,25 +167,9 @@ class ForceField:
     The force field definition is processed by these handlers to populate the ``ForceField`` object model data
     structures that can easily be manipulated via the API:
 
-    Processing a :class:`Topology` object defining a chemical system will then call all :class`ParameterHandler`
+    Processing a :class:`Topology` object defining a chemical system will then call all :class:`ParameterHandler`
     objects in an order guaranteed to satisfy the declared processing order constraints of each
-    :class`ParameterHandler`.
-
-    Attributes
-    ----------
-    parameters : dict of str : list of ParameterType
-        ``parameters[tagname]`` is the instantiated :class:`ParameterHandler` class that handles parameters associated
-        with the force ``tagname``.
-        This is the primary means of retrieving and modifying parameters, such as
-        ``parameters['vdW'][0].sigma *= 1.1``
-    parameter_object_handlers : dict of str : ParameterHandler class
-        Registered list of :class:`ParameterHandler` classes that will handle different force field tags to create the parameter object model.
-        ``parameter_object_handlers[tagname]`` is the :class:`ParameterHandler` that will be instantiated to process the force field definition section ``tagname``.
-        :class:`ParameterHandler` classes are registered when the ForceField object is created, but can be manipulated afterwards.
-    parameter_io_handlers : dict of str : ParameterIOHandler class
-        Registered list of :class:`ParameterIOHandler` classes that will handle serializing/deserializing the parameter object model to string or file representations, such as XML.
-        ``parameter_io_handlers[iotype]`` is the :class:`ParameterHandler` that will be instantiated to process the serialization scheme ``iotype``.
-        :class:`ParameterIOHandler` classes are registered when the ForceField object is created, but can be manipulated afterwards.
+    :class:`ParameterHandler`.
 
     Examples
     --------
@@ -290,7 +274,7 @@ class ForceField:
 
         Load multiple SMIRNOFF parameter sets:
 
-        forcefield = ForceField('test_forcefields/test_forcefield.offxml', 'test_forcefields/tip3p.offxml')
+        >>> forcefield = ForceField('test_forcefields/test_forcefield.offxml', 'test_forcefields/tip3p.offxml')
 
         Load a parameter set from a string:
 
