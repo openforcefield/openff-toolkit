@@ -354,7 +354,8 @@ class ForceField:
 
         Raises
         ------
-        SMIRNOFFVersionError if an incompatible version is passed in.
+        SMIRNOFFVersionError
+            If an incompatible version is passed in.
 
         """
         import packaging.version
@@ -403,9 +404,11 @@ class ForceField:
 
         Raises
         ------
-        SMIRNOFFAromaticityError if an incompatible aromaticity model is passed in.
+        SMIRNOFFAromaticityError
+            If an incompatible aromaticity model is passed in.
 
-        .. notes ::
+        Notes
+        -----
            * Currently, the only supported aromaticity model is 'OEAroModel_MDL'.
 
         """
@@ -531,7 +534,8 @@ class ForceField:
 
         Raises
         ------
-        Exception if two ParameterIOHandlers are attempted to be registered for the same file format.
+        Exception
+            If two ParameterIOHandlers are attempted to be registered for the same file format.
 
         """
         for parameter_io_handler_class in parameter_io_handler_classes:
@@ -729,7 +733,8 @@ class ForceField:
 
         Raises
         ------
-        KeyError if there is no ParameterHandler for the given tagname
+        KeyError
+            If there is no ParameterHandler for the given tagname
         """
         # If there are no kwargs for the handler, initialize handler_kwargs as an empty dict
         skip_version_check = False
@@ -781,7 +786,8 @@ class ForceField:
 
         Raises
         ------
-        KeyError if there is no ParameterIOHandler for the given tagname
+        KeyError
+            If there is no ParameterIOHandler for the given tagname
         """
         # Uppercase the format string to avoid case mismatches
         io_format = io_format.upper()
@@ -1032,11 +1038,10 @@ class ForceField:
 
         Parameters
         ----------
-        source : str or bytes
-            sources : string or file-like object or open file handle or URL (or iterable of these)
-            A list of files defining the SMIRNOFF force field to be loaded
+        source : str or bytes or file-like object
+            File define the SMIRNOFF force field to be loaded
             Currently, only `the SMIRNOFF XML format <https://openforcefield.github.io/standards/standards/smirnoff/>`_ is supported.
-            Each entry may be an absolute file path, a path relative to the current working directory, a path relative to this module's data subdirectory
+            The file may be an absolute file path, a path relative to the current working directory, a path relative to this module's data subdirectory
             (for built in force fields), or an open file-like object with a ``read()`` method from which the force field XML data can be loaded.
 
         Returns

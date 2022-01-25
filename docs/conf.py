@@ -64,6 +64,7 @@ napoleon_google_docstring = False
 napoleon_attr_annotations = True
 napoleon_custom_sections = [("attributes", "params_style")]
 napoleon_use_rtype = False
+napoleon_use_param = True
 
 _python_doc_base = "https://docs.python.org/3.6"
 intersphinx_mapping = {
