@@ -16,7 +16,6 @@ dependencies:
   - networkx
   - ambertools
   - rdkit
-  - mendeleev
   - xmltodict
     # Test-only/optional/dev
   - mdtraj

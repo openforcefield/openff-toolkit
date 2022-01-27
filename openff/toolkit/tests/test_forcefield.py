@@ -3260,8 +3260,8 @@ class TestForceFieldConstraints:
                 constraint_idx
             )
             atom_elements = {
-                molecule.atoms[atom1_idx].element.symbol,
-                molecule.atoms[atom2_idx].element.symbol,
+                molecule.atoms[atom1_idx].symbol,
+                molecule.atoms[atom2_idx].symbol,
             }
             assert atom_elements == bond_elements
             assert np.isclose(
@@ -3604,7 +3604,7 @@ class TestForceFieldParameterAssignment:
 
         # Give each atom a unique name, otherwise OpenMM will complain
         for idx, atom in enumerate(molecule.atoms):
-            atom.name = f"{atom.element.symbol}{idx}"
+            atom.name = f"{atom.symbol}{idx}"
         positions = to_openmm(molecule.conformers[0])
 
         off_gbsas = {
@@ -3908,7 +3908,7 @@ class TestForceFieldParameterAssignment:
 
         # Give each atom a unique name, otherwise OpenMM will complain
         for idx, atom in enumerate(molecule.atoms):
-            atom.name = f"{atom.element.symbol}{idx}"
+            atom.name = f"{atom.symbol}{idx}"
 
         positions = np.concatenate(
             (molecule.conformers[0], molecule.conformers[0] + (10 * unit.angstrom))

@@ -18,7 +18,6 @@ dependencies:
   - networkx
   - ambertools
   - rdkit
-  - mendeleev
   - packaging
     # Removed until a new release which targets openff-toolkit is made.
 #  - openmmforcefields
@@ -38,3 +37,5 @@ dependencies:
   - qcengine
   - mdtraj
   - openff-interchange
+  - pip:
+    - git+https://github.com/openforcefield/openff-units.git@element-module
