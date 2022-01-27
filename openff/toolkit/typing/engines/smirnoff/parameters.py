@@ -5876,7 +5876,8 @@ class VirtualSiteHandler(_NonbondedHandler):
 
             # create the vsite particle
             mass = 0.0
-            vsite_idx = system.addParticle(mass)
+            # addParticle(mass.m_as(unit.dalton)) would be safer but slower
+            vsite_idx = system.addParticle(mass.m)
             ids.append(vsite_idx)
 
             logger.debug(
