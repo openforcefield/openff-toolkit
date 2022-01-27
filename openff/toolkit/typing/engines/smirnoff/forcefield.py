@@ -1039,7 +1039,7 @@ class ForceField:
         Parameters
         ----------
         source : str or bytes or file-like object
-            File define the SMIRNOFF force field to be loaded
+            File defining the SMIRNOFF force field to be loaded
             Currently, only `the SMIRNOFF XML format <https://openforcefield.github.io/standards/standards/smirnoff/>`_ is supported.
             The file may be an absolute file path, a path relative to the current working directory, a path relative to this module's data subdirectory
             (for built in force fields), or an open file-like object with a ``read()`` method from which the force field XML data can be loaded.
