@@ -405,16 +405,6 @@ class Atom(Particle):
         self._stereochemistry = value
 
     @property
-    def element(self):
-        """
-        TODO: Figure out what to do with this API point
-        """
-        raise NotImplementedError(
-            "Maybe everything here can be accessed externally from the atom's atomic number"
-        )
-        assert False
-
-    @property
     def atomic_number(self) -> int:
         """
         The integer atomic number of the atom.
