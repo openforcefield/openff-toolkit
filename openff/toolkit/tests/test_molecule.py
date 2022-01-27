@@ -26,7 +26,7 @@ from tempfile import NamedTemporaryFile
 import numpy as np
 import pytest
 from openff.units import unit
-from openff.units.elemtents import MASSES, SYMBOLS
+from openff.units.elements import MASSES, SYMBOLS
 from openmm import unit as openmm_unit
 
 from openff.toolkit.tests.create_molecules import (
@@ -302,7 +302,7 @@ class TestAtom:
         atom1 = Atom(6, 1 * unit.elementary_charge, False)
         assert atom1.formal_charge == 1 * unit.elementary_charge
 
-    @pytest.mark.parametrize("atomic_number", range(1, 118))
+    @pytest.mark.parametrize("atomic_number", range(1, 117))
     def test_atom_properties(self, atomic_number):
         """Test that atom properties are correctly populated and gettable"""
         formal_charge = 0 * unit.elementary_charge
@@ -315,15 +315,16 @@ class TestAtom:
             atomic_number,
             formal_charge,
             is_aromatic,
-            name=symbol,
+            name="fOO",
         )
         assert atom.atomic_number == atomic_number
         # this API point might be removed?
         # assert atom.element == this_element
         assert atom.formal_charge == formal_charge
         assert atom.is_aromatic == is_aromatic
-        assert atom.name == expected_symbol
+        assert atom.symbol == expected_symbol
         assert atom.mass == expected_mass
+        assert atom.name == "fOO"
 
     def test_atom_metadata(self):
         """Test that atom metadata behaves as expected"""
