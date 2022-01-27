@@ -8,18 +8,21 @@
 Tests for Topology
 
 """
-
-# =============================================================================================
-# GLOBAL IMPORTS
-# =============================================================================================
-
+import itertools
 from unittest import TestCase
 
 import numpy as np
 import pytest
-from simtk import unit
 
-from openff.toolkit.tests.test_forcefield import (
+try:
+    from openmm import app, unit
+    from openmm.app import element
+except ImportError:
+    from simtk import unit
+    from simtk.openmm import app
+    from simtk.openmm.app import element
+
+from openff.toolkit.tests.create_molecules import (
     create_cyclohexane,
     create_ethanol,
     create_reversed_ethanol,
@@ -31,12 +34,9 @@ from openff.toolkit.tests.utils import (
     requires_rdkit,
 )
 from openff.toolkit.topology import (
-    DuplicateUniqueMoleculeError,
     ImproperDict,
-    InvalidBoxVectorsError,
-    InvalidPeriodicityError,
-    MissingUniqueMoleculesError,
     Molecule,
+    TagSortedDict,
     Topology,
     ValenceDict,
 )
@@ -46,6 +46,12 @@ from openff.toolkit.utils import (
     RDKIT_AVAILABLE,
     OpenEyeToolkitWrapper,
     RDKitToolkitWrapper,
+)
+from openff.toolkit.utils.exceptions import (
+    DuplicateUniqueMoleculeError,
+    InvalidBoxVectorsError,
+    InvalidPeriodicityError,
+    MissingUniqueMoleculesError,
 )
 
 # =============================================================================================
@@ -101,6 +107,7 @@ def test_cheminformatics_toolkit_is_installed():
         raise Exception(msg)
 
 
+# TODO: Refactor this to pytest
 class TestTopology(TestCase):
     def setUp(self):
         self.empty_molecule = Molecule()
@@ -192,6 +199,7 @@ class TestTopology(TestCase):
         topology = Topology()
         good_box_vectors = unit.Quantity(np.eye(3) * 20 * unit.angstrom)
         one_dim_vectors = unit.Quantity(np.ones(3) * 20 * unit.angstrom)
+        list_vectors = [20, 20, 20] * unit.angstrom
         bad_shape_vectors = unit.Quantity(np.ones(2) * 20 * unit.angstrom)
         bad_units_vectors = unit.Quantity(np.ones(3) * 20 * unit.year)
         unitless_vectors = np.array([10, 20, 30])
@@ -206,7 +214,7 @@ class TestTopology(TestCase):
                 topology.box_vectors = bad_vectors
             assert topology.box_vectors is None
 
-        for good_vectors in [good_box_vectors, one_dim_vectors]:
+        for good_vectors in [good_box_vectors, one_dim_vectors, list_vectors]:
             topology.box_vectors = good_vectors
             assert (topology.box_vectors == good_vectors * np.eye(3)).all()
 
@@ -317,6 +325,32 @@ class TestTopology(TestCase):
 
         with self.assertRaises(Exception) as context:
             topology_atom = topology.atom(8)
+
+    def test_topology_atom_element(self):
+        """Test getters of TopologyAtom element and atomic number"""
+        topology = Topology()
+        topology.add_molecule(self.toluene_from_sdf)
+
+        first_element = topology.atom(0).element
+        eighth_element = topology.atom(7).element
+
+        # Check if types/instances are correct
+        assert isinstance(first_element, element.Element)
+        assert isinstance(eighth_element, element.Element)
+
+        # Make sure first is a carbon element and eighth is a hydrogen element
+        assert first_element == element.carbon
+        assert eighth_element == element.hydrogen
+
+    def test_topology_bond_atom_molecule(self):
+        topology = Molecule.from_smiles("CC").to_topology()
+        reference_molecule = [*topology.reference_molecules][0]
+
+        bond = [*topology.topology_bonds][0]
+        atom = [*topology.topology_atoms][0]
+
+        assert bond.molecule is reference_molecule
+        assert atom.molecule is reference_molecule
 
     def test_get_bond(self):
         """Test Topology.bond function (bond lookup from index)"""
@@ -621,8 +655,6 @@ class TestTopology(TestCase):
 
     def test_from_openmm(self):
         """Test creation of an OpenFF Topology object from an OpenMM Topology and component molecules"""
-        from simtk.openmm import app
-
         pdbfile = app.PDBFile(
             get_data_file_path("systems/packmol_boxes/cyclohexane_ethanol_0.4_0.6.pdb")
         )
@@ -640,8 +672,6 @@ class TestTopology(TestCase):
 
     def test_from_openmm_missing_reference(self):
         """Test creation of an OpenFF Topology object from an OpenMM Topology when missing a unique molecule"""
-        from simtk.openmm import app
-
         pdbfile = app.PDBFile(
             get_data_file_path("systems/packmol_boxes/cyclohexane_ethanol_0.4_0.6.pdb")
         )
@@ -659,8 +689,6 @@ class TestTopology(TestCase):
         Test creation of an OpenFF Topology object from an OpenMM Topology
         when the origin PDB lacks CONECT records
         """
-        from simtk.openmm import app
-
         pdbfile = app.PDBFile(
             get_data_file_path("systems/test_systems/1_ethanol_no_conect.pdb")
         )
@@ -683,8 +711,6 @@ class TestTopology(TestCase):
 
     def test_to_from_openmm(self):
         """Test a round-trip OpenFF -> OpenMM -> OpenFF Topology."""
-        from simtk.openmm.app import Aromatic
-
         # Create OpenFF topology with 1 ethanol and 2 benzenes.
         ethanol = Molecule.from_smiles("CCO")
         benzene = Molecule.from_smiles("c1ccccc1")
@@ -695,7 +721,7 @@ class TestTopology(TestCase):
 
         # Check that bond orders are preserved.
         n_double_bonds = sum([b.order == 2 for b in omm_topology.bonds()])
-        n_aromatic_bonds = sum([b.type is Aromatic for b in omm_topology.bonds()])
+        n_aromatic_bonds = sum([b.type is app.Aromatic for b in omm_topology.bonds()])
         assert n_double_bonds == 6
         assert n_aromatic_bonds == 12
 
@@ -800,8 +826,6 @@ class TestTopology(TestCase):
         """
         from tempfile import NamedTemporaryFile
 
-        from simtk.unit import nanometer
-
         from openff.toolkit.topology import Molecule, Topology
 
         topology = Topology()
@@ -825,7 +849,7 @@ class TestTopology(TestCase):
         count = 1
         coord = None
         with NamedTemporaryFile(suffix=".pdb") as iofile:
-            positions_nanometer = positions_angstrom.in_units_of(nanometer)
+            positions_nanometer = positions_angstrom.in_units_of(unit.nanometer)
             topology.to_file(iofile.name, positions_nanometer)
             data = open(iofile.name).readlines()
             for line in data:
@@ -913,10 +937,6 @@ class TestTopology(TestCase):
         """
         from tempfile import NamedTemporaryFile
 
-        from openff.toolkit.tests.test_forcefield import (
-            create_ethanol,
-            create_reversed_ethanol,
-        )
         from openff.toolkit.topology import Molecule, Topology
 
         topology = Topology()
@@ -961,8 +981,6 @@ class TestTopology(TestCase):
     @requires_openeye
     def test_from_openmm_duplicate_unique_mol(self):
         """Check that a DuplicateUniqueMoleculeError is raised if we try to pass in two indistinguishably unique mols"""
-        from simtk.openmm import app
-
         pdbfile = app.PDBFile(
             get_data_file_path("systems/packmol_boxes/cyclohexane_ethanol_0.4_0.6.pdb")
         )
@@ -1073,8 +1091,6 @@ class TestTopology(TestCase):
     @requires_openeye
     def test_chemical_environments_matches_OE(self):
         """Test Topology.chemical_environment_matches"""
-        from simtk.openmm import app
-
         toolkit_wrapper = OpenEyeToolkitWrapper()
         pdbfile = app.PDBFile(
             get_data_file_path("systems/packmol_boxes/cyclohexane_ethanol_0.4_0.6.pdb")
@@ -1109,8 +1125,6 @@ class TestTopology(TestCase):
     @requires_rdkit
     def test_chemical_environments_matches_RDK(self):
         """Test Topology.chemical_environment_matches"""
-        from simtk.openmm import app
-
         toolkit_wrapper = RDKitToolkitWrapper()
         pdbfile = app.PDBFile(
             get_data_file_path("systems/packmol_boxes/cyclohexane_ethanol_0.4_0.6.pdb")
@@ -1141,3 +1155,119 @@ class TestTopology(TestCase):
             "[C][C:1]-[C:2]-[O:3]", toolkit_registry=toolkit_wrapper
         )
         assert len(matches) == 0
+
+
+@pytest.mark.parametrize(
+    ("n_degrees", "num_pairs"),
+    [
+        (6, 0),
+        (5, 3),
+        (4, 14),
+        (3, 28),
+    ],
+)
+def test_nth_degree_neighbors(n_degrees, num_pairs):
+    smiles = ["c1ccccc1", "N1ONON1"]
+    topology = Topology.from_molecules([Molecule.from_smiles(smi) for smi in smiles])
+
+    # See test_molecule.TestMolecule.test_nth_degree_neighbors_rings for values
+    num_pairs_found = len([*topology.nth_degree_neighbors(n_degrees=n_degrees)])
+    assert num_pairs_found == num_pairs
+
+
+def _tagsorted_dict_init_ref_key(tsd):
+
+    if tsd is None:
+        tsd = TagSortedDict()
+
+        ref_key = (0, 1, 2)
+        tsd[ref_key] = 5
+    else:
+        ref_key = next(x for x in tsd)
+
+    return tsd, ref_key
+
+
+@pytest.mark.parametrize("tsd", [None, TagSortedDict({(0, 1, 2): 5})])
+def test_tagsorted_dict_deduplication(tsd):
+    """Test that all permutations of a key are present if one permutation is stored"""
+    tsd, ref_key = _tagsorted_dict_init_ref_key(tsd)
+
+    # only has one key, but all permutations match
+    for key in itertools.permutations(ref_key):
+        assert key in tsd
+
+    assert len(tsd) == 1
+
+
+@pytest.mark.parametrize("tsd", [None, TagSortedDict({(0, 1, 2): 5})])
+def test_tagsorted_dict_permutation_equivalence(tsd):
+    """Test that all permutations of a key would return the same result"""
+    tsd, ref_key = _tagsorted_dict_init_ref_key(tsd)
+
+    # lookups using any permutation will give the same return
+    for key in itertools.permutations(ref_key):
+        assert tsd[key] == 5
+
+    assert len(tsd) == 1
+
+
+@pytest.mark.parametrize("tsd", [None, TagSortedDict({(0, 1, 2): 5})])
+def test_tagsorted_dict_key_transform(tsd):
+    """Test that all key permutations transform to the same stored single key
+    permutation"""
+    tsd, ref_key = _tagsorted_dict_init_ref_key(tsd)
+
+    # all permutations should resolve to ref_key
+    for key in itertools.permutations(ref_key):
+        tr_key = tsd.key_transform(key)
+        assert tr_key == ref_key
+
+    assert len(tsd) == 1
+
+
+@pytest.mark.parametrize("tsd", [None, TagSortedDict({(0, 1, 2): 5})])
+def test_tagsorted_dict_modify(tsd):
+    """Test that modifying a key with another permutation replaces the original key"""
+    tsd, ref_key = _tagsorted_dict_init_ref_key(tsd)
+
+    # replace the ref_key since this is a permutation of it
+    mod_key = (1, 0, 2)
+    tsd[mod_key] = 6
+
+    keys = list(tsd)
+    assert ref_key not in keys
+
+    for key in itertools.permutations(ref_key):
+        assert key in tsd
+
+    assert len(tsd) == 1  # should not be 2
+
+
+@pytest.mark.parametrize("tsd", [TagSortedDict({(0, 1, 2): 5, (1, 2): 4})])
+def test_tagsorted_dict_multiple_keys(tsd):
+    """Test the use of multiple keys with similar values but different length"""
+    tsd, ref_key = _tagsorted_dict_init_ref_key(tsd)
+
+    # replace the ref_key since this is a permutation of it
+    mod_key = (1, 0, 2)
+    tsd[mod_key] = 6
+
+    keys = list(tsd)
+    assert ref_key not in keys  # ensure original key is gone
+
+    for key in itertools.permutations(ref_key):
+        assert key in tsd
+
+    assert tsd[(2, 1)] == 4  # should be unchanged
+    assert len(tsd) == 2  # should not be 3
+
+
+@pytest.mark.parametrize("tsd", [TagSortedDict({(0, 1, 2): 5, (1, 2): 4})])
+def test_tagsorted_dict_clear(tsd):
+    """Test the clear method"""
+    tsd, ref_key = _tagsorted_dict_init_ref_key(tsd)
+
+    tsd.clear()
+
+    assert len(tsd) == 0

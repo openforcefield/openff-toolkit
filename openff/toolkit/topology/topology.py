@@ -17,20 +17,28 @@ Class definitions to represent a molecular system and its chemical components
 
 """
 
-# =============================================================================================
-# GLOBAL IMPORTS
-# =============================================================================================
-
 import itertools
 from collections import OrderedDict
 from collections.abc import MutableMapping
 
 import numpy as np
-from simtk import unit
-from simtk.openmm import app
+
+try:
+    from openmm import app, unit
+    from openmm.app import Aromatic, Double, Single, Triple
+except ImportError:
+    from simtk import unit
+    from simtk.openmm import app
+    from simtk.openmm.app import Aromatic, Double, Single, Triple
 
 from openff.toolkit.typing.chemistry import ChemicalEnvironment
-from openff.toolkit.utils import MessageException
+from openff.toolkit.utils.exceptions import (
+    DuplicateUniqueMoleculeError,
+    InvalidBoxVectorsError,
+    InvalidPeriodicityError,
+    MissingUniqueMoleculesError,
+    NotBondedError,
+)
 from openff.toolkit.utils.serialization import Serializable
 from openff.toolkit.utils.toolkits import (
     ALLOWED_AROMATICITY_MODELS,
@@ -39,49 +47,6 @@ from openff.toolkit.utils.toolkits import (
     DEFAULT_AROMATICITY_MODEL,
     GLOBAL_TOOLKIT_REGISTRY,
 )
-
-# =============================================================================================
-# Exceptions
-# =============================================================================================
-
-
-class DuplicateUniqueMoleculeError(MessageException):
-    """
-    Exception for when the user provides indistinguishable unique molecules when trying to identify atoms from a PDB
-    """
-
-    pass
-
-
-class NotBondedError(MessageException):
-    """
-    Exception for when a function requires a bond between two atoms, but none is present
-    """
-
-    pass
-
-
-class InvalidBoxVectorsError(MessageException):
-    """
-    Exception for setting invalid box vectors
-    """
-
-
-class InvalidPeriodicityError(MessageException):
-    """
-    Exception for setting invalid periodicity
-    """
-
-
-class MissingUniqueMoleculesError(MessageException):
-    """
-    Exception for a when unique_molecules is required but not found
-    """
-
-
-# =============================================================================================
-# PRIVATE SUBROUTINES
-# =============================================================================================
 
 
 class _TransformedDict(MutableMapping):
@@ -212,6 +177,107 @@ class SortedDict(_TransformedDict):
         key = tuple(sorted(key))
         # Reverse the key if the first element is bigger than the last.
         return key
+
+
+class UnsortedDict(_TransformedDict):
+    ...
+
+
+class TagSortedDict(_TransformedDict):
+    """
+    A dictionary where keys, consisting of tuples of atom indices, are kept unsorted, but only allows one permutation of a key
+    to exist. Certain situations require that atom indices are not transformed in any
+    way, such as when the tagged order of a match is needed downstream. For example a
+    parameter using charge increments needs the ordering of the tagged match, and so
+    transforming the atom indices in any way will cause that information to be lost.
+
+    Because deduplication is needed, we still must avoid the expected situation
+    where we must not allow two permutations of the same atoms to coexist. For example,
+    a parameter may have matched the indices (2, 0, 1), however a parameter with higher
+    priority also matches the same indices, but the tagged order is (1, 0, 2). We need
+    to make sure both keys don't exist, or else two parameters will apply to
+    the same atoms. We allow the ability to query using either permutation and get
+    identical behavior. The defining feature here, then, is that the stored indices are
+    in tagged order, but one can supply any permutation and it will resolve to the
+    stored value/parameter.
+
+    As a subtle behavior, one must be careful if an external key is used that was not
+    supplied from the TagSortedDict object itself. For example:
+
+        >>> x = TagSortedDict({(2, 5, 0): 100})
+        >>> y = x[(5, 0, 2)]
+
+    The variable y will be 100, but this does not mean the tagged order is (5, 0, 2)
+    as it was supplied from the external tuple. One should either use keys only from
+    __iter__ (e.g.  `for k in x`) or one must transform the key:
+
+        >>> key = (5, 0, 2)
+        >>> y = x[key]
+        >>> key = x.key_transform(key)
+
+    Where `key` will now be `(2, 5, 0)`, as it is the key stored. One can overwrite
+    this key with the new one as expected:
+
+        >>> key = (5, 0, 2)
+        >>> x[key] = 50
+
+    Now the key `(2, 5, 0)` will no longer exist, as it was replaced with `(5, 0, 2)`.
+    """
+
+    def __init__(self, *args, **kwargs):
+
+        # Because keytransform is O(n) due to needing to check the sorted keys,
+        # we cache the sorted keys separately to make keytransform O(1) at
+        # the expense of storage. This is also better in the long run if the
+        # key is long and repeatedly sorting isn't a negligible cost.
+
+        # Set this before calling super init, since super will call the get/set
+        # methods implemented here as it populates self via args/kwargs,
+        # which will automatically populate _sorted
+        self._sorted = SortedDict()
+
+        super().__init__(*args, **kwargs)
+
+    def __setitem__(self, key, value):
+        """
+        Set the key to value, but only allow one permutation of key to exist. The
+        key argument will replace the old permutation:value if it exists.
+        """
+        key = tuple(key)
+        tr_key = self.__keytransform__(key)
+        if key != tr_key:
+            # this means our new key is a permutation of an existing, so we should
+            # replace it
+            del self.store[tr_key]
+        self.store[key] = value
+        # save the sorted version for faster keytransform
+        self._sorted[key] = key
+
+    def __keytransform__(self, key):
+        """Give the key permutation that is currently stored"""
+        # we check if there is a permutation clash by saving the sorted version of
+        # each key. If the sorted version of the key exists, then the return value
+        # corresponds to the explicit permutation we are storing in self (the public
+        # facing key). This permutation may or may not be the same as the key argument
+        # supplied. If the key is not present, then no transformation should be done
+        # and we should return the key as is.
+
+        # As stated in __init__, the alternative is to, on each call, sort the saved
+        # permutations and check if it is equal to the sorted supplied key. In this
+        # sense, self._sorted is a cache/lookup table.
+        key = tuple(key)
+        return self._sorted.get(key, key)
+
+    def key_transform(self, key):
+        key = tuple(key)
+        return self.__keytransform__(key)
+
+    def clear(self):
+        """
+        Clear the contents
+        """
+        self.store.clear()
+        self._sorted.clear()
 
 
 class ImproperDict(_TransformedDict):
@@ -345,6 +411,17 @@ class TopologyAtom(Serializable):
         return self._atom.atomic_number
 
     @property
+    def element(self):
+        """
+        Get the element name of this atom.
+
+        Returns
+        -------
+        openmm.app.element.Element
+        """
+        return self._atom.element
+
+    @property
     def topology_molecule(self):
         """
         Get the TopologyMolecule that this TopologyAtom belongs to.
@@ -364,7 +441,7 @@ class TopologyAtom(Serializable):
         -------
         openff.toolkit.topology.molecule.Molecule
         """
-        return self._topology_molecule.molecule
+        return self._topology_molecule.reference_molecule
 
     @property
     def topology_atom_index(self):
@@ -527,7 +604,7 @@ class TopologyBond(Serializable):
         -------
         openff.toolkit.topology.molecule.Molecule
         """
-        return self._topology_molecule.molecule
+        return self._topology_molecule.reference_molecule
 
     @property
     def bond_order(self):
@@ -741,7 +818,7 @@ class TopologyVirtualSite(Serializable):
         -------
         openff.toolkit.topology.molecule.Molecule
         """
-        return self._topology_molecule.molecule
+        return self._topology_molecule.reference_molecule
 
     @property
     def type(self):
@@ -1161,7 +1238,7 @@ class TopologyMolecule:
         of these three terms will always return a consistent energy.
 
         For more details on the use of three-fold ('trefoil') impropers, see
-        https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html#impropertorsions
+        https://openforcefield.github.io/standards/standards/smirnoff/#impropertorsions
 
 
 
@@ -1205,6 +1282,34 @@ class TopologyMolecule:
         """
         return self._convert_to_topology_atom_tuples(
             self._reference_molecule.amber_impropers
+        )
+
+    def nth_degree_neighbors(self, n_degrees: int):
+        """
+        Return canonicalized pairs of atoms whose shortest separation is `exactly` n bonds.
+        Only pairs with increasing atom indices are returned.
+
+        Parameters
+        ----------
+        n: int
+            The number of bonds separating atoms in each pair
+
+        Returns
+        -------
+        neighbors: iterator of tuple of TopologyAtom
+            Tuples (len 2) of atom that are separated by ``n`` bonds.
+
+        Notes
+        -----
+        The criteria used here relies on minimum distances; when there are multiple valid
+        paths between atoms, such as atoms in rings, the shortest path is considered.
+        For example, two atoms in "meta" positions with respect to each other in a benzene
+        are separated by two paths, one length 2 bonds and the other length 4 bonds. This
+        function would consider them to be 2 apart and would not include them if ``n=4`` was
+        passed.
+        """
+        return self._convert_to_topology_atom_tuples(
+            self._reference_molecule.nth_degree_neighbors(n_degrees=n_degrees)
         )
 
     @property
@@ -1266,7 +1371,7 @@ class Topology(Serializable):
 
     Import some utilities
 
-    >>> from simtk.openmm import app
+    >>> from openmm import app
     >>> from openff.toolkit.tests.utils import get_data_file_path, get_packmol_pdb_file_path
     >>> pdb_filepath = get_packmol_pdb_file_path('cyclohexane_ethanol_0.4_0.6')
     >>> monomer_names = ('cyclohexane', 'ethanol')
@@ -1434,7 +1539,7 @@ class Topology(Serializable):
 
         Returns
         -------
-        box_vectors : simtk.unit.Quantity wrapped numpy array of shape (3, 3)
+        box_vectors : openmm.unit.Quantity wrapped numpy array of shape (3, 3)
             The unit-wrapped box vectors of this topology
         """
         return self._box_vectors
@@ -1446,7 +1551,7 @@ class Topology(Serializable):
 
         Parameters
         ----------
-        box_vectors : simtk.unit.Quantity wrapped numpy array of shape (3, 3)
+        box_vectors : openmm.unit.Quantity wrapped numpy array of shape (3, 3)
             The unit-wrapped box vectors
 
         """
@@ -1457,7 +1562,7 @@ class Topology(Serializable):
             raise InvalidBoxVectorsError("Given unitless box vectors")
         if not (unit.angstrom.is_compatible(box_vectors.unit)):
             raise InvalidBoxVectorsError(
-                "Attempting to set box vectors in units that are incompatible with simtk.unit.Angstrom"
+                "Attempting to set box vectors in units that are incompatible with openmm.unit.Angstrom"
             )
 
         if hasattr(box_vectors, "shape"):
@@ -1467,8 +1572,10 @@ class Topology(Serializable):
                 raise InvalidBoxVectorsError(
                     f"Box vectors must be shape (3, 3). Found shape {box_vectors.shape}"
                 )
-        else:
-            assert len(box_vectors) == 3
+        elif isinstance(box_vectors._value, list):
+            if len(box_vectors) == 3:
+                box_vectors._value *= np.eye(3)
+
         self._box_vectors = box_vectors
 
     @property
@@ -1794,7 +1901,7 @@ class Topology(Serializable):
         of these three terms will always return a consistent energy.
 
         For more details on the use of three-fold ('trefoil') impropers, see
-        https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html#impropertorsions
+        https://openforcefield.github.io/standards/standards/smirnoff/#impropertorsions
 
         .. todo:: Offer a way to do the keytransform and get the final 3 orderings in this
                   method? How can we keep this logic synced up with the parameterization
@@ -1846,6 +1953,34 @@ class Topology(Serializable):
             for amber_improper in topology_molecule.amber_impropers:
                 yield amber_improper
 
+    def nth_degree_neighbors(self, n_degrees: int):
+        """
+        Return canonicalized pairs of atoms whose shortest separation is `exactly` n bonds.
+        Only pairs with increasing atom indices are returned.
+
+        Parameters
+        ----------
+        n: int
+            The number of bonds separating atoms in each pair
+
+        Returns
+        -------
+        neighbors: iterator of tuple of TopologyAtom
+            Tuples (len 2) of atom that are separated by ``n`` bonds.
+
+        Notes
+        -----
+        The criteria used here relies on minimum distances; when there are multiple valid
+        paths between atoms, such as atoms in rings, the shortest path is considered.
+        For example, two atoms in "meta" positions with respect to each other in a benzene
+        are separated by two paths, one length 2 bonds and the other length 4 bonds. This
+        function would consider them to be 2 apart and would not include them if ``n=4`` was
+        passed.
+        """
+        for topology_molecule in self._topology_molecules:
+            for pair in topology_molecule.nth_degree_neighbors(n_degrees=n_degrees):
+                yield pair
+
     class _ChemicalEnvironmentMatch:
         """Represents the match of a given chemical environment query, storing
         both the matched topology atom indices and the indices of the corresponding
@@ -1890,7 +2025,11 @@ class Topology(Serializable):
             self._topology_atom_indices = topology_atom_indices
 
     def chemical_environment_matches(
-        self, query, aromaticity_model="MDL", toolkit_registry=GLOBAL_TOOLKIT_REGISTRY
+        self,
+        query,
+        aromaticity_model="MDL",
+        unique=False,
+        toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
     ):
         """
         Retrieve all matches for a given chemical environment query.
@@ -1936,7 +2075,9 @@ class Topology(Serializable):
             # This will automatically attempt to match chemically identical atoms in
             # a canonical order within the Topology
             ref_mol_matches = ref_mol.chemical_environment_matches(
-                smarts, toolkit_registry=toolkit_registry
+                smarts,
+                unique=unique,
+                toolkit_registry=toolkit_registry,
             )
 
             if len(ref_mol_matches) == 0:
@@ -1981,57 +2122,6 @@ class Topology(Serializable):
         # Implement abstract method Serializable.to_dict()
         raise NotImplementedError()  # TODO
 
-    # TODO: Merge this into Molecule.from_networkx if/when we implement that.
-    # TODO: can we now remove this as we have the ability to do this in the Molecule class?
-    @staticmethod
-    def _networkx_to_hill_formula(mol_graph):
-        """
-        Convert a networkX representation of a molecule to a molecule formula. Used in printing out
-        informative error messages when a molecule from an openmm topology can't be matched.
-
-        Parameters
-        ----------
-        mol_graph : a networkX graph
-            The graph representation of a molecule
-
-        Returns
-        -------
-        formula : str
-            The molecular formula of the graph molecule
-        """
-        from simtk.openmm.app import Element
-
-        # Make a flat list of all atomic numbers in the molecule
-        atom_nums = []
-        for idx in mol_graph.nodes:
-            atom_nums.append(mol_graph.nodes[idx]["atomic_number"])
-
-        # Count the number of instances of each atomic number
-        at_num_to_counts = dict([(unq, atom_nums.count(unq)) for unq in atom_nums])
-
-        symbol_to_counts = {}
-        # Check for C and H first, to make a correct hill formula (remember dicts in python 3.6+ are ordered)
-        if 6 in at_num_to_counts:
-            symbol_to_counts["C"] = at_num_to_counts[6]
-            del at_num_to_counts[6]
-
-        if 1 in at_num_to_counts:
-            symbol_to_counts["H"] = at_num_to_counts[1]
-            del at_num_to_counts[1]
-
-        # Now count instances of all elements other than C and H, in order of ascending atomic number
-        sorted_atom_nums = sorted(at_num_to_counts.keys())
-        for atom_num in sorted_atom_nums:
-            symbol_to_counts[
-                Element.getByAtomicNumber(atom_num).symbol
-            ] = at_num_to_counts[atom_num]
-
-        # Finally format the formula as string
-        formula = ""
-        for ele, count in symbol_to_counts.items():
-            formula += f"{ele}{count}"
-        return formula
-
     @classmethod
     def from_openmm(cls, openmm_topology, unique_molecules=None):
         """
@@ -2039,7 +2129,7 @@ class Topology(Serializable):
 
         Parameters
         ----------
-        openmm_topology : simtk.openmm.app.Topology
+        openmm_topology : openmm.app.Topology
             An OpenMM Topology object
         unique_molecules : iterable of objects that can be used to construct unique Molecule objects
             All unique molecules must be provided, in any order, though multiple copies of each molecule are allowed.
@@ -2131,7 +2221,11 @@ class Topology(Serializable):
                     match_found = True
                     break
             if match_found is False:
-                hill_formula = Molecule.to_hill_formula(omm_mol_G)
+                from openff.toolkit.topology.molecule import (
+                    _networkx_graph_to_hill_formula,
+                )
+
+                hill_formula = _networkx_graph_to_hill_formula(omm_mol_G)
                 msg = f"No match found for molecule {hill_formula}. "
                 probably_missing_conect = [
                     "C",
@@ -2197,13 +2291,15 @@ class Topology(Serializable):
 
         Returns
         -------
-        openmm_topology : simtk.openmm.app.Topology
+        openmm_topology : openmm.app.Topology
             An OpenMM Topology object
         """
-        from simtk.openmm.app import Aromatic, Double, Single
-        from simtk.openmm.app import Topology as OMMTopology
-        from simtk.openmm.app import Triple
-        from simtk.openmm.app.element import Element as OMMElement
+        try:
+            from openmm.app import Topology as OMMTopology
+            from openmm.app.element import Element as OMMElement
+        except ImportError:
+            from simtk.openmm.app import Topology as OMMTopology
+            from simtk.openmm.app.element import Element as OMMElement
 
         omm_topology = OMMTopology()
 
@@ -2299,18 +2395,15 @@ class Topology(Serializable):
         ----------
         filename : str
             name of the pdb file to write to
-        positions : n_atoms x 3 numpy array or simtk.unit.Quantity-wrapped n_atoms x 3 iterable
+        positions : n_atoms x 3 numpy array or openmm.unit.Quantity-wrapped n_atoms x 3 iterable
             Can be an openmm 'quantity' object which has atomic positions as a list of Vec3s along with associated units, otherwise a 3D array of UNITLESS numbers are considered as "Angstroms" by default
         file_format : str
             Output file format. Case insensitive. Currently only supported value is "pdb".
 
         """
-        from simtk.openmm.app import PDBFile
-        from simtk.unit import Quantity, angstroms
-
         openmm_top = self.to_openmm()
-        if not isinstance(positions, Quantity):
-            positions = positions * angstroms
+        if not isinstance(positions, unit.Quantity):
+            positions = positions * unit.angstrom
 
         file_format = file_format.upper()
         if file_format != "PDB":
@@ -2318,7 +2411,7 @@ class Topology(Serializable):
 
         # writing to PDB file
         with open(filename, "w") as outfile:
-            PDBFile.writeFile(openmm_top, positions, outfile, keepIds)
+            app.PDBFile.writeFile(openmm_top, positions, outfile, keepIds)
 
     @staticmethod
     def from_mdtraj(mdtraj_topology, unique_molecules=None):
@@ -2344,64 +2437,20 @@ class Topology(Serializable):
             mdtraj_topology.to_openmm(), unique_molecules=unique_molecules
         )
 
-    # TODO: Jeff prepended an underscore on this before 0.2.0 release to remove it from the API.
-    #       Before exposing this, we should look carefully at the information that is preserved/lost during this
-    #       conversion, and make it clear what would happen to this information in a round trip. For example,
-    #       we should know what would happen to formal and partial bond orders and charges, stereochemistry, and
-    #       multi-conformer information. It will be important to document these risks to users, as all of these
-    #       factors could lead to unintended behavior during system parameterization.
+    # Avoid removing this method, even though it is private and would not be difficult for most
+    # users to replace. Also avoid making it public as round-trips with MDTraj are likely
+    # to not preserve necessary information.
     def _to_mdtraj(self):
         """
         Create an MDTraj Topology object.
-
         Returns
         ----------
         mdtraj_topology : mdtraj.Topology
             An MDTraj Topology object
-        #"""
+        """
         import mdtraj as md
 
         return md.Topology.from_openmm(self.to_openmm())
-
-    @staticmethod
-    def from_parmed(parmed_structure, unique_molecules=None):
-        """
-        .. warning:: This functionality will be implemented in a future toolkit release.
-
-        Construct an OpenFF Topology object from a ParmEd Structure object.
-
-        Parameters
-        ----------
-        parmed_structure : parmed.Structure
-            A ParmEd structure object
-        unique_molecules : iterable of objects that can be used to construct unique Molecule objects
-            All unique molecules must be provided, in any order, though multiple copies of each molecule are allowed.
-            The atomic elements and bond connectivity will be used to match the reference molecules
-            to molecule graphs appearing in the structure's ``topology`` object. If bond orders are present in the
-            structure's ``topology`` object, these will be used in matching as well.
-
-        Returns
-        -------
-        topology : openff.toolkit.topology.Topology
-            An OpenFF Topology object
-        """
-        # TODO: Implement functionality
-        raise NotImplementedError
-
-    def to_parmed(self):
-        """
-
-        .. warning:: This functionality will be implemented in a future toolkit release.
-
-        Create a ParmEd Structure object.
-
-        Returns
-        ----------
-        parmed_structure : parmed.Structure
-            A ParmEd Structure objecft
-        """
-        # TODO: Implement functionality
-        raise NotImplementedError
 
     # TODO: Jeff prepended an underscore on this before 0.2.0 release to remove it from the API.
     #       This function is deprecated and expects the OpenEye toolkit. We need to discuss what
@@ -2545,7 +2594,7 @@ class Topology(Serializable):
         # Creating bonds
         for oe_bond in mol.GetBonds():
             # Set the bond type
-            if oe_bond.GetType() is not "":
+            if oe_bond.GetType() != "":
                 if oe_bond.GetType() in [
                     "Single",
                     "Double",
@@ -2609,7 +2658,7 @@ class Topology(Serializable):
         -------
         oemol : openeye.oechem.OEMol
             An OpenEye molecule
-        positions : simtk.unit.Quantity with shape [nparticles,3], optional, default=None
+        positions : openmm.unit.Quantity with shape [nparticles,3], optional, default=None
             Positions to use in constructing OEMol.
             If virtual sites are present in the Topology, these indices will be skipped.
 
@@ -2918,7 +2967,7 @@ class Topology(Serializable):
         iatom, jatom : Atom
             Atoms to mark as constrained
             These atoms may be bonded or not in the Topology
-        distance : simtk.unit.Quantity, optional, default=True
+        distance : openmm.unit.Quantity, optional, default=True
             Constraint distance
             ``True`` if distance has yet to be determined
             ``False`` if constraint is to be removed
@@ -2954,7 +3003,7 @@ class Topology(Serializable):
 
         Returns
         -------
-        distance : simtk.unit.Quantity or bool
+        distance : openmm.unit.Quantity or bool
             True if constrained but constraints have not yet been applied
             Distance if constraint has already been added to System
 

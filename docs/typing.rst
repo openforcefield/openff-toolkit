@@ -31,7 +31,7 @@ ForceField
 
 The ``ForceField`` class is a primary part of the top-level toolkit API.
 ``ForceField`` objects are initialized from SMIRNOFF data sources (e.g. an ``OFFXML`` file).
-For a basic example of system creation using a ``ForceField``, see ``examples/SMIRNOFF_simulation``.
+For a basic example of OpenMM ``System`` creation using a ``ForceField``, see ``examples/SMIRNOFF_simulation``.
 
 
 .. currentmodule:: openff.toolkit.typing.engines.smirnoff.forcefield
@@ -62,12 +62,17 @@ For more information, see ``examples/forcefield_modification``.
     vdWHandler.vdWType
     LibraryChargeHandler.LibraryChargeType
     GBSAHandler.GBSAType
+    ChargeIncrementModelHandler.ChargeIncrementType
+    VirtualSiteHandler.VirtualSiteBondChargeType
+    VirtualSiteHandler.VirtualSiteMonovalentLonePairType
+    VirtualSiteHandler.VirtualSiteDivalentLonePairType
+    VirtualSiteHandler.VirtualSiteTrivalentLonePairType
 
 Parameter Handlers
 ~~~~~~~~~~~~~~~~~~
 
-Each ``ForceField`` primarily consists of several ``ParameterHandler`` objects, which each contain the machinery to add one energy component to a system.
-During system creation, each ``ParameterHandler`` registered to a ``ForceField`` has its ``assign_parameters()`` function called..
+Each ``ForceField`` primarily consists of several ``ParameterHandler`` objects, which each contain the machinery to add one energy component to an OpenMM ``System``.
+During ``System`` creation, each ``ParameterHandler`` registered to a ``ForceField`` has its ``assign_parameters()`` function called.
 
 .. currentmodule:: openff.toolkit.typing.engines.smirnoff.parameters
 .. autosummary::
@@ -85,6 +90,8 @@ During system creation, each ``ParameterHandler`` registered to a ``ForceField``
     LibraryChargeHandler
     ToolkitAM1BCCHandler
     GBSAHandler
+    ChargeIncrementModelHandler
+    VirtualSiteHandler
 
 Parameter I/O Handlers
 ~~~~~~~~~~~~~~~~~~~~~~

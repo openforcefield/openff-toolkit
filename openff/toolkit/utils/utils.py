@@ -5,9 +5,6 @@ Utility subroutines
 """
 
 __all__ = [
-    "MessageException",
-    "IncompatibleUnitError",
-    "MissingDependencyError",
     "requires_package",
     "inherit_docstrings",
     "all_subclasses",
@@ -30,61 +27,26 @@ __all__ = [
     "convert_0_2_smirnoff_to_0_3",
     "get_molecule_parameterIDs",
 ]
-
-# =============================================================================================
-# GLOBAL IMPORTS
-# =============================================================================================
-
 import contextlib
 import functools
 import logging
+from typing import List, Tuple, Union
 
-from simtk import unit
+try:
+    from openmm import unit
+except ImportError:
+    from simtk import unit
+
+from openff.toolkit.utils.exceptions import (
+    IncompatibleUnitError,
+    MissingDependencyError,
+)
 
 # =============================================================================================
 # CONFIGURE LOGGER
 # =============================================================================================
 
 logger = logging.getLogger(__name__)
-
-
-# =============================================================================================
-# COMMON EXCEPTION TYPES
-# =============================================================================================
-
-
-class MessageException(Exception):
-    """A base class for exceptions that print out a string given in their constructor"""
-
-    def __init__(self, msg):
-        super().__init__(self, msg)
-        self.msg = msg
-
-    def __str__(self):
-        return self.msg
-
-
-class IncompatibleUnitError(MessageException):
-    """
-    Exception for when a parameter is in the wrong units for a ParameterHandler's unit system
-    """
-
-    pass
-
-
-class MissingDependencyError(MessageException):
-    """
-    Exception for when an optional dependency is needed but not installed
-
-    """
-
-    def __init__(self, package_name):
-        self.msg = (
-            f"Missing dependency {package_name}. Try installing it "
-            f"with\n\n$ conda install {package_name} -c conda-forge"
-        )
-
-        super().__init__(self.msg)
 
 
 # =============================================================================================
@@ -207,12 +169,12 @@ def get_data_file_path(relative_path):
 
 def unit_to_string(input_unit):
     """
-    Serialize a simtk.unit.Unit and return it as a string.
+    Serialize a openmm.unit.Unit and return it as a string.
 
     Parameters
     ----------
-    input_unit : A simtk.unit
-        The unit to serialize
+    input_unit : A openmm.unit.Unit
+        The Unit object to serialize
 
     Returns
     -------
@@ -244,11 +206,11 @@ def unit_to_string(input_unit):
 
 def quantity_to_string(input_quantity):
     """
-    Serialize a simtk.unit.Quantity to a string.
+    Serialize a openmm.unit.Quantity to a string.
 
     Parameters
     ----------
-    input_quantity : simtk.unit.Quantity
+    input_quantity : openmm.unit.Quantity
         The quantity to serialize
 
     Returns
@@ -299,7 +261,7 @@ def _ast_eval(node):
     elif isinstance(node, ast.UnaryOp):  # <operator> <operand> e.g., -1
         return operators[type(node.op)](_ast_eval(node.operand))
     elif isinstance(node, ast.Name):
-        # see if this is a simtk unit
+        # see if this is a openmm unit
         b = getattr(unit, node.id)
         return b
     # TODO: This was a quick hack that surprisingly worked. We should validate this further.
@@ -311,18 +273,18 @@ def _ast_eval(node):
 
 def string_to_unit(unit_string):
     """
-    Deserializes a simtk.unit.Quantity from a string representation, for
+    Deserializes a openmm.unit.Quantity from a string representation, for
     example: "kilocalories_per_mole / angstrom ** 2"
 
 
     Parameters
     ----------
     unit_string : dict
-        Serialized representation of a simtk.unit.Quantity.
+        Serialized representation of a openmm.unit.Quantity.
 
     Returns
     -------
-    output_unit: simtk.unit.Quantity
+    output_unit: openmm.unit.Quantity
         The deserialized unit from the string
     """
     import ast
@@ -346,7 +308,7 @@ def string_to_unit(unit_string):
 
 def string_to_quantity(quantity_string):
     """
-    Takes a string representation of a quantity and returns a simtk.unit.Quantity
+    Takes a string representation of a quantity and returns a openmm.unit.Quantity
 
     Parameters
     ----------
@@ -355,7 +317,7 @@ def string_to_quantity(quantity_string):
 
     Returns
     -------
-    output_quantity : simtk.unit.Quantity
+    output_quantity : openmm.unit.Quantity
         The deserialized quantity
     """
     if quantity_string is None:
@@ -370,10 +332,10 @@ def string_to_quantity(quantity_string):
 def convert_all_strings_to_quantity(smirnoff_data):
     """
     Traverses a SMIRNOFF data structure, attempting to convert all
-    quantity-defining strings into simtk.unit.Quantity objects.
+    quantity-defining strings into openmm.unit.Quantity objects.
 
     Integers and floats are ignored and not converted into a dimensionless
-    ``simtk.unit.Quantity`` object.
+    ``openmm.unit.Quantity`` object.
 
     Parameters
     ----------
@@ -384,7 +346,7 @@ def convert_all_strings_to_quantity(smirnoff_data):
     -------
     converted_smirnoff_data : dict
         A hierarchical dict structured in compliance with the SMIRNOFF spec,
-        with quantity-defining strings converted to simtk.unit.Quantity objects
+        with quantity-defining strings converted to openmm.unit.Quantity objects
     """
     if isinstance(smirnoff_data, dict):
         for key, value in smirnoff_data.items():
@@ -422,7 +384,7 @@ def convert_all_quantities_to_string(smirnoff_data):
     -------
     converted_smirnoff_data : dict
         A hierarchical dict structured in compliance with the SMIRNOFF spec,
-        with simtk.unit.Quantitys converted to string
+        with openmm.unit.Quantitys converted to string
     """
 
     if isinstance(smirnoff_data, dict):
@@ -444,7 +406,7 @@ def convert_all_quantities_to_string(smirnoff_data):
 @functools.singledispatch
 def object_to_quantity(object):
     """
-    Attempts to turn the provided object into simtk.unit.Quantity(s).
+    Attempts to turn the provided object into openmm.unit.Quantity(s).
 
     Can handle float, int, strings, quantities, or iterators over
     the same. Raises an exception if unable to convert all inputs.
@@ -452,11 +414,11 @@ def object_to_quantity(object):
     Parameters
     ----------
     object : int, float, string, quantity, or iterator of strings of quantities
-        The object to convert to a ``simtk.unit.Quantity`` object.
+        The object to convert to a ``openmm.unit.Quantity`` object.
 
     Returns
     -------
-    converted_object : simtk.unit.Quantity or List[simtk.unit.Quantity]
+    converted_object : openmm.unit.Quantity or List[openmm.unit.Quantity]
 
     """
     # If we can't find a custom type, we treat this as a generic iterator.
@@ -481,14 +443,14 @@ def _(obj):
 
 def check_units_are_compatible(object_name, object, unit_to_check, context=None):
     """
-    Checks whether a simtk.unit.Quantity or list of simtk.unit.Quantitys is compatible with given unit.
+    Checks whether a openmm.unit.Quantity or list of openmm.unit.Quantitys is compatible with given unit.
 
     Parameters
     ----------
     object_name : string
         Name of object, used in printing exception.
-    object : A simtk.unit.Quantity or list of simtk.unit.Quantitys
-    unit_to_check : A simtk.unit.Unit
+    object : A openmm.unit.Quantity or list of openmm.unit.Quantitys
+    unit_to_check : A openmm.unit.Unit
     context : string, optional. Default=None
         Additional information to provide at the beginning of the exception message if raised
 
@@ -538,9 +500,9 @@ def extract_serialized_units_from_dict(input_dict):
     -------
     unitless_dict : dict
        input_dict, but with keys ending in ``_unit`` removed.
-    attached_units : dict str : simtk.unit.Unit
-       ``attached_units[parameter_name]`` is the simtk.unit.Unit combination that should be attached to corresponding
-       parameter ``parameter_name``. For example ``attached_units['X'] = simtk.unit.angstrom.
+    attached_units : dict str : openmm.unit.Unit
+       ``attached_units[parameter_name]`` is the openmm.unit.Unit combination that should be attached to corresponding
+       parameter ``parameter_name``. For example ``attached_units['X'] = openmm.unit.angstrom.
 
     """
 
@@ -579,14 +541,14 @@ def attach_units(unitless_dict, attached_units):
     ----------
     unitless_dict : dict
        Dictionary, where some items are to have units applied.
-    attached_units : dict [str : simtk.unit.Unit]
-       ``attached_units[parameter_name]`` is the simtk.unit.Unit combination that should be attached to corresponding
+    attached_units : dict [str : openmm.unit.Unit]
+       ``attached_units[parameter_name]`` is the openmm.unit.Unit combination that should be attached to corresponding
        parameter ``parameter_name``
 
     Returns
     -------
     unit_bearing_dict : dict
-       Updated dict with simtk.unit.Unit units attached to values for which units were specified for their keys
+       Updated dict with openmm.unit.Unit units attached to values for which units were specified for their keys
 
     """
     temp_dict = unitless_dict.copy()
@@ -624,27 +586,27 @@ def attach_units(unitless_dict, attached_units):
 
 def detach_units(unit_bearing_dict, output_units=None):
     """
-    Given a dict which may contain some simtk.unit.Quantity objects, return the same dict with the Quantities
+    Given a dict which may contain some openmm.unit.Quantity objects, return the same dict with the Quantities
     replaced with unitless values, and a new dict containing entries with the suffix "_unit" added, containing
     the units.
 
     Parameters
     ----------
     unit_bearing_dict : dict
-        A dictionary potentially containing simtk.unit.Quantity objects as values.
-    output_units : dict[str : simtk.unit.Unit], optional. Default = None
+        A dictionary potentially containing openmm.unit.Quantity objects as values.
+    output_units : dict[str : openmm.unit.Unit], optional. Default = None
         A mapping from parameter fields to the output unit its value should be converted to.
         For example, {'length_unit': unit.angstrom}. If no output_unit is defined for a key:value pair in which
-        the value is a simtk.unit.Quantity, the output unit will be the Quantity's unit, and this information
+        the value is a openmm.unit.Quantity, the output unit will be the Quantity's unit, and this information
         will be included in the unit_dict return value.
 
     Returns
     -------
     unitless_dict : dict
-        The input smirnoff_dict object, with all simtk.unit.Quantity values converted to unitless values.
+        The input smirnoff_dict object, with all openmm.unit.Quantity values converted to unitless values.
     unit_dict : dict
-        A dictionary in which keys are keys of simtk.unit.Quantity values in unit_bearing_dict,
-        but suffixed with "_unit". Values are simtk.unit.Unit .
+        A dictionary in which keys are keys of openmm.unit.Quantity values in unit_bearing_dict,
+        but suffixed with "_unit". Values are openmm.unit.Unit .
     """
 
     if output_units is None:
@@ -677,12 +639,9 @@ def detach_units(unit_bearing_dict, output_units=None):
     return unitless_dict, unit_dict
 
 
-def serialize_numpy(np_array):
+def serialize_numpy(np_array) -> Tuple[bytes, Tuple[int]]:
     """
-    Serializes a numpy array into a JSON-compatible string. Leverages the numpy.save function,
-    thereby preserving the shape of the input array
-
-    from https://stackoverflow.com/questions/30698004/how-can-i-serialize-a-numpy-array-while-preserving-matrix-dimensions#30699208
+    Serializes a numpy array into a big-endian bytestring and tuple representing its shape.
 
     Parameters
     ----------
@@ -691,23 +650,24 @@ def serialize_numpy(np_array):
 
     Returns
     -------
-    serialized : str
-        A serialized representation of the numpy array.
+    serialized : bytes
+        A big-endian bytestring of the NumPy array.
     shape : tuple of ints
         The shape of the serialized array
     """
+    import numpy as np
 
-    bigendian_array = np_array.newbyteorder(">")
+    bigendian_float = np.dtype(float).newbyteorder(">")
+    bigendian_array = np_array.astype(bigendian_float)
     serialized = bigendian_array.tobytes()
     shape = np_array.shape
     return serialized, shape
 
 
-def deserialize_numpy(serialized_np, shape):
+def deserialize_numpy(serialized_np: Union[bytes, List], shape: Tuple[int]):
     """
-    Deserializes a numpy array from a JSON-compatible string.
-
-    from https://stackoverflow.com/questions/30698004/how-can-i-serialize-a-numpy-array-while-preserving-matrix-dimensions#30699208
+    Deserializes a numpy array from a bytestring or list. The input, if a bytestring, is
+    assumed to be in big-endian byte order.
 
     Parameters
     ----------
@@ -726,8 +686,7 @@ def deserialize_numpy(serialized_np, shape):
     if isinstance(serialized_np, list):
         np_array = np.array(serialized_np)
     if isinstance(serialized_np, bytes):
-        dt = np.dtype("float")
-        dt.newbyteorder(">")  # set to big-endian
+        dt = np.dtype("float").newbyteorder(">")
         np_array = np.frombuffer(serialized_np, dtype=dt)
     np_array = np_array.reshape(shape)
     return np_array
@@ -918,7 +877,7 @@ def convert_0_1_smirnoff_to_0_2(smirnoff_data_0_1):
         "cutoff_unit": "angstrom",
     }
     for key, val in vdw_section_additions.items():
-        if not key in smirnoff_data["SMIRNOFF"]["vdW"].keys():
+        if key not in smirnoff_data["SMIRNOFF"]["vdW"].keys():
             logger.warning(
                 f"0.1 SMIRNOFF spec file does not contain '{key}' attribute for 'NonBondedMethod/vdW'' tag. "
                 f"The SMIRNOFF spec converter is assuming it has a value of '{val}'"

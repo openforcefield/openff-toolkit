@@ -4,87 +4,88 @@ on:
   push:
     branches:
       - "master"
-      - "maintenance/.+"
+      - "maintenance/.*"
   pull_request:
     branches:
       - "master"
-      - "maintenance/.+"
+      - "maintenance/.*"
   schedule:
     # Nightly tests run on master by default:
     #   Scheduled workflows run on the latest commit on the default or base branch.
     #   (from https://help.github.com/en/actions/reference/events-that-trigger-workflows#scheduled-events-schedule)
     - cron: "0 0 * * *"
 
+defaults:
+  run:
+    shell: bash -l {0}
+
 jobs:
   test:
     if: (github.event_name == 'schedule' && github.repository == 'openforcefield/openff-toolkit') || (github.event_name != 'schedule')
-    name: Test on ${{ matrix.cfg.os }}, Python ${{ matrix.python-version }}, RDKit=${{ matrix.cfg.rdkit }}, OpenEye=${{ matrix.cfg.openeye }}
-    runs-on: ${{ matrix.cfg.os }}
+    name: Test on ${{ matrix.os }}, Python ${{ matrix.python-version }}, RDKit=${{ matrix.rdkit }}, OpenEye=${{ matrix.openeye }}
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        python-version:
-          - 3.6
-          - 3.7
-          - 3.8
-          - 3.9
-        cfg:
-          - os: ubuntu-latest
-            rdkit: "true"
-            openeye: "false"
-
-          - os: ubuntu-latest
-            rdkit: "false"
-            openeye: "true"
-
-          - os: ubuntu-latest
-            rdkit: "true"
-            openeye: "true"
-
-          - os: macOS-latest
-            rdkit: "true"
-            openeye: "false"
+        os: [ubuntu-latest, macos-latest]
+        python-version: [3.7, 3.8, 3.9]
+        rdkit: [true, false]
+        openeye: [true, false]
+        exclude:
+          - rdkit: false
+            openeye: false
+          - openeye: true
+            python-version: 3.8
+          - openeye: true
+            python-version: 3.9
 
     env:
-      CI_OS: ${{ matrix.cfg.os }}
-      RDKIT: ${{ matrix.cfg.rdkit }}
-      OPENEYE: ${{ matrix.cfg.openeye }}
-      PYVER: ${{ matrix.python-version }}
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
       PACKAGE: openff
       PYTEST_ARGS: -r fE --tb=short --cov=openff --cov-config=setup.cfg --cov-append --cov-report=xml
       NB_ARGS: -v --nbval-lax --ignore=examples/deprecated
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v2.4.0
+        with:
+          fetch-depth: 2
 
-      - uses: conda-incubator/setup-miniconda@v2
-        name: Install both RDKit and OpenEye toolkits
-        if: ${{ matrix.cfg.rdkit == 'TRUE' && matrix.cfg.openeye == 'TRUE' }}
+      - name: Set environment variables
+        run: |
+          if [[ ${{ matrix.openeye }} == true && ${{ matrix.rdkit }} == true ]]; then
+              echo "ENVFILE=test_env" >> $GITHUB_ENV
+              echo "JOBNAME=RDKit and OpenEye" >> $GITHUB_ENV
+              echo "TOOLKIT_CHECKS=RDKIT OPENEYE" >> $GITHUB_ENV
+              echo "PACKAGES_TO_REMOVE=" >> $GITHUB_ENV
+          fi
+
+          if [[ ${{ matrix.openeye }} == true && ${{ matrix.rdkit }} == false ]]; then
+              echo "ENVFILE=openeye" >> $GITHUB_ENV
+              echo "JOBNAME=OpenEye" >> $GITHUB_ENV
+              echo "TOOLKIT_CHECKS=OPENEYE" >> $GITHUB_ENV
+              echo "PACKAGES_TO_REMOVE=ambertools rdkit" >> $GITHUB_ENV
+          fi
+
+          if [[ ${{ matrix.openeye }} == false && ${{ matrix.rdkit }} == true ]]; then
+              echo "ENVFILE=rdkit" >> $GITHUB_ENV
+              echo "JOBNAME=RDKit" >> $GITHUB_ENV
+              echo "TOOLKIT_CHECKS=RDKIT" >> $GITHUB_ENV
+              echo "PACKAGES_TO_REMOVE=openeye-toolkits" >> $GITHUB_ENV
+          fi
+
+
+      - name: Install environment with ${{ env.JOBNAME }}
+        uses: conda-incubator/setup-miniconda@v2.1.1
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: ${{ matrix.cfg.python-version }}
           activate-environment: test
-          environment-file: devtools/conda-envs/test_env.yaml
+          environment-file: devtools/conda-envs/${{ env.ENVFILE }}.yaml
           auto-activate-base: false
-      - uses: conda-incubator/setup-miniconda@v2
-        name: Install only RDKit
-        if: ${{ matrix.cfg.rdkit == 'TRUE' && matrix.cfg.openeye == 'FALSE' }}
-        with:
-          python-version: ${{ matrix.python-version }}
-          activate-environment: test
-          environment-file: devtools/conda-envs/rdkit.yaml
-          auto-activate-base: false
-      - uses: conda-incubator/setup-miniconda@v2
-        name: Install with OpenEye toolkits
-        if: ${{ matrix.cfg.rdkit == 'FALSE' && matrix.cfg.openeye == 'TRUE' }}
-        with:
-          python-version: ${{ matrix.python-version }}
-          activate-environment: test
-          environment-file: devtools/conda-envs/openeye.yaml
-          auto-activate-base: false
+          miniforge-version: latest
+          miniforge-variant: Mambaforge
+          use-mamba: true
 
       - name: Additional info about the build
-        shell: bash -l {0}
         run: |
           uname -a
           df -h
@@ -97,47 +98,53 @@ jobs:
         run: |
           echo "${OE_LICENSE_TEXT}" > ${OE_LICENSE}
 
+      - name: Install package
+        run: |
+          conda remove --force openff-toolkit openff-toolkit-base
+          python setup.py develop --no-deps
+
+      - name: Install test plugins
+        run: |
+          cd utilities/test_plugins
+          python setup.py develop --no-deps
+
+      - name: Remove undesired toolkits
+        run: |
+          if [ ! -z "${{ env.PACKAGES_TO_REMOVE }}" ]; then
+            for cpkg in ${{ env.PACKAGES_TO_REMOVE }}; do
+              if [[ $(conda list | grep $cpkg) ]]; then conda remove --force $cpkg --yes ; fi
+            done
+          fi
+
+      - name: Check installed toolkits
+        run: |
+          for tk in ${{ env.TOOLKIT_CHECKS }}; do
+            python -c "from openff.toolkit.utils.toolkits import ${tk}_AVAILABLE; assert ${tk}_AVAILABLE, '${tk} unavailable'"
+          done
+
+      - name: Check uninstalled toolkits
+        run: |
+          if [ ! -z "${{ env.PACKAGES_TO_REMOVE }}" ]; then
+            for tk in ${{ env.PACKAGES_TO_REMOVE }}; do
+              TK=$(echo ${tk%-*} | tr 'a-z' 'A-Z')
+              python -c "from openff.toolkit.utils.toolkits import ${TK}_AVAILABLE; assert not ${TK}_AVAILABLE, '${TK} available'"
+            done
+          fi
+
       - name: Environment Information
-        shell: bash -l {0}
         run: |
           conda info
           conda list
 
-      - name: Install package
-        shell: bash -l {0}
-        run: |
-          python setup.py develop --no-deps
-
-      - name: Check installed toolkits
-        shell: bash -l {0}
-        run: |
-          if [[ "$OPENEYE" == true ]]; then
-            python -c "from openff.toolkit.utils.toolkits import OPENEYE_AVAILABLE; assert OPENEYE_AVAILABLE, 'OpenEye unavailable'"
-          fi
-          if [[ "$OPENEYE" == false ]]; then
-            if [[ $(conda list | grep openeye-toolkits) ]]; then
-              conda remove --force openeye-toolkits --yes
-            fi
-            python -c "from openff.toolkit.utils.toolkits import OPENEYE_AVAILABLE; assert not OPENEYE_AVAILABLE, 'OpenEye unexpectedly found'"
-          fi
-          if [[ "$RDKIT" == true ]]; then
-            python -c "from openff.toolkit.utils.toolkits import RDKIT_AVAILABLE; assert RDKIT_AVAILABLE, 'RDKit unavailable'"
-          fi
-          if [[ "$RDKIT" == false ]]; then
-            if [[ $(conda list | grep rdkit) ]]; then
-              conda remove --force rdkit --yes
-            fi
-            python -c "from openff.toolkit.utils.toolkits import RDKIT_AVAILABLE; assert not RDKIT_AVAILABLE, 'RDKit unexpectedly found'"
-          fi
-
       - name: Check links
-        shell: bash -l {0}
-        if: ${{ matrix.cfg.rdkit == 'true' && matrix.cfg.openeye == 'TRUE' }}
-        run: |
-          pytest -r fE --tb=short openff/toolkit/tests/test_links.py
+        if: ${{ matrix.rdkit == true && matrix.openeye == true }}
+        run: pytest -r fE --tb=short openff/toolkit/tests/test_links.py
+
+      - name: Run mypy
+        if: ${{ matrix.rdkit == true && matrix.openeye == true }}
+        run: mypy --namespace-packages -p "openff.toolkit"
 
       - name: Run unit tests
-        shell: bash -l {0}
         run: |
           PYTEST_ARGS+=" --ignore=openff/toolkit/tests/test_examples.py"
           PYTEST_ARGS+=" --ignore=openff/toolkit/tests/test_links.py"
@@ -146,38 +153,13 @@ jobs:
           fi
           pytest $PYTEST_ARGS openff/toolkit/tests/
 
-      - name: Run example scripts
-        shell: bash -l {0}
-        run: |
-          if [[ "$RDKIT" == false ]]; then
-            PYTEST_ARGS+=" --ignore=examples/check_dataset_parameter_coverage"
-            PYTEST_ARGS+=" --ignore=examples/QCArchive_interface"
-          fi
-          pytest $PYTEST_ARGS openff/toolkit/tests/test_examples.py
-
-      - name: Run example notebooks
-        shell: bash -l {0}
-        run: |
-          NB_ARGS+=" --ignore=examples/using_smirnoff_in_amber_or_gromacs"
-          # XFail until a new `openmmforcefields` build is made which depends on `openff-toolkit`.
-          NB_ARGS+=" --ignore=examples/swap_amber_parameters"
-          if [[ "$RDKIT" == false ]]; then
-            NB_ARGS+=" --ignore=examples/check_dataset_parameter_coverage"
-            NB_ARGS+=" --ignore=examples/conformer_energies"
-            NB_ARGS+=" --ignore=examples/QCArchive_interface"
-            NB_ARGS+=" --ignore=examples/visualization"
-          fi
-          pytest $NB_ARGS examples/
-
       - name: Run code snippets in docs
-        shell: bash -l {0}
-        if: ${{ matrix.cfg.rdkit == 'TRUE' && matrix.cfg.openeye == 'TRUE' }}
+        if: ${{ matrix.rdkit == true && matrix.openeye == true }}
         run: |
           pytest -v --doctest-glob="docs/*.rst" docs/
 
       - name: Codecov
-        uses: codecov/codecov-action@v1
+        uses: codecov/codecov-action@v2.1.0
         with:
           file: ./coverage.xml
           fail_ci_if_error: true
-

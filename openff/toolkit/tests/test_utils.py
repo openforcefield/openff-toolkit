@@ -9,15 +9,15 @@ Tests for utility methods
 
 """
 
-# =============================================================================================
-# GLOBAL IMPORTS
-# =============================================================================================
-
 import ast
 import os
 
 import pytest
-from simtk import unit
+
+try:
+    from openmm import unit
+except ImportError:
+    from simtk import unit
 
 # =============================================================================================
 # TESTS

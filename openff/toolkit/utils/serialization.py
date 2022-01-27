@@ -4,14 +4,14 @@ Serialization mix-in
 
 .. todo ::
 
-   Currently, the ``openff-toolkit`` toolkit package requires a number of dependencies to support all of these serialization protocols.
-   Instead, should we not include these by default, and instead raise a helpful exception with installation instructions if one of the serialization schemes is called but the requisite library is not installed?
+   Currently, the ``openff-toolkit`` toolkit package requires a number
+   of dependencies to support all of these serialization protocols.
+   Instead, should we not include these by default, and instead raise
+   a helpful exception with installation instructions if one of the
+   serialization schemes is called but the requisite library is not
+   installed?
 
 """
-
-# =============================================================================================
-# GLOBAL IMPORTS
-# =============================================================================================
 
 import abc
 
@@ -25,7 +25,9 @@ from openff.toolkit.utils.utils import requires_package
 class Serializable(abc.ABC):
     """Mix-in to add serialization and deserialization support via JSON, YAML, BSON, TOML, MessagePack, and XML.
 
-    For more information on these formats, see: `JSON <https://www.json.org/>`_, `BSON <http://bsonspec.org/>`_, `YAML <http://yaml.org/>`_, `TOML <https://github.com/toml-lang/toml>`_, `MessagePack <https://msgpack.org/index.html>`_, and `XML <https://www.w3.org/XML/>`_.
+    For more information on these formats, see: `JSON <https://www.json.org/>`_,
+    `BSON <http://bsonspec.org/>`_, `YAML <http://yaml.org/>`_, `TOML <https://github.com/toml-lang/toml>`_,
+    `MessagePack <https://msgpack.org/index.html>`_, and `XML <https://www.w3.org/XML/>`_.
 
     To use this mix-in, the class inheriting from this class must have implemented ``to_dict()`` and ``from_dict()`` methods
     that utilize dictionaries containing only serialiable Python objects.
@@ -473,17 +475,21 @@ def _prep_numpy_data_for_json(data):
     # TODO: Much of this logic can probably be trimmed down
     import numpy as np
 
+    big_endian_float = np.dtype("float").newbyteorder(">")
+
     for key, val in data.items():
         if isinstance(val, np.ndarray):
             data[key] = val.tolist()
         if isinstance(val, dict):
             data[key] = _prep_numpy_data_for_json(val)
         if isinstance(val, bytes):
-            data[key] = np.frombuffer(val).tolist()
+            data[key] = np.frombuffer(val, dtype=big_endian_float).tolist()
         if isinstance(val, list):
             # Fairly hard-coded for case of Molecule.conformers being a List[np.array]
             # A more general solution should safely recurse through lists like dicts
             for i, element in enumerate(val):
                 if isinstance(element, bytes):
-                    data[key][i] = np.frombuffer(element).tolist()
+                    data[key][i] = np.frombuffer(
+                        element, dtype=big_endian_float
+                    ).tolist()
     return data

@@ -1,0 +1,37 @@
+; MDP file for energy minimising with the Sage 2.0.0 force field
+
+;    INTEGRATION - EM
+integrator              = steep ; Steepest descent energy minimisation
+nsteps                  = 10000 ; Maximum of 10000 steps
+emtol                   = 1000 ; Stop minimising when greatest force is smaller than 1000 kJ/mol/nm
+emstep                  = 0.001 ; Initial step size (nm); default 0.01
+
+;    OUTPUT CONTROL
+; Strangely, this is where GROMACS sets all its output control
+; mdrun switches don't change anything
+nstxout                 = 0 ; only last ; Steps between writing coords to uncompressed output trajectory
+nstvout                 = 0 ; only last ; Steps between writing velocities to uncompressed output trajectory
+nstfout                 = 0 ; never ; Steps between writing forces to uncompressed output trajectory
+nstlog                  = 0 ; only last ; Steps between writing energies to log file
+nstenergy               = 0 ; only last ; Steps between writing energies to energy file
+
+;    CUTOFF SCHEME - verlet
+; Verlet is faster, more parallelisable, more accurate, supports GPUs
+; Only use group for the legacy interactions it supports
+cutoff-scheme           = Verlet ; Neighbor searching with a Verlet buffer
+
+;    COULOMB INTERACTIONS
+coulombtype             = PME ; Use Particle Mesh Ewald to compute long-range electrostatic interactions
+rcoulomb                = 0.9 ; Cutoff for short-range electrostatics; tuned for performance at runtime by GROMACS
+verlet-buffer-tolerance = 0.005 ; KJ/mol/ps; energy tolerance for the verlet buffer. Sets rlist
+rlist                   = 0.9 ; Cutoff for the short-range neighbour list; overriden by verlet-buffer-tolerance, set here to avoid notes
+
+;    LJ INTERACTIONS
+vdwtype                 = Cut-off ; Use a cut-off for vdW interactions
+vdw-modifier            = force-switch ; Smoothly switch off the LJ interactions
+rvdw                    = 0.9 ; Distance cutoff for the vdW interactions
+rvdw-switch             = 0.8 ; where to start switching off the LJ force
+DispCorr                = EnerPres ; Correct the energy and pressure for long range dispersion errors
+
+;    CONSTRAINTS - EM
+constraints             = None ; Energy minimise without constraints to avoid LINCS warnings

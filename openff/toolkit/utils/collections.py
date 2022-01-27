@@ -11,10 +11,6 @@ __all__ = [
 ]
 
 
-# =====================================================================
-# GLOBAL IMPORTS
-# =====================================================================
-
 from collections import abc
 
 # =====================================================================
@@ -101,7 +97,7 @@ class ValidatedList(list):
         p_object = self._convert_and_validate([p_object])[0]
         super().insert(index, p_object)
 
-    def __iadd__(self, other):
+    def __iadd__(self, other):  # type: ignore[misc]
         other = self._convert_and_validate(other)
         return super().__iadd__(other)
 

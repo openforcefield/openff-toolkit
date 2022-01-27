@@ -10,10 +10,6 @@ Tests for forcefield class
 """
 
 
-# =============================================================================================
-# GLOBAL IMPORTS
-# =============================================================================================
-
 import copy
 import itertools
 import os
@@ -23,9 +19,29 @@ from tempfile import NamedTemporaryFile
 import numpy as np
 import pytest
 from numpy.testing import assert_almost_equal
-from simtk import openmm, unit
 
+try:
+    import openmm
+    from openmm import NonbondedForce, Platform, System, XmlSerializer, app, unit
+except ImportError:
+    from simtk import openmm, unit
+    from simtk.openmm import app, XmlSerializer, Platform, NonbondedForce, System
+
+from openff.toolkit.tests.create_molecules import (
+    create_acetaldehyde,
+    create_acetate,
+    create_ammonia,
+    create_benzene_no_aromatic,
+    create_cis_1_2_dichloroethene,
+    create_cyclohexane,
+    create_dinitrogen,
+    create_dioxygen,
+    create_ethanol,
+    create_reversed_ethanol,
+    create_water,
+)
 from openff.toolkit.tests.utils import (
+    compare_partial_charges,
     get_14_scaling_factors,
     requires_openeye,
     requires_openeye_mol2,
@@ -33,18 +49,27 @@ from openff.toolkit.tests.utils import (
 )
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff import (
+    ElectrostaticsHandler,
     ForceField,
-    FractionalBondOrderInterpolationMethodUnsupportedError,
-    IncompatibleParameterError,
+    LibraryChargeHandler,
     ParameterHandler,
-    ParameterLookupError,
-    SMIRNOFFAromaticityError,
-    SMIRNOFFSpecError,
     ToolkitAM1BCCHandler,
     XMLParameterIOHandler,
     get_available_force_fields,
+    vdWHandler,
 )
 from openff.toolkit.utils import get_data_file_path
+from openff.toolkit.utils.exceptions import (
+    FractionalBondOrderInterpolationMethodUnsupportedError,
+    IncompatibleParameterError,
+    NonintegralMoleculeChargeException,
+    ParameterLookupError,
+    PartialChargeVirtualSitesError,
+    SMIRNOFFAromaticityError,
+    SMIRNOFFSpecError,
+    SMIRNOFFSpecUnimplementedError,
+    UnassignedMoleculeChargeException,
+)
 from openff.toolkit.utils.toolkits import (
     AmberToolsToolkitWrapper,
     ChargeMethodUnavailableError,
@@ -56,11 +81,6 @@ from openff.toolkit.utils.toolkits import (
 # ======================================================================
 # GLOBAL CONSTANTS
 # ======================================================================
-
-# File paths.
-TIP3P_SDF_FILE_PATH = get_data_file_path(
-    os.path.join("systems", "monomers", "water.sdf")
-)
 
 XML_FF_GENERICS = """<?xml version='1.0' encoding='ASCII'?>
 <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
@@ -84,8 +104,13 @@ XML_FF_GENERICS = """<?xml version='1.0' encoding='ASCII'?>
 </SMIRNOFF>
 """
 
-simple_xml_ff = str.encode(
-    """<?xml version='1.0' encoding='ASCII'?>
+xml_without_section_version = """<?xml version="1.0" encoding="ASCII"?>
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+  <ToolkitAM1BCC/>
+</SMIRNOFF>
+"""
+
+xml_simple_ff = """<?xml version='1.0' encoding='ASCII'?>
 <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
   <Bonds version="0.3">
     <Bond smirks="[#6X4:1]-[#6X4:2]" id="b1" k="620.0 * kilocalories_per_mole/angstrom**2" length="1.526 * angstrom"/>
@@ -113,7 +138,6 @@ simple_xml_ff = str.encode(
   <ToolkitAM1BCC version="0.3"/>
 </SMIRNOFF>
 """
-)
 
 xml_ff_w_comments = """<?xml version='1.0' encoding='ASCII'?>
 <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
@@ -148,6 +172,13 @@ xml_ff_w_comments = """<?xml version='1.0' encoding='ASCII'?>
 </SMIRNOFF>
 """
 
+xml_missing_torsion = """
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+  <ProperTorsions version="0.3" potential="k*(1+cos(periodicity*theta-phase))">
+    <Proper smirks="[#99:1]-[#99X4:2]-[#99:3]-[#99:4]" id="t1" idivf1="1" k1="0.156 * kilocalories_per_mole" periodicity1="3" phase1="0.0 * degree"/>
+  </ProperTorsions>
+</SMIRNOFF>
+"""
 
 xml_ff_w_cosmetic_elements = """<?xml version='1.0' encoding='ASCII'?>
 <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
@@ -298,6 +329,382 @@ xml_ff_torsion_bo_standard_supersede = """<?xml version='1.0' encoding='ASCII'?>
 </SMIRNOFF>
 """
 
+xml_ff_virtual_sites_monovalent_match_once = """<?xml version="1.0" encoding="utf-8"?>
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+    <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
+        <Bond smirks="[*:1]~[*:2]" id="b999" k="500.0 * kilocalories_per_mole/angstrom**2" length="1.1 * angstrom"/>
+    </Bonds>
+    <VirtualSites version="0.3">
+        <VirtualSite
+            type="MonovalentLonePair"
+            name="EP"
+            smirks="[#8:1]~[#6:2]~[#6:3]"
+            distance="0.1*angstrom"
+            charge_increment1="0.1*elementary_charge"
+            charge_increment2="0.1*elementary_charge"
+            charge_increment3="0.1*elementary_charge"
+            sigma="0.1*angstrom"
+            epsilon="0.1*kilocalories_per_mole"
+            inPlaneAngle="110.*degree"
+            outOfPlaneAngle="41*degree"
+            match="once" >
+        </VirtualSite>
+    </VirtualSites>
+</SMIRNOFF>
+"""
+
+xml_tip5p = """<?xml version="1.0" encoding="utf-8"?>
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+    <LibraryCharges version="0.3">
+            <LibraryCharge name="tip5p" smirks="[#1:1]-[#8X2H2+0:2]-[#1:3]" charge1="0.*elementary_charge" charge2="0.*elementary_charge" charge3="0.*elementary_charge"/>
+    </LibraryCharges>
+    <vdW version="0.3" potential="Lennard-Jones-12-6" combining_rules="Lorentz-Berthelot" scale12="0.0" scale13="0.0" scale14="0.5" scale15="1.0" switch_width="1.0 * angstrom" cutoff="9.0 * angstrom" method="cutoff">
+            <Atom smirks="[#1:1]-[#8X2H2+0]-[#1]" epsilon="0. * mole**-1 * kilojoule" id="n35" sigma="1 * nanometer"/>
+            <Atom smirks="[#1]-[#8X2H2+0:1]-[#1]" epsilon="0.66944 * mole**-1 * kilojoule" id="n35" sigma="0.312 * nanometer"/>
+    </vdW>
+     <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
+        <Bond smirks="[#1:1]-[#8X2H2+0:2]-[#1]" length="0.9572 * angstrom" k="462750.4 * nanometer**-2 * mole**-1 * kilojoule" id="b1" />   
+    </Bonds>
+    <Angles version="0.3" potential="harmonic">
+        <Angle smirks="[#1:1]-[#8X2H2+0:2]-[#1:3]" angle="1.82421813418 * radian" k="836.8 * mole**-1 * radian**-2 * kilojoule" id="a1" />
+    </Angles>
+    <VirtualSites version="0.3" exclusion_policy="parents">
+        <VirtualSite
+            type="DivalentLonePair"
+            name="EP"
+            smirks="[#1:1]-[#8X2H2+0:2]-[#1:3]"
+            distance="0.70 * angstrom"
+            charge_increment1="0.1205*elementary_charge"
+            charge_increment2="0.0*elementary_charge"
+            charge_increment3="0.1205*elementary_charge"
+            sigma="1.0*angstrom"
+            epsilon="0.0*kilocalories_per_mole"
+            outOfPlaneAngle="54.71384225*degree"
+            match="all_permutations" >
+        </VirtualSite>
+    </VirtualSites>
+    <Electrostatics version="0.3" method="PME" scale12="0.0" scale13="0.0" scale14="0.833333" scale15="1.0" switch_width="0.0 * angstrom" cutoff="9.0 * angstrom"/>
+  <Constraints version="0.3">
+    <Constraint smirks="[#1:1]-[#8X2H2+0:2]-[#1]" id="c1" distance="0.9572 * angstrom"/>
+    <Constraint smirks="[#1:1]-[#8X2H2+0]-[#1:2]" id="c2" distance="1.5139006545247014 * angstrom"/>
+  </Constraints>
+</SMIRNOFF>
+"""
+
+xml_gbsa_ff = """<?xml version='1.0' encoding='ASCII'?>
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+    <GBSA version="0.3" gb_model="HCT" solvent_dielectric="78.5" solute_dielectric="1" sa_model="None" surface_area_penalty="5.4*calories/mole/angstroms**2" solvent_radius="1.4*angstroms">
+          <Atom smirks="[*:1]" radius="0.15*nanometer" scale="0.8"/>
+    </GBSA>
+</SMIRNOFF>
+"""
+
+xml_charge_increment_model_ff_no_missing_cis = """
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+  <Electrostatics version="0.3" method="PME" scale12="0.0" scale13="0.0" scale14="0.833333" cutoff="9.0 * angstrom"/>
+  <ChargeIncrementModel version="0.3" number_of_conformers="1" partial_charge_method="formal_charge">
+    <ChargeIncrement smirks="[#6X4:1]-[#8:2]" charge_increment1="-0.06*elementary_charge" charge_increment2="0.06*elementary_charge"/>
+    <ChargeIncrement smirks="[#6X4:1]-[#1:2]" charge_increment1="-0.01*elementary_charge" charge_increment2="0.01*elementary_charge"/>
+    <ChargeIncrement smirks="[C:1][C:2][O:3]" charge_increment1="0.2*elementary_charge" charge_increment2="-0.1*elementary_charge" charge_increment3="-0.1*elementary_charge"/>
+  </ChargeIncrementModel>
+</SMIRNOFF>"""
+
+xml_charge_increment_model_ff_one_less_ci = """
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+  <Electrostatics version="0.3" method="PME" scale12="0.0" scale13="0.0" scale14="0.833333" cutoff="9.0 * angstrom"/>
+  <ChargeIncrementModel version="0.3" number_of_conformers="1" partial_charge_method="formal_charge">
+    <ChargeIncrement smirks="[#6X4:1]-[#8:2]" charge_increment1="-0.06*elementary_charge" charge_increment2="0.06*elementary_charge"/>
+    <ChargeIncrement smirks="[#6X4:1]-[#1:2]" charge_increment1="-0.01*elementary_charge"/>
+    <ChargeIncrement smirks="[C:1][C:2][O:3]" charge_increment1="0.2*elementary_charge" charge_increment2="-0.1*elementary_charge"/>
+  </ChargeIncrementModel>
+</SMIRNOFF>"""
+
+xml_charge_increment_model_ff_ethanol = """
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+  <Electrostatics version="0.3" method="PME" scale12="0.0" scale13="0.0" scale14="0.833333" cutoff="9.0 * angstrom"/>
+  <ChargeIncrementModel version="0.3" number_of_conformers="1" partial_charge_method="formal_charge">
+    <ChargeIncrement smirks="[#6X4:1]-[#8:2]" charge_increment1="-0.05*elementary_charge" charge_increment2="0.05*elementary_charge"/>
+    <ChargeIncrement smirks="[C:1][C:2][O:3]" charge_increment1="0.2*elementary_charge" charge_increment2="-0.1*elementary_charge" charge_increment3="-0.1*elementary_charge"/>
+  </ChargeIncrementModel>
+</SMIRNOFF>"""
+
+xml_charge_increment_model_ff_net_charge = """
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+  <Electrostatics version="0.3" method="PME" scale12="0.0" scale13="0.0" scale14="0.833333" cutoff="9.0 * angstrom"/>
+  <ChargeIncrementModel version="0.3" number_of_conformers="1" partial_charge_method="formal_charge">
+    <ChargeIncrement smirks="[#6X3:1]-[#8X1-1:2]" charge_increment1="-0.05*elementary_charge" charge_increment2="0.05*elementary_charge"/>
+    <ChargeIncrement smirks="[#6X3:1]=[#8X1:2]" charge_increment1="0.2*elementary_charge" charge_increment2="-0.2*elementary_charge"/>
+  </ChargeIncrementModel>
+</SMIRNOFF>"""
+
+xml_charge_increment_model_ff_override = """
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+  <Electrostatics version="0.3" method="PME" scale12="0.0" scale13="0.0" scale14="0.833333" cutoff="9.0 * angstrom"/>
+  <ChargeIncrementModel version="0.3" number_of_conformers="1" partial_charge_method="formal_charge">
+    <ChargeIncrement smirks="[#1:1]-[#6:2]([#1:3])([#1:4])" charge_increment1="0.123*elementary_charge" charge_increment2="0.369*elementary_charge" charge_increment3="-0.123*elementary_charge" charge_increment4="0.123*elementary_charge"/>
+    <ChargeIncrement smirks="[#6X4:1]([#1:2])([#1:3])([#1:4])" charge_increment1="0.3*elementary_charge" charge_increment2="-0.1*elementary_charge" charge_increment3="-0.1*elementary_charge" charge_increment4="-0.1*elementary_charge"/>
+  </ChargeIncrementModel>
+</SMIRNOFF>"""
+
+xml_charge_increment_model_ff_both_apply = """
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+  <Electrostatics version="0.3" method="PME" scale12="0.0" scale13="0.0" scale14="0.833333" cutoff="9.0 * angstrom"/>
+  <ChargeIncrementModel version="0.3" number_of_conformers="0" partial_charge_method="formal_charge">
+    <ChargeIncrement smirks="[#6X4:1]([#1:2])([#1:3])([#1:4])" charge_increment1="0.3*elementary_charge" charge_increment2="-0.1*elementary_charge" charge_increment3="-0.1*elementary_charge" charge_increment4="-0.1*elementary_charge"/>
+    <ChargeIncrement smirks="[#6X4:1][#6X4:2][#8]" charge_increment1="0.05*elementary_charge" charge_increment2="-0.05*elementary_charge"/>
+  </ChargeIncrementModel>
+</SMIRNOFF>"""
+
+xml_charge_increment_model_ff_match_once = """
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+  <Electrostatics version="0.3" method="PME" scale12="0.0" scale13="0.0" scale14="0.833333" cutoff="9.0 * angstrom"/>
+  <ChargeIncrementModel version="0.3" number_of_conformers="1" partial_charge_method="formal_charge">
+    <ChargeIncrement smirks="[#6X4:1]([#1:2])[#6][#8]" charge_increment1="0.1*elementary_charge" charge_increment2="-0.1*elementary_charge"/>
+  </ChargeIncrementModel>
+</SMIRNOFF>"""
+
+xml_charge_increment_model_ff_match_two = """
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+  <Electrostatics version="0.3" method="PME" scale12="0.0" scale13="0.0" scale14="0.833333" cutoff="9.0 * angstrom"/>
+  <ChargeIncrementModel version="0.3" number_of_conformers="1" partial_charge_method="formal_charge">
+    <ChargeIncrement smirks="[#6X4:1]([#1:2])([#1:3])[#6][#8]" charge_increment1="0.1*elementary_charge" charge_increment2="-0.05*elementary_charge" charge_increment3="-0.05*elementary_charge"/>
+  </ChargeIncrementModel>
+</SMIRNOFF>"""
+
+xml_charge_increment_model_ff_match_all = """
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+  <Electrostatics version="0.3" method="PME" scale12="0.0" scale13="0.0" scale14="0.833333" cutoff="9.0 * angstrom"/>
+  <ChargeIncrementModel version="0.3" number_of_conformers="1" partial_charge_method="formal_charge">
+    <ChargeIncrement smirks="[#6X4:1]([#1:2])([#1:3])([#1:4])" charge_increment1="0.3*elementary_charge" charge_increment2="-0.1*elementary_charge" charge_increment3="-0.1*elementary_charge" charge_increment4="-0.1*elementary_charge"/>
+  </ChargeIncrementModel>
+</SMIRNOFF>"""
+
+xml_ff_virtual_sites_bondcharge_match_once = """<?xml version="1.0" encoding="utf-8"?>
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+    <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
+      <Bond smirks="[*:1]~[*:2]" id="b999" k="500.0 * kilocalories_per_mole/angstrom**2" length="1.1 * angstrom"/>
+    </Bonds>
+    <VirtualSites version="0.3">
+        <VirtualSite
+            type="BondCharge"
+            name="EP"
+            smirks="[*:1]~[*:2]"
+            distance="0.1*angstrom"
+            charge_increment1="0.1*elementary_charge"
+            charge_increment2="0.1*elementary_charge"
+            sigma="0.1*angstrom"
+            epsilon="0.1*kilocalories_per_mole"
+            match="once" >
+        </VirtualSite>
+        <VirtualSite
+            type="BondCharge"
+            name="EP"
+            smirks="[#7:1]~[#7:2]"
+            distance="0.2*angstrom"
+            charge_increment1="0.2*elementary_charge"
+            charge_increment2="0.2*elementary_charge"
+            sigma="0.2*angstrom"
+            epsilon="0.2*kilocalories_per_mole"
+            match="all_permutations" >
+        </VirtualSite>
+        <VirtualSite
+            type="BondCharge"
+            name="EP"
+            smirks="[#7:1]~[#7:2]"
+            distance="0.2*nanometers"
+            charge_increment1="0.2*elementary_charge"
+            charge_increment2="0.2*elementary_charge"
+            sigma="0.2*angstrom"
+            epsilon="0.2*kilocalories_per_mole"
+            match="once" >
+        </VirtualSite>
+    </VirtualSites>
+</SMIRNOFF>
+"""
+
+xml_ff_virtual_sites_bondcharge_match_all = """<?xml version="1.0" encoding="utf-8"?>
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+    <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
+      <Bond smirks="[*:1]~[*:2]" id="b999" k="500.0 * kilocalories_per_mole/angstrom**2" length="1.1 * angstrom"/>
+    </Bonds>
+    <VirtualSites version="0.3">
+        <VirtualSite
+            type="BondCharge"
+            name="EP"
+            smirks="[*:1]~[*:2]"
+            distance="0.1*angstrom"
+            charge_increment1="0.1*elementary_charge"
+            charge_increment2="0.1*elementary_charge"
+            sigma="0.1*angstrom"
+            epsilon="0.1*kilocalories_per_mole"
+            match="once" >
+        </VirtualSite>
+        <VirtualSite
+            type="BondCharge"
+            name="EP"
+            smirks="[#7:1]~[#7:2]"
+            distance="0.2*angstrom"
+            charge_increment1="0.2*elementary_charge"
+            charge_increment2="0.2*elementary_charge"
+            sigma="0.2*angstrom"
+            epsilon="0.2*kilocalories_per_mole"
+            match="once" >
+        </VirtualSite>
+        <VirtualSite
+            type="BondCharge"
+            name="EP"
+            smirks="[#7:1]~[#7:2]"
+            distance="0.2*angstrom"
+            charge_increment1="0.2*elementary_charge"
+            charge_increment2="0.2*elementary_charge"
+            sigma="0.2*angstrom"
+            epsilon="0.2*kilocalories_per_mole"
+            match="all_permutations" >
+        </VirtualSite>
+    </VirtualSites>
+</SMIRNOFF>
+"""
+
+xml_ff_virtual_sites_bondcharge_match_once_two_names = """<?xml version="1.0" encoding="utf-8"?>
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+    <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
+      <Bond smirks="[*:1]~[*:2]" id="b999" k="500.0 * kilocalories_per_mole/angstrom**2" length="1.1 * angstrom"/>
+    </Bonds>
+    <VirtualSites version="0.3">
+        <VirtualSite
+            type="BondCharge"
+            name="EP1"
+            smirks="[*:1]~[*:2]"
+            distance="0.1*angstrom"
+            charge_increment1="0.1*elementary_charge"
+            charge_increment2="0.1*elementary_charge"
+            sigma="0.1*angstrom"
+            epsilon="0.1*kilocalories_per_mole"
+            match="once" >
+        </VirtualSite>
+        <VirtualSite
+            type="BondCharge"
+            name="EP2"
+            smirks="[*:1]~[*:2]"
+            distance="0.2*angstrom"
+            charge_increment1="0.2*elementary_charge"
+            charge_increment2="0.2*elementary_charge"
+            sigma="0.2*angstrom"
+            epsilon="0.2*kilocalories_per_mole"
+            match="once" >
+        </VirtualSite>
+    </VirtualSites>
+</SMIRNOFF>
+"""
+
+xml_ff_virtual_sites_monovalent_match_once = """<?xml version="1.0" encoding="utf-8"?>
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+    <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
+      <Bond smirks="[*:1]~[*:2]" id="b999" k="500.0 * kilocalories_per_mole/angstrom**2" length="1.1 * angstrom"/>
+    </Bonds>
+    <VirtualSites version="0.3">
+        <VirtualSite
+            type="MonovalentLonePair"
+            name="EP"
+            smirks="[#8:1]~[#6:2]~[#6:3]"
+            distance="0.1*angstrom"
+            charge_increment1="0.1*elementary_charge"
+            charge_increment2="0.1*elementary_charge"
+            charge_increment3="0.1*elementary_charge"
+            sigma="0.1*angstrom"
+            epsilon="0.1*kilocalories_per_mole"
+            inPlaneAngle="110.*degree"
+            outOfPlaneAngle="41*degree"
+            match="once" >
+        </VirtualSite>
+        <VirtualSite
+            type="MonovalentLonePair"
+            name="EP"
+            smirks="[#8:1]=[#6:2]-[#6:3]"
+            distance="0.2*angstrom"
+            charge_increment1="0.2*elementary_charge"
+            charge_increment2="0.2*elementary_charge"
+            charge_increment3="0.2*elementary_charge"
+            sigma="0.2*angstrom"
+            epsilon="0.2*kilocalories_per_mole"
+            inPlaneAngle="120.*degree"
+            outOfPlaneAngle="42*degree"
+            match="once" >
+        </VirtualSite>
+    </VirtualSites>
+</SMIRNOFF>
+"""
+
+xml_ff_virtual_sites_divalent_match_all = """<?xml version="1.0" encoding="ASCII"?>
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+    <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
+      <Bond smirks="[*:1]~[*:2]" id="b999" k="500.0 * kilocalories_per_mole/angstrom**2" length="1.1 * angstrom"/>
+    </Bonds>
+    <VirtualSites version="0.3">
+        <VirtualSite
+            type="DivalentLonePair"
+            name="EP"
+            smirks="[#1:1]-[#8X2H2+0:2]-[#1:3]"
+            distance="0.70 * angstrom"
+            charge_increment1="0.241*elementary_charge"
+            charge_increment2="0.0*elementary_charge"
+            charge_increment3="0.241*elementary_charge"
+            sigma="3.12*angstrom"
+            epsilon="0.16*kilocalories_per_mole"
+            outOfPlaneAngle="54.71384225*degree"
+            match="all_permutations" >
+        </VirtualSite>
+    </VirtualSites>
+</SMIRNOFF>
+"""
+
+xml_ff_virtual_sites_trivalent_match_once = """<?xml version="1.0" encoding="ASCII"?>
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+    <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
+      <Bond smirks="[*:1]~[*:2]" id="b999" k="500.0 * kilocalories_per_mole/angstrom**2" length="1.1 * angstrom"/>
+    </Bonds>
+    <VirtualSites version="0.3">
+        <VirtualSite
+            type="TrivalentLonePair"
+            name="EP"
+            smirks="[*:1]-[#7X3:2](-[*:3])-[*:4]"
+            distance="0.50 * angstrom"
+            charge_increment1="0.0*elementary_charge"
+            charge_increment2="1.0*elementary_charge"
+            charge_increment3="0.0*elementary_charge"
+            charge_increment4="0.0*elementary_charge"
+            sigma="0.0*angstrom"
+            epsilon="0.0*kilocalories_per_mole"
+            match="once" >
+        </VirtualSite>
+    </VirtualSites>
+</SMIRNOFF>
+"""
+
+xml_ff_virtual_sites_trivalent_match_all = """
+<?xml version="1.0" encoding="ASCII"?>
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+    <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
+      <Bond smirks="[*:1]~[*:2]" id="b999" k="500.0 * kilocalories_per_mole/angstrom**2" length="1.1 * angstrom"/>
+    </Bonds>
+    <VirtualSites version="0.3">
+        <VirtualSite
+            type="TrivalentLonePair"
+            name="EP"
+            smirks="[*:1]-[#7X3:2]-([*:3])-[*:4]"
+            distance="0.70 * angstrom"
+            charge_increment1="0.1*elementary_charge"
+            charge_increment2="0.1*elementary_charge"
+            charge_increment3="0.1*elementary_charge"
+            charge_increment4="0.1*elementary_charge"
+            sigma="0.1*angstrom"
+            epsilon="0.1*kilocalories_per_mole"
+            match="once" >
+        </VirtualSite>
+    </VirtualSites>
+</SMIRNOFF>
+"""
+
 
 # ======================================================================
 # TEST UTILITY FUNCTIONS
@@ -306,7 +713,7 @@ xml_ff_torsion_bo_standard_supersede = """<?xml version='1.0' encoding='ASCII'?>
 
 def round_charge(xml):
     """Round charge fields in a serialized OpenMM system to 2 decimal places"""
-    # Example Particle line: 				<Particle eps=".4577296" q="-.09709000587463379" sig=".1908"/>
+    # Example Particle line:                <Particle eps=".4577296" q="-.09709000587463379" sig=".1908"/>
     xmlsp = xml.split(' q="')
     for index, chunk in enumerate(xmlsp):
         # Skip file before first q=
@@ -317,280 +724,6 @@ def round_charge(xml):
         chunk = '" sig'.join(chunksp)
         xmlsp[index] = chunk
     return ' q="'.join(xmlsp)
-
-
-def create_cis_1_2_dichloroethene():
-    """
-    Creates an openff.toolkit.topology.Molecule representation of cis-1,2-dichloroethene
-    without the use of a cheminformatics toolkit.
-    """
-
-    cis_dichloroethene = Molecule()
-    cis_dichloroethene.add_atom(17, 0, False)
-    cis_dichloroethene.add_atom(6, 0, False)
-    cis_dichloroethene.add_atom(6, 0, False)
-    cis_dichloroethene.add_atom(17, 0, False)
-    cis_dichloroethene.add_atom(1, 0, False)
-    cis_dichloroethene.add_atom(1, 0, False)
-    cis_dichloroethene.add_bond(0, 1, 1, False)
-    cis_dichloroethene.add_bond(1, 2, 2, False, "Z")
-    cis_dichloroethene.add_bond(2, 3, 1, False)
-    cis_dichloroethene.add_bond(1, 4, 1, False)
-    cis_dichloroethene.add_bond(2, 5, 1, False)
-    return cis_dichloroethene
-
-
-def create_ethanol():
-    """
-    Creates an openff.toolkit.topology.Molecule representation of
-    ethanol without the use of a cheminformatics toolkit
-    """
-    # Create an ethanol molecule without using a toolkit
-    ethanol = Molecule()
-    ethanol.add_atom(6, 0, False)  # C0
-    ethanol.add_atom(6, 0, False)  # C1
-    ethanol.add_atom(8, 0, False)  # O2
-    ethanol.add_atom(1, 0, False)  # H3
-    ethanol.add_atom(1, 0, False)  # H4
-    ethanol.add_atom(1, 0, False)  # H5
-    ethanol.add_atom(1, 0, False)  # H6
-    ethanol.add_atom(1, 0, False)  # H7
-    ethanol.add_atom(1, 0, False)  # H8
-    ethanol.add_bond(0, 1, 1, False, fractional_bond_order=1.33)  # C0 - C1
-    ethanol.add_bond(1, 2, 1, False, fractional_bond_order=1.23)  # C1 - O2
-    ethanol.add_bond(0, 3, 1, False, fractional_bond_order=1)  # C0 - H3
-    ethanol.add_bond(0, 4, 1, False, fractional_bond_order=1)  # C0 - H4
-    ethanol.add_bond(0, 5, 1, False, fractional_bond_order=1)  # C0 - H5
-    ethanol.add_bond(1, 6, 1, False, fractional_bond_order=1)  # C1 - H6
-    ethanol.add_bond(1, 7, 1, False, fractional_bond_order=1)  # C1 - H7
-    ethanol.add_bond(2, 8, 1, False, fractional_bond_order=1)  # O2 - H8
-    charges = unit.Quantity(
-        np.array([-0.4, -0.3, -0.2, -0.1, 0.00001, 0.1, 0.2, 0.3, 0.4]),
-        unit.elementary_charge,
-    )
-    ethanol.partial_charges = charges
-
-    return ethanol
-
-
-def create_reversed_ethanol():
-    """
-    Creates an openff.toolkit.topology.Molecule representation of
-    ethanol without the use of a cheminformatics toolkit. This function
-    reverses the atom indexing of create_ethanol
-    """
-    # Create an ethanol molecule without using a toolkit
-    ethanol = Molecule()
-    ethanol.add_atom(1, 0, False)  # H0
-    ethanol.add_atom(1, 0, False)  # H1
-    ethanol.add_atom(1, 0, False)  # H2
-    ethanol.add_atom(1, 0, False)  # H3
-    ethanol.add_atom(1, 0, False)  # H4
-    ethanol.add_atom(1, 0, False)  # H5
-    ethanol.add_atom(8, 0, False)  # O6
-    ethanol.add_atom(6, 0, False)  # C7
-    ethanol.add_atom(6, 0, False)  # C8
-    ethanol.add_bond(8, 7, 1, False, fractional_bond_order=1.33)  # C8 - C7
-    ethanol.add_bond(7, 6, 1, False, fractional_bond_order=1.23)  # C7 - O6
-    ethanol.add_bond(8, 5, 1, False, fractional_bond_order=1)  # C8 - H5
-    ethanol.add_bond(8, 4, 1, False, fractional_bond_order=1)  # C8 - H4
-    ethanol.add_bond(8, 3, 1, False, fractional_bond_order=1)  # C8 - H3
-    ethanol.add_bond(7, 2, 1, False, fractional_bond_order=1)  # C7 - H2
-    ethanol.add_bond(7, 1, 1, False, fractional_bond_order=1)  # C7 - H1
-    ethanol.add_bond(6, 0, 1, False, fractional_bond_order=1)  # O6 - H0
-    charges = unit.Quantity(
-        np.array([0.4, 0.3, 0.2, 0.1, 0.00001, -0.1, -0.2, -0.3, -0.4]),
-        unit.elementary_charge,
-    )
-    ethanol.partial_charges = charges
-    return ethanol
-
-
-def create_benzene_no_aromatic():
-    """
-    Creates an openff.toolkit.topology.Molecule representation of benzene through the API with aromatic bonds
-    not defied, used to test the levels of isomorphic matching.
-    """
-    benzene = Molecule()
-    benzene.add_atom(6, 0, False)  # C0
-    benzene.add_atom(6, 0, False)  # C1
-    benzene.add_atom(6, 0, False)  # C2
-    benzene.add_atom(6, 0, False)  # C3
-    benzene.add_atom(6, 0, False)  # C4
-    benzene.add_atom(6, 0, False)  # C5
-    benzene.add_atom(1, 0, False)  # H6
-    benzene.add_atom(1, 0, False)  # H7
-    benzene.add_atom(1, 0, False)  # H8
-    benzene.add_atom(1, 0, False)  # H9
-    benzene.add_atom(1, 0, False)  # H10
-    benzene.add_atom(1, 0, False)  # H11
-    benzene.add_bond(0, 5, 1, False)  # C0 - C5
-    benzene.add_bond(0, 1, 1, False)  # C0 - C1
-    benzene.add_bond(1, 2, 1, False)  # C1 - C2
-    benzene.add_bond(2, 3, 1, False)  # C2 - C3
-    benzene.add_bond(3, 4, 1, False)  # C3 - C4
-    benzene.add_bond(4, 5, 1, False)  # C4 - C5
-    benzene.add_bond(0, 6, 1, False)  # C0 - H6
-    benzene.add_bond(1, 7, 1, False)  # C1 - C7
-    benzene.add_bond(2, 8, 1, False)  # C2 - C8
-    benzene.add_bond(3, 9, 1, False)  # C3 - C9
-    benzene.add_bond(4, 10, 1, False)  # C4 - C10
-    benzene.add_bond(5, 11, 1, False)  # C5 - C11
-    return benzene
-
-
-def create_acetaldehyde():
-    """
-    Creates an openff.toolkit.topology.Molecule representation of acetaldehyde through the API
-    """
-    acetaldehyde = Molecule()
-    acetaldehyde.add_atom(6, 0, False)  # C0
-    acetaldehyde.add_atom(6, 0, False)  # C1
-    acetaldehyde.add_atom(8, 0, False)  # O2
-    acetaldehyde.add_atom(1, 0, False)  # H3
-    acetaldehyde.add_atom(1, 0, False)  # H4
-    acetaldehyde.add_atom(1, 0, False)  # H5
-    acetaldehyde.add_atom(1, 0, False)  # H6
-    acetaldehyde.add_bond(0, 1, 1, False)  # C0 - C1
-    acetaldehyde.add_bond(1, 2, 2, False)  # C1 = O2
-    acetaldehyde.add_bond(0, 3, 1, False)  # C0 - H3
-    acetaldehyde.add_bond(0, 4, 1, False)  # C0 - H4
-    acetaldehyde.add_bond(0, 5, 1, False)  # C0 - H5
-    acetaldehyde.add_bond(1, 6, 1, False)  # C1 - H6
-    charges = unit.Quantity(
-        np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]), unit.elementary_charge
-    )
-    acetaldehyde.partial_charges = charges
-    return acetaldehyde
-
-
-def create_water():
-    """
-    Creates an openff.toolkit.topology.Molecule representation of water through the API
-    """
-    mol = Molecule()
-    mol.add_atom(1, 0, False)  # H1
-    mol.add_atom(8, 0, False)  # O
-    mol.add_atom(1, 0, False)  # H2
-    mol.add_bond(0, 1, 1, False)  # H1 - O
-    mol.add_bond(1, 2, 1, False)  # O - H2
-    charges = unit.Quantity(np.array([0.0, 0.0, 0.0]), unit.elementary_charge)
-    mol.partial_charges = charges
-    return mol
-
-
-def create_ammonia():
-    """
-    Creates an openff.toolkit.topology.Molecule representation of ammonia through the API
-    """
-    mol = Molecule()
-    mol.add_atom(1, 0, False)  # H1
-    mol.add_atom(7, 0, False)  # N
-    mol.add_atom(1, 0, False)  # H2
-    mol.add_atom(1, 0, False)  # H3
-    mol.add_bond(0, 1, 1, False)  # H1 - N
-    mol.add_bond(1, 2, 1, False)  # N - H2
-    mol.add_bond(1, 3, 1, False)  # N - H3
-    charges = unit.Quantity(np.array([0.0, 0.0, 0.0, 0.0]), unit.elementary_charge)
-    mol.partial_charges = charges
-    return mol
-
-
-def create_acetate():
-    """
-    Creates an openff.toolkit.topology.Molecule representation of
-    acetate without the use of a cheminformatics toolkit
-    """
-    # Create an acetate molecule without using a toolkit
-    acetate = Molecule()
-    acetate.add_atom(6, 0, False)  # C0
-    acetate.add_atom(6, 0, False)  # C1
-    acetate.add_atom(8, 0, False)  # O2
-    acetate.add_atom(8, -1, False)  # O3
-    acetate.add_atom(1, 0, False)  # H4
-    acetate.add_atom(1, 0, False)  # H5
-    acetate.add_atom(1, 0, False)  # H6
-    acetate.add_bond(0, 1, 1, False)  # C0 - C1
-    acetate.add_bond(1, 2, 2, False)  # C1 = O2
-    acetate.add_bond(1, 3, 1, False)  # C1 - O3[-1]
-    acetate.add_bond(0, 4, 1, False)  # C0 - H4
-    acetate.add_bond(0, 5, 1, False)  # C0 - H5
-    acetate.add_bond(0, 6, 1, False)  # C0 - H6
-    return acetate
-
-
-def create_cyclohexane():
-    """
-    Creates an openff.toolkit.topology.Molecule representation of
-    cyclohexane without the use of a cheminformatics toolkit
-    """
-    cyclohexane = Molecule()
-    cyclohexane.add_atom(6, 0, False)  # C0
-    cyclohexane.add_atom(6, 0, False)  # C1
-    cyclohexane.add_atom(6, 0, False)  # C2
-    cyclohexane.add_atom(6, 0, False)  # C3
-    cyclohexane.add_atom(6, 0, False)  # C4
-    cyclohexane.add_atom(6, 0, False)  # C5
-    cyclohexane.add_atom(1, 0, False)  # H6
-    cyclohexane.add_atom(1, 0, False)  # H7
-    cyclohexane.add_atom(1, 0, False)  # H8
-    cyclohexane.add_atom(1, 0, False)  # H9
-    cyclohexane.add_atom(1, 0, False)  # H10
-    cyclohexane.add_atom(1, 0, False)  # H11
-    cyclohexane.add_atom(1, 0, False)  # H12
-    cyclohexane.add_atom(1, 0, False)  # H13
-    cyclohexane.add_atom(1, 0, False)  # H14
-    cyclohexane.add_atom(1, 0, False)  # H15
-    cyclohexane.add_atom(1, 0, False)  # H16
-    cyclohexane.add_atom(1, 0, False)  # H17
-    cyclohexane.add_bond(0, 1, 1, False)  # C0 - C1
-    cyclohexane.add_bond(1, 2, 1, False)  # C1 - C2
-    cyclohexane.add_bond(2, 3, 1, False)  # C2 - C3
-    cyclohexane.add_bond(3, 4, 1, False)  # C3 - C4
-    cyclohexane.add_bond(4, 5, 1, False)  # C4 - C5
-    cyclohexane.add_bond(5, 0, 1, False)  # C5 - C0
-    cyclohexane.add_bond(0, 6, 1, False)  # C0 - H6
-    cyclohexane.add_bond(0, 7, 1, False)  # C0 - H7
-    cyclohexane.add_bond(1, 8, 1, False)  # C1 - H8
-    cyclohexane.add_bond(1, 9, 1, False)  # C1 - H9
-    cyclohexane.add_bond(2, 10, 1, False)  # C2 - H10
-    cyclohexane.add_bond(2, 11, 1, False)  # C2 - H11
-    cyclohexane.add_bond(3, 12, 1, False)  # C3 - H12
-    cyclohexane.add_bond(3, 13, 1, False)  # C3 - H13
-    cyclohexane.add_bond(4, 14, 1, False)  # C4 - H14
-    cyclohexane.add_bond(4, 15, 1, False)  # C4 - H15
-    cyclohexane.add_bond(5, 16, 1, False)  # C5 - H16
-    cyclohexane.add_bond(5, 17, 1, False)  # C5 - H17
-    return cyclohexane
-
-
-def create_dioxygen():
-    """
-    Creates an openff.toolkit.topology.Molecule representation of
-    dioxygen without the use of a cheminformatics toolkit
-    """
-    dioxygen = Molecule()
-    dioxygen.add_atom(8, 0, False)  # O0
-    dioxygen.add_atom(8, 0, False)  # O1
-    dioxygen.add_bond(0, 1, 2, False)  # O0 # O1
-    charges = unit.Quantity(np.array([0.0, 0.0]), unit.elementary_charge)
-    dioxygen.partial_charges = charges
-
-    return dioxygen
-
-
-def create_dinitrogen():
-    """
-    Creates an openff.toolkit.topology.Molecule representation of
-    dinitrogen without the use of a cheminformatics toolkit
-    """
-    dinitrogen = Molecule()
-    dinitrogen.add_atom(7, 0, False)  # N0
-    dinitrogen.add_atom(7, 0, False)  # N1
-    dinitrogen.add_bond(0, 1, 3, False)  # N0 - N1
-    charges = unit.Quantity(np.array([0.0, 0.0]), unit.elementary_charge)
-    dinitrogen.partial_charges = charges
-    return dinitrogen
 
 
 nonbonded_resolution_matrix = [
@@ -615,7 +748,7 @@ nonbonded_resolution_matrix = [
         "electrostatics_method": "reaction-field",
         "has_periodic_box": True,
         "omm_force": None,
-        "exception": SMIRNOFFSpecError,
+        "exception": SMIRNOFFSpecUnimplementedError,
         "exception_match": "reaction-field",
     },
     {
@@ -663,7 +796,7 @@ nonbonded_resolution_matrix = [
         "electrostatics_method": "reaction-field",
         "has_periodic_box": True,
         "omm_force": None,
-        "exception": SMIRNOFFSpecError,
+        "exception": IncompatibleParameterError,
         "exception_match": "reaction-field",
     },
     {
@@ -804,6 +937,25 @@ class TestForceField:
 
         assert hash(default_case) == hash(lower_case)
 
+    def test_do_not_load_in_child_dir(self, tmp_path):
+        """Ensure force field XML files in nested subdirectories are not loaded
+        when not explicitly pointed to."""
+        nested_directory = tmp_path / os.path.join("a", "b", "c")
+        os.makedirs(nested_directory, exist_ok=True)
+
+        # Create a FF in a nested directory
+        ForceField("openff-1.0.0.offxml").to_file(
+            os.path.join(nested_directory, "force-field.offxml")
+        )
+
+        # Check that the file does not exist in the current working directory.
+        assert not os.path.isfile("force-field.offxml")
+
+        with pytest.raises(
+            OSError, match="Source force-field.offxml could not be read."
+        ):
+            ForceField("force-field.offxml")
+
     @pytest.mark.parametrize("full_path", [(True, False)])
     @pytest.mark.parametrize("force_field_file", [*get_available_force_fields()])
     def test_get_available_force_fields_loadable(self, full_path, force_field_file):
@@ -878,7 +1030,7 @@ class TestForceField:
         forcefield = ForceField(iter(file_paths))
 
     @pytest.mark.skip(reason="Needs to be updated for 0.2.0 syntax")
-    def test_create_gbsa():
+    def test_create_gbsa(self):
         """Test reading of ffxml files with GBSA support."""
         forcefield = ForceField("test_forcefields/Frosst_AlkEthOH_GBSA.offxml")
 
@@ -910,7 +1062,7 @@ class TestForceField:
         forcefield = ForceField(iter(urls))
 
     def test_create_forcefield_from_xml_string(self):
-        forcefield = ForceField(simple_xml_ff)
+        forcefield = ForceField(xml_simple_ff)
         assert len(forcefield._parameter_handlers["Bonds"]._parameters) == 3
         assert len(forcefield._parameter_handlers["Angles"]._parameters) == 2
         assert len(forcefield._parameter_handlers["ProperTorsions"]._parameters) == 3
@@ -948,7 +1100,7 @@ class TestForceField:
         """
         import pickle
 
-        forcefield_1 = ForceField(simple_xml_ff)
+        forcefield_1 = ForceField(xml_simple_ff)
         pickled = pickle.dumps(forcefield_1)
         forcefield_2 = pickle.loads(pickled)
         assert forcefield_1.to_string() == forcefield_2.to_string()
@@ -972,8 +1124,11 @@ class TestForceField:
         """
         Test writing a ForceField to an XML string
         """
-        forcefield_1 = ForceField(simple_xml_ff)
+        forcefield_1 = ForceField(xml_simple_ff)
         string_1 = forcefield_1.to_string("XML")
+        # Ensure that we have spaces instead of tabs
+        assert "    " in string_1
+        assert "\t" not in string_1
         forcefield_2 = ForceField(string_1)
         string_2 = forcefield_2.to_string("XML")
         assert string_1 == string_2
@@ -1055,7 +1210,7 @@ class TestForceField:
         # These files will be deleted once garbage collection runs (end of this function)
         iofile1 = NamedTemporaryFile(suffix="." + file_path_extension)
         iofile2 = NamedTemporaryFile(suffix="." + file_path_extension)
-        forcefield_1 = ForceField(simple_xml_ff)
+        forcefield_1 = ForceField(xml_simple_ff)
         forcefield_1.to_file(iofile1.name, io_format=specified_format)
         forcefield_2 = ForceField(iofile1.name)
         forcefield_2.to_file(iofile2.name, io_format=specified_format)
@@ -1141,18 +1296,13 @@ class TestForceField:
             match="Missing version while trying to construct "
             "<class 'openff.toolkit.typing.engines."
             "smirnoff.parameters.ToolkitAM1BCCHandler'>.",
-        ) as excinfo:
-            ff = ForceField(
-                '<?xml version="1.0" encoding="ASCII"?>'
-                '<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">'
-                "  <ToolkitAM1BCC/>"
-                "</SMIRNOFF>"
-            )
+        ):
+            ForceField(xml_without_section_version)
 
     def test_load_two_sources(self):
         """Test loading data from two SMIRNOFF data sources"""
         ff = ForceField(
-            simple_xml_ff, xml_ff_w_cosmetic_elements, allow_cosmetic_attributes=True
+            xml_simple_ff, xml_ff_w_cosmetic_elements, allow_cosmetic_attributes=True
         )
         assert len(ff.get_parameter_handler("Bonds").parameters) == 5
 
@@ -1193,35 +1343,26 @@ class TestForceField:
 
     def test_load_two_sources_incompatible_tags(self):
         """Test loading data from two SMIRNOFF data sources which have incompatible physics"""
-        # Make an XML force field with a modifiedvdW 1-4 scaling factor
+        # Make an XML force field with a modified vdW 1-4 scaling factor
         nonstandard_xml_ff = xml_ff_w_comments.replace('scale14="0.5"', 'scale14="1.0"')
         with pytest.raises(
             IncompatibleParameterError,
             match="handler value: 0.5, incompatible value: 1.0",
-        ) as excinfo:
-            ff = ForceField(simple_xml_ff, nonstandard_xml_ff)
+        ):
+            ForceField(xml_simple_ff, nonstandard_xml_ff)
 
     def test_gbsahandler_sa_model_none(self):
         """
         Ensure that string values of "None" are correctly interpreted in the GBSAHandler's sa_model field
         """
-        gbsa_ff_xml = """<?xml version='1.0' encoding='ASCII'?>
-<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-    <GBSA version="0.3" gb_model="HCT" solvent_dielectric="78.5" solute_dielectric="1" sa_model="None" surface_area_penalty="5.4*calories/mole/angstroms**2" solvent_radius="1.4*angstroms">
-          <Atom smirks="[*:1]" radius="0.15*nanometer" scale="0.8"/>
-    </GBSA>
-</SMIRNOFF>
-"""
         from openff.toolkit.typing.engines.smirnoff import ForceField
 
-        ff = ForceField(gbsa_ff_xml)
+        ForceField(xml_gbsa_ff)
 
     @pytest.mark.parametrize(
         "toolkit_registry,registry_description", toolkit_registries
     )
     def test_parameterize_ethanol(self, toolkit_registry, registry_description):
-        from simtk.openmm import app
-
         forcefield = ForceField("test_forcefields/test_forcefield.offxml")
         pdbfile = app.PDBFile(get_data_file_path("systems/test_systems/1_ethanol.pdb"))
         molecules = [create_ethanol()]
@@ -1265,8 +1406,6 @@ class TestForceField:
     ):
         """Test parameterizing ethanol, but failing because custom handler classes can not resolve
         which order to run in"""
-        from simtk.openmm import app
-
         # from openff.toolkit.typing.engines.smirnoff.parameters import BondHandler, AngleHandler, ConstraintHandler
 
         forcefield = ForceField("test_forcefields/test_forcefield.offxml")
@@ -1284,21 +1423,11 @@ class TestForceField:
             )
 
     def test_parameterize_ethanol_missing_torsion(self):
-        from simtk.openmm import app
-
         from openff.toolkit.typing.engines.smirnoff.parameters import (
             UnassignedProperTorsionParameterException,
         )
 
-        forcefield = ForceField(
-            """
-<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-  <ProperTorsions version="0.3" potential="k*(1+cos(periodicity*theta-phase))">
-    <Proper smirks="[#99:1]-[#99X4:2]-[#99:3]-[#99:4]" id="t1" idivf1="1" k1="0.156 * kilocalories_per_mole" periodicity1="3" phase1="0.0 * degree"/>
-  </ProperTorsions>
-</SMIRNOFF>
-"""
-        )
+        forcefield = ForceField(xml_missing_torsion)
         pdbfile = app.PDBFile(get_data_file_path("systems/test_systems/1_ethanol.pdb"))
         molecules = [create_ethanol()]
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
@@ -1306,8 +1435,8 @@ class TestForceField:
             UnassignedProperTorsionParameterException,
             match="- Topology indices [(]5, 0, 1, 6[)]: "
             r"names and elements [(](H\d+)? H[)], [(](C\d+)? C[)], [(](C\d+)? C[)], [(](H\d+)? H[)],",
-        ) as excinfo:
-            omm_system = forcefield.create_openmm_system(topology)
+        ):
+            forcefield.create_openmm_system(topology)
 
     @pytest.mark.parametrize(
         "toolkit_registry,registry_description", toolkit_registries
@@ -1316,8 +1445,6 @@ class TestForceField:
         self, toolkit_registry, registry_description
     ):
         """Test parameterizing a periodic system of two distinct molecules"""
-        from simtk.openmm import app
-
         forcefield = ForceField("test_forcefields/test_forcefield.offxml")
         pdbfile = app.PDBFile(
             get_data_file_path("systems/test_systems/1_cyclohexane_1_ethanol.pdb")
@@ -1337,8 +1464,6 @@ class TestForceField:
         self, toolkit_registry, registry_description
     ):
         """Test parametrizing a nonperiodic system of two distinct molecules"""
-        from simtk.openmm import app
-
         forcefield = ForceField("test_forcefields/test_forcefield.offxml")
         pdbfile = app.PDBFile(
             get_data_file_path("systems/test_systems/1_cyclohexane_1_ethanol.pdb")
@@ -1368,8 +1493,6 @@ class TestForceField:
         """Test parameterizing a large system of several distinct molecules.
         This test is very slow, so it is only run if the --runslow option is provided to pytest.
         """
-        from simtk.openmm import app
-
         forcefield = ForceField("test_forcefields/test_forcefield.offxml")
         box_file_path = get_data_file_path(
             os.path.join("systems", "packmol_boxes", box)
@@ -1398,8 +1521,6 @@ class TestForceField:
         The results of both should be identical.
         """
         toolkit_registry = ToolkitRegistry(toolkit_precedence=[OpenEyeToolkitWrapper])
-        from simtk.openmm import XmlSerializer, app
-
         forcefield = ForceField("test_forcefields/test_forcefield.offxml")
         pdbfile = app.PDBFile(get_data_file_path("systems/test_systems/1_ethanol.pdb"))
         # Load the unique molecules with one atom ordering
@@ -1437,9 +1558,6 @@ class TestForceField:
         Test parameterizing the same PDB, using reference mol2s that have different atom orderings.
         The results of both should be identical.
         """
-
-        from simtk.openmm import XmlSerializer, app
-
         toolkit_registry = ToolkitRegistry(
             toolkit_precedence=[RDKitToolkitWrapper, AmberToolsToolkitWrapper]
         )
@@ -1512,36 +1630,13 @@ class TestForceField:
         force_field = ForceField("test_forcefields/test_forcefield.offxml")
         force_field.create_openmm_system(topology, toolkit_registry=toolkit_registry)
 
-    @pytest.mark.skip(
-        reason="We will not support going directly to ParmEd for now."
-        "We will instead feed OpenMM System objects to ParmEd "
-        "for further processing."
-    )
-    def test_parameterize_ethanol_to_parmed(self):
-        from simtk.openmm import app
-
-        forcefield = ForceField("test_forcefields/test_forcefield.offxml")
-        pdbfile = app.PDBFile(get_data_file_path("systems/test_systems/1_ethanol.pdb"))
-        # toolkit_wrapper = RDKitToolkitWrapper()
-        molecules = [
-            Molecule.from_file(get_data_file_path(name))
-            for name in ("molecules/ethanol.mol2",)
-        ]
-        topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
-
-        parmed_system = forcefield.create_parmed_structure(
-            topology, positions=pdbfile.getPositions()
-        )
-
     @pytest.mark.parametrize(
         "toolkit_registry,registry_description", toolkit_registries
     )
     def test_pass_invalid_kwarg_to_create_openmm_system(
         self, toolkit_registry, registry_description
     ):
-        """Test to ensure an exception is raised when an unrecognized kwarg is passed """
-        from simtk.openmm import app
-
+        """Test to ensure an exception is raised when an unrecognized kwarg is passed"""
         file_path = get_data_file_path("test_forcefields/test_forcefield.offxml")
         forcefield = ForceField(file_path)
         pdbfile = app.PDBFile(get_data_file_path("systems/test_systems/1_ethanol.pdb"))
@@ -1581,11 +1676,105 @@ class TestForceField:
         e_cutoff = forcefield["Electrostatics"].cutoff
         assert found_cutoff == vdw_cutoff == e_cutoff
 
+    def test_vdw_cutoff_overrides_electrostatics(self):
+        topology = Molecule.from_smiles("[#18]").to_topology()
+        topology.box_vectors = [3, 3, 3] * unit.nanometer
+
+        force_field = ForceField()
+
+        vdw_handler = vdWHandler(version=0.3)
+        vdw_handler.method = "cutoff"
+        vdw_handler.cutoff = 6.0 * unit.angstrom
+        vdw_handler.scale14 = 1.0
+
+        vdw_handler.add_parameter(
+            {
+                "smirks": "[#18:1]",
+                "epsilon": 1.0 * unit.kilojoules_per_mole,
+                "sigma": 1.0 * unit.angstrom,
+            }
+        )
+        force_field.register_parameter_handler(vdw_handler)
+
+        electrostatics_handler = ElectrostaticsHandler(version=0.3)
+        electrostatics_handler.cutoff = 7.0 * unit.angstrom
+        electrostatics_handler.method = "PME"
+        force_field.register_parameter_handler(electrostatics_handler)
+
+        library_charges = LibraryChargeHandler(version=0.3)
+        library_charges.add_parameter(
+            {
+                "smirks": "[#18:1]",
+                "charge1": 0.0 * unit.elementary_charge,
+            }
+        )
+        force_field.register_parameter_handler(library_charges)
+
+        system = force_field.create_openmm_system(topology)
+
+        assert np.isclose(
+            system.getForce(0).getCutoffDistance().value_in_unit(unit.angstrom), 6.0
+        )
+
+        # Ensure an exception is raised when the electrostatics cutoff is meaningful
+        # and mismatched
+        force_field.deregister_parameter_handler(force_field["Electrostatics"])
+
+        # TODO: Don't change the box vectors once this case is supported
+        topology.box_vectors = None
+        electrostatics_handler.method = "Coulomb"
+        force_field.register_parameter_handler(electrostatics_handler)
+
+        with pytest.raises(IncompatibleParameterError, match="cutoff must equal"):
+            force_field.create_openmm_system(topology)
+
+    def test_nondefault_nonbonded_cutoff(self):
+        """Test that the cutoff of the NonbondedForce is set properly when vdW and Electrostatics cutoffs
+        are identical but not the psuedo-default value of 9.0 A."""
+        topology = Molecule.from_smiles("[#18]").to_topology()
+        topology.box_vectors = [3, 3, 3] * unit.nanometer
+
+        force_field = ForceField()
+
+        vdw_handler = vdWHandler(version=0.3)
+        vdw_handler.method = "cutoff"
+        vdw_handler.cutoff = 7.89 * unit.angstrom
+        vdw_handler.scale14 = 1.0
+
+        vdw_handler.add_parameter(
+            {
+                "smirks": "[#18:1]",
+                "epsilon": 1.0 * unit.kilojoules_per_mole,
+                "sigma": 1.0 * unit.angstrom,
+            }
+        )
+        force_field.register_parameter_handler(vdw_handler)
+
+        electrostatics_handler = ElectrostaticsHandler(version=0.3)
+        electrostatics_handler.cutoff = 7.89 * unit.angstrom
+        electrostatics_handler.method = "PME"
+        force_field.register_parameter_handler(electrostatics_handler)
+
+        library_charges = LibraryChargeHandler(version=0.3)
+        library_charges.add_parameter(
+            {
+                "smirks": "[#18:1]",
+                "charge1": 0.0 * unit.elementary_charge,
+            }
+        )
+        force_field.register_parameter_handler(library_charges)
+
+        system = force_field.create_openmm_system(topology)
+
+        found_cutoff = (
+            system.getForce(0).getCutoffDistance().value_in_unit(unit.angstrom)
+        )
+
+        assert abs(found_cutoff - 7.89) < 1e-6
+
     @pytest.mark.parametrize("inputs", nonbonded_resolution_matrix)
     def test_nonbonded_method_resolution(self, inputs):
         """Test predefined permutations of input options to ensure nonbonded handling is correctly resolved"""
-        from simtk.openmm import app
-
         vdw_method = inputs["vdw_method"]
         electrostatics_method = inputs["electrostatics_method"]
         has_periodic_box = inputs["has_periodic_box"]
@@ -1712,7 +1901,7 @@ class TestForceField:
     )
     def test_deregister_parameter_handler(self, to_deregister):
         """Ensure that ForceField.deregister_parameter_handler behaves correctly"""
-        ff = ForceField(simple_xml_ff)
+        ff = ForceField(xml_simple_ff)
         # Make sure the handler is present in the test force field
         handler_found = False
         for handler in ff._parameter_handlers.values():
@@ -1798,237 +1987,7 @@ trivalent_parameters_args = []
 
 
 class TestForceFieldVirtualSites:
-
-    xml_ff_virtual_sites_bondcharge_match_once = """<?xml version="1.0" encoding="utf-8"?>
-    <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-        <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
-          <Bond smirks="[*:1]~[*:2]" id="b999" k="500.0 * kilocalories_per_mole/angstrom**2" length="1.1 * angstrom"/>
-        </Bonds>
-        <VirtualSites version="0.3">
-            <VirtualSite
-                type="BondCharge"
-                name="EP"
-                smirks="[*:1]~[*:2]"
-                distance="0.1*angstrom"
-                charge_increment1="0.1*elementary_charge"
-                charge_increment2="0.1*elementary_charge"
-                sigma="0.1*angstrom"
-                epsilon="0.1*kilocalories_per_mole"
-                match="once" >
-            </VirtualSite>
-            <VirtualSite
-                type="BondCharge"
-                name="EP"
-                smirks="[#7:1]~[#7:2]"
-                distance="0.2*angstrom"
-                charge_increment1="0.2*elementary_charge"
-                charge_increment2="0.2*elementary_charge"
-                sigma="0.2*angstrom"
-                epsilon="0.2*kilocalories_per_mole"
-                match="all_permutations" >
-            </VirtualSite>
-            <VirtualSite
-                type="BondCharge"
-                name="EP"
-                smirks="[#7:1]~[#7:2]"
-                distance="0.2*nanometers"
-                charge_increment1="0.2*elementary_charge"
-                charge_increment2="0.2*elementary_charge"
-                sigma="0.2*angstrom"
-                epsilon="0.2*kilocalories_per_mole"
-                match="once" >
-            </VirtualSite>
-        </VirtualSites>
-    </SMIRNOFF>
-    """
-
-    xml_ff_virtual_sites_bondcharge_match_all = """<?xml version="1.0" encoding="utf-8"?>
-    <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-        <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
-          <Bond smirks="[*:1]~[*:2]" id="b999" k="500.0 * kilocalories_per_mole/angstrom**2" length="1.1 * angstrom"/>
-        </Bonds>
-        <VirtualSites version="0.3">
-            <VirtualSite
-                type="BondCharge"
-                name="EP"
-                smirks="[*:1]~[*:2]"
-                distance="0.1*angstrom"
-                charge_increment1="0.1*elementary_charge"
-                charge_increment2="0.1*elementary_charge"
-                sigma="0.1*angstrom"
-                epsilon="0.1*kilocalories_per_mole"
-                match="once" >
-            </VirtualSite>
-            <VirtualSite
-                type="BondCharge"
-                name="EP"
-                smirks="[#7:1]~[#7:2]"
-                distance="0.2*angstrom"
-                charge_increment1="0.2*elementary_charge"
-                charge_increment2="0.2*elementary_charge"
-                sigma="0.2*angstrom"
-                epsilon="0.2*kilocalories_per_mole"
-                match="once" >
-            </VirtualSite>
-            <VirtualSite
-                type="BondCharge"
-                name="EP"
-                smirks="[#7:1]~[#7:2]"
-                distance="0.2*angstrom"
-                charge_increment1="0.2*elementary_charge"
-                charge_increment2="0.2*elementary_charge"
-                sigma="0.2*angstrom"
-                epsilon="0.2*kilocalories_per_mole"
-                match="all_permutations" >
-            </VirtualSite>
-        </VirtualSites>
-    </SMIRNOFF>
-    """
-
-    xml_ff_virtual_sites_bondcharge_match_once_two_names = """<?xml version="1.0" encoding="utf-8"?>
-    <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-        <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
-          <Bond smirks="[*:1]~[*:2]" id="b999" k="500.0 * kilocalories_per_mole/angstrom**2" length="1.1 * angstrom"/>
-        </Bonds>
-        <VirtualSites version="0.3">
-            <VirtualSite
-                type="BondCharge"
-                name="EP1"
-                smirks="[*:1]~[*:2]"
-                distance="0.1*angstrom"
-                charge_increment1="0.1*elementary_charge"
-                charge_increment2="0.1*elementary_charge"
-                sigma="0.1*angstrom"
-                epsilon="0.1*kilocalories_per_mole"
-                match="once" >
-            </VirtualSite>
-            <VirtualSite
-                type="BondCharge"
-                name="EP2"
-                smirks="[*:1]~[*:2]"
-                distance="0.2*angstrom"
-                charge_increment1="0.2*elementary_charge"
-                charge_increment2="0.2*elementary_charge"
-                sigma="0.2*angstrom"
-                epsilon="0.2*kilocalories_per_mole"
-                match="once" >
-            </VirtualSite>
-        </VirtualSites>
-    </SMIRNOFF>
-    """
-
-    xml_ff_virtual_sites_monovalent_match_once = """<?xml version="1.0" encoding="utf-8"?>
-    <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-        <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
-          <Bond smirks="[*:1]~[*:2]" id="b999" k="500.0 * kilocalories_per_mole/angstrom**2" length="1.1 * angstrom"/>
-        </Bonds>
-        <VirtualSites version="0.3">
-            <VirtualSite
-                type="MonovalentLonePair"
-                name="EP"
-                smirks="[#8:1]~[#6:2]~[#6:3]"
-                distance="0.1*angstrom"
-                charge_increment1="0.1*elementary_charge"
-                charge_increment2="0.1*elementary_charge"
-                charge_increment3="0.1*elementary_charge"
-                sigma="0.1*angstrom"
-                epsilon="0.1*kilocalories_per_mole"
-                inPlaneAngle="110.*degree"
-                outOfPlaneAngle="41*degree"
-                match="once" >
-            </VirtualSite>
-            <VirtualSite
-                type="MonovalentLonePair"
-                name="EP"
-                smirks="[#8:1]=[#6:2]-[#6:3]"
-                distance="0.2*angstrom"
-                charge_increment1="0.2*elementary_charge"
-                charge_increment2="0.2*elementary_charge"
-                charge_increment3="0.2*elementary_charge"
-                sigma="0.2*angstrom"
-                epsilon="0.2*kilocalories_per_mole"
-                inPlaneAngle="120.*degree"
-                outOfPlaneAngle="42*degree"
-                match="once" >
-            </VirtualSite>
-        </VirtualSites>
-    </SMIRNOFF>
-    """
-
-    xml_ff_virtual_sites_divalent_match_all = """<?xml version="1.0" encoding="ASCII"?>
-    <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-        <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
-          <Bond smirks="[*:1]~[*:2]" id="b999" k="500.0 * kilocalories_per_mole/angstrom**2" length="1.1 * angstrom"/>
-        </Bonds>
-        <VirtualSites version="0.3">
-            <VirtualSite
-                type="DivalentLonePair"
-                name="EP"
-                smirks="[#1:1]-[#8X2H2+0:2]-[#1:3]"
-                distance="0.70 * angstrom"
-                charge_increment1="0.241*elementary_charge"
-                charge_increment2="0.0*elementary_charge"
-                charge_increment3="0.241*elementary_charge"
-                sigma="3.12*angstrom"
-                epsilon="0.16*kilocalories_per_mole"
-                outOfPlaneAngle="54.71384225*degree"
-                match="all_permutations" >
-            </VirtualSite>
-        </VirtualSites>
-    </SMIRNOFF>
-    """
-
-    xml_ff_virtual_sites_trivalent_match_once = """<?xml version="1.0" encoding="ASCII"?>
-    <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-        <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
-          <Bond smirks="[*:1]~[*:2]" id="b999" k="500.0 * kilocalories_per_mole/angstrom**2" length="1.1 * angstrom"/>
-        </Bonds>
-        <VirtualSites version="0.3">
-            <VirtualSite
-                type="TrivalentLonePair"
-                name="EP"
-                smirks="[*:1]-[#7X3:2](-[*:3])-[*:4]"
-                distance="0.50 * angstrom"
-                charge_increment1="0.0*elementary_charge"
-                charge_increment2="1.0*elementary_charge"
-                charge_increment3="0.0*elementary_charge"
-                charge_increment4="0.0*elementary_charge"
-                sigma="0.0*angstrom"
-                epsilon="0.0*kilocalories_per_mole"
-                match="once" >
-            </VirtualSite>
-        </VirtualSites>
-    </SMIRNOFF>
-    """
-
-    xml_ff_virtual_sites_trivalent_match_all = """
-    <?xml version="1.0" encoding="ASCII"?>
-    <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-        <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
-          <Bond smirks="[*:1]~[*:2]" id="b999" k="500.0 * kilocalories_per_mole/angstrom**2" length="1.1 * angstrom"/>
-        </Bonds>
-        <VirtualSites version="0.3">
-            <VirtualSite
-                type="TrivalentLonePair"
-                name="EP"
-                smirks="[*:1]-[#7X3:2]-([*:3])-[*:4]"
-                distance="0.70 * angstrom"
-                charge_increment1="0.1*elementary_charge"
-                charge_increment2="0.1*elementary_charge"
-                charge_increment3="0.1*elementary_charge"
-                charge_increment4="0.1*elementary_charge"
-                sigma="0.1*angstrom"
-                epsilon="0.1*kilocalories_per_mole"
-                match="once" >
-            </VirtualSite>
-        </VirtualSites>
-    </SMIRNOFF>
-    """
-
     def _test_physical_parameters(self, tkr, xml, smi, assert_physics, mol=None):
-
-        from simtk.openmm import NonbondedForce
-
         file_path = get_data_file_path("test_forcefields/test_forcefield.offxml")
         forcefield = ForceField(file_path, xml)
         if mol is None:
@@ -2054,9 +2013,16 @@ class TestForceFieldVirtualSites:
             )
         return
 
+    import functools
+
     charge_unit = unit.elementary_charge
     epsilon_unit = unit.kilocalorie_per_mole
     sigma_unit = unit.angstrom
+    length_unit = unit.angstrom
+
+    as_charge = functools.partial(unit.Quantity, unit=charge_unit)
+    as_epsilon = functools.partial(unit.Quantity, unit=epsilon_unit)
+    as_sigma = functools.partial(unit.Quantity, unit=sigma_unit)
 
     ############################################################################
     # Bond charge virtual site test data
@@ -2073,9 +2039,9 @@ class TestForceFieldVirtualSites:
             "xml": xml_ff_virtual_sites_bondcharge_match_once,
             "smi": None,
             "assert_physics": (
-                (+0.2 * charge_unit, None, None),
-                (+0.2 * charge_unit, None, None),
-                (-0.4 * charge_unit, 0.2 * sigma_unit, 0.2 * epsilon_unit),
+                (as_charge(+0.2), None, None),
+                (as_charge(+0.2), None, None),
+                (as_charge(-0.4), as_sigma(0.2), as_epsilon(0.2)),
             ),
             "mol": create_dinitrogen(),
         }
@@ -2089,9 +2055,9 @@ class TestForceFieldVirtualSites:
             "xml": xml_ff_virtual_sites_bondcharge_match_once,
             "smi": None,
             "assert_physics": (
-                (+0.1 * charge_unit, None, None),
-                (+0.1 * charge_unit, None, None),
-                (-0.2 * charge_unit, 0.1 * sigma_unit, 0.1 * epsilon_unit),
+                (as_charge(+0.1), None, None),
+                (as_charge(+0.1), None, None),
+                (as_charge(-0.2), as_sigma(0.1), as_epsilon(0.1)),
             ),
             "mol": create_dioxygen(),
         }
@@ -2104,10 +2070,10 @@ class TestForceFieldVirtualSites:
             "xml": xml_ff_virtual_sites_bondcharge_match_all,
             "smi": None,
             "assert_physics": (
-                (+0.4 * charge_unit, None, None),
-                (+0.4 * charge_unit, None, None),
-                (-0.4 * charge_unit, 0.2 * sigma_unit, 0.2 * epsilon_unit),
-                (-0.4 * charge_unit, 0.2 * sigma_unit, 0.2 * epsilon_unit),
+                (as_charge(+0.4), None, None),
+                (as_charge(+0.4), None, None),
+                (as_charge(-0.4), as_sigma(0.2), as_epsilon(0.2)),
+                (as_charge(-0.4), as_sigma(0.2), as_epsilon(0.2)),
             ),
             "mol": create_dinitrogen(),
         }
@@ -2124,10 +2090,10 @@ class TestForceFieldVirtualSites:
             "xml": xml_ff_virtual_sites_bondcharge_match_once_two_names,
             "smi": None,
             "assert_physics": (
-                (+0.3 * charge_unit, None, None),
-                (+0.3 * charge_unit, None, None),
-                (-0.2 * charge_unit, 0.1 * sigma_unit, 0.1 * epsilon_unit),
-                (-0.4 * charge_unit, 0.2 * sigma_unit, 0.2 * epsilon_unit),
+                (as_charge(+0.3), None, None),
+                (as_charge(+0.3), None, None),
+                (as_charge(-0.2), as_sigma(0.1), as_epsilon(0.1)),
+                (as_charge(-0.4), as_sigma(0.2), as_epsilon(0.2)),
             ),
             "mol": create_dinitrogen(),
         }
@@ -2139,14 +2105,14 @@ class TestForceFieldVirtualSites:
             "xml": xml_ff_virtual_sites_monovalent_match_once,
             "smi": None,
             "assert_physics": (
-                (+0.2 * charge_unit, None, None),
-                (+0.2 * charge_unit, None, None),
-                (+0.2 * charge_unit, None, None),
-                (+0.0 * charge_unit, None, None),
-                (+0.0 * charge_unit, None, None),
-                (+0.0 * charge_unit, None, None),
-                (+0.0 * charge_unit, None, None),
-                (-0.6 * charge_unit, 0.2 * sigma_unit, 0.2 * epsilon_unit),
+                (as_charge(+0.2), None, None),
+                (as_charge(+0.2), None, None),
+                (as_charge(+0.2), None, None),
+                (as_charge(+0.0), None, None),
+                (as_charge(+0.0), None, None),
+                (as_charge(+0.0), None, None),
+                (as_charge(+0.0), None, None),
+                (as_charge(-0.6), as_sigma(0.2), as_epsilon(0.2)),
             ),
             "mol": create_acetaldehyde(),
         }
@@ -2163,11 +2129,11 @@ class TestForceFieldVirtualSites:
             "xml": xml_ff_virtual_sites_divalent_match_all,
             "smi": None,
             "assert_physics": (
-                (+0.4820 * charge_unit, None, None),
-                (+0.0000 * charge_unit, None, None),
-                (+0.4820 * charge_unit, None, None),
-                (-0.4820 * charge_unit, 3.12 * sigma_unit, 0.16 * epsilon_unit),
-                (-0.4820 * charge_unit, 3.12 * sigma_unit, 0.16 * epsilon_unit),
+                (as_charge(+0.4820), None, None),
+                (as_charge(+0.0000), None, None),
+                (as_charge(+0.4820), None, None),
+                (as_charge(-0.4820), as_sigma(3.12), as_epsilon(0.16)),
+                (as_charge(-0.4820), as_sigma(3.12), as_epsilon(0.16)),
             ),
             "mol": create_water(),
         }
@@ -2183,11 +2149,11 @@ class TestForceFieldVirtualSites:
             "xml": xml_ff_virtual_sites_trivalent_match_once,
             "smi": None,
             "assert_physics": (
-                (+0.0000 * charge_unit, None, None),
-                (+1.0000 * charge_unit, None, None),
-                (+0.0000 * charge_unit, None, None),
-                (+0.0000 * charge_unit, None, None),
-                (-1.0000 * charge_unit, 0.00 * sigma_unit, 0.00 * epsilon_unit),
+                (as_charge(+0.0000), None, None),
+                (as_charge(+1.0000), None, None),
+                (as_charge(+0.0000), None, None),
+                (as_charge(+0.0000), None, None),
+                (as_charge(-1.0000), as_sigma(0.00), as_epsilon(0.00)),
             ),
             "mol": create_ammonia(),
         }
@@ -2246,21 +2212,74 @@ class TestForceFieldVirtualSites:
 
         self._test_physical_parameters(toolkit_registry, *args.values())
 
+    def test_orientation_preserved_if_match_once(self):
+        """
+        Test that orientation-mangling bug from https://github.com/openforcefield/openff-toolkit/issues/1159
+        is resolved.
+        """
+        force_field = ForceField()
 
-class TestForceFieldChargeAssignment:
-    def generate_monatomic_ions():
-        return (
-            ("Li+", +1 * unit.elementary_charge),
-            ("Na+", +1 * unit.elementary_charge),
-            ("K+", +1 * unit.elementary_charge),
-            ("Rb+", +1 * unit.elementary_charge),
-            ("Cs+", +1 * unit.elementary_charge),
-            ("F-", -1 * unit.elementary_charge),
-            ("Cl-", -1 * unit.elementary_charge),
-            ("Br-", -1 * unit.elementary_charge),
-            ("I-", -1 * unit.elementary_charge),
+        vsite_handler = force_field.get_parameter_handler("VirtualSites")
+        vsite_handler.add_parameter(
+            parameter_kwargs={
+                "smirks": "[#6:2]=[#8:1]",
+                "name": "EP",
+                "type": "BondCharge",
+                "distance": 0.7 * unit.nanometers,
+                "match": "once",
+                "charge_increment1": 0.2 * unit.elementary_charge,
+                "charge_increment2": 0.1 * unit.elementary_charge,
+                "sigma": 1.0 * unit.angstrom,
+                "epsilon": 2.0 / 4.184 * unit.kilocalorie_per_mole,
+            }
         )
 
+        molecule = Molecule.from_mapped_smiles("[O:2]=[C:1]=[O:3]")
+
+        omm_system: System
+        omm_system, topology = force_field.create_openmm_system(
+            molecule.to_topology(), return_topology=True
+        )
+
+        omm_particle_tuples = []
+        for i in range(omm_system.getNumParticles()):
+
+            if not omm_system.isVirtualSite(i):
+                continue
+
+            omm_v_site = omm_system.getVirtualSite(i)
+
+            omm_particle_tuples.append(
+                tuple(
+                    omm_v_site.getParticle(j)
+                    for j in range(omm_v_site.getNumParticles())
+                )
+            )
+        assert (1, 0) in omm_particle_tuples
+        assert (2, 0) in omm_particle_tuples
+        for molecule in topology.reference_molecules:
+            for v_site in molecule.virtual_sites:
+                for particle in v_site.particles:
+                    # correct particle.orientation is (1,0) and (2,0)
+                    # and not (0, 1), (0, 2)
+                    assert particle.orientation in omm_particle_tuples
+
+
+def generate_monatomic_ions():
+    return (
+        ("Li+", +1 * unit.elementary_charge),
+        ("Na+", +1 * unit.elementary_charge),
+        ("K+", +1 * unit.elementary_charge),
+        ("Rb+", +1 * unit.elementary_charge),
+        ("Cs+", +1 * unit.elementary_charge),
+        ("F-", -1 * unit.elementary_charge),
+        ("Cl-", -1 * unit.elementary_charge),
+        ("Br-", -1 * unit.elementary_charge),
+        ("I-", -1 * unit.elementary_charge),
+    )
+
+
+class TestForceFieldChargeAssignment:
     @pytest.mark.parametrize(
         "toolkit_registry,registry_description", toolkit_registries
     )
@@ -2268,8 +2287,6 @@ class TestForceFieldChargeAssignment:
         """Test skipping charge generation and instead getting charges from the original Molecule"""
         # Create an ethanol molecule without using a toolkit
         molecules = [create_ethanol()]
-
-        from simtk.openmm import NonbondedForce, app
 
         file_path = get_data_file_path("test_forcefields/test_forcefield.offxml")
         forcefield = ForceField(file_path)
@@ -2318,12 +2335,6 @@ class TestForceFieldChargeAssignment:
     )
     def test_nonintegral_charge_exception(self, toolkit_registry, registry_description):
         """Test skipping charge generation and instead getting charges from the original Molecule"""
-        from simtk.openmm import app
-
-        from openff.toolkit.typing.engines.smirnoff.parameters import (
-            NonintegralMoleculeChargeException,
-        )
-
         # Create an ethanol molecule without using a toolkit
         ethanol = create_ethanol()
         ethanol.partial_charges[0] = 1.0 * unit.elementary_charge
@@ -2363,8 +2374,6 @@ class TestForceFieldChargeAssignment:
         cyclohexane = create_cyclohexane()
         molecules = [ethanol, cyclohexane]
 
-        from simtk.openmm import NonbondedForce, app
-
         file_path = get_data_file_path("test_forcefields/test_forcefield.offxml")
         forcefield = ForceField(file_path)
         pdbfile = app.PDBFile(
@@ -2395,8 +2404,6 @@ class TestForceFieldChargeAssignment:
 
     def test_library_charges_to_single_water(self):
         """Test assigning charges to one water molecule using library charges"""
-        from simtk.openmm import NonbondedForce
-
         ff = ForceField(
             "test_forcefields/test_forcefield.offxml", "test_forcefields/tip3p.offxml"
         )
@@ -2427,16 +2434,8 @@ class TestForceFieldChargeAssignment:
 
     def test_charge_increment_model_forward_and_reverse_ethanol(self):
         """Test application of ChargeIncrements to the same molecule with different orderings in the topology"""
-        test_charge_increment_model_ff = """
-        <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-          <Electrostatics version="0.3" method="PME" scale12="0.0" scale13="0.0" scale14="0.833333" cutoff="9.0 * angstrom"/>
-          <ChargeIncrementModel version="0.3" number_of_conformers="1" partial_charge_method="formal_charge">
-            <ChargeIncrement smirks="[#6X4:1]-[#8:2]" charge_increment1="-0.05*elementary_charge" charge_increment2="0.05*elementary_charge"/>
-            <ChargeIncrement smirks="[C:1][C:2][O:3]" charge_increment1="0.2*elementary_charge" charge_increment2="-0.1*elementary_charge" charge_increment3="-0.1*elementary_charge"/>
-          </ChargeIncrementModel>
-        </SMIRNOFF>"""
         file_path = get_data_file_path("test_forcefields/test_forcefield.offxml")
-        ff = ForceField(file_path, test_charge_increment_model_ff)
+        ff = ForceField(file_path, xml_charge_increment_model_ff_ethanol)
         del ff._parameter_handlers["ToolkitAM1BCC"]
         top = Topology.from_molecules([create_ethanol(), create_reversed_ethanol()])
         sys = ff.create_openmm_system(top)
@@ -2475,29 +2474,11 @@ class TestForceFieldChargeAssignment:
         than tagged atom. We test this by making two equivalent (one with fully explicit CIs, the other with some
         implicit CIa) FFs and ensuring that both perform the same parameterization.
         """
-        test_charge_increment_model_ff_no_missing_cis = """
-        <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-          <Electrostatics version="0.3" method="PME" scale12="0.0" scale13="0.0" scale14="0.833333" cutoff="9.0 * angstrom"/>
-          <ChargeIncrementModel version="0.3" number_of_conformers="1" partial_charge_method="formal_charge">
-            <ChargeIncrement smirks="[#6X4:1]-[#8:2]" charge_increment1="-0.06*elementary_charge" charge_increment2="0.06*elementary_charge"/>
-            <ChargeIncrement smirks="[#6X4:1]-[#1:2]" charge_increment1="-0.01*elementary_charge" charge_increment2="0.01*elementary_charge"/>
-            <ChargeIncrement smirks="[C:1][C:2][O:3]" charge_increment1="0.2*elementary_charge" charge_increment2="-0.1*elementary_charge" charge_increment3="-0.1*elementary_charge"/>
-          </ChargeIncrementModel>
-        </SMIRNOFF>"""
-        test_charge_increment_model_ff_one_less_ci = """
-        <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-          <Electrostatics version="0.3" method="PME" scale12="0.0" scale13="0.0" scale14="0.833333" cutoff="9.0 * angstrom"/>
-          <ChargeIncrementModel version="0.3" number_of_conformers="1" partial_charge_method="formal_charge">
-            <ChargeIncrement smirks="[#6X4:1]-[#8:2]" charge_increment1="-0.06*elementary_charge" charge_increment2="0.06*elementary_charge"/>
-            <ChargeIncrement smirks="[#6X4:1]-[#1:2]" charge_increment1="-0.01*elementary_charge"/>
-            <ChargeIncrement smirks="[C:1][C:2][O:3]" charge_increment1="0.2*elementary_charge" charge_increment2="-0.1*elementary_charge"/>
-          </ChargeIncrementModel>
-        </SMIRNOFF>"""
         # Make a FF from each OFFXML string
         file_path = get_data_file_path("test_forcefields/test_forcefield.offxml")
-        ff1 = ForceField(file_path, test_charge_increment_model_ff_one_less_ci)
+        ff1 = ForceField(file_path, xml_charge_increment_model_ff_one_less_ci)
         del ff1._parameter_handlers["ToolkitAM1BCC"]
-        ff2 = ForceField(file_path, test_charge_increment_model_ff_no_missing_cis)
+        ff2 = ForceField(file_path, xml_charge_increment_model_ff_no_missing_cis)
         del ff2._parameter_handlers["ToolkitAM1BCC"]
         top = Topology.from_molecules([create_ethanol()])
         # Make a system from each FF
@@ -2583,18 +2564,8 @@ class TestForceFieldChargeAssignment:
 
     def test_charge_increment_model_net_charge(self):
         """Test application of charge increments on a molecule with a net charge"""
-        from simtk import unit
-
-        test_charge_increment_model_ff = """
-        <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-          <Electrostatics version="0.3" method="PME" scale12="0.0" scale13="0.0" scale14="0.833333" cutoff="9.0 * angstrom"/>
-          <ChargeIncrementModel version="0.3" number_of_conformers="1" partial_charge_method="formal_charge">
-            <ChargeIncrement smirks="[#6X3:1]-[#8X1-1:2]" charge_increment1="-0.05*elementary_charge" charge_increment2="0.05*elementary_charge"/>
-            <ChargeIncrement smirks="[#6X3:1]=[#8X1:2]" charge_increment1="0.2*elementary_charge" charge_increment2="-0.2*elementary_charge"/>
-          </ChargeIncrementModel>
-        </SMIRNOFF>"""
         file_path = get_data_file_path("test_forcefields/test_forcefield.offxml")
-        ff = ForceField(file_path, test_charge_increment_model_ff)
+        ff = ForceField(file_path, xml_charge_increment_model_ff_net_charge)
         del ff._parameter_handlers["ToolkitAM1BCC"]
 
         acetate = create_acetate()
@@ -2612,22 +2583,13 @@ class TestForceFieldChargeAssignment:
 
     def test_charge_increment_model_deduplicate_symmetric_matches(self):
         """Test that chargeincrementmodelhandler deduplicates symmetric matches"""
-        from simtk import unit
-
         ethanol = create_ethanol()
         top = ethanol.to_topology()
 
+        file_path = get_data_file_path("test_forcefields/test_forcefield.offxml")
         # Test a charge increment that matches all C-H bonds at once
         # (this should be applied once: C0-H3-H4-H5)
-        test_charge_increment_model_ff = """
-        <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-          <Electrostatics version="0.3" method="PME" scale12="0.0" scale13="0.0" scale14="0.833333" cutoff="9.0 * angstrom"/>
-          <ChargeIncrementModel version="0.3" number_of_conformers="1" partial_charge_method="formal_charge">
-            <ChargeIncrement smirks="[#6X4:1]([#1:2])([#1:3])([#1:4])" charge_increment1="0.3*elementary_charge" charge_increment2="-0.1*elementary_charge" charge_increment3="-0.1*elementary_charge" charge_increment4="-0.1*elementary_charge"/>
-          </ChargeIncrementModel>
-        </SMIRNOFF>"""
-        file_path = get_data_file_path("test_forcefields/test_forcefield.offxml")
-        ff = ForceField(file_path, test_charge_increment_model_ff)
+        ff = ForceField(file_path, xml_charge_increment_model_ff_match_all)
         del ff._parameter_handlers["ToolkitAM1BCC"]
 
         sys = ff.create_openmm_system(top)
@@ -2653,15 +2615,7 @@ class TestForceFieldChargeAssignment:
 
         # Test a charge increment that matches two C-H bonds at a time
         # (this should be applied 3 times: C0-H3-H4, C0-H3-H5, C0-H4-H5)
-        test_charge_increment_model_ff = """
-        <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-          <Electrostatics version="0.3" method="PME" scale12="0.0" scale13="0.0" scale14="0.833333" cutoff="9.0 * angstrom"/>
-          <ChargeIncrementModel version="0.3" number_of_conformers="1" partial_charge_method="formal_charge">
-            <ChargeIncrement smirks="[#6X4:1]([#1:2])([#1:3])[#6][#8]" charge_increment1="0.1*elementary_charge" charge_increment2="-0.05*elementary_charge" charge_increment3="-0.05*elementary_charge"/>
-          </ChargeIncrementModel>
-        </SMIRNOFF>"""
-        file_path = get_data_file_path("test_forcefields/test_forcefield.offxml")
-        ff = ForceField(file_path, test_charge_increment_model_ff)
+        ff = ForceField(file_path, xml_charge_increment_model_ff_match_two)
         del ff._parameter_handlers["ToolkitAM1BCC"]
 
         sys = ff.create_openmm_system(top)
@@ -2687,15 +2641,7 @@ class TestForceFieldChargeAssignment:
 
         # Test a charge increment that matches ONE C-H bond at a time
         # (this should be applied three times: C0-H3, C0-H4, C0-H5)
-        test_charge_increment_model_ff = """
-        <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-          <Electrostatics version="0.3" method="PME" scale12="0.0" scale13="0.0" scale14="0.833333" cutoff="9.0 * angstrom"/>
-          <ChargeIncrementModel version="0.3" number_of_conformers="1" partial_charge_method="formal_charge">
-            <ChargeIncrement smirks="[#6X4:1]([#1:2])[#6][#8]" charge_increment1="0.1*elementary_charge" charge_increment2="-0.1*elementary_charge"/>
-          </ChargeIncrementModel>
-        </SMIRNOFF>"""
-        file_path = get_data_file_path("test_forcefields/test_forcefield.offxml")
-        ff = ForceField(file_path, test_charge_increment_model_ff)
+        ff = ForceField(file_path, xml_charge_increment_model_ff_match_once)
         del ff._parameter_handlers["ToolkitAM1BCC"]
 
         sys = ff.create_openmm_system(top)
@@ -2722,18 +2668,8 @@ class TestForceFieldChargeAssignment:
     def test_charge_increment_model_completely_overlapping_matches_override(self):
         """Ensure that DIFFERENT chargeincrements override one another if they apply to the
         same atoms, regardless of order"""
-        from simtk import unit
-
-        test_charge_increment_model_ff = """
-        <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-          <Electrostatics version="0.3" method="PME" scale12="0.0" scale13="0.0" scale14="0.833333" cutoff="9.0 * angstrom"/>
-          <ChargeIncrementModel version="0.3" number_of_conformers="1" partial_charge_method="formal_charge">
-            <ChargeIncrement smirks="[#1:1]-[#6:2]([#1:3])([#1:4])" charge_increment1="0.123*elementary_charge" charge_increment2="0.369*elementary_charge" charge_increment3="-0.123*elementary_charge" charge_increment4="0.123*elementary_charge"/>
-            <ChargeIncrement smirks="[#6X4:1]([#1:2])([#1:3])([#1:4])" charge_increment1="0.3*elementary_charge" charge_increment2="-0.1*elementary_charge" charge_increment3="-0.1*elementary_charge" charge_increment4="-0.1*elementary_charge"/>
-          </ChargeIncrementModel>
-        </SMIRNOFF>"""
         file_path = get_data_file_path("test_forcefields/test_forcefield.offxml")
-        ff = ForceField(file_path, test_charge_increment_model_ff)
+        ff = ForceField(file_path, xml_charge_increment_model_ff_override)
         del ff._parameter_handlers["ToolkitAM1BCC"]
 
         ethanol = create_ethanol()
@@ -2762,18 +2698,8 @@ class TestForceFieldChargeAssignment:
     def test_charge_increment_model_partially_overlapping_matches_both_apply(self):
         """Ensure that DIFFERENT chargeincrements BOTH get applied if they match
         a partially-overlapping set of atoms"""
-        from simtk import unit
-
-        test_charge_increment_model_ff = """
-        <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-          <Electrostatics version="0.3" method="PME" scale12="0.0" scale13="0.0" scale14="0.833333" cutoff="9.0 * angstrom"/>
-          <ChargeIncrementModel version="0.3" number_of_conformers="0" partial_charge_method="formal_charge">
-            <ChargeIncrement smirks="[#6X4:1]([#1:2])([#1:3])([#1:4])" charge_increment1="0.3*elementary_charge" charge_increment2="-0.1*elementary_charge" charge_increment3="-0.1*elementary_charge" charge_increment4="-0.1*elementary_charge"/>
-            <ChargeIncrement smirks="[#6X4:1][#6X4:2][#8]" charge_increment1="0.05*elementary_charge" charge_increment2="-0.05*elementary_charge"/>
-          </ChargeIncrementModel>
-        </SMIRNOFF>"""
         file_path = get_data_file_path("test_forcefields/test_forcefield.offxml")
-        ff = ForceField(file_path, test_charge_increment_model_ff)
+        ff = ForceField(file_path, xml_charge_increment_model_ff_both_apply)
         del ff._parameter_handlers["ToolkitAM1BCC"]
 
         ethanol = create_ethanol()
@@ -2837,8 +2763,6 @@ class TestForceFieldChargeAssignment:
     def test_library_charge_hierarchy(self):
         """Test assigning charges to one water molecule using library charges, where two LCs match and the
         assignment is determined by order they are added to the force field"""
-        from simtk.openmm import NonbondedForce
-
         # Test with xml_OH_library_charges_xml loaded last, which should assign dummy partial charges
         ff = ForceField(
             "test_forcefields/test_forcefield.offxml",
@@ -2874,8 +2798,6 @@ class TestForceFieldChargeAssignment:
 
     def test_library_charges_to_two_waters(self):
         """Test assigning charges to two water molecules using library charges"""
-        from simtk.openmm import NonbondedForce
-
         ff = ForceField(
             "test_forcefields/test_forcefield.offxml", "test_forcefields/tip3p.offxml"
         )
@@ -2901,8 +2823,6 @@ class TestForceFieldChargeAssignment:
 
     def test_library_charges_to_three_ethanols_different_atom_ordering(self):
         """Test assigning charges to three ethanols with different atom orderings"""
-        from simtk.openmm import NonbondedForce
-
         # Define a library charge parameter for ethanol (C1-C2-O3) where C1 has charge -0.2, and its Hs have -0.02,
         # C2 has charge -0.1 and its Hs have -0.01, and O3 has charge 0.3, and its H has charge 0.08
 
@@ -2977,8 +2897,6 @@ class TestForceFieldChargeAssignment:
     @pytest.mark.parametrize("monatomic_ion,formal_charge", generate_monatomic_ions())
     def test_library_charges_monatomic_ions(self, monatomic_ion, formal_charge):
         """Test assigning library charges to each of the monatomic ions in openff-1.1.0.xml"""
-        from simtk.openmm import NonbondedForce
-
         ff = ForceField(
             "test_forcefields/test_forcefield.offxml",
             "test_forcefields/ion_charges.offxml",
@@ -2995,8 +2913,6 @@ class TestForceFieldChargeAssignment:
     def test_charge_method_hierarchy(self):
         """Ensure that molecules are parameterized by charge_from_molecules first, then library charges
         if not applicable, then AM1BCC otherwise"""
-        from simtk.openmm import NonbondedForce
-
         ff = ForceField(
             "test_forcefields/test_forcefield.offxml",
             xml_CH_zeroes_library_charges_xml,
@@ -3158,8 +3074,6 @@ class TestForceFieldChargeAssignment:
     def test_assign_charges_to_molecule_in_parts_using_multiple_library_charges(self):
         """Test assigning charges to parts of a molecule using two library charge lines. Note that these LibraryCharge
         SMIRKS have partial overlap, so this also tests that the hierarchy is correctly obeyed."""
-        from simtk.openmm import NonbondedForce
-
         ff = ForceField(
             "test_forcefields/test_forcefield.offxml",
             xml_ethanol_library_charges_in_parts_ff,
@@ -3201,8 +3115,6 @@ class TestForceFieldChargeAssignment:
     def test_assign_charges_using_library_charges_by_single_atoms(self):
         """Test assigning charges to parts of a molecule using per-atom library charges. Note that these LibraryCharge
         SMIRKS will match multiple atoms, so this is also a test of correct usage of the parameter hierarchy.."""
-        from simtk.openmm import NonbondedForce
-
         ff = ForceField(
             "test_forcefields/test_forcefield.offxml",
             xml_ethanol_library_charges_by_atom_ff,
@@ -3245,12 +3157,6 @@ class TestForceFieldChargeAssignment:
         self,
     ):
         """Fail to assign charges to a molecule because not all atoms can be assigned"""
-        from simtk.openmm import NonbondedForce
-
-        from openff.toolkit.typing.engines.smirnoff.parameters import (
-            UnassignedMoleculeChargeException,
-        )
-
         molecules = [Molecule.from_file(get_data_file_path("molecules/toluene.sdf"))]
         top = Topology.from_molecules(molecules)
 
@@ -3296,8 +3202,6 @@ class TestForceFieldChargeAssignment:
         """Ensure that charges are set on returned topology if the user specifies 'return_topology=True' in
         create_openmm_system"""
         # TODO: Should this test also cover multiple unique molecules?
-        from simtk.openmm import NonbondedForce
-
         mol = create_acetate()
         ff = ForceField("test_forcefields/test_forcefield.offxml", *additional_offxmls)
         charge_mols = []
@@ -3327,6 +3231,49 @@ class TestForceFieldChargeAssignment:
                 all_charges_zero = False
         assert not (all_charges_zero)
 
+    def test_library_charges_from_molecule_manual(self):
+        """Test that constructing a LibraryChargeHandler from partial charges on Molecule objects
+        produces the same result as using the `charge_from_molecules` kwarg. while manually
+        setting the molecule's partial charges to arbitrary non-physical values"""
+        # TODO: Remove this test if `charge_from_molecules` is depcreated (#806)
+        mol = Molecule.from_mapped_smiles("[Cl:1][C:2]#[C:3][F:4]")
+        mol.partial_charges = np.linspace(-0.3, 0.3, 4) * unit.elementary_charge
+
+        test_forcefield = ForceField("test_forcefields/test_forcefield.offxml")
+        using_kwarg = test_forcefield.create_openmm_system(
+            topology=mol.to_topology(), charge_from_molecules=[mol]
+        )
+
+        library_charges = LibraryChargeHandler.LibraryChargeType.from_molecule(mol)
+        test_forcefield.register_parameter_handler(LibraryChargeHandler(version=0.3))
+        test_forcefield["LibraryCharges"].add_parameter(parameter=library_charges)
+        using_library_charges = test_forcefield.create_openmm_system(
+            topology=mol.to_topology()
+        )
+
+        compare_partial_charges(using_kwarg, using_library_charges)
+
+    def test_library_charges_from_molecule_assigned(self):
+        """Test that constructing a LibraryChargeHandler from partial charges on Molecule objects
+        produces the same result as using the `charge_from_molecules` kwarg. while manually
+        setting the molecule's partial charges to arbitrary non-physical values"""
+        mol = Molecule.from_smiles("CCO")
+        mol.assign_partial_charges(partial_charge_method="mmff94")
+
+        test_forcefield = ForceField("test_forcefields/test_forcefield.offxml")
+        using_kwarg = test_forcefield.create_openmm_system(
+            topology=mol.to_topology(), charge_from_molecules=[mol]
+        )
+
+        library_charges = LibraryChargeHandler.LibraryChargeType.from_molecule(mol)
+        test_forcefield.register_parameter_handler(LibraryChargeHandler(version=0.3))
+        test_forcefield["LibraryCharges"].add_parameter(parameter=library_charges)
+        using_library_charges = test_forcefield.create_openmm_system(
+            topology=mol.to_topology()
+        )
+
+        compare_partial_charges(using_kwarg, using_library_charges)
+
 
 # ======================================================================
 # TEST CONSTRAINTS
@@ -3348,7 +3295,10 @@ class TestForceFieldConstraints:
                 molecule.atoms[atom2_idx].element.symbol,
             }
             assert atom_elements == bond_elements
-            assert np.isclose(distance / unit.angstrom, bond_length / unit.angstrom)
+            assert np.isclose(
+                distance.value_in_unit(unit.angstrom),
+                bond_length.value_in_unit(unit.angstrom),
+            )
 
     def test_constraints_hbonds(self):
         """Test that hydrogen bonds constraints are applied correctly to a ethane molecule."""
@@ -3634,8 +3584,6 @@ class TestForceFieldParameterAssignment:
         ff_system = ff.create_openmm_system(molecule.to_topology())
 
         # Load OpenMM System created with the 0.1 version of the toolkit.
-        from simtk import openmm
-
         with open(xml_file_path, "r") as f:
             xml_system = openmm.XmlSerializer.deserialize(f.read())
 
@@ -3669,10 +3617,7 @@ class TestForceFieldParameterAssignment:
         Regression test on HCT, OBC1, and OBC2 GBSA models. This test ensures that the
         SMIRNOFF-based GBSA models match the equivalent OpenMM implementations.
         """
-
         import parmed as pmd
-        from simtk import openmm
-        from simtk.openmm import Platform
 
         from openff.toolkit.tests.utils import (
             compare_system_energies,
@@ -3837,9 +3782,7 @@ class TestForceFieldParameterAssignment:
 
         off_nonbonded_force.setReactionFieldDielectric(1.0)
 
-        # Not sure if zeroing the switching width is essential -- This might only make a difference
-        # in the energy if we tested on a molecule larger than the 9A cutoff
-        # off_nonbonded_force.setSwitchingDistance(0)
+        # TODO: look into if switching distance is relevant #882
 
         # Create Contexts
         integrator = openmm.VerletIntegrator(1.0 * unit.femtoseconds)
@@ -3852,11 +3795,9 @@ class TestForceFieldParameterAssignment:
         # Get context energies
         amber_energy = get_context_potential_energy(amber_context, positions)
         off_energy = get_context_potential_energy(off_context, positions)
-
         # Very handy for debugging
         # print(openmm.XmlSerializer.serialize(off_gbsa_force))
         # print(openmm.XmlSerializer.serialize(amber_gbsa_force))
-
         # Ensure that the GBSA energies (which we put into ForceGroup 1) are identical
         # For Platform=OpenCL, we do get "=="-level identical numbers, but for "Reference", we don't.
         # assert amber_energy[1] == off_energy[1]
@@ -3864,52 +3805,17 @@ class TestForceFieldParameterAssignment:
 
         # Ensure that all system energies are the same
         compare_system_energies(
-            off_omm_system, amber_omm_system, positions, by_force_type=False
+            off_omm_system,
+            amber_omm_system,
+            positions,
+            by_force_type=False,
+            atol=1.0e-4,
         )
 
     def test_tip5p_dimer_energy(self):
-        """"""
-
-        tip5p_offxml = """<?xml version="1.0" encoding="utf-8"?>
-<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-    <LibraryCharges version="0.3">
-            <LibraryCharge name="tip5p" smirks="[#1:1]-[#8X2H2+0:2]-[#1:3]" charge1="0.*elementary_charge" charge2="0.*elementary_charge" charge3="0.*elementary_charge"/>
-    </LibraryCharges>
-    <vdW version="0.3" potential="Lennard-Jones-12-6" combining_rules="Lorentz-Berthelot" scale12="0.0" scale13="0.0" scale14="0.5" scale15="1.0" switch_width="1.0 * angstrom" cutoff="9.0 * angstrom" method="cutoff">
-            <Atom smirks="[#1:1]-[#8X2H2+0]-[#1]" epsilon="0. * mole**-1 * kilojoule" id="n35" sigma="1 * nanometer"/>
-            <Atom smirks="[#1]-[#8X2H2+0:1]-[#1]" epsilon="0.66944 * mole**-1 * kilojoule" id="n35" sigma="0.312 * nanometer"/>
-    </vdW>
-     <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
-        <Bond smirks="[#1:1]-[#8X2H2+0:2]-[#1]" length="0.9572 * angstrom" k="462750.4 * nanometer**-2 * mole**-1 * kilojoule" id="b1" />   
-    </Bonds>
-    <Angles version="0.3" potential="harmonic">
-        <Angle smirks="[#1:1]-[#8X2H2+0:2]-[#1:3]" angle="1.82421813418 * radian" k="836.8 * mole**-1 * radian**-2 * kilojoule" id="a1" />
-    </Angles>
-    <VirtualSites version="0.3" exclusion_policy="parents">
-        <VirtualSite
-            type="DivalentLonePair"
-            name="EP"
-            smirks="[#1:1]-[#8X2H2+0:2]-[#1:3]"
-            distance="0.70 * angstrom"
-            charge_increment1="0.1205*elementary_charge"
-            charge_increment2="0.0*elementary_charge"
-            charge_increment3="0.1205*elementary_charge"
-            sigma="1.0*angstrom"
-            epsilon="0.0*kilocalories_per_mole"
-            outOfPlaneAngle="54.71384225*degree"
-            match="all_permutations" >
-        </VirtualSite>
-    </VirtualSites>
-    <Electrostatics version="0.3" method="PME" scale12="0.0" scale13="0.0" scale14="0.833333" scale15="1.0" switch_width="0.0 * angstrom" cutoff="9.0 * angstrom"/>
-  <Constraints version="0.3">
-    <Constraint smirks="[#1:1]-[#8X2H2+0:2]-[#1]" id="c1" distance="0.9572 * angstrom"/>
-    <Constraint smirks="[#1:1]-[#8X2H2+0]-[#1:2]" id="c2" distance="1.5139006545247014 * angstrom"/>
-  </Constraints>
-</SMIRNOFF>
-"""
         from openff.toolkit.tests.utils import evaluate_molecules_off
 
-        off_ff = ForceField("test_forcefields/test_forcefield.offxml", tip5p_offxml)
+        off_ff = ForceField("test_forcefields/test_forcefield.offxml", xml_tip5p)
 
         molecule1 = create_water()
         molecule1.atoms[0].name = "O"
@@ -3971,12 +3877,13 @@ class TestForceFieldParameterAssignment:
         ref_ene = 0.0011797690240 * unit.kilojoule_per_mole
 
         assert np.allclose(
-            off_crds / unit.angstrom, ref_crds_with_vsite / unit.angstrom
+            off_crds.value_in_unit(unit.angstrom),
+            ref_crds_with_vsite.value_in_unit(unit.angstrom),
         )
         # allow 1% error in energy difference (default is .001%)
         assert np.allclose(
-            off_ene / unit.kilocalorie_per_mole,
-            ref_ene / unit.kilocalorie_per_mole,
+            off_ene.value_in_unit(unit.kilocalorie_per_mole),
+            ref_ene.value_in_unit(unit.kilocalorie_per_mole),
             rtol=0.05,
         )
 
@@ -4007,10 +3914,7 @@ class TestForceFieldParameterAssignment:
     def test_molecule_energy_gb_no_sa(self, zero_charges, gbsa_model):
         """Test creating a GBSA system without a surface energy term, and validate its energy
         against the same system made using OpenMM's AMBER GBSA functionality"""
-        import numpy as np
         import parmed as pmd
-        from simtk import openmm
-        from simtk.openmm import Platform
 
         from openff.toolkit.tests.utils import (
             compare_system_energies,
@@ -4196,13 +4100,13 @@ class TestForceFieldParameterAssignment:
         topology = Topology.from_molecules(molecule)
 
         labels = forcefield.label_molecules(topology)[0]
+
         assert len(labels["Bonds"]) == 2654
         assert len(labels["Angles"]) == 4789
         assert len(labels["ProperTorsions"]) == 6973
         assert len(labels["ImproperTorsions"]) == 528
 
-        fn = forcefield.create_openmm_system
-        omm_system = fn(
+        omm_system = forcefield.create_openmm_system(
             topology,
             charge_from_molecules=[molecule],
             toolkit_registry=toolkit_registry,
@@ -4279,7 +4183,6 @@ class TestForceFieldParameterAssignment:
             decimal=8,
         )
 
-    @requires_openeye
     def test_overwrite_bond_orders(self):
         """Test that previously-defined bond orders in the topology are overwritten"""
         mol = create_ethanol()
@@ -4327,7 +4230,88 @@ class TestForceFieldParameterAssignment:
         for bond1, bond2 in zip(
             omm_sys_top.topology_bonds, mod_omm_sys_top.topology_bonds
         ):
-            assert bond1.bond.fractional_bond_order == bond2.bond.fractional_bond_order
+            # 'approx()' because https://github.com/openforcefield/openff-toolkit/issues/994
+            assert bond1.bond.fractional_bond_order == pytest.approx(
+                bond2.bond.fractional_bond_order
+            )
+
+    def test_fractional_bond_order_ignore_existing_confs(self):
+        """Test that previously-defined bond orders in the topology are overwritten"""
+        mol = create_ethanol()
+        top = Topology.from_molecules(mol)
+
+        mod_mol = create_ethanol()
+        mod_mol.generate_conformers()
+        mod_mol._conformers[0][0][0] = (
+            mod_mol._conformers[0][0][0] + 1.0 * unit.angstrom
+        )
+        mod_mol._conformers[0][1][0] = (
+            mod_mol._conformers[0][1][0] - 1.0 * unit.angstrom
+        )
+        mod_mol._conformers[0][2][0] = (
+            mod_mol._conformers[0][2][0] + 1.0 * unit.angstrom
+        )
+
+        mod_top = Topology.from_molecules(mod_mol)
+
+        forcefield = ForceField("test_forcefields/test_forcefield.offxml", xml_ff_bo)
+
+        omm_system, omm_sys_top = forcefield.create_openmm_system(
+            top, return_topology=True
+        )
+        mod_omm_system, mod_omm_sys_top = forcefield.create_openmm_system(
+            mod_top, return_topology=True
+        )
+
+        # Check that the assigned bond parameters are identical for both systems
+        default_bond_force = [
+            f for f in omm_system.getForces() if isinstance(f, openmm.HarmonicBondForce)
+        ][0]
+        mod_bond_force = [
+            f
+            for f in mod_omm_system.getForces()
+            if isinstance(f, openmm.HarmonicBondForce)
+        ][0]
+
+        for idx in range(default_bond_force.getNumBonds()):
+            assert all(
+                np.isclose(
+                    default_value.value_in_unit(default_value.unit),
+                    mod_value.value_in_unit(default_value.unit),
+                )
+                for default_value, mod_value in zip(
+                    default_bond_force.getBondParameters(idx)[2:],
+                    mod_bond_force.getBondParameters(idx)[2:],
+                )
+            )
+
+        # Check that the assigned torsion parameters are identical for both systems
+        default_torsion_force = [
+            force
+            for force in omm_system.getForces()
+            if isinstance(force, openmm.PeriodicTorsionForce)
+        ][0]
+        mod_torsion_force = [
+            force
+            for force in mod_omm_system.getForces()
+            if isinstance(force, openmm.PeriodicTorsionForce)
+        ][0]
+
+        for idx in range(default_torsion_force.getNumTorsions()):
+            default_k = default_torsion_force.getTorsionParameters(idx)[-1]
+            mod_k = mod_torsion_force.getTorsionParameters(idx)[-1]
+            assert np.isclose(
+                default_k.value_in_unit(default_k.unit),
+                mod_k.value_in_unit(default_k.unit),
+            )
+
+        # Check that the returned topology has the correct bond order
+        for bond1, bond2 in zip(
+            omm_sys_top.topology_bonds, mod_omm_sys_top.topology_bonds
+        ):
+            assert np.isclose(
+                bond1.bond.fractional_bond_order, bond2.bond.fractional_bond_order
+            )
 
     @pytest.mark.parametrize(
         (
@@ -4757,8 +4741,6 @@ class TestSmirnoffVersionConverter:
         ff_system = ff.create_openmm_system(molecule.to_topology())
 
         # Load OpenMM System created with the 0.1 version of the toolkit.
-        from simtk import openmm
-
         with open(xml_file_path, "r") as f:
             xml_system = openmm.XmlSerializer.deserialize(f.read())
 
@@ -4772,6 +4754,50 @@ class TestSmirnoffVersionConverter:
             ignore_charges=True,
             ignore_improper_folds=True,
         )
+
+
+class TestForceFieldGetPartialCharges:
+    """Tests for the ForceField.get_partial_charges method."""
+
+    @staticmethod
+    def get_partial_charges_from_create_openmm_system(mol, force_field):
+        """Helper method to compute partial charges from a generated openmm System."""
+        system = force_field.create_openmm_system(mol.to_topology())
+        nbforce = [
+            f for f in system.getForces() if isinstance(f, openmm.openmm.NonbondedForce)
+        ][0]
+
+        n_particles = nbforce.getNumParticles()
+        charges = [nbforce.getParticleParameters(i)[0] for i in range(n_particles)]
+
+        return unit.Quantity(charges)
+
+    def test_get_partial_charges(self):
+        """Test that ethanol charges are computed correctly."""
+        ethanol: Molecule = create_ethanol()
+        force_field: ForceField = ForceField("test_forcefields/test_forcefield.offxml")
+
+        ethanol_partial_charges = self.get_partial_charges_from_create_openmm_system(
+            ethanol, force_field
+        )
+
+        partial_charges = force_field.get_partial_charges(ethanol)
+
+        assert (
+            ethanol_partial_charges - partial_charges < 1.0e-6 * unit.elementary_charge
+        ).all()
+        assert partial_charges.shape == (ethanol.n_atoms,)
+
+    def test_get_partial_charges_vsites(self):
+        """Test that a molecule with virtual sites raises an error."""
+        ethanol: Molecule = create_ethanol()
+        force_field: ForceField = ForceField(
+            "test_forcefields/test_forcefield.offxml",
+            xml_ff_virtual_sites_monovalent_match_once,
+        )
+
+        with pytest.raises(PartialChargeVirtualSitesError):
+            force_field.get_partial_charges(ethanol)
 
 
 @pytest.mark.skip(reason="Needs to be updated for 0.2.0 syntax")

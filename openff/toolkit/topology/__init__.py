@@ -19,11 +19,13 @@ from openff.toolkit.topology.topology import (
     MissingUniqueMoleculesError,
     NotBondedError,
     SortedDict,
+    TagSortedDict,
     Topology,
     TopologyAtom,
     TopologyBond,
     TopologyMolecule,
     TopologyVirtualParticle,
     TopologyVirtualSite,
+    UnsortedDict,
     ValenceDict,
 )

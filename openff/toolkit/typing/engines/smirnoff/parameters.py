@@ -13,15 +13,20 @@ New pluggable handlers can be created by creating subclasses of :class:`Paramete
 """
 
 __all__ = [
-    "SMIRNOFFSpecError",
-    "IncompatibleParameterError",
-    "FractionalBondOrderInterpolationMethodUnsupportedError",
-    "NotEnoughPointsForInterpolationError",
-    "UnassignedValenceParameterException",
-    "UnassignedBondParameterException",
-    "UnassignedAngleParameterException",
+    "DuplicateParameterError",
     "DuplicateVirtualSiteTypeException",
+    "FractionalBondOrderInterpolationMethodUnsupportedError",
+    "IncompatibleParameterError",
+    "NonintegralMoleculeChargeException",
+    "NotEnoughPointsForInterpolationError",
     "ParameterLookupError",
+    "SMIRNOFFSpecError",
+    "SMIRNOFFSpecUnimplementedError",
+    "UnassignedAngleParameterException",
+    "UnassignedBondParameterException",
+    "UnassignedMoleculeChargeException",
+    "UnassignedProperTorsionParameterException",
+    "UnassignedValenceParameterException",
     "NonbondedMethod",
     "ParameterList",
     "ParameterType",
@@ -35,17 +40,13 @@ __all__ = [
     "AngleHandler",
     "ProperTorsionHandler",
     "ImproperTorsionHandler",
+    "ElectrostaticsHandler",
+    "LibraryChargeHandler",
     "vdWHandler",
     "GBSAHandler",
     "ToolkitAM1BCCHandler",
     "VirtualSiteHandler",
 ]
-
-
-# =============================================================================================
-# GLOBAL IMPORTS
-# =============================================================================================
-
 import abc
 import copy
 import functools
@@ -55,17 +56,45 @@ import re
 from collections import OrderedDict, defaultdict
 from enum import Enum
 from itertools import combinations
+from typing import Any, List, Optional, Type, Union
 
-from simtk import openmm, unit
+try:
+    import openmm
+    from openmm import unit
+except ImportError:
+    from simtk import openmm, unit
 
-from openff.toolkit.topology import ImproperDict, SortedDict, Topology, ValenceDict
+from openff.toolkit.topology import (
+    ImproperDict,
+    TagSortedDict,
+    Topology,
+    UnsortedDict,
+    ValenceDict,
+)
 from openff.toolkit.topology.molecule import Molecule
+from openff.toolkit.topology.topology import NotBondedError
 from openff.toolkit.typing.chemistry import ChemicalEnvironment
 from openff.toolkit.utils.collections import ValidatedDict, ValidatedList
+from openff.toolkit.utils.exceptions import (
+    DuplicateParameterError,
+    DuplicateVirtualSiteTypeException,
+    FractionalBondOrderInterpolationMethodUnsupportedError,
+    IncompatibleParameterError,
+    MissingIndexedAttributeError,
+    NonintegralMoleculeChargeException,
+    NotEnoughPointsForInterpolationError,
+    ParameterLookupError,
+    SMIRNOFFSpecError,
+    SMIRNOFFSpecUnimplementedError,
+    UnassignedAngleParameterException,
+    UnassignedBondParameterException,
+    UnassignedMoleculeChargeException,
+    UnassignedProperTorsionParameterException,
+    UnassignedValenceParameterException,
+)
 from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
 from openff.toolkit.utils.utils import (
     IncompatibleUnitError,
-    MessageException,
     all_subclasses,
     attach_units,
     extract_serialized_units_from_dict,
@@ -77,92 +106,6 @@ from openff.toolkit.utils.utils import (
 # =============================================================================================
 
 logger = logging.getLogger(__name__)
-
-
-# ======================================================================
-# CUSTOM EXCEPTIONS
-# ======================================================================
-
-
-class SMIRNOFFSpecError(MessageException):
-    """
-    Exception for when data is noncompliant with the SMIRNOFF data specification.
-    """
-
-    pass
-
-
-class FractionalBondOrderInterpolationMethodUnsupportedError(MessageException):
-    """
-    Exception for when an unsupported fractional bond order interpolation assignment method is called.
-    """
-
-    pass
-
-
-class NotEnoughPointsForInterpolationError(MessageException):
-    """Exception for when less than two points are provided for interpolation"""
-
-    pass
-
-
-class IncompatibleParameterError(MessageException):
-    """
-    Exception for when a set of parameters is scientifically/technically incompatible with another
-    """
-
-    pass
-
-
-class UnassignedValenceParameterException(Exception):
-    """Exception raised when there are valence terms for which a ParameterHandler can't find parameters."""
-
-    pass
-
-
-class UnassignedBondParameterException(UnassignedValenceParameterException):
-    """Exception raised when there are bond terms for which a ParameterHandler can't find parameters."""
-
-    pass
-
-
-class UnassignedAngleParameterException(UnassignedValenceParameterException):
-    """Exception raised when there are angle terms for which a ParameterHandler can't find parameters."""
-
-    pass
-
-
-class UnassignedProperTorsionParameterException(UnassignedValenceParameterException):
-    """Exception raised when there are proper torsion terms for which a ParameterHandler can't find parameters."""
-
-    pass
-
-
-class UnassignedMoleculeChargeException(Exception):
-    """Exception raised when no charge method is able to assign charges to a molecule."""
-
-    pass
-
-
-class NonintegralMoleculeChargeException(Exception):
-    """Exception raised when the partial charges on a molecule do not sum up to its formal charge."""
-
-    pass
-
-
-class DuplicateParameterError(MessageException):
-    """Exception raised when trying to add a ParameterType that already exists"""
-
-
-class ParameterLookupError(MessageException):
-    """Exception raised when something goes wrong in a parameter lookup in
-    ParameterHandler.__getitem__"""
-
-
-class DuplicateVirtualSiteTypeException(Exception):
-    """Exception raised when trying to register two different virtual site classes with the same 'type'"""
-
-    pass
 
 
 # ======================================================================
@@ -190,18 +133,18 @@ class NonbondedMethod(Enum):
 def _linear_inter_or_extrapolate(points_dict, x_query):
     """
     Linearly interpolate or extrapolate based on a piecewise linear function defined by a set of points.
-    This function is designed to work with key:value pairs where the value may be a simtk.unit.Quantity.
+    This function is designed to work with key:value pairs where the value may be a openmm.unit.Quantity.
 
     Parameters
     ----------
-    points_dict : dict{float: float or float-valued simtk.unit.Quantity}
+    points_dict : dict{float: float or float-valued openmm.unit.Quantity}
         A dictionary with each item representing a point, where the key is the X value and the value is the Y value.
     x_query : float
         The X value of the point to interpolate or extrapolate.
 
     Returns
     -------
-    y_value : float or float-valued simtk.unit.Quantity
+    y_value : float or float-valued openmm.unit.Quantity
         The result of interpolation/extrapolation.
     """
 
@@ -312,7 +255,7 @@ class ParameterAttribute:
     default : object, optional
         When specified, the descriptor makes this attribute optional by
         attaching a default value to it.
-    unit : simtk.unit.Quantity, optional
+    unit : openmm.unit.Quantity, optional
         When specified, only quantities with compatible units are allowed
         to be set, and string expressions are automatically parsed into a
         ``Quantity``.
@@ -351,7 +294,7 @@ class ParameterAttribute:
 
     The attribute allow automatic conversion and validation of units.
 
-    >>> from simtk import unit
+    >>> from openmm import unit
     >>> class MyParameter:
     ...     attr_quantity = ParameterAttribute(unit=unit.angstrom)
     ...
@@ -516,7 +459,7 @@ class IndexedParameterAttribute(ParameterAttribute):
     default : object, optional
         When specified, the descriptor makes this attribute optional by
         attaching a default value to it.
-    unit : simtk.unit.Quantity, optional
+    unit : openmm.unit.Quantity, optional
         When specified, only sequences of quantities with compatible units
         are allowed to be set.
     converter : callable, optional
@@ -537,7 +480,7 @@ class IndexedParameterAttribute(ParameterAttribute):
 
     Create an optional indexed attribute with unit of angstrom.
 
-    >>> from simtk import unit
+    >>> from openmm import unit
     >>> class MyParameter:
     ...     length = IndexedParameterAttribute(default=None, unit=unit.angstrom)
     ...
@@ -593,7 +536,7 @@ class MappedParameterAttribute(ParameterAttribute):
     default : object, optional
         When specified, the descriptor makes this attribute optional by
         attaching a default value to it.
-    unit : simtk.unit.Quantity, optional
+    unit : openmm.unit.Quantity, optional
         When specified, only sequences of mappings where values are quantities with
         compatible units are allowed to be set.
     converter : callable, optional
@@ -612,7 +555,7 @@ class MappedParameterAttribute(ParameterAttribute):
 
     Create an optional indexed attribute with unit of angstrom.
 
-    >>> from simtk import unit
+    >>> from openmm import unit
     >>> class MyParameter:
     ...     length = MappedParameterAttribute(default=None, unit=unit.angstrom)
     ...
@@ -669,7 +612,7 @@ class IndexedMappedParameterAttribute(ParameterAttribute):
     default : object, optional
         When specified, the descriptor makes this attribute optional by
         attaching a default value to it.
-    unit : simtk.unit.Quantity, optional
+    unit : openmm.unit.Quantity, optional
         When specified, only sequences of mappings where values are quantities with
         compatible units are allowed to be set.
     converter : callable, optional
@@ -688,7 +631,7 @@ class IndexedMappedParameterAttribute(ParameterAttribute):
 
     Create an optional indexed attribute with unit of angstrom.
 
-    >>> from simtk import unit
+    >>> from openmm import unit
     >>> class MyParameter:
     ...     length = IndexedMappedParameterAttribute(default=None, unit=unit.angstrom)
     ...
@@ -1143,35 +1086,30 @@ class _ParameterAttributeHandler:
 
         # Check if this is an indexed_mapped attribute.
         if (
-            (key is not None)
-            and (index is not None)
+            key is not None
+            and index is not None
             and attr_name in self._get_indexed_mapped_parameter_attributes()
         ):
             indexed_mapped_attr_value = getattr(self, attr_name)
             try:
                 return indexed_mapped_attr_value[index][key]
             except (IndexError, KeyError) as err:
-                if not err.args:
-                    err.args = ("",)
-                err.args = err.args + (
-                    f"'{item}' is out of bound for indexed attribute '{attr_name}'",
+                raise MissingIndexedAttributeError(
+                    f"{str(err)} '{item}' is out of bounds for indexed attribute '{attr_name}'"
                 )
-                raise
 
         # Otherwise, try indexed attribute
         # Separate the indexed attribute name from the list index.
         attr_name, index = self._split_attribute_index(item)
 
         # Check if this is an indexed attribute.
-        if (
-            index is not None
-        ) and attr_name in self._get_indexed_parameter_attributes():
+        if index is not None and attr_name in self._get_indexed_parameter_attributes():
             indexed_attr_value = getattr(self, attr_name)
             try:
                 return indexed_attr_value[index]
             except IndexError:
-                raise IndexError(
-                    f"'{item}' is out of bound for indexed attribute '{attr_name}'"
+                raise MissingIndexedAttributeError(
+                    f"'{item}' is out of bounds for indexed attribute '{attr_name}'"
                 )
 
         # Otherwise, forward the search to the next class in the MRO.
@@ -1206,12 +1144,9 @@ class _ParameterAttributeHandler:
                 indexed_mapped_attr_value[index][mapkey] = value
                 return
             except (IndexError, KeyError) as err:
-                if not err.args:
-                    err.args = ("",)
-                err.args = err.args + (
-                    f"'{key}' is out of bound for indexed attribute '{attr_name}'",
+                raise MissingIndexedAttributeError(
+                    f"{str(err)} '{key}' is out of bounds for indexed attribute '{attr_name}'"
                 )
-                raise
 
         # Otherwise, try indexed attribute
         # Separate the indexed attribute name from the list index.
@@ -1227,8 +1162,8 @@ class _ParameterAttributeHandler:
                 indexed_attr_value[index] = value
                 return
             except IndexError:
-                raise IndexError(
-                    f"'{key}' is out of bound for indexed attribute '{attr_name}'"
+                raise MissingIndexedAttributeError(
+                    f"'{key}' is out of bounds for indexed attribute '{attr_name}'"
                 )
 
         # Forward the request to the next class in the MRO.
@@ -1793,9 +1728,9 @@ class ParameterType(_ParameterAttributeHandler):
     """
 
     # ChemicalEnvironment valence type string expected by SMARTS string for this Handler
-    _VALENCE_TYPE = None
+    _VALENCE_TYPE: Optional[str] = None
     # The string mapping to this ParameterType in a SMIRNOFF data source
-    _ELEMENT_NAME = None
+    _ELEMENT_NAME: Optional[str] = None
 
     # Parameter attributes shared among all parameter types.
     smirks = ParameterAttribute()
@@ -1843,8 +1778,8 @@ class ParameterType(_ParameterAttributeHandler):
 # PARAMETER HANDLERS
 #
 # The following classes are Handlers that know how to create Force
-# subclasses and add them to a System that is being created. Each Handler
-# class must define three methods:
+# subclasses and add them to an OpenMM System that is being created. Each
+# Handler class must define three methods:
 # 1) a constructor which takes as input hierarchical dictionaries of data
 #    conformant to the SMIRNOFF spec;
 # 2) a create_force() method that constructs the Force object and adds it
@@ -1874,20 +1809,21 @@ class ParameterHandler(_ParameterAttributeHandler):
 
     """
 
-    _TAGNAME = None  # str of section type handled by this ParameterHandler (XML element name for SMIRNOFF XML representation)
-    _INFOTYPE = None  # container class with type information that will be stored in self._parameters
-    _OPENMMTYPE = None  # OpenMM Force class (or None if no equivalent)
-    _DEPENDENCIES = (
-        None  # list of ParameterHandler classes that must precede this, or None
-    )
+    # str of section type handled by this ParameterHandler (XML element name for SMIRNOFF XML representation)
+    _TAGNAME: Optional[str] = None
+    # container class with type information that will be stored in self._parameters
+    _INFOTYPE: Optional[Any] = None
+    # OpenMM Force class (or None if no equivalent)
+    _OPENMMTYPE: Optional[str] = None
+    # list of ParameterHandler classes that must precede this, or None
+    _DEPENDENCIES: Optional[Any] = None
 
-    _KWARGS = []  # Kwargs to catch when create_force is called
-    _SMIRNOFF_VERSION_INTRODUCED = (
-        0.0  # the earliest version of SMIRNOFF spec that supports this ParameterHandler
-    )
-    _SMIRNOFF_VERSION_DEPRECATED = (
-        None  # if deprecated, the first SMIRNOFF version number it is no longer used
-    )
+    # Kwargs to catch when create_force is called
+    _KWARGS: List[str] = []
+    # the earliest version of SMIRNOFF spec that supports this ParameterHandler
+    _SMIRNOFF_VERSION_INTRODUCED = 0.0
+    _SMIRNOFF_VERSION_DEPRECATED = None
+    # if deprecated, the first SMIRNOFF version number it is no longer used
     _MIN_SUPPORTED_SECTION_VERSION = 0.3
     _MAX_SUPPORTED_SECTION_VERSION = 0.3
 
@@ -2054,11 +1990,15 @@ class ParameterHandler(_ParameterAttributeHandler):
             The SMIRKS pattern (if str) or index (if int) of the parameter directly after where
             the new parameter will be added
 
-        Note that one of (parameter_kwargs, parameter) must be specified
-        Note that when `before` and `after` are both None, the new parameter will be appended
-            to the END of the parameter list.
-        Note that when `before` and `after` are both specified, the new parameter
-            will be added immediately after the parameter matching the `after` pattern or index.
+        Note the following behavior:
+          * Either `parameter_kwargs` or `parameter` must be specified.
+          * When `before` and `after` are both `None`, the new parameter will be appended
+            to the **END** of the parameter list.
+          * When `before` and `after` are both specified, the new parameter will be added immediately
+            after the parameter matching the `after` pattern or index.
+          * The order of parameters in a parameter list can have significant impacts on parameter assignment. For details,
+            see the [SMIRNOFF](https://openforcefield.github.io/standards/standards/smirnoff/#smirnoff-parameter-specification-is-hierarchical)
+            specification.
 
         Examples
         --------
@@ -2067,7 +2007,7 @@ class ParameterHandler(_ParameterAttributeHandler):
 
         Given an existing parameter handler and a new parameter to add to it:
 
-        >>> from simtk import unit
+        >>> from openmm import unit
         >>> bh = BondHandler(skip_version_check=True)
         >>> length = 1.5 * unit.angstrom
         >>> k = 100 * unit.kilocalorie_per_mole / unit.angstrom ** 2
@@ -2145,7 +2085,7 @@ class ParameterHandler(_ParameterAttributeHandler):
 
         Create a parameter handler and populate it with some data.
 
-        >>> from simtk import unit
+        >>> from openmm import unit
         >>> handler = BondHandler(skip_version_check=True)
         >>> handler.add_parameter(
         ...     {
@@ -2203,13 +2143,16 @@ class ParameterHandler(_ParameterAttributeHandler):
             self._parameter_type = parameter_type
             self._environment_match = environment_match
 
-    def find_matches(self, entity):
+    def find_matches(self, entity, unique=False):
         """Find the elements of the topology/molecule matched by a parameter type.
 
         Parameters
         ----------
         entity : openff.toolkit.topology.Topology
             Topology to search.
+        unique : bool, default=False
+            If False, SMARTS matching will enumerate every valid permutation of matching atoms.
+            If True, only one order of each unique match will be returned.
 
         Returns
         ---------
@@ -2220,9 +2163,14 @@ class ParameterHandler(_ParameterAttributeHandler):
 
         # TODO: Right now, this method is only ever called with an entity that is a Topology.
         #  Should we reduce its scope and have a check here to make sure entity is a Topology?
-        return self._find_matches(entity)
+        return self._find_matches(entity, unique=unique)
 
-    def _find_matches(self, entity, transformed_dict_cls=ValenceDict):
+    def _find_matches(
+        self,
+        entity,
+        transformed_dict_cls=ValenceDict,
+        unique=False,
+    ):
         """Implement find_matches() and allow using a difference valence dictionary.
         Parameters
         ----------
@@ -2233,6 +2181,10 @@ class ParameterHandler(_ParameterAttributeHandler):
             will determine how groups of atom indices are stored
             and accessed (e.g for angles indices should be 0-1-2
             and not 2-1-0).
+        unique : bool, default=False
+            If False, SMARTS matching will enumerate every valid permutation of matching atoms.
+            If True, only one order of each unique match will be returned.
+
         Returns
         ---------
         matches : `transformed_dict_cls` of ParameterHandlerMatch
@@ -2250,7 +2202,8 @@ class ParameterHandler(_ParameterAttributeHandler):
             matches_for_this_type = {}
 
             for environment_match in entity.chemical_environment_matches(
-                parameter_type.smirks
+                parameter_type.smirks,
+                unique=unique,
             ):
                 # Update the matches for this parameter type.
                 handler_match = self._Match(parameter_type, environment_match)
@@ -2307,27 +2260,27 @@ class ParameterHandler(_ParameterAttributeHandler):
             reference_molecule.get_bond_between(atom_i, atom_j)
 
     def assign_parameters(self, topology, system):
-        """Assign parameters for the given Topology to the specified System object.
+        """Assign parameters for the given Topology to the specified OpenMM ``System`` object.
 
         Parameters
         ----------
         topology : openff.toolkit.topology.Topology
             The Topology for which parameters are to be assigned.
             Either a new Force will be created or parameters will be appended to an existing Force.
-        system : simtk.openmm.System
+        system : openmm.System
             The OpenMM System object to add the Force (or append new parameters) to.
         """
         pass
 
     def postprocess_system(self, topology, system, **kwargs):
-        """Allow the force to perform a a final post-processing pass on the System following parameter assignment, if needed.
+        """Allow the force to perform a a final post-processing pass on the OpenMM ``System`` following parameter assignment, if needed.
 
         Parameters
         ----------
         topology : openff.toolkit.topology.Topology
             The Topology for which parameters are to be assigned.
             Either a new Force will be created or parameters will be appended to an existing Force.
-        system : simtk.openmm.System
+        system : openmm.System
             The OpenMM System object to add the Force (or append new parameters) to.
         """
         pass
@@ -2802,7 +2755,13 @@ class BondHandler(ParameterHandler):
             # particle_indices = tuple([ atom.particle_index for atom in atoms ])
 
             # Ensure atoms are actually bonded correct pattern in Topology
-            self._assert_correct_connectivity(bond_match)
+            try:
+                self._assert_correct_connectivity(bond_match)
+            except NotBondedError as e:
+                smirks = bond_match.parameter_type.smirks
+                raise NotBondedError(
+                    f"While processing bond with SMIRKS {smirks}: " + e.msg
+                )
 
             # topology.assert_bonded(atoms[0], atoms[1])
             bond_params = bond_match.parameter_type
@@ -2829,7 +2788,6 @@ class BondHandler(ParameterHandler):
                 )
                 match.reference_molecule.assign_fractional_bond_orders(
                     toolkit_registry=toolkit_registry,
-                    use_conformers=match.reference_molecule.conformers,
                     bond_order_model=self.fractional_bondorder_method.lower(),
                 )
 
@@ -2979,7 +2937,13 @@ class AngleHandler(ParameterHandler):
             # Ensure atoms are actually bonded correct pattern in Topology
             # for (i, j) in [(0, 1), (1, 2)]:
             #     topology.assert_bonded(atoms[i], atoms[j])
-            self._assert_correct_connectivity(angle_match)
+            try:
+                self._assert_correct_connectivity(angle_match)
+            except NotBondedError as e:
+                smirks = angle_match.parameter_type.smirks
+                raise NotBondedError(
+                    f"While processing angle with SMIRKS {smirks}: " + e.msg
+                )
 
             if (
                 topology.is_constrained(atoms[0], atoms[1])
@@ -3129,7 +3093,13 @@ class ProperTorsionHandler(ParameterHandler):
         for (atom_indices, torsion_match) in torsion_matches.items():
             # Ensure atoms are actually bonded correct pattern in Topology
             # Currently does nothing
-            self._assert_correct_connectivity(torsion_match)
+            try:
+                self._assert_correct_connectivity(torsion_match)
+            except NotBondedError as e:
+                smirks = torsion_match.parameter_type.smirks
+                raise NotBondedError(
+                    f"While processing torsion with SMIRKS {smirks}: " + e.msg
+                )
 
             if torsion_match.parameter_type.k_bondorder is None:
                 # TODO: add a check here that we have same number of terms for
@@ -3236,7 +3206,6 @@ class ProperTorsionHandler(ParameterHandler):
                 )
                 match.reference_molecule.assign_fractional_bond_orders(
                     toolkit_registry=toolkit_registry,
-                    use_conformers=match.reference_molecule.conformers,
                     bond_order_model=self.fractional_bondorder_method.lower(),
                 )
 
@@ -3326,7 +3295,7 @@ class ImproperTorsionHandler(ParameterHandler):
             tolerance_attrs=float_attrs_to_compare,
         )
 
-    def find_matches(self, entity):
+    def find_matches(self, entity, unique=False):
         """Find the improper torsions in the topology/molecule matched by a parameter type.
 
         Parameters
@@ -3341,7 +3310,9 @@ class ImproperTorsionHandler(ParameterHandler):
             matching the 4-tuple of atom indices in ``entity``.
 
         """
-        return self._find_matches(entity, transformed_dict_cls=ImproperDict)
+        return self._find_matches(
+            entity, transformed_dict_cls=ImproperDict, unique=unique
+        )
 
     def create_force(self, system, topology, **kwargs):
         # force = super(ImproperTorsionHandler, self).create_force(system, topology, **kwargs)
@@ -3361,7 +3332,15 @@ class ImproperTorsionHandler(ParameterHandler):
             # For impropers, central atom is atom 1
             # for (i, j) in [(0, 1), (1, 2), (1, 3)]:
             #     topology.assert_bonded(atom_indices[i], atom_indices[j])
-            self._assert_correct_connectivity(improper_match, [(0, 1), (1, 2), (1, 3)])
+            try:
+                self._assert_correct_connectivity(
+                    improper_match, [(0, 1), (1, 2), (1, 3)]
+                )
+            except NotBondedError as e:
+                smirks = improper_match.parameter_type.smirks
+                raise NotBondedError(
+                    f"While processing improper with SMIRKS {smirks}: " + e.msg
+                )
 
             improper = improper_match.parameter_type
 
@@ -3430,8 +3409,9 @@ class _NonbondedHandler(ParameterHandler):
         if len(existing) == 0:
             force = self._OPENMMTYPE()
             system.addForce(force)
-            # Create all particles.
-            for _ in topology.topology_particles:
+            # Create all atom particles. Virtual site particles are handled in
+            # in its own handler
+            for _ in topology.topology_atoms:
                 force.addParticle(0.0, 1.0, 0.0)
         else:
             force = existing[0]
@@ -3627,7 +3607,7 @@ class vdWHandler(_NonbondedHandler):
                 #                             "must be provided")
             else:
                 force.setNonbondedMethod(openmm.NonbondedForce.LJPME)
-                force.setCutoffDistance(9.0 * unit.angstrom)
+                force.setCutoffDistance(self.cutoff)
                 force.setEwaldErrorTolerance(1.0e-4)
 
         # If method is cutoff, then we currently support openMM's PME for periodic system and NoCutoff for nonperiodic
@@ -3676,7 +3656,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
     cutoff = ParameterAttribute(default=9.0 * unit.angstrom, unit=unit.angstrom)
     switch_width = ParameterAttribute(default=0.0 * unit.angstrom, unit=unit.angstrom)
     method = ParameterAttribute(
-        default="PME", converter=_allow_only(["Coulomb", "PME"])
+        default="PME", converter=_allow_only(["Coulomb", "PME", "reaction-field"])
     )
 
     # TODO: Use _allow_only when ParameterAttribute will support multiple converters (it'll be easy when we switch to use the attrs library)
@@ -3761,9 +3741,6 @@ class ElectrostaticsHandler(_NonbondedHandler):
         match_found : bool
             Whether a match was found. If True, the input molecule will have been modified in-place.
         """
-
-        import simtk.unit
-
         # Check each charge_mol for whether it's isomorphic to the input molecule
         for charge_mol in charge_mols:
             ismorphic, topology_atom_map = Molecule.are_isomorphic(
@@ -3782,7 +3759,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
                 # Set the partial charges
                 # Make a copy of the charge molecule's charges array (this way it's the right shape)
                 temp_mol_charges = copy.deepcopy(
-                    simtk.unit.Quantity(charge_mol.partial_charges)
+                    openmm.unit.Quantity(charge_mol.partial_charges)
                 )
                 for charge_idx, ref_idx in topology_atom_map.items():
                     temp_mol_charges[ref_idx] = charge_mol.partial_charges[charge_idx]
@@ -3853,7 +3830,6 @@ class ElectrostaticsHandler(_NonbondedHandler):
             self.mark_charges_assigned(ref_mol, topology)
 
         # Set the nonbonded method
-        settings_matched = False
         current_nb_method = force.getNonbondedMethod()
 
         # First, check whether the vdWHandler set the nonbonded method to LJPME, because that means
@@ -3875,7 +3851,6 @@ class ElectrostaticsHandler(_NonbondedHandler):
             if topology.box_vectors is None:
                 assert current_nb_method == openmm.NonbondedForce.NoCutoff
                 force.setCutoffDistance(self.cutoff)
-                settings_matched = True
                 # raise IncompatibleParameterError("Electrostatics handler received PME method keyword, but a nonperiodic"
                 #                                  " topology. Use of PME electrostatics requires a periodic topology.")
             else:
@@ -3884,17 +3859,14 @@ class ElectrostaticsHandler(_NonbondedHandler):
                     # There's no need to check for matching cutoff/tolerance here since both are hard-coded defaults
                 else:
                     force.setNonbondedMethod(openmm.NonbondedForce.PME)
-                    force.setCutoffDistance(9.0 * unit.angstrom)
+                    force.setCutoffDistance(self.cutoff)
                     force.setEwaldErrorTolerance(1.0e-4)
-
-            settings_matched = True
 
         # If vdWHandler set the nonbonded method to NoCutoff, then we don't need to change anything
         elif self.method == "Coulomb":
             if topology.box_vectors is None:
                 # (vdWHandler will have already set this to NoCutoff)
                 assert current_nb_method == openmm.NonbondedForce.NoCutoff
-                settings_matched = True
             else:
                 raise IncompatibleParameterError(
                     "Electrostatics method set to Coulomb, and topology is periodic. "
@@ -3906,26 +3878,15 @@ class ElectrostaticsHandler(_NonbondedHandler):
         # If the vdWHandler set the nonbonded method to PME, then ensure that it has the same cutoff
         elif self.method == "reaction-field":
             if topology.box_vectors is None:
-                # (vdWHandler will have already set this to NoCutoff)
-                assert current_nb_method == openmm.NonbondedForce.NoCutoff
-                settings_matched = True
-            else:
-                raise IncompatibleParameterError(
-                    "Electrostatics method set to reaction-field. In the future, "
-                    "this will lead to use of OpenMM's CutoffPeriodic or CutoffNonPeriodic"
-                    " Nonbonded force method, however this is not supported in the "
-                    "current Open Force Field Toolkit"
+                raise SMIRNOFFSpecError(
+                    "Electrostatics method reaction-field can only be applied to a periodic system."
                 )
 
-        if not settings_matched:
-            raise IncompatibleParameterError(
-                "Unable to support provided vdW method, electrostatics "
-                "method ({}), and topology periodicity ({}) selections. Additional "
-                "options for nonbonded treatment may be added in future versions "
-                "of the Open Force Field Toolkit.".format(
-                    self.method, topology.box_vectors is not None
+            else:
+                raise SMIRNOFFSpecUnimplementedError(
+                    "Electrostatics method reaction-field is supported in the SMIRNOFF specification "
+                    "but not yet implemented in the OpenFF Toolkit."
                 )
-            )
 
     def postprocess_system(self, system, topology, **kwargs):
         force = super().create_force(system, topology, **kwargs)
@@ -3998,11 +3959,24 @@ class LibraryChargeHandler(_NonbondedHandler):
                     f"tagged atoms and charges"
                 )
 
+        @classmethod
+        def from_molecule(cls, molecule):
+            """Construct a LibraryChargeType from a molecule with existing partial charges."""
+            if molecule.partial_charges is None:
+                raise ValueError("Input molecule is missing partial charges.")
+
+            smirks = molecule.to_smiles(mapped=True)
+            charges = molecule.partial_charges
+
+            library_charge_type = cls(smirks=smirks, charge=charges)
+
+            return library_charge_type
+
     _TAGNAME = "LibraryCharges"  # SMIRNOFF tag name to process
     _INFOTYPE = LibraryChargeType  # info type to store
     _DEPENDENCIES = [vdWHandler, ElectrostaticsHandler]
 
-    def find_matches(self, entity):
+    def find_matches(self, entity, unique=True):
         """Find the elements of the topology/molecule matched by a parameter type.
 
         Parameters
@@ -4019,7 +3993,11 @@ class LibraryChargeHandler(_NonbondedHandler):
 
         # TODO: Right now, this method is only ever called with an entity that is a Topology.
         #  Should we reduce its scope and have a check here to make sure entity is a Topology?
-        return self._find_matches(entity, transformed_dict_cls=dict)
+        return self._find_matches(
+            entity,
+            transformed_dict_cls=dict,
+            unique=unique,
+        )
 
     def create_force(self, system, topology, **kwargs):
         force = super().create_force(system, topology, **kwargs)
@@ -4283,7 +4261,7 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
             identical_attrs=string_attrs_to_compare + int_attrs_to_compare,
         )
 
-    def find_matches(self, entity):
+    def find_matches(self, entity, unique=False):
         """Find the elements of the topology/molecule matched by a parameter type.
 
         Parameters
@@ -4297,10 +4275,9 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
             ``matches[particle_indices]`` is the ``ParameterType`` object
             matching the tuple of particle indices in ``entity``.
         """
-        # Using SortedDict here leads to the desired deduplication behavior, BUT it mangles the order
-        # of the atom indices in the keys. Thankfully, the Match objects that are values in `matches` contain
-        # `match.environment_match.topology_atom_indices`, which has the tuple in the correct order
-        matches = self._find_matches(entity, transformed_dict_cls=SortedDict)
+        matches = self._find_matches(
+            entity, transformed_dict_cls=TagSortedDict, unique=unique
+        )
         return matches
 
     def create_force(self, system, topology, **kwargs):
@@ -4603,9 +4580,9 @@ class GBSAHandler(ParameterHandler):
             # WARNING: The lines below aren't equivalent. The NonbondedForce and
             # CustomGBForce NonbondedMethod enums have different meanings.
             # More details:
-            # http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.NonbondedForce.html
-            # http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.GBSAOBCForce.html
-            # http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.CustomGBForce.html
+            # http://docs.openmm.org/latest/api-python/generated/openmm.openmm.NonbondedForce.html
+            # http://docs.openmm.org/latest/api-python/generated/openmm.openmm.GBSAOBCForce.html
+            # http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomGBForce.html
 
             # gbsa_force.setNonbondedMethod(simtk.openmm.NonbondedForce.CutoffPeriodic)
             gbsa_force.setNonbondedMethod(simtk.openmm.CustomGBForce.CutoffPeriodic)
@@ -4899,16 +4876,16 @@ class VirtualSiteHandler(_NonbondedHandler):
         None
         """
 
-        if vsite_name in self._virtual_site_types and replace == False:
+        if vsite_name in self._virtual_site_types and not replace:
             raise DuplicateVirtualSiteTypeException(
                 "VirtualSite type {} already registered for handler {} and replace=False".format(
                     vsite_name, self.__class__
                 )
             )
         self._virtual_site_types[vsite_name] = vsite_cls
-        self._parameters = [
-            param for param in self._parameters if param.type != vsite_name
-        ]
+        self._parameters = ParameterList(
+            [param for param in self._parameters if param.type != vsite_name]
+        )
 
     @property
     def virtual_site_types(self):
@@ -4964,7 +4941,7 @@ class VirtualSiteHandler(_NonbondedHandler):
         else:
 
             raise SMIRNOFFSpecError(
-                'VirtualSiteHander exclusion policy not understood. Set "exclusion_policy" to one of {}'.format(
+                'VirtualSiteHandler exclusion policy not understood. Set "exclusion_policy" to one of {}'.format(
                     _exclusion_policies_implemented
                 )
             )
@@ -4985,7 +4962,8 @@ class VirtualSiteHandler(_NonbondedHandler):
         # using this generic selector as a type
         _ELEMENT_NAME = "VirtualSite"
 
-        _enable_types = {}
+        # TODO: This is never used - remove?
+        _enable_types = {}  # type: ignore
 
         def __new__(cls, **attrs):
 
@@ -5032,13 +5010,13 @@ class VirtualSiteHandler(_NonbondedHandler):
 
         # Here we define the default sorting behavior if we need to sort the
         # atom key into a canonical ordering
-        transformed_dict_cls = ValenceDict
+        transformed_dict_cls: Union[Type[ValenceDict], Type[ImproperDict]] = ValenceDict
 
         # Value of None indicates "not a valid type" or "not an actual implemented type".
         # To enable/register a new virtual site type, make a subclass and set its
         # _vsite_type to what would need to be provided in the OFFXML "type" attr,
         # e.g. type="BondCharge" would mean _vsite_type="BondCharge"
-        _vsite_type = None
+        _vsite_type: Optional[str] = None
 
         @classmethod
         def vsite_type(cls):
@@ -5194,8 +5172,7 @@ class VirtualSiteHandler(_NonbondedHandler):
             # has the match setting, which ultimately decides which orientations
             # to include.
             if self.match == "once":
-                key = self.transformed_dict_cls.key_transform(orientations[0])
-                orientations = [key]
+                orientations = [orientations[0]]
                 # else all matches wanted, so keep whatever was matched.
 
             base_args = {
@@ -5396,7 +5373,7 @@ class VirtualSiteHandler(_NonbondedHandler):
     def _find_matches(
         self,
         entity,
-        transformed_dict_cls=ValenceDict,
+        transformed_dict_cls=UnsortedDict,
         use_named_slots=False,
         expand_permutations=False,
     ):
@@ -5577,7 +5554,7 @@ class VirtualSiteHandler(_NonbondedHandler):
         # somewhere else
 
         logger.debug("Creating OpenFF virtual site representations...")
-        topology = self._create_openff_virtual_sites(topology)
+        self.create_openff_virtual_sites(topology)
 
         # The toolkit now has a representation of the vsites in the topology,
         # and here we create the OpenMM parameters/objects/exclusions
@@ -5609,7 +5586,7 @@ class VirtualSiteHandler(_NonbondedHandler):
             other_handler, identical_attrs=string_attrs_to_compare
         )
 
-    def find_matches(self, entity, expand_permutations=True):
+    def find_matches(self, entity, expand_permutations=True, unique=False):
         """Find the virtual sites in the topology/molecule matched by a
         parameter type.
 
@@ -5625,9 +5602,13 @@ class VirtualSiteHandler(_NonbondedHandler):
             matching the n-tuple of atom indices in ``entity``.
 
         """
+        if unique:
+            raise NotImplementedError(
+                "`unique=True` not implemented in VirtualSiteHandler"
+            )
         return self._find_matches(
             entity,
-            transformed_dict_cls=dict,
+            transformed_dict_cls=UnsortedDict,
             use_named_slots=True,
             expand_permutations=expand_permutations,
         )
@@ -5705,7 +5686,15 @@ class VirtualSiteHandler(_NonbondedHandler):
 
         return combined_orientations
 
-    def _create_openff_virtual_sites(self, topology):
+    def create_openff_virtual_sites(self, topology):
+        """
+        Modifies the input topology to contain VirtualSites assigned by this handler.
+
+        Parameters
+        ----------
+        topology : openff.toolkit.topology.Topology
+            Topology to add virtual sites to.
+        """
 
         for molecule in topology.reference_molecules:
 
@@ -5715,7 +5704,7 @@ class VirtualSiteHandler(_NonbondedHandler):
             FrozenMolecules. However, the signature is different, as they return
             different results.
 
-            Also, we are using a topology to retreive the indices for the
+            Also, we are using a topology to retrieve the indices for the
             matches, but then using those indices as a direct `Atom` object
             lookup in the molecule. This is unsafe because there is no reason to
             believe that the indices should be consistent. However, there is
@@ -5734,8 +5723,6 @@ class VirtualSiteHandler(_NonbondedHandler):
             # for the virtual site to represent multiple particles
             for vsite_type, orientations in virtual_sites:
                 vsite_type.add_virtual_site(molecule, orientations, replace=True)
-
-        return topology
 
     def _create_openmm_virtual_sites(self, system, force, topology, ref_mol):
 

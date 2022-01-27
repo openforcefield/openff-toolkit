@@ -11,47 +11,63 @@ on:
 
 jobs:
   test:
-    name: Test on ${{ matrix.cfg.os }}, Python ${{ matrix.python-version }}, OpenEye=${{ matrix.openeye }}
-    runs-on: ${{ matrix.cfg.os }}
+    name: Test on ${{ matrix.os }}, Python ${{ matrix.cfg.python-version }}, OpenEye=${{ matrix.cfg.openeye }}
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        python-version:
-          - 3.6
-          - 3.7
-        openeye:
-          - "true"
-          - "false"
-        cfg:
-          - os: ubuntu-latest
-          - os: macOS-latest
+        os:
+          - ubuntu-latest
+          - macos-latest
+        cfg:            
+          - python-version: 3.7
+            openeye: "true"
+
+          - python-version: 3.7
+            openeye: "false"
+
+          - python-version: 3.8
+            openeye: "true"
+
+          - python-version: 3.8
+            openeye: "false"
+
+            # Add a 3.9 + OE build when OETK are released on 3.9
+          - python-version: 3.9
+            openeye: "false"
 
     env:
-      CI_OS: ${{ matrix.cfg.os }}
-      OPENEYE: ${{ matrix.openeye }}
-      PYVER: ${{ matrix.python-version }}
+      CI_OS: ${{ matrix.os }}
+      OPENEYE: ${{ matrix.cfg.openeye }}
+      PYVER: ${{ matrix.cfg.python-version }}
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
       PACKAGE: openff-toolkit
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v2.4.0
 
-      - uses: conda-incubator/setup-miniconda@v2
+      - uses: conda-incubator/setup-miniconda@v2.1.1
         name: Vanilla install from conda
-        if: ${{ matrix.openeye == 'false' }}
+        if: ${{ matrix.cfg.openeye == 'false' }}
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: ${{ matrix.cfg.python-version }}
           activate-environment: test
           environment-file: devtools/conda-envs/conda.yaml
           auto-activate-base: false
-      - uses: conda-incubator/setup-miniconda@v2
+          miniforge-version: latest
+          miniforge-variant: Mambaforge
+          use-mamba: true
+      - uses: conda-incubator/setup-miniconda@v2.1.1
         name: Install from conda with OpenEye
-        if: ${{ matrix.openeye == 'true' }}
+        if: ${{ matrix.cfg.openeye == 'true' }}
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: ${{ matrix.cfg.python-version }}
           activate-environment: test
           environment-file: devtools/conda-envs/conda_oe.yaml
           auto-activate-base: false
+          miniforge-version: latest
+          miniforge-variant: Mambaforge
+          use-mamba: true
 
       - name: Additional info about the build
         shell: bash -l {0}
@@ -92,7 +108,7 @@ jobs:
           # Go up one directory to ensure that we don't just load the OFFTK from the checked-out repo
           cd ../
 
-          export LATEST_TAG=$(git ls-remote --tags https://github.com/openforcefield/openff-toolkit.git | cut -f2 | grep -v "rc" | tail -1 | sed 's/refs\/tags\///')
+          export LATEST_TAG=$(git ls-remote --tags https://github.com/openforcefield/openff-toolkit.git | cut -f2 | grep -E "([0-9]+)\.([0-9]+)\.([0-9]+)$" | sort --version-sort | tail -1 | sed 's/refs\/tags\///')
           export FOUND_VER=$(python -c "import openff.toolkit; print(openff.toolkit.__version__)")
 
           echo "Latest tag is"
@@ -110,11 +126,16 @@ jobs:
       - name: Test the package
         shell: bash -l {0}
         run: |
-          export LATEST_TAG=$(git ls-remote --tags https://github.com/openforcefield/openff-toolkit.git | cut -f2 | grep -v "rc" | tail -1 | sed 's/refs\/tags\///')
           # Checkout the state of the repo as of the last release
+          export LATEST_TAG=$(git ls-remote --tags https://github.com/openforcefield/openff-toolkit.git | cut -f2 | grep -E "([0-9]+)\.([0-9]+)\.([0-9]+)$" | sort --version-sort | tail -1 | sed 's/refs\/tags\///')
           git fetch --tags
           git checkout tags/$LATEST_TAG
           git log -1 | cat
+          
+          # Install test plugins
+          cd utilities/test_plugins
+          python setup.py develop --no-deps
+          cd -
 
           pwd
           ls
@@ -124,9 +145,6 @@ jobs:
             python -c "import openeye; print(openeye.oechem.OEChemIsLicensed())"
           fi
 
-          PYTEST_ARGS=" -r fE --tb=short --runslow"
-          PYTEST_ARGS+=" --ignore=openff/toolkit/tests/test_links.py"
-          pytest $PYTEST_ARGS openff
-          PYTEST_ARGS=" -r fE --tb=short"
+          PYTEST_ARGS=" -r fE --tb=short --runslow openff/toolkit/tests/conftest.py"
           PYTEST_ARGS+=" --ignore=openff/toolkit/tests/test_links.py"
           pytest $PYTEST_ARGS openff

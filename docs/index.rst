@@ -3,28 +3,34 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
+.. _openff-toolkit-index:
+
 Open Force Field Toolkit
 ========================
 
 A modern, extensible library for molecular mechanics force field science from the `Open Force Field Initiative <http://openforcefield.org>`_
 
-User Guide
-----------
-
 .. toctree::
+   :caption: Getting started
    :maxdepth: 1
 
    installation
-   releasehistory
-   smirnoff
    examples
-   developing
+   releasehistory
    faq
 
-API documentation
------------------
+.. toctree::
+   :caption: Using the toolkit
+   :maxdepth: 1
+
+   users/concepts
+   users/molecule_cookbook
+   users/smirnoff
+   users/virtualsites
+   users/developing
 
 .. toctree::
+  :caption: API documentation
   :maxdepth: 1
 
   topology

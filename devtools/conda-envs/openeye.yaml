@@ -11,12 +11,13 @@ dependencies:
     # Testing
   - pytest
   - pytest-cov
+  - pytest-rerunfailures
   - nbval
   - codecov
   - coverage
   - numpy
   - networkx
-  - ambertools
+  - parmed
   - openeye-toolkits
   - packaging
     # Removed until a new release which targets openff-toolkit is made.
@@ -33,3 +34,4 @@ dependencies:
   - qcportal
   - qcengine
   - mdtraj
+  - openff-interchange

@@ -9,10 +9,6 @@ Utilities for testing.
 
 """
 
-# =============================================================================================
-# GLOBAL IMPORTS
-# =============================================================================================
-
 import collections
 import copy
 import functools
@@ -25,7 +21,12 @@ from typing import List, Tuple
 
 import numpy as np
 import pytest
-from simtk import openmm, unit
+
+try:
+    import openmm
+    from openmm import unit
+except ImportError:
+    from simtk import openmm, unit
 
 from openff.toolkit.utils import (
     AmberToolsToolkitWrapper,
@@ -47,7 +48,8 @@ requires_openeye = pytest.mark.skipif(
     reason="Test requires OE toolkit",
 )
 requires_openeye_mol2 = pytest.mark.skipif(
-    requires_openeye.args, reason="Test requires OE toolkit to read mol2 files"
+    not OpenEyeToolkitWrapper.is_available(),
+    reason="Test requires OE toolkit to read mol2 files",
 )
 
 
@@ -307,15 +309,15 @@ def create_system_from_amber(prmtop_file_path, inpcrd_file_path, *args, **kwargs
         Path to the coordinates file in AMBER inpcrd or rst7 format.
     *args
     **kwargs
-        Other parameters to pass to ``simtk.openmm.app.AmberPrmtopFile.createSystem``.
+        Other parameters to pass to ``openmm.app.AmberPrmtopFile.createSystem``.
 
     Returns
     -------
-    system : simtk.openmm.System
+    system : openmm.System
         The OpenMM ``System`` object with the parameters.
-    topology : simtk.openmm.app.Topology
+    topology : openmm.app.Topology
         The OpenMM ``Topology`` object loaded from the AMBER files.
-    positions : simtk.unit.Quantity
+    positions : openmm.unit.Quantity
         Initial positions loaded from the inpcrd or restart file.
 
     """
@@ -344,9 +346,9 @@ def quantities_allclose(quantity1, quantity2, **kwargs):
 
     Parameters
     ----------
-    quantity1 : simtk.unit.Quantity
+    quantity1 : openmm.unit.Quantity
         The first unit to compare.
-    quantity2 : simtk.unit.Quantity
+    quantity2 : openmm.unit.Quantity
         The second unit to compare.
     **kwargs
         Other parameters passed to ``numpy.allclose()``.
@@ -380,11 +382,11 @@ def get_context_potential_energy(
 
     Parameters
     ----------
-    context : simtk.openmm.Context
+    context : openmm.Context
         The Context object containing the system.
-    positions : simtk.unit.Quantity
+    positions : openmm.unit.Quantity
         A n_atoms x 3 arrays of coordinates with units of length.
-    box_vectors : simtk.unit.Quantity, optional
+    box_vectors : openmm.unit.Quantity, optional
         If specified, this should be a 3 x 3 array. Each row should
         be a box vector.
     by_force_group : bool, optional
@@ -393,7 +395,7 @@ def get_context_potential_energy(
 
     Returns
     -------
-    potential_energy : simtk.unit.Quantity or Dict[type, Quantity]
+    potential_energy : openmm.unit.Quantity or Dict[type, Quantity]
         The potential energy of the system at the given coordinates.
         If ``by_force_group`` is True, then this is a dictionary
         mapping force groups to their potential energy.
@@ -443,17 +445,17 @@ def compare_context_energies(
 
     Parameters
     ----------
-    context1 : simtk.openmm.Context
+    context1 : openmm.Context
         The first Context object to compare containing the system.
-    context2 : simtk.openmm.Context
+    context2 : openmm.Context
         The second Context object to compare containing the system.
-    positions : simtk.unit.Quantity
+    positions : openmm.unit.Quantity
         A n_atoms x 3 arrays of coordinates with units of length.
     rtol : float, optional, default=1e-5
         The relative tolerance parameter used for the energy comparisons.
     atol : float, optional, default=1e-8
         The absolute tolerance parameter used for the energy comparisons.
-    box_vectors : simtk.unit.Quantity, optional
+    box_vectors : openmm.unit.Quantity, optional
         If specified, this should be a 3 x 3 array. Each row should
         be a box vector.
     by_force_group : bool, optional
@@ -462,11 +464,11 @@ def compare_context_energies(
 
     Returns
     -------
-    potential_energy1 : simtk.unit.Quantity or Dict[int, Quantity]
+    potential_energy1 : openmm.unit.Quantity or Dict[int, Quantity]
         The potential energy of context1 at the given coordinates.
         If ``by_force_group`` is True, then this is a dictionary
         mapping force groups to their potential energy.
-    potential_energy2 : simtk.unit.Quantity or Dict[int, Quantity]
+    potential_energy2 : openmm.unit.Quantity or Dict[int, Quantity]
         The potential energy of context2 at the given coordinates.
         If ``by_force_group`` is True, then this is a dictionary
         mapping force groups to their potential energy.
@@ -537,13 +539,13 @@ def compare_system_energies(
 
     Parameters
     ----------
-    system1 : simtk.openmm.System
+    system1 : openmm.System
         The first Context object to compare containing the system.
-    system2 : simtk.openmm.System
+    system2 : openmm.System
         The second Context object to compare containing the system.
-    positions : simtk.unit.Quantity
+    positions : openmm.unit.Quantity
         A n_atoms x 3 arrays of coordinates with units of length.
-    box_vectors : simtk.unit.Quantity, optional
+    box_vectors : openmm.unit.Quantity, optional
         If specified, this should be a 3 x 3 array. Each row should
         be a box vector.
     by_force_type : bool, optional
@@ -566,11 +568,11 @@ def compare_system_energies(
 
     Returns
     -------
-    potential_energy1 : simtk.unit.Quantity or Dict[str, Quantity]
+    potential_energy1 : openmm.unit.Quantity or Dict[str, Quantity]
         The potential energy of context1 at the given coordinates.
         If ``by_force_type`` is True, then this is a dictionary
         mapping force names to their potential energy.
-    potential_energy2 : simtk.unit.Quantity or Dict[str, Quantity]
+    potential_energy2 : openmm.unit.Quantity or Dict[str, Quantity]
         The potential energy of context2 at the given coordinates.
         If ``by_force_type`` is True, then this is a dictionary
         mapping force names to their potential energy.
@@ -714,7 +716,7 @@ class _ParametersComparer:
     Examples
     --------
     >>> import copy
-    >>> from simtk import unit
+    >>> from openmm import unit
     >>> par1 = _ParametersComparer(charge=1.0*unit.elementary_charge,
     ...                            rmin_half=1.5*unit.angstrom)
     >>> par2 = copy.deepcopy(par1)
@@ -814,7 +816,7 @@ class _TorsionParametersComparer:
 
     Examples
     --------
-    >>> from simtk import unit
+    >>> from openmm import unit
     >>> par1 = _ParametersComparer(periodicity=2, phase=0.0*unit.degrees)
     >>> par2 = _ParametersComparer(periodicity=4, phase=180.0*unit.degrees)
     >>> torsion_par = _TorsionParametersComparer(par1, par2)
@@ -1009,7 +1011,7 @@ def _get_force_parameters(force, system, ignored_parameters):
     ----------
     force
         The OpenMM Force object.
-    system : simtk.openmm.System
+    system : openmm.System
         The System to which this force belongs to.
     ignored_parameters : Iterable[str]
         The parameters to ignore in the comparison.
@@ -1173,7 +1175,7 @@ def _get_torsion_force_parameters(force, system, ignored_parameters):
         torsion_key = [atom1, atom2, atom3, atom4]
         if len(set(torsion_key)) != 4:
             raise ValueError(
-                "Torsion {} is defined on less than 4 atoms: {}".format(torsion_key)
+                f"Torsion {torsion_idx} is defined on less than 4 atoms: {torsion_key}"
             )
 
         # Check if this is proper or not.
@@ -1215,7 +1217,7 @@ def _find_all_bonds(system):
 
     Parameters
     ----------
-    system : simtk.openmm.System
+    system : openmm.System
         A System object containing a HarmonicBondForce from which the
         bonds are inferred.
 
@@ -1324,9 +1326,9 @@ def compare_system_parameters(
 
     Parameters
     ----------
-    system1 : simtk.openmm.System
+    system1 : openmm.System
         The first system to compare.
-    system2 : simtk.openmm.System
+    system2 : openmm.System
         The second system to compare.
     systems_labels : Tuple[str], optional
         A pair of strings with a meaningful name for the system. If
@@ -1455,7 +1457,7 @@ def compare_amber_smirnoff(
 
     Returns
     -------
-    energies : Dict[str, Dict[str, simtk.unit.Quantity]] or None
+    energies : Dict[str, Dict[str, openmm.unit.Quantity]] or None
         If ``check_energies`` is ``False``, nothing is returned. Otherwise,
         this is a dictionary with two keys: 'AMBER' and 'SMIRNOFF', each
         pointing to another dictionary mapping forces to their total
@@ -1689,7 +1691,7 @@ def coords_from_off_mols(mols, conformer_id=0, unit=unit.angstrom):
         The system/list of molecules
     conformer_id : int, default=0
         The conformer to use for retreiving the coordinates from each molcule
-    unit : simtk.unit, default=unit.angstrom
+    unit : openmm.unit, default=unit.angstrom
         The units to convert the coordinates to
     """
     xyz = np.vstack([mol.conformers[conformer_id].value_in_unit(unit) for mol in mols])
@@ -1806,14 +1808,32 @@ def get_14_scaling_factors(omm_sys: openmm.System) -> Tuple[List, List]:
         i, j, q, sig, eps = nonbond_force.getExceptionParameters(exception_idx)
 
         # Trust that q == 0 covers the cases of 1-2, 1-3, and truly being 0
-        if q / unit.elementary_charge ** 2 != 0:
+        if q.value_in_unit(unit.elementary_charge ** 2) != 0:
             q_i = nonbond_force.getParticleParameters(i)[0]
             q_j = nonbond_force.getParticleParameters(j)[0]
             coul_14.append(q / (q_i * q_j))
 
-        if eps / unit.kilojoule_per_mole != 0:
+        if eps.value_in_unit(unit.kilojoule_per_mole) != 0:
             eps_i = nonbond_force.getParticleParameters(i)[2]
             eps_j = nonbond_force.getParticleParameters(j)[2]
             vdw_14.append(eps / (eps_i * eps_j) ** 0.5)
 
     return coul_14, vdw_14
+
+
+def compare_partial_charges(system1, system2):
+    assert (
+        system1.getNumParticles() == system2.getNumParticles()
+    ), "Systems do not have the same number of particles"
+
+    n_particles = system1.getNumParticles()
+
+    for force1 in system1.getForces():
+        if type(force1) == openmm.NonbondedForce:
+            charges1 = [force1.getParticleParameters(i)[0] for i in range(n_particles)]
+
+    for force2 in system2.getForces():
+        if type(force2) == openmm.NonbondedForce:
+            charges2 = [force2.getParticleParameters(i)[0] for i in range(n_particles)]
+
+    assert charges1 == charges2, [(x - y) for x, y in zip(charges1, charges2)]

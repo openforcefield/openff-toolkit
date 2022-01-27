@@ -22,34 +22,44 @@ __all__ = [
     "ParameterHandlerRegistrationError",
     "SMIRNOFFVersionError",
     "SMIRNOFFAromaticityError",
-    "ParseError",
+    "SMIRNOFFParseError",
+    "PartialChargeVirtualSitesError",
     "ForceField",
 ]
-
-
-# =============================================================================================
-# GLOBAL IMPORTS
-# =============================================================================================
 
 import copy
 import logging
 import os
 import pathlib
 from collections import OrderedDict
+from typing import List
 
-from simtk import openmm
+try:
+    import openmm
+except ImportError:
+    from simtk import openmm
 
 from openff.toolkit.topology.molecule import DEFAULT_AROMATICITY_MODEL
 from openff.toolkit.typing.engines.smirnoff.io import ParameterIOHandler
-from openff.toolkit.typing.engines.smirnoff.parameters import ParameterHandler
+from openff.toolkit.typing.engines.smirnoff.parameters import (
+    IncompatibleParameterError,
+    ParameterHandler,
+)
 from openff.toolkit.typing.engines.smirnoff.plugins import load_handler_plugins
+from openff.toolkit.utils.exceptions import (
+    ParameterHandlerRegistrationError,
+    PartialChargeVirtualSitesError,
+    SMIRNOFFAromaticityError,
+    SMIRNOFFParseError,
+    SMIRNOFFVersionError,
+)
 from openff.toolkit.utils.utils import (
-    MessageException,
     all_subclasses,
     convert_0_1_smirnoff_to_0_2,
     convert_0_2_smirnoff_to_0_3,
     convert_all_quantities_to_string,
     convert_all_strings_to_quantity,
+    requires_package,
 )
 
 # =============================================================================================
@@ -63,10 +73,10 @@ logger = logging.getLogger(__name__)
 # =============================================================================================
 
 # Directory paths used by ForceField to discover offxml files.
-_installed_offxml_dir_paths = []
+_installed_offxml_dir_paths: List[str] = []
 
 
-def _get_installed_offxml_dir_paths():
+def _get_installed_offxml_dir_paths() -> List[str]:
     """Return the list of directory paths where to search for offxml files.
 
     This function load the information by calling all the entry points
@@ -83,11 +93,11 @@ def _get_installed_offxml_dir_paths():
     """
     global _installed_offxml_dir_paths
     if len(_installed_offxml_dir_paths) == 0:
-        from pkg_resources import iter_entry_points
+        from importlib_metadata import entry_points
 
         # Find all registered entry points that should return a list of
         # paths to directories where to search for offxml files.
-        for entry_point in iter_entry_points(
+        for entry_point in entry_points().select(
             group="openforcefield.smirnoff_forcefield_directory"
         ):
             _installed_offxml_dir_paths.extend(entry_point.load()())
@@ -103,16 +113,16 @@ def get_available_force_fields(full_paths=False):
     ``openff-forcefields`` package is installed, this should include several
     .offxml files such as ``openff-1.0.0.offxml``\ .
 
-     Parameters
-     ----------
-     full_paths : bool, default=False
-         If False, return the name of each available \*.offxml file.
-         If True, return the full path to each available \*.offxml file.
+    Parameters
+    ----------
+    full_paths : bool, default=False
+        If False, return the name of each available \*.offxml file.
+        If True, return the full path to each available \*.offxml file.
 
-     Returns
-     -------
-     available_force_fields : List[str]
-         List of available force field files
+    Returns
+    -------
+    available_force_fields : List[str]
+        List of available force field files
 
     """
     installed_paths = _get_installed_offxml_dir_paths()
@@ -132,38 +142,6 @@ MAX_SUPPORTED_VERSION = (
 )
 
 
-class ParameterHandlerRegistrationError(MessageException):
-    """
-    Exception for errors in ParameterHandler registration
-    """
-
-    pass
-
-
-class SMIRNOFFVersionError(MessageException):
-    """
-    Exception thrown when an incompatible SMIRNOFF version data structure in attempted to be read.
-    """
-
-    pass
-
-
-class SMIRNOFFAromaticityError(MessageException):
-    """
-    Exception thrown when an incompatible SMIRNOFF aromaticity model is checked for compatibility.
-    """
-
-    pass
-
-
-class ParseError(MessageException):
-    """
-    Error for when a SMIRNOFF data structure is not parseable by a ForceField
-    """
-
-    pass
-
-
 # =============================================================================================
 # FORCEFIELD
 # =============================================================================================
@@ -176,7 +154,7 @@ class ParseError(MessageException):
 class ForceField:
     """A factory that assigns SMIRNOFF parameters to a molecular system
 
-    :class:`ForceField` is a factory that constructs an OpenMM :class:`simtk.openmm.System` object from a
+    :class:`ForceField` is a factory that constructs an OpenMM :class:`openmm.System` object from a
     :class:`openff.toolkit.topology.Topology` object defining a (bio)molecular system containing one or more molecules.
 
     When a :class:`ForceField` object is created from one or more specified SMIRNOFF serialized representations,
@@ -189,25 +167,9 @@ class ForceField:
     The force field definition is processed by these handlers to populate the ``ForceField`` object model data
     structures that can easily be manipulated via the API:
 
-    Processing a :class:`Topology` object defining a chemical system will then call all :class`ParameterHandler`
+    Processing a :class:`Topology` object defining a chemical system will then call all :class:`ParameterHandler`
     objects in an order guaranteed to satisfy the declared processing order constraints of each
-    :class`ParameterHandler`.
-
-    Attributes
-    ----------
-    parameters : dict of str : list of ParameterType
-        ``parameters[tagname]`` is the instantiated :class:`ParameterHandler` class that handles parameters associated
-        with the force ``tagname``.
-        This is the primary means of retrieving and modifying parameters, such as
-        ``parameters['vdW'][0].sigma *= 1.1``
-    parameter_object_handlers : dict of str : ParameterHandler class
-        Registered list of :class:`ParameterHandler` classes that will handle different force field tags to create the parameter object model.
-        ``parameter_object_handlers[tagname]`` is the :class:`ParameterHandler` that will be instantiated to process the force field definition section ``tagname``.
-        :class:`ParameterHandler` classes are registered when the ForceField object is created, but can be manipulated afterwards.
-    parameter_io_handlers : dict of str : ParameterIOHandler class
-        Registered list of :class:`ParameterIOHandler` classes that will handle serializing/deserializing the parameter object model to string or file representations, such as XML.
-        ``parameter_io_handlers[iotype]`` is the :class:`ParameterHandler` that will be instantiated to process the serialization scheme ``iotype``.
-        :class:`ParameterIOHandler` classes are registered when the ForceField object is created, but can be manipulated afterwards.
+    :class:`ParameterHandler`.
 
     Examples
     --------
@@ -280,7 +242,7 @@ class ForceField:
         ----------
         sources : string or file-like object or open file handle or URL (or iterable of these)
             A list of files defining the SMIRNOFF force field to be loaded.
-            Currently, only `the SMIRNOFF XML format <https://github.com/openforcefield/openff-toolkit/blob/master/The-SMIRNOFF-force-field-format.md>`_ is supported.
+            Currently, only `the SMIRNOFF XML format <https://openforcefield.github.io/standards/standards/smirnoff/>`_ is supported.
             Each entry may be an absolute file path, a path relative to the current working directory, a path relative to this module's data subdirectory
             (for built in force fields), or an open file-like object with a ``read()`` method from which the force field XML data can be loaded.
             If multiple files are specified, any top-level tags that are repeated will be merged if they are compatible,
@@ -312,7 +274,7 @@ class ForceField:
 
         Load multiple SMIRNOFF parameter sets:
 
-        forcefield = ForceField('test_forcefields/test_forcefield.offxml', 'test_forcefields/tip3p.offxml')
+        >>> forcefield = ForceField('test_forcefields/test_forcefield.offxml', 'test_forcefields/tip3p.offxml')
 
         Load a parameter set from a string:
 
@@ -392,7 +354,8 @@ class ForceField:
 
         Raises
         ------
-        SMIRNOFFVersionError if an incompatible version is passed in.
+        SMIRNOFFVersionError
+            If an incompatible version is passed in.
 
         """
         import packaging.version
@@ -441,9 +404,11 @@ class ForceField:
 
         Raises
         ------
-        SMIRNOFFAromaticityError if an incompatible aromaticity model is passed in.
+        SMIRNOFFAromaticityError
+            If an incompatible aromaticity model is passed in.
 
-        .. notes ::
+        Notes
+        -----
            * Currently, the only supported aromaticity model is 'OEAroModel_MDL'.
 
         """
@@ -569,7 +534,8 @@ class ForceField:
 
         Raises
         ------
-        Exception if two ParameterIOHandlers are attempted to be registered for the same file format.
+        Exception
+            If two ParameterIOHandlers are attempted to be registered for the same file format.
 
         """
         for parameter_io_handler_class in parameter_io_handler_classes:
@@ -767,7 +733,8 @@ class ForceField:
 
         Raises
         ------
-        KeyError if there is no ParameterHandler for the given tagname
+        KeyError
+            If there is no ParameterHandler for the given tagname
         """
         # If there are no kwargs for the handler, initialize handler_kwargs as an empty dict
         skip_version_check = False
@@ -819,7 +786,8 @@ class ForceField:
 
         Raises
         ------
-        KeyError if there is no ParameterIOHandler for the given tagname
+        KeyError
+            If there is no ParameterIOHandler for the given tagname
         """
         # Uppercase the format string to avoid case mismatches
         io_format = io_format.upper()
@@ -874,7 +842,7 @@ class ForceField:
         ----------
         sources : string or file-like object or open file handle or URL (or iterable of these)
             A list of files defining the SMIRNOFF force field to be loaded.
-            Currently, only `the SMIRNOFF XML format <https://github.com/openforcefield/openff-toolkit/blob/master/The-SMIRNOFF-force-field-format.md>`_ is supported.
+            Currently, only `the SMIRNOFF XML format <https://openforcefield.github.io/standards/standards/smirnoff/>`_ is supported.
             Each entry may be an absolute file path, a path relative to the current working directory, a path relative to this module's data subdirectory
             (for built in force fields), or an open file-like object with a ``read()`` method from which the force field XML data can be loaded.
             If multiple files are specified, any top-level tags that are repeated will be merged if they are compatible,
@@ -883,7 +851,9 @@ class ForceField:
         allow_cosmetic_attributes : bool, optional. Default = False
             Whether to permit non-spec kwargs present in the source.
 
-        .. notes ::
+        Notes
+        -----
+
            * New SMIRNOFF sections are handled independently, as if they were specified in the same file.
            * If a SMIRNOFF section that has already been read appears again, its definitions are appended to the end of the previously-read
              definitions if the sections are configured with compatible attributes; otherwise, an ``IncompatibleTagException`` is raised.
@@ -964,7 +934,9 @@ class ForceField:
         elif "SMIRFF" in smirnoff_data:
             version = smirnoff_data["SMIRFF"]["version"]
         else:
-            raise ParseError("'version' attribute must be specified in SMIRNOFF tag")
+            raise SMIRNOFFParseError(
+                "'version' attribute must be specified in SMIRNOFF tag"
+            )
 
         self._check_smirnoff_version_compatibility(str(version))
         # Convert 0.1 spec files to 0.3 SMIRNOFF data format by converting
@@ -981,7 +953,7 @@ class ForceField:
 
         # Ensure that SMIRNOFF is a top-level key of the dict
         if not ("SMIRNOFF" in smirnoff_data):
-            raise ParseError(
+            raise SMIRNOFFParseError(
                 "'SMIRNOFF' must be a top-level key in the SMIRNOFF object model"
             )
 
@@ -992,7 +964,7 @@ class ForceField:
             self.aromaticity_model = aromaticity_model
 
         elif self._aromaticity_model is None:
-            raise ParseError(
+            raise SMIRNOFFParseError(
                 "'aromaticity_model' attribute must be specified in SMIRNOFF "
                 "tag, or contained in a previously-loaded SMIRNOFF data source"
             )
@@ -1066,11 +1038,10 @@ class ForceField:
 
         Parameters
         ----------
-        source : str or bytes
-            sources : string or file-like object or open file handle or URL (or iterable of these)
-            A list of files defining the SMIRNOFF force field to be loaded
-            Currently, only `the SMIRNOFF XML format <https://github.com/openforcefield/openff-toolkit/blob/master/The-SMIRNOFF-force-field-format.md>`_ is supported.
-            Each entry may be an absolute file path, a path relative to the current working directory, a path relative to this module's data subdirectory
+        source : str or bytes or file-like object
+            File defining the SMIRNOFF force field to be loaded
+            Currently, only `the SMIRNOFF XML format <https://openforcefield.github.io/standards/standards/smirnoff/>`_ is supported.
+            The file may be an absolute file path, a path relative to the current working directory, a path relative to this module's data subdirectory
             (for built in force fields), or an open file-like object with a ``read()`` method from which the force field XML data can be loaded.
 
         Returns
@@ -1091,13 +1062,14 @@ class ForceField:
             # Finally, search in openff/toolkit/data/.
             # TODO: Remove this when smirnoff99Frosst 1.0.9 will be released.
             searched_dirs_paths.append(get_data_file_path(""))
+            searched_dirs_paths.append(get_data_file_path("test_forcefields"))
+            searched_dirs_paths.append(get_data_file_path("test_forcefields/old"))
 
             # Determine the actual path of the file.
             # TODO: What is desired toolkit behavior if two files with the desired name are available?
-            dir_paths = [pathlib.Path(path) for path in searched_dirs_paths]
-            for dir_path in dir_paths:
-                for file_path in dir_path.glob("**/*.offxml"):
-                    # Cannot compare filenames alone, source can be test_forcefield/...
+            for dir_path in searched_dirs_paths:
+                dir_path = pathlib.Path(dir_path)
+                for file_path in dir_path.glob("*.offxml"):
                     if str(file_path).lower().endswith(source.lower()):
                         source = str(file_path.absolute())
                         break
@@ -1114,15 +1086,15 @@ class ForceField:
             try:
                 smirnoff_data = parameter_io_handler.parse_file(source)
                 return smirnoff_data
-            except ParseError as e:
+            except SMIRNOFFParseError as e:
                 exception_msg = e.msg
             except (FileNotFoundError, OSError):
                 # If this is not a file path or a file handle, attempt parsing as a string.
                 try:
                     smirnoff_data = parameter_io_handler.parse_string(source)
                     return smirnoff_data
-                except ParseError as e:
-                    exception_msg = e.msg
+                except SMIRNOFFParseError as e:
+                    exception_msg = e.args[0]
 
         # If we haven't returned by now, the parsing was unsuccessful
         valid_formats = [
@@ -1273,7 +1245,7 @@ class ForceField:
 
         Returns
         -------
-        system : simtk.openmm.System
+        system : openmm.System
             The newly created OpenMM System corresponding to the specified ``topology``
         topology : openff.toolkit.topology.Topology, optional.
             If the `return_topology` keyword argument is used, this method will also return a Topology. This
@@ -1302,8 +1274,12 @@ class ForceField:
         if topology.box_vectors is not None:
             system.setDefaultPeriodicBoxVectors(*topology.box_vectors)
 
-        # Add particles (both atoms and virtual sites) with appropriate masses
-        for atom in topology.topology_particles:
+        # Add atom particles with appropriate masses
+        # Virtual site particle creation is handled in the parameter handler
+        # create_force call
+        # This means that even though virtual sites may have been created via
+        # the molecule API, an empty VirtualSites tag must exist in the FF
+        for atom in topology.topology_atoms:
             system.addParticle(atom.atom.mass)
 
         # Determine the order in which to process ParameterHandler objects in order to satisfy dependencies
@@ -1366,42 +1342,37 @@ class ForceField:
             vdw_14,
         )
 
+        if hasattr(self.get_parameter_handler("Electrostatics"), "cutoff"):
+            vdw_cutoff = self.get_parameter_handler("vdW").cutoff
+            coul_cutoff = self.get_parameter_handler("Electrostatics").cutoff
+            coul_method = self.get_parameter_handler("Electrostatics").method
+            if vdw_cutoff != coul_cutoff:
+                if coul_method == "PME":
+                    nonbonded_force.setCutoffDistance(vdw_cutoff)
+                else:
+                    raise IncompatibleParameterError(
+                        "In its current implementation of the OpenFF Toolkit, with "
+                        f"With electrostatics method {coul_method}, the electrostatics "
+                        f"cutoff must equal the vdW cutoff. Found vdw cutoff {vdw_cutoff} "
+                        f"and {coul_cutoff}."
+                    )
+
         if return_topology:
             return (system, topology)
         else:
             return system
 
-    def create_parmed_structure(self, topology, positions, **kwargs):
-        """Create a ParmEd Structure object representing the interactions for the specified Topology with the current force field
-
-        This method creates a `ParmEd <http://github.com/parmed/parmed>`_ ``Structure`` object containing a topology, positions, and parameters.
-
-        Parameters
-        ----------
-        topology : openff.toolkit.topology.Topology
-            The ``Topology`` corresponding to the ``System`` object to be created.
-        positions : simtk.unit.Quantity of dimension (natoms,3) with units compatible with angstroms
-            The positions corresponding to the ``System`` object to be created
-
-        Returns
-        -------
-        structure : parmed.Structure
-            The newly created ``parmed.Structure`` object
-
+    @requires_package("openff.interchange")
+    @requires_package("mdtraj")
+    def _to_interchange(self, topology, box=None):
         """
-        raise NotImplementedError
-        # import parmed
-        # TODO: Automagically handle expansion of virtual sites? Or is Topology supposed to do that?
+        Create an Interchange object from a ForceField, Topology, and (optionally) box vectors.
 
-        # Create OpenMM System
-        # system = self.create_openmm_system(
-        #    topology, **kwargs)
+        WARNING: This API and functionality are experimental and not suitable for production.
+        """
+        from openff.interchange.components.interchange import Interchange
 
-        # Create a ParmEd Structure object
-        # structure = parmed.openmm.topsystem.load_topology(
-        #    topology.to_openmm(), system, positions)
-        #
-        # return structure
+        return Interchange.from_smirnoff(force_field=self, topology=topology, box=box)
 
     def label_molecules(self, topology):
         """Return labels for a list of molecules corresponding to parameters from this force field.
@@ -1486,6 +1457,71 @@ class ForceField:
             )
             raise KeyError(msg)
         return ph_class
+
+    def get_partial_charges(self, molecule, **kwargs):
+        """Generate the partial charges for the given molecule in this force field.
+
+        Parameters
+        ----------
+        molecule : :class:`openff.toolkit.topology.Molecule`
+            The ``Molecule`` corresponding to the system to be parameterized
+        toolkit_registry : :class:`openff.toolkit.utils.toolkits.ToolkitRegistry`, default=GLOBAL_TOOLKIT_REGISTRY
+            The toolkit registry to use for operations like conformer generation and
+            partial charge assignment.
+
+        Returns
+        -------
+        charges : ``openmm.unit.Quantity`` with shape ``(n_atoms,)`` and dimensions of charge
+            The partial charges of the provided molecule in this force field.
+
+        Raises
+        ------
+        PartialChargeVirtualSitesError
+            If the ``ForceField`` applies virtual sites to the ``Molecule``.
+            ``get_partial_charges`` cannot identify which virtual site charges
+            may belong to which atoms in this case.
+
+        Other exceptions
+            As any ``ParameterHandler`` may in principle modify charges, the entire
+            force field must be applied to the molecule to produce the charges.
+            Calls to this method from incorrectly or incompletely specified ``ForceField``
+            objects thus may raise an exception.
+
+        Examples
+        --------
+
+        >>> from openff.toolkit.typing.engines.smirnoff import ForceField, Molecule
+        >>> ethanol = Molecule.from_smiles('CCO')
+        >>> force_field = ForceField('test_forcefields/test_forcefield.offxml')
+
+        Assign partial charges to the molecule according to the force field:
+
+        >>> ethanol.partial_charges = force_field.get_partial_charges(ethanol)
+
+        Use the assigned partial charges when creating an OpenMM ``System``:
+
+        >>> topology = ethanol.to_topology()
+        >>> system = forcefield.create_openmm_system(
+        ...    topology,
+        ...    charge_from_molecules=[ethanol]
+        ... )
+
+        This is especially useful when you want to create multiple systems
+        with the same molecule or molecules, as it allows the expensive
+        charge calculation to be cached.
+
+        """
+        _, top_with_charges = self.create_openmm_system(
+            molecule.to_topology(), return_topology=True, **kwargs
+        )
+
+        if top_with_charges.n_topology_virtual_sites != 0:
+            raise PartialChargeVirtualSitesError(
+                "get_partial_charges is not supported on molecules with virtual sites"
+            )
+
+        charges = [*top_with_charges.reference_molecules][0].partial_charges
+        return charges
 
     def __getitem__(self, val):
         """

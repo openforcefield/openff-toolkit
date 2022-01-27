@@ -1,0 +1,16 @@
+# https://docs.readthedocs.io/en/stable/config-file/v2.html
+version: 2
+build:
+  os: ubuntu-20.04
+  tools:
+    python: mambaforge-4.10 # Python version is specified in Conda environment
+sphinx:
+  configuration: docs/conf.py
+python:
+  install:
+  - method: setuptools
+    path: .
+conda:
+  environment: docs/environment.yml
+formats:
+- pdf

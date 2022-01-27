@@ -10,6 +10,7 @@ dependencies:
     # Testing
   - pytest
   - pytest-cov
+  - pytest-rerunfailures
   - nbval
   - codecov
   - coverage
@@ -32,3 +33,4 @@ dependencies:
   - qcportal
   - qcengine
   - mdtraj
+  - openff-interchange

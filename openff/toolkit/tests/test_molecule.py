@@ -19,10 +19,6 @@ TODO:
 
 """
 
-# =============================================================================================
-# GLOBAL IMPORTS
-# =============================================================================================
-
 import copy
 import os
 import pickle
@@ -30,9 +26,15 @@ from tempfile import NamedTemporaryFile
 
 import numpy as np
 import pytest
-from simtk import unit
 
-from openff.toolkit.tests.test_forcefield import (
+try:
+    from openmm import unit
+    from openmm.app import element
+except ImportError:
+    from simtk import unit
+    from simtk.openmm.app import element
+
+from openff.toolkit.tests.create_molecules import (
     create_acetaldehyde,
     create_benzene_no_aromatic,
     create_cis_1_2_dichloroethene,
@@ -42,6 +44,7 @@ from openff.toolkit.tests.test_forcefield import (
 )
 from openff.toolkit.tests.utils import (
     has_pkg,
+    requires_ambertools,
     requires_openeye,
     requires_pkg,
     requires_rdkit,
@@ -52,8 +55,14 @@ from openff.toolkit.topology.molecule import (
     FrozenMolecule,
     InvalidConformerError,
     Molecule,
+    SmilesParsingError,
+    _networkx_graph_to_hill_formula,
 )
 from openff.toolkit.utils import get_data_file_path
+from openff.toolkit.utils.exceptions import (
+    ConformerGenerationError,
+    UnsupportedFileTypeError,
+)
 from openff.toolkit.utils.toolkits import (
     AmberToolsToolkitWrapper,
     OpenEyeToolkitWrapper,
@@ -81,7 +90,7 @@ def assert_molecule_is_equal(molecule1, molecule2, msg):
         raise AssertionError(msg)
 
 
-def is_four_memebered_ring_torsion(torsion):
+def is_four_membered_ring_torsion(torsion):
     """Check that three atoms in the given torsion form a four-membered ring."""
     # Push a copy of the first and second atom in the end to make the code simpler.
     torsion = list(torsion) + [torsion[0], torsion[1]]
@@ -96,7 +105,7 @@ def is_four_memebered_ring_torsion(torsion):
     return is_four_membered_ring
 
 
-def is_three_memebered_ring_torsion(torsion):
+def is_three_membered_ring_torsion(torsion):
     """Check that three atoms in the given torsion form a three-membered ring.
 
     In order to be 4 atoms with a three-membered ring, there must be
@@ -220,7 +229,7 @@ def mini_drug_bank(xfail_mols=None, wip_mols=None):
 
 # Use a "static" variable as a workaround as fixtures cannot be
 # used inside pytest.mark.parametrize (see issue #349 in pytest).
-mini_drug_bank.molecules = None
+mini_drug_bank.molecules = None  # type: ignore
 
 # All the molecules that raise UndefinedStereochemistryError when read by OETK()
 openeye_drugbank_undefined_stereo_mols = {
@@ -248,12 +257,18 @@ rdkit_drugbank_undefined_stereo_mols = {
     "DrugBank_3930",
     "DrugBank_5043",
     "DrugBank_5418",
+    "DrugBank_7124",
+    "DrugBank_6865",
 }
 
 
 # Missing stereo in OE but not RDK:  'DrugBank_2987', 'DrugBank_3502', 'DrugBank_4161',
 # 'DrugBank_4162', 'DrugBank_6531', 'DrugBank_1700',
-drugbank_stereogenic_in_rdkit_but_not_openeye = {"DrugBank_5329"}
+drugbank_stereogenic_in_rdkit_but_not_openeye = {
+    "DrugBank_5329",
+    "DrugBank_7124",
+    "DrugBank_6865",
+}
 
 # Some molecules are _valid_ in both OETK and RDKit, but will fail if you try
 # to convert from one to the other, since OE adds stereo that RDKit doesn't
@@ -289,8 +304,6 @@ class TestAtom:
 
     def test_atom_properties(self):
         """Test that atom properties are correctly populated and gettable"""
-        from simtk.openmm.app import element
-
         formal_charge = 0 * unit.elementary_charge
         is_aromatic = False
         # Attempt to create all elements supported by OpenMM
@@ -314,6 +327,20 @@ class TestAtom:
             assert atom.formal_charge == formal_charge
             assert atom.is_aromatic == is_aromatic
             assert atom.name == this_element.name
+
+    def test_set_molecule(self):
+        """Test appropriately setting a molecule with no errors"""
+        mol = Molecule.from_smiles("CCO")
+        atom = Atom(6, 0, False)
+        atom.molecule = mol
+
+    def test_set_molecule_error(self):
+        """Test setting molecule for atom with molecule raises error"""
+        mol = Molecule.from_smiles("CCO")
+        atom = Atom(6, 0, False)
+        atom.molecule = mol
+        with pytest.raises(AssertionError, match="already has an associated molecule"):
+            atom.molecule = mol
 
 
 class TestMolecule:
@@ -461,6 +488,29 @@ class TestMolecule:
         molecule_copy.properties["aaa"] = "bbb"
         assert "aaa" not in molecule.properties
 
+    @pytest.mark.skipif(
+        not (has_pkg("rdkit") and not (has_pkg("openeye"))),
+        reason="Test requires that RDKit is installed, but OpenEye is not installed",
+    )
+    def test_repr_bad_smiles(self):
+        """Test that the repr falls back to Hill formula if to_smiles fails."""
+
+        assert "bad" not in Molecule.from_smiles("CC").__repr__()
+
+        # OpenEye will report a smiles of ClCl(Cl)C without error, so only test with RDKit unless we
+        # can come up with a molecule that OpenEyeToolkitWrapper.to_smiles() will reliably fail on
+
+        molecule = Molecule()
+        molecule.add_atom(17, 0, False)
+        molecule.add_atom(17, 0, False)
+        molecule.add_atom(17, 0, False)
+
+        molecule.add_bond(0, 1, 1, False)
+        molecule.add_bond(0, 2, 1, False)
+
+        expected_repr = "Molecule with name '' with bad SMILES and Hill formula 'Cl3'"
+        assert molecule.__repr__() == expected_repr
+
     @pytest.mark.parametrize("toolkit", [OpenEyeToolkitWrapper, RDKitToolkitWrapper])
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_to_from_smiles(self, molecule, toolkit):
@@ -501,6 +551,18 @@ class TestMolecule:
 
         smiles2 = molecule2.to_smiles(toolkit_registry=toolkit_wrapper)
         assert smiles1 == smiles2
+
+    @pytest.mark.parametrize(
+        "smiles, expected", [("[Cl:1]Cl", {0: 1}), ("[Cl:1][Cl:2]", {0: 1, 1: 2})]
+    )
+    @pytest.mark.parametrize(
+        "toolkit_class", [OpenEyeToolkitWrapper, RDKitToolkitWrapper]
+    )
+    def test_from_smiles_with_map(self, smiles, expected, toolkit_class):
+        if not (toolkit_class.is_available()):
+            pytest.skip(f"Required toolkit {toolkit_class} is unavailable")
+        molecule = Molecule.from_smiles(smiles, toolkit_registry=toolkit_class())
+        assert molecule.properties["atom_map"] == expected
 
     smiles_types = [
         {"isomeric": True, "explicit_hydrogens": True, "mapped": True, "error": None},
@@ -718,6 +780,7 @@ class TestMolecule:
         assert (
             len(set([atom.name for atom in molecule.atoms])) == molecule.n_atoms
         ) == molecule.has_unique_atom_names
+        assert all("x" in a.name for a in molecule.atoms)
 
     inchi_data = [
         {
@@ -1247,11 +1310,11 @@ class TestMolecule:
     def test_hill_formula(self):
         """Test that making the hill formula is consistent between input methods and ordering"""
         # make sure smiles match reference
-        molecule_smiles = create_ethanol()
-        assert molecule_smiles.hill_formula == "C2H6O"
+        molecule = create_ethanol()
+        assert molecule.hill_formula == "C2H6O"
         # make sure is not order dependent
-        molecule_smiles_reverse = create_reversed_ethanol()
-        assert molecule_smiles.hill_formula == molecule_smiles_reverse.hill_formula
+        molecule_reverse = create_reversed_ethanol()
+        assert molecule.hill_formula == molecule_reverse.hill_formula
         # make sure single element names are put first
         order_mol = Molecule.from_smiles("C(Br)CB")
         assert order_mol.hill_formula == "C2H6BBr"
@@ -1263,16 +1326,19 @@ class TestMolecule:
         assert br_i.hill_formula == "BrI"
         # make sure files and smiles match
         molecule_file = Molecule.from_file(get_data_file_path("molecules/ethanol.sdf"))
-        assert molecule_smiles.hill_formula == molecule_file.hill_formula
+        assert molecule.hill_formula == molecule_file.hill_formula
         # make sure the topology molecule gives the same formula
         from openff.toolkit.topology.topology import Topology, TopologyMolecule
 
-        topology = Topology.from_molecules(molecule_smiles)
-        topmol = TopologyMolecule(molecule_smiles, topology)
-        assert molecule_smiles.hill_formula == Molecule.to_hill_formula(topmol)
-        # make sure the networkx matches
-        assert molecule_smiles.hill_formula == Molecule.to_hill_formula(
-            molecule_smiles.to_networkx()
+        topology = Topology.from_molecules(molecule)
+        topmol = TopologyMolecule(molecule, topology)
+        assert molecule.hill_formula == Molecule._object_to_hill_formula(topmol)
+        assert molecule.hill_formula == Molecule._object_to_hill_formula(
+            molecule.to_networkx()
+        )
+
+        assert molecule.hill_formula == _networkx_graph_to_hill_formula(
+            molecule.to_networkx()
         )
 
     def test_isomorphic_general(self):
@@ -1824,6 +1890,70 @@ class TestMolecule:
         else:
             pytest.skip("Required toolkit is unavailable")
 
+    @pytest.mark.parametrize(
+        "toolkit_class", [OpenEyeToolkitWrapper, RDKitToolkitWrapper]
+    )
+    @pytest.mark.parametrize(
+        "smiles, undefined_only, expected",
+        [
+            (
+                "FC(Br)(Cl)[C@@H](Br)(Cl)",
+                False,
+                [
+                    "F[C@](Br)(Cl)[C@@H](Br)(Cl)",
+                    "F[C@](Br)(Cl)[C@H](Br)(Cl)",
+                    "F[C@@](Br)(Cl)[C@@H](Br)(Cl)",
+                    "F[C@@](Br)(Cl)[C@H](Br)(Cl)",
+                ],
+            ),
+            (
+                "FC(Br)(Cl)[C@@H](Br)(Cl)",
+                True,
+                ["F[C@](Br)(Cl)[C@@H](Br)(Cl)", "F[C@@](Br)(Cl)[C@@H](Br)(Cl)"],
+            ),
+            ("F[C@H](Cl)Br", False, ["F[C@@H](Cl)Br"]),
+            ("F[C@H](Cl)Br", True, []),
+        ],
+    )
+    def test_enumerating_stereo_partially_defined(
+        self, toolkit_class, smiles, undefined_only, expected
+    ):
+        """Test the enumerating stereo of molecules with partially defined chirality"""
+
+        if not toolkit_class.is_available():
+            pytest.skip("Required toolkit is unavailable")
+
+        toolkit = toolkit_class()
+
+        # test undefined only
+        mol = Molecule.from_smiles(
+            smiles, toolkit_registry=toolkit, allow_undefined_stereo=True
+        )
+        stereoisomers = mol.enumerate_stereoisomers(
+            undefined_only=undefined_only, rationalise=False
+        )
+
+        # Ensure that the results of the enumeration are what the test expects.
+        # This roundtrips the expected output from SMILES --> OFFMol --> SMILES,
+        # since the SMILES for stereoisomers generated in this test may change depending
+        # on which cheminformatics toolkit is used.
+        expected = {
+            Molecule.from_smiles(stereoisomer, allow_undefined_stereo=True).to_smiles(
+                explicit_hydrogens=True, isomeric=True, mapped=False
+            )
+            for stereoisomer in expected
+        }
+        actual = {
+            stereoisomer.to_smiles(explicit_hydrogens=True, isomeric=True, mapped=False)
+            for stereoisomer in stereoisomers
+        }
+
+        assert expected == actual
+
+    def test_from_xyz_unsupported(self):
+        with pytest.raises(UnsupportedFileTypeError):
+            Molecule.from_file("foo.xyz", file_format="xyz")
+
     @requires_rdkit
     def test_from_pdb_and_smiles(self):
         """Test the ability to make a valid molecule using RDKit and SMILES together"""
@@ -1911,6 +2041,20 @@ class TestMolecule:
         ] == ethanol.to_smiles(mapped=True)
 
     @requires_pkg("qcportal")
+    def test_to_qcschema_no_connections(self):
+        mol = Molecule.from_mapped_smiles("[Br-:1].[K+:2]")
+        mol.add_conformer(
+            unit.Quantity(
+                np.array(
+                    [[0.188518, 0.015684, 0.001562], [0.148794, 0.21268, 0.11992]]
+                ),
+                unit.nanometers,
+            )
+        )
+        qcschema = mol.to_qcschema()
+        assert qcschema.connectivity is None
+
+    @requires_pkg("qcportal")
     def test_from_qcschema_no_client(self):
         """Test the ability to make molecules from QCArchive record instances and dicts"""
 
@@ -1981,6 +2125,7 @@ class TestMolecule:
     ]
 
     @requires_pkg("qcportal")
+    @pytest.mark.flaky(reruns=5)
     @pytest.mark.parametrize("input_data", client_examples)
     def test_from_qcschema_with_client(self, input_data):
         """For each of the examples try and make a offmol using the instance and dict and check they match"""
@@ -2093,6 +2238,7 @@ class TestMolecule:
             mol_qca_record = Molecule.from_qcschema(entry, client)
 
     @requires_pkg("qcportal")
+    @pytest.mark.flaky(reruns=10)
     def test_qcschema_molecule_record_round_trip_from_to_from(self):
         """Test making a molecule from qca record using from_qcschema,
         then converting back to qcschema using to_qcschema,
@@ -2128,6 +2274,20 @@ class TestMolecule:
         # make sure the atom map is not exposed
         with pytest.raises(KeyError):
             mapping = mol._properties["atom_map"]
+
+    @pytest.mark.parametrize(
+        "toolkit_class", [OpenEyeToolkitWrapper, RDKitToolkitWrapper]
+    )
+    def test_from_mapped_smiles_partial(self, toolkit_class):
+        """Test that creating a molecule from a partially mapped SMILES raises an
+        exception."""
+        if not (toolkit_class.is_available()):
+            pytest.skip(f"Required toolkit {toolkit_class} is unavailable")
+        with pytest.raises(
+            SmilesParsingError,
+            match="The mapped smiles does not contain enough indexes",
+        ):
+            Molecule.from_mapped_smiles("[Cl:1][Cl]", toolkit_registry=toolkit_class())
 
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_n_particles(self, molecule):
@@ -2175,8 +2335,8 @@ class TestMolecule:
 
             assert (
                 is_chain
-                or is_three_memebered_ring_torsion(proper)
-                or is_four_memebered_ring_torsion(proper)
+                or is_three_membered_ring_torsion(proper)
+                or is_four_membered_ring_torsion(proper)
             )
 
     @pytest.mark.parametrize("molecule", mini_drug_bank())
@@ -2194,7 +2354,7 @@ class TestMolecule:
                 or (improper[0].is_bonded_to(improper[3]))
                 or (improper[2].is_bonded_to(improper[3]))
             )
-            assert is_not_cyclic or is_three_memebered_ring_torsion(improper)
+            assert is_not_cyclic or is_three_membered_ring_torsion(improper)
 
     @pytest.mark.parametrize(
         ("molecule", "n_impropers", "n_pruned"),
@@ -2233,7 +2393,48 @@ class TestMolecule:
         common_torsions = molecule.propers & molecule.impropers
         if len(common_torsions) > 0:
             for torsion in common_torsions:
-                assert is_three_memebered_ring_torsion(torsion)
+                assert is_three_membered_ring_torsion(torsion)
+
+    def test_nth_degree_neighbors_basic(self):
+        benzene = Molecule.from_smiles("c1ccccc1")
+
+        with pytest.raises(ValueError, match="0 or fewer atoms"):
+            benzene.nth_degree_neighbors(n_degrees=0)
+
+        with pytest.raises(ValueError, match="0 or fewer atoms"):
+            benzene.nth_degree_neighbors(n_degrees=-1)
+
+        # 3 proper torsions have 1-4 pairs that are duplicates of other torsions, i.e.
+        # torsions 0-1-2-3 0-5-4-3 where #s are the indices of carbons in the ring
+        n_14_pairs = len([*benzene.nth_degree_neighbors(n_degrees=3)])
+        assert n_14_pairs == benzene.n_propers - 3
+
+        for pair in benzene.nth_degree_neighbors(n_degrees=3):
+            assert pair[0].molecule_particle_index < pair[1].molecule_particle_index
+
+    @pytest.mark.parametrize(
+        ("smiles", "n_degrees", "num_pairs"),
+        [
+            ("c1ccccc1", 6, 0),
+            ("c1ccccc1", 5, 3),
+            ("c1ccccc1", 4, 12),
+            ("c1ccccc1", 3, 21),
+            ("N1ONON1", 4, 2),
+            ("N1ONON1", 3, 7),
+            ("C1#CO1", 2, 0),
+            ("C1#CO1", 1, 3),
+            ("C1CO1", 4, 0),
+            ("C1CO1", 2, 10),
+            ("C1=C=C=C=1", 4, 0),
+            ("C1=C=C=C=1", 3, 0),
+            ("C1=C=C=C=1", 2, 2),
+        ],
+    )
+    def test_nth_degree_neighbors_rings(self, smiles, n_degrees, num_pairs):
+        molecule = Molecule.from_smiles(smiles)
+
+        num_pairs_found = len([*molecule.nth_degree_neighbors(n_degrees=n_degrees)])
+        assert num_pairs_found == num_pairs
 
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_total_charge(self, molecule):
@@ -2262,9 +2463,6 @@ class TestMolecule:
 
     def test_add_conformers(self):
         """Test addition of conformers to a molecule"""
-        import numpy as np
-        from simtk import unit
-
         # Define a methane molecule
         molecule = Molecule()
         molecule.name = "methane"
@@ -2763,13 +2961,400 @@ class TestMolecule:
         molecule2 = Molecule.from_dict(molecule_dict)
         assert molecule.to_dict() == molecule2.to_dict()
 
+    def test_bond_charge_virtual_site_position_symmetric(self):
+        """
+        Test for expected positions of virtual sites when created through the molecule
+        API. This uses symmetric, which will add both orientations of the atoms to
+        create two particles for the vsite.
+
+        The order of the positions is the same as the order of the particles as they
+        appear in the molecule using Molecule.particles
+        """
+
+        import openff.toolkit.tests.test_forcefield
+
+        molecule = openff.toolkit.tests.test_forcefield.create_water()
+        # molecule = create_water()
+
+        # a 90 degree water molecule on the xy plane
+        molecule.add_conformer(
+            unit.Quantity(
+                np.array(
+                    [
+                        [1.0, 0.0, 0.0],
+                        [0.0, 0.0, 0.0],
+                        [0.0, 1.0, 0.0],
+                    ]
+                ),
+                unit.angstrom,
+            )
+        )
+
+        atom1 = molecule.atoms[0]
+        atom2 = molecule.atoms[1]
+        distance = 0.1 * unit.angstrom
+        vsite1_index = molecule.add_bond_charge_virtual_site(
+            [atom1, atom2],
+            distance,
+            replace=False,
+            symmetric=True,
+        )
+        expected = np.array([[1.1, 0.0, 0.0], [-0.1, 0.0, 0.0]])
+
+        vsite_pos = molecule.compute_virtual_site_positions_from_conformer(0)
+        vsite_pos = vsite_pos / vsite_pos.unit
+
+        assert vsite_pos.shape == (2, 3)
+        assert np.allclose(vsite_pos, expected)
+
+        conformer = molecule.conformers[0]
+        vsite_pos = molecule.compute_virtual_site_positions_from_atom_positions(
+            conformer
+        )
+        vsite_pos = vsite_pos / vsite_pos.unit
+
+        assert vsite_pos.shape == (2, 3)
+        assert np.allclose(vsite_pos, expected)
+
+    def test_bond_charge_virtual_site_position(self):
+        """
+        Test for expected positions of virtual sites when created through the molecule
+        API.
+
+        The order of the positions is the same as the order of the particles as they
+        appear in the molecule using Molecule.particles
+        """
+
+        import openff.toolkit.tests.test_forcefield
+
+        molecule = openff.toolkit.tests.test_forcefield.create_water()
+        # molecule = create_water()
+
+        # a 90 degree water molecule on the xy plane
+        molecule.add_conformer(
+            unit.Quantity(
+                np.array(
+                    [
+                        [1.0, 0.0, 0.0],
+                        [0.0, 0.0, 0.0],
+                        [0.0, 1.0, 0.0],
+                    ]
+                ),
+                unit.angstrom,
+            )
+        )
+
+        atom1 = molecule.atoms[0]
+        atom2 = molecule.atoms[1]
+        distance = 0.1 * unit.angstrom
+        vsite1_index = molecule.add_bond_charge_virtual_site(
+            [atom1, atom2],
+            distance,
+            replace=False,
+            symmetric=False,
+        )
+        expected = np.array([[1.1, 0.0, 0.0]])
+
+        vsite_pos = molecule.compute_virtual_site_positions_from_conformer(0)
+        vsite_pos = vsite_pos / vsite_pos.unit
+
+        assert vsite_pos.shape == (1, 3)
+        assert np.allclose(vsite_pos, expected)
+
+        conformer = molecule.conformers[0]
+        vsite_pos = molecule.compute_virtual_site_positions_from_atom_positions(
+            conformer
+        )
+        vsite_pos = vsite_pos / vsite_pos.unit
+
+        assert vsite_pos.shape == (1, 3)
+        assert np.allclose(vsite_pos, expected)
+
+    def test_monovalent_lone_pair_virtual_site_position_symmetric(self):
+        """
+        Test for expected positions of virtual sites when created through the molecule
+        API. This uses symmetric, which will add both orientations of the atoms to
+        create two particles for the vsite.
+
+        Note: symmetric with Monovalent is a bit counterintuitive. Since the particles
+        origin is placed on the first atom, using a "symmetric" definition will flip
+        the ordering, causing another particle to be placed on the third atom, reflected
+        on the xy plane between the first particle.
+
+        The order of the positions is the same as the order of the particles as they
+        appear in the molecule using Molecule.particles
+        """
+
+        import openff.toolkit.tests.test_forcefield
+
+        molecule = openff.toolkit.tests.test_forcefield.create_water()
+
+        # a 90 degree water molecule on the xy plane
+        molecule.add_conformer(
+            unit.Quantity(
+                np.array(
+                    [
+                        [1.0, 0.0, 0.0],
+                        [0.0, 0.0, 0.0],
+                        [0.0, 1.0, 0.0],
+                    ]
+                ),
+                unit.angstrom,
+            )
+        )
+
+        atom1 = molecule.atoms[0]
+        atom2 = molecule.atoms[1]
+        atom3 = molecule.atoms[2]
+        distance = 0.2 * unit.angstrom
+        out_of_plane_angle = 90 * unit.degree
+        in_plane_angle = 180 * unit.degree
+        vsite1_index = molecule.add_monovalent_lone_pair_virtual_site(
+            [atom1, atom2, atom3],
+            distance,
+            out_of_plane_angle=out_of_plane_angle,
+            in_plane_angle=in_plane_angle,
+            symmetric=True,
+        )
+        expected = np.array([[1.0, 0.0, -0.2], [0.0, 1.0, 0.2]])
+
+        vsite_pos = molecule.compute_virtual_site_positions_from_conformer(0)
+        vsite_pos = vsite_pos / vsite_pos.unit
+        assert vsite_pos.shape == (2, 3)
+        assert np.allclose(vsite_pos, expected)
+
+        conformer = molecule.conformers[0]
+        vsite_pos = molecule.compute_virtual_site_positions_from_atom_positions(
+            conformer
+        )
+        vsite_pos = vsite_pos / vsite_pos.unit
+        assert vsite_pos.shape == (2, 3)
+        assert np.allclose(vsite_pos, expected)
+
+    def test_monovalent_lone_pair_virtual_site_position(self):
+        """
+        Test for expected positions of virtual sites when created through the molecule
+        API.
+
+        The order of the positions is the same as the order of the particles as they
+        appear in the molecule using Molecule.particles
+        """
+
+        import openff.toolkit.tests.test_forcefield
+
+        molecule = openff.toolkit.tests.test_forcefield.create_water()
+
+        # a 90 degree water molecule on the xy plane
+        molecule.add_conformer(
+            unit.Quantity(
+                np.array(
+                    [
+                        [1.0, 0.0, 0.0],
+                        [0.0, 0.0, 0.0],
+                        [0.0, 1.0, 0.0],
+                    ]
+                ),
+                unit.angstrom,
+            )
+        )
+
+        atom1 = molecule.atoms[0]
+        atom2 = molecule.atoms[1]
+        atom3 = molecule.atoms[2]
+        distance = 0.2 * unit.angstrom
+        out_of_plane_angle = 90 * unit.degree
+        in_plane_angle = 180 * unit.degree
+        vsite1_index = molecule.add_monovalent_lone_pair_virtual_site(
+            [atom1, atom2, atom3],
+            distance,
+            out_of_plane_angle=out_of_plane_angle,
+            in_plane_angle=in_plane_angle,
+            symmetric=False,
+        )
+        expected = np.array([[1.0, 0.0, -0.2]])
+
+        vsite_pos = molecule.compute_virtual_site_positions_from_conformer(0)
+        vsite_pos = vsite_pos / vsite_pos.unit
+        assert vsite_pos.shape == (1, 3)
+        assert np.allclose(vsite_pos, expected)
+
+        conformer = molecule.conformers[0]
+        vsite_pos = molecule.compute_virtual_site_positions_from_atom_positions(
+            conformer
+        )
+        vsite_pos = vsite_pos / vsite_pos.unit
+        assert vsite_pos.shape == (1, 3)
+        assert np.allclose(vsite_pos, expected)
+
+    def test_divalent_lone_pair_virtual_site_position(self):
+        """
+        Test for expected positions of virtual sites when created through the molecule
+        API.
+
+        The order of the positions is the same as the order of the particles as they
+        appear in the molecule using Molecule.particles
+        """
+
+        import openff.toolkit.tests.test_forcefield
+
+        molecule = openff.toolkit.tests.test_forcefield.create_water()
+
+        # a 90 degree water molecule on the xy plane
+        molecule.add_conformer(
+            unit.Quantity(
+                np.array(
+                    [
+                        [1.0, 0.0, 0.0],
+                        [0.0, 0.0, 0.0],
+                        [0.0, 1.0, 0.0],
+                    ]
+                ),
+                unit.angstrom,
+            )
+        )
+
+        atom1 = molecule.atoms[0]
+        atom2 = molecule.atoms[1]
+        atom3 = molecule.atoms[2]
+        distance = 0.2 * unit.angstrom
+        out_of_plane_angle = 90 * unit.degree
+        vsite1_index = molecule.add_divalent_lone_pair_virtual_site(
+            [atom1, atom2, atom3],
+            distance,
+            out_of_plane_angle=out_of_plane_angle,
+            symmetric=False,
+        )
+        expected = np.array([[0.0, 0.0, -0.2]])
+
+        vsite_pos = molecule.compute_virtual_site_positions_from_conformer(0)
+        vsite_pos = vsite_pos / vsite_pos.unit
+        assert vsite_pos.shape == (1, 3)
+        assert np.allclose(vsite_pos, expected)
+
+        conformer = molecule.conformers[0]
+        vsite_pos = molecule.compute_virtual_site_positions_from_atom_positions(
+            conformer
+        )
+        vsite_pos = vsite_pos / vsite_pos.unit
+        assert vsite_pos.shape == (1, 3)
+        assert np.allclose(vsite_pos, expected)
+
+    def test_divalent_lone_pair_virtual_site_position_symmetric(self):
+        """
+        Test for expected positions of virtual sites when created through the molecule
+        API. This uses symmetric, which will add both orientations of the atoms to
+        create two particles for the vsite.
+
+        Note: symmetric with Monovalent is a bit counterintuitive. Since the particles
+        origin is placed on the first atom, using a "symmetric" definition will flip
+        the ordering, causing another particle to be placed on the third atom, reflected
+        on the xy plane between the first particle.
+
+        The order of the positions is the same as the order of the particles as they
+        appear in the molecule using Molecule.particles
+        """
+
+        import openff.toolkit.tests.test_forcefield
+
+        molecule = openff.toolkit.tests.test_forcefield.create_water()
+
+        # a 90 degree water molecule on the xy plane
+        molecule.add_conformer(
+            unit.Quantity(
+                np.array(
+                    [
+                        [1.0, 0.0, 0.0],
+                        [0.0, 0.0, 0.0],
+                        [0.0, 1.0, 0.0],
+                    ]
+                ),
+                unit.angstrom,
+            )
+        )
+
+        atom1 = molecule.atoms[0]
+        atom2 = molecule.atoms[1]
+        atom3 = molecule.atoms[2]
+        distance = 0.2 * unit.angstrom
+        out_of_plane_angle = 90 * unit.degree
+        vsite1_index = molecule.add_divalent_lone_pair_virtual_site(
+            [atom1, atom2, atom3],
+            distance,
+            out_of_plane_angle=out_of_plane_angle,
+            symmetric=True,
+        )
+        expected = np.array([[0.0, 0.0, -0.2], [0.0, 0.0, 0.2]])
+
+        vsite_pos = molecule.compute_virtual_site_positions_from_conformer(0)
+        vsite_pos = vsite_pos / vsite_pos.unit
+        assert vsite_pos.shape == (2, 3)
+        assert np.allclose(vsite_pos, expected)
+
+        conformer = molecule.conformers[0]
+        vsite_pos = molecule.compute_virtual_site_positions_from_atom_positions(
+            conformer
+        )
+        vsite_pos = vsite_pos / vsite_pos.unit
+        assert vsite_pos.shape == (2, 3)
+        assert np.allclose(vsite_pos, expected)
+
+    def test_trivalent_lone_pair_virtual_site_position(self):
+        """
+        Test for expected positions of virtual sites when created through the molecule
+        API.
+
+        The order of the positions is the same as the order of the particles as they
+        appear in the molecule using Molecule.particles
+        """
+
+        import openff.toolkit.tests.test_forcefield
+
+        molecule = openff.toolkit.tests.test_forcefield.create_ammonia()
+
+        # an ammonia; the central nitrogen .5 above the hydrogen, which all lie one
+        # an xy plane
+        molecule.add_conformer(
+            unit.Quantity(
+                np.array(
+                    [
+                        [1.0, 0.0, 0.0],
+                        [0.0, 0.0, 0.5],
+                        [-0.5, 0.5, 0.0],
+                        [-0.5, -0.5, 0.0],
+                    ]
+                ),
+                unit.angstrom,
+            )
+        )
+
+        atom1 = molecule.atoms[0]
+        atom2 = molecule.atoms[1]
+        atom3 = molecule.atoms[2]
+        atom4 = molecule.atoms[3]
+        distance = 1.0 * unit.angstrom
+        vsite1_index = molecule.add_trivalent_lone_pair_virtual_site(
+            [atom1, atom2, atom3, atom4], distance, symmetric=False
+        )
+        expected = np.array([[0.0, 0.0, 1.5]])
+
+        vsite_pos = molecule.compute_virtual_site_positions_from_conformer(0)
+        vsite_pos = vsite_pos / vsite_pos.unit
+        assert vsite_pos.shape == (1, 3)
+        assert np.allclose(vsite_pos, expected)
+
+        conformer = molecule.conformers[0]
+        vsite_pos = molecule.compute_virtual_site_positions_from_atom_positions(
+            conformer
+        )
+        vsite_pos = vsite_pos / vsite_pos.unit
+        assert vsite_pos.shape == (1, 3)
+        assert np.allclose(vsite_pos, expected)
+
     @requires_openeye
     def test_chemical_environment_matches_OE(self):
         """Test chemical environment matches"""
         # TODO: Move this to test_toolkits, test all available toolkits
         # Create chiral molecule
-        from simtk.openmm.app import element
-
         toolkit_wrapper = OpenEyeToolkitWrapper()
         molecule = Molecule()
         atom_C = molecule.add_atom(
@@ -2839,8 +3424,6 @@ class TestMolecule:
     def test_chemical_environment_matches_RDKit(self):
         """Test chemical environment matches"""
         # Create chiral molecule
-        from simtk.openmm.app import element
-
         toolkit_wrapper = RDKitToolkitWrapper()
         molecule = Molecule()
         atom_C = molecule.add_atom(
@@ -2921,9 +3504,6 @@ class TestMolecule:
         """Test computation/retrieval of partial charges"""
         # TODO: Test only one molecule for speed?
         # TODO: Do we need to deepcopy each molecule, or is setUp called separately for each test method?
-        import numpy as np
-        from simtk import unit
-
         # Do not modify original molecules.
         # molecules = copy.deepcopy(mini_drug_bank())
         # In principle, testing for charge assignment over a wide set of molecules is important, but
@@ -2947,10 +3527,14 @@ class TestMolecule:
         initial_charges = molecule._partial_charges
 
         # Make sure everything isn't 0s
-        assert (abs(initial_charges / unit.elementary_charge) > 0.01).any()
+        assert (abs(initial_charges.value_in_unit(unit.elementary_charge)) > 0.01).any()
         # Check total charge
-        charges_sum_unitless = initial_charges.sum() / unit.elementary_charge
-        total_charge_unitless = molecule.total_charge / unit.elementary_charge
+        charges_sum_unitless = initial_charges.sum().value_in_unit(
+            unit.elementary_charge
+        )
+        total_charge_unitless = molecule.total_charge.value_in_unit(
+            unit.elementary_charge
+        )
         # if abs(charges_sum_unitless - total_charge_unitless) > 0.0001:
         # print(
         #     "molecule {}    charge_sum {}     molecule.total_charge {}".format(
@@ -3066,6 +3650,35 @@ class TestMolecule:
                     # fbo2 = [bond.fractional_bond_order for bond in molecule.bonds]
                     # np.testing.assert_allclose(fbo1, fbo2, atol=1.e-4)
 
+    @requires_ambertools
+    @requires_openeye
+    @pytest.mark.slow
+    @pytest.mark.parametrize("model", ["AM1-Wiberg", "am1-wiberg"])
+    @pytest.mark.parametrize(
+        "toolkit", [OpenEyeToolkitWrapper, AmberToolsToolkitWrapper]
+    )
+    def test_bond_order_method_passing(self, model, toolkit):
+        """Test that different calls to Molecule.assign_fractional_bond_orders do not
+        produce unexpected errors, but do not asses validity of results"""
+        mol = Molecule.from_smiles("CCO")
+
+        # Test that default model works
+        mol.assign_fractional_bond_orders()
+
+        mol.assign_fractional_bond_orders(
+            bond_order_model=model,
+        )
+
+        mol.assign_fractional_bond_orders(
+            bond_order_model=model,
+            toolkit_registry=toolkit(),
+        )
+
+        mol.assign_fractional_bond_orders(
+            bond_order_model=model,
+            toolkit_registry=ToolkitRegistry([toolkit()]),
+        )
+
     def test_get_bond_between(self):
         """Test Molecule.get_bond_between"""
         mol = Molecule.from_smiles("C#C")
@@ -3117,15 +3730,46 @@ class TestMolecule:
         assert len([atom for atom in mol.atoms if atom.is_in_ring()]) == n_atom_rings
         assert len([bond for bond in mol.bonds if bond.is_in_ring()]) == n_bond_rings
 
-    @requires_pkg("ipython")
+    @requires_rdkit
+    @requires_openeye
+    def test_conformer_generation_failure(self):
+        # This test seems possibly redundant, is it needed?
+        molecule = Molecule.from_smiles("F[U](F)(F)(F)(F)F")
+
+        with pytest.raises(ConformerGenerationError, match="Omega conf.*fail"):
+            molecule.generate_conformers(
+                n_conformers=1, toolkit_registry=OpenEyeToolkitWrapper()
+            )
+
+        with pytest.raises(ConformerGenerationError, match="RDKit conf.*fail"):
+            molecule.generate_conformers(
+                n_conformers=1, toolkit_registry=RDKitToolkitWrapper()
+            )
+
+        with pytest.raises(ValueError) as execption:
+            molecule.generate_conformers(n_conformers=1)
+
+            # pytest's checking of the string representation of this exception does not seem
+            # to play well with how it's constructed currently, so manually compare contents
+            exception_as_str = str(exception)
+            assert (
+                "No registered toolkits can provide the capability" in exception_as_str
+            )
+            assert "generate_conformers" in exception_as_str
+            assert "OpenEye Omega conformer generation failed" in exception_as_str
+            assert "RDKit conformer generation failed" in exception_as_str
+
+
+class TestMoleculeVisualization:
+    @requires_pkg("IPython")
     @requires_rdkit
     def test_visualize_rdkit(self):
         """Test that the visualize method returns an expected object when using RDKit to generate a 2-D representation"""
-        import rdkit
+        import IPython
 
         mol = Molecule().from_smiles("CCO")
 
-        assert isinstance(mol.visualize(backend="rdkit"), rdkit.Chem.rdchem.Mol)
+        assert isinstance(mol.visualize(backend="rdkit"), IPython.core.display.SVG)
 
     @pytest.mark.skipif(
         has_pkg("rdkit"),
@@ -3159,7 +3803,15 @@ class TestMolecule:
         # Ensure an NGLView widget is returned
         assert isinstance(mol.visualize(backend="nglview"), nglview.NGLWidget)
 
-    @requires_pkg("ipython")
+        # Providing other arguments is an error
+        with pytest.raises(ValueError):
+            mol.visualize(backend="nglview", width=100)
+        with pytest.raises(ValueError):
+            mol.visualize(backend="nglview", height=100)
+        with pytest.raises(ValueError):
+            mol.visualize(backend="nglview", show_all_hydrogens=False)
+
+    @requires_pkg("IPython")
     @requires_openeye
     def test_visualize_openeye(self):
         """Test that the visualize method returns an expected object when using OpenEye to generate a 2-D representation"""
@@ -3168,6 +3820,15 @@ class TestMolecule:
         mol = Molecule().from_smiles("CCO")
 
         assert isinstance(mol.visualize(backend="openeye"), IPython.core.display.Image)
+
+    @pytest.mark.skipif(
+        has_pkg("nglview"),
+        reason="Test requires that NGLview is not installed",
+    )
+    def test_ipython_repr_no_nglview(self):
+        """Test that the default Molecule repr does not break when nglview is not installed"""
+        molecule = Molecule().from_smiles("CCO")
+        molecule._ipython_display_()
 
 
 class MyMol(FrozenMolecule):
@@ -3210,6 +3871,7 @@ class TestMoleculeSubclass:
 
     @requires_pkg("qcelemental")
     @requires_pkg("qcportal")
+    @pytest.mark.flaky(reruns=5)
     def test_molecule_subclass_from_qcschema(self):
         """Ensure that the right type of object is returned when running MyMol.from_qcschema"""
         import qcportal as ptl
