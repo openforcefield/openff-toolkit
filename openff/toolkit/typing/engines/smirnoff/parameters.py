@@ -5874,10 +5874,7 @@ class VirtualSiteHandler(_NonbondedHandler):
             else:
                 sigma = ljtype.sigma
 
-            # create the vsite particle
-            mass = 0.0
-            # addParticle(mass.m_as(unit.dalton)) would be safer but slower
-            vsite_idx = system.addParticle(mass.m)
+            vsite_idx = system.addParticle(mass=0.0)
             ids.append(vsite_idx)
 
             logger.debug(
