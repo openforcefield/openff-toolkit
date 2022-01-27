@@ -2129,7 +2129,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                 # conformers using Omega: https://docs.eyesopen.com/toolkits/python/
                 # omegatk/OEConfGenConstants/OEFragBuilderMode.html.
                 rms_cutoff=None if not is_elf_method else 0.05 * unit.angstrom,
-                make_carboxylic_acids_cis=is_elf_method,
+                make_carboxylic_acids_cis=True,
             )
         else:
             temp_mol._conformers = None
