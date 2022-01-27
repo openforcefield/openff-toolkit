@@ -422,7 +422,7 @@ class Atom(Particle):
         """
         return self._atomic_number
 
-    @propert
+    @property
     def symbol(self) -> str:
         """
         Return the symbol implied by the atomic number of this atom
@@ -5539,7 +5539,7 @@ class FrozenMolecule(Serializable):
             for j, atom_coords in enumerate(geometry.m_as(unit.angstrom)):
                 x, y, z = atom_coords
                 xyz_data.write(
-                    f"{SYMBOLS[self.atoms[j].atomic_number}       {x: .10f}   {y: .10f}   {z: .10f}\n"
+                    f"{SYMBOLS[self.atoms[j].atomic_number]}       {x: .10f}   {y: .10f}   {z: .10f}\n"
                 )
 
             # now we up the frame count

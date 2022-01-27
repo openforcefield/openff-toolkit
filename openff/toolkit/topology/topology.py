@@ -1420,7 +1420,9 @@ class Topology(Serializable):
         # Convert all openMM mols to graphs
         omm_topology_G = nx.Graph()
         for atom in openmm_topology.atoms():
-            omm_topology_G.add_node(atom.index, atomic_number=atom.atomic_number)
+            omm_topology_G.add_node(
+                atom.index, atomic_number=atom.element.atomic_number
+            )
         for bond in openmm_topology.bonds():
             omm_topology_G.add_edge(
                 bond.atom1.index, bond.atom2.index, bond_order=bond.order
