@@ -29,7 +29,7 @@ import sphinx
 
 # If your documentation needs a minimal Sphinx version, state it here.
 #
-# needs_sphinx = '1.0'
+# needs_sphinx = "4.4.0"
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
@@ -68,15 +68,24 @@ napoleon_use_param = True
 
 _python_doc_base = "https://docs.python.org/3.6"
 intersphinx_mapping = {
-    _python_doc_base: None,
-    "https://numpy.org/doc/stable": None,
-    "https://docs.scipy.org/doc/scipy/reference": None,
-    "https://scikit-learn.org/stable": None,
-    "http://docs.openmm.org/latest/api-python/": None,
-    "https://www.rdkit.org/docs": None,
-    "https://docs.eyesopen.com/toolkits/python/": None,
-    "https://www.mdtraj.org/1.9.5/": None,
+    "python": ("https://docs.python.org/3.6", None),
+    "numpy": ("https://numpy.org/doc/stable", None),
+    "scipy": ("https://docs.scipy.org/doc/scipy/reference", None),
+    "scikit.learn": ("https://scikit-learn.org/stable", None),
+    "openmm": ("http://docs.openmm.org/latest/api-python/", None),
+    "rdkit": ("https://www.rdkit.org/docs", None),
+    "openeye": ("https://docs.eyesopen.com/toolkits/python/", None),
+    "mdtraj": ("https://www.mdtraj.org/1.9.5/", None),
+    "openff.interchange": (
+        "https://openff-interchange.readthedocs.io/en/stable/",
+        None,
+    ),
+    "openff.fragmenter": ("https://fragmenter.readthedocs.io/en/stable/", None),
 }
+myst_url_schemes = [
+    "http",
+    "https",
+]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
