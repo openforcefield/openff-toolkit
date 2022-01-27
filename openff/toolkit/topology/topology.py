@@ -1288,14 +1288,17 @@ class TopologyMolecule:
         """
         Return canonicalized pairs of atoms whose shortest separation is `exactly` n bonds.
         Only pairs with increasing atom indices are returned.
+
         Parameters
         ----------
         n: int
             The number of bonds separating atoms in each pair
+
         Returns
         -------
         neighbors: iterator of tuple of TopologyAtom
             Tuples (len 2) of atom that are separated by ``n`` bonds.
+
         Notes
         -----
         The criteria used here relies on minimum distances; when there are multiple valid
@@ -1954,14 +1957,17 @@ class Topology(Serializable):
         """
         Return canonicalized pairs of atoms whose shortest separation is `exactly` n bonds.
         Only pairs with increasing atom indices are returned.
+
         Parameters
         ----------
         n: int
             The number of bonds separating atoms in each pair
+
         Returns
         -------
         neighbors: iterator of tuple of TopologyAtom
             Tuples (len 2) of atom that are separated by ``n`` bonds.
+
         Notes
         -----
         The criteria used here relies on minimum distances; when there are multiple valid

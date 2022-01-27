@@ -4,6 +4,7 @@
    contain the root `toctree` directive.
 
 .. _openff-toolkit-index:
+
 Open Force Field Toolkit
 ========================
 
