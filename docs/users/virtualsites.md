@@ -83,8 +83,8 @@ site parameters. Let us consider 4-, 5-, and 6-point water models:
 
 * A 4-point water model with a `DivalentLonePair`: This can be implemented by
   specifying `match="once"`, `outOfPlaneAngle="0*degree"`, and
-  `distance=-.15*angstrom"`. Since the SMIRKS pattern `"[#1:1]-[#8X2:2]-
-  [#2:3]"` would match water twice and would create two particles in the exact
+  `distance=-.15*angstrom"`. Since the SMIRKS pattern `"[#1:1]-[#8X2:2]-[#1:3]"`
+  would match water twice and would create two particles in the exact
   same position if `all_permutations` was specified, we specify `"once"` to
   have only one particle generated. Although having two particles in the same
   position should not affect the physics if the proper exclusion policy is
