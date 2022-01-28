@@ -3715,20 +3715,57 @@ class TestMolecule:
         assert n_rings == mol.get_n_rings()
 
     @pytest.mark.parametrize(
+        "toolkit_wrapper", [RDKitToolkitWrapper, OpenEyeToolkitWrapper]
+    )
+    @pytest.mark.parametrize(
         ("smiles", "n_atom_rings", "n_bond_rings"),
         [
             ("c1ccc2ccccc2c1", 10, 11),
-            ("c1ccc(cc1)c2ccccc2", 12, 12),
-            ("Cc1ccc(cc1Nc2nccc(n2)c3cccnc3)NC(=O)c4ccc(cc4)CN5CCN(CC5)C", 30, 30),
+            ("c1ccc(cc1)c2ccccc2", 12, 13),
+            ("Cc1ccc(cc1Nc2nccc(n2)c3cccnc3)NC(=O)c4ccc(cc4)CN5CCN(CC5)C", 30, 31),
         ],
     )
-    @requires_rdkit
-    def test_is_in_ring(self, smiles, n_atom_rings, n_bond_rings):
+    def test_is_in_ring(self, smiles, n_atom_rings, n_bond_rings, toolkit_wrapper):
         """Test Atom.is_in_ring and Bond.is_in_ring"""
         mol = Molecule.from_smiles(smiles)
 
-        assert len([atom for atom in mol.atoms if atom.is_in_ring()]) == n_atom_rings
-        assert len([bond for bond in mol.bonds if bond.is_in_ring()]) == n_bond_rings
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=[toolkit_wrapper()])
+
+        atoms_in_ring = [
+            atom
+            for atom in mol.atoms
+            if atom.is_in_ring(toolkit_registry=toolkit_registry)
+        ]
+
+        bonds_in_ring = [
+            bond
+            for bond in mol.bonds
+            if bond.is_in_ring(toolkit_registry=toolkit_registry)
+        ]
+
+        assert len(atoms_in_ring) == n_atom_rings
+        assert len(bonds_in_ring) == n_bond_rings
+
+    @pytest.mark.parametrize(
+        "toolkit_wrapper", [RDKitToolkitWrapper, OpenEyeToolkitWrapper]
+    )
+    @pytest.mark.parametrize(
+        ("smiles", "n_rings"),
+        [
+            ("c1ccc2ccccc2c1", 2),
+            ("c1ccc(cc1)c2ccccc2", 2),
+            ("Cc1ccc(cc1Nc2nccc(n2)c3cccnc3)NC(=O)c4ccc(cc4)CN5CCN(CC5)C", 5),
+        ],
+    )
+    def test_n_rings(self, smiles, n_rings, toolkit_wrapper):
+        """Test Atom.is_in_ring and Bond.is_in_ring"""
+        mol = Molecule.from_smiles(smiles)
+
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=[toolkit_wrapper()])
+
+        n_rings_found = mol.get_n_rings(toolkit_registry=toolkit_registry)
+
+        assert n_rings_found == n_rings
 
     @requires_rdkit
     @requires_openeye

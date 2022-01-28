@@ -1266,6 +1266,34 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         return oemol
 
+    def get_n_rings(self, molecule) -> int:
+        """Return the number of rings in this molecule."""
+        # TODO: Document OpenEye/RDKIt ring-finding differences
+        from openeye import oechem
+
+        oemol = molecule.to_openeye()
+        n_rings, atom_ring_info = oechem.OEDetermineRingSystems(oemol)
+
+        return n_rings
+
+    def atom_is_in_ring(self, molecule, atom_index: int) -> bool:
+        """Return whether or not an atom is in a ring.
+        Parameters
+        ----------
+        molecule : openff.toolkit.topology.Molecule
+            The molecule containing the atom of interest
+        atom_index : int
+            The index of the atom of interest
+        Returns
+        -------
+        is_in_ring : bool
+            Whether or not the atom of index `atom_index` is in a ring
+        """
+        oemol = molecule.to_openeye()
+        is_in_ring = [*oemol.GetAtoms()][atom_index].IsInRing()
+
+        return is_in_ring
+
     def _get_smiles_flavor(self, isomeric, explicit_hydrogens):
         from openeye import oechem
 

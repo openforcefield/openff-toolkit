@@ -4143,35 +4143,33 @@ class FrozenMolecule(Serializable):
 
     def get_n_rings(self, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """Return the number of rings found in the Molecule as determined by
-        a cheminformatics toolkit
-
-        Currently only implemented via The RDKit, which must be installed.
+        a cheminformatics toolkit wrapper.
 
         .. note ::
 
             For systems containing some special cases of connected rings, this
             function may not be well-behaved and may report a different number
             rings than expected. Some problematic cases include networks of many
-            (5+) rings or bicyclic moieties (i.e. norbornane).
+            (5+) rings or bicyclic moieties (i.e. norbornane). RDkit and OpenEye
+            ring-finding implementations also differ.
 
         """
         if isinstance(toolkit_registry, ToolkitRegistry):
-            rings = toolkit_registry.call(
-                "find_rings",
+            n_rings = toolkit_registry.call(
+                "get_n_rings",
                 molecule=self,
             )
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
-            rings = toolkit.find_rings(
+            n_rings = toolkit.get_n_rings(
                 molecule=self,
             )
         else:
             raise InvalidToolkitRegistryError(
-                "Invalid toolkit_registry passed to from_smiles. Expected ToolkitRegistry or ToolkitWrapper. "
-                f"Got  {type(toolkit_registry)}"
+                "Invalid toolkit_registry passed to `get_n_rings`. Expected ToolkitRegistry or ToolkitWrapper. "
+                f"Got {type(toolkit_registry)}"
             )
 
-        n_rings = len(rings)
         return n_rings
 
     @property
