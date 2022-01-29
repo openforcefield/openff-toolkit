@@ -607,10 +607,10 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         oechem.OEPerceiveChiral(oemol)
         oechem.OEAssignAromaticFlags(oemol, oechem.OEAroModel_MDL)
         oechem.OE3DToInternalStereo(oemol)
-        print(f"Number of atoms after sanitization: {oemol.GetNumAtoms()}")
+        print(f"Number of atoms after sanitization: {oemol.NumAtoms()}")
 
         offmol_w_stereo_and_aro = self.from_openeye(
-            oemol, allow_undefined_stereo=True, hydrogens_are_explicit=True
+            oemol, allow_undefined_stereo=True
         )
         return offmol_w_stereo_and_aro
 

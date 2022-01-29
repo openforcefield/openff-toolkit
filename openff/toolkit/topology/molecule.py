@@ -5456,8 +5456,6 @@ class FrozenMolecule(Serializable):
             print(edge, edge_data)
             offmol.add_bond(edge[0], edge[1], edge_data["bond_order"], False)
 
-        # # Retrieve metadata to be recovered after roundtrip to rdkit land
-        # atoms_metadata = [atom.metadata for atom in offmol.atoms]
 
         print(f"Number of atoms before sanitization: {offmol.n_atoms}")
         coords = (
@@ -5480,9 +5478,6 @@ class FrozenMolecule(Serializable):
         for stereo_aro_bond, bond in zip(offmol_w_stereo_and_aro.bonds, offmol.bonds):
             bond._is_aromatic = stereo_aro_bond.is_aromatic
 
-        # # Recover metadata. Atom order is expected to be the same as in rdkit
-        # for atom, metadata in zip(offmol.atoms, atoms_metadata):
-        #     atom.metadata.update(metadata)
 
         print(f"OFFMol number of atoms: {offmol.n_atoms}")
         return offmol
