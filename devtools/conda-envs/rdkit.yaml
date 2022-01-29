@@ -34,3 +34,4 @@ dependencies:
   - qcengine
   - mdtraj
   - openff-interchange
+  - python-constraint
