@@ -10,7 +10,7 @@ import importlib
 import itertools
 import logging
 import tempfile
-from typing import TYPE_CHECKING, List, Optional, Tuple
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 import numpy
 import numpy as np
@@ -2282,8 +2282,10 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 raise UndefinedStereochemistryError(msg)
 
     @staticmethod
-    def _constrain_end_directions(*values, bond_indices, flip_direction):
-        """A constraint applied mapping global E/Z stereochemistry into local RDKit
+    def _constrain_end_directions(
+        *values: int, bond_indices: List[int], flip_direction: Dict[int, bool]
+    ) -> bool:
+        """A constraint applied when mapping global E/Z stereochemistry into local RDKit
         bond directions that ensures that the 'left' bonds point in opposite directions
         (i.e. one has to be up and one has to be down) and likewise for the 'right' bonds
         """
@@ -2295,8 +2297,13 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         return len(unique_values) == len(values)
 
     @staticmethod
-    def _constrain_rank(*values, bond_indices, flip_direction, expected_stereo):
-        """A constraint applied mapping global E/Z stereochemistry into local RDKit
+    def _constrain_rank(
+        *values: int,
+        bond_indices: List[int],
+        flip_direction: Dict[int, bool],
+        expected_stereo: str,
+    ) -> bool:
+        """A constraint applied when mapping global E/Z stereochemistry into local RDKit
         bond directions that ensures that the 'left' bond with the highest CIP rank
         and the 'right' bond with the highest CIP rank point either in the same direction
         if Z stereo or opposite directions of E.
@@ -2315,7 +2322,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             raise NotImplementedError()
 
     @classmethod
-    def _assign_rdmol_bonds_stereo(cls, off_molecule, rd_molecule):
+    def _assign_rdmol_bonds_stereo(cls, off_molecule: "Molecule", rd_molecule):
         """Copy the info about bonds stereochemistry from the OFF Molecule to RDKit Mol.
 
         The method proceeds by formulating mapping global E/Z stereo information onto
@@ -2334,7 +2341,14 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             Chem.BondStereo.STEREOZ: "Z",
         }
 
-        # Needed to ensure the _CIPRank is present.
+        stereogenic_bonds = [
+            bond for bond in off_molecule.bonds if bond.stereochemistry
+        ]
+
+        if len(stereogenic_bonds) == 0:
+            return
+
+            # Needed to ensure the _CIPRank is present.
         Chem.AssignStereochemistry(
             rd_molecule, cleanIt=True, force=True, flagPossibleStereoCenters=True
         )
@@ -2342,10 +2356,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         csp_problem = Problem()
         csp_variables = set()
 
-        for bond in off_molecule.bonds:
-
-            if not bond.stereochemistry:
-                continue
+        for bond in stereogenic_bonds:
 
             # Here we use a notation where atoms 'b' and 'c' are the two atoms involved
             # in the double bond, while 'a' corresponds to a neighbour of 'b' and 'd' a
@@ -2453,8 +2464,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                         )
                     )
                 )
-                for bond in off_molecule.bonds
-                if bond.stereochemistry
+                for bond in stereogenic_bonds
             ):
                 continue
 
