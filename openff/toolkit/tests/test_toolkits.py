@@ -204,8 +204,6 @@ rdkit_inchi_stereochemistry_lost = [
     "DrugBank_6865",
 ]
 
-rdkit_inchi_roundtrip_mangled = ["DrugBank_2684"]
-
 openeye_iupac_bad_stereo = [
     "DrugBank_977",
     "DrugBank_1634",
@@ -1980,12 +1978,6 @@ class TestRDKitToolkitWrapper:
         else:
             print(molecule.name)
             mol2 = molecule.from_inchi(inchi, toolkit_registry=toolkit)
-
-            # Some molecules are mangled by being round-tripped to/from InChI
-            if molecule.name in rdkit_inchi_roundtrip_mangled:
-                with pytest.raises(AssertionError):
-                    mol2.to_rdkit()
-                return
 
             # compare the full molecule excluding the properties dictionary
             # turn of the bond order matching as this could move in the aromatic rings
