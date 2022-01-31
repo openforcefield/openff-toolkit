@@ -3714,14 +3714,16 @@ class TestMolecule:
         mol = Molecule.from_smiles(smiles, allow_undefined_stereo=True)
         assert n_rings == mol.get_n_rings()
 
+    @requires_openye
+    @requires_rdkit
     @pytest.mark.parametrize(
         "toolkit_wrapper", [RDKitToolkitWrapper, OpenEyeToolkitWrapper]
     )
     @pytest.mark.parametrize(
         ("smiles", "n_atom_rings", "n_bond_rings"),
         [
-            ("c1ccc2ccccc2c1", 10, 10),
-            ("c1ccc(cc1)c2ccccc2", 12, 10),
+            ("c1ccc2ccccc2c1", 10, 11),
+            ("c1ccc(cc1)c2ccccc2", 12, 12),
             ("Cc1ccc(cc1Nc2nccc(n2)c3cccnc3)NC(=O)c4ccc(cc4)CN5CCN(CC5)C", 30, 30),
         ],
     )

@@ -5888,9 +5888,7 @@ class FrozenMolecule(Serializable):
             DeprecationWarning,
         )
 
-        if self._rings is None:
-            self.get_rings()
-        return self._rings
+        return self.get_rings()
 
     def get_rings(self, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """
