@@ -2392,7 +2392,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             # Collect lists of the indices of the bonds that appear to the 'left' of
             # and 'right' of the stereogenic bond so we can constrain their directions
             # so that all 'left' bonds do not, for example, point up.
-            constraints_ab, constraints_cd = [], []
+            constraints_ab: List[int] = []
+            constraints_cd: List[int] = []
 
             for index_pair, constraints_list in [
                 ((index_a, index_b), constraints_ab) for index_a in indices_a
