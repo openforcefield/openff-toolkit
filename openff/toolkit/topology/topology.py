@@ -128,9 +128,7 @@ class ValenceDict(_TransformedDict):
             possible = [tuple(p) for p in possible]
             impossible = [p for p in possible if p not in permutations]
             if impossible:
-                raise ValueError(
-                    f"Impossible permutations {impossible} for key {key}!"
-                    )
+                raise ValueError(f"Impossible permutations {impossible} for key {key}!")
             possible_permutations = [k for k in permutations if k in possible]
             for i, permutation in enumerate(possible_permutations):
                 if key == permutation:

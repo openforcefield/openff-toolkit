@@ -1274,29 +1274,45 @@ def test_tagsorted_dict_clear(tsd):
 
 
 class TestValenceDict:
-
-    @pytest.mark.parametrize("inkey, outkey", [
-        [[0, 1], (0, 1)],
-        [[1, 0], (0, 1)],
-        [(1, 3, 2, 4), (1, 3, 2, 4)],
-        [(4, 2, 3, 1), (1, 3, 2, 4)],
-        [(1, 8, 3, 4, 2, 5), (1, 8, 3, 4, 2, 5)],
-        [(5, 2, 4, 3, 8, 1), (1, 8, 3, 4, 2, 5)]
-    ])
+    @pytest.mark.parametrize(
+        "inkey, outkey",
+        [
+            [[0, 1], (0, 1)],
+            [[1, 0], (0, 1)],
+            [(1, 3, 2, 4), (1, 3, 2, 4)],
+            [(4, 2, 3, 1), (1, 3, 2, 4)],
+            [(1, 8, 3, 4, 2, 5), (1, 8, 3, 4, 2, 5)],
+            [(5, 2, 4, 3, 8, 1), (1, 8, 3, 4, 2, 5)],
+        ],
+    )
     def test_key_transform(self, inkey, outkey):
         assert ValenceDict.key_transform(inkey) == outkey
 
-
-    @pytest.mark.parametrize("key, possible, index", [
-        [[0, 1], None, 0],
-        [[1, 0], None, 1],
-        [(1, 3, 2, 4), None, 0],
-        [(4, 2, 3, 1), None, 1],
-        [(4, 2, 3, 1), [(4, 2, 3, 1),], 0],
-        [(1, 8, 3, 4, 2, 5), None, 0],
-        [(5, 2, 4, 3, 8, 1), None, 1],
-        [(5, 2, 4, 3, 8, 1), [(5, 2, 4, 3, 8, 1),], 0],
-    ])
+    @pytest.mark.parametrize(
+        "key, possible, index",
+        [
+            [[0, 1], None, 0],
+            [[1, 0], None, 1],
+            [(1, 3, 2, 4), None, 0],
+            [(4, 2, 3, 1), None, 1],
+            [
+                (4, 2, 3, 1),
+                [
+                    (4, 2, 3, 1),
+                ],
+                0,
+            ],
+            [(1, 8, 3, 4, 2, 5), None, 0],
+            [(5, 2, 4, 3, 8, 1), None, 1],
+            [
+                (5, 2, 4, 3, 8, 1),
+                [
+                    (5, 2, 4, 3, 8, 1),
+                ],
+                0,
+            ],
+        ],
+    )
     def test_index_of(self, key, possible, index):
         assert ValenceDict.index_of(key, possible) == index
 
