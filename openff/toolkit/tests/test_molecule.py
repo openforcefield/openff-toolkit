@@ -3714,61 +3714,16 @@ class TestMolecule:
         mol = Molecule.from_smiles(smiles, allow_undefined_stereo=True)
         assert n_rings == mol.get_n_rings()
 
-    @requires_openye
-    @requires_rdkit
-    @pytest.mark.parametrize(
-        "toolkit_wrapper", [RDKitToolkitWrapper, OpenEyeToolkitWrapper]
-    )
-    @pytest.mark.parametrize(
-        ("smiles", "n_atom_rings", "n_bond_rings"),
-        [
-            ("c1ccc2ccccc2c1", 10, 11),
-            ("c1ccc(cc1)c2ccccc2", 12, 12),
-            ("Cc1ccc(cc1Nc2nccc(n2)c3cccnc3)NC(=O)c4ccc(cc4)CN5CCN(CC5)C", 30, 30),
-        ],
-    )
-    def test_is_in_ring(self, smiles, n_atom_rings, n_bond_rings, toolkit_wrapper):
-        """Test Atom.is_in_ring and Bond.is_in_ring"""
-        mol = Molecule.from_smiles(smiles)
-
-        toolkit_registry = ToolkitRegistry(toolkit_precedence=[toolkit_wrapper()])
-
-        atoms_in_ring = [
-            atom
-            for atom in mol.atoms
-            if atom.is_in_ring(toolkit_registry=toolkit_registry)
-        ]
-
-        bonds_in_ring = [
-            bond
-            for bond in mol.bonds
-            if bond.is_in_ring(toolkit_registry=toolkit_registry)
-        ]
-
-        assert len(atoms_in_ring) == n_atom_rings
-        assert len(bonds_in_ring) == n_bond_rings
-
-    @requires_rdkit
-    @requires_openeye
-    def test_central_biphenyl_bond(self):
-        """Test that `Bond.is_in_ring` is False for the central bond in a phenyl"""
-        # Use a mapped smiles to ensure atom order while looking up central bond
-        # Generated via Molecule.from_smiles("c1ccc(cc1)c2ccccc2").to_smiles(mapped=True)
-
-        biphenyl = Molecule.from_smiles(
-            "[H:13][c:1]1[c:2]([c:3]([c:4]([c:5]([c:6]1[H:17])[H:16])[c:7]2[c:8]([c:9]([c:10]"
-            "([c:11]([c:12]2[H:22])[H:21])[H:20])[H:19])[H:18])[H:15])[H:14]"
+    def test_is_in_ring(self):
+        """
+        Test basic behavior of Atom.is_in_ring and Bond.is_in_ring API.
+        More extensive behavior testing is done in test_toolkits.py
+        """
+        molecule = Molecule.from_smiles(
+            "[H:9][c:3]1[c:2]([c:1]([c:6]([c:5]([c:4]1[H:10])[H:11])[H:12])[H:7])[H:8]"
         )
-
-        openeye_registry = ToolkitRegistry(toolkit_precedence=[OpenEyeToolkitWrapper])
-        rdkit_registry = ToolkitRegistry(toolkit_precedence=[OpenEyeToolkitWrapper])
-
-        for bond in biphenyl.bonds:
-            assert bond.is_in_ring(
-                toolkit_registry=openeye_registry
-            ) == bond.is_in_ring(toolkit_registry=rdkit_registry)
-            if (bond.atom1_index, bond.atom2_index) in [(4, 9), (9, 4)]:
-                assert bond.is_in_ring() is False
+        assert molecule.atoms[1].is_in_ring()
+        assert molecule.bonds[1].is_in_ring()
 
     @pytest.mark.parametrize(
         "toolkit_wrapper", [RDKitToolkitWrapper, OpenEyeToolkitWrapper]
