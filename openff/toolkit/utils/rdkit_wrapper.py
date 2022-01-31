@@ -12,7 +12,6 @@ import logging
 import tempfile
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
-import numpy
 import numpy as np
 
 try:
@@ -2378,18 +2377,21 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 int(rd_molecule.GetAtomWithIdx(i).GetProp("_CIPRank"))
                 for i in indices_a
             ]
-            index_a = indices_a[numpy.argmax(ranks_a)]
+            index_a = indices_a[np.argmax(ranks_a)]
             ranks_d = [
                 int(rd_molecule.GetAtomWithIdx(i).GetProp("_CIPRank"))
                 for i in indices_d
             ]
-            index_d = indices_d[numpy.argmax(ranks_d)]
+            index_d = indices_d[np.argmax(ranks_d)]
 
             index_ab = rd_molecule.GetBondBetweenAtoms(index_a, index_b).GetIdx()
             index_cd = rd_molecule.GetBondBetweenAtoms(index_c, index_d).GetIdx()
 
             flip_direction = {}
 
+            # Collect lists of the indices of the bonds that appear to the 'left' of
+            # and 'right' of the stereogenic bond so we can constrain their directions
+            # so that all 'left' bonds do not, for example, point up.
             constraints_ab, constraints_cd = [], []
 
             for index_pair, constraints_list in [
