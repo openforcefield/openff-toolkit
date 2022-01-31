@@ -8,6 +8,10 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ## Current development
 
+### Behaviors changed and bugfixes
+- [PR #1185](https://github.com/openforcefield/openff-toolkit/pull/1185):
+  Removed length check in ValenceDict and fixed checking the permutations of dihedrals
+
 ### Improved documentation and warnings
 - [PR #1172](https://github.com/openforcefield/openff-toolkit/pull/1172): Adding
   discussion about constraints to the FAQ
