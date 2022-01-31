@@ -1278,19 +1278,42 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
     def atom_is_in_ring(self, molecule, atom_index: int) -> bool:
         """Return whether or not an atom is in a ring.
+
         Parameters
         ----------
         molecule : openff.toolkit.topology.Molecule
             The molecule containing the atom of interest
         atom_index : int
             The index of the atom of interest
+
         Returns
         -------
         is_in_ring : bool
             Whether or not the atom of index `atom_index` is in a ring
+
         """
         oemol = molecule.to_openeye()
         is_in_ring = [*oemol.GetAtoms()][atom_index].IsInRing()
+
+        return is_in_ring
+
+    def bond_is_in_ring(self, molecule, bond_index: int) -> bool:
+        """Return whether or not an bond is in a ring.
+
+        Parameters
+        ----------
+        molecule : openff.toolkit.topology.Molecule
+            The molecule containing the atom of interest
+        bond_index : int
+            The index of the bond of interest
+
+        Returns
+        -------
+        is_in_ring : bool
+            Whether or not the bond of index `bond_index` is in a ring
+        """
+        oemol = molecule.to_openeye()
+        is_in_ring = [*oemol.GetBonds()][bond_index].IsInRing()
 
         return is_in_ring
 
