@@ -2088,7 +2088,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
     # Stereochemistry RDKit utilities.
     # --------------------------------
 
-    def find_rings(self, molecule):
+    def find_rings(self, molecule) -> Tuple[Tuple[int]]:
         """Find the rings in a given molecule.
 
         .. note ::

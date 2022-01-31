@@ -34,7 +34,7 @@ import warnings
 from abc import abstractmethod
 from collections import OrderedDict
 from copy import deepcopy
-from typing import TYPE_CHECKING, List, Optional, Union
+from typing import TYPE_CHECKING, List, Optional, Tuple, Union
 
 import numpy as np
 
@@ -5846,6 +5846,35 @@ class FrozenMolecule(Serializable):
         from openff.toolkit.topology import NotBondedError
 
         raise NotBondedError("No bond between atom {} and {}".format(i, j))
+
+    @property
+    def rings(self) -> Tuple[Tuple[int]]:
+        """DEPRECATED: Return a tuple of tuples representing the rings in this molecule.
+
+        This functionality is DEPRECATED and will be removed in a future release of the
+        OpenFF Toolkit. For finding rings in a molecule, call out directly to a
+        cheminformatics toolkit after using `Molecule.to_openeye()` or `Molecule.to_rdkit()`
+
+        .. note ::
+            For systems containing some special cases of connected rings, this
+            function may not be well-behaved and may report a different number
+            rings than expected. Some problematic cases include networks of many
+            (5+) rings or bicyclic moieties (i.e. norbornane).
+        """
+
+        # TODO: Remove by July 2022.
+
+        warnings.warn(
+            "`Molecule.rings` is DEPRECATED and will be removed in a future release of "
+            "the OpenFF Toolkit. For finding rings in a molecule, call out directly to a "
+            "cheminformatics toolkit after using `Molecule.to_openeye()` or "
+            "`Molecule.to_rdkit()`.",
+            DeprecationWarning,
+        )
+
+        if self._rings is None:
+            self.get_rings()
+        return self._rings
 
     def get_rings(self, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """
