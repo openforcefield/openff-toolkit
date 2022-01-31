@@ -2118,7 +2118,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         """Return the number of rings in this molecule. See `find_rings` for more details."""
         return len(self.find_rings(molecule))
 
-    def atom_is_in_ring(self, molecule, atom_index: int) -> bool:
+    def atom_is_in_ring(self, molecule: "Molecule", atom_index: int) -> bool:
         """Return whether or not an atom is in a ring.
 
         Parameters
@@ -2139,7 +2139,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         return is_in_ring
 
-    def bond_is_in_ring(self, molecule, bond_index: int) -> bool:
+    def bond_is_in_ring(self, molecule: "Molecule", bond_index: int) -> bool:
         """Return whether or not a bond is in a ring.
 
         Parameters

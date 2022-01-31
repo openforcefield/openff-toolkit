@@ -1276,7 +1276,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         return n_rings
 
-    def atom_is_in_ring(self, molecule, atom_index: int) -> bool:
+    def atom_is_in_ring(self, molecule: "Molecule", atom_index: int) -> bool:
         """Return whether or not an atom is in a ring.
 
         Parameters
@@ -1297,7 +1297,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         return is_in_ring
 
-    def bond_is_in_ring(self, molecule, bond_index: int) -> bool:
+    def bond_is_in_ring(self, molecule: "Molecule", bond_index: int) -> bool:
         """Return whether or not an bond is in a ring.
 
         Parameters

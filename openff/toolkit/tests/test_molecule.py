@@ -3746,7 +3746,27 @@ class TestMolecule:
         assert len(atoms_in_ring) == n_atom_rings
         assert len(bonds_in_ring) == n_bond_rings
 
-        # TODO: Explicitly test that the central bond in a biphenyl is NOT counted
+    @requires_rdkit
+    @requires_openeye
+    def test_central_biphenyl_bond(self):
+        """Test that `Bond.is_in_ring` is False for the central bond in a phenyl"""
+        # Use a mapped smiles to ensure atom order while looking up central bond
+        # Generated via Molecule.from_smiles("c1ccc(cc1)c2ccccc2").to_smiles(mapped=True)
+
+        biphenyl = Molecule.from_smiles(
+            "[H:13][c:1]1[c:2]([c:3]([c:4]([c:5]([c:6]1[H:17])[H:16])[c:7]2[c:8]([c:9]([c:10]"
+            "([c:11]([c:12]2[H:22])[H:21])[H:20])[H:19])[H:18])[H:15])[H:14]"
+        )
+
+        openeye_registry = ToolkitRegistry(toolkit_precedence=[OpenEyeToolkitWrapper])
+        rdkit_registry = ToolkitRegistry(toolkit_precedence=[OpenEyeToolkitWrapper])
+
+        for bond in biphenyl.bonds:
+            assert bond.is_in_ring(
+                toolkit_registry=openeye_registry
+            ) == bond.is_in_ring(toolkit_registry=rdkit_registry)
+            if (bond.atom1_index, bond.atom2_index) in [(4, 9), (9, 4)]:
+                assert bond.is_in_ring() is False
 
     @pytest.mark.parametrize(
         "toolkit_wrapper", [RDKitToolkitWrapper, OpenEyeToolkitWrapper]
