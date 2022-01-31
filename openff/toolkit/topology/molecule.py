@@ -4156,6 +4156,33 @@ class FrozenMolecule(Serializable):
         self._construct_torsions()
         return len(self._impropers)
 
+    @property
+    def n_rings(self) -> int:
+        """DEPRECATED: Return the number of rings in this molecule.
+
+        This functionality is DEPRECATED and will be removed in a future release of the
+        OpenFF Toolkit. For finding rings in a molecule, call out directly to a
+        cheminformatics toolkit after using `Molecule.to_openeye()` or `Molecule.to_rdkit()`
+
+        .. note ::
+            For systems containing some special cases of connected rings, this
+            function may not be well-behaved and may report a different number
+            rings than expected. Some problematic cases include networks of many
+            (5+) rings or bicyclic moieties (i.e. norbornane).
+        """
+
+        # TODO: Remove by July 2022.
+
+        warnings.warn(
+            "`Molecule.n_rings` is DEPRECATED and will be removed in a future release of "
+            "the OpenFF Toolkit. For finding rings in a molecule, call out directly to a "
+            "cheminformatics toolkit after using `Molecule.to_openeye()` or "
+            "`Molecule.to_rdkit()`.",
+            DeprecationWarning,
+        )
+
+        return self.get_n_rings()
+
     def get_n_rings(self, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """Return the number of rings found in the Molecule as determined by
         a cheminformatics toolkit wrapper.

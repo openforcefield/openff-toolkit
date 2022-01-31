@@ -3725,6 +3725,8 @@ class TestMolecule:
         assert molecule.atoms[1].is_in_ring()
         assert molecule.bonds[1].is_in_ring()
 
+    @requires_rdkit
+    @requires_openeye
     @pytest.mark.parametrize(
         "toolkit_wrapper", [RDKitToolkitWrapper, OpenEyeToolkitWrapper]
     )
@@ -3737,7 +3739,11 @@ class TestMolecule:
         ],
     )
     def test_n_rings(self, smiles, n_rings, toolkit_wrapper):
-        """Test Atom.is_in_ring and Bond.is_in_ring"""
+        """
+        Test Molecule.get_n_rings.
+
+        Note that this method is deprecated and slated to be removed by July 2022.
+        """
         mol = Molecule.from_smiles(smiles)
 
         toolkit_registry = ToolkitRegistry(toolkit_precedence=[toolkit_wrapper()])
