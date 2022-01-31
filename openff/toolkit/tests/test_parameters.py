@@ -91,7 +91,7 @@ class TestParameterAttribute:
 
         class MyParameter:
             attr_unit = ParameterAttribute(
-                unit=unit.kilocalories_per_mole / unit.angstrom ** 2
+                unit=unit.kilocalories_per_mole / unit.angstrom**2
             )
 
         my_par = MyParameter()
@@ -104,7 +104,7 @@ class TestParameterAttribute:
             my_par.attr_unit = 3.0 * unit.kilocalories_per_mole
 
         # Otherwise the attribute is assigned correctly.
-        value = 3.0 * unit.kilocalories_per_mole / unit.angstrom ** 2
+        value = 3.0 * unit.kilocalories_per_mole / unit.angstrom**2
         my_par.attr_unit = value
         assert my_par.attr_unit == value
         assert my_par.attr_unit.unit == value.unit
@@ -113,13 +113,13 @@ class TestParameterAttribute:
         """ParameterAttributes attached to units convert strings into Quantity objects."""
 
         class MyParameter:
-            attr_unit = ParameterAttribute(unit=unit.meter / unit.second ** 2)
+            attr_unit = ParameterAttribute(unit=unit.meter / unit.second**2)
 
         my_par = MyParameter()
 
         my_par.attr_unit = "3.0*meter/second**2"
-        assert my_par.attr_unit == 3.0 * unit.meter / unit.second ** 2
-        assert my_par.attr_unit.unit == unit.meter / unit.second ** 2
+        assert my_par.attr_unit == 3.0 * unit.meter / unit.second**2
+        assert my_par.attr_unit.unit == unit.meter / unit.second**2
 
         # Assigning incorrect units still raises an error.
         with pytest.raises(IncompatibleUnitError, match="should have units of"):
@@ -463,7 +463,7 @@ class TestParameterAttributeHandler:
 class TestParameterHandler:
 
     length = 1 * unit.angstrom
-    k = 10 * unit.kilocalorie_per_mole / unit.angstrom ** 2
+    k = 10 * unit.kilocalorie_per_mole / unit.angstrom**2
 
     def test_tagname(self):
         """Test the TAGNAME getter and default behavior"""
@@ -613,14 +613,14 @@ class TestParameterHandler:
             {
                 "smirks": "[*:1]-[*:2]",
                 "length": 1 * unit.angstrom,
-                "k": 10 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
+                "k": 10 * unit.kilocalorie_per_mole / unit.angstrom**2,
             }
         )
         bh.add_parameter(
             {
                 "smirks": "[*:1]=[*:2]",
                 "length": 0.2 * unit.nanometer,
-                "k": 0.4 * unit.kilojoule_per_mole / unit.nanometer ** 2,
+                "k": 0.4 * unit.kilojoule_per_mole / unit.nanometer**2,
             }
         )
         bh_dict = bh.to_dict()
@@ -638,14 +638,14 @@ class TestParameterHandler:
             {
                 "smirks": "[*:1]-[*:2]",
                 "length": 1 * unit.angstrom,
-                "k": 10 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
+                "k": 10 * unit.kilocalorie_per_mole / unit.angstrom**2,
             }
         )
         bh.add_parameter(
             {
                 "smirks": "[*:1]=[*:2]",
                 "length": 0.2 * unit.nanometer,
-                "k": 0.4 * unit.kilojoule_per_mole / unit.nanometer ** 2,
+                "k": 0.4 * unit.kilojoule_per_mole / unit.nanometer**2,
             }
         )
         bh_dict = bh.to_dict()
@@ -724,14 +724,14 @@ class TestParameterHandler:
             {
                 "smirks": "[*:1]-[*:2]",
                 "length": 1 * unit.angstrom,
-                "k": 10 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
+                "k": 10 * unit.kilocalorie_per_mole / unit.angstrom**2,
             }
         )
         bh.add_parameter(
             {
                 "smirks": "[*:1]=[*:2]",
                 "length": 0.2 * unit.nanometer,
-                "k": 0.4 * unit.kilojoule_per_mole / unit.nanometer ** 2,
+                "k": 0.4 * unit.kilojoule_per_mole / unit.nanometer**2,
             }
         )
 
@@ -761,7 +761,7 @@ class TestParameterHandler:
             {
                 "smirks": "[*:1]-[*:2]",
                 "length": 1 * unit.angstrom,
-                "k": 10 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
+                "k": 10 * unit.kilocalorie_per_mole / unit.angstrom**2,
                 "id": "b0",
             }
         )
@@ -772,7 +772,7 @@ class TestParameterHandler:
 
         assert params[0].length == unit.Quantity(1.0, unit.angstrom)
         assert params[0].k == unit.Quantity(
-            10.0, unit.kilocalorie_per_mole / unit.angstrom ** 2
+            10.0, unit.kilocalorie_per_mole / unit.angstrom**2
         )
 
         # Ensure a query with no matches returns an empty list
@@ -793,7 +793,7 @@ class TestParameterHandler:
             {
                 "smirks": "[#1:1]-[#6:2]",
                 "length": 1 * unit.angstrom,
-                "k": 10 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
+                "k": 10 * unit.kilocalorie_per_mole / unit.angstrom**2,
                 "id": "b1",
             }
         )
@@ -953,17 +953,17 @@ class TestParameterList:
         p1 = BondHandler.BondType(
             smirks="[*:1]-[*:2]",
             length=1.01 * unit.angstrom,
-            k=5 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
+            k=5 * unit.kilocalorie_per_mole / unit.angstrom**2,
         )
         p2 = BondHandler.BondType(
             smirks="[*:1]=[*:2]",
             length=1.02 * unit.angstrom,
-            k=6 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
+            k=6 * unit.kilocalorie_per_mole / unit.angstrom**2,
         )
         p3 = BondHandler.BondType(
             smirks="[*:1]#[*:3]",
             length=1.03 * unit.angstrom,
-            k=7 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
+            k=7 * unit.kilocalorie_per_mole / unit.angstrom**2,
         )
         parameter_list = ParameterList([p1, p2, p3])
         ser_param_list = parameter_list.to_list()
@@ -975,17 +975,17 @@ class TestParameterList:
         p1 = BondHandler.BondType(
             smirks="[*:1]-[*:2]",
             length=1.01 * unit.angstrom,
-            k=5 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
+            k=5 * unit.kilocalorie_per_mole / unit.angstrom**2,
         )
         p2 = BondHandler.BondType(
             smirks="[*:1]=[*:2]",
             length=1.02 * unit.angstrom,
-            k=6 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
+            k=6 * unit.kilocalorie_per_mole / unit.angstrom**2,
         )
         p3 = BondHandler.BondType(
             smirks="[*:1]#[*:3]",
             length=1.03 * unit.angstrom,
-            k=7 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
+            k=7 * unit.kilocalorie_per_mole / unit.angstrom**2,
         )
         parameter_list = ParameterList([p1, p2, p3])
         param_dict_list = parameter_list.to_list()
@@ -1177,7 +1177,7 @@ class TestBondType:
         p1 = BondHandler.BondType(
             smirks="[*:1]-[*:2]",
             length=1.02 * unit.angstrom,
-            k=5 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
+            k=5 * unit.kilocalorie_per_mole / unit.angstrom**2,
         )
         param_dict = p1.to_dict()
         param_dict_unitless, attached_units = detach_units(param_dict)
@@ -1188,9 +1188,9 @@ class TestBondType:
         }
         assert attached_units == {
             "length_unit": unit.angstrom,
-            "k_unit": (unit.angstrom ** -2)
-            * (unit.mole ** -1)
-            * (unit.kilocalorie ** 1),
+            "k_unit": (unit.angstrom**-2)
+            * (unit.mole**-1)
+            * (unit.kilocalorie**1),
         }
 
     def test_bondtype_partial_bondorders(self):
@@ -1198,9 +1198,9 @@ class TestBondType:
         Test the parsing of a BondType with k_bondorder1/2/3 definitions
         """
         length = 1.4 * unit.angstrom
-        k1 = 101 * unit.kilocalorie_per_mole / unit.angstrom ** 2
-        k2 = 202 * unit.kilocalorie_per_mole / unit.angstrom ** 2
-        k3 = 303 * unit.kilocalorie_per_mole / unit.angstrom ** 2
+        k1 = 101 * unit.kilocalorie_per_mole / unit.angstrom**2
+        k2 = 202 * unit.kilocalorie_per_mole / unit.angstrom**2
+        k3 = 303 * unit.kilocalorie_per_mole / unit.angstrom**2
 
         param = BondHandler.BondType(
             smirks="[*:1]-[*:2]",
@@ -1219,9 +1219,9 @@ class TestBondType:
         length = 1.4 * unit.angstrom
         length1 = 1.5 * unit.angstrom
         length2 = 1.3 * unit.angstrom
-        k = 50 * unit.kilocalorie_per_mole / unit.angstrom ** 2
-        k1 = 101 * unit.kilocalorie_per_mole / unit.angstrom ** 2
-        k2 = 202 * unit.kilocalorie_per_mole / unit.angstrom ** 2
+        k = 50 * unit.kilocalorie_per_mole / unit.angstrom**2
+        k1 = 101 * unit.kilocalorie_per_mole / unit.angstrom**2
+        k2 = 202 * unit.kilocalorie_per_mole / unit.angstrom**2
 
         with pytest.raises(SMIRNOFFSpecError, match="Either k or k_bondorder"):
             BondHandler.BondType(
@@ -1262,7 +1262,7 @@ class TestBondType:
         p1 = BondHandler.BondType(
             smirks="[*:1]-[*:2]",
             length=1.02 * unit.angstrom,
-            k=5 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
+            k=5 * unit.kilocalorie_per_mole / unit.angstrom**2,
         )
         param_dict = p1.to_dict()
         param_dict_unitless, attached_units = detach_units(
@@ -1278,7 +1278,7 @@ class TestBondType:
         p1 = BondHandler.BondType(
             smirks="[*:1]-[*:2]",
             length=1.02 * unit.angstrom,
-            k=5 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
+            k=5 * unit.kilocalorie_per_mole / unit.angstrom**2,
         )
         param_dict = p1.to_dict()
         with pytest.raises(
@@ -1296,7 +1296,7 @@ class TestBondType:
         p1 = BondHandler.BondType(
             smirks="[*:1]-[*:2]",
             length=1.02 * unit.angstrom,
-            k=5 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
+            k=5 * unit.kilocalorie_per_mole / unit.angstrom**2,
             id="b1",
         )
         param_dict = p1.to_dict()
@@ -1309,7 +1309,7 @@ class TestBondType:
         p1 = BondHandler.BondType(
             smirks="[*:1]-[*:2]",
             length=1.02 * unit.angstrom,
-            k=5 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
+            k=5 * unit.kilocalorie_per_mole / unit.angstrom**2,
             pilot="alice",
             allow_cosmetic_attributes=True,
         )
@@ -1323,7 +1323,7 @@ class TestBondType:
         p1 = BondHandler.BondType(
             smirks="[*:1]-[*:2]",
             length=1.02 * unit.angstrom,
-            k=5 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
+            k=5 * unit.kilocalorie_per_mole / unit.angstrom**2,
             pilot="alice",
             allow_cosmetic_attributes=True,
         )
@@ -1340,7 +1340,7 @@ class TestBondType:
             p1 = BondHandler.BondType(
                 smirks="[*:1]-[*:2]",
                 length=1.02 * unit.angstrom,
-                k=5 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
+                k=5 * unit.kilocalorie_per_mole / unit.angstrom**2,
                 pilot="alice",
                 allow_cosmetic_attributes=False,
             )
@@ -1352,7 +1352,7 @@ class TestBondType:
         p1 = BondHandler.BondType(
             smirks="[*:1]-[*:2]",
             length=1.02 * unit.angstrom,
-            k=5 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
+            k=5 * unit.kilocalorie_per_mole / unit.angstrom**2,
         )
         # Ensure the cosmetic attribute is present by default during output
         p1.add_cosmetic_attribute("pilot", "alice")
@@ -1384,8 +1384,8 @@ class TestBondHandler:
     ):
         """Test that linear interpolation works as expected"""
         k_bondorder = {
-            1: 101 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
-            2: 123 * unit.kilocalorie_per_mole / unit.angstrom ** 2,
+            1: 101 * unit.kilocalorie_per_mole / unit.angstrom**2,
+            2: 123 * unit.kilocalorie_per_mole / unit.angstrom**2,
         }
 
         length_bondorder = {
@@ -2189,7 +2189,7 @@ class TestGBSAHandler:
         assert gbsa_handler.sa_model == "ACE"
         assert (
             gbsa_handler.surface_area_penalty
-            == 5.4 * unit.calorie / unit.mole / unit.angstrom ** 2
+            == 5.4 * unit.calorie / unit.mole / unit.angstrom**2
         )
         assert gbsa_handler.solvent_radius == 1.4 * unit.angstrom
 
@@ -2223,11 +2223,11 @@ class TestGBSAHandler:
             gbsa_handler.sa_model = "Invalid SA option"
 
         gbsa_handler.surface_area_penalty = (
-            1.23 * unit.kilocalorie / unit.mole / unit.nanometer ** 2
+            1.23 * unit.kilocalorie / unit.mole / unit.nanometer**2
         )
         with pytest.raises(IncompatibleUnitError) as excinfo:
             gbsa_handler.surface_area_penalty = (
-                1.23 * unit.degree / unit.mole / unit.nanometer ** 2
+                1.23 * unit.degree / unit.mole / unit.nanometer**2
             )
 
         gbsa_handler.solvent_radius = 300 * unit.femtometer

@@ -90,9 +90,9 @@ def test_get_data_file_path():
         ("kilocalories_per_mole", unit.kilocalories_per_mole),
         (
             "kilocalories_per_mole/angstrom**2",
-            unit.kilocalories_per_mole / unit.angstrom ** 2,
+            unit.kilocalories_per_mole / unit.angstrom**2,
         ),
-        ("joule/(mole * nanometer**2)", unit.joule / (unit.mole * unit.nanometer ** 2)),
+        ("joule/(mole * nanometer**2)", unit.joule / (unit.mole * unit.nanometer**2)),
         ("picosecond**(-1)", unit.picosecond ** (-1)),
         ("300.0 * kelvin", 300 * unit.kelvin),
         ("1 * kilojoule + 500 * joule", 1.5 * unit.kilojoule),
