@@ -9,7 +9,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ## Current development
 
 ### Improved documentation and warnings
-
+- [PR #1172](https://github.com/openforcefield/openff-toolkit/pull/1172): Adding
+  discussion about constraints to the FAQ
 - [PR #1173](https://github.com/openforcefield/openforcefield/pull/1173): Expand
   on the SMIRNOFF section of the toolkit docs
 
