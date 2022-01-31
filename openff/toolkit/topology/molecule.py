@@ -2107,17 +2107,32 @@ class Bond(Serializable):
         """
         Return whether or not this bond is in a ring(s) (of any size)
 
+        Note: Bonds containing atoms that are only in separate rings, i.e. the central bond in a biphenyl,
+            are not considered to be bondned by this criteria.
+
+        Parameters
+        ----------
+        toolkit_registry: openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, default=GLOBAL_TOOLKIT_REGISTRY
+            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use to enumerate the tautomers.
+
+        Returns
+        -------
+        is_in_ring: bool
+            Whether or not this bond is in a ring.
+
         """
         if self._molecule is None:
             raise NotAttachedToMoleculeError(
                 "This Bond does not belong to a Molecule object"
             )
 
-        if self.atom1.is_in_ring(toolkit_registry=toolkit_registry):
-            if self.atom2.is_in_ring(toolkit_registry=toolkit_registry):
-                return True
+        _is_in_ring = toolkit_registry.call(
+            "bond_is_in_ring",
+            self._molecule,
+            self.molecule_bond_index,
+        )
 
-        return False
+        return _is_in_ring
 
     def __repr__(self):
         return f"Bond(atom1 index={self.atom1_index}, atom2 index={self.atom2_index})"
