@@ -39,4 +39,4 @@ dependencies:
   - qcengine
   - mdtraj
   - pip:
-    - git+https://github.com/openforcefield/openff-interchange.git@topology-refactor
+    - git+https://github.com/openforcefield/openff-interchange.git@v0.2.0-alpha.1

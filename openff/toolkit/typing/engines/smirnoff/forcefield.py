@@ -1247,7 +1247,7 @@ class ForceField:
     def create_openmm_system(
         self,
         topology: "Topology",
-        use_interchange: bool = True,
+        use_interchange: bool = False,
         **kwargs,
     ):
         """Create an OpenMM System from this ForceField and a Topology.
