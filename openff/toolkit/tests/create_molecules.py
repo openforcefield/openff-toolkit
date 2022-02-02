@@ -16,7 +16,7 @@ import pytest
 from openff.units import unit
 
 from openff.toolkit.tests.utils import requires_openeye
-from openff.toolkit.topology.molecule import Molecule
+from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.utils import get_data_file_path
 
 
@@ -454,3 +454,61 @@ def tip5_water():
         symmetric=True,
     )
     return molecule
+
+@pytest.fixture
+def topology_with_metadata():
+    n2 = Molecule.from_smiles('N#N')
+    ammonia = create_ammonia()
+    chloride = Molecule.from_smiles('[Cl-]')
+    water = create_water()
+    mols = [n2,
+            ammonia,
+            chloride,
+            chloride,
+            ammonia,
+            chloride,
+            chloride,
+            n2,
+            chloride,
+            chloride,
+            chloride,
+            water]
+
+    top = Topology.from_molecules(mols)
+
+    atom_hier_info = [('AAA', 1, 'A'),  # mol[0]
+                      ('AAA', 1, 'A'),  # mol[0]
+                      ('AAA', 1, 'A'),  # mol[1]
+                      ('BBB', 1, 'A'),  # mol[1]
+                      ('BBB', 2, 'A'),  # mol[1]
+                      ('BBB', 2, 'B'),  # mol[1]
+                      ('CCC', 2, 'B'),  # mol[2]
+                      ('CCC', 3, 'B'),  # mol[3]
+                      ('CCC', 3, 'C'),  # mol[4]
+                      ('DDD', 4, 'C'),  # mol[4]
+                      ('EEE', 4, 'D'),  # mol[4]
+                      ('EEE', 5, 'E'),  # mol[4]
+                      ('FFF', 6, 'E'),  # mol[5]
+                      ('GGG', 6, 'F'),  # mol[6]
+                      ('GGG', 7, 'G'),  # mol[7]
+                      ('HHH', 8, 'H'),  # mol[7]
+                      ('YZ', 9, 'I'),  # mol[8]
+                      ('AAA', 1, 'A'),  # mol[9]
+                      (None, None, None),  # mol[10]
+                      (None, None, None),  # mol[11]
+                      ('AAA', None, None),  # mol[11]
+                      (None, None, 'A'),  # mol[12]
+                      ]
+
+    for atom, metadata_tuple in zip(top.atoms, atom_hier_info):
+        residue_name = metadata_tuple[0]
+        residue_number = metadata_tuple[1]
+        chain_id = metadata_tuple[2]
+        if residue_name is not None:
+            atom.metadata['residue_name'] = residue_name
+        if residue_number is not None:
+            atom.metadata['residue_number'] = residue_number
+        if chain_id is not None:
+            atom.metadata['chain_id'] = chain_id
+
+    return top

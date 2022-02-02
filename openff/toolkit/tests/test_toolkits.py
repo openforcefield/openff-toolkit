@@ -27,6 +27,7 @@ from openff.toolkit.tests.create_molecules import (
     create_cyclohexane,
     create_ethanol,
     create_reversed_ethanol,
+    topology_with_metadata
 )
 from openff.toolkit.tests.utils import (
     requires_ambertools,
@@ -565,6 +566,58 @@ class TestOpenEyeToolkitWrapper:
         oemol2 = eth_from_oe.to_openeye()
         for oeatom in oemol2.GetAtoms():
             assert math.isnan(oeatom.GetPartialCharge())
+
+    def test_to_from_openeye_hierarchy_metadata(self, topology_with_metadata):
+        """
+        Test roundtripping to/from ``OpenEyeToolkitWrapper`` for molecules with PDB hierarchy metadata
+        """
+        from openeye import oechem
+        for molecule in topology_with_metadata.molecules:
+            oemol = molecule.to_openeye()
+            roundtrip_mol = Molecule.from_openeye(oemol)
+
+            # Check OEMol
+            for orig_atom, oe_atom in zip(molecule.atoms, oemol.GetAtoms()):
+                if 'residue_name' in orig_atom.metadata:
+                    assert orig_atom.metadata['residue_name'] == oechem.OEAtomGetResidue(oe_atom).GetName()
+                else:
+                    if oechem.OEHasResidues(oemol):
+                        assert 'UNL' == oechem.OEAtomGetResidue(oe_atom).GetName()
+
+                if 'residue_number' in orig_atom.metadata:
+                    assert orig_atom.metadata['residue_number'] == oechem.OEAtomGetResidue(oe_atom).GetResidueNumber()
+                else:
+                    if oechem.OEHasResidues(oemol):
+                        assert 1 == oechem.OEAtomGetResidue(oe_atom).GetResidueNumber()
+
+                if 'chain_id' in orig_atom.metadata:
+                    assert orig_atom.metadata['chain_id'] == oechem.OEAtomGetResidue(oe_atom).GetChainID()
+                else:
+                    if oechem.OEHasResidues(oemol):
+                        assert ' ' == oechem.OEAtomGetResidue(oe_atom).GetChainID()
+
+            # Check roundtripped OFFMol
+            for orig_atom, roundtrip_atom in zip(molecule.atoms,
+                                                          roundtrip_mol.atoms):
+                # If ANY atom in the OEMol has any hierarchy metadata set, then the ENTIRE molecule is considered
+                # to have metadata. Anything that wasn't set defaults to ("UNK", 1, "").
+                if oechem.OEHasResidues(oemol):
+                    if 'residue_name' in orig_atom.metadata:
+                        assert orig_atom.metadata['residue_name'] == roundtrip_atom.metadata['residue_name']
+                    else:
+                        assert roundtrip_atom.metadata['residue_name'] == 'UNL'
+                    if 'residue_number' in orig_atom.metadata:
+                        assert orig_atom.metadata['residue_number'] == roundtrip_atom.metadata['residue_number']
+                    else:
+                        assert roundtrip_atom.metadata['residue_number'] == 1
+                    if 'chain_id' in orig_atom.metadata:
+                        assert orig_atom.metadata['chain_id'] == roundtrip_atom.metadata['chain_id']
+                    else:
+                        assert roundtrip_atom.metadata['chain_id'] == ""
+                else:
+                    assert 'residue_name' not in roundtrip_atom.metadata
+                    assert 'residue_number' not in roundtrip_atom.metadata
+                    assert 'chain_id' not in roundtrip_atom.metadata
 
     def test_from_openeye_mutable_input(self):
         """
@@ -2073,7 +2126,7 @@ class TestRDKitToolkitWrapper:
         for fbo, bond in zip(fractional_bond_orders, molecule.bonds):
             bond.fractional_bond_order = fbo
 
-        # Do a first conversion to/from oemol
+        # Do a first conversion to/from rdmol
         rdmol = molecule.to_rdkit()
         molecule2 = Molecule.from_rdkit(rdmol)
 
