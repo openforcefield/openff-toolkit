@@ -64,7 +64,6 @@ from openff.toolkit.utils.toolkits import (
 
 def get_mini_drug_bank(toolkit_class, xfail_mols=None):
     """Read the mini drug bank sdf file with the toolkit and return the molecules"""
-    return []
     # This is a work around a weird error where even though the test is skipped due to a missing toolkit
     #  we still try and read the file with the toolkit
     if toolkit_class.is_available():
