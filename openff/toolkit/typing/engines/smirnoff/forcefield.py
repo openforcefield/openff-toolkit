@@ -1413,7 +1413,7 @@ class ForceField:
 
         Parameters
         ----------
-        topology : openff.system.Topology
+        topology : openff.toolkit.topology.Topology
             The topology to create this `Interchange` object from.
         box : array-like, optional
             The box vectors or lengths to use for the Interchange object.
