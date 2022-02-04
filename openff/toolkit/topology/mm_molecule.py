@@ -7,6 +7,15 @@ TypedMolecule TODOs
 * Topology serialization will have trouble here - Won't know whether it's trying to deserialize a Molecule or a TypedMolecule.
 
 """
+from typing import Dict, List
+
+from openff.units import unit
+
+from openff.toolkit.topology.molecule import (
+    AtomMetadataDict,
+    _atom_nums_to_hill_formula,
+)
+from openff.toolkit.utils.utils import deserialize_numpy, serialize_numpy
 
 
 class _TypedMolecule:
@@ -16,8 +25,8 @@ class _TypedMolecule:
         self.hierarchy_schemes = dict()
         self.conformers = None
 
-    def add_atom(self, **kwargs):
-        atom = _TypedAtom(self, **kwargs)
+    def add_atom(self, atomic_number: int, **kwargs):
+        atom = _TypedAtom(atomic_number, self, **kwargs)
         self.atoms.append(atom)
 
     def add_bond(self, atom1, atom2, **kwargs):
@@ -43,19 +52,19 @@ class _TypedMolecule:
         self.conformers.append(conformer)
 
     @property
-    def n_atoms(self):
+    def n_atoms(self) -> int:
         return len(self.atoms)
 
     @property
-    def n_particles(self):
+    def n_particles(self) -> int:
         return len(self.atoms)
 
     @property
-    def n_bonds(self):
+    def n_bonds(self) -> int:
         return len(self.bonds)
 
     @property
-    def n_conformers(self):
+    def n_conformers(self) -> int:
         if self.conformers is None:
             return 0
         return len(self.conformers)
@@ -63,7 +72,7 @@ class _TypedMolecule:
     def atom(self, index):
         return self.atoms[index]
 
-    def atom_index(self, atom):
+    def atom_index(self, atom) -> int:
         return self.atoms.index(atom)
 
     def bond(self, index):
@@ -75,7 +84,25 @@ class _TypedMolecule:
                 if atom.molecule_atom_index == atom2_index:
                     return bond
 
-    def to_dict(self):
+    @property
+    def hill_formula(self) -> str:
+        """
+        Return the Hill formula of this molecule.
+
+        If any atoms are non-elemental, defined by having an atomic number of 0,
+        return INVALID instead.
+        """
+        return self.to_hill_formula()
+
+    def to_hill_formula(self) -> str:
+        atom_nums: List[int] = [atom.atomic_number for atom in self.atoms]
+
+        if min(atom_nums) <= 0:
+            return "INVALID"
+
+        return _atom_nums_to_hill_formula(atom_nums)
+
+    def to_dict(self) -> Dict:
         molecule_dict = dict()
         special_serialization_logic = [
             "atoms",
@@ -165,14 +192,14 @@ class _TypedMolecule:
         for key, val in molecule_dict:
             setattr(self, key, val)
 
-    def particle(self, index):
+    def particle(self, index) -> int:
         return self.atom(index)
 
     @property
     def particles(self):
         return self.atoms
 
-    def particle_index(self, particle):
+    def particle_index(self, particle) -> int:
         return self.atom_index(particle)
 
     def to_hill_formula(self) -> str:
@@ -193,15 +220,31 @@ class _TypedMolecule:
 
 
 class _TypedAtom:
-    def __init__(self, molecule, metadata=None, **kwargs):
+    def __init__(self, atomic_number: int, molecule, metadata=None, **kwargs):
         if metadata is None:
             self.metadata = AtomMetadataDict()
         else:
             self.metadata = AtomMetadataDict(metadata)
+        self._atomic_number = atomic_number
         self.molecule = molecule
         self.bonds = []
         for key, val in kwargs.items():
             setattr(self, key, val)
+
+    @property
+    def atomic_number(self) -> int:
+        return self._atomic_number
+
+    @atomic_number.setter
+    def atomic_number(self, value):
+        if not isinstance(value, int):
+            raise ValueError("atomic_number must be an integer")
+        if value < 0:
+            raise ValueError(
+                "atomic_number must be non-negative. An atomic number "
+                "of 0 is acceptable."
+            )
+        self._atomic_number = value
 
     def add_bond(self, bond):
         self.bonds.append(bond)
@@ -216,14 +259,14 @@ class _TypedAtom:
         return bonded_atoms
 
     @property
-    def molecule_atom_index(self):
+    def molecule_atom_index(self) -> int:
         return self.molecule.atoms.index(self)
 
     @property
-    def molecule_particle_index(self):
+    def molecule_particle_index(self) -> int:
         return self.molecule.atoms.index(self)
 
-    def to_dict(self):
+    def to_dict(self) -> Dict:
         atom_dict = dict()
         atom_dict["metadata"] = dict(self.metadata)
         special_serialization_logic = ["metadata", "molecule", "bonds"]
@@ -250,18 +293,18 @@ class _TypedBond:
             setattr(self, key, val)
 
     @property
-    def atoms(self):
+    def atoms(self) -> List[_TypedAtom]:
         return [self.atom1, self.atom2]
 
     @property
-    def atom1_index(self):
+    def atom1_index(self) -> int:
         return self.atom1.molecule_atom_index
 
     @property
-    def atom2_index(self):
+    def atom2_index(self) -> int:
         return self.atom2.molecule_atom_index
 
-    def to_dict(self):
+    def to_dict(self) -> Dict:
         bond_dict = dict()
         bond_dict["atom1"] = self.atom1.molecule_atom_index
         bond_dict["atom2"] = self.atom2.molecule_atom_index
