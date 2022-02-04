@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 
 from openff.toolkit.topology.mm_molecule import (
@@ -48,10 +49,25 @@ class TestMMMolecule:
         assert water.get_bond_between(0, 1) is water.bond(0)
         assert water.get_bond_between(0, 2) is water.bond(1)
 
+    def test_atom_particle_iterators(self, water):
+
+        for atom, particle in zip(water.atoms, water.particles):
+            assert atom is particle
+
     def test_hill_formula(self, water, molecule_with_bogus_atom):
 
         assert water.hill_formula == "H2O"
         assert molecule_with_bogus_atom.hill_formula == "INVALID"
+
+    def test_add_conformer(self, water):
+        water_molecule = Molecule.from_smiles("O")
+        water_molecule.generate_conformers(n_conformers=1)
+
+        assert water.n_conformers == 0
+        water.add_conformer(water_molecule.conformers[0])
+        assert water.n_conformers == 1
+
+        assert np.allclose(water.conformers[0], water_molecule.conformers[0])
 
     def test_dict_roundtrip(self, water):
         roundtrip = _SimpleMolecule.from_dict(water.to_dict())
@@ -64,6 +80,17 @@ class TestMMMolecule:
                 roundtrip.atom(atom_index).atomic_number
                 == water.atom(atom_index).atomic_number
             )
+
+    def test_dict_roundtrip_conformers(self, water):
+        water_molecule = Molecule.from_smiles("O")
+        water_molecule.generate_conformers(n_conformers=1)
+
+        water.add_conformer(water_molecule.conformers[0])
+
+        roundtrip = _SimpleMolecule.from_dict(water.to_dict())
+
+        assert water.n_conformers == roundtrip.n_conformers
+        assert np.allclose(water.conformers[0], roundtrip.conformers[0])
 
     def test_from_molecule(self):
         converted = _SimpleMolecule.from_molecule(Molecule.from_smiles("O"))

@@ -179,13 +179,12 @@ class _SimpleMolecule:
         if conformers is None:
             molecule.conformers = None
         else:
+            conformers_unit = molecule_dict.pop("conformers_unit")
             molecule.conformers = list()
-            for ser_conf in molecule_dict["conformers"]:
-                # TODO: Update to use string_to_quantity
+            for ser_conf in conformers:
                 conformers_shape = (molecule.n_atoms, 3)
                 conformer_unitless = deserialize_numpy(ser_conf, conformers_shape)
-                c_unit = getattr(unit, molecule_dict["conformers_unit"])
-                conformer = unit.Quantity(conformer_unitless, c_unit)
+                conformer = unit.Quantity(conformer_unitless, conformers_unit)
                 molecule.conformers.append(conformer)
 
         hier_scheme_dicts = molecule_dict.pop("hierarchy_schemes")
