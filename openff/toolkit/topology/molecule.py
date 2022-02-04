@@ -34,7 +34,7 @@ import warnings
 from abc import abstractmethod
 from collections import OrderedDict
 from copy import deepcopy
-from typing import TYPE_CHECKING, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, List, Optional, Union
 
 import numpy as np
 
