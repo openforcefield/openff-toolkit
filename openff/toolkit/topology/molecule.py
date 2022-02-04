@@ -4991,7 +4991,8 @@ class FrozenMolecule(Serializable):
             molecule = toolkit.from_iupac(
                 iupac_name,
                 allow_undefined_stereo=allow_undefined_stereo,
-                _cls=cls ** kwargs,
+                _cls=cls,
+                **kwargs,
             )
         else:
             raise Exception(
@@ -7438,6 +7439,8 @@ TypedMolecule TODOs
 * Topology serialization will have trouble here - Won't know whether it's trying to deserialize a Molecule or a TypedMolecule.
 
 """
+
+
 class _TypedMolecule:
     def __init__(self):
         self.atoms = []
@@ -7461,7 +7464,8 @@ class _TypedMolecule:
                 "Invalid inputs to molecule._add_bond. Expected ints or Atoms. "
                 "Received {} (type {}) and {} (type {}) ".format(
                     atom1, type(atom1), atom2, type(atom2)
-                ))
+                )
+            )
         bond = _TypedBond(atom1_atom, atom2_atom, **kwargs)
         self.bonds.append(bond)
 
@@ -7505,13 +7509,15 @@ class _TypedMolecule:
 
     def to_dict(self):
         molecule_dict = dict()
-        special_serialization_logic = ['atoms',
-                                       'bonds',
-                                       'conformers',
-                                       'hierarchy_schemes',
-                                       'molecule']
+        special_serialization_logic = [
+            "atoms",
+            "bonds",
+            "conformers",
+            "hierarchy_schemes",
+            "molecule",
+        ]
         for attr_name, attr_val in self.__dict__.items():
-            if attr_name.startswith('_'):
+            if attr_name.startswith("_"):
                 continue
             if attr_name in special_serialization_logic:
                 continue
@@ -7520,12 +7526,12 @@ class _TypedMolecule:
         atom_list = list()
         for atom in self.atoms:
             atom_list.append(atom.to_dict())
-        molecule_dict['atoms'] = atom_list
+        molecule_dict["atoms"] = atom_list
 
         bond_list = list()
         for bond in self.bonds:
             bond_list.append(bond.to_dict())
-        molecule_dict['bonds'] = bond_list
+        molecule_dict["bonds"] = bond_list
 
         if self.conformers is None:
             molecule_dict["conformers"] = None
@@ -7652,12 +7658,10 @@ class _TypedAtom:
     def to_dict(self):
         atom_dict = dict()
         atom_dict["metadata"] = dict(self.metadata)
-        special_serialization_logic = ['metadata',
-                                       'molecule',
-                                       'bonds']
+        special_serialization_logic = ["metadata", "molecule", "bonds"]
 
         for attr_name, attr_val in self.__dict__.items():
-            if attr_name.startswith('_'):
+            if attr_name.startswith("_"):
                 continue
             if attr_name in special_serialization_logic:
                 continue
@@ -7691,15 +7695,14 @@ class _TypedBond:
 
     def to_dict(self):
         bond_dict = dict()
-        bond_dict['atom1'] = self.atom1.molecule_atom_index
-        bond_dict['atom2'] = self.atom2.molecule_atom_index
-        special_serialization_logic = ['atom1', 'atom2', 'molecule']
+        bond_dict["atom1"] = self.atom1.molecule_atom_index
+        bond_dict["atom2"] = self.atom2.molecule_atom_index
+        special_serialization_logic = ["atom1", "atom2", "molecule"]
 
         for attr_name, attr_val in self.__dict__.items():
-            if attr_name.startswith('_'):
+            if attr_name.startswith("_"):
                 continue
             if attr_name in special_serialization_logic:
                 continue
             bond_dict[attr_name] = attr_val
         return bond_dict
-

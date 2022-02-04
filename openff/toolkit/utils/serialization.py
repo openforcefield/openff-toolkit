@@ -286,7 +286,7 @@ class Serializable(abc.ABC):
         yaml.SafeDumper.add_representer(
             OrderedDict,
             lambda dumper, value: self._represent_odict(
-                dumper, u"tag:yaml.org,2002:map", value
+                dumper, "tag:yaml.org,2002:map", value
             ),
         )
         d = self.to_dict()
@@ -318,7 +318,7 @@ class Serializable(abc.ABC):
         yaml.SafeDumper.add_representer(
             OrderedDict,
             lambda dumper, value: self._represent_odict(  # type: ignore[name-defined]
-                dumper, u"tag:yaml.org,2002:map", value
+                dumper, "tag:yaml.org,2002:map", value
             ),
         )
         d = yaml.safe_load(serialized)

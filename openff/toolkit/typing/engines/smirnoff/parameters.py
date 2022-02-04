@@ -2600,13 +2600,13 @@ class BondHandler(ParameterHandler):
 
         length = ParameterAttribute(default=None, unit=unit.angstrom)
         k = ParameterAttribute(
-            default=None, unit=unit.kilocalorie / unit.mole / unit.angstrom ** 2
+            default=None, unit=unit.kilocalorie / unit.mole / unit.angstrom**2
         )
 
         # fractional bond order params
         length_bondorder = MappedParameterAttribute(default=None, unit=unit.angstrom)
         k_bondorder = MappedParameterAttribute(
-            default=None, unit=unit.kilocalorie / unit.mole / unit.angstrom ** 2
+            default=None, unit=unit.kilocalorie / unit.mole / unit.angstrom**2
         )
 
         def __init__(self, **kwargs):
@@ -2904,7 +2904,7 @@ class AngleHandler(ParameterHandler):
         _ELEMENT_NAME = "Angle"
 
         angle = ParameterAttribute(unit=unit.degree)
-        k = ParameterAttribute(unit=unit.kilocalorie / unit.mole / unit.degree ** 2)
+        k = ParameterAttribute(unit=unit.kilocalorie / unit.mole / unit.degree**2)
 
     _TAGNAME = "Angles"  # SMIRNOFF tag name to process
     _INFOTYPE = AngleType  # class to hold force type info
@@ -4485,8 +4485,8 @@ class GBSAHandler(ParameterHandler):
     solute_dielectric = ParameterAttribute(default=1, converter=float)
     sa_model = ParameterAttribute(default="ACE", converter=_allow_only(["ACE", None]))
     surface_area_penalty = ParameterAttribute(
-        default=5.4 * unit.calorie / unit.mole / unit.angstrom ** 2,
-        unit=unit.calorie / unit.mole / unit.angstrom ** 2,
+        default=5.4 * unit.calorie / unit.mole / unit.angstrom**2,
+        unit=unit.calorie / unit.mole / unit.angstrom**2,
     )
     solvent_radius = ParameterAttribute(default=1.4 * unit.angstrom, unit=unit.angstrom)
 
@@ -4501,7 +4501,7 @@ class GBSAHandler(ParameterHandler):
         if self.gb_model == "HCT":
             if (
                 self.surface_area_penalty
-                != 5.4 * unit.calorie / unit.mole / unit.angstrom ** 2
+                != 5.4 * unit.calorie / unit.mole / unit.angstrom**2
             ) and (self.sa_model is not None):
                 raise IncompatibleParameterError(
                     f"The current implementation of HCT GBSA does not "
@@ -4527,7 +4527,7 @@ class GBSAHandler(ParameterHandler):
         if self.gb_model == "OBC1":
             if (
                 self.surface_area_penalty
-                != 5.4 * unit.calorie / unit.mole / unit.angstrom ** 2
+                != 5.4 * unit.calorie / unit.mole / unit.angstrom**2
             ) and (self.sa_model is not None):
                 raise IncompatibleParameterError(
                     f"The current implementation of OBC1 GBSA does not "
