@@ -1818,14 +1818,16 @@ class TestOpenEyeToolkitWrapper:
         # Use a mapped smiles to ensure atom order while looking up central bond
         # Generated via Molecule.from_smiles("c1ccc(cc1)c2ccccc2").to_smiles(mapped=True)
 
-        biphenyl = Molecule.from_smiles(
+        biphenyl = Molecule.from_mapped_smiles(
             "[H:13][c:1]1[c:2]([c:3]([c:4]([c:5]([c:6]1[H:17])[H:16])[c:7]2[c:8]([c:9]([c:10]"
             "([c:11]([c:12]2[H:22])[H:21])[H:20])[H:19])[H:18])[H:15])[H:14]"
         )
 
         toolkit_registry = ToolkitRegistry(toolkit_precedence=[OpenEyeToolkitWrapper])
 
-        assert biphenyl.get_bond_between(4, 9).is_in_ring() is False
+        assert biphenyl.get_bond_between(3, 6).is_in_ring() is False
+
+        assert len([bond for bond in biphenyl.bonds if bond.is_in_ring()]) == 12
 
     def test_find_matches_unique(self):
         """Test the expected behavior of the `unique` argument in find_matches"""
@@ -2920,14 +2922,16 @@ class TestRDKitToolkitWrapper:
         # Use a mapped smiles to ensure atom order while looking up central bond
         # Generated via Molecule.from_smiles("c1ccc(cc1)c2ccccc2").to_smiles(mapped=True)
 
-        biphenyl = Molecule.from_smiles(
+        biphenyl = Molecule.from_mapped_smiles(
             "[H:13][c:1]1[c:2]([c:3]([c:4]([c:5]([c:6]1[H:17])[H:16])[c:7]2[c:8]([c:9]([c:10]"
             "([c:11]([c:12]2[H:22])[H:21])[H:20])[H:19])[H:18])[H:15])[H:14]"
         )
 
         toolkit_registry = ToolkitRegistry(toolkit_precedence=[RDKitToolkitWrapper()])
 
-        assert biphenyl.get_bond_between(4, 9).is_in_ring() is False
+        assert biphenyl.get_bond_between(3, 6).is_in_ring() is False
+
+        assert len([bond for bond in biphenyl.bonds if bond.is_in_ring()]) == 12
 
     def test_find_matches_unique(self):
         """Test the expected behavior of the `unique` argument in find_matches"""
