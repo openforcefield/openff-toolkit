@@ -38,8 +38,8 @@ from typing import TYPE_CHECKING, List, Optional, Union
 
 import networkx as nx
 import numpy as np
-from mendeleev import element
 from openff.units import unit
+from openff.units.elements import MASSES, SYMBOLS
 from openff.units.openmm import to_openmm
 
 if TYPE_CHECKING:
@@ -405,23 +405,20 @@ class Atom(Particle):
         self._stereochemistry = value
 
     @property
-    def element(self):
-        """
-        The element of this atom.
-
-        Returns
-        -------
-        mendeleev.models.Element
-        """
-        return element(self._atomic_number)
-
-    @property
-    def atomic_number(self):
+    def atomic_number(self) -> int:
         """
         The integer atomic number of the atom.
 
         """
         return self._atomic_number
+
+    @property
+    def symbol(self) -> str:
+        """
+        Return the symbol implied by the atomic number of this atom
+
+        """
+        return SYMBOLS[self.atomic_number]
 
     @property
     def mass(self):
@@ -433,7 +430,7 @@ class Atom(Particle):
         TODO (from jeff): Are there atoms that have different chemical properties based on their isotopes?
 
         """
-        return self.element.mass
+        return MASSES[self.atomic_number]
 
     @property
     def name(self):
@@ -2454,7 +2451,7 @@ class FrozenMolecule(Serializable):
 
         element_counts = defaultdict(int)
         for atom in self.atoms:
-            symbol = atom.element.symbol
+            symbol = SYMBOLS[atom.atomic_number]
             element_counts[symbol] += 1
             # TODO: It may be worth exposing this as a user option, i.e. to avoid multiple ligands
             # parameterized with OpenFF clashing because they have atom names like O1x, H3x, etc.
@@ -2584,7 +2581,7 @@ class FrozenMolecule(Serializable):
 
         id = ""
         for atom in self.atoms:
-            id += f"{atom.element.symbol}_{atom.formal_charge}_{atom.stereochemistry}__"
+            id += f"{SYMBOLS[atom.atomic_number]}_{atom.formal_charge}_{atom.stereochemistry}__"
         for bond in self.bonds:
             id += f"{bond.bond_order}_{bond.stereochemistry}_{bond.atom1_index}_{bond.atom2_index}__"
         # return hash(id)
@@ -5313,7 +5310,7 @@ class FrozenMolecule(Serializable):
             for atom in openmm_topology.atoms():
                 omm_topology_G.add_node(
                     atom.index,
-                    atomic_number=atom.element.atomic_number,
+                    atomic_number=atom.atomic_number,
                     formal_charge=0.0,
                     atom_name=atom.name,
                     residue_name=atom.residue.name,
@@ -5330,14 +5327,14 @@ class FrozenMolecule(Serializable):
                 # Assign sequential negative numbers as atomic numbers for hydrogens attached to the same heavy atom.
                 # We do the same to the substructure templates that are used for matching. This saves runtime because
                 # it removes redundant self-symmetric matches.
-                if bond.atom1.element.atomic_number == 1:
+                if bond.atom1.atomic_number == 1:
                     h_index = bond.atom1.index
                     heavy_atom_index = bond.atom2.index
                     n_hydrogens[heavy_atom_index] += 1
                     omm_topology_G.nodes[h_index]["atomic_number"] = (
                         -1 * n_hydrogens[heavy_atom_index]
                     )
-                if bond.atom2.element.atomic_number == 1:
+                if bond.atom2.atomic_number == 1:
                     h_index = bond.atom2.index
                     heavy_atom_index = bond.atom1.index
                     n_hydrogens[heavy_atom_index] += 1
@@ -5533,7 +5530,7 @@ class FrozenMolecule(Serializable):
             for j, atom_coords in enumerate(geometry.m_as(unit.angstrom)):
                 x, y, z = atom_coords
                 xyz_data.write(
-                    f"{self.atoms[j].element.symbol}       {x: .10f}   {y: .10f}   {z: .10f}\n"
+                    f"{SYMBOLS[self.atoms[j].atomic_number]}       {x: .10f}   {y: .10f}   {z: .10f}\n"
                 )
 
             # now we up the frame count
@@ -5907,7 +5904,7 @@ class FrozenMolecule(Serializable):
         connectivity = [
             (bond.atom1_index, bond.atom2_index, bond.bond_order) for bond in self.bonds
         ]
-        symbols = [element(atom.atomic_number).symbol for atom in self.atoms]
+        symbols = [SYMBOLS[atom.atomic_number] for atom in self.atoms]
         if extras is not None:
             extras[
                 "canonical_isomeric_explicit_hydrogen_mapped_smiles"
@@ -7251,7 +7248,7 @@ def _atom_nums_to_hill_formula(atom_nums: List[int]) -> str:
     Hill formula. See https://en.wikipedia.org/wiki/Chemical_formula#Hill_system"""
     from collections import Counter
 
-    atom_symbol_counts = Counter(element(atom_num).symbol for atom_num in atom_nums)
+    atom_symbol_counts = Counter(SYMBOLS[atom_num] for atom_num in atom_nums)
 
     formula = []
     # Check for C and H first, to make a correct hill formula

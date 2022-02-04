@@ -1306,7 +1306,8 @@ class ForceField:
         # This means that even though virtual sites may have been created via
         # the molecule API, an empty VirtualSites tag must exist in the FF
         for atom in topology.topology_atoms:
-            system.addParticle(atom.mass)
+            # addParticle(mass.m_as(unit.dalton)) would be safer but slower
+            system.addParticle(atom.mass.m)
 
         # Determine the order in which to process ParameterHandler objects in order to satisfy dependencies
         parameter_handlers = self._resolve_parameter_handler_order()
