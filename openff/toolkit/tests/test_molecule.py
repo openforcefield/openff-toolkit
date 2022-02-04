@@ -3701,11 +3701,16 @@ class TestMolecule:
         Test basic behavior of Atom.is_in_ring and Bond.is_in_ring API.
         More extensive behavior testing is done in test_toolkits.py
         """
-        molecule = Molecule.from_smiles(
-            "[H:9][c:3]1[c:2]([c:1]([c:6]([c:5]([c:4]1[H:10])[H:11])[H:12])[H:7])[H:8]"
-        )
-        assert molecule.atoms[1].is_in_ring()
-        assert molecule.bonds[1].is_in_ring()
+        molecule = Molecule.from_smiles("c1ccccc1")
+
+        for atom in molecule.atoms:
+            if atom.atomic_number == 6:
+                assert atom.is_in_ring()
+
+        for bond in molecule.bonds:
+            if 1 in (bond.atom1.atomic_number, bond.atom2.atomic_number):
+                continue
+            assert bond.is_in_ring()
 
     @requires_rdkit
     @requires_openeye
