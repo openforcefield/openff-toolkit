@@ -1,13 +1,17 @@
 import pytest
 
-from openff.toolkit.topology.mm_molecule import _TypedAtom, _TypedBond, _TypedMolecule
+from openff.toolkit.topology.mm_molecule import (
+    _SimpleAtom,
+    _SimpleBond,
+    _SimpleMolecule,
+)
 from openff.toolkit.topology.molecule import Molecule
 
 
 class TestMMMolecule:
     @pytest.fixture()
     def water(self):
-        water = _TypedMolecule()
+        water = _SimpleMolecule()
         water.add_atom(atomic_number=8)
         water.add_atom(atomic_number=1)
         water.add_atom(atomic_number=1)
@@ -18,7 +22,7 @@ class TestMMMolecule:
 
     @pytest.fixture()
     def molecule_with_bogus_atom(self):
-        molecule = _TypedMolecule()
+        molecule = _SimpleMolecule()
         molecule.add_atom(atomic_number=6)
         molecule.add_atom(atomic_number=0)
         molecule.add_bond(0, 1)
@@ -26,7 +30,7 @@ class TestMMMolecule:
         return molecule
 
     def test_create_water(self):
-        water = _TypedMolecule()
+        water = _SimpleMolecule()
         water.add_atom(atomic_number=8)
         water.add_atom(atomic_number=1)
         water.add_atom(atomic_number=1)
@@ -50,7 +54,7 @@ class TestMMMolecule:
         assert molecule_with_bogus_atom.hill_formula == "INVALID"
 
     def test_dict_roundtrip(self, water):
-        roundtrip = _TypedMolecule.from_dict(water.to_dict())
+        roundtrip = _SimpleMolecule.from_dict(water.to_dict())
 
         assert roundtrip.n_atoms == water.n_atoms
         assert roundtrip.n_bonds == water.n_bonds
@@ -62,7 +66,7 @@ class TestMMMolecule:
             )
 
     def test_from_molecule(self):
-        converted = _TypedMolecule.from_molecule(Molecule.from_smiles("O"))
+        converted = _SimpleMolecule.from_molecule(Molecule.from_smiles("O"))
 
         assert converted.n_atoms == 3
         assert converted.n_bonds == 2

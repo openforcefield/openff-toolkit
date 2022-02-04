@@ -20,7 +20,7 @@ from openff.toolkit.utils.exceptions import UnsupportedMoleculeConversionError
 from openff.toolkit.utils.utils import deserialize_numpy, serialize_numpy
 
 
-class _TypedMolecule:
+class _SimpleMolecule:
     def __init__(self):
         self.atoms = []
         self.bonds = []
@@ -28,14 +28,14 @@ class _TypedMolecule:
         self.conformers = None
 
     def add_atom(self, atomic_number: int, **kwargs):
-        atom = _TypedAtom(atomic_number, self, **kwargs)
+        atom = _SimpleAtom(atomic_number, self, **kwargs)
         self.atoms.append(atom)
 
     def add_bond(self, atom1, atom2, **kwargs):
         if isinstance(atom1, int) and isinstance(atom2, int):
             atom1_atom = self.atoms[atom1]
             atom2_atom = self.atoms[atom2]
-        elif isinstance(atom1, _TypedAtom) and isinstance(atom2, _TypedAtom):
+        elif isinstance(atom1, _SimpleAtom) and isinstance(atom2, _SimpleAtom):
             atom1_atom = atom1
             atom2_atom = atom2
         else:
@@ -45,7 +45,7 @@ class _TypedMolecule:
                     atom1, type(atom1), atom2, type(atom2)
                 )
             )
-        bond = _TypedBond(atom1_atom, atom2_atom, **kwargs)
+        bond = _SimpleBond(atom1_atom, atom2_atom, **kwargs)
         self.bonds.append(bond)
 
     def add_conformer(self, conformer):
@@ -164,7 +164,7 @@ class _TypedMolecule:
 
         atom_dicts = molecule_dict.pop("atoms")
         for atom_dict in atom_dicts:
-            molecule.atoms.append(_TypedAtom.from_dict(atom_dict))
+            molecule.atoms.append(_SimpleAtom.from_dict(atom_dict))
 
         bond_dicts = molecule_dict.pop("bonds")
 
@@ -227,12 +227,12 @@ class _TypedMolecule:
 
     def to_molecule(self) -> NoReturn:
         raise UnsupportedMoleculeConversionError(
-            "The information content of a _TypedMolecule is insufficient for creating "
+            "The information content of a _SimpleMolecule is insufficient for creating "
             "an OpenFF Molecule with sufficiently specified chemistry."
         )
 
 
-class _TypedAtom:
+class _SimpleAtom:
     def __init__(self, atomic_number: int, molecule=None, metadata=None, **kwargs):
         if metadata is None:
             self.metadata = AtomMetadataDict()
@@ -301,7 +301,7 @@ class _TypedAtom:
         return atom
 
 
-class _TypedBond:
+class _SimpleBond:
     def __init__(self, atom1, atom2, **kwargs):
         self.molecule = atom1.molecule
         self.atom1 = atom1
@@ -314,7 +314,7 @@ class _TypedBond:
             setattr(self, key, val)
 
     @property
-    def atoms(self) -> List[_TypedAtom]:
+    def atoms(self) -> List[_SimpleAtom]:
         return [self.atom1, self.atom2]
 
     @property
