@@ -7,7 +7,7 @@ TypedMolecule TODOs
 * Topology serialization will have trouble here - Won't know whether it's trying to deserialize a Molecule or a TypedMolecule.
 
 """
-from typing import Dict, List, NoReturn
+from typing import TYPE_CHECKING, Dict, List, NoReturn
 
 from openff.units import unit
 
@@ -18,6 +18,9 @@ from openff.toolkit.topology.molecule import (
 )
 from openff.toolkit.utils.exceptions import UnsupportedMoleculeConversionError
 from openff.toolkit.utils.utils import deserialize_numpy, serialize_numpy
+
+if TYPE_CHECKING:
+    import networkx as nx
 
 
 class _SimpleMolecule:
@@ -113,6 +116,24 @@ class _SimpleMolecule:
             return "INVALID"
 
         return _atom_nums_to_hill_formula(atom_nums)
+
+    def to_networkx(self) -> "nx.Graph":
+        import networkx as nx
+
+        graph = nx.Graph()
+
+        for atom_index, atom in enumerate(self.atoms):
+            graph.add_node(
+                atom_index,
+                atomic_number=atom.atomic_number,
+            )
+        for bond in self.bonds:
+            graph.add_edge(
+                bond.atom1_index,
+                bond.atom2_index,
+            )
+
+        return graph
 
     def to_dict(self) -> Dict:
         molecule_dict = dict()

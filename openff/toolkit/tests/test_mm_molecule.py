@@ -59,6 +59,12 @@ class TestMMMolecule:
         assert water.hill_formula == "H2O"
         assert molecule_with_bogus_atom.hill_formula == "INVALID"
 
+    def test_to_networkx(self, water):
+        graph = water.to_networkx()
+
+        assert graph.number_of_nodes() == water.n_atoms
+        assert graph.number_of_edges() == water.n_bonds
+
     def test_add_conformer(self, water):
         water_molecule = Molecule.from_smiles("O")
         water_molecule.generate_conformers(n_conformers=1)
