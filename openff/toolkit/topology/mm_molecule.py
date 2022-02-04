@@ -7,14 +7,16 @@ TypedMolecule TODOs
 * Topology serialization will have trouble here - Won't know whether it's trying to deserialize a Molecule or a TypedMolecule.
 
 """
-from typing import Dict, List
+from typing import Dict, List, NoReturn
 
 from openff.units import unit
 
 from openff.toolkit.topology.molecule import (
     AtomMetadataDict,
+    Molecule,
     _atom_nums_to_hill_formula,
 )
+from openff.toolkit.utils.exceptions import UnsupportedMoleculeConversionError
 from openff.toolkit.utils.utils import deserialize_numpy, serialize_numpy
 
 
@@ -33,7 +35,7 @@ class _TypedMolecule:
         if isinstance(atom1, int) and isinstance(atom2, int):
             atom1_atom = self.atoms[atom1]
             atom2_atom = self.atoms[atom2]
-        elif isinstance(atom1, Atom) and isinstance(atom2, Atom):
+        elif isinstance(atom1, _TypedAtom) and isinstance(atom2, _TypedAtom):
             atom1_atom = atom1
             atom2_atom = atom2
         else:
@@ -83,6 +85,16 @@ class _TypedMolecule:
             for atom in bond.atoms:
                 if atom.molecule_atom_index == atom2_index:
                     return bond
+
+    def particle(self, index) -> int:
+        return self.atom(index)
+
+    @property
+    def particles(self):
+        return self.atoms
+
+    def particle_index(self, particle) -> int:
+        return self.atom_index(particle)
 
     @property
     def hill_formula(self) -> str:
@@ -149,33 +161,32 @@ class _TypedMolecule:
     @classmethod
     def from_dict(cls, molecule_dict):
         molecule = cls()
-        molecule.initialize_from_dict(molecule_dict)
-        return molecule
 
-    def initialize_from_dict(self, molecule_dict):
         atom_dicts = molecule_dict.pop("atoms")
         for atom_dict in atom_dicts:
-            self.add_atom(**atom_dict)
+            molecule.atoms.append(_TypedAtom.from_dict(atom_dict))
 
         bond_dicts = molecule_dict.pop("bonds")
-        print(bond_dicts)
+
         for bond_dict in bond_dicts:
-            bond_dict["atom1"] = int(bond_dict["atom1"])
-            bond_dict["atom2"] = int(bond_dict["atom2"])
-            self.add_bond(**bond_dict)
+            atom1_index = bond_dict["atom1_index"]
+            atom2_index = bond_dict["atom2_index"]
+            molecule.add_bond(
+                atom1=molecule.atom(atom1_index), atom2=molecule.atom(atom2_index)
+            )
 
         conformers = molecule_dict.pop("conformers")
         if conformers is None:
-            self.conformers = None
+            molecule.conformers = None
         else:
-            self.conformers = list()
+            molecule.conformers = list()
             for ser_conf in molecule_dict["conformers"]:
                 # TODO: Update to use string_to_quantity
-                conformers_shape = (self.n_atoms, 3)
+                conformers_shape = (molecule.n_atoms, 3)
                 conformer_unitless = deserialize_numpy(ser_conf, conformers_shape)
                 c_unit = getattr(unit, molecule_dict["conformers_unit"])
                 conformer = unit.Quantity(conformer_unitless, c_unit)
-                self.conformers.append(conformer)
+                molecule.conformers.append(conformer)
 
         hier_scheme_dicts = molecule_dict.pop("hierarchy_schemes")
         for iter_name, hierarchy_scheme_dict in hier_scheme_dicts.items():
@@ -187,24 +198,42 @@ class _TypedMolecule:
                 new_hier_scheme.add_hierarchy_element(
                     element_dict["identifier"], element_dict["particle_indices"]
                 )
-            self._expose_hierarchy_scheme(iter_name)
+            molecule._expose_hierarchy_scheme(iter_name)
 
         for key, val in molecule_dict:
-            setattr(self, key, val)
+            setattr(molecule, key, val)
 
-    def particle(self, index) -> int:
-        return self.atom(index)
+        return molecule
 
-    @property
-    def particles(self):
-        return self.atoms
+    @classmethod
+    def from_molecule(cls, molecule: Molecule):
+        """Generate an MM molecule from an OpenFF Molecule."""
+        mm_molecule = cls()
+        for atom in molecule.atoms:
+            mm_molecule.add_atom(
+                atomic_number=atom.atomic_number,
+                meatadata=atom.metadata,
+            )
 
-    def particle_index(self, particle) -> int:
-        return self.atom_index(particle)
+        for bond in molecule.bonds:
+            mm_molecule.add_bond(
+                atom1=mm_molecule.atom(bond.atom1_index),
+                atom2=mm_molecule.atom(bond.atom2_index),
+            )
+
+        mm_molecule.conformers = molecule.conformers
+
+        return mm_molecule
+
+    def to_molecule(self) -> NoReturn:
+        raise UnsupportedMoleculeConversionError(
+            "The information content of a _TypedMolecule is insufficient for creating "
+            "an OpenFF Molecule with sufficiently specified chemistry."
+        )
 
 
 class _TypedAtom:
-    def __init__(self, atomic_number: int, molecule, metadata=None, **kwargs):
+    def __init__(self, atomic_number: int, molecule=None, metadata=None, **kwargs):
         if metadata is None:
             self.metadata = AtomMetadataDict()
         else:
@@ -253,15 +282,23 @@ class _TypedAtom:
     def to_dict(self) -> Dict:
         atom_dict = dict()
         atom_dict["metadata"] = dict(self.metadata)
-        special_serialization_logic = ["metadata", "molecule", "bonds"]
+        atom_dict["atomic_number"] = self._atomic_number
+
+        keys_to_skip = ["metadata", "molecule", "bonds"]
 
         for attr_name, attr_val in self.__dict__.items():
             if attr_name.startswith("_"):
                 continue
-            if attr_name in special_serialization_logic:
+            if attr_name in keys_to_skip:
                 continue
             atom_dict[attr_name] = attr_val
         return atom_dict
+
+    @classmethod
+    def from_dict(cls, atom_dict: Dict):
+        atom = cls(atomic_number=atom_dict["atomic_number"])
+        # TODO: Metadata
+        return atom
 
 
 class _TypedBond:
@@ -290,14 +327,7 @@ class _TypedBond:
 
     def to_dict(self) -> Dict:
         bond_dict = dict()
-        bond_dict["atom1"] = self.atom1.molecule_atom_index
-        bond_dict["atom2"] = self.atom2.molecule_atom_index
-        special_serialization_logic = ["atom1", "atom2", "molecule"]
+        bond_dict["atom1_index"] = self.atom1.molecule_atom_index
+        bond_dict["atom2_index"] = self.atom2.molecule_atom_index
 
-        for attr_name, attr_val in self.__dict__.items():
-            if attr_name.startswith("_"):
-                continue
-            if attr_name in special_serialization_logic:
-                continue
-            bond_dict[attr_name] = attr_val
         return bond_dict
