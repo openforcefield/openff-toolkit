@@ -7,9 +7,10 @@ TypedMolecule TODOs
 * Topology serialization will have trouble here - Won't know whether it's trying to deserialize a Molecule or a TypedMolecule.
 
 """
-from typing import TYPE_CHECKING, Dict, List, NoReturn
+from typing import TYPE_CHECKING, Dict, List, NoReturn, Optional, Union
 
 from openff.units import unit
+from openff.units.elements import SYMBOLS
 
 from openff.toolkit.topology.molecule import (
     AtomMetadataDict,
@@ -251,6 +252,17 @@ class _SimpleMolecule:
             "an OpenFF Molecule with sufficiently specified chemistry."
         )
 
+    def generate_unique_atom_names(self):
+        """Generate unique atom names. See `Molecule.generate_unique_atom_names`."""
+        from collections import defaultdict
+
+        element_counts = defaultdict(int)
+        for atom in self.atoms:
+            symbol = SYMBOLS[atom.atomic_number]
+            element_counts[symbol] += 1
+
+            atom.name = symbol + str(element_counts[symbol]) + "x"
+
 
 class _SimpleAtom:
     def __init__(self, atomic_number: int, molecule=None, metadata=None, **kwargs):
@@ -260,7 +272,7 @@ class _SimpleAtom:
             self.metadata = AtomMetadataDict(metadata)
         self._atomic_number = atomic_number
         self.molecule = molecule
-        self.bonds = []
+        self._bonds: List[Optional[_SimpleBond]] = list()
         for key, val in kwargs.items():
             setattr(self, key, val)
 
@@ -299,8 +311,8 @@ class _SimpleAtom:
     def molecule_particle_index(self) -> int:
         return self.molecule.atoms.index(self)
 
-    def to_dict(self) -> Dict:
-        atom_dict = dict()
+    def to_dict(self) -> Dict[str, Union[Dict, str, int]]:
+        atom_dict: Dict[str, Union[Dict, str, int]] = dict()
         atom_dict["metadata"] = dict(self.metadata)
         atom_dict["atomic_number"] = self._atomic_number
 
