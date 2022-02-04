@@ -202,22 +202,6 @@ class _TypedMolecule:
     def particle_index(self, particle) -> int:
         return self.atom_index(particle)
 
-    def to_hill_formula(self) -> str:
-        """
-        Generate the Hill formula of this molecule.
-
-        Returns
-        ----------
-        formula : the Hill formula of the molecule
-
-        Raises
-        -----------
-        NotImplementedError : if the molecule is not of one of the specified types.
-        """
-        atom_nums = [atom.atomic_number for atom in self.atoms]
-
-        return _atom_nums_to_hill_formula(atom_nums)
-
 
 class _TypedAtom:
     def __init__(self, atomic_number: int, molecule, metadata=None, **kwargs):
