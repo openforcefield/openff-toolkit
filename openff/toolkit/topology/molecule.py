@@ -4157,64 +4157,6 @@ class FrozenMolecule(Serializable):
         return len(self._impropers)
 
     @property
-    def n_rings(self) -> int:
-        """DEPRECATED: Return the number of rings in this molecule.
-
-        This functionality is DEPRECATED and will be removed in a future release of the
-        OpenFF Toolkit. For finding rings in a molecule, call out directly to a
-        cheminformatics toolkit after using `Molecule.to_openeye()` or `Molecule.to_rdkit()`
-
-        .. note ::
-            For systems containing some special cases of connected rings, this
-            function may not be well-behaved and may report a different number
-            rings than expected. Some problematic cases include networks of many
-            (5+) rings or bicyclic moieties (i.e. norbornane).
-        """
-
-        # TODO: Remove by July 2022.
-
-        warnings.warn(
-            "`Molecule.n_rings` is DEPRECATED and will be removed in a future release of "
-            "the OpenFF Toolkit. For finding rings in a molecule, call out directly to a "
-            "cheminformatics toolkit after using `Molecule.to_openeye()` or "
-            "`Molecule.to_rdkit()`.",
-            DeprecationWarning,
-        )
-
-        return self.get_n_rings()
-
-    def get_n_rings(self, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
-        """Return the number of rings found in the Molecule as determined by
-        a cheminformatics toolkit wrapper.
-
-        .. note ::
-
-            For systems containing some special cases of connected rings, this
-            function may not be well-behaved and may report a different number
-            rings than expected. Some problematic cases include networks of many
-            (5+) rings or bicyclic moieties (i.e. norbornane). RDkit and OpenEye
-            ring-finding implementations also differ.
-
-        """
-        if isinstance(toolkit_registry, ToolkitRegistry):
-            n_rings = toolkit_registry.call(
-                "get_n_rings",
-                molecule=self,
-            )
-        elif isinstance(toolkit_registry, ToolkitWrapper):
-            toolkit = toolkit_registry
-            n_rings = toolkit.get_n_rings(
-                molecule=self,
-            )
-        else:
-            raise InvalidToolkitRegistryError(
-                "Invalid toolkit_registry passed to `get_n_rings`. Expected ToolkitRegistry or ToolkitWrapper. "
-                f"Got {type(toolkit_registry)}"
-            )
-
-        return n_rings
-
-    @property
     def particles(self):
         """
         Iterate over all Particle objects.
@@ -5889,72 +5831,6 @@ class FrozenMolecule(Serializable):
         from openff.toolkit.topology import NotBondedError
 
         raise NotBondedError("No bond between atom {} and {}".format(i, j))
-
-    @property
-    def rings(self) -> Tuple[Tuple[int]]:
-        """DEPRECATED: Return a tuple of tuples representing the rings in this molecule.
-
-        This functionality is DEPRECATED and will be removed in a future release of the
-        OpenFF Toolkit. For finding rings in a molecule, call out directly to a
-        cheminformatics toolkit after using `Molecule.to_openeye()` or `Molecule.to_rdkit()`
-
-        .. note ::
-            For systems containing some special cases of connected rings, this
-            function may not be well-behaved and may report a different number
-            rings than expected. Some problematic cases include networks of many
-            (5+) rings or bicyclic moieties (i.e. norbornane).
-        """
-
-        # TODO: Remove by July 2022.
-
-        warnings.warn(
-            "`Molecule.rings` is DEPRECATED and will be removed in a future release of "
-            "the OpenFF Toolkit. For finding rings in a molecule, call out directly to a "
-            "cheminformatics toolkit after using `Molecule.to_openeye()` or "
-            "`Molecule.to_rdkit()`.",
-            DeprecationWarning,
-        )
-
-        return self.get_rings()
-
-    def get_rings(self, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
-        """
-        Call out to ToolkitWrapper methods to find the rings in this molecule.
-
-        Currently only implemented via The RDKit, which must be installed.
-
-        .. note ::
-
-            For systems containing some special cases of connected rings, this
-            function may not be well-behaved and may report a different number
-            rings than expected. Some problematic cases include networks of many
-            (5+) rings or bicyclic moieties (i.e. norbornane).
-
-        Returns
-        -------
-        rings : tuple of tuple of int
-            A nested tuple with one subtuple per ring and each subtuple containing
-            a tuple of the indices of atoms containing with it. If no rings are
-            found, a single empty tuple is returned.
-
-        """
-        if isinstance(toolkit_registry, ToolkitRegistry):
-            rings = toolkit_registry.call(
-                "find_rings",
-                molecule=self,
-            )
-        elif isinstance(toolkit_registry, ToolkitWrapper):
-            toolkit = toolkit_registry
-            rings = toolkit.find_rings(
-                molecule=self,
-            )
-        else:
-            raise InvalidToolkitRegistryError(
-                "Invalid toolkit_registry passed to from_smiles. Expected ToolkitRegistry or ToolkitWrapper. "
-                f"Got  {type(toolkit_registry)}"
-            )
-
-        return rings
 
 
 class Molecule(FrozenMolecule):

@@ -1266,16 +1266,6 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         return oemol
 
-    def get_n_rings(self, molecule) -> int:
-        """Return the number of rings in this molecule."""
-        # TODO: Document OpenEye/RDKIt ring-finding differences
-        from openeye import oechem
-
-        oemol = molecule.to_openeye()
-        n_rings, atom_ring_info = oechem.OEDetermineRingSystems(oemol)
-
-        return n_rings
-
     def atom_is_in_ring(self, molecule: "Molecule", atom_index: int) -> bool:
         """Return whether or not an atom is in a ring.
 

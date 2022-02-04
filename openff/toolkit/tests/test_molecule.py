@@ -3696,24 +3696,6 @@ class TestMolecule:
         with pytest.raises(NotBondedError):
             mol.get_bond_between(hydrogens[0], hydrogens[1])
 
-    @pytest.mark.parametrize(
-        ("smiles", "n_rings"),
-        [
-            ("CCO", 0),
-            ("c1ccccc1", 1),
-            ("C1CC2CCC1C2", 2),  # This should probably be 3?
-            ("c1ccc(cc1)c2ccccc2", 2),
-            ("c1ccc2ccccc2c1", 2),
-            ("c1ccc2cc3ccccc3cc2c1", 3),
-            ("C1C2C(CCC1)CC5C3C2CCC7C3C4C(CCC6C4C5CCC6)CC7", 7),
-        ],
-    )
-    @requires_rdkit
-    def test_molecule_rings(self, smiles, n_rings):
-        """Test the Molecule.rings property"""
-        mol = Molecule.from_smiles(smiles, allow_undefined_stereo=True)
-        assert n_rings == mol.get_n_rings()
-
     def test_is_in_ring(self):
         """
         Test basic behavior of Atom.is_in_ring and Bond.is_in_ring API.
@@ -3724,33 +3706,6 @@ class TestMolecule:
         )
         assert molecule.atoms[1].is_in_ring()
         assert molecule.bonds[1].is_in_ring()
-
-    @requires_rdkit
-    @requires_openeye
-    @pytest.mark.parametrize(
-        "toolkit_wrapper", [RDKitToolkitWrapper, OpenEyeToolkitWrapper]
-    )
-    @pytest.mark.parametrize(
-        ("smiles", "n_rings"),
-        [
-            ("c1ccc2ccccc2c1", 2),
-            ("c1ccc(cc1)c2ccccc2", 2),
-            ("Cc1ccc(cc1Nc2nccc(n2)c3cccnc3)NC(=O)c4ccc(cc4)CN5CCN(CC5)C", 5),
-        ],
-    )
-    def test_n_rings(self, smiles, n_rings, toolkit_wrapper):
-        """
-        Test Molecule.get_n_rings.
-
-        Note that this method is deprecated and slated to be removed by July 2022.
-        """
-        mol = Molecule.from_smiles(smiles)
-
-        toolkit_registry = ToolkitRegistry(toolkit_precedence=[toolkit_wrapper()])
-
-        n_rings_found = mol.get_n_rings(toolkit_registry=toolkit_registry)
-
-        assert n_rings_found == n_rings
 
     @requires_rdkit
     @requires_openeye

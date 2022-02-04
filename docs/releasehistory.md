@@ -19,9 +19,10 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
   functionality in OpenEye and RDKit wrappers.
 
 ## API breaking changes
-- [PR #855](https://github.com/openforcefield/openff-toolkit/pull/855): Deprecates
-  [`Molecule.rings`](openff.toolkit.topology.Molecule.rings). To find rings in a
-  molecule, directly use a cheminformatics toolkit after using
+- [PR #855](https://github.com/openforcefield/openff-toolkit/pull/855): Removes
+  [`Molecule.rings`](openff.toolkit.topology.Molecule.rings) and
+  [`Molecule.n_rings`](openff.toolkit.topology.Molecule.n_rings). To find rings in
+  a molecule, directly use a cheminformatics toolkit after using
   [`Molecule.to_rdkit`](openff.toolkit.topology.Molecule.to_rdkit) or
   [`Molecule.to_openeye`](openff.toolkit.topology.Molecule.to_openeye).
 
