@@ -426,7 +426,7 @@ class TopologyAtom(Serializable):
         -------
         openff.toolkit.topology.molecule.Molecule
         """
-        return self._topology_molecule.molecule
+        return self._topology_molecule.reference_molecule
 
     @property
     def topology_atom_index(self):
@@ -580,7 +580,7 @@ class TopologyBond(Serializable):
         -------
         openff.toolkit.topology.molecule.Molecule
         """
-        return self._topology_molecule.molecule
+        return self._topology_molecule.reference_molecule
 
     @property
     def bond_order(self):
@@ -787,7 +787,7 @@ class TopologyVirtualSite(Serializable):
         -------
         openff.toolkit.topology.molecule.Molecule
         """
-        return self._topology_molecule.molecule
+        return self._topology_molecule.reference_molecule
 
     @property
     def type(self):
@@ -1247,14 +1247,17 @@ class TopologyMolecule:
         """
         Return canonicalized pairs of atoms whose shortest separation is `exactly` n bonds.
         Only pairs with increasing atom indices are returned.
+
         Parameters
         ----------
         n: int
             The number of bonds separating atoms in each pair
+
         Returns
         -------
         neighbors: iterator of tuple of TopologyAtom
             Tuples (len 2) of atom that are separated by ``n`` bonds.
+
         Notes
         -----
         The criteria used here relies on minimum distances; when there are multiple valid
@@ -1909,14 +1912,17 @@ class Topology(Serializable):
         """
         Return canonicalized pairs of atoms whose shortest separation is `exactly` n bonds.
         Only pairs with increasing atom indices are returned.
+
         Parameters
         ----------
         n: int
             The number of bonds separating atoms in each pair
+
         Returns
         -------
         neighbors: iterator of tuple of TopologyAtom
             Tuples (len 2) of atom that are separated by ``n`` bonds.
+
         Notes
         -----
         The criteria used here relies on minimum distances; when there are multiple valid

@@ -55,7 +55,10 @@ from openff.toolkit.topology.molecule import (
     _networkx_graph_to_hill_formula,
 )
 from openff.toolkit.utils import get_data_file_path
-from openff.toolkit.utils.exceptions import ConformerGenerationError
+from openff.toolkit.utils.exceptions import (
+    ConformerGenerationError,
+    UnsupportedFileTypeError,
+)
 from openff.toolkit.utils.toolkits import (
     AmberToolsToolkitWrapper,
     OpenEyeToolkitWrapper,
@@ -1930,6 +1933,10 @@ class TestMolecule:
 
         assert expected == actual
 
+    def test_from_xyz_unsupported(self):
+        with pytest.raises(UnsupportedFileTypeError):
+            Molecule.from_file("foo.xyz", file_format="xyz")
+
     @requires_rdkit
     def test_from_pdb_and_smiles(self):
         """Test the ability to make a valid molecule using RDKit and SMILES together"""
@@ -3615,6 +3622,9 @@ class TestMolecule:
         produce unexpected errors, but do not asses validity of results"""
         mol = Molecule.from_smiles("CCO")
 
+        # Test that default model works
+        mol.assign_fractional_bond_orders()
+
         mol.assign_fractional_bond_orders(
             bond_order_model=model,
         )
@@ -3771,6 +3781,15 @@ class TestMoleculeVisualization:
         mol = Molecule().from_smiles("CCO")
 
         assert isinstance(mol.visualize(backend="openeye"), IPython.core.display.Image)
+
+    @pytest.mark.skipif(
+        has_pkg("nglview"),
+        reason="Test requires that NGLview is not installed",
+    )
+    def test_ipython_repr_no_nglview(self):
+        """Test that the default Molecule repr does not break when nglview is not installed"""
+        molecule = Molecule().from_smiles("CCO")
+        molecule._ipython_display_()
 
 
 class MyMol(FrozenMolecule):

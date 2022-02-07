@@ -1774,7 +1774,7 @@ def get_14_scaling_factors(omm_sys: openmm.System) -> Tuple[List, List]:
         i, j, q, sig, eps = nonbond_force.getExceptionParameters(exception_idx)
 
         # Trust that q == 0 covers the cases of 1-2, 1-3, and truly being 0
-        if q.value_in_unit(unit.elementary_charge ** 2) != 0:
+        if q.value_in_unit(unit.elementary_charge**2) != 0:
             q_i = nonbond_force.getParticleParameters(i)[0]
             q_j = nonbond_force.getParticleParameters(j)[0]
             coul_14.append(q / (q_i * q_j))

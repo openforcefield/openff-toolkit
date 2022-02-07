@@ -22,7 +22,6 @@ Parameter files used by typical molecular dynamics simulation packages do not cu
 For example, one could take a structure file and infer bond orders based on bond lengths, or attempt to infer bond orders from force constants in a parameter file.
 Such inference work is outside the scope of SMIRNOFF.
 
-If you have such an inference problem, we recommend that you use pre-existing cheminformatics tools available elsewhere (such as via the OpenEye toolkits, such as the `OEPerceiveBondOrders` functionality offered there) to solve this problem and identify your molecules before beginning your work with SMIRNOFF.
 
 ## What about starting from a PDB file?
 
@@ -31,21 +30,33 @@ This is especially problematic for PDB files from X-ray crystallography which ty
 For our purposes here, however, we assume you begin with the coordinates of all atoms present and the full topology of your system.
 
 Given a PDB file of a hypothetical biomolecular system of interest containing a small molecule, there are several routes available to you for treating the small molecule present:
-- Use a cheminformatics toolkit (see above) to infer bond orders
+- Use a cheminformatics toolkit (see below) to infer bond orders
 - Identify your ligand from a database; e.g. if it is in the Protein Data Bank (PDB), it will be present in the [Ligand Expo](http://ligand-expo.rcsb.org) meaning that it has a database entry and code you can use to look up its putative chemical identity
 - Identify your ligand by name or SMILES string (or similar) from the literature or your collaborators
+
+## What about starting from an XYZ file?
+
+XYZ files generally only contain elements and positions, and are therefore similar in content to PDB files. See the above section "What about starting from a PDB file?" for more information.
 
 ## What do you recommend as a starting point?
 
 For application of SMIRNOFF force fields, we recommend that you begin your work with formats which provide the chemical identity of your small molecule (including formal charge and bond order).
 This means we recommend one of the following or equivalent:
-- A `.mol2` file or files for the molecules comprising your system, with correct bond orders and formal charges. (Note: Do NOT generate this from a simulation package or tool which does not have access to bond order information; you may end up with a `.mol2` file, but the bond orders will be incorrect)
+- A `.sdf`, `.mol`, or `.mol2` file or files for the molecules comprising your system, with correct bond orders and formal charges. (Note: Do NOT generate this from a simulation package or tool which does not have access to bond order information; you may end up with a correct-seeming file, but the bond orders will be incorrect)
 - Isomeric SMILES strings for the components of your system
 - InCHI strings for the components of your system
 - Chemical Identity Registry numbers for the components of your system
 - IUPAC names for the components of your system
 
 Essentially, anything which provides the full identity of what you want to simulate (including stereochemistry) should work, though it may require more or less work to get it into an acceptable format.
+
+## I understand the risks and want to perform bond and formal charge inference anyway
+
+If you are unable to provide a molecule in the formats recommended above and want to attempt to infer the bond orders and atomic formal charges, there are tools available elsewhere that can provide guesses for this problem. These tools are not perfect, and the inference problem itself is poorly defined, so you should review each output closely (see our [Core Concepts](users/concepts) for an explanation of what information is needed to construct an OpenFF Molecule). Some tools we know of include:
+
+- the OpenEye toolkits' [`OEPerceiveBondOrders`](https://docs.eyesopen.com/toolkits/python/oechemtk/OEChemFunctions/OEPerceiveBondOrders.html) functionality
+- [MDAnalysis' RDKit converter](https://docs.mdanalysis.org/stable/documentation_pages/converters/RDKit.html?highlight=rdkit#module-MDAnalysis.converters.RDKit), with an [example here](https://github.com/openforcefield/openff-toolkit/issues/1126#issuecomment-969712195)
+- the Jensen group's [xyz2mol program](https://github.com/jensengroup/xyz2mol/)
 
 ## My conda installation of the toolkit doesn't appear to work. What should I try next?
 
@@ -58,6 +69,16 @@ conda activate <my_new_env>
 
 Installing into a new environment avoids forcing conda to satisfy the dependencies of both the toolkit and all existing packages in that environment.
 Taking the approach that conda environments are generally disposable, even ephemeral, minimizes the chances for hard-to-diagnose dependency issues.
+
+## My conda installation of the toolkit STILL doesn't appear to work.
+
+Many of our users encounter issues that are ultimately due to their terminal finding a different `conda` at higher priority in their `PATH` than the `conda` deployment where OpenFF is installed. To fix this, find the conda deployment where OpenFF is installed. Then, if that folder is something like `~/miniconda3`, run in the terminal:
+
+```shell
+source ~/miniconda3/etc/profile.d/conda.sh
+```
+
+and then try rerunning and/or reinstalling the Toolkit. 
 
 ## The partial charges generated by the toolkit don't seem to depend on the molecule's conformation! Is this a bug?
 
@@ -77,3 +98,49 @@ entry_points={
 ```
 
 Where `get_my_new_force_field_paths` is a function in the `my_package` module providing a list of strings holding the paths to the directories to search. You should also rename `my_new_force_field_paths` to suit your force field. See [`openff-forcefields`](https://github.com/openforcefield/openff-forcefields/blob/ed0d904/setup.py#L57-L61) for an example.
+
+## What does "unconstrained" mean in a force field name?
+
+Each release of an [OpenFF force field](https://github.com/openforcefield/openff-forcefields/tree/master/openforcefields/offxml) has two associated `.offxml` files: one unadorned (for example, `openff-2.0.0.offxml`) and one labelled "unconstrained" (`openff_unconstrained-2.0.0.offxml`). This reflects the presence or absence of holonomic constraints on hydrogen-involving bonds in the force field specification.
+
+Typically, OpenFF force fields treat bonds with a harmonic potential according to Hooke's law. With this treatment, bonds involving hydrogen atoms have a much higher vibration frequency than any other part of a typical biochemical system. By constraining these bonds to a fixed length, MD time steps can be increased past 1 fs, improving simulation performance. These bond vibrations are not structurally important to proteins so can usually be ignored.
+
+While we recommend hydrogen-involving bond constraints and a time step of 2 fs for ordinary use, some other specialist uses require a harmonic treatment. The unconstrained force fields are provided for these uses.
+
+Use the constrained force field:
+ - When running MD with a time step greater than 1 fs
+
+Use the unconstrained force field:
+ - When computing single point energy calculations or energy minimisation
+ - When running MD with a time step of 1 fs (or less)
+ - When bond lengths may deviate from equilibrium
+ - When fitting a force field, both because many fitting techniques require continuity and because deviations from equilibrium bond length may be important
+ - Any other circumstance when forces or energies must be defined or continuous for any possible position of a hydrogen atom
+
+Starting with v2.0.0 (Sage), TIP3P water is included in OpenFF force fields. The geometry of TIP3P water is always constrained, even in the unconstrained force fields.
+
+## How do I add or remove constraints from my own force field?
+
+To make applying or removing bond constraints easy, constrained force fields released by OpenFF always include full bond parameters. Constraints on Hydrogen-involving bonds inherit their lengths from the harmonic parameters also included in the force field. To restore the harmonic treatment, simply remove the appropriate constraint entry from the force field.
+
+Hydrogen-involving bonds are constrained with a single constraint entry in a `.offxml` file:
+
+```xml
+<Constraints version="0.3">
+    <!-- constrain all bonds to hydrogen to their equilibrium bond length -->
+    <Constraint smirks="[#1:1]-[*:2]" id="c1"></Constraint>
+</Constraints>
+```
+
+Adding or removing the inner `<Constraint...` line will convert a force field between being constrained and unconstrained. A [`ForceField`](openff.toolkit.typing.engines.smirnoff.forcefield) object can constrain its bonds involving hydrogen by adding the relevant parameter to its `'Constraints'` parameter handler:
+
+```python
+ch = force_field.get_parameter_handler('Constraints')
+ch.add_parameter(smirks="[#1:1]-[*:2]")
+```
+
+Constraints can be removed from bonds involving hydrogen by removing the corresponding parameter:
+
+```python
+del forcefield['Constraints']["[#1:1]-[*:2]"]
+```

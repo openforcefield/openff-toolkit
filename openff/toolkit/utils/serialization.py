@@ -281,7 +281,7 @@ class Serializable(abc.ABC):
         yaml.SafeDumper.add_representer(
             OrderedDict,
             lambda dumper, value: self._represent_odict(
-                dumper, u"tag:yaml.org,2002:map", value
+                dumper, "tag:yaml.org,2002:map", value
             ),
         )
         d = self.to_dict()
@@ -312,8 +312,8 @@ class Serializable(abc.ABC):
 
         yaml.SafeDumper.add_representer(
             OrderedDict,
-            lambda dumper, value: self._represent_odict(  # type: ignore[name-defined]
-                dumper, u"tag:yaml.org,2002:map", value
+            lambda dumper, value: self._represent_odict(
+                dumper, "tag:yaml.org,2002:map", value
             ),
         )
         d = yaml.safe_load(serialized)
@@ -470,17 +470,21 @@ def _prep_numpy_data_for_json(data):
     # TODO: Much of this logic can probably be trimmed down
     import numpy as np
 
+    big_endian_float = np.dtype("float").newbyteorder(">")
+
     for key, val in data.items():
         if isinstance(val, np.ndarray):
             data[key] = val.tolist()
         if isinstance(val, dict):
             data[key] = _prep_numpy_data_for_json(val)
         if isinstance(val, bytes):
-            data[key] = np.frombuffer(val).tolist()
+            data[key] = np.frombuffer(val, dtype=big_endian_float).tolist()
         if isinstance(val, list):
             # Fairly hard-coded for case of Molecule.conformers being a List[np.array]
             # A more general solution should safely recurse through lists like dicts
             for i, element in enumerate(val):
                 if isinstance(element, bytes):
-                    data[key][i] = np.frombuffer(element).tolist()
+                    data[key][i] = np.frombuffer(
+                        element, dtype=big_endian_float
+                    ).tolist()
     return data

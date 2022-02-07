@@ -19,10 +19,7 @@ jobs:
         os:
           - ubuntu-latest
           - macos-latest
-        cfg:
-          - python-version: 3.6
-            openeye: "true"
-            
+        cfg:            
           - python-version: 3.7
             openeye: "true"
 
@@ -134,6 +131,11 @@ jobs:
           git fetch --tags
           git checkout tags/$LATEST_TAG
           git log -1 | cat
+          
+          # Install test plugins
+          cd utilities/test_plugins
+          python setup.py develop --no-deps
+          cd -
 
           pwd
           ls
