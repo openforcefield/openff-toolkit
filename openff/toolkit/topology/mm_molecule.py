@@ -85,9 +85,11 @@ class _SimpleMolecule:
         return self.bonds[index]
 
     def get_bond_between(self, atom1_index, atom2_index):
-        for bond in self.atom(atom1_index).bonds:
+        atom1 = self.atom(atom1_index)
+        atom2 = self.atom(atom2_index)
+        for bond in atom1.bonds:
             for atom in bond.atoms:
-                if atom.molecule_atom_index == atom2_index:
+                if atom is atom2:
                     return bond
 
     def particle(self, index) -> int:
@@ -291,13 +293,17 @@ class _SimpleAtom:
             )
         self._atomic_number = value
 
+    @property
+    def bonds(self):
+        return self._bonds
+
     def add_bond(self, bond):
-        self.bonds.append(bond)
+        self._bonds.append(bond)
 
     @property
     def bonded_atoms(self):
         bonded_atoms = []
-        for bond in self.bonds:
+        for bond in self._bonds:
             for atom in bond:
                 if atom is not self:
                     bonded_atoms.append(atom)
