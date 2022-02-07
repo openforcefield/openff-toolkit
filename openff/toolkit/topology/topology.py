@@ -1526,6 +1526,8 @@ class Topology(Serializable):
         """
         from openmm import app
 
+        from openff.toolkit.topology.molecule import Bond
+
         omm_topology = app.Topology()
 
         # Create unique atom names

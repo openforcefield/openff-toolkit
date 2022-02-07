@@ -138,6 +138,19 @@ class _SimpleMolecule:
 
         return graph
 
+    @classmethod
+    def _from_networkx(cls, graph: "nx.Graph"):
+
+        molecule = cls()
+
+        for node in g.nodes(data=True):
+            molecule.add_atom(atomic_number=node[1]["atomic_number"])
+
+        for edge in g.edges(data=True):
+            molecule.add_bond(e[0], e[1])
+
+        return molecule
+
     def to_dict(self) -> Dict:
         molecule_dict = dict()
         special_serialization_logic = [
@@ -253,6 +266,31 @@ class _SimpleMolecule:
             "The information content of a _SimpleMolecule is insufficient for creating "
             "an OpenFF Molecule with sufficiently specified chemistry."
         )
+
+    def _is_isomorphic_with(self, other) -> bool:
+        """
+        Untrustworthy check for pseudo-isomorphism.
+
+        This currently checks that the two molecules have
+        * The same number of atoms
+        * The same number of bonds
+        * Atoms with matching atomic numbers, in order
+
+        This currently does NOT checks that the two molecules have
+        * Topologically identical bond graphs
+        """
+
+        if self.n_atoms != other.n_atoms:
+            return False
+
+        if self.n_bonds != other.n_bonds:
+            return False
+
+        for this_atom, other_atom in zip(self.atoms, other.atoms):
+            if this_atom.atomic_number != other_atom.atomic_number:
+                return False
+
+        return True
 
     def generate_unique_atom_names(self):
         """Generate unique atom names. See `Molecule.generate_unique_atom_names`."""
