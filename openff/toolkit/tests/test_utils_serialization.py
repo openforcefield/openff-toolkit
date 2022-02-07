@@ -128,7 +128,6 @@ class TestNumPySerialization:
     def test_deserialize_endianness(self, endian):
         """Test that arrays are deserialized as big-endian, and that
         the deserialization breaks if the input is little-endian."""
-        dt_bigendian = np.dtype(float).newbyteorder(">")
         dt_input = np.dtype(float).newbyteorder(endian)
         arr = np.arange(3, dtype=dt_input)
         deserialized = deserialize_numpy(arr.tobytes(), arr.shape)

@@ -1,7 +1,6 @@
 """
 Test classes and function in module openff.toolkit.typing.engines.smirnoff.plugins
 """
-import pkg_resources
 import pytest
 
 from openff.toolkit.typing.engines.smirnoff import ForceField
