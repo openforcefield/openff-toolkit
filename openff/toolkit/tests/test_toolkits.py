@@ -579,21 +579,12 @@ class TestOpenEyeToolkitWrapper:
             for orig_atom, oe_atom in zip(molecule.atoms, oemol.GetAtoms()):
                 if 'residue_name' in orig_atom.metadata:
                     assert orig_atom.metadata['residue_name'] == oechem.OEAtomGetResidue(oe_atom).GetName()
-                else:
-                    if oechem.OEHasResidues(oemol):
-                        assert 'UNL' == oechem.OEAtomGetResidue(oe_atom).GetName()
 
                 if 'residue_number' in orig_atom.metadata:
                     assert orig_atom.metadata['residue_number'] == oechem.OEAtomGetResidue(oe_atom).GetResidueNumber()
-                else:
-                    if oechem.OEHasResidues(oemol):
-                        assert 1 == oechem.OEAtomGetResidue(oe_atom).GetResidueNumber()
 
                 if 'chain_id' in orig_atom.metadata:
                     assert orig_atom.metadata['chain_id'] == oechem.OEAtomGetResidue(oe_atom).GetChainID()
-                else:
-                    if oechem.OEHasResidues(oemol):
-                        assert ' ' == oechem.OEAtomGetResidue(oe_atom).GetChainID()
 
             # Check roundtripped OFFMol
             for orig_atom, roundtrip_atom in zip(molecule.atoms,
@@ -603,16 +594,13 @@ class TestOpenEyeToolkitWrapper:
                 if oechem.OEHasResidues(oemol):
                     if 'residue_name' in orig_atom.metadata:
                         assert orig_atom.metadata['residue_name'] == roundtrip_atom.metadata['residue_name']
-                    else:
-                        assert roundtrip_atom.metadata['residue_name'] == 'UNL'
+
                     if 'residue_number' in orig_atom.metadata:
                         assert orig_atom.metadata['residue_number'] == roundtrip_atom.metadata['residue_number']
-                    else:
-                        assert roundtrip_atom.metadata['residue_number'] == 1
+
                     if 'chain_id' in orig_atom.metadata:
                         assert orig_atom.metadata['chain_id'] == roundtrip_atom.metadata['chain_id']
-                    else:
-                        assert roundtrip_atom.metadata['chain_id'] == ""
+
                 else:
                     assert 'residue_name' not in roundtrip_atom.metadata
                     assert 'residue_number' not in roundtrip_atom.metadata
