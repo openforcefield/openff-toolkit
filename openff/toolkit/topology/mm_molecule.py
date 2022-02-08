@@ -1,10 +1,12 @@
 """
 TypedMolecule TODOs
 * Testing
-* Detemine whether atomic numbers are required, or whether a TypedMol could have a mix of TypedAtom and TypedParticles, where the latter doesn't need atomic nubmers
+* Detemine whether atomic numbers are required, or whether a TypedMol could have a mix of
+  TypedAtom and TypedParticles, where the latter doesn't need atomic nubmers
 * Determine whether typedmols should have isomorphism operations
 * Should be able to go to hill formula (?), networkx, openmm
-* Topology serialization will have trouble here - Won't know whether it's trying to deserialize a Molecule or a TypedMolecule.
+* Topology serialization will have trouble here - Won't know whether it's trying to
+  deserialize a Molecule or a TypedMolecule.
 
 """
 from typing import TYPE_CHECKING, Dict, List, NoReturn, Optional, Union
@@ -139,15 +141,18 @@ class _SimpleMolecule:
         return graph
 
     @classmethod
-    def _from_networkx(cls, graph: "nx.Graph"):
-
+    def _from_subgraph(cls, subgraph: "nx.Graph"):
         molecule = cls()
 
-        for node in g.nodes(data=True):
-            molecule.add_atom(atomic_number=node[1]["atomic_number"])
+        # The subgraph stores indices that might not start at zero (i.e. topology indices)
+        # but we need 0-index indices (like molecule indices) to add bonds
+        offset = min(subgraph.nodes())
 
-        for edge in g.edges(data=True):
-            molecule.add_bond(e[0], e[1])
+        for (index, node_data) in subgraph.nodes(data=True):
+            molecule.add_atom(atomic_number=node_data["atomic_number"])
+
+        for (topology_index1, topology_index2, edge_data) in subgraph.edges(data=True):
+            molecule.add_bond(topology_index1 - offset, topology_index2 - offset)
 
         return molecule
 
