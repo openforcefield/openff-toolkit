@@ -15,6 +15,11 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
   is no longer guaranteed to maintain the ordering of bonds, but now explicitly guarantees that it maintains 
   the order of atoms (Neither of these ordering guarantees were explicitly documented before, but this may be a 
   change from the previous behavior). 
+- [PR #1165](https://github.com/openforcefield/openforcefield/pull/1165): Adds the boolean argument
+  `use_interchange` to
+  [`create_openmm_system`](openff.toolkit.typing.engines.smirnoff.ForceField.create_openmm_system)
+  with a default value of False. Setting it to True routes `openmm.System` creation through
+  Interchange.
   
 ### Behaviors changed and bugfixes
 
