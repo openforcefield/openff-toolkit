@@ -1966,7 +1966,7 @@ class TestForceField:
         from openff.toolkit.typing.engines.smirnoff import BondHandler
 
         length = 1 * unit.angstrom
-        k = 10 * unit.kilocalorie_per_mole / unit.angstrom ** 2
+        k = 10 * unit.kilocalorie_per_mole / unit.angstrom**2
 
         param_with_id = {
             "smirks": "[*:1]-[*:2]",

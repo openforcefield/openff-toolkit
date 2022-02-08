@@ -32,6 +32,7 @@ from openff.toolkit.typing.chemistry import ChemicalEnvironment
 from openff.toolkit.utils import quantity_to_string, string_to_quantity
 from openff.toolkit.utils.exceptions import (
     DuplicateUniqueMoleculeError,
+    InvalidAromaticityModelError,
     InvalidBoxVectorsError,
     InvalidPeriodicityError,
     MissingUniqueMoleculesError,
@@ -439,6 +440,28 @@ class Topology(Serializable):
         self._molecules = list()
         self._cached_chemically_identical_molecules = None
 
+    def __iadd__(self, other):
+        """Add two Topology objects.
+
+        This method has the following effects:
+        * The cache (_cached_chemically_identical_molecules) is reset
+        * The constrained atom pairs (Topology.constrained_atom_pairs) is reset
+        * Box vectors are **not** updated.
+
+        """
+        this = copy(self)
+        if self.aromaticity_model != other.aromaticity_model:
+            raise InvalidAromaticityModelError(
+                "Mismatch in aromaticity models. Trying to add a Topology with aromaticity model "
+                f"{other.aromaticity_model} to a Topology with aromaticity model "
+                f"{self.aromaticity_model}"
+            )
+        self._constrained_atom_pairs = dict()
+        self._cached_chemically_identical_molecules = None
+
+        for molecule in other.molecules:
+            self.add_molecule(molecule)
+
     @property
     def reference_molecules(self):
         """
@@ -527,7 +550,7 @@ class Topology(Serializable):
             msg = "Aromaticity model must be one of {}; specified '{}'".format(
                 ALLOWED_AROMATICITY_MODELS, aromaticity_model
             )
-            raise ValueError(msg)
+            raise InvalidAromaticityModelError(msg)
         self._aromaticity_model = aromaticity_model
 
     @property

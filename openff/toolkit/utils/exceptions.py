@@ -212,6 +212,12 @@ class SMIRNOFFAromaticityError(OpenFFToolkitException):
     """
 
 
+class InvalidAromaticityModelError(OpenFFToolkitException, ValueError):
+    """
+    General exception for errors while setting the aromaticity model of a Topology.
+    """
+
+
 # TODO: Remove in January 2022
 class _DeprecatedParseError(_DeprecatedMessageException):
     """DEPRECATED: Error for when a SMIRNOFF data structure is not parseable by a ForceField"""
