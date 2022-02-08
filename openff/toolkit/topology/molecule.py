@@ -2451,7 +2451,7 @@ class FrozenMolecule(Serializable):
 
         element_counts = defaultdict(int)
         for atom in self.atoms:
-            symbol = SYMBOLS[atom.atomic_number]
+            symbol = atom.symbol
             element_counts[symbol] += 1
             # TODO: It may be worth exposing this as a user option, i.e. to avoid multiple ligands
             # parameterized with OpenFF clashing because they have atom names like O1x, H3x, etc.
@@ -2581,7 +2581,7 @@ class FrozenMolecule(Serializable):
 
         id = ""
         for atom in self.atoms:
-            id += f"{SYMBOLS[atom.atomic_number]}_{atom.formal_charge}_{atom.stereochemistry}__"
+            id += f"{atom.symbol}_{atom.formal_charge}_{atom.stereochemistry}__"
         for bond in self.bonds:
             id += f"{bond.bond_order}_{bond.stereochemistry}_{bond.atom1_index}_{bond.atom2_index}__"
         # return hash(id)
