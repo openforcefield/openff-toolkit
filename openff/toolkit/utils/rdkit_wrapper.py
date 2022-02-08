@@ -1575,12 +1575,20 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                         "Got {} instead.".format(stereo_code)
                     )
 
+            res = rda.GetPDBResidueInfo()
+            metadata = dict()
+            if res is not None:
+                metadata['residue_name'] = res.GetResidueName()
+                metadata['residue_number'] = res.GetResidueNumber()
+                metadata['chain_id'] = res.GetChainId()
+
             atom_index = offmol._add_atom(
                 atomic_number,
                 formal_charge,
                 is_aromatic,
                 name=name,
                 stereochemistry=stereochemistry,
+                metadata=metadata
             )
             map_atoms[rd_idx] = atom_index
             atom_mapping[atom_index] = map_id
@@ -1859,6 +1867,21 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         for index, atom in enumerate(molecule.atoms):
             rdatom = rdmol.GetAtomWithIdx(index)
             rdatom.SetProp("_Name", atom.name)
+            if rdatom.GetPDBResidueInfo() is None:
+                res = Chem.AtomPDBResidueInfo()
+            else:
+                res = rdatom.GetPDBResidueInfo()
+
+            if 'residue_name' in atom.metadata:
+                res.SetResidueName(atom.metadata['residue_name'])
+
+            if 'residue_number' in atom.metadata:
+                res.SetResidueNumber(atom.metadata['residue_number'])
+
+            if 'chain_id' in atom.metadata:
+                res.SetChainId(atom.metadata['chain_id'])
+
+            rdatom.SetPDBResidueInfo(res)
 
         for bond in molecule.bonds:
             atom_indices = (

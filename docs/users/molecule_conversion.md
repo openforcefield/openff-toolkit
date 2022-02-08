@@ -2,6 +2,9 @@ Hierarchy iterators are ignored when converting to other packages, only the info
 
 Molecule conversion spec
 
+RDKit - We always run rdatom.SetPDBMetadata, meaning that undefined values in an OFFMol are set to be the default values in rdkit
+OpenEye - We always run oechem.OEAtomSetResidue(oe_atom, res), meaning that undefined values in an OFFMol may not be preserved when going to OpenEye. 
+
 Example hierarchy conversion table
 | At idx                     | 0   | 1   | 2   | 3   | 4   | 5   | 6   | 7   | 8   | 9   | 10  | 11  | 12  | 13  | 14  | 15  | 16 | 17  | 18    | 19    | 20    | 21    |
 |----------------------------|-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|----|-----|-------|-------|-------|-------|

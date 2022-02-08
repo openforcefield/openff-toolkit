@@ -2191,6 +2191,59 @@ class TestRDKitToolkitWrapper:
             == expected_output_smiles
         )
 
+    def test_to_from_rdkit_hierarchy_metadata(self, topology_with_metadata):
+        """
+        Test roundtripping to/from ``OpenEyeToolkitWrapper`` for molecules with PDB hierarchy metadata
+        """
+        for molecule in topology_with_metadata.molecules:
+            rdmol = molecule.to_rdkit()
+            roundtrip_mol = Molecule.from_rdkit(rdmol)
+
+            # Check RDMol
+            for orig_atom, rd_atom in zip(molecule.atoms, rdmol.GetAtoms()):
+                if 'residue_name' in orig_atom.metadata:
+                    assert orig_atom.metadata['residue_name'] == rd_atom.GetPDBResidueInfo().GetResidueName()
+                else:
+                    assert rd_atom.GetPDBResidueInfo().GetResidueName() == ''
+
+                if 'residue_number' in orig_atom.metadata:
+                    assert orig_atom.metadata['residue_number'] == rd_atom.GetPDBResidueInfo().GetResidueNumber()
+                else:
+                    assert rd_atom.GetPDBResidueInfo().GetResidueNumber() == 0
+
+
+                if 'chain_id' in orig_atom.metadata:
+                    assert orig_atom.metadata['chain_id'] == rd_atom.GetPDBResidueInfo().GetChainId()
+                else:
+                    assert rd_atom.GetPDBResidueInfo().GetChainId() == ''
+
+            # from rdkit import Chem
+            #print('orig mol metadata', molecule.metadata)
+            #print('roundtrip mol metadata', roundtrip_mol.metadata)
+            # print('chain id', Chem.SplitMolByPDBChainId(rdmol))
+            # print('chain id', [(chain[0], [a.GetIdx() for a in chain[1].GetAtoms()]) for chain in Chem.SplitMolByPDBChainId(rdmol).items()])
+            # print('pdb residues', Chem.SplitMolByPDBResidues(rdmol))
+            # print('pdb residues', [(res[0], [a.GetIdx() for a in res[1].GetAtoms()]) for res in Chem.SplitMolByPDBResidues(rdmol).items()])
+            # print()
+
+            # Check roundtripped OFFMol
+            for orig_atom, roundtrip_atom in zip(molecule.atoms,
+                                                          roundtrip_mol.atoms):
+                if 'residue_name' in orig_atom.metadata:
+                    assert orig_atom.metadata['residue_name'] == roundtrip_atom.metadata['residue_name']
+                else:
+                    assert roundtrip_atom.metadata['residue_name'] == ''
+
+                if 'residue_number' in orig_atom.metadata:
+                    assert orig_atom.metadata['residue_number'] == roundtrip_atom.metadata['residue_number']
+                else:
+                    assert roundtrip_atom.metadata['residue_number'] == 0
+
+                if 'chain_id' in orig_atom.metadata:
+                    assert orig_atom.metadata['chain_id'] == roundtrip_atom.metadata['chain_id']
+                else:
+                    assert roundtrip_atom.metadata['chain_id'] == ''
+
     def test_from_rdkit_implicit_hydrogens(self):
         """
         Test that hydrogens are inferred from hydrogen-less RDKit molecules,
