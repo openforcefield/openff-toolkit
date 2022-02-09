@@ -6,4 +6,28 @@ A modern, extensible library for molecular mechanics force field science from th
 from ._version import get_versions  # type: ignore
 
 __version__ = get_versions()["version"]
-del get_versions
+
+import openff.toolkit.data as data
+import openff.toolkit.tests as tests
+import openff.toolkit.topology as topology
+import openff.toolkit.typing as typing
+import openff.toolkit.utils as utils
+
+from openff.toolkit.topology import Molecule, Topology
+from openff.toolkit.typing.engines.smirnoff.forcefield import (
+    ForceField,
+    get_available_force_fields,
+)
+
+__all__ = [
+    "__version__",
+    "data",
+    "tests",
+    "topology",
+    "typing",
+    "utils",
+    "Molecule",
+    "Topology",
+    "ForceField",
+    "get_available_force_fields",
+]
