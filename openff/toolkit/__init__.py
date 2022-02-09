@@ -7,8 +7,6 @@ from ._version import get_versions  # type: ignore
 
 __version__ = get_versions()["version"]
 
-import openff.toolkit.data as data
-import openff.toolkit.tests as tests
 import openff.toolkit.topology as topology
 import openff.toolkit.typing as typing
 import openff.toolkit.utils as utils
@@ -21,8 +19,6 @@ from openff.toolkit.typing.engines.smirnoff.forcefield import (
 
 __all__ = [
     "__version__",
-    "data",
-    "tests",
     "topology",
     "typing",
     "utils",
