@@ -16,12 +16,12 @@ Class definitions to represent a molecular system and its chemical components
    * Use `attrs <http://www.attrs.org/>`_ for object setter boilerplate?
 
 """
-
-import copy
 import itertools
 import warnings
 from collections import OrderedDict
 from collections.abc import MutableMapping
+from copy import deepcopy
+from typing import TYPE_CHECKING, Dict, NoReturn, Tuple
 
 import numpy as np
 from openff.units import unit
@@ -47,6 +47,8 @@ from openff.toolkit.utils.toolkits import (
     GLOBAL_TOOLKIT_REGISTRY,
 )
 
+if TYPE_CHECKING:
+    from openff.units.unit import Quantity
 # =============================================================================================
 # PRIVATE SUBROUTINES
 # =============================================================================================
@@ -441,7 +443,7 @@ class Topology(Serializable):
         self._cached_chemically_identical_molecules = None
 
     def __iadd__(self, other):
-        """Add two Topology objects.
+        """Add two Topology objects in-place.
 
         This method has the following effects:
         * The cache (_cached_chemically_identical_molecules) is reset
@@ -449,18 +451,27 @@ class Topology(Serializable):
         * Box vectors are **not** updated.
 
         """
-        this = copy(self)
         if self.aromaticity_model != other.aromaticity_model:
             raise InvalidAromaticityModelError(
                 "Mismatch in aromaticity models. Trying to add a Topology with aromaticity model "
                 f"{other.aromaticity_model} to a Topology with aromaticity model "
                 f"{self.aromaticity_model}"
             )
+
         self._constrained_atom_pairs = dict()
         self._cached_chemically_identical_molecules = None
 
         for molecule in other.molecules:
-            self.add_molecule(molecule)
+            self.add_molecule(deepcopy(molecule))
+
+        return self
+
+    def __add__(self, other):
+        """Add two Topology objects. See Topology.__iadd__ for details."""
+        combined = deepcopy(self)
+        combined += other
+
+        return combined
 
     @property
     def reference_molecules(self):
@@ -666,13 +677,13 @@ class Topology(Serializable):
         self._charge_model = charge_model
 
     @property
-    def constrained_atom_pairs(self):
+    def constrained_atom_pairs(self) -> Dict[Tuple[int], "Quantity"]:
         """Returns the constrained atom pairs of the Topology
 
         Returns
         -------
-        constrained_atom_pairs : dict
-             dictionary of the form d[(atom1_topology_index, atom2_topology_index)] = distance (float)
+        constrained_atom_pairs : dict of Tuple[int]: unit.Quantity
+             dictionary of the form {(atom1_topology_index, atom2_topology_index): distance}
         """
         return self._constrained_atom_pairs
 
@@ -1299,7 +1310,7 @@ class Topology(Serializable):
         return self._cached_chemically_identical_molecules
 
     def copy_initializer(self, other):
-        other_dict = copy.deepcopy(other.to_dict())
+        other_dict = deepcopy(other.to_dict())
         self._initialize_from_dict(other_dict)
 
     def to_dict(self):
@@ -2178,7 +2189,7 @@ class Topology(Serializable):
         pass
 
     def add_molecule(self, molecule):
-        self._molecules.append(copy.deepcopy(molecule))
+        self._molecules.append(deepcopy(molecule))
         self._cached_chemically_identical_molecules = None
         return len(self._molecules)
 

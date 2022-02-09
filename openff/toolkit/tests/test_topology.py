@@ -123,6 +123,41 @@ class TestTopology:
 
         assert (topology.box_vectors == topology_copy.box_vectors).all()
 
+    def test_add_basic(self):
+        topology1 = Molecule.from_smiles("O").to_topology()
+        topology2 = Molecule.from_smiles("CO").to_topology()
+
+        topology3 = topology1 + topology2
+
+        assert topology3.n_atoms == 9
+        assert topology3.n_bonds == 7
+        assert topology3.n_molecules == 2
+
+    def test_add_inplace(self):
+        topology1 = Molecule.from_smiles("O").to_topology()
+        topology2 = Molecule.from_smiles("CO").to_topology()
+
+        topology3 = topology1 + topology2
+        topology1 += topology2
+
+        for attr in ["n_atoms", "n_bonds", "n_molecules"]:
+            assert getattr(topology1, attr) == getattr(topology3, attr)
+
+    def test_add_invalidate_cache(self):
+        topology1 = Molecule.from_smiles("O").to_topology()
+        topology2 = Molecule.from_smiles("CO").to_topology()
+
+        topology1.add_constraint(0, 1, 1.01 * unit.angstrom)
+        topology2.identical_molecule_groups
+
+        assert topology1.constrained_atom_pairs[(0, 1)] == 1.01 * unit.angstrom
+        assert len(topology2._cached_chemically_identical_molecules) == 1
+
+        topology3 = topology1 + topology2
+
+        assert topology3.constrained_atom_pairs == {}
+        assert topology3._cached_chemically_identical_molecules is None
+
     def test_box_vectors(self):
         """Test the getter and setter for box_vectors"""
         topology = Topology()

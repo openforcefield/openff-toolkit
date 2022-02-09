@@ -32,13 +32,15 @@ __all__ = [
 import contextlib
 import functools
 import logging
-from typing import Union
+from typing import TYPE_CHECKING, Union
 
 import numpy as np
 from openff.units import unit
 
 from openff.toolkit.utils.exceptions import MissingDependencyError
 
+if TYPE_CHECKING:
+    from openff.units.unit import Quantity
 # =============================================================================================
 # CONFIGURE LOGGER
 # =============================================================================================
@@ -273,7 +275,7 @@ def string_to_unit(unit_string):
     return unit.Unit(unit_string)
 
 
-def string_to_quantity(quantity_string) -> Union[str, int, float, unit.Quantity]:
+def string_to_quantity(quantity_string) -> Union[str, int, float, "Quantity"]:
     """Attempt to parse a string into a unit.Quantity.
 
     Note that dimensionless floats and ints are returns as floats or ints, not Quantity objects.

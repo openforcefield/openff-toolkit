@@ -17,6 +17,7 @@ from openff.units import unit
 
 if TYPE_CHECKING:
     from openff.toolkit.topology.molecule import Molecule
+    from openff.units.unit import Quantity
 
 from openff.toolkit.utils import base_wrapper
 from openff.toolkit.utils.constants import DEFAULT_AROMATICITY_MODEL
@@ -990,7 +991,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
     @classmethod
     def _elf_is_problematic_conformer(
-        cls, molecule: "Molecule", conformer: unit.Quantity
+        cls,
+        molecule: "Molecule",
+        conformer: "Quantity",
     ) -> Tuple[bool, Optional[str]]:
         """A function which checks if a particular conformer is known to be problematic
         when computing ELF partial charges.
@@ -1039,7 +1042,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
     @classmethod
     def _elf_prune_problematic_conformers(
         cls, molecule: "Molecule"
-    ) -> List[unit.Quantity]:
+    ) -> List["Quantity"]:
         """A function which attempts to remove conformers which are known to be
         problematic when computing ELF partial charges.
 
@@ -1074,7 +1077,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
     @classmethod
     def _elf_compute_electrostatic_energy(
-        cls, molecule: "Molecule", conformer: unit.Quantity
+        cls,
+        molecule: "Molecule",
+        conformer: "Quantity",
     ) -> float:
         """Computes the 'electrostatic interaction energy' of a particular conformer
         of a molecule.
@@ -1194,10 +1199,10 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
     def _elf_select_diverse_conformers(
         cls,
         molecule: "Molecule",
-        ranked_conformers: List[unit.Quantity],
+        ranked_conformers: List["Quantity"],
         limit: int,
-        rms_tolerance: unit.Quantity,
-    ) -> List[unit.Quantity]:
+        rms_tolerance: "Quantity",
+    ) -> List["Quantity"]:
         """Attempt to greedily select a specified number conformers which are maximally
         diverse.
 
@@ -1282,7 +1287,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         molecule: "Molecule",
         percentage: float = 2.0,
         limit: int = 10,
-        rms_tolerance: unit.Quantity = 0.05 * unit.angstrom,
+        rms_tolerance: "Quantity" = 0.05 * unit.angstrom,
     ):
         """Applies the `ELF method
         <https://docs.eyesopen.com/toolkits/python/quacpactk/molchargetheory.html#elf-conformer-selection>`_
