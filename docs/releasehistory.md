@@ -20,7 +20,10 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
   [`create_openmm_system`](openff.toolkit.typing.engines.smirnoff.ForceField.create_openmm_system)
   with a default value of False. Setting it to True routes `openmm.System` creation through
   Interchange.
-  
+- [PR #1192](https://github.com/openforcefield/openforcefield/pull/1192): Add re-exports for core classes to
+  `openff.toolkit` and re-exports for parameter types to the new `openff.toolkit.topology.parametertypes` module.
+  This does not affect existing paths.
+
 ### Behaviors changed and bugfixes
 
 - [PR #1118](https://github.com/openforcefield/openforcefield/pull/1118):
@@ -33,7 +36,6 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 - [PR #1113](https://github.com/openforcefield/openff-toolkit/pull/1113): Updates the Amber/GROMACS
   example to use Interchange.
-
 
 ## 0.10.1 Minor feature and bugfix release
 
