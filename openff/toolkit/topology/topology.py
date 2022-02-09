@@ -1537,13 +1537,13 @@ class Topology(Serializable):
 
         # Go through atoms in OpenFF to preserve the order.
         omm_atoms = []
-        # We need to iterate over the topology molecules if we want to
-        # keep track of chains/residues as Atom.topology_molecule is
-        # instantiated every time and can't be used as a key.
-        for molecule in self.molecules:
-            molecule_id = self.molecule_index(molecule)
-            residue_id = molecule.name
-            for atom in molecule.atoms:
+
+        used_chain_ids = []
+        used_residue_ids = []
+        for atom in self.atoms:
+            #molecule_id = self.molecule_index(molecule)
+            #residue_id = molecule.name
+            #for atom in molecule.atoms:
                 # reference_molecule = topology_molecule#.reference_molecule
                 # n_molecules = 1
                 # n_molecules = len(
@@ -1568,29 +1568,65 @@ class Topology(Serializable):
                 # except KeyError:
                 #    chain = omm_topology.addChain()
                 #    mol_to_chains[key_molecule] = chain
-                try:
-                    chain = mol_to_chains[molecule_id]
-                except KeyError:
-                    chain = omm_topology.addChain()
-                    mol_to_chains[molecule_id] = chain
+            if 'residue_name' in atom.metadata:
+                atom_residue_name = atom.metadata['residue_name']
+            else:
+                atom_residue_name = 'UNK'
 
-                # Add one residue for each topology molecule.
-                try:
-                    residue = mol_to_residues[molecule_id]
-                except KeyError:
-                    residue = omm_topology.addResidue(residue_id, chain)
-                    mol_to_residues[molecule_id] = residue
+            if 'residue_number' in atom.metadata:
+                atom_residue_number = atom.metadata['residue_number']
+            else:
+                atom_residue_number = '0'
 
-                # Add atom.
-                element = app.Element.getByAtomicNumber(atom.atomic_number)
-                # omm_atom = omm_topology.addAtom(atom.atom.name, element, residue)
-                omm_atom = omm_topology.addAtom(atom.name, element, residue)
+            if 'chain_id' in atom.metadata:
+                atom_chain_id = atom.metadata['chain_id']
+            else:
+                atom_chain_id = 'X'
 
-                # Make sure that OpenFF and OpenMM Topology atoms have the same indices.
-                # assert atom.topology_atom_index == int(omm_atom.id) - 1
-                # print(self.topology_atom_index(atom))
-                assert self.atom_index(atom) == int(omm_atom.id) - 1
-                omm_atoms.append(omm_atom)
+
+            # Make a string chain ID comprised of chain_id_N
+            # Add a final "_N" to the end of this ID string that ensures we don't produce
+            # noncontiguous (in atom order) residue
+            counter = 0
+            chain_id = f'{atom_chain_id}_{counter}'
+            while chain_id in used_chain_ids[:-1]:
+                counter += 1
+                chain_id = f'{atom_chain_id}_{counter}'
+            used_chain_ids.append(chain_id)
+
+            try:
+                chain = mol_to_chains[chain_id]
+            except KeyError:
+                chain = omm_topology.addChain(chain_id)
+                mol_to_chains[chain_id] = chain
+
+            # Make a string residue ID comprised of residue_name, residue_number, chain ID, and a counter "N".
+            # The counter "N" is appended end of this ID string to ensure we don't produce
+            # noncontiguous (in atom order) residue
+            counter = 0
+            residue_id = f'{atom_residue_name}_{atom_residue_number}_{atom_chain_id}_{counter}'
+            while residue_id in used_residue_ids[:-1]:
+                counter += 1
+                residue_id = f'{atom_residue_name}_{atom_residue_number}_{atom_chain_id}_{counter}'
+            used_residue_ids.append(residue_id)
+
+            print(chain_id, residue_id)
+            try:
+                residue = mol_to_residues[residue_id]
+            except KeyError:
+                residue = omm_topology.addResidue(residue_id, chain)
+                mol_to_residues[residue_id] = residue
+
+            # Add atom.
+            element = app.Element.getByAtomicNumber(atom.atomic_number)
+            # omm_atom = omm_topology.addAtom(atom.atom.name, element, residue)
+            omm_atom = omm_topology.addAtom(atom.name, element, residue)
+
+            # Make sure that OpenFF and OpenMM Topology atoms have the same indices.
+            # assert atom.topology_atom_index == int(omm_atom.id) - 1
+            # print(self.topology_atom_index(atom))
+            assert self.atom_index(atom) == int(omm_atom.id) - 1
+            omm_atoms.append(omm_atom)
 
         # Add all bonds.
         bond_types = {1: app.Single, 2: app.Double, 3: app.Triple}
