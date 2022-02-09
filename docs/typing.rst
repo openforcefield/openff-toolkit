@@ -49,25 +49,25 @@ Parameter Type
 These are usually initialized during ``ForceField`` creation, and can be inspected and modified by users via the Python API.
 For more information, see ``examples/forcefield_modification``.
 
-.. currentmodule:: openff.toolkit.typing.engines.smirnoff.parameters
+.. currentmodule:: openff.toolkit.typing.engines.smirnoff.parametertypes
 .. autosummary::
     :nosignatures:
     :toctree: api/generated/
 
     ParameterType
-    ConstraintHandler.ConstraintType
-    BondHandler.BondType
-    AngleHandler.AngleType
-    ProperTorsionHandler.ProperTorsionType
-    ImproperTorsionHandler.ImproperTorsionType
-    vdWHandler.vdWType
-    LibraryChargeHandler.LibraryChargeType
-    GBSAHandler.GBSAType
-    ChargeIncrementModelHandler.ChargeIncrementType
-    VirtualSiteHandler.VirtualSiteBondChargeType
-    VirtualSiteHandler.VirtualSiteMonovalentLonePairType
-    VirtualSiteHandler.VirtualSiteDivalentLonePairType
-    VirtualSiteHandler.VirtualSiteTrivalentLonePairType
+    ConstraintType
+    BondType
+    AngleType
+    ProperTorsionType
+    ImproperTorsionType
+    vdWType
+    LibraryChargeType
+    GBSAType
+    ChargeIncrementType
+    VirtualSiteBondChargeType
+    VirtualSiteMonovalentLonePairType
+    VirtualSiteDivalentLonePairType
+    VirtualSiteTrivalentLonePairType
 
 Parameter Handlers
 ~~~~~~~~~~~~~~~~~~
