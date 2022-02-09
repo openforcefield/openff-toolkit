@@ -55,6 +55,7 @@ For more information, see ``examples/forcefield_modification``.
     :toctree: api/generated/
 
     ParameterType
+    ConstraintHandler.ConstraintType
     BondHandler.BondType
     AngleHandler.AngleType
     ProperTorsionHandler.ProperTorsionType
@@ -81,6 +82,7 @@ During ``System`` creation, each ``ParameterHandler`` registered to a ``ForceFie
 
     ParameterList
     ParameterHandler
+    ConstraintHandler
     BondHandler
     AngleHandler
     ProperTorsionHandler
