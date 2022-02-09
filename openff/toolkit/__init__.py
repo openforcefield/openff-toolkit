@@ -10,7 +10,6 @@ __version__ = get_versions()["version"]
 import openff.toolkit.topology as topology
 import openff.toolkit.typing as typing
 import openff.toolkit.utils as utils
-
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff.forcefield import (
     ForceField,
