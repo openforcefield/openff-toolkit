@@ -449,6 +449,8 @@ class Atom(Particle):
         """
         Return whether or not this atom is in a ring(s) (of any size)
 
+        This Atom is expected to be attached to a molecule (`Atom.molecule`).
+
         Parameters
         ----------
         toolkit_registry: openff.toolkit.utils.toolkits.ToolkitRegistry, default=GLOBAL_TOOLKIT_REGISTRY
@@ -2100,6 +2102,8 @@ class Bond(Serializable):
     def is_in_ring(self, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY) -> bool:
         """
         Return whether or not this bond is in a ring(s) (of any size)
+
+        This Bond is expected to be attached to a molecule (`Bond.molecule`).
 
         Note: Bonds containing atoms that are only in separate rings, i.e. the central bond in a biphenyl,
             are not considered to be bonded by this criteria.

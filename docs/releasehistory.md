@@ -25,6 +25,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
   a molecule, directly use a cheminformatics toolkit after using
   [`Molecule.to_rdkit`](openff.toolkit.topology.Molecule.to_rdkit) or
   [`Molecule.to_openeye`](openff.toolkit.topology.Molecule.to_openeye).
+  [`Atom.is_in_ring`](openff.toolkit.topology.Atom.is_in_ring) and
+  [`Bond.is_in_ring`](openff.toolkit.topology.Bond.is_in_ring) are now methods, not properties.
 
 ## 0.10.2 Bugfix release
 
