@@ -449,7 +449,10 @@ class Atom(Particle):
         """
         Return whether or not this atom is in a ring(s) (of any size)
 
-        Currently only implemented via The RDKit, which must be installed.
+        Parameters
+        ----------
+        toolkit_registry: openff.toolkit.utils.toolkits.ToolkitRegistry, default=GLOBAL_TOOLKIT_REGISTRY
+            :class:`ToolkitRegistry` to use to enumerate the tautomers.
 
         """
         if self._molecule is None:
@@ -459,8 +462,7 @@ class Atom(Particle):
 
         _is_in_ring = toolkit_registry.call(
             "atom_is_in_ring",
-            self._molecule,
-            self.molecule_atom_index,
+            self
         )
 
         return _is_in_ring
@@ -2112,8 +2114,8 @@ class Bond(Serializable):
 
         Parameters
         ----------
-        toolkit_registry: openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, default=GLOBAL_TOOLKIT_REGISTRY
-            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use to enumerate the tautomers.
+        toolkit_registry: openff.toolkit.utils.toolkits.ToolkitRegistry, default=GLOBAL_TOOLKIT_REGISTRY
+            :class:`ToolkitRegistry` to use to enumerate the tautomers.
 
         Returns
         -------
@@ -2128,8 +2130,7 @@ class Bond(Serializable):
 
         _is_in_ring = toolkit_registry.call(
             "bond_is_in_ring",
-            self._molecule,
-            self.molecule_bond_index,
+            self
         )
 
         return _is_in_ring
