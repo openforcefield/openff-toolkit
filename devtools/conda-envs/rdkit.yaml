@@ -18,13 +18,12 @@ dependencies:
   - networkx
   - ambertools
   - rdkit
-  - mendeleev
   - packaging
     # Removed until a new release which targets openff-toolkit is made.
 #  - openmmforcefields
   - openmm
   - openff-forcefields
-  - openff-units >=0.1.4
+  - openff-units >=0.1.5
   - openff-utilities
   - smirnoff99Frosst
   - cachetools

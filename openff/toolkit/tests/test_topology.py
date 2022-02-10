@@ -266,24 +266,22 @@ class TestTopology:
         with pytest.raises(Exception) as context:
             topology_atom = topology.atom(8)
 
-    def test_topology_atom_element(self, toluene_from_sdf):
-        """Test getters of TopologyAtom element and atomic number"""
-        from mendeleev import element
-        from mendeleev.models import Element
-
+    def test_topology_atom_element_properties(self, toluene_from_sdf):
+        """
+        Test element-like getters of TopologyAtom atomic number. In 0.11.0, Atom.element
+        was removed and replaced with Atom.atomic_number and Atom.symbol.
+        """
         topology = Topology()
         topology.add_molecule(toluene_from_sdf)
 
-        first_element = topology.atom(0).element
-        eighth_element = topology.atom(7).element
+        first_atom = topology.atom(0)
+        eighth_atom = topology.atom(7)
 
-        # Check if types/instances are correct
-        assert isinstance(first_element, Element)
-        assert isinstance(eighth_element, Element)
-
-        # Make sure first is a carbon element and eighth is a hydrogen element
-        assert first_element.symbol == element(6).symbol
-        assert eighth_element.symbol == element(1).symbol
+        # These atoms are expected to be hydrogen and carbon, respectively
+        assert first_atom.symbol == "C"
+        assert first_atom.atomic_number == 6
+        assert eighth_atom.symbol == "H"
+        assert eighth_atom.atomic_number == 1
 
     def test_get_bond(self, ethane_from_smiles, ethene_from_smiles):
         """Test Topology.bond function (bond lookup from index)"""

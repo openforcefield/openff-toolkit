@@ -6,28 +6,90 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 * `minor` increments add features but do not break API compatibility
 * `micro` increments represent bugfix releases or improvements in documentation
 
+## Migration guide
+
+### Units
+
+Import the [unit registry](https://pint.readthedocs.io/en/stable/developers_reference.html?highlight=unitregistry#pint.UnitRegistry) provided by `openff-units`:
+
+```
+from openff.units import unit
+```
+
+Create a `unit.Quantity` object:
+```
+value = unit.Quantity(1.0, unit.nanometer)  # or 1.0 * unit.nanometer
+```
+
+Inspect the value and unit of this quantity:
+```
+print(value.magnitude)  # or value.m
+# 1.0
+print(value.units)
+# <Unit('nanometer')>
+```
+
+Convert to compatible units:
+```
+converted = value.to(unit.angstrom)
+print(converted)
+# 10.0 <Unit('angstrom')>
+```
+
+Report the value in compatible units:
+```
+print(value.magnitude_as(unit.angstrom))  $ or .m_as()
+# 10.0 <Unit('angstrom')>
+```
+
+Convert to and from OpenMM quantities:
+```
+from openff.units.openmm import to_openmm, from_openmm
+value_openmm = to_openmm(value)
+print(value_openmm)
+# Quantity(value=1.0, unit=nanometer)
+print(type(value_openmm))
+# 1.0 <Unit('nanometer')>
+value_roundtrip = from_openmm(value_openmm)
+print(value_roundtrip)
+# 1.0 <Unit('nanometer')>
+```
+
+
 ## Current Development
 
 - [PR #964](https://github.com/openforcefield/openff-toolkit/pull/964): Adds initial implementation
-  of atom metadata dictionaries. 
-- [PR #1097](https://github.com/openforcefield/openff-toolkit/pull/1097): Deprecates TopologyMolecule. 
-- [PR #1097](https://github.com/openforcefield/openff-toolkit/pull/1097): Topology.from_openmm  
-  is no longer guaranteed to maintain the ordering of bonds, but now explicitly guarantees that it maintains 
-  the order of atoms (Neither of these ordering guarantees were explicitly documented before, but this may be a 
-  change from the previous behavior). 
+  of atom metadata dictionaries.
+- [PR #1097](https://github.com/openforcefield/openff-toolkit/pull/1097): Deprecates TopologyMolecule.
+- [PR #1097](https://github.com/openforcefield/openff-toolkit/pull/1097): Topology.from_openmm
+  is no longer guaranteed to maintain the ordering of bonds, but now explicitly guarantees that it maintains
+  the order of atoms (Neither of these ordering guarantees were explicitly documented before, but this may be a
+  change from the previous behavior).
 - [PR #1165](https://github.com/openforcefield/openforcefield/pull/1165): Adds the boolean argument
   `use_interchange` to
   [`create_openmm_system`](openff.toolkit.typing.engines.smirnoff.ForceField.create_openmm_system)
   with a default value of False. Setting it to True routes `openmm.System` creation through
   Interchange.
-  
+
 ### Behaviors changed and bugfixes
 
+- [PR #1182](https://github.com/openforcefield/openforcefield/pull/1182) and
+  [PR #1142](https://github.com/openforcefield/openforcefield/pull/1142) migrate handling of
+  unit-bearing quantities from OpenMM's unit module (`openmm.unit`) to
+  [`openff-units`](https://github.com/openforcefield/openff-units), which itself is based off of
+  [Pint](https://pint.readthedocs.io/en/stable/).
 - [PR #1118](https://github.com/openforcefield/openforcefield/pull/1118):
   [`Molecule.to_hill_formula`](openff.toolkit.topology.Molecule.to_hill_formula) is now a class method
   and no longer accepts input of NetworkX graphs.
 - [PR #1130](https://github.com/openforcefield/openforcefield/pull/1130): Running unit tests will
   no longer generate force field files in the local directory.
+- [PR #1182](https://github.com/openforcefield/openforcefield/pull/1182): Removes `Atom.element`,
+  thereby also removing `Atom.element.symbol`, `Atom.element.mass` and `Atom.element.atomic_number`.
+  These are replaced with corresponding properties directly on the
+  [`Atom`](openff.toolkit.topology.molecule.Atom) class:
+  [`Atom.symbol`](openff.toolkit.topology.molecule.Atom.symbol),
+  [`Atom.mass`](openff.toolkit.topology.molecule.Atom.mass), and
+  [`Atom.atomic_number`](openff.toolkit.topology.molecule.Atom.atomic_number).
 
 ### Examples added
 

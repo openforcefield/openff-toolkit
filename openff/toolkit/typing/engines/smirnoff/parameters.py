@@ -2398,7 +2398,7 @@ class ParameterHandler(_ParameterAttributeHandler):
                 for atom_idx in unassigned_tuple:
                     atom = topology.atom(atom_idx)
                     unassigned_atoms.append(atom)
-                    unassigned_str += f"({atom.name} {atom.element.symbol}), "
+                    unassigned_str += f"({atom.name} {atom.symbol}), "
                 unassigned_atom_tuples.append(tuple(unassigned_atoms))
             err_msg += (
                 "{parameter_handler} was not able to find parameters for the following valence terms:\n"
@@ -5874,9 +5874,7 @@ class VirtualSiteHandler(_NonbondedHandler):
             else:
                 sigma = ljtype.sigma
 
-            # create the vsite particle
-            mass = 0.0
-            vsite_idx = system.addParticle(mass)
+            vsite_idx = system.addParticle(mass=0.0)
             ids.append(vsite_idx)
 
             logger.debug(

@@ -25,8 +25,8 @@ from tempfile import NamedTemporaryFile
 
 import numpy as np
 import pytest
-from mendeleev import element
 from openff.units import unit
+from openff.units.elements import MASSES, SYMBOLS
 from openmm import unit as openmm_unit
 
 from openff.toolkit.tests.create_molecules import (
@@ -302,28 +302,28 @@ class TestAtom:
         atom1 = Atom(6, 1 * unit.elementary_charge, False)
         assert atom1.formal_charge == 1 * unit.elementary_charge
 
-    @pytest.mark.parametrize("atomic_number", range(1, 118))
+    @pytest.mark.parametrize("atomic_number", range(1, 117))
     def test_atom_properties(self, atomic_number):
         """Test that atom properties are correctly populated and gettable"""
         formal_charge = 0 * unit.elementary_charge
         is_aromatic = False
 
-        this_element = element(atomic_number)
+        expected_mass = MASSES[atomic_number]
+        expected_symbol = SYMBOLS[atomic_number]
 
         atom = Atom(
-            this_element.atomic_number,
+            atomic_number,
             formal_charge,
             is_aromatic,
-            name=this_element.name,
+            name="fOO",
         )
-        assert atom.atomic_number == this_element.atomic_number
-        # Equality comparison fails with mendeleev v0.9.0 and older,
-        # should be fixed when a new release is made
-        # assert atom.element == this_element
+        assert atom.atomic_number == atomic_number
         assert atom.formal_charge == formal_charge
         assert atom.is_aromatic == is_aromatic
-        assert atom.name == this_element.name
-        assert atom.mass == this_element.mass
+        assert atom.symbol == expected_symbol
+        assert atom.mass == expected_mass
+        assert atom.mass.units == unit.dalton
+        assert atom.name == "fOO"
 
     def test_atom_metadata(self):
         """Test that atom metadata behaves as expected"""
@@ -774,7 +774,7 @@ class TestMolecule:
             # now we just need to check the smiles generated
             if data["atom_map"] is None:
                 for i, atom in enumerate(mol.atoms, 1):
-                    assert f"[{atom.element.symbol}:{i}]" in smiles
+                    assert f"[{atom.symbol}:{i}]" in smiles
             else:
                 if 0 in data["atom_map"].values():
                     increment = True
@@ -782,7 +782,7 @@ class TestMolecule:
                     increment = False
 
                 for atom, index in data["atom_map"].items():
-                    assert f"[{mol.atoms[atom].element.symbol}:{index + 1 if increment else index}]"
+                    assert f"[{mol.atoms[atom].symbol}:{index + 1 if increment else index}]"
 
         else:
             pytest.skip(
@@ -1532,7 +1532,7 @@ class TestMolecule:
         mol = Molecule.from_smiles("CCC[N@@](C)CC")
 
         nitrogen_idx = [
-            atom.molecule_atom_index for atom in mol.atoms if atom.element.symbol == "N"
+            atom.molecule_atom_index for atom in mol.atoms if atom.symbol == "N"
         ][0]
 
         # TODO: This fails with RDKitToolkitWrapper because it perceives
