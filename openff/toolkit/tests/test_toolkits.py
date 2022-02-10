@@ -37,7 +37,7 @@ from openff.toolkit.tests.utils import (
     requires_openeye,
     requires_rdkit,
 )
-from openff.toolkit.topology.molecule import Molecule
+from openff.toolkit.topology.molecule import Atom, Bond, Molecule
 from openff.toolkit.utils import get_data_file_path
 from openff.toolkit.utils.exceptions import (
     ChargeMethodUnavailableError,
@@ -46,6 +46,7 @@ from openff.toolkit.utils.exceptions import (
     IncorrectNumConformersWarning,
     InvalidIUPACNameError,
     InvalidToolkitError,
+    NotAttachedToMoleculeError,
     ToolkitUnavailableException,
     UndefinedStereochemistryError,
 )

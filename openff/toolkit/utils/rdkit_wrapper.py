@@ -19,13 +19,14 @@ except ImportError:
     from simtk import unit
 
 if TYPE_CHECKING:
-    from openff.toolkit.topology.molecule import Molecule
+    from openff.toolkit.topology.molecule import Molecule, Bond, Atom
 
 from openff.toolkit.utils import base_wrapper
 from openff.toolkit.utils.constants import DEFAULT_AROMATICITY_MODEL
 from openff.toolkit.utils.exceptions import (
     ChargeMethodUnavailableError,
     ConformerGenerationError,
+    NotAttachedToMoleculeError,
     SMILESParseError,
     ToolkitUnavailableException,
     UndefinedStereochemistryError,
@@ -2084,52 +2085,77 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             unique=unique,
         )
 
-    # --------------------------------
-    # Stereochemistry RDKit utilities.
-    # --------------------------------
-
-    def atom_is_in_ring(self, molecule: "Molecule", atom_index: int) -> bool:
+    def atom_is_in_ring(self, atom: "Atom") -> bool:
         """Return whether or not an atom is in a ring.
+
+        It is assumed that this atom is in molecule.
 
         Parameters
         ----------
-        molecule : openff.toolkit.topology.Molecule
+        atom : openff.toolkit.topology.molecule.Atom
             The molecule containing the atom of interest
-        atom_index : int
-            The index of the atom of interest
 
         Returns
         -------
         is_in_ring : bool
-            Whether or not the atom of index `atom_index` is in a ring
+            Whether or not the atom is in a ring.
 
+        Raises
+        ------
+        NotAttachedToMoleculeError
         """
+        if atom.molecule is None:
+            raise NotAttachedToMoleculeError(
+                "This Atom does not belong to a Molecule object"
+            )
+
+        molecule = atom.molecule
+        atom_index = atom.molecule_atom_index
+
         rdmol = molecule.to_rdkit()
-        is_in_ring = rdmol.GetAtomWithIdx(atom_index).IsInRing()
+        rdatom = rdmol.GetAtomWithIdx(atom_index)
+
+        is_in_ring = rdatom.IsInRing()
 
         return is_in_ring
 
-    def bond_is_in_ring(self, molecule: "Molecule", bond_index: int) -> bool:
+    def bond_is_in_ring(self, bond: "Bond") -> bool:
         """Return whether or not a bond is in a ring.
+
+        It is assumed that this atom is in molecule.
 
         Parameters
         ----------
-        molecule : openff.toolkit.topology.Molecule
-            The molecule containing the bond of interest
-        bond_index : int
-            The index of the bond of interest
+        bond : openff.toolkit.topology.molecule.Bond
+            The molecule containing the atom of interest
 
         Returns
         -------
         is_in_ring : bool
             Whether or not the bond of index `bond_index` is in a ring
 
+        Raises
+        ------
+        NotAttachedToMoleculeError
         """
+        if bond.molecule is None:
+            raise NotAttachedToMoleculeError(
+                "This Bond does not belong to a Molecule object"
+            )
+
+        molecule = bond.molecule
         rdmol = molecule.to_rdkit()
-        rdbond = rdmol.GetBondWithIdx(bond_index)
+
+        # Molecule.to_rdkit() is NOT guaranteed to preserve bond ordering,
+        # so we must look up the corresponding bond via its constituent atom indices
+        rdbond = rdmol.GetBondBetweenAtoms(bond.atom1_index, bond.atom2_index)
         is_in_ring = rdbond.IsInRing()
 
         return is_in_ring
+
+    # --------------------------------
+    # Stereochemistry RDKit utilities.
+    # --------------------------------
 
     @staticmethod
     def _find_undefined_stereo_atoms(rdmol, assign_stereo=False):

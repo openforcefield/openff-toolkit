@@ -455,15 +455,7 @@ class Atom(Particle):
             :class:`ToolkitRegistry` to use to enumerate the tautomers.
 
         """
-        if self._molecule is None:
-            raise NotAttachedToMoleculeError(
-                "This Atom does not belong to a Molecule object"
-            )
-
-        _is_in_ring = toolkit_registry.call(
-            "atom_is_in_ring",
-            self
-        )
+        _is_in_ring = toolkit_registry.call("atom_is_in_ring", self)
 
         return _is_in_ring
 
@@ -2110,7 +2102,7 @@ class Bond(Serializable):
         Return whether or not this bond is in a ring(s) (of any size)
 
         Note: Bonds containing atoms that are only in separate rings, i.e. the central bond in a biphenyl,
-            are not considered to be bondned by this criteria.
+            are not considered to be bonded by this criteria.
 
         Parameters
         ----------
@@ -2123,15 +2115,7 @@ class Bond(Serializable):
             Whether or not this bond is in a ring.
 
         """
-        if self._molecule is None:
-            raise NotAttachedToMoleculeError(
-                "This Bond does not belong to a Molecule object"
-            )
-
-        _is_in_ring = toolkit_registry.call(
-            "bond_is_in_ring",
-            self
-        )
+        _is_in_ring = toolkit_registry.call("bond_is_in_ring", self)
 
         return _is_in_ring
 
