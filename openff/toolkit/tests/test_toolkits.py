@@ -1830,6 +1830,18 @@ class TestOpenEyeToolkitWrapper:
 
         assert len([bond for bond in biphenyl.bonds if bond.is_in_ring()]) == 12
 
+    def test_unattached_is_in_ring(self):
+        toolkit = OpenEyeToolkitWrapper()
+        dummy_atom1 = Atom(1, 0, False)
+        dummy_atom2 = Atom(1, 0, False)
+        dummy_bond = Bond(dummy_atom1, dummy_atom2, 0, False)
+
+        with pytest.raises(NotAttachedToMoleculeError, match="Atom"):
+            toolkit.atom_is_in_ring(dummy_atom1)
+
+        with pytest.raises(NotAttachedToMoleculeError, match="Bond"):
+            toolkit.bond_is_in_ring(dummy_bond)
+
     def test_find_matches_unique(self):
         """Test the expected behavior of the `unique` argument in find_matches"""
         smirks = "[C:1]~[C:2]~[C:3]"
@@ -2933,6 +2945,18 @@ class TestRDKitToolkitWrapper:
         assert biphenyl.get_bond_between(3, 6).is_in_ring() is False
 
         assert len([bond for bond in biphenyl.bonds if bond.is_in_ring()]) == 12
+
+    def test_unattached_is_in_ring(self):
+        toolkit = RDKitToolkitWrapper()
+        dummy_atom1 = Atom(1, 0, False)
+        dummy_atom2 = Atom(1, 0, False)
+        dummy_bond = Bond(dummy_atom1, dummy_atom2, 0, False)
+
+        with pytest.raises(NotAttachedToMoleculeError, match="Atom"):
+            toolkit.atom_is_in_ring(dummy_atom1)
+
+        with pytest.raises(NotAttachedToMoleculeError, match="Bond"):
+            toolkit.bond_is_in_ring(dummy_bond)
 
     def test_find_matches_unique(self):
         """Test the expected behavior of the `unique` argument in find_matches"""
