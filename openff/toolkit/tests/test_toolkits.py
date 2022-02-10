@@ -1843,7 +1843,7 @@ class TestOpenEyeToolkitWrapper:
         dummy_bond._molecule = None
 
         with pytest.raises(NotAttachedToMoleculeError, match="Bond"):
-            toolkit.atom_is_in_ring(dummy_atom)
+            toolkit.bond_is_in_ring(dummy_bond)
 
     def test_find_matches_unique(self):
         """Test the expected behavior of the `unique` argument in find_matches"""
@@ -2951,12 +2951,10 @@ class TestRDKitToolkitWrapper:
 
     def test_unattached_is_in_ring(self):
         toolkit = RDKitToolkitWrapper()
-        dummy_atom1 = Atom(1, 0, False)
-        dummy_atom2 = Atom(1, 0, False)
-        dummy_bond = Bond(dummy_atom1, dummy_atom2, 0, False)
+        dummy_atom = Atom(1, 0, False)
 
         with pytest.raises(NotAttachedToMoleculeError, match="Atom"):
-            toolkit.atom_is_in_ring(dummy_atom1)
+            toolkit.atom_is_in_ring(dummy_atom)
 
         # The Bond constructor checks to see that the atoms are in a molecule,
         # so not so straightforward to make one from the constructor
@@ -2964,7 +2962,7 @@ class TestRDKitToolkitWrapper:
         dummy_bond._molecule = None
 
         with pytest.raises(NotAttachedToMoleculeError, match="Bond"):
-            toolkit.atom_is_in_ring(dummy_bond)
+            toolkit.bond_is_in_ring(dummy_bond)
 
     def test_find_matches_unique(self):
         """Test the expected behavior of the `unique` argument in find_matches"""
