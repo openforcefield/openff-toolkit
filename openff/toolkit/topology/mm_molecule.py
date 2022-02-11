@@ -105,6 +105,36 @@ class _SimpleMolecule:
         return self.atom_index(particle)
 
     @property
+    def angles(self):
+        for atom1 in self.atoms:
+            for atom2 in atom1.bonded_atoms:
+                for atom3 in atom2.bonded_atoms:
+                    if atom1 is atom3:
+                        continue
+                    if atom1.molecule_atom_index < atom3.molecule_atom_index:
+                        yield (atom1, atom2, atom3)
+                    else:
+                        # Do not return i.e. (2, 1, 0), only (0, 1, 2)
+                        pass
+
+    @property
+    def propers(self):
+        for atom1 in self.atoms:
+            for atom2 in atom1.bonded_atoms:
+                for atom3 in atom2.bonded_atoms:
+                    if atom1 is atom3:
+                        continue
+                    for atom4 in atom3.bonded_atoms:
+                        if atom4 in (atom1, atom2):
+                            continue
+
+                        if atom1.index < atom4.index:
+                            yield (atom1, atom2, atom3, atom4)
+                        else:
+                            # Do no duplicate
+                            pass  # yield (atom4, atom3, atom2, atom1)
+
+    @property
     def hill_formula(self) -> str:
         """
         Return the Hill formula of this molecule.
@@ -316,7 +346,7 @@ class _SimpleAtom:
         else:
             self.metadata = AtomMetadataDict(metadata)
         self._atomic_number = atomic_number
-        self.molecule = molecule
+        self._molecule = molecule
         self._bonds: List[Optional[_SimpleBond]] = list()
         for key, val in kwargs.items():
             setattr(self, key, val)
@@ -337,6 +367,11 @@ class _SimpleAtom:
         self._atomic_number = value
 
     @property
+    def molecule(self):
+        """The ``Molecule`` this particle is part of."""
+        return self._molecule
+
+    @property
     def bonds(self):
         return self._bonds
 
@@ -345,12 +380,10 @@ class _SimpleAtom:
 
     @property
     def bonded_atoms(self):
-        bonded_atoms = []
         for bond in self._bonds:
-            for atom in bond:
+            for atom in [bond.atom1, bond.atom2]:
                 if atom is not self:
-                    bonded_atoms.append(atom)
-        return bonded_atoms
+                    yield atom
 
     @property
     def molecule_atom_index(self) -> int:

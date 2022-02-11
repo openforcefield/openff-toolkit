@@ -275,7 +275,7 @@ class Atom(Particle):
 
         Parameters
         ----------
-        bond: an openff.toolkit.topology.molecule.Bond
+        bond: an penff.toolkit.topology.molecule.Bond
             A bond involving this atom
         """
 
