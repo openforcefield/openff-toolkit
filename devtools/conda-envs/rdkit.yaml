@@ -23,7 +23,7 @@ dependencies:
 #  - openmmforcefields
   - openmm
   - openff-forcefields
-  - openff-units >=0.1.4
+  - openff-units >=0.1.5
   - openff-utilities
   - smirnoff99Frosst
   - cachetools
@@ -36,6 +36,5 @@ dependencies:
   - qcportal
   - qcengine
   - mdtraj
-  - openff-interchange
   - pip:
-    - git+https://github.com/openforcefield/openff-units.git@element-module
+    - git+https://github.com/openforcefield/openff-interchange.git@v0.2.0-alpha.1

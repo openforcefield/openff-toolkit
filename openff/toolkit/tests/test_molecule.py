@@ -318,12 +318,11 @@ class TestAtom:
             name="fOO",
         )
         assert atom.atomic_number == atomic_number
-        # this API point might be removed?
-        # assert atom.element == this_element
         assert atom.formal_charge == formal_charge
         assert atom.is_aromatic == is_aromatic
         assert atom.symbol == expected_symbol
         assert atom.mass == expected_mass
+        assert atom.mass.units == unit.dalton
         assert atom.name == "fOO"
 
     def test_atom_metadata(self):

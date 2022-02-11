@@ -44,6 +44,7 @@ from openff.units.openmm import to_openmm
 
 if TYPE_CHECKING:
     import networkx as nx
+    from openff.units.unit import Quantity
 
 from cached_property import cached_property
 from packaging import version
@@ -421,15 +422,16 @@ class Atom(Particle):
         return SYMBOLS[self.atomic_number]
 
     @property
-    def mass(self):
+    def mass(self) -> "unit.Quantity":
         """
         The standard atomic weight (abundance-weighted isotopic mass) of the atomic site.
 
-        .. todo :: Should we discriminate between standard atomic weight and most abundant isotopic mass?
-
-        TODO (from jeff): Are there atoms that have different chemical properties based on their isotopes?
-
+        The mass is reported in units of Dalton.
         """
+        # This is assumed elsewhere in the codebase to be in units of Dalton, which is what is
+        # reported by MASSES as of openff-units v0.1.5. There may be performance implications if
+        # other functions need to verify or convert units.
+        # https://github.com/openforcefield/openff-toolkit/pull/1182#discussion_r802078273
         return MASSES[self.atomic_number]
 
     @property
@@ -2451,7 +2453,7 @@ class FrozenMolecule(Serializable):
 
         element_counts = defaultdict(int)
         for atom in self.atoms:
-            symbol = SYMBOLS[atom.atomic_number]
+            symbol = atom.symbol
             element_counts[symbol] += 1
             # TODO: It may be worth exposing this as a user option, i.e. to avoid multiple ligands
             # parameterized with OpenFF clashing because they have atom names like O1x, H3x, etc.
@@ -2581,7 +2583,7 @@ class FrozenMolecule(Serializable):
 
         id = ""
         for atom in self.atoms:
-            id += f"{SYMBOLS[atom.atomic_number]}_{atom.formal_charge}_{atom.stereochemistry}__"
+            id += f"{atom.symbol}_{atom.formal_charge}_{atom.stereochemistry}__"
         for bond in self.bonds:
             id += f"{bond.bond_order}_{bond.stereochemistry}_{bond.atom1_index}_{bond.atom2_index}__"
         # return hash(id)

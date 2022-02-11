@@ -9,7 +9,7 @@ dependencies:
   - packaging
   - openmm >=7.6
   - openff-forcefields
-  - openff-units >=0.1.4
+  - openff-units >=0.1.5
   - openff-utilities
   - smirnoff99Frosst
   - numpy
@@ -36,7 +36,6 @@ dependencies:
   - qcelemental
   - qcportal
   - qcengine
-  - openff-interchange
   - mdtraj
   # Typing
   - mypy
@@ -47,4 +46,4 @@ dependencies:
     - types-toml
     - types-PyYAML
     - mongo-types
-    - git+https://github.com/openforcefield/openff-units.git@element-module
+    - git+https://github.com/openforcefield/openff-interchange.git@v0.2.0-alpha.1

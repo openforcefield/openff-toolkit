@@ -317,7 +317,7 @@ class Serializable(abc.ABC):
 
         yaml.SafeDumper.add_representer(
             OrderedDict,
-            lambda dumper, value: self._represent_odict(  # type: ignore[name-defined]
+            lambda dumper, value: self._represent_odict(
                 dumper, "tag:yaml.org,2002:map", value
             ),
         )

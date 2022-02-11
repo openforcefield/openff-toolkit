@@ -101,7 +101,11 @@ jobs:
 
       - name: Install package
         run: |
-          conda remove --force openff-toolkit openff-toolkit-base
+          # While Interchange is being installed with pip, there is no need to
+          # force uninstall openff-toolkit-base since it's only pulled in when
+          # Interchange is installed with conda. Un-comment this when testing
+          # against a conda build of Interchange.
+          # conda remove --force openff-toolkit openff-toolkit-base
           python setup.py develop --no-deps
 
       - name: Remove undesired toolkits

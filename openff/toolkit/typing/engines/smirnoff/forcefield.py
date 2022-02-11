@@ -33,7 +33,7 @@ import os
 import pathlib
 import warnings
 from collections import OrderedDict
-from typing import List
+from typing import TYPE_CHECKING, List
 
 from openff.toolkit.topology.molecule import DEFAULT_AROMATICITY_MODEL
 from openff.toolkit.typing.engines.smirnoff.io import ParameterIOHandler
@@ -57,6 +57,9 @@ from openff.toolkit.utils.utils import (
     convert_all_strings_to_quantity,
     requires_package,
 )
+
+if TYPE_CHECKING:
+    from openff.toolkit.topology import Topology
 
 deprecated_names = ["ParseError"]
 
@@ -1239,8 +1242,33 @@ class ForceField:
     # TODO: How do we know if the system is periodic or not?
     # TODO: Should we also accept a Molecule as an alternative to a Topology?
 
+    # TODO: Fall back to old code path if Interchange not installed?
     @requires_package("openmm")
-    def create_openmm_system(self, topology, **kwargs):
+    def create_openmm_system(
+        self,
+        topology: "Topology",
+        use_interchange: bool = False,
+        **kwargs,
+    ):
+        """Create an OpenMM System from this ForceField and a Topology.
+
+        Parameters
+        ----------
+        topology : openforcefield.topology.Topology
+            The ``Topology`` which is to be parameterized with this ``ForceField``.
+        use_interchange : bool, optional, default=True
+            Whether to use the Interchange module in creation of an OpenMM ``System``.
+
+        """
+        if use_interchange:
+            return self.create_interchange(topology, **kwargs,).to_openmm(
+                combine_nonbonded_forces=True,
+            )
+        else:
+            return self._old_create_openmm_system(topology, **kwargs)
+
+    @requires_package("openmm")
+    def _old_create_openmm_system(self, topology, **kwargs):
         """Create an OpenMM System representing the interactions for the specified Topology with the current force field
 
         Parameters
@@ -1378,11 +1406,24 @@ class ForceField:
             return system
 
     @requires_package("openff.interchange")
-    def _to_interchange(self, topology, box=None):
+    def create_interchange(self, topology: "Topology", box=None):
         """
         Create an Interchange object from a ForceField, Topology, and (optionally) box vectors.
 
         WARNING: This API and functionality are experimental and not suitable for production.
+
+        Parameters
+        ----------
+        topology : openff.toolkit.topology.Topology
+            The topology to create this `Interchange` object from.
+        box : array-like, optional
+            The box vectors or lengths to use for the Interchange object.
+
+        Returns
+        -------
+        interchange : openff.interchange.Interchange
+            An `Interchange` object resulting from applying this `ForceField` to a `Topology`.
+
         """
         from openff.interchange.components.interchange import Interchange
 
