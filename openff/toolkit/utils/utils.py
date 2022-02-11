@@ -273,7 +273,7 @@ def string_to_unit(unit_string):
     return unit.Unit(unit_string)
 
 
-def string_to_quantity(quantity_string) -> Union[str, unit.Quantity]:
+def string_to_quantity(quantity_string) -> Union[str, int, float, unit.Quantity]:
     """Attempt to parse a string into a unit.Quantity.
 
     Note that dimensionless floats and ints are returns as floats or ints, not Quantity objects.
@@ -291,9 +291,9 @@ def string_to_quantity(quantity_string) -> Union[str, unit.Quantity]:
     # TODO: Should intentionally unitless array-likes be Quantity objects
     #       or their raw representation?
     if (quantity.units == unit.dimensionless) and isinstance(quantity.m, (int, float)):
-        quantity = quantity.m
-
-    return quantity
+        return quantity.m
+    else:
+        return quantity
 
 
 def _string_to_quantity(quantity_string):

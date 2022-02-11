@@ -9,16 +9,14 @@ dependencies:
   - packaging
   - openmm >=7.6
   - openff-forcefields
-  - openff-units >=0.1.4
+  - openff-units >=0.1.5
   - openff-utilities
   - smirnoff99Frosst
   - numpy
   - networkx
   - ambertools
   - rdkit
-  - mendeleev
   - xmltodict
-  - mendeleev
     # Test-only/optional/dev
   - pytest
   - pytest-cov
