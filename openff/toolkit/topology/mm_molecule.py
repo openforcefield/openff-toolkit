@@ -24,6 +24,7 @@ from openff.toolkit.utils.utils import deserialize_numpy, serialize_numpy
 
 if TYPE_CHECKING:
     import networkx as nx
+    from openff.units.unit import Quantity
 
 
 class _SimpleMolecule:
@@ -181,6 +182,13 @@ class _SimpleMolecule:
             )
 
         return graph
+
+    def nth_degree_neighbors(self, n_degrees):
+        from openff.toolkit.topology.molecule import (
+            _nth_degree_neighbors_from_graphlike,
+        )
+
+        return _nth_degree_neighbors_from_graph(graphlike=self, n_degrees=n_degrees)
 
     @classmethod
     def _from_subgraph(cls, subgraph: "nx.Graph"):
@@ -379,11 +387,11 @@ class _SimpleAtom:
         self._atomic_number = value
 
     @property
-    def symbol(self) -> int:
+    def symbol(self) -> str:
         return SYMBOLS[self.atomic_number]
 
     @property
-    def mass(self) -> unit.Quantity:
+    def mass(self) -> "Quantity":
         return MASSES[self.atomic_number]
 
     @property
