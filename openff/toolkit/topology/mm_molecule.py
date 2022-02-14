@@ -12,7 +12,7 @@ TypedMolecule TODOs
 from typing import TYPE_CHECKING, Dict, List, NoReturn, Optional, Union
 
 from openff.units import unit
-from openff.units.elements import SYMBOLS
+from openff.units.elements import MASSES, SYMBOLS
 
 from openff.toolkit.topology.molecule import (
     AtomMetadataDict,
@@ -128,11 +128,23 @@ class _SimpleMolecule:
                         if atom4 in (atom1, atom2):
                             continue
 
-                        if atom1.index < atom4.index:
+                        if atom1.molecule_atom_index < atom4.molecule_atom_index:
                             yield (atom1, atom2, atom3, atom4)
                         else:
                             # Do no duplicate
                             pass  # yield (atom4, atom3, atom2, atom1)
+
+    @property
+    def impropers(self):
+        return {}
+
+    @property
+    def smirnoff_impropers(self):
+        return {}
+
+    @property
+    def amber_impropers(self):
+        return {}
 
     @property
     def hill_formula(self) -> str:
@@ -365,6 +377,14 @@ class _SimpleAtom:
                 "of 0 is acceptable."
             )
         self._atomic_number = value
+
+    @property
+    def symbol(self) -> int:
+        return SYMBOLS[self.atomic_number]
+
+    @property
+    def mass(self) -> unit.Quantity:
+        return MASSES[self.atomic_number]
 
     @property
     def molecule(self):
