@@ -3620,43 +3620,29 @@ class TestMolecule:
         )
 
     def test_make_carboxylic_acids_cis(self):
-        # First, check that we get exactly the right coords for cis and trans formic acid
+        # First, check that we get exactly the right coords for cis and trans ethanoic acid
         offmol = Molecule.from_mapped_smiles(
-            "[H:5][C:1]([H:6])([H:7])[C:2](=[O:4])[O:3][H:8]"
+            "[H:1][C:2](=[O:3])[O:4][H:5]"
         )
         # cis methanoic (formic) acid
-        cis_xyz = unit.Quantity(
-            value=np.array(
-                [
-                    [-1.02844071, 0.34484008, -0.13397247],
-                    [-1.6529808, 0.61047715, 1.19898856],
-                    [-0.95982963, 1.56161928, 1.87139809],
-                    [-2.65173483, 0.05333299, 1.62961793],
-                    [-0.28333247, -0.44931144, -0.04270577],
-                    [-1.79993558, 0.06760395, -0.85680676],
-                    [-0.53051436, 1.2521683, -0.48778746],
-                    [-1.35536134, 1.75175381, 2.74874902],
-                ]
-            ),
-            unit=unit.angstrom,
-        )
-
-        # trans methanoic (formic) acid
-        trans_xyz = unit.Quantity(
-            value=np.array(
-                [
-                    [-1.02844071, 0.34484008, -0.13397247],
-                    [-1.6529808, 0.61047715, 1.19898856],
-                    [-0.95982963, 1.56161928, 1.87139809],
-                    [-2.65173483, 0.05333299, 1.62961793],
-                    [-0.28333247, -0.44931144, -0.04270577],
-                    [-1.79993558, 0.06760395, -0.85680676],
-                    [-0.53051436, 1.2521683, -0.48778746],
-                    [-0.18957424, 1.88568068, 1.35755765],
-                ]
-            ),
-            unit=unit.angstrom,
-        )
+        cis_xyz = np.array(
+            [
+                [-1.0, -1.0, 0.0],  # HC
+                [+0.0, +0.0, 0.0],  # C
+                [-1.0, +1.0, 0.0],  # =O
+                [+1.0, +0.0, 0.0],  # -O
+                [+2.0, +1.0, 0.0]   # HO
+            ]
+        ) * unit.angstrom
+        trans_xyz = np.array(
+            [
+                [-1.0, -1.0, 0.0],  # HC
+                [+0.0, +0.0, 0.0],  # C
+                [-1.0, +1.0, 0.0],  # =O
+                [+1.0, +0.0, 0.0],  # -O
+                [+2.0, -1.0, 0.0]   # HO
+            ]
+        ) * unit.angstrom
 
         offmol._conformers = [trans_xyz, cis_xyz]
         expected_conformers = [cis_xyz, cis_xyz]
