@@ -3620,29 +3620,33 @@ class TestMolecule:
         )
 
     def test_make_carboxylic_acids_cis(self):
-        # First, check that we get exactly the right coords for cis and trans ethanoic acid
-        offmol = Molecule.from_mapped_smiles(
-            "[H:1][C:2](=[O:3])[O:4][H:5]"
-        )
+        # First, check that we get exactly the right coords for cis and trans methanoic acid
+        offmol = Molecule.from_mapped_smiles("[H:1][C:2](=[O:3])[O:4][H:5]")
         # cis methanoic (formic) acid
-        cis_xyz = np.array(
-            [
-                [-1.0, -1.0, 0.0],  # HC
-                [+0.0, +0.0, 0.0],  # C
-                [-1.0, +1.0, 0.0],  # =O
-                [+1.0, +0.0, 0.0],  # -O
-                [+2.0, +1.0, 0.0]   # HO
-            ]
-        ) * unit.angstrom
-        trans_xyz = np.array(
-            [
-                [-1.0, -1.0, 0.0],  # HC
-                [+0.0, +0.0, 0.0],  # C
-                [-1.0, +1.0, 0.0],  # =O
-                [+1.0, +0.0, 0.0],  # -O
-                [+2.0, -1.0, 0.0]   # HO
-            ]
-        ) * unit.angstrom
+        cis_xyz = (
+            np.array(
+                [
+                    [-1.0, -1.0, 0.0],  # HC
+                    [+0.0, +0.0, 0.0],  # C
+                    [-1.0, +1.0, 0.0],  # =O
+                    [+1.0, +0.0, 0.0],  # -O
+                    [+2.0, +1.0, 0.0],  # HO
+                ]
+            )
+            * unit.angstrom
+        )
+        trans_xyz = (
+            np.array(
+                [
+                    [-1.0, -1.0, 0.0],  # HC
+                    [+0.0, +0.0, 0.0],  # C
+                    [-1.0, +1.0, 0.0],  # =O
+                    [+1.0, +0.0, 0.0],  # -O
+                    [+2.0, -1.0, 0.0],  # HO
+                ]
+            )
+            * unit.angstrom
+        )
 
         offmol._conformers = [trans_xyz, cis_xyz]
         expected_conformers = [cis_xyz, cis_xyz]
