@@ -38,12 +38,13 @@ from typing import TYPE_CHECKING, List, Optional, Union
 
 import networkx as nx
 import numpy as np
-from mendeleev import element
 from openff.units import unit
+from openff.units.elements import MASSES, SYMBOLS
 from openff.units.openmm import to_openmm
 
 if TYPE_CHECKING:
     import networkx as nx
+    from openff.units.unit import Quantity
 
 from cached_property import cached_property
 from packaging import version
@@ -405,18 +406,7 @@ class Atom(Particle):
         self._stereochemistry = value
 
     @property
-    def element(self):
-        """
-        The element of this atom.
-
-        Returns
-        -------
-        mendeleev.models.Element
-        """
-        return element(self._atomic_number)
-
-    @property
-    def atomic_number(self):
+    def atomic_number(self) -> int:
         """
         The integer atomic number of the atom.
 
@@ -424,16 +414,25 @@ class Atom(Particle):
         return self._atomic_number
 
     @property
-    def mass(self):
+    def symbol(self) -> str:
+        """
+        Return the symbol implied by the atomic number of this atom
+
+        """
+        return SYMBOLS[self.atomic_number]
+
+    @property
+    def mass(self) -> "unit.Quantity":
         """
         The standard atomic weight (abundance-weighted isotopic mass) of the atomic site.
 
-        .. todo :: Should we discriminate between standard atomic weight and most abundant isotopic mass?
-
-        TODO (from jeff): Are there atoms that have different chemical properties based on their isotopes?
-
+        The mass is reported in units of Dalton.
         """
-        return self.element.mass
+        # This is assumed elsewhere in the codebase to be in units of Dalton, which is what is
+        # reported by MASSES as of openff-units v0.1.5. There may be performance implications if
+        # other functions need to verify or convert units.
+        # https://github.com/openforcefield/openff-toolkit/pull/1182#discussion_r802078273
+        return MASSES[self.atomic_number]
 
     @property
     def name(self):
@@ -2454,7 +2453,7 @@ class FrozenMolecule(Serializable):
 
         element_counts = defaultdict(int)
         for atom in self.atoms:
-            symbol = atom.element.symbol
+            symbol = atom.symbol
             element_counts[symbol] += 1
             # TODO: It may be worth exposing this as a user option, i.e. to avoid multiple ligands
             # parameterized with OpenFF clashing because they have atom names like O1x, H3x, etc.
@@ -2584,7 +2583,7 @@ class FrozenMolecule(Serializable):
 
         id = ""
         for atom in self.atoms:
-            id += f"{atom.element.symbol}_{atom.formal_charge}_{atom.stereochemistry}__"
+            id += f"{atom.symbol}_{atom.formal_charge}_{atom.stereochemistry}__"
         for bond in self.bonds:
             id += f"{bond.bond_order}_{bond.stereochemistry}_{bond.atom1_index}_{bond.atom2_index}__"
         # return hash(id)
@@ -4991,7 +4990,8 @@ class FrozenMolecule(Serializable):
             molecule = toolkit.from_iupac(
                 iupac_name,
                 allow_undefined_stereo=allow_undefined_stereo,
-                _cls=cls ** kwargs,
+                _cls=cls,
+                **kwargs,
             )
         else:
             raise Exception(
@@ -5299,24 +5299,13 @@ class FrozenMolecule(Serializable):
                 Any edges that are not assgined a bond order will have the value Chem.rdchem.BondType.UNSPECIFIED
                 and should be considered an error.
             """
-            #import networkx as nx
-            #
-            # omm_topology_G = nx.Graph()
-            # for atom in openmm_topology.atoms():
-            #     omm_topology_G.add_node(
-            #         atom.index,
-            #         atomic_number=atom.element.atomic_number,
-            #         formal_charge=0.0,
-            #         atom_name=atom.name,
-            #         residue_name=atom.residue.name,
-            #         residue_number=atom.residue.index,
-            #     )
 
             # Don't modify the input graph
             import copy
             omm_topology_G = copy.deepcopy(omm_topology_G)
 
             _make_hydrogens_negative_in_networkx_graph(omm_topology_G)
+
             # Try matching this substructure to the whole molecule graph
             node_match = isomorphism.categorical_node_match(
                 ["atomic_number", "already_matched"], [-100, False]
@@ -5528,7 +5517,7 @@ class FrozenMolecule(Serializable):
             for j, atom_coords in enumerate(geometry.m_as(unit.angstrom)):
                 x, y, z = atom_coords
                 xyz_data.write(
-                    f"{self.atoms[j].element.symbol}       {x: .10f}   {y: .10f}   {z: .10f}\n"
+                    f"{SYMBOLS[self.atoms[j].atomic_number]}       {x: .10f}   {y: .10f}   {z: .10f}\n"
                 )
 
             # now we up the frame count
@@ -5902,7 +5891,7 @@ class FrozenMolecule(Serializable):
         connectivity = [
             (bond.atom1_index, bond.atom2_index, bond.bond_order) for bond in self.bonds
         ]
-        symbols = [element(atom.atomic_number).symbol for atom in self.atoms]
+        symbols = [SYMBOLS[atom.atomic_number] for atom in self.atoms]
         if extras is not None:
             extras[
                 "canonical_isomeric_explicit_hydrogen_mapped_smiles"
@@ -7246,7 +7235,7 @@ def _atom_nums_to_hill_formula(atom_nums: List[int]) -> str:
     Hill formula. See https://en.wikipedia.org/wiki/Chemical_formula#Hill_system"""
     from collections import Counter
 
-    atom_symbol_counts = Counter(element(atom_num).symbol for atom_num in atom_nums)
+    atom_symbol_counts = Counter(SYMBOLS[atom_num] for atom_num in atom_nums)
 
     formula = []
     # Check for C and H first, to make a correct hill formula

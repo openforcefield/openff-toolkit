@@ -557,7 +557,7 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
                     )
                     # Ensure that antechamber/sqm did not change the indexing by checking against
                     # an ordered list of element symbols for this molecule
-                    expected_elements = [at.element.symbol for at in molecule.atoms]
+                    expected_elements = [atom.symbol for atom in molecule.atoms]
                     conformer_bond_orders = (
                         self._get_fractional_bond_orders_from_sqm_out(
                             "sqm.out", validate_elements=expected_elements

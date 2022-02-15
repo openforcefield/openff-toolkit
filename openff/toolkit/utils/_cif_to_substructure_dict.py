@@ -11,11 +11,12 @@ from collections import defaultdict
 
 import rdkit
 from CifFile import ReadCif
-from mendeleev import element
+from openff.units.elements import SYMBOLS
 
 import openff
 from openff.toolkit.topology import Molecule
 
+_SYMBOL_TO_ATOMIC_NUMBER = {v: k for k, v in SYMBOLS.items()}
 
 # Amber ff porting functions
 def remove_charge_and_bond_order_from_guanidinium(rdmol):
@@ -165,15 +166,22 @@ class CifSubstructures:
         symbol_to_num_dict : dict
             Atom symbol to atomic number (key, value) dictionary.
         """
-        atom_symbol_list = cif_entry["_chem_comp_atom.type_symbol"]
-        elements = element(atom_symbol_list)
-        atomic_nums_list = []
-        for element_ in elements:
-            atomic_nums_list.append(element_.atomic_number)
-        # Create dictionary
-        symbol_to_num_dict = {
-            symbol: number for symbol, number in zip(atom_symbol_list, atomic_nums_list)
+        # Is this de-duplicated? i.e. can it be ["C", "C", "H"] or only ["C", "H"] ?
+        atom_symbol_list: List[str] = cif_entry["_chem_comp_atom.type_symbol"]
+
+        # Is this dict a de-duplicated mapping between element symbols and atomic numbers
+        # for the elements in this cif file? If so, can maybe do it in one step
+        """
+        symbol_to_num_dict: Dict[str, int] = {
+            symbol: atomic_number for atomic_number, symbol in SYMBOLS.items() if atomic_number in
+            cif_entry["_chem_comp_atom.type_symbol"]
         }
+        """
+
+        symbol_to_num_dict: Dict[str, int] = {
+            symbol: _SYMBOL_TO_ATOMIC_NUMBER[symbol] for symbol in atom_symbol_list
+        }
+
         return symbol_to_num_dict
 
     @staticmethod
