@@ -27,6 +27,7 @@ A modern, extensible library for molecular mechanics force field science from th
    users/smirnoff
    users/virtualsites
    users/developing
+   users/molecule_conversion
 
 .. toctree::
   :caption: API documentation

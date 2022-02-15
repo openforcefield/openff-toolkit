@@ -690,7 +690,7 @@ class TestTopology:
 
 
 
-    def test_to_from_rdkit_hierarchy_metadata(self, topology_with_metadata):
+    def test_to_from_openmm_hierarchy_metadata(self, topology_with_metadata):
         """
         Test roundtripping to/from ``OpenEyeToolkitWrapper`` for molecules with PDB hierarchy metadata
         """
@@ -705,7 +705,7 @@ class TestTopology:
 
         roundtrip_top = Topology.from_openmm(omm_top, unique_molecules=unique_mols)
 
-        # Check RDMol
+        # Check OMM Atom
         for orig_atom, omm_atom in zip(topology_with_metadata.atoms, omm_top.atoms()):
             if 'residue_name' in orig_atom.metadata:
                 assert orig_atom.metadata['residue_name'] == omm_atom.residue.name
@@ -713,10 +713,9 @@ class TestTopology:
                 assert omm_atom.residue.name == 'UNK'
 
             if 'residue_number' in orig_atom.metadata:
-                assert orig_atom.metadata['residue_number'] == omm_atom.residue.id
+                assert orig_atom.metadata['residue_number'] == int(omm_atom.residue.id)
             else:
-                assert omm_atom.residue.id == 0
-
+                assert omm_atom.residue.id == '0'
 
             if 'chain_id' in orig_atom.metadata:
                 assert orig_atom.metadata['chain_id'] == omm_atom.residue.chain.id
