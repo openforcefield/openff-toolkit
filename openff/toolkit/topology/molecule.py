@@ -3342,7 +3342,6 @@ class FrozenMolecule(Serializable):
 
         # Pull out the coordinates of all carboxylic acid groups into cooh_xyz
         cooh_xyz = conformers[:, cooh_indices, :]
-        print(cooh_xyz.shape, (n_conformers, n_cooh_groups, 4, 3))
         assert cooh_xyz.shape == (n_conformers, n_cooh_groups, 4, 3)
 
         def dot(a, b):
