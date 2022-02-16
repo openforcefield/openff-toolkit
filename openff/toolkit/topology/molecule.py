@@ -5296,7 +5296,7 @@ class FrozenMolecule(Serializable):
             for atom in openmm_topology.atoms():
                 omm_topology_G.add_node(
                     atom.index,
-                    atomic_number=atom.atomic_number,
+                    atomic_number=atom.element.atomic_number,
                     formal_charge=0.0,
                     atom_name=atom.name,
                     residue_name=atom.residue.name,
@@ -5313,14 +5313,14 @@ class FrozenMolecule(Serializable):
                 # Assign sequential negative numbers as atomic numbers for hydrogens attached to the same heavy atom.
                 # We do the same to the substructure templates that are used for matching. This saves runtime because
                 # it removes redundant self-symmetric matches.
-                if bond.atom1.atomic_number == 1:
+                if bond.atom1.element.atomic_number == 1:
                     h_index = bond.atom1.index
                     heavy_atom_index = bond.atom2.index
                     n_hydrogens[heavy_atom_index] += 1
                     omm_topology_G.nodes[h_index]["atomic_number"] = (
                         -1 * n_hydrogens[heavy_atom_index]
                     )
-                if bond.atom2.atomic_number == 1:
+                if bond.atom2.element.atomic_number == 1:
                     h_index = bond.atom2.index
                     heavy_atom_index = bond.atom1.index
                     n_hydrogens[heavy_atom_index] += 1
