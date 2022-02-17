@@ -34,7 +34,7 @@ import warnings
 from abc import abstractmethod
 from collections import OrderedDict, UserDict
 from copy import deepcopy
-from typing import TYPE_CHECKING, List, Optional, Union
+from typing import TYPE_CHECKING, Generator, List, Optional, Tuple, Union
 
 import networkx as nx
 import numpy as np
@@ -43,6 +43,7 @@ from openff.units.elements import MASSES, SYMBOLS
 from openff.units.openmm import to_openmm
 
 if TYPE_CHECKING:
+    from openff.toolkit.topology._mm_molecule import _SimpleAtom, _SimpleMolecule
     import networkx as nx
     from openff.units.unit import Quantity
 
@@ -422,7 +423,7 @@ class Atom(Particle):
         return SYMBOLS[self.atomic_number]
 
     @property
-    def mass(self) -> "unit.Quantity":
+    def mass(self) -> "Quantity":
         """
         The standard atomic weight (abundance-weighted isotopic mass) of the atomic site.
 
@@ -4745,23 +4746,6 @@ class FrozenMolecule(Serializable):
         }
         return amber_impropers
 
-    def _nth_degree_neighbors(self, n_degrees):
-        import networkx as nx
-
-        mol_graph = self.to_networkx()
-
-        for node_i in mol_graph.nodes:
-            for node_j in mol_graph.nodes:
-                if node_i == node_j:
-                    continue
-
-                path_length = nx.shortest_path_length(mol_graph, node_i, node_j)
-
-                if path_length == n_degrees:
-                    if node_i > node_j:
-                        continue
-                    yield (self.atoms[node_i], self.atoms[node_j])
-
     def nth_degree_neighbors(self, n_degrees):
         """
         Return canonicalized pairs of atoms whose shortest separation is `exactly` n bonds.
@@ -4794,7 +4778,9 @@ class FrozenMolecule(Serializable):
                 f"path lengths of {n_degrees}."
             )
         else:
-            return self._nth_degree_neighbors(n_degrees=n_degrees)
+            return _nth_degree_neighbors_from_graphlike(
+                graphlike=self, n_degrees=n_degrees
+            )
 
     @property
     def total_charge(self):
@@ -5312,7 +5298,7 @@ class FrozenMolecule(Serializable):
             for atom in openmm_topology.atoms():
                 omm_topology_G.add_node(
                     atom.index,
-                    atomic_number=atom.atomic_number,
+                    atomic_number=atom.element.atomic_number,
                     formal_charge=0.0,
                     atom_name=atom.name,
                     residue_name=atom.residue.name,
@@ -5329,14 +5315,14 @@ class FrozenMolecule(Serializable):
                 # Assign sequential negative numbers as atomic numbers for hydrogens attached to the same heavy atom.
                 # We do the same to the substructure templates that are used for matching. This saves runtime because
                 # it removes redundant self-symmetric matches.
-                if bond.atom1.atomic_number == 1:
+                if bond.atom1.element.atomic_number == 1:
                     h_index = bond.atom1.index
                     heavy_atom_index = bond.atom2.index
                     n_hydrogens[heavy_atom_index] += 1
                     omm_topology_G.nodes[h_index]["atomic_number"] = (
                         -1 * n_hydrogens[heavy_atom_index]
                     )
-                if bond.atom2.atomic_number == 1:
+                if bond.atom2.element.atomic_number == 1:
                     h_index = bond.atom2.index
                     heavy_atom_index = bond.atom1.index
                     n_hydrogens[heavy_atom_index] += 1
@@ -7250,7 +7236,10 @@ def _atom_nums_to_hill_formula(atom_nums: List[int]) -> str:
     Hill formula. See https://en.wikipedia.org/wiki/Chemical_formula#Hill_system"""
     from collections import Counter
 
-    atom_symbol_counts = Counter(SYMBOLS[atom_num] for atom_num in atom_nums)
+    SYMBOLS_ = deepcopy(SYMBOLS)
+    SYMBOLS_[0] = "X"
+
+    atom_symbol_counts = Counter(SYMBOLS_[atom_num] for atom_num in atom_nums)
 
     formula = []
     # Check for C and H first, to make a correct hill formula
@@ -7269,6 +7258,46 @@ def _atom_nums_to_hill_formula(atom_nums: List[int]) -> str:
             formula.append(str(count))
 
     return "".join(formula)
+
+
+def _nth_degree_neighbors_from_graphlike(
+    graphlike: Union[Molecule, "_SimpleMolecule"], n_degrees: int
+) -> Generator[
+    Union[Tuple[Atom, Atom], Tuple["_SimpleAtom", "_SimpleAtom"]], None, None
+]:
+    """
+    Given a graph-like object, return a tuple of the nth degree neighbors of each atom.
+
+    The input `graphlike` object must provide a .to_networkx() method and an
+    `atoms` property that can be indexed.
+
+    See Molecule.nth_degree_neighbors for more details.
+
+    Parameters
+    ----------
+    graphlike : Union[Molecule, _SimpleMolecule]
+        The graph-like object to get the neighbors of.
+    n: int
+        The number of bonds separating atoms in each pair
+
+    Returns
+    -------
+    neighbors: iterator of tuple of Atom
+        Tuples (len 2) of atom that are separated by ``n`` bonds.
+    """
+    graph = graphlike.to_networkx()
+
+    for node_i in graph.nodes:
+        for node_j in graph.nodes:
+            if node_i == node_j:
+                continue
+
+            path_length = nx.shortest_path_length(graph, node_i, node_j)
+
+            if path_length == n_degrees:
+                if node_i > node_j:
+                    continue
+                yield (graphlike.atoms[node_i], graphlike.atoms[node_j])
 
 
 class HierarchyScheme:

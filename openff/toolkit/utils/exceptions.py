@@ -315,3 +315,7 @@ class MissingIndexedAttributeError(
     OpenFFToolkitException, IndexError, KeyError, AttributeError
 ):
     """Error raised when an indexed attribute does not exist"""
+
+
+class UnsupportedMoleculeConversionError(OpenFFToolkitException):
+    """Error raised when attempting to instantiate a Molecule with insufficient inputs."""

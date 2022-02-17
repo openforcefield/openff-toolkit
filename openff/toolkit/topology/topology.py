@@ -16,18 +16,19 @@ Class definitions to represent a molecular system and its chemical components
    * Use `attrs <http://www.attrs.org/>`_ for object setter boilerplate?
 
 """
-
 import copy
 import itertools
 import warnings
 from collections import OrderedDict
 from collections.abc import MutableMapping
+from typing import Generator, List, Union
 
 import numpy as np
 from openff.units import unit
 from openff.utilities import requires_package
 
 from openff.toolkit.topology import Molecule
+from openff.toolkit.topology._mm_molecule import _SimpleMolecule
 from openff.toolkit.typing.chemistry import ChemicalEnvironment
 from openff.toolkit.utils import quantity_to_string, string_to_quantity
 from openff.toolkit.utils.exceptions import (
@@ -440,9 +441,9 @@ class Topology(Serializable):
         self._cached_chemically_identical_molecules = None
 
     @property
-    def reference_molecules(self):
+    def reference_molecules(self) -> List[Molecule]:
         """
-        Get an iterator of reference molecules in this Topology.
+        Get a list of reference molecules in this Topology.
 
         Returns
         -------
@@ -451,7 +452,7 @@ class Topology(Serializable):
         return self._molecules
 
     @classmethod
-    def from_molecules(cls, molecules):
+    def from_molecules(cls, molecules: Union[Molecule, List[Molecule]]):
         """
         Create a new Topology object containing one copy of each of the specified molecule(s).
 
@@ -466,10 +467,7 @@ class Topology(Serializable):
             The Topology created from the specified molecule(s)
         """
         # Ensure that we are working with an iterable
-        try:
-            iter(molecules)
-        except TypeError as te:
-            # Make iterable object
+        if isinstance(molecules, (Molecule, _SimpleMolecule)):
             molecules = [molecules]
 
         # Create Topology and populate it with specified molecules
@@ -696,7 +694,7 @@ class Topology(Serializable):
         return len(self._molecules)
 
     @property
-    def molecules(self):
+    def molecules(self) -> Generator[Union[Molecule, _SimpleMolecule], None, None]:
         """Returns an iterator over all the Molecules in this Topology
 
         Returns
@@ -1528,6 +1526,8 @@ class Topology(Serializable):
         """
         from openmm import app
 
+        from openff.toolkit.topology.molecule import Bond
+
         omm_topology = app.Topology()
 
         # Create unique atom names
@@ -1602,17 +1602,26 @@ class Topology(Serializable):
         for bond in self.topology_bonds:
             atom1, atom2 = bond.atoms
             atom1_idx, atom2_idx = self.atom_index(atom1), self.atom_index(atom2)
-            bond_type = (
-                # Aromatic if bond.bond.is_aromatic else bond_types[bond.bond_order]
-                app.Aromatic
-                if bond.is_aromatic
-                else bond_types[bond.bond_order]
-            )
+            if isinstance(bond, Bond):
+                if bond.is_aromatic:
+                    bond_type = app.Aromatic
+                else:
+                    bond_type = bond_types[bond.bond_order]
+                bond_order = bond.bond_order
+            elif isinstance(bond, _SimpleBond):
+                bond_type = None
+                bond_order = None
+            else:
+                raise RuntimeError(
+                    "Unexpected bond type found while iterating over Topology.topology_bonds."
+                    f"Found {type(bond)}, allowed are Bond and _SimpleBond."
+                )
+
             omm_topology.addBond(
                 omm_atoms[atom1_idx],
                 omm_atoms[atom2_idx],
                 type=bond_type,
-                order=bond.bond_order,
+                order=bond_order,
             )
 
         if self.box_vectors is not None:
@@ -2154,7 +2163,7 @@ class Topology(Serializable):
         """
         pass
 
-    def add_molecule(self, molecule):
+    def add_molecule(self, molecule: Union[Molecule, _SimpleMolecule]) -> int:
         self._molecules.append(copy.deepcopy(molecule))
         self._cached_chemically_identical_molecules = None
         return len(self._molecules)
