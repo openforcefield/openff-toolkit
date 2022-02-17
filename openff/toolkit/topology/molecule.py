@@ -4778,7 +4778,9 @@ class FrozenMolecule(Serializable):
                 f"path lengths of {n_degrees}."
             )
         else:
-            return _nth_degree_neighbors_from_graph(graphlike=self, n_degrees=n_degrees)
+            return _nth_degree_neighbors_from_graphlike(
+                graphlike=self, n_degrees=n_degrees
+            )
 
     @property
     def total_charge(self):
