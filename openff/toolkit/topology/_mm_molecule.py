@@ -166,6 +166,9 @@ class _SimpleMolecule:
         return _atom_nums_to_hill_formula(atom_nums)
 
     def to_networkx(self) -> "nx.Graph":
+        # TODO: Custom attribtues should probably be attached to the nodes (and possibly also
+        #       the edges?). See for more:
+        #       https://github.com/openforcefield/openff-toolkit/pull/1179#discussion_r808549385
         import networkx as nx
 
         graph = nx.Graph()
