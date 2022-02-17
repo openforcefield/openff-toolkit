@@ -160,7 +160,7 @@ class _SimpleMolecule:
     def to_hill_formula(self) -> str:
         atom_nums: List[int] = [atom.atomic_number for atom in self.atoms]
 
-        if min(atom_nums) <= 0:
+        if min(atom_nums) < 0:
             return "INVALID"
 
         return _atom_nums_to_hill_formula(atom_nums)

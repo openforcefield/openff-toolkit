@@ -7234,7 +7234,10 @@ def _atom_nums_to_hill_formula(atom_nums: List[int]) -> str:
     Hill formula. See https://en.wikipedia.org/wiki/Chemical_formula#Hill_system"""
     from collections import Counter
 
-    atom_symbol_counts = Counter(SYMBOLS[atom_num] for atom_num in atom_nums)
+    SYMBOLS_ = deepcopy(SYMBOLS)
+    SYMBOLS_[0] = "X"
+
+    atom_symbol_counts = Counter(SYMBOLS_[atom_num] for atom_num in atom_nums)
 
     formula = []
     # Check for C and H first, to make a correct hill formula

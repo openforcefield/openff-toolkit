@@ -22,10 +22,19 @@ class TestMMMolecule:
         return water
 
     @pytest.fixture()
-    def molecule_with_bogus_atom(self):
+    def molecule_with_zero_atom(self):
         molecule = _SimpleMolecule()
         molecule.add_atom(atomic_number=6)
         molecule.add_atom(atomic_number=0)
+        molecule.add_bond(0, 1)
+
+        return molecule
+
+    @pytest.fixture()
+    def molecule_with_bogus_atom(self):
+        molecule = _SimpleMolecule()
+        molecule.add_atom(atomic_number=6)
+        molecule.add_atom(atomic_number=-1)
         molecule.add_bond(0, 1)
 
         return molecule
@@ -54,9 +63,15 @@ class TestMMMolecule:
         for atom, particle in zip(water.atoms, water.particles):
             assert atom is particle
 
-    def test_hill_formula(self, water, molecule_with_bogus_atom):
+    def test_hill_formula(
+        self,
+        water,
+        molecule_with_zero_atom,
+        molecule_with_bogus_atom,
+    ):
 
         assert water.hill_formula == "H2O"
+        assert molecule_with_zero_atom.hill_formula == "CX"
         assert molecule_with_bogus_atom.hill_formula == "INVALID"
 
     def test_to_networkx(self, water):
