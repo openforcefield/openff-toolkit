@@ -43,7 +43,7 @@ from openff.units.elements import MASSES, SYMBOLS
 from openff.units.openmm import to_openmm
 
 if TYPE_CHECKING:
-    from openff.toolkit.topology.mm_molecule import _SimpleAtom, _SimpleMolecule
+    from openff.toolkit.topology._mm_molecule import _SimpleAtom, _SimpleMolecule
     import networkx as nx
     from openff.units.unit import Quantity
 

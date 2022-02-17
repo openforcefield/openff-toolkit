@@ -28,7 +28,7 @@ from openff.units import unit
 from openff.utilities import requires_package
 
 from openff.toolkit.topology import Molecule
-from openff.toolkit.topology.mm_molecule import _SimpleMolecule
+from openff.toolkit.topology._mm_molecule import _SimpleMolecule
 from openff.toolkit.typing.chemistry import ChemicalEnvironment
 from openff.toolkit.utils import quantity_to_string, string_to_quantity
 from openff.toolkit.utils.exceptions import (
