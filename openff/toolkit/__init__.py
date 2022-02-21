@@ -15,6 +15,12 @@ __all__ = [
     "Topology",
     "ForceField",
     "get_available_force_fields",
+    "GLOBAL_TOOLKIT_REGISTRY",
+    "AmberToolsToolkitWrapper",
+    "BuiltInToolkitWrapper",
+    "OpenEyeToolkitWrapper",
+    "RDKitToolkitWrapper",
+    "ToolkitRegistry",
     "topology",
     "typing",
     "utils",
@@ -26,6 +32,12 @@ _lazy_imports_obj = {
     "get_available_force_fields": "openff.toolkit.typing.engines.smirnoff",
     "Molecule": "openff.toolkit.topology",
     "Topology": "openff.toolkit.topology",
+    "GLOBAL_TOOLKIT_REGISTRY": "openff.toolkit.utils.toolkits",
+    "AmberToolsToolkitWrapper": "openff.toolkit.utils.toolkits",
+    "BuiltInToolkitWrapper": "openff.toolkit.utils.toolkits",
+    "OpenEyeToolkitWrapper": "openff.toolkit.utils.toolkits",
+    "RDKitToolkitWrapper": "openff.toolkit.utils.toolkits",
+    "ToolkitRegistry": "openff.toolkit.utils.toolkits",
 }
 
 # Dictionary of modules to lazily import; maps the modules's name to its path
