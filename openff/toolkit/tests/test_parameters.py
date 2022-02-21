@@ -15,6 +15,7 @@ import pytest
 from numpy.testing import assert_almost_equal
 from openff.units import unit
 
+import openff.toolkit.typing.engines.smirnoff.parameters
 from openff.toolkit.topology import Molecule
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     BondHandler,
@@ -45,8 +46,6 @@ from openff.toolkit.utils.exceptions import (
     SMIRNOFFSpecError,
     SMIRNOFFVersionError,
 )
-import openff.toolkit.typing.engines.smirnoff.parameters
-
 
 # ======================================================================
 # Test ParameterAttribute descriptor
