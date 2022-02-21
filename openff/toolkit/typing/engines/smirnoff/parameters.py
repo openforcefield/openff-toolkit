@@ -5275,6 +5275,30 @@ class VirtualSiteHandler(_NonbondedHandler):
 
             return fn(*args, **kwargs)
 
+        @abc.abstractmethod
+        def add_virtual_site(self, molecule, orientations, replace=False):
+            """
+            Add a virtual site to the molecule
+
+            Parameters
+            ----------
+            molecule : openff.toolkit.topology.molecule.Molecule
+                The molecule to add the virtual site to
+            orientations : List[Tuple[int]]
+                A list of orientation tuples which define the permuations used
+                to contruct the geometry of the virtual site particles
+            replace : bool, default=False
+                Replace this virtual site if it already exists in the molecule
+
+            Returns
+            -------
+            off_idx : int
+                The index of the first particle added due to this virtual site
+
+            .. warning :: This API is experimental and subject to change.
+            """
+            raise NotImplementedError
+
     class VirtualSiteBondChargeType(VirtualSiteType):
         """A SMIRNOFF virtual site bond charge type
 
