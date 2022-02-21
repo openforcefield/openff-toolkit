@@ -46,6 +46,20 @@ __all__ = [
     "GBSAHandler",
     "ToolkitAM1BCCHandler",
     "VirtualSiteHandler",
+    "ParameterType",
+    "ConstraintType",
+    "BondType",
+    "AngleType",
+    "ProperTorsionType",
+    "ImproperTorsionType",
+    "vdWType",
+    "LibraryChargeType",
+    "GBSAType",
+    "ChargeIncrementType",
+    "VirtualSiteBondChargeType",
+    "VirtualSiteMonovalentLonePairType",
+    "VirtualSiteDivalentLonePairType",
+    "VirtualSiteTrivalentLonePairType",
 ]
 import abc
 import copy
@@ -5919,6 +5933,25 @@ class VirtualSiteHandler(_NonbondedHandler):
                 )
 
         return ids
+
+
+# ======================================================================
+# PARAMETERTYPE RE-EXPORTS
+# ======================================================================
+
+ConstraintType = ConstraintHandler.ConstraintType
+BondType = BondHandler.BondType
+AngleType = AngleHandler.AngleType
+ProperTorsionType = ProperTorsionHandler.ProperTorsionType
+ImproperTorsionType = ImproperTorsionHandler.ImproperTorsionType
+vdWType = vdWHandler.vdWType
+LibraryChargeType = LibraryChargeHandler.LibraryChargeType
+GBSAType = GBSAHandler.GBSAType
+ChargeIncrementType = ChargeIncrementModelHandler.ChargeIncrementType
+VirtualSiteBondChargeType = VirtualSiteHandler.VirtualSiteBondChargeType
+VirtualSiteMonovalentLonePairType = VirtualSiteHandler.VirtualSiteMonovalentLonePairType
+VirtualSiteDivalentLonePairType = VirtualSiteHandler.VirtualSiteDivalentLonePairType
+VirtualSiteTrivalentLonePairType = VirtualSiteHandler.VirtualSiteTrivalentLonePairType
 
 
 if __name__ == "__main__":
