@@ -8,6 +8,7 @@
 Test classes and function in module openff.toolkit.typing.engines.smirnoff.parameters.
 
 """
+from inspect import isabstract, isclass
 
 import numpy
 import pytest
@@ -44,6 +45,8 @@ from openff.toolkit.utils.exceptions import (
     SMIRNOFFSpecError,
     SMIRNOFFVersionError,
 )
+import openff.toolkit.typing.engines.smirnoff.parameters
+
 
 # ======================================================================
 # Test ParameterAttribute descriptor
@@ -2255,6 +2258,40 @@ class TestGBSAHandler:
             IncompatibleParameterError, match="Difference between 'solvent_radius' "
         ) as excinfo:
             gbsa_handler_1.check_handler_compatibility(gbsa_handler_3)
+
+
+class TestParameterTypeReExports:
+    def test_parametertype_reexports(self):
+        params_module = openff.toolkit.typing.engines.smirnoff.parameters
+
+        def subclass_attrs(obj, classinfo):
+            """Iterate over members of ``obj`` that are concrete, public subclasses of ``classinfo``"""
+            return filter(
+                lambda nv: (  # (name, value)
+                    isclass(nv[1])
+                    and issubclass(nv[1], classinfo)
+                    and not isabstract(nv[1])
+                    and not nv[0].startswith("_")
+                ),
+                vars(obj).items(),
+            )
+
+        for _, paramhandler in subclass_attrs(params_module, ParameterHandler):
+            for paramtype_name, paramtype in subclass_attrs(
+                paramhandler, ParameterType
+            ):
+                assert paramtype_name in vars(params_module), (
+                    f"ParameterType {paramtype_name!r} is "
+                    f"not re-exported from parameters module"
+                )
+                assert vars(params_module)[paramtype_name] is paramtype, (
+                    f"Exported attribute parameters.{paramtype_name} "
+                    f"does not match ParameterType {paramtype_name!r}"
+                )
+                assert paramtype_name in params_module.__all__, (
+                    f"ParameterType {paramtype_name!r} "
+                    f"missing from parameters.__all__"
+                )
 
 
 # TODO: test_nonbonded_settings (ensure that choices in Electrostatics and vdW tags resolve
