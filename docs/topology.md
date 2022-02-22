@@ -20,7 +20,6 @@ including offering serialization to a variety of standard formats (including [XM
     FrozenMolecule
     Molecule
     Topology
-    TopologyMolecule
 :::
 
 ## Secondary objects
@@ -36,14 +35,10 @@ including offering serialization to a variety of standard formats (including [XM
     Bond
     VirtualSite
     VirtualParticle
-    TopologyVirtualParticle
     BondChargeVirtualSite
     MonovalentLonePairVirtualSite
     DivalentLonePairVirtualSite
     TrivalentLonePairVirtualSite
-    TopologyAtom
-    TopologyBond
-    TopologyVirtualSite
     ValenceDict
     ImproperDict
 :::

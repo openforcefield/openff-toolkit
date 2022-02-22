@@ -70,6 +70,9 @@ print(value_roundtrip)
   [`create_openmm_system`](openff.toolkit.typing.engines.smirnoff.ForceField.create_openmm_system)
   with a default value of False. Setting it to True routes `openmm.System` creation through
   Interchange.
+- [PR #1192](https://github.com/openforcefield/openforcefield/pull/1192): Add re-exports for core classes to the new
+  `openff.toolkit.app` module and re-exports for parameter types to the new `openff.toolkit.topology.parametertypes` module.
+  This does not affect existing paths and gives some new, easier to remember paths to core objects.
 
 ### Behaviors changed and bugfixes
 
@@ -95,7 +98,6 @@ print(value_roundtrip)
 
 - [PR #1113](https://github.com/openforcefield/openff-toolkit/pull/1113): Updates the Amber/GROMACS
   example to use Interchange.
-
 
 ## 0.10.1 Minor feature and bugfix release
 
