@@ -3222,7 +3222,7 @@ class FrozenMolecule(Serializable):
         n_conformers=10,
         rms_cutoff=None,
         clear_existing=True,
-        make_carboxylic_acids_cis=False,
+        make_carboxylic_acids_cis=True,
     ):
         """
         Generate conformers for this molecule using an underlying toolkit.
@@ -3242,10 +3242,10 @@ class FrozenMolecule(Serializable):
             for each ``ToolkitWrapper`` (generally 1 Angstrom).
         clear_existing : bool, default=True
             Whether to overwrite existing conformers for the molecule
-        make_carboxylic_acids_cis: bool, default=False
+        make_carboxylic_acids_cis: bool, default=True
             Guarantee all conformers have exclusively cis carboxylic acid groups (COOH)
-            by rotating the proton in any trans carboxylic acids 180 degrees around the C-O bond.
-            Useful when using the OpenEye toolkit to work around a bug in conformer generation
+            by rotating the proton in any trans carboxylic acids 180 degrees around the
+            C-O bond. Works around a bug in conformer generation by the OpenEye toolkit
             where trans COOH is much more common than it should be.
 
         Examples
