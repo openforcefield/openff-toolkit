@@ -92,6 +92,7 @@ from openff.toolkit.utils.exceptions import (
     FractionalBondOrderInterpolationMethodUnsupportedError,
     IncompatibleParameterError,
     IncompatibleUnitError,
+    InvalidSwitchingDistanceError,
     MissingIndexedAttributeError,
     NonintegralMoleculeChargeException,
     NotEnoughPointsForInterpolationError,
@@ -3647,7 +3648,7 @@ class vdWHandler(_NonbondedHandler):
         """
         float_attrs_to_compare = ["scale12", "scale13", "scale14", "scale15"]
         string_attrs_to_compare = ["potential", "combining_rules", "method"]
-        unit_attrs_to_compare = ["cutoff"]
+        unit_attrs_to_compare = ["cutoff", "switch_width"]
 
         self._check_attributes_are_equal(
             other_handler,
@@ -3676,6 +3677,17 @@ class vdWHandler(_NonbondedHandler):
                 force.setCutoffDistance(to_openmm(self.cutoff))
                 force.setEwaldErrorTolerance(1.0e-4)
 
+                if self.switch_width >= self.cutoff:
+                    raise InvalidSwitchingDistanceError(
+                        "Attempted to generate a NonbondedForce with a switching width greater than the or equal to the cutoff "
+                        f"distance. Found switch_width={self.switch_width} and cutoff={self.cutoff}."
+                    )
+                else:
+                    force.setSwitchingDistance(
+                        to_openmm(self.cutoff - self.switch_width)
+                    )
+                    force.setUseSwitchingFunction(self.switch_width < self.cutoff)
+
         # If method is cutoff, then we currently support openMM's PME for periodic system and NoCutoff for nonperiodic
         elif self.method == "cutoff":
             # If we're given a nonperiodic box, we always set NoCutoff. Later we'll add support for CutoffNonPeriodic
@@ -3684,7 +3696,19 @@ class vdWHandler(_NonbondedHandler):
             else:
                 force.setNonbondedMethod(openmm.NonbondedForce.PME)
                 force.setUseDispersionCorrection(True)
+
                 force.setCutoffDistance(to_openmm(self.cutoff))
+
+                if self.switch_width >= self.cutoff:
+                    raise InvalidSwitchingDistanceError(
+                        "Attempted to generate a NonbondedForce with a switching width greater than the or equal to the cutoff "
+                        f"distance. Found switch_width={self.switch_width} and cutoff={self.cutoff}."
+                    )
+                else:
+                    force.setSwitchingDistance(
+                        to_openmm(self.cutoff - self.switch_width)
+                    )
+                    force.setUseSwitchingFunction(self.switch_width < self.cutoff)
 
         # Iterate over all defined Lennard-Jones types, allowing later matches to override earlier ones.
         atom_matches = self.find_matches(topology)

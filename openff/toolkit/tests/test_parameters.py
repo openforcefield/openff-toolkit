@@ -40,6 +40,7 @@ from openff.toolkit.utils.exceptions import (
     DuplicateParameterError,
     IncompatibleParameterError,
     IncompatibleUnitError,
+    InvalidSwitchingDistanceError,
     MissingIndexedAttributeError,
     NotEnoughPointsForInterpolationError,
     ParameterLookupError,
@@ -1742,6 +1743,74 @@ class TestvdWType:
     """
     Test the behavior of vdWType
     """
+
+    @pytest.mark.parametrize(
+        "cutoff,switch_width,expected_use,expected_switching_distance",
+        [
+            (9.0 * unit.angstrom, 1.0 * unit.angstrom, True, 8.0 * unit.angstrom),
+            (11.0 * unit.angstrom, 2.0 * unit.angstrom, True, 9.0 * unit.angstrom),
+            (9.0 * unit.angstrom, 9.0 * unit.angstrom, False, 0.0 * unit.angstrom),
+            (9.0 * unit.angstrom, 10.0 * unit.angstrom, False, 0.0 * unit.angstrom),
+        ],
+    )
+    @pytest.mark.parametrize(
+        "method",
+        ["PME", "cutoff"],
+    )
+    def test_switch_width(
+        self, cutoff, switch_width, expected_use, expected_switching_distance, method
+    ):
+        """Test that create_force works on a vdWHandler which has a switch width
+        specified.
+        """
+
+        import openmm
+        from openmm import unit as openmm_unit
+
+        # Create a dummy topology containing only argon and give it a set of
+        # box vectors.
+        topology = Molecule.from_smiles("[Ar]").to_topology()
+        topology.box_vectors = unit.Quantity(numpy.eye(3) * 20 * unit.angstrom)
+
+        # create a VdW handler with only parameters for argon.
+        vdw_handler = vdWHandler(
+            version=0.3,
+            cutoff=cutoff,
+            switch_width=switch_width,
+            method=method,
+        )
+        vdw_handler.add_parameter(
+            {
+                "smirks": "[#18:1]",
+                "epsilon": 1.0 * unit.kilojoules_per_mole,
+                "sigma": 1.0 * unit.angstrom,
+            }
+        )
+
+        omm_sys = openmm.System()
+
+        if expected_use:
+
+            vdw_handler.create_force(omm_sys, topology)
+
+            nonbonded_force = [
+                force
+                for force in omm_sys.getForces()
+                if isinstance(force, openmm.NonbondedForce)
+            ][0]
+
+            assert nonbonded_force.getUseSwitchingFunction()
+
+            assert numpy.isclose(
+                nonbonded_force.getSwitchingDistance().value_in_unit(
+                    openmm_unit.angstrom
+                ),
+                expected_switching_distance.m_as(unit.angstrom),
+            )
+
+        else:
+            with pytest.raises(InvalidSwitchingDistanceError, match=str(cutoff.m)):
+                vdw_handler.create_force(omm_sys, topology)
 
     def test_sigma_rmin_half(self):
         """Test the setter/getter behavior or sigma and rmin_half"""
