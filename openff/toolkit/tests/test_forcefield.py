@@ -3274,6 +3274,21 @@ class TestForceFieldChargeAssignment:
 
         compare_partial_charges(using_kwarg, using_library_charges)
 
+    def test_sage_tip3p_charges(self):
+        """Ensure tip3p charges packaged with sage are applied over AM1-BCC charges.
+        https://github.com/openforcefield/openff-toolkit/issues/1199"""
+        sage = ForceField("openff-2.0.0.offxml")
+
+        topology = Molecule.from_smiles("O").to_topology()
+
+        system = sage.create_openmm_system(topology)
+
+        force = [f for f in system.getForces() if type(f) == openmm.NonbondedForce][0]
+
+        found_charges = [force.getParticleParameters(i)[0]._value for i in range(3)]
+
+        assert np.allclose(found_charges, [-0.834, 0.417, 0.417])
+
 
 # ======================================================================
 # TEST CONSTRAINTS
