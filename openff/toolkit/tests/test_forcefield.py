@@ -2402,10 +2402,13 @@ class TestForceFieldChargeAssignment:
             q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
             assert q != (0.0 * unit.elementary_charge)
 
-    def test_library_charges_to_single_water(self):
+    @pytest.mark.parametrize('ff_inputs', [["test_forcefields/test_forcefield.offxml",
+                                            "test_forcefields/tip3p.offxml"],
+                                           ['openff-2.0.0.offxml']])
+    def test_library_charges_to_single_water(self, ff_inputs):
         """Test assigning charges to one water molecule using library charges"""
         ff = ForceField(
-            "test_forcefields/test_forcefield.offxml", "test_forcefields/tip3p.offxml"
+            *ff_inputs
         )
         mol = Molecule.from_file(
             get_data_file_path(os.path.join("systems", "monomers", "water.sdf"))
@@ -3273,27 +3276,6 @@ class TestForceFieldChargeAssignment:
         )
 
         compare_partial_charges(using_kwarg, using_library_charges)
-
-    @pytest.mark.parametrize(
-        "force_field_file", ["openff-2.0.0.offxml", "test_forcefields/tip3p.offxml"]
-    )
-    def test_tip3p_charges(self, force_field_file):
-        """
-        Ensure tip3p charges packaged with sage or a standalone TIP3P force field
-        are applied over AM1-BCC charges. See
-        https://github.com/openforcefield/openff-toolkit/issues/1199
-        """
-        force_field = ForceField(force_field_file)
-
-        topology = Molecule.from_smiles("O").to_topology()
-
-        system = force_field.create_openmm_system(topology)
-
-        force = [f for f in system.getForces() if type(f) == openmm.NonbondedForce][0]
-
-        found_charges = [force.getParticleParameters(i)[0]._value for i in range(3)]
-
-        assert np.allclose(found_charges, [-0.834, 0.417, 0.417])
 
 
 # ======================================================================
