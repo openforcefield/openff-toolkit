@@ -8,6 +8,17 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ## Current development
 
+### Critical bugfixes
+
+- [PR #1200](https://github.com/openforcefield/openforcefield/pull/1200): Fixes a bug
+  ([Issue #1199](https://github.com/openforcefield/openff-toolkit/issues/428)) in which library
+  charges were ignored in some force fields, including `openff-2.0.0` code name "Sage." This resulted in
+  the TIP3P partial charges included Sage not being applied correctly in versions 0.10.1 and 0.10.2 of the
+  OpenFF Toolkit. This regression was not present in version 0.10.0 and earlier and therefore is not
+  believed to have any impact on the fitting or benchmarking of the first release of Sage (version
+  2.0.0). The change causing regression only affected library charges and therefore no other
+  parameter types are believed to be affected.
+
 ### Behaviors changed and bugfixes
 
 - [PR #1171](https://github.com/openforcefield/openforcefield/pull/1171): Failure of 

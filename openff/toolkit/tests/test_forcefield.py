@@ -2402,11 +2402,19 @@ class TestForceFieldChargeAssignment:
             q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
             assert q != (0.0 * unit.elementary_charge)
 
-    def test_library_charges_to_single_water(self):
+    @pytest.mark.parametrize(
+        "ff_inputs",
+        [
+            [
+                "test_forcefields/test_forcefield.offxml",
+                "test_forcefields/tip3p.offxml",
+            ],
+            ["openff-2.0.0.offxml"],
+        ],
+    )
+    def test_library_charges_to_single_water(self, ff_inputs):
         """Test assigning charges to one water molecule using library charges"""
-        ff = ForceField(
-            "test_forcefields/test_forcefield.offxml", "test_forcefields/tip3p.offxml"
-        )
+        ff = ForceField(*ff_inputs)
         mol = Molecule.from_file(
             get_data_file_path(os.path.join("systems", "monomers", "water.sdf"))
         )
