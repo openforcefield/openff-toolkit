@@ -6,7 +6,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 * `minor` increments add features but do not break API compatibility
 * `micro` increments represent bugfix releases or improvements in documentation
 
-## Current development
+## 0.10.3 Bugfix release
 
 ### Critical bugfixes
 
@@ -16,13 +16,26 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
   the TIP3P partial charges included Sage not being applied correctly in versions 0.10.1 and 0.10.2 of the
   OpenFF Toolkit. This regression was not present in version 0.10.0 and earlier and therefore is not
   believed to have any impact on the fitting or benchmarking of the first release of Sage (version
-  2.0.0). The change causing regression only affected library charges and therefore no other
+  2.0.0). The change causing the regression only affected library charges and therefore no other
   parameter types are believed to be affected.
+
+### API breaking changes
+- [PR #855](https://github.com/openforcefield/openff-toolkit/pull/855): In earlier 
+  versions of the toolkit, we had mistakenly made the assumption that cheminformatics 
+  toolkits agreed on the number and membership of rings. However we later learned that this
+  was not true. This PR removes
+  [`Molecule.rings`](openff.toolkit.topology.Molecule.rings) and
+  [`Molecule.n_rings`](openff.toolkit.topology.Molecule.n_rings). To find rings in
+  a molecule, directly use a cheminformatics toolkit after using
+  [`Molecule.to_rdkit`](openff.toolkit.topology.Molecule.to_rdkit) or
+  [`Molecule.to_openeye`](openff.toolkit.topology.Molecule.to_openeye).
+  [`Atom.is_in_ring`](openff.toolkit.topology.Atom.is_in_ring) and
+  [`Bond.is_in_ring`](openff.toolkit.topology.Bond.is_in_ring) are now methods, not properties.
 
 ### Behaviors changed and bugfixes
 
 - [PR #1171](https://github.com/openforcefield/openforcefield/pull/1171): Failure of 
-  [`Molecule.apply_elf_conformer_selection()`] due to excluding all available conformations ([Issue #428] (https://github.com/openforcefield/openff-toolkit/issues/428) )
+  [`Molecule.apply_elf_conformer_selection()`] due to excluding all available conformations ([Issue #428](https://github.com/openforcefield/openff-toolkit/issues/428))
   now provides a better error. The `make_carboxylic_acids_cis` argument (`False` by default) has been added to 
   [`Molecule.generate_conformers()`] to mitigate a common cause of this error. By setting this argument to `True` in internal use of this method, trans carboxylic 
   acids are no longer generated in [`Molecule.assign_partial_charges()`] and 
@@ -44,15 +57,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
   [`Bond.is_in_ring`](openff.toolkit.topology.Bond.is_in_ring) to use corresponding
   functionality in OpenEye and RDKit wrappers.
 
-## API breaking changes
-- [PR #855](https://github.com/openforcefield/openff-toolkit/pull/855): Removes
-  [`Molecule.rings`](openff.toolkit.topology.Molecule.rings) and
-  [`Molecule.n_rings`](openff.toolkit.topology.Molecule.n_rings). To find rings in
-  a molecule, directly use a cheminformatics toolkit after using
-  [`Molecule.to_rdkit`](openff.toolkit.topology.Molecule.to_rdkit) or
-  [`Molecule.to_openeye`](openff.toolkit.topology.Molecule.to_openeye).
-  [`Atom.is_in_ring`](openff.toolkit.topology.Atom.is_in_ring) and
-  [`Bond.is_in_ring`](openff.toolkit.topology.Bond.is_in_ring) are now methods, not properties.
+
 
 ## 0.10.2 Bugfix release
 
