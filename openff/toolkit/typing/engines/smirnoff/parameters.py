@@ -3686,7 +3686,7 @@ class vdWHandler(_NonbondedHandler):
                     force.setSwitchingDistance(
                         to_openmm(self.cutoff - self.switch_width)
                     )
-                    force.setUseSwitchingFunction(self.switch_width < self.cutoff)
+                    force.setUseSwitchingFunction(self.switch_width.m > 0)
 
         # If method is cutoff, then we currently support openMM's PME for periodic system and NoCutoff for nonperiodic
         elif self.method == "cutoff":
@@ -3708,7 +3708,7 @@ class vdWHandler(_NonbondedHandler):
                     force.setSwitchingDistance(
                         to_openmm(self.cutoff - self.switch_width)
                     )
-                    force.setUseSwitchingFunction(self.switch_width < self.cutoff)
+                    force.setUseSwitchingFunction(self.switch_width.m > 0)
 
         # Iterate over all defined Lennard-Jones types, allowing later matches to override earlier ones.
         atom_matches = self.find_matches(topology)
