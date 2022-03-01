@@ -70,7 +70,7 @@ import re
 from collections import OrderedDict, defaultdict
 from enum import Enum
 from itertools import combinations
-from typing import Any, List, Optional, Type, Union
+from typing import TYPE_CHECKING, Any, List, Optional, Type, Union
 
 from openff.units import unit
 from openff.utilities import requires_package
@@ -92,7 +92,6 @@ from openff.toolkit.utils.exceptions import (
     FractionalBondOrderInterpolationMethodUnsupportedError,
     IncompatibleParameterError,
     IncompatibleUnitError,
-    InvalidSwitchingDistanceError,
     MissingIndexedAttributeError,
     NonintegralMoleculeChargeException,
     NotEnoughPointsForInterpolationError,
@@ -112,6 +111,9 @@ from openff.toolkit.utils.utils import (
     extract_serialized_units_from_dict,
     object_to_quantity,
 )
+
+if TYPE_CHECKING:
+    import openmm
 
 # =============================================================================================
 # CONFIGURE LOGGER
@@ -3677,17 +3679,6 @@ class vdWHandler(_NonbondedHandler):
                 force.setCutoffDistance(to_openmm(self.cutoff))
                 force.setEwaldErrorTolerance(1.0e-4)
 
-                if self.switch_width >= self.cutoff:
-                    raise InvalidSwitchingDistanceError(
-                        "Attempted to generate a NonbondedForce with a switching width greater than the or equal to the cutoff "
-                        f"distance. Found switch_width={self.switch_width} and cutoff={self.cutoff}."
-                    )
-                else:
-                    force.setSwitchingDistance(
-                        to_openmm(self.cutoff - self.switch_width)
-                    )
-                    force.setUseSwitchingFunction(self.switch_width.m > 0)
-
         # If method is cutoff, then we currently support openMM's PME for periodic system and NoCutoff for nonperiodic
         elif self.method == "cutoff":
             # If we're given a nonperiodic box, we always set NoCutoff. Later we'll add support for CutoffNonPeriodic
@@ -3699,16 +3690,7 @@ class vdWHandler(_NonbondedHandler):
 
                 force.setCutoffDistance(to_openmm(self.cutoff))
 
-                if self.switch_width >= self.cutoff:
-                    raise InvalidSwitchingDistanceError(
-                        "Attempted to generate a NonbondedForce with a switching width greater than the or equal to the cutoff "
-                        f"distance. Found switch_width={self.switch_width} and cutoff={self.cutoff}."
-                    )
-                else:
-                    force.setSwitchingDistance(
-                        to_openmm(self.cutoff - self.switch_width)
-                    )
-                    force.setUseSwitchingFunction(self.switch_width.m > 0)
+        self._apply_switching_function(force)
 
         # Iterate over all defined Lennard-Jones types, allowing later matches to override earlier ones.
         atom_matches = self.find_matches(topology)
@@ -3729,6 +3711,15 @@ class vdWHandler(_NonbondedHandler):
         self._check_all_valence_terms_assigned(
             atom_matches, topology, [(atom,) for atom in topology.atoms]
         )
+
+    def _apply_switching_function(self, force: "openmm.NonbondedForce"):
+        """Apply a switching function to a NonbondedForce if self.switch_width is nonzero."""
+        from openff.units.openmm import to_openmm
+
+        if self.switch_width.m > 0:
+            switching_distance = to_openmm(self.cutoff - self.switch_width)
+            force.setSwitchingDistance(switching_distance)
+            force.setUseSwitchingFunction(True)
 
 
 class ElectrostaticsHandler(_NonbondedHandler):

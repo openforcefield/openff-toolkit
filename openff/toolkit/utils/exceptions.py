@@ -243,12 +243,6 @@ class SMIRNOFFSpecUnimplementedError(OpenFFToolkitException):
     """
 
 
-class InvalidSwitchingDistanceError(OpenFFToolkitException):
-    """
-    Exception for when a force field specifies a switch distance greater than the cutoff.
-    """
-
-
 class FractionalBondOrderInterpolationMethodUnsupportedError(OpenFFToolkitException):
     """
     Exception for when an unsupported fractional bond order interpolation assignment method is called.

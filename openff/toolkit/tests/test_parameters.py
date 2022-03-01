@@ -40,7 +40,6 @@ from openff.toolkit.utils.exceptions import (
     DuplicateParameterError,
     IncompatibleParameterError,
     IncompatibleUnitError,
-    InvalidSwitchingDistanceError,
     MissingIndexedAttributeError,
     NotEnoughPointsForInterpolationError,
     ParameterLookupError,
@@ -1748,9 +1747,8 @@ class TestvdWType:
         "cutoff,switch_width,expected_use,expected_switching_distance",
         [
             (9.0 * unit.angstrom, 1.0 * unit.angstrom, True, 8.0 * unit.angstrom),
-            (11.0 * unit.angstrom, 2.0 * unit.angstrom, True, 9.0 * unit.angstrom),
-            (9.0 * unit.angstrom, 9.0 * unit.angstrom, False, 0.0 * unit.angstrom),
-            (9.0 * unit.angstrom, 10.0 * unit.angstrom, False, 0.0 * unit.angstrom),
+            (15.0 * unit.angstrom, 5.0 * unit.angstrom, True, 10.0 * unit.angstrom),
+            (9.0 * unit.angstrom, 0.0 * unit.angstrom, False, 0.0 * unit.angstrom),
         ],
     )
     @pytest.mark.parametrize(
@@ -1789,17 +1787,17 @@ class TestvdWType:
 
         omm_sys = openmm.System()
 
+        vdw_handler.create_force(omm_sys, topology)
+
+        nonbonded_force = [
+            force
+            for force in omm_sys.getForces()
+            if isinstance(force, openmm.NonbondedForce)
+        ][0]
+
+        assert nonbonded_force.getUseSwitchingFunction() == expected_use
+
         if expected_use:
-
-            vdw_handler.create_force(omm_sys, topology)
-
-            nonbonded_force = [
-                force
-                for force in omm_sys.getForces()
-                if isinstance(force, openmm.NonbondedForce)
-            ][0]
-
-            assert nonbonded_force.getUseSwitchingFunction()
 
             assert numpy.isclose(
                 nonbonded_force.getSwitchingDistance().value_in_unit(
@@ -1807,10 +1805,6 @@ class TestvdWType:
                 ),
                 expected_switching_distance.m_as(unit.angstrom),
             )
-
-        else:
-            with pytest.raises(InvalidSwitchingDistanceError, match=str(cutoff.m)):
-                vdw_handler.create_force(omm_sys, topology)
 
     def test_sigma_rmin_half(self):
         """Test the setter/getter behavior or sigma and rmin_half"""
