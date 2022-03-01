@@ -74,10 +74,7 @@ print(value_roundtrip)
   `openff.toolkit.app` module and re-exports for parameter types to the new `openff.toolkit.topology.parametertypes` module.
   This does not affect existing paths and gives some new, easier to remember paths to core objects.
 - [PR #1198](https://github.com/openforcefield/openforcefield/pull/1198): Ensure the vdW switch
-  width is correctly set and enabled. If the switch width is greater than the cutoff distance, it is
-  considered invalid and an exception
-  ([`InvalidSwitchingDistanceError`](openff.toolkit.utils.exceptions.InvalidSwitchingDistanceError))
-  is raised.
+  width is correctly set and enabled.
 
 ### Behaviors changed and bugfixes
 
