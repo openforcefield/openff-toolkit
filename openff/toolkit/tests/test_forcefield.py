@@ -3647,6 +3647,12 @@ class TestForceFieldParameterAssignment:
         ff = ForceField(
             "test_forcefields/test_forcefield.offxml", off_gbsas[gbsa_model]
         )
+
+        # OpenMM 7.7 and older don't properly handle parsing prmtop files with a GBSA model and
+        # a switching function; this bug may be fixed but for testing purposes, simply turn off
+        # the switching function
+        ff["vdW"].switch_width = 0.0 * unit.angstrom
+
         off_top = molecule.to_topology()
         if is_periodic:
             off_top.box_vectors = (
@@ -3695,6 +3701,13 @@ class TestForceFieldParameterAssignment:
             amber_nb_method = openmm.app.forcefield.NoCutoff
             amber_cutoff = None
 
+        # OpenMM will process False to mean "don't use one" and a quantity as "use with this distance"
+        switching_distance: Union[
+            bool, openmm_unit.Quantity
+        ] = off_nonbonded_force.getUseSwitchingFunction()
+        if switching_distance:
+            switching_distance = off_nonbonded_force.getSwitchingDistance()
+
         (
             amber_omm_system,
             amber_omm_topology,
@@ -3707,6 +3720,7 @@ class TestForceFieldParameterAssignment:
             nonbondedCutoff=amber_cutoff,
             gbsaModel="ACE",
             implicitSolventKappa=0.0,
+            switchDistance=switching_distance,
         )
 
         # Retrieve the GBSAForce from both the AMBER and OpenForceField systems
@@ -3781,8 +3795,6 @@ class TestForceFieldParameterAssignment:
             off_nonbonded_force.setNonbondedMethod(openmm.NonbondedForce.NoCutoff)
 
         off_nonbonded_force.setReactionFieldDielectric(1.0)
-
-        # TODO: look into if switching distance is relevant #882
 
         # Create Contexts
         integrator = openmm.VerletIntegrator(1.0 * openmm_unit.femtoseconds)
