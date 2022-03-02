@@ -1753,6 +1753,7 @@ class TestvdWType:
     )
     @pytest.mark.parametrize(
         "method",
+        # It's possible that this test should not cover PME (LJ-PME), see comments in parameters.py
         ["PME", "cutoff"],
     )
     def test_switch_width(

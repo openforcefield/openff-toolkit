@@ -3687,6 +3687,10 @@ class vdWHandler(_NonbondedHandler):
 
                 force.setCutoffDistance(to_openmm(self.cutoff))
 
+        # This applies a switching function whether the vdW method is LJ-PME or cut-off. It's not clear if this is a
+        # valid combination of settings, if this is something that all engines would support, or if it even has an
+        # effect. In OpenMM, it can be applied but it might not have any effect. The SMIRNOFF spec offers no clear
+        # guidance on this combination, but it is possible that is may be revised in the future to do so.
         self._apply_switching_function(force)
 
         # Iterate over all defined Lennard-Jones types, allowing later matches to override earlier ones.
