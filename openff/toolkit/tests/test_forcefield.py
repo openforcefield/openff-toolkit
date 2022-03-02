@@ -2374,7 +2374,7 @@ class TestForceFieldChargeAssignment:
         for particle_index, expected_charge in expected_charges:
             q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
             assert q == expected_charge
-        for particle_index in range(topology.n_topology_particles):
+        for particle_index in range(topology.n_particles):
             q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
             assert q != (0.0 * unit.elementary_charge)
 
@@ -3061,14 +3061,12 @@ class TestForceFieldChargeAssignment:
             assert q == expected_charge
 
         # Ensure the last molecule (ethanol) had _some_ nonzero charge assigned by an AM1BCC implementation
-        for particle_index in range(len(expected_charges), top.n_topology_atoms - 1):
+        for particle_index in range(len(expected_charges), top.n_atoms - 1):
             q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
             assert q != 0 * unit.elementary_charge
 
         # Ensure that iodine has a charge of -1, specified by charge increment model charge_method="formal charge"
-        q, sigma, epsilon = nonbondedForce.getParticleParameters(
-            top.n_topology_atoms - 1
-        )
+        q, sigma, epsilon = nonbondedForce.getParticleParameters(top.n_atoms - 1)
         assert q == -1.0 * openmm_unit.elementary_charge
 
     def test_assign_charges_to_molecule_in_parts_using_multiple_library_charges(self):
@@ -3183,7 +3181,7 @@ class TestForceFieldChargeAssignment:
         nonbondedForce = [
             f for f in omm_system.getForces() if type(f) == NonbondedForce
         ][0]
-        for particle_index in range(top.n_topology_atoms):
+        for particle_index in range(top.n_atoms):
             q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
             assert q != 0 * unit.elementary_charge
 
@@ -4231,9 +4229,7 @@ class TestForceFieldParameterAssignment:
                 idx
             ) == mod_bond_force.getBondParameters(idx)
 
-        for bond1, bond2 in zip(
-            omm_sys_top.topology_bonds, mod_omm_sys_top.topology_bonds
-        ):
+        for bond1, bond2 in zip(omm_sys_top.bonds, mod_omm_sys_top.bonds):
             # 'approx()' because https://github.com/openforcefield/openff-toolkit/issues/994
             assert bond1.fractional_bond_order == pytest.approx(
                 bond2.fractional_bond_order

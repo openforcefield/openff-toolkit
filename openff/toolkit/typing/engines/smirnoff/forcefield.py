@@ -718,7 +718,7 @@ class ForceField:
         if set(assigned_set) != set(topology_set):
             # Form informative error message
             msg = f"{name}: Mismatch between valence terms added and topological terms expected.\n"
-            atoms = [atom for atom in topology.topology_atoms]
+            atoms = [atom for atom in topology.atoms]
             if len(assigned_set.difference(topology_set)) > 0:
                 msg += "Valence terms created that are not present in Topology:\n"
                 msg += render_atoms(assigned_set.difference(topology_set))
@@ -1333,7 +1333,7 @@ class ForceField:
         # create_force call
         # This means that even though virtual sites may have been created via
         # the molecule API, an empty VirtualSites tag must exist in the FF
-        for atom in topology.topology_atoms:
+        for atom in topology.atoms:
             # addParticle(mass.m_as(unit.dalton)) would be safer but slower
             system.addParticle(atom.mass.m)
 
@@ -1570,7 +1570,7 @@ class ForceField:
             molecule.to_topology(), return_topology=True, **kwargs
         )
 
-        if top_with_charges.n_topology_virtual_sites != 0:
+        if top_with_charges.n_virtual_sites != 0:
             raise PartialChargeVirtualSitesError(
                 "get_partial_charges is not supported on molecules with virtual sites"
             )
