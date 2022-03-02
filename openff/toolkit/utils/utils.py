@@ -77,7 +77,8 @@ def requires_package(package_name):
             try:
                 importlib.import_module(package_name)
             except (ImportError, ModuleNotFoundError):
-                raise MissingDependencyError(package_name)
+                package_name_corrected = package_name.replace(".", "-")
+                raise MissingDependencyError(package_name_corrected)
             except Exception as e:
                 raise e
 
