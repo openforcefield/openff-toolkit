@@ -70,7 +70,7 @@ import re
 from collections import OrderedDict, defaultdict
 from enum import Enum
 from itertools import combinations
-from typing import TYPE_CHECKING, Any, List, Optional, Type, Union
+from typing import Any, List, Optional, Type, Union
 
 from openff.units import unit
 from openff.utilities import requires_package
@@ -111,9 +111,6 @@ from openff.toolkit.utils.utils import (
     extract_serialized_units_from_dict,
     object_to_quantity,
 )
-
-if TYPE_CHECKING:
-    import openmm
 
 # =============================================================================================
 # CONFIGURE LOGGER
@@ -3712,7 +3709,7 @@ class vdWHandler(_NonbondedHandler):
             atom_matches, topology, [(atom,) for atom in topology.atoms]
         )
 
-    def _apply_switching_function(self, force: "openmm.NonbondedForce"):
+    def _apply_switching_function(self, force):
         """Apply a switching function to a NonbondedForce if self.switch_width is nonzero."""
         from openff.units.openmm import to_openmm
 
