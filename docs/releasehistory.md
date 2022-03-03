@@ -73,6 +73,8 @@ print(value_roundtrip)
 - [PR #1192](https://github.com/openforcefield/openforcefield/pull/1192): Add re-exports for core classes to the new
   `openff.toolkit.app` module and re-exports for parameter types to the new `openff.toolkit.topology.parametertypes` module.
   This does not affect existing paths and gives some new, easier to remember paths to core objects.
+- [PR #1198](https://github.com/openforcefield/openforcefield/pull/1198): Ensure the vdW switch
+  width is correctly set and enabled.
 
 ### Behaviors changed and bugfixes
 

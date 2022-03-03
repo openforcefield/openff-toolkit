@@ -3647,7 +3647,7 @@ class vdWHandler(_NonbondedHandler):
         """
         float_attrs_to_compare = ["scale12", "scale13", "scale14", "scale15"]
         string_attrs_to_compare = ["potential", "combining_rules", "method"]
-        unit_attrs_to_compare = ["cutoff"]
+        unit_attrs_to_compare = ["cutoff", "switch_width"]
 
         self._check_attributes_are_equal(
             other_handler,
@@ -3684,7 +3684,14 @@ class vdWHandler(_NonbondedHandler):
             else:
                 force.setNonbondedMethod(openmm.NonbondedForce.PME)
                 force.setUseDispersionCorrection(True)
+
                 force.setCutoffDistance(to_openmm(self.cutoff))
+
+        # This applies a switching function whether the vdW method is LJ-PME or cut-off. It's not clear if this is a
+        # valid combination of settings, if this is something that all engines would support, or if it even has an
+        # effect. In OpenMM, it can be applied but it might not have any effect. The SMIRNOFF spec offers no clear
+        # guidance on this combination, but it is possible that is may be revised in the future to do so.
+        self._apply_switching_function(force)
 
         # Iterate over all defined Lennard-Jones types, allowing later matches to override earlier ones.
         atom_matches = self.find_matches(topology)
@@ -3705,6 +3712,15 @@ class vdWHandler(_NonbondedHandler):
         self._check_all_valence_terms_assigned(
             atom_matches, topology, [(atom,) for atom in topology.atoms]
         )
+
+    def _apply_switching_function(self, force):
+        """Apply a switching function to a NonbondedForce if self.switch_width is nonzero."""
+        from openff.units.openmm import to_openmm
+
+        if self.switch_width.m > 0:
+            switching_distance = to_openmm(self.cutoff - self.switch_width)
+            force.setSwitchingDistance(switching_distance)
+            force.setUseSwitchingFunction(True)
 
 
 class ElectrostaticsHandler(_NonbondedHandler):
