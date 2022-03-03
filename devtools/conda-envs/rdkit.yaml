@@ -21,7 +21,8 @@ dependencies:
   - packaging
     # Removed until a new release which targets openff-toolkit is made.
 #  - openmmforcefields
-  - openmm
+  # Unpin when https://github.com/openmm/openmm/issues/3495 is resolved
+  - openmm =7.6
   - openff-forcefields
   - openff-units >=0.1.5
   - openff-utilities
