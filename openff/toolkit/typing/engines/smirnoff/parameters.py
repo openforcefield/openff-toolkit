@@ -2681,9 +2681,9 @@ class BondHandler(ParameterHandler):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         # Default value for fractional_bondorder_interpolation depends on section version
-        if self.version == 0.3 and "fractional_bondorder_interpolation" not in kwargs:
+        if self.version == 0.3 and "fractional_bondorder_method" not in kwargs:
             self.fractional_bondorder_method = "none"
-        elif self.version == 0.4 and "fractional_bondorder_interpolation" not in kwargs:
+        elif self.version == 0.4 and "fractional_bondorder_method" not in kwargs:
             self.fractional_bondorder_method = "AM1-Wiberg"
 
         # Default value for potential depends on section version

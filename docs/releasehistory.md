@@ -93,6 +93,11 @@ print(value_roundtrip)
   [`Atom.symbol`](openff.toolkit.topology.molecule.Atom.symbol),
   [`Atom.mass`](openff.toolkit.topology.molecule.Atom.mass), and
   [`Atom.atomic_number`](openff.toolkit.topology.molecule.Atom.atomic_number).
+- [PR #1209](https://github.com/openforcefield/openforcefield/pull/1209): Fixes 
+  [Issue #1073](https://github.com/openforcefield/openff-toolkit/issues/1073), where the
+  `fractional_bondorder_method` kwarg to the 
+  [`BondHandler`](openff.toolkit.typing.engines.smirnoff.parameters.BondHandler) initializer 
+  was being ignored.
 
 ### Examples added
 
