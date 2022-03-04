@@ -1403,7 +1403,7 @@ class TestBondHandler:
         bh2 = BondHandler(version=0.4)
         assert bh2.fractional_bondorder_method == "AM1-Wiberg"
         assert bh2.potential == "(k/2)*(r-length)^2"
-        bh3 = BondHandler(version=0.3, fractional_bondorder_method='AM1-Wiberg')
+        bh3 = BondHandler(version=0.3, fractional_bondorder_method="AM1-Wiberg")
         assert bh3.fractional_bondorder_method == "AM1-Wiberg"
         assert bh3.potential == "harmonic"
 
