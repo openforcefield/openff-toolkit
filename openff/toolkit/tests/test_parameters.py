@@ -1405,6 +1405,7 @@ class TestBondHandler:
         assert bh2.potential == "(k/2)*(r-length)^2"
         bh3 = BondHandler(version=0.3, fractional_bondorder_method="AM1-Wiberg")
         assert bh3.fractional_bondorder_method == "AM1-Wiberg"
+        assert bh3.fractional_bondorder_interpolation == "linear"
         assert bh3.potential == "harmonic"
 
     def test_harmonic_potentials_are_compatible(self):
