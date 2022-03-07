@@ -321,7 +321,7 @@ class TestTopology:
         """Test Topology.virtual_site function (get virtual site from index)"""
         topology = Topology()
         topology.add_molecule(ethane_from_smiles_w_vsites)
-        assert topology.n_sites == 2
+        assert topology.n_virtual_sites == 2
         topology.add_molecule(propane_from_smiles_w_vsites)
         assert topology.n_virtual_sites == 4
         with pytest.raises(Exception) as context:
@@ -339,7 +339,7 @@ class TestTopology:
 
         n_equal_atoms = 0
         for atom in topology.atoms:
-            for vsite in topology.topology_virtual_sites:
+            for vsite in topology.virtual_sites:
                 for vsite_atom in vsite.atoms:
                     if atom == vsite_atom:
                         n_equal_atoms += 1
