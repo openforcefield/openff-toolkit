@@ -5228,7 +5228,7 @@ class VirtualSiteHandler(_NonbondedHandler):
         def __eq__(self, obj):
             if type(self) != type(obj):
                 return False
-            A = ["name"]
+            A = ["name", "smirks"]
             are_equal = [getattr(self, a) == getattr(obj, a) for a in A]
             return all(are_equal)
 
@@ -5626,23 +5626,43 @@ class VirtualSiteHandler(_NonbondedHandler):
                         for new_match in v:
                             unique = True
                             new_item = new_match._parameter_type
-                            for idx, (name, existing_match) in enumerate(
-                                matches[k].items()
-                            ):
-                                existing_item = existing_match._parameter_type
-                                same_parameter = False
+                            for existing_indices in matches:
+                                # only go over existing indices which are a
+                                # permutation of our current match
+                                if set(k).difference(existing_indices):
+                                    continue
+                                # the goal here is to go over all current match
+                                # indices, and potentially clear them out if
+                                # our new parameter is a match
+                                for idx, (name, existing_match) in enumerate(
+                                    list(matches[existing_indices].items())
+                                ):
+                                    existing_item = existing_match._parameter_type
+                                    same_parameter = False
 
-                                same_type = type(existing_item) == type(new_item)
-                                if same_type:
-                                    same_parameter = existing_item == new_item
+                                    same_type = type(existing_item) == type(new_item)
+                                    if same_type:
+                                        same_parameter = existing_item == new_item
 
-                                # same, so replace it to have a FIFO priority
-                                # and the last parameter matching wins
-                                if same_parameter:
-                                    matches[k][new_item.name] = new_match
-                                    unique = False
+                                    # same, so replace it to have a FIFO priority
+                                    # and the last parameter matching wins
+                                    if same_parameter:
+                                        matches[k][new_item.name] = new_match
+                                        unique = False
+                                    else:
+                                        # If we are here, we have the same
+                                        # set of indices as the new match,
+                                        # but the parameter is not the same.
+                                        # In this case, we need to clear out
+                                        # any existing vsites, since this
+                                        # new incoming vsite needs to replace
+                                        # them
+                                        matches[existing_indices].pop(
+                                            existing_item.name
+                                        )
                             if unique:
                                 marginal_matches.append(new_match)
+
                         matches[k].update(
                             {p._parameter_type.name: p for p in marginal_matches}
                         )
