@@ -75,6 +75,8 @@ print(value_roundtrip)
   This does not affect existing paths and gives some new, easier to remember paths to core objects.
 - [PR #1198](https://github.com/openforcefield/openforcefield/pull/1198): Ensure the vdW switch
   width is correctly set and enabled.
+- [PR #1213](https://github.com/openforcefield/openff-toolkit/pull/1213): Removes
+  `Topology.charge_model` and `Topology.fractional_bond_order_model`.
 
 ### Behaviors changed and bugfixes
 
