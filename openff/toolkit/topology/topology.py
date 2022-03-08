@@ -617,7 +617,6 @@ class Topology(Serializable):
         """
         return self._constrained_atom_pairs
 
-
     @property
     def n_molecules(self):
         """Returns the number of molecules in this Topology
