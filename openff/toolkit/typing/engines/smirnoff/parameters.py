@@ -5649,17 +5649,19 @@ class VirtualSiteHandler(_NonbondedHandler):
                                     if same_parameter:
                                         matches[k][new_item.name] = new_match
                                         unique = False
-                                    else:
+                                    elif new_item.name in matches[existing_indices]:
                                         # If we are here, we have the same
                                         # set of indices as the new match,
-                                        # but the parameter is not the same.
+                                        # but the parameter is not the same, even
+                                        # though the name is, meaning we just
+                                        # overrode the name/slot with this param.
                                         # In this case, we need to clear out
                                         # any existing vsites, since this
                                         # new incoming vsite needs to replace
                                         # them
-                                        matches[existing_indices].pop(
-                                            existing_item.name
-                                        )
+                                        matches[existing_indices].pop(new_item.name)
+                                        matches[k][new_item.name] = new_match
+                                        unique = False
                             if unique:
                                 marginal_matches.append(new_match)
 
