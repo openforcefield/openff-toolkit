@@ -579,7 +579,6 @@ class TestTopology:
             )
             assert mod_imp in top.amber_impropers
 
-    # test_get_fractional_bond_order
     # test_two_of_same_molecule
     # test_two_different_molecules
     # test_to_from_dict

@@ -41,8 +41,6 @@ from openff.toolkit.utils.exceptions import (
 from openff.toolkit.utils.serialization import Serializable
 from openff.toolkit.utils.toolkits import (
     ALLOWED_AROMATICITY_MODELS,
-    ALLOWED_CHARGE_MODELS,
-    ALLOWED_FRACTIONAL_BOND_ORDER_MODELS,
     DEFAULT_AROMATICITY_MODEL,
     GLOBAL_TOOLKIT_REGISTRY,
 )
@@ -440,6 +438,7 @@ class Topology(Serializable):
         self._molecules = list()
         self._cached_chemically_identical_molecules = None
 
+    # Should this be deprecated?
     @property
     def reference_molecules(self) -> List[Molecule]:
         """
@@ -608,39 +607,6 @@ class Topology(Serializable):
             )
 
     @property
-    def charge_model(self):
-        """
-        Get the partial charge model applied to all molecules in the topology.
-
-        Returns
-        -------
-        charge_model : str
-            Charge model used for all molecules in the Topology.
-
-        """
-        return self._charge_model
-
-    @charge_model.setter
-    def charge_model(self, charge_model):
-        """
-        Set the partial charge model used for all molecules in the topology.
-
-        Parameters
-        ----------
-        charge_model : str
-            Charge model to use for all molecules in the Topology.
-            Allowed values: ['AM1-BCC']
-            * ``AM1-BCC``: Canonical AM1-BCC scheme
-        """
-        if not charge_model in ALLOWED_CHARGE_MODELS:
-            raise ValueError(
-                "Charge model must be one of {}; specified '{}'".format(
-                    ALLOWED_CHARGE_MODELS, charge_model
-                )
-            )
-        self._charge_model = charge_model
-
-    @property
     def constrained_atom_pairs(self):
         """Returns the constrained atom pairs of the Topology
 
@@ -651,37 +617,6 @@ class Topology(Serializable):
         """
         return self._constrained_atom_pairs
 
-    @property
-    def fractional_bond_order_model(self):
-        """
-        Get the fractional bond order model for the Topology.
-
-        Returns
-        -------
-        fractional_bond_order_model : str
-            Fractional bond order model in use.
-
-        """
-        return self._fractional_bond_order_model
-
-    @fractional_bond_order_model.setter
-    def fractional_bond_order_model(self, fractional_bond_order_model):
-        """
-        Set the fractional bond order model applied to all molecules in the topology.
-
-        Parameters
-        ----------
-        fractional_bond_order_model : str
-            Fractional bond order model to use. One of: ['Wiberg']
-
-        """
-        if not fractional_bond_order_model in ALLOWED_FRACTIONAL_BOND_ORDER_MODELS:
-            raise ValueError(
-                "Fractional bond order model must be one of {}; specified '{}'".format(
-                    ALLOWED_FRACTIONAL_BOND_ORDER_MODELS, fractional_bond_order_model
-                )
-            )
-        self._fractional_bond_order_model = fractional_bond_order_model
 
     @property
     def n_molecules(self):
