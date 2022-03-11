@@ -102,11 +102,19 @@ print(value_roundtrip)
   `fractional_bondorder_method` kwarg to the 
   [`BondHandler`](openff.toolkit.typing.engines.smirnoff.parameters.BondHandler) initializer 
   was being ignored.
+- [PR #1214](https://github.com/openforcefield/openforcefield/pull/1214): A long overdue fix
+  for [Issue #837](https://github.com/openforcefield/openff-toolkit/issues/837)! If OpenEye is
+  available, the `ToolkitAM1BCCHandler` will use the ELF10 method to select conformers for AM1BCC
+  charge assignment. 
 
 ### Examples added
 
 - [PR #1113](https://github.com/openforcefield/openff-toolkit/pull/1113): Updates the Amber/GROMACS
   example to use Interchange.
+
+### Tests updated
+- [PR #1188](https://github.com/openforcefield/openff-toolkit/pull/1188): Add an `<Electrostatics>`
+  section to the TIP3P force field file used in testing (`test_forcefields/tip3p.offxml`)
 
 ## 0.10.1 Minor feature and bugfix release
 
