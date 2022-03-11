@@ -4196,10 +4196,17 @@ class ToolkitAM1BCCHandler(_NonbondedHandler):
             # If the molecule wasn't already assigned charge values, calculate them here
             toolkit_registry = kwargs.get("toolkit_registry", GLOBAL_TOOLKIT_REGISTRY)
             try:
+                # If OpenEye is available, use ELF10
+                partial_charge_method = "am1bcc"
+                for available_toolkit_wrapper in toolkit_registry.registered_toolkits:
+                    if "OpenEye" in str(available_toolkit_wrapper):
+                        partial_charge_method = "am1bccelf10"
+
                 # We don't need to generate conformers here, since that will be done by default in
                 # compute_partial_charges with am1bcc if the use_conformers kwarg isn't defined
                 unique_mol.assign_partial_charges(
-                    partial_charge_method="am1bcc", toolkit_registry=toolkit_registry
+                    partial_charge_method=partial_charge_method,
+                    toolkit_registry=toolkit_registry,
                 )
             except Exception as e:
                 warnings.warn(str(e), Warning)

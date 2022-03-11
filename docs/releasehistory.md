@@ -100,6 +100,10 @@ print(value_roundtrip)
   `fractional_bondorder_method` kwarg to the 
   [`BondHandler`](openff.toolkit.typing.engines.smirnoff.parameters.BondHandler) initializer 
   was being ignored.
+- [PR #1214](https://github.com/openforcefield/openforcefield/pull/1214): A long overdue fix
+  for [Issue #837](https://github.com/openforcefield/openff-toolkit/issues/837)! If OpenEye is
+  available, the `ToolkitAM1BCCHandler` will use the ELF10 method to select conformers for AM1BCC
+  charge assignment. 
 
 ### Examples added
 
