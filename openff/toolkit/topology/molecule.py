@@ -34,19 +34,18 @@ import warnings
 from abc import abstractmethod
 from collections import OrderedDict, UserDict
 from copy import deepcopy
-from typing import TYPE_CHECKING, List, Optional, Union
+from typing import TYPE_CHECKING, Generator, List, Optional, Tuple, Union
 
 import networkx as nx
 import numpy as np
-import mendeleev
-from mendeleev import element
-from mendeleev.fetch import fetch_table
-
 from openff.units import unit
+from openff.units.elements import MASSES, SYMBOLS
 from openff.units.openmm import to_openmm
 
 if TYPE_CHECKING:
+    from openff.toolkit.topology._mm_molecule import _SimpleAtom, _SimpleMolecule
     import networkx as nx
+    from openff.units.unit import Quantity
 
 from cached_property import cached_property
 from packaging import version
@@ -83,12 +82,6 @@ from openff.toolkit.utils.utils import (
 # =============================================================================================
 # GLOBAL PARAMETERS
 # =============================================================================================
-
-_MENDELEEV_ELEMENTS_DATAFRAME = fetch_table("elements")
-_ATOMIC_NUMBERS_TO_ELEMENTS = {
-    row.atomic_number: getattr(mendeleev, row.symbol)
-    for row in _MENDELEEV_ELEMENTS_DATAFRAME.itertuples()
-}
 
 # TODO: Can we have the `ALLOWED_*_MODELS` list automatically appear in the docstrings below?
 # TODO: Should `ALLOWED_*_MODELS` be objects instead of strings?
@@ -414,18 +407,7 @@ class Atom(Particle):
         self._stereochemistry = value
 
     @property
-    def element(self):
-        """
-        The element of this atom.
-
-        Returns
-        -------
-        mendeleev.models.Element
-        """
-        return _ATOMIC_NUMBERS_TO_ELEMENTS[self.atomic_number]
-
-    @property
-    def atomic_number(self):
+    def atomic_number(self) -> int:
         """
         The integer atomic number of the atom.
 
@@ -433,16 +415,25 @@ class Atom(Particle):
         return self._atomic_number
 
     @property
-    def mass(self):
+    def symbol(self) -> str:
+        """
+        Return the symbol implied by the atomic number of this atom
+
+        """
+        return SYMBOLS[self.atomic_number]
+
+    @property
+    def mass(self) -> "Quantity":
         """
         The standard atomic weight (abundance-weighted isotopic mass) of the atomic site.
 
-        .. todo :: Should we discriminate between standard atomic weight and most abundant isotopic mass?
-
-        TODO (from jeff): Are there atoms that have different chemical properties based on their isotopes?
-
+        The mass is reported in units of Dalton.
         """
-        return self.element.mass
+        # This is assumed elsewhere in the codebase to be in units of Dalton, which is what is
+        # reported by MASSES as of openff-units v0.1.5. There may be performance implications if
+        # other functions need to verify or convert units.
+        # https://github.com/openforcefield/openff-toolkit/pull/1182#discussion_r802078273
+        return MASSES[self.atomic_number]
 
     @property
     def name(self):
@@ -2463,7 +2454,7 @@ class FrozenMolecule(Serializable):
 
         element_counts = defaultdict(int)
         for atom in self.atoms:
-            symbol = atom.element.symbol
+            symbol = atom.symbol
             element_counts[symbol] += 1
             # TODO: It may be worth exposing this as a user option, i.e. to avoid multiple ligands
             # parameterized with OpenFF clashing because they have atom names like O1x, H3x, etc.
@@ -2593,7 +2584,7 @@ class FrozenMolecule(Serializable):
 
         id = ""
         for atom in self.atoms:
-            id += f"{atom.element.symbol}_{atom.formal_charge}_{atom.stereochemistry}__"
+            id += f"{atom.symbol}_{atom.formal_charge}_{atom.stereochemistry}__"
         for bond in self.bonds:
             id += f"{bond.bond_order}_{bond.stereochemistry}_{bond.atom1_index}_{bond.atom2_index}__"
         # return hash(id)
@@ -4755,23 +4746,6 @@ class FrozenMolecule(Serializable):
         }
         return amber_impropers
 
-    def _nth_degree_neighbors(self, n_degrees):
-        import networkx as nx
-
-        mol_graph = self.to_networkx()
-
-        for node_i in mol_graph.nodes:
-            for node_j in mol_graph.nodes:
-                if node_i == node_j:
-                    continue
-
-                path_length = nx.shortest_path_length(mol_graph, node_i, node_j)
-
-                if path_length == n_degrees:
-                    if node_i > node_j:
-                        continue
-                    yield (self.atoms[node_i], self.atoms[node_j])
-
     def nth_degree_neighbors(self, n_degrees):
         """
         Return canonicalized pairs of atoms whose shortest separation is `exactly` n bonds.
@@ -4804,7 +4778,9 @@ class FrozenMolecule(Serializable):
                 f"path lengths of {n_degrees}."
             )
         else:
-            return self._nth_degree_neighbors(n_degrees=n_degrees)
+            return _nth_degree_neighbors_from_graphlike(
+                graphlike=self, n_degrees=n_degrees
+            )
 
     @property
     def total_charge(self):
@@ -5000,7 +4976,8 @@ class FrozenMolecule(Serializable):
             molecule = toolkit.from_iupac(
                 iupac_name,
                 allow_undefined_stereo=allow_undefined_stereo,
-                _cls=cls ** kwargs,
+                _cls=cls,
+                **kwargs,
             )
         else:
             raise Exception(
@@ -5541,7 +5518,7 @@ class FrozenMolecule(Serializable):
             for j, atom_coords in enumerate(geometry.m_as(unit.angstrom)):
                 x, y, z = atom_coords
                 xyz_data.write(
-                    f"{self.atoms[j].element.symbol}       {x: .10f}   {y: .10f}   {z: .10f}\n"
+                    f"{SYMBOLS[self.atoms[j].atomic_number]}       {x: .10f}   {y: .10f}   {z: .10f}\n"
                 )
 
             # now we up the frame count
@@ -5915,7 +5892,7 @@ class FrozenMolecule(Serializable):
         connectivity = [
             (bond.atom1_index, bond.atom2_index, bond.bond_order) for bond in self.bonds
         ]
-        symbols = [atom.element.symbol for atom in self.atoms]
+        symbols = [SYMBOLS[atom.atomic_number] for atom in self.atoms]
         if extras is not None:
             extras[
                 "canonical_isomeric_explicit_hydrogen_mapped_smiles"
@@ -7259,8 +7236,10 @@ def _atom_nums_to_hill_formula(atom_nums: List[int]) -> str:
     Hill formula. See https://en.wikipedia.org/wiki/Chemical_formula#Hill_system"""
     from collections import Counter
 
-    atom_symbol_counts = Counter(_ATOMIC_NUMBERS_TO_ELEMENTS[atom_num].symbol
-                                 for atom_num in atom_nums)
+    SYMBOLS_ = deepcopy(SYMBOLS)
+    SYMBOLS_[0] = "X"
+
+    atom_symbol_counts = Counter(SYMBOLS_[atom_num] for atom_num in atom_nums)
 
     formula = []
     # Check for C and H first, to make a correct hill formula
@@ -7279,6 +7258,46 @@ def _atom_nums_to_hill_formula(atom_nums: List[int]) -> str:
             formula.append(str(count))
 
     return "".join(formula)
+
+
+def _nth_degree_neighbors_from_graphlike(
+    graphlike: Union[Molecule, "_SimpleMolecule"], n_degrees: int
+) -> Generator[
+    Union[Tuple[Atom, Atom], Tuple["_SimpleAtom", "_SimpleAtom"]], None, None
+]:
+    """
+    Given a graph-like object, return a tuple of the nth degree neighbors of each atom.
+
+    The input `graphlike` object must provide a .to_networkx() method and an
+    `atoms` property that can be indexed.
+
+    See Molecule.nth_degree_neighbors for more details.
+
+    Parameters
+    ----------
+    graphlike : Union[Molecule, _SimpleMolecule]
+        The graph-like object to get the neighbors of.
+    n: int
+        The number of bonds separating atoms in each pair
+
+    Returns
+    -------
+    neighbors: iterator of tuple of Atom
+        Tuples (len 2) of atom that are separated by ``n`` bonds.
+    """
+    graph = graphlike.to_networkx()
+
+    for node_i in graph.nodes:
+        for node_j in graph.nodes:
+            if node_i == node_j:
+                continue
+
+            path_length = nx.shortest_path_length(graph, node_i, node_j)
+
+            if path_length == n_degrees:
+                if node_i > node_j:
+                    continue
+                yield (graphlike.atoms[node_i], graphlike.atoms[node_j])
 
 
 class HierarchyScheme:

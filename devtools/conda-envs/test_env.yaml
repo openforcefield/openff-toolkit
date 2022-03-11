@@ -7,18 +7,17 @@ dependencies:
   - python
   - pip
   - packaging
-  - openmm >=7.6
+  # Unpin when https://github.com/openmm/openmm/issues/3495 is resolved
+  - openmm =7.6
   - openff-forcefields
-  - openff-units >=0.1.4
+  - openff-units >=0.1.5
   - openff-utilities
   - smirnoff99Frosst
   - numpy
   - networkx
   - ambertools
   - rdkit
-  - mendeleev
   - xmltodict
-  - mendeleev
     # Test-only/optional/dev
   - pytest
   - pytest-cov
@@ -38,7 +37,6 @@ dependencies:
   - qcelemental
   - qcportal
   - qcengine
-  - openff-interchange
   - mdtraj
   # Typing
   - mypy
@@ -49,3 +47,4 @@ dependencies:
     - types-toml
     - types-PyYAML
     - mongo-types
+    - git+https://github.com/openforcefield/openff-interchange.git@v0.2.0-alpha.1

@@ -46,6 +46,20 @@ __all__ = [
     "GBSAHandler",
     "ToolkitAM1BCCHandler",
     "VirtualSiteHandler",
+    "ParameterType",
+    "ConstraintType",
+    "BondType",
+    "AngleType",
+    "ProperTorsionType",
+    "ImproperTorsionType",
+    "vdWType",
+    "LibraryChargeType",
+    "GBSAType",
+    "ChargeIncrementType",
+    "VirtualSiteBondChargeType",
+    "VirtualSiteMonovalentLonePairType",
+    "VirtualSiteDivalentLonePairType",
+    "VirtualSiteTrivalentLonePairType",
 ]
 import abc
 import copy
@@ -2398,7 +2412,7 @@ class ParameterHandler(_ParameterAttributeHandler):
                 for atom_idx in unassigned_tuple:
                     atom = topology.atom(atom_idx)
                     unassigned_atoms.append(atom)
-                    unassigned_str += f"({atom.name} {atom.element.symbol}), "
+                    unassigned_str += f"({atom.name} {atom.symbol}), "
                 unassigned_atom_tuples.append(tuple(unassigned_atoms))
             err_msg += (
                 "{parameter_handler} was not able to find parameters for the following valence terms:\n"
@@ -2600,13 +2614,13 @@ class BondHandler(ParameterHandler):
 
         length = ParameterAttribute(default=None, unit=unit.angstrom)
         k = ParameterAttribute(
-            default=None, unit=unit.kilocalorie / unit.mole / unit.angstrom ** 2
+            default=None, unit=unit.kilocalorie / unit.mole / unit.angstrom**2
         )
 
         # fractional bond order params
         length_bondorder = MappedParameterAttribute(default=None, unit=unit.angstrom)
         k_bondorder = MappedParameterAttribute(
-            default=None, unit=unit.kilocalorie / unit.mole / unit.angstrom ** 2
+            default=None, unit=unit.kilocalorie / unit.mole / unit.angstrom**2
         )
 
         def __init__(self, **kwargs):
@@ -2667,9 +2681,9 @@ class BondHandler(ParameterHandler):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         # Default value for fractional_bondorder_interpolation depends on section version
-        if self.version == 0.3 and "fractional_bondorder_interpolation" not in kwargs:
+        if self.version == 0.3 and "fractional_bondorder_method" not in kwargs:
             self.fractional_bondorder_method = "none"
-        elif self.version == 0.4 and "fractional_bondorder_interpolation" not in kwargs:
+        elif self.version == 0.4 and "fractional_bondorder_method" not in kwargs:
             self.fractional_bondorder_method = "AM1-Wiberg"
 
         # Default value for potential depends on section version
@@ -2904,7 +2918,7 @@ class AngleHandler(ParameterHandler):
         _ELEMENT_NAME = "Angle"
 
         angle = ParameterAttribute(unit=unit.degree)
-        k = ParameterAttribute(unit=unit.kilocalorie / unit.mole / unit.degree ** 2)
+        k = ParameterAttribute(unit=unit.kilocalorie / unit.mole / unit.degree**2)
 
     _TAGNAME = "Angles"  # SMIRNOFF tag name to process
     _INFOTYPE = AngleType  # class to hold force type info
@@ -3633,7 +3647,7 @@ class vdWHandler(_NonbondedHandler):
         """
         float_attrs_to_compare = ["scale12", "scale13", "scale14", "scale15"]
         string_attrs_to_compare = ["potential", "combining_rules", "method"]
-        unit_attrs_to_compare = ["cutoff"]
+        unit_attrs_to_compare = ["cutoff", "switch_width"]
 
         self._check_attributes_are_equal(
             other_handler,
@@ -3670,7 +3684,14 @@ class vdWHandler(_NonbondedHandler):
             else:
                 force.setNonbondedMethod(openmm.NonbondedForce.PME)
                 force.setUseDispersionCorrection(True)
+
                 force.setCutoffDistance(to_openmm(self.cutoff))
+
+        # This applies a switching function whether the vdW method is LJ-PME or cut-off. It's not clear if this is a
+        # valid combination of settings, if this is something that all engines would support, or if it even has an
+        # effect. In OpenMM, it can be applied but it might not have any effect. The SMIRNOFF spec offers no clear
+        # guidance on this combination, but it is possible that is may be revised in the future to do so.
+        self._apply_switching_function(force)
 
         # Iterate over all defined Lennard-Jones types, allowing later matches to override earlier ones.
         atom_matches = self.find_matches(topology)
@@ -3691,6 +3712,15 @@ class vdWHandler(_NonbondedHandler):
         self._check_all_valence_terms_assigned(
             atom_matches, topology, [(atom,) for atom in topology.atoms]
         )
+
+    def _apply_switching_function(self, force):
+        """Apply a switching function to a NonbondedForce if self.switch_width is nonzero."""
+        from openff.units.openmm import to_openmm
+
+        if self.switch_width.m > 0:
+            switching_distance = to_openmm(self.cutoff - self.switch_width)
+            force.setSwitchingDistance(switching_distance)
+            force.setUseSwitchingFunction(True)
 
 
 class ElectrostaticsHandler(_NonbondedHandler):
@@ -4485,8 +4515,8 @@ class GBSAHandler(ParameterHandler):
     solute_dielectric = ParameterAttribute(default=1, converter=float)
     sa_model = ParameterAttribute(default="ACE", converter=_allow_only(["ACE", None]))
     surface_area_penalty = ParameterAttribute(
-        default=5.4 * unit.calorie / unit.mole / unit.angstrom ** 2,
-        unit=unit.calorie / unit.mole / unit.angstrom ** 2,
+        default=5.4 * unit.calorie / unit.mole / unit.angstrom**2,
+        unit=unit.calorie / unit.mole / unit.angstrom**2,
     )
     solvent_radius = ParameterAttribute(default=1.4 * unit.angstrom, unit=unit.angstrom)
 
@@ -4501,7 +4531,7 @@ class GBSAHandler(ParameterHandler):
         if self.gb_model == "HCT":
             if (
                 self.surface_area_penalty
-                != 5.4 * unit.calorie / unit.mole / unit.angstrom ** 2
+                != 5.4 * unit.calorie / unit.mole / unit.angstrom**2
             ) and (self.sa_model is not None):
                 raise IncompatibleParameterError(
                     f"The current implementation of HCT GBSA does not "
@@ -4527,7 +4557,7 @@ class GBSAHandler(ParameterHandler):
         if self.gb_model == "OBC1":
             if (
                 self.surface_area_penalty
-                != 5.4 * unit.calorie / unit.mole / unit.angstrom ** 2
+                != 5.4 * unit.calorie / unit.mole / unit.angstrom**2
             ) and (self.sa_model is not None):
                 raise IncompatibleParameterError(
                     f"The current implementation of OBC1 GBSA does not "
@@ -5261,6 +5291,30 @@ class VirtualSiteHandler(_NonbondedHandler):
 
             return fn(*args, **kwargs)
 
+        @abc.abstractmethod
+        def add_virtual_site(self, molecule, orientations, replace=False):
+            """
+            Add a virtual site to the molecule
+
+            Parameters
+            ----------
+            molecule : openff.toolkit.topology.molecule.Molecule
+                The molecule to add the virtual site to
+            orientations : List[Tuple[int]]
+                A list of orientation tuples which define the permuations used
+                to contruct the geometry of the virtual site particles
+            replace : bool, default=False
+                Replace this virtual site if it already exists in the molecule
+
+            Returns
+            -------
+            off_idx : int
+                The index of the first particle added due to this virtual site
+
+            .. warning :: This API is experimental and subject to change.
+            """
+            raise NotImplementedError
+
     class VirtualSiteBondChargeType(VirtualSiteType):
         """A SMIRNOFF virtual site bond charge type
 
@@ -5874,9 +5928,7 @@ class VirtualSiteHandler(_NonbondedHandler):
             else:
                 sigma = ljtype.sigma
 
-            # create the vsite particle
-            mass = 0.0
-            vsite_idx = system.addParticle(mass)
+            vsite_idx = system.addParticle(mass=0.0)
             ids.append(vsite_idx)
 
             logger.debug(
@@ -5921,6 +5973,25 @@ class VirtualSiteHandler(_NonbondedHandler):
                 )
 
         return ids
+
+
+# ======================================================================
+# PARAMETERTYPE RE-EXPORTS
+# ======================================================================
+
+ConstraintType = ConstraintHandler.ConstraintType
+BondType = BondHandler.BondType
+AngleType = AngleHandler.AngleType
+ProperTorsionType = ProperTorsionHandler.ProperTorsionType
+ImproperTorsionType = ImproperTorsionHandler.ImproperTorsionType
+vdWType = vdWHandler.vdWType
+LibraryChargeType = LibraryChargeHandler.LibraryChargeType
+GBSAType = GBSAHandler.GBSAType
+ChargeIncrementType = ChargeIncrementModelHandler.ChargeIncrementType
+VirtualSiteBondChargeType = VirtualSiteHandler.VirtualSiteBondChargeType
+VirtualSiteMonovalentLonePairType = VirtualSiteHandler.VirtualSiteMonovalentLonePairType
+VirtualSiteDivalentLonePairType = VirtualSiteHandler.VirtualSiteDivalentLonePairType
+VirtualSiteTrivalentLonePairType = VirtualSiteHandler.VirtualSiteTrivalentLonePairType
 
 
 if __name__ == "__main__":
