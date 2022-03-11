@@ -763,10 +763,15 @@ class TestTopology:
     @requires_rdkit
     def test_to_file_units_check(self):
         """
-        Checks whether writing pdb with unitless positions, Angstrom positions,
-        nanometer positions, result in the same output
+        Checks that writing a PDB file with different coordinate representations results in the same output.
+        - Angstrom "openff units" (default behavior if using Molecule.conformers[0])
+        - nanometer "openff units"
+        - unitless NumPy array
+        - converted OpenMM quantity
         """
         from tempfile import NamedTemporaryFile
+
+        from openff.units.openmm import to_openmm
 
         from openff.toolkit.topology import Molecule, Topology
 
@@ -776,41 +781,26 @@ class TestTopology:
         )
         topology.add_molecule(mol)
         positions_angstrom = mol.conformers[0]
-        count = 1
-        # Write the molecule to PDB and ensure that the X coordinate of the first atom is 10.172
-        with NamedTemporaryFile(suffix=".pdb") as iofile:
-            topology.to_file(iofile.name, positions_angstrom)
-            data = open(iofile.name).readlines()
-            for line in data:
-                if line.startswith("HETATM") and count == 1:
-                    count = count + 1
-                    coord = line.split()[-6]
-        assert coord == "10.172"
 
-        # Do the same check, but feed in equivalent positions measured in nanometers and ensure the PDB is still the same
-        count = 1
-        coord = None
-        with NamedTemporaryFile(suffix=".pdb") as iofile:
-            positions_nanometer = positions_angstrom.to(unit.nanometer)
-            topology.to_file(iofile.name, positions_nanometer)
-            data = open(iofile.name).readlines()
-            for line in data:
-                if line.startswith("HETATM") and count == 1:
-                    count = count + 1
-                    coord = line.split()[-6]
-        assert coord == "10.172"
+        def _check_file(topology, coordinates):
+            # Write the molecule to PDB and ensure that the X coordinate of the first atom is 10.172
+            count = 1
+            with NamedTemporaryFile(suffix=".pdb") as iofile:
+                topology.to_file(iofile.name, coordinates)
+                data = open(iofile.name).readlines()
+                for line in data:
+                    if line.startswith("HETATM") and count == 1:
+                        count = count + 1
+                        coord = line.split()[-6]
+            assert coord == "10.172"
 
-        count = 1
-        coord = "abc"
-        with NamedTemporaryFile(suffix=".pdb") as iofile:
-            positions_unitless = positions_angstrom.m
-            topology.to_file(iofile.name, positions_unitless)
-            data = open(iofile.name).readlines()
-            for line in data:
-                if line.startswith("HETATM") and count == 1:
-                    count = count + 1
-                    coord = line.split()[-6]
-        assert coord == "10.172"
+        _check_file(topology, coordinates=positions_angstrom)
+        _check_file(topology, coordinates=positions_angstrom.to(unit.nanometer))
+        _check_file(topology, coordinates=positions_angstrom.m)
+        _check_file(topology, coordinates=to_openmm(positions_angstrom))
+
+        with pytest.raises(ValueError, match="Could not process.*list.*"):
+            _check_file(topology, coordinates=positions_angstrom.m.tolist())
 
     @requires_rdkit
     def test_to_file_fileformat_lettercase(self):

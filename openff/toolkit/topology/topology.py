@@ -1634,7 +1634,9 @@ class Topology(Serializable):
         return omm_topology
 
     @requires_package("openmm")
-    def to_file(self, filename, positions, file_format="PDB", keepIds=False):
+    def to_file(
+        self, filename: str, positions, file_format: str = "PDB", keepIds=False
+    ):
         """
         Save coordinates and topology to a PDB file.
 
@@ -1655,7 +1657,11 @@ class Topology(Serializable):
         filename : str
             name of the pdb file to write to
         positions : n_atoms x 3 numpy array or openmm.unit.Quantity-wrapped n_atoms x 3 iterable
-            Can be an openmm 'quantity' object which has atomic positions as a list of Vec3s along with associated units, otherwise a 3D array of UNITLESS numbers are considered as "Angstroms" by default
+            Can be a
+              - `openmm.unit.Quantity' object which has atomic positions as a list of unit-tagged `Vec3` objects
+              - `openff.units.unit.Quantity` object which wraps a `numpy.ndarray` with units
+              - (unitless) 2D `numpy.ndarray`, in which it is assumed that the positions are in units of Angstroms.
+            For all data types, must have shape (n_atoms, 3) where n_atoms matches the number of atoms in this topology.
         file_format : str
             Output file format. Case insensitive. Currently only supported value is "pdb".
 
@@ -1664,13 +1670,17 @@ class Topology(Serializable):
         from openmm import unit as openmm_unit
 
         openmm_top = self.to_openmm()
-        if not isinstance(positions, openmm_unit.Quantity):
-            if isinstance(positions, np.ndarray):
-                positions = unit.Quantity(positions, unit.angstroms)
 
-            from openff.units.openmm import to_openmm
+        if isinstance(positions, openmm_unit.Quantity):
+            openmm_positions = positions
+        elif isinstance(positions, unit.Quantity):
+            from openff.units.openmm import to_openmm as to_openmm_quantity
 
-            positions = to_openmm(positions)
+            openmm_positions = to_openmm_quantity(positions)
+        elif isinstance(positions, np.ndarray):
+            openmm_positions = openmm_unit.Quantity(positions, openmm_unit.angstroms)
+        else:
+            raise ValueError(f"Could not process positions of type {type(positions)}.")
 
         file_format = file_format.upper()
         if file_format != "PDB":
@@ -1678,7 +1688,7 @@ class Topology(Serializable):
 
         # writing to PDB file
         with open(filename, "w") as outfile:
-            app.PDBFile.writeFile(openmm_top, positions, outfile, keepIds)
+            app.PDBFile.writeFile(openmm_top, openmm_positions, outfile, keepIds)
 
     # Should this be a staticmethod or a classmethod?
     @staticmethod
