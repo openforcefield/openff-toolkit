@@ -113,6 +113,15 @@ class TestTopology:
         assert not topology.is_periodic
         assert len(topology.constrained_atom_pairs.items()) == 0
 
+    def test_deprecated_api_points(self):
+        """Ensure that some of the API deprecated circa v0.11.0 still exist."""
+        topology = Topology()
+        for key in ["molecules", "atoms", "bonds", "particles", "virtual_sites"]:
+            with pytest.warns(DeprecationWarning, match="Use Topology.*instead"):
+                assert getattr(topology, "n_topology_" + key) == 0
+            with pytest.warns(DeprecationWarning, match="Use Topology.*instead"):
+                assert len([*getattr(topology, "topology_" + key)]) == 0
+
     def test_reinitialization_box_vectors(self):
         topology = Topology()
         assert Topology(topology).box_vectors is None
