@@ -106,6 +106,10 @@ print(value_roundtrip)
 - [PR #1113](https://github.com/openforcefield/openff-toolkit/pull/1113): Updates the Amber/GROMACS
   example to use Interchange.
 
+### Tests updated
+- [PR #1188](https://github.com/openforcefield/openff-toolkit/pull/1188): Add an `<Electrostatics>`
+  section to the TIP3P force field file used in testing (`test_forcefields/tip3p.offxml`)
+
 ## 0.10.1 Minor feature and bugfix release
 
 ### Behaviors changed and bugfixes
