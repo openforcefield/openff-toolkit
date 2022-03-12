@@ -5051,7 +5051,7 @@ class FrozenMolecule(Serializable):
 
         """
         # TODO: Ensure we are dealing with an OpenFF Topology object
-        if topology.n_topology_molecules != 1:
+        if topology.n_molecules != 1:
             raise ValueError("Topology must contain exactly one molecule")
         molecule = [i for i in topology.reference_molecules][0]
         return cls(molecule)
