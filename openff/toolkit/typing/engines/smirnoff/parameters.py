@@ -5273,8 +5273,7 @@ class VirtualSiteHandler(_NonbondedHandler):
             # has the match setting, which ultimately decides which orientations
             # to include.
             if self.match == "once":
-                key = self.transformed_dict_cls.key_transform(orientations[0])
-                orientations = [key]
+                orientations = [orientations[0]]
                 # else all matches wanted, so keep whatever was matched.
 
             base_args = {
@@ -5660,6 +5659,7 @@ class VirtualSiteHandler(_NonbondedHandler):
                                         # new incoming vsite needs to replace
                                         # them
                                         matches[existing_indices].pop(new_item.name)
+
                                         matches[k][new_item.name] = new_match
                                         unique = False
                             if unique:
@@ -5683,6 +5683,8 @@ class VirtualSiteHandler(_NonbondedHandler):
             for k, v in matches.items():
                 matches[k] = list(v.values())
 
+        # take out any matches which are empty due to a higher priority param matching.
+        matches = {k: v for k, v in matches.items() if v}
         return matches
 
     @requires_package("openmm")
