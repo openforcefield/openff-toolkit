@@ -2254,6 +2254,49 @@ class TestForceFieldVirtualSites:
 
         self._test_physical_parameters(toolkit_registry, *args.values())
 
+    def test_bond_charge_override(self):
+        """Reproduce https://github.com/openforcefield/openff-toolkit/issues/1206."""
+        mol = Molecule.from_mapped_smiles("[Cl:1][Na:2]")
+        ff = ForceField()
+        vsh = ff.get_parameter_handler("VirtualSites", {"version": 0.3})
+
+        vsh.add_parameter(
+            {
+                "type": "BondCharge",
+                "smirks": "[Cl:1][Na:2]",
+                "match": "once",
+                "charge_increment": [0.100, -0.100] * unit.elementary_charge,
+                "distance": [0.1010] * unit.angstrom,
+                "name": "aaa",
+            }
+        )
+        vsh.add_parameter(
+            {
+                "type": "BondCharge",
+                "smirks": "[Na:1][Cl:2]",
+                "match": "once",
+                "charge_increment": [0.100, -0.100] * unit.elementary_charge,
+                "distance": [0.220] * unit.angstrom,
+                "name": "aaa",
+            }
+        )
+
+        sys = ff.create_openmm_system(mol.to_topology())
+
+        # For each vsite, print out which particles are involved, and at which distance.
+        for vsite_idx in range(sys.getNumParticles()):
+            if not (sys.isVirtualSite(vsite_idx)):
+                continue
+            vsite = sys.getVirtualSite(vsite_idx)
+            vsite_parents = []
+            for vsite_parent_idx in range(vsite.getNumParticles()):
+                vsite_parent = vsite.getParticle(vsite_parent_idx)
+                vsite_parents.append(vsite_parent)
+            distance = vsite.getLocalPosition()[0].value_in_unit(omm_unit.angstrom)
+
+            assert vsite_parents == [1, 0]
+            # TODO: Determine the expected distance and assert
+
 
 class TestForceFieldChargeAssignment:
     @pytest.mark.parametrize(
