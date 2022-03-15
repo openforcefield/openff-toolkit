@@ -319,3 +319,7 @@ class MissingIndexedAttributeError(
 
 class UnsupportedMoleculeConversionError(OpenFFToolkitException):
     """Error raised when attempting to instantiate a Molecule with insufficient inputs."""
+
+
+class InconsistentStereochemistryError(OpenFFToolkitException):
+    """Error raised when stereochemistry is inconsistent before and after conversions between molecule representations."""
