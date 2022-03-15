@@ -250,7 +250,8 @@ class Atom(Particle):
         self._atomic_number = atomic_number
         # Use the setter here, since it will handle either ints or Quantities
         if hasattr(formal_charge, "units"):
-            if formal_charge.units == unit.dimensionless:
+            # Faster check than ` == unit.dimensionless`
+            if str(formal_charge.units) == "":
                 raise Exception
         self.formal_charge = formal_charge
         self._is_aromatic = is_aromatic
@@ -335,9 +336,12 @@ class Atom(Particle):
         Set the atom's formal charge. Accepts either ints or openmm.unit.Quantity-wrapped ints with units of charge.
         """
         if isinstance(other, int):
-            self._formal_charge = other * unit.elementary_charge
+            self._formal_charge = unit.Quantity(other, unit.elementary_charge)
         elif isinstance(other, unit.Quantity):
-            if other.units in unit.elementary_charge.compatible_units():
+            # Faster to check equality than convert, so short-circuit
+            if other.units is unit.elementary_charge:
+                self.formal_charge = other
+            elif other.units in unit.elementary_charge.compatible_units():
                 self._formal_charge = other
             else:
                 raise IncompatibleUnitError(
