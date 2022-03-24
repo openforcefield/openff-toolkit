@@ -644,7 +644,7 @@ class Topology(Serializable):
             )
 
     @property
-    def constrained_atom_pairs(self) -> Dict[Tuple[int], "Quantity"]:
+    def constrained_atom_pairs(self):
         """Returns the constrained atom pairs of the Topology
 
         Returns
