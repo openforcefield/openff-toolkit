@@ -115,12 +115,23 @@ class TestTopology:
 
     def test_deprecated_api_points(self):
         """Ensure that some of the API deprecated circa v0.11.0 still exist."""
+        from openff.toolkit.topology.topology import _TopologyDeprecationWarning
+
         topology = Topology()
+
         for key in ["molecules", "atoms", "bonds", "particles", "virtual_sites"]:
-            with pytest.warns(DeprecationWarning, match="Use Topology.*instead"):
-                assert getattr(topology, "n_topology_" + key) == 0
-            with pytest.warns(DeprecationWarning, match="Use Topology.*instead"):
-                assert len([*getattr(topology, "topology_" + key)]) == 0
+            old_iterator = "topology_" + key
+            old_counter = "n_topology_" + key
+            with pytest.warns(
+                _TopologyDeprecationWarning,
+                match=f"Topology.{old_counter} is deprecated. Use Topology.n_{key} instead.",
+            ):
+                assert getattr(topology, old_counter) == 0
+            with pytest.warns(
+                _TopologyDeprecationWarning,
+                match=f"Topology.{old_iterator} is deprecated. Use Topology.{key} instead.",
+            ):
+                assert len([*getattr(topology, old_iterator)]) == 0
 
     def test_reinitialization_box_vectors(self):
         topology = Topology()
