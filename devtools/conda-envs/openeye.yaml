@@ -36,7 +36,7 @@ dependencies:
   - msgpack-python
   - xmltodict
   - qcelemental
-  - qcportal
+  - qcportal >=0.15
   - qcengine
   - mdtraj
   - pip:

@@ -38,7 +38,7 @@ dependencies:
   - bson
   - msgpack-python
   - qcelemental
-  - qcportal
+  - qcportal >=0.15
   - qcengine
   - mdtraj
   # Typing
