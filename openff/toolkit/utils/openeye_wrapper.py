@@ -29,6 +29,7 @@ from openff.toolkit.utils.exceptions import (
     ChargeMethodUnavailableError,
     ConformerGenerationError,
     GAFFAtomTypeWarning,
+    InconsistentStereochemistryError,
     InvalidIUPACNameError,
     LicenseError,
     SMILESParseError,
@@ -1126,8 +1127,10 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                     )
                 )
                 if oeatom_stereochemistry != atom.stereochemistry:
-                    raise Exception(
-                        "Programming error: OpenEye atom stereochemistry assumptions failed."
+                    raise InconsistentStereochemistryError(
+                        "Programming error: OpenEye atom stereochemistry assumptions failed. "
+                        f"The atom in the oemol has stereochemistry {oeatom_stereochemistry} and "
+                        f"the atom in the offmol has stereoheometry {atom.stereochemistry}."
                     )
 
         # Set bond stereochemistry
@@ -1166,8 +1169,10 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                     )
                 )
                 if oebond_stereochemistry != bond.stereochemistry:
-                    raise Exception(
-                        "Programming error: OpenEye bond stereochemistry assumptions failed."
+                    raise InconsistentStereochemistryError(
+                        "Programming error: OpenEye bond stereochemistry assumptions failed. "
+                        f"The bond in the oemol has stereochemistry {oebond_stereochemistry} and "
+                        f"the bond in the offmol has stereoheometry {bond.stereochemistry}."
                     )
 
         # Clean Up phase
