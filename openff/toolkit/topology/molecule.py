@@ -250,7 +250,8 @@ class Atom(Particle):
         self._atomic_number = atomic_number
         # Use the setter here, since it will handle either ints or Quantities
         if hasattr(formal_charge, "units"):
-            if formal_charge.units == unit.dimensionless:
+            # Faster check than ` == unit.dimensionless`
+            if str(formal_charge.units) == "":
                 raise Exception
         self.formal_charge = formal_charge
         self._is_aromatic = is_aromatic
@@ -335,9 +336,12 @@ class Atom(Particle):
         Set the atom's formal charge. Accepts either ints or openmm.unit.Quantity-wrapped ints with units of charge.
         """
         if isinstance(other, int):
-            self._formal_charge = other * unit.elementary_charge
+            self._formal_charge = unit.Quantity(other, unit.elementary_charge)
         elif isinstance(other, unit.Quantity):
-            if other.units in unit.elementary_charge.compatible_units():
+            # Faster to check equality than convert, so short-circuit
+            if other.units is unit.elementary_charge:
+                self.formal_charge = other
+            elif other.units in unit.elementary_charge.compatible_units():
                 self._formal_charge = other
             else:
                 raise IncompatibleUnitError(
@@ -5051,7 +5055,7 @@ class FrozenMolecule(Serializable):
 
         """
         # TODO: Ensure we are dealing with an OpenFF Topology object
-        if topology.n_topology_molecules != 1:
+        if topology.n_molecules != 1:
             raise ValueError("Topology must contain exactly one molecule")
         molecule = [i for i in topology.reference_molecules][0]
         return cls(molecule)
@@ -5298,7 +5302,7 @@ class FrozenMolecule(Serializable):
             for atom in openmm_topology.atoms():
                 omm_topology_G.add_node(
                     atom.index,
-                    atomic_number=atom.element.atomic_number,
+                    atomic_number=atom.atomic_number,
                     formal_charge=0.0,
                     atom_name=atom.name,
                     residue_name=atom.residue.name,
@@ -5315,14 +5319,14 @@ class FrozenMolecule(Serializable):
                 # Assign sequential negative numbers as atomic numbers for hydrogens attached to the same heavy atom.
                 # We do the same to the substructure templates that are used for matching. This saves runtime because
                 # it removes redundant self-symmetric matches.
-                if bond.atom1.element.atomic_number == 1:
+                if bond.atom1.atomic_number == 1:
                     h_index = bond.atom1.index
                     heavy_atom_index = bond.atom2.index
                     n_hydrogens[heavy_atom_index] += 1
                     omm_topology_G.nodes[h_index]["atomic_number"] = (
                         -1 * n_hydrogens[heavy_atom_index]
                     )
-                if bond.atom2.element.atomic_number == 1:
+                if bond.atom2.atomic_number == 1:
                     h_index = bond.atom2.index
                     heavy_atom_index = bond.atom1.index
                     n_hydrogens[heavy_atom_index] += 1

@@ -2254,6 +2254,58 @@ class TestForceFieldVirtualSites:
 
         self._test_physical_parameters(toolkit_registry, *args.values())
 
+    def test_orientation_preserved_if_match_once(self):
+        """
+        Test that orientation-mangling bug from https://github.com/openforcefield/openff-toolkit/issues/1159
+        is resolved.
+        """
+        force_field = ForceField()
+
+        vsite_handler = force_field.get_parameter_handler("VirtualSites")
+        vsite_handler.add_parameter(
+            parameter_kwargs={
+                "smirks": "[#6:2]=[#8:1]",
+                "name": "EP",
+                "type": "BondCharge",
+                "distance": 0.7 * unit.nanometers,
+                "match": "once",
+                "charge_increment1": 0.2 * unit.elementary_charge,
+                "charge_increment2": 0.1 * unit.elementary_charge,
+                "sigma": 1.0 * unit.angstrom,
+                "epsilon": 2.0 / 4.184 * unit.kilocalorie_per_mole,
+            }
+        )
+
+        molecule = Molecule.from_mapped_smiles("[O:2]=[C:1]=[O:3]")
+
+        omm_system: System
+        omm_system, topology = force_field.create_openmm_system(
+            molecule.to_topology(), return_topology=True
+        )
+
+        omm_particle_tuples = []
+        for i in range(omm_system.getNumParticles()):
+
+            if not omm_system.isVirtualSite(i):
+                continue
+
+            omm_v_site = omm_system.getVirtualSite(i)
+
+            omm_particle_tuples.append(
+                tuple(
+                    omm_v_site.getParticle(j)
+                    for j in range(omm_v_site.getNumParticles())
+                )
+            )
+        assert (1, 0) in omm_particle_tuples
+        assert (2, 0) in omm_particle_tuples
+        for molecule in topology.reference_molecules:
+            for v_site in molecule.virtual_sites:
+                for particle in v_site.particles:
+                    # correct particle.orientation is (1,0) and (2,0)
+                    # and not (0, 1), (0, 2)
+                    assert particle.orientation in omm_particle_tuples
+
 
 class TestForceFieldChargeAssignment:
     @pytest.mark.parametrize(
@@ -2374,15 +2426,23 @@ class TestForceFieldChargeAssignment:
         for particle_index, expected_charge in expected_charges:
             q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
             assert q == expected_charge
-        for particle_index in range(topology.n_topology_particles):
+        for particle_index in range(topology.n_particles):
             q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
             assert q != (0.0 * unit.elementary_charge)
 
-    def test_library_charges_to_single_water(self):
+    @pytest.mark.parametrize(
+        "ff_inputs",
+        [
+            [
+                "test_forcefields/test_forcefield.offxml",
+                "test_forcefields/tip3p.offxml",
+            ],
+            ["openff-2.0.0.offxml"],
+        ],
+    )
+    def test_library_charges_to_single_water(self, ff_inputs):
         """Test assigning charges to one water molecule using library charges"""
-        ff = ForceField(
-            "test_forcefields/test_forcefield.offxml", "test_forcefields/tip3p.offxml"
-        )
+        ff = ForceField(*ff_inputs)
         mol = Molecule.from_file(
             get_data_file_path(os.path.join("systems", "monomers", "water.sdf"))
         )
@@ -3061,14 +3121,12 @@ class TestForceFieldChargeAssignment:
             assert q == expected_charge
 
         # Ensure the last molecule (ethanol) had _some_ nonzero charge assigned by an AM1BCC implementation
-        for particle_index in range(len(expected_charges), top.n_topology_atoms - 1):
+        for particle_index in range(len(expected_charges), top.n_atoms - 1):
             q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
             assert q != 0 * unit.elementary_charge
 
         # Ensure that iodine has a charge of -1, specified by charge increment model charge_method="formal charge"
-        q, sigma, epsilon = nonbondedForce.getParticleParameters(
-            top.n_topology_atoms - 1
-        )
+        q, sigma, epsilon = nonbondedForce.getParticleParameters(top.n_atoms - 1)
         assert q == -1.0 * openmm_unit.elementary_charge
 
     def test_assign_charges_to_molecule_in_parts_using_multiple_library_charges(self):
@@ -3183,7 +3241,7 @@ class TestForceFieldChargeAssignment:
         nonbondedForce = [
             f for f in omm_system.getForces() if type(f) == NonbondedForce
         ][0]
-        for particle_index in range(top.n_topology_atoms):
+        for particle_index in range(top.n_atoms):
             q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
             assert q != 0 * unit.elementary_charge
 
@@ -3273,6 +3331,43 @@ class TestForceFieldChargeAssignment:
         )
 
         compare_partial_charges(using_kwarg, using_library_charges)
+
+    @requires_openeye
+    def test_toolkit_am1bcc_uses_elf10_if_oe_is_available(self):
+        """Ensure that the ToolkitAM1BCCHandler assigns ELF10 charges if OpenEye is available."""
+        # Can't just use CCO - Molecule needs to be big enough to realistically
+        # result in more than one conformer when ELF10 is requested
+        mol = Molecule.from_smiles("OCCCCCCO")
+
+        # The test forcefield "out of the box" just uses ToolkitAM1BCC, so this
+        # should produce ELF10 charges
+        test_forcefield = ForceField("test_forcefields/test_forcefield.offxml")
+        sys = test_forcefield.create_openmm_system(topology=mol.to_topology())
+
+        # Make another system with a force field that has the ToolkitAM1BCCHandler
+        # removed, and is explicitly told to use a ChargeIncrementModelHandler
+        # with AM1BCCELF10 charges. Ensure that the resulting charges are identical.
+        test_forcefield.deregister_parameter_handler("ToolkitAM1BCC")
+        cimh = test_forcefield.get_parameter_handler(
+            "ChargeIncrementModel",
+            {"version": 0.3, "partial_charge_method": "am1bccelf10"},
+        )
+
+        sys_a1b_elf10 = test_forcefield.create_openmm_system(topology=mol.to_topology())
+
+        compare_partial_charges(sys, sys_a1b_elf10)
+
+        # Now modify the ChargeIncrementModelHandler to specifically use single-conformer
+        # AM1BCC and ensure that the resulting charges are different from the first system.
+        cimh.partial_charge_method = "am1bcc"
+        assert test_forcefield["ChargeIncrementModel"].partial_charge_method == "am1bcc"
+
+        sys_a1b_single_conf = test_forcefield.create_openmm_system(
+            topology=mol.to_topology()
+        )
+        # Ensure that we get different results with AM1BCC ELF10 and single conf AM1BCC
+        with pytest.raises(AssertionError):
+            compare_partial_charges(sys_a1b_elf10, sys_a1b_single_conf)
 
 
 # ======================================================================
@@ -4243,9 +4338,7 @@ class TestForceFieldParameterAssignment:
                 idx
             ) == mod_bond_force.getBondParameters(idx)
 
-        for bond1, bond2 in zip(
-            omm_sys_top.topology_bonds, mod_omm_sys_top.topology_bonds
-        ):
+        for bond1, bond2 in zip(omm_sys_top.bonds, mod_omm_sys_top.bonds):
             # 'approx()' because https://github.com/openforcefield/openff-toolkit/issues/994
             assert bond1.fractional_bond_order == pytest.approx(
                 bond2.fractional_bond_order

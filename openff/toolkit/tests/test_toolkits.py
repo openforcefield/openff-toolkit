@@ -12,7 +12,7 @@ Tests for cheminformatics toolkit wrappers
 import logging
 import os
 from tempfile import NamedTemporaryFile
-from typing import Dict
+from typing import TYPE_CHECKING, Dict
 
 import numpy as np
 import pytest
@@ -55,6 +55,9 @@ from openff.toolkit.utils.toolkits import (
     ToolkitRegistry,
     ToolkitWrapper,
 )
+
+if TYPE_CHECKING:
+    from openff.units.unit import Quantity
 
 # =============================================================================================
 # FIXTURES
@@ -272,7 +275,7 @@ def formic_acid_molecule() -> Molecule:
 
 
 @pytest.fixture()
-def formic_acid_conformers() -> Dict[str, unit.Quantity]:
+def formic_acid_conformers() -> Dict[str, "Quantity"]:
 
     return {
         "cis": np.array(
@@ -2638,7 +2641,7 @@ class TestRDKitToolkitWrapper:
         self,
         formic_acid_molecule: Molecule,
         expected_conformer_map: Dict[int, int],
-        rms_tolerance: unit.Quantity,
+        rms_tolerance: "Quantity",
     ):
         """Test the greedy selection of 'diverse' ELF conformers."""
 

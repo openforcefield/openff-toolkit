@@ -104,15 +104,23 @@ class TestTopology:
     def test_empty(self):
         """Test creation of empty topology"""
         topology = Topology()
-        # assert topology.n_reference_molecules == 0
-        assert topology.n_topology_molecules == 0
-        assert topology.n_topology_atoms == 0
-        assert topology.n_topology_bonds == 0
-        assert topology.n_topology_particles == 0
-        assert topology.n_topology_virtual_sites == 0
+        assert topology.n_molecules == 0
+        assert topology.n_atoms == 0
+        assert topology.n_bonds == 0
+        assert topology.n_particles == 0
+        assert topology.n_virtual_sites == 0
         assert topology.box_vectors is None
         assert not topology.is_periodic
         assert len(topology.constrained_atom_pairs.items()) == 0
+
+    def test_deprecated_api_points(self):
+        """Ensure that some of the API deprecated circa v0.11.0 still exist."""
+        topology = Topology()
+        for key in ["molecules", "atoms", "bonds", "particles", "virtual_sites"]:
+            with pytest.warns(DeprecationWarning, match="Use Topology.*instead"):
+                assert getattr(topology, "n_topology_" + key) == 0
+            with pytest.warns(DeprecationWarning, match="Use Topology.*instead"):
+                assert len([*getattr(topology, "topology_" + key)]) == 0
 
     def test_reinitialization_box_vectors(self):
         topology = Topology()
@@ -122,6 +130,41 @@ class TestTopology:
         topology_copy = Topology(topology)
 
         assert (topology.box_vectors == topology_copy.box_vectors).all()
+
+    def test_add_basic(self):
+        topology1 = Molecule.from_smiles("O").to_topology()
+        topology2 = Molecule.from_smiles("CO").to_topology()
+
+        topology3 = topology1 + topology2
+
+        assert topology3.n_atoms == 9
+        assert topology3.n_bonds == 7
+        assert topology3.n_molecules == 2
+
+    def test_add_inplace(self):
+        topology1 = Molecule.from_smiles("O").to_topology()
+        topology2 = Molecule.from_smiles("CO").to_topology()
+
+        topology3 = topology1 + topology2
+        topology1 += topology2
+
+        for attr in ["n_atoms", "n_bonds", "n_molecules"]:
+            assert getattr(topology1, attr) == getattr(topology3, attr)
+
+    def test_add_invalidate_cache(self):
+        topology1 = Molecule.from_smiles("O").to_topology()
+        topology2 = Molecule.from_smiles("CO").to_topology()
+
+        topology1.add_constraint(0, 1, 1.01 * unit.angstrom)
+        topology2.identical_molecule_groups
+
+        assert topology1.constrained_atom_pairs[(0, 1)] == 1.01 * unit.angstrom
+        assert len(topology2._cached_chemically_identical_molecules) == 1
+
+        topology3 = topology1 + topology2
+
+        assert topology3.constrained_atom_pairs == {}
+        assert topology3._cached_chemically_identical_molecules is None
 
     def test_box_vectors(self):
         """Test the getter and setter for box_vectors"""
@@ -179,71 +222,66 @@ class TestTopology:
         """Test creation of a OpenFF Topology object from a SMILES string"""
         topology = Topology.from_molecules(ethane_from_smiles)
 
-        # assert topology.n_reference_molecules == 1
-        assert topology.n_topology_molecules == 1
-        assert topology.n_topology_atoms == 8
-        assert topology.n_topology_bonds == 7
-        assert topology.n_topology_particles == 8
-        assert topology.n_topology_virtual_sites == 0
+        assert topology.n_molecules == 1
+        assert topology.n_atoms == 8
+        assert topology.n_bonds == 7
+        assert topology.n_particles == 8
+        assert topology.n_virtual_sites == 0
         assert topology.box_vectors is None
         assert len(topology.constrained_atom_pairs.items()) == 0
 
         topology.add_molecule(ethane_from_smiles)
 
-        # assert topology.n_reference_molecules == 1
-        assert topology.n_topology_molecules == 2
-        assert topology.n_topology_atoms == 16
-        assert topology.n_topology_bonds == 14
-        assert topology.n_topology_particles == 16
-        assert topology.n_topology_virtual_sites == 0
+        assert topology.n_molecules == 2
+        assert topology.n_atoms == 16
+        assert topology.n_bonds == 14
+        assert topology.n_particles == 16
+        assert topology.n_virtual_sites == 0
         assert topology.box_vectors is None
         assert len(topology.constrained_atom_pairs.items()) == 0
 
     def test_from_smiles_unique_mols(self, ethane_from_smiles, propane_from_smiles):
         """Test the addition of two different molecules to a topology"""
         topology = Topology.from_molecules([ethane_from_smiles, propane_from_smiles])
-        assert topology.n_topology_molecules == 2
-        # assert topology.n_reference_molecules == 2
+        assert topology.n_molecules == 2
 
-    def test_n_topology_atoms(self, ethane_from_smiles):
+    def test_n_atoms(self, ethane_from_smiles):
         """Test n_atoms function"""
         topology = Topology()
-        assert topology.n_topology_atoms == 0
-        assert topology.n_topology_bonds == 0
+        assert topology.n_atoms == 0
+        assert topology.n_bonds == 0
         topology.add_molecule(ethane_from_smiles)
-        assert topology.n_topology_atoms == 8
-        assert topology.n_topology_bonds == 7
+        assert topology.n_atoms == 8
+        assert topology.n_bonds == 7
 
-    def test_n_topology_atoms_with_vsites(
-        self, ethane_from_smiles_w_vsites, tip5_water
-    ):
+    def test_n_atoms_with_vsites(self, ethane_from_smiles_w_vsites, tip5_water):
         """Test n_atoms function when vsites are present"""
         topology = Topology()
-        assert topology.n_topology_atoms == 0
-        assert topology.n_topology_bonds == 0
+        assert topology.n_atoms == 0
+        assert topology.n_bonds == 0
         topology.add_molecule(ethane_from_smiles_w_vsites)
-        assert topology.n_topology_atoms == 8
-        assert topology.n_topology_bonds == 7
+        assert topology.n_atoms == 8
+        assert topology.n_bonds == 7
 
         topology = Topology()
-        assert topology.n_topology_atoms == 0
-        assert topology.n_topology_bonds == 0
+        assert topology.n_atoms == 0
+        assert topology.n_bonds == 0
         topology.add_molecule(tip5_water)
-        assert topology.n_topology_atoms == 3
-        assert topology.n_topology_bonds == 2
+        assert topology.n_atoms == 3
+        assert topology.n_bonds == 2
 
-    def test_n_topology_virtual_sites(self, ethane_from_smiles_w_vsites, tip5_water):
+    def test_n_virtual_sites(self, ethane_from_smiles_w_vsites, tip5_water):
         """Test n_atoms function"""
         topology = Topology()
-        assert topology.n_topology_virtual_sites == 0
+        assert topology.n_virtual_sites == 0
         topology.add_molecule(ethane_from_smiles_w_vsites)
-        assert topology.n_topology_virtual_sites == 2
+        assert topology.n_virtual_sites == 2
 
         topology = Topology()
-        assert topology.n_topology_virtual_sites == 0
+        assert topology.n_virtual_sites == 0
         topology.add_molecule(tip5_water)
-        assert topology.n_topology_virtual_sites == 1
-        assert topology.n_topology_particles == 5
+        assert topology.n_virtual_sites == 1
+        assert topology.n_particles == 5
 
     def test_get_atom(self, ethane_from_smiles):
         """Test Topology.atom function (atom lookup from index)"""
@@ -266,7 +304,7 @@ class TestTopology:
         with pytest.raises(Exception) as context:
             topology_atom = topology.atom(8)
 
-    def test_topology_atom_element_properties(self, toluene_from_sdf):
+    def test_atom_element_properties(self, toluene_from_sdf):
         """
         Test element-like getters of TopologyAtom atomic number. In 0.11.0, Atom.element
         was removed and replaced with Atom.atomic_number and Atom.symbol.
@@ -327,9 +365,9 @@ class TestTopology:
         """Test Topology.virtual_site function (get virtual site from index)"""
         topology = Topology()
         topology.add_molecule(ethane_from_smiles_w_vsites)
-        assert topology.n_topology_virtual_sites == 2
+        assert topology.n_virtual_sites == 2
         topology.add_molecule(propane_from_smiles_w_vsites)
-        assert topology.n_topology_virtual_sites == 4
+        assert topology.n_virtual_sites == 4
         with pytest.raises(Exception) as context:
             topology_vsite = topology.virtual_site(-1)
         with pytest.raises(Exception) as context:
@@ -344,16 +382,16 @@ class TestTopology:
         assert topology_vsite4.type == "BondChargeVirtualSite"
 
         n_equal_atoms = 0
-        for topology_atom in topology.topology_atoms:
-            for vsite in topology.topology_virtual_sites:
+        for atom in topology.atoms:
+            for vsite in topology.virtual_sites:
                 for vsite_atom in vsite.atoms:
-                    if topology_atom == vsite_atom:
+                    if atom == vsite_atom:
                         n_equal_atoms += 1
 
         # There are four virtual sites -- Two BondCharges with 2 atoms, and two MonovalentLonePairs with 3 atoms
         assert n_equal_atoms == 10
 
-    def test_topology_particles_virtualsites_indexed_last(
+    def test_particles_virtualsites_indexed_last(
         self, ethane_from_smiles_w_vsites, propane_from_smiles_w_vsites
     ):
         """
@@ -369,7 +407,7 @@ class TestTopology:
         # Iterate through all TopologyParticles, ensuring that all atoms appear
         # before all virtualsides
         reading_atoms = True
-        for particle in topology.topology_particles:
+        for particle in topology.particles:
             if reading_atoms:
                 if isinstance(particle, Atom):
                     pass
@@ -378,9 +416,7 @@ class TestTopology:
             elif not (reading_atoms):
                 assert isinstance(particle, VirtualParticle)
 
-    def test_topology_virtual_site_particle_start_index(
-        self, propane_from_smiles_w_vsites
-    ):
+    def test_virtual_site_particle_start_index(self, propane_from_smiles_w_vsites):
 
         topology = Topology()
         topology.add_molecule(propane_from_smiles_w_vsites)
@@ -579,15 +615,10 @@ class TestTopology:
             )
             assert mod_imp in top.amber_impropers
 
-    # test_get_fractional_bond_order
     # test_two_of_same_molecule
     # test_two_different_molecules
     # test_to_from_dict
     # test_get_molecule
-    # test_get_topology_atom
-    # test_get_topology_bond
-    # test_get_topology_virtual_site
-    # test_get_topology_molecule
     # test_is_bonded
     # TODO: Test serialization
 
@@ -605,8 +636,7 @@ class TestTopology:
         molecules = [create_ethanol(), create_cyclohexane()]
 
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
-        # assert topology.n_reference_molecules == 2
-        assert topology.n_topology_molecules == 239
+        assert topology.n_molecules == 239
 
     def test_from_openmm_missing_reference(self):
         """Test creation of an OpenFF Topology object from an OpenMM Topology when missing a unique molecule"""
@@ -674,27 +704,22 @@ class TestTopology:
 
         # The round-trip OpenFF Topology is identical to the original.
         # The reference molecules are the same.
-        assert (
-            off_topology.n_reference_molecules
-            == off_topology_copy.n_reference_molecules
-        )
+        assert off_topology.n_molecules == off_topology_copy.n_molecules
         reference_molecules_copy = list(off_topology_copy.reference_molecules)
         for ref_mol_idx, ref_mol in enumerate(off_topology.reference_molecules):
             assert ref_mol == reference_molecules_copy[ref_mol_idx]
 
         # The number of topology molecules is the same.
-        assert (
-            off_topology.n_topology_molecules == off_topology_copy.n_topology_molecules
-        )
+        assert off_topology.n_molecules == off_topology_copy.n_molecules
 
         # Check atoms.
-        assert off_topology.n_topology_atoms == off_topology_copy.n_topology_atoms
-        for atom_idx, atom in enumerate(off_topology.topology_atoms):
+        assert off_topology.n_atoms == off_topology_copy.n_atoms
+        for atom_idx, atom in enumerate(off_topology.atoms):
             atom_copy = off_topology_copy.atom(atom_idx)
             assert atom.atomic_number == atom_copy.atomic_number
 
         # Check bonds.
-        for bond_idx, bond in enumerate(off_topology.topology_bonds):
+        for bond_idx, bond in enumerate(off_topology.bonds):
             # bond_copy = off_topology_copy.bond(bond_idx)
             bond_copy = off_topology_copy.get_bond_between(
                 off_topology.atom_index(bond.atoms[0]),
@@ -726,8 +751,8 @@ class TestTopology:
         ]
         top = Topology.from_mdtraj(trj.top, unique_molecules=unique_molecules)
 
-        assert top.n_topology_molecules == 2
-        assert top.n_topology_bonds == 26
+        assert top.n_molecules == 2
+        assert top.n_bonds == 26
 
     @requires_rdkit
     def test_to_file_vsites(self):
@@ -763,10 +788,15 @@ class TestTopology:
     @requires_rdkit
     def test_to_file_units_check(self):
         """
-        Checks whether writing pdb with unitless positions, Angstrom positions,
-        nanometer positions, result in the same output
+        Checks that writing a PDB file with different coordinate representations results in the same output.
+        - Angstrom "openff units" (default behavior if using Molecule.conformers[0])
+        - nanometer "openff units"
+        - unitless NumPy array
+        - converted OpenMM quantity
         """
         from tempfile import NamedTemporaryFile
+
+        from openff.units.openmm import to_openmm
 
         from openff.toolkit.topology import Molecule, Topology
 
@@ -776,41 +806,26 @@ class TestTopology:
         )
         topology.add_molecule(mol)
         positions_angstrom = mol.conformers[0]
-        count = 1
-        # Write the molecule to PDB and ensure that the X coordinate of the first atom is 10.172
-        with NamedTemporaryFile(suffix=".pdb") as iofile:
-            topology.to_file(iofile.name, positions_angstrom)
-            data = open(iofile.name).readlines()
-            for line in data:
-                if line.startswith("HETATM") and count == 1:
-                    count = count + 1
-                    coord = line.split()[-6]
-        assert coord == "10.172"
 
-        # Do the same check, but feed in equivalent positions measured in nanometers and ensure the PDB is still the same
-        count = 1
-        coord = None
-        with NamedTemporaryFile(suffix=".pdb") as iofile:
-            positions_nanometer = positions_angstrom.to(unit.nanometer)
-            topology.to_file(iofile.name, positions_nanometer)
-            data = open(iofile.name).readlines()
-            for line in data:
-                if line.startswith("HETATM") and count == 1:
-                    count = count + 1
-                    coord = line.split()[-6]
-        assert coord == "10.172"
+        def _check_file(topology, coordinates):
+            # Write the molecule to PDB and ensure that the X coordinate of the first atom is 10.172
+            count = 1
+            with NamedTemporaryFile(suffix=".pdb") as iofile:
+                topology.to_file(iofile.name, coordinates)
+                data = open(iofile.name).readlines()
+                for line in data:
+                    if line.startswith("HETATM") and count == 1:
+                        count = count + 1
+                        coord = line.split()[-6]
+            assert coord == "10.172"
 
-        count = 1
-        coord = "abc"
-        with NamedTemporaryFile(suffix=".pdb") as iofile:
-            positions_unitless = positions_angstrom.m
-            topology.to_file(iofile.name, positions_unitless)
-            data = open(iofile.name).readlines()
-            for line in data:
-                if line.startswith("HETATM") and count == 1:
-                    count = count + 1
-                    coord = line.split()[-6]
-        assert coord == "10.172"
+        _check_file(topology, coordinates=positions_angstrom)
+        _check_file(topology, coordinates=positions_angstrom.to(unit.nanometer))
+        _check_file(topology, coordinates=positions_angstrom.m)
+        _check_file(topology, coordinates=to_openmm(positions_angstrom))
+
+        with pytest.raises(ValueError, match="Could not process.*list.*"):
+            _check_file(topology, coordinates=positions_angstrom.m.tolist())
 
     @requires_rdkit
     def test_to_file_fileformat_lettercase(self):

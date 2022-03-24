@@ -3461,7 +3461,7 @@ class _NonbondedHandler(ParameterHandler):
             system.addForce(force)
             # Create all atom particles. Virtual site particles are handled in
             # in its own handler
-            for _ in topology.topology_atoms:
+            for _ in topology.atoms:
                 force.addParticle(0.0, 1.0, 0.0)
         else:
             force = existing[0]
@@ -4059,7 +4059,7 @@ class LibraryChargeHandler(_NonbondedHandler):
     _INFOTYPE = LibraryChargeType  # info type to store
     _DEPENDENCIES = [vdWHandler, ElectrostaticsHandler]
 
-    def find_matches(self, entity, unique=True):
+    def find_matches(self, entity, unique=False):
         """Find the elements of the topology/molecule matched by a parameter type.
 
         Parameters
@@ -4196,10 +4196,17 @@ class ToolkitAM1BCCHandler(_NonbondedHandler):
             # If the molecule wasn't already assigned charge values, calculate them here
             toolkit_registry = kwargs.get("toolkit_registry", GLOBAL_TOOLKIT_REGISTRY)
             try:
+                # If OpenEye is available, use ELF10
+                partial_charge_method = "am1bcc"
+                for available_toolkit_wrapper in toolkit_registry.registered_toolkits:
+                    if "OpenEye" in str(available_toolkit_wrapper):
+                        partial_charge_method = "am1bccelf10"
+
                 # We don't need to generate conformers here, since that will be done by default in
                 # compute_partial_charges with am1bcc if the use_conformers kwarg isn't defined
                 unique_mol.assign_partial_charges(
-                    partial_charge_method="am1bcc", toolkit_registry=toolkit_registry
+                    partial_charge_method=partial_charge_method,
+                    toolkit_registry=toolkit_registry,
                 )
             except Exception as e:
                 warnings.warn(str(e), Warning)
@@ -4213,15 +4220,13 @@ class ToolkitAM1BCCHandler(_NonbondedHandler):
                     mol_instance = topology.molecule(mol_instance_idx)
                     mol_instance_atom_index = atom_map[unique_mol_atom_index]
                     mol_instance_atom = mol_instance.atom(mol_instance_atom_index)
-                    topology_particle_index = topology.particle_index(mol_instance_atom)
+                    particle_index = topology.particle_index(mol_instance_atom)
 
                     # Retrieve nonbonded parameters for reference atom (charge not set yet)
-                    _, sigma, epsilon = force.getParticleParameters(
-                        topology_particle_index
-                    )
+                    _, sigma, epsilon = force.getParticleParameters(particle_index)
                     # Set the nonbonded force with the partial charge
                     force.setParticleParameters(
-                        topology_particle_index,
+                        particle_index,
                         to_openmm(particle_charge),
                         sigma,
                         epsilon,
@@ -4415,10 +4420,8 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
                     mol_instance_particle = mol_instance.particle(
                         mol_instance_particle_index
                     )
-                    topology_particle_index = topology.particle_index(
-                        mol_instance_particle
-                    )
-                    charges_to_assign[topology_particle_index] = particle_charge
+                    particle_index = topology.particle_index(mol_instance_particle)
+                    charges_to_assign[particle_index] = particle_charge
 
             # Find SMARTS-based matches for charge increments
             charge_increment_matches = self.find_matches(topology)
@@ -4462,10 +4465,10 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
                         charges_to_assign[top_particle_idx] += charge_increment
 
             # Set the incremented charges on the System particles
-            for topology_particle_index, charge_to_assign in charges_to_assign.items():
-                _, sigma, epsilon = force.getParticleParameters(topology_particle_index)
+            for particle_index, charge_to_assign in charges_to_assign.items():
+                _, sigma, epsilon = force.getParticleParameters(particle_index)
                 force.setParticleParameters(
-                    topology_particle_index,
+                    particle_index,
                     to_openmm(charge_to_assign),
                     sigma,
                     epsilon,
@@ -4709,10 +4712,10 @@ class GBSAHandler(ParameterHandler):
         # To keep it simple, we DO NOT pre-populate the particles in the GBSA force here.
         # We call addParticle further below instead.
         # These lines are commented out intentionally as an example of what NOT to do.
-        # for topology_particle in topology.topology_particles:
+        # for particle in topology.particles:
         # gbsa_force.addParticle([0.0, 1.0, 0.0])
 
-        params_to_add = [[] for _ in topology.topology_particles]
+        params_to_add = [[] for _ in range(topology.n_particles)]
         for atom_key, atom_match in atom_matches.items():
             atom_idx = atom_key[0]
             gbsatype = atom_match.parameter_type
@@ -5273,8 +5276,7 @@ class VirtualSiteHandler(_NonbondedHandler):
             # has the match setting, which ultimately decides which orientations
             # to include.
             if self.match == "once":
-                key = self.transformed_dict_cls.key_transform(orientations[0])
-                orientations = [key]
+                orientations = [orientations[0]]
                 # else all matches wanted, so keep whatever was matched.
 
             base_args = {

@@ -32,13 +32,15 @@ __all__ = [
 import contextlib
 import functools
 import logging
-from typing import Union
+from typing import TYPE_CHECKING, Union
 
 import numpy as np
 from openff.units import unit
 
 from openff.toolkit.utils.exceptions import MissingDependencyError
 
+if TYPE_CHECKING:
+    from openff.units.unit import Quantity
 # =============================================================================================
 # CONFIGURE LOGGER
 # =============================================================================================
