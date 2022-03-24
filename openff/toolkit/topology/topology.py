@@ -53,14 +53,15 @@ if TYPE_CHECKING:
 # =============================================================================================
 
 
-class _TopologyDeprecationWarning(DeprecationWarning):
-    def __init__(self, old_method, new_method):
-        self.message = (
-            f"Topology.{old_method} is deprecated. Use Topology.{new_method} instead."
-        )
+def _topology_deprecation(old_method, new_method):
+    warnings.warn(
+        f"Topology.{old_method} is deprecated. Use Topology.{new_method} instead.",
+        TopologyDeprecationWarning,
+    )
 
-    def __str__(self):
-        return self.message
+
+class TopologyDeprecationWarning(UserWarning):
+    """Warning for deprecated portions of the Topology API."""
 
 
 class _TransformedDict(MutableMapping):
@@ -2201,75 +2202,65 @@ class Topology(Serializable):
     @property
     def n_topology_atoms(self) -> int:
         """DEPRECATED: Use Topology.n_atoms instead."""
-        warnings.warn(_TopologyDeprecationWarning("n_topology_atoms", "n_atoms"))
+        _topology_deprecation("n_topology_atoms", "n_atoms")
         return self.n_atoms
 
     @property
     def topology_atoms(self):
         """DEPRECATED: Use Topology.atoms instead."""
-        warnings.warn(_TopologyDeprecationWarning("topology_atoms", "atoms"))
+        _topology_deprecation("topology_atoms", "atoms")
         return self.atoms
 
     @property
     def n_topology_bonds(self) -> int:
         """DEPRECATED: Use Topology.n_bonds instead."""
-        warnings.warn(_TopologyDeprecationWarning("n_topology_bonds", "n_bonds"))
+        _topology_deprecation("n_topology_bonds", "n_bonds")
         return self.n_bonds
 
     @property
     def topology_bonds(self):
         """DEPRECATED: Use Topology.bonds instead."""
-        warnings.warn(_TopologyDeprecationWarning("topology_bonds", "bonds"))
+        _topology_deprecation("topology_bonds", "bonds")
         return self.bonds
 
     @property
     def n_topology_particles(self) -> int:
         """DEPRECATED: Use Topology.n_particles instead."""
-        warnings.warn(
-            _TopologyDeprecationWarning("n_topology_particles", "n_particles")
-        )
+        _topology_deprecation("n_topology_particles", "n_particles")
         return self.n_particles
 
     @property
     def topology_particles(self):
         """DEPRECATED: Use Topology.particles instead."""
-        warnings.warn(_TopologyDeprecationWarning("topology_particles", "particles"))
+        _topology_deprecation("topology_particles", "particles")
         return self.particles
 
     @property
     def n_topology_virtual_sites(self) -> int:
         """DEPRECATED: Use Topology.n_virtual_sites instead."""
-        warnings.warn(
-            _TopologyDeprecationWarning("n_topology_virtual_sites", "n_virtual_sites")
-        )
+        _topology_deprecation("n_topology_virtual_sites", "n_virtual_sites")
         return self.n_virtual_sites
 
     @property
     def topology_virtual_sites(self):
         """DEPRECATED: Use Topology.virtual_sites instead."""
-        warnings.warn(
-            _TopologyDeprecationWarning("topology_virtual_sites", "virtual_sites")
-        )
+        _topology_deprecation("topology_virtual_sites", "virtual_sites")
         return self.virtual_sites
 
     @property
     def n_reference_molecules(self) -> int:
         """DEPRECATED: Use Topology.n_molecules instead."""
-        warnings.warn(
-            _TopologyDeprecationWarning("n_reference_molecules", "n_molecules")
-        )
+        _topology_deprecation("n_reference_molecules", "n_molecules")
         return self.n_molecules
 
     @property
     def n_topology_molecules(self) -> int:
         """DEPRECATED: Use Topology.n_molecules instead."""
-        warnings.warn(
-            _TopologyDeprecationWarning("n_topology_molecules", "n_molecules")
-        )
+        _topology_deprecation("n_topology_molecules", "n_molecules")
         return self.n_molecules
 
     @property
     def topology_molecules(self):
         """DEPRECATED: Use Topology.molecules instead."""
-        warnings.warn(_TopologyDeprecationWarning("topology_molecules", "molecules"))
+        _topology_deprecation("topology_molecules", "molecules")
         return self.molecules
