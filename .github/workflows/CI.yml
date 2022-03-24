@@ -138,6 +138,10 @@ jobs:
           conda info
           conda list
 
+      - name: Check cairo
+        run: |
+          python -c "from rdkt.Chem import Draw"
+
       - name: Check links
         if: ${{ matrix.rdkit == true && matrix.openeye == true }}
         run: pytest -r fE --tb=short openff/toolkit/tests/test_links.py
