@@ -1025,9 +1025,8 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                 # Store with implicit units until we're sure this conformer exists
                 positions = np.zeros(shape=[n_atoms, 3], dtype=np.float64)
                 for oe_id in conf.GetCoords().keys():
-                    off_atom_coords = unit.Quantity(
-                        conf.GetCoords()[oe_id], unit.angstrom
-                    )
+                    # implicitly in angstrom
+                    off_atom_coords = conf.GetCoords()[oe_id]
                     off_atom_index = off_to_oe_idx[oe_id]
                     positions[off_atom_index, :] = off_atom_coords
                 all_zeros = not np.any(positions)
