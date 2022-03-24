@@ -140,7 +140,7 @@ jobs:
 
       - name: Check cairo
         run: |
-          python -c "from rdkt.Chem import Draw"
+          python -c "from rdkit.Chem import Draw"
 
       - name: Check links
         if: ${{ matrix.rdkit == true && matrix.openeye == true }}
