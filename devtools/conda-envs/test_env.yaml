@@ -30,6 +30,7 @@ dependencies:
   - openeye-toolkits
   - mdtraj
   - cachetools
+  - cached-property
   - black
   - isort
   - pyyaml

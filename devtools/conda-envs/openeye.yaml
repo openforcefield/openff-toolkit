@@ -29,6 +29,7 @@ dependencies:
   - openff-utilities
   - smirnoff99Frosst
   - cachetools
+  - cached-property
   - pyyaml
   - toml
   - bson
