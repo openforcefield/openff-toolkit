@@ -540,7 +540,7 @@ class Topology(Serializable):
 
         Returns
         -------
-        box_vectors : openmm.unit.Quantity wrapped numpy array of shape (3, 3)
+        box_vectors : unit-wrapped numpy array of shape (3, 3)
             The unit-wrapped box vectors of this topology
         """
         return self._box_vectors
@@ -552,7 +552,7 @@ class Topology(Serializable):
 
         Parameters
         ----------
-        box_vectors : openmm.unit.Quantity wrapped numpy array of shape (3, 3)
+        box_vectors : unit-wrapped numpy array of shape (3, 3)
             The unit-wrapped box vectors
 
         """
@@ -1630,10 +1630,9 @@ class Topology(Serializable):
         with open(filename, "w") as outfile:
             app.PDBFile.writeFile(openmm_top, openmm_positions, outfile, keepIds)
 
-    # Should this be a staticmethod or a classmethod?
-    @staticmethod
+    @classmethod
     @requires_package("mdtraj")
-    def from_mdtraj(mdtraj_topology, unique_molecules=None):
+    def from_mdtraj(cls, mdtraj_topology, unique_molecules=None):
         """
         Construct an OpenFF Topology object from an MDTraj Topology object.
 
@@ -1652,7 +1651,7 @@ class Topology(Serializable):
         topology : openff.toolkit.topology.Topology
             An OpenFF Topology object
         """
-        return Topology.from_openmm(
+        return cls.from_openmm(
             mdtraj_topology.to_openmm(), unique_molecules=unique_molecules
         )
 
@@ -1878,7 +1877,7 @@ class Topology(Serializable):
         -------
         oemol : openeye.oechem.OEMol
             An OpenEye molecule
-        positions : openmm.unit.Quantity with shape [nparticles,3], optional, default=None
+        positions : unit-wrapped array with shape [nparticles,3], optional, default=None
             Positions to use in constructing OEMol.
             If virtual sites are present in the Topology, these indices will be skipped.
 
@@ -2132,7 +2131,7 @@ class Topology(Serializable):
         iatom, jatom : Atom
             Atoms to mark as constrained
             These atoms may be bonded or not in the Topology
-        distance : openmm.unit.Quantity, optional, default=True
+        distance : unit-wrapped float, optional, default=True
             Constraint distance
             ``True`` if distance has yet to be determined
             ``False`` if constraint is to be removed
@@ -2168,9 +2167,9 @@ class Topology(Serializable):
 
         Returns
         -------
-        distance : openmm.unit.Quantity or bool
+        distance : unit-wrapped float or bool
             True if constrained but constraints have not yet been applied
-            Distance if constraint has already been added to System
+            Distance if constraint has already been added to Topology
 
         """
         if (iatom, jatom) in self._constrained_atom_pairs:

@@ -834,7 +834,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         are stored on individual ``OEAtom`` s, and their values are initialized to ``0.0``.
         In the Open Force Field Toolkit, an ``openff.toolkit.topology.Molecule``'s
         ``partial_charges`` attribute is initialized to ``None`` and can be set to a
-        ``openmm.unit.Quantity``-wrapped numpy array with units of
+        unit-wrapped numpy array with units of
         elementary charge. The Open Force
         Field Toolkit considers an ``OEMol`` where every ``OEAtom`` has a partial
         charge of ``float('nan')`` to be equivalent to an Open Force Field Toolkit `Molecule`'s
@@ -964,7 +964,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             oe_idx = oeatom.GetIdx()
             map_id = oeatom.GetMapIdx()
             atomic_number = oeatom.GetAtomicNum()
-            # Carry with implicit units of elementary charge to skip unit checks in _add_atom
+            # Carry with implicit units of elementary charge for faster route through _add_atom
             formal_charge = oeatom.GetFormalCharge()
             is_aromatic = oeatom.IsAromatic()
             stereochemistry = OpenEyeToolkitWrapper._openeye_cip_atom_stereochemistry(
@@ -978,11 +978,14 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                 is_aromatic,
                 stereochemistry=stereochemistry,
                 name=name,
+                invalidate_cache=False,
             )
             off_to_oe_idx[
                 oe_idx
             ] = atom_index  # store for mapping oeatom to molecule atom indices below
             atom_mapping[atom_index] = map_id
+
+        molecule._invalidate_cached_properties()
 
         # If we have a full / partial atom map add it to the molecule. Zeroes 0
         # indicates no mapping
@@ -1012,7 +1015,10 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                 is_aromatic=is_aromatic,
                 stereochemistry=stereochemistry,
                 fractional_bond_order=fractional_bond_order,
+                invalidate_cache=False,
             )
+
+        molecule._invalidate_cached_properties()
 
         # TODO: Copy conformations, if present
         # TODO: Come up with some scheme to know when to import coordinates
@@ -1191,7 +1197,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         ``OEAtom``\ s, and their values are initialized to ``0.0``. In
         the Open Force Field Toolkit, an``openff.toolkit.topology.Molecule``'s
         ``partial_charges`` attribute is initialized to ``None`` and can
-        be set to a ``openmm.unit.Quantity``-wrapped numpy array with
+        be set to a unit-wrapped numpy array with
         units of elementary charge. The Open Force Field Toolkit
         considers an ``OEMol`` where every ``OEAtom`` has a partial
         charge of ``float('nan')`` to be equivalent to an Open Force
@@ -1707,7 +1713,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             The molecule to generate conformers for.
         n_conformers : int, default=1
             The maximum number of conformers to generate.
-        rms_cutoff : openmm.unit.Quantity-wrapped float, in units of distance, optional, default=None
+        rms_cutoff : unit-wrapped float, in units of distance, optional, default=None
             The minimum RMS value at which two conformers are considered redundant and one is deleted.
             If None, the cutoff is set to 1 Angstrom
         clear_existing : bool, default=True
@@ -1859,7 +1865,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             The charge model to use. One of ['amberff94', 'mmff', 'mmff94', 'am1-mulliken', 'am1bcc',
             'am1bccnosymspt', 'am1bccelf10']
             If None, 'am1-mulliken' will be used.
-        use_conformers : iterable of openmm.unit.Quantity-wrapped numpy arrays, each with
+        use_conformers : iterable of unit-wrapped numpy arrays, each with
             shape (n_atoms, 3) and dimension of distance. Optional, default = None
             Coordinates to use for partial charge calculation. If None, an appropriate number
             of conformers will be generated.
@@ -2056,7 +2062,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         ----------
         molecule : Molecule
             Molecule for which partial charges are to be computed
-        use_conformers : iterable of openmm.unit.Quantity-wrapped numpy arrays, each with
+        use_conformers : iterable of unit-wrapped numpy arrays, each with
             shape (n_atoms, 3) and dimension of distance. Optional, default = None
             Coordinates to use for partial charge calculation. If None, an appropriate number of conformers
             will be generated.
@@ -2102,7 +2108,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         bond_order_model : str, optional, default=None
             The charge model to use. One of ['am1-wiberg', 'am1-wiberg-elf10',
             'pm3-wiberg', 'pm3-wiberg-elf10']. If None, 'am1-wiberg' will be used.
-        use_conformers : iterable of openmm.unit.Quantity(np.array) with shape (n_atoms, 3) and
+        use_conformers : iterable of unit-wrapped np.array with shape (n_atoms, 3) and
             dimension of distance, optional, default=None
             The conformers to use for fractional bond order calculation. If None, an
             appropriate number of conformers will be generated by an available

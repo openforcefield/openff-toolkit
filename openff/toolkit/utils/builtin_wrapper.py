@@ -63,7 +63,7 @@ class BuiltInToolkitWrapper(base_wrapper.ToolkitWrapper):
         partial_charge_method: str, optional, default=None
             The charge model to use. One of ['zeros', 'formal_charge']. If None, 'formal_charge'
             will be used.
-        use_conformers : iterable of openmm.unit.Quantity-wrapped numpy arrays, each with shape
+        use_conformers : iterable of unit-wrapped numpy arrays, each with shape
             (n_atoms, 3) and dimension of distance. Optional, default = None
             Coordinates to use for partial charge calculation. If None, an appropriate number
             of conformers will be generated.
