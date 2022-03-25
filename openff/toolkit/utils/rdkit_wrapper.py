@@ -983,7 +983,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 ]
             )
 
-        molecule.partial_charges = unit.Quantiity(charges, unit.elementary_charge)
+        molecule.partial_charges = unit.Quantity(charges, unit.elementary_charge)
 
         if normalize_partial_charges:
             molecule._normalize_partial_charges()
@@ -1604,7 +1604,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                     positions[off_idx, :] = atom_coords
                 offmol._add_conformer(unit.Quantity(positions, unit.angstrom))
 
-        partial_charges = value = np.zeros(shape=offmol.n_atoms, dtype=np.float64)
+        partial_charges = np.zeros(shape=offmol.n_atoms, dtype=np.float64)
 
         any_atom_has_partial_charge = False
         for rd_idx, rd_atom in enumerate(rdmol.GetAtoms()):
