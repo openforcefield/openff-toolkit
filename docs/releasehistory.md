@@ -70,6 +70,24 @@ print(value_roundtrip)
   [`create_openmm_system`](openff.toolkit.typing.engines.smirnoff.ForceField.create_openmm_system)
   with a default value of False. Setting it to True routes `openmm.System` creation through
   Interchange.
+- [PR #1192](https://github.com/openforcefield/openforcefield/pull/1192): Add re-exports for core classes to the new
+  `openff.toolkit.app` module and re-exports for parameter types to the new `openff.toolkit.topology.parametertypes` module.
+  This does not affect existing paths and gives some new, easier to remember paths to core objects.
+- [PR #1198](https://github.com/openforcefield/openforcefield/pull/1198): Ensure the vdW switch
+  width is correctly set and enabled.
+- [PR #1213](https://github.com/openforcefield/openff-toolkit/pull/1213): Removes
+  `Topology.charge_model` and `Topology.fractional_bond_order_model`.
+
+### Critical bugfixes
+
+- [PR #1200](https://github.com/openforcefield/openforcefield/pull/1200): Fixes a bug
+  ([Issue #1199](https://github.com/openforcefield/openff-toolkit/issues/428)) in which library
+  charges were ignored in some force fields, including `openff-2.0.0` code name "Sage." This resulted in
+  the TIP3P partial charges included Sage not being applied correctly in versions 0.10.1 and 0.10.2 of the
+  OpenFF Toolkit. This regression was not present in version 0.10.0 and earlier and therefore is not
+  believed to have any impact on the fitting or benchmarking of the first release of Sage (version
+  2.0.0). The change causing regression only affected library charges and therefore no other
+  parameter types are believed to be affected.
 
 ### Behaviors changed and bugfixes
 
@@ -90,12 +108,28 @@ print(value_roundtrip)
   [`Atom.symbol`](openff.toolkit.topology.molecule.Atom.symbol),
   [`Atom.mass`](openff.toolkit.topology.molecule.Atom.mass), and
   [`Atom.atomic_number`](openff.toolkit.topology.molecule.Atom.atomic_number).
+- [PR #1209](https://github.com/openforcefield/openforcefield/pull/1209): Fixes 
+  [Issue #1073](https://github.com/openforcefield/openff-toolkit/issues/1073), where the
+  `fractional_bondorder_method` kwarg to the 
+  [`BondHandler`](openff.toolkit.typing.engines.smirnoff.parameters.BondHandler) initializer 
+  was being ignored.
+- [PR #1214](https://github.com/openforcefield/openforcefield/pull/1214): A long overdue fix
+  for [Issue #837](https://github.com/openforcefield/openff-toolkit/issues/837)! If OpenEye is
+  available, the `ToolkitAM1BCCHandler` will use the ELF10 method to select conformers for AM1BCC
+  charge assignment. 
+- [PR #1160](https://github.com/openforcefield/openforcefield/pull/1160): Fixes the bug identified in
+  [Issue #1159](https://github.com/openforcefield/openff-toolkit/issues/1159), in which the order of 
+  atoms defining a `BondChargeVirtualSite` (and possibly other virtual sites types too) might be reversed 
+  if the `match` attribute of the virtual site has a value of `"once"`.
 
 ### Examples added
 
 - [PR #1113](https://github.com/openforcefield/openff-toolkit/pull/1113): Updates the Amber/GROMACS
   example to use Interchange.
 
+### Tests updated
+- [PR #1188](https://github.com/openforcefield/openff-toolkit/pull/1188): Add an `<Electrostatics>`
+  section to the TIP3P force field file used in testing (`test_forcefields/tip3p.offxml`)
 
 ## 0.10.1 Minor feature and bugfix release
 

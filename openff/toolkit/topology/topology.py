@@ -16,18 +16,19 @@ Class definitions to represent a molecular system and its chemical components
    * Use `attrs <http://www.attrs.org/>`_ for object setter boilerplate?
 
 """
-
 import copy
 import itertools
 import warnings
 from collections import OrderedDict
 from collections.abc import MutableMapping
+from typing import TYPE_CHECKING, Generator, List, Union
 
 import numpy as np
 from openff.units import unit
 from openff.utilities import requires_package
 
 from openff.toolkit.topology import Molecule
+from openff.toolkit.topology._mm_molecule import _SimpleMolecule
 from openff.toolkit.typing.chemistry import ChemicalEnvironment
 from openff.toolkit.utils import quantity_to_string, string_to_quantity
 from openff.toolkit.utils.exceptions import (
@@ -40,22 +41,27 @@ from openff.toolkit.utils.exceptions import (
 from openff.toolkit.utils.serialization import Serializable
 from openff.toolkit.utils.toolkits import (
     ALLOWED_AROMATICITY_MODELS,
-    ALLOWED_CHARGE_MODELS,
-    ALLOWED_FRACTIONAL_BOND_ORDER_MODELS,
     DEFAULT_AROMATICITY_MODEL,
     GLOBAL_TOOLKIT_REGISTRY,
 )
+
+if TYPE_CHECKING:
+    from openff.toolkit.topology.molecule import Atom, Bond
 
 # =============================================================================================
 # PRIVATE SUBROUTINES
 # =============================================================================================
 
 
-def _TOPOLOGY_DEPRECATION_WARNING(old_method, new_method):
+def _topology_deprecation(old_method, new_method):
     warnings.warn(
         f"Topology.{old_method} is deprecated. Use Topology.{new_method} instead.",
-        DeprecationWarning,
+        TopologyDeprecationWarning,
     )
+
+
+class TopologyDeprecationWarning(UserWarning):
+    """Warning for deprecated portions of the Topology API."""
 
 
 class _TransformedDict(MutableMapping):
@@ -439,10 +445,11 @@ class Topology(Serializable):
         self._molecules = list()
         self._cached_chemically_identical_molecules = None
 
+    # Should this be deprecated?
     @property
-    def reference_molecules(self):
+    def reference_molecules(self) -> List[Molecule]:
         """
-        Get an iterator of reference molecules in this Topology.
+        Get a list of reference molecules in this Topology.
 
         Returns
         -------
@@ -451,7 +458,7 @@ class Topology(Serializable):
         return self._molecules
 
     @classmethod
-    def from_molecules(cls, molecules):
+    def from_molecules(cls, molecules: Union[Molecule, List[Molecule]]):
         """
         Create a new Topology object containing one copy of each of the specified molecule(s).
 
@@ -466,10 +473,7 @@ class Topology(Serializable):
             The Topology created from the specified molecule(s)
         """
         # Ensure that we are working with an iterable
-        try:
-            iter(molecules)
-        except TypeError as te:
-            # Make iterable object
+        if isinstance(molecules, (Molecule, _SimpleMolecule)):
             molecules = [molecules]
 
         # Create Topology and populate it with specified molecules
@@ -610,39 +614,6 @@ class Topology(Serializable):
             )
 
     @property
-    def charge_model(self):
-        """
-        Get the partial charge model applied to all molecules in the topology.
-
-        Returns
-        -------
-        charge_model : str
-            Charge model used for all molecules in the Topology.
-
-        """
-        return self._charge_model
-
-    @charge_model.setter
-    def charge_model(self, charge_model):
-        """
-        Set the partial charge model used for all molecules in the topology.
-
-        Parameters
-        ----------
-        charge_model : str
-            Charge model to use for all molecules in the Topology.
-            Allowed values: ['AM1-BCC']
-            * ``AM1-BCC``: Canonical AM1-BCC scheme
-        """
-        if not charge_model in ALLOWED_CHARGE_MODELS:
-            raise ValueError(
-                "Charge model must be one of {}; specified '{}'".format(
-                    ALLOWED_CHARGE_MODELS, charge_model
-                )
-            )
-        self._charge_model = charge_model
-
-    @property
     def constrained_atom_pairs(self):
         """Returns the constrained atom pairs of the Topology
 
@@ -652,38 +623,6 @@ class Topology(Serializable):
              dictionary of the form d[(atom1_topology_index, atom2_topology_index)] = distance (float)
         """
         return self._constrained_atom_pairs
-
-    @property
-    def fractional_bond_order_model(self):
-        """
-        Get the fractional bond order model for the Topology.
-
-        Returns
-        -------
-        fractional_bond_order_model : str
-            Fractional bond order model in use.
-
-        """
-        return self._fractional_bond_order_model
-
-    @fractional_bond_order_model.setter
-    def fractional_bond_order_model(self, fractional_bond_order_model):
-        """
-        Set the fractional bond order model applied to all molecules in the topology.
-
-        Parameters
-        ----------
-        fractional_bond_order_model : str
-            Fractional bond order model to use. One of: ['Wiberg']
-
-        """
-        if not fractional_bond_order_model in ALLOWED_FRACTIONAL_BOND_ORDER_MODELS:
-            raise ValueError(
-                "Fractional bond order model must be one of {}; specified '{}'".format(
-                    ALLOWED_FRACTIONAL_BOND_ORDER_MODELS, fractional_bond_order_model
-                )
-            )
-        self._fractional_bond_order_model = fractional_bond_order_model
 
     @property
     def n_molecules(self):
@@ -696,7 +635,7 @@ class Topology(Serializable):
         return len(self._molecules)
 
     @property
-    def molecules(self):
+    def molecules(self) -> Generator[Union[Molecule, _SimpleMolecule], None, None]:
         """Returns an iterator over all the Molecules in this Topology
 
         Returns
@@ -720,27 +659,26 @@ class Topology(Serializable):
         return self._molecules[index]
 
     @property
-    def n_atoms(self):
+    def n_atoms(self) -> int:
         """
         Returns the number of  atoms in in this Topology.
 
         Returns
         -------
-        n_topology_atoms : int
+        n_atoms : int
         """
         n_atoms = 0
-        for reference_molecule in self.reference_molecules:
-            n_atoms_per_topology_molecule = reference_molecule.n_atoms
-            n_atoms += n_atoms_per_topology_molecule
+        for molecule in self.molecules:
+            n_atoms += molecule.n_atoms
         return n_atoms
 
     @property
-    def atoms(self):
+    def atoms(self) -> Generator["Atom", None, None]:
         """Returns an iterator over the atoms in this Topology. These will be in ascending order of topology index.
 
         Returns
         -------
-        topology_atoms : Iterable of TopologyAtom
+        atoms : Generator of TopologyAtom
         """
         for molecule in self._molecules:
             for atom in molecule.atoms:
@@ -767,7 +705,7 @@ class Topology(Serializable):
                 topology_molecule_atom_start_index += molecule.n_atoms
         raise Exception("Atom not found in this Topology")
 
-    def particle_index(self, particle):
+    def particle_index(self, particle) -> int:
         """
         Returns the index of a given particle in this topology
 
@@ -780,12 +718,12 @@ class Topology(Serializable):
         index : int
             The index of the given particle in this topology
         """
-        for index, topology_particle in enumerate(self.particles):
-            if particle is topology_particle:
+        for index, iter_particle in enumerate(self.particles):
+            if particle is iter_particle:
                 return index
         raise Exception("Particle not found in this Topology")
 
-    def virtual_site_particle_start_index(self, virtual_site):
+    def virtual_site_particle_start_index(self, virtual_site) -> int:
         """
         Returns the  particle index of the first particle of this virtual site.
 
@@ -814,8 +752,8 @@ class Topology(Serializable):
         index : int
             The index of the given molecule in this topology
         """
-        for index, topology_molecule in enumerate(self.molecules):
-            if molecule is topology_molecule:
+        for index, iter_molecule in enumerate(self.molecules):
+            if molecule is iter_molecule:
                 return index
         raise Exception("Molecule not found in this Topology")
 
@@ -874,7 +812,7 @@ class Topology(Serializable):
                 yield bond
 
     @property
-    def n_particles(self):
+    def n_particles(self) -> int:
         """
         Returns the number of particles (Atoms and VirtualParticles) in in this Topology.
 
@@ -906,7 +844,7 @@ class Topology(Serializable):
                     yield vp
 
     @property
-    def n_virtual_sites(self):
+    def n_virtual_sites(self) -> int:
         """
         Returns the number of VirtualSites in in this Topology.
 
@@ -917,7 +855,7 @@ class Topology(Serializable):
 
         n_virtual_sites = 0
         for molecule in self.molecules:
-            n_virtual_sites += molecule.n_virtual_sites
+            n_virtual_sites += molecule.n_virtual_sites  # type: ignore[union-attr]
         return n_virtual_sites
 
     @property
@@ -1041,14 +979,17 @@ class Topology(Serializable):
         """
         Return canonicalized pairs of atoms whose shortest separation is `exactly` n bonds.
         Only pairs with increasing atom indices are returned.
+
         Parameters
         ----------
         n: int
             The number of bonds separating atoms in each pair
+
         Returns
         -------
         neighbors: iterator of tuple of Atom
             Tuples (len 2) of atom that are separated by ``n`` bonds.
+
         Notes
         -----
         The criteria used here relies on minimum distances; when there are multiple valid
@@ -1545,6 +1486,8 @@ class Topology(Serializable):
         """
         from openmm import app
 
+        from openff.toolkit.topology.molecule import Bond
+
         omm_topology = app.Topology()
 
         # Create unique atom names
@@ -1607,20 +1550,29 @@ class Topology(Serializable):
 
         # Add all bonds.
         bond_types = {1: app.Single, 2: app.Double, 3: app.Triple}
-        for bond in self.topology_bonds:
+        for bond in self.bonds:
             atom1, atom2 = bond.atoms
             atom1_idx, atom2_idx = self.atom_index(atom1), self.atom_index(atom2)
-            bond_type = (
-                # Aromatic if bond.bond.is_aromatic else bond_types[bond.bond_order]
-                app.Aromatic
-                if bond.is_aromatic
-                else bond_types[bond.bond_order]
-            )
+            if isinstance(bond, Bond):
+                if bond.is_aromatic:
+                    bond_type = app.Aromatic
+                else:
+                    bond_type = bond_types[bond.bond_order]
+                bond_order = bond.bond_order
+            elif isinstance(bond, _SimpleBond):
+                bond_type = None
+                bond_order = None
+            else:
+                raise RuntimeError(
+                    "Unexpected bond type found while iterating over Topology.bonds."
+                    f"Found {type(bond)}, allowed are Bond and _SimpleBond."
+                )
+
             omm_topology.addBond(
                 omm_atoms[atom1_idx],
                 omm_atoms[atom2_idx],
                 type=bond_type,
-                order=bond.bond_order,
+                order=bond_order,
             )
 
         if self.box_vectors is not None:
@@ -1630,7 +1582,9 @@ class Topology(Serializable):
         return omm_topology
 
     @requires_package("openmm")
-    def to_file(self, filename, positions, file_format="PDB", keepIds=False):
+    def to_file(
+        self, filename: str, positions, file_format: str = "PDB", keepIds=False
+    ):
         """
         Save coordinates and topology to a PDB file.
 
@@ -1651,7 +1605,11 @@ class Topology(Serializable):
         filename : str
             name of the pdb file to write to
         positions : n_atoms x 3 numpy array or openmm.unit.Quantity-wrapped n_atoms x 3 iterable
-            Can be an openmm 'quantity' object which has atomic positions as a list of Vec3s along with associated units, otherwise a 3D array of UNITLESS numbers are considered as "Angstroms" by default
+            Can be a
+              - `openmm.unit.Quantity' object which has atomic positions as a list of unit-tagged `Vec3` objects
+              - `openff.units.unit.Quantity` object which wraps a `numpy.ndarray` with units
+              - (unitless) 2D `numpy.ndarray`, in which it is assumed that the positions are in units of Angstroms.
+            For all data types, must have shape (n_atoms, 3) where n_atoms matches the number of atoms in this topology.
         file_format : str
             Output file format. Case insensitive. Currently only supported value is "pdb".
 
@@ -1660,13 +1618,17 @@ class Topology(Serializable):
         from openmm import unit as openmm_unit
 
         openmm_top = self.to_openmm()
-        if not isinstance(positions, openmm_unit.Quantity):
-            if isinstance(positions, np.ndarray):
-                positions = unit.Quantity(positions, unit.angstroms)
 
-            from openff.units.openmm import to_openmm
+        if isinstance(positions, openmm_unit.Quantity):
+            openmm_positions = positions
+        elif isinstance(positions, unit.Quantity):
+            from openff.units.openmm import to_openmm as to_openmm_quantity
 
-            positions = to_openmm(positions)
+            openmm_positions = to_openmm_quantity(positions)
+        elif isinstance(positions, np.ndarray):
+            openmm_positions = openmm_unit.Quantity(positions, openmm_unit.angstroms)
+        else:
+            raise ValueError(f"Could not process positions of type {type(positions)}.")
 
         file_format = file_format.upper()
         if file_format != "PDB":
@@ -1674,7 +1636,7 @@ class Topology(Serializable):
 
         # writing to PDB file
         with open(filename, "w") as outfile:
-            app.PDBFile.writeFile(openmm_top, positions, outfile, keepIds)
+            app.PDBFile.writeFile(openmm_top, openmm_positions, outfile, keepIds)
 
     # Should this be a staticmethod or a classmethod?
     @staticmethod
@@ -1976,7 +1938,7 @@ class Topology(Serializable):
             )
 
         # Create bonds
-        for off_bond in self.topology_bonds():
+        for off_bond in self.bonds():
             oe_mol.NewBond(oe_atoms[bond.atom1], oe_atoms[bond.atom2], bond.bond_order)
             if off_bond.type:
                 if off_bond.type == "Aromatic":
@@ -2000,7 +1962,7 @@ class Topology(Serializable):
         if positions is not None:
             # Set the OEMol positions
             particle_indices = [
-                atom.particle_index for atom in self.topology_atoms
+                atom.particle_index for atom in self.atoms
             ]  # get particle indices
             pos = positions[particle_indices].m_as(unit.angstrom)
             pos = list(itertools.chain.from_iterable(pos))
@@ -2080,16 +2042,16 @@ class Topology(Serializable):
         An openff.toolkit.topology.TopologyAtom
         """
         assert type(atom_topology_index) is int
-        assert 0 <= atom_topology_index < self.n_topology_atoms
+        assert 0 <= atom_topology_index < self.n_atoms
         this_molecule_start_index = 0
         next_molecule_start_index = 0
-        for topology_molecule in self._molecules:
-            next_molecule_start_index += topology_molecule.n_atoms
+        for molecule in self.molecules:
+            next_molecule_start_index += molecule.n_atoms
             if next_molecule_start_index > atom_topology_index:
                 atom_molecule_index = atom_topology_index - this_molecule_start_index
                 # NOTE: the index here should still be in the topology index order, NOT the reference molecule's
-                return topology_molecule.atom(atom_molecule_index)
-            this_molecule_start_index += topology_molecule.n_atoms
+                return molecule.atom(atom_molecule_index)
+            this_molecule_start_index += molecule.n_atoms
 
         # Potentially more computationally efficient lookup ( O(largest_molecule_natoms)? )
         # start_index_2_top_mol is an ordered dict of [starting_atom_index] --> [topology_molecule]
@@ -2140,15 +2102,15 @@ class Topology(Serializable):
         An openff.toolkit.topology.TopologyBond
         """
         assert type(bond_topology_index) is int
-        assert 0 <= bond_topology_index < self.n_topology_bonds
+        assert 0 <= bond_topology_index < self.n_bonds
         this_molecule_start_index = 0
         next_molecule_start_index = 0
-        for topology_molecule in self._molecules:
-            next_molecule_start_index += topology_molecule.n_bonds
+        for molecule in self._molecules:
+            next_molecule_start_index += molecule.n_bonds
             if next_molecule_start_index > bond_topology_index:
                 bond_molecule_index = bond_topology_index - this_molecule_start_index
-                return topology_molecule.bond(bond_molecule_index)
-            this_molecule_start_index += topology_molecule.n_bonds
+                return molecule.bond(bond_molecule_index)
+            this_molecule_start_index += molecule.n_bonds
 
     def add_particle(self, particle):
         """Add a Particle to the Topology.
@@ -2162,73 +2124,10 @@ class Topology(Serializable):
         """
         pass
 
-    def add_molecule(self, molecule):
+    def add_molecule(self, molecule: Union[Molecule, _SimpleMolecule]) -> int:
         self._molecules.append(copy.deepcopy(molecule))
         self._cached_chemically_identical_molecules = None
         return len(self._molecules)
-
-    # Outdated now that topologies contain full copies of molecules
-    def _add_molecule(self, molecule, local_topology_to_reference_index=None):
-        """Add a Molecule to the Topology. You can optionally request that the atoms be added to the Topology in
-        a different order than they appear in the Molecule.
-
-        Parameters
-        ----------
-        molecule : Molecule
-            The Molecule to be added.
-        local_topology_to_reference_index: dict, optional, default = None
-            Dictionary of {TopologyMolecule_atom_index : Molecule_atom_index} for the TopologyMolecule that will be
-            built. If None, this function will add the atoms to the Topology in the order that they appear in the
-            reference molecule.
-
-        Returns
-        -------
-        index : int
-            The index of this molecule in the topology
-        """
-        from openff.toolkit.topology.molecule import FrozenMolecule, Molecule
-
-        if local_topology_to_reference_index is None:
-            local_topology_to_reference_index = dict(
-                (i, i) for i in range(molecule.n_atoms)
-            )
-
-        mol_smiles = molecule.to_smiles()
-        reference_molecule = None
-        for potential_ref_mol in self._reference_molecule_to_topology_molecules.keys():
-            if mol_smiles == potential_ref_mol.to_smiles():
-                # If the molecule is already in the Topology.reference_molecules, add another reference to it in
-                # Topology.molecules
-                reference_molecule = potential_ref_mol
-
-                # Graph-match this molecule to see if it's in the same order
-                # Default settings use full matching
-                _, atom_map = Molecule.are_isomorphic(
-                    molecule, reference_molecule, return_atom_map=True
-                )
-                if atom_map is None:
-                    raise Exception(1)
-                new_mapping = {}
-                for local_top_idx, ref_idx in local_topology_to_reference_index.items():
-                    new_mapping[local_top_idx] = atom_map[ref_idx]
-                local_topology_to_reference_index = new_mapping
-                # raise Exception(local_topology_to_reference_index)
-                break
-        if reference_molecule is None:
-            # If it's a new unique molecule, make and store an immutable copy of it
-            reference_molecule = FrozenMolecule(molecule)
-            self._reference_molecule_to_topology_molecules[reference_molecule] = list()
-
-        topology_molecule = TopologyMolecule(
-            reference_molecule, self, local_topology_to_reference_index
-        )
-        self._topology_molecules.append(topology_molecule)
-        self._reference_molecule_to_topology_molecules[reference_molecule].append(
-            self._topology_molecules[-1]
-        )
-
-        index = len(self._topology_molecules) - 1
-        return index
 
     def add_constraint(self, iatom, jatom, distance=True):
         """
@@ -2309,126 +2208,67 @@ class Topology(Serializable):
 
     # DEPRECATED API POINTS
     @property
-    def n_topology_atoms(self):
-        """
-        Returns the number of atoms in in this Topology.
-
-        Returns
-        -------
-        n_topology_atoms : int
-        """
-        _TOPOLOGY_DEPRECATION_WARNING("n_topology_atom", "n_atoms")
+    def n_topology_atoms(self) -> int:
+        """DEPRECATED: Use Topology.n_atoms instead."""
+        _topology_deprecation("n_topology_atoms", "n_atoms")
         return self.n_atoms
 
     @property
     def topology_atoms(self):
-        """
-        Returns an iterator over the atoms in this Topology. These will be in ascending order of topology index.
-
-        Returns
-        -------
-        topology_atoms : Iterable of Atom
-        """
-        _TOPOLOGY_DEPRECATION_WARNING("topology_atoms", "atoms")
+        """DEPRECATED: Use Topology.atoms instead."""
+        _topology_deprecation("topology_atoms", "atoms")
         return self.atoms
 
     @property
-    def n_topology_bonds(self):
-        """
-        Returns the number of bonds in in this Topology.
-
-        Returns
-        -------
-        n_bonds : int
-        """
-        _TOPOLOGY_DEPRECATION_WARNING("n_topology_bonds", "n_bonds")
+    def n_topology_bonds(self) -> int:
+        """DEPRECATED: Use Topology.n_bonds instead."""
+        _topology_deprecation("n_topology_bonds", "n_bonds")
         return self.n_bonds
 
     @property
     def topology_bonds(self):
-        """Returns an iterator over the bonds in this Topology
-
-        Returns
-        -------
-        topology_bonds : Iterable of Bond
-        """
-        _TOPOLOGY_DEPRECATION_WARNING("topology_bonds", "bonds")
+        """DEPRECATED: Use Topology.bonds instead."""
+        _topology_deprecation("topology_bonds", "bonds")
         return self.bonds
 
     @property
-    def n_topology_particles(self):
-        """
-        Returns the number of topology particles (TopologyAtoms and TopologyVirtualSites) in in this Topology.
-
-        Returns
-        -------
-        n_topology_particles : int
-        """
-        _TOPOLOGY_DEPRECATION_WARNING("n_topology_particles", "n_particles")
+    def n_topology_particles(self) -> int:
+        """DEPRECATED: Use Topology.n_particles instead."""
+        _topology_deprecation("n_topology_particles", "n_particles")
         return self.n_particles
 
     @property
     def topology_particles(self):
-        """Returns an iterator over the particles (TopologyAtoms and TopologyVirtualSites) in this Topology. The
-        TopologyAtoms will be in order of ascending Topology index.
-
-        Returns
-        --------
-        topology_particles : Iterable of TopologyAtom and TopologyVirtualSite
-        """
-        _TOPOLOGY_DEPRECATION_WARNING("topology_particles", "particles")
+        """DEPRECATED: Use Topology.particles instead."""
+        _topology_deprecation("topology_particles", "particles")
         return self.particles
 
     @property
-    def n_topology_virtual_sites(self):
-        """
-        Deprecated - Use Topology.n_virtual_sites instead.
-        """
-        _TOPOLOGY_DEPRECATION_WARNING("n_topology_virtual_sites", "n_virtual_sites")
+    def n_topology_virtual_sites(self) -> int:
+        """DEPRECATED: Use Topology.n_virtual_sites instead."""
+        _topology_deprecation("n_topology_virtual_sites", "n_virtual_sites")
         return self.n_virtual_sites
 
     @property
     def topology_virtual_sites(self):
-        """Get an iterator over the virtual sites in this Topology
-
-        Returns
-        -------
-        topology_virtual_sites : Iterable of TopologyVirtualSite
-        """
-        _TOPOLOGY_DEPRECATION_WARNING("topology_virtual_sites", "virtual_sites")
+        """DEPRECATED: Use Topology.virtual_sites instead."""
+        _topology_deprecation("topology_virtual_sites", "virtual_sites")
         return self.virtual_sites
 
     @property
-    def n_reference_molecules(self):
-        """
-        Returns the number of reference (unique) molecules in in this Topology.
-
-        Returns
-        -------
-        n_reference_molecules : int
-        """
-        _TOPOLOGY_DEPRECATION_WARNING("n_reference_molecules", "n_molecules")
+    def n_reference_molecules(self) -> int:
+        """DEPRECATED: Use Topology.n_molecules instead."""
+        _topology_deprecation("n_reference_molecules", "n_molecules")
         return self.n_molecules
 
     @property
-    def n_topology_molecules(self):
-        """
-        Returns the number of topology molecules in in this Topology.
-
-        Returns
-        -------
-        n_topology_molecules : int
-        """
-        _TOPOLOGY_DEPRECATION_WARNING("n_topology_molecules", "n_molecules")
+    def n_topology_molecules(self) -> int:
+        """DEPRECATED: Use Topology.n_molecules instead."""
+        _topology_deprecation("n_topology_molecules", "n_molecules")
         return self.n_molecules
 
     @property
     def topology_molecules(self):
-        """Returns an iterator over all the TopologyMolecules in this Topology
-
-        Returns
-        -------
-        topology_molecules : Iterable of TopologyMolecule
-        """
-        _TOPOLOGY_DEPRECATION_WARNING("topology_molecules", "molecules")
+        """DEPRECATED: Use Topology.molecules instead."""
+        _topology_deprecation("topology_molecules", "molecules")
         return self.molecules

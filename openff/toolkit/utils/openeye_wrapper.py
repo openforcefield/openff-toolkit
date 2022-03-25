@@ -29,6 +29,7 @@ from openff.toolkit.utils.exceptions import (
     ChargeMethodUnavailableError,
     ConformerGenerationError,
     GAFFAtomTypeWarning,
+    InconsistentStereochemistryError,
     InvalidIUPACNameError,
     LicenseError,
     SMILESParseError,
@@ -1008,7 +1009,8 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             oe_idx = oeatom.GetIdx()
             map_id = oeatom.GetMapIdx()
             atomic_number = oeatom.GetAtomicNum()
-            formal_charge = oeatom.GetFormalCharge() * unit.elementary_charge
+            # Carry with implicit units of elementary charge to skip unit checks in _add_atom
+            formal_charge = oeatom.GetFormalCharge()
             is_aromatic = oeatom.IsAromatic()
             stereochemistry = OpenEyeToolkitWrapper._openeye_cip_atom_stereochemistry(
                 oemol, oeatom
@@ -1075,24 +1077,20 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         if hasattr(oemol, "GetConfs"):
             for conf in oemol.GetConfs():
                 n_atoms = molecule.n_atoms
-                positions = unit.Quantity(
-                    np.zeros(shape=[n_atoms, 3], dtype=np.float64), unit.angstrom
-                )
+                # Store with implicit units until we're sure this conformer exists
+                positions = np.zeros(shape=[n_atoms, 3], dtype=np.float64)
                 for oe_id in conf.GetCoords().keys():
-                    off_atom_coords = unit.Quantity(
-                        conf.GetCoords()[oe_id], unit.angstrom
-                    )
+                    # implicitly in angstrom
+                    off_atom_coords = conf.GetCoords()[oe_id]
                     off_atom_index = off_to_oe_idx[oe_id]
                     positions[off_atom_index, :] = off_atom_coords
-                if (positions == 0 * unit.angstrom).all() and n_atoms > 1:
+                all_zeros = not np.any(positions)
+                if all_zeros and n_atoms > 1:
                     continue
-                molecule._add_conformer(positions)
+                molecule._add_conformer(unit.Quantity(positions, unit.angstrom))
 
-        # Copy partial charges, if present
-        partial_charges = unit.Quantity(
-            np.zeros(shape=molecule.n_atoms, dtype=np.float64),
-            unit.elementary_charge,
-        )
+        # Store charges with implicit units in this scope
+        unitless_charges = np.zeros(shape=molecule.n_atoms, dtype=np.float64)
 
         # If all OEAtoms have a partial charge of NaN, then the OFFMol should
         # have its partial_charges attribute set to None
@@ -1101,14 +1099,16 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             oe_idx = oe_atom.GetIdx()
             off_idx = off_to_oe_idx[oe_idx]
             unitless_charge = oe_atom.GetPartialCharge()
-            if not math.isnan(unitless_charge):
-                any_partial_charge_is_not_nan = True
-                # break
-            charge = unitless_charge * unit.elementary_charge
-            partial_charges[off_idx] = charge
+            # Once this is True, skip the isnancheck
+            if not any_partial_charge_is_not_nan:
+                if not math.isnan(unitless_charge):
+                    any_partial_charge_is_not_nan = True
+            unitless_charges[off_idx] = unitless_charge
 
         if any_partial_charge_is_not_nan:
-            molecule.partial_charges = partial_charges
+            molecule.partial_charges = unit.Quantity(
+                unitless_charges, unit.elementary_charge
+            )
         else:
             molecule.partial_charges = None
 
@@ -1181,8 +1181,10 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                     )
                 )
                 if oeatom_stereochemistry != atom.stereochemistry:
-                    raise Exception(
-                        "Programming error: OpenEye atom stereochemistry assumptions failed."
+                    raise InconsistentStereochemistryError(
+                        "Programming error: OpenEye atom stereochemistry assumptions failed. "
+                        f"The atom in the oemol has stereochemistry {oeatom_stereochemistry} and "
+                        f"the atom in the offmol has stereoheometry {atom.stereochemistry}."
                     )
 
         # Set bond stereochemistry
@@ -1221,8 +1223,10 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                     )
                 )
                 if oebond_stereochemistry != bond.stereochemistry:
-                    raise Exception(
-                        "Programming error: OpenEye bond stereochemistry assumptions failed."
+                    raise InconsistentStereochemistryError(
+                        "Programming error: OpenEye bond stereochemistry assumptions failed. "
+                        f"The bond in the oemol has stereochemistry {oebond_stereochemistry} and "
+                        f"the bond in the offmol has stereoheometry {bond.stereochemistry}."
                     )
 
         # Clean Up phase
@@ -1890,7 +1894,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             for atom_index, coordinates in oe_conformer.GetCoords().items():
                 conformer[atom_index, :] = coordinates
 
-            conformers.append(conformer * unit.angstrom)
+            conformers.append(unit.Quantity(conformer, unit.angstrom))
 
         molecule._conformers = conformers
 
@@ -1920,7 +1924,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         molecule : openff.toolkit.topology.Molecule
             Molecule for which partial charges are to be computed
         partial_charge_method : str, optional, default=None
-            The charge model to use. One of ['amberff94', 'mmff', 'mmff94', `am1-mulliken`, 'am1bcc',
+            The charge model to use. One of ['amberff94', 'mmff', 'mmff94', 'am1-mulliken', 'am1bcc',
             'am1bccnosymspt', 'am1bccelf10']
             If None, 'am1-mulliken' will be used.
         use_conformers : iterable of openmm.unit.Quantity-wrapped numpy arrays, each with

@@ -8,12 +8,14 @@
 Test classes and function in module openff.toolkit.typing.engines.smirnoff.parameters.
 
 """
+from inspect import isabstract, isclass
 
 import numpy
 import pytest
 from numpy.testing import assert_almost_equal
 from openff.units import unit
 
+import openff.toolkit.typing.engines.smirnoff.parameters
 from openff.toolkit.topology import Molecule
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     BondHandler,
@@ -1401,6 +1403,10 @@ class TestBondHandler:
         bh2 = BondHandler(version=0.4)
         assert bh2.fractional_bondorder_method == "AM1-Wiberg"
         assert bh2.potential == "(k/2)*(r-length)^2"
+        bh3 = BondHandler(version=0.3, fractional_bondorder_method="AM1-Wiberg")
+        assert bh3.fractional_bondorder_method == "AM1-Wiberg"
+        assert bh3.fractional_bondorder_interpolation == "linear"
+        assert bh3.potential == "harmonic"
 
     def test_harmonic_potentials_are_compatible(self):
         """
@@ -1740,6 +1746,70 @@ class TestvdWType:
     """
     Test the behavior of vdWType
     """
+
+    @pytest.mark.parametrize(
+        "cutoff,switch_width,expected_use,expected_switching_distance",
+        [
+            (9.0 * unit.angstrom, 1.0 * unit.angstrom, True, 8.0 * unit.angstrom),
+            (15.0 * unit.angstrom, 5.0 * unit.angstrom, True, 10.0 * unit.angstrom),
+            (9.0 * unit.angstrom, 0.0 * unit.angstrom, False, 0.0 * unit.angstrom),
+        ],
+    )
+    @pytest.mark.parametrize(
+        "method",
+        # It's possible that this test should not cover PME (LJ-PME), see comments in parameters.py
+        ["PME", "cutoff"],
+    )
+    def test_switch_width(
+        self, cutoff, switch_width, expected_use, expected_switching_distance, method
+    ):
+        """Test that create_force works on a vdWHandler which has a switch width
+        specified.
+        """
+
+        import openmm
+        from openmm import unit as openmm_unit
+
+        # Create a dummy topology containing only argon and give it a set of
+        # box vectors.
+        topology = Molecule.from_smiles("[Ar]").to_topology()
+        topology.box_vectors = unit.Quantity(numpy.eye(3) * 20 * unit.angstrom)
+
+        # create a VdW handler with only parameters for argon.
+        vdw_handler = vdWHandler(
+            version=0.3,
+            cutoff=cutoff,
+            switch_width=switch_width,
+            method=method,
+        )
+        vdw_handler.add_parameter(
+            {
+                "smirks": "[#18:1]",
+                "epsilon": 1.0 * unit.kilojoules_per_mole,
+                "sigma": 1.0 * unit.angstrom,
+            }
+        )
+
+        omm_sys = openmm.System()
+
+        vdw_handler.create_force(omm_sys, topology)
+
+        nonbonded_force = [
+            force
+            for force in omm_sys.getForces()
+            if isinstance(force, openmm.NonbondedForce)
+        ][0]
+
+        assert nonbonded_force.getUseSwitchingFunction() == expected_use
+
+        if expected_use:
+
+            assert numpy.isclose(
+                nonbonded_force.getSwitchingDistance().value_in_unit(
+                    openmm_unit.angstrom
+                ),
+                expected_switching_distance.m_as(unit.angstrom),
+            )
 
     def test_sigma_rmin_half(self):
         """Test the setter/getter behavior or sigma and rmin_half"""
@@ -2255,6 +2325,40 @@ class TestGBSAHandler:
             IncompatibleParameterError, match="Difference between 'solvent_radius' "
         ) as excinfo:
             gbsa_handler_1.check_handler_compatibility(gbsa_handler_3)
+
+
+class TestParameterTypeReExports:
+    def test_parametertype_reexports(self):
+        params_module = openff.toolkit.typing.engines.smirnoff.parameters
+
+        def subclass_attrs(obj, classinfo):
+            """Iterate over members of ``obj`` that are concrete, public subclasses of ``classinfo``"""
+            return filter(
+                lambda nv: (  # (name, value)
+                    isclass(nv[1])
+                    and issubclass(nv[1], classinfo)
+                    and not isabstract(nv[1])
+                    and not nv[0].startswith("_")
+                ),
+                vars(obj).items(),
+            )
+
+        for _, paramhandler in subclass_attrs(params_module, ParameterHandler):
+            for paramtype_name, paramtype in subclass_attrs(
+                paramhandler, ParameterType
+            ):
+                assert paramtype_name in vars(params_module), (
+                    f"ParameterType {paramtype_name!r} is "
+                    f"not re-exported from parameters module"
+                )
+                assert vars(params_module)[paramtype_name] is paramtype, (
+                    f"Exported attribute parameters.{paramtype_name} "
+                    f"does not match ParameterType {paramtype_name!r}"
+                )
+                assert paramtype_name in params_module.__all__, (
+                    f"ParameterType {paramtype_name!r} "
+                    f"missing from parameters.__all__"
+                )
 
 
 # TODO: test_nonbonded_settings (ensure that choices in Electrostatics and vdW tags resolve

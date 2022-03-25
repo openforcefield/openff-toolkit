@@ -34,7 +34,7 @@ import warnings
 from abc import abstractmethod
 from collections import OrderedDict, UserDict
 from copy import deepcopy
-from typing import TYPE_CHECKING, List, Optional, Union
+from typing import TYPE_CHECKING, Generator, List, Optional, Tuple, Union
 
 import networkx as nx
 import numpy as np
@@ -43,6 +43,7 @@ from openff.units.elements import MASSES, SYMBOLS
 from openff.units.openmm import to_openmm
 
 if TYPE_CHECKING:
+    from openff.toolkit.topology._mm_molecule import _SimpleAtom, _SimpleMolecule
     import networkx as nx
     from openff.units.unit import Quantity
 
@@ -249,7 +250,8 @@ class Atom(Particle):
         self._atomic_number = atomic_number
         # Use the setter here, since it will handle either ints or Quantities
         if hasattr(formal_charge, "units"):
-            if formal_charge.units == unit.dimensionless:
+            # Faster check than ` == unit.dimensionless`
+            if str(formal_charge.units) == "":
                 raise Exception
         self.formal_charge = formal_charge
         self._is_aromatic = is_aromatic
@@ -334,9 +336,12 @@ class Atom(Particle):
         Set the atom's formal charge. Accepts either ints or openmm.unit.Quantity-wrapped ints with units of charge.
         """
         if isinstance(other, int):
-            self._formal_charge = other * unit.elementary_charge
+            self._formal_charge = unit.Quantity(other, unit.elementary_charge)
         elif isinstance(other, unit.Quantity):
-            if other.units in unit.elementary_charge.compatible_units():
+            # Faster to check equality than convert, so short-circuit
+            if other.units is unit.elementary_charge:
+                self.formal_charge = other
+            elif other.units in unit.elementary_charge.compatible_units():
                 self._formal_charge = other
             else:
                 raise IncompatibleUnitError(
@@ -422,7 +427,7 @@ class Atom(Particle):
         return SYMBOLS[self.atomic_number]
 
     @property
-    def mass(self) -> "unit.Quantity":
+    def mass(self) -> "Quantity":
         """
         The standard atomic weight (abundance-weighted isotopic mass) of the atomic site.
 
@@ -4745,23 +4750,6 @@ class FrozenMolecule(Serializable):
         }
         return amber_impropers
 
-    def _nth_degree_neighbors(self, n_degrees):
-        import networkx as nx
-
-        mol_graph = self.to_networkx()
-
-        for node_i in mol_graph.nodes:
-            for node_j in mol_graph.nodes:
-                if node_i == node_j:
-                    continue
-
-                path_length = nx.shortest_path_length(mol_graph, node_i, node_j)
-
-                if path_length == n_degrees:
-                    if node_i > node_j:
-                        continue
-                    yield (self.atoms[node_i], self.atoms[node_j])
-
     def nth_degree_neighbors(self, n_degrees):
         """
         Return canonicalized pairs of atoms whose shortest separation is `exactly` n bonds.
@@ -4794,7 +4782,9 @@ class FrozenMolecule(Serializable):
                 f"path lengths of {n_degrees}."
             )
         else:
-            return self._nth_degree_neighbors(n_degrees=n_degrees)
+            return _nth_degree_neighbors_from_graphlike(
+                graphlike=self, n_degrees=n_degrees
+            )
 
     @property
     def total_charge(self):
@@ -5065,7 +5055,7 @@ class FrozenMolecule(Serializable):
 
         """
         # TODO: Ensure we are dealing with an OpenFF Topology object
-        if topology.n_topology_molecules != 1:
+        if topology.n_molecules != 1:
             raise ValueError("Topology must contain exactly one molecule")
         molecule = [i for i in topology.reference_molecules][0]
         return cls(molecule)
@@ -5305,6 +5295,7 @@ class FrozenMolecule(Serializable):
             omm_topology_G = copy.deepcopy(omm_topology_G)
 
             _make_hydrogens_negative_in_networkx_graph(omm_topology_G)
+
 
             # Try matching this substructure to the whole molecule graph
             node_match = isomorphism.categorical_node_match(
@@ -7235,7 +7226,10 @@ def _atom_nums_to_hill_formula(atom_nums: List[int]) -> str:
     Hill formula. See https://en.wikipedia.org/wiki/Chemical_formula#Hill_system"""
     from collections import Counter
 
-    atom_symbol_counts = Counter(SYMBOLS[atom_num] for atom_num in atom_nums)
+    SYMBOLS_ = deepcopy(SYMBOLS)
+    SYMBOLS_[0] = "X"
+
+    atom_symbol_counts = Counter(SYMBOLS_[atom_num] for atom_num in atom_nums)
 
     formula = []
     # Check for C and H first, to make a correct hill formula
@@ -7254,6 +7248,46 @@ def _atom_nums_to_hill_formula(atom_nums: List[int]) -> str:
             formula.append(str(count))
 
     return "".join(formula)
+
+
+def _nth_degree_neighbors_from_graphlike(
+    graphlike: Union[Molecule, "_SimpleMolecule"], n_degrees: int
+) -> Generator[
+    Union[Tuple[Atom, Atom], Tuple["_SimpleAtom", "_SimpleAtom"]], None, None
+]:
+    """
+    Given a graph-like object, return a tuple of the nth degree neighbors of each atom.
+
+    The input `graphlike` object must provide a .to_networkx() method and an
+    `atoms` property that can be indexed.
+
+    See Molecule.nth_degree_neighbors for more details.
+
+    Parameters
+    ----------
+    graphlike : Union[Molecule, _SimpleMolecule]
+        The graph-like object to get the neighbors of.
+    n: int
+        The number of bonds separating atoms in each pair
+
+    Returns
+    -------
+    neighbors: iterator of tuple of Atom
+        Tuples (len 2) of atom that are separated by ``n`` bonds.
+    """
+    graph = graphlike.to_networkx()
+
+    for node_i in graph.nodes:
+        for node_j in graph.nodes:
+            if node_i == node_j:
+                continue
+
+            path_length = nx.shortest_path_length(graph, node_i, node_j)
+
+            if path_length == n_degrees:
+                if node_i > node_j:
+                    continue
+                yield (graphlike.atoms[node_i], graphlike.atoms[node_j])
 
 
 class HierarchyScheme:

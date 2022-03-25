@@ -46,6 +46,20 @@ __all__ = [
     "GBSAHandler",
     "ToolkitAM1BCCHandler",
     "VirtualSiteHandler",
+    "ParameterType",
+    "ConstraintType",
+    "BondType",
+    "AngleType",
+    "ProperTorsionType",
+    "ImproperTorsionType",
+    "vdWType",
+    "LibraryChargeType",
+    "GBSAType",
+    "ChargeIncrementType",
+    "VirtualSiteBondChargeType",
+    "VirtualSiteMonovalentLonePairType",
+    "VirtualSiteDivalentLonePairType",
+    "VirtualSiteTrivalentLonePairType",
 ]
 import abc
 import copy
@@ -2667,9 +2681,9 @@ class BondHandler(ParameterHandler):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         # Default value for fractional_bondorder_interpolation depends on section version
-        if self.version == 0.3 and "fractional_bondorder_interpolation" not in kwargs:
+        if self.version == 0.3 and "fractional_bondorder_method" not in kwargs:
             self.fractional_bondorder_method = "none"
-        elif self.version == 0.4 and "fractional_bondorder_interpolation" not in kwargs:
+        elif self.version == 0.4 and "fractional_bondorder_method" not in kwargs:
             self.fractional_bondorder_method = "AM1-Wiberg"
 
         # Default value for potential depends on section version
@@ -3447,7 +3461,7 @@ class _NonbondedHandler(ParameterHandler):
             system.addForce(force)
             # Create all atom particles. Virtual site particles are handled in
             # in its own handler
-            for _ in topology.topology_atoms:
+            for _ in topology.atoms:
                 force.addParticle(0.0, 1.0, 0.0)
         else:
             force = existing[0]
@@ -3633,7 +3647,7 @@ class vdWHandler(_NonbondedHandler):
         """
         float_attrs_to_compare = ["scale12", "scale13", "scale14", "scale15"]
         string_attrs_to_compare = ["potential", "combining_rules", "method"]
-        unit_attrs_to_compare = ["cutoff"]
+        unit_attrs_to_compare = ["cutoff", "switch_width"]
 
         self._check_attributes_are_equal(
             other_handler,
@@ -3670,7 +3684,14 @@ class vdWHandler(_NonbondedHandler):
             else:
                 force.setNonbondedMethod(openmm.NonbondedForce.PME)
                 force.setUseDispersionCorrection(True)
+
                 force.setCutoffDistance(to_openmm(self.cutoff))
+
+        # This applies a switching function whether the vdW method is LJ-PME or cut-off. It's not clear if this is a
+        # valid combination of settings, if this is something that all engines would support, or if it even has an
+        # effect. In OpenMM, it can be applied but it might not have any effect. The SMIRNOFF spec offers no clear
+        # guidance on this combination, but it is possible that is may be revised in the future to do so.
+        self._apply_switching_function(force)
 
         # Iterate over all defined Lennard-Jones types, allowing later matches to override earlier ones.
         atom_matches = self.find_matches(topology)
@@ -3691,6 +3712,15 @@ class vdWHandler(_NonbondedHandler):
         self._check_all_valence_terms_assigned(
             atom_matches, topology, [(atom,) for atom in topology.atoms]
         )
+
+    def _apply_switching_function(self, force):
+        """Apply a switching function to a NonbondedForce if self.switch_width is nonzero."""
+        from openff.units.openmm import to_openmm
+
+        if self.switch_width.m > 0:
+            switching_distance = to_openmm(self.cutoff - self.switch_width)
+            force.setSwitchingDistance(switching_distance)
+            force.setUseSwitchingFunction(True)
 
 
 class ElectrostaticsHandler(_NonbondedHandler):
@@ -4029,7 +4059,7 @@ class LibraryChargeHandler(_NonbondedHandler):
     _INFOTYPE = LibraryChargeType  # info type to store
     _DEPENDENCIES = [vdWHandler, ElectrostaticsHandler]
 
-    def find_matches(self, entity, unique=True):
+    def find_matches(self, entity, unique=False):
         """Find the elements of the topology/molecule matched by a parameter type.
 
         Parameters
@@ -4166,10 +4196,17 @@ class ToolkitAM1BCCHandler(_NonbondedHandler):
             # If the molecule wasn't already assigned charge values, calculate them here
             toolkit_registry = kwargs.get("toolkit_registry", GLOBAL_TOOLKIT_REGISTRY)
             try:
+                # If OpenEye is available, use ELF10
+                partial_charge_method = "am1bcc"
+                for available_toolkit_wrapper in toolkit_registry.registered_toolkits:
+                    if "OpenEye" in str(available_toolkit_wrapper):
+                        partial_charge_method = "am1bccelf10"
+
                 # We don't need to generate conformers here, since that will be done by default in
                 # compute_partial_charges with am1bcc if the use_conformers kwarg isn't defined
                 unique_mol.assign_partial_charges(
-                    partial_charge_method="am1bcc", toolkit_registry=toolkit_registry
+                    partial_charge_method=partial_charge_method,
+                    toolkit_registry=toolkit_registry,
                 )
             except Exception as e:
                 warnings.warn(str(e), Warning)
@@ -4183,15 +4220,13 @@ class ToolkitAM1BCCHandler(_NonbondedHandler):
                     mol_instance = topology.molecule(mol_instance_idx)
                     mol_instance_atom_index = atom_map[unique_mol_atom_index]
                     mol_instance_atom = mol_instance.atom(mol_instance_atom_index)
-                    topology_particle_index = topology.particle_index(mol_instance_atom)
+                    particle_index = topology.particle_index(mol_instance_atom)
 
                     # Retrieve nonbonded parameters for reference atom (charge not set yet)
-                    _, sigma, epsilon = force.getParticleParameters(
-                        topology_particle_index
-                    )
+                    _, sigma, epsilon = force.getParticleParameters(particle_index)
                     # Set the nonbonded force with the partial charge
                     force.setParticleParameters(
-                        topology_particle_index,
+                        particle_index,
                         to_openmm(particle_charge),
                         sigma,
                         epsilon,
@@ -4385,10 +4420,8 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
                     mol_instance_particle = mol_instance.particle(
                         mol_instance_particle_index
                     )
-                    topology_particle_index = topology.particle_index(
-                        mol_instance_particle
-                    )
-                    charges_to_assign[topology_particle_index] = particle_charge
+                    particle_index = topology.particle_index(mol_instance_particle)
+                    charges_to_assign[particle_index] = particle_charge
 
             # Find SMARTS-based matches for charge increments
             charge_increment_matches = self.find_matches(topology)
@@ -4432,10 +4465,10 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
                         charges_to_assign[top_particle_idx] += charge_increment
 
             # Set the incremented charges on the System particles
-            for topology_particle_index, charge_to_assign in charges_to_assign.items():
-                _, sigma, epsilon = force.getParticleParameters(topology_particle_index)
+            for particle_index, charge_to_assign in charges_to_assign.items():
+                _, sigma, epsilon = force.getParticleParameters(particle_index)
                 force.setParticleParameters(
-                    topology_particle_index,
+                    particle_index,
                     to_openmm(charge_to_assign),
                     sigma,
                     epsilon,
@@ -4679,10 +4712,10 @@ class GBSAHandler(ParameterHandler):
         # To keep it simple, we DO NOT pre-populate the particles in the GBSA force here.
         # We call addParticle further below instead.
         # These lines are commented out intentionally as an example of what NOT to do.
-        # for topology_particle in topology.topology_particles:
+        # for particle in topology.particles:
         # gbsa_force.addParticle([0.0, 1.0, 0.0])
 
-        params_to_add = [[] for _ in topology.topology_particles]
+        params_to_add = [[] for _ in range(topology.n_particles)]
         for atom_key, atom_match in atom_matches.items():
             atom_idx = atom_key[0]
             gbsatype = atom_match.parameter_type
@@ -5243,8 +5276,7 @@ class VirtualSiteHandler(_NonbondedHandler):
             # has the match setting, which ultimately decides which orientations
             # to include.
             if self.match == "once":
-                key = self.transformed_dict_cls.key_transform(orientations[0])
-                orientations = [key]
+                orientations = [orientations[0]]
                 # else all matches wanted, so keep whatever was matched.
 
             base_args = {
@@ -5260,6 +5292,30 @@ class VirtualSiteHandler(_NonbondedHandler):
             kwargs.pop(self._extra_nb_var)
 
             return fn(*args, **kwargs)
+
+        @abc.abstractmethod
+        def add_virtual_site(self, molecule, orientations, replace=False):
+            """
+            Add a virtual site to the molecule
+
+            Parameters
+            ----------
+            molecule : openff.toolkit.topology.molecule.Molecule
+                The molecule to add the virtual site to
+            orientations : List[Tuple[int]]
+                A list of orientation tuples which define the permuations used
+                to contruct the geometry of the virtual site particles
+            replace : bool, default=False
+                Replace this virtual site if it already exists in the molecule
+
+            Returns
+            -------
+            off_idx : int
+                The index of the first particle added due to this virtual site
+
+            .. warning :: This API is experimental and subject to change.
+            """
+            raise NotImplementedError
 
     class VirtualSiteBondChargeType(VirtualSiteType):
         """A SMIRNOFF virtual site bond charge type
@@ -5919,6 +5975,25 @@ class VirtualSiteHandler(_NonbondedHandler):
                 )
 
         return ids
+
+
+# ======================================================================
+# PARAMETERTYPE RE-EXPORTS
+# ======================================================================
+
+ConstraintType = ConstraintHandler.ConstraintType
+BondType = BondHandler.BondType
+AngleType = AngleHandler.AngleType
+ProperTorsionType = ProperTorsionHandler.ProperTorsionType
+ImproperTorsionType = ImproperTorsionHandler.ImproperTorsionType
+vdWType = vdWHandler.vdWType
+LibraryChargeType = LibraryChargeHandler.LibraryChargeType
+GBSAType = GBSAHandler.GBSAType
+ChargeIncrementType = ChargeIncrementModelHandler.ChargeIncrementType
+VirtualSiteBondChargeType = VirtualSiteHandler.VirtualSiteBondChargeType
+VirtualSiteMonovalentLonePairType = VirtualSiteHandler.VirtualSiteMonovalentLonePairType
+VirtualSiteDivalentLonePairType = VirtualSiteHandler.VirtualSiteDivalentLonePairType
+VirtualSiteTrivalentLonePairType = VirtualSiteHandler.VirtualSiteTrivalentLonePairType
 
 
 if __name__ == "__main__":

@@ -1821,17 +1821,24 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         """
         Create an RDKit molecule
         Requires the RDKit to be installed.
+
         .. warning :: This API is experimental and subject to change.
+
         Parameters
         ----------
+
         aromaticity_model : str, optional, default=DEFAULT_AROMATICITY_MODEL
             The aromaticity model to use
+
         Returns
         -------
+
         rdmol : rkit.RDMol
             An RDKit molecule
+
         Examples
         --------
+
         Convert a molecule to RDKit
         >>> from openff.toolkit.topology import Molecule
         >>> ethanol = Molecule.from_smiles('CCO')
