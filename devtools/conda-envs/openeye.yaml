@@ -17,7 +17,7 @@ dependencies:
   - coverage
   - numpy
   - networkx
-  - parmed  # ??? what ???
+  - parmed
   - openeye-toolkits
   - packaging
     # Removed until a new release which targets openff-toolkit is made.
@@ -29,13 +29,14 @@ dependencies:
   - openff-utilities
   - smirnoff99Frosst
   - cachetools
+  - cached-property
   - pyyaml
   - toml
   - bson
   - msgpack-python
   - xmltodict
   - qcelemental
-  - qcportal
+  - qcportal >=0.15
   - qcengine
   - mdtraj
   - pip:
