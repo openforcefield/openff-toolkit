@@ -23,7 +23,7 @@ The toolkit wrappers can then be accessed through the registry:
 .. code-block:: python
 
     >>> from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY as toolkit_registry
-    >>> from openff.toolkit.topology.molecule import Molecule
+    >>> from openff.toolkit import Molecule
     >>> molecule = Molecule.from_smiles('Cc1ccccc1')
     >>> smiles = toolkit_registry.call('to_smiles', molecule)
 
@@ -58,7 +58,7 @@ be explored by selecting which toolkit(s) are and are not registered.
 .. code-block:: python
 
     >>> from openff.toolkit.utils.toolkits import OpenEyeToolkitWrapper, GLOBAL_TOOLKIT_REGISTRY as toolkit_registry
-    >>> from openff.toolkit.topology.molecule import Molecule
+    >>> from openff.toolkit import Molecule
     >>> molecule = Molecule.from_smiles('Cc1ccccc1')
     >>> smiles_via_openeye = toolkit_registry.call('to_smiles', molecule)
     >>> print(smiles_via_openeye)

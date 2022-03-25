@@ -1775,7 +1775,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         --------
 
         Convert a molecule to RDKit
-        >>> from openff.toolkit.topology import Molecule
+        >>> from openff.toolkit import Molecule
         >>> ethanol = Molecule.from_smiles('CCO')
         >>> rdmol = ethanol.to_rdkit()
         """
