@@ -53,11 +53,15 @@ if TYPE_CHECKING:
 # =============================================================================================
 
 
-def _TOPOLOGY_DEPRECATION_WARNING(old_method, new_method):
+def _topology_deprecation(old_method, new_method):
     warnings.warn(
         f"Topology.{old_method} is deprecated. Use Topology.{new_method} instead.",
-        DeprecationWarning,
+        TopologyDeprecationWarning,
     )
+
+
+class TopologyDeprecationWarning(UserWarning):
+    """Warning for deprecated portions of the Topology API."""
 
 
 class _TransformedDict(MutableMapping):
@@ -2196,126 +2200,67 @@ class Topology(Serializable):
 
     # DEPRECATED API POINTS
     @property
-    def n_topology_atoms(self):
-        """
-        Returns the number of atoms in in this Topology.
-
-        Returns
-        -------
-        n_topology_atoms : int
-        """
-        _TOPOLOGY_DEPRECATION_WARNING("n_topology_atom", "n_atoms")
+    def n_topology_atoms(self) -> int:
+        """DEPRECATED: Use Topology.n_atoms instead."""
+        _topology_deprecation("n_topology_atoms", "n_atoms")
         return self.n_atoms
 
     @property
     def topology_atoms(self):
-        """
-        Returns an iterator over the atoms in this Topology. These will be in ascending order of topology index.
-
-        Returns
-        -------
-        topology_atoms : Iterable of Atom
-        """
-        _TOPOLOGY_DEPRECATION_WARNING("topology_atoms", "atoms")
+        """DEPRECATED: Use Topology.atoms instead."""
+        _topology_deprecation("topology_atoms", "atoms")
         return self.atoms
 
     @property
     def n_topology_bonds(self) -> int:
-        """
-        Returns the number of bonds in in this Topology.
-
-        Returns
-        -------
-        n_bonds : int
-        """
-        _TOPOLOGY_DEPRECATION_WARNING("n_topology_bonds", "n_bonds")
+        """DEPRECATED: Use Topology.n_bonds instead."""
+        _topology_deprecation("n_topology_bonds", "n_bonds")
         return self.n_bonds
 
     @property
-    def topology_bonds(self) -> Generator["Bond", None, None]:
-        """Returns an iterator over the bonds in this Topology
-
-        Returns
-        -------
-        bonds: Iterable of Bond
-        """
-        _TOPOLOGY_DEPRECATION_WARNING("topology_bonds", "bonds")
+    def topology_bonds(self):
+        """DEPRECATED: Use Topology.bonds instead."""
+        _topology_deprecation("topology_bonds", "bonds")
         return self.bonds
 
     @property
     def n_topology_particles(self) -> int:
-        """
-        Returns the number of topology particles (TopologyAtoms and TopologyVirtualSites) in in this Topology.
-
-        Returns
-        -------
-        n_topology_particles : int
-        """
-        _TOPOLOGY_DEPRECATION_WARNING("n_topology_particles", "n_particles")
+        """DEPRECATED: Use Topology.n_particles instead."""
+        _topology_deprecation("n_topology_particles", "n_particles")
         return self.n_particles
 
     @property
     def topology_particles(self):
-        """Returns an iterator over the particles (TopologyAtoms and TopologyVirtualSites) in this Topology. The
-        TopologyAtoms will be in order of ascending Topology index.
-
-        Returns
-        --------
-        topology_particles : Iterable of TopologyAtom and TopologyVirtualSite
-        """
-        _TOPOLOGY_DEPRECATION_WARNING("topology_particles", "particles")
+        """DEPRECATED: Use Topology.particles instead."""
+        _topology_deprecation("topology_particles", "particles")
         return self.particles
 
     @property
     def n_topology_virtual_sites(self) -> int:
-        """
-        Deprecated - Use Topology.n_virtual_sites instead.
-        """
-        _TOPOLOGY_DEPRECATION_WARNING("n_topology_virtual_sites", "n_virtual_sites")
+        """DEPRECATED: Use Topology.n_virtual_sites instead."""
+        _topology_deprecation("n_topology_virtual_sites", "n_virtual_sites")
         return self.n_virtual_sites
 
     @property
     def topology_virtual_sites(self):
-        """Get an iterator over the virtual sites in this Topology
-
-        Returns
-        -------
-        topology_virtual_sites : Iterable of TopologyVirtualSite
-        """
-        _TOPOLOGY_DEPRECATION_WARNING("topology_virtual_sites", "virtual_sites")
+        """DEPRECATED: Use Topology.virtual_sites instead."""
+        _topology_deprecation("topology_virtual_sites", "virtual_sites")
         return self.virtual_sites
 
     @property
     def n_reference_molecules(self) -> int:
-        """
-        Returns the number of reference (unique) molecules in in this Topology.
-
-        Returns
-        -------
-        n_reference_molecules : int
-        """
-        _TOPOLOGY_DEPRECATION_WARNING("n_reference_molecules", "n_molecules")
+        """DEPRECATED: Use Topology.n_molecules instead."""
+        _topology_deprecation("n_reference_molecules", "n_molecules")
         return self.n_molecules
 
     @property
     def n_topology_molecules(self) -> int:
-        """
-        Returns the number of topology molecules in in this Topology.
-
-        Returns
-        -------
-        n_topology_molecules : int
-        """
-        _TOPOLOGY_DEPRECATION_WARNING("n_topology_molecules", "n_molecules")
+        """DEPRECATED: Use Topology.n_molecules instead."""
+        _topology_deprecation("n_topology_molecules", "n_molecules")
         return self.n_molecules
 
     @property
     def topology_molecules(self):
-        """Returns an iterator over all the TopologyMolecules in this Topology
-
-        Returns
-        -------
-        topology_molecules : Iterable of TopologyMolecule
-        """
-        _TOPOLOGY_DEPRECATION_WARNING("topology_molecules", "molecules")
+        """DEPRECATED: Use Topology.molecules instead."""
+        _topology_deprecation("topology_molecules", "molecules")
         return self.molecules
