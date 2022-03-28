@@ -2363,7 +2363,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         if len(stereogenic_bonds) == 0:
             return
 
-        # Needed to ensure the _CIPRank is present.
+        # Needed to ensure the _CIPRank is present. Note that, despite the kwargs that look like
+        # they could mangle existing stereo, it is actually preserved.
         Chem.AssignStereochemistry(
             rd_molecule, cleanIt=True, force=True, flagPossibleStereoCenters=True
         )
