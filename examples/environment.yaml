@@ -22,3 +22,5 @@ dependencies:
   - gromacs
   - lammps
   - ambertools
+  - pip:
+    - https://github.com/mattwthompson/openmmforcefields.git@toolkit-update
