@@ -3551,18 +3551,22 @@ class TestMolecule:
         recomputed_charges = molecule._partial_charges
         assert np.allclose(initial_charges, recomputed_charges, atol=0.002)
 
-    @pytest.mark.parametrize("toolkit", ["openeye", "rdkit"])
-    def test_apply_elf_conformer_selection(self, toolkit):
+    @pytest.mark.parametrize(
+        "toolkit_wrapper", [OpenEyeToolkitWrapper, RDKitToolkitWrapper]
+    )
+    @pytest.mark.parametrize("use_registry", [True, False])
+    def test_apply_elf_conformer_selection(self, toolkit_wrapper, use_registry):
         """Test applying the ELF10 method."""
 
-        if toolkit == "openeye":
+        if toolkit_wrapper == OpenEyeToolkitWrapper:
             pytest.importorskip("openeye")
-            toolkit_registry = ToolkitRegistry(
-                toolkit_precedence=[OpenEyeToolkitWrapper]
-            )
-        elif toolkit == "rdkit":
+        elif toolkit_wrapper == RDKitToolkitWrapper:
             pytest.importorskip("rdkit")
-            toolkit_registry = ToolkitRegistry(toolkit_precedence=[RDKitToolkitWrapper])
+
+        if use_registry:
+            toolkit = toolkit_wrapper()
+        else:
+            toolkit = ToolkitRegistry(toolkit_precedence=[toolkit_wrapper])
 
         molecule = Molecule.from_file(
             get_data_file_path(os.path.join("molecules", "z_3_hydroxy_propenal.sdf")),
@@ -3605,7 +3609,7 @@ class TestMolecule:
         molecule._conformers = [*initial_conformers]
 
         # Apply ELF10
-        molecule.apply_elf_conformer_selection(toolkit_registry=toolkit_registry)
+        molecule.apply_elf_conformer_selection(toolkit_registry=toolkit)
         elf10_conformers = molecule.conformers
 
         assert len(elf10_conformers) == 1
@@ -3613,6 +3617,45 @@ class TestMolecule:
         assert np.allclose(
             elf10_conformers[0].value_in_unit(unit.angstrom),
             initial_conformers[1].value_in_unit(unit.angstrom),
+        )
+
+    def test_make_carboxylic_acids_cis(self):
+        # First, check that we get exactly the right coords for cis and trans methanoic acid
+        offmol = Molecule.from_mapped_smiles("[H:1][C:2](=[O:3])[O:4][H:5]")
+        # cis methanoic (formic) acid
+        cis_xyz = (
+            np.array(
+                [
+                    [-1.0, -1.0, 0.0],  # HC
+                    [+0.0, +0.0, 0.0],  # C
+                    [-1.0, +1.0, 0.0],  # =O
+                    [+1.0, +0.0, 0.0],  # -O
+                    [+2.0, +1.0, 0.0],  # HO
+                ]
+            )
+            * unit.angstrom
+        )
+        trans_xyz = (
+            np.array(
+                [
+                    [-1.0, -1.0, 0.0],  # HC
+                    [+0.0, +0.0, 0.0],  # C
+                    [-1.0, +1.0, 0.0],  # =O
+                    [+1.0, +0.0, 0.0],  # -O
+                    [+2.0, -1.0, 0.0],  # HO
+                ]
+            )
+            * unit.angstrom
+        )
+
+        offmol._conformers = [trans_xyz, cis_xyz]
+        expected_conformers = [cis_xyz, cis_xyz]
+
+        offmol._make_carboxylic_acids_cis()
+
+        assert np.all(
+            np.abs(np.asarray(offmol.conformers) - np.asarray(expected_conformers))
+            < 1e-5
         )
 
     @requires_openeye
