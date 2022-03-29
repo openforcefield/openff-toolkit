@@ -2498,6 +2498,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                     rd_bond.SetBondDir(Chem.BondDir.ENDDOWNRIGHT)
                 elif direction == 1:
                     rd_bond.SetBondDir(Chem.BondDir.ENDUPRIGHT)
+                else:
+                    raise NotImplementedError()
 
             Chem.AssignStereochemistry(rd_molecule, cleanIt=True, force=True)
 
