@@ -23,6 +23,8 @@ from openff.toolkit.utils.constants import DEFAULT_AROMATICITY_MODEL
 from openff.toolkit.utils.exceptions import (
     ChargeMethodUnavailableError,
     ConformerGenerationError,
+    NotAttachedToMoleculeError,
+    RadicalsNotSupportedError,
     SMILESParseError,
     ToolkitUnavailableException,
     UndefinedStereochemistryError,
@@ -1479,6 +1481,13 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         # if we are loading from a mapped smiles extract the mapping
         atom_mapping = {}
         for rda in rdmol.GetAtoms():
+
+            # See issues #1075 for some discussion on radicals
+            if rda.GetNumRadicalElectrons() != 0:
+                raise RadicalsNotSupportedError(
+                    "The OpenFF Toolkit does not currently support parsing molecules with radicals."
+                )
+
             rd_idx = rda.GetIdx()
             # if the molecule was made from a mapped smiles this has been hidden
             # so that it does not affect the sterochemistry tags

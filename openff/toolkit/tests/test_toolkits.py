@@ -42,6 +42,8 @@ from openff.toolkit.utils.exceptions import (
     IncorrectNumConformersWarning,
     InvalidIUPACNameError,
     InvalidToolkitError,
+    NotAttachedToMoleculeError,
+    RadicalsNotSupportedError,
     ToolkitUnavailableException,
     UndefinedStereochemistryError,
 )
@@ -1834,6 +1836,11 @@ class TestRDKitToolkitWrapper:
         smiles2 = molecule.to_smiles(toolkit_registry=toolkit_wrapper)
         assert smiles2 == expected_output_smiles
 
+    def test_rdkit_from_smiles_radical(self):
+        """Test that parsing an SMILES with a radical raises RadicalsNotSupportedError."""
+        with pytest.raises(RadicalsNotSupportedError):
+            RDKitToolkitWrapper().from_smiles("[CH3]")
+
     def test_rdkit_from_smiles_hydrogens_are_explicit(self):
         """
         Test to ensure that RDKitToolkitWrapper.from_smiles has the proper behavior with
@@ -2165,6 +2172,15 @@ class TestRDKitToolkitWrapper:
 
         offmol_no_h = Molecule.from_rdkit(rdmol, hydrogens_are_explicit=True)
         assert not any([a.atomic_number == 1 for a in offmol_no_h.atoms])
+
+    def test_from_rdkit_radical(self):
+        """Test that parsing an rdmol with a radical raises RadicalsNotSupportedError."""
+        from rdkit import Chem
+
+        rdmol = Chem.MolFromSmiles("[CH3]")
+
+        with pytest.raises(RadicalsNotSupportedError):
+            RDKitToolkitWrapper().from_rdkit(rdmol)
 
     @pytest.mark.parametrize(
         "smiles, expected_map", [("[Cl:1][Cl]", {0: 1}), ("[Cl:1][Cl:2]", {0: 1, 1: 2})]
