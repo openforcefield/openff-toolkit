@@ -1588,10 +1588,15 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             is passed into this function.
         _cls : class
             Molecule constructor
+
         Returns
         -------
         molecule : openff.toolkit.topology.Molecule
             An OpenFF style molecule.
+
+        Raises
+        ------
+        RadicalsNotSupportedError : If any atoms in the OpenEye molecule contain radical electrons.
         """
         from openeye import oechem
 

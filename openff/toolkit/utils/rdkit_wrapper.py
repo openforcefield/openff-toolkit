@@ -739,6 +739,10 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         -------
         molecule : openff.toolkit.topology.Molecule
             An OpenFF style molecule.
+
+        Raises
+        ------
+        RadicalsNotSupportedError : If any atoms in the RDKit molecule contain radical electrons.
         """
         from rdkit import Chem
 

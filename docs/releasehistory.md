@@ -91,6 +91,12 @@ print(value_roundtrip)
 
 ### Behaviors changed and bugfixes
 
+- [PR #1236](https://github.com/openforcefield/openff-toolkit/pull/1236) raises
+  [`RadicalsNotSupportedError`](openff.toolkit.utils.exceptions.RadicalsNotSupportedError) when
+  [`Molecule.from_openeye`](openff.toolkit.topology.Molecule.from_openeye),
+  [`Molecule.from_rdkit`](openff.toolkit.topology.Molecule.from_rdkit),
+  [`Molecule.from_smiles`](openff.toolkit.topology.Molecule.from_smiles), or similar methods
+  detect that a molecule contains radical electrons.
 - [PR #1182](https://github.com/openforcefield/openforcefield/pull/1182) and
   [PR #1142](https://github.com/openforcefield/openforcefield/pull/1142) migrate handling of
   unit-bearing quantities from OpenMM's unit module (`openmm.unit`) to
