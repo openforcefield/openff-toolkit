@@ -2511,6 +2511,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 rd_stereo_string = _RD_STEREO_TO_STR.get(rd_bond.GetStereo(), None)
                 if off_bond.stereochemistry != rd_stereo_string:
                     stereo_mismatch = True
+                    break
 
             if stereo_mismatch:
                 continue
