@@ -2308,13 +2308,12 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         """
         # Account for bond "direction" using flip_directions dict, see more thorough comment
         # in _constrain_rank for details.
-        unique_values = [
+        bond_directions = [
             (value if not flip_direction[i] else 1 - value)
             for i, value in zip(bond_indices, values)
         ]
-        unique_values_set = set(unique_values)
-        print(unique_values_set)
-        return len(unique_values_set) == len(values)
+        unique_bond_directions = set(bond_directions)
+        return len(unique_bond_directions) == len(values)
 
     @staticmethod
     def _constrain_rank(
@@ -2335,19 +2334,18 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         # "normal" case is when the neighboring bonds are coming FROM the double bond,
         # and where that's not true, the following line switches the
         # meaning of "down" and "up" to give us the desired meaning.
-        flipped_values = [
+        bond_directions = [
             (value if not flip_direction[i] else 1 - value)
             for i, value in zip(bond_indices, values)
         ]
 
         # Test for equality of items in flipped_values by turning it into a set and
         # counting how many values remain.
-        flipped_values_set = set(flipped_values)
-        print(flipped_values_set)
+        unique_bond_directions = set(bond_directions)
         if expected_stereo == "E":
-            return len(flipped_values_set) == min(2, len(bond_indices))
+            return len(unique_bond_directions) == min(2, len(bond_indices))
         elif expected_stereo == "Z":
-            return len(flipped_values_set) == 1
+            return len(unique_bond_directions) == 1
         else:
             raise NotImplementedError()
 
