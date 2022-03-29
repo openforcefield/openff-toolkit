@@ -32,6 +32,7 @@ from openff.toolkit.utils.exceptions import (
     InconsistentStereochemistryError,
     InvalidIUPACNameError,
     LicenseError,
+    RadicalsNotSupportedError,
     SMILESParseError,
     ToolkitUnavailableException,
     UndefinedStereochemistryError,
@@ -966,6 +967,20 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             atomic_number = oeatom.GetAtomicNum()
             # Carry with implicit units of elementary charge to skip unit checks in _add_atom
             formal_charge = oeatom.GetFormalCharge()
+            explicit_valence = oeatom.GetExplicitValence()
+            mdl_valence = oechem.OEMDLGetValence(
+                atomic_number, formal_charge, explicit_valence
+            )
+            number_radical_electrons = mdl_valence - (
+                oeatom.GetImplicitHCount() + explicit_valence
+            )
+
+            if number_radical_electrons > 0:
+                raise RadicalsNotSupportedError(
+                    "The OpenFF Toolkit does not currently support parsing molecules with radicals. "
+                    f"Found {number_radical_electrons} radical electrons on atom {oeatom}."
+                )
+
             is_aromatic = oeatom.IsAromatic()
             stereochemistry = OpenEyeToolkitWrapper._openeye_cip_atom_stereochemistry(
                 oemol, oeatom

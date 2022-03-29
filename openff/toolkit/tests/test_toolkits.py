@@ -350,6 +350,11 @@ class TestOpenEyeToolkitWrapper:
             else:
                 Molecule.from_smiles(smiles, toolkit_registry=toolkit_wrapper)
 
+    def test_openeye_from_smiles_radical(self):
+        """Test that parsing an SMILES with a radical raises RadicalsNotSupportedError."""
+        with pytest.raises(RadicalsNotSupportedError):
+            OpenEyeToolkitWrapper().from_smiles("[CH3]")
+
     # TODO: test_smiles_round_trip
 
     def test_smiles_add_H(self):
@@ -580,6 +585,17 @@ class TestOpenEyeToolkitWrapper:
         assert oechem.OEHasImplicitHydrogens(oe_molecule)
         Molecule.from_openeye(oe_molecule)
         assert oechem.OEHasImplicitHydrogens(oe_molecule)
+
+    def test_from_openeye_radical(self):
+        """Test that parsing an rdmol with a radical raises RadicalsNotSupportedError."""
+        from openeye import oechem
+
+        smiles = "[H][C]([H])[H]"
+        oemol = oechem.OEGraphMol()
+        oechem.OESmilesToMol(oemol, smiles)
+
+        with pytest.raises(RadicalsNotSupportedError):
+            OpenEyeToolkitWrapper().from_openeye(oemol)
 
     def test_from_openeye_implicit_hydrogen(self):
         """
