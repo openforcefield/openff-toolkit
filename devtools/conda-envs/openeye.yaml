@@ -35,6 +35,7 @@ dependencies:
   - bson
   - msgpack-python
   - xmltodict
+  - python-constraint
   - qcelemental
   - qcportal >=0.15
   - qcengine

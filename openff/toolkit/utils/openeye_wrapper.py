@@ -1171,7 +1171,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                     raise InconsistentStereochemistryError(
                         "Programming error: OpenEye bond stereochemistry assumptions failed. "
                         f"The bond in the oemol has stereochemistry {oebond_stereochemistry} and "
-                        f"the bond in the offmol has stereoheometry {bond.stereochemistry}."
+                        f"the bond in the offmol has stereochemistry {bond.stereochemistry}."
                     )
 
         # Clean Up phase
