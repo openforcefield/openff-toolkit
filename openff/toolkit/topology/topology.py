@@ -386,7 +386,7 @@ class Topology(Serializable):
 
     Create a Topology object from a PDB file and sdf files defining the molecular contents
 
-    >>> from openff.toolkit.topology import Molecule, Topology
+    >>> from openff.toolkit import Molecule, Topology
     >>> pdbfile = app.PDBFile(pdb_filepath)
     >>> sdf_filepaths = [get_data_file_path(f'systems/monomers/{name}.sdf') for name in monomer_names]
     >>> unique_molecules = [Molecule.from_file(sdf_filepath) for sdf_filepath in sdf_filepaths]
@@ -1139,7 +1139,7 @@ class Topology(Serializable):
             two-membered list where the first element is the topology molecule index, and the second element
             is a dict describing the atom map from the unique molecule to the instance of it in the topology.
 
-                >>> from openff.toolkit.topology import Molecule, Topology
+        >>> from openff.toolkit import Molecule, Topology
         >>> # Create a water ordered as OHH
         >>> water1 = Molecule()
         >>> water1.add_atom(8, 0, False)
