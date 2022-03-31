@@ -1,11 +1,12 @@
 import argparse
 
 import openmm
+from openff.units.openmm import from_openmm, to_openmm
+from openmm import app
+from openmm import unit as openmm_unit
 from rdkit.Chem import rdMolAlign
-from openmm import unit as openmm_unit, app
-from openff.units.openmm import to_openmm, from_openmm
 
-from openff.toolkit import Molecule, Topology, ForceField
+from openff.toolkit import ForceField, Molecule, Topology
 from openff.toolkit.utils import RDKitToolkitWrapper
 
 
