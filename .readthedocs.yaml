@@ -11,6 +11,8 @@ sphinx:
 
 build:
   image: latest
+  tools:
+    python: "mambaforce-4.10"
 
 python:
   version: 3.8
