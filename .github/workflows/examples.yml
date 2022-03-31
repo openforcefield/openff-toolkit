@@ -9,6 +9,7 @@ on:
     branches:
       - "master"
       - "maintenance/.+"
+      - "topology-biopolymer-refactor"
   schedule:
     # Nightly tests run on master by default:
     #   Scheduled workflows run on the latest commit on the default or base branch.
@@ -122,6 +123,10 @@ jobs:
             NB_ARGS+=" --ignore=examples/conformer_energies"
             NB_ARGS+=" --ignore=examples/using_smirnoff_in_amber_or_gromacs"
           fi
+          # https://github.com/openforcefield/openff-toolkit/pull/1232#issuecomment-1080889858
+          NB_ARGS+=" --ignore=examples/toolkit_showcase/toolkit_showcase.ipynb"
+          NB_ARGS+=" --ignore=examples/swap_amber_parameters/swap_existing_ligand_parameters_with_openmmforcefields.ipynb"
+
           NB_ARGS+=" --ignore=examples/using_smirnoff_in_amber_or_gromacs/export_with_interchange.ipynb"
           pytest $NB_ARGS examples
 
