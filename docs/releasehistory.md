@@ -10,7 +10,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Critical bugfixes
 
-- [PR #XXXX](https://github.com/openforcefield/openforcefield/pull/XXXX): A long overdue fix
+- [PR #1242](https://github.com/openforcefield/openforcefield/pull/1242): A long overdue fix
   for [Issue #837](https://github.com/openforcefield/openff-toolkit/issues/837)! If OpenEye is
   available, the `ToolkitAM1BCCHandler` will use the ELF10 method to select conformers for AM1BCC
   charge assignment.
