@@ -6,6 +6,15 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 * `minor` increments add features but do not break API compatibility
 * `micro` increments represent bugfix releases or improvements in documentation
 
+## 0.10.4 Bugfix release
+
+### Critical bugfixes
+
+- [PR #1242](https://github.com/openforcefield/openforcefield/pull/1242): A long overdue fix
+  for [Issue #837](https://github.com/openforcefield/openff-toolkit/issues/837)! If OpenEye is
+  available, the `ToolkitAM1BCCHandler` will use the ELF10 method to select conformers for AM1BCC
+  charge assignment.
+
 ## 0.10.3 Bugfix release
 
 ### Critical bugfixes
