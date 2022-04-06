@@ -5,11 +5,12 @@ Wrapper class providing a minimal consistent interface to the `RDKit <http://www
 __all__ = ("RDKitToolkitWrapper",)
 
 import copy
+import functools
 import importlib
 import itertools
 import logging
 import tempfile
-from typing import TYPE_CHECKING, List, Optional, Tuple
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 import numpy as np
 from cachetools import LRUCache, cached
@@ -1780,7 +1781,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         --------
 
         Convert a molecule to RDKit
-        >>> from openff.toolkit.topology import Molecule
+        >>> from openff.toolkit import Molecule
         >>> ethanol = Molecule.from_smiles('CCO')
         >>> rdmol = ethanol.to_rdkit()
         """
@@ -2303,137 +2304,226 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 raise UndefinedStereochemistryError(msg)
 
     @staticmethod
-    def _flip_rdbond_direction(rdbond, paired_rdbonds):
-        """Flip the rdbond and all those paired to it.
-
-        Parameters
-        ----------
-        rdbond : rdkit.Chem.Bond
-            The Bond whose direction needs to be flipped.
-        paired_rdbonds : Dict[Tuple[int], List[rdkit.Chem.Bond]]
-            Maps bond atom indices that are assigned a bond direction to
-            the bonds on the other side of the double bond.
+    def _constrain_end_directions(
+        *values: int, bond_indices: List[int], flip_direction: Dict[int, bool]
+    ) -> bool:
+        """A constraint applied when mapping global E/Z stereochemistry into local RDKit
+        bond directions that ensures that the 'left' bonds point in opposite directions
+        (i.e. one has to be up and one has to be down) and likewise for the 'right' bonds
         """
-        from rdkit import Chem
+        # Account for bond "direction" using flip_directions dict, see more thorough comment
+        # in _constrain_rank for details.
+        bond_directions = [
+            (value if not flip_direction[i] else 1 - value)
+            for i, value in zip(bond_indices, values)
+        ]
+        unique_bond_directions = set(bond_directions)
+        return len(unique_bond_directions) == len(values)
 
-        # The function assumes that all bonds are either up or down.
-        supported_directions = {Chem.BondDir.ENDUPRIGHT, Chem.BondDir.ENDDOWNRIGHT}
+    @staticmethod
+    def _constrain_rank(
+        *values: int,
+        bond_indices: List[int],
+        flip_direction: Dict[int, bool],
+        expected_stereo: str,
+    ) -> bool:
+        """A constraint applied when mapping global E/Z stereochemistry into local RDKit
+        bond directions that ensures that the 'left' bond with the highest CIP rank
+        and the 'right' bond with the highest CIP rank point either in the same direction
+        if Z stereo or opposite directions if E.
+        """
+        # The "value" for each bond is ultimately set to either 0 (down) or 1 (up).
+        # However, we also need to know the "direction" of the bond to make sense
+        # of this - Is it coming FROM, or going TO this double bond while going down or up?
+        # This information is in the flipped_values dict. This code assumes that the
+        # "normal" case is when the neighboring bonds are coming FROM the double bond,
+        # and where that's not true, the following line switches the
+        # meaning of "down" and "up" to give us the desired meaning.
+        bond_directions = [
+            (value if not flip_direction[i] else 1 - value)
+            for i, value in zip(bond_indices, values)
+        ]
 
-        def _flip(b, paired, flipped, ignored):
-            # The function assumes that all bonds are either up or down.
-            assert b.GetBondDir() in supported_directions
-            bond_atom_indices = (b.GetBeginAtomIdx(), b.GetEndAtomIdx())
-
-            # Check that we haven't flipped this bond already.
-            if bond_atom_indices in flipped:
-                # This should never happen.
-                raise RuntimeError("Cannot flip the bond direction consistently.")
-
-            # Flip the bond.
-            if b.GetBondDir() == Chem.BondDir.ENDUPRIGHT:
-                b.SetBondDir(Chem.BondDir.ENDDOWNRIGHT)
-            else:
-                b.SetBondDir(Chem.BondDir.ENDUPRIGHT)
-            flipped.add(bond_atom_indices)
-
-            # Flip all the paired bonds as well (if there are any).
-            if bond_atom_indices in paired:
-                for paired_rdbond in paired[bond_atom_indices]:
-                    # Don't flip the bond that was flipped in the upper-level recursion.
-                    if (
-                        paired_rdbond.GetBeginAtomIdx(),
-                        paired_rdbond.GetEndAtomIdx(),
-                    ) != ignored:
-                        # Don't flip this bond in the next recursion.
-                        _flip(paired_rdbond, paired, flipped, ignored=bond_atom_indices)
-
-        _flip(rdbond, paired_rdbonds, flipped=set(), ignored=None)
+        # Test for equality of items in flipped_values by turning it into a set and
+        # counting how many values remain.
+        unique_bond_directions = set(bond_directions)
+        if expected_stereo == "E":
+            return len(unique_bond_directions) == min(2, len(bond_indices))
+        elif expected_stereo == "Z":
+            return len(unique_bond_directions) == 1
+        else:
+            raise NotImplementedError()
 
     @classmethod
-    def _assign_rdmol_bonds_stereo(cls, offmol, rdmol):
-        """Copy the info about bonds stereochemistry from the OFF Molecule to RDKit Mol."""
+    def _assign_rdmol_bonds_stereo(cls, off_molecule: "Molecule", rd_molecule):
+        """Copy the info about bonds stereochemistry from the OFF Molecule to RDKit Mol.
+        The method proceeds by formulating mapping global E/Z stereo information onto
+        local 'bond directions' as a constraint satisfaction problem (CSP).
+        In this formalism, the variables correspond to the indices of the bonds
+        neighbouring a stereogenic bond, the domain for each variable is 0 (down)
+        or 1 (up), and the constraints are designed to ensure the correct E/Z stereo
+        is yielded after assignment of the directions.
+        """
+        from constraint import Problem
         from rdkit import Chem
 
-        # Map the bonds indices that are assigned bond direction
-        # to the bond on the other side of the double bond.
-        # (atom_index1, atom_index2) -> List[rdkit.Chem.Bond]
-        paired_bonds = {}
+        _RD_STEREO_TO_STR = {
+            Chem.BondStereo.STEREOE: "E",
+            Chem.BondStereo.STEREOZ: "Z",
+        }
 
-        for bond in offmol.bonds:
-            # No need to do anything with bonds without stereochemistry.
-            if not bond.stereochemistry:
+        stereogenic_bonds = [
+            bond for bond in off_molecule.bonds if bond.stereochemistry
+        ]
+
+        if len(stereogenic_bonds) == 0:
+            return
+
+        # Needed to ensure the _CIPRank is present. Note that, despite the kwargs that look like
+        # they could mangle existing stereo, it is actually preserved.
+        Chem.AssignStereochemistry(
+            rd_molecule, cleanIt=True, force=True, flagPossibleStereoCenters=True
+        )
+
+        csp_problem = Problem()
+        csp_variables = set()
+
+        for bond in stereogenic_bonds:
+
+            # Here we use a notation where atoms 'b' and 'c' are the two atoms involved
+            # in the double bond, while 'a' corresponds to a neighbour of 'b' and 'd' a
+            # neighbour of 'c'.
+            atom_b, atom_c = bond.atom1, bond.atom2
+            index_b, index_c = atom_b.molecule_atom_index, atom_c.molecule_atom_index
+
+            indices_a = [
+                n.molecule_atom_index for n in atom_b.bonded_atoms if n != atom_c
+            ]
+            indices_d = [
+                n.molecule_atom_index for n in atom_c.bonded_atoms if n != atom_b
+            ]
+            # A stereogenic double bond should either involve atoms with degree 3
+            # (e.g. carbon) or degree 2 (e.g. divalent nitrogen).
+            assert 1 <= len(indices_a) <= 2 and 1 <= len(indices_d) <= 2
+
+            # Identify the highest CIP-ranked bond coming off each side of the double
+            # bond. This lets us later add a constraint to ensure that we have the
+            # correct E/Z stereochemistry
+            ranks_a = [
+                int(rd_molecule.GetAtomWithIdx(i).GetProp("_CIPRank"))
+                for i in indices_a
+            ]
+            index_a = indices_a[np.argmax(ranks_a)]
+            ranks_d = [
+                int(rd_molecule.GetAtomWithIdx(i).GetProp("_CIPRank"))
+                for i in indices_d
+            ]
+            index_d = indices_d[np.argmax(ranks_d)]
+
+            index_ab = rd_molecule.GetBondBetweenAtoms(index_a, index_b).GetIdx()
+            index_cd = rd_molecule.GetBondBetweenAtoms(index_c, index_d).GetIdx()
+
+            flip_direction = {}
+
+            # Collect lists of the indices of the bonds that appear to the 'left' of
+            # and 'right' of the stereogenic bond so we can constrain their directions
+            # so that all 'left' bonds do not, for example, point up.
+            constraints_ab: List[int] = []
+            constraints_cd: List[int] = []
+
+            for index_pair, constraints_list in [
+                ((index_a, index_b), constraints_ab) for index_a in indices_a
+            ] + [((index_d, index_c), constraints_cd) for index_d in indices_d]:
+
+                # Each single bond neighboring a double bond needs to be defined as a
+                # "variable" in the CSP problem. Here, each bond is identified by its
+                # bond index in the RDMol (note: this is not guaranteed to be the same
+                # as the corresponding bond's index in the OFFMol). This also ensures
+                # that we don't define the same bond twice.
+                rd_bond = rd_molecule.GetBondBetweenAtoms(*index_pair)
+                rd_bond_index = rd_bond.GetIdx()
+
+                if rd_bond_index not in csp_variables:
+                    csp_problem.addVariable(rd_bond_index, [1, 0])  # 0 = down, 1 = up
+                    csp_variables.add(rd_bond_index)
+
+                # The direction of the bond should point from the double bond to its
+                # neighbour. If the bond is pointing from the neighbour to the double
+                # bond instead, we need to flip the direction of the bond. See
+                # rdkit/Code/GraphMol/Chirality.cpp:findAtomNeighborDirHelper for more
+                # details.
+                flip_direction[rd_bond_index] = (
+                    rd_bond.GetBeginAtomIdx() != index_pair[1]
+                )
+                constraints_list.append(rd_bond_index)
+
+            # Add one constraint corresponding to the highest-ranked bond on OPPOSITE
+            # sides of the double bond, to ensure that they are oriented up/down to
+            # achieve the correct E/Z value of the double bond.
+            csp_problem.addConstraint(
+                functools.partial(
+                    cls._constrain_rank,
+                    bond_indices=[index_ab, index_cd],
+                    flip_direction=flip_direction,
+                    expected_stereo=bond.stereochemistry,
+                ),
+                [index_ab, index_cd],
+            )
+            # Add constraint(s) corresponding ALL bonds on the SAME side of the double
+            # bond, to ensure that they do not all take the same value (if one is "up",
+            # the other can not also be "up").
+            csp_problem.addConstraint(
+                functools.partial(
+                    cls._constrain_end_directions,
+                    bond_indices=constraints_ab,
+                    flip_direction=flip_direction,
+                ),
+                constraints_ab,
+            )
+            csp_problem.addConstraint(
+                functools.partial(
+                    cls._constrain_end_directions,
+                    bond_indices=constraints_cd,
+                    flip_direction=flip_direction,
+                ),
+                constraints_cd,
+            )
+
+        # Do not assume that every solution found by the solver is valid.
+        # Iterate through the solutions and ensure that the
+        # desired E/Z marks have really been achieved.
+        has_solution = False
+
+        for solution in csp_problem.getSolutionIter():
+
+            for rd_bond_index, direction in solution.items():
+
+                rd_bond = rd_molecule.GetBondWithIdx(rd_bond_index)
+                if direction == 0:
+                    rd_bond.SetBondDir(Chem.BondDir.ENDDOWNRIGHT)
+                elif direction == 1:
+                    rd_bond.SetBondDir(Chem.BondDir.ENDUPRIGHT)
+                else:
+                    raise NotImplementedError()
+
+            Chem.AssignStereochemistry(rd_molecule, cleanIt=True, force=True)
+
+            # Verify that there are no stereo mismatches between the original
+            # OFFMol and the newly-assigned RDMol
+            stereo_mismatch = False
+            for off_bond in stereogenic_bonds:
+                rd_bond = rd_molecule.GetBondBetweenAtoms(
+                    off_bond.atom1_index, off_bond.atom2_index
+                )
+                rd_stereo_string = _RD_STEREO_TO_STR.get(rd_bond.GetStereo(), None)
+                if off_bond.stereochemistry != rd_stereo_string:
+                    stereo_mismatch = True
+                    break
+
+            if stereo_mismatch:
                 continue
 
-            # Isolate stereo RDKit bond object.
-            rdbond_atom_indices = (
-                bond.atom1.molecule_atom_index,
-                bond.atom2.molecule_atom_index,
-            )
-            stereo_rdbond = rdmol.GetBondBetweenAtoms(*rdbond_atom_indices)
+            has_solution = True
+            break
 
-            # Collect all neighboring rdbonds of atom1 and atom2.
-            neighbor_rdbonds1 = [
-                rdmol.GetBondBetweenAtoms(
-                    n.molecule_atom_index, bond.atom1.molecule_atom_index
-                )
-                for n in bond.atom1.bonded_atoms
-                if n != bond.atom2
-            ]
-            neighbor_rdbonds2 = [
-                rdmol.GetBondBetweenAtoms(
-                    bond.atom2.molecule_atom_index, n.molecule_atom_index
-                )
-                for n in bond.atom2.bonded_atoms
-                if n != bond.atom1
-            ]
-
-            # Select only 1 neighbor bond per atom out of the two.
-            neighbor_rdbonds = []
-            for i, rdbonds in enumerate([neighbor_rdbonds1, neighbor_rdbonds2]):
-                # If there are no neighbors for which we have already
-                # assigned the bond direction, just pick the first one.
-                neighbor_rdbonds.append(rdbonds[0])
-                # Otherwise, pick neighbor that was already assigned to
-                # avoid inconsistencies and keep the tree non-cyclic.
-                for rdb in rdbonds:
-                    if (rdb.GetBeginAtomIdx(), rdb.GetBeginAtomIdx()) in paired_bonds:
-                        neighbor_rdbonds[i] = rdb
-                        break
-
-            # Assign a random direction to the bonds that were not already assigned
-            # keeping track of which bond would be best to flip later (i.e. does that
-            # are not already determining the stereochemistry of another double bond).
-            flipped_rdbond = neighbor_rdbonds[0]
-            for rdb in neighbor_rdbonds:
-                if (rdb.GetBeginAtomIdx(), rdb.GetEndAtomIdx()) not in paired_bonds:
-                    rdb.SetBondDir(Chem.BondDir.ENDUPRIGHT)
-                    # Set this bond as a possible bond to flip.
-                    flipped_rdbond = rdb
-
-            Chem.AssignStereochemistry(rdmol, cleanIt=True, force=True)
-
-            # Verify that the current directions give us the desired stereochemistries.
-            assert bond.stereochemistry in {"E", "Z"}
-            if bond.stereochemistry == "E":
-                desired_rdk_stereo_code = Chem.rdchem.BondStereo.STEREOE
-            else:
-                desired_rdk_stereo_code = Chem.rdchem.BondStereo.STEREOZ
-
-            # If that doesn't work, flip the direction of one bond preferring
-            # those that are not already determining the stereo of another bond.
-            if stereo_rdbond.GetStereo() != desired_rdk_stereo_code:
-                cls._flip_rdbond_direction(flipped_rdbond, paired_bonds)
-                Chem.AssignStereochemistry(rdmol, cleanIt=True, force=True)
-
-                # The stereo should be set correctly here.
-                assert stereo_rdbond.GetStereo() == desired_rdk_stereo_code
-
-            # Update paired bonds map.
-            neighbor_bond_indices = [
-                (rdb.GetBeginAtomIdx(), rdb.GetEndAtomIdx()) for rdb in neighbor_rdbonds
-            ]
-            for i, bond_indices in enumerate(neighbor_bond_indices):
-                try:
-                    paired_bonds[bond_indices].append(neighbor_rdbonds[1 - i])
-                except KeyError:
-                    paired_bonds[bond_indices] = [neighbor_rdbonds[1 - i]]
+        assert has_solution, "E/Z stereo could not be converted to local stereo"

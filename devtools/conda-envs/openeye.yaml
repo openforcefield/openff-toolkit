@@ -29,13 +29,15 @@ dependencies:
   - openff-utilities
   - smirnoff99Frosst
   - cachetools
+  - cached-property
   - pyyaml
   - toml
   - bson
   - msgpack-python
   - xmltodict
+  - python-constraint
   - qcelemental
-  - qcportal
+  - qcportal >=0.15
   - qcengine
   - mdtraj
   - pip:

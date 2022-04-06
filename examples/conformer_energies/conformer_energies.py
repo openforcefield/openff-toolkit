@@ -1,9 +1,13 @@
 import argparse
-from openff.toolkit.topology import Molecule, Topology
-from openff.toolkit.utils import RDKitToolkitWrapper
+
+import openmm
+from openff.units.openmm import from_openmm, to_openmm
+from openmm import app
+from openmm import unit as openmm_unit
 from rdkit.Chem import rdMolAlign
-from simtk import openmm, unit as openmm_unit
-from openff.units.openmm import to_openmm, from_openmm
+
+from openff.toolkit import ForceField, Molecule, Topology
+from openff.toolkit.utils import RDKitToolkitWrapper
 
 
 def compute_conformer_energies_from_file(filename):
@@ -35,8 +39,6 @@ def compute_conformer_energies_from_file(filename):
     )
 
     # Load the openff-2.0.0 force field appropriate for vacuum calculations (without constraints)
-    from openff.toolkit.typing.engines.smirnoff import ForceField
-
     forcefield_str = "openff_unconstrained-2.0.0.offxml"
     forcefield = ForceField(forcefield_str)
     # Loop over molecules and minimize each conformer
@@ -55,7 +57,7 @@ def compute_conformer_energies_from_file(filename):
         integrator = openmm.VerletIntegrator(1 * openmm_unit.femtoseconds)
         platform = openmm.Platform.getPlatformByName("Reference")
         omm_top = off_top.to_openmm()
-        simulation = openmm.app.Simulation(omm_top, system, integrator, platform)
+        simulation = app.Simulation(omm_top, system, integrator, platform)
 
         # Print text header
         print(

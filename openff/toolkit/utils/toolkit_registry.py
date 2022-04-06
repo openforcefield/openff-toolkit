@@ -287,7 +287,7 @@ class ToolkitRegistry:
 
         Create a molecule, and call the toolkit ``to_smiles()`` method directly
 
-        >>> from openff.toolkit.topology import Molecule
+        >>> from openff.toolkit import Molecule
         >>> molecule = Molecule.from_smiles('Cc1ccccc1')
         >>> toolkit_registry = ToolkitRegistry([OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper])
         >>> method = toolkit_registry.resolve('to_smiles')
@@ -345,7 +345,7 @@ class ToolkitRegistry:
 
         Create a molecule, and call the toolkit ``to_smiles()`` method directly
 
-        >>> from openff.toolkit.topology import Molecule
+        >>> from openff.toolkit import Molecule
         >>> molecule = Molecule.from_smiles('Cc1ccccc1')
         >>> toolkit_registry = ToolkitRegistry([OpenEyeToolkitWrapper, RDKitToolkitWrapper])
         >>> smiles = toolkit_registry.call('to_smiles', molecule)

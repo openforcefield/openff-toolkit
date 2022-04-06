@@ -208,12 +208,12 @@ class ForceField:
 
     Create a new ForceField containing the smirnoff99Frosst parameter set:
 
-    >>> from openff.toolkit.typing.engines.smirnoff import ForceField
+    >>> from openff.toolkit import ForceField
     >>> forcefield = ForceField('test_forcefields/test_forcefield.offxml')
 
     Create an OpenMM system from a :class:`openff.toolkit.topology.Topology` object:
 
-    >>> from openff.toolkit.topology import Molecule, Topology
+    >>> from openff.toolkit import Molecule, Topology
     >>> ethanol = Molecule.from_smiles('CCO')
     >>> topology = Topology.from_molecules(molecules=[ethanol])
     >>> system = forcefield.create_openmm_system(topology)
@@ -1456,7 +1456,7 @@ class ForceField:
            Or should we label all interactions in a :class:`Topology` instead of just labeling its ``unique_molecules``?
 
         """
-        from openff.toolkit.topology import Topology
+        from openff.toolkit import Topology
         from openff.toolkit.typing.engines.smirnoff.parameters import VirtualSiteHandler
 
         # Loop over molecules and label
@@ -1545,7 +1545,7 @@ class ForceField:
         Examples
         --------
 
-        >>> from openff.toolkit.typing.engines.smirnoff import ForceField, Molecule
+        >>> from openff.toolkit import ForceField, Molecule
         >>> ethanol = Molecule.from_smiles('CCO')
         >>> force_field = ForceField('test_forcefields/test_forcefield.offxml')
 

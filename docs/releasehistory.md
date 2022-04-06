@@ -121,6 +121,12 @@ print(value_roundtrip)
   [Issue #1159](https://github.com/openforcefield/openff-toolkit/issues/1159), in which the order of 
   atoms defining a `BondChargeVirtualSite` (and possibly other virtual sites types too) might be reversed 
   if the `match` attribute of the virtual site has a value of `"once"`.
+- [PR #1231](https://github.com/openforcefield/openforcefield/pull/1231): Fixes
+  [Issue #1181](https://github.com/openforcefield/openff-toolkit/issues/1181) and
+  [Issue #1190](https://github.com/openforcefield/openff-toolkit/issues/1190), where in rare cases 
+  double bond stereo would cause `to_rdkit` to raise an error. The transfer of double bond stereochemistry
+  from OpenFF's E/Z representation to RDKit's local representation is now handled as a constraint
+  satisfaction problem.
 
 ### Examples added
 

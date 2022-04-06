@@ -1025,9 +1025,8 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                 # Store with implicit units until we're sure this conformer exists
                 positions = np.zeros(shape=[n_atoms, 3], dtype=np.float64)
                 for oe_id in conf.GetCoords().keys():
-                    off_atom_coords = unit.Quantity(
-                        conf.GetCoords()[oe_id], unit.angstrom
-                    )
+                    # implicitly in angstrom
+                    off_atom_coords = conf.GetCoords()[oe_id]
                     off_atom_index = off_to_oe_idx[oe_id]
                     positions[off_atom_index, :] = off_atom_coords
                 all_zeros = not np.any(positions)
@@ -1172,7 +1171,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                     raise InconsistentStereochemistryError(
                         "Programming error: OpenEye bond stereochemistry assumptions failed. "
                         f"The bond in the oemol has stereochemistry {oebond_stereochemistry} and "
-                        f"the bond in the offmol has stereoheometry {bond.stereochemistry}."
+                        f"the bond in the offmol has stereochemistry {bond.stereochemistry}."
                     )
 
         # Clean Up phase
@@ -1222,7 +1221,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Create an OpenEye molecule from a Molecule
 
-        >>> from openff.toolkit.topology import Molecule
+        >>> from openff.toolkit import Molecule
         >>> toolkit_wrapper = OpenEyeToolkitWrapper()
         >>> molecule = Molecule.from_smiles('CC')
         >>> oemol = toolkit_wrapper.to_openeye(molecule)
@@ -1488,7 +1487,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         Examples
         --------
 
-        >>> from openff.toolkit.topology import Molecule
+        >>> from openff.toolkit import Molecule
         >>> from openff.toolkit.utils import get_data_file_path
         >>> sdf_filepath = get_data_file_path('molecules/ethanol.sdf')
         >>> molecule = Molecule(sdf_filepath)
