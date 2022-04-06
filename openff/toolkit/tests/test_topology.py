@@ -133,14 +133,12 @@ class TestTopology(TestCase):
         molecule.add_bond_charge_virtual_site(
             (carbons[0], carbons[1]),
             0.1 * unit.angstrom,
-            charge_increments=[0.1, 0.05] * unit.elementary_charge,
         )
         molecule.add_monovalent_lone_pair_virtual_site(
             (c0_hydrogens[0], carbons[0], carbons[1]),
             0.2 * unit.angstrom,
             20 * unit.degree,
             25 * unit.degree,
-            charge_increments=[0.01, 0.02, 0.03] * unit.elementary_charge,
         )
         self.ethane_from_smiles_w_vsites = Molecule(molecule)
 
@@ -156,14 +154,12 @@ class TestTopology(TestCase):
             0.2 * unit.angstrom,
             20 * unit.degree,
             25 * unit.degree,
-            charge_increments=[0.01, 0.02, 0.03] * unit.elementary_charge,
             symmetric=True,
         )
         # This will add *one* particle (symmetric=False), *one* virtual site
         molecule.add_bond_charge_virtual_site(
             (carbons[0], carbons[1]),
             0.1 * unit.angstrom,
-            charge_increments=[0.1, 0.05] * unit.elementary_charge,
             symmetric=False,
         )
         self.propane_from_smiles_w_vsites = Molecule(molecule)
@@ -176,7 +172,6 @@ class TestTopology(TestCase):
             (H1, O1, H2),
             0.7 * unit.angstrom,
             54.71384225 * unit.degree,
-            charge_increments=[0.1205, 0.00, 0.1205] * unit.elementary_charge,
             symmetric=True,
         )
         self.tip5_water = Molecule(molecule)
@@ -398,9 +393,9 @@ class TestTopology(TestCase):
         topology.add_molecule(self.propane_from_smiles_w_vsites)
         assert topology.n_topology_virtual_sites == 4
         with self.assertRaises(Exception) as context:
-            topology_vsite = topology.virtual_site(-1)
+            topology.virtual_site(-1)
         with self.assertRaises(Exception) as context:
-            topology_vsite = topology.virtual_site(4)
+            topology.virtual_site(4)
         topology_vsite1 = topology.virtual_site(0)
         topology_vsite2 = topology.virtual_site(1)
         topology_vsite3 = topology.virtual_site(2)
@@ -413,7 +408,9 @@ class TestTopology(TestCase):
         n_equal_atoms = 0
         for topology_atom in topology.topology_atoms:
             for vsite in topology.topology_virtual_sites:
-                for vsite_atom in vsite.atoms:
+                vparticle = next(iter(vsite.particles))
+
+                for vsite_atom in vparticle.atoms:
                     if topology_atom == vsite_atom:
                         n_equal_atoms += 1
 
@@ -476,9 +473,8 @@ class TestTopology(TestCase):
 
         # Add a virtualsite to the reference ethanol
         for ref_mol in topology.reference_molecules:
-            atoms = [ref_mol.atoms[i] for i in [0, 1]]
             ref_mol._add_bond_charge_virtual_site(
-                atoms,
+                [(0, 1)],
                 0.5 * unit.angstrom,
             )
 
@@ -486,12 +482,15 @@ class TestTopology(TestCase):
         for top_vs, expected_indices in zip(
             topology.topology_virtual_sites, virtual_site_topology_atom_indices
         ):
+
+            top_vp = next(iter(top_vs.particles))
+
             assert (
-                tuple([at.topology_particle_index for at in top_vs.atoms])
+                tuple([at.topology_particle_index for at in top_vp.atoms])
                 == expected_indices
             )
-            assert top_vs.atom(0).topology_particle_index == expected_indices[0]
-            assert top_vs.atom(1).topology_particle_index == expected_indices[1]
+            assert top_vp.atom(0).topology_particle_index == expected_indices[0]
+            assert top_vp.atom(1).topology_particle_index == expected_indices[1]
 
     def test_is_bonded(self):
         """Test Topology.virtual_site function (get virtual site from index)"""
@@ -804,7 +803,6 @@ class TestTopology(TestCase):
         mol.add_bond_charge_virtual_site(
             (carbons[0], carbons[1]),
             0.1 * unit.angstrom,
-            charge_increments=[0.1, 0.05] * unit.elementary_charge,
         )
         topology = Topology()
         topology.add_molecule(mol)
