@@ -31,7 +31,11 @@ __all__ = [
 
 from typing import Optional
 
-from openff.toolkit.utils.exceptions import SMIRKSMismatchError, SMIRKSParsingError, InvalidToolkitRegistryError
+from openff.toolkit.utils.exceptions import (
+    InvalidToolkitRegistryError,
+    SMIRKSMismatchError,
+    SMIRKSParsingError,
+)
 from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY, ToolkitWrapper
 
 
@@ -252,7 +256,10 @@ class ChemicalEnvironment:
         elif isinstance(toolkit_registry, ToolkitWrapper):
             return ToolkitWrapper._smarts_to_networkx(self.smirks)
         else:
-            raise InvalidToolkitRegistryError(f"`toolkit_registry` must be either an instance of ToolkitRegistry or ToolkitWrapper. Got {type(toolkit_registry)} instead")
+            raise InvalidToolkitRegistryError(
+                f"`toolkit_registry` must be either an instance of ToolkitRegistry or ToolkitWrapper. Got {type(toolkit_registry)} instead"
+            )
+
 
 class AtomChemicalEnvironment(ChemicalEnvironment):
     """Chemical environment matching one labeled atom."""

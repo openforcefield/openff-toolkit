@@ -27,7 +27,7 @@ from openff.toolkit.tests.create_molecules import (
     create_cyclohexane,
     create_ethanol,
     create_reversed_ethanol,
-    topology_with_metadata
+    topology_with_metadata,
 )
 from openff.toolkit.tests.utils import (
     requires_ambertools,
@@ -571,40 +571,58 @@ class TestOpenEyeToolkitWrapper:
         Test roundtripping to/from ``OpenEyeToolkitWrapper`` for molecules with PDB hierarchy metadata
         """
         from openeye import oechem
+
         for molecule in topology_with_metadata.molecules:
             oemol = molecule.to_openeye()
             roundtrip_mol = Molecule.from_openeye(oemol)
 
             # Check OEMol
             for orig_atom, oe_atom in zip(molecule.atoms, oemol.GetAtoms()):
-                if 'residue_name' in orig_atom.metadata:
-                    assert orig_atom.metadata['residue_name'] == oechem.OEAtomGetResidue(oe_atom).GetName()
+                if "residue_name" in orig_atom.metadata:
+                    assert (
+                        orig_atom.metadata["residue_name"]
+                        == oechem.OEAtomGetResidue(oe_atom).GetName()
+                    )
 
-                if 'residue_number' in orig_atom.metadata:
-                    assert orig_atom.metadata['residue_number'] == oechem.OEAtomGetResidue(oe_atom).GetResidueNumber()
+                if "residue_number" in orig_atom.metadata:
+                    assert (
+                        orig_atom.metadata["residue_number"]
+                        == oechem.OEAtomGetResidue(oe_atom).GetResidueNumber()
+                    )
 
-                if 'chain_id' in orig_atom.metadata:
-                    assert orig_atom.metadata['chain_id'] == oechem.OEAtomGetResidue(oe_atom).GetChainID()
+                if "chain_id" in orig_atom.metadata:
+                    assert (
+                        orig_atom.metadata["chain_id"]
+                        == oechem.OEAtomGetResidue(oe_atom).GetChainID()
+                    )
 
             # Check roundtripped OFFMol
-            for orig_atom, roundtrip_atom in zip(molecule.atoms,
-                                                          roundtrip_mol.atoms):
+            for orig_atom, roundtrip_atom in zip(molecule.atoms, roundtrip_mol.atoms):
                 # If ANY atom in the OEMol has any hierarchy metadata set, then the ENTIRE molecule is considered
                 # to have metadata. Anything that wasn't set defaults to ("UNK", 1, "").
                 if oechem.OEHasResidues(oemol):
-                    if 'residue_name' in orig_atom.metadata:
-                        assert orig_atom.metadata['residue_name'] == roundtrip_atom.metadata['residue_name']
+                    if "residue_name" in orig_atom.metadata:
+                        assert (
+                            orig_atom.metadata["residue_name"]
+                            == roundtrip_atom.metadata["residue_name"]
+                        )
 
-                    if 'residue_number' in orig_atom.metadata:
-                        assert orig_atom.metadata['residue_number'] == roundtrip_atom.metadata['residue_number']
+                    if "residue_number" in orig_atom.metadata:
+                        assert (
+                            orig_atom.metadata["residue_number"]
+                            == roundtrip_atom.metadata["residue_number"]
+                        )
 
-                    if 'chain_id' in orig_atom.metadata:
-                        assert orig_atom.metadata['chain_id'] == roundtrip_atom.metadata['chain_id']
+                    if "chain_id" in orig_atom.metadata:
+                        assert (
+                            orig_atom.metadata["chain_id"]
+                            == roundtrip_atom.metadata["chain_id"]
+                        )
 
                 else:
-                    assert 'residue_name' not in roundtrip_atom.metadata
-                    assert 'residue_number' not in roundtrip_atom.metadata
-                    assert 'chain_id' not in roundtrip_atom.metadata
+                    assert "residue_name" not in roundtrip_atom.metadata
+                    assert "residue_number" not in roundtrip_atom.metadata
+                    assert "chain_id" not in roundtrip_atom.metadata
 
     def test_from_openeye_mutable_input(self):
         """
@@ -2201,25 +2219,33 @@ class TestRDKitToolkitWrapper:
 
             # Check RDMol
             for orig_atom, rd_atom in zip(molecule.atoms, rdmol.GetAtoms()):
-                if 'residue_name' in orig_atom.metadata:
-                    assert orig_atom.metadata['residue_name'] == rd_atom.GetPDBResidueInfo().GetResidueName()
+                if "residue_name" in orig_atom.metadata:
+                    assert (
+                        orig_atom.metadata["residue_name"]
+                        == rd_atom.GetPDBResidueInfo().GetResidueName()
+                    )
                 else:
-                    assert rd_atom.GetPDBResidueInfo().GetResidueName() == ''
+                    assert rd_atom.GetPDBResidueInfo().GetResidueName() == ""
 
-                if 'residue_number' in orig_atom.metadata:
-                    assert orig_atom.metadata['residue_number'] == rd_atom.GetPDBResidueInfo().GetResidueNumber()
+                if "residue_number" in orig_atom.metadata:
+                    assert (
+                        orig_atom.metadata["residue_number"]
+                        == rd_atom.GetPDBResidueInfo().GetResidueNumber()
+                    )
                 else:
                     assert rd_atom.GetPDBResidueInfo().GetResidueNumber() == 0
 
-
-                if 'chain_id' in orig_atom.metadata:
-                    assert orig_atom.metadata['chain_id'] == rd_atom.GetPDBResidueInfo().GetChainId()
+                if "chain_id" in orig_atom.metadata:
+                    assert (
+                        orig_atom.metadata["chain_id"]
+                        == rd_atom.GetPDBResidueInfo().GetChainId()
+                    )
                 else:
-                    assert rd_atom.GetPDBResidueInfo().GetChainId() == ''
+                    assert rd_atom.GetPDBResidueInfo().GetChainId() == ""
 
             # from rdkit import Chem
-            #print('orig mol metadata', molecule.metadata)
-            #print('roundtrip mol metadata', roundtrip_mol.metadata)
+            # print('orig mol metadata', molecule.metadata)
+            # print('roundtrip mol metadata', roundtrip_mol.metadata)
             # print('chain id', Chem.SplitMolByPDBChainId(rdmol))
             # print('chain id', [(chain[0], [a.GetIdx() for a in chain[1].GetAtoms()]) for chain in Chem.SplitMolByPDBChainId(rdmol).items()])
             # print('pdb residues', Chem.SplitMolByPDBResidues(rdmol))
@@ -2227,22 +2253,30 @@ class TestRDKitToolkitWrapper:
             # print()
 
             # Check roundtripped OFFMol
-            for orig_atom, roundtrip_atom in zip(molecule.atoms,
-                                                          roundtrip_mol.atoms):
-                if 'residue_name' in orig_atom.metadata:
-                    assert orig_atom.metadata['residue_name'] == roundtrip_atom.metadata['residue_name']
+            for orig_atom, roundtrip_atom in zip(molecule.atoms, roundtrip_mol.atoms):
+                if "residue_name" in orig_atom.metadata:
+                    assert (
+                        orig_atom.metadata["residue_name"]
+                        == roundtrip_atom.metadata["residue_name"]
+                    )
                 else:
-                    assert roundtrip_atom.metadata['residue_name'] == ''
+                    assert roundtrip_atom.metadata["residue_name"] == ""
 
-                if 'residue_number' in orig_atom.metadata:
-                    assert orig_atom.metadata['residue_number'] == roundtrip_atom.metadata['residue_number']
+                if "residue_number" in orig_atom.metadata:
+                    assert (
+                        orig_atom.metadata["residue_number"]
+                        == roundtrip_atom.metadata["residue_number"]
+                    )
                 else:
-                    assert roundtrip_atom.metadata['residue_number'] == 0
+                    assert roundtrip_atom.metadata["residue_number"] == 0
 
-                if 'chain_id' in orig_atom.metadata:
-                    assert orig_atom.metadata['chain_id'] == roundtrip_atom.metadata['chain_id']
+                if "chain_id" in orig_atom.metadata:
+                    assert (
+                        orig_atom.metadata["chain_id"]
+                        == roundtrip_atom.metadata["chain_id"]
+                    )
                 else:
-                    assert roundtrip_atom.metadata['chain_id'] == ''
+                    assert roundtrip_atom.metadata["chain_id"] == ""
 
     def test_from_rdkit_implicit_hydrogens(self):
         """

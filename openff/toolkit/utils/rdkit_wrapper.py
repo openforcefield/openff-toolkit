@@ -244,8 +244,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             raise InvalidConformerError("The PDB and SMILES structures do not match.")
 
     def _smarts_to_networkx(self, substructure_smarts):
-        from rdkit import Chem
         import networkx as nx
+        from rdkit import Chem
+
         rdmol = Chem.MolFromSmarts(substructure_smarts)
 
         _bondtypes = {
@@ -262,12 +263,11 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         for atom in rdmol.GetAtoms():
             atomic_number = atom.GetAtomicNum()
 
-
             rdmol_G.add_node(
                 atom.GetIdx(),
                 atomic_number=atomic_number,
                 formal_charge=atom.GetFormalCharge(),
-                map_index=atom.GetAtomMapNum()
+                map_index=atom.GetAtomMapNum(),
             )
         for bond in rdmol.GetBonds():
             bond_type = bond.GetBondType()
@@ -1578,9 +1578,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             res = rda.GetPDBResidueInfo()
             metadata = dict()
             if res is not None:
-                metadata['residue_name'] = res.GetResidueName()
-                metadata['residue_number'] = res.GetResidueNumber()
-                metadata['chain_id'] = res.GetChainId()
+                metadata["residue_name"] = res.GetResidueName()
+                metadata["residue_number"] = res.GetResidueNumber()
+                metadata["chain_id"] = res.GetChainId()
 
             atom_index = offmol._add_atom(
                 atomic_number,
@@ -1588,7 +1588,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 is_aromatic,
                 name=name,
                 stereochemistry=stereochemistry,
-                metadata=metadata
+                metadata=metadata,
             )
             map_atoms[rd_idx] = atom_index
             atom_mapping[atom_index] = map_id
@@ -1879,14 +1879,14 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             else:
                 res = rdatom.GetPDBResidueInfo()
 
-            if 'residue_name' in atom.metadata:
-                res.SetResidueName(atom.metadata['residue_name'])
+            if "residue_name" in atom.metadata:
+                res.SetResidueName(atom.metadata["residue_name"])
 
-            if 'residue_number' in atom.metadata:
-                res.SetResidueNumber(atom.metadata['residue_number'])
+            if "residue_number" in atom.metadata:
+                res.SetResidueNumber(atom.metadata["residue_number"])
 
-            if 'chain_id' in atom.metadata:
-                res.SetChainId(atom.metadata['chain_id'])
+            if "chain_id" in atom.metadata:
+                res.SetChainId(atom.metadata["chain_id"])
 
             rdatom.SetPDBResidueInfo(res)
 

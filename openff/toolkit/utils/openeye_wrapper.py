@@ -571,8 +571,9 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         return mols
 
     def _smarts_to_networkx(self, substructure_smarts):
-        from openeye import oechem
         import networkx as nx
+        from openeye import oechem
+
         qmol = oechem.OEQMol()
         if not oechem.OEParseSmiles(qmol, substructure_smarts):
             raise ValueError(f"Error parsing SMARTS '{substructure_smarts}'")
@@ -587,7 +588,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                 atom.GetIdx(),
                 atomic_number=atomic_number,
                 formal_charge=atom.GetFormalCharge(),
-                map_index=atom.GetMapIdx()
+                map_index=atom.GetMapIdx(),
             )
         for bond in qmol.GetBonds():
             bond_order = bond.GetOrder()
@@ -604,15 +605,14 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
     def _assign_aromaticity_and_stereo_from_3d(self, offmol):
         from openeye import oechem
+
         oemol = offmol.to_openeye()
         oechem.OEPerceiveChiral(oemol)
         oechem.OEAssignAromaticFlags(oemol, oechem.OEAroModel_MDL)
         oechem.OE3DToInternalStereo(oemol)
         print(f"Number of atoms after sanitization: {oemol.NumAtoms()}")
 
-        offmol_w_stereo_and_aro = self.from_openeye(
-            oemol, allow_undefined_stereo=True
-        )
+        offmol_w_stereo_and_aro = self.from_openeye(oemol, allow_undefined_stereo=True)
         return offmol_w_stereo_and_aro
 
     def enumerate_protomers(self, molecule, max_states=10):
@@ -1021,10 +1021,14 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             # Transfer in hierarchy metadata
             metadata_dict = dict()
             if oechem.OEHasResidues(oemol):
-                metadata_dict['residue_name'] = oechem.OEAtomGetResidue(oeatom).GetName()
-                metadata_dict['residue_number'] = oechem.OEAtomGetResidue(oeatom).GetResidueNumber()
-                metadata_dict['chain_id'] = oechem.OEAtomGetResidue(oeatom).GetChainID()
-            #print('from', metadata_dict)
+                metadata_dict["residue_name"] = oechem.OEAtomGetResidue(
+                    oeatom
+                ).GetName()
+                metadata_dict["residue_number"] = oechem.OEAtomGetResidue(
+                    oeatom
+                ).GetResidueNumber()
+                metadata_dict["chain_id"] = oechem.OEAtomGetResidue(oeatom).GetChainID()
+            # print('from', metadata_dict)
 
             atom_index = molecule._add_atom(
                 atomic_number,
@@ -1032,7 +1036,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                 is_aromatic,
                 stereochemistry=stereochemistry,
                 name=name,
-                metadata=metadata_dict
+                metadata=metadata_dict,
             )
             off_to_oe_idx[
                 oe_idx
@@ -1308,19 +1312,19 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                     off_atom.partial_charge.m_as(unit.elementary_charge)
                 )
             # oeatom.SetPartialCharge(1.)
-            #print('to before set', oechem.OEAtomGetResidue(oe_atom))
-            #print('to', off_atom.metadata)
+            # print('to before set', oechem.OEAtomGetResidue(oe_atom))
+            # print('to', off_atom.metadata)
             res = oechem.OEAtomGetResidue(oe_atom)
 
-            if 'residue_name' in off_atom.metadata:
-                res.SetName(off_atom.metadata['residue_name'])
-            if 'residue_number' in off_atom.metadata:
-                res.SetResidueNumber(off_atom.metadata['residue_number'])
-            if 'chain_id' in off_atom.metadata:
-                res.SetChainID(off_atom.metadata['chain_id'])
+            if "residue_name" in off_atom.metadata:
+                res.SetName(off_atom.metadata["residue_name"])
+            if "residue_number" in off_atom.metadata:
+                res.SetResidueNumber(off_atom.metadata["residue_number"])
+            if "chain_id" in off_atom.metadata:
+                res.SetChainID(off_atom.metadata["chain_id"])
             oechem.OEAtomSetResidue(oe_atom, res)
 
-            #print('to after set', oechem.OEAtomGetResidue(oe_atom))
+            # print('to after set', oechem.OEAtomGetResidue(oe_atom))
         assert None not in oemol_atoms
 
         oemol_bonds = [None] * molecule.n_bonds  # list of corresponding oemol bonds

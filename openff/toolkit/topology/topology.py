@@ -1296,6 +1296,7 @@ class Topology(Serializable):
     @requires_package("openmm")
     def _openmm_topology_to_networkx(openmm_topology):
         import networkx as nx
+
         # Convert all openMM mols to graphs
         omm_topology_G = nx.Graph()
         for atom in openmm_topology.atoms():
@@ -1305,7 +1306,7 @@ class Topology(Serializable):
                 atom_name=atom.name,
                 residue_name=atom.residue.name,
                 residue_id=atom.residue.id,
-                chain_id=atom.residue.chain.id
+                chain_id=atom.residue.chain.id,
             )
         for bond in openmm_topology.bonds():
             omm_topology_G.add_edge(
@@ -1402,7 +1403,12 @@ class Topology(Serializable):
                     # Take the first valid atom indexing map
                     first_topology_atom_index = min(mapping.keys())
                     topology_molecules_to_add.append(
-                        (first_topology_atom_index, unq_mol_G, mapping.items(), omm_mol_G)
+                        (
+                            first_topology_atom_index,
+                            unq_mol_G,
+                            mapping.items(),
+                            omm_mol_G,
+                        )
                     )
                     match_found = True
                     break
@@ -1440,7 +1446,12 @@ class Topology(Serializable):
         # The connected_component_subgraph function above may have scrambled the molecule order, so sort molecules
         # by their first atom's topology index
         topology_molecules_to_add.sort(key=lambda x: x[0])
-        for first_index, unq_mol_G, top_to_ref_index, omm_mol_G in topology_molecules_to_add:
+        for (
+            first_index,
+            unq_mol_G,
+            top_to_ref_index,
+            omm_mol_G,
+        ) in topology_molecules_to_add:
             local_top_to_ref_index = dict(
                 [
                     (top_index - first_index, ref_index)
@@ -1451,10 +1462,14 @@ class Topology(Serializable):
             remapped_mol = unq_mol.remap(local_top_to_ref_index, current_to_new=False)
             # Transfer hierarchy metadata from openmm mol graph to offmol metadata
             for omm_atom, off_atom in zip(omm_mol_G.nodes, remapped_mol.atoms):
-                off_atom.name = omm_mol_G.nodes[omm_atom]['atom_name']
-                off_atom.metadata['residue_name'] = omm_mol_G.nodes[omm_atom]['residue_name']
-                off_atom.metadata['residue_number'] = int(omm_mol_G.nodes[omm_atom]['residue_id'])
-                off_atom.metadata['chain_id'] = omm_mol_G.nodes[omm_atom]['chain_id']
+                off_atom.name = omm_mol_G.nodes[omm_atom]["atom_name"]
+                off_atom.metadata["residue_name"] = omm_mol_G.nodes[omm_atom][
+                    "residue_name"
+                ]
+                off_atom.metadata["residue_number"] = int(
+                    omm_mol_G.nodes[omm_atom]["residue_id"]
+                )
+                off_atom.metadata["chain_id"] = omm_mol_G.nodes[omm_atom]["chain_id"]
             topology.add_molecule(remapped_mol)
 
         if openmm_topology.getPeriodicBoxVectors() is not None:
@@ -1496,7 +1511,6 @@ class Topology(Serializable):
                 if not ref_mol.has_unique_atom_names:
                     ref_mol.generate_unique_atom_names()
 
-
         # Go through atoms in OpenFF to preserve the order.
         omm_atoms = []
 
@@ -1504,20 +1518,20 @@ class Topology(Serializable):
         last_residue = None
         for atom in self.atoms:
 
-            if 'residue_name' in atom.metadata:
-                atom_residue_name = atom.metadata['residue_name']
+            if "residue_name" in atom.metadata:
+                atom_residue_name = atom.metadata["residue_name"]
             else:
-                atom_residue_name = 'UNK'
+                atom_residue_name = "UNK"
 
-            if 'residue_number' in atom.metadata:
-                atom_residue_number = atom.metadata['residue_number']
+            if "residue_number" in atom.metadata:
+                atom_residue_number = atom.metadata["residue_number"]
             else:
-                atom_residue_number = '0'
+                atom_residue_number = "0"
 
-            if 'chain_id' in atom.metadata:
-                atom_chain_id = atom.metadata['chain_id']
+            if "chain_id" in atom.metadata:
+                atom_chain_id = atom.metadata["chain_id"]
             else:
-                atom_chain_id = 'X'
+                atom_chain_id = "X"
 
             if last_chain is None:
                 chain = omm_topology.addChain(atom_chain_id)
@@ -1529,9 +1543,11 @@ class Topology(Serializable):
             if last_residue is None:
                 residue = omm_topology.addResidue(atom_residue_name, chain)
                 residue.id = atom_residue_number
-            elif (last_residue.name == atom_residue_name) and \
-                 (int(last_residue.id) == atom_residue_number) and \
-                 (chain.id == last_chain.id):
+            elif (
+                (last_residue.name == atom_residue_name)
+                and (int(last_residue.id) == atom_residue_number)
+                and (chain.id == last_chain.id)
+            ):
                 residue = last_residue
             else:
                 residue = omm_topology.addResidue(atom_residue_name, chain)

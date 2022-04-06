@@ -707,8 +707,6 @@ class TestTopology:
             assert bond.bond_order == bond_copy.bond_order
             assert bond.is_aromatic == bond_copy.is_aromatic
 
-
-
     def test_to_from_openmm_hierarchy_metadata(self, topology_with_metadata):
         """
         Test roundtripping to/from ``OpenEyeToolkitWrapper`` for molecules with PDB hierarchy metadata
@@ -726,38 +724,48 @@ class TestTopology:
 
         # Check OMM Atom
         for orig_atom, omm_atom in zip(topology_with_metadata.atoms, omm_top.atoms()):
-            if 'residue_name' in orig_atom.metadata:
-                assert orig_atom.metadata['residue_name'] == omm_atom.residue.name
+            if "residue_name" in orig_atom.metadata:
+                assert orig_atom.metadata["residue_name"] == omm_atom.residue.name
             else:
-                assert omm_atom.residue.name == 'UNK'
+                assert omm_atom.residue.name == "UNK"
 
-            if 'residue_number' in orig_atom.metadata:
-                assert orig_atom.metadata['residue_number'] == int(omm_atom.residue.id)
+            if "residue_number" in orig_atom.metadata:
+                assert orig_atom.metadata["residue_number"] == int(omm_atom.residue.id)
             else:
-                assert omm_atom.residue.id == '0'
+                assert omm_atom.residue.id == "0"
 
-            if 'chain_id' in orig_atom.metadata:
-                assert orig_atom.metadata['chain_id'] == omm_atom.residue.chain.id
+            if "chain_id" in orig_atom.metadata:
+                assert orig_atom.metadata["chain_id"] == omm_atom.residue.chain.id
             else:
-                assert omm_atom.residue.chain.id == 'X'
+                assert omm_atom.residue.chain.id == "X"
 
         # Check roundtripped OFFMol
-        for orig_atom, roundtrip_atom in zip(topology_with_metadata.atoms, roundtrip_top.atoms):
-            if 'residue_name' in orig_atom.metadata:
-                assert orig_atom.metadata['residue_name'] == roundtrip_atom.metadata['residue_name']
+        for orig_atom, roundtrip_atom in zip(
+            topology_with_metadata.atoms, roundtrip_top.atoms
+        ):
+            if "residue_name" in orig_atom.metadata:
+                assert (
+                    orig_atom.metadata["residue_name"]
+                    == roundtrip_atom.metadata["residue_name"]
+                )
             else:
-                assert roundtrip_atom.metadata['residue_name'] == 'UNK'
+                assert roundtrip_atom.metadata["residue_name"] == "UNK"
 
-            if 'residue_number' in orig_atom.metadata:
-                assert orig_atom.metadata['residue_number'] == roundtrip_atom.metadata['residue_number']
+            if "residue_number" in orig_atom.metadata:
+                assert (
+                    orig_atom.metadata["residue_number"]
+                    == roundtrip_atom.metadata["residue_number"]
+                )
             else:
-                assert roundtrip_atom.metadata['residue_number'] == 0
+                assert roundtrip_atom.metadata["residue_number"] == 0
 
-            if 'chain_id' in orig_atom.metadata:
-                assert orig_atom.metadata['chain_id'] == roundtrip_atom.metadata['chain_id']
+            if "chain_id" in orig_atom.metadata:
+                assert (
+                    orig_atom.metadata["chain_id"]
+                    == roundtrip_atom.metadata["chain_id"]
+                )
             else:
-                assert roundtrip_atom.metadata['chain_id'] == 'X'
-
+                assert roundtrip_atom.metadata["chain_id"] == "X"
 
     @requires_pkg("mdtraj")
     def test_from_mdtraj(self):
