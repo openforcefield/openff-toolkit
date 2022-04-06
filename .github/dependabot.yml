@@ -5,6 +5,3 @@ updates:
     directory: "/"
     schedule:
       interval: "daily"
-    target-branch:
-      - "master"
-      - "topology-biopolymer-refactor"
