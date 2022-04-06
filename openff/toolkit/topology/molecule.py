@@ -5328,8 +5328,8 @@ class FrozenMolecule(Serializable):
                         omm_topology_G, substructure_graph, node_match=node_match
                     )
                     if GM.subgraph_is_isomorphic():
-                        print(res_name)
-                        print(substructure_smarts)
+                        # print(res_name)
+                        # print(substructure_smarts)
                         for omm_idx_2_rdk_idx in GM.subgraph_isomorphisms_iter():
                             #assert len(omm_idx_2_rdk_idx) == rdmol.GetNumAtoms()
                             for omm_idx, rdk_idx in omm_idx_2_rdk_idx.items():
@@ -5359,12 +5359,12 @@ class FrozenMolecule(Serializable):
                 if non_isomorphic_flag:
                     non_isomorphic_count += 1
             # print(f"Non isomorphic residues: {non_isomorphic_count}")
-            print(
-                f"N. of assigned nodes: {len(already_assigned_nodes)} -- N. of atoms: {len(omm_topology_G.nodes)}"
-            )
-            print(
-                f"N. of assigned edges: {len(already_assigned_edges)} -- N. of bonds: {len(omm_topology_G.edges)}"
-            )
+            # print(
+            #     f"N. of assigned nodes: {len(already_assigned_nodes)} -- N. of atoms: {len(omm_topology_G.nodes)}"
+            # )
+            # print(
+            #     f"N. of assigned edges: {len(already_assigned_edges)} -- N. of bonds: {len(omm_topology_G.edges)}"
+            # )
             assert len(already_assigned_nodes) == len(omm_topology_G.nodes)
             assert len(already_assigned_edges) == len(omm_topology_G.edges)
 
@@ -5417,9 +5417,9 @@ class FrozenMolecule(Serializable):
         offmol = Molecule()
 
         for node_idx, node_data in omm_topology_G.nodes.items():
-            print(node_idx, node_data)
+            # print(node_idx, node_data)
             formal_charge = int(node_data["formal_charge"])
-            print(f"Formal charge: {formal_charge}")
+            # print(f"Formal charge: {formal_charge}")
             offmol.add_atom(
                 node_data["atomic_number"],
                 int(node_data["formal_charge"]),
@@ -5433,11 +5433,11 @@ class FrozenMolecule(Serializable):
             )
 
         for edge, edge_data in omm_topology_G.edges.items():
-            print(edge, edge_data)
+            # print(edge, edge_data)
             offmol.add_bond(edge[0], edge[1], edge_data["bond_order"], False)
 
 
-        print(f"Number of atoms before sanitization: {offmol.n_atoms}")
+        # print(f"Number of atoms before sanitization: {offmol.n_atoms}")
         coords = (
             np.array(
                 [
@@ -5459,7 +5459,7 @@ class FrozenMolecule(Serializable):
             bond._is_aromatic = stereo_aro_bond.is_aromatic
 
 
-        print(f"OFFMol number of atoms: {offmol.n_atoms}")
+        #print(f"OFFMol number of atoms: {offmol.n_atoms}")
         return offmol
 
     def _to_xyz_file(self, file_path):
