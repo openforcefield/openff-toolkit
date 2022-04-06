@@ -58,6 +58,9 @@ print(value_roundtrip)
 
 ## Current Development
 
+- [PR #1194](https://github.com/openforcefield/openforcefield/pull/1194): Adds
+  [`Topology.__add__`](openff.toolkit.topology.Topology.__add__), allowing `Topology` objects to be
+  added together, including added in-place, using the `+` operator.
 - [PR #964](https://github.com/openforcefield/openff-toolkit/pull/964): Adds initial implementation
   of atom metadata dictionaries.
 - [PR #1097](https://github.com/openforcefield/openff-toolkit/pull/1097): Deprecates TopologyMolecule.
