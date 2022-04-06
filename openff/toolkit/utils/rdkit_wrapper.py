@@ -867,7 +867,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             The molecule to generate conformers for.
         n_conformers : int, default=1
             Maximum number of conformers to generate.
-        rms_cutoff : openmm.Quantity-wrapped float, in units of distance, optional, default=None
+        rms_cutoff : unit-wrapped float, in units of distance, optional, default=None
             The minimum RMS value at which two conformers are considered redundant and one is deleted.
             If None, the cutoff is set to 1 Angstrom
 
@@ -880,7 +880,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         from rdkit.Chem import AllChem
 
         if rms_cutoff is None:
-            rms_cutoff = 1.0 * unit.angstrom
+            rms_cutoff = unit.Quantity(1.0, unit.angstrom)
         rdmol = self.to_rdkit(molecule)
         # TODO: This generates way more conformations than omega, given the same
         # nConfs and RMS threshold. Is there some way to set an energy cutoff as well?
@@ -931,7 +931,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                         (MMFF). This method does not make use of conformers, and hence
                         ``use_conformers`` and ``strict_n_conformers`` will not impact
                         the partial charges produced.
-        use_conformers : iterable of openmm.unit.Quantity-wrapped numpy arrays, each with
+        use_conformers : iterable of unit-wrapped numpy arrays, each with
             shape (n_atoms, 3) and dimension of distance. Optional, default = None
             Coordinates to use for partial charge calculation. If None, an appropriate number of
             conformers will be generated.
@@ -984,7 +984,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 ]
             )
 
-        molecule.partial_charges = charges * unit.elementary_charge
+        molecule.partial_charges = unit.Quantity(charges, unit.elementary_charge)
 
         if normalize_partial_charges:
             molecule._normalize_partial_charges()
@@ -1491,7 +1491,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             # create a new atom
             # atomic_number = oemol.NewAtom(rda.GetAtomicNum())
             atomic_number = rda.GetAtomicNum()
-            formal_charge = rda.GetFormalCharge() * unit.elementary_charge
+            # implicit units of elementary charge
+            formal_charge = rda.GetFormalCharge()
             is_aromatic = rda.GetIsAromatic()
             if rda.HasProp("_Name"):
                 name = rda.GetProp("_Name")
@@ -1525,9 +1526,12 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 is_aromatic,
                 name=name,
                 stereochemistry=stereochemistry,
+                invalidate_cache=False,
             )
             map_atoms[rd_idx] = atom_index
             atom_mapping[atom_index] = map_id
+
+        offmol._invalidate_cached_properties()
 
         # If we have a full / partial atom map add it to the molecule. Zeroes 0
         # indicates no mapping
@@ -1551,9 +1555,15 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
             # create a new bond
             bond_index = offmol._add_bond(
-                map_atoms[a1], map_atoms[a2], order, is_aromatic
+                map_atoms[a1],
+                map_atoms[a2],
+                order,
+                is_aromatic=is_aromatic,
+                invalidate_cache=False,
             )
             map_bonds[rdb_idx] = bond_index
+
+        offmol._invalidate_cached_properties()
 
         # Now fill in the cached (structure-dependent) properties. We have to have the 2D
         # structure of the molecule in place first, because each call to add_atom and
@@ -1588,23 +1598,20 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         if len(rdmol.GetConformers()) != 0:
             for conf in rdmol.GetConformers():
                 n_atoms = offmol.n_atoms
-                # TODO: Will this always be angstrom when loading from RDKit?
-                positions = unit.Quantity(np.zeros((n_atoms, 3)), unit.angstrom)
+                # Here we assume this always be angstrom
+                positions = np.zeros((n_atoms, 3))
                 for rd_idx, off_idx in map_atoms.items():
-                    atom_coords = conf.GetPositions()[rd_idx, :] * unit.angstrom
+                    atom_coords = conf.GetPositions()[rd_idx, :]
                     positions[off_idx, :] = atom_coords
-                offmol._add_conformer(positions)
+                offmol._add_conformer(unit.Quantity(positions, unit.angstrom))
 
-        partial_charges = unit.Quantity(
-            value=np.zeros(shape=offmol.n_atoms, dtype=np.float64),
-            units=unit.elementary_charge,
-        )
+        partial_charges = np.zeros(shape=offmol.n_atoms, dtype=np.float64)
 
         any_atom_has_partial_charge = False
         for rd_idx, rd_atom in enumerate(rdmol.GetAtoms()):
             off_idx = map_atoms[rd_idx]
             if rd_atom.HasProp("PartialCharge"):
-                charge = rd_atom.GetDoubleProp("PartialCharge") * unit.elementary_charge
+                charge = rd_atom.GetDoubleProp("PartialCharge")
                 partial_charges[off_idx] = charge
                 any_atom_has_partial_charge = True
             else:
@@ -1614,7 +1621,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                         "Some atoms in rdmol have partial charges, but others do not."
                     )
         if any_atom_has_partial_charge:
-            offmol.partial_charges = partial_charges
+            offmol.partial_charges = unit.Quantity(
+                partial_charges, unit.elementary_charge
+            )
         else:
             offmol.partial_charges = None
         return offmol
