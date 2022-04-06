@@ -464,11 +464,17 @@ class Topology(Serializable):
                 f"{self.aromaticity_model}"
             )
 
-        self._constrained_atom_pairs = dict()
         self._cached_chemically_identical_molecules = None
+
+        constrained_atom_pairs_to_add = other.constrained_atom_pairs
+        atom_index_offset = self.n_atoms
 
         for molecule in other.molecules:
             self.add_molecule(deepcopy(molecule))
+
+        for key, value in constrained_atom_pairs_to_add.items():
+            new_key = tuple(index + atom_index_offset for index in key)
+            self._constrained_atom_pairs[new_key] = value
 
         return self
 
@@ -648,12 +654,12 @@ class Topology(Serializable):
             )
 
     @property
-    def constrained_atom_pairs(self):
+    def constrained_atom_pairs(self) -> Dict[Tuple[int], Union[unit.Quantity, bool]]:
         """Returns the constrained atom pairs of the Topology
 
         Returns
         -------
-        constrained_atom_pairs : dict of Tuple[int]: unit.Quantity
+        constrained_atom_pairs : dict of Tuple[int]: Union[unit.Quantity, bool]
              dictionary of the form {(atom1_topology_index, atom2_topology_index): distance}
         """
         return self._constrained_atom_pairs

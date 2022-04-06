@@ -142,41 +142,6 @@ class TestTopology:
 
         assert (topology.box_vectors == topology_copy.box_vectors).all()
 
-    def test_add_basic(self):
-        topology1 = Molecule.from_smiles("O").to_topology()
-        topology2 = Molecule.from_smiles("CO").to_topology()
-
-        topology3 = topology1 + topology2
-
-        assert topology3.n_atoms == 9
-        assert topology3.n_bonds == 7
-        assert topology3.n_molecules == 2
-
-    def test_add_inplace(self):
-        topology1 = Molecule.from_smiles("O").to_topology()
-        topology2 = Molecule.from_smiles("CO").to_topology()
-
-        topology3 = topology1 + topology2
-        topology1 += topology2
-
-        for attr in ["n_atoms", "n_bonds", "n_molecules"]:
-            assert getattr(topology1, attr) == getattr(topology3, attr)
-
-    def test_add_invalidate_cache(self):
-        topology1 = Molecule.from_smiles("O").to_topology()
-        topology2 = Molecule.from_smiles("CO").to_topology()
-
-        topology1.add_constraint(0, 1, 1.01 * unit.angstrom)
-        topology2.identical_molecule_groups
-
-        assert topology1.constrained_atom_pairs[(0, 1)] == 1.01 * unit.angstrom
-        assert len(topology2._cached_chemically_identical_molecules) == 1
-
-        topology3 = topology1 + topology2
-
-        assert topology3.constrained_atom_pairs == {}
-        assert topology3._cached_chemically_identical_molecules is None
-
     def test_box_vectors(self):
         """Test the getter and setter for box_vectors"""
         topology = Topology()
@@ -1226,6 +1191,77 @@ class TestTopology:
         ]
         for expected_id, residue in zip(expected_ids, residues):
             assert expected_id == residue.identifier
+
+
+class TestAddTopology:
+    def test_add_basic(self):
+        topology1 = Molecule.from_smiles("O").to_topology()
+        topology2 = Molecule.from_smiles("CO").to_topology()
+
+        topology3 = topology1 + topology2
+
+        assert topology3.n_atoms == 9
+        assert topology3.n_bonds == 7
+        assert topology3.n_molecules == 2
+
+    def test_add_inplace(self):
+        topology1 = Molecule.from_smiles("O").to_topology()
+        topology2 = Molecule.from_smiles("CO").to_topology()
+
+        topology3 = topology1 + topology2
+        topology1 += topology2
+
+        for attr in ["n_atoms", "n_bonds", "n_molecules"]:
+            assert getattr(topology1, attr) == getattr(topology3, attr)
+
+    def test_add_invalidate_cache(self):
+        topology1 = Molecule.from_smiles("O").to_topology()
+        topology2 = Molecule.from_smiles("CO").to_topology()
+
+        topology1.add_constraint(0, 1, 1.01 * unit.angstrom)
+        topology2.identical_molecule_groups
+
+        assert topology1.constrained_atom_pairs[(0, 1)] == 1.01 * unit.angstrom
+        assert len(topology2._cached_chemically_identical_molecules) == 1
+
+        topology3 = topology1 + topology2
+
+        assert topology3._cached_chemically_identical_molecules is None
+
+        # Constrained atom pairs are intentionally not removed
+        assert topology3.constrained_atom_pairs[(0, 1)] == 1.01 * unit.angstrom
+
+    def test_add_with_constraints(self):
+        # See https://github.com/openforcefield/openff-toolkit/pull/1194#discussion_r834768068
+        methane = Molecule.from_mapped_smiles(
+            "[H:2][C:1]([H:3])([H:4])[H:5]"
+        ).to_topology()
+        water = Molecule.from_mapped_smiles("[H:2][O:1][H:3]").to_topology()
+
+        # Constrain one C-H bond in methane and H-H in water (0-indexed)
+        methane.add_constraint(0, 1)
+        water.add_constraint(1, 2, unit.Quantity(1.234, unit.angstrom))
+
+        combined_topology = methane + water
+
+        # Constraints are tracked i-j and j-i, so this dict is length 4
+        assert len(combined_topology.constrained_atom_pairs) == 4
+
+        # Methane is the first molecule, so (0, 1) is conserved. The atoms in the constrained
+        # pair in water are offset by the number of atoms in methane (5)
+        assert ((0, 1)) in combined_topology.constrained_atom_pairs
+        assert ((1, 0)) in combined_topology.constrained_atom_pairs
+        assert ((6, 7)) in combined_topology.constrained_atom_pairs
+        assert ((7, 6)) in combined_topology.constrained_atom_pairs
+
+        assert combined_topology.constrained_atom_pairs[(0, 1)]
+        assert combined_topology.constrained_atom_pairs[(1, 0)]
+        assert combined_topology.constrained_atom_pairs[(6, 7)] == unit.Quantity(
+            1.234, unit.angstrom
+        )
+        assert combined_topology.constrained_atom_pairs[(7, 6)] == unit.Quantity(
+            1.234, unit.angstrom
+        )
 
 
 @pytest.mark.parametrize(
