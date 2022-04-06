@@ -1177,7 +1177,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                     raise InconsistentStereochemistryError(
                         "Programming error: OpenEye bond stereochemistry assumptions failed. "
                         f"The bond in the oemol has stereochemistry {oebond_stereochemistry} and "
-                        f"the bond in the offmol has stereoheometry {bond.stereochemistry}."
+                        f"the bond in the offmol has stereochemistry {bond.stereochemistry}."
                     )
 
         # Clean Up phase
@@ -1227,7 +1227,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Create an OpenEye molecule from a Molecule
 
-        >>> from openff.toolkit.topology import Molecule
+        >>> from openff.toolkit import Molecule
         >>> toolkit_wrapper = OpenEyeToolkitWrapper()
         >>> molecule = Molecule.from_smiles('CC')
         >>> oemol = toolkit_wrapper.to_openeye(molecule)
@@ -1493,7 +1493,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         Examples
         --------
 
-        >>> from openff.toolkit.topology import Molecule
+        >>> from openff.toolkit import Molecule
         >>> from openff.toolkit.utils import get_data_file_path
         >>> sdf_filepath = get_data_file_path('molecules/ethanol.sdf')
         >>> molecule = Molecule(sdf_filepath)
