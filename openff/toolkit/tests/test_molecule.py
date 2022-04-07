@@ -27,7 +27,6 @@ import numpy as np
 import pytest
 from openff.units import unit
 from openff.units.elements import MASSES, SYMBOLS
-from openmm import unit as openmm_unit
 
 from openff.toolkit.tests.create_molecules import (
     create_acetaldehyde,
@@ -2492,6 +2491,8 @@ class TestMolecule:
 
     def test_add_conformers(self):
         """Test addition of conformers to a molecule"""
+        from openmm import unit as openmm_unit
+
         # Define a methane molecule
         molecule = Molecule()
         molecule.name = "methane"
@@ -2606,7 +2607,6 @@ class TestMolecule:
         assert molecule.n_conformers == 3
         assert molecule.conformers[2][0][0] == 10.0 * unit.angstrom
 
-        # Add a conformer with units of nanometers
         conf_nonsense_units = unit.Quantity(
             np.array(
                 [
@@ -2621,6 +2621,26 @@ class TestMolecule:
         )
         with pytest.raises(Exception) as excinfo:
             molecule.add_conformer(conf_nonsense_units)
+
+        conf_openmm_units = openmm_unit.Quantity(
+            np.array(
+                [
+                    [1.0, 2.0, 3.0],
+                    [4.0, 5.0, 6.0],
+                    [7.0, 8.0, 9.0],
+                    [10.0, 11.0, 12.0],
+                    [13.0, 14.0, 15],
+                ]
+            ),
+            openmm_unit.angstrom,
+        )
+        molecule.add_conformer(conf_openmm_units)
+
+        assert molecule.conformers[-1][0][0].m_as(unit.angstrom) == 1.0
+        assert molecule.conformers[-1][-1][-1].m_as(unit.angstrom) == 15.0
+
+        with pytest.raises(Exception) as excinfo:
+            molecule.add_conformer(conf_unitless)
 
         # Add a conformer with no units
         conf_unitless = np.array(

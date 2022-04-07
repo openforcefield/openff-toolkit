@@ -4246,50 +4246,56 @@ class FrozenMolecule(Serializable):
         index: int
             The index of this conformer
         """
-        new_conf = unit.Quantity(
-            np.zeros(shape=(self.n_atoms, 3), dtype=float), unit.angstrom
-        )
-        if not (new_conf.shape == coordinates.shape):
-            raise Exception(
+        if coordinates.shape != (self.n_atoms, 3):
+            raise InvalidConformerError(
                 "molecule.add_conformer given input of the wrong shape: "
-                "Given {}, expected {}".format(coordinates.shape, new_conf.shape)
+                f"Given {coordinates.shape}, expected {(self.n_atoms, 3)}"
             )
 
-        if isinstance(new_conf, unit.Quantity):
+        if isinstance(coordinates, unit.Quantity):
             if not coordinates.units.is_compatible_with(unit.angstrom):
-                raise Exception(
+                raise IncompatibleUnitError(
                     "Coordinates passed to Molecule._add_conformer with incompatible units. "
                     "Ensure that units are dimension of length."
                 )
-        elif hasattr(new_conf, "unit"):
+
+        elif hasattr(coordinates, "unit"):
+            from openff.units.openmm import from_openmm
             from openmm import unit as openmm_unit
 
-            if not isinstance(other, openmm_unit.Quantity):
+            if not isinstance(coordinates, openmm_unit.Quantity):
                 raise IncompatibleUnitError(
-                    "Unsupported type passed to formal_charge setter. "
+                    "Unsupported type passed to Molecule._add_conformer setter. "
                     "Found object of type {type(other)}."
                 )
 
             if not coordinates.unit.is_compatible(openmm_unit.meter):
-                raise Exception(
-                    "Coordinates passed to Molecule._add_conformer with incompatible units. "
+                raise IncompatibleUnitError(
+                    "Coordinates passed to Molecule._add_conformer with units of incompatible dimensionality. "
+                    f"Adding conformers with OpenMM-style units is supported, by found units of {coordinates.unit}. "
                     "Ensure that units are dimension of length."
                 )
+
+            coordinates = from_openmm(coordinates)
+
         else:
-            raise Exception(
+            raise IncompatibleUnitError(
                 "Coordinates passed to Molecule._add_conformer without units. Ensure that coordinates are "
                 "of type openmm.unit.Quantity or openff.units.unit.Quantity"
             )
 
+        tmp_conf = unit.Quantity(
+            np.zeros(shape=(self.n_atoms, 3), dtype=float), unit.angstrom
+        )
         try:
-            new_conf[:] = coordinates
+            tmp_conf[:] = coordinates
         except AttributeError as e:
             print(e)
 
         if self._conformers is None:
             # TODO should we checking that the exact same conformer is not in the list already?
             self._conformers = []
-        self._conformers.append(new_conf)
+        self._conformers.append(tmp_conf)
         return len(self._conformers)
 
     @property
