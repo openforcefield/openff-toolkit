@@ -96,6 +96,10 @@ print(value_roundtrip)
   unit-bearing quantities from OpenMM's unit module (`openmm.unit`) to
   [`openff-units`](https://github.com/openforcefield/openff-units), which itself is based off of
   [Pint](https://pint.readthedocs.io/en/stable/).
+- [PR #1230](https://github.com/openforcefield/openforcefield/pull/1230) removes safe imports from
+  the `simtk` namespace, which was deprecated in
+  [August 2021](https://github.com/openmm/openmm/releases/tag/7.6.0) with the release of OpenMM 7.6,
+  and therefore removes support for versions of OpenMM older than 7.6.
 - [PR #1118](https://github.com/openforcefield/openforcefield/pull/1118):
   [`Molecule.to_hill_formula`](openff.toolkit.topology.Molecule.to_hill_formula) is now a class method
   and no longer accepts input of NetworkX graphs.
