@@ -4800,6 +4800,28 @@ class TestForceFieldParameterAssignment:
             )
 
 
+class TestInterchangeReturnTopology:
+    # TODO: Remove these tests when `return_topology` is deprecated in version 0.12.0
+    def test_deprecation_warning_raised(self):
+        """
+        Ensure that the deprecation warning is raised when `return_topology` is
+        used.
+        """
+        forcefield = ForceField("test_forcefields/test_forcefield.offxml", xml_ff_bo)
+
+        topology = create_ethanol().to_topology()
+        topology.box_vectors = unit.Quantity([4, 4, 4], unit.nanometer)
+
+        with pytest.warns(
+            DeprecationWarning, match="DEPRECATED and will be removed in version 0.12.0"
+        ):
+            omm_system, ret_top = forcefield.create_openmm_system(
+                topology,
+                use_interchange=True,
+                return_topology=True,
+            )
+
+
 class TestSmirnoffVersionConverter:
     @requires_openeye_mol2
     @pytest.mark.parametrize(

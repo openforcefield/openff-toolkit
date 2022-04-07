@@ -58,6 +58,9 @@ print(value_roundtrip)
 
 ## Current Development
 
+- [PR #1250](https://github.com/openforcefield/openff-toolkit/pull/1250): Adds support for
+  `return_topology` in the Interchange code path in
+  [`create_openmm_system`](openff.toolkit.typing.engines.smirnoff.ForceField.create_openmm_system).
 - [PR #964](https://github.com/openforcefield/openff-toolkit/pull/964): Adds initial implementation
   of atom metadata dictionaries.
 - [PR #1097](https://github.com/openforcefield/openff-toolkit/pull/1097): Deprecates TopologyMolecule.

@@ -33,7 +33,7 @@ import os
 import pathlib
 import warnings
 from collections import OrderedDict
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, List, Tuple, Union
 
 from openff.toolkit.topology.molecule import DEFAULT_AROMATICITY_MODEL
 from openff.toolkit.typing.engines.smirnoff.io import ParameterIOHandler
@@ -59,6 +59,8 @@ from openff.toolkit.utils.utils import (
 )
 
 if TYPE_CHECKING:
+    import openmm
+
     from openff.toolkit.topology import Topology
 
 deprecated_names = ["ParseError"]
@@ -1249,7 +1251,7 @@ class ForceField:
         topology: "Topology",
         use_interchange: bool = False,
         **kwargs,
-    ):
+    ) -> Union["openmm.System", Tuple["openmm.System", "Topology"]]:
         """Create an OpenMM System from this ForceField and a Topology.
 
         Parameters
@@ -1261,9 +1263,25 @@ class ForceField:
 
         """
         if use_interchange:
-            return self.create_interchange(topology, **kwargs,).to_openmm(
-                combine_nonbonded_forces=True,
+            return_topology = kwargs.pop("return_topology", False)
+
+            interchange = self.create_interchange(
+                topology,
+                **kwargs,
             )
+            openmm_system = interchange.to_openmm(combine_nonbonded_forces=True)
+            if not return_topology:
+                return openmm_system
+            else:
+                warning_msg = (
+                    f"The `create_openmm_system` kwarg `return_topology` is DEPRECATED and will be "
+                    "removed in version 0.12.0 of the OpenFF Toolkit. "
+                    "Use `ForceField.create_interchange` followed by `Interchange.topology`, "
+                    "`Interchange.to_openmm_topology`, and `Interchange.to_openmm` "
+                    "for long-term replacements for `return_topology` functionality."
+                )
+                warnings.warn(warning_msg, DeprecationWarning)
+                return openmm_system, copy.deepcopy(interchange.topology)
         else:
             return self._old_create_openmm_system(topology, **kwargs)
 
