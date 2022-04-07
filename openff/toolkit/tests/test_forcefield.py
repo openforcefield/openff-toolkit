@@ -4812,7 +4812,9 @@ class TestInterchangeReturnTopology:
         topology = create_ethanol().to_topology()
         topology.box_vectors = unit.Quantity([4, 4, 4], unit.nanometer)
 
-        with pytest.warns(DeprecationWarning, match="results from param"):
+        with pytest.warns(
+            DeprecationWarning, match="DEPRECATED and will be removed in version 0.12.0"
+        ):
             omm_system, ret_top = forcefield.create_openmm_system(
                 topology,
                 use_interchange=True,
