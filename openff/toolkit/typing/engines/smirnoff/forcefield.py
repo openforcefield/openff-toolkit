@@ -1274,9 +1274,11 @@ class ForceField:
                 return openmm_system
             else:
                 warning_msg = (
-                    f"kwarg `return_topology` is DEPRECATED and will be removed in a version 0.12.0 of the OpenFF "
-                    "Toolkit. Use `ForceField.create_interchange` for better manipulation of the topology that "
-                    "results from parameterization. Also see `Interchange.to_openmm_topology()`."
+                    f"The `create_openmm_system` kwarg `return_topology` is DEPRECATED and will be "
+                    "removed in version 0.12.0 of the OpenFF Toolkit. "
+                    "Use `ForceField.create_interchange` followed by `Interchange.topology`, "
+                    "`Interchange.to_openmm_topology`, and `Interchange.to_openmm` "
+                    "for long-term replacements for `return_topology` functionality."
                 )
                 warnings.warn(warning_msg, DeprecationWarning)
                 return openmm_system, copy.deepcopy(interchange.topology)
