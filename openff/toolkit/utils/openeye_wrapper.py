@@ -606,10 +606,10 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         from openeye import oechem
         oemol = offmol.to_openeye()
         oechem.OEPerceiveChiral(oemol)
-        oechem.OEAssignAromaticFlags(oemol, oechem.OEAroModel_MDL)
         oechem.OE3DToInternalStereo(oemol)
         print(f"Number of atoms after sanitization: {oemol.NumAtoms()}")
 
+        # Aromaticity is re-perceived in this call
         offmol_w_stereo_and_aro = self.from_openeye(
             oemol, allow_undefined_stereo=True
         )
@@ -1315,7 +1315,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             if 'residue_name' in off_atom.metadata:
                 res.SetName(off_atom.metadata['residue_name'])
             if 'residue_number' in off_atom.metadata:
-                res.SetResidueNumber(off_atom.metadata['residue_number'])
+                res.SetResidueNumber(int(off_atom.metadata['residue_number']))
             if 'chain_id' in off_atom.metadata:
                 res.SetChainID(off_atom.metadata['chain_id'])
             oechem.OEAtomSetResidue(oe_atom, res)

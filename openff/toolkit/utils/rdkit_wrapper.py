@@ -1883,7 +1883,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 res.SetResidueName(atom.metadata['residue_name'])
 
             if 'residue_number' in atom.metadata:
-                res.SetResidueNumber(atom.metadata['residue_number'])
+                res.SetResidueNumber(int(atom.metadata['residue_number']))
 
             if 'chain_id' in atom.metadata:
                 res.SetChainId(atom.metadata['chain_id'])
