@@ -58,6 +58,9 @@ print(value_roundtrip)
 
 ## Current Development
 
+- [PR #1250](https://github.com/openforcefield/openff-toolkit/pull/1250): Adds support for
+  `return_topology` in the Interchange code path in
+  [`create_openmm_system`](openff.toolkit.typing.engines.smirnoff.ForceField.create_openmm_system).
 - [PR #964](https://github.com/openforcefield/openff-toolkit/pull/964): Adds initial implementation
   of atom metadata dictionaries.
 - [PR #1097](https://github.com/openforcefield/openff-toolkit/pull/1097): Deprecates TopologyMolecule.
@@ -96,6 +99,10 @@ print(value_roundtrip)
   unit-bearing quantities from OpenMM's unit module (`openmm.unit`) to
   [`openff-units`](https://github.com/openforcefield/openff-units), which itself is based off of
   [Pint](https://pint.readthedocs.io/en/stable/).
+- [PR #1230](https://github.com/openforcefield/openforcefield/pull/1230) removes safe imports from
+  the `simtk` namespace, which was deprecated in
+  [August 2021](https://github.com/openmm/openmm/releases/tag/7.6.0) with the release of OpenMM 7.6,
+  and therefore removes support for versions of OpenMM older than 7.6.
 - [PR #1118](https://github.com/openforcefield/openforcefield/pull/1118):
   [`Molecule.to_hill_formula`](openff.toolkit.topology.Molecule.to_hill_formula) is now a class method
   and no longer accepts input of NetworkX graphs.
@@ -121,6 +128,12 @@ print(value_roundtrip)
   [Issue #1159](https://github.com/openforcefield/openff-toolkit/issues/1159), in which the order of 
   atoms defining a `BondChargeVirtualSite` (and possibly other virtual sites types too) might be reversed 
   if the `match` attribute of the virtual site has a value of `"once"`.
+- [PR #1231](https://github.com/openforcefield/openforcefield/pull/1231): Fixes
+  [Issue #1181](https://github.com/openforcefield/openff-toolkit/issues/1181) and
+  [Issue #1190](https://github.com/openforcefield/openff-toolkit/issues/1190), where in rare cases 
+  double bond stereo would cause `to_rdkit` to raise an error. The transfer of double bond stereochemistry
+  from OpenFF's E/Z representation to RDKit's local representation is now handled as a constraint
+  satisfaction problem.
 
 ### Examples added
 

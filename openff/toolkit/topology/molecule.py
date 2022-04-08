@@ -271,6 +271,7 @@ class Atom(Particle):
 
     # TODO: We can probably avoid an explicit call and determine this dynamically
     #   from self._molecule (maybe caching the result) to get rid of some bookkeeping.
+    # TODO: Should stereochemistry be reset/cleared/recomputed upon addition of a bond?
     def add_bond(self, bond):
         """Adds a bond that this atom is involved in
         .. todo :: Is this how we want to keep records?
@@ -282,7 +283,6 @@ class Atom(Particle):
         """
 
         self._bonds.append(bond)
-        # self._stereochemistry = None
 
     def add_virtual_site(self, vsite):
         """Adds a bond that this atom is involved in
@@ -333,7 +333,7 @@ class Atom(Particle):
     @formal_charge.setter
     def formal_charge(self, other):
         """
-        Set the atom's formal charge. Accepts either ints or openmm.unit.Quantity-wrapped ints with units of charge.
+        Set the atom's formal charge. Accepts either ints or unit-wrapped ints with units of charge.
         """
         if isinstance(other, int):
             self._formal_charge = unit.Quantity(other, unit.elementary_charge)
@@ -375,7 +375,7 @@ class Atom(Particle):
 
         Returns
         -------
-        openmm.unit.Quantity with dimension of atomic charge, or None if no charge has been specified
+        unit-wrapped float with dimension of atomic charge, or None if no charge has been specified
         """
         if self._molecule._partial_charges is None:
             return None
@@ -2040,16 +2040,14 @@ class Bond(Serializable):
     ----------
     atom1, atom2 : openff.toolkit.topology.Atom
         Atoms involved in the bond
-    bondtype : int
-        Discrete bond type representation for the Open Forcefield aromaticity model
-        TODO: Do we want to pin ourselves to a single standard aromaticity model?
-    type : str
-        String based bond type
-    order : int
-        Integral bond order
+    bond_order : int
+        The (integer) bond order of this bond.
+    is_aromatic : bool
+        Whether or not this bond is aromatic.
     fractional_bond_order : float, optional
-        Fractional bond order, or None.
-
+        The fractional bond order, or partial bond order of this bond.
+    stereochemstry : str, optional, default=None
+        A string representing this stereochemistry of this bond.
 
     .. warning :: This API is experimental and subject to change.
     """
@@ -2080,7 +2078,6 @@ class Bond(Serializable):
         atom2.add_bond(self)
         # TODO: Check bondtype and fractional_bond_order are valid?
         # TODO: Dative bonds
-        # self._type = bondtype
         self._fractional_bond_order = fractional_bond_order
         self._bond_order = bond_order
         self._is_aromatic = is_aromatic
@@ -3916,6 +3913,7 @@ class FrozenMolecule(Serializable):
         stereochemistry=None,
         name=None,
         metadata=None,
+        invalidate_cache: bool = True,
     ):
         """
         Add an atom
@@ -3936,6 +3934,9 @@ class FrozenMolecule(Serializable):
             An optional dictionary where keys are strings and values are strings or ints. This is intended
             to record atom-level information used to inform hierarchy definition and iteration, such as
             grouping atom by residue and chain.
+        invalidate_cache : bool, default=True
+            Whether or not to invalidate the cache of the molecule upon the addition of this atom. This should
+            be left to its default value (`True`) for safety.
 
         Returns
         -------
@@ -3971,9 +3972,11 @@ class FrozenMolecule(Serializable):
             molecule=self,
         )
         self._atoms.append(atom)
-        # self._particles.append(atom)
-        self._invalidate_cached_properties()
-        return self._atoms.index(atom)
+        if invalidate_cache:
+            self._invalidate_cached_properties()
+
+        # Since we just appended it, we can just return the length - 1
+        return len(self._atoms) - 1
 
     def _add_virtual_site(self, vsite, replace=False):
         replaced = False
@@ -4166,6 +4169,7 @@ class FrozenMolecule(Serializable):
         is_aromatic,
         stereochemistry=None,
         fractional_bond_order=None,
+        invalidate_cache: bool = True,
     ):
         """
         Add a bond between two specified atom indices
@@ -4184,6 +4188,10 @@ class FrozenMolecule(Serializable):
             Either 'E' or 'Z' for specified stereochemistry, or None if stereochemistry is irrelevant
         fractional_bond_order : float, optional, default=None
             The fractional (eg. Wiberg) bond order
+        invalidate_cache : bool, default=True
+            Whether or not to invalidate the cache of the molecule upon the addition of this atom. This should
+            be left to its default value (`True`) for safety.
+
         Returns
         -------
         index : int
@@ -4217,9 +4225,11 @@ class FrozenMolecule(Serializable):
             fractional_bond_order=fractional_bond_order,
         )
         self._bonds.append(bond)
-        self._invalidate_cached_properties()
-        # TODO: This is a bad way to get bond index
-        return self._bonds.index(bond)
+        if invalidate_cache:
+            self._invalidate_cached_properties()
+
+        # Since we just appended it, we can just return the length - 1
+        return len(self._bonds) - 1
 
     def _add_conformer(self, coordinates):
         """
@@ -4236,50 +4246,56 @@ class FrozenMolecule(Serializable):
         index: int
             The index of this conformer
         """
-        new_conf = unit.Quantity(
-            np.zeros(shape=(self.n_atoms, 3), dtype=float), unit.angstrom
-        )
-        if not (new_conf.shape == coordinates.shape):
-            raise Exception(
+        if coordinates.shape != (self.n_atoms, 3):
+            raise InvalidConformerError(
                 "molecule.add_conformer given input of the wrong shape: "
-                "Given {}, expected {}".format(coordinates.shape, new_conf.shape)
+                f"Given {coordinates.shape}, expected {(self.n_atoms, 3)}"
             )
 
-        if isinstance(new_conf, unit.Quantity):
+        if isinstance(coordinates, unit.Quantity):
             if not coordinates.units.is_compatible_with(unit.angstrom):
-                raise Exception(
+                raise IncompatibleUnitError(
                     "Coordinates passed to Molecule._add_conformer with incompatible units. "
                     "Ensure that units are dimension of length."
                 )
-        elif hasattr(new_conf, "unit"):
+
+        elif hasattr(coordinates, "unit"):
+            from openff.units.openmm import from_openmm
             from openmm import unit as openmm_unit
 
-            if not isinstance(other, openmm_unit.Quantity):
+            if not isinstance(coordinates, openmm_unit.Quantity):
                 raise IncompatibleUnitError(
-                    "Unsupported type passed to formal_charge setter. "
+                    "Unsupported type passed to Molecule._add_conformer setter. "
                     "Found object of type {type(other)}."
                 )
 
             if not coordinates.unit.is_compatible(openmm_unit.meter):
-                raise Exception(
-                    "Coordinates passed to Molecule._add_conformer with incompatible units. "
+                raise IncompatibleUnitError(
+                    "Coordinates passed to Molecule._add_conformer with units of incompatible dimensionality. "
+                    f"Adding conformers with OpenMM-style units is supported, by found units of {coordinates.unit}. "
                     "Ensure that units are dimension of length."
                 )
+
+            coordinates = from_openmm(coordinates)
+
         else:
-            raise Exception(
+            raise IncompatibleUnitError(
                 "Coordinates passed to Molecule._add_conformer without units. Ensure that coordinates are "
                 "of type openmm.unit.Quantity or openff.units.unit.Quantity"
             )
 
+        tmp_conf = unit.Quantity(
+            np.zeros(shape=(self.n_atoms, 3), dtype=float), unit.angstrom
+        )
         try:
-            new_conf[:] = coordinates
+            tmp_conf[:] = coordinates
         except AttributeError as e:
             print(e)
 
         if self._conformers is None:
             # TODO should we checking that the exact same conformer is not in the list already?
             self._conformers = []
-        self._conformers.append(new_conf)
+        self._conformers.append(tmp_conf)
         return len(self._conformers)
 
     @property
@@ -6638,7 +6654,6 @@ class Molecule(FrozenMolecule):
              ``other``?
 
         """
-        # super(self, Molecule).__init__(*args, **kwargs)
         super(Molecule, self).__init__(*args, **kwargs)
 
     # TODO: Change this to add_atom(Atom) to improve encapsulation and extensibility?
@@ -6941,7 +6956,7 @@ class Molecule(FrozenMolecule):
 
         Parameters
         ----------
-        coordinates: openmm.unit.Quantity(np.array) with shape (n_atoms, 3) and dimension of distance
+        coordinates: unit-wrapped np.array with shape (n_atoms, 3) and dimension of distance
             Coordinates of the new conformer, with the first dimension of the array corresponding to the atom index in
             the Molecule's indexing system.
 
