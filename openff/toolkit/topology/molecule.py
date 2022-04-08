@@ -5367,7 +5367,10 @@ class FrozenMolecule(Serializable):
                                     rdk_idx_2_omm_idx[edge[0]],
                                     rdk_idx_2_omm_idx[edge[1]],
                                 )
-                                if tuple(sorted(omm_edge_idx)) in already_assigned_edges:
+                                if (
+                                    tuple(sorted(omm_edge_idx))
+                                    in already_assigned_edges
+                                ):
                                     continue
                                 already_assigned_edges.add(tuple(sorted(omm_edge_idx)))
                                 omm_topology_G.get_edge_data(*omm_edge_idx)[
