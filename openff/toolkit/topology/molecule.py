@@ -5238,8 +5238,8 @@ class FrozenMolecule(Serializable):
                 # Assign sequential negative numbers as atomic numbers for hydrogens attached to the same heavy atom.
                 # We do the same to the substructure templates that are used for matching. This saves runtime because
                 # it removes redundant self-symmetric matches.
-                atom_1_atomic_num = graph.nodes[bond[0]]['atomic_number']
-                atom_2_atomic_num = graph.nodes[bond[1]]['atomic_number']
+                atom_1_atomic_num = graph.nodes[bond[0]]["atomic_number"]
+                atom_2_atomic_num = graph.nodes[bond[1]]["atomic_number"]
                 if atom_1_atomic_num <= 1:
                     h_index = bond[0]
                     heavy_atom_index = bond[1]
@@ -5255,7 +5255,6 @@ class FrozenMolecule(Serializable):
                         -1 * n_hydrogens[heavy_atom_index]
                     )
 
-
         def _undo_making_hydrogens_negative_in_networkx_graph(graph):
             # Negative atomic numbers are really hydrogen, so we reassign them to be atomic number
             # 1 once they've been matched
@@ -5263,9 +5262,11 @@ class FrozenMolecule(Serializable):
                 if graph.nodes[idx]["atomic_number"] < 0:
                     graph.nodes[idx]["atomic_number"] = 1
 
-        def _add_chemical_info_to_networkx_graph(substructure_library,
-                                                 omm_topology_G,
-                                                 toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+        def _add_chemical_info_to_networkx_graph(
+            substructure_library,
+            omm_topology_G,
+            toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
+        ):
             """
             Construct an OpenFF Topology object from an OpenMM Topology object.
 
@@ -5292,10 +5293,10 @@ class FrozenMolecule(Serializable):
 
             # Don't modify the input graph
             import copy
+
             omm_topology_G = copy.deepcopy(omm_topology_G)
 
             _make_hydrogens_negative_in_networkx_graph(omm_topology_G)
-
 
             # Try matching this substructure to the whole molecule graph
             node_match = isomorphism.categorical_node_match(
@@ -5316,7 +5317,9 @@ class FrozenMolecule(Serializable):
                 )
                 non_isomorphic_flag = True
                 for substructure_smarts in sorted_substructure_smarts:
-                    substructure_graph = toolkit_registry.call('_smarts_to_networkx', substructure_smarts)
+                    substructure_graph = toolkit_registry.call(
+                        "_smarts_to_networkx", substructure_smarts
+                    )
                     # These substructures (and only these substructures) should be able to overlap previous matches.
                     # They handle bonds between substructures.
                     if res_name in ["PEPTIDE_BOND", "DISULFIDE"]:
@@ -5331,7 +5334,6 @@ class FrozenMolecule(Serializable):
                         # print(res_name)
                         # print(substructure_smarts)
                         for omm_idx_2_rdk_idx in GM.subgraph_isomorphisms_iter():
-
                             for omm_idx, rdk_idx in omm_idx_2_rdk_idx.items():
                                 # TODO: What should we do with atoms that aren't mapped in the substructure?
                                 if omm_idx in already_assigned_nodes:
@@ -5354,7 +5356,9 @@ class FrozenMolecule(Serializable):
                                 already_assigned_edges.add(tuple(sorted(omm_edge_idx)))
                                 omm_topology_G.get_edge_data(*omm_edge_idx)[
                                     "bond_order"
-                                ] = substructure_graph.get_edge_data(*edge)["bond_order"]
+                                ] = substructure_graph.get_edge_data(*edge)[
+                                    "bond_order"
+                                ]
                         non_isomorphic_flag = False
                 if non_isomorphic_flag:
                     non_isomorphic_count += 1
@@ -5374,7 +5378,7 @@ class FrozenMolecule(Serializable):
 
         from openff.toolkit.utils import get_data_file_path
 
-        '''
+        """
         To dos
              * Remove/hide this function, route traffic through Topology.from_openmm/from_pdb
              * Handle loading custom substructure dicts
@@ -5396,7 +5400,7 @@ class FrozenMolecule(Serializable):
         Make hydrogens positive
         Turn nx graph into offmol (Molecule.from_networkx)
         Use a toolkitwrapper to percieve aro and stereo from 3D (oetkw and rdktkw.assign_stereo_from_3d)
-        '''
+        """
 
         substructure_file_path = get_data_file_path(
             "proteins/aa_residues_substructures_explicit_bond_orders_with_caps.json"
@@ -5408,6 +5412,7 @@ class FrozenMolecule(Serializable):
 
         pdb = PDBFile(file_path)
         from openff.toolkit.topology import Topology
+
         omm_topology_G = Topology._openmm_topology_to_networkx(pdb.topology)
 
         omm_topology_G = _add_chemical_info_to_networkx_graph(
@@ -5436,7 +5441,6 @@ class FrozenMolecule(Serializable):
             # print(edge, edge_data)
             offmol.add_bond(edge[0], edge[1], edge_data["bond_order"], False)
 
-
         # print(f"Number of atoms before sanitization: {offmol.n_atoms}")
         coords = (
             np.array(
@@ -5450,7 +5454,9 @@ class FrozenMolecule(Serializable):
 
         offmol.add_conformer(coords)
         # TODO: Ensure that this assigns aromaticity
-        offmol_w_stereo_and_aro = toolkit_registry.call('_assign_aromaticity_and_stereo_from_3d', offmol)
+        offmol_w_stereo_and_aro = toolkit_registry.call(
+            "_assign_aromaticity_and_stereo_from_3d", offmol
+        )
         assert offmol_w_stereo_and_aro.n_atoms == offmol.n_atoms
         for stereo_aro_atom, atom in zip(offmol_w_stereo_and_aro.atoms, offmol.atoms):
             atom.stereochemistry = stereo_aro_atom.stereochemistry
@@ -5458,8 +5464,7 @@ class FrozenMolecule(Serializable):
         for stereo_aro_bond, bond in zip(offmol_w_stereo_and_aro.bonds, offmol.bonds):
             bond._is_aromatic = stereo_aro_bond.is_aromatic
 
-
-        #print(f"OFFMol number of atoms: {offmol.n_atoms}")
+        # print(f"OFFMol number of atoms: {offmol.n_atoms}")
         return offmol
 
     def _to_xyz_file(self, file_path):
