@@ -292,6 +292,10 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             ^ Chem.SANITIZE_ADJUSTHS,  # ^ Chem.SANITIZE_SETAROMATICITY,
         )
         Chem.AssignStereochemistryFrom3D(rdmol)
+        Chem.Kekulize(rdmol, clearAromaticFlags=True)
+        Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_MDL)
+        # To get HIS//TRP to get recognized as aromatic, we can use a different aromaticity model
+        #Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_DEFAULT)
 
         print(f"Number of atoms after sanitization: {len(rdmol.GetAtoms())}")
 
