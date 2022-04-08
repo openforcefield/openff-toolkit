@@ -2289,11 +2289,14 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         (i.e. one has to be up and one has to be down) and likewise for the 'right' bonds
         """
 
-        unique_values = {
+        # Account for bond "direction" using flip_directions dict, see more thorough comment
+        # in _constrain_rank for details.
+        bond_directions = [
             (value if not flip_direction[i] else 1 - value)
             for i, value in zip(bond_indices, values)
-        }
-        return len(unique_values) == len(values)
+        ]
+        unique_bond_directions = set(bond_directions)
+        return len(unique_bond_directions) == len(values)
 
     @staticmethod
     def _constrain_rank(
@@ -2305,18 +2308,28 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         """A constraint applied when mapping global E/Z stereochemistry into local RDKit
         bond directions that ensures that the 'left' bond with the highest CIP rank
         and the 'right' bond with the highest CIP rank point either in the same direction
-        if Z stereo or opposite directions of E.
+        if Z stereo or opposite directions if E.
         """
 
-        flipped_values = {
+        # The "value" for each bond is ultimately set to either 0 (down) or 1 (up).
+        # However, we also need to know the "direction" of the bond to make sense
+        # of this - Is it coming FROM, or going TO this double bond while going down or up?
+        # This information is in the flipped_values dict. This code assumes that the
+        # "normal" case is when the neighboring bonds are coming FROM the double bond,
+        # and where that's not true, the following line switches the
+        # meaning of "down" and "up" to give us the desired meaning.
+        bond_directions = [
             (value if not flip_direction[i] else 1 - value)
             for i, value in zip(bond_indices, values)
-        }
+        ]
 
+        # Test for equality of items in flipped_values by turning it into a set and
+        # counting how many values remain.
+        unique_bond_directions = set(bond_directions)
         if expected_stereo == "E":
-            return len(flipped_values) == min(2, len(bond_indices))
+            return len(unique_bond_directions) == min(2, len(bond_indices))
         elif expected_stereo == "Z":
-            return len(flipped_values) == 1
+            return len(unique_bond_directions) == 1
         else:
             raise NotImplementedError()
 
@@ -2347,7 +2360,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         if len(stereogenic_bonds) == 0:
             return
 
-            # Needed to ensure the _CIPRank is present.
+        # Needed to ensure the _CIPRank is present. Note that, despite the kwargs that look like
+        # they could mangle existing stereo, it is actually preserved.
         Chem.AssignStereochemistry(
             rd_molecule, cleanIt=True, force=True, flagPossibleStereoCenters=True
         )
@@ -2373,6 +2387,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             # (e.g. carbon) or degree 2 (e.g. divalent nitrogen).
             assert 1 <= len(indices_a) <= 2 and 1 <= len(indices_d) <= 2
 
+            # Identify the highest CIP-ranked bond coming off each side of the double
+            # bond. This lets us later add a constraint to ensure that we have the
+            # correct E/Z stereochemistry
             ranks_a = [
                 int(rd_molecule.GetAtomWithIdx(i).GetProp("_CIPRank"))
                 for i in indices_a
@@ -2399,6 +2416,11 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 ((index_a, index_b), constraints_ab) for index_a in indices_a
             ] + [((index_d, index_c), constraints_cd) for index_d in indices_d]:
 
+                # Each single bond neighboring a double bond needs to be defined as a
+                # "variable" in the CSP problem. Here, each bond is identified by its
+                # bond index in the RDMol (note: this is not guaranteed to be the same
+                # as the corresponding bond's index in the OFFMol). This also ensures
+                # that we don't define the same bond twice.
                 rd_bond = rd_molecule.GetBondBetweenAtoms(*index_pair)
                 rd_bond_index = rd_bond.GetIdx()
 
@@ -2416,6 +2438,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 )
                 constraints_list.append(rd_bond_index)
 
+            # Add one constraint corresponding to the highest-ranked bond on OPPOSITE
+            # sides of the double bond, to ensure that they are oriented up/down to
+            # achieve the correct E/Z value of the double bond.
             csp_problem.addConstraint(
                 functools.partial(
                     cls._constrain_rank,
@@ -2425,6 +2450,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 ),
                 [index_ab, index_cd],
             )
+            # Add constraint(s) corresponding ALL bonds on the SAME side of the double
+            # bond, to ensure that they do not all take the same value (if one is "up",
+            # the other can not also be "up").
             csp_problem.addConstraint(
                 functools.partial(
                     cls._constrain_end_directions,
@@ -2442,6 +2470,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 constraints_cd,
             )
 
+        # Do not assume that every solution found by the solver is valid.
+        # Iterate through the solutions and ensure that the
+        # desired E/Z marks have really been achieved.
         has_solution = False
 
         for solution in csp_problem.getSolutionIter():
@@ -2449,26 +2480,28 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             for rd_bond_index, direction in solution.items():
 
                 rd_bond = rd_molecule.GetBondWithIdx(rd_bond_index)
-                rd_bond.SetBondDir(
-                    Chem.BondDir.ENDUPRIGHT if direction else Chem.BondDir.ENDDOWNRIGHT
-                )
+                if direction == 0:
+                    rd_bond.SetBondDir(Chem.BondDir.ENDDOWNRIGHT)
+                elif direction == 1:
+                    rd_bond.SetBondDir(Chem.BondDir.ENDUPRIGHT)
+                else:
+                    raise NotImplementedError()
 
             Chem.AssignStereochemistry(rd_molecule, cleanIt=True, force=True)
 
-            if any(
-                (
-                    bond.stereochemistry
-                    != (
-                        _RD_STEREO_TO_STR.get(
-                            rd_molecule.GetBondBetweenAtoms(
-                                bond.atom1_index, bond.atom2_index
-                            ).GetStereo(),
-                            None,
-                        )
-                    )
+            # Verify that there are no stereo mismatches between the original
+            # OFFMol and the newly-assigned RDMol
+            stereo_mismatch = False
+            for off_bond in stereogenic_bonds:
+                rd_bond = rd_molecule.GetBondBetweenAtoms(
+                    off_bond.atom1_index, off_bond.atom2_index
                 )
-                for bond in stereogenic_bonds
-            ):
+                rd_stereo_string = _RD_STEREO_TO_STR.get(rd_bond.GetStereo(), None)
+                if off_bond.stereochemistry != rd_stereo_string:
+                    stereo_mismatch = True
+                    break
+
+            if stereo_mismatch:
                 continue
 
             has_solution = True
