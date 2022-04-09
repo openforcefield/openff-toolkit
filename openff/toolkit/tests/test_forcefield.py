@@ -2402,11 +2402,19 @@ class TestForceFieldChargeAssignment:
             q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
             assert q != (0.0 * unit.elementary_charge)
 
-    def test_library_charges_to_single_water(self):
+    @pytest.mark.parametrize(
+        "ff_inputs",
+        [
+            [
+                "test_forcefields/test_forcefield.offxml",
+                "test_forcefields/tip3p.offxml",
+            ],
+            ["openff-2.0.0.offxml"],
+        ],
+    )
+    def test_library_charges_to_single_water(self, ff_inputs):
         """Test assigning charges to one water molecule using library charges"""
-        ff = ForceField(
-            "test_forcefields/test_forcefield.offxml", "test_forcefields/tip3p.offxml"
-        )
+        ff = ForceField(*ff_inputs)
         mol = Molecule.from_file(
             get_data_file_path(os.path.join("systems", "monomers", "water.sdf"))
         )
@@ -3273,6 +3281,43 @@ class TestForceFieldChargeAssignment:
         )
 
         compare_partial_charges(using_kwarg, using_library_charges)
+
+    @requires_openeye
+    def test_toolkit_am1bcc_uses_elf10_if_oe_is_available(self):
+        """Ensure that the ToolkitAM1BCCHandler assigns ELF10 charges if OpenEye is available."""
+        # Can't just use CCO - Molecule needs to be big enough to realistically
+        # result in more than one conformer when ELF10 is requested
+        mol = Molecule.from_smiles("OCCCCCCO")
+
+        # The test forcefield "out of the box" just uses ToolkitAM1BCC, so this
+        # should produce ELF10 charges
+        test_forcefield = ForceField("test_forcefields/test_forcefield.offxml")
+        sys = test_forcefield.create_openmm_system(topology=mol.to_topology())
+
+        # Make another system with a force field that has the ToolkitAM1BCCHandler
+        # removed, and is explicitly told to use a ChargeIncrementModelHandler
+        # with AM1BCCELF10 charges. Ensure that the resulting charges are identical.
+        test_forcefield.deregister_parameter_handler("ToolkitAM1BCC")
+        cimh = test_forcefield.get_parameter_handler(
+            "ChargeIncrementModel",
+            {"version": 0.3, "partial_charge_method": "am1bccelf10"},
+        )
+
+        sys_a1b_elf10 = test_forcefield.create_openmm_system(topology=mol.to_topology())
+
+        compare_partial_charges(sys, sys_a1b_elf10)
+
+        # Now modify the ChargeIncrementModelHandler to specifically use single-conformer
+        # AM1BCC and ensure that the resulting charges are different from the first system.
+        cimh.partial_charge_method = "am1bcc"
+        assert test_forcefield["ChargeIncrementModel"].partial_charge_method == "am1bcc"
+
+        sys_a1b_single_conf = test_forcefield.create_openmm_system(
+            topology=mol.to_topology()
+        )
+        # Ensure that we get different results with AM1BCC ELF10 and single conf AM1BCC
+        with pytest.raises(AssertionError):
+            compare_partial_charges(sys_a1b_elf10, sys_a1b_single_conf)
 
 
 # ======================================================================

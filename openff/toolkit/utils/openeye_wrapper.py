@@ -23,7 +23,7 @@ except ImportError:
     from simtk import unit
 
 if TYPE_CHECKING:
-    from openff.toolkit.topology.molecule import Molecule
+    from openff.toolkit.topology.molecule import Molecule, Bond, Atom
 
 from openff.toolkit.utils import base_wrapper
 from openff.toolkit.utils.constants import DEFAULT_AROMATICITY_MODEL
@@ -34,6 +34,7 @@ from openff.toolkit.utils.exceptions import (
     GAFFAtomTypeWarning,
     InvalidIUPACNameError,
     LicenseError,
+    NotAttachedToMoleculeError,
     SMILESParseError,
     ToolkitUnavailableException,
     UndefinedStereochemistryError,
@@ -1266,6 +1267,79 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         return oemol
 
+    def atom_is_in_ring(self, atom: "Atom") -> bool:
+        """Return whether or not an atom is in a ring.
+
+        It is assumed that this atom is in molecule.
+
+        Parameters
+        ----------
+        atom : openff.toolkit.topology.molecule.Atom
+            The molecule containing the atom of interest
+
+        Returns
+        -------
+        is_in_ring : bool
+            Whether or not the atom is in a ring.
+
+        Raises
+        ------
+        NotAttachedToMoleculeError
+        """
+        if atom.molecule is None:
+            raise NotAttachedToMoleculeError(
+                "This Atom does not belong to a Molecule object"
+            )
+
+        molecule = atom.molecule
+        atom_index = atom.molecule_atom_index
+
+        oemol = molecule.to_openeye()
+
+        # Molecule.to_openeye() is guaranteed to preserve atom ordering
+        is_in_ring = [*oemol.GetAtoms()][atom_index].IsInRing()
+
+        return is_in_ring
+
+    def bond_is_in_ring(self, bond: "Bond") -> bool:
+        """Return whether or not a bond is in a ring.
+
+        It is assumed that this atom is in molecule.
+
+        Parameters
+        ----------
+        bond : openff.toolkit.topology.molecule.Bond
+            The molecule containing the atom of interest
+
+        Returns
+        -------
+        is_in_ring : bool
+            Whether or not the bond of index `bond_index` is in a ring
+
+        Raises
+        ------
+        NotAttachedToMoleculeError
+        """
+        if bond.molecule is None:
+            raise NotAttachedToMoleculeError(
+                "This Bond does not belong to a Molecule object"
+            )
+
+        molecule = bond.molecule
+
+        oemol = molecule.to_openeye()
+
+        # Molecule.to_openeye() is NOT guaranteed to preserve bond ordering,
+        # so we must look up the corresponding `OEBond` via `OEAtom`s
+        oebond = oemol.GetBond(
+            [*oemol.GetAtoms()][bond.atom1_index],
+            [*oemol.GetAtoms()][bond.atom2_index],
+        )
+
+        is_in_ring = oebond.IsInRing()
+
+        return is_in_ring
+
     def _get_smiles_flavor(self, isomeric, explicit_hydrogens):
         from openeye import oechem
 
@@ -1649,7 +1723,12 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         return molecule
 
     def generate_conformers(
-        self, molecule, n_conformers=1, rms_cutoff=None, clear_existing=True
+        self,
+        molecule,
+        n_conformers=1,
+        rms_cutoff=None,
+        clear_existing=True,
+        make_carboxylic_acids_cis=False,
     ):
         r"""
         Generate molecule conformers using OpenEye Omega.
@@ -1673,6 +1752,9 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             If None, the cutoff is set to 1 Angstrom
         clear_existing : bool, default=True
             Whether to overwrite existing conformers for the molecule
+        make_carboxylic_acids_cis: bool, default=False
+            Guarantee all conformers have exclusively cis carboxylic acid groups (COOH)
+            by rotating the proton in any trans carboxylic acids 180 degrees around the C-O bond.
         """
         import copy
 
@@ -1715,6 +1797,9 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         for conformer in molecule2._conformers:
             molecule._add_conformer(conformer)
 
+        if make_carboxylic_acids_cis:
+            molecule._make_carboxylic_acids_cis(toolkit_registry=self)
+
     def apply_elf_conformer_selection(
         self,
         molecule: "Molecule",
@@ -1731,8 +1816,13 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         -----
         * The input molecule should have a large set of conformers already
           generated to select the ELF conformers from.
-        * The selected conformers will be retained in the `molecule.conformers` list
+        * The selected conformers will be retained in the ``molecule.conformers`` list
           while unselected conformers will be discarded.
+        * Conformers generated with the OpenEye toolkit often include trans
+          carboxylic acids (COOH). These are unphysical and will be rejected by
+          ``apply_elf_conformer_selection``. If no conformers are selected, try
+          re-running ``generate_conformers`` with the ``make_carboxylic_acids_cis``
+          argument set to ``True``
 
         See Also
         --------
@@ -1779,9 +1869,17 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         # Check to make sure the call to OE was succesful, and re-route any
         # non-fatal warnings to the correct logger.
-        if not status:
+        if output_string and not status:
             raise RuntimeError("\n" + output_string)
-        elif len(output_string) > 0:
+        elif not status:
+            raise RuntimeError(
+                "OpenEye failed to select conformers, but did not return any output. "
+                "This most commonly occurs when the Molecule does not have enough conformers to "
+                "select from. Try calling Molecule.apply_elf_conformer_selection() again after "
+                "running Molecule.generate_conformers() with a much larger value of n_conformers "
+                "or with make_carboxylic_acids_cis=True."
+            )
+        elif output_string:
             logger.warning(output_string)
 
         # Extract and store the ELF conformers on the input molecule.
@@ -1928,6 +2026,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                     mol_copy,
                     n_conformers=charge_method["rec_confs"],
                     rms_cutoff=0.25 * unit.angstrom,
+                    make_carboxylic_acids_cis=True,
                 )
                 # TODO: What's a "best practice" RMS cutoff to use here?
         else:
@@ -2097,12 +2196,14 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         is_elf_method = bond_order_model in ["am1-wiberg-elf10", "pm3-wiberg-elf10"]
 
         if use_conformers is None:
-            temp_mol.generate_conformers(
+            self.generate_conformers(
+                molecule=temp_mol,
                 n_conformers=1 if not is_elf_method else 500,
                 # 0.05 is the recommended RMS when generating a 'Dense' amount of
                 # conformers using Omega: https://docs.eyesopen.com/toolkits/python/
                 # omegatk/OEConfGenConstants/OEFragBuilderMode.html.
                 rms_cutoff=None if not is_elf_method else 0.05 * unit.angstrom,
+                make_carboxylic_acids_cis=True,
             )
         else:
             temp_mol._conformers = None

@@ -2,7 +2,7 @@ ci:
   autoupdate_schedule: "monthly"
 repos:
 - repo: https://github.com/psf/black
-  rev: 22.1.0
+  rev: 22.3.0
   hooks:
   - id: black
     files: ^openff
@@ -16,7 +16,7 @@ repos:
     files: ^openff
     args: [--check]
 - repo: https://github.com/nbQA-dev/nbQA
-  rev: 1.2.3
+  rev: 1.3.1
   hooks:
     - id: nbqa-pyupgrade
       files: ^examples/((?!deprecated).)*$

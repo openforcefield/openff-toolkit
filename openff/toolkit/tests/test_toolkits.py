@@ -37,7 +37,7 @@ from openff.toolkit.tests.utils import (
     requires_openeye,
     requires_rdkit,
 )
-from openff.toolkit.topology.molecule import Molecule
+from openff.toolkit.topology.molecule import Atom, Molecule
 from openff.toolkit.utils import get_data_file_path
 from openff.toolkit.utils.exceptions import (
     ChargeMethodUnavailableError,
@@ -46,6 +46,7 @@ from openff.toolkit.utils.exceptions import (
     IncorrectNumConformersWarning,
     InvalidIUPACNameError,
     InvalidToolkitError,
+    NotAttachedToMoleculeError,
     ToolkitUnavailableException,
     UndefinedStereochemistryError,
 )
@@ -1782,6 +1783,66 @@ class TestOpenEyeToolkitWrapper:
         # TODO: Add test for aromaticity
         # TODO: Add test and molecule functionality for isotopes
 
+    @pytest.mark.parametrize(
+        ("smiles", "n_atom_rings", "n_bond_rings"),
+        [
+            ("c1ccc2ccccc2c1", 10, 11),
+            ("c1ccc(cc1)c2ccccc2", 12, 12),
+            ("Cc1ccc(cc1Nc2nccc(n2)c3cccnc3)NC(=O)c4ccc(cc4)CN5CCN(CC5)C", 30, 30),
+        ],
+    )
+    def test_is_in_ring(self, smiles, n_atom_rings, n_bond_rings):
+        """Test Atom.is_in_ring and Bond.is_in_ring"""
+        mol = Molecule.from_smiles(smiles)
+
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=[OpenEyeToolkitWrapper()])
+
+        atoms_in_ring = [
+            atom
+            for atom in mol.atoms
+            if atom.is_in_ring(toolkit_registry=toolkit_registry)
+        ]
+
+        bonds_in_ring = [
+            bond
+            for bond in mol.bonds
+            if bond.is_in_ring(toolkit_registry=toolkit_registry)
+        ]
+
+        assert len(atoms_in_ring) == n_atom_rings
+        assert len(bonds_in_ring) == n_bond_rings
+
+    def test_central_biphenyl_bond(self):
+        """Test that `Bond.is_in_ring` is False for the central bond in a phenyl"""
+        # Use a mapped smiles to ensure atom order while looking up central bond
+        # Generated via Molecule.from_smiles("c1ccc(cc1)c2ccccc2").to_smiles(mapped=True)
+
+        biphenyl = Molecule.from_mapped_smiles(
+            "[H:13][c:1]1[c:2]([c:3]([c:4]([c:5]([c:6]1[H:17])[H:16])[c:7]2[c:8]([c:9]([c:10]"
+            "([c:11]([c:12]2[H:22])[H:21])[H:20])[H:19])[H:18])[H:15])[H:14]"
+        )
+
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=[OpenEyeToolkitWrapper])
+
+        assert biphenyl.get_bond_between(3, 6).is_in_ring() is False
+
+        assert len([bond for bond in biphenyl.bonds if bond.is_in_ring()]) == 12
+
+    def test_unattached_is_in_ring(self):
+        toolkit = OpenEyeToolkitWrapper()
+        dummy_atom = Atom(1, 0, False)
+
+        with pytest.raises(NotAttachedToMoleculeError, match="Atom"):
+            toolkit.atom_is_in_ring(dummy_atom)
+
+        # The Bond constructor checks to see that the atoms are in a molecule,
+        # so not so straightforward to make one from the constructor
+        dummy_bond = Molecule.from_smiles("O").bonds[0]
+        dummy_bond._molecule = None
+
+        with pytest.raises(NotAttachedToMoleculeError, match="Bond"):
+            toolkit.bond_is_in_ring(dummy_bond)
+
     def test_find_matches_unique(self):
         """Test the expected behavior of the `unique` argument in find_matches"""
         smirks = "[C:1]~[C:2]~[C:3]"
@@ -2834,6 +2895,66 @@ class TestRDKitToolkitWrapper:
             ignore_functional_groups=terminal_backwards
         )
         assert bonds == []
+
+    @pytest.mark.parametrize(
+        ("smiles", "n_atom_rings", "n_bond_rings"),
+        [
+            ("c1ccc2ccccc2c1", 10, 11),
+            ("c1ccc(cc1)c2ccccc2", 12, 12),
+            ("Cc1ccc(cc1Nc2nccc(n2)c3cccnc3)NC(=O)c4ccc(cc4)CN5CCN(CC5)C", 30, 30),
+        ],
+    )
+    def test_is_in_ring(self, smiles, n_atom_rings, n_bond_rings):
+        """Test Atom.is_in_ring and Bond.is_in_ring"""
+        mol = Molecule.from_smiles(smiles)
+
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=[RDKitToolkitWrapper()])
+
+        atoms_in_ring = [
+            atom
+            for atom in mol.atoms
+            if atom.is_in_ring(toolkit_registry=toolkit_registry)
+        ]
+
+        bonds_in_ring = [
+            bond
+            for bond in mol.bonds
+            if bond.is_in_ring(toolkit_registry=toolkit_registry)
+        ]
+
+        assert len(atoms_in_ring) == n_atom_rings
+        assert len(bonds_in_ring) == n_bond_rings
+
+    def test_central_biphenyl_bond(self):
+        """Test that `Bond.is_in_ring` is False for the central bond in a phenyl"""
+        # Use a mapped smiles to ensure atom order while looking up central bond
+        # Generated via Molecule.from_smiles("c1ccc(cc1)c2ccccc2").to_smiles(mapped=True)
+
+        biphenyl = Molecule.from_mapped_smiles(
+            "[H:13][c:1]1[c:2]([c:3]([c:4]([c:5]([c:6]1[H:17])[H:16])[c:7]2[c:8]([c:9]([c:10]"
+            "([c:11]([c:12]2[H:22])[H:21])[H:20])[H:19])[H:18])[H:15])[H:14]"
+        )
+
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=[RDKitToolkitWrapper()])
+
+        assert biphenyl.get_bond_between(3, 6).is_in_ring() is False
+
+        assert len([bond for bond in biphenyl.bonds if bond.is_in_ring()]) == 12
+
+    def test_unattached_is_in_ring(self):
+        toolkit = RDKitToolkitWrapper()
+        dummy_atom = Atom(1, 0, False)
+
+        with pytest.raises(NotAttachedToMoleculeError, match="Atom"):
+            toolkit.atom_is_in_ring(dummy_atom)
+
+        # The Bond constructor checks to see that the atoms are in a molecule,
+        # so not so straightforward to make one from the constructor
+        dummy_bond = Molecule.from_smiles("O").bonds[0]
+        dummy_bond._molecule = None
+
+        with pytest.raises(NotAttachedToMoleculeError, match="Bond"):
+            toolkit.bond_is_in_ring(dummy_bond)
 
     def test_find_matches_unique(self):
         """Test the expected behavior of the `unique` argument in find_matches"""
