@@ -757,11 +757,7 @@ class VirtualSite(Particle, abc.ABC):
         self._molecule: Optional["Molecule"] = None
         self._name: str = name
 
-        if len(orientations) > 0 and type(orientations[0]) is int:
-            orientations = [tuple(orientations)]
-        else:
-            orientations = [tuple(x) for x in orientations]
-
+        orientations = [tuple(x) for x in orientations]
         self._orientations: List[Tuple[int, ...]] = orientations
 
     def __eq__(self, other):
@@ -894,7 +890,10 @@ class VirtualSite(Particle, abc.ABC):
         #    raise ValueError('This VirtualSite does not belong to a Topology object')
         # TODO: This will be slow; can we cache this and update it only when needed?
         #       Deleting atoms/molecules in the Topology would have to invalidate the cached index.
-        return self._molecule.virtual_sites.index(self)
+        if self._molecule is None:
+            raise ValueError("This virtual site does not belong to a molecule")
+        else:
+            return self._molecule.virtual_sites.index(self)
 
     # @property
     # def molecule_particle_index(self):

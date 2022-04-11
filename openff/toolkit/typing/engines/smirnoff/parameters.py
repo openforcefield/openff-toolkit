@@ -54,7 +54,7 @@ import logging
 import re
 from collections import OrderedDict, defaultdict
 from enum import Enum
-from typing import Any, List, Optional, Union
+from typing import Any, List, Optional, Union, cast
 
 try:
     import openmm
@@ -238,8 +238,9 @@ def _allow_only(allowed_values):
 
 def _compute_lj_sigma(
     sigma: Optional[unit.Quantity], rmin_half: Optional[unit.Quantity]
-):
-    return sigma if sigma is not None else (2.0 * rmin_half / (2.0 ** (1.0 / 6.0)))
+) -> unit.Quantity:
+
+    return sigma if sigma is not None else (2.0 * rmin_half / (2.0 ** (1.0 / 6.0)))  # type: ignore
 
 
 def _validate_units(attr, value: Union[str, unit.Quantity], units: unit.Unit):
@@ -2003,7 +2004,7 @@ class ParameterHandler(_ParameterAttributeHandler):
         pass
 
     def _index_of_parameter(
-        self, parameter: Optional[ParameterType] = None, key: Optional[str] = None
+        self, parameter: Optional[ParameterType] = None, key: Optional[Any] = None
     ) -> Optional[int]:
         """Attempts to find the index of a parameter in the parameters list.
 
@@ -2029,7 +2030,7 @@ class ParameterHandler(_ParameterAttributeHandler):
         ):
             raise ValueError("`key` and `parameter` are mutually exclusive arguments")
 
-        key = key if key is not None else parameter.smirks
+        key = key if parameter is None else parameter.smirks
 
         for index, existing_parameter in enumerate(self._parameters):
 
@@ -4747,7 +4748,7 @@ class VirtualSiteHandler(_NonbondedHandler):
 
     class VirtualSiteType(vdWHandler.vdWType):
 
-        _VALENCE_TYPE = None
+        _VALENCE_TYPE = None  # type: ignore[assignment]
         _ELEMENT_NAME = "VirtualSite"
 
         name = ParameterAttribute(default="EP", converter=str)
@@ -4885,6 +4886,8 @@ class VirtualSiteHandler(_NonbondedHandler):
             cls, type_: _VirtualSiteType, match: str, is_in_plane: Optional[bool] = None
         ) -> bool:
 
+            is_in_plane = True if is_in_plane is None else is_in_plane
+
             if match == "once":
                 return type_ == "TrivalentLonePair" or (
                     type_ == "DivalentLonePair" and is_in_plane
@@ -4998,8 +5001,8 @@ class VirtualSiteHandler(_NonbondedHandler):
 
     def _index_of_parameter(
         self,
-        parameter: Optional["VirtualSiteHandler.VirtualSiteType"] = None,
-        key: Optional[Tuple[str, str, str]] = None,
+        parameter: Optional[ParameterType] = None,
+        key: Optional[Any] = None,
     ) -> Optional[int]:
         """Attempts to find the index of a parameter in the parameters list.
 
@@ -5025,10 +5028,11 @@ class VirtualSiteHandler(_NonbondedHandler):
         ):
             raise ValueError("`key` and `parameter` are mutually exclusive arguments")
 
-        key = (
+        key = cast(
+            Tuple[str, str, str],
             key
             if parameter is None
-            else (parameter.type, parameter.smirks, parameter.name)
+            else (parameter.type, parameter.smirks, parameter.name),
         )
         expected_type, expected_smirks, expected_name = key
 
@@ -5053,7 +5057,7 @@ class VirtualSiteHandler(_NonbondedHandler):
         # We need to find all the parameters that would lead to a v-site being placed
         # onto a given 'parent atom'. We only allow each parent atom to be assigned one
         # v-site with a given 'name', whereby the last parameter to be matched wins.
-        matches_by_parent = defaultdict(lambda: defaultdict(list))
+        matches_by_parent: Dict = defaultdict(lambda: defaultdict(list))
 
         for parameter in self._parameters:
 
