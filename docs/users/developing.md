@@ -22,8 +22,8 @@ When new functionality is added to the OpenFF Toolkit, it becomes our responsibi
 
 ### Philosophy
 
-- The *core functionality* of the OpenFF Toolkit is to combine an Open Force Field [`ForceField`](openff.toolkit.typing.engines.smirnoff.forcefield.ForceField) and [`Topology`](openff.toolkit.topology.Topology) to create an OpenMM [`System`](http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.System.html).
-- An OpenMM [`System`](http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.System.html) contains *everything* needed to compute the potential energy of a system, except the coordinates and (optionally) box vectors.
+- The *core functionality* of the OpenFF Toolkit is to combine an Open Force Field [`ForceField`](openff.toolkit.typing.engines.smirnoff.forcefield.ForceField) and [`Topology`](openff.toolkit.topology.Topology) to create an OpenMM [`System`](http://docs.openmm.org/latest/api-python/generated/openmm.openmm.System.html).
+- An OpenMM [`System`](http://docs.openmm.org/latest/api-python/generated/openmm.openmm.System.html) contains *everything* needed to compute the potential energy of a system, except the coordinates and (optionally) box vectors.
 - The OpenFF toolkit employs a modular "plugin" architecture wherever possible, providing a standard interface for contributed features.
 
 

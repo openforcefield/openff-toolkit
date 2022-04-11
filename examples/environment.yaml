@@ -11,8 +11,8 @@ dependencies:
   - qcelemental
   - qcportal
   - qcengine
-  - openmmforcefields
-  - mendeleev
+  # https://github.com/openforcefield/openff-toolkit/pull/1232#issuecomment-1080889858
+  # openmmforcefields
   # Below are dependencies of the toolkit; they are listed here as a reference
   - mdtraj
   - numpy
