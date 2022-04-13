@@ -225,11 +225,16 @@ print(value_roundtrip)
   [`Bond.is_in_ring`](openff.toolkit.topology.Bond.is_in_ring) to use corresponding
   functionality in OpenEye and RDKit wrappers.
 
+## API breaking changes
+- [PR #855](https://github.com/openforcefield/openff-toolkit/pull/855): Removes
+  [`Molecule.rings`](openff.toolkit.topology.Molecule.rings) and
+  [`Molecule.n_rings`](openff.toolkit.topology.Molecule.n_rings). To find rings in
+  a molecule, directly use a cheminformatics toolkit after using
+  [`Molecule.to_rdkit`](openff.toolkit.topology.Molecule.to_rdkit) or
+  [`Molecule.to_openeye`](openff.toolkit.topology.Molecule.to_openeye).
+  [`Atom.is_in_ring`](openff.toolkit.topology.Atom.is_in_ring) and
+  [`Bond.is_in_ring`](openff.toolkit.topology.Bond.is_in_ring) are now methods, not properties.
 
-### Improved documentation and warnings
-
-- [PR #1173](https://github.com/openforcefield/openforcefield/pull/1173): Expand
-  on the SMIRNOFF section of the toolkit docs
 
 ## 0.10.2 Bugfix release
 
