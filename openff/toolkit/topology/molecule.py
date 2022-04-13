@@ -3520,9 +3520,7 @@ class FrozenMolecule(Serializable):
             return
 
         # Convert all conformers into one big array
-        conformers = np.asarray(
-            [q.value_in_unit(unit.angstrom) for q in self._conformers]
-        )
+        conformers = np.asarray([q.m_as(unit.angstrom) for q in self._conformers])
 
         # Scan the molecule for carboxylic acids
         cooh_indices = self.chemical_environment_matches(
@@ -3619,7 +3617,7 @@ class FrozenMolecule(Serializable):
         conformers[:, cooh_indices, :] = cooh_xyz
 
         # Return conformers to original type
-        self._conformers = [conf * unit.angstrom for conf in conformers]
+        self._conformers = [unit.Quantity(conf, unit.angstrom) for conf in conformers]
 
     def compute_virtual_site_positions_from_conformer(self, conformer_idx):
         """

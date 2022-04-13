@@ -3665,7 +3665,7 @@ class TestMolecule:
         # First, check that we get exactly the right coords for cis and trans methanoic acid
         offmol = Molecule.from_mapped_smiles("[H:1][C:2](=[O:3])[O:4][H:5]")
         # cis methanoic (formic) acid
-        cis_xyz = (
+        cis_xyz = unit.Quantity(
             np.array(
                 [
                     [-1.0, -1.0, 0.0],  # HC
@@ -3674,10 +3674,10 @@ class TestMolecule:
                     [+1.0, +0.0, 0.0],  # -O
                     [+2.0, +1.0, 0.0],  # HO
                 ]
-            )
-            * unit.angstrom
+            ),
+            unit.angstrom,
         )
-        trans_xyz = (
+        trans_xyz = unit.Quantity(
             np.array(
                 [
                     [-1.0, -1.0, 0.0],  # HC
@@ -3686,8 +3686,8 @@ class TestMolecule:
                     [+1.0, +0.0, 0.0],  # -O
                     [+2.0, -1.0, 0.0],  # HO
                 ]
-            )
-            * unit.angstrom
+            ),
+            unit.angstrom,
         )
 
         offmol._conformers = [trans_xyz, cis_xyz]
