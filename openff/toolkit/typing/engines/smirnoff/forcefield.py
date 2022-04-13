@@ -131,16 +131,16 @@ def get_available_force_fields(full_paths=False):
     ``openff-forcefields`` package is installed, this should include several
     .offxml files such as ``openff-1.0.0.offxml``\ .
 
-     Parameters
-     ----------
-     full_paths : bool, default=False
-         If False, return the name of each available \*.offxml file.
-         If True, return the full path to each available \*.offxml file.
+    Parameters
+    ----------
+    full_paths : bool, default=False
+        If False, return the name of each available \*.offxml file.
+        If True, return the full path to each available \*.offxml file.
 
-     Returns
-     -------
-     available_force_fields : List[str]
-         List of available force field files
+    Returns
+    -------
+    available_force_fields : List[str]
+        List of available force field files
 
     """
     installed_paths = _get_installed_offxml_dir_paths()
@@ -185,25 +185,9 @@ class ForceField:
     The force field definition is processed by these handlers to populate the ``ForceField`` object model data
     structures that can easily be manipulated via the API:
 
-    Processing a :class:`Topology` object defining a chemical system will then call all :class`ParameterHandler`
+    Processing a :class:`Topology` object defining a chemical system will then call all :class:`ParameterHandler`
     objects in an order guaranteed to satisfy the declared processing order constraints of each
-    :class`ParameterHandler`.
-
-    Attributes
-    ----------
-    parameters : dict of str : list of ParameterType
-        ``parameters[tagname]`` is the instantiated :class:`ParameterHandler` class that handles parameters associated
-        with the force ``tagname``.
-        This is the primary means of retrieving and modifying parameters, such as
-        ``parameters['vdW'][0].sigma *= 1.1``
-    parameter_object_handlers : dict of str : ParameterHandler class
-        Registered list of :class:`ParameterHandler` classes that will handle different force field tags to create the parameter object model.
-        ``parameter_object_handlers[tagname]`` is the :class:`ParameterHandler` that will be instantiated to process the force field definition section ``tagname``.
-        :class:`ParameterHandler` classes are registered when the ForceField object is created, but can be manipulated afterwards.
-    parameter_io_handlers : dict of str : ParameterIOHandler class
-        Registered list of :class:`ParameterIOHandler` classes that will handle serializing/deserializing the parameter object model to string or file representations, such as XML.
-        ``parameter_io_handlers[iotype]`` is the :class:`ParameterHandler` that will be instantiated to process the serialization scheme ``iotype``.
-        :class:`ParameterIOHandler` classes are registered when the ForceField object is created, but can be manipulated afterwards.
+    :class:`ParameterHandler`.
 
     Examples
     --------
@@ -308,7 +292,7 @@ class ForceField:
 
         Load multiple SMIRNOFF parameter sets:
 
-        forcefield = ForceField('test_forcefields/test_forcefield.offxml', 'test_forcefields/tip3p.offxml')
+        >>> forcefield = ForceField('test_forcefields/test_forcefield.offxml', 'test_forcefields/tip3p.offxml')
 
         Load a parameter set from a string:
 
@@ -388,7 +372,8 @@ class ForceField:
 
         Raises
         ------
-        SMIRNOFFVersionError if an incompatible version is passed in.
+        SMIRNOFFVersionError
+            If an incompatible version is passed in.
 
         """
         import packaging.version
@@ -437,9 +422,11 @@ class ForceField:
 
         Raises
         ------
-        SMIRNOFFAromaticityError if an incompatible aromaticity model is passed in.
+        SMIRNOFFAromaticityError
+            If an incompatible aromaticity model is passed in.
 
-        .. notes ::
+        Notes
+        -----
            * Currently, the only supported aromaticity model is 'OEAroModel_MDL'.
 
         """
@@ -565,7 +552,8 @@ class ForceField:
 
         Raises
         ------
-        Exception if two ParameterIOHandlers are attempted to be registered for the same file format.
+        Exception
+            If two ParameterIOHandlers are attempted to be registered for the same file format.
 
         """
         for parameter_io_handler_class in parameter_io_handler_classes:
@@ -763,7 +751,8 @@ class ForceField:
 
         Raises
         ------
-        KeyError if there is no ParameterHandler for the given tagname
+        KeyError
+            If there is no ParameterHandler for the given tagname
         """
         # If there are no kwargs for the handler, initialize handler_kwargs as an empty dict
         skip_version_check = False
@@ -815,7 +804,8 @@ class ForceField:
 
         Raises
         ------
-        KeyError if there is no ParameterIOHandler for the given tagname
+        KeyError
+            If there is no ParameterIOHandler for the given tagname
         """
         # Uppercase the format string to avoid case mismatches
         io_format = io_format.upper()
@@ -879,7 +869,9 @@ class ForceField:
         allow_cosmetic_attributes : bool, optional. Default = False
             Whether to permit non-spec kwargs present in the source.
 
-        .. notes ::
+        Notes
+        -----
+
            * New SMIRNOFF sections are handled independently, as if they were specified in the same file.
            * If a SMIRNOFF section that has already been read appears again, its definitions are appended to the end of the previously-read
              definitions if the sections are configured with compatible attributes; otherwise, an ``IncompatibleTagException`` is raised.
@@ -1064,11 +1056,10 @@ class ForceField:
 
         Parameters
         ----------
-        source : str or bytes
-            sources : string or file-like object or open file handle or URL (or iterable of these)
-            A list of files defining the SMIRNOFF force field to be loaded
+        source : str or bytes or file-like object
+            File defining the SMIRNOFF force field to be loaded
             Currently, only `the SMIRNOFF XML format <https://openforcefield.github.io/standards/standards/smirnoff/>`_ is supported.
-            Each entry may be an absolute file path, a path relative to the current working directory, a path relative to this module's data subdirectory
+            The file may be an absolute file path, a path relative to the current working directory, a path relative to this module's data subdirectory
             (for built in force fields), or an open file-like object with a ``read()`` method from which the force field XML data can be loaded.
 
         Returns

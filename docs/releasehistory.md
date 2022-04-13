@@ -235,6 +235,7 @@ print(value_roundtrip)
   [`Atom.is_in_ring`](openff.toolkit.topology.Atom.is_in_ring) and
   [`Bond.is_in_ring`](openff.toolkit.topology.Bond.is_in_ring) are now methods, not properties.
 
+
 ## 0.10.2 Bugfix release
 
 ### API-breaking changes
