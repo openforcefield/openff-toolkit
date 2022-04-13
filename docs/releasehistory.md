@@ -226,6 +226,10 @@ print(value_roundtrip)
   functionality in OpenEye and RDKit wrappers.
 
 
+### Improved documentation and warnings
+
+- [PR #1173](https://github.com/openforcefield/openforcefield/pull/1173): Expand
+  on the SMIRNOFF section of the toolkit docs
 
 ## 0.10.2 Bugfix release
 
