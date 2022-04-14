@@ -154,6 +154,7 @@ print(value_roundtrip)
   example to use Interchange.
 
 ### Tests updated
+
 - [PR #1188](https://github.com/openforcefield/openff-toolkit/pull/1188): Add an `<Electrostatics>`
   section to the TIP3P force field file used in testing (`test_forcefields/tip3p.offxml`)
 
@@ -225,11 +226,16 @@ print(value_roundtrip)
   [`Bond.is_in_ring`](openff.toolkit.topology.Bond.is_in_ring) to use corresponding
   functionality in OpenEye and RDKit wrappers.
 
+## API breaking changes
+- [PR #855](https://github.com/openforcefield/openff-toolkit/pull/855): Removes
+  [`Molecule.rings`](openff.toolkit.topology.Molecule.rings) and
+  [`Molecule.n_rings`](openff.toolkit.topology.Molecule.n_rings). To find rings in
+  a molecule, directly use a cheminformatics toolkit after using
+  [`Molecule.to_rdkit`](openff.toolkit.topology.Molecule.to_rdkit) or
+  [`Molecule.to_openeye`](openff.toolkit.topology.Molecule.to_openeye).
+  [`Atom.is_in_ring`](openff.toolkit.topology.Atom.is_in_ring) and
+  [`Bond.is_in_ring`](openff.toolkit.topology.Bond.is_in_ring) are now methods, not properties.
 
-### Improved documentation and warnings
-
-- [PR #1173](https://github.com/openforcefield/openforcefield/pull/1173): Expand
-  on the SMIRNOFF section of the toolkit docs
 
 ## 0.10.2 Bugfix release
 
@@ -254,13 +260,13 @@ print(value_roundtrip)
 - [PR #1153](https://github.com/openforcefield/openforcefield/pull/1153): Fixes
   [Issue #1152](https://github.com/openforcefield/openff-toolkit/issues/1052) in which running
   [`Molecule.generate_conformers`](openff.toolkit.topology.Molecule.generate_conformers)
-  using the OpenEye backend would use the stereochemistry from an existing conformer instead
-  of the stereochemistry from the molecular graph, leading to undefined behavior if the molecule had a 2D conformer.
+  using the OpenEye backend would use the stereochemistry from an existing conformer instead 
+  of the stereochemistry from the molecular graph, leading to undefined behavior if the molecule had a 2D conformer. 
 - [PR #1158](https://github.com/openforcefield/openff-toolkit/pull/1158): Fixes the default
   representation of [`Molecule`](openff.toolkit.topology.Molecule) failing in Jupyter notebooks when
   NGLview is not installed.
-- [PR #1151](https://github.com/openforcefield/openforcefield/pull/1151): Fixes
-  [Issue #1150](https://github.com/openforcefield/openff-toolkit/issues/1150), in which calling
+- [PR #1151](https://github.com/openforcefield/openforcefield/pull/1151): Fixes 
+  [Issue #1150](https://github.com/openforcefield/openff-toolkit/issues/1150), in which calling 
   [`Molecule.assign_fractional_bond_orders`](openff.toolkit.topology.Molecule.assign_fractional_bond_orders)
   with all default arguments would lead to an error as a result of trying to lowercase `None`.
 - [PR #1149](https://github.com/openforcefield/openforcefield/pull/1149):
@@ -270,6 +276,17 @@ print(value_roundtrip)
   reference molecule from their `.molecule` attribute.
 - [PR #1155](https://github.com/openforcefield/openforcefield/pull/1155): Ensures big-endian
   byte order of NumPy arrays when serialized to dictionaries or files formats except JSON.
+- [PR #1163](https://github.com/openforcefield/openforcefield/pull/1163): Fixes the bug identified in
+  [Issue #1161](https://github.com/openforcefield/openff-toolkit/issues/1161), which was caused by the use
+  of the deprecated `pkg_resources` package. Now the recommended `importlib_metadata` package is used instead.
+
+
+### Breaking changes
+- [PR #1118](https://github.com/openforcefield/openforcefield/pull/1118):
+  [`Molecule.to_hill_formula`](openff.toolkit.topology.Molecule.to_hill_formula) is now a class method
+  and no longer accepts input of NetworkX graphs.
+- [PR #1156](https://github.com/openforcefield/openforcefield/pull/1156): Removes `ParseError` and
+  `MessageException`, which has been deprecated since version 0.10.0.
 
 ### Examples added
 
