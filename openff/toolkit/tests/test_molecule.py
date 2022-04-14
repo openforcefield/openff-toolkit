@@ -3890,6 +3890,15 @@ class TestMoleculeVisualization:
 
         assert isinstance(mol.visualize(backend="openeye"), IPython.core.display.Image)
 
+    @pytest.mark.skipif(
+        has_pkg("nglview"),
+        reason="Test requires that NGLview is not installed",
+    )
+    def test_ipython_repr_no_nglview(self):
+        """Test that the default Molecule repr does not break when nglview is not installed"""
+        molecule = Molecule().from_smiles("CCO")
+        molecule._ipython_display_()
+
 
 @pytest.mark.parametrize("strict_chirality", (True, False))
 class TestMoleculeResiduePerception:
