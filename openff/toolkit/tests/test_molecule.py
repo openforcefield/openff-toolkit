@@ -1365,8 +1365,6 @@ class TestMolecule:
         from openff.toolkit.topology.topology import Topology
 
         topology = Topology.from_molecules(molecule)
-        topmol = TopologyMolecule(molecule, topology)
-        assert molecule.hill_formula == Molecule._object_to_hill_formula(topmol)
         assert molecule.hill_formula == Molecule._object_to_hill_formula(
             molecule.to_networkx()
         )
@@ -1406,7 +1404,7 @@ class TestMolecule:
         )
         # check matching with nx.Graph with full matching
         assert ethanol.is_isomorphic_with(ethanol_reverse.to_networkx()) is True
-        # check matching with a TopologyMolecule class
+
         from openff.toolkit.topology.topology import Topology
 
         topology = Topology.from_molecules(ethanol)

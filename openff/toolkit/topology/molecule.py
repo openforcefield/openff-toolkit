@@ -7356,31 +7356,6 @@ def _networkx_graph_to_hill_formula(graph: "nx.Graph") -> str:
     return _atom_nums_to_hill_formula(atom_nums)
 
 
-def _topologymolecule_to_hill_formula(topology_molecule: "TopologyMolecule") -> str:
-    """
-    Convert a TopologyMolecule to a Hill formula.
-
-    This function exists only to maintain backwards-compatibility with the old
-    behavior of Molecule.to_hill_formulat of Molecule.to_hill_formula, which was
-    a static method that duck-typed inputs of Molecule or graph objects. When
-    `TopologyMolecule` is removed, this should also be removed.
-
-    Parameters
-    ----------
-    topology_molecule : TopologyMolecule
-        The TopologyMolecule to convert.
-
-    Returns
-    -------
-    str
-        The Hill formula corresponding to the TopologyMolecule.
-
-    """
-    atom_nums = [atom.atomic_number for atom in topology_molecule.atoms]
-
-    return _atom_nums_to_hill_formula(atom_nums)
-
-
 def _atom_nums_to_hill_formula(atom_nums: List[int]) -> str:
     """
     Given a `Counter` object of atom counts by atomic number, generate the corresponding
