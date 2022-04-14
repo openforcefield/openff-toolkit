@@ -31,8 +31,9 @@ import copy
 import logging
 import os
 import pathlib
+import warnings
 from collections import OrderedDict
-from typing import List, Tuple, Union
+from typing import TYPE_CHECKING, List, Tuple, Union
 
 from openff.toolkit.topology.molecule import DEFAULT_AROMATICITY_MODEL
 from openff.toolkit.typing.engines.smirnoff.io import ParameterIOHandler
@@ -56,6 +57,11 @@ from openff.toolkit.utils.utils import (
     convert_all_strings_to_quantity,
     requires_package,
 )
+
+if TYPE_CHECKING:
+    import openmm
+
+    from openff.toolkit.topology import Topology
 
 # =============================================================================================
 # CONFIGURE LOGGER
