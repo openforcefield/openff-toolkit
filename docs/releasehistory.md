@@ -94,31 +94,6 @@ print(value_roundtrip)
 
 ### Behaviors changed and bugfixes
 
-- [PR #1171](https://github.com/openforcefield/openforcefield/pull/1171): Failure of 
-  [`Molecule.apply_elf_conformer_selection()`] due to excluding all available conformations ([Issue #428] (https://github.com/openforcefield/openff-toolkit/issues/428) )
-  now provides a better error. The `make_carboxylic_acids_cis` argument (`False` by default) has been added to 
-  [`Molecule.generate_conformers()`] to mitigate a common cause of this error. By setting this argument to `True` in internal use of this method, trans carboxylic 
-  acids are no longer generated in [`Molecule.assign_partial_charges()`] and 
-  [`Molecule.assign_fractional_bond_orders()`] methods (though users may still pass trans conformers in, they'll just be pruned by ELF methods). This should work around most instances
-  of the OpenEye Omega bug where trans carboxylic acids are more common than they should be.
-
-[`Molecule.apply_elf_conformer_selection()`]: openff.toolkit.topology.Molecule.apply_elf_conformer_selection
-[`Molecule.generate_conformers()`]: openff.toolkit.topology.Molecule.generate_conformers
-[`Molecule.assign_partial_charges()`]: openff.toolkit.topology.Molecule.assign_partial_charges
-[`Molecule.assign_fractional_bond_orders()`]: openff.toolkit.topology.Molecule.assign_fractional_bond_orders
-
-- [PR #1182](https://github.com/openforcefield/openforcefield/pull/1182) and
-  [PR #1142](https://github.com/openforcefield/openforcefield/pull/1142) migrate handling of
-  unit-bearing quantities from OpenMM's unit module (`openmm.unit`) to
-  [`openff-units`](https://github.com/openforcefield/openff-units), which itself is based off of
-  [Pint](https://pint.readthedocs.io/en/stable/).
-- [PR #1230](https://github.com/openforcefield/openforcefield/pull/1230) removes safe imports from
-  the `simtk` namespace, which was deprecated in
-  [August 2021](https://github.com/openmm/openmm/releases/tag/7.6.0) with the release of OpenMM 7.6,
-  and therefore removes support for versions of OpenMM older than 7.6.
-- [PR #1118](https://github.com/openforcefield/openforcefield/pull/1118):
-  [`Molecule.to_hill_formula`](openff.toolkit.topology.Molecule.to_hill_formula) is now a class method
-  and no longer accepts input of NetworkX graphs.
 - [PR #1130](https://github.com/openforcefield/openforcefield/pull/1130): Running unit tests will
   no longer generate force field files in the local directory.
 - [PR #1182](https://github.com/openforcefield/openforcefield/pull/1182): Removes `Atom.element`,
@@ -154,6 +129,7 @@ print(value_roundtrip)
   example to use Interchange.
 
 ### Tests updated
+
 - [PR #1188](https://github.com/openforcefield/openff-toolkit/pull/1188): Add an `<Electrostatics>`
   section to the TIP3P force field file used in testing (`test_forcefields/tip3p.offxml`)
 
@@ -279,6 +255,13 @@ print(value_roundtrip)
   [Issue #1161](https://github.com/openforcefield/openff-toolkit/issues/1161), which was caused by the use
   of the deprecated `pkg_resources` package. Now the recommended `importlib_metadata` package is used instead.
 
+
+### Breaking changes
+- [PR #1118](https://github.com/openforcefield/openforcefield/pull/1118):
+  [`Molecule.to_hill_formula`](openff.toolkit.topology.Molecule.to_hill_formula) is now a class method
+  and no longer accepts input of NetworkX graphs.
+- [PR #1156](https://github.com/openforcefield/openforcefield/pull/1156): Removes `ParseError` and
+  `MessageException`, which has been deprecated since version 0.10.0.
 
 ### Breaking changes
 - [PR #1118](https://github.com/openforcefield/openforcefield/pull/1118):
