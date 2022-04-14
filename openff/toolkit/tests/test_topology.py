@@ -1023,8 +1023,6 @@ class TestTopology:
 
     def test_group_chemically_identical_molecules(self):
         """Test behavior and caching of Topology.group_chemically_identical_molecules"""
-        from pprint import pprint
-
         top = Topology()
 
         # Test for correct behavior with empty topology

@@ -4132,8 +4132,6 @@ class LibraryChargeHandler(_NonbondedHandler):
                 continue
 
             # If we pass both tests above, go ahead and assign charges
-            # TODO: We could probably save a little time by looking up this TopologyMolecule's _reference molecule_
-            #       and assigning charges to all other instances of it in this topology
             for top_particle_idx in top_particle_idxs:
                 _, sigma, epsilon = force.getParticleParameters(top_particle_idx)
                 force.setParticleParameters(

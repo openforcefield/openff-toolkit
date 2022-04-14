@@ -1801,9 +1801,16 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             Guarantee all conformers have exclusively cis carboxylic acid groups (COOH)
             by rotating the proton in any trans carboxylic acids 180 degrees around the C-O bond.
         """
+        import copy
+
         from openeye import oeomega
 
-        oemol = self.to_openeye(molecule)
+        # Copy the molecule and scrub the conformers so that omega HAS to read stereo from graph mol
+        # See https://github.com/openforcefield/openff-toolkit/issues/1152
+        mol_copy = copy.deepcopy(molecule)
+        mol_copy._conformers = None
+
+        oemol = self.to_openeye(mol_copy)
         omega = oeomega.OEOmega()
         omega.SetMaxConfs(n_conformers)
         omega.SetCanonOrder(False)

@@ -191,7 +191,7 @@ class _SimpleMolecule:
             _nth_degree_neighbors_from_graphlike,
         )
 
-        return _nth_degree_neighbors_from_graph(graphlike=self, n_degrees=n_degrees)
+        return _nth_degree_neighbors_from_graphlike(graphlike=self, n_degrees=n_degrees)
 
     @classmethod
     def _from_subgraph(cls, subgraph: "nx.Graph"):

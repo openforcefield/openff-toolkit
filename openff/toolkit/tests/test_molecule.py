@@ -56,9 +56,9 @@ from openff.toolkit.topology.molecule import (
     HierarchySchemeNotFoundException,
     HierarchySchemeWithIteratorNameAlreadyRegisteredException,
     InvalidAtomMetadataError,
-    InvalidConformerError,
     Molecule,
     SmilesParsingError,
+    _networkx_graph_to_hill_formula,
 )
 from openff.toolkit.utils import get_data_file_path
 from openff.toolkit.utils.exceptions import (
@@ -1368,6 +1368,10 @@ class TestMolecule:
             molecule.to_networkx()
         )
 
+        assert molecule.hill_formula == _networkx_graph_to_hill_formula(
+            molecule.to_networkx()
+        )
+
     def test_isomorphic_general(self):
         """Test the matching using different input types"""
         # check that hill formula fails are caught
@@ -1399,7 +1403,7 @@ class TestMolecule:
         )
         # check matching with nx.Graph with full matching
         assert ethanol.is_isomorphic_with(ethanol_reverse.to_networkx()) is True
-        # check matching with a TopologyMolecule class
+
         from openff.toolkit.topology.topology import Topology
 
         topology = Topology.from_molecules(ethanol)
@@ -3751,6 +3755,9 @@ class TestMolecule:
         """Test that different calls to Molecule.assign_fractional_bond_orders do not
         produce unexpected errors, but do not asses validity of results"""
         mol = Molecule.from_smiles("CCO")
+
+        # Test that default model works
+        mol.assign_fractional_bond_orders()
 
         mol.assign_fractional_bond_orders(
             bond_order_model=model,
