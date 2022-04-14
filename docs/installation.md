@@ -2,6 +2,8 @@
 
 # Installation
 
+(installation/conda)=
+
 ## Installing via `conda`
 
 The simplest way to install the Open Force Field Toolkit is via the [conda](https://docs.conda.io/en/latest/) package manager.
@@ -65,6 +67,8 @@ $ conda update -c conda-forge openff-toolkit
 ```
 
 Note that this may update other packages or install new packages if the most recent release of the Toolkit requires it.
+
+(installation/source)=
 
 ## Installing from source
 
@@ -144,6 +148,8 @@ It provides most of the functionality that the OpenFF Toolkit relies on.
 
 AmberTools is a collection of free tools provided with the Amber MD software and installed by default with the `openff-toolkit` package. 
 It provides a free implementation of functionality required by OpenFF Toolkit and not provided by RDKit.
+
+(installation/openeye)=
 
 ### OpenEye
 
