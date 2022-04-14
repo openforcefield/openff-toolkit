@@ -84,6 +84,11 @@ and then try rerunning and/or reinstalling the Toolkit.
 
 No! This is the intended behavior. The force field parameters of a molecule should be independent of both their chemical environment and conformation so that they can be used and compared across different contexts. When applying AM1BCC partial charges, the toolkit achieves a deterministic output by ignoring the input conformation and producing several new conformations for the same molecule. Partial charges are then computed based on these conformations. This behavior can be controlled with the `use_conformers` argument to the [assign_partial_charges()](openff.toolkit.topology.Molecule.assign_partial_charges) and [compute_partial_charges_am1bcc()](openff.toolkit.topology.Molecule.compute_partial_charges_am1bcc) methods of the [Molecule](openff.toolkit.topology.Molecule) class.
 
+## Parameterizing my system, which contains a large molecule, is taking forever. What's wrong?
+
+The mainline OpenFF force fields use AM1-BCC to assign partial charges (via the `<ToolkitAM1BCCHandler>` tag in the OFFXML file). This method unfortunately scales poorly with the size of a molecule and ligands roughly 100 atoms or larger may take so long (i.e. 10 minutes or more) that it seems like your code is simply hanging indefinitely. If you have OpenEye license and OpenEye Toolkits installed, the OpenFF Toolkit will instead use `quacpac`, which can offer better performance on large molecules. (Otherwise, it uses AmberTool's `sqm`, which is free to use.)
+
+In the future, the use of AM1-BCC in OpenFF force fields may be replaced with method(s) that perform better and scale better with molecule size, but (as of April 2022) these are still in an experimental phase.
 
 ## How can I distribute my own force fields in SMIRNOFF format?
 
