@@ -2175,13 +2175,14 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         charges : numpy.array of shape (natoms) of type float
             The partial charges
         """
+        # TODO: Remove in version 0.12.0
 
         import warnings
 
         warnings.warn(
-            "compute_partial_charges_am1bcc will be deprecated in an upcoming release. "
-            "Use assign_partial_charges(partial_charge_method='am1bccelf10') instead.",
-            DeprecationWarning,
+            "compute_partial_charges_am1bcc is deprecated and will be removed in version 0.12.0. "
+            "Use assign_partial_charges(partial_charge_method='am1bcc') instead.",
+            UserWarning,
         )
         self.assign_partial_charges(
             molecule,

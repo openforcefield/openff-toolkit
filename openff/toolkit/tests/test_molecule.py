@@ -3828,6 +3828,21 @@ class TestMolecule:
             assert "OpenEye Omega conformer generation failed" in exception_as_str
             assert "RDKit conformer generation failed" in exception_as_str
 
+    @requires_openeye
+    @requires_rdkit
+    def test_compute_partial_charges_am1bcc_warning(self):
+        # TODO: Remove in version 0.12.0 alognside the removal of these methods
+        molecule = create_ethanol()
+
+        toolkits = [OpenEyeToolkitWrapper(), AmberToolsToolkitWrapper()]
+
+        with pytest.warns(UserWarning, match="compute_.*_am1bcc.*0.12"):
+            molecule.compute_partial_charges_am1bcc()
+
+        for toolkit in toolkits:
+            with pytest.warns(UserWarning, match="compute_.*_am1bcc.*0.12"):
+                toolkit.compute_partial_charges_am1bcc(molecule)
+
 
 class TestMoleculeVisualization:
     @requires_pkg("IPython")
