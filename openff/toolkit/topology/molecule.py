@@ -59,6 +59,7 @@ from openff.toolkit.utils.exceptions import (
     InvalidAtomMetadataError,
     InvalidConformerError,
     SmilesParsingError,
+    UnsupportedFileTypeError,
 )
 from openff.toolkit.utils.serialization import Serializable
 from openff.toolkit.utils.toolkits import (
@@ -5296,6 +5297,14 @@ class FrozenMolecule(Serializable):
             else:
                 file_format = file_path.split(".")[-1]
         file_format = file_format.upper()
+
+        if file_format == "XYZ":
+            raise UnsupportedFileTypeError(
+                "Parsing `.xyz` files is not currently supported because they lack sufficient "
+                "chemical information to be used with SMIRNOFF force fields. For more information, "
+                "see https://open-forcefield-toolkit.readthedocs.io/en/latest/faq.html or to provide "
+                "feedback please visit https://github.com/openforcefield/openff-toolkit/issues/1145."
+            )
 
         # Determine which toolkit to use (highest priority that's compatible with input type)
         if isinstance(toolkit_registry, ToolkitRegistry):
