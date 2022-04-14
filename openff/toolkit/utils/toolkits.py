@@ -58,7 +58,6 @@ __all__ = (
 
 
 import logging
-import warnings
 
 from openff.toolkit.utils.ambertools_wrapper import AmberToolsToolkitWrapper
 from openff.toolkit.utils.base_wrapper import ToolkitWrapper
@@ -89,25 +88,9 @@ from openff.toolkit.utils.exceptions import (
     ToolkitUnavailableException,
     UndefinedStereochemistryError,
 )
-from openff.toolkit.utils.openeye_wrapper import (
-    OpenEyeToolkitWrapper,
-    requires_openeye_module,
-)
+from openff.toolkit.utils.openeye_wrapper import OpenEyeToolkitWrapper
 from openff.toolkit.utils.rdkit_wrapper import RDKitToolkitWrapper
 from openff.toolkit.utils.toolkit_registry import ToolkitRegistry
-
-deprecated_names = ["MessageException"]
-
-# TODO: Remove in January 2022, see _DeprecatedMessageException in openff/toolkit/utils/exceptions.py
-def __getattr__(name):
-    if name in deprecated_names:
-        warnings.filterwarnings("default", category=DeprecationWarning)
-        from openff.toolkit.utils.exceptions import MessageException
-
-        return MessageException
-        # return globals()[f"MessageException"]
-    raise AttributeError(f"module {__name__} has no attribute {name}")
-
 
 # =============================================================================================
 # CONFIGURE LOGGER
