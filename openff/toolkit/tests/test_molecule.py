@@ -56,7 +56,6 @@ from openff.toolkit.topology.molecule import (
     HierarchySchemeNotFoundException,
     HierarchySchemeWithIteratorNameAlreadyRegisteredException,
     InvalidAtomMetadataError,
-    InvalidConformerError,
     Molecule,
     SmilesParsingError,
     _networkx_graph_to_hill_formula,
