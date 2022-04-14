@@ -121,6 +121,32 @@ print(value_roundtrip)
   and no longer accepts input of NetworkX graphs.
 - [PR #1130](https://github.com/openforcefield/openforcefield/pull/1130): Running unit tests will
   no longer generate force field files in the local directory.
+- [PR #1182](https://github.com/openforcefield/openforcefield/pull/1182): Removes `Atom.element`,
+  thereby also removing `Atom.element.symbol`, `Atom.element.mass` and `Atom.element.atomic_number`.
+  These are replaced with corresponding properties directly on the
+  [`Atom`](openff.toolkit.topology.molecule.Atom) class:
+  [`Atom.symbol`](openff.toolkit.topology.molecule.Atom.symbol),
+  [`Atom.mass`](openff.toolkit.topology.molecule.Atom.mass), and
+  [`Atom.atomic_number`](openff.toolkit.topology.molecule.Atom.atomic_number).
+- [PR #1209](https://github.com/openforcefield/openforcefield/pull/1209): Fixes 
+  [Issue #1073](https://github.com/openforcefield/openff-toolkit/issues/1073), where the
+  `fractional_bondorder_method` kwarg to the 
+  [`BondHandler`](openff.toolkit.typing.engines.smirnoff.parameters.BondHandler) initializer 
+  was being ignored.
+- [PR #1214](https://github.com/openforcefield/openforcefield/pull/1214): A long overdue fix
+  for [Issue #837](https://github.com/openforcefield/openff-toolkit/issues/837)! If OpenEye is
+  available, the `ToolkitAM1BCCHandler` will use the ELF10 method to select conformers for AM1BCC
+  charge assignment. 
+- [PR #1160](https://github.com/openforcefield/openforcefield/pull/1160): Fixes the bug identified in
+  [Issue #1159](https://github.com/openforcefield/openff-toolkit/issues/1159), in which the order of 
+  atoms defining a `BondChargeVirtualSite` (and possibly other virtual sites types too) might be reversed 
+  if the `match` attribute of the virtual site has a value of `"once"`.
+- [PR #1231](https://github.com/openforcefield/openforcefield/pull/1231): Fixes
+  [Issue #1181](https://github.com/openforcefield/openff-toolkit/issues/1181) and
+  [Issue #1190](https://github.com/openforcefield/openff-toolkit/issues/1190), where in rare cases 
+  double bond stereo would cause `to_rdkit` to raise an error. The transfer of double bond stereochemistry
+  from OpenFF's E/Z representation to RDKit's local representation is now handled as a constraint
+  satisfaction problem.
 
 ### Examples added
 
@@ -199,11 +225,16 @@ print(value_roundtrip)
   [`Bond.is_in_ring`](openff.toolkit.topology.Bond.is_in_ring) to use corresponding
   functionality in OpenEye and RDKit wrappers.
 
+## API breaking changes
+- [PR #855](https://github.com/openforcefield/openff-toolkit/pull/855): Removes
+  [`Molecule.rings`](openff.toolkit.topology.Molecule.rings) and
+  [`Molecule.n_rings`](openff.toolkit.topology.Molecule.n_rings). To find rings in
+  a molecule, directly use a cheminformatics toolkit after using
+  [`Molecule.to_rdkit`](openff.toolkit.topology.Molecule.to_rdkit) or
+  [`Molecule.to_openeye`](openff.toolkit.topology.Molecule.to_openeye).
+  [`Atom.is_in_ring`](openff.toolkit.topology.Atom.is_in_ring) and
+  [`Bond.is_in_ring`](openff.toolkit.topology.Bond.is_in_ring) are now methods, not properties.
 
-### Improved documentation and warnings
-
-- [PR #1173](https://github.com/openforcefield/openforcefield/pull/1173): Expand
-  on the SMIRNOFF section of the toolkit docs
 
 ## 0.10.2 Bugfix release
 
@@ -228,13 +259,13 @@ print(value_roundtrip)
 - [PR #1153](https://github.com/openforcefield/openforcefield/pull/1153): Fixes
   [Issue #1152](https://github.com/openforcefield/openff-toolkit/issues/1052) in which running
   [`Molecule.generate_conformers`](openff.toolkit.topology.Molecule.generate_conformers)
-  using the OpenEye backend would use the stereochemistry from an existing conformer instead
-  of the stereochemistry from the molecular graph, leading to undefined behavior if the molecule had a 2D conformer.
+  using the OpenEye backend would use the stereochemistry from an existing conformer instead 
+  of the stereochemistry from the molecular graph, leading to undefined behavior if the molecule had a 2D conformer. 
 - [PR #1158](https://github.com/openforcefield/openff-toolkit/pull/1158): Fixes the default
   representation of [`Molecule`](openff.toolkit.topology.Molecule) failing in Jupyter notebooks when
   NGLview is not installed.
-- [PR #1151](https://github.com/openforcefield/openforcefield/pull/1151): Fixes
-  [Issue #1150](https://github.com/openforcefield/openff-toolkit/issues/1150), in which calling
+- [PR #1151](https://github.com/openforcefield/openforcefield/pull/1151): Fixes 
+  [Issue #1150](https://github.com/openforcefield/openff-toolkit/issues/1150), in which calling 
   [`Molecule.assign_fractional_bond_orders`](openff.toolkit.topology.Molecule.assign_fractional_bond_orders)
   with all default arguments would lead to an error as a result of trying to lowercase `None`.
 - [PR #1149](https://github.com/openforcefield/openforcefield/pull/1149):

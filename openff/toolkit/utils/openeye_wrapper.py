@@ -20,7 +20,7 @@ from cachetools import LRUCache, cached
 from openff.units import unit
 
 if TYPE_CHECKING:
-    from openff.toolkit.topology.molecule import Molecule
+    from openff.toolkit.topology.molecule import Molecule, Bond, Atom
 
 from openff.toolkit.utils import base_wrapper
 from openff.toolkit.utils.constants import DEFAULT_AROMATICITY_MODEL
@@ -32,6 +32,7 @@ from openff.toolkit.utils.exceptions import (
     InconsistentStereochemistryError,
     InvalidIUPACNameError,
     LicenseError,
+    NotAttachedToMoleculeError,
     SMILESParseError,
     ToolkitUnavailableException,
     UndefinedStereochemistryError,
@@ -1310,6 +1311,79 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             oechem.OESetSDData(oemol, str(key), str(value))
 
         return oemol
+
+    def atom_is_in_ring(self, atom: "Atom") -> bool:
+        """Return whether or not an atom is in a ring.
+
+        It is assumed that this atom is in molecule.
+
+        Parameters
+        ----------
+        atom : openff.toolkit.topology.molecule.Atom
+            The molecule containing the atom of interest
+
+        Returns
+        -------
+        is_in_ring : bool
+            Whether or not the atom is in a ring.
+
+        Raises
+        ------
+        NotAttachedToMoleculeError
+        """
+        if atom.molecule is None:
+            raise NotAttachedToMoleculeError(
+                "This Atom does not belong to a Molecule object"
+            )
+
+        molecule = atom.molecule
+        atom_index = atom.molecule_atom_index
+
+        oemol = molecule.to_openeye()
+
+        # Molecule.to_openeye() is guaranteed to preserve atom ordering
+        is_in_ring = [*oemol.GetAtoms()][atom_index].IsInRing()
+
+        return is_in_ring
+
+    def bond_is_in_ring(self, bond: "Bond") -> bool:
+        """Return whether or not a bond is in a ring.
+
+        It is assumed that this atom is in molecule.
+
+        Parameters
+        ----------
+        bond : openff.toolkit.topology.molecule.Bond
+            The molecule containing the atom of interest
+
+        Returns
+        -------
+        is_in_ring : bool
+            Whether or not the bond of index `bond_index` is in a ring
+
+        Raises
+        ------
+        NotAttachedToMoleculeError
+        """
+        if bond.molecule is None:
+            raise NotAttachedToMoleculeError(
+                "This Bond does not belong to a Molecule object"
+            )
+
+        molecule = bond.molecule
+
+        oemol = molecule.to_openeye()
+
+        # Molecule.to_openeye() is NOT guaranteed to preserve bond ordering,
+        # so we must look up the corresponding `OEBond` via `OEAtom`s
+        oebond = oemol.GetBond(
+            [*oemol.GetAtoms()][bond.atom1_index],
+            [*oemol.GetAtoms()][bond.atom2_index],
+        )
+
+        is_in_ring = oebond.IsInRing()
+
+        return is_in_ring
 
     def _get_smiles_flavor(self, isomeric, explicit_hydrogens):
         from openeye import oechem
