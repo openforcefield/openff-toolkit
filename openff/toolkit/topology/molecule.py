@@ -48,7 +48,8 @@ if TYPE_CHECKING:
     from openff.units.unit import Quantity
 
 from cached_property import cached_property
-from openmm import LocalCoordinatesSite, unit
+from openmm import LocalCoordinatesSite
+from openmm import unit as openmm_unit
 from openmm.app import Element, element
 from packaging import version
 
@@ -4432,8 +4433,8 @@ class FrozenMolecule(Serializable):
 
         else:
             raise IncompatibleUnitError(
-                "Coordinates passed to Molecule._add_conformer without units. Ensure that coordinates are "
-                "of type openmm.unit.Quantity or openff.units.unit.Quantity"
+                "Unknown object passed to Molecule._add_conformer. Expected types include "
+                f"openmm.unit.Quantity and openff.units.unit.Quantity, found type {type(coordinates)}."
             )
 
         tmp_conf = unit.Quantity(
