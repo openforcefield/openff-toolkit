@@ -86,7 +86,7 @@ No! This is the intended behavior. The force field parameters of a molecule shou
 
 ## Parameterizing my system, which contains a large molecule, is taking forever. What's wrong?
 
-The mainline OpenFF force fields use AM1-BCC to assign partial charges (via the `<ToolkitAM1BCCHandler>` tag in the OFFXML file). This method unfortunately scales poorly with the size of a molecule and ligands roughly 100 atoms or larger may take so long (i.e. 10 minutes or more) that it seems like your code is simply hanging indefinitely. If you have OpenEye license and OpenEye Toolkits [installed](installation/openeye), the OpenFF Toolkit will instead use `quacpac`, which can offer better performance on large molecules. (Otherwise, it uses AmberTool's `sqm`, which is free to use.)
+The mainline OpenFF force fields use AM1-BCC to assign partial charges (via the `<ToolkitAM1BCCHandler>` tag in the OFFXML file). This method unfortunately scales poorly with the size of a molecule and ligands roughly 100 atoms (about 40 heavy atoms) or larger may take so long (i.e. 10 minutes or more) that it seems like your code is simply hanging indefinitely. If you have an OpenEye license and OpenEye Toolkits [installed](installation/openeye), the OpenFF Toolkit will instead use `quacpac`, which can offer better performance on large molecules. Otherwise, it uses AmberTool's `sqm`, which is free to use.
 
 In the future, the use of AM1-BCC in OpenFF force fields may be replaced with method(s) that perform better and scale better with molecule size, but (as of April 2022) these are still in an experimental phase.
 
