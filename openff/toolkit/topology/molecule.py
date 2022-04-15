@@ -3745,6 +3745,8 @@ class FrozenMolecule(Serializable):
         toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
     ):
         """
+        DEPRECATED: Use ``assign_partial_charges(partial_charge_method='am1bcc')`` insetad.
+
         Calculate partial atomic charges for this molecule using AM1-BCC run by an underlying toolkit
         and assign them to this molecule's ``partial_charges`` attribute.
 
@@ -3772,6 +3774,12 @@ class FrozenMolecule(Serializable):
             If an invalid object is passed as the toolkit_registry parameter
 
         """
+        # TODO: Remove in version 0.12.0
+        warnings.warn(
+            "compute_partial_charges_am1bcc is deprecated and will be removed in version 0.12.0. "
+            "Use assign_partial_charges(partial_charge_method='am1bcc') instead.",
+            UserWarning,
+        )
         self.assign_partial_charges(
             partial_charge_method="am1bcc",
             use_conformers=use_conformers,
@@ -3781,7 +3789,7 @@ class FrozenMolecule(Serializable):
 
     def assign_partial_charges(
         self,
-        partial_charge_method,
+        partial_charge_method: str,
         strict_n_conformers=False,
         use_conformers=None,
         toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
@@ -3790,6 +3798,19 @@ class FrozenMolecule(Serializable):
         """
         Calculate partial atomic charges for this molecule using an underlying toolkit, and assign
         the new values to the partial_charges attribute.
+
+        Some supported charge methods are:
+            - ``"am1bcc"``
+            - ``"am1bccelf10"`` (requires OpenEye Toolkits)
+            - ``"am1-mulliken"``
+            - ``"mmff94"``
+            - ``"gasteiger"``
+
+        For more supported charge methods and details, see the corresponding methods in each toolkit wrapper:
+            - OpenEyeToolkitWrapper.assign_partial_charges
+            - RDKitToolkitWrapper.assign_partial_charges
+            - AmberToolsToolkitWrapper.assign_partial_charges
+            - BuiltInToolkitWrapper.assign_partial_charges
 
         Parameters
         ----------
@@ -3818,6 +3839,12 @@ class FrozenMolecule(Serializable):
         InvalidToolkitRegistryError
             If an invalid object is passed as the toolkit_registry parameter
 
+        See Also
+        --------
+        OpenEyeToolkitWrapper.assign_partial_charges
+        RDKitToolkitWrapper.assign_partial_charges
+        AmberToolsToolkitWrapper.assign_partial_charges
+        BuiltInToolkitWrapper.assign_partial_charges
         """
         if isinstance(toolkit_registry, ToolkitRegistry):
             # We may need to try several toolkitwrappers to find one
@@ -3835,8 +3862,8 @@ class FrozenMolecule(Serializable):
                 _cls=self.__class__,
             )
         elif isinstance(toolkit_registry, ToolkitWrapper):
-            toolkit = toolkit_registry
-            toolkit.assign_partial_charges(
+            toolkit_wrapper: ToolkitWrapper = toolkit_registry
+            toolkit_wrapper.assign_partial_charges(  # type: ignore[attr-defined]
                 self,
                 partial_charge_method=partial_charge_method,
                 use_conformers=use_conformers,
