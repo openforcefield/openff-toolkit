@@ -3863,8 +3863,8 @@ class FrozenMolecule(Serializable):
                 _cls=self.__class__,
             )
         elif isinstance(toolkit_registry, ToolkitWrapper):
-            toolkit = toolkit_registry
-            toolkit.assign_partial_charges(
+            toolkit_wrapper: ToolkitWrapper = toolkit_registry
+            toolkit_wrapper.assign_partial_charges(  # type: ignore[attr-defined]
                 self,
                 partial_charge_method=partial_charge_method,
                 use_conformers=use_conformers,
