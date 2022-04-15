@@ -1,4 +1,4 @@
-name: openforcefield
+name: openff-toolkit-docs
 channels:
     # Avoids crashing RTD machines by pulling an empty cudatoolkit pacakge
     - jaimergp/label/unsupported-cudatoolkit-shim
@@ -22,6 +22,10 @@ dependencies:
     - rdkit
     - ambertools
     - packaging
+    - openff-units
+    - openff-utilities
+    - cached_property
+    - cachetools
     # Serialization: Should these be optional?
     - toml
     - bson
