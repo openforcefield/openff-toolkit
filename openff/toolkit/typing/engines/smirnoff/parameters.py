@@ -4841,6 +4841,18 @@ class VirtualSiteHandler(_NonbondedHandler):
                     f"'{type_}' is not a supported virtual site type"
                 )
 
+            if "charge_increment" in kwargs:
+                expected_num_charge_increments = cls._expected_num_charge_increments(
+                    type_
+                )
+                num_charge_increments = len(kwargs["charge_increment"])
+                if num_charge_increments != expected_num_charge_increments:
+                    raise SMIRNOFFSpecError(
+                        f"'{type_}' virtual sites expect exactly {expected_num_charge_increments} "
+                        f"charge increments, but got {kwargs['charge_increment']} "
+                        f"(length {num_charge_increments}) instead."
+                    )
+
             supports_in_plane_angle = cls._supports_in_plane_angle(type_)
             supports_out_of_plane_angle = cls._supports_out_of_plane_angle(type_)
 
@@ -4880,6 +4892,16 @@ class VirtualSiteHandler(_NonbondedHandler):
         @classmethod
         def _supports_out_of_plane_angle(cls, type_: _VirtualSiteType) -> bool:
             return type_ in {"MonovalentLonePair", "DivalentLonePair"}
+
+        @classmethod
+        def _expected_num_charge_increments(cls, type_: _VirtualSiteType) -> int:
+            if type_ == "BondCharge":
+                return 2
+            elif (type_ == "MonovalentLonePair") or (type_ == "DivalentLonePair"):
+                return 3
+            elif type_ == "TrivalentLonePair":
+                return 4
+            raise NotImplementedError()
 
         @classmethod
         def _supports_match(

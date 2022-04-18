@@ -2723,6 +2723,20 @@ class TestVirtualSiteHandler:
             expected_total_charge, total_charge.value_in_unit(unit.elementary_charge)
         )
 
+    def test_invalid_num_charge_increments(self):
+        with pytest.raises(
+            SMIRNOFFSpecError,
+            match="'BondCharge' virtual sites expect exactly 2 charge increments,",
+        ):
+            VirtualSiteHandler.VirtualSiteType(
+                type="BondCharge",
+                smirks="[*]-[*]",
+                name="EP",
+                charge_increment=[0.1, 0.2, 0.3] * unit.elementary_charge,
+                match="all_permutations",
+                distance=2.0 * unit.angstrom,
+            )
+
 
 class TestLibraryChargeHandler:
     def test_create_library_charge_handler(self):
