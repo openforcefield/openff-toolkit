@@ -4996,21 +4996,25 @@ class VirtualSiteHandler(_NonbondedHandler):
         }
 
         for smirks_index, atom_index in enumerate(matched_indices):
-
             if (parameter.type, smirks_index) not in supported_connectivity:
                 # No restrictions placed on this matched atom.
                 continue
 
             matched_atom = atoms_by_index[atom_index]
             connectivity = len(matched_atom.atom.bonds)
-
-            if supported_connectivity[(parameter.type, smirks_index)] == connectivity:
+            expected_connectivity = supported_connectivity[
+                (parameter.type, smirks_index)
+            ]
+            if expected_connectivity == connectivity:
                 continue
 
             raise NotImplementedError(
                 f"{parameter.smirks} matched chemical environment that is currently "
-                f"unsupported by virtual sites of type {parameter.type}. If this is "
-                f"a use case you would like supporting, please describe what it is "
+                f"unsupported by virtual sites of type {parameter.type}. Atom with "
+                f"{smirks_index=} matched topology atom {atom_index} with "
+                f"{connectivity=}, but it was expected to have connectivity "
+                f"{expected_connectivity}. If this is "
+                f"a use case you would like supported, please describe what it is "
                 f"you are trying to do in an issue on the OpenFF Toolkit GitHub: "
                 f"https://github.com/openforcefield/openff-toolkit/issues"
             )
@@ -5076,6 +5080,10 @@ class VirtualSiteHandler(_NonbondedHandler):
 
         from collections import defaultdict
 
+        topology_atoms = {
+            i: topology_atom for i, topology_atom in enumerate(entity.topology_atoms)
+        }
+
         # We need to find all the parameters that would lead to a v-site being placed
         # onto a given 'parent atom'. We only allow each parent atom to be assigned one
         # v-site with a given 'name', whereby the last parameter to be matched wins.
@@ -5123,6 +5131,13 @@ class VirtualSiteHandler(_NonbondedHandler):
                     (assigned_parameter, match_orientations)
                 )
 
+                for match in match_orientations:
+                    # make sure the match does not look like a weird edge case that we
+                    # haven't tested to ensure 'sensible' behaviour in most cases.
+                    self._validate_found_match(
+                        topology_atoms, match.topology_atom_indices, assigned_parameter
+                    )
+
         return assigned_matches_by_parent
 
     def _find_matches(
@@ -5132,10 +5147,6 @@ class VirtualSiteHandler(_NonbondedHandler):
         unique=False,
     ) -> List[ParameterHandler._Match]:
 
-        topology_atoms = {
-            i: topology_atom for i, topology_atom in enumerate(entity.topology_atoms)
-        }
-
         assigned_matches_by_parent = self._find_matches_by_parent(entity)
         assigned_matches = []
 
@@ -5144,12 +5155,6 @@ class VirtualSiteHandler(_NonbondedHandler):
             for assigned_parameter, match_orientations in assigned_parameters:
 
                 for match in match_orientations:
-
-                    # make sure the match does not look like a wierd edge case that we
-                    # haven't tested to ensure 'sensible' behaviour in most cases.
-                    self._validate_found_match(
-                        topology_atoms, match.topology_atom_indices, assigned_parameter
-                    )
 
                     assigned_matches.append(
                         ParameterHandler._Match(assigned_parameter, match)
