@@ -16,7 +16,8 @@ dependencies:
   - rdkit
   - mdtraj
   - xmltodict
-    # Test-only/optional/dev
+  - python-constraint
+  # Test-only/optional/dev
   - pytest
   - pytest-cov
   - pytest-rerunfailures
