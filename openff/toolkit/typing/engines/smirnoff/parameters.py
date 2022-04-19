@@ -5011,8 +5011,8 @@ class VirtualSiteHandler(_NonbondedHandler):
             raise NotImplementedError(
                 f"{parameter.smirks} matched chemical environment that is currently "
                 f"unsupported by virtual sites of type {parameter.type}. Atom with "
-                f"{smirks_index=} matched topology atom {atom_index} with "
-                f"{connectivity=}, but it was expected to have connectivity "
+                f"smirks index={smirks_index} matched topology atom {atom_index} with "
+                f"connectivity={connectivity}, but it was expected to have connectivity "
                 f"{expected_connectivity}. If this is "
                 f"a use case you would like supported, please describe what it is "
                 f"you are trying to do in an issue on the OpenFF Toolkit GitHub: "
