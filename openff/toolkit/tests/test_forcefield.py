@@ -32,6 +32,7 @@ except ImportError:
 
 from openff.toolkit.tests.create_molecules import (
     create_acetate,
+    create_acetaldehyde,
     create_cyclohexane,
     create_ethanol,
     create_reversed_ethanol,
@@ -4751,14 +4752,15 @@ class TestForceFieldGetPartialCharges:
 
     def test_get_partial_charges_vsites(self):
         """Test that a molecule with virtual sites raises an error."""
-        ethanol: Molecule = create_ethanol()
+        acetaldehyde: Molecule = create_acetaldehyde()
+
         force_field: ForceField = ForceField(
             "test_forcefields/test_forcefield.offxml",
             xml_ff_virtual_sites_monovalent,
         )
 
         with pytest.raises(PartialChargeVirtualSitesError):
-            force_field.get_partial_charges(ethanol)
+            force_field.get_partial_charges(acetaldehyde)
 
 
 @pytest.mark.skip(reason="Needs to be updated for 0.2.0 syntax")
