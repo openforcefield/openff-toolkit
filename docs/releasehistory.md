@@ -6,6 +6,9 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 * `minor` increments add features but do not break API compatibility
 * `micro` increments represent bugfix releases or improvements in documentation
 
+## Current development
+
+
 ## 0.10.5 Bugfix release
 
 - [PR #1252](https://github.com/openforcefield/openforcefield/pull/1252): Refactors virtual 
