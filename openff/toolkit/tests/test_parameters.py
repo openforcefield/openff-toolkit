@@ -2785,6 +2785,27 @@ class TestVirtualSiteHandler:
                 distance=2.0 * unit.angstrom,
             )
 
+    def test_bad_connectivity_errors_in_create_force(self):
+        handler = VirtualSiteHandler(version="0.3")
+        handler.add_parameter(
+            parameter=VirtualSiteMocking.divalent_parameter(
+                "[O:2]=[C:1][H:3]", match="all_permutations"
+            )
+        )
+        topology = VirtualSiteMocking.formaldehyde().to_topology()
+
+        system = openmm.System()
+
+        for _ in range(topology.n_topology_atoms):
+            system.addParticle(10.0 * unit.amu)
+
+        with pytest.raises(
+            NotImplementedError,
+            match="Atom with smirks_index=0 matched topology atom 1 with connectivity=3, "
+                  "but it was expected to have connectivity 2",
+        ):
+            handler.create_force(system, topology)
+
 
 class TestLibraryChargeHandler:
     def test_create_library_charge_handler(self):
