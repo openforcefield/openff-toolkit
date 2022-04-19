@@ -647,17 +647,18 @@ class TopologyBond(Serializable):
 
 
 class TopologyVirtualSite(Serializable):
-    """
-    A TopologyVirtualSite is a lightweight data structure that represents a single
-    openff.toolkit.topology.molecule.VirtualSite in a Topology. A TopologyVirtualSite consists of two references --
-    One to its fully detailed "VirtualSite", an openff.toolkit.topology.molecule.VirtualSite, and another to its parent
-    "topology_molecule", which occupies a spot in the parent Topology's TopologyMolecule list.
+    """A TopologyVirtualSite is a lightweight data structure that represents a single
+    openff.toolkit.topology.molecule.VirtualSite in a Topology.
 
-    As some systems can be very large, there is no always-existing representation of a TopologyVirtualSite. They are
-    created on demand as the user requests them.
+    A TopologyVirtualSite consists of two references -- One to its fully detailed
+    "VirtualSite", an openff.toolkit.topology.molecule.VirtualSite, and another to its
+    parent "topology_molecule", which occupies a spot in the parent Topology's
+    TopologyMolecule list.
+
+    As some systems can be very large, there is no always-existing representation of a
+    TopologyVirtualSite. They are created on demand as the user requests them.
 
     .. warning :: This API is experimental and subject to change.
-
     """
 
     def __init__(self, virtual_site, topology_molecule):
@@ -670,41 +671,18 @@ class TopologyVirtualSite(Serializable):
         topology_molecule : An openff.toolkit.topology.TopologyMolecule
             The TopologyMolecule that this TopologyVirtualSite belongs to
         """
-        # TODO: Type checks
+
+        from openff.toolkit.topology import VirtualSite
+
+        assert isinstance(virtual_site, VirtualSite)
+        assert isinstance(topology_molecule, TopologyMolecule)
+
         self._virtual_site = virtual_site
         self._topology_molecule = topology_molecule
         self._topology_virtual_particle_start_index = None
 
     def invalidate_cached_data(self):
         self._topology_virtual_particle_start_index = None
-
-    def atom(self, index):
-        """
-        Get the atom at a specific index in this TopologyVirtualSite
-
-        Parameters
-        ----------
-        index : int
-            The index of the atom in the reference VirtualSite to retrieve
-
-        Returns
-        -------
-        TopologyAtom
-
-        """
-        return TopologyAtom(self._virtual_site.atoms[index], self.topology_molecule)
-
-    @property
-    def atoms(self):
-        """
-        Get the TopologyAtoms involved in this TopologyVirtualSite.
-
-        Returns
-        -------
-        iterator of openff.toolkit.topology.TopologyAtom
-        """
-        for ref_atom in self._virtual_site.atoms:
-            yield TopologyAtom(ref_atom, self._topology_molecule)
 
     @property
     def virtual_site(self):
@@ -769,28 +747,33 @@ class TopologyVirtualSite(Serializable):
         # from all TopologyMolecules second
 
         # If the cached value is not available, generate it
-
         if self._topology_virtual_particle_start_index is None:
-            virtual_particle_start_topology_index = (
-                self.topology_molecule.topology.n_topology_atoms
-            )
-            for (
-                topology_molecule
-            ) in self._topology_molecule._topology.topology_molecules:
-                for tvsite in topology_molecule.virtual_sites:
-                    if self == tvsite:
-                        break
-                    virtual_particle_start_topology_index += tvsite.n_particles
-                if self._topology_molecule == topology_molecule:
-                    break
-                # else:
-                #     virtual_particle_start_topology_index += tvsite.n_particles
-                #     virtual_particle_start_topology_index += topology_molecule.n_particles
-            self._topology_virtual_particle_start_index = (
-                virtual_particle_start_topology_index
-            )
-        # Return cached value
-        # print(self._topology_virtual_particle_start_index)
+
+            particle_start_index = self.topology_molecule.topology.n_topology_atoms
+
+            for molecule in self._topology_molecule._topology.topology_molecules:
+
+                if self._topology_molecule != molecule:
+
+                    particle_start_index += sum(
+                        v_site.n_particles for v_site in molecule.virtual_sites
+                    )
+                    continue
+
+                for v_site in molecule.virtual_sites:
+
+                    if self != v_site:
+                        particle_start_index += v_site.n_particles
+                        continue
+
+                    # we found the v-site we were looking for.
+                    self._topology_virtual_particle_start_index = particle_start_index
+                    return particle_start_index
+
+            # need a safety catch to ensure we don't fall through without ever finding
+            # the right virtual site.
+            raise ValueError("This virtual site could not be found in the topology")
+
         return self._topology_virtual_particle_start_index
 
     @property
@@ -806,7 +789,7 @@ class TopologyVirtualSite(Serializable):
 
         for vptl in self.virtual_site.particles:
             yield TopologyVirtualParticle(
-                self._virtual_site, vptl, self._topology_molecule
+                self._virtual_site, vptl, self._topology_molecule, self
             )
 
     @property
@@ -832,8 +815,10 @@ class TopologyVirtualSite(Serializable):
         return self._virtual_site.type
 
     def __eq__(self, other):
-        return (self._virtual_site == other._virtual_site) and (
-            self._topology_molecule == other._topology_molecule
+        return (
+            type(self) == type(other)
+            and self._virtual_site == other._virtual_site
+            and self._topology_molecule == other._topology_molecule
         )
 
     def to_dict(self):
@@ -853,24 +838,112 @@ class TopologyVirtualSite(Serializable):
 # =============================================================================================
 
 
-class TopologyVirtualParticle(TopologyVirtualSite):
-    def __init__(self, virtual_site, virtual_particle, topology_molecule):
+class TopologyVirtualParticle(Serializable):
+    def __init__(
+        self, virtual_site, virtual_particle, topology_molecule, topology_virtual_site
+    ):
+
+        from openff.toolkit.topology import VirtualParticle, VirtualSite
+
+        assert isinstance(virtual_site, VirtualSite)
+        assert isinstance(virtual_particle, VirtualParticle)
+
+        assert isinstance(topology_virtual_site, TopologyVirtualSite)
+        assert isinstance(topology_molecule, TopologyMolecule)
+
+        # TODO: Type checks
         self._virtual_site = virtual_site
         self._virtual_particle = virtual_particle
+
         self._topology_molecule = topology_molecule
+        self._topology_virtual_site = topology_virtual_site
 
-    def __eq__(self, other):
+    @property
+    def molecule(self):
+        """
+        Get the reference Molecule that this TopologyVirtualParticle belongs to.
 
-        if type(other) != type(self):
-            return False
+        Returns
+        -------
+        openff.toolkit.topology.molecule.Molecule
+        """
+        return self._topology_molecule.reference_molecule
 
-        same_vsite = super() == super(TopologyVirtualParticle, other)
-        if not same_vsite:
-            return False
+    @property
+    def virtual_site(self):
+        """
+        Get the reference VirtualSite for this TopologyVirtualSite.
 
-        same_ptl = self.topology_particle_index == other.topology_particle_index
+        Returns
+        -------
+        an openff.toolkit.topology.molecule.VirtualSite
+        """
+        return self._virtual_site
 
-        return same_ptl
+    @property
+    def virtual_particle(self):
+        """
+        Get the reference VirtualParticle for this TopologyVirtualParticle.
+
+        Returns
+        -------
+        an openff.toolkit.topology.molecule.VirtualSite
+        """
+        return self._virtual_particle
+
+    @property
+    def type(self):
+        """
+        Get the type of this virtual site
+
+        Returns
+        -------
+        str : The class name of this virtual site
+        """
+        return self._virtual_site.type
+
+    def atom(self, index):
+        """Get the atom at a specific index in this TopologyVirtualParticle
+
+        Parameters
+        ----------
+        index : int
+            The index of the atom in the reference VirtualParticle to retrieve
+        Returns
+        -------
+        TopologyAtom
+        """
+        reference_atoms = self._topology_molecule.reference_molecule.atoms
+
+        return TopologyAtom(
+            reference_atoms[self._virtual_particle.orientation[index]],
+            self.topology_molecule,
+        )
+
+    @property
+    def atoms(self):
+        """
+        Get the TopologyAtoms involved in this TopologyVirtualParticle.
+        Returns
+        -------
+        iterator of openff.toolkit.topology.TopologyAtom
+        """
+
+        ref_atoms = self._topology_molecule.reference_molecule.atoms
+
+        for ref_index in self._virtual_particle.orientation:
+            yield TopologyAtom(ref_atoms[ref_index], self._topology_molecule)
+
+    @property
+    def topology_molecule(self):
+        """
+        Get the TopologyMolecule that this TopologyVirtualSite belongs to.
+
+        Returns
+        -------
+        openff.toolkit.topology.TopologyMolecule
+        """
+        return self._topology_molecule
 
     @property
     def topology_particle_index(self):
@@ -885,14 +958,60 @@ class TopologyVirtualParticle(TopologyVirtualSite):
         # This assumes that the particles in a topology are listed with all atoms from all TopologyMolecules
         # first, followed by all VirtualSites from all TopologyMolecules second
         orientation_key = self._virtual_particle.orientation
-        offset = 0
+        offset = None
         # vsite is a topology vsite, which has a regular vsite
-        for i, ornt in enumerate(self._virtual_site._virtual_site.orientations):
+        for i, ornt in enumerate(self._virtual_site.orientations):
+
             if ornt == orientation_key:
                 offset = i
                 break
 
-        return offset + self._virtual_site.topology_virtual_particle_start_index
+        assert offset is not None
+
+        return (
+            offset + self._topology_virtual_site.topology_virtual_particle_start_index
+        )
+
+    @property
+    def topology_parent_atom_index(self) -> int:
+        """Returns the index of the 'parent' atom as determined by the virtual site type
+        in the topology.
+        """
+
+        from openff.toolkit.typing.engines.smirnoff import VirtualSiteHandler
+
+        parent_index = VirtualSiteHandler.VirtualSiteType.type_to_parent_index(
+            self._virtual_particle.virtual_site.type
+        )
+        parent_reference_atom_index = self._virtual_particle.orientation[parent_index]
+
+        mapped_molecule_atom_index = self._topology_molecule._ref_to_top_index[
+            parent_reference_atom_index
+        ]
+        return (
+            self._topology_molecule.atom_start_topology_index
+            + mapped_molecule_atom_index
+        )
+
+    def __eq__(self, other):
+
+        return (
+            type(other) == type(self)
+            and self._virtual_particle == other._virtual_particle
+            and self._virtual_site == other._virtual_site
+            and self._topology_molecule == other._topology_molecule
+        )
+
+    def to_dict(self):
+        """Convert to dictionary representation."""
+        # Implement abstract method Serializable.to_dict()
+        raise NotImplementedError()  # TODO
+
+    @classmethod
+    def from_dict(cls, d):
+        """Static constructor from dictionary representation."""
+        # Implement abstract method Serializable.to_dict()
+        raise NotImplementedError()  # TODO
 
 
 # =============================================================================================
@@ -1045,7 +1164,7 @@ class TopologyMolecule:
         """
         # If cached value is not available, generate it.
         if self._virtual_particle_start_topology_index is None:
-            particle_start_topology_index = self.topology.n_atoms
+            particle_start_topology_index = self.topology.n_topology_atoms
             for topology_molecule in self._topology.topology_molecules:
                 if self == topology_molecule:
                     self._particle_start_topology_index = particle_start_topology_index
@@ -1145,7 +1264,7 @@ class TopologyMolecule:
         for vsite in self.reference_molecule.virtual_sites:
             tvsite = TopologyVirtualSite(vsite, self)
             for vptl in vsite.particles:
-                yield TopologyVirtualParticle(tvsite, vptl, self)
+                yield TopologyVirtualParticle(vsite, vptl, self, tvsite)
 
     @property
     def n_particles(self):

@@ -36,6 +36,7 @@ except ImportError:
 
 from openff.toolkit.tests.create_molecules import (
     create_acetaldehyde,
+    create_ammonia,
     create_benzene_no_aromatic,
     create_cis_1_2_dichloroethene,
     create_cyclohexane,
@@ -2639,105 +2640,6 @@ class TestMolecule:
 
         assert molecule == molecule_copy
 
-    @pytest.mark.parametrize("molecule", mini_drug_bank())
-    def test_add_virtual_site_units(self, molecule):
-        """
-        Tests the unit type checking of the VirtualSite base class
-        """
-
-        # TODO: Should these be using BondChargeVirtualSite, or should we just call the base class (which does the unit checks) directly?
-
-        # Prepare values for unit checks
-        distance_unitless = 0.4
-        sigma_unitless = 0.1
-        rmin_half_unitless = 0.2
-        epsilon_unitless = 0.3
-        charge_increments_unitless = [0.1, 0.2]
-        distance = distance_unitless * unit.angstrom
-        sigma = sigma_unitless * unit.angstrom
-        rmin_half = rmin_half_unitless * unit.angstrom
-        epsilon = epsilon_unitless * (unit.kilojoule / unit.mole)
-        charge_increments = charge_increments_unitless * unit.elementary_charge
-
-        # Do not modify the original molecule.
-        molecule = copy.deepcopy(molecule)
-
-        atom1 = molecule.atoms[0]
-        atom2 = molecule.atoms[1]
-        atom3 = molecule.atoms[2]
-        atom4 = molecule.atoms[3]
-
-        atoms = (atom1, atom2)
-
-        # Try to feed in unitless sigma
-        with pytest.raises(Exception) as excinfo:
-            molecule.add_bond_charge_virtual_site(
-                atoms, distance, epsilon=epsilon, sigma=sigma_unitless, replace=True
-            )
-
-        # Try to feed in unitless rmin_half
-        with pytest.raises(Exception) as excinfo:
-            molecule.add_bond_charge_virtual_site(
-                atoms,
-                distance,
-                epsilon=epsilon,
-                rmin_half=rmin_half_unitless,
-                replace=True,
-            )
-
-        # Try to feed in unitless epsilon
-        with pytest.raises(Exception) as excinfo:
-            molecule.add_bond_charge_virtual_site(
-                atoms,
-                distance,
-                epsilon=epsilon_unitless,
-                sigma=sigma,
-                rmin_half=rmin_half,
-                replace=True,
-            )
-
-        # Try to feed in unitless charges
-        with pytest.raises(Exception) as excinfo:
-            molecule.add_bond_charge_virtual_site(
-                atoms,
-                distance,
-                charge_incrtements=charge_increments_unitless,
-                replace=True,
-            )
-
-        # We shouldn't be able to give both rmin_half and sigma VdW parameters.
-        with pytest.raises(Exception) as excinfo:
-            molecule.add_bond_charge_virtual_site(
-                [atom1, atom2],
-                distance,
-                epsilon=epsilon,
-                sigma=sigma,
-                rmin_half=rmin_half,
-                replace=True,
-            )
-
-        # Try creating virtual site from sigma+epsilon; replace=False since this
-        # should be the first vsite to succeed
-        vsite1_index = molecule.add_bond_charge_virtual_site(
-            atoms, distance, epsilon=epsilon, sigma=sigma, replace=False
-        )
-        # Try creating virutal site from rmin_half+epsilon
-        vsite2_index = molecule.add_bond_charge_virtual_site(
-            atoms, distance, epsilon=epsilon, rmin_half=rmin_half, replace=True
-        )
-
-        # TODO: Test the @property getters for sigma, epsilon, and rmin_half
-
-        # We should have to give as many charge increments as atoms (len(charge_increments)) = 4
-        with pytest.raises(Exception) as excinfo:
-            molecule.add_bond_charge_virtual_site(
-                atoms, distance, charge_increments=[0.0], replace=True
-            )
-
-        vsite3_index = molecule.add_bond_charge_virtual_site(
-            atoms, distance, charge_increments=charge_increments, replace=True
-        )
-
     def test_virtual_particle(self):
         """Test setter, getters, and methods of VirtualParticle"""
         mol = create_ethanol()
@@ -2745,13 +2647,11 @@ class TestMolecule:
         mol.add_bond_charge_virtual_site(
             (mol.atoms[1], mol.atoms[2]),
             0.5 * unit.angstrom,
-            charge_increments=[-0.1, 0.1] * unit.elementary_charge,
         )
         # Add a NON SYMMETRIC (specified in kwarg) VirtualSite, which should have one particle
         mol.add_bond_charge_virtual_site(
             (mol.atoms[0], mol.atoms[1]),
             0.5 * unit.angstrom,
-            charge_increments=[-0.1, 0.1] * unit.elementary_charge,
             symmetric=False,
         )
 
@@ -2763,7 +2663,7 @@ class TestMolecule:
         assert vps0[0].virtual_site_particle_index == 0
         assert vps0[1].virtual_site_particle_index == 1
         orientations0 = [vp.orientation for vp in vps0]
-        assert len(set(orientations0) & {(0, 1), (1, 0)}) == 2
+        assert len(set(orientations0) & {(1, 2), (2, 1)}) == 2
 
         # Ensure the second vsite has one particle
         vps1 = [vp for vp in mol.virtual_sites[1].particles]
@@ -2783,7 +2683,6 @@ class TestMolecule:
         atom1 = molecule.atoms[0]
         atom2 = molecule.atoms[1]
         atom3 = molecule.atoms[2]
-        atom4 = molecule.atoms[3]
 
         # Prepare values for unit checks
         distance_unitless = 0.4
@@ -2791,14 +2690,12 @@ class TestMolecule:
 
         # Try to feed in a unitless distance
         with pytest.raises(AssertionError) as excinfo:
-            vsite1_index = molecule.add_bond_charge_virtual_site(
-                [atom1, atom2], distance_unitless
-            )
+            molecule.add_bond_charge_virtual_site([atom1, atom2], distance_unitless)
 
         vsite1_index = molecule.add_bond_charge_virtual_site([atom1, atom2], distance)
         vsite1 = molecule.virtual_sites[vsite1_index]
-        assert atom1 in vsite1.atoms
-        assert atom2 in vsite1.atoms
+        assert atom1.molecule_atom_index in vsite1.orientations[0]
+        assert atom2.molecule_atom_index in vsite1.orientations[0]
         assert vsite1 in atom1.virtual_sites
         assert vsite1 in atom2.virtual_sites
         assert vsite1.distance == distance
@@ -2807,15 +2704,10 @@ class TestMolecule:
         vsite2_index = molecule.add_bond_charge_virtual_site(
             [atom2, atom3],
             distance,
-            sigma=0.1 * unit.angstrom,
-            epsilon=1.0 * unit.kilojoule_per_mole,
-            charge_increments=unit.Quantity(
-                np.array([0.1, 0.2]), unit.elementary_charge
-            ),
         )
         vsite2 = molecule.virtual_sites[vsite2_index]
-        assert atom2 in vsite2.atoms
-        assert atom3 in vsite2.atoms
+        assert atom2.molecule_atom_index in vsite2.orientations[0]
+        assert atom3.molecule_atom_index in vsite2.orientations[0]
         assert vsite2 in atom2.virtual_sites
         assert vsite2 in atom3.virtual_sites
         assert vsite2.distance == distance
@@ -2841,7 +2733,6 @@ class TestMolecule:
         atom1 = molecule.atoms[0]
         atom2 = molecule.atoms[1]
         atom3 = molecule.atoms[2]
-        atom4 = molecule.atoms[3]
 
         # Prepare values for unit checks
         distance_unitless = 0.3
@@ -2855,7 +2746,7 @@ class TestMolecule:
 
         # Try passing in a unitless distance
         with pytest.raises(AssertionError) as excinfo:
-            vsite1_index = molecule.add_monovalent_lone_pair_virtual_site(
+            molecule.add_monovalent_lone_pair_virtual_site(
                 atoms,
                 distance_unitless,
                 out_of_plane_angle,
@@ -2865,7 +2756,7 @@ class TestMolecule:
 
         # Try passing in a unitless out_of_plane_angle
         with pytest.raises(AssertionError) as excinfo:
-            vsite1_index = molecule.add_monovalent_lone_pair_virtual_site(
+            molecule.add_monovalent_lone_pair_virtual_site(
                 atoms,
                 distance,
                 out_of_plane_angle_unitless,
@@ -2875,7 +2766,7 @@ class TestMolecule:
 
         # Try passing in a unitless in_plane_angle
         with pytest.raises(AssertionError) as excinfo:
-            vsite1_index = molecule.add_monovalent_lone_pair_virtual_site(
+            molecule.add_monovalent_lone_pair_virtual_site(
                 atoms,
                 distance,
                 out_of_plane_angle,
@@ -2884,8 +2775,8 @@ class TestMolecule:
             )
 
         # Try giving two atoms
-        with pytest.raises(AssertionError) as excinfo:
-            vsite1_index = molecule.add_monovalent_lone_pair_virtual_site(
+        with pytest.raises(IndexError) as excinfo:
+            molecule.add_monovalent_lone_pair_virtual_site(
                 [atom1, atom2],
                 distance,
                 out_of_plane_angle,
@@ -2894,7 +2785,7 @@ class TestMolecule:
             )
 
         # Successfully make a virtual site; throw exception is already present (replace=False)
-        vsite1_index = molecule.add_monovalent_lone_pair_virtual_site(
+        molecule.add_monovalent_lone_pair_virtual_site(
             atoms, distance, out_of_plane_angle, in_plane_angle, replace=False
         )
         # TODO: Check if we get the same values back out from the @properties
@@ -2911,10 +2802,10 @@ class TestMolecule:
         atom1 = molecule.atoms[0]
         atom2 = molecule.atoms[1]
         atom3 = molecule.atoms[2]
-        atom4 = molecule.atoms[3]
+
         distance = 0.3 * unit.angstrom
         out_of_plane_angle = 30 * unit.degree
-        vsite1_index = molecule.add_divalent_lone_pair_virtual_site(
+        molecule.add_divalent_lone_pair_virtual_site(
             [atom1, atom2, atom3],
             distance,
             out_of_plane_angle,
@@ -2922,8 +2813,8 @@ class TestMolecule:
         )
 
         # test giving too few atoms
-        with pytest.raises(AssertionError) as excinfo:
-            vsite1_index = molecule.add_divalent_lone_pair_virtual_site(
+        with pytest.raises(IndexError) as excinfo:
+            molecule.add_divalent_lone_pair_virtual_site(
                 [atom1, atom2],
                 distance,
                 out_of_plane_angle,
@@ -2942,17 +2833,11 @@ class TestMolecule:
         atom1 = molecule.atoms[0]
         atom2 = molecule.atoms[1]
         atom3 = molecule.atoms[2]
-        atom4 = molecule.atoms[3]
         distance = 0.3 * unit.angstrom
 
-        vsite1_index = molecule.add_trivalent_lone_pair_virtual_site(
-            [atom1, atom2, atom3, atom4],
-            distance,
-            replace=False,
-        )
         # Test for assertion when giving too few atoms
-        with pytest.raises(AssertionError) as excinfo:
-            vsite1_index = molecule.add_trivalent_lone_pair_virtual_site(
+        with pytest.raises(IndexError) as excinfo:
+            molecule.add_trivalent_lone_pair_virtual_site(
                 [atom1, atom2, atom3],
                 distance,
                 replace=True,
@@ -2993,7 +2878,7 @@ class TestMolecule:
         atom1 = molecule.atoms[0]
         atom2 = molecule.atoms[1]
         distance = 0.1 * unit.angstrom
-        vsite1_index = molecule.add_bond_charge_virtual_site(
+        molecule.add_bond_charge_virtual_site(
             [atom1, atom2],
             distance,
             replace=False,
@@ -3047,7 +2932,7 @@ class TestMolecule:
         atom1 = molecule.atoms[0]
         atom2 = molecule.atoms[1]
         distance = 0.1 * unit.angstrom
-        vsite1_index = molecule.add_bond_charge_virtual_site(
+        molecule.add_bond_charge_virtual_site(
             [atom1, atom2],
             distance,
             replace=False,
@@ -3109,7 +2994,7 @@ class TestMolecule:
         distance = 0.2 * unit.angstrom
         out_of_plane_angle = 90 * unit.degree
         in_plane_angle = 180 * unit.degree
-        vsite1_index = molecule.add_monovalent_lone_pair_virtual_site(
+        molecule.add_monovalent_lone_pair_virtual_site(
             [atom1, atom2, atom3],
             distance,
             out_of_plane_angle=out_of_plane_angle,
@@ -3164,7 +3049,7 @@ class TestMolecule:
         distance = 0.2 * unit.angstrom
         out_of_plane_angle = 90 * unit.degree
         in_plane_angle = 180 * unit.degree
-        vsite1_index = molecule.add_monovalent_lone_pair_virtual_site(
+        molecule.add_monovalent_lone_pair_virtual_site(
             [atom1, atom2, atom3],
             distance,
             out_of_plane_angle=out_of_plane_angle,
@@ -3218,8 +3103,8 @@ class TestMolecule:
         atom3 = molecule.atoms[2]
         distance = 0.2 * unit.angstrom
         out_of_plane_angle = 90 * unit.degree
-        vsite1_index = molecule.add_divalent_lone_pair_virtual_site(
-            [atom1, atom2, atom3],
+        molecule.add_divalent_lone_pair_virtual_site(
+            [atom2, atom1, atom3],
             distance,
             out_of_plane_angle=out_of_plane_angle,
             symmetric=False,
@@ -3277,8 +3162,8 @@ class TestMolecule:
         atom3 = molecule.atoms[2]
         distance = 0.2 * unit.angstrom
         out_of_plane_angle = 90 * unit.degree
-        vsite1_index = molecule.add_divalent_lone_pair_virtual_site(
-            [atom1, atom2, atom3],
+        molecule.add_divalent_lone_pair_virtual_site(
+            [atom2, atom1, atom3],
             distance,
             out_of_plane_angle=out_of_plane_angle,
             symmetric=True,
@@ -3307,9 +3192,7 @@ class TestMolecule:
         appear in the molecule using Molecule.particles
         """
 
-        import openff.toolkit.tests.test_forcefield
-
-        molecule = openff.toolkit.tests.test_forcefield.create_ammonia()
+        molecule = create_ammonia()
 
         # an ammonia; the central nitrogen .5 above the hydrogen, which all lie one
         # an xy plane
@@ -3332,8 +3215,8 @@ class TestMolecule:
         atom3 = molecule.atoms[2]
         atom4 = molecule.atoms[3]
         distance = 1.0 * unit.angstrom
-        vsite1_index = molecule.add_trivalent_lone_pair_virtual_site(
-            [atom1, atom2, atom3, atom4], distance, symmetric=False
+        molecule.add_trivalent_lone_pair_virtual_site(
+            [atom2, atom1, atom3, atom4], distance
         )
         expected = np.array([[0.0, 0.0, 1.5]])
 

@@ -28,10 +28,11 @@ __all__ = [
 ]
 
 import copy
+import itertools
 import logging
 import os
 import pathlib
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 from typing import List
 
 try:
@@ -1306,46 +1307,20 @@ class ForceField:
         for parameter_handler in parameter_handlers:
             parameter_handler.postprocess_system(system, topology, **kwargs)
 
-        # Handle 1-4 scaling interactions here, instead of in handlers, since OpenMM
-        # does things slightly differently than other engines may
-        electrostatics_14 = self.get_parameter_handler(tagname="Electrostatics").scale14
-        vdw_14 = self.get_parameter_handler(tagname="vdW").scale14
-
-        # Create exceptions based on bonds.
-        # QUESTION: Will we want to do this for *all* cases, or would we ever want flexibility here?
-        bond_particle_indices = []
-
-        for topology_molecule in topology.topology_molecules:
-
-            top_mol_particle_start_index = topology_molecule.atom_start_topology_index
-
-            for topology_bond in topology_molecule.bonds:
-                top_index_1 = topology_molecule._ref_to_top_index[
-                    topology_bond.bond.atom1_index
-                ]
-                top_index_2 = topology_molecule._ref_to_top_index[
-                    topology_bond.bond.atom2_index
-                ]
-
-                top_index_1 += top_mol_particle_start_index
-                top_index_2 += top_mol_particle_start_index
-
-                bond_particle_indices.append((top_index_1, top_index_2))
-
-        # TODO: Can we generalize this to allow for `CustomNonbondedForce` implementations too?
-        forces = [system.getForce(i) for i in range(system.getNumForces())]
-        nonbonded_force = [f for f in forces if type(f) == openmm.NonbondedForce][0]
-
-        nonbonded_force.createExceptionsFromBonds(
-            bond_particle_indices,
-            electrostatics_14,
-            vdw_14,
-        )
+        # Generate exclusions between 1-2, 1-3, and 1-4 pairs
+        self._generate_exclusions(system, topology)
 
         if hasattr(self.get_parameter_handler("Electrostatics"), "cutoff"):
             vdw_cutoff = self.get_parameter_handler("vdW").cutoff
             coul_cutoff = self.get_parameter_handler("Electrostatics").cutoff
             coul_method = self.get_parameter_handler("Electrostatics").method
+
+            nonbonded_force: openmm.NonbondedForce = [
+                force
+                for force in system.getForces()
+                if isinstance(force, openmm.NonbondedForce)
+            ][0]
+
             if vdw_cutoff != coul_cutoff:
                 if coul_method == "PME":
                     nonbonded_force.setCutoffDistance(vdw_cutoff)
@@ -1361,6 +1336,108 @@ class ForceField:
             return (system, topology)
         else:
             return system
+
+    def _generate_exclusions(self, system, topology):
+        """Generates any needed 1-2, 1-3, and 1-4 exclusions based on the topology and
+        adds them to the systems `NonbondedForce` if one is present.
+        """
+
+        # TODO: Can we generalize this to allow for `CustomNonbondedForce`
+        #       implementations too?
+        nonbonded_forces: List[openmm.NonbondedForce] = [
+            force
+            for force in system.getForces()
+            if isinstance(force, openmm.NonbondedForce)
+        ]
+        assert len(nonbonded_forces) <= 1, "only a single non-bonded force expected"
+
+        if len(nonbonded_forces) == 0:
+            return
+
+        nonbonded_force = nonbonded_forces[0]
+
+        # Handle 1-4 scaling interactions here, instead of in handlers, since OpenMM
+        # does things slightly differently than other engines may
+        electrostatics_14 = self.get_parameter_handler(tagname="Electrostatics").scale14
+        vdw_14 = self.get_parameter_handler(tagname="vdW").scale14
+
+        if "VirtualSites" in self._parameter_handlers:
+            v_site_handler = self._parameter_handlers["VirtualSites"]
+            v_site_exclusion_policy = v_site_handler.exclusion_policy
+
+            if v_site_exclusion_policy != "parents":
+                raise NotImplementedError()
+
+        else:
+            v_site_exclusion_policy = None
+
+        # Create exceptions based on bonds.
+        # QUESTION: Will we want to do this for *all* cases, or would we ever want
+        #           flexibility here?
+        exclusion_particle_indices = []
+        vsite_parent_exclusions = []
+
+        for topology_molecule in topology.topology_molecules:
+
+            top_mol_particle_start_index = topology_molecule.atom_start_topology_index
+
+            parent_to_v_site_indices = defaultdict(list)
+
+            for topology_v_sites in topology_molecule.virtual_sites:
+                for topology_v_site in topology_v_sites.particles:
+                    v_site_index = topology_v_site.topology_particle_index
+                    parent_index = topology_v_site.topology_parent_atom_index
+
+                    parent_to_v_site_indices[parent_index].append(v_site_index)
+
+                    # Make sure the v-site doesn't interact with the parent. This
+                    # assumes a v-site policy of 'parents'
+                    vsite_parent_exclusions.append(
+                        (parent_index, v_site_index, 0.0, 1.0, 0.0)
+                    )
+
+            # make sure v-sites on the same parent do not interact
+            vsite_parent_exclusions.extend(
+                [
+                    (*pair, 0.0, 1.0, 0.0)
+                    for grouped_v_sites in parent_to_v_site_indices.values()
+                    for pair in itertools.combinations(grouped_v_sites, r=2)
+                ]
+            )
+
+            for topology_bond in topology_molecule.bonds:
+                top_index_1 = topology_molecule._ref_to_top_index[
+                    topology_bond.bond.atom1_index
+                ]
+                top_index_2 = topology_molecule._ref_to_top_index[
+                    topology_bond.bond.atom2_index
+                ]
+
+                top_index_1 += top_mol_particle_start_index
+                top_index_2 += top_mol_particle_start_index
+
+                exclusion_particle_indices.append((top_index_1, top_index_2))
+
+                # Add a 'bond' between each v-site and every atom that the 'parent' of
+                # the v-site is bonded to so that correct 'parent' policy exceptions are
+                # generated. See https://github.com/openmm/openmm/issues/2045
+                for v_site_index in parent_to_v_site_indices[top_index_1]:
+                    exclusion_particle_indices.append((v_site_index, top_index_2))
+                for v_site_index in parent_to_v_site_indices[top_index_2]:
+                    exclusion_particle_indices.append((v_site_index, top_index_1))
+
+            if v_site_exclusion_policy is None:
+                continue
+
+        nonbonded_force.createExceptionsFromBonds(
+            exclusion_particle_indices,
+            electrostatics_14,
+            vdw_14,
+        )
+        for exclusion in vsite_parent_exclusions:
+            nonbonded_force.addException(*exclusion, replace=True)
+
+        return nonbonded_force
 
     @requires_package("openff.interchange")
     @requires_package("mdtraj")
@@ -1416,7 +1493,7 @@ class ForceField:
                     param_is_list = True
 
                 matches = parameter_handler.find_matches(top_mol)
-
+                print(matches)
                 # Remove the chemical environment matches from the
                 # matched results.
 

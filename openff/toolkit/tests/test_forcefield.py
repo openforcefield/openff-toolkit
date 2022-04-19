@@ -15,10 +15,13 @@ import itertools
 import os
 from collections import OrderedDict
 from tempfile import NamedTemporaryFile
+from typing import Dict, List, Tuple
 
 import numpy as np
 import pytest
 from numpy.testing import assert_almost_equal
+
+from openff.toolkit.tests.mocking import VirtualSiteMocking
 
 try:
     import openmm
@@ -30,12 +33,7 @@ except ImportError:
 from openff.toolkit.tests.create_molecules import (
     create_acetaldehyde,
     create_acetate,
-    create_ammonia,
-    create_benzene_no_aromatic,
-    create_cis_1_2_dichloroethene,
     create_cyclohexane,
-    create_dinitrogen,
-    create_dioxygen,
     create_ethanol,
     create_reversed_ethanol,
     create_water,
@@ -54,6 +52,7 @@ from openff.toolkit.typing.engines.smirnoff import (
     LibraryChargeHandler,
     ParameterHandler,
     ToolkitAM1BCCHandler,
+    VirtualSiteHandler,
     XMLParameterIOHandler,
     get_available_force_fields,
     vdWHandler,
@@ -329,30 +328,6 @@ xml_ff_torsion_bo_standard_supersede = """<?xml version='1.0' encoding='ASCII'?>
 </SMIRNOFF>
 """
 
-xml_ff_virtual_sites_monovalent_match_once = """<?xml version="1.0" encoding="utf-8"?>
-<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-    <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
-        <Bond smirks="[*:1]~[*:2]" id="b999" k="500.0 * kilocalories_per_mole/angstrom**2" length="1.1 * angstrom"/>
-    </Bonds>
-    <VirtualSites version="0.3">
-        <VirtualSite
-            type="MonovalentLonePair"
-            name="EP"
-            smirks="[#8:1]~[#6:2]~[#6:3]"
-            distance="0.1*angstrom"
-            charge_increment1="0.1*elementary_charge"
-            charge_increment2="0.1*elementary_charge"
-            charge_increment3="0.1*elementary_charge"
-            sigma="0.1*angstrom"
-            epsilon="0.1*kilocalories_per_mole"
-            inPlaneAngle="110.*degree"
-            outOfPlaneAngle="41*degree"
-            match="once" >
-        </VirtualSite>
-    </VirtualSites>
-</SMIRNOFF>
-"""
-
 xml_tip5p = """<?xml version="1.0" encoding="utf-8"?>
 <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
     <LibraryCharges version="0.3">
@@ -372,10 +347,10 @@ xml_tip5p = """<?xml version="1.0" encoding="utf-8"?>
         <VirtualSite
             type="DivalentLonePair"
             name="EP"
-            smirks="[#1:1]-[#8X2H2+0:2]-[#1:3]"
+            smirks="[#1:2]-[#8X2H2+0:1]-[#1:3]"
             distance="0.70 * angstrom"
-            charge_increment1="0.1205*elementary_charge"
-            charge_increment2="0.0*elementary_charge"
+            charge_increment2="0.1205*elementary_charge"
+            charge_increment1="0.0*elementary_charge"
             charge_increment3="0.1205*elementary_charge"
             sigma="1.0*angstrom"
             epsilon="0.0*kilocalories_per_mole"
@@ -597,7 +572,7 @@ xml_ff_virtual_sites_bondcharge_match_once_two_names = """<?xml version="1.0" en
 </SMIRNOFF>
 """
 
-xml_ff_virtual_sites_monovalent_match_once = """<?xml version="1.0" encoding="utf-8"?>
+xml_ff_virtual_sites_monovalent = """<?xml version="1.0" encoding="utf-8"?>
 <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
     <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
       <Bond smirks="[*:1]~[*:2]" id="b999" k="500.0 * kilocalories_per_mole/angstrom**2" length="1.1 * angstrom"/>
@@ -615,7 +590,7 @@ xml_ff_virtual_sites_monovalent_match_once = """<?xml version="1.0" encoding="ut
             epsilon="0.1*kilocalories_per_mole"
             inPlaneAngle="110.*degree"
             outOfPlaneAngle="41*degree"
-            match="once" >
+            match="all_permutations" >
         </VirtualSite>
         <VirtualSite
             type="MonovalentLonePair"
@@ -629,7 +604,7 @@ xml_ff_virtual_sites_monovalent_match_once = """<?xml version="1.0" encoding="ut
             epsilon="0.2*kilocalories_per_mole"
             inPlaneAngle="120.*degree"
             outOfPlaneAngle="42*degree"
-            match="once" >
+            match="all_permutations" >
         </VirtualSite>
     </VirtualSites>
 </SMIRNOFF>
@@ -1630,6 +1605,233 @@ class TestForceField:
         force_field = ForceField("test_forcefields/test_forcefield.offxml")
         force_field.create_openmm_system(topology, toolkit_registry=toolkit_registry)
 
+    @staticmethod
+    def _generate_exceptions(force_field: ForceField, topology: Topology):
+
+        system: openmm.System = force_field.create_openmm_system(topology)
+        assert system.getNumForces() == 1
+        force: openmm.NonbondedForce = next(iter(system.getForces()))
+
+        return dict(
+            (
+                tuple(sorted(force.getExceptionParameters(i)[:2])),
+                force.getExceptionParameters(i)[2:],
+            )
+            for i in range(force.getNumExceptions())
+        )
+
+    @staticmethod
+    def _compare_exceptions(exception_a, exception_b, compare_charge=True):
+
+        charge_a, sigma_a, epsilon_a = exception_a
+        charge_b, sigma_b, epsilon_b = exception_b
+
+        if compare_charge:
+            assert np.isclose(
+                charge_a.value_in_unit(charge_a.unit),
+                charge_b.value_in_unit(charge_a.unit),
+            )
+        assert np.isclose(
+            sigma_a.value_in_unit(sigma_a.unit),
+            sigma_b.value_in_unit(sigma_a.unit),
+        )
+        assert np.isclose(
+            epsilon_a.value_in_unit(epsilon_a.unit),
+            epsilon_b.value_in_unit(epsilon_a.unit),
+        )
+
+    @pytest.mark.parametrize(
+        "topology, parameters, expected_1_1, expected_1_2, expected_1_3, expected_1_4, "
+        "expected_1_n, expected_v_v_1_4, expected_charges",
+        [
+            # v-sites in 1-4 positions.
+            (
+                Topology.from_molecules(
+                    [
+                        VirtualSiteMocking.molecule_from_smiles(
+                            "[O:1]=[C:2]([H:5])[C:3]([H:6])=[O:4]", reverse=False
+                        ),
+                        VirtualSiteMocking.molecule_from_smiles(
+                            "[O:1]=[C:2]([H:5])[C:3]([H:6])=[O:4]", reverse=True
+                        ),
+                    ]
+                ),
+                [VirtualSiteMocking.bond_charge_parameter("[O:1]=[C:2]")],
+                [(12, 0), (13, 3), (15, 11), (14, 8)],
+                [(12, 1), (13, 2), (15, 10), (14, 9)],
+                [
+                    (12, 2),
+                    (12, 4),
+                    (13, 1),
+                    (13, 5),
+                    (15, 9),
+                    (15, 7),
+                    (14, 10),
+                    (14, 6),
+                ],
+                [
+                    (12, 3),
+                    (12, 5),
+                    (13, 0),
+                    (13, 4),
+                    (15, 8),
+                    (15, 6),
+                    (14, 11),
+                    (14, 7),
+                ],
+                [],
+                [(12, 13), (15, 14)],
+                {
+                    0: 0.1,
+                    1: 0.2,
+                    2: 0.2,
+                    3: 0.1,
+                    4: 0.0,
+                    5: 0.0,
+                    6: 0.0,
+                    7: 0.0,
+                    8: 0.1,
+                    9: 0.2,
+                    10: 0.2,
+                    11: 0.1,
+                    12: -0.3,
+                    13: -0.3,
+                    14: -0.3,
+                    15: -0.3,
+                },
+            ),
+            # v-site on same parent atom
+            (
+                Topology.from_molecules([Molecule.from_mapped_smiles("[C:1][Cl:2]")]),
+                [
+                    VirtualSiteMocking.bond_charge_parameter("[Cl:1][C:2]", "EP"),
+                    VirtualSiteMocking.bond_charge_parameter("[Cl:1][C:2]", "LP"),
+                ],
+                [(1, 2), (1, 3), (2, 3)],
+                [(0, 2), (0, 3)],
+                [],
+                [],
+                [],
+                [],
+                {0: 0.4, 1: 0.2, 2: -0.3, 3: -0.3},
+            ),
+        ],
+    )
+    def test_v_site_exclusions(
+        self,
+        topology: Topology,
+        parameters: List[VirtualSiteHandler.VirtualSiteType],
+        expected_1_1: List[Tuple[int, int]],
+        expected_1_2: List[Tuple[int, int]],
+        expected_1_3: List[Tuple[int, int]],
+        expected_1_4: List[Tuple[int, int]],
+        expected_1_n: List[Tuple[int, int]],
+        expected_v_v_1_4: List[Tuple[int, int]],
+        expected_charges: Dict[int, float],
+    ):
+
+        v_site_epsilon, v_site_sigma = 3.0, 4.0
+        atom_epsilon, atom_sigma = 2.0, 3.0
+
+        electrostatic_14, vdw_14 = 1.0 / 1.2, 0.5
+
+        def charge_product(pair: Tuple[int, int]) -> unit.Quantity:
+            return (
+                expected_charges[pair[0]] * expected_charges[pair[1]]
+            ) * unit.elementary_charge**2
+
+        force_field = ForceField()
+        force_field.get_parameter_handler("Electrostatics")
+        force_field.get_parameter_handler("LibraryCharges").add_parameter(
+            {"smirks": "[*:1]", "charge": [0.0] * unit.elementary_charge}
+        )
+        force_field.get_parameter_handler("vdW").add_parameter(
+            {
+                "smirks": "[*:1]",
+                "epsilon": atom_epsilon * unit.kilojoule_per_mole,
+                "sigma": atom_sigma * unit.angstrom,
+            }
+        )
+
+        exceptions_no_v_sites = self._generate_exceptions(force_field, topology)
+
+        handler = VirtualSiteHandler(version="0.3")
+        force_field.register_parameter_handler(handler)
+
+        for parameter in parameters:
+            handler.add_parameter(parameter=parameter)
+
+        exceptions_v_sites = self._generate_exceptions(force_field, topology)
+
+        # make sure all the exceptions created when there were no v-sites made it into
+        # the system with v-sites.
+        assert all(key in exceptions_v_sites for key in exceptions_no_v_sites)
+
+        for key in exceptions_no_v_sites:
+            self._compare_exceptions(
+                # don't consider charge here as the v-site charge increments will change
+                # the atom charges.
+                exceptions_no_v_sites[key],
+                exceptions_v_sites[key],
+                False,
+            )
+
+        # drop any exceptions between atoms now that we've checked they're the same.
+        exceptions_v_sites = {
+            k: v
+            for k, v in exceptions_v_sites.items()
+            if k not in exceptions_no_v_sites
+        }
+
+        # make sure the exceptions are between the same atom - v-site pairs.
+        expected_exceptions = {
+            **{
+                # charge, sigma, eps
+                tuple(sorted(pair)): (
+                    0.0 * unit.elementary_charge**2,
+                    10.0 * unit.angstrom,
+                    0.0 * unit.kilojoule_per_mole,
+                )
+                for pair in expected_1_1 + expected_1_2 + expected_1_3
+            },
+            **{
+                tuple(sorted(pair)): (
+                    electrostatic_14 * charge_product(pair),
+                    0.5 * (atom_sigma + v_site_sigma) * unit.angstrom,
+                    vdw_14
+                    * np.sqrt(atom_epsilon * v_site_epsilon)
+                    * unit.kilojoule_per_mole,
+                )
+                for pair in expected_1_4
+            },
+            **{
+                tuple(sorted(pair)): (
+                    charge_product(pair) * unit.elementary_charge**2,
+                    0.5 * (atom_sigma + v_site_sigma) * unit.angstrom,
+                    np.sqrt(atom_epsilon * v_site_epsilon) * unit.kilojoule_per_mole,
+                )
+                for pair in expected_1_n
+            },
+            **{
+                tuple(sorted(pair)): (
+                    electrostatic_14 * charge_product(pair),
+                    0.5 * (v_site_sigma + v_site_sigma) * unit.angstrom,
+                    vdw_14
+                    * np.sqrt(v_site_epsilon * v_site_epsilon)
+                    * unit.kilojoule_per_mole,
+                )
+                for pair in expected_v_v_1_4
+            },
+        }
+        assert len(exceptions_v_sites) == len(expected_exceptions)
+        assert {*exceptions_v_sites} == {*expected_exceptions}
+
+        for key in expected_exceptions:
+            expected_exception = expected_exceptions[key]
+            actual_exception = exceptions_v_sites[key]
+
+            self._compare_exceptions(expected_exception, actual_exception)
+
     @pytest.mark.parametrize(
         "toolkit_registry,registry_description", toolkit_registries
     )
@@ -1978,291 +2180,6 @@ class TestForceField:
         ff_without_id.get_parameter_handler("Bonds").add_parameter(param_without_id)
 
         assert hash(ff_with_id) == hash(ff_without_id)
-
-
-bond_charge_parameters_args = []
-monovalent_parameters_args = []
-divalent_parameters_args = []
-trivalent_parameters_args = []
-
-
-class TestForceFieldVirtualSites:
-    def _test_physical_parameters(self, tkr, xml, smi, assert_physics, mol=None):
-        file_path = get_data_file_path("test_forcefields/test_forcefield.offxml")
-        forcefield = ForceField(file_path, xml)
-        if mol is None:
-            mol = Molecule.from_smiles(smi)
-        topology = mol.to_topology()
-        kwargs = {}
-        if mol.partial_charges is not None:
-            kwargs["charge_from_molecules"] = [mol]
-        omm_system = forcefield.create_openmm_system(
-            topology, toolkit_registry=tkr, **kwargs
-        )
-        nonbondedForce = [
-            f for f in omm_system.getForces() if type(f) == NonbondedForce
-        ][0]
-
-        for particle_index, expected in enumerate(assert_physics):
-            parameters = nonbondedForce.getParticleParameters(particle_index)
-            assert all(
-                [
-                    (b is None or np.isclose(a / a.unit, b / a.unit))
-                    for a, b in zip(parameters, expected)
-                ]
-            )
-        return
-
-    import functools
-
-    charge_unit = unit.elementary_charge
-    epsilon_unit = unit.kilocalorie_per_mole
-    sigma_unit = unit.angstrom
-    length_unit = unit.angstrom
-
-    as_charge = functools.partial(unit.Quantity, unit=charge_unit)
-    as_epsilon = functools.partial(unit.Quantity, unit=epsilon_unit)
-    as_sigma = functools.partial(unit.Quantity, unit=sigma_unit)
-
-    ############################################################################
-    # Bond charge virtual site test data
-    ############################################################################
-
-    # For the data structures below, a value of None means that the comparison
-    # should be skipped and is therefore not checked. The atom sigma and epsilon
-    # parameters are not touched by virtual sites, so we ignore them here.
-
-    # First test that one vsite is added, and that the last parameter
-    # is chosen over the top-most wildcard match
-    opts = OrderedDict(
-        {
-            "xml": xml_ff_virtual_sites_bondcharge_match_once,
-            "smi": None,
-            "assert_physics": (
-                (as_charge(+0.2), None, None),
-                (as_charge(+0.2), None, None),
-                (as_charge(-0.4), as_sigma(0.2), as_epsilon(0.2)),
-            ),
-            "mol": create_dinitrogen(),
-        }
-    )
-    bond_charge_parameters_args.append(opts)
-
-    # Test the wildcard match at the top, which means the other parameters
-    # should be skipped
-    opts = OrderedDict(
-        {
-            "xml": xml_ff_virtual_sites_bondcharge_match_once,
-            "smi": None,
-            "assert_physics": (
-                (as_charge(+0.1), None, None),
-                (as_charge(+0.1), None, None),
-                (as_charge(-0.2), as_sigma(0.1), as_epsilon(0.1)),
-            ),
-            "mol": create_dioxygen(),
-        }
-    )
-    bond_charge_parameters_args.append(opts)
-
-    # Test the wildcard match where match is 0-1 and 1-0, giving two particles
-    opts = OrderedDict(
-        {
-            "xml": xml_ff_virtual_sites_bondcharge_match_all,
-            "smi": None,
-            "assert_physics": (
-                (as_charge(+0.4), None, None),
-                (as_charge(+0.4), None, None),
-                (as_charge(-0.4), as_sigma(0.2), as_epsilon(0.2)),
-                (as_charge(-0.4), as_sigma(0.2), as_epsilon(0.2)),
-            ),
-            "mol": create_dinitrogen(),
-        }
-    )
-    bond_charge_parameters_args.append(opts)
-
-    ############################################################################
-    # Monovalent virtual site test data
-    ############################################################################
-
-    # Test that using different names allows for multiple virtual sites
-    opts = OrderedDict(
-        {
-            "xml": xml_ff_virtual_sites_bondcharge_match_once_two_names,
-            "smi": None,
-            "assert_physics": (
-                (as_charge(+0.3), None, None),
-                (as_charge(+0.3), None, None),
-                (as_charge(-0.2), as_sigma(0.1), as_epsilon(0.1)),
-                (as_charge(-0.4), as_sigma(0.2), as_epsilon(0.2)),
-            ),
-            "mol": create_dinitrogen(),
-        }
-    )
-    bond_charge_parameters_args.append(opts)
-
-    opts = OrderedDict(
-        {
-            "xml": xml_ff_virtual_sites_monovalent_match_once,
-            "smi": None,
-            "assert_physics": (
-                (as_charge(+0.2), None, None),
-                (as_charge(+0.2), None, None),
-                (as_charge(+0.2), None, None),
-                (as_charge(+0.0), None, None),
-                (as_charge(+0.0), None, None),
-                (as_charge(+0.0), None, None),
-                (as_charge(+0.0), None, None),
-                (as_charge(-0.6), as_sigma(0.2), as_epsilon(0.2)),
-            ),
-            "mol": create_acetaldehyde(),
-        }
-    )
-    monovalent_parameters_args.append(opts)
-
-    ############################################################################
-    # Divalent virtual site test data
-    ############################################################################
-
-    # A TIP5P definition from OpenMM
-    opts = OrderedDict(
-        {
-            "xml": xml_ff_virtual_sites_divalent_match_all,
-            "smi": None,
-            "assert_physics": (
-                (as_charge(+0.4820), None, None),
-                (as_charge(+0.0000), None, None),
-                (as_charge(+0.4820), None, None),
-                (as_charge(-0.4820), as_sigma(3.12), as_epsilon(0.16)),
-                (as_charge(-0.4820), as_sigma(3.12), as_epsilon(0.16)),
-            ),
-            "mol": create_water(),
-        }
-    )
-    divalent_parameters_args.append(opts)
-
-    ############################################################################
-    # Trivalent virtual site test data
-    ############################################################################
-
-    opts = OrderedDict(
-        {
-            "xml": xml_ff_virtual_sites_trivalent_match_once,
-            "smi": None,
-            "assert_physics": (
-                (as_charge(+0.0000), None, None),
-                (as_charge(+1.0000), None, None),
-                (as_charge(+0.0000), None, None),
-                (as_charge(+0.0000), None, None),
-                (as_charge(-1.0000), as_sigma(0.00), as_epsilon(0.00)),
-            ),
-            "mol": create_ammonia(),
-        }
-    )
-    trivalent_parameters_args.append(opts)
-
-    @pytest.mark.parametrize(
-        "toolkit_registry,registry_description", toolkit_registries
-    )
-    @pytest.mark.parametrize("args", bond_charge_parameters_args)
-    def test_bond_charge_virtual_site_parameters(
-        self, toolkit_registry, registry_description, args
-    ):
-        """
-        Test force fields with bond charge lone pair virtual sites
-        """
-
-        self._test_physical_parameters(toolkit_registry, *args.values())
-
-    @pytest.mark.parametrize(
-        "toolkit_registry,registry_description", toolkit_registries
-    )
-    @pytest.mark.parametrize("args", monovalent_parameters_args)
-    def test_monovalent_virtual_site_parameters(
-        self, toolkit_registry, registry_description, args
-    ):
-        """
-        Test force fields with monovalent charge lone pair virtual sites
-        """
-
-        self._test_physical_parameters(toolkit_registry, *args.values())
-
-    @pytest.mark.parametrize(
-        "toolkit_registry,registry_description", toolkit_registries
-    )
-    @pytest.mark.parametrize("args", divalent_parameters_args)
-    def test_divalent_virtual_site_parameters(
-        self, toolkit_registry, registry_description, args
-    ):
-        """
-        Test force fields with divalent lone pair virtual sites
-        """
-
-        self._test_physical_parameters(toolkit_registry, *args.values())
-
-    @pytest.mark.parametrize(
-        "toolkit_registry,registry_description", toolkit_registries
-    )
-    @pytest.mark.parametrize("args", trivalent_parameters_args)
-    def test_trivalent_charge_virtual_site(
-        self, toolkit_registry, registry_description, args
-    ):
-        """
-        Test force fields with trivalent lone pair virtual sites
-        """
-
-        self._test_physical_parameters(toolkit_registry, *args.values())
-
-    def test_orientation_preserved_if_match_once(self):
-        """
-        Test that orientation-mangling bug from https://github.com/openforcefield/openff-toolkit/issues/1159
-        is resolved.
-        """
-        force_field = ForceField()
-
-        vsite_handler = force_field.get_parameter_handler("VirtualSites")
-        vsite_handler.add_parameter(
-            parameter_kwargs={
-                "smirks": "[#6:2]=[#8:1]",
-                "name": "EP",
-                "type": "BondCharge",
-                "distance": 0.7 * unit.nanometers,
-                "match": "once",
-                "charge_increment1": 0.2 * unit.elementary_charge,
-                "charge_increment2": 0.1 * unit.elementary_charge,
-                "sigma": 1.0 * unit.angstrom,
-                "epsilon": 2.0 / 4.184 * unit.kilocalorie_per_mole,
-            }
-        )
-
-        molecule = Molecule.from_mapped_smiles("[O:2]=[C:1]=[O:3]")
-
-        omm_system: System
-        omm_system, topology = force_field.create_openmm_system(
-            molecule.to_topology(), return_topology=True
-        )
-
-        omm_particle_tuples = []
-        for i in range(omm_system.getNumParticles()):
-
-            if not omm_system.isVirtualSite(i):
-                continue
-
-            omm_v_site = omm_system.getVirtualSite(i)
-
-            omm_particle_tuples.append(
-                tuple(
-                    omm_v_site.getParticle(j)
-                    for j in range(omm_v_site.getNumParticles())
-                )
-            )
-        assert (1, 0) in omm_particle_tuples
-        assert (2, 0) in omm_particle_tuples
-        for molecule in topology.reference_molecules:
-            for v_site in molecule.virtual_sites:
-                for particle in v_site.particles:
-                    # correct particle.orientation is (1,0) and (2,0)
-                    # and not (0, 1), (0, 2)
-                    assert particle.orientation in omm_particle_tuples
 
 
 def generate_monatomic_ions():
@@ -4835,14 +4752,15 @@ class TestForceFieldGetPartialCharges:
 
     def test_get_partial_charges_vsites(self):
         """Test that a molecule with virtual sites raises an error."""
-        ethanol: Molecule = create_ethanol()
+        acetaldehyde: Molecule = create_acetaldehyde()
+
         force_field: ForceField = ForceField(
             "test_forcefields/test_forcefield.offxml",
-            xml_ff_virtual_sites_monovalent_match_once,
+            xml_ff_virtual_sites_monovalent,
         )
 
         with pytest.raises(PartialChargeVirtualSitesError):
-            force_field.get_partial_charges(ethanol)
+            force_field.get_partial_charges(acetaldehyde)
 
 
 @pytest.mark.skip(reason="Needs to be updated for 0.2.0 syntax")
