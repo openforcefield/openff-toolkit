@@ -63,7 +63,8 @@ class VirtualSiteMocking:
             type="BondCharge",
             smirks=smirks,
             name=name,
-            charge_increment=[0.1, 0.2] * unit.elementary_charge * param_multiple,
+            charge_increment=[0.1 * param_multiple, 0.2 * param_multiple]
+            * unit.elementary_charge,
             sigma=4.0 * param_multiple * unit.angstrom,
             epsilon=3.0 * param_multiple * unit.kilojoule_per_mole,
             match="all_permutations",
