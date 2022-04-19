@@ -31,8 +31,8 @@ except ImportError:
     from simtk.openmm import app, XmlSerializer, Platform, NonbondedForce, System
 
 from openff.toolkit.tests.create_molecules import (
-    create_acetate,
     create_acetaldehyde,
+    create_acetate,
     create_cyclohexane,
     create_ethanol,
     create_reversed_ethanol,
