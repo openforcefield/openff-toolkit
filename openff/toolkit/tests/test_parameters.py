@@ -2583,6 +2583,40 @@ class TestVirtualSiteHandler:
                 ],
                 2,
             ),
+            # Check a complex case of bond charge vsite assignment and overwriting
+            (
+                Topology.from_molecules(
+                    [
+                        VirtualSiteMocking.formaldehyde(reverse=False),
+                        VirtualSiteMocking.formaldehyde(reverse=True),
+                    ]
+                ),
+                [
+                    VirtualSiteMocking.bond_charge_parameter("[O:1]=[*:2]"),
+                    VirtualSiteMocking.bond_charge_parameter(
+                        "[O:1]=[C:2]", param_multiple=1.5
+                    ),
+                    VirtualSiteMocking.bond_charge_parameter(
+                        "[O:1]=[CX3:2]", param_multiple=2.0, name="EP2"
+                    ),
+                ],
+                [
+                    # charge, sigma, epsilon
+                    (0.35 * _E, 10.0 * _A, 0.0 * _KJ),
+                    (0.7 * _E, 10.0 * _A, 0.0 * _KJ),
+                    (0.0 * _E, 10.0 * _A, 0.0 * _KJ),
+                    (0.0 * _E, 10.0 * _A, 0.0 * _KJ),
+                    (0.0 * _E, 10.0 * _A, 0.0 * _KJ),
+                    (0.0 * _E, 10.0 * _A, 0.0 * _KJ),
+                    (0.7 * _E, 10.0 * _A, 0.0 * _KJ),
+                    (0.35 * _E, 10.0 * _A, 0.0 * _KJ),
+                    (-0.45 * _E, 6.0 * _A, 4.5 * _KJ),  # C=O vsite
+                    (-0.6 * _E, 8.0 * _A, 6.0 * _KJ),  # CX3=O vsite
+                    (-0.45 * _E, 6.0 * _A, 4.5 * _KJ),  # C=O vsite
+                    (-0.6 * _E, 8.0 * _A, 6.0 * _KJ),  # CX3=O vsite
+                ],
+                4,
+            ),
             (
                 Topology.from_molecules(
                     [

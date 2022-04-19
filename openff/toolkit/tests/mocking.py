@@ -56,18 +56,18 @@ class VirtualSiteMocking:
 
     @staticmethod
     def bond_charge_parameter(
-        smirks: str, name: str = "EP"
+        smirks: str, name: str = "EP", param_multiple: float = 1.0
     ) -> VirtualSiteHandler.VirtualSiteType:
 
         return VirtualSiteHandler.VirtualSiteType(
             type="BondCharge",
             smirks=smirks,
             name=name,
-            charge_increment=[0.1, 0.2] * unit.elementary_charge,
-            sigma=4.0 * unit.angstrom,
-            epsilon=3.0 * unit.kilojoule_per_mole,
+            charge_increment=[0.1, 0.2] * unit.elementary_charge * param_multiple,
+            sigma=4.0 * param_multiple * unit.angstrom,
+            epsilon=3.0 * param_multiple * unit.kilojoule_per_mole,
             match="all_permutations",
-            distance=2.0 * unit.angstrom,
+            distance=2.0 * param_multiple * unit.angstrom,
         )
 
     @staticmethod
