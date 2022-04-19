@@ -2211,6 +2211,15 @@ class TestRDKitToolkitWrapper:
 
             # Check RDMol
             for orig_atom, rd_atom in zip(molecule.atoms, rdmol.GetAtoms()):
+
+                atom_has_any_metadata = (('residue_name' in orig_atom.metadata) or
+                                         ('residue_number' in orig_atom.metadata) or
+                                         ('chain_id' in orig_atom.metadata))
+
+                if not(atom_has_any_metadata):
+                    assert rd_atom.GetPDBResidueInfo() is None
+                    continue
+
                 if "residue_name" in orig_atom.metadata:
                     assert (
                         orig_atom.metadata["residue_name"]
@@ -2218,6 +2227,7 @@ class TestRDKitToolkitWrapper:
                     )
                 else:
                     assert rd_atom.GetPDBResidueInfo().GetResidueName() == ""
+
 
                 if "residue_number" in orig_atom.metadata:
                     assert (
@@ -2246,6 +2256,13 @@ class TestRDKitToolkitWrapper:
 
             # Check roundtripped OFFMol
             for orig_atom, roundtrip_atom in zip(molecule.atoms, roundtrip_mol.atoms):
+                atom_has_any_metadata = (('residue_name' in orig_atom.metadata) or
+                                         ('residue_number' in orig_atom.metadata) or
+                                         ('chain_id' in orig_atom.metadata))
+                if not(atom_has_any_metadata):
+                    assert roundtrip_atom.metadata == {}
+                    continue
+
                 if "residue_name" in orig_atom.metadata:
                     assert (
                         orig_atom.metadata["residue_name"]

@@ -1888,21 +1888,28 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         for index, atom in enumerate(molecule.atoms):
             rdatom = rdmol.GetAtomWithIdx(index)
             rdatom.SetProp("_Name", atom.name)
+
             if rdatom.GetPDBResidueInfo() is None:
                 res = Chem.AtomPDBResidueInfo()
             else:
                 res = rdatom.GetPDBResidueInfo()
 
+            atom_has_any_metadata = False
+
             if "residue_name" in atom.metadata:
+                atom_has_any_metadata = True
                 res.SetResidueName(atom.metadata["residue_name"])
 
             if "residue_number" in atom.metadata:
+                atom_has_any_metadata = True
                 res.SetResidueNumber(int(atom.metadata["residue_number"]))
 
             if "chain_id" in atom.metadata:
+                atom_has_any_metadata = True
                 res.SetChainId(atom.metadata["chain_id"])
 
-            rdatom.SetPDBResidueInfo(res)
+            if atom_has_any_metadata:
+                rdatom.SetPDBResidueInfo(res)
 
         for bond in molecule.bonds:
             atom_indices = (
