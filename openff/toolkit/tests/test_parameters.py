@@ -2802,7 +2802,7 @@ class TestVirtualSiteHandler:
         with pytest.raises(
             NotImplementedError,
             match="Atom with smirks_index=0 matched topology atom 1 with connectivity=3, "
-                  "but it was expected to have connectivity 2",
+            "but it was expected to have connectivity 2",
         ):
             handler.create_force(system, topology)
 
