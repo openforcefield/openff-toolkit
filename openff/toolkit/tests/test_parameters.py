@@ -2228,11 +2228,14 @@ class TestVirtualSiteHandler:
     @pytest.mark.parametrize(
         "parameters, smiles, expected_matches",
         [
+            # Check that a basic BOndCharge virtual site can be applied
             (
                 [VirtualSiteMocking.bond_charge_parameter("[Cl:1]-[C:2]")],
                 "[Cl:2][C:1]([H:3])([H:4])[H:5]",
                 {(1, 0): {("[Cl:1]-[C:2]", "EP")}},
             ),
+            # Check that two bond charge vsites with different names can be applied
+            # to the same atoms
             (
                 [
                     VirtualSiteMocking.bond_charge_parameter("[Cl:1]-[C:2]", name="EP"),
@@ -2241,11 +2244,13 @@ class TestVirtualSiteHandler:
                 "[Cl:1][C:2]([H:3])([H:4])[H:5]",
                 {(0, 1): {("[Cl:1]-[C:2]", "EP"), ("[Cl:1]-[C:2]", "LP")}},
             ),
+            # Check that a bond charge vsite can be applied to a symmetric moiety
             (
                 [VirtualSiteMocking.bond_charge_parameter("[C:1]#[C:2]")],
                 "[H:1][C:2]#[C:3][C:4]",
                 {(1, 2): {("[C:1]#[C:2]", "EP")}, (2, 1): {("[C:1]#[C:2]", "EP")}},
             ),
+            # Check that a monovalent lone pair vsite can be applied to a relatively symmetric moiety
             (
                 [VirtualSiteMocking.monovalent_parameter("[O:1]=[C:2]-[*:3]")],
                 "[O:2]=[C:1]([H:3])[Cl:4]",
@@ -2254,6 +2259,7 @@ class TestVirtualSiteHandler:
                     (1, 0, 3): {("[O:1]=[C:2]-[*:3]", "EP")},
                 },
             ),
+            # Check that monovalent lone pair vsites override correctly
             (
                 [
                     VirtualSiteMocking.monovalent_parameter("[O:1]=[C:2]-[*:3]"),
@@ -2262,6 +2268,8 @@ class TestVirtualSiteHandler:
                 "[O:2]=[C:1]([H:3])[Cl:4]",
                 {(1, 0, 3): {("[O:1]=[C:2]-[Cl:3]", "EP")}},
             ),
+            # Check that a single-particle in-plane divalent lone pair vsite
+            # can be applied
             (
                 [
                     VirtualSiteMocking.divalent_parameter(
@@ -2271,6 +2279,7 @@ class TestVirtualSiteHandler:
                 "[H:1][O:2][H:3]",
                 {(1, 0, 2): {("[H:2][O:1][H:3]", "EP")}},
             ),
+            # Check that a two-particle out-of-plane divalent lone pair vsite can be applied
             (
                 [
                     VirtualSiteMocking.divalent_parameter(
@@ -2285,6 +2294,8 @@ class TestVirtualSiteHandler:
                     (1, 2, 0): {("[H:2][O:1][H:3]", "EP")},
                 },
             ),
+            # Check that a single-particle in-plane divalent lone pair site can
+            # be applied to a symmetric molecule
             (
                 [
                     VirtualSiteMocking.divalent_parameter(
@@ -2297,6 +2308,8 @@ class TestVirtualSiteHandler:
                     (2, 3, 1): {("[*:2]-[N:1]~[*:3]", "EP")},
                 },
             ),
+            # Check that a two-particle out-of-plane divalent lone pair vsite
+            # can be applied to a symmetric molecule
             (
                 [
                     VirtualSiteMocking.divalent_parameter(
@@ -2313,6 +2326,7 @@ class TestVirtualSiteHandler:
                     (2, 3, 1): {("[*:2]~[N:1]~[*:3]", "EP")},
                 },
             ),
+            # Check that a trivalent lone pair vsite can be applied to a simple molecule
             (
                 [VirtualSiteMocking.trivalent_parameter("[N:1]([H:2])([H:3])[H:4]")],
                 "[N:2]([H:1])([H:3])[H:4]",
