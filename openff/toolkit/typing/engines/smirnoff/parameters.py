@@ -3732,6 +3732,15 @@ class ElectrostaticsHandler(_NonbondedHandler):
     _TAGNAME = "Electrostatics"
     _DEPENDENCIES = [vdWHandler]
     _KWARGS = ["charge_from_molecules", "allow_nonintegral_charges"]
+    _MAX_SUPPORTED_SECTION_VERSION = 0.4
+
+    # Tolerance when comparing float attributes for handler compatibility.
+    _SCALETOL = 1e-5
+    _DEFAULT_REACTION_FIELD_EXPRESSION = (
+        "charge1*charge2/(4*pi*epsilon0)*(1/r + k_rf*r^2 - c_rf);"
+        "k_rf=(cutoff^(-3))*(solvent_dielectric-1)/(2*solvent_dielectric+1);"
+        "c_rf=cutoff^(-1)*(3*solvent_dielectric)/(2*solvent_dielectric+1)"
+    )
 
     scale12 = ParameterAttribute(default=0.0, converter=float)
     scale13 = ParameterAttribute(default=0.0, converter=float)
@@ -3740,7 +3749,25 @@ class ElectrostaticsHandler(_NonbondedHandler):
     cutoff = ParameterAttribute(default=9.0 * unit.angstrom, unit=unit.angstrom)
     switch_width = ParameterAttribute(default=0.0 * unit.angstrom, unit=unit.angstrom)
     method = ParameterAttribute(
-        default="PME", converter=_allow_only(["Coulomb", "PME", "reaction-field"])
+        default=None, converter=_allow_only(["Coulomb", "PME", "reaction-field"])
+    )
+
+    # TODO: How to validate arbitrary algebra in a converter?
+    periodic_potential = ParameterAttribute(
+        default="Ewald3D-ConductingBoundary",
+        converter=_allow_only(
+            [
+                "Ewald3D-ConductingBoundary",
+                "Coulomb",
+                _DEFAULT_REACTION_FIELD_EXPRESSION,
+            ]
+        ),
+    )
+    nonperiodic_potential = ParameterAttribute(
+        default="Coulomb", converter=_allow_only(["Coulomb"])
+    )
+    exception_potential = ParameterAttribute(
+        default="Coulomb", converter=_allow_only(["Coulomb"])
     )
 
     # TODO: Use _allow_only when ParameterAttribute will support multiple converters (it'll be easy when we switch to use the attrs library)
@@ -3780,8 +3807,62 @@ class ElectrostaticsHandler(_NonbondedHandler):
                 f"is supported (SMIRNOFF data specified {new_switch_width})"
             )
 
-    # Tolerance when comparing float attributes for handler compatibility.
-    _SCALETOL = 1e-5
+    def __init__(self, **kwargs):
+        if kwargs["version"] == 0.4:
+            if "method" in kwargs:
+                raise SMIRNOFFSpecError(
+                    "`method` attribute has been removed in version 0.4 of the Electrostatics tag. Use "
+                    "`periodic_potential`, `nonperiodic_potenetial`, and `exception_potential` instead. "
+                    "See https://openforcefield.github.io/standards/standards/smirnoff/#electrostatics"
+                )
+        if kwargs["version"] == 0.3:
+            logger.info(
+                "Attempting to up-convert Electrostatics section from 0.3 to 0.4"
+            )
+            # Default value in 0.3 is "PME", so we have to handle these cases identically
+            if kwargs.get("method") in ["PME", None]:
+                kwargs["periodic_potential"] = "Ewald3D-ConductingBoundary"
+                kwargs["nonperiodic_potential"] = "Coulomb"
+                kwargs["exception_potential"] = "Coulomb"
+                kwargs["version"] = 0.4
+                kwargs.pop("method", None)
+                logger.info(
+                    'Successfully up-converted Electrostatics section from 0.3 to 0.4. `method="PME"` '
+                    'is now split into `periodic_potential="Ewald3D-ConductingBoundary"`, '
+                    '`nonperiodic_potential="Coulomb"`, and `exception_potential="Coulomb"`.'
+                )
+                print(kwargs)
+            elif kwargs["method"] == "Coulomb":
+                kwargs["periodic_potential"] = "Coulomb"
+                kwargs["nonperiodic_potential"] = "Coulomb"
+                kwargs["exception_potential"] = "Coulomb"
+                kwargs["version"] = 0.4
+                kwargs.pop("method", None)
+                logger.info(
+                    'Successfully up-converted Electrostatics section from 0.3 to 0.4. `method="Coulomb"` '
+                    'is now split into `periodic_potential="Coulob"`, '
+                    '`nonperiodic_potential="Coulomb"`, and `exception_potential="Coulomb"`.'
+                )
+            elif kwargs["method"] == "reaction-field":
+                kwargs["periodic_potential"] = self._DEFAULT_REACTION_FIELD_EXPRESSION
+                kwargs["nonperiodic_potential"] = "Coulomb"
+                kwargs["exception_potential"] = "Coulomb"
+                kwargs["version"] = 0.4
+                kwargs.pop("method", None)
+                logger.info(
+                    'Successfully up-converted Electrostatics section from 0.3 to 0.4. `method="Coulomb"` '
+                    f'is now split into `periodic_potential="{self._DEFAULT_REACTION_FIELD_EXPRESSION}"` '
+                    '`nonperiodic_potential="Coulomb"`, and `exception_potential="Coulomb"`.'
+                )
+            else:
+                # This clause shouldn't be accessible; the only previously-allowed values
+                # (`converter=_allow_only(["Coulomb", "PME", "reaction-field"])`)
+                # should all be handled by the above up-conversion
+                logger.warning(
+                    "Failed to up-convert Electrostatics section from 0.3 to 0.4. Did not know "
+                    "how to up-convert `method={kwargs['method']`. Continuing to use version 0.3."
+                )
+        super().__init__(**kwargs)
 
     def check_handler_compatibility(self, other_handler):
         """

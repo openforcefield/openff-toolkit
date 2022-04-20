@@ -20,6 +20,7 @@ from openff.toolkit.topology import Molecule
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     BondHandler,
     ChargeIncrementModelHandler,
+    ElectrostaticsHandler,
     GBSAHandler,
     ImproperTorsionHandler,
     IndexedParameterAttribute,
@@ -1845,6 +1846,50 @@ class TestvdWType:
         )
         assert "sigma" not in param.to_dict()
         assert "rmin_half" in param.to_dict()
+
+
+class TestElectrostaticsHandlerUpconversion:
+    """
+    Test the implementation of OFF-EP-0005:
+
+    https://openforcefield.github.io/standards/enhancement-proposals/off-ep-0005/
+    """
+
+    def test_pme_upconversion(self):
+        handler = ElectrostaticsHandler(version=0.3, method="PME")
+        assert handler.periodic_potential == "Ewald3D-ConductingBoundary"
+
+        assert handler.version == 0.4
+        assert handler.nonperiodic_potential == "Coulomb"
+        assert handler.exception_potential == "Coulomb"
+
+    def test_coulomb_upconversion(self):
+        handler = ElectrostaticsHandler(version=0.3, method="Coulomb")
+        assert handler.periodic_potential == "Coulomb"
+
+        assert handler.version == 0.4
+        assert handler.nonperiodic_potential == "Coulomb"
+        assert handler.exception_potential == "Coulomb"
+
+    def test_reaction_field_upconversion(self):
+        # Copied from https://github.com/openforcefield/standards/blob/
+        # 20078830200cf04d4e77e3b442ef21eefc79751c/docs/enhancement-proposals/off-ep-0005.md
+        default_reaction_field_expression = (
+            "charge1*charge2/(4*pi*epsilon0)*(1/r + k_rf*r^2 - c_rf);"
+            "k_rf=(cutoff^(-3))*(solvent_dielectric-1)/(2*solvent_dielectric+1);"
+            "c_rf=cutoff^(-1)*(3*solvent_dielectric)/(2*solvent_dielectric+1)"
+        )
+
+        handler = ElectrostaticsHandler(version=0.3, method="reaction-field")
+        assert handler.periodic_potential == default_reaction_field_expression
+
+        assert handler.version == 0.4
+        assert handler.nonperiodic_potential == "Coulomb"
+        assert handler.exception_potential == "Coulomb"
+
+    def test_invalid_0_4_kwargs(self):
+        with pytest.raises(SMIRNOFFSpecError, match="removed in version 0.4 of the E"):
+            ElectrostaticsHandler(version=0.4, method="PME")
 
 
 class TestVirtualSiteHandler:
