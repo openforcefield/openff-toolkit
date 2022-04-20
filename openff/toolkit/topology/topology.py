@@ -1514,82 +1514,88 @@ class Topology(Serializable):
         # Go through atoms in OpenFF to preserve the order.
         omm_atoms = []
 
-        last_chain = None
-        last_residue = None
-        for atom in self.atoms:
+        for molecule in self.molecules:
+            last_chain = None
+            last_residue = None
+            for atom in molecule.atoms:
 
-            if "residue_name" in atom.metadata:
-                atom_residue_name = atom.metadata["residue_name"]
-            else:
-                atom_residue_name = "UNK"
-
-            if "residue_number" in atom.metadata:
-                atom_residue_number = atom.metadata["residue_number"]
-            else:
-                atom_residue_number = "0"
-
-            if "chain_id" in atom.metadata:
-                atom_chain_id = atom.metadata["chain_id"]
-            else:
-                atom_chain_id = "X"
-
-            if last_chain is None:
-                chain = omm_topology.addChain(atom_chain_id)
-            elif last_chain.id == atom_chain_id:
-                chain = last_chain
-            else:
-                chain = omm_topology.addChain(atom_chain_id)
-
-            if last_residue is None:
-                residue = omm_topology.addResidue(atom_residue_name, chain)
-                residue.id = atom_residue_number
-            elif (
-                (last_residue.name == atom_residue_name)
-                and (int(last_residue.id) == atom_residue_number)
-                and (chain.id == last_chain.id)
-            ):
-                residue = last_residue
-            else:
-                residue = omm_topology.addResidue(atom_residue_name, chain)
-                residue.id = atom_residue_number
-
-            # Add atom.
-            element = app.Element.getByAtomicNumber(atom.atomic_number)
-            omm_atom = omm_topology.addAtom(atom.name, element, residue)
-
-            # Make sure that OpenFF and OpenMM Topology atoms have the same indices.
-            assert self.atom_index(atom) == int(omm_atom.id) - 1
-            omm_atoms.append(omm_atom)
-
-            last_chain = chain
-            last_residue = residue
-
-        # Add all bonds.
-        bond_types = {1: app.Single, 2: app.Double, 3: app.Triple}
-        for bond in self.bonds:
-            atom1, atom2 = bond.atoms
-            atom1_idx, atom2_idx = self.atom_index(atom1), self.atom_index(atom2)
-            if isinstance(bond, Bond):
-                if bond.is_aromatic:
-                    bond_type = app.Aromatic
+                if "residue_name" in atom.metadata:
+                    atom_residue_name = atom.metadata["residue_name"]
                 else:
-                    bond_type = bond_types[bond.bond_order]
-                bond_order = bond.bond_order
-            elif isinstance(bond, _SimpleBond):
-                bond_type = None
-                bond_order = None
-            else:
-                raise RuntimeError(
-                    "Unexpected bond type found while iterating over Topology.bonds."
-                    f"Found {type(bond)}, allowed are Bond and _SimpleBond."
-                )
+                    atom_residue_name = "UNK"
 
-            omm_topology.addBond(
-                omm_atoms[atom1_idx],
-                omm_atoms[atom2_idx],
-                type=bond_type,
-                order=bond_order,
-            )
+                if "residue_number" in atom.metadata:
+                    atom_residue_number = atom.metadata["residue_number"]
+                else:
+                    atom_residue_number = "0"
+
+                if "chain_id" in atom.metadata:
+                    atom_chain_id = atom.metadata["chain_id"]
+                else:
+                    atom_chain_id = "X"
+
+                if last_chain is None:
+                    chain = omm_topology.addChain(atom_chain_id)
+                elif last_chain.id == atom_chain_id:
+                    chain = last_chain
+                else:
+                    chain = omm_topology.addChain(atom_chain_id)
+                try:
+                    print(
+                        f"{last_residue.name=} {atom_residue_name=} {int(last_residue.id)=} {atom_residue_number=} {chain.id=} {last_chain.id=}"
+                    )
+                except:
+                    pass
+                if last_residue is None:
+                    residue = omm_topology.addResidue(atom_residue_name, chain)
+                    residue.id = atom_residue_number
+                elif (
+                    (last_residue.name == atom_residue_name)
+                    and (int(last_residue.id) == int(atom_residue_number))
+                    and (chain.id == last_chain.id)
+                ):
+                    residue = last_residue
+                else:
+                    residue = omm_topology.addResidue(atom_residue_name, chain)
+                    residue.id = atom_residue_number
+
+                # Add atom.
+                element = app.Element.getByAtomicNumber(atom.atomic_number)
+                omm_atom = omm_topology.addAtom(atom.name, element, residue)
+
+                # Make sure that OpenFF and OpenMM Topology atoms have the same indices.
+                assert self.atom_index(atom) == int(omm_atom.id) - 1
+                omm_atoms.append(omm_atom)
+
+                last_chain = chain
+                last_residue = residue
+
+            # Add all bonds.
+            bond_types = {1: app.Single, 2: app.Double, 3: app.Triple}
+            for bond in molecule.bonds:
+                atom1, atom2 = bond.atoms
+                atom1_idx, atom2_idx = self.atom_index(atom1), self.atom_index(atom2)
+                if isinstance(bond, Bond):
+                    if bond.is_aromatic:
+                        bond_type = app.Aromatic
+                    else:
+                        bond_type = bond_types[bond.bond_order]
+                    bond_order = bond.bond_order
+                elif isinstance(bond, _SimpleBond):
+                    bond_type = None
+                    bond_order = None
+                else:
+                    raise RuntimeError(
+                        "Unexpected bond type found while iterating over Topology.bonds."
+                        f"Found {type(bond)}, allowed are Bond and _SimpleBond."
+                    )
+
+                omm_topology.addBond(
+                    omm_atoms[atom1_idx],
+                    omm_atoms[atom2_idx],
+                    type=bond_type,
+                    order=bond_order,
+                )
 
         if self.box_vectors is not None:
             from openff.units.openmm import to_openmm

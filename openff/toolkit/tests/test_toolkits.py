@@ -467,9 +467,9 @@ class TestOpenEyeToolkitWrapper:
         for atom1, atom2 in zip(molecule.atoms, molecule2.atoms):
             # OpenEye always adds hierarchy metadata (residue name + num) info, so account for that
             atom1_dict = atom1.to_dict()
-            atom1_dict['metadata'].update({"residue_name": "UNL",
-                               "residue_number": 1,
-                               "chain_id": " "})
+            atom1_dict["metadata"].update(
+                {"residue_name": "UNL", "residue_number": 1, "chain_id": " "}
+            )
             assert atom1_dict == atom2.to_dict()
         for bond1, bond2 in zip(molecule.bonds, molecule2.bonds):
             assert bond1.to_dict() == bond2.to_dict()
@@ -522,9 +522,9 @@ class TestOpenEyeToolkitWrapper:
         for atom1, atom2 in zip(molecule.atoms, molecule2.atoms):
             # OpenEye always adds hierarchy metadata (residue name + num) info, so account for that
             atom1_dict = atom1.to_dict()
-            atom1_dict['metadata'].update({"residue_name": "UNL",
-                               "residue_number": 1,
-                               "chain_id": " "})
+            atom1_dict["metadata"].update(
+                {"residue_name": "UNL", "residue_number": 1, "chain_id": " "}
+            )
             assert atom1_dict == atom2.to_dict()
         for bond1, bond2 in zip(molecule.bonds, molecule2.bonds):
             assert bond1.to_dict() == bond2.to_dict()
@@ -2222,11 +2222,13 @@ class TestRDKitToolkitWrapper:
             # Check RDMol
             for orig_atom, rd_atom in zip(molecule.atoms, rdmol.GetAtoms()):
 
-                atom_has_any_metadata = (('residue_name' in orig_atom.metadata) or
-                                         ('residue_number' in orig_atom.metadata) or
-                                         ('chain_id' in orig_atom.metadata))
+                atom_has_any_metadata = (
+                    ("residue_name" in orig_atom.metadata)
+                    or ("residue_number" in orig_atom.metadata)
+                    or ("chain_id" in orig_atom.metadata)
+                )
 
-                if not(atom_has_any_metadata):
+                if not (atom_has_any_metadata):
                     assert rd_atom.GetPDBResidueInfo() is None
                     continue
 
@@ -2237,7 +2239,6 @@ class TestRDKitToolkitWrapper:
                     )
                 else:
                     assert rd_atom.GetPDBResidueInfo().GetResidueName() == ""
-
 
                 if "residue_number" in orig_atom.metadata:
                     assert (
@@ -2266,10 +2267,12 @@ class TestRDKitToolkitWrapper:
 
             # Check roundtripped OFFMol
             for orig_atom, roundtrip_atom in zip(molecule.atoms, roundtrip_mol.atoms):
-                atom_has_any_metadata = (('residue_name' in orig_atom.metadata) or
-                                         ('residue_number' in orig_atom.metadata) or
-                                         ('chain_id' in orig_atom.metadata))
-                if not(atom_has_any_metadata):
+                atom_has_any_metadata = (
+                    ("residue_name" in orig_atom.metadata)
+                    or ("residue_number" in orig_atom.metadata)
+                    or ("chain_id" in orig_atom.metadata)
+                )
+                if not (atom_has_any_metadata):
                     assert roundtrip_atom.metadata == {}
                     continue
 
