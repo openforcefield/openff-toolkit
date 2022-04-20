@@ -465,7 +465,12 @@ class TestOpenEyeToolkitWrapper:
                 central_carbon_stereo_specified = True
         assert central_carbon_stereo_specified
         for atom1, atom2 in zip(molecule.atoms, molecule2.atoms):
-            assert atom1.to_dict() == atom2.to_dict()
+            # OpenEye always adds hierarchy metadata (residue name + num) info, so account for that
+            atom1_dict = atom1.to_dict()
+            atom1_dict['metadata'].update({"residue_name": "UNL",
+                               "residue_number": 1,
+                               "chain_id": " "})
+            assert atom1_dict == atom2.to_dict()
         for bond1, bond2 in zip(molecule.bonds, molecule2.bonds):
             assert bond1.to_dict() == bond2.to_dict()
         assert (molecule.conformers[0] == molecule2.conformers[0]).all()
@@ -515,7 +520,12 @@ class TestOpenEyeToolkitWrapper:
                 central_carbon_stereo_specified = True
         assert central_carbon_stereo_specified
         for atom1, atom2 in zip(molecule.atoms, molecule2.atoms):
-            assert atom1.to_dict() == atom2.to_dict()
+            # OpenEye always adds hierarchy metadata (residue name + num) info, so account for that
+            atom1_dict = atom1.to_dict()
+            atom1_dict['metadata'].update({"residue_name": "UNL",
+                               "residue_number": 1,
+                               "chain_id": " "})
+            assert atom1_dict == atom2.to_dict()
         for bond1, bond2 in zip(molecule.bonds, molecule2.bonds):
             assert bond1.to_dict() == bond2.to_dict()
         # The molecule was initialized from SMILES, so mol.conformers arrays should be None for both
