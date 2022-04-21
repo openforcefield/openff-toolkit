@@ -62,8 +62,6 @@ __all__ = [
     "VirtualSiteTrivalentLonePairType",
 ]
 import abc
-from packaging.version import Version, parse
-
 import copy
 import functools
 import inspect
@@ -76,6 +74,7 @@ from typing import Any, List, Optional, Type, Union
 
 from openff.units import unit
 from openff.utilities import requires_package
+from packaging.version import Version, parse
 
 from openff.toolkit.topology import (
     ImproperDict,
@@ -1838,7 +1837,7 @@ class ParameterHandler(_ParameterAttributeHandler):
     _SMIRNOFF_VERSION_DEPRECATED = None
     # if deprecated, the first SMIRNOFF version number it is no longer used
     _MIN_SUPPORTED_SECTION_VERSION = Version("0.3")
-    _MAX_SUPPORTED_SECTION_VERSION =Version("0.3")
+    _MAX_SUPPORTED_SECTION_VERSION = Version("0.3")
 
     version = ParameterAttribute()
 
@@ -1857,15 +1856,16 @@ class ParameterHandler(_ParameterAttributeHandler):
         if isinstance(new_version, Version):
             pass
         elif isinstance(new_version, str):
-            new_version  = Version(new_version)
-        elif isinstance(new_version, float):
-            new_version  = Version(str(new_version))
+            new_version = Version(new_version)
+        elif isinstance(new_version, (float, int)):
+            new_version = Version(str(new_version))
         else:
-            raise Exception
+            raise Exception(f"Could not convert type {type(new_version)}")
 
         # Use PEP-440 compliant version number comparison, if requested
         if (new_version > self._MAX_SUPPORTED_SECTION_VERSION) or (
-            new_version < self._MIN_SUPPORTED_SECTION_VERSION):
+            new_version < self._MIN_SUPPORTED_SECTION_VERSION
+        ):
             raise SMIRNOFFVersionError(
                 f"SMIRNOFF offxml file was written with version {new_version}, but this version "
                 f"of ForceField only supports version {self._MIN_SUPPORTED_SECTION_VERSION} "
@@ -2685,15 +2685,21 @@ class BondHandler(ParameterHandler):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         # Default value for fractional_bondorder_interpolation depends on section version
-        if self.version == 0.3 and "fractional_bondorder_method" not in kwargs:
+        if (
+            self.version == Version("0.3")
+            and "fractional_bondorder_method" not in kwargs
+        ):
             self.fractional_bondorder_method = "none"
-        elif self.version == 0.4 and "fractional_bondorder_method" not in kwargs:
+        elif (
+            self.version == Version("0.4")
+            and "fractional_bondorder_method" not in kwargs
+        ):
             self.fractional_bondorder_method = "AM1-Wiberg"
 
         # Default value for potential depends on section version
-        if self.version == 0.3 and "potential" not in kwargs:
+        if self.version == Version("0.3") and "potential" not in kwargs:
             self.potential = "harmonic"
-        elif self.version == 0.4 and "potential" not in kwargs:
+        elif self.version == Version("0.4") and "potential" not in kwargs:
             self.potential = "(k/2)*(r-length)^2"
 
     def check_handler_compatibility(self, other_handler):
