@@ -62,6 +62,8 @@ __all__ = [
     "VirtualSiteTrivalentLonePairType",
 ]
 import abc
+from packaging.version import Version, parse
+
 import copy
 import functools
 import inspect
@@ -1835,8 +1837,8 @@ class ParameterHandler(_ParameterAttributeHandler):
     _SMIRNOFF_VERSION_INTRODUCED = 0.0
     _SMIRNOFF_VERSION_DEPRECATED = None
     # if deprecated, the first SMIRNOFF version number it is no longer used
-    _MIN_SUPPORTED_SECTION_VERSION = 0.3
-    _MAX_SUPPORTED_SECTION_VERSION = 0.3
+    _MIN_SUPPORTED_SECTION_VERSION = Version("0.3")
+    _MAX_SUPPORTED_SECTION_VERSION =Version("0.3")
 
     version = ParameterAttribute()
 
@@ -1850,18 +1852,20 @@ class ParameterHandler(_ParameterAttributeHandler):
         SMIRNOFFVersionError if an incompatible version is passed in.
 
         """
-        import packaging.version
-
         from openff.toolkit.typing.engines.smirnoff import SMIRNOFFVersionError
 
+        if isinstance(new_version, Version):
+            pass
+        elif isinstance(new_version, str):
+            new_version  = Version(new_version)
+        elif isinstance(new_version, float):
+            new_version  = Version(str(new_version))
+        else:
+            raise Exception
+
         # Use PEP-440 compliant version number comparison, if requested
-        if (
-            packaging.version.parse(str(new_version))
-            > packaging.version.parse(str(self._MAX_SUPPORTED_SECTION_VERSION))
-        ) or (
-            packaging.version.parse(str(new_version))
-            < packaging.version.parse(str(self._MIN_SUPPORTED_SECTION_VERSION))
-        ):
+        if (new_version > self._MAX_SUPPORTED_SECTION_VERSION) or (
+            new_version < self._MIN_SUPPORTED_SECTION_VERSION):
             raise SMIRNOFFVersionError(
                 f"SMIRNOFF offxml file was written with version {new_version}, but this version "
                 f"of ForceField only supports version {self._MIN_SUPPORTED_SECTION_VERSION} "
@@ -2660,7 +2664,7 @@ class BondHandler(ParameterHandler):
     _INFOTYPE = BondType  # class to hold force type info
     _OPENMMTYPE = "HarmonicBondForce"
     _DEPENDENCIES = [ConstraintHandler]  # ConstraintHandler must be executed first
-    _MAX_SUPPORTED_SECTION_VERSION = 0.4
+    _MAX_SUPPORTED_SECTION_VERSION = Version("0.4")
 
     # Use the _allow_only filter here because this class's implementation contains all the information about supported
     # potentials for this handler.
@@ -3040,7 +3044,7 @@ class ProperTorsionHandler(ParameterHandler):
     _KWARGS = ["partial_bond_orders_from_molecules"]
     _INFOTYPE = ProperTorsionType  # info type to store
     _OPENMMTYPE = "PeriodicTorsionForce"
-    _MAX_SUPPORTED_SECTION_VERSION = 0.4
+    _MAX_SUPPORTED_SECTION_VERSION = Version("0.4")
 
     potential = ParameterAttribute(
         default="k*(1+cos(periodicity*theta-phase))",
@@ -4318,7 +4322,7 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
         LibraryChargeHandler,
         ToolkitAM1BCCHandler,
     ]
-    _MAX_SUPPORTED_SECTION_VERSION = 0.4
+    _MAX_SUPPORTED_SECTION_VERSION = Version("0.4")
 
     number_of_conformers = ParameterAttribute(default=1, converter=int)
 
