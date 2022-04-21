@@ -1308,7 +1308,6 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             oe_idx = oe_atom.GetIdx()
             oemol_atoms[oe_to_off_idx[oe_idx]] = oe_atom
             off_atom = molecule.atoms[oe_to_off_idx[oe_idx]]
-            # oe_atom.SetData("name", off_atom.name)
             oe_atom.SetName(off_atom.name)
 
             if off_atom.partial_charge is None:
@@ -1317,9 +1316,6 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                 oe_atom.SetPartialCharge(
                     off_atom.partial_charge.m_as(unit.elementary_charge)
                 )
-            # oeatom.SetPartialCharge(1.)
-            # print('to before set', oechem.OEAtomGetResidue(oe_atom))
-            # print('to', off_atom.metadata)
             res = oechem.OEAtomGetResidue(oe_atom)
 
             if "residue_name" in off_atom.metadata:
@@ -1330,7 +1326,6 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                 res.SetChainID(off_atom.metadata["chain_id"])
             oechem.OEAtomSetResidue(oe_atom, res)
 
-            # print('to after set', oechem.OEAtomGetResidue(oe_atom))
         assert None not in oemol_atoms
 
         oemol_bonds = [None] * molecule.n_bonds  # list of corresponding oemol bonds

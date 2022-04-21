@@ -1540,12 +1540,6 @@ class Topology(Serializable):
                     chain = last_chain
                 else:
                     chain = omm_topology.addChain(atom_chain_id)
-                try:
-                    print(
-                        f"{last_residue.name=} {atom_residue_name=} {int(last_residue.id)=} {atom_residue_number=} {chain.id=} {last_chain.id=}"
-                    )
-                except:
-                    pass
                 if last_residue is None:
                     residue = omm_topology.addResidue(atom_residue_name, chain)
                     residue.id = atom_residue_number

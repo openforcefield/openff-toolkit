@@ -2256,15 +2256,6 @@ class TestRDKitToolkitWrapper:
                 else:
                     assert rd_atom.GetPDBResidueInfo().GetChainId() == ""
 
-            # from rdkit import Chem
-            # print('orig mol metadata', molecule.metadata)
-            # print('roundtrip mol metadata', roundtrip_mol.metadata)
-            # print('chain id', Chem.SplitMolByPDBChainId(rdmol))
-            # print('chain id', [(chain[0], [a.GetIdx() for a in chain[1].GetAtoms()]) for chain in Chem.SplitMolByPDBChainId(rdmol).items()])
-            # print('pdb residues', Chem.SplitMolByPDBResidues(rdmol))
-            # print('pdb residues', [(res[0], [a.GetIdx() for a in res[1].GetAtoms()]) for res in Chem.SplitMolByPDBResidues(rdmol).items()])
-            # print()
-
             # Check roundtripped OFFMol
             for orig_atom, roundtrip_atom in zip(molecule.atoms, roundtrip_mol.atoms):
                 atom_has_any_metadata = (

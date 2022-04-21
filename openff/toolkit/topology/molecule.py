@@ -5237,20 +5237,14 @@ class FrozenMolecule(Serializable):
     @classmethod
     @requires_package("openmm")
     def from_pdb(cls, file_path, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
-        import networkx as nx
         from networkx.algorithms import isomorphism
         from openmm import unit as openmm_unit
-        from openmm.app import PDBFile
-        from rdkit import Chem
 
         def _make_hydrogens_negative_in_networkx_graph(graph):
-            n_hydrogens = [0] * len(graph.nodes)
+            # Use this list as a mapping from heavy atom index to the number of hydrogens we've counted
+            # so far.
+            n_hydrogens_on_heavy_atom = [0] * len(graph.nodes)
             for bond in graph.edges:
-                # omm_topology_G.add_edge(
-                #     bond.atom1.index,
-                #     bond.atom2.index,
-                #     bond_order=Chem.rdchem.BondType.UNSPECIFIED,  # bond.order
-                # )
                 # Assign sequential negative numbers as atomic numbers for hydrogens attached to the same heavy atom.
                 # We do the same to the substructure templates that are used for matching. This saves runtime because
                 # it removes redundant self-symmetric matches.
@@ -5259,16 +5253,16 @@ class FrozenMolecule(Serializable):
                 if atom_1_atomic_num <= 1:
                     h_index = bond[0]
                     heavy_atom_index = bond[1]
-                    n_hydrogens[heavy_atom_index] += 1
+                    n_hydrogens_on_heavy_atom[heavy_atom_index] += 1
                     graph.nodes[h_index]["atomic_number"] = (
-                        -1 * n_hydrogens[heavy_atom_index]
+                        -1 * n_hydrogens_on_heavy_atom[heavy_atom_index]
                     )
                 if atom_2_atomic_num <= 1:
                     h_index = bond[1]
                     heavy_atom_index = bond[0]
-                    n_hydrogens[heavy_atom_index] += 1
+                    n_hydrogens_on_heavy_atom[heavy_atom_index] += 1
                     graph.nodes[h_index]["atomic_number"] = (
-                        -1 * n_hydrogens[heavy_atom_index]
+                        -1 * n_hydrogens_on_heavy_atom[heavy_atom_index]
                     )
 
         def _undo_making_hydrogens_negative_in_networkx_graph(graph):
@@ -5347,8 +5341,6 @@ class FrozenMolecule(Serializable):
                         omm_topology_G, substructure_graph, node_match=node_match
                     )
                     if GM.subgraph_is_isomorphic():
-                        # print(res_name)
-                        # print(substructure_smarts)
                         for omm_idx_2_rdk_idx in GM.subgraph_isomorphisms_iter():
                             for omm_idx, rdk_idx in omm_idx_2_rdk_idx.items():
                                 # TODO: What should we do with atoms that aren't mapped in the substructure?
@@ -5381,13 +5373,6 @@ class FrozenMolecule(Serializable):
                         non_isomorphic_flag = False
                 if non_isomorphic_flag:
                     non_isomorphic_count += 1
-            # print(f"Non isomorphic residues: {non_isomorphic_count}")
-            # print(
-            #     f"N. of assigned nodes: {len(already_assigned_nodes)} -- N. of atoms: {len(omm_topology_G.nodes)}"
-            # )
-            # print(
-            #     f"N. of assigned edges: {len(already_assigned_edges)} -- N. of bonds: {len(omm_topology_G.edges)}"
-            # )
             assert len(already_assigned_nodes) == len(omm_topology_G.nodes)
             assert len(already_assigned_edges) == len(omm_topology_G.edges)
 
@@ -5441,9 +5426,7 @@ class FrozenMolecule(Serializable):
         offmol = Molecule()
 
         for node_idx, node_data in omm_topology_G.nodes.items():
-            # print(node_idx, node_data)
             formal_charge = int(node_data["formal_charge"])
-            # print(f"Formal charge: {formal_charge}")
             offmol.add_atom(
                 node_data["atomic_number"],
                 int(node_data["formal_charge"]),
@@ -5457,10 +5440,8 @@ class FrozenMolecule(Serializable):
             )
 
         for edge, edge_data in omm_topology_G.edges.items():
-            # print(edge, edge_data)
             offmol.add_bond(edge[0], edge[1], edge_data["bond_order"], False)
 
-        # print(f"Number of atoms before sanitization: {offmol.n_atoms}")
         coords = (
             np.array(
                 [
@@ -5483,7 +5464,6 @@ class FrozenMolecule(Serializable):
         for stereo_aro_bond, bond in zip(offmol_w_stereo_and_aro.bonds, offmol.bonds):
             bond._is_aromatic = stereo_aro_bond.is_aromatic
 
-        # print(f"OFFMol number of atoms: {offmol.n_atoms}")
         return offmol
 
     def _to_xyz_file(self, file_path):
