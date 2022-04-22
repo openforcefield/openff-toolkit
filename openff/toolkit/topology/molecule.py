@@ -5432,6 +5432,7 @@ class FrozenMolecule(Serializable):
         with open(substructure_file_path, "r") as subfile:
             substructure_dictionary = json.load(subfile)
         from openmm.app import PDBFile
+        from openmm.app import PDBFile
 
         pdb = PDBFile(file_path)
         from openff.toolkit.topology import Topology
