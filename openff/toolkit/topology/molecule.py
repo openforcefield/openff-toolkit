@@ -5242,7 +5242,9 @@ class FrozenMolecule(Serializable):
 
     @classmethod
     @requires_package("openmm")
-    def from_polymer_pdb(cls, file_path: Union[str, TextIO], toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+    def from_polymer_pdb(
+        cls, file_path: Union[str, TextIO], toolkit_registry=GLOBAL_TOOLKIT_REGISTRY
+    ):
         """
         Loads a polymer from a PDB file. Currently only supports proteins with canonical amino acids,
         but may later be extended to handle other common polymers, or accept user-defined polymer templates.
@@ -5460,8 +5462,6 @@ class FrozenMolecule(Serializable):
 
         for edge, edge_data in omm_topology_G.edges.items():
             offmol.add_bond(edge[0], edge[1], edge_data["bond_order"], False)
-
-
 
         coords = (
             np.array(
