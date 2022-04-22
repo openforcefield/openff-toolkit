@@ -30,6 +30,7 @@ __all__ = [
 import contextlib
 import functools
 import logging
+import re
 from typing import List, Tuple, Union
 
 import numpy as np
@@ -165,12 +166,23 @@ def get_data_file_path(relative_path):
 
 def unit_to_string(input_unit: unit.Unit) -> str:
     unit_as_str = str(input_unit)
+
+    # The rest of this function is a set of attempts at backwards-compatibility in order for serializations
+    # to be understood by old versions (< 0.11.0) of the toolkit. None of these are necessary for
+    # self-consistency (>= 0.11.0) and the checks here are purely performance loss. We should have a timebomb
+    # for these checks.
     if "\N{Angstrom Sign}" in unit_as_str:
         unit_as_str = unit_as_str.replace("\N{Angstrom Sign}", "angstrom")
     if "\N{Latin Capital Letter A with Ring Above}" in unit_as_str:
         unit_as_str = unit_as_str.replace(
             "\N{Latin Capital Letter A with Ring Above}", "angstrom"
         )
+    if re.match("k.* / mol", unit_as_str) is not None:
+        if "kcal" in unit_as_str:
+            unit_as_str.replace("kcal", "kilocalorie")
+        if "kj" in unit_as_str:
+            unit_as_str.replace("kJ", "kilojoule")
+
     return unit_as_str
 
 
