@@ -33,7 +33,7 @@ import os
 import pathlib
 import warnings
 from collections import OrderedDict
-from typing import TYPE_CHECKING, List, Tuple, Union
+from typing import TYPE_CHECKING, List, Optional, Tuple, Union
 
 from openff.toolkit.topology.molecule import DEFAULT_AROMATICITY_MODEL
 from openff.toolkit.typing.engines.smirnoff.io import ParameterIOHandler
