@@ -5654,6 +5654,7 @@ class FrozenMolecule(Serializable):
         offmol_w_stereo_and_aro = toolkit_registry.call(
             "_assign_aromaticity_and_stereo_from_3d", offmol
         )
+
         assert offmol_w_stereo_and_aro.n_atoms == offmol.n_atoms
         for stereo_aro_atom, atom in zip(offmol_w_stereo_and_aro.atoms, offmol.atoms):
             atom.stereochemistry = stereo_aro_atom.stereochemistry
