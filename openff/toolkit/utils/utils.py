@@ -179,9 +179,16 @@ def unit_to_string(input_unit: unit.Unit) -> str:
         )
     if re.match("k.* / mol", unit_as_str) is not None:
         if "kcal" in unit_as_str:
-            unit_as_str.replace("kcal", "kilocalorie")
+            unit_as_str = unit_as_str.replace("kcal", "kilocalorie")
         if "kj" in unit_as_str:
-            unit_as_str.replace("kJ", "kilojoule")
+            unit_as_str = unit_as_str.replace("kJ", "kilojoule")
+
+    # Other hacks for OpenMM compatibility
+    unit_as_str = unit_as_str.replace(" mol", " mole")
+    unit_as_str = unit_as_str.replace("deg", "degree")
+    unit_as_str = unit_as_str.replace("rad", "radian")
+    if unit_as_str == "e":
+        unit_as_str = "elementary_charge"
 
     return unit_as_str
 
