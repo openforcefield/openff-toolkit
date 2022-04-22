@@ -38,28 +38,20 @@ from typing import TYPE_CHECKING, Generator, List, Optional, TextIO, Tuple, Unio
 
 import networkx as nx
 import numpy as np
+from cached_property import cached_property
 from openff.units import unit
 from openff.units.elements import MASSES, SYMBOLS
-from openff.units.openmm import to_openmm
-
-if TYPE_CHECKING:
-    from openff.toolkit.topology._mm_molecule import _SimpleAtom, _SimpleMolecule
-    import networkx as nx
-    from openff.units.unit import Quantity
-
-from cached_property import cached_property
 from packaging import version
 
 import openff.toolkit
-from openff.toolkit.utils import get_data_file_path, requires_package
 from openff.toolkit.utils.exceptions import (
     HierarchySchemeNotFoundException,
     HierarchySchemeWithIteratorNameAlreadyRegisteredException,
     IncompatibleUnitError,
     InvalidAtomMetadataError,
     InvalidConformerError,
-    NotAttachedToMoleculeError,
     SmilesParsingError,
+    UnsupportedFileTypeError,
 )
 from openff.toolkit.utils.serialization import Serializable
 from openff.toolkit.utils.toolkits import (
@@ -75,9 +67,15 @@ from openff.toolkit.utils.toolkits import (
 from openff.toolkit.utils.utils import (
     MissingDependencyError,
     dict_to_quantity,
+    get_data_file_path,
     quantity_to_dict,
     requires_package,
 )
+
+if TYPE_CHECKING:
+    from openff.units.unit import Quantity
+
+    from openff.toolkit.topology._mm_molecule import _SimpleAtom, _SimpleMolecule
 
 # =============================================================================================
 # GLOBAL PARAMETERS
@@ -510,18 +508,21 @@ class Atom(Particle):
                     return True
         return False
 
-    @property
-    def is_in_ring(self):
+    def is_in_ring(self, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY) -> bool:
         """
         Return whether or not this atom is in a ring(s) (of any size)
 
-        """
-        if self._molecule is None:
-            raise NotAttachedToMoleculeError(
-                "This Atom does not belong to a Molecule object"
-            )
+        This Atom is expected to be attached to a molecule (`Atom.molecule`).
 
-        return any([self.molecule_atom_index in ring for ring in self._molecule.rings])
+        Parameters
+        ----------
+        toolkit_registry: openff.toolkit.utils.toolkits.ToolkitRegistry, default=GLOBAL_TOOLKIT_REGISTRY
+            :class:`ToolkitRegistry` to use to enumerate the tautomers.
+
+        """
+        _is_in_ring = toolkit_registry.call("atom_is_in_ring", self)
+
+        return _is_in_ring
 
     @property
     def virtual_sites(self):
@@ -1242,6 +1243,7 @@ class VirtualSite(Particle):
 
     @requires_package("openmm")
     def _openmm_virtual_site(self, atoms):
+        from openff.units.openmm import to_openmm
         from openmm import LocalCoordinatesSite
 
         originwt, xdir, ydir = self.local_frame_weights
@@ -2172,22 +2174,29 @@ class Bond(Serializable):
             raise ValueError("This Atom does not belong to a Molecule object")
         return self._molecule.bonds.index(self)
 
-    @property
-    def is_in_ring(self):
+    def is_in_ring(self, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY) -> bool:
         """
         Return whether or not this bond is in a ring(s) (of any size)
 
-        """
-        if self._molecule is None:
-            raise NotAttachedToMoleculeError(
-                "This Bond does not belong to a Molecule object"
-            )
+        This Bond is expected to be attached to a molecule (`Bond.molecule`).
 
-        for ring in self._molecule.rings:
-            if self.atom1.molecule_atom_index in ring:
-                if self.atom2.molecule_atom_index in ring:
-                    return True
-        return False
+        Note: Bonds containing atoms that are only in separate rings, i.e. the central bond in a biphenyl,
+            are not considered to be bonded by this criteria.
+
+        Parameters
+        ----------
+        toolkit_registry: openff.toolkit.utils.toolkits.ToolkitRegistry, default=GLOBAL_TOOLKIT_REGISTRY
+            :class:`ToolkitRegistry` to use to enumerate the tautomers.
+
+        Returns
+        -------
+        is_in_ring: bool
+            Whether or not this bond is in a ring.
+
+        """
+        _is_in_ring = toolkit_registry.call("bond_is_in_ring", self)
+
+        return _is_in_ring
 
     def __repr__(self):
         return f"Bond(atom1 index={self.atom1_index}, atom2 index={self.atom2_index})"
@@ -3406,6 +3415,7 @@ class FrozenMolecule(Serializable):
         n_conformers=10,
         rms_cutoff=None,
         clear_existing=True,
+        make_carboxylic_acids_cis=True,
     ):
         """
         Generate conformers for this molecule using an underlying toolkit.
@@ -3425,6 +3435,11 @@ class FrozenMolecule(Serializable):
             for each ``ToolkitWrapper`` (generally 1 Angstrom).
         clear_existing : bool, default=True
             Whether to overwrite existing conformers for the molecule
+        make_carboxylic_acids_cis: bool, default=True
+            Guarantee all conformers have exclusively cis carboxylic acid groups (COOH)
+            by rotating the proton in any trans carboxylic acids 180 degrees around the
+            C-O bond. Works around a bug in conformer generation by the OpenEye toolkit
+            where trans COOH is much more common than it should be.
 
         Examples
         --------
@@ -3452,6 +3467,7 @@ class FrozenMolecule(Serializable):
                 rms_cutoff=rms_cutoff,
                 clear_existing=clear_existing,
                 raise_exception_types=[],
+                make_carboxylic_acids_cis=make_carboxylic_acids_cis,
             )
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
@@ -3460,6 +3476,7 @@ class FrozenMolecule(Serializable):
                 n_conformers=n_conformers,
                 rms_cutoff=rms_cutoff,
                 clear_existing=clear_existing,
+                make_carboxylic_acids_cis=make_carboxylic_acids_cis,
             )
         else:
             raise InvalidToolkitRegistryError(
@@ -3467,6 +3484,149 @@ class FrozenMolecule(Serializable):
                     type(toolkit_registry)
                 )
             )
+
+    def _make_carboxylic_acids_cis(self, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+        """
+        Rotate dihedral angle of any conformers with trans COOH groups so they are cis
+
+        Carboxylic acid groups almost always exist in nature in the cis conformation,
+        with the hydrogen atom in between the two oxygen atoms::
+
+                  O----H
+                 /
+                /
+               /
+            --C
+               \\
+                \\
+                  O
+
+        However, the OpenEye toolkit frequently produces carboxylic acid geometries
+        in the unrealistic trans conformation::
+
+             H----O
+                 /
+                /
+               /
+            --C
+               \\
+                \\
+                  O
+
+        This method converts all conformers in the Molecule with the trans conformation
+        into the corresponding cis conformer by rotating the OH bond around the CO bond
+        by 180 degrees. Carboxylic acids that are already cis are unchanged. Carboxylic
+        acid groups are considered cis if their O-C-O-H dihedral angle is acute.
+
+        Parameters
+        ----------
+        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
+            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
+        """
+
+        # Return early if there are no conformers
+        if not self._conformers:
+            return
+
+        # Convert all conformers into one big array
+        conformers = np.asarray([q.m_as(unit.angstrom) for q in self._conformers])
+
+        # Scan the molecule for carboxylic acids
+        cooh_indices = self.chemical_environment_matches(
+            "[C:2]([O:3][H:4])=[O:1]", toolkit_registry=toolkit_registry
+        )
+        n_conformers, n_cooh_groups = len(conformers), len(cooh_indices)
+        # Exit early if there are no carboxylic acids
+        if not n_cooh_groups:
+            return
+
+        # Pull out the coordinates of all carboxylic acid groups into cooh_xyz
+        cooh_xyz = conformers[:, cooh_indices, :]
+        assert cooh_xyz.shape == (n_conformers, n_cooh_groups, 4, 3)
+
+        def dot(a, b):
+            """Compute dot product along last axis of arrays"""
+            return np.sum(a * b, axis=-1)[..., np.newaxis]
+
+        def norm(a):
+            """Compute norm along last axis of array"""
+            return np.linalg.norm(a, axis=-1)[..., np.newaxis]
+
+        def dihedral(a):
+            """Compute dihedrals of array with shape (..., 4, 3)"""
+            # Praxeolitic formula
+            # 1 sqrt, 1 cross product
+            # from https://stackoverflow.com/questions/20305272/dihedral-torsion-angle-from-four-points-in-cartesian-coordinates-in-python
+            p0 = a[..., 0, :]
+            p1 = a[..., 1, :]
+            p2 = a[..., 2, :]
+            p3 = a[..., 3, :]
+
+            b0 = -1.0 * (p1 - p0)
+            b1 = p2 - p1
+            b2 = p3 - p2
+
+            # normalize b1 so that it does not influence magnitude of vector
+            # rejections that come next
+            b1 /= norm(b1)
+
+            # vector rejections
+            # v = projection of b0 onto plane perpendicular to b1
+            #   = b0 minus component that aligns with b1
+            # w = projection of b2 onto plane perpendicular to b1
+            #   = b2 minus component that aligns with b1
+            v = b0 - dot(b0, b1) * b1
+            w = b2 - dot(b2, b1) * b1
+
+            # angle between v and w in a plane is the torsion angle
+            # v and w may not be normalized but that's fine since tan is y/x
+            x = dot(v, w)
+            y = dot(np.cross(b1, v), w)
+            return np.arctan2(y, x)
+
+        dihedrals = dihedral(cooh_xyz)
+        assert dihedrals.shape == (n_conformers, n_cooh_groups, 1)
+        dihedrals.shape = (n_conformers, n_cooh_groups, 1, 1)
+
+        # Get indices of trans COOH groups
+        trans_indices = np.logical_not(
+            np.logical_and((-np.pi / 2) < dihedrals, dihedrals < (np.pi / 2))
+        )
+        # Expand array so it can be used to index cooh_xyz
+        trans_indices = np.repeat(trans_indices, repeats=4, axis=2)
+        trans_indices = np.repeat(trans_indices, repeats=3, axis=3)
+        # Get indices of individual atoms in trans COOH groups (except terminal O)
+        trans_indices_h = trans_indices.copy()
+        trans_indices_h[:, :, (0, 1, 2), :] = False
+        trans_indices_c = trans_indices.copy()
+        trans_indices_c[:, :, (0, 2, 3), :] = False
+        trans_indices_o = trans_indices.copy()
+        trans_indices_o[:, :, (0, 1, 3), :] = False
+
+        # Rotate OH around CO bond
+        # We want to rotate H 180 degrees around the CO bond (b1)
+        c = cooh_xyz[trans_indices_c].reshape(-1, 3)
+        o = cooh_xyz[trans_indices_o].reshape(-1, 3)
+        h = cooh_xyz[trans_indices_h].reshape(-1, 3)
+        # Axis is defined as the line from the origin along a unit vector, so
+        # move C to the origin and normalize
+        point = h - c
+        axis = o - c
+        axis /= norm(axis)
+        # Do the rotation
+        # https://en.wikipedia.org/wiki/Rotation_matrix#Rotation_matrix_from_axis_and_angle
+        rotated = axis * (dot(axis, point)) - np.cross(np.cross(axis, point), axis)
+        # Move rotated point back to original coordinates
+        rotated = rotated + c
+
+        # Update the coordinates
+        cooh_xyz[trans_indices_h] = rotated.reshape((-1))
+
+        # Update conformers with rotated coordinates
+        conformers[:, cooh_indices, :] = cooh_xyz
+
+        # Return conformers to original type
+        self._conformers = [unit.Quantity(conf, unit.angstrom) for conf in conformers]
 
     def compute_virtual_site_positions_from_conformer(self, conformer_idx):
         """
@@ -3569,7 +3729,7 @@ class FrozenMolecule(Serializable):
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
             toolkit.apply_elf_conformer_selection(  # type: ignore[attr-defined]
-                self, molecule=self, percentage=percentage, limit=limit, **kwargs
+                molecule=self, percentage=percentage, limit=limit, **kwargs
             )
         else:
             raise InvalidToolkitRegistryError(
@@ -3585,6 +3745,8 @@ class FrozenMolecule(Serializable):
         toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
     ):
         """
+        DEPRECATED: Use ``assign_partial_charges(partial_charge_method='am1bcc')`` insetad.
+
         Calculate partial atomic charges for this molecule using AM1-BCC run by an underlying toolkit
         and assign them to this molecule's ``partial_charges`` attribute.
 
@@ -3612,6 +3774,12 @@ class FrozenMolecule(Serializable):
             If an invalid object is passed as the toolkit_registry parameter
 
         """
+        # TODO: Remove in version 0.12.0
+        warnings.warn(
+            "compute_partial_charges_am1bcc is deprecated and will be removed in version 0.12.0. "
+            "Use assign_partial_charges(partial_charge_method='am1bcc') instead.",
+            UserWarning,
+        )
         self.assign_partial_charges(
             partial_charge_method="am1bcc",
             use_conformers=use_conformers,
@@ -3621,7 +3789,7 @@ class FrozenMolecule(Serializable):
 
     def assign_partial_charges(
         self,
-        partial_charge_method,
+        partial_charge_method: str,
         strict_n_conformers=False,
         use_conformers=None,
         toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
@@ -3630,6 +3798,19 @@ class FrozenMolecule(Serializable):
         """
         Calculate partial atomic charges for this molecule using an underlying toolkit, and assign
         the new values to the partial_charges attribute.
+
+        Some supported charge methods are:
+            - ``"am1bcc"``
+            - ``"am1bccelf10"`` (requires OpenEye Toolkits)
+            - ``"am1-mulliken"``
+            - ``"mmff94"``
+            - ``"gasteiger"``
+
+        For more supported charge methods and details, see the corresponding methods in each toolkit wrapper:
+            - OpenEyeToolkitWrapper.assign_partial_charges
+            - RDKitToolkitWrapper.assign_partial_charges
+            - AmberToolsToolkitWrapper.assign_partial_charges
+            - BuiltInToolkitWrapper.assign_partial_charges
 
         Parameters
         ----------
@@ -3658,6 +3839,12 @@ class FrozenMolecule(Serializable):
         InvalidToolkitRegistryError
             If an invalid object is passed as the toolkit_registry parameter
 
+        See Also
+        --------
+        OpenEyeToolkitWrapper.assign_partial_charges
+        RDKitToolkitWrapper.assign_partial_charges
+        AmberToolsToolkitWrapper.assign_partial_charges
+        BuiltInToolkitWrapper.assign_partial_charges
         """
         if isinstance(toolkit_registry, ToolkitRegistry):
             # We may need to try several toolkitwrappers to find one
@@ -3675,8 +3862,8 @@ class FrozenMolecule(Serializable):
                 _cls=self.__class__,
             )
         elif isinstance(toolkit_registry, ToolkitWrapper):
-            toolkit = toolkit_registry
-            toolkit.assign_partial_charges(
+            toolkit_wrapper: ToolkitWrapper = toolkit_registry
+            toolkit_wrapper.assign_partial_charges(  # type: ignore[attr-defined]
                 self,
                 partial_charge_method=partial_charge_method,
                 use_conformers=use_conformers,
@@ -3739,7 +3926,6 @@ class FrozenMolecule(Serializable):
             If an invalid object is passed as the toolkit_registry parameter
 
         """
-        bond_order_model = bond_order_model.lower()
 
         if isinstance(toolkit_registry, ToolkitRegistry):
             return toolkit_registry.call(
@@ -3772,7 +3958,6 @@ class FrozenMolecule(Serializable):
 
         self._cached_smiles = None
         # TODO: Clear fractional bond orders
-        self._rings = None
         self._ordered_connection_table_hash = None
         for atom in self.atoms:
             if "molecule_atom_index" in atom.__dict__:
@@ -4280,8 +4465,8 @@ class FrozenMolecule(Serializable):
 
         else:
             raise IncompatibleUnitError(
-                "Coordinates passed to Molecule._add_conformer without units. Ensure that coordinates are "
-                "of type openmm.unit.Quantity or openff.units.unit.Quantity"
+                "Unknown object passed to Molecule._add_conformer. Expected types include "
+                f"openmm.unit.Quantity and openff.units.unit.Quantity, found type {type(coordinates)}."
             )
 
         tmp_conf = unit.Quantity(
@@ -4397,22 +4582,6 @@ class FrozenMolecule(Serializable):
         """int: number of possible improper torsions in the Molecule."""
         self._construct_torsions()
         return len(self._impropers)
-
-    @property
-    def n_rings(self):
-        """Return the number of rings found in the Molecule
-
-        Requires the RDKit to be installed.
-
-        .. note ::
-
-            For systems containing some special cases of connected rings, this
-            function may not be well-behaved and may report a different number
-            rings than expected. Some problematic cases include networks of many
-            (5+) rings or bicyclic moieties (i.e. norbornane).
-
-        """
-        return len(self.rings)
 
     @property
     def particles(self):
@@ -5154,6 +5323,14 @@ class FrozenMolecule(Serializable):
                 file_format = file_path.split(".")[-1]
         file_format = file_format.upper()
 
+        if file_format == "XYZ":
+            raise UnsupportedFileTypeError(
+                "Parsing `.xyz` files is not currently supported because they lack sufficient "
+                "chemical information to be used with SMIRNOFF force fields. For more information, "
+                "see https://open-forcefield-toolkit.readthedocs.io/en/latest/faq.html or to provide "
+                "feedback please visit https://github.com/openforcefield/openff-toolkit/issues/1145."
+            )
+
         # Determine which toolkit to use (highest priority that's compatible with input type)
         if isinstance(toolkit_registry, ToolkitRegistry):
             # TODO: Encapsulate this logic into ToolkitRegistry.call()?
@@ -5433,7 +5610,6 @@ class FrozenMolecule(Serializable):
 
         with open(substructure_file_path, "r") as subfile:
             substructure_dictionary = json.load(subfile)
-        from openmm.app import PDBFile
         from openmm.app import PDBFile
 
         pdb = PDBFile(file_path)
@@ -6495,53 +6671,6 @@ class FrozenMolecule(Serializable):
         from openff.toolkit.topology import NotBondedError
 
         raise NotBondedError("No bond between atom {} and {}".format(i, j))
-
-    @property
-    def rings(self):
-        """Return the number of rings in this molecule.
-
-        Requires the RDKit to be installed.
-
-        .. note ::
-
-            For systems containing some special cases of connected rings, this
-            function may not be well-behaved and may report a different number
-            rings than expected. Some problematic cases include networks of many
-            (5+) rings or bicyclic moieties (i.e. norbornane).
-
-        """
-        if self._rings is None:
-            self._get_rings()
-        return self._rings
-
-    @RDKitToolkitWrapper.requires_toolkit()
-    def _get_rings(self):
-        """
-        Call out to RDKitToolkitWrapper methods to find the rings in this molecule.
-
-        Requires the RDKit to be installed.
-
-        .. note ::
-
-            For systems containing some special cases of connected rings, this
-            function may not be well-behaved and may report a different number
-            rings than expected. Some problematic cases include networks of many
-            (5+) rings or bicyclic moieties (i.e. norbornane).
-
-        .. todo :: This could be refactored to use ToolkitWrapper.call() to flexibly
-            access other toolkits, if find_rings is implemented.
-
-        Returns
-        -------
-        rings : tuple of tuple of int
-            A nested tuple with one subtuple per ring and each subtuple containing
-            a tuple of the indices of atoms containing with it. If no rings are
-            found, a single empty tuple is returned.
-
-        """
-        toolkit = RDKitToolkitWrapper()
-        rings = toolkit.find_rings(self)
-        self._rings = rings
 
 
 class Molecule(FrozenMolecule):

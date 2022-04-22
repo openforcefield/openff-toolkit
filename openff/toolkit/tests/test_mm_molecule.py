@@ -1,11 +1,7 @@
 import numpy as np
 import pytest
 
-from openff.toolkit.topology._mm_molecule import (
-    _SimpleAtom,
-    _SimpleBond,
-    _SimpleMolecule,
-)
+from openff.toolkit.topology._mm_molecule import _SimpleMolecule
 from openff.toolkit.topology.molecule import Molecule
 
 

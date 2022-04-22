@@ -17,13 +17,14 @@ from cachetools import LRUCache, cached
 from openff.units import unit
 
 if TYPE_CHECKING:
-    from openff.toolkit.topology.molecule import Molecule
+    from openff.toolkit.topology.molecule import Molecule, Bond, Atom
 
 from openff.toolkit.utils import base_wrapper
 from openff.toolkit.utils.constants import DEFAULT_AROMATICITY_MODEL
 from openff.toolkit.utils.exceptions import (
     ChargeMethodUnavailableError,
     ConformerGenerationError,
+    NotAttachedToMoleculeError,
     SMILESParseError,
     ToolkitUnavailableException,
     UndefinedStereochemistryError,
@@ -909,7 +910,13 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         return molecule
 
     def generate_conformers(
-        self, molecule, n_conformers=1, rms_cutoff=None, clear_existing=True, _cls=None
+        self,
+        molecule,
+        n_conformers=1,
+        rms_cutoff=None,
+        clear_existing=True,
+        _cls=None,
+        make_carboxylic_acids_cis=False,
     ):
         r"""
         Generate molecule conformers using RDKit.
@@ -936,6 +943,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             Whether to overwrite existing conformers for the molecule.
         _cls : class
             Molecule constructor
+        make_carboxylic_acids_cis: bool, default=False
+            Guarantee all conformers have exclusively cis carboxylic acid groups (COOH)
+            by rotating the proton in any trans carboxylic acids 180 degrees around the C-O bond.
 
         """
         from rdkit.Chem import AllChem
@@ -965,6 +975,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         for conformer in molecule2._conformers:
             molecule._add_conformer(conformer)
+
+        if make_carboxylic_acids_cis:
+            molecule._make_carboxylic_acids_cis(toolkit_registry=self)
 
     def assign_partial_charges(
         self,
@@ -1234,13 +1247,14 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         n_conformers = len(molecule.conformers)
 
+        # rdkit does not have conformer indices but conformer "ids"
         conformer_ids = [conf.GetId() for conf in rdkit_molecule.GetConformers()]
 
         # Compute the RMS matrix making sure to take into account any automorhism (e.g
         # a phenyl or nitro substituent flipped 180 degrees.
         rms_matrix = np.zeros((n_conformers, n_conformers))
 
-        for i, j in itertools.combinations(conformer_ids, 2):
+        for i, j in itertools.combinations(np.arange(n_conformers), 2):
 
             rms_matrix[i, j] = AllChem.GetBestRMS(
                 rdkit_molecule,
@@ -2203,35 +2217,77 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             unique=unique,
         )
 
-    # --------------------------------
-    # Stereochemistry RDKit utilities.
-    # --------------------------------
+    def atom_is_in_ring(self, atom: "Atom") -> bool:
+        """Return whether or not an atom is in a ring.
 
-    def find_rings(self, molecule):
-        """Find the rings in a given molecule.
-
-        .. note ::
-
-            For systems containing some special cases of connected rings, this
-            function may not be well-behaved and may report a different number
-            rings than expected. Some problematic cases include networks of many
-            (5+) rings or bicyclic moieties (i.e. norbornane).
+        It is assumed that this atom is in molecule.
 
         Parameters
         ----------
-        molecule : openff.toolkit.topology.Molecule
-            The molecule for which rings are to be found
+        atom : openff.toolkit.topology.molecule.Atom
+            The molecule containing the atom of interest
 
         Returns
         -------
-        rings : tuple of tuples of atom indices
-            Nested tuples, each containing the indices of atoms in each ring
+        is_in_ring : bool
+            Whether or not the atom is in a ring.
 
+        Raises
+        ------
+        NotAttachedToMoleculeError
         """
+        if atom.molecule is None:
+            raise NotAttachedToMoleculeError(
+                "This Atom does not belong to a Molecule object"
+            )
+
+        molecule = atom.molecule
+        atom_index = atom.molecule_atom_index
+
         rdmol = molecule.to_rdkit()
-        ring_info = rdmol.GetRingInfo()
-        rings = ring_info.AtomRings()
-        return rings
+        rdatom = rdmol.GetAtomWithIdx(atom_index)
+
+        is_in_ring = rdatom.IsInRing()
+
+        return is_in_ring
+
+    def bond_is_in_ring(self, bond: "Bond") -> bool:
+        """Return whether or not a bond is in a ring.
+
+        It is assumed that this atom is in molecule.
+
+        Parameters
+        ----------
+        bond : openff.toolkit.topology.molecule.Bond
+            The molecule containing the atom of interest
+
+        Returns
+        -------
+        is_in_ring : bool
+            Whether or not the bond of index `bond_index` is in a ring
+
+        Raises
+        ------
+        NotAttachedToMoleculeError
+        """
+        if bond.molecule is None:
+            raise NotAttachedToMoleculeError(
+                "This Bond does not belong to a Molecule object"
+            )
+
+        molecule = bond.molecule
+        rdmol = molecule.to_rdkit()
+
+        # Molecule.to_rdkit() is NOT guaranteed to preserve bond ordering,
+        # so we must look up the corresponding bond via its constituent atom indices
+        rdbond = rdmol.GetBondBetweenAtoms(bond.atom1_index, bond.atom2_index)
+        is_in_ring = rdbond.IsInRing()
+
+        return is_in_ring
+
+    # --------------------------------
+    # Stereochemistry RDKit utilities.
+    # --------------------------------
 
     @staticmethod
     def _find_undefined_stereo_atoms(rdmol, assign_stereo=False):

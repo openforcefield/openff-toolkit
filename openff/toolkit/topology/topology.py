@@ -46,7 +46,7 @@ from openff.toolkit.utils.toolkits import (
 )
 
 if TYPE_CHECKING:
-    from openff.toolkit.topology.molecule import Atom, Bond
+    from openff.toolkit.topology.molecule import Atom
 
 # =============================================================================================
 # PRIVATE SUBROUTINES
