@@ -166,10 +166,10 @@ def get_data_file_path(relative_path):
 def unit_to_string(input_unit: unit.Unit) -> str:
     unit_as_str = str(input_unit)
     if "\N{Angstrom Sign}" in unit_as_str:
-        unit_as_str = unit_as_str.replace("\N{Angstrom Sign}", "A")
+        unit_as_str = unit_as_str.replace("\N{Angstrom Sign}", "angstrom")
     if "\N{Latin Capital Letter A with Ring Above}" in unit_as_str:
         unit_as_str = unit_as_str.replace(
-            "\N{Latin Capital Letter A with Ring Above}", "A"
+            "\N{Latin Capital Letter A with Ring Above}", "angstrom"
         )
     return unit_as_str
 
