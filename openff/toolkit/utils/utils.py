@@ -15,13 +15,12 @@ __all__ = [
     "string_to_unit",
     "string_to_quantity",
     "object_to_quantity",
-    # "check_units_are_compatible",
     "extract_serialized_units_from_dict",
     "attach_units",
     "detach_units",
     "serialize_numpy",
     "deserialize_numpy",
-    # "convert_all_quantities_to_string",
+    "convert_all_quantities_to_string",
     "convert_all_strings_to_quantity",
     "convert_0_1_smirnoff_to_0_2",
     "convert_0_2_smirnoff_to_0_3",
@@ -164,8 +163,15 @@ def get_data_file_path(relative_path):
     return fn
 
 
-def unit_to_string(input_unit):
-    return str(input_unit)
+def unit_to_string(input_unit: unit.Unit) -> str:
+    unit_as_str = str(input_unit)
+    if "\N{Angstrom Sign}" in unit_as_str:
+        unit_as_str = unit_as_str.replace("\N{Angstrom Sign}", "A")
+    if "\N{Latin Capital Letter A with Ring Above}" in unit_as_str:
+        unit_as_str = unit_as_str.replace(
+            "\N{Latin Capital Letter A with Ring Above}", "A"
+        )
+    return unit_as_str
 
 
 def quantity_to_dict(input_quantity):
@@ -183,13 +189,11 @@ def dict_to_quantity(input_dict):
     return input_dict["value"] * unit.Unit(input_dict["unit"])
 
 
-def quantity_to_string(input_quantity):
-    return str(input_quantity)
-
-
-def _quantity_to_string(input_quantity):
+def quantity_to_string(input_quantity: unit.Quantity) -> str:
     """
-    Serialize a openmm.unit.Quantity to a string.
+    Serialize a openff.units.unit.Quantity to a string representation that is backwards-compatible
+    with older versions of the OpenFF Toolkit. This includes a " * " between numerical values and
+    their units and "A" being used in place of the unicode Å ("\N{ANGSTROM SIGN}").
 
     Parameters
     ----------
@@ -202,6 +206,21 @@ def _quantity_to_string(input_quantity):
         The serialized quantity
 
     """
+    if input_quantity is None:
+        return None
+    unitless_value = input_quantity.m_as(input_quantity.units)
+    # The string representation of a numpy array doesn't have commas and breaks the
+    # parser, thus we convert any arrays to list here
+    if isinstance(unitless_value, np.ndarray):
+        unitless_value = list(unitless_value)
+    unit_string = unit_to_string(input_quantity.units)
+    output_string = "{} * {}".format(unitless_value, unit_string)
+    return output_string
+
+    return str(input_quantity)
+
+
+def _quantity_to_string(input_quantity):
     import numpy as np
 
     if input_quantity is None:
@@ -385,8 +404,8 @@ def convert_all_quantities_to_string(smirnoff_data):
         for index, item in enumerate(smirnoff_data):
             smirnoff_data[index] = convert_all_quantities_to_string(item)
         obj_to_return = smirnoff_data
-    # elif isinstance(smirnoff_data, openmm_unit.Quantity):
-    #     obj_to_return = quantity_to_string(smirnoff_data)
+    elif isinstance(smirnoff_data, unit.Quantity):
+        obj_to_return = quantity_to_string(smirnoff_data)
     else:
         obj_to_return = smirnoff_data
 
