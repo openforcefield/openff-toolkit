@@ -49,6 +49,8 @@ from openff.toolkit.utils.exceptions import (
     SMIRNOFFParseError,
     SMIRNOFFVersionError,
 )
+from openff.toolkit.utils.toolkit_registry import _toolkit_registry_manager
+from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
 from openff.toolkit.utils.utils import (
     all_subclasses,
     convert_0_1_smirnoff_to_0_2,
@@ -62,6 +64,8 @@ if TYPE_CHECKING:
     import openmm
 
     from openff.toolkit.topology import Topology
+    from openff.toolkit.utils.base_wrapper import ToolkitWrapper
+    from openff.toolkit.utils.toolkit_registry import ToolkitRegistry
 
 # =============================================================================================
 # CONFIGURE LOGGER
@@ -1224,6 +1228,7 @@ class ForceField:
         self,
         topology: "Topology",
         use_interchange: bool = False,
+        toolkit_registry: Optional[Union["ToolkitRegistry", "ToolkitWrapper"]] = None,
         **kwargs,
     ) -> Union["openmm.System", Tuple["openmm.System", "Topology"]]:
         """Create an OpenMM System from this ForceField and a Topology.
@@ -1239,10 +1244,12 @@ class ForceField:
         if use_interchange:
             return_topology = kwargs.pop("return_topology", False)
 
-            interchange = self.create_interchange(
-                topology,
-                **kwargs,
-            )
+            registry = toolkit_registry if toolkit_registry else GLOBAL_TOOLKIT_REGISTRY
+            with _toolkit_registry_manager(registry):
+                interchange = self.create_interchange(
+                    topology,
+                    **kwargs,
+                )
             openmm_system = interchange.to_openmm(combine_nonbonded_forces=True)
             if not return_topology:
                 return openmm_system
