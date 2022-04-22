@@ -34,7 +34,7 @@ import warnings
 from abc import abstractmethod
 from collections import OrderedDict, UserDict
 from copy import deepcopy
-from typing import TYPE_CHECKING, Generator, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Generator, List, Optional, TextIO, Tuple, Union
 
 import networkx as nx
 import numpy as np
@@ -5237,6 +5237,49 @@ class FrozenMolecule(Serializable):
     @classmethod
     @requires_package("openmm")
     def from_pdb(cls, file_path, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+
+        return cls.from_polymer_pdb(file_path, toolkit_registry=toolkit_registry)
+
+    @classmethod
+    @requires_package("openmm")
+    def from_polymer_pdb(cls, file_path: Union[str, TextIO], toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+        """
+        Loads a polymer from a PDB file. Currently only supports proteins with canonical amino acids,
+        but may later be extended to handle other common polymers, or accept user-defined polymer templates.
+
+        This method proceeds in the following order:
+
+        * Loads the polymer substructure template file
+        * Loads the PDB into an OpenMM PDBFile object (openmm.app.PDBFile)
+        * Turns OpenMM topology into naive networkx graph (Topology._omm_topology_to_networkx)
+        * Calls Molecule.from_pdb._add_chemical_info_to_networkx_graph, which:
+            * Makes hydrogens in the topology graph negative (a runtime performance trick to
+              reduce the number of symmetries)
+              (Molecule._from_pdb._make_hydrogens_negative_in_networkx_graph)
+            * For each substructure loaded from the substructure template file:
+                * Turns the substructure from its original form (SMARTS) into a networkx graph
+                * Makes the hydrogens in the substructure graph negative
+                * Uses networkx to find graph isomorphisms between the substructure and the topology graph
+                * For any isomorphism, assigns the atom formal charge and bond order info from the substructure
+                  to the topology graph, then marks the atoms and bonds as having been assigned so they can not
+                  be overwritten by subsequent isomorphisms
+        * Convert the topology graph back to an OpenFF Molecule
+        * Take coordinates from the OpenMM Topology and add them as a conformer to the OpenFF Molecule
+        * Process the OpenFF Molecule to assign aromaticity and stereochemistry
+          (ToolkitWrapper._assign_aromaticity_and_stereo_from_3d)
+
+
+        Parameters
+        ----------
+        file_path : str or file object
+            PDB information to be passed to OpenMM PDBFile object for loading
+        toolkit_registry = ToolkitWrapper or ToolkitRegistry. Default = None
+            Either a ToolkitRegistry, ToolkitWrapper
+
+        Returns
+        -------
+        molecule : openff.toolkit.topology.Molecule
+        """
         from networkx.algorithms import isomorphism
         from openmm import unit as openmm_unit
 
@@ -5382,30 +5425,6 @@ class FrozenMolecule(Serializable):
 
         from openff.toolkit.utils import get_data_file_path
 
-        """
-        To dos
-             * Remove/hide this function, route traffic through Topology.from_openmm/from_pdb
-             * Handle loading custom substructure dicts
-             * Don't assign info to non-tagged atoms (?)
-             * Make spec for molecule/residue info, and where it goes in to/from rdkit/openeye/openmm
-             
-             
-        Turn OMM topology into naive networkx graph (Topology._omm_to_networkx)
-        Make hydrogens negative (Molecule._from_pdb_make_networkx_hydrogens_negative)
-
-        Load requested substructure file(s) (Molecule._from_pdb_parse_substructure_sources)
-        For smarts in substructures
-            Turn substructure into nx graph (ChemicalEnvironment.to_networkx, oetkw/rdktkw._smarts_to_networkx)
-            Make hydrogens negative (Molecule._from_pdb_make_networkx_hydrogens_negative)
-            Make peptide and disulfide bonds have `already_matched=True` 
-            Update the nx graph with chemical info
-        Check whether any bonds are unassigned and raise an informative error (Molecule._from_pdb_check_bonds_assigned)
-        Check whether any element numbers are negative or formal charges are unset and raise an informative error (Molecule._from_pdb_check_atoms_assigned)
-        Make hydrogens positive
-        Turn nx graph into offmol (Molecule.from_networkx)
-        Use a toolkitwrapper to percieve aro and stereo from 3D (oetkw and rdktkw.assign_stereo_from_3d)
-        """
-
         substructure_file_path = get_data_file_path(
             "proteins/aa_residues_substructures_explicit_bond_orders_with_caps.json"
         )
@@ -5426,7 +5445,6 @@ class FrozenMolecule(Serializable):
         offmol = Molecule()
 
         for node_idx, node_data in omm_topology_G.nodes.items():
-            formal_charge = int(node_data["formal_charge"])
             offmol.add_atom(
                 node_data["atomic_number"],
                 int(node_data["formal_charge"]),
@@ -5441,6 +5459,8 @@ class FrozenMolecule(Serializable):
 
         for edge, edge_data in omm_topology_G.edges.items():
             offmol.add_bond(edge[0], edge[1], edge_data["bond_order"], False)
+
+
 
         coords = (
             np.array(
