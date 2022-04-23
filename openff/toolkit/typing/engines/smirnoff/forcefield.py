@@ -49,8 +49,10 @@ from openff.toolkit.utils.exceptions import (
     SMIRNOFFParseError,
     SMIRNOFFVersionError,
 )
-from openff.toolkit.utils.toolkit_registry import _toolkit_registry_manager
-from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
+from openff.toolkit.utils.toolkits import (
+    GLOBAL_TOOLKIT_REGISTRY,
+    _toolkit_registry_manager,
+)
 from openff.toolkit.utils.utils import (
     all_subclasses,
     convert_0_1_smirnoff_to_0_2,

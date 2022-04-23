@@ -15,6 +15,7 @@ import itertools
 import os
 from collections import OrderedDict
 from tempfile import NamedTemporaryFile
+from types import BuiltinFunctionType
 
 import numpy as np
 import openmm
@@ -56,8 +57,16 @@ from openff.toolkit.typing.engines.smirnoff import (
     get_available_force_fields,
     vdWHandler,
 )
-from openff.toolkit.utils import get_data_file_path
+from openff.toolkit.utils import (
+    AmberToolsToolkitWrapper,
+    BuiltInToolkitWrapper,
+    OpenEyeToolkitWrapper,
+    RDKitToolkitWrapper,
+    ToolkitRegistry,
+    get_data_file_path,
+)
 from openff.toolkit.utils.exceptions import (
+    ChargeMethodUnavailableError,
     FractionalBondOrderInterpolationMethodUnsupportedError,
     IncompatibleParameterError,
     NonintegralMoleculeChargeException,
@@ -67,13 +76,6 @@ from openff.toolkit.utils.exceptions import (
     SMIRNOFFSpecError,
     SMIRNOFFSpecUnimplementedError,
     UnassignedMoleculeChargeException,
-)
-from openff.toolkit.utils.toolkits import (
-    AmberToolsToolkitWrapper,
-    ChargeMethodUnavailableError,
-    OpenEyeToolkitWrapper,
-    RDKitToolkitWrapper,
-    ToolkitRegistry,
 )
 
 # ======================================================================
@@ -4797,6 +4799,65 @@ class TestForceFieldParameterAssignment:
             omm_system, ret_top = forcefield.create_openmm_system(
                 topology,
                 charge_from_molecules=[mol],
+            )
+
+
+class TestForceFieldWithToolkits:
+    """Test interactions between ``ForceField`` methods and wrapped toolkits."""
+
+    # TODO: Remove `use_interchange` arguments in coordination with #1276. They are included
+    #       here because ONLY that code path uses the experimental `_toolkit_registry_manager` motif
+
+    # TODO: Remaking `GLOBAL_TOOLKIT_REGISTRY` every test is a stopgap for
+    #       https://github.com/openforcefield/openff-toolkit/pull/1281#issuecomment-1106972153
+
+    def test_toolkit_registry_no_charge_methods(self):
+        from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
+
+        for toolkit in [
+            OpenEyeToolkitWrapper,
+            RDKitToolkitWrapper,
+            AmberToolsToolkitWrapper,
+            BuiltInToolkitWrapper,
+        ]:
+            GLOBAL_TOOLKIT_REGISTRY.register_toolkit(toolkit)
+        topology = create_ethanol().to_topology()
+        force_field = ForceField("test_forcefields/test_forcefield.offxml")
+        with pytest.raises(
+            ValueError, match="No registered toolkits can provide .*find_smarts_matches"
+        ):
+            force_field.create_openmm_system(
+                topology, use_interchange=True, toolkit_registry=BuiltInToolkitWrapper()
+            )
+
+    @requires_rdkit
+    def test_toolkit_registry_bad_charge_method(self):
+        from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
+
+        for toolkit in [
+            OpenEyeToolkitWrapper,
+            RDKitToolkitWrapper,
+            AmberToolsToolkitWrapper,
+            BuiltInToolkitWrapper,
+        ]:
+            GLOBAL_TOOLKIT_REGISTRY.register_toolkit(toolkit)
+        topology = create_ethanol().to_topology()
+        force_field = ForceField(
+            "test_forcefields/test_forcefield.offxml",
+            xml_charge_increment_model_ff_ethanol,
+        )
+        force_field.deregister_parameter_handler("ToolkitAM1BCC")
+        force_field["ChargeIncrementModel"].partial_charge_method == "am1bccelf10"
+
+        with pytest.raises(
+            ValueError, match="No registered toolkits can provide .*Mulliken"
+        ):
+            force_field.create_openmm_system(
+                topology,
+                use_interchange=True,
+                toolkit_registry=ToolkitRegistry(
+                    [RDKitToolkitWrapper(), AmberToolsToolkitWrapper()]
+                ),
             )
 
 
