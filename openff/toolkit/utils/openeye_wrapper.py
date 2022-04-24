@@ -1117,7 +1117,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                 neighs, oechem.OEAtomStereo_Tetra, oechem.OEAtomStereo_Right
             )
 
-            # Flip chirality if stereochemistry isincorrect
+            # Flip chirality if stereochemistry is incorrect
             oeatom_stereochemistry = (
                 OpenEyeToolkitWrapper._openeye_cip_atom_stereochemistry(oemol, oeatom)
             )

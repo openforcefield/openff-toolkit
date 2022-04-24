@@ -3420,7 +3420,7 @@ class TestMolecule:
         atom_H = molecule.add_atom(1, 0, False, name="H")
         atom_Cl = molecule.add_atom(17, 0, False, name="Cl")
         atom_Br = molecule.add_atom(35, 0, False, name="Br")
-        atom_F = molecule.add_atom(35, 0, False, name="F")
+        atom_F = molecule.add_atom(9, 0, False, name="F")
         molecule.add_bond(atom_C, atom_H, 1, False)
         molecule.add_bond(atom_C, atom_Cl, 1, False)
         molecule.add_bond(atom_C, atom_Br, 1, False)
