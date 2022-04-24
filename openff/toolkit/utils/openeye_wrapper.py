@@ -1321,10 +1321,19 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
             if "residue_name" in off_atom.metadata:
                 res.SetName(off_atom.metadata["residue_name"])
+            else:
+                res.SetName("UNL")
+
             if "residue_number" in off_atom.metadata:
                 res.SetResidueNumber(int(off_atom.metadata["residue_number"]))
+            else:
+                res.SetResidueNumber(1)
+
             if "chain_id" in off_atom.metadata:
                 res.SetChainID(off_atom.metadata["chain_id"])
+            else:
+                res.SetChainID(" ")
+
             oechem.OEAtomSetResidue(oe_atom, res)
 
         assert None not in oemol_atoms
