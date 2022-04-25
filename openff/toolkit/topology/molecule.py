@@ -24,7 +24,8 @@ Molecular chemical entity representation and routines to interface with cheminfo
      read multiple molecules via ``Molecules.from_file()``.
    * Should we allow the removal of atoms too?
    * Should invalidation of cached properties be handled via something like a tracked list?
-   * Refactor toolkit encapsulation to generalize and provide only a few major toolkit methods and toolkit objects that can be queried for features
+   * Refactor toolkit encapsulation to generalize and provide only a few major toolkit methods and toolkit objects
+        that can be queried for features
    * Speed up overall import time by putting non-global imports only where they are needed
 
 """
@@ -189,8 +190,9 @@ class Atom(Particle):
 
        * Should ``Atom`` objects be immutable or mutable?
        * Do we want to support the addition of arbitrary additional properties,
-         such as floating point quantities (e.g. ``charge``), integral quantities (such as ``id`` or ``serial`` index in a PDB file),
-         or string labels (such as Lennard-Jones types)?
+        such as floating point quantities (e.g. ``charge``), integral quantities (such as ``id`` or ``serial``
+        index in a PDB file),
+        or string labels (such as Lennard-Jones types)?
 
     .. todo :: Allow atoms to have associated properties.
 
@@ -258,7 +260,7 @@ class Atom(Particle):
             name = ""
         self._name = name
         self._molecule = molecule
-        ## From Jeff: I'm going to assume that this is implicit in the parent Molecule's ordering of atoms
+        # From Jeff: I'm going to assume that this is implicit in the parent Molecule's ordering of atoms
         # self._molecule_atom_index = molecule_atom_index
         self._bonds = list()
         self._virtual_sites = list()
@@ -405,7 +407,10 @@ class Atom(Particle):
         """
 
         # if (value != 'CW') and (value != 'CCW') and not(value is None):
-        #    raise Exception("Atom stereochemistry setter expected 'CW', 'CCW', or None. Received {} (type {})".format(value, type(value)))
+        #    raise Exception(
+        #       "Atom stereochemistry setter expected 'CW', 'CCW', or None. ""
+        #       "Received {} (type {})".format(value, type(value))"
+        # )
         self._stereochemistry = value
 
     @property
@@ -453,11 +458,9 @@ class Atom(Particle):
         other : string
             The new name for this atom
         """
-        if not (type(other) is str):
+        if type(other) != str:
             raise Exception(
-                "In setting atom name. Expected str, received {} (type {})".format(
-                    other, type(other)
-                )
+                f"In setting atom name. Expected str, received {other} (type {type(other)})."
             )
         self._name = other
 
@@ -482,7 +485,7 @@ class Atom(Particle):
         """
         for bond in self._bonds:
             for atom in bond.atoms:
-                if not (atom == self):
+                if atom is not self:
                     # TODO: This seems dangerous. Ask John for a better way
                     yield atom
 
@@ -588,13 +591,11 @@ class Atom(Particle):
 
     def __repr__(self):
         # TODO: Also include particle_index and which molecule this atom belongs to?
-        return "Atom(name={}, atomic number={})".format(self._name, self._atomic_number)
+        return f"Atom(name={self._name}, atomic number={self._atomic_number})"
 
     def __str__(self):
         # TODO: Also include particle_index and which molecule this atom belongs to?
-        return "<Atom name='{}' atomic number='{}'>".format(
-            self._name, self._atomic_number
-        )
+        return f"<Atom name='{self._name}' atomic number='{self._atomic_number}'>."
 
 
 # =============================================================================================
@@ -832,7 +833,8 @@ class VirtualSite(Particle):
         atoms : list of Atom of shape [N]
             atoms[index] is the corresponding Atom
         charge_increments : list of floats of shape [N], optional, default=None
-            The amount of charge to remove from the VirtualSite's atoms and put in the VirtualSite. Indexing in this list should match the ordering in the atoms list. Default is None.
+            The amount of charge to remove from the VirtualSite's atoms and put in the VirtualSite. Indexing in this
+            list should match the ordering in the atoms list. Default is None.
         sigma : float, default=None
             Sigma term for VdW properties of virtual site. Default is None.
         epsilon : float
@@ -851,12 +853,11 @@ class VirtualSite(Particle):
         """
 
         # Ensure we have as many charge_increments as we do atoms
-        if not (charge_increments is None):
-            if not (len(charge_increments) == len(atoms)):
+        if charge_increments is not None:
+            if len(charge_increments) != len(atoms):
                 raise Exception(
-                    "VirtualSite definition must have same number of charge_increments ({}) and atoms({})".format(
-                        len(charge_increments), len(atoms)
-                    )
+                    "VirtualSite definition must have same number of charge_increments "
+                    f"({len(charge_increments)}) and atoms({len(atoms)})"
                 )
         else:
             charge_increments = ([0.0] * len(atoms)) * unit.elementary_charge
@@ -868,18 +869,16 @@ class VirtualSite(Particle):
             sigma = 0.0 * unit.angstrom
 
         # VdW parameters can either be epsilon+rmin_half or epsilon+sigma, but not both
-        if not (epsilon is None):
+        if epsilon is not None:
             if (rmin_half is not None) and (sigma is not None):
                 raise Exception(
-                    "VirtualSite constructor given epsilon (value : {}), rmin_half (value : {}), and sigma (value : {}). If epsilon is nonzero, it should receive either rmin_half OR sigma".format(
-                        epsilon, rmin_half, sigma
-                    )
+                    f"VirtualSite constructor given epsilon (value : {epsilon}), rmin_half (value : {rmin_half}), "
+                    f"and sigma (value : {sigma}). If epsilon is nonzero, it should receive either rmin_half OR sigma"
                 )
             if (rmin_half is None) and (sigma is None):
                 raise Exception(
-                    "VirtualSite constructor given epsilon (value : {}) but not given rmin_half (value : {}) or sigma (value : {})".format(
-                        epsilon, rmin_half, sigma
-                    )
+                    f"VirtualSite constructor given epsilon (value : {epsilon}) but not given rmin_half "
+                    f"(value : {rmin_half}) or sigma (value : {sigma})"
                 )
             if sigma is None:
                 # TODO: Save the 6th root of 2 if this starts being slow.
@@ -888,9 +887,8 @@ class VirtualSite(Particle):
         elif epsilon is None:
             if (rmin_half is not None) or (sigma is not None):
                 raise Exception(
-                    "VirtualSite constructor given rmin_half (value : {}) or sigma (value : {}), but not epsilon (value : {})".format(
-                        rmin_half, sigma, epsilon
-                    )
+                    f"VirtualSite constructor given rmin_half (value : {rmin_half}) or sigma (value : {sigma}), "
+                    f"but not epsilon (value : {epsilon})"
                 )
 
         # Perform type-checking
@@ -1307,7 +1305,10 @@ class VirtualSite(Particle):
 
 class BondChargeVirtualSite(VirtualSite):
     """
-    A particle representing a "Bond Charge"-type virtual site, in which the location of the charge is specified by the positions of two atoms. This supports placement of a virtual site S along a vector between two specified atoms, e.g. to allow for a sigma hole for halogens or similar contexts. With positive values of the distance, the virtual site lies outside the first indexed atom.
+    A particle representing a "Bond Charge"-type virtual site, in which the location of the charge is specified by
+    the positions of two atoms. This supports placement of a virtual site S along a vector between two specified
+    atoms, e.g. to allow for a sigma hole for halogens or similar contexts. With positive values of the distance,
+    the virtual site lies outside the first indexed atom.
 
     .. warning :: This API is experimental and subject to change.
     """
@@ -1324,7 +1325,10 @@ class BondChargeVirtualSite(VirtualSite):
         orientations=None,
     ):
         """
-        Create a bond charge-type virtual site, in which the location of the charge is specified by the position of two atoms. This supports placement of a virtual site S along a vector between two specified atoms, e.g. to allow for a sigma hole for halogens or similar contexts. With positive values of the distance, the virtual site lies outside the first indexed atom.
+        Create a bond charge-type virtual site, in which the location of the charge is specified by the position of
+        two atoms. This supports placement of a virtual site S along a vector between two specified atoms, e.g. to
+        allow for a sigma hole for halogens or similar contexts. With positive values of the distance, the virtual
+        site lies outside the first indexed atom.
 
         TODO: One of the examples in the SMIRNOFF spec has a BondCharge defined with three atoms -- How does that work?
         https://openforcefield.github.io/standards/standards/smirnoff/#virtualsites-virtual-sites-for-off-atom-charges
@@ -1337,9 +1341,10 @@ class BondChargeVirtualSite(VirtualSite):
         distance : :class:`openmm.unit.Quantity` of dimension [Length] wrapping a scalar
 
         weights : list of floats of shape [N] or None, optional, default=None
-            weights[index] is the weight of particles[index] contributing to the position of the virtual site. Default is None
+            weights[index] is the weight of particles[index] contributing to the position of the virtual site.
         charge_increments : list of floats of shape [N], optional, default=None
-            The amount of charge to remove from the VirtualSite's atoms and put in the VirtualSite. Indexing in this list should match the ordering in the atoms list. Default is None.
+            The amount of charge to remove from the VirtualSite's atoms and put in the VirtualSite. Indexing in this
+            list should match the ordering in the atoms list. Default is None.
         epsilon : float
             Epsilon term for VdW properties of virtual site. Default is None.
         sigma : float, default=None
@@ -1463,7 +1468,10 @@ class BondChargeVirtualSite(VirtualSite):
 
 class MonovalentLonePairVirtualSite(VirtualSite):
     """
-    A particle representing a "Monovalent Lone Pair"-type virtual site, in which the location of the charge is specified by the positions of three atoms. This is originally intended for situations like a carbonyl, and allows placement of a virtual site S at a specified distance d, in_plane_angle, and out_of_plane_angle relative to a central atom and two connected atoms.
+    A particle representing a "Monovalent Lone Pair"-type virtual site, in which the location of the charge
+    is specified by the positions of three atoms. This is originally intended for situations like a carbonyl,
+    and allows placement of a virtual site S at a specified distance d, in_plane_angle, and out_of_plane_angle
+    relative to a central atom and two connected atoms.
 
     .. warning :: This API is experimental and subject to change.
     """
@@ -1482,7 +1490,8 @@ class MonovalentLonePairVirtualSite(VirtualSite):
         orientations=None,
     ):
         """
-        Create a bond charge-type virtual site, in which the location of the charge is specified by the position of three atoms.
+        Create a bond charge-type virtual site, in which the location of the charge is specified by the position of
+        three atoms.
 
         Parameters
         ----------
@@ -1652,7 +1661,12 @@ class MonovalentLonePairVirtualSite(VirtualSite):
 
 class DivalentLonePairVirtualSite(VirtualSite):
     """
-    A particle representing a "Divalent Lone Pair"-type virtual site, in which the location of the charge is specified by the positions of three atoms. This is suitable for cases like four-point and five-point water models as well as pyrimidine; a charge site S lies a specified distance d from the central atom among three atoms along the bisector of the angle between the atoms (if out_of_plane_angle is zero) or out of the plane by the specified angle (if out_of_plane_angle is nonzero) with its projection along the bisector. For positive values of the distance d the virtual site lies outside the 2-1-3 angle and for negative values it lies inside.
+    A particle representing a "Divalent Lone Pair"-type virtual site, in which the location of the charge is specified
+    by the positions of three atoms. This is suitable for cases like four-point and five-point water models as well as
+    pyrimidine; a charge site S lies a specified distance d from the central atom among three atoms along the bisector
+    of the angle between the atoms (if out_of_plane_angle is zero) or out of the plane by the specified angle (if
+    out_of_plane_angle is nonzero) with its projection along the bisector. For positive values of the distance d the
+    virtual site lies outside the 2-1-3 angle and for negative values it lies inside.
     """
 
     def __init__(
@@ -1668,7 +1682,8 @@ class DivalentLonePairVirtualSite(VirtualSite):
         orientations=None,
     ):
         """
-        Create a divalent lone pair-type virtual site, in which the location of the charge is specified by the position of three atoms.
+        Create a divalent lone pair-type virtual site, in which the location of the charge is specified by the
+        position of three atoms.
 
         Parameters
         ----------
@@ -1818,7 +1833,11 @@ class DivalentLonePairVirtualSite(VirtualSite):
 
 class TrivalentLonePairVirtualSite(VirtualSite):
     """
-    A particle representing a "Trivalent Lone Pair"-type virtual site, in which the location of the charge is specified by the positions of four atoms. This is suitable for planar or tetrahedral nitrogen lone pairs; a charge site S lies above the central atom (e.g. nitrogen a distance d along the vector perpendicular to the plane of the three connected atoms (2,3,4). With positive values of d the site lies above the nitrogen and with negative values it lies below the nitrogen.
+    A particle representing a "Trivalent Lone Pair"-type virtual site, in which the location of the charge is
+    specified by the positions of four atoms. This is suitable for planar or tetrahedral nitrogen lone pairs;
+    a charge site S lies above the central atom (e.g. nitrogen a distance d along the vector perpendicular to
+    the plane of the three connected atoms (2,3,4). With positive values of d the site lies above the nitrogen
+    and with negative values it lies below the nitrogen.
 
     .. warning :: This API is experimental and subject to change.
     """
@@ -1835,7 +1854,8 @@ class TrivalentLonePairVirtualSite(VirtualSite):
         orientations=None,
     ):
         """
-        Create a trivalent lone pair-type virtual site, in which the location of the charge is specified by the position of four atoms.
+        Create a trivalent lone pair-type virtual site, in which the location of the charge is specified by the
+        position of four atoms.
 
         Parameters
         ----------
@@ -2211,8 +2231,8 @@ class Bond(Serializable):
 # Molecule
 # =============================================================================================
 
-# TODO: How do we automatically trigger invalidation of cached properties if an ``Atom``, ``Bond``, or ``VirtualSite`` is modified,
-#       rather than added/deleted via the API? The simplest resolution is simply to make them immutable.
+# TODO: How do we automatically trigger invalidation of cached properties if an ``Atom``, ``Bond``, or ``VirtualSite``
+#       is modified, rather than added/deleted via the API? The simplest resolution is simply to make them immutable.
 
 
 class FrozenMolecule(Serializable):
@@ -2373,16 +2393,14 @@ class FrozenMolecule(Serializable):
             # if there turned out to be no way to load this input
             value_errors = list()
 
-            if isinstance(other, openff.toolkit.topology.FrozenMolecule) and not (
-                loaded
-            ):
+            if isinstance(other, openff.toolkit.topology.FrozenMolecule) and not loaded:
                 self._copy_initializer(other)
                 loaded = True
-            if isinstance(other, openff.toolkit.topology.Molecule) and not (loaded):
+            if isinstance(other, openff.toolkit.topology.Molecule) and not loaded:
                 # TODO: This will need to be updated once FrozenMolecules and Molecules are significantly different
                 self._copy_initializer(other)
                 loaded = True
-            if isinstance(other, OrderedDict) and not (loaded):
+            if isinstance(other, OrderedDict) and not loaded:
                 self.__setstate__(other)
                 loaded = True
 
@@ -2414,7 +2432,7 @@ class FrozenMolecule(Serializable):
                     loaded = True
             # TODO: Make this compatible with file-like objects (I couldn't figure out how to make an oemolistream
             # from a fileIO object)
-            if (isinstance(other, str) or hasattr(other, "read")) and not (loaded):
+            if isinstance(other, str) or hasattr(other, "read") and not loaded:
                 try:
                     mol = Molecule.from_file(
                         other,
@@ -2435,9 +2453,9 @@ class FrozenMolecule(Serializable):
             # If none of the above methods worked, raise a ValueError summarizing the
             # errors from the different loading attempts
 
-            if not (loaded):
-                msg = "Cannot construct openff.toolkit.topology.Molecule from {}\n".format(
-                    other
+            if not loaded:
+                msg = (
+                    f"Cannot construct openff.toolkit.topology.Molecule from {other}\n"
                 )
                 for value_error in value_errors:
                     msg += str(value_error)
@@ -2493,7 +2511,8 @@ class FrozenMolecule(Serializable):
         smarts: str or ChemicalEnvironment
             Tagged SMARTS with a single atom with index 1. Any matches for this atom will have any assigned
             stereocheistry information removed.
-        toolkit_registry : a :class:`ToolkitRegistry` or :class:`ToolkitWrapper` object, optional, default=GLOBAL_TOOLKIT_REGISTRY
+        toolkit_registry : a :class:`ToolkitRegistry` or :class:`ToolkitWrapper` object, optional,
+            default=GLOBAL_TOOLKIT_REGISTRY
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for I/O operations
 
         """
@@ -2531,8 +2550,8 @@ class FrozenMolecule(Serializable):
 
         molecule_dict = OrderedDict()
         molecule_dict["name"] = self._name
-        ## From Jeff: If we go the properties-as-dict route, then _properties should, at
-        ## the top level, be a dict. Should we go through recursively and ensure all values are dicts too?
+        # From Jeff: If we go the properties-as-dict route, then _properties should, at
+        # the top level, be a dict. Should we go through recursively and ensure all values are dicts too?
         molecule_dict["atoms"] = [atom.to_dict() for atom in self._atoms]
         molecule_dict["virtual_sites"] = [
             vsite.to_dict() for vsite in self._virtual_sites
@@ -2738,7 +2757,7 @@ class FrozenMolecule(Serializable):
         description = f"Molecule with name '{self.name}'"
         try:
             smiles = self.to_smiles()
-        except:
+        except Exception:
             hill = self.to_hill_formula()
             return description + f" with bad SMILES and Hill formula '{hill}'"
         return description + f" and SMILES '{smiles}'"
@@ -2785,12 +2804,15 @@ class FrozenMolecule(Serializable):
         self._initialize_from_dict(other_dict)
 
     def __eq__(self, other):
-        """Test two molecules for equality to see if they are the chemical species, but do not check other annotated properties.
+        """
+        Test two molecules for equality to see if they are the chemical species, but do not check other
+        annotated properties.
 
         .. note ::
 
-           Note that this method simply tests whether two molecules are identical chemical species using equivalence of their canonical isomeric SMILES.
-           No effort is made to ensure that the atoms are in the same order or that any annotated properties are preserved.
+           Note that this method simply tests whether two molecules are identical chemical species using equivalence of
+           their canonical isomeric SMILES.  No effort is made to ensure that the atoms are in the same order or that
+           any annotated properties are preserved.
 
         """
         # updated to use the new isomorphic checking method, with full matching
@@ -2851,7 +2873,7 @@ class FrozenMolecule(Serializable):
         ----------
         iter_name : str
         """
-        if not iter_name in self._hierarchy_schemes:
+        if iter_name not in self._hierarchy_schemes:
             raise HierarchySchemeNotFoundException(
                 f'Can not delete HierarchyScheme with name "{iter_name}" '
                 f"because no HierarchyScheme with that iterator name exists"
@@ -2906,7 +2928,8 @@ class FrozenMolecule(Serializable):
             atom map into the properties dictionary. If no mapping is passed all atoms will be mapped in order, else
             an atom map dictionary from the current atom index to the map id should be supplied with no duplicates.
             The map ids (values) should start from 0 or 1.
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
+        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or
+            openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES conversion
 
         Returns
@@ -2934,9 +2957,8 @@ class FrozenMolecule(Serializable):
             to_smiles_method = toolkit_registry.to_smiles
         else:
             raise InvalidToolkitRegistryError(
-                "Invalid toolkit_registry passed to to_smiles. Expected ToolkitRegistry or ToolkitWrapper. Got  {}".format(
-                    type(toolkit_registry)
-                )
+                "Invalid toolkit_registry passed to to_smiles. Expected ToolkitRegistry or ToolkitWrapper. "
+                f"Got {type(toolkit_registry)}"
             )
 
         # Get a string representation of the function containing the toolkit name so we can check
@@ -2977,7 +2999,8 @@ class FrozenMolecule(Serializable):
             an exception will be raised if a InChI with undefined stereochemistry
             is passed into this function.
 
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
+        toolkit_registry : openff.toolkit.utils.toolkits.ToolRegistry
+            or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for InChI-to-molecule conversion
 
 
@@ -3006,9 +3029,8 @@ class FrozenMolecule(Serializable):
             )
         else:
             raise InvalidToolkitRegistryError(
-                "Invalid toolkit_registry passed to from_inchi. Expected ToolkitRegistry or ToolkitWrapper. Got  {}".format(
-                    type(toolkit_registry)
-                )
+                "Invalid toolkit_registry passed to from_inchi. Expected ToolkitRegistry or ToolkitWrapper. "
+                f"Got {type(toolkit_registry)}"
             )
 
         return molecule
@@ -3016,18 +3038,19 @@ class FrozenMolecule(Serializable):
     def to_inchi(self, fixed_hydrogens=False, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """
         Create an InChI string for the molecule using the requested toolkit backend.
-        InChI is a standardised representation that does not capture tautomers unless specified using the fixed hydrogen
-        layer.
+        InChI is a standardised representation that does not capture tautomers unless specified using the fixed
+        hydrogen layer.
 
         For information on InChi see here https://iupac.org/who-we-are/divisions/division-details/inchi/
 
         Parameters
         ----------
         fixed_hydrogens: bool, default=False
-            If a fixed hydrogen layer should be added to the InChI, if `True` this will produce a non standard specific
-            InChI string of the molecule.
+            If a fixed hydrogen layer should be added to the InChI, if `True` this will produce a non standard
+            specific InChI string of the molecule.
 
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
+        toolkit_registry : openff.toolkit.utils.toolkits.ToolRegistry
+            or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for molecule-to-InChI conversion
 
         Returns
@@ -3050,9 +3073,8 @@ class FrozenMolecule(Serializable):
             inchi = toolkit.to_inchi(self, fixed_hydrogens=fixed_hydrogens)
         else:
             raise InvalidToolkitRegistryError(
-                "Invalid toolkit_registry passed to to_inchi. Expected ToolkitRegistry or ToolkitWrapper. Got  {}".format(
-                    type(toolkit_registry)
-                )
+                "Invalid toolkit_registry passed to to_inchi. Expected ToolkitRegistry or ToolkitWrapper. "
+                f"Got {type(toolkit_registry)}"
             )
 
         return inchi
@@ -3062,8 +3084,8 @@ class FrozenMolecule(Serializable):
     ):
         """
         Create an InChIKey for the molecule using the requested toolkit backend.
-        InChIKey is a standardised representation that does not capture tautomers unless specified using the fixed hydrogen
-        layer.
+        InChIKey is a standardised representation that does not capture tautomers unless specified
+        using the fixed hydrogen layer.
 
         For information on InChi see here https://iupac.org/who-we-are/divisions/division-details/inchi/
 
@@ -3073,7 +3095,8 @@ class FrozenMolecule(Serializable):
             If a fixed hydrogen layer should be added to the InChI, if `True` this will produce a non standard specific
             InChI string of the molecule.
 
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
+        toolkit_registry : openff.toolkit.utils.toolkits.ToolRegistry
+            or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for molecule-to-InChIKey conversion
 
         Returns
@@ -3096,9 +3119,8 @@ class FrozenMolecule(Serializable):
             inchi_key = toolkit.to_inchikey(self, fixed_hydrogens=fixed_hydrogens)
         else:
             raise InvalidToolkitRegistryError(
-                "Invalid toolkit_registry passed to to_inchikey. Expected ToolkitRegistry or ToolkitWrapper. Got  {}".format(
-                    type(toolkit_registry)
-                )
+                "Invalid toolkit_registry passed to to_inchikey. Expected ToolkitRegistry or ToolkitWrapper. "
+                f"Got {type(toolkit_registry)}"
             )
 
         return inchi_key
@@ -3120,7 +3142,8 @@ class FrozenMolecule(Serializable):
             The SMILES representation of the molecule.
         hydrogens_are_explicit : bool, default = False
             If False, the cheminformatics toolkit will perform hydrogen addition
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
+        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry
+            or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
         allow_undefined_stereo : bool, default=False
             Whether to accept SMILES with undefined stereochemistry. If False,
@@ -3155,9 +3178,8 @@ class FrozenMolecule(Serializable):
             )
         else:
             raise InvalidToolkitRegistryError(
-                "Invalid toolkit_registry passed to from_smiles. Expected ToolkitRegistry or ToolkitWrapper. Got  {}".format(
-                    type(toolkit_registry)
-                )
+                "Invalid toolkit_registry passed to from_smiles. Expected ToolkitRegistry or ToolkitWrapper. "
+                f"Got {type(toolkit_registry)}"
             )
 
         return molecule
@@ -3235,7 +3257,8 @@ class FrozenMolecule(Serializable):
             nitrogen stereocenters will be disregarded in the isomorphism
             check.
 
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
+        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry
+            or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for
             removing stereochemistry from pyrimidal nitrogens.
 
@@ -3381,7 +3404,8 @@ class FrozenMolecule(Serializable):
             nitrogen stereocenters will be disregarded in the isomorphism
             check.
 
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
+        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry
+            or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for
             removing stereochemistry from pyrimidal nitrogens.
 
@@ -3425,14 +3449,15 @@ class FrozenMolecule(Serializable):
 
         Parameters
         ----------
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
+        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or
+            openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
         n_conformers : int, default=1
             The maximum number of conformers to produce
         rms_cutoff : openmm.unit.Quantity-wrapped float, in units of distance, optional, default=None
             The minimum RMS value at which two conformers are considered redundant and one is deleted. Precise
-            implementation of this cutoff may be toolkit-dependent. If ``None``, the cutoff is set to be the default value
-            for each ``ToolkitWrapper`` (generally 1 Angstrom).
+            implementation of this cutoff may be toolkit-dependent. If ``None``, the cutoff is set to be the
+            default value for each ``ToolkitWrapper`` (generally 1 Angstrom).
         clear_existing : bool, default=True
             Whether to overwrite existing conformers for the molecule
         make_carboxylic_acids_cis: bool, default=True
@@ -3480,9 +3505,8 @@ class FrozenMolecule(Serializable):
             )
         else:
             raise InvalidToolkitRegistryError(
-                "Invalid toolkit_registry passed to generate_conformers. Expected ToolkitRegistry or ToolkitWrapper. Got  {}".format(
-                    type(toolkit_registry)
-                )
+                "Invalid toolkit_registry passed to generate_conformers. Expected ToolkitRegistry or ToolkitWrapper. "
+                f"Got {type(toolkit_registry)}"
             )
 
     def _make_carboxylic_acids_cis(self, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
@@ -3520,7 +3544,8 @@ class FrozenMolecule(Serializable):
 
         Parameters
         ----------
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
+        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry
+            or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
         """
 
@@ -3556,7 +3581,7 @@ class FrozenMolecule(Serializable):
             """Compute dihedrals of array with shape (..., 4, 3)"""
             # Praxeolitic formula
             # 1 sqrt, 1 cross product
-            # from https://stackoverflow.com/questions/20305272/dihedral-torsion-angle-from-four-points-in-cartesian-coordinates-in-python
+            # from https://stackoverflow.com/q/20305272
             p0 = a[..., 0, :]
             p1 = a[..., 1, :]
             p2 = a[..., 2, :]
@@ -3755,10 +3780,11 @@ class FrozenMolecule(Serializable):
         strict_n_conformers : bool, default=False
             Whether to raise an exception if an invalid number of conformers is provided for the given charge method.
             If this is False and an invalid number of conformers is found, a warning will be raised.
-        use_conformers : iterable of openmm.unit.Quantity-wrapped numpy arrays, each with shape (n_atoms, 3) and dimension of distance. Optional, default=None
-            Coordinates to use for partial charge calculation.
+        use_conformers : iterable of openmm.unit.Quantity-wrapped numpy arrays, each with shape (n_atoms, 3)
+            and dimension of distance. Optional, default=None Coordinates to use for partial charge calculation.
             If None, an appropriate number of conformers for the given charge method will be generated.
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
+        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry
+        or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for the calculation
 
         Examples
@@ -3819,9 +3845,12 @@ class FrozenMolecule(Serializable):
         strict_n_conformers : bool, default=False
             Whether to raise an exception if an invalid number of conformers is provided for the given charge method.
             If this is False and an invalid number of conformers is found, a warning will be raised.
-        use_conformers : iterable of openmm.unit.Quantity-wrapped numpy arrays, each with shape (n_atoms, 3) and dimension of distance. Optional, default=None
-            Coordinates to use for partial charge calculation. If None, an appropriate number of conformers will be generated.
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
+        use_conformers : iterable of openmm.unit.Quantity-wrapped numpy arrays, each with shape (n_atoms, 3) and
+            dimension of distance. Optional, default=None
+            Coordinates to use for partial charge calculation. If None, an appropriate number of conformers will
+            be generated.
+        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry
+            or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for the calculation.
         normalize_partial_charges : bool, default=True
             Whether to offset partial charges so that they sum to the total formal charge of the molecule.
@@ -3906,13 +3935,14 @@ class FrozenMolecule(Serializable):
 
         Parameters
         ----------
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
+        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or
+            openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
         bond_order_model : string, optional. Default=None
             The bond order model to use for fractional bond order calculation. If ``None``, "am1-wiberg" will be used.
-        use_conformers : iterable of openmm.unit.Quantity(np.array) with shape (n_atoms, 3) and dimension of distance, optional, default=None
-            The conformers to use for fractional bond order calculation. If ``None``, an appropriate number
-            of conformers will be generated by an available ToolkitWrapper.
+        use_conformers : iterable of openmm.unit.Quantity(np.array) with shape (n_atoms, 3) and dimension of distance,
+            optional, default=None The conformers to use for fractional bond order calculation. If ``None``, an
+            appropriate number of conformers will be generated by an available ToolkitWrapper.
 
         Examples
         --------
@@ -3982,8 +4012,8 @@ class FrozenMolecule(Serializable):
         Returns
         -------
         graph : networkx.Graph
-            The resulting graph, with nodes (atoms) labeled with atom indices, elements, stereochemistry and aromaticity
-            flags and bonds with two atom indices, bond order, stereochemistry, and aromaticity flags
+            The resulting graph, with nodes (atoms) labeled with atom indices, elements, stereochemistry and
+            aromaticity flags and bonds with two atom indices, bond order, stereochemistry, and aromaticity flags
 
         Examples
         --------
@@ -4028,7 +4058,8 @@ class FrozenMolecule(Serializable):
         ignore_functional_groups: optional, List[str], default=None,
             A list of bond SMARTS patterns to be ignored when finding rotatable bonds.
 
-        toolkit_registry: openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
+        toolkit_registry: openff.toolkit.utils.toolkits.ToolkitRegistry
+            or openff.toolkit.utils.toolkits.ToolkitWrapperl, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMARTS matching
 
         Returns
@@ -4174,11 +4205,9 @@ class FrozenMolecule(Serializable):
                     break
                 else:
                     error_msg = (
-                        "Attempted to add the new virtual site:\n{}\n"
-                        + "to molecule: \n{}\nAnother vsite with the same type "
-                        + "already exists and replace=False. Existing vsite "
-                        + "is:\n{}\n"
-                    ).format(vsite, self, existing_vsite)
+                        f"Attempted to add the new virtual site:\n{vsite}\n to molecule: \n{self}\nAnother viste"
+                        f"with the same type already exists and replace=False. Existing vsite is:\n{existing_vsite}\n"
+                    )
                     raise Exception(error_msg)
         if not replaced:
             self._virtual_sites.append(vsite)
@@ -4230,8 +4259,8 @@ class FrozenMolecule(Serializable):
         self, atoms, distance, out_of_plane_angle, in_plane_angle, **kwargs
     ):
         """
-        Create a bond charge-type virtual site, in which the location of the charge is specified by the position of
-        three atoms.
+        Create a bond charge-type virtual site, in which the location of the charge is specified by
+        the position of three atoms.
 
         Parameters
         ----------
@@ -4277,8 +4306,8 @@ class FrozenMolecule(Serializable):
         self, atoms, distance, out_of_plane_angle, **kwargs
     ):
         """
-        Create a divalent lone pair-type virtual site, in which the location of the charge is specified by the position
-        of three atoms.
+        Create a divalent lone pair-type virtual site, in which the location of the charge is specified by
+        the position of three atoms.
 
         Parameters
         ----------
@@ -4319,8 +4348,8 @@ class FrozenMolecule(Serializable):
 
     def _add_trivalent_lone_pair_virtual_site(self, atoms, distance, **kwargs):
         """
-        Create a trivalent lone pair-type virtual site, in which the location of the charge is specified by the position
-         of four atoms.
+        Create a trivalent lone pair-type virtual site, in which the location of the charge is specified by
+        the position of four atoms.
 
         Parameters
         ----------
@@ -4392,14 +4421,12 @@ class FrozenMolecule(Serializable):
         else:
             raise Exception(
                 "Invalid inputs to molecule._add_bond. Expected ints or Atoms. "
-                "Received {} (type {}) and {} (type {}) ".format(
-                    atom1, type(atom1), atom2, type(atom2)
-                )
+                f"Received {atom1} (type {type(atom1)}) and {atom2} (type {type(atom2)}) "
             )
         # TODO: Check to make sure bond does not already exist
         if atom1_atom.is_bonded_to(atom2_atom):
             raise Exception(
-                "Bond already exists between {} and {}".format(atom1_atom, atom2_atom)
+                f"Bond already exists between {atom1_atom} and {atom2_atom})"
             )
         bond = Bond(
             atom1_atom,
@@ -4503,7 +4530,8 @@ class FrozenMolecule(Serializable):
         Parameters
         ----------
         charges : None or a openmm.unit.Quantity - wrapped numpy array [1 x n_atoms]
-            The partial charges to assign to the molecule. If not None, must be in units compatible with openmm.unit.elementary_charge
+            The partial charges to assign to the molecule. If not None, must be in units compatible with
+            openmm.unit.elementary_charge
 
         """
         if charges is None:
@@ -4515,7 +4543,7 @@ class FrozenMolecule(Serializable):
             if hasattr(charges, "unit"):
                 from openmm import unit as openmm_unit
 
-                if not isinstance(other, openmm_unit.Quantity):
+                if not isinstance(charges, openmm_unit.Quantity):
                     raise IncompatibleUnitError(
                         "Unsupported type passed to partial_charges setter. "
                         "Found object of type {type(charges)}."
@@ -5060,7 +5088,8 @@ class FrozenMolecule(Serializable):
         query : str or ChemicalEnvironment
             SMARTS string (with one or more tagged atoms) or ``ChemicalEnvironment`` query.
             Query will internally be resolved to SMIRKS using ``query.asSMIRKS()`` if it has an ``.asSMIRKS`` method.
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=GLOBAL_TOOLKIT_REGISTRY
+        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry
+            or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=GLOBAL_TOOLKIT_REGISTRY
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for chemical environment matches
 
 
@@ -5078,8 +5107,9 @@ class FrozenMolecule(Serializable):
 
         .. todo ::
 
-           * Do we want to generalize ``query`` to allow other kinds of queries, such as mdtraj DSL, pymol selections, atom index slices, etc?
-             We could call it ``topology.matches(query)`` instead of ``chemical_environment_matches``
+           * Do we want to generalize ``query`` to allow other kinds of queries, such as mdtraj DSL,
+           pymol selections, atom index slices, etc? We could call it ``topology.matches(query)`` instead of
+           ``chemical_environment_matches``
 
         """
         # Resolve to SMIRKS if needed
@@ -5128,7 +5158,8 @@ class FrozenMolecule(Serializable):
         ----------
         iupac_name : str
             IUPAC name of molecule to be generated
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=GLOBAL_TOOLKIT_REGISTRY
+        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry
+            or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=GLOBAL_TOOLKIT_REGISTRY
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for chemical environment matches
         allow_undefined_stereo : bool, default=False
             If false, raises an exception if molecule contains undefined stereochemistry.
@@ -5170,9 +5201,8 @@ class FrozenMolecule(Serializable):
             )
         else:
             raise Exception(
-                "Invalid toolkit_registry passed to from_iupac. Expected ToolkitRegistry or ToolkitWrapper. Got  {}".format(
-                    type(toolkit_registry)
-                )
+                "Invalid toolkit_registry passed to from_iupac. Expected ToolkitRegistry or ToolkitWrapper. "
+                f"Got {type(toolkit_registry)}."
             )
 
         return molecule
@@ -5202,9 +5232,8 @@ class FrozenMolecule(Serializable):
             to_iupac_method = toolkit_registry.to_iupac
         else:
             raise Exception(
-                "Invalid toolkit_registry passed to to_iupac. Expected ToolkitRegistry or ToolkitWrapper. Got  {}".format(
-                    type(toolkit_registry)
-                )
+                "Invalid toolkit_registry passed to to_iupac. Expected ToolkitRegistry or ToolkitWrapper. "
+                f"Got {type(toolkit_registry)}"
             )
 
         # TODO: Can `to_iupac` fail if given a well-behaved OFFMol/OEMol?
@@ -5289,7 +5318,8 @@ class FrozenMolecule(Serializable):
             Format specifier, usually file suffix (eg. 'MOL2', 'SMI')
             Note that not all toolkits support all formats. Check ToolkitWrapper.toolkit_file_read_formats for your
             loaded toolkits for details.
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper,
+        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry
+            or openff.toolkit.utils.toolkits.ToolkitWrapper,
         optional, default=GLOBAL_TOOLKIT_REGISTRY
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for file loading. If a Toolkit is passed, only
             the highest-precedence toolkit is used
@@ -5311,7 +5341,7 @@ class FrozenMolecule(Serializable):
         """
 
         if file_format is None:
-            if not (isinstance(file_path, str)):
+            if not isinstance(file_path, str):
                 raise Exception(
                     "If providing a file-like object for reading molecules, the format must be specified"
                 )
@@ -5352,12 +5382,12 @@ class FrozenMolecule(Serializable):
                 # to the error message that will hopefully reduce this confusion.
                 if file_format == "MOL2" and RDKitToolkitWrapper.is_available():
                     msg += (
-                        f"RDKit does not fully support input of molecules from mol2 format unless they "
-                        f"have Corina atom types, and this is not common in the simulation community. For this "
-                        f"reason, the Open Force Field Toolkit does not use "
-                        f"RDKit to read .mol2. Consider reading from SDF instead. If you would like to attempt "
-                        f"to use RDKit to read mol2 anyway, you can load the molecule of interest into an RDKit "
-                        f"molecule and use openff.toolkit.topology.Molecule.from_rdkit, but we do not recommend this."
+                        "RDKit does not fully support input of molecules from mol2 format unless they "
+                        "have Corina atom types, and this is not common in the simulation community. For this "
+                        "reason, the Open Force Field Toolkit does not use "
+                        "RDKit to read .mol2. Consider reading from SDF instead. If you would like to attempt "
+                        "to use RDKit to read mol2 anyway, you can load the molecule of interest into an RDKit "
+                        "molecule and use openff.toolkit.topology.Molecule.from_rdkit, but we do not recommend this."
                     )
                 elif file_format == "PDB" and RDKitToolkitWrapper.is_available():
                     msg += (
@@ -5405,7 +5435,7 @@ class FrozenMolecule(Serializable):
             )
 
         if len(mols) == 0:
-            raise Exception("Unable to read molecule from file: {}".format(file_path))
+            raise Exception(f"Unable to read molecule from file: {file_path}")
         elif len(mols) == 1:
             return mols[0]
 
@@ -5585,10 +5615,12 @@ class FrozenMolecule(Serializable):
                     non_isomorphic_count += 1
             # print(f"Non isomorphic residues: {non_isomorphic_count}")
             print(
-                f"N. of assigned nodes: {len(already_assigned_nodes)} -- N. of atoms: {len(list(openmm_topology.atoms()))}"
+                f"N. of assigned nodes: {len(already_assigned_nodes)} -- N. of atoms: "
+                f"{len(list(openmm_topology.atoms()))}"
             )
             print(
-                f"N. of assigned edges: {len(already_assigned_edges)} -- N. of bonds: {len(list(openmm_topology.bonds()))}"
+                f"N. of assigned edges: {len(already_assigned_edges)} -- N. of bonds: "
+                f"{len(list(openmm_topology.bonds()))}"
             )
             # assert len(already_assigned_nodes) == len(list(openmm_topology.atoms()))
             # assert len(already_assigned_edges) == len(list(openmm_topology.bonds()))
@@ -5635,14 +5667,14 @@ class FrozenMolecule(Serializable):
 
         print(f"Number of atoms before sanitization: {offmol.n_atoms}")
         # TODO: Pull in coordinates and assign stereochemistry
-        coords = (
+        coords = unit.Quantity(
             np.array(
                 [
                     [*vec3.value_in_unit(openmm_unit.angstrom)]
                     for vec3 in pdb.getPositions()
                 ]
-            )
-            * unit.angstrom
+            ),
+            unit.angstrom,
         )
 
         offmol.add_conformer(coords)
@@ -5650,8 +5682,8 @@ class FrozenMolecule(Serializable):
         rdmol = offmol.to_rdkit()
         Chem.SanitizeMol(
             rdmol,
-            Chem.SANITIZE_ALL
-            ^ Chem.SANITIZE_ADJUSTHS,  # ^ Chem.SANITIZE_SETAROMATICITY,
+            Chem.SANITIZE_ALL ^ Chem.SANITIZE_ADJUSTHS,
+            # ^ Chem.SANITIZE_SETAROMATICITY,
         )
         Chem.AssignStereochemistryFrom3D(rdmol)
 
@@ -5733,10 +5765,10 @@ class FrozenMolecule(Serializable):
         file_format : str
             Format specifier, one of ['MOL2', 'MOL2H', 'SDF', 'PDB', 'SMI', 'CAN', 'TDT']
             Note that not all toolkits support all formats
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper,
-        optional, default=GLOBAL_TOOLKIT_REGISTRY
-            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for file writing. If a Toolkit is passed, only
-            the highest-precedence toolkit is used
+        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry
+            or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=GLOBAL_TOOLKIT_REGISTRY
+            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for file writing. If a Toolkit is passed,
+            only the highest-precedence toolkit is used
 
         Raises
         ------
@@ -5784,8 +5816,8 @@ class FrozenMolecule(Serializable):
                     toolkit.toolkit_name
                 ] = toolkit.toolkit_file_write_formats
             raise ValueError(
-                "The requested file format ({}) is not available from any of the installed toolkits "
-                "(supported formats: {})".format(file_format, supported_formats)
+                f"The requested file format ({file_format}) is not available from any of the installed toolkits "
+                f"(supported formats: {supported_formats})"
             )
 
         # Write file
@@ -5806,7 +5838,8 @@ class FrozenMolecule(Serializable):
         max_states: int optional, default=20
             The maximum amount of molecules that should be returned
 
-        toolkit_registry: openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, default=GLOBAL_TOOLKIT_REGISTRY
+        toolkit_registry: openff.toolkit.utils.toolkits.ToolkitRegistry
+            or openff.toolkit.utils.toolkits.ToolkitWrapper, default=GLOBAL_TOOLKIT_REGISTRY
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use to enumerate the tautomers.
 
         Returns
@@ -5853,7 +5886,8 @@ class FrozenMolecule(Serializable):
         rationalise: bool optional, default=True
             If we should try to build and rationalise the molecule to ensure it can exist
 
-        toolkit_registry: openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, default=GLOBAL_TOOLKIT_REGISTRY
+        toolkit_registry: openff.toolkit.utils.toolkits.ToolkitRegistry or
+            lopenff.toolkit.utils.toolkits.ToolkitWrapper, default=GLOBAL_TOOLKIT_REGISTRY
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use to enumerate the stereoisomers.
 
         Returns
@@ -6130,7 +6164,8 @@ class FrozenMolecule(Serializable):
         mapped_smiles: str,
             A CMILES-style mapped smiles string with explicit hydrogens.
 
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional
+        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry
+            or openff.toolkit.utils.toolkits.ToolkitWrapper, optional
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
 
         allow_undefined_stereo : bool, default=False
@@ -6207,7 +6242,8 @@ class FrozenMolecule(Serializable):
             A qcportal.FractalClient instance to use for fetching an initial geometry.
             Only used if ``qca_record`` is a dataset entry.
 
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional
+        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or
+            openff.toolkit.utils.toolkits.ToolkitWrapper, optional
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
 
         allow_undefined_stereo : bool, default=False
@@ -6384,7 +6420,8 @@ class FrozenMolecule(Serializable):
 
         Parameters
         ----------
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional
+        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or
+            openff.toolkit.utils.toolkits.ToolkitWrapper, optional
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
 
          Returns
@@ -6400,9 +6437,8 @@ class FrozenMolecule(Serializable):
             return toolkit.canonical_order_atoms(self)
         else:
             raise InvalidToolkitRegistryError(
-                "Invalid toolkit_registry passed to from_smiles. Expected ToolkitRegistry or ToolkitWrapper. Got  {}".format(
-                    type(toolkit_registry)
-                )
+                "Invalid toolkit_registry passed to from_smiles. Expected ToolkitRegistry or ToolkitWrapper. "
+                f"Got {type(toolkit_registry)}."
             )
 
     def remap(self, mapping_dict, current_to_new=True):
@@ -6660,7 +6696,7 @@ class FrozenMolecule(Serializable):
         else:
             raise TypeError(
                 "Invalid input passed to get_bond_between(). Expected ints or Atoms, "
-                "got {} and {}".format(i, j)
+                f"got {j} and {j}."
             )
 
         for bond in atom_i.bonds:
@@ -6675,14 +6711,15 @@ class FrozenMolecule(Serializable):
 
         from openff.toolkit.topology import NotBondedError
 
-        raise NotBondedError("No bond between atom {} and {}".format(i, j))
+        raise NotBondedError(f"No bond between atom {i} and {j}")
 
 
 class Molecule(FrozenMolecule):
     """
     Mutable chemical representation of a molecule, such as a small molecule or biopolymer.
 
-    .. todo :: What other API calls would be useful for supporting biopolymers as small molecules? Perhaps iterating over chains and residues?
+    .. todo :: What other API calls would be useful for supporting biopolymers as small molecules? Perhaps iterating
+        over chains and residues?
 
     Examples
     --------
@@ -6911,7 +6948,8 @@ class Molecule(FrozenMolecule):
         self, atoms, distance, out_of_plane_angle, in_plane_angle, **kwargs
     ):
         """
-        Create a bond charge-type virtual site, in which the location of the charge is specified by the position of three atoms.
+        Create a bond charge-type virtual site, in which the location of the charge is specified by
+        the position of three atoms.
 
         Parameters
         ----------
@@ -6959,12 +6997,12 @@ class Molecule(FrozenMolecule):
         )
         return vsite_index
 
-    # def add_divalent_lone_pair_virtual_site(self, atoms, distance, out_of_plane_angle, in_plane_angle, charge_increments=None, weights=None, epsilon=None, sigma=None, rmin_half=None, name=None):
     def add_divalent_lone_pair_virtual_site(
         self, atoms, distance, out_of_plane_angle, **kwargs
     ):
         """
-        Create a divalent lone pair-type virtual site, in which the location of the charge is specified by the position of three atoms.
+        Create a divalent lone pair-type virtual site, in which the location of the charge is specified by
+        the position of three atoms.
 
         Parameters
         ----------
@@ -7009,7 +7047,8 @@ class Molecule(FrozenMolecule):
 
     def add_trivalent_lone_pair_virtual_site(self, atoms, distance, **kwargs):
         """
-        Create a trivalent lone pair-type virtual site, in which the location of the charge is specified by the position of four atoms.
+        Create a trivalent lone pair-type virtual site, in which the location of the charge is specified by
+        the position of four atoms.
 
         Parameters
         ----------

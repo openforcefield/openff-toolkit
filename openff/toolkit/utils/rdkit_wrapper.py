@@ -1669,7 +1669,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             rdatom.SetFormalCharge(atom.formal_charge.m_as(unit.elementary_charge))
             rdatom.SetIsAromatic(atom.is_aromatic)
 
-            ## Stereo handling code moved to after bonds are added
+            # Stereo handling code moved to after bonds are added
             if atom.stereochemistry == "S":
                 rdatom.SetChiralTag(Chem.CHI_TETRAHEDRAL_CW)
             elif atom.stereochemistry == "R":

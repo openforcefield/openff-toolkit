@@ -140,16 +140,14 @@ for toolkit in GLOBAL_TOOLKIT_REGISTRY.registered_toolkits:
 BASIC_CHEMINFORMATICS_TOOLKITS = [RDKitToolkitWrapper, OpenEyeToolkitWrapper]
 
 # Ensure we have at least one basic toolkit
-if (
-    sum(
-        [
-            tk.is_available()
-            for tk in GLOBAL_TOOLKIT_REGISTRY.registered_toolkits
-            if type(tk) in BASIC_CHEMINFORMATICS_TOOLKITS
-        ]
-    )
-    == 0
-):
+any_toolkits = False
+for tk in GLOBAL_TOOLKIT_REGISTRY.registered_toolkits:
+    if type(tk) in BASIC_CHEMINFORMATICS_TOOLKITS:
+        if tk.is_available():
+            any_toolkits = True
+            break
+
+if not any_toolkits:
     from openff.toolkit.utils import all_subclasses
 
     msg = "WARNING: No basic cheminformatics toolkits are available.\n"

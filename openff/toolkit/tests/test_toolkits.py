@@ -3080,8 +3080,7 @@ class TestAmberToolsToolkitWrapper:
         # which should raise the first error encountered
         with pytest.raises(
             ValueError,
-            match=f"has 2 conformers, but charge method 'am1bcc' "
-            f"expects exactly 1.",
+            match="has 2 conformers, but charge method 'am1bcc' expects exactly 1.",
         ):
             molecule.assign_partial_charges(
                 partial_charge_method="am1bcc",
@@ -3096,8 +3095,7 @@ class TestAmberToolsToolkitWrapper:
         # in a failed task together in a single ValueError.
         with pytest.raises(
             ValueError,
-            match=f"has 2 conformers, but charge method 'am1bcc' "
-            f"expects exactly 1.",
+            match="has 2 conformers, but charge method 'am1bcc' expects exactly 1.",
         ):
             toolkit_registry.call(
                 "assign_partial_charges",
@@ -3112,8 +3110,7 @@ class TestAmberToolsToolkitWrapper:
         # confs, and specify strict_n_conformers, which should produce an IncorrectNumConformersError
         with pytest.raises(
             IncorrectNumConformersError,
-            match=f"has 2 conformers, but charge method 'am1bcc' "
-            f"expects exactly 1.",
+            match="has 2 conformers, but charge method 'am1bcc' expects exactly 1.",
         ):
             ATTKW = AmberToolsToolkitWrapper()
             ATTKW.assign_partial_charges(
@@ -3566,7 +3563,7 @@ class TestBuiltInToolkitWrapper:
         # was thrown inside them, so we just check for a ValueError here
         with pytest.raises(
             ValueError,
-            match=f"has 1 conformers, but charge method 'zeros' " f"expects exactly 0.",
+            match="has 1 conformers, but charge method 'zeros' expects exactly 0.",
         ):
             molecule.assign_partial_charges(
                 toolkit_registry=toolkit_registry,
@@ -3579,7 +3576,7 @@ class TestBuiltInToolkitWrapper:
         # confs, and specify strict_n_conformers, which should produce an IncorrectNumConformersError
         with pytest.raises(
             IncorrectNumConformersError,
-            match=f"has 1 conformers, but charge method 'zeros' " f"expects exactly 0.",
+            match="has 1 conformers, but charge method 'zeros' expects exactly 0.",
         ):
             BITKW = BuiltInToolkitWrapper()
             BITKW.assign_partial_charges(

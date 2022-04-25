@@ -983,7 +983,7 @@ class TestForceField:
         forcefield.get_parameter_handler("Angles")
 
         # Shouldn't find InvalidKey handler, since it doesn't exist
-        with pytest.raises(KeyError) as excinfo:
+        with pytest.raises(KeyError):
             forcefield.get_parameter_handler("InvalidKey")
 
         # Verify the aromatocitiy model is not None
@@ -1008,7 +1008,7 @@ class TestForceField:
         forcefield.get_parameter_handler("Bonds")
 
         # Shouldn't find AngleHandler, since we didn't allow that to be registered
-        with pytest.raises(KeyError) as excinfo:
+        with pytest.raises(KeyError):
             forcefield.get_parameter_handler("Angles")
 
     def test_create_forcefield_from_file(self):
@@ -1153,7 +1153,7 @@ class TestForceField:
         with pytest.raises(
             SMIRNOFFSpecError,
             match="Unexpected kwarg [(]parameters: k, length[)]  passed",
-        ) as excinfo:
+        ):
             forcefield = ForceField(xml_ff_w_cosmetic_elements)
 
         # Create a force field from XML successfully, by explicitly permitting cosmetic attributes
@@ -1170,7 +1170,7 @@ class TestForceField:
         with pytest.raises(
             SMIRNOFFSpecError,
             match="Unexpected kwarg [(]parameters: k, length[)]  passed",
-        ) as excinfo:
+        ):
             forcefield = ForceField(string_1, allow_cosmetic_attributes=False)
 
         # Complete the forcefield_1 --> string --> forcefield_2 roundtrip
@@ -1259,7 +1259,7 @@ class TestForceField:
         with pytest.raises(
             SMIRNOFFSpecError,
             match="Unexpected kwarg [(]parameters: k, length[)]  passed",
-        ) as excinfo:
+        ):
             forcefield = ForceField(xml_ff_w_cosmetic_elements)
 
         # Create a force field from XML successfully
@@ -1278,7 +1278,7 @@ class TestForceField:
         with pytest.raises(
             SMIRNOFFSpecError,
             match="Unexpected kwarg [(]parameters: k, length[)]  passed",
-        ) as excinfo:
+        ):
             forcefield = ForceField(iofile1.name, allow_cosmetic_attributes=False)
 
         # Complete the forcefield_1 --> file --> forcefield_2 roundtrip
@@ -1432,7 +1432,7 @@ class TestForceField:
             RuntimeError,
             match="Unable to resolve order in which to run ParameterHandlers. "
             "Dependencies do not form a directed acyclic graph",
-        ) as excinfo:
+        ):
             # TODO: specify desired toolkit_registry behavior in Interchange
             omm_system = forcefield.create_openmm_system(
                 topology,
@@ -1848,7 +1848,7 @@ class TestForceField:
                         nonbond_method_matched = True
             assert nonbond_method_matched
         else:
-            with pytest.raises(exception, match=exception_match) as excinfo:
+            with pytest.raises(exception, match=exception_match):
                 # The method is validated and may raise an exception if it's not supported.
                 forcefield.get_parameter_handler("vdW", {}).method = vdw_method
                 forcefield.get_parameter_handler(
@@ -1960,7 +1960,7 @@ class TestForceField:
                 handler_found = True
         assert not (handler_found)
 
-        with pytest.raises(KeyError) as excinfo:
+        with pytest.raises(KeyError):
             ff.deregister_parameter_handler(to_deregister)
 
     def test_hash(self):
@@ -2812,9 +2812,7 @@ class TestForceFieldChargeAssignment:
             assert abs_charge_sum > 0.5 * unit.elementary_charge
 
         else:
-            with pytest.raises(
-                expected_exception, match=expected_exception_match
-            ) as excinfo:
+            with pytest.raises(expected_exception, match=expected_exception_match):
                 ethanol.assign_partial_charges(
                     partial_charge_method=partial_charge_method,
                     toolkit_registry=toolkit_wrapper,
@@ -3228,7 +3226,7 @@ class TestForceFieldChargeAssignment:
         with pytest.raises(
             UnassignedMoleculeChargeException,
             match="did not have charges assigned by any ParameterHandler",
-        ) as excinfo:
+        ):
             omm_system = ff.create_openmm_system(top)
 
         # If we do NOT delete the ToolkiAM1BCCHandler, then toluene should be assigned some nonzero partial charges.

@@ -29,13 +29,14 @@ class Serializable(abc.ABC):
     `BSON <http://bsonspec.org/>`_, `YAML <http://yaml.org/>`_, `TOML <https://github.com/toml-lang/toml>`_,
     `MessagePack <https://msgpack.org/index.html>`_, and `XML <https://www.w3.org/XML/>`_.
 
-    To use this mix-in, the class inheriting from this class must have implemented ``to_dict()`` and ``from_dict()`` methods
-    that utilize dictionaries containing only serialiable Python objects.
+    To use this mix-in, the class inheriting from this class must have implemented ``to_dict()`` and ``from_dict()``
+    methods that utilize dictionaries containing only serialiable Python objects.
 
     .. warning ::
 
-       The serialization/deserialiation schemes used here place some strict constraints on what kinds of ``dict`` objects
-       can be serialized. No effort is made to add further protection to ensure serialization is possible. Use with caution.
+       The serialization/deserialiation schemes used here place some strict constraints on what kinds of ``dict``
+       objects can be serialized. No effort is made to add further protection to ensure serialization is possible.
+       Use with caution.
 
     Examples
     --------

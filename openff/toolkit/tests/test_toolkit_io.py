@@ -85,7 +85,7 @@ CAFFEINE
 $$$$
 """
 
-CAFFEINE_2D_COORDS = (
+CAFFEINE_2D_COORDS = unit.Quantity(
     np.array(
         [
             (-1.1875, -9.6542, 0.0000),
@@ -104,8 +104,8 @@ CAFFEINE_2D_COORDS = (
             (-0.2917, -8.0750, 0.0000),
         ],
         np.double,
-    )
-    * unit.angstrom
+    ),
+    unit.angstrom,
 )
 
 
@@ -850,13 +850,13 @@ class BaseFromFileIO:
 
     def test_from_file_qwe_format_raises_exception(self):
         with pytest.raises(ValueError, match="Unsupported file format: QWE"):
-            mols = self.toolkit_wrapper.from_file(
+            self.toolkit_wrapper.from_file(
                 file_manager.caffeine_2d_sdf, file_format="qwe"
             )
 
     def test_from_file_obj_qwe_format_raises_exception(self):
         with pytest.raises(ValueError, match="Unsupported file format: QWE"):
-            mols = self.toolkit_wrapper.from_file_obj(
+            self.toolkit_wrapper.from_file_obj(
                 file_obj_manager.caffeine_2d_sdf, file_format="qwe"
             )
 
@@ -1091,7 +1091,7 @@ class BaseToFileIO:
 
     def test_to_file_qwe_format_raises_exception(self):
         with tempfile.NamedTemporaryFile(suffix=".smi") as fileobj:
-            with pytest.raises(ValueError, match=f"Unsupported file format: QWE"):
+            with pytest.raises(ValueError, match="Unsupported file format: QWE"):
                 self.toolkit_wrapper.to_file(ETHANOL, fileobj.name, "QWE")
 
     # === Test writing to a file that does not exist

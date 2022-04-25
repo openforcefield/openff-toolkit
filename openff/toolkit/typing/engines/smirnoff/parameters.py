@@ -4000,8 +4000,8 @@ class ElectrostaticsHandler(_NonbondedHandler):
                 q, _, _ = force.getParticleParameters(topology.particle_index(particle))
                 partial_charge_sum += from_openmm(q)
             if (
-                abs(formal_charge_sum - partial_charge_sum)
-                > 0.01 * unit.elementary_charge
+                abs(formal_charge_sum - partial_charge_sum).m_as(unit.elementary_charge)
+                > 0.01
             ):
                 msg = (
                     f"Partial charge sum ({partial_charge_sum}) "
