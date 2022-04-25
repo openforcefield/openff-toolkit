@@ -3,7 +3,7 @@ Class definitions to represent a molecular system and its chemical components
 
 .. todo::
 
-   * Create MoleculeImage, ParticleImage, AtomImage, VirtualSiteImage here. (Or ``MoleculeInstance``?)
+   * Create MoleculeImage, ParticleImage, AtomImage here. (Or ``MoleculeInstance``?)
    * Create ``MoleculeGraph`` to represent fozen set of atom elements and bonds that can used as a key for compression
    * Add hierarchical way of traversing Topology (chains, residues)
    * Make all classes hashable and serializable.
@@ -361,10 +361,6 @@ class Topology(Serializable):
     A Topology is a chemical representation of a system containing one or more molecules appearing in a specified
     order.
 
-    As of the 0.7.0 release, the Topology particle indexing system puts all atoms before all virtualsites.
-    This ensures that atoms keep the same Topology particle index value, even if the Topology
-    is modified during system creation by the addition of virtual sites.
-
     .. warning :: This API is experimental and subject to change.
 
     Examples
@@ -715,22 +711,6 @@ class Topology(Serializable):
                 return index
         raise Exception("Particle not found in this Topology")
 
-    def virtual_site_particle_start_index(self, virtual_site) -> int:
-        """
-        Returns the  particle index of the first particle of this virtual site.
-
-        Parameters
-        ----------
-        virtual_site : openff.toolkit.topology.VirtualSite
-
-        Returns
-        -------
-        index : int
-            The topology particle index of the first particle in this virtual site.
-        """
-        first_particle = next(virtual_site.particles)
-        return self.particle_index(first_particle)
-
     def molecule_index(self, molecule):
         """
         Returns the index of a given molecule in this topology
@@ -763,20 +743,6 @@ class Topology(Serializable):
         """
         return self.atom_index(molecule.atoms[0])
 
-    def molecule_virtual_particle_start_index(self, molecule):
-        """
-        Returns the index of a molecule's first virtual particle in this topology
-
-        Parameters
-        ----------
-        molecule : openff.toolkit.topology.FrozenMolecule
-
-        Returns
-        -------
-        index : int
-        """
-        return self.particle_index(molecule.virtual_sites[0].particles[0])
-
     @property
     def n_bonds(self):
         """
@@ -806,7 +772,7 @@ class Topology(Serializable):
     @property
     def n_particles(self) -> int:
         """
-        Returns the number of particles (Atoms and VirtualParticles) in in this Topology.
+        Returns the number of particles (Atoms) in in this Topology.
 
         Returns
         -------
@@ -820,47 +786,16 @@ class Topology(Serializable):
     @property
     def particles(self):
         """
-        Returns an iterator over the particles (Atoms and VirtualParticles) in this Topology. The
+        Returns an iterator over the particles (Atoms) in this Topology. The
         particles will be in order of ascending Topology index.
 
         Returns
         --------
-        particles : Iterable of Atom and VirtualParticle
+        particles : Iterable of Atom
         """
         for molecule in self.molecules:
             for atom in molecule.atoms:
                 yield atom
-        for molecule in self.molecules:
-            for vs in molecule.virtual_sites:
-                for vp in vs.particles:
-                    yield vp
-
-    @property
-    def n_virtual_sites(self) -> int:
-        """
-        Returns the number of VirtualSites in in this Topology.
-
-        Returns
-        -------
-        n_virtual_sites : iterable of TopologyVirtualSites
-        """
-
-        n_virtual_sites = 0
-        for molecule in self.molecules:
-            n_virtual_sites += molecule.n_virtual_sites  # type: ignore[union-attr]
-        return n_virtual_sites
-
-    @property
-    def virtual_sites(self):
-        """Get an iterator over the virtual sites in this Topology
-
-        Returns
-        -------
-        virtual_sites : Iterable of VirtualSite
-        """
-        for molecule in self._molecules:
-            for virtual_site in molecule.virtual_sites:
-                yield virtual_site
 
     @property
     def n_angles(self):
@@ -1578,12 +1513,11 @@ class Topology(Serializable):
 
         Notes:
 
-        1. This doesn't handle virtual sites (they're ignored)
-        2. Atom numbering may not remain same, for example if the atoms
+        1. Atom numbering may not remain same, for example if the atoms
            in water are numbered as 1001, 1002, 1003, they would change
            to 1, 2, 3. This doesn't affect the topology or coordinates or
            atom-ordering in any way.
-        3. Same issue with the amino acid names in the pdb file, they are
+        2. Same issue with the amino acid names in the pdb file, they are
            not returned.
 
         Parameters
@@ -1878,7 +1812,6 @@ class Topology(Serializable):
             An OpenEye molecule
         positions : unit-wrapped array with shape [nparticles,3], optional, default=None
             Positions to use in constructing OEMol.
-            If virtual sites are present in the Topology, these indices will be skipped.
 
         NOTE: This comes from https://github.com/oess/oeommtools/blob/master/oeommtools/utils.py
 
@@ -2054,31 +1987,6 @@ class Topology(Serializable):
         # atom_molecule_index = atom_topology_index - search_index
         # return topology_molecule.atom(atom_molecule_index)
 
-    def virtual_site(self, vsite_topology_index):
-        """
-        Get the TopologyAtom at a given Topology atom index.
-
-        Parameters
-        ----------
-        vsite_topology_index : int
-             The index of the TopologyVirtualSite in this Topology
-
-        Returns
-        -------
-        An openff.toolkit.topology.TopologyVirtualSite
-
-        """
-        assert type(vsite_topology_index) is int
-        assert 0 <= vsite_topology_index < self.n_virtual_sites
-        this_molecule_start_index = 0
-        next_molecule_start_index = 0
-        for molecule in self._molecules:
-            next_molecule_start_index += molecule.n_virtual_sites
-            if next_molecule_start_index > vsite_topology_index:
-                vsite_molecule_index = vsite_topology_index - this_molecule_start_index
-                return molecule.virtual_site(vsite_molecule_index)
-            this_molecule_start_index += molecule.n_virtual_sites
-
     def bond(self, bond_topology_index):
         """
         Get the TopologyBond at a given Topology bond index.
@@ -2235,18 +2143,6 @@ class Topology(Serializable):
         """DEPRECATED: Use Topology.particles instead."""
         _topology_deprecation("topology_particles", "particles")
         return self.particles
-
-    @property
-    def n_topology_virtual_sites(self) -> int:
-        """DEPRECATED: Use Topology.n_virtual_sites instead."""
-        _topology_deprecation("n_topology_virtual_sites", "n_virtual_sites")
-        return self.n_virtual_sites
-
-    @property
-    def topology_virtual_sites(self):
-        """DEPRECATED: Use Topology.virtual_sites instead."""
-        _topology_deprecation("topology_virtual_sites", "virtual_sites")
-        return self.virtual_sites
 
     @property
     def n_reference_molecules(self) -> int:
