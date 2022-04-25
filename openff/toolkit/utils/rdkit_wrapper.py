@@ -275,7 +275,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             bond_type = bond.GetBondType()
             # All bonds in the graph should have been explicitly assigned by this point.
             if bond_type == Chem.rdchem.BondType.UNSPECIFIED:
-                raise SMILESParseError(f"A bond in {substructure_smarts} has an unspecified bond order")
+                raise SMILESParseError(
+                    f"A bond in {substructure_smarts} has an unspecified bond order"
+                )
 
             rdmol_G.add_edge(
                 bond.GetBeginAtomIdx(),

@@ -36,7 +36,11 @@ from openff.toolkit.utils.exceptions import (
     SMIRKSMismatchError,
     SMIRKSParsingError,
 )
-from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY, ToolkitWrapper, ToolkitRegistry
+from openff.toolkit.utils.toolkits import (
+    GLOBAL_TOOLKIT_REGISTRY,
+    ToolkitRegistry,
+    ToolkitWrapper,
+)
 
 
 class ChemicalEnvironment:
@@ -229,6 +233,7 @@ class ChemicalEnvironment:
             return "ImproperTorsion"
         else:
             return None
+
 
 class AtomChemicalEnvironment(ChemicalEnvironment):
     """Chemical environment matching one labeled atom."""

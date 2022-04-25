@@ -5414,8 +5414,11 @@ class FrozenMolecule(Serializable):
     @classmethod
     @requires_package("openmm")
     def from_pdb(cls, file_path, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
-        warnings.warn("Molecule.from_pdb will soon be deprecated in favor of the more explicit "
-                      "Molecule.from_polymer_pdb", UserWarning)
+        warnings.warn(
+            "Molecule.from_pdb will soon be deprecated in favor of the more explicit "
+            "Molecule.from_polymer_pdb",
+            UserWarning,
+        )
         return cls.from_polymer_pdb(file_path, toolkit_registry=toolkit_registry)
 
     @classmethod
