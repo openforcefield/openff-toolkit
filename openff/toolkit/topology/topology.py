@@ -1514,32 +1514,41 @@ class Topology(Serializable):
         # Go through atoms in OpenFF to preserve the order.
         omm_atoms = []
 
+        # For each atom in each molecule, determine which chain/residue it should be a part of
         for molecule in self.molecules:
+            # No chain or residue can span more than one OFF molecule, so reset these to None for the first
+            # atom in each molecule.
             last_chain = None
             last_residue = None
             for atom in molecule.atoms:
-
+                # If the residue name is undefined, assume a default of "UNK"
                 if "residue_name" in atom.metadata:
                     atom_residue_name = atom.metadata["residue_name"]
                 else:
                     atom_residue_name = "UNK"
 
+                # If the residue number is undefined, assume a default of "0"
                 if "residue_number" in atom.metadata:
                     atom_residue_number = atom.metadata["residue_number"]
                 else:
                     atom_residue_number = "0"
 
+                # If the chain ID is undefined, assume a default of "X"
                 if "chain_id" in atom.metadata:
                     atom_chain_id = atom.metadata["chain_id"]
                 else:
                     atom_chain_id = "X"
 
+                # Determine whether this atom should be part of the last atom's chain, or if it
+                # should start a new chain
                 if last_chain is None:
                     chain = omm_topology.addChain(atom_chain_id)
                 elif last_chain.id == atom_chain_id:
                     chain = last_chain
                 else:
                     chain = omm_topology.addChain(atom_chain_id)
+                # Determine whether this atom should be a part of the last atom's residue, or if it
+                # should start a new residue
                 if last_residue is None:
                     residue = omm_topology.addResidue(atom_residue_name, chain)
                     residue.id = atom_residue_number

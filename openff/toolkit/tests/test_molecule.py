@@ -4236,16 +4236,6 @@ class TestMoleculeFromPDB:
             expected_mol, atom_stereochemistry_matching=False
         )
 
-    # @pytest.mark.slow
-    # def test_from_pdb_t4_smiles_roundtrip(self):
-    #     """Creation of Molecule from an uncapped T4 lysozyme PDB file."""
-    #     pdb_file = get_data_file_path("proteins/T4-protein.pdb")
-    #     offmol = Molecule.from_pdb(pdb_file)
-    #     rdkit_mol_smiles = Molecule.from_rdkit(
-    #         offmol.to_rdkit(), allow_undefined_stereo=True
-    #     ).to_smiles(toolkit_registry=RDKitToolkitWrapper())
-    #     assert offmol.to_smiles() == rdkit_mol_smiles
-
     @pytest.mark.xfail()
     def test_from_pdb_t4_n_residues(self):
         """Test number of residues when creating Molecule from T4 PDB"""

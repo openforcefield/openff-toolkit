@@ -275,7 +275,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             bond_type = bond.GetBondType()
             # All bonds in the graph should have been explicitly assigned by this point.
             if bond_type == Chem.rdchem.BondType.UNSPECIFIED:
-                raise Exception
+                raise SMILESParseError(f"A bond in {substructure_smarts} has an unspecified bond order")
 
             rdmol_G.add_edge(
                 bond.GetBeginAtomIdx(),
@@ -298,8 +298,6 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_MDL)
         # To get HIS//TRP to get recognized as aromatic, we can use a different aromaticity model
         # Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_DEFAULT)
-
-        print(f"Number of atoms after sanitization: {len(rdmol.GetAtoms())}")
 
         offmol_w_stereo_and_aro = offmol.from_rdkit(
             rdmol, allow_undefined_stereo=True, hydrogens_are_explicit=True

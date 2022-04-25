@@ -577,7 +577,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         qmol = oechem.OEQMol()
         if not oechem.OEParseSmiles(qmol, substructure_smarts):
-            raise ValueError(f"Error parsing SMARTS '{substructure_smarts}'")
+            raise SMILESParseError(f"Error parsing SMARTS '{substructure_smarts}'")
 
         oechem.OEAssignHybridization(qmol)
 
@@ -593,9 +593,8 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             )
         for bond in qmol.GetBonds():
             bond_order = bond.GetOrder()
-            # All bonds in the graph should have been explicitly assigned by this point.
             if bond_order == 0:
-                raise Exception
+                raise SMILESParseError(f"A bond in '{substructure_smarts} has order 0")
 
             graph.add_edge(
                 bond.GetBgnIdx(),

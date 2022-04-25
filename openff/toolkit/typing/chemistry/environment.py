@@ -36,7 +36,7 @@ from openff.toolkit.utils.exceptions import (
     SMIRKSMismatchError,
     SMIRKSParsingError,
 )
-from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY, ToolkitWrapper
+from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY, ToolkitWrapper, ToolkitRegistry
 
 
 class ChemicalEnvironment:
@@ -229,37 +229,6 @@ class ChemicalEnvironment:
             return "ImproperTorsion"
         else:
             return None
-
-    def to_networkx(self, toolkit_registry=None):
-        """
-        Convert this chemicalenvironment into a networkx graph.
-
-        Parameters
-        ----------
-        toolkit_registry = ToolkitWrapper or ToolkitRegistry. Default = None
-            Either a ToolkitRegistry, ToolkitWrapper, indicating the backend to use for
-            parsing the ChemicalEnvironment SMIRKS/SMARTS into a networkx graph.
-            If None, the GLOBAL_TOOLKIT_REGISTRY will be used.
-
-        Returns
-        -------
-        graph : networkx.Graph
-            A graph where all atoms have `atomic_number`, `formal_charge`, `is_aromatic`, and `stereochemistry`
-            attributes, and all bonds have `bond_order`, `stereochemistry`, and `is_aromatic` attributes.
-
-        """
-        if toolkit_registry is None:
-            toolkit_registry = GLOBAL_TOOLKIT_REGISTRY
-
-        if isinstance(toolkit_registry, ToolkitWrapper):
-            return ToolkitWrapper._smarts_to_networkx(self.smirks)
-        elif isinstance(toolkit_registry, ToolkitWrapper):
-            return ToolkitWrapper._smarts_to_networkx(self.smirks)
-        else:
-            raise InvalidToolkitRegistryError(
-                f"`toolkit_registry` must be either an instance of ToolkitRegistry or ToolkitWrapper. Got {type(toolkit_registry)} instead"
-            )
-
 
 class AtomChemicalEnvironment(ChemicalEnvironment):
     """Chemical environment matching one labeled atom."""

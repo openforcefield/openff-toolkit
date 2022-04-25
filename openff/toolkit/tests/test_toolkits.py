@@ -466,7 +466,7 @@ class TestOpenEyeToolkitWrapper:
                 central_carbon_stereo_specified = True
         assert central_carbon_stereo_specified
         for atom1, atom2 in zip(molecule.atoms, molecule2.atoms):
-            # OpenEye always adds hierarchy metadata (residue name + num) info, so account for that
+            # OpenEye wrapper always adds hierarchy metadata (residue name + num) info, so account for that
             atom1_dict = atom1.to_dict()
             atom1_dict["metadata"].update(
                 {"residue_name": "UNL", "residue_number": 1, "chain_id": " "}
@@ -521,7 +521,7 @@ class TestOpenEyeToolkitWrapper:
                 central_carbon_stereo_specified = True
         assert central_carbon_stereo_specified
         for atom1, atom2 in zip(molecule.atoms, molecule2.atoms):
-            # OpenEye always adds hierarchy metadata (residue name + num) info, so account for that
+            # OpenEye wrapper always adds hierarchy metadata (residue name + num) info, so account for that
             atom1_dict = atom1.to_dict()
             atom1_dict["metadata"].update(
                 {"residue_name": "UNL", "residue_number": 1, "chain_id": " "}
@@ -608,7 +608,7 @@ class TestOpenEyeToolkitWrapper:
             # Check roundtripped OFFMol
             for orig_atom, roundtrip_atom in zip(molecule.atoms, roundtrip_mol.atoms):
                 # If ANY atom in the OEMol has any hierarchy metadata set, then the ENTIRE molecule is considered
-                # to have metadata. Anything that wasn't set defaults to ("UNK", 1, "").
+                # to have metadata. Anything that wasn't set defaults to ("UNK", 1, " ").
                 if oechem.OEHasResidues(oemol):
                     if "residue_name" in orig_atom.metadata:
                         assert (

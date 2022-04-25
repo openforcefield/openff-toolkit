@@ -5414,7 +5414,8 @@ class FrozenMolecule(Serializable):
     @classmethod
     @requires_package("openmm")
     def from_pdb(cls, file_path, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
-
+        warnings.warn("Molecule.from_pdb will soon be deprecated in favor of the more explicit "
+                      "Molecule.from_polymer_pdb", UserWarning)
         return cls.from_polymer_pdb(file_path, toolkit_registry=toolkit_registry)
 
     @classmethod
@@ -5423,7 +5424,8 @@ class FrozenMolecule(Serializable):
         cls, file_path: Union[str, TextIO], toolkit_registry=GLOBAL_TOOLKIT_REGISTRY
     ):
         """
-        Loads a polymer from a PDB file. Currently only supports proteins with canonical amino acids,
+        Loads a polymer from a PDB file. Currently only supports proteins with canonical amino acids that are
+        either uncapped or capped by ACE/NME groupe,
         but may later be extended to handle other common polymers, or accept user-defined polymer templates.
 
         This method proceeds in the following order:
@@ -5431,10 +5433,10 @@ class FrozenMolecule(Serializable):
         * Loads the polymer substructure template file
         * Loads the PDB into an OpenMM PDBFile object (openmm.app.PDBFile)
         * Turns OpenMM topology into naive networkx graph (Topology._omm_topology_to_networkx)
-        * Calls Molecule.from_pdb._add_chemical_info_to_networkx_graph, which:
+        * Calls Molecule.from_polymer_pdb._add_chemical_info_to_networkx_graph, which:
             * Makes hydrogens in the topology graph negative (a runtime performance trick to
               reduce the number of symmetries)
-              (Molecule._from_pdb._make_hydrogens_negative_in_networkx_graph)
+              (Molecule.from_polymer_pdb._make_hydrogens_negative_in_networkx_graph)
             * For each substructure loaded from the substructure template file:
                 * Turns the substructure from its original form (SMARTS) into a networkx graph
                 * Makes the hydrogens in the substructure graph negative
@@ -5650,7 +5652,7 @@ class FrozenMolecule(Serializable):
         )
 
         offmol.add_conformer(coords)
-        # TODO: Ensure that this assigns aromaticity
+
         offmol_w_stereo_and_aro = toolkit_registry.call(
             "_assign_aromaticity_and_stereo_from_3d", offmol
         )
