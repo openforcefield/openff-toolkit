@@ -8,6 +8,12 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ## Current development
 
+## 0.10.6 Bugfix release
+
+### Critical bugfixes
+
+- [PR #1284](https://github.com/openforcefield/openforcefield/pull/1284): Fixes
+  [Issue #1283](https://github.com/openforcefield/openff-toolkit/issues/1283) - force fields containing `BondCharge` virtual sites cannot be loaded due to an issue with how `outOfPlaneAngle` and `inPlaneAngle` keywords are validated
 
 ## 0.10.5 Bugfix release
 

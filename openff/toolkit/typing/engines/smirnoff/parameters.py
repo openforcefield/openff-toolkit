@@ -4795,6 +4795,9 @@ class VirtualSiteHandler(_NonbondedHandler):
         @outOfPlaneAngle.converter
         def outOfPlaneAngle(self, attr, value):
 
+            if value == "None":
+                return None
+
             supports_out_of_plane_angle = self._supports_out_of_plane_angle(self.type)
 
             if not supports_out_of_plane_angle and value is not None:
@@ -4808,6 +4811,9 @@ class VirtualSiteHandler(_NonbondedHandler):
 
         @inPlaneAngle.converter
         def inPlaneAngle(self, attr, value):
+
+            if value == "None":
+                return None
 
             supports_in_plane_angle = self._supports_in_plane_angle(self.type)
 
