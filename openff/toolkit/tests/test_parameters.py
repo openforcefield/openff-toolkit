@@ -2088,6 +2088,26 @@ class TestVirtualSiteHandler:
     Test the creation of a VirtualSiteHandler and the implemented VirtualSiteTypes
     """
 
+    def test_serialize_roundtrip(self):
+
+        force_field = ForceField()
+
+        handler = force_field.get_parameter_handler("VirtualSites")
+        handler.add_parameter(
+            parameter=VirtualSiteMocking.bond_charge_parameter("[*:1][*:2]")
+        )
+        handler.add_parameter(
+            parameter=VirtualSiteMocking.monovalent_parameter("[*:1][*:2][*:3]")
+        )
+        handler.add_parameter(
+            parameter=VirtualSiteMocking.divalent_parameter("[*:2][*:1][*:3]", "once")
+        )
+        handler.add_parameter(
+            parameter=VirtualSiteMocking.trivalent_parameter("[*:1][*:2][*:3][*:4]")
+        )
+
+        ForceField(force_field.to_string())
+
     @classmethod
     def build_force_field(cls, v_site_handler: VirtualSiteHandler) -> ForceField:
 
