@@ -226,22 +226,6 @@ class TestTopology:
         assert topology.n_atoms == 8
         assert topology.n_bonds == 7
 
-    def test_n_atoms_with_vsites(self, ethane_from_smiles_w_vsites, tip5_water):
-        """Test n_atoms function when vsites are present"""
-        topology = Topology()
-        assert topology.n_atoms == 0
-        assert topology.n_bonds == 0
-        topology.add_molecule(ethane_from_smiles_w_vsites)
-        assert topology.n_atoms == 8
-        assert topology.n_bonds == 7
-
-        topology = Topology()
-        assert topology.n_atoms == 0
-        assert topology.n_bonds == 0
-        topology.add_molecule(tip5_water)
-        assert topology.n_atoms == 3
-        assert topology.n_bonds == 2
-
     def test_get_atom(self, ethane_from_smiles):
         """Test Topology.atom function (atom lookup from index)"""
         topology = Topology()
@@ -317,17 +301,6 @@ class TestTopology:
 
         with pytest.raises(Exception) as context:
             topology_bond = topology.bond(12)
-
-    def test_is_bonded(self, propane_from_smiles_w_vsites):
-        topology = Topology()
-        topology.add_molecule(propane_from_smiles_w_vsites)
-        topology.assert_bonded(0, 1)
-        topology.assert_bonded(1, 0)
-        topology.assert_bonded(1, 2)
-        # C-H bond
-        topology.assert_bonded(0, 4)
-        with pytest.raises(Exception) as context:
-            topology.assert_bonded(0, 2)
 
     def test_angles(self, ethane_from_smiles, propane_from_smiles):
         """Topology.angles should return image angles of all topology molecules."""

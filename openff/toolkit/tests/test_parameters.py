@@ -21,15 +21,8 @@ from openff.units import unit
 import openff.toolkit.typing.engines.smirnoff.parameters
 from openff.toolkit.tests.mocking import VirtualSiteMocking
 from openff.toolkit.tests.utils import does_not_raise
-from openff.toolkit.typing.engines.smirnoff import ForceField
-
-try:
-    import openmm
-    from openmm import unit
-except ImportError:
-    from simtk import unit, openmm
-
 from openff.toolkit.topology import Molecule, Topology
+from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     BondHandler,
     ChargeIncrementModelHandler,
@@ -2188,6 +2181,24 @@ class TestVirtualSiteHandler:
 
         return output_conformer[molecule.n_atoms :, :]
 
+    def test_serialize_roundtrip(self):
+
+        force_field = ForceField()
+
+        handler = force_field.get_parameter_handler("VirtualSites")
+        handler.add_parameter(
+            parameter=VirtualSiteMocking.bond_charge_parameter("[*:1][*:2]")
+        )
+        handler.add_parameter(
+            parameter=VirtualSiteMocking.monovalent_parameter("[*:1][*:2][*:3]")
+        )
+        handler.add_parameter(
+            parameter=VirtualSiteMocking.divalent_parameter("[*:2][*:1][*:3]", "once")
+        )
+        handler.add_parameter(
+            parameter=VirtualSiteMocking.trivalent_parameter("[*:1][*:2][*:3][*:4]")
+        )
+
     @pytest.mark.parametrize(
         "smiles, matched_indices, parameter, expected_raises",
         [
@@ -2371,6 +2382,41 @@ class TestVirtualSiteHandler:
 
         assert {**matched_smirks} == expected_matches
 
+    def test_find_matches_multiple_molecules(self):
+
+        topology = Topology.from_molecules(
+            [
+                Molecule.from_mapped_smiles("[Cl:2][C:1]([H:3])([H:4])[H:5]"),
+                Molecule.from_mapped_smiles("[O:2]=[C:1]([H:3])[F:4]"),
+            ]
+        )
+
+        handler = VirtualSiteHandler(version="0.3")
+
+        handler.add_parameter(
+            parameter=VirtualSiteMocking.bond_charge_parameter("[Cl:1]-[C:2]")
+        )
+        handler.add_parameter(
+            parameter=VirtualSiteMocking.monovalent_parameter("[O:1]=[C:2]-[*:3]")
+        )
+
+        matches = handler.find_matches(topology, unique=False)
+
+        matched_smirks = defaultdict(set)
+
+        for match in matches:
+
+            matched_smirks[match.environment_match.topology_atom_indices].add(
+                (match.parameter_type.smirks, match.parameter_type.name)
+            )
+
+        expected_matches = {
+            (1, 0): {("[Cl:1]-[C:2]", "EP")},
+            (6, 5, 7): {("[O:1]=[C:2]-[*:3]", "EP")},
+            (6, 5, 8): {("[O:1]=[C:2]-[*:3]", "EP")},
+        }
+        assert {**matched_smirks} == expected_matches
+
     @pytest.mark.parametrize(
         "query_parameter, query_key, expected_index",
         [
@@ -2413,27 +2459,6 @@ class TestVirtualSiteHandler:
                 match="all_permutations",
                 distance=2.0 * unit.angstrom,
             )
-
-    def test_bad_connectivity_errors_in_create_force(self):
-        handler = VirtualSiteHandler(version="0.3")
-        handler.add_parameter(
-            parameter=VirtualSiteMocking.divalent_parameter(
-                "[O:2]=[C:1][H:3]", match="all_permutations"
-            )
-        )
-        topology = VirtualSiteMocking.formaldehyde().to_topology()
-
-        system = openmm.System()
-
-        for _ in range(topology.n_topology_atoms):
-            system.addParticle(10.0 * unit.amu)
-
-        with pytest.raises(
-            NotImplementedError,
-            match="Atom with smirks index=0 matched topology atom 1 with "
-            "connectivity=3, but it was expected to have connectivity 2",
-        ):
-            handler.create_force(system, topology)
 
 
 class TestLibraryChargeHandler:

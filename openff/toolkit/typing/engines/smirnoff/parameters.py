@@ -241,7 +241,7 @@ def _validate_units(attr, value: Union[str, unit.Quantity], units: unit.Unit):
     value = object_to_quantity(value)
 
     try:
-        if not units.is_compatible(value.unit):
+        if not units.is_compatible_with(value.units):
             raise IncompatibleUnitError(
                 f"{attr.name}={value} should have units of {units}"
             )
@@ -4942,7 +4942,7 @@ class VirtualSiteHandler(_NonbondedHandler):
             is_in_plane = (
                 None
                 if not supports_out_of_plane_angle
-                else np.isclose(out_of_plane_angle.value_in_unit(unit.degree), 0.0)
+                else np.isclose(out_of_plane_angle.m_as(unit.degree), 0.0)
             )
 
             if not cls._supports_match(type_, match, is_in_plane):
@@ -5007,7 +5007,7 @@ class VirtualSiteHandler(_NonbondedHandler):
     @classmethod
     def _validate_found_match(
         cls,
-        atoms_by_index: Dict[int, TopologyAtom],
+        atoms_by_index: Dict,
         matched_indices: Tuple[int, ...],
         parameter: VirtualSiteType,
     ):
@@ -5043,7 +5043,7 @@ class VirtualSiteHandler(_NonbondedHandler):
                 continue
 
             matched_atom = atoms_by_index[atom_index]
-            connectivity = len(matched_atom.atom.bonds)
+            connectivity = len(matched_atom.bonds)
             expected_connectivity = supported_connectivity[
                 (parameter.type, smirks_index)
             ]

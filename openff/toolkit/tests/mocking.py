@@ -1,5 +1,5 @@
 import numpy
-from openmm import unit
+from openff.units import unit
 
 from openff.toolkit.topology import Molecule
 from openff.toolkit.typing.engines.smirnoff import VirtualSiteHandler
