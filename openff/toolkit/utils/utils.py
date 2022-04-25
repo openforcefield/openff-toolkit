@@ -34,6 +34,7 @@ import re
 from typing import List, Tuple, Union
 
 import numpy as np
+import pint
 from openff.units import unit
 
 from openff.toolkit.utils.exceptions import MissingDependencyError
@@ -164,33 +165,13 @@ def get_data_file_path(relative_path):
     return fn
 
 
+@pint.register_unit_format("simple")
+def format_unit_simple(unit, registry, **options):
+    return " * ".join(f"{u} ** {p}" for u, p in unit.items())
+
+
 def unit_to_string(input_unit: unit.Unit) -> str:
-    unit_as_str = str(input_unit)
-
-    # The rest of this function is a set of attempts at backwards-compatibility in order for serializations
-    # to be understood by old versions (< 0.11.0) of the toolkit. None of these are necessary for
-    # self-consistency (>= 0.11.0) and the checks here are purely performance loss. We should have a timebomb
-    # for these checks.
-    if "\N{Angstrom Sign}" in unit_as_str:
-        unit_as_str = unit_as_str.replace("\N{Angstrom Sign}", "angstrom")
-    if "\N{Latin Capital Letter A with Ring Above}" in unit_as_str:
-        unit_as_str = unit_as_str.replace(
-            "\N{Latin Capital Letter A with Ring Above}", "angstrom"
-        )
-    if re.match("k.* / mol", unit_as_str) is not None:
-        if "kcal" in unit_as_str:
-            unit_as_str = unit_as_str.replace("kcal", "kilocalorie")
-        if "kj" in unit_as_str:
-            unit_as_str = unit_as_str.replace("kJ", "kilojoule")
-
-    # Other hacks for OpenMM compatibility
-    unit_as_str = unit_as_str.replace(" mol", " mole")
-    unit_as_str = unit_as_str.replace("deg", "degree")
-    unit_as_str = unit_as_str.replace("rad", "radian")
-    if unit_as_str == "e":
-        unit_as_str = "elementary_charge"
-
-    return unit_as_str
+    return f"{input_unit:simple}"
 
 
 def quantity_to_dict(input_quantity):
