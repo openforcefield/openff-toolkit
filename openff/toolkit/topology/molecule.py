@@ -1,8 +1,3 @@
-#!/usr/bin/env python
-
-# =============================================================================================
-# MODULE DOCSTRING
-# =============================================================================================
 """
 Molecular chemical entity representation and routines to interface with cheminformatics toolkits
 
@@ -39,7 +34,7 @@ from typing import TYPE_CHECKING, Generator, List, Optional, Tuple, Union
 
 import networkx as nx
 import numpy as np
-from cached_property import cached_property
+from cached_property import cached_property  # noqa
 from openff.units import unit
 from openff.units.elements import MASSES, SYMBOLS
 from packaging import version
@@ -78,24 +73,12 @@ if TYPE_CHECKING:
 
     from openff.toolkit.topology._mm_molecule import _SimpleAtom, _SimpleMolecule
 
-# =============================================================================================
-# GLOBAL PARAMETERS
-# =============================================================================================
-
 # TODO: Can we have the `ALLOWED_*_MODELS` list automatically appear in the docstrings below?
 # TODO: Should `ALLOWED_*_MODELS` be objects instead of strings?
 # TODO: Should these be imported from `openff.toolkit.cheminformatics.aromaticity_models` and `.bondorder_models`?
 
 # TODO: Allow all OpenEye aromaticity models to be used with OpenEye names?
 #       Only support OEAroModel_MDL in RDKit version?
-
-# =============================================================================================
-# PRIVATE SUBROUTINES
-# =============================================================================================
-
-# =============================================================================================
-# Particle
-# =============================================================================================
 
 
 class Particle(Serializable):
@@ -155,11 +138,6 @@ class Particle(Serializable):
         """Static constructor from dictionary representation."""
         # Implement abstract method Serializable.to_dict()
         raise NotImplementedError()  # TODO
-
-
-# =============================================================================================
-# Atom
-# =============================================================================================
 
 
 class AtomMetadataDict(UserDict):
@@ -598,11 +576,6 @@ class Atom(Particle):
         return f"<Atom name='{self._name}' atomic number='{self._atomic_number}'>."
 
 
-# =============================================================================================
-# VirtualParticle
-# =============================================================================================
-
-
 class VirtualParticle(Particle):
     """
     A single particle owned by a VirtualSite
@@ -783,11 +756,6 @@ class VirtualParticle(Particle):
         """
 
         return self._position(atom_positions)
-
-
-# =============================================================================================
-# VirtualSite
-# =============================================================================================
 
 
 class VirtualSite(Particle):
@@ -1987,69 +1955,6 @@ class TrivalentLonePairVirtualSite(VirtualSite):
         return self._openmm_virtual_site(atoms)
 
 
-# =============================================================================================
-# Bond Stereochemistry
-# =============================================================================================
-
-# class BondStereochemistry(Serializable):
-# """
-# Bond stereochemistry representation
-# """
-# def __init__(self, stereo_type, neighbor1, neighbor2):
-#    """
-#
-#    Parameters
-#    ----------
-#    stereo_type
-#    neighbor1
-#    neighbor2
-#    """
-#    assert isinstance(neighbor1, Atom)
-#    assert isinstance(neighbor2, Atom)
-#    # Use stereo_type @setter to check stereo type is a permitted value
-#    self.stereo_type = stereo_type
-#    self._neighbor1 = neighbor1
-#    self._neighbor2 = neighbor2
-
-# def to_dict(self):
-#    bs_dict = OrderedDict()
-#    bs_dict['stereo_type'] = self._stereo_type
-#    bs_dict['neighbor1_index'] = self._neighbor1.molecule_atom_index
-#    bs_dict['neighbor2_index'] = self._neighbor2.molecule_atom_index
-#    return bs_dict
-
-# classmethod
-# def from_dict(cls, molecule, bs_dict):
-#    neighbor1 = molecule.atoms[bs_dict['neighbor1_index']]
-#    neighbor2 = molecule.atoms[bs_dict['neighbor2_index']]
-#    return cls.__init__(bs_dict['stereo_type'], neighbor1, neighbor2)
-
-# @property
-# def stereo_type(self):
-#    return self._stereo_type
-
-# @stereo_type.setter
-# def stereo_type(self, value):
-#    assert (value == 'CIS') or (value == 'TRANS') or (value is None)
-#    self._stereo_type = value
-
-# @property
-# def neighbor1(self):
-#    return self._neighbor1
-
-# @property
-# def neighbor2(self):
-#    return self._neighbor2
-
-# @property
-# def neighbors(self):
-#    return (self._neighbor1, self._neighbor2)
-
-# =============================================================================================
-# Bond
-# =============================================================================================
-
-
 class Bond(Serializable):
     """
     Chemical bond representation.
@@ -2226,10 +2131,6 @@ class Bond(Serializable):
             f"<Bond atom1 index='{self.atom1_index}', atom2 index='{self.atom2_index}'>"
         )
 
-
-# =============================================================================================
-# Molecule
-# =============================================================================================
 
 # TODO: How do we automatically trigger invalidation of cached properties if an ``Atom``, ``Bond``, or ``VirtualSite``
 #       is modified, rather than added/deleted via the API? The simplest resolution is simply to make them immutable.

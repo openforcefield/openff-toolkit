@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 Utility subroutines
 
@@ -38,16 +37,7 @@ from openff.units import unit
 
 from openff.toolkit.utils.exceptions import MissingDependencyError
 
-# =============================================================================================
-# CONFIGURE LOGGER
-# =============================================================================================
-
 logger = logging.getLogger(__name__)
-
-
-# =============================================================================================
-# UTILITY SUBROUTINES
-# =============================================================================================
 
 
 def requires_package(package_name):

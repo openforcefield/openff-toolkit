@@ -1,9 +1,3 @@
-#!/usr/bin/env python
-
-# ==============================================================================
-# MODULE DOCSTRING
-# ==============================================================================
-
 """
 environment.py
 
@@ -114,15 +108,12 @@ class ChemicalEnvironment:
             and validate_valence_type=True
         """
         perceived_type = self.get_type(toolkit_registry=toolkit_registry)
-        if (
-            (perceived_type != self._expected_type)
-            and validate_valence_type
-            and not (self._expected_type is None)
-        ):
-            raise SMIRKSMismatchError(
-                f"{self.__class__} expected '{self._expected_type}' chemical environment, but "
-                f"smirks was set to '{self.smirks}', which is type '{perceived_type}'"
-            )
+        if validate_valence_type and self._expected_type is not None:
+            if perceived_type != self._expected_type:
+                raise SMIRKSMismatchError(
+                    f"{self.__class__} expected '{self._expected_type}' chemical environment, but "
+                    f"smirks was set to '{self.smirks}', which is type '{perceived_type}'"
+                )
 
     @classmethod
     def validate_smirks(
@@ -191,38 +182,28 @@ class ChemicalEnvironment:
             toolkit_registry = GLOBAL_TOOLKIT_REGISTRY
 
         if isinstance(toolkit_registry, ToolkitWrapper):
-            unique_tags, connectivity = toolkit_registry.get_tagged_smarts_connectivity(
+            unique_tags, conn = toolkit_registry.get_tagged_smarts_connectivity(
                 self.smirks
             )
         else:
-            unique_tags, connectivity = toolkit_registry.call(
+            unique_tags, conn = toolkit_registry.call(
                 "get_tagged_smarts_connectivity", self.smirks
             )
 
-        if unique_tags == (1,) and len(connectivity) == 0:
-            return "Atom"
-        if unique_tags == (1, 2) and (1, 2) in connectivity:
-            return "Bond"
-        elif (
-            unique_tags == (1, 2, 3)
-            and (1, 2) in connectivity
-            and (2, 3) in connectivity
-        ):
-            return "Angle"
-        elif (
-            unique_tags == (1, 2, 3, 4)
-            and (1, 2) in connectivity
-            and (2, 3) in connectivity
-            and (3, 4) in connectivity
-        ):
-            return "ProperTorsion"
-        elif (
-            unique_tags == (1, 2, 3, 4)
-            and (1, 2) in connectivity
-            and (2, 3) in connectivity
-            and (2, 4) in connectivity
-        ):
-            return "ImproperTorsion"
+        if unique_tags == (1,):
+            if len(conn) == 0:
+                return "Atom"
+        if unique_tags == (1, 2):
+            if (1, 2) in conn:
+                return "Bond"
+        elif unique_tags == (1, 2, 3):
+            if (1, 2) in conn and (2, 3) in conn:
+                return "Angle"
+        elif unique_tags == (1, 2, 3, 4):
+            if (1, 2) in conn and (2, 3) in conn and (2, 3) in conn and (3, 4) in conn:
+                return "ProperTorsion"
+            elif (1, 2) in conn and (2, 3) in conn and (2, 4) in conn:
+                return "ImproperTorsion"
         else:
             return None
 

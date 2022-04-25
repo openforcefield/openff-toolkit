@@ -1,8 +1,3 @@
-#!/usr/bin/env python
-# =============================================================================================
-# MODULE DOCSTRING
-# =============================================================================================
-
 """
 Tests for I/O functionality of the toolkit wrappers
 
@@ -28,16 +23,8 @@ from openff.toolkit.utils.exceptions import (
     UndefinedStereochemistryError,
 )
 
-# ================================================================
-# Data records used for testing.
-# ================================================================
-
 ETHANOL = create_molecules.create_ethanol()
 ETHANOL.name = "ethanol"
-
-# ========================================================
-# Various records for caffeine
-# ========================================================
 
 # From https://www.ebi.ac.uk/chembl/compound_report_card/CHEMBL113/
 CAFFEINE_2D_SDF = """\
@@ -290,7 +277,7 @@ M  END
 $$$$
 """
 
-CAFFEINE_3D_COORDS = (
+CAFFEINE_3D_COORDS = unit.Quantity(
     np.array(
         [
             (0.4700, 2.5688, 0.0006),
@@ -319,13 +306,9 @@ CAFFEINE_3D_COORDS = (
             (-2.9346, 2.1021, -0.8849),
         ],
         np.double,
-    )
-    * unit.angstrom
+    ),
+    unit.angstrom,
 )
-
-# ========================================================
-# Various records for aspirin
-# ========================================================
 
 
 # From https://www.ebi.ac.uk/chembl/compound_report_card/CHEMBL25/
@@ -576,13 +559,9 @@ $$$$
 """
 
 
-# ========================================================
-# CHEBI:1148 triggers 'allow_undefined_stereo' exceptions
-# ========================================================
-
 CHEBI_1148_SDF = """\
 CHEBI:1148
-  Marvin  09120817212D          
+  Marvin  09120817212D
 
   7  6  0  0  0  0            999 V2000
     1.4289   -0.1650    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0
@@ -620,19 +599,10 @@ THREE_MOLS_SDF = (
 )
 THREE_MOLS_SMI = CAFFEINE_SMI + "Q" + CAFFEINE_SMI + ASPIRIN_SMI
 
-# ========================================================
-# Used to test that _cls is passed correctly
-# ========================================================
-
 
 class SingingMolecule(Molecule):
     def sing(self):
         return "The hills are alive with sound of music!"
-
-
-# ========================================================
-# Manage the input files
-# ========================================================
 
 
 # This code manages a temporary directory.
@@ -686,9 +656,9 @@ class FileManager:
     caffeine_not_smi = FilenameDescriptor(CAFFEINE_2D_SDF)
     caffeine_not_sdf = FilenameDescriptor(CAFFEINE_SMI)
 
-    ## aspirin_2d_sdf = FilenameDescriptor(ASPIRIN_2D_SDF)
-    ## aspirin_3d_sdf = FilenameDescriptor(ASPIRIN_3D_SDF)
-    ## aspirin_smi = FilenameDescriptor(ASPIRIN_SMI)
+    # aspirin_2d_sdf = FilenameDescriptor(ASPIRIN_2D_SDF)
+    # aspirin_3d_sdf = FilenameDescriptor(ASPIRIN_3D_SDF)
+    # aspirin_smi = FilenameDescriptor(ASPIRIN_SMI)
 
     two_mols_sdf = FilenameDescriptor(TWO_MOLS_SDF)
     two_mols_smi = FilenameDescriptor(TWO_MOLS_SMI)
@@ -720,9 +690,9 @@ class FileObjManager:
     caffeine_3d_sdf = FileobjDescriptor(CAFFEINE_3D_SDF)
     caffeine_smi = FileobjDescriptor(CAFFEINE_SMI)
 
-    ## aspirin_2d_sdf = FileobjDescriptor(ASPIRIN_2D_SDF)
-    ## aspirin_3d_sdf = FileobjDescriptor(ASPIRIN_3D_SDF)
-    ## aspirin_smi = FileobjDescriptor(ASPIRIN_SMI)
+    # aspirin_2d_sdf = FileobjDescriptor(ASPIRIN_2D_SDF)
+    # aspirin_3d_sdf = FileobjDescriptor(ASPIRIN_3D_SDF)
+    # aspirin_smi = FileobjDescriptor(ASPIRIN_SMI)
 
     two_mols_sdf = FileobjDescriptor(TWO_MOLS_SDF)
     two_mols_smi = FileobjDescriptor(TWO_MOLS_SMI)
@@ -735,14 +705,8 @@ class FileObjManager:
 
 file_obj_manager = FileObjManager()
 
-# ========================================================
-# Base class to test from_file() and from_file_obj()
-# ========================================================
-
 
 class BaseFromFileIO:
-    # == Test variations of "sdf" and "mol"
-
     @pytest.mark.parametrize("file_format", ("SDF", "sdf", "sdF", "MOL", "mol"))
     def test_from_file_sdf_ignores_file_format_case(self, file_format):
         mols = self.toolkit_wrapper.from_file(file_manager.caffeine_2d_sdf, file_format)
@@ -760,8 +724,6 @@ class BaseFromFileIO:
         mol = mols[0]
         assert mol.name == "caffeine"
 
-    # == Test reading two molecules from an SDF
-
     def test_from_file_sdf_two_molecules(self):
         mols = self.toolkit_wrapper.from_file(file_manager.two_mols_sdf, "SDF")
         self._test_from_sdf_two_molecules(mols)
@@ -775,8 +737,6 @@ class BaseFromFileIO:
         assert mols[0].name == "caffeine"
         assert mols[1].name == "aspirin"
 
-    # == Test skipping an error molecule from an SDF
-
     def test_from_file_sdf_three_molecules(self):
         mols = self.toolkit_wrapper.from_file(file_manager.three_mols_sdf, "SDF")
         self._test_from_sdf_two_molecules(mols)
@@ -786,8 +746,6 @@ class BaseFromFileIO:
             file_obj_manager.three_mols_sdf, "SDF"
         )
         self._test_from_sdf_two_molecules(mols)
-
-    # == Test variations of "smi" format
 
     @pytest.mark.parametrize("file_format", ("SMI", "smi", "sMi"))
     def test_from_file_smi_ignores_file_format_case(self, file_format):
@@ -809,8 +767,6 @@ class BaseFromFileIO:
         assert mol.n_bonds == 25
         assert mol.n_conformers == 0
 
-    # == Test reading two molecules from a SMILES file
-
     def test_from_file_smi_two_molecules(self):
         mols = self.toolkit_wrapper.from_file(file_manager.two_mols_smi, "SMI")
         self._test_from_smi_two_molecules(mols)
@@ -824,8 +780,6 @@ class BaseFromFileIO:
         assert mols[0].name == "CHEMBL113"
         assert mols[1].name == "ASPIRIN"
 
-    # == Test skipping an error molecule from a SMI
-
     def test_from_file_smi_three_molecules(self):
         mols = self.toolkit_wrapper.from_file(file_manager.three_mols_smi, "SMI")
         self._test_from_smi_two_molecules(mols)
@@ -836,8 +790,6 @@ class BaseFromFileIO:
         )
         self._test_from_smi_two_molecules(mols)
 
-    # == Test that file_format overrides the extension
-
     def test_from_file_sdf_ignores_filename_extension(self):
         mols = self.toolkit_wrapper.from_file(file_manager.caffeine_not_smi, "sdf")
         self._test_from_sdf_ignores_file_format_case(mols)
@@ -845,8 +797,6 @@ class BaseFromFileIO:
     def test_from_file_smi_ignores_filename_extension(self):
         mols = self.toolkit_wrapper.from_file(file_manager.caffeine_not_sdf, "smi")
         self._test_from_smi_ignores_file_format_case(mols)
-
-    # == Test format "qwe" raises an exception
 
     def test_from_file_qwe_format_raises_exception(self):
         with pytest.raises(ValueError, match="Unsupported file format: QWE"):
@@ -860,15 +810,11 @@ class BaseFromFileIO:
                 file_obj_manager.caffeine_2d_sdf, file_format="qwe"
             )
 
-    # == Test when a file doesn't exist
-
     @pytest.mark.parametrize("file_format", ["smi", "sdf", "mol"])
     def test_from_file_when_the_filename_does_not_exist(self, file_format):
         filename = f"/qwelkjpath/to/file/that/does/not/exist/asdflkjasdf.{file_format}"
         with pytest.raises(OSError):
             self.toolkit_wrapper.from_file(filename, file_format=file_format)
-
-    # == Test reading SDF 2D coordinates
 
     def test_from_file_2D_sdf_coords(self):
         mol = self.toolkit_wrapper.from_file(file_manager.caffeine_2d_sdf, "sdf")[0]
@@ -891,8 +837,6 @@ class BaseFromFileIO:
         # Beyond this are the hydrogens, which are added by algorithm.
         assert_allclose(conformer[: CAFFEINE_2D_COORDS.shape[0]], CAFFEINE_2D_COORDS)
 
-    # == Test reading SDF 3D coordinates
-
     def test_from_file_3D_sdf_keeps_hydrogens(self):
         mol = self.toolkit_wrapper.from_file(file_manager.caffeine_3d_sdf, "sdf")[0]
         self._test_3D_sdf_keeps_hydrogens(mol)
@@ -913,8 +857,6 @@ class BaseFromFileIO:
 
         # All hydrogens are explicit in the file
         assert_allclose(conformer, CAFFEINE_3D_COORDS)
-
-    # == Test allow_undefined_stereo
 
     def test_from_file_with_undefined_stereo(self):
         with pytest.raises(
@@ -939,8 +881,6 @@ class BaseFromFileIO:
         self.toolkit_wrapper.from_file_obj(
             file_obj_manager.chebi_1148_sdf, "sdf", allow_undefined_stereo=True
         )[0]
-
-    # == Test passing in a user-defined _cls
 
     @pytest.mark.parametrize(
         "name,file_format", [("caffeine_2d_sdf", "SDF"), ("caffeine_smi", "SMI")]
@@ -1002,11 +942,6 @@ class TestRDKitToolkitFromFileIO(BaseFromFileIO):
         assert mol.name == "CHEMBL113"
 
 
-# ========================================================
-# Base class to test to_file() and to_file_obj()
-# ========================================================
-
-
 @pytest.fixture(scope="class")
 def tmpdir(request):
     request.cls.tmpdir = tmpdir = tempfile.TemporaryDirectory()
@@ -1039,8 +974,6 @@ class BaseToFileIO:
     def get_tmpfile(self, name):
         return os.path.join(self.tmpdir.name, name)
 
-    # == Test variations of "sdf" and "mol"
-
     @pytest.mark.parametrize("format_name", ["SDF", "sdf", "sDf", "mol", "MOL"])
     def test_to_file_sdf(self, format_name):
         filename = self.get_tmpfile("abc.xyz")
@@ -1062,8 +995,6 @@ class BaseToFileIO:
             match="Need a text mode file object like StringIO or a file opened with mode 't'",
         ):
             self.toolkit_wrapper.to_file_obj(ETHANOL, f, "sdf")
-
-    # === Test variations of "smi"
 
     @pytest.mark.parametrize("format_name", ["SMI", "smi", "sMi"])
     def test_to_file_smi(self, format_name):
@@ -1087,14 +1018,10 @@ class BaseToFileIO:
         ):
             self.toolkit_wrapper.to_file_obj(ETHANOL, f, "smi")
 
-    # === Test format "qwe" raises an exception
-
     def test_to_file_qwe_format_raises_exception(self):
         with tempfile.NamedTemporaryFile(suffix=".smi") as fileobj:
             with pytest.raises(ValueError, match="Unsupported file format: QWE"):
                 self.toolkit_wrapper.to_file(ETHANOL, fileobj.name, "QWE")
-
-    # === Test writing to a file that does not exist
 
     @pytest.mark.parametrize("format_name", ["smi", "sdf", "mol"])
     def test_to_file_when_the_file_does_not_exist(self, format_name):
@@ -1115,11 +1042,6 @@ class TestRDKitToolkitToFileIO(BaseToFileIO):
     toolkit_wrapper_class = RDKitToolkitWrapper
 
 
-# ========================================================
-# Base class to test SMILES parsing
-# ========================================================
-
-
 class BaseSmiles:
     def test_parse_methane_with_implicit_Hs(self):
         mol = self.toolkit_wrapper.from_smiles("C")
@@ -1137,7 +1059,7 @@ class BaseSmiles:
                 f"in the molecule, then you should construct the desired molecule as an {self.tk_mol_name}"
             ),
         ):
-            mol = self.toolkit_wrapper.from_smiles("C", hydrogens_are_explicit=True)
+            self.toolkit_wrapper.from_smiles("C", hydrogens_are_explicit=True)
 
     def test_parse_methane_with_explicit_Hs(self):
         mol = self.toolkit_wrapper.from_smiles("[C]([H])([H])([H])([H])")
@@ -1156,10 +1078,9 @@ class BaseSmiles:
 
     def test_parse_bad_smiles(self):
         with pytest.raises(SMILESParseError, match="Unable to parse the SMILES string"):
-            mol = self.toolkit_wrapper.from_smiles("QWERT")
+            self.toolkit_wrapper.from_smiles("QWERT")
 
-    ### Copied from test_toolkits.py
-
+    # Copied from test_toolkits.py
     @pytest.mark.parametrize(
         "title, smiles",
         [

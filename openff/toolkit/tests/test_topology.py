@@ -1,9 +1,3 @@
-#!/usr/bin/env python
-
-# =============================================================================================
-# MODULE DOCSTRING
-# =============================================================================================
-
 """
 Tests for Topology
 
@@ -16,7 +10,11 @@ import pytest
 from openff.units import unit
 from openmm import app
 
-from openff.toolkit.tests.create_molecules import *
+from openff.toolkit.tests.create_molecules import (
+    create_cyclohexane,
+    create_ethanol,
+    create_reversed_ethanol,
+)
 from openff.toolkit.tests.utils import (
     get_data_file_path,
     requires_openeye,
@@ -45,10 +43,6 @@ from openff.toolkit.utils.exceptions import (
     InvalidPeriodicityError,
     MissingUniqueMoleculesError,
 )
-
-# =============================================================================================
-# UTILITY FUNCTIONS
-# =============================================================================================
 
 
 def assert_tuple_of_atoms_equal(
@@ -84,10 +78,6 @@ def assert_tuple_of_atoms_equal(
         atom_indices.append(valence_dict)
     assert set(atom_indices[0]) == set(atom_indices[1])
 
-
-# =============================================================================================
-# TESTS
-# =============================================================================================
 
 # IF we've done our jobs right, it shouldn't matter which toolkit the tests for Topology run using (both's behaviors
 # should be indistinguishable)
@@ -263,8 +253,8 @@ class TestTopology:
         """Test Topology.atom function (atom lookup from index)"""
         topology = Topology()
         topology.add_molecule(ethane_from_smiles)
-        with pytest.raises(Exception) as context:
-            topology_atom = topology.atom(-1)
+        with pytest.raises(Exception):
+            topology.atom(-1)
 
         # Make sure we get 2 carbons and 8 hydrogens
         n_carbons = 0
@@ -277,8 +267,8 @@ class TestTopology:
         assert n_carbons == 2
         assert n_hydrogens == 6
 
-        with pytest.raises(Exception) as context:
-            topology_atom = topology.atom(8)
+        with pytest.raises(Exception):
+            topology.atom(8)
 
     def test_atom_element_properties(self, toluene_from_sdf):
         """
@@ -302,8 +292,8 @@ class TestTopology:
         topology = Topology()
         topology.add_molecule(ethane_from_smiles)
         topology.add_molecule(ethene_from_smiles)
-        with pytest.raises(Exception) as context:
-            topology_atom = topology.bond(-1)
+        with pytest.raises(Exception):
+            topology.bond(-1)
 
         n_single_bonds = 0
         n_double_bonds = 0
@@ -332,7 +322,7 @@ class TestTopology:
         assert n_cc_bonds == 2
         assert n_ch_bonds == 10
 
-        with pytest.raises(Exception) as context:
+        with pytest.raises(Exception):
             topology_bond = topology.bond(12)
 
     def test_get_virtual_site(
@@ -344,10 +334,10 @@ class TestTopology:
         assert topology.n_virtual_sites == 2
         topology.add_molecule(propane_from_smiles_w_vsites)
         assert topology.n_virtual_sites == 4
-        with pytest.raises(Exception) as context:
-            topology_vsite = topology.virtual_site(-1)
-        with pytest.raises(Exception) as context:
-            topology_vsite = topology.virtual_site(4)
+        with pytest.raises(Exception):
+            topology.virtual_site(-1)
+        with pytest.raises(Exception):
+            topology.virtual_site(4)
         topology_vsite1 = topology.virtual_site(0)
         topology_vsite2 = topology.virtual_site(1)
         topology_vsite3 = topology.virtual_site(2)
@@ -454,7 +444,7 @@ class TestTopology:
         topology.assert_bonded(1, 2)
         # C-H bond
         topology.assert_bonded(0, 4)
-        with pytest.raises(Exception) as context:
+        with pytest.raises(Exception):
             topology.assert_bonded(0, 2)
 
     def test_angles(self, ethane_from_smiles, propane_from_smiles):
@@ -621,12 +611,8 @@ class TestTopology:
         )
 
         molecules = [create_ethanol()]
-        with pytest.raises(
-            ValueError, match="No match found for molecule C6H12"
-        ) as excinfo:
-            topology = Topology.from_openmm(
-                pdbfile.topology, unique_molecules=molecules
-            )
+        with pytest.raises(ValueError, match="No match found for molecule C6H12"):
+            Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
 
     def test_from_openmm_missing_conect(self):
         """
@@ -648,10 +634,8 @@ class TestTopology:
             "information. If this molecule is coming from "
             "PDB, please ensure that the file contains CONECT "
             "records.",
-        ) as excinfo:
-            topology = Topology.from_openmm(
-                pdbfile.topology, unique_molecules=molecules
-            )
+        ):
+            Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
 
     def test_to_from_openmm(self):
         """Test a round-trip OpenFF -> OpenMM -> OpenFF Topology."""
@@ -752,7 +736,9 @@ class TestTopology:
         topology = Topology()
         topology.add_molecule(mol)
         count = 0
-        # The file should be printed out with 9 atoms and 0 virtualsites, so we check to ensure that thtere are only 9 HETATM entries
+
+        # The file should be printed out with 9 atoms and 0 virtualsites, so we check to ensure that
+        # there are only 9 HETATM entries
         with NamedTemporaryFile(suffix=".pdb") as iofile:
             topology.to_file(iofile.name, positions)
             data = open(iofile.name).readlines()
@@ -879,8 +865,8 @@ class TestTopology:
             get_data_file_path("systems/test_systems/1_ethanol.pdb"), "CCO"
         )
         positions = mol.conformers[0]
-        # Make up coordinates for the second ethanol by translating the first by 10 angstroms
-        # (note that this will still be a gibberish conformation, since the atom order in the second molecule is different)
+        # Make up coordinates for the second ethanol by translating the first by 10 angstroms (note that this will
+        # still be a gibberish conformation, since the atom order in the second molecule is different)
         positions = np.concatenate([positions, positions + 10.0 * unit.angstrom])
         element_order = []
 
@@ -913,7 +899,9 @@ class TestTopology:
 
     @requires_openeye
     def test_from_openmm_duplicate_unique_mol(self):
-        """Check that a DuplicateUniqueMoleculeError is raised if we try to pass in two indistinguishably unique mols"""
+        """
+        Check that a DuplicateUniqueMoleculeError is raised if we try to pass in two indistinguishably unique mols
+        """
         pdbfile = app.PDBFile(
             get_data_file_path("systems/packmol_boxes/cyclohexane_ethanol_0.4_0.6.pdb")
         )
@@ -925,10 +913,8 @@ class TestTopology:
                 "molecules/cyclohexane.mol2",
             )
         ]
-        with pytest.raises(DuplicateUniqueMoleculeError) as context:
-            topology = Topology.from_openmm(
-                pdbfile.topology, unique_molecules=molecules
-            )
+        with pytest.raises(DuplicateUniqueMoleculeError):
+            Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
 
     @pytest.mark.skip
     def test_from_openmm_distinguish_using_stereochemistry(self):

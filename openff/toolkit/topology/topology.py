@@ -1,8 +1,3 @@
-#!/usr/bin/env python
-
-# =============================================================================================
-# MODULE DOCSTRING
-# =============================================================================================
 """
 Class definitions to represent a molecular system and its chemical components
 
@@ -47,10 +42,6 @@ from openff.toolkit.utils.toolkits import (
 
 if TYPE_CHECKING:
     from openff.toolkit.topology.molecule import Atom
-
-# =============================================================================================
-# PRIVATE SUBROUTINES
-# =============================================================================================
 
 
 def _topology_deprecation(old_method, new_method):
@@ -564,9 +555,8 @@ class Topology(Serializable):
         if not hasattr(box_vectors, "units"):
             raise InvalidBoxVectorsError("Given unitless box vectors")
         # Unit.compatible_units() returns False with itself, for some reason
-        if (
-            box_vectors.units != unit.nm
-            and box_vectors.units not in unit.nm.compatible_units()
+        if (box_vectors.units != unit.nm) and (
+            box_vectors.units not in unit.nm.compatible_units()
         ):
             raise InvalidBoxVectorsError(
                 f"Cannot set box vectors with quantities with unit {box_vectors.units}"

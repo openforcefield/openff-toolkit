@@ -1,9 +1,3 @@
-#!/usr/bin/env python
-
-# =============================================================================================
-# MODULE DOCSTRING
-# =============================================================================================
-
 """
 Tests for cheminformatics toolkit wrappers
 
@@ -22,7 +16,6 @@ from openff.units import unit
 from openff.toolkit.tests.create_molecules import (
     create_acetaldehyde,
     create_acetate,
-    create_ammonia,
     create_cyclic_n3h3,
     create_cyclohexane,
     create_ethanol,
@@ -56,10 +49,6 @@ from openff.toolkit.utils.toolkits import (
     ToolkitRegistry,
     ToolkitWrapper,
 )
-
-# =============================================================================================
-# FIXTURES
-# =============================================================================================
 
 
 def get_mini_drug_bank(toolkit_class, xfail_mols=None):
@@ -274,32 +263,31 @@ def formic_acid_molecule() -> Molecule:
 def formic_acid_conformers() -> Dict[str, unit.Quantity]:
 
     return {
-        "cis": np.array(
-            [
-                [-0.95927322, -0.91789997, 0.36333418],
-                [-0.34727824, 0.12828046, 0.22784603],
-                [0.82766682, 0.26871252, -0.42284882],
-                [-0.67153811, 1.10376000, 0.61921501],
-                [1.15035689, -0.58282924, -0.78766006],
-            ]
-        )
-        * unit.angstrom,
-        "trans": np.array(
-            [
-                [-0.95927322, -0.91789997, 0.36333418],
-                [-0.34727824, 0.12828046, 0.22784603],
-                [0.82766682, 0.26871252, -0.42284882],
-                [-0.67153811, 1.10376000, 0.61921501],
-                [1.14532626, 1.19679034, -0.41266876],
-            ]
-        )
-        * unit.angstrom,
+        "cis": unit.Quantity(
+            np.array(
+                [
+                    [-0.95927322, -0.91789997, 0.36333418],
+                    [-0.34727824, 0.12828046, 0.22784603],
+                    [0.82766682, 0.26871252, -0.42284882],
+                    [-0.67153811, 1.10376000, 0.61921501],
+                    [1.15035689, -0.58282924, -0.78766006],
+                ]
+            ),
+            unit.angstrom,
+        ),
+        "trans": unit.Quantity(
+            np.array(
+                [
+                    [-0.95927322, -0.91789997, 0.36333418],
+                    [-0.34727824, 0.12828046, 0.22784603],
+                    [0.82766682, 0.26871252, -0.42284882],
+                    [-0.67153811, 1.10376000, 0.61921501],
+                    [1.14532626, 1.19679034, -0.41266876],
+                ]
+            ),
+            unit.angstrom,
+        ),
     }
-
-
-# =============================================================================================
-# TESTS
-# =============================================================================================
 
 
 @requires_openeye
@@ -337,7 +325,7 @@ class TestOpenEyeToolkitWrapper:
             ("spec_db_smiles", spec_db_smiles, False),
         ]:
             if raises_exception:
-                with pytest.raises(UndefinedStereochemistryError) as context:
+                with pytest.raises(UndefinedStereochemistryError):
                     Molecule.from_smiles(smiles, toolkit_registry=toolkit_wrapper)
                 Molecule.from_smiles(
                     smiles,
@@ -608,7 +596,7 @@ class TestOpenEyeToolkitWrapper:
         with pytest.raises(
             ValueError,
             match="but OpenEye Toolkit interpreted SMILES 'C#C' as having implicit hydrogen",
-        ) as excinfo:
+        ):
             offmol = Molecule.from_smiles(
                 smiles_impl,
                 toolkit_registry=toolkit_wrapper,
@@ -651,19 +639,19 @@ class TestOpenEyeToolkitWrapper:
 
     @pytest.mark.parametrize("molecule", get_mini_drug_bank(OpenEyeToolkitWrapper))
     def test_to_inchi(self, molecule):
-        """Test conversion to standard and non-standard InChI"""
+        """Test, but do not validate, conversion to standard and non-standard InChI"""
 
         toolkit = OpenEyeToolkitWrapper()
-        inchi = molecule.to_inchi(toolkit_registry=toolkit)
-        non_standard = molecule.to_inchi(True, toolkit_registry=toolkit)
+        molecule.to_inchi(toolkit_registry=toolkit)
+        molecule.to_inchi(True, toolkit_registry=toolkit)
 
     @pytest.mark.parametrize("molecule", get_mini_drug_bank(OpenEyeToolkitWrapper))
     def test_to_inchikey(self, molecule):
-        """Test the conversion to standard and non-standard InChIKey"""
+        """Test, but do not validate, the conversion to standard and non-standard InChIKey"""
 
         toolkit = OpenEyeToolkitWrapper()
-        inchikey = molecule.to_inchikey(toolkit_registry=toolkit)
-        non_standard_key = molecule.to_inchikey(True, toolkit_registry=toolkit)
+        molecule.to_inchikey(toolkit_registry=toolkit)
+        molecule.to_inchikey(True, toolkit_registry=toolkit)
 
     def test_from_bad_inchi(self):
         """Test building a molecule from a bad InChI string"""
@@ -671,7 +659,7 @@ class TestOpenEyeToolkitWrapper:
         toolkit = OpenEyeToolkitWrapper()
         inchi = "InChI=1S/ksbfksfksfksbfks"
         with pytest.raises(RuntimeError):
-            mol = Molecule.from_inchi(inchi, toolkit_registry=toolkit)
+            Molecule.from_inchi(inchi, toolkit_registry=toolkit)
 
     @pytest.mark.parametrize("molecule", get_mini_drug_bank(OpenEyeToolkitWrapper))
     def test_non_standard_inchi_round_trip(self, molecule):
@@ -811,8 +799,10 @@ class TestOpenEyeToolkitWrapper:
         water.add_bond(0, 1, 1, False)
         water.add_bond(1, 2, 1, False)
         water.add_conformer(
-            np.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]])
-            * unit.angstrom
+            unit.Quantity(
+                np.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]),
+                unit.angstrom,
+            )
         )
         sio = StringIO()
         water.to_file(sio, "pdb", toolkit_registry=toolkit)
@@ -981,9 +971,9 @@ class TestOpenEyeToolkitWrapper:
         toolkit_wrapper = OpenEyeToolkitWrapper()
         filename = get_data_file_path("molecules/ethanol.sdf")
         ethanol = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
-        ethanol.partial_charges = (
-            np.array([-4.0, -3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0, 4.0])
-            * unit.elementary_charge
+        ethanol.partial_charges = unit.Quantity(
+            np.array([-4.0, -3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0, 4.0]),
+            unit.elementary_charge,
         )
         ethanol.properties["test_prop"] = "test_value"
         new_conf = ethanol.conformers[0] + (
@@ -1180,35 +1170,39 @@ class TestOpenEyeToolkitWrapper:
 
         initial_conformers = [
             # Add a conformer with an internal H-bond.
-            np.array(
-                [
-                    [0.5477, 0.3297, -0.0621],
-                    [-0.1168, -0.7881, 0.2329],
-                    [-1.4803, -0.8771, 0.1667],
-                    [-0.2158, 1.5206, -0.4772],
-                    [-1.4382, 1.5111, -0.5580],
-                    [1.6274, 0.3962, -0.0089],
-                    [0.3388, -1.7170, 0.5467],
-                    [-1.8612, -0.0347, -0.1160],
-                    [0.3747, 2.4222, -0.7115],
-                ]
-            )
-            * unit.angstrom,
+            unit.Quantity(
+                np.array(
+                    [
+                        [0.5477, 0.3297, -0.0621],
+                        [-0.1168, -0.7881, 0.2329],
+                        [-1.4803, -0.8771, 0.1667],
+                        [-0.2158, 1.5206, -0.4772],
+                        [-1.4382, 1.5111, -0.5580],
+                        [1.6274, 0.3962, -0.0089],
+                        [0.3388, -1.7170, 0.5467],
+                        [-1.8612, -0.0347, -0.1160],
+                        [0.3747, 2.4222, -0.7115],
+                    ]
+                ),
+                unit.angstrom,
+            ),
             # Add a conformer without an internal H-bond.
-            np.array(
-                [
-                    [0.5477, 0.3297, -0.0621],
-                    [-0.1168, -0.7881, 0.2329],
-                    [-1.4803, -0.8771, 0.1667],
-                    [-0.2158, 1.5206, -0.4772],
-                    [0.3353, 2.5772, -0.7614],
-                    [1.6274, 0.3962, -0.0089],
-                    [0.3388, -1.7170, 0.5467],
-                    [-1.7743, -1.7634, 0.4166],
-                    [-1.3122, 1.4082, -0.5180],
-                ]
-            )
-            * unit.angstrom,
+            unit.Quantity(
+                np.array(
+                    [
+                        [0.5477, 0.3297, -0.0621],
+                        [-0.1168, -0.7881, 0.2329],
+                        [-1.4803, -0.8771, 0.1667],
+                        [-0.2158, 1.5206, -0.4772],
+                        [0.3353, 2.5772, -0.7614],
+                        [1.6274, 0.3962, -0.0089],
+                        [0.3388, -1.7170, 0.5467],
+                        [-1.7743, -1.7634, 0.4166],
+                        [-1.3122, 1.4082, -0.5180],
+                    ]
+                ),
+                unit.angstrom,
+            ),
         ]
 
         molecule._conformers = [*initial_conformers]
@@ -1358,7 +1352,7 @@ class TestOpenEyeToolkitWrapper:
         # which means it will only ever return ValueError
         with pytest.raises(
             ValueError, match="is not available from OpenEyeToolkitWrapper"
-        ) as excinfo:
+        ):
             molecule.assign_partial_charges(
                 toolkit_registry=toolkit_registry,
                 partial_charge_method="NotARealChargeMethod",
@@ -1368,7 +1362,7 @@ class TestOpenEyeToolkitWrapper:
         with pytest.raises(
             ChargeMethodUnavailableError,
             match="is not available from OpenEyeToolkitWrapper",
-        ) as excinfo:
+        ):
             OETKW = OpenEyeToolkitWrapper()
             OETKW.assign_partial_charges(
                 molecule=molecule, partial_charge_method="NotARealChargeMethod"
@@ -1814,9 +1808,13 @@ class TestOpenEyeToolkitWrapper:
 
         toolkit_registry = ToolkitRegistry(toolkit_precedence=[OpenEyeToolkitWrapper])
 
-        assert biphenyl.get_bond_between(3, 6).is_in_ring() is False
+        this_bond = biphenyl.get_bond_between(3, 6)
+        assert this_bond.is_in_ring(toolkit_registry=toolkit_registry) is False
 
-        assert len([bond for bond in biphenyl.bonds if bond.is_in_ring()]) == 12
+        ring_bonds = [
+            b for b in biphenyl.bonds if b.is_in_ring(toolkit_registry=toolkit_registry)
+        ]
+        assert len(ring_bonds) == 12
 
     def test_unattached_is_in_ring(self):
         toolkit = OpenEyeToolkitWrapper()
@@ -1903,7 +1901,7 @@ class TestRDKitToolkitWrapper:
         with pytest.raises(
             ValueError,
             match="but RDKit toolkit interpreted SMILES 'C#C' as having implicit hydrogen",
-        ) as excinfo:
+        ):
             offmol = Molecule.from_smiles(
                 smiles_impl,
                 toolkit_registry=toolkit_wrapper,
@@ -1930,21 +1928,19 @@ class TestRDKitToolkitWrapper:
 
     @pytest.mark.parametrize("molecule", get_mini_drug_bank(RDKitToolkitWrapper))
     def test_to_inchi(self, molecule):
-        """Test conversion to standard and non-standard InChI"""
+        """Test, but do not validate, conversion to standard and non-standard InChI"""
 
         toolkit = RDKitToolkitWrapper()
-        inchi = molecule.to_inchi(toolkit_registry=toolkit)
-        non_standard = molecule.to_inchi(fixed_hydrogens=True, toolkit_registry=toolkit)
+        molecule.to_inchi(toolkit_registry=toolkit)
+        molecule.to_inchi(fixed_hydrogens=True, toolkit_registry=toolkit)
 
     @pytest.mark.parametrize("molecule", get_mini_drug_bank(RDKitToolkitWrapper))
     def test_to_inchikey(self, molecule):
-        """Test the conversion to standard and non-standard InChIKey"""
+        """Test, but do not validate, the conversion to standard and non-standard InChIKey"""
 
         toolkit = RDKitToolkitWrapper()
-        inchikey = molecule.to_inchikey(toolkit_registry=toolkit)
-        non_standard_key = molecule.to_inchikey(
-            fixed_hydrogens=True, toolkit_registry=toolkit
-        )
+        molecule.to_inchikey(toolkit_registry=toolkit)
+        molecule.to_inchikey(fixed_hydrogens=True, toolkit_registry=toolkit)
 
     def test_from_bad_inchi(self):
         """Test building a molecule from a bad InChI string"""
@@ -1952,7 +1948,7 @@ class TestRDKitToolkitWrapper:
         toolkit = RDKitToolkitWrapper()
         inchi = "InChI=1S/ksbfksfksfksbfks"
         with pytest.raises(RuntimeError):
-            mol = Molecule.from_inchi(inchi, toolkit_registry=toolkit)
+            Molecule.from_inchi(inchi, toolkit_registry=toolkit)
 
     inchi_data = [
         {
@@ -2406,9 +2402,9 @@ class TestRDKitToolkitWrapper:
         toolkit_wrapper = RDKitToolkitWrapper()
         filename = get_data_file_path("molecules/ethanol.sdf")
         ethanol = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
-        ethanol.partial_charges = (
-            np.array([-4.0, -3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0, 4.0])
-            * unit.elementary_charge
+        ethanol.partial_charges = unit.Quantity(
+            np.array([-4.0, -3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0, 4.0]),
+            unit.elementary_charge,
         )
         ethanol.properties["test_prop"] = "test_value"
         new_conf = ethanol.conformers[0] + (
@@ -2726,35 +2722,39 @@ class TestRDKitToolkitWrapper:
 
         initial_conformers = [
             # Add a conformer with an internal H-bond.
-            np.array(
-                [
-                    [0.5477, 0.3297, -0.0621],
-                    [-0.1168, -0.7881, 0.2329],
-                    [-1.4803, -0.8771, 0.1667],
-                    [-0.2158, 1.5206, -0.4772],
-                    [-1.4382, 1.5111, -0.5580],
-                    [1.6274, 0.3962, -0.0089],
-                    [0.3388, -1.7170, 0.5467],
-                    [-1.8612, -0.0347, -0.1160],
-                    [0.3747, 2.4222, -0.7115],
-                ]
-            )
-            * unit.angstrom,
+            unit.Quantity(
+                np.array(
+                    [
+                        [0.5477, 0.3297, -0.0621],
+                        [-0.1168, -0.7881, 0.2329],
+                        [-1.4803, -0.8771, 0.1667],
+                        [-0.2158, 1.5206, -0.4772],
+                        [-1.4382, 1.5111, -0.5580],
+                        [1.6274, 0.3962, -0.0089],
+                        [0.3388, -1.7170, 0.5467],
+                        [-1.8612, -0.0347, -0.1160],
+                        [0.3747, 2.4222, -0.7115],
+                    ]
+                ),
+                unit.angstrom,
+            ),
             # Add a conformer without an internal H-bond.
-            np.array(
-                [
-                    [0.5477, 0.3297, -0.0621],
-                    [-0.1168, -0.7881, 0.2329],
-                    [-1.4803, -0.8771, 0.1667],
-                    [-0.2158, 1.5206, -0.4772],
-                    [0.3353, 2.5772, -0.7614],
-                    [1.6274, 0.3962, -0.0089],
-                    [0.3388, -1.7170, 0.5467],
-                    [-1.7743, -1.7634, 0.4166],
-                    [-1.3122, 1.4082, -0.5180],
-                ]
-            )
-            * unit.angstrom,
+            unit.Quantity(
+                np.array(
+                    [
+                        [0.5477, 0.3297, -0.0621],
+                        [-0.1168, -0.7881, 0.2329],
+                        [-1.4803, -0.8771, 0.1667],
+                        [-0.2158, 1.5206, -0.4772],
+                        [0.3353, 2.5772, -0.7614],
+                        [1.6274, 0.3962, -0.0089],
+                        [0.3388, -1.7170, 0.5467],
+                        [-1.7743, -1.7634, 0.4166],
+                        [-1.3122, 1.4082, -0.5180],
+                    ]
+                ),
+                unit.angstrom,
+            ),
         ]
 
         molecule._conformers = [*initial_conformers]
@@ -2923,9 +2923,13 @@ class TestRDKitToolkitWrapper:
 
         toolkit_registry = ToolkitRegistry(toolkit_precedence=[RDKitToolkitWrapper()])
 
-        assert biphenyl.get_bond_between(3, 6).is_in_ring() is False
+        this_bond = biphenyl.get_bond_between(3, 6)
+        assert this_bond.is_in_ring(toolkit_registry=toolkit_registry) is False
 
-        assert len([bond for bond in biphenyl.bonds if bond.is_in_ring()]) == 12
+        ring_bonds = [
+            b for b in biphenyl.bonds if b.is_in_ring(toolkit_registry=toolkit_registry)
+        ]
+        assert len(ring_bonds) == 12
 
     def test_unattached_is_in_ring(self):
         toolkit = RDKitToolkitWrapper()
@@ -2955,7 +2959,10 @@ class TestRDKitToolkitWrapper:
     def test_to_rdkit_losing_aromaticity_(self):
         # test the example given in issue #513
         # <https://github.com/openforcefield/openff-toolkit/issues/513>
-        smiles = "[H]c1c(c(c(c(c1OC2=C(C(=C(N3C2=C(C(=C3[H])C#N)[H])[H])F)[H])OC([H])([H])C([H])([H])N4C(=C(C(=O)N(C4=O)[H])[H])[H])[H])F)[H]"
+        smiles = (
+            "[H]c1c(c(c(c(c1OC2=C(C(=C(N3C2=C(C(=C3[H])C#N)[H])[H])F)[H])OC([H])([H])C([H])([H])"
+            "N4C(=C(C(=O)N(C4=O)[H])[H])[H])[H])F)[H]"
+        )
 
         mol = Molecule.from_smiles(smiles)
         rdmol = mol.to_rdkit()
@@ -3045,8 +3052,8 @@ class TestAmberToolsToolkitWrapper:
 
     def test_assign_partial_charges_am1bcc_wrong_n_confs(self):
         """
-        Test AmberToolsToolkitWrapper assign_partial_charges() with am1bcc when requesting to use an incorrect number of
-        conformers
+        Test AmberToolsToolkitWrapper assign_partial_charges() with am1bcc when requesting to use an incorrect number
+        of conformers
         """
 
         toolkit_registry = ToolkitRegistry(
@@ -3199,7 +3206,7 @@ class TestAmberToolsToolkitWrapper:
         # was thrown inside them, so we just check for a ValueError here
         with pytest.raises(
             ValueError, match="is not available from AmberToolsToolkitWrapper"
-        ) as excinfo:
+        ):
             molecule.assign_partial_charges(
                 toolkit_registry=toolkit_registry,
                 partial_charge_method="NotARealChargeMethod",
@@ -3209,7 +3216,7 @@ class TestAmberToolsToolkitWrapper:
         with pytest.raises(
             ChargeMethodUnavailableError,
             match="is not available from AmberToolsToolkitWrapper",
-        ) as excinfo:
+        ):
             ATTKW = AmberToolsToolkitWrapper()
             ATTKW.assign_partial_charges(
                 molecule=molecule, partial_charge_method="NotARealChargeMethod"
@@ -3514,7 +3521,7 @@ class TestBuiltInToolkitWrapper:
         # was thrown inside them, so we just check for a ValueError here
         with pytest.raises(
             ValueError, match="is not supported by the Built-in toolkit"
-        ) as excinfo:
+        ):
             molecule.assign_partial_charges(
                 toolkit_registry=toolkit_registry,
                 partial_charge_method="NotARealChargeMethod",
@@ -3524,7 +3531,7 @@ class TestBuiltInToolkitWrapper:
         with pytest.raises(
             ChargeMethodUnavailableError,
             match="is not supported by the Built-in toolkit",
-        ) as excinfo:
+        ):
             BITKW = BuiltInToolkitWrapper()
             BITKW.assign_partial_charges(
                 molecule=molecule, partial_charge_method="NotARealChargeMethod"
@@ -3595,7 +3602,7 @@ class TestToolkitWrapper:
         tkw = ToolkitWrapper()
         mol = create_ethanol()
 
-        ## Test molecule with no conformers
+        # Test molecule with no conformers
         # Check with no min or max should pass
         tkw._check_n_conformers(mol, "nocharge")
         # Check with min=1 should warn
@@ -3631,7 +3638,7 @@ class TestToolkitWrapper:
         # Check with max=1 should pass
         tkw._check_n_conformers(mol, "nocharge", max_confs=1, strict_n_conformers=True)
 
-        ## Test molecule with conformers
+        # Test molecule with conformers
         # Add some conformers
         mol.generate_conformers(n_conformers=1)
         for _ in range(9):
@@ -3640,7 +3647,7 @@ class TestToolkitWrapper:
         # Check with no min or max should pass
         tkw._check_n_conformers(mol, "nocharge")
 
-        ## min_confs checks
+        # min_confs checks
         # Check with min=1 should be fine
         tkw._check_n_conformers(mol, "nocharge", min_confs=1)
         # Check with min=10 should be fine
@@ -3660,7 +3667,7 @@ class TestToolkitWrapper:
                 mol, "nocharge", min_confs=11, strict_n_conformers=True
             )
 
-        ## max_confs checks
+        # max_confs checks
         # Check with max=1 and strict_n_conformers should raise an error
         with pytest.raises(
             IncorrectNumConformersError,
@@ -3674,7 +3681,7 @@ class TestToolkitWrapper:
         # Check with max=11 and strict_n_conformers should be OK
         tkw._check_n_conformers(mol, "nocharge", max_confs=11, strict_n_conformers=True)
 
-        ## min_confs and max_confs checks
+        # min_confs and max_confs checks
         # Check with max=10 and min=10 and strict_n_conformers should be OK
         tkw._check_n_conformers(
             mol, "nocharge", min_confs=10, max_confs=10, strict_n_conformers=True
@@ -4025,9 +4032,11 @@ class TestToolkitRegistry:
         assert first_toolkit not in [
             type(tk) for tk in GLOBAL_TOOLKIT_REGISTRY.registered_toolkits
         ]
-        assert len(GLOBAL_TOOLKIT_REGISTRY.registered_toolkits) == num_toolkits - 1
+        assert (
+            len(GLOBAL_TOOLKIT_REGISTRY.registered_toolkits) == num_toolkits - 1  # noqa
+        )
 
-        GLOBAL_TOOLKIT_REGISTRY = deepcopy(global_registry_copy)
+        GLOBAL_TOOLKIT_REGISTRY = deepcopy(global_registry_copy)  # noqa
 
     def test_register_builtintoolkit(self):
         """Test creation of toolkit registry with Built-in toolkit"""
@@ -4042,10 +4051,8 @@ class TestToolkitRegistry:
         )
 
         # Test ToolkitRegistry.resolve()
-        assert (
-            registry.resolve("assign_partial_charges")
-            == registry.registered_toolkits[0].assign_partial_charges
-        )
+        resolved = registry.resolve("assign_partial_charges")
+        assert resolved == registry.registered_toolkits[0].assign_partial_charges
 
     @requires_rdkit
     @requires_openeye

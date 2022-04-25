@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 Wrapper classes for providing a minimal consistent interface to cheminformatics toolkits
 
@@ -92,16 +91,8 @@ from openff.toolkit.utils.openeye_wrapper import OpenEyeToolkitWrapper
 from openff.toolkit.utils.rdkit_wrapper import RDKitToolkitWrapper
 from openff.toolkit.utils.toolkit_registry import ToolkitRegistry
 
-# =============================================================================================
-# CONFIGURE LOGGER
-# =============================================================================================
-
 logger = logging.getLogger(__name__)
 
-
-# =============================================================================================
-# GLOBAL TOOLKIT REGISTRY
-# =============================================================================================
 
 # Create global toolkit registry, where all available toolkits are registered
 GLOBAL_TOOLKIT_REGISTRY = ToolkitRegistry(
@@ -114,9 +105,6 @@ GLOBAL_TOOLKIT_REGISTRY = ToolkitRegistry(
     exception_if_unavailable=False,
 )
 
-# =============================================================================================
-# SET GLOBAL TOOLKIT-AVAIABLE VARIABLES
-# =============================================================================================
 
 OPENEYE_AVAILABLE = False
 RDKIT_AVAILABLE = False
@@ -131,9 +119,6 @@ for toolkit in GLOBAL_TOOLKIT_REGISTRY.registered_toolkits:
     elif type(toolkit) is AmberToolsToolkitWrapper:
         AMBERTOOLS_AVAILABLE = True
 
-# =============================================================================================
-# WARN IF INSUFFICIENT TOOLKITS INSTALLED
-# =============================================================================================
 
 # Define basic toolkits that handle essential file I/O
 

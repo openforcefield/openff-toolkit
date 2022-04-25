@@ -3,20 +3,12 @@ Built-in ToolkitWrapper for very basic functionality. Intended for testing and n
 """
 __all__ = ("BuiltInToolkitWrapper",)
 
-# =============================================================================================
-# IMPORTS
-# =============================================================================================
-
 import numpy as np
 from openff.units import unit
 
 from openff.toolkit.utils import base_wrapper
 from openff.toolkit.utils.exceptions import ChargeMethodUnavailableError
 from openff.toolkit.utils.utils import inherit_docstrings
-
-# =============================================================================================
-# Implementation
-# =============================================================================================
 
 
 @inherit_docstrings

@@ -16,16 +16,7 @@ from openff.toolkit.utils.openeye_wrapper import OpenEyeToolkitWrapper
 from openff.toolkit.utils.rdkit_wrapper import RDKitToolkitWrapper
 from openff.toolkit.utils.utils import all_subclasses
 
-# =============================================================================================
-# CONFIGURE LOGGER
-# =============================================================================================
-
 logger = logging.getLogger(__name__)
-
-
-# =============================================================================================
-# Implementation
-# =============================================================================================
 
 
 class ToolkitRegistry:
