@@ -9,6 +9,9 @@ Test classes and function in module openff.toolkit.typing.engines.smirnoff.param
 
 """
 from inspect import isabstract, isclass
+import itertools
+from collections import defaultdict
+from typing import Dict, List, Tuple
 
 import numpy
 import pytest
@@ -16,7 +19,17 @@ from numpy.testing import assert_almost_equal
 from openff.units import unit
 
 import openff.toolkit.typing.engines.smirnoff.parameters
-from openff.toolkit.topology import Molecule
+from openff.toolkit.tests.mocking import VirtualSiteMocking
+from openff.toolkit.tests.utils import does_not_raise
+from openff.toolkit.typing.engines.smirnoff import ForceField
+
+try:
+    import openmm
+    from openmm import unit
+except ImportError:
+    from simtk import unit, openmm
+
+from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     BondHandler,
     ChargeIncrementModelHandler,
@@ -1847,223 +1860,580 @@ class TestvdWType:
         assert "rmin_half" in param.to_dict()
 
 
+class TestVirtualSiteType:
+    @pytest.mark.parametrize(
+        "parameter, expected_index",
+        [
+            (VirtualSiteMocking.bond_charge_parameter("[*:1][*:2]"), 0),
+            (VirtualSiteMocking.monovalent_parameter("[*:1][*:2][*:3]"), 0),
+            (VirtualSiteMocking.divalent_parameter("[*:2][*:1][*:3]", "once"), 0),
+            (VirtualSiteMocking.trivalent_parameter("[*:1][*:2][*:3][*:4]"), 0),
+        ],
+    )
+    def test_parent_index(self, parameter, expected_index):
+
+        assert parameter.parent_index == expected_index
+        assert (
+            VirtualSiteHandler.VirtualSiteType.type_to_parent_index(parameter.type)
+            == expected_index
+        )
+
+    @pytest.mark.parametrize(
+        "kwargs, expected_raises",
+        [
+            (
+                VirtualSiteMocking.bond_charge_parameter("[*:1][*:2]").to_dict(),
+                does_not_raise(),
+            ),
+            (
+                VirtualSiteMocking.monovalent_parameter("[*:1][*:2][*:3]").to_dict(),
+                does_not_raise(),
+            ),
+            (
+                VirtualSiteMocking.divalent_parameter(
+                    "[*:1][*:2][*:3]", match="once", angle=0.0 * unit.degrees
+                ).to_dict(),
+                does_not_raise(),
+            ),
+            (
+                VirtualSiteMocking.divalent_parameter(
+                    "[*:1][*:2][*:3]",
+                    match="all_permutations",
+                    angle=2.0 * unit.degrees,
+                ).to_dict(),
+                does_not_raise(),
+            ),
+            (
+                VirtualSiteMocking.trivalent_parameter(
+                    "[*:1][*:2][*:3][*:4]"
+                ).to_dict(),
+                does_not_raise(),
+            ),
+            # Validate `type`
+            (
+                {},
+                pytest.raises(SMIRNOFFSpecError, match="the `type` keyword is missing"),
+            ),
+            (
+                {"type": "InvalidType"},
+                pytest.raises(
+                    SMIRNOFFSpecError,
+                    match="'InvalidType' is not a supported virtual site type",
+                ),
+            ),
+            # Validate `match`
+            (
+                {"type": "BondCharge"},
+                pytest.raises(
+                    SMIRNOFFSpecError, match="the `match` keyword is missing"
+                ),
+            ),
+            (
+                {"type": "BondCharge", "match": "once"},
+                pytest.raises(
+                    SMIRNOFFSpecError,
+                    match="match='once' not supported with type='BondCharge'",
+                ),
+            ),
+            (
+                {"type": "BondCharge", "match": "once"},
+                pytest.raises(
+                    SMIRNOFFSpecError,
+                    match="match='once' not supported with type='BondCharge'",
+                ),
+            ),
+            (
+                {"type": "MonovalentLonePair", "match": "once"},
+                pytest.raises(
+                    SMIRNOFFSpecError,
+                    match="match='once' not supported with type='MonovalentLonePair'",
+                ),
+            ),
+            (
+                {
+                    "type": "DivalentLonePair",
+                    "match": "once",
+                    "outOfPlaneAngle": 2.0 * unit.degrees,
+                },
+                pytest.raises(
+                    SMIRNOFFSpecError,
+                    match="match='once' not supported with "
+                    "type='DivalentLonePair' and is_in_plane=False",
+                ),
+            ),
+            (
+                {"type": "TrivalentLonePair", "match": "all_permutations"},
+                pytest.raises(
+                    SMIRNOFFSpecError,
+                    match="match='all_permutations' not supported with "
+                    "type='TrivalentLonePair'",
+                ),
+            ),
+        ],
+    )
+    def test_add_default_init_kwargs_validation(self, kwargs, expected_raises):
+
+        with expected_raises:
+            VirtualSiteHandler.VirtualSiteType._add_default_init_kwargs(kwargs)
+
+    @pytest.mark.parametrize(
+        "kwargs, expected_kwargs",
+        [
+            (
+                {"type": "BondCharge", "match": "all_permutations"},
+                {
+                    "type": "BondCharge",
+                    "match": "all_permutations",
+                    "outOfPlaneAngle": None,
+                    "inPlaneAngle": None,
+                    "sigma": 0.0 * unit.angstrom,
+                    "epsilon": 0.0 * unit.kilocalorie_per_mole,
+                },
+            ),
+            (
+                {
+                    "type": "BondCharge",
+                    "match": "all_permutations",
+                    "rmin_half": 1.0 * unit.angstrom,
+                },
+                {
+                    "type": "BondCharge",
+                    "match": "all_permutations",
+                    "outOfPlaneAngle": None,
+                    "inPlaneAngle": None,
+                    "rmin_half": 1.0 * unit.angstrom,
+                    "epsilon": 0.0 * unit.kilocalorie_per_mole,
+                },
+            ),
+            (
+                {"type": "MonovalentLonePair", "match": "all_permutations"},
+                {
+                    "type": "MonovalentLonePair",
+                    "match": "all_permutations",
+                    "sigma": 0.0 * unit.angstrom,
+                    "epsilon": 0.0 * unit.kilocalorie_per_mole,
+                },
+            ),
+        ],
+    )
+    def test_add_default_init_kwargs_values(self, kwargs, expected_kwargs):
+
+        assert kwargs != expected_kwargs
+        VirtualSiteHandler.VirtualSiteType._add_default_init_kwargs(kwargs)
+        assert kwargs == expected_kwargs
+
+    @pytest.mark.parametrize(
+        "parameter, in_plane_angle, expected_raises",
+        [
+            (
+                VirtualSiteMocking.bond_charge_parameter("[*:1][*:2]"),
+                0.0 * unit.degrees,
+                pytest.raises(
+                    SMIRNOFFSpecError,
+                    match="'BondCharge' sites do not support `inPlaneAngle`",
+                ),
+            ),
+            (
+                VirtualSiteMocking.bond_charge_parameter("[*:1][*:2]"),
+                None,
+                does_not_raise(),
+            ),
+            (
+                VirtualSiteMocking.monovalent_parameter("[*:1][*:2][*:3]"),
+                1.0 * unit.angstrom,
+                pytest.raises(IncompatibleUnitError),
+            ),
+            (
+                VirtualSiteMocking.monovalent_parameter("[*:1][*:2][*:3]"),
+                130.0 * unit.degrees,
+                does_not_raise(),
+            ),
+        ],
+    )
+    def test_in_plane_angle_converter(self, parameter, in_plane_angle, expected_raises):
+
+        parameter_dict = parameter.to_dict()
+        parameter_dict["inPlaneAngle"] = in_plane_angle
+
+        with expected_raises:
+            new_parameter = VirtualSiteHandler.VirtualSiteType(**parameter_dict)
+            assert new_parameter.inPlaneAngle == in_plane_angle
+
+    @pytest.mark.parametrize(
+        "parameter, out_of_plane_angle, expected_raises",
+        [
+            (
+                VirtualSiteMocking.bond_charge_parameter("[*:1][*:2]"),
+                0.0 * unit.degrees,
+                pytest.raises(
+                    SMIRNOFFSpecError,
+                    match="'BondCharge' sites do not support `outOfPlaneAngle`",
+                ),
+            ),
+            (
+                VirtualSiteMocking.bond_charge_parameter("[*:1][*:2]"),
+                None,
+                does_not_raise(),
+            ),
+            (
+                VirtualSiteMocking.monovalent_parameter("[*:1][*:2][*:3]"),
+                130.0 * unit.degrees,
+                does_not_raise(),
+            ),
+        ],
+    )
+    def test_out_of_plane_angle_converter(
+        self, parameter, out_of_plane_angle, expected_raises
+    ):
+
+        parameter_dict = parameter.to_dict()
+        parameter_dict["outOfPlaneAngle"] = out_of_plane_angle
+
+        with expected_raises:
+            new_parameter = VirtualSiteHandler.VirtualSiteType(**parameter_dict)
+            assert new_parameter.outOfPlaneAngle == out_of_plane_angle
+
+
 class TestVirtualSiteHandler:
     """
     Test the creation of a VirtualSiteHandler and the implemented VirtualSiteTypes
     """
 
-    def _test_variable_names(self, valid_kwargs, variable_names):
+    @classmethod
+    def build_force_field(cls, v_site_handler: VirtualSiteHandler) -> ForceField:
 
-        for name_to_change in variable_names:
-            invalid_kwargs = valid_kwargs.copy()
-            invalid_kwargs[
-                name_to_change
-            ] = "bad_attribute_value_that_will_never_be_used"
+        force_field = ForceField()
 
-            # Should also be able to perform the lookup on the type attribute.
-            # Needed to test setting to the wrong type value
-            exception = SMIRNOFFSpecError
-
-            with pytest.raises(exception):
-                vs_type = VirtualSiteHandler._VirtualSiteTypeSelector(**invalid_kwargs)
-
-    def _test_complete_attributes(self, valid_kwargs, names, virtual_site_type):
-
-        vs_type = virtual_site_type(**valid_kwargs)
-
-        for name_to_remove in names:
-            invalid_kwargs = valid_kwargs.copy()
-            invalid_kwargs.pop(name_to_remove)
-
-            with pytest.raises(SMIRNOFFSpecError):
-                vs_type = virtual_site_type(**invalid_kwargs)
-
-        # Test adding bogus attr
-        with pytest.raises(SMIRNOFFSpecError):
-            invalid_kwargs = valid_kwargs.copy()
-            invalid_kwargs["bad_attribute_name_that_will_never_be_in_the_spec"] = True
-            vs_type = virtual_site_type(**invalid_kwargs)
-
-    def test_create_virtual_site_handler(self):
-        """Test creation of an empty VirtualSiteHandler"""
-        handler = VirtualSiteHandler(
-            skip_version_check=True, exclusion_policy="parents"
-        )
-
-        with pytest.raises(SMIRNOFFSpecError):
-            handler = VirtualSiteHandler(
-                skip_version_check=True,
-                exclusion_policy="bad_attribute_value_that_will_never_be_used",
-            )
-
-    def test_serialize_virtual_site_handler(self):
-        """Test serializing a populated VirtualSiteHandler"""
-        handler = VirtualSiteHandler(
-            skip_version_check=True, exclusion_policy="parents"
-        )
-
-        handler.add_parameter(
+        force_field.get_parameter_handler("Bonds").add_parameter(
             {
-                "smirks": "[#1:1]-[#8X2H2+0:2]-[#1:3]",
-                "type": "DivalentLonePair",
-                "distance": -0.0106 * unit.nanometers,
-                "outOfPlaneAngle": 0.0 * unit.degrees,
-                "match": "once",
-                "charge_increment1": 0.5 * unit.elementary_charge,
-                "charge_increment2": -1.0 * unit.elementary_charge,
-                "charge_increment3": 0.5 * unit.elementary_charge,
+                "smirks": "[*:1]~[*:2]",
+                "k": 0.0 * unit.kilojoule_per_mole / unit.angstrom**2,
+                "length": 0.0 * unit.angstrom,
             }
         )
+        force_field.get_parameter_handler("Angles").add_parameter(
+            {
+                "smirks": "[*:1]~[*:2]~[*:3]",
+                "k": 0.0 * unit.kilojoule_per_mole / unit.degree**2,
+                "angle": 60.0 * unit.degree,
+            }
+        )
+        force_field.get_parameter_handler("ProperTorsions").add_parameter(
+            {
+                "smirks": "[*:1]~[*:2]~[*:3]~[*:4]",
+                "k": [0.0] * unit.kilojoule_per_mole,
+                "phase": [0.0] * unit.degree,
+                "periodicity": [2],
+                "idivf": [1.0],
+            }
+        )
+        force_field.get_parameter_handler("vdW").add_parameter(
+            {
+                "smirks": "[*:1]",
+                "epsilon": 0.0 * unit.kilojoule_per_mole,
+                "sigma": 1.0 * unit.angstrom,
+            }
+        )
+        force_field.get_parameter_handler("LibraryCharges").add_parameter(
+            {"smirks": "[*:1]", "charge": [0.0] * unit.elementary_charge}
+        )
+        force_field.get_parameter_handler("Electrostatics")
 
-        handler.to_dict()
+        force_field.register_parameter_handler(v_site_handler)
 
-    def test_virtual_site_bond_charge_type(self):
-        """
-        Ensure that an error is raised if incorrect parameters are given to
-        a bond charge type
-        """
+        return force_field
 
-        valid_kwargs = dict(
-            type="BondCharge",
-            smirks="[#6:1]-[#7:2]",
-            name="EP",
-            distance=1.0 * unit.angstrom,
-            charge_increment=[1.0, 1.0] * unit.elementary_charge,
-            sigma=0.0 * unit.angstrom,
-            epsilon=1.0 * unit.kilocalorie / unit.mole,
-            match="once",
+    @classmethod
+    def generate_v_site_coordinates(
+        cls,
+        molecule: Molecule,
+        input_conformer: unit.Quantity,
+        parameter: VirtualSiteHandler.VirtualSiteType,
+    ) -> unit.Quantity:
+
+        # Compute the coordinates of the virtual site. Unfortunately OpenMM does not
+        # seem to offer a more compact way to do this currently.
+        handler = VirtualSiteHandler(version="0.3")
+        handler.add_parameter(parameter=parameter)
+
+        force_field = cls.build_force_field(handler)
+
+        system = force_field.create_openmm_system(molecule.to_topology())
+
+        n_v_sites = sum(
+            1 if system.isVirtualSite(i) else 0 for i in range(system.getNumParticles())
         )
 
-        # sigma and epsilon are optional
-        names = ["type", "distance", "charge_increment"]
-
-        self._test_complete_attributes(
-            valid_kwargs, names, VirtualSiteHandler.VirtualSiteBondChargeType
+        input_conformer = (
+            numpy.vstack(
+                [
+                    input_conformer.value_in_unit(unit.angstrom),
+                    numpy.zeros((n_v_sites, 3)),
+                ]
+            )
+            * unit.angstrom
         )
 
-        variable_names = ["type", "match"]
-        self._test_variable_names(valid_kwargs, variable_names)
+        context = openmm.Context(
+            system,
+            openmm.VerletIntegrator(1.0 * unit.femtosecond),
+            openmm.Platform.getPlatformByName("Reference"),
+        )
+        context.setPositions(input_conformer)
+        context.computeVirtualSites()
 
-    def test_virtual_site_monovalent_type(self):
-        """
-        Ensure that an error is raised if incorrect parameters are given to
-        a monovalent type
-        """
-
-        valid_kwargs = dict(
-            type="MonovalentLonePair",
-            smirks="[#6:1]-[#7:2]-[#8:3]",
-            name="EP",
-            distance=1.0 * unit.angstrom,
-            charge_increment=[1.0, 1.0, 1.0] * unit.elementary_charge,
-            outOfPlaneAngle=30 * unit.degree,
-            inPlaneAngle=30 * unit.degree,
-            sigma=0.0 * unit.angstrom,
-            epsilon=1.0 * unit.kilocalorie / unit.mole,
-            match="once",
+        output_conformer = context.getState(getPositions=True).getPositions(
+            asNumpy=True
         )
 
-        # sigma and epsilon are optional
-        names = [
-            "type",
-            "distance",
-            "charge_increment",
-            "outOfPlaneAngle",
-            "inPlaneAngle",
-        ]
+        return output_conformer[molecule.n_atoms :, :]
 
-        self._test_complete_attributes(
-            valid_kwargs, names, VirtualSiteHandler.VirtualSiteMonovalentLonePairType
-        )
+    @pytest.mark.parametrize(
+        "smiles, matched_indices, parameter, expected_raises",
+        [
+            (
+                "[Cl:1][H:2]",
+                (1, 2),
+                VirtualSiteMocking.bond_charge_parameter("[Cl:1][H:2]"),
+                does_not_raise(),
+            ),
+            (
+                "[N:1]([H:2])([H:3])[H:4]",
+                (1, 2, 3),
+                VirtualSiteMocking.monovalent_parameter("[*:2][N:1][*:3]"),
+                pytest.raises(NotImplementedError, match="please describe what it is"),
+            ),
+        ],
+    )
+    def test_validate_found_match(
+        self, smiles, matched_indices, parameter, expected_raises
+    ):
 
-        variable_names = ["type", "match"]
-        self._test_variable_names(valid_kwargs, variable_names)
+        molecule = Molecule.from_smiles(smiles, allow_undefined_stereo=True)
+        topology: Topology = molecule.to_topology()
 
-    def test_virtual_site_divalent_type(self):
-        """
-        Ensure that an error is raised if incorrect parameters are given to
-        a divalent type
-        """
+        topology_atoms = {
+            i: topology_atom for i, topology_atom in enumerate(topology.topology_atoms)
+        }
 
-        valid_kwargs = dict(
-            type="DivalentLonePair",
-            smirks="[#6:1]-[#7:2]-[#8:3]",
-            name="EP",
-            distance=1.0 * unit.angstrom,
-            charge_increment=[1.0, 1.0, 1.0] * unit.elementary_charge,
-            outOfPlaneAngle=30 * unit.degree,
-            sigma=0.0 * unit.angstrom,
-            epsilon=1.0 * unit.kilocalorie / unit.mole,
-            match="once",
-        )
+        with expected_raises:
+            VirtualSiteHandler._validate_found_match(
+                topology_atoms, matched_indices, parameter
+            )
 
-        # sigma and epsilon are optional
-        names = [
-            "type",
-            "distance",
-            "charge_increment",
-            "outOfPlaneAngle",
-        ]
+    @pytest.mark.parametrize(
+        "handler_a, handler_b, expected_raises",
+        [
+            # Currently, no other test cases as only one `exclusion_policy` is supported
+            (
+                VirtualSiteHandler(version="0.3"),
+                VirtualSiteHandler(version="0.3"),
+                does_not_raise(),
+            )
+        ],
+    )
+    def test_check_handler_compatability(self, handler_a, handler_b, expected_raises):
+        with expected_raises:
+            handler_a.check_handler_compatibility(handler_b)
 
-        self._test_complete_attributes(
-            valid_kwargs, names, VirtualSiteHandler.VirtualSiteDivalentLonePairType
-        )
+    @pytest.mark.parametrize(
+        "parameters, smiles, expected_matches",
+        [
+            # Check that a basic BOndCharge virtual site can be applied
+            (
+                [VirtualSiteMocking.bond_charge_parameter("[Cl:1]-[C:2]")],
+                "[Cl:2][C:1]([H:3])([H:4])[H:5]",
+                {(1, 0): {("[Cl:1]-[C:2]", "EP")}},
+            ),
+            # Check that two bond charge vsites with different names can be applied
+            # to the same atoms
+            (
+                [
+                    VirtualSiteMocking.bond_charge_parameter("[Cl:1]-[C:2]", name="EP"),
+                    VirtualSiteMocking.bond_charge_parameter("[Cl:1]-[C:2]", name="LP"),
+                ],
+                "[Cl:1][C:2]([H:3])([H:4])[H:5]",
+                {(0, 1): {("[Cl:1]-[C:2]", "EP"), ("[Cl:1]-[C:2]", "LP")}},
+            ),
+            # Check that a bond charge vsite can be applied to a symmetric moiety
+            (
+                [VirtualSiteMocking.bond_charge_parameter("[C:1]#[C:2]")],
+                "[H:1][C:2]#[C:3][C:4]",
+                {(1, 2): {("[C:1]#[C:2]", "EP")}, (2, 1): {("[C:1]#[C:2]", "EP")}},
+            ),
+            # Check that a monovalent lone pair vsite can be applied to a relatively symmetric moiety
+            (
+                [VirtualSiteMocking.monovalent_parameter("[O:1]=[C:2]-[*:3]")],
+                "[O:2]=[C:1]([H:3])[Cl:4]",
+                {
+                    (1, 0, 2): {("[O:1]=[C:2]-[*:3]", "EP")},
+                    (1, 0, 3): {("[O:1]=[C:2]-[*:3]", "EP")},
+                },
+            ),
+            # Check that monovalent lone pair vsites override correctly
+            (
+                [
+                    VirtualSiteMocking.monovalent_parameter("[O:1]=[C:2]-[*:3]"),
+                    VirtualSiteMocking.monovalent_parameter("[O:1]=[C:2]-[Cl:3]"),
+                ],
+                "[O:2]=[C:1]([H:3])[Cl:4]",
+                {(1, 0, 3): {("[O:1]=[C:2]-[Cl:3]", "EP")}},
+            ),
+            # Check that a single-particle in-plane divalent lone pair vsite
+            # can be applied
+            (
+                [
+                    VirtualSiteMocking.divalent_parameter(
+                        "[H:2][O:1][H:3]", match="once", angle=0.0 * unit.degree
+                    )
+                ],
+                "[H:1][O:2][H:3]",
+                {(1, 0, 2): {("[H:2][O:1][H:3]", "EP")}},
+            ),
+            # Check that a two-particle out-of-plane divalent lone pair vsite can be applied
+            (
+                [
+                    VirtualSiteMocking.divalent_parameter(
+                        "[H:2][O:1][H:3]",
+                        match="all_permutations",
+                        angle=30.0 * unit.degree,
+                    )
+                ],
+                "[H:1][O:2][H:3]",
+                {
+                    (1, 0, 2): {("[H:2][O:1][H:3]", "EP")},
+                    (1, 2, 0): {("[H:2][O:1][H:3]", "EP")},
+                },
+            ),
+            # Check that a single-particle in-plane divalent lone pair site can
+            # be applied to a symmetric molecule
+            (
+                [
+                    VirtualSiteMocking.divalent_parameter(
+                        "[*:2]-[N:1]~[*:3]", match="once", angle=0.0 * unit.degree
+                    )
+                ],
+                "[H:1][N:2]=[N:3][H:4]",
+                {
+                    (1, 0, 2): {("[*:2]-[N:1]~[*:3]", "EP")},
+                    (2, 3, 1): {("[*:2]-[N:1]~[*:3]", "EP")},
+                },
+            ),
+            # Check that a two-particle out-of-plane divalent lone pair vsite
+            # can be applied to a symmetric molecule
+            (
+                [
+                    VirtualSiteMocking.divalent_parameter(
+                        "[*:2]~[N:1]~[*:3]",
+                        match="all_permutations",
+                        angle=30.0 * unit.degree,
+                    )
+                ],
+                "[H:1][N:2]=[N:3][H:4]",
+                {
+                    (1, 0, 2): {("[*:2]~[N:1]~[*:3]", "EP")},
+                    (1, 2, 0): {("[*:2]~[N:1]~[*:3]", "EP")},
+                    (2, 1, 3): {("[*:2]~[N:1]~[*:3]", "EP")},
+                    (2, 3, 1): {("[*:2]~[N:1]~[*:3]", "EP")},
+                },
+            ),
+            # Check that a trivalent lone pair vsite can be applied to a simple molecule
+            (
+                [VirtualSiteMocking.trivalent_parameter("[N:1]([H:2])([H:3])[H:4]")],
+                "[N:2]([H:1])([H:3])[H:4]",
+                {(1, 0, 2, 3): {("[N:1]([H:2])([H:3])[H:4]", "EP")}},
+            ),
+        ],
+    )
+    def test_find_matches(
+        self,
+        parameters: List[VirtualSiteHandler.VirtualSiteType],
+        smiles: str,
+        expected_matches: Dict[Tuple[int, ...], List[Tuple[str, str]]],
+    ):
 
-        variable_names = ["type", "match"]
-        self._test_variable_names(valid_kwargs, variable_names)
+        molecule = Molecule.from_mapped_smiles(smiles, allow_undefined_stereo=True)
 
-    def test_virtual_site_trivalent_type(self):
-        """
-        Ensure that an error is raised if incorrect parameters are given to
-        a trivalent type
-        """
+        handler = VirtualSiteHandler(version="0.3")
 
-        valid_kwargs = dict(
-            type="TrivalentLonePair",
-            smirks="[#6:1]-[#7:2](-[#8:3])-[#8:4]",
-            name="EP",
-            distance=1.0 * unit.angstrom,
-            charge_increment=[1.0, 1.0, 1.0, 1.0] * unit.elementary_charge,
-            sigma=0.0 * unit.angstrom,
-            epsilon=1.0 * unit.kilocalorie / unit.mole,
-            match="once",
-        )
+        for parameter in parameters:
+            handler.add_parameter(parameter=parameter)
 
-        # sigma and epsilon are optional
-        names = [
-            "type",
-            "distance",
-            "charge_increment",
-        ]
+        matches = handler.find_matches(molecule.to_topology(), unique=False)
 
-        self._test_complete_attributes(
-            valid_kwargs, names, VirtualSiteHandler.VirtualSiteTrivalentLonePairType
-        )
+        matched_smirks = defaultdict(set)
 
-        variable_names = ["type", "match"]
-        self._test_variable_names(valid_kwargs, variable_names)
+        for match in matches:
 
-    def test_virtual_site_trivalent_type_invalid_match(self):
-        """
-        Ensure that an error is raised if incorrect parameters are given to
-        a trivalent type
-        """
+            matched_smirks[match.environment_match.topology_atom_indices].add(
+                (match.parameter_type.smirks, match.parameter_type.name)
+            )
 
-        invalid_kwargs = dict(
-            type="TrivalentLonePair",
-            smirks="[#6:1]-[#7:2](-[#8:3])-[#8:4]",
-            name="EP",
-            distance=1.0 * unit.angstrom,
-            charge_increment=[1.0, 1.0, 1.0, 1.0] * unit.elementary_charge,
-            sigma=0.0 * unit.angstrom,
-            epsilon=1.0 * unit.kilocalorie / unit.mole,
-            match="all_permutations",
-        )
+        assert {**matched_smirks} == expected_matches
+
+    @pytest.mark.parametrize(
+        "query_parameter, query_key, expected_index",
+        [
+            (
+                VirtualSiteMocking.monovalent_parameter("[*:1][*:2][*:3]", name="LP"),
+                None,
+                2,
+            ),
+            (None, ("BondCharge", "[*:1][*:2]", "EP"), 3),
+            (None, ("BondCharge", "[*:1][*:2]", "LP"), 1),
+            (None, ("MonovalentLonePair", "[*:1][*:2][*:3]", "EP"), 0),
+            (None, ("MonovalentLonePair", "[*:1][*:2][*:3]", "LP"), 2),
+            (None, ("DivalentLonePair", "[*:1][*:2][*:3]", "LP"), None),
+        ],
+    )
+    def test_index_of_parameter(self, query_parameter, query_key, expected_index):
+
+        handler = VirtualSiteHandler(version="0.3")
+
+        for parameter in [
+            VirtualSiteMocking.monovalent_parameter("[*:1][*:2][*:3]", name="EP"),
+            VirtualSiteMocking.bond_charge_parameter("[*:1][*:2]", name="LP"),
+            VirtualSiteMocking.monovalent_parameter("[*:1][*:2][*:3]", name="LP"),
+            VirtualSiteMocking.bond_charge_parameter("[*:1][*:2]", name="EP"),
+        ]:
+            handler.add_parameter(parameter=parameter)
+
+        assert handler._index_of_parameter(query_parameter, query_key) == expected_index
+
+    def test_invalid_num_charge_increments(self):
         with pytest.raises(
             SMIRNOFFSpecError,
-            match="TrivalentLonePair virtual site defined with match attribute set to all_permutations. Only supported value is 'once'.",
-        ) as excinfo:
-            vs = VirtualSiteHandler.VirtualSiteTrivalentLonePairType(**invalid_kwargs)
+            match="'BondCharge' virtual sites expect exactly 2 charge increments,",
+        ):
+            VirtualSiteHandler.VirtualSiteType(
+                type="BondCharge",
+                smirks="[*]-[*]",
+                name="EP",
+                charge_increment=[0.1, 0.2, 0.3] * unit.elementary_charge,
+                match="all_permutations",
+                distance=2.0 * unit.angstrom,
+            )
+
+    def test_bad_connectivity_errors_in_create_force(self):
+        handler = VirtualSiteHandler(version="0.3")
+        handler.add_parameter(
+            parameter=VirtualSiteMocking.divalent_parameter(
+                "[O:2]=[C:1][H:3]", match="all_permutations"
+            )
+        )
+        topology = VirtualSiteMocking.formaldehyde().to_topology()
+
+        system = openmm.System()
+
+        for _ in range(topology.n_topology_atoms):
+            system.addParticle(10.0 * unit.amu)
+
+        with pytest.raises(
+            NotImplementedError,
+            match="Atom with smirks index=0 matched topology atom 1 with "
+            "connectivity=3, but it was expected to have connectivity 2",
+        ):
+            handler.create_force(system, topology)
 
 
 class TestLibraryChargeHandler:
