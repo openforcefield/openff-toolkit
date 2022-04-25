@@ -214,7 +214,8 @@ def _linear_inter_or_extrapolate(points_dict, x_query):
         return k
 
 
-# TODO: This is technically a validator, not a converter, but ParameterAttribute doesn't support them yet (it'll be easy if we switch to use the attrs library).
+# TODO: This is technically a validator, not a converter, but ParameterAttribute doesn't support them yet
+#       (it'll be easy if we switch to use the attrs library).
 def _allow_only(allowed_values):
     """A converter that checks the new value is only in a set."""
     allowed_values = frozenset(allowed_values)
@@ -976,7 +977,7 @@ class _ParameterAttributeHandler:
         for attrib_basename in self._get_indexed_parameter_attributes().keys():
             index = 1
             while True:
-                attrib_w_index = "{}{}".format(attrib_basename, index)
+                attrib_w_index = f"{attrib_basename}{index}"
 
                 # Exit the while loop if the indexed attribute is not given.
                 # this is the stop condition
@@ -1477,7 +1478,7 @@ class ParameterList(list):
         if not isinstance(other, ParameterList):
             msg = (
                 "ParameterList.extend(other) expected instance of ParameterList, "
-                "but received {} (type {}) instead".format(other, type(other))
+                f"but received {other} (type {type(other)}) instead"
             )
             raise TypeError(msg)
         # TODO: Check if other ParameterList contains the same ParameterTypes?
@@ -1509,9 +1510,7 @@ class ParameterList(list):
             for parameter in self:
                 if parameter.smirks == item:
                     return self.index(parameter)
-            raise ParameterLookupError(
-                "SMIRKS {item} not found in ParameterList".format(item=item)
-            )
+            raise ParameterLookupError(f"SMIRKS {item} not found in ParameterList")
 
     def insert(self, index, parameter):
         """
@@ -1778,7 +1777,7 @@ class ParameterType(_ParameterAttributeHandler):
         super().__init__(allow_cosmetic_attributes=allow_cosmetic_attributes, **kwargs)
 
     def __repr__(self):
-        ret_str = "<{} with ".format(self.__class__.__name__)
+        ret_str = "<{self.__class__.__name__} with "
         for attr, val in self.to_dict().items():
             ret_str += f"{attr}: {val}  "
         ret_str += ">"
@@ -2202,7 +2201,7 @@ class ParameterHandler(_ParameterAttributeHandler):
             ``matches[particle_indices]`` is the ``ParameterType`` object
             matching the tuple of particle indices in ``entity``.
         """
-        logger.debug("Finding matches for {}".format(self.__class__.__name__))
+        logger.debug(f"Finding matches for {self.__class__.__name__}")
 
         matches = transformed_dict_cls()
 
@@ -2231,7 +2230,7 @@ class ParameterHandler(_ParameterAttributeHandler):
                 )
             )
 
-        logger.debug("{} matches identified".format(len(matches)))
+        logger.debug(f"{len(matches)} matches identified")
         return matches
 
     @staticmethod
@@ -3600,7 +3599,8 @@ class vdWHandler(_NonbondedHandler):
         default="cutoff", converter=_allow_only(["cutoff", "PME"])
     )
 
-    # TODO: Use _allow_only when ParameterAttribute will support multiple converters (it'll be easy when we switch to use the attrs library)
+    # TODO: Use _allow_only when ParameterAttribute will support multiple converters
+    #       (it'll be easy when we switch to use the attrs library)
     @scale12.converter
     def scale12(self, attrs, new_scale12):
         if new_scale12 != 0.0:
@@ -3743,7 +3743,8 @@ class ElectrostaticsHandler(_NonbondedHandler):
         default="PME", converter=_allow_only(["Coulomb", "PME", "reaction-field"])
     )
 
-    # TODO: Use _allow_only when ParameterAttribute will support multiple converters (it'll be easy when we switch to use the attrs library)
+    # TODO: Use _allow_only when ParameterAttribute will support multiple converters
+    #       (it'll be easy when we switch to use the attrs library)
     @scale12.converter
     def scale12(self, attrs, new_scale12):
         if new_scale12 != 0.0:

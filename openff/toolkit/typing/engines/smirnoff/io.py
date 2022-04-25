@@ -128,7 +128,8 @@ class XMLParameterIOHandler(ParameterIOHandler):
         ----------
         source : str or io.RawIOBase
             File path of file-like object implementing a ``read()`` method
-            specifying a SMIRNOFF force field definition in `the SMIRNOFF XML format <https://openforcefield.github.io/standards/standards/smirnoff/#xml-representation>`_.
+            specifying a SMIRNOFF force field definition in `the SMIRNOFF XML format
+            <https://openforcefield.github.io/standards/standards/smirnoff/#xml-representation>`_.
 
         Raises
         ------
@@ -156,7 +157,8 @@ class XMLParameterIOHandler(ParameterIOHandler):
         Parameters
         ----------
         data : str
-            A SMIRNOFF force field definition in `the SMIRNOFF XML format <https://openforcefield.github.io/standards/standards/smirnoff/#xml-representation>`_.
+            A SMIRNOFF force field definition in `the SMIRNOFF XML format
+            <https://openforcefield.github.io/standards/standards/smirnoff/#xml-representation>`_.
 
         """
         from pyexpat import ExpatError

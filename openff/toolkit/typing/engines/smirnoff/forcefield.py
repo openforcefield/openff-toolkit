@@ -416,8 +416,7 @@ class ForceField:
         # Implement better logic here if we ever support another aromaticity model
         if aromaticity_model != "OEAroModel_MDL":
             raise SMIRNOFFAromaticityError(
-                "Read aromaticity model {}. Currently only "
-                "OEAroModel_MDL is supported.".format(aromaticity_model)
+                f"Read aromaticity model {aromaticity_model}. Currently only OEAroModel_MDL is supported."
             )
 
         self._aromaticity_model = aromaticity_model
@@ -805,12 +804,8 @@ class ForceField:
             io_handler = new_handler_class()
             self.register_parameter_io_handler(io_handler)
         if io_handler is None:
-            msg = "Cannot find a registered parameter IO handler for format '{}'\n".format(
-                io_format
-            )
-            msg += "Registered parameter IO handlers: {}\n".format(
-                self._parameter_io_handlers.keys()
-            )
+            msg = f"Cannot find a registered parameter IO handler for format '{io_format}'\n"
+            msg += f"Registered parameter IO handlers: {self._parameter_io_handlers.keys()}\n"
             raise KeyError(msg)
 
         return io_handler
@@ -1339,10 +1334,11 @@ class ForceField:
             known_kwargs.update(parameter_handler.known_kwargs)
         unknown_kwargs = set(kwargs.keys()).difference(known_kwargs)
         if len(unknown_kwargs) > 0:
-            msg = "The following keyword arguments to create_openmm_system() are not used by any registered force Handler: {}\n".format(
-                unknown_kwargs
+            msg = (
+                "The following keyword arguments to create_openmm_system() are not used by any registered "
+                f"force Handler: {unknown_kwargs}\n"
             )
-            msg += "Known keyword arguments: {}".format(known_kwargs)
+            msg += "Known keyword arguments: {known_kwargs}"
             raise ValueError(msg)
 
         # Add forces and parameters to the System
@@ -1445,7 +1441,8 @@ class ForceField:
            What is the most useful API for this method?
            Should we instead accept :class:`Molecule` objects as input and individually return labels?
            Should we attach the labels to the :class:`Molecule` object?
-           Or should we label all interactions in a :class:`Topology` instead of just labeling its ``unique_molecules``?
+           Or should we label all interactions in a :class:`Topology` instead of just labeling its
+            ``unique_molecules``?
 
         """
         from openff.toolkit import Topology
@@ -1496,12 +1493,8 @@ class ForceField:
         try:
             ph_class = self._parameter_handler_classes[tagname]
         except KeyError:
-            msg = "Cannot find a registered parameter handler class for tag '{}'\n".format(
-                tagname
-            )
-            msg += "Known parameter handler class tags are {}".format(
-                self._parameter_handler_classes.keys()
-            )
+            msg = f"Cannot find a registered parameter handler class for tag '{tagname}'\n"
+            msg += f"Known parameter handler class tags are {self._parameter_handler_classes.keys()}"
             raise KeyError(msg)
         return ph_class
 

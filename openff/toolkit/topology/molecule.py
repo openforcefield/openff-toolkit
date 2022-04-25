@@ -5176,7 +5176,7 @@ class FrozenMolecule(Serializable):
 
         Create a molecule from an IUPAC name
 
-        >>> molecule = Molecule.from_iupac('4-[(4-methylpiperazin-1-yl)methyl]-N-(4-methyl-3-{[4-(pyridin-3-yl)pyrimidin-2-yl]amino}phenyl)benzamide')
+        >>> molecule = Molecule.from_iupac('4-[(4-methylpiperazin-1-yl)methyl]-N-(4-methyl-3-{[4-(pyridin-3-yl)pyrimidin-2-yl]amino}phenyl)benzamide')  # noqa
 
         Create a molecule from a common name
 
@@ -7574,7 +7574,9 @@ class HierarchyScheme:
         their identifiers.
         """
         # hard-code the sort_func value here, since it's hard to serialize safely
-        sort_func = lambda x: version.parse(".".join([str(i) for i in x.identifier]))
+        def sort_func(x):
+            return version.parse(".".join([str(i) for i in x.identifier]))
+
         self.hierarchy_elements.sort(key=sort_func)
 
     def __str__(self):
