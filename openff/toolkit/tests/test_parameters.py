@@ -8,9 +8,9 @@
 Test classes and function in module openff.toolkit.typing.engines.smirnoff.parameters.
 
 """
-from inspect import isabstract, isclass
 import itertools
 from collections import defaultdict
+from inspect import isabstract, isclass
 from typing import Dict, List, Tuple
 
 import numpy

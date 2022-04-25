@@ -65,22 +65,14 @@ import logging
 import re
 from collections import OrderedDict, defaultdict
 from enum import Enum
-from typing import Any, List, Optional, Union, cast
-
-from openff.units import unit
-from openff.utilities import requires_package
-
-from typing import Dict, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
 import numpy as np
+from openff.units import unit
+from openff.utilities import requires_package
 from typing_extensions import Literal, get_args
 
-from openff.toolkit.topology import (
-    ImproperDict,
-    TagSortedDict,
-    Topology,
-    ValenceDict,
-)
+from openff.toolkit.topology import ImproperDict, TagSortedDict, Topology, ValenceDict
 from openff.toolkit.topology.molecule import Molecule
 from openff.toolkit.topology.topology import NotBondedError
 from openff.toolkit.typing.chemistry import ChemicalEnvironment
@@ -5211,6 +5203,7 @@ class VirtualSiteHandler(_NonbondedHandler):
 
     def create_force(self, system, topology: Topology, **kwargs):
         raise NotImplementedError("Use `openff-interchange` instead.")
+
 
 # ======================================================================
 # PARAMETERTYPE RE-EXPORTS
