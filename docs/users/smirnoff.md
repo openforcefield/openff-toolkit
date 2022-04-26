@@ -73,7 +73,7 @@ general or as specific as needed.
 [SMARTS]: https://www.daylight.com/dayhtml/doc/theory/theory.smarts.html
 [SMIRKS]: https://www.daylight.com/dayhtml/doc/theory/theory.smirks.html
 [standards repository]: https://openforcefield.github.io/standards/standards/smirnoff/
-[`Interchange`]: openff.interchange.components.interchange.Interchange
+[`Interchange`]: openff.interchange.Interchange
 [producing input files and data]: openff.interchange:using/output
 
 :::{hint} 

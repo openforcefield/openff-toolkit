@@ -34,7 +34,7 @@ The ``ForceField`` class is a primary part of the top-level toolkit API.
 For a basic example of OpenMM ``System`` creation using a ``ForceField``, see ``examples/SMIRNOFF_simulation``.
 
 
-.. currentmodule:: openff.toolkit.typing.engines.smirnoff.forcefield
+.. currentmodule:: openff.toolkit.typing.engines.smirnoff
 .. autosummary::
     :nosignatures:
     :toctree: api/generated/
@@ -49,7 +49,7 @@ Parameter Type
 These are usually initialized during ``ForceField`` creation, and can be inspected and modified by users via the Python API.
 For more information, see ``examples/forcefield_modification``.
 
-.. currentmodule:: openff.toolkit.typing.engines.smirnoff.parametertypes
+.. currentmodule:: openff.toolkit.typing.engines.smirnoff
 .. autosummary::
     :nosignatures:
     :toctree: api/generated/
