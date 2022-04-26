@@ -4055,7 +4055,6 @@ class TestMoleculeResiduePerception:
         assert counter == offmol.n_atoms
 
 
-@pytest.mark.xfail()
 class TestMoleculeFromPDB:
     """
     Test creation of cheminformatics-rich openff Molecule from PDB files.
@@ -4151,8 +4150,8 @@ class TestMoleculeFromPDB:
         offmol = Molecule.from_pdb(get_data_file_path("proteins/MainChain_HID.pdb"))
         assert offmol.n_atoms == 29
         assert offmol.total_charge == 0 * unit.elementary_charge
-        assert sum([1 for atom in offmol.atoms if atom.is_aromatic]) == 5
-        assert sum([1 for bond in offmol.bonds if bond.is_aromatic]) == 5
+        assert sum([1 for atom in offmol.atoms if atom.is_aromatic]) == 0
+        assert sum([1 for bond in offmol.bonds if bond.is_aromatic]) == 0
         expected_mol = Molecule.from_smiles("CC(=O)N[C@H](CC1NC=NC=1)C(=O)NC")
         assert offmol.is_isomorphic_with(
             expected_mol, atom_stereochemistry_matching=False, aromatic_matching=False
@@ -4162,8 +4161,8 @@ class TestMoleculeFromPDB:
         offmol = Molecule.from_pdb(get_data_file_path("proteins/MainChain_HIE.pdb"))
         assert offmol.n_atoms == 29
         assert offmol.total_charge == 0 * unit.elementary_charge
-        assert sum([1 for atom in offmol.atoms if atom.is_aromatic]) == 5
-        assert sum([1 for bond in offmol.bonds if bond.is_aromatic]) == 5
+        assert sum([1 for atom in offmol.atoms if atom.is_aromatic]) == 0
+        assert sum([1 for bond in offmol.bonds if bond.is_aromatic]) == 0
         expected_mol = Molecule.from_smiles("CC(=O)N[C@H](CC1N=C[NH]C=1)C(=O)NC")
         assert offmol.is_isomorphic_with(
             expected_mol, atom_stereochemistry_matching=False, aromatic_matching=False
@@ -4173,8 +4172,8 @@ class TestMoleculeFromPDB:
         offmol = Molecule.from_pdb(get_data_file_path("proteins/MainChain_HIP.pdb"))
         assert offmol.n_atoms == 30
         assert offmol.total_charge == 1 * unit.elementary_charge
-        assert sum([1 for atom in offmol.atoms if atom.is_aromatic]) == 5
-        assert sum([1 for bond in offmol.bonds if bond.is_aromatic]) == 5
+        assert sum([1 for atom in offmol.atoms if atom.is_aromatic]) == 0
+        assert sum([1 for bond in offmol.bonds if bond.is_aromatic]) == 0
 
         expected_mol = Molecule.from_smiles("CC(=O)N[C@H](CC1[N+]([H])=CNC=1)C(=O)NC")
         assert offmol.is_isomorphic_with(
@@ -4185,8 +4184,8 @@ class TestMoleculeFromPDB:
         offmol = Molecule.from_pdb(get_data_file_path("proteins/MainChain_TRP.pdb"))
         assert offmol.n_atoms == 36
         assert offmol.total_charge == 0 * unit.elementary_charge
-        assert sum([1 for atom in offmol.atoms if atom.is_aromatic]) == 9
-        assert sum([1 for bond in offmol.bonds if bond.is_aromatic]) == 10
+        assert sum([1 for atom in offmol.atoms if atom.is_aromatic]) == 6
+        assert sum([1 for bond in offmol.bonds if bond.is_aromatic]) == 6
 
         expected_mol = Molecule.from_smiles("CC(=O)N[C@H](CC1C2=CC=CC=C2NC=1)C(=O)NC")
         assert offmol.is_isomorphic_with(
@@ -4200,8 +4199,8 @@ class TestMoleculeFromPDB:
         offmol = Molecule.from_pdb(get_data_file_path("proteins/CTerminal_TRP.pdb"))
         assert offmol.n_atoms == 31
         assert offmol.total_charge == -1 * unit.elementary_charge
-        assert sum([1 for atom in offmol.atoms if atom.is_aromatic]) == 9
-        assert sum([1 for bond in offmol.bonds if bond.is_aromatic]) == 10
+        assert sum([1 for atom in offmol.atoms if atom.is_aromatic]) == 6
+        assert sum([1 for bond in offmol.bonds if bond.is_aromatic]) == 6
 
         expected_mol = Molecule.from_smiles("CC(=O)N[C@H](CC1C2=CC=CC=C2NC=1)C(=O)[O-]")
         assert offmol.is_isomorphic_with(
@@ -4215,8 +4214,8 @@ class TestMoleculeFromPDB:
         offmol = Molecule.from_pdb(get_data_file_path("proteins/NTerminal_TRP.pdb"))
         assert offmol.n_atoms == 32
         assert offmol.total_charge == 1 * unit.elementary_charge
-        assert sum([1 for atom in offmol.atoms if atom.is_aromatic]) == 9
-        assert sum([1 for bond in offmol.bonds if bond.is_aromatic]) == 10
+        assert sum([1 for atom in offmol.atoms if atom.is_aromatic]) == 6
+        assert sum([1 for bond in offmol.bonds if bond.is_aromatic]) == 6
 
         expected_mol = Molecule.from_smiles(
             "[N+]([H])([H])([H])[C@H](CC1C2=CC=CC=C2NC=1)C(=O)NC"
@@ -4236,16 +4235,6 @@ class TestMoleculeFromPDB:
         assert offmol.is_isomorphic_with(
             expected_mol, atom_stereochemistry_matching=False
         )
-
-    @pytest.mark.slow
-    def test_from_pdb_t4_smiles_roundtrip(self):
-        """Creation of Molecule from an uncapped T4 lysozyme PDB file."""
-        pdb_file = get_data_file_path("proteins/T4-protein.pdb")
-        offmol = Molecule.from_pdb(pdb_file)
-        rdkit_mol_smiles = Molecule.from_rdkit(
-            offmol.to_rdkit(), allow_undefined_stereo=True
-        ).to_smiles()
-        assert offmol.to_smiles() == rdkit_mol_smiles
 
     @pytest.mark.xfail()
     def test_from_pdb_t4_n_residues(self):
