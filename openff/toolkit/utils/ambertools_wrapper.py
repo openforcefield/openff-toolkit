@@ -396,7 +396,7 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
         data = open(file_path).read()
 
         begin_sep = """ Bond Orders
-
+ 
   QMMM:    NUM1 ELEM1 NUM2 ELEM2      BOND_ORDER
 """
         end_sep = """

@@ -2268,11 +2268,11 @@ class TestRDKitToolkitWrapper:
             == expected_output_smiles
         )
 
-    def test_to_from_rdkit_hierarchy_metadata(self, topology_with_metadata):
+    def test_to_from_rdkit_hierarchy_metadata(self):
         """
         Test roundtripping to/from ``OpenEyeToolkitWrapper`` for molecules with PDB hierarchy metadata
         """
-        for molecule in topology_with_metadata.molecules:
+        for molecule in topology_with_metadata().molecules:
             rdmol = molecule.to_rdkit()
             roundtrip_mol = Molecule.from_rdkit(rdmol)
 

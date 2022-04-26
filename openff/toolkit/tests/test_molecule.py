@@ -3574,8 +3574,12 @@ class TestMoleculeSubclass:
 
 
 class TestHierarchies:
-    def test_nothing_perceived_dipeptide(self, dipeptide):
+    def test_nothing_perceived_dipeptide(self):
         """Test that loading a "vanilla" molecule from SDF does not assign atom metadata"""
+        from openff.toolkit.tests.create_molecules import dipeptide as create_dipeptide
+
+        dipeptide = create_dipeptide()
+
         with pytest.raises(KeyError):
             assert dipeptide.atoms[0].metadata["residue_name"] is None
         with pytest.raises(KeyError):
@@ -3585,8 +3589,14 @@ class TestHierarchies:
         with pytest.raises(AttributeError):
             dipeptide.residues[0]
 
-    def test_residues_perceived_dipeptide(self, dipeptide_residues_perceived):
+    def test_residues_perceived_dipeptide(self):
         """Test that perceiving residues on a residue-containing molecule correctly populates atom metadata"""
+        from openff.toolkit.tests.create_molecules import (
+            dipeptide_residues_perceived as create_dipeptide,
+        )
+
+        dipeptide_residues_perceived = create_dipeptide()
+
         assert "ACE" == dipeptide_residues_perceived.atoms[0].metadata["residue_name"]
         assert 1 == dipeptide_residues_perceived.atoms[0].metadata["residue_number"]
         assert "ALA" == dipeptide_residues_perceived.atoms[10].metadata["residue_name"]
@@ -3595,8 +3605,13 @@ class TestHierarchies:
         with pytest.raises(AttributeError):
             type(dipeptide_residues_perceived.residues[0])
 
-    def test_add_delete_hierarchy_scheme(self, dipeptide_residues_perceived):
+    def test_add_delete_hierarchy_scheme(self):
         """Test adding and removing HierarchySchemes to/from molecules"""
+        from openff.toolkit.tests.create_molecules import (
+            dipeptide_residues_perceived as create_dipeptide,
+        )
+
+        dipeptide_residues_perceived = create_dipeptide()
 
         assert len(dipeptide_residues_perceived.hierarchy_schemes) == 0
         dipeptide_residues_perceived.add_hierarchy_scheme(
@@ -3638,13 +3653,19 @@ class TestHierarchies:
             HierarchySchemeNotFoundException,
             match=(
                 'Can not delete HierarchyScheme with name "res_by_num" because no HierarchyScheme '
-                "with that iterator name exists",
+                "with that iterator name exists"
             ),
         ):
             dipeptide_residues_perceived.delete_hierarchy_scheme("res_by_num")
 
-    def test_hierarchy_perceived_dipeptide(self, dipeptide_hierarchy_perceived):
+    def test_hierarchy_perceived_dipeptide(self):
         """Test populating and accessing HierarchyElements"""
+        from openff.toolkit.tests.create_molecules import (
+            dipeptide_hierarchy_perceived as create_dipeptide,
+        )
+
+        dipeptide_hierarchy_perceived = create_dipeptide()
+
         assert (
             str(dipeptide_hierarchy_perceived.residues[0])
             == "HierarchyElement ('None', 1, 'ACE') of iterator 'residues' containing 6 particle(s)"
@@ -3672,10 +3693,14 @@ class TestHierarchies:
                 assert particle.metadata["residue_name"] == residue.residue_name
                 assert particle.metadata["residue_number"] == residue.residue_number
 
-    def test_hierarchy_perceived_information_propagation(
-        self, dipeptide_hierarchy_perceived
-    ):
+    def test_hierarchy_perceived_information_propagation(self):
         """Ensure that updating atom metadata doesn't update the iterators until the hierarchy is re-perceived"""
+        from openff.toolkit.tests.create_molecules import (
+            dipeptide_hierarchy_perceived as create_dipeptide,
+        )
+
+        dipeptide_hierarchy_perceived = create_dipeptide()
+
         for atom in dipeptide_hierarchy_perceived.atoms:
             atom.metadata["chain"] = "A"
         assert ("A", 1, "ACE") != dipeptide_hierarchy_perceived.residues[0].identifier

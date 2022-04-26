@@ -112,7 +112,7 @@ class NonbondedMethod(Enum):
     PME = 4
 
 
-_cal_mol_a2 = (unit.calorie / unit.mole / unit.angstrom**2,)
+_cal_mol_a2 = unit.calorie / unit.mole / unit.angstrom**2
 
 
 def _linear_inter_or_extrapolate(points_dict, x_query):
@@ -4528,7 +4528,7 @@ class GBSAHandler(ParameterHandler):
     solute_dielectric = ParameterAttribute(default=1, converter=float)
     sa_model = ParameterAttribute(default="ACE", converter=_allow_only(["ACE", None]))
     surface_area_penalty = ParameterAttribute(
-        default=5.4 * _cal_mol_a2,
+        default=unit.Quantity(5.4, _cal_mol_a2),
         unit=_cal_mol_a2,
     )
     solvent_radius = ParameterAttribute(default=1.4 * unit.angstrom, unit=unit.angstrom)
@@ -4542,7 +4542,7 @@ class GBSAHandler(ParameterHandler):
         #   solvent_radius is 1.4 A
         # Justification at https://github.com/openforcefield/openff-toolkit/pull/363
         if self.gb_model == "HCT":
-            if (self.surface_area_penalty != 5.4 * _cal_mol_a2) and (
+            if self.surface_area_penalty != 5.4 * _cal_mol_a2 and (
                 self.sa_model is not None
             ):
                 raise IncompatibleParameterError(
@@ -4567,7 +4567,7 @@ class GBSAHandler(ParameterHandler):
         #   solvent_radius is 1.4 A
         # Justification at https://github.com/openforcefield/openff-toolkit/pull/363
         if self.gb_model == "OBC1":
-            if (self.surface_area_penalty != 5.4 * _cal_mol_a2) and (
+            if self.surface_area_penalty != 5.4 * _cal_mol_a2 and (
                 self.sa_model is not None
             ):
                 raise IncompatibleParameterError(

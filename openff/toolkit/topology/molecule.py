@@ -3815,7 +3815,7 @@ class FrozenMolecule(Serializable):
         for edge, edge_data in omm_topology_G.edges.items():
             offmol.add_bond(edge[0], edge[1], edge_data["bond_order"], False)
 
-        coords = (
+        coords = unit.Quantity(
             np.array(
                 [
                     [*vec3.value_in_unit(openmm_unit.angstrom)]

@@ -6,7 +6,6 @@ These are common to several test modules.
 """
 
 import numpy as np
-import pytest
 from openff.units import unit
 
 from openff.toolkit.tests.utils import requires_openeye
@@ -308,88 +307,74 @@ def create_dinitrogen():
     return dinitrogen
 
 
-@pytest.fixture
 def dipeptide():
     dipeptide = Molecule.from_file(get_data_file_path("proteins/CTerminal_ALA.sdf"))
     return dipeptide
 
 
-@pytest.fixture
-def dipeptide_residues_perceived(dipeptide):
-    dipeptide = Molecule(dipeptide)
-    dipeptide.perceive_residues()
-    return dipeptide
-
-
-@pytest.fixture
-def dipeptide_hierarchy_perceived(dipeptide_residues_perceived):
-    dipeptide_residues_perceived = Molecule(dipeptide_residues_perceived)
-    dipeptide_residues_perceived._add_default_hierarchy_schemes()
-    dipeptide_residues_perceived.perceive_hierarchy()
+def dipeptide_residues_perceived():
+    dipeptide_residues_perceived = Molecule(dipeptide())
+    dipeptide_residues_perceived.perceive_residues()
     return dipeptide_residues_perceived
 
 
-@pytest.fixture
+def dipeptide_hierarchy_perceived():
+    dipeptide_hierarchy_perceived = Molecule(dipeptide_residues_perceived())
+    dipeptide_hierarchy_perceived._add_default_hierarchy_schemes()
+    dipeptide_hierarchy_perceived.perceive_hierarchy()
+    return dipeptide_hierarchy_perceived
+
+
 def cyx():
     cyx = Molecule.from_file(get_data_file_path("proteins/MainChain_CYX.sdf"))
     return cyx
 
 
-@pytest.fixture
-def cyx_residues_perceived(cyx):
-    cyx = Molecule(cyx)
-    cyx.perceive_residues()
-    return cyx
-
-
-@pytest.fixture
-def cyx_hierarchy_perceived(cyx_residues_perceived):
-    cyx_residues_perceived = Molecule(cyx_residues_perceived)
-    cyx_residues_perceived._add_default_hierarchy_schemes()
-    cyx_residues_perceived.perceive_hierarchy()
+def cyx_residues_perceived():
+    cyx_residues_perceived = Molecule(cyx())
+    cyx_residues_perceived.perceive_residues()
     return cyx_residues_perceived
 
 
-@pytest.fixture
+def cyx_hierarchy_perceived():
+    cyx_hierarchy_perceived = Molecule(cyx_residues_perceived())
+    cyx_hierarchy_perceived._add_default_hierarchy_schemes()
+    cyx_hierarchy_perceived.perceive_hierarchy()
+    return cyx_hierarchy_perceived
+
+
 def empty_molecule():
     return Molecule()
 
 
-@pytest.fixture
 def ethane_from_smiles():
     return Molecule.from_smiles("CC")
 
 
-@pytest.fixture
 def ethene_from_smiles():
     return Molecule.from_smiles("C=C")
 
 
-@pytest.fixture
 def propane_from_smiles():
     return Molecule.from_smiles("CCC")
 
 
-@pytest.fixture
 def toluene_from_sdf():
     filename = get_data_file_path("molecules/toluene.sdf")
     return Molecule.from_file(filename)
 
 
 @requires_openeye
-@pytest.fixture
 def toluene_from_charged_mol2():
     filename = get_data_file_path("molecules/toluene_charged.mol2")
     # TODO: This will require openeye to load
     return Molecule.from_file(filename)
 
 
-@pytest.fixture
 def charged_methylamine_from_smiles():
     return Molecule.from_smiles("[H]C([H])([H])[N+]([H])([H])[H]")
 
 
-@pytest.fixture
 def ethane_from_smiles_w_vsites():
     molecule = Molecule.from_smiles("CC")
     carbons = [atom for atom in molecule.atoms if atom.atomic_number == 6]
@@ -409,7 +394,6 @@ def ethane_from_smiles_w_vsites():
     return molecule
 
 
-@pytest.fixture
 def propane_from_smiles_w_vsites():
     # Make a propane with virtual sites
     molecule = Molecule.from_smiles("CCC")
@@ -434,7 +418,6 @@ def propane_from_smiles_w_vsites():
     return molecule
 
 
-@pytest.fixture
 def tip5_water():
     # Make a TIP5 water
     molecule = Molecule.from_smiles("[H][O][H]")
