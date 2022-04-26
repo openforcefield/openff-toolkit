@@ -245,6 +245,67 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
             raise InvalidConformerError("The PDB and SMILES structures do not match.")
 
+    def _smarts_to_networkx(self, substructure_smarts):
+        import networkx as nx
+        from rdkit import Chem
+
+        rdmol = Chem.MolFromSmarts(substructure_smarts)
+
+        _bondtypes = {
+            # 0: Chem.BondType.AROMATIC,
+            Chem.BondType.SINGLE: 1,
+            Chem.BondType.AROMATIC: 1.5,
+            Chem.BondType.DOUBLE: 2,
+            Chem.BondType.TRIPLE: 3,
+            Chem.BondType.QUADRUPLE: 4,
+            Chem.BondType.QUINTUPLE: 5,
+            Chem.BondType.HEXTUPLE: 6,
+        }
+        rdmol_G = nx.Graph()
+        for atom in rdmol.GetAtoms():
+            atomic_number = atom.GetAtomicNum()
+
+            rdmol_G.add_node(
+                atom.GetIdx(),
+                atomic_number=atomic_number,
+                formal_charge=atom.GetFormalCharge(),
+                map_index=atom.GetAtomMapNum(),
+            )
+        for bond in rdmol.GetBonds():
+            bond_type = bond.GetBondType()
+            # All bonds in the graph should have been explicitly assigned by this point.
+            if bond_type == Chem.rdchem.BondType.UNSPECIFIED:
+                raise SMILESParseError(
+                    f"A bond in {substructure_smarts} has an unspecified bond order"
+                )
+
+            rdmol_G.add_edge(
+                bond.GetBeginAtomIdx(),
+                bond.GetEndAtomIdx(),
+                bond_order=_bondtypes[bond_type],
+            )
+        return rdmol_G
+
+    def _assign_aromaticity_and_stereo_from_3d(self, offmol):
+        from rdkit import Chem
+
+        rdmol = offmol.to_rdkit()
+        Chem.SanitizeMol(
+            rdmol,
+            Chem.SANITIZE_ALL
+            ^ Chem.SANITIZE_ADJUSTHS,  # ^ Chem.SANITIZE_SETAROMATICITY,
+        )
+        Chem.AssignStereochemistryFrom3D(rdmol)
+        Chem.Kekulize(rdmol, clearAromaticFlags=True)
+        Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_MDL)
+        # To get HIS//TRP to get recognized as aromatic, we can use a different aromaticity model
+        # Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_DEFAULT)
+
+        offmol_w_stereo_and_aro = offmol.from_rdkit(
+            rdmol, allow_undefined_stereo=True, hydrogens_are_explicit=True
+        )
+        return offmol_w_stereo_and_aro
+
     def _process_sdf_supplier(self, sdf_supplier, allow_undefined_stereo, _cls):
         "Helper function to process RDKit molecules from an SDF input source"
         from rdkit import Chem
@@ -1534,12 +1595,20 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                         "Got {} instead.".format(stereo_code)
                     )
 
+            res = rda.GetPDBResidueInfo()
+            metadata = dict()
+            if res is not None:
+                metadata["residue_name"] = res.GetResidueName()
+                metadata["residue_number"] = res.GetResidueNumber()
+                metadata["chain_id"] = res.GetChainId()
+
             atom_index = offmol._add_atom(
                 atomic_number,
                 formal_charge,
                 is_aromatic,
                 name=name,
                 stereochemistry=stereochemistry,
+                metadata=metadata,
                 invalidate_cache=False,
             )
             map_atoms[rd_idx] = atom_index
@@ -1833,6 +1902,28 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         for index, atom in enumerate(molecule.atoms):
             rdatom = rdmol.GetAtomWithIdx(index)
             rdatom.SetProp("_Name", atom.name)
+
+            if rdatom.GetPDBResidueInfo() is None:
+                res = Chem.AtomPDBResidueInfo()
+            else:
+                res = rdatom.GetPDBResidueInfo()
+
+            atom_has_any_metadata = False
+
+            if "residue_name" in atom.metadata:
+                atom_has_any_metadata = True
+                res.SetResidueName(atom.metadata["residue_name"])
+
+            if "residue_number" in atom.metadata:
+                atom_has_any_metadata = True
+                res.SetResidueNumber(int(atom.metadata["residue_number"]))
+
+            if "chain_id" in atom.metadata:
+                atom_has_any_metadata = True
+                res.SetChainId(atom.metadata["chain_id"])
+
+            if atom_has_any_metadata:
+                rdatom.SetPDBResidueInfo(res)
 
         for bond in molecule.bonds:
             atom_indices = (
