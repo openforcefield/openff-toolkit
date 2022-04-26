@@ -189,7 +189,7 @@ class ForceField:
 
     Modify the long-range electrostatics method:
 
-    >>> forcefield.get_parameter_handler('Electrostatics').method = 'PME'
+    >>> forcefield.get_parameter_handler('Electrostatics').periodic_potential = 'PME'
 
     Inspect the first few vdW parameters:
 
@@ -1380,7 +1380,9 @@ class ForceField:
         if hasattr(self.get_parameter_handler("Electrostatics"), "cutoff"):
             vdw_cutoff = self.get_parameter_handler("vdW").cutoff
             coul_cutoff = self.get_parameter_handler("Electrostatics").cutoff
-            coul_method = self.get_parameter_handler("Electrostatics").method
+            coul_periodic_potential = self.get_parameter_handler(
+                "Electrostatics"
+            ).periodic_potential
             if vdw_cutoff != coul_cutoff:
                 if coul_method == "PME":
                     nonbonded_force.setCutoffDistance(to_openmm(vdw_cutoff))
