@@ -694,6 +694,8 @@ class TestParameterHandler:
 
         with pytest.raises(SMIRNOFFVersionError) as excinfo:
             my_ph = MyPHSubclass(version=0.1)
+        with pytest.raises(Exception, match="Could not convert .*list"):
+            MyPHSubclass(version=[0])
         my_ph = MyPHSubclass(version=0.3)
         my_ph = MyPHSubclass(version=1)
         my_ph = MyPHSubclass(version="1.9")
