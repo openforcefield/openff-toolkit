@@ -1384,14 +1384,13 @@ class ForceField:
                 "Electrostatics"
             ).periodic_potential
             if vdw_cutoff != coul_cutoff:
-                if coul_method == "PME":
+                if coul_periodic_potential == "Ewald3D-ConductingBoundary":
                     nonbonded_force.setCutoffDistance(to_openmm(vdw_cutoff))
                 else:
                     raise IncompatibleParameterError(
-                        "In its current implementation of the OpenFF Toolkit, with "
-                        f"With electrostatics method {coul_method}, the electrostatics "
-                        f"cutoff must equal the vdW cutoff. Found vdw cutoff {vdw_cutoff} "
-                        f"and {coul_cutoff}."
+                        "In its current implementation of the OpenFF Toolkit, with With electrostatics periodic "
+                        f"potential {coul_periodic_potential}, the electrostatics cutoff must equal the vdW cutoff. "
+                        f"Found vdw cutoff {vdw_cutoff} and {coul_cutoff}."
                     )
 
         if return_topology:

@@ -3804,24 +3804,24 @@ class ElectrostaticsHandler(_NonbondedHandler):
 
     @periodic_potential.converter
     def periodic_potential(self, attr, new_value):
-        if new_value.lower() == "pme":
+        if new_value in ["PME", "Ewald3D-ConductingBoundary"]:
             return "Ewald3D-ConductingBoundary"
-        elif new_value == "reaction-field":
+        elif new_value in ["reaction-field", self._DEFAULT_REACTION_FIELD_EXPRESSION]:
             return self._DEFAULT_REACTION_FIELD_EXPRESSION
         elif new_value.lower() == "coulomb":
             return "Coulomb"
         else:
-            raise Exception
+            raise Exception(f"Did not know how to convert {new_value}")
 
     def __init__(self, **kwargs):
-        if kwargs["version"] == 0.4:
+        if kwargs.get("version") == 0.4:
             if "method" in kwargs:
                 raise SMIRNOFFSpecError(
                     "`method` attribute has been removed in version 0.4 of the Electrostatics tag. Use "
                     "`periodic_potential`, `nonperiodic_potenetial`, and `exception_potential` instead. "
                     "See https://openforcefield.github.io/standards/standards/smirnoff/#electrostatics"
                 )
-        if kwargs["version"] == 0.3:
+        if kwargs.get("version") == 0.3:
             logger.info(
                 "Attempting to up-convert Electrostatics section from 0.3 to 0.4"
             )
@@ -3837,7 +3837,6 @@ class ElectrostaticsHandler(_NonbondedHandler):
                     'is now split into `periodic_potential="Ewald3D-ConductingBoundary"`, '
                     '`nonperiodic_potential="Coulomb"`, and `exception_potential="Coulomb"`.'
                 )
-                print(kwargs)
             elif kwargs["method"] == "Coulomb":
                 kwargs["periodic_potential"] = "Coulomb"
                 kwargs["nonperiodic_potential"] = "Coulomb"

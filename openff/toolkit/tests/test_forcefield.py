@@ -4801,6 +4801,9 @@ class TestForceFieldParameterAssignment:
 
 class TestInterchangeReturnTopology:
     # TODO: Remove these tests when `return_topology` is deprecated in version 0.12.0
+    # TODO: Turn this test back on once Interchange is tagged with a pre-release supporting
+    #       only Electrostatics version 0.4
+    @pytest.mark.skip(reason="Interchange needs to be updated")
     def test_deprecation_warning_raised(self):
         """
         Ensure that the deprecation warning is raised when `return_topology` is
