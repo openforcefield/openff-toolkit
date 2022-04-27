@@ -1185,7 +1185,7 @@ class _ParameterAttributeHandler:
         Add a cosmetic attribute to this object.
 
         This attribute will not have a functional effect on the object
-        in the Open Force Field Toolkit, but can be written out during
+        in the OpenFF Toolkit, but can be written out during
         output.
 
         .. warning :: The API for modifying cosmetic attributes is experimental
@@ -3797,7 +3797,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
     def switch_width(self, attr, new_switch_width):
         if new_switch_width not in [0.0 * unit.angstrom, None, "None", "none"]:
             raise SMIRNOFFSpecUnimplementedError(
-                "The current implementation of the Open Force Field Toolkit does not support an electrostatic "
+                "The current implementation of the OpenFF Toolkit does not support an electrostatic "
                 f"switch width (passed a value of {new_switch_width}). Currently only `0.0 angstroms` is supported "
                 "and no switching function will be applied to the resulting `NonbondedForce`. If this behavior is "
                 "important to you, please raise an issue at https://github.com/openforcefield/openff-toolkit/issues."
