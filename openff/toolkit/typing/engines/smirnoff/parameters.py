@@ -3795,11 +3795,12 @@ class ElectrostaticsHandler(_NonbondedHandler):
 
     @switch_width.converter
     def switch_width(self, attr, new_switch_width):
-        if self.switch_width != 0.0 * unit.angstrom:
-            raise IncompatibleParameterError(
-                "The current implementation of the Open Force Field Toolkit can not "
-                "support an electrostatic switching width. Currently only `0.0 angstroms` "
-                f"is supported (SMIRNOFF data specified {new_switch_width})"
+        if new_switch_width not in [0.0 * unit.angstrom, None, "None", "none"]:
+            raise SMIRNOFFSpecUnimplementedError(
+                "The current implementation of the Open Force Field Toolkit does not support an electrostatic "
+                f"switch width (passed a value of {new_switch_width}). Currently only `0.0 angstroms` is supported "
+                "and no switching function will be applied to the resulting `NonbondedForce`. If this behavior is "
+                "important to you, please raise an issue at https://github.com/openforcefield/openff-toolkit/issues."
             )
 
     @periodic_potential.converter

@@ -1691,6 +1691,14 @@ class TestForceField:
                 use_interchange=False,
             )
 
+    def test_electrostatics_switch_width_unsupported(self):
+        handler = ElectrostaticsHandler(version=0.4)
+        with pytest.raises(
+            SMIRNOFFSpecUnimplementedError,
+            match="not support an electrostatic switch width",
+        ):
+            handler.switch_width = 1.234 * unit.nanometer
+
     @pytest.mark.parametrize("mod_cuoff", [True, False])
     def test_nonbonded_cutoff_no_box_vectors(self, mod_cuoff):
         """Ensure that the NonbondedForce objects use the cutoff specified in the
