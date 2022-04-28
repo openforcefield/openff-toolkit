@@ -393,9 +393,9 @@ def _toolkit_registry_manager(toolkit_registry: Union[ToolkitRegistry, ToolkitWr
     from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
 
     if isinstance(toolkit_registry, ToolkitRegistry):
-        toolkits = toolkit_registry.registered_toolkits
+        context_toolkits = toolkit_registry.registered_toolkits
     elif isinstance(toolkit_registry, ToolkitWrapper):
-        toolkits = [toolkit_registry]
+        context_toolkits = [toolkit_registry]
     else:
         raise NotImplementedError(
             "Only ``ToolkitRegistry`` and ``ToolkitWrapper`` are supported."
@@ -406,13 +406,20 @@ def _toolkit_registry_manager(toolkit_registry: Union[ToolkitRegistry, ToolkitWr
     for toolkit in original_toolkits:
         GLOBAL_TOOLKIT_REGISTRY.deregister_toolkit(toolkit)
 
-    for toolkit in toolkits:
+    for toolkit in context_toolkits:
         GLOBAL_TOOLKIT_REGISTRY.register_toolkit(toolkit)
 
-    yield
+    exc = None
+    try:
+        yield
+    except Exception as e:
+        exc = e
 
-    for toolkit in toolkits:
+    for toolkit in context_toolkits:
         GLOBAL_TOOLKIT_REGISTRY.deregister_toolkit(toolkit)
 
     for toolkit in original_toolkits:
         GLOBAL_TOOLKIT_REGISTRY.register_toolkit(toolkit)
+
+    if exc is not None:
+        raise exc
