@@ -49,10 +49,6 @@ from openff.toolkit.utils.exceptions import (
     SMIRNOFFParseError,
     SMIRNOFFVersionError,
 )
-from openff.toolkit.utils.toolkits import (
-    GLOBAL_TOOLKIT_REGISTRY,
-    _toolkit_registry_manager,
-)
 from openff.toolkit.utils.utils import (
     all_subclasses,
     convert_0_1_smirnoff_to_0_2,
@@ -64,6 +60,7 @@ from openff.toolkit.utils.utils import (
 
 if TYPE_CHECKING:
     import openmm
+    from openff.units import unit
 
     from openff.toolkit.topology import Topology
     from openff.toolkit.utils.base_wrapper import ToolkitWrapper
@@ -1219,9 +1216,6 @@ class ForceField:
     #       Or should we create an "enhanced" OpenFF System object that knows how to convert to all of these formats?
     #       We could even create a universal applyParameters(format='AMBER') method that allows us to export to whatever system we want.
 
-    # TODO: Should the Topology contain the default box vectors? Or should we require they be specified externally?
-
-    # TODO: How do we know if the system is periodic or not?
     # TODO: Should we also accept a Molecule as an alternative to a Topology?
 
     # TODO: Fall back to old code path if Interchange not installed?
@@ -1230,7 +1224,6 @@ class ForceField:
         self,
         topology: "Topology",
         use_interchange: bool = False,
-        toolkit_registry: Optional[Union["ToolkitRegistry", "ToolkitWrapper"]] = None,
         **kwargs,
     ) -> Union["openmm.System", Tuple["openmm.System", "Topology"]]:
         """Create an OpenMM System from this ForceField and a Topology.
@@ -1245,13 +1238,12 @@ class ForceField:
         """
         if use_interchange:
             return_topology = kwargs.pop("return_topology", False)
+            toolkit_registry = kwargs.get("toolkit_registry", None)
 
-            registry = toolkit_registry if toolkit_registry else GLOBAL_TOOLKIT_REGISTRY
-            with _toolkit_registry_manager(registry):
-                interchange = self.create_interchange(
-                    topology,
-                    **kwargs,
-                )
+            interchange = self.create_interchange(
+                topology,
+                toolkit_registry,
+            )
             openmm_system = interchange.to_openmm(combine_nonbonded_forces=True)
             if not return_topology:
                 return openmm_system
@@ -1407,7 +1399,11 @@ class ForceField:
             return system
 
     @requires_package("openff.interchange")
-    def create_interchange(self, topology: "Topology", box=None):
+    def create_interchange(
+        self,
+        topology: "Topology",
+        toolkit_registry: Optional[Union["ToolkitRegistry", "ToolkitWrapper"]] = None,
+    ):
         """
         Create an Interchange object from a ForceField, Topology, and (optionally) box vectors.
 
@@ -1417,8 +1413,9 @@ class ForceField:
         ----------
         topology : openff.toolkit.topology.Topology
             The topology to create this `Interchange` object from.
-        box : array-like, optional
-            The box vectors or lengths to use for the Interchange object.
+        toolkit_registry :  ToolkitRegistry, optional
+            A `ToolkitRegistry` containing the toolkit wrappers to be used during parametriation,
+            i.e. for assigning partial charges and fractional bond orders.
 
         Returns
         -------
@@ -1428,7 +1425,17 @@ class ForceField:
         """
         from openff.interchange import Interchange
 
-        return Interchange.from_smirnoff(force_field=self, topology=topology, box=box)
+        from openff.toolkit.utils.toolkit_registry import _toolkit_registry_manager
+
+        if toolkit_registry is not None:
+            used_registry = toolkit_registry
+        else:
+            from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
+
+            used_registry = GLOBAL_TOOLKIT_REGISTRY
+
+        with _toolkit_registry_manager(used_registry):
+            return Interchange.from_smirnoff(force_field=self, topology=topology)
 
     def label_molecules(self, topology):
         """Return labels for a list of molecules corresponding to parameters from this force field.
