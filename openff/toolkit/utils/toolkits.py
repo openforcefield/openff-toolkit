@@ -163,34 +163,3 @@ if (
                 wrapper._toolkit_name, wrapper._toolkit_installation_instructions
             )
     print(msg)
-
-
-# Coped from https://github.com/openforcefield/openff-fragmenter/blob/4a290b866a8ed43eabcbd3231c62b01f0c6d7df6/openff/fragmenter/utils.py#L97-L123
-@contextmanager
-def _toolkit_registry_manager(toolkit_registry: Union[ToolkitRegistry, ToolkitWrapper]):
-
-    if isinstance(toolkit_registry, ToolkitRegistry):
-        toolkits = toolkit_registry.registered_toolkits
-    elif isinstance(toolkit_registry, ToolkitWrapper):
-        toolkits = [toolkit_registry]
-    else:
-        raise NotImplementedError(
-            "Only ``ToolkitRegistry`` and ``ToolkitWrapper`` are supported. Found type "
-            f"{type(toolkit_registry)}"
-        )
-
-    original_toolkits = GLOBAL_TOOLKIT_REGISTRY.registered_toolkits
-
-    for toolkit in original_toolkits:
-        GLOBAL_TOOLKIT_REGISTRY.deregister_toolkit(toolkit)
-
-    for toolkit in toolkits:
-        GLOBAL_TOOLKIT_REGISTRY.register_toolkit(toolkit)
-
-    yield
-
-    for toolkit in toolkits:
-        GLOBAL_TOOLKIT_REGISTRY.deregister_toolkit(toolkit)
-
-    for toolkit in original_toolkits:
-        GLOBAL_TOOLKIT_REGISTRY.register_toolkit(toolkit)
