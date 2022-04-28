@@ -4804,8 +4804,24 @@ class TestForceFieldParameterAssignment:
 class TestForceFieldWithToolkits:
     """Test interactions between ``ForceField`` methods and wrapped toolkits."""
 
+    # TODO: If `_toolkit_registry_manager` is made public or used for other parts of the API,
+    #       these tests should be moved/adapted into more unit tests that call it directly
     # TODO: Remove `use_interchange` arguments in coordination with #1276. They are included
     #       here because ONLY that code path uses the experimental `_toolkit_registry_manager` motif
+
+    def test_toolkit_registry_bogus_argument(self):
+
+        topology = create_ethanol().to_topology()
+        force_field = ForceField("test_forcefields/test_forcefield.offxml")
+        with pytest.raises(
+            NotImplementedError,
+            match="Only .*ToolkitRegistry.*ToolkitWrapper.* are supported",
+        ):
+            force_field.create_openmm_system(
+                topology,
+                use_interchange=True,
+                toolkit_registry="rdkit",
+            )
 
     def test_toolkit_registry_no_charge_methods(self):
 
