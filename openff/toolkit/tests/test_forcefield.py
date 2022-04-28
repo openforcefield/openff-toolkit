@@ -4808,19 +4808,8 @@ class TestForceFieldWithToolkits:
     # TODO: Remove `use_interchange` arguments in coordination with #1276. They are included
     #       here because ONLY that code path uses the experimental `_toolkit_registry_manager` motif
 
-    # TODO: Remaking `GLOBAL_TOOLKIT_REGISTRY` every test is a stopgap for
-    #       https://github.com/openforcefield/openff-toolkit/pull/1281#issuecomment-1106972153
-
     def test_toolkit_registry_no_charge_methods(self):
-        from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
 
-        for toolkit in [
-            OpenEyeToolkitWrapper,
-            RDKitToolkitWrapper,
-            AmberToolsToolkitWrapper,
-            BuiltInToolkitWrapper,
-        ]:
-            GLOBAL_TOOLKIT_REGISTRY.register_toolkit(toolkit)
         topology = create_ethanol().to_topology()
         force_field = ForceField("test_forcefields/test_forcefield.offxml")
         with pytest.raises(
@@ -4832,25 +4821,16 @@ class TestForceFieldWithToolkits:
 
     @requires_rdkit
     def test_toolkit_registry_bad_charge_method(self):
-        from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
-
-        for toolkit in [
-            OpenEyeToolkitWrapper,
-            RDKitToolkitWrapper,
-            AmberToolsToolkitWrapper,
-            BuiltInToolkitWrapper,
-        ]:
-            GLOBAL_TOOLKIT_REGISTRY.register_toolkit(toolkit)
         topology = create_ethanol().to_topology()
         force_field = ForceField(
             "test_forcefields/test_forcefield.offxml",
             xml_charge_increment_model_ff_ethanol,
         )
         force_field.deregister_parameter_handler("ToolkitAM1BCC")
-        force_field["ChargeIncrementModel"].partial_charge_method == "am1bccelf10"
+        force_field["ChargeIncrementModel"].partial_charge_method = "am1bccelf10"
 
         with pytest.raises(
-            ValueError, match="No registered toolkits can provide .*Mulliken"
+            ValueError, match="No registered toolkits can provide .*elf10"
         ):
             force_field.create_openmm_system(
                 topology,
