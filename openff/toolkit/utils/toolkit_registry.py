@@ -409,17 +409,10 @@ def _toolkit_registry_manager(toolkit_registry: Union[ToolkitRegistry, ToolkitWr
     for toolkit in context_toolkits:
         GLOBAL_TOOLKIT_REGISTRY.register_toolkit(toolkit)
 
-    exc = None
     try:
         yield
-    except Exception as e:
-        exc = e
-
-    for toolkit in context_toolkits:
-        GLOBAL_TOOLKIT_REGISTRY.deregister_toolkit(toolkit)
-
-    for toolkit in original_toolkits:
-        GLOBAL_TOOLKIT_REGISTRY.register_toolkit(toolkit)
-
-    if exc is not None:
-        raise exc
+    finally:
+        for toolkit in context_toolkits:
+            GLOBAL_TOOLKIT_REGISTRY.deregister_toolkit(toolkit)
+        for toolkit in original_toolkits:
+            GLOBAL_TOOLKIT_REGISTRY.register_toolkit(toolkit)
