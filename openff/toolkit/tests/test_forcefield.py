@@ -15,7 +15,6 @@ import itertools
 import os
 from collections import OrderedDict
 from tempfile import NamedTemporaryFile
-from types import BuiltinFunctionType
 
 import numpy as np
 import openmm
