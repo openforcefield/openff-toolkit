@@ -60,7 +60,6 @@ from openff.toolkit.utils.utils import (
 
 if TYPE_CHECKING:
     import openmm
-    from openff.units import unit
 
     from openff.toolkit.topology import Topology
     from openff.toolkit.utils.base_wrapper import ToolkitWrapper

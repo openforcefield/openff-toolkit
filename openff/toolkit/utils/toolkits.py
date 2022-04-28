@@ -58,8 +58,6 @@ __all__ = (
 
 
 import logging
-from contextlib import contextmanager
-from typing import Union
 
 from openff.toolkit.utils.ambertools_wrapper import AmberToolsToolkitWrapper
 from openff.toolkit.utils.base_wrapper import ToolkitWrapper
