@@ -54,7 +54,7 @@ import logging
 import re
 from collections import OrderedDict, defaultdict
 from enum import Enum
-from typing import Any, List, Optional, Union, cast
+from typing import Any, List, Optional, Tuple, Union, cast
 
 try:
     import openmm
@@ -5151,7 +5151,7 @@ class VirtualSiteHandler(_NonbondedHandler):
         entity: Topology,
         transformed_dict_cls=dict,
         unique=False,
-    ) -> Dict[int, List[ParameterHandler._Match]]:
+    ) -> Dict[Tuple(int), List[ParameterHandler._Match]]:
 
         assigned_matches_by_parent = self._find_matches_by_parent(entity)
         return_dict = {}
