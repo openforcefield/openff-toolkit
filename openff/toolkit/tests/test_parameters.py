@@ -1874,7 +1874,7 @@ class TestElectrostaticsHandlerUpconversion:
     )
     def test_upconversion(self, old_method, new_method):
         handler = ElectrostaticsHandler(version=0.3, method=old_method)
-        assert handler.version == 0.4
+        assert handler.version == Version("0.4")
 
         # Only `periodic_potential` is a function of the values in a version 0.3 handler ...
         assert handler.periodic_potential == new_method

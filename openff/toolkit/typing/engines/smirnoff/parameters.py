@@ -3740,7 +3740,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
     _TAGNAME = "Electrostatics"
     _DEPENDENCIES = [vdWHandler]
     _KWARGS = ["charge_from_molecules", "allow_nonintegral_charges"]
-    _MAX_SUPPORTED_SECTION_VERSION = 0.4
+    _MAX_SUPPORTED_SECTION_VERSION = Version("0.4")
 
     # Tolerance when comparing float attributes for handler compatibility.
     _SCALETOL = 1e-5

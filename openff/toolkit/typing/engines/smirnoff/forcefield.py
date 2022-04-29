@@ -35,6 +35,8 @@ import warnings
 from collections import OrderedDict
 from typing import TYPE_CHECKING, List, Tuple, Union
 
+from packaging.version import Version
+
 from openff.toolkit.topology.molecule import DEFAULT_AROMATICITY_MODEL
 from openff.toolkit.typing.engines.smirnoff.io import ParameterIOHandler
 from openff.toolkit.typing.engines.smirnoff.parameters import (
@@ -323,8 +325,8 @@ class ForceField:
         """
         Initialize all object fields.
         """
-        self._MIN_SUPPORTED_SMIRNOFF_VERSION = 0.1
-        self._MAX_SUPPORTED_SMIRNOFF_VERSION = 0.3
+        self._MIN_SUPPORTED_SMIRNOFF_VERSION = Version("0.1")
+        self._MAX_SUPPORTED_SMIRNOFF_VERSION = Version("0.3")
         self._disable_version_check = (
             False  # if True, will disable checking compatibility version
         )
