@@ -1493,7 +1493,6 @@ class ForceField:
                     param_is_list = True
 
                 matches = parameter_handler.find_matches(top_mol)
-                print(matches)
                 # Remove the chemical environment matches from the
                 # matched results.
 

@@ -15,6 +15,14 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 - [PR #1284](https://github.com/openforcefield/openforcefield/pull/1284): Fixes
   [Issue #1283](https://github.com/openforcefield/openff-toolkit/issues/1283) - force fields containing `BondCharge` virtual sites cannot be loaded due to an issue with how `outOfPlaneAngle` and `inPlaneAngle` keywords are validated
 
+### Minor bugfixes
+- [PR #1290](https://github.com/openforcefield/openforcefield/pull/1290): Fixes
+  [Issue #1216](https://github.com/openforcefield/openff-toolkit/issues/1216) by adding internal logic to handle
+  the possibility that multiple vsites share the same parent atom, and makes the return value of 
+  `VirtualSiteHandler.find_matches` be closer to the base class.
+
+
+
 ## 0.10.5 Bugfix release
 
 - [PR #1252](https://github.com/openforcefield/openforcefield/pull/1252): Refactors virtual 
