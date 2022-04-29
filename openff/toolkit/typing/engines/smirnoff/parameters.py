@@ -5151,7 +5151,7 @@ class VirtualSiteHandler(_NonbondedHandler):
         entity: Topology,
         transformed_dict_cls=dict,
         unique=False,
-    ) -> Dict[Tuple(int), List[ParameterHandler._Match]]:
+    ) -> Dict[Tuple[int], List[ParameterHandler._Match]]:
 
         assigned_matches_by_parent = self._find_matches_by_parent(entity)
         return_dict = {}
