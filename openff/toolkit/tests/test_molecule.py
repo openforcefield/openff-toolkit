@@ -27,7 +27,6 @@ import numpy as np
 import pytest
 from openff.units import unit
 from openff.units.elements import MASSES, SYMBOLS
-from openmm import unit as openmm_unit
 
 from openff.toolkit.tests.create_molecules import (
     create_acetaldehyde,
@@ -57,12 +56,17 @@ from openff.toolkit.topology.molecule import (
     HierarchySchemeNotFoundException,
     HierarchySchemeWithIteratorNameAlreadyRegisteredException,
     InvalidAtomMetadataError,
-    InvalidConformerError,
     Molecule,
     SmilesParsingError,
+    _networkx_graph_to_hill_formula,
 )
 from openff.toolkit.utils import get_data_file_path
-from openff.toolkit.utils.exceptions import ConformerGenerationError
+from openff.toolkit.utils.exceptions import (
+    ConformerGenerationError,
+    IncompatibleUnitError,
+    InvalidConformerError,
+    UnsupportedFileTypeError,
+)
 from openff.toolkit.utils.toolkits import (
     AmberToolsToolkitWrapper,
     OpenEyeToolkitWrapper,
@@ -1364,6 +1368,10 @@ class TestMolecule:
             molecule.to_networkx()
         )
 
+        assert molecule.hill_formula == _networkx_graph_to_hill_formula(
+            molecule.to_networkx()
+        )
+
     def test_isomorphic_general(self):
         """Test the matching using different input types"""
         # check that hill formula fails are caught
@@ -1395,7 +1403,7 @@ class TestMolecule:
         )
         # check matching with nx.Graph with full matching
         assert ethanol.is_isomorphic_with(ethanol_reverse.to_networkx()) is True
-        # check matching with a TopologyMolecule class
+
         from openff.toolkit.topology.topology import Topology
 
         topology = Topology.from_molecules(ethanol)
@@ -1984,6 +1992,10 @@ class TestMolecule:
 
         assert expected == actual
 
+    def test_from_xyz_unsupported(self):
+        with pytest.raises(UnsupportedFileTypeError):
+            Molecule.from_file("foo.xyz", file_format="xyz")
+
     @requires_rdkit
     def test_from_pdb_and_smiles(self):
         """Test the ability to make a valid molecule using RDKit and SMILES together"""
@@ -2492,6 +2504,8 @@ class TestMolecule:
 
     def test_add_conformers(self):
         """Test addition of conformers to a molecule"""
+        from openmm import unit as openmm_unit
+
         # Define a methane molecule
         molecule = Molecule()
         molecule.name = "methane"
@@ -2550,7 +2564,7 @@ class TestMolecule:
             ),
             unit.angstrom,
         )
-        with pytest.raises(Exception) as excinfo:
+        with pytest.raises(InvalidConformerError):
             molecule.add_conformer(conf_missing_z)
 
         conf_too_few_atoms = unit.Quantity(
@@ -2564,7 +2578,7 @@ class TestMolecule:
             ),
             unit.angstrom,
         )
-        with pytest.raises(Exception) as excinfo:
+        with pytest.raises(InvalidConformerError):
             molecule.add_conformer(conf_too_few_atoms)
 
         # Add a conformer with too many coordinates
@@ -2581,12 +2595,12 @@ class TestMolecule:
             ),
             unit.angstrom,
         )
-        with pytest.raises(Exception) as excinfo:
+        with pytest.raises(InvalidConformerError):
             molecule.add_conformer(conf_too_many_atoms)
 
         # Add a conformer with no coordinates
         conf_no_coordinates = unit.Quantity(np.array([]), unit.angstrom)
-        with pytest.raises(Exception) as excinfo:
+        with pytest.raises(InvalidConformerError):
             molecule.add_conformer(conf_no_coordinates)
 
         # Add a conforer with units of nanometers
@@ -2606,7 +2620,6 @@ class TestMolecule:
         assert molecule.n_conformers == 3
         assert molecule.conformers[2][0][0] == 10.0 * unit.angstrom
 
-        # Add a conformer with units of nanometers
         conf_nonsense_units = unit.Quantity(
             np.array(
                 [
@@ -2619,8 +2632,25 @@ class TestMolecule:
             ),
             unit.joule,
         )
-        with pytest.raises(Exception) as excinfo:
+        with pytest.raises(IncompatibleUnitError):
             molecule.add_conformer(conf_nonsense_units)
+
+        conf_openmm_units = openmm_unit.Quantity(
+            np.array(
+                [
+                    [1.0, 2.0, 3.0],
+                    [4.0, 5.0, 6.0],
+                    [7.0, 8.0, 9.0],
+                    [10.0, 11.0, 12.0],
+                    [13.0, 14.0, 15],
+                ]
+            ),
+            openmm_unit.angstrom,
+        )
+        molecule.add_conformer(conf_openmm_units)
+
+        assert molecule.conformers[-1][0][0].m_as(unit.angstrom) == 1.0
+        assert molecule.conformers[-1][-1][-1].m_as(unit.angstrom) == 15.0
 
         # Add a conformer with no units
         conf_unitless = np.array(
@@ -2632,7 +2662,7 @@ class TestMolecule:
                 [13.0, 14.0, 15],
             ]
         )
-        with pytest.raises(Exception) as excinfo:
+        with pytest.raises(IncompatibleUnitError):
             molecule.add_conformer(conf_unitless)
 
     @pytest.mark.parametrize("molecule", mini_drug_bank())
@@ -3390,7 +3420,7 @@ class TestMolecule:
         atom_H = molecule.add_atom(1, 0, False, name="H")
         atom_Cl = molecule.add_atom(17, 0, False, name="Cl")
         atom_Br = molecule.add_atom(35, 0, False, name="Br")
-        atom_F = molecule.add_atom(35, 0, False, name="F")
+        atom_F = molecule.add_atom(9, 0, False, name="F")
         molecule.add_bond(atom_C, atom_H, 1, False)
         molecule.add_bond(atom_C, atom_Cl, 1, False)
         molecule.add_bond(atom_C, atom_Br, 1, False)
@@ -3572,18 +3602,22 @@ class TestMolecule:
         recomputed_charges = molecule._partial_charges
         assert np.allclose(initial_charges, recomputed_charges, atol=0.002)
 
-    @pytest.mark.parametrize("toolkit", ["openeye", "rdkit"])
-    def test_apply_elf_conformer_selection(self, toolkit):
+    @pytest.mark.parametrize(
+        "toolkit_wrapper", [OpenEyeToolkitWrapper, RDKitToolkitWrapper]
+    )
+    @pytest.mark.parametrize("use_registry", [True, False])
+    def test_apply_elf_conformer_selection(self, toolkit_wrapper, use_registry):
         """Test applying the ELF10 method."""
 
-        if toolkit == "openeye":
+        if toolkit_wrapper == OpenEyeToolkitWrapper:
             pytest.importorskip("openeye")
-            toolkit_registry = ToolkitRegistry(
-                toolkit_precedence=[OpenEyeToolkitWrapper]
-            )
-        elif toolkit == "rdkit":
+        elif toolkit_wrapper == RDKitToolkitWrapper:
             pytest.importorskip("rdkit")
-            toolkit_registry = ToolkitRegistry(toolkit_precedence=[RDKitToolkitWrapper])
+
+        if use_registry:
+            toolkit = toolkit_wrapper()
+        else:
+            toolkit = ToolkitRegistry(toolkit_precedence=[toolkit_wrapper])
 
         molecule = Molecule.from_file(
             get_data_file_path(os.path.join("molecules", "z_3_hydroxy_propenal.sdf")),
@@ -3626,7 +3660,7 @@ class TestMolecule:
         molecule._conformers = [*initial_conformers]
 
         # Apply ELF10
-        molecule.apply_elf_conformer_selection(toolkit_registry=toolkit_registry)
+        molecule.apply_elf_conformer_selection(toolkit_registry=toolkit)
         elf10_conformers = molecule.conformers
 
         assert len(elf10_conformers) == 1
@@ -3634,6 +3668,45 @@ class TestMolecule:
         assert np.allclose(
             elf10_conformers[0].m_as(unit.angstrom),
             initial_conformers[1].m_as(unit.angstrom),
+        )
+
+    def test_make_carboxylic_acids_cis(self):
+        # First, check that we get exactly the right coords for cis and trans methanoic acid
+        offmol = Molecule.from_mapped_smiles("[H:1][C:2](=[O:3])[O:4][H:5]")
+        # cis methanoic (formic) acid
+        cis_xyz = unit.Quantity(
+            np.array(
+                [
+                    [-1.0, -1.0, 0.0],  # HC
+                    [+0.0, +0.0, 0.0],  # C
+                    [-1.0, +1.0, 0.0],  # =O
+                    [+1.0, +0.0, 0.0],  # -O
+                    [+2.0, +1.0, 0.0],  # HO
+                ]
+            ),
+            unit.angstrom,
+        )
+        trans_xyz = unit.Quantity(
+            np.array(
+                [
+                    [-1.0, -1.0, 0.0],  # HC
+                    [+0.0, +0.0, 0.0],  # C
+                    [-1.0, +1.0, 0.0],  # =O
+                    [+1.0, +0.0, 0.0],  # -O
+                    [+2.0, -1.0, 0.0],  # HO
+                ]
+            ),
+            unit.angstrom,
+        )
+
+        offmol._conformers = [trans_xyz, cis_xyz]
+        expected_conformers = [cis_xyz, cis_xyz]
+
+        offmol._make_carboxylic_acids_cis()
+
+        assert np.all(
+            np.abs(np.asarray(offmol.conformers) - np.asarray(expected_conformers))
+            < 1e-5
         )
 
     @requires_openeye
@@ -3683,6 +3756,9 @@ class TestMolecule:
         produce unexpected errors, but do not asses validity of results"""
         mol = Molecule.from_smiles("CCO")
 
+        # Test that default model works
+        mol.assign_fractional_bond_orders()
+
         mol.assign_fractional_bond_orders(
             bond_order_model=model,
         )
@@ -3714,40 +3790,21 @@ class TestMolecule:
         with pytest.raises(NotBondedError):
             mol.get_bond_between(hydrogens[0], hydrogens[1])
 
-    @pytest.mark.parametrize(
-        ("smiles", "n_rings"),
-        [
-            ("CCO", 0),
-            ("c1ccccc1", 1),
-            ("C1CC2CCC1C2", 2),  # This should probably be 3?
-            ("c1ccc(cc1)c2ccccc2", 2),
-            ("c1ccc2ccccc2c1", 2),
-            ("c1ccc2cc3ccccc3cc2c1", 3),
-            ("C1C2C(CCC1)CC5C3C2CCC7C3C4C(CCC6C4C5CCC6)CC7", 7),
-        ],
-    )
-    @requires_rdkit
-    def test_molecule_rings(self, smiles, n_rings):
-        """Test the Molecule.rings property"""
-        assert (
-            n_rings == Molecule.from_smiles(smiles, allow_undefined_stereo=True).n_rings
-        )
+    def test_is_in_ring(self):
+        """
+        Test basic behavior of Atom.is_in_ring and Bond.is_in_ring API.
+        More extensive behavior testing is done in test_toolkits.py
+        """
+        molecule = Molecule.from_smiles("c1ccccc1")
 
-    @pytest.mark.parametrize(
-        ("smiles", "n_atom_rings", "n_bond_rings"),
-        [
-            ("c1ccc2ccccc2c1", 10, 11),
-            ("c1ccc(cc1)c2ccccc2", 12, 12),
-            ("Cc1ccc(cc1Nc2nccc(n2)c3cccnc3)NC(=O)c4ccc(cc4)CN5CCN(CC5)C", 30, 30),
-        ],
-    )
-    @requires_rdkit
-    def test_is_in_ring(self, smiles, n_atom_rings, n_bond_rings):
-        """Test Atom.is_in_ring and Bond.is_in_ring"""
-        mol = Molecule.from_smiles(smiles)
+        for atom in molecule.atoms:
+            if atom.atomic_number == 6:
+                assert atom.is_in_ring()
 
-        assert len([atom for atom in mol.atoms if atom.is_in_ring]) == n_atom_rings
-        assert len([bond for bond in mol.bonds if bond.is_in_ring]) == n_bond_rings
+        for bond in molecule.bonds:
+            if 1 in (bond.atom1.atomic_number, bond.atom2.atomic_number):
+                continue
+            assert bond.is_in_ring()
 
     @requires_rdkit
     @requires_openeye
@@ -3777,6 +3834,21 @@ class TestMolecule:
             assert "generate_conformers" in exception_as_str
             assert "OpenEye Omega conformer generation failed" in exception_as_str
             assert "RDKit conformer generation failed" in exception_as_str
+
+    @requires_openeye
+    @requires_rdkit
+    def test_compute_partial_charges_am1bcc_warning(self):
+        # TODO: Remove in version 0.12.0 alognside the removal of these methods
+        molecule = create_ethanol()
+
+        toolkits = [OpenEyeToolkitWrapper(), AmberToolsToolkitWrapper()]
+
+        with pytest.warns(UserWarning, match="compute_.*_am1bcc.*0.12"):
+            molecule.compute_partial_charges_am1bcc()
+
+        for toolkit in toolkits:
+            with pytest.warns(UserWarning, match="compute_.*_am1bcc.*0.12"):
+                toolkit.compute_partial_charges_am1bcc(molecule)
 
 
 class TestMoleculeVisualization:
@@ -3839,6 +3911,15 @@ class TestMoleculeVisualization:
         mol = Molecule().from_smiles("CCO")
 
         assert isinstance(mol.visualize(backend="openeye"), IPython.core.display.Image)
+
+    @pytest.mark.skipif(
+        has_pkg("nglview"),
+        reason="Test requires that NGLview is not installed",
+    )
+    def test_ipython_repr_no_nglview(self):
+        """Test that the default Molecule repr does not break when nglview is not installed"""
+        molecule = Molecule().from_smiles("CCO")
+        molecule._ipython_display_()
 
 
 @pytest.mark.parametrize("strict_chirality", (True, False))
@@ -3974,7 +4055,6 @@ class TestMoleculeResiduePerception:
         assert counter == offmol.n_atoms
 
 
-@pytest.mark.xfail()
 class TestMoleculeFromPDB:
     """
     Test creation of cheminformatics-rich openff Molecule from PDB files.
@@ -4070,8 +4150,8 @@ class TestMoleculeFromPDB:
         offmol = Molecule.from_pdb(get_data_file_path("proteins/MainChain_HID.pdb"))
         assert offmol.n_atoms == 29
         assert offmol.total_charge == 0 * unit.elementary_charge
-        assert sum([1 for atom in offmol.atoms if atom.is_aromatic]) == 5
-        assert sum([1 for bond in offmol.bonds if bond.is_aromatic]) == 5
+        assert sum([1 for atom in offmol.atoms if atom.is_aromatic]) == 0
+        assert sum([1 for bond in offmol.bonds if bond.is_aromatic]) == 0
         expected_mol = Molecule.from_smiles("CC(=O)N[C@H](CC1NC=NC=1)C(=O)NC")
         assert offmol.is_isomorphic_with(
             expected_mol, atom_stereochemistry_matching=False, aromatic_matching=False
@@ -4081,8 +4161,8 @@ class TestMoleculeFromPDB:
         offmol = Molecule.from_pdb(get_data_file_path("proteins/MainChain_HIE.pdb"))
         assert offmol.n_atoms == 29
         assert offmol.total_charge == 0 * unit.elementary_charge
-        assert sum([1 for atom in offmol.atoms if atom.is_aromatic]) == 5
-        assert sum([1 for bond in offmol.bonds if bond.is_aromatic]) == 5
+        assert sum([1 for atom in offmol.atoms if atom.is_aromatic]) == 0
+        assert sum([1 for bond in offmol.bonds if bond.is_aromatic]) == 0
         expected_mol = Molecule.from_smiles("CC(=O)N[C@H](CC1N=C[NH]C=1)C(=O)NC")
         assert offmol.is_isomorphic_with(
             expected_mol, atom_stereochemistry_matching=False, aromatic_matching=False
@@ -4092,8 +4172,8 @@ class TestMoleculeFromPDB:
         offmol = Molecule.from_pdb(get_data_file_path("proteins/MainChain_HIP.pdb"))
         assert offmol.n_atoms == 30
         assert offmol.total_charge == 1 * unit.elementary_charge
-        assert sum([1 for atom in offmol.atoms if atom.is_aromatic]) == 5
-        assert sum([1 for bond in offmol.bonds if bond.is_aromatic]) == 5
+        assert sum([1 for atom in offmol.atoms if atom.is_aromatic]) == 0
+        assert sum([1 for bond in offmol.bonds if bond.is_aromatic]) == 0
 
         expected_mol = Molecule.from_smiles("CC(=O)N[C@H](CC1[N+]([H])=CNC=1)C(=O)NC")
         assert offmol.is_isomorphic_with(
@@ -4104,8 +4184,8 @@ class TestMoleculeFromPDB:
         offmol = Molecule.from_pdb(get_data_file_path("proteins/MainChain_TRP.pdb"))
         assert offmol.n_atoms == 36
         assert offmol.total_charge == 0 * unit.elementary_charge
-        assert sum([1 for atom in offmol.atoms if atom.is_aromatic]) == 9
-        assert sum([1 for bond in offmol.bonds if bond.is_aromatic]) == 10
+        assert sum([1 for atom in offmol.atoms if atom.is_aromatic]) == 6
+        assert sum([1 for bond in offmol.bonds if bond.is_aromatic]) == 6
 
         expected_mol = Molecule.from_smiles("CC(=O)N[C@H](CC1C2=CC=CC=C2NC=1)C(=O)NC")
         assert offmol.is_isomorphic_with(
@@ -4119,8 +4199,8 @@ class TestMoleculeFromPDB:
         offmol = Molecule.from_pdb(get_data_file_path("proteins/CTerminal_TRP.pdb"))
         assert offmol.n_atoms == 31
         assert offmol.total_charge == -1 * unit.elementary_charge
-        assert sum([1 for atom in offmol.atoms if atom.is_aromatic]) == 9
-        assert sum([1 for bond in offmol.bonds if bond.is_aromatic]) == 10
+        assert sum([1 for atom in offmol.atoms if atom.is_aromatic]) == 6
+        assert sum([1 for bond in offmol.bonds if bond.is_aromatic]) == 6
 
         expected_mol = Molecule.from_smiles("CC(=O)N[C@H](CC1C2=CC=CC=C2NC=1)C(=O)[O-]")
         assert offmol.is_isomorphic_with(
@@ -4134,8 +4214,8 @@ class TestMoleculeFromPDB:
         offmol = Molecule.from_pdb(get_data_file_path("proteins/NTerminal_TRP.pdb"))
         assert offmol.n_atoms == 32
         assert offmol.total_charge == 1 * unit.elementary_charge
-        assert sum([1 for atom in offmol.atoms if atom.is_aromatic]) == 9
-        assert sum([1 for bond in offmol.bonds if bond.is_aromatic]) == 10
+        assert sum([1 for atom in offmol.atoms if atom.is_aromatic]) == 6
+        assert sum([1 for bond in offmol.bonds if bond.is_aromatic]) == 6
 
         expected_mol = Molecule.from_smiles(
             "[N+]([H])([H])([H])[C@H](CC1C2=CC=CC=C2NC=1)C(=O)NC"
@@ -4155,16 +4235,6 @@ class TestMoleculeFromPDB:
         assert offmol.is_isomorphic_with(
             expected_mol, atom_stereochemistry_matching=False
         )
-
-    @pytest.mark.slow
-    def test_from_pdb_t4_smiles_roundtrip(self):
-        """Creation of Molecule from an uncapped T4 lysozyme PDB file."""
-        pdb_file = get_data_file_path("proteins/T4-protein.pdb")
-        offmol = Molecule.from_pdb(pdb_file)
-        rdkit_mol_smiles = Molecule.from_rdkit(
-            offmol.to_rdkit(), allow_undefined_stereo=True
-        ).to_smiles()
-        assert offmol.to_smiles() == rdkit_mol_smiles
 
     @pytest.mark.xfail()
     def test_from_pdb_t4_n_residues(self):

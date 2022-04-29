@@ -61,6 +61,15 @@ print(value_roundtrip)
 - [PR #1194](https://github.com/openforcefield/openforcefield/pull/1194): Adds
   [`Topology.__add__`](openff.toolkit.topology.Topology.__add__), allowing `Topology` objects to be
   added together, including added in-place, using the `+` operator.
+- [PR #1279](https://github.com/openforcefield/openforcefield/pull/1279):
+  [`ParameterHandler.version`](openff.toolkit.typing.engines.smirnoff.parameters.ParameterHandler.version)
+  and the ``.version`` attribute of its subclasses is now a
+  [``Version``](https://packaging.pypa.io/en/latest/version.html#packaging.version.Version)
+  object. Previously it was a string, which is not safe for
+  [PEP440](https://www.python.org/dev/peps/pep-0440/#final-releases)-style versioning.
+- [PR #1250](https://github.com/openforcefield/openff-toolkit/pull/1250): Adds support for
+  `return_topology` in the Interchange code path in
+  [`create_openmm_system`](openff.toolkit.typing.engines.smirnoff.ForceField.create_openmm_system).
 - [PR #964](https://github.com/openforcefield/openff-toolkit/pull/964): Adds initial implementation
   of atom metadata dictionaries.
 - [PR #1097](https://github.com/openforcefield/openff-toolkit/pull/1097): Deprecates TopologyMolecule.
@@ -94,14 +103,6 @@ print(value_roundtrip)
 
 ### Behaviors changed and bugfixes
 
-- [PR #1182](https://github.com/openforcefield/openforcefield/pull/1182) and
-  [PR #1142](https://github.com/openforcefield/openforcefield/pull/1142) migrate handling of
-  unit-bearing quantities from OpenMM's unit module (`openmm.unit`) to
-  [`openff-units`](https://github.com/openforcefield/openff-units), which itself is based off of
-  [Pint](https://pint.readthedocs.io/en/stable/).
-- [PR #1118](https://github.com/openforcefield/openforcefield/pull/1118):
-  [`Molecule.to_hill_formula`](openff.toolkit.topology.Molecule.to_hill_formula) is now a class method
-  and no longer accepts input of NetworkX graphs.
 - [PR #1130](https://github.com/openforcefield/openforcefield/pull/1130): Running unit tests will
   no longer generate force field files in the local directory.
 - [PR #1182](https://github.com/openforcefield/openforcefield/pull/1182): Removes `Atom.element`,
@@ -137,8 +138,151 @@ print(value_roundtrip)
   example to use Interchange.
 
 ### Tests updated
+
 - [PR #1188](https://github.com/openforcefield/openff-toolkit/pull/1188): Add an `<Electrostatics>`
   section to the TIP3P force field file used in testing (`test_forcefields/tip3p.offxml`)
+
+## 0.10.4 Bugfix release
+
+### Critical bugfixes
+
+- [PR #1242](https://github.com/openforcefield/openforcefield/pull/1242): Fixes
+  [Issue #837](https://github.com/openforcefield/openff-toolkit/issues/837).
+  If OpenEye Toolkits are available,
+  [`ToolkitAM1BCCHandler`](openff.toolkit.typing.engines.smirnoff.parameters.ToolkitAM1BCCHandler)
+  will use the ELF10 method to select conformers for AM1-BCC charge assignment.
+- [PR #1184](https://github.com/openforcefield/openforcefield/pull/1184): Fixes
+  [Issue #1181](https://github.com/openforcefield/openff-toolkit/issues/1181) and
+  [Issue #1190](https://github.com/openforcefield/openff-toolkit/issues/1190), where in rare cases
+  double bond stereochemistry would cause
+  [`Molecule.to_rdkit`](openff.toolkit.topology.Molecule.to_rdkit) to raise an error. The transfer
+  of double bond stereochemistry from OpenFF's E/Z representation to RDKit's local representation is
+  now handled as a constraint satisfaction problem.
+
+## 0.10.3 Bugfix release
+
+### Critical bugfixes
+
+- [PR #1200](https://github.com/openforcefield/openforcefield/pull/1200): Fixes a bug
+  ([Issue #1199](https://github.com/openforcefield/openff-toolkit/issues/428)) in which library
+  charges were ignored in some force fields, including `openff-2.0.0` code name "Sage." This resulted in
+  the TIP3P partial charges included Sage not being applied correctly in versions 0.10.1 and 0.10.2 of the
+  OpenFF Toolkit. This regression was not present in version 0.10.0 and earlier and therefore is not
+  believed to have any impact on the fitting or benchmarking of the first release of Sage (version
+  2.0.0). The change causing the regression only affected library charges and therefore no other
+  parameter types are believed to be affected.
+
+### API breaking changes
+- [PR #855](https://github.com/openforcefield/openff-toolkit/pull/855): In earlier
+  versions of the toolkit, we had mistakenly made the assumption that cheminformatics
+  toolkits agreed on the number and membership of rings. However we later learned that this
+  was not true. This PR removes
+  [`Molecule.rings`](openff.toolkit.topology.Molecule.rings) and
+  [`Molecule.n_rings`](openff.toolkit.topology.Molecule.n_rings). To find rings in
+  a molecule, directly use a cheminformatics toolkit after using
+  [`Molecule.to_rdkit`](openff.toolkit.topology.Molecule.to_rdkit) or
+  [`Molecule.to_openeye`](openff.toolkit.topology.Molecule.to_openeye).
+  [`Atom.is_in_ring`](openff.toolkit.topology.Atom.is_in_ring) and
+  [`Bond.is_in_ring`](openff.toolkit.topology.Bond.is_in_ring) are now methods, not properties.
+
+### Behaviors changed and bugfixes
+
+- [PR #1171](https://github.com/openforcefield/openforcefield/pull/1171): Failure of
+  [`Molecule.apply_elf_conformer_selection()`] due to excluding all available conformations ([Issue #428](https://github.com/openforcefield/openff-toolkit/issues/428))
+  now provides a better error. The `make_carboxylic_acids_cis` argument (`False` by default) has been added to
+  [`Molecule.generate_conformers()`] to mitigate a common cause of this error. By setting this argument to `True` in internal use of this method, trans carboxylic
+  acids are no longer generated in [`Molecule.assign_partial_charges()`] and
+  [`Molecule.assign_fractional_bond_orders()`] methods (though users may still pass trans conformers in, they'll just be pruned by ELF methods). This should work around most instances
+  of the OpenEye Omega bug where trans carboxylic acids are more common than they should be.
+
+[`Molecule.apply_elf_conformer_selection()`]: openff.toolkit.topology.Molecule.apply_elf_conformer_selection
+[`Molecule.generate_conformers()`]: openff.toolkit.topology.Molecule.generate_conformers
+[`Molecule.assign_partial_charges()`]: openff.toolkit.topology.Molecule.assign_partial_charges
+[`Molecule.assign_fractional_bond_orders()`]: openff.toolkit.topology.Molecule.assign_fractional_bond_orders
+
+### Improved documentation and warnings
+- [PR #1172](https://github.com/openforcefield/openff-toolkit/pull/1172): Adding
+  discussion about constraints to the FAQ
+- [PR #1173](https://github.com/openforcefield/openforcefield/pull/1173): Expand
+  on the SMIRNOFF section of the toolkit docs
+- [PR #855](https://github.com/openforcefield/openff-toolkit/pull/855): Refactors
+  [`Atom.is_in_ring`](openff.toolkit.topology.Atom.is_in_ring) and
+  [`Bond.is_in_ring`](openff.toolkit.topology.Bond.is_in_ring) to use corresponding
+  functionality in OpenEye and RDKit wrappers.
+
+## API breaking changes
+- [PR #855](https://github.com/openforcefield/openff-toolkit/pull/855): Removes
+  [`Molecule.rings`](openff.toolkit.topology.Molecule.rings) and
+  [`Molecule.n_rings`](openff.toolkit.topology.Molecule.n_rings). To find rings in
+  a molecule, directly use a cheminformatics toolkit after using
+  [`Molecule.to_rdkit`](openff.toolkit.topology.Molecule.to_rdkit) or
+  [`Molecule.to_openeye`](openff.toolkit.topology.Molecule.to_openeye).
+  [`Atom.is_in_ring`](openff.toolkit.topology.Atom.is_in_ring) and
+  [`Bond.is_in_ring`](openff.toolkit.topology.Bond.is_in_ring) are now methods, not properties.
+
+
+## 0.10.2 Bugfix release
+
+### API-breaking changes
+
+- [PR #1118](https://github.com/openforcefield/openforcefield/pull/1118):
+  [`Molecule.to_hill_formula`](openff.toolkit.topology.Molecule.to_hill_formula) is now a class method
+  and no longer accepts input of NetworkX graphs.
+
+### Behaviors changed and bugfixes
+
+- [PR #1160](https://github.com/openforcefield/openforcefield/pull/1160): Fixes a major bug identified in
+  [Issue #1159](https://github.com/openforcefield/openff-toolkit/issues/1159), in which the order of
+  atoms defining a `BondChargeVirtualSite` (and possibly other virtual sites types too) might be reversed
+  if the `match` attribute of the virtual site has a value of `"once"`.
+- [PR #1130](https://github.com/openforcefield/openforcefield/pull/1130): Running unit tests will
+  no longer generate force field files in the local directory.
+- [PR #1148](https://github.com/openforcefield/openforcefield/pull/1148): Adds a new exception
+  [`UnsupportedFileTypeError`](openff.toolkit.utils.exceptions.UnsupportedFileTypeError) and
+  descriptive error message when attempting to use
+  [`Molecule.from_file`](openff.toolkit.topology.Molecule.from_file) to parse XYZ/`.xyz` files.
+- [PR #1153](https://github.com/openforcefield/openforcefield/pull/1153): Fixes
+  [Issue #1152](https://github.com/openforcefield/openff-toolkit/issues/1052) in which running
+  [`Molecule.generate_conformers`](openff.toolkit.topology.Molecule.generate_conformers)
+  using the OpenEye backend would use the stereochemistry from an existing conformer instead 
+  of the stereochemistry from the molecular graph, leading to undefined behavior if the molecule had a 2D conformer. 
+- [PR #1158](https://github.com/openforcefield/openff-toolkit/pull/1158): Fixes the default
+  representation of [`Molecule`](openff.toolkit.topology.Molecule) failing in Jupyter notebooks when
+  NGLview is not installed.
+- [PR #1151](https://github.com/openforcefield/openforcefield/pull/1151): Fixes 
+  [Issue #1150](https://github.com/openforcefield/openff-toolkit/issues/1150), in which calling 
+  [`Molecule.assign_fractional_bond_orders`](openff.toolkit.topology.Molecule.assign_fractional_bond_orders)
+  with all default arguments would lead to an error as a result of trying to lowercase `None`.
+- [PR #1149](https://github.com/openforcefield/openforcefield/pull/1149):
+  [`TopologyAtom`](openff.toolkit.topology.TopologyAtom),
+  [`TopologyBond`](openff.toolkit.topology.TopologyBond), and
+  [`TopologyVirtualSite`](openff.toolkit.topology.TopologyVirtualSite) now properly reference their
+  reference molecule from their `.molecule` attribute.
+- [PR #1155](https://github.com/openforcefield/openforcefield/pull/1155): Ensures big-endian
+  byte order of NumPy arrays when serialized to dictionaries or files formats except JSON.
+- [PR #1163](https://github.com/openforcefield/openforcefield/pull/1163): Fixes the bug identified in
+  [Issue #1161](https://github.com/openforcefield/openff-toolkit/issues/1161), which was caused by the use
+  of the deprecated `pkg_resources` package. Now the recommended `importlib_metadata` package is used instead.
+
+
+### Breaking changes
+- [PR #1118](https://github.com/openforcefield/openforcefield/pull/1118):
+  [`Molecule.to_hill_formula`](openff.toolkit.topology.Molecule.to_hill_formula) is now a class method
+  and no longer accepts input of NetworkX graphs.
+- [PR #1156](https://github.com/openforcefield/openforcefield/pull/1156): Removes `ParseError` and
+  `MessageException`, which has been deprecated since version 0.10.0.
+
+### Breaking changes
+- [PR #1118](https://github.com/openforcefield/openforcefield/pull/1118):
+  [`Molecule.to_hill_formula`](openff.toolkit.topology.Molecule.to_hill_formula) is now a class method
+  and no longer accepts input of NetworkX graphs.
+- [PR #1156](https://github.com/openforcefield/openforcefield/pull/1156): Removes `ParseError` and
+  `MessageException`, which has been deprecated since version 0.10.0.
+
+### Examples added
+
+- [PR #1113](https://github.com/openforcefield/openff-toolkit/pull/1113): Updates the Amber/GROMACS
+  example to use Interchange.
 
 ## 0.10.1 Minor feature and bugfix release
 

@@ -74,6 +74,7 @@ from typing import Any, List, Optional, Type, Union
 
 from openff.units import unit
 from openff.utilities import requires_package
+from packaging.version import Version, parse
 
 from openff.toolkit.topology import (
     ImproperDict,
@@ -1835,8 +1836,8 @@ class ParameterHandler(_ParameterAttributeHandler):
     _SMIRNOFF_VERSION_INTRODUCED = 0.0
     _SMIRNOFF_VERSION_DEPRECATED = None
     # if deprecated, the first SMIRNOFF version number it is no longer used
-    _MIN_SUPPORTED_SECTION_VERSION = 0.3
-    _MAX_SUPPORTED_SECTION_VERSION = 0.3
+    _MIN_SUPPORTED_SECTION_VERSION = Version("0.3")
+    _MAX_SUPPORTED_SECTION_VERSION = Version("0.3")
 
     version = ParameterAttribute()
 
@@ -1850,17 +1851,20 @@ class ParameterHandler(_ParameterAttributeHandler):
         SMIRNOFFVersionError if an incompatible version is passed in.
 
         """
-        import packaging.version
-
         from openff.toolkit.typing.engines.smirnoff import SMIRNOFFVersionError
 
+        if isinstance(new_version, Version):
+            pass
+        elif isinstance(new_version, str):
+            new_version = Version(new_version)
+        elif isinstance(new_version, (float, int)):
+            new_version = Version(str(new_version))
+        else:
+            raise Exception(f"Could not convert type {type(new_version)}")
+
         # Use PEP-440 compliant version number comparison, if requested
-        if (
-            packaging.version.parse(str(new_version))
-            > packaging.version.parse(str(self._MAX_SUPPORTED_SECTION_VERSION))
-        ) or (
-            packaging.version.parse(str(new_version))
-            < packaging.version.parse(str(self._MIN_SUPPORTED_SECTION_VERSION))
+        if (new_version > self._MAX_SUPPORTED_SECTION_VERSION) or (
+            new_version < self._MIN_SUPPORTED_SECTION_VERSION
         ):
             raise SMIRNOFFVersionError(
                 f"SMIRNOFF offxml file was written with version {new_version}, but this version "
@@ -2660,7 +2664,7 @@ class BondHandler(ParameterHandler):
     _INFOTYPE = BondType  # class to hold force type info
     _OPENMMTYPE = "HarmonicBondForce"
     _DEPENDENCIES = [ConstraintHandler]  # ConstraintHandler must be executed first
-    _MAX_SUPPORTED_SECTION_VERSION = 0.4
+    _MAX_SUPPORTED_SECTION_VERSION = Version("0.4")
 
     # Use the _allow_only filter here because this class's implementation contains all the information about supported
     # potentials for this handler.
@@ -2681,15 +2685,21 @@ class BondHandler(ParameterHandler):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         # Default value for fractional_bondorder_interpolation depends on section version
-        if self.version == 0.3 and "fractional_bondorder_method" not in kwargs:
+        if (
+            self.version == Version("0.3")
+            and "fractional_bondorder_method" not in kwargs
+        ):
             self.fractional_bondorder_method = "none"
-        elif self.version == 0.4 and "fractional_bondorder_method" not in kwargs:
+        elif (
+            self.version == Version("0.4")
+            and "fractional_bondorder_method" not in kwargs
+        ):
             self.fractional_bondorder_method = "AM1-Wiberg"
 
         # Default value for potential depends on section version
-        if self.version == 0.3 and "potential" not in kwargs:
+        if self.version == Version("0.3") and "potential" not in kwargs:
             self.potential = "harmonic"
-        elif self.version == 0.4 and "potential" not in kwargs:
+        elif self.version == Version("0.4") and "potential" not in kwargs:
             self.potential = "(k/2)*(r-length)^2"
 
     def check_handler_compatibility(self, other_handler):
@@ -3040,7 +3050,7 @@ class ProperTorsionHandler(ParameterHandler):
     _KWARGS = ["partial_bond_orders_from_molecules"]
     _INFOTYPE = ProperTorsionType  # info type to store
     _OPENMMTYPE = "PeriodicTorsionForce"
-    _MAX_SUPPORTED_SECTION_VERSION = 0.4
+    _MAX_SUPPORTED_SECTION_VERSION = Version("0.4")
 
     potential = ParameterAttribute(
         default="k*(1+cos(periodicity*theta-phase))",
@@ -4132,8 +4142,6 @@ class LibraryChargeHandler(_NonbondedHandler):
                 continue
 
             # If we pass both tests above, go ahead and assign charges
-            # TODO: We could probably save a little time by looking up this TopologyMolecule's _reference molecule_
-            #       and assigning charges to all other instances of it in this topology
             for top_particle_idx in top_particle_idxs:
                 _, sigma, epsilon = force.getParticleParameters(top_particle_idx)
                 force.setParticleParameters(
@@ -4320,7 +4328,7 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
         LibraryChargeHandler,
         ToolkitAM1BCCHandler,
     ]
-    _MAX_SUPPORTED_SECTION_VERSION = 0.4
+    _MAX_SUPPORTED_SECTION_VERSION = Version("0.4")
 
     number_of_conformers = ParameterAttribute(default=1, converter=int)
 

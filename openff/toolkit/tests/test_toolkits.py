@@ -27,13 +27,14 @@ from openff.toolkit.tests.create_molecules import (
     create_cyclohexane,
     create_ethanol,
     create_reversed_ethanol,
+    topology_with_metadata,
 )
 from openff.toolkit.tests.utils import (
     requires_ambertools,
     requires_openeye,
     requires_rdkit,
 )
-from openff.toolkit.topology.molecule import Molecule
+from openff.toolkit.topology.molecule import Atom, Molecule
 from openff.toolkit.utils import get_data_file_path
 from openff.toolkit.utils.exceptions import (
     ChargeMethodUnavailableError,
@@ -42,6 +43,7 @@ from openff.toolkit.utils.exceptions import (
     IncorrectNumConformersWarning,
     InvalidIUPACNameError,
     InvalidToolkitError,
+    NotAttachedToMoleculeError,
     ToolkitUnavailableException,
     UndefinedStereochemistryError,
 )
@@ -66,7 +68,6 @@ if TYPE_CHECKING:
 
 def get_mini_drug_bank(toolkit_class, xfail_mols=None):
     """Read the mini drug bank sdf file with the toolkit and return the molecules"""
-
     # This is a work around a weird error where even though the test is skipped due to a missing toolkit
     #  we still try and read the file with the toolkit
     if toolkit_class.is_available():
@@ -468,7 +469,12 @@ class TestOpenEyeToolkitWrapper:
                 central_carbon_stereo_specified = True
         assert central_carbon_stereo_specified
         for atom1, atom2 in zip(molecule.atoms, molecule2.atoms):
-            assert atom1.to_dict() == atom2.to_dict()
+            # OpenEye wrapper always adds hierarchy metadata (residue name + num) info, so account for that
+            atom1_dict = atom1.to_dict()
+            atom1_dict["metadata"].update(
+                {"residue_name": "UNL", "residue_number": 1, "chain_id": " "}
+            )
+            assert atom1_dict == atom2.to_dict()
         for bond1, bond2 in zip(molecule.bonds, molecule2.bonds):
             assert bond1.to_dict() == bond2.to_dict()
         assert (molecule.conformers[0] == molecule2.conformers[0]).all()
@@ -518,7 +524,12 @@ class TestOpenEyeToolkitWrapper:
                 central_carbon_stereo_specified = True
         assert central_carbon_stereo_specified
         for atom1, atom2 in zip(molecule.atoms, molecule2.atoms):
-            assert atom1.to_dict() == atom2.to_dict()
+            # OpenEye wrapper always adds hierarchy metadata (residue name + num) info, so account for that
+            atom1_dict = atom1.to_dict()
+            atom1_dict["metadata"].update(
+                {"residue_name": "UNL", "residue_number": 1, "chain_id": " "}
+            )
+            assert atom1_dict == atom2.to_dict()
         for bond1, bond2 in zip(molecule.bonds, molecule2.bonds):
             assert bond1.to_dict() == bond2.to_dict()
         # The molecule was initialized from SMILES, so mol.conformers arrays should be None for both
@@ -566,6 +577,64 @@ class TestOpenEyeToolkitWrapper:
         oemol2 = eth_from_oe.to_openeye()
         for oeatom in oemol2.GetAtoms():
             assert math.isnan(oeatom.GetPartialCharge())
+
+    def test_to_from_openeye_hierarchy_metadata(self, topology_with_metadata):
+        """
+        Test roundtripping to/from ``OpenEyeToolkitWrapper`` for molecules with PDB hierarchy metadata
+        """
+        from openeye import oechem
+
+        for molecule in topology_with_metadata.molecules:
+            oemol = molecule.to_openeye()
+            roundtrip_mol = Molecule.from_openeye(oemol)
+
+            # Check OEMol
+            for orig_atom, oe_atom in zip(molecule.atoms, oemol.GetAtoms()):
+                if "residue_name" in orig_atom.metadata:
+                    assert (
+                        orig_atom.metadata["residue_name"]
+                        == oechem.OEAtomGetResidue(oe_atom).GetName()
+                    )
+
+                if "residue_number" in orig_atom.metadata:
+                    assert (
+                        orig_atom.metadata["residue_number"]
+                        == oechem.OEAtomGetResidue(oe_atom).GetResidueNumber()
+                    )
+
+                if "chain_id" in orig_atom.metadata:
+                    assert (
+                        orig_atom.metadata["chain_id"]
+                        == oechem.OEAtomGetResidue(oe_atom).GetChainID()
+                    )
+
+            # Check roundtripped OFFMol
+            for orig_atom, roundtrip_atom in zip(molecule.atoms, roundtrip_mol.atoms):
+                # If ANY atom in the OEMol has any hierarchy metadata set, then the ENTIRE molecule is considered
+                # to have metadata. Anything that wasn't set defaults to ("UNK", 1, " ").
+                if oechem.OEHasResidues(oemol):
+                    if "residue_name" in orig_atom.metadata:
+                        assert (
+                            orig_atom.metadata["residue_name"]
+                            == roundtrip_atom.metadata["residue_name"]
+                        )
+
+                    if "residue_number" in orig_atom.metadata:
+                        assert (
+                            orig_atom.metadata["residue_number"]
+                            == roundtrip_atom.metadata["residue_number"]
+                        )
+
+                    if "chain_id" in orig_atom.metadata:
+                        assert (
+                            orig_atom.metadata["chain_id"]
+                            == roundtrip_atom.metadata["chain_id"]
+                        )
+
+                else:
+                    assert "residue_name" not in roundtrip_atom.metadata
+                    assert "residue_number" not in roundtrip_atom.metadata
+                    assert "chain_id" not in roundtrip_atom.metadata
 
     def test_from_openeye_mutable_input(self):
         """
@@ -1775,6 +1844,66 @@ class TestOpenEyeToolkitWrapper:
         # TODO: Add test for aromaticity
         # TODO: Add test and molecule functionality for isotopes
 
+    @pytest.mark.parametrize(
+        ("smiles", "n_atom_rings", "n_bond_rings"),
+        [
+            ("c1ccc2ccccc2c1", 10, 11),
+            ("c1ccc(cc1)c2ccccc2", 12, 12),
+            ("Cc1ccc(cc1Nc2nccc(n2)c3cccnc3)NC(=O)c4ccc(cc4)CN5CCN(CC5)C", 30, 30),
+        ],
+    )
+    def test_is_in_ring(self, smiles, n_atom_rings, n_bond_rings):
+        """Test Atom.is_in_ring and Bond.is_in_ring"""
+        mol = Molecule.from_smiles(smiles)
+
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=[OpenEyeToolkitWrapper()])
+
+        atoms_in_ring = [
+            atom
+            for atom in mol.atoms
+            if atom.is_in_ring(toolkit_registry=toolkit_registry)
+        ]
+
+        bonds_in_ring = [
+            bond
+            for bond in mol.bonds
+            if bond.is_in_ring(toolkit_registry=toolkit_registry)
+        ]
+
+        assert len(atoms_in_ring) == n_atom_rings
+        assert len(bonds_in_ring) == n_bond_rings
+
+    def test_central_biphenyl_bond(self):
+        """Test that `Bond.is_in_ring` is False for the central bond in a phenyl"""
+        # Use a mapped smiles to ensure atom order while looking up central bond
+        # Generated via Molecule.from_smiles("c1ccc(cc1)c2ccccc2").to_smiles(mapped=True)
+
+        biphenyl = Molecule.from_mapped_smiles(
+            "[H:13][c:1]1[c:2]([c:3]([c:4]([c:5]([c:6]1[H:17])[H:16])[c:7]2[c:8]([c:9]([c:10]"
+            "([c:11]([c:12]2[H:22])[H:21])[H:20])[H:19])[H:18])[H:15])[H:14]"
+        )
+
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=[OpenEyeToolkitWrapper])
+
+        assert biphenyl.get_bond_between(3, 6).is_in_ring() is False
+
+        assert len([bond for bond in biphenyl.bonds if bond.is_in_ring()]) == 12
+
+    def test_unattached_is_in_ring(self):
+        toolkit = OpenEyeToolkitWrapper()
+        dummy_atom = Atom(1, 0, False)
+
+        with pytest.raises(NotAttachedToMoleculeError, match="Atom"):
+            toolkit.atom_is_in_ring(dummy_atom)
+
+        # The Bond constructor checks to see that the atoms are in a molecule,
+        # so not so straightforward to make one from the constructor
+        dummy_bond = Molecule.from_smiles("O").bonds[0]
+        dummy_bond._molecule = None
+
+        with pytest.raises(NotAttachedToMoleculeError, match="Bond"):
+            toolkit.bond_is_in_ring(dummy_bond)
+
     def test_find_matches_unique(self):
         """Test the expected behavior of the `unique` argument in find_matches"""
         smirks = "[C:1]~[C:2]~[C:3]"
@@ -2068,7 +2197,7 @@ class TestRDKitToolkitWrapper:
         for fbo, bond in zip(fractional_bond_orders, molecule.bonds):
             bond.fractional_bond_order = fbo
 
-        # Do a first conversion to/from oemol
+        # Do a first conversion to/from rdmol
         rdmol = molecule.to_rdkit()
         molecule2 = Molecule.from_rdkit(rdmol)
 
@@ -2145,6 +2274,86 @@ class TestRDKitToolkitWrapper:
             molecule2.to_smiles(toolkit_registry=toolkit_wrapper)
             == expected_output_smiles
         )
+
+    def test_to_from_rdkit_hierarchy_metadata(self, topology_with_metadata):
+        """
+        Test roundtripping to/from ``OpenEyeToolkitWrapper`` for molecules with PDB hierarchy metadata
+        """
+        for molecule in topology_with_metadata.molecules:
+            rdmol = molecule.to_rdkit()
+            roundtrip_mol = Molecule.from_rdkit(rdmol)
+
+            # Check RDMol
+            for orig_atom, rd_atom in zip(molecule.atoms, rdmol.GetAtoms()):
+
+                atom_has_any_metadata = (
+                    ("residue_name" in orig_atom.metadata)
+                    or ("residue_number" in orig_atom.metadata)
+                    or ("chain_id" in orig_atom.metadata)
+                )
+
+                if not (atom_has_any_metadata):
+                    assert rd_atom.GetPDBResidueInfo() is None
+                    continue
+
+                if "residue_name" in orig_atom.metadata:
+                    assert (
+                        orig_atom.metadata["residue_name"]
+                        == rd_atom.GetPDBResidueInfo().GetResidueName()
+                    )
+                else:
+                    assert rd_atom.GetPDBResidueInfo().GetResidueName() == ""
+
+                if "residue_number" in orig_atom.metadata:
+                    assert (
+                        orig_atom.metadata["residue_number"]
+                        == rd_atom.GetPDBResidueInfo().GetResidueNumber()
+                    )
+                else:
+                    assert rd_atom.GetPDBResidueInfo().GetResidueNumber() == 0
+
+                if "chain_id" in orig_atom.metadata:
+                    assert (
+                        orig_atom.metadata["chain_id"]
+                        == rd_atom.GetPDBResidueInfo().GetChainId()
+                    )
+                else:
+                    assert rd_atom.GetPDBResidueInfo().GetChainId() == ""
+
+            # Check roundtripped OFFMol
+            for orig_atom, roundtrip_atom in zip(molecule.atoms, roundtrip_mol.atoms):
+                atom_has_any_metadata = (
+                    ("residue_name" in orig_atom.metadata)
+                    or ("residue_number" in orig_atom.metadata)
+                    or ("chain_id" in orig_atom.metadata)
+                )
+                if not (atom_has_any_metadata):
+                    assert roundtrip_atom.metadata == {}
+                    continue
+
+                if "residue_name" in orig_atom.metadata:
+                    assert (
+                        orig_atom.metadata["residue_name"]
+                        == roundtrip_atom.metadata["residue_name"]
+                    )
+                else:
+                    assert roundtrip_atom.metadata["residue_name"] == ""
+
+                if "residue_number" in orig_atom.metadata:
+                    assert (
+                        orig_atom.metadata["residue_number"]
+                        == roundtrip_atom.metadata["residue_number"]
+                    )
+                else:
+                    assert roundtrip_atom.metadata["residue_number"] == 0
+
+                if "chain_id" in orig_atom.metadata:
+                    assert (
+                        orig_atom.metadata["chain_id"]
+                        == roundtrip_atom.metadata["chain_id"]
+                    )
+                else:
+                    assert roundtrip_atom.metadata["chain_id"] == ""
 
     def test_from_rdkit_implicit_hydrogens(self):
         """
@@ -2823,6 +3032,66 @@ class TestRDKitToolkitWrapper:
             ignore_functional_groups=terminal_backwards
         )
         assert bonds == []
+
+    @pytest.mark.parametrize(
+        ("smiles", "n_atom_rings", "n_bond_rings"),
+        [
+            ("c1ccc2ccccc2c1", 10, 11),
+            ("c1ccc(cc1)c2ccccc2", 12, 12),
+            ("Cc1ccc(cc1Nc2nccc(n2)c3cccnc3)NC(=O)c4ccc(cc4)CN5CCN(CC5)C", 30, 30),
+        ],
+    )
+    def test_is_in_ring(self, smiles, n_atom_rings, n_bond_rings):
+        """Test Atom.is_in_ring and Bond.is_in_ring"""
+        mol = Molecule.from_smiles(smiles)
+
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=[RDKitToolkitWrapper()])
+
+        atoms_in_ring = [
+            atom
+            for atom in mol.atoms
+            if atom.is_in_ring(toolkit_registry=toolkit_registry)
+        ]
+
+        bonds_in_ring = [
+            bond
+            for bond in mol.bonds
+            if bond.is_in_ring(toolkit_registry=toolkit_registry)
+        ]
+
+        assert len(atoms_in_ring) == n_atom_rings
+        assert len(bonds_in_ring) == n_bond_rings
+
+    def test_central_biphenyl_bond(self):
+        """Test that `Bond.is_in_ring` is False for the central bond in a phenyl"""
+        # Use a mapped smiles to ensure atom order while looking up central bond
+        # Generated via Molecule.from_smiles("c1ccc(cc1)c2ccccc2").to_smiles(mapped=True)
+
+        biphenyl = Molecule.from_mapped_smiles(
+            "[H:13][c:1]1[c:2]([c:3]([c:4]([c:5]([c:6]1[H:17])[H:16])[c:7]2[c:8]([c:9]([c:10]"
+            "([c:11]([c:12]2[H:22])[H:21])[H:20])[H:19])[H:18])[H:15])[H:14]"
+        )
+
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=[RDKitToolkitWrapper()])
+
+        assert biphenyl.get_bond_between(3, 6).is_in_ring() is False
+
+        assert len([bond for bond in biphenyl.bonds if bond.is_in_ring()]) == 12
+
+    def test_unattached_is_in_ring(self):
+        toolkit = RDKitToolkitWrapper()
+        dummy_atom = Atom(1, 0, False)
+
+        with pytest.raises(NotAttachedToMoleculeError, match="Atom"):
+            toolkit.atom_is_in_ring(dummy_atom)
+
+        # The Bond constructor checks to see that the atoms are in a molecule,
+        # so not so straightforward to make one from the constructor
+        dummy_bond = Molecule.from_smiles("O").bonds[0]
+        dummy_bond._molecule = None
+
+        with pytest.raises(NotAttachedToMoleculeError, match="Bond"):
+            toolkit.bond_is_in_ring(dummy_bond)
 
     def test_find_matches_unique(self):
         """Test the expected behavior of the `unique` argument in find_matches"""
@@ -4024,7 +4293,7 @@ def test_license_check(monkeypatch):
     assert OpenEyeToolkitWrapper()._check_licenses()
     assert OpenEyeToolkitWrapper().is_available()
 
-    from openff.toolkit.utils.toolkits import requires_openeye_module
+    from openff.toolkit.utils.openeye_wrapper import requires_openeye_module
 
     @requires_openeye_module("oeszybki")
     def func_using_extraneous_openeye_module():

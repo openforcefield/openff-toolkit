@@ -28,9 +28,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os:
-          - ubuntu-latest
-          - macos-latest
+        os: [ubuntu-latest, macos-latest]
         python-version: [3.7, 3.8, 3.9]
         rdkit: [true, false]
         openeye: [true, false]
@@ -45,7 +43,7 @@ jobs:
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
       PACKAGE: openff
-      PYTEST_ARGS: -r fE --tb=short --cov=openff --cov-config=setup.cfg --cov-append --cov-report=xml
+      PYTEST_ARGS: -r fE --tb=short -nauto --cov=openff --cov-config=setup.cfg --cov-append --cov-report=xml
       NB_ARGS: -v --nbval-lax --ignore=examples/deprecated
 
     steps:
@@ -110,6 +108,11 @@ jobs:
           # conda remove --force openff-toolkit openff-toolkit-base
           python setup.py develop --no-deps
 
+      - name: Install test plugins
+        run: |
+          cd utilities/test_plugins
+          python setup.py develop --no-deps
+
       - name: Remove undesired toolkits
         run: |
           if [ ! -z "${{ env.PACKAGES_TO_REMOVE }}" ]; then
@@ -161,7 +164,7 @@ jobs:
           pytest -v --doctest-glob="docs/*.rst" docs/
 
       - name: Codecov
-        uses: codecov/codecov-action@v2.1.0
+        uses: codecov/codecov-action@v3.0.0
         with:
           file: ./coverage.xml
           fail_ci_if_error: true

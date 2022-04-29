@@ -11,6 +11,7 @@ dependencies:
     # Testing
   - pytest
   - pytest-cov
+  - pytest-xdist
   - pytest-rerunfailures
   - nbval
   - codecov
@@ -41,4 +42,4 @@ dependencies:
   - qcengine
   - mdtraj
   - pip:
-    - git+https://github.com/openforcefield/openff-interchange.git@v0.2.0-alpha.1
+    - git+https://github.com/openforcefield/openff-interchange.git@v0.2.0-alpha.3

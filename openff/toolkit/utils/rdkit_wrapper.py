@@ -16,19 +16,19 @@ import numpy as np
 from cachetools import LRUCache, cached
 from openff.units import unit
 
-if TYPE_CHECKING:
-    from openff.toolkit.topology.molecule import Molecule
-    from openff.units.unit import Quantity
-
 from openff.toolkit.utils import base_wrapper
 from openff.toolkit.utils.constants import DEFAULT_AROMATICITY_MODEL
 from openff.toolkit.utils.exceptions import (
     ChargeMethodUnavailableError,
     ConformerGenerationError,
+    NotAttachedToMoleculeError,
     SMILESParseError,
     ToolkitUnavailableException,
     UndefinedStereochemistryError,
 )
+
+if TYPE_CHECKING:
+    from openff.toolkit.topology.molecule import Atom, Bond, Molecule
 
 # =============================================================================================
 # CONFIGURE LOGGER
@@ -244,6 +244,67 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             from openff.toolkit.topology.molecule import InvalidConformerError
 
             raise InvalidConformerError("The PDB and SMILES structures do not match.")
+
+    def _smarts_to_networkx(self, substructure_smarts):
+        import networkx as nx
+        from rdkit import Chem
+
+        rdmol = Chem.MolFromSmarts(substructure_smarts)
+
+        _bondtypes = {
+            # 0: Chem.BondType.AROMATIC,
+            Chem.BondType.SINGLE: 1,
+            Chem.BondType.AROMATIC: 1.5,
+            Chem.BondType.DOUBLE: 2,
+            Chem.BondType.TRIPLE: 3,
+            Chem.BondType.QUADRUPLE: 4,
+            Chem.BondType.QUINTUPLE: 5,
+            Chem.BondType.HEXTUPLE: 6,
+        }
+        rdmol_G = nx.Graph()
+        for atom in rdmol.GetAtoms():
+            atomic_number = atom.GetAtomicNum()
+
+            rdmol_G.add_node(
+                atom.GetIdx(),
+                atomic_number=atomic_number,
+                formal_charge=atom.GetFormalCharge(),
+                map_index=atom.GetAtomMapNum(),
+            )
+        for bond in rdmol.GetBonds():
+            bond_type = bond.GetBondType()
+            # All bonds in the graph should have been explicitly assigned by this point.
+            if bond_type == Chem.rdchem.BondType.UNSPECIFIED:
+                raise SMILESParseError(
+                    f"A bond in {substructure_smarts} has an unspecified bond order"
+                )
+
+            rdmol_G.add_edge(
+                bond.GetBeginAtomIdx(),
+                bond.GetEndAtomIdx(),
+                bond_order=_bondtypes[bond_type],
+            )
+        return rdmol_G
+
+    def _assign_aromaticity_and_stereo_from_3d(self, offmol):
+        from rdkit import Chem
+
+        rdmol = offmol.to_rdkit()
+        Chem.SanitizeMol(
+            rdmol,
+            Chem.SANITIZE_ALL
+            ^ Chem.SANITIZE_ADJUSTHS,  # ^ Chem.SANITIZE_SETAROMATICITY,
+        )
+        Chem.AssignStereochemistryFrom3D(rdmol)
+        Chem.Kekulize(rdmol, clearAromaticFlags=True)
+        Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_MDL)
+        # To get HIS//TRP to get recognized as aromatic, we can use a different aromaticity model
+        # Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_DEFAULT)
+
+        offmol_w_stereo_and_aro = offmol.from_rdkit(
+            rdmol, allow_undefined_stereo=True, hydrogens_are_explicit=True
+        )
+        return offmol_w_stereo_and_aro
 
     def _process_sdf_supplier(self, sdf_supplier, allow_undefined_stereo, _cls):
         "Helper function to process RDKit molecules from an SDF input source"
@@ -849,7 +910,13 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         return molecule
 
     def generate_conformers(
-        self, molecule, n_conformers=1, rms_cutoff=None, clear_existing=True, _cls=None
+        self,
+        molecule,
+        n_conformers=1,
+        rms_cutoff=None,
+        clear_existing=True,
+        _cls=None,
+        make_carboxylic_acids_cis=False,
     ):
         r"""
         Generate molecule conformers using RDKit.
@@ -876,6 +943,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             Whether to overwrite existing conformers for the molecule.
         _cls : class
             Molecule constructor
+        make_carboxylic_acids_cis: bool, default=False
+            Guarantee all conformers have exclusively cis carboxylic acid groups (COOH)
+            by rotating the proton in any trans carboxylic acids 180 degrees around the C-O bond.
 
         """
         from rdkit.Chem import AllChem
@@ -905,6 +975,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         for conformer in molecule2._conformers:
             molecule._add_conformer(conformer)
+
+        if make_carboxylic_acids_cis:
+            molecule._make_carboxylic_acids_cis(toolkit_registry=self)
 
     def assign_partial_charges(
         self,
@@ -1178,13 +1251,14 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         n_conformers = len(molecule.conformers)
 
+        # rdkit does not have conformer indices but conformer "ids"
         conformer_ids = [conf.GetId() for conf in rdkit_molecule.GetConformers()]
 
         # Compute the RMS matrix making sure to take into account any automorhism (e.g
         # a phenyl or nitro substituent flipped 180 degrees.
         rms_matrix = np.zeros((n_conformers, n_conformers))
 
-        for i, j in itertools.combinations(conformer_ids, 2):
+        for i, j in itertools.combinations(np.arange(n_conformers), 2):
 
             rms_matrix[i, j] = AllChem.GetBestRMS(
                 rdkit_molecule,
@@ -1525,12 +1599,20 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                         "Got {} instead.".format(stereo_code)
                     )
 
+            res = rda.GetPDBResidueInfo()
+            metadata = dict()
+            if res is not None:
+                metadata["residue_name"] = res.GetResidueName()
+                metadata["residue_number"] = res.GetResidueNumber()
+                metadata["chain_id"] = res.GetChainId()
+
             atom_index = offmol._add_atom(
                 atomic_number,
                 formal_charge,
                 is_aromatic,
                 name=name,
                 stereochemistry=stereochemistry,
+                metadata=metadata,
                 invalidate_cache=False,
             )
             map_atoms[rd_idx] = atom_index
@@ -1825,6 +1907,28 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             rdatom = rdmol.GetAtomWithIdx(index)
             rdatom.SetProp("_Name", atom.name)
 
+            if rdatom.GetPDBResidueInfo() is None:
+                res = Chem.AtomPDBResidueInfo()
+            else:
+                res = rdatom.GetPDBResidueInfo()
+
+            atom_has_any_metadata = False
+
+            if "residue_name" in atom.metadata:
+                atom_has_any_metadata = True
+                res.SetResidueName(atom.metadata["residue_name"])
+
+            if "residue_number" in atom.metadata:
+                atom_has_any_metadata = True
+                res.SetResidueNumber(int(atom.metadata["residue_number"]))
+
+            if "chain_id" in atom.metadata:
+                atom_has_any_metadata = True
+                res.SetChainId(atom.metadata["chain_id"])
+
+            if atom_has_any_metadata:
+                rdatom.SetPDBResidueInfo(res)
+
         for bond in molecule.bonds:
             atom_indices = (
                 bond.atom1.molecule_atom_index,
@@ -2117,35 +2221,77 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             unique=unique,
         )
 
-    # --------------------------------
-    # Stereochemistry RDKit utilities.
-    # --------------------------------
+    def atom_is_in_ring(self, atom: "Atom") -> bool:
+        """Return whether or not an atom is in a ring.
 
-    def find_rings(self, molecule):
-        """Find the rings in a given molecule.
-
-        .. note ::
-
-            For systems containing some special cases of connected rings, this
-            function may not be well-behaved and may report a different number
-            rings than expected. Some problematic cases include networks of many
-            (5+) rings or bicyclic moieties (i.e. norbornane).
+        It is assumed that this atom is in molecule.
 
         Parameters
         ----------
-        molecule : openff.toolkit.topology.Molecule
-            The molecule for which rings are to be found
+        atom : openff.toolkit.topology.molecule.Atom
+            The molecule containing the atom of interest
 
         Returns
         -------
-        rings : tuple of tuples of atom indices
-            Nested tuples, each containing the indices of atoms in each ring
+        is_in_ring : bool
+            Whether or not the atom is in a ring.
 
+        Raises
+        ------
+        NotAttachedToMoleculeError
         """
+        if atom.molecule is None:
+            raise NotAttachedToMoleculeError(
+                "This Atom does not belong to a Molecule object"
+            )
+
+        molecule = atom.molecule
+        atom_index = atom.molecule_atom_index
+
         rdmol = molecule.to_rdkit()
-        ring_info = rdmol.GetRingInfo()
-        rings = ring_info.AtomRings()
-        return rings
+        rdatom = rdmol.GetAtomWithIdx(atom_index)
+
+        is_in_ring = rdatom.IsInRing()
+
+        return is_in_ring
+
+    def bond_is_in_ring(self, bond: "Bond") -> bool:
+        """Return whether or not a bond is in a ring.
+
+        It is assumed that this atom is in molecule.
+
+        Parameters
+        ----------
+        bond : openff.toolkit.topology.molecule.Bond
+            The molecule containing the atom of interest
+
+        Returns
+        -------
+        is_in_ring : bool
+            Whether or not the bond of index `bond_index` is in a ring
+
+        Raises
+        ------
+        NotAttachedToMoleculeError
+        """
+        if bond.molecule is None:
+            raise NotAttachedToMoleculeError(
+                "This Bond does not belong to a Molecule object"
+            )
+
+        molecule = bond.molecule
+        rdmol = molecule.to_rdkit()
+
+        # Molecule.to_rdkit() is NOT guaranteed to preserve bond ordering,
+        # so we must look up the corresponding bond via its constituent atom indices
+        rdbond = rdmol.GetBondBetweenAtoms(bond.atom1_index, bond.atom2_index)
+        is_in_ring = rdbond.IsInRing()
+
+        return is_in_ring
+
+    # --------------------------------
+    # Stereochemistry RDKit utilities.
+    # --------------------------------
 
     @staticmethod
     def _find_undefined_stereo_atoms(rdmol, assign_stereo=False):
