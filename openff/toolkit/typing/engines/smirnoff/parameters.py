@@ -5151,13 +5151,12 @@ class VirtualSiteHandler(_NonbondedHandler):
         entity: Topology,
         transformed_dict_cls=dict,
         unique=False,
-    ) -> List[ParameterHandler._Match]:
+    ) -> Dict[int, List[ParameterHandler._Match]]:
 
         assigned_matches_by_parent = self._find_matches_by_parent(entity)
-        assigned_matches = []
-
+        return_dict = {}
         for parent_index, assigned_parameters in assigned_matches_by_parent.items():
-
+            assigned_matches = []
             for assigned_parameter, match_orientations in assigned_parameters:
 
                 for match in match_orientations:
@@ -5165,8 +5164,9 @@ class VirtualSiteHandler(_NonbondedHandler):
                     assigned_matches.append(
                         ParameterHandler._Match(assigned_parameter, match)
                     )
+            return_dict[(parent_index,)] = assigned_matches
 
-        return assigned_matches
+        return return_dict
 
     def create_force(self, system: openmm.System, topology: Topology, **kwargs):
 
