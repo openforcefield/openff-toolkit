@@ -60,6 +60,12 @@ print(value_roundtrip)
 
 - [PR #1277](https://github.com/openforcefield/openff-toolkit/pull/1277): Adds support for version
   0.4 of the `<Electrostatics>` section of the SMIRNOFF specification.
+- [PR #1279](https://github.com/openforcefield/openforcefield/pull/1279):
+  [`ParameterHandler.version`](openff.toolkit.typing.engines.smirnoff.parameters.ParameterHandler.version)
+  and the ``.version`` attribute of its subclasses is now a
+  [``Version``](https://packaging.pypa.io/en/latest/version.html#packaging.version.Version)
+  object. Previously it was a string, which is not safe for
+  [PEP440](https://www.python.org/dev/peps/pep-0440/#final-releases)-style versioning.
 - [PR #1250](https://github.com/openforcefield/openff-toolkit/pull/1250): Adds support for
   `return_topology` in the Interchange code path in
   [`create_openmm_system`](openff.toolkit.typing.engines.smirnoff.ForceField.create_openmm_system).
