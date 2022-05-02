@@ -197,7 +197,7 @@ def quantity_to_string(input_quantity: unit.Quantity) -> str:
 
     Parameters
     ----------
-    input_quantity : openmm.unit.Quantity
+    input_quantity : openff.units.unit.Quantity
         The quantity to serialize
 
     Returns
@@ -273,18 +273,18 @@ def _ast_eval(node):
 
 def string_to_unit(unit_string):
     """
-    Deserializes a openmm.unit.Quantity from a string representation, for
+    Deserializes a openff.units.unit.Quantity from a string representation, for
     example: "kilocalories_per_mole / angstrom ** 2"
 
 
     Parameters
     ----------
     unit_string : dict
-        Serialized representation of a openmm.unit.Quantity.
+        Serialized representation of a openff.units.unit.Quantity.
 
     Returns
     -------
-    output_unit: openmm.unit.Quantity
+    output_unit: openff.units.unit.Quantity
         The deserialized unit from the string
     """
     return unit.Unit(unit_string)
@@ -339,10 +339,10 @@ def _string_to_quantity(quantity_string):
 def convert_all_strings_to_quantity(smirnoff_data):
     """
     Traverses a SMIRNOFF data structure, attempting to convert all
-    quantity-defining strings into openmm.unit.Quantity objects.
+    quantity-defining strings into openff.units.unit.Quantity objects.
 
     Integers and floats are ignored and not converted into a dimensionless
-    ``openmm.unit.Quantity`` object.
+    ``openff.units.unit.Quantity`` object.
 
     Parameters
     ----------
@@ -353,7 +353,7 @@ def convert_all_strings_to_quantity(smirnoff_data):
     -------
     converted_smirnoff_data : dict
         A hierarchical dict structured in compliance with the SMIRNOFF spec,
-        with quantity-defining strings converted to openmm.unit.Quantity objects
+        with quantity-defining strings converted to openff.units.unit.Quantity objects
     """
     if isinstance(smirnoff_data, dict):
         for key, value in smirnoff_data.items():
@@ -391,7 +391,7 @@ def convert_all_quantities_to_string(smirnoff_data):
     -------
     converted_smirnoff_data : dict
         A hierarchical dict structured in compliance with the SMIRNOFF spec,
-        with openmm.unit.Quantitys converted to string
+        with openff.units.unit.Quantitys converted to string
     """
 
     if isinstance(smirnoff_data, dict):
