@@ -30,7 +30,6 @@ __all__ = [
 import contextlib
 import functools
 import logging
-import re
 from typing import List, Tuple, Union
 
 import numpy as np
