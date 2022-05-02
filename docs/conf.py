@@ -114,14 +114,15 @@ import importlib
 if importlib.util.find_spec("notfound"):
     extensions.append("notfound.extension")
 
+    notfound_urls_prefix = "https://docs.openforcefield.org/projects/toolkit/en/stable/"
     notfound_context = {
         "title": "404: File Not Found",
-        "body": """
+        "body": f"""
     <h1>404: File Not Found</h1>
     <p>
         Sorry, we couldn't find that page. This often happens as a result of
         following an outdated link. Please check the
-        <a href="https://open-forcefield-toolkit.readthedocs.io/en/stable/">latest stable version</a>
+        <a href="{notfound_urls_prefix}">latest stable version</a>
         of the docs, unless you're sure you want an earlier version, and
         try using the search box or the navigation menu on the left.
     </p>
