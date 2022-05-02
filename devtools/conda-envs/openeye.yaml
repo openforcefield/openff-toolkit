@@ -42,3 +42,4 @@ dependencies:
   - mdtraj
   - pip:
     - git+https://github.com/openforcefield/openff-interchange.git@v0.2.0-alpha.3
+    - git+https://github.com/openforcefield/openff-units.git@openmm-per-mol
