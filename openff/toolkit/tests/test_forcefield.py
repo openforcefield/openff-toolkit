@@ -2375,7 +2375,7 @@ class TestForceFieldChargeAssignment:
         # Fail because nonintegral charges aren't allowed
         with pytest.raises(
             NonintegralMoleculeChargeException,
-            match="Partial charge sum [(]1.40001 e[)] for molecule",
+            match="Partial charge sum [(]1.40001 e.*[)] for molecule",
         ):
             omm_system = forcefield.create_openmm_system(
                 topology,
