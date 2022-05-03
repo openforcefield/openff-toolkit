@@ -484,7 +484,6 @@ def _contains_bytes(val) -> bool:
         return any([_contains_bytes(x) for x in val.values()])
     else:
         raise Exception(f"type {val}")
-    return False
 
 
 def _prep_numpy_data_for_json(data: Dict) -> Dict:
