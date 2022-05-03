@@ -12,8 +12,8 @@ Serialization mix-in
    installed?
 
 """
-
 import abc
+from typing import Dict
 
 from openff.toolkit.utils.utils import requires_package
 
@@ -104,7 +104,7 @@ class Serializable(abc.ABC):
     def from_dict(cls, d):
         pass
 
-    def to_json(self, indent=None):
+    def to_json(self, indent=None) -> str:
         """
         Return a JSON serialized representation.
 
@@ -124,14 +124,14 @@ class Serializable(abc.ABC):
         import json
 
         d = self.to_dict()
-        # TODO: More generally check for bytes in dict
-        if "conformers" in d or "molecules" in d:
+
+        if _contains_bytes(d):
             d = _prep_numpy_data_for_json(d)
 
         return json.dumps(d, indent=indent)
 
     @classmethod
-    def from_json(cls, serialized):
+    def from_json(cls, serialized: str):
         """
         Instantiate an object from a JSON serialized representation.
 
@@ -470,9 +470,25 @@ class Serializable(abc.ABC):
         return cls.from_dict(d)
 
 
-def _prep_numpy_data_for_json(data):
+def _contains_bytes(val) -> bool:
+    """Report if any values in list are bytes."""
+    if val is None:
+        return False
+    elif isinstance(val, bytes):
+        return True
+    elif isinstance(val, (int, float, str, bool)):
+        return False
+    elif isinstance(val, list):
+        return any([_contains_bytes(x) for x in val])
+    elif isinstance(val, dict):
+        return any([_contains_bytes(x) for x in val.values()])
+    else:
+        raise Exception(f"type {val}")
+    return False
+
+
+def _prep_numpy_data_for_json(data: Dict) -> Dict:
     """Recursively search through a dict and convert the bytes fields to lists"""
-    # TODO: Much of this logic can probably be trimmed down
     import numpy as np
 
     big_endian_float = np.dtype("float").newbyteorder(">")
@@ -485,15 +501,13 @@ def _prep_numpy_data_for_json(data):
         if isinstance(val, bytes):
             data[key] = np.frombuffer(val, dtype=big_endian_float).tolist()
         if isinstance(val, list):
-            # Fairly hard-coded for case of Molecule.conformers being a List[np.array]
-            # A more general solution should safely recurse through lists like dicts
-            if key == "conformers":
-                for i, element in enumerate(val):
-                    if isinstance(element, bytes):
-                        data[key][i] = np.frombuffer(
-                            element, dtype=big_endian_float
-                        ).tolist()
-            # hard-coded case for molecules in Topology
-            elif key == "molecules":
-                data[key] = [_prep_numpy_data_for_json(v) for v in val]
+            for i, element in enumerate(val):
+                if isinstance(element, bytes):
+                    # Handles case of List[np.array], like Molecule.conformers
+                    data[key][i] = np.frombuffer(
+                        element, dtype=big_endian_float
+                    ).tolist()
+                else:
+                    # Handles case of List[Molecule], like Topology.molecules
+                    data[key][i] = _prep_numpy_data_for_json(element)
     return data
