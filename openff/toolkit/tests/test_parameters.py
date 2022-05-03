@@ -1283,7 +1283,7 @@ class TestBondType:
         param_dict = p1.to_dict()
         with pytest.raises(
             ValueError,
-            match="Requested output unit cal is not compatible with quantity unit Å.",
+            match="Requested output unit cal.* is not compatible with quantity unit angstrom.",
         ) as context:
             param_dict_unitless, attached_units = detach_units(
                 param_dict, output_units={"length_unit": unit.calorie}
