@@ -125,7 +125,7 @@ class Serializable(abc.ABC):
 
         d = self.to_dict()
         # TODO: More generally check for bytes in dict
-        if "conformers" in d.keys():
+        if "conformers" in d or "molecules" in d:
             d = _prep_numpy_data_for_json(d)
 
         return json.dumps(d, indent=indent)
@@ -487,9 +487,13 @@ def _prep_numpy_data_for_json(data):
         if isinstance(val, list):
             # Fairly hard-coded for case of Molecule.conformers being a List[np.array]
             # A more general solution should safely recurse through lists like dicts
-            for i, element in enumerate(val):
-                if isinstance(element, bytes):
-                    data[key][i] = np.frombuffer(
-                        element, dtype=big_endian_float
-                    ).tolist()
+            if key == "conformers":
+                for i, element in enumerate(val):
+                    if isinstance(element, bytes):
+                        data[key][i] = np.frombuffer(
+                            element, dtype=big_endian_float
+                        ).tolist()
+            # hard-coded case for molecules in Topology
+            elif key == "molecules":
+                data[key] = [_prep_numpy_data_for_json(v) for v in val]
     return data
