@@ -99,7 +99,9 @@ name: table-hierarchy-across-toolkits
     "chain_id" not in atom.metadata
     ```
 * - OpenFF setter (defined)
-  - Defined: `atom.metadata["residue_name"] = X`
+  - ```
+    atom.metadata["residue_name"] = X
+    ```
   - ```
     atom.metadata["residue_number"] = X
     ```
@@ -127,9 +129,9 @@ name: table-hierarchy-across-toolkits
     omm_atom.residue.chain.id
     ```
 * - OpenMM getter (undefined)
-  - Not possible
-  - Not possible
-  - Not possible
+  - All particles in an OpenMM Topology belong to a chain and residue
+  - All particles in an OpenMM Topology belong to a chain and residue
+  - All particles in an OpenMM Topology belong to a chain and residue
 * - OpenMM setter (defined)
   - ```
     omm_atom.residue.name = X
@@ -173,17 +175,17 @@ name: table-hierarchy-across-toolkits
 * - RDKit setter (defined)
   - ```
     res = rda.GetPDBResidueInfo() 
-    res..SetResidueName(X) 
+    res.SetResidueName(X) 
     rdatom.SetPDBResidueInfo(res)
     ```
   - ```
     res = rda.GetPDBResidueInfo() 
-    res..SetResidueNumber(X) 
+    res.SetResidueNumber(X) 
     rdatom.SetPDBResidueInfo(res)
     ```
   - ```
     .res = rda.GetPDBResidueInfo() 
-    res..SetSetChainId(X) 
+    res.SetSetChainId(X) 
     rdatom.SetPDBResidueInfo(res)
     ```
 * - RDKit setter (if at least one field is defined, but not this one) 
@@ -243,7 +245,7 @@ name: table-hierarchy-across-toolkits
   - ```
     res = oechem.OEAtomGetResidue(atom) 
     res.SetName("UNL") 
-    oechem.OEAtomSetResidue(atom, res
+    oechem.OEAtomSetResidue(atom, res)
     ```
   - ```
     res = oechem.OEAtomGetResidue(atom) 
