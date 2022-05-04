@@ -36,15 +36,15 @@ from collections import OrderedDict, UserDict
 from copy import deepcopy
 from typing import (
     TYPE_CHECKING,
+    Any,
+    Dict,
     Generator,
     List,
     Optional,
+    Set,
     TextIO,
     Tuple,
     Union,
-    Set,
-    Dict,
-    Any,
 )
 
 import networkx as nx
