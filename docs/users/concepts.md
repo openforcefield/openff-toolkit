@@ -14,14 +14,13 @@ OpenFF [`Molecule`](openff.toolkit.topology.Molecule)
   This data should be considered cosmetic and should not affect system creation.
   Whenever possible, molecule serialization or format conversion should preserve this data.
 
-OpenFF `System`
-: An object that contains everything needed to calculate a molecular system's energy, except the atomic coordinates.
-  Note that this does not exist yet, and that OpenMM `System` objects are being used for this purpose right now. Development is underway on [GitHub](https://github.com/openforcefield/openff-system).
-
 OpenFF [`Topology`](openff.toolkit.topology.Topology)
-: An object that efficiently holds many OpenFF `Molecule` objects.
-  The atom indexing in a `Topology` may differ from those of the underlying `Molecule`s
+: A collection of molecules, as well as optional box vector, positions, and other information. A `Topology` describes the chemistry of a system, but has no force field parameters.
 
 OpenFF [`ForceField`](openff.toolkit.typing.engines.smirnoff.forcefield.ForceField)
 : An object generated from an OFFXML file (or other source of SMIRNOFF data).
   Most information from the SMIRNOFF data source is stored in this object's several `ParameterHandler`s, however some top-level SMIRNOFF data is stored in the `ForceField` object itself.
+
+OpenFF [`Interchange`](openff.interchange:index)
+: A `Topology` that has been parametrized by a `ForceField`. An `Interchange` contains all the information needed to calculate an energy or start a simulation. `Interchange` also provides methods to export this information
+to MD simulation engines.
