@@ -33,17 +33,27 @@ A simplified `.offxml` file for TIP3P water might look like this:
     <Author>The Open Force Field Initiative</Author>
     <Date>2021-08-16</Date>
     <Constraints version="0.3">
-        <Constraint smirks="[#1:1]-[#8X2H2+0:2]-[#1]" id="c-tip3p-H-O" distance="0.9572 * angstrom"></Constraint>
-        <Constraint smirks="[#1:1]-[#8X2H2+0]-[#1:2]" id="c-tip3p-H-O-H" distance="1.5139006545247014 * angstrom"></Constraint>
+        <Constraint smirks="[#1:1]-[#8X2H2+0:2]-[#1]" id="c-tip3p-H-O" 
+                    distance="0.9572 * angstrom"></Constraint>
+        <Constraint smirks="[#1:1]-[#8X2H2+0]-[#1:2]" id="c-tip3p-H-O-H" 
+                    distance="1.5139006545247014 * angstrom"></Constraint>
     </Constraints>
-    <vdW version="0.3" potential="Lennard-Jones-12-6" combining_rules="Lorentz-Berthelot" scale12="0.0" scale13="0.0" scale14="0.5" scale15="1.0" cutoff="9.0 * angstrom" switch_width="1.0 * angstrom" method="cutoff">
-        <Atom smirks="[#1]-[#8X2H2+0:1]-[#1]" epsilon="0.1521 * mole**-1 * kilocalorie" id="n-tip3p-O" sigma="3.1507 * angstrom"></Atom>
-        <Atom smirks="[#1:1]-[#8X2H2+0]-[#1]" epsilon="0 * mole**-1 * kilocalorie" id="n-tip3p-H" sigma="1 * angstrom"></Atom>
+    <vdW version="0.3" potential="Lennard-Jones-12-6" combining_rules="Lorentz-Berthelot" 
+         scale12="0.0" scale13="0.0" scale14="0.5" scale15="1.0" cutoff="9.0 * angstrom" 
+         switch_width="1.0 * angstrom" method="cutoff">
+        <Atom smirks="[#1]-[#8X2H2+0:1]-[#1]" epsilon="0.1521 * mole**-1 * kilocalorie" 
+              id="n-tip3p-O" sigma="3.1507 * angstrom"></Atom>
+        <Atom smirks="[#1:1]-[#8X2H2+0]-[#1]" epsilon="0 * mole**-1 * kilocalorie" 
+              id="n-tip3p-H" sigma="1 * angstrom"></Atom>
     </vdW>
-    <Electrostatics version="0.3" scale12="0.0" scale13="0.0" scale14="0.8333333333" scale15="1.0" cutoff="9.0 * angstrom" switch_width="0.0 * angstrom" method="PME"></Electrostatics>
+    <Electrostatics version="0.3" scale12="0.0" scale13="0.0" scale14="0.8333333333" 
+                    scale15="1.0" cutoff="9.0 * angstrom" switch_width="0.0 * angstrom" 
+                    method="PME"></Electrostatics>
     <LibraryCharges version="0.3">
-        <LibraryCharge smirks="[#1]-[#8X2H2+0:1]-[#1]" charge1="-0.834 * elementary_charge" id="q-tip3p-O"></LibraryCharge>
-        <LibraryCharge smirks="[#1:1]-[#8X2H2+0]-[#1]" charge1="0.417 * elementary_charge" id="q-tip3p-H"></LibraryCharge>
+        <LibraryCharge smirks="[#1]-[#8X2H2+0:1]-[#1]" charge1="-0.834 * elementary_charge" 
+                       id="q-tip3p-O"></LibraryCharge>
+        <LibraryCharge smirks="[#1:1]-[#8X2H2+0]-[#1]" charge1="0.417 * elementary_charge" 
+                       id="q-tip3p-H"></LibraryCharge>
     </LibraryCharges>
 </SMIRNOFF>
 ```
