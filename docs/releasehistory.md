@@ -540,6 +540,8 @@ print(value_roundtrip)
 - Translate previous release history to MyST markdown
 :::
 
+## Earlier releases
+
 :::{eval-rst}
 
 0.9.1 - Minor feature and bugfix release
