@@ -17,6 +17,7 @@ import numpy
 import pytest
 from numpy.testing import assert_almost_equal
 from openff.units import unit
+from packaging.version import Version
 
 import openff.toolkit.typing.engines.smirnoff.parameters
 from openff.toolkit.tests.mocking import VirtualSiteMocking
@@ -694,11 +695,13 @@ class TestParameterHandler:
         """
 
         class MyPHSubclass(ParameterHandler):
-            _MIN_SUPPORTED_SECTION_VERSION = 0.3
-            _MAX_SUPPORTED_SECTION_VERSION = 2
+            _MIN_SUPPORTED_SECTION_VERSION = Version("0.3")
+            _MAX_SUPPORTED_SECTION_VERSION = Version("2")
 
         with pytest.raises(SMIRNOFFVersionError) as excinfo:
             my_ph = MyPHSubclass(version=0.1)
+        with pytest.raises(Exception, match="Could not convert .*list"):
+            MyPHSubclass(version=[0])
         my_ph = MyPHSubclass(version=0.3)
         my_ph = MyPHSubclass(version=1)
         my_ph = MyPHSubclass(version="1.9")
@@ -710,11 +713,11 @@ class TestParameterHandler:
         """Ensure that a ParameterHandler remembers the version that was set when it was initialized."""
 
         class MyPHSubclass(ParameterHandler):
-            _MIN_SUPPORTED_SECTION_VERSION = 0.3
-            _MAX_SUPPORTED_SECTION_VERSION = 2
+            _MIN_SUPPORTED_SECTION_VERSION = Version("0.3")
+            _MAX_SUPPORTED_SECTION_VERSION = Version("2")
 
         my_ph = MyPHSubclass(version=1.234)
-        assert my_ph.to_dict()["version"] == 1.234
+        assert my_ph.to_dict()["version"] == Version("1.234")
 
     def test_add_delete_cosmetic_attributes(self):
         """Test ParameterHandler.to_dict() function when some parameters are in
@@ -1286,7 +1289,7 @@ class TestBondType:
         param_dict = p1.to_dict()
         with pytest.raises(
             ValueError,
-            match="Requested output unit cal is not compatible with quantity unit Å.",
+            match="Requested output unit cal.* is not compatible with quantity unit angstrom.",
         ) as context:
             param_dict_unitless, attached_units = detach_units(
                 param_dict, output_units={"length_unit": unit.calorie}

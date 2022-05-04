@@ -31,8 +31,16 @@ __all__ = [
 
 from typing import Optional
 
-from openff.toolkit.utils.exceptions import SMIRKSMismatchError, SMIRKSParsingError
-from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY, ToolkitWrapper
+from openff.toolkit.utils.exceptions import (
+    InvalidToolkitRegistryError,
+    SMIRKSMismatchError,
+    SMIRKSParsingError,
+)
+from openff.toolkit.utils.toolkits import (
+    GLOBAL_TOOLKIT_REGISTRY,
+    ToolkitRegistry,
+    ToolkitWrapper,
+)
 
 
 class ChemicalEnvironment:

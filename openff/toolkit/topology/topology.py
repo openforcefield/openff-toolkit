@@ -1227,6 +1227,28 @@ class Topology(Serializable):
             new_mol = Molecule.from_dict(molecule_dict)
             self.add_molecule(new_mol)
 
+    @staticmethod
+    @requires_package("openmm")
+    def _openmm_topology_to_networkx(openmm_topology):
+        import networkx as nx
+
+        # Convert all openMM mols to graphs
+        omm_topology_G = nx.Graph()
+        for atom in openmm_topology.atoms():
+            omm_topology_G.add_node(
+                atom.index,
+                atomic_number=atom.element.atomic_number,
+                atom_name=atom.name,
+                residue_name=atom.residue.name,
+                residue_id=atom.residue.id,
+                chain_id=atom.residue.chain.id,
+            )
+        for bond in openmm_topology.bonds():
+            omm_topology_G.add_edge(
+                bond.atom1.index, bond.atom2.index, bond_order=bond.order
+            )
+        return omm_topology_G
+
     @classmethod
     @requires_package("openmm")
     def from_openmm(cls, openmm_topology, unique_molecules=None):
@@ -1293,17 +1315,7 @@ class Topology(Serializable):
                     raise DuplicateUniqueMoleculeError(msg)
             graph_to_unq_mol[unq_mol_graph] = unq_mol
 
-        # Convert all openMM mols to graphs
-        omm_topology_G = nx.Graph()
-        for atom in openmm_topology.atoms():
-            omm_topology_G.add_node(
-                atom.index, atomic_number=atom.element.atomic_number
-            )
-        for bond in openmm_topology.bonds():
-            omm_topology_G.add_edge(
-                bond.atom1.index, bond.atom2.index, bond_order=bond.order
-            )
-
+        omm_topology_G = cls._openmm_topology_to_networkx(openmm_topology)
         # For each connected subgraph (molecule) in the topology, find its match in unique_molecules
         topology_molecules_to_add = list()
         for omm_mol_G in (
@@ -1326,7 +1338,12 @@ class Topology(Serializable):
                     # Take the first valid atom indexing map
                     first_topology_atom_index = min(mapping.keys())
                     topology_molecules_to_add.append(
-                        (first_topology_atom_index, unq_mol_G, mapping.items())
+                        (
+                            first_topology_atom_index,
+                            unq_mol_G,
+                            mapping.items(),
+                            omm_mol_G,
+                        )
                     )
                     match_found = True
                     break
@@ -1364,7 +1381,12 @@ class Topology(Serializable):
         # The connected_component_subgraph function above may have scrambled the molecule order, so sort molecules
         # by their first atom's topology index
         topology_molecules_to_add.sort(key=lambda x: x[0])
-        for first_index, unq_mol_G, top_to_ref_index in topology_molecules_to_add:
+        for (
+            first_index,
+            unq_mol_G,
+            top_to_ref_index,
+            omm_mol_G,
+        ) in topology_molecules_to_add:
             local_top_to_ref_index = dict(
                 [
                     (top_index - first_index, ref_index)
@@ -1373,6 +1395,16 @@ class Topology(Serializable):
             )
             unq_mol = graph_to_unq_mol[unq_mol_G]
             remapped_mol = unq_mol.remap(local_top_to_ref_index, current_to_new=False)
+            # Transfer hierarchy metadata from openmm mol graph to offmol metadata
+            for omm_atom, off_atom in zip(omm_mol_G.nodes, remapped_mol.atoms):
+                off_atom.name = omm_mol_G.nodes[omm_atom]["atom_name"]
+                off_atom.metadata["residue_name"] = omm_mol_G.nodes[omm_atom][
+                    "residue_name"
+                ]
+                off_atom.metadata["residue_number"] = int(
+                    omm_mol_G.nodes[omm_atom]["residue_id"]
+                )
+                off_atom.metadata["chain_id"] = omm_mol_G.nodes[omm_atom]["chain_id"]
             topology.add_molecule(remapped_mol)
 
         if openmm_topology.getPeriodicBoxVectors() is not None:
@@ -1414,93 +1446,94 @@ class Topology(Serializable):
                 if not ref_mol.has_unique_atom_names:
                     ref_mol.generate_unique_atom_names()
 
-        # Keep track of which chains and residues have been added.
-        mol_to_chains = {}
-        mol_to_residues = {}
-
         # Go through atoms in OpenFF to preserve the order.
         omm_atoms = []
-        # We need to iterate over the topology molecules if we want to
-        # keep track of chains/residues as Atom.topology_molecule is
-        # instantiated every time and can't be used as a key.
+
+        # For each atom in each molecule, determine which chain/residue it should be a part of
         for molecule in self.molecules:
-            molecule_id = self.molecule_index(molecule)
-            residue_id = molecule.name
+            # No chain or residue can span more than one OFF molecule, so reset these to None for the first
+            # atom in each molecule.
+            last_chain = None
+            last_residue = None
             for atom in molecule.atoms:
-                # reference_molecule = topology_molecule#.reference_molecule
-                # n_molecules = 1
-                # n_molecules = len(
-                #    self._reference_molecule_to_topology_molecules[reference_molecule]
-                # )
+                # If the residue name is undefined, assume a default of "UNK"
+                if "residue_name" in atom.metadata:
+                    atom_residue_name = atom.metadata["residue_name"]
+                else:
+                    atom_residue_name = "UNK"
 
-                # assert not (hasattr(molecule, "residues"))
-                # Get rid of this logic, replace chain with topology_molecule_index and residue with molecule.name
-                # Later override these using atom metadata/hierarchyiterators if possible
-                ## Add 1 chain per molecule unless there are more than 5 copies,
-                ## in which case we add a single chain for all of them.
-                # if n_molecules <= 5:
-                #    # We associate a chain to each molecule.
-                #    key_molecule = topology_molecule
-                # else:
-                #    # We associate a chain to all the topology molecule.
-                #    key_molecule = reference_molecule
+                # If the residue number is undefined, assume a default of "0"
+                if "residue_number" in atom.metadata:
+                    atom_residue_number = atom.metadata["residue_number"]
+                else:
+                    atom_residue_number = "0"
 
-                # Create a new chain if it doesn't exit.
-                # try:
-                #    chain = mol_to_chains[key_molecule]
-                # except KeyError:
-                #    chain = omm_topology.addChain()
-                #    mol_to_chains[key_molecule] = chain
-                try:
-                    chain = mol_to_chains[molecule_id]
-                except KeyError:
-                    chain = omm_topology.addChain()
-                    mol_to_chains[molecule_id] = chain
+                # If the chain ID is undefined, assume a default of "X"
+                if "chain_id" in atom.metadata:
+                    atom_chain_id = atom.metadata["chain_id"]
+                else:
+                    atom_chain_id = "X"
 
-                # Add one residue for each topology molecule.
-                try:
-                    residue = mol_to_residues[molecule_id]
-                except KeyError:
-                    residue = omm_topology.addResidue(residue_id, chain)
-                    mol_to_residues[molecule_id] = residue
+                # Determine whether this atom should be part of the last atom's chain, or if it
+                # should start a new chain
+                if last_chain is None:
+                    chain = omm_topology.addChain(atom_chain_id)
+                elif last_chain.id == atom_chain_id:
+                    chain = last_chain
+                else:
+                    chain = omm_topology.addChain(atom_chain_id)
+                # Determine whether this atom should be a part of the last atom's residue, or if it
+                # should start a new residue
+                if last_residue is None:
+                    residue = omm_topology.addResidue(atom_residue_name, chain)
+                    residue.id = atom_residue_number
+                elif (
+                    (last_residue.name == atom_residue_name)
+                    and (int(last_residue.id) == int(atom_residue_number))
+                    and (chain.id == last_chain.id)
+                ):
+                    residue = last_residue
+                else:
+                    residue = omm_topology.addResidue(atom_residue_name, chain)
+                    residue.id = atom_residue_number
 
                 # Add atom.
                 element = app.Element.getByAtomicNumber(atom.atomic_number)
-                # omm_atom = omm_topology.addAtom(atom.atom.name, element, residue)
                 omm_atom = omm_topology.addAtom(atom.name, element, residue)
 
                 # Make sure that OpenFF and OpenMM Topology atoms have the same indices.
-                # assert atom.topology_atom_index == int(omm_atom.id) - 1
-                # print(self.topology_atom_index(atom))
                 assert self.atom_index(atom) == int(omm_atom.id) - 1
                 omm_atoms.append(omm_atom)
 
-        # Add all bonds.
-        bond_types = {1: app.Single, 2: app.Double, 3: app.Triple}
-        for bond in self.bonds:
-            atom1, atom2 = bond.atoms
-            atom1_idx, atom2_idx = self.atom_index(atom1), self.atom_index(atom2)
-            if isinstance(bond, Bond):
-                if bond.is_aromatic:
-                    bond_type = app.Aromatic
-                else:
-                    bond_type = bond_types[bond.bond_order]
-                bond_order = bond.bond_order
-            elif isinstance(bond, _SimpleBond):
-                bond_type = None
-                bond_order = None
-            else:
-                raise RuntimeError(
-                    "Unexpected bond type found while iterating over Topology.bonds."
-                    f"Found {type(bond)}, allowed are Bond and _SimpleBond."
-                )
+                last_chain = chain
+                last_residue = residue
 
-            omm_topology.addBond(
-                omm_atoms[atom1_idx],
-                omm_atoms[atom2_idx],
-                type=bond_type,
-                order=bond_order,
-            )
+            # Add all bonds.
+            bond_types = {1: app.Single, 2: app.Double, 3: app.Triple}
+            for bond in molecule.bonds:
+                atom1, atom2 = bond.atoms
+                atom1_idx, atom2_idx = self.atom_index(atom1), self.atom_index(atom2)
+                if isinstance(bond, Bond):
+                    if bond.is_aromatic:
+                        bond_type = app.Aromatic
+                    else:
+                        bond_type = bond_types[bond.bond_order]
+                    bond_order = bond.bond_order
+                elif isinstance(bond, _SimpleBond):
+                    bond_type = None
+                    bond_order = None
+                else:
+                    raise RuntimeError(
+                        "Unexpected bond type found while iterating over Topology.bonds."
+                        f"Found {type(bond)}, allowed are Bond and _SimpleBond."
+                    )
+
+                omm_topology.addBond(
+                    omm_atoms[atom1_idx],
+                    omm_atoms[atom2_idx],
+                    type=bond_type,
+                    order=bond_order,
+                )
 
         if self.box_vectors is not None:
             from openff.units.openmm import to_openmm
