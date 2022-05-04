@@ -66,9 +66,9 @@ napoleon_custom_sections = [("attributes", "params_style")]
 napoleon_use_rtype = False
 napoleon_use_param = True
 
-_python_doc_base = "https://docs.python.org/3.6"
+_python_doc_base = "https://docs.python.org/3.7"
 intersphinx_mapping = {
-    "python": ("https://docs.python.org/3.6", None),
+    "python": ("https://docs.python.org/3.7", None),
     "numpy": ("https://numpy.org/doc/stable", None),
     "scipy": ("https://docs.scipy.org/doc/scipy/reference", None),
     "scikit.learn": ("https://scikit-learn.org/stable", None),
@@ -77,10 +77,13 @@ intersphinx_mapping = {
     "openeye": ("https://docs.eyesopen.com/toolkits/python/", None),
     "mdtraj": ("https://www.mdtraj.org/1.9.5/", None),
     "openff.interchange": (
-        "https://openff-interchange.readthedocs.io/en/stable/",
+        "https://docs.openforcefield.org/projects/interchange/en/stable/",
         None,
     ),
-    "openff.fragmenter": ("https://fragmenter.readthedocs.io/en/stable/", None),
+    "openff.fragmenter": (
+        "https://docs.openforcefield.org/projects/fragmenter/en/stable/",
+        None,
+    ),
 }
 myst_url_schemes = [
     "http",
@@ -109,12 +112,12 @@ execution_excludepatterns = []
 # sphinx-notfound-page
 # https://github.com/readthedocs/sphinx-notfound-page
 # Renders a 404 page with absolute links
-import importlib
+from importlib.util import find_spec as find_import_spec
 
-if importlib.util.find_spec("notfound"):
+if find_import_spec("notfound"):
     extensions.append("notfound.extension")
 
-    notfound_urls_prefix = "https://docs.openforcefield.org/projects/toolkit/en/stable/"
+    notfound_urls_prefix = "/projects/toolkit/en/stable/"
     notfound_context = {
         "title": "404: File Not Found",
         "body": f"""
