@@ -4635,14 +4635,18 @@ class FrozenMolecule(Serializable):
     def n_propers(self) -> int:
         """Number of proper torsions in the molecule."""
         self._construct_torsions()
-        assert self._propers is not None
+        assert (
+            self._propers is not None
+        ), "_construct_torsions always sets _propers to a set"
         return len(self._propers)
 
     @property
     def n_impropers(self) -> int:
         """Number of possible improper torsions in the molecule."""
         self._construct_torsions()
-        assert self._impropers is not None
+        assert (
+            self._impropers is not None
+        ), "_construct_torsions always sets _impropers to a set"
         return len(self._impropers)
 
     @property
@@ -4885,7 +4889,9 @@ class FrozenMolecule(Serializable):
         torsions : iterable of 4-Atom tuples
         """
         self._construct_torsions()
-        assert self._torsions is not None
+        assert (
+            self._torsions is not None
+        ), "_construct_torsions always sets _torsions to a set"
         return self._torsions
 
     @property
@@ -4898,7 +4904,9 @@ class FrozenMolecule(Serializable):
            * Do we need to return a ``Torsion`` object that collects information about fractional bond orders?
         """
         self._construct_torsions()
-        assert self._propers is not None
+        assert (
+            self._propers is not None
+        ), "_construct_torsions always sets _propers to a set"
         return self._propers
 
     @property
@@ -4920,7 +4928,9 @@ class FrozenMolecule(Serializable):
         smirnoff_impropers, amber_impropers
         """
         self._construct_torsions()
-        assert self._impropers is not None
+        assert (
+            self._impropers is not None
+        ), "_construct_torsions always sets _impropers to a set"
         return self._impropers
 
     @property
