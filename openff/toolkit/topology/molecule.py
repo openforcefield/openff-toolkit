@@ -2294,7 +2294,7 @@ class FrozenMolecule(Serializable):
         Parameters
         ----------
         other : optional, default=None
-            If specified, attempt to construct a copy of the Molecule from
+            If specified, attempt to construct a copy of the molecule from
             the specified object. This can be any one of the following:
 
             * a :class:`Molecule` object
@@ -2636,7 +2636,7 @@ class FrozenMolecule(Serializable):
 
     def _initialize_from_dict(self, molecule_dict):
         """
-        Initialize this Molecule from a dictionary representation
+        Initialize the molecule from a dictionary representation
 
         Parameters
         ----------
@@ -2857,7 +2857,7 @@ class FrozenMolecule(Serializable):
         Returns
         -------
         A dict of the form {str: HierarchyScheme}
-            The HierarchySchemes associated with this Molecule.
+            The HierarchySchemes associated with the molecule.
         """
         return self._hierarchy_schemes
 
@@ -3557,7 +3557,7 @@ class FrozenMolecule(Serializable):
                 \\
                   O
 
-        This method converts all conformers in the Molecule with the trans conformation
+        This method converts all conformers in the molecule with the trans conformation
         into the corresponding cis conformer by rotating the OH bond around the CO bond
         by 180 degrees. Carboxylic acids that are already cis are unchanged. Carboxylic
         acid groups are considered cis if their O-C-O-H dihedral angle is acute.
@@ -4024,7 +4024,7 @@ class FrozenMolecule(Serializable):
                 del atom.__dict__["molecule_atom_index"]
 
     def to_networkx(self):
-        """Generate a NetworkX undirected graph from the Molecule.
+        """Generate a NetworkX undirected graph from the molecule.
 
         Nodes are Atoms labeled with particle indices and atomic elements (via the ``element`` node atrribute).
         Edges denote chemical bonds between Atoms.
@@ -4484,7 +4484,7 @@ class FrozenMolecule(Serializable):
         ----------
         coordinates: openmm.unit.Quantity(np.array) with shape (n_atoms, 3) and dimension of distance
             Coordinates of the new conformer, with the first dimension of the array corresponding to the atom index in
-            the Molecule's indexing system.
+            the molecule's indexing system.
 
         Returns
         -------
@@ -4551,7 +4551,7 @@ class FrozenMolecule(Serializable):
         Returns
         -------
         partial_charges : a openmm.unit.Quantity - wrapped numpy array [1 x n_atoms] or None
-            The partial charges on this Molecule's atoms. Returns None if no charges have been specified.
+            The partial charges on the molecule's atoms. Returns None if no charges have been specified.
         """
         return self._partial_charges
 
@@ -4627,20 +4627,20 @@ class FrozenMolecule(Serializable):
 
     @property
     def n_angles(self) -> int:
-        """Number of angles in the Molecule."""
+        """Number of angles in the molecule."""
         self._construct_angles()
         return len(self._angles)
 
     @property
     def n_propers(self) -> int:
-        """Number of proper torsions in the Molecule."""
+        """Number of proper torsions in the molecule."""
         self._construct_torsions()
         assert self._propers is not None
         return len(self._propers)
 
     @property
     def n_impropers(self) -> int:
-        """Number of possible improper torsions in the Molecule."""
+        """Number of possible improper torsions in the molecule."""
         self._construct_torsions()
         assert self._impropers is not None
         return len(self._impropers)
@@ -4648,7 +4648,7 @@ class FrozenMolecule(Serializable):
     @property
     def particles(self) -> List[Particle]:
         """
-        Iterate over all Particle objects in the Molecule.
+        Iterate over all Particle objects in the molecule.
         """
 
         return self._atoms + [
@@ -6812,7 +6812,7 @@ class Molecule(FrozenMolecule):
         Parameters
         ----------
         other : optional, default=None
-            If specified, attempt to construct a copy of the Molecule from the
+            If specified, attempt to construct a copy of the molecule from the
             specified object. This can be any one of the following:
 
             * a :class:`Molecule` object
@@ -7180,7 +7180,7 @@ class Molecule(FrozenMolecule):
         ----------
         coordinates: unit-wrapped np.array with shape (n_atoms, 3) and dimension of distance
             Coordinates of the new conformer, with the first dimension of the array corresponding to the atom index in
-            the Molecule's indexing system.
+            the molecule's indexing system.
 
         Returns
         -------
