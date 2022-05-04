@@ -60,8 +60,11 @@ happen during conversion TO other packages
   
 
 :::{list-table}
-:header-rows: 1
-:name: label-to-reference
+---
+header-rows: 1
+class: expanded
+name: table-hierarchy-across-toolkits
+---
 
 * - Toolkit
   - residue_name
