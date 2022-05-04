@@ -2599,7 +2599,7 @@ class FrozenMolecule(Serializable):
         return hash(self.to_smiles())
 
     # @cached_property
-    def ordered_connection_table_hash(self) -> int:
+    def ordered_connection_table_hash(self):
         """Compute an ordered hash of the atoms and bonds in the molecule"""
         if self._ordered_connection_table_hash is not None:
             return self._ordered_connection_table_hash
@@ -4885,7 +4885,7 @@ class FrozenMolecule(Serializable):
         torsions : iterable of 4-Atom tuples
         """
         self._construct_torsions()
-        assert self._torsions is None
+        assert self._torsions is not None
         return self._torsions
 
     @property
@@ -4964,7 +4964,8 @@ class FrozenMolecule(Serializable):
         smirnoff_improper_smarts = "[*:1]~[X3:2](~[*:3])~[*:4]"
         improper_idxs = self.chemical_environment_matches(smirnoff_improper_smarts)
         smirnoff_impropers = {
-            tuple(self.atoms[idx] for idx in imp) for imp in improper_idxs
+            (self.atom(imp[0]), self.atom(imp[1]), self.atom(imp[2]), self.atom(imp[3]))
+            for imp in improper_idxs
         }
         return smirnoff_impropers
 
@@ -5000,7 +5001,8 @@ class FrozenMolecule(Serializable):
         amber_improper_smarts = "[X3:1](~[*:2])(~[*:3])~[*:4]"
         improper_idxs = self.chemical_environment_matches(amber_improper_smarts)
         amber_impropers = {
-            tuple(self.atoms[idx] for idx in imp) for imp in improper_idxs
+            (self.atom(imp[0]), self.atom(imp[1]), self.atom(imp[2]), self.atom(imp[3]))
+            for imp in improper_idxs
         }
         return amber_impropers
 
