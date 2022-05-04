@@ -4926,11 +4926,11 @@ class FrozenMolecule(Serializable):
     @property
     def smirnoff_impropers(self) -> Set[Tuple[Atom, Atom, Atom, Atom]]:
         """
-        Iterate over improper torsions in the molecule, but only those with
-        trivalent centers, reporting the central atom second in each improper.
+        Iterate over all impropers with trivalent centers, reporting the central atom second.
 
-        Note that it's possible that a trivalent center will not have an improper assigned.
-        This will depend on the force field that is used.
+        The central atom is reported second in each torsion. This method reports
+        an improper for each trivalent atom in the molecule, whether or not any
+        given force field would assign it improper torsion parameters.
 
         Also note that this will return 6 possible atom orderings around each improper
         center. In current SMIRNOFF parameterization, three of these six
@@ -4972,11 +4972,11 @@ class FrozenMolecule(Serializable):
     @property
     def amber_impropers(self) -> Set[Tuple[Atom, Atom, Atom, Atom]]:
         """
-        Iterate over improper torsions with trivalent centers.
+        Iterate over all impropers with trivalent centers, reporting the central atom first.
 
-        The central atom is reported first in each torsion. Note that it's
-        possible that a trivalent center will not have an improper assigned.
-        This will depend on the force field that is used.
+        The central atom is reported first in each torsion. This method reports
+        an improper for each trivalent atom in the molecule, whether or not any
+        given force field would assign it improper torsion parameters.
 
         Also note that this will return 6 possible atom orderings around each
         improper center. In current AMBER parameterization, one of these six
