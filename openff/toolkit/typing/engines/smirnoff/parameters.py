@@ -3871,12 +3871,9 @@ class ElectrostaticsHandler(_NonbondedHandler):
                     '`nonperiodic_potential="Coulomb"`, and `exception_potential="Coulomb"`.'
                 )
             else:
-                # This clause shouldn't be accessible; the only previously-allowed values
-                # (`converter=_allow_only(["Coulomb", "PME", "reaction-field"])`)
-                # should all be handled by the above up-conversion
-                logger.warning(
+                raise NotImplementedError(
                     "Failed to up-convert Electrostatics section from 0.3 to 0.4. Did not know "
-                    f"how to up-convert `method={kwargs['method']}`. Continuing to use version 0.3."
+                    f"how to up-convert `method={kwargs['method']}`."
                 )
         super().__init__(**kwargs)
 
