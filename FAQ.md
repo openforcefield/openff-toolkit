@@ -137,7 +137,7 @@ Hydrogen-involving bonds are constrained with a single constraint entry in a `.o
 </Constraints>
 ```
 
-Adding or removing the inner `<Constraint...` line will convert a force field between being constrained and unconstrained. A [`ForceField`](openff.toolkit.typing.engines.smirnoff.forcefield) object can constrain its bonds involving hydrogen by adding the relevant parameter to its `'Constraints'` parameter handler:
+Adding or removing the inner `<Constraint...` line will convert a force field between being constrained and unconstrained. A [`ForceField`](openff.toolkit.typing.engines.smirnoff.forcefield.ForceField) object can constrain its bonds involving hydrogen by adding the relevant parameter to its `'Constraints'` parameter handler:
 
 ```python
 ch = force_field.get_parameter_handler('Constraints')
