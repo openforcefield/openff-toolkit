@@ -1853,7 +1853,13 @@ class TestvdWType:
 
 
 class TestElectrostaticsHandler:
-    def test_solvent_dielectric_setter(self):
+    def test_solvent_dielectric(self):
+        with pytest.raises(
+            SMIRNOFFSpecUnimplementedError,
+            match="make use of `solvent_d",
+        ):
+            ElectrostaticsHandler(version=0.3, method="PME", solvent_dielectric=4)
+
         handler = ElectrostaticsHandler(version=0.4)
         assert handler.solvent_dielectric is None
 
@@ -1864,6 +1870,15 @@ class TestElectrostaticsHandler:
             match="make use of `solvent_d",
         ):
             handler.solvent_dielectric = 78.3
+
+    def test_unknown_periodic_potential(self):
+        handler = ElectrostaticsHandler(version=0.4)
+
+        with pytest.raises(
+            NotImplementedError,
+            match="unexpected periodic potential",
+        ):
+            handler.periodic_potential = "PPPM"
 
 
 class TestElectrostaticsHandlerUpconversion:

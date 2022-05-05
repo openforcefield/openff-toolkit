@@ -3823,13 +3823,13 @@ class ElectrostaticsHandler(_NonbondedHandler):
         elif new_value.lower() == "coulomb":
             return "Coulomb"
         else:
-            raise Exception(f"Did not know how to convert {new_value}")
+            raise NotImplementedError(
+                "Failed to process unexpected periodic potential value: {new_value}"
+            )
 
     @solvent_dielectric.converter
     def solvent_dielectric(self, attr, new_value):
-        if new_value is None:
-            return new_value
-        else:
+        if new_value is not None:
             raise SMIRNOFFSpecUnimplementedError(
                 "The current implementation of the OpenFF Toolkit does not support any electrostatic "
                 "functions that make use of `solvent_dielectric`. If this behavior is important to you, please raise"
