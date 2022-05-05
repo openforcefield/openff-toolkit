@@ -46,6 +46,7 @@ from openff.toolkit.utils.exceptions import (
     NotEnoughPointsForInterpolationError,
     ParameterLookupError,
     SMIRNOFFSpecError,
+    SMIRNOFFSpecUnimplementedError,
     SMIRNOFFVersionError,
 )
 
@@ -1849,6 +1850,20 @@ class TestvdWType:
         )
         assert "sigma" not in param.to_dict()
         assert "rmin_half" in param.to_dict()
+
+
+class TestElectrostaticsHandler:
+    def test_solvent_dielectric_setter(self):
+        handler = ElectrostaticsHandler(version=0.4)
+        assert handler.solvent_dielectric is None
+
+        handler.solvent_dielectric = None
+
+        with pytest.raises(
+            SMIRNOFFSpecUnimplementedError,
+            match="make use of `solvent_d",
+        ):
+            handler.solvent_dielectric = 78.3
 
 
 class TestElectrostaticsHandlerUpconversion:

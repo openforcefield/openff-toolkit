@@ -3756,6 +3756,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
     scale15 = ParameterAttribute(default=1.0, converter=float)
     cutoff = ParameterAttribute(default=9.0 * unit.angstrom, unit=unit.angstrom)
     switch_width = ParameterAttribute(default=0.0 * unit.angstrom, unit=unit.angstrom)
+    solvent_dielectric = ParameterAttribute(default=None)
 
     # TODO: How to validate arbitrary algebra in a converter?
     periodic_potential = ParameterAttribute(
@@ -3823,6 +3824,17 @@ class ElectrostaticsHandler(_NonbondedHandler):
             return "Coulomb"
         else:
             raise Exception(f"Did not know how to convert {new_value}")
+
+    @solvent_dielectric.converter
+    def solvent_dielectric(self, attr, new_value):
+        if new_value is None:
+            return new_value
+        else:
+            raise SMIRNOFFSpecUnimplementedError(
+                "The current implementation of the OpenFF Toolkit does not support any electrostatic "
+                "functions that make use of `solvent_dielectric`. If this behavior is important to you, please raise"
+                "raise an issue at https://github.com/openforcefield/openff-toolkit/issues."
+            )
 
     def __init__(self, **kwargs):
         if kwargs.get("version") == 0.4:
