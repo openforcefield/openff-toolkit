@@ -219,7 +219,7 @@ print(value_roundtrip)
   [`Bond.is_in_ring`](openff.toolkit.topology.Bond.is_in_ring) to use corresponding
   functionality in OpenEye and RDKit wrappers.
 
-## API breaking changes
+### API breaking changes
 - [PR #855](https://github.com/openforcefield/openff-toolkit/pull/855): Removes
   [`Molecule.rings`](openff.toolkit.topology.Molecule.rings) and
   [`Molecule.n_rings`](openff.toolkit.topology.Molecule.n_rings). To find rings in
@@ -273,13 +273,6 @@ print(value_roundtrip)
   [Issue #1161](https://github.com/openforcefield/openff-toolkit/issues/1161), which was caused by the use
   of the deprecated `pkg_resources` package. Now the recommended `importlib_metadata` package is used instead.
 
-
-### Breaking changes
-- [PR #1118](https://github.com/openforcefield/openforcefield/pull/1118):
-  [`Molecule.to_hill_formula`](openff.toolkit.topology.Molecule.to_hill_formula) is now a class method
-  and no longer accepts input of NetworkX graphs.
-- [PR #1156](https://github.com/openforcefield/openforcefield/pull/1156): Removes `ParseError` and
-  `MessageException`, which has been deprecated since version 0.10.0.
 
 ### Breaking changes
 - [PR #1118](https://github.com/openforcefield/openforcefield/pull/1118):
@@ -557,6 +550,8 @@ print(value_roundtrip)
 :::{TODO}
 - Translate previous release history to MyST markdown
 :::
+
+## Earlier releases
 
 :::{eval-rst}
 
