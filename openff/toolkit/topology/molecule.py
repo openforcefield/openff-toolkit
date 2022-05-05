@@ -2206,7 +2206,6 @@ class FrozenMolecule(Serializable):
         # Return conformers to original type
         self._conformers = [unit.Quantity(conf, unit.angstrom) for conf in conformers]
 
-
     def apply_elf_conformer_selection(
         self,
         percentage: float = 2.0,
