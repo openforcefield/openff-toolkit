@@ -59,25 +59,202 @@ happen during conversion TO other packages
   and `chain_id` will be assigned to the same OpenMM residue.
   
 
-| Toolkit                                                           | residue_name                                                                               | residue_number                                                                                  | chain_id                                                                                    |
-|-------------------------------------------------------------------|--------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------|
-| PDB file ATOM/HETATM columns                                      | Columns 18-20 (resName)                                                                    | Columns 23-26 (resSeq)                                                                          | Columns 22 (chainID)                                                                        |
-| PDBx/MMCIF fields                                                 | label_comp_id                                                                              | label_seq_id                                                                                    | label_asym_id                                                                               |
-| OpenFF getter (defined)                                           | atom.metadata[‘residue_name’]                                                              | atom.metadata[‘residue_number’]                                                                 | atom.metadata[‘chain_id’]                                                                   |
-| OpenFF getter (undefined)                                         | ‘residue_name’ not in atom.metadata                                                        | ‘residue_number’ not in atom.metadata                                                           | ‘chain_id’ not in atom.metadata                                                             |
-| OpenFF setter (defined)                                           | Defined: atom.metadata[‘residue_name’] = X                                                 | atom.metadata[‘residue_number’] = X                                                             | atom.metadata[‘chain_id’] = X                                                               |
-| OpenFF setter (undefined)                                         | del atom.metadata[‘residue_name’]                                                          | del atom.metadata[‘residue_number’]                                                             |  del atom.metadata[‘chain_id’]                                                              |
-| OpenMM getter (defined)                                           | omm_atom.residue.name                                                                      | omm_atom.residue.id                                                                             | omm_atom.residue.chain.id                                                                   |
-| OpenMM getter (undefined)                                         | Not possible                                                                               | Not possible                                                                                    | Not possible                                                                                |
-| OpenMM setter (defined)                                           | omm_atom.residue.name = X                                                                  | omm_atom.residue.id = X                                                                         | omm_atom.residue.chain.id = X                                                               |
-| OpenMM setter (undefined)                                         | omm_atom.residue.name = “UNL”                                                              | omm_atom.residue.id = 0                                                                         | omm_atom.residue.chain.id = “X”                                                             |
-| RDKit getter (defined)                                            | rda.GetPDBResidueInfo().GetResidueName()                                                   | rda.GetPDBResidueInfo().GetResidueNumber()                                                      | rda.GetPDBResidueInfo().GetChainId()                                                        |
-| RDKit getter (undefined)                                          | rda.GetPDBResidueInfo() is None                                                            | rda.GetPDBResidueInfo() is None                                                                 | rda.GetPDBResidueInfo() is None                                                             |
-| RDKit setter (defined)                                            | res = rda.GetPDBResidueInfo() res..SetResidueName(X) rdatom.SetPDBResidueInfo(res)         | res = rda.GetPDBResidueInfo() res..SetResidueNumber(X) rdatom.SetPDBResidueInfo(res)            | .res = rda.GetPDBResidueInfo() res..SetSetChainId(X) rdatom.SetPDBResidueInfo(res)          |
-| RDKit setter (if at least one field is defined, but not this one) | res = rda.GetPDBResidueInfo() rdatom.SetPDBResidueInfo(res)                                | res = rda.GetPDBResidueInfo() rdatom.SetPDBResidueInfo(res)                                     | res = rda.GetPDBResidueInfo() rdatom.SetPDBResidueInfo(res)                                 |
-| RDKit setter (if ALL fields are undefined)                        | No action                                                                                  | No action                                                                                       | No action                                                                                   |
-| OpenEye getter (defined)                                          | oechem.OEAtomGetResidue(atom).GetName()                                                    | oechem.OEAtomGetResidue(atom).GetResidueNumber()                                                | oechem.OEAtomGetResidue(atom).GetChainID()                                                  |
-| OpenEye getter (undefined)                                        | oechem.OEHasResidues(oemol) == False                                                       | oechem.OEHasResidues(oemol) == False:                                                           | oechem.OEHasResidues(oemol) == False                                                        |
-| OpenEye setter (defined)                                          | res = oechem.OEAtomGetResidue(atom) res.SetName(X) oechem.OEAtomSetResidue(atom, res)      | res = oechem.OEAtomGetResidue(atom) res.SetResidueNumber(X) oechem.OEAtomSetResidue(atom, res)  | res = oechem.OEAtomGetResidue(atom) res.SetChainID(X) oechem.OEAtomSetResidue(atom, res)    |
-| OpenEye setter (undefined)                                        | res = oechem.OEAtomGetResidue(atom) res.SetName(“UNL”) oechem.OEAtomSetResidue(atom, res)  | res = oechem.OEAtomGetResidue(atom) res.SetResidueNumber(1) oechem.OEAtomSetResidue(atom, res)  | res = oechem.OEAtomGetResidue(atom) res.SetChainID(“ “) oechem.OEAtomSetResidue(atom, res)  |
+:::{list-table}
+---
+header-rows: 1
+class: expanded
+name: table-hierarchy-across-toolkits
+---
 
+* - Toolkit
+  - residue_name
+  - residue_number
+  - chain_id
+* - PDB file ATOM/HETATM columns
+  - Columns 18-20 (`resName`)
+  - Columns 23-26 (`resSeq`)
+  - Columns 22 (`chainID`)
+* - PDBx/MMCIF fields
+  - `label_comp_id`
+  - `label_seq_id`
+  - `label_asym_id`
+* - OpenFF getter (defined)
+  - ```
+    atom.metadata["residue_name"]
+    ```
+  - ```
+    atom.metadata["residue_number"]
+    ```
+  - ```
+    atom.metadata["chain_id"]
+    ```
+* - OpenFF getter (undefined)
+  - ```
+    "residue_name" not in atom.metadata
+    ```
+  - ```
+    "residue_number" not in atom.metadata
+    ```
+  - ```
+    "chain_id" not in atom.metadata
+    ```
+* - OpenFF setter (defined)
+  - ```
+    atom.metadata["residue_name"] = X
+    ```
+  - ```
+    atom.metadata["residue_number"] = X
+    ```
+  - ```
+    atom.metadata["chain_id"] = X
+    ```
+* - OpenFF setter (undefined)
+  - ```
+    del atom.metadata['residue_name']
+    ```
+  - ```
+    del atom.metadata['residue_number']
+    ```
+  - ```
+    del atom.metadata['chain_id']
+    ```
+* - OpenMM getter (defined)
+  - ```
+    omm_atom.residue.name
+    ```
+  - ```
+    omm_atom.residue.id
+    ```
+  - ```
+    omm_atom.residue.chain.id
+    ```
+* - OpenMM getter (undefined)
+  - All particles in an OpenMM Topology belong to a chain and residue
+  - All particles in an OpenMM Topology belong to a chain and residue
+  - All particles in an OpenMM Topology belong to a chain and residue
+* - OpenMM setter (defined)
+  - ```
+    omm_atom.residue.name = X
+    ```
+  - ```
+    omm_atom.residue.id = X
+    ```
+  - ```
+    omm_atom.residue.chain.id = X
+    ```
+* - OpenMM setter (undefined)
+  - ```
+    omm_atom.residue.name = "UNL"
+    ```
+  - ```
+    omm_atom.residue.id = 0
+    ```
+  - ```
+    omm_atom.residue.chain.id = "X"
+    ```
+* - RDKit getter (defined)
+  - ```
+    rda.GetPDBResidueInfo().GetResidueName()
+    ```
+  - ```
+    rda.GetPDBResidueInfo().GetResidueNumber()
+    ```
+  - ```
+    rda.GetPDBResidueInfo().GetChainId()
+    ```
+* - RDKit getter (undefined)
+  - ```
+    rda.GetPDBResidueInfo() is None
+    ```
+  - ```
+    rda.GetPDBResidueInfo() is None
+    ```
+  - ```
+    rda.GetPDBResidueInfo() is None
+    ```
+* - RDKit setter (defined)
+  - ```
+    res = rda.GetPDBResidueInfo() 
+    res.SetResidueName(X) 
+    rdatom.SetPDBResidueInfo(res)
+    ```
+  - ```
+    res = rda.GetPDBResidueInfo() 
+    res.SetResidueNumber(X) 
+    rdatom.SetPDBResidueInfo(res)
+    ```
+  - ```
+    .res = rda.GetPDBResidueInfo() 
+    res.SetSetChainId(X) 
+    rdatom.SetPDBResidueInfo(res)
+    ```
+* - RDKit setter (if at least one field is defined, but not this one) 
+  - ```
+    res = rda.GetPDBResidueInfo() 
+    rdatom.SetPDBResidueInfo(res)
+    ```
+  - ```
+    res = rda.GetPDBResidueInfo() 
+    rdatom.SetPDBResidueInfo(res)
+    ```
+  - ```
+    res = rda.GetPDBResidueInfo() 
+    rdatom.SetPDBResidueInfo(res)
+    ```
+* - RDKit setter (if ALL fields are undefined)
+  - No action
+  - No action
+  - No action
+* - OpenEye getter (defined)
+  - ```
+    oechem.OEAtomGetResidue(atom).GetName()
+    ```
+  - ```
+    oechem.OEAtomGetResidue(atom).GetResidueNumber()
+    ```
+  - ```
+    oechem.OEAtomGetResidue(atom).GetChainID()
+    ```
+* - OpenEye getter (undefined)
+  - ```
+    oechem.OEHasResidues(oemol) == False
+    ```
+  - ```
+    oechem.OEHasResidues(oemol) == False
+    ```
+  - ```
+    oechem.OEHasResidues(oemol) == False
+    ```
+* - OpenEye setter (defined)
+  - ```
+    res = oechem.OEAtomGetResidue(atom) 
+    res.SetName(X) 
+    oechem.OEAtomSetResidue(atom, res)
+    ```
+  - ```
+    res = oechem.OEAtomGetResidue(atom) 
+    res.SetResidueNumber(X) 
+    oechem.OEAtomSetResidue(atom, res)
+    ```
+  - ```
+    res = oechem.OEAtomGetResidue(atom) 
+    res.SetChainID(X) 
+    oechem.OEAtomSetResidue(atom, res)
+    ```
+* - OpenEye setter (undefined)
+  - ```
+    res = oechem.OEAtomGetResidue(atom) 
+    res.SetName("UNL") 
+    oechem.OEAtomSetResidue(atom, res)
+    ```
+  - ```
+    res = oechem.OEAtomGetResidue(atom) 
+    res.SetResidueNumber(1) 
+    oechem.OEAtomSetResidue(atom, res)
+    ```
+  - ```
+    res = oechem.OEAtomGetResidue(atom) 
+    res.SetChainID(" ") 
+    oechem.OEAtomSetResidue(atom, res)
+    ```
+:::

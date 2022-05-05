@@ -33,7 +33,18 @@ import operator
 import warnings
 from collections import OrderedDict, UserDict
 from copy import deepcopy
-from typing import TYPE_CHECKING, Generator, List, Optional, TextIO, Tuple, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    Generator,
+    List,
+    Optional,
+    Set,
+    TextIO,
+    Tuple,
+    Union,
+)
 
 import networkx as nx
 import numpy as np
@@ -871,7 +882,7 @@ class FrozenMolecule(Serializable):
         Parameters
         ----------
         other : optional, default=None
-            If specified, attempt to construct a copy of the Molecule from
+            If specified, attempt to construct a copy of the molecule from
             the specified object. This can be any one of the following:
 
             * a :class:`Molecule` object
@@ -1032,7 +1043,7 @@ class FrozenMolecule(Serializable):
                 raise ValueError(msg)
 
     @property
-    def has_unique_atom_names(self):
+    def has_unique_atom_names(self) -> bool:
         """True if the molecule has unique atom names, False otherwise."""
         unique_atom_names = set([atom.name for atom in self.atoms])
         if len(unique_atom_names) < self.n_atoms:
@@ -1174,6 +1185,7 @@ class FrozenMolecule(Serializable):
 
     # @cached_property
     def ordered_connection_table_hash(self):
+        """Compute an ordered hash of the atoms and bonds in the molecule"""
         if self._ordered_connection_table_hash is not None:
             return self._ordered_connection_table_hash
 
@@ -1209,7 +1221,7 @@ class FrozenMolecule(Serializable):
 
     def _initialize_from_dict(self, molecule_dict):
         """
-        Initialize this Molecule from a dictionary representation
+        Initialize the molecule from a dictionary representation
 
         Parameters
         ----------
@@ -1343,6 +1355,8 @@ class FrozenMolecule(Serializable):
         iterator_name,
     ):
         """
+        Use the molecule's metadata to facilitate iteration over its atoms.
+
         Parameters
         ----------
         uniqueness_criteria : tuple of str
@@ -1370,17 +1384,21 @@ class FrozenMolecule(Serializable):
         return new_hier_scheme
 
     @property
-    def hierarchy_schemes(self):
+    def hierarchy_schemes(self) -> Dict[str, "HierarchyScheme"]:
         """
+        The hierarchy schemes available on the molecule.
+
         Returns
         -------
         A dict of the form {str: HierarchyScheme}
-            The HierarchySchemes associated with this Molecule.
+            The HierarchySchemes associated with the molecule.
         """
         return self._hierarchy_schemes
 
     def delete_hierarchy_scheme(self, iter_name):
         """
+        Remove an existing ``HierarchyScheme`` specified by its iterator name.
+
         Parameters
         ----------
         iter_name : str
@@ -1396,6 +1414,8 @@ class FrozenMolecule(Serializable):
 
     def perceive_hierarchy(self, iter_names=None):
         """
+        Infer a hierarchy from atom metadata according to the existing hierarchy schemes.
+
         Parameters
         ----------
         iter_names : Iterable of str, Optional
@@ -1729,40 +1749,64 @@ class FrozenMolecule(Serializable):
         toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
     ):
         """
-        Determines whether the two molecules are isomorphic by comparing their graph representations and the chosen
-        node/edge attributes. Minimally connections and atomic_number are checked.
+        Determine if ``mol1`` is isomorphic to ``mol2``.
 
-        If nx.Graphs() are given they must at least have atomic_number attributes on nodes.
-        other optional attributes for nodes are: is_aromatic, formal_charge and stereochemistry.
-        optional attributes for edges are: is_aromatic, bond_order and stereochemistry.
+        ``are_isomorphic()`` compares two molecule's graph representations and
+        the chosen node/edge attributes. Connections and atomic numbers are
+        always checked.
+
+        If nx.Graphs() are given they must at least have ``atomic_number``
+        attributes on nodes. Other attributes that ``are_isomorphic()`` can
+        optionally check...
+
+        -  ... in nodes are:
+
+           -  ``is_aromatic``
+           -  ``formal_charge``
+           -  ``stereochemistry``
+
+        -  ... in edges are:
+
+           -  ``is_aromatic``
+           -  ``bond_order``
+           -  ``stereochemistry``
+
+        By default, all attributes are checked, but stereochemistry around
+        pyrimidal nitrogen is ignored.
 
         .. warning :: This API is experimental and subject to change.
 
         Parameters
         ----------
         mol1 : an openff.toolkit.topology.molecule.FrozenMolecule or nx.Graph()
+            The first molecule to test for isomorphism.
+
         mol2 : an openff.toolkit.topology.molecule.FrozenMolecule or nx.Graph()
-            The molecule to test for isomorphism.
+            The second molecule to test for isomorphism.
 
         return_atom_map: bool, default=False, optional
-            will return an optional dict containing the atomic mapping.
+            Return a ``dict`` containing the atomic mapping instead of a
+            ``bool``.
 
         aromatic_matching: bool, default=True, optional
-            compare the aromatic attributes of bonds and atoms.
+            If ``False``, aromaticity of graph nodes and edges are ignored for
+            the purpose of determining isomorphism.
 
         formal_charge_matching: bool, default=True, optional
-            compare the formal charges attributes of the atoms.
+            If ``False``, formal charges of graph nodes are ignored for
+            the purpose of determining isomorphism.
 
-        bond_order_matching: bool, deafult=True, optional
-            compare the bond order on attributes of the bonds.
+        bond_order_matching: bool, default=True, optional
+            If ``False``, bond orders of graph edges are ignored for
+            the purpose of determining isomorphism.
 
         atom_stereochemistry_matching : bool, default=True, optional
             If ``False``, atoms' stereochemistry is ignored for the
-            purpose of determining equality.
+            purpose of determining isomorphism.
 
         bond_stereochemistry_matching : bool, default=True, optional
             If ``False``, bonds' stereochemistry is ignored for the
-            purpose of determining equality.
+            purpose of determining isomorphism.
 
         strip_pyrimidal_n_atom_stereo: bool, default=True, optional
             If ``True``, any stereochemistry defined around pyrimidal
@@ -2047,7 +2091,7 @@ class FrozenMolecule(Serializable):
                 \\
                   O
 
-        This method converts all conformers in the Molecule with the trans conformation
+        This method converts all conformers in the molecule with the trans conformation
         into the corresponding cis conformer by rotating the OH bond around the CO bond
         by 180 degrees. Carboxylic acids that are already cis are unchanged. Carboxylic
         acid groups are considered cis if their O-C-O-H dihedral angle is acute.
@@ -2162,6 +2206,7 @@ class FrozenMolecule(Serializable):
         # Return conformers to original type
         self._conformers = [unit.Quantity(conf, unit.angstrom) for conf in conformers]
 
+
     def apply_elf_conformer_selection(
         self,
         percentage: float = 2.0,
@@ -2171,23 +2216,13 @@ class FrozenMolecule(Serializable):
         ] = GLOBAL_TOOLKIT_REGISTRY,
         **kwargs,
     ):
-        """Applies the `ELF method
+        """Select a set of diverse conformers from the molecule's conformers with ELF.
+
+        Applies the `Electrostatically Least-interacting Functional groups method
         <https://docs.eyesopen.com/toolkits/python/quacpactk/molchargetheory.html#elf-conformer-selection>`_
         to select a set of diverse conformers which have minimal
-        electrostatically strongly interacting functional groups from a
-        molecules conformers.
-
-        Notes
-        -----
-        * The input molecule should have a large set of conformers already
-          generated to select the ELF conformers from.
-        * The selected conformers will be retained in the `conformers` list
-          while unselected conformers will be discarded.
-
-        See Also
-        --------
-        OpenEyeToolkitWrapper.apply_elf_conformer_selection
-        RDKitToolkitWrapper.apply_elf_conformer_selection
+        electrostatically strongly interacting functional groups from the
+        molecule's conformers.
 
         Parameters
         ----------
@@ -2198,6 +2233,18 @@ class FrozenMolecule(Serializable):
             interaction energies to greedily select from.
         limit
             The maximum number of conformers to select.
+
+        Notes
+        -----
+        * The input molecule should have a large set of conformers already
+          generated to select the ELF conformers from.
+        * The selected conformers will be retained in the `conformers` list
+          while unselected conformers will be discarded.
+
+        See Also
+        --------
+        openff.toolkit.utils.toolkits.OpenEyeToolkitWrapper.apply_elf_conformer_selection
+        openff.toolkit.utils.toolkits.RDKitToolkitWrapper.apply_elf_conformer_selection
         """
         if isinstance(toolkit_registry, ToolkitRegistry):
             toolkit_registry.call(
@@ -2226,7 +2273,11 @@ class FrozenMolecule(Serializable):
         toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
     ):
         """
-        DEPRECATED: Use ``assign_partial_charges(partial_charge_method='am1bcc')`` insetad.
+        .. deprecated:: 0.11.0
+
+            This method was deprecated in v0.11.0 and will soon be removed.
+            Use :py:meth:`assign_partial_charges(partial_charge_method='am1bcc')
+            <Molecule.assign_partial_charges>` instead.
 
         Calculate partial atomic charges for this molecule using AM1-BCC run by an underlying toolkit
         and assign them to this molecule's ``partial_charges`` attribute.
@@ -2277,37 +2328,47 @@ class FrozenMolecule(Serializable):
         normalize_partial_charges=True,
     ):
         """
-        Calculate partial atomic charges for this molecule using an underlying toolkit, and assign
-        the new values to the partial_charges attribute.
+        Calculate partial atomic charges and store them in the molecule.
 
-        Some supported charge methods are:
-            - ``"am1bcc"``
-            - ``"am1bccelf10"`` (requires OpenEye Toolkits)
-            - ``"am1-mulliken"``
-            - ``"mmff94"``
-            - ``"gasteiger"``
+        ``assign_partial_charges`` computes charges using the specified toolkit
+        and assigns the new values to the ``partial_charges`` attribute.
+        Supported charge methods vary from toolkit to toolkit, but some
+        supported methods are:
 
-        For more supported charge methods and details, see the corresponding methods in each toolkit wrapper:
-            - OpenEyeToolkitWrapper.assign_partial_charges
-            - RDKitToolkitWrapper.assign_partial_charges
-            - AmberToolsToolkitWrapper.assign_partial_charges
-            - BuiltInToolkitWrapper.assign_partial_charges
+        - ``"am1bcc"``
+        - ``"am1bccelf10"`` (requires OpenEye Toolkits)
+        - ``"am1-mulliken"``
+        - ``"mmff94"``
+        - ``"gasteiger"``
+
+        For more supported charge methods and details, see the corresponding
+        methods in each toolkit wrapper:
+
+        - :meth:`OpenEyeToolkitWrapper.assign_partial_charges <openff.toolkit.utils.toolkits.OpenEyeToolkitWrapper.assign_partial_charges>`
+        - :meth:`RDKitToolkitWrapper.assign_partial_charges <openff.toolkit.utils.toolkits.RDKitToolkitWrapper.assign_partial_charges>`
+        - :meth:`AmberToolsToolkitWrapper.assign_partial_charges <openff.toolkit.utils.toolkits.AmberToolsToolkitWrapper.assign_partial_charges>`
+        - :meth:`BuiltInToolkitWrapper.assign_partial_charges <openff.toolkit.utils.toolkits.BuiltInToolkitWrapper.assign_partial_charges>`
 
         Parameters
         ----------
         partial_charge_method : string
-            The partial charge calculation method to use for partial charge calculation.
+            The partial charge calculation method to use for partial charge
+            calculation.
         strict_n_conformers : bool, default=False
-            Whether to raise an exception if an invalid number of conformers is provided for the given charge method.
-            If this is False and an invalid number of conformers is found, a warning will be raised.
+            Whether to raise an exception if an invalid number of conformers is
+            provided for the given charge method. If this is False and an
+            invalid number of conformers is found, a warning will be raised.
         use_conformers : iterable of openmm.unit.Quantity-wrapped numpy arrays, each with shape (n_atoms, 3) and dimension of distance. Optional, default=None
-            Coordinates to use for partial charge calculation. If None, an appropriate number of conformers will be generated.
+            Coordinates to use for partial charge calculation. If None, an
+            appropriate number of conformers will be generated.
         toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
-            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for the calculation.
+            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for the
+            calculation.
         normalize_partial_charges : bool, default=True
-            Whether to offset partial charges so that they sum to the total formal charge of the molecule.
-            This is used to prevent accumulation of rounding errors when the partial charge assignment method
-            returns values at limited precision.
+            Whether to offset partial charges so that they sum to the total
+            formal charge of the molecule. This is used to prevent accumulation
+            of rounding errors when the partial charge assignment method returns
+            values at limited precision.
 
         Examples
         --------
@@ -2322,10 +2383,10 @@ class FrozenMolecule(Serializable):
 
         See Also
         --------
-        OpenEyeToolkitWrapper.assign_partial_charges
-        RDKitToolkitWrapper.assign_partial_charges
-        AmberToolsToolkitWrapper.assign_partial_charges
-        BuiltInToolkitWrapper.assign_partial_charges
+        openff.toolkit.utils.toolkits.OpenEyeToolkitWrapper.assign_partial_charges
+        openff.toolkit.utils.toolkits.RDKitToolkitWrapper.assign_partial_charges
+        openff.toolkit.utils.toolkits.AmberToolsToolkitWrapper.assign_partial_charges
+        openff.toolkit.utils.toolkits.BuiltInToolkitWrapper.assign_partial_charges
         """
         if isinstance(toolkit_registry, ToolkitRegistry):
             # We may need to try several toolkitwrappers to find one
@@ -2380,8 +2441,10 @@ class FrozenMolecule(Serializable):
         use_conformers=None,
     ):
         """
-        Update and store list of bond orders this molecule. Bond orders are stored on each
-        bond, in the ``bond.fractional_bond_order`` attribute.
+        Update and store list of bond orders this molecule.
+
+        Bond orders are stored on each bond, in the
+        ``bond.fractional_bond_order`` attribute.
 
         .. warning :: This API is experimental and subject to change.
 
@@ -2390,10 +2453,10 @@ class FrozenMolecule(Serializable):
         toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
         bond_order_model : string, optional. Default=None
-            The bond order model to use for fractional bond order calculation. If ``None``, "am1-wiberg" will be used.
+            The bond order model to use for fractional bond order calculation. If ``None``, ``"am1-wiberg"`` is used.
         use_conformers : iterable of openmm.unit.Quantity(np.array) with shape (n_atoms, 3) and dimension of distance, optional, default=None
             The conformers to use for fractional bond order calculation. If ``None``, an appropriate number
-            of conformers will be generated by an available ToolkitWrapper.
+            of conformers will be generated by an available ``ToolkitWrapper``.
 
         Examples
         --------
@@ -2445,7 +2508,7 @@ class FrozenMolecule(Serializable):
                 del atom.__dict__["molecule_atom_index"]
 
     def to_networkx(self):
-        """Generate a NetworkX undirected graph from the Molecule.
+        """Generate a NetworkX undirected graph from the molecule.
 
         Nodes are Atoms labeled with particle indices and atomic elements (via the ``element`` node atrribute).
         Edges denote chemical bonds between Atoms.
@@ -2721,7 +2784,7 @@ class FrozenMolecule(Serializable):
         ----------
         coordinates: openmm.unit.Quantity(np.array) with shape (n_atoms, 3) and dimension of distance
             Coordinates of the new conformer, with the first dimension of the array corresponding to the atom index in
-            the Molecule's indexing system.
+            the molecule's indexing system.
 
         Returns
         -------
@@ -2788,7 +2851,7 @@ class FrozenMolecule(Serializable):
         Returns
         -------
         partial_charges : a openmm.unit.Quantity - wrapped numpy array [1 x n_atoms] or None
-            The partial charges on this Molecule's atoms. Returns None if no charges have been specified.
+            The partial charges on the molecule's atoms. Returns None if no charges have been specified.
         """
         return self._partial_charges
 
@@ -2826,14 +2889,14 @@ class FrozenMolecule(Serializable):
                         self._partial_charges = converted
 
     @property
-    def n_particles(self):
+    def n_particles(self) -> int:
         """
         The number of Particle objects, which corresponds to how many positions must be used.
         """
         return len(self._atoms)
 
     @property
-    def n_atoms(self):
+    def n_atoms(self) -> int:
         """
         The number of Atom objects.
         """
@@ -2842,32 +2905,38 @@ class FrozenMolecule(Serializable):
     @property
     def n_bonds(self):
         """
-        The number of Bond objects.
+        The number of Bond objects in the molecule.
         """
         return sum([1 for bond in self.bonds])
 
     @property
-    def n_angles(self):
-        """int: number of angles in the Molecule."""
+    def n_angles(self) -> int:
+        """Number of angles in the molecule."""
         self._construct_angles()
         return len(self._angles)
 
     @property
-    def n_propers(self):
-        """int: number of proper torsions in the Molecule."""
+    def n_propers(self) -> int:
+        """Number of proper torsions in the molecule."""
         self._construct_torsions()
+        assert (
+            self._propers is not None
+        ), "_construct_torsions always sets _propers to a set"
         return len(self._propers)
 
     @property
-    def n_impropers(self):
-        """int: number of possible improper torsions in the Molecule."""
+    def n_impropers(self) -> int:
+        """Number of possible improper torsions in the molecule."""
         self._construct_torsions()
+        assert (
+            self._impropers is not None
+        ), "_construct_torsions always sets _impropers to a set"
         return len(self._impropers)
 
     @property
-    def particles(self):
+    def particles(self) -> List[Particle]:
         """
-        Iterate over all Particle objects.
+        Iterate over all Particle objects in the molecule.
         """
 
         return self._atoms
@@ -2905,14 +2974,15 @@ class FrozenMolecule(Serializable):
 
     @property
     def atoms(self):
+
         """
-        Iterate over all Atom objects.
+        Iterate over all Atom objects in the molecule.
         """
         return self._atoms
 
-    def atom(self, index: int):
+    def atom(self, index: int) -> Atom:
         """
-        Get atom with a specified index.
+        Get the atom with the specified index.
 
         Parameters
         ----------
@@ -2924,9 +2994,11 @@ class FrozenMolecule(Serializable):
         """
         return self._atoms[index]
 
-    def atom_index(self, atom):
+    def atom_index(self, atom: Atom) -> int:
         """
-        Returns the index of a given atom in this molecule
+        Returns the index of the given atom in this molecule
+
+        .. TODO: document behaviour when atom is not present in self
 
         Parameters
         ----------
@@ -2942,32 +3014,34 @@ class FrozenMolecule(Serializable):
     @property
     def conformers(self):
         """
-        Returns the list of conformers for this molecule. This returns a list of openmm.unit.Quantity-wrapped numpy
-        arrays, of shape (3 x n_atoms) and with dimensions of distance. The return value is the actual list of
-        conformers, and changes to the contents affect the original FrozenMolecule.
+        Returns the list of conformers for this molecule.
 
+        Conformers are presented as a list of ``Quantity``-wrapped NumPy
+        arrays, of shape (3 x n_atoms) and with dimensions of [Distance]. The
+        return value is the actual list of conformers, and changes to the
+        contents affect the original ``FrozenMolecule``.
         """
         return self._conformers
 
     @property
-    def n_conformers(self):
+    def n_conformers(self) -> int:
         """
-        Returns the number of conformers for this molecule.
+        The number of conformers for this molecule.
         """
         if self._conformers is None:
             return 0
         return len(self._conformers)
 
     @property
-    def bonds(self):
+    def bonds(self) -> List[Bond]:
         """
-        Iterate over all Bond objects.
+        Iterate over all Bond objects in the molecule.
         """
         return self._bonds
 
-    def bond(self, index: int):
+    def bond(self, index: int) -> Bond:
         """
-        Get bond with the specified index.
+        Get the bond with the specified index.
 
         Parameters
         ----------
@@ -2980,7 +3054,7 @@ class FrozenMolecule(Serializable):
         return self._bonds[index]
 
     @property
-    def angles(self):
+    def angles(self) -> Set[Tuple[Atom, Atom, Atom]]:
         """
         Get an iterator over all i-j-k angles.
         """
@@ -2988,7 +3062,7 @@ class FrozenMolecule(Serializable):
         return self._angles
 
     @property
-    def torsions(self):
+    def torsions(self) -> Set[Tuple[Atom, Atom, Atom, Atom]]:
         """
         Get an iterator over all i-j-k-l torsions.
         Note that i-j-k-i torsions (cycles) are excluded.
@@ -2998,10 +3072,13 @@ class FrozenMolecule(Serializable):
         torsions : iterable of 4-Atom tuples
         """
         self._construct_torsions()
+        assert (
+            self._torsions is not None
+        ), "_construct_torsions always sets _torsions to a set"
         return self._torsions
 
     @property
-    def propers(self):
+    def propers(self) -> Set[Tuple[Atom, Atom, Atom, Atom]]:
         """
         Iterate over all proper torsions in the molecule
 
@@ -3010,10 +3087,13 @@ class FrozenMolecule(Serializable):
            * Do we need to return a ``Torsion`` object that collects information about fractional bond orders?
         """
         self._construct_torsions()
+        assert (
+            self._propers is not None
+        ), "_construct_torsions always sets _propers to a set"
         return self._propers
 
     @property
-    def impropers(self):
+    def impropers(self) -> Set[Tuple[Atom, Atom, Atom, Atom]]:
         """
         Iterate over all improper torsions in the molecule.
 
@@ -3023,7 +3103,7 @@ class FrozenMolecule(Serializable):
         Returns
         -------
         impropers : set of tuple
-            An iterator of tuples, each containing the indices of atoms making
+            An iterator of tuples, each containing the atoms making
             up a possible improper torsion.
 
         See Also
@@ -3031,16 +3111,19 @@ class FrozenMolecule(Serializable):
         smirnoff_impropers, amber_impropers
         """
         self._construct_torsions()
+        assert (
+            self._impropers is not None
+        ), "_construct_torsions always sets _impropers to a set"
         return self._impropers
 
     @property
-    def smirnoff_impropers(self):
+    def smirnoff_impropers(self) -> Set[Tuple[Atom, Atom, Atom, Atom]]:
         """
-        Iterate over improper torsions in the molecule, but only those with
-        trivalent centers, reporting the central atom second in each improper.
+        Iterate over all impropers with trivalent centers, reporting the central atom second.
 
-        Note that it's possible that a trivalent center will not have an improper assigned.
-        This will depend on the force field that is used.
+        The central atom is reported second in each torsion. This method reports
+        an improper for each trivalent atom in the molecule, whether or not any
+        given force field would assign it improper torsion parameters.
 
         Also note that this will return 6 possible atom orderings around each improper
         center. In current SMIRNOFF parameterization, three of these six
@@ -3074,21 +3157,22 @@ class FrozenMolecule(Serializable):
         smirnoff_improper_smarts = "[*:1]~[X3:2](~[*:3])~[*:4]"
         improper_idxs = self.chemical_environment_matches(smirnoff_improper_smarts)
         smirnoff_impropers = {
-            tuple(self.atoms[idx] for idx in imp) for imp in improper_idxs
+            (self.atom(imp[0]), self.atom(imp[1]), self.atom(imp[2]), self.atom(imp[3]))
+            for imp in improper_idxs
         }
         return smirnoff_impropers
 
     @property
-    def amber_impropers(self):
+    def amber_impropers(self) -> Set[Tuple[Atom, Atom, Atom, Atom]]:
         """
-        Iterate over improper torsions in the molecule, but only those with
-        trivalent centers, reporting the central atom first in each improper.
+        Iterate over all impropers with trivalent centers, reporting the central atom first.
 
-        Note that it's possible that a trivalent center will not have an improper assigned.
-        This will depend on the force field that is used.
+        The central atom is reported first in each torsion. This method reports
+        an improper for each trivalent atom in the molecule, whether or not any
+        given force field would assign it improper torsion parameters.
 
-        Also note that this will return 6 possible atom orderings around each improper
-        center. In current AMBER parameterization, one of these six
+        Also note that this will return 6 possible atom orderings around each
+        improper center. In current AMBER parameterization, one of these six
         orderings will be used for the actual assignment of the improper term
         and measurement of the angle. This method does not encode the logic to
         determine which of the six orderings AMBER would use.
@@ -3110,7 +3194,8 @@ class FrozenMolecule(Serializable):
         amber_improper_smarts = "[X3:1](~[*:2])(~[*:3])~[*:4]"
         improper_idxs = self.chemical_environment_matches(amber_improper_smarts)
         amber_impropers = {
-            tuple(self.atoms[idx] for idx in imp) for imp in improper_idxs
+            (self.atom(imp[0]), self.atom(imp[1]), self.atom(imp[2]), self.atom(imp[3]))
+            for imp in improper_idxs
         }
         return amber_impropers
 
@@ -3161,7 +3246,7 @@ class FrozenMolecule(Serializable):
         return charge_sum
 
     @property
-    def name(self):
+    def name(self) -> str:
         """
         The name (or title) of the molecule
         """
@@ -3180,14 +3265,14 @@ class FrozenMolecule(Serializable):
             raise Exception("Molecule name must be a string")
 
     @property
-    def properties(self):
+    def properties(self) -> Dict[str, Any]:
         """
         The properties dictionary of the molecule
         """
         return self._properties
 
     @property
-    def hill_formula(self):
+    def hill_formula(self) -> str:
         """
         Get the Hill formula of the molecule
         """
@@ -3232,16 +3317,19 @@ class FrozenMolecule(Serializable):
         unique=False,
         toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
     ):
-        """Retrieve all matches for a given chemical environment query.
+        """Find matches in the molecule for a SMARTS string or ``ChemicalEnvironment`` query
 
         Parameters
         ----------
         query : str or ChemicalEnvironment
-            SMARTS string (with one or more tagged atoms) or ``ChemicalEnvironment`` query.
-            Query will internally be resolved to SMIRKS using ``query.asSMIRKS()`` if it has an ``.asSMIRKS`` method.
+            SMARTS string (with one or more tagged atoms) or
+            ``ChemicalEnvironment`` query. Query will internally be resolved to
+            SMIRKS using ``query.asSMIRKS()`` if it has an ``.asSMIRKS`` method.
         toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=GLOBAL_TOOLKIT_REGISTRY
-            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for chemical environment matches
-
+            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for
+            chemical environment matches
+        unique : bool
+            If ``True``, returned matches will be guaranteed to be unique.
 
         Returns
         -------
@@ -3303,6 +3391,8 @@ class FrozenMolecule(Serializable):
     ):
         """Generate a molecule from IUPAC or common name
 
+        .. note :: This method requires the OpenEye toolkit to be installed.
+
         Parameters
         ----------
         iupac_name : str
@@ -3316,8 +3406,6 @@ class FrozenMolecule(Serializable):
         -------
         molecule : Molecule
             The resulting molecule with position
-
-        .. note :: This method requires the OpenEye toolkit to be installed.
 
         Examples
         --------
@@ -3468,8 +3556,7 @@ class FrozenMolecule(Serializable):
             Format specifier, usually file suffix (eg. 'MOL2', 'SMI')
             Note that not all toolkits support all formats. Check ToolkitWrapper.toolkit_file_read_formats for your
             loaded toolkits for details.
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper,
-        optional, default=GLOBAL_TOOLKIT_REGISTRY
+        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=GLOBAL_TOOLKIT_REGISTRY
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for file loading. If a Toolkit is passed, only
             the highest-precedence toolkit is used
         allow_undefined_stereo : bool, default=False
@@ -3593,6 +3680,11 @@ class FrozenMolecule(Serializable):
     @classmethod
     @requires_package("openmm")
     def from_pdb(cls, file_path, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+        """
+        .. deprecated:: 0.11.0
+            ``from_pdb`` is deprecated and will soon be removed. Use
+            :py:meth:`from_polymer_pdb` instead.
+        """
         warnings.warn(
             "Molecule.from_pdb will soon be deprecated in favor of the more explicit "
             "Molecule.from_polymer_pdb",
@@ -4307,7 +4399,7 @@ class FrozenMolecule(Serializable):
 
         Parameters
         ----------
-        mapped_smiles: str,
+        mapped_smiles: str
             A CMILES-style mapped smiles string with explicit hydrogens.
 
         toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional
@@ -4558,16 +4650,21 @@ class FrozenMolecule(Serializable):
 
     def canonical_order_atoms(self, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """
-        Canonical order the atoms in a copy of the molecule using a toolkit, returns a new copy.
+        Produce a copy of the molecule with the atoms reordered canonically.
+
+        Each toolkit defines its own canonical ordering of atoms. The canonical
+        order may change from toolkit version to toolkit version or between
+        toolkits.
 
         .. warning :: This API is experimental and subject to change.
 
         Parameters
         ----------
         toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional
-            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
+            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for
+            SMILES-to-molecule conversion
 
-         Returns
+        Returns
         -------
         molecule : openff.toolkit.topology.Molecule
             An new OpenFF style molecule with atoms in the canonical order.
@@ -4905,7 +5002,7 @@ class Molecule(FrozenMolecule):
         Parameters
         ----------
         other : optional, default=None
-            If specified, attempt to construct a copy of the Molecule from the
+            If specified, attempt to construct a copy of the molecule from the
             specified object. This can be any one of the following:
 
             * a :class:`Molecule` object
@@ -4982,7 +5079,7 @@ class Molecule(FrozenMolecule):
         metadata=None,
     ):
         """
-        Add an atom
+        Add an atom to the molecule.
 
         Parameters
         ----------
@@ -5086,7 +5183,7 @@ class Molecule(FrozenMolecule):
         ----------
         coordinates: unit-wrapped np.array with shape (n_atoms, 3) and dimension of distance
             Coordinates of the new conformer, with the first dimension of the array corresponding to the atom index in
-            the Molecule's indexing system.
+            the molecule's indexing system.
 
         Returns
         -------
@@ -5112,11 +5209,11 @@ class Molecule(FrozenMolecule):
         Parameters
         ----------
         backend : str, optional, default='rdkit'
-            Which visualization engine to use. Choose from:
+            The visualization engine to use. Choose from:
 
-            - rdkit
-            - openeye
-            - nglview (conformers needed)
+            - ``"rdkit"``
+            - ``"openeye"``
+            - ``"nglview"`` (requires conformers)
 
         width : int, optional, default=500
             Width of the generated representation (only applicable to
@@ -5235,17 +5332,19 @@ class Molecule(FrozenMolecule):
 
     def perceive_residues(self, substructure_file_path=None, strict_chirality=True):
         """
-        Perceive residue substructure and fill atoms metadata accordingly.
+        Perceive a polymer's residues and fill each atom's metadata accordingly.
 
-        Perceives residues by matching substructures in the current molecule with a substructure dictionary file,
-        using SMARTS.
+        Perceives residues by matching substructures in the current molecule
+        with a substructure dictionary file, using SMARTS.
 
         Parameters
         ----------
         substructure_file_path : str, optional, default=None
-            Path to substructure library file in JSON format. Defaults to using built-in substructure file.
+            Path to substructure library file in JSON format. Defaults to using
+            built-in substructure file.
         strict_chirality: bool, optional, default=True
-            Whether to use strict chirality symbols (stereomarks) for substructure matchings with SMARTS.
+            Whether to use strict chirality symbols (stereomarks) for
+            substructure matchings with SMARTS.
         """
         # Read substructure dictionary file
         if not substructure_file_path:
