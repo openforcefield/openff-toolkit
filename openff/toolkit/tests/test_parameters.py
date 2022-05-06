@@ -1858,7 +1858,6 @@ class TestvdWType:
         assert "rmin_half" in param.to_dict()
 
 
-
 class TestElectrostaticsHandler:
     def test_solvent_dielectric(self):
         with pytest.raises(
@@ -1929,6 +1928,7 @@ class TestVirtualSiteHandler:
     """
     Test the creation of a VirtualSiteHandler and the implemented VirtualSiteTypes
     """
+
     @pytest.mark.parametrize(
         "parameter, expected_index",
         [
