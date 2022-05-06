@@ -381,7 +381,7 @@ to see a code coverage report. This uses [Coverage.py](https://coverage.readthed
 ## Supported Python versions
 
 The OpenFF Toolkit roughly follows [NEP 29](https://numpy.org/neps/nep-0029-deprecation_policy.html). 
-As of version 0.9.1 (March 2021) this means Python 3.7-3.9 is officially supported. 
+As of version 0.11.0 (June 2022) this means Python 3.8-3.9 is officially supported. 
 We develop, test, and distribute on macOS and Linux-based operating systems. 
 We do not currently support Windows. 
 Some CI builds run using only RDKit as a backend, some run using only OpenEye Toolkits, and some run using both installed at once.
@@ -394,14 +394,14 @@ The CI matrix is currently as follows:
 +                       +------------+-----------+-------------+------------+-----------+-------------+
 |                       | RDKit      | OpenEye   | RDKit + OE  | RDKit      | OpenEye   | RDKit + OE  |
 +=======================+============+===========+=============+============+===========+=============+
-| Python 3.6 and older  | No support after 0.9.1 (March 2021)                                         |
+| Python 3.7 and older  | No support after 0.11.0 (March 2021)                                        |
 +-----------------------+------------+-----------+-------------+------------+-----------+-------------+
-| Python 3.7            | **Test**   | **Test**  | **Test**    | **Test**   | **Test**  | **Test**    |
-+-----------------------+------------+-----------+-------------+------------+-----------+-------------+
-| Python 3.8            | **Test**   | Skip      | Skip        | **Test**   | Skip      | Skip        |
+| Python 3.8            | **Test**   | **Test**  | **Test**    | **Test**   | **Test**  | **Test**    |
 +-----------------------+------------+-----------+-------------+------------+-----------+-------------+
 | Python 3.9            | **Test**   | Skip      | Skip        | **Test**   | Skip      | Skip        |
 +-----------------------+------------+-----------+-------------+------------+-----------+-------------+
-| Python 3.10 and newer | Waiting on official releases and upstream support                           |
+| Python 3.10           | **Test**   | Skip      | Skip        | **Test**   | Skip      | Skip        |
++-----------------------+------------+-----------+-------------+------------+-----------+-------------+
+| Python 3.11 and newer | Pending official releases and/or upstream support                           |
 +-----------------------+------------+-----------+-------------+------------+-----------+-------------+
 :::

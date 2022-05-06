@@ -1,6 +1,6 @@
 name: Conda
 
-on: 
+on:
   release:
     types:
       - released
@@ -16,30 +16,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os:
-          - ubuntu-latest
-          - macos-latest
-        cfg:            
-          - python-version: 3.7
-            openeye: "true"
-
-          - python-version: 3.7
-            openeye: "false"
-
-          - python-version: 3.8
-            openeye: "true"
-
-          - python-version: 3.8
-            openeye: "false"
-
-            # Add a 3.9 + OE build when OETK are released on 3.9
-          - python-version: 3.9
-            openeye: "false"
+        os: [ubuntu-latest, macos-latest]
+        python-version: ["3.8", "3.9", "3.10"]
+        openeye: [true, false]
 
     env:
       CI_OS: ${{ matrix.os }}
-      OPENEYE: ${{ matrix.cfg.openeye }}
-      PYVER: ${{ matrix.cfg.python-version }}
+      OPENEYE: ${{ matrix.openeye }}
+      PYVER: ${{ matrix.python-version }}
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
       PACKAGE: openff-toolkit
 
@@ -48,9 +32,9 @@ jobs:
 
       - uses: conda-incubator/setup-miniconda@v2.1.1
         name: Vanilla install from conda
-        if: ${{ matrix.cfg.openeye == 'false' }}
+        if: ${{ matrix.openeye == 'false' }}
         with:
-          python-version: ${{ matrix.cfg.python-version }}
+          python-version: ${{ matrix.python-version }}
           activate-environment: test
           environment-file: devtools/conda-envs/conda.yaml
           auto-activate-base: false
@@ -59,9 +43,9 @@ jobs:
           use-mamba: true
       - uses: conda-incubator/setup-miniconda@v2.1.1
         name: Install from conda with OpenEye
-        if: ${{ matrix.cfg.openeye == 'true' }}
+        if: ${{ matrix.openeye == 'true' }}
         with:
-          python-version: ${{ matrix.cfg.python-version }}
+          python-version: ${{ matrix.python-version }}
           activate-environment: test
           environment-file: devtools/conda-envs/conda_oe.yaml
           auto-activate-base: false
@@ -131,7 +115,7 @@ jobs:
           git fetch --tags
           git checkout tags/$LATEST_TAG
           git log -1 | cat
-          
+
           # Install test plugins
           cd utilities/test_plugins
           python setup.py develop --no-deps
