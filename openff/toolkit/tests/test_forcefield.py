@@ -741,15 +741,15 @@ def generate_monatomic_ions():
 nonbonded_resolution_matrix = [
     {
         "vdw_method": "cutoff",
-        "electrostatics_method": "Coulomb",
+        "electrostatics_periodic_potential": "Coulomb",
         "has_periodic_box": True,
         "omm_force": None,
-        "exception": IncompatibleParameterError,
+        "exception": SMIRNOFFSpecUnimplementedError,
         "exception_match": "",
     },
     {
         "vdw_method": "cutoff",
-        "electrostatics_method": "Coulomb",
+        "electrostatics_periodic_potential": "Coulomb",
         "has_periodic_box": False,
         "omm_force": openmm.NonbondedForce.NoCutoff,
         "exception": None,
@@ -757,7 +757,7 @@ nonbonded_resolution_matrix = [
     },
     {
         "vdw_method": "cutoff",
-        "electrostatics_method": "reaction-field",
+        "electrostatics_periodic_potential": "reaction-field",
         "has_periodic_box": True,
         "omm_force": None,
         "exception": SMIRNOFFSpecUnimplementedError,
@@ -765,15 +765,15 @@ nonbonded_resolution_matrix = [
     },
     {
         "vdw_method": "cutoff",
-        "electrostatics_method": "reaction-field",
+        "electrostatics_periodic_potential": "reaction-field",
         "has_periodic_box": False,
-        "omm_force": None,
-        "exception": SMIRNOFFSpecError,
+        "omm_force": openmm.NonbondedForce.NoCutoff,
+        "exception": None,
         "exception_match": "reaction-field",
     },
     {
         "vdw_method": "cutoff",
-        "electrostatics_method": "PME",
+        "electrostatics_periodic_potential": "PME",
         "has_periodic_box": True,
         "omm_force": openmm.NonbondedForce.PME,
         "exception": None,
@@ -781,7 +781,7 @@ nonbonded_resolution_matrix = [
     },
     {
         "vdw_method": "cutoff",
-        "electrostatics_method": "PME",
+        "electrostatics_periodic_potential": "PME",
         "has_periodic_box": False,
         "omm_force": openmm.NonbondedForce.NoCutoff,
         "exception": None,
@@ -789,7 +789,7 @@ nonbonded_resolution_matrix = [
     },
     {
         "vdw_method": "PME",
-        "electrostatics_method": "Coulomb",
+        "electrostatics_periodic_potential": "Coulomb",
         "has_periodic_box": True,
         "omm_force": None,
         "exception": IncompatibleParameterError,
@@ -797,31 +797,31 @@ nonbonded_resolution_matrix = [
     },
     {
         "vdw_method": "PME",
-        "electrostatics_method": "Coulomb",
-        "has_periodic_box": False,
-        "omm_force": openmm.NonbondedForce.NoCutoff,
-        "exception": None,
-        "exception_match": "",
-    },
-    {
-        "vdw_method": "PME",
-        "electrostatics_method": "reaction-field",
-        "has_periodic_box": True,
-        "omm_force": None,
-        "exception": IncompatibleParameterError,
-        "exception_match": "reaction-field",
-    },
-    {
-        "vdw_method": "PME",
-        "electrostatics_method": "reaction-field",
+        "electrostatics_periodic_potential": "Coulomb",
         "has_periodic_box": False,
         "omm_force": None,
         "exception": SMIRNOFFSpecError,
-        "exception_match": "reaction-field",
+        "exception_match": "vdw method PME.* is only valid for periodic systems",
     },
     {
         "vdw_method": "PME",
-        "electrostatics_method": "PME",
+        "electrostatics_periodic_potential": "reaction-field",
+        "has_periodic_box": True,
+        "omm_force": None,
+        "exception": IncompatibleParameterError,
+        "exception_match": "must also be PME",
+    },
+    {
+        "vdw_method": "PME",
+        "electrostatics_periodic_potential": "reaction-field",
+        "has_periodic_box": False,
+        "omm_force": None,
+        "exception": SMIRNOFFSpecError,
+        "exception_match": "vdw method PME.* is only valid for periodic systems",
+    },
+    {
+        "vdw_method": "PME",
+        "electrostatics_periodic_potential": "PME",
         "has_periodic_box": True,
         "omm_force": openmm.NonbondedForce.LJPME,
         "exception": None,
@@ -829,11 +829,11 @@ nonbonded_resolution_matrix = [
     },
     {
         "vdw_method": "PME",
-        "electrostatics_method": "PME",
+        "electrostatics_periodic_potential": "PME",
         "has_periodic_box": False,
         "omm_force": openmm.NonbondedForce.NoCutoff,
-        "exception": None,
-        "exception_match": "",
+        "exception": SMIRNOFFSpecError,
+        "exception_match": "vdw method PME.* is only valid for periodic systems",
     },
 ]
 
@@ -1691,6 +1691,14 @@ class TestForceField:
                 use_interchange=False,
             )
 
+    def test_electrostatics_switch_width_unsupported(self):
+        handler = ElectrostaticsHandler(version=0.4)
+        with pytest.raises(
+            SMIRNOFFSpecUnimplementedError,
+            match="not support an electrostatic switch width",
+        ):
+            handler.switch_width = 1.234 * unit.nanometer
+
     @pytest.mark.parametrize("mod_cuoff", [True, False])
     def test_nonbonded_cutoff_no_box_vectors(self, mod_cuoff):
         """Ensure that the NonbondedForce objects use the cutoff specified in the
@@ -1737,7 +1745,7 @@ class TestForceField:
 
         electrostatics_handler = ElectrostaticsHandler(version=0.3)
         electrostatics_handler.cutoff = 7.0 * unit.angstrom
-        electrostatics_handler.method = "PME"
+        electrostatics_handler.periodic_potential = "PME"
         force_field.register_parameter_handler(electrostatics_handler)
 
         library_charges = LibraryChargeHandler(version=0.3)
@@ -1762,7 +1770,7 @@ class TestForceField:
 
         # TODO: Don't change the box vectors once this case is supported
         topology.box_vectors = None
-        electrostatics_handler.method = "Coulomb"
+        electrostatics_handler.periodic_potential = "Coulomb"
         force_field.register_parameter_handler(electrostatics_handler)
 
         with pytest.raises(IncompatibleParameterError, match="cutoff must equal"):
@@ -1792,7 +1800,7 @@ class TestForceField:
 
         electrostatics_handler = ElectrostaticsHandler(version=0.3)
         electrostatics_handler.cutoff = 7.89 * unit.angstrom
-        electrostatics_handler.method = "PME"
+        electrostatics_handler.periodic_potential = "PME"
         force_field.register_parameter_handler(electrostatics_handler)
 
         library_charges = LibraryChargeHandler(version=0.3)
@@ -1816,7 +1824,6 @@ class TestForceField:
     def test_nonbonded_method_resolution(self, inputs):
         """Test predefined permutations of input options to ensure nonbonded handling is correctly resolved"""
         vdw_method = inputs["vdw_method"]
-        electrostatics_method = inputs["electrostatics_method"]
         has_periodic_box = inputs["has_periodic_box"]
         omm_force = inputs["omm_force"]
         exception = inputs["exception"]
@@ -1836,7 +1843,7 @@ class TestForceField:
             forcefield.get_parameter_handler("vdW", {}).method = vdw_method
             forcefield.get_parameter_handler(
                 "Electrostatics", {}
-            ).method = electrostatics_method
+            ).periodic_potential = inputs["electrostatics_periodic_potential"]
             omm_system = forcefield.create_openmm_system(
                 topology, use_interchange=False
             )
@@ -1853,7 +1860,7 @@ class TestForceField:
                 forcefield.get_parameter_handler("vdW", {}).method = vdw_method
                 forcefield.get_parameter_handler(
                     "Electrostatics", {}
-                ).method = electrostatics_method
+                ).periodic_potential = inputs["electrostatics_periodic_potential"]
                 omm_system = forcefield.create_openmm_system(
                     topology, use_interchange=False
                 )
@@ -4802,6 +4809,9 @@ class TestForceFieldParameterAssignment:
 
 class TestInterchangeReturnTopology:
     # TODO: Remove these tests when `return_topology` is deprecated in version 0.12.0
+    # TODO: Turn this test back on once Interchange is tagged with a pre-release supporting
+    #       only Electrostatics version 0.4
+    @pytest.mark.skip(reason="Interchange needs to be updated")
     def test_deprecation_warning_raised(self):
         """
         Ensure that the deprecation warning is raised when `return_topology` is
@@ -4937,7 +4947,7 @@ def test_electrostatics_options(self):
     )
     for method in ["PME", "reaction-field", "Coulomb"]:
         # Change electrostatics method
-        forcefield.forces["Electrostatics"].method = method
+        forcefield.forces["Electrostatics"].periodic_potential = method
         f = partial(check_system_creation_from_molecule, forcefield, molecule)
         f.description = "Testing {} parameter assignment using molecule {}".format(
             offxml_file_path, molecule.name
