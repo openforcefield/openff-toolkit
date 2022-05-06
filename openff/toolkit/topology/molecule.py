@@ -3027,7 +3027,7 @@ class FrozenMolecule(Serializable):
         return len(self._conformers)
 
     @property
-    def bonds(self):
+    def bonds(self) -> List[Bond]:
         """
         Iterate over all Bond objects in the molecule.
         """

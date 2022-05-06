@@ -1912,6 +1912,238 @@ class TestVirtualSiteHandler:
     Test the creation of a VirtualSiteHandler and the implemented VirtualSiteTypes
     """
 
+    @pytest.mark.parametrize(
+        "parameter, expected_index",
+        [
+            (VirtualSiteMocking.bond_charge_parameter("[*:1][*:2]"), 0),
+            (VirtualSiteMocking.monovalent_parameter("[*:1][*:2][*:3]"), 0),
+            (VirtualSiteMocking.divalent_parameter("[*:2][*:1][*:3]", "once"), 0),
+            (VirtualSiteMocking.trivalent_parameter("[*:1][*:2][*:3][*:4]"), 0),
+        ],
+    )
+    def test_parent_index(self, parameter, expected_index):
+
+        assert parameter.parent_index == expected_index
+        assert (
+            VirtualSiteHandler.VirtualSiteType.type_to_parent_index(parameter.type)
+            == expected_index
+        )
+
+    @pytest.mark.parametrize(
+        "kwargs, expected_raises",
+        [
+            (
+                VirtualSiteMocking.bond_charge_parameter("[*:1][*:2]").to_dict(),
+                does_not_raise(),
+            ),
+            (
+                VirtualSiteMocking.monovalent_parameter("[*:1][*:2][*:3]").to_dict(),
+                does_not_raise(),
+            ),
+            (
+                VirtualSiteMocking.divalent_parameter(
+                    "[*:1][*:2][*:3]", match="once", angle=0.0 * unit.degrees
+                ).to_dict(),
+                does_not_raise(),
+            ),
+            (
+                VirtualSiteMocking.divalent_parameter(
+                    "[*:1][*:2][*:3]",
+                    match="all_permutations",
+                    angle=2.0 * unit.degrees,
+                ).to_dict(),
+                does_not_raise(),
+            ),
+            (
+                VirtualSiteMocking.trivalent_parameter(
+                    "[*:1][*:2][*:3][*:4]"
+                ).to_dict(),
+                does_not_raise(),
+            ),
+            # Validate `type`
+            (
+                {},
+                pytest.raises(SMIRNOFFSpecError, match="the `type` keyword is missing"),
+            ),
+            (
+                {"type": "InvalidType"},
+                pytest.raises(
+                    SMIRNOFFSpecError,
+                    match="'InvalidType' is not a supported virtual site type",
+                ),
+            ),
+            # Validate `match`
+            (
+                {"type": "BondCharge"},
+                pytest.raises(
+                    SMIRNOFFSpecError, match="the `match` keyword is missing"
+                ),
+            ),
+            (
+                {"type": "BondCharge", "match": "once"},
+                pytest.raises(
+                    SMIRNOFFSpecError,
+                    match="match='once' not supported with type='BondCharge'",
+                ),
+            ),
+            (
+                {"type": "BondCharge", "match": "once"},
+                pytest.raises(
+                    SMIRNOFFSpecError,
+                    match="match='once' not supported with type='BondCharge'",
+                ),
+            ),
+            (
+                {"type": "MonovalentLonePair", "match": "once"},
+                pytest.raises(
+                    SMIRNOFFSpecError,
+                    match="match='once' not supported with type='MonovalentLonePair'",
+                ),
+            ),
+            (
+                {
+                    "type": "DivalentLonePair",
+                    "match": "once",
+                    "outOfPlaneAngle": 2.0 * unit.degrees,
+                },
+                pytest.raises(
+                    SMIRNOFFSpecError,
+                    match="match='once' not supported with "
+                    "type='DivalentLonePair' and is_in_plane=False",
+                ),
+            ),
+            (
+                {"type": "TrivalentLonePair", "match": "all_permutations"},
+                pytest.raises(
+                    SMIRNOFFSpecError,
+                    match="match='all_permutations' not supported with "
+                    "type='TrivalentLonePair'",
+                ),
+            ),
+        ],
+    )
+    def test_add_default_init_kwargs_validation(self, kwargs, expected_raises):
+
+        with expected_raises:
+            VirtualSiteHandler.VirtualSiteType._add_default_init_kwargs(kwargs)
+
+    @pytest.mark.parametrize(
+        "kwargs, expected_kwargs",
+        [
+            (
+                {"type": "BondCharge", "match": "all_permutations"},
+                {
+                    "type": "BondCharge",
+                    "match": "all_permutations",
+                    "outOfPlaneAngle": None,
+                    "inPlaneAngle": None,
+                    "sigma": 0.0 * unit.angstrom,
+                    "epsilon": 0.0 * unit.kilocalorie_per_mole,
+                },
+            ),
+            (
+                {
+                    "type": "BondCharge",
+                    "match": "all_permutations",
+                    "rmin_half": 1.0 * unit.angstrom,
+                },
+                {
+                    "type": "BondCharge",
+                    "match": "all_permutations",
+                    "outOfPlaneAngle": None,
+                    "inPlaneAngle": None,
+                    "rmin_half": 1.0 * unit.angstrom,
+                    "epsilon": 0.0 * unit.kilocalorie_per_mole,
+                },
+            ),
+            (
+                {"type": "MonovalentLonePair", "match": "all_permutations"},
+                {
+                    "type": "MonovalentLonePair",
+                    "match": "all_permutations",
+                    "sigma": 0.0 * unit.angstrom,
+                    "epsilon": 0.0 * unit.kilocalorie_per_mole,
+                },
+            ),
+        ],
+    )
+    def test_add_default_init_kwargs_values(self, kwargs, expected_kwargs):
+
+        assert kwargs != expected_kwargs
+        VirtualSiteHandler.VirtualSiteType._add_default_init_kwargs(kwargs)
+        assert kwargs == expected_kwargs
+
+    @pytest.mark.parametrize(
+        "parameter, in_plane_angle, expected_raises",
+        [
+            (
+                VirtualSiteMocking.bond_charge_parameter("[*:1][*:2]"),
+                0.0 * unit.degrees,
+                pytest.raises(
+                    SMIRNOFFSpecError,
+                    match="'BondCharge' sites do not support `inPlaneAngle`",
+                ),
+            ),
+            (
+                VirtualSiteMocking.bond_charge_parameter("[*:1][*:2]"),
+                None,
+                does_not_raise(),
+            ),
+            (
+                VirtualSiteMocking.monovalent_parameter("[*:1][*:2][*:3]"),
+                1.0 * unit.angstrom,
+                pytest.raises(IncompatibleUnitError),
+            ),
+            (
+                VirtualSiteMocking.monovalent_parameter("[*:1][*:2][*:3]"),
+                130.0 * unit.degrees,
+                does_not_raise(),
+            ),
+        ],
+    )
+    def test_in_plane_angle_converter(self, parameter, in_plane_angle, expected_raises):
+
+        parameter_dict = parameter.to_dict()
+        parameter_dict["inPlaneAngle"] = in_plane_angle
+
+        with expected_raises:
+            new_parameter = VirtualSiteHandler.VirtualSiteType(**parameter_dict)
+            assert new_parameter.inPlaneAngle == in_plane_angle
+
+    @pytest.mark.parametrize(
+        "parameter, out_of_plane_angle, expected_raises",
+        [
+            (
+                VirtualSiteMocking.bond_charge_parameter("[*:1][*:2]"),
+                0.0 * unit.degrees,
+                pytest.raises(
+                    SMIRNOFFSpecError,
+                    match="'BondCharge' sites do not support `outOfPlaneAngle`",
+                ),
+            ),
+            (
+                VirtualSiteMocking.bond_charge_parameter("[*:1][*:2]"),
+                None,
+                does_not_raise(),
+            ),
+            (
+                VirtualSiteMocking.monovalent_parameter("[*:1][*:2][*:3]"),
+                130.0 * unit.degrees,
+                does_not_raise(),
+            ),
+        ],
+    )
+    def test_out_of_plane_angle_converter(
+        self, parameter, out_of_plane_angle, expected_raises
+    ):
+
+        parameter_dict = parameter.to_dict()
+        parameter_dict["outOfPlaneAngle"] = out_of_plane_angle
+
+        with expected_raises:
+            new_parameter = VirtualSiteHandler.VirtualSiteType(**parameter_dict)
+            assert new_parameter.outOfPlaneAngle == out_of_plane_angle
+
     def test_serialize_roundtrip(self):
 
         force_field = ForceField()
@@ -1929,6 +2161,9 @@ class TestVirtualSiteHandler:
         handler.add_parameter(
             parameter=VirtualSiteMocking.trivalent_parameter("[*:1][*:2][*:3][*:4]")
         )
+        offxml_string = force_field.to_string()
+        roundtripped_force_field = ForceField(offxml_string)
+        assert offxml_string == roundtripped_force_field.to_string()
 
     @pytest.mark.parametrize(
         "smiles, matched_indices, parameter, expected_raises",
