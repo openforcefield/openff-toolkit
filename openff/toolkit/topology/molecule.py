@@ -605,10 +605,6 @@ class Atom(Particle):
 # def neighbors(self):
 #    return (self._neighbor1, self._neighbor2)
 
-# =============================================================================================
-# Bond
-# =============================================================================================
-
 
 class Bond(Serializable):
     """
@@ -786,10 +782,6 @@ class Bond(Serializable):
             f"<Bond atom1 index='{self.atom1_index}', atom2 index='{self.atom2_index}'>"
         )
 
-
-# =============================================================================================
-# Molecule
-# =============================================================================================
 
 # TODO: How do we automatically trigger invalidation of cached properties if an ``Atom`` or ``Bond`` is modified,
 #       rather than added/deleted via the API? The simplest resolution is simply to make them immutable.

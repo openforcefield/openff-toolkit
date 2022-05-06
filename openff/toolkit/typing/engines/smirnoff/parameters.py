@@ -235,11 +235,6 @@ def _validate_units(attr, value: Union[str, unit.Quantity], units: unit.Unit):
     return value
 
 
-# ======================================================================
-# PARAMETER ATTRIBUTES
-# ======================================================================
-
-# TODO: Think about adding attrs to the dependencies and inherit from attr.ib
 class ParameterAttribute:
     """A descriptor for ``ParameterType`` attributes.
 
