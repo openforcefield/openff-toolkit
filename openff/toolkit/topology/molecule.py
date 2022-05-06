@@ -3685,7 +3685,6 @@ class FrozenMolecule(Serializable):
 
     @classmethod
     @requires_package("openmm")
-    @requires_package("rdkit")
     def from_polymer_pdb(
         cls, file_path: Union[str, TextIO], toolkit_registry=GLOBAL_TOOLKIT_REGISTRY
     ):
@@ -3730,7 +3729,6 @@ class FrozenMolecule(Serializable):
         from networkx.algorithms import isomorphism
         from openmm import unit as openmm_unit
         from openmm.app import PDBFile
-        from rdkit import Chem
 
         from openff.toolkit.topology import Topology
         from openff.toolkit.utils import get_data_file_path
@@ -3917,15 +3915,6 @@ class FrozenMolecule(Serializable):
         )
 
         offmol.add_conformer(coords)
-
-        # TODO: Ensure that this assigns aromaticity
-        rdmol = offmol.to_rdkit()
-        Chem.SanitizeMol(
-            rdmol,
-            Chem.SANITIZE_ALL ^ Chem.SANITIZE_ADJUSTHS,
-            # ^ Chem.SANITIZE_SETAROMATICITY,
-        )
-        Chem.AssignStereochemistryFrom3D(rdmol)
 
         offmol_w_stereo_and_aro = toolkit_registry.call(
             "_assign_aromaticity_and_stereo_from_3d", offmol
