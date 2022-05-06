@@ -89,6 +89,14 @@ def test_dimensionless_units():
 
     assert unit_value == unit.dimensionless
 
+def test_object_to_quantity_accepts_openmm():
+    from openff.toolkit.utils.utils import object_to_quantity
+    import openmm.unit
+    val = object_to_quantity(1. * openmm.unit.angstrom)
+    assert val == 1. * unit.angstrom
+    val = object_to_quantity(1. * openmm.unit.nanometer)
+    assert val == 10. * unit.angstrom
+
 
 def test_sort_smirnoff_dict():
     from collections import OrderedDict

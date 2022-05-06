@@ -435,6 +435,15 @@ def _(obj):
 def _(obj):
     return unit.Quantity(obj)
 
+try:
+    from openff.units.openmm import from_openmm
+    import openmm.unit
+    @object_to_quantity.register(openmm.unit.Quantity)
+    def _(obj):
+        return from_openmm(obj)
+except ImportError:
+    pass
+
 
 def extract_serialized_units_from_dict(input_dict):
     """
