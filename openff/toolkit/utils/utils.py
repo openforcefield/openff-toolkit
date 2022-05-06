@@ -452,6 +452,18 @@ def _(obj):
     return unit.Quantity(obj)
 
 
+try:
+    import openmm
+    from openff.units.openmm import from_openmm
+
+    @object_to_quantity.register(openmm.unit.Quantity)
+    def _(obj):
+        return from_openmm(obj)
+
+except ImportError:
+    pass
+
+
 def extract_serialized_units_from_dict(input_dict):
     """
     Create a mapping of (potentially unit-bearing) quantities from a dictionary, where some keys exist in pairs like
