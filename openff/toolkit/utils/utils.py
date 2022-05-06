@@ -15,13 +15,12 @@ __all__ = [
     "string_to_unit",
     "string_to_quantity",
     "object_to_quantity",
-    # "check_units_are_compatible",
     "extract_serialized_units_from_dict",
     "attach_units",
     "detach_units",
     "serialize_numpy",
     "deserialize_numpy",
-    # "convert_all_quantities_to_string",
+    "convert_all_quantities_to_string",
     "convert_all_strings_to_quantity",
     "convert_0_1_smirnoff_to_0_2",
     "convert_0_2_smirnoff_to_0_3",
@@ -34,6 +33,7 @@ import logging
 from typing import List, Tuple, Union
 
 import numpy as np
+import pint
 from openff.units import unit
 
 from openff.toolkit.utils.exceptions import MissingDependencyError
@@ -164,8 +164,13 @@ def get_data_file_path(relative_path):
     return fn
 
 
-def unit_to_string(input_unit):
-    return str(input_unit)
+@pint.register_unit_format("simple")
+def format_unit_simple(unit, registry, **options):
+    return " * ".join(f"{u} ** {p}" for u, p in unit.items())
+
+
+def unit_to_string(input_unit: unit.Unit) -> str:
+    return f"{input_unit:simple}"
 
 
 def quantity_to_dict(input_quantity):
@@ -183,17 +188,15 @@ def dict_to_quantity(input_dict):
     return input_dict["value"] * unit.Unit(input_dict["unit"])
 
 
-def quantity_to_string(input_quantity):
-    return str(input_quantity)
-
-
-def _quantity_to_string(input_quantity):
+def quantity_to_string(input_quantity: unit.Quantity) -> str:
     """
-    Serialize a openmm.unit.Quantity to a string.
+    Serialize a openff.units.unit.Quantity to a string representation that is backwards-compatible
+    with older versions of the OpenFF Toolkit. This includes a " * " between numerical values and
+    their units and "A" being used in place of the unicode Å ("\N{ANGSTROM SIGN}").
 
     Parameters
     ----------
-    input_quantity : openmm.unit.Quantity
+    input_quantity : openff.units.unit.Quantity
         The quantity to serialize
 
     Returns
@@ -202,6 +205,19 @@ def _quantity_to_string(input_quantity):
         The serialized quantity
 
     """
+    unitless_value = input_quantity.m_as(input_quantity.units)
+    # The string representation of a numpy array doesn't have commas and breaks the
+    # parser, thus we convert any arrays to list here
+    if isinstance(unitless_value, np.ndarray):
+        unitless_value = list(unitless_value)
+    unit_string = unit_to_string(input_quantity.units)
+    output_string = "{} * {}".format(unitless_value, unit_string)
+    return output_string
+
+    return str(input_quantity)
+
+
+def _quantity_to_string(input_quantity):
     import numpy as np
 
     if input_quantity is None:
@@ -256,18 +272,18 @@ def _ast_eval(node):
 
 def string_to_unit(unit_string):
     """
-    Deserializes a openmm.unit.Quantity from a string representation, for
+    Deserializes a openff.units.unit.Quantity from a string representation, for
     example: "kilocalories_per_mole / angstrom ** 2"
 
 
     Parameters
     ----------
     unit_string : dict
-        Serialized representation of a openmm.unit.Quantity.
+        Serialized representation of a openff.units.unit.Quantity.
 
     Returns
     -------
-    output_unit: openmm.unit.Quantity
+    output_unit: openff.units.unit.Quantity
         The deserialized unit from the string
     """
     return unit.Unit(unit_string)
@@ -322,10 +338,10 @@ def _string_to_quantity(quantity_string):
 def convert_all_strings_to_quantity(smirnoff_data):
     """
     Traverses a SMIRNOFF data structure, attempting to convert all
-    quantity-defining strings into openmm.unit.Quantity objects.
+    quantity-defining strings into openff.units.unit.Quantity objects.
 
     Integers and floats are ignored and not converted into a dimensionless
-    ``openmm.unit.Quantity`` object.
+    ``openff.units.unit.Quantity`` object.
 
     Parameters
     ----------
@@ -336,7 +352,7 @@ def convert_all_strings_to_quantity(smirnoff_data):
     -------
     converted_smirnoff_data : dict
         A hierarchical dict structured in compliance with the SMIRNOFF spec,
-        with quantity-defining strings converted to openmm.unit.Quantity objects
+        with quantity-defining strings converted to openff.units.unit.Quantity objects
     """
     if isinstance(smirnoff_data, dict):
         for key, value in smirnoff_data.items():
@@ -374,7 +390,7 @@ def convert_all_quantities_to_string(smirnoff_data):
     -------
     converted_smirnoff_data : dict
         A hierarchical dict structured in compliance with the SMIRNOFF spec,
-        with openmm.unit.Quantitys converted to string
+        with openff.units.unit.Quantitys converted to string
     """
 
     if isinstance(smirnoff_data, dict):
@@ -385,8 +401,8 @@ def convert_all_quantities_to_string(smirnoff_data):
         for index, item in enumerate(smirnoff_data):
             smirnoff_data[index] = convert_all_quantities_to_string(item)
         obj_to_return = smirnoff_data
-    # elif isinstance(smirnoff_data, openmm_unit.Quantity):
-    #     obj_to_return = quantity_to_string(smirnoff_data)
+    elif isinstance(smirnoff_data, unit.Quantity):
+        obj_to_return = quantity_to_string(smirnoff_data)
     else:
         obj_to_return = smirnoff_data
 
