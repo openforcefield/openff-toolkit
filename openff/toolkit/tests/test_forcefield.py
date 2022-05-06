@@ -2218,8 +2218,8 @@ class TestForceField:
                     -0.15 * unit.elementary_charge,
                     -0.05 * unit.elementary_charge,
                     -0.05 * unit.elementary_charge,
-                    -0.05 * unit.elementary_charge
-                ]
+                    -0.05 * unit.elementary_charge,
+                ],
             }
         )
         force_field.label_molecules(Molecule.from_smiles("CF").to_topology())
