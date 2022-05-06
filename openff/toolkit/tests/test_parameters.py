@@ -21,6 +21,7 @@ from openff.toolkit.topology import Molecule
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     BondHandler,
     ChargeIncrementModelHandler,
+    ElectrostaticsHandler,
     GBSAHandler,
     ImproperTorsionHandler,
     IndexedParameterAttribute,
@@ -45,6 +46,7 @@ from openff.toolkit.utils.exceptions import (
     NotEnoughPointsForInterpolationError,
     ParameterLookupError,
     SMIRNOFFSpecError,
+    SMIRNOFFSpecUnimplementedError,
     SMIRNOFFVersionError,
 )
 
@@ -1848,6 +1850,72 @@ class TestvdWType:
         )
         assert "sigma" not in param.to_dict()
         assert "rmin_half" in param.to_dict()
+
+
+class TestElectrostaticsHandler:
+    def test_solvent_dielectric(self):
+        with pytest.raises(
+            SMIRNOFFSpecUnimplementedError,
+            match="make use of `solvent_d",
+        ):
+            ElectrostaticsHandler(version=0.3, method="PME", solvent_dielectric=4)
+
+        handler = ElectrostaticsHandler(version=0.4)
+        assert handler.solvent_dielectric is None
+
+        handler.solvent_dielectric = None
+
+        with pytest.raises(
+            SMIRNOFFSpecUnimplementedError,
+            match="make use of `solvent_d",
+        ):
+            handler.solvent_dielectric = 78.3
+
+    def test_unknown_periodic_potential(self):
+        handler = ElectrostaticsHandler(version=0.4)
+
+        with pytest.raises(
+            NotImplementedError,
+            match="unexpected periodic potential",
+        ):
+            handler.periodic_potential = "PPPM"
+
+
+class TestElectrostaticsHandlerUpconversion:
+    """
+    Test the implementation of OFF-EP-0005:
+
+    https://openforcefield.github.io/standards/enhancement-proposals/off-ep-0005/
+    """
+
+    default_reaction_field_expression = (
+        "charge1*charge2/(4*pi*epsilon0)*(1/r + k_rf*r^2 - c_rf);"
+        "k_rf=(cutoff^(-3))*(solvent_dielectric-1)/(2*solvent_dielectric+1);"
+        "c_rf=cutoff^(-1)*(3*solvent_dielectric)/(2*solvent_dielectric+1)"
+    )
+
+    @pytest.mark.parametrize(
+        ("old_method", "new_method"),
+        [
+            ("PME", "Ewald3D-ConductingBoundary"),
+            ("Coulomb", "Coulomb"),
+            ("reaction-field", default_reaction_field_expression),
+        ],
+    )
+    def test_upconversion(self, old_method, new_method):
+        handler = ElectrostaticsHandler(version=0.3, method=old_method)
+        assert handler.version == Version("0.4")
+
+        # Only `periodic_potential` is a function of the values in a version 0.3 handler ...
+        assert handler.periodic_potential == new_method
+
+        # ... for everything else, it's the same
+        assert handler.nonperiodic_potential == "Coulomb"
+        assert handler.exception_potential == "Coulomb"
+
+    def test_invalid_0_4_kwargs(self):
+        with pytest.raises(SMIRNOFFSpecError, match="removed in version 0.4 of the E"):
+            ElectrostaticsHandler(version=0.4, method="PME")
 
 
 class TestVirtualSiteHandler:
