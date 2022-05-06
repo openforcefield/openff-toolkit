@@ -4841,6 +4841,7 @@ class TestForceFieldWithToolkits:
                 topology, use_interchange=True, toolkit_registry=BuiltInToolkitWrapper()
             )
 
+    @pytest.mark.skip(reason="Broken until Interchange supports Electrostatics 0.4")
     @requires_rdkit
     def test_toolkit_registry_bad_charge_method(self):
         topology = create_ethanol().to_topology()
