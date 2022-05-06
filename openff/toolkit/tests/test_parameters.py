@@ -2112,6 +2112,9 @@ class TestVirtualSiteHandler:
         handler.add_parameter(
             parameter=VirtualSiteMocking.trivalent_parameter("[*:1][*:2][*:3][*:4]")
         )
+        offxml_string = force_field.to_string()
+        roundtripped_force_field = ForceField(offxml_string)
+        assert offxml_string == roundtripped_force_field.to_string()
 
     @pytest.mark.parametrize(
         "smiles, matched_indices, parameter, expected_raises",
