@@ -435,12 +435,15 @@ def _(obj):
 def _(obj):
     return unit.Quantity(obj)
 
+
 try:
-    from openff.units.openmm import from_openmm
     import openmm.unit
+    from openff.units.openmm import from_openmm
+
     @object_to_quantity.register(openmm.unit.Quantity)
     def _(obj):
         return from_openmm(obj)
+
 except ImportError:
     pass
 
