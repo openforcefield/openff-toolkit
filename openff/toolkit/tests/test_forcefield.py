@@ -2181,6 +2181,49 @@ class TestForceField:
 
         assert hash(ff_with_id) == hash(ff_without_id)
 
+    def test_issue_1216(self):
+        """Test that the conflict between vsitehandler and librarychargehandler
+        identified in issue #1216 remains resolved.
+
+        https://github.com/openforcefield/openff-toolkit/issues/1216
+        """
+        force_field = ForceField()
+        force_field.get_parameter_handler("Electrostatics")
+
+        vsite_handler: VirtualSiteHandler = force_field.get_parameter_handler(
+            "VirtualSites"
+        )
+        vsite_handler.add_parameter(
+            {
+                "smirks": "[#6:1][#9:2]",
+                "name": "EP",
+                "type": "BondCharge",
+                "distance": 1.0 * unit.angstrom,
+                "match": "all_permutations",
+                "charge_increment1": 0.2 * unit.elementary_charge,
+                "charge_increment2": 0.1 * unit.elementary_charge,
+                "sigma": 1.0 * unit.angstrom,
+                "epsilon": 0.0 * unit.kilocalorie_per_mole,
+            }
+        )
+
+        library_handler: LibraryChargeHandler = force_field.get_parameter_handler(
+            "LibraryCharges"
+        )
+        library_handler.add_parameter(
+            {
+                "smirks": "[F:2][C:1]([H:3])([H:4])([H:5])",
+                "charge": [
+                    0.3 * unit.elementary_charge,
+                    -0.15 * unit.elementary_charge,
+                    -0.05 * unit.elementary_charge,
+                    -0.05 * unit.elementary_charge,
+                    -0.05 * unit.elementary_charge
+                ]
+            }
+        )
+        force_field.label_molecules(Molecule.from_smiles("CF").to_topology())
+
 
 def generate_monatomic_ions():
     return (
