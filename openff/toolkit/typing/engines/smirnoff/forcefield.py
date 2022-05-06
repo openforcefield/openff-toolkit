@@ -35,6 +35,8 @@ import warnings
 from collections import OrderedDict
 from typing import TYPE_CHECKING, List, Tuple, Union
 
+from packaging.version import Version
+
 from openff.toolkit.topology.molecule import DEFAULT_AROMATICITY_MODEL
 from openff.toolkit.typing.engines.smirnoff.io import ParameterIOHandler
 from openff.toolkit.typing.engines.smirnoff.parameters import (
@@ -189,7 +191,7 @@ class ForceField:
 
     Modify the long-range electrostatics method:
 
-    >>> forcefield.get_parameter_handler('Electrostatics').method = 'PME'
+    >>> forcefield.get_parameter_handler('Electrostatics').periodic_potential = 'PME'
 
     Inspect the first few vdW parameters:
 
@@ -323,8 +325,8 @@ class ForceField:
         """
         Initialize all object fields.
         """
-        self._MIN_SUPPORTED_SMIRNOFF_VERSION = 0.1
-        self._MAX_SUPPORTED_SMIRNOFF_VERSION = 0.3
+        self._MIN_SUPPORTED_SMIRNOFF_VERSION = Version("0.1")
+        self._MAX_SUPPORTED_SMIRNOFF_VERSION = Version("0.3")
         self._disable_version_check = (
             False  # if True, will disable checking compatibility version
         )
@@ -1380,16 +1382,17 @@ class ForceField:
         if hasattr(self.get_parameter_handler("Electrostatics"), "cutoff"):
             vdw_cutoff = self.get_parameter_handler("vdW").cutoff
             coul_cutoff = self.get_parameter_handler("Electrostatics").cutoff
-            coul_method = self.get_parameter_handler("Electrostatics").method
+            coul_periodic_potential = self.get_parameter_handler(
+                "Electrostatics"
+            ).periodic_potential
             if vdw_cutoff != coul_cutoff:
-                if coul_method == "PME":
+                if coul_periodic_potential == "Ewald3D-ConductingBoundary":
                     nonbonded_force.setCutoffDistance(to_openmm(vdw_cutoff))
                 else:
                     raise IncompatibleParameterError(
-                        "In its current implementation of the OpenFF Toolkit, with "
-                        f"With electrostatics method {coul_method}, the electrostatics "
-                        f"cutoff must equal the vdW cutoff. Found vdw cutoff {vdw_cutoff} "
-                        f"and {coul_cutoff}."
+                        "In its current implementation of the OpenFF Toolkit, with With electrostatics periodic "
+                        f"potential {coul_periodic_potential}, the electrostatics cutoff must equal the vdW cutoff. "
+                        f"Found vdw cutoff {vdw_cutoff} and {coul_cutoff}."
                     )
 
         if return_topology:

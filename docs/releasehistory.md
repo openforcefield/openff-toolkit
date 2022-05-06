@@ -58,6 +58,8 @@ print(value_roundtrip)
 
 ## Current Development
 
+- [PR #1277](https://github.com/openforcefield/openff-toolkit/pull/1277): Adds support for version
+  0.4 of the `<Electrostatics>` section of the SMIRNOFF specification.
 - [PR #1279](https://github.com/openforcefield/openforcefield/pull/1279):
   [`ParameterHandler.version`](openff.toolkit.typing.engines.smirnoff.parameters.ParameterHandler.version)
   and the ``.version`` attribute of its subclasses is now a
@@ -100,6 +102,16 @@ print(value_roundtrip)
 
 ### Behaviors changed and bugfixes
 
+- [PR #1277](https://github.com/openforcefield/openff-toolkit/pull/1277): Version 0.3 `<Electrostatics>`
+  sections of OFFXML files will automatically be up-converted (in memory) to version 0.4 according
+  to the recomendations provided in
+  [OFF-EP 0005](https://openforcefield.github.io/standards/enhancement-proposals/off-ep-0005/). Note
+  this means the `method` attribute is replaced by `periodic_potential`, `nonperiodic_potential`,
+  and `exception_potential`.
+- [PR #1277](https://github.com/openforcefield/openff-toolkit/pull/1277): Fixes a bug in which
+  attempting to convert
+  [`ElectrostaticsHandler.switch_width`](openff.toolkit.typing.engines.smirnoff.parameters.ElectrostaticsHandler)
+  did nothing.
 - [PR #1130](https://github.com/openforcefield/openforcefield/pull/1130): Running unit tests will
   no longer generate force field files in the local directory.
 - [PR #1182](https://github.com/openforcefield/openforcefield/pull/1182): Removes `Atom.element`,
