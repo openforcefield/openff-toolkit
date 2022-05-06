@@ -437,7 +437,6 @@ class TestTopology:
 
     # test_two_of_same_molecule
     # test_two_different_molecules
-    # test_to_from_dict
     # test_get_molecule
     # test_is_bonded
     # TODO: Test serialization
@@ -1047,6 +1046,37 @@ class TestTopology:
         ]
         for expected_id, residue in zip(expected_ids, residues):
             assert expected_id == residue.identifier
+
+
+class TestTopologySerialization:
+    @pytest.fixture
+    def oleic_acid(self):
+        """Simple floppy molecule that can be assured to have multiple conformers"""
+        return Molecule.from_smiles("CCCCCCCC\C=C/CCCCCCCC(O)=O")
+
+    @pytest.mark.parametrize(("with_conformers"), [True, False])
+    @pytest.mark.parametrize(("n_molecules"), [1, 2])
+    @pytest.mark.parametrize(("format"), ["dict", "json"])
+    def test_roundtrip(self, oleic_acid, with_conformers, n_molecules, format):
+
+        if with_conformers:
+            n_conformers = 2
+            oleic_acid.generate_conformers(n_conformers=n_conformers)
+        else:
+            n_conformers = 0
+
+        if format == "dict":
+            roundtrip = Topology.from_dict(
+                Topology.from_molecules(n_molecules * [oleic_acid]).to_dict()
+            )
+        elif format == "json":
+            roundtrip = Topology.from_json(
+                Topology.from_molecules(n_molecules * [oleic_acid]).to_json()
+            )
+
+        assert roundtrip.n_molecules == n_molecules
+        assert roundtrip.n_atoms == oleic_acid.n_atoms * n_molecules
+        assert [*roundtrip.molecules][0].n_conformers == n_conformers
 
 
 @pytest.mark.parametrize(

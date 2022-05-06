@@ -26,6 +26,10 @@ dependencies:
     - openff-utilities
     - cached_property
     - cachetools
+    - python-constraint
+    - mdtraj
+    - qcportal
+    - nglview
     # Serialization: Should these be optional?
     - toml
     - bson

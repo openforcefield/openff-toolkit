@@ -1187,7 +1187,7 @@ class _ParameterAttributeHandler:
         Add a cosmetic attribute to this object.
 
         This attribute will not have a functional effect on the object
-        in the Open Force Field Toolkit, but can be written out during
+        in the OpenFF Toolkit, but can be written out during
         output.
 
         .. warning :: The API for modifying cosmetic attributes is experimental
@@ -3687,28 +3687,26 @@ class vdWHandler(_NonbondedHandler):
 
         force = super().create_force(system, topology, **kwargs)
 
-        # If we're using PME, then the only possible openMM Nonbonded type is LJPME
-        if self.method == "PME":
-            # If we're given a nonperiodic box, we always set NoCutoff. Later we'll add support for CutoffNonPeriodic
-            if topology.box_vectors is None:
-                force.setNonbondedMethod(openmm.NonbondedForce.NoCutoff)
-                # if (topology.box_vectors is None):
-                #     raise SMIRNOFFSpecError("If vdW method is  PME, a periodic Topology "
-                #                             "must be provided")
-            else:
+        if topology.box_vectors is None:
+            if self.method == "PME":
+                raise SMIRNOFFSpecError(
+                    "vdw method PME (LJPME) is only valid for periodic systems. Provided a topology with no box "
+                    "vectors; please set the topology's box vectors if this is intended to be a periodic system."
+                )
+            force.setNonbondedMethod(openmm.NonbondedForce.NoCutoff)
+
+        else:
+            # If we're using PME for vdW, then the only possible OpenMM NonbondedForce is LJPME
+            if self.method == "PME":
                 force.setNonbondedMethod(openmm.NonbondedForce.LJPME)
                 force.setCutoffDistance(to_openmm(self.cutoff))
                 force.setEwaldErrorTolerance(1.0e-4)
 
-        # If method is cutoff, then we currently support openMM's PME for periodic system and NoCutoff for nonperiodic
-        elif self.method == "cutoff":
-            # If we're given a nonperiodic box, we always set NoCutoff. Later we'll add support for CutoffNonPeriodic
-            if topology.box_vectors is None:
-                force.setNonbondedMethod(openmm.NonbondedForce.NoCutoff)
-            else:
+            # If method is cutoff (and the system is periodic), then we currently support OpenMM's NonbondedForce.PME,
+            # which uses cutoff for the vdW interactions but PME for electrostatics
+            elif self.method == "cutoff":
                 force.setNonbondedMethod(openmm.NonbondedForce.PME)
                 force.setUseDispersionCorrection(True)
-
                 force.setCutoffDistance(to_openmm(self.cutoff))
 
         # This applies a switching function whether the vdW method is LJ-PME or cut-off. It's not clear if this is a
@@ -3756,6 +3754,15 @@ class ElectrostaticsHandler(_NonbondedHandler):
     _TAGNAME = "Electrostatics"
     _DEPENDENCIES = [vdWHandler]
     _KWARGS = ["charge_from_molecules", "allow_nonintegral_charges"]
+    _MAX_SUPPORTED_SECTION_VERSION = Version("0.4")
+
+    # Tolerance when comparing float attributes for handler compatibility.
+    _SCALETOL = 1e-5
+    _DEFAULT_REACTION_FIELD_EXPRESSION = (
+        "charge1*charge2/(4*pi*epsilon0)*(1/r + k_rf*r^2 - c_rf);"
+        "k_rf=(cutoff^(-3))*(solvent_dielectric-1)/(2*solvent_dielectric+1);"
+        "c_rf=cutoff^(-1)*(3*solvent_dielectric)/(2*solvent_dielectric+1)"
+    )
 
     scale12 = ParameterAttribute(default=0.0, converter=float)
     scale13 = ParameterAttribute(default=0.0, converter=float)
@@ -3763,8 +3770,24 @@ class ElectrostaticsHandler(_NonbondedHandler):
     scale15 = ParameterAttribute(default=1.0, converter=float)
     cutoff = ParameterAttribute(default=9.0 * unit.angstrom, unit=unit.angstrom)
     switch_width = ParameterAttribute(default=0.0 * unit.angstrom, unit=unit.angstrom)
-    method = ParameterAttribute(
-        default="PME", converter=_allow_only(["Coulomb", "PME", "reaction-field"])
+    solvent_dielectric = ParameterAttribute(default=None)
+
+    # TODO: How to validate arbitrary algebra in a converter?
+    periodic_potential = ParameterAttribute(
+        default="Ewald3D-ConductingBoundary",
+        converter=_allow_only(
+            [
+                "Ewald3D-ConductingBoundary",
+                "Coulomb",
+                _DEFAULT_REACTION_FIELD_EXPRESSION,
+            ]
+        ),
+    )
+    nonperiodic_potential = ParameterAttribute(
+        default="Coulomb", converter=_allow_only(["Coulomb"])
+    )
+    exception_potential = ParameterAttribute(
+        default="Coulomb", converter=_allow_only(["Coulomb"])
     )
 
     # TODO: Use _allow_only when ParameterAttribute will support multiple converters
@@ -3798,15 +3821,88 @@ class ElectrostaticsHandler(_NonbondedHandler):
 
     @switch_width.converter
     def switch_width(self, attr, new_switch_width):
-        if self.switch_width != 0.0 * unit.angstrom:
-            raise IncompatibleParameterError(
-                "The current implementation of the Open Force Field Toolkit can not "
-                "support an electrostatic switching width. Currently only `0.0 angstroms` "
-                f"is supported (SMIRNOFF data specified {new_switch_width})"
+        if new_switch_width not in [0.0 * unit.angstrom, None, "None", "none"]:
+            raise SMIRNOFFSpecUnimplementedError(
+                "The current implementation of the OpenFF Toolkit does not support an electrostatic "
+                f"switch width (passed a value of {new_switch_width}). Currently only `0.0 angstroms` is supported "
+                "and no switching function will be applied to the resulting `NonbondedForce`. If this behavior is "
+                "important to you, please raise an issue at https://github.com/openforcefield/openff-toolkit/issues."
             )
 
-    # Tolerance when comparing float attributes for handler compatibility.
-    _SCALETOL = 1e-5
+    @periodic_potential.converter
+    def periodic_potential(self, attr, new_value):
+        if new_value in ["PME", "Ewald3D-ConductingBoundary"]:
+            return "Ewald3D-ConductingBoundary"
+        elif new_value in ["reaction-field", self._DEFAULT_REACTION_FIELD_EXPRESSION]:
+            return self._DEFAULT_REACTION_FIELD_EXPRESSION
+        elif new_value.lower() == "coulomb":
+            return "Coulomb"
+        else:
+            raise NotImplementedError(
+                "Failed to process unexpected periodic potential value: {new_value}"
+            )
+
+    @solvent_dielectric.converter
+    def solvent_dielectric(self, attr, new_value):
+        if new_value is not None:
+            raise SMIRNOFFSpecUnimplementedError(
+                "The current implementation of the OpenFF Toolkit does not support any electrostatic "
+                "functions that make use of `solvent_dielectric`. If this behavior is important to you, please raise"
+                "raise an issue at https://github.com/openforcefield/openff-toolkit/issues."
+            )
+
+    def __init__(self, **kwargs):
+        if kwargs.get("version") == 0.4:
+            if "method" in kwargs:
+                raise SMIRNOFFSpecError(
+                    "`method` attribute has been removed in version 0.4 of the Electrostatics tag. Use "
+                    "`periodic_potential`, `nonperiodic_potenetial`, and `exception_potential` instead. "
+                    "See https://openforcefield.github.io/standards/standards/smirnoff/#electrostatics"
+                )
+        if kwargs.get("version") == 0.3:
+            logger.info(
+                "Attempting to up-convert Electrostatics section from 0.3 to 0.4"
+            )
+            # Default value in 0.3 is "PME", so we have to handle these cases identically
+            if kwargs.get("method") in ["PME", None]:
+                kwargs["periodic_potential"] = "Ewald3D-ConductingBoundary"
+                kwargs["nonperiodic_potential"] = "Coulomb"
+                kwargs["exception_potential"] = "Coulomb"
+                kwargs["version"] = 0.4
+                kwargs.pop("method", None)
+                logger.info(
+                    'Successfully up-converted Electrostatics section from 0.3 to 0.4. `method="PME"` '
+                    'is now split into `periodic_potential="Ewald3D-ConductingBoundary"`, '
+                    '`nonperiodic_potential="Coulomb"`, and `exception_potential="Coulomb"`.'
+                )
+            elif kwargs["method"] == "Coulomb":
+                kwargs["periodic_potential"] = "Coulomb"
+                kwargs["nonperiodic_potential"] = "Coulomb"
+                kwargs["exception_potential"] = "Coulomb"
+                kwargs["version"] = 0.4
+                kwargs.pop("method", None)
+                logger.info(
+                    'Successfully up-converted Electrostatics section from 0.3 to 0.4. `method="Coulomb"` '
+                    'is now split into `periodic_potential="Coulob"`, '
+                    '`nonperiodic_potential="Coulomb"`, and `exception_potential="Coulomb"`.'
+                )
+            elif kwargs["method"] == "reaction-field":
+                kwargs["periodic_potential"] = self._DEFAULT_REACTION_FIELD_EXPRESSION
+                kwargs["nonperiodic_potential"] = "Coulomb"
+                kwargs["exception_potential"] = "Coulomb"
+                kwargs["version"] = 0.4
+                kwargs.pop("method", None)
+                logger.info(
+                    'Successfully up-converted Electrostatics section from 0.3 to 0.4. `method="Coulomb"` '
+                    f'is now split into `periodic_potential="{self._DEFAULT_REACTION_FIELD_EXPRESSION}"` '
+                    '`nonperiodic_potential="Coulomb"`, and `exception_potential="Coulomb"`.'
+                )
+            else:
+                raise NotImplementedError(
+                    "Failed to up-convert Electrostatics section from 0.3 to 0.4. Did not know "
+                    f"how to up-convert `method={kwargs['method']}`."
+                )
+        super().__init__(**kwargs)
 
     def check_handler_compatibility(self, other_handler):
         """
@@ -3823,7 +3919,11 @@ class ElectrostaticsHandler(_NonbondedHandler):
         IncompatibleParameterError if handler_kwargs are incompatible with existing parameters.
         """
         float_attrs_to_compare = ["scale12", "scale13", "scale14", "scale15"]
-        string_attrs_to_compare = ["method"]
+        string_attrs_to_compare = [
+            "periodic_potential",
+            "nonperiodic_potential",
+            "exception_potential",
+        ]
         unit_attrs_to_compare = ["cutoff", "switch_width"]
 
         self._check_attributes_are_equal(
@@ -3937,29 +4037,33 @@ class ElectrostaticsHandler(_NonbondedHandler):
                     # Finally, mark that charges were assigned for this reference molecule
                     self.mark_charges_assigned(mol_instance, topology)
 
-        # Set the nonbonded method
+        # Get the nonbonded method, likely set in advance by vdWHandler
         current_nb_method = force.getNonbondedMethod()
 
         # First, check whether the vdWHandler set the nonbonded method to LJPME, because that means
         # that electrostatics also has to be PME
-        if (current_nb_method == openmm.NonbondedForce.LJPME) and (
-            self.method != "PME"
-        ):
-            raise IncompatibleParameterError(
-                "In current Open Force Field Toolkit implementation, if vdW "
-                "treatment is set to LJPME, electrostatics must also be PME "
-                "(electrostatics treatment currently set to {}".format(self.method)
-            )
+        if current_nb_method == openmm.NonbondedForce.LJPME:
+            if self.periodic_potential != "Ewald3D-ConductingBoundary":
+                raise IncompatibleParameterError(
+                    "In current OpenFF Toolkit implementation of LJPME, if vdW treatment is set to LJPME, "
+                    "electrostatics must also be PME (periodic electrostatics treatment currently set to "
+                    f"{self.periodic_potential})."
+                )
 
-        # Then, set nonbonded methods based on method keyword
-        if self.method == "PME":
-            # Check whether the topology is nonperiodic, in which case we always switch to NoCutoff
-            # (vdWHandler will have already set this to NoCutoff)
-            # TODO: This is an assumption right now, and a bad one. See issue #219
-            if topology.box_vectors is None:
-                assert current_nb_method == openmm.NonbondedForce.NoCutoff
-                force.setCutoffDistance(to_openmm(self.cutoff))
-            else:
+        if topology.box_vectors is None:
+            # For all non-periodic topologies, use NoCutoff. This should already be set by the vdWHandler.
+            # In these cases, ElectrostaticsHandler.nonperiodic_potential is not directly procssed.
+            if self.nonperiodic_potential != "Coulomb":
+                raise SMIRNOFFSpecError(
+                    "Found a non-periodic Electrostatics potential besides Coulomb "
+                    f"(found {self.nonperiodic_potential}). The only non-periodic potential supported by "
+                    'version 0.4 of the Electrostatics section of the SMIRNOFF specification is "Coulomb".'
+                )
+            assert current_nb_method == openmm.NonbondedForce.NoCutoff
+            force.setCutoffDistance(to_openmm(self.cutoff))
+
+        else:
+            if self.periodic_potential == "Ewald3D-ConductingBoundary":
                 if current_nb_method == openmm.NonbondedForce.LJPME:
                     pass
                     # There's no need to check for matching cutoff/tolerance here since both are hard-coded defaults
@@ -3968,30 +4072,24 @@ class ElectrostaticsHandler(_NonbondedHandler):
                     force.setCutoffDistance(to_openmm(self.cutoff))
                     force.setEwaldErrorTolerance(1.0e-4)
 
-        # If vdWHandler set the nonbonded method to NoCutoff, then we don't need to change anything
-        elif self.method == "Coulomb":
-            if topology.box_vectors is None:
-                # (vdWHandler will have already set this to NoCutoff)
-                assert current_nb_method == openmm.NonbondedForce.NoCutoff
-            else:
-                raise IncompatibleParameterError(
-                    "Electrostatics method set to Coulomb, and topology is periodic. "
-                    "In the future, this will lead to use of OpenMM's CutoffPeriodic "
-                    "Nonbonded force method, however this is not supported in the "
-                    "current Open Force Field Toolkit."
+            elif self.periodic_potential == "Coulomb":
+                raise SMIRNOFFSpecUnimplementedError(
+                    "Electrostatics `periodic_potential` set to `Coulomb`, and topology is periodic. "
+                    "In the future, this will lead to use of OpenMM's `NonbondedForce.CutoffPeriodic` "
+                    "but this is not currently implemented."
                 )
 
-        # If the vdWHandler set the nonbonded method to PME, then ensure that it has the same cutoff
-        elif self.method == "reaction-field":
-            if topology.box_vectors is None:
-                raise SMIRNOFFSpecError(
-                    "Electrostatics method reaction-field can only be applied to a periodic system."
-                )
-
-            else:
+            elif self.periodic_potential == self._DEFAULT_REACTION_FIELD_EXPRESSION:
                 raise SMIRNOFFSpecUnimplementedError(
                     "Electrostatics method reaction-field is supported in the SMIRNOFF specification "
                     "but not yet implemented in the OpenFF Toolkit."
+                )
+
+            else:
+                raise Exception(
+                    f"Found an unexpected periodic potential {self.periodic_potential}. Did not know how to set the "
+                    "OpenMM NonbondedForce. Please open an issue at "
+                    "https://github.com/openforcefield/openff-toolkit/issues."
                 )
 
     def postprocess_system(self, system, topology, **kwargs):

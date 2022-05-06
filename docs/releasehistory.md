@@ -58,6 +58,8 @@ print(value_roundtrip)
 
 ## Current Development
 
+- [PR #1277](https://github.com/openforcefield/openff-toolkit/pull/1277): Adds support for version
+  0.4 of the `<Electrostatics>` section of the SMIRNOFF specification.
 - [PR #1279](https://github.com/openforcefield/openforcefield/pull/1279):
   [`ParameterHandler.version`](openff.toolkit.typing.engines.smirnoff.parameters.ParameterHandler.version)
   and the ``.version`` attribute of its subclasses is now a
@@ -100,6 +102,16 @@ print(value_roundtrip)
 
 ### Behaviors changed and bugfixes
 
+- [PR #1277](https://github.com/openforcefield/openff-toolkit/pull/1277): Version 0.3 `<Electrostatics>`
+  sections of OFFXML files will automatically be up-converted (in memory) to version 0.4 according
+  to the recomendations provided in
+  [OFF-EP 0005](https://openforcefield.github.io/standards/enhancement-proposals/off-ep-0005/). Note
+  this means the `method` attribute is replaced by `periodic_potential`, `nonperiodic_potential`,
+  and `exception_potential`.
+- [PR #1277](https://github.com/openforcefield/openff-toolkit/pull/1277): Fixes a bug in which
+  attempting to convert
+  [`ElectrostaticsHandler.switch_width`](openff.toolkit.typing.engines.smirnoff.parameters.ElectrostaticsHandler)
+  did nothing.
 - [PR #1130](https://github.com/openforcefield/openforcefield/pull/1130): Running unit tests will
   no longer generate force field files in the local directory.
 - [PR #1182](https://github.com/openforcefield/openforcefield/pull/1182): Removes `Atom.element`,
@@ -227,7 +239,7 @@ print(value_roundtrip)
   [`Bond.is_in_ring`](openff.toolkit.topology.Bond.is_in_ring) to use corresponding
   functionality in OpenEye and RDKit wrappers.
 
-## API breaking changes
+### API breaking changes
 - [PR #855](https://github.com/openforcefield/openff-toolkit/pull/855): Removes
   [`Molecule.rings`](openff.toolkit.topology.Molecule.rings) and
   [`Molecule.n_rings`](openff.toolkit.topology.Molecule.n_rings). To find rings in
@@ -281,13 +293,6 @@ print(value_roundtrip)
   [Issue #1161](https://github.com/openforcefield/openff-toolkit/issues/1161), which was caused by the use
   of the deprecated `pkg_resources` package. Now the recommended `importlib_metadata` package is used instead.
 
-
-### Breaking changes
-- [PR #1118](https://github.com/openforcefield/openforcefield/pull/1118):
-  [`Molecule.to_hill_formula`](openff.toolkit.topology.Molecule.to_hill_formula) is now a class method
-  and no longer accepts input of NetworkX graphs.
-- [PR #1156](https://github.com/openforcefield/openforcefield/pull/1156): Removes `ParseError` and
-  `MessageException`, which has been deprecated since version 0.10.0.
 
 ### Breaking changes
 - [PR #1118](https://github.com/openforcefield/openforcefield/pull/1118):
@@ -565,6 +570,8 @@ print(value_roundtrip)
 :::{TODO}
 - Translate previous release history to MyST markdown
 :::
+
+## Earlier releases
 
 :::{eval-rst}
 
