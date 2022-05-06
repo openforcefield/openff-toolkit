@@ -1486,14 +1486,13 @@ class ForceField:
         for molecule_idx, molecule in enumerate(topology.reference_molecules):
             top_mol = Topology.from_molecules([molecule])
             current_molecule_labels = dict()
-            param_is_list = False
             for tag, parameter_handler in self._parameter_handlers.items():
+                param_is_list = False
 
                 if type(parameter_handler) == VirtualSiteHandler:
                     param_is_list = True
 
                 matches = parameter_handler.find_matches(top_mol)
-                print(matches)
                 # Remove the chemical environment matches from the
                 # matched results.
 
