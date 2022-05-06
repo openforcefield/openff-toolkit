@@ -130,7 +130,7 @@ jobs:
           NB_ARGS+=" --ignore=examples/using_smirnoff_in_amber_or_gromacs/export_with_interchange.ipynb"
 
           # REMOVE THIS LINE BEFORE 0.11.0 RELEASE
-          NB_ARGS+=" --ignore=examples/virtual_sites/vsite_showcase.ipynb
+          NB_ARGS+=" --ignore=examples/virtual_sites/vsite_showcase.ipynb"
           pytest $NB_ARGS examples
 
       - name: Codecov
