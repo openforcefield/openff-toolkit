@@ -64,10 +64,7 @@ For more information, see ``examples/forcefield_modification``.
     LibraryChargeType
     GBSAType
     ChargeIncrementType
-    VirtualSiteBondChargeType
-    VirtualSiteMonovalentLonePairType
-    VirtualSiteDivalentLonePairType
-    VirtualSiteTrivalentLonePairType
+    VirtualSiteType
 
 Parameter Handlers
 ~~~~~~~~~~~~~~~~~~

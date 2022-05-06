@@ -1565,11 +1565,6 @@ class ForceField:
             molecule.to_topology(), return_topology=True, **kwargs
         )
 
-        if top_with_charges.n_virtual_sites != 0:
-            raise PartialChargeVirtualSitesError(
-                "get_partial_charges is not supported on molecules with virtual sites"
-            )
-
         charges = [*top_with_charges.reference_molecules][0].partial_charges
         return charges
 
