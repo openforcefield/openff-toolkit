@@ -1,8 +1,3 @@
-#!/usr/bin/env python
-
-# =============================================================================================
-# MODULE DOCSTRING
-# =============================================================================================
 """
 Parameter handlers for the SMIRNOFF force field engine
 
@@ -70,7 +65,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union, cast
 import numpy as np
 from openff.units import unit
 from openff.utilities import requires_package
-from packaging.version import Version, parse
+from packaging.version import Version
 from typing_extensions import Literal, get_args
 
 from openff.toolkit.topology import ImproperDict, TagSortedDict, Topology, ValenceDict
@@ -98,22 +93,12 @@ from openff.toolkit.utils.exceptions import (
 )
 from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
 from openff.toolkit.utils.utils import (
-    all_subclasses,
     attach_units,
     extract_serialized_units_from_dict,
     object_to_quantity,
 )
 
-# =============================================================================================
-# CONFIGURE LOGGER
-# =============================================================================================
-
 logger = logging.getLogger(__name__)
-
-
-# ======================================================================
-# ENUM TYPES
-# ======================================================================
 
 
 class NonbondedMethod(Enum):
@@ -128,9 +113,7 @@ class NonbondedMethod(Enum):
     PME = 4
 
 
-# ======================================================================
-# UTILITY FUNCTIONS
-# ======================================================================
+_cal_mol_a2 = unit.calorie / unit.mole / unit.angstrom**2
 
 
 def _linear_inter_or_extrapolate(points_dict, x_query):
@@ -206,7 +189,8 @@ def _linear_inter_or_extrapolate(points_dict, x_query):
         return k
 
 
-# TODO: This is technically a validator, not a converter, but ParameterAttribute doesn't support them yet (it'll be easy if we switch to use the attrs library).
+# TODO: This is technically a validator, not a converter, but ParameterAttribute doesn't support them yet
+#       (it'll be easy if we switch to use the attrs library).
 def _allow_only(allowed_values):
     """A converter that checks the new value is only in a set."""
     allowed_values = frozenset(allowed_values)
@@ -251,11 +235,6 @@ def _validate_units(attr, value: Union[str, unit.Quantity], units: unit.Unit):
     return value
 
 
-# ======================================================================
-# PARAMETER ATTRIBUTES
-# ======================================================================
-
-# TODO: Think about adding attrs to the dependencies and inherit from attr.ib
 class ParameterAttribute:
     """A descriptor for ``ParameterType`` attributes.
 
@@ -770,7 +749,9 @@ class _ParameterAttributeHandler:
     >>> ParameterTypeOrHandler(length=3.0*unit.nanometer)
     Traceback (most recent call last):
     ...
-    openff.toolkit.typing.engines.smirnoff.parameters.SMIRNOFFSpecError: <class 'openff.toolkit.typing.engines.smirnoff.parameters.ParameterTypeOrHandler'> require the following missing parameters: ['k']. Defined kwargs are ['length']
+    openff.toolkit.typing.engines.smirnoff.parameters.SMIRNOFFSpecError:
+    <class 'openff.toolkit.typing.engines.smirnoff.parameters.ParameterTypeOrHandler'> require the following missing
+    parameters: ['k']. Defined kwargs are ['length']
 
     Each attribute can be made optional by specifying a default value,
     and you can attach a converter function by passing a callable as an
@@ -988,7 +969,7 @@ class _ParameterAttributeHandler:
         for attrib_basename in self._get_indexed_parameter_attributes().keys():
             index = 1
             while True:
-                attrib_w_index = "{}{}".format(attrib_basename, index)
+                attrib_w_index = f"{attrib_basename}{index}"
 
                 # Exit the while loop if the indexed attribute is not given.
                 # this is the stop condition
@@ -1362,7 +1343,9 @@ class _ParameterAttributeHandler:
         """
         # If no filter is specified, get all the parameters.
         if filter is None:
-            filter = lambda x: True
+
+            def filter(x):
+                return True
 
         # Go through MRO and retrieve also parents descriptors. The function
         # inspect.getmembers() automatically resolves the MRO, but it also
@@ -1430,10 +1413,6 @@ class _ParameterAttributeHandler:
         return required
 
 
-# ======================================================================
-# PARAMETER TYPE/LIST
-# ======================================================================
-
 # We can't actually make this derive from dict, because it's possible for the user to change SMIRKS
 # of parameters already in the list, which would cause the ParameterType object's SMIRKS and
 # the dictionary key's SMIRKS to be out of sync.
@@ -1493,7 +1472,7 @@ class ParameterList(list):
         if not isinstance(other, ParameterList):
             msg = (
                 "ParameterList.extend(other) expected instance of ParameterList, "
-                "but received {} (type {}) instead".format(other, type(other))
+                f"but received {other} (type {type(other)}) instead"
             )
             raise TypeError(msg)
         # TODO: Check if other ParameterList contains the same ParameterTypes?
@@ -1525,9 +1504,7 @@ class ParameterList(list):
             for parameter in self:
                 if parameter.smirks == item:
                     return self.index(parameter)
-            raise ParameterLookupError(
-                "SMIRKS {item} not found in ParameterList".format(item=item)
-            )
+            raise ParameterLookupError(f"SMIRKS {item} not found in ParameterList")
 
     def insert(self, index, parameter):
         """
@@ -1794,26 +1771,12 @@ class ParameterType(_ParameterAttributeHandler):
         super().__init__(allow_cosmetic_attributes=allow_cosmetic_attributes, **kwargs)
 
     def __repr__(self):
-        ret_str = "<{} with ".format(self.__class__.__name__)
+        ret_str = "<{self.__class__.__name__} with "
         for attr, val in self.to_dict().items():
             ret_str += f"{attr}: {val}  "
         ret_str += ">"
         return ret_str
 
-
-# ======================================================================
-# PARAMETER HANDLERS
-#
-# The following classes are Handlers that know how to create Force
-# subclasses and add them to an OpenMM System that is being created. Each
-# Handler class must define three methods:
-# 1) a constructor which takes as input hierarchical dictionaries of data
-#    conformant to the SMIRNOFF spec;
-# 2) a create_force() method that constructs the Force object and adds it
-#    to the System; and
-# 3) a labelForce() method that provides access to which terms are applied
-#    to which atoms in specified mols.
-# ======================================================================
 
 # TODO: Should we have a parameter handler registry?
 
@@ -2064,9 +2027,9 @@ class ParameterHandler(_ParameterAttributeHandler):
             to the **END** of the parameter list.
           * When `before` and `after` are both specified, the new parameter will be added immediately
             after the parameter matching the `after` pattern or index.
-          * The order of parameters in a parameter list can have significant impacts on parameter assignment. For details,
-            see the [SMIRNOFF](https://openforcefield.github.io/standards/standards/smirnoff/#smirnoff-parameter-specification-is-hierarchical)
-            specification.
+          * The order of parameters in a parameter list can have significant impacts on parameter assignment. For
+            details, see the SMIRNOFF specification:
+            https://openforcefield.github.io/standards/standards/smirnoff/#smirnoff-parameter-specification-is-hierarchical
 
         Examples
         --------
@@ -2261,7 +2224,7 @@ class ParameterHandler(_ParameterAttributeHandler):
             ``matches[particle_indices]`` is the ``ParameterType`` object
             matching the tuple of particle indices in ``entity``.
         """
-        logger.debug("Finding matches for {}".format(self.__class__.__name__))
+        logger.debug(f"Finding matches for {self.__class__.__name__}")
 
         matches = transformed_dict_cls()
 
@@ -2290,7 +2253,7 @@ class ParameterHandler(_ParameterAttributeHandler):
                 )
             )
 
-        logger.debug("{} matches identified".format(len(matches)))
+        logger.debug(f"{len(matches)} matches identified")
         return matches
 
     @staticmethod
@@ -2343,7 +2306,9 @@ class ParameterHandler(_ParameterAttributeHandler):
         pass
 
     def postprocess_system(self, topology, system, **kwargs):
-        """Allow the force to perform a a final post-processing pass on the OpenMM ``System`` following parameter assignment, if needed.
+        """
+        Allow the force to perform a final post-processing pass on the OpenMM ``System`` following parameter
+        assignment, if needed.
 
         Parameters
         ----------
@@ -2389,10 +2354,6 @@ class ParameterHandler(_ParameterAttributeHandler):
         smirnoff_data.update(header_attribute_dict)
 
         return smirnoff_data
-
-    # -------------------------------
-    # Utilities for children classes.
-    # -------------------------------
 
     @classmethod
     def _check_all_valence_terms_assigned(
@@ -2606,9 +2567,6 @@ class ParameterHandler(_ParameterAttributeHandler):
         return self.parameters[val]
 
 
-# =============================================================================================
-
-
 class ConstraintHandler(ParameterHandler):
     """Handle SMIRNOFF ``<Constraints>`` tags
 
@@ -2650,9 +2608,6 @@ class ConstraintHandler(ParameterHandler):
             else:
                 system.addConstraint(*atoms, to_openmm(constraint.distance))
                 topology.add_constraint(*atoms, constraint.distance)
-
-
-# =============================================================================================
 
 
 class BondHandler(ParameterHandler):
@@ -2964,9 +2919,6 @@ class BondHandler(ParameterHandler):
         )
 
 
-# =============================================================================================
-
-
 class AngleHandler(ParameterHandler):
     """Handle SMIRNOFF ``<AngleForce>`` tags
 
@@ -3072,8 +3024,6 @@ class AngleHandler(ParameterHandler):
             exception_cls=UnassignedAngleParameterException,
         )
 
-
-# =============================================================================================
 
 # TODO: There's a lot of duplicated code in ProperTorsionHandler and ImproperTorsionHandler
 class ProperTorsionHandler(ParameterHandler):
@@ -3668,7 +3618,8 @@ class vdWHandler(_NonbondedHandler):
         default="cutoff", converter=_allow_only(["cutoff", "PME"])
     )
 
-    # TODO: Use _allow_only when ParameterAttribute will support multiple converters (it'll be easy when we switch to use the attrs library)
+    # TODO: Use _allow_only when ParameterAttribute will support multiple converters
+    #       (it'll be easy when we switch to use the attrs library)
     @scale12.converter
     def scale12(self, attrs, new_scale12):
         if new_scale12 != 0.0:
@@ -3834,7 +3785,8 @@ class ElectrostaticsHandler(_NonbondedHandler):
         default="Coulomb", converter=_allow_only(["Coulomb"])
     )
 
-    # TODO: Use _allow_only when ParameterAttribute will support multiple converters (it'll be easy when we switch to use the attrs library)
+    # TODO: Use _allow_only when ParameterAttribute will support multiple converters
+    #       (it'll be easy when we switch to use the attrs library)
     @scale12.converter
     def scale12(self, attrs, new_scale12):
         if new_scale12 != 0.0:
@@ -4164,8 +4116,8 @@ class ElectrostaticsHandler(_NonbondedHandler):
                 q, _, _ = force.getParticleParameters(topology.particle_index(particle))
                 partial_charge_sum += from_openmm(q)
             if (
-                abs(formal_charge_sum - partial_charge_sum)
-                > 0.01 * unit.elementary_charge
+                abs(formal_charge_sum - partial_charge_sum).m_as(unit.elementary_charge)
+                > 0.01
             ):
                 msg = (
                     f"Partial charge sum ({partial_charge_sum}) "
@@ -4403,11 +4355,12 @@ class ToolkitAM1BCCHandler(_NonbondedHandler):
         bond_matches = self.find_matches(topology)
 
         # Apply bond charge increments to all appropriate force groups
-        # QUESTION: Should we instead apply this to the Topology in a preprocessing step, prior to spreading out charge onto virtual sites?
+        # QUESTION: Should we instead apply this to the Topology in a preprocessing step, prior to spreading out
+        #           charge onto virtual sites?
         for force in system.getForces():
-            if force.__class__.__name__ in [
-                "NonbondedForce"
-            ]:  # TODO: We need to apply this to all Force types that involve charges, such as (Custom)GBSA forces and CustomNonbondedForce
+            if force.__class__.__name__ in ["NonbondedForce"]:
+                # TODO: We need to apply this to all Force types that involve charges, such as (Custom)GBSA forces and
+                #       CustomNonbondedForce
                 for (atoms, bond_match) in bond_matches.items():
                     # Get corresponding particle indices in Topology
                     bond = bond_match.parameter_type
@@ -4680,8 +4633,8 @@ class GBSAHandler(ParameterHandler):
     solute_dielectric = ParameterAttribute(default=1, converter=float)
     sa_model = ParameterAttribute(default="ACE", converter=_allow_only(["ACE", None]))
     surface_area_penalty = ParameterAttribute(
-        default=5.4 * unit.calorie / unit.mole / unit.angstrom**2,
-        unit=unit.calorie / unit.mole / unit.angstrom**2,
+        default=unit.Quantity(5.4, _cal_mol_a2),
+        unit=_cal_mol_a2,
     )
     solvent_radius = ParameterAttribute(default=1.4 * unit.angstrom, unit=unit.angstrom)
 
@@ -4694,10 +4647,9 @@ class GBSAHandler(ParameterHandler):
         #   solvent_radius is 1.4 A
         # Justification at https://github.com/openforcefield/openff-toolkit/pull/363
         if self.gb_model == "HCT":
-            if (
-                self.surface_area_penalty
-                != 5.4 * unit.calorie / unit.mole / unit.angstrom**2
-            ) and (self.sa_model is not None):
+            if self.surface_area_penalty != 5.4 * _cal_mol_a2 and (
+                self.sa_model is not None
+            ):
                 raise IncompatibleParameterError(
                     f"The current implementation of HCT GBSA does not "
                     f"support surface_area_penalty values other than 5.4 "
@@ -4720,10 +4672,9 @@ class GBSAHandler(ParameterHandler):
         #   solvent_radius is 1.4 A
         # Justification at https://github.com/openforcefield/openff-toolkit/pull/363
         if self.gb_model == "OBC1":
-            if (
-                self.surface_area_penalty
-                != 5.4 * unit.calorie / unit.mole / unit.angstrom**2
-            ) and (self.sa_model is not None):
+            if self.surface_area_penalty != 5.4 * _cal_mol_a2 and (
+                self.sa_model is not None
+            ):
                 raise IncompatibleParameterError(
                     f"The current implementation of OBC1 GBSA does not "
                     f"support surface_area_penalty values other than 5.4 "
@@ -4805,7 +4756,7 @@ class GBSAHandler(ParameterHandler):
             "OBC2": openmm.GBSAOBCForce,
             # It's tempting to do use the class below, but the customgbforce
             # version of OBC2 doesn't provide setSolventRadius()
-            #'OBC2': simtk.openmm.app.internal.customgbforces.GBSAOBC2Force,
+            # 'OBC2': simtk.openmm.app.internal.customgbforces.GBSAOBC2Force,
         }
         openmm_force_type = force_map[self.gb_model]
 
@@ -5310,10 +5261,6 @@ class VirtualSiteHandler(_NonbondedHandler):
     def create_force(self, system, topology: Topology, **kwargs):
         raise NotImplementedError("Use `openff-interchange` instead.")
 
-
-# ======================================================================
-# PARAMETERTYPE RE-EXPORTS
-# ======================================================================
 
 ConstraintType = ConstraintHandler.ConstraintType
 BondType = BondHandler.BondType

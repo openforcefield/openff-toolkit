@@ -11,6 +11,15 @@ repos:
   rev: 5.10.1
   hooks:
   - id: isort
+- repo: https://github.com/PyCQA/flake8
+  rev: 4.0.1
+  hooks:
+  - id: flake8
+    files: ^openff
+    additional_dependencies: [
+        'flake8-absolute-import',
+        'flake8-no-pep420',
+    ]
 - repo: https://github.com/nbQA-dev/nbQA
   rev: 1.3.1
   hooks:

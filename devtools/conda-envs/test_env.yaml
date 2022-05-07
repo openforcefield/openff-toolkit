@@ -31,8 +31,6 @@ dependencies:
   - mdtraj
   - cachetools
   - cached-property
-  - black
-  - isort
   - pyyaml
   - toml
   - bson

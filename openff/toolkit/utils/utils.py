@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 Utility subroutines
 
@@ -38,16 +37,7 @@ from openff.units import unit
 
 from openff.toolkit.utils.exceptions import MissingDependencyError
 
-# =============================================================================================
-# CONFIGURE LOGGER
-# =============================================================================================
-
 logger = logging.getLogger(__name__)
-
-
-# =============================================================================================
-# UTILITY SUBROUTINES
-# =============================================================================================
 
 
 def requires_package(package_name):
@@ -554,8 +544,9 @@ def attach_units(unitless_dict, attached_units):
                     float(parameter_attrib_string) * units_to_attach
                 )
             except ValueError as e:
-                e.msg = "Expected numeric value for parameter '{}', instead found '{}' when trying to attach units '{}'\n".format(
-                    indexed_parameter_name, parameter_attrib_string, units_to_attach
+                e.msg = (
+                    f"Expected numeric value for parameter '{indexed_parameter_name}', instead found "
+                    f"'{parameter_attrib_string}' when trying to attach units '{units_to_attach}'\n"
                 )
                 raise e
             c += 1
@@ -986,9 +977,8 @@ def get_molecule_parameterIDs(molecules, forcefield):
     )
     if len(duplicates) > 0:
         raise ValueError(
-            "Error: get_molecule_parameterIDs has been provided a list of oemols which contains some duplicates: {}".format(
-                duplicates
-            )
+            "Error: get_molecule_parameterIDs has been provided a list of oemols which contains some duplicates: "
+            f"{duplicates}"
         )
 
     # Assemble molecules into a Topology
