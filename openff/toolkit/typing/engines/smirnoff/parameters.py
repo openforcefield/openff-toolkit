@@ -1771,7 +1771,7 @@ class ParameterType(_ParameterAttributeHandler):
         super().__init__(allow_cosmetic_attributes=allow_cosmetic_attributes, **kwargs)
 
     def __repr__(self):
-        ret_str = "<{self.__class__.__name__} with "
+        ret_str = f"<{self.__class__.__name__} with "
         for attr, val in self.to_dict().items():
             ret_str += f"{attr}: {val}  "
         ret_str += ">"

@@ -1159,6 +1159,12 @@ class TestParameterType:
         assert param_dict["smirks"] == "[*:1]"
         assert len(param_dict.keys()) == 1
 
+    def test_repr(self):
+        class NamedType(ParameterType):
+            pass
+
+        assert NamedType(smirks="[*:1]").__repr__().startswith("<NamedType")
+
 
 class TestBondType:
     """Tests for the BondType class."""
