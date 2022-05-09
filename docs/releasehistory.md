@@ -121,7 +121,7 @@ print(value_roundtrip)
   [`Atom.symbol`](openff.toolkit.topology.molecule.Atom.symbol),
   [`Atom.mass`](openff.toolkit.topology.molecule.Atom.mass), and
   [`Atom.atomic_number`](openff.toolkit.topology.molecule.Atom.atomic_number).
-- [PR #1209](https://github.com/openforcefield/openforcefield/pull/1209): Fixes 
+- [PR #1209](https://github.com/openforcefield/openforcefield/pull/1209): Fixes
   [Issue #1073](https://github.com/openforcefield/openff-toolkit/issues/1073), where the
   `fractional_bondorder_method` kwarg to the 
   [`BondHandler`](openff.toolkit.typing.engines.smirnoff.parameters.BondHandler) initializer 
@@ -150,6 +150,14 @@ print(value_roundtrip)
 
 - [PR #1188](https://github.com/openforcefield/openff-toolkit/pull/1188): Add an `<Electrostatics>`
   section to the TIP3P force field file used in testing (`test_forcefields/tip3p.offxml`)
+
+### Minor bugfixes
+- [PR #1290](https://github.com/openforcefield/openforcefield/pull/1290): Fixes
+  [Issue #1216](https://github.com/openforcefield/openff-toolkit/issues/1216) by adding internal logic to handle
+  the possibility that multiple vsites share the same parent atom, and makes the return value of 
+  `VirtualSiteHandler.find_matches` be closer to the base class.
+
+
 
 ## 0.10.5 Bugfix release
 

@@ -2340,11 +2340,11 @@ class TestVirtualSiteHandler:
 
         matched_smirks = defaultdict(set)
 
-        for match in matches:
-
-            matched_smirks[match.environment_match.topology_atom_indices].add(
-                (match.parameter_type.smirks, match.parameter_type.name)
-            )
+        for match_list in matches.values():
+            for match in match_list:
+                matched_smirks[match.environment_match.topology_atom_indices].add(
+                    (match.parameter_type.smirks, match.parameter_type.name)
+                )
 
         assert {**matched_smirks} == expected_matches
 
@@ -2370,11 +2370,13 @@ class TestVirtualSiteHandler:
 
         matched_smirks = defaultdict(set)
 
-        for match in matches:
+        for match_key in matches:
+            match_list: List = matches[match_key]
 
-            matched_smirks[match.environment_match.topology_atom_indices].add(
-                (match.parameter_type.smirks, match.parameter_type.name)
-            )
+            for match in match_list:
+                matched_smirks[match.environment_match.topology_atom_indices].add(
+                    (match.parameter_type.smirks, match.parameter_type.name)
+                )
 
         expected_matches = {
             (1, 0): {("[Cl:1]-[C:2]", "EP")},
