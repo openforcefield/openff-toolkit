@@ -320,12 +320,12 @@ sphinx-autobuild docs docs/_build/html --watch openff
 
 Development for the `openff-toolkit` conforms to the recommendations given by the [Software Development Best Practices for Computational Chemistry](https://github.com/choderalab/software-development) guide.
 
-The naming conventions of classes, functions, and variables follows [PEP8](https://www.python.org/dev/peps/pep-0008/), consistently with the best practices guide. 
+The naming conventions of classes, functions, and variables follows [PEP8](https://www.python.org/dev/peps/pep-0008/), consistently with the best practices guide.
 The naming conventions used in this library not covered by PEP8 are:
 - Use `file_path`, `file_name`, and `file_stem` to indicate `path/to/stem.extension`, `stem.extension`, and `stem` respectively, consistent with the variables in the [`pathlib` module](https://docs.python.org/3/library/pathlib.html) of the standard library.
 - Use `n_x` to abbreviate "number of $x$" (e.g. `n_atoms`, `n_molecules`).
 
-We place a high priority on code cleanliness and readability, even if code could be written more compactly. 
+We place a high priority on code cleanliness and readability, even if code could be written more compactly.
 For example, 15-character variable names are fine. Triply nested list comprehensions are not.
 
 The `openff-toolkit` has adopted code formatting tools ("linters") to maintain consistent style and remove the burden of adhering to these standards by hand.
@@ -380,10 +380,10 @@ to see a code coverage report. This uses [Coverage.py](https://coverage.readthed
 
 ## Supported Python versions
 
-The OpenFF Toolkit roughly follows [NEP 29](https://numpy.org/neps/nep-0029-deprecation_policy.html). 
-As of version 0.11.0 (June 2022) this means Python 3.8-3.9 is officially supported. 
-We develop, test, and distribute on macOS and Linux-based operating systems. 
-We do not currently support Windows. 
+The OpenFF Toolkit roughly follows [NEP 29](https://numpy.org/neps/nep-0029-deprecation_policy.html).
+As of version 0.11.0 (June 2022) this means Python 3.8-3.9 are officially supported.
+We develop, test, and distribute on macOS and Linux-based operating systems.
+We do not currently support Windows.
 Some CI builds run using only RDKit as a backend, some run using only OpenEye Toolkits, and some run using both installed at once.
 
 The CI matrix is currently as follows:

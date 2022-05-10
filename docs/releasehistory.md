@@ -58,6 +58,8 @@ print(value_roundtrip)
 
 ## Current Development
 
+- [PR #1297](https://github.com/openforcefield/openff-toolkit/pull/1297): Drops support
+  for Python 3.7, following [NEP-29](https://numpy.org/neps/nep-0029-deprecation_policy.html).
 - [PR #1277](https://github.com/openforcefield/openff-toolkit/pull/1277): Adds support for version
   0.4 of the `<Electrostatics>` section of the SMIRNOFF specification.
 - [PR #1279](https://github.com/openforcefield/openforcefield/pull/1279):
