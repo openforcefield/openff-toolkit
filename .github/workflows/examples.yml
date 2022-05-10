@@ -123,10 +123,6 @@ jobs:
             NB_ARGS+=" --ignore=examples/conformer_energies"
             NB_ARGS+=" --ignore=examples/using_smirnoff_in_amber_or_gromacs"
           fi
-          # https://github.com/openforcefield/openff-toolkit/pull/1232#issuecomment-1080889858
-          NB_ARGS+=" --ignore=examples/toolkit_showcase/toolkit_showcase.ipynb"
-          NB_ARGS+=" --ignore=examples/swap_amber_parameters/swap_existing_ligand_parameters_with_openmmforcefields.ipynb"
-
           NB_ARGS+=" --ignore=examples/using_smirnoff_in_amber_or_gromacs/export_with_interchange.ipynb"
 
           # REMOVE THIS LINE BEFORE 0.11.0 RELEASE
