@@ -43,8 +43,16 @@ from openff.toolkit.typing.engines.smirnoff import (
     get_available_force_fields,
     vdWHandler,
 )
-from openff.toolkit.utils import get_data_file_path
+from openff.toolkit.utils import (
+    AmberToolsToolkitWrapper,
+    BuiltInToolkitWrapper,
+    OpenEyeToolkitWrapper,
+    RDKitToolkitWrapper,
+    ToolkitRegistry,
+    get_data_file_path,
+)
 from openff.toolkit.utils.exceptions import (
+    ChargeMethodUnavailableError,
     FractionalBondOrderInterpolationMethodUnsupportedError,
     IncompatibleParameterError,
     NonintegralMoleculeChargeException,
@@ -53,13 +61,6 @@ from openff.toolkit.utils.exceptions import (
     SMIRNOFFSpecError,
     SMIRNOFFSpecUnimplementedError,
     UnassignedMoleculeChargeException,
-)
-from openff.toolkit.utils.toolkits import (
-    AmberToolsToolkitWrapper,
-    ChargeMethodUnavailableError,
-    OpenEyeToolkitWrapper,
-    RDKitToolkitWrapper,
-    ToolkitRegistry,
 )
 
 XML_FF_GENERICS = """<?xml version='1.0' encoding='ASCII'?>
@@ -4428,6 +4429,62 @@ class TestForceFieldParameterAssignment:
             omm_system, ret_top = forcefield.create_openmm_system(
                 topology,
                 charge_from_molecules=[mol],
+            )
+
+
+class TestForceFieldWithToolkits:
+    """Test interactions between ``ForceField`` methods and wrapped toolkits."""
+
+    # TODO: If `_toolkit_registry_manager` is made public or used for other parts of the API,
+    #       these tests should be moved/adapted into more unit tests that call it directly
+    # TODO: Remove `use_interchange` arguments in coordination with #1276. They are included
+    #       here because ONLY that code path uses the experimental `_toolkit_registry_manager` motif
+
+    def test_toolkit_registry_bogus_argument(self):
+
+        topology = create_ethanol().to_topology()
+        force_field = ForceField("test_forcefields/test_forcefield.offxml")
+        with pytest.raises(
+            NotImplementedError,
+            match="Only .*ToolkitRegistry.*ToolkitWrapper.* are supported",
+        ):
+            force_field.create_openmm_system(
+                topology,
+                use_interchange=True,
+                toolkit_registry="rdkit",
+            )
+
+    def test_toolkit_registry_no_charge_methods(self):
+
+        topology = create_ethanol().to_topology()
+        force_field = ForceField("test_forcefields/test_forcefield.offxml")
+        with pytest.raises(
+            ValueError, match="No registered toolkits can provide .*find_smarts_matches"
+        ):
+            force_field.create_openmm_system(
+                topology, use_interchange=True, toolkit_registry=BuiltInToolkitWrapper()
+            )
+
+    @pytest.mark.skip(reason="Broken until Interchange supports Electrostatics 0.4")
+    @requires_rdkit
+    def test_toolkit_registry_bad_charge_method(self):
+        topology = create_ethanol().to_topology()
+        force_field = ForceField(
+            "test_forcefields/test_forcefield.offxml",
+            xml_charge_increment_model_ff_ethanol,
+        )
+        force_field.deregister_parameter_handler("ToolkitAM1BCC")
+        force_field["ChargeIncrementModel"].partial_charge_method = "am1bccelf10"
+
+        with pytest.raises(
+            ValueError, match="No registered toolkits can provide .*elf10"
+        ):
+            force_field.create_openmm_system(
+                topology,
+                use_interchange=True,
+                toolkit_registry=ToolkitRegistry(
+                    [RDKitToolkitWrapper(), AmberToolsToolkitWrapper()]
+                ),
             )
 
 

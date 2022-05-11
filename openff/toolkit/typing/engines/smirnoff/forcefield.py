@@ -28,7 +28,7 @@ import os
 import pathlib
 import warnings
 from collections import OrderedDict
-from typing import TYPE_CHECKING, List, Tuple, Union
+from typing import TYPE_CHECKING, List, Optional, Tuple, Union
 
 from packaging.version import Version
 
@@ -59,6 +59,8 @@ if TYPE_CHECKING:
     import openmm
 
     from openff.toolkit.topology import Topology
+    from openff.toolkit.utils.base_wrapper import ToolkitWrapper
+    from openff.toolkit.utils.toolkit_registry import ToolkitRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -1197,8 +1199,6 @@ class ForceField:
                 ordered_parameter_handlers.append(self._parameter_handlers[tagname])
         return ordered_parameter_handlers
 
-    # TODO: Should the Topology contain the default box vectors? Or should we require they be specified externally?
-    # TODO: How do we know if the system is periodic or not?
     # TODO: Should we also accept a Molecule as an alternative to a Topology?
     # TODO: Fall back to old code path if Interchange not installed?
     @requires_package("openmm")
@@ -1220,10 +1220,11 @@ class ForceField:
         """
         if use_interchange:
             return_topology = kwargs.pop("return_topology", False)
+            toolkit_registry = kwargs.get("toolkit_registry", None)
 
             interchange = self.create_interchange(
                 topology,
-                **kwargs,
+                toolkit_registry,
             )
             openmm_system = interchange.to_openmm(combine_nonbonded_forces=True)
             if not return_topology:
@@ -1382,7 +1383,11 @@ class ForceField:
             return system
 
     @requires_package("openff.interchange")
-    def create_interchange(self, topology: "Topology", box=None):
+    def create_interchange(
+        self,
+        topology: "Topology",
+        toolkit_registry: Optional[Union["ToolkitRegistry", "ToolkitWrapper"]] = None,
+    ):
         """
         Create an Interchange object from a ForceField, Topology, and (optionally) box vectors.
 
@@ -1392,8 +1397,9 @@ class ForceField:
         ----------
         topology : openff.toolkit.topology.Topology
             The topology to create this `Interchange` object from.
-        box : array-like, optional
-            The box vectors or lengths to use for the Interchange object.
+        toolkit_registry :  ToolkitRegistry, optional
+            A `ToolkitRegistry` containing the toolkit wrappers to be used during parametriation,
+            i.e. for assigning partial charges and fractional bond orders.
 
         Returns
         -------
@@ -1403,7 +1409,17 @@ class ForceField:
         """
         from openff.interchange import Interchange
 
-        return Interchange.from_smirnoff(force_field=self, topology=topology, box=box)
+        from openff.toolkit.utils.toolkit_registry import _toolkit_registry_manager
+
+        if toolkit_registry is not None:
+            used_registry = toolkit_registry
+        else:
+            from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
+
+            used_registry = GLOBAL_TOOLKIT_REGISTRY
+
+        with _toolkit_registry_manager(used_registry):
+            return Interchange.from_smirnoff(force_field=self, topology=topology)
 
     def label_molecules(self, topology):
         """Return labels for a list of molecules corresponding to parameters from this force field.
