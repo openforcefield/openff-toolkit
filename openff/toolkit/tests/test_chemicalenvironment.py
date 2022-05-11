@@ -2,7 +2,15 @@ from typing import List
 
 import pytest
 
-from openff.toolkit.typing.chemistry import *
+from openff.toolkit.typing.chemistry import (
+    AngleChemicalEnvironment,
+    AtomChemicalEnvironment,
+    BondChemicalEnvironment,
+    ChemicalEnvironment,
+    ImproperChemicalEnvironment,
+    TorsionChemicalEnvironment,
+)
+from openff.toolkit.utils.exceptions import SMIRKSMismatchError, SMIRKSParsingError
 from openff.toolkit.utils.toolkits import OPENEYE_AVAILABLE
 
 # TODO: Evaluate which tests in this file should be moved to test_toolkits
@@ -25,15 +33,11 @@ class TestChemicalEnvironments:
         Test all types of ChemicalEnvironment objects with defined atoms and bonds
         Each will be tetrahedral carbons connected by ring single bonds
         """
-        carbon = [["#6"], ["X4"]]
-        singleBond = [["-"], ["@"]]
-        atom = AtomChemicalEnvironment("[#6X4:1]", "CT")
-        bond = BondChemicalEnvironment("[#6X4:1]-[#6X4:2]", "CT-CT")
-        angle = AngleChemicalEnvironment("[#6X4:1]-[#6X4:2]-[#6X4:3]", "CT-CT-CT")
-        torsion = TorsionChemicalEnvironment(
-            "[#6X4:1]-[#6X4:2]-[#6X4:3]-[#6X4:4]", "CT-CT-CT-CT"
-        )
-        improper = ImproperChemicalEnvironment(
+        AtomChemicalEnvironment("[#6X4:1]", "CT")
+        BondChemicalEnvironment("[#6X4:1]-[#6X4:2]", "CT-CT")
+        AngleChemicalEnvironment("[#6X4:1]-[#6X4:2]-[#6X4:3]", "CT-CT-CT")
+        TorsionChemicalEnvironment("[#6X4:1]-[#6X4:2]-[#6X4:3]-[#6X4:4]", "CT-CT-CT-CT")
+        ImproperChemicalEnvironment(
             "[#6X4:1]-[#6X4:2](-[#6X4:3])-[#6X4:4]", "CT-CT(-CT)-CT"
         )
 
@@ -65,7 +69,8 @@ class TestChemicalEnvironments:
             ["[#6:1]1(-;!@[#1,#6])=;@[#6]-;@[#6]1", "Atom", ChemicalEnvironment],
             ["C(O-[#7,#8])CC=[*]", None, ChemicalEnvironment],
             [
-                "[#6$([#6X4](~[#7!-1,#8!-1,#16!-1,#9,#17,#35,#53])(~[#8]~[#1])):1]-[#6X2H2;+0:2]-,=,:;!@;!#[#7!-1,#8,#16:3]-[#4:4]",
+                "[#6$([#6X4](~[#7!-1,#8!-1,#16!-1,#9,#17,#35,#53])(~[#8]~[#1])):1]-"
+                "[#6X2H2;+0:2]-,=,:;!@;!#[#7!-1,#8,#16:3]-[#4:4]",
                 "ProperTorsion",
                 TorsionChemicalEnvironment,
             ],
@@ -180,7 +185,7 @@ class TestChemicalEnvironments:
         """
         for wrong_env in wrong_envs:
             with pytest.raises(SMIRKSMismatchError):
-                env = wrong_env(smirks)
+                wrong_env(smirks)
 
     @pytest.mark.parametrize("toolkit", toolkits)
     def test_wrong_smirks_error(self, toolkit):
@@ -189,11 +194,11 @@ class TestChemicalEnvironments:
         """
         smirks = "[*;:1]"
         with pytest.raises(SMIRKSParsingError):
-            env = ChemicalEnvironment(smirks, toolkit_registry=toolkit)
+            ChemicalEnvironment(smirks, toolkit_registry=toolkit)
 
     def test_embedded_atoms_smirks(self):
         """
         Check embedded atom parsing works
         """
         smirks = "[#1$(*-[#6](-[#7,#8,#9,#16,#17,#35])-[#7,#8,#9,#16,#17,#35]):1]~[$([#1]~[#6])]"
-        env = ChemicalEnvironment(smirks)
+        ChemicalEnvironment(smirks)

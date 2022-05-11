@@ -1,25 +1,18 @@
-"Base class for the toolkit wrappers. Defines the public API and some shared methods"
+"""
+Base class for toolkit wrappers. Defines the public API and some shared methods
+"""
 
 __all__ = ("ToolkitWrapper",)
-
-# =============================================================================================
-# IMPORTS
-# =============================================================================================
 
 from functools import wraps
 from typing import Optional
 
+from openff.toolkit.utils.constants import DEFAULT_AROMATICITY_MODEL
 from openff.toolkit.utils.exceptions import (
     IncorrectNumConformersError,
     IncorrectNumConformersWarning,
     ToolkitUnavailableException,
 )
-
-from .constants import DEFAULT_AROMATICITY_MODEL
-
-# =============================================================================================
-# Implementation
-# =============================================================================================
 
 
 def _mol_to_ctab_and_aro_key(

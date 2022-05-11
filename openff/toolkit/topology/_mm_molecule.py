@@ -284,7 +284,7 @@ class _SimpleMolecule:
 
         hier_scheme_dicts = molecule_dict.pop("hierarchy_schemes")
         for iter_name, hierarchy_scheme_dict in hier_scheme_dicts.items():
-            new_hier_scheme = self.add_hierarchy_scheme(
+            new_hier_scheme = cls.add_hierarchy_scheme(
                 hierarchy_scheme_dict["uniqueness_criteria"],
                 iter_name,
             )

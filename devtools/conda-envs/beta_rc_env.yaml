@@ -9,7 +9,7 @@ dependencies:
   - python
   - pip
   - packaging
-  - openmm
+  - openmm >=7.6
   - openff-forcefields
   - smirnoff99Frosst
   - numpy

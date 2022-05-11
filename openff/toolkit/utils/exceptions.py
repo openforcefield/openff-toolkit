@@ -186,7 +186,8 @@ class SMIRNOFFParseError(OpenFFToolkitException):
 
 class PartialChargeVirtualSitesError(OpenFFToolkitException):
     """
-    Exception thrown when partial charges cannot be computed for a Molecule because the ForceField applies virtual sites.
+    Exception thrown when partial charges cannot be computed for a Molecule because the ForceField applies virtual
+    sites.
     """
 
 
@@ -281,7 +282,9 @@ class UnsupportedMoleculeConversionError(OpenFFToolkitException):
 
 
 class InconsistentStereochemistryError(OpenFFToolkitException):
-    """Error raised when stereochemistry is inconsistent before and after conversions between molecule representations."""
+    """
+    Error raised when stereochemistry is inconsistent before and after conversions between molecule representations.
+    """
 
 
 class UnsupportedFileTypeError(OpenFFToolkitException):

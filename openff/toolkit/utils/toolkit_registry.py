@@ -18,16 +18,7 @@ from openff.toolkit.utils.openeye_wrapper import OpenEyeToolkitWrapper
 from openff.toolkit.utils.rdkit_wrapper import RDKitToolkitWrapper
 from openff.toolkit.utils.utils import all_subclasses
 
-# =============================================================================================
-# CONFIGURE LOGGER
-# =============================================================================================
-
 logger = logging.getLogger(__name__)
-
-
-# =============================================================================================
-# Implementation
-# =============================================================================================
 
 
 class ToolkitRegistry:
@@ -382,14 +373,11 @@ class ToolkitRegistry:
         raise ValueError(msg)
 
     def __repr__(self):
-        return (
-            "<ToolkitRegistry containing "
-            + ", ".join([tk.toolkit_name for tk in self._toolkits])
-            + ">"
-        )
+        return f"<ToolkitRegistry containing {', '.join([tk.toolkit_name for tk in self._toolkits])}>"
 
 
-# Coped from https://github.com/openforcefield/openff-fragmenter/blob/4a290b866a8ed43eabcbd3231c62b01f0c6d7df6/openff/fragmenter/utils.py#L97-L123
+# Coped from https://github.com/openforcefield/openff-fragmenter/blob/4a290b866a8ed43eabcbd3231c62b01f0c6d7df6
+# /openff/fragmenter/utils.py#L97-L123
 @contextmanager
 def _toolkit_registry_manager(toolkit_registry: Union[ToolkitRegistry, ToolkitWrapper]):
     from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
