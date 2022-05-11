@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-
+# flake8: noqa
 """
 Tools for generating library of substructures from the Chemical Component
 Dictionary (CCD).

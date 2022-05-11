@@ -16,16 +16,7 @@ from openff.toolkit.utils.openeye_wrapper import OpenEyeToolkitWrapper
 from openff.toolkit.utils.rdkit_wrapper import RDKitToolkitWrapper
 from openff.toolkit.utils.utils import all_subclasses
 
-# =============================================================================================
-# CONFIGURE LOGGER
-# =============================================================================================
-
 logger = logging.getLogger(__name__)
-
-
-# =============================================================================================
-# Implementation
-# =============================================================================================
 
 
 class ToolkitRegistry:
@@ -380,6 +371,4 @@ class ToolkitRegistry:
         raise ValueError(msg)
 
     def __repr__(self):
-        return "ToolkitRegistry containing " + ", ".join(
-            [tk.toolkit_name for tk in self._toolkits]
-        )
+        return f"<ToolkitRegistry containing {', '.join([tk.toolkit_name for tk in self._toolkits])}>"

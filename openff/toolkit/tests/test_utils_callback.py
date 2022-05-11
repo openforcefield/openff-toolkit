@@ -1,9 +1,3 @@
-#!/usr/bin/env python
-
-# =====================================================================
-# MODULE DOCSTRING
-# =====================================================================
-
 """
 Tests for callback utility classes and functions.
 
@@ -13,10 +7,6 @@ import pytest
 
 from openff.toolkit.utils.callback import Callbackable, callback_method
 from openff.toolkit.utils.exceptions import CallbackRegistrationError
-
-# =====================================================================
-# UTILITY CLASSES AND FUNCTIONS
-# =====================================================================
 
 
 class CallHistory:
@@ -58,17 +48,8 @@ class CallHistory:
 call_history = CallHistory()
 
 
-# =====================================================================
-# Test Callbackable class
-# =====================================================================
-
-
 class TestCallbackable:
     """Test suite for the Callbackable base class."""
-
-    # ----------------------------- #
-    # Utility classes and functions #
-    # ----------------------------- #
 
     class MyCallbackable(Callbackable):
         @callback_method
@@ -110,10 +91,6 @@ class TestCallbackable:
         call_history.reset_history()
         getattr(callbackable, event_name)(*args, **kwargs)
         assert call_history.history == expected_history
-
-    # ----- #
-    # Tests #
-    # ----- #
 
     @pytest.mark.parametrize("event_name", ["instance_method"])
     @pytest.mark.parametrize(

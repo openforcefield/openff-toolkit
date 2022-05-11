@@ -21,12 +21,11 @@ dependencies:
   - parmed
   - openeye-toolkits
   - packaging
-    # Removed until a new release which targets openff-toolkit is made.
-#  - openmmforcefields
-  # Unpin when https://github.com/openmm/openmm/issues/3495 is resolved
-  - openmm =7.6
+    # Removed until a compatible release is made
+# - openmmforcefields
+  - openmm =>7.6
   - openff-forcefields
-  - openff-units >=0.1.5
+  - openff-units >=0.1.6
   - openff-utilities
   - smirnoff99Frosst
   - cachetools
@@ -42,4 +41,4 @@ dependencies:
   - qcengine
   - mdtraj
   - pip:
-    - git+https://github.com/openforcefield/openff-interchange.git@v0.2.0-alpha.3
+    - git+https://github.com/openforcefield/openff-interchange.git@v0.2.0-alpha.4
