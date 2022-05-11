@@ -1,8 +1,3 @@
-#!/usr/bin/env python
-
-# =============================================================================================
-# MODULE DOCSTRING
-# =============================================================================================
 """
 Class definitions to represent a molecular system and its chemical components
 
@@ -16,23 +11,24 @@ Class definitions to represent a molecular system and its chemical components
    * Use `attrs <http://www.attrs.org/>`_ for object setter boilerplate?
 
 """
-import copy
 import itertools
 import warnings
 from collections import OrderedDict
 from collections.abc import MutableMapping
-from typing import TYPE_CHECKING, Generator, List, Union
+from copy import deepcopy
+from typing import TYPE_CHECKING, Dict, Generator, List, Tuple, Union
 
 import numpy as np
 from openff.units import unit
 from openff.utilities import requires_package
 
 from openff.toolkit.topology import Molecule
-from openff.toolkit.topology._mm_molecule import _SimpleMolecule
+from openff.toolkit.topology._mm_molecule import _SimpleBond, _SimpleMolecule
 from openff.toolkit.typing.chemistry import ChemicalEnvironment
 from openff.toolkit.utils import quantity_to_string, string_to_quantity
 from openff.toolkit.utils.exceptions import (
     DuplicateUniqueMoleculeError,
+    InvalidAromaticityModelError,
     InvalidBoxVectorsError,
     InvalidPeriodicityError,
     MissingUniqueMoleculesError,
@@ -47,10 +43,6 @@ from openff.toolkit.utils.toolkits import (
 
 if TYPE_CHECKING:
     from openff.toolkit.topology.molecule import Atom
-
-# =============================================================================================
-# PRIVATE SUBROUTINES
-# =============================================================================================
 
 
 def _topology_deprecation(old_method, new_method):
@@ -200,11 +192,10 @@ class UnsortedDict(_TransformedDict):
 
 class TagSortedDict(_TransformedDict):
     """
-    A dictionary where keys, consisting of tuples of atom indices, are kept unsorted, but only allows one permutation of a key
-    to exist. Certain situations require that atom indices are not transformed in any
-    way, such as when the tagged order of a match is needed downstream. For example a
-    parameter using charge increments needs the ordering of the tagged match, and so
-    transforming the atom indices in any way will cause that information to be lost.
+    A dictionary where keys, consisting of tuples of atom indices, are kept unsorted, but only allows one permutation
+    of a key to exist. Certain situations require that atom indices are not transformed in any way, such as when the
+    tagged order of a match is needed downstream. For example a parameter using charge increments needs the ordering of
+    the tagged match, and so transforming the atom indices in any way will cause that information to be lost.
 
     Because deduplication is needed, we still must avoid the expected situation
     where we must not allow two permutations of the same atoms to coexist. For example,
@@ -300,7 +291,9 @@ class ImproperDict(_TransformedDict):
 
     @staticmethod
     def key_transform(key):
-        """Reorder tuple in numerical order except for element[1] which is the central atom; it retains its position."""
+        """
+        Reorder tuple in numerical order except for element[1] which is the central atom; it retains its position.
+        """
         # Ensure key is a tuple
         key = tuple(key)
         assert len(key) == 4, "Improper keys must be 4 atoms"
@@ -317,12 +310,12 @@ class ImproperDict(_TransformedDict):
         """
         Generates a canonical ordering of the equivalent permutations of ``key`` (equivalent rearrangements of indices)
         and identifies which of those possible orderings this particular ordering is. This method is useful when
-        multiple SMARTS patterns might match the same atoms, but local molecular symmetry or the use of
-        wildcards in the SMARTS could make the matches occur in arbitrary order.
+        multiple SMARTS patterns might match the same atoms, but local molecular symmetry or the use of wildcards in
+        the SMARTS could make the matches occur in arbitrary order.
 
-        This method can be restricted to a subset of the canonical orderings, by providing
-        the optional ``possible`` keyword argument. If provided, the index returned by this method will be
-        the index of the element in ``possible`` after undergoing the same canonical sorting as above.
+        This method can be restricted to a subset of the canonical orderings, by providing the optional ``possible``
+        keyword argument. If provided, the index returned by this method will be the index of the element in
+        ``possible`` after undergoing the same canonical sorting as above.
 
         Parameters
         ----------
@@ -366,7 +359,8 @@ class ImproperDict(_TransformedDict):
 
 class Topology(Serializable):
     """
-    A Topology is a chemical representation of a system containing one or more molecules appearing in a specified order.
+    A Topology is a chemical representation of a system containing one or more molecules appearing in a specified
+    order.
 
     .. warning :: This API is experimental and subject to change.
 
@@ -440,6 +434,43 @@ class Topology(Serializable):
         self._box_vectors = None
         self._molecules = list()
         self._cached_chemically_identical_molecules = None
+
+    def __iadd__(self, other):
+        """Add two Topology objects in-place.
+
+        This method has the following effects:
+        * The cache (_cached_chemically_identical_molecules) is reset
+        * The constrained atom pairs (Topology.constrained_atom_pairs) is reset
+        * Box vectors are **not** updated.
+
+        """
+        if self.aromaticity_model != other.aromaticity_model:
+            raise InvalidAromaticityModelError(
+                "Mismatch in aromaticity models. Trying to add a Topology with aromaticity model "
+                f"{other.aromaticity_model} to a Topology with aromaticity model "
+                f"{self.aromaticity_model}"
+            )
+
+        self._cached_chemically_identical_molecules = None
+
+        constrained_atom_pairs_to_add = other.constrained_atom_pairs
+        atom_index_offset = self.n_atoms
+
+        for molecule in other.molecules:
+            self.add_molecule(deepcopy(molecule))
+
+        for key, value in constrained_atom_pairs_to_add.items():
+            new_key = tuple(index + atom_index_offset for index in key)
+            self._constrained_atom_pairs[new_key] = value
+
+        return self
+
+    def __add__(self, other):
+        """Add two Topology objects. See Topology.__iadd__ for details."""
+        combined = deepcopy(self)
+        combined += other
+
+        return combined
 
     # Should this be deprecated?
     @property
@@ -523,11 +554,11 @@ class Topology(Serializable):
             Aromaticity model to use. One of: ['OEAroModel_MDL']
         """
 
-        if not aromaticity_model in ALLOWED_AROMATICITY_MODELS:
+        if aromaticity_model not in ALLOWED_AROMATICITY_MODELS:
             msg = "Aromaticity model must be one of {}; specified '{}'".format(
                 ALLOWED_AROMATICITY_MODELS, aromaticity_model
             )
-            raise ValueError(msg)
+            raise InvalidAromaticityModelError(msg)
         self._aromaticity_model = aromaticity_model
 
     @property
@@ -558,9 +589,8 @@ class Topology(Serializable):
         if not hasattr(box_vectors, "units"):
             raise InvalidBoxVectorsError("Given unitless box vectors")
         # Unit.compatible_units() returns False with itself, for some reason
-        if (
-            box_vectors.units != unit.nm
-            and box_vectors.units not in unit.nm.compatible_units()
+        if (box_vectors.units != unit.nm) and (
+            box_vectors.units not in unit.nm.compatible_units()
         ):
             raise InvalidBoxVectorsError(
                 f"Cannot set box vectors with quantities with unit {box_vectors.units}"
@@ -610,13 +640,13 @@ class Topology(Serializable):
             )
 
     @property
-    def constrained_atom_pairs(self):
+    def constrained_atom_pairs(self) -> Dict[Tuple[int], Union[unit.Quantity, bool]]:
         """Returns the constrained atom pairs of the Topology
 
         Returns
         -------
-        constrained_atom_pairs : dict
-             dictionary of the form d[(atom1_topology_index, atom2_topology_index)] = distance (float)
+        constrained_atom_pairs : dict of Tuple[int]: Union[unit.Quantity, bool]
+             dictionary of the form {(atom1_topology_index, atom2_topology_index): distance}
         """
         return self._constrained_atom_pairs
 
@@ -993,8 +1023,8 @@ class Topology(Serializable):
 
         TODO:
 
-        * Do we want to generalize this to other kinds of queries too, like mdtraj DSL, pymol selections, atom index slices, etc?
-          We could just call it topology.matches(query)
+        * Do we want to generalize this to other kinds of queries too, like mdtraj DSL, pymol selections, atom index
+          slices, etc? We could just call it topology.matches(query)
 
         Parameters
         ----------
@@ -1118,7 +1148,9 @@ class Topology(Serializable):
             A mapping from the index of each molecule in the topology to (the index of the first appearance of
             a chemically equivalent molecule in the topology, and a mapping from the atom indices of this molecule to
             the atom indices of that chemically equivalent molecule).
-            ``identical_molecules[molecule_idx] = (unique_molecule_idx, {molecule_atom_idx, unique_molecule_atom_idx})``
+            ``identical_molecules[molecule_idx] = (
+                unique_molecule_idx, {molecule_atom_idx, unique_molecule_atom_idx}
+            )``
         """
         # Check whether this was run previously, and a cached result is available.
         if self._cached_chemically_identical_molecules is not None:
@@ -1152,7 +1184,7 @@ class Topology(Serializable):
         return self._cached_chemically_identical_molecules
 
     def copy_initializer(self, other):
-        other_dict = copy.deepcopy(other.to_dict())
+        other_dict = deepcopy(other.to_dict())
         self._initialize_from_dict(other_dict)
 
     def to_dict(self):
@@ -1568,7 +1600,7 @@ class Topology(Serializable):
               - `openmm.unit.Quantity' object which has atomic positions as a list of unit-tagged `Vec3` objects
               - `openff.units.unit.Quantity` object which wraps a `numpy.ndarray` with units
               - (unitless) 2D `numpy.ndarray`, in which it is assumed that the positions are in units of Angstroms.
-            For all data types, must have shape (n_atoms, 3) where n_atoms matches the number of atoms in this topology.
+            For all data types, must have shape (n_atoms, 3) where n_atoms is the number of atoms in this topology.
         file_format : str
             Output file format. Case insensitive. Currently only supported value is "pdb".
 
@@ -1643,7 +1675,9 @@ class Topology(Serializable):
     #       to do with this functionality in light of our move to the ToolkitWrapper architecture.
     #       Also, as written, this function implies several things about our toolkit's ability to
     #       handle biopolymers. We need to discuss how much of this functionality we will expose
-    #       and how we can make our toolkit's current scope clear to users..
+    #       and how we can make our toolkit's current scope clear to users.
+    @requires_package("openeye.oechem")
+    @requires_package("openmm")
     @staticmethod
     def _from_openeye(oemol):
         """
@@ -1662,6 +1696,9 @@ class Topology(Serializable):
             An OpenFF molecule
 
         """
+        from openeye import oechem
+        from openmm import Vec3, app
+
         # TODO: Convert this to cls.from_molecules(Molecule.from_openeye())?
         # OE Hierarchical molecule view
         hv = oechem.OEHierView(
@@ -1704,11 +1741,11 @@ class Topology(Serializable):
                         # Add atom to the mapping dictionary
                         oe_atom_to_openmm_at[oe_at] = openmm_at
 
-        if topology.getNumAtoms() != mol.NumAtoms():
+        if topology.getNumAtoms() != oemol.NumAtoms():
             oechem.OEThrow.Error(
                 "OpenMM topology and OEMol number of atoms mismatching: "
                 "OpenMM = {} vs OEMol  = {}".format(
-                    topology.getNumAtoms(), mol.NumAtoms()
+                    topology.getNumAtoms(), oemol.NumAtoms()
                 )
             )
 
@@ -1734,9 +1771,8 @@ class Topology(Serializable):
 
             # The amide bond is made by Carbon and Nitrogen atoms
             if not (
-                atomB.IsCarbon()
-                and atomE.IsNitrogen()
-                or (atomB.IsNitrogen() and atomE.IsCarbon())
+                (atomB.IsCarbon() and atomE.IsNitrogen())
+                or ((atomB.IsNitrogen() and atomE.IsCarbon()))
             ):
                 return False
 
@@ -1778,7 +1814,7 @@ class Topology(Serializable):
                 return False
 
         # Creating bonds
-        for oe_bond in mol.GetBonds():
+        for oe_bond in oemol.GetBonds():
             # Set the bond type
             if oe_bond.GetType() != "":
                 if oe_bond.GetType() in [
@@ -1834,6 +1870,7 @@ class Topology(Serializable):
     #       It also expects Topology to be organized by chain, which is not currently the case.
     #       Bringing this function back would require non-trivial engineering and testing, and we
     #       would want to discuss what "guarantee" of correctness it could offer.
+    @requires_package("openeye.oechem")
     def _to_openeye(self, positions=None, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
         """
         Create an OpenEye OEMol from the topology
@@ -1850,6 +1887,8 @@ class Topology(Serializable):
         NOTE: This comes from https://github.com/oess/oeommtools/blob/master/oeommtools/utils.py
 
         """
+        from openeye import oechem
+
         oe_mol = oechem.OEMol()
 
         # Python set used to identify atoms that are not in protein residues
@@ -1888,10 +1927,8 @@ class Topology(Serializable):
 
         if self.n_atoms != oe_mol.NumAtoms():
             raise Exception(
-                "OEMol has an unexpected number of atoms: "
-                "Molecule has {} atoms, while OEMol has {} atoms".format(
-                    topology.n_atom, oe_mol.NumAtoms()
-                )
+                "OEMol has an unexpected number of atoms: Topology has {self.n_atoms} atoms while OEMol has "
+                "{oe_mol.NumAtoms()} atoms."
             )
 
         # Create bonds
@@ -2014,7 +2051,8 @@ class Topology(Serializable):
         # start_index_2_top_mol is an ordered dict of [starting_atom_index] --> [topology_molecule]
         # search_range = range(atom_topology_index - largest_molecule_natoms, atom_topology_index)
         # search_index = atom_topology_index
-        # while not(search_index in start_index_2_top_mol.keys()): # Only efficient if start_index_2_top_mol.keys() is a set (constant time lookups)
+        # Only efficient if start_index_2_top_mol.keys() is a set (constant time lookups)
+        # while not(search_index in start_index_2_top_mol.keys()):
         #     search_index -= 1
         # topology_molecule = start_index_2_top_mol(search_index)
         # atom_molecule_index = atom_topology_index - search_index
@@ -2057,7 +2095,7 @@ class Topology(Serializable):
         pass
 
     def add_molecule(self, molecule: Union[Molecule, _SimpleMolecule]) -> int:
-        self._molecules.append(copy.deepcopy(molecule))
+        self._molecules.append(deepcopy(molecule))
         self._cached_chemically_identical_molecules = None
         return len(self._molecules)
 
@@ -2083,11 +2121,13 @@ class Topology(Serializable):
             existing_distance = self._constrained_atom_pairs[(iatom, jatom)]
             if isinstance(existing_distance, unit.Quantity) and distance is True:
                 raise Exception(
-                    f"Atoms ({iatom},{jatom}) already constrained with distance {existing_distance} but attempting to override with unspecified distance"
+                    f"Atoms ({iatom},{jatom}) already constrained with distance {existing_distance} "
+                    "but attempting to override with unspecified distance"
                 )
             if (existing_distance is True) and (distance is True):
                 raise Exception(
-                    f"Atoms ({iatom},{jatom}) already constrained with unspecified distance but attempting to override with unspecified distance"
+                    f"Atoms ({iatom},{jatom}) already constrained with unspecified distance "
+                    "but attempting to override with unspecified distance"
                 )
             if distance is False:
                 del self._constrained_atom_pairs[(iatom, jatom)]

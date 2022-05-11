@@ -1,9 +1,3 @@
-#!/usr/bin/env python
-
-# ======================================================================
-# MODULE DOCSTRING
-# ======================================================================
-
 """
 Test that the examples in the repo run without errors.
 """
@@ -18,10 +12,6 @@ import textwrap
 import pytest
 
 from openff.toolkit.utils import RDKIT_AVAILABLE, get_data_file_path, temporary_cd
-
-# ======================================================================
-# TEST UTILITIES
-# ======================================================================
 
 ROOT_DIR_PATH = pathlib.Path(__file__).joinpath("../../../../").resolve()
 
@@ -55,7 +45,7 @@ def run_script_str(script_str):
         # Run the Python script.
         try:
             run_script_file(temp_file_path)
-        except:
+        except:  # noqa
             script_str = textwrap.indent(script_str, "    ")
             raise Exception(f"The following script failed:\n{script_str}")
 
@@ -97,11 +87,6 @@ def find_readme_examples():
     with open(readme_path, "r") as f:
         readme_content = f.read()
     return re.findall("```python(.*?)```", readme_content, flags=re.DOTALL)
-
-
-# ======================================================================
-# TESTS
-# ======================================================================
 
 
 @pytest.mark.parametrize("readme_example_str", find_readme_examples())

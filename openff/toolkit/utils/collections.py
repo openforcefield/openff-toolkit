@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """
 Custom collections classes.
 
@@ -12,10 +10,6 @@ __all__ = [
 
 
 from collections import abc
-
-# =====================================================================
-# VALIDATED LIST
-# =====================================================================
 
 
 class ValidatedList(list):

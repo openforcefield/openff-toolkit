@@ -1,8 +1,3 @@
-#!/usr/bin/env python
-
-# =============================================================================================
-# MODULE DOCSTRING
-# =============================================================================================
 """
 XML I/O parser for the SMIRNOFF (SMIRKS Native Open Force Field) format.
 
@@ -22,16 +17,7 @@ from typing import Optional
 
 import xmltodict
 
-# =============================================================================================
-# CONFIGURE LOGGER
-# =============================================================================================
-
 logger = logging.getLogger(__name__)
-
-
-# =============================================================================================
-# Base ParameterIOHandler
-# =============================================================================================
 
 
 class ParameterIOHandler:
@@ -108,11 +94,6 @@ class ParameterIOHandler:
         pass
 
 
-# =============================================================================================
-# XML I/O
-# =============================================================================================
-
-
 class XMLParameterIOHandler(ParameterIOHandler):
     """
     Handles serialization/deserialization of SMIRNOFF ForceField objects from OFFXML format.
@@ -128,7 +109,8 @@ class XMLParameterIOHandler(ParameterIOHandler):
         ----------
         source : str or io.RawIOBase
             File path of file-like object implementing a ``read()`` method
-            specifying a SMIRNOFF force field definition in `the SMIRNOFF XML format <https://openforcefield.github.io/standards/standards/smirnoff/#xml-representation>`_.
+            specifying a SMIRNOFF force field definition in `the SMIRNOFF XML format
+            <https://openforcefield.github.io/standards/standards/smirnoff/#xml-representation>`_.
 
         Raises
         ------
@@ -156,7 +138,8 @@ class XMLParameterIOHandler(ParameterIOHandler):
         Parameters
         ----------
         data : str
-            A SMIRNOFF force field definition in `the SMIRNOFF XML format <https://openforcefield.github.io/standards/standards/smirnoff/#xml-representation>`_.
+            A SMIRNOFF force field definition in `the SMIRNOFF XML format
+            <https://openforcefield.github.io/standards/standards/smirnoff/#xml-representation>`_.
 
         """
         from pyexpat import ExpatError

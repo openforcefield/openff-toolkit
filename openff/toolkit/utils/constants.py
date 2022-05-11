@@ -8,12 +8,6 @@ __all__ = (
 )
 
 
-# =============================================================================================
-# SUPPORTED MODELS
-#
-# TODO: We may no longer need these since we now require SMIRNOFF to specify these models explicitly.
-# =============================================================================================
-
 # TODO: Is there a more specific name and reference for the aromaticity model?
 DEFAULT_AROMATICITY_MODEL = "OEAroModel_MDL"
 ALLOWED_AROMATICITY_MODELS = ["OEAroModel_MDL"]

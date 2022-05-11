@@ -1,9 +1,3 @@
-#!/usr/bin/env python
-
-# =============================================================================================
-# MODULE DOCSTRING
-# =============================================================================================
-
 """
 Tests for molecular topology representations
 
@@ -35,12 +29,6 @@ from openff.toolkit.tests.create_molecules import (
     create_cyclohexane,
     create_ethanol,
     create_reversed_ethanol,
-    cyx,
-    cyx_hierarchy_perceived,
-    cyx_residues_perceived,
-    dipeptide,
-    dipeptide_hierarchy_perceived,
-    dipeptide_residues_perceived,
 )
 from openff.toolkit.tests.utils import (
     has_pkg,
@@ -73,10 +61,6 @@ from openff.toolkit.utils.toolkits import (
     RDKitToolkitWrapper,
     ToolkitRegistry,
 )
-
-# =============================================================================================
-# TEST UTILITIES
-# =============================================================================================
 
 
 def assert_molecule_is_equal(molecule1, molecule2, msg):
@@ -165,11 +149,6 @@ def is_three_membered_ring_torsion(torsion):
 
     # This is a torsion including a three-membered ring.
     return True
-
-
-# =============================================================================================
-# FIXTURES
-# =============================================================================================
 
 
 def mini_drug_bank(xfail_mols=None, wip_mols=None):
@@ -283,10 +262,6 @@ drugbank_stereogenic_in_oe_but_not_rdkit = {
     "DrugBank_2141",
 }
 
-# =============================================================================================
-# TESTS
-# =============================================================================================
-
 
 class TestAtom:
     """Test Atom class."""
@@ -354,11 +329,11 @@ class TestAtom:
         assert atom3.to_dict() == atom.to_dict()
 
         # Ensure that invalid types raise appropriate errors
-        with pytest.raises(InvalidAtomMetadataError, match="non-string key") as excinfo:
+        with pytest.raises(InvalidAtomMetadataError, match="non-string key"):
             atom3.metadata[1] = "one"
         with pytest.raises(
             InvalidAtomMetadataError, match="non-string or integer value"
-        ) as excinfo:
+        ):
             atom3.metadata["length"] = 3.0 * unit.angstrom
 
     def test_set_molecule(self):
@@ -499,10 +474,6 @@ class TestMolecule:
             mol = Molecule.from_json(mol.to_json())
 
         assert np.allclose(initial_conformer, mol.conformers[0])
-
-    # ----------------------------------------------------
-    # Test Molecule constructors and conversion utilities.
-    # ----------------------------------------------------
 
     def test_create_empty(self):
         """Test empty constructor."""
@@ -898,9 +869,9 @@ class TestMolecule:
 
         # Ensure that attempting to initialize a single Molecule from a file
         # containing multiple molecules raises a ValueError
-        with pytest.raises(ValueError) as exc_info:
-            filename = get_data_file_path("molecules/zinc-subset-tripos.mol2.gz")
-            molecule = Molecule(filename, allow_undefined_stereo=True)
+        filename = get_data_file_path("molecules/zinc-subset-tripos.mol2.gz")
+        with pytest.raises(ValueError):
+            Molecule(filename, allow_undefined_stereo=True)
 
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_create_from_serialized(self, molecule):
@@ -919,7 +890,7 @@ class TestMolecule:
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_to_networkx(self, molecule):
         """Test conversion to NetworkX graph."""
-        graph = molecule.to_networkx()
+        molecule.to_networkx()
 
     @requires_rdkit
     @pytest.mark.parametrize("molecule", mini_drug_bank())
@@ -1322,10 +1293,6 @@ class TestMolecule:
             molecule, test_mol, "Molecule.to_openeye()/from_openeye() round trip failed"
         )
 
-    # ----------------------------------------------------
-    # Test properties.
-    # ----------------------------------------------------
-
     def test_name(self):
         """Test Molecule name property"""
         molecule1 = Molecule()
@@ -1345,25 +1312,28 @@ class TestMolecule:
         # make sure smiles match reference
         molecule = create_ethanol()
         assert molecule.hill_formula == "C2H6O"
+
         # make sure is not order dependent
         molecule_reverse = create_reversed_ethanol()
         assert molecule.hill_formula == molecule_reverse.hill_formula
+
         # make sure single element names are put first
         order_mol = Molecule.from_smiles("C(Br)CB")
         assert order_mol.hill_formula == "C2H6BBr"
+
         # test molecule with no carbon
         no_carb_mol = Molecule.from_smiles("OS(=O)(=O)O")
         assert no_carb_mol.hill_formula == "H2O4S"
+
         # test no carbon and hydrogen
         br_i = Molecule.from_smiles("BrI")
         assert br_i.hill_formula == "BrI"
+
         # make sure files and smiles match
         molecule_file = Molecule.from_file(get_data_file_path("molecules/ethanol.sdf"))
         assert molecule.hill_formula == molecule_file.hill_formula
-        # make sure the topology molecule gives the same formula
-        from openff.toolkit.topology.topology import Topology
 
-        topology = Topology.from_molecules(molecule)
+        # make sure the topology molecule gives the same formula
         assert molecule.hill_formula == Molecule._object_to_hill_formula(
             molecule.to_networkx()
         )
@@ -1599,8 +1569,8 @@ class TestMolecule:
             """Check all of the attributes in a molecule match after being remapped"""
             for atoms in zip(mol1.atoms, mol2.atoms):
                 assert atoms[0].to_dict() == atoms[1].to_dict()
-            # bonds will not be in the same order in the molecule and the atom1 and atom2 indecies could be out of order
-            # make a dict to compare them both
+            # bonds will not be in the same order in the molecule and the atom1 and atom2 indecies could be out of
+            # order make a dict to compare them both
             remapped_bonds = dict(
                 ((bond.atom1_index, bond.atom2_index), bond) for bond in mol2.bonds
             )
@@ -1678,7 +1648,7 @@ class TestMolecule:
         # catch mappings that are the wrong size
         too_small_mapping = {0: 1}
         with pytest.raises(ValueError):
-            new_ethanol = ethanol.remap(too_small_mapping, current_to_new=True)
+            ethanol.remap(too_small_mapping, current_to_new=True)
 
     def test_wrong_index_mapping(self):
         """Make sure the remap fails when the indexing starts from the wrong value"""
@@ -1688,7 +1658,7 @@ class TestMolecule:
             (i + 10, new_id) for i, new_id in enumerate(mapping.values())
         )
         with pytest.raises(IndexError):
-            new_ethanol = ethanol.remap(wrong_index_mapping, current_to_new=True)
+            ethanol.remap(wrong_index_mapping, current_to_new=True)
 
     tautomer_data = [
         {"molecule": "Oc1c(cccc3)c3nc2ccncc12", "tautomers": 2},
@@ -2266,7 +2236,7 @@ class TestMolecule:
         del entry.attributes["canonical_isomeric_explicit_hydrogen_mapped_smiles"]
         # now make the molecule from the record instance with the geometry
         with pytest.raises(KeyError):
-            mol_qca_record = Molecule.from_qcschema(entry, client)
+            Molecule.from_qcschema(entry, client)
 
     @requires_pkg("qcportal")
     @pytest.mark.flaky(reruns=10)
@@ -2299,12 +2269,13 @@ class TestMolecule:
 
         # there should be no undefined sterochmeistry error when making the molecule
         mol = Molecule.from_mapped_smiles(
-            "[H:14][c:1]1[c:3]([c:7]([c:11]([c:8]([c:4]1[H:17])[H:21])[C:13]([H:24])([H:25])[c:12]2[c:9]([c:5]([c:2]([c:6]([c:10]2[H:23])[H:19])[H:15])[H:18])[H:22])[H:20])[H:16]"
+            "[H:14][c:1]1[c:3]([c:7]([c:11]([c:8]([c:4]1[H:17])[H:21])[C:13]([H:24])"
+            "([H:25])[c:12]2[c:9]([c:5]([c:2]([c:6]([c:10]2[H:23])[H:19])[H:15])[H:18])[H:22])[H:20])[H:16]"
         )
         assert mol.n_atoms == 25
         # make sure the atom map is not exposed
         with pytest.raises(KeyError):
-            mapping = mol._properties["atom_map"]
+            mol._properties["atom_map"]
 
     @pytest.mark.parametrize(
         "toolkit_class", [OpenEyeToolkitWrapper, RDKitToolkitWrapper]
@@ -2469,10 +2440,6 @@ class TestMolecule:
             charge_sum += atom.formal_charge
         assert charge_sum == molecule.total_charge
 
-    # ----------------------------------------------------
-    # Test magic methods.
-    # ----------------------------------------------------
-
     def test_equality(self):
         """Test equality operator"""
         molecules = mini_drug_bank()
@@ -2481,10 +2448,6 @@ class TestMolecule:
         for i in range(nmolecules):
             for j in range(i, min(i + 3, nmolecules)):
                 assert (molecules[i] == molecules[j]) == (i == j)
-
-    # ----------------------
-    # Test Molecule methods.
-    # ----------------------
 
     def test_add_conformers(self):
         """Test addition of conformers to a molecule"""
@@ -2670,7 +2633,7 @@ class TestMolecule:
                 fractional_bond_order=bond.fractional_bond_order,
             )
         # Try to add the final bond twice, which should raise an Exception
-        with pytest.raises(Exception) as excinfo:
+        with pytest.raises(Exception):
             molecule_copy.add_bond(
                 bond.atom1_index,
                 bond.atom2_index,
@@ -2899,35 +2862,39 @@ class TestMolecule:
 
         initial_conformers = [
             # Add a conformer with an internal H-bond.
-            np.array(
-                [
-                    [0.5477, 0.3297, -0.0621],
-                    [-0.1168, -0.7881, 0.2329],
-                    [-1.4803, -0.8771, 0.1667],
-                    [-0.2158, 1.5206, -0.4772],
-                    [-1.4382, 1.5111, -0.5580],
-                    [1.6274, 0.3962, -0.0089],
-                    [0.3388, -1.7170, 0.5467],
-                    [-1.8612, -0.0347, -0.1160],
-                    [0.3747, 2.4222, -0.7115],
-                ]
-            )
-            * unit.angstrom,
+            unit.Quantity(
+                np.array(
+                    [
+                        [0.5477, 0.3297, -0.0621],
+                        [-0.1168, -0.7881, 0.2329],
+                        [-1.4803, -0.8771, 0.1667],
+                        [-0.2158, 1.5206, -0.4772],
+                        [-1.4382, 1.5111, -0.5580],
+                        [1.6274, 0.3962, -0.0089],
+                        [0.3388, -1.7170, 0.5467],
+                        [-1.8612, -0.0347, -0.1160],
+                        [0.3747, 2.4222, -0.7115],
+                    ]
+                ),
+                unit.angstrom,
+            ),
             # Add a conformer without an internal H-bond.
-            np.array(
-                [
-                    [0.5477, 0.3297, -0.0621],
-                    [-0.1168, -0.7881, 0.2329],
-                    [-1.4803, -0.8771, 0.1667],
-                    [-0.2158, 1.5206, -0.4772],
-                    [0.3353, 2.5772, -0.7614],
-                    [1.6274, 0.3962, -0.0089],
-                    [0.3388, -1.7170, 0.5467],
-                    [-1.7743, -1.7634, 0.4166],
-                    [-1.3122, 1.4082, -0.5180],
-                ]
-            )
-            * unit.angstrom,
+            unit.Quantity(
+                np.array(
+                    [
+                        [0.5477, 0.3297, -0.0621],
+                        [-0.1168, -0.7881, 0.2329],
+                        [-1.4803, -0.8771, 0.1667],
+                        [-0.2158, 1.5206, -0.4772],
+                        [0.3353, 2.5772, -0.7614],
+                        [1.6274, 0.3962, -0.0089],
+                        [0.3388, -1.7170, 0.5467],
+                        [-1.7743, -1.7634, 0.4166],
+                        [-1.3122, 1.4082, -0.5180],
+                    ]
+                ),
+                unit.angstrom,
+            ),
         ]
 
         molecule._conformers = [*initial_conformers]
@@ -2977,10 +2944,8 @@ class TestMolecule:
 
         offmol._make_carboxylic_acids_cis()
 
-        assert np.all(
-            np.abs(np.asarray(offmol.conformers) - np.asarray(expected_conformers))
-            < 1e-5
-        )
+        diffs = np.asarray(offmol.conformers) - np.asarray(expected_conformers)
+        assert np.all(np.abs(diffs)) < 1e-5
 
     @requires_openeye
     def test_assign_fractional_bond_orders(self):
@@ -3008,7 +2973,7 @@ class TestMolecule:
                         toolkit_registry=toolkit_registry,
                         use_conformers=molecule.conformers,
                     )
-                    fbo1 = [bond.fractional_bond_order for bond in molecule.bonds]
+                    # fbo1 = [bond.fractional_bond_order for bond in molecule.bonds]
                     # TODO: Now that the assign_fractional_bond_orders function takes more kwargs,
                     #       how can we meaningfully cache its results?
                     # # Call should be faster the second time due to caching
@@ -3095,19 +3060,6 @@ class TestMolecule:
                 n_conformers=1, toolkit_registry=RDKitToolkitWrapper()
             )
 
-        with pytest.raises(ValueError) as execption:
-            molecule.generate_conformers(n_conformers=1)
-
-            # pytest's checking of the string representation of this exception does not seem
-            # to play well with how it's constructed currently, so manually compare contents
-            exception_as_str = str(exception)
-            assert (
-                "No registered toolkits can provide the capability" in exception_as_str
-            )
-            assert "generate_conformers" in exception_as_str
-            assert "OpenEye Omega conformer generation failed" in exception_as_str
-            assert "RDKit conformer generation failed" in exception_as_str
-
     @requires_openeye
     @requires_rdkit
     def test_compute_partial_charges_am1bcc_warning(self):
@@ -3128,7 +3080,9 @@ class TestMoleculeVisualization:
     @requires_pkg("IPython")
     @requires_rdkit
     def test_visualize_rdkit(self):
-        """Test that the visualize method returns an expected object when using RDKit to generate a 2-D representation"""
+        """
+        Test that the visualize method returns an expected object when using RDKit to generate a 2-D representation
+        """
         import IPython
 
         mol = Molecule().from_smiles("CCO")
@@ -3178,7 +3132,9 @@ class TestMoleculeVisualization:
     @requires_pkg("IPython")
     @requires_openeye
     def test_visualize_openeye(self):
-        """Test that the visualize method returns an expected object when using OpenEye to generate a 2-D representation"""
+        """
+        Test that the visualize method returns an expected object when using OpenEye to generate a 2-D representation.
+        """
         import IPython
 
         mol = Molecule().from_smiles("CCO")
@@ -3321,7 +3277,6 @@ class TestMoleculeResiduePerception:
         # Perceive residue substructures
         offmol.perceive_residues(strict_chirality=strict_chirality)
         counter = 0  # matched atom counter
-        unlabelled_counter = 0  # unmatched atom counter
         for atom in offmol.atoms:
             if atom.metadata:
                 counter += 1
@@ -3512,7 +3467,7 @@ class TestMoleculeFromPDB:
     @pytest.mark.xfail()
     def test_from_pdb_t4_n_residues(self):
         """Test number of residues when creating Molecule from T4 PDB"""
-        expected_n_residues = 164
+        expected_n_residues = 164  # noqa
         raise NotImplementedError
 
     @pytest.mark.xfail()
@@ -3608,10 +3563,14 @@ class TestMoleculeSubclass:
 
 
 class TestHierarchies:
-    def test_nothing_perceived_dipeptide(self, dipeptide):
+    def test_nothing_perceived_dipeptide(self):
         """Test that loading a "vanilla" molecule from SDF does not assign atom metadata"""
+        from openff.toolkit.tests.create_molecules import dipeptide as create_dipeptide
+
+        dipeptide = create_dipeptide()
+
         with pytest.raises(KeyError):
-            assert None == dipeptide.atoms[0].metadata["residue_name"]
+            assert dipeptide.atoms[0].metadata["residue_name"] is None
         with pytest.raises(KeyError):
             assert "ALA" == dipeptide.atoms[10].metadata["residue_name"]
         with pytest.raises(KeyError):
@@ -3619,8 +3578,14 @@ class TestHierarchies:
         with pytest.raises(AttributeError):
             dipeptide.residues[0]
 
-    def test_residues_perceived_dipeptide(self, dipeptide_residues_perceived):
+    def test_residues_perceived_dipeptide(self):
         """Test that perceiving residues on a residue-containing molecule correctly populates atom metadata"""
+        from openff.toolkit.tests.create_molecules import (
+            dipeptide_residues_perceived as create_dipeptide,
+        )
+
+        dipeptide_residues_perceived = create_dipeptide()
+
         assert "ACE" == dipeptide_residues_perceived.atoms[0].metadata["residue_name"]
         assert 1 == dipeptide_residues_perceived.atoms[0].metadata["residue_number"]
         assert "ALA" == dipeptide_residues_perceived.atoms[10].metadata["residue_name"]
@@ -3629,8 +3594,13 @@ class TestHierarchies:
         with pytest.raises(AttributeError):
             type(dipeptide_residues_perceived.residues[0])
 
-    def test_add_delete_hierarchy_scheme(self, dipeptide_residues_perceived):
+    def test_add_delete_hierarchy_scheme(self):
         """Test adding and removing HierarchySchemes to/from molecules"""
+        from openff.toolkit.tests.create_molecules import (
+            dipeptide_residues_perceived as create_dipeptide,
+        )
+
+        dipeptide_residues_perceived = create_dipeptide()
 
         assert len(dipeptide_residues_perceived.hierarchy_schemes) == 0
         dipeptide_residues_perceived.add_hierarchy_scheme(
@@ -3670,12 +3640,21 @@ class TestHierarchies:
             dipeptide_residues_perceived.res_by_num[0]
         with pytest.raises(
             HierarchySchemeNotFoundException,
-            match='Can not delete HierarchyScheme with name "res_by_num" because no HierarchyScheme with that iterator name exists',
+            match=(
+                'Can not delete HierarchyScheme with name "res_by_num" because no HierarchyScheme '
+                "with that iterator name exists"
+            ),
         ):
             dipeptide_residues_perceived.delete_hierarchy_scheme("res_by_num")
 
-    def test_hierarchy_perceived_dipeptide(self, dipeptide_hierarchy_perceived):
+    def test_hierarchy_perceived_dipeptide(self):
         """Test populating and accessing HierarchyElements"""
+        from openff.toolkit.tests.create_molecules import (
+            dipeptide_hierarchy_perceived as create_dipeptide,
+        )
+
+        dipeptide_hierarchy_perceived = create_dipeptide()
+
         assert (
             str(dipeptide_hierarchy_perceived.residues[0])
             == "HierarchyElement ('None', 1, 'ACE') of iterator 'residues' containing 6 particle(s)"
@@ -3703,10 +3682,14 @@ class TestHierarchies:
                 assert particle.metadata["residue_name"] == residue.residue_name
                 assert particle.metadata["residue_number"] == residue.residue_number
 
-    def test_hierarchy_perceived_information_propagation(
-        self, dipeptide_hierarchy_perceived
-    ):
+    def test_hierarchy_perceived_information_propagation(self):
         """Ensure that updating atom metadata doesn't update the iterators until the hierarchy is re-perceived"""
+        from openff.toolkit.tests.create_molecules import (
+            dipeptide_hierarchy_perceived as create_dipeptide,
+        )
+
+        dipeptide_hierarchy_perceived = create_dipeptide()
+
         for atom in dipeptide_hierarchy_perceived.atoms:
             atom.metadata["chain"] = "A"
         assert ("A", 1, "ACE") != dipeptide_hierarchy_perceived.residues[0].identifier

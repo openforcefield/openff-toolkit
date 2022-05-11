@@ -1,8 +1,3 @@
-#!/usr/bin/env python
-
-# =============================================================================================
-# MODULE DOCSTRING
-# =============================================================================================
 """
 Molecular chemical entity representation and routines to interface with cheminformatics toolkits
 
@@ -24,7 +19,8 @@ Molecular chemical entity representation and routines to interface with cheminfo
      read multiple molecules via ``Molecules.from_file()``.
    * Should we allow the removal of atoms too?
    * Should invalidation of cached properties be handled via something like a tracked list?
-   * Refactor toolkit encapsulation to generalize and provide only a few major toolkit methods and toolkit objects that can be queried for features
+   * Refactor toolkit encapsulation to generalize and provide only a few major toolkit methods and toolkit objects
+        that can be queried for features
    * Speed up overall import time by putting non-global imports only where they are needed
 
 """
@@ -84,24 +80,12 @@ if TYPE_CHECKING:
 
     from openff.toolkit.topology._mm_molecule import _SimpleAtom, _SimpleMolecule
 
-# =============================================================================================
-# GLOBAL PARAMETERS
-# =============================================================================================
-
 # TODO: Can we have the `ALLOWED_*_MODELS` list automatically appear in the docstrings below?
 # TODO: Should `ALLOWED_*_MODELS` be objects instead of strings?
 # TODO: Should these be imported from `openff.toolkit.cheminformatics.aromaticity_models` and `.bondorder_models`?
 
 # TODO: Allow all OpenEye aromaticity models to be used with OpenEye names?
 #       Only support OEAroModel_MDL in RDKit version?
-
-# =============================================================================================
-# PRIVATE SUBROUTINES
-# =============================================================================================
-
-# =============================================================================================
-# Particle
-# =============================================================================================
 
 
 class Particle(Serializable):
@@ -163,11 +147,6 @@ class Particle(Serializable):
         raise NotImplementedError()  # TODO
 
 
-# =============================================================================================
-# Atom
-# =============================================================================================
-
-
 class AtomMetadataDict(UserDict):
     def __init__(self, *args, **kwargs):
         self.data = {}
@@ -194,8 +173,9 @@ class Atom(Particle):
 
        * Should ``Atom`` objects be immutable or mutable?
        * Do we want to support the addition of arbitrary additional properties,
-         such as floating point quantities (e.g. ``charge``), integral quantities (such as ``id`` or ``serial`` index in a PDB file),
-         or string labels (such as Lennard-Jones types)?
+        such as floating point quantities (e.g. ``charge``), integral quantities (such as ``id`` or ``serial``
+        index in a PDB file),
+        or string labels (such as Lennard-Jones types)?
 
     .. todo :: Allow atoms to have associated properties.
 
@@ -263,7 +243,7 @@ class Atom(Particle):
             name = ""
         self._name = name
         self._molecule = molecule
-        ## From Jeff: I'm going to assume that this is implicit in the parent Molecule's ordering of atoms
+        # From Jeff: I'm going to assume that this is implicit in the parent Molecule's ordering of atoms
         # self._molecule_atom_index = molecule_atom_index
         self._bonds = list()
 
@@ -398,7 +378,10 @@ class Atom(Particle):
         """
 
         # if (value != 'CW') and (value != 'CCW') and not(value is None):
-        #    raise Exception("Atom stereochemistry setter expected 'CW', 'CCW', or None. Received {} (type {})".format(value, type(value)))
+        #    raise Exception(
+        #       "Atom stereochemistry setter expected 'CW', 'CCW', or None. ""
+        #       "Received {} (type {})".format(value, type(value))"
+        # )
         self._stereochemistry = value
 
     @property
@@ -446,11 +429,9 @@ class Atom(Particle):
         other : string
             The new name for this atom
         """
-        if not (type(other) is str):
+        if type(other) != str:
             raise Exception(
-                "In setting atom name. Expected str, received {} (type {})".format(
-                    other, type(other)
-                )
+                f"In setting atom name. Expected str, received {other} (type {type(other)})."
             )
         self._name = other
 
@@ -475,7 +456,7 @@ class Atom(Particle):
         """
         for bond in self._bonds:
             for atom in bond.atoms:
-                if not (atom == self):
+                if atom is not self:
                     # TODO: This seems dangerous. Ask John for a better way
                     yield atom
 
@@ -557,7 +538,7 @@ class Atom(Particle):
 
     def __repr__(self):
         # TODO: Also include particle_index and which molecule this atom belongs to?
-        return "Atom(name={}, atomic number={})".format(self._name, self._atomic_number)
+        return f"Atom(name={self._name}, atomic number={self._atomic_number})"
 
     def __str__(self):
         # TODO: Also include particle_index and which molecule this atom belongs to?
@@ -623,10 +604,6 @@ class Atom(Particle):
 # @property
 # def neighbors(self):
 #    return (self._neighbor1, self._neighbor2)
-
-# =============================================================================================
-# Bond
-# =============================================================================================
 
 
 class Bond(Serializable):
@@ -806,10 +783,6 @@ class Bond(Serializable):
         )
 
 
-# =============================================================================================
-# Molecule
-# =============================================================================================
-
 # TODO: How do we automatically trigger invalidation of cached properties if an ``Atom`` or ``Bond`` is modified,
 #       rather than added/deleted via the API? The simplest resolution is simply to make them immutable.
 
@@ -972,16 +945,14 @@ class FrozenMolecule(Serializable):
             # if there turned out to be no way to load this input
             value_errors = list()
 
-            if isinstance(other, openff.toolkit.topology.FrozenMolecule) and not (
-                loaded
-            ):
+            if isinstance(other, openff.toolkit.topology.FrozenMolecule) and not loaded:
                 self._copy_initializer(other)
                 loaded = True
-            if isinstance(other, openff.toolkit.topology.Molecule) and not (loaded):
+            if isinstance(other, openff.toolkit.topology.Molecule) and not loaded:
                 # TODO: This will need to be updated once FrozenMolecules and Molecules are significantly different
                 self._copy_initializer(other)
                 loaded = True
-            if isinstance(other, OrderedDict) and not (loaded):
+            if isinstance(other, OrderedDict) and not loaded:
                 self.__setstate__(other)
                 loaded = True
 
@@ -1013,7 +984,7 @@ class FrozenMolecule(Serializable):
                     loaded = True
             # TODO: Make this compatible with file-like objects (I couldn't figure out how to make an oemolistream
             # from a fileIO object)
-            if (isinstance(other, str) or hasattr(other, "read")) and not (loaded):
+            if isinstance(other, str) or hasattr(other, "read") and not loaded:
                 try:
                     mol = Molecule.from_file(
                         other,
@@ -1034,9 +1005,9 @@ class FrozenMolecule(Serializable):
             # If none of the above methods worked, raise a ValueError summarizing the
             # errors from the different loading attempts
 
-            if not (loaded):
-                msg = "Cannot construct openff.toolkit.topology.Molecule from {}\n".format(
-                    other
+            if not loaded:
+                msg = (
+                    f"Cannot construct openff.toolkit.topology.Molecule from {other}\n"
                 )
                 for value_error in value_errors:
                     msg += str(value_error)
@@ -1092,7 +1063,8 @@ class FrozenMolecule(Serializable):
         smarts: str or ChemicalEnvironment
             Tagged SMARTS with a single atom with index 1. Any matches for this atom will have any assigned
             stereocheistry information removed.
-        toolkit_registry : a :class:`ToolkitRegistry` or :class:`ToolkitWrapper` object, optional, default=GLOBAL_TOOLKIT_REGISTRY
+        toolkit_registry : a :class:`ToolkitRegistry` or :class:`ToolkitWrapper` object, optional,
+            default=GLOBAL_TOOLKIT_REGISTRY
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for I/O operations
 
         """
@@ -1130,8 +1102,8 @@ class FrozenMolecule(Serializable):
 
         molecule_dict = OrderedDict()
         molecule_dict["name"] = self._name
-        ## From Jeff: If we go the properties-as-dict route, then _properties should, at
-        ## the top level, be a dict. Should we go through recursively and ensure all values are dicts too?
+        # From Jeff: If we go the properties-as-dict route, then _properties should, at
+        # the top level, be a dict. Should we go through recursively and ensure all values are dicts too?
         molecule_dict["atoms"] = [atom.to_dict() for atom in self._atoms]
         molecule_dict["bonds"] = [bond.to_dict() for bond in self._bonds]
         # TODO: Charges
@@ -1285,7 +1257,7 @@ class FrozenMolecule(Serializable):
         description = f"Molecule with name '{self.name}'"
         try:
             smiles = self.to_smiles()
-        except:
+        except Exception:
             hill = self.to_hill_formula()
             return description + f" with bad SMILES and Hill formula '{hill}'"
         return description + f" and SMILES '{smiles}'"
@@ -1331,12 +1303,15 @@ class FrozenMolecule(Serializable):
         self._initialize_from_dict(other_dict)
 
     def __eq__(self, other):
-        """Test two molecules for equality to see if they are the chemical species, but do not check other annotated properties.
+        """
+        Test two molecules for equality to see if they are the chemical species, but do not check other
+        annotated properties.
 
         .. note ::
 
-           Note that this method simply tests whether two molecules are identical chemical species using equivalence of their canonical isomeric SMILES.
-           No effort is made to ensure that the atoms are in the same order or that any annotated properties are preserved.
+           Note that this method simply tests whether two molecules are identical chemical species using equivalence of
+           their canonical isomeric SMILES.  No effort is made to ensure that the atoms are in the same order or that
+           any annotated properties are preserved.
 
         """
         # updated to use the new isomorphic checking method, with full matching
@@ -1403,7 +1378,7 @@ class FrozenMolecule(Serializable):
         ----------
         iter_name : str
         """
-        if not iter_name in self._hierarchy_schemes:
+        if iter_name not in self._hierarchy_schemes:
             raise HierarchySchemeNotFoundException(
                 f'Can not delete HierarchyScheme with name "{iter_name}" '
                 f"because no HierarchyScheme with that iterator name exists"
@@ -1460,7 +1435,8 @@ class FrozenMolecule(Serializable):
             atom map into the properties dictionary. If no mapping is passed all atoms will be mapped in order, else
             an atom map dictionary from the current atom index to the map id should be supplied with no duplicates.
             The map ids (values) should start from 0 or 1.
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
+        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or
+            openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES conversion
 
         Returns
@@ -1488,9 +1464,8 @@ class FrozenMolecule(Serializable):
             to_smiles_method = toolkit_registry.to_smiles
         else:
             raise InvalidToolkitRegistryError(
-                "Invalid toolkit_registry passed to to_smiles. Expected ToolkitRegistry or ToolkitWrapper. Got  {}".format(
-                    type(toolkit_registry)
-                )
+                "Invalid toolkit_registry passed to to_smiles. Expected ToolkitRegistry or ToolkitWrapper. "
+                f"Got {type(toolkit_registry)}"
             )
 
         # Get a string representation of the function containing the toolkit name so we can check
@@ -1531,7 +1506,8 @@ class FrozenMolecule(Serializable):
             an exception will be raised if a InChI with undefined stereochemistry
             is passed into this function.
 
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
+        toolkit_registry : openff.toolkit.utils.toolkits.ToolRegistry
+            or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for InChI-to-molecule conversion
 
 
@@ -1560,9 +1536,8 @@ class FrozenMolecule(Serializable):
             )
         else:
             raise InvalidToolkitRegistryError(
-                "Invalid toolkit_registry passed to from_inchi. Expected ToolkitRegistry or ToolkitWrapper. Got  {}".format(
-                    type(toolkit_registry)
-                )
+                "Invalid toolkit_registry passed to from_inchi. Expected ToolkitRegistry or ToolkitWrapper. "
+                f"Got {type(toolkit_registry)}"
             )
 
         return molecule
@@ -1570,18 +1545,19 @@ class FrozenMolecule(Serializable):
     def to_inchi(self, fixed_hydrogens=False, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """
         Create an InChI string for the molecule using the requested toolkit backend.
-        InChI is a standardised representation that does not capture tautomers unless specified using the fixed hydrogen
-        layer.
+        InChI is a standardised representation that does not capture tautomers unless specified using the fixed
+        hydrogen layer.
 
         For information on InChi see here https://iupac.org/who-we-are/divisions/division-details/inchi/
 
         Parameters
         ----------
         fixed_hydrogens: bool, default=False
-            If a fixed hydrogen layer should be added to the InChI, if `True` this will produce a non standard specific
-            InChI string of the molecule.
+            If a fixed hydrogen layer should be added to the InChI, if `True` this will produce a non standard
+            specific InChI string of the molecule.
 
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
+        toolkit_registry : openff.toolkit.utils.toolkits.ToolRegistry
+            or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for molecule-to-InChI conversion
 
         Returns
@@ -1604,9 +1580,8 @@ class FrozenMolecule(Serializable):
             inchi = toolkit.to_inchi(self, fixed_hydrogens=fixed_hydrogens)
         else:
             raise InvalidToolkitRegistryError(
-                "Invalid toolkit_registry passed to to_inchi. Expected ToolkitRegistry or ToolkitWrapper. Got  {}".format(
-                    type(toolkit_registry)
-                )
+                "Invalid toolkit_registry passed to to_inchi. Expected ToolkitRegistry or ToolkitWrapper. "
+                f"Got {type(toolkit_registry)}"
             )
 
         return inchi
@@ -1616,8 +1591,8 @@ class FrozenMolecule(Serializable):
     ):
         """
         Create an InChIKey for the molecule using the requested toolkit backend.
-        InChIKey is a standardised representation that does not capture tautomers unless specified using the fixed hydrogen
-        layer.
+        InChIKey is a standardised representation that does not capture tautomers unless specified
+        using the fixed hydrogen layer.
 
         For information on InChi see here https://iupac.org/who-we-are/divisions/division-details/inchi/
 
@@ -1627,7 +1602,8 @@ class FrozenMolecule(Serializable):
             If a fixed hydrogen layer should be added to the InChI, if `True` this will produce a non standard specific
             InChI string of the molecule.
 
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
+        toolkit_registry : openff.toolkit.utils.toolkits.ToolRegistry
+            or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for molecule-to-InChIKey conversion
 
         Returns
@@ -1650,9 +1626,8 @@ class FrozenMolecule(Serializable):
             inchi_key = toolkit.to_inchikey(self, fixed_hydrogens=fixed_hydrogens)
         else:
             raise InvalidToolkitRegistryError(
-                "Invalid toolkit_registry passed to to_inchikey. Expected ToolkitRegistry or ToolkitWrapper. Got  {}".format(
-                    type(toolkit_registry)
-                )
+                "Invalid toolkit_registry passed to to_inchikey. Expected ToolkitRegistry or ToolkitWrapper. "
+                f"Got {type(toolkit_registry)}"
             )
 
         return inchi_key
@@ -1674,7 +1649,8 @@ class FrozenMolecule(Serializable):
             The SMILES representation of the molecule.
         hydrogens_are_explicit : bool, default = False
             If False, the cheminformatics toolkit will perform hydrogen addition
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
+        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry
+            or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
         allow_undefined_stereo : bool, default=False
             Whether to accept SMILES with undefined stereochemistry. If False,
@@ -1709,9 +1685,8 @@ class FrozenMolecule(Serializable):
             )
         else:
             raise InvalidToolkitRegistryError(
-                "Invalid toolkit_registry passed to from_smiles. Expected ToolkitRegistry or ToolkitWrapper. Got  {}".format(
-                    type(toolkit_registry)
-                )
+                "Invalid toolkit_registry passed to from_smiles. Expected ToolkitRegistry or ToolkitWrapper. "
+                f"Got {type(toolkit_registry)}"
             )
 
         return molecule
@@ -1813,7 +1788,8 @@ class FrozenMolecule(Serializable):
             nitrogen stereocenters will be disregarded in the isomorphism
             check.
 
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
+        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry
+            or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for
             removing stereochemistry from pyrimidal nitrogens.
 
@@ -1959,7 +1935,8 @@ class FrozenMolecule(Serializable):
             nitrogen stereocenters will be disregarded in the isomorphism
             check.
 
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
+        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry
+            or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for
             removing stereochemistry from pyrimidal nitrogens.
 
@@ -2003,14 +1980,15 @@ class FrozenMolecule(Serializable):
 
         Parameters
         ----------
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
+        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or
+            openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
         n_conformers : int, default=1
             The maximum number of conformers to produce
         rms_cutoff : openmm.unit.Quantity-wrapped float, in units of distance, optional, default=None
             The minimum RMS value at which two conformers are considered redundant and one is deleted. Precise
-            implementation of this cutoff may be toolkit-dependent. If ``None``, the cutoff is set to be the default value
-            for each ``ToolkitWrapper`` (generally 1 Angstrom).
+            implementation of this cutoff may be toolkit-dependent. If ``None``, the cutoff is set to be the
+            default value for each ``ToolkitWrapper`` (generally 1 Angstrom).
         clear_existing : bool, default=True
             Whether to overwrite existing conformers for the molecule
         make_carboxylic_acids_cis: bool, default=True
@@ -2058,9 +2036,8 @@ class FrozenMolecule(Serializable):
             )
         else:
             raise InvalidToolkitRegistryError(
-                "Invalid toolkit_registry passed to generate_conformers. Expected ToolkitRegistry or ToolkitWrapper. Got  {}".format(
-                    type(toolkit_registry)
-                )
+                "Invalid toolkit_registry passed to generate_conformers. Expected ToolkitRegistry or ToolkitWrapper. "
+                f"Got {type(toolkit_registry)}"
             )
 
     def _make_carboxylic_acids_cis(self, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
@@ -2098,7 +2075,8 @@ class FrozenMolecule(Serializable):
 
         Parameters
         ----------
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
+        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry
+            or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
         """
 
@@ -2134,7 +2112,7 @@ class FrozenMolecule(Serializable):
             """Compute dihedrals of array with shape (..., 4, 3)"""
             # Praxeolitic formula
             # 1 sqrt, 1 cross product
-            # from https://stackoverflow.com/questions/20305272/dihedral-torsion-angle-from-four-points-in-cartesian-coordinates-in-python
+            # from https://stackoverflow.com/q/20305272
             p0 = a[..., 0, :]
             p1 = a[..., 1, :]
             p2 = a[..., 2, :]
@@ -2286,10 +2264,11 @@ class FrozenMolecule(Serializable):
         strict_n_conformers : bool, default=False
             Whether to raise an exception if an invalid number of conformers is provided for the given charge method.
             If this is False and an invalid number of conformers is found, a warning will be raised.
-        use_conformers : iterable of openmm.unit.Quantity-wrapped numpy arrays, each with shape (n_atoms, 3) and dimension of distance. Optional, default=None
-            Coordinates to use for partial charge calculation.
+        use_conformers : iterable of openmm.unit.Quantity-wrapped numpy arrays, each with shape (n_atoms, 3)
+            and dimension of distance. Optional, default=None Coordinates to use for partial charge calculation.
             If None, an appropriate number of conformers for the given charge method will be generated.
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
+        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry
+        or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for the calculation
 
         Examples
@@ -2343,10 +2322,14 @@ class FrozenMolecule(Serializable):
         For more supported charge methods and details, see the corresponding
         methods in each toolkit wrapper:
 
-        - :meth:`OpenEyeToolkitWrapper.assign_partial_charges <openff.toolkit.utils.toolkits.OpenEyeToolkitWrapper.assign_partial_charges>`
-        - :meth:`RDKitToolkitWrapper.assign_partial_charges <openff.toolkit.utils.toolkits.RDKitToolkitWrapper.assign_partial_charges>`
-        - :meth:`AmberToolsToolkitWrapper.assign_partial_charges <openff.toolkit.utils.toolkits.AmberToolsToolkitWrapper.assign_partial_charges>`
-        - :meth:`BuiltInToolkitWrapper.assign_partial_charges <openff.toolkit.utils.toolkits.BuiltInToolkitWrapper.assign_partial_charges>`
+        - :meth:`OpenEyeToolkitWrapper.assign_partial_charges
+            <openff.toolkit.utils.toolkits.OpenEyeToolkitWrapper.assign_partial_charges>`
+        - :meth:`RDKitToolkitWrapper.assign_partial_charges
+            <openff.toolkit.utils.toolkits.RDKitToolkitWrapper.assign_partial_charges>`
+        - :meth:`AmberToolsToolkitWrapper.assign_partial_charges
+            <openff.toolkit.utils.toolkits.AmberToolsToolkitWrapper.assign_partial_charges>`
+        - :meth:`BuiltInToolkitWrapper.assign_partial_charges
+            <openff.toolkit.utils.toolkits.BuiltInToolkitWrapper.assign_partial_charges>`
 
         Parameters
         ----------
@@ -2357,10 +2340,13 @@ class FrozenMolecule(Serializable):
             Whether to raise an exception if an invalid number of conformers is
             provided for the given charge method. If this is False and an
             invalid number of conformers is found, a warning will be raised.
-        use_conformers : iterable of openmm.unit.Quantity-wrapped numpy arrays, each with shape (n_atoms, 3) and dimension of distance. Optional, default=None
+        use_conformers : iterable of openmm.unit.Quantity-wrapped numpy arrays, each with shape (n_atoms, 3) and
+            dimension of distance. Optional, default=None
             Coordinates to use for partial charge calculation. If None, an
             appropriate number of conformers will be generated.
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
+        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or
+            openff.toolkit.utils.toolkits.ToolkitWrapper,
+            optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for the
             calculation.
         normalize_partial_charges : bool, default=True
@@ -2449,11 +2435,13 @@ class FrozenMolecule(Serializable):
 
         Parameters
         ----------
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
+        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or
+            openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
         bond_order_model : string, optional. Default=None
             The bond order model to use for fractional bond order calculation. If ``None``, ``"am1-wiberg"`` is used.
-        use_conformers : iterable of openmm.unit.Quantity(np.array) with shape (n_atoms, 3) and dimension of distance, optional, default=None
+        use_conformers : iterable of openmm.unit.Quantity(np.array) with shape (n_atoms, 3) and dimension of distance,
+            optional, default=None
             The conformers to use for fractional bond order calculation. If ``None``, an appropriate number
             of conformers will be generated by an available ``ToolkitWrapper``.
 
@@ -2524,8 +2512,8 @@ class FrozenMolecule(Serializable):
         Returns
         -------
         graph : networkx.Graph
-            The resulting graph, with nodes (atoms) labeled with atom indices, elements, stereochemistry and aromaticity
-            flags and bonds with two atom indices, bond order, stereochemistry, and aromaticity flags
+            The resulting graph, with nodes (atoms) labeled with atom indices, elements, stereochemistry and
+            aromaticity flags and bonds with two atom indices, bond order, stereochemistry, and aromaticity flags
 
         Examples
         --------
@@ -2570,7 +2558,8 @@ class FrozenMolecule(Serializable):
         ignore_functional_groups: optional, List[str], default=None,
             A list of bond SMARTS patterns to be ignored when finding rotatable bonds.
 
-        toolkit_registry: openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
+        toolkit_registry: openff.toolkit.utils.toolkits.ToolkitRegistry
+            or openff.toolkit.utils.toolkits.ToolkitWrapperl, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMARTS matching
 
         Returns
@@ -2751,14 +2740,12 @@ class FrozenMolecule(Serializable):
         else:
             raise Exception(
                 "Invalid inputs to molecule._add_bond. Expected ints or Atoms. "
-                "Received {} (type {}) and {} (type {}) ".format(
-                    atom1, type(atom1), atom2, type(atom2)
-                )
+                f"Received {atom1} (type {type(atom1)}) and {atom2} (type {type(atom2)}) "
             )
         # TODO: Check to make sure bond does not already exist
         if atom1_atom.is_bonded_to(atom2_atom):
             raise Exception(
-                "Bond already exists between {} and {}".format(atom1_atom, atom2_atom)
+                f"Bond already exists between {atom1_atom} and {atom2_atom})"
             )
         bond = Bond(
             atom1_atom,
@@ -2862,7 +2849,8 @@ class FrozenMolecule(Serializable):
         Parameters
         ----------
         charges : None or a openmm.unit.Quantity - wrapped numpy array [1 x n_atoms]
-            The partial charges to assign to the molecule. If not None, must be in units compatible with openmm.unit.elementary_charge
+            The partial charges to assign to the molecule. If not None, must be in units compatible with
+            openmm.unit.elementary_charge
 
         """
         if charges is None:
@@ -2874,7 +2862,7 @@ class FrozenMolecule(Serializable):
             if hasattr(charges, "unit"):
                 from openmm import unit as openmm_unit
 
-                if not isinstance(other, openmm_unit.Quantity):
+                if not isinstance(charges, openmm_unit.Quantity):
                     raise IncompatibleUnitError(
                         "Unsupported type passed to partial_charges setter. "
                         "Found object of type {type(charges)}."
@@ -2973,7 +2961,6 @@ class FrozenMolecule(Serializable):
 
     @property
     def atoms(self):
-
         """
         Iterate over all Atom objects in the molecule.
         """
@@ -3321,14 +3308,11 @@ class FrozenMolecule(Serializable):
         Parameters
         ----------
         query : str or ChemicalEnvironment
-            SMARTS string (with one or more tagged atoms) or
-            ``ChemicalEnvironment`` query. Query will internally be resolved to
-            SMIRKS using ``query.asSMIRKS()`` if it has an ``.asSMIRKS`` method.
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=GLOBAL_TOOLKIT_REGISTRY
-            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for
-            chemical environment matches
-        unique : bool
-            If ``True``, returned matches will be guaranteed to be unique.
+            SMARTS string (with one or more tagged atoms) or ``ChemicalEnvironment`` query.
+            Query will internally be resolved to SMIRKS using ``query.asSMIRKS()`` if it has an ``.asSMIRKS`` method.
+        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry
+            or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=GLOBAL_TOOLKIT_REGISTRY
+            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for chemical environment matches
 
         Returns
         -------
@@ -3344,8 +3328,9 @@ class FrozenMolecule(Serializable):
 
         .. todo ::
 
-           * Do we want to generalize ``query`` to allow other kinds of queries, such as mdtraj DSL, pymol selections, atom index slices, etc?
-             We could call it ``topology.matches(query)`` instead of ``chemical_environment_matches``
+           * Do we want to generalize ``query`` to allow other kinds of queries, such as mdtraj DSL,
+           pymol selections, atom index slices, etc? We could call it ``topology.matches(query)`` instead of
+           ``chemical_environment_matches``
 
         """
         # Resolve to SMIRKS if needed
@@ -3396,7 +3381,8 @@ class FrozenMolecule(Serializable):
         ----------
         iupac_name : str
             IUPAC name of molecule to be generated
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=GLOBAL_TOOLKIT_REGISTRY
+        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry
+            or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=GLOBAL_TOOLKIT_REGISTRY
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for chemical environment matches
         allow_undefined_stereo : bool, default=False
             If false, raises an exception if molecule contains undefined stereochemistry.
@@ -3411,7 +3397,7 @@ class FrozenMolecule(Serializable):
 
         Create a molecule from an IUPAC name
 
-        >>> molecule = Molecule.from_iupac('4-[(4-methylpiperazin-1-yl)methyl]-N-(4-methyl-3-{[4-(pyridin-3-yl)pyrimidin-2-yl]amino}phenyl)benzamide')
+        >>> molecule = Molecule.from_iupac('4-[(4-methylpiperazin-1-yl)methyl]-N-(4-methyl-3-{[4-(pyridin-3-yl)pyrimidin-2-yl]amino}phenyl)benzamide')  # noqa
 
         Create a molecule from a common name
 
@@ -3436,9 +3422,8 @@ class FrozenMolecule(Serializable):
             )
         else:
             raise Exception(
-                "Invalid toolkit_registry passed to from_iupac. Expected ToolkitRegistry or ToolkitWrapper. Got  {}".format(
-                    type(toolkit_registry)
-                )
+                "Invalid toolkit_registry passed to from_iupac. Expected ToolkitRegistry or ToolkitWrapper. "
+                f"Got {type(toolkit_registry)}."
             )
 
         return molecule
@@ -3468,9 +3453,8 @@ class FrozenMolecule(Serializable):
             to_iupac_method = toolkit_registry.to_iupac
         else:
             raise Exception(
-                "Invalid toolkit_registry passed to to_iupac. Expected ToolkitRegistry or ToolkitWrapper. Got  {}".format(
-                    type(toolkit_registry)
-                )
+                "Invalid toolkit_registry passed to to_iupac. Expected ToolkitRegistry or ToolkitWrapper. "
+                f"Got {type(toolkit_registry)}"
             )
 
         # TODO: Can `to_iupac` fail if given a well-behaved OFFMol/OEMol?
@@ -3555,7 +3539,8 @@ class FrozenMolecule(Serializable):
             Format specifier, usually file suffix (eg. 'MOL2', 'SMI')
             Note that not all toolkits support all formats. Check ToolkitWrapper.toolkit_file_read_formats for your
             loaded toolkits for details.
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=GLOBAL_TOOLKIT_REGISTRY
+        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or
+            openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=GLOBAL_TOOLKIT_REGISTRY
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for file loading. If a Toolkit is passed, only
             the highest-precedence toolkit is used
         allow_undefined_stereo : bool, default=False
@@ -3576,7 +3561,7 @@ class FrozenMolecule(Serializable):
         """
 
         if file_format is None:
-            if not (isinstance(file_path, str)):
+            if not isinstance(file_path, str):
                 raise Exception(
                     "If providing a file-like object for reading molecules, the format must be specified"
                 )
@@ -3617,12 +3602,12 @@ class FrozenMolecule(Serializable):
                 # to the error message that will hopefully reduce this confusion.
                 if file_format == "MOL2" and RDKitToolkitWrapper.is_available():
                     msg += (
-                        f"RDKit does not fully support input of molecules from mol2 format unless they "
-                        f"have Corina atom types, and this is not common in the simulation community. For this "
-                        f"reason, the Open Force Field Toolkit does not use "
-                        f"RDKit to read .mol2. Consider reading from SDF instead. If you would like to attempt "
-                        f"to use RDKit to read mol2 anyway, you can load the molecule of interest into an RDKit "
-                        f"molecule and use openff.toolkit.topology.Molecule.from_rdkit, but we do not recommend this."
+                        "RDKit does not fully support input of molecules from mol2 format unless they "
+                        "have Corina atom types, and this is not common in the simulation community. For this "
+                        "reason, the Open Force Field Toolkit does not use "
+                        "RDKit to read .mol2. Consider reading from SDF instead. If you would like to attempt "
+                        "to use RDKit to read mol2 anyway, you can load the molecule of interest into an RDKit "
+                        "molecule and use openff.toolkit.topology.Molecule.from_rdkit, but we do not recommend this."
                     )
                 elif file_format == "PDB" and RDKitToolkitWrapper.is_available():
                     msg += (
@@ -3670,14 +3655,13 @@ class FrozenMolecule(Serializable):
             )
 
         if len(mols) == 0:
-            raise Exception("Unable to read molecule from file: {}".format(file_path))
+            raise Exception(f"Unable to read molecule from file: {file_path}")
         elif len(mols) == 1:
             return mols[0]
 
         return mols
 
     @classmethod
-    @requires_package("openmm")
     def from_pdb(cls, file_path, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """
         .. deprecated:: 0.11.0
@@ -3736,6 +3720,10 @@ class FrozenMolecule(Serializable):
         """
         from networkx.algorithms import isomorphism
         from openmm import unit as openmm_unit
+        from openmm.app import PDBFile
+
+        from openff.toolkit.topology import Topology
+        from openff.toolkit.utils import get_data_file_path
 
         def _make_hydrogens_negative_in_networkx_graph(graph):
             # Use this list as a mapping from heavy atom index to the number of hydrogens we've counted
@@ -3799,9 +3787,7 @@ class FrozenMolecule(Serializable):
             """
 
             # Don't modify the input graph
-            import copy
-
-            omm_topology_G = copy.deepcopy(omm_topology_G)
+            omm_topology_G = deepcopy(omm_topology_G)
 
             _make_hydrogens_negative_in_networkx_graph(omm_topology_G)
 
@@ -3877,18 +3863,14 @@ class FrozenMolecule(Serializable):
 
             return omm_topology_G
 
-        from openff.toolkit.utils import get_data_file_path
-
         substructure_file_path = get_data_file_path(
             "proteins/aa_residues_substructures_explicit_bond_orders_with_caps.json"
         )
 
         with open(substructure_file_path, "r") as subfile:
             substructure_dictionary = json.load(subfile)
-        from openmm.app import PDBFile
 
         pdb = PDBFile(file_path)
-        from openff.toolkit.topology import Topology
 
         omm_topology_G = Topology._openmm_topology_to_networkx(pdb.topology)
 
@@ -3914,14 +3896,14 @@ class FrozenMolecule(Serializable):
         for edge, edge_data in omm_topology_G.edges.items():
             offmol.add_bond(edge[0], edge[1], edge_data["bond_order"], False)
 
-        coords = (
+        coords = unit.Quantity(
             np.array(
                 [
                     [*vec3.value_in_unit(openmm_unit.angstrom)]
                     for vec3 in pdb.getPositions()
                 ]
-            )
-            * unit.angstrom
+            ),
+            unit.angstrom,
         )
 
         offmol.add_conformer(coords)
@@ -4004,10 +3986,10 @@ class FrozenMolecule(Serializable):
         file_format : str
             Format specifier, one of ['MOL2', 'MOL2H', 'SDF', 'PDB', 'SMI', 'CAN', 'TDT']
             Note that not all toolkits support all formats
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper,
-        optional, default=GLOBAL_TOOLKIT_REGISTRY
-            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for file writing. If a Toolkit is passed, only
-            the highest-precedence toolkit is used
+        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry
+            or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=GLOBAL_TOOLKIT_REGISTRY
+            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for file writing. If a Toolkit is passed,
+            only the highest-precedence toolkit is used
 
         Raises
         ------
@@ -4055,8 +4037,8 @@ class FrozenMolecule(Serializable):
                     toolkit.toolkit_name
                 ] = toolkit.toolkit_file_write_formats
             raise ValueError(
-                "The requested file format ({}) is not available from any of the installed toolkits "
-                "(supported formats: {})".format(file_format, supported_formats)
+                f"The requested file format ({file_format}) is not available from any of the installed toolkits "
+                f"(supported formats: {supported_formats})"
             )
 
         # Write file
@@ -4077,7 +4059,8 @@ class FrozenMolecule(Serializable):
         max_states: int optional, default=20
             The maximum amount of molecules that should be returned
 
-        toolkit_registry: openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, default=GLOBAL_TOOLKIT_REGISTRY
+        toolkit_registry: openff.toolkit.utils.toolkits.ToolkitRegistry
+            or openff.toolkit.utils.toolkits.ToolkitWrapper, default=GLOBAL_TOOLKIT_REGISTRY
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use to enumerate the tautomers.
 
         Returns
@@ -4124,7 +4107,8 @@ class FrozenMolecule(Serializable):
         rationalise: bool optional, default=True
             If we should try to build and rationalise the molecule to ensure it can exist
 
-        toolkit_registry: openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, default=GLOBAL_TOOLKIT_REGISTRY
+        toolkit_registry: openff.toolkit.utils.toolkits.ToolkitRegistry or
+            lopenff.toolkit.utils.toolkits.ToolkitWrapper, default=GLOBAL_TOOLKIT_REGISTRY
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use to enumerate the stereoisomers.
 
         Returns
@@ -4401,7 +4385,8 @@ class FrozenMolecule(Serializable):
         mapped_smiles: str
             A CMILES-style mapped smiles string with explicit hydrogens.
 
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional
+        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry
+            or openff.toolkit.utils.toolkits.ToolkitWrapper, optional
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
 
         allow_undefined_stereo : bool, default=False
@@ -4478,7 +4463,8 @@ class FrozenMolecule(Serializable):
             A qcportal.FractalClient instance to use for fetching an initial geometry.
             Only used if ``qca_record`` is a dataset entry.
 
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional
+        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or
+            openff.toolkit.utils.toolkits.ToolkitWrapper, optional
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
 
         allow_undefined_stereo : bool, default=False
@@ -4659,7 +4645,8 @@ class FrozenMolecule(Serializable):
 
         Parameters
         ----------
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional
+        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or
+            openff.toolkit.utils.toolkits.ToolkitWrapper, optional
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for
             SMILES-to-molecule conversion
 
@@ -4676,9 +4663,8 @@ class FrozenMolecule(Serializable):
             return toolkit.canonical_order_atoms(self)
         else:
             raise InvalidToolkitRegistryError(
-                "Invalid toolkit_registry passed to from_smiles. Expected ToolkitRegistry or ToolkitWrapper. Got  {}".format(
-                    type(toolkit_registry)
-                )
+                "Invalid toolkit_registry passed to from_smiles. Expected ToolkitRegistry or ToolkitWrapper. "
+                f"Got {type(toolkit_registry)}."
             )
 
     def remap(self, mapping_dict, current_to_new=True):
@@ -4933,7 +4919,7 @@ class FrozenMolecule(Serializable):
         else:
             raise TypeError(
                 "Invalid input passed to get_bond_between(). Expected ints or Atoms, "
-                "got {} and {}".format(i, j)
+                f"got {j} and {j}."
             )
 
         for bond in atom_i.bonds:
@@ -4948,14 +4934,15 @@ class FrozenMolecule(Serializable):
 
         from openff.toolkit.topology import NotBondedError
 
-        raise NotBondedError("No bond between atom {} and {}".format(i, j))
+        raise NotBondedError(f"No bond between atom {i} and {j}")
 
 
 class Molecule(FrozenMolecule):
     """
     Mutable chemical representation of a molecule, such as a small molecule or biopolymer.
 
-    .. todo :: What other API calls would be useful for supporting biopolymers as small molecules? Perhaps iterating over chains and residues?
+    .. todo :: What other API calls would be useful for supporting biopolymers as small molecules? Perhaps iterating
+        over chains and residues?
 
     Examples
     --------
@@ -5623,7 +5610,9 @@ class HierarchyScheme:
         their identifiers.
         """
         # hard-code the sort_func value here, since it's hard to serialize safely
-        sort_func = lambda x: version.parse(".".join([str(i) for i in x.identifier]))
+        def sort_func(x):
+            return version.parse(".".join([str(i) for i in x.identifier]))
+
         self.hierarchy_elements.sort(key=sort_func)
 
     def __str__(self):

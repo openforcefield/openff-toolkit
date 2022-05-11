@@ -9,7 +9,7 @@ class VirtualSiteMocking:
     @staticmethod
     def sp1_conformer() -> unit.Quantity:
 
-        return (
+        return unit.Quantity(
             numpy.array(
                 [
                     [-2.0, +0.0, +0.0],
@@ -17,13 +17,13 @@ class VirtualSiteMocking:
                     [+1.0, +0.0, +0.0],
                     [+2.0, +0.0, +0.0],
                 ]
-            )
-            * unit.angstrom
+            ),
+            unit.angstrom,
         )
 
     @staticmethod
     def sp2_conformer() -> unit.Quantity:
-        return (
+        return unit.Quantity(
             numpy.array(
                 [
                     [+1.0, +0.0, +0.0],
@@ -31,8 +31,8 @@ class VirtualSiteMocking:
                     [-1.0, +0.0, -1.0],
                     [-1.0, +0.0, +1.0],
                 ]
-            )
-            * unit.angstrom
+            ),
+            unit.angstrom,
         )
 
     @staticmethod
@@ -41,7 +41,7 @@ class VirtualSiteMocking:
         first atom positioned at (0, 1, 0), the second atom at (0, 0, 0) and
         the remaining atoms at the corners of the tetrahedron.
         """
-        return (
+        return unit.Quantity(
             numpy.array(
                 [
                     [+0.0, +1.0, +0.0],
@@ -50,8 +50,8 @@ class VirtualSiteMocking:
                     [+numpy.sqrt(3) / 4.0, -0.5, +3.0 / 4.0],
                     [+numpy.sqrt(3) / 4.0, -0.5, -3.0 / 4.0],
                 ]
-            )
-            * unit.angstrom
+            ),
+            unit.angstrom,
         )
 
     @staticmethod
@@ -63,8 +63,10 @@ class VirtualSiteMocking:
             type="BondCharge",
             smirks=smirks,
             name=name,
-            charge_increment=[0.1 * param_multiple, 0.2 * param_multiple]
-            * unit.elementary_charge,
+            charge_increment=unit.Quantity(
+                [0.1 * param_multiple, 0.2 * param_multiple],
+                unit.elementary_charge,
+            ),
             sigma=4.0 * param_multiple * unit.angstrom,
             epsilon=3.0 * param_multiple * unit.kilojoule_per_mole,
             match="all_permutations",

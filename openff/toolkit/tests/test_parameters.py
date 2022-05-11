@@ -1,14 +1,7 @@
-#!/usr/bin/env python
-
-# ======================================================================
-# MODULE DOCSTRING
-# ======================================================================
-
 """
 Test classes and function in module openff.toolkit.typing.engines.smirnoff.parameters.
 
 """
-import itertools
 from collections import defaultdict
 from inspect import isabstract, isclass
 from typing import Dict, List, Tuple
@@ -38,6 +31,7 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     ParameterType,
     ProperTorsionHandler,
     VirtualSiteHandler,
+    _cal_mol_a2,
     _linear_inter_or_extrapolate,
     _ParameterAttributeHandler,
     vdWHandler,
@@ -55,10 +49,6 @@ from openff.toolkit.utils.exceptions import (
     SMIRNOFFSpecUnimplementedError,
     SMIRNOFFVersionError,
 )
-
-# ======================================================================
-# Test ParameterAttribute descriptor
-# ======================================================================
 
 
 class TestParameterAttribute:
@@ -300,8 +290,8 @@ class TestInterpolation:
         k_bondorder = {
             2: 1.8 * unit.kilocalorie / unit.mole,
         }
-        with pytest.raises(NotEnoughPointsForInterpolationError) as excinfo:
-            k = _linear_inter_or_extrapolate(k_bondorder, 1)
+        with pytest.raises(NotEnoughPointsForInterpolationError):
+            _linear_inter_or_extrapolate(k_bondorder, 1)
 
     @pytest.mark.parametrize(
         ("fractional_bond_order", "k_interpolated"),
@@ -458,11 +448,6 @@ class TestParameterAttributeHandler:
         my_parameter.assert_getattr()
         my_parameter.a1
         my_parameter.assert_getattr()
-
-
-# ======================================================================
-# Test ParameterHandler
-# ======================================================================
 
 
 class TestParameterHandler:
@@ -664,32 +649,33 @@ class TestParameterHandler:
         # Generate a SMIRNOFFSpecError by not providing a section version
         with pytest.raises(
             SMIRNOFFSpecError, match="Missing version while trying to construct"
-        ) as excinfo:
-            ph = ParameterHandler()
+        ):
+            ParameterHandler()
+
         # Successfully create ParameterHandler by skipping version check
-        ph = ParameterHandler(skip_version_check=True)
+        ParameterHandler(skip_version_check=True)
 
         # Successfully create ParameterHandler by providing max supported version
-        ph = ParameterHandler(version=ParameterHandler._MAX_SUPPORTED_SECTION_VERSION)
+        ParameterHandler(version=ParameterHandler._MAX_SUPPORTED_SECTION_VERSION)
 
         # Successfully create ParameterHandler by providing min supported version
-        ph = ParameterHandler(version=ParameterHandler._MIN_SUPPORTED_SECTION_VERSION)
+        ParameterHandler(version=ParameterHandler._MIN_SUPPORTED_SECTION_VERSION)
 
         # Generate a SMIRNOFFSpecError by providing a value higher than the max supported
         with pytest.raises(
             SMIRNOFFVersionError,
             match="SMIRNOFF offxml file was written with version 1000.0, "
             "but this version of ForceField only supports version",
-        ) as excinfo:
-            ph = ParameterHandler(version="1000.0")
+        ):
+            ParameterHandler(version="1000.0")
 
         # Generate a SMIRNOFFSpecError by providing a value lower than the min supported
         with pytest.raises(
             SMIRNOFFVersionError,
             match="SMIRNOFF offxml file was written with version 0.1, "
             "but this version of ForceField only supports version",
-        ) as excinfo:
-            ph = ParameterHandler(version="0.1")
+        ):
+            ParameterHandler(version="0.1")
 
     def test_supported_version_range(self):
         """
@@ -700,16 +686,16 @@ class TestParameterHandler:
             _MIN_SUPPORTED_SECTION_VERSION = Version("0.3")
             _MAX_SUPPORTED_SECTION_VERSION = Version("2")
 
-        with pytest.raises(SMIRNOFFVersionError) as excinfo:
-            my_ph = MyPHSubclass(version=0.1)
+        with pytest.raises(SMIRNOFFVersionError):
+            MyPHSubclass(version=0.1)
         with pytest.raises(Exception, match="Could not convert .*list"):
             MyPHSubclass(version=[0])
-        my_ph = MyPHSubclass(version=0.3)
-        my_ph = MyPHSubclass(version=1)
-        my_ph = MyPHSubclass(version="1.9")
-        my_ph = MyPHSubclass(version=2.0)
-        with pytest.raises(SMIRNOFFVersionError) as excinfo:
-            my_ph = MyPHSubclass(version=2.1)
+        MyPHSubclass(version=0.3)
+        MyPHSubclass(version=1)
+        MyPHSubclass(version="1.9")
+        MyPHSubclass(version=2.0)
+        with pytest.raises(SMIRNOFFVersionError):
+            MyPHSubclass(version=2.1)
 
     def test_write_same_version_as_was_set(self):
         """Ensure that a ParameterHandler remembers the version that was set when it was initialized."""
@@ -823,7 +809,7 @@ class TestParameterList:
         """Test creation of a parameter list."""
         p1 = ParameterType(smirks="[*:1]")
         p2 = ParameterType(smirks="[#1:1]")
-        parameters = ParameterList([p1, p2])
+        ParameterList([p1, p2])
 
     @pytest.mark.wip(
         reason="Until ChemicalEnvironment won't be refactored to use the ToolkitRegistry "
@@ -865,7 +851,7 @@ class TestParameterList:
             parameters.index("[#2:1]")
 
         p4 = ParameterType(smirks="[#2:1]")
-        with pytest.raises(ValueError, match="is not in list") as excinfo:
+        with pytest.raises(ValueError, match="is not in list"):
             parameters.index(p4)
 
     def test_contains(self):
@@ -1173,6 +1159,12 @@ class TestParameterType:
         assert param_dict["smirks"] == "[*:1]"
         assert len(param_dict.keys()) == 1
 
+    def test_repr(self):
+        class NamedType(ParameterType):
+            pass
+
+        assert NamedType(smirks="[*:1]").__repr__().startswith("<NamedType")
+
 
 class TestBondType:
     """Tests for the BondType class."""
@@ -1292,7 +1284,7 @@ class TestBondType:
         with pytest.raises(
             ValueError,
             match="Requested output unit cal.* is not compatible with quantity unit angstrom.",
-        ) as context:
+        ):
             param_dict_unitless, attached_units = detach_units(
                 param_dict, output_units={"length_unit": unit.calorie}
             )
@@ -1342,10 +1334,8 @@ class TestBondType:
         """
         Test that ParameterTypes raise an error on receiving unexpected attributes passed to __init__()
         """
-        with pytest.raises(
-            SMIRNOFFSpecError, match="Unexpected kwarg (pilot: alice)*"
-        ) as context:
-            p1 = BondHandler.BondType(
+        with pytest.raises(SMIRNOFFSpecError, match="Unexpected kwarg (pilot: alice)*"):
+            BondHandler.BondType(
                 smirks="[*:1]-[*:2]",
                 length=1.02 * unit.angstrom,
                 k=5 * unit.kilocalorie / unit.mole / unit.angstrom**2,
@@ -1421,7 +1411,8 @@ class TestBondHandler:
 
     def test_harmonic_potentials_are_compatible(self):
         """
-        Ensure that handlers with potential ="harmonic" evaluate as compatible with handlers with potential="(k/2)*(r-length)^2"
+        Ensure that handlers with `potential="harmonic"` evaluate as compatible with handlers with
+        potential="(k/2)*(r-length)^2"
         """
         bh1 = BondHandler(skip_version_check=True)
         bh2 = BondHandler(skip_version_check=True)
@@ -1496,8 +1487,8 @@ class TestProperTorsionType:
         """
         with pytest.raises(
             SMIRNOFFSpecError, match="Unexpected kwarg \(phase3: 31 deg\)*."
-        ) as context:
-            p1 = ProperTorsionHandler.ProperTorsionType(
+        ):
+            ProperTorsionHandler.ProperTorsionType(
                 smirks="[*:1]-[*:2]-[*:3]-[*:4]",
                 phase1=30 * unit.degree,
                 periodicity1=2,
@@ -1512,10 +1503,8 @@ class TestProperTorsionType:
         Test creation and serialization of a multi-term proper torsion where
         one of the terms has incorrect units
         """
-        with pytest.raises(
-            IncompatibleUnitError, match="should have units of"
-        ) as context:
-            p1 = ProperTorsionHandler.ProperTorsionType(
+        with pytest.raises(IncompatibleUnitError, match="should have units of"):
+            ProperTorsionHandler.ProperTorsionType(
                 smirks="[*:1]-[*:2]-[*:3]-[*:4]",
                 phase1=30 * unit.degree,
                 periodicity1=2,
@@ -1633,8 +1622,8 @@ class TestProperTorsionType:
         """
         with pytest.raises(
             SMIRNOFFSpecError, match="Unexpected kwarg \(k3_bondorder1*."
-        ) as context:
-            p1 = ProperTorsionHandler.ProperTorsionType(
+        ):
+            ProperTorsionHandler.ProperTorsionType(
                 smirks="[*:1]-[*:2]-[*:3]-[*:4]",
                 phase1=30 * unit.degree,
                 periodicity1=2,
@@ -1650,7 +1639,7 @@ class TestProperTorsionType:
         """Test behavior where a single bond order term is specified for a single k"""
         # raises no error, as checks are handled at parameterization
         # we may add a `validate` method later that is called manually by user when they want it
-        p1 = ProperTorsionHandler.ProperTorsionType(
+        ProperTorsionHandler.ProperTorsionType(
             smirks="[*:1]-[*:2]~[*:3]-[*:4]",
             phase1=30 * unit.degree,
             periodicity1=2,
@@ -1662,7 +1651,7 @@ class TestProperTorsionType:
         # TODO : currently raises no error, as checks are handled at parameterization
         # is this a spec thing that we should be checking?
         # if so, it will be painful to implement
-        p1 = ProperTorsionHandler.ProperTorsionType(
+        ProperTorsionHandler.ProperTorsionType(
             smirks="[*:1]-[*:2]-[*:3]-[*:4]",
             phase1=30 * unit.degree,
             periodicity1=2,
@@ -1687,8 +1676,8 @@ class TestProperTorsionHandler:
             "only the following values are supported: ['k*(1+cos(periodicity*theta-phase))']."
         )
         with pytest.raises(SMIRNOFFSpecError, match=err_msg):
-            ph1 = ProperTorsionHandler(potential="charmm", skip_version_check=True)
-        ph1 = ProperTorsionHandler(
+            ProperTorsionHandler(potential="charmm", skip_version_check=True)
+        ProperTorsionHandler(
             potential="k*(1+cos(periodicity*theta-phase))", skip_version_check=True
         )
 
@@ -1698,8 +1687,8 @@ class TestProperTorsionHandler:
             "only the following values are supported: ['k*(1+cos(periodicity*theta-phase))']."
         )
         with pytest.raises(SMIRNOFFSpecError, match=err_msg):
-            ph1 = ImproperTorsionHandler(potential="charmm", skip_version_check=True)
-        ph1 = ImproperTorsionHandler(
+            ImproperTorsionHandler(potential="charmm", skip_version_check=True)
+        ImproperTorsionHandler(
             potential="k*(1+cos(periodicity*theta-phase))", skip_version_check=True
         )
 
@@ -2161,12 +2150,6 @@ class TestVirtualSiteHandler:
             new_parameter = VirtualSiteHandler.VirtualSiteType(**parameter_dict)
             assert new_parameter.outOfPlaneAngle == out_of_plane_angle
 
-
-class TestVirtualSiteHandler:
-    """
-    Test the creation of a VirtualSiteHandler and the implemented VirtualSiteTypes
-    """
-
     def test_serialize_roundtrip(self):
 
         force_field = ForceField()
@@ -2363,11 +2346,11 @@ class TestVirtualSiteHandler:
 
         matched_smirks = defaultdict(set)
 
-        for match in matches:
-
-            matched_smirks[match.environment_match.topology_atom_indices].add(
-                (match.parameter_type.smirks, match.parameter_type.name)
-            )
+        for match_list in matches.values():
+            for match in match_list:
+                matched_smirks[match.environment_match.topology_atom_indices].add(
+                    (match.parameter_type.smirks, match.parameter_type.name)
+                )
 
         assert {**matched_smirks} == expected_matches
 
@@ -2393,11 +2376,13 @@ class TestVirtualSiteHandler:
 
         matched_smirks = defaultdict(set)
 
-        for match in matches:
+        for match_key in matches:
+            match_list: List = matches[match_key]
 
-            matched_smirks[match.environment_match.topology_atom_indices].add(
-                (match.parameter_type.smirks, match.parameter_type.name)
-            )
+            for match in match_list:
+                matched_smirks[match.environment_match.topology_atom_indices].add(
+                    (match.parameter_type.smirks, match.parameter_type.name)
+                )
 
         expected_matches = {
             (1, 0): {("[Cl:1]-[C:2]", "EP")},
@@ -2453,18 +2438,18 @@ class TestVirtualSiteHandler:
 class TestLibraryChargeHandler:
     def test_create_library_charge_handler(self):
         """Test creation of an empty LibraryChargeHandler"""
-        handler = LibraryChargeHandler(skip_version_check=True)
+        LibraryChargeHandler(skip_version_check=True)
 
     def test_library_charge_type_wrong_num_charges(self):
         """Ensure that an error is raised if a LibraryChargeType is initialized with a different number of
         tagged atoms and charges"""
-        lc_type = LibraryChargeHandler.LibraryChargeType(
+        LibraryChargeHandler.LibraryChargeType(
             smirks="[#6:1]-[#7:2]",
             charge1=0.1 * unit.elementary_charge,
             charge2=-0.1 * unit.elementary_charge,
         )
 
-        lc_type = LibraryChargeHandler.LibraryChargeType(
+        LibraryChargeHandler.LibraryChargeType(
             smirks="[#6:1]-[#7:2]-[#6]",
             charge1=0.1 * unit.elementary_charge,
             charge2=-0.1 * unit.elementary_charge,
@@ -2473,8 +2458,8 @@ class TestLibraryChargeHandler:
         with pytest.raises(
             SMIRNOFFSpecError,
             match="initialized with unequal number of tagged atoms and charges",
-        ) as excinfo:
-            lc_type = LibraryChargeHandler.LibraryChargeType(
+        ):
+            LibraryChargeHandler.LibraryChargeType(
                 smirks="[#6:1]-[#7:2]",
                 charge1=0.05 * unit.elementary_charge,
                 charge2=0.05 * unit.elementary_charge,
@@ -2484,8 +2469,8 @@ class TestLibraryChargeHandler:
         with pytest.raises(
             SMIRNOFFSpecError,
             match="initialized with unequal number of tagged atoms and charges",
-        ) as excinfo:
-            lc_type = LibraryChargeHandler.LibraryChargeType(
+        ):
+            LibraryChargeHandler.LibraryChargeType(
                 smirks="[#6:1]-[#7:2]-[#6]",
                 charge1=0.05 * unit.elementary_charge,
                 charge2=0.05 * unit.elementary_charge,
@@ -2495,8 +2480,8 @@ class TestLibraryChargeHandler:
         with pytest.raises(
             SMIRNOFFSpecError,
             match="initialized with unequal number of tagged atoms and charges",
-        ) as excinfo:
-            lc_type = LibraryChargeHandler.LibraryChargeType(
+        ):
+            LibraryChargeHandler.LibraryChargeType(
                 smirks="[#6:1]-[#7:2]-[#6]", charge1=0.05 * unit.elementary_charge
             )
 
@@ -2536,11 +2521,11 @@ class TestChargeIncrementModelHandler:
         handler = ChargeIncrementModelHandler(
             skip_version_check=True, number_of_conformers="0"
         )
-        with pytest.raises(TypeError) as excinfo:
+        with pytest.raises(TypeError):
             handler = ChargeIncrementModelHandler(
                 skip_version_check=True, number_of_conformers=None
             )
-        with pytest.raises(SMIRNOFFSpecError) as excinfo:
+        with pytest.raises(SMIRNOFFSpecError):
             handler = ChargeIncrementModelHandler(
                 skip_version_check=True, n_conformers=[10]
             )
@@ -2563,7 +2548,7 @@ class TestChargeIncrementModelHandler:
         assert handler.number_of_conformers == 2
         handler.number_of_conformers = "3"
         assert handler.number_of_conformers == 3
-        with pytest.raises(ValueError) as excinfo:
+        with pytest.raises(ValueError):
             handler.number_of_conformers = "string that can't be cast to int"
 
     def test_charge_increment_model_handlers_are_compatible(self):
@@ -2575,19 +2560,19 @@ class TestChargeIncrementModelHandler:
         handler3 = ChargeIncrementModelHandler(
             skip_version_check=True, number_of_conformers="9"
         )
-        with pytest.raises(IncompatibleParameterError) as excinfo:
+        with pytest.raises(IncompatibleParameterError):
             handler1.check_handler_compatibility(handler3)
 
     def test_charge_increment_type_wrong_num_increments(self):
         """Ensure that an error is raised if a ChargeIncrementType is initialized with a different number of
         tagged atoms and chargeincrements"""
-        ci_type = ChargeIncrementModelHandler.ChargeIncrementType(
+        ChargeIncrementModelHandler.ChargeIncrementType(
             smirks="[#6:1]-[#7:2]",
             charge_increment1=0.1 * unit.elementary_charge,
             charge_increment2=-0.1 * unit.elementary_charge,
         )
 
-        ci_type = ChargeIncrementModelHandler.ChargeIncrementType(
+        ChargeIncrementModelHandler.ChargeIncrementType(
             smirks="[#6:1]-[#7:2]-[#6]",
             charge_increment1=0.1 * unit.elementary_charge,
             charge_increment2=-0.1 * unit.elementary_charge,
@@ -2596,8 +2581,8 @@ class TestChargeIncrementModelHandler:
         with pytest.raises(
             SMIRNOFFSpecError,
             match="an invalid combination of tagged atoms and charge increments",
-        ) as excinfo:
-            ci_type = ChargeIncrementModelHandler.ChargeIncrementType(
+        ):
+            ChargeIncrementModelHandler.ChargeIncrementType(
                 smirks="[#6:1]-[#7:2]",
                 charge_increment1=0.05 * unit.elementary_charge,
                 charge_increment2=0.05 * unit.elementary_charge,
@@ -2607,27 +2592,27 @@ class TestChargeIncrementModelHandler:
         with pytest.raises(
             SMIRNOFFSpecError,
             match="an invalid combination of tagged atoms and charge increments",
-        ) as excinfo:
-            ci_type = ChargeIncrementModelHandler.ChargeIncrementType(
+        ):
+            ChargeIncrementModelHandler.ChargeIncrementType(
                 smirks="[#6:1]-[#7:2]-[#6]",
                 charge_increment1=0.05 * unit.elementary_charge,
                 charge_increment2=0.05 * unit.elementary_charge,
                 charge_increment3=-0.1 * unit.elementary_charge,
             )
 
-        ci_type = ChargeIncrementModelHandler.ChargeIncrementType(
+        ChargeIncrementModelHandler.ChargeIncrementType(
             smirks="[#6:1]-[#7:2]-[#6]",
             charge_increment1=0.05 * unit.elementary_charge,
         )
 
     def test_charge_increment_one_ci_missing(self):
         """Test creating a chargeincrement parameter with a missing value"""
-        inferred = ChargeIncrementModelHandler.ChargeIncrementType(
+        ChargeIncrementModelHandler.ChargeIncrementType(
             smirks="[*:1]-[*:2]",
             charge_increment=[0.1 * unit.elementary_charge],
         )
 
-        explicit = ChargeIncrementModelHandler.ChargeIncrementType(
+        ChargeIncrementModelHandler.ChargeIncrementType(
             smirks="[*:1]-[*:2]",
             charge_increment=[
                 0.1 * unit.elementary_charge,
@@ -2644,10 +2629,7 @@ class TestGBSAHandler:
         assert gbsa_handler.solvent_dielectric == 78.5
         assert gbsa_handler.solute_dielectric == 1
         assert gbsa_handler.sa_model == "ACE"
-        assert (
-            gbsa_handler.surface_area_penalty
-            == 5.4 * unit.calorie / unit.mole / unit.angstrom**2
-        )
+        assert gbsa_handler.surface_area_penalty == 5.4 * _cal_mol_a2
         assert gbsa_handler.solvent_radius == 1.4 * unit.angstrom
 
     def test_gbsahandler_setters(self):
@@ -2657,17 +2639,17 @@ class TestGBSAHandler:
         gbsa_handler.gb_model = "OBC2"
         gbsa_handler.gb_model = "HCT"
         gbsa_handler.gb_model = "OBC1"
-        with pytest.raises(SMIRNOFFSpecError) as excinfo:
+        with pytest.raises(SMIRNOFFSpecError):
             gbsa_handler.gb_model = "Something invalid"
 
         gbsa_handler.solvent_dielectric = 50.0
         gbsa_handler.solvent_dielectric = "50.0"
-        with pytest.raises(ValueError) as excinfo:
+        with pytest.raises(ValueError):
             gbsa_handler.solvent_dielectric = "string that can not be cast to float"
 
         gbsa_handler.solute_dielectric = 2.5
         gbsa_handler.solute_dielectric = "3.5"
-        with pytest.raises(ValueError) as excinfo:
+        with pytest.raises(ValueError):
             gbsa_handler.solute_dielectric = "string that can not be cast to float"
 
         gbsa_handler.sa_model = "ACE"
@@ -2676,19 +2658,19 @@ class TestGBSAHandler:
         gbsa_handler.sa_model = None
         gbsa_handler.sa_model = "None"
 
-        with pytest.raises(TypeError) as excinfo:
+        with pytest.raises(TypeError):
             gbsa_handler.sa_model = "Invalid SA option"
 
         gbsa_handler.surface_area_penalty = (
             1.23 * unit.kilocalorie / unit.mole / unit.nanometer**2
         )
-        with pytest.raises(IncompatibleUnitError) as excinfo:
+        with pytest.raises(IncompatibleUnitError):
             gbsa_handler.surface_area_penalty = (
                 1.23 * unit.degree / unit.mole / unit.nanometer**2
             )
 
         gbsa_handler.solvent_radius = 300 * unit.femtometer
-        with pytest.raises(IncompatibleUnitError) as excinfo:
+        with pytest.raises(IncompatibleUnitError):
             gbsa_handler.solvent_radius = 3000 * unit.radian
 
     def test_gbsahandlers_are_compatible(self):
@@ -2707,7 +2689,7 @@ class TestGBSAHandler:
         )
         with pytest.raises(
             IncompatibleParameterError, match="Difference between 'solvent_radius' "
-        ) as excinfo:
+        ):
             gbsa_handler_1.check_handler_compatibility(gbsa_handler_3)
 
 

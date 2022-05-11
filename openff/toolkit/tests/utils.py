@@ -1,9 +1,3 @@
-#!/usr/bin/env python
-
-# =============================================================================================
-# MODULE DOCSTRING
-# =============================================================================================
-
 """
 Utilities for testing.
 
@@ -114,11 +108,6 @@ def does_not_raise():
     yield
 
 
-# =============================================================================================
-# Shortcut functions to get file paths to test data.
-# =============================================================================================
-
-
 def get_amber_file_path(prefix):
     """Get AMBER prmtop and inpcrd test data filepaths.
 
@@ -215,11 +204,14 @@ def extract_compressed_molecules(tar_file_name, file_subpaths=None, filter_func=
             return extracted_file_paths
 
         # Otherwise, create a filter matching only the subpaths.
-        filter_func = lambda x: x in file_subpaths_set
+        def filter_func(x):
+            return x in file_subpaths_set
 
     # If no filter was specified, just create one matching everything.
     if filter_func is None:
-        filter_func = lambda x: True
+
+        def filter_func(x):
+            return True
 
     # Determine opening mode.
     if ".gz" in tar_file_name:
@@ -299,11 +291,6 @@ def get_freesolv_file_path(freesolv_id, ff_version):
     return extract_compressed_molecules("FreeSolv.tar.gz", file_subpaths=file_subpaths)
 
 
-# =============================================================================================
-# Shortcut functions to create System objects from system files.
-# =============================================================================================
-
-
 def create_system_from_amber(prmtop_file_path, inpcrd_file_path, *args, **kwargs):
     """Create an OpenMM System and Topology from the AMBER files.
 
@@ -337,11 +324,6 @@ def create_system_from_amber(prmtop_file_path, inpcrd_file_path, *args, **kwargs
     # Store numpy positions.
     positions = inpcrd_file.getPositions(asNumpy=True)
     return system, prmtop_file.topology, positions
-
-
-# =============================================================================================
-# Utility functions for energy comparisons.
-# =============================================================================================
 
 
 def quantities_allclose(quantity1, quantity2, **kwargs):
@@ -701,11 +683,6 @@ def compare_system_energies(
     return potential_energy1, potential_energy2
 
 
-# =============================================================================================
-# Utility functions for parameters comparisons.
-# =============================================================================================
-
-
 class _ParametersComparer:
     """This is just a convenience class to compare and print parameters.
 
@@ -859,7 +836,9 @@ class _TorsionParametersComparer:
 
     def _pretty_format_parameters(self, parameters, new_line=True, indent=True):
         # Reorder the parameters by periodicity and then phase to print in deterministic order.
-        sort_key = lambda x: (x.parameters["periodicity"], x.parameters["phase"])
+        def sort_key(x):
+            return x.parameters["periodicity"], x.parameters["phase"]
+
         parameters = sorted(parameters, key=sort_key)
         # Quantities in a dictionary are normally printed in the
         # format "Quantity(value, unit=unit)" so we make it prettier.
@@ -1131,9 +1110,8 @@ def _merge_impropers_folds(improper_parameters):
 
                 # If phase and periodicity match, sum the force constants
                 # and remove one _ParametersComparer object from the list.
-                if (
-                    parameters1["phase"] == parameters2["phase"]
-                    and parameters1["periodicity"] == parameters2["periodicity"]
+                if (parameters1["phase"] == parameters2["phase"]) and (
+                    parameters1["periodicity"] == parameters2["periodicity"]
                 ):
                     # Update the force constant of the first parameter.
                     parameters1["k"] += parameters2["k"]
@@ -1421,11 +1399,6 @@ def compare_system_parameters(
             )
 
 
-# =============================================================================================
-# Utility functions to compare SMIRNOFF and AMBER force fields.
-# =============================================================================================
-
-
 def compare_amber_smirnoff(
     prmtop_file_path,
     inpcrd_file_path,
@@ -1509,14 +1482,6 @@ def compare_amber_smirnoff(
 
         return {"AMBER": amber_energies, "SMIRNOFF": forcefield_energies}
     return None
-
-
-# ==============================================================================
-# Utility functions for handling molecules in OpenMM with virtual sites
-# ==============================================================================
-
-# Note that these assume that the system is homogenous, i.e. the system
-# is composed of one or more identical molecules
 
 
 def reorder_openff_to_openmm(xyz, n_atoms_per_mol, n_vptls_per_mol):
