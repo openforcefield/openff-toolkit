@@ -58,6 +58,8 @@ print(value_roundtrip)
 
 ## Current Development
 
+- [PR #1297](https://github.com/openforcefield/openff-toolkit/pull/1297): Drops support
+  for Python 3.7, following [NEP-29](https://numpy.org/neps/nep-0029-deprecation_policy.html).
 - [PR #1194](https://github.com/openforcefield/openforcefield/pull/1194): Adds
   [`Topology.__add__`](openff.toolkit.topology.Topology.__add__), allowing `Topology` objects to be
   added together, including added in-place, using the `+` operator.

@@ -20,7 +20,7 @@ If the problem involves a specific molecule or file, please upload that as well.
 
 **Computing environment (please complete the following information):**
  - Operating system
- - Output of running `conda list` 
+ - Output of running `conda list`
 
 **Additional context**
 <!-- Add any other context about the problem here. -->
