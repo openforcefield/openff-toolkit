@@ -58,6 +58,9 @@ print(value_roundtrip)
 
 ## Current Development
 
+- [PR #1194](https://github.com/openforcefield/openforcefield/pull/1194): Adds
+  [`Topology.__add__`](openff.toolkit.topology.Topology.__add__), allowing `Topology` objects to be
+  added together, including added in-place, using the `+` operator.
 - [PR #1277](https://github.com/openforcefield/openff-toolkit/pull/1277): Adds support for version
   0.4 of the `<Electrostatics>` section of the SMIRNOFF specification.
 - [PR #1279](https://github.com/openforcefield/openforcefield/pull/1279):

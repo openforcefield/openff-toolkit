@@ -176,6 +176,12 @@ class SMIRNOFFAromaticityError(OpenFFToolkitException):
     """
 
 
+class InvalidAromaticityModelError(OpenFFToolkitException, ValueError):
+    """
+    General exception for errors while setting the aromaticity model of a Topology.
+    """
+
+
 class SMIRNOFFParseError(OpenFFToolkitException):
     """
     Error for when a SMIRNOFF data structure is not parseable by a ForceField

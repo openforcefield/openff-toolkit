@@ -16,9 +16,6 @@ import numpy as np
 from cachetools import LRUCache, cached
 from openff.units import unit
 
-if TYPE_CHECKING:
-    from openff.toolkit.topology.molecule import Molecule, Bond, Atom
-
 from openff.toolkit.utils import base_wrapper
 from openff.toolkit.utils.constants import DEFAULT_AROMATICITY_MODEL
 from openff.toolkit.utils.exceptions import (
@@ -29,6 +26,9 @@ from openff.toolkit.utils.exceptions import (
     ToolkitUnavailableException,
     UndefinedStereochemistryError,
 )
+
+if TYPE_CHECKING:
+    from openff.toolkit.topology.molecule import Atom, Bond, Molecule
 
 logger = logging.getLogger(__name__)
 
@@ -1057,7 +1057,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
     @classmethod
     def _elf_is_problematic_conformer(
-        cls, molecule: "Molecule", conformer: unit.Quantity
+        cls,
+        molecule: "Molecule",
+        conformer: unit.Quantity,
     ) -> Tuple[bool, Optional[str]]:
         """A function which checks if a particular conformer is known to be problematic
         when computing ELF partial charges.
@@ -1141,7 +1143,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
     @classmethod
     def _elf_compute_electrostatic_energy(
-        cls, molecule: "Molecule", conformer: unit.Quantity
+        cls,
+        molecule: "Molecule",
+        conformer: unit.Quantity,
     ) -> float:
         """Computes the 'electrostatic interaction energy' of a particular conformer
         of a molecule.

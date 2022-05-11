@@ -11,12 +11,12 @@ Class definitions to represent a molecular system and its chemical components
    * Use `attrs <http://www.attrs.org/>`_ for object setter boilerplate?
 
 """
-import copy
 import itertools
 import warnings
 from collections import OrderedDict
 from collections.abc import MutableMapping
-from typing import TYPE_CHECKING, Generator, List, Union
+from copy import deepcopy
+from typing import TYPE_CHECKING, Dict, Generator, List, Tuple, Union
 
 import numpy as np
 from openff.units import unit
@@ -28,6 +28,7 @@ from openff.toolkit.typing.chemistry import ChemicalEnvironment
 from openff.toolkit.utils import quantity_to_string, string_to_quantity
 from openff.toolkit.utils.exceptions import (
     DuplicateUniqueMoleculeError,
+    InvalidAromaticityModelError,
     InvalidBoxVectorsError,
     InvalidPeriodicityError,
     MissingUniqueMoleculesError,
@@ -434,6 +435,43 @@ class Topology(Serializable):
         self._molecules = list()
         self._cached_chemically_identical_molecules = None
 
+    def __iadd__(self, other):
+        """Add two Topology objects in-place.
+
+        This method has the following effects:
+        * The cache (_cached_chemically_identical_molecules) is reset
+        * The constrained atom pairs (Topology.constrained_atom_pairs) is reset
+        * Box vectors are **not** updated.
+
+        """
+        if self.aromaticity_model != other.aromaticity_model:
+            raise InvalidAromaticityModelError(
+                "Mismatch in aromaticity models. Trying to add a Topology with aromaticity model "
+                f"{other.aromaticity_model} to a Topology with aromaticity model "
+                f"{self.aromaticity_model}"
+            )
+
+        self._cached_chemically_identical_molecules = None
+
+        constrained_atom_pairs_to_add = other.constrained_atom_pairs
+        atom_index_offset = self.n_atoms
+
+        for molecule in other.molecules:
+            self.add_molecule(deepcopy(molecule))
+
+        for key, value in constrained_atom_pairs_to_add.items():
+            new_key = tuple(index + atom_index_offset for index in key)
+            self._constrained_atom_pairs[new_key] = value
+
+        return self
+
+    def __add__(self, other):
+        """Add two Topology objects. See Topology.__iadd__ for details."""
+        combined = deepcopy(self)
+        combined += other
+
+        return combined
+
     # Should this be deprecated?
     @property
     def reference_molecules(self) -> List[Molecule]:
@@ -520,7 +558,7 @@ class Topology(Serializable):
             msg = "Aromaticity model must be one of {}; specified '{}'".format(
                 ALLOWED_AROMATICITY_MODELS, aromaticity_model
             )
-            raise ValueError(msg)
+            raise InvalidAromaticityModelError(msg)
         self._aromaticity_model = aromaticity_model
 
     @property
@@ -602,13 +640,13 @@ class Topology(Serializable):
             )
 
     @property
-    def constrained_atom_pairs(self):
+    def constrained_atom_pairs(self) -> Dict[Tuple[int], Union[unit.Quantity, bool]]:
         """Returns the constrained atom pairs of the Topology
 
         Returns
         -------
-        constrained_atom_pairs : dict
-             dictionary of the form d[(atom1_topology_index, atom2_topology_index)] = distance (float)
+        constrained_atom_pairs : dict of Tuple[int]: Union[unit.Quantity, bool]
+             dictionary of the form {(atom1_topology_index, atom2_topology_index): distance}
         """
         return self._constrained_atom_pairs
 
@@ -1146,7 +1184,7 @@ class Topology(Serializable):
         return self._cached_chemically_identical_molecules
 
     def copy_initializer(self, other):
-        other_dict = copy.deepcopy(other.to_dict())
+        other_dict = deepcopy(other.to_dict())
         self._initialize_from_dict(other_dict)
 
     def to_dict(self):
@@ -2057,7 +2095,7 @@ class Topology(Serializable):
         pass
 
     def add_molecule(self, molecule: Union[Molecule, _SimpleMolecule]) -> int:
-        self._molecules.append(copy.deepcopy(molecule))
+        self._molecules.append(deepcopy(molecule))
         self._cached_chemically_identical_molecules = None
         return len(self._molecules)
 
