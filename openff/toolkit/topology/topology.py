@@ -1456,7 +1456,7 @@ class Topology(Serializable):
         Contiguously-indexed atoms with the same `residue_name`, `residue_number`,
         and `chain_id` will be put into the same OpenMM residue.
 
-        Continguously-indexed residues with with the same `chain_id` will be put
+        Contiguously-indexed residues with with the same `chain_id` will be put
         into the same OpenMM chain.
 
         This method will never make an OpenMM chain or residue larger than the
