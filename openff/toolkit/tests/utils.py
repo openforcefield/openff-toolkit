@@ -45,6 +45,10 @@ requires_openeye_mol2 = pytest.mark.skipif(
     reason="Test requires OE toolkit to read mol2 files",
 )
 
+unimplemented_interchange = pytest.mark.skip(
+    reason="Functionality has not or will not be implemented in Interchange"
+)
+
 
 def has_pkg(pkg_name):
     """
@@ -1750,7 +1754,7 @@ def evaluate_molecules_off(molecules, forcefield, minimize=False):
     atom_xyz = to_openmm(coords_from_off_mols(molecules, unit=unit.nanometer))
 
     # IMPORTANT! The new system has the virtual sites, but the oFF top does not as there is no API yet to do so
-    sys = forcefield.create_openmm_system(top, allow_nonintegral_charges=True)
+    sys = forcefield.create_openmm_system(top)
 
     n_vptl = sys.getNumParticles() - len(atom_xyz)
     n_mol = len(molecules)

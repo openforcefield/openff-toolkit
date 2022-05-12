@@ -142,7 +142,6 @@ Extend this class to add a support for a new force or energy term to the toolkit
 
 Each `ParameterHandler`-derived class MUST implement the following methods and define the following attributes:
 
-- `create_force(self, system, topology, **kwargs)`: takes an OpenMM `System` and a OpenFF `Topology` as input, as well as optional keyword arguments, and modifies the `System` to contain the appropriate parameters.
 - Class members `ParameterAttributes`: These correspond to the header-level attributes in a SMIRNOFF data source.
 For example, the `Bonds` tag in the SMIRNOFF spec has an optional `fractional_bondorder_method` field, which corresponds to the line  `fractional_bondorder_method = ParameterAttribute(default=None)` in the `BondHandler` class definition.
 The `ParameterAttribute` and `IndexedParameterAttribute` classes offer considerable flexibility for validating inputs.
@@ -168,8 +167,6 @@ Each `ParameterHandler`-derived class MAY implement:
     This function is used when a `ForceField` is attempted to be constructed from *multiple* SMIRNOFF data sources, and it is necessary to check that two sections with the same tag name can be combined in a sane way.
     For example, if the user instructed two `vdW` sections to be read, but the sections defined different vdW potentials, then this function should raise an Exception indicating that there is no safe way to combine the parameters.
     The default implementation of this function should suffice for most developers.
-  - `postprocess_system`: operates identically to `create_force`, but is run after each ParameterHandlers' `create_force` has already been called.
-    The default implementation of this method simply does nothing, and should suffice for most developers.
 
 ### `ParameterType`
 [`ParameterType`](openff.toolkit.typing.engines.smirnoff.parameters.ParameterType) is a base class for the SMIRKS-based parameters of a `ParameterHandler`.
