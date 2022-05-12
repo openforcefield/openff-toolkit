@@ -1450,8 +1450,18 @@ class Topology(Serializable):
         """
         Create an OpenMM Topology object.
 
-        The OpenMM ``Topology`` object will have one residue and chain per
-        molecule.
+        The atom metadata fields `residue_name`, `residue_number`, and `chain_id`
+        are used to group atoms into OpenMM residues and chains.
+
+        Contiguously-indexed atoms with the same `residue_name`, `residue_number`,
+        and `chain_id` will be put into the same OpenMM residue.
+
+        Continguously-indexed residues with with the same `chain_id` will be put
+        into the same OpenMM chain.
+
+        This method will never make an OpenMM chain or residue larger than the
+        OpenFF Molecule that it came from. In other words, no chain or residue
+        will span two OpenFF Molecules.
 
         Parameters
         ----------
