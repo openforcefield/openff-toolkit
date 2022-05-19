@@ -58,6 +58,9 @@ print(value_roundtrip)
 
 ## Current Development
 
+- [PR #XXXX](https://github.com/openforcefield/openff-toolkit/pull/XXX): Deprecates `Topology.particles`,
+  `Topology.n_particles`, `Topology.particle_index` as `Molecule` objects do not store virtual sites,
+  only atoms.
 - [PR #1297](https://github.com/openforcefield/openff-toolkit/pull/1297): Drops support
   for Python 3.7, following [NEP-29](https://numpy.org/neps/nep-0029-deprecation_policy.html).
 - [PR #1194](https://github.com/openforcefield/openforcefield/pull/1194): Adds

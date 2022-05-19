@@ -731,24 +731,6 @@ class Topology(Serializable):
                 topology_molecule_atom_start_index += molecule.n_atoms
         raise Exception("Atom not found in this Topology")
 
-    def particle_index(self, particle) -> int:
-        """
-        Returns the index of a given particle in this topology
-
-        Parameters
-        ----------
-        particle : openff.toolkit.topology.Particle
-
-        Returns
-        -------
-        index : int
-            The index of the given particle in this topology
-        """
-        for index, iter_particle in enumerate(self.particles):
-            if particle is iter_particle:
-                return index
-        raise Exception("Particle not found in this Topology")
-
     def molecule_index(self, molecule):
         """
         Returns the index of a given molecule in this topology
@@ -806,34 +788,6 @@ class Topology(Serializable):
         for molecule in self.molecules:
             for bond in molecule.bonds:
                 yield bond
-
-    @property
-    def n_particles(self) -> int:
-        """
-        Returns the number of particles (Atoms) in in this Topology.
-
-        Returns
-        -------
-        n_particles : int
-        """
-        n_particles = 0
-        for molecule in self.molecules:
-            n_particles += molecule.n_particles
-        return n_particles
-
-    @property
-    def particles(self):
-        """
-        Returns an iterator over the particles (Atoms) in this Topology. The
-        particles will be in order of ascending Topology index.
-
-        Returns
-        --------
-        particles : Iterable of Atom
-        """
-        for molecule in self.molecules:
-            for atom in molecule.atoms:
-                yield atom
 
     @property
     def n_angles(self):
@@ -2092,18 +2046,6 @@ class Topology(Serializable):
                 return molecule.bond(bond_molecule_index)
             this_molecule_start_index += molecule.n_bonds
 
-    def add_particle(self, particle):
-        """Add a Particle to the Topology.
-
-        Parameters
-        ----------
-        particle : Particle
-            The Particle to be added.
-            The Topology will take ownership of the Particle.
-
-        """
-        pass
-
     def add_molecule(self, molecule: Union[Molecule, _SimpleMolecule]) -> int:
         self._molecules.append(deepcopy(molecule))
         self._cached_chemically_identical_molecules = None
@@ -2242,3 +2184,20 @@ class Topology(Serializable):
         """DEPRECATED: Use Topology.molecules instead."""
         _topology_deprecation("topology_molecules", "molecules")
         return self.molecules
+
+    @property
+    def n_particles(self) -> int:
+        """DEPRECATED: Use Topology.n_atoms instead."""
+        _topology_deprecation("n_particles", "n_atoms")
+        return self.n_atoms
+
+    @property
+    def particles(self):
+        """DEPRECATED: Use Topology.molecules instead."""
+        _topology_deprecation("particles", "atoms")
+        return self.atoms
+
+    def particle_index(self, particle) -> int:
+        """DEPRECATED: Use Topology.atom_index instead."""
+        _topology_deprecation("particle_index", "atom_index")
+        return self.atom_index(particle)
