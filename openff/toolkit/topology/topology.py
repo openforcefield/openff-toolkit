@@ -27,11 +27,13 @@ from openff.toolkit.topology._mm_molecule import _SimpleBond, _SimpleMolecule
 from openff.toolkit.typing.chemistry import ChemicalEnvironment
 from openff.toolkit.utils import quantity_to_string, string_to_quantity
 from openff.toolkit.utils.exceptions import (
+    AtomNotInTopologyError,
     DuplicateUniqueMoleculeError,
     InvalidAromaticityModelError,
     InvalidBoxVectorsError,
     InvalidPeriodicityError,
     MissingUniqueMoleculesError,
+    MoleculeNotInTopologyError,
     NotBondedError,
 )
 from openff.toolkit.utils.serialization import Serializable
@@ -722,6 +724,10 @@ class Topology(Serializable):
         -------
         index : int
             The index of the given atom in this topology
+
+        Raises
+        ------
+        AtomNotInTopologyError : If the given atom is not in this topology
         """
         topology_molecule_atom_start_index = 0
         for molecule in self.molecules:
@@ -729,8 +735,9 @@ class Topology(Serializable):
                 return molecule.atom_index(atom) + topology_molecule_atom_start_index
             else:
                 topology_molecule_atom_start_index += molecule.n_atoms
-        raise Exception("Atom not found in this Topology")
+        raise AtomNotInTopologyError("Atom not found in this Topology")
 
+    # TODO: Should we have particles at all (iterators, objects, etc.)?
     def particle_index(self, particle) -> int:
         """
         Returns the index of a given particle in this topology
@@ -761,11 +768,16 @@ class Topology(Serializable):
         -------
         index : int
             The index of the given molecule in this topology
+
+        Raises
+        ------
+        MoleculeNotInTopologyError : If the given atom is not in this topology
         """
         for index, iter_molecule in enumerate(self.molecules):
             if molecule is iter_molecule:
                 return index
-        raise Exception("Molecule not found in this Topology")
+
+        raise MoleculeNotInTopologyError("Molecule not found in this Topology")
 
     def molecule_atom_start_index(self, molecule):
         """
