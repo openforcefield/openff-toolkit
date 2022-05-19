@@ -4500,7 +4500,6 @@ class TestForceFieldGetPartialCharges:
 
         return openmm_unit.Quantity(charges)
 
-    @unimplemented_interchange
     def test_get_partial_charges(self):
         """Test that ethanol charges are computed correctly."""
         ethanol: Molecule = create_ethanol()
@@ -4524,5 +4523,4 @@ class TestForceFieldGetPartialCharges:
 # TODO: test_write_cosmetic_elements (eg. Author)
 # TODO: add_handler_with_incompatible_kwargs (for example different scale14 vals)
 # TODO: test_invalid_file_version
-# TODO: test_library_charges
 # TODO: test_create_gbsa

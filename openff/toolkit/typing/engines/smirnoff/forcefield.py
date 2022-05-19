@@ -54,6 +54,7 @@ from openff.toolkit.utils.utils import (
 
 if TYPE_CHECKING:
     import openmm
+    from openff.units import unit
 
     from openff.toolkit.topology import Molecule, Topology
     from openff.toolkit.utils.base_wrapper import ToolkitWrapper
@@ -1362,7 +1363,7 @@ class ForceField:
             raise KeyError(msg)
         return ph_class
 
-    def get_partial_charges(self, molecule, **kwargs):
+    def get_partial_charges(self, molecule: "Molecule", **kwargs) -> "unit.Quantity":
         """Generate the partial charges for the given molecule in this force field.
 
         Parameters
@@ -1415,13 +1416,25 @@ class ForceField:
         charge calculation to be cached.
 
         """
+        from openff.toolkit.topology.molecule import Molecule
+
+        if not isinstance(molecule, Molecule):
+            raise ValueError(
+                "`molecule` argument must be a `Molecule` or subclass object. Found type "
+                f"{type(molecule)}"
+            )
+
         _, top_with_charges = self.create_openmm_system(
             molecule.to_topology(), return_topology=True, **kwargs
         )
 
-        # This assumption does not hold with Interchange's behavior. Not clear if it should?
-        charges = [*top_with_charges.reference_molecules][0].partial_charges
-        return charges
+        assert top_with_charges.n_molecules == 1, (
+            "Expected a single molecule in the topology produced by Interchange. "
+            f"Found {len(top_with_charges.n_molecules)} molecules."
+        )
+
+        for molecule in top_with_charges.molecules:
+            return molecule.partial_charges
 
     def __getitem__(self, val):
         """
