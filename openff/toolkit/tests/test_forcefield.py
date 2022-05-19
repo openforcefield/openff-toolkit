@@ -4044,7 +4044,6 @@ class TestForceFieldParameterAssignment:
                 k = params[-1]
                 assert_almost_equal(k / k.unit, k_torsion_interpolated)
 
-    @unimplemented_interchange
     def test_fractional_bondorder_multiple_same_mol(self):
         """Check that an error is thrown when essentially the same molecule is entered more than once
         for partial_bond_orders_from_molecules"""
