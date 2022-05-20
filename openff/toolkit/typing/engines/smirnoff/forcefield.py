@@ -1213,12 +1213,14 @@ class ForceField:
         partial_bond_orders_from_molecules = kwargs.pop(
             "partial_bond_orders_from_molecules", None
         )
+        allow_nonintegral_charges = kwargs.pop("allow_nonintegral_charges", False)
 
         interchange = self.create_interchange(
             topology,
             toolkit_registry,
             charge_from_molecules=charge_from_molecules,
             partial_bond_orders_from_molecules=partial_bond_orders_from_molecules,
+            allow_nonintegral_charges=allow_nonintegral_charges,
         )
 
         openmm_system = interchange.to_openmm(combine_nonbonded_forces=True)
@@ -1243,6 +1245,7 @@ class ForceField:
         toolkit_registry: Optional[Union["ToolkitRegistry", "ToolkitWrapper"]] = None,
         charge_from_molecules: Optional[List["Molecule"]] = None,
         partial_bond_orders_from_molecules: Optional[List["Molecule"]] = None,
+        allow_nonintegral_charges: bool = False,
     ):
         """
         Create an Interchange object from a ForceField, Topology, and (optionally) box vectors.
@@ -1280,6 +1283,7 @@ class ForceField:
                 topology=topology,
                 charge_from_molecules=charge_from_molecules,
                 partial_bond_orders_from_molecules=partial_bond_orders_from_molecules,
+                allow_nonintegral_charges=allow_nonintegral_charges,
             )
 
     def label_molecules(self, topology):

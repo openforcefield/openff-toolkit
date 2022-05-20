@@ -1933,7 +1933,6 @@ class TestForceFieldChargeAssignment:
                 toolkit_registry=toolkit_registry,
             )
 
-    @unimplemented_interchange
     @pytest.mark.parametrize("toolkit_registry", toolkit_registries)
     def test_nonintegral_charge_override(self, toolkit_registry):
         ethanol = create_ethanol()
