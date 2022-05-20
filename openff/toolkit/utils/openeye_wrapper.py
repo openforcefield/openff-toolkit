@@ -20,7 +20,7 @@ from cachetools import LRUCache, cached
 from openff.units import unit
 
 if TYPE_CHECKING:
-    from openff.toolkit.topology.molecule import Molecule
+    from openff.toolkit.topology.molecule import Molecule, Bond, Atom
 
 from openff.toolkit.utils import base_wrapper
 from openff.toolkit.utils.constants import DEFAULT_AROMATICITY_MODEL
@@ -32,6 +32,7 @@ from openff.toolkit.utils.exceptions import (
     InconsistentStereochemistryError,
     InvalidIUPACNameError,
     LicenseError,
+    NotAttachedToMoleculeError,
     RadicalsNotSupportedError,
     SMILESParseError,
     ToolkitUnavailableException,
@@ -39,16 +40,7 @@ from openff.toolkit.utils.exceptions import (
 )
 from openff.toolkit.utils.utils import inherit_docstrings
 
-# =============================================================================================
-# CONFIGURE LOGGER
-# =============================================================================================
-
 logger = logging.getLogger(__name__)
-
-
-# =============================================================================================
-# IMPLEMENTATION
-# =============================================================================================
 
 
 def get_oeformat(file_format):
@@ -571,6 +563,50 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         return mols
 
+    def _smarts_to_networkx(self, substructure_smarts):
+        import networkx as nx
+        from openeye import oechem
+
+        qmol = oechem.OEQMol()
+        if not oechem.OEParseSmiles(qmol, substructure_smarts):
+            raise SMILESParseError(f"Error parsing SMARTS '{substructure_smarts}'")
+
+        oechem.OEAssignHybridization(qmol)
+
+        graph = nx.Graph()
+        for atom in qmol.GetAtoms():
+            atomic_number = atom.GetAtomicNum()
+
+            graph.add_node(
+                atom.GetIdx(),
+                atomic_number=atomic_number,
+                formal_charge=atom.GetFormalCharge(),
+                map_index=atom.GetMapIdx(),
+            )
+        for bond in qmol.GetBonds():
+            bond_order = bond.GetOrder()
+            if bond_order == 0:
+                raise SMILESParseError(f"A bond in '{substructure_smarts} has order 0")
+
+            graph.add_edge(
+                bond.GetBgnIdx(),
+                bond.GetEndIdx(),
+                bond_order=bond_order,
+            )
+        return graph
+
+    def _assign_aromaticity_and_stereo_from_3d(self, offmol):
+        from openeye import oechem
+
+        oemol = offmol.to_openeye()
+        oechem.OEPerceiveChiral(oemol)
+        oechem.OE3DToInternalStereo(oemol)
+        print(f"Number of atoms after sanitization: {oemol.NumAtoms()}")
+
+        # Aromaticity is re-perceived in this call
+        offmol_w_stereo_and_aro = self.from_openeye(oemol, allow_undefined_stereo=True)
+        return offmol_w_stereo_and_aro
+
     def enumerate_protomers(self, molecule, max_states=10):
         """
         Enumerate the formal charges of a molecule to generate different protomoers.
@@ -835,7 +871,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         are stored on individual ``OEAtom`` s, and their values are initialized to ``0.0``.
         In the Open Force Field Toolkit, an ``openff.toolkit.topology.Molecule``'s
         ``partial_charges`` attribute is initialized to ``None`` and can be set to a
-        ``openmm.unit.Quantity``-wrapped numpy array with units of
+        unit-wrapped numpy array with units of
         elementary charge. The Open Force
         Field Toolkit considers an ``OEMol`` where every ``OEAtom`` has a partial
         charge of ``float('nan')`` to be equivalent to an Open Force Field Toolkit `Molecule`'s
@@ -965,7 +1001,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             oe_idx = oeatom.GetIdx()
             map_id = oeatom.GetMapIdx()
             atomic_number = oeatom.GetAtomicNum()
-            # Carry with implicit units of elementary charge to skip unit checks in _add_atom
+            # Carry with implicit units of elementary charge for faster route through _add_atom
             formal_charge = oeatom.GetFormalCharge()
             explicit_valence = oeatom.GetExplicitValence()
             mdl_valence = oechem.OEMDLGetValence(
@@ -987,17 +1023,34 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             )
             # stereochemistry = self._openeye_cip_atom_stereochemistry(oemol, oeatom)
             name = oeatom.GetName()
+
+            # Transfer in hierarchy metadata
+            metadata_dict = dict()
+            if oechem.OEHasResidues(oemol):
+                metadata_dict["residue_name"] = oechem.OEAtomGetResidue(
+                    oeatom
+                ).GetName()
+                metadata_dict["residue_number"] = oechem.OEAtomGetResidue(
+                    oeatom
+                ).GetResidueNumber()
+                metadata_dict["chain_id"] = oechem.OEAtomGetResidue(oeatom).GetChainID()
+            # print('from', metadata_dict)
+
             atom_index = molecule._add_atom(
                 atomic_number,
                 formal_charge,
                 is_aromatic,
                 stereochemistry=stereochemistry,
                 name=name,
+                metadata=metadata_dict,
+                invalidate_cache=False,
             )
             off_to_oe_idx[
                 oe_idx
             ] = atom_index  # store for mapping oeatom to molecule atom indices below
             atom_mapping[atom_index] = map_id
+
+        molecule._invalidate_cached_properties()
 
         # If we have a full / partial atom map add it to the molecule. Zeroes 0
         # indicates no mapping
@@ -1027,7 +1080,10 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                 is_aromatic=is_aromatic,
                 stereochemistry=stereochemistry,
                 fractional_bond_order=fractional_bond_order,
+                invalidate_cache=False,
             )
+
+        molecule._invalidate_cached_properties()
 
         # TODO: Copy conformations, if present
         # TODO: Come up with some scheme to know when to import coordinates
@@ -1125,7 +1181,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                 neighs, oechem.OEAtomStereo_Tetra, oechem.OEAtomStereo_Right
             )
 
-            # Flip chirality if stereochemistry isincorrect
+            # Flip chirality if stereochemistry is incorrect
             oeatom_stereochemistry = (
                 OpenEyeToolkitWrapper._openeye_cip_atom_stereochemistry(oemol, oeatom)
             )
@@ -1186,7 +1242,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                     raise InconsistentStereochemistryError(
                         "Programming error: OpenEye bond stereochemistry assumptions failed. "
                         f"The bond in the oemol has stereochemistry {oebond_stereochemistry} and "
-                        f"the bond in the offmol has stereoheometry {bond.stereochemistry}."
+                        f"the bond in the offmol has stereochemistry {bond.stereochemistry}."
                     )
 
         # Clean Up phase
@@ -1206,7 +1262,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         ``OEAtom``\ s, and their values are initialized to ``0.0``. In
         the Open Force Field Toolkit, an``openff.toolkit.topology.Molecule``'s
         ``partial_charges`` attribute is initialized to ``None`` and can
-        be set to a ``openmm.unit.Quantity``-wrapped numpy array with
+        be set to a unit-wrapped numpy array with
         units of elementary charge. The Open Force Field Toolkit
         considers an ``OEMol`` where every ``OEAtom`` has a partial
         charge of ``float('nan')`` to be equivalent to an Open Force
@@ -1236,7 +1292,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Create an OpenEye molecule from a Molecule
 
-        >>> from openff.toolkit.topology import Molecule
+        >>> from openff.toolkit import Molecule
         >>> toolkit_wrapper = OpenEyeToolkitWrapper()
         >>> molecule = Molecule.from_smiles('CC')
         >>> oemol = toolkit_wrapper.to_openeye(molecule)
@@ -1258,7 +1314,6 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             oe_idx = oe_atom.GetIdx()
             oemol_atoms[oe_to_off_idx[oe_idx]] = oe_atom
             off_atom = molecule.atoms[oe_to_off_idx[oe_idx]]
-            # oe_atom.SetData("name", off_atom.name)
             oe_atom.SetName(off_atom.name)
 
             if off_atom.partial_charge is None:
@@ -1267,7 +1322,25 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                 oe_atom.SetPartialCharge(
                     off_atom.partial_charge.m_as(unit.elementary_charge)
                 )
-            # oeatom.SetPartialCharge(1.)
+            res = oechem.OEAtomGetResidue(oe_atom)
+
+            if "residue_name" in off_atom.metadata:
+                res.SetName(off_atom.metadata["residue_name"])
+            else:
+                res.SetName("UNL")
+
+            if "residue_number" in off_atom.metadata:
+                res.SetResidueNumber(int(off_atom.metadata["residue_number"]))
+            else:
+                res.SetResidueNumber(1)
+
+            if "chain_id" in off_atom.metadata:
+                res.SetChainID(off_atom.metadata["chain_id"])
+            else:
+                res.SetChainID(" ")
+
+            oechem.OEAtomSetResidue(oe_atom, res)
+
         assert None not in oemol_atoms
 
         oemol_bonds = [None] * molecule.n_bonds  # list of corresponding oemol bonds
@@ -1319,6 +1392,79 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             oechem.OESetSDData(oemol, str(key), str(value))
 
         return oemol
+
+    def atom_is_in_ring(self, atom: "Atom") -> bool:
+        """Return whether or not an atom is in a ring.
+
+        It is assumed that this atom is in molecule.
+
+        Parameters
+        ----------
+        atom : openff.toolkit.topology.molecule.Atom
+            The molecule containing the atom of interest
+
+        Returns
+        -------
+        is_in_ring : bool
+            Whether or not the atom is in a ring.
+
+        Raises
+        ------
+        NotAttachedToMoleculeError
+        """
+        if atom.molecule is None:
+            raise NotAttachedToMoleculeError(
+                "This Atom does not belong to a Molecule object"
+            )
+
+        molecule = atom.molecule
+        atom_index = atom.molecule_atom_index
+
+        oemol = molecule.to_openeye()
+
+        # Molecule.to_openeye() is guaranteed to preserve atom ordering
+        is_in_ring = [*oemol.GetAtoms()][atom_index].IsInRing()
+
+        return is_in_ring
+
+    def bond_is_in_ring(self, bond: "Bond") -> bool:
+        """Return whether or not a bond is in a ring.
+
+        It is assumed that this atom is in molecule.
+
+        Parameters
+        ----------
+        bond : openff.toolkit.topology.molecule.Bond
+            The molecule containing the atom of interest
+
+        Returns
+        -------
+        is_in_ring : bool
+            Whether or not the bond of index `bond_index` is in a ring
+
+        Raises
+        ------
+        NotAttachedToMoleculeError
+        """
+        if bond.molecule is None:
+            raise NotAttachedToMoleculeError(
+                "This Bond does not belong to a Molecule object"
+            )
+
+        molecule = bond.molecule
+
+        oemol = molecule.to_openeye()
+
+        # Molecule.to_openeye() is NOT guaranteed to preserve bond ordering,
+        # so we must look up the corresponding `OEBond` via `OEAtom`s
+        oebond = oemol.GetBond(
+            [*oemol.GetAtoms()][bond.atom1_index],
+            [*oemol.GetAtoms()][bond.atom2_index],
+        )
+
+        is_in_ring = oebond.IsInRing()
+
+        return is_in_ring
 
     def _get_smiles_flavor(self, isomeric, explicit_hydrogens):
         from openeye import oechem
@@ -1502,7 +1648,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         Examples
         --------
 
-        >>> from openff.toolkit.topology import Molecule
+        >>> from openff.toolkit import Molecule
         >>> from openff.toolkit.utils import get_data_file_path
         >>> sdf_filepath = get_data_file_path('molecules/ethanol.sdf')
         >>> molecule = Molecule(sdf_filepath)
@@ -1708,7 +1854,12 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         return molecule
 
     def generate_conformers(
-        self, molecule, n_conformers=1, rms_cutoff=None, clear_existing=True
+        self,
+        molecule,
+        n_conformers=1,
+        rms_cutoff=None,
+        clear_existing=True,
+        make_carboxylic_acids_cis=False,
     ):
         r"""
         Generate molecule conformers using OpenEye Omega.
@@ -1727,15 +1878,25 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             The molecule to generate conformers for.
         n_conformers : int, default=1
             The maximum number of conformers to generate.
-        rms_cutoff : openmm.unit.Quantity-wrapped float, in units of distance, optional, default=None
+        rms_cutoff : unit-wrapped float, in units of distance, optional, default=None
             The minimum RMS value at which two conformers are considered redundant and one is deleted.
             If None, the cutoff is set to 1 Angstrom
         clear_existing : bool, default=True
             Whether to overwrite existing conformers for the molecule
+        make_carboxylic_acids_cis: bool, default=False
+            Guarantee all conformers have exclusively cis carboxylic acid groups (COOH)
+            by rotating the proton in any trans carboxylic acids 180 degrees around the C-O bond.
         """
+        import copy
+
         from openeye import oeomega
 
-        oemol = self.to_openeye(molecule)
+        # Copy the molecule and scrub the conformers so that omega HAS to read stereo from graph mol
+        # See https://github.com/openforcefield/openff-toolkit/issues/1152
+        mol_copy = copy.deepcopy(molecule)
+        mol_copy._conformers = None
+
+        oemol = self.to_openeye(mol_copy)
         omega = oeomega.OEOmega()
         omega.SetMaxConfs(n_conformers)
         omega.SetCanonOrder(False)
@@ -1767,6 +1928,9 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         for conformer in molecule2._conformers:
             molecule._add_conformer(conformer)
 
+        if make_carboxylic_acids_cis:
+            molecule._make_carboxylic_acids_cis(toolkit_registry=self)
+
     def apply_elf_conformer_selection(
         self,
         molecule: "Molecule",
@@ -1783,8 +1947,13 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         -----
         * The input molecule should have a large set of conformers already
           generated to select the ELF conformers from.
-        * The selected conformers will be retained in the `molecule.conformers` list
+        * The selected conformers will be retained in the ``molecule.conformers`` list
           while unselected conformers will be discarded.
+        * Conformers generated with the OpenEye toolkit often include trans
+          carboxylic acids (COOH). These are unphysical and will be rejected by
+          ``apply_elf_conformer_selection``. If no conformers are selected, try
+          re-running ``generate_conformers`` with the ``make_carboxylic_acids_cis``
+          argument set to ``True``
 
         See Also
         --------
@@ -1831,9 +2000,17 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         # Check to make sure the call to OE was succesful, and re-route any
         # non-fatal warnings to the correct logger.
-        if not status:
+        if output_string and not status:
             raise RuntimeError("\n" + output_string)
-        elif len(output_string) > 0:
+        elif not status:
+            raise RuntimeError(
+                "OpenEye failed to select conformers, but did not return any output. "
+                "This most commonly occurs when the Molecule does not have enough conformers to "
+                "select from. Try calling Molecule.apply_elf_conformer_selection() again after "
+                "running Molecule.generate_conformers() with a much larger value of n_conformers "
+                "or with make_carboxylic_acids_cis=True."
+            )
+        elif output_string:
             logger.warning(output_string)
 
         # Extract and store the ELF conformers on the input molecule.
@@ -1879,7 +2056,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             The charge model to use. One of ['amberff94', 'mmff', 'mmff94', 'am1-mulliken', 'am1bcc',
             'am1bccnosymspt', 'am1bccelf10']
             If None, 'am1-mulliken' will be used.
-        use_conformers : iterable of openmm.unit.Quantity-wrapped numpy arrays, each with
+        use_conformers : iterable of unit-wrapped numpy arrays, each with
             shape (n_atoms, 3) and dimension of distance. Optional, default = None
             Coordinates to use for partial charge calculation. If None, an appropriate number
             of conformers will be generated.
@@ -1980,6 +2157,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                     mol_copy,
                     n_conformers=charge_method["rec_confs"],
                     rms_cutoff=0.25 * unit.angstrom,
+                    make_carboxylic_acids_cis=True,
                 )
                 # TODO: What's a "best practice" RMS cutoff to use here?
         else:
@@ -2076,7 +2254,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         ----------
         molecule : Molecule
             Molecule for which partial charges are to be computed
-        use_conformers : iterable of openmm.unit.Quantity-wrapped numpy arrays, each with
+        use_conformers : iterable of unit-wrapped numpy arrays, each with
             shape (n_atoms, 3) and dimension of distance. Optional, default = None
             Coordinates to use for partial charge calculation. If None, an appropriate number of conformers
             will be generated.
@@ -2090,13 +2268,14 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         charges : numpy.array of shape (natoms) of type float
             The partial charges
         """
+        # TODO: Remove in version 0.12.0
 
         import warnings
 
         warnings.warn(
-            "compute_partial_charges_am1bcc will be deprecated in an upcoming release. "
-            "Use assign_partial_charges(partial_charge_method='am1bccelf10') instead.",
-            DeprecationWarning,
+            "compute_partial_charges_am1bcc is deprecated and will be removed in version 0.12.0. "
+            "Use assign_partial_charges(partial_charge_method='am1bcc') instead.",
+            UserWarning,
         )
         self.assign_partial_charges(
             molecule,
@@ -2122,7 +2301,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         bond_order_model : str, optional, default=None
             The charge model to use. One of ['am1-wiberg', 'am1-wiberg-elf10',
             'pm3-wiberg', 'pm3-wiberg-elf10']. If None, 'am1-wiberg' will be used.
-        use_conformers : iterable of openmm.unit.Quantity(np.array) with shape (n_atoms, 3) and
+        use_conformers : iterable of unit-wrapped np.array with shape (n_atoms, 3) and
             dimension of distance, optional, default=None
             The conformers to use for fractional bond order calculation. If None, an
             appropriate number of conformers will be generated by an available
@@ -2149,12 +2328,14 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         is_elf_method = bond_order_model in ["am1-wiberg-elf10", "pm3-wiberg-elf10"]
 
         if use_conformers is None:
-            temp_mol.generate_conformers(
+            self.generate_conformers(
+                molecule=temp_mol,
                 n_conformers=1 if not is_elf_method else 500,
                 # 0.05 is the recommended RMS when generating a 'Dense' amount of
                 # conformers using Omega: https://docs.eyesopen.com/toolkits/python/
                 # omegatk/OEConfGenConstants/OEFragBuilderMode.html.
                 rms_cutoff=None if not is_elf_method else 0.05 * unit.angstrom,
+                make_carboxylic_acids_cis=True,
             )
         else:
             temp_mol._conformers = None

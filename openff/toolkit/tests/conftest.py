@@ -1,9 +1,3 @@
-#!/usr/bin/env python
-
-# =============================================================================================
-# MODULE DOCSTRING
-# =============================================================================================
-
 """
 Configuration file for pytest.
 
@@ -29,11 +23,6 @@ def pytest_configure(config):
     )
 
 
-# =============================================================================================
-# UTILITY FUNCTIONS
-# =============================================================================================
-
-
 def untar_full_alkethoh_and_freesolv_set():
     """When running slow tests, we unpack the full AlkEthOH and FreeSolv test
     sets in advance to speed things up.
@@ -52,11 +41,6 @@ def untar_full_alkethoh_and_freesolv_set():
         tarfile_path = os.path.join(molecule_dir_path, tarfile_name)
         with tarfile.open(tarfile_path, "r:gz") as tar:
             tar.extractall(path=molecule_dir_path)
-
-
-# =============================================================================================
-# CONFIGURATION
-# =============================================================================================
 
 
 def pytest_addoption(parser):

@@ -16,8 +16,6 @@ jobs:
           - ubuntu-latest
           - macos-latest
         python-version:
-          - 3.7
-          - 3.8
           - 3.9
 
     env:
@@ -25,7 +23,7 @@ jobs:
       PYTEST_ARGS: -r fE --tb=short --cov=openff --cov-config=setup.cfg --cov-append --cov-report=xml
 
     steps:
-      - uses: actions/checkout@v2.3.5
+      - uses: actions/checkout@v2.4.0
         with:
           fetch-depth: 2
 
@@ -91,7 +89,7 @@ jobs:
           mypy --namespace-packages -p "openff.toolkit"
 
       - name: Codecov
-        uses: codecov/codecov-action@v2.1.0
+        uses: codecov/codecov-action@v3.0.0
         with:
           file: ./coverage.xml
           fail_ci_if_error: true

@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 Wrapper classes for providing a minimal consistent interface to cheminformatics toolkits
 
@@ -58,7 +57,6 @@ __all__ = (
 
 
 import logging
-import warnings
 
 from openff.toolkit.utils.ambertools_wrapper import AmberToolsToolkitWrapper
 from openff.toolkit.utils.base_wrapper import ToolkitWrapper
@@ -89,36 +87,12 @@ from openff.toolkit.utils.exceptions import (
     ToolkitUnavailableException,
     UndefinedStereochemistryError,
 )
-from openff.toolkit.utils.openeye_wrapper import (
-    OpenEyeToolkitWrapper,
-    requires_openeye_module,
-)
+from openff.toolkit.utils.openeye_wrapper import OpenEyeToolkitWrapper
 from openff.toolkit.utils.rdkit_wrapper import RDKitToolkitWrapper
 from openff.toolkit.utils.toolkit_registry import ToolkitRegistry
 
-deprecated_names = ["MessageException"]
-
-# TODO: Remove in January 2022, see _DeprecatedMessageException in openff/toolkit/utils/exceptions.py
-def __getattr__(name):
-    if name in deprecated_names:
-        warnings.filterwarnings("default", category=DeprecationWarning)
-        from openff.toolkit.utils.exceptions import MessageException
-
-        return MessageException
-        # return globals()[f"MessageException"]
-    raise AttributeError(f"module {__name__} has no attribute {name}")
-
-
-# =============================================================================================
-# CONFIGURE LOGGER
-# =============================================================================================
-
 logger = logging.getLogger(__name__)
 
-
-# =============================================================================================
-# GLOBAL TOOLKIT REGISTRY
-# =============================================================================================
 
 # Create global toolkit registry, where all available toolkits are registered
 GLOBAL_TOOLKIT_REGISTRY = ToolkitRegistry(
@@ -131,9 +105,6 @@ GLOBAL_TOOLKIT_REGISTRY = ToolkitRegistry(
     exception_if_unavailable=False,
 )
 
-# =============================================================================================
-# SET GLOBAL TOOLKIT-AVAIABLE VARIABLES
-# =============================================================================================
 
 OPENEYE_AVAILABLE = False
 RDKIT_AVAILABLE = False
@@ -148,25 +119,20 @@ for toolkit in GLOBAL_TOOLKIT_REGISTRY.registered_toolkits:
     elif type(toolkit) is AmberToolsToolkitWrapper:
         AMBERTOOLS_AVAILABLE = True
 
-# =============================================================================================
-# WARN IF INSUFFICIENT TOOLKITS INSTALLED
-# =============================================================================================
 
 # Define basic toolkits that handle essential file I/O
 
 BASIC_CHEMINFORMATICS_TOOLKITS = [RDKitToolkitWrapper, OpenEyeToolkitWrapper]
 
 # Ensure we have at least one basic toolkit
-if (
-    sum(
-        [
-            tk.is_available()
-            for tk in GLOBAL_TOOLKIT_REGISTRY.registered_toolkits
-            if type(tk) in BASIC_CHEMINFORMATICS_TOOLKITS
-        ]
-    )
-    == 0
-):
+any_toolkits = False
+for tk in GLOBAL_TOOLKIT_REGISTRY.registered_toolkits:
+    if type(tk) in BASIC_CHEMINFORMATICS_TOOLKITS:
+        if tk.is_available():
+            any_toolkits = True
+            break
+
+if not any_toolkits:
     from openff.toolkit.utils import all_subclasses
 
     msg = "WARNING: No basic cheminformatics toolkits are available.\n"

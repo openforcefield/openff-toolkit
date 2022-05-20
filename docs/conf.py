@@ -29,14 +29,14 @@ import sphinx
 
 # If your documentation needs a minimal Sphinx version, state it here.
 #
-# needs_sphinx = '1.0'
+# needs_sphinx = "4.4.0"
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
     "sphinx.ext.autodoc",
-    "numpydoc",
+    "sphinx.ext.napoleon",
     "sphinx.ext.autosummary",
     "sphinx.ext.doctest",
     "sphinx.ext.todo",
@@ -57,24 +57,41 @@ autodoc_default_options = {
     "member-order": "bysource",
 }
 autodoc_preserve_defaults = True
+autodoc_typehints_format = "short"
+# Workaround for autodoc_typehints_format not working for attributes
+# see https://github.com/sphinx-doc/sphinx/issues/10290#issuecomment-1079740009
+python_use_unqualified_type_names = True
 
-# Disable NumPy style attributes/methods expecting every method to have its own docs page
-numpydoc_class_members_toctree = False
-# Disable numpydoc rendering methods twice
-# https://stackoverflow.com/questions/34216659/sphinx-autosummary-produces-two-summaries-for-each-class
-numpydoc_show_class_members = False
+napoleon_numpy_docstring = True
+napoleon_google_docstring = False
+napoleon_attr_annotations = True
+napoleon_custom_sections = [("attributes", "params_style")]
+napoleon_use_rtype = False
+napoleon_use_param = True
 
-_python_doc_base = "https://docs.python.org/3.6"
+_python_doc_base = "https://docs.python.org/3.7"
 intersphinx_mapping = {
-    _python_doc_base: None,
-    "https://numpy.org/doc/stable": None,
-    "https://docs.scipy.org/doc/scipy/reference": None,
-    "https://scikit-learn.org/stable": None,
-    "http://docs.openmm.org/latest/api-python/": None,
-    "https://www.rdkit.org/docs": None,
-    "https://docs.eyesopen.com/toolkits/python/": None,
-    "https://www.mdtraj.org/1.9.5/": None,
+    "python": ("https://docs.python.org/3.7", None),
+    "numpy": ("https://numpy.org/doc/stable", None),
+    "scipy": ("https://docs.scipy.org/doc/scipy/reference", None),
+    "scikit.learn": ("https://scikit-learn.org/stable", None),
+    "openmm": ("http://docs.openmm.org/latest/api-python/", None),
+    "rdkit": ("https://www.rdkit.org/docs", None),
+    "openeye": ("https://docs.eyesopen.com/toolkits/python/", None),
+    "mdtraj": ("https://www.mdtraj.org/1.9.5/", None),
+    "openff.interchange": (
+        "https://docs.openforcefield.org/projects/interchange/en/stable/",
+        None,
+    ),
+    "openff.fragmenter": (
+        "https://docs.openforcefield.org/projects/fragmenter/en/stable/",
+        None,
+    ),
 }
+myst_url_schemes = [
+    "http",
+    "https",
+]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
@@ -98,19 +115,20 @@ execution_excludepatterns = []
 # sphinx-notfound-page
 # https://github.com/readthedocs/sphinx-notfound-page
 # Renders a 404 page with absolute links
-import importlib
+from importlib.util import find_spec as find_import_spec
 
-if importlib.util.find_spec("notfound"):
+if find_import_spec("notfound"):
     extensions.append("notfound.extension")
 
+    notfound_urls_prefix = "/projects/toolkit/en/stable/"
     notfound_context = {
         "title": "404: File Not Found",
-        "body": """
+        "body": f"""
     <h1>404: File Not Found</h1>
     <p>
         Sorry, we couldn't find that page. This often happens as a result of
         following an outdated link. Please check the
-        <a href="https://open-forcefield-toolkit.readthedocs.io/en/stable/">latest stable version</a>
+        <a href="{notfound_urls_prefix}">latest stable version</a>
         of the docs, unless you're sure you want an earlier version, and
         try using the search box or the navigation menu on the left.
     </p>

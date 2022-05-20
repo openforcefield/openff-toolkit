@@ -1,11 +1,7 @@
 import numpy as np
 import pytest
 
-from openff.toolkit.topology._mm_molecule import (
-    _SimpleAtom,
-    _SimpleBond,
-    _SimpleMolecule,
-)
+from openff.toolkit.topology._mm_molecule import _SimpleMolecule
 from openff.toolkit.topology.molecule import Molecule
 
 
@@ -99,7 +95,7 @@ class TestMMMolecule:
         for atom_index in range(roundtrip.n_atoms):
             assert (
                 roundtrip.atom(atom_index).atomic_number
-                == water.atom(atom_index).atomic_number
+                == water.atom(atom_index).atomic_number  # noqa
             )
 
     def test_dict_roundtrip_conformers(self, water):
@@ -121,7 +117,5 @@ class TestMMMolecule:
 
         expected_atomic_numbers = [8, 1, 1]
         for atom_index in range(converted.n_atoms):
-            assert (
-                converted.atom(atom_index).atomic_number
-                == expected_atomic_numbers[atom_index]
-            )
+            found = converted.atom(atom_index).atomic_number
+            assert found == expected_atomic_numbers[atom_index]

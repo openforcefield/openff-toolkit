@@ -1,9 +1,3 @@
-#!/usr/bin/env python
-
-# =============================================================================================
-# MODULE DOCSTRING
-# =============================================================================================
-
 """
 Functions which create a topological molecule directly, without a toolkit.
 
@@ -12,11 +6,10 @@ These are common to several test modules.
 """
 
 import numpy as np
-import pytest
 from openff.units import unit
 
 from openff.toolkit.tests.utils import requires_openeye
-from openff.toolkit.topology.molecule import Molecule
+from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.utils import get_data_file_path
 
 
@@ -314,88 +307,74 @@ def create_dinitrogen():
     return dinitrogen
 
 
-@pytest.fixture
 def dipeptide():
     dipeptide = Molecule.from_file(get_data_file_path("proteins/CTerminal_ALA.sdf"))
     return dipeptide
 
 
-@pytest.fixture
-def dipeptide_residues_perceived(dipeptide):
-    dipeptide = Molecule(dipeptide)
-    dipeptide.perceive_residues()
-    return dipeptide
-
-
-@pytest.fixture
-def dipeptide_hierarchy_perceived(dipeptide_residues_perceived):
-    dipeptide_residues_perceived = Molecule(dipeptide_residues_perceived)
-    dipeptide_residues_perceived._add_default_hierarchy_schemes()
-    dipeptide_residues_perceived.perceive_hierarchy()
+def dipeptide_residues_perceived():
+    dipeptide_residues_perceived = Molecule(dipeptide())
+    dipeptide_residues_perceived.perceive_residues()
     return dipeptide_residues_perceived
 
 
-@pytest.fixture
+def dipeptide_hierarchy_perceived():
+    dipeptide_hierarchy_perceived = Molecule(dipeptide_residues_perceived())
+    dipeptide_hierarchy_perceived._add_default_hierarchy_schemes()
+    dipeptide_hierarchy_perceived.perceive_hierarchy()
+    return dipeptide_hierarchy_perceived
+
+
 def cyx():
     cyx = Molecule.from_file(get_data_file_path("proteins/MainChain_CYX.sdf"))
     return cyx
 
 
-@pytest.fixture
-def cyx_residues_perceived(cyx):
-    cyx = Molecule(cyx)
-    cyx.perceive_residues()
-    return cyx
-
-
-@pytest.fixture
-def cyx_hierarchy_perceived(cyx_residues_perceived):
-    cyx_residues_perceived = Molecule(cyx_residues_perceived)
-    cyx_residues_perceived._add_default_hierarchy_schemes()
-    cyx_residues_perceived.perceive_hierarchy()
+def cyx_residues_perceived():
+    cyx_residues_perceived = Molecule(cyx())
+    cyx_residues_perceived.perceive_residues()
     return cyx_residues_perceived
 
 
-@pytest.fixture
+def cyx_hierarchy_perceived():
+    cyx_hierarchy_perceived = Molecule(cyx_residues_perceived())
+    cyx_hierarchy_perceived._add_default_hierarchy_schemes()
+    cyx_hierarchy_perceived.perceive_hierarchy()
+    return cyx_hierarchy_perceived
+
+
 def empty_molecule():
     return Molecule()
 
 
-@pytest.fixture
 def ethane_from_smiles():
     return Molecule.from_smiles("CC")
 
 
-@pytest.fixture
 def ethene_from_smiles():
     return Molecule.from_smiles("C=C")
 
 
-@pytest.fixture
 def propane_from_smiles():
     return Molecule.from_smiles("CCC")
 
 
-@pytest.fixture
 def toluene_from_sdf():
     filename = get_data_file_path("molecules/toluene.sdf")
     return Molecule.from_file(filename)
 
 
 @requires_openeye
-@pytest.fixture
 def toluene_from_charged_mol2():
     filename = get_data_file_path("molecules/toluene_charged.mol2")
     # TODO: This will require openeye to load
     return Molecule.from_file(filename)
 
 
-@pytest.fixture
 def charged_methylamine_from_smiles():
     return Molecule.from_smiles("[H]C([H])([H])[N+]([H])([H])[H]")
 
 
-@pytest.fixture
 def ethane_from_smiles_w_vsites():
     molecule = Molecule.from_smiles("CC")
     carbons = [atom for atom in molecule.atoms if atom.atomic_number == 6]
@@ -415,7 +394,6 @@ def ethane_from_smiles_w_vsites():
     return molecule
 
 
-@pytest.fixture
 def propane_from_smiles_w_vsites():
     # Make a propane with virtual sites
     molecule = Molecule.from_smiles("CCC")
@@ -440,7 +418,6 @@ def propane_from_smiles_w_vsites():
     return molecule
 
 
-@pytest.fixture
 def tip5_water():
     # Make a TIP5 water
     molecule = Molecule.from_smiles("[H][O][H]")
@@ -454,3 +431,64 @@ def tip5_water():
         symmetric=True,
     )
     return molecule
+
+
+def topology_with_metadata():
+    n2 = Molecule.from_smiles("N#N")
+    ammonia = create_ammonia()
+    chloride = Molecule.from_smiles("[Cl-]")
+    water = create_water()
+    mols = [
+        n2,
+        ammonia,
+        chloride,
+        chloride,
+        ammonia,
+        chloride,
+        chloride,
+        n2,
+        chloride,
+        chloride,
+        chloride,
+        water,
+    ]
+
+    top = Topology.from_molecules(mols)
+
+    atom_hier_info = [
+        ("AAA", 1, "A"),  # mol[0]
+        ("AAA", 1, "A"),  # mol[0]
+        ("AAA", 1, "A"),  # mol[1]
+        ("BBB", 1, "A"),  # mol[1]
+        ("BBB", 2, "A"),  # mol[1]
+        ("BBB", 2, "B"),  # mol[1]
+        ("CCC", 2, "B"),  # mol[2]
+        ("CCC", 3, "B"),  # mol[3]
+        ("CCC", 3, "C"),  # mol[4]
+        ("DDD", 4, "C"),  # mol[4]
+        ("EEE", 4, "D"),  # mol[4]
+        ("EEE", 5, "E"),  # mol[4]
+        ("FFF", 6, "E"),  # mol[5]
+        ("GGG", 6, "F"),  # mol[6]
+        ("GGG", 7, "G"),  # mol[7]
+        ("HHH", 8, "H"),  # mol[7]
+        ("YZ", 9, "I"),  # mol[8]
+        ("AAA", 1, "A"),  # mol[9]
+        (None, None, None),  # mol[10]
+        (None, None, None),  # mol[11]
+        ("AAA", None, None),  # mol[11]
+        (None, None, "A"),  # mol[12]
+    ]
+
+    for atom, metadata_tuple in zip(top.atoms, atom_hier_info):
+        residue_name = metadata_tuple[0]
+        residue_number = metadata_tuple[1]
+        chain_id = metadata_tuple[2]
+        if residue_name is not None:
+            atom.metadata["residue_name"] = residue_name
+        if residue_number is not None:
+            atom.metadata["residue_number"] = residue_number
+        if chain_id is not None:
+            atom.metadata["chain_id"] = chain_id
+
+    return top

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Copy the openff-toolkit examples suite to a local directory"""
 
-from pathlib import Path
-from os import environ
-from shutil import copytree, ignore_patterns
 import argparse
+from os import environ
+from pathlib import Path
+from shutil import copytree, ignore_patterns
 
 
 class NoExamplesLibraryError(Exception):

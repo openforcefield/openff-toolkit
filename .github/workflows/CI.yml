@@ -28,25 +28,22 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os:
-          - ubuntu-latest
-          - macos-latest
-        python-version: [3.7, 3.8, 3.9]
+        os: [ubuntu-latest, macos-latest]
+        python-version: ["3.8", "3.9"]
         rdkit: [true, false]
         openeye: [true, false]
         exclude:
           - rdkit: false
             openeye: false
           - openeye: true
-            python-version: 3.8
-          - openeye: true
-            python-version: 3.9
+            python-version: "3.9"
+#         - openeye: true
+#           python-version: "3.10"
 
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
       PACKAGE: openff
-      PYTEST_ARGS: -r fE --tb=short --cov=openff --cov-config=setup.cfg --cov-append --cov-report=xml
-      NB_ARGS: -v --nbval-lax --ignore=examples/deprecated
+      PYTEST_ARGS: -r fE --tb=short -nauto --cov=openff --cov-config=setup.cfg --cov-append --cov-report=xml
 
     steps:
       - uses: actions/checkout@v2.4.0
@@ -106,8 +103,14 @@ jobs:
           # While Interchange is being installed with pip, there is no need to
           # force uninstall openff-toolkit-base since it's only pulled in when
           # Interchange is installed with conda. Un-comment this when testing
-          # against a conda build of Interchange.
+          # against a conda build of Interchange. (It may also be pulled down
+          # by `openmmforcefields` and should be removed in that case a well.)
           # conda remove --force openff-toolkit openff-toolkit-base
+          python setup.py develop --no-deps
+
+      - name: Install test plugins
+        run: |
+          cd utilities/test_plugins
           python setup.py develop --no-deps
 
       - name: Remove undesired toolkits
@@ -161,7 +164,7 @@ jobs:
           pytest -v --doctest-glob="docs/*.rst" docs/
 
       - name: Codecov
-        uses: codecov/codecov-action@v2.1.0
+        uses: codecov/codecov-action@v3.0.0
         with:
           file: ./coverage.xml
           fail_ci_if_error: true

@@ -4,6 +4,8 @@ __all__ = ("ToolkitRegistry",)
 
 import inspect
 import logging
+from contextlib import contextmanager
+from typing import Union
 
 from openff.toolkit.utils.ambertools_wrapper import AmberToolsToolkitWrapper
 from openff.toolkit.utils.base_wrapper import ToolkitWrapper
@@ -16,16 +18,7 @@ from openff.toolkit.utils.openeye_wrapper import OpenEyeToolkitWrapper
 from openff.toolkit.utils.rdkit_wrapper import RDKitToolkitWrapper
 from openff.toolkit.utils.utils import all_subclasses
 
-# =============================================================================================
-# CONFIGURE LOGGER
-# =============================================================================================
-
 logger = logging.getLogger(__name__)
-
-
-# =============================================================================================
-# Implementation
-# =============================================================================================
 
 
 class ToolkitRegistry:
@@ -287,7 +280,7 @@ class ToolkitRegistry:
 
         Create a molecule, and call the toolkit ``to_smiles()`` method directly
 
-        >>> from openff.toolkit.topology import Molecule
+        >>> from openff.toolkit import Molecule
         >>> molecule = Molecule.from_smiles('Cc1ccccc1')
         >>> toolkit_registry = ToolkitRegistry([OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper])
         >>> method = toolkit_registry.resolve('to_smiles')
@@ -345,7 +338,7 @@ class ToolkitRegistry:
 
         Create a molecule, and call the toolkit ``to_smiles()`` method directly
 
-        >>> from openff.toolkit.topology import Molecule
+        >>> from openff.toolkit import Molecule
         >>> molecule = Molecule.from_smiles('Cc1ccccc1')
         >>> toolkit_registry = ToolkitRegistry([OpenEyeToolkitWrapper, RDKitToolkitWrapper])
         >>> smiles = toolkit_registry.call('to_smiles', molecule)
@@ -380,6 +373,36 @@ class ToolkitRegistry:
         raise ValueError(msg)
 
     def __repr__(self):
-        return "ToolkitRegistry containing " + ", ".join(
-            [tk.toolkit_name for tk in self._toolkits]
+        return f"<ToolkitRegistry containing {', '.join([tk.toolkit_name for tk in self._toolkits])}>"
+
+
+# Coped from https://github.com/openforcefield/openff-fragmenter/blob/4a290b866a8ed43eabcbd3231c62b01f0c6d7df6
+# /openff/fragmenter/utils.py#L97-L123
+@contextmanager
+def _toolkit_registry_manager(toolkit_registry: Union[ToolkitRegistry, ToolkitWrapper]):
+    from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
+
+    if isinstance(toolkit_registry, ToolkitRegistry):
+        context_toolkits = toolkit_registry.registered_toolkits
+    elif isinstance(toolkit_registry, ToolkitWrapper):
+        context_toolkits = [toolkit_registry]
+    else:
+        raise NotImplementedError(
+            "Only ``ToolkitRegistry`` and ``ToolkitWrapper`` are supported."
         )
+
+    original_toolkits = GLOBAL_TOOLKIT_REGISTRY.registered_toolkits
+
+    for toolkit in original_toolkits:
+        GLOBAL_TOOLKIT_REGISTRY.deregister_toolkit(toolkit)
+
+    for toolkit in context_toolkits:
+        GLOBAL_TOOLKIT_REGISTRY.register_toolkit(toolkit)
+
+    try:
+        yield
+    finally:
+        for toolkit in context_toolkits:
+            GLOBAL_TOOLKIT_REGISTRY.deregister_toolkit(toolkit)
+        for toolkit in original_toolkits:
+            GLOBAL_TOOLKIT_REGISTRY.register_toolkit(toolkit)

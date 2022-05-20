@@ -13,7 +13,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [macOS-latest, ubuntu-latest]
-        python-version: [3.7, 3.8, 3.9]
+        python-version: ["3.8", "3.9"]
 
     env:
       CI_OS: ${{ matrix.os }}
@@ -68,9 +68,9 @@ jobs:
         ls build
 
     - name: Upload installer as artifact
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
-        name: ${{ matrix.os }}_py${{ matrix.python-version }}.sh  
+        name: ${{ matrix.os }}_py${{ matrix.python-version }}.sh
         path: toolkit-installer-constructor/build/openff-toolkit*/openff-toolkit*.sh
 
     - name: Install from installer

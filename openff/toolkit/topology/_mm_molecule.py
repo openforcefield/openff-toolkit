@@ -191,7 +191,7 @@ class _SimpleMolecule:
             _nth_degree_neighbors_from_graphlike,
         )
 
-        return _nth_degree_neighbors_from_graph(graphlike=self, n_degrees=n_degrees)
+        return _nth_degree_neighbors_from_graphlike(graphlike=self, n_degrees=n_degrees)
 
     @classmethod
     def _from_subgraph(cls, subgraph: "nx.Graph"):
@@ -284,7 +284,7 @@ class _SimpleMolecule:
 
         hier_scheme_dicts = molecule_dict.pop("hierarchy_schemes")
         for iter_name, hierarchy_scheme_dict in hier_scheme_dicts.items():
-            new_hier_scheme = self.add_hierarchy_scheme(
+            new_hier_scheme = cls.add_hierarchy_scheme(
                 hierarchy_scheme_dict["uniqueness_criteria"],
                 iter_name,
             )

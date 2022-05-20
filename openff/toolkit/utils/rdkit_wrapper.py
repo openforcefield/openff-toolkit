@@ -5,39 +5,33 @@ Wrapper class providing a minimal consistent interface to the `RDKit <http://www
 __all__ = ("RDKitToolkitWrapper",)
 
 import copy
+import functools
 import importlib
 import itertools
 import logging
 import tempfile
-from typing import TYPE_CHECKING, List, Optional, Tuple
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 import numpy as np
 from cachetools import LRUCache, cached
 from openff.units import unit
-
-if TYPE_CHECKING:
-    from openff.toolkit.topology.molecule import Molecule
 
 from openff.toolkit.utils import base_wrapper
 from openff.toolkit.utils.constants import DEFAULT_AROMATICITY_MODEL
 from openff.toolkit.utils.exceptions import (
     ChargeMethodUnavailableError,
     ConformerGenerationError,
+    NotAttachedToMoleculeError,
     RadicalsNotSupportedError,
     SMILESParseError,
     ToolkitUnavailableException,
     UndefinedStereochemistryError,
 )
 
-# =============================================================================================
-# CONFIGURE LOGGER
-# =============================================================================================
+if TYPE_CHECKING:
+    from openff.toolkit.topology.molecule import Atom, Bond, Molecule
 
 logger = logging.getLogger(__name__)
-
-# =============================================================================================
-# IMPLEMENTATION
-# =============================================================================================
 
 
 def normalize_file_format(file_format):
@@ -243,6 +237,67 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             from openff.toolkit.topology.molecule import InvalidConformerError
 
             raise InvalidConformerError("The PDB and SMILES structures do not match.")
+
+    def _smarts_to_networkx(self, substructure_smarts):
+        import networkx as nx
+        from rdkit import Chem
+
+        rdmol = Chem.MolFromSmarts(substructure_smarts)
+
+        _bondtypes = {
+            # 0: Chem.BondType.AROMATIC,
+            Chem.BondType.SINGLE: 1,
+            Chem.BondType.AROMATIC: 1.5,
+            Chem.BondType.DOUBLE: 2,
+            Chem.BondType.TRIPLE: 3,
+            Chem.BondType.QUADRUPLE: 4,
+            Chem.BondType.QUINTUPLE: 5,
+            Chem.BondType.HEXTUPLE: 6,
+        }
+        rdmol_G = nx.Graph()
+        for atom in rdmol.GetAtoms():
+            atomic_number = atom.GetAtomicNum()
+
+            rdmol_G.add_node(
+                atom.GetIdx(),
+                atomic_number=atomic_number,
+                formal_charge=atom.GetFormalCharge(),
+                map_index=atom.GetAtomMapNum(),
+            )
+        for bond in rdmol.GetBonds():
+            bond_type = bond.GetBondType()
+            # All bonds in the graph should have been explicitly assigned by this point.
+            if bond_type == Chem.rdchem.BondType.UNSPECIFIED:
+                raise SMILESParseError(
+                    f"A bond in {substructure_smarts} has an unspecified bond order"
+                )
+
+            rdmol_G.add_edge(
+                bond.GetBeginAtomIdx(),
+                bond.GetEndAtomIdx(),
+                bond_order=_bondtypes[bond_type],
+            )
+        return rdmol_G
+
+    def _assign_aromaticity_and_stereo_from_3d(self, offmol):
+        from rdkit import Chem
+
+        rdmol = offmol.to_rdkit()
+        Chem.SanitizeMol(
+            rdmol,
+            Chem.SANITIZE_ALL
+            ^ Chem.SANITIZE_ADJUSTHS,  # ^ Chem.SANITIZE_SETAROMATICITY,
+        )
+        Chem.AssignStereochemistryFrom3D(rdmol)
+        Chem.Kekulize(rdmol, clearAromaticFlags=True)
+        Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_MDL)
+        # To get HIS//TRP to get recognized as aromatic, we can use a different aromaticity model
+        # Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_DEFAULT)
+
+        offmol_w_stereo_and_aro = offmol.from_rdkit(
+            rdmol, allow_undefined_stereo=True, hydrogens_are_explicit=True
+        )
+        return offmol_w_stereo_and_aro
 
     def _process_sdf_supplier(self, sdf_supplier, allow_undefined_stereo, _cls):
         "Helper function to process RDKit molecules from an SDF input source"
@@ -852,7 +907,13 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         return molecule
 
     def generate_conformers(
-        self, molecule, n_conformers=1, rms_cutoff=None, clear_existing=True, _cls=None
+        self,
+        molecule,
+        n_conformers=1,
+        rms_cutoff=None,
+        clear_existing=True,
+        _cls=None,
+        make_carboxylic_acids_cis=False,
     ):
         r"""
         Generate molecule conformers using RDKit.
@@ -871,7 +932,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             The molecule to generate conformers for.
         n_conformers : int, default=1
             Maximum number of conformers to generate.
-        rms_cutoff : openmm.Quantity-wrapped float, in units of distance, optional, default=None
+        rms_cutoff : unit-wrapped float, in units of distance, optional, default=None
             The minimum RMS value at which two conformers are considered redundant and one is deleted.
             If None, the cutoff is set to 1 Angstrom
 
@@ -879,12 +940,15 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             Whether to overwrite existing conformers for the molecule.
         _cls : class
             Molecule constructor
+        make_carboxylic_acids_cis: bool, default=False
+            Guarantee all conformers have exclusively cis carboxylic acid groups (COOH)
+            by rotating the proton in any trans carboxylic acids 180 degrees around the C-O bond.
 
         """
         from rdkit.Chem import AllChem
 
         if rms_cutoff is None:
-            rms_cutoff = 1.0 * unit.angstrom
+            rms_cutoff = unit.Quantity(1.0, unit.angstrom)
         rdmol = self.to_rdkit(molecule)
         # TODO: This generates way more conformations than omega, given the same
         # nConfs and RMS threshold. Is there some way to set an energy cutoff as well?
@@ -908,6 +972,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         for conformer in molecule2._conformers:
             molecule._add_conformer(conformer)
+
+        if make_carboxylic_acids_cis:
+            molecule._make_carboxylic_acids_cis(toolkit_registry=self)
 
     def assign_partial_charges(
         self,
@@ -935,7 +1002,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                         (MMFF). This method does not make use of conformers, and hence
                         ``use_conformers`` and ``strict_n_conformers`` will not impact
                         the partial charges produced.
-        use_conformers : iterable of openmm.unit.Quantity-wrapped numpy arrays, each with
+        use_conformers : iterable of unit-wrapped numpy arrays, each with
             shape (n_atoms, 3) and dimension of distance. Optional, default = None
             Coordinates to use for partial charge calculation. If None, an appropriate number of
             conformers will be generated.
@@ -988,14 +1055,16 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 ]
             )
 
-        molecule.partial_charges = charges * unit.elementary_charge
+        molecule.partial_charges = unit.Quantity(charges, unit.elementary_charge)
 
         if normalize_partial_charges:
             molecule._normalize_partial_charges()
 
     @classmethod
     def _elf_is_problematic_conformer(
-        cls, molecule: "Molecule", conformer: unit.Quantity
+        cls,
+        molecule: "Molecule",
+        conformer: unit.Quantity,
     ) -> Tuple[bool, Optional[str]]:
         """A function which checks if a particular conformer is known to be problematic
         when computing ELF partial charges.
@@ -1079,7 +1148,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
     @classmethod
     def _elf_compute_electrostatic_energy(
-        cls, molecule: "Molecule", conformer: unit.Quantity
+        cls,
+        molecule: "Molecule",
+        conformer: unit.Quantity,
     ) -> float:
         """Computes the 'electrostatic interaction energy' of a particular conformer
         of a molecule.
@@ -1177,13 +1248,14 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         n_conformers = len(molecule.conformers)
 
+        # rdkit does not have conformer indices but conformer "ids"
         conformer_ids = [conf.GetId() for conf in rdkit_molecule.GetConformers()]
 
         # Compute the RMS matrix making sure to take into account any automorhism (e.g
         # a phenyl or nitro substituent flipped 180 degrees.
         rms_matrix = np.zeros((n_conformers, n_conformers))
 
-        for i, j in itertools.combinations(conformer_ids, 2):
+        for i, j in itertools.combinations(np.arange(n_conformers), 2):
 
             rms_matrix[i, j] = AllChem.GetBestRMS(
                 rdkit_molecule,
@@ -1503,7 +1575,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             # create a new atom
             # atomic_number = oemol.NewAtom(rda.GetAtomicNum())
             atomic_number = rda.GetAtomicNum()
-            formal_charge = rda.GetFormalCharge() * unit.elementary_charge
+            # implicit units of elementary charge
+            formal_charge = rda.GetFormalCharge()
             is_aromatic = rda.GetIsAromatic()
             if rda.HasProp("_Name"):
                 name = rda.GetProp("_Name")
@@ -1531,15 +1604,26 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                         "Got {} instead.".format(stereo_code)
                     )
 
+            res = rda.GetPDBResidueInfo()
+            metadata = dict()
+            if res is not None:
+                metadata["residue_name"] = res.GetResidueName()
+                metadata["residue_number"] = res.GetResidueNumber()
+                metadata["chain_id"] = res.GetChainId()
+
             atom_index = offmol._add_atom(
                 atomic_number,
                 formal_charge,
                 is_aromatic,
                 name=name,
                 stereochemistry=stereochemistry,
+                metadata=metadata,
+                invalidate_cache=False,
             )
             map_atoms[rd_idx] = atom_index
             atom_mapping[atom_index] = map_id
+
+        offmol._invalidate_cached_properties()
 
         # If we have a full / partial atom map add it to the molecule. Zeroes 0
         # indicates no mapping
@@ -1563,9 +1647,15 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
             # create a new bond
             bond_index = offmol._add_bond(
-                map_atoms[a1], map_atoms[a2], order, is_aromatic
+                map_atoms[a1],
+                map_atoms[a2],
+                order,
+                is_aromatic=is_aromatic,
+                invalidate_cache=False,
             )
             map_bonds[rdb_idx] = bond_index
+
+        offmol._invalidate_cached_properties()
 
         # Now fill in the cached (structure-dependent) properties. We have to have the 2D
         # structure of the molecule in place first, because each call to add_atom and
@@ -1600,23 +1690,20 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         if len(rdmol.GetConformers()) != 0:
             for conf in rdmol.GetConformers():
                 n_atoms = offmol.n_atoms
-                # TODO: Will this always be angstrom when loading from RDKit?
-                positions = unit.Quantity(np.zeros((n_atoms, 3)), unit.angstrom)
+                # Here we assume this always be angstrom
+                positions = np.zeros((n_atoms, 3))
                 for rd_idx, off_idx in map_atoms.items():
-                    atom_coords = conf.GetPositions()[rd_idx, :] * unit.angstrom
+                    atom_coords = conf.GetPositions()[rd_idx, :]
                     positions[off_idx, :] = atom_coords
-                offmol._add_conformer(positions)
+                offmol._add_conformer(unit.Quantity(positions, unit.angstrom))
 
-        partial_charges = unit.Quantity(
-            value=np.zeros(shape=offmol.n_atoms, dtype=np.float64),
-            units=unit.elementary_charge,
-        )
+        partial_charges = np.zeros(shape=offmol.n_atoms, dtype=np.float64)
 
         any_atom_has_partial_charge = False
         for rd_idx, rd_atom in enumerate(rdmol.GetAtoms()):
             off_idx = map_atoms[rd_idx]
             if rd_atom.HasProp("PartialCharge"):
-                charge = rd_atom.GetDoubleProp("PartialCharge") * unit.elementary_charge
+                charge = rd_atom.GetDoubleProp("PartialCharge")
                 partial_charges[off_idx] = charge
                 any_atom_has_partial_charge = True
             else:
@@ -1626,7 +1713,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                         "Some atoms in rdmol have partial charges, but others do not."
                     )
         if any_atom_has_partial_charge:
-            offmol.partial_charges = partial_charges
+            offmol.partial_charges = unit.Quantity(
+                partial_charges, unit.elementary_charge
+            )
         else:
             offmol.partial_charges = None
         return offmol
@@ -1658,7 +1747,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             rdatom.SetFormalCharge(atom.formal_charge.m_as(unit.elementary_charge))
             rdatom.SetIsAromatic(atom.is_aromatic)
 
-            ## Stereo handling code moved to after bonds are added
+            # Stereo handling code moved to after bonds are added
             if atom.stereochemistry == "S":
                 rdatom.SetChiralTag(Chem.CHI_TETRAHEDRAL_CW)
             elif atom.stereochemistry == "R":
@@ -1788,7 +1877,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         --------
 
         Convert a molecule to RDKit
-        >>> from openff.toolkit.topology import Molecule
+        >>> from openff.toolkit import Molecule
         >>> ethanol = Molecule.from_smiles('CCO')
         >>> rdmol = ethanol.to_rdkit()
         """
@@ -1822,6 +1911,28 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         for index, atom in enumerate(molecule.atoms):
             rdatom = rdmol.GetAtomWithIdx(index)
             rdatom.SetProp("_Name", atom.name)
+
+            if rdatom.GetPDBResidueInfo() is None:
+                res = Chem.AtomPDBResidueInfo()
+            else:
+                res = rdatom.GetPDBResidueInfo()
+
+            atom_has_any_metadata = False
+
+            if "residue_name" in atom.metadata:
+                atom_has_any_metadata = True
+                res.SetResidueName(atom.metadata["residue_name"])
+
+            if "residue_number" in atom.metadata:
+                atom_has_any_metadata = True
+                res.SetResidueNumber(int(atom.metadata["residue_number"]))
+
+            if "chain_id" in atom.metadata:
+                atom_has_any_metadata = True
+                res.SetChainId(atom.metadata["chain_id"])
+
+            if atom_has_any_metadata:
+                rdatom.SetPDBResidueInfo(res)
 
         for bond in molecule.bonds:
             atom_indices = (
@@ -2115,35 +2226,73 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             unique=unique,
         )
 
-    # --------------------------------
-    # Stereochemistry RDKit utilities.
-    # --------------------------------
+    def atom_is_in_ring(self, atom: "Atom") -> bool:
+        """Return whether or not an atom is in a ring.
 
-    def find_rings(self, molecule):
-        """Find the rings in a given molecule.
-
-        .. note ::
-
-            For systems containing some special cases of connected rings, this
-            function may not be well-behaved and may report a different number
-            rings than expected. Some problematic cases include networks of many
-            (5+) rings or bicyclic moieties (i.e. norbornane).
+        It is assumed that this atom is in molecule.
 
         Parameters
         ----------
-        molecule : openff.toolkit.topology.Molecule
-            The molecule for which rings are to be found
+        atom : openff.toolkit.topology.molecule.Atom
+            The molecule containing the atom of interest
 
         Returns
         -------
-        rings : tuple of tuples of atom indices
-            Nested tuples, each containing the indices of atoms in each ring
+        is_in_ring : bool
+            Whether or not the atom is in a ring.
 
+        Raises
+        ------
+        NotAttachedToMoleculeError
         """
+        if atom.molecule is None:
+            raise NotAttachedToMoleculeError(
+                "This Atom does not belong to a Molecule object"
+            )
+
+        molecule = atom.molecule
+        atom_index = atom.molecule_atom_index
+
         rdmol = molecule.to_rdkit()
-        ring_info = rdmol.GetRingInfo()
-        rings = ring_info.AtomRings()
-        return rings
+        rdatom = rdmol.GetAtomWithIdx(atom_index)
+
+        is_in_ring = rdatom.IsInRing()
+
+        return is_in_ring
+
+    def bond_is_in_ring(self, bond: "Bond") -> bool:
+        """Return whether or not a bond is in a ring.
+
+        It is assumed that this atom is in molecule.
+
+        Parameters
+        ----------
+        bond : openff.toolkit.topology.molecule.Bond
+            The molecule containing the atom of interest
+
+        Returns
+        -------
+        is_in_ring : bool
+            Whether or not the bond of index `bond_index` is in a ring
+
+        Raises
+        ------
+        NotAttachedToMoleculeError
+        """
+        if bond.molecule is None:
+            raise NotAttachedToMoleculeError(
+                "This Bond does not belong to a Molecule object"
+            )
+
+        molecule = bond.molecule
+        rdmol = molecule.to_rdkit()
+
+        # Molecule.to_rdkit() is NOT guaranteed to preserve bond ordering,
+        # so we must look up the corresponding bond via its constituent atom indices
+        rdbond = rdmol.GetBondBetweenAtoms(bond.atom1_index, bond.atom2_index)
+        is_in_ring = rdbond.IsInRing()
+
+        return is_in_ring
 
     @staticmethod
     def _find_undefined_stereo_atoms(rdmol, assign_stereo=False):
@@ -2311,137 +2460,226 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 raise UndefinedStereochemistryError(msg)
 
     @staticmethod
-    def _flip_rdbond_direction(rdbond, paired_rdbonds):
-        """Flip the rdbond and all those paired to it.
-
-        Parameters
-        ----------
-        rdbond : rdkit.Chem.Bond
-            The Bond whose direction needs to be flipped.
-        paired_rdbonds : Dict[Tuple[int], List[rdkit.Chem.Bond]]
-            Maps bond atom indices that are assigned a bond direction to
-            the bonds on the other side of the double bond.
+    def _constrain_end_directions(
+        *values: int, bond_indices: List[int], flip_direction: Dict[int, bool]
+    ) -> bool:
+        """A constraint applied when mapping global E/Z stereochemistry into local RDKit
+        bond directions that ensures that the 'left' bonds point in opposite directions
+        (i.e. one has to be up and one has to be down) and likewise for the 'right' bonds
         """
-        from rdkit import Chem
+        # Account for bond "direction" using flip_directions dict, see more thorough comment
+        # in _constrain_rank for details.
+        bond_directions = [
+            (value if not flip_direction[i] else 1 - value)
+            for i, value in zip(bond_indices, values)
+        ]
+        unique_bond_directions = set(bond_directions)
+        return len(unique_bond_directions) == len(values)
 
-        # The function assumes that all bonds are either up or down.
-        supported_directions = {Chem.BondDir.ENDUPRIGHT, Chem.BondDir.ENDDOWNRIGHT}
+    @staticmethod
+    def _constrain_rank(
+        *values: int,
+        bond_indices: List[int],
+        flip_direction: Dict[int, bool],
+        expected_stereo: str,
+    ) -> bool:
+        """A constraint applied when mapping global E/Z stereochemistry into local RDKit
+        bond directions that ensures that the 'left' bond with the highest CIP rank
+        and the 'right' bond with the highest CIP rank point either in the same direction
+        if Z stereo or opposite directions if E.
+        """
+        # The "value" for each bond is ultimately set to either 0 (down) or 1 (up).
+        # However, we also need to know the "direction" of the bond to make sense
+        # of this - Is it coming FROM, or going TO this double bond while going down or up?
+        # This information is in the flipped_values dict. This code assumes that the
+        # "normal" case is when the neighboring bonds are coming FROM the double bond,
+        # and where that's not true, the following line switches the
+        # meaning of "down" and "up" to give us the desired meaning.
+        bond_directions = [
+            (value if not flip_direction[i] else 1 - value)
+            for i, value in zip(bond_indices, values)
+        ]
 
-        def _flip(b, paired, flipped, ignored):
-            # The function assumes that all bonds are either up or down.
-            assert b.GetBondDir() in supported_directions
-            bond_atom_indices = (b.GetBeginAtomIdx(), b.GetEndAtomIdx())
-
-            # Check that we haven't flipped this bond already.
-            if bond_atom_indices in flipped:
-                # This should never happen.
-                raise RuntimeError("Cannot flip the bond direction consistently.")
-
-            # Flip the bond.
-            if b.GetBondDir() == Chem.BondDir.ENDUPRIGHT:
-                b.SetBondDir(Chem.BondDir.ENDDOWNRIGHT)
-            else:
-                b.SetBondDir(Chem.BondDir.ENDUPRIGHT)
-            flipped.add(bond_atom_indices)
-
-            # Flip all the paired bonds as well (if there are any).
-            if bond_atom_indices in paired:
-                for paired_rdbond in paired[bond_atom_indices]:
-                    # Don't flip the bond that was flipped in the upper-level recursion.
-                    if (
-                        paired_rdbond.GetBeginAtomIdx(),
-                        paired_rdbond.GetEndAtomIdx(),
-                    ) != ignored:
-                        # Don't flip this bond in the next recursion.
-                        _flip(paired_rdbond, paired, flipped, ignored=bond_atom_indices)
-
-        _flip(rdbond, paired_rdbonds, flipped=set(), ignored=None)
+        # Test for equality of items in flipped_values by turning it into a set and
+        # counting how many values remain.
+        unique_bond_directions = set(bond_directions)
+        if expected_stereo == "E":
+            return len(unique_bond_directions) == min(2, len(bond_indices))
+        elif expected_stereo == "Z":
+            return len(unique_bond_directions) == 1
+        else:
+            raise NotImplementedError()
 
     @classmethod
-    def _assign_rdmol_bonds_stereo(cls, offmol, rdmol):
-        """Copy the info about bonds stereochemistry from the OFF Molecule to RDKit Mol."""
+    def _assign_rdmol_bonds_stereo(cls, off_molecule: "Molecule", rd_molecule):
+        """Copy the info about bonds stereochemistry from the OFF Molecule to RDKit Mol.
+        The method proceeds by formulating mapping global E/Z stereo information onto
+        local 'bond directions' as a constraint satisfaction problem (CSP).
+        In this formalism, the variables correspond to the indices of the bonds
+        neighbouring a stereogenic bond, the domain for each variable is 0 (down)
+        or 1 (up), and the constraints are designed to ensure the correct E/Z stereo
+        is yielded after assignment of the directions.
+        """
+        from constraint import Problem
         from rdkit import Chem
 
-        # Map the bonds indices that are assigned bond direction
-        # to the bond on the other side of the double bond.
-        # (atom_index1, atom_index2) -> List[rdkit.Chem.Bond]
-        paired_bonds = {}
+        _RD_STEREO_TO_STR = {
+            Chem.BondStereo.STEREOE: "E",
+            Chem.BondStereo.STEREOZ: "Z",
+        }
 
-        for bond in offmol.bonds:
-            # No need to do anything with bonds without stereochemistry.
-            if not bond.stereochemistry:
+        stereogenic_bonds = [
+            bond for bond in off_molecule.bonds if bond.stereochemistry
+        ]
+
+        if len(stereogenic_bonds) == 0:
+            return
+
+        # Needed to ensure the _CIPRank is present. Note that, despite the kwargs that look like
+        # they could mangle existing stereo, it is actually preserved.
+        Chem.AssignStereochemistry(
+            rd_molecule, cleanIt=True, force=True, flagPossibleStereoCenters=True
+        )
+
+        csp_problem = Problem()
+        csp_variables = set()
+
+        for bond in stereogenic_bonds:
+
+            # Here we use a notation where atoms 'b' and 'c' are the two atoms involved
+            # in the double bond, while 'a' corresponds to a neighbour of 'b' and 'd' a
+            # neighbour of 'c'.
+            atom_b, atom_c = bond.atom1, bond.atom2
+            index_b, index_c = atom_b.molecule_atom_index, atom_c.molecule_atom_index
+
+            indices_a = [
+                n.molecule_atom_index for n in atom_b.bonded_atoms if n != atom_c
+            ]
+            indices_d = [
+                n.molecule_atom_index for n in atom_c.bonded_atoms if n != atom_b
+            ]
+            # A stereogenic double bond should either involve atoms with degree 3
+            # (e.g. carbon) or degree 2 (e.g. divalent nitrogen).
+            assert 1 <= len(indices_a) <= 2 and 1 <= len(indices_d) <= 2
+
+            # Identify the highest CIP-ranked bond coming off each side of the double
+            # bond. This lets us later add a constraint to ensure that we have the
+            # correct E/Z stereochemistry
+            ranks_a = [
+                int(rd_molecule.GetAtomWithIdx(i).GetProp("_CIPRank"))
+                for i in indices_a
+            ]
+            index_a = indices_a[np.argmax(ranks_a)]
+            ranks_d = [
+                int(rd_molecule.GetAtomWithIdx(i).GetProp("_CIPRank"))
+                for i in indices_d
+            ]
+            index_d = indices_d[np.argmax(ranks_d)]
+
+            index_ab = rd_molecule.GetBondBetweenAtoms(index_a, index_b).GetIdx()
+            index_cd = rd_molecule.GetBondBetweenAtoms(index_c, index_d).GetIdx()
+
+            flip_direction = {}
+
+            # Collect lists of the indices of the bonds that appear to the 'left' of
+            # and 'right' of the stereogenic bond so we can constrain their directions
+            # so that all 'left' bonds do not, for example, point up.
+            constraints_ab: List[int] = []
+            constraints_cd: List[int] = []
+
+            for index_pair, constraints_list in [
+                ((index_a, index_b), constraints_ab) for index_a in indices_a
+            ] + [((index_d, index_c), constraints_cd) for index_d in indices_d]:
+
+                # Each single bond neighboring a double bond needs to be defined as a
+                # "variable" in the CSP problem. Here, each bond is identified by its
+                # bond index in the RDMol (note: this is not guaranteed to be the same
+                # as the corresponding bond's index in the OFFMol). This also ensures
+                # that we don't define the same bond twice.
+                rd_bond = rd_molecule.GetBondBetweenAtoms(*index_pair)
+                rd_bond_index = rd_bond.GetIdx()
+
+                if rd_bond_index not in csp_variables:
+                    csp_problem.addVariable(rd_bond_index, [1, 0])  # 0 = down, 1 = up
+                    csp_variables.add(rd_bond_index)
+
+                # The direction of the bond should point from the double bond to its
+                # neighbour. If the bond is pointing from the neighbour to the double
+                # bond instead, we need to flip the direction of the bond. See
+                # rdkit/Code/GraphMol/Chirality.cpp:findAtomNeighborDirHelper for more
+                # details.
+                flip_direction[rd_bond_index] = (
+                    rd_bond.GetBeginAtomIdx() != index_pair[1]
+                )
+                constraints_list.append(rd_bond_index)
+
+            # Add one constraint corresponding to the highest-ranked bond on OPPOSITE
+            # sides of the double bond, to ensure that they are oriented up/down to
+            # achieve the correct E/Z value of the double bond.
+            csp_problem.addConstraint(
+                functools.partial(
+                    cls._constrain_rank,
+                    bond_indices=[index_ab, index_cd],
+                    flip_direction=flip_direction,
+                    expected_stereo=bond.stereochemistry,
+                ),
+                [index_ab, index_cd],
+            )
+            # Add constraint(s) corresponding ALL bonds on the SAME side of the double
+            # bond, to ensure that they do not all take the same value (if one is "up",
+            # the other can not also be "up").
+            csp_problem.addConstraint(
+                functools.partial(
+                    cls._constrain_end_directions,
+                    bond_indices=constraints_ab,
+                    flip_direction=flip_direction,
+                ),
+                constraints_ab,
+            )
+            csp_problem.addConstraint(
+                functools.partial(
+                    cls._constrain_end_directions,
+                    bond_indices=constraints_cd,
+                    flip_direction=flip_direction,
+                ),
+                constraints_cd,
+            )
+
+        # Do not assume that every solution found by the solver is valid.
+        # Iterate through the solutions and ensure that the
+        # desired E/Z marks have really been achieved.
+        has_solution = False
+
+        for solution in csp_problem.getSolutionIter():
+
+            for rd_bond_index, direction in solution.items():
+
+                rd_bond = rd_molecule.GetBondWithIdx(rd_bond_index)
+                if direction == 0:
+                    rd_bond.SetBondDir(Chem.BondDir.ENDDOWNRIGHT)
+                elif direction == 1:
+                    rd_bond.SetBondDir(Chem.BondDir.ENDUPRIGHT)
+                else:
+                    raise NotImplementedError()
+
+            Chem.AssignStereochemistry(rd_molecule, cleanIt=True, force=True)
+
+            # Verify that there are no stereo mismatches between the original
+            # OFFMol and the newly-assigned RDMol
+            stereo_mismatch = False
+            for off_bond in stereogenic_bonds:
+                rd_bond = rd_molecule.GetBondBetweenAtoms(
+                    off_bond.atom1_index, off_bond.atom2_index
+                )
+                rd_stereo_string = _RD_STEREO_TO_STR.get(rd_bond.GetStereo(), None)
+                if off_bond.stereochemistry != rd_stereo_string:
+                    stereo_mismatch = True
+                    break
+
+            if stereo_mismatch:
                 continue
 
-            # Isolate stereo RDKit bond object.
-            rdbond_atom_indices = (
-                bond.atom1.molecule_atom_index,
-                bond.atom2.molecule_atom_index,
-            )
-            stereo_rdbond = rdmol.GetBondBetweenAtoms(*rdbond_atom_indices)
+            has_solution = True
+            break
 
-            # Collect all neighboring rdbonds of atom1 and atom2.
-            neighbor_rdbonds1 = [
-                rdmol.GetBondBetweenAtoms(
-                    n.molecule_atom_index, bond.atom1.molecule_atom_index
-                )
-                for n in bond.atom1.bonded_atoms
-                if n != bond.atom2
-            ]
-            neighbor_rdbonds2 = [
-                rdmol.GetBondBetweenAtoms(
-                    bond.atom2.molecule_atom_index, n.molecule_atom_index
-                )
-                for n in bond.atom2.bonded_atoms
-                if n != bond.atom1
-            ]
-
-            # Select only 1 neighbor bond per atom out of the two.
-            neighbor_rdbonds = []
-            for i, rdbonds in enumerate([neighbor_rdbonds1, neighbor_rdbonds2]):
-                # If there are no neighbors for which we have already
-                # assigned the bond direction, just pick the first one.
-                neighbor_rdbonds.append(rdbonds[0])
-                # Otherwise, pick neighbor that was already assigned to
-                # avoid inconsistencies and keep the tree non-cyclic.
-                for rdb in rdbonds:
-                    if (rdb.GetBeginAtomIdx(), rdb.GetBeginAtomIdx()) in paired_bonds:
-                        neighbor_rdbonds[i] = rdb
-                        break
-
-            # Assign a random direction to the bonds that were not already assigned
-            # keeping track of which bond would be best to flip later (i.e. does that
-            # are not already determining the stereochemistry of another double bond).
-            flipped_rdbond = neighbor_rdbonds[0]
-            for rdb in neighbor_rdbonds:
-                if (rdb.GetBeginAtomIdx(), rdb.GetEndAtomIdx()) not in paired_bonds:
-                    rdb.SetBondDir(Chem.BondDir.ENDUPRIGHT)
-                    # Set this bond as a possible bond to flip.
-                    flipped_rdbond = rdb
-
-            Chem.AssignStereochemistry(rdmol, cleanIt=True, force=True)
-
-            # Verify that the current directions give us the desired stereochemistries.
-            assert bond.stereochemistry in {"E", "Z"}
-            if bond.stereochemistry == "E":
-                desired_rdk_stereo_code = Chem.rdchem.BondStereo.STEREOE
-            else:
-                desired_rdk_stereo_code = Chem.rdchem.BondStereo.STEREOZ
-
-            # If that doesn't work, flip the direction of one bond preferring
-            # those that are not already determining the stereo of another bond.
-            if stereo_rdbond.GetStereo() != desired_rdk_stereo_code:
-                cls._flip_rdbond_direction(flipped_rdbond, paired_bonds)
-                Chem.AssignStereochemistry(rdmol, cleanIt=True, force=True)
-
-                # The stereo should be set correctly here.
-                assert stereo_rdbond.GetStereo() == desired_rdk_stereo_code
-
-            # Update paired bonds map.
-            neighbor_bond_indices = [
-                (rdb.GetBeginAtomIdx(), rdb.GetEndAtomIdx()) for rdb in neighbor_rdbonds
-            ]
-            for i, bond_indices in enumerate(neighbor_bond_indices):
-                try:
-                    paired_bonds[bond_indices].append(neighbor_rdbonds[1 - i])
-                except KeyError:
-                    paired_bonds[bond_indices] = [neighbor_rdbonds[1 - i]]
+        assert has_solution, "E/Z stereo could not be converted to local stereo"

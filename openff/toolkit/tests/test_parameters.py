@@ -1,25 +1,26 @@
-#!/usr/bin/env python
-
-# ======================================================================
-# MODULE DOCSTRING
-# ======================================================================
-
 """
 Test classes and function in module openff.toolkit.typing.engines.smirnoff.parameters.
 
 """
+from collections import defaultdict
 from inspect import isabstract, isclass
+from typing import Dict, List, Tuple
 
 import numpy
 import pytest
 from numpy.testing import assert_almost_equal
 from openff.units import unit
+from packaging.version import Version
 
 import openff.toolkit.typing.engines.smirnoff.parameters
-from openff.toolkit.topology import Molecule
+from openff.toolkit.tests.mocking import VirtualSiteMocking
+from openff.toolkit.tests.utils import does_not_raise
+from openff.toolkit.topology import Molecule, Topology
+from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     BondHandler,
     ChargeIncrementModelHandler,
+    ElectrostaticsHandler,
     GBSAHandler,
     ImproperTorsionHandler,
     IndexedParameterAttribute,
@@ -30,6 +31,7 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     ParameterType,
     ProperTorsionHandler,
     VirtualSiteHandler,
+    _cal_mol_a2,
     _linear_inter_or_extrapolate,
     _ParameterAttributeHandler,
     vdWHandler,
@@ -44,12 +46,9 @@ from openff.toolkit.utils.exceptions import (
     NotEnoughPointsForInterpolationError,
     ParameterLookupError,
     SMIRNOFFSpecError,
+    SMIRNOFFSpecUnimplementedError,
     SMIRNOFFVersionError,
 )
-
-# ======================================================================
-# Test ParameterAttribute descriptor
-# ======================================================================
 
 
 class TestParameterAttribute:
@@ -291,8 +290,8 @@ class TestInterpolation:
         k_bondorder = {
             2: 1.8 * unit.kilocalorie / unit.mole,
         }
-        with pytest.raises(NotEnoughPointsForInterpolationError) as excinfo:
-            k = _linear_inter_or_extrapolate(k_bondorder, 1)
+        with pytest.raises(NotEnoughPointsForInterpolationError):
+            _linear_inter_or_extrapolate(k_bondorder, 1)
 
     @pytest.mark.parametrize(
         ("fractional_bond_order", "k_interpolated"),
@@ -449,11 +448,6 @@ class TestParameterAttributeHandler:
         my_parameter.assert_getattr()
         my_parameter.a1
         my_parameter.assert_getattr()
-
-
-# ======================================================================
-# Test ParameterHandler
-# ======================================================================
 
 
 class TestParameterHandler:
@@ -655,32 +649,33 @@ class TestParameterHandler:
         # Generate a SMIRNOFFSpecError by not providing a section version
         with pytest.raises(
             SMIRNOFFSpecError, match="Missing version while trying to construct"
-        ) as excinfo:
-            ph = ParameterHandler()
+        ):
+            ParameterHandler()
+
         # Successfully create ParameterHandler by skipping version check
-        ph = ParameterHandler(skip_version_check=True)
+        ParameterHandler(skip_version_check=True)
 
         # Successfully create ParameterHandler by providing max supported version
-        ph = ParameterHandler(version=ParameterHandler._MAX_SUPPORTED_SECTION_VERSION)
+        ParameterHandler(version=ParameterHandler._MAX_SUPPORTED_SECTION_VERSION)
 
         # Successfully create ParameterHandler by providing min supported version
-        ph = ParameterHandler(version=ParameterHandler._MIN_SUPPORTED_SECTION_VERSION)
+        ParameterHandler(version=ParameterHandler._MIN_SUPPORTED_SECTION_VERSION)
 
         # Generate a SMIRNOFFSpecError by providing a value higher than the max supported
         with pytest.raises(
             SMIRNOFFVersionError,
             match="SMIRNOFF offxml file was written with version 1000.0, "
             "but this version of ForceField only supports version",
-        ) as excinfo:
-            ph = ParameterHandler(version="1000.0")
+        ):
+            ParameterHandler(version="1000.0")
 
         # Generate a SMIRNOFFSpecError by providing a value lower than the min supported
         with pytest.raises(
             SMIRNOFFVersionError,
             match="SMIRNOFF offxml file was written with version 0.1, "
             "but this version of ForceField only supports version",
-        ) as excinfo:
-            ph = ParameterHandler(version="0.1")
+        ):
+            ParameterHandler(version="0.1")
 
     def test_supported_version_range(self):
         """
@@ -688,27 +683,29 @@ class TestParameterHandler:
         """
 
         class MyPHSubclass(ParameterHandler):
-            _MIN_SUPPORTED_SECTION_VERSION = 0.3
-            _MAX_SUPPORTED_SECTION_VERSION = 2
+            _MIN_SUPPORTED_SECTION_VERSION = Version("0.3")
+            _MAX_SUPPORTED_SECTION_VERSION = Version("2")
 
-        with pytest.raises(SMIRNOFFVersionError) as excinfo:
-            my_ph = MyPHSubclass(version=0.1)
-        my_ph = MyPHSubclass(version=0.3)
-        my_ph = MyPHSubclass(version=1)
-        my_ph = MyPHSubclass(version="1.9")
-        my_ph = MyPHSubclass(version=2.0)
-        with pytest.raises(SMIRNOFFVersionError) as excinfo:
-            my_ph = MyPHSubclass(version=2.1)
+        with pytest.raises(SMIRNOFFVersionError):
+            MyPHSubclass(version=0.1)
+        with pytest.raises(Exception, match="Could not convert .*list"):
+            MyPHSubclass(version=[0])
+        MyPHSubclass(version=0.3)
+        MyPHSubclass(version=1)
+        MyPHSubclass(version="1.9")
+        MyPHSubclass(version=2.0)
+        with pytest.raises(SMIRNOFFVersionError):
+            MyPHSubclass(version=2.1)
 
     def test_write_same_version_as_was_set(self):
         """Ensure that a ParameterHandler remembers the version that was set when it was initialized."""
 
         class MyPHSubclass(ParameterHandler):
-            _MIN_SUPPORTED_SECTION_VERSION = 0.3
-            _MAX_SUPPORTED_SECTION_VERSION = 2
+            _MIN_SUPPORTED_SECTION_VERSION = Version("0.3")
+            _MAX_SUPPORTED_SECTION_VERSION = Version("2")
 
         my_ph = MyPHSubclass(version=1.234)
-        assert my_ph.to_dict()["version"] == 1.234
+        assert my_ph.to_dict()["version"] == Version("1.234")
 
     def test_add_delete_cosmetic_attributes(self):
         """Test ParameterHandler.to_dict() function when some parameters are in
@@ -812,7 +809,7 @@ class TestParameterList:
         """Test creation of a parameter list."""
         p1 = ParameterType(smirks="[*:1]")
         p2 = ParameterType(smirks="[#1:1]")
-        parameters = ParameterList([p1, p2])
+        ParameterList([p1, p2])
 
     @pytest.mark.wip(
         reason="Until ChemicalEnvironment won't be refactored to use the ToolkitRegistry "
@@ -854,7 +851,7 @@ class TestParameterList:
             parameters.index("[#2:1]")
 
         p4 = ParameterType(smirks="[#2:1]")
-        with pytest.raises(ValueError, match="is not in list") as excinfo:
+        with pytest.raises(ValueError, match="is not in list"):
             parameters.index(p4)
 
     def test_contains(self):
@@ -1162,6 +1159,12 @@ class TestParameterType:
         assert param_dict["smirks"] == "[*:1]"
         assert len(param_dict.keys()) == 1
 
+    def test_repr(self):
+        class NamedType(ParameterType):
+            pass
+
+        assert NamedType(smirks="[*:1]").__repr__().startswith("<NamedType")
+
 
 class TestBondType:
     """Tests for the BondType class."""
@@ -1280,8 +1283,8 @@ class TestBondType:
         param_dict = p1.to_dict()
         with pytest.raises(
             ValueError,
-            match="Requested output unit cal is not compatible with quantity unit Å.",
-        ) as context:
+            match="Requested output unit cal.* is not compatible with quantity unit angstrom.",
+        ):
             param_dict_unitless, attached_units = detach_units(
                 param_dict, output_units={"length_unit": unit.calorie}
             )
@@ -1331,10 +1334,8 @@ class TestBondType:
         """
         Test that ParameterTypes raise an error on receiving unexpected attributes passed to __init__()
         """
-        with pytest.raises(
-            SMIRNOFFSpecError, match="Unexpected kwarg (pilot: alice)*"
-        ) as context:
-            p1 = BondHandler.BondType(
+        with pytest.raises(SMIRNOFFSpecError, match="Unexpected kwarg (pilot: alice)*"):
+            BondHandler.BondType(
                 smirks="[*:1]-[*:2]",
                 length=1.02 * unit.angstrom,
                 k=5 * unit.kilocalorie / unit.mole / unit.angstrom**2,
@@ -1410,7 +1411,8 @@ class TestBondHandler:
 
     def test_harmonic_potentials_are_compatible(self):
         """
-        Ensure that handlers with potential ="harmonic" evaluate as compatible with handlers with potential="(k/2)*(r-length)^2"
+        Ensure that handlers with `potential="harmonic"` evaluate as compatible with handlers with
+        potential="(k/2)*(r-length)^2"
         """
         bh1 = BondHandler(skip_version_check=True)
         bh2 = BondHandler(skip_version_check=True)
@@ -1485,8 +1487,8 @@ class TestProperTorsionType:
         """
         with pytest.raises(
             SMIRNOFFSpecError, match="Unexpected kwarg \(phase3: 31 deg\)*."
-        ) as context:
-            p1 = ProperTorsionHandler.ProperTorsionType(
+        ):
+            ProperTorsionHandler.ProperTorsionType(
                 smirks="[*:1]-[*:2]-[*:3]-[*:4]",
                 phase1=30 * unit.degree,
                 periodicity1=2,
@@ -1501,10 +1503,8 @@ class TestProperTorsionType:
         Test creation and serialization of a multi-term proper torsion where
         one of the terms has incorrect units
         """
-        with pytest.raises(
-            IncompatibleUnitError, match="should have units of"
-        ) as context:
-            p1 = ProperTorsionHandler.ProperTorsionType(
+        with pytest.raises(IncompatibleUnitError, match="should have units of"):
+            ProperTorsionHandler.ProperTorsionType(
                 smirks="[*:1]-[*:2]-[*:3]-[*:4]",
                 phase1=30 * unit.degree,
                 periodicity1=2,
@@ -1622,8 +1622,8 @@ class TestProperTorsionType:
         """
         with pytest.raises(
             SMIRNOFFSpecError, match="Unexpected kwarg \(k3_bondorder1*."
-        ) as context:
-            p1 = ProperTorsionHandler.ProperTorsionType(
+        ):
+            ProperTorsionHandler.ProperTorsionType(
                 smirks="[*:1]-[*:2]-[*:3]-[*:4]",
                 phase1=30 * unit.degree,
                 periodicity1=2,
@@ -1639,7 +1639,7 @@ class TestProperTorsionType:
         """Test behavior where a single bond order term is specified for a single k"""
         # raises no error, as checks are handled at parameterization
         # we may add a `validate` method later that is called manually by user when they want it
-        p1 = ProperTorsionHandler.ProperTorsionType(
+        ProperTorsionHandler.ProperTorsionType(
             smirks="[*:1]-[*:2]~[*:3]-[*:4]",
             phase1=30 * unit.degree,
             periodicity1=2,
@@ -1651,7 +1651,7 @@ class TestProperTorsionType:
         # TODO : currently raises no error, as checks are handled at parameterization
         # is this a spec thing that we should be checking?
         # if so, it will be painful to implement
-        p1 = ProperTorsionHandler.ProperTorsionType(
+        ProperTorsionHandler.ProperTorsionType(
             smirks="[*:1]-[*:2]-[*:3]-[*:4]",
             phase1=30 * unit.degree,
             periodicity1=2,
@@ -1676,8 +1676,8 @@ class TestProperTorsionHandler:
             "only the following values are supported: ['k*(1+cos(periodicity*theta-phase))']."
         )
         with pytest.raises(SMIRNOFFSpecError, match=err_msg):
-            ph1 = ProperTorsionHandler(potential="charmm", skip_version_check=True)
-        ph1 = ProperTorsionHandler(
+            ProperTorsionHandler(potential="charmm", skip_version_check=True)
+        ProperTorsionHandler(
             potential="k*(1+cos(periodicity*theta-phase))", skip_version_check=True
         )
 
@@ -1687,8 +1687,8 @@ class TestProperTorsionHandler:
             "only the following values are supported: ['k*(1+cos(periodicity*theta-phase))']."
         )
         with pytest.raises(SMIRNOFFSpecError, match=err_msg):
-            ph1 = ImproperTorsionHandler(potential="charmm", skip_version_check=True)
-        ph1 = ImproperTorsionHandler(
+            ImproperTorsionHandler(potential="charmm", skip_version_check=True)
+        ImproperTorsionHandler(
             potential="k*(1+cos(periodicity*theta-phase))", skip_version_check=True
         )
 
@@ -1847,240 +1847,609 @@ class TestvdWType:
         assert "rmin_half" in param.to_dict()
 
 
+class TestElectrostaticsHandler:
+    def test_solvent_dielectric(self):
+        with pytest.raises(
+            SMIRNOFFSpecUnimplementedError,
+            match="make use of `solvent_d",
+        ):
+            ElectrostaticsHandler(version=0.3, method="PME", solvent_dielectric=4)
+
+        handler = ElectrostaticsHandler(version=0.4)
+        assert handler.solvent_dielectric is None
+
+        handler.solvent_dielectric = None
+
+        with pytest.raises(
+            SMIRNOFFSpecUnimplementedError,
+            match="make use of `solvent_d",
+        ):
+            handler.solvent_dielectric = 78.3
+
+    def test_unknown_periodic_potential(self):
+        handler = ElectrostaticsHandler(version=0.4)
+
+        with pytest.raises(
+            NotImplementedError,
+            match="unexpected periodic potential",
+        ):
+            handler.periodic_potential = "PPPM"
+
+
+class TestElectrostaticsHandlerUpconversion:
+    """
+    Test the implementation of OFF-EP-0005:
+
+    https://openforcefield.github.io/standards/enhancement-proposals/off-ep-0005/
+    """
+
+    default_reaction_field_expression = (
+        "charge1*charge2/(4*pi*epsilon0)*(1/r + k_rf*r^2 - c_rf);"
+        "k_rf=(cutoff^(-3))*(solvent_dielectric-1)/(2*solvent_dielectric+1);"
+        "c_rf=cutoff^(-1)*(3*solvent_dielectric)/(2*solvent_dielectric+1)"
+    )
+
+    @pytest.mark.parametrize(
+        ("old_method", "new_method"),
+        [
+            ("PME", "Ewald3D-ConductingBoundary"),
+            ("Coulomb", "Coulomb"),
+            ("reaction-field", default_reaction_field_expression),
+        ],
+    )
+    def test_upconversion(self, old_method, new_method):
+        handler = ElectrostaticsHandler(version=0.3, method=old_method)
+        assert handler.version == Version("0.4")
+
+        # Only `periodic_potential` is a function of the values in a version 0.3 handler ...
+        assert handler.periodic_potential == new_method
+
+        # ... for everything else, it's the same
+        assert handler.nonperiodic_potential == "Coulomb"
+        assert handler.exception_potential == "Coulomb"
+
+    def test_invalid_0_4_kwargs(self):
+        with pytest.raises(SMIRNOFFSpecError, match="removed in version 0.4 of the E"):
+            ElectrostaticsHandler(version=0.4, method="PME")
+
+
 class TestVirtualSiteHandler:
     """
     Test the creation of a VirtualSiteHandler and the implemented VirtualSiteTypes
     """
 
-    def _test_variable_names(self, valid_kwargs, variable_names):
+    @pytest.mark.parametrize(
+        "parameter, expected_index",
+        [
+            (VirtualSiteMocking.bond_charge_parameter("[*:1][*:2]"), 0),
+            (VirtualSiteMocking.monovalent_parameter("[*:1][*:2][*:3]"), 0),
+            (VirtualSiteMocking.divalent_parameter("[*:2][*:1][*:3]", "once"), 0),
+            (VirtualSiteMocking.trivalent_parameter("[*:1][*:2][*:3][*:4]"), 0),
+        ],
+    )
+    def test_parent_index(self, parameter, expected_index):
 
-        for name_to_change in variable_names:
-            invalid_kwargs = valid_kwargs.copy()
-            invalid_kwargs[
-                name_to_change
-            ] = "bad_attribute_value_that_will_never_be_used"
-
-            # Should also be able to perform the lookup on the type attribute.
-            # Needed to test setting to the wrong type value
-            exception = SMIRNOFFSpecError
-
-            with pytest.raises(exception):
-                vs_type = VirtualSiteHandler._VirtualSiteTypeSelector(**invalid_kwargs)
-
-    def _test_complete_attributes(self, valid_kwargs, names, virtual_site_type):
-
-        vs_type = virtual_site_type(**valid_kwargs)
-
-        for name_to_remove in names:
-            invalid_kwargs = valid_kwargs.copy()
-            invalid_kwargs.pop(name_to_remove)
-
-            with pytest.raises(SMIRNOFFSpecError):
-                vs_type = virtual_site_type(**invalid_kwargs)
-
-        # Test adding bogus attr
-        with pytest.raises(SMIRNOFFSpecError):
-            invalid_kwargs = valid_kwargs.copy()
-            invalid_kwargs["bad_attribute_name_that_will_never_be_in_the_spec"] = True
-            vs_type = virtual_site_type(**invalid_kwargs)
-
-    def test_create_virtual_site_handler(self):
-        """Test creation of an empty VirtualSiteHandler"""
-        handler = VirtualSiteHandler(
-            skip_version_check=True, exclusion_policy="parents"
+        assert parameter.parent_index == expected_index
+        assert (
+            VirtualSiteHandler.VirtualSiteType.type_to_parent_index(parameter.type)
+            == expected_index
         )
 
-        with pytest.raises(SMIRNOFFSpecError):
-            handler = VirtualSiteHandler(
-                skip_version_check=True,
-                exclusion_policy="bad_attribute_value_that_will_never_be_used",
+    @pytest.mark.parametrize(
+        "kwargs, expected_raises",
+        [
+            (
+                VirtualSiteMocking.bond_charge_parameter("[*:1][*:2]").to_dict(),
+                does_not_raise(),
+            ),
+            (
+                VirtualSiteMocking.monovalent_parameter("[*:1][*:2][*:3]").to_dict(),
+                does_not_raise(),
+            ),
+            (
+                VirtualSiteMocking.divalent_parameter(
+                    "[*:1][*:2][*:3]", match="once", angle=0.0 * unit.degrees
+                ).to_dict(),
+                does_not_raise(),
+            ),
+            (
+                VirtualSiteMocking.divalent_parameter(
+                    "[*:1][*:2][*:3]",
+                    match="all_permutations",
+                    angle=2.0 * unit.degrees,
+                ).to_dict(),
+                does_not_raise(),
+            ),
+            (
+                VirtualSiteMocking.trivalent_parameter(
+                    "[*:1][*:2][*:3][*:4]"
+                ).to_dict(),
+                does_not_raise(),
+            ),
+            # Validate `type`
+            (
+                {},
+                pytest.raises(SMIRNOFFSpecError, match="the `type` keyword is missing"),
+            ),
+            (
+                {"type": "InvalidType"},
+                pytest.raises(
+                    SMIRNOFFSpecError,
+                    match="'InvalidType' is not a supported virtual site type",
+                ),
+            ),
+            # Validate `match`
+            (
+                {"type": "BondCharge"},
+                pytest.raises(
+                    SMIRNOFFSpecError, match="the `match` keyword is missing"
+                ),
+            ),
+            (
+                {"type": "BondCharge", "match": "once"},
+                pytest.raises(
+                    SMIRNOFFSpecError,
+                    match="match='once' not supported with type='BondCharge'",
+                ),
+            ),
+            (
+                {"type": "BondCharge", "match": "once"},
+                pytest.raises(
+                    SMIRNOFFSpecError,
+                    match="match='once' not supported with type='BondCharge'",
+                ),
+            ),
+            (
+                {"type": "MonovalentLonePair", "match": "once"},
+                pytest.raises(
+                    SMIRNOFFSpecError,
+                    match="match='once' not supported with type='MonovalentLonePair'",
+                ),
+            ),
+            (
+                {
+                    "type": "DivalentLonePair",
+                    "match": "once",
+                    "outOfPlaneAngle": 2.0 * unit.degrees,
+                },
+                pytest.raises(
+                    SMIRNOFFSpecError,
+                    match="match='once' not supported with "
+                    "type='DivalentLonePair' and is_in_plane=False",
+                ),
+            ),
+            (
+                {"type": "TrivalentLonePair", "match": "all_permutations"},
+                pytest.raises(
+                    SMIRNOFFSpecError,
+                    match="match='all_permutations' not supported with "
+                    "type='TrivalentLonePair'",
+                ),
+            ),
+        ],
+    )
+    def test_add_default_init_kwargs_validation(self, kwargs, expected_raises):
+
+        with expected_raises:
+            VirtualSiteHandler.VirtualSiteType._add_default_init_kwargs(kwargs)
+
+    @pytest.mark.parametrize(
+        "kwargs, expected_kwargs",
+        [
+            (
+                {"type": "BondCharge", "match": "all_permutations"},
+                {
+                    "type": "BondCharge",
+                    "match": "all_permutations",
+                    "outOfPlaneAngle": None,
+                    "inPlaneAngle": None,
+                    "sigma": 0.0 * unit.angstrom,
+                    "epsilon": 0.0 * unit.kilocalorie_per_mole,
+                },
+            ),
+            (
+                {
+                    "type": "BondCharge",
+                    "match": "all_permutations",
+                    "rmin_half": 1.0 * unit.angstrom,
+                },
+                {
+                    "type": "BondCharge",
+                    "match": "all_permutations",
+                    "outOfPlaneAngle": None,
+                    "inPlaneAngle": None,
+                    "rmin_half": 1.0 * unit.angstrom,
+                    "epsilon": 0.0 * unit.kilocalorie_per_mole,
+                },
+            ),
+            (
+                {"type": "MonovalentLonePair", "match": "all_permutations"},
+                {
+                    "type": "MonovalentLonePair",
+                    "match": "all_permutations",
+                    "sigma": 0.0 * unit.angstrom,
+                    "epsilon": 0.0 * unit.kilocalorie_per_mole,
+                },
+            ),
+        ],
+    )
+    def test_add_default_init_kwargs_values(self, kwargs, expected_kwargs):
+
+        assert kwargs != expected_kwargs
+        VirtualSiteHandler.VirtualSiteType._add_default_init_kwargs(kwargs)
+        assert kwargs == expected_kwargs
+
+    @pytest.mark.parametrize(
+        "parameter, in_plane_angle, expected_raises",
+        [
+            (
+                VirtualSiteMocking.bond_charge_parameter("[*:1][*:2]"),
+                0.0 * unit.degrees,
+                pytest.raises(
+                    SMIRNOFFSpecError,
+                    match="'BondCharge' sites do not support `inPlaneAngle`",
+                ),
+            ),
+            (
+                VirtualSiteMocking.bond_charge_parameter("[*:1][*:2]"),
+                None,
+                does_not_raise(),
+            ),
+            (
+                VirtualSiteMocking.monovalent_parameter("[*:1][*:2][*:3]"),
+                1.0 * unit.angstrom,
+                pytest.raises(IncompatibleUnitError),
+            ),
+            (
+                VirtualSiteMocking.monovalent_parameter("[*:1][*:2][*:3]"),
+                130.0 * unit.degrees,
+                does_not_raise(),
+            ),
+        ],
+    )
+    def test_in_plane_angle_converter(self, parameter, in_plane_angle, expected_raises):
+
+        parameter_dict = parameter.to_dict()
+        parameter_dict["inPlaneAngle"] = in_plane_angle
+
+        with expected_raises:
+            new_parameter = VirtualSiteHandler.VirtualSiteType(**parameter_dict)
+            assert new_parameter.inPlaneAngle == in_plane_angle
+
+    @pytest.mark.parametrize(
+        "parameter, out_of_plane_angle, expected_raises",
+        [
+            (
+                VirtualSiteMocking.bond_charge_parameter("[*:1][*:2]"),
+                0.0 * unit.degrees,
+                pytest.raises(
+                    SMIRNOFFSpecError,
+                    match="'BondCharge' sites do not support `outOfPlaneAngle`",
+                ),
+            ),
+            (
+                VirtualSiteMocking.bond_charge_parameter("[*:1][*:2]"),
+                None,
+                does_not_raise(),
+            ),
+            (
+                VirtualSiteMocking.monovalent_parameter("[*:1][*:2][*:3]"),
+                130.0 * unit.degrees,
+                does_not_raise(),
+            ),
+        ],
+    )
+    def test_out_of_plane_angle_converter(
+        self, parameter, out_of_plane_angle, expected_raises
+    ):
+
+        parameter_dict = parameter.to_dict()
+        parameter_dict["outOfPlaneAngle"] = out_of_plane_angle
+
+        with expected_raises:
+            new_parameter = VirtualSiteHandler.VirtualSiteType(**parameter_dict)
+            assert new_parameter.outOfPlaneAngle == out_of_plane_angle
+
+    def test_serialize_roundtrip(self):
+
+        force_field = ForceField()
+
+        handler = force_field.get_parameter_handler("VirtualSites")
+        handler.add_parameter(
+            parameter=VirtualSiteMocking.bond_charge_parameter("[*:1][*:2]")
+        )
+        handler.add_parameter(
+            parameter=VirtualSiteMocking.monovalent_parameter("[*:1][*:2][*:3]")
+        )
+        handler.add_parameter(
+            parameter=VirtualSiteMocking.divalent_parameter("[*:2][*:1][*:3]", "once")
+        )
+        handler.add_parameter(
+            parameter=VirtualSiteMocking.trivalent_parameter("[*:1][*:2][*:3][*:4]")
+        )
+        offxml_string = force_field.to_string()
+        roundtripped_force_field = ForceField(offxml_string)
+        assert offxml_string == roundtripped_force_field.to_string()
+
+    @pytest.mark.parametrize(
+        "smiles, matched_indices, parameter, expected_raises",
+        [
+            (
+                "[Cl:1][H:2]",
+                (1, 2),
+                VirtualSiteMocking.bond_charge_parameter("[Cl:1][H:2]"),
+                does_not_raise(),
+            ),
+            (
+                "[N:1]([H:2])([H:3])[H:4]",
+                (1, 2, 3),
+                VirtualSiteMocking.monovalent_parameter("[*:2][N:1][*:3]"),
+                pytest.raises(NotImplementedError, match="please describe what it is"),
+            ),
+        ],
+    )
+    def test_validate_found_match(
+        self, smiles, matched_indices, parameter, expected_raises
+    ):
+
+        molecule = Molecule.from_smiles(smiles, allow_undefined_stereo=True)
+        topology: Topology = molecule.to_topology()
+
+        topology_atoms = {
+            i: topology_atom for i, topology_atom in enumerate(topology.topology_atoms)
+        }
+
+        with expected_raises:
+            VirtualSiteHandler._validate_found_match(
+                topology_atoms, matched_indices, parameter
             )
 
-    def test_serialize_virtual_site_handler(self):
-        """Test serializing a populated VirtualSiteHandler"""
-        handler = VirtualSiteHandler(
-            skip_version_check=True, exclusion_policy="parents"
+    @pytest.mark.parametrize(
+        "handler_a, handler_b, expected_raises",
+        [
+            # Currently, no other test cases as only one `exclusion_policy` is supported
+            (
+                VirtualSiteHandler(version="0.3"),
+                VirtualSiteHandler(version="0.3"),
+                does_not_raise(),
+            )
+        ],
+    )
+    def test_check_handler_compatability(self, handler_a, handler_b, expected_raises):
+        with expected_raises:
+            handler_a.check_handler_compatibility(handler_b)
+
+    @pytest.mark.parametrize(
+        "parameters, smiles, expected_matches",
+        [
+            # Check that a basic BOndCharge virtual site can be applied
+            (
+                [VirtualSiteMocking.bond_charge_parameter("[Cl:1]-[C:2]")],
+                "[Cl:2][C:1]([H:3])([H:4])[H:5]",
+                {(1, 0): {("[Cl:1]-[C:2]", "EP")}},
+            ),
+            # Check that two bond charge vsites with different names can be applied
+            # to the same atoms
+            (
+                [
+                    VirtualSiteMocking.bond_charge_parameter("[Cl:1]-[C:2]", name="EP"),
+                    VirtualSiteMocking.bond_charge_parameter("[Cl:1]-[C:2]", name="LP"),
+                ],
+                "[Cl:1][C:2]([H:3])([H:4])[H:5]",
+                {(0, 1): {("[Cl:1]-[C:2]", "EP"), ("[Cl:1]-[C:2]", "LP")}},
+            ),
+            # Check that a bond charge vsite can be applied to a symmetric moiety
+            (
+                [VirtualSiteMocking.bond_charge_parameter("[C:1]#[C:2]")],
+                "[H:1][C:2]#[C:3][C:4]",
+                {(1, 2): {("[C:1]#[C:2]", "EP")}, (2, 1): {("[C:1]#[C:2]", "EP")}},
+            ),
+            # Check that a monovalent lone pair vsite can be applied to a relatively symmetric moiety
+            (
+                [VirtualSiteMocking.monovalent_parameter("[O:1]=[C:2]-[*:3]")],
+                "[O:2]=[C:1]([H:3])[Cl:4]",
+                {
+                    (1, 0, 2): {("[O:1]=[C:2]-[*:3]", "EP")},
+                    (1, 0, 3): {("[O:1]=[C:2]-[*:3]", "EP")},
+                },
+            ),
+            # Check that monovalent lone pair vsites override correctly
+            (
+                [
+                    VirtualSiteMocking.monovalent_parameter("[O:1]=[C:2]-[*:3]"),
+                    VirtualSiteMocking.monovalent_parameter("[O:1]=[C:2]-[Cl:3]"),
+                ],
+                "[O:2]=[C:1]([H:3])[Cl:4]",
+                {(1, 0, 3): {("[O:1]=[C:2]-[Cl:3]", "EP")}},
+            ),
+            # Check that a single-particle in-plane divalent lone pair vsite
+            # can be applied
+            (
+                [
+                    VirtualSiteMocking.divalent_parameter(
+                        "[H:2][O:1][H:3]", match="once", angle=0.0 * unit.degree
+                    )
+                ],
+                "[H:1][O:2][H:3]",
+                {(1, 0, 2): {("[H:2][O:1][H:3]", "EP")}},
+            ),
+            # Check that a two-particle out-of-plane divalent lone pair vsite can be applied
+            (
+                [
+                    VirtualSiteMocking.divalent_parameter(
+                        "[H:2][O:1][H:3]",
+                        match="all_permutations",
+                        angle=30.0 * unit.degree,
+                    )
+                ],
+                "[H:1][O:2][H:3]",
+                {
+                    (1, 0, 2): {("[H:2][O:1][H:3]", "EP")},
+                    (1, 2, 0): {("[H:2][O:1][H:3]", "EP")},
+                },
+            ),
+            # Check that a single-particle in-plane divalent lone pair site can
+            # be applied to a symmetric molecule
+            (
+                [
+                    VirtualSiteMocking.divalent_parameter(
+                        "[*:2]-[N:1]~[*:3]", match="once", angle=0.0 * unit.degree
+                    )
+                ],
+                "[H:1][N:2]=[N:3][H:4]",
+                {
+                    (1, 0, 2): {("[*:2]-[N:1]~[*:3]", "EP")},
+                    (2, 3, 1): {("[*:2]-[N:1]~[*:3]", "EP")},
+                },
+            ),
+            # Check that a two-particle out-of-plane divalent lone pair vsite
+            # can be applied to a symmetric molecule
+            (
+                [
+                    VirtualSiteMocking.divalent_parameter(
+                        "[*:2]~[N:1]~[*:3]",
+                        match="all_permutations",
+                        angle=30.0 * unit.degree,
+                    )
+                ],
+                "[H:1][N:2]=[N:3][H:4]",
+                {
+                    (1, 0, 2): {("[*:2]~[N:1]~[*:3]", "EP")},
+                    (1, 2, 0): {("[*:2]~[N:1]~[*:3]", "EP")},
+                    (2, 1, 3): {("[*:2]~[N:1]~[*:3]", "EP")},
+                    (2, 3, 1): {("[*:2]~[N:1]~[*:3]", "EP")},
+                },
+            ),
+            # Check that a trivalent lone pair vsite can be applied to a simple molecule
+            (
+                [VirtualSiteMocking.trivalent_parameter("[N:1]([H:2])([H:3])[H:4]")],
+                "[N:2]([H:1])([H:3])[H:4]",
+                {(1, 0, 2, 3): {("[N:1]([H:2])([H:3])[H:4]", "EP")}},
+            ),
+        ],
+    )
+    def test_find_matches(
+        self,
+        parameters: List[VirtualSiteHandler.VirtualSiteType],
+        smiles: str,
+        expected_matches: Dict[Tuple[int, ...], List[Tuple[str, str]]],
+    ):
+
+        molecule = Molecule.from_mapped_smiles(smiles, allow_undefined_stereo=True)
+
+        handler = VirtualSiteHandler(version="0.3")
+
+        for parameter in parameters:
+            handler.add_parameter(parameter=parameter)
+
+        matches = handler.find_matches(molecule.to_topology(), unique=False)
+
+        matched_smirks = defaultdict(set)
+
+        for match_list in matches.values():
+            for match in match_list:
+                matched_smirks[match.environment_match.topology_atom_indices].add(
+                    (match.parameter_type.smirks, match.parameter_type.name)
+                )
+
+        assert {**matched_smirks} == expected_matches
+
+    def test_find_matches_multiple_molecules(self):
+
+        topology = Topology.from_molecules(
+            [
+                Molecule.from_mapped_smiles("[Cl:2][C:1]([H:3])([H:4])[H:5]"),
+                Molecule.from_mapped_smiles("[O:2]=[C:1]([H:3])[F:4]"),
+            ]
         )
+
+        handler = VirtualSiteHandler(version="0.3")
 
         handler.add_parameter(
-            {
-                "smirks": "[#1:1]-[#8X2H2+0:2]-[#1:3]",
-                "type": "DivalentLonePair",
-                "distance": -0.0106 * unit.nanometers,
-                "outOfPlaneAngle": 0.0 * unit.degrees,
-                "match": "once",
-                "charge_increment1": 0.5 * unit.elementary_charge,
-                "charge_increment2": -1.0 * unit.elementary_charge,
-                "charge_increment3": 0.5 * unit.elementary_charge,
-            }
+            parameter=VirtualSiteMocking.bond_charge_parameter("[Cl:1]-[C:2]")
+        )
+        handler.add_parameter(
+            parameter=VirtualSiteMocking.monovalent_parameter("[O:1]=[C:2]-[*:3]")
         )
 
-        handler.to_dict()
+        matches = handler.find_matches(topology, unique=False)
 
-    def test_virtual_site_bond_charge_type(self):
-        """
-        Ensure that an error is raised if incorrect parameters are given to
-        a bond charge type
-        """
+        matched_smirks = defaultdict(set)
 
-        valid_kwargs = dict(
-            type="BondCharge",
-            smirks="[#6:1]-[#7:2]",
-            name="EP",
-            distance=1.0 * unit.angstrom,
-            charge_increment=[1.0, 1.0] * unit.elementary_charge,
-            sigma=0.0 * unit.angstrom,
-            epsilon=1.0 * unit.kilocalorie / unit.mole,
-            match="once",
-        )
+        for match_key in matches:
+            match_list: List = matches[match_key]
 
-        # sigma and epsilon are optional
-        names = ["type", "distance", "charge_increment"]
+            for match in match_list:
+                matched_smirks[match.environment_match.topology_atom_indices].add(
+                    (match.parameter_type.smirks, match.parameter_type.name)
+                )
 
-        self._test_complete_attributes(
-            valid_kwargs, names, VirtualSiteHandler.VirtualSiteBondChargeType
-        )
+        expected_matches = {
+            (1, 0): {("[Cl:1]-[C:2]", "EP")},
+            (6, 5, 7): {("[O:1]=[C:2]-[*:3]", "EP")},
+            (6, 5, 8): {("[O:1]=[C:2]-[*:3]", "EP")},
+        }
+        assert {**matched_smirks} == expected_matches
 
-        variable_names = ["type", "match"]
-        self._test_variable_names(valid_kwargs, variable_names)
+    @pytest.mark.parametrize(
+        "query_parameter, query_key, expected_index",
+        [
+            (
+                VirtualSiteMocking.monovalent_parameter("[*:1][*:2][*:3]", name="LP"),
+                None,
+                2,
+            ),
+            (None, ("BondCharge", "[*:1][*:2]", "EP"), 3),
+            (None, ("BondCharge", "[*:1][*:2]", "LP"), 1),
+            (None, ("MonovalentLonePair", "[*:1][*:2][*:3]", "EP"), 0),
+            (None, ("MonovalentLonePair", "[*:1][*:2][*:3]", "LP"), 2),
+            (None, ("DivalentLonePair", "[*:1][*:2][*:3]", "LP"), None),
+        ],
+    )
+    def test_index_of_parameter(self, query_parameter, query_key, expected_index):
 
-    def test_virtual_site_monovalent_type(self):
-        """
-        Ensure that an error is raised if incorrect parameters are given to
-        a monovalent type
-        """
+        handler = VirtualSiteHandler(version="0.3")
 
-        valid_kwargs = dict(
-            type="MonovalentLonePair",
-            smirks="[#6:1]-[#7:2]-[#8:3]",
-            name="EP",
-            distance=1.0 * unit.angstrom,
-            charge_increment=[1.0, 1.0, 1.0] * unit.elementary_charge,
-            outOfPlaneAngle=30 * unit.degree,
-            inPlaneAngle=30 * unit.degree,
-            sigma=0.0 * unit.angstrom,
-            epsilon=1.0 * unit.kilocalorie / unit.mole,
-            match="once",
-        )
+        for parameter in [
+            VirtualSiteMocking.monovalent_parameter("[*:1][*:2][*:3]", name="EP"),
+            VirtualSiteMocking.bond_charge_parameter("[*:1][*:2]", name="LP"),
+            VirtualSiteMocking.monovalent_parameter("[*:1][*:2][*:3]", name="LP"),
+            VirtualSiteMocking.bond_charge_parameter("[*:1][*:2]", name="EP"),
+        ]:
+            handler.add_parameter(parameter=parameter)
 
-        # sigma and epsilon are optional
-        names = [
-            "type",
-            "distance",
-            "charge_increment",
-            "outOfPlaneAngle",
-            "inPlaneAngle",
-        ]
+        assert handler._index_of_parameter(query_parameter, query_key) == expected_index
 
-        self._test_complete_attributes(
-            valid_kwargs, names, VirtualSiteHandler.VirtualSiteMonovalentLonePairType
-        )
-
-        variable_names = ["type", "match"]
-        self._test_variable_names(valid_kwargs, variable_names)
-
-    def test_virtual_site_divalent_type(self):
-        """
-        Ensure that an error is raised if incorrect parameters are given to
-        a divalent type
-        """
-
-        valid_kwargs = dict(
-            type="DivalentLonePair",
-            smirks="[#6:1]-[#7:2]-[#8:3]",
-            name="EP",
-            distance=1.0 * unit.angstrom,
-            charge_increment=[1.0, 1.0, 1.0] * unit.elementary_charge,
-            outOfPlaneAngle=30 * unit.degree,
-            sigma=0.0 * unit.angstrom,
-            epsilon=1.0 * unit.kilocalorie / unit.mole,
-            match="once",
-        )
-
-        # sigma and epsilon are optional
-        names = [
-            "type",
-            "distance",
-            "charge_increment",
-            "outOfPlaneAngle",
-        ]
-
-        self._test_complete_attributes(
-            valid_kwargs, names, VirtualSiteHandler.VirtualSiteDivalentLonePairType
-        )
-
-        variable_names = ["type", "match"]
-        self._test_variable_names(valid_kwargs, variable_names)
-
-    def test_virtual_site_trivalent_type(self):
-        """
-        Ensure that an error is raised if incorrect parameters are given to
-        a trivalent type
-        """
-
-        valid_kwargs = dict(
-            type="TrivalentLonePair",
-            smirks="[#6:1]-[#7:2](-[#8:3])-[#8:4]",
-            name="EP",
-            distance=1.0 * unit.angstrom,
-            charge_increment=[1.0, 1.0, 1.0, 1.0] * unit.elementary_charge,
-            sigma=0.0 * unit.angstrom,
-            epsilon=1.0 * unit.kilocalorie / unit.mole,
-            match="once",
-        )
-
-        # sigma and epsilon are optional
-        names = [
-            "type",
-            "distance",
-            "charge_increment",
-        ]
-
-        self._test_complete_attributes(
-            valid_kwargs, names, VirtualSiteHandler.VirtualSiteTrivalentLonePairType
-        )
-
-        variable_names = ["type", "match"]
-        self._test_variable_names(valid_kwargs, variable_names)
-
-    def test_virtual_site_trivalent_type_invalid_match(self):
-        """
-        Ensure that an error is raised if incorrect parameters are given to
-        a trivalent type
-        """
-
-        invalid_kwargs = dict(
-            type="TrivalentLonePair",
-            smirks="[#6:1]-[#7:2](-[#8:3])-[#8:4]",
-            name="EP",
-            distance=1.0 * unit.angstrom,
-            charge_increment=[1.0, 1.0, 1.0, 1.0] * unit.elementary_charge,
-            sigma=0.0 * unit.angstrom,
-            epsilon=1.0 * unit.kilocalorie / unit.mole,
-            match="all_permutations",
-        )
+    def test_invalid_num_charge_increments(self):
         with pytest.raises(
             SMIRNOFFSpecError,
-            match="TrivalentLonePair virtual site defined with match attribute set to all_permutations. Only supported value is 'once'.",
-        ) as excinfo:
-            vs = VirtualSiteHandler.VirtualSiteTrivalentLonePairType(**invalid_kwargs)
+            match="'BondCharge' virtual sites expect exactly 2 charge increments,",
+        ):
+            VirtualSiteHandler.VirtualSiteType(
+                type="BondCharge",
+                smirks="[*]-[*]",
+                name="EP",
+                charge_increment=[0.1, 0.2, 0.3] * unit.elementary_charge,
+                match="all_permutations",
+                distance=2.0 * unit.angstrom,
+            )
 
 
 class TestLibraryChargeHandler:
     def test_create_library_charge_handler(self):
         """Test creation of an empty LibraryChargeHandler"""
-        handler = LibraryChargeHandler(skip_version_check=True)
+        LibraryChargeHandler(skip_version_check=True)
 
     def test_library_charge_type_wrong_num_charges(self):
         """Ensure that an error is raised if a LibraryChargeType is initialized with a different number of
         tagged atoms and charges"""
-        lc_type = LibraryChargeHandler.LibraryChargeType(
+        LibraryChargeHandler.LibraryChargeType(
             smirks="[#6:1]-[#7:2]",
             charge1=0.1 * unit.elementary_charge,
             charge2=-0.1 * unit.elementary_charge,
         )
 
-        lc_type = LibraryChargeHandler.LibraryChargeType(
+        LibraryChargeHandler.LibraryChargeType(
             smirks="[#6:1]-[#7:2]-[#6]",
             charge1=0.1 * unit.elementary_charge,
             charge2=-0.1 * unit.elementary_charge,
@@ -2089,8 +2458,8 @@ class TestLibraryChargeHandler:
         with pytest.raises(
             SMIRNOFFSpecError,
             match="initialized with unequal number of tagged atoms and charges",
-        ) as excinfo:
-            lc_type = LibraryChargeHandler.LibraryChargeType(
+        ):
+            LibraryChargeHandler.LibraryChargeType(
                 smirks="[#6:1]-[#7:2]",
                 charge1=0.05 * unit.elementary_charge,
                 charge2=0.05 * unit.elementary_charge,
@@ -2100,8 +2469,8 @@ class TestLibraryChargeHandler:
         with pytest.raises(
             SMIRNOFFSpecError,
             match="initialized with unequal number of tagged atoms and charges",
-        ) as excinfo:
-            lc_type = LibraryChargeHandler.LibraryChargeType(
+        ):
+            LibraryChargeHandler.LibraryChargeType(
                 smirks="[#6:1]-[#7:2]-[#6]",
                 charge1=0.05 * unit.elementary_charge,
                 charge2=0.05 * unit.elementary_charge,
@@ -2111,8 +2480,8 @@ class TestLibraryChargeHandler:
         with pytest.raises(
             SMIRNOFFSpecError,
             match="initialized with unequal number of tagged atoms and charges",
-        ) as excinfo:
-            lc_type = LibraryChargeHandler.LibraryChargeType(
+        ):
+            LibraryChargeHandler.LibraryChargeType(
                 smirks="[#6:1]-[#7:2]-[#6]", charge1=0.05 * unit.elementary_charge
             )
 
@@ -2152,11 +2521,11 @@ class TestChargeIncrementModelHandler:
         handler = ChargeIncrementModelHandler(
             skip_version_check=True, number_of_conformers="0"
         )
-        with pytest.raises(TypeError) as excinfo:
+        with pytest.raises(TypeError):
             handler = ChargeIncrementModelHandler(
                 skip_version_check=True, number_of_conformers=None
             )
-        with pytest.raises(SMIRNOFFSpecError) as excinfo:
+        with pytest.raises(SMIRNOFFSpecError):
             handler = ChargeIncrementModelHandler(
                 skip_version_check=True, n_conformers=[10]
             )
@@ -2179,7 +2548,7 @@ class TestChargeIncrementModelHandler:
         assert handler.number_of_conformers == 2
         handler.number_of_conformers = "3"
         assert handler.number_of_conformers == 3
-        with pytest.raises(ValueError) as excinfo:
+        with pytest.raises(ValueError):
             handler.number_of_conformers = "string that can't be cast to int"
 
     def test_charge_increment_model_handlers_are_compatible(self):
@@ -2191,19 +2560,19 @@ class TestChargeIncrementModelHandler:
         handler3 = ChargeIncrementModelHandler(
             skip_version_check=True, number_of_conformers="9"
         )
-        with pytest.raises(IncompatibleParameterError) as excinfo:
+        with pytest.raises(IncompatibleParameterError):
             handler1.check_handler_compatibility(handler3)
 
     def test_charge_increment_type_wrong_num_increments(self):
         """Ensure that an error is raised if a ChargeIncrementType is initialized with a different number of
         tagged atoms and chargeincrements"""
-        ci_type = ChargeIncrementModelHandler.ChargeIncrementType(
+        ChargeIncrementModelHandler.ChargeIncrementType(
             smirks="[#6:1]-[#7:2]",
             charge_increment1=0.1 * unit.elementary_charge,
             charge_increment2=-0.1 * unit.elementary_charge,
         )
 
-        ci_type = ChargeIncrementModelHandler.ChargeIncrementType(
+        ChargeIncrementModelHandler.ChargeIncrementType(
             smirks="[#6:1]-[#7:2]-[#6]",
             charge_increment1=0.1 * unit.elementary_charge,
             charge_increment2=-0.1 * unit.elementary_charge,
@@ -2212,8 +2581,8 @@ class TestChargeIncrementModelHandler:
         with pytest.raises(
             SMIRNOFFSpecError,
             match="an invalid combination of tagged atoms and charge increments",
-        ) as excinfo:
-            ci_type = ChargeIncrementModelHandler.ChargeIncrementType(
+        ):
+            ChargeIncrementModelHandler.ChargeIncrementType(
                 smirks="[#6:1]-[#7:2]",
                 charge_increment1=0.05 * unit.elementary_charge,
                 charge_increment2=0.05 * unit.elementary_charge,
@@ -2223,27 +2592,27 @@ class TestChargeIncrementModelHandler:
         with pytest.raises(
             SMIRNOFFSpecError,
             match="an invalid combination of tagged atoms and charge increments",
-        ) as excinfo:
-            ci_type = ChargeIncrementModelHandler.ChargeIncrementType(
+        ):
+            ChargeIncrementModelHandler.ChargeIncrementType(
                 smirks="[#6:1]-[#7:2]-[#6]",
                 charge_increment1=0.05 * unit.elementary_charge,
                 charge_increment2=0.05 * unit.elementary_charge,
                 charge_increment3=-0.1 * unit.elementary_charge,
             )
 
-        ci_type = ChargeIncrementModelHandler.ChargeIncrementType(
+        ChargeIncrementModelHandler.ChargeIncrementType(
             smirks="[#6:1]-[#7:2]-[#6]",
             charge_increment1=0.05 * unit.elementary_charge,
         )
 
     def test_charge_increment_one_ci_missing(self):
         """Test creating a chargeincrement parameter with a missing value"""
-        inferred = ChargeIncrementModelHandler.ChargeIncrementType(
+        ChargeIncrementModelHandler.ChargeIncrementType(
             smirks="[*:1]-[*:2]",
             charge_increment=[0.1 * unit.elementary_charge],
         )
 
-        explicit = ChargeIncrementModelHandler.ChargeIncrementType(
+        ChargeIncrementModelHandler.ChargeIncrementType(
             smirks="[*:1]-[*:2]",
             charge_increment=[
                 0.1 * unit.elementary_charge,
@@ -2260,10 +2629,7 @@ class TestGBSAHandler:
         assert gbsa_handler.solvent_dielectric == 78.5
         assert gbsa_handler.solute_dielectric == 1
         assert gbsa_handler.sa_model == "ACE"
-        assert (
-            gbsa_handler.surface_area_penalty
-            == 5.4 * unit.calorie / unit.mole / unit.angstrom**2
-        )
+        assert gbsa_handler.surface_area_penalty == 5.4 * _cal_mol_a2
         assert gbsa_handler.solvent_radius == 1.4 * unit.angstrom
 
     def test_gbsahandler_setters(self):
@@ -2273,17 +2639,17 @@ class TestGBSAHandler:
         gbsa_handler.gb_model = "OBC2"
         gbsa_handler.gb_model = "HCT"
         gbsa_handler.gb_model = "OBC1"
-        with pytest.raises(SMIRNOFFSpecError) as excinfo:
+        with pytest.raises(SMIRNOFFSpecError):
             gbsa_handler.gb_model = "Something invalid"
 
         gbsa_handler.solvent_dielectric = 50.0
         gbsa_handler.solvent_dielectric = "50.0"
-        with pytest.raises(ValueError) as excinfo:
+        with pytest.raises(ValueError):
             gbsa_handler.solvent_dielectric = "string that can not be cast to float"
 
         gbsa_handler.solute_dielectric = 2.5
         gbsa_handler.solute_dielectric = "3.5"
-        with pytest.raises(ValueError) as excinfo:
+        with pytest.raises(ValueError):
             gbsa_handler.solute_dielectric = "string that can not be cast to float"
 
         gbsa_handler.sa_model = "ACE"
@@ -2292,19 +2658,19 @@ class TestGBSAHandler:
         gbsa_handler.sa_model = None
         gbsa_handler.sa_model = "None"
 
-        with pytest.raises(TypeError) as excinfo:
+        with pytest.raises(TypeError):
             gbsa_handler.sa_model = "Invalid SA option"
 
         gbsa_handler.surface_area_penalty = (
             1.23 * unit.kilocalorie / unit.mole / unit.nanometer**2
         )
-        with pytest.raises(IncompatibleUnitError) as excinfo:
+        with pytest.raises(IncompatibleUnitError):
             gbsa_handler.surface_area_penalty = (
                 1.23 * unit.degree / unit.mole / unit.nanometer**2
             )
 
         gbsa_handler.solvent_radius = 300 * unit.femtometer
-        with pytest.raises(IncompatibleUnitError) as excinfo:
+        with pytest.raises(IncompatibleUnitError):
             gbsa_handler.solvent_radius = 3000 * unit.radian
 
     def test_gbsahandlers_are_compatible(self):
@@ -2323,7 +2689,7 @@ class TestGBSAHandler:
         )
         with pytest.raises(
             IncompatibleParameterError, match="Difference between 'solvent_radius' "
-        ) as excinfo:
+        ):
             gbsa_handler_1.check_handler_compatibility(gbsa_handler_3)
 
 

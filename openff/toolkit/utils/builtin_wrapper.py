@@ -3,20 +3,12 @@ Built-in ToolkitWrapper for very basic functionality. Intended for testing and n
 """
 __all__ = ("BuiltInToolkitWrapper",)
 
-# =============================================================================================
-# IMPORTS
-# =============================================================================================
-
 import numpy as np
 from openff.units import unit
 
 from openff.toolkit.utils import base_wrapper
 from openff.toolkit.utils.exceptions import ChargeMethodUnavailableError
 from openff.toolkit.utils.utils import inherit_docstrings
-
-# =============================================================================================
-# Implementation
-# =============================================================================================
 
 
 @inherit_docstrings
@@ -63,7 +55,7 @@ class BuiltInToolkitWrapper(base_wrapper.ToolkitWrapper):
         partial_charge_method: str, optional, default=None
             The charge model to use. One of ['zeros', 'formal_charge']. If None, 'formal_charge'
             will be used.
-        use_conformers : iterable of openmm.unit.Quantity-wrapped numpy arrays, each with shape
+        use_conformers : iterable of unit-wrapped numpy arrays, each with shape
             (n_atoms, 3) and dimension of distance. Optional, default = None
             Coordinates to use for partial charge calculation. If None, an appropriate number
             of conformers will be generated.

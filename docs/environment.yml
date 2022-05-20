@@ -1,4 +1,4 @@
-name: openforcefield
+name: openff-toolkit-docs
 channels:
     # Avoids crashing RTD machines by pulling an empty cudatoolkit pacakge
     - jaimergp/label/unsupported-cudatoolkit-shim
@@ -7,14 +7,13 @@ channels:
 dependencies:
     - pip
     # readthedocs dependencies
-    - numpydoc
     - myst-nb
     - myst-parser>=0.13.6
-    - testpath==0.3.1
     - docutils
     - sphinx-notfound-page
+    - sphinx>=4.4,<5
     # conda build dependencies
-    - python
+    - python=3.8
     - setuptools
     - numpy
     - openmm
@@ -23,6 +22,14 @@ dependencies:
     - rdkit
     - ambertools
     - packaging
+    - openff-units
+    - openff-utilities
+    - cached_property
+    - cachetools
+    - python-constraint
+    - mdtraj
+    - qcportal
+    - nglview
     # Serialization: Should these be optional?
     - toml
     - bson

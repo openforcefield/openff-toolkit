@@ -1,8 +1,3 @@
-#!/usr/bin/env python
-
-# =============================================================================================
-# MODULE DOCSTRING
-# =============================================================================================
 """
 Molecular chemical entity representation and routines to interface with cheminformatics toolkits
 
@@ -24,42 +19,44 @@ Molecular chemical entity representation and routines to interface with cheminfo
      read multiple molecules via ``Molecules.from_file()``.
    * Should we allow the removal of atoms too?
    * Should invalidation of cached properties be handled via something like a tracked list?
-   * Refactor toolkit encapsulation to generalize and provide only a few major toolkit methods and toolkit objects that can be queried for features
+   * Refactor toolkit encapsulation to generalize and provide only a few major toolkit methods and toolkit objects
+        that can be queried for features
    * Speed up overall import time by putting non-global imports only where they are needed
 
 """
 import json
 import operator
 import warnings
-from abc import abstractmethod
 from collections import OrderedDict, UserDict
 from copy import deepcopy
-from typing import TYPE_CHECKING, Generator, List, Optional, Tuple, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    Generator,
+    List,
+    Optional,
+    Set,
+    TextIO,
+    Tuple,
+    Union,
+)
 
 import networkx as nx
 import numpy as np
 from openff.units import unit
 from openff.units.elements import MASSES, SYMBOLS
-from openff.units.openmm import to_openmm
-
-if TYPE_CHECKING:
-    from openff.toolkit.topology._mm_molecule import _SimpleAtom, _SimpleMolecule
-    import networkx as nx
-    from openff.units.unit import Quantity
-
-from cached_property import cached_property
 from packaging import version
 
 import openff.toolkit
-from openff.toolkit.utils import get_data_file_path, requires_package
 from openff.toolkit.utils.exceptions import (
     HierarchySchemeNotFoundException,
     HierarchySchemeWithIteratorNameAlreadyRegisteredException,
     IncompatibleUnitError,
     InvalidAtomMetadataError,
     InvalidConformerError,
-    NotAttachedToMoleculeError,
     SmilesParsingError,
+    UnsupportedFileTypeError,
 )
 from openff.toolkit.utils.serialization import Serializable
 from openff.toolkit.utils.toolkits import (
@@ -74,14 +71,14 @@ from openff.toolkit.utils.toolkits import (
 )
 from openff.toolkit.utils.utils import (
     MissingDependencyError,
-    dict_to_quantity,
-    quantity_to_dict,
+    get_data_file_path,
     requires_package,
 )
 
-# =============================================================================================
-# GLOBAL PARAMETERS
-# =============================================================================================
+if TYPE_CHECKING:
+    from openff.units.unit import Quantity
+
+    from openff.toolkit.topology._mm_molecule import _SimpleAtom, _SimpleMolecule
 
 # TODO: Can we have the `ALLOWED_*_MODELS` list automatically appear in the docstrings below?
 # TODO: Should `ALLOWED_*_MODELS` be objects instead of strings?
@@ -90,20 +87,12 @@ from openff.toolkit.utils.utils import (
 # TODO: Allow all OpenEye aromaticity models to be used with OpenEye names?
 #       Only support OEAroModel_MDL in RDKit version?
 
-# =============================================================================================
-# PRIVATE SUBROUTINES
-# =============================================================================================
-
-# =============================================================================================
-# Particle
-# =============================================================================================
-
 
 class Particle(Serializable):
     """
     Base class for all particles in a molecule.
 
-    A particle object could be an ``Atom`` or a ``VirtualSite``.
+    A particle object could be an ``Atom`` or similar.
 
     .. warning :: This API is experimental and subject to change.
     """
@@ -158,11 +147,6 @@ class Particle(Serializable):
         raise NotImplementedError()  # TODO
 
 
-# =============================================================================================
-# Atom
-# =============================================================================================
-
-
 class AtomMetadataDict(UserDict):
     def __init__(self, *args, **kwargs):
         self.data = {}
@@ -185,14 +169,13 @@ class Atom(Particle):
     """
     A particle representing a chemical atom.
 
-    Note that non-chemical virtual sites are represented by the ``VirtualSite`` object.
-
     .. todo::
 
        * Should ``Atom`` objects be immutable or mutable?
        * Do we want to support the addition of arbitrary additional properties,
-         such as floating point quantities (e.g. ``charge``), integral quantities (such as ``id`` or ``serial`` index in a PDB file),
-         or string labels (such as Lennard-Jones types)?
+        such as floating point quantities (e.g. ``charge``), integral quantities (such as ``id`` or ``serial``
+        index in a PDB file),
+        or string labels (such as Lennard-Jones types)?
 
     .. todo :: Allow atoms to have associated properties.
 
@@ -260,10 +243,10 @@ class Atom(Particle):
             name = ""
         self._name = name
         self._molecule = molecule
-        ## From Jeff: I'm going to assume that this is implicit in the parent Molecule's ordering of atoms
+        # From Jeff: I'm going to assume that this is implicit in the parent Molecule's ordering of atoms
         # self._molecule_atom_index = molecule_atom_index
         self._bonds = list()
-        self._virtual_sites = list()
+
         if metadata is None:
             self._metadata = AtomMetadataDict()
         else:
@@ -271,6 +254,7 @@ class Atom(Particle):
 
     # TODO: We can probably avoid an explicit call and determine this dynamically
     #   from self._molecule (maybe caching the result) to get rid of some bookkeeping.
+    # TODO: Should stereochemistry be reset/cleared/recomputed upon addition of a bond?
     def add_bond(self, bond):
         """Adds a bond that this atom is involved in
         .. todo :: Is this how we want to keep records?
@@ -282,19 +266,6 @@ class Atom(Particle):
         """
 
         self._bonds.append(bond)
-        # self._stereochemistry = None
-
-    def add_virtual_site(self, vsite):
-        """Adds a bond that this atom is involved in
-        .. todo :: Is this how we want to keep records?
-
-        Parameters
-        ----------
-        bond: an openff.toolkit.topology.molecule.Bond
-            A bond involving this atom
-        """
-
-        self._virtual_sites.append(vsite)
 
     def to_dict(self):
         """Return a dict representation of the atom."""
@@ -333,7 +304,7 @@ class Atom(Particle):
     @formal_charge.setter
     def formal_charge(self, other):
         """
-        Set the atom's formal charge. Accepts either ints or openmm.unit.Quantity-wrapped ints with units of charge.
+        Set the atom's formal charge. Accepts either ints or unit-wrapped ints with units of charge.
         """
         if isinstance(other, int):
             self._formal_charge = unit.Quantity(other, unit.elementary_charge)
@@ -375,7 +346,7 @@ class Atom(Particle):
 
         Returns
         -------
-        openmm.unit.Quantity with dimension of atomic charge, or None if no charge has been specified
+        unit-wrapped float with dimension of atomic charge, or None if no charge has been specified
         """
         if self._molecule._partial_charges is None:
             return None
@@ -407,7 +378,10 @@ class Atom(Particle):
         """
 
         # if (value != 'CW') and (value != 'CCW') and not(value is None):
-        #    raise Exception("Atom stereochemistry setter expected 'CW', 'CCW', or None. Received {} (type {})".format(value, type(value)))
+        #    raise Exception(
+        #       "Atom stereochemistry setter expected 'CW', 'CCW', or None. ""
+        #       "Received {} (type {})".format(value, type(value))"
+        # )
         self._stereochemistry = value
 
     @property
@@ -455,11 +429,9 @@ class Atom(Particle):
         other : string
             The new name for this atom
         """
-        if not (type(other) is str):
+        if type(other) != str:
             raise Exception(
-                "In setting atom name. Expected str, received {} (type {})".format(
-                    other, type(other)
-                )
+                f"In setting atom name. Expected str, received {other} (type {type(other)})."
             )
         self._name = other
 
@@ -484,7 +456,7 @@ class Atom(Particle):
         """
         for bond in self._bonds:
             for atom in bond.atoms:
-                if not (atom == self):
+                if atom is not self:
                     # TODO: This seems dangerous. Ask John for a better way
                     yield atom
 
@@ -510,42 +482,21 @@ class Atom(Particle):
                     return True
         return False
 
-    @property
-    def is_in_ring(self):
+    def is_in_ring(self, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY) -> bool:
         """
         Return whether or not this atom is in a ring(s) (of any size)
 
-        """
-        if self._molecule is None:
-            raise NotAttachedToMoleculeError(
-                "This Atom does not belong to a Molecule object"
-            )
-
-        return any([self.molecule_atom_index in ring for ring in self._molecule.rings])
-
-    @property
-    def virtual_sites(self):
-        """
-        The list of ``VirtualSite`` objects this atom is involved in.
-
-        """
-        return self._virtual_sites
-        # for vsite in self._vsites:
-        #    yield vsite
-
-    def virtual_site(self, index: int):
-        """
-        Get virtual_site with a specified index.
+        This Atom is expected to be attached to a molecule (`Atom.molecule`).
 
         Parameters
         ----------
-        index : int
+        toolkit_registry: openff.toolkit.utils.toolkits.ToolkitRegistry, default=GLOBAL_TOOLKIT_REGISTRY
+            :class:`ToolkitRegistry` to use to enumerate the tautomers.
 
-        Returns
-        -------
-        virtual_site : openff.toolkit.topology.VirtualSite
         """
-        return self._virtual_sites[index]
+        _is_in_ring = toolkit_registry.call("atom_is_in_ring", self)
+
+        return _is_in_ring
 
     @property
     def molecule_atom_index(self):
@@ -587,1382 +538,13 @@ class Atom(Particle):
 
     def __repr__(self):
         # TODO: Also include particle_index and which molecule this atom belongs to?
-        return "Atom(name={}, atomic number={})".format(self._name, self._atomic_number)
+        return f"Atom(name={self._name}, atomic number={self._atomic_number})"
 
     def __str__(self):
         # TODO: Also include particle_index and which molecule this atom belongs to?
         return "<Atom name='{}' atomic number='{}'>".format(
             self._name, self._atomic_number
         )
-
-
-# =============================================================================================
-# VirtualParticle
-# =============================================================================================
-
-
-class VirtualParticle(Particle):
-    """
-    A single particle owned by a VirtualSite
-
-    .. warning :: This API is experimental and subject to change.
-    """
-
-    def __init__(self, vsite, orientation, name=None):
-        """
-        A single particle owned by a VirtualSite
-
-        Parameters
-        ----------
-        vsite : openff.toolkit.topology.VirtualSite
-            The parent VirtualSite of this VirtualParticle
-        orientation : tuple of int
-            Molecule atom indices of parent atoms
-        name : str, optional
-            The name of the particle
-
-        """
-        self._virtual_site = vsite
-        self._molecule = vsite.molecule
-        self._orientation = orientation
-        self._name = name
-
-    @property
-    def virtual_site(self):
-        return self._virtual_site
-
-    @property
-    def orientation(self):
-        return self._orientation
-
-    @property
-    def virtual_site_particle_index(self):
-        """
-        The index of the particle relative to its owning virtual site. Normally
-        this should either be 0 or 1.
-        """
-        return self.virtual_site.orientations.index(self.orientation)
-
-    def _position(self, atom_positions):
-        """
-        Calculations the position of a virtual particle, as defined by the OpenMM
-        :class:`openmm.openmm.openmm.LocalCoordinatesSite` definition.
-
-        The frame is first constructed using the input atoms, where the weights defined
-        by each virtual site are used. The virtual particle positions are then
-        determined by setting the displacements, also determined uniquely by each
-        virtual site definition.
-
-        Note that, following the definition of the OpenMM LocalCoordinatesSite, the
-        frame is forced to be orthogonal. This is first enforced by only allowing the
-        x- and y-axis to be defined, since the z-axis must be normal to this plane.
-        Then, y is then reset to be normal to the zx plane. This should ensure that the
-        frame is orthonormal (after normalization).
-
-        Note that this returns a 1D flat list as it is meant to be appended into a
-        (M, 3) array via the public interface.
-
-        Parameters
-        ----------
-        atom_positions: iterable of int
-            The indices of the atoms, relative to the indices defined by the owning
-            molecule. This is necessary since this particle has a certain orientation,
-            so the input atoms must be in the original input ordering which was used to
-            define the orientation.
-
-        Returns
-        -------
-        :class:`openmm.unit.Quantity` of dimension [Length] in unit Angstrom wrapping an
-        numpy.ndarray
-        """
-
-        # Although the above docstring claims that we fully implement
-        # the OpenMM behavior, it has not been compared to OpenMM
-        # at the source code level. If positions seem to be inconsistent,
-        # please submit a bug report! We have tests to make sure our
-        # implemented types are correct, so we are interested in cases
-        # where custom virtual sites cause breakage.
-
-        atom_positions_unit = atom_positions.units
-
-        originwt, xdir, ydir = self.virtual_site.local_frame_weights
-        disp = self.virtual_site.local_frame_position
-        x, y, z = disp.m
-
-        # this pulls the correct ordering of the atoms
-        pos = []
-        for atom in self._orientation:
-            pos.append(atom_positions[atom])
-
-        atom_positions = pos
-
-        originwt = np.atleast_2d(originwt)
-        atom_positions = np.atleast_2d(atom_positions)
-
-        origin = np.dot(originwt, atom_positions).sum(axis=0)
-
-        xaxis, yaxis = np.dot(np.vstack((xdir, ydir)), atom_positions)
-
-        zaxis = np.cross(xaxis, yaxis)
-        yaxis = np.cross(zaxis, xaxis)
-
-        def _normalize(axis):
-            L = np.linalg.norm(axis)
-            if L > 0.0:
-                axis /= L
-            return axis
-
-        xaxis, yaxis, zaxis = map(_normalize, (xaxis, yaxis, zaxis))
-
-        position = origin + x * xaxis + y * yaxis + z * zaxis
-
-        return unit.Quantity(position, units=atom_positions_unit)
-
-    def _extract_position_from_conformer(self, conformation):
-
-        indices = [atom.molecule_atom_index for atom in self.virtual_site.atoms]
-
-        atom_positions = [conformation[i] for i in indices]
-
-        return atom_positions
-
-    def _get_conformer(self, conformer_idx):
-
-        assert self.molecule
-        assert len(self.molecule.conformers) > 0
-
-        conformer = self.molecule.conformers[conformer_idx]
-
-        return conformer
-
-    def compute_position_from_conformer(self, conformer_idx):
-        """
-        Compute the position of this virtual particle given an existing
-        conformer owned by the parent molecule/virtual site.
-
-        Parameters
-        ----------
-        conformer_idx : int
-            The index of the conformer in the owning molecule.
-
-        Returns
-        -------
-        :class:`openmm.unit.Quantity` of dimension [Length] in unit Angstroms wrapping a
-        numpy.ndarray
-            The positions of the virtual particles belonging to this virtual site.
-            The array is the size (M, 3) where M is the number of virtual particles
-            belonging to this virtual site.
-
-        """
-
-        atom_positions = self._get_conformer(conformer_idx)
-
-        return self.compute_position_from_atom_positions(atom_positions)
-
-    def compute_position_from_atom_positions(self, atom_positions):
-        """
-        Compute the position of this virtual site particle given a set of coordinates.
-
-        Parameters
-        ----------
-        atom_positions : :class:`openmm.unit.Quantity` of dimension [Length] wrapping a
-        numpy.ndarray
-            The positions of all atoms in the molecule. The array is the size (N, 3)
-            where N is the number of atoms in the molecule.
-
-        Returns
-        -------
-        :class:`openmm.unit.Quantity` of dimension [Length] in unit Angstroms wrapping a
-        numpy.ndarray
-            The positions of the virtual particles belonging to this virtual site.
-            The array is the size (M, 3) where M is the number of virtual particles
-            belonging to this virtual site.
-
-        """
-
-        return self._position(atom_positions)
-
-
-# =============================================================================================
-# VirtualSite
-# =============================================================================================
-
-
-class VirtualSite(Particle):
-    """
-    A container representing one or more virtual particles whose positions are
-    defined in terms of ``Atom`` positions. This container enables the coupling
-    of particles that are symmetric about some axis/plane of the underlying
-    atoms. For example, a single virtual site can represent two lone pairs of a
-    water molecule, where the angle and distance parameters are expected to stay
-    coupled, and are reflections across the plane of symmetry.
-
-    Note that chemical atoms are represented by the ``Atom``.
-
-
-    .. warning :: This API is experimental and subject to change.
-
-    .. todo::
-
-       * Should a virtual site be able to belong to more than one Topology?
-       * Should virtual sites be immutable or mutable?
-
-    """
-
-    def __init__(
-        self,
-        atoms,
-        charge_increments=None,
-        epsilon=None,
-        sigma=None,
-        rmin_half=None,
-        name=None,
-        orientations=None,
-    ):
-        """
-        Base class for VirtualSites
-
-        .. todo ::
-
-           * change sigma/epsilon/rmin_half to have units
-
-        Parameters
-        ----------
-        atoms : list of Atom of shape [N]
-            atoms[index] is the corresponding Atom
-        charge_increments : list of floats of shape [N], optional, default=None
-            The amount of charge to remove from the VirtualSite's atoms and put in the VirtualSite. Indexing in this list should match the ordering in the atoms list. Default is None.
-        sigma : float, default=None
-            Sigma term for VdW properties of virtual site. Default is None.
-        epsilon : float
-            Epsilon term for VdW properties of virtual site. Default is None.
-        rmin_half : float
-            Rmin_half term for VdW properties of virtual site. Default is None.
-        name : string or None, default=None
-            The name of this virtual site. Default is None.
-
-        virtual_site_type : str
-            Virtual site type.
-        name : str or None, default=None
-            The name of this virtual site. Default is None
-        orientation : list of int tuples or None, default=None
-            The ordering of the atoms used to define the frame of the virtual site.
-        """
-
-        # Ensure we have as many charge_increments as we do atoms
-        if not (charge_increments is None):
-            if not (len(charge_increments) == len(atoms)):
-                raise Exception(
-                    "VirtualSite definition must have same number of charge_increments ({}) and atoms({})".format(
-                        len(charge_increments), len(atoms)
-                    )
-                )
-        else:
-            charge_increments = ([0.0] * len(atoms)) * unit.elementary_charge
-
-        # set sane defaults for OpenMM
-        if epsilon is None and rmin_half is None:
-            epsilon = 0.0 * unit.kilocalorie / unit.mole
-        if sigma is None and rmin_half is None:
-            sigma = 0.0 * unit.angstrom
-
-        # VdW parameters can either be epsilon+rmin_half or epsilon+sigma, but not both
-        if not (epsilon is None):
-            if (rmin_half is not None) and (sigma is not None):
-                raise Exception(
-                    "VirtualSite constructor given epsilon (value : {}), rmin_half (value : {}), and sigma (value : {}). If epsilon is nonzero, it should receive either rmin_half OR sigma".format(
-                        epsilon, rmin_half, sigma
-                    )
-                )
-            if (rmin_half is None) and (sigma is None):
-                raise Exception(
-                    "VirtualSite constructor given epsilon (value : {}) but not given rmin_half (value : {}) or sigma (value : {})".format(
-                        epsilon, rmin_half, sigma
-                    )
-                )
-            if sigma is None:
-                # TODO: Save the 6th root of 2 if this starts being slow.
-                sigma = (2.0 * rmin_half) / (2.0 ** (1.0 / 6))
-
-        elif epsilon is None:
-            if (rmin_half is not None) or (sigma is not None):
-                raise Exception(
-                    "VirtualSite constructor given rmin_half (value : {}) or sigma (value : {}), but not epsilon (value : {})".format(
-                        rmin_half, sigma, epsilon
-                    )
-                )
-
-        # Perform type-checking
-        # for atom in atoms:
-        #     assert isinstance(atom, Atom)
-        # for atom_index in range(len(atoms) - 1):
-        #     assert atoms[atom_index].molecule is atoms[atom_index + 1].molecule
-        # assert isinstance(atoms[1].molecule, FrozenMolecule)
-
-        if sigma is None:
-            self._sigma = None
-        else:
-            assert hasattr(sigma, "units")
-            assert sigma.units in unit.angstrom.compatible_units()
-            self._sigma = sigma.to(unit.angstrom)
-
-        if epsilon is None:
-            self._epsilon = None
-        else:
-            assert hasattr(epsilon, "units")
-            kj_mol = unit.kilojoule / unit.mole
-            assert epsilon.units.is_compatible_with(kj_mol)
-            self._epsilon = epsilon.to(kj_mol)
-
-        if charge_increments is None:
-            self._charge_increments = None
-        else:
-            for ci in charge_increments:
-                assert hasattr(ci, "units")
-                assert ci.units in unit.elementary_charges.compatible_units()
-            self._charge_increments = [
-                ci.m_as(unit.elementary_charges) for ci in charge_increments
-            ] * unit.elementary_charge
-
-        self._atoms = list()
-
-        for atom in atoms:
-            atom.add_virtual_site(self)
-            self._atoms.append(atom)
-        self._molecule = atoms[0].molecule
-
-        self._name = name
-
-        if orientations is None:
-            ornt = [tuple(atom.molecule_atom_index for atom in atoms)]
-            self._orientations = ornt
-            self._particles = {ornt[0]: VirtualParticle(self, ornt[0])}
-        else:
-            ornt = None
-            if type(orientations[0]) is int:
-                ornt = [tuple(orientations)]
-            else:
-                ornt = [tuple(x) for x in orientations]
-            self._orientations = ornt
-            self._particles = dict(
-                {order: VirtualParticle(self, order) for order in ornt}
-            )
-
-        # Subclassing makes _type unnecessary
-        # self._type = None
-        # TODO: Validate site types against allowed values
-
-        # self._weights = np.array(weights) # make a copy and convert to array internally
-
-    def __eq__(self, other):
-        if not issubclass(type(other), VirtualSite):
-            return False
-        if self.type != other.type:
-            return False
-        same_name = self.name == other.name
-        same_indices = self.atoms == other.atoms
-        same_mol = self.molecule is other.molecule
-        same_vsite = same_name and same_indices and same_mol
-        return same_vsite
-
-    def to_dict(self):
-        """
-        Return a dict representation of the virtual site.
-
-        """
-        # Each subclass should have its own to_dict
-        vsite_dict = OrderedDict()
-        vsite_dict["name"] = self._name
-        vsite_dict["atoms"] = tuple([i.molecule_atom_index for i in self.atoms])
-        vsite_dict["charge_increments"] = quantity_to_dict(self._charge_increments)
-
-        vsite_dict["epsilon"] = quantity_to_dict(self._epsilon)
-
-        vsite_dict["sigma"] = quantity_to_dict(self._sigma)
-        vsite_dict["orientations"] = self._orientations
-
-        # skip packing the particles; they are created dynamically
-
-        return vsite_dict
-
-    @classmethod
-    def from_dict(cls, vsite_dict):
-        """Create a virtual site from a dict representation."""
-        # Each subclass needs to have its own from_dict
-
-        # Make a copy of the vsite_dict, where we'll unit-wrap the appropriate values
-        vsite_dict_units = deepcopy(vsite_dict)
-
-        # Attach units to epsilon term
-        vsite_dict_units["epsilon"] = dict_to_quantity(vsite_dict["epsilon"])
-        vsite_dict_units["sigma"] = dict_to_quantity(vsite_dict["sigma"])
-        vsite_dict_units["charge_increments"] = dict_to_quantity(
-            vsite_dict["charge_increments"]
-        )
-
-        vsite_dict_units["orientations"] = cls._orientation
-
-        return VirtualSite(**vsite_dict_units)
-
-    def index_of_orientation(self, virtual_particle):
-        """
-        Return the orientation used by the given virtual particle.
-
-        Parameters
-        ----------
-        virtual_particle : VirtualParticle
-            The virtual particle contained in this virual site
-
-        Returns
-        -------
-        A tuple of atom indices
-        """
-
-        for i, vp in enumerate(self.particles):
-            if vp.orientation == virtual_particle.orientation:
-                return i
-        assert ValueError(
-            "The given virtual particle was not found in this Virtual Site"
-        )
-
-    @property
-    def orientations(self):
-        """
-        The orientations used by the virtual site particles.
-
-        Orientations are an implementation to allow generation and coupling of multiple
-        particles using the same physical definition. We can do this by allowing each
-        particle to use a specific ordering of bases when calculating the positions.
-        This is similar to improper torsion angles: the angle you find depends on the
-        atom ordering used in the calculation.
-
-        Before the positions are constructed, the parent atoms are reordered according
-        to the particle's orientation. Each virtual particle has exactly one
-        orientation. Since the frame of the virtual site is defined by a static list of
-        weights and masks, we are able to influence how the local frame is constructed
-        by crafting specific ordering the parent atoms.
-
-        As a concrete example, we could define a TIP5 water by using one virtual site,
-        and the particles have orientations (0, 1, 2) and (2, 1, 0). This means that,
-        given that we are using a right-handed coordinate system, the z-axis will
-        point in opposite directions for each particle. Using the same
-        ``out_of_plane_angle`` and ``distance`` will therefore result in two unique
-        particle positions.
-
-        Using the toolkit API allows arbitrary selection of orientations. The SMIRNOFF
-        specification, via the offxml file format, the orientations are controlled
-        bondtype the "match" attribute. In this case, only the keywords "once" and
-        "all_permuations" are allowed, meaning only the first orientation or all
-        possible orientations are generated.
-
-        The virtual site adders via :class:`Molecule` simplify this by optionally using
-        a ``symmetric`` kwarg, which is the equivalent to the XML ``match`` keyword
-        described above. However, the symmetric kwarg is not available for sites
-        which symmetry is not possible, e.g. :class:`TrivalentLonePairVirtualSite`,
-        provided a layer of sanity checking.  For the TIP5 example above, setting
-        ``symmetric=True`` (the default) should automatically produce both particles.
-
-        Parameters
-        ----------
-
-        Returns
-        -------
-        List of tuples of ints specifying the ordering of the parent atoms.
-        """
-        return self._orientations
-
-    @property
-    def particles(self):
-        """
-        Particles owned by this VirtualSite
-        """
-        for vp in self._particles.values():
-            yield vp
-
-    @property
-    def n_particles(self):
-        """
-        The number of particles that the virtual site represents
-        """
-        # Virtual sites can represent multiple particles in a system
-        # Assume a 1 to 1 mapping of orientations to particles for now
-        # This means a virtualsite can only represent a single physical set
-        # of parameters (distance, angle, etc)
-        return len(self._particles)
-
-    @property
-    def molecule_virtual_site_index(self):
-        """
-        The index of this VirtualSite within the list of virtual sites within ``Molecule``
-        Note that this can be different from ``particle_index``.
-        """
-        # if self._topology is None:
-        #    raise ValueError('This VirtualSite does not belong to a Topology object')
-        # TODO: This will be slow; can we cache this and update it only when needed?
-        #       Deleting atoms/molecules in the Topology would have to invalidate the cached index.
-        return self._molecule.virtual_sites.index(self)
-
-    # @property
-    # def molecule_particle_index(self):
-    #     """
-    #     The index of this VirtualSite within the the list of particles in the parent ``Molecule``.
-    #     Note that this can be different from ``molecule_virtual_site_index``.
-
-    #     """
-    #     if self._molecule is None:
-    #         raise ValueError(
-    #             'This VirtualSite does not belong to a Molecule object')
-    #     return self._molecule.particles.index(self)
-
-    @property
-    def atoms(self):
-        """
-        Atoms on whose position this VirtualSite depends.
-        """
-        return self._atoms
-        # for atom in self._atoms:
-        #    yield atom
-
-    @property
-    def charge_increments(self):
-        """
-        Charges taken from this VirtualSite's atoms and given to the VirtualSite
-        """
-        return self._charge_increments
-
-    @property
-    def epsilon(self):
-        """
-        The VdW epsilon term of this VirtualSite
-        """
-        return self._epsilon
-
-    @property
-    def sigma(self):
-        """
-        The VdW sigma term of this VirtualSite
-        """
-        return self._sigma
-
-    @property
-    def rmin_half(self):
-        """
-        The VdW rmin_half term of this VirtualSite
-        """
-        rmin = 2.0 ** (1.0 / 6) * self._sigma
-        rmin_half = rmin / 2
-        return rmin_half
-
-    @property
-    def name(self):
-        """
-        The name of this VirtualSite
-        """
-        return self._name
-
-    @property
-    def type(self):
-        """The type of this VirtualSite (returns the class name as string)"""
-        return self.__class__.__name__
-
-    @property
-    @abstractmethod
-    def local_frame_weights(self):
-        """
-        The per-atom weights used to define the virtual site frame.
-
-        The SMIRNOFF virtual sites use the definition of
-        :class:`openmm.LocalCoordinatesSite` implemented by OpenMM.
-        As such, the weights are used to determine the origin and the x and y axes of
-        the local frame. Since the frame is an orthogonal bases, the z axis is not
-        specified as it is assumed to be the cross of the x and y axes (using a
-        right-handed coordinates).
-
-        The weights defined refer to the weights of each atom's positions. For the
-        origin, the weights must sum to 1. For the x and y axes, the weights much each
-        sum to 0. For example, for a custom bond charge virtual site with two atoms:
-
-        - Origin: [.5, .5] The origin of the frame is always in between atom 1 and
-          atom 2. The calculation is 0.5 * atom1.xyz + 0.5 * atom2.xyz
-        - X-Axis: [-1, 1] The x-axis points from atom 1 to atom 2. Positive
-          displacements of this axis are closer to atom 2.
-        - Y-Axis: [0, 0] This axis must be defined, so here we set it to the null
-          space. Any displacements along y are sent to 0. Because of this, the z-axis
-          will also be 0.
-
-        The displacements along the axes defined here are defined/returned by
-        :attr:`VirtualSite.local_frame_position`.
-
-        To implement a new virtual site type (using a LocalCoordinatesSite
-        definition), override this function.
-
-        Parameters
-        ----------
-
-        Returns
-        -------
-        Tuple of list of weights used to define the origin, x-axis, and y-axis
-        """
-
-    @property
-    @abstractmethod
-    def local_frame_position(self):
-        """
-        The displacements of the virtual site relative to the local frame.
-
-        The SMIRNOFF virtual sites use the definition of
-        :class:`openmm.LocalCoordinatesSite` as implemented by OpenMM.
-        As such, the frame positions refer to positions as defined by the frame, or the
-        local axes defined by the owning atoms (see
-        :attr:`VirtualSite.local_frame_weights`).
-
-        To implement a new virtual site type (using a LocalCoordinatesSite
-        definition), override this function.
-
-        Parameters
-        ----------
-
-        Returns
-        -------
-        :class:`openmm.unit.Quantity` of dimension [Length] wrapping a list of
-        displacements in the local frame for the x, y, and z directions.
-        """
-
-    def __repr__(self):
-        # TODO: Also include particle_index, which molecule this atom belongs to?
-        return "VirtualSite(name={}, type={}, atoms={})".format(
-            self.name, self.type, self.atoms
-        )
-
-    def __str__(self):
-        # TODO: Also include particle_index, which molecule this atom belongs to?
-        return "<VirtualSite name={} type={} atoms={} particles={}>".format(
-            self.name, self.type, self.atoms, self.n_particles
-        )
-
-    @requires_package("openmm")
-    def _openmm_virtual_site(self, atoms):
-        from openmm import LocalCoordinatesSite
-
-        originwt, xdir, ydir = self.local_frame_weights
-        pos = self.local_frame_position
-
-        return LocalCoordinatesSite(atoms, originwt, xdir, ydir, to_openmm(pos))
-
-    def compute_positions_from_conformer(self, conformer_idx):
-        """
-        Compute the position of the virtual site particles given an existing conformer
-        owned by the parent molecule.
-
-        Parameters
-        ----------
-        conformer_idx : int
-            The index of the conformer in the owning molecule.
-
-        Returns
-        -------
-        :class:`openmm.unit.Quantity` of dimension [Length] in unit Angstroms wrapping a
-        numpy.ndarray
-            The positions of the virtual particles belonging to this virtual site.
-            The array is the size (M, 3) where M is the number of virtual particles
-            belonging to this virtual site.
-        """
-
-        positions = []
-        for vp in self.particles:
-            vp_pos = vp.compute_position_from_conformer(conformer_idx)
-            positions.append(vp_pos.m_as(unit.angstrom))
-
-        return unit.Quantity(np.array(positions).reshape(-1, 3), units=unit.angstrom)
-
-    def compute_positions_from_atom_positions(self, atom_positions):
-        """
-        Compute the positions of the virtual site particles given a set of coordinates.
-
-        Parameters
-        ----------
-        atom_positions : :class:`openmm.unit.Quantity` of dimension [Length] wrapping a
-        numpy.ndarray
-            The positions of all atoms in the molecule. The array is the size (N, 3)
-            where N is the number of atoms in the molecule.
-
-        Returns
-        -------
-        :class:`openmm.unit.Quantity` of dimension [Length] in unit Angstroms wrapping a
-        numpy.ndarray
-            The positions of the virtual particles belonging to this virtual site.
-            The array is the size (M, 3) where M is the number of virtual particles
-            belonging to this virtual site.
-        """
-
-        positions = []
-        for vp in self.particles:
-            vp_pos = vp.compute_position_from_atom_positions(atom_positions)
-            positions.extend(vp_pos.m_as(unit.angstrom))
-
-        return unit.Quantity(np.array(positions).reshape(-1, 3), units=unit.angstrom)
-
-
-class BondChargeVirtualSite(VirtualSite):
-    """
-    A particle representing a "Bond Charge"-type virtual site, in which the location of the charge is specified by the positions of two atoms. This supports placement of a virtual site S along a vector between two specified atoms, e.g. to allow for a sigma hole for halogens or similar contexts. With positive values of the distance, the virtual site lies outside the first indexed atom.
-
-    .. warning :: This API is experimental and subject to change.
-    """
-
-    def __init__(
-        self,
-        atoms,
-        distance,
-        charge_increments=None,
-        epsilon=None,
-        sigma=None,
-        rmin_half=None,
-        name=None,
-        orientations=None,
-    ):
-        """
-        Create a bond charge-type virtual site, in which the location of the charge is specified by the position of two atoms. This supports placement of a virtual site S along a vector between two specified atoms, e.g. to allow for a sigma hole for halogens or similar contexts. With positive values of the distance, the virtual site lies outside the first indexed atom.
-
-        TODO: One of the examples in the SMIRNOFF spec has a BondCharge defined with three atoms -- How does that work?
-        https://openforcefield.github.io/standards/standards/smirnoff/#virtualsites-virtual-sites-for-off-atom-charges
-
-        Parameters
-        ----------
-        atoms : list of openff.toolkit.topology.molecule.Atom objects of shape [N]
-            The atoms defining the virtual site's position
-
-        distance : :class:`openmm.unit.Quantity` of dimension [Length] wrapping a scalar
-
-        weights : list of floats of shape [N] or None, optional, default=None
-            weights[index] is the weight of particles[index] contributing to the position of the virtual site. Default is None
-        charge_increments : list of floats of shape [N], optional, default=None
-            The amount of charge to remove from the VirtualSite's atoms and put in the VirtualSite. Indexing in this list should match the ordering in the atoms list. Default is None.
-        epsilon : float
-            Epsilon term for VdW properties of virtual site. Default is None.
-        sigma : float, default=None
-            Sigma term for VdW properties of virtual site. Default is None.
-        rmin_half : float
-            Rmin_half term for VdW properties of virtual site. Default is None.
-        name : string or None, default=None
-            The name of this virtual site. Default is None.
-        orientations : list of tuples of 3 Atoms or ints
-            The permutations of the matched atoms that should be used to define
-            the orientation of each virtual site particle
-        """
-        assert hasattr(distance, "units")
-        assert distance.units.is_compatible_with(unit.nanometer)
-
-        super().__init__(
-            atoms,
-            charge_increments=charge_increments,
-            epsilon=epsilon,
-            sigma=sigma,
-            rmin_half=rmin_half,
-            name=name,
-            orientations=orientations,
-        )
-        self._distance = distance.to(unit.angstrom)
-
-    def __eq__(self, other):
-        return super().__eq__(other)
-
-    def to_dict(self):
-        vsite_dict = super().to_dict()
-        vsite_dict["distance"] = quantity_to_dict(self._distance)
-
-        vsite_dict["vsite_type"] = self.type
-        vsite_dict["orientations"] = self._orientations
-
-        return vsite_dict
-
-    @classmethod
-    def from_dict(cls, vsite_dict):
-        base_dict = deepcopy(vsite_dict)
-        # Make sure it's the right type of virtual site
-        assert vsite_dict["vsite_type"] == "BondChargeVirtualSite"
-        base_dict.pop("vsite_type")
-        base_dict.pop("distance")
-        vsite = super().from_dict(**base_dict)
-        vsite._distance = dict_to_quantity(vsite_dict["distance"])
-        return vsite
-
-    @property
-    def distance(self):
-        """The distance parameter of the virtual site"""
-        return self._distance
-
-    @property
-    def local_frame_weights(self):
-        """
-        Returns the local frame weights used to calculate the particle positions.
-        See :attr:`VirtualSite.local_frame_weights` for a general description.
-
-        Bond charge virtual sites are defined by the axis defined by the two
-        atoms that define the bond. Since the virtual site position is defined
-        solely by this axis, the other y-axis is defined but not used.
-
-        Parameters
-        ----------
-
-        Returns
-        -------
-        Tuple of list of weights used to define the origin, x-axis, and y-axis.
-        """
-
-        originwt = [1.0, 0.0]  # first atom is origin
-
-        xdir = [-1.0, 1.0]
-
-        ydir = [-1.0, 1.0]
-
-        return originwt, xdir, ydir
-
-    @property
-    def local_frame_position(self):
-        """
-        The displacements of the virtual site relative to the local frame.
-        See :attr:`VirtualSite.local_frame_position` for a general description.
-
-        Parameters
-        ----------
-
-        Returns
-        -------
-        :class:`openmm.unit.Quantity` of dimension [Length] wrapping a list of
-        displacements in the local frame for the x, y, and z directions.
-        """
-
-        # since the origin is atom 1, and xdir is a unit vector pointing
-        # towards the center of the other atoms, we want the
-        # vsite to point away from the unit vector to achieve the desired
-        # distance
-        _unit = self._distance.units
-        pos = _unit * [-self._distance.m_as(_unit), 0.0, 0.0]
-
-        return pos
-
-    def get_openmm_virtual_site(self, atoms):
-        """
-        Returns the OpenMM virtual site corresponding to this BondChargeVirtualSite.
-
-        Parameters
-        ----------
-        atoms : iterable of int
-            The indices of the atoms involved in this virtual site.
-
-        Returns
-        -------
-        :class:`openmm.LocalCoordinatesSite`
-        """
-        assert len(atoms) >= 2
-        return self._openmm_virtual_site(atoms)
-
-
-class MonovalentLonePairVirtualSite(VirtualSite):
-    """
-    A particle representing a "Monovalent Lone Pair"-type virtual site, in which the location of the charge is specified by the positions of three atoms. This is originally intended for situations like a carbonyl, and allows placement of a virtual site S at a specified distance d, in_plane_angle, and out_of_plane_angle relative to a central atom and two connected atoms.
-
-    .. warning :: This API is experimental and subject to change.
-    """
-
-    def __init__(
-        self,
-        atoms,
-        distance,
-        out_of_plane_angle,
-        in_plane_angle,
-        charge_increments=None,
-        epsilon=None,
-        sigma=None,
-        rmin_half=None,
-        name=None,
-        orientations=None,
-    ):
-        """
-        Create a bond charge-type virtual site, in which the location of the charge is specified by the position of three atoms.
-
-        Parameters
-        ----------
-        atoms : list of three openff.toolkit.topology.molecule.Atom objects
-            The three atoms defining the virtual site's position
-
-        distance : :class:`openmm.unit.Quantity` of dimension [Length] wrapping a scalar
-
-        out_of_plane_angle : :class:`openmm.unit.Quantity` of dimension [Angle] wrapping
-        a scalar
-
-        in_plane_angle : :class:`openmm.unit.Quantity` of dimension [Angle] wrapping a
-        scalar
-
-        epsilon : float
-            Epsilon term for VdW properties of virtual site. Default is None.
-        sigma : float, default=None
-            Sigma term for VdW properties of virtual site. Default is None.
-        rmin_half : float
-            Rmin_half term for VdW properties of virtual site. Default is None.
-        name : string or None, default=None
-            The name of this virtual site. Default is None.
-        orientations : list of tuples of 3 Atoms or ints
-            The permutations of the matched atoms that should be used to define
-            the orientation of each virtual site particle
-        """
-        # assert isinstance(distance, unit.Quantity)
-        # TODO: Check for proper number of atoms
-        assert hasattr(distance, "units")
-        assert unit.angstrom.is_compatible_with(distance.units)
-        assert hasattr(in_plane_angle, "units")
-        assert unit.degree.is_compatible_with(in_plane_angle.units)
-        assert hasattr(out_of_plane_angle, "units")
-        assert unit.degree.is_compatible_with(out_of_plane_angle.units)
-
-        assert len(atoms) == 3
-        super().__init__(
-            atoms,
-            charge_increments=charge_increments,
-            epsilon=epsilon,
-            sigma=sigma,
-            rmin_half=rmin_half,
-            name=name,
-            orientations=orientations,
-        )
-        self._distance = distance.to(unit.angstrom)
-        self._out_of_plane_angle = out_of_plane_angle.to(unit.degree)
-        self._in_plane_angle = in_plane_angle.to(unit.degree)
-
-    def to_dict(self):
-        vsite_dict = super().to_dict()
-        vsite_dict["distance"] = quantity_to_dict(self._distance)
-
-        vsite_dict["out_of_plane_angle"] = quantity_to_dict(self._out_of_plane_angle)
-        vsite_dict["in_plane_angle"] = quantity_to_dict(self._in_plane_angle)
-        vsite_dict["vsite_type"] = self.type
-        return vsite_dict
-
-    def __eq__(self, other):
-        return super().__eq__(other)
-
-    @classmethod
-    def from_dict(cls, vsite_dict):
-        """
-        Construct a new MonovalentLonePairVirtualSite from an serialized dictionary representation.
-
-        Parameters
-        ----------
-        vsite_dict : dict
-            The VirtualSite to deserialize.
-
-        Returns
-        -------
-        The newly created MonovalentLonePairVirtualSite
-
-        """
-        # The function is overridden only to have a custom docstring.
-        vsite = super().from_dict(vsite_dict)
-        vsite._out_of_plane_angle = dict_to_quantity(vsite_dict["out_of_plane_angle"])
-        vsite._in_plane_angle = dict_to_quantity(vsite_dict["in_plane_angle"])
-        return vsite
-
-    @property
-    def distance(self):
-        """The distance parameter of the virtual site"""
-        return self._distance
-
-    @property
-    def in_plane_angle(self):
-        """The in_plane_angle parameter of the virtual site"""
-        return self._in_plane_angle
-
-    @property
-    def out_of_plane_angle(self):
-        """The out_of_plane_angle parameter of the virtual site"""
-        return self._out_of_plane_angle
-
-    @property
-    def local_frame_weights(self):
-        """
-        Returns the local frame weights used to calculate the particle positions.
-        See :attr:`VirtualSite.local_frame_weights` for a general description.
-
-        Parameters
-        ----------
-
-        Returns
-        -------
-        Tuple of list of weights used to define the origin, x-axis, and y-axis.
-        """
-
-        originwt = [1.0, 0.0, 0.0]
-
-        xdir = [-1.0, 1.0, 0.0]
-        ydir = [-1.0, 0.0, 1.0]
-
-        return originwt, xdir, ydir
-
-    @property
-    def local_frame_position(self):
-        """
-        The displacements of the virtual site relative to the local frame.
-        See :attr:`VirtualSite.local_frame_position` for a general description.
-
-        Parameters
-        ----------
-
-        Returns
-        -------
-        :class:`openmm.unit.Quantity` of dimension [Length] wrapping a list of displacements
-        in the local frame for the x, y, and z directions.
-        """
-
-        theta = self._in_plane_angle.m_as(unit.radians)
-        psi = self._out_of_plane_angle.m_as(unit.radians)
-
-        distance_unit = self._distance.units
-        pos = unit.Quantity(
-            [
-                self._distance.m_as(distance_unit) * np.cos(theta) * np.cos(psi),
-                self._distance.m_as(distance_unit) * np.sin(theta) * np.cos(psi),
-                self._distance.m_as(distance_unit) * np.sin(psi),
-            ],
-            units=distance_unit,
-        )
-
-        return pos
-
-    def get_openmm_virtual_site(self, atoms):
-        """
-        Returns the OpenMM virtual site corresponding to this
-        MonovalentLonePairVirtualSite.
-
-        Parameters
-        ----------
-        atoms : iterable of int
-            The indices of the atoms involved in this virtual site.
-
-        Returns
-        -------
-        :class:`openmm.LocalCoordinatesSite`
-        """
-
-        assert len(atoms) >= 3
-        return self._openmm_virtual_site(atoms)
-
-
-class DivalentLonePairVirtualSite(VirtualSite):
-    """
-    A particle representing a "Divalent Lone Pair"-type virtual site, in which the location of the charge is specified by the positions of three atoms. This is suitable for cases like four-point and five-point water models as well as pyrimidine; a charge site S lies a specified distance d from the central atom among three atoms along the bisector of the angle between the atoms (if out_of_plane_angle is zero) or out of the plane by the specified angle (if out_of_plane_angle is nonzero) with its projection along the bisector. For positive values of the distance d the virtual site lies outside the 2-1-3 angle and for negative values it lies inside.
-    """
-
-    def __init__(
-        self,
-        atoms,
-        distance,
-        out_of_plane_angle,
-        charge_increments=None,
-        epsilon=None,
-        sigma=None,
-        rmin_half=None,
-        name=None,
-        orientations=None,
-    ):
-        """
-        Create a divalent lone pair-type virtual site, in which the location of the charge is specified by the position of three atoms.
-
-        Parameters
-        ----------
-        atoms : list of 3 openff.toolkit.topology.molecule.Atom objects
-            The three atoms defining the virtual site's position
-
-        distance : :class:`openmm.unit.Quantity` of dimension [Length] wrapping a scalar
-
-        out_of_plane_angle : :class:`openmm.unit.Quantity` of dimension [Angle] wrapping
-        a scalar
-
-        epsilon : float
-            Epsilon term for VdW properties of virtual site. Default is None.
-        sigma : float, default=None
-            Sigma term for VdW properties of virtual site. Default is None.
-        rmin_half : float
-            Rmin_half term for VdW properties of virtual site. Default is None.
-        name : string or None, default=None
-            The name of this virtual site. Default is None.
-        orientations : list of tuples of 3 Atoms or ints
-            The permutations of the matched atoms that should be used to define
-            the orientation of each virtual site particle
-        """
-        assert hasattr(distance, "units")
-        assert unit.angstrom.is_compatible_with(distance.units)
-
-        assert hasattr(out_of_plane_angle, "units")
-        assert unit.degree.is_compatible_with(out_of_plane_angle.units)
-
-        assert len(atoms) == 3
-        super().__init__(
-            atoms,
-            charge_increments=charge_increments,
-            epsilon=epsilon,
-            sigma=sigma,
-            rmin_half=rmin_half,
-            name=name,
-            orientations=orientations,
-        )
-        self._distance = distance.to(unit.angstrom)
-        self._out_of_plane_angle = out_of_plane_angle.to(unit.degree)
-
-    def __eq__(self, other):
-        return super().__eq__(other)
-
-    def to_dict(self):
-        vsite_dict = super().to_dict()
-        vsite_dict["distance"] = quantity_to_dict(self._distance)
-        vsite_dict["out_of_plane_angle"] = quantity_to_dict(self._out_of_plane_angle)
-        vsite_dict["vsite_type"] = self.type
-        return vsite_dict
-
-    @classmethod
-    def from_dict(cls, vsite_dict):
-        """
-        Construct a new DivalentLonePairVirtualSite from an serialized dictionary representation.
-
-        Parameters
-        ----------
-        vsite_dict : dict
-            The VirtualSite to deserialize.
-
-        Returns
-        -------
-        The newly created DivalentLonePairVirtualSite
-
-        """
-        # The function is overridden only to have a custom docstring.
-        vsite = super().from_dict(vsite_dict)
-        vsite._out_of_plane_angle = dict_to_quantity(vsite_dict["out_of_plane_angle"])
-        return vsite
-
-    @property
-    def distance(self):
-        """The distance parameter of the virtual site"""
-        return self._distance
-
-    @property
-    def out_of_plane_angle(self):
-        """The out_of_plane_angle parameter of the virtual site"""
-        return self._out_of_plane_angle
-
-    @property
-    def local_frame_weights(self):
-        """
-        Returns the local frame weights used to calculate the particle positions.
-        See :attr:`VirtualSite.local_frame_weights` for a general description.
-
-        Parameters
-        ----------
-
-        Returns
-        -------
-        Tuple of list of weights used to define the origin, x-axis, and y-axis.
-        """
-
-        originwt = [0.0, 1.0, 0.0]
-
-        xdir = [0.5, -1.0, 0.5]
-        ydir = [1.0, -1.0, 0.0]
-
-        return originwt, xdir, ydir
-
-    @property
-    def local_frame_position(self):
-        """
-        The displacements of the virtual site relative to the local frame.
-        See :attr:`VirtualSite.local_frame_position` for a general description.
-
-        Parameters
-        ----------
-
-        Returns
-        -------
-        :class:`openmm.unit.Quantity` of dimension [Length] wrapping a list of
-        displacements in the local frame for the x, y, and z directions.
-        """
-
-        theta = self._out_of_plane_angle.m_as(unit.radians)
-
-        distance_unit = self._distance.units
-        pos = distance_unit * [
-            -self._distance.m_as(distance_unit) * np.cos(theta),
-            0.0,
-            self._distance.m_as(distance_unit) * np.sin(theta),
-        ]  # pos of the vsite in local crds
-        return pos
-
-    def get_openmm_virtual_site(self, atoms):
-        """
-        Returns the OpenMM virtual site corresponding to this
-        DivalentLonePairVirtualSite.
-
-        Parameters
-        ----------
-        atoms : iterable of int
-            The indices of the atoms involved in this virtual site.
-
-        Returns
-        -------
-        :class:`openmm.LocalCoordinatesSite`
-        """
-
-        assert len(atoms) >= 3
-        return self._openmm_virtual_site(atoms)
-
-
-class TrivalentLonePairVirtualSite(VirtualSite):
-    """
-    A particle representing a "Trivalent Lone Pair"-type virtual site, in which the location of the charge is specified by the positions of four atoms. This is suitable for planar or tetrahedral nitrogen lone pairs; a charge site S lies above the central atom (e.g. nitrogen a distance d along the vector perpendicular to the plane of the three connected atoms (2,3,4). With positive values of d the site lies above the nitrogen and with negative values it lies below the nitrogen.
-
-    .. warning :: This API is experimental and subject to change.
-    """
-
-    def __init__(
-        self,
-        atoms,
-        distance,
-        charge_increments=None,
-        epsilon=None,
-        sigma=None,
-        rmin_half=None,
-        name=None,
-        orientations=None,
-    ):
-        """
-        Create a trivalent lone pair-type virtual site, in which the location of the charge is specified by the position of four atoms.
-
-        Parameters
-        ----------
-        atoms : list of 4 openff.toolkit.topology.molecule.Atom objects
-            The three atoms defining the virtual site's position
-
-        distance : :class:`openmm.unit.Quantity` of dimension [Length] wrapping a scalar
-
-        epsilon : float
-            Epsilon term for VdW properties of virtual site. Default is None.
-        sigma : float, default=None
-            Sigma term for VdW properties of virtual site. Default is None.
-        rmin_half : float
-            Rmin_half term for VdW properties of virtual site. Default is None.
-        name : string or None, default=None
-            The name of this virtual site. Default is None.
-        orientations : list of tuples of 3 Atoms or ints
-            The permutations of the matched atoms that should be used to define
-            the orientation of each virtual site particle
-        """
-        assert len(atoms) == 4
-
-        assert hasattr(distance, "units")
-        assert unit.angstrom.is_compatible_with(distance.units)
-
-        super().__init__(
-            atoms,
-            charge_increments=charge_increments,
-            epsilon=epsilon,
-            sigma=sigma,
-            rmin_half=rmin_half,
-            name=name,
-            orientations=orientations,
-        )
-        self._distance = distance.to(unit.angstrom)
-
-    def __eq__(self, other):
-        return super().__eq__(other)
-
-    def to_dict(self):
-        vsite_dict = super().to_dict()
-        vsite_dict["distance"] = quantity_to_dict(self._distance)
-        vsite_dict["vsite_type"] = self.type
-        return vsite_dict
-
-    @classmethod
-    def from_dict(cls, vsite_dict):
-        """
-        Construct a new TrivalentPairVirtualSite from an serialized dictionary representation.
-
-        Parameters
-        ----------
-        vsite_dict : dict
-            The VirtualSite to deserialize.
-
-
-        Returns
-        -------
-        The newly created TrivalentLonePairVirtualSite
-
-        """
-        # The function is overridden only to have a custom docstring.
-        return super().from_dict(vsite_dict)
-
-    @property
-    def distance(self):
-        """The distance parameter of the virtual site"""
-        return self._distance
-
-    @property
-    def local_frame_weights(self):
-        """
-        Returns the local frame weights used to calculate the particle positions.
-        See :attr:`VirtualSite.local_frame_weights` for a general description.
-
-        Parameters
-        ----------
-
-        Returns
-        -------
-        Tuple of list of weights used to define the origin, x-axis, and y-axis.
-        """
-
-        originwt = [0.0, 1.0, 0.0, 0.0]
-
-        xdir = [1 / 3, -1.0, 1 / 3, 1 / 3]
-
-        # ydir does not matter
-        ydir = [1.0, -1.0, 0.0, 0.0]
-
-        return originwt, xdir, ydir
-
-    @property
-    def local_frame_position(self):
-        """
-        The displacements of the virtual site relative to the local frame.
-        See :attr:`VirtualSite.local_frame_position` for a general description.
-
-        Parameters
-        ----------
-
-        Returns
-        -------
-        :class:`openmm.unit.Quantity` of dimension [Length] wrapping a list of
-        displacements in the local frame for the x, y, and z directions.
-        """
-
-        distance_unit = self._distance.units
-        pos = unit.Quantity([-self._distance.m, 0.0, 0.0], units=distance_unit)
-
-        return pos
-
-    def get_openmm_virtual_site(self, atoms):
-        """
-        Returns the OpenMM virtual site corresponding to this
-        TrivalentLonePairVirtualSite.
-
-        Parameters
-        ----------
-        atoms : iterable of int
-            The indices of the atoms involved in this virtual site.
-
-        Returns
-        -------
-        :class:`openmm.LocalCoordinatesSite`
-        """
-
-        assert len(atoms) >= 4
-        return self._openmm_virtual_site(atoms)
 
 
 # =============================================================================================
@@ -2023,10 +605,6 @@ class TrivalentLonePairVirtualSite(VirtualSite):
 # def neighbors(self):
 #    return (self._neighbor1, self._neighbor2)
 
-# =============================================================================================
-# Bond
-# =============================================================================================
-
 
 class Bond(Serializable):
     """
@@ -2040,16 +618,14 @@ class Bond(Serializable):
     ----------
     atom1, atom2 : openff.toolkit.topology.Atom
         Atoms involved in the bond
-    bondtype : int
-        Discrete bond type representation for the Open Forcefield aromaticity model
-        TODO: Do we want to pin ourselves to a single standard aromaticity model?
-    type : str
-        String based bond type
-    order : int
-        Integral bond order
+    bond_order : int
+        The (integer) bond order of this bond.
+    is_aromatic : bool
+        Whether or not this bond is aromatic.
     fractional_bond_order : float, optional
-        Fractional bond order, or None.
-
+        The fractional bond order, or partial bond order of this bond.
+    stereochemstry : str, optional, default=None
+        A string representing this stereochemistry of this bond.
 
     .. warning :: This API is experimental and subject to change.
     """
@@ -2080,7 +656,6 @@ class Bond(Serializable):
         atom2.add_bond(self)
         # TODO: Check bondtype and fractional_bond_order are valid?
         # TODO: Dative bonds
-        # self._type = bondtype
         self._fractional_bond_order = fractional_bond_order
         self._bond_order = bond_order
         self._is_aromatic = is_aromatic
@@ -2175,22 +750,29 @@ class Bond(Serializable):
             raise ValueError("This Atom does not belong to a Molecule object")
         return self._molecule.bonds.index(self)
 
-    @property
-    def is_in_ring(self):
+    def is_in_ring(self, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY) -> bool:
         """
         Return whether or not this bond is in a ring(s) (of any size)
 
-        """
-        if self._molecule is None:
-            raise NotAttachedToMoleculeError(
-                "This Bond does not belong to a Molecule object"
-            )
+        This Bond is expected to be attached to a molecule (`Bond.molecule`).
 
-        for ring in self._molecule.rings:
-            if self.atom1.molecule_atom_index in ring:
-                if self.atom2.molecule_atom_index in ring:
-                    return True
-        return False
+        Note: Bonds containing atoms that are only in separate rings, i.e. the central bond in a biphenyl,
+            are not considered to be bonded by this criteria.
+
+        Parameters
+        ----------
+        toolkit_registry: openff.toolkit.utils.toolkits.ToolkitRegistry, default=GLOBAL_TOOLKIT_REGISTRY
+            :class:`ToolkitRegistry` to use to enumerate the tautomers.
+
+        Returns
+        -------
+        is_in_ring: bool
+            Whether or not this bond is in a ring.
+
+        """
+        _is_in_ring = toolkit_registry.call("bond_is_in_ring", self)
+
+        return _is_in_ring
 
     def __repr__(self):
         return f"Bond(atom1 index={self.atom1_index}, atom2 index={self.atom2_index})"
@@ -2201,11 +783,7 @@ class Bond(Serializable):
         )
 
 
-# =============================================================================================
-# Molecule
-# =============================================================================================
-
-# TODO: How do we automatically trigger invalidation of cached properties if an ``Atom``, ``Bond``, or ``VirtualSite`` is modified,
+# TODO: How do we automatically trigger invalidation of cached properties if an ``Atom`` or ``Bond`` is modified,
 #       rather than added/deleted via the API? The simplest resolution is simply to make them immutable.
 
 
@@ -2277,7 +855,7 @@ class FrozenMolecule(Serializable):
         Parameters
         ----------
         other : optional, default=None
-            If specified, attempt to construct a copy of the Molecule from
+            If specified, attempt to construct a copy of the molecule from
             the specified object. This can be any one of the following:
 
             * a :class:`Molecule` object
@@ -2367,16 +945,14 @@ class FrozenMolecule(Serializable):
             # if there turned out to be no way to load this input
             value_errors = list()
 
-            if isinstance(other, openff.toolkit.topology.FrozenMolecule) and not (
-                loaded
-            ):
+            if isinstance(other, openff.toolkit.topology.FrozenMolecule) and not loaded:
                 self._copy_initializer(other)
                 loaded = True
-            if isinstance(other, openff.toolkit.topology.Molecule) and not (loaded):
+            if isinstance(other, openff.toolkit.topology.Molecule) and not loaded:
                 # TODO: This will need to be updated once FrozenMolecules and Molecules are significantly different
                 self._copy_initializer(other)
                 loaded = True
-            if isinstance(other, OrderedDict) and not (loaded):
+            if isinstance(other, OrderedDict) and not loaded:
                 self.__setstate__(other)
                 loaded = True
 
@@ -2408,7 +984,7 @@ class FrozenMolecule(Serializable):
                     loaded = True
             # TODO: Make this compatible with file-like objects (I couldn't figure out how to make an oemolistream
             # from a fileIO object)
-            if (isinstance(other, str) or hasattr(other, "read")) and not (loaded):
+            if isinstance(other, str) or hasattr(other, "read") and not loaded:
                 try:
                     mol = Molecule.from_file(
                         other,
@@ -2429,16 +1005,16 @@ class FrozenMolecule(Serializable):
             # If none of the above methods worked, raise a ValueError summarizing the
             # errors from the different loading attempts
 
-            if not (loaded):
-                msg = "Cannot construct openff.toolkit.topology.Molecule from {}\n".format(
-                    other
+            if not loaded:
+                msg = (
+                    f"Cannot construct openff.toolkit.topology.Molecule from {other}\n"
                 )
                 for value_error in value_errors:
                     msg += str(value_error)
                 raise ValueError(msg)
 
     @property
-    def has_unique_atom_names(self):
+    def has_unique_atom_names(self) -> bool:
         """True if the molecule has unique atom names, False otherwise."""
         unique_atom_names = set([atom.name for atom in self.atoms])
         if len(unique_atom_names) < self.n_atoms:
@@ -2487,7 +1063,8 @@ class FrozenMolecule(Serializable):
         smarts: str or ChemicalEnvironment
             Tagged SMARTS with a single atom with index 1. Any matches for this atom will have any assigned
             stereocheistry information removed.
-        toolkit_registry : a :class:`ToolkitRegistry` or :class:`ToolkitWrapper` object, optional, default=GLOBAL_TOOLKIT_REGISTRY
+        toolkit_registry : a :class:`ToolkitRegistry` or :class:`ToolkitWrapper` object, optional,
+            default=GLOBAL_TOOLKIT_REGISTRY
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for I/O operations
 
         """
@@ -2525,12 +1102,9 @@ class FrozenMolecule(Serializable):
 
         molecule_dict = OrderedDict()
         molecule_dict["name"] = self._name
-        ## From Jeff: If we go the properties-as-dict route, then _properties should, at
-        ## the top level, be a dict. Should we go through recursively and ensure all values are dicts too?
+        # From Jeff: If we go the properties-as-dict route, then _properties should, at
+        # the top level, be a dict. Should we go through recursively and ensure all values are dicts too?
         molecule_dict["atoms"] = [atom.to_dict() for atom in self._atoms]
-        molecule_dict["virtual_sites"] = [
-            vsite.to_dict() for vsite in self._virtual_sites
-        ]
         molecule_dict["bonds"] = [bond.to_dict() for bond in self._bonds]
         # TODO: Charges
         # TODO: Properties
@@ -2583,6 +1157,7 @@ class FrozenMolecule(Serializable):
 
     # @cached_property
     def ordered_connection_table_hash(self):
+        """Compute an ordered hash of the atoms and bonds in the molecule"""
         if self._ordered_connection_table_hash is not None:
             return self._ordered_connection_table_hash
 
@@ -2618,7 +1193,7 @@ class FrozenMolecule(Serializable):
 
     def _initialize_from_dict(self, molecule_dict):
         """
-        Initialize this Molecule from a dictionary representation
+        Initialize the molecule from a dictionary representation
 
         Parameters
         ----------
@@ -2632,56 +1207,6 @@ class FrozenMolecule(Serializable):
         self.name = molecule_dict["name"]
         for atom_dict in molecule_dict["atoms"]:
             self._add_atom(**atom_dict)
-
-        # Handle virtual site unit reattachment and molecule tagging
-        for vsite_dict in molecule_dict["virtual_sites"]:
-            vsite_dict_units = deepcopy(vsite_dict)
-
-            # Attach units to epsilon term
-            vsite_dict_units["epsilon"] = dict_to_quantity(vsite_dict["epsilon"])
-            vsite_dict_units["sigma"] = dict_to_quantity(vsite_dict["sigma"])
-            vsite_dict_units["charge_increments"] = dict_to_quantity(
-                vsite_dict["charge_increments"]
-            )
-            vsite_dict_units["orientations"] = vsite_dict["orientations"]
-
-            # Call the correct molecule._add_X_virtual_site function, based on the stated type
-            # Also generate the Atom objects from the atom indices
-            atoms = [self._atoms[i] for i in vsite_dict_units["atoms"]]
-            vsite_dict_units["atoms"] = atoms
-            if vsite_dict_units["vsite_type"] == "BondChargeVirtualSite":
-                del vsite_dict_units["vsite_type"]
-                vsite_dict_units["distance"] = dict_to_quantity(vsite_dict["distance"])
-                self._add_bond_charge_virtual_site(**vsite_dict_units)
-
-            elif vsite_dict_units["vsite_type"] == "MonovalentLonePairVirtualSite":
-                del vsite_dict_units["vsite_type"]
-                vsite_dict_units["distance"] = dict_to_quantity(vsite_dict["distance"])
-                vsite_dict_units["in_plane_angle"] = dict_to_quantity(
-                    vsite_dict["in_plane_angle"]
-                )
-                vsite_dict_units["out_of_plane_angle"] = dict_to_quantity(
-                    vsite_dict["out_of_plane_angle"]
-                )
-                self._add_monovalent_lone_pair_virtual_site(**vsite_dict_units)
-
-            elif vsite_dict_units["vsite_type"] == "DivalentLonePairVirtualSite":
-                del vsite_dict_units["vsite_type"]
-                vsite_dict_units["distance"] = dict_to_quantity(vsite_dict["distance"])
-                vsite_dict_units["out_of_plane_angle"] = dict_to_quantity(
-                    vsite_dict["out_of_plane_angle"]
-                )
-                self._add_divalent_lone_pair_virtual_site(**vsite_dict_units)
-
-            elif vsite_dict_units["vsite_type"] == "TrivalentLonePairVirtualSite":
-                del vsite_dict_units["vsite_type"]
-                vsite_dict_units["distance"] = dict_to_quantity(vsite_dict["distance"])
-                self._add_trivalent_lone_pair_virtual_site(**vsite_dict_units)
-
-            else:
-                raise Exception(
-                    "Vsite type {} not recognized".format(vsite_dict["vsite_type"])
-                )
 
         for bond_dict in molecule_dict["bonds"]:
             bond_dict["atom1"] = int(bond_dict["atom1"])
@@ -2732,7 +1257,7 @@ class FrozenMolecule(Serializable):
         description = f"Molecule with name '{self.name}'"
         try:
             smiles = self.to_smiles()
-        except:
+        except Exception:
             hill = self.to_hill_formula()
             return description + f" with bad SMILES and Hill formula '{hill}'"
         return description + f" and SMILES '{smiles}'"
@@ -2749,7 +1274,6 @@ class FrozenMolecule(Serializable):
         """
         self._name = ""
         self._atoms = list()
-        self._virtual_sites = list()
         self._bonds = list()  # List of bonds between Atom objects
         self._properties = {}  # Attached properties to be preserved
         # self._cached_properties = None # Cached properties (such as partial charges) can be recomputed as needed
@@ -2779,12 +1303,15 @@ class FrozenMolecule(Serializable):
         self._initialize_from_dict(other_dict)
 
     def __eq__(self, other):
-        """Test two molecules for equality to see if they are the chemical species, but do not check other annotated properties.
+        """
+        Test two molecules for equality to see if they are the chemical species, but do not check other
+        annotated properties.
 
         .. note ::
 
-           Note that this method simply tests whether two molecules are identical chemical species using equivalence of their canonical isomeric SMILES.
-           No effort is made to ensure that the atoms are in the same order or that any annotated properties are preserved.
+           Note that this method simply tests whether two molecules are identical chemical species using equivalence of
+           their canonical isomeric SMILES.  No effort is made to ensure that the atoms are in the same order or that
+           any annotated properties are preserved.
 
         """
         # updated to use the new isomorphic checking method, with full matching
@@ -2803,6 +1330,8 @@ class FrozenMolecule(Serializable):
         iterator_name,
     ):
         """
+        Use the molecule's metadata to facilitate iteration over its atoms.
+
         Parameters
         ----------
         uniqueness_criteria : tuple of str
@@ -2830,22 +1359,26 @@ class FrozenMolecule(Serializable):
         return new_hier_scheme
 
     @property
-    def hierarchy_schemes(self):
+    def hierarchy_schemes(self) -> Dict[str, "HierarchyScheme"]:
         """
+        The hierarchy schemes available on the molecule.
+
         Returns
         -------
         A dict of the form {str: HierarchyScheme}
-            The HierarchySchemes associated with this Molecule.
+            The HierarchySchemes associated with the molecule.
         """
         return self._hierarchy_schemes
 
     def delete_hierarchy_scheme(self, iter_name):
         """
+        Remove an existing ``HierarchyScheme`` specified by its iterator name.
+
         Parameters
         ----------
         iter_name : str
         """
-        if not iter_name in self._hierarchy_schemes:
+        if iter_name not in self._hierarchy_schemes:
             raise HierarchySchemeNotFoundException(
                 f'Can not delete HierarchyScheme with name "{iter_name}" '
                 f"because no HierarchyScheme with that iterator name exists"
@@ -2856,6 +1389,8 @@ class FrozenMolecule(Serializable):
 
     def perceive_hierarchy(self, iter_names=None):
         """
+        Infer a hierarchy from atom metadata according to the existing hierarchy schemes.
+
         Parameters
         ----------
         iter_names : Iterable of str, Optional
@@ -2900,7 +1435,8 @@ class FrozenMolecule(Serializable):
             atom map into the properties dictionary. If no mapping is passed all atoms will be mapped in order, else
             an atom map dictionary from the current atom index to the map id should be supplied with no duplicates.
             The map ids (values) should start from 0 or 1.
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
+        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or
+            openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES conversion
 
         Returns
@@ -2928,9 +1464,8 @@ class FrozenMolecule(Serializable):
             to_smiles_method = toolkit_registry.to_smiles
         else:
             raise InvalidToolkitRegistryError(
-                "Invalid toolkit_registry passed to to_smiles. Expected ToolkitRegistry or ToolkitWrapper. Got  {}".format(
-                    type(toolkit_registry)
-                )
+                "Invalid toolkit_registry passed to to_smiles. Expected ToolkitRegistry or ToolkitWrapper. "
+                f"Got {type(toolkit_registry)}"
             )
 
         # Get a string representation of the function containing the toolkit name so we can check
@@ -2971,7 +1506,8 @@ class FrozenMolecule(Serializable):
             an exception will be raised if a InChI with undefined stereochemistry
             is passed into this function.
 
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
+        toolkit_registry : openff.toolkit.utils.toolkits.ToolRegistry
+            or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for InChI-to-molecule conversion
 
 
@@ -3000,9 +1536,8 @@ class FrozenMolecule(Serializable):
             )
         else:
             raise InvalidToolkitRegistryError(
-                "Invalid toolkit_registry passed to from_inchi. Expected ToolkitRegistry or ToolkitWrapper. Got  {}".format(
-                    type(toolkit_registry)
-                )
+                "Invalid toolkit_registry passed to from_inchi. Expected ToolkitRegistry or ToolkitWrapper. "
+                f"Got {type(toolkit_registry)}"
             )
 
         return molecule
@@ -3010,18 +1545,19 @@ class FrozenMolecule(Serializable):
     def to_inchi(self, fixed_hydrogens=False, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """
         Create an InChI string for the molecule using the requested toolkit backend.
-        InChI is a standardised representation that does not capture tautomers unless specified using the fixed hydrogen
-        layer.
+        InChI is a standardised representation that does not capture tautomers unless specified using the fixed
+        hydrogen layer.
 
         For information on InChi see here https://iupac.org/who-we-are/divisions/division-details/inchi/
 
         Parameters
         ----------
         fixed_hydrogens: bool, default=False
-            If a fixed hydrogen layer should be added to the InChI, if `True` this will produce a non standard specific
-            InChI string of the molecule.
+            If a fixed hydrogen layer should be added to the InChI, if `True` this will produce a non standard
+            specific InChI string of the molecule.
 
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
+        toolkit_registry : openff.toolkit.utils.toolkits.ToolRegistry
+            or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for molecule-to-InChI conversion
 
         Returns
@@ -3044,9 +1580,8 @@ class FrozenMolecule(Serializable):
             inchi = toolkit.to_inchi(self, fixed_hydrogens=fixed_hydrogens)
         else:
             raise InvalidToolkitRegistryError(
-                "Invalid toolkit_registry passed to to_inchi. Expected ToolkitRegistry or ToolkitWrapper. Got  {}".format(
-                    type(toolkit_registry)
-                )
+                "Invalid toolkit_registry passed to to_inchi. Expected ToolkitRegistry or ToolkitWrapper. "
+                f"Got {type(toolkit_registry)}"
             )
 
         return inchi
@@ -3056,8 +1591,8 @@ class FrozenMolecule(Serializable):
     ):
         """
         Create an InChIKey for the molecule using the requested toolkit backend.
-        InChIKey is a standardised representation that does not capture tautomers unless specified using the fixed hydrogen
-        layer.
+        InChIKey is a standardised representation that does not capture tautomers unless specified
+        using the fixed hydrogen layer.
 
         For information on InChi see here https://iupac.org/who-we-are/divisions/division-details/inchi/
 
@@ -3067,7 +1602,8 @@ class FrozenMolecule(Serializable):
             If a fixed hydrogen layer should be added to the InChI, if `True` this will produce a non standard specific
             InChI string of the molecule.
 
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
+        toolkit_registry : openff.toolkit.utils.toolkits.ToolRegistry
+            or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for molecule-to-InChIKey conversion
 
         Returns
@@ -3090,9 +1626,8 @@ class FrozenMolecule(Serializable):
             inchi_key = toolkit.to_inchikey(self, fixed_hydrogens=fixed_hydrogens)
         else:
             raise InvalidToolkitRegistryError(
-                "Invalid toolkit_registry passed to to_inchikey. Expected ToolkitRegistry or ToolkitWrapper. Got  {}".format(
-                    type(toolkit_registry)
-                )
+                "Invalid toolkit_registry passed to to_inchikey. Expected ToolkitRegistry or ToolkitWrapper. "
+                f"Got {type(toolkit_registry)}"
             )
 
         return inchi_key
@@ -3114,7 +1649,8 @@ class FrozenMolecule(Serializable):
             The SMILES representation of the molecule.
         hydrogens_are_explicit : bool, default = False
             If False, the cheminformatics toolkit will perform hydrogen addition
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
+        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry
+            or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
         allow_undefined_stereo : bool, default=False
             Whether to accept SMILES with undefined stereochemistry. If False,
@@ -3149,9 +1685,8 @@ class FrozenMolecule(Serializable):
             )
         else:
             raise InvalidToolkitRegistryError(
-                "Invalid toolkit_registry passed to from_smiles. Expected ToolkitRegistry or ToolkitWrapper. Got  {}".format(
-                    type(toolkit_registry)
-                )
+                "Invalid toolkit_registry passed to from_smiles. Expected ToolkitRegistry or ToolkitWrapper. "
+                f"Got {type(toolkit_registry)}"
             )
 
         return molecule
@@ -3189,47 +1724,72 @@ class FrozenMolecule(Serializable):
         toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
     ):
         """
-        Determines whether the two molecules are isomorphic by comparing their graph representations and the chosen
-        node/edge attributes. Minimally connections and atomic_number are checked.
+        Determine if ``mol1`` is isomorphic to ``mol2``.
 
-        If nx.Graphs() are given they must at least have atomic_number attributes on nodes.
-        other optional attributes for nodes are: is_aromatic, formal_charge and stereochemistry.
-        optional attributes for edges are: is_aromatic, bond_order and stereochemistry.
+        ``are_isomorphic()`` compares two molecule's graph representations and
+        the chosen node/edge attributes. Connections and atomic numbers are
+        always checked.
+
+        If nx.Graphs() are given they must at least have ``atomic_number``
+        attributes on nodes. Other attributes that ``are_isomorphic()`` can
+        optionally check...
+
+        -  ... in nodes are:
+
+           -  ``is_aromatic``
+           -  ``formal_charge``
+           -  ``stereochemistry``
+
+        -  ... in edges are:
+
+           -  ``is_aromatic``
+           -  ``bond_order``
+           -  ``stereochemistry``
+
+        By default, all attributes are checked, but stereochemistry around
+        pyrimidal nitrogen is ignored.
 
         .. warning :: This API is experimental and subject to change.
 
         Parameters
         ----------
         mol1 : an openff.toolkit.topology.molecule.FrozenMolecule or nx.Graph()
+            The first molecule to test for isomorphism.
+
         mol2 : an openff.toolkit.topology.molecule.FrozenMolecule or nx.Graph()
-            The molecule to test for isomorphism.
+            The second molecule to test for isomorphism.
 
         return_atom_map: bool, default=False, optional
-            will return an optional dict containing the atomic mapping.
+            Return a ``dict`` containing the atomic mapping instead of a
+            ``bool``.
 
         aromatic_matching: bool, default=True, optional
-            compare the aromatic attributes of bonds and atoms.
+            If ``False``, aromaticity of graph nodes and edges are ignored for
+            the purpose of determining isomorphism.
 
         formal_charge_matching: bool, default=True, optional
-            compare the formal charges attributes of the atoms.
+            If ``False``, formal charges of graph nodes are ignored for
+            the purpose of determining isomorphism.
 
-        bond_order_matching: bool, deafult=True, optional
-            compare the bond order on attributes of the bonds.
+        bond_order_matching: bool, default=True, optional
+            If ``False``, bond orders of graph edges are ignored for
+            the purpose of determining isomorphism.
 
         atom_stereochemistry_matching : bool, default=True, optional
             If ``False``, atoms' stereochemistry is ignored for the
-            purpose of determining equality.
+            purpose of determining isomorphism.
 
         bond_stereochemistry_matching : bool, default=True, optional
             If ``False``, bonds' stereochemistry is ignored for the
-            purpose of determining equality.
+            purpose of determining isomorphism.
 
         strip_pyrimidal_n_atom_stereo: bool, default=True, optional
             If ``True``, any stereochemistry defined around pyrimidal
             nitrogen stereocenters will be disregarded in the isomorphism
             check.
 
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
+        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry
+            or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for
             removing stereochemistry from pyrimidal nitrogens.
 
@@ -3375,7 +1935,8 @@ class FrozenMolecule(Serializable):
             nitrogen stereocenters will be disregarded in the isomorphism
             check.
 
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
+        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry
+            or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for
             removing stereochemistry from pyrimidal nitrogens.
 
@@ -3409,6 +1970,7 @@ class FrozenMolecule(Serializable):
         n_conformers=10,
         rms_cutoff=None,
         clear_existing=True,
+        make_carboxylic_acids_cis=True,
     ):
         """
         Generate conformers for this molecule using an underlying toolkit.
@@ -3418,16 +1980,22 @@ class FrozenMolecule(Serializable):
 
         Parameters
         ----------
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
+        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or
+            openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
         n_conformers : int, default=1
             The maximum number of conformers to produce
         rms_cutoff : openmm.unit.Quantity-wrapped float, in units of distance, optional, default=None
             The minimum RMS value at which two conformers are considered redundant and one is deleted. Precise
-            implementation of this cutoff may be toolkit-dependent. If ``None``, the cutoff is set to be the default value
-            for each ``ToolkitWrapper`` (generally 1 Angstrom).
+            implementation of this cutoff may be toolkit-dependent. If ``None``, the cutoff is set to be the
+            default value for each ``ToolkitWrapper`` (generally 1 Angstrom).
         clear_existing : bool, default=True
             Whether to overwrite existing conformers for the molecule
+        make_carboxylic_acids_cis: bool, default=True
+            Guarantee all conformers have exclusively cis carboxylic acid groups (COOH)
+            by rotating the proton in any trans carboxylic acids 180 degrees around the
+            C-O bond. Works around a bug in conformer generation by the OpenEye toolkit
+            where trans COOH is much more common than it should be.
 
         Examples
         --------
@@ -3455,6 +2023,7 @@ class FrozenMolecule(Serializable):
                 rms_cutoff=rms_cutoff,
                 clear_existing=clear_existing,
                 raise_exception_types=[],
+                make_carboxylic_acids_cis=make_carboxylic_acids_cis,
             )
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
@@ -3463,66 +2032,157 @@ class FrozenMolecule(Serializable):
                 n_conformers=n_conformers,
                 rms_cutoff=rms_cutoff,
                 clear_existing=clear_existing,
+                make_carboxylic_acids_cis=make_carboxylic_acids_cis,
             )
         else:
             raise InvalidToolkitRegistryError(
-                "Invalid toolkit_registry passed to generate_conformers. Expected ToolkitRegistry or ToolkitWrapper. Got  {}".format(
-                    type(toolkit_registry)
-                )
+                "Invalid toolkit_registry passed to generate_conformers. Expected ToolkitRegistry or ToolkitWrapper. "
+                f"Got {type(toolkit_registry)}"
             )
 
-    def compute_virtual_site_positions_from_conformer(self, conformer_idx):
+    def _make_carboxylic_acids_cis(self, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """
-        Compute the position of all virtual sites given an existing
-        conformer specified by its index.
+        Rotate dihedral angle of any conformers with trans COOH groups so they are cis
+
+        Carboxylic acid groups almost always exist in nature in the cis conformation,
+        with the hydrogen atom in between the two oxygen atoms::
+
+                  O----H
+                 /
+                /
+               /
+            --C
+               \\
+                \\
+                  O
+
+        However, the OpenEye toolkit frequently produces carboxylic acid geometries
+        in the unrealistic trans conformation::
+
+             H----O
+                 /
+                /
+               /
+            --C
+               \\
+                \\
+                  O
+
+        This method converts all conformers in the molecule with the trans conformation
+        into the corresponding cis conformer by rotating the OH bond around the CO bond
+        by 180 degrees. Carboxylic acids that are already cis are unchanged. Carboxylic
+        acid groups are considered cis if their O-C-O-H dihedral angle is acute.
 
         Parameters
         ----------
-        conformer_idx : int
-            The index of the conformer.
-
-        Returns
-        -------
-        :class:`openmm.unit.Quantity` of dimension [Length] in unit Angstroms wrapping a
-        numpy.ndarray
-            The positions of the virtual particles belonging to this virtual site.
-            The array is the size (M, 3) where M is the number of virtual particles
-            belonging to this virtual site.
+        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry
+            or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
+            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
         """
 
-        atom_positions = self._conformers[conformer_idx]
-        return self.compute_virtual_site_positions_from_atom_positions(atom_positions)
+        # Return early if there are no conformers
+        if not self._conformers:
+            return
 
-    def compute_virtual_site_positions_from_atom_positions(self, atom_positions):
-        """
-        Compute the positions of the virtual sites in this molecule given a set of
-        external coordinates. The coordinates do not need come from an internal
-        conformer, but are assumed to have the same shape and be in the same order.
+        # Convert all conformers into one big array
+        conformers = np.asarray([q.m_as(unit.angstrom) for q in self._conformers])
 
-        Parameters
-        ----------
-        atom_positions : :class:`openmm.unit.Quantity` of dimension [Length] wrapping a
-        numpy.ndarray
-            The positions of all atoms in the molecule. The array is the size (N, 3)
-            where N is the number of atoms in the molecule.
+        # Scan the molecule for carboxylic acids
+        cooh_indices = self.chemical_environment_matches(
+            "[C:2]([O:3][H:4])=[O:1]", toolkit_registry=toolkit_registry
+        )
+        n_conformers, n_cooh_groups = len(conformers), len(cooh_indices)
+        # Exit early if there are no carboxylic acids
+        if not n_cooh_groups:
+            return
 
-        Returns
-        -------
-        :class:`openmm.unit.Quantity` of dimension [Length] in unit Angstroms wrapping a
-        numpy.ndarray
-            The positions of the virtual particles belonging to this virtual site.
-            The array is the size (M, 3) where M is the number of virtual particles
-            belonging to this virtual site.
+        # Pull out the coordinates of all carboxylic acid groups into cooh_xyz
+        cooh_xyz = conformers[:, cooh_indices, :]
+        assert cooh_xyz.shape == (n_conformers, n_cooh_groups, 4, 3)
 
-        """
+        def dot(a, b):
+            """Compute dot product along last axis of arrays"""
+            return np.sum(a * b, axis=-1)[..., np.newaxis]
 
-        positions = []
+        def norm(a):
+            """Compute norm along last axis of array"""
+            return np.linalg.norm(a, axis=-1)[..., np.newaxis]
 
-        for vsite in self.virtual_sites:
-            vsite_pos = vsite.compute_positions_from_atom_positions(atom_positions)
-            positions.append(vsite_pos.m_as(unit.angstrom))
+        def dihedral(a):
+            """Compute dihedrals of array with shape (..., 4, 3)"""
+            # Praxeolitic formula
+            # 1 sqrt, 1 cross product
+            # from https://stackoverflow.com/q/20305272
+            p0 = a[..., 0, :]
+            p1 = a[..., 1, :]
+            p2 = a[..., 2, :]
+            p3 = a[..., 3, :]
 
-        return unit.Quantity(np.array(positions).reshape(-1, 3), units=unit.angstrom)
+            b0 = -1.0 * (p1 - p0)
+            b1 = p2 - p1
+            b2 = p3 - p2
+
+            # normalize b1 so that it does not influence magnitude of vector
+            # rejections that come next
+            b1 /= norm(b1)
+
+            # vector rejections
+            # v = projection of b0 onto plane perpendicular to b1
+            #   = b0 minus component that aligns with b1
+            # w = projection of b2 onto plane perpendicular to b1
+            #   = b2 minus component that aligns with b1
+            v = b0 - dot(b0, b1) * b1
+            w = b2 - dot(b2, b1) * b1
+
+            # angle between v and w in a plane is the torsion angle
+            # v and w may not be normalized but that's fine since tan is y/x
+            x = dot(v, w)
+            y = dot(np.cross(b1, v), w)
+            return np.arctan2(y, x)
+
+        dihedrals = dihedral(cooh_xyz)
+        assert dihedrals.shape == (n_conformers, n_cooh_groups, 1)
+        dihedrals.shape = (n_conformers, n_cooh_groups, 1, 1)
+
+        # Get indices of trans COOH groups
+        trans_indices = np.logical_not(
+            np.logical_and((-np.pi / 2) < dihedrals, dihedrals < (np.pi / 2))
+        )
+        # Expand array so it can be used to index cooh_xyz
+        trans_indices = np.repeat(trans_indices, repeats=4, axis=2)
+        trans_indices = np.repeat(trans_indices, repeats=3, axis=3)
+        # Get indices of individual atoms in trans COOH groups (except terminal O)
+        trans_indices_h = trans_indices.copy()
+        trans_indices_h[:, :, (0, 1, 2), :] = False
+        trans_indices_c = trans_indices.copy()
+        trans_indices_c[:, :, (0, 2, 3), :] = False
+        trans_indices_o = trans_indices.copy()
+        trans_indices_o[:, :, (0, 1, 3), :] = False
+
+        # Rotate OH around CO bond
+        # We want to rotate H 180 degrees around the CO bond (b1)
+        c = cooh_xyz[trans_indices_c].reshape(-1, 3)
+        o = cooh_xyz[trans_indices_o].reshape(-1, 3)
+        h = cooh_xyz[trans_indices_h].reshape(-1, 3)
+        # Axis is defined as the line from the origin along a unit vector, so
+        # move C to the origin and normalize
+        point = h - c
+        axis = o - c
+        axis /= norm(axis)
+        # Do the rotation
+        # https://en.wikipedia.org/wiki/Rotation_matrix#Rotation_matrix_from_axis_and_angle
+        rotated = axis * (dot(axis, point)) - np.cross(np.cross(axis, point), axis)
+        # Move rotated point back to original coordinates
+        rotated = rotated + c
+
+        # Update the coordinates
+        cooh_xyz[trans_indices_h] = rotated.reshape((-1))
+
+        # Update conformers with rotated coordinates
+        conformers[:, cooh_indices, :] = cooh_xyz
+
+        # Return conformers to original type
+        self._conformers = [unit.Quantity(conf, unit.angstrom) for conf in conformers]
 
     def apply_elf_conformer_selection(
         self,
@@ -3533,23 +2193,13 @@ class FrozenMolecule(Serializable):
         ] = GLOBAL_TOOLKIT_REGISTRY,
         **kwargs,
     ):
-        """Applies the `ELF method
+        """Select a set of diverse conformers from the molecule's conformers with ELF.
+
+        Applies the `Electrostatically Least-interacting Functional groups method
         <https://docs.eyesopen.com/toolkits/python/quacpactk/molchargetheory.html#elf-conformer-selection>`_
         to select a set of diverse conformers which have minimal
-        electrostatically strongly interacting functional groups from a
-        molecules conformers.
-
-        Notes
-        -----
-        * The input molecule should have a large set of conformers already
-          generated to select the ELF conformers from.
-        * The selected conformers will be retained in the `conformers` list
-          while unselected conformers will be discarded.
-
-        See Also
-        --------
-        OpenEyeToolkitWrapper.apply_elf_conformer_selection
-        RDKitToolkitWrapper.apply_elf_conformer_selection
+        electrostatically strongly interacting functional groups from the
+        molecule's conformers.
 
         Parameters
         ----------
@@ -3560,6 +2210,18 @@ class FrozenMolecule(Serializable):
             interaction energies to greedily select from.
         limit
             The maximum number of conformers to select.
+
+        Notes
+        -----
+        * The input molecule should have a large set of conformers already
+          generated to select the ELF conformers from.
+        * The selected conformers will be retained in the `conformers` list
+          while unselected conformers will be discarded.
+
+        See Also
+        --------
+        openff.toolkit.utils.toolkits.OpenEyeToolkitWrapper.apply_elf_conformer_selection
+        openff.toolkit.utils.toolkits.RDKitToolkitWrapper.apply_elf_conformer_selection
         """
         if isinstance(toolkit_registry, ToolkitRegistry):
             toolkit_registry.call(
@@ -3572,7 +2234,7 @@ class FrozenMolecule(Serializable):
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
             toolkit.apply_elf_conformer_selection(  # type: ignore[attr-defined]
-                self, molecule=self, percentage=percentage, limit=limit, **kwargs
+                molecule=self, percentage=percentage, limit=limit, **kwargs
             )
         else:
             raise InvalidToolkitRegistryError(
@@ -3588,6 +2250,12 @@ class FrozenMolecule(Serializable):
         toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
     ):
         """
+        .. deprecated:: 0.11.0
+
+            This method was deprecated in v0.11.0 and will soon be removed.
+            Use :py:meth:`assign_partial_charges(partial_charge_method='am1bcc')
+            <Molecule.assign_partial_charges>` instead.
+
         Calculate partial atomic charges for this molecule using AM1-BCC run by an underlying toolkit
         and assign them to this molecule's ``partial_charges`` attribute.
 
@@ -3596,10 +2264,11 @@ class FrozenMolecule(Serializable):
         strict_n_conformers : bool, default=False
             Whether to raise an exception if an invalid number of conformers is provided for the given charge method.
             If this is False and an invalid number of conformers is found, a warning will be raised.
-        use_conformers : iterable of openmm.unit.Quantity-wrapped numpy arrays, each with shape (n_atoms, 3) and dimension of distance. Optional, default=None
-            Coordinates to use for partial charge calculation.
+        use_conformers : iterable of openmm.unit.Quantity-wrapped numpy arrays, each with shape (n_atoms, 3)
+            and dimension of distance. Optional, default=None Coordinates to use for partial charge calculation.
             If None, an appropriate number of conformers for the given charge method will be generated.
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
+        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry
+        or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for the calculation
 
         Examples
@@ -3615,6 +2284,12 @@ class FrozenMolecule(Serializable):
             If an invalid object is passed as the toolkit_registry parameter
 
         """
+        # TODO: Remove in version 0.12.0
+        warnings.warn(
+            "compute_partial_charges_am1bcc is deprecated and will be removed in version 0.12.0. "
+            "Use assign_partial_charges(partial_charge_method='am1bcc') instead.",
+            UserWarning,
+        )
         self.assign_partial_charges(
             partial_charge_method="am1bcc",
             use_conformers=use_conformers,
@@ -3624,31 +2299,61 @@ class FrozenMolecule(Serializable):
 
     def assign_partial_charges(
         self,
-        partial_charge_method,
+        partial_charge_method: str,
         strict_n_conformers=False,
         use_conformers=None,
         toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
         normalize_partial_charges=True,
     ):
         """
-        Calculate partial atomic charges for this molecule using an underlying toolkit, and assign
-        the new values to the partial_charges attribute.
+        Calculate partial atomic charges and store them in the molecule.
+
+        ``assign_partial_charges`` computes charges using the specified toolkit
+        and assigns the new values to the ``partial_charges`` attribute.
+        Supported charge methods vary from toolkit to toolkit, but some
+        supported methods are:
+
+        - ``"am1bcc"``
+        - ``"am1bccelf10"`` (requires OpenEye Toolkits)
+        - ``"am1-mulliken"``
+        - ``"mmff94"``
+        - ``"gasteiger"``
+
+        For more supported charge methods and details, see the corresponding
+        methods in each toolkit wrapper:
+
+        - :meth:`OpenEyeToolkitWrapper.assign_partial_charges
+            <openff.toolkit.utils.toolkits.OpenEyeToolkitWrapper.assign_partial_charges>`
+        - :meth:`RDKitToolkitWrapper.assign_partial_charges
+            <openff.toolkit.utils.toolkits.RDKitToolkitWrapper.assign_partial_charges>`
+        - :meth:`AmberToolsToolkitWrapper.assign_partial_charges
+            <openff.toolkit.utils.toolkits.AmberToolsToolkitWrapper.assign_partial_charges>`
+        - :meth:`BuiltInToolkitWrapper.assign_partial_charges
+            <openff.toolkit.utils.toolkits.BuiltInToolkitWrapper.assign_partial_charges>`
 
         Parameters
         ----------
         partial_charge_method : string
-            The partial charge calculation method to use for partial charge calculation.
+            The partial charge calculation method to use for partial charge
+            calculation.
         strict_n_conformers : bool, default=False
-            Whether to raise an exception if an invalid number of conformers is provided for the given charge method.
-            If this is False and an invalid number of conformers is found, a warning will be raised.
-        use_conformers : iterable of openmm.unit.Quantity-wrapped numpy arrays, each with shape (n_atoms, 3) and dimension of distance. Optional, default=None
-            Coordinates to use for partial charge calculation. If None, an appropriate number of conformers will be generated.
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
-            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for the calculation.
+            Whether to raise an exception if an invalid number of conformers is
+            provided for the given charge method. If this is False and an
+            invalid number of conformers is found, a warning will be raised.
+        use_conformers : iterable of openmm.unit.Quantity-wrapped numpy arrays, each with shape (n_atoms, 3) and
+            dimension of distance. Optional, default=None
+            Coordinates to use for partial charge calculation. If None, an
+            appropriate number of conformers will be generated.
+        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or
+            openff.toolkit.utils.toolkits.ToolkitWrapper,
+            optional, default=None
+            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for the
+            calculation.
         normalize_partial_charges : bool, default=True
-            Whether to offset partial charges so that they sum to the total formal charge of the molecule.
-            This is used to prevent accumulation of rounding errors when the partial charge assignment method
-            returns values at limited precision.
+            Whether to offset partial charges so that they sum to the total
+            formal charge of the molecule. This is used to prevent accumulation
+            of rounding errors when the partial charge assignment method returns
+            values at limited precision.
 
         Examples
         --------
@@ -3661,6 +2366,12 @@ class FrozenMolecule(Serializable):
         InvalidToolkitRegistryError
             If an invalid object is passed as the toolkit_registry parameter
 
+        See Also
+        --------
+        openff.toolkit.utils.toolkits.OpenEyeToolkitWrapper.assign_partial_charges
+        openff.toolkit.utils.toolkits.RDKitToolkitWrapper.assign_partial_charges
+        openff.toolkit.utils.toolkits.AmberToolsToolkitWrapper.assign_partial_charges
+        openff.toolkit.utils.toolkits.BuiltInToolkitWrapper.assign_partial_charges
         """
         if isinstance(toolkit_registry, ToolkitRegistry):
             # We may need to try several toolkitwrappers to find one
@@ -3678,8 +2389,8 @@ class FrozenMolecule(Serializable):
                 _cls=self.__class__,
             )
         elif isinstance(toolkit_registry, ToolkitWrapper):
-            toolkit = toolkit_registry
-            toolkit.assign_partial_charges(
+            toolkit_wrapper: ToolkitWrapper = toolkit_registry
+            toolkit_wrapper.assign_partial_charges(  # type: ignore[attr-defined]
                 self,
                 partial_charge_method=partial_charge_method,
                 use_conformers=use_conformers,
@@ -3715,20 +2426,24 @@ class FrozenMolecule(Serializable):
         use_conformers=None,
     ):
         """
-        Update and store list of bond orders this molecule. Bond orders are stored on each
-        bond, in the ``bond.fractional_bond_order`` attribute.
+        Update and store list of bond orders this molecule.
+
+        Bond orders are stored on each bond, in the
+        ``bond.fractional_bond_order`` attribute.
 
         .. warning :: This API is experimental and subject to change.
 
         Parameters
         ----------
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
+        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or
+            openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
         bond_order_model : string, optional. Default=None
-            The bond order model to use for fractional bond order calculation. If ``None``, "am1-wiberg" will be used.
-        use_conformers : iterable of openmm.unit.Quantity(np.array) with shape (n_atoms, 3) and dimension of distance, optional, default=None
+            The bond order model to use for fractional bond order calculation. If ``None``, ``"am1-wiberg"`` is used.
+        use_conformers : iterable of openmm.unit.Quantity(np.array) with shape (n_atoms, 3) and dimension of distance,
+            optional, default=None
             The conformers to use for fractional bond order calculation. If ``None``, an appropriate number
-            of conformers will be generated by an available ToolkitWrapper.
+            of conformers will be generated by an available ``ToolkitWrapper``.
 
         Examples
         --------
@@ -3742,7 +2457,6 @@ class FrozenMolecule(Serializable):
             If an invalid object is passed as the toolkit_registry parameter
 
         """
-        bond_order_model = bond_order_model.lower()
 
         if isinstance(toolkit_registry, ToolkitRegistry):
             return toolkit_registry.call(
@@ -3775,18 +2489,16 @@ class FrozenMolecule(Serializable):
 
         self._cached_smiles = None
         # TODO: Clear fractional bond orders
-        self._rings = None
         self._ordered_connection_table_hash = None
         for atom in self.atoms:
             if "molecule_atom_index" in atom.__dict__:
                 del atom.__dict__["molecule_atom_index"]
 
     def to_networkx(self):
-        """Generate a NetworkX undirected graph from the Molecule.
+        """Generate a NetworkX undirected graph from the molecule.
 
         Nodes are Atoms labeled with particle indices and atomic elements (via the ``element`` node atrribute).
         Edges denote chemical bonds between Atoms.
-        Virtual sites are not included, since they lack a concept of chemical connectivity.
 
         .. todo ::
 
@@ -3800,8 +2512,8 @@ class FrozenMolecule(Serializable):
         Returns
         -------
         graph : networkx.Graph
-            The resulting graph, with nodes (atoms) labeled with atom indices, elements, stereochemistry and aromaticity
-            flags and bonds with two atom indices, bond order, stereochemistry, and aromaticity flags
+            The resulting graph, with nodes (atoms) labeled with atom indices, elements, stereochemistry and
+            aromaticity flags and bonds with two atom indices, bond order, stereochemistry, and aromaticity flags
 
         Examples
         --------
@@ -3846,7 +2558,8 @@ class FrozenMolecule(Serializable):
         ignore_functional_groups: optional, List[str], default=None,
             A list of bond SMARTS patterns to be ignored when finding rotatable bonds.
 
-        toolkit_registry: openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
+        toolkit_registry: openff.toolkit.utils.toolkits.ToolkitRegistry
+            or openff.toolkit.utils.toolkits.ToolkitWrapperl, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMARTS matching
 
         Returns
@@ -3916,6 +2629,7 @@ class FrozenMolecule(Serializable):
         stereochemistry=None,
         name=None,
         metadata=None,
+        invalidate_cache: bool = True,
     ):
         """
         Add an atom
@@ -3936,6 +2650,9 @@ class FrozenMolecule(Serializable):
             An optional dictionary where keys are strings and values are strings or ints. This is intended
             to record atom-level information used to inform hierarchy definition and iteration, such as
             grouping atom by residue and chain.
+        invalidate_cache : bool, default=True
+            Whether or not to invalidate the cache of the molecule upon the addition of this atom. This should
+            be left to its default value (`True`) for safety.
 
         Returns
         -------
@@ -3971,192 +2688,11 @@ class FrozenMolecule(Serializable):
             molecule=self,
         )
         self._atoms.append(atom)
-        # self._particles.append(atom)
-        self._invalidate_cached_properties()
-        return self._atoms.index(atom)
+        if invalidate_cache:
+            self._invalidate_cached_properties()
 
-    def _add_virtual_site(self, vsite, replace=False):
-        replaced = False
-        for i, existing_vsite in enumerate(self._virtual_sites):
-            same_vsite = existing_vsite == vsite
-            if same_vsite:
-                if replace:
-                    self._virtual_sites[i] = vsite
-                    replaced = True
-                    break
-                else:
-                    error_msg = (
-                        "Attempted to add the new virtual site:\n{}\n"
-                        + "to molecule: \n{}\nAnother vsite with the same type "
-                        + "already exists and replace=False. Existing vsite "
-                        + "is:\n{}\n"
-                    ).format(vsite, self, existing_vsite)
-                    raise Exception(error_msg)
-        if not replaced:
-            self._virtual_sites.append(vsite)
-        return self._virtual_sites.index(vsite)
-
-    def _add_bond_charge_virtual_site(self, atoms, distance, **kwargs):
-        """
-        Create a bond charge-type virtual site, in which the location of the charge is specified by the position of two
-        atoms. This supports placement of a virtual site S along a vector between two specified atoms, e.g. to allow
-        for a sigma hole for halogens or similar contexts. With positive values of the distance, the virtual site lies
-        outside the first indexed atom.
-
-        Parameters
-        ----------
-        atoms : list of openff.toolkit.topology.molecule.Atom objects of shape [N]
-            The atoms defining the virtual site's position
-
-        distance : :class:`openmm.unit.Quantity` of dimension [Length] wrapping a scalar
-
-        charge_increments : list of floats of shape [N], optional, default=None
-            The amount of charge to remove from the VirtualSite's atoms and put in the VirtualSite. Indexing in this
-            list should match the ordering in the atoms list. Default is None.
-        epsilon : float
-            Epsilon term for VdW properties of virtual site. Default is None.
-        sigma : float, default=None
-            Sigma term for VdW properties of virtual site. Default is None.
-        rmin_half : float
-            Rmin_half term for VdW properties of virtual site. Default is None.
-        name : string or None, default=None
-            The name of this virtual site. Default is None.
-        orientations : list of int 2-tuples
-            The orientations that should be used to create the virtual site.
-            Each orientation corresponds to an individual virtual particle.
-
-        Returns
-        -------
-        index : int
-            The index of the newly-added virtual site in the molecule
-        """
-
-        replace = kwargs.pop("replace", False)
-
-        vsite = BondChargeVirtualSite(atoms, distance, **kwargs)
-
-        self._add_virtual_site(vsite, replace=replace)
-        return self._virtual_sites.index(vsite)
-
-    def _add_monovalent_lone_pair_virtual_site(
-        self, atoms, distance, out_of_plane_angle, in_plane_angle, **kwargs
-    ):
-        """
-        Create a bond charge-type virtual site, in which the location of the charge is specified by the position of
-        three atoms.
-
-        Parameters
-        ----------
-        atoms : list of three :class:`openff.toolkit.topology.molecule.Atom` objects
-            The three atoms defining the virtual site's position
-
-        distance : :class:`openmm.unit.Quantity` of dimension [Length] wrapping a scalar
-
-        out_of_plane_angle : :class:`openmm.unit.Quantity` of dimension [Angle] wrapping
-        a scalar
-
-        in_plane_angle : :class:`openmm.unit.Quantity` of dimension [Angle] wrapping a
-        scalar
-
-        epsilon : float
-            Epsilon term for VdW properties of virtual site. Default is None.
-        sigma : float, default=None
-            Sigma term for VdW properties of virtual site. Default is None.
-        rmin_half : float
-            Rmin_half term for VdW properties of virtual site. Default is None.
-        name : string or None, default=None
-            The name of this virtual site. Default is None.
-        orientations : list of int 3-tuples
-            The orientations that should be used to create the virtual site.
-            Each orientation corresponds to an individual virtual particle.
-
-        Returns
-        -------
-        index : int
-            The index of the newly-added virtual site in the molecule
-        """
-
-        replace = kwargs.pop("replace", False)
-
-        vsite = MonovalentLonePairVirtualSite(
-            atoms, distance, out_of_plane_angle, in_plane_angle, **kwargs
-        )
-
-        self._add_virtual_site(vsite, replace=replace)
-        return self._virtual_sites.index(vsite)
-
-    def _add_divalent_lone_pair_virtual_site(
-        self, atoms, distance, out_of_plane_angle, **kwargs
-    ):
-        """
-        Create a divalent lone pair-type virtual site, in which the location of the charge is specified by the position
-        of three atoms.
-
-        Parameters
-        ----------
-        atoms : list of three :class:`openff.toolkit.topology.molecule.Atom` objects
-            The three atoms defining the virtual site's position
-
-        distance : :class:`openmm.unit.Quantity` of dimension [Length] wrapping a scalar
-
-        out_of_plane_angle : :class:`openmm.unit.Quantity` of dimension [Angle] wrapping
-        a scalar
-
-        epsilon : float
-            Epsilon term for VdW properties of virtual site. Default is None.
-        sigma : float, default=None
-            Sigma term for VdW properties of virtual site. Default is None.
-        rmin_half : float
-            Rmin_half term for VdW properties of virtual site. Default is None.
-        name : string or None, default=None
-            The name of this virtual site. Default is None.
-        orientations : list of int 3-tuples
-            The orientations that should be used to create the virtual site.
-            Each orientation corresponds to an individual virtual particle.
-
-        Returns
-        -------
-        index : int
-            The index of the newly-added virtual site in the molecule
-        """
-
-        replace = kwargs.pop("replace", False)
-
-        vsite = DivalentLonePairVirtualSite(
-            atoms, distance, out_of_plane_angle, **kwargs
-        )
-
-        self._add_virtual_site(vsite, replace=replace)
-        return self._virtual_sites.index(vsite)
-
-    def _add_trivalent_lone_pair_virtual_site(self, atoms, distance, **kwargs):
-        """
-        Create a trivalent lone pair-type virtual site, in which the location of the charge is specified by the position
-         of four atoms.
-
-        Parameters
-        ----------
-        atoms : list of 4 :class:`openff.toolkit.topology.molecule.Atom` objects
-            The four atoms defining the virtual site's position
-
-        distance : :class:`openmm.unit.Quantity` of dimension [Length] wrapping a scalar
-
-        epsilon : float
-            Epsilon term for VdW properties of virtual site. Default is None.
-        sigma : float, default=None
-            Sigma term for VdW properties of virtual site. Default is None.
-        rmin_half : float
-            Rmin_half term for VdW properties of virtual site. Default is None.
-        name : string or None, default=None
-            The name of this virtual site. Default is None.
-        """
-
-        replace = kwargs.pop("replace", False)
-
-        vsite = TrivalentLonePairVirtualSite(atoms, distance, **kwargs)
-
-        self._add_virtual_site(vsite, replace=replace)
-        return self._virtual_sites.index(vsite)
+        # Since we just appended it, we can just return the length - 1
+        return len(self._atoms) - 1
 
     def _add_bond(
         self,
@@ -4166,6 +2702,7 @@ class FrozenMolecule(Serializable):
         is_aromatic,
         stereochemistry=None,
         fractional_bond_order=None,
+        invalidate_cache: bool = True,
     ):
         """
         Add a bond between two specified atom indices
@@ -4184,6 +2721,10 @@ class FrozenMolecule(Serializable):
             Either 'E' or 'Z' for specified stereochemistry, or None if stereochemistry is irrelevant
         fractional_bond_order : float, optional, default=None
             The fractional (eg. Wiberg) bond order
+        invalidate_cache : bool, default=True
+            Whether or not to invalidate the cache of the molecule upon the addition of this atom. This should
+            be left to its default value (`True`) for safety.
+
         Returns
         -------
         index : int
@@ -4199,14 +2740,12 @@ class FrozenMolecule(Serializable):
         else:
             raise Exception(
                 "Invalid inputs to molecule._add_bond. Expected ints or Atoms. "
-                "Received {} (type {}) and {} (type {}) ".format(
-                    atom1, type(atom1), atom2, type(atom2)
-                )
+                f"Received {atom1} (type {type(atom1)}) and {atom2} (type {type(atom2)}) "
             )
         # TODO: Check to make sure bond does not already exist
         if atom1_atom.is_bonded_to(atom2_atom):
             raise Exception(
-                "Bond already exists between {} and {}".format(atom1_atom, atom2_atom)
+                f"Bond already exists between {atom1_atom} and {atom2_atom})"
             )
         bond = Bond(
             atom1_atom,
@@ -4217,9 +2756,11 @@ class FrozenMolecule(Serializable):
             fractional_bond_order=fractional_bond_order,
         )
         self._bonds.append(bond)
-        self._invalidate_cached_properties()
-        # TODO: This is a bad way to get bond index
-        return self._bonds.index(bond)
+        if invalidate_cache:
+            self._invalidate_cached_properties()
+
+        # Since we just appended it, we can just return the length - 1
+        return len(self._bonds) - 1
 
     def _add_conformer(self, coordinates):
         """
@@ -4229,57 +2770,63 @@ class FrozenMolecule(Serializable):
         ----------
         coordinates: openmm.unit.Quantity(np.array) with shape (n_atoms, 3) and dimension of distance
             Coordinates of the new conformer, with the first dimension of the array corresponding to the atom index in
-            the Molecule's indexing system.
+            the molecule's indexing system.
 
         Returns
         -------
         index: int
             The index of this conformer
         """
-        new_conf = unit.Quantity(
-            np.zeros(shape=(self.n_atoms, 3), dtype=float), unit.angstrom
-        )
-        if not (new_conf.shape == coordinates.shape):
-            raise Exception(
+        if coordinates.shape != (self.n_atoms, 3):
+            raise InvalidConformerError(
                 "molecule.add_conformer given input of the wrong shape: "
-                "Given {}, expected {}".format(coordinates.shape, new_conf.shape)
+                f"Given {coordinates.shape}, expected {(self.n_atoms, 3)}"
             )
 
-        if isinstance(new_conf, unit.Quantity):
+        if isinstance(coordinates, unit.Quantity):
             if not coordinates.units.is_compatible_with(unit.angstrom):
-                raise Exception(
+                raise IncompatibleUnitError(
                     "Coordinates passed to Molecule._add_conformer with incompatible units. "
                     "Ensure that units are dimension of length."
                 )
-        elif hasattr(new_conf, "unit"):
+
+        elif hasattr(coordinates, "unit"):
+            from openff.units.openmm import from_openmm
             from openmm import unit as openmm_unit
 
-            if not isinstance(other, openmm_unit.Quantity):
+            if not isinstance(coordinates, openmm_unit.Quantity):
                 raise IncompatibleUnitError(
-                    "Unsupported type passed to formal_charge setter. "
+                    "Unsupported type passed to Molecule._add_conformer setter. "
                     "Found object of type {type(other)}."
                 )
 
             if not coordinates.unit.is_compatible(openmm_unit.meter):
-                raise Exception(
-                    "Coordinates passed to Molecule._add_conformer with incompatible units. "
+                raise IncompatibleUnitError(
+                    "Coordinates passed to Molecule._add_conformer with units of incompatible dimensionality. "
+                    f"Adding conformers with OpenMM-style units is supported, by found units of {coordinates.unit}. "
                     "Ensure that units are dimension of length."
                 )
+
+            coordinates = from_openmm(coordinates)
+
         else:
-            raise Exception(
-                "Coordinates passed to Molecule._add_conformer without units. Ensure that coordinates are "
-                "of type openmm.unit.Quantity or openff.units.unit.Quantity"
+            raise IncompatibleUnitError(
+                "Unknown object passed to Molecule._add_conformer. Expected types include "
+                f"openmm.unit.Quantity and openff.units.unit.Quantity, found type {type(coordinates)}."
             )
 
+        tmp_conf = unit.Quantity(
+            np.zeros(shape=(self.n_atoms, 3), dtype=float), unit.angstrom
+        )
         try:
-            new_conf[:] = coordinates
+            tmp_conf[:] = coordinates
         except AttributeError as e:
             print(e)
 
         if self._conformers is None:
             # TODO should we checking that the exact same conformer is not in the list already?
             self._conformers = []
-        self._conformers.append(new_conf)
+        self._conformers.append(tmp_conf)
         return len(self._conformers)
 
     @property
@@ -4290,7 +2837,7 @@ class FrozenMolecule(Serializable):
         Returns
         -------
         partial_charges : a openmm.unit.Quantity - wrapped numpy array [1 x n_atoms] or None
-            The partial charges on this Molecule's atoms. Returns None if no charges have been specified.
+            The partial charges on the molecule's atoms. Returns None if no charges have been specified.
         """
         return self._partial_charges
 
@@ -4302,7 +2849,8 @@ class FrozenMolecule(Serializable):
         Parameters
         ----------
         charges : None or a openmm.unit.Quantity - wrapped numpy array [1 x n_atoms]
-            The partial charges to assign to the molecule. If not None, must be in units compatible with openmm.unit.elementary_charge
+            The partial charges to assign to the molecule. If not None, must be in units compatible with
+            openmm.unit.elementary_charge
 
         """
         if charges is None:
@@ -4314,7 +2862,7 @@ class FrozenMolecule(Serializable):
             if hasattr(charges, "unit"):
                 from openmm import unit as openmm_unit
 
-                if not isinstance(other, openmm_unit.Quantity):
+                if not isinstance(charges, openmm_unit.Quantity):
                     raise IncompatibleUnitError(
                         "Unsupported type passed to partial_charges setter. "
                         "Found object of type {type(charges)}."
@@ -4328,85 +2876,57 @@ class FrozenMolecule(Serializable):
                         self._partial_charges = converted
 
     @property
-    def n_particles(self):
+    def n_particles(self) -> int:
         """
         The number of Particle objects, which corresponds to how many positions must be used.
         """
-        return len(self._atoms) + sum(
-            vsite.n_particles for vsite in self._virtual_sites
-        )
+        return len(self._atoms)
 
     @property
-    def n_atoms(self):
+    def n_atoms(self) -> int:
         """
         The number of Atom objects.
         """
         return len(self._atoms)
 
     @property
-    def n_virtual_sites(self):
-        """
-        The number of VirtualSite objects.
-        """
-        return len(self._virtual_sites)
-
-    @property
-    def n_virtual_particles(self):
-        """
-        The number of VirtualParticle objects.
-        """
-        return sum(vsite.n_particles for vsite in self._virtual_sites)
-
-    @property
     def n_bonds(self):
         """
-        The number of Bond objects.
+        The number of Bond objects in the molecule.
         """
         return sum([1 for bond in self.bonds])
 
     @property
-    def n_angles(self):
-        """int: number of angles in the Molecule."""
+    def n_angles(self) -> int:
+        """Number of angles in the molecule."""
         self._construct_angles()
         return len(self._angles)
 
     @property
-    def n_propers(self):
-        """int: number of proper torsions in the Molecule."""
+    def n_propers(self) -> int:
+        """Number of proper torsions in the molecule."""
         self._construct_torsions()
+        assert (
+            self._propers is not None
+        ), "_construct_torsions always sets _propers to a set"
         return len(self._propers)
 
     @property
-    def n_impropers(self):
-        """int: number of possible improper torsions in the Molecule."""
+    def n_impropers(self) -> int:
+        """Number of possible improper torsions in the molecule."""
         self._construct_torsions()
+        assert (
+            self._impropers is not None
+        ), "_construct_torsions always sets _impropers to a set"
         return len(self._impropers)
 
     @property
-    def n_rings(self):
-        """Return the number of rings found in the Molecule
-
-        Requires the RDKit to be installed.
-
-        .. note ::
-
-            For systems containing some special cases of connected rings, this
-            function may not be well-behaved and may report a different number
-            rings than expected. Some problematic cases include networks of many
-            (5+) rings or bicyclic moieties (i.e. norbornane).
-
+    def particles(self) -> List[Particle]:
         """
-        return len(self.rings)
-
-    @property
-    def particles(self):
-        """
-        Iterate over all Particle objects.
+        Iterate over all Particle objects in the molecule.
         """
 
-        return self._atoms + [
-            ptl for vsite in self._virtual_sites for ptl in vsite.particles
-        ]
+        return self._atoms
 
     def particle(self, index: int):
         """
@@ -4418,13 +2938,9 @@ class FrozenMolecule(Serializable):
 
         Returns
         -------
-        atom or virtualparticle : openff.toolkit.topology.Atom or VirtualParticle
+        atom: openff.toolkit.topology.Atom
         """
-        if index <= self.n_atoms:
-            return self.atom(index)
-        else:
-            index -= self.n_atoms
-            return self.virtual_particle(index)
+        return self.atom(index)
 
     def particle_index(self, particle):
         """
@@ -4444,56 +2960,15 @@ class FrozenMolecule(Serializable):
                 return index
 
     @property
-    def virtual_particles(self):
-        """
-        Iterate over all virtual particle objects.
-        """
-
-        return [ptl for vsite in self._virtual_sites for ptl in vsite.particles]
-
-    def virtual_particle(self, index: int):
-        """
-        Get virtual particle with a specified index.
-
-        Parameters
-        ----------
-        index : int
-
-        Returns
-        -------
-        virtualparticle : openff.toolkit.topology.VirtualParticle
-        """
-        for ptl_idx, ptl in enumerate(self.virtual_particles):
-            if index == ptl_idx:
-                return ptl
-
-    def virtual_particle_index(self, particle):
-        """
-        Returns the index of a given virtual particle in this molecule
-
-        Parameters
-        ----------
-        virtual_particle : openff.toolkit.topology.VirtualParticle
-
-        Returns
-        -------
-        index : int
-            The index of the given virtual particle in this molecule
-        """
-        for ptl_idx, ptl in enumerate(self.virtual_particles):
-            if ptl is particle:
-                return ptl_idx
-
-    @property
     def atoms(self):
         """
-        Iterate over all Atom objects.
+        Iterate over all Atom objects in the molecule.
         """
         return self._atoms
 
-    def atom(self, index: int):
+    def atom(self, index: int) -> Atom:
         """
-        Get atom with a specified index.
+        Get the atom with the specified index.
 
         Parameters
         ----------
@@ -4505,9 +2980,11 @@ class FrozenMolecule(Serializable):
         """
         return self._atoms[index]
 
-    def atom_index(self, atom):
+    def atom_index(self, atom: Atom) -> int:
         """
-        Returns the index of a given atom in this molecule
+        Returns the index of the given atom in this molecule
+
+        .. TODO: document behaviour when atom is not present in self
 
         Parameters
         ----------
@@ -4523,87 +3000,34 @@ class FrozenMolecule(Serializable):
     @property
     def conformers(self):
         """
-        Returns the list of conformers for this molecule. This returns a list of openmm.unit.Quantity-wrapped numpy
-        arrays, of shape (3 x n_atoms) and with dimensions of distance. The return value is the actual list of
-        conformers, and changes to the contents affect the original FrozenMolecule.
+        Returns the list of conformers for this molecule.
 
+        Conformers are presented as a list of ``Quantity``-wrapped NumPy
+        arrays, of shape (3 x n_atoms) and with dimensions of [Distance]. The
+        return value is the actual list of conformers, and changes to the
+        contents affect the original ``FrozenMolecule``.
         """
         return self._conformers
 
     @property
-    def n_conformers(self):
+    def n_conformers(self) -> int:
         """
-        Returns the number of conformers for this molecule.
+        The number of conformers for this molecule.
         """
         if self._conformers is None:
             return 0
         return len(self._conformers)
 
     @property
-    def virtual_sites(self):
+    def bonds(self) -> List[Bond]:
         """
-        Iterate over all VirtualSite objects.
-        """
-        return self._virtual_sites
-
-    def virtual_site(self, index: int):
-        """
-        Get virtual_site with a specified index.
-
-        Parameters
-        ----------
-        index : int
-
-        Returns
-        -------
-        virtual_site : openff.toolkit.topology.VirtualSite
-        """
-        return self._virtual_sites[index]
-
-    def virtual_site_index(self, virtual_site):
-        """
-        Get the molecule index of a particular virtual site.
-        Note that a virtual site may have multiple virtual particles, and that the index returned by this method
-        does not correspond to the virtual _particle_ index. For that, use the `particle_index` method.
-
-        Parameters
-        ----------
-        virtual_site : openff.toolkit.topology.VirtualSite
-
-        Returns
-        -------
-        index : int
-        """
-        for index, mol_vsite in enumerate(self._virtual_sites):
-            if virtual_site is mol_vsite:
-                return index
-        raise Exception("VirtualSite not found in Molecule")
-
-    def virtual_site_particle_start_index(self, virtual_site):
-        """
-        Returns the molecule particle index of the first particle of this virtual site.
-
-        Parameters
-        ----------
-        virtual_site : openff.toolkit.topology.VirtualSite
-
-        Returns
-        -------
-        index : int
-        """
-        first_particle = virtual_site.particles[0]
-        return self.particle_index(first_particle)
-
-    @property
-    def bonds(self):
-        """
-        Iterate over all Bond objects.
+        Iterate over all Bond objects in the molecule.
         """
         return self._bonds
 
-    def bond(self, index: int):
+    def bond(self, index: int) -> Bond:
         """
-        Get bond with the specified index.
+        Get the bond with the specified index.
 
         Parameters
         ----------
@@ -4616,7 +3040,7 @@ class FrozenMolecule(Serializable):
         return self._bonds[index]
 
     @property
-    def angles(self):
+    def angles(self) -> Set[Tuple[Atom, Atom, Atom]]:
         """
         Get an iterator over all i-j-k angles.
         """
@@ -4624,7 +3048,7 @@ class FrozenMolecule(Serializable):
         return self._angles
 
     @property
-    def torsions(self):
+    def torsions(self) -> Set[Tuple[Atom, Atom, Atom, Atom]]:
         """
         Get an iterator over all i-j-k-l torsions.
         Note that i-j-k-i torsions (cycles) are excluded.
@@ -4634,10 +3058,13 @@ class FrozenMolecule(Serializable):
         torsions : iterable of 4-Atom tuples
         """
         self._construct_torsions()
+        assert (
+            self._torsions is not None
+        ), "_construct_torsions always sets _torsions to a set"
         return self._torsions
 
     @property
-    def propers(self):
+    def propers(self) -> Set[Tuple[Atom, Atom, Atom, Atom]]:
         """
         Iterate over all proper torsions in the molecule
 
@@ -4646,10 +3073,13 @@ class FrozenMolecule(Serializable):
            * Do we need to return a ``Torsion`` object that collects information about fractional bond orders?
         """
         self._construct_torsions()
+        assert (
+            self._propers is not None
+        ), "_construct_torsions always sets _propers to a set"
         return self._propers
 
     @property
-    def impropers(self):
+    def impropers(self) -> Set[Tuple[Atom, Atom, Atom, Atom]]:
         """
         Iterate over all improper torsions in the molecule.
 
@@ -4659,7 +3089,7 @@ class FrozenMolecule(Serializable):
         Returns
         -------
         impropers : set of tuple
-            An iterator of tuples, each containing the indices of atoms making
+            An iterator of tuples, each containing the atoms making
             up a possible improper torsion.
 
         See Also
@@ -4667,16 +3097,19 @@ class FrozenMolecule(Serializable):
         smirnoff_impropers, amber_impropers
         """
         self._construct_torsions()
+        assert (
+            self._impropers is not None
+        ), "_construct_torsions always sets _impropers to a set"
         return self._impropers
 
     @property
-    def smirnoff_impropers(self):
+    def smirnoff_impropers(self) -> Set[Tuple[Atom, Atom, Atom, Atom]]:
         """
-        Iterate over improper torsions in the molecule, but only those with
-        trivalent centers, reporting the central atom second in each improper.
+        Iterate over all impropers with trivalent centers, reporting the central atom second.
 
-        Note that it's possible that a trivalent center will not have an improper assigned.
-        This will depend on the force field that is used.
+        The central atom is reported second in each torsion. This method reports
+        an improper for each trivalent atom in the molecule, whether or not any
+        given force field would assign it improper torsion parameters.
 
         Also note that this will return 6 possible atom orderings around each improper
         center. In current SMIRNOFF parameterization, three of these six
@@ -4710,21 +3143,22 @@ class FrozenMolecule(Serializable):
         smirnoff_improper_smarts = "[*:1]~[X3:2](~[*:3])~[*:4]"
         improper_idxs = self.chemical_environment_matches(smirnoff_improper_smarts)
         smirnoff_impropers = {
-            tuple(self.atoms[idx] for idx in imp) for imp in improper_idxs
+            (self.atom(imp[0]), self.atom(imp[1]), self.atom(imp[2]), self.atom(imp[3]))
+            for imp in improper_idxs
         }
         return smirnoff_impropers
 
     @property
-    def amber_impropers(self):
+    def amber_impropers(self) -> Set[Tuple[Atom, Atom, Atom, Atom]]:
         """
-        Iterate over improper torsions in the molecule, but only those with
-        trivalent centers, reporting the central atom first in each improper.
+        Iterate over all impropers with trivalent centers, reporting the central atom first.
 
-        Note that it's possible that a trivalent center will not have an improper assigned.
-        This will depend on the force field that is used.
+        The central atom is reported first in each torsion. This method reports
+        an improper for each trivalent atom in the molecule, whether or not any
+        given force field would assign it improper torsion parameters.
 
-        Also note that this will return 6 possible atom orderings around each improper
-        center. In current AMBER parameterization, one of these six
+        Also note that this will return 6 possible atom orderings around each
+        improper center. In current AMBER parameterization, one of these six
         orderings will be used for the actual assignment of the improper term
         and measurement of the angle. This method does not encode the logic to
         determine which of the six orderings AMBER would use.
@@ -4746,7 +3180,8 @@ class FrozenMolecule(Serializable):
         amber_improper_smarts = "[X3:1](~[*:2])(~[*:3])~[*:4]"
         improper_idxs = self.chemical_environment_matches(amber_improper_smarts)
         amber_impropers = {
-            tuple(self.atoms[idx] for idx in imp) for imp in improper_idxs
+            (self.atom(imp[0]), self.atom(imp[1]), self.atom(imp[2]), self.atom(imp[3]))
+            for imp in improper_idxs
         }
         return amber_impropers
 
@@ -4797,7 +3232,7 @@ class FrozenMolecule(Serializable):
         return charge_sum
 
     @property
-    def name(self):
+    def name(self) -> str:
         """
         The name (or title) of the molecule
         """
@@ -4816,14 +3251,14 @@ class FrozenMolecule(Serializable):
             raise Exception("Molecule name must be a string")
 
     @property
-    def properties(self):
+    def properties(self) -> Dict[str, Any]:
         """
         The properties dictionary of the molecule
         """
         return self._properties
 
     @property
-    def hill_formula(self):
+    def hill_formula(self) -> str:
         """
         Get the Hill formula of the molecule
         """
@@ -4868,16 +3303,16 @@ class FrozenMolecule(Serializable):
         unique=False,
         toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
     ):
-        """Retrieve all matches for a given chemical environment query.
+        """Find matches in the molecule for a SMARTS string or ``ChemicalEnvironment`` query
 
         Parameters
         ----------
         query : str or ChemicalEnvironment
             SMARTS string (with one or more tagged atoms) or ``ChemicalEnvironment`` query.
             Query will internally be resolved to SMIRKS using ``query.asSMIRKS()`` if it has an ``.asSMIRKS`` method.
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=GLOBAL_TOOLKIT_REGISTRY
+        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry
+            or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=GLOBAL_TOOLKIT_REGISTRY
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for chemical environment matches
-
 
         Returns
         -------
@@ -4893,8 +3328,9 @@ class FrozenMolecule(Serializable):
 
         .. todo ::
 
-           * Do we want to generalize ``query`` to allow other kinds of queries, such as mdtraj DSL, pymol selections, atom index slices, etc?
-             We could call it ``topology.matches(query)`` instead of ``chemical_environment_matches``
+           * Do we want to generalize ``query`` to allow other kinds of queries, such as mdtraj DSL,
+           pymol selections, atom index slices, etc? We could call it ``topology.matches(query)`` instead of
+           ``chemical_environment_matches``
 
         """
         # Resolve to SMIRKS if needed
@@ -4939,11 +3375,14 @@ class FrozenMolecule(Serializable):
     ):
         """Generate a molecule from IUPAC or common name
 
+        .. note :: This method requires the OpenEye toolkit to be installed.
+
         Parameters
         ----------
         iupac_name : str
             IUPAC name of molecule to be generated
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=GLOBAL_TOOLKIT_REGISTRY
+        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry
+            or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=GLOBAL_TOOLKIT_REGISTRY
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for chemical environment matches
         allow_undefined_stereo : bool, default=False
             If false, raises an exception if molecule contains undefined stereochemistry.
@@ -4953,14 +3392,12 @@ class FrozenMolecule(Serializable):
         molecule : Molecule
             The resulting molecule with position
 
-        .. note :: This method requires the OpenEye toolkit to be installed.
-
         Examples
         --------
 
         Create a molecule from an IUPAC name
 
-        >>> molecule = Molecule.from_iupac('4-[(4-methylpiperazin-1-yl)methyl]-N-(4-methyl-3-{[4-(pyridin-3-yl)pyrimidin-2-yl]amino}phenyl)benzamide')
+        >>> molecule = Molecule.from_iupac('4-[(4-methylpiperazin-1-yl)methyl]-N-(4-methyl-3-{[4-(pyridin-3-yl)pyrimidin-2-yl]amino}phenyl)benzamide')  # noqa
 
         Create a molecule from a common name
 
@@ -4985,9 +3422,8 @@ class FrozenMolecule(Serializable):
             )
         else:
             raise Exception(
-                "Invalid toolkit_registry passed to from_iupac. Expected ToolkitRegistry or ToolkitWrapper. Got  {}".format(
-                    type(toolkit_registry)
-                )
+                "Invalid toolkit_registry passed to from_iupac. Expected ToolkitRegistry or ToolkitWrapper. "
+                f"Got {type(toolkit_registry)}."
             )
 
         return molecule
@@ -5017,9 +3453,8 @@ class FrozenMolecule(Serializable):
             to_iupac_method = toolkit_registry.to_iupac
         else:
             raise Exception(
-                "Invalid toolkit_registry passed to to_iupac. Expected ToolkitRegistry or ToolkitWrapper. Got  {}".format(
-                    type(toolkit_registry)
-                )
+                "Invalid toolkit_registry passed to to_iupac. Expected ToolkitRegistry or ToolkitWrapper. "
+                f"Got {type(toolkit_registry)}"
             )
 
         # TODO: Can `to_iupac` fail if given a well-behaved OFFMol/OEMol?
@@ -5104,8 +3539,8 @@ class FrozenMolecule(Serializable):
             Format specifier, usually file suffix (eg. 'MOL2', 'SMI')
             Note that not all toolkits support all formats. Check ToolkitWrapper.toolkit_file_read_formats for your
             loaded toolkits for details.
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper,
-        optional, default=GLOBAL_TOOLKIT_REGISTRY
+        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or
+            openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=GLOBAL_TOOLKIT_REGISTRY
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for file loading. If a Toolkit is passed, only
             the highest-precedence toolkit is used
         allow_undefined_stereo : bool, default=False
@@ -5126,7 +3561,7 @@ class FrozenMolecule(Serializable):
         """
 
         if file_format is None:
-            if not (isinstance(file_path, str)):
+            if not isinstance(file_path, str):
                 raise Exception(
                     "If providing a file-like object for reading molecules, the format must be specified"
                 )
@@ -5137,6 +3572,14 @@ class FrozenMolecule(Serializable):
             else:
                 file_format = file_path.split(".")[-1]
         file_format = file_format.upper()
+
+        if file_format == "XYZ":
+            raise UnsupportedFileTypeError(
+                "Parsing `.xyz` files is not currently supported because they lack sufficient "
+                "chemical information to be used with SMIRNOFF force fields. For more information, "
+                "see https://open-forcefield-toolkit.readthedocs.io/en/latest/faq.html or to provide "
+                "feedback please visit https://github.com/openforcefield/openff-toolkit/issues/1145."
+            )
 
         # Determine which toolkit to use (highest priority that's compatible with input type)
         if isinstance(toolkit_registry, ToolkitRegistry):
@@ -5159,12 +3602,12 @@ class FrozenMolecule(Serializable):
                 # to the error message that will hopefully reduce this confusion.
                 if file_format == "MOL2" and RDKitToolkitWrapper.is_available():
                     msg += (
-                        f"RDKit does not fully support input of molecules from mol2 format unless they "
-                        f"have Corina atom types, and this is not common in the simulation community. For this "
-                        f"reason, the Open Force Field Toolkit does not use "
-                        f"RDKit to read .mol2. Consider reading from SDF instead. If you would like to attempt "
-                        f"to use RDKit to read mol2 anyway, you can load the molecule of interest into an RDKit "
-                        f"molecule and use openff.toolkit.topology.Molecule.from_rdkit, but we do not recommend this."
+                        "RDKit does not fully support input of molecules from mol2 format unless they "
+                        "have Corina atom types, and this is not common in the simulation community. For this "
+                        "reason, the Open Force Field Toolkit does not use "
+                        "RDKit to read .mol2. Consider reading from SDF instead. If you would like to attempt "
+                        "to use RDKit to read mol2 anyway, you can load the molecule of interest into an RDKit "
+                        "molecule and use openff.toolkit.topology.Molecule.from_rdkit, but we do not recommend this."
                     )
                 elif file_format == "PDB" and RDKitToolkitWrapper.is_available():
                     msg += (
@@ -5212,70 +3655,113 @@ class FrozenMolecule(Serializable):
             )
 
         if len(mols) == 0:
-            raise Exception("Unable to read molecule from file: {}".format(file_path))
+            raise Exception(f"Unable to read molecule from file: {file_path}")
         elif len(mols) == 1:
             return mols[0]
 
         return mols
 
     @classmethod
+    def from_pdb(cls, file_path, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+        """
+        .. deprecated:: 0.11.0
+            ``from_pdb`` is deprecated and will soon be removed. Use
+            :py:meth:`from_polymer_pdb` instead.
+        """
+        warnings.warn(
+            "Molecule.from_pdb will soon be deprecated in favor of the more explicit "
+            "Molecule.from_polymer_pdb",
+            UserWarning,
+        )
+        return cls.from_polymer_pdb(file_path, toolkit_registry=toolkit_registry)
+
+    @classmethod
     @requires_package("openmm")
-    def from_pdb(cls, file_path):
-        import networkx as nx
+    def from_polymer_pdb(
+        cls, file_path: Union[str, TextIO], toolkit_registry=GLOBAL_TOOLKIT_REGISTRY
+    ):
+        """
+        Loads a polymer from a PDB file. Currently only supports proteins with canonical amino acids that are
+        either uncapped or capped by ACE/NME groupe,
+        but may later be extended to handle other common polymers, or accept user-defined polymer templates.
+
+        This method proceeds in the following order:
+
+        * Loads the polymer substructure template file
+        * Loads the PDB into an OpenMM PDBFile object (openmm.app.PDBFile)
+        * Turns OpenMM topology into naive networkx graph (Topology._omm_topology_to_networkx)
+        * Calls Molecule.from_polymer_pdb._add_chemical_info_to_networkx_graph, which:
+            * Makes hydrogens in the topology graph negative (a runtime performance trick to
+              reduce the number of symmetries)
+              (Molecule.from_polymer_pdb._make_hydrogens_negative_in_networkx_graph)
+            * For each substructure loaded from the substructure template file:
+                * Turns the substructure from its original form (SMARTS) into a networkx graph
+                * Makes the hydrogens in the substructure graph negative
+                * Uses networkx to find graph isomorphisms between the substructure and the topology graph
+                * For any isomorphism, assigns the atom formal charge and bond order info from the substructure
+                  to the topology graph, then marks the atoms and bonds as having been assigned so they can not
+                  be overwritten by subsequent isomorphisms
+        * Convert the topology graph back to an OpenFF Molecule
+        * Take coordinates from the OpenMM Topology and add them as a conformer to the OpenFF Molecule
+        * Process the OpenFF Molecule to assign aromaticity and stereochemistry
+          (ToolkitWrapper._assign_aromaticity_and_stereo_from_3d)
+
+
+        Parameters
+        ----------
+        file_path : str or file object
+            PDB information to be passed to OpenMM PDBFile object for loading
+        toolkit_registry = ToolkitWrapper or ToolkitRegistry. Default = None
+            Either a ToolkitRegistry, ToolkitWrapper
+
+        Returns
+        -------
+        molecule : openff.toolkit.topology.Molecule
+        """
         from networkx.algorithms import isomorphism
         from openmm import unit as openmm_unit
         from openmm.app import PDBFile
-        from rdkit import Chem
 
-        def _rdmol_to_networkx(rdmol, res_name):
-            _bondtypes = {
-                # 0: Chem.BondType.AROMATIC,
-                Chem.BondType.SINGLE: 1,
-                Chem.BondType.AROMATIC: 1.5,
-                Chem.BondType.DOUBLE: 2,
-                Chem.BondType.TRIPLE: 3,
-                Chem.BondType.QUADRUPLE: 4,
-                Chem.BondType.QUINTUPLE: 5,
-                Chem.BondType.HEXTUPLE: 6,
-            }
-            rdmol_G = nx.Graph()
-            n_hydrogens = [0] * rdmol.GetNumAtoms()
-            for atom in rdmol.GetAtoms():
-                atomic_number = atom.GetAtomicNum()
+        from openff.toolkit.topology import Topology
+        from openff.toolkit.utils import get_data_file_path
+
+        def _make_hydrogens_negative_in_networkx_graph(graph):
+            # Use this list as a mapping from heavy atom index to the number of hydrogens we've counted
+            # so far.
+            n_hydrogens_on_heavy_atom = [0] * len(graph.nodes)
+            for bond in graph.edges:
                 # Assign sequential negative numbers as atomic numbers for hydrogens attached to the same heavy atom.
-                # We do the same to hydrogens in the protein graph. This makes it so we
-                # don't have to deal with redundant self-symmetric matches.
-                if atomic_number == 1:
-                    heavy_atom_idx = atom.GetNeighbors()[0].GetIdx()
-                    n_hydrogens[heavy_atom_idx] += 1
-                    atomic_number = -1 * n_hydrogens[heavy_atom_idx]
+                # We do the same to the substructure templates that are used for matching. This saves runtime because
+                # it removes redundant self-symmetric matches.
+                atom_1_atomic_num = graph.nodes[bond[0]]["atomic_number"]
+                atom_2_atomic_num = graph.nodes[bond[1]]["atomic_number"]
+                if atom_1_atomic_num <= 1:
+                    h_index = bond[0]
+                    heavy_atom_index = bond[1]
+                    n_hydrogens_on_heavy_atom[heavy_atom_index] += 1
+                    graph.nodes[h_index]["atomic_number"] = (
+                        -1 * n_hydrogens_on_heavy_atom[heavy_atom_index]
+                    )
+                if atom_2_atomic_num <= 1:
+                    h_index = bond[1]
+                    heavy_atom_index = bond[0]
+                    n_hydrogens_on_heavy_atom[heavy_atom_index] += 1
+                    graph.nodes[h_index]["atomic_number"] = (
+                        -1 * n_hydrogens_on_heavy_atom[heavy_atom_index]
+                    )
 
-                rdmol_G.add_node(
-                    atom.GetIdx(),
-                    atomic_number=atomic_number,
-                    formal_charge=atom.GetFormalCharge(),
-                )
-                # These substructures (and only these substructures) should be able to overlap previous matches.
-                # They handle bonds between substructures.
-                if res_name in ["PEPTIDE_BOND", "DISULFIDE"]:
-                    rdmol_G.nodes[atom.GetIdx()]["already_matched"] = True
-            for bond in rdmol.GetBonds():
-                bond_type = bond.GetBondType()
+        def _undo_making_hydrogens_negative_in_networkx_graph(graph):
+            # Negative atomic numbers are really hydrogen, so we reassign them to be atomic number
+            # 1 once they've been matched
+            for idx in graph.nodes:
+                if graph.nodes[idx]["atomic_number"] < 0:
+                    graph.nodes[idx]["atomic_number"] = 1
 
-                # All bonds in the graph should have been explicitly assigned by this point.
-                if bond_type == Chem.rdchem.BondType.UNSPECIFIED:
-                    raise Exception
-                    # bond_type = Chem.rdchem.BondType.SINGLE
-                    # bond_type = Chem.rdchem.BondType.AROMATIC
-                    # bond_type = Chem.rdchem.BondType.ONEANDAHALF
-                rdmol_G.add_edge(
-                    bond.GetBeginAtomIdx(),
-                    bond.GetEndAtomIdx(),
-                    bond_order=_bondtypes[bond_type],
-                )
-            return rdmol_G
-
-        def _openmm_topology_to_networkx(substructure_library, openmm_topology):
+        def _add_chemical_info_to_networkx_graph(
+            substructure_library,
+            omm_topology_G,
+            toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
+        ):
             """
             Construct an OpenFF Topology object from an OpenMM Topology object.
 
@@ -5283,8 +3769,11 @@ class FrozenMolecule(Serializable):
             ----------
             substructure_library : dict{str:list[str, list[str]]}
                 A dictionary of substructures. substructure_library[aa_name] = list[tagged SMARTS, list[atom_names]]
-            openmm_topology : openmm.app.Topology
-                An OpenMM Topology object
+            omm_topology_G : networkx.Graph
+                A graph where each node has at least the `atomic_number` attribute, and edges indicate the existence of
+                chemical bonds.
+            toolkit_registry = ToolkitWrapper or ToolkitRegistry. Default = None
+                Either a ToolkitRegistry, ToolkitWrapper
 
             Returns
             -------
@@ -5296,43 +3785,11 @@ class FrozenMolecule(Serializable):
                 Any edges that are not assgined a bond order will have the value Chem.rdchem.BondType.UNSPECIFIED
                 and should be considered an error.
             """
-            import networkx as nx
 
-            omm_topology_G = nx.Graph()
-            for atom in openmm_topology.atoms():
-                omm_topology_G.add_node(
-                    atom.index,
-                    atomic_number=atom.element.atomic_number,
-                    formal_charge=0.0,
-                    atom_name=atom.name,
-                    residue_name=atom.residue.name,
-                    residue_number=atom.residue.index,
-                )
+            # Don't modify the input graph
+            omm_topology_G = deepcopy(omm_topology_G)
 
-            n_hydrogens = [0] * openmm_topology.getNumAtoms()
-            for bond in openmm_topology.bonds():
-                omm_topology_G.add_edge(
-                    bond.atom1.index,
-                    bond.atom2.index,
-                    bond_order=Chem.rdchem.BondType.UNSPECIFIED,  # bond.order
-                )
-                # Assign sequential negative numbers as atomic numbers for hydrogens attached to the same heavy atom.
-                # We do the same to the substructure templates that are used for matching. This saves runtime because
-                # it removes redundant self-symmetric matches.
-                if bond.atom1.element.atomic_number == 1:
-                    h_index = bond.atom1.index
-                    heavy_atom_index = bond.atom2.index
-                    n_hydrogens[heavy_atom_index] += 1
-                    omm_topology_G.nodes[h_index]["atomic_number"] = (
-                        -1 * n_hydrogens[heavy_atom_index]
-                    )
-                if bond.atom2.element.atomic_number == 1:
-                    h_index = bond.atom2.index
-                    heavy_atom_index = bond.atom1.index
-                    n_hydrogens[heavy_atom_index] += 1
-                    omm_topology_G.nodes[h_index]["atomic_number"] = (
-                        -1 * n_hydrogens[heavy_atom_index]
-                    )
+            _make_hydrogens_negative_in_networkx_graph(omm_topology_G)
 
             # Try matching this substructure to the whole molecule graph
             node_match = isomorphism.categorical_node_match(
@@ -5342,6 +3799,8 @@ class FrozenMolecule(Serializable):
             already_assigned_nodes = set()
             already_assigned_edges = set()
 
+            # Now that the openmm topology has been converted to networkx, try to tile over the whole
+            # networkx graph with the known substructures
             non_isomorphic_count = 0
             for res_name in substructure_library:
                 # TODO: This is a hack for the moment since we don't have a more sophisticated way to resolve clashes
@@ -5351,58 +3810,58 @@ class FrozenMolecule(Serializable):
                 )
                 non_isomorphic_flag = True
                 for substructure_smarts in sorted_substructure_smarts:
-                    rdmol = Chem.MolFromSmarts(substructure_smarts)
-                    rdmol_G = _rdmol_to_networkx(rdmol, res_name)
+                    substructure_graph = toolkit_registry.call(
+                        "_smarts_to_networkx", substructure_smarts
+                    )
+                    # These substructures (and only these substructures) should be able to overlap previous matches.
+                    # They handle bonds between substructures.
+                    if res_name in ["PEPTIDE_BOND", "DISULFIDE"]:
+                        for node in substructure_graph.nodes:
+                            substructure_graph.nodes[node]["already_matched"] = True
+
+                    _make_hydrogens_negative_in_networkx_graph(substructure_graph)
                     GM = isomorphism.GraphMatcher(
-                        omm_topology_G, rdmol_G, node_match=node_match
+                        omm_topology_G, substructure_graph, node_match=node_match
                     )
                     if GM.subgraph_is_isomorphic():
-                        print(res_name)
-                        print(substructure_smarts)
                         for omm_idx_2_rdk_idx in GM.subgraph_isomorphisms_iter():
-                            assert len(omm_idx_2_rdk_idx) == rdmol.GetNumAtoms()
                             for omm_idx, rdk_idx in omm_idx_2_rdk_idx.items():
+                                # TODO: What should we do with atoms that aren't mapped in the substructure?
                                 if omm_idx in already_assigned_nodes:
                                     continue
                                 already_assigned_nodes.add(omm_idx)
-                                # Negative atomic numbers are really hydrogen, so we reassign them to be atomic number
-                                # 1 once they've been matched
-                                if omm_topology_G.nodes[omm_idx]["atomic_number"] < 0:
-                                    omm_topology_G.nodes[omm_idx]["atomic_number"] = 1
                                 omm_topology_G.nodes[omm_idx][
                                     "formal_charge"
-                                ] = rdmol_G.nodes[rdk_idx]["formal_charge"]
+                                ] = substructure_graph.nodes[rdk_idx]["formal_charge"]
                                 omm_topology_G.nodes[omm_idx]["already_matched"] = True
                             rdk_idx_2_omm_idx = dict(
                                 [(j, i) for i, j in omm_idx_2_rdk_idx.items()]
                             )
-                            for edge in rdmol_G.edges:
+                            for edge in substructure_graph.edges:
                                 omm_edge_idx = (
                                     rdk_idx_2_omm_idx[edge[0]],
                                     rdk_idx_2_omm_idx[edge[1]],
                                 )
-                                if omm_edge_idx in already_assigned_edges:
+                                if (
+                                    tuple(sorted(omm_edge_idx))
+                                    in already_assigned_edges
+                                ):
                                     continue
-                                already_assigned_edges.add(tuple(omm_edge_idx))
+                                already_assigned_edges.add(tuple(sorted(omm_edge_idx)))
                                 omm_topology_G.get_edge_data(*omm_edge_idx)[
                                     "bond_order"
-                                ] = rdmol_G.get_edge_data(*edge)["bond_order"]
+                                ] = substructure_graph.get_edge_data(*edge)[
+                                    "bond_order"
+                                ]
                         non_isomorphic_flag = False
                 if non_isomorphic_flag:
                     non_isomorphic_count += 1
-            # print(f"Non isomorphic residues: {non_isomorphic_count}")
-            print(
-                f"N. of assigned nodes: {len(already_assigned_nodes)} -- N. of atoms: {len(list(openmm_topology.atoms()))}"
-            )
-            print(
-                f"N. of assigned edges: {len(already_assigned_edges)} -- N. of bonds: {len(list(openmm_topology.bonds()))}"
-            )
-            # assert len(already_assigned_nodes) == len(list(openmm_topology.atoms()))
-            # assert len(already_assigned_edges) == len(list(openmm_topology.bonds()))
+            assert len(already_assigned_nodes) == len(omm_topology_G.nodes)
+            assert len(already_assigned_edges) == len(omm_topology_G.edges)
+
+            _undo_making_hydrogens_negative_in_networkx_graph(omm_topology_G)
 
             return omm_topology_G
-
-        from openff.toolkit.utils import get_data_file_path
 
         substructure_file_path = get_data_file_path(
             "proteins/aa_residues_substructures_explicit_bond_orders_with_caps.json"
@@ -5410,70 +3869,56 @@ class FrozenMolecule(Serializable):
 
         with open(substructure_file_path, "r") as subfile:
             substructure_dictionary = json.load(subfile)
-        from openmm.app import PDBFile
 
         pdb = PDBFile(file_path)
-        omm_topology_G = _openmm_topology_to_networkx(
-            substructure_dictionary, pdb.topology
+
+        omm_topology_G = Topology._openmm_topology_to_networkx(pdb.topology)
+
+        omm_topology_G = _add_chemical_info_to_networkx_graph(
+            substructure_dictionary, omm_topology_G, toolkit_registry=toolkit_registry
         )
 
         offmol = Molecule()
 
         for node_idx, node_data in omm_topology_G.nodes.items():
-            print(node_idx, node_data)
-            formal_charge = int(node_data["formal_charge"])
-            print(f"Formal charge: {formal_charge}")
             offmol.add_atom(
                 node_data["atomic_number"],
                 int(node_data["formal_charge"]),
                 False,
+                name=node_data["atom_name"],
                 metadata={
                     "residue_name": node_data["residue_name"],
-                    "residue_number": node_data["residue_number"],
-                    "atom_name": node_data["atom_name"],
+                    "residue_number": node_data["residue_id"],
+                    "chain_id": node_data["chain_id"],
                 },
             )
 
         for edge, edge_data in omm_topology_G.edges.items():
-            print(edge, edge_data)
             offmol.add_bond(edge[0], edge[1], edge_data["bond_order"], False)
 
-        # Retrieve metadata to be recovered after roundtrip to rdkit land
-        atoms_metadata = [atom.metadata for atom in offmol.atoms]
-
-        print(f"Number of atoms before sanitization: {offmol.n_atoms}")
-        # TODO: Pull in coordinates and assign stereochemistry
-        coords = (
+        coords = unit.Quantity(
             np.array(
                 [
                     [*vec3.value_in_unit(openmm_unit.angstrom)]
                     for vec3 in pdb.getPositions()
                 ]
-            )
-            * unit.angstrom
+            ),
+            unit.angstrom,
         )
 
         offmol.add_conformer(coords)
-        # TODO: Ensure that this assigns aromaticity
-        rdmol = offmol.to_rdkit()
-        Chem.SanitizeMol(
-            rdmol,
-            Chem.SANITIZE_ALL
-            ^ Chem.SANITIZE_ADJUSTHS,  # ^ Chem.SANITIZE_SETAROMATICITY,
-        )
-        Chem.AssignStereochemistryFrom3D(rdmol)
 
-        print(f"Number of atoms after sanitization: {len(rdmol.GetAtoms())}")
-
-        offmol = cls.from_rdkit(
-            rdmol, allow_undefined_stereo=True, hydrogens_are_explicit=True
+        offmol_w_stereo_and_aro = toolkit_registry.call(
+            "_assign_aromaticity_and_stereo_from_3d", offmol
         )
 
-        # Recover metadata. Atom order is expected to be the same as in rdkit
-        for atom, metadata in zip(offmol.atoms, atoms_metadata):
-            atom.metadata.update(metadata)
+        assert offmol_w_stereo_and_aro.n_atoms == offmol.n_atoms
+        for stereo_aro_atom, atom in zip(offmol_w_stereo_and_aro.atoms, offmol.atoms):
+            atom.stereochemistry = stereo_aro_atom.stereochemistry
+            atom._is_aromatic = stereo_aro_atom.is_aromatic
+        for stereo_aro_bond, bond in zip(offmol_w_stereo_and_aro.bonds, offmol.bonds):
+            bond._is_aromatic = stereo_aro_bond.is_aromatic
 
-        print(f"OFFMol number of atoms: {offmol.n_atoms}")
         return offmol
 
     def _to_xyz_file(self, file_path):
@@ -5541,10 +3986,10 @@ class FrozenMolecule(Serializable):
         file_format : str
             Format specifier, one of ['MOL2', 'MOL2H', 'SDF', 'PDB', 'SMI', 'CAN', 'TDT']
             Note that not all toolkits support all formats
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper,
-        optional, default=GLOBAL_TOOLKIT_REGISTRY
-            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for file writing. If a Toolkit is passed, only
-            the highest-precedence toolkit is used
+        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry
+            or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=GLOBAL_TOOLKIT_REGISTRY
+            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for file writing. If a Toolkit is passed,
+            only the highest-precedence toolkit is used
 
         Raises
         ------
@@ -5592,8 +4037,8 @@ class FrozenMolecule(Serializable):
                     toolkit.toolkit_name
                 ] = toolkit.toolkit_file_write_formats
             raise ValueError(
-                "The requested file format ({}) is not available from any of the installed toolkits "
-                "(supported formats: {})".format(file_format, supported_formats)
+                f"The requested file format ({file_format}) is not available from any of the installed toolkits "
+                f"(supported formats: {supported_formats})"
             )
 
         # Write file
@@ -5614,7 +4059,8 @@ class FrozenMolecule(Serializable):
         max_states: int optional, default=20
             The maximum amount of molecules that should be returned
 
-        toolkit_registry: openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, default=GLOBAL_TOOLKIT_REGISTRY
+        toolkit_registry: openff.toolkit.utils.toolkits.ToolkitRegistry
+            or openff.toolkit.utils.toolkits.ToolkitWrapper, default=GLOBAL_TOOLKIT_REGISTRY
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use to enumerate the tautomers.
 
         Returns
@@ -5661,7 +4107,8 @@ class FrozenMolecule(Serializable):
         rationalise: bool optional, default=True
             If we should try to build and rationalise the molecule to ensure it can exist
 
-        toolkit_registry: openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, default=GLOBAL_TOOLKIT_REGISTRY
+        toolkit_registry: openff.toolkit.utils.toolkits.ToolkitRegistry or
+            lopenff.toolkit.utils.toolkits.ToolkitWrapper, default=GLOBAL_TOOLKIT_REGISTRY
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use to enumerate the stereoisomers.
 
         Returns
@@ -5935,10 +4382,11 @@ class FrozenMolecule(Serializable):
 
         Parameters
         ----------
-        mapped_smiles: str,
+        mapped_smiles: str
             A CMILES-style mapped smiles string with explicit hydrogens.
 
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional
+        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry
+            or openff.toolkit.utils.toolkits.ToolkitWrapper, optional
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
 
         allow_undefined_stereo : bool, default=False
@@ -6015,7 +4463,8 @@ class FrozenMolecule(Serializable):
             A qcportal.FractalClient instance to use for fetching an initial geometry.
             Only used if ``qca_record`` is a dataset entry.
 
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional
+        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or
+            openff.toolkit.utils.toolkits.ToolkitWrapper, optional
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
 
         allow_undefined_stereo : bool, default=False
@@ -6186,16 +4635,22 @@ class FrozenMolecule(Serializable):
 
     def canonical_order_atoms(self, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """
-        Canonical order the atoms in a copy of the molecule using a toolkit, returns a new copy.
+        Produce a copy of the molecule with the atoms reordered canonically.
+
+        Each toolkit defines its own canonical ordering of atoms. The canonical
+        order may change from toolkit version to toolkit version or between
+        toolkits.
 
         .. warning :: This API is experimental and subject to change.
 
         Parameters
         ----------
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or openff.toolkit.utils.toolkits.ToolkitWrapper, optional
-            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
+        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or
+            openff.toolkit.utils.toolkits.ToolkitWrapper, optional
+            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for
+            SMILES-to-molecule conversion
 
-         Returns
+        Returns
         -------
         molecule : openff.toolkit.topology.Molecule
             An new OpenFF style molecule with atoms in the canonical order.
@@ -6208,9 +4663,8 @@ class FrozenMolecule(Serializable):
             return toolkit.canonical_order_atoms(self)
         else:
             raise InvalidToolkitRegistryError(
-                "Invalid toolkit_registry passed to from_smiles. Expected ToolkitRegistry or ToolkitWrapper. Got  {}".format(
-                    type(toolkit_registry)
-                )
+                "Invalid toolkit_registry passed to from_smiles. Expected ToolkitRegistry or ToolkitWrapper. "
+                f"Got {type(toolkit_registry)}."
             )
 
     def remap(self, mapping_dict, current_to_new=True):
@@ -6232,9 +4686,6 @@ class FrozenMolecule(Serializable):
         new_molecule :  openff.toolkit.topology.molecule.Molecule
             An openff.toolkit.Molecule instance with all attributes transferred, in the PDB order.
         """
-
-        if self.n_virtual_sites != 0:
-            raise NotImplementedError("We can not remap virtual sites yet!")
 
         # make sure the size of the mapping matches the current molecule
         if len(mapping_dict) != self.n_atoms:
@@ -6468,7 +4919,7 @@ class FrozenMolecule(Serializable):
         else:
             raise TypeError(
                 "Invalid input passed to get_bond_between(). Expected ints or Atoms, "
-                "got {} and {}".format(i, j)
+                f"got {j} and {j}."
             )
 
         for bond in atom_i.bonds:
@@ -6483,61 +4934,15 @@ class FrozenMolecule(Serializable):
 
         from openff.toolkit.topology import NotBondedError
 
-        raise NotBondedError("No bond between atom {} and {}".format(i, j))
-
-    @property
-    def rings(self):
-        """Return the number of rings in this molecule.
-
-        Requires the RDKit to be installed.
-
-        .. note ::
-
-            For systems containing some special cases of connected rings, this
-            function may not be well-behaved and may report a different number
-            rings than expected. Some problematic cases include networks of many
-            (5+) rings or bicyclic moieties (i.e. norbornane).
-
-        """
-        if self._rings is None:
-            self._get_rings()
-        return self._rings
-
-    @RDKitToolkitWrapper.requires_toolkit()
-    def _get_rings(self):
-        """
-        Call out to RDKitToolkitWrapper methods to find the rings in this molecule.
-
-        Requires the RDKit to be installed.
-
-        .. note ::
-
-            For systems containing some special cases of connected rings, this
-            function may not be well-behaved and may report a different number
-            rings than expected. Some problematic cases include networks of many
-            (5+) rings or bicyclic moieties (i.e. norbornane).
-
-        .. todo :: This could be refactored to use ToolkitWrapper.call() to flexibly
-            access other toolkits, if find_rings is implemented.
-
-        Returns
-        -------
-        rings : tuple of tuple of int
-            A nested tuple with one subtuple per ring and each subtuple containing
-            a tuple of the indices of atoms containing with it. If no rings are
-            found, a single empty tuple is returned.
-
-        """
-        toolkit = RDKitToolkitWrapper()
-        rings = toolkit.find_rings(self)
-        self._rings = rings
+        raise NotBondedError(f"No bond between atom {i} and {j}")
 
 
 class Molecule(FrozenMolecule):
     """
     Mutable chemical representation of a molecule, such as a small molecule or biopolymer.
 
-    .. todo :: What other API calls would be useful for supporting biopolymers as small molecules? Perhaps iterating over chains and residues?
+    .. todo :: What other API calls would be useful for supporting biopolymers as small molecules? Perhaps iterating
+        over chains and residues?
 
     Examples
     --------
@@ -6583,7 +4988,7 @@ class Molecule(FrozenMolecule):
         Parameters
         ----------
         other : optional, default=None
-            If specified, attempt to construct a copy of the Molecule from the
+            If specified, attempt to construct a copy of the molecule from the
             specified object. This can be any one of the following:
 
             * a :class:`Molecule` object
@@ -6647,7 +5052,6 @@ class Molecule(FrozenMolecule):
              ``other``?
 
         """
-        # super(self, Molecule).__init__(*args, **kwargs)
         super(Molecule, self).__init__(*args, **kwargs)
 
     # TODO: Change this to add_atom(Atom) to improve encapsulation and extensibility?
@@ -6661,7 +5065,7 @@ class Molecule(FrozenMolecule):
         metadata=None,
     ):
         """
-        Add an atom
+        Add an atom to the molecule.
 
         Parameters
         ----------
@@ -6713,193 +5117,6 @@ class Molecule(FrozenMolecule):
         )
         return atom_index
 
-    def add_bond_charge_virtual_site(self, atoms, distance, **kwargs):
-        """
-        Add a virtual site representing the charge on a bond.
-
-        Create a bond charge-type virtual site, in which the location of the
-        charge is specified by the position of two atoms. This supports
-        placement of a virtual site :math:`S` along a vector between two specified
-        atoms, e.g. to allow for a sigma hole for halogens or similar contexts.
-        With positive values of the distance, the virtual site lies outside the
-        first indexed atom.
-
-        Parameters
-        ----------
-        atoms : list of :class:`openff.toolkit.topology.molecule.Atom` objects
-            The atoms defining the virtual site's position
-
-        distance : :class:`openmm.unit.Quantity` of dimension [Length] wrapping a scalar
-
-        charge_increments : list of floats of shape [N], optional, default=None
-            The amount of charge to remove from the VirtualSite's atoms and put
-            in the VirtualSite. Indexing in this list should match the ordering
-            in the atoms list. Default is None.
-        epsilon : float
-            Epsilon term for VdW properties of virtual site. Default is ``None``.
-        sigma : float, default=None
-            Sigma term for VdW properties of virtual site. Default is ``None``.
-        rmin_half : float
-            Rmin_half term for VdW properties of virtual site. Default is ``None``.
-        name : string or None, default=''
-            The name of this virtual site. Default is ''.
-        symmetric : bool, default=True
-            Whether to make virtual site symmetric by creating two particles
-            instead of just one. As an example, for N_2 this should be set to
-            True to model both lone pairs with the same parameters.
-
-        Returns
-        -------
-        index : int
-            The index of the newly-added virtual site in the molecule
-
-        """
-        if kwargs.get("symmetric", True) is True:
-            kwargs["orientations"] = [(0, 1), (1, 0)]
-        else:
-            kwargs["orientations"] = [(0, 1)]
-        kwargs.pop("symmetric", None)
-
-        vsite_index = self._add_bond_charge_virtual_site(atoms, distance, **kwargs)
-        return vsite_index
-
-    def add_monovalent_lone_pair_virtual_site(
-        self, atoms, distance, out_of_plane_angle, in_plane_angle, **kwargs
-    ):
-        """
-        Create a bond charge-type virtual site, in which the location of the charge is specified by the position of three atoms.
-
-        Parameters
-        ----------
-        atoms : list of three :class:`openff.toolkit.topology.molecule.Atom` objects
-            The three atoms defining the virtual site's position
-
-        distance : :class:`openmm.unit.Quantity` of dimension [Length] wrapping a scalar
-
-        out_of_plane_angle : :class:`openmm.unit.Quantity` of dimension [Angle] wrapping
-        a scalar
-
-        in_plane_angle : :class:`openmm.unit.Quantity` of dimension [Angle] wrapping a
-        scalar
-
-        epsilon : float
-            Epsilon term for VdW properties of virtual site. Default is None.
-        sigma : float, default=None
-            Sigma term for VdW properties of virtual site. Default is None.
-        rmin_half : float
-            Rmin_half term for VdW properties of virtual site. Default is None.
-        name : string or None, default=''
-            The name of this virtual site. Default is ''.
-        symmetric : bool, default=False
-            Whether to make virtual site symmetric by creating two particles
-            instead of just one. Note that because this site is defined is placed
-            on the noncentral atom, setting this to True will place one particle
-            on atom1, and the other on atom3.
-
-        Returns
-        -------
-        index : int
-            The index of the newly-added virtual site in the molecule
-
-
-        """
-
-        if kwargs.get("symmetric", False) is True:
-            kwargs["orientations"] = [(0, 1, 2), (2, 1, 0)]
-        else:
-            kwargs["orientations"] = [(0, 1, 2)]
-        kwargs.pop("symmetric", None)
-
-        vsite_index = self._add_monovalent_lone_pair_virtual_site(
-            atoms, distance, out_of_plane_angle, in_plane_angle, **kwargs
-        )
-        return vsite_index
-
-    # def add_divalent_lone_pair_virtual_site(self, atoms, distance, out_of_plane_angle, in_plane_angle, charge_increments=None, weights=None, epsilon=None, sigma=None, rmin_half=None, name=None):
-    def add_divalent_lone_pair_virtual_site(
-        self, atoms, distance, out_of_plane_angle, **kwargs
-    ):
-        """
-        Create a divalent lone pair-type virtual site, in which the location of the charge is specified by the position of three atoms.
-
-        Parameters
-        ----------
-        atoms : list of three :class:`openff.toolkit.topology.molecule.Atom` objects
-            The three atoms defining the virtual site's position
-
-        distance : :class:`openmm.unit.Quantity` of dimension [Length] wrapping a scalar
-
-        out_of_plane_angle : :class:`openmm.unit.Quantity` of dimension [Angle] wrapping
-        a scalar
-
-        epsilon : float
-            Epsilon term for VdW properties of virtual site. Default is None.
-        sigma : float, default=None
-            Sigma term for VdW properties of virtual site. Default is None.
-        rmin_half : float
-            Rmin_half term for VdW properties of virtual site. Default is None.
-        name : string or None, default=''
-            The name of this virtual site. Default is ''.
-        symmetric : bool, default=True
-            Whether to make virtual site symmetric by creating two particles
-            instead of just one. As an example, for TIP5 should be set to True
-            to model both lone pairs with the same parameters.
-
-
-        Returns
-        -------
-        index : int
-            The index of the newly-added virtual site in the molecule
-
-        """
-        if kwargs.get("symmetric", True) is True:
-            kwargs["orientations"] = [(0, 1, 2), (2, 1, 0)]
-        else:
-            kwargs["orientations"] = [(0, 1, 2)]
-        kwargs.pop("symmetric", None)
-
-        vsite_index = self._add_divalent_lone_pair_virtual_site(
-            atoms, distance, out_of_plane_angle, **kwargs
-        )
-        return vsite_index
-
-    def add_trivalent_lone_pair_virtual_site(self, atoms, distance, **kwargs):
-        """
-        Create a trivalent lone pair-type virtual site, in which the location of the charge is specified by the position of four atoms.
-
-        Parameters
-        ----------
-        atoms : list of four :class:`openff.toolkit.topology.molecule.Atom` objects
-            The four atoms defining the virtual site's position
-
-        distance : openmm.unit.Quantity of dimension [Length] wrapping a scalar
-
-        epsilon : float
-            Epsilon term for VdW properties of virtual site. Default is None.
-        sigma : float, default=None
-            Sigma term for VdW properties of virtual site. Default is None.
-        rmin_half : float
-            Rmin_half term for VdW properties of virtual site. Default is None.
-        name : string or None, default=''
-            The name of this virtual site. Default is ''.
-
-        Returns
-        -------
-        index : int
-            The index of the newly-added virtual site in the molecule
-
-        """
-
-        # This virtual site only makes sense with a single orientation
-
-        kwargs["orientations"] = [(0, 1, 2, 3)]
-        kwargs.pop("symmetric", None)
-
-        vsite_index = self._add_trivalent_lone_pair_virtual_site(
-            atoms, distance, **kwargs
-        )
-        return vsite_index
-
     def add_bond(
         self,
         atom1,
@@ -6950,9 +5167,9 @@ class Molecule(FrozenMolecule):
 
         Parameters
         ----------
-        coordinates: openmm.unit.Quantity(np.array) with shape (n_atoms, 3) and dimension of distance
+        coordinates: unit-wrapped np.array with shape (n_atoms, 3) and dimension of distance
             Coordinates of the new conformer, with the first dimension of the array corresponding to the atom index in
-            the Molecule's indexing system.
+            the molecule's indexing system.
 
         Returns
         -------
@@ -6978,11 +5195,11 @@ class Molecule(FrozenMolecule):
         Parameters
         ----------
         backend : str, optional, default='rdkit'
-            Which visualization engine to use. Choose from:
+            The visualization engine to use. Choose from:
 
-            - rdkit
-            - openeye
-            - nglview (conformers needed)
+            - ``"rdkit"``
+            - ``"openeye"``
+            - ``"nglview"`` (requires conformers)
 
         width : int, optional, default=500
             Width of the generated representation (only applicable to
@@ -7101,17 +5318,19 @@ class Molecule(FrozenMolecule):
 
     def perceive_residues(self, substructure_file_path=None, strict_chirality=True):
         """
-        Perceive residue substructure and fill atoms metadata accordingly.
+        Perceive a polymer's residues and fill each atom's metadata accordingly.
 
-        Perceives residues by matching substructures in the current molecule with a substructure dictionary file,
-        using SMARTS.
+        Perceives residues by matching substructures in the current molecule
+        with a substructure dictionary file, using SMARTS.
 
         Parameters
         ----------
         substructure_file_path : str, optional, default=None
-            Path to substructure library file in JSON format. Defaults to using built-in substructure file.
+            Path to substructure library file in JSON format. Defaults to using
+            built-in substructure file.
         strict_chirality: bool, optional, default=True
-            Whether to use strict chirality symbols (stereomarks) for substructure matchings with SMARTS.
+            Whether to use strict chirality symbols (stereomarks) for
+            substructure matchings with SMARTS.
         """
         # Read substructure dictionary file
         if not substructure_file_path:
@@ -7391,7 +5610,9 @@ class HierarchyScheme:
         their identifiers.
         """
         # hard-code the sort_func value here, since it's hard to serialize safely
-        sort_func = lambda x: version.parse(".".join([str(i) for i in x.identifier]))
+        def sort_func(x):
+            return version.parse(".".join([str(i) for i in x.identifier]))
+
         self.hierarchy_elements.sort(key=sort_func)
 
     def __str__(self):
