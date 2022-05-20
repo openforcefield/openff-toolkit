@@ -88,6 +88,17 @@ if TYPE_CHECKING:
 #       Only support OEAroModel_MDL in RDKit version?
 
 
+def _molecule_deprecation(old_method, new_method):
+    warnings.warn(
+        f"Molecule.{old_method} is deprecated. Use Molecule.{new_method} instead.",
+        MoleculeDeprecationWarning,
+    )
+
+
+class MoleculeDeprecationWarning(UserWarning):
+    """Warning for deprecated portions of the Molecule API."""
+
+
 class Particle(Serializable):
     """
     Base class for all particles in a molecule.
@@ -2921,43 +2932,20 @@ class FrozenMolecule(Serializable):
         return len(self._impropers)
 
     @property
-    def particles(self) -> List[Particle]:
-        """
-        Iterate over all Particle objects in the molecule.
-        """
+    def particles(self) -> List[Atom]:
+        """DEPRECATED: Use Molecule.atoms instead."""
+        _molecule_deprecation("particles", "atoms")
+        return self.atoms
 
-        return self._atoms
-
-    def particle(self, index: int):
-        """
-        Get particle with a specified index.
-
-        Parameters
-        ----------
-        index : int
-
-        Returns
-        -------
-        atom: openff.toolkit.topology.Atom
-        """
+    def particle(self, index: int) -> Atom:
+        """DEPRECATED: Use Molecule.atom instead."""
+        _molecule_deprecation("particle", "atom")
         return self.atom(index)
 
-    def particle_index(self, particle):
-        """
-        Returns the index of a given particle in this molecule
-
-        Parameters
-        ----------
-        particle : openff.toolkit.topology.Particle
-
-        Returns
-        -------
-        index : int
-            The index of the given particle in this molecule
-        """
-        for index, mol_particle in enumerate(self.particles):
-            if particle is mol_particle:
-                return index
+    def particle_index(self, particle: Atom) -> int:
+        """DEPRECATED: Use Molecule.atom_index instead."""
+        _molecule_deprecation("particle_index", "atom_index")
+        return self.atom_index(particle)
 
     @property
     def atoms(self):

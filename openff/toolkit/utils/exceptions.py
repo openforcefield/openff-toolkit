@@ -111,6 +111,18 @@ class NotAttachedToMoleculeError(OpenFFToolkitException):
     """Exception for when a component does not belong to a Molecule object, but is queried"""
 
 
+class NotInTopologyError(OpenFFToolkitException):
+    """An object was not found in a topology."""
+
+
+class AtomNotInTopologyError(NotInTopologyError):
+    """An atom was not found in a topology."""
+
+
+class MoleculeNotInTopologyError(NotInTopologyError):
+    """A molecule was not found in a topology."""
+
+
 class InvalidAtomMetadataError(OpenFFToolkitException):
     """The program attempted to set atom metadata to an invalid type"""
 
