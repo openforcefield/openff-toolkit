@@ -31,6 +31,7 @@ from openff.toolkit.tests.utils import (
     requires_rdkit,
 )
 from openff.toolkit.topology import (
+    Atom,
     ImproperDict,
     Molecule,
     TagSortedDict,
@@ -45,10 +46,12 @@ from openff.toolkit.utils import (
     RDKitToolkitWrapper,
 )
 from openff.toolkit.utils.exceptions import (
+    AtomNotInTopologyError,
     DuplicateUniqueMoleculeError,
     InvalidBoxVectorsError,
     InvalidPeriodicityError,
     MissingUniqueMoleculesError,
+    MoleculeNotInTopologyError,
 )
 
 
@@ -267,6 +270,32 @@ class TestTopology:
 
         with pytest.raises(Exception):
             topology.atom(8)
+
+    def test_atom_index(self):
+        topology = create_ethanol().to_topology()
+
+        for index in range(topology.n_atoms):
+            atom = topology.atom(index)
+            assert topology.atom_index(atom) == index
+
+        ghost_atom = Atom(atomic_number=1, formal_charge=0, is_aromatic=False)
+
+        with pytest.raises(AtomNotInTopologyError):
+            topology.atom_index(ghost_atom)
+
+    def test_molecule_index(self):
+        molecules = [Molecule.from_smiles("CCO"), Molecule.from_smiles("O")]
+
+        topology = Topology.from_molecules(molecules)
+
+        for index in range(topology.n_molecules):
+            molecule = topology.molecule(index)
+            assert topology.molecule_index(molecule) == index
+
+        ghost_molecule = Molecule.from_smiles("N")
+
+        with pytest.raises(MoleculeNotInTopologyError):
+            topology.molecule_index(ghost_molecule)
 
     def test_atom_element_properties(self):
         """
