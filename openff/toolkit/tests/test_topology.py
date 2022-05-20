@@ -132,6 +132,28 @@ class TestTopology:
             ):
                 assert len([*getattr(topology, old_iterator)]) == 0
 
+        # Some particle-related methods are deprecated for reasons other than the `TopologyX` deprecation
+        with pytest.warns(
+            TopologyDeprecationWarning,
+            match="Topology.n_particles is deprecated. Use Topology.n_atoms instead.",
+        ):
+            assert topology.n_particles == 0
+
+        with pytest.warns(
+            TopologyDeprecationWarning,
+            match="Topology.particles is deprecated. Use Topology.atoms instead.",
+        ):
+            assert len([*topology.particles]) == 0
+
+        topology = Molecule.from_smiles("O").to_topology()
+        first_atom = [*topology.atoms][0]
+
+        with pytest.warns(
+            TopologyDeprecationWarning,
+            match="Topology.particle_index is deprecated. Use Topology.atom_index instead.",
+        ):
+            assert topology.particle_index(first_atom) == 0
+
     def test_reinitialization_box_vectors(self):
         topology = Topology()
         assert Topology(topology).box_vectors is None
