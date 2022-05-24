@@ -5479,6 +5479,33 @@ class FrozenMolecule(Serializable):
 
             return rwmol
 
+        def _rdkit_fuzzy_query(query):
+            """return a copy of Query which is less specific:
+            - ignore aromaticity and hybridization of atoms (i.e. [#6] not C)
+            - ignore bond orders
+            - ignore charges
+            """
+            # it's tricky from the Python API to properly edit queries,
+            # but you can do SetQuery on Atoms/Bonds to edit them quite powerfully
+            generic = Chem.MolFromSmarts('**')
+            generic_bond = generic.GetBondWithIdx(0)
+            # N.B. This isn't likely to be an active
+            generic_mol = Chem.MolFromSmarts(  # TODO: optimisation, create this once somewhere
+                ''.join('[#{}]'.format(i + 1) for i in range(112)))
+
+            fuzzy = Chem.Mol(query)
+            for a in fuzzy.GetAtoms():
+                a.SetFormalCharge(0)
+                a.SetQuery(generic_mol.GetAtomWithIdx(
+                    a.GetAtomicNum() - 1))  # i.e. H looks up atom 0 in our generic mol
+                a.SetNoImplicit(True)
+            for b in fuzzy.GetBonds():
+                b.SetIsAromatic(False)
+                b.SetBondType(Chem.rdchem.BondType.SINGLE)
+                b.SetQuery(generic_bond)
+
+            return fuzzy
+
         def _add_chemical_info(
             substructure_library,
             rdkit_mol,
@@ -5520,13 +5547,10 @@ class FrozenMolecule(Serializable):
                     ref = Chem.MolFromSmarts(substructure_smarts)
                     # then create a looser definition for pattern matching...
                     # be lax about double bonds and chirality
-                    pattern = substructure_smarts.replace('=', '~').replace('@', '').replace('@@', '')
-                    # be less specific about aromaticity
-                    pattern = pattern.replace('N', '#7').replace('n', '#7')
-                    pattern = pattern.replace('C', '#6').replace('c', '#6')
-                    pattern = pattern.replace('O', '#8').replace('S', '#16')
+                    fuzzy = _rdkit_fuzzy_query(ref)
 
-                    for match in mol.GetSubstructMatches(Chem.MolFromSmarts(pattern)):
+                    for match in mol.GetSubstructMatches(Chem.MolFromSmarts(fuzzy)):
+                        # TODO: If we're allowing disulfide & peptide, this check needs changing
                         if any(m in already_assigned_nodes for m in match):
                             continue
                         already_assigned_nodes.update(match)
@@ -5537,15 +5561,13 @@ class FrozenMolecule(Serializable):
                             if atom_i.GetChiralTag():
                                 mol.GetAtomWithIdx(j).SetChiralTag(
                                     atom_i.GetChiralTag())
-                            # copy over charge, only fancy atoms worth thinking about(?)
-                            if atom_i.GetAtomicNum() not in (7, 8, 16):  # N, O, S
-                                continue
                             atom_j.SetFormalCharge(atom_i.GetFormalCharge())
 
                         # map double/aromatic bonds onto our substructure
-                        double_bonds = (b for b in ref.GetBonds()
+                        # TODO: If you wanted to count edges seen, this is likely where to implement
+                        fancy_bonds = (b for b in ref.GetBonds()
                                         if b.GetBondType() != Chem.rdchem.BondType.SINGLE)
-                        for b in double_bonds:
+                        for b in fancy_bonds:
                             x = match[b.GetBeginAtomIdx()]
                             y = match[b.GetEndAtomIdx()]
                             b2 = mol.GetBondBetweenAtoms(x, y)
