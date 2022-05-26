@@ -1329,7 +1329,27 @@ class FrozenMolecule(Serializable):
         # TODO the doc string did not match the previous function what matching should this method do?
         return Molecule.are_isomorphic(self, other, return_atom_map=False)[0]
 
-    def _add_default_hierarchy_schemes(self):
+    def add_default_hierarchy_schemes(self, overwrite_existing=True):
+        """
+        Adds `chain` and `residue` hierarchy schemes.
+
+        Parameters
+        ----------
+        overwrite_existing : bool, default=True
+            Whether to overwrite existing instances of the `residue` and `chain` hierarchy schemes. If this is
+            False and either of the hierarchy schemes are already defined on this molecule, an exception will
+            be raised.
+
+        Raises
+        ------
+        HierarchySchemeWithIteratorNameAlreadyRegisteredException
+        """
+        if overwrite_existing:
+            if "chains" in self._hierarchy_schemes.keys():
+                self.delete_hierarchy_scheme("chains")
+            if "residues" in self._hierarchy_schemes.keys():
+                self.delete_hierarchy_scheme("residues")
+
         self.add_hierarchy_scheme(
             ("chain", "residue_number", "residue_name"), "residues"
         )
@@ -3907,6 +3927,9 @@ class FrozenMolecule(Serializable):
         for stereo_aro_bond, bond in zip(offmol_w_stereo_and_aro.bonds, offmol.bonds):
             bond._is_aromatic = stereo_aro_bond.is_aromatic
 
+        offmol.add_default_hierarchy_schemes()
+        offmol.perceive_hierarchy()
+
         return offmol
 
     def _to_xyz_file(self, file_path):
@@ -5525,6 +5548,28 @@ class HierarchyScheme:
             Name of the iterator that will be exposed to access the HierarchyElements generated
             by this scheme
         """
+        if (type(uniqueness_criteria) is not list) and (
+            type(uniqueness_criteria) is not tuple
+        ):
+            raise TypeError(
+                f"'uniqueness_criteria' kwarg must be a list or a tuple of strings,"
+                f" received {repr(uniqueness_criteria)} "
+                f"(type {type(uniqueness_criteria)}) instead."
+            )
+
+        for criterion in uniqueness_criteria:
+            if type(criterion) is not str:
+                raise TypeError(
+                    f"Each item in the 'uniqueness_criteria' kwarg must be a string,"
+                    f" received {repr(criterion)} "
+                    f"(type {type(criterion)}) instead."
+                )
+
+        if type(iterator_name) is not str:
+            raise TypeError(
+                f"'iterator_name' kwarg must be a string, received {repr(iterator_name)} "
+                f"(type {type(iterator_name)}) instead."
+            )
         self.parent = parent
         self.uniqueness_criteria = uniqueness_criteria
         self.iterator_name = iterator_name
