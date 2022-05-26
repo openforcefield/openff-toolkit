@@ -1855,7 +1855,7 @@ class TestMolecule:
                 assert isomer.n_conformers == 0
 
             mol = Molecule.from_smiles(
-                "Cl/C=C\Cl", toolkit_registry=toolkit, allow_undefined_stereo=True
+                r"Cl/C=C\Cl", toolkit_registry=toolkit, allow_undefined_stereo=True
             )
             isomers = mol.enumerate_stereoisomers(
                 undefined_only=True, rationalise=False
@@ -1864,7 +1864,7 @@ class TestMolecule:
             assert isomers == []
 
             mol = Molecule.from_smiles(
-                "Cl/C=C\Cl", toolkit_registry=toolkit, allow_undefined_stereo=True
+                r"Cl/C=C\Cl", toolkit_registry=toolkit, allow_undefined_stereo=True
             )
             isomers = mol.enumerate_stereoisomers(
                 undefined_only=False, rationalise=False
@@ -2291,11 +2291,29 @@ class TestMolecule:
         ):
             Molecule.from_mapped_smiles("[Cl:1][Cl]", toolkit_registry=toolkit_class())
 
-    @pytest.mark.parametrize("molecule", mini_drug_bank())
-    def test_n_particles(self, molecule):
-        """Test n_particles property"""
-        n_particles = sum([1 for particle in molecule.particles])
-        assert n_particles == molecule.n_particles
+    def test_deprecated_api_points(self):
+        """Ensure that some of the API deprecated circa v0.11.0 still exist."""
+        from openff.toolkit.topology.molecule import MoleculeDeprecationWarning
+
+        molecule = Molecule.from_smiles("O")
+
+        with pytest.warns(
+            MoleculeDeprecationWarning,
+            match="Molecule.particles is deprecated. Use Molecule.atoms instead.",
+        ):
+            assert len(molecule.particles) == 3
+
+        with pytest.warns(
+            MoleculeDeprecationWarning,
+            match="Molecule.n_particles is deprecated. Use Molecule.n_atoms instead.",
+        ):
+            assert molecule.n_particles == 3
+
+        with pytest.warns(
+            MoleculeDeprecationWarning,
+            match="Molecule.particle_index is deprecated. Use Molecule.atom_index instead.",
+        ):
+            assert molecule.particle_index(molecule.atom(0)) == 0
 
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_n_atoms(self, molecule):
@@ -2406,7 +2424,7 @@ class TestMolecule:
         assert n_14_pairs == benzene.n_propers - 3
 
         for pair in benzene.nth_degree_neighbors(n_degrees=3):
-            assert pair[0].molecule_particle_index < pair[1].molecule_particle_index
+            assert pair[0].molecule_atom_index < pair[1].molecule_atom_index
 
     @pytest.mark.parametrize(
         ("smiles", "n_degrees", "num_pairs"),
@@ -3657,30 +3675,30 @@ class TestHierarchies:
 
         assert (
             str(dipeptide_hierarchy_perceived.residues[0])
-            == "HierarchyElement ('None', 1, 'ACE') of iterator 'residues' containing 6 particle(s)"
+            == "HierarchyElement ('None', 1, 'ACE') of iterator 'residues' containing 6 atom(s)"
         )
         assert dipeptide_hierarchy_perceived.residues[0].chain == "None"
         assert dipeptide_hierarchy_perceived.residues[0].residue_name == "ACE"
         assert dipeptide_hierarchy_perceived.residues[0].residue_number == 1
-        assert set(dipeptide_hierarchy_perceived.residues[0].particle_indices) == set(
+        assert set(dipeptide_hierarchy_perceived.residues[0].atom_indices) == set(
             range(6)
         )
 
         assert (
             str(dipeptide_hierarchy_perceived.residues[1])
-            == "HierarchyElement ('None', 2, 'ALA') of iterator 'residues' containing 11 particle(s)"
+            == "HierarchyElement ('None', 2, 'ALA') of iterator 'residues' containing 11 atom(s)"
         )
         assert dipeptide_hierarchy_perceived.residues[1].chain == "None"
         assert dipeptide_hierarchy_perceived.residues[1].residue_name == "ALA"
         assert dipeptide_hierarchy_perceived.residues[1].residue_number == 2
-        assert set(dipeptide_hierarchy_perceived.residues[1].particle_indices) == set(
+        assert set(dipeptide_hierarchy_perceived.residues[1].atom_indices) == set(
             range(6, 17)
         )
 
         for residue in dipeptide_hierarchy_perceived.residues:
-            for particle in residue.particles:
-                assert particle.metadata["residue_name"] == residue.residue_name
-                assert particle.metadata["residue_number"] == residue.residue_number
+            for atom in residue.atoms:
+                assert atom.metadata["residue_name"] == residue.residue_name
+                assert atom.metadata["residue_number"] == residue.residue_number
 
     def test_hierarchy_perceived_information_propagation(self):
         """Ensure that updating atom metadata doesn't update the iterators until the hierarchy is re-perceived"""

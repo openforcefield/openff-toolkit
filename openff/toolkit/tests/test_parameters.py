@@ -1486,7 +1486,7 @@ class TestProperTorsionType:
         the indices are not consecutive and a SMIRNOFFSpecError is raised
         """
         with pytest.raises(
-            SMIRNOFFSpecError, match="Unexpected kwarg \(phase3: 31 deg\)*."
+            SMIRNOFFSpecError, match=r"Unexpected kwarg \(phase3: 31 deg\)*."
         ):
             ProperTorsionHandler.ProperTorsionType(
                 smirks="[*:1]-[*:2]-[*:3]-[*:4]",
@@ -1621,7 +1621,7 @@ class TestProperTorsionType:
         AND we are doing bond order interpolation
         """
         with pytest.raises(
-            SMIRNOFFSpecError, match="Unexpected kwarg \(k3_bondorder1*."
+            SMIRNOFFSpecError, match=r"Unexpected kwarg \(k3_bondorder1*."
         ):
             ProperTorsionHandler.ProperTorsionType(
                 smirks="[*:1]-[*:2]-[*:3]-[*:4]",

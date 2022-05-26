@@ -590,7 +590,7 @@ class MappedParameterAttribute(ParameterAttribute):
 
 
 class IndexedMappedParameterAttribute(ParameterAttribute):
-    """The attribute of a parameter with an unspecified number of terms, where
+    r"""The attribute of a parameter with an unspecified number of terms, where
     each term is a mapping.
 
     Some parameters can be associated to multiple terms,
@@ -1606,7 +1606,7 @@ class ParameterList(list):
 
 # TODO: Rename to better reflect role as parameter base class?
 class ParameterType(_ParameterAttributeHandler):
-    """
+    r"""
     Base class for SMIRNOFF parameter types.
 
     This base class provides utilities to create new parameter types. See
@@ -2190,8 +2190,8 @@ class ParameterHandler(_ParameterAttributeHandler):
         Returns
         ---------
         matches : ValenceDict[Tuple[int], ParameterHandler._Match]
-            ``matches[particle_indices]`` is the ``ParameterType`` object
-            matching the tuple of particle indices in ``entity``.
+            ``matches[atom_indices]`` is the ``ParameterType`` object
+            matching the tuple of atom indices in ``entity``.
         """
 
         # TODO: Right now, this method is only ever called with an entity that is a Topology.
@@ -2221,8 +2221,8 @@ class ParameterHandler(_ParameterAttributeHandler):
         Returns
         ---------
         matches : `transformed_dict_cls` of ParameterHandlerMatch
-            ``matches[particle_indices]`` is the ``ParameterType`` object
-            matching the tuple of particle indices in ``entity``.
+            ``matches[atom_indices]`` is the ``ParameterType`` object
+            matching the tuple of atom indices in ``entity``.
         """
         logger.debug(f"Finding matches for {self.__class__.__name__}")
 
@@ -2400,12 +2400,7 @@ class ParameterHandler(_ParameterAttributeHandler):
         # the order of atom indices doesn't matter for comparison.
         valence_terms_dict = assigned_terms.__class__()
         for atoms in valence_terms:
-            # try:
-            # valence_terms is a list of TopologyAtom tuples.
-            atom_indices = (topology.particle_index(a) for a in atoms)
-            # except TypeError:
-            #     # valence_terms is a list of TopologyAtom.
-            #     atom_indices = (topology.particle_index(atoms),)
+            atom_indices = (topology.atom_index(a) for a in atoms)
             valence_terms_dict[atom_indices] = atoms
 
         # Check that both valence dictionaries have the same keys (i.e. terms).
@@ -2799,8 +2794,8 @@ class BondHandler(ParameterHandler):
             0  # keep track of how many bonds were constrained (and hence skipped)
         )
         for (topology_atom_indices, bond_match) in bond_matches.items():
-            # Get corresponding particle indices in Topology
-            # particle_indices = tuple([ atom.particle_index for atom in atoms ])
+            # Get corresponding atom indices in Topology
+            # atom_indices = tuple([ atom.atom_index for atom in atoms ])
 
             # Ensure atoms are actually bonded correct pattern in Topology
             try:
@@ -4002,29 +3997,23 @@ class ElectrostaticsHandler(_NonbondedHandler):
                 continue
 
             # Otherwise, the molecule is in the charge_from_molecules list, and we should assign charges to it
-            for unique_mol_particle in unique_mol.particles:
-                unique_mol_particle_index = unique_mol.particle_index(
-                    unique_mol_particle
-                )
-                particle_charge = unique_mol.partial_charges[unique_mol_particle_index]
+            for unique_mol_atom in unique_mol.atoms:
+                unique_mol_atom_index = unique_mol.atom_index(unique_mol_atom)
+                atom_charge = unique_mol.partial_charges[unique_mol_atom_index]
                 for mol_instance_idx, atom_map in group:
                     mol_instance = topology.molecule(mol_instance_idx)
-                    mol_instance_particle_index = atom_map[unique_mol_particle_index]
-                    mol_instance_particle = mol_instance.particle(
-                        mol_instance_particle_index
-                    )
-                    mol_instance_particle_top_idx = topology.particle_index(
-                        mol_instance_particle
-                    )
+                    mol_instance_atom_index = atom_map[unique_mol_atom_index]
+                    mol_instance_atom = mol_instance.atom(mol_instance_atom_index)
+                    mol_instance_atom_top_idx = topology.atom_index(mol_instance_atom)
 
                     # Retrieve nonbonded parameters for reference atom (charge not set yet)
                     _, sigma, epsilon = force.getParticleParameters(
-                        mol_instance_particle_top_idx
+                        mol_instance_atom_top_idx
                     )
                     # Set the nonbonded force with the partial charge
                     force.setParticleParameters(
-                        mol_instance_particle_top_idx,
-                        to_openmm(particle_charge),
+                        mol_instance_atom_top_idx,
+                        to_openmm(atom_charge),
                         sigma,
                         epsilon,
                     )
@@ -4112,8 +4101,8 @@ class ElectrostaticsHandler(_NonbondedHandler):
                 continue
             formal_charge_sum = molecule.total_charge
             partial_charge_sum = 0.0 * unit.elementary_charge
-            for particle in molecule.particles:
-                q, _, _ = force.getParticleParameters(topology.particle_index(particle))
+            for atom in molecule.atoms:
+                q, _, _ = force.getParticleParameters(topology.atom_index(atom))
                 partial_charge_sum += from_openmm(q)
             if (
                 abs(formal_charge_sum - partial_charge_sum).m_as(unit.elementary_charge)
@@ -4186,8 +4175,8 @@ class LibraryChargeHandler(_NonbondedHandler):
         Returns
         ---------
         matches : ValenceDict[Tuple[int], ParameterHandler._Match]
-            ``matches[particle_indices]`` is the ``ParameterType`` object
-            matching the tuple of particle indices in ``entity``.
+            ``matches[atom_indices]`` is the ``ParameterType`` object
+            matching the tuple of atom indices in ``entity``.
         """
 
         # TODO: Right now, this method is only ever called with an entity that is a Topology.
@@ -4235,11 +4224,9 @@ class LibraryChargeHandler(_NonbondedHandler):
                 continue
 
             # Ensure all of the atoms in this mol are covered, otherwise skip it
-            top_particle_idxs = [
-                topology.particle_index(atom) for atom in molecule.atoms
-            ]
+            top_atom_idxs = [topology.atom_index(atom) for atom in molecule.atoms]
             if (
-                len(set(top_particle_idxs).intersection(assignable_atoms))
+                len(set(top_atom_idxs).intersection(assignable_atoms))
                 != molecule.n_atoms
             ):
                 logger.debug(
@@ -4248,11 +4235,11 @@ class LibraryChargeHandler(_NonbondedHandler):
                 continue
 
             # If we pass both tests above, go ahead and assign charges
-            for top_particle_idx in top_particle_idxs:
-                _, sigma, epsilon = force.getParticleParameters(top_particle_idx)
+            for top_atom_idx in top_atom_idxs:
+                _, sigma, epsilon = force.getParticleParameters(top_atom_idx)
                 force.setParticleParameters(
-                    top_particle_idx,
-                    atom_assignments[top_particle_idx].m_as(unit.elementary_charge),
+                    top_atom_idx,
+                    atom_assignments[top_atom_idx].m_as(unit.elementary_charge),
                     sigma,
                     epsilon,
                 )
@@ -4329,19 +4316,19 @@ class ToolkitAM1BCCHandler(_NonbondedHandler):
             # Assign charges to relevant atoms
             for unique_mol_atom in unique_mol.atoms:
                 unique_mol_atom_index = unique_mol.atom_index(unique_mol_atom)
-                particle_charge = unique_mol.partial_charges[unique_mol_atom_index]
+                atom_charge = unique_mol.partial_charges[unique_mol_atom_index]
                 for mol_instance_idx, atom_map in group:
                     mol_instance = topology.molecule(mol_instance_idx)
                     mol_instance_atom_index = atom_map[unique_mol_atom_index]
                     mol_instance_atom = mol_instance.atom(mol_instance_atom_index)
-                    particle_index = topology.particle_index(mol_instance_atom)
+                    atom_index = topology.atom_index(mol_instance_atom)
 
                     # Retrieve nonbonded parameters for reference atom (charge not set yet)
-                    _, sigma, epsilon = force.getParticleParameters(particle_index)
+                    _, sigma, epsilon = force.getParticleParameters(atom_index)
                     # Set the nonbonded force with the partial charge
                     force.setParticleParameters(
-                        particle_index,
-                        to_openmm(particle_charge),
+                        atom_index,
+                        to_openmm(atom_charge),
                         sigma,
                         epsilon,
                     )
@@ -4362,29 +4349,29 @@ class ToolkitAM1BCCHandler(_NonbondedHandler):
                 # TODO: We need to apply this to all Force types that involve charges, such as (Custom)GBSA forces and
                 #       CustomNonbondedForce
                 for (atoms, bond_match) in bond_matches.items():
-                    # Get corresponding particle indices in Topology
+                    # Get corresponding atom indices in Topology
                     bond = bond_match.parameter_type
 
-                    particle_indices = tuple([atom.particle_index for atom in atoms])
+                    atom_indices = tuple([atom.atom_index for atom in atoms])
                     # Retrieve parameters
                     [charge0, sigma0, epsilon0] = force.getParticleParameters(
-                        particle_indices[0]
+                        atom_indices[0]
                     )
                     [charge1, sigma1, epsilon1] = force.getParticleParameters(
-                        particle_indices[1]
+                        atom_indices[1]
                     )
                     # Apply bond charge increment
                     charge0 -= bond.increment.m_as(unit.elementary_charge)
                     charge1 += bond.increment.m_as(unit.elementary_charge)
                     # Update charges
                     force.setParticleParameters(
-                        particle_indices[0],
+                        atom_indices[0],
                         to_openmm(charge0),
                         sigma0,
                         epsilon0,
                     )
                     force.setParticleParameters(
-                        particle_indices[1],
+                        atom_indices[1],
                         to_openmm(charge1),
                         sigma1,
                         epsilon1,
@@ -4477,8 +4464,8 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
         Returns
         ---------
         matches : ValenceDict[Tuple[int], ParameterHandler._Match]
-            ``matches[particle_indices]`` is the ``ParameterType`` object
-            matching the tuple of particle indices in ``entity``.
+            ``matches[atom_indices]`` is the ``ParameterType`` object
+            matching the tuple of atom indices in ``entity``.
         """
         matches = self._find_matches(
             entity, transformed_dict_cls=TagSortedDict, unique=unique
@@ -4526,17 +4513,15 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
             charges_to_assign = {}
 
             # Assign initial, un-incremented charges to relevant atoms
-            for particle in unique_mol.particles:
-                unique_mol_particle_index = unique_mol.particle_index(particle)
-                particle_charge = unique_mol.partial_charges[unique_mol_particle_index]
+            for atom in unique_mol.atoms:
+                unique_mol_atom_index = unique_mol.atom_index(atom)
+                atom_charge = unique_mol.partial_charges[unique_mol_atom_index]
                 for mol_instance_idx, atom_map in group:
                     mol_instance = topology.molecule(mol_instance_idx)
-                    mol_instance_particle_index = atom_map[unique_mol_particle_index]
-                    mol_instance_particle = mol_instance.particle(
-                        mol_instance_particle_index
-                    )
-                    particle_index = topology.particle_index(mol_instance_particle)
-                    charges_to_assign[particle_index] = particle_charge
+                    mol_instance_atom_index = atom_map[unique_mol_atom_index]
+                    mol_instance_atom = mol_instance.atom(mol_instance_atom_index)
+                    atom_index = topology.atom_index(mol_instance_atom)
+                    charges_to_assign[atom_index] = atom_charge
 
             # Find SMARTS-based matches for charge increments
             charge_increment_matches = self.find_matches(topology)
@@ -4573,17 +4558,17 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
                         f"must be either the same as- or one less than the number of tagged atoms."
                     )
 
-                for top_particle_idx, charge_increment in zip(
+                for top_atom_idx, charge_increment in zip(
                     atom_indices, charge_increments
                 ):
-                    if top_particle_idx in charges_to_assign:
-                        charges_to_assign[top_particle_idx] += charge_increment
+                    if top_atom_idx in charges_to_assign:
+                        charges_to_assign[top_atom_idx] += charge_increment
 
-            # Set the incremented charges on the System particles
+            # Set the incremented charges on the System atoms
             for particle_index, charge_to_assign in charges_to_assign.items():
-                _, sigma, epsilon = force.getParticleParameters(particle_index)
+                _, sigma, epsilon = force.getParticleParameters(atom_index)
                 force.setParticleParameters(
-                    particle_index,
+                    atom_index,
                     to_openmm(charge_to_assign),
                     sigma,
                     epsilon,
@@ -4825,10 +4810,10 @@ class GBSAHandler(ParameterHandler):
         # To keep it simple, we DO NOT pre-populate the particles in the GBSA force here.
         # We call addParticle further below instead.
         # These lines are commented out intentionally as an example of what NOT to do.
-        # for particle in topology.particles:
+        # for particle in topology.atoms:
         # gbsa_force.addParticle([0.0, 1.0, 0.0])
 
-        params_to_add = [[] for _ in range(topology.n_particles)]
+        params_to_add = [[] for _ in range(topology.n_atoms)]
         for atom_key, atom_match in atom_matches.items():
             atom_idx = atom_key[0]
             gbsatype = atom_match.parameter_type

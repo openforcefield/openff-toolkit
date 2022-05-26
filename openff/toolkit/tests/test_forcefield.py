@@ -2073,8 +2073,8 @@ class TestForceFieldChargeAssignment:
         for particle_index, expected_charge in expected_charges:
             q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
             assert q == expected_charge
-        for particle_index in range(topology.n_particles):
-            q, sigma, epsilon = nonbondedForce.getParticleParameters(particle_index)
+        for atom_index in range(topology.n_atoms):
+            q, sigma, epsilon = nonbondedForce.getParticleParameters(atom_index)
             assert q != (0.0 * unit.elementary_charge)
 
     @pytest.mark.parametrize(

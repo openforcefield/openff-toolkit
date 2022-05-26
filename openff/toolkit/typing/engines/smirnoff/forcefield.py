@@ -1347,7 +1347,7 @@ class ForceField:
         bond_particle_indices = []
 
         bond_particle_indices = [
-            (topology.particle_index(bond.atom1), topology.particle_index(bond.atom2))
+            (topology.atom_index(bond.atom1), topology.atom_index(bond.atom2))
             for bond in topology.bonds
         ]
 

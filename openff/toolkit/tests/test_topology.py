@@ -107,7 +107,6 @@ class TestTopology:
         assert topology.n_molecules == 0
         assert topology.n_atoms == 0
         assert topology.n_bonds == 0
-        assert topology.n_particles == 0
         assert topology.box_vectors is None
         assert not topology.is_periodic
         assert len(topology.constrained_atom_pairs.items()) == 0
@@ -222,7 +221,6 @@ class TestTopology:
         assert topology.n_molecules == 1
         assert topology.n_atoms == 8
         assert topology.n_bonds == 7
-        assert topology.n_particles == 8
         assert topology.box_vectors is None
         assert len(topology.constrained_atom_pairs.items()) == 0
 
@@ -230,7 +228,6 @@ class TestTopology:
         assert topology.n_molecules == 2
         assert topology.n_atoms == 16
         assert topology.n_bonds == 14
-        assert topology.n_particles == 16
         assert topology.box_vectors is None
         assert len(topology.constrained_atom_pairs.items()) == 0
 
@@ -1174,7 +1171,7 @@ class TestTopologySerialization:
     @pytest.fixture
     def oleic_acid(self):
         """Simple floppy molecule that can be assured to have multiple conformers"""
-        return Molecule.from_smiles("CCCCCCCC\C=C/CCCCCCCC(O)=O")
+        return Molecule.from_smiles(r"CCCCCCCC\C=C/CCCCCCCC(O)=O")
 
     @pytest.mark.parametrize(("with_conformers"), [True, False])
     @pytest.mark.parametrize(("n_molecules"), [1, 2])

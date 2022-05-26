@@ -110,7 +110,7 @@ class Particle(Serializable):
 
     @property
     def molecule(self):
-        """
+        r"""
         The ``Molecule`` this particle is part of.
 
         .. todo::
@@ -178,7 +178,7 @@ class AtomMetadataDict(UserDict):
 
 class Atom(Particle):
     """
-    A particle representing a chemical atom.
+    A chemcical atom.
 
     .. todo::
 
@@ -513,7 +513,6 @@ class Atom(Particle):
     def molecule_atom_index(self):
         """
         The index of this Atom within the the list of atoms in the parent ``Molecule``.
-        Note that this can be different from ``molecule_particle_index``.
         """
         if self._molecule is None:
             raise ValueError("This Atom does not belong to a Molecule object")
@@ -522,37 +521,15 @@ class Atom(Particle):
         self._molecule_atom_index = self._molecule.atoms.index(self)
         return self._molecule_atom_index
 
-    @property
-    def molecule_particle_index(self):
-        """
-        The index of this Particle within the the list of particles in the parent ``Molecule``.
-        Note that this can be different from ``molecule_atom_index``.
-
-        """
-        if self._molecule is None:
-            raise ValueError("This Atom does not belong to a Molecule object")
-        return self._molecule.particles.index(self)
-
-    # ## From Jeff: Not sure if we actually need this
-    # @property
-    # def topology_atom_index(self):
-    #     """
-    #     The index of this Atom within the the list of atoms in ``Topology``.
-    #     Note that this can be different from ``particle_index``.
-    #
-    #     """
-    #     if self._topology is None:
-    #         raise ValueError('This Atom does not belong to a Topology object')
-    #     # TODO: This will be slow; can we cache this and update it only when needed?
-    #     #       Deleting atoms/molecules in the Topology would have to invalidate the cached index.
-    #     return self._topology.atoms.index(self)
+    # I can deprecate this instead of removing it ... but it seems incredibly unlikely to be used directly
+    # as part of the public API
 
     def __repr__(self):
-        # TODO: Also include particle_index and which molecule this atom belongs to?
+        # TODO: Also include which molecule this atom belongs to?
         return f"Atom(name={self._name}, atomic number={self._atomic_number})"
 
     def __str__(self):
-        # TODO: Also include particle_index and which molecule this atom belongs to?
+        # TODO: Also include which molecule this atom belongs to?
         return "<Atom name='{}' atomic number='{}'>".format(
             self._name, self._atomic_number
         )
@@ -850,7 +827,7 @@ class FrozenMolecule(Serializable):
         toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
         allow_undefined_stereo=False,
     ):
-        """
+        r"""
         Create a new FrozenMolecule object
 
         .. todo ::
@@ -1259,7 +1236,7 @@ class FrozenMolecule(Serializable):
             # hierarchy_scheme = self._hierarchy_schemes[iter_name]
             for element_dict in hierarchy_scheme_dict["hierarchy_elements"]:
                 new_hier_scheme.add_hierarchy_element(
-                    element_dict["identifier"], element_dict["particle_indices"]
+                    element_dict["identifier"], element_dict["atom_indices"]
                 )
             self._expose_hierarchy_scheme(iter_name)
 
@@ -2508,7 +2485,7 @@ class FrozenMolecule(Serializable):
     def to_networkx(self):
         """Generate a NetworkX undirected graph from the molecule.
 
-        Nodes are Atoms labeled with particle indices and atomic elements (via the ``element`` node atrribute).
+        Nodes are Atoms labeled with atom indices and atomic elements (via the ``element`` node atrribute).
         Edges denote chemical bonds between Atoms.
 
         .. todo ::
@@ -2888,10 +2865,9 @@ class FrozenMolecule(Serializable):
 
     @property
     def n_particles(self) -> int:
-        """
-        The number of Particle objects, which corresponds to how many positions must be used.
-        """
-        return len(self._atoms)
+        """DEPRECATED: Use Molecule.n_atoms instead."""
+        _molecule_deprecation("n_particles", "n_atoms")
+        return self.n_atoms
 
     @property
     def n_atoms(self) -> int:
@@ -3107,7 +3083,7 @@ class FrozenMolecule(Serializable):
         of these three terms will always return a consistent energy.
 
         The exact three orderings that will be applied during parameterization can not be
-        determined in this method, since it requires sorting the particle indices, and
+        determined in this method, since it requires sorting the atom indices, and
         those indices may change when this molecule is added to a Topology.
 
         For more details on the use of three-fold ('trefoil') impropers, see
@@ -5545,9 +5521,9 @@ class HierarchyScheme:
 
     def perceive_hierarchy(self):
         """
-        Groups the particles of the parent of this HierarchyScheme according to their
+        Groups the atoms of the parent of this HierarchyScheme according to their
         metadata, and creates HierarchyElements suitable for iteration over the parent.
-        Particles missing the metadata fields in this HierarchyScheme's
+        atoms missing the metadata fields in this HierarchyScheme's
         uniqueness_criteria tuple will have those spots populated with the string 'None'.
 
         This method overwrites the HierarchyScheme's `hierarchy_elements` attribute in place.
@@ -5558,26 +5534,26 @@ class HierarchyScheme:
         from collections import defaultdict
 
         self.hierarchy_elements = list()
-        # Determine which particles should get added to which HierarchyElements
+        # Determine which atoms should get added to which HierarchyElements
         hier_eles_to_add = defaultdict(list)
-        for particle in self.parent.particles:
-            particle_key = list()
+        for atom in self.parent.atoms:
+            atom_key = list()
             for field_key in self.uniqueness_criteria:
-                if field_key in particle.metadata:
-                    particle_key.append(particle.metadata[field_key])
+                if field_key in atom.metadata:
+                    atom_key.append(atom.metadata[field_key])
                 else:
-                    particle_key.append("None")
+                    atom_key.append("None")
 
-            hier_eles_to_add[tuple(particle_key)].append(particle)
+            hier_eles_to_add[tuple(atom_key)].append(atom)
 
         # Create the actual HierarchyElements
-        for particle_key, particles_to_add in hier_eles_to_add.items():
-            particle_indices = [p.molecule_particle_index for p in particles_to_add]
-            self.add_hierarchy_element(particle_key, particle_indices)
+        for atom_key, atoms_to_add in hier_eles_to_add.items():
+            atom_indices = [p.molecule_atom_index for p in atoms_to_add]
+            self.add_hierarchy_element(atom_key, atom_indices)
 
         self.sort_hierarchy_elements()
 
-    def add_hierarchy_element(self, identifier, particle_indices):
+    def add_hierarchy_element(self, identifier, atom_indices):
         """
         Instantiate a new HierarchyElement belonging to this HierarchyScheme.
         This is the main way to instantiate new HierarchyElements.
@@ -5586,9 +5562,9 @@ class HierarchyScheme:
         ----------
         identifier : tuple of str and int
             uniqueness tuple
-        particle_indices : iterable int
+        atom_indices : iterable int
         """
-        new_hier_ele = HierarchyElement(self, identifier, particle_indices)
+        new_hier_ele = HierarchyElement(self, identifier, atom_indices)
         self.hierarchy_elements.append(new_hier_ele)
         return new_hier_ele
 
@@ -5614,16 +5590,16 @@ class HierarchyScheme:
 
 
 class HierarchyElement:
-    def __init__(self, scheme, identifier, particle_indices):
+    def __init__(self, scheme, identifier, atom_indices):
         """
         scheme : HierarchyScheme
         id : tuple of str and int
             uniqueness tuple
-        particle_indicess : iterable int
+        atom_indicess : iterable int
         """
         self.scheme = scheme
         self.identifier = identifier
-        self.particle_indices = deepcopy(particle_indices)
+        self.atom_indices = deepcopy(atom_indices)
         for id_component, uniqueness_component in zip(
             identifier, scheme.uniqueness_criteria
         ):
@@ -5635,17 +5611,17 @@ class HierarchyElement:
         """
         return_dict = dict()
         return_dict["identifier"] = self.identifier
-        return_dict["particle_indices"] = self.particle_indices
+        return_dict["atom_indices"] = self.atom_indices
         return return_dict
 
     @property
-    def particles(self):
-        for particle_index in self.particle_indices:
-            yield self.parent.particles[particle_index]
+    def atoms(self):
+        for atom_index in self.atom_indices:
+            yield self.parent.atoms[atom_index]
 
-    def particle(self, index: int):
+    def atom(self, index: int):
         """
-        Get particle with a specified index.
+        Get atom with a specified index.
 
         Parameters
         ----------
@@ -5653,9 +5629,9 @@ class HierarchyElement:
 
         Returns
         -------
-        particle : openff.toolkit.topology.Particle
+        atom : openff.toolkit.topology.molecule.Atom
         """
-        return self.parent.particles[self.particle_indices[index]]
+        return self.parent.atoms[self.atom_indices[index]]
 
     @property
     def parent(self):
@@ -5664,7 +5640,7 @@ class HierarchyElement:
     def __str__(self):
         return (
             f"HierarchyElement {self.identifier} of iterator '{self.scheme.iterator_name}' containing "
-            f"{len(self.particle_indices)} particle(s)"
+            f"{len(self.atom_indices)} atom(s)"
         )
 
     def __repr__(self):

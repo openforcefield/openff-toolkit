@@ -65,10 +65,6 @@ class _SimpleMolecule:
         return len(self.atoms)
 
     @property
-    def n_particles(self) -> int:
-        return len(self.atoms)
-
-    @property
     def n_bonds(self) -> int:
         return len(self.bonds)
 
@@ -97,10 +93,6 @@ class _SimpleMolecule:
 
     def particle(self, index) -> int:
         return self.atom(index)
-
-    @property
-    def particles(self):
-        return self.atoms
 
     def particle_index(self, particle) -> int:
         return self.atom_index(particle)
