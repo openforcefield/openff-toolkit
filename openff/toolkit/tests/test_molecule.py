@@ -3624,6 +3624,7 @@ class TestHierarchies:
             )
         assert len(dipeptide_residues_perceived.hierarchy_schemes) == 2
 
+        # This won't exist until we run perceive_hierarchy
         with pytest.raises(AttributeError):
             dipeptide_residues_perceived.res_by_num[0]
 
@@ -3646,6 +3647,53 @@ class TestHierarchies:
             ),
         ):
             dipeptide_residues_perceived.delete_hierarchy_scheme("res_by_num")
+
+    def test_add_hierarchy_scheme(self):
+        """Test all behaviors of Molecule.add_hierarchy_scheme"""
+        offmol = Molecule()
+
+        # Raise an error if iterator name isn't a string, even if it's hashable
+        with pytest.raises(
+            TypeError, match="'iterator_name' kwarg must be a string, received 1"
+        ):
+            offmol.add_hierarchy_scheme(("chain", "residue_number", "residue_name"), 1)
+
+        # Ensure that the uniqueness criteria kwarg is some sort of iterable
+        with pytest.raises(
+            TypeError,
+            match="'uniqueness_criteria' kwarg must be a list or a tuple of strings, received 'residue_number'",
+        ):
+            offmol.add_hierarchy_scheme("residue_number", "residues")
+        # Providing uniqueness_criteria as a list is OK
+        offmol.add_hierarchy_scheme(
+            ["chain", "residue_number", "residue_name"], "residues"
+        )
+
+        # Ensure that the items in the uniqueness_criteria are strings
+        with pytest.raises(
+            TypeError,
+            match="Each item in the 'uniqueness_criteria' kwarg must be a string, received [(]'chain_id',[)]",
+        ):
+            offmol.add_hierarchy_scheme([("chain_id",)], "chains")
+
+    def test_add_default_hierarchy_schemes(self):
+        """Test add_default_hierarchy_schemes and its kwargs"""
+        offmol = Molecule.from_pdb(get_data_file_path("proteins/MainChain_ALA.pdb"))
+        offmol.delete_hierarchy_scheme("residues")
+        offmol.delete_hierarchy_scheme("chains")
+        offmol.add_hierarchy_scheme(("residue_number", "residue_name"), "residues")
+        # Make sure that the non-default "residues" iterator that we just added
+        # doesn't have "chains" as a uniqueness criterion
+        assert "chain" not in offmol.hierarchy_schemes["residues"].uniqueness_criteria
+        # Test that the overwrite_existing kwarg has the right behavior
+        with pytest.raises(HierarchySchemeWithIteratorNameAlreadyRegisteredException):
+            offmol.add_default_hierarchy_schemes(overwrite_existing=False)
+
+        # Run add_default_hierarchy_schemes with overwrite_existing set to its default value,
+        # which should overwrite the "residues" iterator we just defined
+        offmol.add_default_hierarchy_schemes()
+        # Ensure that the new residues iterator DOES have "chain" as a uniqueness criterion
+        assert "chain" in offmol.hierarchy_schemes["residues"].uniqueness_criteria
 
     def test_hierarchy_perceived_dipeptide(self):
         """Test populating and accessing HierarchyElements"""
