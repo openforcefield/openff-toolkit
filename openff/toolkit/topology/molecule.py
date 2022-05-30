@@ -3730,12 +3730,12 @@ class FrozenMolecule(Serializable):
         with open(substructure_file_path, "r") as subfile:
             substructure_dictionary = json.load(subfile)
 
-
-        offmol = toolkit_registry.call('_polymer_openmm_topology_to_offmol', pdb.topology, substructure_dictionary)
+        offmol = toolkit_registry.call(
+            "_polymer_openmm_topology_to_offmol", pdb.topology, substructure_dictionary
+        )
         # TODO: I think we've copied this across from the SMARTS patterns, unless I've confused R/S and CCW/CW again
 
-        #Chem.AssignStereochemistryFrom3D(rdkit_mol)
-
+        # Chem.AssignStereochemistryFrom3D(rdkit_mol)
 
         for i, atom in enumerate(pdb.topology.atoms()):
             offmol.atoms[i].name = atom.name
@@ -3745,7 +3745,6 @@ class FrozenMolecule(Serializable):
                 "residue_number": atom.residue.id,
                 "chain_id": atom.residue.chain.id,
             }
-
 
         offmol.add_default_hierarchy_schemes()
         offmol.perceive_hierarchy()

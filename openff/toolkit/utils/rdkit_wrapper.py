@@ -280,10 +280,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
     def _polymer_openmm_topology_to_offmol(self, omm_top, substructure_dictionary):
         from rdkit import Chem
+
         rdkit_mol = self._polymer_openmm_topology_to_rdmol(omm_top)
-        rdkit_mol = self._add_chemical_info(
-            substructure_dictionary, rdkit_mol
-        )
+        rdkit_mol = self._add_chemical_info(substructure_dictionary, rdkit_mol)
         offmol = Molecule.from_rdkit(rdkit_mol)
         return offmol
 
@@ -311,6 +310,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             a copy of the original molecule with charges and bond order added
         """
         from rdkit import Chem
+
         already_assigned_nodes = set()
         # TODO: We currently assume all single and modify a few
         # Therefore it's hard to know if we've missed any edges...
@@ -342,9 +342,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                         atom_j = mol.GetAtomWithIdx(j)
                         # copy over chirality
                         if atom_i.GetChiralTag():
-                            mol.GetAtomWithIdx(j).SetChiralTag(
-                                atom_i.GetChiralTag()
-                            )
+                            mol.GetAtomWithIdx(j).SetChiralTag(atom_i.GetChiralTag())
                         atom_j.SetFormalCharge(atom_i.GetFormalCharge())
 
                     # map double/aromatic bonds onto our substructure
@@ -376,7 +374,6 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         # assert len(already_assigned_edges) == len(omm_topology_G.edges)
 
         return mol
-
 
     def _polymer_openmm_topology_to_rdmol(self, omm_top):
         from rdkit import Chem
