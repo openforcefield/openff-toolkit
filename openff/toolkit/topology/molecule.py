@@ -3720,13 +3720,20 @@ class FrozenMolecule(Serializable):
         molecule : openff.toolkit.topology.Molecule
         """
         from rdkit import Chem
+        from openmm.app import PDBFile
 
         def openmm_to_rdkit(pdbfile):
             # convert openmm PDBFile to rdkit Molecule
             # all bonds initially SINGLE, all charge initially neutral
             rwmol = Chem.RWMol()
             for atom in pdbfile.topology.atoms():
-                rwmol.AddAtom(Chem.Atom(atom.element.atomic_number))
+                idx = rwmol.AddAtom(Chem.Atom(atom.element.atomic_number))
+                res = Chem.AtomPDBResidueInfo()
+                res.SetResidueName(atom.residue.name)
+                res.SetResidueNumber(int(atom.residue.id))
+                res.SetChainId(atom.residue.chain.id)
+                rwatom = rwmol.GetAtomWithIdx(idx)
+                rwatom.SetPDBResidueInfo(res)
             # we're fully explicit
             for atom in rwmol.GetAtoms():
                 atom.SetNoImplicit(True)
@@ -3753,7 +3760,10 @@ class FrozenMolecule(Serializable):
             generic_bond = generic.GetBondWithIdx(0)
             # N.B. This isn't likely to be an active
             generic_mol = Chem.MolFromSmarts(  # TODO: optimisation, create this once somewhere
-                ''.join('[#{}]'.format(i + 1) for i in range(112)))
+                ''.join(
+                    '[#{}]'.format(i + 1) for i in range(112)
+                )
+            )
 
             fuzzy = Chem.Mol(query)
             for a in fuzzy.GetAtoms():
@@ -3790,16 +3800,6 @@ class FrozenMolecule(Serializable):
             rdkit_mol : rdkit.Chem.Mol
                 a copy of the original molecule with charges and bond order added
             """
-            # Don't modify the input graph
-            omm_topology_G = deepcopy(omm_topology_G)
-
-            _make_hydrogens_negative_in_networkx_graph(omm_topology_G)
-
-            # Try matching this substructure to the whole molecule graph
-            node_match = isomorphism.categorical_node_match(
-                ["atomic_number", "already_matched"], [-100, False]
-            )
-
             already_assigned_nodes = set()
             # TODO: We currently assume all single and modify a few
             # Therefore it's hard to know if we've missed any edges...
@@ -3821,7 +3821,8 @@ class FrozenMolecule(Serializable):
                     # be lax about double bonds and chirality
                     fuzzy = _rdkit_fuzzy_query(ref)
 
-                    for match in mol.GetSubstructMatches(Chem.MolFromSmarts(fuzzy)):
+                    for match in mol.GetSubstructMatches(fuzzy,
+                                                         maxMatches=0):
                         # TODO: If we're allowing disulfide & peptide, this check needs changing
                         if any(m in already_assigned_nodes for m in match):
                             continue
@@ -3845,7 +3846,12 @@ class FrozenMolecule(Serializable):
                             b2 = mol.GetBondBetweenAtoms(x, y)
                             b2.SetBondType(b.GetBondType())
 
-            assert len(already_assigned_nodes) == rdkit_mol.GetNumAtoms()
+            if not(len(already_assigned_nodes) == rdkit_mol.GetNumAtoms()):
+                unassigned_atom_indices = set(range(rdkit_mol.GetNumAtoms())) - already_assigned_nodes
+                unassigned_atom_indices = sorted(list(unassigned_atom_indices))
+                print(unassigned_atom_indices)
+                print([rdkit_mol.GetAtomWithIdx(i).GetPDBResidueInfo().GetResidueName() for i in unassigned_atom_indices])
+
             #assert len(already_assigned_edges) == len(omm_topology_G.edges)
 
             return mol
