@@ -3720,151 +3720,8 @@ class FrozenMolecule(Serializable):
         molecule : openff.toolkit.topology.Molecule
         """
         from openmm.app import PDBFile
-        from rdkit import Chem
 
-        def openmm_to_rdkit(pdbfile):
-            # convert openmm PDBFile to rdkit Molecule
-            # all bonds initially SINGLE, all charge initially neutral
-            rwmol = Chem.RWMol()
-            for atom in pdbfile.topology.atoms():
-                idx = rwmol.AddAtom(Chem.Atom(atom.element.atomic_number))
-                res = Chem.AtomPDBResidueInfo()
-                res.SetResidueName(atom.residue.name)
-                res.SetResidueNumber(int(atom.residue.id))
-                res.SetChainId(atom.residue.chain.id)
-                rwatom = rwmol.GetAtomWithIdx(idx)
-                rwatom.SetPDBResidueInfo(res)
-            # we're fully explicit
-            for atom in rwmol.GetAtoms():
-                atom.SetNoImplicit(True)
-            for bond in pdbfile.topology.bonds():
-                rwmol.AddBond(bond[0].index, bond[1].index, Chem.BondType.SINGLE)
-
-            conf = Chem.Conformer()
-            for i, pos in enumerate(pdbfile.getPositions()):
-                conf.SetAtomPosition(i, list(pos.value_in_unit(pos.unit)))
-            rwmol.AddConformer(conf)
-
-            return rwmol
-
-        def _rdkit_fuzzy_query(query):
-            """return a copy of Query which is less specific:
-            - ignore aromaticity and hybridization of atoms (i.e. [#6] not C)
-            - ignore bond orders
-            - ignore charges
-            """
-            # it's tricky from the Python API to properly edit queries,
-            # but you can do SetQuery on Atoms/Bonds to edit them quite powerfully
-            generic = Chem.MolFromSmarts("**")
-            generic_bond = generic.GetBondWithIdx(0)
-            # N.B. This isn't likely to be an active
-            generic_mol = (
-                Chem.MolFromSmarts(  # TODO: optimisation, create this once somewhere
-                    "".join("[#{}]".format(i + 1) for i in range(112))
-                )
-            )
-
-            fuzzy = Chem.Mol(query)
-            for a in fuzzy.GetAtoms():
-                a.SetFormalCharge(0)
-                a.SetQuery(
-                    generic_mol.GetAtomWithIdx(a.GetAtomicNum() - 1)
-                )  # i.e. H looks up atom 0 in our generic mol
-                a.SetNoImplicit(True)
-            for b in fuzzy.GetBonds():
-                b.SetIsAromatic(False)
-                b.SetBondType(Chem.rdchem.BondType.SINGLE)
-                b.SetQuery(generic_bond)
-
-            return fuzzy
-
-        def _add_chemical_info(
-            substructure_library,
-            rdkit_mol,
-            toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
-        ):
-            """
-
-
-            Parameters
-            ----------
-            substructure_library : dict{str:list[str, list[str]]}
-                A dictionary of substructures. substructure_library[aa_name] = list[tagged SMARTS, list[atom_names]]
-            rdkit_mol : rdkit.Chem.Mol
-                Currently invalid (bond orders and charge) Molecule
-            toolkit_registry = ToolkitWrapper or ToolkitRegistry. Default = None
-                Either a ToolkitRegistry, ToolkitWrapper
-
-            Returns
-            -------
-            rdkit_mol : rdkit.Chem.Mol
-                a copy of the original molecule with charges and bond order added
-            """
-            already_assigned_nodes = set()
-            # TODO: We currently assume all single and modify a few
-            # Therefore it's hard to know if we've missed any edges...
-            # Notably assumes all bonds *between* fragments are single
-            # already_assigned_edges = set()
-
-            mol = Chem.Mol(rdkit_mol)
-
-            for res_name in substructure_library:
-                # TODO: This is a hack for the moment since we don't have a more sophisticated way to resolve clashes
-                # so it just does the biggest substructures first
-                sorted_substructure_smarts = sorted(
-                    substructure_library[res_name], key=len, reverse=True
-                )
-                for substructure_smarts in sorted_substructure_smarts:
-                    # this is the molecule as defined in template
-                    ref = Chem.MolFromSmarts(substructure_smarts)
-                    # then create a looser definition for pattern matching...
-                    # be lax about double bonds and chirality
-                    fuzzy = _rdkit_fuzzy_query(ref)
-
-                    for match in mol.GetSubstructMatches(fuzzy, maxMatches=0):
-                        # TODO: If we're allowing disulfide & peptide, this check needs changing
-                        if any(m in already_assigned_nodes for m in match):
-                            continue
-                        already_assigned_nodes.update(match)
-
-                        for atom_i, j in zip(ref.GetAtoms(), match):
-                            atom_j = mol.GetAtomWithIdx(j)
-                            # copy over chirality
-                            if atom_i.GetChiralTag():
-                                mol.GetAtomWithIdx(j).SetChiralTag(
-                                    atom_i.GetChiralTag()
-                                )
-                            atom_j.SetFormalCharge(atom_i.GetFormalCharge())
-
-                        # map double/aromatic bonds onto our substructure
-                        # TODO: If you wanted to count edges seen, this is likely where to implement
-                        fancy_bonds = (
-                            b
-                            for b in ref.GetBonds()
-                            if b.GetBondType() != Chem.rdchem.BondType.SINGLE
-                        )
-                        for b in fancy_bonds:
-                            x = match[b.GetBeginAtomIdx()]
-                            y = match[b.GetEndAtomIdx()]
-                            b2 = mol.GetBondBetweenAtoms(x, y)
-                            b2.SetBondType(b.GetBondType())
-
-            if not (len(already_assigned_nodes) == rdkit_mol.GetNumAtoms()):
-                unassigned_atom_indices = (
-                    set(range(rdkit_mol.GetNumAtoms())) - already_assigned_nodes
-                )
-                unassigned_atom_indices = sorted(list(unassigned_atom_indices))
-                print(unassigned_atom_indices)
-                print(
-                    [
-                        rdkit_mol.GetAtomWithIdx(i).GetPDBResidueInfo().GetResidueName()
-                        for i in unassigned_atom_indices
-                    ]
-                )
-
-            # assert len(already_assigned_edges) == len(omm_topology_G.edges)
-
-            return mol
+        pdb = PDBFile(file_path)
 
         substructure_file_path = get_data_file_path(
             "proteins/aa_residues_substructures_explicit_bond_orders_with_caps.json"
@@ -3873,16 +3730,13 @@ class FrozenMolecule(Serializable):
         with open(substructure_file_path, "r") as subfile:
             substructure_dictionary = json.load(subfile)
 
-        pdb = PDBFile(file_path)
 
-        rdkit_mol = openmm_to_rdkit(pdb)
-        rdkit_mol = _add_chemical_info(
-            substructure_dictionary, rdkit_mol, toolkit_registry=toolkit_registry
-        )
+        offmol = toolkit_registry.call('_polymer_openmm_topology_to_offmol', pdb.topology, substructure_dictionary)
         # TODO: I think we've copied this across from the SMARTS patterns, unless I've confused R/S and CCW/CW again
-        # Chem.AssignStereochemistryFrom3D(rdkit_mol)
 
-        offmol = Molecule.from_rdkit(rdkit_mol)
+        #Chem.AssignStereochemistryFrom3D(rdkit_mol)
+
+
         for i, atom in enumerate(pdb.topology.atoms()):
             offmol.atoms[i].name = atom.name
             # shh, don't tell Jeff
@@ -3891,6 +3745,7 @@ class FrozenMolecule(Serializable):
                 "residue_number": atom.residue.id,
                 "chain_id": atom.residue.chain.id,
             }
+
 
         offmol.add_default_hierarchy_schemes()
         offmol.perceive_hierarchy()
