@@ -3719,8 +3719,8 @@ class FrozenMolecule(Serializable):
         -------
         molecule : openff.toolkit.topology.Molecule
         """
-        from rdkit import Chem
         from openmm.app import PDBFile
+        from rdkit import Chem
 
         def openmm_to_rdkit(pdbfile):
             # convert openmm PDBFile to rdkit Molecule
@@ -3758,9 +3758,9 @@ class FrozenMolecule(Serializable):
             generic = Chem.MolFromSmarts("**")
             generic_bond = generic.GetBondWithIdx(0)
             # N.B. This isn't likely to be an active
-            generic_mol = Chem.MolFromSmarts(  # TODO: optimisation, create this once somewhere
-                ''.join(
-                    '[#{}]'.format(i + 1) for i in range(112)
+            generic_mol = (
+                Chem.MolFromSmarts(  # TODO: optimisation, create this once somewhere
+                    "".join("[#{}]".format(i + 1) for i in range(112))
                 )
             )
 
@@ -3821,8 +3821,7 @@ class FrozenMolecule(Serializable):
                     # be lax about double bonds and chirality
                     fuzzy = _rdkit_fuzzy_query(ref)
 
-                    for match in mol.GetSubstructMatches(fuzzy,
-                                                         maxMatches=0):
+                    for match in mol.GetSubstructMatches(fuzzy, maxMatches=0):
                         # TODO: If we're allowing disulfide & peptide, this check needs changing
                         if any(m in already_assigned_nodes for m in match):
                             continue
@@ -3850,11 +3849,18 @@ class FrozenMolecule(Serializable):
                             b2 = mol.GetBondBetweenAtoms(x, y)
                             b2.SetBondType(b.GetBondType())
 
-            if not(len(already_assigned_nodes) == rdkit_mol.GetNumAtoms()):
-                unassigned_atom_indices = set(range(rdkit_mol.GetNumAtoms())) - already_assigned_nodes
+            if not (len(already_assigned_nodes) == rdkit_mol.GetNumAtoms()):
+                unassigned_atom_indices = (
+                    set(range(rdkit_mol.GetNumAtoms())) - already_assigned_nodes
+                )
                 unassigned_atom_indices = sorted(list(unassigned_atom_indices))
                 print(unassigned_atom_indices)
-                print([rdkit_mol.GetAtomWithIdx(i).GetPDBResidueInfo().GetResidueName() for i in unassigned_atom_indices])
+                print(
+                    [
+                        rdkit_mol.GetAtomWithIdx(i).GetPDBResidueInfo().GetResidueName()
+                        for i in unassigned_atom_indices
+                    ]
+                )
 
             # assert len(already_assigned_edges) == len(omm_topology_G.edges)
 
