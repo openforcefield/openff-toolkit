@@ -3738,8 +3738,7 @@ class FrozenMolecule(Serializable):
             for atom in rwmol.GetAtoms():
                 atom.SetNoImplicit(True)
             for bond in pdbfile.topology.bonds():
-                rwmol.AddBond(bond[0].index, bond[1].index,
-                              Chem.BondType.SINGLE)
+                rwmol.AddBond(bond[0].index, bond[1].index, Chem.BondType.SINGLE)
 
             conf = Chem.Conformer()
             for i, pos in enumerate(pdbfile.getPositions()):
@@ -3756,7 +3755,7 @@ class FrozenMolecule(Serializable):
             """
             # it's tricky from the Python API to properly edit queries,
             # but you can do SetQuery on Atoms/Bonds to edit them quite powerfully
-            generic = Chem.MolFromSmarts('**')
+            generic = Chem.MolFromSmarts("**")
             generic_bond = generic.GetBondWithIdx(0)
             # N.B. This isn't likely to be an active
             generic_mol = Chem.MolFromSmarts(  # TODO: optimisation, create this once somewhere
@@ -3768,8 +3767,9 @@ class FrozenMolecule(Serializable):
             fuzzy = Chem.Mol(query)
             for a in fuzzy.GetAtoms():
                 a.SetFormalCharge(0)
-                a.SetQuery(generic_mol.GetAtomWithIdx(
-                    a.GetAtomicNum() - 1))  # i.e. H looks up atom 0 in our generic mol
+                a.SetQuery(
+                    generic_mol.GetAtomWithIdx(a.GetAtomicNum() - 1)
+                )  # i.e. H looks up atom 0 in our generic mol
                 a.SetNoImplicit(True)
             for b in fuzzy.GetBonds():
                 b.SetIsAromatic(False)
@@ -3804,7 +3804,7 @@ class FrozenMolecule(Serializable):
             # TODO: We currently assume all single and modify a few
             # Therefore it's hard to know if we've missed any edges...
             # Notably assumes all bonds *between* fragments are single
-            #already_assigned_edges = set()
+            # already_assigned_edges = set()
 
             mol = Chem.Mol(rdkit_mol)
 
@@ -3833,13 +3833,17 @@ class FrozenMolecule(Serializable):
                             # copy over chirality
                             if atom_i.GetChiralTag():
                                 mol.GetAtomWithIdx(j).SetChiralTag(
-                                    atom_i.GetChiralTag())
+                                    atom_i.GetChiralTag()
+                                )
                             atom_j.SetFormalCharge(atom_i.GetFormalCharge())
 
                         # map double/aromatic bonds onto our substructure
                         # TODO: If you wanted to count edges seen, this is likely where to implement
-                        fancy_bonds = (b for b in ref.GetBonds()
-                                        if b.GetBondType() != Chem.rdchem.BondType.SINGLE)
+                        fancy_bonds = (
+                            b
+                            for b in ref.GetBonds()
+                            if b.GetBondType() != Chem.rdchem.BondType.SINGLE
+                        )
                         for b in fancy_bonds:
                             x = match[b.GetBeginAtomIdx()]
                             y = match[b.GetEndAtomIdx()]
@@ -3852,7 +3856,7 @@ class FrozenMolecule(Serializable):
                 print(unassigned_atom_indices)
                 print([rdkit_mol.GetAtomWithIdx(i).GetPDBResidueInfo().GetResidueName() for i in unassigned_atom_indices])
 
-            #assert len(already_assigned_edges) == len(omm_topology_G.edges)
+            # assert len(already_assigned_edges) == len(omm_topology_G.edges)
 
             return mol
 
@@ -3870,16 +3874,16 @@ class FrozenMolecule(Serializable):
             substructure_dictionary, rdkit_mol, toolkit_registry=toolkit_registry
         )
         # TODO: I think we've copied this across from the SMARTS patterns, unless I've confused R/S and CCW/CW again
-        #Chem.AssignStereochemistryFrom3D(rdkit_mol)
+        # Chem.AssignStereochemistryFrom3D(rdkit_mol)
 
         offmol = Molecule.from_rdkit(rdkit_mol)
         for i, atom in enumerate(pdb.topology.atoms()):
             offmol.atoms[i].name = atom.name
             # shh, don't tell Jeff
             offmol.atoms[i]._metadata = {
-                'residue_name': atom.residue.name,
-                'residue_number': atom.residue.id,
-                'chain_id': atom.residue.chain.id,
+                "residue_name": atom.residue.name,
+                "residue_number": atom.residue.id,
+                "chain_id": atom.residue.chain.id,
             }
 
         offmol.add_default_hierarchy_schemes()
