@@ -4,10 +4,6 @@ Wrapper class providing a minimal consistent interface to `AmberTools <http://am
 
 __all__ = ("AmberToolsToolkitWrapper",)
 
-# =============================================================================================
-# IMPORTS
-# =============================================================================================
-
 import subprocess
 import tempfile
 from collections import defaultdict
@@ -24,10 +20,6 @@ from openff.toolkit.utils.exceptions import (
     ToolkitUnavailableException,
 )
 from openff.toolkit.utils.utils import temporary_cd
-
-# =============================================================================================
-# IMPLEMENTATION
-# =============================================================================================
 
 
 class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):

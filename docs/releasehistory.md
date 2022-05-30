@@ -58,6 +58,16 @@ print(value_roundtrip)
 
 ## Current Development
 
+- [PR #1303](https://github.com/openforcefield/openff-toolkit/pull/1303): Deprecates `Topology.particles`,
+  `Topology.n_particles`, `Topology.particle_index` as `Molecule` objects do not store virtual sites,
+  only atoms.
+- [PR #1297](https://github.com/openforcefield/openff-toolkit/pull/1297): Drops support
+  for Python 3.7, following [NEP-29](https://numpy.org/neps/nep-0029-deprecation_policy.html).
+- [PR #1194](https://github.com/openforcefield/openforcefield/pull/1194): Adds
+  [`Topology.__add__`](openff.toolkit.topology.Topology.__add__), allowing `Topology` objects to be
+  added together, including added in-place, using the `+` operator.
+- [PR #1277](https://github.com/openforcefield/openff-toolkit/pull/1277): Adds support for version
+  0.4 of the `<Electrostatics>` section of the SMIRNOFF specification.
 - [PR #1279](https://github.com/openforcefield/openforcefield/pull/1279):
   [`ParameterHandler.version`](openff.toolkit.typing.engines.smirnoff.parameters.ParameterHandler.version)
   and the ``.version`` attribute of its subclasses is now a
@@ -100,6 +110,16 @@ print(value_roundtrip)
 
 ### Behaviors changed and bugfixes
 
+- [PR #1277](https://github.com/openforcefield/openff-toolkit/pull/1277): Version 0.3 `<Electrostatics>`
+  sections of OFFXML files will automatically be up-converted (in memory) to version 0.4 according
+  to the recomendations provided in
+  [OFF-EP 0005](https://openforcefield.github.io/standards/enhancement-proposals/off-ep-0005/). Note
+  this means the `method` attribute is replaced by `periodic_potential`, `nonperiodic_potential`,
+  and `exception_potential`.
+- [PR #1277](https://github.com/openforcefield/openff-toolkit/pull/1277): Fixes a bug in which
+  attempting to convert
+  [`ElectrostaticsHandler.switch_width`](openff.toolkit.typing.engines.smirnoff.parameters.ElectrostaticsHandler)
+  did nothing.
 - [PR #1130](https://github.com/openforcefield/openforcefield/pull/1130): Running unit tests will
   no longer generate force field files in the local directory.
 - [PR #1182](https://github.com/openforcefield/openforcefield/pull/1182): Removes `Atom.element`,
@@ -109,7 +129,7 @@ print(value_roundtrip)
   [`Atom.symbol`](openff.toolkit.topology.molecule.Atom.symbol),
   [`Atom.mass`](openff.toolkit.topology.molecule.Atom.mass), and
   [`Atom.atomic_number`](openff.toolkit.topology.molecule.Atom.atomic_number).
-- [PR #1209](https://github.com/openforcefield/openforcefield/pull/1209): Fixes 
+- [PR #1209](https://github.com/openforcefield/openforcefield/pull/1209): Fixes
   [Issue #1073](https://github.com/openforcefield/openff-toolkit/issues/1073), where the
   `fractional_bondorder_method` kwarg to the 
   [`BondHandler`](openff.toolkit.typing.engines.smirnoff.parameters.BondHandler) initializer 
@@ -138,6 +158,34 @@ print(value_roundtrip)
 
 - [PR #1188](https://github.com/openforcefield/openff-toolkit/pull/1188): Add an `<Electrostatics>`
   section to the TIP3P force field file used in testing (`test_forcefields/tip3p.offxml`)
+
+### Minor bugfixes
+- [PR #1290](https://github.com/openforcefield/openforcefield/pull/1290): Fixes
+  [Issue #1216](https://github.com/openforcefield/openff-toolkit/issues/1216) by adding internal logic to handle
+  the possibility that multiple vsites share the same parent atom, and makes the return value of 
+  `VirtualSiteHandler.find_matches` be closer to the base class.
+
+
+
+## 0.10.5 Bugfix release
+
+- [PR #1252](https://github.com/openforcefield/openforcefield/pull/1252): Refactors virtual 
+  site support, resolving
+  [Issue #1235](https://github.com/openforcefield/openff-toolkit/issues/1235), 
+  [Issue #1233](https://github.com/openforcefield/openff-toolkit/issues/1233), 
+  [Issue #1222](https://github.com/openforcefield/openff-toolkit/issues/1222),
+  [Issue #1221](https://github.com/openforcefield/openff-toolkit/issues/1221), and
+  [Issue #1206](https://github.com/openforcefield/openff-toolkit/issues/1206).
+  
+  - Attempts to make virtual site handler more resilient through code simplification.
+  - Virtual sites are now associated with a particular 'parent' atom, rather than with a set of atoms. In particular, when checking if a v-site has been assigned we now only check the main 'parent' atom associated with the v-site, rather than all additional orientation atoms. As an example, if a force field contained a bond-charge v-site that matches [O:1]=[C:2] and a monovalent lone pair that matches [O:1]=[C:2]-[*:3] in that order, then only the monovalent lone pair will be assigned to formaldehyde as the oxygen is the main atom that would be associated with both v-sites, and the monovalent lone pair appears later in the hierarchy. This constitutes a behaviour change over previous versions.
+  - All v-site exclusion policies have been removed except for 'parents' which has been updated to match [OFF-EP 0006](https://openforcefield.github.io/standards/enhancement-proposals/off-ep-0006/).
+  - checks have been added to enforce that the 'match' keyword complies with the SMIRNOFF spec.
+  - Molecule virtual site classes no longer store FF data such as epsilon and sigma.
+  - Sanity checks have been added when matching chemical environments for v-sites that ensure the environment looks like one of our expected test cases.
+  - Fixes di- and trivalent lone pairs mixing the `:1` and `:2` indices.
+  - Fixes trivalent v-site positioning.
+  - Correctly splits `TopologyVirtualSite` and `TopologyVirtualParticle` so that virtual particles no longer have attributes such as `particles`, and ensure that indexing methods now work correctly.
 
 ## 0.10.4 Bugfix release
 
@@ -207,7 +255,7 @@ print(value_roundtrip)
   [`Bond.is_in_ring`](openff.toolkit.topology.Bond.is_in_ring) to use corresponding
   functionality in OpenEye and RDKit wrappers.
 
-## API breaking changes
+### API breaking changes
 - [PR #855](https://github.com/openforcefield/openff-toolkit/pull/855): Removes
   [`Molecule.rings`](openff.toolkit.topology.Molecule.rings) and
   [`Molecule.n_rings`](openff.toolkit.topology.Molecule.n_rings). To find rings in
@@ -261,13 +309,6 @@ print(value_roundtrip)
   [Issue #1161](https://github.com/openforcefield/openff-toolkit/issues/1161), which was caused by the use
   of the deprecated `pkg_resources` package. Now the recommended `importlib_metadata` package is used instead.
 
-
-### Breaking changes
-- [PR #1118](https://github.com/openforcefield/openforcefield/pull/1118):
-  [`Molecule.to_hill_formula`](openff.toolkit.topology.Molecule.to_hill_formula) is now a class method
-  and no longer accepts input of NetworkX graphs.
-- [PR #1156](https://github.com/openforcefield/openforcefield/pull/1156): Removes `ParseError` and
-  `MessageException`, which has been deprecated since version 0.10.0.
 
 ### Breaking changes
 - [PR #1118](https://github.com/openforcefield/openforcefield/pull/1118):
@@ -545,6 +586,8 @@ print(value_roundtrip)
 :::{TODO}
 - Translate previous release history to MyST markdown
 :::
+
+## Earlier releases
 
 :::{eval-rst}
 

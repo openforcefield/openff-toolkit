@@ -29,7 +29,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
-        python-version: [3.7]
+        python-version: [3.8]
         rdkit: [true, false]
         openeye: [true, false]
         exclude:
@@ -73,7 +73,7 @@ jobs:
           miniforge-version: latest
           miniforge-variant: Mambaforge
           use-mamba: true
-      
+
       - name: Install additional example dependencies
         run: |
           mamba env update --file examples/environment.yaml --name test
@@ -123,11 +123,13 @@ jobs:
             NB_ARGS+=" --ignore=examples/conformer_energies"
             NB_ARGS+=" --ignore=examples/using_smirnoff_in_amber_or_gromacs"
           fi
+          NB_ARGS+=" --ignore=examples/using_smirnoff_in_amber_or_gromacs/export_with_interchange.ipynb"
           # https://github.com/openforcefield/openff-toolkit/pull/1232#issuecomment-1080889858
           NB_ARGS+=" --ignore=examples/toolkit_showcase/toolkit_showcase.ipynb"
           NB_ARGS+=" --ignore=examples/swap_amber_parameters/swap_existing_ligand_parameters_with_openmmforcefields.ipynb"
 
-          NB_ARGS+=" --ignore=examples/using_smirnoff_in_amber_or_gromacs/export_with_interchange.ipynb"
+          # REMOVE THIS LINE BEFORE 0.11.0 RELEASE
+          NB_ARGS+=" --ignore=examples/virtual_sites/vsite_showcase.ipynb"
           pytest $NB_ARGS examples
 
       - name: Codecov

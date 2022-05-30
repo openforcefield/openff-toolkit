@@ -1,9 +1,3 @@
-#!/usr/bin/env python
-
-# =============================================================================================
-# MODULE DOCSTRING
-# =============================================================================================
-
 """
 Tests for forcefield class
 
@@ -13,7 +7,6 @@ Tests for forcefield class
 import copy
 import itertools
 import os
-from collections import OrderedDict
 from tempfile import NamedTemporaryFile
 
 import numpy as np
@@ -26,14 +19,8 @@ from openmm import NonbondedForce, Platform, XmlSerializer, app
 from openmm import unit as openmm_unit
 
 from openff.toolkit.tests.create_molecules import (
-    create_acetaldehyde,
     create_acetate,
-    create_ammonia,
-    create_benzene_no_aromatic,
-    create_cis_1_2_dichloroethene,
     create_cyclohexane,
-    create_dinitrogen,
-    create_dioxygen,
     create_ethanol,
     create_reversed_ethanol,
     create_water,
@@ -56,29 +43,25 @@ from openff.toolkit.typing.engines.smirnoff import (
     get_available_force_fields,
     vdWHandler,
 )
-from openff.toolkit.utils import get_data_file_path
+from openff.toolkit.utils import (
+    AmberToolsToolkitWrapper,
+    BuiltInToolkitWrapper,
+    OpenEyeToolkitWrapper,
+    RDKitToolkitWrapper,
+    ToolkitRegistry,
+    get_data_file_path,
+)
 from openff.toolkit.utils.exceptions import (
+    ChargeMethodUnavailableError,
     FractionalBondOrderInterpolationMethodUnsupportedError,
     IncompatibleParameterError,
     NonintegralMoleculeChargeException,
     ParameterLookupError,
-    PartialChargeVirtualSitesError,
     SMIRNOFFAromaticityError,
     SMIRNOFFSpecError,
     SMIRNOFFSpecUnimplementedError,
     UnassignedMoleculeChargeException,
 )
-from openff.toolkit.utils.toolkits import (
-    AmberToolsToolkitWrapper,
-    ChargeMethodUnavailableError,
-    OpenEyeToolkitWrapper,
-    RDKitToolkitWrapper,
-    ToolkitRegistry,
-)
-
-# ======================================================================
-# GLOBAL CONSTANTS
-# ======================================================================
 
 XML_FF_GENERICS = """<?xml version='1.0' encoding='ASCII'?>
 <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
@@ -327,30 +310,6 @@ xml_ff_torsion_bo_standard_supersede = """<?xml version='1.0' encoding='ASCII'?>
 </SMIRNOFF>
 """
 
-xml_ff_virtual_sites_monovalent_match_once = """<?xml version="1.0" encoding="utf-8"?>
-<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
-    <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
-        <Bond smirks="[*:1]~[*:2]" id="b999" k="500.0 * kilocalories_per_mole/angstrom**2" length="1.1 * angstrom"/>
-    </Bonds>
-    <VirtualSites version="0.3">
-        <VirtualSite
-            type="MonovalentLonePair"
-            name="EP"
-            smirks="[#8:1]~[#6:2]~[#6:3]"
-            distance="0.1*angstrom"
-            charge_increment1="0.1*elementary_charge"
-            charge_increment2="0.1*elementary_charge"
-            charge_increment3="0.1*elementary_charge"
-            sigma="0.1*angstrom"
-            epsilon="0.1*kilocalories_per_mole"
-            inPlaneAngle="110.*degree"
-            outOfPlaneAngle="41*degree"
-            match="once" >
-        </VirtualSite>
-    </VirtualSites>
-</SMIRNOFF>
-"""
-
 xml_tip5p = """<?xml version="1.0" encoding="utf-8"?>
 <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
     <LibraryCharges version="0.3">
@@ -361,7 +320,7 @@ xml_tip5p = """<?xml version="1.0" encoding="utf-8"?>
             <Atom smirks="[#1]-[#8X2H2+0:1]-[#1]" epsilon="0.66944 * mole**-1 * kilojoule" id="n35" sigma="0.312 * nanometer"/>
     </vdW>
      <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
-        <Bond smirks="[#1:1]-[#8X2H2+0:2]-[#1]" length="0.9572 * angstrom" k="462750.4 * nanometer**-2 * mole**-1 * kilojoule" id="b1" />   
+        <Bond smirks="[#1:1]-[#8X2H2+0:2]-[#1]" length="0.9572 * angstrom" k="462750.4 * nanometer**-2 * mole**-1 * kilojoule" id="b1" />
     </Bonds>
     <Angles version="0.3" potential="harmonic">
         <Angle smirks="[#1:1]-[#8X2H2+0:2]-[#1:3]" angle="1.82421813418 * radian" k="836.8 * mole**-1 * radian**-2 * kilojoule" id="a1" />
@@ -370,10 +329,10 @@ xml_tip5p = """<?xml version="1.0" encoding="utf-8"?>
         <VirtualSite
             type="DivalentLonePair"
             name="EP"
-            smirks="[#1:1]-[#8X2H2+0:2]-[#1:3]"
+            smirks="[#1:2]-[#8X2H2+0:1]-[#1:3]"
             distance="0.70 * angstrom"
-            charge_increment1="0.1205*elementary_charge"
-            charge_increment2="0.0*elementary_charge"
+            charge_increment2="0.1205*elementary_charge"
+            charge_increment1="0.0*elementary_charge"
             charge_increment3="0.1205*elementary_charge"
             sigma="1.0*angstrom"
             epsilon="0.0*kilocalories_per_mole"
@@ -595,7 +554,7 @@ xml_ff_virtual_sites_bondcharge_match_once_two_names = """<?xml version="1.0" en
 </SMIRNOFF>
 """
 
-xml_ff_virtual_sites_monovalent_match_once = """<?xml version="1.0" encoding="utf-8"?>
+xml_ff_virtual_sites_monovalent = """<?xml version="1.0" encoding="utf-8"?>
 <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
     <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="AM1-Wiberg" fractional_bondorder_interpolation="linear">
       <Bond smirks="[*:1]~[*:2]" id="b999" k="500.0 * kilocalories_per_mole/angstrom**2" length="1.1 * angstrom"/>
@@ -613,7 +572,7 @@ xml_ff_virtual_sites_monovalent_match_once = """<?xml version="1.0" encoding="ut
             epsilon="0.1*kilocalories_per_mole"
             inPlaneAngle="110.*degree"
             outOfPlaneAngle="41*degree"
-            match="once" >
+            match="all_permutations" >
         </VirtualSite>
         <VirtualSite
             type="MonovalentLonePair"
@@ -627,7 +586,7 @@ xml_ff_virtual_sites_monovalent_match_once = """<?xml version="1.0" encoding="ut
             epsilon="0.2*kilocalories_per_mole"
             inPlaneAngle="120.*degree"
             outOfPlaneAngle="42*degree"
-            match="once" >
+            match="all_permutations" >
         </VirtualSite>
     </VirtualSites>
 </SMIRNOFF>
@@ -704,11 +663,6 @@ xml_ff_virtual_sites_trivalent_match_all = """
 """
 
 
-# ======================================================================
-# TEST UTILITY FUNCTIONS
-# ======================================================================
-
-
 def round_charge(xml):
     """Round charge fields in a serialized OpenMM system to 2 decimal places"""
     # Example Particle line:                <Particle eps=".4577296" q="-.09709000587463379" sig=".1908"/>
@@ -741,15 +695,15 @@ def generate_monatomic_ions():
 nonbonded_resolution_matrix = [
     {
         "vdw_method": "cutoff",
-        "electrostatics_method": "Coulomb",
+        "electrostatics_periodic_potential": "Coulomb",
         "has_periodic_box": True,
         "omm_force": None,
-        "exception": IncompatibleParameterError,
+        "exception": SMIRNOFFSpecUnimplementedError,
         "exception_match": "",
     },
     {
         "vdw_method": "cutoff",
-        "electrostatics_method": "Coulomb",
+        "electrostatics_periodic_potential": "Coulomb",
         "has_periodic_box": False,
         "omm_force": openmm.NonbondedForce.NoCutoff,
         "exception": None,
@@ -757,7 +711,7 @@ nonbonded_resolution_matrix = [
     },
     {
         "vdw_method": "cutoff",
-        "electrostatics_method": "reaction-field",
+        "electrostatics_periodic_potential": "reaction-field",
         "has_periodic_box": True,
         "omm_force": None,
         "exception": SMIRNOFFSpecUnimplementedError,
@@ -765,15 +719,15 @@ nonbonded_resolution_matrix = [
     },
     {
         "vdw_method": "cutoff",
-        "electrostatics_method": "reaction-field",
+        "electrostatics_periodic_potential": "reaction-field",
         "has_periodic_box": False,
-        "omm_force": None,
-        "exception": SMIRNOFFSpecError,
+        "omm_force": openmm.NonbondedForce.NoCutoff,
+        "exception": None,
         "exception_match": "reaction-field",
     },
     {
         "vdw_method": "cutoff",
-        "electrostatics_method": "PME",
+        "electrostatics_periodic_potential": "PME",
         "has_periodic_box": True,
         "omm_force": openmm.NonbondedForce.PME,
         "exception": None,
@@ -781,7 +735,7 @@ nonbonded_resolution_matrix = [
     },
     {
         "vdw_method": "cutoff",
-        "electrostatics_method": "PME",
+        "electrostatics_periodic_potential": "PME",
         "has_periodic_box": False,
         "omm_force": openmm.NonbondedForce.NoCutoff,
         "exception": None,
@@ -789,7 +743,7 @@ nonbonded_resolution_matrix = [
     },
     {
         "vdw_method": "PME",
-        "electrostatics_method": "Coulomb",
+        "electrostatics_periodic_potential": "Coulomb",
         "has_periodic_box": True,
         "omm_force": None,
         "exception": IncompatibleParameterError,
@@ -797,31 +751,31 @@ nonbonded_resolution_matrix = [
     },
     {
         "vdw_method": "PME",
-        "electrostatics_method": "Coulomb",
-        "has_periodic_box": False,
-        "omm_force": openmm.NonbondedForce.NoCutoff,
-        "exception": None,
-        "exception_match": "",
-    },
-    {
-        "vdw_method": "PME",
-        "electrostatics_method": "reaction-field",
-        "has_periodic_box": True,
-        "omm_force": None,
-        "exception": IncompatibleParameterError,
-        "exception_match": "reaction-field",
-    },
-    {
-        "vdw_method": "PME",
-        "electrostatics_method": "reaction-field",
+        "electrostatics_periodic_potential": "Coulomb",
         "has_periodic_box": False,
         "omm_force": None,
         "exception": SMIRNOFFSpecError,
-        "exception_match": "reaction-field",
+        "exception_match": "vdw method PME.* is only valid for periodic systems",
     },
     {
         "vdw_method": "PME",
-        "electrostatics_method": "PME",
+        "electrostatics_periodic_potential": "reaction-field",
+        "has_periodic_box": True,
+        "omm_force": None,
+        "exception": IncompatibleParameterError,
+        "exception_match": "must also be PME",
+    },
+    {
+        "vdw_method": "PME",
+        "electrostatics_periodic_potential": "reaction-field",
+        "has_periodic_box": False,
+        "omm_force": None,
+        "exception": SMIRNOFFSpecError,
+        "exception_match": "vdw method PME.* is only valid for periodic systems",
+    },
+    {
+        "vdw_method": "PME",
+        "electrostatics_periodic_potential": "PME",
         "has_periodic_box": True,
         "omm_force": openmm.NonbondedForce.LJPME,
         "exception": None,
@@ -829,11 +783,11 @@ nonbonded_resolution_matrix = [
     },
     {
         "vdw_method": "PME",
-        "electrostatics_method": "PME",
+        "electrostatics_periodic_potential": "PME",
         "has_periodic_box": False,
         "omm_force": openmm.NonbondedForce.NoCutoff,
-        "exception": None,
-        "exception_match": "",
+        "exception": SMIRNOFFSpecError,
+        "exception_match": "vdw method PME.* is only valid for periodic systems",
     },
 ]
 
@@ -899,11 +853,6 @@ partial_charge_method_resolution_matrix = [
         "exception_match": "",
     },
 ]
-
-
-# =============================================================================================
-# TESTS
-# =============================================================================================
 
 
 toolkit_registries = []
@@ -983,7 +932,7 @@ class TestForceField:
         forcefield.get_parameter_handler("Angles")
 
         # Shouldn't find InvalidKey handler, since it doesn't exist
-        with pytest.raises(KeyError) as excinfo:
+        with pytest.raises(KeyError):
             forcefield.get_parameter_handler("InvalidKey")
 
         # Verify the aromatocitiy model is not None
@@ -1008,7 +957,7 @@ class TestForceField:
         forcefield.get_parameter_handler("Bonds")
 
         # Shouldn't find AngleHandler, since we didn't allow that to be registered
-        with pytest.raises(KeyError) as excinfo:
+        with pytest.raises(KeyError):
             forcefield.get_parameter_handler("Angles")
 
     def test_create_forcefield_from_file(self):
@@ -1027,52 +976,6 @@ class TestForceField:
         assert "Source 1234 could not be read." in str(exception_info.value)
         assert "syntax error" in str(exception_info.value)
 
-    @pytest.mark.skip(reason="Needs to be updated for 0.2.0 syntax")
-    def test_create_forcefield_from_file_list(self):
-        # These offxml files are located in package data path, which is automatically installed and searched
-        file_paths = [smirnoff99Frosst_offxml_file_path, tip3p_offxml_file_path]
-        # Create a forcefield from multiple offxml files
-        forcefield = ForceField(file_paths)
-
-    @pytest.mark.skip(reason="Needs to be updated for 0.2.0 syntax")
-    def test_create_forcefield_from_file_path_iterator(self):
-        # These offxml files are located in package data path, which is automatically installed and searched
-        file_paths = [smirnoff99Frosst_offxml_file_path, tip3p_offxml_file_path]
-        # A generator should work as well
-        forcefield = ForceField(iter(file_paths))
-
-    @pytest.mark.skip(reason="Needs to be updated for 0.2.0 syntax")
-    def test_create_gbsa(self):
-        """Test reading of ffxml files with GBSA support."""
-        forcefield = ForceField("test_forcefields/Frosst_AlkEthOH_GBSA.offxml")
-
-    @pytest.mark.skip(reason="Needs to be updated for 0.2.0 syntax")
-    def test_create_forcefield_from_url(self):
-        urls = [
-            "https://raw.githubusercontent.com/openforcefield/openff-toolkit/master/openff/toolkit/data/test_forcefields/test_forcefield.offxml",
-            "https://raw.githubusercontent.com/openforcefield/openff-toolkit/master/openff/toolkit/data/test_forcefields/tip3p.offxml",
-        ]
-        # Test creation with smirnoff99frosst URL
-        forcefield = ForceField(urls[0])
-
-    @pytest.mark.skip(reason="Needs to be updated for 0.2.0 syntax")
-    def test_create_forcefield_from_url_list(self):
-        urls = [
-            "https://raw.githubusercontent.com/openforcefield/openff-toolkit/master/openff/toolkit/data/test_forcefields/test_forcefield.offxml",
-            "https://raw.githubusercontent.com/openforcefield/openff-toolkit/master/openff/toolkit/data/test_forcefields/tip3p.offxml",
-        ]
-        # Test creation with multiple URLs
-        forcefield = ForceField(urls)
-
-    @pytest.mark.skip(reason="Needs to be updated for 0.2.0 syntax")
-    def test_create_forcefield_from_url_iterator(self):
-        urls = [
-            "https://raw.githubusercontent.com/openforcefield/openff-toolkit/master/openff/toolkit/data/test_forcefields/test_forcefield.offxml",
-            "https://raw.githubusercontent.com/openforcefield/openff-toolkit/master/openff/toolkit/data/test_forcefields/tip3p.offxml",
-        ]
-        # A generator should work as well
-        forcefield = ForceField(iter(urls))
-
     def test_create_forcefield_from_xml_string(self):
         forcefield = ForceField(xml_simple_ff)
         assert len(forcefield._parameter_handlers["Bonds"]._parameters) == 3
@@ -1080,31 +983,6 @@ class TestForceField:
         assert len(forcefield._parameter_handlers["ProperTorsions"]._parameters) == 3
         assert len(forcefield._parameter_handlers["ImproperTorsions"]._parameters) == 2
         assert len(forcefield._parameter_handlers["vdW"]._parameters) == 2
-
-    @pytest.mark.skip(reason="Needs to be updated for 0.2.0 syntax")
-    def test_deep_copy(self):
-        forcefield = ForceField(smirnoff99Frosst_offxml_file_path)
-        # Deep copy
-        forcefield2 = copy.deepcopy(cls.forcefield)
-        assert_forcefields_equal(
-            cls.forcefield,
-            forcefield2,
-            "ForceField deep copy does not match original ForceField",
-        )
-
-    @pytest.mark.skip(reason="Needs to be updated for 0.2.0 syntax")
-    # TODO: This should check the output of forcefield.to_dict
-    def test_serialize(self):
-
-        forcefield = ForceField(smirnoff99Frosst_offxml_file_path)
-        # Serialize/deserialize
-        serialized_forcefield = cls.forcefield.__getstate__()
-        forcefield2 = ForceField.__setstate__(serialized_forcefield)
-        assert_forcefields_equal(
-            cls.forcefield,
-            forcefield2,
-            "Deserialized serialized ForceField does not match original ForceField",
-        )
 
     def test_pickle(self):
         """
@@ -1153,8 +1031,8 @@ class TestForceField:
         with pytest.raises(
             SMIRNOFFSpecError,
             match="Unexpected kwarg [(]parameters: k, length[)]  passed",
-        ) as excinfo:
-            forcefield = ForceField(xml_ff_w_cosmetic_elements)
+        ):
+            ForceField(xml_ff_w_cosmetic_elements)
 
         # Create a force field from XML successfully, by explicitly permitting cosmetic attributes
         forcefield_1 = ForceField(
@@ -1170,8 +1048,8 @@ class TestForceField:
         with pytest.raises(
             SMIRNOFFSpecError,
             match="Unexpected kwarg [(]parameters: k, length[)]  passed",
-        ) as excinfo:
-            forcefield = ForceField(string_1, allow_cosmetic_attributes=False)
+        ):
+            ForceField(string_1, allow_cosmetic_attributes=False)
 
         # Complete the forcefield_1 --> string --> forcefield_2 roundtrip
         forcefield_2 = ForceField(string_1, allow_cosmetic_attributes=True)
@@ -1189,15 +1067,15 @@ class TestForceField:
 
     def test_read_0_1_smirnoff(self):
         """Test reading an 0.1 spec OFFXML file"""
-        ff = ForceField("test_forcefields/smirnoff99Frosst_reference_0_1_spec.offxml")
+        ForceField("test_forcefields/smirnoff99Frosst_reference_0_1_spec.offxml")
 
     def test_read_0_1_smirff(self):
         """Test reading an 0.1 spec OFFXML file, enclosed by the legacy "SMIRFF" tag"""
-        ff = ForceField("test_forcefields/smirff99Frosst_reference_0_1_spec.offxml")
+        ForceField("test_forcefields/smirff99Frosst_reference_0_1_spec.offxml")
 
     def test_read_0_2_smirnoff(self):
         """Test reading an 0.2 spec OFFXML file"""
-        ff = ForceField("test_forcefields/smirnoff99Frosst_reference_0_2_spec.offxml")
+        ForceField("test_forcefields/smirnoff99Frosst_reference_0_2_spec.offxml")
 
     @pytest.mark.parametrize("file_path_extension", ["xml", "XML", "offxml", "OFFXML"])
     @pytest.mark.parametrize(
@@ -1259,8 +1137,8 @@ class TestForceField:
         with pytest.raises(
             SMIRNOFFSpecError,
             match="Unexpected kwarg [(]parameters: k, length[)]  passed",
-        ) as excinfo:
-            forcefield = ForceField(xml_ff_w_cosmetic_elements)
+        ):
+            ForceField(xml_ff_w_cosmetic_elements)
 
         # Create a force field from XML successfully
         forcefield_1 = ForceField(
@@ -1278,8 +1156,8 @@ class TestForceField:
         with pytest.raises(
             SMIRNOFFSpecError,
             match="Unexpected kwarg [(]parameters: k, length[)]  passed",
-        ) as excinfo:
-            forcefield = ForceField(iofile1.name, allow_cosmetic_attributes=False)
+        ):
+            ForceField(iofile1.name, allow_cosmetic_attributes=False)
 
         # Complete the forcefield_1 --> file --> forcefield_2 roundtrip
         forcefield_2 = ForceField(iofile1.name, allow_cosmetic_attributes=True)
@@ -1381,7 +1259,7 @@ class TestForceField:
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
 
         # TODO: specify desired toolkit_registry behavior in Interchange
-        omm_system = forcefield.create_openmm_system(
+        forcefield.create_openmm_system(
             topology,
             toolkit_registry=toolkit_registry,
             use_interchange=False,
@@ -1432,9 +1310,9 @@ class TestForceField:
             RuntimeError,
             match="Unable to resolve order in which to run ParameterHandlers. "
             "Dependencies do not form a directed acyclic graph",
-        ) as excinfo:
+        ):
             # TODO: specify desired toolkit_registry behavior in Interchange
-            omm_system = forcefield.create_openmm_system(
+            forcefield.create_openmm_system(
                 topology,
                 toolkit_registry=toolkit_registry,
                 use_interchange=False,
@@ -1473,7 +1351,7 @@ class TestForceField:
         #                                                                      'molecules/cyclohexane.mol2')]
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
 
-        omm_system = forcefield.create_openmm_system(topology)
+        forcefield.create_openmm_system(topology)
 
     @pytest.mark.parametrize(
         "toolkit_registry,registry_description", toolkit_registries
@@ -1490,7 +1368,7 @@ class TestForceField:
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
         topology.box_vectors = None
 
-        omm_system = forcefield.create_openmm_system(topology)
+        forcefield.create_openmm_system(topology)
 
     @pytest.mark.slow
     @pytest.mark.parametrize(
@@ -1527,7 +1405,7 @@ class TestForceField:
             unique_molecules=molecules,
         )
 
-        omm_system = forcefield.create_openmm_system(
+        forcefield.create_openmm_system(
             topology,
             toolkit_registry=toolkit_registry,
         )
@@ -1682,14 +1560,22 @@ class TestForceField:
         with pytest.raises(
             ValueError,
             match=".* not used by any registered force Handler: {'invalid_kwarg'}.*",
-        ) as e:
+        ):
             # TODO: specify desired toolkit_registry behavior in Interchange
-            omm_system = forcefield.create_openmm_system(
+            forcefield.create_openmm_system(
                 topology,
                 invalid_kwarg="aaa",
                 toolkit_registry=toolkit_registry,
                 use_interchange=False,
             )
+
+    def test_electrostatics_switch_width_unsupported(self):
+        handler = ElectrostaticsHandler(version=0.4)
+        with pytest.raises(
+            SMIRNOFFSpecUnimplementedError,
+            match="not support an electrostatic switch width",
+        ):
+            handler.switch_width = 1.234 * unit.nanometer
 
     @pytest.mark.parametrize("mod_cuoff", [True, False])
     def test_nonbonded_cutoff_no_box_vectors(self, mod_cuoff):
@@ -1737,7 +1623,7 @@ class TestForceField:
 
         electrostatics_handler = ElectrostaticsHandler(version=0.3)
         electrostatics_handler.cutoff = 7.0 * unit.angstrom
-        electrostatics_handler.method = "PME"
+        electrostatics_handler.periodic_potential = "PME"
         force_field.register_parameter_handler(electrostatics_handler)
 
         library_charges = LibraryChargeHandler(version=0.3)
@@ -1762,7 +1648,7 @@ class TestForceField:
 
         # TODO: Don't change the box vectors once this case is supported
         topology.box_vectors = None
-        electrostatics_handler.method = "Coulomb"
+        electrostatics_handler.periodic_potential = "Coulomb"
         force_field.register_parameter_handler(electrostatics_handler)
 
         with pytest.raises(IncompatibleParameterError, match="cutoff must equal"):
@@ -1792,7 +1678,7 @@ class TestForceField:
 
         electrostatics_handler = ElectrostaticsHandler(version=0.3)
         electrostatics_handler.cutoff = 7.89 * unit.angstrom
-        electrostatics_handler.method = "PME"
+        electrostatics_handler.periodic_potential = "PME"
         force_field.register_parameter_handler(electrostatics_handler)
 
         library_charges = LibraryChargeHandler(version=0.3)
@@ -1816,7 +1702,6 @@ class TestForceField:
     def test_nonbonded_method_resolution(self, inputs):
         """Test predefined permutations of input options to ensure nonbonded handling is correctly resolved"""
         vdw_method = inputs["vdw_method"]
-        electrostatics_method = inputs["electrostatics_method"]
         has_periodic_box = inputs["has_periodic_box"]
         omm_force = inputs["omm_force"]
         exception = inputs["exception"]
@@ -1836,7 +1721,7 @@ class TestForceField:
             forcefield.get_parameter_handler("vdW", {}).method = vdw_method
             forcefield.get_parameter_handler(
                 "Electrostatics", {}
-            ).method = electrostatics_method
+            ).periodic_potential = inputs["electrostatics_periodic_potential"]
             omm_system = forcefield.create_openmm_system(
                 topology, use_interchange=False
             )
@@ -1848,12 +1733,12 @@ class TestForceField:
                         nonbond_method_matched = True
             assert nonbond_method_matched
         else:
-            with pytest.raises(exception, match=exception_match) as excinfo:
+            with pytest.raises(exception, match=exception_match):
                 # The method is validated and may raise an exception if it's not supported.
                 forcefield.get_parameter_handler("vdW", {}).method = vdw_method
                 forcefield.get_parameter_handler(
                     "Electrostatics", {}
-                ).method = electrostatics_method
+                ).periodic_potential = inputs["electrostatics_periodic_potential"]
                 omm_system = forcefield.create_openmm_system(
                     topology, use_interchange=False
                 )
@@ -1960,7 +1845,7 @@ class TestForceField:
                 handler_found = True
         assert not (handler_found)
 
-        with pytest.raises(KeyError) as excinfo:
+        with pytest.raises(KeyError):
             ff.deregister_parameter_handler(to_deregister)
 
     def test_hash(self):
@@ -2023,288 +1908,50 @@ class TestForceField:
 
         assert hash(ff_with_id) == hash(ff_without_id)
 
+    def test_issue_1216(self):
+        """Test that the conflict between vsitehandler and librarychargehandler
+        identified in issue #1216 remains resolved.
 
-bond_charge_parameters_args = []
-monovalent_parameters_args = []
-divalent_parameters_args = []
-trivalent_parameters_args = []
-
-
-class TestForceFieldVirtualSites:
-    def _test_physical_parameters(self, tkr, xml, smi, assert_physics, mol=None):
-        file_path = get_data_file_path("test_forcefields/test_forcefield.offxml")
-        forcefield = ForceField(file_path, xml)
-        if mol is None:
-            mol = Molecule.from_smiles(smi)
-        topology = mol.to_topology()
-        kwargs = {}
-        if mol.partial_charges is not None:
-            kwargs["charge_from_molecules"] = [mol]
-        omm_system = forcefield.create_openmm_system(
-            topology, toolkit_registry=tkr, **kwargs
-        )
-        nonbondedForce = [
-            f for f in omm_system.getForces() if type(f) == NonbondedForce
-        ][0]
-
-        for particle_index, expected in enumerate(assert_physics):
-            parameters = nonbondedForce.getParticleParameters(particle_index)
-            for found, reference in zip(parameters, expected):
-                if reference is None:
-                    continue
-                assert np.allclose(from_openmm(found), reference)
-        return
-
-    import functools
-
-    charge_unit = unit.elementary_charge
-    epsilon_unit = unit.kilocalorie_per_mole
-    sigma_unit = unit.angstrom
-    length_unit = unit.angstrom
-
-    as_charge = functools.partial(unit.Quantity, units=charge_unit)
-    as_epsilon = functools.partial(unit.Quantity, units=epsilon_unit)
-    as_sigma = functools.partial(unit.Quantity, units=sigma_unit)
-
-    ############################################################################
-    # Bond charge virtual site test data
-    ############################################################################
-
-    # For the data structures below, a value of None means that the comparison
-    # should be skipped and is therefore not checked. The atom sigma and epsilon
-    # parameters are not touched by virtual sites, so we ignore them here.
-
-    # First test that one vsite is added, and that the last parameter
-    # is chosen over the top-most wildcard match
-    opts = OrderedDict(
-        {
-            "xml": xml_ff_virtual_sites_bondcharge_match_once,
-            "smi": None,
-            "assert_physics": (
-                (as_charge(+0.2), None, None),
-                (as_charge(+0.2), None, None),
-                (as_charge(-0.4), as_sigma(0.2), as_epsilon(0.2)),
-            ),
-            "mol": create_dinitrogen(),
-        }
-    )
-    bond_charge_parameters_args.append(opts)
-
-    # Test the wildcard match at the top, which means the other parameters
-    # should be skipped
-    opts = OrderedDict(
-        {
-            "xml": xml_ff_virtual_sites_bondcharge_match_once,
-            "smi": None,
-            "assert_physics": (
-                (as_charge(+0.1), None, None),
-                (as_charge(+0.1), None, None),
-                (as_charge(-0.2), as_sigma(0.1), as_epsilon(0.1)),
-            ),
-            "mol": create_dioxygen(),
-        }
-    )
-    bond_charge_parameters_args.append(opts)
-
-    # Test the wildcard match where match is 0-1 and 1-0, giving two particles
-    opts = OrderedDict(
-        {
-            "xml": xml_ff_virtual_sites_bondcharge_match_all,
-            "smi": None,
-            "assert_physics": (
-                (as_charge(+0.4), None, None),
-                (as_charge(+0.4), None, None),
-                (as_charge(-0.4), as_sigma(0.2), as_epsilon(0.2)),
-                (as_charge(-0.4), as_sigma(0.2), as_epsilon(0.2)),
-            ),
-            "mol": create_dinitrogen(),
-        }
-    )
-    bond_charge_parameters_args.append(opts)
-
-    ############################################################################
-    # Monovalent virtual site test data
-    ############################################################################
-
-    # Test that using different names allows for multiple virtual sites
-    opts = OrderedDict(
-        {
-            "xml": xml_ff_virtual_sites_bondcharge_match_once_two_names,
-            "smi": None,
-            "assert_physics": (
-                (as_charge(+0.3), None, None),
-                (as_charge(+0.3), None, None),
-                (as_charge(-0.2), as_sigma(0.1), as_epsilon(0.1)),
-                (as_charge(-0.4), as_sigma(0.2), as_epsilon(0.2)),
-            ),
-            "mol": create_dinitrogen(),
-        }
-    )
-    bond_charge_parameters_args.append(opts)
-
-    opts = OrderedDict(
-        {
-            "xml": xml_ff_virtual_sites_monovalent_match_once,
-            "smi": None,
-            "assert_physics": (
-                (as_charge(+0.2), None, None),
-                (as_charge(+0.2), None, None),
-                (as_charge(+0.2), None, None),
-                (as_charge(+0.0), None, None),
-                (as_charge(+0.0), None, None),
-                (as_charge(+0.0), None, None),
-                (as_charge(+0.0), None, None),
-                (as_charge(-0.6), as_sigma(0.2), as_epsilon(0.2)),
-            ),
-            "mol": create_acetaldehyde(),
-        }
-    )
-    monovalent_parameters_args.append(opts)
-
-    ############################################################################
-    # Divalent virtual site test data
-    ############################################################################
-
-    # A TIP5P definition from OpenMM
-    opts = OrderedDict(
-        {
-            "xml": xml_ff_virtual_sites_divalent_match_all,
-            "smi": None,
-            "assert_physics": (
-                (as_charge(+0.4820), None, None),
-                (as_charge(+0.0000), None, None),
-                (as_charge(+0.4820), None, None),
-                (as_charge(-0.4820), as_sigma(3.12), as_epsilon(0.16)),
-                (as_charge(-0.4820), as_sigma(3.12), as_epsilon(0.16)),
-            ),
-            "mol": create_water(),
-        }
-    )
-    divalent_parameters_args.append(opts)
-
-    ############################################################################
-    # Trivalent virtual site test data
-    ############################################################################
-
-    opts = OrderedDict(
-        {
-            "xml": xml_ff_virtual_sites_trivalent_match_once,
-            "smi": None,
-            "assert_physics": (
-                (as_charge(+0.0000), None, None),
-                (as_charge(+1.0000), None, None),
-                (as_charge(+0.0000), None, None),
-                (as_charge(+0.0000), None, None),
-                (as_charge(-1.0000), as_sigma(0.00), as_epsilon(0.00)),
-            ),
-            "mol": create_ammonia(),
-        }
-    )
-    trivalent_parameters_args.append(opts)
-
-    @pytest.mark.parametrize(
-        "toolkit_registry,registry_description", toolkit_registries
-    )
-    @pytest.mark.parametrize("args", bond_charge_parameters_args)
-    def test_bond_charge_virtual_site_parameters(
-        self, toolkit_registry, registry_description, args
-    ):
+        https://github.com/openforcefield/openff-toolkit/issues/1216
         """
-        Test force fields with bond charge lone pair virtual sites
-        """
+        from openff.toolkit.typing.engines.smirnoff.parameters import VirtualSiteHandler
 
-        self._test_physical_parameters(toolkit_registry, *args.values())
-
-    @pytest.mark.parametrize(
-        "toolkit_registry,registry_description", toolkit_registries
-    )
-    @pytest.mark.parametrize("args", monovalent_parameters_args)
-    def test_monovalent_virtual_site_parameters(
-        self, toolkit_registry, registry_description, args
-    ):
-        """
-        Test force fields with monovalent charge lone pair virtual sites
-        """
-
-        self._test_physical_parameters(toolkit_registry, *args.values())
-
-    @pytest.mark.parametrize(
-        "toolkit_registry,registry_description", toolkit_registries
-    )
-    @pytest.mark.parametrize("args", divalent_parameters_args)
-    def test_divalent_virtual_site_parameters(
-        self, toolkit_registry, registry_description, args
-    ):
-        """
-        Test force fields with divalent lone pair virtual sites
-        """
-
-        self._test_physical_parameters(toolkit_registry, *args.values())
-
-    @pytest.mark.parametrize(
-        "toolkit_registry,registry_description", toolkit_registries
-    )
-    @pytest.mark.parametrize("args", trivalent_parameters_args)
-    def test_trivalent_charge_virtual_site(
-        self, toolkit_registry, registry_description, args
-    ):
-        """
-        Test force fields with trivalent lone pair virtual sites
-        """
-
-        self._test_physical_parameters(toolkit_registry, *args.values())
-
-    def test_orientation_preserved_if_match_once(self):
-        """
-        Test that orientation-mangling bug from https://github.com/openforcefield/openff-toolkit/issues/1159
-        is resolved.
-        """
         force_field = ForceField()
+        force_field.get_parameter_handler("Electrostatics")
 
-        vsite_handler = force_field.get_parameter_handler("VirtualSites")
+        vsite_handler: VirtualSiteHandler = force_field.get_parameter_handler(
+            "VirtualSites"
+        )
         vsite_handler.add_parameter(
-            parameter_kwargs={
-                "smirks": "[#6:2]=[#8:1]",
+            {
+                "smirks": "[#6:1][#9:2]",
                 "name": "EP",
                 "type": "BondCharge",
-                "distance": 0.7 * unit.nanometers,
-                "match": "once",
+                "distance": 1.0 * unit.angstrom,
+                "match": "all_permutations",
                 "charge_increment1": 0.2 * unit.elementary_charge,
                 "charge_increment2": 0.1 * unit.elementary_charge,
                 "sigma": 1.0 * unit.angstrom,
-                "epsilon": 2.0 / 4.184 * unit.kilocalorie_per_mole,
+                "epsilon": 0.0 * unit.kilocalorie_per_mole,
             }
         )
 
-        molecule = Molecule.from_mapped_smiles("[O:2]=[C:1]=[O:3]")
-
-        omm_system: System
-        omm_system, topology = force_field.create_openmm_system(
-            molecule.to_topology(), return_topology=True
+        library_handler: LibraryChargeHandler = force_field.get_parameter_handler(
+            "LibraryCharges"
         )
-
-        omm_particle_tuples = []
-        for i in range(omm_system.getNumParticles()):
-
-            if not omm_system.isVirtualSite(i):
-                continue
-
-            omm_v_site = omm_system.getVirtualSite(i)
-
-            omm_particle_tuples.append(
-                tuple(
-                    omm_v_site.getParticle(j)
-                    for j in range(omm_v_site.getNumParticles())
-                )
-            )
-        assert (1, 0) in omm_particle_tuples
-        assert (2, 0) in omm_particle_tuples
-        for molecule in topology.reference_molecules:
-            for v_site in molecule.virtual_sites:
-                for particle in v_site.particles:
-                    # correct particle.orientation is (1,0) and (2,0)
-                    # and not (0, 1), (0, 2)
-                    assert particle.orientation in omm_particle_tuples
+        library_handler.add_parameter(
+            {
+                "smirks": "[F:2][C:1]([H:3])([H:4])([H:5])",
+                "charge": [
+                    0.3 * unit.elementary_charge,
+                    -0.15 * unit.elementary_charge,
+                    -0.05 * unit.elementary_charge,
+                    -0.05 * unit.elementary_charge,
+                    -0.05 * unit.elementary_charge,
+                ],
+            }
+        )
+        force_field.label_molecules(Molecule.from_smiles("CF").to_topology())
 
 
 class TestForceFieldChargeAssignment:
@@ -2377,13 +2024,13 @@ class TestForceFieldChargeAssignment:
             NonintegralMoleculeChargeException,
             match="Partial charge sum [(]1.40001 e.*[)] for molecule",
         ):
-            omm_system = forcefield.create_openmm_system(
+            forcefield.create_openmm_system(
                 topology,
                 charge_from_molecules=[ethanol],
                 toolkit_registry=toolkit_registry,
             )
         # Pass when the `allow_nonintegral_charges` keyword is included
-        omm_system = forcefield.create_openmm_system(
+        forcefield.create_openmm_system(
             topology,
             charge_from_molecules=[ethanol],
             toolkit_registry=toolkit_registry,
@@ -2459,14 +2106,14 @@ class TestForceFieldChargeAssignment:
         """Ensure that the examples for librarycharges in the SMIRNOFF spec page are still valid"""
         # TODO: This test is practically useless while the XML strings are hard-coded at the top of this file.
         #       We should implement something like doctests for the XML snippets on the SMIRNOFF spec page.
-        ff = ForceField(xml_spec_docs_ala_library_charges_xml)
-        ff = ForceField(xml_spec_docs_tip3p_library_charges_xml)
+        ForceField(xml_spec_docs_ala_library_charges_xml)
+        ForceField(xml_spec_docs_tip3p_library_charges_xml)
 
     def test_parse_charge_increment_model_from_spec_docs(self):
         """Ensure that the examples for librarycharges in the SMIRNOFF spec page are still valid"""
         # TODO: This test is practically useless while the XML strings are hard-coded at the top of this file.
         #       We should implement something like doctests for the XML snippets on the SMIRNOFF spec page.
-        ff = ForceField(xml_spec_docs_charge_increment_model_xml)
+        ForceField(xml_spec_docs_charge_increment_model_xml)
 
     def test_charge_increment_model_forward_and_reverse_ethanol(self):
         """Test application of ChargeIncrements to the same molecule with different orderings in the topology"""
@@ -2583,11 +2230,11 @@ class TestForceFieldChargeAssignment:
             SMIRNOFFSpecError,
             match="number of chargeincrements must be either the same",
         ):
-            sys = ff.create_openmm_system(top)
+            ff.create_openmm_system(top)
 
         # Ensure that parameterization with the correct number of increments DOES NOT raise an exception
         cimh.parameters[0].charge_increment = cimh.parameters[0].charge_increment[:2]
-        sys = ff.create_openmm_system(top)
+        ff.create_openmm_system(top)
 
         # Add TWO LESS chargeincrement parameters than there are tagged atoms and ensure an exception is raised
         cimh.parameters[0].charge_increment = cimh.parameters[0].charge_increment[:1]
@@ -2595,12 +2242,12 @@ class TestForceFieldChargeAssignment:
             SMIRNOFFSpecError,
             match="number of chargeincrements must be either the same",
         ):
-            sys = ff.create_openmm_system(top)
+            ff.create_openmm_system(top)
 
     def test_charge_increment_model_initialize_with_no_elements(self):
         """Ensure that we can initialize a ForceField object from an OFFXML with a ChargeIncrementModel header, but no
         ChargeIncrement elements"""
-        ff = ForceField(xml_charge_increment_model_formal_charges)
+        ForceField(xml_charge_increment_model_formal_charges)
 
     def test_charge_increment_model_net_charge(self):
         """Test application of charge increments on a molecule with a net charge"""
@@ -2812,9 +2459,7 @@ class TestForceFieldChargeAssignment:
             assert abs_charge_sum > 0.5 * unit.elementary_charge
 
         else:
-            with pytest.raises(
-                expected_exception, match=expected_exception_match
-            ) as excinfo:
+            with pytest.raises(expected_exception, match=expected_exception_match):
                 ethanol.assign_partial_charges(
                     partial_charge_method=partial_charge_method,
                     toolkit_registry=toolkit_wrapper,
@@ -3005,7 +2650,7 @@ class TestForceFieldChargeAssignment:
 
         # Assign dummy partial charges to cyclohexane, which we expect to find in the final system since it
         # is included in the charge_from_molecules kwarg to create_openmm_system
-        cyclohexane.partial_charges = (
+        cyclohexane.partial_charges = unit.Quantity(
             np.array(
                 [
                     -0.2,
@@ -3027,8 +2672,8 @@ class TestForceFieldChargeAssignment:
                     0.1,
                     0.1,
                 ]
-            )
-            * unit.elementary_charge
+            ),
+            unit.elementary_charge,
         )
 
         # There were previously known issues when parameterizing molecules with all zero charges,
@@ -3228,7 +2873,7 @@ class TestForceFieldChargeAssignment:
         with pytest.raises(
             UnassignedMoleculeChargeException,
             match="did not have charges assigned by any ParameterHandler",
-        ) as excinfo:
+        ):
             omm_system = ff.create_openmm_system(top)
 
         # If we do NOT delete the ToolkiAM1BCCHandler, then toluene should be assigned some nonzero partial charges.
@@ -3264,9 +2909,8 @@ class TestForceFieldChargeAssignment:
         ff = ForceField("test_forcefields/test_forcefield.offxml", *additional_offxmls)
         charge_mols = []
         if charge_method == "charge_from_molecules":
-            mol.partial_charges = (
-                np.array([-1.3, -0.2, -0.1, 0.0, 0.1, 0.2, 0.3])
-                * unit.elementary_charge
+            mol.partial_charges = unit.Quantity(
+                np.array([-1.3, -0.2, -0.1, 0.0, 0.1, 0.2, 0.3]), unit.elementary_charge
             )
             charge_mols = [mol]
         omm_system, ret_top = ff.create_openmm_system(
@@ -3370,11 +3014,6 @@ class TestForceFieldChargeAssignment:
             compare_partial_charges(sys_a1b_elf10, sys_a1b_single_conf)
 
 
-# ======================================================================
-# TEST CONSTRAINTS
-# ======================================================================
-
-
 class TestForceFieldConstraints:
     """Tests that constraints are correctly applied and behave correctly."""
 
@@ -3407,11 +3046,6 @@ class TestForceFieldConstraints:
         self.check_molecule_constraints(
             ethane, system, bond_elements={"C", "H"}, bond_length=1.09 * unit.angstrom
         )
-
-
-# ======================================================================
-# TEST PARAMETER ASSIGNMENT
-# ======================================================================
 
 
 def generate_alkethoh_parameters_assignment_cases():
@@ -3797,9 +3431,7 @@ class TestForceFieldParameterAssignment:
             amber_cutoff = None
 
         # OpenMM will process False to mean "don't use one" and a quantity as "use with this distance"
-        switching_distance: Union[
-            bool, openmm_unit.Quantity
-        ] = off_nonbonded_force.getUseSwitchingFunction()
+        switching_distance = off_nonbonded_force.getUseSwitchingFunction()
         if switching_distance:
             switching_distance = off_nonbonded_force.getSwitchingDistance()
 
@@ -3819,25 +3451,23 @@ class TestForceFieldParameterAssignment:
         )
 
         # Retrieve the GBSAForce from both the AMBER and OpenForceField systems
-        off_gbsa_forces = [
-            force
-            for force in off_omm_system.getForces()
-            if (
-                isinstance(force, openmm.GBSAOBCForce)
-                or isinstance(force, openmm.openmm.CustomGBForce)
-            )
-        ]
-        assert len(off_gbsa_forces) == 1
+        off_gbsa_forces = list()
+        for force in off_omm_system.getForces():
+            if isinstance(force, openmm.GBSAOBCForce) or isinstance(
+                force, openmm.openmm.CustomGBForce
+            ):
+                off_gbsa_forces.append(force)
+
+        amber_gbsa_forces = list()
+        for force in amber_omm_system.getForces():
+            if isinstance(force, openmm.GBSAOBCForce) or isinstance(
+                force, openmm.openmm.CustomGBForce
+            ):
+                amber_gbsa_forces.append(force)
+
+        assert len(amber_gbsa_forces) == len(off_gbsa_forces) == 1
+
         off_gbsa_force = off_gbsa_forces[0]
-        amber_gbsa_forces = [
-            force
-            for force in amber_omm_system.getForces()
-            if (
-                isinstance(force, openmm.GBSAOBCForce)
-                or isinstance(force, openmm.openmm.CustomGBForce)
-            )
-        ]
-        assert len(amber_gbsa_forces) == 1
         amber_gbsa_force = amber_gbsa_forces[0]
 
         # We get radius and screen values from each model's getStandardParameters method
@@ -3922,50 +3552,53 @@ class TestForceFieldParameterAssignment:
         )
 
     def test_tip5p_dimer_energy(self):
+
+        pytest.skip("fails until migration to openff-interchange")
+
         from openff.toolkit.tests.utils import evaluate_molecules_off
 
         off_ff = ForceField("test_forcefields/test_forcefield.offxml", xml_tip5p)
 
         molecule1 = create_water()
-        molecule1.atoms[0].name = "O"
-        molecule1.atoms[1].name = "H1"
+        molecule1.atoms[1].name = "O"
+        molecule1.atoms[0].name = "H1"
         molecule1.atoms[2].name = "H2"
         molecule1.generate_conformers(n_conformers=1)
 
-        molecule1.conformers[0] = (
+        molecule1.conformers[0] = unit.Quantity(
             np.array(
                 [
                     [-0.78900161, -0.19816432, -0.0],
                     [-0.00612716, 0.39173634, -0.0],
                     [0.79512877, -0.19357202, 0.0],
                 ]
-            )
-            * unit.angstrom
+            ),
+            unit.angstrom,
         )
 
         molecule2 = create_water()
-        molecule2.atoms[0].name = "O"
-        molecule2.atoms[1].name = "H1"
+        molecule2.atoms[1].name = "O"
+        molecule2.atoms[0].name = "H1"
         molecule2.atoms[2].name = "H2"
         molecule2.generate_conformers(n_conformers=1)
 
         # This is mol1 + 10 angstrom
-        molecule2.conformers[0] = (
+        molecule2.conformers[0] = unit.Quantity(
             np.array(
                 [
                     [9.21099839, 9.80183568, 10.0],
                     [9.99387284, 10.39173634, 10.0],
                     [10.79512877, 9.80642798, 10.0],
                 ]
-            )
-            * unit.angstrom
+            ),
+            unit.angstrom,
         )
 
         off_crds, off_ene = evaluate_molecules_off(
             [molecule1, molecule2], off_ff, minimize=False
         )
 
-        ref_crds_with_vsite = (
+        ref_crds_with_vsite = unit.Quantity(
             np.array(
                 [
                     [-0.0789001605855, -0.0198164316973, -0.0],
@@ -3979,8 +3612,8 @@ class TestForceFieldParameterAssignment:
                     [0.9987548969596, 1.0796049187395, 0.9428605979232],
                     [0.9987548969596, 1.0796049187395, 1.0571394020767],
                 ]
-            )
-            * unit.nanometer
+            ),
+            unit.nanometer,
         )
 
         ref_ene = 0.0011797690240 * openmm_unit.kilojoule_per_mole
@@ -4096,25 +3729,23 @@ class TestForceFieldParameterAssignment:
         )
 
         # Retrieve the GBSAForce from both the AMBER and OpenForceField systems
-        off_gbsa_forces = [
-            force
-            for force in off_omm_system.getForces()
-            if (
-                isinstance(force, openmm.GBSAOBCForce)
-                or isinstance(force, openmm.openmm.CustomGBForce)
-            )
-        ]
-        assert len(off_gbsa_forces) == 1
+        off_gbsa_forces = list()
+        for force in off_omm_system.getForces():
+            if isinstance(force, openmm.GBSAOBCForce) or isinstance(
+                force, openmm.openmm.CustomGBForce
+            ):
+                off_gbsa_forces.append(force)
+
+        amber_gbsa_forces = list()
+        for force in amber_omm_system.getForces():
+            if isinstance(force, openmm.GBSAOBCForce) or isinstance(
+                force, openmm.openmm.CustomGBForce
+            ):
+                amber_gbsa_forces.append(force)
+
+        assert len(amber_gbsa_forces) == len(off_gbsa_forces) == 1
+
         off_gbsa_force = off_gbsa_forces[0]
-        amber_gbsa_forces = [
-            force
-            for force in amber_omm_system.getForces()
-            if (
-                isinstance(force, openmm.GBSAOBCForce)
-                or isinstance(force, openmm.openmm.CustomGBForce)
-            )
-        ]
-        assert len(amber_gbsa_forces) == 1
         amber_gbsa_force = amber_gbsa_forces[0]
 
         # We get radius and screen values from each model's getStandardParameters method
@@ -4217,7 +3848,7 @@ class TestForceFieldParameterAssignment:
         assert len(labels["ProperTorsions"]) == 6973
         assert len(labels["ImproperTorsions"]) == 528
 
-        omm_system = forcefield.create_openmm_system(
+        forcefield.create_openmm_system(
             topology,
             charge_from_molecules=[molecule],
             toolkit_registry=toolkit_registry,
@@ -4280,7 +3911,8 @@ class TestForceFieldParameterAssignment:
 
         sys_no_vdw = ff_no_vdw.create_openmm_system(top)
         sys_no_electrostatics = ff_no_electrostatics.create_openmm_system(top)
-        sys_no_nonbonded = ff_no_nonbonded.create_openmm_system(top)
+        # Unclear what this object is currently doing
+        sys_no_nonbonded = ff_no_nonbonded.create_openmm_system(top)  # noqa
 
         np.testing.assert_almost_equal(
             actual=get_14_scaling_factors(sys_no_vdw)[0],
@@ -4512,7 +4144,7 @@ class TestForceFieldParameterAssignment:
         topology = Topology.from_molecules([mol, mol2])
 
         with pytest.raises(ValueError):
-            omm_system = forcefield.create_openmm_system(
+            forcefield.create_openmm_system(
                 topology,
                 charge_from_molecules=[mol],
                 partial_bond_orders_from_molecules=[mol, mol2],
@@ -4800,8 +4432,67 @@ class TestForceFieldParameterAssignment:
             )
 
 
+class TestForceFieldWithToolkits:
+    """Test interactions between ``ForceField`` methods and wrapped toolkits."""
+
+    # TODO: If `_toolkit_registry_manager` is made public or used for other parts of the API,
+    #       these tests should be moved/adapted into more unit tests that call it directly
+    # TODO: Remove `use_interchange` arguments in coordination with #1276. They are included
+    #       here because ONLY that code path uses the experimental `_toolkit_registry_manager` motif
+
+    def test_toolkit_registry_bogus_argument(self):
+
+        topology = create_ethanol().to_topology()
+        force_field = ForceField("test_forcefields/test_forcefield.offxml")
+        with pytest.raises(
+            NotImplementedError,
+            match="Only .*ToolkitRegistry.*ToolkitWrapper.* are supported",
+        ):
+            force_field.create_openmm_system(
+                topology,
+                use_interchange=True,
+                toolkit_registry="rdkit",
+            )
+
+    def test_toolkit_registry_no_charge_methods(self):
+
+        topology = create_ethanol().to_topology()
+        force_field = ForceField("test_forcefields/test_forcefield.offxml")
+        with pytest.raises(
+            ValueError, match="No registered toolkits can provide .*find_smarts_matches"
+        ):
+            force_field.create_openmm_system(
+                topology, use_interchange=True, toolkit_registry=BuiltInToolkitWrapper()
+            )
+
+    @pytest.mark.skip(reason="Broken until Interchange supports Electrostatics 0.4")
+    @requires_rdkit
+    def test_toolkit_registry_bad_charge_method(self):
+        topology = create_ethanol().to_topology()
+        force_field = ForceField(
+            "test_forcefields/test_forcefield.offxml",
+            xml_charge_increment_model_ff_ethanol,
+        )
+        force_field.deregister_parameter_handler("ToolkitAM1BCC")
+        force_field["ChargeIncrementModel"].partial_charge_method = "am1bccelf10"
+
+        with pytest.raises(
+            ValueError, match="No registered toolkits can provide .*elf10"
+        ):
+            force_field.create_openmm_system(
+                topology,
+                use_interchange=True,
+                toolkit_registry=ToolkitRegistry(
+                    [RDKitToolkitWrapper(), AmberToolsToolkitWrapper()]
+                ),
+            )
+
+
 class TestInterchangeReturnTopology:
     # TODO: Remove these tests when `return_topology` is deprecated in version 0.12.0
+    # TODO: Turn this test back on once Interchange is tagged with a pre-release supporting
+    #       only Electrostatics version 0.4
+    @pytest.mark.skip(reason="Interchange needs to be updated")
     def test_deprecation_warning_raised(self):
         """
         Ensure that the deprecation warning is raised when `return_topology` is
@@ -4914,64 +4605,6 @@ class TestForceFieldGetPartialCharges:
             ethanol_partial_charges - partial_charges < 1.0e-6 * unit.elementary_charge
         ).all()
         assert partial_charges.shape == (ethanol.n_atoms,)
-
-    def test_get_partial_charges_vsites(self):
-        """Test that a molecule with virtual sites raises an error."""
-        ethanol: Molecule = create_ethanol()
-        force_field: ForceField = ForceField(
-            "test_forcefields/test_forcefield.offxml",
-            xml_ff_virtual_sites_monovalent_match_once,
-        )
-
-        with pytest.raises(PartialChargeVirtualSitesError):
-            force_field.get_partial_charges(ethanol)
-
-
-@pytest.mark.skip(reason="Needs to be updated for 0.2.0 syntax")
-def test_electrostatics_options(self):
-    """Test parameter assignment using smirnoff99Frosst on laromustine with various long-range electrostatics options."""
-    molecules_file_path = get_data_file_path("molecules/laromustine_tripos.mol2")
-    molecule = openff.toolkit.topology.Molecule.from_file(molecules_file_path)
-    forcefield = ForceField(
-        [smirnoff99Frosst_offxml_file_path, charge_increment_offxml_file_path]
-    )
-    for method in ["PME", "reaction-field", "Coulomb"]:
-        # Change electrostatics method
-        forcefield.forces["Electrostatics"].method = method
-        f = partial(check_system_creation_from_molecule, forcefield, molecule)
-        f.description = "Testing {} parameter assignment using molecule {}".format(
-            offxml_file_path, molecule.name
-        )
-        # yield f
-    # TODO: Implement a similar test, where we compare OpenMM energy evals from an
-    #       AMBER-parameterized system to OFF-parameterized systems
-
-
-@pytest.mark.skip(reason="Needs to be updated for 0.2.0 syntax")
-def test_charge_increment(self):
-    """Test parameter assignment using smirnoff99Frosst on laromustine with ChargeIncrementModel."""
-    molecules_file_path = get_data_file_path("molecules/laromustine_tripos.mol2")
-    molecule = openff.toolkit.topology.Molecule.from_file(molecules_file_path)
-    forcefield = ForceField(
-        ["test_forcefields/test_forcefield.offxml", "chargeincrement-test"]
-    )
-    check_system_creation_from_molecule(forcefield, molecule)
-    # TODO: We can't implement a test for chargeincrement yet because we
-    #       haven't settled on a SMIRNOFF spec for chargeincrementmodel
-
-
-@pytest.mark.skip(reason="Needs to be updated for 0.2.0 syntax")
-def test_create_system_molecules_parmatfrosst_gbsa(self):
-    """Test creation of a System object from small molecules to test parm@frosst force field with GBSA support."""
-    molecules_file_path = get_data_file_path(
-        "molecules/AlkEthOH_test_filt1_tripos.mol2"
-    )
-    check_parameter_assignment(
-        offxml_file_path="test_forcefields/Frosst_AlkEthOH_GBSA.offxml",
-        molecules_file_path=molecules_file_path,
-    )
-    # TODO: Figure out if we just want to check that energy is finite (this is what the original test did,
-    #       or compare numerically to a reference system.
 
 
 # TODO: test_get_new_parameterhandler

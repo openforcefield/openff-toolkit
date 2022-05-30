@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """
 Utility classes and functions to create objects supporting callback registration.
 
@@ -15,10 +13,6 @@ import functools
 import inspect
 
 from openff.toolkit.utils.exceptions import CallbackRegistrationError
-
-# =====================================================================
-# CALLBACKABLE CLASSES
-# =====================================================================
 
 
 def callback_method(func=None, events=()):

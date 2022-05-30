@@ -16,9 +16,6 @@ import numpy as np
 from cachetools import LRUCache, cached
 from openff.units import unit
 
-if TYPE_CHECKING:
-    from openff.toolkit.topology.molecule import Molecule, Bond, Atom
-
 from openff.toolkit.utils import base_wrapper
 from openff.toolkit.utils.constants import DEFAULT_AROMATICITY_MODEL
 from openff.toolkit.utils.exceptions import (
@@ -30,15 +27,10 @@ from openff.toolkit.utils.exceptions import (
     UndefinedStereochemistryError,
 )
 
-# =============================================================================================
-# CONFIGURE LOGGER
-# =============================================================================================
+if TYPE_CHECKING:
+    from openff.toolkit.topology.molecule import Atom, Bond, Molecule
 
 logger = logging.getLogger(__name__)
-
-# =============================================================================================
-# IMPLEMENTATION
-# =============================================================================================
 
 
 def normalize_file_format(file_format):
@@ -1065,7 +1057,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
     @classmethod
     def _elf_is_problematic_conformer(
-        cls, molecule: "Molecule", conformer: unit.Quantity
+        cls,
+        molecule: "Molecule",
+        conformer: unit.Quantity,
     ) -> Tuple[bool, Optional[str]]:
         """A function which checks if a particular conformer is known to be problematic
         when computing ELF partial charges.
@@ -1149,7 +1143,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
     @classmethod
     def _elf_compute_electrostatic_energy(
-        cls, molecule: "Molecule", conformer: unit.Quantity
+        cls,
+        molecule: "Molecule",
+        conformer: unit.Quantity,
     ) -> float:
         """Computes the 'electrostatic interaction energy' of a particular conformer
         of a molecule.
@@ -1738,7 +1734,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             rdatom.SetFormalCharge(atom.formal_charge.m_as(unit.elementary_charge))
             rdatom.SetIsAromatic(atom.is_aromatic)
 
-            ## Stereo handling code moved to after bonds are added
+            # Stereo handling code moved to after bonds are added
             if atom.stereochemistry == "S":
                 rdatom.SetChiralTag(Chem.CHI_TETRAHEDRAL_CW)
             elif atom.stereochemistry == "R":
@@ -2284,10 +2280,6 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         is_in_ring = rdbond.IsInRing()
 
         return is_in_ring
-
-    # --------------------------------
-    # Stereochemistry RDKit utilities.
-    # --------------------------------
 
     @staticmethod
     def _find_undefined_stereo_atoms(rdmol, assign_stereo=False):

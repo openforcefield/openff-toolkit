@@ -4,10 +4,6 @@ from urllib.request import Request, urlopen
 
 import pytest
 
-# ======================================================================
-# TEST UTILITIES
-# ======================================================================
-
 ROOT_DIR_PATH = os.path.join(
     os.path.dirname(os.path.realpath(__file__)), "..", "..", ".."
 )
@@ -25,11 +21,6 @@ def find_readme_links():
     with open(readme_file_path, "r") as f:
         readme_content = f.read()
     return re.findall("http[s]?://(?:[0-9a-zA-Z]|[-/.%:_])+", readme_content)
-
-
-# ======================================================================
-# TESTS
-# ======================================================================
 
 
 @pytest.mark.parametrize("readme_link", find_readme_links())

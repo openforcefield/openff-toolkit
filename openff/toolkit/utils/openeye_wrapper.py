@@ -39,16 +39,7 @@ from openff.toolkit.utils.exceptions import (
 )
 from openff.toolkit.utils.utils import inherit_docstrings
 
-# =============================================================================================
-# CONFIGURE LOGGER
-# =============================================================================================
-
 logger = logging.getLogger(__name__)
-
-
-# =============================================================================================
-# IMPLEMENTATION
-# =============================================================================================
 
 
 def get_oeformat(file_format):
@@ -609,7 +600,6 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         oemol = offmol.to_openeye()
         oechem.OEPerceiveChiral(oemol)
         oechem.OE3DToInternalStereo(oemol)
-        print(f"Number of atoms after sanitization: {oemol.NumAtoms()}")
 
         # Aromaticity is re-perceived in this call
         offmol_w_stereo_and_aro = self.from_openeye(oemol, allow_undefined_stereo=True)

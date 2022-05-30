@@ -1,15 +1,9 @@
 from openff.toolkit.topology.molecule import (
     Atom,
     Bond,
-    BondChargeVirtualSite,
-    DivalentLonePairVirtualSite,
     FrozenMolecule,
     Molecule,
-    MonovalentLonePairVirtualSite,
     Particle,
-    TrivalentLonePairVirtualSite,
-    VirtualParticle,
-    VirtualSite,
 )
 from openff.toolkit.topology.topology import (
     DuplicateUniqueMoleculeError,
@@ -24,3 +18,22 @@ from openff.toolkit.topology.topology import (
     UnsortedDict,
     ValenceDict,
 )
+
+__all__ = [
+    "Atom",
+    "Bond",
+    "FrozenMolecule",
+    "Molecule",
+    "Particle",
+    "DuplicateUniqueMoleculeError",
+    "ImproperDict",
+    "InvalidBoxVectorsError",
+    "InvalidPeriodicityError",
+    "MissingUniqueMoleculesError",
+    "NotBondedError",
+    "SortedDict",
+    "TagSortedDict",
+    "Topology",
+    "UnsortedDict",
+    "ValenceDict",
+]

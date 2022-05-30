@@ -5,7 +5,7 @@ A modern, extensible library for molecular mechanics force field science from th
 
 import importlib
 
-from ._version import get_versions  # type: ignore
+from openff.toolkit._version import get_versions  # type: ignore
 
 __version__ = get_versions()["version"]
 
