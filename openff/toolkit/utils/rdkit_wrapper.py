@@ -237,65 +237,18 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
             raise InvalidConformerError("The PDB and SMILES structures do not match.")
 
-    def _smarts_to_networkx(self, substructure_smarts):
-        import networkx as nx
-        from rdkit import Chem
-
-        rdmol = Chem.MolFromSmarts(substructure_smarts)
-
-        _bondtypes = {
-            # 0: Chem.BondType.AROMATIC,
-            Chem.BondType.SINGLE: 1,
-            Chem.BondType.AROMATIC: 1.5,
-            Chem.BondType.DOUBLE: 2,
-            Chem.BondType.TRIPLE: 3,
-            Chem.BondType.QUADRUPLE: 4,
-            Chem.BondType.QUINTUPLE: 5,
-            Chem.BondType.HEXTUPLE: 6,
-        }
-        rdmol_G = nx.Graph()
-        for atom in rdmol.GetAtoms():
-            atomic_number = atom.GetAtomicNum()
-
-            rdmol_G.add_node(
-                atom.GetIdx(),
-                atomic_number=atomic_number,
-                formal_charge=atom.GetFormalCharge(),
-                map_index=atom.GetAtomMapNum(),
-            )
-        for bond in rdmol.GetBonds():
-            bond_type = bond.GetBondType()
-            # All bonds in the graph should have been explicitly assigned by this point.
-            if bond_type == Chem.rdchem.BondType.UNSPECIFIED:
-                raise SMILESParseError(
-                    f"A bond in {substructure_smarts} has an unspecified bond order"
-                )
-
-            rdmol_G.add_edge(
-                bond.GetBeginAtomIdx(),
-                bond.GetEndAtomIdx(),
-                bond_order=_bondtypes[bond_type],
-            )
-        return rdmol_G
-
     def _polymer_openmm_topology_to_offmol(self, omm_top, substructure_dictionary):
-        from rdkit import Chem
         rdkit_mol = self._polymer_openmm_topology_to_rdmol(omm_top)
-        rdkit_mol = self._add_chemical_info(
-            substructure_dictionary, rdkit_mol
-        )
-        offmol = Molecule.from_rdkit(rdkit_mol)
+        rdkit_mol = self._add_chemical_info(rdkit_mol, substructure_dictionary)
+        offmol = self.from_rdkit(rdkit_mol)
         return offmol
 
     def _add_chemical_info(
         self,
         rdkit_mol,
         substructure_library,
-        # toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
     ):
         """
-
-
         Parameters
         ----------
         rdkit_mol : rdkit.Chem.Mol
@@ -311,11 +264,12 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             a copy of the original molecule with charges and bond order added
         """
         from rdkit import Chem
+
         already_assigned_nodes = set()
         # TODO: We currently assume all single and modify a few
         # Therefore it's hard to know if we've missed any edges...
         # Notably assumes all bonds *between* fragments are single
-        # already_assigned_edges = set()
+        already_assigned_edges = set()
 
         mol = Chem.Mol(rdkit_mol)
 
@@ -330,11 +284,14 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 ref = Chem.MolFromSmarts(substructure_smarts)
                 # then create a looser definition for pattern matching...
                 # be lax about double bonds and chirality
-                fuzzy = _fuzzy_query(ref)
+                fuzzy = self._fuzzy_query(ref)
 
-                for match in mol.GetSubstructMatches(fuzzy, maxMatches=0):
-                    # TODO: If we're allowing disulfide & peptide, this check needs changing
-                    if any(m in already_assigned_nodes for m in match):
+                # It's important that we do the substructure search on `rdkit_mol`, but the chemical
+                # info is added to `mol`. If we use the same rdkit molecule for search AND info addition,
+                # then single bonds may no longer be present for subsequent overlapping matches.
+                for match in rdkit_mol.GetSubstructMatches(fuzzy, maxMatches=0):
+                    if (any(m in already_assigned_nodes for m in match) and
+                            (res_name not in ['PEPTIDE_BOND', 'DISULFIDE'])):
                         continue
                     already_assigned_nodes.update(match)
 
@@ -342,23 +299,15 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                         atom_j = mol.GetAtomWithIdx(j)
                         # copy over chirality
                         if atom_i.GetChiralTag():
-                            mol.GetAtomWithIdx(j).SetChiralTag(
-                                atom_i.GetChiralTag()
-                            )
+                            mol.GetAtomWithIdx(j).SetChiralTag(atom_i.GetChiralTag())
                         atom_j.SetFormalCharge(atom_i.GetFormalCharge())
 
-                    # map double/aromatic bonds onto our substructure
-                    # TODO: If you wanted to count edges seen, this is likely where to implement
-                    fancy_bonds = (
-                        b
-                        for b in ref.GetBonds()
-                        if b.GetBondType() != Chem.rdchem.BondType.SINGLE
-                    )
-                    for b in fancy_bonds:
+                    for b in ref.GetBonds():
                         x = match[b.GetBeginAtomIdx()]
                         y = match[b.GetEndAtomIdx()]
                         b2 = mol.GetBondBetweenAtoms(x, y)
                         b2.SetBondType(b.GetBondType())
+                        already_assigned_edges.add(tuple(sorted([x, y])))
 
         if not (len(already_assigned_nodes) == rdkit_mol.GetNumAtoms()):
             unassigned_atom_indices = (
@@ -372,11 +321,18 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                     for i in unassigned_atom_indices
                 ]
             )
+        all_bonds = set([tuple(sorted([bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()])) for bond in rdkit_mol.GetBonds()])
+
+        if all_bonds != already_assigned_edges:
+            print("Bonds were unassigned:")
+            print(len(all_bonds), len(already_assigned_edges))
+            for bond in sorted(all_bonds - already_assigned_edges):
+                print(bond)
+
 
         # assert len(already_assigned_edges) == len(omm_topology_G.edges)
 
         return mol
-
 
     def _polymer_openmm_topology_to_rdmol(self, omm_top):
         from rdkit import Chem
@@ -396,12 +352,12 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         for atom in rwmol.GetAtoms():
             atom.SetNoImplicit(True)
         for bond in omm_top.bonds():
-            rwmol.AddBond(bond[0].index, bond[1].index, Chem.BondType.UNSPECIFIED)
+            rwmol.AddBond(bond[0].index, bond[1].index, Chem.BondType.SINGLE)
 
-        conf = Chem.Conformer()
-        for i, pos in enumerate(omm_top.getPositions()):
-            conf.SetAtomPosition(i, list(pos.value_in_unit(pos.unit)))
-        rwmol.AddConformer(conf)
+        # conf = Chem.Conformer()
+        # for i, pos in enumerate(omm_top.getPositions()):
+        #     conf.SetAtomPosition(i, list(pos.value_in_unit(pos.unit)))
+        # rwmol.AddConformer(conf)
 
         return rwmol
 
