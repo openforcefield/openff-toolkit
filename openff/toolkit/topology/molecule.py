@@ -3733,6 +3733,7 @@ class FrozenMolecule(Serializable):
 
         offmol = toolkit_registry.call(
             "_polymer_openmm_topology_to_offmol", pdb.topology, substructure_dictionary
+
         )
 
         coords = unit.Quantity(
@@ -3746,13 +3747,11 @@ class FrozenMolecule(Serializable):
         )
         offmol.add_conformer(coords)
         offmol = toolkit_registry.call("_assign_aromaticity_and_stereo_from_3d", offmol)
-
         for i, atom in enumerate(pdb.topology.atoms()):
             offmol.atoms[i].name = atom.name
             offmol.atoms[i].metadata["residue_name"] = atom.residue.name
             offmol.atoms[i].metadata["residue_number"] = atom.residue.id
             offmol.atoms[i].metadata["chain_id"] = atom.residue.chain.id
-
         offmol.add_default_hierarchy_schemes()
         offmol.perceive_hierarchy()
 
