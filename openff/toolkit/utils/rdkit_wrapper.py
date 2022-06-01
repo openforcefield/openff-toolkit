@@ -290,8 +290,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 # info is added to `mol`. If we use the same rdkit molecule for search AND info addition,
                 # then single bonds may no longer be present for subsequent overlapping matches.
                 for match in rdkit_mol.GetSubstructMatches(fuzzy, maxMatches=0):
-                    if (any(m in already_assigned_nodes for m in match) and
-                            (res_name not in ['PEPTIDE_BOND', 'DISULFIDE'])):
+                    if any(m in already_assigned_nodes for m in match) and (
+                        res_name not in ["PEPTIDE_BOND", "DISULFIDE"]
+                    ):
                         continue
                     already_assigned_nodes.update(match)
 
@@ -321,14 +322,18 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                     for i in unassigned_atom_indices
                 ]
             )
-        all_bonds = set([tuple(sorted([bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()])) for bond in rdkit_mol.GetBonds()])
+        all_bonds = set(
+            [
+                tuple(sorted([bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()]))
+                for bond in rdkit_mol.GetBonds()
+            ]
+        )
 
         if all_bonds != already_assigned_edges:
             print("Bonds were unassigned:")
             print(len(all_bonds), len(already_assigned_edges))
             for bond in sorted(all_bonds - already_assigned_edges):
                 print(bond)
-
 
         # assert len(already_assigned_edges) == len(omm_topology_G.edges)
 
