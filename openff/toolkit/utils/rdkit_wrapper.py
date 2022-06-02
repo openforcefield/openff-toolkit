@@ -910,7 +910,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         _cls=None,
         make_carboxylic_acids_cis=False,
     ):
-        r"""
+        """
         Generate molecule conformers using RDKit.
 
         .. warning :: This API is experimental and subject to change.

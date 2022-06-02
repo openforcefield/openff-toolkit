@@ -590,7 +590,7 @@ class MappedParameterAttribute(ParameterAttribute):
 
 
 class IndexedMappedParameterAttribute(ParameterAttribute):
-    r"""The attribute of a parameter with an unspecified number of terms, where
+    """The attribute of a parameter with an unspecified number of terms, where
     each term is a mapping.
 
     Some parameters can be associated to multiple terms,
@@ -1606,7 +1606,7 @@ class ParameterList(list):
 
 # TODO: Rename to better reflect role as parameter base class?
 class ParameterType(_ParameterAttributeHandler):
-    r"""
+    """
     Base class for SMIRNOFF parameter types.
 
     This base class provides utilities to create new parameter types. See
