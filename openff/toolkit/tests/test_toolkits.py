@@ -896,6 +896,29 @@ class TestOpenEyeToolkitWrapper:
         assert water_from_pdb_split[1].split()[2].rstrip() == "O"
         assert water_from_pdb_split[2].split()[2].rstrip() == "H"
 
+    def test_pdb_conect_and_hetatm(self):
+        """Test that OpenEyeToolkitWrapper writes PDB files with CONECT and HETATM records and no ATOM records."""
+        molecule = Molecule.from_smiles("CC(=O)NC1=CC=C(C=C1)O")
+        molecule.generate_conformers(n_conformers=1)
+
+        molecule.to_file(
+            "acetaminophen_openeye.pdb",
+            "PDB",
+            ToolkitRegistry([OpenEyeToolkitWrapper()]),
+        )
+
+        with open("acetaminophen_openeye.pdb") as f:
+            pdb_lines = f.readlines()
+
+        assert "ATOM" not in pdb_lines
+        assert (
+            len([row for row in pdb_lines if row.startswith("HETATM")])
+            == molecule.n_atoms
+        )
+        assert (
+            len([row for row in pdb_lines if row.startswith("CONECT")]) == 10
+        )  # 20 bonds, 10 lines of CONECT
+
     def test_get_sdf_coordinates(self):
         """Test OpenEyeToolkitWrapper for importing a single set of coordinates from a sdf file"""
 
