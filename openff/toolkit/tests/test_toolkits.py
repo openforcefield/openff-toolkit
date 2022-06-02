@@ -852,7 +852,6 @@ class TestOpenEyeToolkitWrapper:
         pdb = sio.getvalue()
         assert pdb.count("END") == 7
 
-
     def test_write_pdb_preserving_atom_names(self):
         """
         Make sure OpenEyeToolkitWrapper preserves unique atom names when writing to PDB.
@@ -865,9 +864,9 @@ class TestOpenEyeToolkitWrapper:
         sio = StringIO()
         mol.to_file(sio, "pdb", toolkit_registry=toolkit)
         mol_from_pdb = sio.getvalue()
-        assert 'C1' in mol_from_pdb
-        assert 'C2' in mol_from_pdb
-        assert 'O1' in mol_from_pdb
+        assert "C1" in mol_from_pdb
+        assert "C2" in mol_from_pdb
+        assert "O1" in mol_from_pdb
 
     def test_write_pdb_preserving_atom_order(self):
         """
@@ -2624,9 +2623,9 @@ class TestRDKitToolkitWrapper:
         sio = StringIO()
         mol.to_file(sio, "pdb", toolkit_registry=toolkit)
         mol_from_pdb = sio.getvalue()
-        assert 'C1' in mol_from_pdb
-        assert 'C2' in mol_from_pdb
-        assert 'O1' in mol_from_pdb
+        assert "C1" in mol_from_pdb
+        assert "C2" in mol_from_pdb
+        assert "O1" in mol_from_pdb
 
     # Unskip this when we implement PDB-reading support for RDKitToolkitWrapper
     @pytest.mark.skip

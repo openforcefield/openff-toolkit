@@ -419,6 +419,17 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         # Issue #475 (https://github.com/openforcefield/openff-toolkit/issues/475)
         # dfhahn's workaround: Using OEWritePDBFile does not alter the atom arrangement
         if file_format.lower() == "pdb":
+
+            # OEPerceiveResidues overwrites the atom names that we just wrote, so save them and put them back
+            # https://github.com/openforcefield/openff-toolkit/pull/848#issuecomment-825306336
+
+            atom_names = [oeatom.GetName() for oeatom in oemol.GetAtoms()]
+
+            oechem.OEPerceiveResidues(oemol)
+
+            for oeatom, atom_name in zip(oemol.GetAtoms(), atom_names):
+                oeatom.SetName(atom_name)
+
             if oemol.NumConfs() > 1:
                 for conf in oemol.GetConfs():
                     oechem.OEWritePDBFile(ofs, conf, oechem.OEOFlavor_PDB_BONDS)
