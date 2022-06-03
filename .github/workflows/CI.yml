@@ -33,10 +33,12 @@ jobs:
         rdkit: [true, false]
         openeye: [true, false]
         exclude:
-          - os: macos-latest
-          - openeye: false
           - rdkit: false
-          - python-version: "3.8"
+            openeye: false
+          - openeye: true
+            python-version: "3.9"
+#         - openeye: true
+#           python-version: "3.10"
 
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
