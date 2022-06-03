@@ -58,6 +58,14 @@ If you are unable to provide a molecule in the formats recommended above and wan
 - [MDAnalysis' RDKit converter](https://docs.mdanalysis.org/stable/documentation_pages/converters/RDKit.html?highlight=rdkit#module-MDAnalysis.converters.RDKit), with an [example here](https://github.com/openforcefield/openff-toolkit/issues/1126#issuecomment-969712195)
 - the Jensen group's [xyz2mol program](https://github.com/jensengroup/xyz2mol/)
 
+## I'm getting stereochemistry errors when loading a molecule from a SMILES string.
+
+The toolkit does not accept molecules with undefined stereochemistry. Applying parameters based on [direct chemical perception](https://pubs.acs.org/doi/pdf/10.1021/acs.jctc.8b00640) requires knowing the stereochemistry of chiral centers. Molecule representations without defined stereochemistry might not be given all appropriate parameters specified from the force field, particularly valence terms, around the stereocenters.
+
+## I understsand the risks and want to load a molecule from a SMILES string that might not fully define stereocehmistry.
+
+Pass `allow_undefined_stereo=True` to molecule loading methods like [Molecule.from_smiles](openff.toolkit.topology.Molecule.from_smiles) to downgrade the exception to a warning. As an example, see the "SMILES without stereochemistry" section in the [Molecule cookbook](users/molecule_cookbook).
+
 ## My conda installation of the toolkit doesn't appear to work. What should I try next?
 
 We recommend that you install the toolkit in a fresh conda environment, explicitly passing the channels to be used, in-order:
