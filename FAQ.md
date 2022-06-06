@@ -60,11 +60,11 @@ If you are unable to provide a molecule in the formats recommended above and wan
 
 ## I'm getting stereochemistry errors when loading a molecule from a SMILES string.
 
-The toolkit does not accept molecules with undefined stereochemistry. Applying parameters based on [direct chemical perception](https://pubs.acs.org/doi/pdf/10.1021/acs.jctc.8b00640) requires knowing the stereochemistry of chiral centers. Molecule representations without defined stereochemistry might not be given all appropriate parameters specified from the force field, particularly valence terms, around the stereocenters.
+The toolkit does not accept molecules with undefined stereochemistry by default. This is because the stereochemistry of a molecule may affect its partial charges, and assigning parameters using [direct chemical perception](https://pubs.acs.org/doi/pdf/10.1021/acs.jctc.8b00640) may require knowing the stereochemistry of chiral centers. Because the OpenFF Toolkit doesn't know which force field will be used when molecule is loaded (and the main-line OpenFF force fields use AM1BCC for charge assignment, which is stereochemistry-dependent) , it defaults to throwing an error if a molecule with undefined stereochemistry is loaded. 
 
 ## I understand the risks and want to load a molecule from a SMILES string that might not fully define stereochemistry.
 
-Pass `allow_undefined_stereo=True` to molecule loading methods like [Molecule.from_smiles](openff.toolkit.topology.Molecule.from_smiles) to downgrade the exception to a warning. As an example, see the "SMILES without stereochemistry" section in the [Molecule cookbook](smiles_no_stereochemistry).
+Pass `allow_undefined_stereo=True` to molecule loading methods like [Molecule.from_smiles](openff.toolkit.topology.Molecule.from_smiles) to downgrade the exception to a warning. As an example, see the "SMILES without stereochemistry" section in the [Molecule cookbook](smiles_no_stereochemistry). Where possible, our parameter assignment infrastructure will gracefully handle molecules with undefined stereochemistry that are loaded this way. 
 
 ## My conda installation of the toolkit doesn't appear to work. What should I try next?
 
