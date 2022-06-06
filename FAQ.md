@@ -64,7 +64,7 @@ The toolkit does not accept molecules with undefined stereochemistry. Applying p
 
 ## I understand the risks and want to load a molecule from a SMILES string that might not fully define stereochemistry.
 
-Pass `allow_undefined_stereo=True` to molecule loading methods like [Molecule.from_smiles](openff.toolkit.topology.Molecule.from_smiles) to downgrade the exception to a warning. As an example, see the "SMILES without stereochemistry" section in the [Molecule cookbook](users/molecule_cookbook).
+Pass `allow_undefined_stereo=True` to molecule loading methods like [Molecule.from_smiles](openff.toolkit.topology.Molecule.from_smiles) to downgrade the exception to a warning. As an example, see the "SMILES without stereochemistry" section in the [Molecule cookbook](smiles_no_stereochemistry).
 
 ## My conda installation of the toolkit doesn't appear to work. What should I try next?
 
