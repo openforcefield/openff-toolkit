@@ -3829,12 +3829,12 @@ class TestForceFieldParameterAssignment:
             decimal=8,
         )
 
-        # sys_no_vdw = ff_no_vdw.create_openmm_system(top)
-        # np.testing.assert_almost_equal(
-        #     actual=get_14_scaling_factors(sys_no_vdw)[0],
-        #     desired=ff_no_vdw["Electrostatics"].scale14,
-        #     decimal=8,
-        # )
+        sys_no_vdw = ff_no_vdw.create_openmm_system(top)
+        np.testing.assert_almost_equal(
+            actual=get_14_scaling_factors(sys_no_vdw)[0],
+            desired=ff_no_vdw["Electrostatics"].scale14,
+            decimal=8,
+        )
 
     def test_overwrite_bond_orders(self):
         """Test that previously-defined bond orders in the topology are overwritten"""
