@@ -23,7 +23,7 @@ Add these sections later
 --->
 
 
-
+(userguide_hierarchy)=
 ## Hierarchy data (chains and residues)
 
 Note that the representations of hierarchy data (namely, chains and residues) in 
