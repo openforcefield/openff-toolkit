@@ -34,10 +34,7 @@ from packaging.version import Version
 
 from openff.toolkit.topology.molecule import DEFAULT_AROMATICITY_MODEL
 from openff.toolkit.typing.engines.smirnoff.io import ParameterIOHandler
-from openff.toolkit.typing.engines.smirnoff.parameters import (
-    IncompatibleParameterError,
-    ParameterHandler,
-)
+from openff.toolkit.typing.engines.smirnoff.parameters import ParameterHandler
 from openff.toolkit.typing.engines.smirnoff.plugins import load_handler_plugins
 from openff.toolkit.utils.exceptions import (
     ParameterHandlerRegistrationError,
@@ -57,8 +54,9 @@ from openff.toolkit.utils.utils import (
 
 if TYPE_CHECKING:
     import openmm
+    from openff.units import unit
 
-    from openff.toolkit.topology import Topology
+    from openff.toolkit.topology import Molecule, Topology
     from openff.toolkit.utils.base_wrapper import ToolkitWrapper
     from openff.toolkit.utils.toolkit_registry import ToolkitRegistry
 
@@ -132,11 +130,6 @@ def get_available_force_fields(full_paths=False):
 MAX_SUPPORTED_VERSION = (
     "1.0"  # maximum version of the SMIRNOFF spec supported by this SMIRNOFF force field
 )
-
-
-# QUESTION: How should we document private object fields?
-
-# TODO: How do we serialize/deserialize `ForceField`'s object model? Can we rely on pickle?
 
 
 class ForceField:
@@ -879,7 +872,7 @@ class ForceField:
         l1_dict = OrderedDict()
 
         # Assume we will write out SMIRNOFF data in compliance with the max supported spec version
-        l1_dict["version"] = self._MAX_SUPPORTED_SMIRNOFF_VERSION
+        l1_dict["version"] = str(self._MAX_SUPPORTED_SMIRNOFF_VERSION)
 
         # Write out the aromaticity model used
         l1_dict["aromaticity_model"] = self._aromaticity_model
@@ -1200,12 +1193,10 @@ class ForceField:
         return ordered_parameter_handlers
 
     # TODO: Should we also accept a Molecule as an alternative to a Topology?
-    # TODO: Fall back to old code path if Interchange not installed?
     @requires_package("openmm")
     def create_openmm_system(
         self,
         topology: "Topology",
-        use_interchange: bool = False,
         **kwargs,
     ) -> Union["openmm.System", Tuple["openmm.System", "Topology"]]:
         """Create an OpenMM System from this ForceField and a Topology.
@@ -1214,179 +1205,58 @@ class ForceField:
         ----------
         topology : openforcefield.topology.Topology
             The ``Topology`` which is to be parameterized with this ``ForceField``.
-        use_interchange : bool, optional, default=True
-            Whether to use the Interchange module in creation of an OpenMM ``System``.
 
         """
-        if use_interchange:
-            return_topology = kwargs.pop("return_topology", False)
-            toolkit_registry = kwargs.get("toolkit_registry", None)
-
-            interchange = self.create_interchange(
-                topology,
-                toolkit_registry,
-            )
-            openmm_system = interchange.to_openmm(combine_nonbonded_forces=True)
-            if not return_topology:
-                return openmm_system
-            else:
-                warning_msg = (
-                    "The `create_openmm_system` kwarg `return_topology` is DEPRECATED and will be "
-                    "removed in version 0.12.0 of the OpenFF Toolkit. "
-                    "Use `ForceField.create_interchange` followed by `Interchange.topology`, "
-                    "`Interchange.to_openmm_topology`, and `Interchange.to_openmm` "
-                    "for long-term replacements for `return_topology` functionality."
-                )
-                warnings.warn(warning_msg, DeprecationWarning)
-                return openmm_system, copy.deepcopy(interchange.topology)
-        else:
-            return self._old_create_openmm_system(topology, **kwargs)
-
-    @requires_package("openmm")
-    def _old_create_openmm_system(self, topology, **kwargs):
-        """Create an OpenMM System representing the interactions for the specified Topology with the current force field
-
-        Parameters
-        ----------
-        topology : openff.toolkit.topology.Topology
-            The ``Topology`` corresponding to the system to be parameterized
-        charge_from_molecules : List[openff.toolkit.molecule.Molecule], optional. default =[]
-            If specified, partial charges will be taken from the given molecules
-            instead of being determined by the force field.
-        partial_bond_orders_from_molecules : List[openff.toolkit.molecule.Molecule], optional. default=[]
-            If specified, partial bond orders will be taken from the given molecules
-            instead of being determined by the force field.
-            **All** bonds on each molecule given must have ``fractional_bond_order`` specified.
-            A `ValueError` will be raised if any bonds have ``fractional_bond_order=None``.
-            Molecules in the topology not represented in this list will have fractional
-            bond orders calculated using underlying toolkits as needed.
-        return_topology : bool, optional. default=False
-            If ``True``, return tuple of ``(system, topology)``, where
-            ``topology`` is the processed topology. Default ``False``. This topology will have the
-            final partial charges assigned on its reference_molecules attribute, as well as partial
-            bond orders (if they were calculated).
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry, optional. default=GLOBAL_TOOLKIT_REGISTRY
-            The toolkit registry to use for operations like conformer generation and
-            partial charge assignment.
-
-        Returns
-        -------
-        system : openmm.System
-            The newly created OpenMM System corresponding to the specified ``topology``
-        topology : openff.toolkit.topology.Topology, optional.
-            If the `return_topology` keyword argument is used, this method will also return a Topology. This
-            can be used to inspect the partial charges and partial bond orders assigned to the molecules
-            during parameterization.
-
-        """
-        import openmm
-        from openff.units.openmm import to_openmm
-
         return_topology = kwargs.pop("return_topology", False)
+        toolkit_registry = kwargs.pop("toolkit_registry", None)
+        charge_from_molecules = kwargs.pop("charge_from_molecules", None)
+        partial_bond_orders_from_molecules = kwargs.pop(
+            "partial_bond_orders_from_molecules", None
+        )
+        allow_nonintegral_charges = kwargs.pop("allow_nonintegral_charges", False)
 
-        # Make a deep copy of the topology so we don't accidentally modify it
-        topology = copy.deepcopy(topology)
+        if len(kwargs) > 0:
+            from openff.toolkit.utils.exceptions import UnsupportedKeywordArgumentsError
 
-        # set all fractional_bond_orders in topology to None
-        for ref_mol in topology.reference_molecules:
-            for bond in ref_mol.bonds:
-                bond.fractional_bond_order = None
-
-        # Set the topology aromaticity model to that used by the current force field
-        # TODO: See openff-toolkit issue #206 for proposed implementation of aromaticity
-        # topology.set_aromaticity_model(self._aromaticity_model)
-
-        # Create an empty OpenMM System
-        system = openmm.System()
-
-        # Set periodic boundary conditions if specified
-        if topology.box_vectors is not None:
-            system.setDefaultPeriodicBoxVectors(*to_openmm(topology.box_vectors))
-
-        # Add atom particles with appropriate masses
-        # Virtual site particle creation is handled in the parameter handler
-        # create_force call
-        # This means that even though virtual sites may have been created via
-        # the molecule API, an empty VirtualSites tag must exist in the FF
-        for atom in topology.atoms:
-            # addParticle(mass.m_as(unit.dalton)) would be safer but slower
-            system.addParticle(atom.mass.m)
-
-        # Determine the order in which to process ParameterHandler objects in order to satisfy dependencies
-        parameter_handlers = self._resolve_parameter_handler_order()
-
-        # Check if any kwargs have been provided that aren't handled by force Handlers
-        # TODO: Delete this and kwargs from arguments above?
-        known_kwargs = set()
-        for parameter_handler in parameter_handlers:
-            known_kwargs.update(parameter_handler.known_kwargs)
-        unknown_kwargs = set(kwargs.keys()).difference(known_kwargs)
-        if len(unknown_kwargs) > 0:
             msg = (
-                "The following keyword arguments to create_openmm_system() are not used by any registered "
-                f"force Handler: {unknown_kwargs}\n"
+                "Unsupported keyword arguments found passed to `ForceField.create_openmm_system`. Supported "
+                "keyword arguments are `return_topology`, `toolkit_registry`, `charge_from_molecules`, "
+                f"`partial_bond_orders_from_molecules`, and `allow_nonintegral_charges`. Found: {kwargs}"
             )
-            msg += "Known keyword arguments: {known_kwargs}"
-            raise ValueError(msg)
 
-        # Add forces and parameters to the System
-        for parameter_handler in parameter_handlers:
-            parameter_handler.create_force(system, topology, **kwargs)
+            raise UnsupportedKeywordArgumentsError(msg)
 
-        # Let force Handlers do postprocessing
-        for parameter_handler in parameter_handlers:
-            parameter_handler.postprocess_system(system, topology, **kwargs)
-
-        # Handle 1-4 scaling interactions here, instead of in handlers, since OpenMM
-        # does things slightly differently than other engines may
-        electrostatics_14 = self.get_parameter_handler(tagname="Electrostatics").scale14
-        vdw_14 = self.get_parameter_handler(tagname="vdW").scale14
-
-        # Create exceptions based on bonds.
-        # QUESTION: Will we want to do this for *all* cases, or would we ever want flexibility here?
-        bond_particle_indices = []
-
-        bond_particle_indices = [
-            (topology.particle_index(bond.atom1), topology.particle_index(bond.atom2))
-            for bond in topology.bonds
-        ]
-
-        # TODO: Can we generalize this to allow for `CustomNonbondedForce` implementations too?
-        forces = [system.getForce(i) for i in range(system.getNumForces())]
-        nonbonded_force = [f for f in forces if type(f) == openmm.NonbondedForce][0]
-
-        nonbonded_force.createExceptionsFromBonds(
-            bond_particle_indices,
-            electrostatics_14,
-            vdw_14,
+        interchange = self.create_interchange(
+            topology,
+            toolkit_registry,
+            charge_from_molecules=charge_from_molecules,
+            partial_bond_orders_from_molecules=partial_bond_orders_from_molecules,
+            allow_nonintegral_charges=allow_nonintegral_charges,
         )
 
-        if hasattr(self.get_parameter_handler("Electrostatics"), "cutoff"):
-            vdw_cutoff = self.get_parameter_handler("vdW").cutoff
-            coul_cutoff = self.get_parameter_handler("Electrostatics").cutoff
-            coul_periodic_potential = self.get_parameter_handler(
-                "Electrostatics"
-            ).periodic_potential
-            if vdw_cutoff != coul_cutoff:
-                if coul_periodic_potential == "Ewald3D-ConductingBoundary":
-                    nonbonded_force.setCutoffDistance(to_openmm(vdw_cutoff))
-                else:
-                    raise IncompatibleParameterError(
-                        "In its current implementation of the OpenFF Toolkit, with With electrostatics periodic "
-                        f"potential {coul_periodic_potential}, the electrostatics cutoff must equal the vdW cutoff. "
-                        f"Found vdw cutoff {vdw_cutoff} and {coul_cutoff}."
-                    )
+        openmm_system = interchange.to_openmm(combine_nonbonded_forces=True)
 
-        if return_topology:
-            return (system, topology)
+        if not return_topology:
+            return openmm_system
         else:
-            return system
+            warning_msg = (
+                "The `create_openmm_system` kwarg `return_topology` is DEPRECATED and will be "
+                "removed in version 0.12.0 of the OpenFF Toolkit. "
+                "Use `ForceField.create_interchange` followed by `Interchange.topology`, "
+                "`Interchange.to_openmm_topology`, and `Interchange.to_openmm` "
+                "for long-term replacements for `return_topology` functionality."
+            )
+            warnings.warn(warning_msg, DeprecationWarning)
+            return openmm_system, copy.deepcopy(interchange.topology)
 
     @requires_package("openff.interchange")
     def create_interchange(
         self,
         topology: "Topology",
         toolkit_registry: Optional[Union["ToolkitRegistry", "ToolkitWrapper"]] = None,
+        charge_from_molecules: Optional[List["Molecule"]] = None,
+        partial_bond_orders_from_molecules: Optional[List["Molecule"]] = None,
+        allow_nonintegral_charges: bool = False,
     ):
         """
         Create an Interchange object from a ForceField, Topology, and (optionally) box vectors.
@@ -1419,7 +1289,13 @@ class ForceField:
             used_registry = GLOBAL_TOOLKIT_REGISTRY
 
         with _toolkit_registry_manager(used_registry):
-            return Interchange.from_smirnoff(force_field=self, topology=topology)
+            return Interchange.from_smirnoff(
+                force_field=self,
+                topology=topology,
+                charge_from_molecules=charge_from_molecules,
+                partial_bond_orders_from_molecules=partial_bond_orders_from_molecules,
+                allow_nonintegral_charges=allow_nonintegral_charges,
+            )
 
     def label_molecules(self, topology):
         """Return labels for a list of molecules corresponding to parameters from this force field.
@@ -1502,7 +1378,7 @@ class ForceField:
             raise KeyError(msg)
         return ph_class
 
-    def get_partial_charges(self, molecule, **kwargs):
+    def get_partial_charges(self, molecule: "Molecule", **kwargs) -> "unit.Quantity":
         """Generate the partial charges for the given molecule in this force field.
 
         Parameters
@@ -1555,12 +1431,25 @@ class ForceField:
         charge calculation to be cached.
 
         """
+        from openff.toolkit.topology.molecule import Molecule
+
+        if not isinstance(molecule, Molecule):
+            raise ValueError(
+                "`molecule` argument must be a `Molecule` or subclass object. Found type "
+                f"{type(molecule)}"
+            )
+
         _, top_with_charges = self.create_openmm_system(
             molecule.to_topology(), return_topology=True, **kwargs
         )
 
-        charges = [*top_with_charges.reference_molecules][0].partial_charges
-        return charges
+        assert top_with_charges.n_molecules == 1, (
+            "Expected a single molecule in the topology produced by Interchange. "
+            f"Found {len(top_with_charges.n_molecules)} molecules."
+        )
+
+        for molecule in top_with_charges.molecules:
+            return molecule.partial_charges
 
     def __getitem__(self, val):
         """
