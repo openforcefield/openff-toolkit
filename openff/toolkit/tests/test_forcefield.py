@@ -1499,6 +1499,27 @@ class TestForceField:
             toolkit_registry=toolkit_registry,
         )
 
+    @pytest.mark.parametrize("toolkit_registry", toolkit_registries)
+    def test_pass_invalid_kwarg_to_create_openmm_system(self, toolkit_registry):
+        """Test to ensure an exception is raised when an unrecognized kwarg is passed"""
+        file_path = get_data_file_path("test_forcefields/test_forcefield.offxml")
+        forcefield = ForceField(file_path)
+        pdbfile = app.PDBFile(get_data_file_path("systems/test_systems/1_ethanol.pdb"))
+        molecules = []
+        molecules.append(Molecule.from_smiles("CCO"))
+        topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
+
+        with pytest.raises(
+            ValueError,
+            match="Unsupported.* Found: {'invalid_kwarg': 'aaa",
+        ):
+            # TODO: specify desired toolkit_registry behavior in Interchange
+            forcefield.create_openmm_system(
+                topology,
+                invalid_kwarg="aaa",
+                toolkit_registry=toolkit_registry,
+            )
+
     def test_electrostatics_switch_width_unsupported(self):
         handler = ElectrostaticsHandler(version=0.4)
         with pytest.raises(

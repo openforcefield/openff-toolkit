@@ -307,3 +307,7 @@ class InconsistentStereochemistryError(OpenFFToolkitException):
 
 class UnsupportedFileTypeError(OpenFFToolkitException):
     """Error raised when attempting to parse an unsupported file type."""
+
+
+class UnsupportedKeywordArgumentsError(OpenFFToolkitException, ValueError):
+    """Error raised when an unexpected keyword argument is passed to `ForceField.create_openmm_system`."""

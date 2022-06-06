@@ -2905,9 +2905,6 @@ class vdWHandler(_NonbondedHandler):
 
     _TAGNAME = "vdW"  # SMIRNOFF tag name to process
     _INFOTYPE = vdWType  # info type to store
-    # _KWARGS = ['ewaldErrorTolerance',
-    #            'useDispersionCorrection',
-    #            'usePbc'] # Kwargs to catch when create_force is called
 
     potential = ParameterAttribute(
         default="Lennard-Jones-12-6", converter=_allow_only(["Lennard-Jones-12-6"])

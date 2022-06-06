@@ -1215,6 +1215,17 @@ class ForceField:
         )
         allow_nonintegral_charges = kwargs.pop("allow_nonintegral_charges", False)
 
+        if len(kwargs) > 0:
+            from openff.toolkit.utils.exceptions import UnsupportedKeywordArgumentsError
+
+            msg = (
+                "Unsupported keyword arguments found passed to `ForceField.create_openmm_system`. Supported "
+                "keyword arguments are `return_topology`, `toolkit_registry`, `charge_from_molecules`, "
+                f"`partial_bond_orders_from_molecules`, and `allow_nonintegral_charges`. Found: {kwargs}"
+            )
+
+            raise UnsupportedKeywordArgumentsError(msg)
+
         interchange = self.create_interchange(
             topology,
             toolkit_registry,
