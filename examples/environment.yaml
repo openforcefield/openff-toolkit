@@ -1,13 +1,13 @@
 name: offtk-examples
 channels:
   - conda-forge
-
 dependencies:
   # These dependencies are in addition to the toolkit itself
   - nglview
   - notebook
   - gromacs >=2021=nompi*
   - lammps
+  - openff-amber-ff-ports >=0.0.2
   - ambertools
   - qcelemental
   - qcportal
@@ -17,9 +17,12 @@ dependencies:
   # Below are some dependencies of the toolkit; they are listed here as a reference
   - mdtraj
   - numpy
-  - openmm
+  - openmm >=7.7
   - openff-forcefields >=2.0.0
-  - openff-interchange >=0.1.3  # Replace with ">=0.2.0" with 0.11.0 release
+  - cached-property
+  - cachetools
+  # Some others that will be pulled down by an Interchange conda package
+  - openff-utilities
+  - openff-units >=0.1.6
   - pip:
-    # Remove when 0.2.0 is released
-    - git+https://github.com/openforcefield/openff-interchange.git@v0.2.0-alpha.4
+    - git+https://github.com/openforcefield/openff-interchange.git@main
