@@ -1344,16 +1344,26 @@ class FrozenMolecule(Serializable):
         ------
         HierarchySchemeWithIteratorNameAlreadyRegisteredException
         """
+        self._add_chain_hierarchy_scheme(overwrite_existing=overwrite_existing)
+        self._add_residue_hierarchy_scheme(overwrite_existing=overwrite_existing)
+
+    def _add_chain_hierarchy_scheme(self, overwrite_existing=True):
+        """Add ``chain`` hierarchy scheme."""
         if overwrite_existing:
             if "chains" in self._hierarchy_schemes.keys():
                 self.delete_hierarchy_scheme("chains")
+
+        self.add_hierarchy_scheme(("chain",), "chains")
+
+    def _add_residue_hierarchy_scheme(self, overwrite_existing=True):
+        """Add ``residue`` hierarchy scheme."""
+        if overwrite_existing:
             if "residues" in self._hierarchy_schemes.keys():
                 self.delete_hierarchy_scheme("residues")
 
         self.add_hierarchy_scheme(
             ("chain", "residue_number", "residue_name"), "residues"
         )
-        self.add_hierarchy_scheme(("chain",), "chains")
 
     def add_hierarchy_scheme(
         self,
