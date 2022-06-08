@@ -184,9 +184,9 @@ class Atom(Particle):
 
        * Should ``Atom`` objects be immutable or mutable?
        * Do we want to support the addition of arbitrary additional properties,
-        such as floating point quantities (e.g. ``charge``), integral quantities (such as ``id`` or ``serial``
-        index in a PDB file),
-        or string labels (such as Lennard-Jones types)?
+         such as floating point quantities (e.g. ``charge``), integral
+         quantities (such as ``id`` or ``serial`` index in a PDB file),
+         or string labels (such as Lennard-Jones types)?
 
     .. todo :: Allow atoms to have associated properties.
 
@@ -2353,14 +2353,14 @@ class FrozenMolecule(Serializable):
         For more supported charge methods and details, see the corresponding
         methods in each toolkit wrapper:
 
-        - :meth:`OpenEyeToolkitWrapper.assign_partial_charges
-            <openff.toolkit.utils.toolkits.OpenEyeToolkitWrapper.assign_partial_charges>`
-        - :meth:`RDKitToolkitWrapper.assign_partial_charges
-            <openff.toolkit.utils.toolkits.RDKitToolkitWrapper.assign_partial_charges>`
-        - :meth:`AmberToolsToolkitWrapper.assign_partial_charges
-            <openff.toolkit.utils.toolkits.AmberToolsToolkitWrapper.assign_partial_charges>`
-        - :meth:`BuiltInToolkitWrapper.assign_partial_charges
-            <openff.toolkit.utils.toolkits.BuiltInToolkitWrapper.assign_partial_charges>`
+        - :meth:`OpenEyeToolkitWrapper.assign_partial_charges \
+          <openff.toolkit.utils.toolkits.OpenEyeToolkitWrapper.assign_partial_charges>`
+        - :meth:`RDKitToolkitWrapper.assign_partial_charges \
+          <openff.toolkit.utils.toolkits.RDKitToolkitWrapper.assign_partial_charges>`
+        - :meth:`AmberToolsToolkitWrapper.assign_partial_charges \
+          <openff.toolkit.utils.toolkits.AmberToolsToolkitWrapper.assign_partial_charges>`
+        - :meth:`BuiltInToolkitWrapper.assign_partial_charges \
+          <openff.toolkit.utils.toolkits.BuiltInToolkitWrapper.assign_partial_charges>`
 
         Parameters
         ----------
@@ -3336,9 +3336,10 @@ class FrozenMolecule(Serializable):
 
         .. todo ::
 
-           * Do we want to generalize ``query`` to allow other kinds of queries, such as mdtraj DSL,
-           pymol selections, atom index slices, etc? We could call it ``topology.matches(query)`` instead of
-           ``chemical_environment_matches``
+           * Do we want to generalize ``query`` to allow other kinds of queries,
+             such as mdtraj DSL, pymol selections, atom index slices, etc? We
+             could call it ``topology.matches(query)`` instead of
+             ``chemical_environment_matches``
 
         """
         # Resolve to SMIRKS if needed
