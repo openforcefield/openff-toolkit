@@ -1,24 +1,25 @@
 name: offtk-examples
 channels:
   - conda-forge
-  - bioconda
 
-# These dependencies are in addition to the toolkit itself
 dependencies:
+  # These dependencies are in addition to the toolkit itself
   - nglview
   - notebook
-  - gromacs
+  - gromacs >=2021=nompi*
+  - lammps
+  - ambertools
   - qcelemental
   - qcportal
   - qcengine
   # https://github.com/openforcefield/openff-toolkit/pull/1232#issuecomment-1080889858
   # openmmforcefields
-  # Below are dependencies of the toolkit; they are listed here as a reference
+  # Below are some dependencies of the toolkit; they are listed here as a reference
   - mdtraj
   - numpy
   - openmm
   - openff-forcefields >=2.0.0
-  - openff-interchange >=0.1.3
-  - gromacs
-  - lammps
-  - ambertools
+  - openff-interchange >=0.1.3  # Replace with ">=0.2.0" with 0.11.0 release
+  - pip:
+    # Remove when 0.2.0 is released
+    - git+https://github.com/openforcefield/openff-interchange.git@v0.2.0-alpha.4

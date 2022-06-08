@@ -3661,6 +3661,7 @@ class FrozenMolecule(Serializable):
 
     @classmethod
     @requires_package("openmm")
+    @requires_package("rdkit")
     def from_polymer_pdb(
         cls, file_path: Union[str, TextIO], toolkit_registry=GLOBAL_TOOLKIT_REGISTRY
     ):
@@ -3673,23 +3674,15 @@ class FrozenMolecule(Serializable):
 
         * Loads the polymer substructure template file
         * Loads the PDB into an OpenMM PDBFile object (openmm.app.PDBFile)
-        * Turns OpenMM topology into naive networkx graph (Topology._omm_topology_to_networkx)
-        * Calls Molecule.from_polymer_pdb._add_chemical_info_to_networkx_graph, which:
-            * Makes hydrogens in the topology graph negative (a runtime performance trick to
-              reduce the number of symmetries)
-              (Molecule.from_polymer_pdb._make_hydrogens_negative_in_networkx_graph)
-            * For each substructure loaded from the substructure template file:
-                * Turns the substructure from its original form (SMARTS) into a networkx graph
-                * Makes the hydrogens in the substructure graph negative
-                * Uses networkx to find graph isomorphisms between the substructure and the topology graph
-                * For any isomorphism, assigns the atom formal charge and bond order info from the substructure
-                  to the topology graph, then marks the atoms and bonds as having been assigned so they can not
+        * Turns OpenMM topology into a temporarily invalid rdkit Molecule
+        * Calls Molecule.from_polymer_pdb._add_chemical_info, which:
+            * For each substructure loaded from the substructure template file:e
+                * Uses rdkit to find matches between the substructure and the molecule
+                * For any matches, assigns the atom formal charge and bond order info from the substructure
+                  to the rdkit molecule, then marks the atoms and bonds as having been assigned so they can not
                   be overwritten by subsequent isomorphisms
-        * Convert the topology graph back to an OpenFF Molecule
-        * Take coordinates from the OpenMM Topology and add them as a conformer to the OpenFF Molecule
-        * Process the OpenFF Molecule to assign aromaticity and stereochemistry
-          (ToolkitWrapper._assign_aromaticity_and_stereo_from_3d)
-
+        * Take coordinates from the OpenMM Topology and add them as a conformer
+        * Convert the rdkit Molecule to OpenFF
 
         Parameters
         ----------
@@ -3702,150 +3695,10 @@ class FrozenMolecule(Serializable):
         -------
         molecule : openff.toolkit.topology.Molecule
         """
-        from networkx.algorithms import isomorphism
-        from openmm import unit as openmm_unit
+        import openmm.unit as openmm_unit
         from openmm.app import PDBFile
 
-        from openff.toolkit.topology import Topology
-        from openff.toolkit.utils import get_data_file_path
-
-        def _make_hydrogens_negative_in_networkx_graph(graph):
-            # Use this list as a mapping from heavy atom index to the number of hydrogens we've counted
-            # so far.
-            n_hydrogens_on_heavy_atom = [0] * len(graph.nodes)
-            for bond in graph.edges:
-                # Assign sequential negative numbers as atomic numbers for hydrogens attached to the same heavy atom.
-                # We do the same to the substructure templates that are used for matching. This saves runtime because
-                # it removes redundant self-symmetric matches.
-                atom_1_atomic_num = graph.nodes[bond[0]]["atomic_number"]
-                atom_2_atomic_num = graph.nodes[bond[1]]["atomic_number"]
-                if atom_1_atomic_num <= 1:
-                    h_index = bond[0]
-                    heavy_atom_index = bond[1]
-                    n_hydrogens_on_heavy_atom[heavy_atom_index] += 1
-                    graph.nodes[h_index]["atomic_number"] = (
-                        -1 * n_hydrogens_on_heavy_atom[heavy_atom_index]
-                    )
-                if atom_2_atomic_num <= 1:
-                    h_index = bond[1]
-                    heavy_atom_index = bond[0]
-                    n_hydrogens_on_heavy_atom[heavy_atom_index] += 1
-                    graph.nodes[h_index]["atomic_number"] = (
-                        -1 * n_hydrogens_on_heavy_atom[heavy_atom_index]
-                    )
-
-        def _undo_making_hydrogens_negative_in_networkx_graph(graph):
-            # Negative atomic numbers are really hydrogen, so we reassign them to be atomic number
-            # 1 once they've been matched
-            for idx in graph.nodes:
-                if graph.nodes[idx]["atomic_number"] < 0:
-                    graph.nodes[idx]["atomic_number"] = 1
-
-        def _add_chemical_info_to_networkx_graph(
-            substructure_library,
-            omm_topology_G,
-            toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
-        ):
-            """
-            Construct an OpenFF Topology object from an OpenMM Topology object.
-
-            Parameters
-            ----------
-            substructure_library : dict{str:list[str, list[str]]}
-                A dictionary of substructures. substructure_library[aa_name] = list[tagged SMARTS, list[atom_names]]
-            omm_topology_G : networkx.Graph
-                A graph where each node has at least the `atomic_number` attribute, and edges indicate the existence of
-                chemical bonds.
-            toolkit_registry = ToolkitWrapper or ToolkitRegistry. Default = None
-                Either a ToolkitRegistry, ToolkitWrapper
-
-            Returns
-            -------
-            omm_topology_G : networkx graph
-                A networkX graph representation of the openmm topology with chemical information added from the
-                substructure dictionary. Atoms are nodes and bonds are edges.
-                Nodes (atoms) have attributes for `atomic_number` (int) and `formal_charge` (int).
-                Edges (bonds) have attributes for `bond_order` (Chem.rdchem.BondType).
-                Any edges that are not assgined a bond order will have the value Chem.rdchem.BondType.UNSPECIFIED
-                and should be considered an error.
-            """
-
-            # Don't modify the input graph
-            omm_topology_G = deepcopy(omm_topology_G)
-
-            _make_hydrogens_negative_in_networkx_graph(omm_topology_G)
-
-            # Try matching this substructure to the whole molecule graph
-            node_match = isomorphism.categorical_node_match(
-                ["atomic_number", "already_matched"], [-100, False]
-            )
-
-            already_assigned_nodes = set()
-            already_assigned_edges = set()
-
-            # Now that the openmm topology has been converted to networkx, try to tile over the whole
-            # networkx graph with the known substructures
-            non_isomorphic_count = 0
-            for res_name in substructure_library:
-                # TODO: This is a hack for the moment since we don't have a more sophisticated way to resolve clashes
-                # so it just does the biggest substructures first
-                sorted_substructure_smarts = sorted(
-                    substructure_library[res_name], key=len, reverse=True
-                )
-                non_isomorphic_flag = True
-                for substructure_smarts in sorted_substructure_smarts:
-                    substructure_graph = toolkit_registry.call(
-                        "_smarts_to_networkx", substructure_smarts
-                    )
-                    # These substructures (and only these substructures) should be able to overlap previous matches.
-                    # They handle bonds between substructures.
-                    if res_name in ["PEPTIDE_BOND", "DISULFIDE"]:
-                        for node in substructure_graph.nodes:
-                            substructure_graph.nodes[node]["already_matched"] = True
-
-                    _make_hydrogens_negative_in_networkx_graph(substructure_graph)
-                    GM = isomorphism.GraphMatcher(
-                        omm_topology_G, substructure_graph, node_match=node_match
-                    )
-                    if GM.subgraph_is_isomorphic():
-                        for omm_idx_2_rdk_idx in GM.subgraph_isomorphisms_iter():
-                            for omm_idx, rdk_idx in omm_idx_2_rdk_idx.items():
-                                # TODO: What should we do with atoms that aren't mapped in the substructure?
-                                if omm_idx in already_assigned_nodes:
-                                    continue
-                                already_assigned_nodes.add(omm_idx)
-                                omm_topology_G.nodes[omm_idx][
-                                    "formal_charge"
-                                ] = substructure_graph.nodes[rdk_idx]["formal_charge"]
-                                omm_topology_G.nodes[omm_idx]["already_matched"] = True
-                            rdk_idx_2_omm_idx = dict(
-                                [(j, i) for i, j in omm_idx_2_rdk_idx.items()]
-                            )
-                            for edge in substructure_graph.edges:
-                                omm_edge_idx = (
-                                    rdk_idx_2_omm_idx[edge[0]],
-                                    rdk_idx_2_omm_idx[edge[1]],
-                                )
-                                if (
-                                    tuple(sorted(omm_edge_idx))
-                                    in already_assigned_edges
-                                ):
-                                    continue
-                                already_assigned_edges.add(tuple(sorted(omm_edge_idx)))
-                                omm_topology_G.get_edge_data(*omm_edge_idx)[
-                                    "bond_order"
-                                ] = substructure_graph.get_edge_data(*edge)[
-                                    "bond_order"
-                                ]
-                        non_isomorphic_flag = False
-                if non_isomorphic_flag:
-                    non_isomorphic_count += 1
-            assert len(already_assigned_nodes) == len(omm_topology_G.nodes)
-            assert len(already_assigned_edges) == len(omm_topology_G.edges)
-
-            _undo_making_hydrogens_negative_in_networkx_graph(omm_topology_G)
-
-            return omm_topology_G
+        pdb = PDBFile(file_path)
 
         substructure_file_path = get_data_file_path(
             "proteins/aa_residues_substructures_explicit_bond_orders_with_caps.json"
@@ -3854,31 +3707,9 @@ class FrozenMolecule(Serializable):
         with open(substructure_file_path, "r") as subfile:
             substructure_dictionary = json.load(subfile)
 
-        pdb = PDBFile(file_path)
-
-        omm_topology_G = Topology._openmm_topology_to_networkx(pdb.topology)
-
-        omm_topology_G = _add_chemical_info_to_networkx_graph(
-            substructure_dictionary, omm_topology_G, toolkit_registry=toolkit_registry
+        offmol = toolkit_registry.call(
+            "_polymer_openmm_topology_to_offmol", pdb.topology, substructure_dictionary
         )
-
-        offmol = Molecule()
-
-        for node_idx, node_data in omm_topology_G.nodes.items():
-            offmol.add_atom(
-                node_data["atomic_number"],
-                int(node_data["formal_charge"]),
-                False,
-                name=node_data["atom_name"],
-                metadata={
-                    "residue_name": node_data["residue_name"],
-                    "residue_number": node_data["residue_id"],
-                    "chain_id": node_data["chain_id"],
-                },
-            )
-
-        for edge, edge_data in omm_topology_G.edges.items():
-            offmol.add_bond(edge[0], edge[1], edge_data["bond_order"], False)
 
         coords = unit.Quantity(
             np.array(
@@ -3889,20 +3720,13 @@ class FrozenMolecule(Serializable):
             ),
             unit.angstrom,
         )
-
         offmol.add_conformer(coords)
-
-        offmol_w_stereo_and_aro = toolkit_registry.call(
-            "_assign_aromaticity_and_stereo_from_3d", offmol
-        )
-
-        assert offmol_w_stereo_and_aro.n_atoms == offmol.n_atoms
-        for stereo_aro_atom, atom in zip(offmol_w_stereo_and_aro.atoms, offmol.atoms):
-            atom.stereochemistry = stereo_aro_atom.stereochemistry
-            atom._is_aromatic = stereo_aro_atom.is_aromatic
-        for stereo_aro_bond, bond in zip(offmol_w_stereo_and_aro.bonds, offmol.bonds):
-            bond._is_aromatic = stereo_aro_bond.is_aromatic
-
+        offmol = toolkit_registry.call("_assign_aromaticity_and_stereo_from_3d", offmol)
+        for i, atom in enumerate(pdb.topology.atoms()):
+            offmol.atoms[i].name = atom.name
+            offmol.atoms[i].metadata["residue_name"] = atom.residue.name
+            offmol.atoms[i].metadata["residue_number"] = atom.residue.id
+            offmol.atoms[i].metadata["chain_id"] = atom.residue.chain.id
         offmol.add_default_hierarchy_schemes()
         offmol.perceive_hierarchy()
 

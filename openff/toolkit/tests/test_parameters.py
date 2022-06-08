@@ -705,7 +705,7 @@ class TestParameterHandler:
             _MAX_SUPPORTED_SECTION_VERSION = Version("2")
 
         my_ph = MyPHSubclass(version=1.234)
-        assert my_ph.to_dict()["version"] == Version("1.234")
+        assert my_ph.to_dict()["version"] == str(Version("1.234"))
 
     def test_add_delete_cosmetic_attributes(self):
         """Test ParameterHandler.to_dict() function when some parameters are in
@@ -800,6 +800,17 @@ class TestParameterHandler:
         params = bh.get_parameter({"id": "b1", "smirks": "[#1:1]-[#6:2]"})
 
         assert len(params) == 1
+
+    def test_create_force(self):
+        class MyParameterHandler(ParameterHandler):
+            pass
+
+        handler = MyParameterHandler(version=0.3)
+
+        with pytest.raises(
+            NotImplementedError, match="no longer create OpenMM forces."
+        ):
+            handler.create_force()
 
 
 class TestParameterList:
@@ -1694,28 +1705,6 @@ class TestProperTorsionHandler:
 
 
 class TestvdWHandler:
-    def test_create_force_defaults(self):
-        """Test that create_force works on a vdWHandler with all default values"""
-        import openmm
-
-        # Create a dummy topology containing only argon and give it a set of
-        # box vectors.
-        topology = Molecule.from_smiles("[Ar]").to_topology()
-        topology.box_vectors = unit.Quantity(numpy.eye(3) * 20, unit.angstrom)
-
-        # create a VdW handler with only parameters for argon.
-        vdw_handler = vdWHandler(version=0.3)
-        vdw_handler.add_parameter(
-            {
-                "smirks": "[#18:1]",
-                "epsilon": 1.0 * unit.kilojoules / unit.mole,
-                "sigma": 1.0 * unit.angstrom,
-            }
-        )
-
-        omm_sys = openmm.System()
-        vdw_handler.create_force(omm_sys, topology)
-
     def test_add_param_str(self):
         """
         Ensure that string input is supported, given the added complication that the
@@ -1746,70 +1735,6 @@ class TestvdWType:
     """
     Test the behavior of vdWType
     """
-
-    @pytest.mark.parametrize(
-        "cutoff,switch_width,expected_use,expected_switching_distance",
-        [
-            (9.0 * unit.angstrom, 1.0 * unit.angstrom, True, 8.0 * unit.angstrom),
-            (15.0 * unit.angstrom, 5.0 * unit.angstrom, True, 10.0 * unit.angstrom),
-            (9.0 * unit.angstrom, 0.0 * unit.angstrom, False, 0.0 * unit.angstrom),
-        ],
-    )
-    @pytest.mark.parametrize(
-        "method",
-        # It's possible that this test should not cover PME (LJ-PME), see comments in parameters.py
-        ["PME", "cutoff"],
-    )
-    def test_switch_width(
-        self, cutoff, switch_width, expected_use, expected_switching_distance, method
-    ):
-        """Test that create_force works on a vdWHandler which has a switch width
-        specified.
-        """
-
-        import openmm
-        from openmm import unit as openmm_unit
-
-        # Create a dummy topology containing only argon and give it a set of
-        # box vectors.
-        topology = Molecule.from_smiles("[Ar]").to_topology()
-        topology.box_vectors = unit.Quantity(numpy.eye(3) * 20 * unit.angstrom)
-
-        # create a VdW handler with only parameters for argon.
-        vdw_handler = vdWHandler(
-            version=0.3,
-            cutoff=cutoff,
-            switch_width=switch_width,
-            method=method,
-        )
-        vdw_handler.add_parameter(
-            {
-                "smirks": "[#18:1]",
-                "epsilon": 1.0 * unit.kilojoules_per_mole,
-                "sigma": 1.0 * unit.angstrom,
-            }
-        )
-
-        omm_sys = openmm.System()
-
-        vdw_handler.create_force(omm_sys, topology)
-
-        nonbonded_force = [
-            force
-            for force in omm_sys.getForces()
-            if isinstance(force, openmm.NonbondedForce)
-        ][0]
-
-        assert nonbonded_force.getUseSwitchingFunction() == expected_use
-
-        if expected_use:
-
-            assert numpy.isclose(
-                nonbonded_force.getSwitchingDistance().value_in_unit(
-                    openmm_unit.angstrom
-                ),
-                expected_switching_distance.m_as(unit.angstrom),
-            )
 
     def test_sigma_rmin_half(self):
         """Test the setter/getter behavior or sigma and rmin_half"""
@@ -2727,9 +2652,6 @@ class TestParameterTypeReExports:
                 )
 
 
-# TODO: test_nonbonded_settings (ensure that choices in Electrostatics and vdW tags resolve
-#                                to correct openmm.NonbondedForce subtypes, that setting different cutoffs raises
-#                                exceptions, etc)
 # TODO: test_(all attributes of all ParameterTypes)
 # TODO: test_add_parameter_fractional_bondorder
 # TODO: test_get_indexed_attrib

@@ -257,10 +257,6 @@ class UnassignedMoleculeChargeException(OpenFFToolkitException):
     """Exception raised when no charge method is able to assign charges to a molecule."""
 
 
-class NonintegralMoleculeChargeException(OpenFFToolkitException):
-    """Exception raised when the partial charges on a molecule do not sum up to its formal charge."""
-
-
 class DuplicateParameterError(OpenFFToolkitException):
     """Exception raised when trying to add a ParameterType that already exists"""
 
@@ -295,6 +291,10 @@ class MissingIndexedAttributeError(
     """Error raised when an indexed attribute does not exist"""
 
 
+class MissingPartialChargesError(OpenFFToolkitException, ValueError):
+    """Error raised when a molecule is missing partial charges in a context in which it is expected to have them."""
+
+
 class UnsupportedMoleculeConversionError(OpenFFToolkitException):
     """Error raised when attempting to instantiate a Molecule with insufficient inputs."""
 
@@ -307,3 +307,7 @@ class InconsistentStereochemistryError(OpenFFToolkitException):
 
 class UnsupportedFileTypeError(OpenFFToolkitException):
     """Error raised when attempting to parse an unsupported file type."""
+
+
+class UnsupportedKeywordArgumentsError(OpenFFToolkitException, ValueError):
+    """Error raised when an unexpected keyword argument is passed to `ForceField.create_openmm_system`."""
