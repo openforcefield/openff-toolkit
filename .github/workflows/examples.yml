@@ -99,7 +99,9 @@ jobs:
       - name: Install package
         run: |
           # Remove the packaged openff-toolkit, installed as a dependency of openmmforcefields
-          conda remove --force openff-toolkit-base
+          # ... except it's not installed until it's updated to use the new API
+          # https://github.com/openforcefield/openff-toolkit/pull/1232#issuecomment-1080889858
+          # conda remove --force openff-toolkit-base
           python setup.py develop --no-deps
 
       - name: Environment Information
