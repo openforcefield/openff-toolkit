@@ -3311,11 +3311,15 @@ class TestMoleculeFromPDB:
         """Test off Molecule contains expected number of atoms from T4 pdb."""
         # We expect/know the molecule contains this number of atoms
         expected_n_atoms = 2634
-        offmol = Molecule.from_pdb(get_data_file_path("proteins/T4-protein.pdb"))
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/T4-protein.pdb")
+        )
         assert offmol.n_atoms == expected_n_atoms
 
     def test_molecule_from_pdb_mainchain_ala_dipeptide(self):
-        offmol = Molecule.from_pdb(get_data_file_path("proteins/MainChain_ALA.pdb"))
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/MainChain_ALA.pdb")
+        )
         assert offmol.n_atoms == 22
         expected_mol = Molecule.from_smiles("CC(=O)N[C@H](C)C(=O)NC")
         assert offmol.is_isomorphic_with(
@@ -3323,7 +3327,9 @@ class TestMoleculeFromPDB:
         )
 
     def test_molecule_from_pdb_mainchain_ala_tripeptide(self):
-        offmol = Molecule.from_pdb(get_data_file_path("proteins/MainChain_ALA_ALA.pdb"))
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/MainChain_ALA_ALA.pdb")
+        )
         assert offmol.n_atoms == 32
         expected_mol = Molecule.from_smiles("CC(=O)N[C@H](C)C(=O)N[C@H](C)C(=O)NC")
         assert offmol.is_isomorphic_with(
@@ -3331,7 +3337,9 @@ class TestMoleculeFromPDB:
         )
 
     def test_molecule_from_pdb_cterm_ala_dipeptide(self):
-        offmol = Molecule.from_pdb(get_data_file_path("proteins/CTerminal_ALA.pdb"))
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/CTerminal_ALA.pdb")
+        )
         assert offmol.n_atoms == 17
         expected_mol = Molecule.from_smiles("CC(=O)N[C@H](C)C(=O)[O-]")
         assert offmol.is_isomorphic_with(
@@ -3339,7 +3347,9 @@ class TestMoleculeFromPDB:
         )
 
     def test_molecule_from_pdb_cterm_ala_tripeptide(self):
-        offmol = Molecule.from_pdb(get_data_file_path("proteins/CTerminal_ALA_ALA.pdb"))
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/CTerminal_ALA_ALA.pdb")
+        )
         assert offmol.n_atoms == 27
         expected_mol = Molecule.from_smiles("CC(=O)N[C@H](C)C(=O)N[C@H](C)C(=O)[O-]")
         assert offmol.is_isomorphic_with(
@@ -3347,7 +3357,9 @@ class TestMoleculeFromPDB:
         )
 
     def test_molecule_from_pdb_nterm_ala_dipeptide(self):
-        offmol = Molecule.from_pdb(get_data_file_path("proteins/NTerminal_ALA.pdb"))
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/NTerminal_ALA.pdb")
+        )
         assert offmol.n_atoms == 18
         expected_mol = Molecule.from_smiles("[N+]([H])([H])([H])[C@H](C)C(=O)NC")
         assert offmol.is_isomorphic_with(
@@ -3355,7 +3367,9 @@ class TestMoleculeFromPDB:
         )
 
     def test_molecule_from_pdb_mainchain_arg_dipeptide(self):
-        offmol = Molecule.from_pdb(get_data_file_path("proteins/MainChain_ARG.pdb"))
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/MainChain_ARG.pdb")
+        )
         assert offmol.n_atoms == 36
         expected_mol = Molecule.from_smiles(
             "CC(=O)N[C@H](CCCNC(N)=[N+]([H])[H])C(=O)NC"
@@ -3365,7 +3379,9 @@ class TestMoleculeFromPDB:
         )
 
     def test_molecule_from_pdb_cterm_arg_dipeptide(self):
-        offmol = Molecule.from_pdb(get_data_file_path("proteins/CTerminal_ARG.pdb"))
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/CTerminal_ARG.pdb")
+        )
         assert offmol.n_atoms == 31
         expected_mol = Molecule.from_smiles(
             "CC(=O)N[C@H](CCCNC(N)=[N+]([H])([H]))C(=O)[O-]"
@@ -3375,7 +3391,9 @@ class TestMoleculeFromPDB:
         )
 
     def test_molecule_from_pdb_mainchain_cys_dipeptide(self):
-        offmol = Molecule.from_pdb(get_data_file_path("proteins/MainChain_CYS.pdb"))
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/MainChain_CYS.pdb")
+        )
         assert offmol.n_atoms == 23
         expected_mol = Molecule.from_smiles("CC(=O)N[C@H](CS)C(=O)NC")
         assert offmol.is_isomorphic_with(
@@ -3383,7 +3401,9 @@ class TestMoleculeFromPDB:
         )
 
     def test_molecule_from_pdb_mainchain_cyx_dipeptide(self):
-        offmol = Molecule.from_pdb(get_data_file_path("proteins/MainChain_CYX.pdb"))
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/MainChain_CYX.pdb")
+        )
         assert offmol.n_atoms == 44
         expected_mol = Molecule.from_smiles(
             "CC(=O)N[C@H](CSSC[C@H](NC(=O)C)C(=O)NC)C(=O)NC"
@@ -3393,7 +3413,9 @@ class TestMoleculeFromPDB:
         )
 
     def test_molecule_from_pdb_mainchain_hid_dipeptide(self):
-        offmol = Molecule.from_pdb(get_data_file_path("proteins/MainChain_HID.pdb"))
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/MainChain_HID.pdb")
+        )
         assert offmol.n_atoms == 29
         assert offmol.total_charge == 0 * unit.elementary_charge
         assert sum([1 for atom in offmol.atoms if atom.is_aromatic]) == 0
@@ -3404,7 +3426,9 @@ class TestMoleculeFromPDB:
         )
 
     def test_molecule_from_pdb_mainchain_hie_dipeptide(self):
-        offmol = Molecule.from_pdb(get_data_file_path("proteins/MainChain_HIE.pdb"))
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/MainChain_HIE.pdb")
+        )
         assert offmol.n_atoms == 29
         assert offmol.total_charge == 0 * unit.elementary_charge
         assert sum([1 for atom in offmol.atoms if atom.is_aromatic]) == 0
@@ -3415,7 +3439,9 @@ class TestMoleculeFromPDB:
         )
 
     def test_molecule_from_pdb_mainchain_hip_dipeptide(self):
-        offmol = Molecule.from_pdb(get_data_file_path("proteins/MainChain_HIP.pdb"))
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/MainChain_HIP.pdb")
+        )
         assert offmol.n_atoms == 30
         assert offmol.total_charge == 1 * unit.elementary_charge
         assert sum([1 for atom in offmol.atoms if atom.is_aromatic]) == 0
@@ -3427,7 +3453,9 @@ class TestMoleculeFromPDB:
         )
 
     def test_molecule_from_pdb_mainchain_trp_dipeptide(self):
-        offmol = Molecule.from_pdb(get_data_file_path("proteins/MainChain_TRP.pdb"))
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/MainChain_TRP.pdb")
+        )
         assert offmol.n_atoms == 36
         assert offmol.total_charge == 0 * unit.elementary_charge
         assert sum([1 for atom in offmol.atoms if atom.is_aromatic]) == 6
@@ -3442,7 +3470,9 @@ class TestMoleculeFromPDB:
         )
 
     def test_molecule_from_pdb_cterminal_trp_dipeptide(self):
-        offmol = Molecule.from_pdb(get_data_file_path("proteins/CTerminal_TRP.pdb"))
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/CTerminal_TRP.pdb")
+        )
         assert offmol.n_atoms == 31
         assert offmol.total_charge == -1 * unit.elementary_charge
         assert sum([1 for atom in offmol.atoms if atom.is_aromatic]) == 6
@@ -3457,7 +3487,9 @@ class TestMoleculeFromPDB:
         )
 
     def test_molecule_from_pdb_nterminal_trp_dipeptide(self):
-        offmol = Molecule.from_pdb(get_data_file_path("proteins/NTerminal_TRP.pdb"))
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/NTerminal_TRP.pdb")
+        )
         assert offmol.n_atoms == 32
         assert offmol.total_charge == 1 * unit.elementary_charge
         assert sum([1 for atom in offmol.atoms if atom.is_aromatic]) == 6
@@ -3474,7 +3506,9 @@ class TestMoleculeFromPDB:
         )
 
     def test_molecule_from_pdb_mainchain_pro_dipeptide(self):
-        offmol = Molecule.from_pdb(get_data_file_path("proteins/MainChain_PRO.pdb"))
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/MainChain_PRO.pdb")
+        )
         assert offmol.n_atoms == 26
         assert offmol.total_charge == 0 * unit.elementary_charge
         expected_mol = Molecule.from_smiles("CC(=O)N1[C@H](CCC1)C(=O)NC")
@@ -3696,7 +3730,9 @@ class TestHierarchies:
 
     def test_add_default_hierarchy_schemes(self):
         """Test add_default_hierarchy_schemes and its kwargs"""
-        offmol = Molecule.from_pdb(get_data_file_path("proteins/MainChain_ALA.pdb"))
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/MainChain_ALA.pdb")
+        )
         offmol.delete_hierarchy_scheme("residues")
         offmol.delete_hierarchy_scheme("chains")
         offmol.add_hierarchy_scheme(("residue_number", "residue_name"), "residues")
