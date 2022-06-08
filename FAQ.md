@@ -54,17 +54,15 @@ Essentially, anything which provides the full identity of what you want to simul
 
 If you are unable to provide a molecule in the formats recommended above and want to attempt to infer the bond orders and atomic formal charges, there are tools available elsewhere that can provide guesses for this problem. These tools are not perfect, and the inference problem itself is poorly defined, so you should review each output closely (see our [Core Concepts](users/concepts) for an explanation of what information is needed to construct an OpenFF Molecule). Some tools we know of include:
 
-- the OpenEye Toolkits' [`OEPerceiveBondOrders`](https://docs.eyesopen.com/toolkits/python/oechemtk/OEChemFunctions/OEPerceiveBondOrders.html) functionality
+- the OpenEye Toolkit's [`OEPerceiveBondOrders`](https://docs.eyesopen.com/toolkits/python/oechemtk/OEChemFunctions/OEPerceiveBondOrders.html) functionality
 - [MDAnalysis' RDKit converter](https://docs.mdanalysis.org/stable/documentation_pages/converters/RDKit.html?highlight=rdkit#module-MDAnalysis.converters.RDKit), with an [example here](https://github.com/openforcefield/openff-toolkit/issues/1126#issuecomment-969712195)
 - the Jensen group's [xyz2mol program](https://github.com/jensengroup/xyz2mol/)
 
 ## I'm getting stereochemistry errors when loading a molecule from a SMILES string.
 
-The toolkit does not accept molecules with undefined stereochemistry by default. This is because the stereochemistry of a molecule may affect its partial charges, and assigning parameters using [direct chemical perception](https://pubs.acs.org/doi/pdf/10.1021/acs.jctc.8b00640) may require knowing the stereochemistry of chiral centers. Because the OpenFF Toolkit doesn't know which force field will be used when molecule is loaded (and the main-line OpenFF force fields use AM1BCC for charge assignment, which is stereochemistry-dependent) , it defaults to throwing an error if a molecule with undefined stereochemistry is loaded. 
+The toolkit does not accept molecules with undefined stereochemistry by default. This is because the stereochemistry of a molecule may affect its partial charges, and assigning parameters using [direct chemical perception](https://pubs.acs.org/doi/pdf/10.1021/acs.jctc.8b00640) may require knowing the stereochemistry of chiral centers. Because the main-line OpenFF force fields use a stereochemistry-dependent charge generation method, the Toolkit defaults to throwing an error if a molecule with undefined stereochemistry is loaded. This behavior is in line with OpenFF's general attitude of requiring users to explicitly acknowledge actions that may cause silent errors later on.
 
-## I understand the risks and want to load a molecule from a SMILES string that might not fully define stereochemistry.
-
-Pass `allow_undefined_stereo=True` to molecule loading methods like [Molecule.from_smiles](openff.toolkit.topology.Molecule.from_smiles) to downgrade the exception to a warning. As an example, see the "SMILES without stereochemistry" section in the [Molecule cookbook](smiles_no_stereochemistry). Where possible, our parameter assignment infrastructure will gracefully handle molecules with undefined stereochemistry that are loaded this way. 
+If you're confident a `Molecule` with unassigned stereochemistry is acceptable, pass `allow_undefined_stereo=True` to molecule loading methods like [Molecule.from_smiles](openff.toolkit.topology.Molecule.from_smiles) to downgrade the exception to a warning. As an example, see the "SMILES without stereochemistry" section in the [Molecule cookbook](smiles_no_stereochemistry). Where possible, our parameter assignment infrastructure will gracefully handle molecules with undefined stereochemistry that are loaded this way. 
 
 ## My conda installation of the toolkit doesn't appear to work. What should I try next?
 
