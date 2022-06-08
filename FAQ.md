@@ -25,7 +25,7 @@ Such inference work is outside the scope of SMIRNOFF.
 
 ## What about starting from a PDB file?
 
-PDB files do not in general provide the chemical identity of small molecules contained therein, and thus do not provide suitable starting points for applying SMIROFF to small molecules.
+PDB files do not in general provide the chemical identity of small molecules contained therein, and thus do not provide suitable starting points for applying SMIRNOFF to small molecules.
 This is especially problematic for PDB files from X-ray crystallography which typically do not include proteins, making the problem even worse.
 For our purposes here, however, we assume you begin with the coordinates of all atoms present and the full topology of your system.
 
@@ -44,7 +44,7 @@ For application of SMIRNOFF force fields, we recommend that you begin your work 
 This means we recommend one of the following or equivalent:
 - A `.sdf`, `.mol`, or `.mol2` file or files for the molecules comprising your system, with correct bond orders and formal charges. (Note: Do NOT generate this from a simulation package or tool which does not have access to bond order information; you may end up with a correct-seeming file, but the bond orders will be incorrect)
 - Isomeric SMILES strings for the components of your system
-- InCHI strings for the components of your system
+- InChi strings for the components of your system
 - Chemical Identity Registry numbers for the components of your system
 - IUPAC names for the components of your system
 
@@ -54,9 +54,15 @@ Essentially, anything which provides the full identity of what you want to simul
 
 If you are unable to provide a molecule in the formats recommended above and want to attempt to infer the bond orders and atomic formal charges, there are tools available elsewhere that can provide guesses for this problem. These tools are not perfect, and the inference problem itself is poorly defined, so you should review each output closely (see our [Core Concepts](users/concepts) for an explanation of what information is needed to construct an OpenFF Molecule). Some tools we know of include:
 
-- the OpenEye toolkits' [`OEPerceiveBondOrders`](https://docs.eyesopen.com/toolkits/python/oechemtk/OEChemFunctions/OEPerceiveBondOrders.html) functionality
+- the OpenEye Toolkit's [`OEPerceiveBondOrders`](https://docs.eyesopen.com/toolkits/python/oechemtk/OEChemFunctions/OEPerceiveBondOrders.html) functionality
 - [MDAnalysis' RDKit converter](https://docs.mdanalysis.org/stable/documentation_pages/converters/RDKit.html?highlight=rdkit#module-MDAnalysis.converters.RDKit), with an [example here](https://github.com/openforcefield/openff-toolkit/issues/1126#issuecomment-969712195)
 - the Jensen group's [xyz2mol program](https://github.com/jensengroup/xyz2mol/)
+
+## I'm getting stereochemistry errors when loading a molecule from a SMILES string.
+
+The toolkit does not accept molecules with undefined stereochemistry by default. This is because the stereochemistry of a molecule may affect its partial charges, and assigning parameters using [direct chemical perception](https://pubs.acs.org/doi/pdf/10.1021/acs.jctc.8b00640) may require knowing the stereochemistry of chiral centers. Because the main-line OpenFF force fields use a stereochemistry-dependent charge generation method, the Toolkit defaults to throwing an error if a molecule with undefined stereochemistry is loaded. This behavior is in line with OpenFF's general attitude of requiring users to explicitly acknowledge actions that may cause silent errors later on.
+
+If you're confident a `Molecule` with unassigned stereochemistry is acceptable, pass `allow_undefined_stereo=True` to molecule loading methods like [Molecule.from_smiles](openff.toolkit.topology.Molecule.from_smiles) to downgrade the exception to a warning. As an example, see the "SMILES without stereochemistry" section in the [Molecule cookbook](smiles_no_stereochemistry). Where possible, our parameter assignment infrastructure will gracefully handle molecules with undefined stereochemistry that are loaded this way. 
 
 ## My conda installation of the toolkit doesn't appear to work. What should I try next?
 
@@ -86,7 +92,7 @@ No! This is the intended behavior. The force field parameters of a molecule shou
 
 ## Parameterizing my system, which contains a large molecule, is taking forever. What's wrong?
 
-The mainline OpenFF force fields use AM1-BCC to assign partial charges (via the `<ToolkitAM1BCCHandler>` tag in the OFFXML file). This method unfortunately scales poorly with the size of a molecule and ligands roughly 100 atoms (about 40 heavy atoms) or larger may take so long (i.e. 10 minutes or more) that it seems like your code is simply hanging indefinitely. If you have an OpenEye license and OpenEye Toolkits [installed](installation/openeye), the OpenFF Toolkit will instead use `quacpac`, which can offer better performance on large molecules. Otherwise, it uses AmberTool's `sqm`, which is free to use.
+The mainline OpenFF force fields use AM1-BCC to assign partial charges (via the `<ToolkitAM1BCCHandler>` tag in the OFFXML file). This method unfortunately scales poorly with the size of a molecule and ligands roughly 100 atoms (about 40 heavy atoms) or larger may take so long (i.e. 10 minutes or more) that it seems like your code is simply hanging indefinitely. If you have an OpenEye license and OpenEye Toolkits [installed](installation/openeye), the OpenFF Toolkit will instead use `quacpac`, which can offer better performance on large molecules. Otherwise, it uses AmberTools' `sqm`, which is free to use.
 
 In the future, the use of AM1-BCC in OpenFF force fields may be replaced with method(s) that perform better and scale better with molecule size, but (as of April 2022) these are still in an experimental phase.
 
@@ -106,7 +112,7 @@ Where `get_my_new_force_field_paths` is a function in the `my_package` module pr
 
 ## What does "unconstrained" mean in a force field name?
 
-Each release of an [OpenFF force field](https://github.com/openforcefield/openff-forcefields/tree/master/openforcefields/offxml) has two associated `.offxml` files: one unadorned (for example, `openff-2.0.0.offxml`) and one labelled "unconstrained" (`openff_unconstrained-2.0.0.offxml`). This reflects the presence or absence of holonomic constraints on hydrogen-involving bonds in the force field specification.
+Each release of an [OpenFF force field](https://github.com/openforcefield/openff-forcefields/tree/master/openforcefields/offxml) has two associated `.offxml` files: one unadorned (for example, `openff-2.0.0.offxml`) and one labeled "unconstrained" (`openff_unconstrained-2.0.0.offxml`). This reflects the presence or absence of holonomic constraints on hydrogen-involving bonds in the force field specification.
 
 Typically, OpenFF force fields treat bonds with a harmonic potential according to Hooke's law. With this treatment, bonds involving hydrogen atoms have a much higher vibration frequency than any other part of a typical biochemical system. By constraining these bonds to a fixed length, MD time steps can be increased past 1 fs, improving simulation performance. These bond vibrations are not structurally important to proteins so can usually be ignored.
 
@@ -116,7 +122,7 @@ Use the constrained force field:
  - When running MD with a time step greater than 1 fs
 
 Use the unconstrained force field:
- - When computing single point energy calculations or energy minimisation
+ - When computing single point energy calculations or energy minimization
  - When running MD with a time step of 1 fs (or less)
  - When bond lengths may deviate from equilibrium
  - When fitting a force field, both because many fitting techniques require continuity and because deviations from equilibrium bond length may be important

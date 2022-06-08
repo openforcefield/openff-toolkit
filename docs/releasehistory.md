@@ -58,6 +58,12 @@ print(value_roundtrip)
 
 ## Current Development
 
+- [PR #1276](https://github.com/openforcefield/openff-toolkit/pull/1276): Removes the
+  `use_interchange` argument to
+  [`create_openmm_system`](openff.toolkit.typing.engines.smirnoff.ForceField.create_openmm_system).
+  Deletes the `create_force` and `postprocess_system` methods of `ParameterHandler`
+  [`ParameterHandler.create_force`](openff.toolkit.typing.engines.smirnoff.parameters.ParameterHandler.create_force),
+  [`ParameterHandler.postprocess_system`](openff.toolkit.typing.engines.smirnoff.parameters.ParameterHandler.postprocess_system) and other methods related to creating OpenMM systems and forces. This is now handled in Interchange.
 - [PR #1303](https://github.com/openforcefield/openff-toolkit/pull/1303): Deprecates `Topology.particles`,
   `Topology.n_particles`, `Topology.particle_index` as `Molecule` objects do not store virtual sites,
   only atoms.
