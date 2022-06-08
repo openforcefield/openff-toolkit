@@ -198,6 +198,7 @@ def _allow_only(allowed_values):
     return _value_checker
 
 
+# TODO: MT copy this into Interchange as it's not called here
 def _compute_lj_sigma(
     sigma: Optional[unit.Quantity], rmin_half: Optional[unit.Quantity]
 ) -> unit.Quantity:
@@ -3178,51 +3179,6 @@ class ElectrostaticsHandler(_NonbondedHandler):
             tolerance_attrs=float_attrs_to_compare + unit_attrs_to_compare,
             tolerance=self._SCALETOL,
         )
-
-    def assign_charge_from_molecules(self, molecule, charge_mols):
-        """
-        Given an input molecule, checks against a list of molecules for an isomorphic match. If found, assigns
-        partial charges from the match to the input molecule.
-
-        Parameters
-        ----------
-        molecule : an openff.toolkit.topology.FrozenMolecule
-            The molecule to have partial charges assigned if a match is found.
-        charge_mols : list of [openff.toolkit.topology.FrozenMolecule]
-            A list of molecules with charges already assigned.
-
-        Returns
-        -------
-        match_found : bool
-            Whether a match was found. If True, the input molecule will have been modified in-place.
-        """
-        # Check each charge_mol for whether it's isomorphic to the input molecule
-        for charge_mol in charge_mols:
-            ismorphic, topology_atom_map = Molecule.are_isomorphic(
-                molecule,
-                charge_mol,
-                return_atom_map=True,
-                aromatic_matching=True,
-                formal_charge_matching=True,
-                bond_order_matching=True,
-                atom_stereochemistry_matching=True,
-                bond_stereochemistry_matching=True,
-            )
-            # if they are isomorphic then use the mapping
-            if ismorphic:
-                # Take the first valid atom indexing map
-                # Set the partial charges
-                # Make a copy of the charge molecule's charges array (this way it's the right shape)
-                temp_mol_charges = copy.deepcopy(
-                    unit.Quantity(charge_mol.partial_charges)
-                )
-                for charge_idx, ref_idx in topology_atom_map.items():
-                    temp_mol_charges[charge_idx] = charge_mol.partial_charges[ref_idx]
-                molecule.partial_charges = temp_mol_charges
-                return True
-
-        # If no match was found, return False
-        return False
 
 
 class LibraryChargeHandler(_NonbondedHandler):

@@ -3150,6 +3150,22 @@ class TestMoleculeVisualization:
         molecule = Molecule().from_smiles("CCO")
         molecule._ipython_display_()
 
+    def test_get_coordinates(self):
+        from openff.toolkit.utils.viz import _OFFTrajectoryNGLView
+
+        molecule = Molecule.from_smiles(10 * "C")
+        molecule.generate_conformers(n_conformers=3)
+
+        trajectory = _OFFTrajectoryNGLView(molecule)
+
+        np.testing.assert_allclose(trajectory.get_coordinates(), molecule.conformers[0])
+        np.testing.assert_allclose(
+            trajectory.get_coordinates(0), molecule.conformers[0]
+        )
+        np.testing.assert_allclose(
+            trajectory.get_coordinates(2), molecule.conformers[2]
+        )
+
 
 @pytest.mark.parametrize("strict_chirality", (True, False))
 class TestMoleculeResiduePerception:

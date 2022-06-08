@@ -349,7 +349,7 @@ class ForceField:
         from packaging.version import parse
 
         # Use PEP-440 compliant version number comparison, if requested
-        if not self.disable_version_check:
+        if self.disable_version_check:
             pass
         else:
             if (
@@ -603,8 +603,7 @@ class ForceField:
         """
         return [*self._parameter_handlers.keys()]
 
-    # TODO: Do we want to make this optional?
-
+    # MT: Copy this into Interchange as it's not called in any toolkit methods
     @staticmethod
     def _check_for_missing_valence_terms(
         name, topology, assigned_terms, topological_terms
@@ -922,6 +921,7 @@ class ForceField:
             )
 
         self._check_smirnoff_version_compatibility(str(version))
+
         # Convert 0.1 spec files to 0.3 SMIRNOFF data format by converting
         # from 0.1 spec to 0.2, then 0.2 to 0.3
         if packaging.version.parse(str(version)) == packaging.version.parse("0.1"):
@@ -1158,39 +1158,6 @@ class ForceField:
             discard_cosmetic_attributes=discard_cosmetic_attributes
         )
         io_handler.to_file(filename, smirnoff_data)
-
-    def _resolve_parameter_handler_order(self):
-        """Resolve the order in which ParameterHandler objects should execute to satisfy constraints.
-
-        Returns
-        -------
-        Iterable of ParameterHandlers
-            The ParameterHandlers in this ForceField, in the order that they should be called to satisfy constraints.
-        """
-
-        # Create a DAG expressing dependencies
-        import networkx as nx
-
-        G = nx.DiGraph()
-        for tagname, parameter_handler in self._parameter_handlers.items():
-            G.add_node(tagname)
-        for tagname, parameter_handler in self._parameter_handlers.items():
-            if parameter_handler._DEPENDENCIES is not None:
-                for dependency in parameter_handler._DEPENDENCIES:
-                    G.add_edge(dependency._TAGNAME, parameter_handler._TAGNAME)
-
-        # Ensure there are no loops in handler order
-        if not (nx.is_directed_acyclic_graph(G)):
-            raise RuntimeError(
-                "Unable to resolve order in which to run ParameterHandlers. Dependencies do not form "
-                "a directed acyclic graph."
-            )
-        # Resolve order
-        ordered_parameter_handlers = list()
-        for tagname in nx.topological_sort(G):
-            if tagname in self._parameter_handlers:
-                ordered_parameter_handlers.append(self._parameter_handlers[tagname])
-        return ordered_parameter_handlers
 
     # TODO: Should we also accept a Molecule as an alternative to a Topology?
     @requires_package("openmm")

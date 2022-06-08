@@ -5245,7 +5245,7 @@ class Molecule(FrozenMolecule):
                     smarts_idx
                 ]
 
-    def _ipython_display_(self):
+    def _ipython_display_(self):  # pragma: no cover
         from IPython.display import display
 
         try:

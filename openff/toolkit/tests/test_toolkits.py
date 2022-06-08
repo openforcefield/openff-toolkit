@@ -3886,6 +3886,10 @@ class TestToolkitRegistry:
     @requires_rdkit
     def test_register_imported_toolkit_wrappers(self):
         """Test that imported toolkits are registered, and in the expected order"""
+        no_precedence = ToolkitRegistry(_register_imported_toolkit_wrappers=True)
+
+        assert len(no_precedence.registered_toolkits) == 4
+
         # Ensure a specified order is respected
         default_registry = ToolkitRegistry(
             toolkit_precedence=[

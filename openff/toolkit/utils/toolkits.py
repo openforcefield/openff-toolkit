@@ -132,7 +132,7 @@ for tk in GLOBAL_TOOLKIT_REGISTRY.registered_toolkits:
             any_toolkits = True
             break
 
-if not any_toolkits:
+if not any_toolkits:  # pragma: no cover
     from openff.toolkit.utils import all_subclasses
 
     msg = "WARNING: No basic cheminformatics toolkits are available.\n"
