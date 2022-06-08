@@ -58,6 +58,10 @@ print(value_roundtrip)
 
 ## Current Development
 
+- [PR #1313](https://github.com/openforcefield/openff-toolkit/pull/1313): Fixes 
+  [Issue #1287](https://github.com/openforcefield/openff-toolkit/issues/1287), where  
+  `OpenEyeToolkitWrapper.assign_partial_charges` didn't request symmetrized charges when
+  the charge model was set to `AM1-Mulliken`.
 - [PR #1276](https://github.com/openforcefield/openff-toolkit/pull/1276): Removes the
   `use_interchange` argument to
   [`create_openmm_system`](openff.toolkit.typing.engines.smirnoff.ForceField.create_openmm_system).
