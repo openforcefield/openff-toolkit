@@ -3752,21 +3752,33 @@ class FrozenMolecule(Serializable):
         cls, file_path: Union[str, TextIO], toolkit_registry=GLOBAL_TOOLKIT_REGISTRY
     ):
         """
-        Loads a polymer from a PDB file. Currently only supports proteins with canonical amino acids that are
-        either uncapped or capped by ACE/NME groupe,
-        but may later be extended to handle other common polymers, or accept user-defined polymer templates.
+        Loads a polymer from a PDB file.
+
+        Currently only supports proteins with canonical amino acids that are
+        either uncapped or capped by ACE/NME groups, but may later be extended
+        to handle other common polymers, or accept user-defined polymer
+        templates.
+
+        Metadata such as residues, chains, and atom names are recorded in the
+        ``Atom.properties`` attribute, which is a dictionary mapping from
+        strings like "residue" to the appropriate value. ``from_polymer_pdb``
+        returns a molecule that can be iterated over with the ``.residues`` and
+        ``.chains`` attributes, as well as the usual ``.atoms``.
 
         This method proceeds in the following order:
 
-        * Loads the polymer substructure template file
-        * Loads the PDB into an OpenMM PDBFile object (openmm.app.PDBFile)
+        * Loads the polymer substructure template file (distributed with the
+          OpenFF Toolkit)
+        * Loads the PDB into an OpenMM :class:`openmm.app.PDBFile` object
         * Turns OpenMM topology into a temporarily invalid rdkit Molecule
-        * Calls Molecule.from_polymer_pdb._add_chemical_info, which:
-            * For each substructure loaded from the substructure template file:e
-                * Uses rdkit to find matches between the substructure and the molecule
-                * For any matches, assigns the atom formal charge and bond order info from the substructure
-                  to the rdkit molecule, then marks the atoms and bonds as having been assigned so they can not
-                  be overwritten by subsequent isomorphisms
+        * Adds chemical information to the molecule:
+            * For each substructure loaded from the substructure template file
+                * Uses rdkit to find matches between the substructure and the
+                  molecule
+                * For any matches, assigns the atom formal charge and bond order
+                  info from the substructure to the rdkit molecule, then marks
+                  the atoms and bonds as having been assigned so they can not be
+                  overwritten by subsequent isomorphisms
         * Take coordinates from the OpenMM Topology and add them as a conformer
         * Convert the rdkit Molecule to OpenFF
 
@@ -5214,10 +5226,13 @@ class Molecule(FrozenMolecule):
 
     def perceive_residues(self, substructure_file_path=None, strict_chirality=True):
         """
-        Perceive a polymer's residues and fill each atom's metadata accordingly.
+        Perceive a polymer's residues and permit iterating over them.
 
         Perceives residues by matching substructures in the current molecule
-        with a substructure dictionary file, using SMARTS.
+        with a substructure dictionary file, using SMARTS, and assigns residue
+        names and numbers to atom metadata. It then constructs a residue hierarchy
+        scheme to allow iterating over residues.
+
 
         Parameters
         ----------
@@ -5623,26 +5638,23 @@ class HierarchyElement:
         return return_dict
 
     @property
-    def particles(self):
+    def particles(self) -> Particle:
         for particle_index in self.particle_indices:
             yield self.parent.particles[particle_index]
 
-    def particle(self, index: int):
+    def particle(self, index: int) -> Particle:
         """
-        Get particle with a specified index.
+        Get the particle with a specified index from the parent ``Molecule``.
 
         Parameters
         ----------
-        index : int
-
-        Returns
-        -------
-        particle : openff.toolkit.topology.Particle
+        index
+            The index of the particle in the parent molecule.
         """
         return self.parent.particles[self.particle_indices[index]]
 
     @property
-    def parent(self):
+    def parent(self) -> FrozenMolecule:
         return self.scheme.parent
 
     def __str__(self):
