@@ -41,6 +41,7 @@ from openff.toolkit.topology import NotBondedError
 from openff.toolkit.topology.molecule import (
     Atom,
     FrozenMolecule,
+    HierarchyElement,
     HierarchySchemeNotFoundException,
     HierarchySchemeWithIteratorNameAlreadyRegisteredException,
     InvalidAtomMetadataError,
@@ -3591,8 +3592,9 @@ class TestHierarchies:
         assert "ALA" == dipeptide_residues_perceived.atoms[10].metadata["residue_name"]
         assert 2 == dipeptide_residues_perceived.atoms[10].metadata["residue_number"]
 
+        assert isinstance(dipeptide_residues_perceived.residues[0], HierarchyElement)
         with pytest.raises(AttributeError):
-            type(dipeptide_residues_perceived.residues[0])
+            type(dipeptide_residues_perceived.chains[0])
 
     def test_add_delete_hierarchy_scheme(self):
         """Test adding and removing HierarchySchemes to/from molecules"""
@@ -3602,17 +3604,17 @@ class TestHierarchies:
 
         dipeptide_residues_perceived = create_dipeptide()
 
-        assert len(dipeptide_residues_perceived.hierarchy_schemes) == 0
+        assert len(dipeptide_residues_perceived.hierarchy_schemes) == 1
         dipeptide_residues_perceived.add_hierarchy_scheme(
             ("residue_number",), "res_by_num"
         )
-        assert len(dipeptide_residues_perceived.hierarchy_schemes) == 1
+        assert len(dipeptide_residues_perceived.hierarchy_schemes) == 2
 
         # Redundant hier schemes are OK as long as their iter name is different
         dipeptide_residues_perceived.add_hierarchy_scheme(
             ("residue_number",), "res_by_num2"
         )
-        assert len(dipeptide_residues_perceived.hierarchy_schemes) == 2
+        assert len(dipeptide_residues_perceived.hierarchy_schemes) == 3
 
         # Redundant hier schemes are NOT OK if their iter name is already used
         with pytest.raises(
@@ -3622,21 +3624,13 @@ class TestHierarchies:
             dipeptide_residues_perceived.add_hierarchy_scheme(
                 ("residue_number",), "res_by_num"
             )
-        assert len(dipeptide_residues_perceived.hierarchy_schemes) == 2
+        assert len(dipeptide_residues_perceived.hierarchy_schemes) == 3
 
-        # This won't exist until we run perceive_hierarchy
-        with pytest.raises(AttributeError):
-            dipeptide_residues_perceived.res_by_num[0]
-
-        dipeptide_residues_perceived.perceive_hierarchy(["res_by_num"])
-
+        # perceive_hierarchy() was called by add_hierarchy_scheme
         assert dipeptide_residues_perceived.res_by_num[0].residue_number == 1
-        # Since we only perceived res_by_num above, residues should not be defined
-        with pytest.raises(AttributeError):
-            dipeptide_residues_perceived.residues[0]
         # Delete the hierarchyscheme and ensure that the iterators are no longer available
         dipeptide_residues_perceived.delete_hierarchy_scheme("res_by_num")
-        assert len(dipeptide_residues_perceived.hierarchy_schemes) == 1
+        assert len(dipeptide_residues_perceived.hierarchy_schemes) == 2
         with pytest.raises(AttributeError):
             dipeptide_residues_perceived.res_by_num[0]
         with pytest.raises(
