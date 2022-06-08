@@ -3684,7 +3684,9 @@ class TestHierarchies:
         offmol.add_hierarchy_scheme(("residue_number", "residue_name"), "residues")
         # Make sure that the non-default "residues" iterator that we just added
         # doesn't have "chain_id" as a uniqueness criterion
-        assert "chain_id" not in offmol.hierarchy_schemes["residues"].uniqueness_criteria
+        assert (
+            "chain_id" not in offmol.hierarchy_schemes["residues"].uniqueness_criteria
+        )
         # Test that the overwrite_existing kwarg has the right behavior
         with pytest.raises(HierarchySchemeWithIteratorNameAlreadyRegisteredException):
             offmol.add_default_hierarchy_schemes(overwrite_existing=False)
@@ -3693,15 +3695,19 @@ class TestHierarchies:
         # which should overwrite the "residues" iterator we just defined
         offmol.add_default_hierarchy_schemes()
         # Ensure that the new residues iterator DOES have the correct uniqueness criterion
-        assert "residue_name" in offmol.hierarchy_schemes["residues"].uniqueness_criteria
-        assert "residue_number" in offmol.hierarchy_schemes["residues"].uniqueness_criteria
+        assert (
+            "residue_name" in offmol.hierarchy_schemes["residues"].uniqueness_criteria
+        )
+        assert (
+            "residue_number" in offmol.hierarchy_schemes["residues"].uniqueness_criteria
+        )
         assert "chain_id" in offmol.hierarchy_schemes["residues"].uniqueness_criteria
-        assert [*offmol.residues][0].residue_name == 'ACE'
-        assert [*offmol.residues][0].residue_number == '1'
-        assert [*offmol.residues][0].chain_id == ' '
+        assert [*offmol.residues][0].residue_name == "ACE"
+        assert [*offmol.residues][0].residue_number == "1"
+        assert [*offmol.residues][0].chain_id == " "
 
         assert "chain_id" in offmol.hierarchy_schemes["chains"].uniqueness_criteria
-        assert [*offmol.chains][0].chain_id == ' '
+        assert [*offmol.chains][0].chain_id == " "
 
     def test_hierarchy_perceived_dipeptide(self):
         """Test populating and accessing HierarchyElements"""
