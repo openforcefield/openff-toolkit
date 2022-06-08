@@ -1351,9 +1351,10 @@ class FrozenMolecule(Serializable):
                 self.delete_hierarchy_scheme("residues")
 
         self.add_hierarchy_scheme(
-            ("chain", "residue_number", "residue_name"), "residues"
+            ("chain_id", "residue_number", "residue_name"), "residues"
         )
-        self.add_hierarchy_scheme(("chain",), "chains")
+        self.add_hierarchy_scheme(("chain_id",), "chains")
+        self.perceive_hierarchy()
 
     def add_hierarchy_scheme(
         self,
@@ -3500,7 +3501,7 @@ class FrozenMolecule(Serializable):
         # TODO: Ensure we are dealing with an OpenFF Topology object
         if topology.n_molecules != 1:
             raise ValueError("Topology must contain exactly one molecule")
-        molecule = [i for i in topology.reference_molecules][0]
+        molecule = [i for i in topology.molecules][0]
         return cls(molecule)
 
     def to_topology(self):
@@ -3928,7 +3929,6 @@ class FrozenMolecule(Serializable):
             bond._is_aromatic = stereo_aro_bond.is_aromatic
 
         offmol.add_default_hierarchy_schemes()
-        offmol.perceive_hierarchy()
 
         return offmol
 
