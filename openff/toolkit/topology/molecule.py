@@ -1397,6 +1397,7 @@ class FrozenMolecule(Serializable):
             iterator_name,
         )
         self._hierarchy_schemes[iterator_name] = new_hier_scheme
+        self.perceive_hierarchy([iterator_name])
         return new_hier_scheme
 
     @property
@@ -3763,7 +3764,6 @@ class FrozenMolecule(Serializable):
             offmol.atoms[i].metadata["residue_number"] = atom.residue.id
             offmol.atoms[i].metadata["chain_id"] = atom.residue.chain.id
         offmol.add_default_hierarchy_schemes()
-        offmol.perceive_hierarchy()
 
         return offmol
 
