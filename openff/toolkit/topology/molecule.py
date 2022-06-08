@@ -5256,6 +5256,9 @@ class Molecule(FrozenMolecule):
                     smarts_idx
                 ]
 
+        # Now add the residue hierarchy scheme
+        self._add_residue_hierarchy_scheme()
+
     def _ipython_display_(self):
         from IPython.display import display
 
