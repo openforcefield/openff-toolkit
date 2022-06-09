@@ -122,14 +122,15 @@ class BuiltInToolkitWrapper(base_wrapper.ToolkitWrapper):
                 strict_n_conformers=strict_n_conformers,
             )
 
-        if partial_charge_method == "zeroes":
-            partial_charges = unit.Quantity(
-                molecule.n_atoms * [0.0], unit.elementary_charge
-            )
-        elif partial_charge_method == "formal_charge":
-            partial_charges = [float(atom.formal_charge) for atom in molecule.atoms]
+        if partial_charge_method == "zeros":
+            partial_charges = [0.0] * molecule.n_atoms
 
-        molecule.partial_charges = partial_charges
+        elif partial_charge_method == "formal_charge":
+            partial_charges = [float(atom.formal_charge.m) for atom in molecule.atoms]
+
+        molecule.partial_charges = unit.Quantity(
+            partial_charges, unit.elementary_charge
+        )
 
         if normalize_partial_charges:
             molecule._normalize_partial_charges()
