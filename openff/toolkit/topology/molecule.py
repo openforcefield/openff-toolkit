@@ -178,7 +178,7 @@ class AtomMetadataDict(UserDict):
 
 class Atom(Particle):
     """
-    A chemcical atom.
+    A chemical atom.
 
     .. todo::
 
@@ -521,8 +521,6 @@ class Atom(Particle):
         self._molecule_atom_index = self._molecule.atoms.index(self)
         return self._molecule_atom_index
 
-    # I can deprecate this instead of removing it ... but it seems incredibly unlikely to be used directly
-    # as part of the public API
 
     def __repr__(self):
         # TODO: Also include which molecule this atom belongs to?
@@ -5392,7 +5390,7 @@ class HierarchyScheme:
         """
         Groups the atoms of the parent of this HierarchyScheme according to their
         metadata, and creates HierarchyElements suitable for iteration over the parent.
-        atoms missing the metadata fields in this HierarchyScheme's
+        Atoms missing the metadata fields in this HierarchyScheme's
         uniqueness_criteria tuple will have those spots populated with the string 'None'.
 
         This method overwrites the HierarchyScheme's `hierarchy_elements` attribute in place.
@@ -5464,7 +5462,7 @@ class HierarchyElement:
         scheme : HierarchyScheme
         id : tuple of str and int
             uniqueness tuple
-        atom_indicess : iterable int
+        atom_indices : iterable of int
         """
         self.scheme = scheme
         self.identifier = identifier

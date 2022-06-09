@@ -124,10 +124,10 @@ class BuiltInToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         if partial_charge_method == "zeroes":
             partial_charges = unit.Quantity(
-                molecule.n_atoms * [0], unit.elementary_charge
+                molecule.n_atoms * [0.], unit.elementary_charge
             )
         elif partial_charge_method == "formal_charge":
-            partial_charges = [atom.formal_charge for atom in molecule.atoms]
+            partial_charges = [float(atom.formal_charge) for atom in molecule.atoms]
 
         molecule.partial_charges = partial_charges
 
