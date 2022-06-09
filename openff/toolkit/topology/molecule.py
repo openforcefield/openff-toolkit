@@ -901,9 +901,9 @@ class FrozenMolecule(Serializable):
 
         >>> molecule = FrozenMolecule(rdmol)
 
-        Create a molecule from a serialized molecule object:
+        Convert the molecule into a dictionary and back again:
 
-        >>> serialized_molecule = molecule.__getstate__()
+        >>> serialized_molecule = molecule.to_dict()
         >>> molecule_copy = Molecule(serialized_molecule)
 
         """
@@ -937,8 +937,8 @@ class FrozenMolecule(Serializable):
                 # TODO: This will need to be updated once FrozenMolecules and Molecules are significantly different
                 self._copy_initializer(other)
                 loaded = True
-            if isinstance(other, OrderedDict) and not loaded:
-                self.__setstate__(other)
+            if isinstance(other, dict) and not loaded:
+                self._initialize_from_dict(other)
                 loaded = True
 
             # Check through the toolkit registry to find a compatible wrapper for loading
@@ -1246,12 +1246,6 @@ class FrozenMolecule(Serializable):
             hill = self.to_hill_formula()
             return description + f" with bad SMILES and Hill formula '{hill}'"
         return description + f" and SMILES '{smiles}'"
-
-    def __getstate__(self):
-        return self.to_dict()
-
-    def __setstate__(self, state):
-        return self._initialize_from_dict(state)
 
     def _initialize(self):
         """
@@ -4844,9 +4838,9 @@ class Molecule(FrozenMolecule):
 
         >>> molecule = Molecule(rdmol)
 
-        Create a molecule from a serialized molecule object:
+        Convert the molecule into a dictionary and back again:
 
-        >>> serialized_molecule = molecule.__getstate__()
+        >>> serialized_molecule = molecule.to_dict()
         >>> molecule_copy = Molecule(serialized_molecule)
 
         .. todo ::
