@@ -521,7 +521,6 @@ class Atom(Particle):
         self._molecule_atom_index = self._molecule.atoms.index(self)
         return self._molecule_atom_index
 
-
     def __repr__(self):
         # TODO: Also include which molecule this atom belongs to?
         return f"Atom(name={self._name}, atomic number={self._atomic_number})"
