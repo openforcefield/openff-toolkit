@@ -1237,7 +1237,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         return oemol, off_to_oe_idx
 
     def to_openeye(self, molecule, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
-        r"""
+        """
         Create an OpenEye molecule using the specified aromaticity model
 
         ``OEAtom`` s have a different set of allowed value for partial
@@ -1840,7 +1840,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         clear_existing=True,
         make_carboxylic_acids_cis=False,
     ):
-        r"""
+        """
         Generate molecule conformers using OpenEye Omega.
 
         .. warning :: This API is experimental and subject to change.

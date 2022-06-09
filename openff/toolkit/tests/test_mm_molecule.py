@@ -43,7 +43,6 @@ class TestMMMolecule:
         water.add_bond(0, 1)
         water.add_bond(0, 2)
         assert water.n_atoms == 3
-        assert water.n_particles == 3
         assert water.n_bonds == 2
         assert water.n_conformers == 0
 
@@ -53,11 +52,6 @@ class TestMMMolecule:
 
         assert water.get_bond_between(0, 1) is water.bond(0)
         assert water.get_bond_between(0, 2) is water.bond(1)
-
-    def test_atom_particle_iterators(self, water):
-
-        for atom, particle in zip(water.atoms, water.particles):
-            assert atom is particle
 
     def test_hill_formula(
         self,
